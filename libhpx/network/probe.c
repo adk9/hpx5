@@ -32,7 +32,7 @@ static int _probe_handler(void *o) {
   network_progress(network);
 
   hpx_parcel_t *stack = NULL;
-  int e = hpx_call(HPX_HERE, _probe, &network, sizeof(network), HPX_NULL);
+  int e = hpx_call(HPX_HERE, _probe, HPX_NULL, &network, sizeof(network));
   if (e != HPX_SUCCESS)
     return e;
 
@@ -51,7 +51,7 @@ static void HPX_CONSTRUCTOR _register_actions(void) {
 }
 
 int probe_start(network_t *network) {
-  int e = hpx_call(HPX_HERE, _probe, &network, sizeof(network), HPX_NULL);
+  int e = hpx_call(HPX_HERE, _probe, HPX_NULL, &network, sizeof(network));
   if (e) {
     return dbg_error("failed to start network probe\n");
   }

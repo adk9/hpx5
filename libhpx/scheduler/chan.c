@@ -394,7 +394,7 @@ hpx_lco_chan_recv(hpx_addr_t chan, int *size, void **buffer)
   }
   else {
     hpx_addr_t proxy = hpx_lco_chan_new();
-    hpx_call(chan, _chan_recv_action, NULL, 0, proxy);
+    hpx_call(chan, _chan_recv_action, proxy, NULL, 0);
     status = hpx_lco_chan_recv(proxy, size, buffer);
     hpx_lco_delete(proxy, HPX_NULL);
   }
@@ -419,7 +419,7 @@ hpx_lco_chan_try_recv(hpx_addr_t chan, int *size, void **buffer)
   }
   else {
     hpx_addr_t proxy = hpx_lco_chan_new();
-    hpx_call(chan, _chan_try_recv_action, NULL, 0, proxy);
+    hpx_call(chan, _chan_try_recv_action, proxy, NULL, 0);
     status = hpx_lco_chan_try_recv(proxy, size, buffer);
     hpx_lco_delete(proxy, HPX_NULL);
   }
@@ -446,7 +446,7 @@ hpx_lco_chan_array_new(int n, int size, int chans_per_block)
   hpx_addr_t and = hpx_lco_and_new(blocks);
   for (int i = 0; i < blocks; ++i) {
     hpx_addr_t there = hpx_addr_add(base, i * block_bytes, block_bytes);
-    int e = hpx_call(there, _block_init_action, args, sizeof(args), and);
+    int e = hpx_call(there, _block_init_action, and, args, sizeof(args));
     dbg_check(e, "call of _block_init_action failed\n");
   }
   hpx_lco_wait(and);

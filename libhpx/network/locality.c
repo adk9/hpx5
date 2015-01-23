@@ -45,7 +45,7 @@ static int _call_cont_handler(locality_cont_args_t *args) {
 
   uint32_t size = hpx_thread_current_args_size() - sizeof(args->status) - sizeof(args->action);
   // handle status here: args->status;
-  return hpx_call(target, args->action, args->data, size, HPX_NULL);
+  return hpx_call(target, args->action, HPX_NULL, args->data, size);
 }
 
 static HPX_CONSTRUCTOR void _init_actions(void) {

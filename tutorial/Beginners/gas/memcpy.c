@@ -16,6 +16,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <hpx/hpx.h>
+#include <unistd.h>
 
 static  hpx_action_t _main       = 0;
 static  hpx_action_t _init_array = 0;
@@ -51,9 +52,8 @@ static int _main_action(void *args) {
   hpx_addr_t done = hpx_lco_and_new(size);
   for (int i = 0; i < size; i++) {
     hpx_addr_t remote_block = hpx_addr_add(data, i * BLOCK_SIZE, BLOCK_SIZE);
-    hpx_call(remote_block, _init_array, 
-             &src[i * BLOCK_COUNT], BLOCK_SIZE, 
-             done);
+    hpx_call(remote_block, _init_array, done, &src[i * BLOCK_COUNT],
+             BLOCK_SIZE);
   }
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
@@ -85,7 +85,7 @@ static int _main_action(void *args) {
     assert(local[i] == size - 1);
   hpx_gas_unpin(data);
 
-  printf("hpx_gas_memcpy succeeded for size = %u\n", BLOCK_SIZE);
+  printf("hpx_gas_memcpy succeeded for size = %zu\n", BLOCK_SIZE);
 
   hpx_gas_free(data, HPX_NULL);
   free(src);

@@ -165,7 +165,7 @@ static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
     hpx_action_t op;
     decode_command(command, &op, &addr);
     dbg_log_net("extracted local interrupt of %s\n", dbg_straction(op));
-    int e = hpx_call(addr, op, NULL, 0, HPX_NULL);
+    int e = hpx_call(addr, op, HPX_NULL, NULL, 0);
     if (HPX_SUCCESS != e) {
       dbg_error("failed to process local command");
     }
@@ -179,7 +179,7 @@ static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
       decode_command(command, &op, &addr);
       dbg_log_net("processing command %s from rank %d\n", dbg_straction(op),
                   i);
-      int e = hpx_call(addr, op, &i, sizeof(i), HPX_NULL);
+      int e = hpx_call(addr, op, HPX_NULL, &i, sizeof(i));
       if (HPX_SUCCESS != e) {
         dbg_error("failed to process local command");
       }

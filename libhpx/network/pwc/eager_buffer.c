@@ -30,7 +30,7 @@ static uint32_t _index_of(eager_buffer_t *buffer, uint64_t i) {
   return (i & (buffer->size - 1));
 }
 
-static HPX_INTERRUPT(_eager_rx)(void *args) {
+static HPX_INTERRUPT(_eager_rx, void *args) {
   int *src = args;
   uint32_t bytes = pgas_gpa_to_offset(hpx_thread_current_target());
   peer_t *peer = pwc_get_peer(here->network, *src);
@@ -42,7 +42,7 @@ static HPX_INTERRUPT(_eager_rx)(void *args) {
   return HPX_SUCCESS;
 }
 
-static HPX_INTERRUPT(_finish_eager_tx)(void *UNUSED) {
+static HPX_INTERRUPT(_finish_eager_tx, void *UNUSED) {
   hpx_parcel_t *p = NULL;
   hpx_addr_t target = hpx_thread_current_target();
   if (!hpx_gas_try_pin(target, (void**)&p)) {
@@ -59,7 +59,7 @@ static HPX_INTERRUPT(_finish_eager_tx)(void *UNUSED) {
 /// This currently assumes that the only purpose for padding is to deal with a
 /// wrapped buffer, so it contains a check to see if the number of bytes are in
 /// agreement with what we think we need to unwrap the buffer.
-static HPX_INTERRUPT(_eager_rx_pad)(void *args) {
+static HPX_INTERRUPT(_eager_rx_pad, void *args) {
   int *src = args;
   uint32_t bytes = pgas_gpa_to_offset(hpx_thread_current_target());
   peer_t *peer = pwc_get_peer(here->network, *src);
