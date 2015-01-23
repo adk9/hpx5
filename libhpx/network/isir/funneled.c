@@ -159,7 +159,7 @@ static int _funneled_get(network_t *network,
 
   // and spawn the remote operation---hpx_call eagerly copies the args buffer so
   // there is no need to wait
-  return hpx_call(from, isir_emulate_gwc, &args, sizeof(args), HPX_NULL);
+  return hpx_call(from, isir_emulate_gwc, HPX_NULL, &args, sizeof(args));
 }
 
 

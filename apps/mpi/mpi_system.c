@@ -237,7 +237,7 @@ int mpi_system_init(int num_ranks, int ranks_per_node) {
   hpx_addr_t and = hpx_lco_and_new(num_hpx_ranks);
   int i;
   for (i = 0; i < num_hpx_ranks; ++i)
-    hpx_call(HPX_THERE(i), action_init, &args, sizeof(args), and);
+    hpx_call(HPX_THERE(i), action_init, and, &args, sizeof(args));
 
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);
@@ -250,7 +250,7 @@ int mpi_system_shutdown() {
   hpx_addr_t and = hpx_lco_and_new(num_hpx_ranks);
   int i;
   for (i = 0; i < num_hpx_ranks; ++i)
-    hpx_call(HPX_THERE(i), action_shutdown, NULL, 0, and);
+    hpx_call(HPX_THERE(i), action_shutdown, and, NULL, 0);
 
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);

@@ -16,7 +16,7 @@ static hpx_action_t _sssp_print_source_adj_list = 0;
 sssp_kind_t _sssp_kind = _CHAOTIC_SSSP_KIND;
 adj_list_t graph = HPX_NULL;
 
-typedef int (*send_vertex_t)(hpx_addr_t, hpx_action_t, const void*, size_t, hpx_addr_t);
+typedef int (*send_vertex_t)(hpx_addr_t, hpx_action_t, hpx_addr_t, ...);
 static send_vertex_t send_vertex = hpx_call;
 
 bool _try_update_vertex_distance(adj_list_vertex_t *const vertex, distance_t distance) {
@@ -53,8 +53,9 @@ void _send_update_to_neighbors(adj_list_vertex_t *const vertex, distance_t dista
       = hpx_addr_add(graph, e->dest * sizeof(hpx_addr_t), _index_array_block_size);
     
     // printf("Calling send_vertex with vertex: %zu and distance: %zu\n", index, distance);
-    send_vertex(index, _sssp_visit_vertex, &distance, sizeof(distance), 
-	     _get_termination() == AND_LCO_TERMINATION ? edges : HPX_NULL);
+    send_vertex(index, _sssp_visit_vertex,
+                _get_termination() == AND_LCO_TERMINATION ? edges : HPX_NULL,
+                &distance, sizeof(distance));
   }
   
   // printf("Distance Action waiting on edges on (%" SSSP_UINT_PRI ", %" PRIu32 ", %" PRIu32 ")\n", target.offset, target.base_id, target.block_bytes);
@@ -80,9 +81,9 @@ int _sssp_visit_vertex_action(const distance_t *const args) {
   // printf("Calling update distance on %" SSSP_UINT_PRI "\n", vertex);
 
   if (_get_termination() == AND_LCO_TERMINATION) {
-    return hpx_call_sync(vertex, _sssp_process_vertex, args, sizeof(*args), NULL, 0);
+    return hpx_call_sync(vertex, _sssp_process_vertex, NULL, 0, args, sizeof(*args));
   } else {
-    return hpx_call(vertex, _sssp_process_vertex, args, sizeof(*args), HPX_NULL);
+    return hpx_call(vertex, _sssp_process_vertex, HPX_NULL, args, sizeof(*args));
   }
 }
 
@@ -133,14 +134,15 @@ int call_sssp_action(const call_sssp_args_t *const args) {
     = hpx_addr_add(args->graph, args->source * sizeof(hpx_addr_t), _index_array_block_size);
   const distance_t distance = 0;
   //printf("Calling sssp visit source action to verify the neighbours\n");
-  //hpx_call_sync(index, _sssp_visit_source, &sssp_args, sizeof(sssp_args), HPX_NULL,0);
+  //hpx_call_sync(index, _sssp_visit_source, NULL, 0, &sssp_args, sizeof(sssp_args));
 
   // DC is only supported with count termination now.
   assert(_sssp_kind != _DC_SSSP_KIND || _get_termination() == COUNT_TERMINATION);
 
   // Initialize the graph global variable.  From now on, we have the graph available on every locality and do not need to pass it around.
   const hpx_addr_t initialize_graph_lco = hpx_lco_future_new(0);
-  hpx_bcast(_sssp_initialize_graph, &args->graph, sizeof(args->graph), initialize_graph_lco);
+  hpx_bcast(_sssp_initialize_graph, initialize_graph_lco, &args->graph,
+            sizeof(args->graph));
   hpx_lco_wait(initialize_graph_lco);
   hpx_lco_delete(initialize_graph_lco, HPX_NULL);
 
@@ -157,11 +159,13 @@ int call_sssp_action(const call_sssp_args_t *const args) {
     if(_sssp_kind == _DC_SSSP_KIND || _sssp_kind == _DC1_SSSP_KIND) {
       init_queues_lco = hpx_lco_future_new(0);
       // printf("Calling _sssp_init_queues.\n");
-      hpx_bcast(_sssp_init_queues, &internal_termination_lco, sizeof(internal_termination_lco), init_queues_lco);
+      hpx_bcast(_sssp_init_queues, init_queues_lco,
+                &internal_termination_lco, sizeof(internal_termination_lco));
     }
     hpx_addr_t init_termination_count_lco = hpx_lco_future_new(0);
     // printf("Starting initialization bcast.\n");
-    hpx_bcast(_initialize_termination_detection, NULL, 0, init_termination_count_lco);
+    hpx_bcast(_initialize_termination_detection, init_termination_count_lco,
+              NULL, 0);
     // printf("Waiting on bcast.\n");
     hpx_lco_wait(init_termination_count_lco);
     hpx_lco_delete(init_termination_count_lco, HPX_NULL);
@@ -171,7 +175,7 @@ int call_sssp_action(const call_sssp_args_t *const args) {
     }
     _increment_active_count(1);
     // printf("Calling visit vertex\n");
-    hpx_call(index, _sssp_visit_vertex, &distance, sizeof(distance), HPX_NULL);
+    hpx_call(index, _sssp_visit_vertex, HPX_NULL, &distance, sizeof(distance));
     // printf("starting termination detection\n");
     _detect_termination(args->termination_lco, internal_termination_lco);
   } else if (_get_termination() == PROCESS_TERMINATION) {
@@ -185,7 +189,8 @@ int call_sssp_action(const call_sssp_args_t *const args) {
   } else if (_get_termination() == AND_LCO_TERMINATION) {
     // printf("Calling first visit vertex.\n");
     // start the algorithm from source once
-    hpx_call(index, _sssp_visit_vertex, &distance, sizeof(distance), args->termination_lco);
+    hpx_call(index, _sssp_visit_vertex, args->termination_lco, &distance,
+             sizeof(distance));
   } else {
     fprintf(stderr, "sssp: invalid termination mode.\n");
     hpx_abort();

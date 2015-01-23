@@ -84,7 +84,7 @@ int parcel_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync) {
     .reply = HPX_HERE
   };
 
-  int e = hpx_call(from, _memget_request, &args, sizeof(args), HPX_NULL);
+  int e = hpx_call(from, _memget_request, HPX_NULL, &args, sizeof(args));
   dbg_check(e, "Failed to initiate a memget request.\n");
   return e;
 }

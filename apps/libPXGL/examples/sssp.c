@@ -88,7 +88,7 @@ static int _print_vertex_distance_index_action(int *i)
   vertex = *v;
   hpx_gas_unpin(target);
 
-  return hpx_call_sync(vertex, _print_vertex_distance, i, sizeof(*i), NULL, 0);
+  return hpx_call_sync(vertex, _print_vertex_distance, NULL, 0, i, sizeof(*i));
 }
 
 void sample_graph(sssp_uint_t **problems, sssp_uint_t nproblems, size_t num_edges, sssp_uint_t numvertices, adj_list_t *graph){
@@ -159,8 +159,9 @@ static int _main_action(_sssp_args_t *args) {
       .thread_readers = HPX_THREADS,
       .edgefactor = args->edgefactor
     };
-    hpx_call_sync(HPX_HERE, graph500_edge_list_generator, &graph500_edge_list_generator_args,
-                  sizeof(graph500_edge_list_generator_args), &el, sizeof(el));
+    hpx_call_sync(HPX_HERE, graph500_edge_list_generator, &el, sizeof(el),
+                  &graph500_edge_list_generator_args,
+                  sizeof(graph500_edge_list_generator_args));
     printf("Edge List: #v = %lu, #e = %lu\n", el.num_vertices, el.num_edges);
 
   }
@@ -173,8 +174,8 @@ static int _main_action(_sssp_args_t *args) {
       .thread_readers = HPX_THREADS/2 + 1,
       .filename = args->filename
     };
-    hpx_call_sync(HPX_HERE, edge_list_from_file, &edge_list_from_file_args,
-		  sizeof(edge_list_from_file_args), &el, sizeof(el));
+    hpx_call_sync(HPX_HERE, edge_list_from_file, &el, sizeof(el),
+                  &edge_list_from_file_args, sizeof(edge_list_from_file_args));
     printf("Edge List: #v = %lu, #e = %lu\n",
 	   el.num_vertices, el.num_edges);
   }
@@ -195,7 +196,8 @@ static int _main_action(_sssp_args_t *args) {
   
   if (!realloc_adj_list) {
     // Construct the graph as an adjacency list
-    hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
+    hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &sargs.graph,
+                  sizeof(sargs.graph), &el, sizeof(el));
   }
   
   if (args->graph_generator_type == _GRAPH500) {
@@ -231,7 +233,8 @@ static int _main_action(_sssp_args_t *args) {
 
     if (realloc_adj_list) {
       // Construct the graph as an adjacency list
-      hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &el, sizeof(el), &sargs.graph, sizeof(sargs.graph));
+      hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &sargs.graph,
+                    sizeof(sargs.graph), &el, sizeof(el));
     }
 
     sargs.source = args->problems[i];
@@ -243,10 +246,10 @@ static int _main_action(_sssp_args_t *args) {
     sargs.termination_lco = sssp_lco;
     if (args->delta == 0) {
       printf("Calling SSSP (%s).\n", sssp_kind_str[args->sssp_kind]);
-      hpx_call(HPX_HERE, call_sssp, &sargs, sizeof(sargs), HPX_NULL);
+      hpx_call(HPX_HERE, call_sssp, HPX_NULL, &sargs, sizeof(sargs));
     } else {
       printf("Calling delta-stepping with delta %zu.\n", sargs.delta);
-      hpx_call(HPX_HERE, call_delta_sssp, &sargs, sizeof(sargs), HPX_NULL);
+      hpx_call(HPX_HERE, call_delta_sssp, HPX_NULL, &sargs, sizeof(sargs));
     }
     // printf("Waiting for termination LCO at: %zu\n", sssp_lco);
     hpx_lco_wait(sssp_lco);
@@ -260,7 +263,9 @@ static int _main_action(_sssp_args_t *args) {
 
 #ifdef GATHER_STAT
     _sssp_statistics *sssp_stat=(_sssp_statistics *)malloc(sizeof(_sssp_statistics));
-    hpx_call_sync(sargs.sssp_stat, _print_sssp_stat,sssp_stat,sizeof(_sssp_statistics),sssp_stat,sizeof(_sssp_statistics));
+    hpx_call_sync(sargs.sssp_stat, _print_sssp_stat, sssp_stat,
+                  sizeof(_sssp_statistics), sssp_stat,
+                  sizeof(_sssp_statistics));
     printf("\nuseful work = %lu,  useless work = %lu\n", sssp_stat->useful_work, sssp_stat->useless_work);
 
     total_vertex_visit += (sssp_stat->useful_work + sssp_stat->useless_work);
@@ -273,7 +278,7 @@ static int _main_action(_sssp_args_t *args) {
     hpx_addr_t vertices = hpx_lco_and_new(el.num_vertices);
     for (int i = 0; i < el.num_vertices; ++i) {
       hpx_addr_t index = hpx_addr_add(sargs.graph, i * sizeof(hpx_addr_t), _index_array_block_size);
-      hpx_call(index, _print_vertex_distance_index, &i, sizeof(i), vertices);
+      hpx_call(index, _print_vertex_distance_index, vertices, &i, sizeof(i));
     }
     hpx_lco_wait(vertices);
     hpx_lco_delete(vertices, HPX_NULL);
@@ -281,8 +286,9 @@ static int _main_action(_sssp_args_t *args) {
 
     
     hpx_addr_t checksum_lco = HPX_NULL;
-    if(args->checksum)hpx_call_sync(sargs.graph, dimacs_checksum, &el.num_vertices, sizeof(el.num_vertices),
-                  &checksum_lco, sizeof(checksum_lco));
+    if(args->checksum)hpx_call_sync(sargs.graph, dimacs_checksum,
+                                    &checksum_lco, sizeof(checksum_lco),
+                                    &el.num_vertices, sizeof(el.num_vertices));
     size_t checksum = 0;
     if(args->checksum) {
       hpx_lco_get(checksum_lco, sizeof(checksum), &checksum);
@@ -291,7 +297,9 @@ static int _main_action(_sssp_args_t *args) {
 
     //printf("Computing GTEPS...\n");
     hpx_addr_t gteps_lco = HPX_NULL;
-    hpx_call_sync(sargs.graph, gteps_calculate, &el.num_vertices, sizeof(el.num_vertices), &gteps_lco, sizeof(gteps_lco));
+    hpx_call_sync(sargs.graph, gteps_calculate, &gteps_lco,
+                  sizeof(gteps_lco), &el.num_vertices,
+                  sizeof(el.num_vertices));
     size_t gteps = 0;
     hpx_lco_get(gteps_lco, sizeof(gteps), &gteps);
     hpx_lco_delete(gteps_lco, HPX_NULL);

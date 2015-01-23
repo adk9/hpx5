@@ -69,7 +69,7 @@ START_TEST (test_libhpx_lco_future_new)
     addresses[i] = &values[i];
     sizes[i] = sizeof(uint64_t);
     futures[i] = hpx_lco_future_new(sizeof(uint64_t));
-    hpx_call(HPX_THERE(i), t06_get_value, NULL, 0, futures[i]);
+    hpx_call(HPX_THERE(i), t06_get_value, futures[i], NULL, 0);
   }
 
   hpx_lco_get_all(count, futures, sizes, addresses, NULL);
@@ -79,7 +79,7 @@ START_TEST (test_libhpx_lco_future_new)
   for (int i = 0; i < count; i++) {
     hpx_lco_delete(futures[i], HPX_NULL);
     futures[i] = hpx_lco_future_new(0);
-    hpx_call(HPX_THERE(i), t06_set_value, &value, sizeof(value), futures[i]);
+    hpx_call(HPX_THERE(i), t06_set_value, futures[i], &value, sizeof(value));
   }
 
   hpx_lco_get_all(count, futures, sizes, addresses, NULL);
@@ -113,7 +113,7 @@ START_TEST (test_libhpx_lco_future_array)
   hpx_addr_t base = hpx_lco_future_array_new(2, sizeof(uint64_t), 1);
   hpx_addr_t other = hpx_lco_future_array_at(base, 1, sizeof(uint64_t), 1);
 
-  hpx_call_sync(other, t06_get_future_value, NULL, 0, &value, sizeof(value));
+  hpx_call_sync(other, t06_get_future_value, &value, sizeof(value), NULL, 0);
   fprintf(test_log, "value = %"PRIu64"\n", value);
 
   fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));

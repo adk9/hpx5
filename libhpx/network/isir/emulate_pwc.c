@@ -66,7 +66,7 @@ static int _emulate_gwc_handler(struct isir_emulate_gwc_args *args) {
 
   // hpx_call copies the data out of the buffer and into the parcel
   // synchronously, so we can unpin that buffer as soon as the call returns.
-  int e = hpx_call(to, isir_emulate_pwc, from, n, complete);
+  int e = hpx_call(to, isir_emulate_pwc, complete, from, n);
   gas->unpin(p->target);
   return e;
 }

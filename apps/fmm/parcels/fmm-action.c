@@ -22,8 +22,8 @@ int _fmm_main_action(void) {
   // Populate test data
   hpx_addr_t bound_src = hpx_lco_future_new(sizeof(double) * 6);
   hpx_addr_t bound_tar = hpx_lco_future_new(sizeof(double) * 6);
-  hpx_call(sources, _init_sources, NULL, 0, bound_src);
-  hpx_call(targets, _init_targets, NULL, 0, bound_tar);
+  hpx_call(sources, _init_sources, bound_src, NULL, 0);
+  hpx_call(targets, _init_targets, bound_tar, NULL, 0);
 
   // Determine the smallest bounding box
   double temp_src[6] = {0}, temp_tar[6] = {0};
@@ -44,8 +44,8 @@ int _fmm_main_action(void) {
   hpx_addr_t roots_done = hpx_lco_and_new(2);
   hpx_addr_t source_root = hpx_gas_alloc(sizeof(fmm_box_t));
   hpx_addr_t target_root = hpx_gas_alloc(sizeof(fmm_box_t));
-  hpx_call(source_root, _init_source_root, NULL, 0, roots_done);
-  hpx_call(target_root, _init_target_root, NULL, 0, roots_done);
+  hpx_call(source_root, _init_source_root, roots_done, NULL, 0);
+  hpx_call(target_root, _init_target_root, roots_done, NULL, 0);
   hpx_lco_wait(roots_done);
   hpx_lco_delete(roots_done, HPX_NULL);
 
@@ -64,8 +64,8 @@ int _fmm_main_action(void) {
     .corner[1] = (ymax + ymin - size) * 0.5,
     .corner[2] = (zmax + zmin - size) * 0.5
   };
-  hpx_bcast(_init_param, &init_param_arg, sizeof(init_param_action_arg_t),
-        params_done);
+  hpx_bcast(_init_param, params_done, &init_param_arg,
+            sizeof(init_param_action_arg_t));
   hpx_lco_wait(params_done);
   hpx_lco_delete(params_done, HPX_NULL);
 
@@ -73,13 +73,13 @@ int _fmm_main_action(void) {
   // aggregate action is invoked immediately when a leaf is reached
   hpx_addr_t partition_done = hpx_lco_and_new(2);
   char type1 = 'S', type2 = 'T';
-  hpx_call(source_root, _partition_box, &type1, sizeof(type1), partition_done);
-  hpx_call(target_root, _partition_box, &type2, sizeof(type2), partition_done);
+  hpx_call(source_root, _partition_box, partition_done, &type1, sizeof(type1));
+  hpx_call(target_root, _partition_box, partition_done, &type2, sizeof(type2));
   hpx_lco_wait(partition_done);
   hpx_lco_delete(partition_done, HPX_NULL);
 
   // Spawn disaggregate action along the target tree
-  hpx_call(target_root, _disaggregate, NULL, 0, HPX_NULL);
+  hpx_call(target_root, _disaggregate, HPX_NULL, NULL, 0);
 
   // Wait for completion
   hpx_lco_wait(fmm_param->fmm_done);
@@ -335,7 +335,7 @@ int _partition_box_action(void *args) {
 
   hpx_addr_t points = (type == 'S' ? fmm_param->sources : fmm_param->targets);
   hpx_addr_t partition = hpx_lco_future_new(sizeof(int) * 16);
-  hpx_call(points, _swap, &temp, sizeof(swap_action_arg_t), partition);
+  hpx_call(points, _swap, partition, &temp, sizeof(swap_action_arg_t));
 
   int result[16] = {0}, *subparts = &result[0], *addrs = &result[8];
   hpx_lco_get(partition, sizeof(int) * 16, result);
@@ -366,8 +366,7 @@ int _partition_box_action(void *args) {
         .index[1] = box->index[1] * 2 + yoff[i],
         .index[2] = box->index[2] * 2 + zoff[i]
       };
-      hpx_call(box->child[i], _set_box, &cbox, sizeof(set_box_action_arg_t),
-           branch);
+      hpx_call(box->child[i], _set_box, branch, &cbox, sizeof(set_box_action_arg_t));
     }
   }
   hpx_lco_wait(branch);
@@ -492,13 +491,13 @@ int _set_box_action(void *args) {
   if (box->npts > s) {
     // Continue partitioning the box if it contains more than s points
     hpx_addr_t status = hpx_lco_future_new(0);
-    hpx_call(curr, _partition_box, &type, sizeof(type), status);
+    hpx_call(curr, _partition_box, status, &type, sizeof(type));
     hpx_lco_wait(status);
     hpx_lco_delete(status, HPX_NULL);
   } else {
     // Start the aggregate action at a leaf source box
     if (type == 'S') {
-      hpx_call(curr, _aggregate, NULL, 0, HPX_NULL);
+      hpx_call(curr, _aggregate, HPX_NULL, NULL, 0);
     }
   }
 
@@ -525,7 +524,7 @@ int _aggregate_action(void *args) {
     };
 
     hpx_addr_t result = hpx_lco_future_new(sizeof(double complex) * pgsz);
-    hpx_call(fmm_param->sources, _source_to_mpole, &temp, sizeof(temp), result);
+    hpx_call(fmm_param->sources, _source_to_mpole, result, &temp, sizeof(temp));
     hpx_lco_get(result, sizeof(double complex) * pgsz, &sbox->expansion[0]);
     hpx_lco_delete(result, HPX_NULL);
   } else {
@@ -541,14 +540,14 @@ int _aggregate_action(void *args) {
   if (sbox->nchild == 0 || last_arrival == true) {
     // Spawn tasks to translate multipole expansion into exponential expansions
     const char dir[3] = {'z', 'y', 'x'};
-    hpx_call(curr, _mpole_to_expo, &dir[0], sizeof(char), sbox->expan_avail);
-    hpx_call(curr, _mpole_to_expo, &dir[1], sizeof(char), sbox->expan_avail);
-    hpx_call(curr, _mpole_to_expo, &dir[2], sizeof(char), sbox->expan_avail);
+    hpx_call(curr, _mpole_to_expo, sbox->expan_avail, &dir[0], sizeof(char));
+    hpx_call(curr, _mpole_to_expo, sbox->expan_avail, &dir[1], sizeof(char));
+    hpx_call(curr, _mpole_to_expo, sbox->expan_avail, &dir[2], sizeof(char));
 
     // Spawn task to translate the multipole expansion to its parent box
     int ichild = (sbox->index[2] % 2) * 4 + (sbox->index[1] % 2) * 2 +
       (sbox->index[0] % 2);
-    hpx_call(curr, _mpole_to_mpole, &ichild, sizeof(int), HPX_NULL);
+    hpx_call(curr, _mpole_to_mpole, HPX_NULL, &ichild, sizeof(int));
   }
 
   hpx_gas_unpin(curr);
@@ -756,8 +755,8 @@ int _multipole_to_multipole_action(void *args) {
     }
   }
 
-  hpx_call(sbox->parent, _aggregate, mpolen,
-       sizeof(double complex) * pgsz, HPX_NULL);
+  hpx_call(sbox->parent, _aggregate, HPX_NULL, mpolen,
+       sizeof(double complex) * pgsz);
 
   free(ephi);
   free(powers);
@@ -906,7 +905,7 @@ int _disaggregate_action(void *args) {
     output->list5[0] = list5[0];
     for (int i = 0; i < 8; i++) {
       if (tbox->child[i])
-        hpx_call(tbox->child[i], _disaggregate, output, argsz, HPX_NULL);
+        hpx_call(tbox->child[i], _disaggregate, HPX_NULL, output, argsz);
     }
   } else {
     int nplist1 = input->nlist1;
@@ -917,13 +916,13 @@ int _disaggregate_action(void *args) {
     for (int i = 0; i < nplist5; i++) {
       hpx_addr_t entry = input->list5[i];
       result5[i] = hpx_lco_future_new(sizeof(build_list5_action_return_t) * 4);
-      hpx_call(entry, _build_list5, &tbox->index[0], sizeof(int) * 3, result5[i]);
+      hpx_call(entry, _build_list5, result5[i], &tbox->index[0], sizeof(int) * 3);
     }
 
     for (int i = 0; i < nplist1; i++) {
       hpx_addr_t entry = input->list1[i];
       result1[i] = hpx_lco_future_new(sizeof(int) * 5);
-      hpx_call(entry, _query_box, NULL, 0, result1[i]);
+      hpx_call(entry, _query_box, result1[i], NULL, 0);
     }
 
     // Get lists 1 and 5 results
@@ -963,8 +962,8 @@ int _disaggregate_action(void *args) {
           .level = tbox->level
         };
 
-        hpx_call(fmm_param->sources, _source_to_local, &source_to_local_arg,
-           sizeof(source_to_local_action_arg_t), result1[i]);
+        hpx_call(fmm_param->sources, _source_to_local, result1[i], &source_to_local_arg,
+           sizeof(source_to_local_action_arg_t));
       } else {
         // The source box in plist1 is a list 1 entry of tbox
         hpx_lco_delete(result1[i], HPX_NULL);
@@ -979,7 +978,7 @@ int _disaggregate_action(void *args) {
         char type = 'T';
         for (int i = 0; i < 8; i++) {
           if (tbox->child[i])
-            hpx_call(tbox->child[i], _delete_box, &type, sizeof(char), HPX_NULL);
+            hpx_call(tbox->child[i], _delete_box, HPX_NULL, &type, sizeof(char));
           tbox->child[i] = HPX_NULL;
         }
         tbox->nchild = 0;
@@ -1000,22 +999,22 @@ int _disaggregate_action(void *args) {
         };
 
         for (int i = 0; i < nlist5; i++)
-           hpx_call(list5[i], _merge_expo, &merge_expo_arg,
-             sizeof(merge_expo_action_arg_t), HPX_NULL);
+           hpx_call(list5[i], _merge_expo, HPX_NULL, &merge_expo_arg,
+             sizeof(merge_expo_action_arg_t));
 
         // Wait on merge operation to complete
         for (int i = 0; i < 28; i++)
            hpx_lco_wait(tbox->and_gates[i]);
 
         // Shift the merged exponentials to the child boxes
-        hpx_call(curr, _shift_expo_c1, NULL, 0, HPX_NULL);
-        hpx_call(curr, _shift_expo_c2, NULL, 0, HPX_NULL);
-        hpx_call(curr, _shift_expo_c3, NULL, 0, HPX_NULL);
-        hpx_call(curr, _shift_expo_c4, NULL, 0, HPX_NULL);
-        hpx_call(curr, _shift_expo_c5, NULL, 0, HPX_NULL);
-        hpx_call(curr, _shift_expo_c6, NULL, 0, HPX_NULL);
-        hpx_call(curr, _shift_expo_c7, NULL, 0, HPX_NULL);
-        hpx_call(curr, _shift_expo_c8, NULL, 0, HPX_NULL);
+        hpx_call(curr, _shift_expo_c1, HPX_NULL, NULL, 0);
+        hpx_call(curr, _shift_expo_c2, HPX_NULL, NULL, 0);
+        hpx_call(curr, _shift_expo_c3, HPX_NULL, NULL, 0);
+        hpx_call(curr, _shift_expo_c4, HPX_NULL, NULL, 0);
+        hpx_call(curr, _shift_expo_c5, HPX_NULL, NULL, 0);
+        hpx_call(curr, _shift_expo_c6, HPX_NULL, NULL, 0);
+        hpx_call(curr, _shift_expo_c7, HPX_NULL, NULL, 0);
+        hpx_call(curr, _shift_expo_c8, HPX_NULL, NULL, 0);
       }
     }
 
@@ -1045,8 +1044,8 @@ int _disaggregate_action(void *args) {
         output->list5[i] = list5[i];
       for (int i = 0; i < 8; i++) {
         if (tbox->child[i]) {
-          hpx_call(curr, _local_to_local, &i, sizeof(int), HPX_NULL);
-          hpx_call(tbox->child[i], _disaggregate, output, argsz, HPX_NULL);
+          hpx_call(curr, _local_to_local, HPX_NULL, &i, sizeof(int));
+          hpx_call(tbox->child[i], _disaggregate, HPX_NULL, output, argsz);
         }
       }
     } else {
@@ -1066,8 +1065,8 @@ int _disaggregate_action(void *args) {
        for (int i = 0; i < nlist5; i++)
          proc_target_arg.list5[i] = list5[i];
 
-       hpx_call(fmm_param->targets, _proc_target, &proc_target_arg,
-           sizeof(proc_target_action_arg_t), HPX_NULL);
+       hpx_call(fmm_param->targets, _proc_target, HPX_NULL, &proc_target_arg,
+           sizeof(proc_target_action_arg_t));
       }
     }
   }
@@ -1098,7 +1097,7 @@ int _build_list5_action(void *args) {
       if (fabs(dx) <= 1 && fabs(dy) <= 1 && fabs(dz) <= 1) {
         result[iter].box = sbox->child[i];
         query[iter] = hpx_lco_future_new(sizeof(int) * 5);
-        hpx_call(sbox->child[i], _query_box, NULL, 0, query[iter++]);
+        hpx_call(sbox->child[i], _query_box, query[iter++], NULL, 0);
       }
     }
   }
@@ -1204,7 +1203,7 @@ int _delete_box_action(void *args) {
   hpx_gas_try_pin(curr, (void *)&box);
   for (int i = 0; i < 8; i++) {
     if (box->child[i])
-      hpx_call(box->child[i], _delete_box, NULL, 0, HPX_NULL);
+      hpx_call(box->child[i], _delete_box, HPX_NULL, NULL, 0);
   }
   hpx_lco_delete(box->sema, HPX_NULL);
   hpx_lco_delete(box->expan_avail, HPX_NULL);
@@ -1280,8 +1279,8 @@ int _merge_exponential_action(void *args) {
             calloc(1, sizeof(merge_update_action_arg_t));
           merge_update_arg->label = label;
           merge_update_arg->size = 0;
-          hpx_call(input->box, _merge_update, merge_update_arg,
-             sizeof(merge_update_action_arg_t), HPX_NULL);
+          hpx_call(input->box, _merge_update, HPX_NULL, merge_update_arg,
+                   sizeof(merge_update_action_arg_t));
           free(merge_update_arg);
         } else {
           merge_expo_z_action_arg_t temp = {
@@ -1292,27 +1291,33 @@ int _merge_exponential_action(void *args) {
           if (label <= 1) {
             temp.offx = dx;
             temp.offy = dy;
-            hpx_call(sbox->child[i], _merge_expo_zp, &temp, sizeof(temp), HPX_NULL);
+            hpx_call(sbox->child[i], _merge_expo_zp, HPX_NULL, &temp,
+                     sizeof(temp));
           } else if (label <= 5) {
             temp.offx = dz;
             temp.offy = dx;
-            hpx_call(sbox->child[i], _merge_expo_zp, &temp, sizeof(temp), HPX_NULL);
+            hpx_call(sbox->child[i], _merge_expo_zp, HPX_NULL, &temp,
+                     sizeof(temp));
           } else if (label <= 13) {
             temp.offx = -dz;
             temp.offy = dy;
-            hpx_call(sbox->child[i], _merge_expo_zp, &temp, sizeof(temp), HPX_NULL);
+            hpx_call(sbox->child[i], _merge_expo_zp, HPX_NULL, &temp,
+                     sizeof(temp));
           } else if (label <= 15) {
             temp.offx = dx;
             temp.offy = dy;
-            hpx_call(sbox->child[i], _merge_expo_zm, &temp, sizeof(temp), HPX_NULL);
+            hpx_call(sbox->child[i], _merge_expo_zm, HPX_NULL, &temp,
+                     sizeof(temp));
           } else if (label <= 19) {
             temp.offx = dz;
             temp.offy = dx;
-            hpx_call(sbox->child[i], _merge_expo_zm, &temp, sizeof(temp), HPX_NULL);
+            hpx_call(sbox->child[i], _merge_expo_zm, HPX_NULL, &temp,
+                     sizeof(temp));
           } else {
             temp.offx = -dz;
             temp.offy = dy;
-            hpx_call(sbox->child[i], _merge_expo_zm, &temp, sizeof(temp), HPX_NULL);
+            hpx_call(sbox->child[i], _merge_expo_zm, HPX_NULL, &temp,
+                     sizeof(temp));
           }
         }
       }
@@ -1378,9 +1383,8 @@ int _merge_exponential_zp_action(void *args) {
   }
 
   hpx_gas_unpin(curr);
-  hpx_call(input->box, _merge_update, merge_update_arg,
-       sizeof(merge_update_action_arg_t) + sizeof(double complex) * nexpmax,
-       HPX_NULL);
+  hpx_call(input->box, _merge_update, HPX_NULL, merge_update_arg,
+       sizeof(merge_update_action_arg_t) + sizeof(double complex) * nexpmax);
   free(merge_update_arg);
   return HPX_SUCCESS;
 }
@@ -1441,9 +1445,8 @@ int _merge_exponential_zm_action(void *args) {
   }
 
   hpx_gas_unpin(curr);
-  hpx_call(input->box, _merge_update, merge_update_arg,
-       sizeof(merge_update_action_arg_t) + sizeof(double complex) * nexpmax,
-       HPX_NULL);
+  hpx_call(input->box, _merge_update, HPX_NULL, merge_update_arg,
+       sizeof(merge_update_action_arg_t) + sizeof(double complex) * nexpmax);
   free(merge_update_arg);
   return HPX_SUCCESS;
 }
@@ -1564,8 +1567,8 @@ int _shift_exponential_c1_action(void) {
     for (int i = 0; i < pgsz; i++)
       local[i] += mw2[i];
 
-    hpx_call(tbox->child[0], _merge_local, local,
-         sizeof(double complex) * pgsz, HPX_NULL);
+    hpx_call(tbox->child[0], _merge_local, HPX_NULL, local,
+         sizeof(double complex) * pgsz);
 
     free(temp);
     free(local);
@@ -1673,8 +1676,8 @@ int _shift_exponential_c2_action(void) {
     for (int i = 0; i < pgsz; i++)
       local[i] += mw2[i];
 
-    hpx_call(tbox->child[1], _merge_local, local,
-         sizeof(double complex) * pgsz, HPX_NULL);
+    hpx_call(tbox->child[1], _merge_local, HPX_NULL, local,
+         sizeof(double complex) * pgsz);
     free(temp);
     free(local);
     free(mexpf1);
@@ -1781,8 +1784,8 @@ int _shift_exponential_c3_action(void) {
     for (int i = 0; i < pgsz; i++)
       local[i] += mw2[i];
 
-    hpx_call(tbox->child[2], _merge_local, local,
-         sizeof(double complex) * pgsz, HPX_NULL);
+    hpx_call(tbox->child[2], _merge_local, HPX_NULL, local,
+         sizeof(double complex) * pgsz);
 
     free(temp);
     free(local);
@@ -1890,8 +1893,8 @@ int _shift_exponential_c4_action(void) {
     for (int i = 0; i < pgsz; i++)
       local[i] += mw2[i];
 
-    hpx_call(tbox->child[3], _merge_local, local,
-         sizeof(double complex) * pgsz, HPX_NULL);
+    hpx_call(tbox->child[3], _merge_local, HPX_NULL, local,
+         sizeof(double complex) * pgsz);
 
     free(temp);
     free(local);
@@ -1997,8 +2000,8 @@ int _shift_exponential_c5_action(void) {
     for (int i = 0; i < pgsz; i++)
       local[i] += mw2[i];
 
-    hpx_call(tbox->child[4], _merge_local, local,
-         sizeof(double complex) * pgsz, HPX_NULL);
+    hpx_call(tbox->child[4], _merge_local, HPX_NULL, local,
+         sizeof(double complex) * pgsz);
 
     free(temp);
     free(local);
@@ -2105,8 +2108,8 @@ int _shift_exponential_c6_action(void) {
     for (int i = 0; i < pgsz; i++)
       local[i] += mw2[i];
 
-    hpx_call(tbox->child[5], _merge_local, local,
-         sizeof(double complex) * pgsz, HPX_NULL);
+    hpx_call(tbox->child[5], _merge_local, HPX_NULL, local,
+         sizeof(double complex) * pgsz);
 
     free(temp);
     free(local);
@@ -2213,8 +2216,8 @@ int _shift_exponential_c7_action(void) {
     for (int i = 0; i < pgsz; i++)
       local[i] += mw2[i];
 
-    hpx_call(tbox->child[6], _merge_local, local,
-         sizeof(double complex) * pgsz, HPX_NULL);
+    hpx_call(tbox->child[6], _merge_local, HPX_NULL, local,
+         sizeof(double complex) * pgsz);
 
     free(temp);
     free(local);
@@ -2322,8 +2325,8 @@ int _shift_exponential_c8_action(void) {
     for (int i = 0; i < pgsz; i++)
       local[i] += mw2[i];
 
-    hpx_call(tbox->child[7], _merge_local, local,
-         sizeof(double complex) * pgsz, HPX_NULL);
+    hpx_call(tbox->child[7], _merge_local, HPX_NULL, local,
+         sizeof(double complex) * pgsz);
 
     free(temp);
     free(local);
@@ -2610,8 +2613,8 @@ int _local_to_local_action(void *args) {
     }
   }
 
-  hpx_call(tbox->child[ichild], _merge_local, localn,
-       sizeof(double complex) * pgsz, HPX_NULL);
+  hpx_call(tbox->child[ichild], _merge_local, HPX_NULL, localn,
+       sizeof(double complex) * pgsz);
   free(ephi);
   free(powers);
   free(localn);
@@ -2638,8 +2641,8 @@ int _proc_target_action(void *args) {
   hpx_addr_t list1_result = hpx_lco_future_new(sizeof(double) * 4);
   hpx_addr_t list5_result = hpx_lco_future_new(sizeof(double) * 4);
 
-  hpx_call(input->box, _local_to_target, position, sizeof(double) * 3,
-       far_field_result);
+  hpx_call(input->box, _local_to_target, far_field_result, position,
+           sizeof(double) * 3);
 
   if (nlist1) {
     proc_list1_action_arg_t proc_list1_arg = {
@@ -2658,8 +2661,8 @@ int _proc_target_action(void *args) {
     for (int i = 0; i < nlist1; i++)
       proc_list1_arg.list1[i] = input->list1[i];
 
-    hpx_call(input->list1[0], _proc_list1, &proc_list1_arg,
-         sizeof(proc_list1_action_arg_t), HPX_NULL);
+    hpx_call(input->list1[0], _proc_list1, HPX_NULL, &proc_list1_arg,
+             sizeof(proc_list1_action_arg_t));
   }
 
   if (nlist5) {
@@ -2683,8 +2686,8 @@ int _proc_target_action(void *args) {
     for (int i = 0; i < nlist5; i++)
       proc_list5_arg.list5[i] = input->list5[i];
 
-    hpx_call(input->list5[0], _proc_list5, &proc_list5_arg,
-         sizeof(proc_list5_action_arg_t), HPX_NULL);
+    hpx_call(input->list5[0], _proc_list5, HPX_NULL, &proc_list5_arg,
+             sizeof(proc_list5_action_arg_t));
   }
 
   double far_field_contrib[4] = {0};
@@ -2837,8 +2840,8 @@ int _proc_list1_action(void *args) {
     .position[2] = param->position[2]
   };
 
-  hpx_call(fmm_param->sources, _source_to_target, &source_to_target_arg,
-       sizeof(source_to_target_arg), done);
+  hpx_call(fmm_param->sources, _source_to_target, done,
+           &source_to_target_arg, sizeof(source_to_target_arg));
   double contrib[4];
   hpx_lco_get(done, sizeof(double) * 4, contrib);
 
@@ -2856,8 +2859,8 @@ int _proc_list1_action(void *args) {
     temp[3] = param->field[2];
     hpx_lco_set(param->result, sizeof(double) * 4, temp, HPX_NULL, HPX_NULL);
   } else {
-    hpx_call(param->list1[param->curr], _proc_list1, param,
-         sizeof(proc_list1_action_arg_t), HPX_NULL);
+    hpx_call(param->list1[param->curr], _proc_list1, HPX_NULL, param,
+             sizeof(proc_list1_action_arg_t));
   }
   hpx_gas_unpin(curr);
   return HPX_SUCCESS;
@@ -2887,8 +2890,8 @@ int _proc_list5_action(void *args) {
       for (int i = 0; i < 8; i++) {
         if (sbox->child[i]) {
           done[counter] = hpx_lco_future_new(sizeof(double) * 4);
-          hpx_call(sbox->child[i], _proc_list5, param,
-            sizeof(proc_list5_action_arg_t), done[counter]);
+          hpx_call(sbox->child[i], _proc_list5, done[counter], param,
+                   sizeof(proc_list5_action_arg_t));
           counter++;
         }
       }
@@ -2911,8 +2914,8 @@ int _proc_list5_action(void *args) {
         .position[2] = param->position[2]
       };
 
-      hpx_call(fmm_param->sources, _source_to_target, &source_to_target_arg,
-           sizeof(source_to_target_action_arg_t), done);
+      hpx_call(fmm_param->sources, _source_to_target, done,
+               &source_to_target_arg, sizeof(source_to_target_action_arg_t));
       hpx_lco_get(done, sizeof(double) * 4, contrib);
     }
   } else {
@@ -2930,8 +2933,8 @@ int _proc_list5_action(void *args) {
         .position[2] = param->position[2]
       };
 
-      hpx_call(fmm_param->sources, _source_to_target, &source_to_target_arg,
-           sizeof(source_to_target_action_arg_t), done);
+      hpx_call(fmm_param->sources, _source_to_target, done,
+               &source_to_target_arg, sizeof(source_to_target_action_arg_t));
     }
     hpx_lco_get(done, sizeof(double) * 4, contrib);
   }
@@ -2950,8 +2953,8 @@ int _proc_list5_action(void *args) {
       temp[2] = param->field[2];
       hpx_lco_set(param->result, sizeof(double) * 4, temp, HPX_NULL, HPX_NULL);
     } else {
-      hpx_call(param->list5[param->curr], _proc_list5, param,
-           sizeof(proc_list5_action_arg_t), HPX_NULL);
+      hpx_call(param->list5[param->curr], _proc_list5, HPX_NULL, param,
+               sizeof(proc_list5_action_arg_t));
     }
   } else {
     HPX_THREAD_CONTINUE(contrib);

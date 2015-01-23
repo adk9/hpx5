@@ -112,7 +112,7 @@ static int _send_buffer_progress(send_buffer_t *sends) {
 /// The handler uses the target data to encode the peer for which the rDMA
 /// occurred. This signal indicates that we have an opportunity to progress the
 /// peer's eager send buffer.
-static HPX_ACTION(_finish_get_rx_min)(void *UNUSED) {
+static HPX_ACTION(_finish_get_rx_min, void *UNUSED) {
   uint32_t id = pgas_gpa_to_offset(hpx_thread_current_target());
   peer_t *peer = pwc_get_peer(here->network, id);
   DEBUG_IF(!peer) {

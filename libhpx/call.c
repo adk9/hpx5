@@ -39,7 +39,7 @@ static int _bcast_action(_bcast_args_t *args) {
   hpx_addr_t and = hpx_lco_and_new(here->ranks);
   uint32_t len = hpx_thread_current_args_size() - sizeof(args->action);
   for (int i = 0, e = here->ranks; i < e; ++i) {
-    hpx_call(HPX_THERE(i), args->action, args->data, len, and);
+    hpx_call(HPX_THERE(i), args->action, and, args->data, len);
   }
 
   hpx_lco_wait(and);
@@ -52,65 +52,82 @@ static HPX_CONSTRUCTOR void _init_actions(void) {
 }
 
 /// A RPC call with a user-specified continuation action.
-int hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
-                               const void *args, size_t len,
-                               hpx_addr_t c_target, hpx_action_t c_action)
-{
+int libhpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_target,
+                hpx_action_t c_action, hpx_addr_t lsync, va_list *vargs) {
+  void *args;
+  size_t len;
+  bool typed = action_table_get_args(here->actions, action, *vargs, &args, &len);
+  bool async = (lsync == HPX_NULL);
+
   hpx_parcel_t *p = parcel_create(addr, action, args, len, c_target, c_action,
-                                  hpx_thread_current_pid(), true);
-  if (!p) {
+                                  hpx_thread_current_pid(), async);
+  if (!p)
     return dbg_error("failed to create parcel.\n");
+
+  if (async) {
+    hpx_parcel_send_sync(p);
+  } else {
+    hpx_parcel_send(p, lsync);
   }
 
-  hpx_parcel_send_sync(p);
+  if (typed) {
+    free(args);
+  }
   return HPX_SUCCESS;
+}
+
+/// A RPC call with a user-specified continuation action.
+int hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
+                               hpx_addr_t c_target, hpx_action_t c_action, ...) {
+  va_list vargs;
+  va_start(vargs, c_action);
+  int e = libhpx_call(addr, action, c_target, c_action, HPX_NULL, &vargs);
+  va_end(vargs);
+  return e;
 }
 
 /// Encapsulates an asynchronous remote-procedure-call.
-int hpx_call(hpx_addr_t addr, hpx_action_t action, const void *args,
-             size_t len, hpx_addr_t result)
-{
-  return hpx_call_with_continuation(addr, action, args, len, result,
-                                    hpx_lco_set_action);
+int hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result, ...) {
+  va_list vargs;
+  va_start(vargs, result);
+  int e = libhpx_call(addr, action, result, hpx_lco_set_action, HPX_NULL, &vargs);
+  va_end(vargs);
+  return e;
 }
 
-
-int hpx_call_sync(hpx_addr_t addr, hpx_action_t action,
-                  const void *args, size_t alen,
-                  void *out, size_t olen)
-{
+int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out,
+                  size_t olen, ...) {
   hpx_addr_t result = hpx_lco_future_new(olen);
-  hpx_call(addr, action, args, alen, result);
-  int status = hpx_lco_get(result, olen, out);
-  hpx_lco_delete(result, HPX_NULL);
-  return status;
-}
+  va_list vargs;
+  va_start(vargs, olen);
+  int e = libhpx_call(addr, action, result, hpx_lco_set_action, HPX_NULL, &vargs);
+  va_end(vargs);
 
-
-int hpx_call_async(hpx_addr_t addr, hpx_action_t action,
-                   const void *args, size_t len,
-                   hpx_addr_t args_reuse, hpx_addr_t result)
-{
-  hpx_parcel_t *p = parcel_create(addr, action, args, len, result,
-                                  hpx_lco_set_action, hpx_thread_current_pid(),
-                                  false);
-  if (!p) {
-    return dbg_error("failed to create parcel.\n");
+  if (e == HPX_SUCCESS) {
+    e = hpx_lco_get(result, olen, out);
   }
 
-  hpx_parcel_send(p, args_reuse);
-  return HPX_SUCCESS;
+  hpx_lco_delete(result, HPX_NULL);
+  return e;
 }
 
+int hpx_call_async(hpx_addr_t addr, hpx_action_t action,
+                   hpx_addr_t lsync, hpx_addr_t result, ...) {
+  va_list vargs;
+  va_start(vargs, result);
+  int e = libhpx_call(addr, action, result, hpx_lco_set_action, lsync, &vargs);
+  va_end(vargs);
+  return e;
+}
 
-void hpx_call_cc(hpx_addr_t addr, hpx_action_t action, const void *args,
-                 size_t len, void (*cleanup)(void*), void *env)
-{
+int hpx_call_cc(hpx_addr_t addr, hpx_action_t action, void (*cleanup)(void*),
+                void *env, ...) {
   hpx_parcel_t *p = scheduler_current_parcel();
-  int e = hpx_call_with_continuation(addr, action, args, len, p->c_target,
-                                     p->c_action);
+  va_list vargs;
+  va_start(vargs, env);
+  int e = libhpx_call(addr, action, p->c_target, p->c_action, HPX_NULL, &vargs);
   if (e != HPX_SUCCESS) {
-    dbg_error("hpx_call_with_continuation returned an error.\n");
+    return e;
   }
   p->c_target = HPX_NULL;
   p->c_action = HPX_NULL;
@@ -118,8 +135,7 @@ void hpx_call_cc(hpx_addr_t addr, hpx_action_t action, const void *args,
 }
 
 /// Encapsulates a RPC called on all available localities.
-int hpx_bcast(hpx_action_t action, const void *data, size_t len, hpx_addr_t lco)
-{
+int hpx_bcast(hpx_action_t action, hpx_addr_t lco, const void *data, size_t len) {
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, len + sizeof(_bcast_args_t));
   hpx_parcel_set_target(p, HPX_HERE);
   hpx_parcel_set_action(p, _bcast);
@@ -142,7 +158,7 @@ int hpx_bcast_sync(hpx_action_t action, const void *data, size_t len) {
     goto unwind0;
   }
 
-  e = hpx_bcast(action, data, len, lco);
+  e = hpx_bcast(action, lco, data, len);
   if (e != HPX_SUCCESS) {
     e = dbg_error("hpx_bcast returned an error.\n");
     goto unwind1;
@@ -158,30 +174,4 @@ int hpx_bcast_sync(hpx_action_t action, const void *data, size_t len) {
   hpx_lco_delete(lco, HPX_NULL);
  unwind0:
   return e;
-}
-
-/// Experimental HPX typed call interface.
-int hpx_typed_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
-                                     hpx_addr_t c_target, hpx_action_t c_action,
-                                     ...)
-{
-  void *args;
-  size_t len;
-  va_list vargs;
-  va_start(vargs, c_action);
-  int e = action_table_get_args(here->actions, action, vargs, &args, &len);
-  if (e != LIBHPX_OK) {
-    dbg_error("error getting arguments associated with action id %d\n", action);
-  }
-  va_end(vargs);
-
-  hpx_parcel_t *p = parcel_create(addr, action, args, len, HPX_NULL, HPX_ACTION_NULL,
-                                  hpx_thread_current_pid(), true);
-  if (!p) {
-    return dbg_error("failed to create parcel.\n");
-  }
-
-  hpx_parcel_send_sync(p);
-  free(args);
-  return HPX_SUCCESS;
 }

@@ -238,7 +238,7 @@ hpx_addr_t hpx_lco_future_new(int size) {
 void hpx_lco_future_reset(hpx_addr_t future, hpx_addr_t sync) {
   _future_t *f;
   if (!hpx_gas_try_pin(future, (void**)&f)) {
-    hpx_call_async(future, _future_reset_action, NULL, 0, HPX_NULL, sync);
+    hpx_call_async(future, _future_reset_action, HPX_NULL, sync, NULL, 0);
     return;
   }
 
@@ -263,7 +263,7 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {
   hpx_addr_t and = hpx_lco_and_new(blocks);
   for (int i = 0; i < blocks; ++i) {
     hpx_addr_t there = hpx_addr_add(base, i * block_bytes, block_bytes);
-    int e = hpx_call(there, _block_init, args, sizeof(args), and);
+    int e = hpx_call(there, _block_init, and, args, sizeof(args));
     dbg_check(e, "call of _block_init failed\n");
   }
   hpx_lco_wait(and);

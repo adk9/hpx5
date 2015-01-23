@@ -93,7 +93,7 @@ static int _main_action(int *args) {
 
   hpx_addr_t and = hpx_lco_and_new(NUM_THREADS);
   for (i = 0; i < NUM_THREADS; i++) 
-    hpx_call(HPX_HERE, _dotprod, &i, sizeof(i), and);
+    hpx_call(HPX_HERE, _dotprod, and, &i, sizeof(i));
 
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);

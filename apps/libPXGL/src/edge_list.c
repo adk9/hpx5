@@ -58,7 +58,7 @@ int _edge_list_from_file_local_action(const _edge_list_from_file_local_args_t *a
       // printf("%s", &line[1]);
       const sssp_uint_t position = count++ + skipped;
       hpx_addr_t e = hpx_addr_add(args->el.edge_list, position * sizeof(edge_list_edge_t), args->el.edge_list_bsize);
-      hpx_call(e, _put_edge_edgelist, edge, sizeof(*edge), HPX_NULL);
+      hpx_call(e, _put_edge_edgelist, HPX_NULL, edge, sizeof(*edge));
       continue;
     case 'p': continue;
     default:
@@ -106,7 +106,8 @@ int edge_list_from_file_action(const edge_list_from_file_args_t * const args) {
 
   hpx_addr_t init_termination_count_lco = hpx_lco_future_new(0);
   // printf("Starting initialization bcast.\n");
-  hpx_bcast(_initialize_termination_detection, NULL, 0, init_termination_count_lco);
+  hpx_bcast(_initialize_termination_detection, init_termination_count_lco,
+            NULL, 0);
   // printf("Waiting on bcast.\n");
   hpx_lco_wait(init_termination_count_lco);
   hpx_lco_delete(init_termination_count_lco, HPX_NULL);
@@ -121,7 +122,8 @@ int edge_list_from_file_action(const edge_list_from_file_args_t * const args) {
   for(unsigned int locality_desc = 0; locality_desc < args->locality_readers; ++locality_desc) {
     for(unsigned int thread_desc = 0; thread_desc < args->thread_readers; ++thread_desc) {
       local_args->edges_skip = ((locality_desc * args->thread_readers) + thread_desc) * thread_chunk;
-      hpx_call(HPX_THERE(locality_desc), _edge_list_from_file_local, local_args, local_args_size, HPX_NULL);
+      hpx_call(HPX_THERE(locality_desc), _edge_list_from_file_local,
+               HPX_NULL, local_args, local_args_size);
     }
   }
   double elapsed = hpx_time_elapsed_ms(now)/1e3;

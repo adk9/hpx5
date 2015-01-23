@@ -203,7 +203,7 @@ void make_one_edge(int64_t nverts, int level, int lgN, mrg_state* st, const grap
   const int64_t position = edge_index * 2;
   //printf("Inserting at position %" PRId64 " \n", position);
   hpx_addr_t e = hpx_addr_add(args->el.edge_list, position * sizeof(edge_list_edge_t), args->el.edge_list_bsize); //TODO: verify
-  hpx_call(e, _put_edge_in_edgelist, edge, sizeof(*edge), HPX_NULL);
+  hpx_call(e, _put_edge_in_edgelist, HPX_NULL, edge, sizeof(*edge));
   
    //now insert flipped edge
    sssp_uint_t temp = edge->source; 
@@ -211,7 +211,7 @@ void make_one_edge(int64_t nverts, int level, int lgN, mrg_state* st, const grap
    edge->dest = temp;
    hpx_addr_t e_1 = hpx_addr_add(args->el.edge_list, (position+1) * sizeof(edge_list_edge_t), args->el.edge_list_bsize); //TODO: verify
    //printf("Reverse direction Inserting at position %"PRId64 " \n", position+1);
-   hpx_call(e_1, _put_edge_in_edgelist, edge, sizeof(*edge), HPX_NULL); 
+   hpx_call(e_1, _put_edge_in_edgelist, HPX_NULL, edge, sizeof(*edge)); 
    
    // printf("Inserted 2 edges\n");
 }

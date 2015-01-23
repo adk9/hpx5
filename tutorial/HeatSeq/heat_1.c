@@ -153,7 +153,7 @@ static int _stencil_action(int *ij) {
   };
 
   for (int i = 0; i < 4; ++i) {
-    hpx_call(neighbors[i], _read_double, &vals[i], sizes[i], futures[i]);
+    hpx_call(neighbors[i], _read_double, futures[i], &vals[i], sizes[i]);
   }
 
   hpx_lco_get_all(4, futures, sizes, addrs, NULL);
@@ -169,8 +169,8 @@ static int _stencil_action(int *ij) {
   // write out the new T and continue the dT for the min reduction
   double cont_args[2] = { T, fabs(dT) };
   hpx_addr_t new_grid_addr = hpx_addr_add(new_grid, offset_of(i, j), BLOCKSIZE);
-  hpx_call_cc(new_grid_addr, _write_double, cont_args, sizeof(cont_args), NULL,
-              NULL);
+  hpx_call_cc(new_grid_addr, _write_double, NULL, NULL, cont_args,
+              sizeof(cont_args));
   return HPX_SUCCESS;
 }
 
@@ -186,7 +186,7 @@ static int _spawn_stencil_action(int *ij) {
   int j = ij[1];
 
   hpx_addr_t cell = hpx_addr_add(grid, offset_of(i, j), BLOCKSIZE);
-  hpx_call_cc(cell, _stencil, ij, 2*sizeof(int), NULL, NULL);
+  hpx_call_cc(cell, _stencil, NULL, NULL, ij, 2 * sizeof(int));
   return HPX_SUCCESS;
 }
 
@@ -219,7 +219,7 @@ static int _updateGrid_action(void *args) {
     //  for (int j = 1; j < N + 1; j++) {
     //    int args[2] = { i, j };
     //     hpx_addr_t cell = hpx_addr_add(grid, offset_of(i, j), BLOCKSIZE);
-    //     hpx_call(cell, _stencil, args, sizeof(args), min);
+    //     hpx_call(cell, _stencil, min, args, sizeof(args));
     //   }
     // }
     hpx_par_call(_spawn_stencil, 1, (N)*(N)+1 , N*N, (N+2)*(N+2), 
@@ -272,7 +272,7 @@ static int _initGlobals_action(global_args_t *args) {
 void init_globals(hpx_addr_t grid, hpx_addr_t new_grid) {
   hpx_addr_t init_lco = hpx_lco_future_new(0);
   const global_args_t init_args = { .grid = grid, .new_grid = new_grid };
-  hpx_bcast(_initGlobals, &init_args, sizeof(init_args), init_lco);
+  hpx_bcast(_initGlobals, init_lco, &init_args, sizeof(init_args));
   hpx_lco_wait(init_lco);
   hpx_lco_delete(init_lco, HPX_NULL);
 }
@@ -318,12 +318,12 @@ static int _main_action(int *input)
   hpx_addr_t complete = hpx_lco_and_new(HPX_LOCALITIES);
 
   hpx_addr_t gDone   = hpx_lco_future_new(0);
-  hpx_call(grid, _initGrid, NULL, 0, gDone);
+  hpx_call(grid, _initGrid, gDone, NULL, 0);
   hpx_lco_wait(gDone);
   hpx_lco_delete(gDone, HPX_NULL);
 
   hpx_addr_t nDone   = hpx_lco_future_new(0);
-  hpx_call(new_grid, _initGrid, NULL, 0, nDone);
+  hpx_call(new_grid, _initGrid, nDone, NULL, 0);
   hpx_lco_wait(nDone);
   hpx_lco_delete(nDone, HPX_NULL);
 
@@ -347,14 +347,14 @@ static int _main_action(int *input)
     };
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, 
                                     sizeof(Domain));
-    hpx_call(block, _initDomain, &init, sizeof(init), done);
+    hpx_call(block, _initDomain, done, &init, sizeof(init));
   }
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
 
   for (int i = 0; i < HPX_LOCALITIES; i++) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain)*i, sizeof(Domain)); 
-    hpx_call(block, _updateGrid, NULL, 0, complete);
+    hpx_call(block, _updateGrid, complete, NULL, 0);
   }
   hpx_lco_wait(complete);
   hpx_lco_delete(complete, HPX_NULL); 

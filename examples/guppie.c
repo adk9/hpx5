@@ -246,7 +246,7 @@ void _main_action(guppie_config_t *cfg)
 
   // Initialize main table
   lco = hpx_lco_future_new(0);
-  hpx_bcast(_init_table, cfg, sizeof(*cfg), lco);
+  hpx_bcast(_init_table, lco, cfg, sizeof(*cfg));
   hpx_lco_wait(lco);
   hpx_lco_delete(lco, HPX_NULL);
 
@@ -255,7 +255,7 @@ void _main_action(guppie_config_t *cfg)
 
   // Spawn a mover.
   if (_move)
-    hpx_call(HPX_HERE, _mover, cfg, sizeof(*cfg), HPX_NULL);
+    hpx_call(HPX_HERE, _mover, HPX_NULL, cfg, sizeof(*cfg));
 
   // Begin timing here
   icputime += CPUSEC();
@@ -267,7 +267,7 @@ void _main_action(guppie_config_t *cfg)
 
   // Update the table
   lco = hpx_lco_future_new(0);
-  hpx_bcast(_update_table, cfg, sizeof(*cfg), lco);
+  hpx_bcast(_update_table, lco, cfg, sizeof(*cfg));
   hpx_lco_wait(lco);
   hpx_lco_delete(lco, HPX_NULL);
 
@@ -287,7 +287,7 @@ void _main_action(guppie_config_t *cfg)
   for (i=0; i<cfg->nupdate; i++) {
     temp = (temp << 1) ^ (((long) temp < 0) ? POLY : 0);
     there = hpx_addr_add(cfg->table, (temp & (cfg->tabsize-1))* BLOCK_SIZE, BLOCK_SIZE);
-    hpx_call(there, _bitwiseor, &temp, sizeof(temp), lco);
+    hpx_call(there, _bitwiseor, lco, &temp, sizeof(temp));
   }
   hpx_lco_wait(lco);
   hpx_lco_delete(lco, HPX_NULL);

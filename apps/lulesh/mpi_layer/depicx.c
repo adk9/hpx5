@@ -32,7 +32,7 @@ static int _hpxmain_action(int args[3] /* hpxranks, nx, its */) {
     get_ranks_per_node(i, &size, &ranks_there, NULL);
 
     for (int j = 0; j < ranks_there; ++j)
-      hpx_call(HPX_THERE(i), _lulesh, &args[1], 2 * sizeof(int), and);
+      hpx_call(HPX_THERE(i), _lulesh, and, &args[1], 2 * sizeof(int));
   }
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);

@@ -60,7 +60,7 @@ action_allreduce(void *unused) {
     addrs[i] = &values[i];
     sizes[i] = sizeof(T);
     futures[i] = hpx_lco_future_new(sizeof(T));
-    hpx_call(HPX_THERE(i), get_value, NULL, 0, futures[i]);
+    hpx_call(HPX_THERE(i), get_value, futures[i], NULL, 0);
   }
 
   hpx_lco_get_all(num_ranks, futures, sizes, addrs, NULL);
@@ -70,7 +70,7 @@ action_allreduce(void *unused) {
   for (int i = 0; i < num_ranks; ++i) {
     hpx_lco_delete(futures[i], HPX_NULL);
     futures[i] = hpx_lco_future_new(0);
-    hpx_call(HPX_THERE(i), set_value, &value, sizeof(value), futures[i]);
+    hpx_call(HPX_THERE(i), set_value, futures[i], &value, sizeof(value));
   }
 
   hpx_lco_get_all(num_ranks, futures, sizes, addrs, NULL);

@@ -80,8 +80,9 @@ static int _main_action(void *args) {
     char *local;
 
     hpx_addr_t rfut = hpx_lco_future_new(sizeof(void*));
-    hpx_call(remote, _init_array, &size, sizeof(size), rfut);
-    hpx_call_sync(data, _init_array, &size, sizeof(size), &local, sizeof(local));
+    hpx_call(remote, _init_array, rfut, &size, sizeof(size));
+    hpx_call_sync(data, _init_array, &local, sizeof(local), &size,
+                  sizeof(size));
     hpx_lco_wait(rfut);
     hpx_lco_delete(rfut, HPX_NULL);
 
