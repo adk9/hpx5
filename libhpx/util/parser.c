@@ -193,7 +193,6 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_logat_help = hpx_options_t_help[14] ;
   args_info->hpx_logat_min = -1;
   args_info->hpx_logat_max = -1;
-<<<<<<< HEAD
   args_info->hpx_statistics_help = hpx_options_t_help[15] ;
   args_info->hpx_sendlimit_help = hpx_options_t_help[16] ;
   args_info->hpx_recvlimit_help = hpx_options_t_help[17] ;
@@ -201,16 +200,7 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_mprotectstacks_help = hpx_options_t_help[19] ;
   args_info->hpx_waitonabort_help = hpx_options_t_help[20] ;
   args_info->hpx_parcelbuffersize_help = hpx_options_t_help[22] ;
-=======
-  args_info->hpx_statistics_help = hpx_options_t_help[14] ;
-  args_info->hpx_sendlimit_help = hpx_options_t_help[15] ;
-  args_info->hpx_recvlimit_help = hpx_options_t_help[16] ;
-  args_info->hpx_configfile_help = hpx_options_t_help[17] ;
-  args_info->hpx_mprotectstacks_help = hpx_options_t_help[18] ;
-  args_info->hpx_waitonabort_help = hpx_options_t_help[19] ;
-  args_info->hpx_parcelbuffersize_help = hpx_options_t_help[21] ;
-  args_info->hpx_parceleagerlimit_help = hpx_options_t_help[22] ;
->>>>>>> Add an option for limiting the largest eager parcel we can send.
+  args_info->hpx_parceleagerlimit_help = hpx_options_t_help[23] ;
   
 }
 
