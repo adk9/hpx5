@@ -116,7 +116,7 @@ static int _advance_action(unsigned long *epoch) {
 
   // 5. spawn the next epoch
   unsigned long next = n + 1;
-  return hpx_call(local, _advance, &next, sizeof(next), HPX_NULL);
+  return hpx_call(local, _advance, HPX_NULL, &next, sizeof(next));
 }
 
 
@@ -461,7 +461,7 @@ static int _main_action(RunArgs *runargs)
     args->rank = k;
     args->ndoms = nDoms;
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k, sizeof(Domain));
-    hpx_call(block, _initDomain, args, sizeof(InitArgs) + sizeof(object) * runargs->objectsize, init);
+    hpx_call(block, _initDomain, init, args, sizeof(InitArgs) + sizeof(object) * runargs->objectsize);
   }
   hpx_lco_wait(init);
   hpx_lco_delete(init, HPX_NULL);
@@ -472,7 +472,7 @@ static int _main_action(RunArgs *runargs)
 
   for (k=0;k<nDoms;k++) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k, sizeof(Domain));
-    hpx_call(block, _advance, &epoch, sizeof(epoch), HPX_NULL);
+    hpx_call(block, _advance, HPX_NULL, &epoch, sizeof(epoch));
   }
 
   // And wait for each domain to reach the end of its simulation

@@ -182,33 +182,44 @@ hpx_action_type_t action_table_get_type(const struct action_table *table, hpx_ac
 }
 
 
-int action_table_get_args(const struct action_table *table, hpx_action_t id,
-                          va_list inargs, void **outargs, size_t *len) {
-  *outargs = NULL;
-  *len = 0;
-
+ffi_cif *action_table_get_cif(const struct action_table *table, hpx_action_t id) {
   if (id == HPX_ACTION_INVALID) {
     dbg_log("action registration is not complete");
-    return LIBHPX_ERROR;
+    return NULL;
   }
 
-  ffi_cif *cif = NULL;
   if (id < table->n) {
-    cif = table->entries[id].cif;
+    return table->entries[id].cif;
+  }
+
+  dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n);
+  return NULL;
+}
+
+
+bool action_table_get_args(const struct action_table *table, hpx_action_t id,
+                           va_list inargs, void **outargs, size_t *len) {
+  ffi_cif *cif = action_table_get_cif(table, id);
+
+  // if it is a typed action, marshall variadic arguments into a
+  // contiguous buffer, otherwise simply return the pointer to the
+  // variadic argument.
+  if (cif) {
+    void **args = (void**)malloc(sizeof(void*) * cif->nargs);
+    for (int i = 0; i < cif->nargs; ++i) {
+      args[i] = va_arg(inargs, void*);
+    }
+
+    *len = ffi_raw_size(cif);
+    ffi_raw *raw = (ffi_raw*)malloc(*len);
+    ffi_ptrarray_to_raw(cif, args, raw);
+    *outargs = (void*)raw;
+    return true;
   } else {
-    dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n);
+    *outargs = va_arg(inargs, void *);
+    *len = va_arg(inargs, size_t);
+    return false;
   }
-
-  void **args = (void**)malloc(sizeof(void*) * cif->nargs);
-  for (int i = 0; i < cif->nargs; ++i) {
-    args[i] = va_arg(inargs, void*);
-  }
-
-  *len = ffi_raw_size(cif);
-  ffi_raw *raw = (ffi_raw*)malloc(*len);
-  ffi_ptrarray_to_raw(cif, args, raw);
-  *outargs = (void*)raw;
-  return LIBHPX_OK;
 }
 
 

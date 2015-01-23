@@ -40,7 +40,7 @@ static int _main_action(void *args) {
   // successfully passed to free()"."
   hpx_addr_t local = hpx_gas_alloc(0);
   hpx_addr_t done = hpx_lco_future_new(sizeof(double));
-  hpx_call(local, _pin, NULL, 0, done);
+  hpx_call(local, _pin, done, NULL, 0);
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
   hpx_gas_free(local, HPX_NULL);
