@@ -47,14 +47,14 @@ typedef struct {
 } _get_parcel_args_t;
 
 
-static HPX_DEFINE_ACTION(PINNED_ACTION, _free_parcel)(void *UNUSED) {
+static HPX_DEFDECL_ACTION(PINNED_ACTION, _free_parcel, void *UNUSED) {
   hpx_parcel_t *p = hpx_thread_current_local_target();
   assert(p);
   hpx_parcel_release(p);
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(_get_parcel)(void *args) {
+static HPX_ACTION(_get_parcel, void *args) {
   // Extract arguments.
   _get_parcel_args_t *a = args;
   size_t bytes = a->bytes;
@@ -111,6 +111,6 @@ int peer_send_rendevous(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync) {
     .addr = lva_to_gva(p)
   };
   assert(args.addr != HPX_NULL);
-  return hpx_call(HPX_THERE(peer->rank), _get_parcel, &args, sizeof(args),
-                  lsync);
+  return hpx_call(HPX_THERE(peer->rank), _get_parcel, lsync, &args,
+                  sizeof(args));
 }
