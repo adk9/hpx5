@@ -45,7 +45,7 @@ static int _main_action(int *args) {
   int value;
 
   hpx_addr_t done = hpx_lco_future_new(sizeof(int));
-  hpx_status_t status = hpx_call(HPX_HERE, _exitSuccess, NULL, 0, done);
+  hpx_status_t status = hpx_call(HPX_HERE, _exitSuccess, done, NULL, 0);
   assert(status == HPX_SUCCESS);
 
   hpx_lco_wait(done);

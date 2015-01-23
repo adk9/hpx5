@@ -58,7 +58,7 @@ static int _main_action(int *args) {
   value = 1234;
 
   t = hpx_time_now();
-  hpx_call(HPX_HERE, _set_value, &value, sizeof(value), done);
+  hpx_call(HPX_HERE, _set_value, done, &value, sizeof(value));
   fprintf(stdout, "Value set time: %g\n", hpx_time_elapsed_ms(t));
 
   t = hpx_time_now();
@@ -89,7 +89,7 @@ static int _main_action(int *args) {
     t = hpx_time_now();
     for (int j = 0; j < count; j++) {
       t = hpx_time_now();
-      hpx_call(HPX_HERE, _get_value, NULL, 0, futures[j]);
+      hpx_call(HPX_HERE, _get_value, futures[j], NULL, 0);
       hpx_lco_wait(futures[j]);
     }
     fprintf(stdout, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));

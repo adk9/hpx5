@@ -42,7 +42,7 @@ static int _dimacs_visit_vertex_action(const hpx_addr_t *const args) {
   vertex = *v;
   hpx_gas_unpin(target);
 
-  return hpx_call(vertex, _dimacs_send_dist, args, sizeof(*args), HPX_NULL);
+  return hpx_call(vertex, _dimacs_send_dist, HPX_NULL, args, sizeof(*args));
 }
 
 hpx_action_t dimacs_checksum = 0;
@@ -54,7 +54,8 @@ int dimacs_checksum_action(const sssp_uint_t *const num_vertices) {
   uint32_t block_size = ((*num_vertices + HPX_LOCALITIES - 1) / HPX_LOCALITIES) * sizeof(hpx_addr_t);
   for (int i = 0; i < *num_vertices; ++i) {
     const hpx_addr_t vertex_index = hpx_addr_add(adj_list, i * sizeof(hpx_addr_t), block_size);
-    hpx_call(vertex_index, _dimacs_visit_vertex, &checksum_lco, sizeof(checksum_lco), HPX_NULL);
+    hpx_call(vertex_index, _dimacs_visit_vertex, HPX_NULL, &checksum_lco,
+             sizeof(checksum_lco));
   }
 
   // printf("Finished with the loop\n");

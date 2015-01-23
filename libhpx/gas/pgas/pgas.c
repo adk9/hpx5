@@ -225,8 +225,8 @@ static hpx_addr_t _pgas_gas_cyclic_alloc(size_t n, uint32_t bsize) {
     .n = n,
     .bsize = bsize
   };
-  int e = hpx_call_sync(HPX_THERE(0), pgas_cyclic_alloc, &args, sizeof(args),
-                        &addr, sizeof(addr));
+  int e = hpx_call_sync(HPX_THERE(0), pgas_cyclic_alloc, &addr, sizeof(addr),
+                        &args, sizeof(args));
   dbg_check(e, "Failed to call pgas_cyclic_alloc_handler.\n");
   DEBUG_IF (addr == HPX_NULL) {
     dbg_error("should not get HPX_NULL as a valid location\n");
@@ -244,7 +244,7 @@ static hpx_addr_t _pgas_gas_cyclic_calloc(size_t n, uint32_t bsize) {
     .bsize = bsize
   };
   int e = hpx_call_sync(HPX_THERE(0), pgas_cyclic_calloc,
-                        &args, sizeof(args), &addr, sizeof(addr));
+                        &addr, sizeof(addr), &args, sizeof(args));
   dbg_check(e, "Failed to call pgas_cyclic_calloc_handler.\n");
   DEBUG_IF (addr == HPX_NULL) {
     dbg_error("should not get HPX_NULL as a valid location\n");
@@ -284,7 +284,7 @@ static void _pgas_gas_free(hpx_addr_t gpa, hpx_addr_t sync) {
     libhpx_global_free(pgas_gpa_to_lva(offset));
   }
   else {
-    int e = hpx_call(gpa, pgas_free, NULL, 0, sync);
+    int e = hpx_call(gpa, pgas_free, sync, NULL, 0);
     dbg_check(e, "failed to call pgas_free on %"PRIu64"", gpa);
     return;
   }

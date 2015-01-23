@@ -18,13 +18,11 @@
 
 
 #include "libhpx/config.h"
-
 #include "libhpx/debug.h"
 #include "libhpx/network.h"
 #include "isir/isir.h"
 #include "pwc/pwc.h"
 #include "smp.h"
-
 
 static network_t *_default(config_t *cfg, struct boot *boot, struct gas *gas,
                            int nrx)
