@@ -109,13 +109,8 @@ hpx_addr_t pgas_gpa_add_cyclic(hpx_addr_t gpa, int64_t bytes, uint32_t bsize) {
   // sanity check
   DEBUG_IF (true) {
     const void *lva = pgas_gpa_to_lva(addr);
-    if (!heap_contains_lva(global_heap, lva)) {
+    if (!heap_contains_lva(global_heap, lva))
       dbg_error("computed out of bounds address\n");
-    }
-    const int64_t diff = pgas_gpa_sub_cyclic(addr, gpa, bsize);
-    if (diff != bytes) {
-      dbg_error("Address addition between address %"PRIu64" and offset %"PRId64" computed incorectly as %"PRIu64".  The difference is %"PRId64".\n", gpa, bytes, addr, diff);
-    }
   }
 
   return addr;
