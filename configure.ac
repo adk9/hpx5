@@ -75,11 +75,6 @@ AC_ARG_ENABLE([werror],
                   [Treat warnings as errors @<:@default=no@:>@])],
   [], [enable_werror=no])
 
-AC_ARG_ENABLE([apps],
-  [AS_HELP_STRING([--enable-apps],
-                  [Enable mini-apps @<:@default=no@:>@])],
-  [], [enable_apps=no])
-
 AC_ARG_ENABLE([tutorial],
   [AS_HELP_STRING([--enable-tutorial],
                   [Enable building of code samples from the HPX tutorial @<:@default=no@:>@])],
@@ -193,7 +188,6 @@ AM_CONDITIONAL([OS_DARWIN], [[[[ "x$host_os" = xdarwin* ]]]])
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([CPU_ARM], [test "x$host_cpu" = xarmv7l])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno])
-AM_CONDITIONAL([ENABLE_APPS], [test "x$enable_apps" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
 AM_CONDITIONAL([ENABLE_TUTORIAL], [test "x$enable_tutorial" != xno])
 AM_CONDITIONAL([ENABLE_JEMALLOC], [test "x$enable_jemalloc" != xno])
@@ -261,21 +255,6 @@ AS_IF([test "x$enable_tutorial" != xno],
   tutorial/HeatSeq/Makefile
   tutorial/CollectiveBench/Makefile
   tutorial/cpi/Makefile])])
-
-AS_IF([test "x$enable_apps" != xno],
-  [AC_CONFIG_FILES([apps/Makefile
-  apps/mpi/Makefile
-  apps/fmm/Makefile
-  apps/fmm/parcels/Makefile
-  apps/lulesh/Makefile
-  apps/lulesh/parcels/Makefile
-  apps/lulesh/newfutures/Makefile
-  apps/miniAMR/Makefile
-  apps/miniAMR/parcels/Makefile
-  apps/libPXGL/Makefile
-  apps/libPXGL/include/Makefile
-  apps/libPXGL/examples/Makefile
-  apps/libPXGL/generatorhelper/include/Makefile])])
   
 AS_IF([test "x$enable_docs" != xno],
   [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
