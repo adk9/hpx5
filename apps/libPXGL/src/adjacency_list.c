@@ -68,25 +68,17 @@ static int _increment_count_action(const void *const args) {
 
 // Action to count an edge
 static hpx_action_t _count_edge = HPX_ACTION_INVALID;
-static int _count_edge_action(const edge_list_t * const el) {
+static int _count_edge_action(const void * const args) {
   const hpx_addr_t target = hpx_thread_current_target();
 
-  const int64_t offset = hpx_addr_sub(target, el->edge_list, el->edge_list_bsize);
-
-  assert(offset / sizeof(edge_list_edge_t) < el->num_edges);
-  assert(offset % sizeof(edge_list_edge_t) == 0);
+  // printf("_count_edge with %zu.\n", target);
 
   const edge_list_edge_t * const edge;
   if (!hpx_gas_try_pin(target, (void**)&edge))
     return HPX_RESEND;
 
-  if(edge->source > 1048577) {
-    printf("Source %zu at taregt %zu (offset %" PRId64 ") too large.\n", edge->source, target, offset / sizeof(edge_list_edge_t));
-    hpx_abort();
-  } else {
-    printf("Source %zu at taregt %zu (offset %" PRId64 ").\n", edge->source, target, offset / sizeof(edge_list_edge_t));
-  }
-  
+  // if(*count_array != 272629760) printf("Huston, we have a problem: %zu.\n", *count_array);
+
   const hpx_addr_t count = hpx_addr_add(count_array, edge->source * sizeof(count_t),
                                         _count_array_block_size);
   hpx_gas_unpin(target);
@@ -190,25 +182,15 @@ static int _put_edge_index_action(const adj_list_edge_t *edge)
 }
 
 static hpx_action_t _insert_edge = HPX_ACTION_INVALID;
-static int _insert_edge_action(const edge_list_t * const el)
+static int _insert_edge_action(const void * const args)
 {
   const hpx_addr_t target = hpx_thread_current_target();
-
-  const int64_t offset = hpx_addr_sub(target, el->edge_list, el->edge_list_bsize);
-
-  assert(offset / sizeof(edge_list_edge_t) < el->num_edges);
-  assert(offset % sizeof(edge_list_edge_t) == 0);
 
   edge_list_edge_t *edge;
   if (!hpx_gas_try_pin(target, (void**)&edge))
     return HPX_RESEND;
 
   const sssp_uint_t source = edge->source;
-
-  if(source > 1048577) {
-    printf("Source %zu at taregt %zu (offset %" PRId64 ") too large.\n", source, target, offset / sizeof(edge_list_edge_t));
-    hpx_abort();
-  }
 
   adj_list_edge_t e;
   e.dest = edge->dest;
@@ -287,7 +269,7 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
     //hpx_addr_t edge = hpx_addr_add(el->edge_list, i * sizeof(edge_list_edge_t), el->edge_list_bsize);
    //hpx_call(edge, _count_edge, HPX_NULL, &count_array, sizeof(count_array));
    //}
-  hpx_count_range_call(_count_edge, el->edge_list, el->num_edges, sizeof(edge_list_edge_t), el->edge_list_bsize, sizeof(*el), el);
+  hpx_count_range_call(_count_edge, el->edge_list, el->num_edges, sizeof(edge_list_edge_t), el->edge_list_bsize, 0, NULL);
   double elapsed = hpx_time_elapsed_ms(now)/1e3;
   printf("Time elapsed in the loop: %f\n", elapsed);
   now = hpx_time_now();
@@ -322,7 +304,7 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
 
   _initialize_termination();
 
-  hpx_count_range_call(_insert_edge, el->edge_list, el->num_edges, sizeof(edge_list_edge_t), el->edge_list_bsize, sizeof(*el), el);
+  hpx_count_range_call(_insert_edge, el->edge_list, el->num_edges, sizeof(edge_list_edge_t), el->edge_list_bsize, 0, NULL);
   elapsed = hpx_time_elapsed_ms(now)/1e3;
   printf("Time elapsed in the loop: %f\n", elapsed);
   now = hpx_time_now();
