@@ -31,7 +31,7 @@ static int _main_action(void *args) {
   hpx_addr_t base = hpx_lco_future_array_new(2, sizeof(uint64_t), 1);
   hpx_addr_t other = hpx_lco_future_array_at(base, 1, sizeof(uint64_t), 1);
 
-  hpx_call_sync(other, _get, NULL, 0, &value, sizeof(value));
+  hpx_call_sync(other, _get, &value, sizeof(value), NULL, 0);
   printf("value = %"PRIu64"\n", value);
 
   hpx_shutdown(HPX_SUCCESS);

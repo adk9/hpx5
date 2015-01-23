@@ -66,8 +66,8 @@ static int _receiver_action(hpx_addr_t *channel){
 static int _main_action(void *args) {
   hpx_addr_t chan[1] = {hpx_lco_chan_new()};
   hpx_addr_t done = hpx_lco_and_new(2);
-  hpx_call(HPX_HERE, _sender, chan, sizeof(chan), done);
-  hpx_call(HPX_HERE, _receiver, chan, sizeof(chan), done);
+  hpx_call(HPX_HERE, _sender, done, chan, sizeof(chan));
+  hpx_call(HPX_HERE, _receiver, done, chan, sizeof(chan));
   hpx_lco_wait(done);
 
   hpx_lco_delete(chan[0], HPX_NULL);

@@ -466,8 +466,8 @@ static void _progress(transport_class_t *t, transport_op_t op) {
     break;
   case TRANSPORT_POLL:
     hpx_addr_t and = hpx_lco_and_new(2);
-    hpx_call(HPX_HERE, _send_progress_action, &t, sizeof(t), and);
-    hpx_call(HPX_HERE, _recv_progress_action, &t, sizeof(t), and);
+    hpx_call(HPX_HERE, _send_progress_action, and, &t, sizeof(t));
+    hpx_call(HPX_HERE, _recv_progress_action, and, &t, sizeof(t));
     hpx_lco_wait(and);
     hpx_lco_delete(and, HPX_NULL);
     break;

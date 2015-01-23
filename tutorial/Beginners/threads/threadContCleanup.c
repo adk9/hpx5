@@ -41,7 +41,7 @@ static int _main_action(int *args) {
   int rank = hpx_get_my_rank();
   uint64_t *block = malloc(DATA_SIZE);
 
-  hpx_call_sync(HPX_HERE, _cleanup, &rank, sizeof(rank), block, DATA_SIZE);
+  hpx_call_sync(HPX_HERE, _cleanup, block, DATA_SIZE, &rank, sizeof(rank));
   printf("Value in block is %"PRIu64"\n", *block);
 
   hpx_shutdown(HPX_SUCCESS);

@@ -26,7 +26,7 @@ static int _set_action(void *args) {
 static int _main_action(void *args) {
   hpx_addr_t lco = hpx_lco_and_new(1);
   hpx_addr_t done = hpx_lco_future_new(0);
-  hpx_call(HPX_HERE, _set, &lco, sizeof(lco), done);
+  hpx_call(HPX_HERE, _set, done, &lco, sizeof(lco));
 
   hpx_status_t status = hpx_lco_wait(lco);
   assert(status == HPX_LCO_ERROR);

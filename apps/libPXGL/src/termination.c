@@ -61,7 +61,8 @@ static int _send_termination_count_action(const hpx_addr_t *const args) {
 
 void set_termination(termination_t termination) {
   hpx_addr_t set_termination_lco = hpx_lco_future_new(0);
-  hpx_bcast(_set_termination, &termination, sizeof(termination), set_termination_lco);
+  hpx_bcast(_set_termination, set_termination_lco, &termination,
+            sizeof(termination));
   hpx_lco_wait(set_termination_lco);
   hpx_lco_delete(set_termination_lco, HPX_NULL);
   return;
@@ -92,7 +93,8 @@ void _detect_termination(const hpx_addr_t termination_lco, const hpx_addr_t inte
   SSSP_UINT_T last_finished_count = 0;
 
   while(true) {
-    hpx_bcast(_send_termination_count, &termination_count_lco, sizeof(termination_count_lco), HPX_NULL);
+    hpx_bcast(_send_termination_count, HPX_NULL, &termination_count_lco,
+              sizeof(termination_count_lco));
     sssp_uint_t activity_counts[2];
     hpx_lco_get(termination_count_lco, sizeof(activity_counts), activity_counts);
     const sssp_uint_t active_count = activity_counts[0];

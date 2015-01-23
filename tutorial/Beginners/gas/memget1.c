@@ -61,7 +61,7 @@ static int _main_action(void *args) {
   hpx_addr_t remote = hpx_addr_add(data, peerid * sizeof(masterCopy), sizeof(masterCopy));
 
   hpx_addr_t done = hpx_lco_future_new(sizeof(void*));
-  hpx_call(remote, _init_array, masterCopy, sizeof(masterCopy), done);
+  hpx_call(remote, _init_array, done, masterCopy, sizeof(masterCopy));
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
  
@@ -79,7 +79,7 @@ static int _main_action(void *args) {
     masterCopy[i] = (uint64_t)(((uint64_t)(i) * (uint64_t)(10)) + (uint64_t)(1));
 
   hpx_addr_t rfut = hpx_lco_future_new(0);
-  hpx_call(remote, _init_array, masterCopy, sizeof(masterCopy), rfut);
+  hpx_call(remote, _init_array, rfut, masterCopy, sizeof(masterCopy));
   hpx_lco_wait(rfut);
   hpx_lco_delete(rfut, HPX_NULL);
 

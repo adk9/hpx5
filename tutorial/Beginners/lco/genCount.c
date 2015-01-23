@@ -28,7 +28,7 @@ static int _main_action(void *args) {
   hpx_addr_t lco = hpx_lco_gencount_new(ninplace);
   hpx_addr_t done = hpx_lco_future_new(0);
   for (int i = 0; i < ninplace; i++)
-    hpx_call(HPX_HERE, _increment, &lco, sizeof(lco), done);
+    hpx_call(HPX_HERE, _increment, done, &lco, sizeof(lco));
 
   hpx_lco_gencount_wait(lco, ninplace - 1);
 

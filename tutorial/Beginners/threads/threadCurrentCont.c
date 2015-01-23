@@ -42,7 +42,7 @@ static int _threadCont_action(void *args) {
   local = SET_CONT_VALUE;
 
   hpx_addr_t completed = hpx_lco_future_new(0);
-  hpx_call(c_target, c_action, &local, DATA_SIZE, completed);
+  hpx_call(c_target, c_action, completed, &local, DATA_SIZE);
   hpx_lco_wait(completed);
   hpx_lco_delete(completed, HPX_NULL);
 

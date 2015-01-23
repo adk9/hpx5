@@ -64,7 +64,10 @@ static int _advanceDomain_action(unsigned long *epoch) {
       double elapsed_time_max;
       hpx_lco_get(domain->elapsed_ar, sizeof(double), &elapsed_time_max);
 
-      printf("\n\nElapsed time = %12.6e\n\n", elapsed_time_max/1000.0);
+      printf("\n\nSTART_LOG\n");
+      printf("PROGNAME: lulesh-newfutures\n\n");
+      printf("Elapsed time = %12.6e\n", elapsed_time_max/1000.0);
+
       printf("Run completed:  \n");
       printf("  Problem size = %d \n"
              "  Iteration count = %d \n"
@@ -90,10 +93,8 @@ static int _advanceDomain_action(unsigned long *epoch) {
          "  MaxAbsDiff   = %12.6e\n"
          "  TotalAbsDiff = %12.6e\n"
          "  MaxRelDiff   = %12.6e\n\n", MaxAbsDiff, TotalAbsDiff, MaxRelDiff);
+      printf("END_LOG\n\n");
 
-
-
-      printf("\n\n\n");
       printf("time_in_SBN3 = %e\n", time_in_SBN3/1000.0);
       printf("time_in_PosVel = %e\n", time_in_PosVel/1000.0);
       printf("time_in_MonoQ = %e\n", time_in_MonoQ/1000.0);
@@ -344,7 +345,7 @@ static int _main_action(int *input)
     memcpy(args.posvel, posvel, 2 * 26 * sizeof(hpx_netfuture_t));
     memcpy(args.monoq, monoq, 2 * 26 * sizeof(hpx_netfuture_t));
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k, sizeof(Domain));
-    hpx_call(block, _initDomain, &args, sizeof(args), init);
+    hpx_call(block, _initDomain, init, &args, sizeof(args));
   }
   hpx_lco_wait(init);
   hpx_lco_delete(init, HPX_NULL);
@@ -354,7 +355,7 @@ static int _main_action(int *input)
 
   for (k=0;k<nDoms;k++) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * k, sizeof(Domain));
-    hpx_call(block, _advanceDomain, &epoch, sizeof(epoch), HPX_NULL);
+    hpx_call(block, _advanceDomain, HPX_NULL, &epoch, sizeof(epoch));
   }
 
   // And wait for each domain to reach the end of its simulation

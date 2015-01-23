@@ -140,8 +140,7 @@ START_TEST (test_libhpx_threadExit)
 
   hpx_addr_t done = hpx_lco_future_new(sizeof(uint64_t));
   uint64_t value = SET_CONT_VALUE;
-  hpx_status_t status = hpx_call(HPX_HERE, t05_worker, &value, sizeof(value),
-                                 done);
+  hpx_status_t status = hpx_call(HPX_HERE, t05_worker, done, &value, sizeof(value));
   ck_assert_msg(status == HPX_SUCCESS, "Could not normally terminate the thread");
   hpx_lco_wait(done);
 
@@ -353,7 +352,7 @@ START_TEST (test_libhpx_threadContinueCleanup)
   uint64_t *block = malloc(DATA_SIZE);
   assert(block);
 
-  hpx_call_sync(src, t05_thread_cont_cleanup, &rank, sizeof(rank), block, DATA_SIZE);
+  hpx_call_sync(src, t05_thread_cont_cleanup, block, DATA_SIZE, &rank, sizeof(rank));
   fprintf(test_log, "value in block is %"PRIu64"\n", *block);
 
   free(block);
@@ -367,10 +366,10 @@ END_TEST
 // hpx_thread_current_cont_action gets the continuation action for the current
 // thread
 //****************************************************************************
-HPX_DEFINE_ACTION(ACTION, t05_thread_current_cont_target)(void *args) {
+static HPX_DEFDECL_ACTION(ACTION, t05_thread_current_cont_target, void *args) {
   hpx_action_t c_action = hpx_thread_current_cont_action();
   hpx_addr_t c_target = hpx_thread_current_cont_target();
-  hpx_call(c_target, c_action, NULL, 0, HPX_NULL);
+  hpx_call(c_target, c_action, HPX_NULL, NULL, 0);
   return HPX_SUCCESS;
 }
 
