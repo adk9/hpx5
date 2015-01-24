@@ -61,6 +61,7 @@ static int verbs_get_event(photonEventStatus stat);
 static int verbs_get_dev_addr(int af, photonAddr addr);
 static int verbs_register_addr(photonAddr addr, int af);
 static int verbs_unregister_addr(photonAddr addr, int af);
+static int verbs_get_dev_name(char **ib_dev);
 
 static int __verbs_do_rdma(struct rdma_args_t *args, int opcode, int flags);
 static int __verbs_do_send(struct sr_args_t *args, int flags);
@@ -105,6 +106,7 @@ struct photon_backend_t photon_verbs_backend = {
   .unregister_addr = verbs_unregister_addr,
   .register_buffer = NULL,
   .unregister_buffer = NULL,
+  .get_dev_name = verbs_get_dev_name,
   .test = NULL,
   .wait = NULL,
   .wait_ledger = NULL,
@@ -594,5 +596,10 @@ static int verbs_unregister_addr(photonAddr addr, int af) {
     dbg_warn("Unknown action");
   }
 
+  return PHOTON_OK;
+}
+
+static int verbs_get_dev_name(char **ib_dev) {
+  *ib_dev = &verbs_ctx.ib_dev;
   return PHOTON_OK;
 }
