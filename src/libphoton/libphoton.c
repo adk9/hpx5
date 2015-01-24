@@ -231,6 +231,7 @@ int photon_init(photonConfig cfg) {
   __photon_default->probe_completion = (be->probe_completion)?(be->probe_completion):__photon_default->probe_completion;
   __photon_default->io_init = (be->io_init)?(be->io_init):__photon_default->io_init;
   __photon_default->io_init = (be->io_finalize)?(be->io_finalize):__photon_default->io_finalize;
+  __photon_default->get_dev_name = (be->get_dev_name)?(be->get_dev_name):__photon_default->get_dev_name;
 
   if(__photon_backend->initialized() == PHOTON_OK) {
     log_warn("Photon already initialized");
@@ -589,4 +590,13 @@ int photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_pri
 /* utility method to get the remote buffer info set after a wait buffer request */
 int photon_get_buffer_remote(photon_rid request, photonBuffer ret_desc) {
   return _photon_get_buffer_remote(request, ret_desc);
+}
+
+int photon_get_dev_name(char **dev_name) {
+  if(__photon_default->initialized() != PHOTON_OK) {
+    init_err();
+    return PHOTON_ERROR_NOINIT;
+  }
+
+  return __photon_default->get_dev_name(dev_name);
 }
