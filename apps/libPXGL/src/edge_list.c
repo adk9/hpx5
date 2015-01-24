@@ -112,7 +112,7 @@ int edge_list_from_file_action(const edge_list_from_file_args_t * const args) {
   hpx_lco_wait(init_termination_count_lco);
   hpx_lco_delete(init_termination_count_lco, HPX_NULL);
 
-  size_t filename_len = strlen(args->filename);
+  size_t filename_len = strlen(args->filename) + 1;
   const size_t local_args_size = sizeof(_edge_list_from_file_local_args_t) + filename_len;
   _edge_list_from_file_local_args_t *local_args = malloc(local_args_size);
   local_args->el = *el;
