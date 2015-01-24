@@ -75,22 +75,11 @@ AC_ARG_ENABLE([werror],
                   [Treat warnings as errors @<:@default=no@:>@])],
   [], [enable_werror=no])
 
-AC_ARG_ENABLE([apps],
-  [AS_HELP_STRING([--enable-apps],
-                  [Enable mini-apps @<:@default=no@:>@])],
-  [], [enable_apps=no])
-
 AC_ARG_ENABLE([tutorial],
   [AS_HELP_STRING([--enable-tutorial],
                   [Enable building of code samples from the HPX tutorial @<:@default=no@:>@])],
   [], [enable_tutorial=no])
 
-AC_ARG_ENABLE([jemalloc],
-  [AS_HELP_STRING([--enable-jemalloc],
-                  [Enable using of jemalloc as the default allocator @<:@default=no@:>@])],
-  [], [enable_jemalloc=no])
-AS_IF([test "x$enable_jemalloc" != xno], [HPX_CONTRIB_JEMALLOC_AS_MALLOC])
-  
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug],
                   [Enable debug code @<:@default=no@:>@])],
@@ -193,10 +182,8 @@ AM_CONDITIONAL([OS_DARWIN], [[[[ "x$host_os" = xdarwin* ]]]])
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([CPU_ARM], [test "x$host_cpu" = xarmv7l])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno])
-AM_CONDITIONAL([ENABLE_APPS], [test "x$enable_apps" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
 AM_CONDITIONAL([ENABLE_TUTORIAL], [test "x$enable_tutorial" != xno])
-AM_CONDITIONAL([ENABLE_JEMALLOC], [test "x$enable_jemalloc" != xno])
 AM_CONDITIONAL([ENABLE_PHOTON], [test "x$enable_photon" != xno])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
 
@@ -211,7 +198,7 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $HPX_LIBFFI_CPPFLAGS $libhpx_hwloc_cppflags $hpx_valgrind_cppflags $hpx_uthash_cppflags"
 hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS $libhpx_hwloc_cflags"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
-hpx_extra_libs="$PTHREAD_LIBS $HPX_PHOTON_LIBS $libhpx_hwloc_libs"
+hpx_extra_libs="$PTHREAD_LIBS $HPX_PHOTON_LIBS $libhpx_hwloc_libs $HPX_LIBFFI_LIBS $HPX_JEMALLOC_LIBS"
 AS_IF([test "x$enable_pedantic" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_pedantic $hpx_extra_cflags"])
 
@@ -224,9 +211,10 @@ AS_IF([test "x$enable_werror" != xno],
 CPPFLAGS="$hpx_extra_cppflags $CPPFLAGS"
 CFLAGS="$hpx_extra_cflags $CFLAGS"
 CCASFLAGS="$hpx_extra_ccasflags $CCASFLAGS"
-LIBS="$hpx_extra_libs $LIBS"
+HPX_LIBS="$hpx_extra_libs"
 
-AC_SUBST(HPX_LDADD, "\$(top_builddir)/libhpx/libhpx.la $HPX_JEMALLOC_LDADD $HPX_PHOTON_LDADD $HPX_LIBFFI_LDADD $HPX_JEMALLOC_AS_MALLOC_LDADD")
+AC_SUBST(HPX_LIBS)
+AC_SUBST(HPX_LDADD, "\$(top_builddir)/libhpx/libhpx.la $HPX_JEMALLOC_LDADD $HPX_PHOTON_LDADD $HPX_LIBFFI_LDADD")
 
 # -----------------------------------------------------------------------------
 # Use autoconf to configure all of the Makefiles that need to be processed.
@@ -248,7 +236,8 @@ AC_CONFIG_FILES([
   include/Makefile
   include/libhpx/Makefile
   examples/Makefile
-  bench/Makefile])
+  bench/Makefile
+  hpx.pc])
 
 AS_IF([test "x$enable_tutorial" != xno],
   [AC_CONFIG_FILES([tutorial/Makefile
@@ -304,7 +293,6 @@ echo "================================================"
 echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
 echo "               Networks : $networks"
-echo "               jemalloc : $enable_jemalloc"
 echo "              hugetlbfs : $with_hugetlbfs"
 echo "              Profiling : $with_papi"
 echo "     Topology Awareness : $with_hwloc"

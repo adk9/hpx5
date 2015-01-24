@@ -110,7 +110,7 @@ int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_hand
 
 /// Note that one can add static keyword before invoking thisn macro to make the action
 /// static.
-#define HPX_DECL_ACTION(type, action) hpx_action_t action = -1;
+#define HPX_DECL_ACTION(type, action) hpx_action_t action;
 
 /// A helper macro to declare and define HPX actions.
 #define HPX_DEFINE_ACTION(type, action, arg_sig)	    \
@@ -123,8 +123,8 @@ int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_hand
 
 /// Note that one can add static keyword before invoking thisn macro to make the action
 /// static.
-#define HPX_DEFDECL_ACTION(type, action, arg_sig) \
-hpx_action_t action = -1;                         \
+#define HPX_DEFDECL_ACTION(type, action, arg_sig)           \
+hpx_action_t action = HPX_ACTION_INVALID;                   \
 HPX_DEFINE_ACTION(type, action, arg_sig)
 
 #define HPX_ACTION(n, arg_sig)        HPX_DEFDECL_ACTION(ACTION, n, arg_sig)
