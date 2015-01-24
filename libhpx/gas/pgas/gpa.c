@@ -83,7 +83,7 @@ int64_t pgas_gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   // each difference in the phase is just one byte,
   // each difference in the locality is bsize bytes, and
   // each difference in the phase is entire cycle of bsize bytes
-  const int64_t d = dblock * here->ranks * bsize + dlocality * bsize + dphase;
+  const int64_t d = (int64_t)dblock * here->ranks * bsize + dlocality * bsize + dphase;
 
   // make sure we're not crazy
   DEBUG_IF (pgas_gpa_add_cyclic(rhs, d, bsize) != lhs) {
