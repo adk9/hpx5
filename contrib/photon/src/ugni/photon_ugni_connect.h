@@ -19,7 +19,7 @@ typedef struct ugni_cnct_info_t {
   struct in_addr ip;
 } ugni_cnct_info;
 
-int __ugni_init_context(ugni_cnct_ctx *ctx);
-int __ugni_connect_peers(ugni_cnct_ctx *ctx);
+PHOTON_INTERNAL int __ugni_init_context(ugni_cnct_ctx *ctx);
+PHOTON_INTERNAL int __ugni_connect_peers(ugni_cnct_ctx *ctx);
 
 #endif

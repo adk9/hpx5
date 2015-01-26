@@ -220,7 +220,7 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
   hpx_addr_t index_arr_sync = hpx_lco_future_new(0);
   hpx_bcast(_set_index_array_bsize, &_index_array_block_size, sizeof(uint32_t), index_arr_sync);
 
-  // Array is allocated whyle the broadst of the block size is performed
+  // Array is allocated while the broadst of the block size is performed
   index_array = hpx_gas_global_alloc(HPX_LOCALITIES, _index_array_block_size);
 
   // Start allocating the count array for creating an edge histogram
@@ -354,19 +354,20 @@ int free_adj_list_action(void *arg) {
 
 
 static __attribute__((constructor)) void _adj_list_register_actions() {
-  adj_list_from_edge_list  = HPX_REGISTER_ACTION(adj_list_from_edge_list_action);
-  free_adj_list            = HPX_REGISTER_ACTION(free_adj_list_action);
-  _increment_count         = HPX_REGISTER_ACTION(_increment_count_action);
-  _set_count_array_bsize   = HPX_REGISTER_ACTION(_set_count_array_bsize_action);
-  _set_index_array_bsize   = HPX_REGISTER_ACTION(_set_index_array_bsize_action);
-  _count_edge              = HPX_REGISTER_ACTION(_count_edge_action);
-  _init_vertex             = HPX_REGISTER_ACTION(_init_vertex_action);
-  _init_vertex_distance    = HPX_REGISTER_ACTION(_init_vertex_distance_action);
-  _reset_vertex            = HPX_REGISTER_ACTION(_reset_vertex_action);
-  _alloc_vertex            = HPX_REGISTER_ACTION(_alloc_vertex_action);
-  _alloc_adj_list_entry    = HPX_REGISTER_ACTION(_alloc_adj_list_entry_action);
-  _print_edge              = HPX_REGISTER_ACTION(_print_edge_action);
-  _insert_edge             = HPX_REGISTER_ACTION(_insert_edge_action);
-  _put_edge_index          = HPX_REGISTER_ACTION(_put_edge_index_action);
-  _put_edge                = HPX_REGISTER_ACTION(_put_edge_action);
+  HPX_REGISTER_ACTION(&adj_list_from_edge_list,
+                      adj_list_from_edge_list_action);
+  HPX_REGISTER_ACTION(&free_adj_list, free_adj_list_action);
+  HPX_REGISTER_ACTION(&_increment_count, _increment_count_action);
+  HPX_REGISTER_ACTION(&_set_count_array_bsize, _set_count_array_bsize_action);
+  HPX_REGISTER_ACTION(&_set_index_array_bsize, _set_index_array_bsize_action);
+  HPX_REGISTER_ACTION(&_count_edge, _count_edge_action);
+  HPX_REGISTER_ACTION(&_init_vertex, _init_vertex_action);
+  HPX_REGISTER_ACTION(&_init_vertex_distance, _init_vertex_distance_action);
+  HPX_REGISTER_ACTION(&_reset_vertex, _reset_vertex_action);
+  HPX_REGISTER_ACTION(&_alloc_vertex, _alloc_vertex_action);
+  HPX_REGISTER_ACTION(&_alloc_adj_list_entry, _alloc_adj_list_entry_action);
+  HPX_REGISTER_ACTION(&_print_edge, _print_edge_action);
+  HPX_REGISTER_ACTION(&_insert_edge, _insert_edge_action);
+  HPX_REGISTER_ACTION(&_put_edge_index, _put_edge_index_action);
+  HPX_REGISTER_ACTION(&_put_edge, _put_edge_action);
 }

@@ -31,8 +31,8 @@ void dbg_log1(unsigned line, const char *f, const hpx_log_t level,
               const char *fmt, ...) {
   static tatas_lock_t lock = SYNC_TATAS_LOCK_INIT;
   if (dbg_log_level & level) {
-    int tid = here ? hpx_get_my_thread_id() : -1;
-    int rank = here ? hpx_get_my_rank() : -1;
+    int tid = hpx_get_my_thread_id();
+    int rank = hpx_get_my_rank();
     sync_tatas_acquire(&lock);
     printf("LIBHPX<%d,%d>: (%s:%u) ", rank, tid, f, line);
 
@@ -47,8 +47,8 @@ void dbg_log1(unsigned line, const char *f, const hpx_log_t level,
 
 int
 dbg_error1(unsigned line, const char *f, const char *fmt, ...) {
-  int tid = here ? hpx_get_my_thread_id() : -1;
-  int rank = here ? hpx_get_my_rank() : -1;
+  int tid = hpx_get_my_thread_id();
+  int rank = hpx_get_my_rank();
   fprintf(stderr, "LIBHPX<%d,%d>: (%s:%u) ", rank, tid, f, line);
 
   va_list args;
@@ -69,8 +69,8 @@ dbg_error1(unsigned line, const char *f, const char *fmt, ...) {
 HPX_OPTIMIZE("O0")
 void dbg_wait(void) {
   int i = 0;
-  char hostname[HOST_NAME_MAX];
-  gethostname(hostname, HOST_NAME_MAX);
+  char hostname[255];
+  gethostname(hostname, 255);
   printf("PID %d on %s ready for attach\n", getpid(), hostname);
   fflush(stdout);
   while (0 == i)

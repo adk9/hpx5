@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 #include <stdlib.h>
@@ -19,212 +19,241 @@
 
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
+#include "libhpx/locality.h"
 #include "libhpx/utils.h"
-#include "libsync/hashtables.h"
 
 
-// Some constants that we use to govern the behavior of the action
-// table:
+/// The default libhpx action table size.
+#define LIBHPX_ACTION_TABLE_SIZE 4096
 
-// initial table size
-static const int ACTIONS_INITIAL_HT_SIZE = 256;
+/// Action types
+typedef enum {
+  _ACTION_UNKNOWN = -1,
+  _ACTION_DEFAULT = 0,
+  _ACTION_PINNED,
+  _ACTION_TASK,
+  _ACTION_INTERRUPT,
+} _action_type_t;
 
-// when to expand the table
-static const int ACTIONS_PROBE_LIMIT = 2;
-
-// The hashtable entry type.
-//
-// Our hashtable is just an array of key-value pairs, this is the type
-// of that array element.
-struct _entry {
-  long  key;
-  const void *value;
-};
-
-// The action hashtable is a linear probed hashtable, i.e., an array.
-typedef struct _action_table _action_table_t;
-static struct _action_table {
-  size_t         size;
-  struct _entry *table;
-} _action_table;
-
-void _expand(_action_table_t *ht);
-int _insert(_action_table_t *ht, const long key, const void *value);
-
-// Expand a hashtable.
-//
-// The performance of this routine isn't important because it only happens once
-// per node, while actions are being inserted. It may be called recursively (via
-// the insert() routine) when it encounters a collision so that lookups never
-// collide.
-//
-// @param[in] ht - the hashtable to expand
-void _expand(_action_table_t *ht) {
-  assert(ht != NULL);
-
-  // remember the previous state of the table
-  const int e = ht->size;
-  struct _entry *copy = ht->table;
-
-  // double the size of the table
-  ht->size = 2 * ht->size;
-  ht->table = calloc(ht->size, sizeof(ht->table[0]));
-
-  // iterate through the previous table, and insert all of the values
-  // that aren't empty---i.e., anything where entry->value isn't NULL.
-  // This could trigger recursive expansion, but that's ok, because this
-  // loop will insert anything that wasn't inserted in the inner
-  // expansion.
-  for (int i = 0; i < e; ++i) {
-    if (copy[i].value != NULL)
-      _insert(ht, copy[i].key, copy[i].value);
-  }
-
-  // don't need copy anymore
-  free(copy);
-}
-
-
-// Insert a key-value pair into a hashtable.
-//
-// We don't really care about the performance of this operation because of the
-// two-phased approach to the way that we use the hashtable, all inserts happen
-// once, during table initialization, and then this is read-only.
-//
-// @param[in] ht    - the hashtable
-// @param[in] key   - the action key to insert
-// @param[in] value - the local function pointer for the action
-//
-// @returns key
-int _insert(_action_table_t *ht, const long key, const void *value) {
-  assert(ht != NULL);
-  assert(key != 0);
-  assert(value != NULL);
-
-  // lazy initialization of the action table
-  if (!ht->table) {
-    ht->size = ACTIONS_INITIAL_HT_SIZE;
-    ht->table = calloc(ACTIONS_INITIAL_HT_SIZE, sizeof(ht->table[0]));
-  }
-
-  size_t i = key % ht->size;
-  size_t j = 0;
-
-  // search for the correct bucket, which is just a linear search, bounded by
-  // ACTIONS_PROBE_LIMIT
-  while (ht->table[i].key != 0) {
-    assert(((ht->table[i].key != key) || (ht->table[i].value == value)) &&
-           "attempting to overwrite key during registration");
-
-    i = (i + 1) % ht->size;                     // linear probing
-    j = j + 1;
-
-    if (ACTIONS_PROBE_LIMIT < j) {              // stop probing
-      _expand(ht);
-      i = key % ht->size;
-      j = 0;
-    }
-  }
-
-  // insert the entry
-  ht->table[i].key = key;
-  ht->table[i].value = value;
-  return 1;
-}
-
-
-// Hashtable lookup.
-//
-// Implement a simple, linear probed table. Entries with a key of 0 or value of
-// NULL are considered invalid, and terminate the search.
-const void* _lookup(const _action_table_t *ht, const long key) {
-  assert(ht != NULL);
-  assert(key != 0);
-
-  // We just keep probing here until we hit an invalid entry, because
-  // we know that the probe limit was enforced during insert.
-  size_t i = key % ht->size;
-  while ((ht->table[i].key != 0) && (ht->table[i].key != key))
-    i = (i + 1) % ht->size;
-  return ht->table[i].value;
-}
-
-
-#ifdef ENABLE_DEBUG
+/// An action table entry type.
+///
+/// This will store the function and unique key associated with the action, as
+/// well as the address of the id the user would like to be assigned during
+/// action finalization.
+///
+/// @note In the future this entry type can contain more information about the
+///       actions, e.g., can they block, should we pre-pin their arguments,
+///       etc.
 typedef struct {
-  hpx_action_handler_t f;
-  const char *name;
-} _action_entry_t;
-
-// Insert an action entry with the function name @p key necessary for
-// debugging or tracing actions.
-int _dbg_action_insert(const long key, const hpx_action_handler_t f, const char *name) {
-  _action_entry_t *entry = malloc(sizeof(*entry));
-  entry->f = f;
-  entry->name = name;
-  return _insert(&_action_table, key, entry);
-}
-#endif
+  hpx_action_handler_t func;
+  hpx_action_t        *id;
+  const char          *key;
+  _action_type_t      type;
+} _entry_t;
 
 
-bool hpx_action_eq(const hpx_action_t lhs, const hpx_action_t rhs) {
-  return (lhs == rhs);
-}
-
-
-hpx_action_t action_register(const char *key, hpx_action_handler_t f) {
-#ifdef ENABLE_ACTION_TABLE
-  int e;
-  size_t len = strlen(key);
-  const long hkey = hpx_hash_string(key, len);
-#if ENABLE_DEBUG
-  e = _dbg_action_insert(hkey, f, key);
-#else
-  e = _insert(&_action_table, hkey, (const void*)(hpx_action_t)f);
-#endif
-  assert(e);
-  return (hpx_action_t)hkey;
-#else
-#if ENABLE_DEBUG
-  int e = _dbg_action_insert((long)f, f, key);
-  assert(e);
-#endif
-  return (hpx_action_t)f;
-#endif
+/// Compare two entries by their keys.
+///
+/// This is used to sort the action table during finalization, so that we can
+/// uniformly assign ids to actions independent of which region in the local
+/// address space the functions are loaded into.
+///
+/// @param          lhs A pointer to the left-hand entry.
+/// @param          rhs A pointer tot he right-hand entry.
+///
+/// @return             The lexicographic comparison of the entries' keys.
+static int _cmp_keys(const void *lhs, const void *rhs) {
+  const _entry_t *el = lhs;
+  const _entry_t *er = rhs;
+  return strcmp(el->key, er->key);
 }
 
 
-hpx_action_handler_t action_lookup(hpx_action_t id) {
-#ifdef ENABLE_ACTION_TABLE
-  const void *f = _lookup(&_action_table, (long)id);
-  assert(f);
-#ifdef ENABLE_DEBUG
-  return ((_action_entry_t*)f)->f;
-#endif
-  return (hpx_action_handler_t)(hpx_action_t)f;
-#endif
-  return (hpx_action_handler_t)id;
+/// An action table is simply an array that stores its size.
+///
+///
+typedef struct action_table {
+  int n;
+  _entry_t entries[];
+} _table_t;
+
+
+/// A static action table.
+///
+/// We currently need to be able to register actions before we call hpx_init()
+/// because we use constructors inside of libhpx to do action registration. We
+/// expose this action table to be used for that purpose.
+static _table_t *_actions = NULL;
+
+
+/// Get the static action table.
+///
+/// This is not synchronized and thus unsafe to call in a multithreaded
+/// environment, but we make sure to call it in hpx_init() where we assume we
+/// are running in single-threaded mode, so we should be safe.
+static _table_t *_get_actions(void) {
+  if (!_actions) {
+    static const int capacity = LIBHPX_ACTION_TABLE_SIZE;
+    _actions = malloc(sizeof(*_actions) + capacity * sizeof(_entry_t));
+    _actions->n = 0;
+    memset(&_actions->entries, 0, capacity * sizeof(_entry_t));
+  }
+
+  return _actions;
 }
 
 
-int action_invoke(hpx_action_t action, void *args) {
-  hpx_action_handler_t handler = action_lookup(action);
+/// Sort the actions in an action table by their key.
+static void _sort_entries(_table_t *table) {
+  qsort(&table->entries, table->n, sizeof(_entry_t), _cmp_keys);
+}
+
+
+/// Assign all of the entry ids in the table.
+static void _assign_ids(_table_t *table) {
+  for (int i = 0, e = table->n; i < e; ++i) {
+    *table->entries[i].id = i;
+  }
+}
+
+
+/// Insert an action into a table.
+///
+/// @param        table The table we are inserting into.
+/// @param           id The address of the user's id; written in _assign_ids().
+/// @param          key The unique key for this action; read in _sort_entries().
+/// @param            f The handler for this action.
+/// @param         type The type of this action.
+///
+/// @return             HPX_SUCCESS or an error if the push fails.
+static int _push_back(_table_t *table, hpx_action_t *id, const char *key,
+                      hpx_action_handler_t f, _action_type_t type) {
+  static const int capacity = LIBHPX_ACTION_TABLE_SIZE;
+  int i = table->n++;
+  if (i >= capacity) {
+    return dbg_error("exceeded maximum number of actions (%d)\n", capacity);
+  }
+
+  _entry_t *back = &table->entries[i];
+  back->func = f;
+  back->id = id;
+  back->key = key;
+  back->type = type;
+  return HPX_SUCCESS;
+}
+
+const _table_t *action_table_finalize(void) {
+  _table_t *table = _get_actions();
+  _sort_entries(table);
+  _assign_ids(table);
+  return table;
+}
+
+
+void action_table_free(const _table_t *table) {
+  free((void*)table);
+}
+
+
+const char *action_table_get_key(const struct action_table *table, hpx_action_t id)
+{
+  if (id == HPX_INVALID_ACTION_ID) {
+    dbg_log("action registration is not complete");
+    return "LIBHPX UNKNOWN ACTION";
+  }
+
+  if (id < table->n) {
+    return table->entries[id].key;
+  }
+
+  dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n);
+  return NULL;
+}
+
+
+hpx_action_handler_t action_table_get_handler(const struct action_table *table,
+                                              hpx_action_t id) {
+  if (id == HPX_INVALID_ACTION_ID) {
+    dbg_log("action registration is not complete");
+    return NULL;
+  }
+
+  if (id < table->n) {
+    return table->entries[id].func;
+  }
+
+  dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n);
+  return NULL;
+}
+
+
+static _action_type_t action_table_get_type(const struct action_table *table,
+                                     hpx_action_t id) {
+  if (id == HPX_INVALID_ACTION_ID) {
+    dbg_log("action registration is not complete");
+    return _ACTION_UNKNOWN;
+  }
+
+  if (id < table->n) {
+    return table->entries[id].type;
+  }
+
+  dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n);
+  return _ACTION_UNKNOWN;
+}
+
+
+bool action_is_pinned(const struct action_table *table, hpx_action_t id) {
+  return (action_table_get_type(table, id) == _ACTION_PINNED);
+}
+
+
+bool action_is_task(const struct action_table *table, hpx_action_t id) {
+  return (action_table_get_type(table, id) == _ACTION_TASK);
+}
+
+
+bool action_is_interrupt(const struct action_table *table, hpx_action_t id) {
+  return (action_table_get_type(table, id) == _ACTION_INTERRUPT);
+}
+
+
+int action_run_handler(hpx_parcel_t *parcel) {
+  const hpx_addr_t target = hpx_parcel_get_target(parcel);
+  const uint32_t owner = gas_owner_of(here->gas, target);
+  DEBUG_IF (owner != here->rank) {
+    dbg_log_sched("received parcel at incorrect rank, resend likely\n");
+  }
+
+  hpx_action_t id = hpx_parcel_get_action(parcel);
+  void *args = hpx_parcel_get_data(parcel);
+
+  hpx_action_handler_t handler = action_table_get_handler(here->actions, id);
   return handler(args);
 }
 
 
-const char *action_get_key(hpx_action_t id) {
-  const char *key = NULL;
-#ifdef ENABLE_DEBUG
-  const _action_entry_t *entry = _lookup(&_action_table, id);
-  if (entry)
-    key = entry->name;
-#endif
-  return key;
+/// Called by the user to register an action.
+int hpx_register_action(hpx_action_t *id, const char *key,
+                        hpx_action_handler_t f) {
+  return _push_back(_get_actions(), id, key, f, _ACTION_DEFAULT);
 }
 
 
-hpx_action_t
-hpx_register_action(const char *id, hpx_action_handler_t func) {
-  return action_register(id, func);
+int hpx_register_pinned_action(hpx_action_t *id, const char *key,
+                               hpx_action_handler_t f) {
+  return _push_back(_get_actions(), id, key, f, _ACTION_PINNED);
 }
+
+
+int hpx_register_task(hpx_action_t *id, const char *key,
+                      hpx_action_handler_t f) {
+  return _push_back(_get_actions(), id, key, f, _ACTION_TASK);
+}
+
+
+int hpx_register_interrupt(hpx_action_t *id, const char *key,
+                           hpx_action_handler_t f) {
+  return _push_back(_get_actions(), id, key, f, _ACTION_INTERRUPT);
+}
+

@@ -478,15 +478,15 @@ static void _progress(transport_class_t *t, transport_op_t op) {
 }
 
 static uint32_t _get_send_limit(transport_class_t *t) {
-  return t->req_limit;
+  return t->send_limit;
 }
 
 static uint32_t _get_recv_limit(transport_class_t *t) {
-  return t->req_limit;
+  return t->recv_limit;
 }
 
 
-transport_class_t *transport_new_portals(uint32_t req_limit) {
+transport_class_t *transport_new_portals(uint32_t send_limit, uint32_t recv_limit) {
   if (boot_type(here->boot) != HPX_BOOT_PMI) {
     dbg_error("Portals transport unsupported with non-PMI bootstrap.\n");
   }
@@ -503,19 +503,20 @@ transport_class_t *transport_new_portals(uint32_t req_limit) {
   portals->class.get_send_limit = _get_send_limit;
   portals->class.get_recv_limit = _get_recv_limit;
 
-  portals->class.delete         = _delete;
-  portals->class.pin            = _pin;
-  portals->class.unpin          = _unpin;
-  portals->class.put            = _put;
-  portals->class.get            = _get;
-  portals->class.send           = _send;
-  portals->class.probe          = _probe;
-  portals->class.recv           = _recv;
-  portals->class.test           = _test;
-  portals->class.testsome       = NULL;
-  portals->class.progress       = _progress;
-  portals->class.req_limit      = req_limit == 0 ? portals_default_srlimit : req_limit;
-  portals->class.rkey_table     = NULL;
+  portals->class.delete     = _delete;
+  portals->class.pin        = _pin;
+  portals->class.unpin      = _unpin;
+  portals->class.put        = _put;
+  portals->class.get        = _get;
+  portals->class.send       = _send;
+  portals->class.probe      = _probe;
+  portals->class.recv       = _recv;
+  portals->class.test       = _test;
+  portals->class.testsome   = NULL;
+  portals->class.progress   = _progress;
+  portals->class.send_limit = (send_limit == 0) ? portals_default_srlimit : send_limit;
+  portals->class.send_limit = (recv_limit == 0) ? portals_default_srlimit : recv_limit;
+  portals->class.rkey_table = NULL;
 
   portals->interface            = PTL_INVALID_HANDLE;
   portals->sendq                = PTL_INVALID_HANDLE;
@@ -523,8 +524,8 @@ transport_class_t *transport_new_portals(uint32_t req_limit) {
   portals->pte                  = PTL_PT_ANY;
   portals->bufdesc              = PTL_INVALID_HANDLE;
 
-  _send_progress_action = HPX_REGISTER_ACTION(_send_progress);
-  _recv_progress_action = HPX_REGISTER_ACTION(_recv_progress);
+  LIBHPX_REGISTER_ACTION(&_send_progress_action, _send_progress);
+  LIBHPX_REGISTER_ACTION(&_recv_progress_action, _recv_progress);
 
   _portals_init(portals);
   _set_map(portals);

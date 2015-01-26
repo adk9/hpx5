@@ -1,7 +1,11 @@
 
 #include <stdio.h>
 
+<<<<<<< HEAD
 #include "libpxgl/dimacs.h"
+=======
+#include "pxgl/dimacs.h"
+>>>>>>> release-v0.3.0
 
 #define MODUL ((distance_t) 1 << (sizeof(distance_t) * 8 - 2))
 
@@ -65,7 +69,7 @@ int dimacs_checksum_action(const sssp_uint_t *const num_vertices) {
 }
 
 static __attribute__((constructor)) void _dimacs_register_actions() {
-  dimacs_checksum = HPX_REGISTER_ACTION(dimacs_checksum_action);
-  _dimacs_visit_vertex = HPX_REGISTER_ACTION(_dimacs_visit_vertex_action);
-  _dimacs_send_dist = HPX_REGISTER_ACTION(_dimacs_send_dist_action);
+  HPX_REGISTER_ACTION(&dimacs_checksum, dimacs_checksum_action);
+  HPX_REGISTER_ACTION(&_dimacs_visit_vertex, _dimacs_visit_vertex_action);
+  HPX_REGISTER_ACTION(&_dimacs_send_dist, _dimacs_send_dist_action);
 }

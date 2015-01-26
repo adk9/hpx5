@@ -73,6 +73,10 @@ AC_DEFUN([HPX_CONTRIB_PHOTON],
     AC_CONFIG_FILES([$1/Makefile])
     AC_CONFIG_FILES([$1/src/Makefile])
     AC_CONFIG_FILES([$1/src/util/Makefile])
+    AC_CONFIG_FILES([$1/src/contrib/Makefile])
+    AC_CONFIG_FILES([$1/src/contrib/bit_array/Makefile])
+    AC_CONFIG_FILES([$1/src/contrib/libsync/Makefile])
+    AC_CONFIG_FILES([$1/src/contrib/libsync/arch/Makefile])
     hpx_have_photon=internal
     AC_MSG_RESULT([yes])],
    [hpx_have_photon=installed

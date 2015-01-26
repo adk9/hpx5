@@ -13,14 +13,14 @@
 #include <errno.h>
 #include <netdb.h>
 
-#include "libphoton.h"
-#include "photon_exchange.h"
 #include "util.h"
 #include "logging.h"
+#include "photon_exchange.h"
 #include "verbs_connect.h"
 #include "verbs_util.h"
 #include "verbs_ud.h"
 
+#define DEF_SUB_WR          16
 #define MAX_CQ_ENTRIES      16384
 #define MAX_SRQ_ENTRIES     8192
 #define RDMA_CMA_BASE_PORT  18000
@@ -170,6 +170,8 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
 	  ctx->ib_mtu = 1 << (attr.active_mtu + 7);
 	  ctx->ib_mtu_attr = attr.active_mtu;
 	  ctx->max_srq_wr = dattr.max_srq_wr;
+	  ctx->tx_depth = dattr.max_qp_wr - DEF_SUB_WR;
+	  ctx->rx_depth = dattr.max_qp_wr - DEF_SUB_WR;
 	  ctx->ib_dev = strdup(dev_name);
 	  ctx->ib_port = cport;
 
@@ -507,6 +509,9 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
       log_err("Could not query IB device");
       return PHOTON_ERROR;
     }
+
+    ctx->tx_depth = dattr.max_qp_wr - DEF_SUB_WR;
+    ctx->rx_depth = dattr.max_qp_wr - DEF_SUB_WR;
 
     {
       // create shared receive queue

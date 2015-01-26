@@ -11,15 +11,17 @@ typedef struct photon_rdma_eager_buf_entry_t {
 typedef struct photon_rdma_eager_buf_t {
   //struct photon_rdma_eager_buf_entry_t *entries;
   uint8_t *data;
-  uint32_t offset;
-  uint32_t ackp;
+  uint64_t curr;
+  uint64_t tail;
+  uint32_t size;
   struct photon_buffer_t remote;
 } photon_rdma_eager_buf;
 
 typedef struct photon_rdma_eager_buf_entry_t * photonEagerBufEntry;
-typedef struct photon_rdma_eager_buf_t * photonEagerBuf;
+typedef struct photon_rdma_eager_buf_t       * photonEagerBuf;
 
-photonEagerBuf photon_rdma_eager_buf_create_reuse(uint8_t *eager_buffer, int size);
-void photon_rdma_eager_buf_free(photonEagerBuf buf);
+PHOTON_INTERNAL photonEagerBuf photon_rdma_eager_buf_create_reuse(uint8_t *eager_buffer, int size);
+PHOTON_INTERNAL void photon_rdma_eager_buf_free(photonEagerBuf buf);
+PHOTON_INTERNAL int photon_rdma_eager_buf_get_offset(photonEagerBuf buf, int size, int lim);
 
 #endif

@@ -51,6 +51,10 @@ extern hpx_action_t t10_set;
 extern hpx_action_t t11_increment;
 extern hpx_action_t t12_init_array;
 extern hpx_action_t t13_memput_verify;
+extern hpx_action_t t15_set;
+extern hpx_action_t t15_wait;
+extern hpx_action_t t15_spawn;
+extern hpx_action_t t15_delete;
 
 int t02_init_sources_action(void*);
 int t03_initDomain_action(const InitArgs*);
@@ -94,6 +98,10 @@ int t10_set_action(void*);
 int t11_increment_action(void*);
 int t12_init_array_action(void*);
 int t13_memput_verify_action(void*);
+int t15_set_action(const hpx_addr_t * const future);
+int t15_wait_action(const hpx_addr_t * const lcos);
+int t15_spawn_action(const hpx_addr_t * const termination_lco);
+int t15_delete_action(const hpx_addr_t * const lcos);
 
 void hpxtest_core_setup(void);
 void hpxtest_core_teardown(void);
@@ -111,4 +119,6 @@ void add_10_TestAndLCO(TCase *);
 void add_11_TestGenCountLCO(TCase *);
 void add_12_TestMemget(TCase *);
 void add_13_TestMemput(TCase *);
+void add_15_TestWait(TCase *);
+
 #endif /* LIBHPX_TESTS_TESTS_H_ */

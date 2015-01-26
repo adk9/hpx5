@@ -107,11 +107,12 @@ static transport_class_t _smp = {
   .test           = _test,
   .testsome       = NULL,
   .progress       = _progress,
-  .req_limit      = 0,
+  .send_limit      = 0,
+  .recv_limit      = 0,
   .rkey_table     = NULL
 };
 
 
-transport_class_t *transport_new_smp(uint32_t req_limit) {
+transport_class_t *transport_new_smp(uint32_t UNUSED1, uint32_t UNUSED2) {
   return &_smp;
 }

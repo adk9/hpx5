@@ -89,6 +89,12 @@ struct prof_tctx_s {
 	/* Thread data for thread that performed the allocation. */
 	prof_tdata_t		*tdata;
 
+	/*
+	 * Copy of tdata->thr_uid, necessary because tdata may be defunct during
+	 * teardown.
+	 */
+	uint64_t		thr_uid;
+
 	/* Profiling counters, protected by tdata->lock. */
 	prof_cnt_t		cnts;
 
@@ -355,10 +361,9 @@ prof_tctx_get(const void *ptr)
 	assert(ptr != NULL);
 
 	chunk = (arena_chunk_t *)CHUNK_ADDR2BASE(ptr);
-	if (chunk != ptr) {
-		/* Region. */
+	if (likely(chunk != ptr))
 		ret = arena_prof_tctx_get(ptr);
-	} else
+	else
 		ret = huge_prof_tctx_get(ptr);
 
 	return (ret);
@@ -373,10 +378,9 @@ prof_tctx_set(const void *ptr, prof_tctx_t *tctx)
 	assert(ptr != NULL);
 
 	chunk = (arena_chunk_t *)CHUNK_ADDR2BASE(ptr);
-	if (chunk != ptr) {
-		/* Region. */
+	if (likely(chunk != ptr))
 		arena_prof_tctx_set(ptr, tctx);
-	} else
+	else
 		huge_prof_tctx_set(ptr, tctx);
 }
 

@@ -30,16 +30,16 @@
 #include <jemalloc/jemalloc.h>
 #include <hwloc.h>
 
+#include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
 
 /// Forward declarations.
 /// @{
 struct boot_class;
-struct network_class;
+struct network;
 struct scheduler;
 struct transport_class;
-struct hpx_config;
 /// @}
 
 /// The locality object.
@@ -59,15 +59,16 @@ struct hpx_config;
 ///                  to deal with inter-thread data and control dependencies
 ///                  using LCOs.
 typedef struct {
-  uint32_t                     rank;
-  uint32_t                    ranks;
-  struct boot_class           *boot;
-  struct gas_class             *gas;
-  struct transport_class *transport;
-  struct network_class     *network;
-  struct scheduler           *sched;
-  hpx_config_t              *config;
-  libhpx_hwloc_topology_t  topology;
+  uint32_t                      rank;
+  uint32_t                     ranks;
+  struct boot_class            *boot;
+  struct gas_class              *gas;
+  struct transport_class  *transport;
+  struct network            *network;
+  struct scheduler            *sched;
+  hpx_config_t               *config;
+  const struct action_table *actions;
+  libhpx_hwloc_topology_t   topology;
 } locality_t;
 
 
