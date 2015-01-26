@@ -258,8 +258,6 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
 
   _initialize_termination();
 
-  edge_list_edge_t *edge_list;
-  hpx_gas_try_pin(el->edge_list, (void**)&edge_list);
   // printf("edge_list is %" PRIxPTR " with source %" SSSP_UINT_PRI ", target %" SSSP_UINT_PRI ", and weight %" SSSP_UINT_PRI ".\n", edge_list, edge_list->source, edge_list->dest, edge_list->weight);
   //#include <sys/mman.h>
   //mprotect(edge_list, el->edge_list_bsize * 24, PROT_READ);
