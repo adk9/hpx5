@@ -85,5 +85,5 @@ int hpx_gas_memput(hpx_addr_t to, const void *from, size_t size,
 int hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
 {
   assert(here && here->gas && here->gas->memcpy);
-  return here->gas->memcpy(to, from, size, sync);
+  return (*here->gas->memcpy)(to, from, size, sync);
 }

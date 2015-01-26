@@ -171,7 +171,7 @@ void *receiver(void *args) {
       photon_rid request;
       int flag;
       do {
-        photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
+        photon_probe_completion(other_rank, &flag, &request, PHOTON_PROBE_LEDGER);
       } while (!flag || request != 0xcafebabe);
     }
 

@@ -290,6 +290,8 @@ START_TEST (test_photon_pingpong_for_pwc)
     photon_wait_any(&ret_proc, &request);
     photon_wait_recv_buffer_rdma(other_rank, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq);
     photon_get_buffer_remote(sendReq, &rbuf);
+    photon_send_FIN(sendReq, other_rank, PHOTON_REQ_COMPLETED);
+    photon_wait(recvReq);
   }
 
   gettimeofday(&start, NULL);

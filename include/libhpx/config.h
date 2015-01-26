@@ -34,7 +34,7 @@ static const char* const HPX_GAS_TO_STRING[] = {
   "AGAS",
   "PGAS_SWITCH",
   "AGAS_SWITCH",
-  ""
+  "INVALID_ID"
 };
 
 
@@ -54,9 +54,26 @@ static const char* const HPX_TRANSPORT_TO_STRING[] = {
   "MPI",
   "PORTALS",
   "PHOTON",
-  ""
+  "INVALID_ID"
 };
 
+typedef enum {
+  LIBHPX_NETWORK_DEFAULT = 0,
+  LIBHPX_NETWORK_NONE,
+  LIBHPX_NETWORK_PHOTON,
+  LIBHPX_NETWORK_PORTALS,
+  LIBHPX_NETWORK_MPI,
+  LIBHPX_NETWORK_MAX
+} libhpx_network_t;
+
+static const char * const LIBHPX_NETWORK_TO_STRING[] = {
+  "DEFAULT",
+  "NONE",
+  "PHOTON",
+  "PORTALS",
+  "MPI",
+  "INVALID_ID"
+};
 
 //! Configuration options for which bootstrappers HPX can use.
 typedef enum {

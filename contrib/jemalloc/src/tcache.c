@@ -24,7 +24,7 @@ size_t	tcache_salloc(const void *ptr)
 void
 tcache_event_hard(tcache_t *tcache)
 {
-	size_t binind = tcache->next_gc_bin;
+	index_t binind = tcache->next_gc_bin;
 	tcache_bin_t *tbin = &tcache->tbins[binind];
 	tcache_bin_info_t *tbin_info = &tcache_bin_info[binind];
 
@@ -62,7 +62,7 @@ tcache_event_hard(tcache_t *tcache)
 }
 
 void *
-tcache_alloc_small_hard(tcache_t *tcache, tcache_bin_t *tbin, size_t binind)
+tcache_alloc_small_hard(tcache_t *tcache, tcache_bin_t *tbin, index_t binind)
 {
 	void *ret;
 
@@ -76,7 +76,7 @@ tcache_alloc_small_hard(tcache_t *tcache, tcache_bin_t *tbin, size_t binind)
 }
 
 void
-tcache_bin_flush_small(tcache_bin_t *tbin, size_t binind, unsigned rem,
+tcache_bin_flush_small(tcache_bin_t *tbin, index_t binind, unsigned rem,
     tcache_t *tcache)
 {
 	void *ptr;
@@ -117,8 +117,8 @@ tcache_bin_flush_small(tcache_bin_t *tbin, size_t binind, unsigned rem,
 				    (uintptr_t)chunk) >> LG_PAGE;
 				arena_chunk_map_bits_t *bitselm =
 				    arena_bitselm_get(chunk, pageind);
-				arena_dalloc_bin_locked(arena, chunk, ptr,
-				    bitselm);
+				arena_dalloc_bin_junked_locked(arena, chunk,
+				    ptr, bitselm);
 			} else {
 				/*
 				 * This object was allocated via a different
@@ -153,7 +153,7 @@ tcache_bin_flush_small(tcache_bin_t *tbin, size_t binind, unsigned rem,
 }
 
 void
-tcache_bin_flush_large(tcache_bin_t *tbin, size_t binind, unsigned rem,
+tcache_bin_flush_large(tcache_bin_t *tbin, index_t binind, unsigned rem,
     tcache_t *tcache)
 {
 	void *ptr;
@@ -193,9 +193,10 @@ tcache_bin_flush_large(tcache_bin_t *tbin, size_t binind, unsigned rem,
 			ptr = tbin->avail[i];
 			assert(ptr != NULL);
 			chunk = (arena_chunk_t *)CHUNK_ADDR2BASE(ptr);
-			if (chunk->arena == arena)
-				arena_dalloc_large_locked(arena, chunk, ptr);
-			else {
+			if (chunk->arena == arena) {
+				arena_dalloc_large_junked_locked(arena, chunk,
+				    ptr);
+			} else {
 				/*
 				 * This object was allocated via a different
 				 * arena than the one that is currently locked.
@@ -246,6 +247,14 @@ tcache_arena_associate(tcache_t *tcache, arena_t *arena)
 }
 
 void
+tcache_arena_reassociate(tcache_t *tcache, arena_t *arena)
+{
+
+	tcache_arena_dissociate(tcache);
+	tcache_arena_associate(tcache, arena);
+}
+
+void
 tcache_arena_dissociate(tcache_t *tcache)
 {
 
@@ -261,17 +270,21 @@ tcache_arena_dissociate(tcache_t *tcache)
 tcache_t *
 tcache_get_hard(tsd_t *tsd)
 {
+	arena_t *arena;
 
 	if (!tcache_enabled_get()) {
 		if (tsd_nominal(tsd))
 			tcache_enabled_set(false); /* Memoize. */
 		return (NULL);
 	}
-	return (tcache_create(choose_arena(tsd, NULL)));
+	arena = arena_choose(tsd, NULL);
+	if (unlikely(arena == NULL))
+		return (NULL);
+	return (tcache_create(tsd, arena));
 }
 
 tcache_t *
-tcache_create(arena_t *arena)
+tcache_create(tsd_t *tsd, arena_t *arena)
 {
 	tcache_t *tcache;
 	size_t size, stack_offset;
@@ -282,23 +295,10 @@ tcache_create(arena_t *arena)
 	size = PTR_CEILING(size);
 	stack_offset = size;
 	size += stack_nelms * sizeof(void *);
-	/*
-	 * Round up to the nearest multiple of the cacheline size, in order to
-	 * avoid the possibility of false cacheline sharing.
-	 *
-	 * That this works relies on the same logic as in ipalloc(), but we
-	 * cannot directly call ipalloc() here due to tcache bootstrapping
-	 * issues.
-	 */
-	size = (size + CACHELINE_MASK) & (-CACHELINE);
+	/* Avoid false cacheline sharing. */
+	size = sa2u(size, CACHELINE);
 
-	if (size <= SMALL_MAXCLASS)
-		tcache = (tcache_t *)arena_malloc_small(arena, size, true);
-	else if (size <= tcache_maxclass)
-		tcache = (tcache_t *)arena_malloc_large(arena, size, true);
-	else
-		tcache = (tcache_t *)icalloct(NULL, size, false, arena);
-
+	tcache = ipalloct(tsd, size, CACHELINE, true, false, arena);
 	if (tcache == NULL)
 		return (NULL);
 
@@ -319,7 +319,6 @@ static void
 tcache_destroy(tsd_t *tsd, tcache_t *tcache)
 {
 	unsigned i;
-	size_t tcache_size;
 
 	tcache_arena_dissociate(tcache);
 
@@ -354,23 +353,7 @@ tcache_destroy(tsd_t *tsd, tcache_t *tcache)
 	    arena_prof_accum(tcache->arena, tcache->prof_accumbytes))
 		prof_idump();
 
-	tcache_size = arena_salloc(tcache, false);
-	if (tcache_size <= SMALL_MAXCLASS) {
-		arena_chunk_t *chunk = CHUNK_ADDR2BASE(tcache);
-		arena_t *arena = chunk->arena;
-		size_t pageind = ((uintptr_t)tcache - (uintptr_t)chunk) >>
-		    LG_PAGE;
-		arena_chunk_map_bits_t *bitselm = arena_bitselm_get(chunk,
-		    pageind);
-
-		arena_dalloc_bin(arena, chunk, tcache, pageind, bitselm);
-	} else if (tcache_size <= tcache_maxclass) {
-		arena_chunk_t *chunk = CHUNK_ADDR2BASE(tcache);
-		arena_t *arena = chunk->arena;
-
-		arena_dalloc_large(arena, chunk, tcache);
-	} else
-		idalloct(tsd, tcache, false);
+	idalloct(tsd, tcache, false);
 }
 
 void

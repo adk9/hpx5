@@ -21,6 +21,7 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
@@ -50,6 +51,6 @@ static int _call_cont_handler(locality_cont_args_t *args) {
 }
 
 static HPX_CONSTRUCTOR void _init_actions(void) {
-  locality_shutdown = HPX_REGISTER_ACTION(_shutdown_handler);
-  locality_call_continuation = HPX_REGISTER_ACTION(_call_cont_handler);
+  LIBHPX_REGISTER_ACTION(&locality_shutdown, _shutdown_handler);
+  LIBHPX_REGISTER_ACTION(&locality_call_continuation, _call_cont_handler);
 }

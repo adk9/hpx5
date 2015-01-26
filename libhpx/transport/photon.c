@@ -133,7 +133,7 @@ _pin(transport_class_t *transport, const void* buffer, size_t len)
   rkey_t *r = new_rkey(transport, b);
   if (!r)
     dbg_error("photon: could not allocate registration key.\n");
-  
+
   int rc = photon_get_buffer_private(b, len, (photonBufferPriv)&r->rkey);
   if (rc != PHOTON_OK)
     dbg_error("photon: could not get metadata when pinning the heap: 0x%016lx (%lu).\n",
@@ -380,9 +380,9 @@ _progress(transport_class_t *t, transport_op_t op)
     {
       request_t **i = &(photon->progress)->pending_sends;
       while (*i != NULL) {
-	request_t *j = *i;
-	photon_cancel((photon_rid)j->request, 0);
-	*i = j->next;
+    request_t *j = *i;
+    photon_cancel((photon_rid)j->request, 0);
+    *i = j->next;
       }
     }
     break;
@@ -396,16 +396,16 @@ _progress(transport_class_t *t, transport_op_t op)
 
 
 static uint32_t _photon_get_send_limit(transport_class_t *t) {
-  return t->req_limit;
+  return t->send_limit;
 }
 
 static uint32_t _photon_get_recv_limit(transport_class_t *t) {
-  return t->req_limit;
+  return t->recv_limit;
 }
 
 
 
-transport_class_t *transport_new_photon(uint32_t req_limit) {
+transport_class_t *transport_new_photon(uint32_t send_limit, uint32_t recv_limit) {
   photon_t *photon = malloc(sizeof(*photon));
   photon->class.type           = HPX_TRANSPORT_PHOTON;
   photon->class.id             = _id;
@@ -417,26 +417,27 @@ transport_class_t *transport_new_photon(uint32_t req_limit) {
   photon->class.get_send_limit = _photon_get_send_limit;
   photon->class.get_recv_limit = _photon_get_recv_limit;
 
-  photon->class.delete         = _delete;
-  photon->class.pin            = _pin;
-  photon->class.unpin          = _unpin;
-  photon->class.put            = _put;
-  photon->class.get            = _get;
-  photon->class.send           = _send;
-  photon->class.probe          = _probe;
-  photon->class.recv           = _recv;
-  photon->class.test           = _test;
-  photon->class.testsome       = NULL;
-  photon->class.progress       = _progress;
+  photon->class.delete     = _delete;
+  photon->class.pin        = _pin;
+  photon->class.unpin      = _unpin;
+  photon->class.put        = _put;
+  photon->class.get        = _get;
+  photon->class.send       = _send;
+  photon->class.probe      = _probe;
+  photon->class.recv       = _recv;
+  photon->class.test       = _test;
+  photon->class.testsome   = NULL;
+  photon->class.progress   = _progress;
 
-  photon->class.req_limit      = req_limit == 0 ? photon_default_srlimit : req_limit;
-  photon->class.rkey_table     = NULL;
+  photon->class.send_limit = (send_limit == 0) ? photon_default_srlimit : send_limit;
+  photon->class.recv_limit = (recv_limit == 0) ? photon_default_srlimit : recv_limit;
+  photon->class.rkey_table = NULL;
 
   // runtime configuration options
   char* eth_dev;
   char* ib_dev;
   char* backend;
-  int ib_port;
+  // int ib_port;
   int use_cma;
   int ledger_entries = -1;  // default is 64
   int val = 0;

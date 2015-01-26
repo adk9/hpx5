@@ -25,6 +25,7 @@ photonLedger photon_rdma_ledger_create_reuse(photonLedgerEntry ledger_buffer, in
   memset(new->entries, 0, sizeof(struct photon_rdma_ledger_entry_t) * num_entries);
 
   new->curr = 0;
+  new->tail = 0;
   new->num_entries = num_entries;
 
   return new;
@@ -35,4 +36,15 @@ error_exit:
 
 void photon_rdma_ledger_free(photonLedger ledger) {
   free(ledger);
+}
+
+int photon_rdma_ledger_get_next(photonLedger l) {
+  uint64_t curr, tail;
+  curr = sync_fadd(&l->curr, 1, SYNC_RELAXED);
+  tail = sync_load(&l->tail, SYNC_RELAXED);
+  if ((curr - tail) > l->num_entries) {
+    log_err("Exceeded number of outstanding ledger entries - increase ledger size or wait for completion");
+    return -1;
+  }
+  return curr & (l->num_entries - 1);
 }

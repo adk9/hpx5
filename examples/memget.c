@@ -50,6 +50,8 @@ static int _init_array_action(size_t *args) {
 
   for(int i = 0; i < n; i++)
     local[i] = (HPX_LOCALITY_ID == 0) ? 'a' : 'b';
+
+  hpx_gas_unpin(target);
   HPX_THREAD_CONTINUE(local);
 }
 
@@ -141,8 +143,8 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  _main        = HPX_REGISTER_ACTION(_main_action);
-  _init_array  = HPX_REGISTER_ACTION(_init_array_action);
+  HPX_REGISTER_ACTION(&_main, _main_action);
+  HPX_REGISTER_ACTION(&_init_array, _init_array_action);
 
-  return hpx_run(_main, NULL, 0);
+  return hpx_run(&_main, NULL, 0);
 }

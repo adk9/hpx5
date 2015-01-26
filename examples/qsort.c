@@ -191,10 +191,11 @@ int main (int argc, char *argv[])
   test_log = fopen("test.log", "a+");
 
   // Register the main action
-  _main = HPX_REGISTER_ACTION(_main_action);
-  _parallelQuicksortHelper = HPX_REGISTER_ACTION(_parallelQuicksortHelper_action);
+  HPX_REGISTER_ACTION(&_main, _main_action);
+  HPX_REGISTER_ACTION(&_parallelQuicksortHelper,
+                      _parallelQuicksortHelper_action);
   // Run the main action
-  return hpx_run(_main, &NUM, sizeof(NUM));
+  return hpx_run(&_main, &NUM, sizeof(NUM));
 }
 
 void quicksort(double lyst[], int size)

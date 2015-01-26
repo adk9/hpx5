@@ -75,20 +75,17 @@ AC_ARG_ENABLE([apps],
                   [Enable mini-apps @<:@default=no@:>@])],
   [], [enable_apps=no])
 
+AC_ARG_ENABLE([tutorial],
+  [AS_HELP_STRING([--enable-tutorial],
+                  [Enable building of code samples from the HPX tutorial @<:@default=no@:>@])],
+  [], [enable_tutorial=no])
+
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug],
                   [Enable debug code @<:@default=no@:>@])],
   [], [enable_debug=no])
 AS_IF([test "x$enable_debug" != xno],
   [AC_DEFINE([ENABLE_DEBUG], [1], [Enable debugging stuff])])
-
-AC_ARG_ENABLE([action-table],
-  [AS_HELP_STRING([--enable-action-table],
-                  [Enable asymmetric, dynamic action-registration @<:@default=no@:>@])],
-  [], [enable_action_table=no])
-AS_IF([test "x$enable_action_table" != xno],
-  [AC_DEFINE([ENABLE_ACTION_TABLE], [1], [Enable asymmetric, dynamic action-registration])])
-AM_CONDITIONAL([ENABLE_ACTION_TABLE], [test "$enable_action_table" = "yes"])
 
 AC_ARG_ENABLE([photon-debug],
   [AS_HELP_STRING([--enable-photon-debug],
@@ -198,6 +195,7 @@ AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno])
 AM_CONDITIONAL([ENABLE_APPS], [test "x$enable_apps" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
+AM_CONDITIONAL([ENABLE_TUTORIAL], [test "x$enable_tutorial" != xno])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
 
 AM_CONDITIONAL([GNU_PE_ENV], [test "x$hpx_pe_env" = xGNU])
@@ -250,6 +248,14 @@ AC_CONFIG_FILES([
   examples/Makefile
   bench/Makefile])
 
+AS_IF([test "x$enable_tutorial" != xno],
+  [AC_CONFIG_FILES([tutorial/Makefile
+  tutorial/threads/Makefile
+  tutorial/gas/Makefile
+  tutorial/collectives/Makefile
+  tutorial/lco/Makefile
+  tutorial/parcel/Makefile])])
+
 AS_IF([test "x$enable_apps" != xno],
   [AC_CONFIG_FILES([apps/Makefile
   apps/mpi/Makefile
@@ -268,10 +274,14 @@ AS_IF([test "x$enable_docs" != xno],
   [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
   
 AS_IF([test "x$enable_tests" != xno],
+  [AC_CONFIG_FILES([tests/unit/run_tests.sh],
+		   [chmod +x tests/unit/run_tests.sh])]
+  [AC_CONFIG_FILES([tests/perf/overheads/run_tests.sh],
+		   [chmod +x tests/perf/overheads/run_tests.sh])]
   [AC_CONFIG_FILES([tests/Makefile
   tests/unit/Makefile
-  tests/performance/Makefile
-  tests/performance/overheads/Makefile])])
+  tests/perf/Makefile
+  tests/perf/overheads/Makefile])])
   
 AC_OUTPUT
 
@@ -299,6 +309,7 @@ echo "              Profiling : $with_papi"
 echo "     Topology Awareness : $with_hwloc"
 echo "            SDN support : $with_trema"
 echo "          Documentation : $enable_docs"
+echo "               Tutorial : $enable_tutorial"
 echo "             Test Suite : $enable_tests"
 echo "         Extra CPPFLAGS : $hpx_extra_cppflags"
 echo "           Extra CFLAGS : $hpx_extra_cflags"

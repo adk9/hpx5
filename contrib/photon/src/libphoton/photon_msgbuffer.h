@@ -39,9 +39,9 @@ typedef struct photon_msgbuffer_t * photonMsgBuf;
 
    .base          .hptr         .mptr
    |...p_offset...|...p_hsize...|......msg......| */
-photonMsgBuf photon_msgbuffer_new(uint64_t size, uint64_t p_size, int p_offset, int p_hsize);
-int photon_msgbuffer_free(photonMsgBuf mbuf);
-photon_mbe *photon_msgbuffer_get_entry(photonMsgBuf mbuf, int *ind);
-int photon_msgbuffer_free_entry(photonMsgBuf mbuf, int ind);
+PHOTON_INTERNAL photonMsgBuf photon_msgbuffer_new(uint64_t size, uint64_t p_size, int p_offset, int p_hsize);
+PHOTON_INTERNAL int photon_msgbuffer_free(photonMsgBuf mbuf);
+PHOTON_INTERNAL photon_mbe *photon_msgbuffer_get_entry(photonMsgBuf mbuf, int *ind);
+PHOTON_INTERNAL int photon_msgbuffer_free_entry(photonMsgBuf mbuf, int ind);
 
 #endif

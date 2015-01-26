@@ -22,8 +22,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 #include "hpx/hpx.h"
+#include "libhpx/action.h"
 #include "libhpx/scheduler.h"
 #include "libhpx/locality.h"
 #include "cvar.h"
@@ -151,7 +151,7 @@ static hpx_status_t _gencount_wait_gen_proxy(unsigned long *gen) {
 
 
 static HPX_CONSTRUCTOR void _initialize_actions(void) {
-  _gencount_wait_gen_action = HPX_REGISTER_ACTION(_gencount_wait_gen_proxy);
+  LIBHPX_REGISTER_ACTION(&_gencount_wait_gen_action, _gencount_wait_gen_proxy);
 }
 
 hpx_addr_t

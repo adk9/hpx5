@@ -18,8 +18,8 @@
 #include "config.h"
 #endif
 
-#include <sys/types.h> 
-#include <sys/sysctl.h> 
+#include <sys/types.h>
+#include <sys/sysctl.h>
 #include "libhpx/system.h"
 #include "hpx/hpx.h"
 
@@ -28,15 +28,15 @@
 /// @brief Implements HPX's CPU interface on Darwin (Mac OS X).
 /// ----------------------------------------------------------------------------
 
-int system_get_cores(void) 
-{ 
+int system_get_cores(void)
+{
   int cores;
   size_t length = sizeof(cores);
   sysctlbyname("hw.ncpu", &cores, &length, NULL, 0);
   return cores;
 }
 
-int system_set_affinity(pthread_t *thread, int core_id) {
+int system_set_affinity(pthread_t thread, int core_id) {
   // there's no good way to do this on darwin yet, so we do nothing.
   return HPX_SUCCESS;
 }

@@ -70,7 +70,7 @@ hpx_status_t hpx_lco_wait(hpx_addr_t lco);
 /// @param lco  the LCO we're processing
 /// @param time a time after which to return even if the LCO is not set
 /// @returns    HPX_SUCCESS or the code passed to hpx_lco_error()
-hpx_status_t hpx_lco_try_wait(hpx_addr_t lco, hpx_time_t time);
+//hpx_status_t hpx_lco_try_wait(hpx_addr_t lco, hpx_time_t time);
 
 /// Perform a get operation.
 ///
@@ -102,7 +102,7 @@ hpx_status_t hpx_lco_get(hpx_addr_t lco, int size, void *value);
 /// @param[out] out the output location (may be null)
 /// @param     time a time after which to fail
 /// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
-hpx_status_t hpx_lco_try_get(hpx_addr_t lco, int size, void *value, hpx_time_t time);
+//hpx_status_t hpx_lco_try_get(hpx_addr_t lco, int size, void *value, hpx_time_t time);
 
 /// Blocks the thread until all of the LCOs have been set.
 ///
