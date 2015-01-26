@@ -156,11 +156,6 @@ int t03_printHello_action(int *value)
 
   ld->rank = *value;
  
-  printf("Hello %d (%d/%d) (%d/%d) (%d/%d)\n", *value,
-          HPX_THREAD_ID+1, HPX_THREADS, HPX_LOCALITY_ID+1,
-          HPX_LOCALITIES, HPX_LOCALITY_ID*HPX_THREADS+HPX_THREAD_ID+1,
-          HPX_LOCALITIES*HPX_THREADS);
-
   hpx_gas_unpin(local);
   return HPX_SUCCESS;
 }
@@ -180,7 +175,6 @@ START_TEST(test_libhpx_gas_global_alloc_big_blocks)
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
 
-  printf("initialization is done\n");
   hpx_gas_free(domain, HPX_NULL);
 }
 END_TEST
