@@ -31,3 +31,8 @@ if ENABLE_TUTORIAL
 SUBDIRS      += tutorial
 DIST_SUBDIRS += tutorial
 endif
+
+if ENABLE_APPS
+SUBDIRS      += apps
+DIST_SUBDIRS += apps
+endif
