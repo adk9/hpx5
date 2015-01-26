@@ -222,7 +222,7 @@ int hpx_count_range_call(hpx_action_t action,
              const hpx_addr_t addr,
              const size_t count,
              const size_t increment,
-             const size_t bsize,
+             const uint32_t bsize,
              const size_t arg_size,
              void *const arg) {
   const size_t thread_chunk = count / (HPX_LOCALITIES * HPX_THREADS);
