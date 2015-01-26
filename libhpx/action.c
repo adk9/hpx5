@@ -47,7 +47,6 @@ typedef struct {
   ffi_cif             *cif;
 } _entry_t;
 
-
 /// Compare two entries by their keys.
 ///
 /// This is used to sort the action table during finalization, so that we can
@@ -64,7 +63,6 @@ static int _cmp_keys(const void *lhs, const void *rhs) {
   return strcmp(el->key, er->key);
 }
 
-
 /// An action table is simply an array that stores its size.
 ///
 ///
@@ -73,14 +71,12 @@ typedef struct action_table {
   _entry_t entries[];
 } _table_t;
 
-
 /// A static action table.
 ///
 /// We currently need to be able to register actions before we call hpx_init()
 /// because we use constructors inside of libhpx to do action registration. We
 /// expose this action table to be used for that purpose.
 static _table_t *_actions = NULL;
-
 
 /// Get the static action table.
 ///
@@ -98,12 +94,10 @@ static _table_t *_get_actions(void) {
   return _actions;
 }
 
-
 /// Sort the actions in an action table by their key.
 static void _sort_entries(_table_t *table) {
   qsort(&table->entries, table->n, sizeof(_entry_t), _cmp_keys);
 }
-
 
 /// Assign all of the entry ids in the table.
 static void _assign_ids(_table_t *table) {
@@ -111,7 +105,6 @@ static void _assign_ids(_table_t *table) {
     *table->entries[i].id = i;
   }
 }
-
 
 /// Insert an action into a table.
 ///
@@ -146,11 +139,9 @@ const _table_t *action_table_finalize(void) {
   return table;
 }
 
-
 void action_table_free(const _table_t *table) {
   free((void*)table);
 }
-
 
 const char *action_table_get_key(const struct action_table *table, hpx_action_t id) {
   if (id == HPX_ACTION_INVALID) {
@@ -165,7 +156,6 @@ const char *action_table_get_key(const struct action_table *table, hpx_action_t 
   dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n);
   return NULL;
 }
-
 
 hpx_action_type_t action_table_get_type(const struct action_table *table, hpx_action_t id) {
   if (id == HPX_ACTION_INVALID) {
@@ -196,7 +186,6 @@ ffi_cif *action_table_get_cif(const struct action_table *table, hpx_action_t id)
   return NULL;
 }
 
-
 bool action_table_get_args(const struct action_table *table, hpx_action_t id,
                            va_list inargs, void **outargs, size_t *len) {
   ffi_cif *cif = action_table_get_cif(table, id);
@@ -222,17 +211,8 @@ bool action_table_get_args(const struct action_table *table, hpx_action_t id,
   }
 }
 
-
-int action_table_run_handler(const struct action_table *table, hpx_parcel_t *parcel) {
-  const hpx_addr_t target = hpx_parcel_get_target(parcel);
-  const uint32_t owner = gas_owner_of(here->gas, target);
-  DEBUG_IF (owner != here->rank) {
-    dbg_log_sched("received parcel at incorrect rank, resend likely\n");
-  }
-
-  hpx_action_t id = hpx_parcel_get_action(parcel);
-  void *args = hpx_parcel_get_data(parcel);
-
+int action_table_run_handler(const struct action_table *table, const hpx_action_t id,
+                             void *args) {
   if (id == HPX_ACTION_INVALID) {
     dbg_error("action registration is not complete");
   }
@@ -246,40 +226,26 @@ int action_table_run_handler(const struct action_table *table, hpx_parcel_t *par
     dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n);
   }
 
-  bool pinned = action_is_pinned(table, id);
-  if (pinned) {
-    hpx_gas_try_pin(target, NULL);
-  }
-
   int ret;
   if (likely(cif == NULL)) {
     ret = handler(args);
   } else {
     ffi_raw_call(cif, FFI_FN(handler), &ret, args);
   }
-
-  if (pinned) {
-    hpx_gas_unpin(target);
-  }
-
   return ret;
 }
-
 
 bool action_is_pinned(const struct action_table *table, hpx_action_t id) {
   return (action_table_get_type(table, id) == HPX_ACTION_PINNED);
 }
 
-
 bool action_is_task(const struct action_table *table, hpx_action_t id) {
   return (action_table_get_type(table, id) == HPX_ACTION_TASK);
 }
 
-
 bool action_is_interrupt(const struct action_table *table, hpx_action_t id) {
   return (action_table_get_type(table, id) == HPX_ACTION_INTERRUPT);
 }
-
 
 int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_handler_t f,
                         unsigned int nargs, hpx_action_t *id, ...) {
