@@ -135,7 +135,7 @@ Suite *test_suite(void)
   add_11_TestGenCountLCO(tc);
   add_12_TestMemget(tc);
   add_13_TestMemput(tc);
-  add_15_TestWait(tc);
+  //add_15_TestWait(tc);
 
   suite_add_tcase(s, tc);
   return s;
