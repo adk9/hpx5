@@ -1,1 +1,1 @@
-SHA1(hpx-0.3.0.tar.gz)= a42620d2dc9ac6a11c104e30c290f64a06d44d94
+SHA1(hpx-0.3.0.tar.gz)= d7ec5e45eecec6e2c767c2ffe269010905f6f8a5
