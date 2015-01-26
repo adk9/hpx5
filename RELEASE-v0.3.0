@@ -1,0 +1,131 @@
+HPX Release notes, Version 0.3
+Release date: 12/19/2014
+
+Distributed under the License, Version 0.3. (See accompanying file LICENSE_v0.3.0.txt)
+
+New features
+The HPX has been tested on Parallella-16 with most popular Linaro/Ubuntu OS’s for ARM boards and they have hard-float platforms. The parallella platform is an open source, high performance, energy efficient, based on Epiphany multicore chips developed by Adepteva. HPX has to be built with armv7l-unknown-linux-gnueabihf as host and target. More details about building HPX with ARM is detailed further in the build instructions.
+
+Improvements/Enhancements
+The Photon network transport has been updated with enhancements to internal request and event tracking. The result is lower per-message processing overhead and improved stability on Infiniband and GEMINI/Aries interconnects.
+
+Bug Fixes
+Build Instructions
+##################
+To any of the configurations below may be added the following common options:
+
+* -—enable-apps
+* -—enable-testsuite which may also require —-with-check=$PATH_TO_CHECK/lib/pkgconfig/check.pc
+Notes on building HPX on ARM
+Here are some notes on building/testing HPX on ARM. This is primarily based on ARMv7 architecture on parallella-16.
+
+Ensure that you have the required accessories
+#############################################
+* Parallella-16 board
+* A high quality 2000mA rated 5V DC power supply with 5.5mm OD / 2.1mm ID center positive polarity plug.
+* An ethernet cable
+* UART connector to computer
+* A fan
+* 16 GB Micro SD Card
+
+Note:
+1. The board does get hot so you have to take precautions to cool the board properly. Install the heatsink on the parallella board using the steps in: Installing the heatsink on the parallella board. Before letting the board run for hours, ensure that the board doesn't overheat. Using table fan is highly advisable.
+2. The board is ESD sensitive, please take the necessary precautions.
+
+Create a bootable micro-SD Card
+###############################
+Burn a fresh Micro-SD card using the latest distribution. The details of creating a parallella SD Card can be found from the link Creating a Parallella SD Card. Under Mac OS X, the way I imaged it was like:
+
+* Download the debian image from: HPX Debian parallella image and unzip the image.
+The image can be flashed directly to your microSD and it contains an updated kernel with usb storage support. It also has openmpi-1.6.5 and libcheck installed with all the other dependencies needed to build hpx. If you just want the updated kernel, check the boot/ subdirectory.
+
+* Insert the SD Card into your regular computer.
+* Find the device path of your SD card:
+	$ diskutil list
+* Unmount disk (but don't eject) the card:
+	$ diskutil unmountDisk [device] 
+	Example: 
+	$ diskutil unmountDisk /dev/disk1
+* Copy the image downloaded to the micro-SD card:
+	$ sudo dd if=[image] of=[device] bs=4m
+	Example: 
+	$ sudo dd if=hpx-debian-parallella.img of=/dev/disk1 bs=4m
+Please be patient, this takes a while.
+* Eject the card:
+	$ diskutil eject [device]
+Done!
+
+Connect the peripherals and apply power
+#######################################
+1. Insert the Micro-SD card into parallella board.
+2. Connect a UART connector to parallella. The Parallella board has a three pin 3.3V UART header located next to the RJ45 connector. The RXD pin is an input to the board and the TXD pin is an output from the board. The default UART configuration is as follows: (BAUD_RATE=115,200, DATA_BITS=8, STOP_BIT=1, PARITY=NONE, FLOW=XON/XOFF).
+3. Connect ethernet cable
+4. Connect power cable
+
+Build and run HPX
+#################
+* Start the UART tty screen using the command:
+	$ sudo screen  /dev/ttyUSB0 115200
+Restart the parallella board and the system will boot and a login screen will appear. Once logged in,
+
+* Grab the HPX code from the repository and build the code using the following commands:
+	$ ./bootstrap
+	$ ./configure --prefix=/path/to/hpx/installation --with-mpi CFLAGS="-O0 -g -mcpu=cortex-a9 -mfloat-abi=hard -mfpu=vfpv3" --enable-debug  --with-check --enable-testsuite --enable-tutorial --enable-apps
+Rebuild the jemalloc using commands
+
+	$ pushd contrib/jemalloc
+	$ ./autogen.sh && ./configure --disable-valgrind --disable-fill --disable-stats --with-jemalloc-prefix=libhpx_global_ --without-mangling
+	$ popd
+Reconfigure and build
+
+	$ ./bootstrap
+	$ ./configure --prefix=/path/to/hpx/installation --with-mpi CFLAGS="-O0 -g -mcpu=cortex-a9 -mfloat-abi=hard -mfpu=vfpv3" --enable-debug  --with-check --enable-testsuite --enable-tutorial --enable-apps
+	$ make clean
+	$ make
+Note: There are 2 cores on Parallella-16 boards. To run code on both cores set:
+
+	$ export hpx_cores=2
+	$ export hpx_threads=2
+
+Known limitations
+#################
+1. HPX on ARM works only with SMP and MPI transport.
+2. Since, parallella board has only 1 GB of memory, some of the apps and examples might not work at higher scale due to memory limitation.
+
+On Stampede
+###########
+The following modules are required to build and run HPX:
+intel/14.0.1.106
+mvapich2/2.0b
+At present, the Photon backend is required to use HPX on Stampede.
+
+	$PATH_TO_HPX/hpx/configure --with-mpi=/opt/apps/intel14/mvapich2/2.0b/lib/pkgconfig/mvapich2.pc --enable-photon LDFLAGS=-L/opt/ofed/lib64 CPPFLAGS=-I/opt/ofed/include
+The runtime environment should be set up as follows:
+
+	module load intel/14.0.1.106
+	module load mvapich2/2.0b
+	export HPX_USE_IB_DEV="mlx4_0"
+	export HPX_USE_IB_PORT="1"
+As Stampede nodes have 16 cores, at present it is recommended that hpx programs be run with the option --hpx-cores=15.
+
+On the C-SWARM Cluster
+######################
+HPX now requires a multi-threaded MPI implementation. HPX is known to compile and run on the C-SWARM machines with OpenMPI 1.6.5 compiled with --enable-mpi-thread-multiple
+
+	$PATH_TO_HPX/hpx/configure --with-mpi=$PATH_TO_OPENMPI/lib/pkgconfig/ompi.pc
+
+As C-SWARM nodes have 16 cores, at present it is recommended that hpx programs be run with the option --hpx-cores=15.
+
+On Karst
+########
+HPX on Karst was built and run with the following modules:
+
+gcc/4.7.2
+openmpi/gnu/1.6.3
+Note that Photon cannot be used on Karst.
+
+	$PATH_TO_HPX/hpx/configure --with-mpi=/N/soft/rhel6/openmpi/gnu/1.6.3/lib/pkgconfig/ompi.pc
+
+Known bugs & limitations
+########################
+The lulesh application with netfutures (an implementation with Photon PWC) has a known bug observed in Photon that is being resolved for the next release.
