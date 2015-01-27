@@ -114,6 +114,9 @@ static void _alltoall_fini(lco_t *lco) {
     return;
 
   lco_lock(lco);
+  DEBUG_IF(true) {
+    lco_set_deleted(lco);
+  }
   _alltoall_t *g = (_alltoall_t *)lco;
   if (g->value)
     free(g->value);

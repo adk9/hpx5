@@ -1,7 +1,0 @@
-
-Instructions:
-
-Start with example2
-1) Instead of using hpx_call() to call _initDomain, allocate a parcel, and use
-   parcel_send() to send the message---use it's buffer directly for the
-   InitArgs. 
