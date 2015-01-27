@@ -66,6 +66,9 @@ static void _future_fini(lco_t *lco) {
   _future_t *f = (void*)lco;
   if (f) {
     lco_lock(&f->lco);
+    DEBUG_IF(true) {
+      lco_set_deleted(&f->lco);
+    }
   }
   libhpx_global_free(f);
 }

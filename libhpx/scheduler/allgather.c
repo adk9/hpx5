@@ -108,6 +108,9 @@ static void _allgather_fini(lco_t *lco) {
     return;
 
   lco_lock(lco);
+  DEBUG_IF(true) {
+    lco_set_deleted(lco);
+  }
   _allgather_t *g = (_allgather_t *)lco;
   if (g->value)
     free(g->value);

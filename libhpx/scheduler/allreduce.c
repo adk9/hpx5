@@ -48,6 +48,9 @@ typedef struct {
 /// Deletes a reduction.
 static void _allreduce_fini(lco_t *lco) {
   lco_lock(lco);
+  DEBUG_IF(true) {
+    lco_set_deleted(lco);
+  }
   _allreduce_t *r = (_allreduce_t *)lco;
   if (r->value)
     free(r->value);

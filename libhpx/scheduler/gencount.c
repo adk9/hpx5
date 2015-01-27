@@ -50,6 +50,9 @@ static void _gencount_fini(lco_t *lco) {
 
   _gencount_t *gencnt = (_gencount_t *)lco;
   lco_lock(&gencnt->lco);
+  DEBUG_IF(true) {
+    lco_set_deleted(&gencnt->lco);
+  }
   libhpx_global_free(gencnt);
 }
 

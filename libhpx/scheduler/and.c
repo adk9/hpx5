@@ -91,6 +91,9 @@ static void _and_fini(lco_t *lco)
 
   _and_t *and = (_and_t *)lco;
   lco_lock(&and->lco);
+  DEBUG_IF(true) {
+    lco_set_deleted(&and->lco);
+  }
   libhpx_global_free(and);
 }
 
