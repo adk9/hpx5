@@ -43,7 +43,7 @@ rm -rf ./build/
 ./bootstrap
 mkdir build
 cd build
-../configure $CFGFLAGS --with-check --enable-testsuite --enable-apps $HPXDEBUG
+../configure $CFGFLAGS --with-check --enable-testsuite $HPXDEBUG
 make
 
 # Run all the unit tests:
