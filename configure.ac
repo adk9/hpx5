@@ -87,6 +87,14 @@ AC_ARG_ENABLE([debug],
 AS_IF([test "x$enable_debug" != xno],
   [AC_DEFINE([ENABLE_DEBUG], [1], [Enable debugging stuff])])
 
+AC_ARG_ENABLE([hugetlbfs],
+  [AS_HELP_STRING([--enable-hugetlbfs],
+                  [Enable using huge pages when mapping the heap @<:@default=no@:>@])],
+  [], [enable_hugetlbfs=no])
+AS_IF([test "x$enable_hugetlbfs" != xno],
+  [AC_DEFINE([HUGETLBFS_FLAGS], [MAP_HUGETLB], [Enable huge pages heap allocation])],
+  [AC_DEFINE([HUGETLBFS_FLAGS], [0], [Disableh huge pages heap allocation])])
+
 AC_ARG_ENABLE([profiling],
   [AS_HELP_STRING([--enable-profiling],
                   [Enable profiling support @<:@default=no@:>@])],
@@ -286,6 +294,7 @@ echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
 echo "               Networks : $networks"
 echo "              Profiling : $with_papi"
+echo "         hugetlbfs heap : $enable_hugetlbfs"
 echo "     Topology Awareness : $with_hwloc"
 echo "          Documentation : $enable_docs"
 echo "               Tutorial : $enable_tutorial"
