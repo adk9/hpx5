@@ -83,8 +83,8 @@ static int64_t _pgas_gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsi
   const uint64_t brhs = _block_of(rhs, bsize);
 
   const int64_t dphase = plhs - (int64_t)prhs;
-  const int32_t dlocality = llhs - (int32_t)lrhs;
-  const int64_t dblock = blhs - (int64_t)brhs;
+  const int32_t dlocality = llhs - lrhs;
+  const int64_t dblock = blhs - brhs;
 
   // each difference in the phase is just one byte,
   // each difference in the locality is bsize bytes, and
