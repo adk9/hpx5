@@ -82,7 +82,7 @@ static int64_t _pgas_gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsi
   const uint64_t blhs = _block_of(lhs, bsize);
   const uint64_t brhs = _block_of(rhs, bsize);
 
-  const int64_t dphase = plhs - prhs;
+  const int64_t dphase = plhs - (int64_t)prhs;
   const int32_t dlocality = llhs - lrhs;
   const int64_t dblock = blhs - brhs;
 
@@ -132,7 +132,7 @@ static hpx_addr_t _pgas_gpa_add_cyclic(hpx_addr_t gpa, int64_t bytes, uint32_t b
 
 
 int64_t pgas_gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
-  return _pgas_gpa_add_cyclic(lhs, rhs, bsize, true);
+  return _pgas_gpa_sub_cyclic(lhs, rhs, bsize, true);
 }
 
 hpx_addr_t pgas_gpa_add_cyclic(hpx_addr_t gpa, int64_t bytes, uint32_t bsize) {

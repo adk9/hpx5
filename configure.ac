@@ -126,7 +126,6 @@ HPX_WITH_PKG([pmi],[pmi],[build with support for PMI],[no],[PMI])
 AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray PMI extensions]))
 
 HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[no],[MPI])
-HPX_WITH_PKG([hugetlbfs],[hugetlbfs],[build with hugepages for heap],[no],[HUGETLBFS])
 HPX_WITH_PKG([portals],[portals],[build with Portals networking],[no],[PORTALS])
 
 HPX_WITH_VERBS
@@ -307,7 +306,6 @@ echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
 echo "               Networks : $networks"
 echo "               jemalloc : $enable_jemalloc"
-echo "              hugetlbfs : $with_hugetlbfs"
 echo "              Profiling : $with_papi"
 echo "     Topology Awareness : $with_hwloc"
 echo "          Documentation : $enable_docs"
