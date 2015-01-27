@@ -16,6 +16,7 @@
 
 #include <inttypes.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <jemalloc/jemalloc_hpx.h>
 #include <libsync/sync.h>
 #include <hpx/builtins.h>
@@ -28,9 +29,6 @@
 #include "gpa.h"
 #include "heap.h"
 #include "pgas.h"
-#ifdef HAVE_HUGETLBFS
-  #include <hugetlbfs.h>
-#endif
 
 const uint64_t MAX_HEAP_BYTES = (uint64_t)1lu << GPA_OFFSET_BITS;
 
@@ -153,6 +151,29 @@ static bitmap_t *_new_bitmap(const heap_t *heap) {
 }
 
 
+static void* _mmap_heap(heap_t *const heap) {
+  const int prot  = PROT_READ | PROT_WRITE;
+  const int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE;
+  const uint32_t chunk_lg_align = ceil_log2_64(heap->bytes_per_chunk);
+
+  for (unsigned int i = GPA_MAX_LG_BSIZE; i >= chunk_lg_align; ++i) {
+    void *addr = (void*)(1ul << i);
+    void *ret  = mmap(addr, heap->nbytes, prot, flags, -1, 0);
+    if (ret != addr) {
+      munmap(ret, heap->nbytes);
+      continue;
+    }
+    heap->max_block_lg_size = i;
+    dbg_log_gas("Allocated heap with %u bits for blocks\n", i);
+    return ret;
+  }
+  
+  dbg_error("Could not allocate heap with minimum alignment of %zu.\n", 
+	    heap->bytes_per_chunk);
+  return NULL;
+}
+
+
 int heap_init(heap_t *heap, const size_t size, bool init_cyclic) {
   assert(heap);
   assert(size);
@@ -173,29 +194,15 @@ int heap_init(heap_t *heap, const size_t size, bool init_cyclic) {
   dbg_log_gas("heap nchunks is %zu\n", heap->nchunks);
 
   // use one extra chunk to deal with alignment
-  heap->raw_nchunks = heap->nchunks + 1;
-  heap->raw_nbytes  = heap->raw_nchunks * heap->bytes_per_chunk;
-  heap->raw_base    =
-#ifdef HAVE_HUGETLBFS
-    get_huge_pages(heap->raw_nbytes, GHP_DEFAULT);
-#else
-    malloc(heap->raw_nbytes);
-#endif
-  if (!heap->raw_base) {
+  heap->base  = _mmap_heap(heap);
+  if (!heap->base) {
     dbg_error("could not allocate %zu bytes for the global heap\n",
-              heap->raw_nbytes);
+              heap->nbytes);
     return LIBHPX_ENOMEM;
   }
-  dbg_log_gas("allocated %zu bytes for the global heap\n", heap->raw_nbytes);
-
-  // adjust stored base based on alignment requirements
-  const size_t r = ((uintptr_t)heap->raw_base % heap->bytes_per_chunk);
-  const size_t l = (heap->bytes_per_chunk - r) % heap->bytes_per_chunk;
-  heap->base = heap->raw_base + l;
-  dbg_log_gas("%zu-byte heap reserved at %p\n", heap->nbytes, heap->base);
+  dbg_log_gas("allocated %zu bytes for the global heap\n", heap->nbytes);
 
   assert((uintptr_t)heap->base % heap->bytes_per_chunk == 0);
-  assert(heap->base + heap->nbytes <= heap->raw_base + heap->raw_nbytes);
 
   heap->chunks = _new_bitmap(heap);
   dbg_log_gas("allocated chunk bitmap to manage %zu chunks.\n", heap->nchunks);
@@ -221,14 +228,10 @@ void heap_fini(heap_t *heap) {
   if (heap->chunks)
     bitmap_delete(heap->chunks);
 
-  if (heap->raw_base) {
+  if (heap->base) {
     if (heap->transport)
       heap->transport->unpin(heap->transport, heap->base, heap->nbytes);
-#ifdef HUGETLBFS
-    free_huge_pages(heap->raw_base);
-#else
-    free(heap->raw_base);
-#endif
+    munmap(heap->base, heap->nbytes);
   }
 }
 
@@ -303,6 +306,7 @@ void *heap_offset_to_lva(const heap_t *heap, uint64_t offset) {
 
 uint64_t heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize) {
   assert(heap->cyclic_arena < UINT32_MAX);
+  assert(ceil_log2_32(bsize) <= heap_max_block_lg_size(heap));
 
   // Figure out how many blocks per node that we need, and then allocate that
   // much cyclic space from the heap.
@@ -314,7 +318,11 @@ uint64_t heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize) {
   void      *base = libhpx_global_mallocx(blocks * padded, flags);
   if (!base)
     dbg_error("failed cyclic allocation\n");
-  return heap_lva_to_offset(heap, base);
+  const uint64_t ret = heap_lva_to_offset(heap, base);
+  // We are trying to align the offset to block boundary, so "== 0". Otherwise,
+  // we could check "< bsize".
+  assert((((1ul << align) - 1) & ret) == 0); 
+  return ret;
 }
 
 
@@ -343,6 +351,8 @@ static bool _chunks_are_used(const heap_t *heap, uint64_t offset, size_t n) {
 
 
 uint64_t heap_csbrk(heap_t *heap, size_t n, uint32_t bsize) {
+  assert(ceil_log2_32(bsize) <= heap_max_block_lg_size(heap));
+
   // need to allocate properly aligned offset
   uint32_t padded = (uint32_t)1 << ceil_log2_32(bsize);
   size_t    bytes = n * padded;
@@ -380,4 +390,9 @@ int heap_set_csbrk(heap_t *heap, uint64_t offset) {
   if (old < offset)
     sync_cas(&heap->csbrk, old, offset, SYNC_RELAXED, SYNC_RELAXED);
   return (_chunks_are_used(heap, old, offset)) ? HPX_ERROR : HPX_SUCCESS;
+}
+
+
+uint32_t heap_max_block_lg_size(const heap_t *heap) {
+  return heap->max_block_lg_size;
 }
