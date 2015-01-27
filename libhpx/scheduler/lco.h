@@ -91,13 +91,13 @@ HPX_INTERNAL void lco_init(lco_t *lco, const lco_class_t *class, uintptr_t user)
   HPX_NON_NULL(1,2);
 
 
-/// Set the user state bit to one.
+/// Set the deleted state bit to one.
 ///
 /// This operation does not acquire the LCO lock---the caller must lock the
 /// pointer first if this could occur concurrently.
 ///
 /// @param           lco The LCO to reset.
-void lco_set_user(lco_t *lco)
+void lco_set_deleted(lco_t *lco)
   HPX_INTERNAL;
 
 

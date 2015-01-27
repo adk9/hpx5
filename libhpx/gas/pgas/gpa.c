@@ -66,7 +66,13 @@ static hpx_addr_t _triple_to_gpa(uint32_t rank, uint64_t bid, uint32_t phase,
   return pgas_offset_to_gpa(rank, offset);
 }
 
-int64_t pgas_gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
+
+/// Forward declaration to be used in checking of address difference.
+static hpx_addr_t _pgas_gpa_add_cyclic(hpx_addr_t gpa, int64_t bytes, uint32_t bsize, bool debug);
+
+/// Implementation of address difference to be called from the public interface.
+/// The debug parameter is used to stop recursion in debugging checks.
+static int64_t _pgas_gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize, bool debug) {
   // for a block cyclic computation, we look at the three components
   // separately, and combine them to get the overall offset
   const uint32_t plhs = _phase_of(lhs, bsize);
@@ -76,25 +82,28 @@ int64_t pgas_gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   const uint64_t blhs = _block_of(lhs, bsize);
   const uint64_t brhs = _block_of(rhs, bsize);
 
-  const int32_t dphase = plhs - prhs;
+  const int64_t dphase = plhs - (int64_t)prhs;
   const int32_t dlocality = llhs - lrhs;
   const int64_t dblock = blhs - brhs;
 
   // each difference in the phase is just one byte,
   // each difference in the locality is bsize bytes, and
   // each difference in the phase is entire cycle of bsize bytes
-  const int64_t d = dblock * here->ranks * bsize + dlocality * bsize + dphase;
+  const int64_t d = dblock * (int64_t) here->ranks * (int64_t) bsize + dlocality * (int64_t) bsize + dphase;
 
   // make sure we're not crazy
-  DEBUG_IF (pgas_gpa_add_cyclic(rhs, d, bsize) != lhs) {
+  DEBUG_IF (debug && _pgas_gpa_add_cyclic(rhs, d, bsize, false) != lhs) {
     dbg_error("difference between %"PRIu64" and %"PRIu64" computed incorrectly as %"PRId64"\n",
               lhs, rhs, d);
   }
+
   return d;
 }
 
-/// Perform address arithmetic on a PGAS global address.
-hpx_addr_t pgas_gpa_add_cyclic(hpx_addr_t gpa, int64_t bytes, uint32_t bsize) {
+
+/// Implementation of address addition to be called from the public interface.
+/// The debug parameter is used to stop recursion in debugging checks.
+static hpx_addr_t _pgas_gpa_add_cyclic(hpx_addr_t gpa, int64_t bytes, uint32_t bsize, bool debug) {
   if (!bsize)
     return gpa + bytes;
 
@@ -107,11 +116,25 @@ hpx_addr_t pgas_gpa_add_cyclic(hpx_addr_t gpa, int64_t bytes, uint32_t bsize) {
   const hpx_addr_t addr = _triple_to_gpa(rank, block, phase, bsize);
 
   // sanity check
-  DEBUG_IF (true) {
+  DEBUG_IF (debug) {
     const void *lva = pgas_gpa_to_lva(addr);
-    if (!heap_contains_lva(global_heap, lva))
+    if (!heap_contains_lva(global_heap, lva)) {
       dbg_error("computed out of bounds address\n");
+    }
+    const int64_t diff = _pgas_gpa_sub_cyclic(addr, gpa, bsize, false);
+    if (diff != bytes) {
+      dbg_error("Address addition between address %"PRIu64" and offset %"PRId64" computed incorectly as %"PRIu64".  The difference is %"PRId64".\n", gpa, bytes, addr, diff);
+    }
   }
 
   return addr;
+}
+
+
+int64_t pgas_gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
+  return _pgas_gpa_sub_cyclic(lhs, rhs, bsize, true);
+}
+
+hpx_addr_t pgas_gpa_add_cyclic(hpx_addr_t gpa, int64_t bytes, uint32_t bsize) {
+  return _pgas_gpa_add_cyclic(gpa, bytes, bsize, true);
 }

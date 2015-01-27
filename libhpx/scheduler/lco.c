@@ -30,7 +30,7 @@
 /// We pack state into the LCO pointer---least-significant-bit is already used
 /// in the sync_lockable_ptr interface
 #define _TRIGGERED_MASK    (0x2)
-#define _USER_MASK         (0x4)
+#define _DELETED_MASK      (0x4)
 #define _STATE_MASK        (0x7)
 
 /// return the class pointer, masking out the state.
@@ -169,6 +169,10 @@ HPX_ACTION(attach, void *args) {
 /// LCO bit packing and manipulation
 /// @{
 const lco_class_t *lco_lock(lco_t *lco) {
+  const lco_class_t *class = _lco_class(lco);
+  DEBUG_IF((uintptr_t)class & _DELETED_MASK) {
+    dbg_error("locking lco that was previously deleted");
+  }
   return sync_lockable_ptr_lock(&lco->lock);
 }
 
@@ -176,21 +180,23 @@ void lco_unlock(lco_t *lco) {
   sync_lockable_ptr_unlock(&lco->lock);
 }
 
-void lco_init(lco_t *lco, const lco_class_t *class, uintptr_t user) {
+void lco_init(lco_t *lco, const lco_class_t *class, uintptr_t deleted) {
   lco->vtable = class;
-  lco->bits |= ((user) ? _USER_MASK : 0);
+  lco->bits |= ((deleted) ? _DELETED_MASK : 0);
 }
 
-void lco_set_user(lco_t *lco) {
-  lco->bits |= _USER_MASK;
+void lco_set_deleted(lco_t *lco) {
+  DEBUG_IF(true) {
+    lco->bits |= _DELETED_MASK;
+  }
 }
 
-void lco_reset_user(lco_t *lco) {
-  lco->bits &= ~_USER_MASK;
+void lco_reset_deleted(lco_t *lco) {
+  lco->bits &= ~_DELETED_MASK;
 }
 
-uintptr_t lco_get_user(const lco_t *lco) {
-  return lco->bits & _USER_MASK;
+uintptr_t lco_get_deleted(const lco_t *lco) {
+  return lco->bits & _DELETED_MASK;
 }
 
 void lco_set_triggered(lco_t *lco) {

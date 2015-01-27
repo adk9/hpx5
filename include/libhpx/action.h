@@ -29,7 +29,7 @@ hpx_action_type_t action_table_get_type(const struct action_table *, hpx_action_
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Run the handler associated with a parcel.
-int action_table_run_handler(const struct action_table *, hpx_parcel_t *)
+int action_table_run_handler(const struct action_table *, const hpx_action_t, void *)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Get the serialized/marshalled arguments associated with an action
