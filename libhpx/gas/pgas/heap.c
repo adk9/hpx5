@@ -168,9 +168,9 @@ static void* _mmap_heap(heap_t *const heap) {
     dbg_log_gas("Allocated heap with %u bits for blocks\n", i);
     return ret;
   }
-  
-  dbg_error("Could not allocate heap with minimum alignment of %zu.\n", 
-	    heap->bytes_per_chunk);
+
+  dbg_error("Could not allocate heap with minimum alignment of %zu.\n",
+        heap->bytes_per_chunk);
   return NULL;
 }
 
@@ -322,7 +322,7 @@ uint64_t heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize) {
   const uint64_t ret = heap_lva_to_offset(heap, base);
   // We are trying to align the offset to block boundary, so "== 0". Otherwise,
   // we could check "< bsize".
-  assert((((1ul << align) - 1) & ret) == 0); 
+  assert((((1ul << align) - 1) & ret) == 0);
   return ret;
 }
 
@@ -388,9 +388,13 @@ int heap_set_csbrk(heap_t *heap, uint64_t offset) {
   // csbrk is monotonically increasing, so if we see a value in the csbrk field
   // larger than the new offset, it means that this is happening out of order
   uint64_t old = sync_load(&heap->csbrk, SYNC_RELAXED);
-  if (old < offset)
+  if (old < offset) {
     sync_cas(&heap->csbrk, old, offset, SYNC_RELAXED, SYNC_RELAXED);
-  return (_chunks_are_used(heap, old, offset)) ? HPX_ERROR : HPX_SUCCESS;
+    int used = _chunks_are_used(heap, old, offset - old);
+    return (used) ? HPX_ERROR : HPX_SUCCESS;
+  }
+  // otherwise we have an old allocation and it's fine
+  return HPX_SUCCESS;
 }
 
 

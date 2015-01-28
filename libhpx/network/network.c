@@ -52,7 +52,6 @@
 #define _QUEUE_DEQUEUE _QUEUE(sync_, _dequeue)
 #define _QUEUE_NODE _QUEUE(,_node_t)
 
-
 /// The network class data.
 struct _network {
   struct network             vtable;
@@ -73,10 +72,12 @@ struct _network {
   _QUEUE_T                 rx;
 };
 
+static int stop_progress = 0;
 
 static void *_progress(void *o) {
   //system_set_affinity(pthread_self(), 0);
 
+  int stop;
   struct _network *network = o;
 
   // we have to join the GAS so that we can allocate parcels in here.
@@ -84,21 +85,19 @@ static void *_progress(void *o) {
   if (e) {
     dbg_error("network failed to join the global address space.\n");
   }
-
-  while (true) {
-    pthread_testcancel();
+  
+  do {
     profile_ctr(scheduler_get_stats(here->sched)->progress++);
     transport_progress(network->transport, TRANSPORT_POLL);
     sched_yield();
-  }
-  return NULL;
+    stop = sync_load(&stop_progress, SYNC_RELAXED);
+  } while (!stop);
+  
+  pthread_exit(NULL);
 }
 
 
-static hpx_action_t _probe = 0;
-
-
-static int _probe_handler(void *o) {
+static HPX_ACTION(_probe, void *o) {
   struct network *network = *(struct network **)o;
   hpx_parcel_t *p = NULL;
   int e = hpx_call(HPX_HERE, _probe, HPX_NULL, &network, sizeof(network));
@@ -112,11 +111,6 @@ static int _probe_handler(void *o) {
     }
   }
   return HPX_SUCCESS;
-}
-
-
-static void HPX_CONSTRUCTOR _register_actions(void) {
-  LIBHPX_REGISTER_ACTION(_probe_handler, &_probe);
 }
 
 
@@ -159,7 +153,7 @@ static int _startup(struct network *o) {
   else {
     dbg_log("started probing the network.\n");
   }
-  
+
   return HPX_SUCCESS;
 }
 
@@ -169,19 +163,16 @@ static void _shutdown(struct network *o) {
   if (network->transport->type == HPX_TRANSPORT_SMP)
     return;
 
-  int e = pthread_cancel(network->progress);
-  if (e) {
-    dbg_error("could not cancel the network progress thread.\n");
-  }
+  sync_store(&stop_progress, 1, SYNC_RELAXED);
 
-  e = pthread_join(network->progress, NULL);
+  int e = pthread_join(network->progress, NULL);
   if (e) {
     dbg_error("could not join the network progress thread.\n");
   }
   else {
     dbg_log("shutdown network progress.\n");
   }
-
+  
   int flush = sync_load(&network->flush, SYNC_ACQUIRE);
   if (flush) {
     transport_progress(network->transport, TRANSPORT_FLUSH);

@@ -34,11 +34,44 @@
 #define _STATE_MASK        (0x7)
 
 /// return the class pointer, masking out the state.
-static const lco_class_t *_lco_class(lco_t *lco) {
+static const lco_class_t *_class(lco_t *lco) {
   const lco_class_t *class = sync_lockable_ptr_read(&lco->lock);
   uintptr_t bits = (uintptr_t)class;
   bits = bits & ~_STATE_MASK;
   return (lco_class_t*)bits;
+}
+
+static lco_t *_target_lco(void) {
+  lco_t *lco = hpx_thread_current_local_target();
+  dbg_assert_str(lco, "Could not pin LCO.");
+  return lco;
+}
+
+static hpx_status_t _fini(lco_t *lco) {
+  _class(lco)->on_fini(lco);
+  return HPX_SUCCESS;
+}
+
+static hpx_status_t _set(lco_t *lco, size_t size, const void *data) {
+  _class(lco)->on_set(lco, size, data);
+  return HPX_SUCCESS;
+}
+
+static hpx_status_t _error(lco_t *lco, hpx_status_t code) {
+  _class(lco)->on_error(lco, code);
+  return HPX_SUCCESS;
+}
+
+static hpx_status_t _get(lco_t *lco, size_t bytes, void *out) {
+  return _class(lco)->on_get(lco, bytes, out);
+}
+
+static hpx_status_t _wait(lco_t *lco) {
+  return _class(lco)->on_wait(lco);
+}
+
+static hpx_status_t _attach(lco_t *lco, hpx_parcel_t *p) {
+  return _class(lco)->on_attach(lco, p);
 }
 
 /// Action LCO event handler wrappers.
@@ -46,74 +79,25 @@ static const lco_class_t *_lco_class(lco_t *lco) {
 /// These try and pin the LCO, and then forward to the local event handler
 /// wrappers. If the pin fails, then the LCO isn't local, so the parcel is
 /// resent.
-HPX_ACTION(_lco_fini, void *args) {
-  hpx_addr_t target = hpx_thread_current_target();
-  lco_t *lco = NULL;
-  if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return HPX_RESEND;
-  }
-
-  const lco_class_t *class = _lco_class(lco);
-  DEBUG_IF(!class->on_fini) {
-    return dbg_error("on_fini uninitialized");
-  }
-  class->on_fini(lco);
-  hpx_gas_unpin(target);
-  return HPX_SUCCESS;
+///
+/// @{
+static HPX_PINNED(_lco_fini, void *args) {
+  return _fini(_target_lco());
 }
 
-HPX_ACTION(hpx_lco_set_action, void *data) {
-  hpx_addr_t target = hpx_thread_current_target();
-  lco_t *lco = NULL;
-  if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return HPX_RESEND;
-  }
-
-  size_t size = hpx_thread_current_args_size();
-
-  const lco_class_t *class = _lco_class(lco);
-  DEBUG_IF(!class->on_set) {
-    return dbg_error("on_set uninitialized");
-  }
-  class->on_set(lco, size, data);
-  hpx_gas_unpin(target);
-  return HPX_SUCCESS;
+HPX_PINNED(hpx_lco_set_action, void *data) {
+  return _set(_target_lco(), hpx_thread_current_args_size(), data);
 }
 
-HPX_ACTION(_lco_error, void *args) {
+static HPX_PINNED(_lco_error, void *args) {
   hpx_status_t *code = args;
-  hpx_addr_t target = hpx_thread_current_target();
-  lco_t *lco = NULL;
-  if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return HPX_RESEND;
-  }
-
-  // for now, we don't care about local completion because we know that the
-  // action interface guarantees that we have exclusive access to the data
-  const lco_class_t *class = _lco_class(lco);
-  DEBUG_IF(!class->on_error) {
-    return dbg_error("on_error uninitialized");
-  }
-  class->on_error(lco, *code);
-  hpx_gas_unpin(target);
-  return HPX_SUCCESS;
+  return _error(_target_lco(), *code);
 }
 
-HPX_ACTION(_lco_get, void *args) {
+static HPX_PINNED(_lco_get, void *args) {
   int *n = args;
-  hpx_addr_t target = hpx_thread_current_target();
-  lco_t *lco = NULL;
-  if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return HPX_RESEND;
-  }
-
   char buffer[*n];                  // ouch---rDMA, or preallocate continuation?
-  const lco_class_t *class = _lco_class(lco);
-  DEBUG_IF(!class->on_get) {
-    return dbg_error("on_get uninitialized");
-  }
-  hpx_status_t status = class->on_get(lco, *n, buffer);
-  hpx_gas_unpin(target);
+  hpx_status_t status = _get(_target_lco(), *n, buffer);
   if (status == HPX_SUCCESS) {
     hpx_thread_continue(*n, buffer);
   }
@@ -122,54 +106,27 @@ HPX_ACTION(_lco_get, void *args) {
   }
 }
 
-HPX_ACTION(_lco_wait, void *args) {
-  hpx_addr_t target = hpx_thread_current_target();
-  lco_t *lco = NULL;
-  if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return HPX_RESEND;
-  }
-
-  const lco_class_t *class = _lco_class(lco);
-  DEBUG_IF(!class->on_wait) {
-    return dbg_error("on_wait uninitialized");
-  }
-  hpx_status_t status = class->on_wait(lco);
-  hpx_gas_unpin(target);
-  hpx_thread_exit(status);
+static HPX_PINNED(_lco_wait, void *args) {
+  return _wait(_target_lco());
 }
 
-HPX_ACTION(attach, void *args) {
-  hpx_addr_t target = hpx_thread_current_target();
-  lco_t *lco = NULL;
-  if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return HPX_RESEND;
-  }
-
+HPX_PINNED(attach, void *args) {
   /// @todo: This parcel copy shouldn't be necessary. If we can retain the
   ///        parent parcel and free it appropriately, then we could just enqueue
   ///        the args directly.
   const hpx_parcel_t *p = args;
   hpx_parcel_t *parcel = hpx_parcel_acquire(NULL, p->size);
   assert(parcel_size(p) == parcel_size(parcel));
-
-  DEBUG_IF(parcel == NULL) {
-    return dbg_error("could not allocate a parcel to attach\n");
-  }
+  dbg_assert_str(parcel, "could not allocate a parcel to attach\n");
   memcpy(parcel, p, parcel_size(p));
-
-  const lco_class_t *class = _lco_class(lco);
-  DEBUG_IF(!class->on_attach) {
-    return dbg_error("on_attach uninitialized");
-  }
-  hpx_status_t status = class->on_attach(lco, parcel);
-  hpx_gas_unpin(target);
-  return status;
+  return _attach(_target_lco(), parcel);
 }
+/// @}
 
 /// LCO bit packing and manipulation
 /// @{
 const lco_class_t *lco_lock(lco_t *lco) {
-  const lco_class_t *class = _lco_class(lco);
+  const lco_class_t *class = _class(lco);
   DEBUG_IF((uintptr_t)class & _DELETED_MASK) {
     dbg_error("locking lco that was previously deleted");
   }
@@ -215,18 +172,15 @@ uintptr_t lco_get_triggered(const lco_t *lco) {
 
 void hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync) {
   lco_t *lco = NULL;
-  if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    hpx_call_async(target, _lco_fini, HPX_NULL, rsync, NULL, 0);
+  if (hpx_gas_try_pin(target, (void**)&lco)) {
+    _fini(lco);
+    hpx_gas_unpin(target);
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
     return;
   }
 
-  const lco_class_t *class = _lco_class(lco);
-  DEBUG_IF(!class->on_fini) {
-    dbg_error("on_fini uninitialized");
-  }
-  class->on_fini(lco);
-  hpx_gas_unpin(target);
-  hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+  int e = hpx_call_async(target, _lco_fini, HPX_NULL, rsync, NULL, 0);
+  dbg_check(e, "Could not forward lco_delete\n");
 }
 
 void hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync) {
@@ -240,19 +194,16 @@ void hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync) {
   }
 
   lco_t *lco = NULL;
-  if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    hpx_call_async(target, _lco_error, HPX_NULL, rsync,
-                   &code, sizeof(code));
+  if (hpx_gas_try_pin(target, (void**)&lco)) {
+    _error(lco, code);
+    hpx_gas_unpin(target);
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
     return;
   }
 
-  const lco_class_t *class = _lco_class(lco);
-  DEBUG_IF(!class->on_error) {
-    dbg_error("on_error uninitialized");
-  }
-  class->on_error(lco, code);
-  hpx_gas_unpin(target);
-  hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+  size_t size = sizeof(code);
+  int e = hpx_call_async(target, _lco_error, HPX_NULL, rsync, &code, size);
+  dbg_check(e, "Could not forward lco_error\n");
 }
 
 void hpx_lco_set(hpx_addr_t target, int size, const void *value,
@@ -263,35 +214,27 @@ void hpx_lco_set(hpx_addr_t target, int size, const void *value,
   }
 
   lco_t *lco = NULL;
-  if ((size > HPX_LCO_SET_ASYNC) || !hpx_gas_try_pin(target, (void**)&lco)) {
-    hpx_call_async(target, hpx_lco_set_action, lsync, rsync, value, size);
+  if ((size > HPX_LCO_SET_ASYNC)  && hpx_gas_try_pin(target, (void**)&lco)) {
+    _set(lco, size, value);
+    hpx_gas_unpin(target);
+    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
     return;
   }
 
-  const lco_class_t *class = _lco_class(lco);
-  DEBUG_IF(!class->on_set) {
-    dbg_error("on_set uninitialized");
-  }
-  class->on_set(lco, size, value);
-  hpx_gas_unpin(target);
-  hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-  hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+  int e = hpx_call_async(target, hpx_lco_set_action, lsync, rsync, value, size);
+  dbg_check(e, "Could not forward lco_set\n");
 }
-
 
 hpx_status_t hpx_lco_wait(hpx_addr_t target) {
   lco_t *lco;
-  if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return hpx_call_sync(target, _lco_wait, NULL, 0, NULL, 0);
+  if (hpx_gas_try_pin(target, (void**)&lco)) {
+    hpx_status_t status = _wait(lco);
+    hpx_gas_unpin(target);
+    return status;
   }
 
-  const lco_class_t *class = _lco_class(lco);
-  DEBUG_IF(!class->on_wait) {
-    return dbg_error("on_wait uninitialized");
-  }
-  hpx_status_t status = class->on_wait(lco);
-  hpx_gas_unpin(target);
-  return status;
+  return hpx_call_sync(target, _lco_wait, NULL, 0, NULL, 0);
 }
 
 hpx_status_t hpx_lco_try_wait(hpx_addr_t target, hpx_time_t time) {
@@ -310,10 +253,8 @@ hpx_status_t hpx_lco_try_wait(hpx_addr_t target, hpx_time_t time) {
     return hpx_lco_try_wait(done, time);
   }
 
-  const lco_class_t *class = _lco_class(lco);
-  DEBUG_IF(!class->on_try_wait) {
-    return dbg_error("on_try_wait uninitialized");
-  }
+  const lco_class_t *class = _class(lco);
+  dbg_assert_str(class->on_try_wait, "on_try_wait uninitialized");
   hpx_status_t status = class->on_try_wait(lco, time);
   hpx_gas_unpin(target);
   return status;
@@ -322,17 +263,13 @@ hpx_status_t hpx_lco_try_wait(hpx_addr_t target, hpx_time_t time) {
 /// If the LCO is local, then we use the local get functionality.
 hpx_status_t hpx_lco_get(hpx_addr_t target, int size, void *value) {
   lco_t *lco;
-  if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return hpx_call_sync(target, _lco_get, value, size, &size, sizeof(size));
+  if (hpx_gas_try_pin(target, (void**)&lco)) {
+    hpx_status_t status = _get(lco, size, value);
+    hpx_gas_unpin(target);
+    return status;
   }
 
-  const lco_class_t *class = _lco_class(lco);
-  DEBUG_IF(!class->on_get) {
-    return dbg_error("on_get  uninitialized");
-  }
-  hpx_status_t status = class->on_get(lco, size, value);
-  hpx_gas_unpin(target);
-  return status;
+  return hpx_call_sync(target, _lco_get, value, size, &size, sizeof(size));
 }
 
 int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
@@ -360,11 +297,7 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
   for (int i = 0; i < n; ++i) {
     hpx_status_t status = HPX_SUCCESS;
     if (locals[i] != NULL) {
-      const lco_class_t *lco = _lco_class(locals[i]);
-      DEBUG_IF(!lco->on_wait) {
-        return dbg_error("on_wait uninitialized");
-      }
-      status = lco->on_wait(locals[i]);
+      status = _wait(locals[i]);
       hpx_gas_unpin(lcos[i]);
     }
     else {
@@ -409,11 +342,7 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
   for (int i = 0; i < n; ++i) {
     hpx_status_t status = HPX_SUCCESS;
     if (locals[i] != NULL) {
-      const lco_class_t *lco = _lco_class(locals[i]);
-      DEBUG_IF(!lco->on_get) {
-        return dbg_error("on_get uninitialized");
-      }
-      status = lco->on_get(locals[i], sizes[i], values[i]);
+      status = _get(locals[i], sizes[i], values[i]);
       hpx_gas_unpin(lcos[i]);
     }
     else {

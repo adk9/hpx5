@@ -25,53 +25,26 @@
 #include "libhpx/parcel.h"
 #include "emulation.h"
 
-static hpx_action_t _memcpy_request = 0;
-static hpx_action_t _memcpy_reply = 0;
-
-// Just copy the data into the target block.
-static int _memcpy_reply_action(void *data) {
-  hpx_addr_t target = hpx_thread_current_target();
-  char *local;
-  if (!hpx_gas_try_pin(target, (void**)&local))
-    return HPX_RESEND;
-
-  memcpy(local, data, hpx_thread_current_args_size());
-  hpx_gas_unpin(target);
+static HPX_PINNED(_memcpy_reply, void *data) {
+  char *local = hpx_thread_current_local_target();
+  dbg_assert(local);
+  size_t bytes = hpx_thread_current_args_size();
+  dbg_assert(bytes);
+  memcpy(local, data, bytes);
   return HPX_SUCCESS;
 }
 
-typedef struct {
-  size_t     size;
-  hpx_addr_t   to;
-  hpx_addr_t sync;
-} _memcpy_request_args_t;
-
-static int _memcpy_request_action(_memcpy_request_args_t *args) {
-  hpx_addr_t target = hpx_thread_current_target();
-  char *local;
-  if (!hpx_gas_try_pin(target, (void**)&local))
-    return HPX_RESEND;
-
-  int e = hpx_call(args->to, _memcpy_reply, args->sync, local, args->size);
+static int _memcpy_request_handler(size_t size, hpx_addr_t to, hpx_addr_t sync) {
+  char *local = hpx_thread_current_local_target();
+  int e = hpx_call(to, _memcpy_reply, sync, local, size);
   dbg_check(e, "could not initiate a memcpy reply.\n");
-  hpx_gas_unpin(target);
   return e;
 }
+HPX_ACTION_DEF(PINNED, _memcpy_request_handler, _memcpy_request, HPX_SIZE_T,
+               HPX_ADDR, HPX_ADDR)
 
-static HPX_CONSTRUCTOR void _init_actions(void) {
-  LIBHPX_REGISTER_ACTION(_memcpy_request_action, &_memcpy_request);
-  LIBHPX_REGISTER_ACTION(_memcpy_reply_action, &_memcpy_reply);
-}
-
-int parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
-{
-  _memcpy_request_args_t args = {
-    .size = size,
-    .to = to,
-    .sync = sync
-  };
-
-  int e = hpx_call(from, _memcpy_request, HPX_NULL, &args, sizeof(args));
+int parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync) {
+  int e = hpx_call(from, _memcpy_request, HPX_NULL, &size, &to, &sync);
   dbg_check(e, "Failed to initiate a memcpy request.\n");
   return e;
 }

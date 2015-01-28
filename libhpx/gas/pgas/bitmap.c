@@ -488,7 +488,8 @@ void bitmap_release(bitmap_t *map, uint32_t bit, uint32_t nbits) {
 
 bool bitmap_is_set(const bitmap_t *map, uint32_t bit, uint32_t nbits) {
   assert(map);
-  assert(bit + nbits <= map->nbits);
+  dbg_assert_str(bit + nbits <= map->nbits,
+                 "query out of range, %d + %d > %d\n", bit, nbits, map->nbits);
 
   uint32_t  block = bit / BLOCK_BITS;
   uint32_t offset = bit % BLOCK_BITS;
