@@ -202,24 +202,10 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
 }
 
 /// Perform an asynchronous send operation.
-///
-/// Simply wraps the send operation in an asynchronous interface.
-///
-/// @param            p The parcel to send (may need serialization)
-///
-/// @continues          NULL
-///
-/// @returns            HPX_SUCCESS
-static hpx_action_t _parcel_send_async = 0;
-
-/// The basic send operation is synchronous.
-static int _parcel_send_async_action(hpx_parcel_t **p) {
-  hpx_parcel_send_sync(*p);
+static HPX_ACTION(_parcel_send_async, hpx_parcel_t **p) {
+  int e = hpx_parcel_send_sync(*p);
+  dbg_check(e, "failed to send a parcel\n");
   return HPX_SUCCESS;
-}
-
-static HPX_CONSTRUCTOR void _init_actions(void) {
-  LIBHPX_REGISTER_ACTION(_parcel_send_async_action, &_parcel_send_async);
 }
 
 int parcel_launch(hpx_parcel_t *p) {
