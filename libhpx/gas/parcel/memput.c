@@ -26,7 +26,9 @@
 
 static HPX_PINNED(_memput_request, void *args) {
   char *local = hpx_thread_current_local_target();
+  dbg_assert(local);
   size_t bytes = hpx_thread_current_args_size();
+  dbg_assert(bytes);
   memcpy(local, args, bytes);
   return HPX_SUCCESS;
 }
