@@ -170,13 +170,8 @@ void *pgas_gpa_to_lva(hpx_addr_t gpa) {
 static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   const bool l = _gpa_is_cyclic(lhs);
   const bool r = _gpa_is_cyclic(rhs);
-  DEBUG_IF (l != r) {
-    dbg_error("cannot compare addresses between different allocations.\n");
-  }
-
-  DEBUG_IF (l ^ r) {
-    dbg_error("cannot compare cyclic and non-cyclic addresses.\n");
-  }
+  dbg_assert_str(l == r, "cannot compare addresses across allocations.\n");
+  dbg_assert_str(!(l ^ r), "cannot compare cyclic with non-cyclic.\n");
 
   return (l && r) ? pgas_gpa_sub_cyclic(lhs, rhs, bsize)
                   : pgas_gpa_sub(lhs, rhs);
@@ -210,9 +205,8 @@ static bool _pgas_try_pin(const hpx_addr_t gpa, void **local) {
 }
 
 static void _pgas_unpin(const hpx_addr_t addr) {
-  DEBUG_IF(!_pgas_try_pin(addr, NULL)) {
-    dbg_error("%"PRIu64" is not local to %u\n", addr, here->rank);
-  }
+  dbg_assert_str(_pgas_try_pin(addr, NULL), "%"PRIu64" is not local to %u\n",
+                 addr, here->rank);
 }
 
 
