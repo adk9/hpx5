@@ -27,7 +27,9 @@
 
 static HPX_PINNED(_memcpy_reply, void *data) {
   char *local = hpx_thread_current_local_target();
+  dbg_assert(local);
   size_t bytes = hpx_thread_current_args_size();
+  dbg_assert(bytes);
   memcpy(local, data, bytes);
   return HPX_SUCCESS;
 }
@@ -42,7 +44,7 @@ HPX_ACTION_DEF(PINNED, _memcpy_request_handler, _memcpy_request, HPX_SIZE_T,
                HPX_ADDR, HPX_ADDR)
 
 int parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync) {
-  int e = hpx_call(from, _memcpy_request, HPX_NULL, size, to, sync);
+  int e = hpx_call(from, _memcpy_request, HPX_NULL, &size, &to, &sync);
   dbg_check(e, "Failed to initiate a memcpy request.\n");
   return e;
 }
