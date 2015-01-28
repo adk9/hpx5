@@ -154,12 +154,14 @@ void action_table_free(const _table_t *table) {
       return (type)init;                                                \
     }                                                                   \
     return table->entries[id].name;                                     \
-  }
+  }                                                                     \
+  type action_table_get_##name(const struct action_table *table,        \
+                               hpx_action_t id)
 
-_ACTION_TABLE_GET(const char *, key, NULL)
-_ACTION_TABLE_GET(hpx_action_type_t, type, HPX_ACTION_INVALID)
-_ACTION_TABLE_GET(hpx_action_handler_t, handler, NULL)
-static _ACTION_TABLE_GET(ffi_cif *, cif, NULL)
+_ACTION_TABLE_GET(const char *, key, NULL);
+_ACTION_TABLE_GET(hpx_action_type_t, type, HPX_ACTION_INVALID);
+_ACTION_TABLE_GET(hpx_action_handler_t, handler, NULL);
+static _ACTION_TABLE_GET(ffi_cif *, cif, NULL);
 
 bool action_table_get_args(const struct action_table *table, hpx_action_t id,
                            va_list inargs, void **outargs, size_t *len) {
