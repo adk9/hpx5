@@ -38,13 +38,13 @@ HPX_INTERNAL int dbg_error1(unsigned line, const char *f, const char *fmt, ...) 
 #define _dbg_log(...) dbg_log1(__LINE__, __func__, __VA_ARGS__)
 #define dbg_assert(e)                           \
   do {                                          \
-    if (!e) {                                   \
+    if (!(e)) {                                 \
       hpx_abort();                              \
     }                                           \
   } while (0)
 #define dbg_assert_str(e, ...)                  \
   do {                                          \
-    if (!e) {                                   \
+    if (!(e)) {                                 \
       dbg_error(__VA_ARGS__);                   \
     }                                           \
   } while (0)
