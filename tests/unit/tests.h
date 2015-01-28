@@ -10,8 +10,6 @@
 FILE * test_log;
 
 extern hpx_action_t t02_init_sources;
-extern hpx_action_t t03_initDomain;
-extern hpx_action_t t03_printHello;
 extern hpx_action_t t04_send;
 extern hpx_action_t t04_sendData;
 extern hpx_action_t t04_recv;
@@ -57,8 +55,6 @@ extern hpx_action_t t15_spawn;
 extern hpx_action_t t15_delete;
 
 int t02_init_sources_action(void*);
-int t03_initDomain_action(const InitArgs*);
-int t03_printHello_action(int*);
 int t04_send_action(void*);
 int t04_sendData_action(const initBuffer_t*);
 int t04_recv_action(double*);
