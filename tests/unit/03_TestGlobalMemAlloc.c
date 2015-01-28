@@ -147,7 +147,7 @@ typedef struct inputDomain {
  int rank;
 } inputDomain;
 
-HPX_PINNED_ACTION(t03_printHello, int *value) {
+static HPX_PINNED_ACTION(_printHello, int *value) {
   inputDomain *ld = hpx_thread_current_local_target();
   ld->rank = *value;
   return HPX_SUCCESS;
@@ -162,7 +162,7 @@ START_TEST(test_libhpx_gas_global_alloc_big_blocks)
   for (int i = 0; i < size; i++) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(inputDomain)*i,
                                     sizeof(inputDomain));
-    hpx_call(block, t03_printHello, done, &i, sizeof(int));
+    hpx_call(block, _printHello, done, &i, sizeof(int));
   }
 
   hpx_lco_wait(done);
