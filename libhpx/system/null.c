@@ -14,24 +14,11 @@
 #include "config.h"
 #endif
 
-#include "hpx/hpx.h"
-#include "libhpx/action.h"
-
-
 /// @file libhpx/system/null.c
 /// "Home" location for the HPX_ACTION_NULL action..
 
-hpx_action_t HPX_ACTION_NULL = 0;
+#include "hpx/hpx.h"
 
-
-/// Global null action doesn't do anything.
-static int _null_action(void *args) {
+HPX_INTERRUPT(HPX_ACTION_NULL, void) {
   return HPX_SUCCESS;
 }
-
-
-/// Register the global actions.
-static void HPX_CONSTRUCTOR _init(void) {
-  LIBHPX_REGISTER_ACTION(_null_action, &HPX_ACTION_NULL);
-}
-
