@@ -40,11 +40,11 @@
 ///       actions, e.g., can they block, should we pre-pin their arguments,
 ///       etc.
 typedef struct {
-  hpx_action_handler_t func;
-  hpx_action_t        *id;
-  const char          *key;
-  hpx_action_type_t   type;
-  ffi_cif             *cif;
+  hpx_action_handler_t handler;
+  hpx_action_t             *id;
+  const char              *key;
+  hpx_action_type_t       type;
+  ffi_cif                 *cif;
 } _entry_t;
 
 /// Compare two entries by their keys.
@@ -124,7 +124,7 @@ static int _push_back(_table_t *table, hpx_action_t *id, const char *key,
   }
 
   _entry_t *back = &table->entries[i];
-  back->func = f;
+  back->handler = f;
   back->id = id;
   back->key = key;
   back->type = type;
@@ -143,48 +143,23 @@ void action_table_free(const _table_t *table) {
   free((void*)table);
 }
 
-const char *action_table_get_key(const struct action_table *table, hpx_action_t id) {
-  if (id == HPX_ACTION_INVALID) {
-    dbg_log("action registration is not complete");
-    return "LIBHPX UNKNOWN ACTION";
+#define _ACTION_TABLE_GET(type, name, init)                             \
+  type action_table_get_##name(const struct action_table *table,        \
+                               hpx_action_t id) {                       \
+    if (id == HPX_ACTION_INVALID) {                                     \
+      dbg_log("action registration is not complete");                   \
+      return (type)init;                                                \
+    } else if (id >= table->n) {                                        \
+      dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n); \
+      return (type)init;                                                \
+    }                                                                   \
+    return table->entries[id].name;                                     \
   }
 
-  if (id < table->n) {
-    return table->entries[id].key;
-  }
-
-  dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n);
-  return NULL;
-}
-
-hpx_action_type_t action_table_get_type(const struct action_table *table, hpx_action_t id) {
-  if (id == HPX_ACTION_INVALID) {
-    dbg_log("action registration is not complete");
-    return id;
-  }
-
-  if (id < table->n) {
-    return table->entries[id].type;
-  }
-
-  dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n);
-  return HPX_ACTION_INVALID;
-}
-
-
-ffi_cif *action_table_get_cif(const struct action_table *table, hpx_action_t id) {
-  if (id == HPX_ACTION_INVALID) {
-    dbg_log("action registration is not complete");
-    return NULL;
-  }
-
-  if (id < table->n) {
-    return table->entries[id].cif;
-  }
-
-  dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n);
-  return NULL;
-}
+_ACTION_TABLE_GET(const char *, key, NULL)
+_ACTION_TABLE_GET(hpx_action_type_t, type, HPX_ACTION_INVALID)
+_ACTION_TABLE_GET(hpx_action_handler_t, handler, NULL)
+static _ACTION_TABLE_GET(ffi_cif *, cif, NULL)
 
 bool action_table_get_args(const struct action_table *table, hpx_action_t id,
                            va_list inargs, void **outargs, size_t *len) {
@@ -220,7 +195,7 @@ int action_table_run_handler(const struct action_table *table, const hpx_action_
   hpx_action_handler_t handler = 0;
   ffi_cif *cif = NULL;
   if (id < table->n) {
-    handler = table->entries[id].func;
+    handler = table->entries[id].handler;
     cif = table->entries[id].cif;
   } else {
     dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n);
