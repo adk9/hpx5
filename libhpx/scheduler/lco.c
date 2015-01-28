@@ -254,9 +254,7 @@ hpx_status_t hpx_lco_try_wait(hpx_addr_t target, hpx_time_t time) {
   }
 
   const lco_class_t *class = _class(lco);
-  DEBUG_IF(!class->on_try_wait) {
-    return dbg_error("on_try_wait uninitialized");
-  }
+  dbg_assert_str(class->on_try_wait, "on_try_wait uninitialized");
   hpx_status_t status = class->on_try_wait(lco, time);
   hpx_gas_unpin(target);
   return status;
