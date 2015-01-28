@@ -391,7 +391,7 @@ int heap_set_csbrk(heap_t *heap, uint64_t offset) {
   if (old < offset) {
     sync_cas(&heap->csbrk, old, offset, SYNC_RELAXED, SYNC_RELAXED);
   }
-  return (_chunks_are_used(heap, old, offset - old)) ? HPX_ERROR : HPX_SUCCESS;
+  return (_chunks_are_used(heap, old, offset)) ? HPX_ERROR : HPX_SUCCESS;
 }
 
 
