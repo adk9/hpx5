@@ -160,7 +160,7 @@ int scheduler_startup(struct scheduler *sched) {
     worker = scheduler_get_worker(sched, i);
     worker_join(worker);
   }
-
+  
   return status;
 }
 
