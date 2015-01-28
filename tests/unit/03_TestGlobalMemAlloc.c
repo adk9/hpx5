@@ -147,7 +147,7 @@ typedef struct inputDomain {
  int rank;
 } inputDomain;
 
-static HPX_PINNED_ACTION(_printHello, int *value) {
+static HPX_PINNED(_printHello, int *value) {
   inputDomain *ld = hpx_thread_current_local_target();
   ld->rank = *value;
   return HPX_SUCCESS;
