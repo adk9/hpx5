@@ -31,26 +31,27 @@ HPX_INTERNAL void dbg_log1(unsigned line, const char *f, const hpx_log_t level, 
 HPX_INTERNAL int dbg_error1(unsigned line, const char *f, const char *fmt, ...) HPX_PRINTF(3, 4);
 
 #define dbg_error(...) dbg_error1(__LINE__, __func__, __VA_ARGS__)
-#define dbg_assert(e)                           \
-  do {                                          \
-    int _e = (e);                               \
-    (void)_e;                                   \
-    assert(_e);                                 \
-  } while (0)
 #define dbg_check(e, ...) dbg_assert((e) == HPX_SUCCESS)
 
 
 #ifdef ENABLE_DEBUG
 #define _dbg_log(...) dbg_log1(__LINE__, __func__, __VA_ARGS__)
+#define dbg_assert(e)                           \
+  do {                                          \
+    if (!e) {                                   \
+      hpx_abort();                              \
+    }                                           \
+  } while (0)
 #define dbg_assert_str(e, ...)                  \
   do {                                          \
-    if (!(e)) {                                 \
+    if (!e) {                                   \
       dbg_error(__VA_ARGS__);                   \
     }                                           \
   } while (0)
 #else
 #define _dbg_log(...)
 #define dbg_error(...) dbg_error1(__LINE__, __func__, __VA_ARGS__)
+#define dbg_assert(e) assert(e);
 #define dbg_assert_str(e, ...) dbg_assert(e)
 #endif
 
