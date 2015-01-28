@@ -11,7 +11,6 @@ FILE * test_log;
 
 extern hpx_action_t t02_init_sources;
 extern hpx_action_t t03_initDomain;
-extern hpx_action_t t03_printHello;
 extern hpx_action_t t04_send;
 extern hpx_action_t t04_sendData;
 extern hpx_action_t t04_recv;
