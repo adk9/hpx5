@@ -111,40 +111,6 @@ START_TEST(test_libhpx_gas_global_alloc_block)
 }
 END_TEST
 
-#define N 2000
-
-typedef struct inputDomain {
- int rank;
-} inputDomain;
-
-static int _printHello_handler(int value) {
-  inputDomain *ld = hpx_thread_current_local_target();
-  assert(ld);
-  ld->rank = value;
-  return HPX_SUCCESS;
-}
-
-static HPX_ACTION_DEF(PINNED, _printHello_handler, _printHello, HPX_INT)
-
-START_TEST(test_libhpx_gas_global_alloc_big_blocks)
-{
-  int size = HPX_THREADS * HPX_LOCALITIES * N * N;
-  hpx_addr_t domain = hpx_gas_global_alloc(size, sizeof(domain));
-  hpx_addr_t done = hpx_lco_and_new(size);
-
-  for (int i = 0; i < size; i++) {
-    hpx_addr_t block = hpx_addr_add(domain, sizeof(inputDomain)*i,
-                                    sizeof(inputDomain));
-    hpx_call(block, _printHello, done, &i);
-  }
-
-  hpx_lco_wait(done);
-  hpx_lco_delete(done, HPX_NULL);
-
-  hpx_gas_free(domain, HPX_NULL);
-}
-END_TEST
-
 //****************************************************************************
 // Register tests from this file
 //****************************************************************************
@@ -152,5 +118,4 @@ END_TEST
 void add_03_TestGlobalMemAlloc(TCase *tc) {
   tcase_add_test(tc, test_libhpx_gas_global_alloc);
   tcase_add_test(tc, test_libhpx_gas_global_alloc_block);
-  tcase_add_test(tc, test_libhpx_gas_global_alloc_big_blocks);
 }
