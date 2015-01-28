@@ -42,6 +42,9 @@ _sema_fini(lco_t *lco)
 
   _sema_t *sema = (_sema_t *)lco;
   lco_lock(&sema->lco);
+  DEBUG_IF(true) {
+    lco_set_deleted(&sema->lco);
+  }
   libhpx_global_free(sema);
 }
 

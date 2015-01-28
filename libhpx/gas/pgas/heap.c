@@ -153,7 +153,8 @@ static bitmap_t *_new_bitmap(const heap_t *heap) {
 
 static void* _mmap_heap(heap_t *const heap) {
   const int prot  = PROT_READ | PROT_WRITE;
-  const int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE;
+  dbg_log_gas("HUGETLBFS_FLAGS is %zu.\n", HUGETLBFS_FLAGS | 0ul);
+  const int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE | HUGETLBFS_FLAGS;
   const uint32_t chunk_lg_align = ceil_log2_64(heap->bytes_per_chunk);
 
   for (unsigned int i = GPA_MAX_LG_BSIZE; i >= chunk_lg_align; ++i) {

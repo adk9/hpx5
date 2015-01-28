@@ -21,6 +21,7 @@
 #include "libhpx/libhpx.h"
 #include "mallctl.h"
 
+const char * libhpx_global_malloc_conf = "lg_dirty_mult:-1";
 
 int mallctl_get_lg_dirty_mult(void) {
   ssize_t opt = -1;
@@ -31,8 +32,6 @@ int mallctl_get_lg_dirty_mult(void) {
   }
   return (int)opt;
 }
-
-extern const char * libhpx_global_malloc_conf = "lg_dirty_mult:-1";
 
 int mallctl_disable_dirty_page_purge(void) {
   return (mallctl_get_lg_dirty_mult() == -1) ? LIBHPX_OK : LIBHPX_ERROR;

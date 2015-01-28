@@ -94,6 +94,9 @@ _chan_fini(lco_t *lco)
 
   _chan_t *c = (_chan_t *)lco;
   lco_lock(&c->lco);
+  DEBUG_IF(true) {
+    lco_set_deleted(&c->lco);
+  }
   _node_t *node = c->head;
   while (node) {
     free(node->buffer);

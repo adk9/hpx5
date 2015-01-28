@@ -28,6 +28,10 @@ const char *action_table_get_key(const struct action_table *, hpx_action_t)
 hpx_action_type_t action_table_get_type(const struct action_table *, hpx_action_t)
   HPX_INTERNAL HPX_NON_NULL(1);
 
+/// Get the key for an action.
+hpx_action_handler_t action_table_get_handler(const struct action_table *, hpx_action_t)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
 /// Run the handler associated with a parcel.
 int action_table_run_handler(const struct action_table *, const hpx_action_t, void *)
   HPX_INTERNAL HPX_NON_NULL(1);
