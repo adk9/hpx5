@@ -28,16 +28,13 @@
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
 
-static hpx_action_t _bcast = 0;
-
 
 typedef struct {
   hpx_action_t action;
   char *data[];
 } _bcast_args_t;
 
-
-static int _bcast_action(_bcast_args_t *args) {
+static HPX_ACTION(_bcast, _bcast_args_t *args) {
   hpx_addr_t and = hpx_lco_and_new(here->ranks);
   uint32_t len = hpx_thread_current_args_size() - sizeof(args->action);
   for (int i = 0, e = here->ranks; i < e; ++i)
@@ -47,11 +44,6 @@ static int _bcast_action(_bcast_args_t *args) {
   hpx_lco_delete(and, HPX_NULL);
   return HPX_SUCCESS;
 }
-
-static HPX_CONSTRUCTOR void _init_actions(void) {
-  LIBHPX_REGISTER_ACTION(_bcast_action, &_bcast);
-}
-
 
 /// A RPC call with a user-specified continuation action.
 int libhpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_target,

@@ -71,65 +71,62 @@ int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_hand
   _21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,_34,_35,_36,_37,_38,_39,_40,_41,_42,   \
   _43,_44,_45,_46,_47,_48,_49,_50,_51,_52,_53,_54,_55,_56,_57,_58,_59,_60,_61,_62,_63,_,...) _
 
+/// Wraps the hpx_register_action() function to make it slightly more convenient
+/// to use.
+///
+/// @param         type The type of the action (DEFAULT, PINNED, etc...)
+/// @param      handler The action handler (the function).
+/// @param (car __VA_ARGS__) The action id (the hpx_action_t address)
+/// @param (cdr __VA_ARGS__) The parameter types (HPX_INT, ...)
+#define _HPX_REGISTER_ACTION(type, handler, ...)                    \
+  hpx_register_action(HPX_ACTION_##type, _HPX_XSTR(_id##handler),   \
+                      (hpx_action_handler_t)handler,                \
+                      __HPX_NARGS(__VA_ARGS__) - 1, __VA_ARGS__)
+
+/// Declare an action.
+///
+/// This doesn't actually do anything interesting, but if we ever needed to
+/// mangle the symbol then we would do it here. This can be prefixed with a
+/// storage modifier (i.e., extern, static).
+///
+/// @param       symbol The symbol for the action.
+#define HPX_ACTION_DECL(symbol) hpx_action_t symbol
+
+/// Create an action id for a function, so that it can be called asynchronously.
+///
+/// @param         type The action type.
+/// @param      handler The handler.
+/// @param           id The action id.
+/// @param  __VA_ARGS__ The action type.
+#define HPX_ACTION_DEF(type, handler, id, ...)                      \
+  HPX_ACTION_DECL(id) = -1;                                         \
+  static HPX_CONSTRUCTOR void _register##_##handler(void) {         \
+    _HPX_REGISTER_ACTION(type, handler, &id, __VA_ARGS__);          \
+  }
 
 
-// Register a regular HPX action.
-#define HPX_REGISTER_ACTION(f, ...)                                                    \
-  hpx_register_action(HPX_ACTION_DEFAULT, _HPX_XSTR(_hpx##f), (hpx_action_handler_t)f, \
-                      __HPX_NARGS(__VA_ARGS__)-1, __VA_ARGS__)
+/// Define an HPX.
+///
+/// This will define an action.
+///
+/// @param         type The type of the action (DEFAULT, PINNED, etc).
+/// @param           id The id that you pass to hpx_call to call the action.
+/// @param         args The C argument type (must be a pointer type).
+#define HPX_ACTION_DEF_USER(type, id, args)                     \
+  HPX_ACTION_DECL(id) = -1;                                     \
+  static int id##_##type(args);                                 \
+  static HPX_CONSTRUCTOR void _register_##id##_##type(void) {   \
+    _HPX_REGISTER_ACTION(type, id##_##type , &id);              \
+  }                                                             \
+  static int id##_##type(args)
 
 
-/// Register a pinned action. The global address that these actions
-/// are addressed to is pinned by the runtime during the course of
-/// execution of the action.
-#define HPX_REGISTER_PINNED_ACTION(f, ...)                                             \
-  hpx_register_action(HPX_ACTION_PINNED, _HPX_XSTR(_hpx##f), (hpx_action_handler_t)f,  \
-                      __HPX_NARGS(__VA_ARGS__)-1, __VA_ARGS__)
+#define HPX_ACTION(id, args)    HPX_ACTION_DEF_USER(DEFAULT, id, args)
+#define HPX_PINNED(id, args)    HPX_ACTION_DEF_USER(PINNED, id, args)
+#define HPX_TASK(id, args)      HPX_ACTION_DEF_USER(TASK, id, args)
+#define HPX_INTERRUPT(id, args) HPX_ACTION_DEF_USER(INTERRUPT, id, args)
 
-
-/// Register an HPX "task". Tasks are non-blocking actions that do not
-/// need a stack. They are work-units that are still load-balanced by
-/// the scheduler between the available execution units (worker
-/// thread) on a locality. Tasks can be stolen, like other HPX
-/// threads, but avoid the stack creation overhead since they do not
-/// block.
-#define HPX_REGISTER_TASK(f, ...)                                                      \
-  hpx_register_action(HPX_ACTION_TASK, _HPX_XSTR(_hpx##f), (hpx_action_handler_t)f,    \
-                      __HPX_NARGS(__VA_ARGS__)-1, __VA_ARGS__)
-
-
-/// Register an HPX "interrupt". Interrupts are immediate,
-/// non-blocking actions that can safely run in an interrupt context
-/// (for instance, doing a memory store operation or performing an
-/// asynchronous call). They avoid both, the stack creation overhead
-/// and the scheduling overhead, as they are executed inline by the
-/// communication thread.
-#define HPX_REGISTER_INTERRUPT(f, ...)                                                  \
-  hpx_register_action(HPX_ACTION_INTERRUPT, _HPX_XSTR(_hpx##f), (hpx_action_handler_t)f,\
-                      __HPX_NARGS(__VA_ARGS__)-1, __VA_ARGS__)
-
-/// Note that one can add static keyword before invoking thisn macro to make the action
-/// static.
-#define HPX_DECL_ACTION(type, action) hpx_action_t action;
-
-/// A helper macro to declare and define HPX actions.
-#define HPX_DEFINE_ACTION(type, action, arg_sig)	    \
-  static int action##_##type(arg_sig);                      \
-  static HPX_CONSTRUCTOR                                    \
-  void _register_##action##_##type(void) {                  \
-    HPX_REGISTER_##type(action##_##type, &action);          \
-  }                                                         \
-  static int action##_##type(arg_sig)
-
-/// Note that one can add static keyword before invoking thisn macro to make the action
-/// static.
-#define HPX_DEFDECL_ACTION(type, action, arg_sig)           \
-hpx_action_t action = HPX_ACTION_INVALID;                   \
-HPX_DEFINE_ACTION(type, action, arg_sig)
-
-#define HPX_ACTION(n, arg_sig)        HPX_DEFDECL_ACTION(ACTION, n, arg_sig)
-#define HPX_PINNED_ACTION(n, arg_sig) HPX_DEFDECL_ACTION(PINNED_ACTION, n, arg_sig)
-#define HPX_TASK(n, arg_sig)          HPX_DEFDECL_ACTION(TASK, n, arg_sig)
-#define HPX_INTERRUPT(n, arg_sig)     HPX_DEFDECL_ACTION(INTERRUPT, n, arg_sig)
+#define HPX_REGISTER_ACTION(handler, id) \
+  _HPX_REGISTER_ACTION(DEFAULT, handler, id)
 
 #endif
