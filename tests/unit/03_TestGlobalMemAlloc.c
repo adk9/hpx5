@@ -49,32 +49,15 @@ typedef struct Domain {
   int cycle;
 } Domain;
 
-/// Initialize a domain.
-int
-t03_initDomain_action(const InitArgs *args)
-{
-  // Get the address this parcel was sent to, and map it to a local address---if
-  // this fails then the message arrived at the wrong place due to AGAS
-  // movement, so resend the parcel.
-  hpx_addr_t local = hpx_thread_current_target();
-  Domain *ld = NULL;
-  if (!hpx_gas_try_pin(local, (void**)&ld))
-    return HPX_RESEND;
-
-  // Update the domain with the argument data.
-  ld->rank = args->index;
-  ld->maxcycles = args->maxcycles;
-  ld->nDoms = args->nDoms;
-
-  // make sure to unpin the domain, so that AGAS can move it if it wants to
-  hpx_gas_unpin(local);
-
-  //fprintf(test_log, "Initialized domain %u\n", args->index);
-
-  // return success---this triggers whatever continuation was set by the parcel
-  // sender
+static int _initDomain_handler(int rank, int max, int n) {
+  Domain *ld = hpx_thread_current_local_target();
+  ld->rank = rank;
+  ld->maxcycles = max;
+  ld->nDoms = n;
   return HPX_SUCCESS;
 }
+
+HPX_ACTION_DEF(PINNED, _initDomain_handler, _initDomain, HPX_INT, HPX_INT, HPX_INT)
 
 //****************************************************************************
 // Test code -- for global memory allocation
@@ -83,11 +66,8 @@ START_TEST (test_libhpx_gas_global_alloc)
 {
   // allocate the default argument structure on the stack
 
-  main_args_t args = {
-    .nDoms = 8,
-    .maxCycles = 1,
-    .cores = 8
-  };
+  int nDoms = 8;
+  int maxCycles = 1;
 
   fprintf(test_log, "Starting the GAS global memory allocation test\n");
   // allocate and start a timer
@@ -95,32 +75,22 @@ START_TEST (test_libhpx_gas_global_alloc)
 
  // output the arguments we're running with
   fprintf(test_log, "Number of domains: %d maxCycles: %d cores: %d\n",
-         args.nDoms, args.maxCycles, args.cores);
+          nDoms, maxCycles, 8);
   fflush(test_log);
 
   // Allocate the domain array
-  hpx_addr_t domain = hpx_gas_global_alloc(args.nDoms, sizeof(Domain));
+  hpx_addr_t domain = hpx_gas_global_alloc(nDoms, sizeof(Domain));
 
   // Allocate an and gate that we can wait on to detect that all of the domains
   // have completed initialization.
-  hpx_addr_t done = hpx_lco_and_new(args.nDoms);
+  hpx_addr_t done = hpx_lco_and_new(nDoms);
 
   // Send the initDomain action to all of the domains, in parallel.
-  for (int i = 0, e = args.nDoms; i < e; ++i) {
-
-    // hpx_call() will copy this
-    InitArgs init = {
-      .index = i,
-      .nDoms = args.nDoms,
-      .maxcycles = args.maxCycles,
-      .cores = args.cores
-    };
-
-    // compute the offset for this domain
+  for (int i = 0, e = nDoms; i < e; ++i) {
+    // compute the offset for this domain and send the initDomain action, with
+    // the done LCO as the continuation
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
-
-    // and send the initDomain action, with the done LCO as the continuation
-    hpx_call(block, t03_initDomain, done, &init, sizeof(init));
+    hpx_call(block, _initDomain, done, i, maxCycles, nDoms);
   }
 
   // wait for initialization
