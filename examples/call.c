@@ -33,7 +33,7 @@ static HPX_ACTION(_my_action, void *args) {
   return HPX_SUCCESS;
 }
 
-int _my_typed_action(int i, float f, char c) {
+static int _my_typed_action(int i, float f, char c) {
   printf("Hi, I am a typed action with args: %d %f %c!\n", i, f, c);
   hpx_call_cc(HPX_HERE, _my_action, NULL, NULL, NULL, 0);
   return HPX_SUCCESS;
