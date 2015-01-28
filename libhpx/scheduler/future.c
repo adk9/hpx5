@@ -171,14 +171,10 @@ static hpx_status_t _future_try_wait(lco_t *lco, hpx_time_t time) {
   return status;
 }
 
-static int _future_reset_handler(void *UNUSED) {
-  hpx_addr_t target = hpx_thread_current_target();
-  _future_t *f = NULL;
-  if (!hpx_gas_try_pin(target, (void**)&f))
-    return HPX_RESEND;
-
+static HPX_PINNED(_future_reset_action, void) {
+  _future_t *f = hpx_thread_current_local_target();
+  assert(f);
   _future_reset(f);
-  hpx_gas_unpin(target);
   return HPX_SUCCESS;
 }
 
@@ -203,31 +199,18 @@ static void _future_init(_future_t *f, int size) {
 }
 
 /// Initialize a block of futures.
-static int _future_block_init_handler(uint32_t *args) {
+static HPX_PINNED(_block_init, uint32_t *args) {
   const uint32_t size = args[0];
   const uint32_t nfutures = args[1];
-
-  hpx_addr_t target = hpx_thread_current_target();
-  char *base = NULL;
-
-  // application level forwarding if the future block has moved
-  if (!hpx_gas_try_pin(target, (void**)&base))
-    return HPX_RESEND;
+  char *base = hpx_thread_current_local_target();
+  assert(base);
 
   // sequentially initialize each future
-  for (uint32_t i = 0; i < nfutures; ++i)
+  for (uint32_t i = 0; i < nfutures; ++i) {
     _future_init((_future_t*)(base + i * size), size);
+  }
 
-  hpx_gas_unpin(target);
   return HPX_SUCCESS;
-}
-
-static hpx_action_t _block_init = 0;
-static hpx_action_t _future_reset_action = 0;
-
-static void HPX_CONSTRUCTOR _future_initialize_actions(void) {
-  LIBHPX_REGISTER_ACTION(_future_block_init_handler, &_block_init);
-  LIBHPX_REGISTER_ACTION(_future_reset_handler, &_future_reset_action);
 }
 
 
@@ -240,15 +223,15 @@ hpx_addr_t hpx_lco_future_new(int size) {
 
 void hpx_lco_future_reset(hpx_addr_t future, hpx_addr_t sync) {
   _future_t *f;
-  if (!hpx_gas_try_pin(future, (void**)&f)) {
-    hpx_call_async(future, _future_reset_action, HPX_NULL, sync, NULL, 0);
+  if (hpx_gas_try_pin(future, (void**)&f)) {
+    _future_reset(f);
+    hpx_gas_unpin(future);
+    hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
     return;
   }
 
-  _future_reset(f);
-  hpx_gas_unpin(future);
-  if (sync)
-    hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
+  int e = hpx_call_async(future, _future_reset_action, HPX_NULL, sync, NULL, 0);
+  dbg_check(e, "failed to forward future reset\n");
 }
 
 
@@ -267,7 +250,7 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {
   for (int i = 0; i < blocks; ++i) {
     hpx_addr_t there = hpx_addr_add(base, i * block_bytes, block_bytes);
     int e = hpx_call(there, _block_init, and, args, sizeof(args));
-    dbg_check(e, "call of _block_init failed\n");
+    dbg_check(e, "call of _block_init_action failed\n");
   }
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);
