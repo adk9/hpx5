@@ -3,8 +3,7 @@
 ####################
 
 EXTRA_DIST = \
-        autogen.sh           \
-        README NEWS TODO     \
+        README NEWS          \
         INSTALL AUTHORS      \
         docs
 
