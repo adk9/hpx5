@@ -97,10 +97,7 @@ static void *_progress(void *o) {
 }
 
 
-static hpx_action_t _probe = 0;
-
-
-static int _probe_handler(void *o) {
+static HPX_ACTION(_probe, void *o) {
   struct network *network = *(struct network **)o;
   hpx_parcel_t *p = NULL;
   int e = hpx_call(HPX_HERE, _probe, HPX_NULL, &network, sizeof(network));
@@ -114,11 +111,6 @@ static int _probe_handler(void *o) {
     }
   }
   return HPX_SUCCESS;
-}
-
-
-static void HPX_CONSTRUCTOR _register_actions(void) {
-  LIBHPX_REGISTER_ACTION(_probe_handler, &_probe);
 }
 
 
@@ -161,7 +153,7 @@ static int _startup(struct network *o) {
   else {
     dbg_log("started probing the network.\n");
   }
-  
+
   return HPX_SUCCESS;
 }
 

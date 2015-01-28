@@ -190,14 +190,15 @@ hpx_status_t hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
   return status;
 }
 
-static int _alltoall_getid_proxy(_alltoall_get_offset_t *args) {
+static HPX_ACTION(_alltoall_getid_proxy, _alltoall_get_offset_t *args) {
   // try and pin the alltoall LCO, if we fail, we need to resend the underlying
   // parcel to "catch up" to the moving LCO
   hpx_addr_t target = hpx_thread_current_target();
   _alltoall_t *g;
-  if(!hpx_gas_try_pin(target, (void **)&g))
+  if(!hpx_gas_try_pin(target, (void **)&g)) {
      return HPX_RESEND;
 
+  }
   // otherwise we pinned the LCO, extract the arguments from @p args and use the
   // local getid routine
   char buffer[args->size];
@@ -208,8 +209,7 @@ static int _alltoall_getid_proxy(_alltoall_get_offset_t *args) {
   // the thread's continuation address else finish the current thread's execution.
   if(status == HPX_SUCCESS)
     hpx_thread_continue(args->size, buffer);
-  else
-    hpx_thread_exit(status);
+  return status;
 }
 
 
@@ -303,28 +303,11 @@ hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id, int size,
   return status;
 }
 
-
-static hpx_status_t _alltoall_setid_proxy(void *args) {
-  // try and pin the allgather LCO, if we fail, we need to resend the underlying
-  // parcel to "catch up" to the moving LCO
-  hpx_addr_t target = hpx_thread_current_target();
-  _alltoall_t *g;
-  if(!hpx_gas_try_pin(target, (void **)&g))
-     return HPX_RESEND;
-
-  // otherwise we pinned the LCO, extract the arguments from @p args and use the
-  // local setid routine
-  _alltoall_set_offset_t *a = args;
+static HPX_PINNED(_alltoall_setid_proxy, _alltoall_set_offset_t *a) {
+  _alltoall_t *g = hpx_thread_current_local_target();
+  assert(g);
   size_t size = hpx_thread_current_args_size() - sizeof(_alltoall_set_offset_t);
-  hpx_status_t status = _alltoall_setid(g, a->offset, size, &a->buffer);
-  hpx_gas_unpin(target);
-  return status;
-}
-
-
-static HPX_CONSTRUCTOR void _initialize_actions(void) {
-  LIBHPX_REGISTER_ACTION(_alltoall_setid_proxy, &_alltoall_setid_action);
-  LIBHPX_REGISTER_ACTION(_alltoall_getid_proxy, &_alltoall_getid_action);
+  return _alltoall_setid(g, a->offset, size, &a->buffer);
 }
 
 static void _alltoall_set(lco_t *lco, int size, const void *from) {
