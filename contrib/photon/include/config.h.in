@@ -1,5 +1,11 @@
 /* include/config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Enable call tracing */
+#undef ENABLE_CALLTRACE
+
+/* Enable debug logging */
+#undef ENABLE_DEBUG
+
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #undef HAVE_ARPA_INET_H
 
