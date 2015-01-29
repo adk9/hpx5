@@ -32,27 +32,6 @@
 
 const uint64_t MAX_HEAP_BYTES = (uint64_t)1lu << GPA_OFFSET_BITS;
 
-/// This operates as an atomic fetch and add, with the added caveat that the
-/// "fetched" value will be aligned to an @p align alignment.
-///
-/// @param            p The pointer to update.
-/// @param            n The integer to add.
-/// @param        align The alignment we need.
-///
-/// @returns The @p align-aligned fetched value.
-static uint32_t _fetch_align_and_add(volatile uint64_t *p, uint32_t n,
-                                     uint32_t align) {
-  uint64_t fetch = 0;
-  uint64_t add = 0;
-  do {
-    fetch = sync_load(p, SYNC_ACQUIRE);
-    uint64_t r = (align - (fetch % align)) % align;
-    add = fetch + r;
-  } while (!sync_cas(p, fetch, add + n, SYNC_ACQ_REL, SYNC_RELAXED));
-
-  return add;
-}
-
 
 static void *_heap_chunk_alloc_cyclic(heap_t *heap, size_t bytes, size_t align)
 {
