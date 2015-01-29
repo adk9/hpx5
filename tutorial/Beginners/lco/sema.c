@@ -29,7 +29,7 @@ static int _add_action(int *args) {
     tmp = count;
     tmp = tmp + 1;
     count = tmp;
-    hpx_lco_sema_v(sem, HPX_NULL);
+    hpx_lco_sema_v_sync(sem);
   }
   return HPX_SUCCESS;
 }
@@ -37,7 +37,7 @@ static int _add_action(int *args) {
 static int _main_action(void *args) {
   sem = hpx_lco_sema_new(1);
   hpx_addr_t and = hpx_lco_and_new(NUM_THREADS);
-  for (int i = 0; i < NUM_THREADS; i++) 
+  for (int i = 0; i < NUM_THREADS; i++)
     hpx_call(HPX_HERE, _add, and, &i, sizeof(i));
 
   hpx_lco_wait(and);
@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-   
+
   HPX_REGISTER_ACTION(_main_action, &_main);
   HPX_REGISTER_ACTION(_add_action, &_add);
 
