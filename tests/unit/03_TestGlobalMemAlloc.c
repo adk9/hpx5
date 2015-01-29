@@ -57,7 +57,7 @@ static int _initDomain_handler(int rank, int max, int n) {
   return HPX_SUCCESS;
 }
 
-HPX_ACTION_DEF(PINNED, _initDomain_handler, _initDomain, HPX_INT, HPX_INT, HPX_INT)
+HPX_ACTION_DEF(PINNED, _initDomain_handler, _initDomain, HPX_INT, HPX_INT, HPX_INT);
 
 //****************************************************************************
 // Test code -- for global memory allocation
