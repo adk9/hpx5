@@ -55,8 +55,9 @@ int libhpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_target,
 
   hpx_parcel_t *p = parcel_create(addr, action, args, len, c_target, c_action,
                                   hpx_thread_current_pid(), async);
-  if (!p)
+  if (!p) {
     return dbg_error("failed to create parcel.\n");
+  }
 
   if (async) {
     hpx_parcel_send(p, lsync);
