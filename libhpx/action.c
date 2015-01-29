@@ -140,6 +140,13 @@ const _table_t *action_table_finalize(void) {
 }
 
 void action_table_free(const _table_t *table) {
+  for (int i = 0, e = table->n; i < e; ++i) {
+    ffi_cif *cif = table->entries[i].cif;
+    if (cif) {
+      free(cif->arg_types);
+      free(cif);
+    }
+  }
   free((void*)table);
 }
 
@@ -171,7 +178,7 @@ bool action_table_get_args(const struct action_table *table, hpx_action_t id,
   // contiguous buffer, otherwise simply return the pointer to the
   // variadic argument.
   if (cif) {
-    void **args = (void**)malloc(sizeof(void*) * cif->nargs);
+    void *args[cif->nargs];
     for (int i = 0; i < cif->nargs; ++i) {
       args[i] = va_arg(inargs, void*);
     }
@@ -234,8 +241,8 @@ int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_hand
   ffi_cif *cif = malloc(sizeof(*cif));
   assert(cif);
 
+  hpx_type_t *args = calloc(nargs, sizeof(args[0]));
   va_list vargs;
-  hpx_type_t *args = malloc(sizeof(*args) * nargs);
   va_start(vargs, id);
   for (int i = 0; i < nargs; ++i) {
     args[i] = va_arg(vargs, hpx_type_t);
