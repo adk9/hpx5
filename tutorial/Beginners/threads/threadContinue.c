@@ -12,10 +12,11 @@
 // =============================================================================
 
 //****************************************************************************
-// Example code - Thread continue tutorial - Finish the current thread's 
+// Example code - Thread continue tutorial - Finish the current thread's
 // execution, sending value to the thread's continuation address.
 //****************************************************************************
 #include <stdio.h>
+#include <unistd.h>
 #include <hpx/hpx.h>
 
 #define NUM_THREADS                    2
@@ -55,12 +56,12 @@ static int _main_action(void *args) {
     hpx_lco_future_new(sizeof(int))
   };
 
-  for (int i = 0; i < NUM_THREADS; i++) 
+  for (int i = 0; i < NUM_THREADS; i++)
     hpx_call(HPX_HERE, _doSomething, futures[i], &i, sizeof(i));
-  
+
   hpx_lco_get_all(2, futures, sizes, addrs, NULL);
   hpx_lco_delete(futures[0], HPX_NULL);
-  hpx_lco_delete(futures[1], HPX_NULL);  
+  hpx_lco_delete(futures[1], HPX_NULL);
 
   printf("Return value from first thread is [%d]\n", value[0]);
   printf("Return value from second thread is [%d]\n", value[1]);
@@ -74,7 +75,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-   
+
   HPX_REGISTER_ACTION(_main_action, &_main);
   HPX_REGISTER_ACTION(_doSomething_action, &_doSomething);
 
