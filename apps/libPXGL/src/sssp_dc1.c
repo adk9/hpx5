@@ -26,11 +26,11 @@ static size_t yield;
 static size_t yield_size_threshold;
 static size_t handle_queues_count;
 
-static hpx_action_t _sssp_delete_queues = HPX_ACTION_INVALID;
-static hpx_action_t _sssp_init_queues_dc1 = HPX_ACTION_INVALID;
-static hpx_action_t _handle_queue = HPX_ACTION_INVALID;
-static hpx_action_t _sssp_dc1_process_vertex = HPX_ACTION_INVALID;
-static hpx_action_t sssp_init_dc1 = HPX_ACTION_INVALID;
+static HPX_ACTION_DECL(_sssp_delete_queues);
+static HPX_ACTION_DECL(_sssp_init_queues_dc1);
+static HPX_ACTION_DECL(_handle_queue);
+static HPX_ACTION_DECL(_sssp_dc1_process_vertex);
+static HPX_ACTION_DECL(sssp_init_dc1);
 
 static void _set_affinity(const int thread_id) {
   while (HPX_THREAD_ID != thread_id)
@@ -62,7 +62,7 @@ static bool _maybe_process_one(sssp_queue_t *const q) {
   }
 }
 
-static int _sssp_dc_process_vertex_action(const distance_t *const distance) {
+static HPX_TASK(_sssp_dc1_process_vertex, const distance_t *const distance) {
   const hpx_addr_t target = hpx_thread_current_target();
   const int thread_id = HPX_THREAD_ID;
   // if(rand() % 4 == 1) 
@@ -102,7 +102,7 @@ static int _sssp_dc_process_vertex_action(const distance_t *const distance) {
   return HPX_SUCCESS;
 }
 
-static int sssp_init_dc_action(sssp_init_dc_args_t *args) {
+static HPX_INTERRUPT(sssp_init_dc1, sssp_init_dc_args_t *args) {
   freq = args->freq;
   yield = args->yield_count;
   // printf("freq: %zu\n", freq);  
@@ -127,7 +127,7 @@ typedef struct {
   hpx_addr_t termination_lco;
   sssp_queue_t **queues;
 } _sssp_delete_queues_args_t;
-static int _sssp_delete_queues_action(const _sssp_delete_queues_args_t * const args) {
+static HPX_ACTION(_sssp_delete_queues, const _sssp_delete_queues_args_t * const args) {
   hpx_lco_wait(args->termination_lco);
 
   // printf("Delete queues wait succeeded at %zu. Deleting queues.\n", args->termination_lco);
@@ -145,7 +145,7 @@ static int _sssp_delete_queues_action(const _sssp_delete_queues_args_t * const a
   return HPX_SUCCESS;
 }
 
-static int _sssp_init_queues_action(const hpx_addr_t * const termination_lco) {
+static HPX_ACTION(_sssp_init_queues_dc1, const hpx_addr_t * const termination_lco) {
   // printf("DC1 _sssp_init_queues\n");
   // printf("num_pq in init queues: %zu\n", num_pq);
   // printf("sssp_queues before malloc: %" PRIxPTR "\n", (uintptr_t)sssp_queues);
@@ -169,7 +169,7 @@ static int _sssp_init_queues_action(const hpx_addr_t * const termination_lco) {
   return HPX_SUCCESS;
 }
 
-static int _handle_queue_action(sssp_queue_t *const *const *const args) {
+static HPX_TASK(handle_queue, sssp_queue_t *const *const *const args) {
   const int thread_id = HPX_THREAD_ID;
   sssp_queue_t *const *const queues = *args;
   sssp_queue_t *const queue = queues[thread_id];
@@ -199,13 +199,4 @@ void _switch_to_dc1() {
   _sssp_dc_process_vertex = _sssp_dc1_process_vertex;
   sssp_init_dc = sssp_init_dc1;
   _sssp_init_queues = _sssp_init_queues_dc1;
-}
-
-static HPX_CONSTRUCTOR void _sssp_dc1_register_actions() {
-  HPX_REGISTER_TASK(_sssp_dc_process_vertex_action, &_sssp_dc1_process_vertex);
-  HPX_REGISTER_ACTION(sssp_init_dc_action, &sssp_init_dc1);
-  HPX_REGISTER_ACTION(_sssp_delete_queues_action, &_sssp_delete_queues);
-  HPX_REGISTER_TASK(_handle_queue_action, &_handle_queue);
-  HPX_REGISTER_ACTION(_sssp_init_queues_action, &_sssp_init_queues_dc1);
-  sssp_queues = NULL;
 }
