@@ -81,7 +81,7 @@ static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
   const hpx_addr_t target = hpx_parcel_get_target(parcel);
   const uint32_t owner = gas_owner_of(here->gas, target);
   DEBUG_IF (owner != here->rank) {
-    dbg_log_sched("received parcel at incorrect rank, resend likely\n");
+    log_sched("received parcel at incorrect rank, resend likely\n");
   }
 
   const hpx_action_t id = hpx_parcel_get_action(parcel);
@@ -457,7 +457,7 @@ void worker_bind_self(struct worker *worker) {
 
   // we set worker thread affinity in worker_create()
   //if (self->core >= 0) {
-  //   dbg_log_sched("binding affinity for worker %d to core %d.\n", self->id, self->core);
+  //   log_sched("binding affinity for worker %d to core %d.\n", self->id, self->core);
   //  system_set_affinity(self->thread, self->core);
   //}
 }

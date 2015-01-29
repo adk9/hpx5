@@ -74,11 +74,11 @@ scheduler_new(int cores, int workers, int stack_size, unsigned int backoff_max,
   scheduler_stats_init(&s->stats);
 
   thread_set_stack_size(stack_size);
-  dbg_log_sched("initialized a new scheduler.\n");
+  log_sched("initialized a new scheduler.\n");
 
   // bind a worker for this thread so that we can spawn lightweight threads
   worker_bind_self(&s->workers[0]);
-  dbg_log_sched("worker 0 ready.\n");
+  log_sched("worker 0 ready.\n");
   return s;
 }
 
