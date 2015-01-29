@@ -338,7 +338,7 @@ void network_progress_delete(progress_t *p) {
 
   while ((i = p->pending_sends) != NULL) {      //
     // transport_request_cancel(here->transport, &i->request);
-    // p->pending_sends = p->pending_sends->next;
+    p->pending_sends = i->next;
     request_delete(i);
   }
 
@@ -347,7 +347,7 @@ void network_progress_delete(progress_t *p) {
 
   while ((i = p->pending_recvs) != NULL) {
     // transport_request_cancel(here->transport, &i->request);
-    // p->pending_recvs = p->pending_recvs->next;
+    p->pending_recvs = i->next;
     request_delete(i);
   }
 
