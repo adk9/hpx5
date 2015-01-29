@@ -280,14 +280,14 @@ static void _clear(block_t *blocks, uint32_t bit, uint32_t nbits) {
 
 
 /// Count the number of unused blocks in the bitmap.
-static uint32_t _bitmap_unused_blocks(const bitmap_t *map) {
+static int32_t _bitmap_unused_blocks(const bitmap_t *map) {
   uint32_t unused = 0;
-  for (uint32_t i = 0, e = map->nblocks; i < e; ++i)
+  for (uint32_t i = 0, e = map->nblocks; i < e; ++i) {
     unused += block_popcount(map->blocks[i]);
+  }
 
   uint32_t extra = BLOCK_BITS - (map->nbits % BLOCK_BITS);
-  assert(unused >= extra);
-  return (unused - extra);
+  return (int32_t)(unused - extra);
 }
 
 
@@ -300,7 +300,7 @@ static uint32_t _bitmap_unused_blocks(const bitmap_t *map) {
 ///
 /// @returns LIBHPX_ENOMEM
 static int _bitmap_oom(const bitmap_t *map, uint32_t nbits, uint32_t align) {
-  uint32_t unused = _bitmap_unused_blocks(map);
+  int32_t unused = _bitmap_unused_blocks(map);
   dbg_error("Application ran out of global address space.\n"
             "\t-%u blocks requested with alignment %u\n"
             "\t-%u blocks available\n"
