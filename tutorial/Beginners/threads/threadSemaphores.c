@@ -63,7 +63,7 @@ void _dotprod_action(long *arg) {
   */
   hpx_lco_sema_p (mutex);
   dotstr.sum += mysum;
-  hpx_lco_sema_v (mutex);
+  hpx_lco_sema_v (mutex, HPX_NULL);
 
   hpx_thread_exit(HPX_SUCCESS);
 }

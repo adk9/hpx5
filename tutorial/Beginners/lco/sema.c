@@ -29,7 +29,7 @@ static int _add_action(int *args) {
     tmp = count;
     tmp = tmp + 1;
     count = tmp;
-    hpx_lco_sema_v(sem);
+    hpx_lco_sema_v(sem, HPX_NULL);
   }
   return HPX_SUCCESS;
 }
