@@ -43,14 +43,14 @@ rm -rf ./build/
 ./bootstrap
 mkdir build
 cd build
-../configure $CFGFLAGS --enable-pedantic --enable-wall --enable-apps --enable-jemalloc --enable-debug --enable-logging CFLAGS="-O3 -ggdb" $HPXDEBUG
+../configure $CFGFLAGS --enable-pedantic --enable-wall --enable-apps --enable-jemalloc --enable-logging CFLAGS="-O3 -ggdb" $HPXDEBUG
 make
 
 # Run the apps and check their output...
 set -xe
 case "$HPXMODE" in
     photon)
-        cd $DIR/apps/libPXGL/examples        
+        cd $DIR/build/apps/libPXGL/examples        
         # Delta-Stepping
         mpirun -n 10 --map-by node:PE=16 --tag-output sssp -q 60 -c -z 40000 --hpx-cores=16 --hpx-heap=$((1024 * 1024 * 1024 * 25)) --hpx-sendlimit=32 --hpx-recvlimit=10000 /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.22.0.gr /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.22.0.ss
         # Chaotic
@@ -59,7 +59,7 @@ case "$HPXMODE" in
         mpirun -n 10 --map-by node:PE=16 --tag-output sssp -q 60 -d --hpx-cores=16 --hpx-heap=$((1024 * 1024 * 1024 * 15)) --hpx-sendlimit=32 --hpx-recvlimit=10000 /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.20.0.gr /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.20.0.ss
         ;;
     mpi)
-        cd $DIR/apps/libPXGL/examples
+        cd $DIR/build/apps/libPXGL/examples
         # Delta-Stepping
 	mpirun -n 10 --map-by node:PE=16 --tag-output sssp -q 60 -c -z 40000 --hpx-cores=16 --hpx-heap=$((1024 * 1024 * 1024 * 25)) --hpx-sendlimit=32 --hpx-recvlimit=10000 /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.22.0.gr /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.22.0.ss
         # Chaotic
