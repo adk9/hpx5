@@ -25,10 +25,13 @@ static int _thread1_handler(uint32_t iter, hpx_addr_t sem1, hpx_addr_t sem2) {
   dbg_assert(sem1 != hpx_thread_current_cont_target());
   dbg_assert(sem2 != hpx_thread_current_cont_target());
   hpx_time_t t = hpx_time_now();
+  hpx_addr_t and = hpx_lco_and_new(iter);
   for (int j = 0; j < iter; j++) {
     hpx_lco_sema_p(sem1);
-    hpx_lco_sema_v(sem2);
+    hpx_lco_sema_v(sem2, and);
   }
+  hpx_lco_wait(and);
+  hpx_lco_delete(and, HPX_NULL);
   printf("Thread 1: %d%*g\n", iter, FIELD_WIDTH, hpx_time_elapsed_ms(t));
   return HPX_SUCCESS;
 }
@@ -42,10 +45,13 @@ static int _thread2_handler(uint32_t iter, hpx_addr_t sem1, hpx_addr_t sem2) {
   dbg_assert(sem2 != hpx_thread_current_cont_target());
 
   hpx_time_t t = hpx_time_now();
+  hpx_addr_t and = hpx_lco_and_new(iter);
   for (int j = 0; j < iter; j++) {
     hpx_lco_sema_p(sem2);
-    hpx_lco_sema_v(sem1);
+    hpx_lco_sema_v(sem1, and);
   }
+  hpx_lco_wait(and);
+  hpx_lco_delete(and, HPX_NULL);
   printf("Thread 2: %d%*g\n", iter, FIELD_WIDTH, hpx_time_elapsed_ms(t));
   return HPX_SUCCESS;
 }
@@ -67,10 +73,13 @@ static HPX_ACTION(_main, void) {
     hpx_addr_t mutex = hpx_lco_sema_new(n);
     printf("%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
     t = hpx_time_now();
+    hpx_addr_t and = hpx_lco_and_new(n);
     for (int j = 0, e = n; j < e; ++j) {
       hpx_lco_sema_p(mutex);
-      hpx_lco_sema_v(mutex);
+      hpx_lco_sema_v(mutex, and);
     }
+    hpx_lco_wait(and);
+    hpx_lco_delete(and, HPX_NULL);
     hpx_lco_delete(mutex, HPX_NULL);
     printf("%*g\n", FIELD_WIDTH,  hpx_time_elapsed_ms(t));
   }

@@ -150,7 +150,7 @@ void lco_set_deleted(lco_t *lco) {
 
 void lco_fini(lco_t *lco) {
   DEBUG_IF(true) {
-    lco->bits |= _DELETED_MASK;
+    lco->bits = _DELETED_MASK;
   }
 }
 

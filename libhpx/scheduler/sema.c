@@ -52,6 +52,44 @@ static const lco_class_t _sema_vtable = {
   .on_try_wait = NULL
 };
 
+/// Allocate a semaphore LCO.
+///
+/// @param count The initial count for the semaphore.
+///
+/// @returns The global address of the new semaphore.
+hpx_addr_t hpx_lco_sema_new(unsigned count) {
+  _sema_t *local = libhpx_global_malloc(sizeof(*local));;
+  dbg_assert(local);
+  lco_init(&local->lco, &_sema_vtable, 0);
+  cvar_reset(&local->avail);
+  local->count = count;
+  return lva_to_gva(local);
+}
+
+/// Decrement a semaphore.
+///
+/// If the semaphore is local, then we can use the _sema_get operation directly,
+/// otherwise we perform the operation as a synchronous remote call using the
+/// _sema_p action.
+///
+/// @param sema The global address of the semaphore we're reducing.
+///
+/// @returns HPX_SUCCESS, or an error code if the sema is in an error state.
+hpx_status_t hpx_lco_sema_p(hpx_addr_t sema) {
+  return hpx_lco_get(sema, 0, NULL);
+}
+
+/// Increment a semaphore.
+///
+/// If the semaphore is local, then we can use the _sema_set operation directly,
+/// otherwise we perform the operation as an asynchronous remote call using the
+/// _sema_v action.
+///
+/// @param         sema The global address of the semaphore we're incrementing.
+/// @param        rsync An LCO to set when the set operation completed.
+void hpx_lco_sema_v(hpx_addr_t sema, hpx_addr_t rsync) {
+  hpx_lco_set(sema, 0, NULL, HPX_NULL, rsync);
+}
 
 void _sema_fini(lco_t *lco) {
   dbg_assert(lco->vtable->on_fini == _sema_vtable.on_fini);
@@ -120,45 +158,3 @@ hpx_status_t _sema_get(lco_t *lco, int size, void *out) {
 }
 
 /// @}
-
-
-
-/// Allocate a semaphore LCO.
-///
-/// @param count The initial count for the semaphore.
-///
-/// @returns The global address of the new semaphore.
-hpx_addr_t hpx_lco_sema_new(unsigned count) {
-  _sema_t *local = libhpx_global_malloc(sizeof(*local));;
-  dbg_assert(local);
-  lco_init(&local->lco, &_sema_vtable, 0);
-  cvar_reset(&local->avail);
-  local->count = count;
-  return lva_to_gva(local);
-}
-
-
-/// Decrement a semaphore.
-///
-/// If the semaphore is local, then we can use the _sema_get operation directly,
-/// otherwise we perform the operation as a synchronous remote call using the
-/// _sema_p action.
-///
-/// @param sema The global address of the semaphore we're reducing.
-///
-/// @returns HPX_SUCCESS, or an error code if the sema is in an error state.
-hpx_status_t hpx_lco_sema_p(hpx_addr_t sema) {
-  return hpx_lco_get(sema, 0, NULL);
-}
-
-
-/// Increment a semaphore.
-///
-/// If the semaphore is local, then we can use the _sema_set operation directly,
-/// otherwise we perform the operation as an asynchronous remote call using the
-/// _sema_v action.
-///
-/// @param sema The global address of the semaphore we're incrementing.
-void hpx_lco_sema_v(hpx_addr_t sema) {
-  hpx_lco_set(sema, 0, NULL, HPX_NULL, HPX_NULL);
-}
