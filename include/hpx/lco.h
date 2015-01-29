@@ -172,6 +172,14 @@ hpx_addr_t hpx_lco_sema_new(unsigned init);
 /// @param       rsync An LCO to set so the caller can make this synchronous.
 void hpx_lco_sema_v(hpx_addr_t sema, hpx_addr_t rsync);
 
+/// Standard semaphore V (signal) operation.
+///
+/// Increments the count in the semaphore, signaling the LCO if the increment
+/// transitions from 0 to 1.
+///
+/// @param        sema The global address of a semaphore.
+void hpx_lco_sema_v_sync(hpx_addr_t sema);
+
 /// Standard semaphore P (wait) operation.
 ///
 /// Attempts to decrement the count in the semaphore; blocks if the count is 0.
