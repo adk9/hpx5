@@ -34,35 +34,50 @@ typedef struct {
   uintptr_t count;
 } _sema_t;
 
-static void
-_sema_fini(lco_t *lco)
-{
+static void _sema_fini(lco_t *lco);
+static void _sema_error(lco_t *lco, hpx_status_t code);
+static void _sema_set(lco_t *lco, int size, const void *from);
+static hpx_status_t _sema_wait(lco_t *lco);
+static hpx_status_t _sema_get(lco_t *lco, int size, void *out);
+
+// the semaphore vtable
+static const lco_class_t _sema_vtable = {
+  .on_fini = _sema_fini,
+  .on_error = _sema_error,
+  .on_set = _sema_set,
+  .on_get = _sema_get,
+  .on_wait = _sema_wait,
+  .on_attach = NULL,
+  .on_try_get = NULL,
+  .on_try_wait = NULL
+};
+
+
+void _sema_fini(lco_t *lco) {
+  dbg_assert(lco->vtable->on_fini == _sema_vtable.on_fini);
+
   if (!lco)
     return;
 
   _sema_t *sema = (_sema_t *)lco;
   lco_lock(&sema->lco);
-  DEBUG_IF(true) {
-    lco_set_deleted(&sema->lco);
-  }
+  lco_fini(&sema->lco);
   libhpx_global_free(sema);
 }
 
+void _sema_error(lco_t *lco, hpx_status_t code) {
+  dbg_assert(lco->vtable->on_error == _sema_vtable.on_error);
 
-static void
-_sema_error(lco_t *lco, hpx_status_t code)
-{
   _sema_t *sema = (_sema_t *)lco;
   lco_lock(&sema->lco);
   scheduler_signal_error(&sema->avail, code);
   lco_unlock(&sema->lco);
 }
 
-
 /// Set is equivalent to returning a resource to the semaphore.
-static void
-_sema_set(lco_t *lco, int size, const void *from)
-{
+void _sema_set(lco_t *lco, int size, const void *from) {
+  dbg_assert(lco->vtable->on_set == _sema_vtable.on_set);
+
   _sema_t *sema = (_sema_t *)lco;
   lco_lock(&sema->lco);
   if (sema->count++ == 0) {
@@ -74,9 +89,9 @@ _sema_set(lco_t *lco, int size, const void *from)
   lco_unlock(&sema->lco);
 }
 
+hpx_status_t _sema_wait(lco_t *lco) {
+  dbg_assert(lco->vtable->on_wait == _sema_vtable.on_wait);
 
-static hpx_status_t
-_sema_wait(lco_t *lco) {
   hpx_status_t status = HPX_SUCCESS;
   _sema_t *sema = (_sema_t *)lco;
   lco_lock(&sema->lco);
@@ -97,32 +112,11 @@ _sema_wait(lco_t *lco) {
   return status;
 }
 
+hpx_status_t _sema_get(lco_t *lco, int size, void *out) {
+  dbg_assert(lco->vtable->on_get == _sema_vtable.on_get);
 
-static hpx_status_t
-_sema_get(lco_t *lco, int size, void *out) {
   assert(size == 0);
   return _sema_wait(lco);
-}
-
-
-static void
-_sema_init(_sema_t *sema, unsigned count)
-{
-  // the semaphore vtable
-  static const lco_class_t vtable = {
-    .on_fini = _sema_fini,
-    .on_error = _sema_error,
-    .on_set = _sema_set,
-    .on_get = _sema_get,
-    .on_wait = _sema_wait,
-    .on_attach = NULL,
-    .on_try_get = NULL,
-    .on_try_wait = NULL
-  };
-
-  lco_init(&sema->lco, &vtable, 0);
-  cvar_reset(&sema->avail);
-  sema->count = count;
 }
 
 /// @}
@@ -134,12 +128,12 @@ _sema_init(_sema_t *sema, unsigned count)
 /// @param count The initial count for the semaphore.
 ///
 /// @returns The global address of the new semaphore.
-hpx_addr_t
-hpx_lco_sema_new(unsigned count)
-{
+hpx_addr_t hpx_lco_sema_new(unsigned count) {
   _sema_t *local = libhpx_global_malloc(sizeof(*local));;
-  assert(local);
-  _sema_init(local, count);
+  dbg_assert(local);
+  lco_init(&local->lco, &_sema_vtable, 0);
+  cvar_reset(&local->avail);
+  local->count = count;
   return lva_to_gva(local);
 }
 
@@ -153,9 +147,7 @@ hpx_lco_sema_new(unsigned count)
 /// @param sema The global address of the semaphore we're reducing.
 ///
 /// @returns HPX_SUCCESS, or an error code if the sema is in an error state.
-hpx_status_t
-hpx_lco_sema_p(hpx_addr_t sema)
-{
+hpx_status_t hpx_lco_sema_p(hpx_addr_t sema) {
   return hpx_lco_get(sema, 0, NULL);
 }
 
@@ -167,8 +159,6 @@ hpx_lco_sema_p(hpx_addr_t sema)
 /// _sema_v action.
 ///
 /// @param sema The global address of the semaphore we're incrementing.
-void
-hpx_lco_sema_v(hpx_addr_t sema)
-{
+void hpx_lco_sema_v(hpx_addr_t sema) {
   hpx_lco_set(sema, 0, NULL, HPX_NULL, HPX_NULL);
 }
