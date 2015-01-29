@@ -32,15 +32,15 @@ hpx_action_type_t action_table_get_type(const struct action_table *, hpx_action_
 hpx_action_handler_t action_table_get_handler(const struct action_table *, hpx_action_t)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-/// Run the handler associated with a parcel.
+/// Run the handler associated with an action.
 int action_table_run_handler(const struct action_table *, const hpx_action_t, void *)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-/// Get the serialized/marshalled arguments associated with an action
-bool action_table_get_args(const struct action_table *table, hpx_action_t id,
-                           va_list inargs, void **outargs, size_t *len)
+/// Call an action by sending a parcel given a list of variable args.
+int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
+                       hpx_action_t action, hpx_addr_t c_addr, hpx_action_t c_action,
+                       hpx_addr_t lsync, va_list *args)
   HPX_INTERNAL HPX_NON_NULL(1);
-
 
 /// Is the action a pinned action?
 bool action_is_pinned(const struct action_table *, hpx_action_t)

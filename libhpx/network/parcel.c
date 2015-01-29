@@ -107,7 +107,7 @@ void hpx_parcel_set_cont_target(hpx_parcel_t *p, const hpx_addr_t cont) {
 void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size) {
   if (size) {
     void *to = hpx_parcel_get_data(p);
-    memcpy(to, data, size);
+    memmove(to, data, size);
   }
 }
 
@@ -283,7 +283,7 @@ void hpx_parcel_release(hpx_parcel_t *p) {
 }
 
 hpx_parcel_t *parcel_create(hpx_addr_t target, hpx_action_t action,
-                            const void*args, size_t len, hpx_addr_t c_target,
+                            const void *args, size_t len, hpx_addr_t c_target,
                             hpx_action_t c_action, hpx_pid_t pid, bool inplace)
 {
   hpx_parcel_t *p = hpx_parcel_acquire(inplace ? NULL : args, len);
