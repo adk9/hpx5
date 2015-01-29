@@ -871,7 +871,7 @@ error_exit:
 static int __verbs_connect_qps(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info, verbs_cnct_info *remote_info, int pindex, int num_qp) {
   int i;
   int err;
-#ifdef CALLTRACE
+#ifdef ENABLE_CALLTRACE
   char gid[40];
 #endif
   
