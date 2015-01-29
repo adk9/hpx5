@@ -331,7 +331,8 @@ progress_t *network_progress_new(transport_class_t *t) {
 }
 
 void network_progress_delete(progress_t *p) {
-#if 0
+  request_t *i = NULL;
+
   if (p->pending_sends)
     dbg_log_trans("progress: abandoning active send.\n");
 
@@ -349,5 +350,6 @@ void network_progress_delete(progress_t *p) {
     p->pending_recvs = p->pending_recvs->next;
     request_delete(i);
   }
-#endif
+
+  free(p);
 }
