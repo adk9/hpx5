@@ -141,7 +141,7 @@ static int _startup(struct network *o) {
     return dbg_error("failed to start network progress.\n");
   }
   else {
-    dbg_log("started network progress.\n");
+    log("started network progress.\n");
   }
 
   system_set_affinity(network->progress, -1);
@@ -151,7 +151,7 @@ static int _startup(struct network *o) {
     return dbg_error("failed to start network probe\n");
   }
   else {
-    dbg_log("started probing the network.\n");
+    log("started probing the network.\n");
   }
 
   return HPX_SUCCESS;
@@ -170,7 +170,7 @@ static void _shutdown(struct network *o) {
     dbg_error("could not join the network progress thread.\n");
   }
   else {
-    dbg_log("shutdown network progress.\n");
+    log("shutdown network progress.\n");
   }
 
   int flush = sync_load(&network->flush, SYNC_ACQUIRE);

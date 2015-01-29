@@ -82,7 +82,7 @@ static void _add_switch(uint64_t dpid, uint32_t tid, uint32_t nbuf,
   if (!s) {
     s = malloc(sizeof(*s));
     LL_PREPEND(((trema_t*)trema)->switches, s);
-    dbg_log_net("trema: adding new switch 0x%016lx.\n", dpid);
+    log_net("trema: adding new switch 0x%016lx.\n", dpid);
   }
 
   s->dpid = malloc(sizeof(dpid));
@@ -197,7 +197,7 @@ static int _send_of_msg(const routing_t *r, const uint16_t cmd, struct ofp_match
 static int _add_flow(const routing_t *r, uint64_t src, uint64_t dst, uint16_t port) {
   // create the match request
   struct ofp_match match;
-  dbg_log_net("trema: adding flow, output=%d.\n", port);
+  log_net("trema: adding flow, output=%d.\n", port);
   memset(&match, 0, sizeof(match));
   match.wildcards = (OFPFW_ALL & ~(OFPFW_DL_SRC|OFPFW_DL_DST));
   if (src != HPX_SWADDR_WILDCARD)

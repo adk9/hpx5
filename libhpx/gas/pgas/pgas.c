@@ -377,7 +377,7 @@ static gas_class_t _pgas_vtable = {
 gas_class_t *gas_pgas_new(size_t heap_size, boot_class_t *boot,
                           struct transport_class *transport) {
   if (here->ranks == 1) {
-    dbg_log_gas("PGAS requires at least two ranks\n");
+    log_gas("PGAS requires at least two ranks\n");
     return NULL;
   }
 

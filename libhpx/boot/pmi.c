@@ -279,7 +279,7 @@ boot_class_t *boot_new_pmi(void) {
 
   int spawned;
   if (PMI_Init(&spawned) == PMI_SUCCESS) {
-    dbg_log_boot("initialized PMI boostrapper.\n");
+    log_boot("initialized PMI boostrapper.\n");
     return &_pmi;
   }
 

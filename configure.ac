@@ -87,6 +87,13 @@ AC_ARG_ENABLE([debug],
 AS_IF([test "x$enable_debug" != xno],
   [AC_DEFINE([ENABLE_DEBUG], [1], [Enable debugging stuff])])
 
+AC_ARG_ENABLE([logging],
+  [AS_HELP_STRING([--enable-logging],
+                  [Enable logging code @<:@default=no@:>@])],
+  [], [enable_logging=no])
+AS_IF([test "x$enable_logging" != xno],
+  [AC_DEFINE([ENABLE_LOGGING], [1], [Enable loggging stuff])])
+
 AC_ARG_ENABLE([hugetlbfs],
   [AS_HELP_STRING([--enable-hugetlbfs],
                   [Enable using huge pages when mapping the heap @<:@default=no@:>@])],

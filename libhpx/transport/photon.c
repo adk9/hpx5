@@ -66,7 +66,7 @@ _id(void)
 static void
 _barrier(void)
 {
-  dbg_log_trans("photon: barrier unsupported.\n");
+  log_trans("photon: barrier unsupported.\n");
 }
 
 

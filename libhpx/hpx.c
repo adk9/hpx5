@@ -95,7 +95,7 @@ int hpx_init(int *argc, char ***argv) {
   if (!cfg) {
     return dbg_error("failed to create a configuration.\n");
   }
-  dbg_log_level = cfg->loglevel;
+  log_level = cfg->loglevel;
   if (cfg->waitat == HPX_LOCALITY_ALL) {
     dbg_wait();
   }
@@ -135,11 +135,11 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   if (cfg->logat && cfg->logat != (int*)HPX_LOCALITY_ALL) {
-    int orig_level = dbg_log_level;
-    dbg_log_level = 0;
+    int orig_level = log_level;
+    log_level = 0;
     for (int i = 0; i < cfg->logat[0]; ++i) {
       if (cfg->logat[i+1] == here->rank) {
-        dbg_log_level = orig_level;
+        log_level = orig_level;
       }
     }
   }

@@ -79,10 +79,10 @@ transport_class_t *transport_new(hpx_transport_t type, uint32_t send_limit,
   }
 
   if (!transport) {
-    dbg_log_trans("failed to initialize a transport.\n");
+    log_trans("failed to initialize a transport.\n");
   }
   else {
-    dbg_log("initialized the %s transport.\n", transport->id());
+    log("initialized the %s transport.\n", transport->id());
   }
 
   return transport;

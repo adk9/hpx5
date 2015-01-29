@@ -115,7 +115,7 @@ static HPX_PINNED(_proc_return_credit, uint64_t *args) {
 
   // add credit to the credit-accounting bitmap
   if (cr_bitmap_add_and_test(p->debt, *args)) {
-    //dbg_log("detected quiescence...\n");
+    //log("detected quiescence...\n");
     uint64_t total_credit = sync_addf(&p->credit, -1, SYNC_ACQ_REL);
     assert(total_credit == 0);
     assert(_is_tracked(p));

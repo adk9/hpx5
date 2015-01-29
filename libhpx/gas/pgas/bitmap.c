@@ -193,7 +193,7 @@ static uint32_t _match(const block_t *blocks, uint32_t bit, uint32_t nbits,
 static uint32_t _first_free(const block_t *blocks, uint32_t bit, uint32_t max) {
   assert(blocks);
   assert(bit < max);
-  dbg_log_gas("finding the first free bit during allocation\n");
+  log_gas("finding the first free bit during allocation\n");
 
   uint32_t  block = bit / BLOCK_BITS;
   uint32_t offset = bit % BLOCK_BITS;
@@ -340,7 +340,7 @@ void bitmap_delete(bitmap_t *map) {
 
 
 int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i) {
-  dbg_log_gas("searching for %u blocks with alignment %u.\n", nbits, align);
+  log_gas("searching for %u blocks with alignment %u.\n", nbits, align);
   if (nbits == 0) {
     return LIBHPX_EINVAL;
   }
@@ -378,7 +378,7 @@ int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i) {
 
     if (map->min == bit) {
       uint32_t min = bit + nbits;
-      dbg_log_gas("updated minimum free bit from %u to %u\n", map->min, min);
+      log_gas("updated minimum free bit from %u to %u\n", map->min, min);
       map->min = min;
     }
 
@@ -386,7 +386,7 @@ int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i) {
   }
   sync_tatas_release(&map->lock);
 
-  dbg_log_gas("found at offset %u.\n", bit);
+  log_gas("found at offset %u.\n", bit);
 
   if (i) {
     *i = bit;
@@ -398,7 +398,7 @@ int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i) {
 
 int bitmap_rreserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i)
 {
-  dbg_log_gas("reverse search for %u blocks with alignment %u.\n", nbits,
+  log_gas("reverse search for %u blocks with alignment %u.\n", nbits,
               align);
   if (nbits == 0)
     return LIBHPX_EINVAL;
@@ -446,7 +446,7 @@ int bitmap_rreserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i)
 
     uint32_t max = bit + nbits;
     if (map->max == max) {
-      dbg_log_gas("updated maximum bit from %u to %u\n", map->max, bit);
+      log_gas("updated maximum bit from %u to %u\n", map->max, bit);
       map->max = bit;
     }
 
@@ -454,7 +454,7 @@ int bitmap_rreserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i)
   }
   sync_tatas_release(&map->lock);
 
-  dbg_log_gas("found at offset %u.\n", bit);
+  log_gas("found at offset %u.\n", bit);
 
   if (i) {
     *i = bit;
@@ -465,20 +465,20 @@ int bitmap_rreserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i)
 
 
 void bitmap_release(bitmap_t *map, uint32_t bit, uint32_t nbits) {
-  dbg_log_gas("release %u blocks at %u.\n", nbits, bit);
+  log_gas("release %u blocks at %u.\n", nbits, bit);
 
   sync_tatas_acquire(&map->lock);
   {
     _clear(map->blocks, bit, nbits);
 
     if (bit < map->min) {
-      dbg_log_gas("updated minimum free bit from %u to %u\n", map->min, bit);
+      log_gas("updated minimum free bit from %u to %u\n", map->min, bit);
       map->min = bit;
     }
 
     uint32_t max = bit + nbits;
     if (max > map->max) {
-      dbg_log_gas("updated maximum bit from %u to %u\n", map->max, max);
+      log_gas("updated maximum bit from %u to %u\n", map->max, max);
       map->max = max;
     }
   }
