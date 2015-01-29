@@ -219,7 +219,7 @@ void hpx_lco_set(hpx_addr_t target, int size, const void *value,
   }
 
   lco_t *lco = NULL;
-  if ((size > HPX_LCO_SET_ASYNC) && hpx_gas_try_pin(target, (void**)&lco)) {
+  if ((size < HPX_LCO_SET_ASYNC) && hpx_gas_try_pin(target, (void**)&lco)) {
     _set(lco, size, value);
     hpx_gas_unpin(target);
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
