@@ -72,7 +72,7 @@ static double _getVal_action(void *args) {
   HPX_THREAD_CONTINUE(value);
 }
 
-static double _setVal_action(void *args) {
+static int _setVal_action(void *args) {
   reduce_result = *(double*)args;
   return HPX_SUCCESS;
 }
