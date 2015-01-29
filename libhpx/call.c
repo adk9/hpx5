@@ -51,7 +51,7 @@ int libhpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_target,
   void *args;
   size_t len;
   bool typed = action_table_get_args(here->actions, action, *vargs, &args, &len);
-  bool async = (lsync == HPX_NULL);
+  bool async = (lsync != HPX_NULL);
 
   hpx_parcel_t *p = parcel_create(addr, action, args, len, c_target, c_action,
                                   hpx_thread_current_pid(), async);
@@ -59,9 +59,9 @@ int libhpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_target,
     return dbg_error("failed to create parcel.\n");
 
   if (async) {
-    hpx_parcel_send_sync(p);
-  } else {
     hpx_parcel_send(p, lsync);
+  } else {
+    hpx_parcel_send_sync(p);
   }
 
   if (typed) {
@@ -120,6 +120,7 @@ int hpx_call_cc(hpx_addr_t addr, hpx_action_t action, void (*cleanup)(void*),
   va_list vargs;
   va_start(vargs, env);
   int e = libhpx_call(addr, action, p->c_target, p->c_action, HPX_NULL, &vargs);
+  va_end(vargs);
   if (e != HPX_SUCCESS) {
     return e;
   }
