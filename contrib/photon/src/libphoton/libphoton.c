@@ -35,11 +35,11 @@ int _photon_smsize;
 int _photon_spsize;
 int _forwarder;
 
-#ifdef DEBUG
-int _photon_start_debugging=1;
+#if defined(ENABLE_DEBUG) || defined(ENABLE_CALLTRACE)
+int _photon_start_debugging = 1;
 #endif
 
-#if defined(DEBUG) || defined(CALLTRACE)
+#if defined(ENABLE_CALLTRACE)
 FILE *_phot_ofp;
 #endif
 /* END Globals */

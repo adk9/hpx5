@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
 
   int rdata;
   int ur = open("/dev/urandom", O_RDONLY);
-  read(ur, &rdata, sizeof rdata);
+  int rc = read(ur, &rdata, sizeof rdata);
   srand(rdata);
   close(ur);
 
@@ -136,12 +136,12 @@ int main(int argc, char *argv[]) {
   char *send, *recv[nproc];
 
   // only need one send buffer
-  posix_memalign((void **) &send, 64, PHOTON_BUF_SIZE*sizeof(uint8_t));
+  rc = posix_memalign((void **) &send, 64, PHOTON_BUF_SIZE*sizeof(uint8_t));
   photon_register_buffer(send, PHOTON_BUF_SIZE);
 
   // ... but recv buffers for each potential sender
   for (i=0; i<nproc; i++) {
-    posix_memalign((void **) &recv[i], 64, PHOTON_BUF_SIZE*sizeof(uint8_t));
+    rc = posix_memalign((void **) &recv[i], 64, PHOTON_BUF_SIZE*sizeof(uint8_t));
     photon_register_buffer(recv[i], PHOTON_BUF_SIZE);
   }
   

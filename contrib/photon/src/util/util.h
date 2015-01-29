@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include "photon.h"
+#include "config.h"
 
 #define ALIGN(s, b) (((s) + ((b) - 1)) & ~((b) - 1))
 
