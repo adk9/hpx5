@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include "hpx/hpx.h"
 #include <pthread.h>
+#include "libhpx/debug.h"
 
 #define BENCHMARK "HPX COST OF LCO SEMAPHORES"
 
@@ -12,11 +13,11 @@
 #define HEADER_FIELD_WIDTH 5
 
 static int num[] = {
-  100000,
-  200000,
-  300000,
-  400000,
-  500000
+  10,
+  20,
+  30,
+  40,
+  50
 };
 
 static int _thread1_handler(uint32_t iter, hpx_addr_t sem1, hpx_addr_t sem2) {
