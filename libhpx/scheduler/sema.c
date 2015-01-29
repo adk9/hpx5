@@ -92,8 +92,6 @@ void hpx_lco_sema_v(hpx_addr_t sema, hpx_addr_t rsync) {
 }
 
 void _sema_fini(lco_t *lco) {
-  dbg_assert(lco->vtable->on_fini == _sema_vtable.on_fini);
-
   if (!lco)
     return;
 
@@ -104,8 +102,6 @@ void _sema_fini(lco_t *lco) {
 }
 
 void _sema_error(lco_t *lco, hpx_status_t code) {
-  dbg_assert(lco->vtable->on_error == _sema_vtable.on_error);
-
   _sema_t *sema = (_sema_t *)lco;
   lco_lock(&sema->lco);
   scheduler_signal_error(&sema->avail, code);
@@ -114,8 +110,6 @@ void _sema_error(lco_t *lco, hpx_status_t code) {
 
 /// Set is equivalent to returning a resource to the semaphore.
 void _sema_set(lco_t *lco, int size, const void *from) {
-  dbg_assert(lco->vtable->on_set == _sema_vtable.on_set);
-
   _sema_t *sema = (_sema_t *)lco;
   lco_lock(&sema->lco);
   if (sema->count++ == 0) {
@@ -128,8 +122,6 @@ void _sema_set(lco_t *lco, int size, const void *from) {
 }
 
 hpx_status_t _sema_wait(lco_t *lco) {
-  dbg_assert(lco->vtable->on_wait == _sema_vtable.on_wait);
-
   hpx_status_t status = HPX_SUCCESS;
   _sema_t *sema = (_sema_t *)lco;
   lco_lock(&sema->lco);
@@ -151,8 +143,6 @@ hpx_status_t _sema_wait(lco_t *lco) {
 }
 
 hpx_status_t _sema_get(lco_t *lco, int size, void *out) {
-  dbg_assert(lco->vtable->on_get == _sema_vtable.on_get);
-
   assert(size == 0);
   return _sema_wait(lco);
 }
