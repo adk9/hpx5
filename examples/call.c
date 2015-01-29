@@ -39,7 +39,7 @@ static int _my_typed_action(int i, float f, char c) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION_DEF(DEFAULT, _my_typed_action, id, HPX_INT, HPX_FLOAT, HPX_CHAR)
+static HPX_ACTION_DEF(DEFAULT, _my_typed_action, id, HPX_INT, HPX_FLOAT, HPX_CHAR);
 
 static HPX_ACTION(_main, void *args) {
   int i = 42;
