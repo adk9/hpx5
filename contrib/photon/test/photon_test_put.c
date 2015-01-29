@@ -27,8 +27,8 @@ int main(int argc, char *argv[]) {
   if (photon_init(&cfg))
     exit(1);
 
-  posix_memalign((void **) &send, 64, PHOTON_SEND_SIZE*sizeof(char));
-  posix_memalign((void **) &recv, 64, PHOTON_SEND_SIZE*sizeof(char));
+  int rc = posix_memalign((void **) &send, 64, PHOTON_SEND_SIZE*sizeof(char));
+  rc = posix_memalign((void **) &recv, 64, PHOTON_SEND_SIZE*sizeof(char));
 
   photon_register_buffer(send, PHOTON_SEND_SIZE);
   photon_register_buffer(recv, PHOTON_SEND_SIZE);
