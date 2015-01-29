@@ -85,14 +85,14 @@ static void *_progress(void *o) {
   if (e) {
     dbg_error("network failed to join the global address space.\n");
   }
-  
+
   do {
     profile_ctr(scheduler_get_stats(here->sched)->progress++);
     transport_progress(network->transport, TRANSPORT_POLL);
     sched_yield();
     stop = sync_load(&stop_progress, SYNC_RELAXED);
   } while (!stop);
-  
+
   pthread_exit(NULL);
 }
 
@@ -126,7 +126,7 @@ static void _delete(struct network *o) {
     hpx_parcel_release(p);
   }
   _QUEUE_FINI(&network->tx);
-
+  _QUEUE_FINI(&network->rx);
   free(network);
 }
 
@@ -172,7 +172,7 @@ static void _shutdown(struct network *o) {
   else {
     dbg_log("shutdown network progress.\n");
   }
-  
+
   int flush = sync_load(&network->flush, SYNC_ACQUIRE);
   if (flush) {
     transport_progress(network->transport, TRANSPORT_FLUSH);
