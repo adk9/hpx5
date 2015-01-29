@@ -336,9 +336,9 @@ void network_progress_delete(progress_t *p) {
   if (p->pending_sends)
     dbg_log_trans("progress: abandoning active send.\n");
 
-  while ((i = p->pending_sends) != NULL) {
-    transport_request_cancel(here->transport, i);
-    p->pending_sends = p->pending_sends->next;
+  while ((i = p->pending_sends) != NULL) {      //
+    // transport_request_cancel(here->transport, &i->request);
+    // p->pending_sends = p->pending_sends->next;
     request_delete(i);
   }
 
@@ -346,8 +346,8 @@ void network_progress_delete(progress_t *p) {
     dbg_log_trans("progress: abandoning active recv.\n");
 
   while ((i = p->pending_recvs) != NULL) {
-    transport_request_cancel(here->transport, i);
-    p->pending_recvs = p->pending_recvs->next;
+    // transport_request_cancel(here->transport, &i->request);
+    // p->pending_recvs = p->pending_recvs->next;
     request_delete(i);
   }
 
