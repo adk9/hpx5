@@ -2,13 +2,14 @@
 #define LOGGING_H
 
 #include <stdio.h>
+#include "config.h"
 
 extern int _photon_nproc, _photon_myrank;
-#ifdef DEBUG
+#if defined(ENABLE_DEBUG) || defined(ENABLE_CALLTRACE)
 extern int _photon_start_debugging;
 #endif
 
-#if defined(DEBUG) && defined(CALLTRACE)
+#if defined(ENABLE_CALLTRACE)
 extern FILE *_phot_ofp;
 #define _photon_open_ofp() { if(_phot_ofp == NULL){char name[10]; sprintf(name,"out.%05d",_photon_myrank);_phot_ofp=fopen(name,"w"); } }
 #endif
@@ -20,7 +21,7 @@ void photon_logging_msg(FILE *f, const char *pre, unsigned line, const char *fun
 #define err_msg(p,...)  photon_logging_msg(stderr, p, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define file_msg(p,...) photon_logging_msg(_phot_ofp, p, __LINE__, __FUNCTION__, __VA_ARGS__)
 
-#ifdef DEBUG
+#ifdef ENABLE_DEBUG
 #define dbg_info(...)  do{ if(!_photon_start_debugging){break;} log_msg("ALL:DBG",__VA_ARGS__); } while(0)
 #define dbg_err(...)   do{ if(!_photon_start_debugging){break;} err_msg("ALL:ERR",__VA_ARGS__); } while(0)
 #define dbg_warn(...)  do{ if(!_photon_start_debugging){break;} log_msg("ALL:WRN",__VA_ARGS__); } while(0)
@@ -29,13 +30,13 @@ void photon_logging_msg(FILE *f, const char *pre, unsigned line, const char *fun
 #define dbg_err(...)
 #define dbg_warn(...)
 #endif
-#ifdef CALLTRACE
+#ifdef ENABLE_CALLTRACE
 #define dbg_trace(...) do{ if(!_photon_start_debugging){break;} _photon_open_ofp(); file_msg("ALL:TRACE",__VA_ARGS__); } while(0)
 #else
 #define dbg_trace(...)
 #endif
 
-#ifdef DEBUG
+#ifdef ENABLE_DEBUG
 #define one_debug(...) do{ if (_photon_myrank == 0) { log_msg("ONE:DBG",__VA_ARGS__); } } while (0)
 #else
 #define one_debug(...)

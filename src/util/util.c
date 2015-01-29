@@ -7,7 +7,7 @@
 
 #include "util.h"
 
-#ifdef DEBUG
+#ifdef ENABLE_DEBUG
 time_t _tictoc(time_t stime, int proc) {
   time_t etime;
   etime = time(NULL);

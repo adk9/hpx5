@@ -26,7 +26,7 @@ extern int _photon_smsize;
 extern int _photon_spsize;
 extern int _forwarder;
 
-#ifdef DEBUG
+#ifdef ENABLE_DEBUG
 /* defined in util.c */
 PHOTON_INTERNAL time_t _tictoc(time_t stime, int proc);
 #endif

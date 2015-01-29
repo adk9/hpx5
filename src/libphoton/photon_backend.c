@@ -1079,7 +1079,7 @@ error_exit:
 static int _photon_wait_send_request_rdma(int tag) {
   photonRILedgerEntry curr_entry, entry_iterator;
   int iproc, still_searching = 1;
-#ifdef DEBUG
+#ifdef ENABLE_DEBUG
   time_t stime;
 #endif
   uint64_t curr;
@@ -1090,7 +1090,7 @@ static int _photon_wait_send_request_rdma(int tag) {
   dbg_trace("Spinning on send info ledger looking for send request");
 
   iproc = -1;
-#ifdef DEBUG
+#ifdef ENABLE_DEBUG
   stime = time(NULL);
 #endif
   do {
@@ -1109,7 +1109,7 @@ static int _photon_wait_send_request_rdma(int tag) {
 	  break;
 	}
       }
-#ifdef DEBUG
+#ifdef ENABLE_DEBUG
     stime = _tictoc(stime, -1);
 #endif
   } while(still_searching);
