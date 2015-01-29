@@ -28,7 +28,7 @@ routing_t *routing_new(void) {
 #ifdef HAVE_TREMA
   routing = routing_new_trema();
   if (routing) {
-    dbg_log_net("initialized Trema (OpenFlow) routing control.\n");
+    log_net("initialized Trema (OpenFlow) routing control.\n");
     return routing;
   }
 #endif
@@ -36,7 +36,7 @@ routing_t *routing_new(void) {
 #if HAVE_FLOODLIGHT
   routing = routing_new_floodlight();
   if (routing) {
-    dbg_log_net("initialized Floodlight (OpenFlow) routing control.\n");
+    log_net("initialized Floodlight (OpenFlow) routing control.\n");
     return routing;
   }
 #endif

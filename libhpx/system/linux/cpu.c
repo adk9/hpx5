@@ -43,7 +43,7 @@ int system_set_affinity(pthread_t thread, int core_id) {
   }
   int e = pthread_setaffinity_np(thread, sizeof(cpuset), &cpuset);
   if (e) {
-    dbg_log("failed to bind thread affinity.\n");
+    log("failed to bind thread affinity.\n");
     return LIBHPX_ERROR;
   }
   return LIBHPX_OK;

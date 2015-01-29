@@ -219,7 +219,7 @@ int parcel_launch(hpx_parcel_t *p) {
 
   // LOG
   if (p->c_action != HPX_ACTION_NULL) {
-    dbg_log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64") => %s@(%"PRIu64")\n",
+    log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64") => %s@(%"PRIu64")\n",
                    p->pid,
                    p->credit,
                    action_table_get_key(here->actions, p->action),
@@ -229,7 +229,7 @@ int parcel_launch(hpx_parcel_t *p) {
                    action_table_get_key(here->actions, p->c_action),
                    p->c_target);
   } else {
-    dbg_log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64")\n",
+    log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64")\n",
                    p->pid,
                    p->credit,
                    action_table_get_key(here->actions, p->action),
