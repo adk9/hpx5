@@ -307,7 +307,11 @@ void *heap_offset_to_lva(const heap_t *heap, uint64_t offset) {
 
 uint64_t heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize) {
   assert(heap->cyclic_arena < UINT32_MAX);
-  assert(ceil_log2_32(bsize) <= heap_max_block_lg_size(heap));
+  if (ceil_log2_32(bsize) > heap_max_block_lg_size(heap)) {
+    dbg_error("Attempting to allocate block with alignment %"PRIu32
+	      " while the maximum alignment is %"PRIu32".\n",
+	      ceil_log2_32(bsize), heap_max_block_lg_size(heap));
+  }
 
   // Figure out how many blocks per node that we need, and then allocate that
   // much cyclic space from the heap.
@@ -348,34 +352,6 @@ static bool _chunks_are_used(const heap_t *heap, uint64_t offset, size_t n) {
   uint32_t from = offset / heap->bytes_per_chunk;
   uint32_t to = (offset + n) / heap->bytes_per_chunk + 1;
   return bitmap_is_set(heap->chunks, from, to - from);
-}
-
-
-uint64_t heap_csbrk(heap_t *heap, size_t n, uint32_t bsize) {
-  assert(ceil_log2_32(bsize) <= heap_max_block_lg_size(heap));
-
-  // need to allocate properly aligned offset
-  uint32_t padded = (uint32_t)1 << ceil_log2_32(bsize);
-  size_t    bytes = n * padded;
-  uint64_t offset = _fetch_align_and_add(&heap->csbrk, bytes, padded);
-
-  if (offset + bytes > heap->nbytes)
-    goto oom;
-
-  if (_chunks_are_used(heap, offset, bytes))
-    goto oom;
-
-  return offset;
-
-oom:
-  dbg_error("\n"
-            "out-of-memory detected during csbrk allocation\n"
-            "\t-global heap size: %zu bytes\n"
-            "\t-previous cyclic allocation total: %"PRIu64" bytes\n"
-            "\t-current allocation request: %zu bytes\n",
-            heap->nbytes, offset, bytes);
-
-  return 0;
 }
 
 
