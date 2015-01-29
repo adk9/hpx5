@@ -179,17 +179,6 @@ bool heap_offset_is_cyclic(const heap_t *heap, uint64_t offset)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
-/// Allocate a cyclic array of blocks.
-///
-/// @param         heap The heap from which to allocate.
-/// @param            n The number of blocks per locality to allocate.
-/// @param        bsize The size of the block.
-///
-/// @returns the base offset of the new allocation.
-uint64_t heap_csbrk(heap_t *heap, size_t n, uint32_t bsize)
-  HPX_NON_NULL(1) HPX_INTERNAL;
-
-
 /// Get the csbrk.
 ///
 /// @param         heap The heap.
