@@ -794,7 +794,7 @@ with_sysroot
 enable_libtool_lock
 enable_testsuite
 enable_debug
-enable_trace
+enable_calltrace
 enable_verbs
 with_ugni
 with_pmi
@@ -1460,9 +1460,9 @@ Optional Features:
   --enable-fast-install[=PKGS]
                           optimize for fast installation [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
-  --enable-testsuite      Enable test suite (requires check) [default=yes]
-  --enable-debug          turn on debugging
-  --enable-trace          turn on calltrace to file
+  --enable-testsuite      Enable test suite (requires check) [default=no]
+  --enable-debug          Enable debug logging [default=no]
+  --enable-calltrace      Enable call tracing to file [default=no]
   --disable-verbs         disable verbs (IBV) support (default is autodetect)
 
 Optional Packages:
@@ -17510,25 +17510,35 @@ done
 if test "${enable_testsuite+set}" = set; then :
   enableval=$enable_testsuite;
 else
-  enable_testsuite=yes
+  enable_testsuite=no
 fi
 
 
 # Check whether --enable-debug was given.
 if test "${enable_debug+set}" = set; then :
-  enableval=$enable_debug; CFLAGS="-g -O0 -Wall -DDEBUG ${CFLAGS}"
+  enableval=$enable_debug;
 else
-  CFLAGS="-O2 -Wall ${CFLAGS}"
+  enable_debug=no
 fi
 
+if test "x$enable_debug" != xno; then :
 
-# Check whether --enable-trace was given.
-if test "${enable_trace+set}" = set; then :
-  enableval=$enable_trace; CFLAGS="-DCALLTRACE ${CFLAGS}"
-else
-  CFLAGS="${CFLAGS}"
+$as_echo "#define ENABLE_DEBUG 1" >>confdefs.h
+
 fi
 
+# Check whether --enable-calltrace was given.
+if test "${enable_calltrace+set}" = set; then :
+  enableval=$enable_calltrace;
+else
+  enable_calltrace=no
+fi
+
+if test "x$enable_calltrace" != xno; then :
+
+$as_echo "#define ENABLE_CALLTRACE 1" >>confdefs.h
+
+fi
 
 # Check whether --enable-verbs was given.
 if test "${enable_verbs+set}" = set; then :
@@ -18518,7 +18528,7 @@ else
   HAVE_CHECK_FALSE=
 fi
 
-if test "x$enable_testsuite" != xno -a "x$with_check" != xno; then :
+if test "x$enable_testsuite" != xno && test "x$with_check" != xno; then :
   enable_tests=yes
 else
   enable_tests=no
