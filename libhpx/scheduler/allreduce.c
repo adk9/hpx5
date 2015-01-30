@@ -162,7 +162,7 @@ static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
 
   assert(init);
 
-  lco_init(&r->lco, &vtable, 0);
+  lco_init(&r->lco, &vtable);
   cvar_reset(&r->wait);
   r->readers = readers;
   r->op = op;
