@@ -68,15 +68,13 @@ hpx_addr_t hpx_lco_sema_new(unsigned count) {
 
 /// Decrement a semaphore.
 ///
-/// If the semaphore is local, then we can use the _sema_get operation directly,
-/// otherwise we perform the operation as a synchronous remote call using the
-/// _sema_p action.
+/// Just forward to the equivalent lco_wait() operation.
 ///
 /// @param sema The global address of the semaphore we're reducing.
 ///
 /// @returns HPX_SUCCESS, or an error code if the sema is in an error state.
 hpx_status_t hpx_lco_sema_p(hpx_addr_t sema) {
-  return hpx_lco_get(sema, 0, NULL);
+  return hpx_lco_wait(sema);
 }
 
 /// Increment a semaphore.
