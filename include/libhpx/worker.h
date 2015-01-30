@@ -55,7 +55,7 @@ struct worker {
                                          HPX_CACHELINE_SIZE)];
   two_lock_queue_t    inbox;                    // mail sent to me
   scheduler_stats_t   stats;                    // scheduler statistics
-};
+} HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
 
 /// Initialize a worker structure.
