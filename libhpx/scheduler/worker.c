@@ -465,6 +465,11 @@ void worker_bind_self(struct worker *worker) {
 int worker_start(void) {
   dbg_assert(self);
 
+  // double-check this
+  dbg_assert((uintptr_t)self % HPX_CACHELINE_SIZE == 0);
+  dbg_assert((uintptr_t)&self->work % HPX_CACHELINE_SIZE == 0);
+  dbg_assert((uintptr_t)&self->inbox % HPX_CACHELINE_SIZE == 0);
+
   // get a parcel to start the scheduler loop with
   hpx_parcel_t *p = _schedule(true, NULL);
   if (!p) {

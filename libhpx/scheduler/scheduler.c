@@ -40,8 +40,10 @@ scheduler_new(int cores, int workers, int stack_size, unsigned int backoff_max,
     return NULL;
   }
 
-  int e = posix_memalign((void**)&s->workers, HPX_CACHELINE_SIZE,
-                         workers * sizeof(s->workers[0]));
+  size_t r = HPX_CACHELINE_SIZE - sizeof(s->workers[0]) % HPX_CACHELINE_SIZE;
+  size_t padded_size = sizeof(s->workers[0]) + r;
+  size_t total = workers * padded_size;
+  int e = posix_memalign((void**)&s->workers, HPX_CACHELINE_SIZE, total);
   if (e) {
     dbg_error("could not allocate a worker array.\n");
     scheduler_delete(s);
@@ -160,7 +162,7 @@ int scheduler_startup(struct scheduler *sched) {
     worker = scheduler_get_worker(sched, i);
     worker_join(worker);
   }
-  
+
   return status;
 }
 
