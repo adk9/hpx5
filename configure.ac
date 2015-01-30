@@ -94,14 +94,6 @@ AC_ARG_ENABLE([logging],
 AS_IF([test "x$enable_logging" != xno],
   [AC_DEFINE([ENABLE_LOGGING], [1], [Enable loggging stuff])])
 
-AC_ARG_ENABLE([hugetlbfs],
-  [AS_HELP_STRING([--enable-hugetlbfs],
-                  [Enable using huge pages when mapping the heap @<:@default=no@:>@])],
-  [], [enable_hugetlbfs=no])
-AS_IF([test "x$enable_hugetlbfs" != xno],
-  [AC_DEFINE([HUGETLBFS_FLAGS], [MAP_HUGETLB], [Enable huge pages heap allocation])],
-  [AC_DEFINE([HUGETLBFS_FLAGS], [0], [Disableh huge pages heap allocation])])
-
 AC_ARG_ENABLE([profiling],
   [AS_HELP_STRING([--enable-profiling],
                   [Enable profiling support @<:@default=no@:>@])],
@@ -128,6 +120,12 @@ HPX_WITH_PKG([papi],[papi],[build with profiling],[no],[PAPI])
 HPX_WITH_PKG([pmi],[pmi],[build with support for PMI],[no],[PMI])
 
 AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray PMI extensions]))
+HPX_WITH_PKG([hugetlbfs],[hugetlbfs],[build with hugepages for heap],[no],[HUGETLBFS])
+AS_IF([test "x$with_hugetlbfs" != xno],
+  [AC_DEFINE([HUGETLBFS_FLAGS], [MAP_HUGETLB], [Enable huge pages heap allocation])],
+  [AC_DEFINE([HUGETLBFS_FLAGS], [0], [Disableh huge pages heap allocation])])
+
+
 
 HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[no],[MPI])
 HPX_WITH_PKG([portals],[portals],[build with Portals networking],[no],[PORTALS])
@@ -301,7 +299,7 @@ echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
 echo "               Networks : $networks"
 echo "              Profiling : $with_papi"
-echo "         hugetlbfs heap : $enable_hugetlbfs"
+echo "         hugetlbfs heap : $with_hugetlbfs"
 echo "     Topology Awareness : $with_hwloc"
 echo "          Documentation : $enable_docs"
 echo "               Tutorial : $enable_tutorial"

@@ -15,3 +15,8 @@ libgas_la_SOURCES  = hpx_gas_glue.c \
                      parcel/memget.c \
                      parcel/memput.c \
                      parcel/memcpy.c 
+
+if HAVE_HUGETLBFS
+libgas_la_CFLAGS  = @HUGETLBFS_CFLAGS@
+libgas_la_LIBADD  = @HUGETLBFS_LIBS@
+endif
