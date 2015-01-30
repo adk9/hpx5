@@ -249,13 +249,15 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
 }
 
 
-static void _try_shutdown(struct worker *w) {
-  if (!scheduler_running(w->sched)) {
-    void **sp = &w->sp;
-    intptr_t shutdown = sync_load(&w->sched->shutdown, SYNC_ACQUIRE);
-    thread_transfer((hpx_parcel_t*)&sp, _free_parcel, (void*)shutdown);
-    unreachable();
-  }
+/// Called by the worker from the scheduler loop to shut itself down.
+///
+/// This will transfer back to the original system stack, returning the shutdown
+/// code.
+static void _worker_shutdown(struct worker *w) {
+  void **sp = &w->sp;
+  intptr_t shutdown = sync_load(&w->sched->shutdown, SYNC_ACQUIRE);
+  thread_transfer((hpx_parcel_t*)&sp, _free_parcel, (void*)shutdown);
+  unreachable();
 }
 
 
@@ -301,9 +303,8 @@ static hpx_parcel_t *_try_task(hpx_parcel_t *p) {
 
 /// Schedule something quickly.
 ///
-/// This routine does not try very hard to find work, and is typically used to
-/// transfer inside of an LCO when the caller is holding the LCO lock and wants
-/// to release it.
+/// This routine does not try very hard to find work, and is used inside of an
+/// LCO when the caller is holding the LCO lock and wants to release it.
 ///
 /// This routine will not process any tasks.
 ///
@@ -311,21 +312,27 @@ static hpx_parcel_t *_try_task(hpx_parcel_t *p) {
 ///                       work.
 ///
 /// @returns            A parcel to transfer to.
-static hpx_parcel_t *_schedule_fast(hpx_parcel_t *final) {
-  _try_shutdown(self);
+static hpx_parcel_t *_schedule_in_lco(hpx_parcel_t *final) {
+  hpx_parcel_t *p = NULL;
 
-  // if there is any LIFO work, process it
-  hpx_parcel_t *p = _schedule_lifo(self);
-  if (p) {
-    return _try_bind(p);
+  // return so we can release the lock
+  if (scheduler_is_shutdown(self->sched)) {
+    p = hpx_parcel_acquire(NULL, 0);
+    goto exit;
   }
 
-  p = final;
-  if (p) {
-    return _try_bind(p);
+  // if there is any LIFO work, process it
+  if ((p = _schedule_lifo(self))) {
+    goto exit;
+  }
+
+  if ((p = final)) {
+    goto exit;
   }
 
   p = hpx_parcel_acquire(NULL, 0);
+ exit:
+  dbg_assert(p);
   return _try_bind(p);
 }
 
@@ -346,13 +353,13 @@ static hpx_parcel_t *_schedule_fast(hpx_parcel_t *final) {
 /// but it is NULL, then the scheduler will return a new thread running the
 /// HPX_ACTION_NULL action.
 ///
-/// @param      fast Schedule quickly.
+/// @param    in_lco Schedule quickly so caller can release lco.
 /// @param     final A final option if the scheduler wants to give up.
 ///
 /// @returns A thread to transfer to.
-static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
-  if (fast) {
-    return _schedule_fast(final);
+static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
+  if (in_lco) {
+    return _schedule_in_lco(final);
   }
 
   hpx_parcel_t *p = NULL;
@@ -360,8 +367,9 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
   // We spin in the scheduler processing tasks, until we find a parcel to run
   // that does not represent a task.
   while (p == NULL) {
-
-    _try_shutdown(self);
+    if (scheduler_is_shutdown(self->sched)) {
+      _worker_shutdown(self);
+    }
 
     // prioritize our mailbox
     _handle_mail(self);
