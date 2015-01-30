@@ -340,7 +340,7 @@ static void _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
     .on_try_wait = NULL
   };
 
-  lco_init(&g->lco, &vtable, 0);
+  lco_init(&g->lco, &vtable);
   cvar_reset(&g->wait);
   g->participants = participants;
   g->count = participants;

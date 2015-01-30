@@ -139,7 +139,7 @@ static void _gencount_init(_gencount_t *gencnt, unsigned long ninplace) {
     .on_try_wait = NULL
   };
 
-  lco_init(&gencnt->lco, &gencount_vtable, 0);
+  lco_init(&gencnt->lco, &gencount_vtable);
   cvar_reset(&gencnt->oflow);
   gencnt->gen = 0;
   gencnt->ninplace = ninplace;
