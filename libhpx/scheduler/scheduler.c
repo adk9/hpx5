@@ -172,9 +172,9 @@ void scheduler_shutdown(struct scheduler *sched, int code) {
 }
 
 
-int scheduler_running(struct scheduler *sched) {
+int scheduler_is_shutdown(struct scheduler *sched) {
   int shutdown = sync_load(&sched->shutdown, SYNC_ACQUIRE);
-  return (shutdown == INT_MAX);
+  return (shutdown != INT_MAX);
 }
 
 

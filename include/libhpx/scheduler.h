@@ -131,12 +131,12 @@ void scheduler_shutdown(struct scheduler *scheduler, int code)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 
-/// Check to see if the scheduler is still running.
+/// Check to see if the scheduler was shutdown.
 ///
 /// @param    scheduler The scheduler to check.
 ///
-/// @returns            True if the scheduler is running.
-int scheduler_running(struct scheduler *scheduler)
+/// @returns            True if the scheduler was shutdown..
+int scheduler_is_shutdown(struct scheduler *scheduler)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 
