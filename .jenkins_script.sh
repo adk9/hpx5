@@ -44,7 +44,7 @@ rm -rf ./build/
 mkdir build
 cd build
 ../configure $CFGFLAGS --with-check --enable-testsuite $HPXDEBUG
-make
+make -j 128
 
 # Run all the unit tests:
 make check

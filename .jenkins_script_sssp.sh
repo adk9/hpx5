@@ -43,7 +43,7 @@ rm -rf ./build/
 mkdir build
 cd build
 ../configure $CFGFLAGS --enable-pedantic --enable-wall --enable-apps --enable-jemalloc --disable-logging CFLAGS="-O3" $HPXDEBUG PKG_CONFIG_PATH=/u/zalewski/tools/openmpi-1.8.3/lib/pkgconfig/:$PKG_CONFIG_PATH
-make
+make -j 128
 
 # Run the apps and check their output...
 set -xe
