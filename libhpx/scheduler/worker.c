@@ -645,17 +645,24 @@ void scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
 static void _call_continuation(hpx_addr_t target, hpx_action_t action,
                                const void *args, size_t len,
                                hpx_status_t status) {
+  dbg_assert(!args || len);
+  dbg_assert(!len || args);
+
   // get a parcel we can use to call locality_call_continuation().
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(locality_cont_args_t) + len);
   dbg_assert(p);
   hpx_parcel_set_target(p, target);
   hpx_parcel_set_action(p, locality_call_continuation);
 
-  // perform the single serialization
   locality_cont_args_t *cargs = hpx_parcel_get_data(p);
   cargs->action = action;
   cargs->status = status;
-  memcpy(&cargs->data, args, len);
+
+  // perform the single serialization, if necessary
+  if (args) {
+    memcpy(&cargs->data, args, len);
+  }
+
   hpx_parcel_send(p, HPX_NULL);
 }
 
