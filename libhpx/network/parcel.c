@@ -75,10 +75,7 @@ static void _bless(hpx_parcel_t *p) {
 
   // split the parent's current credit. the parent retains half..
   hpx_parcel_t *parent = scheduler_current_parcel();
-  if (!parent) {
-    dbg_error("no parent to bless child parcel\n");
-  }
-
+  dbg_assert_str(parent, "no parent to bless child parcel\n");
   // parent and child each get half a credit
   p->credit = ++parent->credit;
 }

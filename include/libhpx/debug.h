@@ -39,7 +39,17 @@ void dbg_assert_str_internal(bool expression, unsigned line,
   HPX_INTERNAL HPX_PRINTF(4, 5);
 
 #ifdef ENABLE_DEBUG
-#define dbg_assert_str(e, ...) dbg_assert_str_internal(e, __LINE__, __func__, __VA_ARGS__)
+
+// NB: this is complex for clang's benefit, so it can tell that we're asserting
+// e when doing static analysis
+#define dbg_assert_str(e, ...)                                       \
+  do {                                                               \
+    typeof(e) _e = (e);                                              \
+    dbg_assert_str_internal(_e, __LINE__, __func__, __VA_ARGS__);    \
+    assert(_e);                                                      \
+  } while (0)
+
+
 #define dbg_assert(e) dbg_assert_str(e, "assert failed\n")
 #else
 #define dbg_assert_str(e, ...) assert(e)
