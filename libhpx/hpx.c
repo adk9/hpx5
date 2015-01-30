@@ -282,10 +282,13 @@ void hpx_shutdown(int code) {
 /// Called by the application to shutdown the scheduler and network. May be
 /// called from any lightweight HPX thread, or the network thread.
 void hpx_abort(void) {
-  if (here && here->config && here->config->waitonabort)
+  if (here && here->config && here->config->waitonabort) {
     dbg_wait();
-  assert(here->boot);
-  boot_abort(here->boot);
+  }
+  if (here && here->boot) {
+    assert(here->boot);
+    boot_abort(here->boot);
+  }
   abort();
 }
 
