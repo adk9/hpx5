@@ -189,8 +189,9 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
   p->credit   = 0;
 
   // If there's a user-defined buffer, then remember it---we'll serialize it
-  // later, during the send operation.
-  if (buffer) {
+  // later, during the send operation. We occasionally see a buffer without
+  // bytes so skip in that context too.
+  if (buffer && bytes) {
     p->ustack = NULL;
     memcpy(&p->buffer, &buffer, sizeof(buffer));
   }
