@@ -31,11 +31,11 @@ extern hpx_action_t HPX_ACTION_NULL;
 
 /// Action types.
 typedef enum {
-  HPX_ACTION_INVALID = -1,
   HPX_ACTION_DEFAULT = 0,
   HPX_ACTION_PINNED,
   HPX_ACTION_TASK,
   HPX_ACTION_INTERRUPT,
+  HPX_ACTION_INVALID = UINT16_MAX
 } hpx_action_type_t;
 
 
