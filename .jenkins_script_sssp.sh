@@ -51,20 +51,20 @@ case "$HPXMODE" in
     photon)
         cd $DIR/build/apps/libPXGL/examples        
         # Delta-Stepping
-        mpirun -n 10 --map-by node:PE=16 --tag-output sssp -q 60 -c -z 40000 --hpx-cores=16 --hpx-heap=$((1024 * 1024 * 1024 * 25)) --hpx-sendlimit=32 --hpx-recvlimit=10000 /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.22.0.gr /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.22.0.ss
+        mpirun -n 10 --map-by node:PE=16 --tag-output sssp -q 60 -c -z 40000 --hpx-cores=16 --hpx-heap=$((1024 * 1024 * 1024 * 3)) --hpx-transport=photon --hpx-sendlimit=32 --hpx-recvlimit=10000 /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.22.0.gr /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.22.0.ss
         # Chaotic
-        mpirun -n 10 --map-by node:PE=16 --tag-output sssp -q 60 -c --hpx-cores=16 --hpx-heap=$((1024 * 1024 * 1024 * 15)) --hpx-sendlimit=32 --hpx-recvlimit=10000 /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.20.0.gr /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.20.0.ss < /dev/null 2>&1 | less
+        mpirun -n 10 --map-by node:PE=16 --tag-output sssp -q 60 -c --hpx-cores=16 --hpx-heap=$((1024 * 1024 * 1024 * 15)) --hpx-sendlimit=32 --hpx-transport=photon --hpx-recvlimit=10000 /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.20.0.gr /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.20.0.ss < /dev/null 2>&1 | less
         # Distributed control
-        mpirun -n 10 --map-by node:PE=16 --tag-output sssp -q 60 -d --hpx-cores=16 --hpx-heap=$((1024 * 1024 * 1024 * 15)) --hpx-sendlimit=32 --hpx-recvlimit=10000 /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.20.0.gr /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.20.0.ss
+        mpirun -n 10 --map-by node:PE=16 --tag-output sssp -q 60 -d --hpx-cores=16 --hpx-heap=$((1024 * 1024 * 1024 * 15)) --hpx-sendlimit=32 --hpx-transport=photon --hpx-recvlimit=10000 /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.20.0.gr /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.20.0.ss
         ;;
     mpi)
         cd $DIR/build/apps/libPXGL/examples
         # Delta-Stepping
-	mpirun -n 10 --map-by node:PE=16 --tag-output sssp -q 60 -c -z 40000 --hpx-cores=16 --hpx-heap=$((1024 * 1024 * 1024 * 25)) --hpx-sendlimit=32 --hpx-recvlimit=10000 /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.22.0.gr /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.22.0.ss
+	mpirun -n 10 --map-by node:PE=16 --tag-output sssp -q 60 -c -z 40000 --hpx-cores=16 --hpx-heap=$((1024 * 1024 * 1024 * 3)) --hpx-sendlimit=32 --hpx-transport=mpi --hpx-recvlimit=10000 /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.22.0.gr /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.22.0.ss
         # Chaotic
-        mpirun -n 10 --map-by node:PE=16 --tag-output sssp -q 60 -c --hpx-cores=16 --hpx-heap=$((1024 * 1024 * 1024 * 15)) --hpx-sendlimit=32 --hpx-recvlimit=10000 /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.20.0.gr /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.20.0.ss < /dev/null 2>&1 | less
+        mpirun -n 10 --map-by node:PE=16 --tag-output sssp -q 60 -c --hpx-cores=16 --hpx-heap=$((1024 * 1024 * 1024 * 3)) --hpx-sendlimit=32 --hpx-transport=mpi --hpx-recvlimit=10000 /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.20.0.gr /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.20.0.ss < /dev/null 2>&1 | less
         # Distributed control
-        mpirun -n 10 --map-by node:PE=16 --tag-output sssp -q 60 -d --hpx-cores=16 --hpx-heap=$((1024 * 1024 * 1024 * 15)) --hpx-sendlimit=32 --hpx-recvlimit=10000 /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.20.0.gr /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.20.0.ss
+        mpirun -n 10 --map-by node:PE=16 --tag-output sssp -q 60 -d --hpx-cores=16 --hpx-heap=$((1024 * 1024 * 1024 * 3)) --hpx-sendlimit=32 --hpx-transport=mpi --hpx-recvlimit=10000 /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.20.0.gr /u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n/Random4-n.20.0.ss
         ;;
 esac
 
