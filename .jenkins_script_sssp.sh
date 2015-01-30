@@ -3,8 +3,6 @@
 DIR=$1
 shift
 
-module load /home/zalewski/tools/modules/gcc/4.9.2
-
 function add_mpi() {
     # This is currently cutter-specific and needs to be generalized.
     module load /home/zalewski/tools/modules/openmpi/1.8.3
@@ -39,6 +37,7 @@ esac
 echo "Building HPX in $DIR"
 cd $DIR
 
+module load /home/zalewski/tools/modules/gcc/4.9.2
 rm -rf ./build/
 ./bootstrap
 mkdir build
