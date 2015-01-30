@@ -48,9 +48,9 @@ static __thread struct worker *self = NULL;
 ///
 /// This is used by worker_create().
 static void *_run(void *worker) {
-  assert(here);
-  assert(here->gas);
-  assert(worker);
+  dbg_assert(here);
+  dbg_assert(here->gas);
+  dbg_assert(worker);
 
   worker_bind_self(worker);
 
@@ -135,7 +135,7 @@ static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
 ///
 /// @returns          The parcel @p, but with a valid stack.
 static hpx_parcel_t *_try_bind(hpx_parcel_t *p) {
-  assert(p);
+  dbg_assert(p);
   if (!parcel_get_stack(p)) {
     ustack_t *stack = thread_new(p, _thread_enter);
     parcel_set_stack(p, stack);
@@ -188,7 +188,7 @@ static hpx_parcel_t *_schedule_steal(struct worker *w) {
 
 /// Send a mail message to another worker.
 static void _send_mail(int id, hpx_parcel_t *p) {
-  assert(id >= 0);
+  dbg_assert(id >= 0);
   struct worker *w = scheduler_get_worker(here->sched, id);
   sync_two_lock_queue_enqueue(&w->inbox, p);
 }
@@ -276,7 +276,7 @@ static int _run_task(hpx_parcel_t *to, void *sp, void *env) {
 
   // otherwise run the action
   self->current = env;
-  assert(parcel_get_stack(self->current) == NULL);
+  dbg_assert(parcel_get_stack(self->current) == NULL);
   _thread_enter(env);
   unreachable();
   return HPX_SUCCESS;
@@ -408,13 +408,13 @@ static hpx_parcel_t *_schedule(bool fast, hpx_parcel_t *final) {
 int worker_init(struct worker *w, struct scheduler *sched, int id, int core,
                  unsigned seed, unsigned work_size)
 {
-  assert(w);
-  assert(sched);
+  dbg_assert(w);
+  dbg_assert(sched);
 
   /// make sure the worker has proper alignment
-  assert((uintptr_t)w % HPX_CACHELINE_SIZE == 0);
-  assert((uintptr_t)&w->work % HPX_CACHELINE_SIZE == 0);
-  assert((uintptr_t)&w->inbox % HPX_CACHELINE_SIZE == 0);
+  dbg_assert((uintptr_t)w % HPX_CACHELINE_SIZE == 0);
+  dbg_assert((uintptr_t)&w->work % HPX_CACHELINE_SIZE == 0);
+  dbg_assert((uintptr_t)&w->inbox % HPX_CACHELINE_SIZE == 0);
 
   w->sched      = sched;
   w->thread     = 0;
@@ -447,7 +447,7 @@ void worker_fini(struct worker *w) {
 }
 
 void worker_bind_self(struct worker *worker) {
-  assert(worker);
+  dbg_assert(worker);
 
   if (self && self != worker) {
     dbg_error("HPX does not permit worker structure switching.\n");
@@ -463,7 +463,7 @@ void worker_bind_self(struct worker *worker) {
 }
 
 int worker_start(void) {
-  assert(self);
+  dbg_assert(self);
 
   // get a parcel to start the scheduler loop with
   hpx_parcel_t *p = _schedule(true, NULL);
@@ -509,7 +509,7 @@ void worker_join(struct worker *worker) {
 
 
 void worker_cancel(struct worker *worker) {
-  assert(worker);
+  dbg_assert(worker);
   if (pthread_cancel(worker->thread)) {
     dbg_error("cannot cancel worker thread %d.\n", worker->id);
   }
@@ -518,10 +518,10 @@ void worker_cancel(struct worker *worker) {
 
 /// Spawn a user-level thread.
 void scheduler_spawn(hpx_parcel_t *p) {
-  assert(self);
-  assert(self->id >= 0);
-  assert(p);
-  assert(hpx_gas_try_pin(hpx_parcel_get_target(p), NULL)); // NULL doesn't pin
+  dbg_assert(self);
+  dbg_assert(self->id >= 0);
+  dbg_assert(p);
+  dbg_assert(hpx_gas_try_pin(hpx_parcel_get_target(p), NULL)); // NULL doesn't pin
   if (action_is_interrupt(here->actions, hpx_parcel_get_action(p))) {
     void **sp = &self->sp;
     thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
@@ -568,9 +568,9 @@ void scheduler_yield(void) {
   if (from == to)
     return;
 
-  assert(to);
-  assert(parcel_get_stack(to));
-  assert(parcel_get_stack(to)->sp);
+  dbg_assert(to);
+  dbg_assert(parcel_get_stack(to));
+  dbg_assert(parcel_get_stack(to)->sp);
   // transfer to the new thread
   thread_transfer(to, _checkpoint_yield, self->current);
 }
@@ -642,7 +642,7 @@ static void _call_continuation(hpx_addr_t target, hpx_action_t action,
                                hpx_status_t status) {
   // get a parcel we can use to call locality_call_continuation().
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(locality_cont_args_t) + len);
-  assert(p);
+  dbg_assert(p);
   hpx_parcel_set_target(p, target);
   hpx_parcel_set_action(p, locality_call_continuation);
 
@@ -684,9 +684,9 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
   }
 
   hpx_parcel_t *to = _schedule(false, NULL);
-  assert(to);
-  assert(parcel_get_stack(to));
-  assert(parcel_get_stack(to)->sp);
+  dbg_assert(to);
+  dbg_assert(parcel_get_stack(to));
+  dbg_assert(parcel_get_stack(to)->sp);
   thread_transfer(to, _free_parcel, (void*)(intptr_t)status);
   unreachable();
 }
@@ -822,9 +822,9 @@ static int _move_to(hpx_parcel_t *to, void *sp, void *env) {
 
 
 void hpx_thread_set_affinity(int affinity) {
-  assert(affinity >= -1);
-  assert(self->current);
-  assert(parcel_get_stack(self->current));
+  dbg_assert(affinity >= -1);
+  dbg_assert(self->current);
+  dbg_assert(parcel_get_stack(self->current));
 
   // make sure affinity is in bounds
   affinity = affinity % here->sched->n_workers;
