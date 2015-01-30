@@ -31,7 +31,7 @@
 typedef struct {
   lco_t       lco;
   cvar_t    avail;
-  uintptr_t count;
+  volatile uintptr_t count;
 } _sema_t;
 
 static void _sema_fini(lco_t *lco);
@@ -60,7 +60,7 @@ static const lco_class_t _sema_vtable = {
 hpx_addr_t hpx_lco_sema_new(unsigned count) {
   _sema_t *local = libhpx_global_malloc(sizeof(*local));;
   dbg_assert(local);
-  lco_init(&local->lco, &_sema_vtable, 0);
+  lco_init(&local->lco, &_sema_vtable);
   cvar_reset(&local->avail);
   local->count = count;
   return lva_to_gva(local);
@@ -146,8 +146,9 @@ hpx_status_t _sema_wait(lco_t *lco) {
   }
 
   // reduce the count, unless there was an error
-  if (status == HPX_SUCCESS)
+  if (status == HPX_SUCCESS) {
     sema->count = count - 1;
+  }
 
   lco_unlock(&sema->lco);
   return status;

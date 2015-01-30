@@ -159,7 +159,7 @@ static void _and_init(_and_t *and, intptr_t value) {
   };
 
   assert(value >= 0);
-  lco_init(&and->lco, &vtable, 0);
+  lco_init(&and->lco, &vtable);
   cvar_reset(&and->barrier);
   and->value = value;
   log_lco("and: initialized with %ld inputs\n", and->value);

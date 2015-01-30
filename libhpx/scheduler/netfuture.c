@@ -522,8 +522,7 @@ _future_init(_netfuture_t *f, int size, bool shared)
     .on_try_wait = NULL
   };
 
-  bool inplace = false;
-  lco_init(&f->lco, &vtable, inplace);
+  lco_init(&f->lco, &vtable);
   cvar_reset(&f->empty);
   cvar_reset(&f->full);
   f->bits = 0 | HPX_UNSET; // future starts out empty

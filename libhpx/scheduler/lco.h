@@ -84,8 +84,7 @@ void lco_unlock(lco_t* lco)
 ///
 /// @param           lco The pointer to initialize
 /// @param         class The class pointer for this LCO instance
-/// @param          user Non-zero to set the user state during initialization
-void lco_init(lco_t *lco, const lco_class_t *class, uintptr_t user)
+void lco_init(lco_t *lco, const lco_class_t *class)
   HPX_INTERNAL HPX_NON_NULL(1,2);
 
 /// Finalize an LCO vtable pointer.
