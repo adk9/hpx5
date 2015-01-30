@@ -220,7 +220,7 @@ START_TEST (test_libhpx_threadContinue)
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t *cont_fut = malloc(sizeof(hpx_addr_t) * hpx_get_num_ranks());
+  hpx_addr_t *cont_fut = calloc(hpx_get_num_ranks(), sizeof(hpx_addr_t));
 
   for (int i = 0; i < hpx_get_num_ranks(); i++) {
     cont_fut[i] = hpx_lco_future_new(DATA_SIZE);
