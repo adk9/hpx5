@@ -94,6 +94,7 @@ static void _and_fini(lco_t *lco)
   DEBUG_IF(true) {
     lco_set_deleted(&and->lco);
   }
+  log_lco("and: finalized\n");
   libhpx_global_free(and);
 }
 
@@ -108,19 +109,16 @@ static void _and_error(lco_t *lco, hpx_status_t code) {
 static void _and_set(lco_t *lco, int size, const void *from) {
   _and_t *and = (_and_t *)lco;
   lco_lock(&and->lco);
-  and->value--;
+  intptr_t value = and->value--;
+  log_lco("and: reduced count to %ld\n", value);
 
-  if (and->value > 0) {
-    goto done;
+  if (value == 1) {
+    scheduler_signal_all(&and->barrier);
+  }
+  else {
+    dbg_assert_str(value > 1, "and: too many threads joined (%ld).\n", value);
   }
 
-  if (and->value < 0) {
-    dbg_error("and: too many threads joined the AND lco.\n");
-    goto done;
-  }
-
-  scheduler_signal_all(&and->barrier);
-done:
   lco_unlock(&and->lco);
 }
 
@@ -164,6 +162,7 @@ static void _and_init(_and_t *and, intptr_t value) {
   lco_init(&and->lco, &vtable, 0);
   cvar_reset(&and->barrier);
   and->value = value;
+  log_lco("and: initialized with %ld inputs\n", and->value);
 }
 
 /// @}
@@ -172,9 +171,7 @@ static void _and_init(_and_t *and, intptr_t value) {
 /// Allocate an and LCO. This is synchronous.
 hpx_addr_t hpx_lco_and_new(intptr_t limit) {
   _and_t *and = libhpx_global_malloc(sizeof(*and));
-  if (!and)
-    dbg_error("Could not malloc global memory\n");
-
+  dbg_assert_str(and, "Could not malloc global memory\n");
   _and_init(and, limit);
   return lva_to_gva(and);;
 }

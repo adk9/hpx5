@@ -90,7 +90,7 @@ boot_class_t *boot_new_mpi(void) {
     return &_mpi;
 
   if (MPI_Init(0, NULL) == MPI_SUCCESS) {
-    dbg_log_boot("initialized MPI bootstrapper.\n");
+    log_boot("initialized MPI bootstrapper.\n");
     return &_mpi;
   }
 
