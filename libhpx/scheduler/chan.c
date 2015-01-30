@@ -94,11 +94,11 @@ _chan_fini(lco_t *lco)
   DEBUG_IF(true) {
     lco_set_deleted(&c->lco);
   }
-  _node_t *node = c->head;
-  while (node) {
+  _node_t *node = NULL;
+  while ((node = c->head) != NULL) {
+    c->head = c->head->next;
     free(node->buffer);
     free(node);
-    node = c->head->next;
   }
 
   libhpx_global_free(c);
