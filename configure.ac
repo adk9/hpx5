@@ -122,8 +122,8 @@ HPX_WITH_PKG([pmi],[pmi],[build with support for PMI],[no],[PMI])
 AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray PMI extensions]))
 HPX_WITH_PKG([hugetlbfs],[hugetlbfs],[build with hugepages for heap],[no],[HUGETLBFS])
 AS_IF([test "x$with_hugetlbfs" != xno],
-  [AC_DEFINE([HUGETLBFS_FLAGS], [MAP_HUGETLB], [Enable huge pages heap allocation])],
-  [AC_DEFINE([HUGETLBFS_FLAGS], [0], [Disableh huge pages heap allocation])])
+  [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [0], [Enable huge pages heap allocation])],
+  [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANONYMOUS], [Disableh huge pages heap allocation])])
 
 
 

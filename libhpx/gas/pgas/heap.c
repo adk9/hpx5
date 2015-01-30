@@ -153,12 +153,11 @@ static bitmap_t *_new_bitmap(const heap_t *heap) {
 
 static void* _mmap_heap(heap_t *const heap) {
   const int prot  = PROT_READ | PROT_WRITE;
-  const int flags = MAP_ANON | MAP_PRIVATE | MAP_NORESERVE | HUGETLBFS_FLAGS;
+  const int flags = HPX_HUGETLBFS_MAP_ANON | MAP_PRIVATE;
   const uint32_t chunk_lg_align = ceil_log2_64(heap->bytes_per_chunk);
   int hp_fd = -1;
 #if defined(HAVE_HUGETLBFS)
   log_gas("Using huge pages.\n");
-    log_gas("HUGETLBFS_FLAGS is %zu.\n", HUGETLBFS_FLAGS | 0ul);
   hp_fd = hugetlbfs_unlinked_fd();
   if (hp_fd < 1) {
     dbg_error("Failed to open huge pages file descriptor.");
