@@ -95,9 +95,18 @@ static HPX_PINNED(_lco_error, void *args) {
 }
 
 static HPX_PINNED(_lco_get, void *args) {
+  dbg_assert(args);
   int *n = args;
-  char buffer[*n];                  // ouch---rDMA, or preallocate continuation?
-  hpx_status_t status = _get(_target_lco(), *n, buffer);
+  lco_t *lco = _target_lco();
+  // convert to wait if there's no buffer
+  if (*n == 0) {
+    return _wait(lco);
+  }
+
+  // otherwise do the get to a stack location and continue it---can get rid of
+  // this with a lco_getref()
+  char buffer[*n];
+  hpx_status_t status = _get(lco, *n, buffer);
   if (status == HPX_SUCCESS) {
     hpx_thread_continue(*n, buffer);
   }
@@ -269,7 +278,10 @@ hpx_status_t hpx_lco_try_wait(hpx_addr_t target, hpx_time_t time) {
 hpx_status_t hpx_lco_get(hpx_addr_t target, int size, void *value) {
   lco_t *lco;
   if (hpx_gas_try_pin(target, (void**)&lco)) {
-    hpx_status_t status = _get(lco, size, value);
+    // use wait if there's no output buffer
+    dbg_assert(!size || value);
+    dbg_assert(!value || size);
+    hpx_status_t status = (size) ? _get(lco, size, value) : _wait(lco);
     hpx_gas_unpin(target);
     return status;
   }
