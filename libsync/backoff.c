@@ -23,7 +23,6 @@
 /**
  *  "Magic" backoff constants.
  */
-static const int multiplier = 2;
 static const int limit = 65536;
 
 
