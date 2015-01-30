@@ -42,7 +42,7 @@ rm -rf ./build/
 ./bootstrap
 mkdir build
 cd build
-../configure $CFGFLAGS --enable-jemalloc --enable-jemalloc --enable-apps --enable-debug --enable-logging --enable-testsuite --with-check CFLAGS="-O3" $HPXDEBUG
+../configure $CFGFLAGS --enable-jemalloc --enable-jemalloc --enable-apps --enable-testsuite --with-check CFLAGS="-O3" $HPXDEBUG
 make -j 128
 
 # Run the apps and check their output...
