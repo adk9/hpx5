@@ -135,8 +135,7 @@ HPX_PINNED(attach, void *args) {
 /// LCO bit packing and manipulation
 /// @{
 const lco_class_t *lco_lock(lco_t *lco) {
-  const lco_class_t *class = _class(lco);
-  DEBUG_IF((uintptr_t)class & _DELETED_MASK) {
+  DEBUG_IF((uintptr_t)_class(lco) & _DELETED_MASK) {
     dbg_error("locking lco that was previously deleted");
   }
   return sync_lockable_ptr_lock(&lco->lock);
