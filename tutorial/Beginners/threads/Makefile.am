@@ -2,7 +2,7 @@ threadsdir                  = $(datarootdir)/doc/@PACKAGE@
 threads_PROGRAMS            = threadSpawn1 threadSpawn2 threadSpawn3 threadSpawn4 \
                               threadArgPassing threadContinue threadContCleanup \
                               threadSemaphores threadYield threadExit \
-                              threadCurrentTarget threadCurrentCont 
+                              threadCurrentTarget  
 
 threadSpawn1_SOURCES        = threadSpawn1.c
 threadSpawn2_SOURCES        = threadSpawn2.c
@@ -15,7 +15,6 @@ threadSemaphores_SOURCES    = threadSemaphores.c
 threadYield_SOURCES         = threadYield.c
 threadExit_SOURCES          = threadExit.c
 threadCurrentTarget_SOURCES = threadCurrentTarget.c
-threadCurrentCont_SOURCES   = threadCurrentCont.c
 
 all_LIBS                    = $(HPX_LDADD)
 
@@ -37,7 +36,6 @@ threadSemaphores_LDADD      = $(all_LIBS)
 threadYield_LDADD           = $(all_LIBS)
 threadExit_LDADD            = $(all_LIBS)
 threadCurrentTarget_LDADD   = $(all_LIBS)
-threadCurrentCont_LDADD     = $(all_LIBS)
 
 threadSpawn1_DEPENDENCIES          = $(all_LIBS)
 threadSpawn2_DEPENDENCIES          = $(all_LIBS)
@@ -50,4 +48,3 @@ threadSemaphores_DEPENDENCIES      = $(all_LIBS)
 threadYield_DEPENDENCIES           = $(all_LIBS)
 threadExit_DEPENDENCIES            = $(all_LIBS)
 threadCurrentTarget_DEPENDENCIES   = $(all_LIBS)
-threadCurrentCont_DEPENDENCIES     = $(all_LIBS)
