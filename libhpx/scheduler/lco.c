@@ -278,6 +278,8 @@ hpx_status_t hpx_lco_get(hpx_addr_t target, int size, void *value) {
 }
 
 int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
+  dbg_assert(n > 0);
+
   // Will partition the lcos up into local and remote LCOs. We waste some stack
   // space here, since, for each lco in lcos, we either have a local mapping or
   // a remote address.
@@ -292,6 +294,9 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
       locals[i] = NULL;
       remotes[i] = hpx_lco_future_new(0);
       hpx_call_async(lcos[i], _lco_wait, HPX_NULL, remotes[i], NULL, 0);
+    }
+    else {
+      remotes[i] = HPX_NULL;
     }
   }
 
@@ -320,8 +325,9 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
 }
 
 int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
-                    hpx_status_t statuses[])
-{
+                    hpx_status_t statuses[]) {
+  dbg_assert(n > 0);
+
   // Will partition the lcos up into local and remote LCOs. We waste some stack
   // space here, since, for each lco in lcos, we either have a local mapping or
   // a remote address.
@@ -337,6 +343,9 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
       remotes[i] = hpx_lco_future_new(sizes[i]);
       hpx_call_async(lcos[i], _lco_get, HPX_NULL, remotes[i], &sizes[i],
                      sizeof(sizes[i]));
+    }
+    else {
+      remotes[i] = HPX_NULL;
     }
   }
 
