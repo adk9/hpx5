@@ -145,9 +145,8 @@ void lco_unlock(lco_t *lco) {
   sync_lockable_ptr_unlock(&lco->lock);
 }
 
-void lco_init(lco_t *lco, const lco_class_t *class, uintptr_t deleted) {
+void lco_init(lco_t *lco, const lco_class_t *class) {
   lco->vtable = class;
-  lco->bits |= ((deleted) ? _DELETED_MASK : 0);
 }
 
 void lco_set_deleted(lco_t *lco) {

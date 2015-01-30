@@ -247,7 +247,7 @@ _chan_init(_chan_t *c) {
     .on_try_wait = NULL
   };
 
-  lco_init(&c->lco, &vtable, 0);
+  lco_init(&c->lco, &vtable);
   cvar_reset(&c->nonempty);
   c->head = c->tail = NULL;
 }

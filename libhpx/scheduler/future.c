@@ -192,10 +192,11 @@ static void _future_init(_future_t *f, int size) {
     .on_try_get = NULL
   };
 
-  lco_init(&f->lco, &vtable, 0);
+  lco_init(&f->lco, &vtable);
   cvar_reset(&f->full);
-  if (size)
+  if (size) {
     memset(&f->value, 0, size);
+  }
 }
 
 /// Initialize a block of futures.
