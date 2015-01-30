@@ -3,10 +3,11 @@
 DIR=$1
 shift
 
+module load /home/zalewski/tools/modules/gcc/4.9.2
+
 function add_mpi() {
     # This is currently cutter-specific and needs to be generalized.
-    module load openmpi/1.8.1
-    export C_INCLUDE_PATH=$C_INCLUDE_PATH:/opt/openmpi/1.8.1/include/
+    module load /home/zalewski/tools/modules/openmpi/1.8.3
 }
 
 function add_photon() {
@@ -23,8 +24,7 @@ function add_photon() {
 set -xe
 case "$HPXMODE" in
     photon)
-	CFGFLAGS=" --with-mpi=ompi --enable-photon "
-	add_mpi
+	CFGFLAGS=" --enable-photon "
         add_photon
 	;;
     mpi)
@@ -43,7 +43,7 @@ rm -rf ./build/
 ./bootstrap
 mkdir build
 cd build
-../configure $CFGFLAGS --enable-pedantic --enable-wall --enable-apps --enable-jemalloc --enable-logging CFLAGS="-O3 -ggdb" $HPXDEBUG
+../configure $CFGFLAGS --enable-pedantic --enable-wall --enable-apps --enable-jemalloc --disable-logging CFLAGS="-O3" $HPXDEBUG
 make
 
 # Run the apps and check their output...
