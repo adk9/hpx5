@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <hpx/hpx.h>
 
-#define DEFAULT_ITERS 10000
+#define DEFAULT_ITERS 100
 hpx_action_t echo_pong;
 hpx_action_t echo_finish;
 unsigned long iterations;
