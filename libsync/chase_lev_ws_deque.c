@@ -158,8 +158,13 @@ void sync_chase_lev_ws_deque_delete(chase_lev_ws_deque_t *d) {
   free(d);
 }
 
+uint64_t sync_chase_lev_ws_deque_size(chase_lev_ws_deque_t *d) {
+  uint64_t bottom = sync_load(&d->bottom, SYNC_RELAXED);
+  uint64_t top = sync_load(&d->bottom, SYNC_ACQUIRE);
+  return (bottom - top);
+}
 
-void sync_chase_lev_ws_deque_push(chase_lev_ws_deque_t *d, void *val) {
+uint64_t sync_chase_lev_ws_deque_push(chase_lev_ws_deque_t *d, void *val) {
   // read bottom and buffer, using Chase-Lev 2.3 for top upper bound
   uint64_t bottom = sync_load(&d->bottom, SYNC_RELAXED);
   _buffer_t *buffer = sync_load(&d->buffer, SYNC_RELAXED);
@@ -167,9 +172,11 @@ void sync_chase_lev_ws_deque_push(chase_lev_ws_deque_t *d, void *val) {
   // if the deque seems to be full then update its top bound, if the deque is
   // *really* full then expand its capacity---no underflow potential here
   // because pop() and steal() leave the queue canonical
-  if (bottom - d->top_bound >= buffer->capacity) {
+  uint64_t size = bottom - d->top_bound;
+  if (size >= buffer->capacity) {
     d->top_bound = sync_load(&d->top, SYNC_ACQUIRE);
-    if (bottom - d->top_bound >= buffer->capacity) {
+    size = bottom - d->top_bound;
+    if (size >= buffer->capacity) {
       buffer = _buffer_grow(buffer, bottom, d->top_bound);
       _deque_set_buffer(d, buffer);
     }
@@ -178,6 +185,7 @@ void sync_chase_lev_ws_deque_push(chase_lev_ws_deque_t *d, void *val) {
   // update the bottom
   _buffer_put(buffer, bottom, val);
   _deque_set_bottom(d, bottom + 1);
+  return (size + 1);
 }
 
 
