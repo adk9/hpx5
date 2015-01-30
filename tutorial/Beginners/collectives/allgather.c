@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-// Progrma that computes the average of an array of elements in parallel and 
+// Progrma that computes the average of an array of elements in parallel and
 // gathers the values using hpx_lco_allgather.
 
 #include <stdio.h>
@@ -20,7 +20,7 @@
 
 static hpx_action_t _main      = 0;
 static hpx_action_t _init      = 0;
-static hpx_action_t _check_sum = 0; 
+static hpx_action_t _check_sum = 0;
 
 int num_elements_per_proc   = 10;
 int nDoms                   = 8;
@@ -75,19 +75,19 @@ static int _check_sum_action(int *args) {
 
   // Create a random array of elements on all processes.
   srand(ranks);
-  float *rand_nums = NULL;
-  rand_nums = create_rand_nums(num_elements_per_proc);
+  float *rand_nums = create_rand_nums(num_elements_per_proc);
 
   // Sum the numbers locally
   for (int i = 0; i < num_elements_per_proc; i++) {
     sum += rand_nums[i];
   }
 
+  free(rand_nums);
+
   // Print the random numbers on each process
   printf("Index: #%d, Local sum  %g\n", ld->index, sum);
-
-  hpx_lco_allgather_setid(ld->gsum, ld->index, sizeof(double), &sum, 
-                          HPX_NULL, HPX_NULL);
+  hpx_lco_allgather_setid(ld->gsum, ld->index, sizeof(double), &sum, HPX_NULL,
+                          HPX_NULL);
 
   // Get the gathered value, and print it
   double gsum[nDoms];
@@ -133,7 +133,7 @@ static int _main_action(void *args) {
   hpx_lco_delete(complete, HPX_NULL);
 
   hpx_gas_free(domain, HPX_NULL);
-  hpx_shutdown(HPX_SUCCESS);  
+  hpx_shutdown(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {
@@ -145,7 +145,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-   
+
   HPX_REGISTER_ACTION(_main_action, &_main);
   HPX_REGISTER_ACTION(_init_action, &_init);
   HPX_REGISTER_ACTION(_check_sum_action, &_check_sum);
