@@ -104,7 +104,8 @@ static void _flush_request(progress_t *progress, request_t *r) {
 /// @param     progress The progress object.
 /// @param            r The request to finish.
 static void _finish_recv(progress_t *progress, request_t *r) {
-  parcel_stack_push(&progress->recvs, r->parcel);
+  r->parcel->next = progress->recvs;
+  progress->recvs = r->parcel;
   // network_rx_enqueue(here->network, r->parcel);
   request_delete(r);
 }
@@ -236,17 +237,39 @@ static int _test(progress_t *p, request_t **i,
 /// shutdown where we need the "shutdown-action" parcels to go out before
 /// shutting down the scheduler.
 void network_progress_flush(progress_t *p) {
-  bool send = true;
-  while (send)
-    send = _try_start_send(p);
+  int send = 1;
 
-  // flush the pending sends
-  while (p->pending_sends)
-    _test(p, &p->pending_sends, _flush_request);
+  // if there are pending sends, or we have a send we couldn't start, then
+  // progress sends again
+  while (p->npsends || send) {
+    // complete all pending sends
+    int sends = _test(p, &p->pending_sends, _flush_request);
+    assert(sends <= p->npsends);
+    p->npsends -= sends;
+    DEBUG_IF (sends) {
+      log_trans("finished %d sends in flush.\n", sends);
+    }
+
+    // start as many sends as we can, if this fails then either send was 0
+    // (i.e., we have no more sends to start), or we couldn't try and start.
+    while (send && network_progress_can_send(p)) {
+      send = _try_start_send(p);
+      p->npsends += send;
+      DEBUG_IF(send) {
+        log_trans("started %d sends in flush.\n", send);
+      }
+    }
+  }
 
   // if we have any pending receives, we wait for those to finish as well
-  while (p->pending_recvs)
-    _test(p, &p->pending_recvs, _flush_request);
+  while (p->nprecvs) {
+    int recvs = recvs = _test(p, &p->pending_recvs, _flush_request);
+    assert(recvs <= p->nprecvs);
+    p->nprecvs -= recvs;
+    DEBUG_IF (recvs) {
+      log_trans("finished %d receives.\n", recvs);
+    }
+  }
 }
 
 
@@ -257,7 +280,7 @@ void network_progress_poll(progress_t *p) {
       recv = _try_start_recv(p);
       p->nprecvs += recv;
       DEBUG_IF (recv) {
-        dbg_log_trans("started a recv.\n");
+        log_trans("started a recv.\n");
       }
     }
 
@@ -265,14 +288,14 @@ void network_progress_poll(progress_t *p) {
     assert(sends <= p->npsends);
     p->npsends -= sends;
     DEBUG_IF (sends) {
-      dbg_log_trans("finished %d sends.\n", sends);
+      log_trans("finished %d sends.\n", sends);
     }
 
     int recvs = recvs = _test(p, &p->pending_recvs, _finish_recv);
     assert(recvs <= p->nprecvs);
     p->nprecvs -= recvs;
     DEBUG_IF (recvs) {
-      dbg_log_trans("finished %d receives.\n", recvs);
+      log_trans("finished %d receives.\n", recvs);
     }
 
     // if I have completed recvs, try to pass them along to the parcel network
@@ -289,7 +312,7 @@ void network_progress_poll(progress_t *p) {
     send = _try_start_send(p);
     p->npsends += send;
     DEBUG_IF(send) {
-      dbg_log_trans("started a send.\n");
+      log_trans("started a send.\n");
     }
   }
 }
@@ -308,23 +331,25 @@ progress_t *network_progress_new(transport_class_t *t) {
 }
 
 void network_progress_delete(progress_t *p) {
-#if 0
-  if (p->pending_sends)
-    dbg_log_trans("progress: abandoning active send.\n");
+  request_t *i = NULL;
 
-  while ((i = p->pending_sends) != NULL) {
-    transport_request_cancel(here->transport, i);
-    p->pending_sends = p->pending_sends->next;
+  if (p->pending_sends)
+    log_trans("progress: abandoning active send.\n");
+
+  while ((i = p->pending_sends) != NULL) {      //
+    // transport_request_cancel(here->transport, &i->request);
+    p->pending_sends = i->next;
     request_delete(i);
   }
 
   if (p->pending_recvs)
-    dbg_log_trans("progress: abandoning active recv.\n");
+    log_trans("progress: abandoning active recv.\n");
 
   while ((i = p->pending_recvs) != NULL) {
-    transport_request_cancel(here->transport, i);
-    p->pending_recvs = p->pending_recvs->next;
+    // transport_request_cancel(here->transport, &i->request);
+    p->pending_recvs = i->next;
     request_delete(i);
   }
-#endif
+
+  free(p);
 }

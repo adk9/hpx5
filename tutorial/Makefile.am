@@ -1,1 +1,1 @@
-SUBDIRS = threads gas collectives lco parcel
+SUBDIRS = Beginners CollectiveBench HeatSeq cpi 

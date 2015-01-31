@@ -284,10 +284,8 @@ START_TEST (test_photon_pingpong_for_pwc)
   photon_register_buffer((char*)recv_args, msize);
 
   if (pp_test == PWC_TEST) {
-    photon_rid sendReq, recvReq, request;
-    int ret_proc;
+    photon_rid sendReq, recvReq;
     photon_post_recv_buffer_rdma(other_rank, recv_args, msize, PHOTON_TAG, &recvReq);
-    photon_wait_any(&ret_proc, &request);
     photon_wait_recv_buffer_rdma(other_rank, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq);
     photon_get_buffer_remote(sendReq, &rbuf);
     photon_send_FIN(sendReq, other_rank, PHOTON_REQ_COMPLETED);

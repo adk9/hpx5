@@ -23,6 +23,7 @@
 #include "libhpx/btt.h"
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
@@ -226,7 +227,7 @@ static int _setup_portals(portals_t *ptl) {
 /// A global synchronizing barrier.
 /// ----------------------------------------------------------------------------
 static void _barrier(void) {
-  dbg_log_trans("portals: barrier unsupported.");
+  log_trans("portals: barrier unsupported.");
 }
 
 /// ----------------------------------------------------------------------------
@@ -260,7 +261,7 @@ static int _request_cancel(void *request) {
 /// Pinning not necessary.
 /// ----------------------------------------------------------------------------
 static int _pin(transport_class_t *transport, const void* buffer, size_t len) {
-  return 0;
+  return LIBHPX_OK;
 }
 
 /// ----------------------------------------------------------------------------
@@ -275,7 +276,7 @@ static void _unpin(transport_class_t *transport, const void* buffer, size_t len)
 static int _put(transport_class_t *t, int dest, const void *data, size_t n,
                 void *rbuffer, size_t rn, void *rid, void *r)
 {
-  dbg_log_trans("portals: put unsupported.\n");
+  log_trans("portals: put unsupported.\n");
   return HPX_SUCCESS;
 }
 
@@ -285,7 +286,7 @@ static int _put(transport_class_t *t, int dest, const void *data, size_t n,
 static int _get(transport_class_t *t, int dest, void *buffer, size_t n,
                 const void *rdata, size_t rn, void *rid, void *r)
 {
-  dbg_log_trans("portals: get unsupported.\n");
+  log_trans("portals: get unsupported.\n");
   return HPX_SUCCESS;
 }
 
@@ -294,7 +295,7 @@ static int _get(transport_class_t *t, int dest, void *buffer, size_t n,
 /// ----------------------------------------------------------------------------
 static int _send(transport_class_t *t, int dest, const void *data, size_t n, void *r)
 {
-  dbg_log_trans("portals: send unsupported.\n");
+  log_trans("portals: send unsupported.\n");
   return HPX_SUCCESS;
 }
 
@@ -302,7 +303,7 @@ static int _send(transport_class_t *t, int dest, const void *data, size_t n, voi
 /// Test for request completion.
 /// ----------------------------------------------------------------------------
 static int _test(transport_class_t *t, void *request, int *success) {
-  dbg_log_trans("portals: test unsupported.\n");
+  log_trans("portals: test unsupported.\n");
   return HPX_SUCCESS;
 }
 
@@ -310,7 +311,7 @@ static int _test(transport_class_t *t, void *request, int *success) {
 /// Probe the Portals transport to see if anything has been received.
 /// ----------------------------------------------------------------------------
 static size_t _probe(transport_class_t *t, int *source) {
-  dbg_log_trans("portals: probe unsupported.\n");
+  log_trans("portals: probe unsupported.\n");
   return 0;
 }
 
@@ -318,7 +319,7 @@ static size_t _probe(transport_class_t *t, int *source) {
 /// Receive a buffer.
 /// ----------------------------------------------------------------------------
 static int _recv(transport_class_t *t, int src, void* buffer, size_t n, void *r) {
-  dbg_log_trans("portals: recv unsupported.\n");
+  log_trans("portals: recv unsupported.\n");
   return HPX_SUCCESS;
 }
 
@@ -370,7 +371,7 @@ static int _handle_send_event(ptl_event_t *pe) {
   hpx_parcel_t *p = (hpx_parcel_t*)pe->user_ptr;
   switch (pe->type) {
     default:
-      dbg_log_trans("portals: unknown send queue event (%d).\n", pe->type);
+      log_trans("portals: unknown send queue event (%d).\n", pe->type);
       return PTL_FAIL;
     case PTL_EVENT_ACK:
       if (pe->ni_fail_type == PTL_NI_OK)
@@ -401,7 +402,7 @@ static int _send_progress(transport_class_t **t) {
 
   bool send = _try_start_send(ptl);
   if (send)
-    dbg_log_trans("portals: started a send.\n");
+    log_trans("portals: started a send.\n");
 
   ptl_event_t pe;
   int e = PtlEQGet(ptl->sendq, &pe);
@@ -465,8 +466,8 @@ static void _progress(transport_class_t *t, transport_op_t op) {
     break;
   case TRANSPORT_POLL:
     hpx_addr_t and = hpx_lco_and_new(2);
-    hpx_call(HPX_HERE, _send_progress_action, &t, sizeof(t), and);
-    hpx_call(HPX_HERE, _recv_progress_action, &t, sizeof(t), and);
+    hpx_call(HPX_HERE, _send_progress_action, and, &t, sizeof(t));
+    hpx_call(HPX_HERE, _recv_progress_action, and, &t, sizeof(t));
     hpx_lco_wait(and);
     hpx_lco_delete(and, HPX_NULL);
     break;
@@ -524,8 +525,8 @@ transport_class_t *transport_new_portals(uint32_t send_limit, uint32_t recv_limi
   portals->pte                  = PTL_PT_ANY;
   portals->bufdesc              = PTL_INVALID_HANDLE;
 
-  LIBHPX_REGISTER_ACTION(&_send_progress_action, _send_progress);
-  LIBHPX_REGISTER_ACTION(&_recv_progress_action, _recv_progress);
+  LIBHPX_REGISTER_ACTION(_send_progress, &_send_progress_action);
+  LIBHPX_REGISTER_ACTION(_recv_progress, &_recv_progress_action);
 
   _portals_init(portals);
   _set_map(portals);

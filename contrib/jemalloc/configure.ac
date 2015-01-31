@@ -134,6 +134,7 @@ if test "x$CFLAGS" = "x" ; then
       AC_DEFINE_UNQUOTED([JEMALLOC_HAS_RESTRICT])
     fi
     JE_CFLAGS_APPEND([-Wall])
+    JE_CFLAGS_APPEND([-Werror=declaration-after-statement])
     JE_CFLAGS_APPEND([-pipe])
     JE_CFLAGS_APPEND([-g3])
   elif test "x$je_cv_msvc" = "xyes" ; then
@@ -1107,6 +1108,24 @@ if test "x$abi" != "xpecoff" ; then
 fi
 
 CPPFLAGS="$CPPFLAGS -D_REENTRANT"
+
+dnl Check if the GNU-specific secure_getenv function exists.
+AC_CHECK_FUNC([secure_getenv],
+              [have_secure_getenv="1"],
+              [have_secure_getenv="0"]
+             )
+if test "x$have_secure_getenv" = "x1" ; then
+  AC_DEFINE([JEMALLOC_HAVE_SECURE_GETENV], [ ])
+fi
+
+dnl Check if the Solaris/BSD issetugid function exists.
+AC_CHECK_FUNC([issetugid],
+              [have_issetugid="1"],
+              [have_issetugid="0"]
+             )
+if test "x$have_issetugid" = "x1" ; then
+  AC_DEFINE([JEMALLOC_HAVE_ISSETUGID], [ ])
+fi
 
 dnl Check whether the BSD-specific _malloc_thread_cleanup() exists.  If so, use
 dnl it rather than pthreads TSD cleanup functions to support cleanup during

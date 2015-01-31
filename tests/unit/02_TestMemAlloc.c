@@ -90,7 +90,7 @@ START_TEST (test_libhpx_gas_alloc)
   hpx_addr_t done = hpx_lco_future_new(sizeof(double));
   
   // and send the init_sources action, with the done LCO as the continuation
-  hpx_call(local, t02_init_sources, NULL, 0, done);
+  hpx_call(local, t02_init_sources, done, NULL, 0);
 
   // wait for initialization. The LCO blocks the caller until an LCO set 
   // operation triggers the LCO. 

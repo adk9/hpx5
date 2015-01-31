@@ -1,0 +1,179 @@
+HPX Release notes, Version 0.4.0
+Release date: 01/30/2015
+
+Distributed under the License, Version 0.4.0. (See accompanying file LICENSE_0.4.0.txt)
+
+New features
+###############
+
+1. Actions, Tasks and Interrupts
+=================================
+In HPX, actions are backed by lightweight threads. Executing an action involves more than simply running the handler associated with the action. An action may invoke a blocking operation; the handler needs to be run by a lightweight thread so that when the action blocks, the scheduler can choose a different "unblocked" thread to run. There are overheads involved in creating a lightweight thread, and accessing shared scheduler data-structures. If an application uses actions that do not block, then it need not incur these overheads. To that end, in addition to the existing regular actions, HPX v0.3 (and above) has introduced two notions of lightweight actions: tasks and interrupts.
+
+Tasks and Interrupts
+----------------------
+Tasks are inlined and executed by the scheduler without spawning a new thread for its execution. Interrupts avoid the "scheduling" overhead altogether by being executed inline by the network thread receiving a parcel. The key difference, owing to the progression scheme used by HPX, is that tasks can be load-balanced among cores whereas interrupts cannot. Declaring and registering an HPX task or an interrupt is similar to registering an action.
+
+static HPX_TASK(_my_task, void *arg) {
+ // task body
+}
+There is no difference in how a task or an interrupt gets invoked. In general, tasks or interrupts are not allowed to do blocking operations. They are however free to call hpx_thread_yield or hpx_thread_exit; but the semantics of these calls in a task/interrupt context are not defined.
+
+Pinned actions
+-----------------------
+A lot of HPX code involves actions that pin their arguments, perform global-to-local translation of addresses and do something with the translated local address. We have introduced "pinned" actions where the HPX runtime automatically pins and unpins the target during the lifetime of an action.
+
+static HPX_ACTION(_my_action, void *args) {
+  hpx_addr_t target = hpx_thread_current_target();
+  int *local;
+  if (!hpx_gas_try_pin(target, (void**)&local))
+    return HPX_RESEND;
+
+  int e = do_something(*local);
+  hpx_gas_unpin(target);
+  return e;
+}
+
+Using pinned actions (which can be defined using the HPX_PINNED macro, the following code is transformed to:
+
+static HPX_PINNED(_my_action, void *args) {
+  int *local = hpx_thread_current_local_target();
+  return do_something(*local);
+}
+
+Action Registration
+---------------------
+Actions can be registered using the following registration macro:
+
+// Register a regular HPX action.
+HPX_REGISTER_ACTION(hpx_action_handler_t func, hpx_action_t *id)
+
+// or
+
+HPX_ACTION_DEF(type, handler, id, ...)
+Alternatively, application writers can use the explicit interface to register actions, tasks or interrupts:
+
+/// Register an HPX action of a given @p type.
+///
+/// The action could be a regular action, a pinned action, or a task
+/// or an interrupt. Actions should be registered from the main thread
+/// after calling hpx_init and before calling hpx_run.
+///
+/// @param    id the action id for this action to be returned after registration
+/// @param   key a unique string key for the action
+/// @param     f the local function pointer to associate with the action
+/// @param nargs the variadic number of arguments that this action accepts
+/// @param  type the type of the action to be registered
+/// @returns     error code
+int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_handler_t f,
+                        unsigned int nargs, hpx_action_t *id, ...);
+
+Typed actions
+-----------------
+In addition to the variants discussed above, HPX supports typed actions. With typed actions, HPX takes care of the heavy-lifting involved in serializing and deserializing the arguments to the actions. The type of the action has to be fully specified during registration as shown in the snippet below:
+
+// A regular action
+int foo_action(void*);
+HPX_REGISTER_ACTION(foo_action, &foo);
+
+// A typed action
+int _my_typed_action(int i, float f, char c) {
+  printf("Hi, I am a typed action with args: %d %f %c!\n", i, f, c);
+  return HPX_SUCCESS;
+}
+
+HPX_ACTION_DEF(DEFAULT, _my_typed_action, &id, HPX_INT, HPX_FLOAT, HPX_CHAR);
+
+Action Invocation
+-------------------
+HPX actions can be invoked using any of the hpx_call variants described in include/hpx/rpc.h. All of those calls are now variadic---they support invocation with multiple arguments. Calling un-typed actions is still essentially the same, in that that un-typed actions only accept a pointer to a serialized, contiguous region of memory. Typed actions, on the other hand, are invoked with as many arguments as they were registered with. To call the _my_typed_action declared above, we pass pointers to each argument (without the sizes):
+
+  int i = 42;
+  float f = 1.0;
+  char c = 'a';
+  hpx_call_sync(HPX_HERE, id, NULL, 0, &i, &f, &c);
+
+2. parcel_send_through() interface
+===================================
+Parcels
+--------------------
+Parcels are the core low-level component of the active-message and threading interface to HPX. While parcels are extremely powerful, most application users are encouraged to prefer the higher-level hpx_call interfaces for initiating parallel work.
+
+Parcel life cycle
+--------------------
+Acquisition
+***********
+Parcels are allocated explicitly by users and may have an external data buffer attached at allocation time, or may be allocated with space in-place.
+
+Launch
+******
+Parcels are launched through one of the variety of send operations documented in the code. Launching a parcel transfers ownership of the parcel—application users need not release launched parcels.
+
+Instantiation
+*************
+Received parcels are instantiated into threads, typically at the target locality.
+
+Continuation
+************
+Parcels specify a continuation specification, a target/action pair that specifies what to do with the resulting data from their active message computation, if they produce any.
+
+Release
+*******
+Parcels are released automatically by the system.
+
+Parcel buffers
+---------------
+The primary benefit of dealing directly with parcels rather than the call interface is that their data buffers may be accessed directly from user code, which can avoid a serialization for large data. The following example shows this situation. In the first code, the user mallocs a temporary buffer, performs the compute-ation with the buffer, and then sends it using hpx_call. This send operation may require a serialization, which could be costly for large parcel buffers. The second option allocates a parcel directly, and operates on it's in-place buffer, before preparing the parcel and sending it out.
+
+void *buffer = malloc(N);
+compute(buffer);
+hpx_call(target, action, result, buffer, N);
+free(buffer);
+
+hpx_parcel_t *p = hpx_parcel_acquire(NULL, N);
+void *buffer = parcel_get_data(p);
+compute(buffer);
+parcel_set_target(p, target);
+parcel_set_action(p, action);
+parcel_set_cont_target(p, result);
+parcel_set_cont_action(p, hpx_lco_set_action);
+parcel_send_sync(p) 
+
+Gated send/conditional receive operations
+-------------------------------------------
+The second reason for application users to interact with parcels directly it to use the hpx_parcel_send_through functionality to delay parcel delivery until an LCO has been sent.
+
+Traditionally sent parcels will be delivered in the future, within some period of time. Often, applications want to delay parcel delivery until some condition is met. In HPX, this can be done using the hpx_parcel_send_through operation, which takes a traditional parcel and sends it to the destination "through" an LCO. The LCO will buffer the parcel until it is set, at which point all buffered parcels will be forwarded for delivery and instantiation.
+
+While the above language suggests an implementation, there are many different implementations of this behavior and users should not rely on any particular mechanism or locality guarantees during a send-through. In particular, the system may choose not to perform a copy of the parcel to the LCO, but rather send the parcel to the target and merely establish a signaling channel with the LCO through which the LCO can release the parcel. Or the parcel could be buffered at the sender awaiting such a signal.
+
+3. Regression CI build setup on jenkins to check build failures for
+===================================================================
+* Testsuite (make check)
+* Lulesh application
+* SSSP application
+
+Improvements/Enhancements
+##############################
+HPX-172 Separate debug and logging interfaces.
+
+Bug Fixes
+############
+HPX-162 Shutdown bug
+HPX-143 global alloc was returning HPX_NULL in normal operation
+HPX-148 Gas bitmap was not computing aligned bits correctly.
+HPX-164 Memory arithmetic issues
+HPX-165 Memory alignment issues
+HPX-173 The hpx_lco_sema_v() operation needs to be explicitly asynchronous.
+HPX-139 libffi provides support for typed actions and call interface
+
+Build Instructions
+######################
+The detailed build instructions can be found at Getting started with HPX Runtime Systems.
+
+Known bugs & limitations
+######################
+1. Gencount does not work for ninplace > 0.
+2. SendRecv.c in examples folder hangs
+3. On parallella cluster, we need to resolve the shutdown issue and hang with hpx_thread_yield().
+4. libffi regression with some gcc versions (4.8.4, 4.9.1, 4.9.2 known good).

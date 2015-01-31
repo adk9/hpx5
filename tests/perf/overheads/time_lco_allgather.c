@@ -119,7 +119,7 @@ _advanceDomain_action(const unsigned long *epoch)
 
   ++domain->cycle;
   const unsigned long next = *epoch + 1;
-  return hpx_call(local, _advanceDomain, &next, sizeof(next), HPX_NULL);
+  return hpx_call(local, _advanceDomain, HPX_NULL, &next, sizeof(next));
 }
 
 int
@@ -151,7 +151,7 @@ allgather_main_action(const main_args_t *args)
       .newdt = newdt
     };
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
-    hpx_call(block, _initDomain, &init, sizeof(init), done);
+    hpx_call(block, _initDomain, done, &init, sizeof(init));
   }
 
   hpx_lco_wait(done);
@@ -160,7 +160,7 @@ allgather_main_action(const main_args_t *args)
   const unsigned long epoch = 0;
   for (int i = 0, e = args->nDoms; i < e; ++i) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
-    hpx_call(block, _advanceDomain, &epoch, sizeof(epoch), HPX_NULL);
+    hpx_call(block, _advanceDomain, HPX_NULL, &epoch, sizeof(epoch));
   }
 
   hpx_lco_wait(complete);
@@ -218,9 +218,9 @@ main(int argc, char *argv[argc])
 
   // register the main action
   hpx_action_t _main;
-  HPX_REGISTER_ACTION(&_main, allgather_main_action);
-  HPX_REGISTER_ACTION(&_initDomain, _initDomain_action);
-  HPX_REGISTER_ACTION(&_advanceDomain, _advanceDomain_action);
+  HPX_REGISTER_ACTION(allgather_main_action, &_main);
+  HPX_REGISTER_ACTION(_initDomain_action, &_initDomain);
+  HPX_REGISTER_ACTION(_advanceDomain_action, &_advanceDomain);
 
   // run HPX (this copies the args structure)
   return hpx_run(&_main, &args, sizeof(args));

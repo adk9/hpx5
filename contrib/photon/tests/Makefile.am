@@ -1,6 +1,6 @@
 noinst_PROGRAMS = photontest
-check_SCRIPTS       = $(srcdir)/run_tests.sh
-TESTS               = $(srcdir)/run_tests.sh
+check_SCRIPTS       = run_tests.sh
+TESTS               = run_tests.sh
 check_PROGRAMS      = photontest
 photontest_SOURCES  = photonmain.c \
                       photoninit.c \
@@ -26,5 +26,5 @@ photontest_SOURCES  = photonmain.c \
                       photon_threaded_put_wc.c 
 
 photontest_LDADD    = $(top_builddir)/src/libphoton.la -lm -lcrypto -lcheck @CHECK_LIBS@ @THREAD_LIBS@ @UGNI_LIBS@ @VERBS_LIBS@ @MPI_LIBS@ -lrt
-photontest_CFLAGS   = @CFLAGS@ @CHECK_CFLAGS@ @MPI_CFLAGS@ -I$(top_srcdir)/include
+photontest_CFLAGS   = @CFLAGS@ @CHECK_CFLAGS@ @MPI_CFLAGS@ -I$(top_srcdir)/include -D_GNU_SOURCE
 photontest_CFLAGS  += -g -Wunused -Wno-unused-result -Wunused-function -Wunused-label -Wunused-parameter -Wunused-value -Wunused-variable

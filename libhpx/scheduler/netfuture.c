@@ -32,6 +32,7 @@
 #include "libsync/queues.h"
 #include "lco.h"
 #include "cvar.h"
+#include "future.h"
 
 #define dbg_printf0(...)
 //#define dbg_printf0 printf
@@ -107,6 +108,7 @@ static uint32_t _outstanding_send_limit = 0;
 
 static hpx_action_t _future_set_no_copy_from_remote = 0;
 static hpx_action_t _progress = 0;
+static hpx_action_t _progress_recv = 0;
 static hpx_action_t _add_future_to_table = 0;
 static hpx_action_t _initialize_netfutures = 0;
 
@@ -209,7 +211,7 @@ _future_set_no_copy_from_remote_action(_netfuture_t **fp) {
   return HPX_SUCCESS;
 }
 
-static void 
+static void
 _progress_sends() {
   int phstat;
   if (_outstanding_sends < _outstanding_send_limit) {
@@ -220,13 +222,15 @@ _progress_sends() {
       assert((size_t)pwc_args->remote_ptr + pwc_args->size <
              _netfuture_table.buffers[pwc_args->remote_rank].addr +
              _netfuture_cfg.max_size);
-      phstat =
-        photon_put_with_completion(pwc_args->remote_rank,
-                                   pwc_args->data, pwc_args->size,
-                                   pwc_args->remote_ptr, pwc_args->remote_priv,
-                                   pwc_args->local_rid, pwc_args->remote_rid,
-                                   PHOTON_REQ_ONE_CQE);
-      assert(phstat == PHOTON_OK);
+      do {
+    phstat =
+      photon_put_with_completion(pwc_args->remote_rank,
+                     pwc_args->data, pwc_args->size,
+                     pwc_args->remote_ptr, pwc_args->remote_priv,
+                     pwc_args->local_rid, pwc_args->remote_rid,
+                     0);
+    assert(phstat != PHOTON_ERROR);
+      } while (phstat == PHOTON_ERROR_RESOURCE);
       free(pwc_args);
     }
   }
@@ -264,11 +268,12 @@ _progress_recvs() {
     dbg_printf("  Received recv completion on rank %d for future at %" PRIx64 "\n", hpx_get_my_rank(), request);
     _netfuture_t *f = (_netfuture_t*)request;
     lco_lock(&f->lco);
-    
+
     // do set stuff
     if (!_empty(f)) {
       lco_unlock(&f->lco);
-      hpx_call(HPX_HERE, _future_set_no_copy_from_remote, &f, sizeof(f), HPX_NULL);
+      hpx_call(HPX_HERE, _future_set_no_copy_from_remote, HPX_NULL, &f,
+               sizeof(f));
     } else {
       _future_set_no_copy(f);
       lco_unlock(&f->lco);
@@ -276,13 +281,22 @@ _progress_recvs() {
   } // end if
 }
 
-static void 
+static int
+_progress_recv_action() {
+  while (!shutdown) {
+    _progress_recvs();
+    hpx_thread_yield();
+  }
+  return HPX_SUCCESS;
+}
+
+static void
 _progress_body() {
   if (_netfuture_table.inited != 1)
     return;
   _progress_sends();
   _progress_send_completions();
-  _progress_recvs();
+  //_progress_recvs();
 }
 
 /// This action handles all Photon completions, local and remote, affecting
@@ -374,7 +388,8 @@ _initialize_netfutures_action(_nf_init_args_t *args) {
 
   _netfuture_table.inited = 1;
 
-  hpx_call_async(HPX_HERE, _progress, NULL, 0, HPX_NULL, HPX_NULL);
+  hpx_call_async(HPX_HERE, _progress, HPX_NULL, HPX_NULL, NULL, 0);
+  hpx_call_async(HPX_HERE, _progress_recv, HPX_NULL, HPX_NULL, NULL, 0);
 
   _table_unlock();
 
@@ -406,7 +421,8 @@ hpx_status_t hpx_netfutures_init(hpx_netfuture_config_t *cfg) {
   hpx_addr_t done = hpx_lco_and_new(hpx_get_num_ranks());
   _nf_init_args_t init_args = {.ag = ag, .cfg = _netfuture_cfg};
   for (int i = 0; i < hpx_get_num_ranks(); i++)
-    hpx_call(HPX_THERE(i), _initialize_netfutures, &init_args, sizeof(init_args), done);
+    hpx_call(HPX_THERE(i), _initialize_netfutures, done, &init_args,
+             sizeof(init_args));
   hpx_lco_wait(done);
   return HPX_SUCCESS;
 }
@@ -496,15 +512,17 @@ _future_init(_netfuture_t *f, int size, bool shared)
 {
   // the future vtable
   static const lco_class_t vtable = {
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL
+    .on_fini = NULL,
+    .on_error = NULL,
+    .on_set = NULL,
+    .on_get = NULL,
+    .on_wait = NULL,
+    .on_attach = NULL,
+    .on_try_get = NULL,
+    .on_try_wait = NULL
   };
 
-  bool inplace = false;
-  lco_init(&f->lco, &vtable, inplace);
+  lco_init(&f->lco, &vtable);
   cvar_reset(&f->empty);
   cvar_reset(&f->full);
   f->bits = 0 | HPX_UNSET; // future starts out empty
@@ -588,7 +606,7 @@ hpx_lco_netfuture_new_all(int n, size_t size) {
 
   hpx_addr_t done = hpx_lco_and_new(hpx_get_num_ranks() - 1);
   for (int i = 1; i < hpx_get_num_ranks(); i++)
-    hpx_call(HPX_THERE(i), _add_future_to_table, &f, sizeof(f), done);
+    hpx_call(HPX_THERE(i), _add_future_to_table, done, &f, sizeof(f));
 
   hpx_lco_wait(done);
 
@@ -788,10 +806,11 @@ hpx_lco_netfuture_get_rank(hpx_netfuture_t future) {
 
 static void HPX_CONSTRUCTOR
 _future_initialize_actions(void) {
-  LIBHPX_REGISTER_ACTION(&_future_set_no_copy_from_remote, _future_set_no_copy_from_remote_action);
-  LIBHPX_REGISTER_ACTION(&_progress, _progress_action);
-  LIBHPX_REGISTER_ACTION(&_add_future_to_table, _add_future_to_table_action);
-  LIBHPX_REGISTER_ACTION(&_initialize_netfutures, _initialize_netfutures_action);
+  HPX_REGISTER_ACTION(_future_set_no_copy_from_remote_action, &_future_set_no_copy_from_remote);
+  HPX_REGISTER_ACTION(_progress_action, &_progress);
+  HPX_REGISTER_ACTION(_progress_recv_action, &_progress_recv);
+  HPX_REGISTER_ACTION(_add_future_to_table_action, &_add_future_to_table);
+  HPX_REGISTER_ACTION(_initialize_netfutures_action, &_initialize_netfutures);
 }
 
 void (*netfuture_progress)() = _progress_body;

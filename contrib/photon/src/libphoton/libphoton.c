@@ -35,11 +35,11 @@ int _photon_smsize;
 int _photon_spsize;
 int _forwarder;
 
-#ifdef DEBUG
-int _photon_start_debugging=1;
+#if defined(ENABLE_DEBUG) || defined(ENABLE_CALLTRACE)
+int _photon_start_debugging = 1;
 #endif
 
-#if defined(DEBUG) || defined(CALLTRACE)
+#if defined(ENABLE_CALLTRACE)
 FILE *_phot_ofp;
 #endif
 /* END Globals */
@@ -168,7 +168,11 @@ int photon_init(photonConfig cfg) {
     _photon_smsize = DEF_SMALL_MSG_SIZE;
   if (_LEDGER_SIZE <= 0)
     _LEDGER_SIZE = DEF_LEDGER_SIZE;
-
+  if (lcfg->cap.max_rd < 0)
+    lcfg->cap.max_rd = DEF_MAX_REQUESTS;
+  if (lcfg->cap.default_rd <= 0)
+    lcfg->cap.default_rd = DEF_NUM_REQUESTS;
+  
   assert(is_power_of_2(_LEDGER_SIZE));
   assert(is_power_of_2(_photon_ebsize));
   

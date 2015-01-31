@@ -10,7 +10,6 @@
 FILE * test_log;
 
 extern hpx_action_t t02_init_sources;
-extern hpx_action_t t03_initDomain;
 extern hpx_action_t t04_send;
 extern hpx_action_t t04_sendData;
 extern hpx_action_t t04_recv;
@@ -20,7 +19,6 @@ extern hpx_action_t t05_worker;
 extern hpx_action_t t05_assignID;
 extern hpx_action_t t05_cont_thread;
 extern hpx_action_t t05_thread_cont_cleanup;
-extern hpx_action_t t05_thread_current_cont_target;
 extern hpx_action_t t05_yield_worker;
 extern hpx_action_t t06_get_value;
 extern hpx_action_t t06_set_value;
@@ -57,7 +55,6 @@ extern hpx_action_t t15_spawn;
 extern hpx_action_t t15_delete;
 
 int t02_init_sources_action(void*);
-int t03_initDomain_action(const InitArgs*);
 int t04_send_action(void*);
 int t04_sendData_action(const initBuffer_t*);
 int t04_recv_action(double*);

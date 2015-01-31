@@ -55,10 +55,7 @@ uint64_t table_get(hpx_addr_t table, long i) {
   uint64_t val;
   size_t n = sizeof(val);
   hpx_addr_t there = hpx_addr_add(table, i*BLOCK_SIZE, BLOCK_SIZE);
-  hpx_addr_t lco = hpx_lco_future_new(0);
-  hpx_gas_memget(&val, there, n, lco);
-  hpx_lco_wait(lco);
-  hpx_lco_delete(lco, HPX_NULL);
+  hpx_gas_memget_sync(&val, there, n);
   return val;
 }
 
@@ -249,7 +246,7 @@ void _main_action(guppie_config_t *cfg)
 
   // Initialize main table
   lco = hpx_lco_future_new(0);
-  hpx_bcast(_init_table, cfg, sizeof(*cfg), lco);
+  hpx_bcast(_init_table, lco, cfg, sizeof(*cfg));
   hpx_lco_wait(lco);
   hpx_lco_delete(lco, HPX_NULL);
 
@@ -258,7 +255,7 @@ void _main_action(guppie_config_t *cfg)
 
   // Spawn a mover.
   if (_move)
-    hpx_call(HPX_HERE, _mover, cfg, sizeof(*cfg), HPX_NULL);
+    hpx_call(HPX_HERE, _mover, HPX_NULL, cfg, sizeof(*cfg));
 
   // Begin timing here
   icputime += CPUSEC();
@@ -270,7 +267,7 @@ void _main_action(guppie_config_t *cfg)
 
   // Update the table
   lco = hpx_lco_future_new(0);
-  hpx_bcast(_update_table, cfg, sizeof(*cfg), lco);
+  hpx_bcast(_update_table, lco, cfg, sizeof(*cfg));
   hpx_lco_wait(lco);
   hpx_lco_delete(lco, HPX_NULL);
 
@@ -290,7 +287,7 @@ void _main_action(guppie_config_t *cfg)
   for (i=0; i<cfg->nupdate; i++) {
     temp = (temp << 1) ^ (((long) temp < 0) ? POLY : 0);
     there = hpx_addr_add(cfg->table, (temp & (cfg->tabsize-1))* BLOCK_SIZE, BLOCK_SIZE);
-    hpx_call(there, _bitwiseor, &temp, sizeof(temp), lco);
+    hpx_call(there, _bitwiseor, lco, &temp, sizeof(temp));
   }
   hpx_lco_wait(lco);
   hpx_lco_delete(lco, HPX_NULL);
@@ -362,11 +359,11 @@ int main(int argc, char *argv[])
   };
 
   // register the actions
-  HPX_REGISTER_ACTION(&_main, _main_action);
-  HPX_REGISTER_ACTION(&_init_table, _init_table_action);
-  HPX_REGISTER_ACTION(&_bitwiseor, _bitwiseor_action);
-  HPX_REGISTER_ACTION(&_update_table, _update_table_action);
-  HPX_REGISTER_ACTION(&_mover, _mover_action);
+  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(_init_table_action, &_init_table);
+  HPX_REGISTER_ACTION(_bitwiseor_action, &_bitwiseor);
+  HPX_REGISTER_ACTION(_update_table_action, &_update_table);
+  HPX_REGISTER_ACTION(_mover_action, &_mover);
 
   // run the update_table action
   return hpx_run(&_main, &guppie_cfg, sizeof(guppie_cfg));

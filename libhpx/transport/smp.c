@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include "hpx/hpx.h"
 #include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/transport.h"
 
 static const char *_id(void) {
@@ -58,7 +59,7 @@ static void _delete(transport_class_t *transport) {
 
 
 static int _pin(transport_class_t *transport, const void* buffer, size_t len) {
-  return 0;
+  return LIBHPX_OK;
 }
 
 

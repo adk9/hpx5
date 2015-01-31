@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <inttypes.h>
 #include <limits.h>
 #include <string.h>
 #include <hpx/hpx.h>
@@ -169,13 +170,8 @@ void *pgas_gpa_to_lva(hpx_addr_t gpa) {
 static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   const bool l = _gpa_is_cyclic(lhs);
   const bool r = _gpa_is_cyclic(rhs);
-  DEBUG_IF (l != r) {
-    dbg_error("cannot compare addresses between different allocations.\n");
-  }
-
-  DEBUG_IF (l ^ r) {
-    dbg_error("cannot compare cyclic and non-cyclic addresses.\n");
-  }
+  dbg_assert_str(l == r, "cannot compare addresses across allocations.\n");
+  dbg_assert_str(!(l ^ r), "cannot compare cyclic with non-cyclic.\n");
 
   return (l && r) ? pgas_gpa_sub_cyclic(lhs, rhs, bsize)
                   : pgas_gpa_sub(lhs, rhs);
@@ -209,9 +205,8 @@ static bool _pgas_try_pin(const hpx_addr_t gpa, void **local) {
 }
 
 static void _pgas_unpin(const hpx_addr_t addr) {
-  DEBUG_IF(!_pgas_try_pin(addr, NULL)) {
-    dbg_error("%lu is not local to %u\n", addr, here->rank);
-  }
+  dbg_assert_str(_pgas_try_pin(addr, NULL), "%"PRIu64" is not local to %u\n",
+                 addr, here->rank);
 }
 
 
@@ -224,9 +219,12 @@ static hpx_addr_t _pgas_gas_cyclic_alloc(size_t n, uint32_t bsize) {
     .n = n,
     .bsize = bsize
   };
-  int e = hpx_call_sync(HPX_THERE(0), pgas_cyclic_alloc, &args, sizeof(args),
-                        &addr, sizeof(addr));
+  int e = hpx_call_sync(HPX_THERE(0), pgas_cyclic_alloc, &addr, sizeof(addr),
+                        &args, sizeof(args));
   dbg_check(e, "Failed to call pgas_cyclic_alloc_handler.\n");
+  DEBUG_IF (addr == HPX_NULL) {
+    dbg_error("should not get HPX_NULL as a valid location\n");
+  }
   return addr;
 }
 
@@ -240,8 +238,11 @@ static hpx_addr_t _pgas_gas_cyclic_calloc(size_t n, uint32_t bsize) {
     .bsize = bsize
   };
   int e = hpx_call_sync(HPX_THERE(0), pgas_cyclic_calloc,
-                        &args, sizeof(args), &addr, sizeof(addr));
+                        &addr, sizeof(addr), &args, sizeof(args));
   dbg_check(e, "Failed to call pgas_cyclic_calloc_handler.\n");
+  DEBUG_IF (addr == HPX_NULL) {
+    dbg_error("should not get HPX_NULL as a valid location\n");
+  }
   return addr;
 }
 
@@ -263,7 +264,7 @@ static void _pgas_gas_free(hpx_addr_t gpa, hpx_addr_t sync) {
   DEBUG_IF (true) {
     const void *lva = heap_offset_to_lva(global_heap, offset);
     if (!heap_contains_lva(global_heap, lva))
-      dbg_error("attempt to free out of bounds offset %lu", offset);
+      dbg_error("attempt to free out of bounds offset %"PRIu64"", offset);
   }
 
   if (heap_offset_is_cyclic(global_heap, offset)) {
@@ -273,13 +274,14 @@ static void _pgas_gas_free(hpx_addr_t gpa, hpx_addr_t sync) {
     libhpx_global_free(pgas_gpa_to_lva(offset));
   }
   else {
-    int e = hpx_call(gpa, pgas_free, NULL, 0, sync);
-    dbg_check(e, "failed to call pgas_free on %lu", gpa);
+    int e = hpx_call(gpa, pgas_free, sync, NULL, 0);
+    dbg_check(e, "failed to call pgas_free on %"PRIu64"", gpa);
     return;
   }
 
-  if (sync != HPX_NULL)
+  if (sync) {
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
+  }
 }
 
 static int _pgas_parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size,
@@ -375,32 +377,39 @@ static gas_class_t _pgas_vtable = {
 gas_class_t *gas_pgas_new(size_t heap_size, boot_class_t *boot,
                           struct transport_class *transport) {
   if (here->ranks == 1) {
-    dbg_log_gas("PGAS requires at least two ranks\n");
+    log_gas("PGAS requires at least two ranks\n");
     return NULL;
   }
 
-  if (global_heap)
+  if (global_heap) {
     return &_pgas_vtable;
+  }
 
   global_heap = malloc(sizeof(*global_heap));
   if (!global_heap) {
-    dbg_error("pgas: could not allocate global heap\n");
-    return NULL;
+    dbg_error("could not allocate global heap\n");
+    goto unwind0;
   }
 
   int e = heap_init(global_heap, heap_size, (here->rank == 0));
-  if (e) {
-    dbg_error("pgas: failed to allocate global heap\n");
-    free(global_heap);
-    return NULL;
+  if (e != LIBHPX_OK) {
+    dbg_error("failed to allocate global heap\n");
+    goto unwind1;
   }
 
-  if (heap_bind_transport(global_heap, transport)) {
-    if (!mallctl_disable_dirty_page_purge()) {
-      dbg_error("pgas: failed to disable dirty page purging\n");
-      return NULL;
-    }
+  if (heap_bind_transport(global_heap, transport) != LIBHPX_OK) {
+    dbg_error("failed to bind the transport\n");
+  }
+
+  if (mallctl_disable_dirty_page_purge() != LIBHPX_OK) {
+    dbg_error("failed to disable dirty page purging\n");
+    goto unwind1;
   }
 
   return &_pgas_vtable;
+
+ unwind1:
+  free(global_heap);
+ unwind0:
+  return NULL;
 }

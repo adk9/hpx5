@@ -37,16 +37,21 @@ AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror]
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.2.6])
-LT_INIT([disable-shared]) # we don't support dynamic linking correctly yet
+#LT_INIT()
+LT_INIT([disable-shared]) # we don't support dynamic linking correctly 
 
 # Initialize pthreads
 AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
 
-# intialize contribs
+# Initialize contribs
 HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [libhpx_])
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
-HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [hpx_])
+HPX_CONTRIB_LIBFFI([contrib/libffi], [hpx_])
+HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [libhpx_global_], [_hpx])
 HPX_CONTRIB_VALGRIND([contrib/valgrind], [hpx_])
+
+# Check if the assembler supports CFI directives
+AX_CFI_DIRECTIVES
 
 # NB: Don't check for anything that we're not actually prepared to deal with
 #     in our source code---this just clutters the configure and gives users a
@@ -70,11 +75,6 @@ AC_ARG_ENABLE([werror],
                   [Treat warnings as errors @<:@default=no@:>@])],
   [], [enable_werror=no])
 
-AC_ARG_ENABLE([apps],
-  [AS_HELP_STRING([--enable-apps],
-                  [Enable mini-apps @<:@default=no@:>@])],
-  [], [enable_apps=no])
-
 AC_ARG_ENABLE([tutorial],
   [AS_HELP_STRING([--enable-tutorial],
                   [Enable building of code samples from the HPX tutorial @<:@default=no@:>@])],
@@ -87,21 +87,12 @@ AC_ARG_ENABLE([debug],
 AS_IF([test "x$enable_debug" != xno],
   [AC_DEFINE([ENABLE_DEBUG], [1], [Enable debugging stuff])])
 
-AC_ARG_ENABLE([photon-debug],
-  [AS_HELP_STRING([--enable-photon-debug],
-                  [Enable photon debugging @<:@default=no@:>@])],
-  [], [enable_photon_debug=no])
-AS_IF([test "x$enable_photon_debug" != xno],
-  [AC_DEFINE([ENABLE_PHOTON_DEBUG], [1], [Enable photon debugging stuff])])
-AM_CONDITIONAL([ENABLE_PHOTON_DEBUG], [test "$enable_photon_debug" = "yes"])
-
-AC_ARG_ENABLE([photon-trace],
-  [AS_HELP_STRING([--enable-photon-trace],
-                  [Enable photon call tracing @<:@default=no@:>@])],
-  [], [enable_photon_trace=no])
-AS_IF([test "x$enable_photon_trace" != xno],
-  [AC_DEFINE([ENABLE_PHOTON_TRACE], [1], [Enable photon call tracing (files)])])
-AM_CONDITIONAL([ENABLE_PHOTON_TRACE], [test "$enable_photon_trace" = "yes"])
+AC_ARG_ENABLE([logging],
+  [AS_HELP_STRING([--enable-logging],
+                  [Enable logging code @<:@default=no@:>@])],
+  [], [enable_logging=no])
+AS_IF([test "x$enable_logging" != xno],
+  [AC_DEFINE([ENABLE_LOGGING], [1], [Enable loggging stuff])])
 
 AC_ARG_ENABLE([profiling],
   [AS_HELP_STRING([--enable-profiling],
@@ -120,7 +111,7 @@ AC_ARG_ENABLE([testsuite],
                   [Enable test suite (requires check) @<:@default=yes@:>@])],
   [], [enable_testsuite=yes])
 
-HPX_OPENFLOW
+#HPX_OPENFLOW
 
 # ---------------------------------------------------------------------------
 # --with-options, see config/hpx_with_pkg.m4 for details
@@ -129,15 +120,20 @@ HPX_WITH_PKG([papi],[papi],[build with profiling],[no],[PAPI])
 HPX_WITH_PKG([pmi],[pmi],[build with support for PMI],[no],[PMI])
 
 AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray PMI extensions]))
+HPX_WITH_PKG([hugetlbfs],[hugetlbfs],[build with hugepages for heap],[no],[HUGETLBFS])
+AS_IF([test "x$with_hugetlbfs" != xno],
+  [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [0], [Enable huge pages heap allocation])],
+  [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANONYMOUS], [Disableh huge pages heap allocation])])
+
+
 
 HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[no],[MPI])
 HPX_WITH_PKG([portals],[portals],[build with Portals networking],[no],[PORTALS])
 
 HPX_WITH_VERBS
-HPX_WITH_PKG([ugni],[ugni],[Build with UGNI],[no],[UGNI])
+HPX_WITH_PKG([ugni],[cray-ugni],[Build with UGNI],[no],[UGNI])
 
 AM_CONDITIONAL([HAVE_XSP], [false])
-AM_CONDITIONAL([PHOTON_ENABLE_TESTS], [false])
 
 AC_ARG_ENABLE([photon],
  [AS_HELP_STRING([--enable-photon], [build with Photon networking @<:@default=no@:>@])], [],
@@ -146,7 +142,6 @@ AS_IF([test "x$enable_photon" != xno],
   [HPX_CONTRIB_PHOTON([contrib/photon], [hpx_])],
   [hpx_have_photon=no])
 AM_CONDITIONAL([HAVE_PHOTON], [test "x$hpx_have_photon" != xno])
-AM_CONDITIONAL([BUILD_PHOTON], [test "x$hpx_have_photon" == xinternal])
 
 AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno],
   [AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])])
@@ -169,11 +164,16 @@ AS_IF([test "x$DOXYGEN" != x],
 # ---------------------------------------------------------------------------
 # Perform host-specific work here.
 # ---------------------------------------------------------------------------
+
 AS_CASE([$host_os],
-      [linux*], [AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
-                 dnl l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`
-                 l1d_linesize=`cat /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size`
-                 pagesize=`getconf PAGESIZE`],
+     [linux*], [AS_CASE([$host_cpu],
+         [arm*], [AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
+             l1d_linesize=32
+             pagesize=`getconf PAGESIZE`],
+         [AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
+             dnl l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`
+             l1d_linesize=`cat /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size`
+             pagesize=`getconf PAGESIZE`])],
      [darwin*], [l1d_linesize=`sysctl -n hw.cachelinesize`
                  pagesize=`getconf PAGESIZE`],
     [solaris*], [l1d_linesize=`prtpicl -v -c cpu | \
@@ -182,7 +182,7 @@ AS_CASE([$host_os],
                 [AC_MSG_WARN([Unexpected Host OS $host_os, using defaults])
                  l1d_linesize=128
                  pagesize=4096])
-                 
+
 AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
 AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
 
@@ -192,10 +192,11 @@ AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
 AM_CONDITIONAL([OS_LINUX], [[[[ "x$host_os" = xlinux* ]]]])
 AM_CONDITIONAL([OS_DARWIN], [[[[ "x$host_os" = xdarwin* ]]]])
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
+AM_CONDITIONAL([CPU_ARM], [test "x$host_cpu" = xarmv7l])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno])
-AM_CONDITIONAL([ENABLE_APPS], [test "x$enable_apps" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
 AM_CONDITIONAL([ENABLE_TUTORIAL], [test "x$enable_tutorial" != xno])
+AM_CONDITIONAL([ENABLE_PHOTON], [test "x$enable_photon" != xno])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
 
 AM_CONDITIONAL([GNU_PE_ENV], [test "x$hpx_pe_env" = xGNU])
@@ -206,11 +207,10 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # -----------------------------------------------------------------------------
 # Finalize flags
 # -----------------------------------------------------------------------------
-hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $libhpx_hwloc_cppflags $hpx_valgrind_cppflags $hpx_uthash_cppflags"
+hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $HPX_LIBFFI_CPPFLAGS $libhpx_hwloc_cppflags $hpx_valgrind_cppflags $hpx_uthash_cppflags"
 hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS $libhpx_hwloc_cflags"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
-hpx_extra_libs="$PTHREAD_LIBS $HPX_PHOTON_LIBS $libhpx_hwloc_libs"
-hpx_extra_ldflags="$HPX_PHOTON_LDFLAGS"
+hpx_extra_libs="$PTHREAD_LIBS $HPX_PHOTON_LIBS $libhpx_hwloc_libs $HPX_LIBFFI_LIBS $HPX_JEMALLOC_LIBS"
 AS_IF([test "x$enable_pedantic" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_pedantic $hpx_extra_cflags"])
 
@@ -223,8 +223,10 @@ AS_IF([test "x$enable_werror" != xno],
 CPPFLAGS="$hpx_extra_cppflags $CPPFLAGS"
 CFLAGS="$hpx_extra_cflags $CFLAGS"
 CCASFLAGS="$hpx_extra_ccasflags $CCASFLAGS"
-LIBS="$hpx_extra_libs $LIBS"
-LDFLAGS="$hpx_extra_ldflags $LDFLAGS"
+HPX_LIBS="$hpx_extra_libs"
+
+AC_SUBST(HPX_LIBS)
+AC_SUBST(HPX_LDADD, "\$(top_builddir)/libhpx/libhpx.la $HPX_JEMALLOC_LDADD $HPX_PHOTON_LDADD $HPX_LIBFFI_LDADD")
 
 # -----------------------------------------------------------------------------
 # Use autoconf to configure all of the Makefiles that need to be processed.
@@ -246,29 +248,20 @@ AC_CONFIG_FILES([
   include/Makefile
   include/libhpx/Makefile
   examples/Makefile
-  bench/Makefile])
+  bench/Makefile
+  hpx.pc])
 
 AS_IF([test "x$enable_tutorial" != xno],
   [AC_CONFIG_FILES([tutorial/Makefile
-  tutorial/threads/Makefile
-  tutorial/gas/Makefile
-  tutorial/collectives/Makefile
-  tutorial/lco/Makefile
-  tutorial/parcel/Makefile])])
-
-AS_IF([test "x$enable_apps" != xno],
-  [AC_CONFIG_FILES([apps/Makefile
-  apps/mpi/Makefile
-  apps/fmm/Makefile
-  apps/fmm/parcels/Makefile
-  apps/lulesh/Makefile
-  apps/lulesh/parcels/Makefile
-  apps/lulesh/newfutures/Makefile
-  apps/miniAMR/Makefile
-  apps/miniAMR/parcels/Makefile
-  apps/libPXGL/Makefile
-  apps/libPXGL/include/Makefile
-  apps/libPXGL/examples/Makefile])])
+  tutorial/Beginners/Makefile
+  tutorial/Beginners/threads/Makefile
+  tutorial/Beginners/gas/Makefile
+  tutorial/Beginners/collectives/Makefile
+  tutorial/Beginners/lco/Makefile
+  tutorial/Beginners/parcel/Makefile
+  tutorial/HeatSeq/Makefile
+  tutorial/CollectiveBench/Makefile
+  tutorial/cpi/Makefile])])
   
 AS_IF([test "x$enable_docs" != xno],
   [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
@@ -306,8 +299,8 @@ echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
 echo "               Networks : $networks"
 echo "              Profiling : $with_papi"
+echo "         hugetlbfs heap : $with_hugetlbfs"
 echo "     Topology Awareness : $with_hwloc"
-echo "            SDN support : $with_trema"
 echo "          Documentation : $enable_docs"
 echo "               Tutorial : $enable_tutorial"
 echo "             Test Suite : $enable_tests"

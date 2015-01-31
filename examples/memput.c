@@ -80,8 +80,9 @@ static int _main_action(void *args) {
     char *local;
 
     hpx_addr_t rfut = hpx_lco_future_new(sizeof(void*));
-    hpx_call(remote, _init_array, &size, sizeof(size), rfut);
-    hpx_call_sync(data, _init_array, &size, sizeof(size), &local, sizeof(local));
+    hpx_call(remote, _init_array, rfut, &size, sizeof(size));
+    hpx_call_sync(data, _init_array, &local, sizeof(local), &size,
+                  sizeof(size));
     hpx_lco_wait(rfut);
     hpx_lco_delete(rfut, HPX_NULL);
 
@@ -103,7 +104,7 @@ static int _main_action(void *args) {
     wtime(&t_end);
 
     double latency = (t_end - t_start)/(1.0 * loop);
-    fprintf(stdout, "%-*lu%*.*f\n", 10, size, FIELD_WIDTH,
+    fprintf(stdout, "%-*zu%*.*f\n", 10, size, FIELD_WIDTH,
             FLOAT_PRECISION, latency);
     fflush(stdout);
   }
@@ -142,7 +143,7 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  HPX_REGISTER_ACTION(&_main, _main_action);
-  HPX_REGISTER_ACTION(&_init_array, _init_array_action);
+  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(_init_array_action, &_init_array);
   return hpx_run(&_main, NULL, 0);
 }

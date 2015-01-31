@@ -51,6 +51,10 @@ typestr="level"
 values="default","boot","sched","gas","lco","net","trans","parcel","all"
 enum optional argoptional multiple
 
+option "hpx-logat" - "selectively output log information"
+typestr="[localities]"
+int optional multiple
+
 option "hpx-statistics" - "print HPX runtime statistics"
 flag off
 

@@ -25,6 +25,7 @@
 
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/transport.h"
 #include "libhpx/routing.h"
@@ -65,7 +66,7 @@ _id(void)
 static void
 _barrier(void)
 {
-  dbg_log_trans("photon: barrier unsupported.\n");
+  log_trans("photon: barrier unsupported.\n");
 }
 
 
@@ -127,24 +128,28 @@ static int
 _pin(transport_class_t *transport, const void* buffer, size_t len)
 {
   void *b = (void*)buffer;
-  if (photon_register_buffer(b, len))
-    dbg_error("photon: could not pin buffer of size %lu.\n", len);
+  if (photon_register_buffer(b, len)) {
+    dbg_error("could not pin buffer of size %lu.\n", len);
+  }
 
   rkey_t *r = new_rkey(transport, b);
-  if (!r)
-    dbg_error("photon: could not allocate registration key.\n");
+  if (!r) {
+    dbg_error("could not allocate registration key.\n");
+  }
 
   int rc = photon_get_buffer_private(b, len, (photonBufferPriv)&r->rkey);
-  if (rc != PHOTON_OK)
-    dbg_error("photon: could not get metadata when pinning the heap: 0x%016lx (%lu).\n",
+  if (rc != PHOTON_OK) {
+    dbg_error("could not get metadata when pinning the heap: 0x%016lx (%lu).\n",
               (uintptr_t)b, len);
+  }
 
   assert(!transport->rkey_table);
   transport->rkey_table = exchange_rkey_table(transport, r);
-  if (!transport->rkey_table)
-    dbg_error("photon: error exchanging metadata with peers.\n");
+  if (!transport->rkey_table) {
+    dbg_error("error exchanging metadata with peers.\n");
+  }
 
-  return 1;
+  return LIBHPX_OK;
 }
 
 
@@ -197,7 +202,7 @@ _put(transport_class_t *t, int dest, const void *data, size_t n, void *rbuffer,
     pbuf.priv = priv;
 
     if (rid) {
-      flags = PHOTON_REQ_USERID;
+      // flags = PHOTON_REQ_USERID;
       *(photon_rid*)r = *(photon_rid*)rid;
     }
     else {
@@ -249,7 +254,7 @@ _get(transport_class_t *t, int dest, void *buffer, size_t n, const void *rdata,
     pbuf.priv = priv;
 
     if (rid) {
-      flags = PHOTON_REQ_USERID;
+      // flags = PHOTON_REQ_USERID;
       *(photon_rid*)r = *(photon_rid*)rid;
     }
     else {
@@ -276,11 +281,14 @@ static int
 _send(transport_class_t *t, int dest, const void *data, size_t n, void *r)
 {
   void *b = (void*)data;
+  int e;
 
   //int e = photon_send(&daddr, b, n, 0, r);
-  int e = photon_post_send_buffer_rdma(dest, b, n, PHOTON_DEFAULT_TAG, r);
-  if (e != PHOTON_OK)
-    return dbg_error("photon: could not send %lu bytes to %i.\n", n, dest);
+  do {
+    e = photon_post_send_buffer_rdma(dest, b, n, PHOTON_DEFAULT_TAG, r);
+    if (e == PHOTON_ERROR)
+      return dbg_error("photon: could not send %lu bytes to %i.\n", n, dest);
+  } while (e == PHOTON_ERROR_RESOURCE);
   return HPX_SUCCESS;
 }
 
@@ -356,11 +364,13 @@ _test(transport_class_t *t, void *request, int *success)
 
   // send back the FIN message for local EVQUEUE completions (type==0)
   if ((*success == 1) && (type == 0)) {
-    e = photon_send_FIN(*id, status.src_addr.global.proc_id, 0);
-    if (e != PHOTON_OK) {
-      return dbg_error("photon: could not send FIN back to %lu.\n",
-                       status.src_addr.global.proc_id);
-    }
+    do {
+      e = photon_send_FIN(*id, status.src_addr.global.proc_id, 0);
+      if (e == PHOTON_ERROR) {
+    return dbg_error("photon: could not send FIN back to %lu.\n",
+             status.src_addr.global.proc_id);
+      }
+    } while (e == PHOTON_ERROR_RESOURCE);
   }
 
   return HPX_SUCCESS;
@@ -372,22 +382,13 @@ _progress(transport_class_t *t, transport_op_t op)
 {
   photon_t *photon = (photon_t*)t;
   switch (op) {
-    printf("op: %d\n", op);
   case TRANSPORT_POLL:
     network_progress_poll(photon->progress);
     break;
-  case TRANSPORT_CANCEL:
-    {
-      request_t **i = &(photon->progress)->pending_sends;
-      while (*i != NULL) {
-    request_t *j = *i;
-    photon_cancel((photon_rid)j->request, 0);
-    *i = j->next;
-      }
-    }
-    break;
   case TRANSPORT_FLUSH:
     network_progress_flush(photon->progress);
+    break;
+  case TRANSPORT_CANCEL:
     break;
   default:
     break;
@@ -439,7 +440,7 @@ transport_class_t *transport_new_photon(uint32_t send_limit, uint32_t recv_limit
   char* backend;
   // int ib_port;
   int use_cma;
-  int ledger_entries = -1;  // default is 64
+  int ledger_entries = 512;  // default val (-1) is 64
   int val = 0;
 
   // TODO: make eth_dev and ib_dev runtime configurable!
@@ -474,10 +475,12 @@ transport_class_t *transport_new_photon(uint32_t send_limit, uint32_t recv_limit
   cfg->ibv.ud_gid_prefix   = "ff0e::ffff:0000:0000";
   cfg->ibv.eth_dev         = eth_dev;
   cfg->ibv.ib_dev          = ib_dev;
-  cfg->cap.eager_buf_size  = -1;     // default 128k
-  cfg->cap.small_msg_size  = -1;     // default 8192
-  cfg->cap.small_pwc_size  =  1024;     // 0 disabled
-  cfg->cap.ledger_entries  = ledger_entries;     // default 64;
+  cfg->cap.eager_buf_size  = -1;     // default 256k
+  cfg->cap.small_msg_size  = -1;     // default 4096
+  cfg->cap.small_pwc_size  =  1024;  // 0 disabled
+  cfg->cap.ledger_entries  = ledger_entries;
+  cfg->cap.max_rd          = -1;     // default 1M
+  cfg->cap.default_rd      = -1;     // default 1024
   cfg->exch.allgather      = (typeof(cfg->exch.allgather))here->boot->allgather;
   cfg->exch.barrier        = (typeof(cfg->exch.barrier))here->boot->barrier;
   cfg->backend             = backend;

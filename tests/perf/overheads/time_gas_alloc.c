@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include "hpx/hpx.h"
 
-#define MAX_BYTES        1024*1024*100
+#define MAX_BYTES        1024*1024*1
 #define SKIP_LARGE       10
 #define LOOP_LARGE       100
 
@@ -45,7 +45,7 @@ static int _main_action(void *args) {
   for (size_t size = 1; size <= MAX_BYTES; size*=2) {
     t = hpx_time_now();
     local = hpx_gas_alloc(size);
-    fprintf(stdout, "%-*lu%*g", 10,  size, FIELD_WIDTH, hpx_time_elapsed_ms(t));
+    fprintf(stdout, "%-*zu%*g", 10,  size, FIELD_WIDTH, hpx_time_elapsed_ms(t));
 
     t = hpx_time_now();
     hpx_gas_free(local, HPX_NULL);
@@ -95,7 +95,7 @@ main(int argc, char *argv[])
   fprintf(stdout, "Starting the cost of GAS Allocation benchmark\n");
 
   // Register the main action
-  HPX_REGISTER_ACTION(&_main, _main_action);
+  HPX_REGISTER_ACTION(_main_action, &_main);
 
   // run the main action
   return hpx_run(&_main, NULL, 0);

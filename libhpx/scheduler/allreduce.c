@@ -48,6 +48,9 @@ typedef struct {
 /// Deletes a reduction.
 static void _allreduce_fini(lco_t *lco) {
   lco_lock(lco);
+  DEBUG_IF(true) {
+    lco_set_deleted(lco);
+  }
   _allreduce_t *r = (_allreduce_t *)lco;
   if (r->value)
     free(r->value);
@@ -147,16 +150,19 @@ static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
 {
   // vtable
   static const lco_class_t vtable = {
-    _allreduce_fini,
-    _allreduce_error,
-    _allreduce_set,
-    _allreduce_get,
-    _allreduce_wait
+    .on_fini = _allreduce_fini,
+    .on_error = _allreduce_error,
+    .on_set = _allreduce_set,
+    .on_attach = NULL,
+    .on_get = _allreduce_get,
+    .on_wait = _allreduce_wait,
+    .on_try_get = NULL,
+    .on_try_wait = NULL
   };
 
   assert(init);
 
-  lco_init(&r->lco, &vtable, 0);
+  lco_init(&r->lco, &vtable);
   cvar_reset(&r->wait);
   r->readers = readers;
   r->op = op;

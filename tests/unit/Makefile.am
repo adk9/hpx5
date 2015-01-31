@@ -1,5 +1,5 @@
 noinst_PROGRAMS 	= hpxtest
-check_SCRIPTS           = $(srcdir)/run_tests.sh
+check_SCRIPTS           = run_tests.sh
 TESTS                   = run_tests.sh
 check_PROGRAMS		= hpxtest
 hpxtest_SOURCES		= 00_hpxtest.c \
@@ -18,7 +18,8 @@ hpxtest_SOURCES		= 00_hpxtest.c \
                           13_TestMemput.c \
 			  15_TestWait.c
 
-hpxtest_LDADD           = $(top_builddir)/libhpx/libhpx.la @CHECK_LIBS@ -lm
+hpxtest_LDADD           = $(HPX_LDADD) @CHECK_LIBS@ -lm
+hpxtest_DEPENDENCIES    = $(HPX_LDADD)
 hpxtest_CPPFLAGS        = -I$(top_srcdir)/include 
 hpxtest_CPPFLAGS       += -D_POSIX_C_SOURCE=200809L
 

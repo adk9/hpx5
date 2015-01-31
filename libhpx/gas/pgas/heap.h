@@ -57,15 +57,13 @@ struct bitmap;
 typedef struct heap {
   volatile uint64_t           csbrk;
   size_t            bytes_per_chunk;
-  size_t                raw_nchunks;
   size_t                    nchunks;
   struct bitmap             *chunks;
   size_t                     nbytes;
   char                        *base;
-  size_t                 raw_nbytes;
-  char                    *raw_base;
   struct transport_class *transport;
   unsigned             cyclic_arena;
+  uint32_t        max_block_lg_size;
 } heap_t;
 
 /// Initialize a heap to manage the specified number of bytes.
@@ -181,17 +179,6 @@ bool heap_offset_is_cyclic(const heap_t *heap, uint64_t offset)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 
-/// Allocate a cyclic array of blocks.
-///
-/// @param         heap The heap from which to allocate.
-/// @param            n The number of blocks per locality to allocate.
-/// @param        bsize The size of the block.
-///
-/// @returns the base offset of the new allocation.
-uint64_t heap_csbrk(heap_t *heap, size_t n, uint32_t bsize)
-  HPX_NON_NULL(1) HPX_INTERNAL;
-
-
 /// Get the csbrk.
 ///
 /// @param         heap The heap.
@@ -205,6 +192,15 @@ uint64_t heap_get_csbrk(const heap_t *heap)
 ///
 /// @returns LIBHPX_OK for success, LIBHPX_ENOMEM for failure.
 int heap_set_csbrk(heap_t *heap, uint64_t offset)
+  HPX_NON_NULL(1) HPX_INTERNAL;
+
+
+/// Get the maximum number of bits that can be used for block size in the 
+/// current heap.
+/// @param         heap The heap to check.
+///
+/// @returns The number of bits that can be used for block size.
+uint32_t heap_max_block_lg_size(const heap_t *heap)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 #endif

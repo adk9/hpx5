@@ -74,24 +74,28 @@ AC_CHECK_FUNCS([atoll atoq gethostbyaddr gethostbyname gethostname gettimeofday 
 # ---------------------------------------------------------------------------
 AC_ARG_ENABLE([testsuite],
   [AS_HELP_STRING([--enable-testsuite],
-                  [Enable test suite (requires check) @<:@default=yes@:>@])],
-  [], [enable_testsuite=yes])
+                  [Enable test suite (requires check) @<:@default=no@:>@])],
+  [], [enable_testsuite=no])
 
-AC_ARG_ENABLE(debug,
-	[  --enable-debug          turn on debugging],
-	[CFLAGS="-g -O0 -Wall -DDEBUG ${CFLAGS}"],
-	[CFLAGS="-O2 -Wall ${CFLAGS}"])
+AC_ARG_ENABLE([debug],
+  [AS_HELP_STRING([--enable-debug],
+                  [Enable debug logging @<:@default=no@:>@])],
+  [], [enable_debug=no])
+AS_IF([test "x$enable_debug" != xno],
+  [AC_DEFINE([ENABLE_DEBUG], [1], [Enable debug logging])])
 
-AC_ARG_ENABLE(trace,
-	[  --enable-trace          turn on calltrace to file],
-	[CFLAGS="-DCALLTRACE ${CFLAGS}"],
-	[CFLAGS="${CFLAGS}"])
+AC_ARG_ENABLE([calltrace],
+  [AS_HELP_STRING([--enable-calltrace],
+                  [Enable call tracing to file @<:@default=no@:>@])],
+  [], [enable_calltrace=no])
+AS_IF([test "x$enable_calltrace" != xno],
+  [AC_DEFINE([ENABLE_CALLTRACE], [1], [Enable call tracing])])
 
-dnl Check for infiniband verbs
-AC_ARG_ENABLE(verbs, AC_HELP_STRING([--disable-verbs],
-		    [disable verbs (IBV) support (default is autodetect)]),
-		    [enable_verbs=$enableval],
-		    [enable_verbs=try])
+AC_ARG_ENABLE([verbs],
+  [AS_HELP_STRING([--disable-verbs],
+		  [disable verbs (IBV) support (default is autodetect)])],
+  [enable_verbs=$enableval],
+  [enable_verbs=try])
 
 if test "$enable_verbs" != "no" ; then
         AH_TEMPLATE(HAVE_VERBS, Whether or not ibverbs is installed on the system)
@@ -197,10 +201,37 @@ fi
 AM_CONDITIONAL(HAVE_XSP, test x$have_xsp = xyes)
 
 # ---------------------------------------------------------------------------
+# Perform host-specific work here.
+# ---------------------------------------------------------------------------
+
+AS_CASE([$host_os],
+     [linux*], [AS_CASE([$host_cpu],
+         [arm*], [AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
+             l1d_linesize=32
+             pagesize=`getconf PAGESIZE`],
+         [AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
+             dnl l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`
+             l1d_linesize=`cat /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size`
+             pagesize=`getconf PAGESIZE`])],
+     [darwin*], [l1d_linesize=`sysctl -n hw.cachelinesize`
+                 pagesize=`getconf PAGESIZE`],
+    [solaris*], [l1d_linesize=`prtpicl -v -c cpu | \
+                               grep l1-dcache-line-size | uniq | \
+                               awk '{print $2}'`]
+                [AC_MSG_WARN([Unexpected Host OS $host_os, using defaults])
+                 l1d_linesize=128
+                 pagesize=4096])
+
+AC_DEFINE_UNQUOTED([PHOTON_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
+AC_DEFINE_UNQUOTED([PHOTON_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
+AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
+AC_DEFINE_UNQUOTED([HPXPAGE_SIZE], [$pagesize], [OS Memory Page Size])
+
+# ---------------------------------------------------------------------------
 # --with-options, see config/photon_with_pkg.m4 for details
 # ---------------------------------------------------------------------------
 PHOTON_WITH_PKG([check],[check],[build with check unit tests],[no],[CHECK])
-AS_IF([test "x$enable_testsuite" != xno -a "x$with_check" != xno],
+AS_IF([test "x$enable_testsuite" != xno && test "x$with_check" != xno],
   [enable_tests=yes],
   [enable_tests=no])
 AM_CONDITIONAL([PHOTON_ENABLE_TESTS], [test "x$enable_tests" != xno])

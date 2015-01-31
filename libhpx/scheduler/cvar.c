@@ -19,6 +19,7 @@
 /// ----------------------------------------------------------------------------
 #include <stdint.h>
 
+#include "libhpx/parcel.h"
 #include "cvar.h"
 #include "thread.h"
 
@@ -30,26 +31,21 @@ static const uintptr_t _ERROR_MASK = 0x1;
 // we need a different error code size
 static HPX_UNUSED int check[sizeof(cvar_t) - (2 * sizeof(hpx_status_t)) + 1];
 
-static uintptr_t
-_has_error(const cvar_t *cvar) {
+static uintptr_t _has_error(const cvar_t *cvar) {
   return (uintptr_t)cvar->top & _ERROR_MASK;
 }
 
-ustack_t *
-cvar_set_error(cvar_t *cvar, hpx_status_t code)
-{
-  if (_has_error(cvar))
+hpx_parcel_t *cvar_set_error(cvar_t *cvar, hpx_status_t code) {
+  if (_has_error(cvar)) {
     return NULL;
+  }
 
-  ustack_t *top = cvar->top;
-  cvar->top = (ustack_t*)((((uintptr_t)code) << _CODE_OFFSET) | _ERROR_MASK);
+  hpx_parcel_t *top = cvar->top;
+  cvar->top = (void*)((((uintptr_t)code) << _CODE_OFFSET) | _ERROR_MASK);
   return top;
 }
 
-
-hpx_status_t
-cvar_get_error(const cvar_t *cvar)
-{
+hpx_status_t cvar_get_error(const cvar_t *cvar) {
   if (_has_error(cvar)) {
     return (hpx_status_t)((uintptr_t)(cvar->top) >> _CODE_OFFSET);
   }
@@ -58,51 +54,49 @@ cvar_get_error(const cvar_t *cvar)
   }
 }
 
-void
-cvar_clear_error(cvar_t *cvar)
-{
-  if (_has_error(cvar))
+void cvar_clear_error(cvar_t *cvar) {
+  if (_has_error(cvar)) {
     cvar->top = NULL;
+  }
 }
 
-
-hpx_status_t
-cvar_push_thread(cvar_t *cvar, struct ustack *thread)
-{
-  if (_has_error(cvar))
+hpx_status_t cvar_attach(cvar_t *cvar, struct hpx_parcel *parcel) {
+  if (_has_error(cvar)) {
     return cvar_get_error(cvar);
+  }
 
-  thread->next = cvar->top;
-  cvar->top = thread;
+  parcel->next = cvar->top;
+  cvar->top = parcel;
   return HPX_SUCCESS;
 }
 
-ustack_t *
-cvar_pop_thread(cvar_t *cvar)
-{
-  if (_has_error(cvar))
-    return NULL;
-
-  ustack_t *thread = cvar->top;
-  if (thread)
-    cvar->top = thread->next;
-  return thread;
+hpx_status_t cvar_push_thread(cvar_t *cvar, struct ustack *thread) {
+  return cvar_attach(cvar, thread->parcel);
 }
 
-
-ustack_t *
-cvar_pop_all(cvar_t *cvar)
-{
-  if (_has_error(cvar))
+hpx_parcel_t *cvar_pop(cvar_t *cvar) {
+  if (_has_error(cvar)) {
     return NULL;
+  }
 
-  ustack_t *thread = cvar->top;
+  hpx_parcel_t *top = cvar->top;
+  if (top) {
+    cvar->top = top->next;
+    top->next = NULL;
+  }
+  return top;
+}
+
+hpx_parcel_t *cvar_pop_all(cvar_t *cvar) {
+  if (_has_error(cvar)) {
+    return NULL;
+  }
+
+  hpx_parcel_t *top = cvar->top;
   cvar->top = NULL;
-  return thread;
+  return top;
 }
 
-void
-cvar_reset(cvar_t *cvar)
-{
+void cvar_reset(cvar_t *cvar) {
   cvar->top = NULL;
 }

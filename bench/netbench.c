@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <hpx/hpx.h>
 
-#define DEFAULT_ITERS 10000
+#define DEFAULT_ITERS 100
 hpx_action_t echo_pong;
 hpx_action_t echo_finish;
 unsigned long iterations;
@@ -147,10 +147,10 @@ int main(int argc, char *argv[]) {
     printf("read ITERATIONS as 0, setting them to default of %lu.\n", iterations);
   }
 
-  HPX_REGISTER_ACTION(&echo_pong, echo_pong_action);
-  HPX_REGISTER_ACTION(&echo_finish, echo_finish_action);
+  HPX_REGISTER_ACTION(echo_pong_action, &echo_pong);
+  HPX_REGISTER_ACTION(echo_finish_action, &echo_finish);
   hpx_action_t hpx_main;
-  HPX_REGISTER_ACTION(&hpx_main, hpx_main_action);
+  HPX_REGISTER_ACTION(hpx_main_action, &hpx_main);
 
   int e = hpx_run(&hpx_main, NULL, 0);
   return e;

@@ -77,7 +77,8 @@ static int _main_action(int *args) {
     for (int k=0; k<avg; ++k) {
       // set up the asynchronous send
       hpx_addr_t send = hpx_lco_future_new(0);
-      hpx_call_async(HPX_HERE, _receiver, buf, sizeof(double)*counts[i], send, HPX_NULL);
+      hpx_call_async(HPX_HERE, _receiver, send, HPX_NULL, buf,
+                     sizeof(double) * counts[i]);
 
       // do the useless work
       double volatile d = 0.;
@@ -158,7 +159,7 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  HPX_REGISTER_ACTION(&_main, _main_action);
-  HPX_REGISTER_ACTION(&_receiver, _receiver_action);
+  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(_receiver_action, &_receiver);
   return hpx_run(&_main, args, sizeof(args));
 }

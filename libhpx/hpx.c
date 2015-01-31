@@ -39,6 +39,11 @@
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
 
+HPX_ACTION(hpx_143_fix, void *UNUSED) {
+  hpx_gas_global_alloc(sizeof(void*), HPX_LOCALITIES);
+  return LIBHPX_OK;
+}
+
 /// Cleanup utility function.
 ///
 /// This will delete the global objects, if they've been allocated.
@@ -71,14 +76,14 @@ static void _cleanup(locality_t *l) {
     l->boot = NULL;
   }
 
-  libhpx_hwloc_topology_destroy(l->topology);
+  hwloc_topology_destroy(l->topology);
 
   if (l->actions) {
     action_table_free(l->actions);
   }
 
   if (l->config) {
-    free(l->config);
+    config_free(l->config);
   }
 
   free(l);
@@ -86,11 +91,11 @@ static void _cleanup(locality_t *l) {
 
 
 int hpx_init(int *argc, char ***argv) {
-  hpx_config_t *cfg = hpx_parse_options(argc, argv);
+  hpx_config_t *cfg = parse_options(argc, argv);
   if (!cfg) {
     return dbg_error("failed to create a configuration.\n");
   }
-  dbg_log_level = cfg->loglevel;
+  log_level = cfg->loglevel;
   if (cfg->waitat == HPX_LOCALITY_ALL) {
     dbg_wait();
   }
@@ -106,12 +111,12 @@ int hpx_init(int *argc, char ***argv) {
   here->config = cfg;
 
   // topology
-  int e = libhpx_hwloc_topology_init(&here->topology);
+  int e = hwloc_topology_init(&here->topology);
   if (e) {
     _cleanup(here);
     return dbg_error("failed to initialize a topology.\n");
   }
-  e = libhpx_hwloc_topology_load(here->topology);
+  e = hwloc_topology_load(here->topology);
   if (e) {
     _cleanup(here);
     return dbg_error("failed to load the topology.\n");
@@ -127,6 +132,16 @@ int hpx_init(int *argc, char ***argv) {
   here->ranks = boot_n_ranks(here->boot);
   if (cfg->waitat == here->rank) {
     dbg_wait();
+  }
+
+  if (cfg->logat && cfg->logat != (int*)HPX_LOCALITY_ALL) {
+    int orig_level = log_level;
+    log_level = 0;
+    for (int i = 0; i < cfg->logat[0]; ++i) {
+      if (cfg->logat[i+1] == here->rank) {
+        log_level = orig_level;
+      }
+    }
   }
 
   // byte transport
@@ -203,9 +218,16 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
 
   // create the initial application-level thread to run
   if (here->rank == 0) {
-    status = hpx_call(HPX_HERE, *act, args, size, HPX_NULL);
+    status = hpx_call(HPX_HERE, *act, HPX_NULL, args, size);
     if (status != LIBHPX_OK) {
       dbg_error("failed to spawn initial action\n");
+      goto unwind2;
+    }
+
+    // Fix for https://uisapp2.iu.edu/jira-prd/browse/HPX-143
+    status = hpx_call(HPX_HERE, hpx_143_fix, HPX_NULL, NULL, 0);
+    if (status != LIBHPX_OK) {
+      dbg_error("failed to spawn the initial cyclic allocation");
       goto unwind2;
     }
   }
@@ -252,18 +274,34 @@ void hpx_shutdown(int code) {
 
   // make sure we flush our local network when we shutdown
   network_flush_on_shutdown(here->network);
-  hpx_bcast(locality_shutdown, NULL, 0, HPX_NULL);
-  hpx_thread_exit(0);
+  int e = hpx_bcast(locality_shutdown, HPX_NULL, &code, sizeof(code));
+  hpx_thread_exit(e);
 }
 
 
 /// Called by the application to shutdown the scheduler and network. May be
 /// called from any lightweight HPX thread, or the network thread.
 void hpx_abort(void) {
-  if (here && here->config && here->config->waitonabort)
+  if (here && here->config && here->config->waitonabort) {
     dbg_wait();
-  assert(here->boot);
-  boot_abort(here->boot);
+  }
+  if (here && here->boot) {
+    assert(here->boot);
+    boot_abort(here->boot);
+  }
   abort();
 }
 
+const char *hpx_strerror(hpx_status_t s) {
+  switch (s) {
+   case (HPX_ERROR): return "HPX_ERROR";
+   case (HPX_SUCCESS): return "HPX_SUCCESS";
+   case (HPX_RESEND): return "HPX_RESEND";
+   case (HPX_LCO_ERROR): return "HPX_LCO_ERROR";
+   case (HPX_LCO_CHAN_EMPTY): return "HPX_LCO_CHAN_EMPTY";
+   case (HPX_LCO_TIMEOUT): return "HPX_LCO_TIMEOUT";
+   case (HPX_LCO_RESET): return "HPX_LCO_RESET";
+   case (HPX_USER): return "HPX_USER";
+   default: return "HPX undefined error value";
+  }
+}

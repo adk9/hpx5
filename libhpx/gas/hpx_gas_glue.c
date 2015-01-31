@@ -76,6 +76,16 @@ int hpx_gas_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync) {
   return here->gas->memget(to, from, size, lsync);
 }
 
+int hpx_gas_memget_sync(void *to, hpx_addr_t from, size_t size) {
+  hpx_addr_t lsync = hpx_lco_future_new(0);
+  int e;
+  e = hpx_gas_memget(to, from, size, lsync);
+  dbg_check(e, "failed memget in memget_sync\n");
+  e = hpx_lco_wait(lsync);
+  hpx_lco_delete(lsync, HPX_NULL);
+  return e;
+}
+
 int hpx_gas_memput(hpx_addr_t to, const void *from, size_t size,
                    hpx_addr_t lsync, hpx_addr_t rsync) {
   assert(here && here->gas && here->gas->memput);

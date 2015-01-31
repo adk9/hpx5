@@ -162,7 +162,7 @@ chunk_alloc_core(void *new_addr, size_t size, size_t alignment, bool base,
 	if ((ret = chunk_recycle(&chunks_szad_mmap, &chunks_ad_mmap, new_addr,
 	    size, alignment, base, zero)) != NULL)
 		return (ret);
-	/* requesting an address not implemented for chunk_alloc_mmap */
+	/* Requesting an address not implemented for chunk_alloc_mmap(). */
 	if (new_addr == NULL &&
 	    (ret = chunk_alloc_mmap(size, alignment, zero)) != NULL)
 		return (ret);
@@ -254,7 +254,9 @@ chunk_alloc_default(void *new_addr, size_t size, size_t alignment, bool *zero,
 {
 	arena_t *arena;
 
-	arena = arena_get(tsd_fetch(), arena_ind, false, true);
+	/* Dodge tsd for a0 in order to avoid bootstrapping issues. */
+	arena = (arena_ind == 0) ? a0get() : arena_get(tsd_fetch(), arena_ind,
+	     false, true);
 	/*
 	 * The arena we're allocating on behalf of must have been initialized
 	 * already.

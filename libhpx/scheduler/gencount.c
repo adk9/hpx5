@@ -41,15 +41,15 @@ typedef struct {
 } _gencount_t;
 
 
-static hpx_action_t _gencount_wait_gen_action = 0;
-
-
 static void _gencount_fini(lco_t *lco) {
   if (!lco)
     return;
 
   _gencount_t *gencnt = (_gencount_t *)lco;
   lco_lock(&gencnt->lco);
+  DEBUG_IF(true) {
+    lco_set_deleted(&gencnt->lco);
+  }
   libhpx_global_free(gencnt);
 }
 
@@ -129,14 +129,17 @@ static hpx_status_t _gencount_wait_gen(_gencount_t *gencnt, unsigned long gen) {
 
 static void _gencount_init(_gencount_t *gencnt, unsigned long ninplace) {
   static const lco_class_t gencount_vtable = {
-    _gencount_fini,
-    _gencount_error,
-    _gencount_set,
-    _gencount_get,
-    _gencount_wait
+    .on_fini = _gencount_fini,
+    .on_error = _gencount_error,
+    .on_set = _gencount_set,
+    .on_get = _gencount_get,
+    .on_wait = _gencount_wait,
+    .on_attach = NULL,
+    .on_try_get = NULL,
+    .on_try_wait = NULL
   };
 
-  lco_init(&gencnt->lco, &gencount_vtable, 0);
+  lco_init(&gencnt->lco, &gencount_vtable);
   cvar_reset(&gencnt->oflow);
   gencnt->gen = 0;
   gencnt->ninplace = ninplace;
@@ -144,14 +147,9 @@ static void _gencount_init(_gencount_t *gencnt, unsigned long ninplace) {
     cvar_reset(&gencnt->inplace[i]);
 }
 
-static hpx_status_t _gencount_wait_gen_proxy(unsigned long *gen) {
+static HPX_ACTION(_gencount_wait_gen_proxy, unsigned long *gen) {
   hpx_addr_t target = hpx_thread_current_target();
   return hpx_lco_gencount_wait(target, *gen);
-}
-
-
-static HPX_CONSTRUCTOR void _initialize_actions(void) {
-  LIBHPX_REGISTER_ACTION(&_gencount_wait_gen_action, _gencount_wait_gen_proxy);
 }
 
 hpx_addr_t
@@ -170,8 +168,9 @@ void hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync) {
 
 hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen) {
   _gencount_t *local;
-  if (!hpx_gas_try_pin(gencnt, (void**)&local))
-    return hpx_call_sync(gencnt, _gencount_wait_gen_action, &gen, gen, NULL, 0);
+  if (!hpx_gas_try_pin(gencnt, (void**)&local)) {
+    return hpx_call_sync(gencnt, _gencount_wait_gen_proxy, NULL, 0, &gen, gen);
+  }
 
   hpx_status_t status = _gencount_wait_gen(local, gen);
   hpx_gas_unpin(gencnt);
