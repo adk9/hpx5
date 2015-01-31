@@ -15,6 +15,8 @@
 
 /// @file
 /// @brief Types and constants needed for configuring HPX at run-time.
+#include <stdint.h>
+#include <hpx/attributes.h>
 
 //! Configuration options for which global memory model to use.
 typedef enum {
@@ -135,7 +137,7 @@ static const char* const HPX_LOG_TO_STRING[] = {
 ///
 /// This configuration is used to control some of the runtime
 /// parameters for the HPX system.
-typedef struct {
+typedef struct config {
 #define LIBHPX_DECL_OPTION(group, type, ctype, id, init) ctype id;
 # include "options.def"
 #undef LIBHPX_DECL_OPTION
