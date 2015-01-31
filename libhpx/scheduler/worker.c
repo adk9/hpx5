@@ -41,7 +41,7 @@
 #include "thread.h"
 #include "termination.h"
 
-static __thread struct worker *self = NULL;
+__thread struct worker *self = NULL;
 
 
 /// The pthread entry function for dedicated worker threads.
@@ -146,7 +146,11 @@ static hpx_parcel_t *_try_bind(hpx_parcel_t *p) {
 
 /// Add a parcel to the top of the worker's work queue.
 static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
-  sync_chase_lev_ws_deque_push(&w->work, p);
+  uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
+  self->work_first = (size >= here->sched->wf_threshold);
+  if (self->work_first) {
+    log("work first %lu, %u\n", size, size >= here->sched->wf_threshold);
+  }
 }
 
 
@@ -292,12 +296,17 @@ static int _run_task(hpx_parcel_t *to, void *sp, void *env) {
 /// @returns       NULL The parcel was processed as a task.
 ///                  @p The parcel was not a task.
 static hpx_parcel_t *_try_task(hpx_parcel_t *p) {
-  if (action_is_task(here->actions, hpx_parcel_get_action(p))) {
-    void **sp = &self->sp;
-    thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
-    return NULL;
+  if (scheduler_is_shutdown(self->sched)) {
+    return p;
   }
-  return p;
+
+  if (!action_is_task(here->actions, p->action)) {
+    return p;
+  }
+
+  void **sp = &self->sp;
+  thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
+  return NULL;
 }
 
 
@@ -414,7 +423,7 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
 
 
 int worker_init(struct worker *w, struct scheduler *sched, int id, int core,
-                 unsigned seed, unsigned work_size)
+                unsigned seed, unsigned work_size)
 {
   dbg_assert(w);
   dbg_assert(sched);
@@ -432,6 +441,7 @@ int worker_init(struct worker *w, struct scheduler *sched, int id, int core,
   w->UNUSED     = 0;
   w->sp         = NULL;
   w->current    = NULL;
+  w->work_first = 0;
 
   sync_chase_lev_ws_deque_init(&w->work, work_size);
   sync_two_lock_queue_init(&w->inbox, NULL);
@@ -513,37 +523,68 @@ int worker_create(struct worker *worker) {
 
 
 void worker_join(struct worker *worker) {
-  if (worker->thread != pthread_self()) {
-    if (pthread_join(worker->thread, NULL)) {
-      dbg_error("cannot join worker thread %d.\n", worker->id);
-    }
+  dbg_assert(worker);
+
+  if (worker->thread == pthread_self()) {
+    return;
+  }
+
+  if (pthread_join(worker->thread, NULL)) {
+    dbg_error("cannot join worker thread %d.\n", worker->id);
   }
 }
 
 
 void worker_cancel(struct worker *worker) {
   dbg_assert(worker);
+  dbg_assert(worker->thread != pthread_self());
   if (pthread_cancel(worker->thread)) {
     dbg_error("cannot cancel worker thread %d.\n", worker->id);
   }
 }
 
+static int _work_first(hpx_parcel_t *to, void *sp, void *env) {
+  hpx_parcel_t *prev = self->current;
+  parcel_get_stack(prev)->sp = sp;
+  self->current = to;
+  return HPX_SUCCESS;
+}
 
 /// Spawn a user-level thread.
 void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(self);
   dbg_assert(self->id >= 0);
   dbg_assert(p);
-  dbg_assert(hpx_gas_try_pin(hpx_parcel_get_target(p), NULL)); // NULL doesn't pin
-  if (action_is_interrupt(here->actions, hpx_parcel_get_action(p))) {
-    void **sp = &self->sp;
-    thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
+  dbg_assert(hpx_gas_try_pin(hpx_parcel_get_target(p), NULL)); // NULL doesn't
+                                                               // pin
+  profile_ctr(self->stats.spawns++);
+  // don't run anything until we have started up
+  if (!self->sp) {
+    _spawn_lifo(self, p);
     return;
   }
-  profile_ctr(self->stats.spawns++);
-  _spawn_lifo(self, p);
-}
 
+  // try and run tasks eagerly
+  p = _try_task(p);
+  if (!p) {
+    return;
+  }
+
+  // if we're in help_first, or we're supposed to shutdown, buffer this parcel
+  if (!self->work_first) {
+    _spawn_lifo(self, p);
+    return;
+  }
+
+  if (scheduler_is_shutdown(self->sched)) {
+    _spawn_lifo(self, p);
+    return;
+  }
+
+  uint64_t size = sync_chase_lev_ws_deque_size(&self->work);
+  self->work_first = (size >= self->sched->wf_threshold);
+  thread_transfer(_try_bind(p), _work_first, NULL);
+}
 
 /// This is the continuation that we use to yield a thread.
 ///
