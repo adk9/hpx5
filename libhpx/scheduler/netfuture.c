@@ -519,7 +519,8 @@ _future_init(_netfuture_t *f, int size, bool shared)
     .on_wait = NULL,
     .on_attach = NULL,
     .on_try_get = NULL,
-    .on_try_wait = NULL
+    .on_try_wait = NULL,
+    .on_reset = NULL
   };
 
   lco_init(&f->lco, &vtable);
