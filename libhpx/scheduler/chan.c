@@ -229,8 +229,6 @@ static void _chan_init(_chan_t *c) {
     .on_get      = _chan_get,
     .on_wait     = _chan_wait,
     .on_attach   = NULL,
-    .on_try_get  = NULL,
-    .on_try_wait = NULL,
     .on_reset    = NULL
   };
 
