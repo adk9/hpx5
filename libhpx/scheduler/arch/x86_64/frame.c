@@ -85,9 +85,10 @@ void thread_init(ustack_t *thread, hpx_parcel_t *parcel, thread_entry_t f,
 #endif
 
   // set the stack stuff
-  thread->sp            = frame;
-  thread->next          = NULL;
-  thread->parcel        = parcel;
-  thread->tls_id        = -1;
-  thread->affinity      = -1;
+  thread->sp       = frame;
+  thread->next     = NULL;
+  thread->parcel   = parcel;
+  thread->in_lco   = NULL;
+  thread->tls_id   = -1;
+  thread->affinity = -1;
 }
