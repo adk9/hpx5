@@ -46,6 +46,21 @@ void hpx_lco_delete(hpx_addr_t lco, hpx_addr_t rsync);
 /// @param rsync an LCO to signal remote completion
 void hpx_lco_error(hpx_addr_t lco, hpx_status_t code, hpx_addr_t rsync);
 
+/// Reset an LCO.
+///
+/// This operation allows reusing a LCO by resetting its internal
+/// state. The reset operation is idempotent---resetting an already
+/// unset LCO has no effect. All pending gets/waits on a LCO must have
+/// finished before it can be reset successfully.
+///
+/// N.B. This operation does not reset/zero the data buffer associated
+/// with the LCO.
+///
+/// @param  future the global address of the future to reset.
+/// @param    sync the address of an LCO to set when the future is reset;
+///                may be HPX_NULL
+void hpx_lco_reset(hpx_addr_t future, hpx_addr_t sync);
+
 /// An action-based interface to the LCO set operation.
 extern hpx_action_t hpx_lco_set_action;
 
@@ -208,7 +223,7 @@ hpx_addr_t hpx_lco_and_new(intptr_t inputs);
 /// @param  and the global address of the "and" LCO to set.
 /// @param sync the address of an LCO to set when the "and" LCO is set;
 ///             may be HPX_NULL
-void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t sync); // async
+void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t sync);
 /// @}
 
 /// Create a future.
@@ -221,22 +236,6 @@ void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t sync); // async
 /// @param size the size in bytes of the future's value (may be 0)
 /// @returns    the glboal address of the newly allocated future
 hpx_addr_t hpx_lco_future_new(int size);
-
-/// Reset a "future" LCO.
-///
-/// This operation allows reusing a future LCO by resetting its
-/// internal state. The reset operation is idempotent---resetting an
-/// unset LCO has no effect if there are no waiting threads. To
-/// distinguish a set from a reset, waiting threads are signalled a
-/// "reset" exception before they are released.
-///
-/// N.B. This operation does not reset/zero the data buffer associated
-/// with the future.
-///
-/// @param  future the global address of the future to reset.
-/// @param    sync the address of an LCO to set when the future is reset;
-///                may be HPX_NULL
-void hpx_lco_future_reset(hpx_addr_t future, hpx_addr_t sync); // async
 /// @}
 
 /// Allocate a global array of futures.

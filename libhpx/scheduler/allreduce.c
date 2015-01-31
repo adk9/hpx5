@@ -56,7 +56,6 @@ static void _allreduce_fini(lco_t *lco) {
   libhpx_global_free(lco);
 }
 
-
 /// Handle an error condition.
 static void _allreduce_error(lco_t *lco, hpx_status_t code) {
   lco_lock(lco);
@@ -65,6 +64,14 @@ static void _allreduce_error(lco_t *lco, hpx_status_t code) {
   lco_unlock(lco);
 }
 
+static void _allreduce_reset(lco_t *lco) {
+  _allreduce_t *r = (_allreduce_t *)lco;
+  lco_lock(&r->lco);
+  dbg_assert_str(cvar_empty(&r->wait),
+                 "Reset on allreduce LCO that has waiting threads.\n");
+  cvar_reset(&r->wait);
+  lco_unlock(&r->lco);
+}
 
 /// Update the reduction, will wait if the phase is reading.
 static void _allreduce_set(lco_t *lco, int size, const void *from) {
@@ -149,14 +156,15 @@ static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
 {
   // vtable
   static const lco_class_t vtable = {
-    .on_fini = _allreduce_fini,
-    .on_error = _allreduce_error,
-    .on_set = _allreduce_set,
-    .on_attach = NULL,
-    .on_get = _allreduce_get,
-    .on_wait = _allreduce_wait,
-    .on_try_get = NULL,
-    .on_try_wait = NULL
+    .on_fini     = _allreduce_fini,
+    .on_error    = _allreduce_error,
+    .on_set      = _allreduce_set,
+    .on_attach   = NULL,
+    .on_get      = _allreduce_get,
+    .on_wait     = _allreduce_wait,
+    .on_try_get  = NULL,
+    .on_try_wait = NULL,
+    .on_reset    = _allreduce_reset
   };
 
   assert(init);
