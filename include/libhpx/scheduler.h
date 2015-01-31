@@ -40,7 +40,6 @@
 struct barrier;
 struct config;
 struct cvar;
-struct thread;
 /// @}
 
 /// Typedefs
@@ -74,7 +73,6 @@ struct scheduler {
   scheduler_stats_t     stats;
 };
 
-
 /// Allocate and initialize a new scheduler.
 ///
 /// @param       config The configuration object.
@@ -82,7 +80,6 @@ struct scheduler {
 /// @returns            The scheduler object, or NULL if there was an error.
 struct scheduler *scheduler_new(struct config *config)
   HPX_INTERNAL HPX_MALLOC;
-
 
 /// Finalize and free the scheduler object.
 ///
@@ -94,7 +91,6 @@ struct scheduler *scheduler_new(struct config *config)
 void scheduler_delete(struct scheduler *scheduler)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-
 /// Print collected statistics.
 ///
 /// The scheduler should not be running during this call.
@@ -102,7 +98,6 @@ void scheduler_delete(struct scheduler *scheduler)
 /// @param    scheduler The scheduler.
 void scheduler_dump_stats(struct scheduler *scheduler)
   HPX_INTERNAL HPX_NON_NULL(1);
-
 
 /// Starts the scheduler.
 ///
@@ -116,7 +111,6 @@ void scheduler_dump_stats(struct scheduler *scheduler)
 int scheduler_startup(struct scheduler *scheduler)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-
 /// Stops the scheduler cooperatively.
 ///
 /// This asks all of the threads to shutdown the next time they get a chance to
@@ -127,7 +121,6 @@ int scheduler_startup(struct scheduler *scheduler)
 void scheduler_shutdown(struct scheduler *scheduler, int code)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-
 /// Check to see if the scheduler was shutdown.
 ///
 /// @param    scheduler The scheduler to check.
@@ -136,7 +129,6 @@ void scheduler_shutdown(struct scheduler *scheduler, int code)
 int scheduler_is_shutdown(struct scheduler *scheduler)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-
 /// Join the scheduler at shutdown.
 ///
 /// This will wait until all of the scheduler's worker threads have shutdown.
@@ -144,7 +136,6 @@ int scheduler_is_shutdown(struct scheduler *scheduler)
 /// @param    scheduler The scheduler to join.
 void scheduler_join(struct scheduler *scheduler)
   HPX_INTERNAL HPX_NON_NULL(1);
-
 
 /// Stops the scheduler asynchronously.
 ///
@@ -155,13 +146,11 @@ void scheduler_join(struct scheduler *scheduler)
 void scheduler_abort(struct scheduler *scheduler)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-
 /// Spawn a new user-level thread for the parcel.
 ///
 /// @param    parcel The parcel to spawn.
 void scheduler_spawn(hpx_parcel_t *p)
   HPX_NON_NULL(1) HPX_INTERNAL;
-
 
 /// Yield a user-level thread.
 ///
@@ -171,7 +160,6 @@ void scheduler_spawn(hpx_parcel_t *p)
 /// the locality.
 void scheduler_yield(void)
   HPX_INTERNAL;
-
 
 /// Wait for an condition.
 ///
@@ -189,7 +177,6 @@ void scheduler_yield(void)
 hpx_status_t scheduler_wait(lockable_ptr_t *lock, struct cvar *con)
   HPX_NON_NULL(1, 2) HPX_INTERNAL;
 
-
 /// Signal a condition.
 ///
 /// The calling thread must hold the lock protecting the condition. This call is
@@ -199,7 +186,6 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, struct cvar *con)
 void scheduler_signal(struct cvar *cond)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
-
 /// Signal a condition.
 ///
 /// The calling thread must hold the lock protecting the condition. This call is
@@ -208,7 +194,6 @@ void scheduler_signal(struct cvar *cond)
 /// @param         cvar The condition we'd like to signal.
 void scheduler_signal_all(struct cvar *cvar)
   HPX_NON_NULL(1) HPX_INTERNAL;
-
 
 /// Signal an error condition.
 ///
@@ -222,15 +207,12 @@ void scheduler_signal_all(struct cvar *cvar)
 void scheduler_signal_error(struct cvar *cvar, hpx_status_t code)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
-
 /// Get the parcel bound to the current executing thread.
 hpx_parcel_t *scheduler_current_parcel(void)
   HPX_INTERNAL;
 
-
 /// Get a worker by id.
 struct worker *scheduler_get_worker(struct scheduler *sched, int id)
   HPX_NON_NULL(1) HPX_INTERNAL;
-
 
 #endif // LIBHPX_SCHEDULER_H
