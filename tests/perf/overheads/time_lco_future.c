@@ -58,7 +58,7 @@ static int _main_action(int *args) {
   value = 1234;
 
   t = hpx_time_now();
-  hpx_call(HPX_HERE, _set_value, &value, sizeof(value), done);
+  hpx_call(HPX_HERE, _set_value, done, &value, sizeof(value));
   fprintf(stdout, "Value set time: %g\n", hpx_time_elapsed_ms(t));
 
   t = hpx_time_now();
@@ -89,7 +89,7 @@ static int _main_action(int *args) {
     t = hpx_time_now();
     for (int j = 0; j < count; j++) {
       t = hpx_time_now();
-      hpx_call(HPX_HERE, _get_value, NULL, 0, futures[j]);
+      hpx_call(HPX_HERE, _get_value, futures[j], NULL, 0);
       hpx_lco_wait(futures[j]);
     }
     fprintf(stdout, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
@@ -127,9 +127,9 @@ int main(int argc, char *argv[]) {
   }
 
   // register the actions
-  HPX_REGISTER_ACTION(&_main, _main_action);
-  HPX_REGISTER_ACTION(&_set_value, action_set_value);
-  HPX_REGISTER_ACTION(&_get_value, action_get_value);
+  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(action_set_value, &_set_value);
+  HPX_REGISTER_ACTION(action_get_value, &_get_value);
 
   // run the main action
   return hpx_run(&_main, NULL, 0);

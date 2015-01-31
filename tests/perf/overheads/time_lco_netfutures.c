@@ -110,8 +110,8 @@ static int _action_main(void *args) {
     hpx_netfuture_t base = hpx_lco_netfuture_new_all(2, BUFFER_SIZE);
     args.pingpong = base;
 
-    hpx_call(HPX_HERE, _ping, &args, sizeof(args), done);
-    hpx_call(HPX_THERE(1), _pong, &args, sizeof(args), done);
+    hpx_call(HPX_HERE, _ping, done, &args, sizeof(args));
+    hpx_call(HPX_THERE(1), _pong, done, &args, sizeof(args));
 
     hpx_lco_wait(done);
     hpx_lco_delete(done, HPX_NULL);
@@ -180,8 +180,8 @@ static int _action_pong(args_t *args) {
  */
 void _register_actions(void) {
   /* register action for parcel (must be done by all ranks) */
-  HPX_REGISTER_ACTION(&_main, _action_main);
-  HPX_REGISTER_ACTION(&_ping, _action_ping);
-  HPX_REGISTER_ACTION(&_pong, _action_pong);
+  HPX_REGISTER_ACTION(_action_main, &_main);
+  HPX_REGISTER_ACTION(_action_ping, &_ping);
+  HPX_REGISTER_ACTION(_action_pong, &_pong);
 }
 

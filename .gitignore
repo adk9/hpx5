@@ -18,6 +18,7 @@
 /.deps
 /Makefile
 /Makefile.in
+/hpx.pc
 
 # /config/
 /config/*
@@ -50,32 +51,10 @@
 /examples/sendrecv
 /examples/sendrecv-chan
 /examples/pingpong-chan
-/examples/allgather
-/examples/allreduce-bench
-/examples/alltoall
 /examples/hello
 /examples/netfutures
-
-# /apps/
-/apps/miniAMR/Makefile
-/apps/miniAMR/parcels/Makefile
-/apps/mpi/Makefile
-/apps/Makefile
-/apps/fmm/Makefile
-/apps/fmm/parcels/Makefile
-/apps/lulesh/parcels/Makefile
-/apps/lulesh/parcels/luleshparcels
-/apps/lulesh/Makefile
-/apps/fmm/parcels/fmmparcels
-/apps/lulesh/mpi/luleshMPI
-/apps/miniAMR/parcels/miniamr
-/apps/mpi/hpxmpi
-/apps/lulesh/newfutures/Makefile
-/apps/lulesh/newfutures/luleshnewfutures
-/apps/libPXGL/Makefile
-/apps/libPXGL/include/Makefile
-/apps/libPXGL/examples/Makefile
-/apps/libPXGL/examples/sssp
+/examples/qsort
+/examples/call
 
 # /include/
 /include/stamp-h1
@@ -90,20 +69,11 @@
 
 # /contrib/
 contrib/Makefile
-contrib/hwloc-1.10.0/Makefile
-contrib/hwloc-1.10.0/include/Makefile
-contrib/hwloc-1.10.0/include/hwloc/autogen/config.h
-contrib/hwloc-1.10.0/include/hwloc/autogen/stamp-h3
-contrib/hwloc-1.10.0/include/private/autogen/config.h
-contrib/hwloc-1.10.0/include/private/autogen/stamp-h2
-contrib/hwloc-1.10.0/src/Makefile
-contrib/hwloc-1.10.0/src/static-components.h
-contrib/jemalloc/Makefile
-contrib/jemalloc/include/Makefile
-contrib/jemalloc/include/jemalloc/Makefile
-contrib/jemalloc/include/jemalloc/internal/Makefile
-contrib/jemalloc/src/Makefile
-
+contrib/hwloc-1.10.0/
+contrib/libffi/
+contrib/jemalloc/
+contrib/jemalloc_hpx/
+contrib/photon/
 
 # /libhpx/
 /libhpx/Makefile

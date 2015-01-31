@@ -40,8 +40,10 @@ scheduler_new(int cores, int workers, int stack_size, unsigned int backoff_max,
     return NULL;
   }
 
-  int e = posix_memalign((void**)&s->workers, HPX_CACHELINE_SIZE,
-                         workers * sizeof(s->workers[0]));
+  size_t r = HPX_CACHELINE_SIZE - sizeof(s->workers[0]) % HPX_CACHELINE_SIZE;
+  size_t padded_size = sizeof(s->workers[0]) + r;
+  size_t total = workers * padded_size;
+  int e = posix_memalign((void**)&s->workers, HPX_CACHELINE_SIZE, total);
   if (e) {
     dbg_error("could not allocate a worker array.\n");
     scheduler_delete(s);
@@ -74,11 +76,11 @@ scheduler_new(int cores, int workers, int stack_size, unsigned int backoff_max,
   scheduler_stats_init(&s->stats);
 
   thread_set_stack_size(stack_size);
-  dbg_log_sched("initialized a new scheduler.\n");
+  log_sched("initialized a new scheduler.\n");
 
   // bind a worker for this thread so that we can spawn lightweight threads
   worker_bind_self(&s->workers[0]);
-  dbg_log_sched("worker 0 ready.\n");
+  log_sched("worker 0 ready.\n");
   return s;
 }
 
@@ -170,9 +172,9 @@ void scheduler_shutdown(struct scheduler *sched, int code) {
 }
 
 
-int scheduler_running(struct scheduler *sched) {
+int scheduler_is_shutdown(struct scheduler *sched) {
   int shutdown = sync_load(&sched->shutdown, SYNC_ACQUIRE);
-  return (shutdown == INT_MAX);
+  return (shutdown != INT_MAX);
 }
 
 

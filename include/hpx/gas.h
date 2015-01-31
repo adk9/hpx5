@@ -16,8 +16,8 @@
 /// @file
 /// @brief Functions for allocating and using memory in the HPX global address
 ///        space
-
 #include "hpx/addr.h"
+
 
 /// Performs address translation.
 ///
@@ -32,20 +32,20 @@
 /// Successful pinning operations must be matched with an unpin operation, if
 /// the underlying data is ever to be moved.
 ///
-/// @param       addr the global address
-/// @param[out] local the pinned local address
-/// @returns
-///                   - true; if @p addr is local and @p local is NULL
-///                   - true; if @p addr is local and @p local is not NULL
-///                           and pin is successful
-///                   - false; if @p is not local
-///                   - false; if @p is local and @local is not NULL and pin
-///                            fails
+/// @param         addr The global address.
+/// @param[out]   local The pinned local address.
+///
+/// @returns       true If @p addr is local and @p local is NULL
+///                true If @p addr is local and @p local is not NULL and pin is
+///                       successful.
+///               false If @p is not local.
+///               false If @p is local and @local is not NULL and pin fails.
 bool hpx_gas_try_pin(const hpx_addr_t addr, void **local);
 
 
-/// Allows an address to be remapped.
-/// @param addr the address of global memory to unpin
+/// Unpin a previously pinned block.
+///
+/// @param         addr The address of global memory to unpin.
 void hpx_gas_unpin(const hpx_addr_t addr);
 
 
@@ -55,15 +55,18 @@ void hpx_gas_unpin(const hpx_addr_t addr);
 /// the calling thread, and must either be written into already-allocated global
 /// memory, or sent via a parcel, for anyone else to address the allocation.
 ///
+/// The total amount of usable memory allocated is @p n * @p bsize.
+///
 /// In UPC-land, the returned global address would have the following
 /// distribution:
 ///
 ///    shared [bytes] char foo[n * bytes];
 ///
-/// @param         n the number of localities to allocated memory at
-/// @param     bytes the number of bytes to allocate at each locality
-/// @returns         the global address of the allocated memory
-hpx_addr_t hpx_gas_global_alloc(size_t n, uint32_t bytes);
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
+///
+/// @returns            The global address of the allocated memory.
+hpx_addr_t hpx_gas_global_alloc(size_t n, uint32_t bsize);
 
 
 /// Allocate distributed global zeroed-memory.
@@ -71,24 +74,32 @@ hpx_addr_t hpx_gas_global_alloc(size_t n, uint32_t bytes);
 /// This call is similar to hpx_gas_global_alloc except that the
 /// global memory returned is set to 0.
 ///
-/// @param         n the number of localities to allocated memory at
-/// @param     bytes the number of bytes to allocate at each locality
-/// @returns         the global address of the allocated memory
-hpx_addr_t hpx_gas_global_calloc(size_t n, uint32_t bytes);
+/// The total amount of usable memory allocated is @p n * @p bsize.
+///
+/// In UPC-land, the returned global address would have the following
+/// distribution:
+///
+///    shared [bytes] char foo[n * bytes];
+///
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
+///
+/// @returns            The global address of the allocated memory.
+hpx_addr_t hpx_gas_global_calloc(size_t n, uint32_t bsize);
 
 
 /// Allocate a block of global memory.
 ///
 /// This is a non-collective call to allocate memory in the global
 /// address space that can be moved. The allocated memory, by default,
-/// has affinity to the allocating node. As it allocated in the GAS,
+/// has affinity to the allocating node, however in low memory conditions the
+/// allocated memory may not be local to the caller. As it allocated in the GAS,
 /// it is accessible from any locality, and may be relocated by the
 /// runtime.
 ///
-/// The total amount of memory allocated is bytes.
+/// @param        bytes The number of bytes to allocate.
 ///
-/// @param bytes the number of bytes per block to allocate
-/// @returns     the global address of the allocated memory
+/// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_alloc(uint32_t bytes);
 
 
@@ -97,8 +108,8 @@ hpx_addr_t hpx_gas_alloc(uint32_t bytes);
 /// This global free is asynchronous. The @p sync LCO address can be used to
 /// test for completion of the free.
 ///
-/// @param        addr The global address of the memory to free.
-/// @param       rsync An LCO we can use to detect that the free has occurred.
+/// @param         addr The global address of the memory to free.
+/// @param        rsync An LCO we can use to detect that the free has occurred.
 void hpx_gas_free(hpx_addr_t addr, hpx_addr_t rsync);
 
 
@@ -107,10 +118,10 @@ void hpx_gas_free(hpx_addr_t addr, hpx_addr_t rsync);
 /// This operation is only valid in the AGAS GAS mode. For PGAS, it is effectively
 /// a no-op.
 ///
-/// @param         src - the source address to move
-/// @param         dst - the address pointing to the target locality to move the
-///                      source address @p src to
-/// @param[out]    lco - LCO object to check to wait for the completion of move
+/// @param          src The source address to move.
+/// @param          dst The address pointing to the target locality to move the
+///                       source address @p src to.
+/// @param[out]     lco LCO object to check to wait for the completion of move.
 void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
 
 
@@ -125,14 +136,18 @@ void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
 /// addresses ranges will result in a data race with undefined behavior. Users
 /// should synchronize with some out-of-band mechanism.
 ///
-/// @param             to The local address to copy to.
-/// @param           from The global address to copy from.
-/// @param           size The size, in bytes, of the buffer to copy
-/// @param          lsync The address of a zero-sized future that can be used to
+/// @param           to The local address to copy to.
+/// @param         from The global address to copy from.
+/// @param         size The size, in bytes, of the buffer to copy
+/// @param        lsync The address of a zero-sized future that can be used to
 ///                       wait for completion of the memget.
 ///
 /// @returns HPX_SUCCESS
 int hpx_gas_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync);
+
+
+/// Synchronous interface to memget.
+int hpx_gas_memget_sync(void *to, hpx_addr_t from, size_t size);
 
 
 /// This copies data from a local buffer to a global address, asynchronously.
@@ -148,17 +163,17 @@ int hpx_gas_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync);
 ///
 /// @note A set to @p rsync implies @p lsync has also been set.
 ///
-/// @param             to The global address to copy to.
-/// @param           from The local address to copy from.
-/// @param           size The size, in bytes, of the buffer to copy
-/// @param          lsync The address of a zero-sized future that can be used to
+/// @param           to The global address to copy to.
+/// @param         from The local address to copy from.
+/// @param         size The size, in bytes, of the buffer to copy
+/// @param        lsync The address of a zero-sized future that can be used to
 ///                       wait for local completion of the memput. Once this is
 ///                       signaled the @p from buffer may be reused or freed.
-/// @param          rsync The address of a zero-sized future that can be used to
+/// @param        rsync The address of a zero-sized future that can be used to
 ///                       wait for remote completion of the memput. Once this is
 ///                       signaled the put has become globally visible.
 ///
-/// @returns HPX_SUCCESS
+/// @returns  HPX_SUCCESS
 int hpx_gas_memput(hpx_addr_t to, const void *from, size_t size,
                    hpx_addr_t lsync, hpx_addr_t rsync);
 
@@ -177,13 +192,13 @@ int hpx_gas_memput(hpx_addr_t to, const void *from, size_t size,
 /// overlapping regions will be race free, as long as no concurrent memputs or
 /// memcpys occur to that region.
 ///
-/// @param             to The global address to copy to.
-/// @param           from The global address to copy from.
-/// @param           size The size, in bytes, of the buffer to copy
-/// @param           sync The address of a zero-sized future that can be used to
+/// @param           to The global address to copy to.
+/// @param         from The global address to copy from.
+/// @param         size The size, in bytes, of the buffer to copy
+/// @param         sync The address of a zero-sized future that can be used to
 ///                       wait for completion of the memcpy.
 ///
-/// @returns HPX_OK
+/// @returns  HPX_SUCCESS
 int hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync);
 
 #endif

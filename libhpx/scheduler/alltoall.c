@@ -105,8 +105,8 @@ typedef struct {
   int offset;
 } _alltoall_get_offset_t;
 
-static hpx_action_t _alltoall_setid_action = 0;
-static hpx_action_t _alltoall_getid_action = 0;
+static HPX_ACTION_DECL(_alltoall_setid_proxy);
+static HPX_ACTION_DECL(_alltoall_getid_proxy);
 
 /// Deletes a gathering.
 static void _alltoall_fini(lco_t *lco) {
@@ -114,6 +114,9 @@ static void _alltoall_fini(lco_t *lco) {
     return;
 
   lco_lock(lco);
+  DEBUG_IF(true) {
+    lco_set_deleted(lco);
+  }
   _alltoall_t *g = (_alltoall_t *)lco;
   if (g->value)
     free(g->value);
@@ -179,8 +182,7 @@ hpx_status_t hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
 
   if (!hpx_gas_try_pin(alltoall, (void**)&local)) {
     _alltoall_get_offset_t args = {.size = size, .offset = id};
-    return hpx_call_sync(alltoall, _alltoall_getid_action, &args, sizeof(args),
-                         value, size);
+    return hpx_call_sync(alltoall, _alltoall_getid_proxy, value, size, &args, sizeof(args));
   }
 
   status = _alltoall_getid(local, id, size, value);
@@ -188,7 +190,7 @@ hpx_status_t hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
   return status;
 }
 
-static int _alltoall_getid_proxy(_alltoall_get_offset_t *args) {
+static HPX_ACTION(_alltoall_getid_proxy, _alltoall_get_offset_t *args) {
   // try and pin the alltoall LCO, if we fail, we need to resend the underlying
   // parcel to "catch up" to the moving LCO
   hpx_addr_t target = hpx_thread_current_target();
@@ -281,7 +283,7 @@ hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id, int size,
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, args_size);
     assert(p);
     hpx_parcel_set_target(p, alltoall);
-    hpx_parcel_set_action(p, _alltoall_setid_action);
+    hpx_parcel_set_action(p, _alltoall_setid_proxy);
     hpx_parcel_set_cont_target(p, rsync);
     hpx_parcel_set_cont_action(p, hpx_lco_set_action);
 
@@ -302,28 +304,19 @@ hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id, int size,
 }
 
 
-static hpx_status_t _alltoall_setid_proxy(void *args) {
+static HPX_PINNED(_alltoall_setid_proxy, void *args) {
   // try and pin the allgather LCO, if we fail, we need to resend the underlying
   // parcel to "catch up" to the moving LCO
-  hpx_addr_t target = hpx_thread_current_target();
-  _alltoall_t *g;
-  if(!hpx_gas_try_pin(target, (void **)&g))
-     return HPX_RESEND;
+  _alltoall_t *g = hpx_thread_current_local_target();
+  dbg_assert(g);
 
   // otherwise we pinned the LCO, extract the arguments from @p args and use the
   // local setid routine
   _alltoall_set_offset_t *a = args;
   size_t size = hpx_thread_current_args_size() - sizeof(_alltoall_set_offset_t);
-  hpx_status_t status = _alltoall_setid(g, a->offset, size, &a->buffer);
-  hpx_gas_unpin(target);
-  return status;
+  return _alltoall_setid(g, a->offset, size, &a->buffer);
 }
 
-
-static HPX_CONSTRUCTOR void _initialize_actions(void) {
-  LIBHPX_REGISTER_ACTION(&_alltoall_setid_action, _alltoall_setid_proxy);
-  LIBHPX_REGISTER_ACTION(&_alltoall_getid_action, _alltoall_getid_proxy);
-}
 
 static void _alltoall_set(lco_t *lco, int size, const void *from) {
   // can't call set on an alltoall
@@ -337,14 +330,17 @@ static hpx_status_t _alltoall_get(lco_t *lco, int size, void *out) {
 
 static void _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
   static const lco_class_t vtable = {
-    _alltoall_fini,
-    _alltoall_error,
-    _alltoall_set,
-    _alltoall_get,
-    _alltoall_wait
+    .on_fini = _alltoall_fini,
+    .on_error = _alltoall_error,
+    .on_set = _alltoall_set,
+    .on_get = _alltoall_get,
+    .on_wait = _alltoall_wait,
+    .on_attach = NULL,
+    .on_try_get = NULL,
+    .on_try_wait = NULL
   };
 
-  lco_init(&g->lco, &vtable, 0);
+  lco_init(&g->lco, &vtable);
   cvar_reset(&g->wait);
   g->participants = participants;
   g->count = participants;

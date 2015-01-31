@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include "hpx/hpx.h"
 #include <pthread.h>
+#include "libhpx/debug.h"
 
 #define BENCHMARK "HPX COST OF LCO SEMAPHORES"
 
@@ -12,130 +13,104 @@
 #define HEADER_FIELD_WIDTH 5
 
 static int num[] = {
-  1000000,
-  2000000,
-  3000000,
-  4000000,
-  5000000
+  100000,
+  200000,
+  300000,
+  400000,
+  500000
 };
 
-/// This file tests cost of GAS operations
-static void usage(FILE *stream) {
-  fprintf(stream, "Usage:  [options]\n"
-          "\t-h, this help display\n");
-  hpx_print_help();
-  fflush(stream);
-}
-
-static hpx_action_t _main    = 0;
-static hpx_action_t _thread1 = 0;
-static hpx_action_t _thread2 = 0;
-
-hpx_addr_t sem1, sem2;
-
-static int _thread1_action(uint32_t *args) {
-  uint32_t iter = *args;
+static int _thread1_handler(uint32_t iter, hpx_addr_t sem1, hpx_addr_t sem2) {
+  dbg_assert(sem1 != sem2);
+  dbg_assert(sem1 != hpx_thread_current_cont_target());
+  dbg_assert(sem2 != hpx_thread_current_cont_target());
   hpx_time_t t = hpx_time_now();
+  hpx_addr_t and = hpx_lco_and_new(iter);
   for (int j = 0; j < iter; j++) {
     hpx_lco_sema_p(sem1);
-    hpx_lco_sema_v(sem2);
+    hpx_lco_sema_v(sem2, and);
   }
-  fprintf(stdout, "Thread 1: %d%*g\n", iter, FIELD_WIDTH,
-              hpx_time_elapsed_ms(t));
-
+  hpx_lco_wait(and);
+  hpx_lco_delete(and, HPX_NULL);
+  printf("Thread 1: %d%*g\n", iter, FIELD_WIDTH, hpx_time_elapsed_ms(t));
   return HPX_SUCCESS;
 }
 
-static int _thread2_action(uint32_t *args) {
-  uint32_t iter = *args;
+static HPX_ACTION_DEF(DEFAULT, _thread1_handler, _thread1, HPX_UINT32, HPX_ADDR,
+                      HPX_ADDR);
+
+static int _thread2_handler(uint32_t iter, hpx_addr_t sem1, hpx_addr_t sem2) {
+  dbg_assert(sem1 != sem2);
+  dbg_assert(sem1 != hpx_thread_current_cont_target());
+  dbg_assert(sem2 != hpx_thread_current_cont_target());
+
   hpx_time_t t = hpx_time_now();
+  hpx_addr_t and = hpx_lco_and_new(iter);
   for (int j = 0; j < iter; j++) {
     hpx_lco_sema_p(sem2);
-    hpx_lco_sema_v(sem1);
+    hpx_lco_sema_v(sem1, and);
   }
-  fprintf(stdout, "Thread 2: %d%*g\n", iter, FIELD_WIDTH,
-              hpx_time_elapsed_ms(t));
-
+  hpx_lco_wait(and);
+  hpx_lco_delete(and, HPX_NULL);
+  printf("Thread 2: %d%*g\n", iter, FIELD_WIDTH, hpx_time_elapsed_ms(t));
   return HPX_SUCCESS;
 }
 
-static int _main_action(void *args) {
-  hpx_time_t t;
-  fprintf(stdout, HEADER);
+static HPX_ACTION_DEF(DEFAULT, _thread2_handler, _thread2, HPX_UINT32, HPX_ADDR,
+                      HPX_ADDR);
 
-  // Semaphore non contention test
-  fprintf(stdout, "Semaphore non contention performance\n");
-  fprintf(stdout, "%s%*s%*s\n", "# Iters " , FIELD_WIDTH, "Init time ",
-          FIELD_WIDTH, " latency (ms)");
-  for (int i = 0; i < sizeof(num)/sizeof(num[0]) ; i++) {
-    fprintf(stdout, "%d", num[i]);
+static HPX_ACTION(_main, void) {
+  printf(HEADER);
+  printf("Semaphore non contention performance\n");
+  printf("%s%*s%*s\n", "# Iters " , FIELD_WIDTH, "Init time ", FIELD_WIDTH,
+         " latency (ms)");
+
+  hpx_time_t t;
+  for (int i = 0, e = sizeof(num)/sizeof(num[0]); i < e; ++i) {
+    const int n = num[i];
+    printf("%d", n);
     t = hpx_time_now();
-    hpx_addr_t mutex = hpx_lco_sema_new(num[i]);
-    fprintf(stdout, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
+    hpx_addr_t mutex = hpx_lco_sema_new(n);
+    printf("%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
     t = hpx_time_now();
-    for (int j = 0; j < num[i]; j++) {
+    hpx_addr_t and = hpx_lco_and_new(n);
+    for (int j = 0, e = n; j < e; ++j) {
       hpx_lco_sema_p(mutex);
-      hpx_lco_sema_v(mutex);
+      hpx_lco_sema_v(mutex, and);
     }
-    fprintf(stdout, "%*g\n", FIELD_WIDTH,  hpx_time_elapsed_ms(t));
+    hpx_lco_wait(and);
+    hpx_lco_delete(and, HPX_NULL);
+    hpx_lco_delete(mutex, HPX_NULL);
+    printf("%*g\n", FIELD_WIDTH,  hpx_time_elapsed_ms(t));
   }
 
-  fprintf(stdout, "\nSemaphore contention performance\n");
-  fprintf(stdout, "%s%s%*s\n", "# Thread ID ", "Iters " , FIELD_WIDTH, "latency (ms)");
+  printf("\nSemaphore contention performance\n");
+  printf("%s%s%*s\n", "# Thread ID ", "Iters " , FIELD_WIDTH, "latency (ms)");
   // Semaphore contention test
-  for (int i = 0; i < sizeof(num)/sizeof(num[0]) ; i++) {
-    hpx_addr_t peers[] = {HPX_HERE, HPX_HERE};
-    uint32_t value = num[i];
-    int sizes[] = {sizeof(uint32_t), sizeof(uint32_t)};
-    uint32_t array[] = {0, 0};
-    void *addrs[] = {&array[0], &array[1]};
+  for (int i = 0, e = sizeof(num)/sizeof(num[0]); i < e; ++i) {
+    int value = num[i];
 
-    hpx_addr_t futures[] = {
-      hpx_lco_future_new(sizeof(uint32_t)),
-      hpx_lco_future_new(sizeof(uint32_t))
-    };
+    hpx_addr_t s1 = hpx_lco_sema_new(value);
+    hpx_addr_t s2 = hpx_lco_sema_new(value);
 
-    sem1 = hpx_lco_sema_new(num[i]);
-    sem2 = hpx_lco_sema_new(num[i]);
+    hpx_addr_t and = hpx_lco_and_new(2);
+    hpx_call(HPX_HERE, _thread1, and, &value, &s1, &s2);
+    hpx_call(HPX_HERE, _thread2, and, &value, &s1, &s2);
+    hpx_lco_wait(and);
 
-    hpx_call(peers[0], _thread1, &value, sizeof(uint32_t), futures[0]);
-    hpx_call(peers[1], _thread2, &value, sizeof(uint32_t), futures[1]);
-
-    hpx_lco_get_all(2, futures, sizes, addrs, NULL);
-
-    hpx_lco_delete(futures[0], HPX_NULL);
-    hpx_lco_delete(futures[1], HPX_NULL);
+    hpx_lco_delete(and, HPX_NULL);
+    hpx_lco_delete(s2, HPX_NULL);
+    hpx_lco_delete(s1, HPX_NULL);
   }
 
   hpx_shutdown(HPX_SUCCESS);
 }
 
-int
-main(int argc, char *argv[])
-{
-
+int main(int argc, char *argv[]) {
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return 1;
   }
-
-  int opt = 0;
-  while ((opt = getopt(argc, argv, "h?")) != -1) {
-    switch (opt) {
-     case 'h':
-      usage(stdout);
-      return 0;
-     case '?':
-     default:
-      usage(stderr);
-      return -1;
-    }
-  }
-
-  // Register the main action
-  HPX_REGISTER_ACTION(&_main, _main_action);
-  HPX_REGISTER_ACTION(&_thread1, _thread1_action);
-  HPX_REGISTER_ACTION(&_thread2, _thread2_action);
 
   // run the main action
   return hpx_run(&_main, NULL, 0);

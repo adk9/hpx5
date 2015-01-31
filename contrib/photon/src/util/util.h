@@ -3,6 +3,9 @@
 
 #include <stdbool.h>
 #include "photon.h"
+#include "config.h"
+
+#define ALIGN(s, b) (((s) + ((b) - 1)) & ~((b) - 1))
 
 typedef struct photon_dev_list_t {
   struct photon_dev_list_t *next;

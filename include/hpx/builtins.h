@@ -59,12 +59,20 @@ static inline uint32_t ceil_log2_32(uint32_t val) {
   return ((sizeof(val) * 8 - 1) - clz(val)) + (!!(val & (val - 1)));
 }
 
+static inline uint32_t ceil_log2_64(uint64_t val) {
+  return ((sizeof(val) * 8 - 1) - clzl(val)) + (!!(val & (val - 1)));
+}
+
 static inline uint32_t ceil_div_32(uint32_t num, uint32_t denom) {
   return (num / denom) + ((num % denom) ? 1 : 0);
 }
 
 static inline uint64_t ceil_div_64(uint64_t num, uint64_t denom) {
   return (num / denom) + ((num % denom) ? 1 : 0);
+}
+
+static inline int32_t max_i32(int32_t lhs, int32_t rhs) {
+  return (lhs < rhs) ? rhs : lhs;
 }
 
 #endif // HPX_BUILTINS_H

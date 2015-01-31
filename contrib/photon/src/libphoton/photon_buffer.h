@@ -5,12 +5,16 @@
 #include "config.h"
 #include "photon.h"
 
+struct photon_acct_t {
+  volatile uint64_t rcur;
+  uint32_t rloc;
+  uint32_t event_prefix;
+};
+
 typedef struct photon_buffer_internal_t {
   struct photon_buffer_t buf;
-  photon_rid request;
-  int tag;
-  int is_registered;
-  int ref_count;
+  uint16_t is_registered;
+  uint16_t ref_count;
   /* keep a reference to the registered mem handle */
   void *priv_ptr;
   int priv_size;

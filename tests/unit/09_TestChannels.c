@@ -108,8 +108,8 @@ START_TEST (test_libhpx_lco_channelSendRecv)
   }; 
 
   // Spawn the sender thread.
-  hpx_call(HPX_HERE, t09_sender, channels, sizeof(channels), done); 
-  hpx_call(HPX_HERE, t09_receiver, channels, sizeof(channels), done);
+  hpx_call(HPX_HERE, t09_sender, done, channels, sizeof(channels)); 
+  hpx_call(HPX_HERE, t09_receiver, done, channels, sizeof(channels));
   hpx_lco_wait(done);
 
   hpx_lco_delete(channels[0], HPX_NULL);
@@ -177,8 +177,8 @@ START_TEST (test_libhpx_lco_channelSendInOrder)
     hpx_lco_chan_new()
   };
 
-  hpx_call(HPX_HERE, t09_sendInOrder, channel, sizeof(channel), done);
-  hpx_call(HPX_HERE, t09_receiveInOrder, channel, sizeof(channel), done);
+  hpx_call(HPX_HERE, t09_sendInOrder, done, channel, sizeof(channel));
+  hpx_call(HPX_HERE, t09_receiveInOrder, done, channel, sizeof(channel));
   hpx_lco_wait(done);
 
   hpx_lco_delete(channel[0], HPX_NULL);
@@ -211,7 +211,7 @@ START_TEST (test_libhpx_lco_channelTryRecvEmpty)
 
   hpx_addr_t done = hpx_lco_and_new(1);
   hpx_addr_t channel = hpx_lco_chan_new();
-  hpx_call(HPX_HERE, t09_tryRecvEmpty, &channel, sizeof(channel), done);
+  hpx_call(HPX_HERE, t09_tryRecvEmpty, done, &channel, sizeof(channel));
   hpx_lco_wait(done);
   hpx_lco_delete(channel, HPX_NULL);
   hpx_lco_delete(done, HPX_NULL);
@@ -232,12 +232,12 @@ int t09_senderChannel_action(hpx_addr_t *args) {
 
   //printf("Source sending data = %"PRIu64"\n", data);
   hpx_addr_t done = hpx_lco_future_new(0);
-  hpx_addr_t addr = hpx_lco_chan_array_at(channels, 0, 1, 1);
+  hpx_addr_t addr = hpx_lco_chan_array_at(channels, 0, 8, 1);
   hpx_lco_chan_send(addr, sizeof(data), &data, done, HPX_NULL);
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
 
-  hpx_addr_t chan = hpx_lco_chan_array_at(channels, 1, 1, 1);
+  hpx_addr_t chan = hpx_lco_chan_array_at(channels, 1, 8, 1);
   hpx_lco_chan_recv(chan, NULL, (void**)&result);
   //printf("The data received by source is: = %"PRIu64"\n", *result);
   free(result);
@@ -248,14 +248,14 @@ int t09_receiverChannel_action(hpx_addr_t *args) {
   uint64_t *result;
   uint64_t data = 5678;
   hpx_addr_t channels = *args;
-  hpx_addr_t addr = hpx_lco_chan_array_at(channels, 0, 1, 1);
+  hpx_addr_t addr = hpx_lco_chan_array_at(channels, 0, 8, 1);
   hpx_lco_chan_recv(addr, NULL, (void**)&result);
   //printf("The data received by destination is: = %"PRIu64"\n", *result);
   free(result);
 
   hpx_addr_t done = hpx_lco_future_new(0);
   //printf("Destination sending data = %"PRIu64"\n", data);
-  addr = hpx_lco_chan_array_at(channels, 1, 1, 1);
+  addr = hpx_lco_chan_array_at(channels, 1, 8, 1);
   hpx_lco_chan_send(addr, sizeof(data), &data, done, HPX_NULL);
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
@@ -270,13 +270,13 @@ START_TEST (test_libhpx_lco_channelArray)
   hpx_time_t t1 = hpx_time_now();
 
   // Allocate a global array of 2 channels with block size of 1.
-  hpx_addr_t channels = hpx_lco_chan_array_new(2, 1, 1);
+  hpx_addr_t channels = hpx_lco_chan_array_new(2, 8, 1);
   hpx_addr_t completed = hpx_lco_and_new(2);
     
-  addr1 = hpx_lco_chan_array_at(channels, 0, 1, 1);
-  hpx_call(addr1, t09_senderChannel, &channels, sizeof(channels), completed);
-  addr2 = hpx_lco_chan_array_at(channels, 1, 1, 1);
-  hpx_call(addr2, t09_receiverChannel, &channels, sizeof(channels), completed);
+  addr1 = hpx_lco_chan_array_at(channels, 0, 8, 1);
+  hpx_call(addr1, t09_senderChannel, completed, &channels, sizeof(channels));
+  addr2 = hpx_lco_chan_array_at(channels, 1, 8, 1);
+  hpx_call(addr2, t09_receiverChannel, completed, &channels, sizeof(channels));
 
   hpx_lco_wait(completed);
   hpx_lco_delete(completed, HPX_NULL);

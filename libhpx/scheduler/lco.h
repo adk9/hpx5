@@ -13,8 +13,9 @@
 #ifndef LIBHPX_LCO_H
 #define LIBHPX_LCO_H
 
-#include "hpx/attributes.h"
-#include "libsync/lockable_ptr.h"
+#include <jemalloc/jemalloc_hpx.h>
+#include <hpx/attributes.h>
+#include <libsync/lockable_ptr.h>
 
 /// ----------------------------------------------------------------------------
 /// This constant is used to determine when a set should be performed
@@ -27,7 +28,7 @@ typedef union {
   lockable_ptr_t       lock;
   const lco_class_t *vtable;
   uintptr_t            bits;
-} lco_t;
+} lco_t HPX_ALIGNED(16);
 
 /// ----------------------------------------------------------------------------
 /// The LCO abstract class interface.
@@ -44,19 +45,21 @@ typedef void (*lco_set_t)(lco_t *lco, int size, const void *value);
 typedef void (*lco_error_t)(lco_t *lco, hpx_status_t code);
 typedef hpx_status_t (*lco_get_t)(lco_t *lco, int size, void *value);
 typedef hpx_status_t (*lco_wait_t)(lco_t *lco);
+typedef hpx_status_t (*lco_attach_t)(lco_t *lco, hpx_parcel_t *p);
 typedef hpx_status_t (*lco_try_get_t)(lco_t *lco, int size, void *value, hpx_time_t time);
 typedef hpx_status_t (*lco_try_wait_t)(lco_t *lco, hpx_time_t time);
 
 
 struct lco_class {
-  lco_fini_t   on_fini;
-  lco_error_t on_error;
-  lco_set_t     on_set;
-  lco_get_t     on_get;
-  lco_wait_t   on_wait;
-  lco_try_get_t on_try_get;
+  lco_fini_t         on_fini;
+  lco_error_t       on_error;
+  lco_set_t           on_set;
+  lco_attach_t     on_attach;
+  lco_get_t           on_get;
+  lco_wait_t         on_wait;
+  lco_try_get_t   on_try_get;
   lco_try_wait_t on_try_wait;
-};
+} HPX_ALIGNED(16);
 
 // -----------------------------------------------------------------------------
 // LCO operations merely operate on the bits of an lco vtable pointer.
@@ -69,7 +72,6 @@ struct lco_class {
 const lco_class_t *lco_lock(lco_t *lco)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-
 /// Unlock an LCO.
 ///
 /// The calling thread must currently hold the LCO's lock.
@@ -78,25 +80,27 @@ const lco_class_t *lco_lock(lco_t *lco)
 void lco_unlock(lco_t* lco)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-
 /// Initialize an LCO vtable pointer.
 ///
 /// @param           lco The pointer to initialize
 /// @param         class The class pointer for this LCO instance
-/// @param          user Non-zero to set the user state during initialization
-HPX_INTERNAL void lco_init(lco_t *lco, const lco_class_t *class, uintptr_t user)
-  HPX_NON_NULL(1,2);
+void lco_init(lco_t *lco, const lco_class_t *class)
+  HPX_INTERNAL HPX_NON_NULL(1,2);
 
+/// Finalize an LCO vtable pointer.
+///
+/// @param           lco The pointer to finalize.
+void lco_fini(lco_t *lco)
+  HPX_INTERNAL HPX_NON_NULL(1);
 
-/// Set the user state bit to one.
+/// Set the deleted state bit to one.
 ///
 /// This operation does not acquire the LCO lock---the caller must lock the
 /// pointer first if this could occur concurrently.
 ///
 /// @param           lco The LCO to reset.
-void lco_set_user(lco_t *lco)
-  HPX_INTERNAL;
-
+void lco_set_deleted(lco_t *lco)
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Resets the user state bit to zero.
 ///
@@ -105,8 +109,7 @@ void lco_set_user(lco_t *lco)
 ///
 /// @param           lco The LCO to reset.
 void lco_reset_user(lco_t *lco)
-  HPX_INTERNAL;
-
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Get the user state bit.
 ///
@@ -116,8 +119,7 @@ void lco_reset_user(lco_t *lco)
 /// @param           lco The LCO to read.
 /// @returns Non-zero if the user state bit is set, zero otherwise
 uintptr_t lco_get_user(const lco_t *lco)
-  HPX_INTERNAL;
-
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Set the triggered state to true.
 ///
@@ -126,8 +128,7 @@ uintptr_t lco_get_user(const lco_t *lco)
 ///
 /// @param           lco The LCO to trigger.
 void lco_set_triggered(lco_t *lco)
-  HPX_INTERNAL;
-
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Reset the triggered state to false.
 ///
@@ -136,8 +137,7 @@ void lco_set_triggered(lco_t *lco)
 ///
 /// @param           lco The LCO to trigger.
 void lco_reset_triggered(lco_t *lco)
-  HPX_INTERNAL;
-
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Get the triggered state.
 ///
@@ -148,9 +148,6 @@ void lco_reset_triggered(lco_t *lco)
 ///
 /// @returns Non-zero if the triggered bit is set, zero otherwise.
 uintptr_t lco_get_triggered(const lco_t *lco)
-  HPX_INTERNAL;
-
-void lco_future_set(lco_t *lco, int size, const void *from) 
-  HPX_INTERNAL;
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 #endif // LIBHPX_LCO_H

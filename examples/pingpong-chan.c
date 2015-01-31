@@ -60,7 +60,7 @@ static int _pinger_action(hpx_addr_t *chans) {
       free(rbuf);
     }
     double elapsed = hpx_time_elapsed_ms(start);
-    printf("Size %lu, Latency: %g\n", size, elapsed/(1.0 * _loop));
+    printf("Size %zu, Latency: %g\n", size, elapsed/(1.0 * _loop));
   }
   return HPX_SUCCESS;
 }
@@ -98,8 +98,8 @@ static int _main_action(void *args) {
   };
 
   // spawn the pinger and ponger threads.
-  hpx_call(HPX_HERE, _pinger, chans, sizeof(chans), done);
-  hpx_call(HPX_HERE, _ponger, chans, sizeof(chans), done);
+  hpx_call(HPX_HERE, _pinger, done, chans, sizeof(chans));
+  hpx_call(HPX_HERE, _ponger, done, chans, sizeof(chans));
   hpx_lco_wait(done);
 
   hpx_lco_delete(chans[0], HPX_NULL);
@@ -142,8 +142,8 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  HPX_REGISTER_ACTION(&_main, _main_action);
-  HPX_REGISTER_ACTION(&_pinger, _pinger_action);
-  HPX_REGISTER_ACTION(&_ponger, _ponger_action);
+  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(_pinger_action, &_pinger);
+  HPX_REGISTER_ACTION(_ponger_action, &_ponger);
   return hpx_run(&_main, NULL, 0);
 }

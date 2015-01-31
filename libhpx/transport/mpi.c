@@ -22,6 +22,7 @@
 
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/transport.h"
 #include "progress.h"
@@ -98,7 +99,7 @@ static void _mpi_delete(transport_class_t *transport) {
 /// ----------------------------------------------------------------------------
 static int _mpi_pin(transport_class_t *transport, const void* buffer,
                     size_t len) {
-  return 0;
+  return LIBHPX_OK;
 }
 
 
@@ -115,7 +116,7 @@ static void _mpi_unpin(transport_class_t *transport, const void* buffer,
 static int _mpi_put(transport_class_t *t, int dest, const void *data, size_t n,
                     void *rbuffer, size_t rn, void *rid, void *r)
 {
-  dbg_log_trans("mpi: put unsupported.\n");
+  log_trans("mpi: put unsupported.\n");
   return HPX_SUCCESS;
 }
 
@@ -125,7 +126,7 @@ static int _mpi_put(transport_class_t *t, int dest, const void *data, size_t n,
 static int _mpi_get(transport_class_t *t, int dest, void *buffer, size_t n,
                     const void *rdata, size_t rn, void *rid, void *r)
 {
-  dbg_log_trans("mpi: get unsupported.\n");
+  log_trans("mpi: get unsupported.\n");
   return HPX_SUCCESS;
 }
 
@@ -140,7 +141,7 @@ static int _mpi_send(transport_class_t *t, int dest, const void *data, size_t n,
   void *b = (void*)data;
   int e = MPI_Isend(b, n, MPI_BYTE, dest, here->rank, MPI_COMM_WORLD, r);
   if (e != MPI_SUCCESS)
-    return dbg_error("mpi: could not send %lu bytes to %i.\n", n, dest);
+    return dbg_error("mpi: could not send %zu bytes to %i.\n", n, dest);
   return HPX_SUCCESS;
 }
 
@@ -192,7 +193,7 @@ static int _mpi_recv(transport_class_t *t, int src, void* buffer, size_t n, void
 
   int e = MPI_Irecv(buffer, n, MPI_BYTE, src, src, MPI_COMM_WORLD, r);
   if (e != MPI_SUCCESS)
-    return dbg_error("mpi: could not receive %lu bytes from %i.\n", n, src);
+    return dbg_error("mpi: could not receive %zu bytes from %i.\n", n, src);
 
   return HPX_SUCCESS;
 }
@@ -239,7 +240,7 @@ transport_class_t *transport_new_mpi(uint32_t send_limit, uint32_t recv_limit) {
         MPI_SUCCESS)
       return NULL;
 
-    dbg_log_trans("mpi: thread_support_provided = %d\n", threading);
+    log_trans("mpi: thread_support_provided = %d\n", threading);
   }
 
   mpi_t *mpi = malloc(sizeof(*mpi));

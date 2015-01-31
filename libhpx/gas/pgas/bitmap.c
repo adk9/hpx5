@@ -123,6 +123,8 @@ static inline block_t _create_mask(uint32_t offset, uint32_t length) {
 ///
 struct bitmap {
   tatas_lock_t      lock;
+  uint32_t     min_align;
+  uint32_t    base_align;
   uint32_t           min;
   uint32_t           max;
   uint32_t         nbits;
@@ -191,7 +193,7 @@ static uint32_t _match(const block_t *blocks, uint32_t bit, uint32_t nbits,
 static uint32_t _first_free(const block_t *blocks, uint32_t bit, uint32_t max) {
   assert(blocks);
   assert(bit < max);
-  dbg_log_gas("finding the first free bit during allocation\n");
+  log_gas("finding the first free bit during allocation\n");
 
   uint32_t  block = bit / BLOCK_BITS;
   uint32_t offset = bit % BLOCK_BITS;
@@ -278,14 +280,14 @@ static void _clear(block_t *blocks, uint32_t bit, uint32_t nbits) {
 
 
 /// Count the number of unused blocks in the bitmap.
-static uint32_t _bitmap_unused_blocks(const bitmap_t *map) {
+static int32_t _bitmap_unused_blocks(const bitmap_t *map) {
   uint32_t unused = 0;
-  for (uint32_t i = 0, e = map->nblocks; i < e; ++i)
+  for (uint32_t i = 0, e = map->nblocks; i < e; ++i) {
     unused += block_popcount(map->blocks[i]);
+  }
 
   uint32_t extra = BLOCK_BITS - (map->nbits % BLOCK_BITS);
-  assert(unused >= extra);
-  return (unused - extra);
+  return (int32_t)(unused - extra);
 }
 
 
@@ -293,11 +295,12 @@ static uint32_t _bitmap_unused_blocks(const bitmap_t *map) {
 ///
 /// @param          map The map that is full.
 /// @param        nbits The request size that triggered the OOM.
-/// @param        align The alignment that triggered the OOM.
+/// @param         bias The alignment that triggered OOM.
+/// @param       period The period that triggered the OOM.
 ///
 /// @returns LIBHPX_ENOMEM
 static int _bitmap_oom(const bitmap_t *map, uint32_t nbits, uint32_t align) {
-  uint32_t unused = _bitmap_unused_blocks(map);
+  int32_t unused = _bitmap_unused_blocks(map);
   dbg_error("Application ran out of global address space.\n"
             "\t-%u blocks requested with alignment %u\n"
             "\t-%u blocks available\n"
@@ -309,7 +312,7 @@ static int _bitmap_oom(const bitmap_t *map, uint32_t nbits, uint32_t align) {
 }
 
 
-bitmap_t *bitmap_new(uint32_t nbits) {
+bitmap_t *bitmap_new(uint32_t nbits, uint32_t min_align, uint32_t base_align) {
   uint32_t nblocks = ceil_div_32(nbits, BLOCK_BITS);
   bitmap_t *map = NULL;
   int e = posix_memalign((void**)&map, HPX_CACHELINE_SIZE,
@@ -318,25 +321,29 @@ bitmap_t *bitmap_new(uint32_t nbits) {
     dbg_error("failed to allocate a bitmap for %u bits\n", nbits);
 
   sync_tatas_init(&map->lock);
-  map->min     = 0;
-  map->max     = nbits;
-  map->nbits   = nbits;
-  map->nblocks = nblocks;
+  map->min_align  = min_align;
+  map->base_align = base_align;
+  map->min        = 0;
+  map->max        = nbits;
+  map->nbits      = nbits;
+  map->nblocks    = nblocks;
   memset(&map->blocks, BLOCK_ALL_FREE, nblocks * BLOCK_BYTES);
   return map;
 }
 
 
 void bitmap_delete(bitmap_t *map) {
-  if (map)
+  if (map) {
     free(map);
+  }
 }
 
 
 int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i) {
-  dbg_log_gas("searching for %u blocks with alignment %u.\n", nbits, align);
-  if (nbits == 0)
+  log_gas("searching for %u blocks with alignment %u.\n", nbits, align);
+  if (nbits == 0) {
     return LIBHPX_EINVAL;
+  }
 
   uint32_t bit;
   sync_tatas_acquire(&map->lock);
@@ -344,28 +351,34 @@ int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i) {
     // scan for a match, starting with the minimum available bit
     bit = map->min;
     while (true) {
-      // only test properly aligned offsets
-      uint32_t r = (align - bit % align) % align;
-      bit = bit + r;
+      // crazy way of finding an aligned bit
+      uint64_t val = bit * (1ul << map->min_align) + (1ul << map->base_align);
+      uint32_t max = ctzl(val);
+      while (align > max) {
+        bit += 1;
+        val = bit * (1ul << map->min_align) + (1ul << map->base_align);
+        max = ctzl(val);
+      }
 
       // make sure the match is inbounds
-      if (bit + nbits > map->max)
+      if (bit + nbits > map->max) {
         return _bitmap_oom(map, nbits, align);
+      }
 
       uint32_t matched = _match(map->blocks, bit, nbits, block_ils);
-      if (matched == nbits)
+      if (matched == nbits) {
         break;
+      }
 
       bit = _first_free(map->blocks, bit + matched, map->nbits);
     }
 
-    // make sure we got an aligned match and we didn't run out of memory
-    assert(bit % align == 0);
+    // make sure we didn't run out of memory
     assert(bit + nbits < map->max);
 
     if (map->min == bit) {
       uint32_t min = bit + nbits;
-      dbg_log_gas("updated minimum free bit from %u to %u\n", map->min, min);
+      log_gas("updated minimum free bit from %u to %u\n", map->min, min);
       map->min = min;
     }
 
@@ -373,10 +386,11 @@ int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i) {
   }
   sync_tatas_release(&map->lock);
 
-  dbg_log_gas("found at offset %u.\n", bit);
+  log_gas("found at offset %u.\n", bit);
 
-  if (i)
+  if (i) {
     *i = bit;
+  }
 
   return LIBHPX_OK;
 }
@@ -384,7 +398,8 @@ int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i) {
 
 int bitmap_rreserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i)
 {
-  dbg_log_gas("reverse search for %u blocks aligned to %u.\n", nbits, align);
+  log_gas("reverse search for %u blocks with alignment %u.\n", nbits,
+              align);
   if (nbits == 0)
     return LIBHPX_EINVAL;
 
@@ -398,31 +413,40 @@ int bitmap_rreserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i)
     while (matched != nbits) {
       assert(matched <= nbits);
 
+      // shift down by the number of bits we matched in the last round
       uint32_t shift = nbits - matched;
-      if (shift > bit)
+      if (bit < shift) {
         return _bitmap_oom(map, nbits, align);
+      }
 
       bit = bit - shift;
 
-      uint32_t r = bit % align;
-      if (r > bit)
+      // compute the closest aligned bit to the shifted bit
+      uint64_t val = bit * (1ul << map->min_align) + (1ul << map->base_align);
+      uint32_t max = ctzl(val);
+      while (align > max) {
+        if (bit == 0) {
+          return _bitmap_oom(map, nbits, align);
+        }
+        bit -= 1;
+        val = bit * (1ul << map->min_align) + (1ul << map->base_align);
+        max = ctzl(val);
+      }
+
+      if (bit < map->min) {
         return _bitmap_oom(map, nbits, align);
+      }
 
-      bit = bit - r;
-
-      if (bit < map->min)
-        return _bitmap_oom(map, nbits, align);
-
+      // see how far we can match
       matched = _match(map->blocks, bit, nbits, block_ifs);
     }
 
-    // make sure we got an aligned match and we didn't run out of memory
-    assert(bit % align == 0);
+    // make sure we didn't run out of memory
     assert(bit + nbits <= map->max);
 
     uint32_t max = bit + nbits;
     if (map->max == max) {
-      dbg_log_gas("updated maximum bit from %u to %u\n", map->max, bit);
+      log_gas("updated maximum bit from %u to %u\n", map->max, bit);
       map->max = bit;
     }
 
@@ -430,30 +454,31 @@ int bitmap_rreserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i)
   }
   sync_tatas_release(&map->lock);
 
-  dbg_log_gas("found at offset %u.\n", bit);
+  log_gas("found at offset %u.\n", bit);
 
-  if (i)
+  if (i) {
     *i = bit;
+  }
 
   return LIBHPX_OK;
 }
 
 
 void bitmap_release(bitmap_t *map, uint32_t bit, uint32_t nbits) {
-  dbg_log_gas("release %u blocks at %u.\n", nbits, bit);
+  log_gas("release %u blocks at %u.\n", nbits, bit);
 
   sync_tatas_acquire(&map->lock);
   {
     _clear(map->blocks, bit, nbits);
 
     if (bit < map->min) {
-      dbg_log_gas("updated minimum free bit from %u to %u\n", map->min, bit);
+      log_gas("updated minimum free bit from %u to %u\n", map->min, bit);
       map->min = bit;
     }
 
     uint32_t max = bit + nbits;
     if (max > map->max) {
-      dbg_log_gas("updated maximum bit from %u to %u\n", map->max, max);
+      log_gas("updated maximum bit from %u to %u\n", map->max, max);
       map->max = max;
     }
   }
@@ -463,7 +488,8 @@ void bitmap_release(bitmap_t *map, uint32_t bit, uint32_t nbits) {
 
 bool bitmap_is_set(const bitmap_t *map, uint32_t bit, uint32_t nbits) {
   assert(map);
-  assert(bit + nbits <= map->nbits);
+  dbg_assert_str(bit + nbits <= map->nbits,
+                 "query out of range, %d + %d > %d\n", bit, nbits, map->nbits);
 
   uint32_t  block = bit / BLOCK_BITS;
   uint32_t offset = bit % BLOCK_BITS;

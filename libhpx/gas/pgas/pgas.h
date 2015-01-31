@@ -52,15 +52,15 @@ typedef struct {
 
 
 /// Asynchronous entry point for alloc.
-extern hpx_action_t pgas_cyclic_alloc;
+extern HPX_ACTION_DECL(pgas_cyclic_alloc);
 
 
 /// Asynchronous entry point for calloc.
-extern hpx_action_t pgas_cyclic_calloc;
+extern HPX_ACTION_DECL(pgas_cyclic_calloc);
 
 
 /// Asynchronous entry point for free.
-extern hpx_action_t pgas_free;
+extern HPX_ACTION_DECL(pgas_free);
 
 
 /// Synchronous entry point for alloc.

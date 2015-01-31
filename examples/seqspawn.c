@@ -46,7 +46,7 @@ static int _main_action(int *args) {
   hpx_addr_t and = hpx_lco_and_new(n);
   hpx_time_t now = hpx_time_now();
   for (int i = 0; i < n; i++)
-    hpx_call(HPX_HERE, _nop, 0, 0, and);
+    hpx_call(HPX_HERE, _nop, and, 0, 0);
   hpx_lco_wait(and);
   double elapsed = hpx_time_elapsed_ms(now)/1e3;
   hpx_lco_delete(and, HPX_NULL);
@@ -92,8 +92,8 @@ int main(int argc, char *argv[]) {
   }
 
   // register the actions
-  HPX_REGISTER_ACTION(&_nop, _nop_action);
-  HPX_REGISTER_ACTION(&_main, _main_action);
+  HPX_REGISTER_ACTION(_nop_action, &_nop);
+  HPX_REGISTER_ACTION(_main_action, &_main);
 
   // run the main action
   return hpx_run(&_main, &n, sizeof(n));

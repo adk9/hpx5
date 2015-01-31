@@ -29,6 +29,10 @@
 /// @returns the global address of the thread's target
 hpx_addr_t hpx_thread_current_target(void);
 
+/// Get the action that the current thread is executing.
+/// @returns the action ID of the current thread
+hpx_action_t hpx_thread_current_action(void);
+
 /// Get the address of the continuation for the current thread
 /// @returns the address of the current thread's continuation
 hpx_addr_t hpx_thread_current_cont_target(void);

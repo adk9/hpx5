@@ -38,11 +38,13 @@ struct photon_config_t {
     char **forwarder_eids;
   } forwarder;
 
-  struct {                  // Various buffer and message sizes (set -1 for defaults)
-    int eager_buf_size;     // Size of eager buffer per rank in bytes (default 128k, set 0 to disable)
+  struct {                  // Various buffer and message sizes (-1 for defaults)
+    int eager_buf_size;     // Size of eager buffer per rank in bytes (default 128K, set 0 to disable)
     int small_msg_size;     // Messages <= bytes will use eager buffers (default 8192, set 0 to disable)
     int small_pwc_size;     // Messages <= bytes will be coalesced in PWC (default 8192, set 0 to disable)
     int ledger_entries;     // The number of ledger entries (default 64)
+    int max_rd;             // Max number of request descriptors, power of 2 (default 1M, set 0 for unbounded)
+    int default_rd;         // Initial number of request descriptors allocated per peer (default 1024)
   } cap;
 
   struct {
@@ -94,7 +96,6 @@ struct photon_buffer_priv_t {
 struct photon_buffer_t {
   uintptr_t addr;
   uint64_t size;
-  uint64_t offset;
   struct photon_buffer_priv_t priv;
 };
 
@@ -107,7 +108,8 @@ typedef struct photon_buffer_t      * photonBuffer;
 #define PHOTON_OK              0x0000
 #define PHOTON_ERROR_NOINIT    0x0001
 #define PHOTON_ERROR           0x0002
-#define PHOTON_SHUTDOWN        0x0004
+#define PHOTON_ERROR_RESOURCE  0x0004
+#define PHOTON_SHUTDOWN        0x0008
 
 #define PHOTON_EXCH_TCP        0x0000
 #define PHOTON_EXCH_MPI        0x0001
@@ -119,10 +121,9 @@ typedef struct photon_buffer_t      * photonBuffer;
 #define PHOTON_RECV_LEDGER     0x0001
 
 #define PHOTON_REQ_NIL         0x0000
-#define PHOTON_REQ_USERID      0x0001
-#define PHOTON_REQ_NO_CQE      0x0002
-#define PHOTON_REQ_ONE_CQE     0x0004
-#define PHOTON_REQ_COMPLETED   0x0008
+#define PHOTON_REQ_COMPLETED   0x0001  // explitily set a request completed for FIN
+#define PHOTON_REQ_PWC_NO_LCE  0x0002  // don't return a local rid (pwc-specific)
+#define PHOTON_REQ_PWC_NO_RCE  0x0004  // don't send a remote rid (pwc-specific)
 
 #define PHOTON_AMO_FADD        0x0001
 #define PHOTON_AMO_CSWAP       0x0002
@@ -170,6 +171,8 @@ int photon_post_os_getv_direct(int proc, void *ptr[], uint64_t size[], photonBuf
 // RDMA with completion
 // If @p ptr is NULL, then only completion value in @p remote is sent
 // The remote buffer is specified in @p rptr and the rkey in @p priv
+// The default behavior is to enable all CQ events and local and
+// remote rids from probe_completion() (flags=PHOTON_REQ_NIL {0})
 int photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
                                photon_rid local, photon_rid remote, int flags);
 int photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,

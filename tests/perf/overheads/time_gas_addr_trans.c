@@ -22,11 +22,11 @@ static hpx_action_t _main = 0;
 #define FIELD_WIDTH 20
 
 static int num[] = {
-  1000000,
-  2000000,
-  3000000,
-  4000000,
-  5000000
+  10000,
+  20000,
+  30000,
+  40000,
+  50000
 };
 
 static int _address_translation_action(void* args) {
@@ -67,7 +67,7 @@ static int _main_action(void *args) {
     hpx_addr_t completed = hpx_lco_and_new(num[i]);
     now = hpx_time_now();
     for (int j = 0; j < num[i]; j++)
-      hpx_call(local, _address_translation, 0 , 0, completed);
+      hpx_call(local, _address_translation, completed, 0, 0);
     elapsed = hpx_time_elapsed_ms(now)/1e3;
     hpx_lco_wait(completed);
     fprintf(stdout, "%*.7f", FIELD_WIDTH,  elapsed);
@@ -78,7 +78,7 @@ static int _main_action(void *args) {
     hpx_addr_t done = hpx_lco_and_new(num[i]);
     now = hpx_time_now();
     for (int j = 0; j < num[i]; j++)
-      hpx_call(global, _address_translation, 0 , 0, done);
+      hpx_call(global, _address_translation, done, 0, 0);
     elapsed = hpx_time_elapsed_ms(now)/1e3;
     hpx_lco_wait(done);
     fprintf(stdout, "%*.7f", FIELD_WIDTH,  elapsed);
@@ -89,7 +89,7 @@ static int _main_action(void *args) {
     hpx_addr_t and = hpx_lco_and_new(num[i]);
     now = hpx_time_now();
     for (int j = 0; j < num[i]; j++)
-      hpx_call(callocMem, _address_translation, 0 , 0, and);
+      hpx_call(callocMem, _address_translation, and, 0, 0);
     elapsed = hpx_time_elapsed_ms(now)/1e3;
     hpx_lco_wait(and);
     fprintf(stdout, "%*.7f", FIELD_WIDTH,  elapsed);
@@ -122,8 +122,8 @@ main(int argc, char *argv[]) {
   }
 
   // register the actions
-  HPX_REGISTER_ACTION(&_address_translation, _address_translation_action);
-  HPX_REGISTER_ACTION(&_main, _main_action);
+  HPX_REGISTER_ACTION(_address_translation_action, &_address_translation);
+  HPX_REGISTER_ACTION(_main_action, &_main);
 
   // run the main action
   return hpx_run(&_main, NULL, 0);

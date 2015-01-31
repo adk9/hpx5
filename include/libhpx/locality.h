@@ -27,7 +27,6 @@
 /// wrap common functionality that needs access to the global here object.
 
 #include <hpx/hpx.h>
-#include <jemalloc/jemalloc.h>
 #include <hwloc.h>
 
 #include "libhpx/action.h"
@@ -68,8 +67,12 @@ typedef struct {
   struct scheduler            *sched;
   hpx_config_t               *config;
   const struct action_table *actions;
-  libhpx_hwloc_topology_t   topology;
-} locality_t;
+  hwloc_topology_t          topology;
+} locality_t
+#ifdef __ARMEL__
+HPX_ALIGNED(8)
+#endif
+;
 
 
 /// Inter-locality action interface.

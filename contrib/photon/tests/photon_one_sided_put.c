@@ -65,10 +65,6 @@ START_TEST(test_rdma_one_sided_put_direct)
     }
   }
 
-  // clear the FIN event to avoid it being reaped in later tests
-  int ret_proc;
-  photon_rid req;
-  photon_wait_any(&ret_proc, &req);
   photon_wait(recvReq);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -94,9 +90,9 @@ START_TEST (test_rdma_one_sided_put_direct_array)
 {
   struct photon_buffer_t rbuf[ARRAY_SIZE];
 
-  photon_rid recvReq[ARRAY_SIZE], sendReq[ARRAY_SIZE], request;
+  photon_rid recvReq[ARRAY_SIZE], sendReq[ARRAY_SIZE], directReq[ARRAY_SIZE];
   char *send[ARRAY_SIZE], *recv[ARRAY_SIZE];
-  int rank, size, prev, next, i, j, ret_proc;
+  int rank, size, prev, next, i, j;
 
   fprintf(detailed_log, "Starting the photon vectored RDMA one sided put test\n");
 
@@ -124,29 +120,37 @@ START_TEST (test_rdma_one_sided_put_direct_array)
   // everyone posts their send buffers to their next rank
   for (i = 0; i < ARRAY_SIZE; i++) {
     photon_post_recv_buffer_rdma(next, recv[i], PHOTON_SEND_SIZE, PHOTON_TAG, &recvReq[i]);
-    photon_wait_any(&ret_proc, &request);
     photon_wait_recv_buffer_rdma(prev, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq[i]);
     photon_get_buffer_remote(sendReq[i], &rbuf[i]);
-    photon_post_os_put_direct(prev, send[i], PHOTON_SEND_SIZE, &rbuf[i], 0, &sendReq[i]);
-    photon_send_FIN(sendReq[i], prev, 0);
+    photon_post_os_put_direct(prev, send[i], PHOTON_SEND_SIZE, &rbuf[i], 0, &directReq[i]);
   }
 
-
-  int flag;
-  photon_rid req[ARRAY_SIZE];
   for (i = 0; i < ARRAY_SIZE; i++) {
-    int send_comp = 0;
-    while (send_comp) {
-      int rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &req[i], PHOTON_PROBE_ANY);
-      if (rc != PHOTON_OK)
-        continue;  // no events
-      if (flag) {
-        if (req[i] == PHOTON_TAG)
-          send_comp--;
+    while (1) {
+      int flag, type;
+      struct photon_status_t stat;
+      int tst = photon_test(directReq[i], &flag, &type, &stat);
+      if( tst < 0 ) {
+	fprintf(detailed_log,"%d: An error occured in photon_test(recv)\n", rank);
+	exit(-1);
+      }
+      else if( tst > 0 ) {
+	fprintf(detailed_log,"%d: That shouldn't have happened in this code\n", rank);
+	exit(0);
+      }
+      else {
+	if (flag > 0) {
+	  fprintf(detailed_log,"%d: put(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
+	  photon_send_FIN(sendReq[i], prev, PHOTON_REQ_COMPLETED);
+	  break;
+	}
       }
     }
   }
- 
+
+  for (i = 0; i < ARRAY_SIZE; i++) {
+    photon_wait(recvReq[i]);
+  }
 
   MPI_Barrier(MPI_COMM_WORLD);
   for (i = 0; i < ARRAY_SIZE; i++) {

@@ -134,7 +134,7 @@ struct arena_chunk_map_misc_s {
 	 */
 	rb_node(arena_chunk_map_misc_t)		rb_link;
 
-	__extension__ union {
+	union {
 		/* Linkage for list of dirty runs. */
 		ql_elm(arena_chunk_map_misc_t)	dr_link;
 
@@ -263,8 +263,7 @@ struct arena_s {
 	/*
 	 * There are three classes of arena operations from a locking
 	 * perspective:
-	 * 1) Thread asssignment (modifies nthreads) is protected by
-	 *    arenas_lock.
+	 * 1) Thread assignment (modifies nthreads) is protected by arenas_lock.
 	 * 2) Bin-related operations are protected by bin locks.
 	 * 3) Chunk- and run-related operations are protected by this mutex.
 	 */
@@ -314,7 +313,7 @@ struct arena_s {
 	arena_chunk_miscelms_t	runs_dirty;
 
 	/*
-	 * user-configureable chunk allocation and deallocation functions.
+	 * User-configurable chunk allocation and deallocation functions.
 	 */
 	chunk_alloc_t		*chunk_alloc;
 	chunk_dalloc_t		*chunk_dalloc;

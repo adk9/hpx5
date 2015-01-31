@@ -22,7 +22,7 @@
 #include <errno.h>
 
 #include <hpx/builtins.h>
-#include <jemalloc/jemalloc.h>
+#include <jemalloc/jemalloc_hpx.h>
 #include <valgrind/valgrind.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
@@ -117,7 +117,11 @@ static size_t _alignment(void) {
   }
   else
 #endif
+  #if defined(__ARMEL__)
+    return 8;
+  #else
     return 16;
+  #endif
 }
 
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {

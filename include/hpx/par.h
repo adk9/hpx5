@@ -73,4 +73,12 @@ int hpx_par_call_sync(hpx_action_t action,
                      const size_t env_size,
                      const void *env);
 
+int hpx_count_range_call(hpx_action_t action,
+			 const hpx_addr_t addr,
+			 const size_t count,
+			 const size_t increment,
+			 const uint32_t bsize,
+			 const size_t arg_size,
+			 void *const arg);
+
 #endif // HPX_PAR_H

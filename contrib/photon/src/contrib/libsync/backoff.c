@@ -16,7 +16,7 @@
 #include "config.h"
 #endif
 
-#include "include/backoff.h"
+#include "libsync/backoff.h"
 #include "nop.h"
 
 

@@ -10,6 +10,7 @@
 #include <semaphore.h>
 #include <sched.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <assert.h>
@@ -29,7 +30,7 @@
 
 #define PHOTON_BUF_SIZE (1024*64) // 64k
 #define PHOTON_TAG UINT32_MAX
-#define SQ_SIZE 10
+#define SQ_SIZE 3000
 
 static int ITERS = 10000;
 
@@ -56,6 +57,7 @@ static sem_t sem;
 #ifdef HAVE_SETAFFINITY
 static int ncores = 1;                 /* number of CPU cores */
 static cpu_set_t cpu_set;              /* processor CPU set */
+static cpu_set_t def_set;
 #endif
 
 void *test_thread() {
@@ -100,12 +102,12 @@ void *wait_ledger_completions_thread(void *arg) {
   int flag;
   
   do {
-    photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
-    //photon_probe_completion(inputrank, &flag, &request, PHOTON_PROBE_LEDGER);
+    //photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
+    photon_probe_completion(inputrank, &flag, &request, PHOTON_PROBE_LEDGER);
     if (flag && request == 0xcafebabe)
       recvCompT[inputrank]++;
   } while (!DONE);
-
+  
   pthread_exit(NULL);
 }
 
@@ -123,8 +125,9 @@ int main(int argc, char **argv) {
 
   cfg.nproc = nproc;
   cfg.address = rank;
-
-  photon_init(&cfg);
+  
+  if (photon_init(&cfg))
+    exit(1);
 
   aff_main = aff_evq = aff_ledg = -1;
   if (argc > 1)
@@ -137,13 +140,15 @@ int main(int argc, char **argv) {
   struct photon_buffer_t rbuf[nproc];
   photon_rid recvReq[nproc], sendReq[nproc];
   char *send, *recv[nproc];
-  pthread_t th, th2, recv_threads[nproc];
+  pthread_t th, recv_threads[nproc];
+  //pthread_t th2;
 
   recvCompT = calloc(nproc, sizeof(int));
 
   // only need one send buffer
   //posix_memalign((void **) &send, 8, PHOTON_BUF_SIZE*sizeof(uint8_t));
   send = malloc(PHOTON_BUF_SIZE);
+  memset(send, 1, PHOTON_BUF_SIZE);
   photon_register_buffer(send, PHOTON_BUF_SIZE);
 
   // ... but recv buffers for each potential sender
@@ -176,33 +181,47 @@ int main(int argc, char **argv) {
   //pthread_create(&th2, NULL, test_thread, NULL);
   
   // Create receive threads one per rank
-  //for (t=0; t<nproc; t++) {
-    pthread_create(&recv_threads[0], NULL, wait_ledger_completions_thread, (void*)0);
-  //}
-
+  for (t=0; t<nproc; t++) {
+    pthread_create(&recv_threads[t], NULL, wait_ledger_completions_thread, (void*)t);
+  }
+  
   // set affinity as requested
 #ifdef HAVE_SETAFFINITY
+  if ((ncores = sysconf(_SC_NPROCESSORS_CONF)) <= 0)
+    err(1, "sysconf: couldn't get _SC_NPROCESSORS_CONF");
+  CPU_ZERO(&def_set);
+  for (i=0; i<ncores; i++)
+    CPU_SET(i, &def_set);
   if (aff_main >= 0) {
     //printf("Setting main thread affinity to core %d\n", aff_main);
-    if ((ncores = sysconf(_SC_NPROCESSORS_CONF)) <= 0)
-      err(1, "sysconf: couldn't get _SC_NPROCESSORS_CONF");
     CPU_ZERO(&cpu_set);
     CPU_SET(aff_main, &cpu_set);
-    if (sched_setaffinity(0, sizeof(cpu_set_t), &cpu_set) != 0)
+    if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpu_set) != 0)
       err(1, "couldn't change CPU affinity");
   }
+  else
+    pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &def_set);
   if (aff_evq >= 0) {
     //printf("Setting EVQ probe thread affinity to core %d\n", aff_evq);
     CPU_ZERO(&cpu_set);
     CPU_SET(aff_evq, &cpu_set);
     pthread_setaffinity_np(th, sizeof(cpu_set_t), &cpu_set);
   }
+  else
+    pthread_setaffinity_np(th, sizeof(cpu_set_t), &def_set);
   if (aff_evq >= 0) {
     //printf("Setting LEDGER probe thread affinity to core %d\n", aff_ledg);
     CPU_ZERO(&cpu_set);
     CPU_SET(aff_ledg, &cpu_set);
-    pthread_setaffinity_np(recv_threads[0], sizeof(cpu_set_t), &cpu_set);
+    for (i=0; i<nproc; i++)
+      pthread_setaffinity_np(recv_threads[i], sizeof(cpu_set_t), &cpu_set);
   }
+  else {
+    for (i=0; i<nproc; i++)
+      pthread_setaffinity_np(recv_threads[i], sizeof(cpu_set_t), &def_set);
+  }
+
+  //pthread_setaffinity_np(th2, sizeof(cpu_set_t), &def_set);
 #endif
   
   // now we can proceed with our benchmark
@@ -223,22 +242,28 @@ int main(int argc, char **argv) {
       // send to random rank, excluding self
       while (j == rank)
         j = rand() % nproc;
-    
+
       // PUT
       if (rank <= ns) {
         clock_gettime(CLOCK_MONOTONIC, &time_s);
         for (k=0; k<ITERS; k++) {
 	  if (sem_wait(&sem) == 0) {
-	    photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, PHOTON_REQ_ONE_CQE);
+	    int rc;
+	    rc = photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0);
+	    if (rc == PHOTON_ERROR) {
+	      fprintf(stderr, "Error doing PWC\n");
+	      exit(1);
+	    }
 	  }
-        }
-        clock_gettime(CLOCK_MONOTONIC, &time_e);
+	}
       }
       
       // clear remaining local completions
       do {
 	if (sem_getvalue(&sem, &val)) continue;
       } while (val < SQ_SIZE);
+
+      clock_gettime(CLOCK_MONOTONIC, &time_e);
 
       MPI_Barrier(MPI_COMM_WORLD);
 
@@ -255,18 +280,22 @@ int main(int argc, char **argv) {
           clock_gettime(CLOCK_MONOTONIC, &time_s);
           for (k=0; k<ITERS; k++) {
               if (sem_wait(&sem) == 0) {
-                photon_get_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0);
+                if (photon_get_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0)) {
+		  fprintf(stderr, "Error doing GWC\n");
+		  exit(1);
+		}
               }
           }
-          clock_gettime(CLOCK_MONOTONIC, &time_e);
         }
       }
-
+      
       // clear remaining local completions
       do {
 	if (sem_getvalue(&sem, &val)) continue;
       } while (val < SQ_SIZE);
       
+      clock_gettime(CLOCK_MONOTONIC, &time_e);
+
       MPI_Barrier(MPI_COMM_WORLD);
       
       if (rank == 0 && i && !(sizes[i] % 8)) {
@@ -277,12 +306,12 @@ int main(int argc, char **argv) {
         fflush(stdout);
       }
       else if (rank == 0) {
-        printf("N/A\n");
-        fflush(stdout);
+	printf("N/A\n");
+	fflush(stdout);
       }
     }
   }
-
+  
   MPI_Barrier(MPI_COMM_WORLD);
 
   DONE = 1;

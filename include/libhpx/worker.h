@@ -44,16 +44,18 @@ struct worker {
   int                UNUSED;                    // padding
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
-  const char _padding[HPX_CACHELINE_SIZE - ((sizeof(struct scheduler*) +
-                                             sizeof(pthread_t) +
-                                             sizeof(int) * 4 +
-                                             sizeof(void *) +
-                                             sizeof(hpx_parcel_t*)) %
-                                            HPX_CACHELINE_SIZE)];
+  const char _pada[HPX_CACHELINE_SIZE - ((sizeof(struct scheduler*) +
+                                          sizeof(pthread_t) +
+                                          sizeof(int) * 4 +
+                                          sizeof(void *) +
+                                          sizeof(hpx_parcel_t*)) %
+                                         HPX_CACHELINE_SIZE)];
   chase_lev_ws_deque_t work;                    // my work
+  const char _padb[HPX_CACHELINE_SIZE - (sizeof(chase_lev_ws_deque_t) %
+                                         HPX_CACHELINE_SIZE)];
   two_lock_queue_t    inbox;                    // mail sent to me
   scheduler_stats_t   stats;                    // scheduler statistics
-};
+} HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
 
 /// Initialize a worker structure.

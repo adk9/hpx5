@@ -79,10 +79,10 @@ static int _receiver_action(hpx_addr_t *args) {
       hpx_addr_t done = hpx_lco_future_new(0);
       // 10.6 microseconds
       // int delay = 1000;
-      // hpx_call(HPX_HERE, _worker, &delay, sizeof(delay), done);
+      // hpx_call(HPX_HERE, _worker, done, &delay, sizeof(delay));
       // 106 microseconds
       int delay = 10000;
-      hpx_call(HPX_HERE, _worker, &delay, sizeof(delay), done);
+      hpx_call(HPX_HERE, _worker, done, &delay, sizeof(delay));
       double *buf;
       hpx_lco_chan_recv(chan, NULL, (void**)&buf);
       assert(buf);
@@ -105,7 +105,7 @@ static int _main_action(void *args) {
 
   hpx_addr_t chan = hpx_lco_chan_new();
   hpx_addr_t done = hpx_lco_future_new(0);
-  hpx_call(HPX_HERE, _receiver, &chan, sizeof(chan), done);
+  hpx_call(HPX_HERE, _receiver, done, &chan, sizeof(chan));
 
   for (int i=0;i<LIMIT;++i) {
     double *buf = (double *) malloc(sizeof(double)*counts[i]);
@@ -164,8 +164,8 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  HPX_REGISTER_ACTION(&_main, _main_action);
-  HPX_REGISTER_ACTION(&_worker, _worker_action);
-  HPX_REGISTER_ACTION(&_receiver, _receiver_action);
+  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(_worker_action, &_worker);
+  HPX_REGISTER_ACTION(_receiver_action, &_receiver);
   return hpx_run(&_main, NULL, 0);
 }

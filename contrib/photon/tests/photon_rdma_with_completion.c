@@ -18,7 +18,7 @@
 START_TEST(test_rdma_with_completion) 
 {
   int rank, size, i, next, prev;
-  int ret, flag, rc;
+  int flag, rc;
   int send_comp = 0;
   int recv_comp = 0;
   fprintf(detailed_log, "Starting RDMA with completion test\n");
@@ -29,7 +29,7 @@ START_TEST(test_rdma_with_completion)
   prev = (size + rank - 1) % size;
 
   struct photon_buffer_t rbuf;
-  photon_rid sendReq, recvReq, req, request;
+  photon_rid sendReq, recvReq, req;
   char *send, *recv;
 
   send = (char*)malloc(PHOTON_SEND_SIZE*sizeof(char));
@@ -48,8 +48,6 @@ START_TEST(test_rdma_with_completion)
 
   // Post the recv buffer
   photon_post_recv_buffer_rdma(next, recv, PHOTON_SEND_SIZE, PHOTON_TAG, &recvReq);
-  // Make sure we clear the local post event
-  photon_wait_any(&ret, &request);
   // wait for a recv buffer that was posted
   photon_wait_recv_buffer_rdma(prev, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq);
   // Get the remote buffer info so we can do our own put.

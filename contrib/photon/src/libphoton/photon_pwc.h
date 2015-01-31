@@ -5,6 +5,8 @@
 #include "photon_request.h"
 
 #define PWC_ALIGN      8
+#define PWC_BUFFER     0x01
+#define PWC_LEDGER     0x02
 
 // interface to deal with pwc used along with post/put/get/test
 PHOTON_INTERNAL int photon_pwc_init();
