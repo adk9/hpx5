@@ -37,9 +37,10 @@
 
 /// Forward declarations
 /// @{
-struct thread;
 struct barrier;
+struct config;
 struct cvar;
+struct thread;
 /// @}
 
 /// Typedefs
@@ -67,6 +68,7 @@ struct scheduler {
   int                   cores;
   int               n_workers;
   unsigned int    backoff_max;
+  uint32_t       wf_threshold;
   struct barrier     *barrier;
   struct worker      *workers;
   scheduler_stats_t     stats;
@@ -75,15 +77,10 @@ struct scheduler {
 
 /// Allocate and initialize a new scheduler.
 ///
-/// @param        cores The number of processors this scheduler will run on.
-/// @param      workers The number of worker threads to start.
-/// @param   stack_size The size of the stacks to allocate.
-/// @param  backoff_max The upper bound for worker backoff.
-/// @param   statistics The flag that indicates if statistics are on or off.
+/// @param       config The configuration object.
 ///
 /// @returns            The scheduler object, or NULL if there was an error.
-struct scheduler *scheduler_new(int cores, int workers, int stack_size,
-                                unsigned int backoff_max, bool stats)
+struct scheduler *scheduler_new(struct config *config)
   HPX_INTERNAL HPX_MALLOC;
 
 
