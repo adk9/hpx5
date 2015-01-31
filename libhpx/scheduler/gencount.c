@@ -149,8 +149,6 @@ static void _gencount_init(_gencount_t *gencnt, unsigned long ninplace) {
     .on_get      = _gencount_get,
     .on_wait     = _gencount_wait,
     .on_attach   = NULL,
-    .on_try_get  = NULL,
-    .on_try_wait = NULL,
     .on_reset    = _gencount_reset
   };
 

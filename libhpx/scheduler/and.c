@@ -64,33 +64,6 @@ static hpx_status_t _attach(_and_t *and, hpx_parcel_t *p) {
   return cvar_attach(&and->barrier, p);
 }
 
-static hpx_status_t _try_wait(_and_t *and, hpx_time_t time) {
-  // and->value can change asynchronously, but and->lco and and->barrier do not
-  // because we're holding the lock here
-  hpx_status_t status = cvar_get_error(&and->barrier);
-  if (status != HPX_SUCCESS)
-    return status;
-
-  // read the value using an atomic, we either see 0---in which case either the
-  // and has already been signaled, or there is someone trying to get the lock
-  // we hold in order to signal it. In both cases, the and has been satisfied,
-  // and we can correctly return the status that we read (the status won't
-  // change, because that's done through the hpx_lco_error() handler which would
-  // need the lock too).
-  if (and->value == 0)
-    return status;
-
-  // otherwise wait for the and barrier to reach 0 or return if out of time
-  while (and->value != 0) {
-    if (hpx_time_diff_us(hpx_time_now(), time) > 0)
-      return HPX_LCO_TIMEOUT;
-    hpx_thread_yield();
-    // ADK: Don't you need to yield the lock here?
-  }
-
-  return HPX_SUCCESS;
-}
-
 static void _and_fini(lco_t *lco) {
   if (!lco) {
     return;
@@ -150,20 +123,8 @@ static hpx_status_t _and_attach(lco_t *lco, hpx_parcel_t *p) {
   return status;
 }
 
-static hpx_status_t _and_try_wait(lco_t *lco, hpx_time_t time) {
-  _and_t *and = (_and_t *)lco;
-  lco_lock(&and->lco);
-  hpx_status_t status = _try_wait(and, time);
-  lco_unlock(&and->lco);
-  return status;
-}
-
 static hpx_status_t _and_get(lco_t *lco, int size, void *out) {
   return _and_wait(lco);
-}
-
-static hpx_status_t _and_try_get(lco_t *lco, int size, void *out, hpx_time_t time) {
-  return _and_try_wait(lco, time);
 }
 
 static void _and_init(_and_t *and, intptr_t value) {
@@ -173,8 +134,6 @@ static void _and_init(_and_t *and, intptr_t value) {
     .on_set      = _and_set,
     .on_get      = _and_get,
     .on_wait     = _and_wait,
-    .on_try_get  = _and_try_get,
-    .on_try_wait = _and_try_wait,
     .on_attach   = _and_attach
     .on_reset    = _and_reset
   };

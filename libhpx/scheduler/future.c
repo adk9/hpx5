@@ -45,15 +45,6 @@ static hpx_status_t _wait(_future_t *f) {
   return cvar_get_error(&f->full);
 }
 
-static hpx_status_t _try_wait(_future_t *f, hpx_time_t time) {
-  while (!lco_get_triggered(&f->lco)) {
-    if (hpx_time_diff_us(hpx_time_now(), time) > 0)
-      return HPX_LCO_TIMEOUT;
-    hpx_thread_yield();
-  }
-  return cvar_get_error(&f->full);
-}
-
 static bool _trigger(_future_t *f) {
   if (lco_get_triggered(&f->lco))
     return false;
@@ -166,15 +157,6 @@ static hpx_status_t _future_wait(lco_t *lco) {
   return status;
 }
 
-static hpx_status_t _future_try_wait(lco_t *lco, hpx_time_t time) {
-  hpx_status_t status = HPX_SUCCESS;
-  lco_lock(lco);
-  _future_t *f = (_future_t *)lco;
-  status = _try_wait(f, time);
-  lco_unlock(lco);
-  return status;
-}
-
 /// initialize the future
 static void _future_init(_future_t *f, int size) {
   // the future vtable
@@ -184,10 +166,8 @@ static void _future_init(_future_t *f, int size) {
     .on_set      = _future_set,
     .on_get      = _future_get,
     .on_wait     = _future_wait,
-    .on_try_wait = _future_try_wait,
     .on_attach   = _future_attach,
-    .on_reset    = _future_reset,
-    .on_try_get  = NULL
+    .on_reset    = _future_reset
   };
 
   lco_init(&f->lco, &vtable);

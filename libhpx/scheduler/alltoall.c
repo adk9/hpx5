@@ -344,8 +344,6 @@ static void _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
     .on_get      = _alltoall_get,
     .on_wait     = _alltoall_wait,
     .on_attach   = NULL,
-    .on_try_get  = NULL,
-    .on_try_wait = NULL,
     .on_reset    = _alltoall_reset
   };
 
