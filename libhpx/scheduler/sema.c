@@ -49,8 +49,6 @@ static const lco_class_t _sema_vtable = {
   .on_get      = _sema_get,
   .on_wait     = _sema_wait,
   .on_attach   = NULL,
-  .on_try_get  = NULL,
-  .on_try_wait = NULL,
   .on_reset    = _sema_reset
 };
 

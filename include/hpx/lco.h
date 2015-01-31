@@ -87,17 +87,6 @@ void hpx_lco_set(hpx_addr_t lco, int size, const void *value, hpx_addr_t lsync,
 /// @returns   HPX_SUCCESS or the code passed to hpx_lco_error()
 hpx_status_t hpx_lco_wait(hpx_addr_t lco);
 
-/// Perform a wait operation, failing if a set time is passed.
-///
-/// The LCO blocks the caller until an LCO set operation triggers the LCO or
-/// until @p time is reached. Each LCO type has its own semantics for the state
-/// under which this occurs.
-///
-/// @param lco  the LCO we're processing
-/// @param time a time after which to return even if the LCO is not set
-/// @returns    HPX_SUCCESS or the code passed to hpx_lco_error()
-//hpx_status_t hpx_lco_try_wait(hpx_addr_t lco, hpx_time_t time);
-
 /// Perform a get operation.
 ///
 /// An LCO blocks the caller until the future is set, and then copies its value
@@ -112,23 +101,6 @@ hpx_status_t hpx_lco_wait(hpx_addr_t lco);
 /// @param[out] out the output location (may be null)
 /// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
 hpx_status_t hpx_lco_get(hpx_addr_t lco, int size, void *value);
-
-/// Perform a get operation, failing if a certain time is reached first.
-///
-/// An LCO blocks the caller until the future is set, and then copies its value
-/// data into the provided buffer. Will return early if @p time is reached
-/// first.
-///
-/// If the return status is not HPX_SUCCESS then the LCO was triggered by
-/// hpx_lco_error() rather than hpx_lco_set(), in such a case the memory pointed
-/// to by @p out will not be inspected.
-///
-/// @param      lco the LCO we're processing
-/// @param     size the size of the data
-/// @param[out] out the output location (may be null)
-/// @param     time a time after which to fail
-/// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
-//hpx_status_t hpx_lco_try_get(hpx_addr_t lco, int size, void *value, hpx_time_t time);
 
 /// Blocks the thread until all of the LCOs have been set.
 ///
