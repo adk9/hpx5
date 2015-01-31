@@ -69,6 +69,11 @@ static hpx_status_t _error(lco_t *lco, hpx_status_t code) {
   return HPX_SUCCESS;
 }
 
+static hpx_status_t _reset(lco_t *lco) {
+  _class(lco)->on_reset(lco);
+  return HPX_SUCCESS;
+}
+
 static hpx_status_t _get(lco_t *lco, size_t bytes, void *out) {
   dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
   dbg_assert_str(_class(lco)->on_get, "LCO implementation incomplete\n");
@@ -105,6 +110,10 @@ HPX_PINNED(hpx_lco_set_action, void *data) {
 static HPX_PINNED(_lco_error, void *args) {
   hpx_status_t *code = args;
   return _error(_target_lco(), *code);
+}
+
+static HPX_PINNED(_lco_reset, void *UNUSED) {
+  return _reset(_target_lco());
 }
 
 static HPX_PINNED(_lco_get, void *args) {
@@ -236,6 +245,23 @@ void hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync) {
   size_t size = sizeof(code);
   int e = hpx_call_async(target, _lco_error, HPX_NULL, rsync, &code, size);
   dbg_check(e, "Could not forward lco_error\n");
+}
+
+void hpx_lco_reset(hpx_addr_t target, hpx_addr_t rsync) {
+  if (target == HPX_NULL) {
+    return;
+  }
+
+  lco_t *lco = NULL;
+  if (hpx_gas_try_pin(target, (void**)&lco)) {
+    _reset(lco);
+    hpx_gas_unpin(target);
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    return;
+  }
+
+  int e = hpx_call_async(target, _lco_reset, HPX_NULL, rsync, NULL, 0);
+  dbg_check(e, "Could not forward lco_reset\n");
 }
 
 void hpx_lco_set(hpx_addr_t target, int size, const void *value,

@@ -108,6 +108,15 @@ static void _and_error(lco_t *lco, hpx_status_t code) {
   lco_unlock(&and->lco);
 }
 
+void _and_reset(lco_t *lco) {
+  _and_t *and = (_and_t *)lco;
+  lco_lock(&and->lco);
+  dbg_assert_str(cvar_empty(&and->barrier),
+                 "Reset on AND LCO that has waiting threads.\n");
+  cvar_reset(&and->barrier);
+  lco_unlock(&and->lco);
+}
+
 /// Fast set uses atomic ops to decrement the value, and signals when it gets to 0.
 static void _and_set(lco_t *lco, int size, const void *from) {
   _and_t *and = (_and_t *)lco;
@@ -159,14 +168,15 @@ static hpx_status_t _and_try_get(lco_t *lco, int size, void *out, hpx_time_t tim
 
 static void _and_init(_and_t *and, intptr_t value) {
   static const lco_class_t vtable = {
-    .on_fini = _and_fini,
-    .on_error = _and_error,
-    .on_set = _and_set,
-    .on_get = _and_get,
-    .on_wait = _and_wait,
-    .on_try_get = _and_try_get,
+    .on_fini     = _and_fini,
+    .on_error    = _and_error,
+    .on_set      = _and_set,
+    .on_get      = _and_get,
+    .on_wait     = _and_wait,
+    .on_try_get  = _and_try_get,
     .on_try_wait = _and_try_wait,
-    .on_attach = _and_attach
+    .on_attach   = _and_attach
+    .on_reset    = _and_reset
   };
 
   assert(value >= 0);

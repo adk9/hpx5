@@ -103,9 +103,12 @@ static void _future_error(lco_t *lco, hpx_status_t code) {
   lco_unlock(lco);
 }
 
-static void _future_reset(_future_t *f) {
+static void _future_reset(lco_t *lco) {
+  _future_t *f = (_future_t *)lco;
   lco_lock(&f->lco);
-  scheduler_signal_error(&f->full, HPX_LCO_RESET);
+  dbg_assert_str(cvar_empty(&f->full),
+                 "Reset on a future that has waiting threads.\n");
+  _trigger(f);
   cvar_reset(&f->full);
   lco_unlock(&f->lco);
 }
@@ -172,25 +175,19 @@ static hpx_status_t _future_try_wait(lco_t *lco, hpx_time_t time) {
   return status;
 }
 
-static HPX_PINNED(_future_reset_action, void) {
-  _future_t *f = hpx_thread_current_local_target();
-  assert(f);
-  _future_reset(f);
-  return HPX_SUCCESS;
-}
-
 /// initialize the future
 static void _future_init(_future_t *f, int size) {
   // the future vtable
   static const lco_class_t vtable = {
-    .on_fini = _future_fini,
-    .on_error = _future_error,
-    .on_set = _future_set,
-    .on_get = _future_get,
-    .on_wait = _future_wait,
+    .on_fini     = _future_fini,
+    .on_error    = _future_error,
+    .on_set      = _future_set,
+    .on_get      = _future_get,
+    .on_wait     = _future_wait,
     .on_try_wait = _future_try_wait,
-    .on_attach = _future_attach,
-    .on_try_get = NULL
+    .on_attach   = _future_attach,
+    .on_reset    = _future_reset,
+    .on_try_get  = NULL
   };
 
   lco_init(&f->lco, &vtable);
@@ -215,27 +212,12 @@ static HPX_PINNED(_block_init, uint32_t *args) {
   return HPX_SUCCESS;
 }
 
-
 hpx_addr_t hpx_lco_future_new(int size) {
   _future_t *local = libhpx_global_malloc(sizeof(*local) + size);
   dbg_assert(local);
   _future_init(local, size);
   return lva_to_gva(local);
 }
-
-void hpx_lco_future_reset(hpx_addr_t future, hpx_addr_t sync) {
-  _future_t *f;
-  if (hpx_gas_try_pin(future, (void**)&f)) {
-    _future_reset(f);
-    hpx_gas_unpin(future);
-    hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
-    return;
-  }
-
-  int e = hpx_call_async(future, _future_reset_action, HPX_NULL, sync, NULL, 0);
-  dbg_check(e, "failed to forward future reset\n");
-}
-
 
 // Allocate a global array of futures.
 hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {

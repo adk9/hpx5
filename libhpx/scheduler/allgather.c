@@ -114,13 +114,21 @@ static void _allgather_fini(lco_t *lco) {
   libhpx_global_free(lco);
 }
 
-
 /// Handle an error condition.
 static void _allgather_error(lco_t *lco, hpx_status_t code) {
-  lco_lock(lco);
   _allgather_t *g = (_allgather_t *)lco;
+  lco_lock(&g->lco);
   scheduler_signal_error(&g->wait, code);
-  lco_unlock(lco);
+  lco_unlock(&g->lco);
+}
+
+static void _allgather_reset(lco_t *lco) {
+  _allgather_t *g = (_allgather_t *)lco;
+  lco_lock(&g->lco);
+  dbg_assert_str(cvar_empty(&g->wait),
+                 "Reset on allgather LCO that has waiting threads.\n");
+  cvar_reset(&g->wait);
+  lco_unlock(&g->lco);
 }
 
 /// Get the value of the gathering, will wait if the phase is gathering.
@@ -263,14 +271,15 @@ _allgather_set(lco_t *lco, int size, const void *from)
 static void _allgather_init(_allgather_t *g, size_t participants, size_t size) {
   // vtable
   static const lco_class_t vtable = {
-    .on_fini = _allgather_fini,
-    .on_error = _allgather_error,
-    .on_set = _allgather_set,
-    .on_attach = NULL,
-    .on_get = _allgather_get,
-    .on_wait = _allgather_wait,
-    .on_try_get = NULL,
-    .on_try_wait = NULL
+    .on_fini     = _allgather_fini,
+    .on_error    = _allgather_error,
+    .on_set      = _allgather_set,
+    .on_attach   = NULL,
+    .on_get      = _allgather_get,
+    .on_wait     = _allgather_wait,
+    .on_try_get  = NULL,
+    .on_try_wait = NULL,
+    .on_reset    = _allgather_reset
   };
 
   lco_init(&g->lco, &vtable);

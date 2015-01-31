@@ -100,3 +100,7 @@ hpx_parcel_t *cvar_pop_all(cvar_t *cvar) {
 void cvar_reset(cvar_t *cvar) {
   cvar->top = NULL;
 }
+
+bool cvar_empty(cvar_t *cvar) {
+  return (cvar->top == NULL);
+}
