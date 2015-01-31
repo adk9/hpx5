@@ -74,7 +74,7 @@ struct scheduler *scheduler_new(hpx_config_t *cfg) {
   s->cores        = cores;
   s->n_workers    = workers;
   s->backoff_max  = cfg->backoffmax;
-  // s->wf_threshold = cfg->wfthreshold;
+  s->wf_threshold = cfg->wfthreshold;
   scheduler_stats_init(&s->stats);
 
   thread_set_stack_size(cfg->stacksize);
