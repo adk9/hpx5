@@ -16,11 +16,13 @@
 
 #include <stdlib.h>
 
+#include "libhpx/actions.h"
 #include "libhpx/boot.h"
 #include "libhpx/config.h"
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
 #include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
 
@@ -159,6 +161,11 @@ static int _probe_completion(int rank, uint64_t *op) {
   return flag;
 }
 
+static char *_straction(hpx_action_t id) {
+  dbg_assert(here && here->actions);
+  return action_table_get_key(here->actions, id);
+}
+
 static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
   pwc_network_t *pwc = (void*)network;
   int rank = pwc->rank;
@@ -170,7 +177,7 @@ static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
     hpx_addr_t addr;
     hpx_action_t op;
     decode_command(command, &op, &addr);
-    log_net("extracted local interrupt of %s\n", dbg_straction(op));
+    log_net("extracted local interrupt of %s\n", _straction(op));
     int e = hpx_call(addr, op, HPX_NULL, NULL, 0);
     if (HPX_SUCCESS != e) {
       dbg_error("failed to process local command");
@@ -183,7 +190,7 @@ static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
       hpx_addr_t addr;
       hpx_action_t op;
       decode_command(command, &op, &addr);
-      log_net("processing command %s from rank %d\n", dbg_straction(op),
+      log_net("processing command %s from rank %d\n", _straction(op),
                   i);
       int e = hpx_call(addr, op, HPX_NULL, &i, sizeof(i));
       if (HPX_SUCCESS != e) {
