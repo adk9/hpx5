@@ -148,9 +148,9 @@ static hpx_parcel_t *_try_bind(hpx_parcel_t *p) {
 static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
   uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
   self->work_first = (size >= here->sched->wf_threshold);
-  if (self->work_first) {
-    log("work first %lu, %u\n", size, size >= here->sched->wf_threshold);
-  }
+  // if (self->work_first) {
+  //   log("work first %lu, %u\n", size, size >= here->sched->wf_threshold);
+  // }
 }
 
 
