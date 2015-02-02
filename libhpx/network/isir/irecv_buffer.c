@@ -92,7 +92,7 @@ static int _start(irecv_buffer_t *irecvs, int i) {
   }
   else {
     irecvs->records[i].parcel = p;
-    dbg_log_net("started an MPI_Irecv operation: %u bytes\n", n);
+    log_net("started an MPI_Irecv operation: %u bytes\n", n);
     return LIBHPX_OK;
   }
 }
@@ -121,7 +121,7 @@ int _resize(irecv_buffer_t *buffer, uint32_t size, hpx_parcel_t **out) {
   }
 
   if (buffer->limit && buffer->limit < size) {
-    dbg_log_net("reducing expansion from %u to %u\n", size , buffer->limit);
+    log_net("reducing expansion from %u to %u\n", size , buffer->limit);
     size = buffer->limit;
   }
 
@@ -143,7 +143,7 @@ int _resize(irecv_buffer_t *buffer, uint32_t size, hpx_parcel_t **out) {
   }
 
   if (buffer->requests && buffer->statuses && buffer->out && buffer->records) {
-    dbg_log_net("buffer resized from %u to %u\n", buffer->size, size);
+    log_net("buffer resized from %u to %u\n", buffer->size, size);
     buffer->size = size;
     return LIBHPX_OK;
   }
@@ -212,7 +212,7 @@ static int _probe(irecv_buffer_t *irecvs) {
 
   // There's a pending message that we haven't matched yet. Append a record to
   // match it in the future.
-  dbg_log_net("probe detected irecv for %u-byte parcel\n",
+  log_net("probe detected irecv for %u-byte parcel\n",
               tag_to_payload_size(s.MPI_TAG));
   return _append(irecvs, s.MPI_TAG);
 }
@@ -246,7 +246,7 @@ static hpx_parcel_t *_finish(irecv_buffer_t *irecvs, int i, MPI_Status *s) {
   hpx_parcel_t *p = irecvs->records[i].parcel;
   p->src = s->MPI_SOURCE;
   p->size = mpi_bytes_to_payload_size(n);
-  dbg_log_net("finished a recv for a %u-byte payload\n", p->size);
+  log_net("finished a recv for a %u-byte payload\n", p->size);
   if (LIBHPX_OK != _start(irecvs, i)) {
     dbg_error("failed to regenerate an irecv\n");
   }

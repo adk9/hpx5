@@ -140,7 +140,8 @@ int main(int argc, char **argv) {
   struct photon_buffer_t rbuf[nproc];
   photon_rid recvReq[nproc], sendReq[nproc];
   char *send, *recv[nproc];
-  pthread_t th, th2, recv_threads[nproc];
+  pthread_t th, recv_threads[nproc];
+  //pthread_t th2;
 
   recvCompT = calloc(nproc, sizeof(int));
 

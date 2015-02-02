@@ -73,10 +73,7 @@ static void _bless(hpx_parcel_t *p) {
 
   // split the parent's current credit. the parent retains half..
   hpx_parcel_t *parent = scheduler_current_parcel();
-  if (!parent) {
-    dbg_error("no parent to bless child parcel\n");
-  }
-
+  dbg_assert_str(parent, "no parent to bless child parcel\n");
   // parent and child each get half a credit
   p->credit = ++parent->credit;
 }
@@ -105,7 +102,7 @@ void hpx_parcel_set_cont_target(hpx_parcel_t *p, const hpx_addr_t cont) {
 void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size) {
   if (size) {
     void *to = hpx_parcel_get_data(p);
-    memcpy(to, data, size);
+    memmove(to, data, size);
   }
 }
 
@@ -190,8 +187,9 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
   p->credit   = 0;
 
   // If there's a user-defined buffer, then remember it---we'll serialize it
-  // later, during the send operation.
-  if (buffer) {
+  // later, during the send operation. We occasionally see a buffer without
+  // bytes so skip in that context too.
+  if (buffer && bytes) {
     p->ustack = NULL;
     memcpy(&p->buffer, &buffer, sizeof(buffer));
   }
@@ -200,24 +198,10 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
 }
 
 /// Perform an asynchronous send operation.
-///
-/// Simply wraps the send operation in an asynchronous interface.
-///
-/// @param            p The parcel to send (may need serialization)
-///
-/// @continues          NULL
-///
-/// @returns            HPX_SUCCESS
-static hpx_action_t _parcel_send_async = 0;
-
-/// The basic send operation is synchronous.
-static int _parcel_send_async_action(hpx_parcel_t **p) {
-  hpx_parcel_send_sync(*p);
+static HPX_ACTION(_parcel_send_async, hpx_parcel_t **p) {
+  int e = hpx_parcel_send_sync(*p);
+  dbg_check(e, "failed to send a parcel\n");
   return HPX_SUCCESS;
-}
-
-static HPX_CONSTRUCTOR void _init_actions(void) {
-  LIBHPX_REGISTER_ACTION(_parcel_send_async_action, &_parcel_send_async);
 }
 
 int parcel_launch(hpx_parcel_t *p) {
@@ -231,7 +215,7 @@ int parcel_launch(hpx_parcel_t *p) {
 
   // LOG
   if (p->c_action != HPX_ACTION_NULL) {
-    dbg_log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64") => %s@(%"PRIu64")\n",
+    log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64") => %s@(%"PRIu64")\n",
                    p->pid,
                    p->credit,
                    action_table_get_key(here->actions, p->action),
@@ -241,7 +225,7 @@ int parcel_launch(hpx_parcel_t *p) {
                    action_table_get_key(here->actions, p->c_action),
                    p->c_target);
   } else {
-    dbg_log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64")\n",
+    log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64")\n",
                    p->pid,
                    p->credit,
                    action_table_get_key(here->actions, p->action),
@@ -300,7 +284,7 @@ void hpx_parcel_release(hpx_parcel_t *p) {
 }
 
 hpx_parcel_t *parcel_create(hpx_addr_t target, hpx_action_t action,
-                            const void*args, size_t len, hpx_addr_t c_target,
+                            const void *args, size_t len, hpx_addr_t c_target,
                             hpx_action_t c_action, hpx_pid_t pid, bool inplace)
 {
   hpx_parcel_t *p = hpx_parcel_acquire(inplace ? NULL : args, len);

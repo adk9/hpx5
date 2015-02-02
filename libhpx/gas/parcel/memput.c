@@ -24,21 +24,13 @@
 #include "libhpx/debug.h"
 #include "emulation.h"
 
-static hpx_action_t _memput_request = 0;
-
-static int _memput_request_action(void *args) {
-  hpx_addr_t target = hpx_thread_current_target();
-  char *local;
-  if (!hpx_gas_try_pin(target, (void**)&local))
-    return HPX_RESEND;
-
-  memcpy(local, args, hpx_thread_current_args_size());
-  hpx_gas_unpin(target);
+static HPX_PINNED(_memput_request, void *args) {
+  char *local = hpx_thread_current_local_target();
+  dbg_assert(local);
+  size_t bytes = hpx_thread_current_args_size();
+  dbg_assert(bytes);
+  memcpy(local, args, bytes);
   return HPX_SUCCESS;
-}
-
-static HPX_CONSTRUCTOR void _init_actions(void) {
-  LIBHPX_REGISTER_ACTION(_memput_request_action, &_memput_request);
 }
 
 int parcel_memput(hpx_addr_t to, const void *from, size_t size,

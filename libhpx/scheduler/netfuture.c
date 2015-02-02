@@ -523,8 +523,7 @@ _future_init(_netfuture_t *f, int size, bool shared)
     .on_try_wait = NULL
   };
 
-  bool inplace = false;
-  lco_init(&f->lco, &vtable, inplace);
+  lco_init(&f->lco, &vtable);
   cvar_reset(&f->empty);
   cvar_reset(&f->full);
   f->bits = 0 | HPX_UNSET; // future starts out empty
@@ -808,11 +807,11 @@ hpx_lco_netfuture_get_rank(hpx_netfuture_t future) {
 
 static void HPX_CONSTRUCTOR
 _future_initialize_actions(void) {
-  LIBHPX_REGISTER_ACTION(_future_set_no_copy_from_remote_action, &_future_set_no_copy_from_remote);
-  LIBHPX_REGISTER_ACTION(_progress_action, &_progress);
-  LIBHPX_REGISTER_ACTION(_progress_recv_action, &_progress_recv);
-  LIBHPX_REGISTER_ACTION(_add_future_to_table_action, &_add_future_to_table);
-  LIBHPX_REGISTER_ACTION(_initialize_netfutures_action, &_initialize_netfutures);
+  HPX_REGISTER_ACTION(_future_set_no_copy_from_remote_action, &_future_set_no_copy_from_remote);
+  HPX_REGISTER_ACTION(_progress_action, &_progress);
+  HPX_REGISTER_ACTION(_progress_recv_action, &_progress_recv);
+  HPX_REGISTER_ACTION(_add_future_to_table_action, &_add_future_to_table);
+  HPX_REGISTER_ACTION(_initialize_netfutures_action, &_initialize_netfutures);
 }
 
 void (*netfuture_progress)() = _progress_body;

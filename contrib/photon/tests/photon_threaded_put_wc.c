@@ -85,7 +85,7 @@ START_TEST(test_photon_threaded_put_wc)
 {
   printf("Starting the photon threaded put wc test\n");
   int i, j, k, ns, val, ncores;
-  int rank, nproc, ret_proc;
+  int rank, nproc;
   long t;
   cpu_set_t def_set;
 
@@ -100,7 +100,7 @@ START_TEST(test_photon_threaded_put_wc)
   myrank = rank;
 
   struct photon_buffer_t rbuf[nproc];
-  photon_rid recvReq[nproc], sendReq[nproc], request;
+  photon_rid recvReq[nproc], sendReq[nproc];
   char *send, *recv[nproc];
   pthread_t th, recv_threads[nproc];
 

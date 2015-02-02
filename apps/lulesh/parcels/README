@@ -1,4 +1,0 @@
-This is the parcels version of LULESH using lightweight
-ephemeral threads instead of persistent threads as in channels. 
-Still under construction.
-

@@ -162,17 +162,29 @@ hpx_addr_t hpx_lco_sema_new(unsigned init);
 /// Standard semaphore V (signal) operation.
 ///
 /// Increments the count in the semaphore, signaling the LCO if the increment
-/// transitions from 0 to 1. This is always asynchronous, i.e., returning from
-/// this routine simply means that the increment has been scheduled.
+/// transitions from 0 to 1.
 ///
-/// @param sema the global address of a semaphore
-void hpx_lco_sema_v(hpx_addr_t sema);
+/// This is locally asynchronous, it will potentially return before the
+/// operation completes. Clients that need a signal when the set operation has
+/// completed should use the @p rsync LCO.
+///
+/// @param        sema The global address of a semaphore.
+/// @param       rsync An LCO to set so the caller can make this synchronous.
+void hpx_lco_sema_v(hpx_addr_t sema, hpx_addr_t rsync);
+
+/// Standard semaphore V (signal) operation.
+///
+/// Increments the count in the semaphore, signaling the LCO if the increment
+/// transitions from 0 to 1.
+///
+/// @param        sema The global address of a semaphore.
+void hpx_lco_sema_v_sync(hpx_addr_t sema);
 
 /// Standard semaphore P (wait) operation.
 ///
 /// Attempts to decrement the count in the semaphore; blocks if the count is 0.
 ///
-/// @param sema the global address of a semaphore
+/// @param        sema the global address of a semaphore
 ///
 /// @returns HPX_SUCCESS, or an error code if the semaphore is in an error
 ///          condition

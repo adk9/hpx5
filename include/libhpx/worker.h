@@ -24,6 +24,7 @@
 /// Forward declarations.
 /// @{
 struct scheduler;
+struct ustack;
 /// @}
 
 
@@ -44,17 +45,21 @@ struct worker {
   int                UNUSED;                    // padding
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
-  const char _padding[HPX_CACHELINE_SIZE - ((sizeof(struct scheduler*) +
-                                             sizeof(pthread_t) +
-                                             sizeof(int) * 4 +
-                                             sizeof(void *) +
-                                             sizeof(hpx_parcel_t*)) %
-                                            HPX_CACHELINE_SIZE)];
+  int            work_first;
+  const char _pada[HPX_CACHELINE_SIZE - ((sizeof(struct scheduler*) +
+                                          sizeof(pthread_t) +
+                                          sizeof(int) * 5 +
+                                          sizeof(void *) +
+                                          sizeof(hpx_parcel_t*)) %
+                                         HPX_CACHELINE_SIZE)];
   chase_lev_ws_deque_t work;                    // my work
+  const char _padb[HPX_CACHELINE_SIZE - (sizeof(chase_lev_ws_deque_t) %
+                                         HPX_CACHELINE_SIZE)];
   two_lock_queue_t    inbox;                    // mail sent to me
   scheduler_stats_t   stats;                    // scheduler statistics
-};
+} HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
+HPX_INTERNAL extern __thread struct worker *self;
 
 /// Initialize a worker structure.
 ///
@@ -65,16 +70,14 @@ struct worker {
 /// @param         seed The random seed for this worker.
 /// @param    work_size The initial size of the work queue.
 ///
-/// @returns            LIBHPX_OK or an error code
+/// @returns  LIBHPX_OK or an error code
 int worker_init(struct worker *w, struct scheduler *sched, int id, int core,
-                unsigned seed,  unsigned work_size)
+                unsigned seed, unsigned work_size)
   HPX_INTERNAL HPX_NON_NULL(1, 2);
-
 
 /// Finalize a worker structure.
 void worker_fini(struct worker *w)
   HPX_INTERNAL HPX_NON_NULL(1);
-
 
 /// Bind a worker structure to the current pthread.
 ///
@@ -82,11 +85,9 @@ void worker_fini(struct worker *w)
 void worker_bind_self(struct worker *worker)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-
 /// Start processing lightweight threads.
 int worker_start(void)
   HPX_INTERNAL;
-
 
 /// Creates a worker thread associated with a scheduler.
 ///
@@ -100,7 +101,6 @@ int worker_start(void)
 int worker_create(struct worker *worker)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-
 /// Joins a worker after scheduler_shutdown().
 ///
 /// This is done separately to allow for cleanup to happen. Also improves
@@ -111,7 +111,6 @@ int worker_create(struct worker *worker)
 void worker_join(struct worker *worker)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-
 /// Preemptively shutdown a worker.
 ///
 /// This will leave the (UNIX) process in an undefined state. Only async-safe
@@ -121,6 +120,5 @@ void worker_join(struct worker *worker)
 /// @param       worker The worker to cancel.
 void worker_cancel(struct worker *worker)
   HPX_INTERNAL HPX_NON_NULL(1);
-
 
 #endif // LIBHPX_WORKER_H

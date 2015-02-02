@@ -36,7 +36,7 @@ static HPX_INTERRUPT(_eager_rx, void *args) {
   peer_t *peer = pwc_get_peer(here->network, *src);
   eager_buffer_t *eager = &peer->rx;
   hpx_parcel_t *parcel = eager_buffer_rx(eager, bytes);
-  dbg_log_net("received %u eager parcel bytes from %d (%s)\n", bytes, *src,
+  log_net("received %u eager parcel bytes from %d (%s)\n", bytes, *src,
               action_table_get_key(here->actions, parcel->action));
   scheduler_spawn(parcel);
   return HPX_SUCCESS;
@@ -48,7 +48,7 @@ static HPX_INTERRUPT(_finish_eager_tx, void *UNUSED) {
   if (!hpx_gas_try_pin(target, (void**)&p)) {
     return dbg_error("could not finish eager tx\n");
   }
-  dbg_log_net("releasing sent parcel\n");
+  log_net("releasing sent parcel\n");
   hpx_parcel_release(p);
   hpx_gas_unpin(target);
   return HPX_SUCCESS;
@@ -68,7 +68,7 @@ static HPX_INTERRUPT(_eager_rx_pad, void *args) {
   DEBUG_IF (_index_of(rx, rx->min) != 0) {
     dbg_error("%u bytes did not unwrap the buffer\n", bytes);
   }
-  dbg_log_net("received %u bytes of padding from %u\n", bytes, *src);
+  log_net("received %u bytes of padding from %u\n", bytes, *src);
   return HPX_SUCCESS;
 }
 
@@ -94,7 +94,7 @@ static HPX_INTERRUPT(_eager_rx_pad, void *args) {
 ///                       was injected correctly.
 ///
 static int _pad(eager_buffer_t *tx, hpx_parcel_t *p, uint32_t bytes) {
-  dbg_log_net("sending %u bytes of padding\n", bytes);
+  log_net("sending %u bytes of padding\n", bytes);
   command_t cmd = encode_command(_eager_rx_pad, (uint64_t)bytes);
   int status = peer_put_command(tx->peer, cmd);
   if (status != LIBHPX_OK) {
@@ -132,7 +132,7 @@ int eager_buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   }
 
   if (end - tx->min > tx->size) {
-    dbg_log_net("%u byte parcel may overflow buffer\n", n);
+    log_net("%u byte parcel may overflow buffer\n", n);
     return LIBHPX_RETRY;
   }
 
@@ -148,7 +148,7 @@ int eager_buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   assert(parcel != HPX_NULL);
   const command_t lsync = encode_command(_finish_eager_tx, parcel);
   const command_t cmd = encode_command(_eager_rx, n);
-  dbg_log_net("sending %d byte parcel to %d (%s)\n", n, tx->peer->rank,
+  log_net("sending %d byte parcel to %d (%s)\n", n, tx->peer->rank,
               action_table_get_key(here->actions, p->action));
   int e = peer_pwc(peer, roff + tx->base, lva, n, lsync, HPX_NULL, cmd,
                    SEGMENT_EAGER);

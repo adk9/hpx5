@@ -48,7 +48,6 @@
 hpx_action_t _main = 0;
 
 hpx_action_t t02_init_sources;
-hpx_action_t t03_initDomain;
 hpx_action_t t04_send;
 hpx_action_t t04_sendData;
 hpx_action_t t04_recv;
@@ -134,7 +133,7 @@ Suite *test_suite(void)
   add_11_TestGenCountLCO(tc);
   add_12_TestMemget(tc);
   add_13_TestMemput(tc);
-  add_15_TestWait(tc);
+  //add_15_TestWait(tc);
 
   suite_add_tcase(s, tc);
   return s;
@@ -169,7 +168,7 @@ void _register_actions(void) {
   HPX_REGISTER_ACTION(t02_init_sources_action, &t02_init_sources);
 
   // 03_TestGlobalMemAlloc.c
-  HPX_REGISTER_ACTION(t03_initDomain_action, &t03_initDomain);
+  // Ported to use actions.h
 
   //04_TestParcel.c
   HPX_REGISTER_ACTION(t04_send_action, &t04_send);
