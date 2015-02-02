@@ -163,31 +163,28 @@ int hpx_init(int *argc, char ***argv) {
   }
   HPX_HERE = HPX_THERE(here->rank);
 
-  int cores = cfg->cores;
-  if (!cores) {
-    cores = system_get_cores();
+  if (!cfg->cores) {
+    cfg->cores = system_get_cores();
   }
 
-  int workers = cfg->threads;
-  if (!workers) {
-    if (cores == system_get_cores()) {
-      workers = cores - 1;
+  if (!cfg->threads) {
+    if (cfg->cores == system_get_cores()) {
+      cfg->threads = cfg->cores - 1;
     }
     else {
-      workers = cores;
+      cfg->threads = cfg->cores;
     }
   }
 
   // parcel network
-  here->network = network_new(LIBHPX_NETWORK_DEFAULT, workers);
+  here->network = network_new(LIBHPX_NETWORK_DEFAULT, cfg->threads);
   if (!here->network) {
     _cleanup(here);
     return dbg_error("failed to create network.\n");
   }
 
   // thread scheduler
-  here->sched = scheduler_new(cores, workers, cfg->stacksize,
-                              cfg->backoffmax, cfg->statistics);
+  here->sched = scheduler_new(cfg);
   if (!here->sched) {
     _cleanup(here);
     return dbg_error("failed to create scheduler.\n");

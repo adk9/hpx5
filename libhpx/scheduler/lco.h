@@ -68,8 +68,7 @@ struct lco_class {
 /// Lock an LCO.
 ///
 /// @param lco  The LCO to lock
-/// @returns    The vtable pointer for the LCO, with any packed state removed
-const lco_class_t *lco_lock(lco_t *lco)
+void lco_lock(lco_t *lco)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Unlock an LCO.
@@ -91,15 +90,6 @@ void lco_init(lco_t *lco, const lco_class_t *class)
 ///
 /// @param           lco The pointer to finalize.
 void lco_fini(lco_t *lco)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
-/// Set the deleted state bit to one.
-///
-/// This operation does not acquire the LCO lock---the caller must lock the
-/// pointer first if this could occur concurrently.
-///
-/// @param           lco The LCO to reset.
-void lco_set_deleted(lco_t *lco)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Resets the user state bit to zero.

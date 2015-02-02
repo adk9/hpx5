@@ -103,39 +103,39 @@ void hpx_lco_sema_v_sync(hpx_addr_t sema) {
 }
 
 void _sema_fini(lco_t *lco) {
-  if (!lco)
+  if (!lco) {
     return;
+  }
 
-  _sema_t *sema = (_sema_t *)lco;
-  lco_lock(&sema->lco);
-  lco_fini(&sema->lco);
-  libhpx_global_free(sema);
+  lco_lock(lco);
+  lco_fini(lco);
+  libhpx_global_free(lco);
 }
 
 void _sema_error(lco_t *lco, hpx_status_t code) {
+  lco_lock(lco);
   _sema_t *sema = (_sema_t *)lco;
-  lco_lock(&sema->lco);
   scheduler_signal_error(&sema->avail, code);
-  lco_unlock(&sema->lco);
+  lco_unlock(lco);
 }
 
 /// Set is equivalent to returning a resource to the semaphore.
 void _sema_set(lco_t *lco, int size, const void *from) {
+  lco_lock(lco);
   _sema_t *sema = (_sema_t *)lco;
-  lco_lock(&sema->lco);
   if (sema->count++ == 0) {
     // only signal one sleeping thread since we're only returning one resource,
     // waking everyone up is inefficient
     scheduler_signal(&sema->avail);
   }
 
-  lco_unlock(&sema->lco);
+  lco_unlock(lco);
 }
 
 hpx_status_t _sema_wait(lco_t *lco) {
   hpx_status_t status = HPX_SUCCESS;
+  lco_lock(lco);
   _sema_t *sema = (_sema_t *)lco;
-  lco_lock(&sema->lco);
 
   // wait until the count is non-zero, use while here and re-read count because
   // our condition variables have MESA semantics
@@ -150,7 +150,7 @@ hpx_status_t _sema_wait(lco_t *lco) {
     sema->count = count - 1;
   }
 
-  lco_unlock(&sema->lco);
+  lco_unlock(lco);
   return status;
 }
 

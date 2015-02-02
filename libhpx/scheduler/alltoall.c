@@ -110,17 +110,17 @@ static HPX_ACTION_DECL(_alltoall_getid_proxy);
 
 /// Deletes a gathering.
 static void _alltoall_fini(lco_t *lco) {
-  if (!lco)
+  if (!lco) {
     return;
+  }
 
   lco_lock(lco);
-  DEBUG_IF(true) {
-    lco_set_deleted(lco);
-  }
   _alltoall_t *g = (_alltoall_t *)lco;
-  if (g->value)
+  if (g->value) {
     free(g->value);
-  libhpx_global_free(g);
+  }
+  lco_fini(lco);
+  libhpx_global_free(lco);
 }
 
 

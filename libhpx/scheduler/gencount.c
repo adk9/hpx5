@@ -42,34 +42,31 @@ typedef struct {
 
 
 static void _gencount_fini(lco_t *lco) {
-  if (!lco)
+  if (!lco) {
     return;
-
-  _gencount_t *gencnt = (_gencount_t *)lco;
-  lco_lock(&gencnt->lco);
-  DEBUG_IF(true) {
-    lco_set_deleted(&gencnt->lco);
   }
-  libhpx_global_free(gencnt);
+
+  lco_lock(lco);
+  lco_fini(lco);
+  libhpx_global_free(lco);
 }
 
 
 static void _gencount_error(lco_t *lco, hpx_status_t code) {
+  lco_lock(lco);
   _gencount_t *gen = (_gencount_t *)lco;
-  lco_lock(&gen->lco);
-
-  for (unsigned i = 0, e = gen->ninplace; i < e; ++i)
+  for (unsigned i = 0, e = gen->ninplace; i < e; ++i) {
     scheduler_signal_error(&gen->inplace[i], code);
+  }
   scheduler_signal_error(&gen->oflow, code);
-
-  lco_unlock(&gen->lco);
+  lco_unlock(lco);
 }
 
 
 /// Set is equivalent to incrementing the generation count
 static void _gencount_set(lco_t *lco, int size, const void *from) {
+  lco_lock(lco);
   _gencount_t *gencnt = (_gencount_t *)lco;
-  lco_lock(&gencnt->lco);
   unsigned long gen = gencnt->gen++;
   scheduler_signal_all(&gencnt->oflow);
 
@@ -77,17 +74,18 @@ static void _gencount_set(lco_t *lco, int size, const void *from) {
     cvar_t *cvar = &gencnt->inplace[gen % gencnt->ninplace];
     scheduler_signal_all(cvar);
   }
-  lco_unlock(&gencnt->lco);
+  lco_unlock(lco);
 }
 
 
 /// Get returns the current generation, it does not block.
 static hpx_status_t _gencount_get(lco_t *lco, int size, void *out) {
+  lco_lock(lco);
   _gencount_t *gencnt = (_gencount_t *)lco;
-  lco_lock(&gencnt->lco);
-  if (size)
+  if (size) {
     memcpy(out, &gencnt->gen, size);
-  lco_unlock(&gencnt->lco);
+  }
+  lco_unlock(lco);
   return HPX_SUCCESS;
 }
 
@@ -96,10 +94,10 @@ static hpx_status_t _gencount_get(lco_t *lco, int size, void *out) {
 // actually just wait on oflow since we signal that every time the generation
 // changes.
 static hpx_status_t _gencount_wait(lco_t *lco) {
+  lco_lock(lco);
   _gencount_t *gencnt = (_gencount_t *)lco;
-  lco_lock(&gencnt->lco);
   hpx_status_t status = scheduler_wait(&gencnt->lco.lock, &gencnt->oflow);
-  lco_unlock(&gencnt->lco);
+  lco_unlock(lco);
   return status;
 }
 
@@ -113,10 +111,12 @@ static hpx_status_t _gencount_wait_gen(_gencount_t *gencnt, unsigned long gen) {
   unsigned long current = gencnt->gen;
   while (current < gen && status == HPX_SUCCESS) {
     cvar_t *cond;
-    if (gen < current + gencnt->ninplace)
+    if (gen < current + gencnt->ninplace) {
       cond = &gencnt->inplace[gen % gencnt->ninplace];
-    else
+    }
+    else {
       cond = &gencnt->oflow;
+    }
 
     status = scheduler_wait(&gencnt->lco.lock, cond);
     current = gencnt->gen;
@@ -143,8 +143,9 @@ static void _gencount_init(_gencount_t *gencnt, unsigned long ninplace) {
   cvar_reset(&gencnt->oflow);
   gencnt->gen = 0;
   gencnt->ninplace = ninplace;
-  for (unsigned long i = 0, e = ninplace; i < e; ++i)
+  for (unsigned long i = 0, e = ninplace; i < e; ++i) {
     cvar_reset(&gencnt->inplace[i]);
+  }
 }
 
 static HPX_ACTION(_gencount_wait_gen_proxy, unsigned long *gen) {
@@ -152,11 +153,10 @@ static HPX_ACTION(_gencount_wait_gen_proxy, unsigned long *gen) {
   return hpx_lco_gencount_wait(target, *gen);
 }
 
-hpx_addr_t
-hpx_lco_gencount_new(unsigned long ninplace) {
-  _gencount_t *cnt = libhpx_global_malloc(sizeof(*cnt) +
-                                          ninplace * sizeof(cvar_t));
-  assert(cnt);
+hpx_addr_t hpx_lco_gencount_new(unsigned long ninplace) {
+  size_t bytes = sizeof(_gencount_t) + ninplace * sizeof(cvar_t);
+  _gencount_t *cnt = libhpx_global_malloc(bytes);
+  dbg_assert(cnt);
   _gencount_init(cnt, ninplace);
   return lva_to_gva(cnt);
 }
