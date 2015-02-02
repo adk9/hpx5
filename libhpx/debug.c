@@ -90,9 +90,3 @@ void log_internal(const hpx_log_t level, unsigned line, const char *filename,
   sync_tatas_release(&_log_lock);
 }
 
-const char * dbg_straction(hpx_action_t op) {
-  if (!here || !here->actions) {
-    return "action table uninitialized";
-  }
-  return action_table_get_key(here->actions, op);
-}
