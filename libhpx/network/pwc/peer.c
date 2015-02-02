@@ -47,7 +47,7 @@ typedef struct {
 } _get_parcel_args_t;
 
 
-static HPX_DEFDECL_ACTION(PINNED_ACTION, _free_parcel, void *UNUSED) {
+static HPX_PINNED(_free_parcel, void) {
   hpx_parcel_t *p = hpx_thread_current_local_target();
   assert(p);
   hpx_parcel_release(p);
