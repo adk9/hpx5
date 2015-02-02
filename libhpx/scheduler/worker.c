@@ -581,6 +581,13 @@ void scheduler_spawn(hpx_parcel_t *p) {
     return;
   }
 
+  ustack_t *thread = parcel_get_stack(self->current);
+  dbg_assert(thread);
+  if (thread->in_lco) {
+    _spawn_lifo(self, p);
+    return;
+  }
+
   uint64_t size = sync_chase_lev_ws_deque_size(&self->work);
   self->work_first = (size >= self->sched->wf_threshold);
   thread_transfer(_try_bind(p), _work_first, NULL);
