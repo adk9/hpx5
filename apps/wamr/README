@@ -1,1 +1,0 @@
-mpirun --mca mtl ^psm --mca btl_openib_if_include mlx4_0 -np 2 ./lulesh

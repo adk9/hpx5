@@ -34,7 +34,10 @@ const char *hpx_strerror(hpx_status_t);
 
 /// @}
 
-/// HPX datatypes
+/// An HPX datatype
+typedef ffi_type* hpx_type_t;
+
+/// HPX basic datatypes
 /// @{
 #define HPX_CHAR               &ffi_type_uchar
 #define HPX_UCHAR              &ffi_type_uchar
@@ -64,9 +67,10 @@ const char *hpx_strerror(hpx_status_t);
 #define HPX_COMPLEX_FLOAT      &ffi_type_complex_float
 #define HPX_COMPLEX_DOUBLE     &ffi_type_complex_double
 #define HPX_COMPLEX_LONGDOUBLE &ffi_type_complex_longdouble
-/// @}
 
-/// An HPX datatype
-typedef ffi_type* hpx_type_t;
+#define HPX_SIZE_T             HPX_ULONG
+#define HPX_ADDR               HPX_UINT64
+
+/// @}
 
 #endif

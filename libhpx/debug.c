@@ -26,48 +26,9 @@
 #include "libhpx/locality.h"
 #include "libhpx/debug.h"
 
-hpx_log_t dbg_log_level = HPX_LOG_DEFAULT;
 
-void dbg_log1(unsigned line, const char *f, const hpx_log_t level,
-              const char *fmt, ...) {
-  static tatas_lock_t lock = SYNC_TATAS_LOCK_INIT;
-  if (dbg_log_level & level) {
-    int tid = hpx_get_my_thread_id();
-    int rank = hpx_get_my_rank();
-
-    sync_tatas_acquire(&lock);
-    printf("LIBHPX<%d,%d>: (%s:%u) ", rank, tid, f, line);
-
-    va_list args;
-    va_start(args, fmt);
-    vprintf(fmt, args);
-    va_end(args);
-    fflush(stdout);
-    sync_tatas_release(&lock);
-  }
-}
-
-int
-dbg_error1(unsigned line, const char *f, const char *fmt, ...) {
-  int tid = hpx_get_my_thread_id();
-  int rank = hpx_get_my_rank();
-  fprintf(stderr, "LIBHPX<%d,%d>: (%s:%u) ", rank, tid, f, line);
-
-  va_list args;
-  va_start(args, fmt);
-  vfprintf(stderr, fmt, args);
-  va_end(args);
-
-  fflush(stderr);
-  hpx_abort();
-  return HPX_ERROR;
-}
-
-
-/**
- * Used for debugging. Causes a process to wait for a debugger to attach, and
- * set the value if i != 0.
- */
+// Used for debugging. Causes a process to wait for a debugger to
+// attach, and set the value if i != 0.
 HPX_OPTIMIZE("O0")
 void dbg_wait(void) {
   int i = 0;
@@ -77,6 +38,56 @@ void dbg_wait(void) {
   fflush(stdout);
   while (0 == i)
     sleep(12);
+}
+
+static void __print(FILE *file, unsigned line, const char *filename,
+                    const char *fmt, va_list *list) {
+  int tid = hpx_get_my_thread_id();
+  int rank = hpx_get_my_rank();
+  fprintf(file, "LIBHPX<%d,%d>: (%s:%u) ", rank, tid, filename, line);
+  vfprintf(file, fmt, *list);
+  fflush(file);
+}
+
+/// Helper macro, extracts the va-args and forwards to __print.
+#define _print(file, line, filename, fmt)       \
+  do {                                          \
+    va_list args;                               \
+    va_start(args, fmt);                        \
+    __print(file, line, filename, fmt, &args);  \
+    va_end(args);                               \
+  } while (0)
+
+int dbg_error_internal(unsigned line, const char *filename, const char *fmt,
+                       ...) {
+  _print(stderr, line, filename, fmt);
+  hpx_abort();
+  return HPX_ERROR;
+}
+
+void dbg_assert_str_internal(bool e, unsigned line, const char *filename,
+                             const char *fmt, ...) {
+  if (e) {
+    return;
+  }
+
+  _print(stderr, line, filename, fmt);
+  hpx_abort();
+}
+
+hpx_log_t log_level = HPX_LOG_DEFAULT;
+
+static tatas_lock_t _log_lock = SYNC_TATAS_LOCK_INIT;
+
+void log_internal(const hpx_log_t level, unsigned line, const char *filename,
+                  const char *fmt, ...) {
+  if (!(log_level & level)) {
+    return;
+  }
+
+  sync_tatas_acquire(&_log_lock);
+  _print(stdout, line, filename, fmt);
+  sync_tatas_release(&_log_lock);
 }
 
 const char * dbg_straction(hpx_action_t op) {

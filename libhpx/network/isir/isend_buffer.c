@@ -133,7 +133,7 @@ static int _resize(isend_buffer_t *buffer, uint32_t size) {
   }
 
  exit:
-  dbg_log_net("resized a send buffer from %u to %u\n", oldsize, size);
+  log_net("resized a send buffer from %u to %u\n", oldsize, size);
   return LIBHPX_OK;
 }
 
@@ -164,7 +164,7 @@ static int _start(isend_buffer_t *isends, int i) {
     return dbg_error("failed MPI_Isend: %u bytes to %d\n", n, to);
   }
 
-  dbg_log_net("started MPI_Isend: %u bytes to %d\n", n, to);
+  log_net("started MPI_Isend: %u bytes to %d\n", n, to);
   return LIBHPX_OK;
 }
 
@@ -241,7 +241,7 @@ static void _compact(isend_buffer_t *buffer, int n) {
   uint32_t size = buffer->size;
   uint64_t m = buffer->active - buffer->min;
   if (n == m) {
-    dbg_log_net("bulk compaction of %d/%lu sends in buffer (%u)\n", n, m,
+    log_net("bulk compaction of %d/%lu sends in buffer (%u)\n", n, m,
                 size);
     buffer->min += n;
     return;
@@ -260,7 +260,7 @@ static void _compact(isend_buffer_t *buffer, int n) {
     buffer->records[j] = buffer->records[k];
   }
 
-  dbg_log_net("incremental compaction of %d/%lu sends in buffer (%u)\n", n, m,
+  log_net("incremental compaction of %d/%lu sends in buffer (%u)\n", n, m,
               size);
 }
 
@@ -289,7 +289,7 @@ static int _test_all(isend_buffer_t *buffer) {
   if (total) {
     _compact(buffer, total);
   }
-  dbg_log_net("tested %u sends, completed %d\n", n+m, total);
+  log_net("tested %u sends, completed %d\n", n+m, total);
   return total;
 }
 
@@ -424,12 +424,12 @@ int isend_buffer_flush(isend_buffer_t *buffer) {
 int isend_buffer_progress(isend_buffer_t *isends) {
   int m = _test_all(isends);
   DEBUG_IF (m) {
-    dbg_log_net("finished %d sends\n", m);
+    log_net("finished %d sends\n", m);
   }
 
   int n = _start_all(isends);
   DEBUG_IF (n) {
-    dbg_log_net("failed to start %d sends\n", n);
+    log_net("failed to start %d sends\n", n);
   }
 
   return m;

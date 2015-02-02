@@ -53,6 +53,9 @@ struct hpx_options_t
   long hpx_heapsize_arg;	/**< @brief set HPX per-PE global heap size.  */
   char * hpx_heapsize_orig;	/**< @brief set HPX per-PE global heap size original value given at command line.  */
   const char *hpx_heapsize_help; /**< @brief set HPX per-PE global heap size help description.  */
+  long hpx_wfthreshold_arg;	/**< @brief bound on help-first tasks before work-first scheduling.  */
+  char * hpx_wfthreshold_orig;	/**< @brief bound on help-first tasks before work-first scheduling original value given at command line.  */
+  const char *hpx_wfthreshold_help; /**< @brief bound on help-first tasks before work-first scheduling help description.  */
   enum enum_hpx_gas hpx_gas_arg;	/**< @brief type of Global Address Space (GAS).  */
   char * hpx_gas_orig;	/**< @brief type of Global Address Space (GAS) original value given at command line.  */
   const char *hpx_gas_help; /**< @brief type of Global Address Space (GAS) help description.  */
@@ -104,6 +107,7 @@ struct hpx_options_t
   unsigned int hpx_backoffmax_given ;	/**< @brief Whether hpx-backoffmax was given.  */
   unsigned int hpx_stacksize_given ;	/**< @brief Whether hpx-stacksize was given.  */
   unsigned int hpx_heapsize_given ;	/**< @brief Whether hpx-heapsize was given.  */
+  unsigned int hpx_wfthreshold_given ;	/**< @brief Whether hpx-wfthreshold was given.  */
   unsigned int hpx_gas_given ;	/**< @brief Whether hpx-gas was given.  */
   unsigned int hpx_boot_given ;	/**< @brief Whether hpx-boot was given.  */
   unsigned int hpx_transport_given ;	/**< @brief Whether hpx-transport was given.  */

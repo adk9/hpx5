@@ -37,7 +37,7 @@
 #include "libhpx/transport.h"
 #include "network/probe.h"
 
-HPX_DEFDECL_ACTION(ACTION, hpx_143_fix, void *UNUSED) {
+HPX_ACTION(hpx_143_fix, void *UNUSED) {
   hpx_gas_global_alloc(sizeof(void*), HPX_LOCALITIES);
   return LIBHPX_OK;
 }
@@ -113,7 +113,7 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // set the log level
-  dbg_log_level = here->config->loglevel;
+  log_level = here->config->loglevel;
 
   // topology
   int e = hwloc_topology_init(&here->topology);
@@ -140,11 +140,11 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   if (here->config->logat && here->config->logat != (int*)HPX_LOCALITY_ALL) {
-    int orig_level = dbg_log_level;
-    dbg_log_level = 0;
+    int orig_level = log_level;
+    log_level = 0;
     for (int i = 0; i < here->config->logat[0]; ++i) {
       if (here->config->logat[i+1] == here->rank) {
-        dbg_log_level = orig_level;
+        log_level = orig_level;
       }
     }
   }
@@ -171,33 +171,24 @@ int hpx_init(int *argc, char ***argv) {
   }
   HPX_HERE = HPX_THERE(here->rank);
 
-  int cores = here->config->cores;
-  if (!cores) {
-    cores = system_get_cores();
+  if (!here->config->cores) {
+    here->config->cores = system_get_cores();
   }
 
-  int workers = here->config->threads;
-  if (!workers) {
-    if (cores == system_get_cores()) {
-      workers = cores - 1;
-    }
-    else {
-      workers = cores;
-    }
+  if (!here->config->threads) {
+    here->config->threads = here->config->cores;
   }
 
   // parcel network
-  here->network = network_new(here->config, here->boot, here->gas, workers);
+  here->network = network_new(here->config, here->boot, here->gas,
+                              here->config->threads);
   if (!here->network) {
     status = dbg_error("failed to create network.\n");
     goto unwind1;
   }
 
   // thread scheduler
-  here->sched = scheduler_new(cores, workers,
-                              here->config->stacksize,
-                              here->config->backoffmax,
-                              here->config->statistics);
+  here->sched = scheduler_new(here->config);
   if (!here->sched) {
     status = dbg_error("failed to create scheduler.\n");
     goto unwind1;
@@ -302,10 +293,13 @@ void hpx_shutdown(int code) {
 /// Called by the application to shutdown the scheduler and network. May be
 /// called from any lightweight HPX thread, or the network thread.
 void hpx_abort(void) {
-  if (here && here->config && here->config->waitonabort)
+  if (here && here->config && here->config->waitonabort) {
     dbg_wait();
-  assert(here->boot);
-  boot_abort(here->boot);
+  }
+  if (here && here->boot) {
+    assert(here->boot);
+    boot_abort(here->boot);
+  }
   abort();
 }
 

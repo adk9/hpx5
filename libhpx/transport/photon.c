@@ -66,7 +66,7 @@ _id(void)
 static void
 _barrier(void)
 {
-  dbg_log_trans("photon: barrier unsupported.\n");
+  log_trans("photon: barrier unsupported.\n");
 }
 
 
@@ -382,22 +382,13 @@ _progress(transport_t *t, transport_op_t op)
 {
   photon_t *photon = (photon_t*)t;
   switch (op) {
-    printf("op: %d\n", op);
   case TRANSPORT_POLL:
     network_progress_poll(photon->progress);
     break;
-  case TRANSPORT_CANCEL:
-    {
-      request_t **i = &(photon->progress)->pending_sends;
-      while (*i != NULL) {
-    request_t *j = *i;
-    photon_cancel((photon_rid)j->request, 0);
-    *i = j->next;
-      }
-    }
-    break;
   case TRANSPORT_FLUSH:
     network_progress_flush(photon->progress);
+    break;
+  case TRANSPORT_CANCEL:
     break;
   default:
     break;

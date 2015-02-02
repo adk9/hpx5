@@ -60,15 +60,13 @@ struct bitmap;
 typedef struct heap {
   volatile uint64_t     csbrk;
   size_t      bytes_per_chunk;
-  size_t          raw_nchunks;
   size_t              nchunks;
   struct bitmap       *chunks;
   size_t               nbytes;
   char                  *base;
-  size_t           raw_nbytes;
-  char              *raw_base;
   struct transport *transport;
   unsigned       cyclic_arena;
+  uint32_t  max_block_lg_size;
 } heap_t;
 
 /// Initialize a heap to manage the specified number of bytes.
@@ -83,13 +81,11 @@ typedef struct heap {
 int heap_init(heap_t *heap, size_t size, bool init_cyclic)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
-
 /// Finalize a heap.
 ///
 /// @param         heap The heap pointer to finalize.
 void heap_fini(heap_t *heap)
   HPX_NON_NULL(1) HPX_INTERNAL;
-
 
 /// Allocate a chunk of the global address space.
 ///
@@ -104,7 +100,6 @@ void heap_fini(heap_t *heap)
 void *heap_chunk_alloc(heap_t *heap, size_t size, size_t align)
   HPX_INTERNAL;
 
-
 /// Release a chunk of the global address space.
 ///
 /// This satisfies requests from jemalloc's chunk allocator to release global
@@ -117,7 +112,6 @@ void *heap_chunk_alloc(heap_t *heap, size_t size, size_t align)
 /// @returns I have no idea what the return value should be used for---Luke.
 bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size)
   HPX_NON_NULL(1,2) HPX_INTERNAL;
-
 
 /// This operation binds the heap to a network.
 ///
@@ -132,7 +126,6 @@ bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size)
 int heap_bind_transport(heap_t *heap, struct transport *transport)
   HPX_NON_NULL(1,2) HPX_INTERNAL;
 
-
 /// Check to see if the heap contains the given, local virtual address.
 ///
 /// @param         heap The heap object.
@@ -141,7 +134,6 @@ int heap_bind_transport(heap_t *heap, struct transport *transport)
 /// @returns TRUE if the @p lva is contained in the global heap.
 bool heap_contains_lva(const heap_t *heap, const void *lva)
   HPX_NON_NULL(1) HPX_INTERNAL;
-
 
 /// Compute the relative heap_offset for this address.
 ///
@@ -152,7 +144,6 @@ bool heap_contains_lva(const heap_t *heap, const void *lva)
 uint64_t heap_lva_to_offset(const heap_t *heap, const void *lva)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
-
 /// Convert a heap offset into a local virtual address.
 ///
 /// @param         heap The heap object.
@@ -162,14 +153,11 @@ uint64_t heap_lva_to_offset(const heap_t *heap, const void *lva)
 void *heap_offset_to_lva(const heap_t *heap, uint64_t offset)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
-
 uint64_t heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
-
 void heap_free_cyclic(heap_t *heap, uint64_t offset)
   HPX_NON_NULL(1) HPX_INTERNAL;
-
 
 /// Check to see if the given offset is cyclic.
 ///
@@ -183,18 +171,6 @@ void heap_free_cyclic(heap_t *heap, uint64_t offset)
 bool heap_offset_is_cyclic(const heap_t *heap, uint64_t offset)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
-
-/// Allocate a cyclic array of blocks.
-///
-/// @param         heap The heap from which to allocate.
-/// @param            n The number of blocks per locality to allocate.
-/// @param        bsize The size of the block.
-///
-/// @returns the base offset of the new allocation.
-uint64_t heap_csbrk(heap_t *heap, size_t n, uint32_t bsize)
-  HPX_NON_NULL(1) HPX_INTERNAL;
-
-
 /// Get the csbrk.
 ///
 /// @param         heap The heap.
@@ -203,11 +179,18 @@ uint64_t heap_csbrk(heap_t *heap, size_t n, uint32_t bsize)
 uint64_t heap_get_csbrk(const heap_t *heap)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
-
 /// Set the csbrk to correspond to the given heap_offset value.
 ///
 /// @returns LIBHPX_OK for success, LIBHPX_ENOMEM for failure.
 int heap_set_csbrk(heap_t *heap, uint64_t offset)
+  HPX_NON_NULL(1) HPX_INTERNAL;
+
+/// Get the maximum number of bits that can be used for block size in the
+/// current heap.
+/// @param         heap The heap to check.
+///
+/// @returns The number of bits that can be used for block size.
+uint32_t heap_max_block_lg_size(const heap_t *heap)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 #endif

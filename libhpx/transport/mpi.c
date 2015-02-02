@@ -99,7 +99,7 @@ static void _mpi_unpin(transport_t *transport, const void* buffer,
 static int _mpi_put(transport_t *t, int dest, const void *data, size_t n,
                     void *rbuffer, size_t rn, void *rid, void *r)
 {
-  dbg_log_trans("put unsupported.\n");
+  log_trans("put unsupported.\n");
   return HPX_SUCCESS;
 }
 
@@ -108,7 +108,7 @@ static int _mpi_put(transport_t *t, int dest, const void *data, size_t n,
 static int _mpi_get(transport_t *t, int dest, void *buffer, size_t n,
                     const void *rdata, size_t rn, void *rid, void *r)
 {
-  dbg_log_trans("get unsupported.\n");
+  log_trans("get unsupported.\n");
   return HPX_SUCCESS;
 }
 
@@ -229,7 +229,7 @@ transport_t *transport_new_mpi(uint32_t send_limit, uint32_t recv_limit) {
       return NULL;
     }
 
-    dbg_log_trans("thread_support_provided = %d\n", level);
+    log_trans("thread_support_provided = %d\n", level);
   }
 
   mpi_t *mpi = malloc(sizeof(*mpi));

@@ -286,7 +286,7 @@ static int _get_switches(const floodlight_t *fl) {
       // LD: why is it const if it's not actually const?
       sw->next = ((floodlight_t*)fl)->switches;
       ((floodlight_t*)fl)->switches = sw;
-      dbg_log_net("floodlight: new switch %s added.\n", (char*)sw->dpid);
+      log_net("floodlight: new switch %s added.\n", (char*)sw->dpid);
     }
   }
   json_decref(response);

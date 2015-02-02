@@ -19,7 +19,7 @@
 static  hpx_action_t _main = 0;
 static  hpx_action_t _setValue  = 0;
 
-static int NUM_FUTURES = 5;
+static const int NUM_FUTURES = 5;
 
 static int _setValue_action(void *args) {
   // Generate the random value
@@ -39,7 +39,7 @@ static int _main_action(void *args) {
     futures[i] = hpx_lco_future_new(sizeof(uint64_t));
     hpx_call(HPX_HERE, _setValue, futures[i], NULL, 0);
   }
-  
+
   hpx_lco_get_all(NUM_FUTURES, futures, sizes, addrs, NULL);
   hpx_lco_wait_all(NUM_FUTURES, futures, NULL);
 
@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-   
+
   HPX_REGISTER_ACTION(_main_action, &_main);
   HPX_REGISTER_ACTION(_setValue_action, &_setValue);
 

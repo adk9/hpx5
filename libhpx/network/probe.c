@@ -24,9 +24,8 @@
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
 
-static hpx_action_t _probe = 0;
 
-static int _probe_handler(void *o) {
+static HPX_ACTION(_probe, void *o) {
   network_t *network = *(network_t **)o;
 
   network_progress(network);
@@ -46,17 +45,13 @@ static int _probe_handler(void *o) {
   return HPX_SUCCESS;
 }
 
-static void HPX_CONSTRUCTOR _register_actions(void) {
-  LIBHPX_REGISTER_ACTION(_probe_handler, &_probe);
-}
-
 int probe_start(network_t *network) {
   int e = hpx_call(HPX_HERE, _probe, HPX_NULL, &network, sizeof(network));
   if (e) {
     return dbg_error("failed to start network probe\n");
   }
   else {
-    dbg_log_net("started probing the network\n");
+    log_net("started probing the network\n");
   }
 
   return LIBHPX_OK;

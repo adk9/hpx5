@@ -27,6 +27,10 @@ option "hpx-heapsize" - "set HPX per-PE global heap size"
 typestr="bytes"
 long optional
 
+option "hpx-wfthreshold" - "bound on help-first tasks before work-first scheduling"
+typestr="tasks"
+long optional
+
 option "hpx-gas" - "type of Global Address Space (GAS)"
 typestr="type"
 values="default","smp","pgas","agas","pgas_switch","agas_switch"

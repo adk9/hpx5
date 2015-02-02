@@ -33,13 +33,12 @@ typedef struct {
   int max;
 } par_for_async_args_t;
 
-static int _par_for_async_action(par_for_async_args_t *args) {
+static HPX_ACTION(_par_for_async, par_for_async_args_t *args) {
   for (int i = args->min, e = args->max; i < e; ++i)
     args->f(i, args->args);
   return HPX_SUCCESS;
 }
 
-static hpx_action_t _par_for_async = 0;
 
 int hpx_par_for(hpx_for_action_t f, const int min, const int max,
                 const void *args, hpx_addr_t sync) {
@@ -98,7 +97,7 @@ typedef struct {
   char env[];
 } par_call_async_args_t;
 
-static int _par_call_async_action(par_call_async_args_t *args) {
+static HPX_ACTION(_par_call_async, par_call_async_args_t *args) {
   const size_t env_size = hpx_thread_current_args_size() - sizeof(*args);
   return hpx_par_call(args->action,
                      args->min, args->max, args->branching_factor, args->cutoff,
@@ -106,8 +105,6 @@ static int _par_call_async_action(par_call_async_args_t *args) {
                      env_size, &args->env,
                      args->sync);
 }
-
-static hpx_action_t _par_call_async = 0;
 
 typedef struct {
   hpx_action_t action;
@@ -119,26 +116,16 @@ typedef struct {
   char arg[];
 } hpx_count_range_call_args_t;
 
-static int
-_hpx_count_range_call_action(const hpx_count_range_call_args_t *const args) {
+static HPX_ACTION(_hpx_count_range_call, const hpx_count_range_call_args_t *const args) {
   int status;
   for (size_t i = 0; i < args->count; ++i) {
-    const hpx_addr_t target = 
+    const hpx_addr_t target =
       hpx_addr_add(args->addr, i * args->increment, args->bsize);
     status = hpx_call(target, args->action, HPX_NULL, args->arg, args->arg_size);
     if (status != HPX_SUCCESS) return status;
   }
 
   return HPX_SUCCESS;
-}
-
-static hpx_action_t _hpx_count_range_call;
-
-static HPX_CONSTRUCTOR void _init_actions(void) {
-  LIBHPX_REGISTER_ACTION(_par_for_async_action, &_par_for_async);
-  LIBHPX_REGISTER_ACTION(_par_call_async_action, &_par_call_async);
-  LIBHPX_REGISTER_ACTION(_hpx_count_range_call_action,
-                         &_hpx_count_range_call);
 }
 
 
@@ -222,26 +209,26 @@ int hpx_count_range_call(hpx_action_t action,
              const hpx_addr_t addr,
              const size_t count,
              const size_t increment,
-             const size_t bsize,
+             const uint32_t bsize,
              const size_t arg_size,
              void *const arg) {
   const size_t thread_chunk = count / (HPX_LOCALITIES * HPX_THREADS);
   hpx_count_range_call_args_t *args = malloc(sizeof(*args) + arg_size);
   memcpy(args->arg, arg, arg_size);
-  args->action = action; args->count = thread_chunk; 
+  args->action = action; args->count = thread_chunk;
   args->increment = increment; args->bsize = bsize; args->arg_size = arg_size;
   for (size_t l = 0; l < HPX_LOCALITIES; ++l) {
     for (size_t t = 0; t < HPX_THREADS; ++t) {
-      const uint64_t addr_delta = 
-	(l * HPX_THREADS + t) * thread_chunk * increment;
+      const uint64_t addr_delta =
+    (l * HPX_THREADS + t) * thread_chunk * increment;
       args->addr = hpx_addr_add(
-		     addr, addr_delta, bsize);
+             addr, addr_delta, bsize);
       hpx_call(HPX_THERE(l), _hpx_count_range_call, HPX_NULL, args,
                sizeof(*args) + arg_size);
     }
   }
   args->count = count % (HPX_LOCALITIES * HPX_THREADS);
-  const uint64_t addr_delta = 
+  const uint64_t addr_delta =
     HPX_LOCALITIES * HPX_THREADS * thread_chunk * increment;
   args->addr = hpx_addr_add(addr, addr_delta, bsize);
   hpx_call(HPX_HERE, _hpx_count_range_call, HPX_NULL, args,

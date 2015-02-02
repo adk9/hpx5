@@ -19,11 +19,9 @@
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
 
-
 static HPX_RETURNS_NON_NULL const char *_id(void) {
   return "MPI";
 }
-
 
 static void _delete(boot_t *boot) {
   int finalized;
@@ -33,7 +31,6 @@ static void _delete(boot_t *boot) {
   }
 }
 
-
 static int _rank(const boot_t *boot) {
   int rank;
   if (MPI_Comm_rank(MPI_COMM_WORLD, &rank) != MPI_SUCCESS) {
@@ -41,7 +38,6 @@ static int _rank(const boot_t *boot) {
   }
   return rank;
 }
-
 
 static int _n_ranks(const boot_t *boot) {
   int ranks;
@@ -51,14 +47,12 @@ static int _n_ranks(const boot_t *boot) {
   return ranks;
 }
 
-
 static int _barrier(const boot_t *boot) {
   if (MPI_Barrier(MPI_COMM_WORLD) != MPI_SUCCESS) {
     return HPX_ERROR;
   }
   return HPX_SUCCESS;
 }
-
 
 static int _allgather(const boot_t *boot, const void *cin, void *out, int n) {
   void *in = (void*)cin;
@@ -69,13 +63,11 @@ static int _allgather(const boot_t *boot, const void *cin, void *out, int n) {
   return HPX_SUCCESS;
 }
 
-
 static void _abort(const boot_t *boot) {
   MPI_Abort(MPI_COMM_WORLD, -6);
 }
 
-
-static boot_t _mpi = {
+static boot_t _mpi_boot_class = {
   .type      = HPX_BOOT_MPI,
   .id        = _id,
   .delete    = _delete,
@@ -86,23 +78,21 @@ static boot_t _mpi = {
   .abort     = _abort
 };
 
-
 boot_t *boot_new_mpi(void) {
   int init;
-  int e = MPI_Initialized(&init);
-  if (e != MPI_SUCCESS) {
+  if (MPI_SUCCESS != MPI_Initialized(&init)) {
     dbg_error("mpi initialization failed\n");
     return NULL;
   }
 
   if (init) {
-    return &_mpi;
+    return &_mpi_boot_class;
   }
 
   static const int LIBHPX_THREAD_LEVEL = MPI_THREAD_FUNNELED;
+
   int level;
-  e = MPI_Init_thread(NULL, NULL, LIBHPX_THREAD_LEVEL, &level);
-  if (e != MPI_SUCCESS) {
+  if (MPI_SUCCESS != MPI_Init_thread(NULL, NULL, LIBHPX_THREAD_LEVEL, &level)) {
     dbg_error("mpi initialization failed\n");
     return NULL;
   }
@@ -113,7 +103,6 @@ boot_t *boot_new_mpi(void) {
     return NULL;
   }
 
-
-  dbg_log_boot("thread_support_provided = %d\n", level);
-  return &_mpi;
+  log_boot("thread_support_provided = %d\n", level);
+  return &_mpi_boot_class;
 }

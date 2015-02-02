@@ -25,15 +25,12 @@
 #include "libhpx/parcel.h"
 #include "emulation.h"
 
-static hpx_action_t _memget_request = 0;
-static hpx_action_t _memget_reply = 0;
-
 typedef struct {
   void    *to;
   char from[];
 } _memget_reply_args_t;
 
-static int _memget_reply_action(_memget_reply_args_t *args) {
+static HPX_ACTION(_memget_reply, _memget_reply_args_t *args) {
   memcpy(args->to, &args->from,
          hpx_thread_current_args_size() - sizeof(args->to));
   return HPX_SUCCESS;
@@ -48,7 +45,8 @@ typedef struct {
 } _memget_request_args_t;
 
 
-static int _memget_request_action(_memget_request_args_t *args) {
+static HPX_ACTION(_memget_request, _memget_request_args_t *args) {
+  // not using pinned action because I have an early unpin below
   hpx_addr_t target = hpx_thread_current_target();
   char *local;
   if (!hpx_gas_try_pin(target, (void**)&local))
@@ -69,11 +67,6 @@ static int _memget_request_action(_memget_request_args_t *args) {
   hpx_gas_unpin(target);
   hpx_parcel_send_sync(p);
   return HPX_SUCCESS;
-}
-
-static HPX_CONSTRUCTOR void _init_actions(void) {
-  LIBHPX_REGISTER_ACTION(_memget_request_action, &_memget_request);
-  LIBHPX_REGISTER_ACTION(_memget_reply_action, &_memget_reply);
 }
 
 int parcel_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync) {

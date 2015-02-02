@@ -143,7 +143,9 @@ static void _set_config_options(config_t *cfg, hpx_options_t *opts) {
   }
   cfg->waitat[opts->hpx_waitat_given] = HPX_LOCALITY_NONE;
 
+  dbg_assert(!opts->hpx_configfile_given || opts->hpx_configfile_arg);
   if (opts->hpx_configfile_given) {
+    dbg_assert(cfg->configfile != opts->hpx_configfile_arg);
     if (cfg->configfile)
       free(cfg->configfile);
     cfg->configfile = strdup(opts->hpx_configfile_arg);

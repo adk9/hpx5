@@ -15,6 +15,8 @@
 
 /// @file
 /// @brief Types and constants needed for configuring HPX at run-time.
+#include <stdint.h>
+#include <hpx/attributes.h>
 
 #include <stddef.h>
 #include <stdint.h>

@@ -35,6 +35,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-backoffmax=count    upper bound for worker-thread backoff",
   "      --hpx-stacksize=bytes     set HPX stack size",
   "      --hpx-heapsize=bytes      set HPX per-PE global heap size",
+  "      --hpx-wfthreshold=tasks   bound on help-first tasks before work-first \n                                  scheduling",
   "      --hpx-gas=type            type of Global Address Space (GAS)  (possible \n                                  values=\"default\", \"smp\", \"pgas\", \n                                  \"agas\", \"pgas_switch\", \"agas_switch\")",
   "      --hpx-boot=type           HPX bootstrap method to use  (possible \n                                  values=\"default\", \"smp\", \"mpi\", \n                                  \"pmi\")",
   "      --hpx-transport=type      type of transport to use  (possible \n                                  values=\"default\", \"smp\", \"mpi\", \n                                  \"portals\", \"photon\")",
@@ -114,6 +115,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_backoffmax_given = 0 ;
   args_info->hpx_stacksize_given = 0 ;
   args_info->hpx_heapsize_given = 0 ;
+  args_info->hpx_wfthreshold_given = 0 ;
   args_info->hpx_gas_given = 0 ;
   args_info->hpx_boot_given = 0 ;
   args_info->hpx_transport_given = 0 ;
@@ -138,6 +140,7 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_backoffmax_orig = NULL;
   args_info->hpx_stacksize_orig = NULL;
   args_info->hpx_heapsize_orig = NULL;
+  args_info->hpx_wfthreshold_orig = NULL;
   args_info->hpx_gas_arg = -1;
   args_info->hpx_gas_orig = NULL;
   args_info->hpx_boot_arg = -1;
@@ -173,26 +176,27 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_backoffmax_help = hpx_options_t_help[4] ;
   args_info->hpx_stacksize_help = hpx_options_t_help[5] ;
   args_info->hpx_heapsize_help = hpx_options_t_help[6] ;
-  args_info->hpx_gas_help = hpx_options_t_help[7] ;
-  args_info->hpx_boot_help = hpx_options_t_help[8] ;
-  args_info->hpx_transport_help = hpx_options_t_help[9] ;
-  args_info->hpx_network_help = hpx_options_t_help[10] ;
-  args_info->hpx_waitat_help = hpx_options_t_help[11] ;
+  args_info->hpx_wfthreshold_help = hpx_options_t_help[7] ;
+  args_info->hpx_gas_help = hpx_options_t_help[8] ;
+  args_info->hpx_boot_help = hpx_options_t_help[9] ;
+  args_info->hpx_transport_help = hpx_options_t_help[10] ;
+  args_info->hpx_network_help = hpx_options_t_help[11] ;
+  args_info->hpx_waitat_help = hpx_options_t_help[12] ;
   args_info->hpx_waitat_min = -1;
   args_info->hpx_waitat_max = -1;
-  args_info->hpx_loglevel_help = hpx_options_t_help[12] ;
+  args_info->hpx_loglevel_help = hpx_options_t_help[13] ;
   args_info->hpx_loglevel_min = -1;
   args_info->hpx_loglevel_max = -1;
-  args_info->hpx_logat_help = hpx_options_t_help[13] ;
+  args_info->hpx_logat_help = hpx_options_t_help[14] ;
   args_info->hpx_logat_min = -1;
   args_info->hpx_logat_max = -1;
-  args_info->hpx_statistics_help = hpx_options_t_help[14] ;
-  args_info->hpx_sendlimit_help = hpx_options_t_help[15] ;
-  args_info->hpx_recvlimit_help = hpx_options_t_help[16] ;
-  args_info->hpx_configfile_help = hpx_options_t_help[17] ;
-  args_info->hpx_mprotectstacks_help = hpx_options_t_help[18] ;
-  args_info->hpx_waitonabort_help = hpx_options_t_help[19] ;
-  args_info->hpx_parcelbuffersize_help = hpx_options_t_help[21] ;
+  args_info->hpx_statistics_help = hpx_options_t_help[15] ;
+  args_info->hpx_sendlimit_help = hpx_options_t_help[16] ;
+  args_info->hpx_recvlimit_help = hpx_options_t_help[17] ;
+  args_info->hpx_configfile_help = hpx_options_t_help[18] ;
+  args_info->hpx_mprotectstacks_help = hpx_options_t_help[19] ;
+  args_info->hpx_waitonabort_help = hpx_options_t_help[20] ;
+  args_info->hpx_parcelbuffersize_help = hpx_options_t_help[22] ;
   
 }
 
@@ -319,6 +323,7 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_backoffmax_orig));
   free_string_field (&(args_info->hpx_stacksize_orig));
   free_string_field (&(args_info->hpx_heapsize_orig));
+  free_string_field (&(args_info->hpx_wfthreshold_orig));
   free_string_field (&(args_info->hpx_gas_orig));
   free_string_field (&(args_info->hpx_boot_orig));
   free_string_field (&(args_info->hpx_transport_orig));
@@ -420,6 +425,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-stacksize", args_info->hpx_stacksize_orig, 0);
   if (args_info->hpx_heapsize_given)
     write_into_file(outfile, "hpx-heapsize", args_info->hpx_heapsize_orig, 0);
+  if (args_info->hpx_wfthreshold_given)
+    write_into_file(outfile, "hpx-wfthreshold", args_info->hpx_wfthreshold_orig, 0);
   if (args_info->hpx_gas_given)
     write_into_file(outfile, "hpx-gas", args_info->hpx_gas_orig, hpx_option_parser_hpx_gas_values);
   if (args_info->hpx_boot_given)
@@ -1029,6 +1036,7 @@ hpx_option_parser_internal (int argc, char * const *argv, struct hpx_options_t *
         { "hpx-backoffmax",	1, NULL, 0 },
         { "hpx-stacksize",	1, NULL, 0 },
         { "hpx-heapsize",	1, NULL, 0 },
+        { "hpx-wfthreshold",	1, NULL, 0 },
         { "hpx-gas",	1, NULL, 0 },
         { "hpx-boot",	1, NULL, 0 },
         { "hpx-transport",	1, NULL, 0 },
@@ -1120,6 +1128,20 @@ hpx_option_parser_internal (int argc, char * const *argv, struct hpx_options_t *
                 &(local_args_info.hpx_heapsize_given), optarg, 0, 0, ARG_LONG,
                 check_ambiguity, override, 0, 0,
                 "hpx-heapsize", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* bound on help-first tasks before work-first scheduling.  */
+          else if (strcmp (long_options[option_index].name, "hpx-wfthreshold") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_wfthreshold_arg), 
+                 &(args_info->hpx_wfthreshold_orig), &(args_info->hpx_wfthreshold_given),
+                &(local_args_info.hpx_wfthreshold_given), optarg, 0, 0, ARG_LONG,
+                check_ambiguity, override, 0, 0,
+                "hpx-wfthreshold", '-',
                 additional_error))
               goto failure;
           

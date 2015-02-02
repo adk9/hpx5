@@ -19,8 +19,8 @@ static int _hello_action(void *args) {
   hpx_shutdown(HPX_SUCCESS);
 }
 
-int main(int argc, char *const argv[argc]) {
-  if (hpx_init(NULL, NULL) != 0)
+int main(int argc, char *argv[argc]) {
+  if (hpx_init(&argc, &argv) != 0)
     return -1;
   hpx_action_t hello;
   HPX_REGISTER_ACTION(_hello_action, &hello);

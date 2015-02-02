@@ -49,9 +49,11 @@ typedef struct {
 static void _allreduce_fini(lco_t *lco) {
   lco_lock(lco);
   _allreduce_t *r = (_allreduce_t *)lco;
-  if (r->value)
+  if (r->value) {
     free(r->value);
-  libhpx_global_free(r);
+  }
+  lco_fini(lco);
+  libhpx_global_free(lco);
 }
 
 
@@ -159,7 +161,7 @@ static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
 
   assert(init);
 
-  lco_init(&r->lco, &vtable, 0);
+  lco_init(&r->lco, &vtable);
   cvar_reset(&r->wait);
   r->readers = readers;
   r->op = op;

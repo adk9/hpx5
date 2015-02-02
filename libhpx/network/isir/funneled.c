@@ -185,13 +185,13 @@ static int _funneled_progress(network_t *network) {
   }
 
   DEBUG_IF(n) {
-    dbg_log_net("completed %d recvs\n", n);
+    log_net("completed %d recvs\n", n);
   }
 
   int m = isend_buffer_progress(&this->isends);
 
   DEBUG_IF(m) {
-    dbg_log_net("completed %d sends\n", m);
+    log_net("completed %d sends\n", m);
   }
 
   _send_all(this);
@@ -205,7 +205,7 @@ static int _funneled_progress(network_t *network) {
 
 network_t *network_isir_funneled_new(struct gas *gas, int nrx) {
   if (gas->type == HPX_GAS_SMP) {
-    dbg_log_net("will not initialize a %s network for SMP\n", _funneled_id());
+    log_net("will not initialize a %s network for SMP\n", _funneled_id());
     return NULL;
   }
 
