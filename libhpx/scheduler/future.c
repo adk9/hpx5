@@ -63,22 +63,19 @@ static bool _trigger(_future_t *f) {
 
 // Nothing extra allocated in the future
 static void _future_fini(lco_t *lco) {
-  _future_t *f = (void*)lco;
-  if (f) {
-    lco_lock(&f->lco);
-    DEBUG_IF(true) {
-      lco_set_deleted(&f->lco);
-    }
+  if (!lco) {
+    return;
   }
-  libhpx_global_free(f);
+
+  lco_lock(lco);
+  lco_fini(lco);
+  libhpx_global_free(lco);
 }
 
 /// Copies @p from into the appropriate location.
-static void _future_set(lco_t *lco, int size, const void *from)
-{
+static void _future_set(lco_t *lco, int size, const void *from) {
+  lco_lock(lco);
   _future_t *f = (_future_t *)lco;
-  lco_lock(&f->lco);
-
   // futures are write-once
   if (!_trigger(f)) {
     dbg_error("cannot set an already set future\n");
@@ -91,7 +88,7 @@ static void _future_set(lco_t *lco, int size, const void *from)
   scheduler_signal_all(&f->full);
 
  unlock:
-  lco_unlock(&f->lco);
+  lco_unlock(lco);
 }
 
 void lco_future_set(lco_t *lco, int size, const void *from) {
@@ -99,11 +96,11 @@ void lco_future_set(lco_t *lco, int size, const void *from) {
 }
 
 static void _future_error(lco_t *lco, hpx_status_t code) {
+  lco_lock(lco);
   _future_t *f = (_future_t *)lco;
-  lco_lock(&f->lco);
   _trigger(f);
   scheduler_signal_error(&f->full, code);
-  lco_unlock(&f->lco);
+  lco_unlock(lco);
 }
 
 static void _future_reset(_future_t *f) {
@@ -115,12 +112,12 @@ static void _future_reset(_future_t *f) {
 
 static hpx_status_t _future_attach(lco_t *lco, hpx_parcel_t *p) {
   hpx_status_t status = HPX_SUCCESS;
+  lco_lock(lco);
   _future_t *f = (_future_t *)lco;
-  lco_lock(&f->lco);
 
   // if the future isn't triggered, then attach this parcel to the full
   // condition
-  if (!lco_get_triggered(&f->lco)) {
+  if (!lco_get_triggered(lco)) {
     status = cvar_attach(&f->full, p);
     goto unlock;
   }
@@ -138,36 +135,40 @@ static hpx_status_t _future_attach(lco_t *lco, hpx_parcel_t *p) {
   hpx_parcel_send(p, HPX_NULL);
 
  unlock:
-  lco_unlock(&f->lco);
+  lco_unlock(lco);
   return status;
 }
 
 /// Copies the appropriate value into @p out, waiting if the lco isn't set yet.
 static hpx_status_t _future_get(lco_t *lco, int size, void *out) {
+  hpx_status_t status = HPX_SUCCESS;
+  lco_lock(lco);
+
   _future_t *f = (_future_t *)lco;
-  lco_lock(&f->lco);
-  hpx_status_t status = _wait(f);
-
-  if ((status == HPX_SUCCESS) && out)
+  status = _wait(f);
+  if ((status == HPX_SUCCESS) && out) {
     memcpy(out, &f->value, size);
+  }
 
-  lco_unlock(&f->lco);
+  lco_unlock(lco);
   return status;
 }
 
 static hpx_status_t _future_wait(lco_t *lco) {
+  hpx_status_t status = HPX_SUCCESS;
+  lco_lock(lco);
   _future_t *f = (_future_t *)lco;
-  lco_lock(&f->lco);
-  hpx_status_t status = _wait(f);
-  lco_unlock(&f->lco);
+  status = _wait(f);
+  lco_unlock(lco);
   return status;
 }
 
 static hpx_status_t _future_try_wait(lco_t *lco, hpx_time_t time) {
+  hpx_status_t status = HPX_SUCCESS;
+  lco_lock(lco);
   _future_t *f = (_future_t *)lco;
-  lco_lock(&f->lco);
-  hpx_status_t status = _try_wait(f, time);
-  lco_unlock(&f->lco);
+  status = _try_wait(f, time);
+  lco_unlock(lco);
   return status;
 }
 
@@ -204,7 +205,7 @@ static HPX_PINNED(_block_init, uint32_t *args) {
   const uint32_t size = args[0];
   const uint32_t nfutures = args[1];
   char *base = hpx_thread_current_local_target();
-  assert(base);
+  dbg_assert(base);
 
   // sequentially initialize each future
   for (uint32_t i = 0; i < nfutures; ++i) {
@@ -217,7 +218,7 @@ static HPX_PINNED(_block_init, uint32_t *args) {
 
 hpx_addr_t hpx_lco_future_new(int size) {
   _future_t *local = libhpx_global_malloc(sizeof(*local) + size);
-  assert(local);
+  dbg_assert(local);
   _future_init(local, size);
   return lva_to_gva(local);
 }

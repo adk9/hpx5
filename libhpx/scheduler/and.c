@@ -84,18 +84,14 @@ static hpx_status_t _try_wait(_and_t *and, hpx_time_t time) {
   return HPX_SUCCESS;
 }
 
-static void _and_fini(lco_t *lco)
-{
-  if (!lco)
+static void _and_fini(lco_t *lco) {
+  if (!lco) {
     return;
-
-  _and_t *and = (_and_t *)lco;
-  lco_lock(&and->lco);
-  DEBUG_IF(true) {
-    lco_set_deleted(&and->lco);
   }
-  log_lco("and: finalized\n");
-  libhpx_global_free(and);
+
+  lco_lock(lco);
+  lco_fini(lco);
+  libhpx_global_free(lco);
 }
 
 static void _and_error(lco_t *lco, hpx_status_t code) {
