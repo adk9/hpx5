@@ -327,13 +327,11 @@ static HPX_PINNED(_alltoall_setid_proxy, void *args) {
 
 
 static void _alltoall_set(lco_t *lco, int size, const void *from) {
-  // can't call set on an alltoall
-  hpx_abort();
+  dbg_assert_str(false, "can't call set on an alltoall LCO.\n");
 }
 
-static hpx_status_t _alltoall_get(lco_t *lco, int size, void *out) {
-  // can't call get on an alltoall
-  hpx_abort();
+static hpx_status_t _alltoall_get(lco_t *lco, int size, void **out) {
+  dbg_assert(false, "can't call get on an alltoall LCO.\n");
 }
 
 static void _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
