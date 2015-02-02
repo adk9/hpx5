@@ -1,6 +1,6 @@
 lcodir                        = $(datarootdir)/doc/@PACKAGE@
 lco_PROGRAMS                  = chan probe chanarray chanSendInorder sema \
-                                lcoAnd genCount lcoSetGet lcoAll lcoError \
+                                lcoAnd  lcoSetGet lcoAll lcoError \
                                 lcoFutureArray 
 
 chan_SOURCES                  = chan.c 
@@ -9,7 +9,6 @@ chanarray_SOURCES             = chanarray.c
 chanSendInorder_SOURCES       = chanSendInorder.c
 sema_SOURCES                  = sema.c
 lcoAnd_SOURCES                = lcoAnd.c
-genCount_SOURCES              = genCount.c
 lcoSetGet_SOURCES             = lcoSetGet.c
 lcoAll_SOURCES                = lcoAll.c
 lcoError_SOURCES              = lcoError.c
@@ -35,7 +34,6 @@ chanarray_LDADD               = $(all_LIBS)
 chanSendInorder_LDADD         = $(all_LIBS)
 sema_LDADD                    = $(all_LIBS)
 lcoAnd_LDADD                  = $(all_LIBS)
-genCount_LDADD                = $(all_LIBS)
 lcoSetGet_LDADD               = $(all_LIBS)
 lcoAll_LDADD                  = $(all_LIBS)
 lcoError_LDADD                = $(all_LIBS)
@@ -48,7 +46,6 @@ chanarray_DEPENDENCIES               = $(all_LIBS)
 chanSendInorder_DEPENDENCIES         = $(all_LIBS)
 sema_DEPENDENCIES                    = $(all_LIBS)
 lcoAnd_DEPENDENCIES                  = $(all_LIBS)
-genCount_DEPENDENCIES                = $(all_LIBS)
 lcoSetGet_DEPENDENCIES               = $(all_LIBS)
 lcoAll_DEPENDENCIES                  = $(all_LIBS)
 lcoError_DEPENDENCIES                = $(all_LIBS)

@@ -164,7 +164,7 @@ static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
     hpx_addr_t addr;
     hpx_action_t op;
     decode_command(command, &op, &addr);
-    dbg_log_net("extracted local interrupt of %s\n", dbg_straction(op));
+    log_net("extracted local interrupt of %s\n", dbg_straction(op));
     int e = hpx_call(addr, op, HPX_NULL, NULL, 0);
     if (HPX_SUCCESS != e) {
       dbg_error("failed to process local command");
@@ -177,7 +177,7 @@ static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
       hpx_addr_t addr;
       hpx_action_t op;
       decode_command(command, &op, &addr);
-      dbg_log_net("processing command %s from rank %d\n", dbg_straction(op),
+      log_net("processing command %s from rank %d\n", dbg_straction(op),
                   i);
       int e = hpx_call(addr, op, HPX_NULL, &i, sizeof(i));
       if (HPX_SUCCESS != e) {
@@ -238,12 +238,12 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   int e;
 
   if (boot->type == HPX_BOOT_SMP) {
-    dbg_log_net("will not instantiate photon for the SMP boot network\n");
+    log_net("will not instantiate photon for the SMP boot network\n");
     return LIBHPX_OK;
   }
 
   if (gas->type == HPX_GAS_SMP) {
-    dbg_log_net("will not instantiate photon for the SMP GAS\n");
+    log_net("will not instantiate photon for the SMP GAS\n");
     return LIBHPX_OK;
   }
 

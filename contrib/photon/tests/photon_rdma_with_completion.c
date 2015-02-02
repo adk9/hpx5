@@ -18,7 +18,7 @@
 START_TEST(test_rdma_with_completion) 
 {
   int rank, size, i, next, prev;
-  int ret, flag, rc;
+  int flag, rc;
   int send_comp = 0;
   int recv_comp = 0;
   fprintf(detailed_log, "Starting RDMA with completion test\n");
@@ -29,7 +29,7 @@ START_TEST(test_rdma_with_completion)
   prev = (size + rank - 1) % size;
 
   struct photon_buffer_t rbuf;
-  photon_rid sendReq, recvReq, req, request;
+  photon_rid sendReq, recvReq, req;
   char *send, *recv;
 
   send = (char*)malloc(PHOTON_SEND_SIZE*sizeof(char));

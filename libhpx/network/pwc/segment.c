@@ -32,7 +32,7 @@ int segment_init(segment_t *segment, char *base, size_t size) {
     return dbg_error("failed to register segment with Photon\n");
   }
   else {
-    dbg_log_net("registered segment (%p, %lu)\n", base, size);
+    log_net("registered segment (%p, %lu)\n", base, size);
   }
 
   if (PHOTON_OK != photon_get_buffer_private(base, size , &segment->key)) {
@@ -50,7 +50,7 @@ void segment_fini(segment_t *segment) {
   }
 
   if (PHOTON_OK != photon_unregister_buffer(base, size)) {
-    dbg_log_net("could not unregister the local heap segment %p\n", base);
+    log_net("could not unregister the local heap segment %p\n", base);
   }
 }
 

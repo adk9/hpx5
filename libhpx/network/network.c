@@ -15,8 +15,6 @@
 #endif
 
 /// @file libhpx/network/network.c
-
-
 #include "libhpx/config.h"
 #include "libhpx/debug.h"
 #include "libhpx/network.h"
@@ -25,8 +23,7 @@
 #include "smp.h"
 
 static network_t *_default(config_t *cfg, struct boot *boot, struct gas *gas,
-                           int nrx)
-{
+                           int nrx) {
   network_t *network = NULL;
 #ifdef HAVE_PHOTON
   network = network_pwc_funneled_new(cfg, boot, gas, nrx);
@@ -48,8 +45,7 @@ static network_t *_default(config_t *cfg, struct boot *boot, struct gas *gas,
 
 
 network_t *network_new(config_t *cfg, struct boot *boot, struct gas *gas,
-                       int nrx)
-{
+                       int nrx) {
   network_t *network = NULL;
 
   switch (cfg->network) {
@@ -76,7 +72,7 @@ network_t *network_new(config_t *cfg, struct boot *boot, struct gas *gas,
     dbg_error("failed to initialize the network\n");
   }
   else {
-    dbg_log("network initialized using %s\n", network->id());
+    log("network initialized using %s\n", network->id());
   }
 
   return network;

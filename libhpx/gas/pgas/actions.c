@@ -24,13 +24,8 @@
 #include "heap.h"
 #include "pgas.h"
 
-/// Definitions of the external action handles.
-/// @{
-hpx_action_t pgas_cyclic_alloc = 0;
-hpx_action_t pgas_cyclic_calloc = 0;
-hpx_action_t pgas_free = 0;
-/// @}
-
+static HPX_ACTION_DECL(_calloc_init);
+static HPX_ACTION_DECL(_set_csbrk);
 
 /// Internal utility actions for dealing with calloc.
 /// @{
@@ -39,10 +34,6 @@ typedef struct {
   uint32_t  bytes;
   uint32_t  bsize;
 } _calloc_init_args_t;
-
-static hpx_action_t _calloc_init = 0;
-static hpx_action_t _set_csbrk = 0;
-/// @}
 
 
 /// Allocate from the cyclic space.
@@ -123,7 +114,7 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
 ///
 /// This just unpacks the arguments and forwards to the synchronous form of
 /// alloc locally, and continues the resulting base.
-static int _pgas_cyclic_alloc_handler(pgas_alloc_args_t *args) {
+HPX_ACTION(pgas_cyclic_alloc, pgas_alloc_args_t *args) {
   hpx_addr_t addr = pgas_cyclic_alloc_sync(args->n, args->bsize);
   HPX_THREAD_CONTINUE(addr);
 }
@@ -133,7 +124,7 @@ static int _pgas_cyclic_alloc_handler(pgas_alloc_args_t *args) {
 ///
 /// This just unpacks the arguments and forwards to the synchronous form of
 /// calloc locally, and continues the resulting base.
-static int _pgas_cyclic_calloc_handler(pgas_alloc_args_t *args) {
+HPX_ACTION(pgas_cyclic_calloc, pgas_alloc_args_t *args) {
   hpx_addr_t addr = pgas_cyclic_calloc_sync(args->n, args->bsize);
   HPX_THREAD_CONTINUE(addr);
 }
@@ -150,7 +141,7 @@ static int _pgas_cyclic_calloc_handler(pgas_alloc_args_t *args) {
 ///                     the number of blocks and the size of each block.
 ///
 /// @returns HPX_SUCCESS
-static int _calloc_init_handler(_calloc_init_args_t *args) {
+static HPX_ACTION(_calloc_init, _calloc_init_args_t *args) {
   // Create a global physical address from the offset so that we can perform
   // cyclic address arithmetic on it. This avoids any issues with internal
   // padding, since the addr_add already needs to be able to deal with that
@@ -170,7 +161,7 @@ static int _calloc_init_handler(_calloc_init_args_t *args) {
 }
 
 
-static int _pgas_free_handler(void *UNUSED) {
+HPX_ACTION(pgas_free, void) {
   hpx_addr_t gpa = hpx_thread_current_target();
   if (here->rank != pgas_gpa_to_rank(gpa)) {
     dbg_error("PGAS free operation for rank %u arrived at rank %u instead.\n",
@@ -183,17 +174,8 @@ static int _pgas_free_handler(void *UNUSED) {
 }
 
 
-static int _set_csbrk_handler(size_t *offset) {
+static HPX_ACTION(_set_csbrk, size_t *offset) {
   int e = heap_set_csbrk(global_heap, *offset);
   dbg_check(e, "cyclic allocation ran out of memory at rank %u", here->rank);
   return e;
-}
-
-
-static void HPX_CONSTRUCTOR _pgas_register_actions(void) {
-  LIBHPX_REGISTER_ACTION(_pgas_cyclic_alloc_handler, &pgas_cyclic_alloc);
-  LIBHPX_REGISTER_ACTION(_pgas_cyclic_calloc_handler, &pgas_cyclic_calloc);
-  LIBHPX_REGISTER_ACTION(_pgas_free_handler, &pgas_free);
-  LIBHPX_REGISTER_ACTION(_calloc_init_handler, &_calloc_init);
-  LIBHPX_REGISTER_ACTION(_set_csbrk_handler, &_set_csbrk);
 }

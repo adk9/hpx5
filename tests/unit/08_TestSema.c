@@ -3,7 +3,7 @@
 // @Project       High Performance ParallelX Library (libhpx)
 //----------------------------------------------------------------------------
 // @Subject       Library Unit Test Harness - Semaphores
-// 
+//
 // @Compiler      GCC
 // @OS            Linux
 // @Description   sema.c File Reference
@@ -11,20 +11,20 @@
 //                1. hpx_lco_sema_new -- Create new semaphore
 //                2. hpx_lco_sema_p -- Standard semaphore P (Wait) operation.
 //                3. hpx_lco_sema_v -- Standard semaphore V (Signal) operation.
-//                
+//
 // @Copyright     Copyright (c) 2014, Trustees of Indiana University
 //                All rights reserved.
 //
 //                This software may be modified and distributed under the terms
 //                of the BSD license.  See the COPYING file for details.
 //
-//                This software was created at the Indiana University Center 
+//                This software was created at the Indiana University Center
 //                for Research in Extreme Scale Technologies (CREST).
 //----------------------------------------------------------------------------
 // @Date          09/04/2014
 // @Author        Jayashree Candadai <jayaajay [at] indiana.edu>
 // @Version       0.1
-// Commands to Run: make, mpirun hpxtest 
+// Commands to Run: make, mpirun hpxtest
 //****************************************************************************
 
 //****************************************************************************
@@ -54,10 +54,10 @@ int t08_handler_action(uint32_t *args) {
   fprintf(test_log, "Thread %d: Exiting critical region...\n", x);
   /* END CRITICAL REGION */
 
-  // Standard semaphore V (Signal) operation. 
-  // increments the count in the semaphore, signaling the LCO if the 
-  // increment transitions from 0 to 1. This is always async.    
-  hpx_lco_sema_v(mutex);       /* up semaphore */
+  // Standard semaphore V (Signal) operation.
+  // increments the count in the semaphore, signaling the LCO if the
+  // increment transitions from 0 to 1. This is always async.
+  hpx_lco_sema_v(mutex, HPX_NULL);       /* up semaphore */
 
   return HPX_SUCCESS;
 }
@@ -89,14 +89,14 @@ START_TEST (test_libhpx_lco_Semaphores)
 
   hpx_call(peers[0], t08_handler, futures[0], &i[0], sizeof(uint32_t));
   hpx_call(peers[1], t08_handler, futures[1], &i[1], sizeof(uint32_t));
-    
+
   hpx_lco_get_all(2, futures, sizes, addrs, NULL);
-   
+
   hpx_lco_delete(futures[0], HPX_NULL);
   hpx_lco_delete(futures[1], HPX_NULL);
 
   fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
-} 
+}
 END_TEST
 
 //****************************************************************************

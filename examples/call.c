@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <hpx/hpx.h>
 
-hpx_action_t id;
+static HPX_ACTION_DECL(id);
 
 static HPX_INTERRUPT(_my_interrupt, void *args) {
   printf("Hi, I am an interrupt!\n");
@@ -33,11 +33,13 @@ static HPX_ACTION(_my_action, void *args) {
   return HPX_SUCCESS;
 }
 
-int _my_typed_action(int i, float f, char c) {
+static int _my_typed_action(int i, float f, char c) {
   printf("Hi, I am a typed action with args: %d %f %c!\n", i, f, c);
   hpx_call_cc(HPX_HERE, _my_action, NULL, NULL, NULL, 0);
   return HPX_SUCCESS;
 }
+
+static HPX_ACTION_DEF(DEFAULT, _my_typed_action, id, HPX_INT, HPX_FLOAT, HPX_CHAR);
 
 static HPX_ACTION(_main, void *args) {
   int i = 42;
@@ -50,6 +52,5 @@ static HPX_ACTION(_main, void *args) {
 
 int main(int argc, char *argv[]) {
   hpx_init(&argc, &argv);
-  HPX_REGISTER_ACTION(_my_typed_action, &id, HPX_INT, HPX_FLOAT, HPX_CHAR);
   return hpx_run(&_main, NULL, 0);
 }

@@ -62,7 +62,7 @@ pthread_t progress_start(locality_t *locality) {
     return pthread_self();
   }
   else {
-    dbg_log("started network progress.\n");
+    log("started network progress.\n");
   }
   return id;
 }

@@ -38,21 +38,9 @@ typedef struct {
 
 
 /// Remote action interface to a process.
-static hpx_action_t _proc_call;
-static hpx_action_t _proc_delete;
-static hpx_action_t _proc_return_credit;
-
-typedef struct _call_args _call_args_t;
-static int _proc_call_handler(_call_args_t *args);
-static int _proc_delete_handler(void *args);
-static int _proc_return_credit_handler(uint64_t *args);
-
-static void HPX_CONSTRUCTOR _initialize_actions(void) {
-  LIBHPX_REGISTER_ACTION(_proc_call_handler, &_proc_call);
-  LIBHPX_REGISTER_ACTION(_proc_delete_handler, &_proc_delete);
-  LIBHPX_REGISTER_ACTION(_proc_return_credit_handler, &_proc_return_credit);
-}
-
+static HPX_ACTION_DECL(_proc_call);
+static HPX_ACTION_DECL(_proc_delete);
+static HPX_ACTION_DECL(_proc_return_credit);
 
 static bool _is_tracked(_process_t *p) {
   return (p->termination != HPX_NULL);
@@ -81,19 +69,19 @@ static void _init(_process_t *p, hpx_addr_t termination) {
 }
 
 
-struct _call_args {
+typedef struct {
   hpx_addr_t   target;
   hpx_action_t action;
   hpx_addr_t   result;
   char         data[];
-};
+} _call_args_t;
 
-
-int _proc_call_handler(_call_args_t *args) {
+static HPX_ACTION(_proc_call, _call_args_t *args) {
   hpx_addr_t process = hpx_thread_current_target();
   _process_t *p = NULL;
-  if (!hpx_gas_try_pin(process, (void**)&p))
+  if (!hpx_gas_try_pin(process, (void**)&p)) {
     return HPX_RESEND;
+  }
 
   uint64_t credit = sync_addf(&p->credit, 1, SYNC_ACQ_REL);
   hpx_gas_unpin(process);
@@ -113,35 +101,26 @@ int _proc_call_handler(_call_args_t *args) {
 }
 
 
-int _proc_delete_handler(void *args) {
-  hpx_addr_t target = hpx_thread_current_target();
-  _process_t *p = NULL;
-  if (!hpx_gas_try_pin(target, (void**)&p))
-    return HPX_RESEND;
-
+static HPX_PINNED(_proc_delete, void *args) {
+  _process_t *p = hpx_thread_current_local_target();
+  assert(p);
   _free(p);
-  hpx_gas_unpin(target);
   return HPX_SUCCESS;
 }
 
 
-int _proc_return_credit_handler(uint64_t *args) {
-  uint64_t credit = *args;
-  hpx_addr_t target = hpx_thread_current_target();
-  _process_t *p = NULL;
-  if (!hpx_gas_try_pin(target, (void**)&p))
-    return HPX_RESEND;
+static HPX_PINNED(_proc_return_credit, uint64_t *args) {
+  _process_t *p = hpx_thread_current_local_target();
+  assert(p);
 
   // add credit to the credit-accounting bitmap
-  if (cr_bitmap_add_and_test(p->debt, credit)) {
-    //dbg_log("detected quiescence...\n");
+  if (cr_bitmap_add_and_test(p->debt, *args)) {
+    //log("detected quiescence...\n");
     uint64_t total_credit = sync_addf(&p->credit, -1, SYNC_ACQ_REL);
     assert(total_credit == 0);
     assert(_is_tracked(p));
     hpx_lco_set(p->termination, 0, NULL, HPX_NULL, HPX_NULL);
   }
-
-  hpx_gas_unpin(target);
   return HPX_SUCCESS;
 }
 

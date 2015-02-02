@@ -31,9 +31,9 @@ AC_DEFUN([HPX_CONTRIB_HWLOC],
         unset enable_gl
         AS_IF([test "x$have_hwloc" != xyes],
               [AC_MSG_ERROR([could not configure hwloc])],
-              [$2hwloc_cppflags="\$(HWLOC_EMBEDDED_CPPFLAGS)"
-               $2hwloc_cflags="\$(HWLOC_EMBEDDED_CFLAGS)"
-               $2hwloc_libs="\$(HWLOC_EMBEDDED_LIBS)"])
+              [$2hwloc_cppflags="$HWLOC_EMBEDDED_CPPFLAGS"
+               $2hwloc_cflags="$HWLOC_EMBEDDED_CFLAGS"
+               $2hwloc_libs="$HWLOC_EMBEDDED_LIBS"])
         enable_external_hwloc=no])
    HWLOC_DO_AM_CONDITIONALS
    AM_CONDITIONAL([BUILD_HWLOC], [test "x$enable_external_hwloc" == xno])])

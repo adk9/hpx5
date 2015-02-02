@@ -36,7 +36,7 @@ static int _emulate_pwc_handler(void *buffer) {
   gas_t *gas = here->gas;
   void *to;
   if (!gas->try_pin(p->target, &to)) {
-    dbg_log_net("put-with-completion emulation resend\n");
+    log_net("put-with-completion emulation resend\n");
     return HPX_RESEND;
   }
   memcpy(to, buffer, p->size);
@@ -56,7 +56,7 @@ static int _emulate_gwc_handler(struct isir_emulate_gwc_args *args) {
   gas_t *gas = here->gas;
   void *from;
   if (!gas->try_pin(p->target, &from)) {
-    dbg_log_net("get-with-completion emulation resend\n");
+    log_net("get-with-completion emulation resend\n");
     return HPX_RESEND;
   }
 

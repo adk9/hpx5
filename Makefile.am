@@ -3,13 +3,15 @@
 ####################
 
 EXTRA_DIST = \
-        autogen.sh           \
-        README NEWS TODO     \
+        README NEWS          \
         INSTALL AUTHORS      \
         docs
 
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = -I config -I contrib/hwloc-1.10.0/config
+
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = hpx.pc
 
 SUBDIRS       = contrib libsync libhpx include examples bench
 DIST_SUBDIRS  = contrib libsync libhpx include examples bench
@@ -27,9 +29,4 @@ endif
 if ENABLE_TUTORIAL
 SUBDIRS      += tutorial
 DIST_SUBDIRS += tutorial
-endif
-
-if ENABLE_APPS
-SUBDIRS      += apps
-DIST_SUBDIRS += apps
 endif

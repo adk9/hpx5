@@ -107,7 +107,7 @@ static int _reflow(circular_buffer_t *buffer, uint32_t old_capacity) {
     return dbg_error("unexpected shift\n");
   }
 
-  dbg_log_net("reflowed a circular buffer from %u to %u\n", old_capacity,
+  log_net("reflowed a circular buffer from %u to %u\n", old_capacity,
               new_capacity);
   return LIBHPX_OK;
 }

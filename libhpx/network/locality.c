@@ -29,26 +29,20 @@
 
 locality_t *here = NULL;
 
-hpx_action_t locality_shutdown = 0;
-hpx_action_t locality_call_continuation = 0;
-
 /// The action that shuts down the HPX scheduler.
-static int _shutdown_handler(int *code) {
+HPX_ACTION(locality_shutdown, int *code) {
   scheduler_shutdown(here->sched, *code);
   return HPX_SUCCESS;
 }
 
-static int _call_cont_handler(locality_cont_args_t *args) {
+HPX_ACTION(locality_call_continuation, locality_cont_args_t *args) {
+  // just doing address translation, not pinning
   hpx_addr_t target = hpx_thread_current_target();
-  if (!hpx_gas_try_pin(target, NULL))
+  if (!hpx_gas_try_pin(target, NULL)) {
     return HPX_RESEND;
+  }
 
   uint32_t size = hpx_thread_current_args_size() - sizeof(args->status) - sizeof(args->action);
   // handle status here: args->status;
   return hpx_call(target, args->action, HPX_NULL, args->data, size);
-}
-
-static HPX_CONSTRUCTOR void _init_actions(void) {
-  LIBHPX_REGISTER_ACTION(_shutdown_handler, &locality_shutdown);
-  LIBHPX_REGISTER_ACTION(_call_cont_handler, &locality_call_continuation);
 }
