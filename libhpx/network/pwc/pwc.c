@@ -16,7 +16,7 @@
 
 #include <stdlib.h>
 
-#include "libhpx/actions.h"
+#include "libhpx/action.h"
 #include "libhpx/boot.h"
 #include "libhpx/config.h"
 #include "libhpx/debug.h"
@@ -161,7 +161,7 @@ static int _probe_completion(int rank, uint64_t *op) {
   return flag;
 }
 
-static char *_straction(hpx_action_t id) {
+static const char *_straction(hpx_action_t id) {
   dbg_assert(here && here->actions);
   return action_table_get_key(here->actions, id);
 }
