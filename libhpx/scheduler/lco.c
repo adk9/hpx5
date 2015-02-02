@@ -26,6 +26,7 @@
 #include "libhpx/scheduler.h"
 #include "libhpx/parcel.h"
 #include "lco.h"
+#include "thread.h"
 
 /// We pack state into the LCO pointer---least-significant-bit is already used
 /// in the sync_lockable_ptr interface
@@ -134,14 +135,25 @@ HPX_PINNED(attach, void *args) {
 
 /// LCO bit packing and manipulation
 /// @{
-const lco_class_t *lco_lock(lco_t *lco) {
-  DEBUG_IF((uintptr_t)_class(lco) & _DELETED_MASK) {
-    dbg_error("locking lco that was previously deleted");
-  }
-  return sync_lockable_ptr_lock(&lco->lock);
+void lco_lock(lco_t *lco) {
+  sync_lockable_ptr_lock(&lco->lock);
+  dbg_assert(self && self->current);
+  struct ustack *stack = parcel_get_stack(self->current);
+  dbg_assert(stack);
+  dbg_assert(!stack->in_lco || stack->in_lco == _class(lco));
+  stack->in_lco = _class(lco);
+  log_lco("%p acquired lco %p\n", (void*)self->current, (void*)stack->in_lco);
 }
 
 void lco_unlock(lco_t *lco) {
+  dbg_assert(self && self->current);
+  struct ustack *stack = parcel_get_stack(self->current);
+  log_lco("%p released lco %p\n", (void*)self->current, (void*)stack->in_lco);
+  dbg_assert(stack);
+  dbg_assert(stack->in_lco);
+  dbg_assert_str(stack->in_lco == _class(lco), "lco %p in %p expected %p\n",
+                 (void*)self->current, (void*)lco, (void*)_class(lco));
+  stack->in_lco = NULL;
   sync_lockable_ptr_unlock(&lco->lock);
 }
 
@@ -149,16 +161,11 @@ void lco_init(lco_t *lco, const lco_class_t *class) {
   lco->vtable = class;
 }
 
-void lco_set_deleted(lco_t *lco) {
+void lco_fini(lco_t *lco) {
   DEBUG_IF(true) {
     lco->bits |= _DELETED_MASK;
   }
-}
-
-void lco_fini(lco_t *lco) {
-  DEBUG_IF(true) {
-    lco->bits = _DELETED_MASK;
-  }
+  lco_unlock(lco);
 }
 
 void lco_reset_deleted(lco_t *lco) {
