@@ -143,18 +143,9 @@ static int _pwc_get(network_t *network, void *lva, hpx_addr_t from, size_t n,
   return peer_get(peer, lva, n, offset, cmd, SEGMENT_HEAP);
 }
 
-static int _probe_local(int rank, uint64_t *op) {
+static int _probe(unsigned type, int rank, uint64_t *op) {
   int flag = 0;
-  int e = photon_probe_completion(rank, &flag, op, PHOTON_PROBE_EVQ);
-  if (PHOTON_OK != e) {
-    dbg_error("photon probe error\n");
-  }
-  return flag;
-}
-
-static int _probe_completion(int rank, uint64_t *op) {
-  int flag = 0;
-  int e = photon_probe_completion(rank, &flag, op, PHOTON_PROBE_LEDGER);
+  int e = photon_probe_completion(rank, &flag, op, type);
   if (PHOTON_OK != e) {
     dbg_error("photon probe error\n");
   }
@@ -169,42 +160,43 @@ static const char *_straction(hpx_action_t id) {
 static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
   pwc_network_t *pwc = (void*)network;
   int rank = pwc->rank;
-  hpx_parcel_t *parcels = NULL;
 
   // each time through the loop, we deal with local command completions
   command_t command;
-  while (_probe_local(rank, &command)) {
+  while (_probe(PHOTON_PROBE_EVQ, rank, &command)) {
     hpx_addr_t addr;
     hpx_action_t op;
     decode_command(command, &op, &addr);
-    log_net("extracted local interrupt of %s\n", _straction(op));
-    int e = hpx_call(addr, op, HPX_NULL, NULL, 0);
-    if (HPX_SUCCESS != e) {
-      dbg_error("failed to process local command");
-    }
+    log_net("processing local command: %s\n", _straction(op));
+    int e = hpx_call(addr, op, HPX_NULL, &rank, sizeof(rank));
+    dbg_assert_str(HPX_SUCCESS == e, "failed to process local command\n");
   }
 
   // deal with received commands
   for (int i = 0, e = pwc->ranks; i < e; ++i) {
-    while (_probe_completion(i, &command)) {
+    while (_probe(PHOTON_PROBE_LEDGER, i, &command)) {
       hpx_addr_t addr;
       hpx_action_t op;
       decode_command(command, &op, &addr);
-      log_net("processing command %s from rank %d\n", _straction(op),
-                  i);
-      int e = hpx_call(addr, op, HPX_NULL, &i, sizeof(i));
-      if (HPX_SUCCESS != e) {
-        dbg_error("failed to process local command");
+      log_net("processing command %s from rank %d\n", _straction(op), i);
+      int e = HPX_SUCCESS;
+      if (action_is_interrupt(here->actions, op)) {
+        log("hello\n");
+        e = action_table_run_handler(here->actions, op, &i);
+        log("there\n");
       }
+      else {
+        e = hpx_call(addr, op, HPX_NULL, &i, sizeof(i));
+      }
+      dbg_assert_str(HPX_SUCCESS == e, "failed to process command\n");
     }
   }
 
-  return parcels;
+  return NULL;
 }
 
 static void _pwc_set_flush(network_t *network) {
 }
-
 
 /// Initialize a peer structure.
 ///
