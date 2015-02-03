@@ -143,16 +143,19 @@ int eager_buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
     return _wrap(tx, p, tx->size - roff);
   }
 
-  peer_t *peer = tx->peer;
-  const void *lva = parcel_network_offset(p);
-  const hpx_addr_t parcel = lva_to_gva(p);
-  assert(parcel != HPX_NULL);
-  const command_t lsync = encode_command(_finish_eager_tx, parcel);
-  const command_t cmd = encode_command(_eager_rx, n);
-  log_net("sending %d byte parcel to %d (%s)\n", n, tx->peer->rank,
-              action_table_get_key(here->actions, p->action));
-  int e = peer_pwc(peer, roff + tx->base, lva, n, lsync, HPX_NULL, cmd,
-                   SEGMENT_EAGER);
+  log_net("sending %d byte parcel to %d (%s)\n",
+          n, tx->peer->rank, action_table_get_key(here->actions, p->action));
+
+  int e = peer_pwc(tx->peer,                     // peer structure
+                   tx->base + roff,              // remote offset
+                   parcel_network_offset(p),     // local address
+                   n,                            // # bytes
+                   encode_command(_finish_eager_tx, lva_to_gva(p)), // local completion
+                   HPX_NULL,                     // remote completion
+                   encode_command(_eager_rx, 0), // remote command
+                   SEGMENT_EAGER                 // segment
+                  );
+
   if (e == LIBHPX_OK) {
     tx->max += n;
   }
@@ -171,12 +174,12 @@ hpx_parcel_t *eager_buffer_rx(eager_buffer_t *rx) {
 
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, bytes);
   dbg_assert_str(p != NULL,"failed to allocate a parcel in eager receive\n");
-  memcpy(parcel_network_offset(p), from, bytes);
+  memcpy(parcel_network_offset(p), from, parcel_network_size(p));
 
   // update the progress in this buffer
   rx->min += parcel_network_size(p);
 
-  // fill in the parcel source data and return
-  p->src = rx->peer->rank;
+  // Make sure the parcel came from where we think it came from
+  dbg_assert(p->src == rx->peer->rank);
   return p;
 }
