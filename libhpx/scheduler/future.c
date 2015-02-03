@@ -166,13 +166,16 @@ static hpx_status_t _future_getref(lco_t *lco, int size, void **out) {
 /// Free the reference to the future's value. If the future was
 /// _moved_ to our locality after a getref, check if the reference to
 /// be released matches the reference to the future's value.
-static void _future_release(lco_t *lco, void *out) {
+static bool _future_release(lco_t *lco, void *out) {
+  bool ret = false;
   _future_t *f = (_future_t *)lco;
   lco_lock(&f->lco);
   if (out && out != f->value) {
     free(out);
+    ret = true;
   }
   lco_unlock(&f->lco);
+  return ret;
 }
 
 static hpx_status_t _future_wait(lco_t *lco) {
