@@ -24,5 +24,4 @@ enum {
   LIBHPX_RETRY
 };
 
-
 #endif  // LIBHPX_LIBHPX_H
