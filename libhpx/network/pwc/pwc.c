@@ -179,15 +179,7 @@ static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
       hpx_action_t op;
       decode_command(command, &op, &addr);
       log_net("processing command %s from rank %d\n", _straction(op), i);
-      int e = HPX_SUCCESS;
-      if (action_is_interrupt(here->actions, op)) {
-        log("hello\n");
-        e = action_table_run_handler(here->actions, op, &i);
-        log("there\n");
-      }
-      else {
-        e = hpx_call(addr, op, HPX_NULL, &i, sizeof(i));
-      }
+      int e = hpx_call(addr, op, HPX_NULL, &i, sizeof(i));
       dbg_assert_str(HPX_SUCCESS == e, "failed to process command\n");
     }
   }
