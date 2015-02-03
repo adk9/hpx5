@@ -91,18 +91,16 @@ static void _gencount_set(lco_t *lco, int size, const void *from) {
   lco_unlock(lco);
 }
 
-
 /// Get returns the current generation, it does not block.
 static hpx_status_t _gencount_get(lco_t *lco, int size, void *out) {
   lco_lock(lco);
   _gencount_t *gencnt = (_gencount_t *)lco;
-  if (size) {
+  if (size && out) {
     memcpy(out, &gencnt->gen, size);
   }
   lco_unlock(lco);
   return HPX_SUCCESS;
 }
-
 
 // Wait means to wait for one generation, i.e., wait on the next generation. We
 // actually just wait on oflow since we signal that every time the generation
@@ -147,6 +145,8 @@ static void _gencount_init(_gencount_t *gencnt, unsigned long ninplace) {
     .on_error    = _gencount_error,
     .on_set      = _gencount_set,
     .on_get      = _gencount_get,
+    .on_getref   = NULL,
+    .on_release  = NULL,
     .on_wait     = _gencount_wait,
     .on_attach   = NULL,
     .on_reset    = _gencount_reset
