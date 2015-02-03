@@ -40,9 +40,11 @@ AC_DEFUN([HPX_PE_ENV],
                   hpx_pe_env_cflags_pedantic="-pedantic"
                   hpx_pe_env_cflags_wall="-Wall"
                   hpx_pe_env_cflags_werror="-Werror"
+                  hpx_pe_env_libs="-lrt"
                   hpx_pe_env="GNU"],
                  [hpx_pe_env_cflags_pedantic="-pedantic"
                   hpx_pe_env_cflags_wall="-Wall"
                   hpx_pe_env_cflags_werror="-Werror"
+                  hpx_pe_env_libs="-lrt"
                   hpx_pe_env="GNU"])
    AC_MSG_RESULT([$hpx_pe_env])])
