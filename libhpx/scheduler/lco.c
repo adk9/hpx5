@@ -70,6 +70,8 @@ static hpx_status_t _error(lco_t *lco, hpx_status_t code) {
 }
 
 static hpx_status_t _reset(lco_t *lco) {
+  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
+  dbg_assert_str(_class(lco)->on_reset, "LCO implementation incomplete\n");
   _class(lco)->on_reset(lco);
   return HPX_SUCCESS;
 }
@@ -81,10 +83,14 @@ static hpx_status_t _get(lco_t *lco, size_t bytes, void *out) {
 }
 
 static hpx_status_t _getref(lco_t *lco, size_t bytes, void **out) {
+  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
+  dbg_assert_str(_class(lco)->on_getref, "LCO implementation incomplete\n");
   return _class(lco)->on_getref(lco, bytes, out);
 }
 
 static hpx_status_t _release(lco_t *lco, void *out) {
+  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
+  dbg_assert_str(_class(lco)->on_release, "LCO implementation incomplete\n");
   _class(lco)->on_release(lco, out);
   return HPX_SUCCESS;
 }
