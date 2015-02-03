@@ -134,7 +134,7 @@ static void _and_init(_and_t *and, intptr_t value) {
     .on_set      = _and_set,
     .on_get      = _and_get,
     .on_wait     = _and_wait,
-    .on_attach   = _and_attach
+    .on_attach   = _and_attach,
     .on_reset    = _and_reset
   };
 
