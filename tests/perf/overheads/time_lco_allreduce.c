@@ -154,8 +154,8 @@ allreduce_main_action(const main_args_t *args)
   t1 = hpx_time_now();
   hpx_addr_t newdt = hpx_lco_allreduce_new(args->nDoms, args->nDoms,
                       sizeof(double),
-                      (hpx_commutative_associative_op_t)_maxDouble,
-                      (void (*)(void *, const size_t size)) _initDouble);
+                      (hpx_monoid_op_t)_maxDouble,
+                      (hpx_monoid_id_t)_initDouble);
   fprintf(stdout, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t1));
 
   for (int i = 0, e = args->nDoms; i < e; ++i) {
