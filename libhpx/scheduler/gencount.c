@@ -62,6 +62,20 @@ static void _gencount_error(lco_t *lco, hpx_status_t code) {
   lco_unlock(lco);
 }
 
+void _gencount_reset(lco_t *lco) {
+  _gencount_t *gen = (_gencount_t *)lco;
+  lco_lock(&gen->lco);
+
+  for (unsigned i = 0, e = gen->ninplace; i < e; ++i) {
+    dbg_assert_str(cvar_empty(&gen->inplace[i]),
+                   "Reset on gencount LCO that has waiting threads.\n");
+    cvar_reset(&gen->inplace[i]);
+  }
+  dbg_assert_str(cvar_empty(&gen->oflow),
+                 "Reset on gencount LCO that has waiting threads.\n");
+  cvar_reset(&gen->oflow);
+  lco_unlock(&gen->lco);
+}
 
 /// Set is equivalent to incrementing the generation count
 static void _gencount_set(lco_t *lco, int size, const void *from) {
@@ -77,18 +91,16 @@ static void _gencount_set(lco_t *lco, int size, const void *from) {
   lco_unlock(lco);
 }
 
-
 /// Get returns the current generation, it does not block.
 static hpx_status_t _gencount_get(lco_t *lco, int size, void *out) {
   lco_lock(lco);
   _gencount_t *gencnt = (_gencount_t *)lco;
-  if (size) {
+  if (size && out) {
     memcpy(out, &gencnt->gen, size);
   }
   lco_unlock(lco);
   return HPX_SUCCESS;
 }
-
 
 // Wait means to wait for one generation, i.e., wait on the next generation. We
 // actually just wait on oflow since we signal that every time the generation
@@ -129,14 +141,15 @@ static hpx_status_t _gencount_wait_gen(_gencount_t *gencnt, unsigned long gen) {
 
 static void _gencount_init(_gencount_t *gencnt, unsigned long ninplace) {
   static const lco_class_t gencount_vtable = {
-    .on_fini = _gencount_fini,
-    .on_error = _gencount_error,
-    .on_set = _gencount_set,
-    .on_get = _gencount_get,
-    .on_wait = _gencount_wait,
-    .on_attach = NULL,
-    .on_try_get = NULL,
-    .on_try_wait = NULL
+    .on_fini     = _gencount_fini,
+    .on_error    = _gencount_error,
+    .on_set      = _gencount_set,
+    .on_get      = _gencount_get,
+    .on_getref   = NULL,
+    .on_release  = NULL,
+    .on_wait     = _gencount_wait,
+    .on_attach   = NULL,
+    .on_reset    = _gencount_reset
   };
 
   lco_init(&gencnt->lco, &gencount_vtable);
