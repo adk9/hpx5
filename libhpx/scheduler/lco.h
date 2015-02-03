@@ -45,7 +45,7 @@ typedef void (*lco_set_t)(lco_t *lco, int size, const void *value);
 typedef void (*lco_error_t)(lco_t *lco, hpx_status_t code);
 typedef hpx_status_t (*lco_get_t)(lco_t *lco, int size, void *value);
 typedef hpx_status_t (*lco_getref_t)(lco_t *lco, int size, void **out);
-typedef void (*lco_release_t)(lco_t *lco, void *out);
+typedef bool (*lco_release_t)(lco_t *lco, void *out);
 typedef hpx_status_t (*lco_wait_t)(lco_t *lco);
 typedef hpx_status_t (*lco_attach_t)(lco_t *lco, hpx_parcel_t *p);
 typedef void (*lco_reset_t)(lco_t *lco);

@@ -145,6 +145,15 @@ static HPX_PINNED(_lco_getref, void *args) {
   }
 }
 
+static HPX_PINNED(_lco_getref_reply, void *data) {
+  void **local = hpx_thread_current_local_target();
+  dbg_assert(*local);
+  size_t bytes = hpx_thread_current_args_size();
+  dbg_assert(bytes);
+  memcpy(*local, data, bytes);
+  return HPX_SUCCESS;
+}
+
 static HPX_PINNED(_lco_wait, void *args) {
   return _wait(_target_lco());
 }
@@ -322,19 +331,24 @@ hpx_status_t hpx_lco_getref(hpx_addr_t target, int size, void **out) {
     dbg_assert(!size || out);
     dbg_assert(!out || size);
     hpx_status_t status = (size) ? _getref(lco, size, out) : _wait(lco);
-    hpx_gas_unpin(target);
     return status;
   }
 
-  void *buffer = malloc(size); // ADK: can we get rid of this copy?
+  void *buffer = malloc(size);
   assert(buffer);
-  hpx_addr_t result = hpx_lco_future_new(size);
-  int e = hpx_call(target, _lco_getref, result, &size, sizeof(size));
+  hpx_addr_t result = hpx_lco_future_new(sizeof(buffer));
+  bool pinned = hpx_gas_try_pin(result, NULL);
+  dbg_assert_str(pinned, "failed to pin the local buffer future in hpx_lco_getref.\n");
+
+  hpx_lco_set(result, sizeof(buffer), &buffer, HPX_NULL, HPX_NULL);
+  int e = hpx_call_with_continuation(target, _lco_getref, result, _lco_getref_reply,
+                                     &size, sizeof(size));
   if (e == HPX_SUCCESS) {
-    e = hpx_lco_get(result, size, buffer);
+    e = hpx_lco_wait(result);
     *out = buffer;
   }
 
+  hpx_gas_unpin(result);
   hpx_lco_delete(result, HPX_NULL);
   return e;
 }
@@ -342,7 +356,11 @@ hpx_status_t hpx_lco_getref(hpx_addr_t target, int size, void **out) {
 void hpx_lco_release(hpx_addr_t target, void *out) {
   lco_t *lco;
   if (hpx_gas_try_pin(target, (void**)&lco)) {
-    _release(lco, out);
+    if (!_release(lco, out)) {
+      // unpin the LCO only if it was the original local LCO that we
+      // pinned previously.
+      hpx_gas_unpin(target);
+    }
     hpx_gas_unpin(target);
   } else {
     // if the LCO is not local, delete the copied buffer.
