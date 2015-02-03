@@ -14,8 +14,8 @@
 #include "config.h"
 #endif
 
-/// @file libhpx/scheduler/reduce.c
-/// @brief Defines the reduction LCO.
+/// @file libhpx/scheduler/allreduce.c
+/// @brief Defines the all-reduction LCO.
 
 #include <assert.h>
 #include <stdlib.h>
@@ -130,7 +130,7 @@ static hpx_status_t _allreduce_get(lco_t *lco, int size, void *out) {
   if (++r->count == r->readers) {
     r->count = r->writers;
     r->phase = _reducing;
-    r->init(r->value, size);
+    r->id(r->value, size);
     scheduler_signal_all(&r->wait);
   }
   else {
@@ -170,7 +170,7 @@ static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
   cvar_reset(&r->wait);
   r->readers = readers;
   r->op = op;
-  r->init = id;
+  r->id = id;
   r->count = writers;
   r->writers = writers;
   r->phase = _reducing;
@@ -181,7 +181,7 @@ static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
     assert(r->value);
   }
 
-  r->init(r->value, size);
+  r->id(r->value, size);
 }
 
 /// @}
