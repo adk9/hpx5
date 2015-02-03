@@ -131,6 +131,27 @@ static HPX_PINNED(_lco_reset, void *UNUSED) {
   return _reset(_target_lco());
 }
 
+static HPX_PINNED(_lco_get, void *args) {
+  dbg_assert(args);
+  int *n = args;
+  lco_t *lco = _target_lco();
+  // convert to wait if there's no buffer
+  if (*n == 0) {
+    return _wait(lco);
+  }
+
+  // otherwise do the get to a stack location and continue it---can
+  // get rid of this with a lco_getref()
+  char buffer[*n];
+  hpx_status_t status = _get(lco, *n, buffer);
+  if (status == HPX_SUCCESS) {
+    hpx_thread_continue(*n, buffer);
+  }
+  else {
+    return status;
+  }
+}
+
 static HPX_PINNED(_lco_getref, void *args) {
   dbg_assert(args);
   int *n = args;
@@ -327,7 +348,7 @@ hpx_status_t hpx_lco_get(hpx_addr_t target, int size, void *value) {
     hpx_gas_unpin(target);
     return status;
   }
-  return hpx_call_sync(target, _lco_getref, value, size, &size, sizeof(size));
+  return hpx_call_sync(target, _lco_get, value, size, &size, sizeof(size));
 }
 
 hpx_status_t hpx_lco_getref(hpx_addr_t target, int size, void **out) {
