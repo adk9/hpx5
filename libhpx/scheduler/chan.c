@@ -221,6 +221,8 @@ static void _chan_init(_chan_t *c) {
     .on_error    = _chan_error,
     .on_set      = _chan_set,
     .on_get      = _chan_get,
+    .on_getref   = NULL,
+    .on_release  = NULL,
     .on_wait     = _chan_wait,
     .on_attach   = NULL,
     .on_reset    = NULL

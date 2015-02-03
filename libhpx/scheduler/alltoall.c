@@ -330,8 +330,9 @@ static void _alltoall_set(lco_t *lco, int size, const void *from) {
   dbg_assert_str(false, "can't call set on an alltoall LCO.\n");
 }
 
-static hpx_status_t _alltoall_get(lco_t *lco, int size, void **out) {
-  dbg_assert(false, "can't call get on an alltoall LCO.\n");
+static hpx_status_t _alltoall_get(lco_t *lco, int size, void *out) {
+  dbg_assert_str(false, "can't call get on an alltoall LCO.\n");
+  return HPX_SUCCESS;
 }
 
 static void _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
@@ -340,6 +341,8 @@ static void _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
     .on_error    = _alltoall_error,
     .on_set      = _alltoall_set,
     .on_get      = _alltoall_get,
+    .on_getref   = NULL,
+    .on_release  = NULL,
     .on_wait     = _alltoall_wait,
     .on_attach   = NULL,
     .on_reset    = _alltoall_reset

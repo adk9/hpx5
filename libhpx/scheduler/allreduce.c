@@ -161,6 +161,8 @@ static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
     .on_set      = _allreduce_set,
     .on_attach   = NULL,
     .on_get      = _allreduce_get,
+    .on_getref   = NULL,
+    .on_release  = NULL,
     .on_wait     = _allreduce_wait,
     .on_reset    = _allreduce_reset
   };

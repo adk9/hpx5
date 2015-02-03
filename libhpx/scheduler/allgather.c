@@ -276,6 +276,8 @@ static void _allgather_init(_allgather_t *g, size_t participants, size_t size) {
     .on_set      = _allgather_set,
     .on_attach   = NULL,
     .on_get      = _allgather_get,
+    .on_getref   = NULL,
+    .on_release  = NULL,
     .on_wait     = _allgather_wait,
     .on_reset    = _allgather_reset
   };
