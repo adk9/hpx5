@@ -38,23 +38,30 @@ typedef struct {
 
 
 static hpx_status_t _wait(_and_t *and) {
-  // and->value can change asynchronously, but and->lco and and->barrier do not
-  // because we're holding the lock here
   hpx_status_t status = cvar_get_error(&and->barrier);
-  if (status != HPX_SUCCESS)
+  if (status != HPX_SUCCESS) {
     return status;
+  }
 
-  // read the value using an atomic, we either see 0---in which case either the
-  // and has already been signaled, or there is someone trying to get the lock
-  // we hold in order to signal it. In both cases, the and has been satisfied,
-  // and we can correctly return the status that we read (the status won't
-  // change, because that's done through the hpx_lco_error() handler which would
-  // need the lock too).
-  if (and->value == 0)
+  if (and->value == 0) {
     return status;
+  }
 
   // otherwise wait for the and to be signaled
   return scheduler_wait(&and->lco.lock, &and->barrier);
+}
+
+static hpx_status_t _attach(_and_t *and, hpx_parcel_t *p) {
+  hpx_status_t status = cvar_get_error(&and->barrier);
+  if (status != HPX_SUCCESS) {
+    return status;
+  }
+
+  if (and->value == 0) {
+    return hpx_parcel_send(p, HPX_NULL);
+  }
+
+  return cvar_attach(&and->barrier, p);
 }
 
 static hpx_status_t _try_wait(_and_t *and, hpx_time_t time) {
@@ -126,6 +133,14 @@ static hpx_status_t _and_wait(lco_t *lco) {
   return status;
 }
 
+static hpx_status_t _and_attach(lco_t *lco, hpx_parcel_t *p) {
+  _and_t *and = (_and_t *)lco;
+  lco_lock(&and->lco);
+  hpx_status_t status = _attach(and, p);
+  lco_unlock(&and->lco);
+  return status;
+}
+
 static hpx_status_t _and_try_wait(lco_t *lco, hpx_time_t time) {
   _and_t *and = (_and_t *)lco;
   lco_lock(&and->lco);
@@ -151,7 +166,7 @@ static void _and_init(_and_t *and, intptr_t value) {
     .on_wait = _and_wait,
     .on_try_get = _and_try_get,
     .on_try_wait = _and_try_wait,
-    .on_attach = NULL
+    .on_attach = _and_attach
   };
 
   assert(value >= 0);
