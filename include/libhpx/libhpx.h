@@ -23,5 +23,4 @@ enum {
   LIBHPX_OK = 0
 };
 
-
 #endif  // LIBHPX_LIBHPX_H
