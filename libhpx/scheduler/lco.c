@@ -49,29 +49,41 @@ static lco_t *_target_lco(void) {
 }
 
 static hpx_status_t _fini(lco_t *lco) {
+  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
+  dbg_assert_str(_class(lco)->on_fini, "LCO implementation incomplete\n");
   _class(lco)->on_fini(lco);
   return HPX_SUCCESS;
 }
 
 static hpx_status_t _set(lco_t *lco, size_t size, const void *data) {
+  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
+  dbg_assert_str(_class(lco)->on_set, "LCO implementation incomplete\n");
   _class(lco)->on_set(lco, size, data);
   return HPX_SUCCESS;
 }
 
 static hpx_status_t _error(lco_t *lco, hpx_status_t code) {
+  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
+  dbg_assert_str(_class(lco)->on_error, "LCO implementation incomplete\n");
   _class(lco)->on_error(lco, code);
   return HPX_SUCCESS;
 }
 
 static hpx_status_t _get(lco_t *lco, size_t bytes, void *out) {
+  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
+  dbg_assert_str(_class(lco)->on_get, "LCO implementation incomplete\n");
   return _class(lco)->on_get(lco, bytes, out);
 }
 
 static hpx_status_t _wait(lco_t *lco) {
+  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
+  dbg_assert_str(_class(lco)->on_wait, "LCO implementation incomplete\n");
   return _class(lco)->on_wait(lco);
 }
 
 static hpx_status_t _attach(lco_t *lco, hpx_parcel_t *p) {
+  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
+  dbg_assert_str(_class(lco)->on_attach, "LCO implementation incomplete\n");
   return _class(lco)->on_attach(lco, p);
 }
 
