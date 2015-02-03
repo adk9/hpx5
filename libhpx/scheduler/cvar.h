@@ -28,6 +28,11 @@ typedef struct cvar {
 void cvar_reset(cvar_t *cvar)
   HPX_INTERNAL HPX_NON_NULL(1);
 
+/// Check if a condition variable is empty---there are not waiting
+/// threads associated with the condition variable.
+bool cvar_empty(cvar_t *cvar)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
 /// Set the condition with an error code.
 ///
 /// This records the error in the condition, and returns the list of parcels
