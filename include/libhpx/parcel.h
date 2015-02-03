@@ -32,8 +32,8 @@ struct ustack;
 struct hpx_parcel {
   struct ustack   *ustack;
   struct hpx_parcel *next;
-  int                 src;
   uint32_t           size;
+  int                 src;
   hpx_action_t     action;
   hpx_addr_t       target;
   hpx_action_t   c_action;
