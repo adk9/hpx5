@@ -30,14 +30,13 @@ static uint32_t _index_of(eager_buffer_t *buffer, uint64_t i) {
   return (i & (buffer->size - 1));
 }
 
-static HPX_INTERRUPT(_eager_rx, void *args) {
-  int *src = args;
-  uint32_t bytes = pgas_gpa_to_offset(hpx_thread_current_target());
+/// Command sent to receive in the eager buffer.
+static HPX_INTERRUPT(_eager_rx, int *src) {
   peer_t *peer = pwc_get_peer(here->network, *src);
   eager_buffer_t *eager = &peer->rx;
-  hpx_parcel_t *parcel = eager_buffer_rx(eager, bytes);
-  log_net("received %u eager parcel bytes from %d (%s)\n", bytes, *src,
-              action_table_get_key(here->actions, parcel->action));
+  hpx_parcel_t *parcel = eager_buffer_rx(eager);
+  log_net("received eager parcel bytes from %d (%s)\n", *src,
+          action_table_get_key(here->actions, parcel->action));
   scheduler_spawn(parcel);
   return HPX_SUCCESS;
 }
@@ -160,22 +159,22 @@ int eager_buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   return e;
 }
 
-hpx_parcel_t *eager_buffer_rx(eager_buffer_t *rx, uint32_t bytes) {
-  // allocate a parcel to copy out to
-  const uint32_t size = bytes - parcel_prefix_size();
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, size);
-  DEBUG_IF(!p) {
-    dbg_error("failed to allocate a parcel in eager receive\n");
-  }
-
-  // copy the parcel data
+hpx_parcel_t *eager_buffer_rx(eager_buffer_t *rx) {
+  // Figure out how much data we're going to copy, then allocate a parcel to
+  // copy out the data to. Then perform the copy and return the parcel.
+  //
+  // NB: We technically want to process from the buffer directly.
   const uint32_t i = _index_of(rx, rx->min);
   const uint64_t offset = rx->base + i;
   const void *from = rx->peer->segments[SEGMENT_EAGER].base + offset;
+  const uint32_t bytes = *(const uint32_t *)from;
+
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, bytes);
+  dbg_assert_str(p != NULL,"failed to allocate a parcel in eager receive\n");
   memcpy(parcel_network_offset(p), from, bytes);
 
   // update the progress in this buffer
-  rx->min += bytes;
+  rx->min += parcel_network_size(p);
 
   // fill in the parcel source data and return
   p->src = rx->peer->rank;

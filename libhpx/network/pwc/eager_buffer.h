@@ -79,7 +79,7 @@ int eager_buffer_tx(eager_buffer_t *buffer, hpx_parcel_t *p)
 /// Perform an eager parcel recv.
 ///
 /// This only works on the local endpoint for an eager buffer.
-hpx_parcel_t *eager_buffer_rx(eager_buffer_t *buffer, uint32_t bytes)
+hpx_parcel_t *eager_buffer_rx(eager_buffer_t *buffer)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 #endif // LIBHPX_NETWORK_PWC_EAGER_BUFFER_H
