@@ -396,12 +396,12 @@ hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen);
 /// users should wait to call it until they know that they need it.
 /// @{
 
-/// The commutative-associative operation type.
+/// The commutative-associative (monoid) operation type.
 ///
 /// Common operations would be min, max, +, *, etc. The runtime will pass the
 /// number of bytes that the allreduce was allocated with.
-typedef void (*hpx_commutative_associative_op_t)(void *lhs, const void *rhs,
-                                                 const size_t bytes);
+typedef void (*hpx_monoid_id_t)(void *id, const size_t bytes);
+typedef void (*hpx_monoid_op_t)(void *a, const void *b, const size_t bytes);
 
 /// Allocate a new reduction LCO.
 ///
@@ -415,8 +415,7 @@ typedef void (*hpx_commutative_associative_op_t)(void *lhs, const void *rhs,
 /// @param initializer  An initialization function for the data, this is used to
 ///                     initialize the data in every epoch.
 hpx_addr_t hpx_lco_allreduce_new(size_t participants, size_t readers, size_t size,
-                                 hpx_commutative_associative_op_t op,
-                                 void (*initializer)(void *, const size_t bytes));
+                                 hpx_monoid_op_t op, hpx_monoid_id_t id);
 
 /// Set an allgather.
 ///
