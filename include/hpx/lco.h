@@ -46,6 +46,21 @@ void hpx_lco_delete(hpx_addr_t lco, hpx_addr_t rsync);
 /// @param rsync an LCO to signal remote completion
 void hpx_lco_error(hpx_addr_t lco, hpx_status_t code, hpx_addr_t rsync);
 
+/// Reset an LCO.
+///
+/// This operation allows reusing a LCO by resetting its internal
+/// state. The reset operation is idempotent---resetting an already
+/// unset LCO has no effect. All pending gets/waits on a LCO must have
+/// finished before it can be reset successfully.
+///
+/// N.B. This operation does not reset/zero the data buffer associated
+/// with the LCO.
+///
+/// @param  future the global address of the future to reset.
+/// @param    sync the address of an LCO to set when the future is reset;
+///                may be HPX_NULL
+void hpx_lco_reset(hpx_addr_t future, hpx_addr_t sync);
+
 /// An action-based interface to the LCO set operation.
 extern hpx_action_t hpx_lco_set_action;
 
@@ -72,20 +87,9 @@ void hpx_lco_set(hpx_addr_t lco, int size, const void *value, hpx_addr_t lsync,
 /// @returns   HPX_SUCCESS or the code passed to hpx_lco_error()
 hpx_status_t hpx_lco_wait(hpx_addr_t lco);
 
-/// Perform a wait operation, failing if a set time is passed.
-///
-/// The LCO blocks the caller until an LCO set operation triggers the LCO or
-/// until @p time is reached. Each LCO type has its own semantics for the state
-/// under which this occurs.
-///
-/// @param lco  the LCO we're processing
-/// @param time a time after which to return even if the LCO is not set
-/// @returns    HPX_SUCCESS or the code passed to hpx_lco_error()
-//hpx_status_t hpx_lco_try_wait(hpx_addr_t lco, hpx_time_t time);
-
 /// Perform a get operation.
 ///
-/// An LCO blocks the caller until the future is set, and then copies its value
+/// An LCO blocks the caller until it is set, and then copies its value
 /// data into the provided buffer.
 ///
 /// If the return status is not HPX_SUCCESS then the LCO was triggered by
@@ -98,22 +102,24 @@ hpx_status_t hpx_lco_wait(hpx_addr_t lco);
 /// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
 hpx_status_t hpx_lco_get(hpx_addr_t lco, int size, void *value);
 
-/// Perform a get operation, failing if a certain time is reached first.
+/// Perform a "get" operation on an LCO but instead of copying the LCO
+/// buffer out, get a reference to the LCO's buffer.
 ///
-/// An LCO blocks the caller until the future is set, and then copies its value
-/// data into the provided buffer. Will return early if @p time is reached
-/// first.
-///
-/// If the return status is not HPX_SUCCESS then the LCO was triggered by
-/// hpx_lco_error() rather than hpx_lco_set(), in such a case the memory pointed
-/// to by @p out will not be inspected.
+/// If the return status is not HPX_SUCCESS then the LCO was triggered
+/// by hpx_lco_error() rather than hpx_lco_set().
 ///
 /// @param      lco the LCO we're processing
-/// @param     size the size of the data
-/// @param[out] out the output location (may be null)
-/// @param     time a time after which to fail
+/// @param     size the size of the LCO buffer
+/// @param[out] ref pointer to hold the reference to an LCO's buffer
 /// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
-//hpx_status_t hpx_lco_try_get(hpx_addr_t lco, int size, void *value, hpx_time_t time);
+hpx_status_t hpx_lco_getref(hpx_addr_t lco, int size, void **ref);
+
+/// Release the reference to an LCO's buffer.
+///
+/// @param      lco the LCO we're processing
+/// @param[out] ref the reference to an LCO's buffer
+/// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
+void hpx_lco_release(hpx_addr_t lco, void *ref);
 
 /// Blocks the thread until all of the LCOs have been set.
 ///
@@ -208,7 +214,7 @@ hpx_addr_t hpx_lco_and_new(intptr_t inputs);
 /// @param  and the global address of the "and" LCO to set.
 /// @param sync the address of an LCO to set when the "and" LCO is set;
 ///             may be HPX_NULL
-void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t sync); // async
+void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t sync);
 /// @}
 
 /// Create a future.
@@ -221,22 +227,6 @@ void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t sync); // async
 /// @param size the size in bytes of the future's value (may be 0)
 /// @returns    the glboal address of the newly allocated future
 hpx_addr_t hpx_lco_future_new(int size);
-
-/// Reset a "future" LCO.
-///
-/// This operation allows reusing a future LCO by resetting its
-/// internal state. The reset operation is idempotent---resetting an
-/// unset LCO has no effect if there are no waiting threads. To
-/// distinguish a set from a reset, waiting threads are signalled a
-/// "reset" exception before they are released.
-///
-/// N.B. This operation does not reset/zero the data buffer associated
-/// with the future.
-///
-/// @param  future the global address of the future to reset.
-/// @param    sync the address of an LCO to set when the future is reset;
-///                may be HPX_NULL
-void hpx_lco_future_reset(hpx_addr_t future, hpx_addr_t sync); // async
 /// @}
 
 /// Allocate a global array of futures.
@@ -406,14 +396,28 @@ hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen);
 /// users should wait to call it until they know that they need it.
 /// @{
 
-/// The commutative-associative operation type.
+/// The commutative-associative (monoid) operation type.
 ///
 /// Common operations would be min, max, +, *, etc. The runtime will pass the
 /// number of bytes that the allreduce was allocated with.
-typedef void (*hpx_commutative_associative_op_t)(void *lhs, const void *rhs,
-                                                 const size_t bytes);
+typedef void (*hpx_monoid_id_t)(void *id, const size_t bytes);
+typedef void (*hpx_monoid_op_t)(void *a, const void *b, const size_t bytes);
+
 
 /// Allocate a new reduction LCO.
+///
+/// The reduction is allocated in reduce-mode, i.e., it expects @p participants
+/// to call the hpx_lco_set() operation as the first phase of operation.
+///
+/// @param inputs       The static number of inputs to the reduction.
+/// @param size         The size of the data being reduced.
+/// @param op           The commutative-associative operation we're performing.
+/// @param id            An initialization function for the data, this is used to
+///                     initialize the data in every epoch.
+hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_monoid_op_t op,
+                              hpx_monoid_id_t id);
+
+/// Allocate a new all-reduction LCO.
 ///
 /// The reduction is allocated in reduce-mode, i.e., it expects @p participants
 /// to call the hpx_lco_set() operation as the first phase of operation.
@@ -422,11 +426,9 @@ typedef void (*hpx_commutative_associative_op_t)(void *lhs, const void *rhs,
 /// @param readers      The static number of the readers of the result of the reduction.
 /// @param size         The size of the data being reduced.
 /// @param op           The commutative-associative operation we're performing.
-/// @param initializer  An initialization function for the data, this is used to
-///                     initialize the data in every epoch.
+/// @param id           A function that is used to initialize the data in every epoch.
 hpx_addr_t hpx_lco_allreduce_new(size_t participants, size_t readers, size_t size,
-                                 hpx_commutative_associative_op_t op,
-                                 void (*initializer)(void *, const size_t bytes));
+                                 hpx_monoid_op_t op, hpx_monoid_id_t id);
 
 /// Set an allgather.
 ///

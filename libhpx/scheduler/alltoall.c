@@ -110,26 +110,34 @@ static HPX_ACTION_DECL(_alltoall_getid_proxy);
 
 /// Deletes a gathering.
 static void _alltoall_fini(lco_t *lco) {
-  if (!lco)
+  if (!lco) {
     return;
+  }
 
   lco_lock(lco);
-  DEBUG_IF(true) {
-    lco_set_deleted(lco);
-  }
   _alltoall_t *g = (_alltoall_t *)lco;
-  if (g->value)
+  if (g->value) {
     free(g->value);
-  libhpx_global_free(g);
+  }
+  lco_fini(lco);
+  libhpx_global_free(lco);
 }
-
 
 /// Handle an error condition.
 static void _alltoall_error(lco_t *lco, hpx_status_t code) {
-  lco_lock(lco);
   _alltoall_t *g = (_alltoall_t *)lco;
+  lco_lock(&g->lco);
   scheduler_signal_error(&g->wait, code);
-  lco_unlock(lco);
+  lco_unlock(&g->lco);
+}
+
+static void _alltoall_reset(lco_t *lco) {
+  _alltoall_t *g = (_alltoall_t *)lco;
+  lco_lock(&g->lco);
+  dbg_assert_str(cvar_empty(&g->wait),
+                 "Reset on alltoall LCO that has waiting threads.\n");
+  cvar_reset(&g->wait);
+  lco_unlock(&g->lco);
 }
 
 /// Get the value of the gathering, will wait if the phase is gathering.
@@ -319,25 +327,25 @@ static HPX_PINNED(_alltoall_setid_proxy, void *args) {
 
 
 static void _alltoall_set(lco_t *lco, int size, const void *from) {
-  // can't call set on an alltoall
-  hpx_abort();
+  dbg_assert_str(false, "can't call set on an alltoall LCO.\n");
 }
 
 static hpx_status_t _alltoall_get(lco_t *lco, int size, void *out) {
-  // can't call get on an alltoall
-  hpx_abort();
+  dbg_assert_str(false, "can't call get on an alltoall LCO.\n");
+  return HPX_SUCCESS;
 }
 
 static void _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
   static const lco_class_t vtable = {
-    .on_fini = _alltoall_fini,
-    .on_error = _alltoall_error,
-    .on_set = _alltoall_set,
-    .on_get = _alltoall_get,
-    .on_wait = _alltoall_wait,
-    .on_attach = NULL,
-    .on_try_get = NULL,
-    .on_try_wait = NULL
+    .on_fini     = _alltoall_fini,
+    .on_error    = _alltoall_error,
+    .on_set      = _alltoall_set,
+    .on_get      = _alltoall_get,
+    .on_getref   = NULL,
+    .on_release  = NULL,
+    .on_wait     = _alltoall_wait,
+    .on_attach   = NULL,
+    .on_reset    = _alltoall_reset
   };
 
   lco_init(&g->lco, &vtable);

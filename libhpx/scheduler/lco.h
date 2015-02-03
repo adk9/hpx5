@@ -44,11 +44,11 @@ typedef void (*lco_fini_t)(lco_t *lco);
 typedef void (*lco_set_t)(lco_t *lco, int size, const void *value);
 typedef void (*lco_error_t)(lco_t *lco, hpx_status_t code);
 typedef hpx_status_t (*lco_get_t)(lco_t *lco, int size, void *value);
+typedef hpx_status_t (*lco_getref_t)(lco_t *lco, int size, void **out);
+typedef bool (*lco_release_t)(lco_t *lco, void *out);
 typedef hpx_status_t (*lco_wait_t)(lco_t *lco);
 typedef hpx_status_t (*lco_attach_t)(lco_t *lco, hpx_parcel_t *p);
-typedef hpx_status_t (*lco_try_get_t)(lco_t *lco, int size, void *value, hpx_time_t time);
-typedef hpx_status_t (*lco_try_wait_t)(lco_t *lco, hpx_time_t time);
-
+typedef void (*lco_reset_t)(lco_t *lco);
 
 struct lco_class {
   lco_fini_t         on_fini;
@@ -56,9 +56,10 @@ struct lco_class {
   lco_set_t           on_set;
   lco_attach_t     on_attach;
   lco_get_t           on_get;
+  lco_getref_t     on_getref;
+  lco_release_t   on_release;
   lco_wait_t         on_wait;
-  lco_try_get_t   on_try_get;
-  lco_try_wait_t on_try_wait;
+  lco_reset_t       on_reset;
 } HPX_ALIGNED(16);
 
 // -----------------------------------------------------------------------------
@@ -68,8 +69,7 @@ struct lco_class {
 /// Lock an LCO.
 ///
 /// @param lco  The LCO to lock
-/// @returns    The vtable pointer for the LCO, with any packed state removed
-const lco_class_t *lco_lock(lco_t *lco)
+void lco_lock(lco_t *lco)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Unlock an LCO.
@@ -91,15 +91,6 @@ void lco_init(lco_t *lco, const lco_class_t *class)
 ///
 /// @param           lco The pointer to finalize.
 void lco_fini(lco_t *lco)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
-/// Set the deleted state bit to one.
-///
-/// This operation does not acquire the LCO lock---the caller must lock the
-/// pointer first if this could occur concurrently.
-///
-/// @param           lco The LCO to reset.
-void lco_set_deleted(lco_t *lco)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Resets the user state bit to zero.

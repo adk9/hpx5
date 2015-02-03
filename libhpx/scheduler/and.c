@@ -38,64 +38,40 @@ typedef struct {
 
 
 static hpx_status_t _wait(_and_t *and) {
-  // and->value can change asynchronously, but and->lco and and->barrier do not
-  // because we're holding the lock here
   hpx_status_t status = cvar_get_error(&and->barrier);
-  if (status != HPX_SUCCESS)
+  if (status != HPX_SUCCESS) {
     return status;
+  }
 
-  // read the value using an atomic, we either see 0---in which case either the
-  // and has already been signaled, or there is someone trying to get the lock
-  // we hold in order to signal it. In both cases, the and has been satisfied,
-  // and we can correctly return the status that we read (the status won't
-  // change, because that's done through the hpx_lco_error() handler which would
-  // need the lock too).
-  if (and->value == 0)
+  if (and->value == 0) {
     return status;
+  }
 
   // otherwise wait for the and to be signaled
   return scheduler_wait(&and->lco.lock, &and->barrier);
 }
 
-static hpx_status_t _try_wait(_and_t *and, hpx_time_t time) {
-  // and->value can change asynchronously, but and->lco and and->barrier do not
-  // because we're holding the lock here
+static hpx_status_t _attach(_and_t *and, hpx_parcel_t *p) {
   hpx_status_t status = cvar_get_error(&and->barrier);
-  if (status != HPX_SUCCESS)
+  if (status != HPX_SUCCESS) {
     return status;
-
-  // read the value using an atomic, we either see 0---in which case either the
-  // and has already been signaled, or there is someone trying to get the lock
-  // we hold in order to signal it. In both cases, the and has been satisfied,
-  // and we can correctly return the status that we read (the status won't
-  // change, because that's done through the hpx_lco_error() handler which would
-  // need the lock too).
-  if (and->value == 0)
-    return status;
-
-  // otherwise wait for the and barrier to reach 0 or return if out of time
-  while (and->value != 0) {
-    if (hpx_time_diff_us(hpx_time_now(), time) > 0)
-      return HPX_LCO_TIMEOUT;
-    hpx_thread_yield();
-    // ADK: Don't you need to yield the lock here?
   }
 
-  return HPX_SUCCESS;
+  if (and->value == 0) {
+    return hpx_parcel_send(p, HPX_NULL);
+  }
+
+  return cvar_attach(&and->barrier, p);
 }
 
-static void _and_fini(lco_t *lco)
-{
-  if (!lco)
+static void _and_fini(lco_t *lco) {
+  if (!lco) {
     return;
-
-  _and_t *and = (_and_t *)lco;
-  lco_lock(&and->lco);
-  DEBUG_IF(true) {
-    lco_set_deleted(&and->lco);
   }
-  log_lco("and: finalized\n");
-  libhpx_global_free(and);
+
+  lco_lock(lco);
+  lco_fini(lco);
+  libhpx_global_free(lco);
 }
 
 static void _and_error(lco_t *lco, hpx_status_t code) {
@@ -105,7 +81,16 @@ static void _and_error(lco_t *lco, hpx_status_t code) {
   lco_unlock(&and->lco);
 }
 
-/// Fast set uses atomic ops to decrement the value, and signals when it gets to 0.
+void _and_reset(lco_t *lco) {
+  _and_t *and = (_and_t *)lco;
+  lco_lock(&and->lco);
+  dbg_assert_str(cvar_empty(&and->barrier),
+                 "Reset on AND LCO that has waiting threads.\n");
+  cvar_reset(&and->barrier);
+  lco_unlock(&and->lco);
+}
+
+/// Fast set decrements the value, and signals when it gets to 0.
 static void _and_set(lco_t *lco, int size, const void *from) {
   _and_t *and = (_and_t *)lco;
   lco_lock(&and->lco);
@@ -130,10 +115,10 @@ static hpx_status_t _and_wait(lco_t *lco) {
   return status;
 }
 
-static hpx_status_t _and_try_wait(lco_t *lco, hpx_time_t time) {
+static hpx_status_t _and_attach(lco_t *lco, hpx_parcel_t *p) {
   _and_t *and = (_and_t *)lco;
   lco_lock(&and->lco);
-  hpx_status_t status = _try_wait(and, time);
+  hpx_status_t status = _attach(and, p);
   lco_unlock(&and->lco);
   return status;
 }
@@ -142,20 +127,17 @@ static hpx_status_t _and_get(lco_t *lco, int size, void *out) {
   return _and_wait(lco);
 }
 
-static hpx_status_t _and_try_get(lco_t *lco, int size, void *out, hpx_time_t time) {
-  return _and_try_wait(lco, time);
-}
-
 static void _and_init(_and_t *and, intptr_t value) {
   static const lco_class_t vtable = {
-    .on_fini = _and_fini,
-    .on_error = _and_error,
-    .on_set = _and_set,
-    .on_get = _and_get,
-    .on_wait = _and_wait,
-    .on_try_get = _and_try_get,
-    .on_try_wait = _and_try_wait,
-    .on_attach = NULL
+    .on_fini     = _and_fini,
+    .on_error    = _and_error,
+    .on_set      = _and_set,
+    .on_get      = _and_get,
+    .on_getref   = NULL,
+    .on_release  = NULL,
+    .on_wait     = _and_wait,
+    .on_attach   = _and_attach,
+    .on_reset    = _and_reset
   };
 
   assert(value >= 0);
