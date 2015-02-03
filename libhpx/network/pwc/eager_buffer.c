@@ -42,7 +42,17 @@ static HPX_INTERRUPT(_eager_rx, void *args) {
   return HPX_SUCCESS;
 }
 
-static HPX_INTERRUPT(_finish_eager_tx, void *UNUSED) {
+/// Finish a local eager parcel send operation.
+///
+/// This is run as a local completion command. We'd prefer this to be an
+/// interrupt, but the current framework doesn't have any way to pass the parcel
+/// address through into the handler, it has to come out of band through
+/// hpx_thread_current_target(). Interrupts don't have access to this
+/// out-of-band data, so a task it is.
+///
+/// This is okay, but is likely to be higher overhead than we really want. We
+/// could consider changing the type of network commands...
+static HPX_TASK(_finish_eager_tx, void *UNUSED) {
   hpx_parcel_t *p = NULL;
   hpx_addr_t target = hpx_thread_current_target();
   if (!hpx_gas_try_pin(target, (void**)&p)) {
@@ -54,21 +64,19 @@ static HPX_INTERRUPT(_finish_eager_tx, void *UNUSED) {
   return HPX_SUCCESS;
 }
 
-/// This handles the pad operation at the receiver.
+/// This handles the wrap operation at the receiver.
 ///
-/// This currently assumes that the only purpose for padding is to deal with a
-/// wrapped buffer, so it contains a check to see if the number of bytes are in
-/// agreement with what we think we need to unwrap the buffer.
-static HPX_INTERRUPT(_eager_rx_pad, void *args) {
-  int *src = args;
-  uint32_t bytes = pgas_gpa_to_offset(hpx_thread_current_target());
+/// This currently assumes that rx buffer operations occur in-order, so that
+/// when the wrap commands arrives we can just increment the min index the
+/// amount remaining to exactly wrap the buffer.
+static HPX_INTERRUPT(_eager_rx_wrap, int *src) {
   peer_t *peer = pwc_get_peer(here->network, *src);
   eager_buffer_t *rx = &peer->rx;
-  rx->min += bytes;
-  DEBUG_IF (_index_of(rx, rx->min) != 0) {
-    dbg_error("%u bytes did not unwrap the buffer\n", bytes);
-  }
-  log_net("received %u bytes of padding from %u\n", bytes, *src);
+  uint32_t r = rx->size - _index_of(rx, rx->min);
+  rx->min += r;
+  dbg_assert_str(_index_of(rx, rx->min) == 0,
+                 "%u bytes did not unwrap the buffer\n", r);
+  log_net("eager buffer %d wrapped (%u bytes)\n", *src, r);
   return HPX_SUCCESS;
 }
 
@@ -76,13 +84,7 @@ static HPX_INTERRUPT(_eager_rx_pad, void *args) {
 ///
 /// This is used when we get a send that will wrap around the buffer. It is
 /// implemented using a single command---this is important because we don't use
-/// any eager buffer bytes and thus don't care what the value of bytes is.
-///
-/// If the buffer is being processed in-order, which we expect, then the @p
-/// bytes does not need to be encoded in the command, since the tx/rx indexes
-/// are in agreement, the receiver can compute the padding too. We do send the
-/// bytes though, since it doesn't use any extra bandwidth and allows us to add
-/// padding for reasons other than wrapped buffers.
+/// any eager buffer bytes.
 ///
 /// This function will recursively send the parcel.
 ///
@@ -93,9 +95,9 @@ static HPX_INTERRUPT(_eager_rx_pad, void *args) {
 /// @returns  LIBHPX_OK The result of the parcel send operation if the padding
 ///                       was injected correctly.
 ///
-static int _pad(eager_buffer_t *tx, hpx_parcel_t *p, uint32_t bytes) {
+static int _wrap(eager_buffer_t *tx, hpx_parcel_t *p, uint32_t bytes) {
   log_net("sending %u bytes of padding\n", bytes);
-  command_t cmd = encode_command(_eager_rx_pad, (uint64_t)bytes);
+  command_t cmd = encode_command(_eager_rx_wrap, 0);
   int status = peer_put_command(tx->peer, cmd);
   if (status != LIBHPX_OK) {
     return dbg_error("could not send command to pad eager buffer\n");
@@ -139,7 +141,7 @@ int eager_buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   const uint32_t roff = _index_of(tx, tx->max);
   const uint32_t eoff = _index_of(tx, end);
   if (eoff <= roff) {
-    return _pad(tx, p, tx->size - roff);
+    return _wrap(tx, p, tx->size - roff);
   }
 
   peer_t *peer = tx->peer;
