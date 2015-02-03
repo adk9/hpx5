@@ -35,7 +35,7 @@ typedef struct ustack {
 } ustack_t;
 
 /// This is the type of an HPX thread entry function.
-typedef void (*thread_entry_t)(hpx_parcel_t *) HPX_NORETURN;
+typedef void (*thread_entry_t)(hpx_parcel_t *);
 
 /// Sets the size of a stack.
 ///

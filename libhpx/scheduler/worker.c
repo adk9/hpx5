@@ -69,44 +69,63 @@ static void *_run(void *worker) {
   return NULL;
 }
 
+/// Execute a parcel.
+static int _execute(hpx_parcel_t *p) {
+  hpx_action_t id = hpx_parcel_get_action(p);
+  bool pinned = action_is_pinned(here->actions, id);
+  if (pinned && !hpx_gas_try_pin(p->target, NULL)) {
+    log_sched("pinned action resend\n");
+    return HPX_RESEND;
+  }
+
+  void *args = hpx_parcel_get_data(p);
+  int status = action_table_run_handler(here->actions, id, args);
+  if (pinned) {
+    hpx_gas_unpin(p->target);
+  }
+  return status;
+}
+
+/// The entry function for all interrupts.
+///
+static void _execute_interrupt(hpx_parcel_t *p) {
+  int e = _execute(p);
+  switch (e) {
+   case HPX_SUCCESS:
+    log_sched("completed interrupt\n");
+    return;
+   case HPX_RESEND:
+    log_sched("resending interrupt to %lu\n", p->target);
+    if (HPX_SUCCESS != parcel_launch(p)) {
+      dbg_error("failed to resend parcel\n");
+    }
+    return;
+   default:
+    dbg_error("interrupt produced unexpected error %s.\n", hpx_strerror(e));
+  }
+}
 
 /// The entry function for all of the lightweight threads.
 ///
-/// This entry function extracts the action and the arguments from the parcel,
-/// and then invokes the action on the arguments. If the action returns to this
-/// entry function, we dispatch to the correct thread termination handler.
-///
 /// @param       parcel The parcel that describes the thread to run.
-static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
-  const hpx_addr_t target = hpx_parcel_get_target(parcel);
-  const uint32_t owner = gas_owner_of(here->gas, target);
-  DEBUG_IF (owner != here->rank) {
-    log_sched("received parcel at incorrect rank, resend likely\n");
-  }
-
-  const hpx_action_t id = hpx_parcel_get_action(parcel);
-  void *args = hpx_parcel_get_data(parcel);
-
-  bool pinned = action_is_pinned(here->actions, id);
-  if (pinned) {
-    hpx_gas_try_pin(target, NULL);
-  }
-
-  int status = action_table_run_handler(here->actions, id, args);
-
-  if (pinned) {
-    hpx_gas_unpin(target);
-  }
-
-  switch (status) {
+static void _execute_thread(hpx_parcel_t *p) {
+  int e = _execute(p);
+  switch (e) {
     default:
-      dbg_error("action: produced unhandled error %i.\n", (int)status);
+     dbg_error("thread produced unhandled error %s.\n", hpx_strerror(e));
+     return;
     case HPX_ERROR:
-      dbg_error("action: produced error.\n");
+     dbg_error("thread produced error.\n");
+     return;
     case HPX_RESEND:
+     log_sched("resending interrupt to %lu\n", p->target);
+     if (HPX_SUCCESS != parcel_launch(p)) {
+       dbg_error("failed to resend parcel\n");
+     }
+     return;
     case HPX_SUCCESS:
     case HPX_LCO_ERROR:
-      hpx_thread_exit(status);
+      hpx_thread_exit(e);
   }
   unreachable();
 }
@@ -137,7 +156,7 @@ static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
 static hpx_parcel_t *_try_bind(hpx_parcel_t *p) {
   dbg_assert(p);
   if (!parcel_get_stack(p)) {
-    ustack_t *stack = thread_new(p, _thread_enter);
+    ustack_t *stack = thread_new(p, _execute_thread);
     parcel_set_stack(p, stack);
   }
   return p;
@@ -283,7 +302,7 @@ static int _run_task(hpx_parcel_t *to, void *sp, void *env) {
   // otherwise run the action
   self->current = env;
   dbg_assert(parcel_get_stack(self->current) == NULL);
-  _thread_enter(env);
+  _execute_thread(env);
   unreachable();
   return HPX_SUCCESS;
 }
@@ -305,10 +324,29 @@ static hpx_parcel_t *_try_task(hpx_parcel_t *p) {
   }
 
   void **sp = &self->sp;
-  thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
+  int e = thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
+  dbg_check(e, "Error post _try_task: %s\n", hpx_strerror(e));
   return NULL;
 }
 
+/// Try to execute a parcel as an interrupt.
+///
+/// @param            p The parcel to test.
+///
+/// @returns       NULL The parcel was processed as a task.
+///                  @p The parcel was not a task.
+static hpx_parcel_t *_try_interrupt(hpx_parcel_t *p) {
+  if (scheduler_is_shutdown(self->sched)) {
+    return p;
+  }
+
+  if (!action_is_interrupt(here->actions, p->action)) {
+    return p;
+  }
+
+  _execute_interrupt(p);
+  return NULL;
+}
 
 /// Schedule something quickly.
 ///
@@ -550,47 +588,78 @@ static int _work_first(hpx_parcel_t *to, void *sp, void *env) {
   return HPX_SUCCESS;
 }
 
-/// Spawn a user-level thread.
+/// Spawn a parcel.
+///
+/// This complicated function does a bunch of logic to figure out the proper
+/// method of computation for the parcel.
 void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(self);
   dbg_assert(self->id >= 0);
   dbg_assert(p);
-  dbg_assert(hpx_gas_try_pin(hpx_parcel_get_target(p), NULL)); // NULL doesn't
-                                                               // pin
+  dbg_assert(hpx_gas_try_pin(p->target, NULL)); // just performs translation
   profile_ctr(self->stats.spawns++);
-  // don't run anything until we have started up
+
+  // Don't run anything until we have started up. This lets us use parcel_send()
+  // before hpx_run() without worrying about weird work-first or interrupt
+  // effects.
   if (!self->sp) {
     _spawn_lifo(self, p);
     return;
   }
 
-  // try and run tasks eagerly
-  p = _try_task(p);
+  // We always try and run interrupts eagerly. This should always be safe.
+  p = _try_interrupt(p);
   if (!p) {
     return;
   }
 
-  // if we're in help_first, or we're supposed to shutdown, buffer this parcel
-  if (!self->work_first) {
+  // If we're in help-first mode, or we're supposed to shutdown, we go ahead and
+  // buffer this parcel. It will get pulled from the buffer later for
+  // processing.
+  if (!self->work_first || scheduler_is_shutdown(self->sched)) {
     _spawn_lifo(self, p);
     return;
   }
 
-  if (scheduler_is_shutdown(self->sched)) {
+  // Otherwise we're in work-first mode, which means we should do our best to go
+  // ahead and run the parcel ourselves. There are some things that inhibit
+  // work-first scheduling.
+
+  // 1) We can't work-first anything if we're running a task, because blocking
+  //    the task will also block its parent.
+  //
+  //    NB: We probably can actually run tasks from tasks, since they're
+  //        guaranteed not to block (note we already do this for interrupts),
+  //        the issue is that we can't use _try_task() to do this because we get
+  //        parcel releases that we don't want when we do that. We could
+  //        restructure _try_task() to deal with that, in which case it would
+  //        make sense to hoist the _try_task() farther up this decision tree.
+  hpx_parcel_t *current = self->current;
+  if (action_is_task(here->actions, current->action)) {
     _spawn_lifo(self, p);
     return;
   }
 
-  ustack_t *thread = parcel_get_stack(self->current);
-  dbg_assert(thread);
+  // 2) We can't work-first if we are holding an LCO lock.
+  ustack_t *thread = parcel_get_stack(current);
   if (thread->in_lco) {
     _spawn_lifo(self, p);
     return;
   }
 
+  // 3) We can't work-first from an interrupt.
+  if (action_is_interrupt(here->actions, current->action)) {
+    _spawn_lifo(self, p);
+    return;
+  }
+
+  // We can process the parcel work-first, but we need to use a thread to do it
+  // so that our continuation can be stolen. We first make a check to see if
+  // we're supposed to transition out of work-first scheduling.
   uint64_t size = sync_chase_lev_ws_deque_size(&self->work);
   self->work_first = (size >= self->sched->wf_threshold);
-  thread_transfer(_try_bind(p), _work_first, NULL);
+  int e = thread_transfer(_try_bind(p), _work_first, NULL);
+  dbg_check(e, "Detected a work-first scheduling error: %s\n", hpx_strerror(e));
 }
 
 /// This is the continuation that we use to yield a thread.
