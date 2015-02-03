@@ -2,7 +2,7 @@
 noinst_LTLIBRARIES	= libgas.la
 
 # libgas files and flags
-libgas_la_CPPFLAGS = -I$(top_srcdir)/include -DJEMALLOC_RENAME=libhpx_global_ -DJEMALLOC_NAMESPACE=hpx
+libgas_la_CPPFLAGS = -I$(top_srcdir)/include
 libgas_la_SOURCES  = hpx_gas_glue.c \
                      gas.c \
                      mallctl.c \
