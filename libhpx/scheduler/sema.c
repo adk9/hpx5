@@ -36,20 +36,22 @@ typedef struct {
 
 static void _sema_fini(lco_t *lco);
 static void _sema_error(lco_t *lco, hpx_status_t code);
+static void _sema_reset(lco_t *lco);
 static void _sema_set(lco_t *lco, int size, const void *from);
 static hpx_status_t _sema_wait(lco_t *lco);
 static hpx_status_t _sema_get(lco_t *lco, int size, void *out);
 
 // the semaphore vtable
 static const lco_class_t _sema_vtable = {
-  .on_fini = _sema_fini,
-  .on_error = _sema_error,
-  .on_set = _sema_set,
-  .on_get = _sema_get,
-  .on_wait = _sema_wait,
-  .on_attach = NULL,
-  .on_try_get = NULL,
-  .on_try_wait = NULL
+  .on_fini     = _sema_fini,
+  .on_error    = _sema_error,
+  .on_set      = _sema_set,
+  .on_get      = _sema_get,
+  .on_getref   = NULL,
+  .on_release  = NULL,
+  .on_wait     = _sema_wait,
+  .on_attach   = NULL,
+  .on_reset    = _sema_reset
 };
 
 /// Allocate a semaphore LCO.
@@ -117,6 +119,15 @@ void _sema_error(lco_t *lco, hpx_status_t code) {
   _sema_t *sema = (_sema_t *)lco;
   scheduler_signal_error(&sema->avail, code);
   lco_unlock(lco);
+}
+
+void _sema_reset(lco_t *lco) {
+  _sema_t *sema = (_sema_t *)lco;
+  lco_lock(&sema->lco);
+  dbg_assert_str(cvar_empty(&sema->avail),
+                 "Reset on a sema that has waiting threads.\n");
+  cvar_reset(&sema->avail);
+  lco_unlock(&sema->lco);
 }
 
 /// Set is equivalent to returning a resource to the semaphore.

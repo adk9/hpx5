@@ -32,11 +32,12 @@
 
 /// Local channel interface.
 ///
-/// A channel is an LCO that contains a linked-list queue of dynamically sized
+/// A channel LCO maintains a linked-list of dynamically sized
 /// buffers. It can be used to support a thread-based, point-to-point
-/// communication mechanism, and that channel can be made in-order if the sender
-/// waits for remote completion for sets or sends().
+/// communication mechanism. An in-order channel forces a sender to
+/// wait for remote completion for sets or sends().
 /// @{
+
 typedef struct _node {
   struct _node *next;
   void       *buffer;                           // out-of place because we want
@@ -45,10 +46,10 @@ typedef struct _node {
 
 
 typedef struct {
-  lco_t           lco;
-  cvar_t     nonempty;
-  _node_t       *head;
-  _node_t       *tail;
+  lco_t          lco;
+  cvar_t    nonempty;
+  _node_t      *head;
+  _node_t      *tail;
 } _chan_t;
 
 
@@ -79,7 +80,6 @@ static _node_t *_chan_dequeue(_chan_t *chan) {
   return node;
 }
 
-
 /// Deletes a channel and its internal buffers.
 static void _chan_fini(lco_t *lco) {
   if (!lco) {
@@ -105,7 +105,6 @@ static void _chan_error(lco_t *lco, hpx_status_t code) {
   lco_unlock(&chan->lco);
 }
 
-
 /// Copies the @p from pointer into channel's buffer.
 static void _chan_set(lco_t *lco, int size, const void *from) {
   // set up the node that we're going to enqueue
@@ -113,7 +112,7 @@ static void _chan_set(lco_t *lco, int size, const void *from) {
   node->next = NULL;
   node->size = size;
   if (size != 0) {
-    assert(from);
+    dbg_assert(from);
     node->buffer = malloc(size);
     memcpy(node->buffer, from, size);
   }
@@ -126,7 +125,6 @@ static void _chan_set(lco_t *lco, int size, const void *from) {
   }
   lco_unlock(lco);
 }
-
 
 /// This is a non-blocking try recv on a channel. If the buffer had no data,
 /// then HPX_LCO_CHAN_EMPTY is returned, otherwise @p size is set >= 0, @p is
@@ -153,7 +151,6 @@ static hpx_status_t _chan_try_recv(_chan_t *chan, int *size, void **buffer) {
   return status;
 }
 
-
 /// The channel recv is like a channel get, except that we don't copy out to a
 /// user supplied buffer, but instead return the buffer directly.
 static hpx_status_t _chan_recv(_chan_t *chan, int *size, void **buffer) {
@@ -170,7 +167,7 @@ static hpx_status_t _chan_recv(_chan_t *chan, int *size, void **buffer) {
   // the head node
   lco_unlock(&chan->lco);
 
-  // if we got here without an error, then we dequed succesfully
+  // if we got here without an error, then we dequeued succesfully
   if (status == HPX_SUCCESS) {
     if (size) {
       *size = node->size;
@@ -184,7 +181,6 @@ static hpx_status_t _chan_recv(_chan_t *chan, int *size, void **buffer) {
   return status;
 }
 
-
 /// Use _chan_recv() to get the next buffer, and then copy it to the
 /// user-supplied buffer.
 static hpx_status_t _chan_get(lco_t *lco, int size, void *out) {
@@ -193,14 +189,13 @@ static hpx_status_t _chan_get(lco_t *lco, int size, void *out) {
   hpx_status_t status = _chan_recv((_chan_t *)lco, &bsize, &buffer);
 
   if (status == HPX_SUCCESS) {
-    assert(size == bsize);
+    dbg_assert(size == bsize);
     memcpy(out, buffer, bsize);
     free(buffer);
   }
 
   return status;
 }
-
 
 // For a channel, waiting simply waits until the channel is not empty, but it
 // doesn't really provide any useful information.
@@ -219,25 +214,24 @@ static hpx_status_t _chan_wait(lco_t *lco) {
   return status;
 }
 
-
 /// Initialize the channel
 static void _chan_init(_chan_t *c) {
   static const lco_class_t vtable = {
-    .on_fini = _chan_fini,
-    .on_error = _chan_error,
-    .on_set = _chan_set,
-    .on_get = _chan_get,
-    .on_wait = _chan_wait,
-    .on_attach = NULL,
-    .on_try_get = NULL,
-    .on_try_wait = NULL
+    .on_fini     = _chan_fini,
+    .on_error    = _chan_error,
+    .on_set      = _chan_set,
+    .on_get      = _chan_get,
+    .on_getref   = NULL,
+    .on_release  = NULL,
+    .on_wait     = _chan_wait,
+    .on_attach   = NULL,
+    .on_reset    = NULL
   };
 
   lco_init(&c->lco, &vtable);
   cvar_reset(&c->nonempty);
   c->head = c->tail = NULL;
 }
-
 
 /// Perform a receive operation on behalf of a remote recv operation. This will
 /// use the parcel continuation to copy the buffer out to the actual
@@ -252,11 +246,10 @@ static HPX_ACTION(_chan_recv_proxy, void *args) {
   }
   else {
     // free the buffer after we copy out its data
-    assert(size > 0);
+    dbg_assert(size > 0);
     hpx_thread_continue_cleanup(size, buffer, free, buffer);
   }
 }
-
 
 /// Perform a try receive operation on behalf of a remote try recv
 /// operation. This will use the parcel continuation to copy the buffer out to
@@ -272,7 +265,7 @@ static HPX_ACTION(_chan_try_recv_proxy, void *args) {
   }
   else {
     // free the buffer after we copy out its data
-    assert(size > 0);
+    dbg_assert(size > 0);
     hpx_thread_continue_cleanup(size, buffer, free, buffer);
   }
 }
@@ -281,7 +274,7 @@ static HPX_ACTION(_chan_try_recv_proxy, void *args) {
 /// Initialize a block of futures.
 static HPX_PINNED(_block_init, uint32_t *args) {
   _chan_t *channels = hpx_thread_current_local_target();
-  assert(channels);
+  dbg_assert(channels);
 
   // sequentially initialize each channel
   uint32_t block_size = args[0];
@@ -298,15 +291,13 @@ static HPX_PINNED(_block_init, uint32_t *args) {
 /// Allocate a new channel.
 ///
 /// Channels, like other LCOs, are always allocated in the global
-/// address space, because their addresses can also be used as the
-/// targets of parcels.
+/// address space, because their addresses can be used as the targets
+/// of parcels.
 ///
 /// The channel LCO does not make a distinction between its send or
 /// receive endpoints. A channel LCO can either be sent or received on
-/// by an HPX thread. It would normally be erroneous for a single
-/// thread to try to do both at once, leading to deadlocks. When there
-/// is nothing to receive on a channel, the calling thread is
-/// blocked.
+/// by an HPX thread. When there is nothing to receive on a channel,
+/// the calling thread is blocked.
 ///
 /// Channels, unlike futures, can be written to multiple times. More
 /// notably, channels transfer the ownership of the buffer that is
@@ -320,7 +311,6 @@ hpx_addr_t hpx_lco_chan_new(void) {
   _chan_init(local);
   return lva_to_gva(local);
 }
-
 
 /// Channel send.
 void hpx_lco_chan_send(hpx_addr_t chan, int size, const void *value,
