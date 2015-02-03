@@ -7,6 +7,6 @@ Name: @PACKAGE_NAME@
 Description: The HPX-5 runtime system.
 URL: https://gitlab.crest.iu.edu/extreme/hpx
 Version: @PACKAGE_VERSION@
-Cflags: -I${includedir}
+Cflags: -I${includedir} -I${includedir}/libffi-3.99999/include/
 Libs: -L${libdir} -lhpx
 Libs.private: @HPX_LIBS@
