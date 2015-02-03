@@ -148,6 +148,33 @@ static hpx_status_t _future_get(lco_t *lco, int size, void *out) {
   return status;
 }
 
+/// Returns the reference to the future's value in @p out, waiting if
+/// the lco isn't set yet.
+static hpx_status_t _future_getref(lco_t *lco, int size, void **out) {
+  _future_t *f = (_future_t *)lco;
+  lco_lock(&f->lco);
+  hpx_status_t status = _wait(f);
+
+  if ((status == HPX_SUCCESS) && out) {
+    *out = &f->value;
+  }
+
+  lco_unlock(&f->lco);
+  return status;
+}
+
+/// Free the reference to the future's value. If the future was
+/// _moved_ to our locality after a getref, check if the reference to
+/// be released matches the reference to the future's value.
+static void _future_release(lco_t *lco, void *out) {
+  _future_t *f = (_future_t *)lco;
+  lco_lock(&f->lco);
+  if (out && out != f->value) {
+    free(out);
+  }
+  lco_unlock(&f->lco);
+}
+
 static hpx_status_t _future_wait(lco_t *lco) {
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
@@ -165,6 +192,8 @@ static void _future_init(_future_t *f, int size) {
     .on_error    = _future_error,
     .on_set      = _future_set,
     .on_get      = _future_get,
+    .on_getref   = _future_getref,
+    .on_release  = _future_release,
     .on_wait     = _future_wait,
     .on_attach   = _future_attach,
     .on_reset    = _future_reset

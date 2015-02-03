@@ -89,7 +89,7 @@ hpx_status_t hpx_lco_wait(hpx_addr_t lco);
 
 /// Perform a get operation.
 ///
-/// An LCO blocks the caller until the future is set, and then copies its value
+/// An LCO blocks the caller until it is set, and then copies its value
 /// data into the provided buffer.
 ///
 /// If the return status is not HPX_SUCCESS then the LCO was triggered by
@@ -101,6 +101,25 @@ hpx_status_t hpx_lco_wait(hpx_addr_t lco);
 /// @param[out] out the output location (may be null)
 /// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
 hpx_status_t hpx_lco_get(hpx_addr_t lco, int size, void *value);
+
+/// Perform a "get" operation on an LCO but instead of copying the LCO
+/// buffer out, get a reference to the LCO's buffer.
+///
+/// If the return status is not HPX_SUCCESS then the LCO was triggered
+/// by hpx_lco_error() rather than hpx_lco_set().
+///
+/// @param      lco the LCO we're processing
+/// @param     size the size of the LCO buffer
+/// @param[out] ref pointer to hold the reference to an LCO's buffer
+/// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
+hpx_status_t hpx_lco_getref(hpx_addr_t lco, int size, void **ref);
+
+/// Release the reference to an LCO's buffer.
+///
+/// @param      lco the LCO we're processing
+/// @param[out] ref the reference to an LCO's buffer
+/// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
+void hpx_lco_release(hpx_addr_t lco, void *ref);
 
 /// Blocks the thread until all of the LCOs have been set.
 ///

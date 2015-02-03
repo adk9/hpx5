@@ -516,6 +516,8 @@ _future_init(_netfuture_t *f, int size, bool shared)
     .on_error = NULL,
     .on_set = NULL,
     .on_get = NULL,
+    .on_getref = NULL,
+    .on_release = NULL,
     .on_wait = NULL,
     .on_attach = NULL,
     .on_reset = NULL
