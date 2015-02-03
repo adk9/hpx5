@@ -90,7 +90,7 @@ void _and_reset(lco_t *lco) {
   lco_unlock(&and->lco);
 }
 
-/// Fast set uses atomic ops to decrement the value, and signals when it gets to 0.
+/// Fast set decrements the value, and signals when it gets to 0.
 static void _and_set(lco_t *lco, int size, const void *from) {
   _and_t *and = (_and_t *)lco;
   lco_lock(&and->lco);

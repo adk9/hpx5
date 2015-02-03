@@ -14,8 +14,8 @@
 #include "config.h"
 #endif
 
-/// @file libhpx/scheduler/reduce.c
-/// @brief Defines the reduction LCO.
+/// @file libhpx/scheduler/allreduce.c
+/// @brief Defines the all-reduction LCO.
 
 #include <assert.h>
 #include <stdlib.h>
@@ -34,15 +34,15 @@ static const int _reducing = 0;
 static const  int _reading = 1;
 
 typedef struct {
-  lco_t                           lco;
-  cvar_t                         wait;
-  size_t                      readers;
-  size_t                      writers;
-  hpx_commutative_associative_op_t op;
-  void   (*init)(void*, const size_t);
-  size_t                        count;
-  volatile int                  phase;
-  void                         *value;     // out-of-place for alignment reasons
+  lco_t               lco;
+  cvar_t             wait;
+  size_t          readers;
+  size_t          writers;
+  hpx_monoid_op_t      op;
+  hpx_monoid_id_t      id;
+  size_t            count;
+  volatile int      phase;
+  void             *value;  // out-of-place for alignment reasons
 } _allreduce_t;
 
 /// Deletes a reduction.
@@ -130,7 +130,7 @@ static hpx_status_t _allreduce_get(lco_t *lco, int size, void *out) {
   if (++r->count == r->readers) {
     r->count = r->writers;
     r->phase = _reducing;
-    r->init(r->value, size);
+    r->id(r->value, size);
     scheduler_signal_all(&r->wait);
   }
   else {
@@ -143,17 +143,13 @@ static hpx_status_t _allreduce_get(lco_t *lco, int size, void *out) {
    return status;
 }
 
-
 // Wait for the reduction, loses the value of the reduction for this round.
 static hpx_status_t _allreduce_wait(lco_t *lco) {
   return _allreduce_get(lco, 0, NULL);
 }
 
-
 static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
-                            size_t size, hpx_commutative_associative_op_t op,
-                            void (*init)(void *, const size_t size))
-{
+                            size_t size, hpx_monoid_op_t op, hpx_monoid_id_t id) {
   // vtable
   static const lco_class_t vtable = {
     .on_fini     = _allreduce_fini,
@@ -167,13 +163,14 @@ static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
     .on_reset    = _allreduce_reset
   };
 
-  assert(init);
+  assert(id);
+  assert(op);
 
   lco_init(&r->lco, &vtable);
   cvar_reset(&r->wait);
   r->readers = readers;
   r->op = op;
-  r->init = init;
+  r->id = id;
   r->count = writers;
   r->writers = writers;
   r->phase = _reducing;
@@ -184,17 +181,15 @@ static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
     assert(r->value);
   }
 
-  r->init(r->value, size);
+  r->id(r->value, size);
 }
 
 /// @}
 
 hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
-                                 hpx_commutative_associative_op_t op,
-                                 void (*init)(void*, const size_t size))
-{
+                                 hpx_monoid_op_t op, hpx_monoid_id_t id) {
   _allreduce_t *r = libhpx_global_malloc(sizeof(*r));
   assert(r);
-  _allreduce_init(r, inputs, outputs, size, op, init);
+  _allreduce_init(r, inputs, outputs, size, op, id);
   return lva_to_gva(r);
 }
