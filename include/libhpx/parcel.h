@@ -127,7 +127,7 @@ static inline uint32_t parcel_payload_size(const hpx_parcel_t *p) {
 }
 
 static inline uint32_t parcel_prefix_size(void) {
-  return offsetof(hpx_parcel_t, action);
+  return offsetof(hpx_parcel_t, size);
 }
 
 static inline uint32_t parcel_network_size(const hpx_parcel_t *p) {
@@ -135,7 +135,7 @@ static inline uint32_t parcel_network_size(const hpx_parcel_t *p) {
 }
 
 static inline void *parcel_network_offset(hpx_parcel_t *p) {
-  return &p->action;
+  return &p->size;
 }
 
 #endif // LIBHPX_PARCEL_H
