@@ -500,7 +500,7 @@ hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size);
 /// @param id           An initialization function for the data, this is used to
 ///                     initialize the data in every epoch.
 /// @param predicate    Predicate to guard the LCO.
-hpx_addr_t hpx_lco_user_new(size_t size, hpx_monoid_op_t op, hpx_monoid_id_t id,
+hpx_addr_t hpx_lco_user_new(size_t size, hpx_monoid_id_t id, hpx_monoid_op_t op,
                             hpx_predicate_t predicate);
 /// @}
 
