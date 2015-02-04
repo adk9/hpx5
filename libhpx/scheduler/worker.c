@@ -106,11 +106,11 @@ static int _continue_parcel(hpx_parcel_t *p, hpx_status_t status, size_t size,
     }
 
     if (c_act == hpx_lco_set_action) {
-      e =hpx_call_with_continuation(c_target, c_act, HPX_NULL, HPX_ACTION_NULL,
-                                    value, size);
+      e = hpx_call_with_continuation(c_target, c_act, HPX_NULL, HPX_ACTION_NULL,
+                                     value, size);
     }
     else {
-      _call_continuation(c_target, c_act, value, size, status);
+      e = _call_continuation(c_target, c_act, value, size, status);
     }
   }
   return e;
