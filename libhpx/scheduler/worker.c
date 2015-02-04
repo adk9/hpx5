@@ -69,6 +69,53 @@ static void *_run(void *worker) {
   return NULL;
 }
 
+static int _call_continuation(hpx_addr_t target, hpx_action_t action,
+                              const void *args, size_t len, hpx_status_t status) {
+  dbg_assert(!args || len);
+  dbg_assert(!len || args);
+
+  // get a parcel we can use to call locality_call_continuation().
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(locality_cont_args_t) + len);
+  dbg_assert(p);
+  hpx_parcel_set_target(p, target);
+  hpx_parcel_set_action(p, locality_call_continuation);
+
+  locality_cont_args_t *cargs = hpx_parcel_get_data(p);
+  cargs->action = action;
+  cargs->status = status;
+
+  // perform the single serialization, if necessary
+  if (args) {
+    memcpy(&cargs->data, args, len);
+  }
+
+  return hpx_parcel_send(p, HPX_NULL);
+}
+
+/// continue a parcel by invoking its parcel continuation
+static int _continue_parcel(hpx_parcel_t *p, hpx_status_t status, size_t size,
+                            const void *value) {
+  int e = HPX_SUCCESS;
+  hpx_action_t c_act = hpx_parcel_get_cont_action(p);
+  hpx_addr_t c_target = hpx_parcel_get_cont_target(p);
+  if ((c_target != HPX_NULL) && c_act != HPX_ACTION_NULL) {
+    // Double the credit so that we can pass it on to the continuation
+    // without splitting it up.
+    if (p->pid != HPX_NULL) {
+      --p->credit;
+    }
+
+    if (c_act == hpx_lco_set_action) {
+      e =hpx_call_with_continuation(c_target, c_act, HPX_NULL, HPX_ACTION_NULL,
+                                    value, size);
+    }
+    else {
+      _call_continuation(c_target, c_act, value, size, status);
+    }
+  }
+  return e;
+}
+
 /// Execute a parcel.
 static int _execute(hpx_parcel_t *p) {
   hpx_action_t id = hpx_parcel_get_action(p);
@@ -93,6 +140,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
   switch (e) {
    case HPX_SUCCESS:
     log_sched("completed interrupt\n");
+    _continue_parcel(p, HPX_SUCCESS, 0, NULL);
     return;
    case HPX_RESEND:
     log_sched("resending interrupt to %lu\n", p->target);
@@ -130,7 +178,6 @@ static void _execute_thread(hpx_parcel_t *p) {
   unreachable();
 }
 
-
 /// A thread_transfer() continuation that runs after a worker first starts it's
 /// scheduling loop, but before any user defined lightweight threads run.
 static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
@@ -143,7 +190,6 @@ static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
 
   return HPX_SUCCESS;
 }
-
 
 /// Create a new lightweight thread based on the parcel.
 ///
@@ -162,7 +208,6 @@ static hpx_parcel_t *_try_bind(hpx_parcel_t *p) {
   return p;
 }
 
-
 /// Add a parcel to the top of the worker's work queue.
 static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
   uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
@@ -178,12 +223,10 @@ static hpx_parcel_t *_schedule_lifo(struct worker *w) {
   return sync_chase_lev_ws_deque_pop(&w->work);
 }
 
-
 /// Process the next available yielded thread.
 static hpx_parcel_t *_schedule_yielded(struct worker *w) {
   return sync_two_lock_queue_dequeue(&w->sched->yielded);
 }
-
 
 /// Steal a lightweight thread during scheduling.
 ///
@@ -208,14 +251,12 @@ static hpx_parcel_t *_schedule_steal(struct worker *w) {
   return p;
 }
 
-
 /// Send a mail message to another worker.
 static void _send_mail(int id, hpx_parcel_t *p) {
   dbg_assert(id >= 0);
   struct worker *w = scheduler_get_worker(here->sched, id);
   sync_two_lock_queue_enqueue(&w->inbox, p);
 }
-
 
 /// Process my mail queue.
 static void _handle_mail(struct worker *w) {
@@ -228,7 +269,6 @@ static void _handle_mail(struct worker *w) {
     }
   }
 }
-
 
 /// A transfer continuation that frees the current parcel.
 ///
@@ -543,7 +583,6 @@ int worker_start(void) {
   return LIBHPX_OK;
 }
 
-
 int worker_create(struct worker *worker) {
   pthread_t thread;
 
@@ -555,10 +594,8 @@ int worker_create(struct worker *worker) {
 
   // unbind the worker thread (-1 indicates run on all available cores)
   system_set_affinity(thread, -1);
-
   return LIBHPX_OK;
 }
-
 
 void worker_join(struct worker *worker) {
   dbg_assert(worker);
@@ -571,7 +608,6 @@ void worker_join(struct worker *worker) {
     dbg_error("cannot join worker thread %d.\n", worker->id);
   }
 }
-
 
 void worker_cancel(struct worker *worker) {
   dbg_assert(worker);
@@ -685,7 +721,6 @@ static int _checkpoint_yield(hpx_parcel_t *to, void *sp, void *env) {
   return HPX_SUCCESS;
 }
 
-
 void scheduler_yield(void) {
   // if there's nothing else to do, we can be rescheduled
   hpx_parcel_t *from = self->current;
@@ -705,11 +740,9 @@ void scheduler_yield(void) {
   thread_transfer(to, _checkpoint_yield, self->current);
 }
 
-
 void hpx_thread_yield(void) {
   scheduler_yield();
 }
-
 
 /// A transfer continuation that unlocks a lock.
 static int _unlock(hpx_parcel_t *to, void *sp, void *env) {
@@ -720,7 +753,6 @@ static int _unlock(hpx_parcel_t *to, void *sp, void *env) {
   sync_lockable_ptr_unlock(lock);
   return HPX_SUCCESS;
 }
-
 
 hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   // push the current thread onto the condition variable---no lost-update
@@ -756,64 +788,19 @@ void scheduler_signal(cvar_t *cvar) {
   _resume(cvar_pop(cvar));
 }
 
-
 void scheduler_signal_all(struct cvar *cvar) {
   _resume(cvar_pop_all(cvar));
 }
-
 
 void scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
   _resume(cvar_set_error(cvar, code));
 }
 
-
-static void _call_continuation(hpx_addr_t target, hpx_action_t action,
-                               const void *args, size_t len,
-                               hpx_status_t status) {
-  dbg_assert(!args || len);
-  dbg_assert(!len || args);
-
-  // get a parcel we can use to call locality_call_continuation().
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(locality_cont_args_t) + len);
-  dbg_assert(p);
-  hpx_parcel_set_target(p, target);
-  hpx_parcel_set_action(p, locality_call_continuation);
-
-  locality_cont_args_t *cargs = hpx_parcel_get_data(p);
-  cargs->action = action;
-  cargs->status = status;
-
-  // perform the single serialization, if necessary
-  if (args) {
-    memcpy(&cargs->data, args, len);
-  }
-
-  hpx_parcel_send(p, HPX_NULL);
-}
-
-
 /// unified continuation handler
-static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
-                                   const void *value,
+static void HPX_NORETURN _continue(hpx_status_t status, size_t size, const void *value,
                                    void (*cleanup)(void*), void *env) {
   hpx_parcel_t *parcel = self->current;
-  hpx_action_t c_act = hpx_parcel_get_cont_action(parcel);
-  hpx_addr_t c_target = hpx_parcel_get_cont_target(parcel);
-  if ((c_target != HPX_NULL) && c_act != HPX_ACTION_NULL) {
-    // Double the credit so that we can pass it on to the continuation
-    // without splitting it up.
-    if (parcel->pid != HPX_NULL) {
-      --parcel->credit;
-    }
-
-    if (c_act == hpx_lco_set_action) {
-      hpx_call_with_continuation(c_target, c_act, HPX_NULL, HPX_ACTION_NULL,
-                                 value, size);
-    }
-    else {
-      _call_continuation(c_target, c_act, value, size, status);
-    }
-  }
+  _continue_parcel(parcel, status, size, value);
 
   // run the cleanup handler
   if (cleanup != NULL) {
@@ -828,17 +815,14 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
   unreachable();
 }
 
-
 void hpx_thread_continue(size_t size, const void *value) {
   _continue(HPX_SUCCESS, size, value, NULL, NULL);
 }
-
 
 void hpx_thread_continue_cleanup(size_t size, const void *value,
                                  void (*cleanup)(void*), void *env) {
   _continue(HPX_SUCCESS, size, value, cleanup, env);
 }
-
 
 void hpx_thread_exit(int status) {
   hpx_parcel_t *parcel = self->current;
@@ -863,7 +847,6 @@ void hpx_thread_exit(int status) {
   hpx_abort();
 }
 
-
 scheduler_stats_t *thread_get_stats(void) {
   if (self) {
     return &self->stats;
@@ -873,46 +856,37 @@ scheduler_stats_t *thread_get_stats(void) {
   }
 }
 
-
 hpx_parcel_t *scheduler_current_parcel(void) {
   return self->current;
 }
-
 
 int hpx_get_my_thread_id(void) {
   return (self) ? self->id : -1;
 }
 
-
 hpx_addr_t hpx_thread_current_target(void) {
   return (self && self->current) ? self->current->target : HPX_NULL;
 }
-
 
 hpx_addr_t hpx_thread_current_cont_target(void) {
   return (self && self->current) ? self->current->c_target : HPX_NULL;
 }
 
-
 hpx_action_t hpx_thread_current_action(void) {
   return (self && self->current) ? self->current->action : HPX_ACTION_NULL;
 }
-
 
 hpx_action_t hpx_thread_current_cont_action(void) {
   return (self && self->current) ? self->current->c_action : HPX_ACTION_NULL;
 }
 
-
 uint32_t hpx_thread_current_args_size(void) {
   return (self && self->current) ? self->current->size : 0;
 }
 
-
 hpx_pid_t hpx_thread_current_pid(void) {
   return (self && self->current) ? self->current->pid : HPX_NULL;
 }
-
 
 void *hpx_thread_current_local_target(void) {
   void *local;
@@ -924,11 +898,9 @@ void *hpx_thread_current_local_target(void) {
   return NULL;
 }
 
-
 uint32_t hpx_thread_current_credit(void) {
   return (self && self->current) ? parcel_get_credit(self->current) : 0;
 }
-
 
 int hpx_thread_get_tls_id(void) {
   ustack_t *stack = parcel_get_stack(self->current);
