@@ -32,6 +32,7 @@ extern "C" {
 enum enum_hpx_gas { hpx_gas_arg_default = 0 , hpx_gas_arg_smp, hpx_gas_arg_pgas, hpx_gas_arg_agas, hpx_gas_arg_pgas_switch, hpx_gas_arg_agas_switch };
 enum enum_hpx_boot { hpx_boot_arg_default = 0 , hpx_boot_arg_smp, hpx_boot_arg_mpi, hpx_boot_arg_pmi };
 enum enum_hpx_transport { hpx_transport_arg_default = 0 , hpx_transport_arg_smp, hpx_transport_arg_mpi, hpx_transport_arg_portals, hpx_transport_arg_photon };
+enum enum_hpx_network { hpx_network_arg_default = 0 , hpx_network_arg_smp, hpx_network_arg_pwc, hpx_network_arg_isir };
 enum enum_hpx_loglevel { hpx_loglevel_arg_default = 0 , hpx_loglevel_arg_boot, hpx_loglevel_arg_sched, hpx_loglevel_arg_gas, hpx_loglevel_arg_lco, hpx_loglevel_arg_net, hpx_loglevel_arg_trans, hpx_loglevel_arg_parcel, hpx_loglevel_arg_all };
 
 /** @brief Where the command line options are stored */
@@ -64,8 +65,13 @@ struct hpx_options_t
   enum enum_hpx_transport hpx_transport_arg;	/**< @brief type of transport to use.  */
   char * hpx_transport_orig;	/**< @brief type of transport to use original value given at command line.  */
   const char *hpx_transport_help; /**< @brief type of transport to use help description.  */
-  int hpx_waitat_arg;	/**< @brief wait for debugger at specific locality.  */
-  char * hpx_waitat_orig;	/**< @brief wait for debugger at specific locality original value given at command line.  */
+  enum enum_hpx_network hpx_network_arg;	/**< @brief type of network to use.  */
+  char * hpx_network_orig;	/**< @brief type of network to use original value given at command line.  */
+  const char *hpx_network_help; /**< @brief type of network to use help description.  */
+  int* hpx_waitat_arg;	/**< @brief wait for debugger at specific locality.  */
+  char ** hpx_waitat_orig;	/**< @brief wait for debugger at specific locality original value given at command line.  */
+  int hpx_waitat_min; /**< @brief wait for debugger at specific locality's minimum occurreces */
+  int hpx_waitat_max; /**< @brief wait for debugger at specific locality's maximum occurreces */
   const char *hpx_waitat_help; /**< @brief wait for debugger at specific locality help description.  */
   enum enum_hpx_loglevel *hpx_loglevel_arg;	/**< @brief set the logging level.  */
   char ** hpx_loglevel_orig;	/**< @brief set the logging level original value given at command line.  */
@@ -92,6 +98,12 @@ struct hpx_options_t
   const char *hpx_mprotectstacks_help; /**< @brief use mprotect() to bracket stacks to look for stack overflows help description.  */
   int hpx_waitonabort_flag;	/**< @brief call hpx_wait() inside of hpx_abort() for debugging (default=off).  */
   const char *hpx_waitonabort_help; /**< @brief call hpx_wait() inside of hpx_abort() for debugging help description.  */
+  long hpx_parcelbuffersize_arg;	/**< @brief set the size of p2p recv buffers for parcel sends.  */
+  char * hpx_parcelbuffersize_orig;	/**< @brief set the size of p2p recv buffers for parcel sends original value given at command line.  */
+  const char *hpx_parcelbuffersize_help; /**< @brief set the size of p2p recv buffers for parcel sends help description.  */
+  long hpx_parceleagerlimit_arg;	/**< @brief set the largest eager parcel size (header inclusive).  */
+  char * hpx_parceleagerlimit_orig;	/**< @brief set the largest eager parcel size (header inclusive) original value given at command line.  */
+  const char *hpx_parceleagerlimit_help; /**< @brief set the largest eager parcel size (header inclusive) help description.  */
   
   unsigned int hpx_cores_given ;	/**< @brief Whether hpx-cores was given.  */
   unsigned int hpx_threads_given ;	/**< @brief Whether hpx-threads was given.  */
@@ -102,6 +114,7 @@ struct hpx_options_t
   unsigned int hpx_gas_given ;	/**< @brief Whether hpx-gas was given.  */
   unsigned int hpx_boot_given ;	/**< @brief Whether hpx-boot was given.  */
   unsigned int hpx_transport_given ;	/**< @brief Whether hpx-transport was given.  */
+  unsigned int hpx_network_given ;	/**< @brief Whether hpx-network was given.  */
   unsigned int hpx_waitat_given ;	/**< @brief Whether hpx-waitat was given.  */
   unsigned int hpx_loglevel_given ;	/**< @brief Whether hpx-loglevel was given.  */
   unsigned int hpx_logat_given ;	/**< @brief Whether hpx-logat was given.  */
@@ -111,6 +124,8 @@ struct hpx_options_t
   unsigned int hpx_configfile_given ;	/**< @brief Whether hpx-configfile was given.  */
   unsigned int hpx_mprotectstacks_given ;	/**< @brief Whether hpx-mprotectstacks was given.  */
   unsigned int hpx_waitonabort_given ;	/**< @brief Whether hpx-waitonabort was given.  */
+  unsigned int hpx_parcelbuffersize_given ;	/**< @brief Whether hpx-parcelbuffersize was given.  */
+  unsigned int hpx_parceleagerlimit_given ;	/**< @brief Whether hpx-parceleagerlimit was given.  */
 
 } ;
 
@@ -299,6 +314,7 @@ int hpx_option_parser_required (struct hpx_options_t *args_info,
 extern char *hpx_option_parser_hpx_gas_values[] ;	/**< @brief Possible values for hpx-gas.  */
 extern char *hpx_option_parser_hpx_boot_values[] ;	/**< @brief Possible values for hpx-boot.  */
 extern char *hpx_option_parser_hpx_transport_values[] ;	/**< @brief Possible values for hpx-transport.  */
+extern char *hpx_option_parser_hpx_network_values[] ;	/**< @brief Possible values for hpx-network.  */
 extern char *hpx_option_parser_hpx_loglevel_values[] ;	/**< @brief Possible values for hpx-loglevel.  */
 
 

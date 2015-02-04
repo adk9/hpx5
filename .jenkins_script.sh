@@ -39,6 +39,7 @@ esac
 echo "Building HPX in $DIR"
 cd $DIR
 
+module load /u/ldalessa/modules/modulefiles/gcc/4.9.2
 rm -rf ./build/
 ./bootstrap
 mkdir build

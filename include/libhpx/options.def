@@ -39,7 +39,8 @@ LIBHPX_DECL_OPTION(hpx, arg, uint32_t, wfthreshold, UINT32_MAX)
 LIBHPX_DECL_OPTION(hpx, arg, hpx_gas_t, gas, HPX_GAS_PGAS)
 LIBHPX_DECL_OPTION(hpx, arg, hpx_boot_t, boot, HPX_BOOT_DEFAULT)
 LIBHPX_DECL_OPTION(hpx, arg, hpx_transport_t, transport, HPX_TRANSPORT_DEFAULT)
-LIBHPX_DECL_OPTION(hpx, arg, hpx_locality_t, waitat, HPX_LOCALITY_NONE)
+LIBHPX_DECL_OPTION(hpx, arg, libhpx_network_t, network, LIBHPX_NETWORK_DEFAULT)
+LIBHPX_DECL_OPTION(hpx, arg, hpx_locality_t*, waitat, NULL)
 LIBHPX_DECL_OPTION(hpx, arg[0], hpx_log_t, loglevel, HPX_LOG_DEFAULT)
 LIBHPX_DECL_OPTION(hpx, arg, int *, logat, NULL)
 LIBHPX_DECL_OPTION(hpx, arg, uint32_t, sendlimit, 0)
@@ -50,6 +51,8 @@ LIBHPX_DECL_OPTION(hpx, flag, int, statistics, 1)
 LIBHPX_DECL_OPTION(dbg, flag, int, mprotectstacks, 0)
 LIBHPX_DECL_OPTION(dbg, flag, int, waitonabort, 0)
 
+LIBHPX_DECL_OPTION(pwc, arg, size_t, parcelbuffersize, 1lu << 16)
+LIBHPX_DECL_OPTION(pwc, arg, size_t, parceleagerlimit, 1lu << 13)
 
 #ifdef _LIBHPX_DECL_OPTION_UNDEF
 # undef LIBHPX_DECL_OPTION

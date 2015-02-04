@@ -46,9 +46,14 @@ typestr="type"
 values="default","smp","mpi","portals","photon"
 enum optional
 
+option "hpx-network" - "type of network to use"
+typestr="type"
+values="default","smp","pwc","isir"
+enum optional
+
 option "hpx-waitat" - "wait for debugger at specific locality"
-typestr="locality"
-int optional argoptional
+typestr="[locality]"
+int optional argoptional multiple
 
 option "hpx-loglevel" - "set the logging level"
 typestr="level"
@@ -79,3 +84,14 @@ flag off
 
 option "hpx-waitonabort" - "call hpx_wait() inside of hpx_abort() for debugging"
 flag off
+
+
+section "PWC Network Options"
+
+option "hpx-parcelbuffersize" - "set the size of p2p recv buffers for parcel sends"
+typestr="bytes"
+long optional
+
+option "hpx-parceleagerlimit" - "set the largest eager parcel size (header inclusive)" 
+typestr="bytes"
+long optional

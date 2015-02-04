@@ -71,6 +71,14 @@ static inline uint64_t ceil_div_64(uint64_t num, uint64_t denom) {
   return (num / denom) + ((num % denom) ? 1 : 0);
 }
 
+static inline int min_int(int lhs, int rhs) {
+  return (lhs < rhs) ? lhs : rhs;
+}
+
+static inline uint64_t min_u64(uint64_t lhs, uint64_t rhs) {
+  return (lhs < rhs) ? lhs : rhs;
+}
+
 static inline int32_t max_i32(int32_t lhs, int32_t rhs) {
   return (lhs < rhs) ? rhs : lhs;
 }
