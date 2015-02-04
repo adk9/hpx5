@@ -21,6 +21,7 @@
 #include "libsync/locks.h"
 #include "hpx/hpx.h"
 
+#include "libhpx/action.h"
 #include "libhpx/config.h"
 #include "libhpx/locality.h"
 #include "libhpx/debug.h"
@@ -88,3 +89,4 @@ void log_internal(const hpx_log_t level, unsigned line, const char *filename,
   _print(stdout, line, filename, fmt);
   sync_tatas_release(&_log_lock);
 }
+

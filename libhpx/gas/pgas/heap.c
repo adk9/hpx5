@@ -19,7 +19,7 @@
 #include <sys/mman.h>
 #include <jemalloc/jemalloc_hpx.h>
 #include <libsync/sync.h>
-#include <hpx/builtins.h>
+#include "hpx/builtins.h"
 #include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
@@ -264,7 +264,7 @@ bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size) {
 }
 
 
-int heap_bind_transport(heap_t *heap, transport_class_t *transport) {
+int heap_bind_transport(heap_t *heap, transport_t *transport) {
   heap->transport = transport;
   return transport->pin(transport, heap->base, heap->nbytes);
 }
@@ -297,8 +297,8 @@ uint64_t heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize) {
   assert(heap->cyclic_arena < UINT32_MAX);
   if (ceil_log2_32(bsize) > heap_max_block_lg_size(heap)) {
     dbg_error("Attempting to allocate block with alignment %"PRIu32
-	      " while the maximum alignment is %"PRIu32".\n",
-	      ceil_log2_32(bsize), heap_max_block_lg_size(heap));
+          " while the maximum alignment is %"PRIu32".\n",
+          ceil_log2_32(bsize), heap_max_block_lg_size(heap));
   }
 
   // Figure out how many blocks per node that we need, and then allocate that

@@ -13,37 +13,71 @@
 #ifndef LIBHPX_NETWORK_H
 #define LIBHPX_NETWORK_H
 
+
 /// @file include/libhpx/network.h
-/// @brief Declare the network_class_t structure.
+/// @brief Declare the network_t interface.
 ///
 /// This file declares the interface to the parcel network subsystem in HPX. The
 /// network's primary responsibility is to accept send requests from the
 /// scheduler, and send them out via the configured transport.
 #include <hpx/hpx.h>
-#include <libhpx/config.h>
+
+
+/// Forward declarations.
+/// @{
+struct boot;
+struct config;
+struct gas;
+/// @}
+
 
 /// All network objects implement the network interface.
-struct network {
+typedef struct network {
+  const char *(*id)(void);
+
   void (*delete)(struct network *)
     HPX_NON_NULL(1);
 
-  int (*startup)(struct network *)
+  int (*progress)(struct network *)
     HPX_NON_NULL(1);
 
-  void (*shutdown)(struct network *)
+  int (*send)(struct network *, hpx_parcel_t *p)
+    HPX_NON_NULL(1, 2);
+
+  int (*pwc)(struct network *, hpx_addr_t to, const void *from, size_t n,
+             hpx_addr_t local, hpx_addr_t remote, hpx_action_t op)
     HPX_NON_NULL(1);
 
-  void (*barrier)(struct network *)
+  int (*put)(struct network *, hpx_addr_t to, const void *from, size_t n,
+             hpx_addr_t local, hpx_addr_t remote)
     HPX_NON_NULL(1);
-};
+
+  int (*get)(struct network *, void *to, hpx_addr_t from, size_t n,
+             hpx_addr_t local)
+    HPX_NON_NULL(1, 2);
+
+  hpx_parcel_t *(*probe)(struct network *, int nrx)
+    HPX_NON_NULL(1);
+
+  void (*set_flush)(struct network *)
+    HPX_NON_NULL(1);
+} network_t;
 
 
 /// Create a new network.
 ///
 /// This depends on the current boot and transport object to be configured in
 /// the "here" locality.
-struct network *network_new(libhpx_network_t type, int nrx)
-  HPX_MALLOC HPX_INTERNAL;
+///
+/// @param         type The type of the network to instantiate.
+/// @param         boot The bootstrap network object.
+/// @param          gas The global address space.
+/// @param          nrx The number of receive queues.
+///
+/// @returns            The network object, or NULL if there was an issue.
+network_t *network_new(struct config *config, struct boot *boot,
+                       struct gas *gas, int nrx)
+  HPX_NON_NULL(2, 3) HPX_MALLOC HPX_INTERNAL;
 
 
 /// Delete a network object.
@@ -52,43 +86,22 @@ struct network *network_new(libhpx_network_t type, int nrx)
 /// threads may be operating on the network before making this call.
 ///
 /// @param      network The network to delete.
-static inline void network_delete(struct network *network) {
+static inline void network_delete(network_t *network) {
   network->delete(network);
 }
 
 
-/// Start network progress.
+/// Perform one network progress operation.
 ///
-/// @param     network The network to start.
-static inline int network_startup(struct network *network) {
-  return network->startup(network);
-}
-
-
-/// Shuts down network progress.
+/// This is not synchronized at this point, and must be synchronized
+/// externally.
 ///
-/// Indicates that the network should shut down.
+/// @param      network The network to start.
 ///
-/// @param      network The network to shut down.
-static inline void network_shutdown(struct network *network) {
-  network->shutdown(network);
-}
-
-
-/// A network barrier.
-///
-/// Should only be called by one thread per locality. For a full system barrier,
-/// callers should use the scheduler barrier first, and the thread that arrives
-/// last at the scheduler barrier (see sync barrier interface) can call the
-/// network barrier.
-///
-/// To block all threads through the network barrier, the user can re-join the
-/// scheduler barrier with all of the other threads, thus making a full global
-/// barrier a scheduler->network->scheduler barrier.
-///
-/// @param      network The network which implements the barrier.
-static inline void network_barrier(struct network *network) {
-  network->barrier(network);
+/// @returns  LIBHPX_OK The network was progressed without error.
+static inline int network_progress(network_t *network) {
+  assert(network);
+  return network->progress(network);
 }
 
 
@@ -109,25 +122,101 @@ static inline void network_barrier(struct network *network) {
 ///
 /// @param      network The network to use for the send.
 /// @param            p The parcel to send.
-void network_tx_enqueue(struct network *network, hpx_parcel_t *p)
-  HPX_NON_NULL(1) HPX_INTERNAL;
+///
+/// @returns  LIBHPX_OK The send was buffered successfully
+static inline int network_send(network_t *network, hpx_parcel_t *p) {
+  return network->send(network, p);
+}
+
+
+/// Initiate an rDMA put operation with a remote completion event.
+///
+/// This will copy @p n bytes between the @p from buffer and the @p to buffer,
+/// setting the @p local LCO when the @p from buffer can be reused, and the @p
+/// remote LCO when the remote operation is complete.
+///
+/// Furthermore, it will generate a remote completion event encoding (@p op,
+/// @to) at the locality at which @to is currently mapped, allowing two-sided
+/// active-message semantics.
+///
+/// In this context, signaling the @p remote LCO and the delivery of the remote
+/// completion are independent events that potentially proceed in parallel.
+///
+/// @param      network The network instance to use.
+/// @param           to The global target for the put.
+/// @param         from The local source for the put.
+/// @param            n The number of bytes to put.
+/// @param        local An LCO to signal local completion.
+/// @param       remote An LCO to signal remote completion.
+/// @param           op The remote completion event.
+///
+/// @returns            LIBHPX_OK
+static inline int network_pwc(network_t *network,
+                              hpx_addr_t to, void *from, size_t n,
+                              hpx_addr_t local, hpx_addr_t remote,
+                              hpx_action_t op) {
+  return network->pwc(network, to, from, n, local, remote, op);
+}
+
+
+/// Initiate an rDMA put operation with a remote completion event.
+///
+/// This will copy @p n bytes between the @p from buffer and the @p to buffer,
+/// setting the @p local LCO when the @p from buffer can be reused, and the @p
+/// remote LCO when the remote operation is complete.
+///
+/// @param      network The network instance to use.
+/// @param           to The global target for the put.
+/// @param         from The local source for the put.
+/// @param            n The number of bytes to put.
+/// @param        local An LCO to signal local completion.
+/// @param       remote An LCO to signal remote completion.
+///
+/// @returns            LIBHPX_OK
+static inline int network_put(network_t *network,
+                              hpx_addr_t to, void *from, size_t n,
+                              hpx_addr_t local, hpx_addr_t remote) {
+  return network->put(network, to, from, n, local, remote);
+}
+
+
+/// Initiate an rDMA put operation with a remote completion event.
+///
+/// This will copy @p n bytes between the @p from buffer and the @p to buffer,
+/// setting the @p local LCO when the @p from buffer can be accessed.
+///
+/// @param      network The network instance to use.
+/// @param           to The local target for the get.
+/// @param         from The global source for the get.
+/// @param            n The number of bytes to get.
+/// @param        local An LCO to signal local completion.
+///
+/// @returns            LIBHPX_OK
+static inline int network_get(network_t *network,
+                              void *to, hpx_addr_t from, size_t n,
+                              hpx_addr_t local) {
+  return network->get(network, to, from, n, local);
+}
 
 
 /// Probe for received parcels.
-hpx_parcel_t *network_rx_dequeue(struct network *network, int nrx)
-  HPX_NON_NULL(1) HPX_INTERNAL;
+static inline hpx_parcel_t *network_probe(network_t *network, int nrx) {
+  return network->probe(network, nrx);
+}
 
 
-/// Used by the progress engine.
-hpx_parcel_t *network_tx_dequeue(struct network *network)
-  HPX_NON_NULL(1) HPX_INTERNAL;
+/// Set the network's flush-on-shutdown flag.
+///
+/// Normally the network progress engine will cancel outstanding requests when
+/// it shuts down. This will change that functionality to flush the outstanding
+/// requests during shutdown. This is used to ensure that the hpx_shutdown()
+/// broadcast operation is sent successfully before the local network stops
+/// progressing.
+///
+/// @param      network The network to modify.
+static inline void network_flush_on_shutdown(network_t *network) {
+  network->set_flush(network);
+}
 
-
-int network_try_notify_rx(struct network *network, hpx_parcel_t *p)
-  HPX_NON_NULL(1, 2) HPX_INTERNAL;
-
-
-void network_flush_on_shutdown(struct network *network)
-  HPX_NON_NULL(1) HPX_INTERNAL;
 
 #endif // LIBHPX_NETWORK_H

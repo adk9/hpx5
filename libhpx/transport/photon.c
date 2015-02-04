@@ -42,7 +42,7 @@ static int   photon_default_srlimit = 32;
 
 /// the Photon transport
 typedef struct {
-  transport_class_t     class;
+  transport_t           class;
   struct photon_config_t  cfg;
   progress_t        *progress;
   unsigned              arena;
@@ -112,7 +112,7 @@ _request_cancel(void *request)
 /// Shut down Photon, and delete the transport.
 /// ----------------------------------------------------------------------------
 static void
-_delete(transport_class_t *transport)
+_delete(transport_t *transport)
 {
   photon_t *photon = (photon_t*)transport;
   network_progress_delete(photon->progress);
@@ -125,7 +125,7 @@ _delete(transport_class_t *transport)
 /// Pinning necessary.
 /// ----------------------------------------------------------------------------
 static int
-_pin(transport_class_t *transport, const void* buffer, size_t len)
+_pin(transport_t *transport, const void* buffer, size_t len)
 {
   void *b = (void*)buffer;
   if (photon_register_buffer(b, len)) {
@@ -157,7 +157,7 @@ _pin(transport_class_t *transport, const void* buffer, size_t len)
 /// Pinning necessary.
 /// ----------------------------------------------------------------------------
 static void
-_unpin(transport_class_t *transport, const void* buffer, size_t len)
+_unpin(transport_t *transport, const void* buffer, size_t len)
 {
   void *b = (void*)buffer;
   if (photon_unregister_buffer(b, len))
@@ -172,7 +172,7 @@ _unpin(transport_class_t *transport, const void* buffer, size_t len)
 /// Put data via Photon
 /// ----------------------------------------------------------------------------
 static int
-_put(transport_class_t *t, int dest, const void *data, size_t n, void *rbuffer,
+_put(transport_t *t, int dest, const void *data, size_t n, void *rbuffer,
      size_t rn, void *rid, void *r)
 {
   int rc, flags;
@@ -224,7 +224,7 @@ _put(transport_class_t *t, int dest, const void *data, size_t n, void *rbuffer,
 /// Get data via Photon
 /// ----------------------------------------------------------------------------
 static int
-_get(transport_class_t *t, int dest, void *buffer, size_t n, const void *rdata,
+_get(transport_t *t, int dest, void *buffer, size_t n, const void *rdata,
      size_t rn, void *rid, void *r)
 {
   int rc, flags;
@@ -278,7 +278,7 @@ _get(transport_class_t *t, int dest, void *buffer, size_t n, const void *rdata,
 /// Presumably this will be an "eager" send. Don't use "data" until it's done!
 /// ----------------------------------------------------------------------------
 static int
-_send(transport_class_t *t, int dest, const void *data, size_t n, void *r)
+_send(transport_t *t, int dest, const void *data, size_t n, void *r)
 {
   void *b = (void*)data;
   int e;
@@ -297,7 +297,7 @@ _send(transport_class_t *t, int dest, const void *data, size_t n, void *r)
 /// Probe Photon ledger to see if anything has been received.
 /// ----------------------------------------------------------------------------
 static size_t
-_probe(transport_class_t *transport, int *source)
+_probe(transport_t *transport, int *source)
 {
   int photon_src = *source;
   int flag = 0;
@@ -332,7 +332,7 @@ _probe(transport_class_t *transport, int *source)
 /// Receive a buffer.
 /// ----------------------------------------------------------------------------
 static int
-_recv(transport_class_t *t, int src, void* buffer, size_t n, void *r)
+_recv(transport_t *t, int src, void* buffer, size_t n, void *r)
 {
   //photon_t *photon = (photon_t*)t;
   //uint64_t *id = (uint64_t*)r;
@@ -353,7 +353,7 @@ _recv(transport_class_t *t, int src, void* buffer, size_t n, void *r)
 
 
 static int
-_test(transport_class_t *t, void *request, int *success)
+_test(transport_t *t, void *request, int *success)
 {
   int type = 0;
   struct photon_status_t status;
@@ -378,7 +378,7 @@ _test(transport_class_t *t, void *request, int *success)
 
 
 static void
-_progress(transport_class_t *t, transport_op_t op)
+_progress(transport_t *t, transport_op_t op)
 {
   photon_t *photon = (photon_t*)t;
   switch (op) {
@@ -396,17 +396,17 @@ _progress(transport_class_t *t, transport_op_t op)
 }
 
 
-static uint32_t _photon_get_send_limit(transport_class_t *t) {
+static uint32_t _photon_get_send_limit(transport_t *t) {
   return t->send_limit;
 }
 
-static uint32_t _photon_get_recv_limit(transport_class_t *t) {
+static uint32_t _photon_get_recv_limit(transport_t *t) {
   return t->recv_limit;
 }
 
 
 
-transport_class_t *transport_new_photon(uint32_t send_limit, uint32_t recv_limit) {
+transport_t *transport_new_photon(uint32_t send_limit, uint32_t recv_limit) {
   photon_t *photon = malloc(sizeof(*photon));
   photon->class.type           = HPX_TRANSPORT_PHOTON;
   photon->class.id             = _id;

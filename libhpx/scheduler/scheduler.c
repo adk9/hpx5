@@ -31,7 +31,7 @@
 #include "thread.h"
 
 
-struct scheduler *scheduler_new(hpx_config_t *cfg) {
+struct scheduler *scheduler_new(config_t *cfg) {
   const int cores = cfg->cores;
   const int workers = cfg->threads;
 

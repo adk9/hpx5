@@ -215,23 +215,18 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
   return HPX_SUCCESS;
 }
 
-int action_table_run_handler(const struct action_table *table, const hpx_action_t id,
-                             void *args) {
-  if (id == HPX_ACTION_INVALID) {
-    dbg_error("action registration is not complete");
-  }
+int action_table_run_handler(const struct action_table *table,
+                             const hpx_action_t id, void *args) {
+  dbg_assert_str(id != HPX_ACTION_INVALID,
+                 "action registration is not complete\n");
 
-  hpx_action_handler_t handler = 0;
-  ffi_cif *cif = NULL;
-  if (id < table->n) {
-    handler = table->entries[id].handler;
-    cif = table->entries[id].cif;
-  } else {
-    dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n);
-  }
+  dbg_assert_str(id < table->n,
+                 "action id, %d, out of bounds [0,%u)\n", id, table->n);
 
   int ret;
-  if (likely(cif == NULL)) {
+  hpx_action_handler_t handler = table->entries[id].handler;
+  ffi_cif *cif = table->entries[id].cif;
+  if (!cif) {
     ret = handler(args);
   } else {
     ffi_raw_call(cif, FFI_FN(handler), &ret, args);

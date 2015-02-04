@@ -43,7 +43,7 @@
 typedef struct hpx_options_t hpx_options_t;
 
 /// The default configuration.
-static const hpx_config_t _default_cfg = {
+static const config_t _default_cfg = {
 #define LIBHPX_DECL_OPTION(group, type, ctype, id, default) .id = default,
 # include "libhpx/options.def"
 #undef LIBHPX_DECL_OPTION
@@ -102,7 +102,7 @@ int _read_options_from_env(hpx_options_t *env_args, const char *progname) {
 
 /// Update the configuration structure @p cfg with the option values
 /// specified in @p opts.
-static void _set_config_options(hpx_config_t *cfg, hpx_options_t *opts) {
+static void _set_config_options(config_t *cfg, hpx_options_t *opts) {
 
 #define LIBHPX_DECL_OPTION(group, type, ctype, id, default)   \
   {                                                           \
@@ -136,6 +136,13 @@ static void _set_config_options(hpx_config_t *cfg, hpx_options_t *opts) {
     }
   }
 
+  // translate the waitat list into a HPX_LOCALITY_NONE-terminated array
+  cfg->waitat = calloc(opts->hpx_waitat_given + 1, sizeof(int));
+  for (int i = 0, e = opts->hpx_waitat_given; i < e; ++i) {
+    cfg->waitat[i] = opts->hpx_waitat_arg[i];
+  }
+  cfg->waitat[opts->hpx_waitat_given] = HPX_LOCALITY_NONE;
+
   dbg_assert(!opts->hpx_configfile_given || opts->hpx_configfile_arg);
   if (opts->hpx_configfile_given) {
     dbg_assert(cfg->configfile != opts->hpx_configfile_arg);
@@ -150,11 +157,25 @@ void hpx_print_help(void) {
   hpx_option_parser_print_help();
 }
 
-/// Parse HPX command-line options
-hpx_config_t *parse_options(int *argc, char ***argv) {
+int config_waitat(config_t *cfg, const hpx_locality_t locality) {
+  for (int i = 0; cfg->waitat[i] != HPX_LOCALITY_NONE; ++i) {
+    if (cfg->waitat[i] == HPX_LOCALITY_ALL) {
+      return 1;
+    }
+
+    if (cfg->waitat[i] == locality) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+
+/// Parse HPX command-line options to create a new config object.
+config_t *config_new(int *argc, char ***argv) {
 
   // first, initialize to the default configuration
-  hpx_config_t *cfg = malloc(sizeof(*cfg));
+  config_t *cfg = malloc(sizeof(*cfg));
   *cfg = _default_cfg;
 
   char *progname = (argv) ? (*argv)[0] : "";
@@ -224,11 +245,18 @@ hpx_config_t *parse_options(int *argc, char ***argv) {
   return cfg;
 }
 
+void config_delete(config_t *cfg) {
+  if (!cfg) {
+    return;
+  }
 
-void config_free(hpx_config_t *config) {
-  if (config->configfile)
-    free(config->configfile);
-  if (config->logat && config->logat != (int*)HPX_LOCALITY_ALL)
-    free(config->logat);
-  free(config);
+  if (cfg->logat && cfg->logat != (int*)HPX_LOCALITY_ALL) {
+    free(cfg->logat);
+  }
+
+  if (cfg->waitat) {
+    free(cfg->waitat);
+  }
+
+  free(cfg);
 }

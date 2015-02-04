@@ -78,8 +78,8 @@ void sync_clh_lock_fini(struct clh_lock *lock)
 ///
 /// @param         lock The CLH lock itself.
 /// @param            n The node to use for this operation. This is also the
-///                     node that should be passed into
-///                     sync_clh_lock_release().
+///                       node that should be passed into
+///                       sync_clh_lock_release().
 ///
 /// @return             This returns the node that the caller must wait for in
 ///                     order to acquire the lock.
@@ -92,8 +92,8 @@ struct clh_node *sync_clh_lock_start_acquire(struct clh_lock *lock,
 ///
 /// @param         lock The CLH lock itself.
 /// @param            n The node to use for this operation. This is also the
-///                     node that should be passed into
-///                     sync_clh_lock_release().
+///                       node that should be passed into
+///                       sync_clh_lock_release().
 void sync_clh_lock_acquire(struct clh_lock *lock, struct clh_node *n)
   HPX_NON_NULL(1, 2) HPX_INTERNAL;
 
@@ -102,14 +102,14 @@ void sync_clh_lock_acquire(struct clh_lock *lock, struct clh_node *n)
 ///
 /// @param         lock The CLH lock itself.
 /// @param            n The node to use for this operation. This is also the
-///                     node that should be passed into
-///                     sync_clh_lock_release().
+///                       node that should be passed into
+///                       sync_clh_lock_release().
 ///
 /// @return             This returns an unused node that can either be freed (if
-///                     appropriate based on where nodes are coming from) or
-///                     used in a subsequent call to
-///                     sync_clh_lock_start_acquire() or
-///                     sync_clh_lock_acquire().
+///                       appropriate based on where nodes are coming from) or
+///                       used in a subsequent call to
+///                       sync_clh_lock_start_acquire() or
+///                       sync_clh_lock_acquire().
 struct clh_node *sync_clh_lock_release(struct clh_lock *lock, struct clh_node *n)
   HPX_NON_NULL(1, 2) HPX_INTERNAL HPX_RETURNS_NON_NULL;
 
