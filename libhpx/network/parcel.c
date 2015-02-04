@@ -20,14 +20,12 @@
 /// actual, "on-the-wire," network data structure, as well as the
 /// "thread-control-block" descriptor for the threading subsystem.
 #include <assert.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 #include <jemalloc/jemalloc_hpx.h>
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
-
-#include <inttypes.h>
-
 #include "libhpx/action.h"
 #include "libhpx/attach.h"
 #include "libhpx/debug.h"
@@ -240,12 +238,17 @@ int parcel_launch(hpx_parcel_t *p) {
   // parcel out to the network
   if (gas_owner_of(here->gas, p->target) == here->rank) {
     scheduler_spawn(p);
-  }
-  else {
-    network_tx_enqueue(here->network, p);
+    return HPX_SUCCESS;
   }
 
-  return HPX_SUCCESS;
+  // do a network send
+  int e = network_send(here->network, p);
+  if (e) {
+    dbg_error("failed to perform a network send\n");
+    return HPX_ERROR;
+  }
+
+  return HPX_ERROR;
 }
 
 hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p) {
@@ -336,3 +339,11 @@ void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *parcel) {
   *stack = parcel;
 }
 
+void parcel_stack_foreach(hpx_parcel_t *p, void *env,
+                         void (*f)(hpx_parcel_t*, void*))
+{
+  while (p) {
+    f(p, env);
+    p = (void*)parcel_get_stack(p);
+  }
+}

@@ -25,6 +25,7 @@
 
 #include <photon.h>
 
+#include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
@@ -373,7 +374,7 @@ _initialize_netfutures_action(_nf_init_args_t *args) {
 
   if (hpx_get_num_ranks() > 1) {
     for (int i = 0; i < hpx_get_num_ranks(); i++) {
-      transport_class_t *transport = here->transport;
+      transport_t *transport = here->transport;
       memcpy(&_netfuture_table.buffers[i].priv, &transport->rkey_table[i].rkey, sizeof(_netfuture_table.buffers[i].priv));
       dbg_printf("  At rank %d, buffer[%d].priv = %"PRIx64",%"PRIx64"\n", hpx_get_my_rank(), i, _netfuture_table.buffers[i].priv.key0,  _netfuture_table.buffers[i].priv.key1);
     }

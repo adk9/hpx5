@@ -29,16 +29,17 @@
 #include <hpx/hpx.h>
 #include <hwloc.h>
 
-#include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
 
 /// Forward declarations.
 /// @{
-struct boot_class;
+struct action_table;
+struct boot;
+struct config;
 struct network;
 struct scheduler;
-struct transport_class;
+struct transport;
 /// @}
 
 /// The locality object.
@@ -57,15 +58,15 @@ struct transport_class;
 ///                  infrastructure required to create lightweight threads, and
 ///                  to deal with inter-thread data and control dependencies
 ///                  using LCOs.
-typedef struct {
+typedef struct locality {
   uint32_t                      rank;
   uint32_t                     ranks;
-  struct boot_class            *boot;
-  struct gas_class              *gas;
-  struct transport_class  *transport;
+  struct boot                  *boot;
+  struct gas                    *gas;
+  struct transport        *transport;
   struct network            *network;
   struct scheduler            *sched;
-  hpx_config_t               *config;
+  struct config              *config;
   const struct action_table *actions;
   hwloc_topology_t          topology;
 } locality_t
