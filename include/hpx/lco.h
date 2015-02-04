@@ -400,9 +400,16 @@ hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen);
 ///
 /// Common operations would be min, max, +, *, etc. The runtime will pass the
 /// number of bytes that the allreduce was allocated with.
-typedef void (*hpx_monoid_id_t)(void *id, const size_t bytes);
-typedef void (*hpx_monoid_op_t)(void *a, const void *b, const size_t bytes);
+typedef void (*hpx_monoid_id_t)(void *i, const size_t bytes);
+typedef void (*hpx_monoid_op_t)(void *i, const void *j, const size_t bytes);
 
+/// A predicate that "guards" the LCO.
+///
+/// This has to return true when the value pointed to by the buffer @p
+/// i is fully resolved and can be bound to the buffer associated
+/// with the LCO. All of the waiting threads are signalled once the
+/// predicate returns true.
+typedef bool (*hpx_predicate_t)(void *i, const size_t bytes);
 
 /// Allocate a new reduction LCO.
 ///
@@ -486,6 +493,15 @@ hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
 /// @param size   The size of the value type that we're gathering.
 hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size);
 
+/// Allocate a user-defined LCO.
+///
+/// @param size         The size of the LCO buffer.
+/// @param op           The commutative-associative operation we're performing.
+/// @param id           An initialization function for the data, this is used to
+///                     initialize the data in every epoch.
+/// @param predicate    Predicate to guard the LCO.
+hpx_addr_t hpx_lco_user_new(size_t size, hpx_monoid_op_t op, hpx_monoid_id_t id,
+                            hpx_predicate_t predicate);
 /// @}
 
 #endif
