@@ -461,7 +461,7 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
     if (!hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
       locals[i] = NULL;
       remotes[i] = hpx_lco_future_new(sizes[i]);
-      hpx_call_async(lcos[i], _lco_getref, HPX_NULL, remotes[i], &sizes[i],
+      hpx_call_async(lcos[i], _lco_get, HPX_NULL, remotes[i], &sizes[i],
                      sizeof(sizes[i]));
     }
     else {
