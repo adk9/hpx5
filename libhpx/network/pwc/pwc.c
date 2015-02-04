@@ -27,6 +27,7 @@
 #include "libhpx/parcel.h"
 
 #include "commands.h"
+#include "parcel_utils.h"
 #include "peer.h"
 #include "pwc.h"
 #include "pwc_buffer.h"
@@ -94,7 +95,7 @@ static int _pwc_send(network_t *network, hpx_parcel_t *p) {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(pwc->gas, p->target);
   peer_t *peer = &pwc->peers[rank];
-  size_t bytes = parcel_network_size(p);
+  size_t bytes = pwc_network_size(p);
   if (bytes < pwc->parcel_eager_limit) {
     return peer_send(peer, p, HPX_NULL);
   }
