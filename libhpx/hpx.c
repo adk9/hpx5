@@ -136,7 +136,9 @@ int hpx_init(int *argc, char ***argv) {
   here->rank = boot_rank(here->boot);
   here->ranks = boot_n_ranks(here->boot);
   if (config_waitat(here->config, here->rank)) {
-    dbg_wait();
+    if (!config_waitat(here->config, HPX_LOCALITY_ALL)) {
+      dbg_wait();
+    }
   }
 
   if (here->config->logat && here->config->logat != (int*)HPX_LOCALITY_ALL) {

@@ -362,6 +362,9 @@ static void *_pgas_local_base(gas_t *gas) {
   return global_heap->base;
 }
 
+static uint64_t _pgas_offset_of(hpx_addr_t gpa) {
+  return pgas_gpa_to_offset(gpa);
+}
 
 static gas_t _pgas_vtable = {
   .type          = HPX_GAS_PGAS,
@@ -387,7 +390,8 @@ static gas_t _pgas_vtable = {
   .memget        = _pgas_parcel_memget,
   .memput        = _pgas_parcel_memput,
   .memcpy        = _pgas_parcel_memcpy,
-  .owner_of      = pgas_gpa_to_rank
+  .owner_of      = pgas_gpa_to_rank,
+  .offset_of     = _pgas_offset_of
 };
 
 gas_t *gas_pgas_new(size_t heap_size, boot_t *boot, struct transport *transport)

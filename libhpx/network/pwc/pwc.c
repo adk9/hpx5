@@ -16,15 +16,18 @@
 
 #include <stdlib.h>
 
+#include "libhpx/action.h"
 #include "libhpx/boot.h"
 #include "libhpx/config.h"
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
 #include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
 
 #include "commands.h"
+#include "parcel_utils.h"
 #include "peer.h"
 #include "pwc.h"
 #include "pwc_buffer.h"
@@ -34,7 +37,7 @@ typedef struct {
   uint32_t               rank;
   uint32_t              ranks;
   uint32_t parcel_buffer_size;
-  const uint32_t       UNUSED;                  // padding
+  uint32_t parcel_eager_limit;
   gas_t                  *gas;
   size_t          eager_bytes;
   char                 *eager;
@@ -73,10 +76,10 @@ static int _pwc_progress(network_t *network) {
   return 0;
 }
 
-/// Perform a parcel send operation to an eager buffer.
+/// Perform a parcel send operation.
 ///
-/// This transforms the parcel send operation into a pwc() operation into the
-/// parcel buffer on the target peer.
+/// This determines which peer the operation is occurring to, and which send
+/// protocol to use, and then forwards to the appropriate peer/handler pair.
 ///
 /// This is basically exposed directly to the application programmer through the
 /// network interface, and could be called concurrently by a number of different
@@ -92,7 +95,13 @@ static int _pwc_send(network_t *network, hpx_parcel_t *p) {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(pwc->gas, p->target);
   peer_t *peer = &pwc->peers[rank];
-  return peer_send(peer, p, HPX_NULL);
+  size_t bytes = pwc_network_size(p);
+  if (bytes < pwc->parcel_eager_limit) {
+    return peer_send(peer, p, HPX_NULL);
+  }
+  else {
+    return peer_send_rendevous(peer, p, HPX_NULL);
+  }
 }
 
 /// Perform a put-with-command operation to a global heap address.
@@ -135,63 +144,52 @@ static int _pwc_get(network_t *network, void *lva, hpx_addr_t from, size_t n,
   return peer_get(peer, lva, n, offset, cmd, SEGMENT_HEAP);
 }
 
-static int _probe_local(int rank, uint64_t *op) {
+static int _probe(unsigned type, int rank, uint64_t *op) {
   int flag = 0;
-  int e = photon_probe_completion(rank, &flag, op, PHOTON_PROBE_EVQ);
+  int e = photon_probe_completion(rank, &flag, op, type);
   if (PHOTON_OK != e) {
     dbg_error("photon probe error\n");
   }
   return flag;
 }
 
-static int _probe_completion(int rank, uint64_t *op) {
-  int flag = 0;
-  int e = photon_probe_completion(rank, &flag, op, PHOTON_PROBE_LEDGER);
-  if (PHOTON_OK != e) {
-    dbg_error("photon probe error\n");
-  }
-  return flag;
+static const char *_straction(hpx_action_t id) {
+  dbg_assert(here && here->actions);
+  return action_table_get_key(here->actions, id);
 }
 
 static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
   pwc_network_t *pwc = (void*)network;
   int rank = pwc->rank;
-  hpx_parcel_t *parcels = NULL;
 
   // each time through the loop, we deal with local command completions
   command_t command;
-  while (_probe_local(rank, &command)) {
+  while (_probe(PHOTON_PROBE_EVQ, rank, &command)) {
     hpx_addr_t addr;
     hpx_action_t op;
     decode_command(command, &op, &addr);
-    log_net("extracted local interrupt of %s\n", dbg_straction(op));
-    int e = hpx_call(addr, op, HPX_NULL, NULL, 0);
-    if (HPX_SUCCESS != e) {
-      dbg_error("failed to process local command");
-    }
+    log_net("processing local command: %s\n", _straction(op));
+    int e = hpx_call(addr, op, HPX_NULL, &rank, sizeof(rank));
+    dbg_assert_str(HPX_SUCCESS == e, "failed to process local command\n");
   }
 
   // deal with received commands
   for (int i = 0, e = pwc->ranks; i < e; ++i) {
-    while (_probe_completion(i, &command)) {
+    while (_probe(PHOTON_PROBE_LEDGER, i, &command)) {
       hpx_addr_t addr;
       hpx_action_t op;
       decode_command(command, &op, &addr);
-      log_net("processing command %s from rank %d\n", dbg_straction(op),
-                  i);
+      log_net("processing command %s from rank %d\n", _straction(op), i);
       int e = hpx_call(addr, op, HPX_NULL, &i, sizeof(i));
-      if (HPX_SUCCESS != e) {
-        dbg_error("failed to process local command");
-      }
+      dbg_assert_str(HPX_SUCCESS == e, "failed to process command\n");
     }
   }
 
-  return parcels;
+  return NULL;
 }
 
 static void _pwc_set_flush(network_t *network) {
 }
-
 
 /// Initialize a peer structure.
 ///
@@ -280,6 +278,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   pwc->rank = boot_rank(boot);
   pwc->ranks = ranks;
   pwc->parcel_buffer_size = cfg->parcelbuffersize;
+  pwc->parcel_eager_limit = cfg->parceleagerlimit;
 
   peer_t *local = pwc_get_peer(&pwc->vtable, pwc->rank);
   // Prepare the null segment.

@@ -44,14 +44,13 @@ static int _index_of(uint64_t i, uint32_t n) {
 static int _payload_size_to_tag(uint32_t payload) {
   uint32_t parcel_size = payload + sizeof(hpx_parcel_t);
   int tag = ceil_div_32(parcel_size, HPX_CACHELINE_SIZE);
-  DEBUG_IF(true) {
+  if (DEBUG) {
     int *tag_ub;
     int flag = 0;
     int e = MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &tag_ub, &flag);
     dbg_check(e, "Could not extract tag upper bound\n");
-    if (*tag_ub <= tag) {
-      dbg_error("tag value out of bounds (%d > %d)\n", tag, *tag_ub);
-    }
+    dbg_assert_str(*tag_ub > tag, "tag value out of bounds (%d > %d)\n", tag,
+                   *tag_ub);
   }
   return tag;
 }
@@ -68,9 +67,7 @@ static int _payload_size_to_tag(uint32_t payload) {
 /// @returns  LIBHPX_OK The buffer was resized correctly.
 ///       LIBHPX_ENOMEM There was not enough memory to resize the buffer.
 static int _resize(isend_buffer_t *buffer, uint32_t size) {
-  if (size < buffer->size) {
-    return dbg_error("cannot shrink send buffer\n");
-  }
+  dbg_assert_str(size >= buffer->size, "cannot shrink send buffer\n");
 
   if (size == buffer->size) {
     return LIBHPX_OK;
@@ -154,7 +151,7 @@ static int _start(isend_buffer_t *isends, int i) {
   hpx_parcel_t *p = isends->records[i].parcel;
 
   MPI_Request *r = isends->requests + i;
-  void *from = parcel_network_offset(p);
+  void *from = mpi_network_offset(p);
   int to = gas_owner_of(isends->gas, p->target);
   int n = payload_size_to_mpi_bytes(p->size);
   int tag = _payload_size_to_tag(p->size);
