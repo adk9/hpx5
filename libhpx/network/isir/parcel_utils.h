@@ -14,16 +14,28 @@
 #define LIBHPX_NETWORK_ISIR_PARCEL_UTILS_H
 
 #include <mpi.h>
-#include <libhpx/debug.h>
-#include <libhpx/parcel.h>
+#include "libhpx/debug.h"
+#include "libhpx/parcel.h"
+
+static inline uint32_t mpi_prefix_size(void) {
+  return offsetof(hpx_parcel_t, action);
+}
+
+static inline uint32_t mpi_network_size(const hpx_parcel_t *p) {
+  return parcel_size(p) - mpi_prefix_size();
+}
+
+static inline void *mpi_network_offset(hpx_parcel_t *p) {
+  return &p->action;
+}
 
 static inline int payload_size_to_mpi_bytes(uint32_t payload) {
-  return payload + sizeof(hpx_parcel_t) - offsetof(hpx_parcel_t, action);
+  return payload + sizeof(hpx_parcel_t) - mpi_prefix_size();
 }
 
 static inline uint32_t mpi_bytes_to_payload_size(int bytes) {
-  assert(bytes > 0);
-  return bytes + offsetof(hpx_parcel_t, action) - sizeof(hpx_parcel_t);
+  dbg_assert(bytes > 0);
+  return bytes + mpi_prefix_size() - sizeof(hpx_parcel_t);
 }
 
 static inline uint32_t tag_to_payload_size(int tag) {
