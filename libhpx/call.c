@@ -28,7 +28,6 @@
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
 
-
 typedef struct {
   hpx_action_t action;
   char *data[];
@@ -37,8 +36,9 @@ typedef struct {
 static HPX_ACTION(_bcast, _bcast_args_t *args) {
   hpx_addr_t and = hpx_lco_and_new(here->ranks);
   uint32_t len = hpx_thread_current_args_size() - sizeof(args->action);
-  for (int i = 0, e = here->ranks; i < e; ++i)
+  for (int i = 0, e = here->ranks; i < e; ++i) {
     hpx_call(HPX_THERE(i), args->action, and, args->data, len);
+  }
 
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);
@@ -110,8 +110,7 @@ int hpx_call_cc(hpx_addr_t addr, hpx_action_t action, void (*cleanup)(void*),
 }
 
 /// Encapsulates a RPC called on all available localities.
-int
-hpx_bcast(hpx_action_t action, hpx_addr_t lco, const void *data, size_t len) {
+int hpx_bcast(hpx_action_t action, hpx_addr_t lco, const void *data, size_t len) {
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, len + sizeof(_bcast_args_t));
   hpx_parcel_set_target(p, HPX_HERE);
   hpx_parcel_set_action(p, _bcast);
@@ -122,26 +121,32 @@ hpx_bcast(hpx_action_t action, hpx_addr_t lco, const void *data, size_t len) {
   args->action = action;
   memcpy(&args->data, data, len);
 
-  hpx_parcel_send_sync(p);
+  hpx_parcel_send(p, HPX_NULL);
   return HPX_SUCCESS;
 }
 
 int hpx_bcast_sync(hpx_action_t action, const void *data, size_t len) {
+  int e;
   hpx_addr_t lco = hpx_lco_future_new(0);
   if (lco == HPX_NULL) {
-    return dbg_error("could not allocate an LCO.\n");
+    e = dbg_error("could not allocate an LCO.\n");
+    goto unwind0;
   }
-  int e = hpx_bcast(action, lco, data, len);
+
+  e = hpx_bcast(action, lco, data, len);
   if (e != HPX_SUCCESS) {
-    dbg_error("hpx_bcast returned an error.\n");
-    hpx_lco_delete(lco, HPX_NULL);
-    return e;
+    e = dbg_error("hpx_bcast returned an error.\n");
+    goto unwind1;
   }
 
   e = hpx_lco_wait(lco);
   DEBUG_IF(e != HPX_SUCCESS) {
-    dbg_error("error waiting for bcast and gate");
+    e = dbg_error("error waiting for bcast and gate");
+    goto unwind1;
   }
+
+ unwind1:
   hpx_lco_delete(lco, HPX_NULL);
+ unwind0:
   return e;
 }

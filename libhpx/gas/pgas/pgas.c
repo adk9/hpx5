@@ -137,7 +137,7 @@ void pgas_leave(void) {
 }
 
 
-static void _pgas_delete(gas_class_t *gas) {
+static void _pgas_delete(gas_t *gas) {
   if (global_heap) {
     heap_fini(global_heap);
     free(global_heap);
@@ -146,7 +146,7 @@ static void _pgas_delete(gas_class_t *gas) {
 }
 
 
-static bool _pgas_is_global(gas_class_t *gas, void *lva) {
+static bool _pgas_is_global(gas_t *gas, void *lva) {
   return heap_contains_lva(global_heap, lva);
 }
 
@@ -259,6 +259,10 @@ static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
 /// block allocated by _pgas_gas_alloc. At this time, we do not attempt to deal
 /// with the cyclic allocations, as they are using a simple csbrk allocator.
 static void _pgas_gas_free(hpx_addr_t gpa, hpx_addr_t sync) {
+  if (gpa == HPX_NULL) {
+    return;
+  }
+
   const uint64_t offset = pgas_gpa_to_offset(gpa);
 
   DEBUG_IF (true) {
@@ -349,12 +353,27 @@ static void _pgas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
 }
 
 
-static gas_class_t _pgas_vtable = {
+static size_t _pgas_local_size(gas_t *gas) {
+  return global_heap->nbytes;
+}
+
+
+static void *_pgas_local_base(gas_t *gas) {
+  return global_heap->base;
+}
+
+static uint64_t _pgas_offset_of(hpx_addr_t gpa) {
+  return pgas_gpa_to_offset(gpa);
+}
+
+static gas_t _pgas_vtable = {
   .type          = HPX_GAS_PGAS,
   .delete        = _pgas_delete,
   .join          = pgas_join,
   .leave         = pgas_leave,
   .is_global     = _pgas_is_global,
+  .local_size    = _pgas_local_size,
+  .local_base    = _pgas_local_base,
   .locality_of   = pgas_gpa_to_rank,
   .sub           = _pgas_sub,
   .add           = _pgas_add,
@@ -371,11 +390,12 @@ static gas_class_t _pgas_vtable = {
   .memget        = _pgas_parcel_memget,
   .memput        = _pgas_parcel_memput,
   .memcpy        = _pgas_parcel_memcpy,
-  .owner_of      = pgas_gpa_to_rank
+  .owner_of      = pgas_gpa_to_rank,
+  .offset_of     = _pgas_offset_of
 };
 
-gas_class_t *gas_pgas_new(size_t heap_size, boot_class_t *boot,
-                          struct transport_class *transport) {
+gas_t *gas_pgas_new(size_t heap_size, boot_t *boot, struct transport *transport)
+{
   if (here->ranks == 1) {
     log_gas("PGAS requires at least two ranks\n");
     return NULL;
