@@ -10,20 +10,21 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_NETWORK_ISIR_ISIR_H
-#define LIBHPX_NETWORK_ISIR_ISIR_H
+#ifndef LIBHPX_NETWORK_PWC_PARCEL_UTILS_H
+#define LIBHPX_NETWORK_PWC_PARCEL_UTILS_H
 
-#include <hpx/attributes.h>
+#include "libhpx/parcel.h"
 
-/// Forward declarations.
-/// @{
-struct gas;
-struct network;
-/// @}
+static inline uint32_t pwc_prefix_size(void) {
+  return offsetof(hpx_parcel_t, size);
+}
 
-/// Allocate a new Isend/Irecv funneled network.
-struct network *network_isir_funneled_new(struct gas *gas, int nrx)
-  HPX_NON_NULL(1) HPX_MALLOC HPX_INTERNAL;
+static inline uint32_t pwc_network_size(const hpx_parcel_t *p) {
+  return parcel_size(p) - pwc_prefix_size();
+}
 
+static inline void *pwc_network_offset(hpx_parcel_t *p) {
+  return &p->size;
+}
 
-#endif
+#endif // LIBHPX_NETWORK_ISIR_PARCEL_UTILS_H
