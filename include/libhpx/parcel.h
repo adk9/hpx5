@@ -32,8 +32,8 @@ struct ustack;
 struct hpx_parcel {
   struct ustack   *ustack;
   struct hpx_parcel *next;
-  uint32_t           size;
   int                 src;
+  uint32_t           size;
   hpx_action_t     action;
   hpx_addr_t       target;
   hpx_action_t   c_action;
@@ -124,18 +124,6 @@ static inline uint32_t parcel_size(const hpx_parcel_t *p) {
 
 static inline uint32_t parcel_payload_size(const hpx_parcel_t *p) {
   return p->size;
-}
-
-static inline uint32_t parcel_prefix_size(void) {
-  return offsetof(hpx_parcel_t, size);
-}
-
-static inline uint32_t parcel_network_size(const hpx_parcel_t *p) {
-  return parcel_size(p) - parcel_prefix_size();
-}
-
-static inline void *parcel_network_offset(hpx_parcel_t *p) {
-  return &p->size;
 }
 
 #endif // LIBHPX_PARCEL_H
