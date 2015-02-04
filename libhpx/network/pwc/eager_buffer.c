@@ -22,6 +22,7 @@
 #include "libhpx/scheduler.h"
 #include "commands.h"
 #include "eager_buffer.h"
+#include "parcel_utils.h"
 #include "peer.h"
 #include "pwc.h"
 #include "../../gas/pgas/gpa.h"                 // sort of a hack
@@ -30,19 +31,28 @@ static uint32_t _index_of(eager_buffer_t *buffer, uint64_t i) {
   return (i & (buffer->size - 1));
 }
 
-static HPX_INTERRUPT(_eager_rx, void *args) {
-  int *src = args;
-  uint32_t bytes = pgas_gpa_to_offset(hpx_thread_current_target());
+/// Command sent to receive in the eager buffer.
+static HPX_INTERRUPT(_eager_rx, int *src) {
   peer_t *peer = pwc_get_peer(here->network, *src);
   eager_buffer_t *eager = &peer->rx;
-  hpx_parcel_t *parcel = eager_buffer_rx(eager, bytes);
-  log_net("received %u eager parcel bytes from %d (%s)\n", bytes, *src,
-              action_table_get_key(here->actions, parcel->action));
+  hpx_parcel_t *parcel = eager_buffer_rx(eager);
+  log_net("received eager parcel bytes from %d (%s)\n", *src,
+          action_table_get_key(here->actions, parcel->action));
   scheduler_spawn(parcel);
   return HPX_SUCCESS;
 }
 
-static HPX_INTERRUPT(_finish_eager_tx, void *UNUSED) {
+/// Finish a local eager parcel send operation.
+///
+/// This is run as a local completion command. We'd prefer this to be an
+/// interrupt, but the current framework doesn't have any way to pass the parcel
+/// address through into the handler, it has to come out of band through
+/// hpx_thread_current_target(). Interrupts don't have access to this
+/// out-of-band data, so a task it is.
+///
+/// This is okay, but is likely to be higher overhead than we really want. We
+/// could consider changing the type of network commands...
+static HPX_TASK(_finish_eager_tx, void *UNUSED) {
   hpx_parcel_t *p = NULL;
   hpx_addr_t target = hpx_thread_current_target();
   if (!hpx_gas_try_pin(target, (void**)&p)) {
@@ -54,21 +64,20 @@ static HPX_INTERRUPT(_finish_eager_tx, void *UNUSED) {
   return HPX_SUCCESS;
 }
 
-/// This handles the pad operation at the receiver.
+/// This handles the wrap operation at the receiver.
 ///
-/// This currently assumes that the only purpose for padding is to deal with a
-/// wrapped buffer, so it contains a check to see if the number of bytes are in
-/// agreement with what we think we need to unwrap the buffer.
-static HPX_INTERRUPT(_eager_rx_pad, void *args) {
-  int *src = args;
-  uint32_t bytes = pgas_gpa_to_offset(hpx_thread_current_target());
+/// This currently assumes that rx buffer operations occur in-order, so that
+/// when the wrap commands arrives we can just increment the min index the
+/// amount remaining to exactly wrap the buffer.
+static HPX_INTERRUPT(_eager_rx_wrap, int *src) {
   peer_t *peer = pwc_get_peer(here->network, *src);
   eager_buffer_t *rx = &peer->rx;
-  rx->min += bytes;
-  DEBUG_IF (_index_of(rx, rx->min) != 0) {
-    dbg_error("%u bytes did not unwrap the buffer\n", bytes);
-  }
-  log_net("received %u bytes of padding from %u\n", bytes, *src);
+  uint32_t r = (rx->size - _index_of(rx, rx->min)) % rx->min;
+  dbg_assert(r != 0);
+  rx->min += r;
+  dbg_assert_str(_index_of(rx, rx->min) == 0,
+                 "%u bytes did not unwrap the buffer\n", r);
+  log_net("eager buffer %d wrapped (%u bytes)\n", *src, r);
   return HPX_SUCCESS;
 }
 
@@ -76,13 +85,7 @@ static HPX_INTERRUPT(_eager_rx_pad, void *args) {
 ///
 /// This is used when we get a send that will wrap around the buffer. It is
 /// implemented using a single command---this is important because we don't use
-/// any eager buffer bytes and thus don't care what the value of bytes is.
-///
-/// If the buffer is being processed in-order, which we expect, then the @p
-/// bytes does not need to be encoded in the command, since the tx/rx indexes
-/// are in agreement, the receiver can compute the padding too. We do send the
-/// bytes though, since it doesn't use any extra bandwidth and allows us to add
-/// padding for reasons other than wrapped buffers.
+/// any eager buffer bytes.
 ///
 /// This function will recursively send the parcel.
 ///
@@ -93,17 +96,14 @@ static HPX_INTERRUPT(_eager_rx_pad, void *args) {
 /// @returns  LIBHPX_OK The result of the parcel send operation if the padding
 ///                       was injected correctly.
 ///
-static int _pad(eager_buffer_t *tx, hpx_parcel_t *p, uint32_t bytes) {
-  log_net("sending %u bytes of padding\n", bytes);
-  command_t cmd = encode_command(_eager_rx_pad, (uint64_t)bytes);
+static int _wrap(eager_buffer_t *tx, hpx_parcel_t *p, uint32_t bytes) {
+  dbg_assert(bytes != 0);
+  log_net("wrapping rank %d eager buffer (%u bytes)\n", tx->peer->rank, bytes);
+  command_t cmd = encode_command(_eager_rx_wrap, 0);
   int status = peer_put_command(tx->peer, cmd);
-  if (status != LIBHPX_OK) {
-    return dbg_error("could not send command to pad eager buffer\n");
-  }
-  else {
-    tx->max += bytes;
-    return eager_buffer_tx(tx, p);
-  }
+  dbg_check(status, "could not send command to pad eager buffer\n");
+  tx->max += bytes;
+  return eager_buffer_tx(tx, p);
 }
 
 int eager_buffer_init(eager_buffer_t* b, peer_t *p, uint64_t base,
@@ -120,7 +120,7 @@ void eager_buffer_fini(eager_buffer_t *b) {
 }
 
 int eager_buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
-  const uint32_t n = parcel_network_size(p);
+  const uint32_t n = pwc_network_size(p);
   if (n > tx->size) {
     return dbg_error("cannot send %u bytes via eager parcel buffer\n", n);
   }
@@ -139,43 +139,51 @@ int eager_buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   const uint32_t roff = _index_of(tx, tx->max);
   const uint32_t eoff = _index_of(tx, end);
   if (eoff <= roff) {
-    return _pad(tx, p, tx->size - roff);
+    return _wrap(tx, p, tx->size - roff);
   }
 
-  peer_t *peer = tx->peer;
-  const void *lva = parcel_network_offset(p);
-  const hpx_addr_t parcel = lva_to_gva(p);
-  assert(parcel != HPX_NULL);
-  const command_t lsync = encode_command(_finish_eager_tx, parcel);
-  const command_t cmd = encode_command(_eager_rx, n);
-  log_net("sending %d byte parcel to %d (%s)\n", n, tx->peer->rank,
-              action_table_get_key(here->actions, p->action));
-  int e = peer_pwc(peer, roff + tx->base, lva, n, lsync, HPX_NULL, cmd,
-                   SEGMENT_EAGER);
+  log_net("sending %d byte parcel to %d (%s)\n",
+          n, tx->peer->rank, action_table_get_key(here->actions, p->action));
+
+  int e = peer_pwc(tx->peer,                     // peer structure
+                   tx->base + roff,              // remote offset
+                   pwc_network_offset(p),        // local address
+                   n,                            // # bytes
+                   encode_command(_finish_eager_tx, lva_to_gva(p)), // local completion
+                   HPX_NULL,                     // remote completion
+                   encode_command(_eager_rx, 0), // remote command
+                   SEGMENT_EAGER                 // segment
+                  );
+
   if (e == LIBHPX_OK) {
     tx->max += n;
   }
   return e;
 }
 
-hpx_parcel_t *eager_buffer_rx(eager_buffer_t *rx, uint32_t bytes) {
-  // allocate a parcel to copy out to
-  const uint32_t size = bytes - parcel_prefix_size();
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, size);
-  DEBUG_IF(!p) {
-    dbg_error("failed to allocate a parcel in eager receive\n");
-  }
-
-  // copy the parcel data
+hpx_parcel_t *eager_buffer_rx(eager_buffer_t *rx) {
+  // Figure out how much data we're going to copy, then allocate a parcel to
+  // copy out the data to. Then perform the copy and return the parcel.
+  //
+  // NB: We technically want to process from the buffer directly.
   const uint32_t i = _index_of(rx, rx->min);
+  dbg_assert_str(i + sizeof(uint32_t) < rx->size, "buffer should have wrapped\n");
   const uint64_t offset = rx->base + i;
   const void *from = rx->peer->segments[SEGMENT_EAGER].base + offset;
-  memcpy(parcel_network_offset(p), from, bytes);
+  const uint32_t size = *(const uint32_t *)from;
 
-  // update the progress in this buffer
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, size);
+  dbg_assert_str(p != NULL,"failed to allocate a parcel in eager receive\n");
+
+  const uint32_t bytes = pwc_network_size(p);
+  dbg_assert_str(i + bytes < rx->size, "buffer should have wrapped\n");
+  memcpy(pwc_network_offset(p), from, pwc_network_size(p));
+
+  // Mark the source of the parcel, based on the peer's rank.
+  p->src = rx->peer->rank;
+
+  // Update the progress in this buffer.
   rx->min += bytes;
 
-  // fill in the parcel source data and return
-  p->src = rx->peer->rank;
   return p;
 }

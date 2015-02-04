@@ -109,6 +109,10 @@ static inline int peer_send(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync) {
   return send_buffer_send(&peer->send, p, lsync);
 }
 
+/// Perform a lazy parcel send operation.
+int peer_send_rendevous(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync)
+  HPX_INTERNAL HPX_NON_NULL(1, 2);
+
 /// Perform a get operation from a specific peer.
 ///
 /// @param         peer The peer structure representing the get target.
