@@ -15,13 +15,11 @@
 
 #include <hpx/attributes.h>
 
-
 /// Forward declarations.
 /// @{
 struct gas;
 struct network;
 /// @}
-
 
 /// Allocate a new Isend/Irecv funneled network.
 struct network *network_isir_funneled_new(struct gas *gas, int nrx)
