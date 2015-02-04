@@ -18,6 +18,7 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/parcel.h"
+#include "parcel_utils.h"
 #include "peer.h"
 #include "pwc.h"
 
@@ -72,9 +73,9 @@ static HPX_ACTION(_get_parcel, void *args) {
   peer_t *peer = pwc_get_peer(here->network, p->src);
 
   // get the local destination, size, and remote offset for an rdma transfer
-  void *to = parcel_network_offset(p);
-  uint32_t n = parcel_network_size(p);
-  hpx_addr_t paddr = hpx_addr_add(addr, parcel_prefix_size(), UINT32_MAX);
+  void *to = pwc_network_offset(p);
+  uint32_t n = pwc_network_size(p);
+  hpx_addr_t paddr = hpx_addr_add(addr, pwc_prefix_size(), UINT32_MAX);
   size_t offset = gas_offset_of(here->gas, paddr);
 
   // create a local command that we can wait for

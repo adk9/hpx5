@@ -22,6 +22,7 @@
 #include "libhpx/scheduler.h"
 #include "commands.h"
 #include "eager_buffer.h"
+#include "parcel_utils.h"
 #include "peer.h"
 #include "pwc.h"
 #include "../../gas/pgas/gpa.h"                 // sort of a hack
@@ -71,7 +72,8 @@ static HPX_TASK(_finish_eager_tx, void *UNUSED) {
 static HPX_INTERRUPT(_eager_rx_wrap, int *src) {
   peer_t *peer = pwc_get_peer(here->network, *src);
   eager_buffer_t *rx = &peer->rx;
-  uint32_t r = rx->size - _index_of(rx, rx->min);
+  uint32_t r = (rx->size - _index_of(rx, rx->min)) % rx->min;
+  dbg_assert(r != 0);
   rx->min += r;
   dbg_assert_str(_index_of(rx, rx->min) == 0,
                  "%u bytes did not unwrap the buffer\n", r);
@@ -95,16 +97,13 @@ static HPX_INTERRUPT(_eager_rx_wrap, int *src) {
 ///                       was injected correctly.
 ///
 static int _wrap(eager_buffer_t *tx, hpx_parcel_t *p, uint32_t bytes) {
-  log_net("sending %u bytes of padding\n", bytes);
+  dbg_assert(bytes != 0);
+  log_net("wrapping rank %d eager buffer (%u bytes)\n", tx->peer->rank, bytes);
   command_t cmd = encode_command(_eager_rx_wrap, 0);
   int status = peer_put_command(tx->peer, cmd);
-  if (status != LIBHPX_OK) {
-    return dbg_error("could not send command to pad eager buffer\n");
-  }
-  else {
-    tx->max += bytes;
-    return eager_buffer_tx(tx, p);
-  }
+  dbg_check(status, "could not send command to pad eager buffer\n");
+  tx->max += bytes;
+  return eager_buffer_tx(tx, p);
 }
 
 int eager_buffer_init(eager_buffer_t* b, peer_t *p, uint64_t base,
@@ -121,7 +120,7 @@ void eager_buffer_fini(eager_buffer_t *b) {
 }
 
 int eager_buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
-  const uint32_t n = parcel_network_size(p);
+  const uint32_t n = pwc_network_size(p);
   if (n > tx->size) {
     return dbg_error("cannot send %u bytes via eager parcel buffer\n", n);
   }
@@ -148,7 +147,7 @@ int eager_buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
 
   int e = peer_pwc(tx->peer,                     // peer structure
                    tx->base + roff,              // remote offset
-                   parcel_network_offset(p),     // local address
+                   pwc_network_offset(p),        // local address
                    n,                            // # bytes
                    encode_command(_finish_eager_tx, lva_to_gva(p)), // local completion
                    HPX_NULL,                     // remote completion
@@ -168,18 +167,23 @@ hpx_parcel_t *eager_buffer_rx(eager_buffer_t *rx) {
   //
   // NB: We technically want to process from the buffer directly.
   const uint32_t i = _index_of(rx, rx->min);
+  dbg_assert_str(i + sizeof(uint32_t) < rx->size, "buffer should have wrapped\n");
   const uint64_t offset = rx->base + i;
   const void *from = rx->peer->segments[SEGMENT_EAGER].base + offset;
-  const uint32_t bytes = *(const uint32_t *)from;
+  const uint32_t size = *(const uint32_t *)from;
 
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, bytes);
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, size);
   dbg_assert_str(p != NULL,"failed to allocate a parcel in eager receive\n");
-  memcpy(parcel_network_offset(p), from, parcel_network_size(p));
 
-  // update the progress in this buffer
-  rx->min += parcel_network_size(p);
+  const uint32_t bytes = pwc_network_size(p);
+  dbg_assert_str(i + bytes < rx->size, "buffer should have wrapped\n");
+  memcpy(pwc_network_offset(p), from, pwc_network_size(p));
 
-  // Make sure the parcel came from where we think it came from
-  dbg_assert(p->src == rx->peer->rank);
+  // Mark the source of the parcel, based on the peer's rank.
+  p->src = rx->peer->rank;
+
+  // Update the progress in this buffer.
+  rx->min += bytes;
+
   return p;
 }
