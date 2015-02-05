@@ -45,6 +45,21 @@ typedef struct {
   peer_t                peers[];
 } pwc_network_t;
 
+/// Utility to wrap a probe-completion.
+static int _probe(unsigned type, int rank, uint64_t *op) {
+  int flag = 0;
+  int e = photon_probe_completion(rank, &flag, op, type);
+  if (PHOTON_OK != e) {
+    dbg_error("photon probe error\n");
+  }
+  return flag;
+}
+
+static const char *_straction(hpx_action_t id) {
+  dbg_assert(here && here->actions);
+  return action_table_get_key(here->actions, id);
+}
+
 static const char *_pwc_id() {
   return "Photon put-with-completion\n";
 }
@@ -74,6 +89,32 @@ static void _pwc_delete(network_t *network) {
 }
 
 static int _pwc_progress(network_t *network) {
+  pwc_network_t *pwc = (void*)network;
+  int rank = pwc->rank;
+
+  // each time through the loop, we deal with local command completions
+  command_t command;
+  while (_probe(PHOTON_PROBE_EVQ, rank, &command)) {
+    hpx_addr_t addr;
+    hpx_action_t op;
+    decode_command(command, &op, &addr);
+    log_net("processing local command: %s\n", _straction(op));
+    int e = hpx_call(addr, op, HPX_NULL, &rank, sizeof(rank));
+    dbg_assert_str(HPX_SUCCESS == e, "failed to process local command\n");
+  }
+
+  // deal with received commands
+  for (int i = 0, e = pwc->ranks; i < e; ++i) {
+    while (_probe(PHOTON_PROBE_LEDGER, i, &command)) {
+      hpx_addr_t addr;
+      hpx_action_t op;
+      decode_command(command, &op, &addr);
+      log_net("processing command %s from rank %d\n", _straction(op), i);
+      int e = hpx_call(addr, op, HPX_NULL, &i, sizeof(i));
+      dbg_assert_str(HPX_SUCCESS == e, "failed to process command\n");
+    }
+  }
+
   return 0;
 }
 
@@ -111,8 +152,7 @@ static int _pwc_send(network_t *network, hpx_parcel_t *p) {
 /// peer for the request, and forwards to the p2p put operation.
 static int _pwc_pwc(network_t *network,
                     hpx_addr_t to, const void *lva, size_t n,
-                    hpx_addr_t lsync, hpx_addr_t rsync, hpx_action_t op)
-{
+                    hpx_addr_t lsync, hpx_addr_t rsync, hpx_action_t op) {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(pwc->gas, to);
   peer_t *peer = &pwc->peers[rank];
@@ -125,8 +165,7 @@ static int _pwc_pwc(network_t *network,
 ///
 /// This simply forwards to the pwc handler with no remote command.
 static int _pwc_put(network_t *network, hpx_addr_t to, const void *from,
-                    size_t n, hpx_addr_t lsync, hpx_addr_t rsync)
-{
+                    size_t n, hpx_addr_t lsync, hpx_addr_t rsync) {
   return _pwc_pwc(network, to, from, n, lsync, rsync, HPX_NULL);
 }
 
@@ -135,8 +174,7 @@ static int _pwc_put(network_t *network, hpx_addr_t to, const void *from,
 /// This simply the global address into a symmetric-heap offset, finds the
 /// peer for the request, and forwards to the p2p get operation.
 static int _pwc_get(network_t *network, void *lva, hpx_addr_t from, size_t n,
-                    hpx_addr_t lsync)
-{
+                    hpx_addr_t lsync) {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(pwc->gas, from);
   peer_t *peer = pwc->peers + rank;
@@ -145,47 +183,7 @@ static int _pwc_get(network_t *network, void *lva, hpx_addr_t from, size_t n,
   return peer_get(peer, lva, n, offset, cmd, SEGMENT_HEAP);
 }
 
-static int _probe(unsigned type, int rank, uint64_t *op) {
-  int flag = 0;
-  int e = photon_probe_completion(rank, &flag, op, type);
-  if (PHOTON_OK != e) {
-    dbg_error("photon probe error\n");
-  }
-  return flag;
-}
-
-static const char *_straction(hpx_action_t id) {
-  dbg_assert(here && here->actions);
-  return action_table_get_key(here->actions, id);
-}
-
 static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
-  pwc_network_t *pwc = (void*)network;
-  int rank = pwc->rank;
-
-  // each time through the loop, we deal with local command completions
-  command_t command;
-  while (_probe(PHOTON_PROBE_EVQ, rank, &command)) {
-    hpx_addr_t addr;
-    hpx_action_t op;
-    decode_command(command, &op, &addr);
-    log_net("processing local command: %s\n", _straction(op));
-    int e = hpx_call(addr, op, HPX_NULL, &rank, sizeof(rank));
-    dbg_assert_str(HPX_SUCCESS == e, "failed to process local command\n");
-  }
-
-  // deal with received commands
-  for (int i = 0, e = pwc->ranks; i < e; ++i) {
-    while (_probe(PHOTON_PROBE_LEDGER, i, &command)) {
-      hpx_addr_t addr;
-      hpx_action_t op;
-      decode_command(command, &op, &addr);
-      log_net("processing command %s from rank %d\n", _straction(op), i);
-      int e = hpx_call(addr, op, HPX_NULL, &i, sizeof(i));
-      dbg_assert_str(HPX_SUCCESS == e, "failed to process command\n");
-    }
-  }
-
   return NULL;
 }
 
