@@ -101,7 +101,8 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p);
 ///
 static int _wrap(eager_buffer_t *tx, hpx_parcel_t *p, uint32_t bytes) {
   dbg_assert(bytes != 0);
-  log_net("wrapping rank %d eager buffer (%u bytes)\n", tx->peer->rank, bytes);
+  log_net("wrapping rank %d eager buffer (%u bytes) at sequence # %lu\n",
+          tx->peer->rank, bytes, tx->sequence);
   command_t cmd = encode_command(_eager_rx_wrap, 0);
   int status = peer_put_command(tx->peer, cmd);
   dbg_check(status, "could not send command to pad eager buffer\n");
@@ -132,11 +133,15 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
     return _wrap(tx, p, tx->size - roff);
   }
 
-  log_net("sending %d byte parcel to %d (%s)\n",
-          n, tx->peer->rank, action_table_get_key(here->actions, p->action));
+  uint64_t sequence = tx->sequence++;
+
+  log_net("sequence: %lu, sending %d byte parcel to %d at %p (%s)\n",
+          sequence, n, tx->peer->rank,
+          tx->peer->segments[SEGMENT_EAGER].base + tx->tx_base + roff,
+          action_table_get_key(here->actions, p->action));
 
   int e = peer_pwc(tx->peer,                     // peer structure
-                   tx->base + roff,              // remote offset
+                   tx->tx_base + roff,           // remote offset
                    pwc_network_offset(p),        // local address
                    n,                            // # bytes
                    encode_command(_finish_eager_tx, lva_to_gva(p)), // local completion
@@ -153,14 +158,16 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
 
 
 
-int eager_buffer_init(eager_buffer_t* b, peer_t *p, uint64_t base,
-                      uint32_t size) {
+int eager_buffer_init(eager_buffer_t* b, peer_t *p, uint64_t tx_base,
+                      char *rx_base, uint32_t size) {
   b->peer = p;
   sync_tatas_init(&b->lock);
   b->size = size;
+  b->sequence = 0;
   b->min = 0;
   b->max = 0;
-  b->base = base;
+  b->tx_base = tx_base;
+  b->rx_base = rx_base;
   return LIBHPX_OK;
 }
 
@@ -181,17 +188,22 @@ hpx_parcel_t *eager_buffer_rx(eager_buffer_t *rx) {
   //
   // NB: We technically want to process from the buffer directly.
   const uint32_t i = _index_of(rx, rx->min);
-  dbg_assert_str(i + sizeof(uint32_t) < rx->size, "buffer should have wrapped\n");
-  const uint64_t offset = rx->base + i;
-  const void *from = rx->peer->segments[SEGMENT_EAGER].base + offset;
-  const uint32_t size = *(const uint32_t *)from;
+  dbg_assert_str(i + sizeof(uint32_t) < rx->size,
+                 "buffer should have wrapped\n");
+  dbg_assert_str(rx->rx_base, "cannot receive from a tx buffer\n");
+  const void *from = rx->rx_base + i;
+  uint32_t size = 0;
+  memcpy(&size, from, sizeof(size));            // strict-aliasing
 
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, size);
   dbg_assert_str(p != NULL,"failed to allocate a parcel in eager receive\n");
+  void *to = pwc_network_offset(p);
 
   const uint32_t bytes = pwc_network_size(p);
   dbg_assert_str(i + bytes < rx->size, "buffer should have wrapped\n");
-  memcpy(pwc_network_offset(p), from, bytes);
+  log_net("receiving %u-byte parcel from %d at offset %p\n", size,
+          rx->peer->rank, from);
+  memcpy(to, from, bytes);
 
   // Mark the source of the parcel, based on the peer's rank.
   p->src = rx->peer->rank;
