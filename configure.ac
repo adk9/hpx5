@@ -123,8 +123,7 @@ AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray
 HPX_WITH_PKG([hugetlbfs],[hugetlbfs],[build with hugepages for heap],[no],[HUGETLBFS])
 AS_IF([test "x$with_hugetlbfs" != xno],
   [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [0], [Enable huge pages heap allocation])],
-  [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANONYMOUS], [Disableh huge pages heap allocation])])
-
+  [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANONYMOUS], [Disable huge pages heap allocation])])
 
 
 HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[no],[MPI])
@@ -143,12 +142,22 @@ AS_IF([test "x$enable_photon" != xno],
   [hpx_have_photon=no])
 AM_CONDITIONAL([HAVE_PHOTON], [test "x$hpx_have_photon" != xno])
 
+AC_ARG_WITH([tests-cmd],
+  [AS_HELP_STRING([--with-tests-cmd], [Use this command for running the test harness @<:@default=mpirun@:>@])],
+  [], [with_tests_cmd=no])
+
 AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno],
-  [AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])])
+  [AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])
+   AS_IF([test "x$with_tests_cmd" != xno],
+     [AC_SUBST([TESTS_CMD], [$with_tests_cmd])]
+     [AC_SUBST([TESTS_CMD], [mpirun -np 2])])],
+  [AS_IF([test "x$with_tests_cmd" != xno],
+     [AC_SUBST([TESTS_CMD], [$with_tests_cmd])]
+     [AC_SUBST([TESTS_CMD], [])])])
 
 AC_ARG_WITH([doxygen],
   [AS_HELP_STRING([--with-doxygen], [build documentation @<:@default=no@:>@])],
-  [], [with_doxygen=yes])
+  [with_doxygen=yes], [with_doxygen=no])
 AS_IF([test "x$with_doxygen" != xno],
   [AC_CHECK_PROGS([DOXYGEN], [doxygen])])
 AS_IF([test "x$DOXYGEN" != x],
@@ -264,14 +273,9 @@ AS_IF([test "x$enable_docs" != xno],
   [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
   
 AS_IF([test "x$enable_tests" != xno],
-  [AC_CONFIG_FILES([tests/unit/run_tests.sh],
-		   [chmod +x tests/unit/run_tests.sh])]
-  [AC_CONFIG_FILES([tests/perf/overheads/run_tests.sh],
-		   [chmod +x tests/perf/overheads/run_tests.sh])]
   [AC_CONFIG_FILES([tests/Makefile
   tests/unit/Makefile
-  tests/perf/Makefile
-  tests/perf/overheads/Makefile])])
+  tests/perf/Makefile])])
   
 AC_OUTPUT
 
