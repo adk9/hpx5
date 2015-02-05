@@ -91,7 +91,9 @@ int hpx_call_through(hpx_addr_t addr, hpx_action_t action, hpx_addr_t rsync,
 ///
 /// @returns HPX_SUCCESS, or an error code if the action generated an error that
 ///          could not be handled remotely/
-int hpx_call_through_sync(hpx_addr_t addr, hpx_action_t action, hpx_addr_t rsync,                          hpx_addr_t gate, void *out, size_t olen, ...);
+int hpx_call_through_sync(hpx_addr_t addr, hpx_action_t action, 
+                          hpx_addr_t rsync, hpx_addr_t gate, void *out, 
+                          size_t olen, ...);
 
 /// Locally synchronous call with continuation interface.
 ///
