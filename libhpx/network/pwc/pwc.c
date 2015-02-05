@@ -283,6 +283,11 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   pwc->ranks = ranks;
   pwc->parcel_buffer_size = cfg->parcelbuffersize;
   pwc->parcel_eager_limit = cfg->parceleagerlimit;
+  if (pwc->parcel_eager_limit > pwc->parcel_buffer_size) {
+    dbg_error(" --hpx-parceleagerlimit (%u) must be less than "
+              "--hpx-parcelbuffersize (%u)\n",
+              pwc->parcel_eager_limit, pwc->parcel_buffer_size);
+  }
 
   peer_t *local = pwc_get_peer(&pwc->vtable, pwc->rank);
   // Prepare the null segment.
