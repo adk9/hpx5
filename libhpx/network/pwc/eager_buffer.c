@@ -161,7 +161,7 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
 int eager_buffer_init(eager_buffer_t* b, peer_t *p, uint64_t tx_base,
                       char *rx_base, uint32_t size) {
   b->peer = p;
-  sync_tatas_init(&b->lock);
+  // sync_tatas_init(&b->lock);
   b->size = size;
   b->sequence = 0;
   b->min = 0;
@@ -176,9 +176,9 @@ void eager_buffer_fini(eager_buffer_t *b) {
 
 int eager_buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   int status = LIBHPX_OK;
-  sync_tatas_acquire(&tx->lock);
+  // sync_tatas_acquire(&tx->lock);
   status = _buffer_tx(tx, p);
-  sync_tatas_release(&tx->lock);
+  // sync_tatas_release(&tx->lock);
   return status;
 }
 
@@ -194,6 +194,11 @@ hpx_parcel_t *eager_buffer_rx(eager_buffer_t *rx) {
   const void *from = rx->rx_base + i;
   uint32_t size = 0;
   memcpy(&size, from, sizeof(size));            // strict-aliasing
+  if (DEBUG) {
+    hpx_parcel_t *in = (hpx_parcel_t*)((char*)from - pwc_prefix_size());
+    dbg_assert(in->size == size);
+    dbg_assert(hpx_gas_try_pin(in->target, NULL));
+  }
 
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, size);
   dbg_assert_str(p != NULL,"failed to allocate a parcel in eager receive\n");
