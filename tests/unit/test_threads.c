@@ -122,7 +122,7 @@ static HPX_ACTION(test_libhpx_threadExit, void *UNUSED) {
   hpx_addr_t done = hpx_lco_future_new(sizeof(uint64_t));
   uint64_t value = SET_CONT_VALUE;
   hpx_status_t status = hpx_call(HPX_HERE, _worker, done, &value, sizeof(value));
-  ck_assert_msg(status == HPX_SUCCESS, "Could not normally terminate the thread");
+  assert_msg(status == HPX_SUCCESS, "Could not normally terminate the thread");
   hpx_lco_wait(done);
 
   hpx_lco_get(done, sizeof(uint64_t), &value);
@@ -278,7 +278,7 @@ static HPX_ACTION(test_libhpx_threadYield, void *UNUSED) {
     any_timeouts |= timeout;
     hpx_lco_delete(done[i], HPX_NULL);
   }
-  ck_assert_msg(any_timeouts == false, "Threads did not yield.");
+  assert_msg(any_timeouts == false, "Threads did not yield.");
 
   free(done);
 }

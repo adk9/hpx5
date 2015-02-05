@@ -57,8 +57,8 @@ static HPX_ACTION(test_libhpx_memput, void *UNUSED) {
   bool output = false;
   int e = hpx_call_sync(remote, _memput_verify,
                         &output, sizeof(output), NULL, 0);
-  ck_assert_msg(e == HPX_SUCCESS, "hpx_call_sync failed with %d", e);
-  ck_assert_msg(output == false, "gas_memput failed");
+  assert_msg(e == HPX_SUCCESS, "hpx_call_sync failed with %d", e);
+  assert_msg(output == false, "gas_memput failed");
 }
 
 TEST_MAIN({
