@@ -83,6 +83,36 @@ int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out,
   return e;
 }
 
+int hpx_call_through(hpx_addr_t addr, hpx_action_t action, hpx_addr_t rsync, 
+                     hpx_addr_t gate, hpx_addr_t result, ...) {
+  va_list vargs;
+  va_start(vargs, result);
+  int e = libhpx_call_through_action(here->actions, addr, action, result, 
+                                     hpx_lco_set_action, HPX_NULL, rsync,
+                                     gate, &vargs);
+  va_end(vargs);
+  return e;
+}
+
+int hpx_call_through_sync(hpx_addr_t addr, hpx_action_t action, 
+                          hpx_addr_t rsync, hpx_addr_t gate, void *out, 
+                          size_t olen, ...) {
+  hpx_addr_t result = hpx_lco_future_new(olen);
+  va_list vargs;
+  va_start(vargs, olen);
+  int e = libhpx_call_through_action(here->actions, addr, action, result,
+                                     hpx_lco_set_action, HPX_NULL, rsync,
+                                     gate, &vargs);
+  va_end(vargs);
+ 
+  if (e == HPX_SUCCESS) {
+    e = hpx_lco_get(result, olen, out);
+  }
+                          
+  hpx_lco_delete(result, HPX_NULL);
+  return e;
+}
+
 int hpx_call_async(hpx_addr_t addr, hpx_action_t action,
                    hpx_addr_t lsync, hpx_addr_t result, ...) {
   va_list vargs;
