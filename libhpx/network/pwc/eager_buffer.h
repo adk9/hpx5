@@ -15,7 +15,6 @@
 
 #include <stdint.h>
 #include <hpx/hpx.h>
-#include <libsync/locks.h>
 
 struct peer;
 
@@ -41,7 +40,7 @@ struct peer;
 /// the remote buffer that encodes the number of bytes to skip.
 typedef struct eager_buffer {
   struct peer     *peer;
-  tatas_lock_t     lock;
+  // tatas_lock_t     lock; locking happens in the send buffer
   uint32_t         size;
   const uint32_t UNUSED;
   uint64_t     sequence;
