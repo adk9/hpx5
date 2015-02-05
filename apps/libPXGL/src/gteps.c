@@ -53,7 +53,7 @@ static int _gteps_visit_vertex_action(const hpx_addr_t *const args) {
 hpx_action_t gteps_calculate = HPX_ACTION_INVALID;
 int gteps_calculate_action(const sssp_uint_t *const num_vertices) {
   const hpx_addr_t adj_list = hpx_thread_current_target();
-  hpx_addr_t calculate_lco = hpx_lco_allreduce_new(*num_vertices, 1, sizeof(size_t), (hpx_commutative_associative_op_t) gteps_calculate_op, gteps_calculate_init);
+  hpx_addr_t calculate_lco = hpx_lco_allreduce_new(*num_vertices, 1, sizeof(size_t), (hpx_monoid_op_t) gteps_calculate_op, gteps_calculate_init);
 
   // since we know how we have allocated the index block array, we
   // compute the block size here from the number of vertices.

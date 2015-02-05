@@ -238,7 +238,7 @@ static void _find_next_level() {
       HPX_LOCALITIES, 
       HPX_LOCALITIES, 
       sizeof(size_t), 
-      (hpx_commutative_associative_op_t)_size_t_minimum_op, 
+      (hpx_monoid_op_t)_size_t_minimum_op, 
       (void (*)(void *, const size_t))_size_t_minimum_init);
   const hpx_addr_t bcast_lco = hpx_lco_future_new(0);
   hpx_bcast(_send_next_level, bcast_lco, &level_reduce_lco,
