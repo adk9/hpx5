@@ -171,8 +171,9 @@ _ACTION_TABLE_GET(hpx_action_handler_t, handler, NULL);
 static _ACTION_TABLE_GET(ffi_cif *, cif, NULL);
 
 int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
-                       hpx_action_t action, hpx_addr_t c_addr, hpx_action_t c_action,
-                       hpx_addr_t lsync, va_list *args) {
+                       hpx_action_t action, hpx_addr_t c_addr,
+                       hpx_action_t c_action, hpx_addr_t lsync,
+                       hpx_addr_t rsync, hpx_addr_t gate, va_list *args) {
   size_t len;
   void *outargs;
   hpx_parcel_t *p;
@@ -206,57 +207,18 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
   hpx_parcel_set_cont_action(p, c_action);
   hpx_parcel_set_cont_target(p, c_addr);
 
-  if (lsync) {
-    hpx_parcel_send(p, lsync);
+  if (gate) {
+    if (lsync) {
+      hpx_parcel_send_through(p, gate, lsync, rsync);
+    } else {
+      hpx_parcel_send_through_sync(p, gate, rsync);
+    } 
   } else {
-    hpx_parcel_send_sync(p);
-  }
-
-  return HPX_SUCCESS;
-}
-
-int libhpx_call_through_action(const struct action_table *table, 
-                               hpx_addr_t addr, hpx_action_t action, 
-                               hpx_addr_t c_addr, hpx_action_t c_action,
-                               hpx_addr_t lsync, hpx_addr_t rsync,
-                               hpx_addr_t gate, va_list *args) {
-  size_t len;
-  void *outargs;
-  hpx_parcel_t *p;
-
-  // if it is a typed action, marshall variadic arguments into a
-  // contiguous buffer, otherwise simply return the pointer to the
-  // variadic argument.
-  ffi_cif *cif = action_table_get_cif(table, action);
-  if (cif) {
-    void *argps[cif->nargs];
-    for (int i = 0; i < cif->nargs; ++i) {
-      argps[i] = va_arg(*args, void*);
+    if (lsync) {
+      hpx_parcel_send(p, lsync);
+    } else {
+      hpx_parcel_send_sync(p);
     }
-
-    len = ffi_raw_size(cif);
-    assert (len > 0);
-
-    p = hpx_parcel_acquire(NULL, len);
-    outargs = hpx_parcel_get_data(p);
-    ffi_ptrarray_to_raw(cif, argps, (ffi_raw*)outargs);
-  } else {
-    outargs = va_arg(*args, void *);
-    len = va_arg(*args, size_t);
-
-    p = hpx_parcel_acquire(outargs, len);
-  }
-
-  hpx_parcel_set_pid(p, hpx_thread_current_pid());
-  hpx_parcel_set_target(p, addr);
-  hpx_parcel_set_action(p, action);
-  hpx_parcel_set_cont_action(p, c_action);
-  hpx_parcel_set_cont_target(p, c_addr);
-
-  if (lsync) {
-    hpx_parcel_send_through(p, gate, lsync, rsync);
-  } else {
-    hpx_parcel_send_through_sync(p, gate, rsync);
   }
 
   return HPX_SUCCESS;
