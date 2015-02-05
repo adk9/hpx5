@@ -11,10 +11,11 @@ function add_mpi() {
 
 function add_photon() {
     # This is currently cutter-specific and needs to be generalized.
-    export HPX_USE_IB_DEV=mlx4_0
+    export HPX_USE_IB_DEV=qib0
     export HPX_USE_IB_PORT=1
     export HPX_USE_CMA=0
     export HPX_USE_ETH_DEV=roce0
+    export HPX_USE_BACKEND=verbs
 
     export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
     export LIBRARY_PATH=/usr/lib64:$LIBRARY_PATH
