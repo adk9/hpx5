@@ -109,7 +109,6 @@ static int _resize(isend_buffer_t *buffer, uint32_t size) {
   // right place in the new buffer.
   if (min == nmin) {
     assert(max != nmax);
-    assert(0 < suffix);
     assert(min + prefix == nmax - suffix);
 
     size_t bytes = suffix * sizeof(*buffer->requests);
