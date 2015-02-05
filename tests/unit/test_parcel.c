@@ -108,7 +108,7 @@ static HPX_ACTION(test_libhpx_parcelGetAction, void *UNUSED) {
   hpx_parcel_set_action(p, _sendData);
 
   hpx_action_t get_act = hpx_parcel_get_action(p);
-  ck_assert_msg(get_act == _sendData, "Error creating parcel - wrong action");
+  assert_msg(get_act == _sendData, "Error creating parcel - wrong action");
 
   hpx_parcel_set_data(p, &args, sizeof(args));
   hpx_parcel_set_target(p, to);
@@ -236,7 +236,7 @@ static HPX_ACTION(test_libhpx_parcelGetContinuation, void *UNUSED) {
   hpx_parcel_set_cont_action(p, hpx_lco_set_action);
 
   hpx_action_t get_act = hpx_parcel_get_cont_action(p);
-  ck_assert_msg(get_act == hpx_lco_set_action,
+  assert_msg(get_act == hpx_lco_set_action,
                 "Error in getting cont action");
 
   assert(hpx_parcel_get_cont_target(p) == done);
@@ -252,7 +252,7 @@ static HPX_ACTION(test_libhpx_parcelGetContinuation, void *UNUSED) {
 }
 
 static int _is_error(hpx_status_t s) {
-  ck_assert_msg(s == HPX_SUCCESS, "HPX operation returned error %s",
+  assert_msg(s == HPX_SUCCESS, "HPX operation returned error %s",
                 hpx_strerror(s));
   return (s != HPX_SUCCESS);
 }
@@ -414,7 +414,7 @@ static HPX_ACTION(test_libhpx_parcelSendThrough, void *UNUSED) {
     goto unwind3;
   }
 
-  ck_assert_msg(fin == n, "expected final value %d, got %d", n, fin);
+  assert_msg(fin == n, "expected final value %d, got %d", n, fin);
 
  unwind3:
   hpx_lco_delete(gates, HPX_NULL);

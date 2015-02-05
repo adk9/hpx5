@@ -50,7 +50,7 @@ static HPX_ACTION(_sender, hpx_addr_t *channels) {
   void *rbuf;
   // Receive a buffer from a channel. This is a blocking call.
   hpx_status_t status = hpx_lco_chan_recv(channels[1], NULL, &rbuf);
-  ck_assert_msg(status == HPX_SUCCESS, "LCO Channel receive failed");
+  assert_msg(status == HPX_SUCCESS, "LCO Channel receive failed");
   //uint64_t result = *(uint64_t*)rbuf;
   // free the buffer that it receives on the channel.
   free(rbuf);

@@ -154,7 +154,7 @@ static HPX_ACTION(test_hpx_lco_newfuture_getat, void *UNUSED) {
   hpx_lco_wait(rsync);
   SET_VALUE_T value;
   hpx_lco_get(done, sizeof(SET_VALUE), &value);
-  ck_assert_msg(value == SET_VALUE, "Future did not contain the correct value.");
+  assert_msg(value == SET_VALUE, "Future did not contain the correct value.");
   
   hpx_lco_newfuture_free(fut);
   hpx_lco_delete(lsync, HPX_NULL);
@@ -183,7 +183,7 @@ static HPX_ACTION(test_hpx_lco_newfuture_getat_remote, void *UNUSED) {
     hpx_lco_wait_all(2, syncs, NULL);
     SET_VALUE_T value;
     hpx_lco_get(done, sizeof(SET_VALUE), &value);
-    ck_assert_msg(value == SET_VALUE, "Future did not contain the correct value.");
+    assert_msg(value == SET_VALUE, "Future did not contain the correct value.");
 
     hpx_lco_newfuture_free(fut);
     hpx_lco_delete(lsync, HPX_NULL);
@@ -492,7 +492,7 @@ static HPX_ACTION(test_hpx_lco_newfuture_getat_array, void *UNUSED) {
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
     SET_VALUE_T value;
     hpx_lco_get(done[i], sizeof(SET_VALUE), &value);
-    ck_assert_msg(value == SET_VALUE, "Future did not contain the correct value.");
+    assert_msg(value == SET_VALUE, "Future did not contain the correct value.");
   }
   hpx_lco_newfuture_free_all(NUM_LOCAL_FUTURES, fut);
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++)
@@ -611,7 +611,7 @@ static HPX_ACTION(test_hpx_lco_newfuture_get_all, void *UNUSED) {
   hpx_lco_newfuture_get_all(NUM_LOCAL_FUTURES, fut, sizeof(SET_VALUE_T), (void**)values);
   for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
     printf("FUTURE CONTAINED VALUE %d\n", *values[i]);
-    ck_assert_msg(*(int*)values[i] == SET_VALUE, "Got wrong value");
+    assert_msg(*(int*)values[i] == SET_VALUE, "Got wrong value");
   }
   
   hpx_lco_newfuture_free_all(NUM_LOCAL_FUTURES, fut);
@@ -647,7 +647,7 @@ static HPX_ACTION(test_hpx_lco_newfuture_get_all_remote, void *UNUSED) {
 
     for (int i = 0; i < NUM_LOCAL_FUTURES * ranks; i++) {
       printf("FUTURE CONTAINED VALUE %d\n", *values[i]);
-      ck_assert_msg(*(int*)values[i] == SET_VALUE, "Got wrong value");
+      assert_msg(*(int*)values[i] == SET_VALUE, "Got wrong value");
     }
 
     hpx_lco_newfuture_free_all(NUM_LOCAL_FUTURES * ranks, fut);
@@ -731,9 +731,9 @@ static HPX_ACTION(test_hpx_lco_newfuture_shared_array, void *UNUSED) {
     for (int i = 0; i < NUM_LOCAL_FUTURES; i++) {
       SET_VALUE_T result;
       hpx_lco_newfuture_getat(shared_done, i, sizeof(SET_VALUE_T), &result);
-      ck_assert_msg(result == SET_VALUE, "Shared future did not contain the correct value on first read.");
+      assert_msg(result == SET_VALUE, "Shared future did not contain the correct value on first read.");
       hpx_lco_newfuture_getat(shared_done, i, sizeof(SET_VALUE_T), &result);
-      ck_assert_msg(result == SET_VALUE, "Shared future did not contain the correct value on second read.");
+      assert_msg(result == SET_VALUE, "Shared future did not contain the correct value on second read.");
     }
 
     printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
