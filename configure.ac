@@ -108,8 +108,8 @@ AM_CONDITIONAL([ENABLE_LENGTHY_TESTS], [test "$enable_lengthy_tests" = "yes"])
 
 AC_ARG_ENABLE([testsuite],
   [AS_HELP_STRING([--enable-testsuite],
-                  [Enable test suite (requires check) @<:@default=yes@:>@])],
-  [], [enable_testsuite=yes])
+                  [Enable test suite @<:@default=yes@:>@])],
+  [], [enable_tests=yes])
 
 #HPX_OPENFLOW
 
@@ -146,11 +146,6 @@ AM_CONDITIONAL([HAVE_PHOTON], [test "x$hpx_have_photon" != xno])
 AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno],
   [AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])])
 
-HPX_WITH_PKG([check],[check],[build with check unit tests],[no],[CHECK])
-AS_IF([test "x$enable_testsuite" != xno -a "x$with_check" != xno],
-  [enable_tests=yes],
-  [enable_tests=no])
-    
 AC_ARG_WITH([doxygen],
   [AS_HELP_STRING([--with-doxygen], [build documentation @<:@default=no@:>@])],
   [], [with_doxygen=yes])
