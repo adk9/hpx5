@@ -85,7 +85,7 @@ int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out,
   return e;
 }
 
-int hpx_call_through(hpx_addr_t addr, hpx_action_t action, hpx_addr_t rsync, 
+int hpx_call_when(hpx_addr_t addr, hpx_action_t action, hpx_addr_t rsync, 
                      hpx_addr_t gate, hpx_addr_t result, ...) {
   va_list vargs;
   va_start(vargs, result);
@@ -96,7 +96,7 @@ int hpx_call_through(hpx_addr_t addr, hpx_action_t action, hpx_addr_t rsync,
   return e;
 }
 
-int hpx_call_through_sync(hpx_addr_t addr, hpx_action_t action, 
+int hpx_call_when_sync(hpx_addr_t addr, hpx_action_t action, 
                           hpx_addr_t rsync, hpx_addr_t gate, void *out, 
                           size_t olen, ...) {
   hpx_addr_t result = hpx_lco_future_new(olen);
