@@ -52,7 +52,7 @@ int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out, size_t olen, 
 ///          the hpx_call invocation.
 int hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result, ...);
 
-/// Locally synchronous call interface "through" an LCO.
+/// Locally synchronous call interface when LCO is set.
 ///
 /// This is a locally-synchronous, globally-asynchronous variant of
 /// the remote-procedure call interface which implements the hpx_parcel_send_
@@ -68,12 +68,11 @@ int hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result, ...);
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
-int hpx_call_through(hpx_addr_t addr, hpx_action_t action, hpx_addr_t rsync, 
-                     hpx_addr_t gate, hpx_addr_t result, ...);
+int hpx_call_when(hpx_addr_t addr, hpx_action_t action, hpx_addr_t rsync, 
+                  hpx_addr_t gate, hpx_addr_t result, ...);
 
-/// @file
-/// @brief HPX remote procedure call interface
-/// Fully synchronous call interface which implements hpx_parcel_send_through().
+/// Fully synchronous call interface which implements hpx_parcel_send_through()
+/// when LCO is set
 ///
 /// Performs @p action on @p args at @p addr, and sets @p out with the
 /// resulting value. The output value @p out can be NULL (or the
@@ -91,9 +90,9 @@ int hpx_call_through(hpx_addr_t addr, hpx_action_t action, hpx_addr_t rsync,
 ///
 /// @returns HPX_SUCCESS, or an error code if the action generated an error that
 ///          could not be handled remotely/
-int hpx_call_through_sync(hpx_addr_t addr, hpx_action_t action, 
-                          hpx_addr_t rsync, hpx_addr_t gate, void *out, 
-                          size_t olen, ...);
+int hpx_call_when_sync(hpx_addr_t addr, hpx_action_t action, 
+                       hpx_addr_t rsync, hpx_addr_t gate, void *out, 
+                       size_t olen, ...);
 
 /// Locally synchronous call with continuation interface.
 ///
