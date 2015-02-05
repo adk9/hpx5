@@ -206,13 +206,17 @@ static int _init_peer(pwc_network_t *pwc, peer_t *peer, int self, int rank) {
     return dbg_error("could not initialize the pwc buffer\n");
   }
 
+  // Figure out where I receive from in my eager buffer w.r.t. this peer.
   uint32_t size = pwc->parcel_buffer_size;
-  status = eager_buffer_init(&peer->rx, peer, rank * size, size);
+  char *base = pwc->eager + rank * size;
+  status = eager_buffer_init(&peer->rx, peer, 0, base, size);
   if (LIBHPX_OK != status) {
     return dbg_error("could not initialize the parcel rx endpoint\n");
   }
 
-  status = eager_buffer_init(&peer->tx, peer, self * size, size);
+  // Figure out where I send to w.r.t. this peer in their eager buffer.
+  uint32_t offset = self * size;
+  status = eager_buffer_init(&peer->tx, peer, offset, NULL, size);
   if (LIBHPX_OK != status) {
     return dbg_error("could not initialize the parcel tx endpoint\n");
   }
