@@ -38,8 +38,7 @@ typedef struct {
 /// Try to start a pwc.
 static int _start(pwc_buffer_t *buffer, void *rva, const void *lva, size_t n,
                   hpx_addr_t lsync, hpx_addr_t rsync, command_t cmd,
-                  rdma_key_t key)
-{
+                  rdma_key_t key) {
   if (rsync != HPX_NULL) {
     dbg_error("remote complete event currently unsupported");
   }

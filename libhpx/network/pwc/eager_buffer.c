@@ -123,7 +123,8 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   }
 
   if (end - tx->min > tx->size) {
-    log_net("%u byte parcel may overflow buffer\n", n);
+    log_net("%u byte parcel may overflow buffer (think min is %lu)\n", n,
+            tx->min);
     return LIBHPX_RETRY;
   }
 
@@ -134,9 +135,12 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   }
 
   uint64_t sequence = tx->sequence++;
+#ifdef ENABLE_DEBUG
+  p->sequence = sequence;
+#endif
 
-  log_net("sequence: %lu, sending %d byte parcel to %d at %p (%s)\n",
-          sequence, n, tx->peer->rank,
+  log_net("sequence: %lu, sending %d bytes to %d at %p (%s)\n",
+          p->sequence, n, tx->peer->rank,
           tx->peer->segments[SEGMENT_EAGER].base + tx->tx_base + roff,
           action_table_get_key(here->actions, p->action));
 
@@ -206,18 +210,20 @@ hpx_parcel_t *eager_buffer_rx(eager_buffer_t *rx) {
 
   const uint32_t bytes = pwc_network_size(p);
   dbg_assert_str(i + bytes < rx->size, "buffer should have wrapped\n");
-  log_net("receiving %u-byte parcel from %d at offset %p\n", size,
-          rx->peer->rank, from);
   memcpy(to, from, bytes);
 
   // Mark the source of the parcel, based on the peer's rank.
   p->src = rx->peer->rank;
+
+  log_net("sequence %lu: receiving %u-bytes from %d at offset %p\n",
+          p->sequence, bytes, rx->peer->rank, from);
 
   // Before we leave, check some basics.
   dbg_assert(hpx_gas_try_pin(p->target, NULL));
 
   // Update the progress in this buffer.
   rx->min += bytes;
+  log_net("updated min to %lu\n", rx->min);
 
   return p;
 }
