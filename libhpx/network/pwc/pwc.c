@@ -15,6 +15,7 @@
 #endif
 
 #include <stdlib.h>
+#include <hpx/builtins.h>
 
 #include "libhpx/action.h"
 #include "libhpx/boot.h"
@@ -258,8 +259,16 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
     return NULL;
   }
 
+  // Store some of the salient information in the network structure.
+  pwc->gas = gas;
+  pwc->rank = boot_rank(boot);
+  pwc->ranks = ranks;
+  pwc->parcel_buffer_size = 1u << ceil_log2_32(cfg->parcelbuffersize);
+  pwc->parcel_eager_limit = 1u << ceil_log2_32(cfg->parceleagerlimit);
+  log("initialized a %u-byte buffer size\n", pwc->parcel_buffer_size);
+
   // Allocate the network's eager segment.
-  pwc->eager_bytes = ranks * cfg->parcelbuffersize;
+  pwc->eager_bytes = ranks * pwc->parcel_buffer_size;
   pwc->eager = malloc(pwc->eager_bytes);
   if (!pwc->eager) {
     dbg_error("malloc(%lu) failed for the eager buffer\n", pwc->eager_bytes);
@@ -277,12 +286,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   pwc->vtable.probe = _pwc_probe;
   pwc->vtable.set_flush = _pwc_set_flush;
 
-  // Store some of the salient information in the network structure.
-  pwc->gas = gas;
-  pwc->rank = boot_rank(boot);
-  pwc->ranks = ranks;
-  pwc->parcel_buffer_size = cfg->parcelbuffersize;
-  pwc->parcel_eager_limit = cfg->parceleagerlimit;
+
   if (pwc->parcel_eager_limit > pwc->parcel_buffer_size) {
     dbg_error(" --hpx-parceleagerlimit (%u) must be less than "
               "--hpx-parcelbuffersize (%u)\n",
