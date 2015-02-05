@@ -44,20 +44,23 @@ typedef struct eager_buffer {
   tatas_lock_t     lock;
   uint32_t         size;
   const uint32_t UNUSED;
+  uint64_t     sequence;
   uint64_t          max;
   uint64_t          min;
-  uint64_t         base;
+  uint64_t      tx_base;
+  char         *rx_base;
 } eager_buffer_t;
 
 /// Initialize an eager buffer.
 ///
 /// @param       buffer The buffer to initialize.
-/// @param         base The base offset for the buffer.
+/// @param      tx_base The base tx offset for the buffer.
+/// @param      rx_base The base of the rx buffer.
 /// @param         size The size of the buffer.
 ///
 /// @returns  LIBHPX_OK The buffer was initialized correctly.
-int eager_buffer_init(eager_buffer_t *buffer, struct peer *peer, uint64_t base,
-                      uint32_t size)
+int eager_buffer_init(eager_buffer_t *buffer, struct peer *peer,
+                      uint64_t tx_base, char *rx_base, uint32_t size)
   HPX_INTERNAL HPX_NON_NULL(1, 2);
 
 /// Finalize a buffer.
