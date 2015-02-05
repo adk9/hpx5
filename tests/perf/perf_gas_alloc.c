@@ -71,9 +71,7 @@ static int _main_action(void *args) {
   hpx_shutdown(HPX_SUCCESS);
 }
 
-int
-main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return 1;
