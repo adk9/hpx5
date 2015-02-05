@@ -22,7 +22,8 @@ function add_photon() {
 set -xe
 case "$HPXMODE" in
     photon)
-	CFGFLAGS=" --enable-photon "
+	CFGFLAGS="--with-mpi=ompi  --enable-photon "
+        add_mpi
         add_photon
 	;;
     mpi)
