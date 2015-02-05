@@ -72,7 +72,8 @@ static HPX_TASK(_finish_eager_tx, void *UNUSED) {
 static HPX_INTERRUPT(_eager_rx_wrap, int *src) {
   peer_t *peer = pwc_get_peer(here->network, *src);
   eager_buffer_t *rx = &peer->rx;
-  uint32_t r = (rx->size - _index_of(rx, rx->min)) % rx->min;
+  uint32_t min = _index_of(rx, rx->min);
+  uint32_t r = (rx->size - min);
   dbg_assert(r != 0);
   rx->min += r;
   dbg_assert_str(_index_of(rx, rx->min) == 0,
@@ -80,6 +81,8 @@ static HPX_INTERRUPT(_eager_rx_wrap, int *src) {
   log_net("eager buffer %d wrapped (%u bytes)\n", *src, r);
   return HPX_SUCCESS;
 }
+
+static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p);
 
 /// A utility function to inject padding into an eager buffer.
 ///
@@ -103,23 +106,10 @@ static int _wrap(eager_buffer_t *tx, hpx_parcel_t *p, uint32_t bytes) {
   int status = peer_put_command(tx->peer, cmd);
   dbg_check(status, "could not send command to pad eager buffer\n");
   tx->max += bytes;
-  return eager_buffer_tx(tx, p);
+  return _buffer_tx(tx, p);
 }
 
-int eager_buffer_init(eager_buffer_t* b, peer_t *p, uint64_t base,
-                      uint32_t size) {
-  b->peer = p;
-  b->size = size;
-  b->min = 0;
-  b->max = 0;
-  b->base = base;
-  return LIBHPX_OK;
-}
-
-void eager_buffer_fini(eager_buffer_t *b) {
-}
-
-int eager_buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
+static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   const uint32_t n = pwc_network_size(p);
   if (n > tx->size) {
     return dbg_error("cannot send %u bytes via eager parcel buffer\n", n);
@@ -161,6 +151,30 @@ int eager_buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   return e;
 }
 
+
+
+int eager_buffer_init(eager_buffer_t* b, peer_t *p, uint64_t base,
+                      uint32_t size) {
+  b->peer = p;
+  sync_tatas_init(&b->lock);
+  b->size = size;
+  b->min = 0;
+  b->max = 0;
+  b->base = base;
+  return LIBHPX_OK;
+}
+
+void eager_buffer_fini(eager_buffer_t *b) {
+}
+
+int eager_buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
+  int status = LIBHPX_OK;
+  sync_tatas_acquire(&tx->lock);
+  status = _buffer_tx(tx, p);
+  sync_tatas_release(&tx->lock);
+  return status;
+}
+
 hpx_parcel_t *eager_buffer_rx(eager_buffer_t *rx) {
   // Figure out how much data we're going to copy, then allocate a parcel to
   // copy out the data to. Then perform the copy and return the parcel.
@@ -177,10 +191,13 @@ hpx_parcel_t *eager_buffer_rx(eager_buffer_t *rx) {
 
   const uint32_t bytes = pwc_network_size(p);
   dbg_assert_str(i + bytes < rx->size, "buffer should have wrapped\n");
-  memcpy(pwc_network_offset(p), from, pwc_network_size(p));
+  memcpy(pwc_network_offset(p), from, bytes);
 
   // Mark the source of the parcel, based on the peer's rank.
   p->src = rx->peer->rank;
+
+  // Before we leave, check some basics.
+  dbg_assert(hpx_gas_try_pin(p->target, NULL));
 
   // Update the progress in this buffer.
   rx->min += bytes;
