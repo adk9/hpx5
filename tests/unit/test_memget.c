@@ -59,7 +59,7 @@ static HPX_ACTION(test_libhpx_memget, void *UNUSED) {
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 
   for (int i = 0; i < BLOCK_ELEMS; ++i)
-    ck_assert_msg(local[i] == block[i],
+    assert_msg(local[i] == block[i],
                   "failed to get element %d correctly, expected %"PRIu64
                   ", got %"PRIu64"\n", i, block[i], local[i]);
 }

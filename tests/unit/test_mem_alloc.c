@@ -76,7 +76,7 @@ static HPX_ACTION(test_libhpx_gas_alloc, void *UNUSED) {
   // wait for initialization. The LCO blocks the caller until an LCO set 
   // operation triggers the LCO. 
   int err = hpx_lco_wait(done);
-  ck_assert_msg(err == HPX_SUCCESS, "hpx_lco_wait propagated error");
+  assert_msg(err == HPX_SUCCESS, "hpx_lco_wait propagated error");
 
   // Deletes an LCO - done -the address of the lco to delete
   hpx_lco_delete(done, HPX_NULL);

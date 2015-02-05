@@ -2,9 +2,12 @@
 #define LIBHPX_TESTS_TESTS_H_
 
 #include <string.h>
-#include <stdio.h>                              /* FILE, fopen, sprintf, ... */
-#include <inttypes.h>                           /* stdint formatting */
+#include <stdio.h>
+#include <inttypes.h>
+#include <assert.h>
 #include <hpx/hpx.h>
+
+#define assert_msg(cond, msg) assert(cond && msg)
 
 #define ADD_TEST(test) do {                                  \
     int e = hpx_call_sync(HPX_HERE, test, NULL, 0, NULL, 0); \
