@@ -256,11 +256,10 @@ int parcel_launch(hpx_parcel_t *p) {
   // do a network send
   int e = network_send(here->network, p);
   if (e) {
-    dbg_error("failed to perform a network send\n");
-    return HPX_ERROR;
+    return dbg_error("failed to perform a network send\n");
   }
 
-  return HPX_ERROR;
+  return HPX_SUCCESS;
 }
 
 hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p) {
