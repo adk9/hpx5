@@ -1,46 +1,24 @@
-//****************************************************************************
-// @Filename      07_TestLCO.c
-// @Project       High Performance ParallelX Library (libhpx)
-//----------------------------------------------------------------------------
-// @Subject       Library Unit Test Harness - HPX LCO Interface
-// 
-// @Compiler      GCC
-// @OS            Linux
-// @Description   lco.h File Reference
-// @Goal          Goal of this testcase is to test the HPX LCO Functions
-//                1. hpx_lco_delete
-//                2. hpx_lco_set
-//                3. hpx_lco_wait
-//                4. hpx_lco_get
-//                5. hpx_lco_wait_all
-//                6. hpx_lco_get_all
-//                7. hpx_lco_error
-// @Copyright     Copyright (c) 2014, Trustees of Indiana University
-//                All rights reserved.
+// =============================================================================
+//  High Performance ParalleX Library (libhpx)
 //
-//                This software may be modified and distributed under the terms
-//                of the BSD license.  See the COPYING file for details.
+//  Copyright (c) 2013, Trustees of Indiana University,
+//  All rights reserved.
 //
-//                This software was created at the Indiana University Center 
-//                for Research in Extreme Scale Technologies (CREST).
-//----------------------------------------------------------------------------
-// @Date          09/03/2014
-// @Author        Jayashree Candadai <jayaajay [at] indiana.edu>
-// @Version       0.1
-// Commands to Run: make, mpirun hpxtest 
-//****************************************************************************
+//  This software may be modified and distributed under the terms of the BSD
+//  license.  See the COPYING file for details.
+//
+//  This software was created at the Indiana University Center for Research in
+//  Extreme Scale Technologies (CREST).
+// =============================================================================
 
-//****************************************************************************
-// @Project Includes
-//****************************************************************************
+#include <inttypes.h>
 #include "hpx/hpx.h"
 #include "tests.h"
-#include "domain.h"
 
-//****************************************************************************
+#define BUFFER_SIZE 128
+
 // Testcase to test LCO wait and delete functions
-//****************************************************************************
-int t07_init_array_action(size_t *args) {
+static HPX_ACTION(_init_array, size_t *args) {
   size_t n = *args;
   hpx_addr_t target = hpx_thread_current_target();
   char *local;
@@ -53,12 +31,11 @@ int t07_init_array_action(size_t *args) {
   HPX_THREAD_CONTINUE(local); 
 }
 
-START_TEST (test_libhpx_lcoFunction)
-{
+static HPX_ACTION(test_libhpx_lcoFunction, void *UNUSED) {
   int size = HPX_LOCALITIES;
   int peerID = (HPX_LOCALITY_ID + 1) % size;
  
-  fprintf(test_log, "Starting the HPX LCO test\n");
+  printf("Starting the HPX LCO test\n");
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
@@ -72,13 +49,13 @@ START_TEST (test_libhpx_lcoFunction)
     // Create a future. Futures are builtin LCO's that represent from async
     // computation. Futures are allocated in the global address space.
     done = hpx_lco_future_new(sizeof(void*));
-    hpx_call(remote, t07_init_array, done, &i, sizeof(i));
-    hpx_call_sync(addr, t07_init_array, &local, sizeof(local), &i, sizeof(i));
+    hpx_call(remote, _init_array, done, &i, sizeof(i));
+    hpx_call_sync(addr, _init_array, &local, sizeof(local), &i, sizeof(i));
     
     // Perform a wait operation. The LCO blocks the caller until an LCO set
     // operation triggers the LCO. 
     hpx_status_t status = hpx_lco_wait(done);
-    ck_assert(status == HPX_SUCCESS);
+    assert(status == HPX_SUCCESS);
 
     // Deletes an LCO. It takes address of the LCO and an rsync ot signal
     // remote completion.
@@ -86,14 +63,12 @@ START_TEST (test_libhpx_lcoFunction)
   }
   
   hpx_gas_free(addr, HPX_NULL);
-  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
-END_TEST
 
-//****************************************************************************
 // Testcase to test hpx_lco_set and hpx_lco_get functions.
-//****************************************************************************
-int t07_lcoSetGet_action(uint64_t *args) {
+static HPX_ACTION(_lcoSetGet, uint64_t *args) {
   hpx_addr_t future = hpx_lco_future_new(sizeof(uint64_t));
 
   uint64_t val = 1234;
@@ -111,32 +86,29 @@ int t07_lcoSetGet_action(uint64_t *args) {
   hpx_thread_continue(sizeof(uint64_t), &setVal);
 }
 
-START_TEST (test_libhpx_lcoSetGet) 
-{
+static HPX_ACTION(test_libhpx_lcoSetGet, void *UNUSED) {
   int size = HPX_LOCALITIES;
   uint64_t n = 0;
   
-  fprintf(test_log, "Starting the HPX LCO Set and Get test\n");
-  fprintf(test_log, "localities: %d\n", size);
+  printf("Starting the HPX LCO Set and Get test\n");
+  printf("localities: %d\n", size);
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
   hpx_addr_t done = hpx_lco_future_new(sizeof(uint64_t));
-  hpx_call(HPX_HERE, t07_lcoSetGet, done, &n, sizeof(n));
+  hpx_call(HPX_HERE, _lcoSetGet, done, &n, sizeof(n));
 
   uint64_t result;
   hpx_lco_get(done, sizeof(uint64_t), &result);
-  fprintf(test_log, "Value returned = %"PRIu64"\n", result);
-  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  printf("Value returned = %"PRIu64"\n", result);
+  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 
   hpx_lco_delete(done, HPX_NULL);
+  return HPX_SUCCESS;
 }
-END_TEST
 
-//****************************************************************************
 // Testcase to test hpx_lco_wait_all function.
-//****************************************************************************
-int t07_initBlock_action(uint32_t *args) 
+static HPX_ACTION(_initBlock, uint32_t *args) 
 {
   hpx_addr_t target = hpx_thread_current_target();
   uint32_t *buffer = NULL;
@@ -154,7 +126,7 @@ int t07_initBlock_action(uint32_t *args)
   return HPX_SUCCESS;
 }
 
-int t07_initMemory_action(uint32_t *args) 
+static HPX_ACTION(_initMemory, uint32_t *args) 
 {
   hpx_addr_t local = hpx_thread_current_target();
   uint32_t block_size = args[0];
@@ -164,21 +136,20 @@ int t07_initMemory_action(uint32_t *args)
   hpx_addr_t completed = hpx_lco_and_new(blocks);
   for (int i = 0; i < blocks; i++) {
     hpx_addr_t block = hpx_addr_add(local, i * HPX_LOCALITY_ID * block_bytes, block_bytes);
-    hpx_call(block, t07_initBlock, completed, args, 2 * sizeof(*args));
+    hpx_call(block, _initBlock, completed, args, 2 * sizeof(*args));
   }
   hpx_lco_wait(completed);
   hpx_lco_delete(completed, HPX_NULL);
   return HPX_SUCCESS;
 }
 
-START_TEST (test_libhpx_lcoWaitAll)
-{
+static HPX_ACTION(test_libhpx_lcoWaitAll, void *UNUSED) {
   int size = HPX_LOCALITIES;
   int block_size = 1;
   int ranks = hpx_get_num_ranks();
 
-  fprintf(test_log, "Starting the HPX LCO Wait all test\n");
-  fprintf(test_log, "localities: %d\n", size);
+  printf("Starting the HPX LCO Wait all test\n");
+  printf("localities: %d\n", size);
 
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
@@ -186,8 +157,8 @@ START_TEST (test_libhpx_lcoWaitAll)
   uint32_t blocks = size;
   uint32_t block_bytes = block_size * sizeof(uint32_t);
 
-  fprintf(test_log,"Number of blocks and bytes per block = %d, %d\n", blocks, block_bytes);
-  fprintf(test_log, "Ranks and blocks per rank = %d, %d\n", ranks, blocks / ranks);
+  printf("Number of blocks and bytes per block = %d, %d\n", blocks, block_bytes);
+  printf("Ranks and blocks per rank = %d, %d\n", ranks, blocks / ranks);
   hpx_addr_t addr = hpx_gas_global_alloc(blocks, block_bytes);
 
   uint32_t args[2] = {
@@ -203,12 +174,12 @@ START_TEST (test_libhpx_lcoWaitAll)
 
   for (int i = 0; i < ranks; i++) {
     hpx_addr_t there = hpx_addr_add(addr, i * block_bytes, block_bytes);
-    hpx_call(there, t07_initMemory, done[0], args, sizeof(args));
+    hpx_call(there, _initMemory, done[0], args, sizeof(args));
   }
 
   for (int i = 0; i < rem; i++) {
     hpx_addr_t block = hpx_addr_add(addr, args[1] * ranks + i * block_bytes, block_bytes);
-    hpx_call(block, t07_initMemory, done[1], args, sizeof(args[0]));
+    hpx_call(block, _initMemory, done[1], args, sizeof(args[0]));
   }
 
   // Blocks the thread until all of the LCO's have been set.
@@ -218,15 +189,12 @@ START_TEST (test_libhpx_lcoWaitAll)
   
   hpx_gas_free(addr, HPX_NULL);
 
-  fprintf(test_log, " Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
-END_TEST
 
-//****************************************************************************
 // Testcase to test hpx_lco_get_all function
-//****************************************************************************
-
-int t07_getAll_action(uint32_t *args) {
+static HPX_ACTION(_getAll, uint32_t *args) {
   uint32_t n = *args;
   if (n < 2)
     HPX_THREAD_CONTINUE(n);
@@ -261,8 +229,8 @@ int t07_getAll_action(uint32_t *args) {
     sizeof(uint32_t)
   };
 
-  hpx_call(peers[0], t07_getAll, futures[0], &ns[0], sizeof(uint32_t));
-  hpx_call(peers[1], t07_getAll, futures[1], &ns[1], sizeof(uint32_t));
+  hpx_call(peers[0], _getAll, futures[0], &ns[0], sizeof(uint32_t));
+  hpx_call(peers[1], _getAll, futures[1], &ns[1], sizeof(uint32_t));
 
   hpx_lco_get_all(2, futures, sizes, addrs, NULL);
 
@@ -278,60 +246,52 @@ int t07_getAll_action(uint32_t *args) {
   return HPX_SUCCESS;
 }
 
-START_TEST (test_libhpx_lcoGetAll) 
-{
+static HPX_ACTION(test_libhpx_lcoGetAll, void *UNUSED) {
   uint32_t n, ssn;
-  fprintf(test_log, "Starting the HPX LCO get all test\n");
+  printf("Starting the HPX LCO get all test\n");
   for (uint32_t i = 0; i < 6; i++) {
     ssn = 0;
     n = i + 1;
     hpx_time_t t1 = hpx_time_now();
-    fprintf(test_log, "Square series for (%d): ", n);
+    printf("Square series for (%d): ", n);
     fflush(stdout);
-    hpx_call_sync(HPX_HERE, t07_getAll, &ssn, sizeof(ssn), &n, sizeof(n));
-    fprintf(test_log,"%d", ssn);
-    fprintf(test_log, " Elapsed: %.7f\n", hpx_time_elapsed_ms(t1)/1e3);
+    hpx_call_sync(HPX_HERE, _getAll, &ssn, sizeof(ssn), &n, sizeof(n));
+    printf("%d", ssn);
+    printf(" Elapsed: %.7f\n", hpx_time_elapsed_ms(t1)/1e3);
   }
+  return HPX_SUCCESS;
 }
-END_TEST
 
-//****************************************************************************
 // Testcase to test hpx_lco_error function
-//****************************************************************************
-int t07_errorSet_action(void *args) {
+static HPX_ACTION(_errorSet, void *args) {
   hpx_addr_t addr = *(hpx_addr_t*)args;
   // Propagate an error to an LCO
   hpx_lco_error(addr, HPX_ERROR, HPX_NULL);
   return HPX_SUCCESS;
 }
 
-START_TEST (test_libhpx_lcoError) 
-{
-  fprintf(test_log, "Starting the HPX LCO get all test\n");
+static HPX_ACTION(test_libhpx_lcoError, void *UNUSED) {
+  printf("Starting the HPX LCO get all test\n");
   hpx_time_t t1 = hpx_time_now();
   hpx_addr_t lco = hpx_lco_future_new(0);
   hpx_addr_t done = hpx_lco_future_new(0);
-  hpx_call(HPX_HERE, t07_errorSet, done, &lco, sizeof(lco));
+  hpx_call(HPX_HERE, _errorSet, done, &lco, sizeof(lco));
   hpx_status_t status = hpx_lco_wait(lco);
-  fprintf(test_log, "status == %d\n", status);
-  ck_assert(status == HPX_ERROR);
+  printf("status == %d\n", status);
+  assert(status == HPX_ERROR);
   hpx_lco_wait(done);
 
   hpx_lco_delete(lco, HPX_NULL);
   hpx_lco_delete(done, HPX_NULL);
  
-  fprintf(test_log, " Elapsed: %.7f\n", hpx_time_elapsed_ms(t1)/1e3);
+  printf(" Elapsed: %.7f\n", hpx_time_elapsed_ms(t1)/1e3);
+  return HPX_SUCCESS;
 }
-END_TEST
 
-//****************************************************************************
-// Register tests from this file
-//****************************************************************************
-
-void add_07_TestLCO(TCase *tc) {
-  tcase_add_test(tc, test_libhpx_lcoFunction);
-  tcase_add_test(tc, test_libhpx_lcoSetGet);
-  tcase_add_test(tc, test_libhpx_lcoWaitAll);
-  tcase_add_test(tc, test_libhpx_lcoGetAll);
-  tcase_add_test(tc, test_libhpx_lcoError);
-}
+TEST_MAIN({
+  ADD_TEST(test_libhpx_lcoFunction);
+  ADD_TEST(test_libhpx_lcoSetGet);
+  ADD_TEST(test_libhpx_lcoWaitAll);
+  ADD_TEST(test_libhpx_lcoGetAll);
+  ADD_TEST(test_libhpx_lcoError);
+});
