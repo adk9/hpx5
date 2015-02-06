@@ -5,22 +5,24 @@ shift
 
 function add_mpi() {
     # This is currently cutter-specific and needs to be generalized.
-    module load openmpi/1.8.1
-    export C_INCLUDE_PATH=$C_INCLUDE_PATH:/opt/openmpi/1.8.1/include/
+    module load openmpi/1.8.4_thread
+    export C_INCLUDE_PATH=$C_INCLUDE_PATH:/opt/openmpi/1.8.4_thread/include/
 }
 
 function add_photon() {
     # This is currently cutter-specific and needs to be generalized.
-    export HPX_USE_IB_DEV=mlx4_0
+    export HPX_USE_IB_DEV=$HPXIBDEV
     export HPX_USE_IB_PORT=1
     export HPX_USE_CMA=0
     export HPX_USE_ETH_DEV=roce0
+    export HPX_USE_BACKEND=verbs
 
     export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
     export LIBRARY_PATH=/usr/lib64:$LIBRARY_PATH
 }
 
 set -xe
+export PSM_MEMORY=large
 case "$HPXMODE" in
     photon)
 	CFGFLAGS=" --with-mpi=ompi --enable-photon "
@@ -39,13 +41,14 @@ esac
 echo "Building HPX in $DIR"
 cd $DIR
 
-module load /u/ldalessa/modules/modulefiles/gcc/4.9.2
+module load gcc/4.9.2
 rm -rf ./build/
 ./bootstrap
 mkdir build
 cd build
-../configure $CFGFLAGS --with-check --enable-testsuite $HPXDEBUG
+../configure --prefix=$DIR/build/HPX5/ $CFGFLAGS --enable-testsuite $HPXDEBUG
 make
+make install
 
 # Run all the unit tests:
 make check
