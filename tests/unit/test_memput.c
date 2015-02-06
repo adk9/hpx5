@@ -11,6 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
+#include <stdlib.h>
 #include "hpx/hpx.h"
 #include "tests.h"
 
@@ -57,8 +58,12 @@ static HPX_ACTION(test_libhpx_memput, void *UNUSED) {
   bool output = false;
   int e = hpx_call_sync(remote, _memput_verify,
                         &output, sizeof(output), NULL, 0);
-  assert_msg(e == HPX_SUCCESS, "hpx_call_sync failed with %d", e);
+  if (e != HPX_SUCCESS) {
+    fprintf(stderr, "hpx_call_sync failed with %d", e);
+    exit(EXIT_FAILURE);
+  }
   assert_msg(output == false, "gas_memput failed");
+  return HPX_SUCCESS;
 }
 
 TEST_MAIN({

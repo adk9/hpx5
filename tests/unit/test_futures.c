@@ -11,6 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
+#include <inttypes.h>
 #include "hpx/hpx.h"
 #include "tests.h"
 
@@ -70,6 +71,7 @@ static HPX_ACTION(test_libhpx_lco_future_new, void *UNUSED) {
     hpx_lco_delete(futures[i], HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
 
 // This testcase tests the hpx_lco_future_array_new API function which
@@ -95,6 +97,7 @@ static HPX_ACTION(test_libhpx_lco_future_array, void *UNUSED) {
   printf("value = %"PRIu64"\n", value);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
 
 TEST_MAIN({

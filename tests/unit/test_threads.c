@@ -22,17 +22,19 @@
 //  8. hpx_thread_continue()
 //  9. hpx_thread_continue_cleanup()
 // 10. hpx_thread_exit()
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include "hpx/hpx.h"
 #include "tests.h"
-#include "domain.h"
 #include "libhpx/locality.h"
 #include "libsync/queues.h"
 
 #define NUM_THREADS 5
 #define ARRAY_SIZE 100
+#define BUFFER_SIZE 128
 
 const int DATA_SIZE = sizeof(uint64_t);
 const int SET_CONT_VALUE = 1234;
@@ -99,6 +101,7 @@ static HPX_ACTION(test_libhpx_threadCreate, void *UNUSED) {
   hpx_gas_free(addr, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
 
 // Finish the current thread's execution. The behavior of this call depends
@@ -131,6 +134,7 @@ static HPX_ACTION(test_libhpx_threadExit, void *UNUSED) {
   hpx_lco_delete(done, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
 
 
@@ -172,10 +176,10 @@ static HPX_ACTION(test_libhpx_threadGetTlsID, void *UNUSED) {
   }
 
   hpx_lco_wait(done);
-
   hpx_lco_delete(done, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
 
 // Finish the current thread's execution, sending value to the thread's
@@ -197,7 +201,7 @@ static HPX_ACTION(test_libhpx_threadContinue, void *UNUSED) {
     cont_fut[i] = hpx_lco_future_new(DATA_SIZE);
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
     hpx_parcel_set_target(p, HPX_THERE(i));
-    hpx_parcel_set_action(p, _cont_thread);
+    hpx_parcel_set_action(p, _set_cont);
     hpx_parcel_set_cont_target(p, cont_fut[i]);
     hpx_parcel_set_cont_action(p, hpx_lco_set_action);
     hpx_parcel_send(p, HPX_NULL);
@@ -216,6 +220,7 @@ static HPX_ACTION(test_libhpx_threadContinue, void *UNUSED) {
   free(cont_fut);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
 
 // hpx_thread_yield()
@@ -225,9 +230,7 @@ struct _yield_args {
   double time_limit;
 };
 
-static HPX_ACTION(_yield_worker, struct _yield_args *vargs) {
-  struct _yield_args *args = *vargs;
-
+static HPX_ACTION(_yield_worker, struct _yield_args *args) {
   // int num =
   sync_addf(args->counter, 1, SYNC_SEQ_CST);
 
@@ -281,6 +284,7 @@ static HPX_ACTION(test_libhpx_threadYield, void *UNUSED) {
   assert_msg(any_timeouts == false, "Threads did not yield.");
 
   free(done);
+  return HPX_SUCCESS;
 }
 
 
@@ -321,6 +325,7 @@ static HPX_ACTION(test_libhpx_threadContinueCleanup, void *UNUSED) {
   hpx_gas_free(src, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
 
 // hpx_thread_current_cont_action gets the continuation action for the current
@@ -359,6 +364,7 @@ static HPX_ACTION(test_libhpx_threadContAction, void *UNUSED) {
   free(cont_and);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
 
 TEST_MAIN({

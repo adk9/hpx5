@@ -82,11 +82,13 @@ static HPX_ACTION(test_libhpx_gas_global_alloc, void *UNUSED) {
   hpx_gas_free(domain, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
 
 static HPX_ACTION(test_libhpx_gas_global_alloc_block, void *UNUSED) {
   hpx_addr_t data = hpx_gas_global_alloc(1, 1024 * sizeof(char));
   hpx_gas_free(data, HPX_NULL);
+  return HPX_SUCCESS;
 }
 
 TEST_MAIN({
