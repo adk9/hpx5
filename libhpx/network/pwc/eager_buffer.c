@@ -138,14 +138,28 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   p->sequence = sequence;
 #endif
 
-  pwc_trace("send %u bytes to (%d, %p) [%lu]\n", n, tx->peer->rank,
-            tx->peer->segments[SEGMENT_EAGER].base + tx->tx_base + roff,
-            sequence);
+#ifdef ENABLE_INSTRUMENTATION
+  if (hpx_inst_enabled) {
+    hpx_inst_event_network_pwc_send_t event = {
+      .sequence = sequence,
+      .bytes = n,
+      .address = tx->peer->segments[SEGMENT_EAGER].base + tx->tx_base + roff,
+      .target_rank = tx->peer->rank
+    };
+    hpx_inst_log_event(HPX_INST_CLASS_NETWORK_PWC,
+                       HPX_INST_EVENT_NETWORK_PWC_SEND, 0, sizeof(event),
+                       &event);
+  }
+#endif
 
-  log_net("sequence: %lu, sending %d bytes to %d at %p (%s)\n",
-          p->sequence, n, tx->peer->rank,
-          tx->peer->segments[SEGMENT_EAGER].base + tx->tx_base + roff,
-          action_table_get_key(here->actions, p->action));
+  // pwc_trace("send %u bytes to (%d, %p) [%lu]\n", n, tx->peer->rank,
+  //           tx->peer->segments[SEGMENT_EAGER].base + tx->tx_base + roff,
+  //           sequence);
+
+  // log_net("sequence: %lu, sending %d bytes to %d at %p (%s)\n",
+  //         p->sequence, n, tx->peer->rank,
+  //         tx->peer->segments[SEGMENT_EAGER].base + tx->tx_base + roff,
+  //         action_table_get_key(here->actions, p->action));
 
   int e = peer_pwc(tx->peer,                     // peer structure
                    tx->tx_base + roff,           // remote offset
@@ -222,8 +236,22 @@ hpx_parcel_t *eager_buffer_rx(eager_buffer_t *rx) {
   // Before we leave, check some basics.
   dbg_assert(hpx_gas_try_pin(p->target, NULL));
 
-  pwc_trace("recv %u bytes at %p from %d [%lu]\n",
-            bytes, from, rx->peer->rank, p->sequence);
+#ifdef ENABLE_INSTRUMENTATION
+  if (hpx_inst_enabled) {
+    hpx_inst_event_network_pwc_recv_t event = {
+      .sequence = p->sequence,
+      .bytes = bytes,
+      .address = from,
+      .source_rank = rx->peer->rank
+    };
+    hpx_inst_log_event(HPX_INST_CLASS_NETWORK_PWC,
+                       HPX_INST_EVENT_NETWORK_PWC_RECV, 0, sizeof(event),
+                       &event);
+  }
+#endif
+
+  // pwc_trace("recv %u bytes at %p from %d [%lu]\n",
+  //           bytes, from, rx->peer->rank, p->sequence);
 
   // Update the progress in this buffer.
   rx->min += bytes;
