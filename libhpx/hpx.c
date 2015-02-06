@@ -55,6 +55,8 @@ static void _cleanup(locality_t *l) {
     l->sched = NULL;
   }
 
+  HPX_INST_FINI();
+
   if (l->network) {
     network_delete(l->network);
     l->network = NULL;
@@ -263,7 +265,6 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
  unwind1:
   _cleanup(here);
  unwind0:
-  HPX_INST_FINI();
   return status;
 }
 
@@ -299,6 +300,8 @@ void hpx_shutdown(int code) {
 /// Called by the application to shutdown the scheduler and network. May be
 /// called from any lightweight HPX thread, or the network thread.
 void hpx_abort(void) {
+  HPX_INST_FINI();
+
   if (here && here->config && here->config->waitonabort) {
     dbg_wait();
   }
