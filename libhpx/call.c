@@ -110,6 +110,18 @@ int hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
   return e;
 }
 
+/// hpx_call_when with a user-specified continuation action.
+int hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr, 
+                                    hpx_action_t action, hpx_addr_t c_target, 
+                                    hpx_action_t c_action, ...) {
+  va_list vargs;
+  va_start(vargs, c_action);
+  int e = libhpx_call_action(here->actions, addr, action, c_target, c_action,
+                             HPX_NULL, gate, &vargs);
+  va_end(vargs);
+  return e;
+}
+
 int hpx_call_async(hpx_addr_t addr, hpx_action_t action,
                    hpx_addr_t lsync, hpx_addr_t result, ...) {
   va_list vargs;
