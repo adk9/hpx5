@@ -24,10 +24,11 @@
 #include "libhpx/instrumentation.h"
 #include "logtable.h"
 
-#ifdef HPX_INST_ENABLED
+#ifdef ENABLE_INSTRUMENTATION
 static logtable_t logtables[HPX_INST_NUM_EVENTS];
 static size_t inst_max_log_size = 40*1024*1024-1;
-static bool hpx_inst_enabled = false;
+bool hpx_inst_enabled = false;
+bool hpx_inst_parcel_enabled = false;
 static bool inst_class_enabled[HPX_INST_NUM_CLASSES];
 static char inst_dir_name[256];
 static hpx_time_t time_start;
@@ -72,10 +73,11 @@ log_create(hpx_inst_class_type_t class, hpx_inst_event_type_t event,
 #endif
 
 int hpx_inst_init() {
-#ifdef HPX_INST_ENABLED
+#ifdef ENABLE_INSTRUMENTATION
   int success = -1;
 
   hpx_inst_enabled = get_env_var("HPX_INST_ENABLE");
+  hpx_inst_parcel_enabled = hpx_inst_enabled;
   if (!hpx_inst_enabled)
     return HPX_SUCCESS;
   
@@ -137,7 +139,7 @@ int hpx_inst_init() {
 }
 
 void hpx_inst_fini() {
-#ifdef HPX_INST_ENABLED
+#ifdef ENABLE_INSTRUMENTATION
   inst_active = false;
   for (int i = 0; i < HPX_INST_NUM_EVENTS; i++)
     if (logtables[i].inited == true)
@@ -160,7 +162,7 @@ void hpx_inst_log_event(
                            int user_data_size,
                            void* user_data
                            ) {
-#ifdef HPX_INST_ENABLED
+#ifdef ENABLE_INSTRUMENTATION
   if (!hpx_inst_enabled)
     return;
   

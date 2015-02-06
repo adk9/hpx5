@@ -31,7 +31,7 @@
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
-#include <libhpx/logging.h>
+#include <libhpx/instrumentation.h>
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>                      // used as thread-control block
 #include <libhpx/process.h>
@@ -222,7 +222,7 @@ static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
 static hpx_parcel_t *_schedule_lifo(struct worker *w) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&w->work);
   if (p != NULL) {
-    HPX_LOG_EVENT_PARCEL_RUN(p);
+    HPX_INST_EVENT_PARCEL_RUN(p);
   }
   return p;
 }
@@ -288,7 +288,7 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   if (stack) {
     thread_delete(stack);
   }
-  HPX_LOG_EVENT_PARCEL_END(prev);
+  HPX_INST_EVENT_PARCEL_END(prev);
   hpx_parcel_release(prev);
   int status = (intptr_t)env;
   return status;
