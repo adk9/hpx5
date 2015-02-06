@@ -142,7 +142,7 @@ static int _pwc_send(network_t *network, hpx_parcel_t *p) {
     return peer_send(peer, p, HPX_NULL);
   }
   else {
-    return peer_send_rendevous(peer, p, HPX_NULL);
+    return peer_send_rendezvous(peer, p, HPX_NULL);
   }
 }
 
@@ -261,8 +261,15 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   pwc->gas = gas;
   pwc->rank = boot_rank(boot);
   pwc->ranks = ranks;
-  pwc->parcel_buffer_size = 1u << ceil_log2_32(cfg->parcelbuffersize);
   pwc->parcel_eager_limit = 1u << ceil_log2_32(cfg->parceleagerlimit);
+  // NB: 16 is sizeof(_get_parcel_args_t) in peer.c
+  const int limit = sizeof(hpx_parcel_t) - pwc_prefix_size() + 16;
+  if (pwc->parcel_eager_limit < limit) {
+    dbg_error("--hpx-parceleagerlimit must be at least %u bytes\n", limit);
+    goto unwind;
+  }
+
+  pwc->parcel_buffer_size = 1u << ceil_log2_32(cfg->parcelbuffersize);
   log("initialized a %u-byte buffer size\n", pwc->parcel_buffer_size);
 
   // Allocate the network's eager segment.
