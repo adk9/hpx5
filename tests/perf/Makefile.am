@@ -13,10 +13,7 @@ TESTS = perf_gas_alloc		\
         perf_gas_addr_trans	\
         perf_lco_chan		\
         perf_lco_sema		\
-        perf_lco_future		\
-        perf_lco_allreduce	\
-        perf_lco_allgather	\
-        perf_lco_alltoall
+        perf_lco_future		
 
 if ENABLE_LENGTHY_TESTS
 TESTS += perf_lco_and
@@ -29,18 +26,12 @@ perf_gas_addr_trans_SOURCES	= perf_gas_addr_trans.c
 perf_lco_chan_SOURCES		= perf_lco_chan.c
 perf_lco_sema_SOURCES		= perf_lco_sema.c
 perf_lco_future_SOURCES		= perf_lco_future.c
-perf_lco_allreduce_SOURCES	= perf_lco_allreduce.c
-perf_lco_allgather_SOURCES	= perf_lco_allgather.c
-perf_lco_alltoall_SOURCES	= perf_lco_alltoall.c
 
 perf_gas_alloc_DEPENDENCIES	= $(HPX_LDADD)
 perf_gas_addr_trans_DEPENDENCIES= $(HPX_LDADD)
 perf_lco_chan_DEPENDENCIES	= $(HPX_LDADD)
 perf_lco_sema_DEPENDENCIES	= $(HPX_LDADD)
 perf_lco_future_DEPENDENCIES	= $(HPX_LDADD)
-perf_lco_allreduce_DEPENDENCIES	= $(HPX_LDADD)
-perf_lco_allgather_DEPENDENCIES	= $(HPX_LDADD)
-perf_lco_alltoall_DEPENDENCIES	= $(HPX_LDADD)
 
 if ENABLE_LENGTHY_TESTS
 perf_lco_and_SOURCES		= perf_lco_and.c
