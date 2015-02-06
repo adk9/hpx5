@@ -22,6 +22,7 @@ function add_photon() {
 }
 
 set -xe
+export PSM_MEMORY=large
 case "$HPXMODE" in
     photon)
 	CFGFLAGS=" --with-mpi=ompi --enable-photon "
