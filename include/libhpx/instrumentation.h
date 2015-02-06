@@ -10,17 +10,21 @@
 #endif
 
 typedef enum {
-  HPX_INST_CLASS_PARCEL,
+  HPX_INST_CLASS_PARCEL = 0,
+  HPX_INST_CLASS_NETWORK_PWC,
 
   HPX_INST_NUM_CLASSES
 } hpx_inst_class_type_t;
 
 typedef enum {
-  HPX_INST_EVENT_PARCEL_CREATE,
+  HPX_INST_EVENT_PARCEL_CREATE = 0,
   HPX_INST_EVENT_PARCEL_SEND,
   HPX_INST_EVENT_PARCEL_RECV,
   HPX_INST_EVENT_PARCEL_RUN,
   HPX_INST_EVENT_PARCEL_END,
+
+  HPX_INST_EVENT_NETWORK_PWC_SEND,
+  HPX_INST_EVENT_NETWORK_PWC_RECV,
 
   HPX_INST_NUM_EVENTS
 } hpx_inst_event_type_t;
@@ -98,6 +102,20 @@ typedef struct {
   uint64_t action;
   uint64_t size;
 } hpx_inst_event_parcel_end_t;
+
+typedef struct {
+  uint64_t sequence;
+  uint64_t bytes;
+  uint64_t address;
+  uint64_t target_rank;
+} hpx_inst_event_network_pwc_send_t;
+
+typedef struct {
+  uint64_t sequence;
+  uint64_t bytes;
+  uint64_t address;
+  uint64_t source_rank;
+} hpx_inst_event_network_pwc_recv_t;
 
 extern bool hpx_inst_enabled;
 extern bool hpx_inst_parcel_enabled;
