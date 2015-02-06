@@ -207,21 +207,16 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
   hpx_parcel_set_cont_action(p, c_action);
   hpx_parcel_set_cont_target(p, c_addr);
 
-  if (gate) {
-    if (lsync) {
-      hpx_parcel_send_through(p, gate, lsync);
-    } else {
-      hpx_parcel_send_through_sync(p, gate);
-    }
-  } else {
-    if (lsync) {
-      hpx_parcel_send(p, lsync);
-    } else {
-      hpx_parcel_send_sync(p);
-    }
+  if (likely(!gate && !lsync)) {
+    return hpx_parcel_send_sync(p);
   }
-
-  return HPX_SUCCESS;
+  if (!gate && lsync) {
+    return hpx_parcel_send(p, lsync);
+  }
+  if (!lsync) {
+    return hpx_parcel_send_through_sync(p, gate);
+  }
+  return hpx_parcel_send_through(p, gate, lsync);
 }
 
 int action_table_run_handler(const struct action_table *table,
