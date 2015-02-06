@@ -14,19 +14,16 @@ pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = hpx.pc
 
 SUBDIRS       = contrib libsync libhpx include examples bench
-DIST_SUBDIRS  = contrib libsync libhpx include examples bench
+DIST_SUBDIRS  = contrib libsync libhpx include examples bench tests docs tutorial
 
 if ENABLE_DOCS
 SUBDIRS      += docs
-DIST_SUBDIRS += docs
 endif
 
 if ENABLE_TESTS
 SUBDIRS      += tests
-DIST_SUBDIRS += tests
 endif
 
 if ENABLE_TUTORIAL
 SUBDIRS      += tutorial
-DIST_SUBDIRS += tutorial
 endif
