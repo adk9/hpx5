@@ -44,6 +44,12 @@ static const char * const HPX_INST_EVENT_TYPE_TO_STRING[] = {
   "EVENT_NETWORK_PWC_RECV"
 };
 
+static const int HPX_INST_CLASS_EVENT_OFFSET[] = {
+  0,
+  5,
+  7
+};
+
 static const int HPX_INST_EVENTS_PER_CLASS[] = {5, 0};
 static const int HPX_INST_FIRST_EVENT_FOR_CLASS[] = {0, 5};
 
