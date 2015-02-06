@@ -124,6 +124,17 @@ static void _set_config_options(config_t *cfg, hpx_options_t *opts) {
     }
   }
 
+  if (opts->hpx_traceclasses_given) {
+    cfg->traceclasses = 0;
+    for (int i = 0; i < opts->hpx_traceclasses_given; ++i) {
+      if (opts->hpx_traceclasses_arg[i] == hpx_traceclasses_arg_all) {
+        cfg->traceclasses = -1;
+        break;
+      }
+      cfg->traceclasses |= (1 << opts->hpx_traceclasses_arg[i]);
+    }
+  }
+
   if (opts->hpx_logat_given) {
     if (opts->hpx_logat_arg[0] == HPX_LOCALITY_ALL) {
       cfg->logat = (int*)HPX_LOCALITY_ALL;
