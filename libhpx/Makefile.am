@@ -9,7 +9,8 @@ lib_LTLIBRARIES	   = libhpx.la
 libhpx_la_SOURCES  = hpx.c call.c par.c action.c debug.c 
 
 libhpx_la_CPPFLAGS = -I$(top_srcdir)/include
-libhpx_la_LIBADD   = $(HPX_LIBFFI_LDADD) \
+libhpx_la_LIBADD   = $(HPX_LIBS) \
+                     $(HPX_LIBFFI_LDADD) \
                      $(HPX_PHOTON_LDADD) \
                      $(HWLOC_EMBEDDED_LDADD) \
                      boot/libboot.la \

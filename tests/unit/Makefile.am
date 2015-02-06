@@ -17,13 +17,18 @@ TESTS            = test_and_lco           \
                    test_gencount          \
                    test_global_mem_alloc  \
                    test_lco               \
+                   test_collectives       \
                    test_mem_alloc         \
                    test_memget            \
                    test_memput            \
                    test_parcel            \
+                   test_call              \
                    test_sema              \
-                   test_threads           \
-                   test_wait
+                   test_threads
+
+if ENABLE_LENGTHY_TESTS
+TESTS           += test_wait
+endif
 
 test_and_lco_SOURCES            = test_and_lco.c
 test_channels_SOURCES           = test_channels.c
@@ -31,17 +36,17 @@ test_futures_SOURCES            = test_futures.c
 test_gencount_SOURCES           = test_gencount.c
 test_global_mem_alloc_SOURCES   = test_global_mem_alloc.c
 test_lco_SOURCES                = test_lco.c
+test_collectives_SOURCES        = test_collectives.c
 test_mem_alloc_SOURCES          = test_mem_alloc.c
 test_memget_SOURCES             = test_memget.c
 test_memput_SOURCES             = test_memput.c
 test_parcel_SOURCES             = test_parcel.c
+test_call_SOURCES               = test_call.c
 test_sema_SOURCES               = test_sema.c
 test_threads_SOURCES            = test_threads.c
-test_wait_SOURCES               = test_wait.c
 
-#if HAVE_PHOTON
-#TESTS += test_netfutures
-#test_netfutures_SOURCES         = test_netfutures.c
-#endif
+if ENABLE_LENGTHY_TESTS
+test_wait_SOURCES               = test_wait.c
+endif
 
 LOG_COMPILER = $(TESTS_CMD)
