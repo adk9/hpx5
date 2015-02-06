@@ -129,13 +129,9 @@ hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p)
 ///                       written to or freed), or HPX_NULL if the caller does
 ///                       not care.
 ///
-/// @param        rsync An LCO to be set when the parcel has arrived at the
-///                       LCO. This will not indicate if the parcel was buffered
-///                       or simply forwarded.
-///
 /// @returns            HPX_SUCCESS or an error code.
 hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
-                                     hpx_addr_t lsync, hpx_addr_t rsync)
+                                     hpx_addr_t lsync)
   HPX_NON_NULL(1);
 
 /// Send a parcel "through" an LCO.
@@ -150,13 +146,8 @@ hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
 ///
 /// @param         gate The LCO that will serve as the gate.
 ///
-/// @param        rsync An LCO to be set when the parcel has arrived at the
-///                       LCO. This will not indicate if the parcel was buffered
-///                       or simply forwarded.
-///
 /// @returns            HPX_SUCCESS or an error code.
-hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t lco,
-                                          hpx_addr_t rsync)
+hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t lco)
   HPX_NON_NULL(1);
 
 /// Get the action associated with a parcel.
