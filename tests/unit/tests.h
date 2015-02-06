@@ -3,7 +3,6 @@
 
 #include <string.h>
 #include <stdio.h>
-#include <inttypes.h>
 #include <assert.h>
 #include <hpx/hpx.h>
 
@@ -13,7 +12,6 @@
     int e = hpx_call_sync(HPX_HERE, test, NULL, 0, NULL, 0); \
     assert (e == HPX_SUCCESS);                               \
   } while (0)
-        
 
 // A helper macro to generate a main function template for the test.
 #define TEST_MAIN(tests)                             \
@@ -25,18 +23,6 @@ int main(int argc, char *argv[]) {                   \
   if (hpx_init(&argc, &argv)) {                      \
     fprintf(stderr, "failed to initialize HPX.\n");  \
     return 1;                                        \
-  }                                                  \
-  int _topt = 0;                                     \
-  while ((_topt = getopt(argc, argv, "h?")) != -1) { \
-    switch (_topt) {                                 \
-     case 'h':                                       \
-      usage(stdout);                                 \
-      return 0;                                      \
-     case '?':                                       \
-     default:                                        \
-      usage(stderr);                                 \
-      return -1;                                     \
-    }                                                \
   }                                                  \
   return hpx_run(&_main, NULL, 0);                   \
 }                                                    \

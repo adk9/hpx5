@@ -78,6 +78,7 @@ static HPX_ACTION(test_libhpx_lco_Semaphores, void *UNUSED) {
   hpx_lco_delete(futures[1], HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
 
 TEST_MAIN({

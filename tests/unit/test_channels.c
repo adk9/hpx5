@@ -101,6 +101,7 @@ static HPX_ACTION(test_libhpx_lco_channelSendRecv, void *UNUSED) {
   hpx_lco_delete(done, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 } 
 
 // Send a buffer through an ordered channel. All in order sends from a thread
@@ -166,6 +167,7 @@ static HPX_ACTION(test_libhpx_lco_channelSendInOrder, void *UNUSED) {
   hpx_lco_delete(done, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
 
 // Testcase to test hpx_lco_chan_try_recv function, which probes a single 
@@ -193,6 +195,7 @@ static HPX_ACTION(test_libhpx_lco_channelTryRecvEmpty, void *UNUSED) {
   hpx_lco_delete(done, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
 
 // This testcase tests the functions, hpx_lco_array_new and hpx_lco_chan_array
@@ -255,6 +258,7 @@ static HPX_ACTION(test_libhpx_lco_channelArray, void *UNUSED) {
   hpx_lco_chan_array_delete(channels, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
 
 TEST_MAIN({

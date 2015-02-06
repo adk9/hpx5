@@ -11,6 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
+#include <inttypes.h>
 #include "hpx/hpx.h"
 #include "tests.h"
 
@@ -63,6 +64,7 @@ static HPX_ACTION(test_libhpx_lcoFunction, void *UNUSED) {
   
   hpx_gas_free(addr, HPX_NULL);
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
 
 // Testcase to test hpx_lco_set and hpx_lco_get functions.
@@ -102,6 +104,7 @@ static HPX_ACTION(test_libhpx_lcoSetGet, void *UNUSED) {
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 
   hpx_lco_delete(done, HPX_NULL);
+  return HPX_SUCCESS;
 }
 
 // Testcase to test hpx_lco_wait_all function.
@@ -187,6 +190,7 @@ static HPX_ACTION(test_libhpx_lcoWaitAll, void *UNUSED) {
   hpx_gas_free(addr, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
 
 // Testcase to test hpx_lco_get_all function
@@ -255,6 +259,7 @@ static HPX_ACTION(test_libhpx_lcoGetAll, void *UNUSED) {
     printf("%d", ssn);
     printf(" Elapsed: %.7f\n", hpx_time_elapsed_ms(t1)/1e3);
   }
+  return HPX_SUCCESS;
 }
 
 // Testcase to test hpx_lco_error function
@@ -280,6 +285,7 @@ static HPX_ACTION(test_libhpx_lcoError, void *UNUSED) {
   hpx_lco_delete(done, HPX_NULL);
  
   printf(" Elapsed: %.7f\n", hpx_time_elapsed_ms(t1)/1e3);
+  return HPX_SUCCESS;
 }
 
 TEST_MAIN({

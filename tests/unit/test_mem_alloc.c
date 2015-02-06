@@ -85,6 +85,7 @@ static HPX_ACTION(test_libhpx_gas_alloc, void *UNUSED) {
   hpx_gas_free(local, HPX_NULL);  
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 } 
 
 TEST_MAIN({
