@@ -43,6 +43,9 @@ struct hpx_parcel {
   hpx_addr_t     c_target;
   hpx_pid_t           pid;
   uint64_t         credit;
+#ifdef ENABLE_INSTRUMENTATION
+  uint64_t             id;
+#endif
   char           buffer[];
 };
 

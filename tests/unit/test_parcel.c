@@ -314,19 +314,11 @@ hpx_addr_t _cascade(hpx_addr_t done, hpx_addr_t val, const int n) {
     goto unwind0;
   }
 
-  // we'll wait until all of the parcels are gated before returning---this isn't
-  // strictly necessary and it might make a good test not to do this, but doing
-  // it this way stresses the rsync parameter to hpx_parcel_send_through
-  hpx_addr_t and = hpx_lco_and_new(n);
-  if (_is_hpxnull(and)) {
-    goto unwind1;
-  }
-
   // set up the prefix of the cascade
   for (int i = 0, e = n; i < e; ++i) {
     hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(int));
     if (_is_null(p)) {
-      goto unwind2;
+      goto unwind1;
     }
 
     // set up the initial action we want to run
@@ -348,22 +340,16 @@ hpx_addr_t _cascade(hpx_addr_t done, hpx_addr_t val, const int n) {
     // send the parcel through the current gate
     hpx_addr_t gate = hpx_lco_future_array_at(gates, i, 0, 1);
     if (_is_hpxnull(gate)) {
-      goto unwind2;
+      goto unwind1;
     }
 
-    if (_is_error(hpx_parcel_send_through_sync(p, gate, and))) {
-      goto unwind2;
+    if (_is_error(hpx_parcel_send_through_sync(p, gate))) {
+      goto unwind1;
     }
   }
 
-  if (_is_error(hpx_lco_wait(and))) {
-    goto unwind2;
-  }
-  hpx_lco_delete(and, HPX_NULL);
   return gates;
 
- unwind2:
-  hpx_lco_delete(and, HPX_NULL);
  unwind1:
   hpx_lco_delete(gates, HPX_NULL);
  unwind0:
