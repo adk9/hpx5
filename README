@@ -7,14 +7,15 @@ There are several pre-requisites to successfully configure and run HPX.
 
 Requirements
 ------------
-* autoconf 2.6.3+
-* libtool, pkg-config (only required for developer builds)
-* MPI (optional)
-* check           (optional)
-* doxygen         (optional)
-* Photon          (optional / embedded with HPX)
-* jemalloc        (optional / embedded with HPX)
-* hwloc           (optional / embedded with HPX)
+* autoconf 2.6.3+    (only required for developer builds)
+* automake 1.11+     (only required for developer builds)
+* libtool,pkg-config (only required for developer builds)
+* MPI                (optional)
+* doxygen            (optional)
+* Photon             (embedded with HPX)
+* jemalloc           (embedded with HPX)
+* hwloc              (embedded with HPX)
+* libffi             (embedded with HPX)
 
 HPX can build and run successfully without any network backend, but at
 present, MPI or Photon is required for networking by HPX. Photon can
@@ -111,3 +112,10 @@ or
   HPX_USE_CMA=1
   HPX_USE_BACKEND=ugni
 ```
+
+With MPI, the device to use can be selected by passing the relevant flags to the launcher
+For Open MPI, to use the `mlx4_0` device over `qib0`:
+```
+ mpirun -np N --mca mtl ^psm --mca btl_openib_if_include mlx4_0 <...>
+```
+
