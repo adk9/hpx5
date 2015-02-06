@@ -48,6 +48,8 @@ LIBHPX_DECL_OPTION(hpx, arg, uint32_t, recvlimit, 0)
 LIBHPX_DECL_OPTION(hpx, arg, char *, configfile, 0)
 LIBHPX_DECL_OPTION(hpx, flag, int, statistics, 1)
 
+LIBHPX_DECL_OPTION(hpx, arg[0], trace_class_t, traceclasses, HPX_TRACE_CLASS_DEFAULT)
+
 LIBHPX_DECL_OPTION(dbg, flag, int, mprotectstacks, 0)
 LIBHPX_DECL_OPTION(dbg, flag, int, waitonabort, 0)
 

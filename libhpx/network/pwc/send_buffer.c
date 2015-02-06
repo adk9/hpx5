@@ -115,10 +115,8 @@ static int _send_buffer_progress(send_buffer_t *sends) {
 static HPX_ACTION(_finish_get_rx_min, void *UNUSED) {
   uint32_t id = pgas_gpa_to_offset(hpx_thread_current_target());
   peer_t *peer = pwc_get_peer(here->network, id);
-  DEBUG_IF(!peer) {
-    return dbg_error("invalid peer id %u\n", id);
-  }
-
+  dbg_assert_str(peer, "invalid peer id %u\n", id);
+  log_net("updated min to %lu\n", peer->tx.min);
   return _send_buffer_progress(&peer->send);
 }
 

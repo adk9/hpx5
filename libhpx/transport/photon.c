@@ -477,7 +477,7 @@ transport_t *transport_new_photon(uint32_t send_limit, uint32_t recv_limit) {
   cfg->ibv.ib_dev          = ib_dev;
   cfg->cap.eager_buf_size  = -1;     // default 256k
   cfg->cap.small_msg_size  = -1;     // default 4096
-  cfg->cap.small_pwc_size  =  1024;  // 0 disabled
+  cfg->cap.small_pwc_size  =  0; //1024;  // 0 disabled
   cfg->cap.ledger_entries  = ledger_entries;
   cfg->cap.max_rd          = -1;     // default 1M
   cfg->cap.default_rd      = -1;     // default 1024

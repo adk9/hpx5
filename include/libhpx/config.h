@@ -134,6 +134,12 @@ static const char* const HPX_LOG_TO_STRING[] = {
   "LOG_ALL"
 };
 
+typedef enum {
+  HPX_TRACE_CLASS_DEFAULT = (1<<0),
+  HPX_TRACE_CLASS_PARCELS = (1<<1),
+  HPX_TRACE_CLASS_PWC     = (1<<2),
+  HPX_TRACE_CLASS_ALL     =   (-1)
+} trace_class_t;
 
 /// The HPX configuration type.
 ///

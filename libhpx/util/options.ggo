@@ -64,6 +64,11 @@ option "hpx-logat" - "selectively output log information"
 typestr="[localities]"
 int optional multiple
 
+option "hpx-traceclasses" - "set the event classes to trace"
+typestr="class"
+values="default","parcel","pwc","all"
+enum optional argoptional multiple
+
 option "hpx-statistics" - "print HPX runtime statistics"
 flag off
 
