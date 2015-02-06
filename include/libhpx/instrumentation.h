@@ -10,25 +10,50 @@
 #endif
 
 typedef enum {
-  HPX_INST_CLASS_PARCEL,
+  HPX_INST_CLASS_PARCEL = 0,
+  HPX_INST_CLASS_NETWORK_PWC,
 
   HPX_INST_NUM_CLASSES
 } hpx_inst_class_type_t;
 
+static const char * const HPX_INST_CLASS_TYPE_TO_STRING[] = {
+  "CLASS_PARCEL",
+  "CLASS_NETWORK_PWC",
+};
+
 typedef enum {
-  HPX_INST_EVENT_PARCEL_CREATE,
+  HPX_INST_EVENT_PARCEL_CREATE = 0,
   HPX_INST_EVENT_PARCEL_SEND,
   HPX_INST_EVENT_PARCEL_RECV,
   HPX_INST_EVENT_PARCEL_RUN,
   HPX_INST_EVENT_PARCEL_END,
 
+  HPX_INST_EVENT_NETWORK_PWC_SEND,
+  HPX_INST_EVENT_NETWORK_PWC_RECV,
+
   HPX_INST_NUM_EVENTS
 } hpx_inst_event_type_t;
+
+static const char * const HPX_INST_EVENT_TYPE_TO_STRING[] = {
+  "EVENT_PARCEL_CREATE",
+  "EVENT_PARCEL_SEND",
+  "EVENT_PARCEL_RECV",
+  "EVENT_PARCEL_RUN",
+  "EVENT_PARCEL_END",
+  "EVENT_NETWORK_PWC_SEND",
+  "EVENT_NETWORK_PWC_RECV"
+};
+
+static const int HPX_INST_CLASS_EVENT_OFFSET[] = {
+  0,
+  5,
+  7
+};
 
 static const int HPX_INST_EVENTS_PER_CLASS[] = {5, 0};
 static const int HPX_INST_FIRST_EVENT_FOR_CLASS[] = {0, 5};
 
-typedef struct {
+typedef struct hpx_inst_event {
   hpx_inst_class_type_t class;      /// event class (i.e. subsystem)
   hpx_inst_event_type_t event_type; /// event symbol
   int rank;
@@ -42,7 +67,7 @@ typedef struct {
   uint64_t data[4];                 /// user data for event
 } hpx_inst_event_t; /// represents a logged event in memory
 
-typedef struct {
+typedef struct logtable {
 
   // parameters of log
   int record_size;    /// size in bytes per record
@@ -98,6 +123,20 @@ typedef struct {
   uint64_t action;
   uint64_t size;
 } hpx_inst_event_parcel_end_t;
+
+typedef struct {
+  uint64_t sequence;
+  uint64_t bytes;
+  uint64_t address;
+  uint64_t target_rank;
+} hpx_inst_event_network_pwc_send_t;
+
+typedef struct {
+  uint64_t sequence;
+  uint64_t bytes;
+  uint64_t address;
+  uint64_t source_rank;
+} hpx_inst_event_network_pwc_recv_t;
 
 extern bool hpx_inst_enabled;
 extern bool hpx_inst_parcel_enabled;
