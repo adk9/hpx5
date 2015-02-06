@@ -33,6 +33,8 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
+#define BUFFER_SIZE 128
+
 typedef struct initBuffer {
   int  index;
   char message[BUFFER_SIZE];
@@ -80,6 +82,7 @@ static HPX_ACTION(test_libhpx_parcelCreate, void *UNUSED) {
   hpx_lco_delete(completed, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
 
 // Test code for parcel creation with arguments and parcel set and get action
@@ -114,6 +117,7 @@ static HPX_ACTION(test_libhpx_parcelGetAction, void *UNUSED) {
   hpx_parcel_set_target(p, to);
 
   hpx_parcel_send_sync(p);
+  return HPX_SUCCESS;
 }
 
 // Test code to test parcel get data functions - The hpx_parcel_get_data gets
@@ -128,6 +132,7 @@ static HPX_ACTION(test_libhpx_parcelGetData, void *UNUSED) {
   args->index = hpx_get_my_rank();
   strcpy(args->message,"parcel get data test");
   hpx_parcel_send_sync(p);
+  return HPX_SUCCESS;
 }
 
 // Testcase to test hpx_parcel_release function which explicitly releases a
@@ -142,6 +147,7 @@ static HPX_ACTION(test_libhpx_parcelRelease, void *UNUSED) {
   args->index = hpx_get_my_rank();
   strcpy(args->message,"parcel release test");
   hpx_parcel_release(p);
+  return HPX_SUCCESS;
 }
 
 // This testcase tests hpx_parcel_send function, which sends a parcel with
@@ -196,6 +202,7 @@ static HPX_ACTION(test_libhpx_parcelSend, void *UNUSED) {
     printf("Elapsed: %g\n", elapsed/avg);
     free(buf);
   }
+  return HPX_SUCCESS;
 }
 
 // Testcase to test the parcel continuation
@@ -249,11 +256,13 @@ static HPX_ACTION(test_libhpx_parcelGetContinuation, void *UNUSED) {
   hpx_gas_free(addr, HPX_NULL);
 
   printf("Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
 
 static int _is_error(hpx_status_t s) {
-  assert_msg(s == HPX_SUCCESS, "HPX operation returned error %s",
-                hpx_strerror(s));
+  if (s != HPX_SUCCESS) {
+    fprintf(stderr, "HPX operation returned error %s", hpx_strerror(s));
+  }
   return (s != HPX_SUCCESS);
 }
 
@@ -414,7 +423,10 @@ static HPX_ACTION(test_libhpx_parcelSendThrough, void *UNUSED) {
     goto unwind3;
   }
 
-  assert_msg(fin == n, "expected final value %d, got %d", n, fin);
+  if (fin != n) {
+    fprintf(stderr, "expected final value %d, got %d", n, fin);
+    return HPX_ERROR;
+  }
 
  unwind3:
   hpx_lco_delete(gates, HPX_NULL);
@@ -425,6 +437,7 @@ static HPX_ACTION(test_libhpx_parcelSendThrough, void *UNUSED) {
  unwind0:
   printf("Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   fflush(stdout);
+  return HPX_SUCCESS;
 }
 
 TEST_MAIN({

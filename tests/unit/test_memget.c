@@ -11,6 +11,8 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
+#include <inttypes.h>
+#include <stdlib.h>
 #include "hpx/hpx.h"
 #include "tests.h"
 
@@ -58,10 +60,14 @@ static HPX_ACTION(test_libhpx_memget, void *UNUSED) {
   hpx_lco_delete(completed, HPX_NULL);
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 
-  for (int i = 0; i < BLOCK_ELEMS; ++i)
-    assert_msg(local[i] == block[i],
-                  "failed to get element %d correctly, expected %"PRIu64
-                  ", got %"PRIu64"\n", i, block[i], local[i]);
+  for (int i = 0; i < BLOCK_ELEMS; ++i) {
+    if(local[i] != block[i]) {
+      fprintf(stderr, "failed to get element %d correctly, expected %" PRIu64", got %" PRIu64"\n",
+              i, block[i], local[i]);
+      exit(EXIT_FAILURE);
+    }
+  }
+  return HPX_SUCCESS;
 }
 
 TEST_MAIN({

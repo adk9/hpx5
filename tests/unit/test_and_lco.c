@@ -20,18 +20,13 @@ static HPX_ACTION(_and_set, hpx_addr_t *args) {
 }
 
 static HPX_ACTION(test_libhpx_lco_and, void *UNUSED) {
-  // allocate and start a timer
-  hpx_time_t t1 = hpx_time_now();
-
   // Allocate an and LCO. This is synchronous. An and LCO generates an AND
   // gate. Inputs should be >=0;
   hpx_addr_t lco = hpx_lco_and_new(1);
-  hpx_addr_t done = hpx_lco_future_new(0);
-  hpx_call(HPX_HERE, _and_set, done, &lco, sizeof(lco));
+  hpx_call(HPX_HERE, _and_set, HPX_NULL, &lco, sizeof(lco));
   hpx_lco_wait(lco);
-  hpx_lco_wait(done);
-  hpx_lco_delete(done, HPX_NULL);
   hpx_lco_delete(lco, HPX_NULL);
+  return HPX_SUCCESS;
 } 
 
 TEST_MAIN({
