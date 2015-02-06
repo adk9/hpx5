@@ -35,6 +35,7 @@
 
 typedef struct {
   network_t            vtable;
+  FILE                   *log;
   uint32_t               rank;
   uint32_t              ranks;
   uint32_t parcel_buffer_size;
@@ -83,6 +84,10 @@ static void _pwc_delete(network_t *network) {
 
   if (pwc->eager) {
     free(pwc->eager);
+  }
+
+  if (pwc->log) {
+    fclose(pwc->log);
   }
 
   free(pwc);
@@ -234,8 +239,7 @@ peer_t *pwc_get_peer(struct network *network, int src) {
 }
 
 network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
-                                    int nrx)
-{
+                                    int nrx) {
   int e;
 
   if (boot->type == HPX_BOOT_SMP) {
@@ -271,6 +275,15 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
 
   pwc->parcel_buffer_size = 1u << ceil_log2_32(cfg->parcelbuffersize);
   log("initialized a %u-byte buffer size\n", pwc->parcel_buffer_size);
+
+
+  char filename[256];
+  snprintf(filename, sizeof(filename), "hpxlog.%d", pwc->rank);
+  pwc->log = fopen(filename, "a");
+  if (!pwc->log) {
+    dbg_error("could not open %s as a log file\n", filename);
+    goto unwind;
+  }
 
   // Allocate the network's eager segment.
   pwc->eager_bytes = ranks * pwc->parcel_buffer_size;
@@ -359,3 +372,14 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   return NULL;
 }
 
+
+void pwc_trace(const char *fmt, ...) {
+  pwc_network_t *pwc = (void*)here->network;
+  char prefixed[512];
+  snprintf(prefixed, sizeof(prefixed), "thread %d: %s", hpx_get_my_thread_id(), fmt);
+
+  va_list args;
+  va_start(args, fmt);
+  vfprintf(pwc->log, prefixed, args);
+  va_end(args);
+}
