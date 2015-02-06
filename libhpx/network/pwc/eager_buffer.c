@@ -16,6 +16,7 @@
 
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
+#include "libhpx/instrumentation.h"
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/parcel.h"
@@ -143,7 +144,7 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
     hpx_inst_event_network_pwc_send_t event = {
       .sequence = sequence,
       .bytes = n,
-      .address = tx->peer->segments[SEGMENT_EAGER].base + tx->tx_base + roff,
+      .address = (uint64_t)tx->peer->segments[SEGMENT_EAGER].base + tx->tx_base + roff,
       .target_rank = tx->peer->rank
     };
     hpx_inst_log_event(HPX_INST_CLASS_NETWORK_PWC,
@@ -241,7 +242,7 @@ hpx_parcel_t *eager_buffer_rx(eager_buffer_t *rx) {
     hpx_inst_event_network_pwc_recv_t event = {
       .sequence = p->sequence,
       .bytes = bytes,
-      .address = from,
+      .address = (uint64_t)from,
       .source_rank = rx->peer->rank
     };
     hpx_inst_log_event(HPX_INST_CLASS_NETWORK_PWC,
