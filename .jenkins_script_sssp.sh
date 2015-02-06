@@ -39,6 +39,7 @@ echo "Building HPX in $DIR"
 cd $DIR
 
 module load gcc/4.9.2
+module load binutils/2.25
 rm -rf ./build/
 ./bootstrap
 mkdir build
