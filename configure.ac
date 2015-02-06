@@ -156,7 +156,7 @@ AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" 
 
 AC_ARG_WITH([tests-cmd],
   [AS_HELP_STRING([--with-tests-cmd], [Use this command for running the test harness @<:@default=mpirun -np 2@:>@])],
-  [TESTS_CMD='$with_tests_cmd'], [])
+  [TESTS_CMD="$with_tests_cmd"], [])
 AC_SUBST(TESTS_CMD)
 
 AC_ARG_WITH([doxygen],
