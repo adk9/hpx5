@@ -17,6 +17,7 @@
 #define TEST_MAIN(tests)                             \
 static HPX_ACTION(_main, void *UNUSED) {             \
   tests                                              \
+  hpx_shutdown(HPX_SUCCESS);                         \
   return HPX_SUCCESS;                                \
 }                                                    \
 int main(int argc, char *argv[]) {                   \
