@@ -34,6 +34,7 @@ enum enum_hpx_boot { hpx_boot_arg_default = 0 , hpx_boot_arg_smp, hpx_boot_arg_m
 enum enum_hpx_transport { hpx_transport_arg_default = 0 , hpx_transport_arg_smp, hpx_transport_arg_mpi, hpx_transport_arg_portals, hpx_transport_arg_photon };
 enum enum_hpx_network { hpx_network_arg_default = 0 , hpx_network_arg_smp, hpx_network_arg_pwc, hpx_network_arg_isir };
 enum enum_hpx_loglevel { hpx_loglevel_arg_default = 0 , hpx_loglevel_arg_boot, hpx_loglevel_arg_sched, hpx_loglevel_arg_gas, hpx_loglevel_arg_lco, hpx_loglevel_arg_net, hpx_loglevel_arg_trans, hpx_loglevel_arg_parcel, hpx_loglevel_arg_all };
+enum enum_hpx_traceclasses { hpx_traceclasses_arg_default = 0 , hpx_traceclasses_arg_parcel, hpx_traceclasses_arg_pwc, hpx_traceclasses_arg_all };
 
 /** @brief Where the command line options are stored */
 struct hpx_options_t
@@ -83,6 +84,11 @@ struct hpx_options_t
   int hpx_logat_min; /**< @brief selectively output log information's minimum occurreces */
   int hpx_logat_max; /**< @brief selectively output log information's maximum occurreces */
   const char *hpx_logat_help; /**< @brief selectively output log information help description.  */
+  enum enum_hpx_traceclasses *hpx_traceclasses_arg;	/**< @brief set the event classes to trace.  */
+  char ** hpx_traceclasses_orig;	/**< @brief set the event classes to trace original value given at command line.  */
+  int hpx_traceclasses_min; /**< @brief set the event classes to trace's minimum occurreces */
+  int hpx_traceclasses_max; /**< @brief set the event classes to trace's maximum occurreces */
+  const char *hpx_traceclasses_help; /**< @brief set the event classes to trace help description.  */
   int hpx_statistics_flag;	/**< @brief print HPX runtime statistics (default=off).  */
   const char *hpx_statistics_help; /**< @brief print HPX runtime statistics help description.  */
   long hpx_sendlimit_arg;	/**< @brief HPX transport-specific send limit.  */
@@ -118,6 +124,7 @@ struct hpx_options_t
   unsigned int hpx_waitat_given ;	/**< @brief Whether hpx-waitat was given.  */
   unsigned int hpx_loglevel_given ;	/**< @brief Whether hpx-loglevel was given.  */
   unsigned int hpx_logat_given ;	/**< @brief Whether hpx-logat was given.  */
+  unsigned int hpx_traceclasses_given ;	/**< @brief Whether hpx-traceclasses was given.  */
   unsigned int hpx_statistics_given ;	/**< @brief Whether hpx-statistics was given.  */
   unsigned int hpx_sendlimit_given ;	/**< @brief Whether hpx-sendlimit was given.  */
   unsigned int hpx_recvlimit_given ;	/**< @brief Whether hpx-recvlimit was given.  */
@@ -316,6 +323,7 @@ extern char *hpx_option_parser_hpx_boot_values[] ;	/**< @brief Possible values f
 extern char *hpx_option_parser_hpx_transport_values[] ;	/**< @brief Possible values for hpx-transport.  */
 extern char *hpx_option_parser_hpx_network_values[] ;	/**< @brief Possible values for hpx-network.  */
 extern char *hpx_option_parser_hpx_loglevel_values[] ;	/**< @brief Possible values for hpx-loglevel.  */
+extern char *hpx_option_parser_hpx_traceclasses_values[] ;	/**< @brief Possible values for hpx-traceclasses.  */
 
 
 #ifdef __cplusplus

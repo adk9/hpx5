@@ -35,6 +35,7 @@
 #include "libhpx/debug.h"
 #include "libhpx/instrumentation.h"
 #include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
 #include "libhpx/parcel.h"
 #include "logtable.h"
 
@@ -43,7 +44,6 @@ static logtable_t logtables[HPX_INST_NUM_EVENTS];
 static size_t inst_max_log_size = 40*1024*1024-1;
 bool hpx_inst_enabled = false;
 bool hpx_inst_parcel_enabled = false;
-static bool inst_class_enabled[HPX_INST_NUM_CLASSES];
 static hpx_time_t time_start;
 static bool inst_active = false; // not whether we WANT to log, but whether
                                  // we are ABLE to (i.e. after initialization
@@ -86,6 +86,11 @@ _log_create(hpx_inst_class_type_t class, hpx_inst_event_type_t event,
   }
   return HPX_SUCCESS;
 }
+
+static int _enabled(hpx_inst_class_type_t class) {
+  return (here->config->traceclasses & (1 << (class + 1)));
+}
+
 #endif
 
 int hpx_inst_init() {
@@ -95,10 +100,6 @@ int hpx_inst_init() {
   hpx_inst_enabled = get_env_var("HPX_INST_ENABLE");
   if (!hpx_inst_enabled) {
     return HPX_SUCCESS;
-  }
-
-  for (int i = 0; i < HPX_INST_NUM_CLASSES; i++) {
-    inst_class_enabled[i] = false;
   }
 
   char* max_log_size_text;
@@ -136,33 +137,19 @@ int hpx_inst_init() {
 
   // create log files
   hpx_inst_parcel_enabled = get_env_var("HPX_INST_PARCELS");
-  if (hpx_inst_parcel_enabled) {
-    inst_class_enabled[HPX_INST_CLASS_PARCEL] = true;
-    int class = HPX_INST_CLASS_PARCEL;
-    for (int i = 0; i < HPX_INST_EVENTS_PER_CLASS[class]; i++) {
-      int event = HPX_INST_FIRST_EVENT_FOR_CLASS[class] + i;
-      int success = _log_create(class, event, inst_max_log_size);
 
-      // TODO real error handling
-      if (success != HPX_SUCCESS) {
-        return success;
+  for (int class = 0, e = HPX_INST_NUM_CLASSES; class < e; ++class) {
+    if (!_enabled(class)) {
+      continue;
+    }
+    int event = HPX_INST_CLASS_EVENT_OFFSET[class];
+    int e = HPX_INST_CLASS_EVENT_OFFSET[class + 1];
+    for (; event < e; ++event) {
+      int e = _log_create(class, event, inst_max_log_size);
+      if (LIBHPX_OK != e) {
+        dbg_error("failed to create a log for %s\n",
+                  HPX_INST_EVENT_TYPE_TO_STRING[event]);
       }
-    }
-  }
-
-  // Hard-code creation of log files for network_pwc
-  {
-    int class = HPX_INST_CLASS_NETWORK_PWC;
-    int event = HPX_INST_EVENT_NETWORK_PWC_SEND;
-    inst_class_enabled[class] = 1;
-    if (LIBHPX_OK != _log_create(class, event, inst_max_log_size)) {
-      dbg_error("failed to create a log for %s\n",
-                HPX_INST_EVENT_TYPE_TO_STRING[event]);
-    }
-    event = HPX_INST_EVENT_NETWORK_PWC_RECV;
-    if (LIBHPX_OK != _log_create(class, event, inst_max_log_size)) {
-      dbg_error("failed to create a log for %s\n",
-                HPX_INST_EVENT_TYPE_TO_STRING[event]);
     }
   }
 
@@ -198,11 +185,13 @@ void hpx_inst_log_event(hpx_inst_class_type_t class,
                         int user_data_size,
                         void* user_data) {
 #ifdef ENABLE_INSTRUMENTATION
-  if (!hpx_inst_enabled)
+  if (!_enabled(class)) {
     return;
+  }
 
-  if (!inst_active)
+  if (!inst_active) {
     return;
+  }
 
   logtable_t *lt = &logtables[event_type];
 
