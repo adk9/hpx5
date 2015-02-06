@@ -138,8 +138,9 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   p->sequence = sequence;
 #endif
 
-  pwc_trace("(%lu) send %u bytes to %d:%p\n", sequence, n, tx->peer->rank,
-            tx->peer->segments[SEGMENT_EAGER].base + tx->tx_base + roff);
+  pwc_trace("send %u bytes to (%d, %p) [%lu]\n", n, tx->peer->rank,
+            tx->peer->segments[SEGMENT_EAGER].base + tx->tx_base + roff,
+            sequence);
 
   log_net("sequence: %lu, sending %d bytes to %d at %p (%s)\n",
           p->sequence, n, tx->peer->rank,
@@ -221,8 +222,8 @@ hpx_parcel_t *eager_buffer_rx(eager_buffer_t *rx) {
   // Before we leave, check some basics.
   dbg_assert(hpx_gas_try_pin(p->target, NULL));
 
-  pwc_trace("(%lu) recv %u bytes at sequence %lu from %d:%p\n", rx->sequence,
-         bytes, p->sequence, rx->peer->rank, from);
+  pwc_trace("recv %u bytes at %p from %d [%lu]\n",
+            bytes, from, rx->peer->rank, p->sequence);
 
   // Update the progress in this buffer.
   rx->min += bytes;

@@ -278,7 +278,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
 
 
   char filename[256];
-  snprintf(filename, sizeof(filename), "hpxlog.%d", pwc->rank);
+  snprintf(filename, sizeof(filename), "pwc_trace.%d", pwc->rank);
   pwc->log = fopen(filename, "a");
   if (!pwc->log) {
     dbg_error("could not open %s as a log file\n", filename);
@@ -371,7 +371,6 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   _pwc_delete(&pwc->vtable);
   return NULL;
 }
-
 
 void pwc_trace(const char *fmt, ...) {
   pwc_network_t *pwc = (void*)here->network;
