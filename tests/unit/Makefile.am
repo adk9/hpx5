@@ -39,9 +39,9 @@ test_sema_SOURCES               = test_sema.c
 test_threads_SOURCES            = test_threads.c
 test_wait_SOURCES               = test_wait.c
 
-if HAVE_PHOTON
-TESTS += test_netfutures
-test_netfutures_SOURCES         = test_netfutures.c
-endif
+#if HAVE_PHOTON
+#TESTS += test_netfutures
+#test_netfutures_SOURCES         = test_netfutures.c
+#endif
 
 LOG_COMPILER = $(TESTS_CMD)

@@ -98,6 +98,13 @@ AC_ARG_ENABLE([debug],
 AS_IF([test "x$enable_debug" != xno],
   [AC_DEFINE([ENABLE_DEBUG], [1], [Enable debugging stuff])])
 
+AC_ARG_ENABLE([instrumentation],
+  [AS_HELP_STRING([--enable-instrumentation],
+                  [Enable instrumentation code @<:@default=no@:>@])],
+  [], [enable_instrumentation=no])
+AS_IF([test "x$enable_instrumentation" != xno],
+  [AC_DEFINE([ENABLE_INSTRUMENTATION], [1], [Enable instrumentation for performance])])
+
 AC_ARG_ENABLE([logging],
   [AS_HELP_STRING([--enable-logging],
                   [Enable logging code @<:@default=no@:>@])],
@@ -261,6 +268,7 @@ AC_CONFIG_FILES([
   libhpx/util/Makefile
   libhpx/scheduler/Makefile
   libhpx/scheduler/arch/Makefile
+  libhpx/instrumentation/Makefile
   include/Makefile
   include/libhpx/Makefile
   examples/Makefile
