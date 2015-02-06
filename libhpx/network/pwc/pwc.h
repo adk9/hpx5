@@ -34,4 +34,7 @@ struct network *network_pwc_funneled_new(struct config *, struct boot *,
 struct peer *pwc_get_peer(struct network *pwc, int src)
   HPX_INTERNAL;
 
+void pwc_trace(const char *, ...)
+  HPX_INTERNAL HPX_NON_NULL(1) HPX_PRINTF(1, 2);
+
 #endif
