@@ -229,11 +229,6 @@ static int _probe(irecv_buffer_t *irecvs) {
 static hpx_parcel_t *_finish(irecv_buffer_t *irecvs, int i, MPI_Status *s) {
   ACTIVE_RANGE_CHECK(irecvs, i, NULL);
 
-  if (s->MPI_ERROR != MPI_SUCCESS) {
-    dbg_error("irecv failed\n");
-    return NULL;
-  }
-
   int n;
   if (MPI_SUCCESS != MPI_Get_count(s, MPI_BYTE, &n)) {
     dbg_error("could not extract the size of an irecv\n");
