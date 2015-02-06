@@ -32,6 +32,7 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/gas.h"
 #include "libhpx/locality.h"
+#include "libhpx/instrumentation.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
@@ -40,6 +41,9 @@
 static const uintptr_t _INPLACE_MASK = 0x1;
 static const uintptr_t   _STATE_MASK = 0x1;
 static const size_t _SMALL_THRESHOLD = HPX_PAGE_SIZE;
+#ifdef ENABLE_INSTRUMENTATION
+static uint64_t parcel_count = 0;
+#endif
 
 static size_t _max(size_t lhs, size_t rhs) {
   return (lhs > rhs) ? lhs : rhs;
@@ -185,6 +189,12 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
   p->c_action = HPX_ACTION_NULL;
   p->c_target = HPX_NULL;
   p->credit   = 0;
+#ifdef ENABLE_INSTRUMENTATION
+  if (hpx_inst_enabled && hpx_inst_parcel_enabled) { 
+    parcel_count = sync_fadd(&parcel_count, 1, SYNC_RELAXED);
+    p->id = ((0xfffff && hpx_get_my_rank()) << 40) | parcel_count;
+  }
+#endif
 
   // If there's a user-defined buffer, then remember it---we'll serialize it
   // later, during the send operation. We occasionally see a buffer without
@@ -193,6 +203,8 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
     p->ustack = NULL;
     memcpy(&p->buffer, &buffer, sizeof(buffer));
   }
+
+  HPX_INST_EVENT_PARCEL_CREATE(p);
 
   return p;
 }
@@ -252,6 +264,7 @@ int parcel_launch(hpx_parcel_t *p) {
 }
 
 hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p) {
+  HPX_INST_EVENT_PARCEL_SEND(p);
   _prepare(p);
   return parcel_launch(p);
 }
