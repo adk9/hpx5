@@ -61,15 +61,14 @@ int hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result, ...);
 /// @param   gate The LCO that will serve as the gate.
 /// @param   addr The address that defines where the action is executed.
 /// @param action The action to perform.
-/// @param  rsync An address for the remote synchronization.
 /// @param result An address of an LCO to trigger with the result.
 /// @param   args The argument data buffer for @p action.
 /// @param    len The length of the @p args buffer.
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
-int hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action, 
-                  hpx_addr_t rsync, hpx_addr_t result, ...);
+int hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
+                  hpx_addr_t result, ...);
 
 /// Fully synchronous call interface which implements hpx_parcel_send_through()
 /// when LCO is set
@@ -82,7 +81,6 @@ int hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 /// @param   gate The LCO that will serve as the gate.
 /// @param   addr The address that defines where the action is executed.
 /// @param action The action to perform.
-/// @param  rsync An address for the remote synchronization.
 /// @param    out Address of the output buffer.
 /// @param   olen The length of the @p output buffer.
 /// @param   args The argument data buffer for @p action.
@@ -90,8 +88,8 @@ int hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 ///
 /// @returns HPX_SUCCESS, or an error code if the action generated an error that
 ///          could not be handled remotely/
-int hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action, 
-                       hpx_addr_t rsync, void *out, size_t olen, ...);
+int hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
+                       void *out, size_t olen, ...);
 
 /// Locally synchronous call with continuation interface.
 ///
