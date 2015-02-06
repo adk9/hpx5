@@ -190,7 +190,7 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
   p->c_target = HPX_NULL;
   p->credit   = 0;
 #ifdef ENABLE_INSTRUMENTATION
-  if (hpx_inst_enabled && hpx_inst_parcel_enabled) { 
+  if (hpx_inst_enabled && hpx_inst_parcel_enabled) {
     parcel_count = sync_fadd(&parcel_count, 1, SYNC_RELAXED);
     p->id = ((0xfffff && hpx_get_my_rank()) << 40) | parcel_count;
   }
@@ -280,16 +280,15 @@ hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
   return status;
 }
 
-hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t gate,
-                                          hpx_addr_t rsync) {
+hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t gate) {
   _prepare(p);
-  return hpx_call(gate, attach, rsync, p, parcel_size(p));
+  return hpx_call(gate, attach, HPX_NULL, p, parcel_size(p));
 }
 
 hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
-                                     hpx_addr_t lsync, hpx_addr_t rsync) {
+                                     hpx_addr_t lsync) {
   _prepare(p);
-  return hpx_call_async(gate, attach, lsync, rsync, p, parcel_size(p));
+  return hpx_call_async(gate, attach, lsync, HPX_NULL, p, parcel_size(p));
 }
 
 void hpx_parcel_release(hpx_parcel_t *p) {
