@@ -64,7 +64,7 @@ static HPX_ACTION(_get_parcel, void *args) {
   // Allocate a parcel to receive in.
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, bytes);
   if (!p) {
-    dbg_error("Could not allocate a parcel for rendevous protocol\n");
+    dbg_error("Could not allocate a parcel for rendezvous protocol\n");
     return HPX_ERROR;
   }
 
@@ -106,7 +106,7 @@ static HPX_ACTION(_get_parcel, void *args) {
   return status;
 }
 
-int peer_send_rendevous(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync) {
+int peer_send_rendezvous(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync) {
   _get_parcel_args_t args = {
     .bytes = parcel_size(p),
     .addr = lva_to_gva(p)

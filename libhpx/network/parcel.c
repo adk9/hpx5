@@ -192,7 +192,7 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
 #ifdef ENABLE_INSTRUMENTATION
   if (hpx_inst_enabled && hpx_inst_parcel_enabled) {
     parcel_count = sync_fadd(&parcel_count, 1, SYNC_RELAXED);
-    p->id = ((0xfffff && hpx_get_my_rank()) << 40) | parcel_count;
+    p->id = ((uint64_t)(0xfffff && hpx_get_my_rank()) << 40) | parcel_count;
   }
 #endif
 

@@ -15,6 +15,7 @@
 #endif
 
 #include <stdlib.h>
+#include <hpx/builtins.h>
 
 #include "libhpx/action.h"
 #include "libhpx/boot.h"
@@ -43,6 +44,21 @@ typedef struct {
   char                 *eager;
   peer_t                peers[];
 } pwc_network_t;
+
+/// Utility to wrap a probe-completion.
+static int _probe(unsigned type, int rank, uint64_t *op) {
+  int flag = 0;
+  int e = photon_probe_completion(rank, &flag, op, type);
+  if (PHOTON_OK != e) {
+    dbg_error("photon probe error\n");
+  }
+  return flag;
+}
+
+static const char *_straction(hpx_action_t id) {
+  dbg_assert(here && here->actions);
+  return action_table_get_key(here->actions, id);
+}
 
 static const char *_pwc_id() {
   return "Photon put-with-completion\n";
@@ -73,6 +89,32 @@ static void _pwc_delete(network_t *network) {
 }
 
 static int _pwc_progress(network_t *network) {
+  pwc_network_t *pwc = (void*)network;
+  int rank = pwc->rank;
+
+  // each time through the loop, we deal with local command completions
+  command_t command;
+  while (_probe(PHOTON_PROBE_EVQ, rank, &command)) {
+    hpx_addr_t addr;
+    hpx_action_t op;
+    decode_command(command, &op, &addr);
+    log_net("processing local command: %s\n", _straction(op));
+    int e = hpx_call(addr, op, HPX_NULL, &rank, sizeof(rank));
+    dbg_assert_str(HPX_SUCCESS == e, "failed to process local command\n");
+  }
+
+  // deal with received commands
+  for (int i = 0, e = pwc->ranks; i < e; ++i) {
+    while (_probe(PHOTON_PROBE_LEDGER, i, &command)) {
+      hpx_addr_t addr;
+      hpx_action_t op;
+      decode_command(command, &op, &addr);
+      log_net("processing command %s from rank %d\n", _straction(op), i);
+      int e = hpx_call(addr, op, HPX_NULL, &i, sizeof(i));
+      dbg_assert_str(HPX_SUCCESS == e, "failed to process command\n");
+    }
+  }
+
   return 0;
 }
 
@@ -100,7 +142,7 @@ static int _pwc_send(network_t *network, hpx_parcel_t *p) {
     return peer_send(peer, p, HPX_NULL);
   }
   else {
-    return peer_send_rendevous(peer, p, HPX_NULL);
+    return peer_send_rendezvous(peer, p, HPX_NULL);
   }
 }
 
@@ -110,8 +152,7 @@ static int _pwc_send(network_t *network, hpx_parcel_t *p) {
 /// peer for the request, and forwards to the p2p put operation.
 static int _pwc_pwc(network_t *network,
                     hpx_addr_t to, const void *lva, size_t n,
-                    hpx_addr_t lsync, hpx_addr_t rsync, hpx_action_t op)
-{
+                    hpx_addr_t lsync, hpx_addr_t rsync, hpx_action_t op) {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(pwc->gas, to);
   peer_t *peer = &pwc->peers[rank];
@@ -124,8 +165,7 @@ static int _pwc_pwc(network_t *network,
 ///
 /// This simply forwards to the pwc handler with no remote command.
 static int _pwc_put(network_t *network, hpx_addr_t to, const void *from,
-                    size_t n, hpx_addr_t lsync, hpx_addr_t rsync)
-{
+                    size_t n, hpx_addr_t lsync, hpx_addr_t rsync) {
   return _pwc_pwc(network, to, from, n, lsync, rsync, HPX_NULL);
 }
 
@@ -134,8 +174,7 @@ static int _pwc_put(network_t *network, hpx_addr_t to, const void *from,
 /// This simply the global address into a symmetric-heap offset, finds the
 /// peer for the request, and forwards to the p2p get operation.
 static int _pwc_get(network_t *network, void *lva, hpx_addr_t from, size_t n,
-                    hpx_addr_t lsync)
-{
+                    hpx_addr_t lsync) {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(pwc->gas, from);
   peer_t *peer = pwc->peers + rank;
@@ -144,47 +183,7 @@ static int _pwc_get(network_t *network, void *lva, hpx_addr_t from, size_t n,
   return peer_get(peer, lva, n, offset, cmd, SEGMENT_HEAP);
 }
 
-static int _probe(unsigned type, int rank, uint64_t *op) {
-  int flag = 0;
-  int e = photon_probe_completion(rank, &flag, op, type);
-  if (PHOTON_OK != e) {
-    dbg_error("photon probe error\n");
-  }
-  return flag;
-}
-
-static const char *_straction(hpx_action_t id) {
-  dbg_assert(here && here->actions);
-  return action_table_get_key(here->actions, id);
-}
-
 static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
-  pwc_network_t *pwc = (void*)network;
-  int rank = pwc->rank;
-
-  // each time through the loop, we deal with local command completions
-  command_t command;
-  while (_probe(PHOTON_PROBE_EVQ, rank, &command)) {
-    hpx_addr_t addr;
-    hpx_action_t op;
-    decode_command(command, &op, &addr);
-    log_net("processing local command: %s\n", _straction(op));
-    int e = hpx_call(addr, op, HPX_NULL, &rank, sizeof(rank));
-    dbg_assert_str(HPX_SUCCESS == e, "failed to process local command\n");
-  }
-
-  // deal with received commands
-  for (int i = 0, e = pwc->ranks; i < e; ++i) {
-    while (_probe(PHOTON_PROBE_LEDGER, i, &command)) {
-      hpx_addr_t addr;
-      hpx_action_t op;
-      decode_command(command, &op, &addr);
-      log_net("processing command %s from rank %d\n", _straction(op), i);
-      int e = hpx_call(addr, op, HPX_NULL, &i, sizeof(i));
-      dbg_assert_str(HPX_SUCCESS == e, "failed to process command\n");
-    }
-  }
-
   return NULL;
 }
 
@@ -206,13 +205,17 @@ static int _init_peer(pwc_network_t *pwc, peer_t *peer, int self, int rank) {
     return dbg_error("could not initialize the pwc buffer\n");
   }
 
+  // Figure out where I receive from in my eager buffer w.r.t. this peer.
   uint32_t size = pwc->parcel_buffer_size;
-  status = eager_buffer_init(&peer->rx, peer, rank * size, size);
+  char *base = pwc->eager + rank * size;
+  status = eager_buffer_init(&peer->rx, peer, 0, base, size);
   if (LIBHPX_OK != status) {
     return dbg_error("could not initialize the parcel rx endpoint\n");
   }
 
-  status = eager_buffer_init(&peer->tx, peer, self * size, size);
+  // Figure out where I send to w.r.t. this peer in their eager buffer.
+  uint32_t offset = self * size;
+  status = eager_buffer_init(&peer->tx, peer, offset, NULL, size);
   if (LIBHPX_OK != status) {
     return dbg_error("could not initialize the parcel tx endpoint\n");
   }
@@ -231,8 +234,7 @@ peer_t *pwc_get_peer(struct network *network, int src) {
 }
 
 network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
-                                    int nrx)
-{
+                                    int nrx) {
   int e;
 
   if (boot->type == HPX_BOOT_SMP) {
@@ -254,8 +256,23 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
     return NULL;
   }
 
+  // Store some of the salient information in the network structure.
+  pwc->gas = gas;
+  pwc->rank = boot_rank(boot);
+  pwc->ranks = ranks;
+  pwc->parcel_eager_limit = 1u << ceil_log2_32(cfg->parceleagerlimit);
+  // NB: 16 is sizeof(_get_parcel_args_t) in peer.c
+  const int limit = sizeof(hpx_parcel_t) - pwc_prefix_size() + 16;
+  if (pwc->parcel_eager_limit < limit) {
+    dbg_error("--hpx-parceleagerlimit must be at least %u bytes\n", limit);
+    goto unwind;
+  }
+
+  pwc->parcel_buffer_size = 1u << ceil_log2_32(cfg->parcelbuffersize);
+  log("initialized a %u-byte buffer size\n", pwc->parcel_buffer_size);
+
   // Allocate the network's eager segment.
-  pwc->eager_bytes = ranks * cfg->parcelbuffersize;
+  pwc->eager_bytes = ranks * pwc->parcel_buffer_size;
   pwc->eager = malloc(pwc->eager_bytes);
   if (!pwc->eager) {
     dbg_error("malloc(%lu) failed for the eager buffer\n", pwc->eager_bytes);
@@ -273,12 +290,12 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   pwc->vtable.probe = _pwc_probe;
   pwc->vtable.set_flush = _pwc_set_flush;
 
-  // Store some of the salient information in the network structure.
-  pwc->gas = gas;
-  pwc->rank = boot_rank(boot);
-  pwc->ranks = ranks;
-  pwc->parcel_buffer_size = cfg->parcelbuffersize;
-  pwc->parcel_eager_limit = cfg->parceleagerlimit;
+
+  if (pwc->parcel_eager_limit > pwc->parcel_buffer_size) {
+    dbg_error(" --hpx-parceleagerlimit (%u) must be less than "
+              "--hpx-parcelbuffersize (%u)\n",
+              pwc->parcel_eager_limit, pwc->parcel_buffer_size);
+  }
 
   peer_t *local = pwc_get_peer(&pwc->vtable, pwc->rank);
   // Prepare the null segment.
@@ -340,4 +357,3 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   _pwc_delete(&pwc->vtable);
   return NULL;
 }
-

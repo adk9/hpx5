@@ -38,8 +38,7 @@ typedef struct {
 /// Try to start a pwc.
 static int _start(pwc_buffer_t *buffer, void *rva, const void *lva, size_t n,
                   hpx_addr_t lsync, hpx_addr_t rsync, command_t cmd,
-                  rdma_key_t key)
-{
+                  rdma_key_t key) {
   if (rsync != HPX_NULL) {
     dbg_error("remote complete event currently unsupported");
   }
@@ -86,8 +85,7 @@ void pwc_buffer_fini(pwc_buffer_t *buffer) {
 
 int pwc_buffer_put(pwc_buffer_t *buffer, size_t roff, const void *lva, size_t n,
                    hpx_addr_t lsync, hpx_addr_t rsync, command_t cmd,
-                   segment_t *segment)
-{
+                   segment_t *segment) {
   void *rva = segment_offset_to_rva(segment, roff);
   rdma_key_t key = segment->key;
 
