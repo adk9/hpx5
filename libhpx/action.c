@@ -172,8 +172,8 @@ static _ACTION_TABLE_GET(ffi_cif *, cif, NULL);
 
 int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
                        hpx_action_t action, hpx_addr_t c_addr,
-                       hpx_action_t c_action, hpx_addr_t lsync,
-                       hpx_addr_t rsync, hpx_addr_t gate, va_list *args) {
+                       hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
+                       va_list *args) {
   size_t len;
   void *outargs;
   hpx_parcel_t *p;
@@ -209,10 +209,10 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
 
   if (gate) {
     if (lsync) {
-      hpx_parcel_send_through(p, gate, lsync, rsync);
+      hpx_parcel_send_through(p, gate, lsync, HPX_NULL);
     } else {
-      hpx_parcel_send_through_sync(p, gate, rsync);
-    } 
+      hpx_parcel_send_through_sync(p, gate, HPX_NULL);
+    }
   } else {
     if (lsync) {
       hpx_parcel_send(p, lsync);
