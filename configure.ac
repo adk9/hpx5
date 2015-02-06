@@ -33,7 +33,7 @@ AC_PROG_INSTALL
 AM_PROG_AS
 
 # Initialize automake and libtool
-AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror])
+AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror parallel-tests color-tests])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.2.6])
@@ -119,8 +119,8 @@ AM_CONDITIONAL([ENABLE_LENGTHY_TESTS], [test "$enable_lengthy_tests" = "yes"])
 
 AC_ARG_ENABLE([testsuite],
   [AS_HELP_STRING([--enable-testsuite],
-                  [Enable test suite (requires check) @<:@default=yes@:>@])],
-  [], [enable_testsuite=yes])
+                  [Enable test suite @<:@default=yes@:>@])],
+  [], [enable_tests=yes])
 
 #HPX_OPENFLOW
 
@@ -134,8 +134,7 @@ AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray
 HPX_WITH_PKG([hugetlbfs],[hugetlbfs],[build with hugepages for heap],[no],[HUGETLBFS])
 AS_IF([test "x$with_hugetlbfs" != xno],
   [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [0], [Enable huge pages heap allocation])],
-  [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANONYMOUS], [Disableh huge pages heap allocation])])
-
+  [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANONYMOUS], [Disable huge pages heap allocation])])
 
 
 HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[no],[MPI])
@@ -155,16 +154,18 @@ AS_IF([test "x$enable_photon" != xno],
 AM_CONDITIONAL([HAVE_PHOTON], [test "x$hpx_have_photon" != xno])
 
 AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno],
-  [AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])])
+  [AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])
+   TESTS_CMD='mpirun -np 2'],
+  [TESTS_CMD=''])
 
-HPX_WITH_PKG([check],[check],[build with check unit tests],[no],[CHECK])
-AS_IF([test "x$enable_testsuite" != xno -a "x$with_check" != xno],
-  [enable_tests=yes],
-  [enable_tests=no])
-    
+AC_ARG_WITH([tests-cmd],
+  [AS_HELP_STRING([--with-tests-cmd], [Use this command for running the test harness @<:@default=mpirun -np 2@:>@])],
+  [TESTS_CMD='$with_tests_cmd'], [])
+AC_SUBST(TESTS_CMD)
+
 AC_ARG_WITH([doxygen],
   [AS_HELP_STRING([--with-doxygen], [build documentation @<:@default=no@:>@])],
-  [], [with_doxygen=yes])
+  [with_doxygen=yes], [with_doxygen=no])
 AS_IF([test "x$with_doxygen" != xno],
   [AC_CHECK_PROGS([DOXYGEN], [doxygen])])
 AS_IF([test "x$DOXYGEN" != x],
@@ -289,14 +290,9 @@ AS_IF([test "x$enable_docs" != xno],
   [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
   
 AS_IF([test "x$enable_tests" != xno],
-  [AC_CONFIG_FILES([tests/unit/run_tests.sh],
-		   [chmod +x tests/unit/run_tests.sh])]
-  [AC_CONFIG_FILES([tests/perf/overheads/run_tests.sh],
-		   [chmod +x tests/perf/overheads/run_tests.sh])]
   [AC_CONFIG_FILES([tests/Makefile
   tests/unit/Makefile
-  tests/perf/Makefile
-  tests/perf/overheads/Makefile])])
+  tests/perf/Makefile])])
   
 AC_OUTPUT
 

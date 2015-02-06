@@ -6,12 +6,12 @@
 *.la
 *~
 *.swp
+*.log
 *Makefile.in
 
 # /
 /aclocal.m4
 /configure
-/config.log
 /config.status
 /libtool
 /autom4te.cache
@@ -90,28 +90,31 @@ contrib/photon/
 
 # /tests/
 /tests/.deps
-/tests/hpxtest
+/tests/perf/perf_gas_addr_trans
+/tests/perf/perf_gas_alloc
+/tests/perf/perf_lco_allgather
+/tests/perf/perf_lco_allreduce
+/tests/perf/perf_lco_alltoall
+/tests/perf/perf_lco_chan
+/tests/perf/perf_lco_future
+/tests/perf/perf_lco_sema
+/tests/unit/test_and_lco
+/tests/unit/test_channels
+/tests/unit/test_futures
+/tests/unit/test_gencount
+/tests/unit/test_global_mem_alloc
+/tests/unit/test_lco
+/tests/unit/test_mem_alloc
+/tests/unit/test_memget
+/tests/unit/test_memput
+/tests/unit/test_parcel
+/tests/unit/test_sema
+/tests/unit/test_threads
+/tests/unit/test_wait
 /tests/Makefile
 /tests/Makefile.in
 /tests/perf/Makefile
-/tests/perf/overheads/Makefile
-/tests/perf/overheads/run_tests.sh
-/tests/perf/overheads/time_gas_addr_trans
-/tests/perf/overheads/time_gas_alloc
-/tests/perf/overheads/time_lco_allgather
-/tests/perf/overheads/time_lco_allreduce
-/tests/perf/overheads/time_lco_alltoall
-/tests/perf/overheads/time_lco_and
-/tests/perf/overheads/time_lco_chan
-/tests/perf/overheads/time_lco_future
-/tests/perf/overheads/time_lco_netfutures
-/tests/perf/overheads/time_lco_netfutures_msgSize
-/tests/perf/overheads/time_lco_sema
 /tests/unit/Makefile
-/tests/unit/run_tests.sh
-/tests/unit/hpxtest
-
-
 
 # /docs
 /docs/doxyfile.stamp

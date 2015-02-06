@@ -28,18 +28,16 @@
 static HPX_ACTION(_probe, void *o) {
   network_t *network = *(network_t **)o;
 
-  network_progress(network);
-
-  hpx_parcel_t *stack = NULL;
-  int e = hpx_call(HPX_HERE, _probe, HPX_NULL, &network, sizeof(network));
-  if (e != HPX_SUCCESS)
-    return e;
-
-  while ((stack = network_probe(network, hpx_get_my_thread_id()))) {
-    hpx_parcel_t *p = NULL;
-    while ((p = parcel_stack_pop(&stack))) {
-      scheduler_spawn(p);
+  while (true) {
+    network_progress(network);
+    hpx_parcel_t *stack = NULL;
+    while ((stack = network_probe(network, hpx_get_my_thread_id()))) {
+      hpx_parcel_t *p = NULL;
+      while ((p = parcel_stack_pop(&stack))) {
+        parcel_launch(p);
+      }
     }
+    hpx_thread_yield();
   }
 
   return HPX_SUCCESS;
