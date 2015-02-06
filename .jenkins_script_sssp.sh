@@ -5,7 +5,7 @@ shift
 
 function add_mpi() {
     # This is currently cutter-specific and needs to be generalized.
-    module load /home/zalewski/tools/modules/openmpi/1.8.3
+    module load openmpi/1.8.4_thread
 }
 
 function add_photon() {
@@ -38,7 +38,7 @@ esac
 echo "Building HPX in $DIR"
 cd $DIR
 
-module load /home/zalewski/tools/modules/gcc/4.9.2
+module load gcc/4.9.2
 rm -rf ./build/
 ./bootstrap
 mkdir build
