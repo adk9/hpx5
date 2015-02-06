@@ -33,7 +33,7 @@ AC_PROG_INSTALL
 AM_PROG_AS
 
 # Initialize automake and libtool
-AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror color-tests])
+AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror parallel-tests color-tests])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.2.6])
@@ -142,18 +142,15 @@ AS_IF([test "x$enable_photon" != xno],
   [hpx_have_photon=no])
 AM_CONDITIONAL([HAVE_PHOTON], [test "x$hpx_have_photon" != xno])
 
-AC_ARG_WITH([tests-cmd],
-  [AS_HELP_STRING([--with-tests-cmd], [Use this command for running the test harness @<:@default=mpirun@:>@])],
-  [], [with_tests_cmd=no])
-
 AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno],
   [AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])
-   AS_IF([test "x$with_tests_cmd" != xno],
-     [AC_SUBST([TESTS_CMD], [$with_tests_cmd])]
-     [AC_SUBST([TESTS_CMD], [mpirun -np 2])])],
-  [AS_IF([test "x$with_tests_cmd" != xno],
-     [AC_SUBST([TESTS_CMD], [$with_tests_cmd])]
-     [AC_SUBST([TESTS_CMD], [])])])
+   TESTS_CMD='mpirun -np 2'],
+  [TESTS_CMD=''])
+
+AC_ARG_WITH([tests-cmd],
+  [AS_HELP_STRING([--with-tests-cmd], [Use this command for running the test harness @<:@default=mpirun -np 2@:>@])],
+  [TESTS_CMD='$with_tests_cmd'], [])
+AC_SUBST(TESTS_CMD)
 
 AC_ARG_WITH([doxygen],
   [AS_HELP_STRING([--with-doxygen], [build documentation @<:@default=no@:>@])],
