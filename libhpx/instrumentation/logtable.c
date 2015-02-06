@@ -10,15 +10,15 @@
 #include <sys/stat.h>
 
 #include "libsync/sync.h"
-#include "libhpx/logging.h"
+#include "libhpx/instrumentation.h"
 
 //unsigned int get_logging_record_size(unsigned int user_data_size) {
-//  return sizeof(hpx_logging_event_t) + user_data_size;
+//  return sizeof(hpx_inst_event_t) + user_data_size;
 //}
 
 int logtable_init(logtable_t *logtable, char* filename, size_t total_size) {
   logtable->data_size = total_size;
-  unsigned int record_size = sizeof(hpx_logging_event_t); // change this if user data size can vary
+  unsigned int record_size = sizeof(hpx_inst_event_t); // change this if user data size can vary
   int fd = open(filename, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
   if (fd == -1) { 
     // TODO hpx-specific error handling
@@ -68,10 +68,10 @@ void logtable_fini(logtable_t *logtable) {
   }
 }
 
-hpx_logging_event_t* logtable_next_and_increment(logtable_t *lt) {
+hpx_inst_event_t* logtable_next_and_increment(logtable_t *lt) {
   if (lt->record_size * (lt->index + 1) > lt->data_size)
     return NULL;
 
   unsigned int index = sync_fadd(&lt->index, 1, SYNC_RELAXED);  
-  return (hpx_logging_event_t*)((uintptr_t)lt->data + lt->record_size * index);
+  return (hpx_inst_event_t*)((uintptr_t)lt->data + lt->record_size * index);
 }

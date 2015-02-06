@@ -23,7 +23,7 @@
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
 #include "libhpx/locality.h"
-#include "libhpx/logging.h"
+#include "libhpx/instrumentation.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
@@ -113,7 +113,7 @@ static void _flush_request(progress_t *progress, request_t *r) {
 /// @param     progress The progress object.
 /// @param            r The request to finish.
 static void _finish_recv(progress_t *progress, request_t *r) {
-  HPX_LOG_EVENT_PARCEL_RECV(r->parcel);
+  HPX_INST_EVENT_PARCEL_RECV(r->parcel);
   r->parcel->next = progress->recvs;
   progress->recvs = r->parcel;
   // network_rx_enqueue(here->network, r->parcel);
