@@ -209,9 +209,9 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
 
   if (gate) {
     if (lsync) {
-      hpx_parcel_send_through(p, gate, lsync, HPX_NULL);
+      hpx_parcel_send_through(p, gate, lsync);
     } else {
-      hpx_parcel_send_through_sync(p, gate, HPX_NULL);
+      hpx_parcel_send_through_sync(p, gate);
     }
   } else {
     if (lsync) {
