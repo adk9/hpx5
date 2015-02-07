@@ -95,10 +95,9 @@ static HPX_ACTION(test_libhpx_lco_allreduce, void *UNUSED) {
   hpx_addr_t done = hpx_lco_and_new(nDoms);
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
 
-  hpx_addr_t newdt = hpx_lco_allreduce_new(nDoms, nDoms,
-                      sizeof(double),
-                      (hpx_monoid_op_t)_maxDouble,
-                      (hpx_monoid_id_t)_initDouble);
+  hpx_addr_t newdt = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(double),
+                                           (hpx_monoid_id_t)_initDouble,
+                                           (hpx_monoid_op_t)_maxDouble);
 
   for (int i = 0, e = nDoms; i < e; ++i) {
     InitArgs init = {
