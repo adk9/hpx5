@@ -38,8 +38,8 @@ typedef struct {
   cvar_t             wait;
   size_t          readers;
   size_t          writers;
-  hpx_monoid_op_t      op;
   hpx_monoid_id_t      id;
+  hpx_monoid_op_t      op;
   size_t            count;
   volatile int      phase;
   void             *value;  // out-of-place for alignment reasons
@@ -149,7 +149,7 @@ static hpx_status_t _allreduce_wait(lco_t *lco) {
 }
 
 static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
-                            size_t size, hpx_monoid_op_t op, hpx_monoid_id_t id) {
+                            size_t size, hpx_monoid_id_t id, hpx_monoid_op_t op) {
   // vtable
   static const lco_class_t vtable = {
     .on_fini     = _allreduce_fini,
@@ -187,9 +187,9 @@ static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
 /// @}
 
 hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
-                                 hpx_monoid_op_t op, hpx_monoid_id_t id) {
+                                 hpx_monoid_id_t id, hpx_monoid_op_t op) {
   _allreduce_t *r = libhpx_global_malloc(sizeof(*r));
   assert(r);
-  _allreduce_init(r, inputs, outputs, size, op, id);
+  _allreduce_init(r, inputs, outputs, size, id, op);
   return lva_to_gva(r);
 }
