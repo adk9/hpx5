@@ -80,6 +80,8 @@ contrib/photon/
 /libhpx/boot/Makefile
 /libhpx/gas/Makefile
 /libhpx/network/Makefile
+/libhpx/network/isir/Makefile
+/libhpx/network/pwc/Makefile
 /libhpx/scheduler/Makefile
 /libhpx/scheduler/arch/Makefile
 /libhpx/system/Makefile
@@ -100,6 +102,8 @@ contrib/photon/
 /tests/perf/perf_lco_sema
 /tests/unit/test_and_lco
 /tests/unit/test_channels
+/tests/unit/test_call
+/tests/unit/test_collectives
 /tests/unit/test_futures
 /tests/unit/test_gencount
 /tests/unit/test_global_mem_alloc
