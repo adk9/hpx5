@@ -18,19 +18,10 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
-typedef struct {
-  int nDoms;
-  int maxCycles;
-  int cores;
-} main_args_t;
-
 typedef struct Domain {
-  hpx_addr_t complete;
-  hpx_addr_t newdt;
   int nDoms;
   int rank;
   int maxcycles;
-  int cycle;
 } Domain;
 
 static int _initDomain_handler(int rank, int max, int n) {
@@ -55,8 +46,8 @@ static HPX_ACTION(test_libhpx_gas_global_alloc, void *UNUSED) {
   hpx_time_t t1 = hpx_time_now();
 
  // output the arguments we're running with
-  printf("Number of domains: %d maxCycles: %d cores: %d\n",
-          nDoms, maxCycles, 8);
+  printf("Number of domains: %d maxCycles: %d.\n",
+          nDoms, maxCycles);
   fflush(stdout);
 
   // Allocate the domain array

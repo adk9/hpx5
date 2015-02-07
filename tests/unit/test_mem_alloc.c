@@ -41,7 +41,7 @@ static HPX_ACTION(_init_sources, void* args) {
     //printf("Sources_p[i] = '%d'\n", sources_p[i]);
   }
 
-  // make sure to unpin the domain, so that AGAS can move it if it wants to
+  // make sure to unpin so that AGAS can move it if it wants to
   hpx_gas_unpin(local);
 
   return HPX_SUCCESS;
