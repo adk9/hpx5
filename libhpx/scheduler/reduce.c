@@ -84,7 +84,8 @@ static void _reduce_set(lco_t *lco, int size, const void *from) {
     scheduler_signal_all(&r->barrier);
   }
   else {
-    dbg_assert_str(r->inputs < 0, "reduction: too many threads joined (%d).\n", r->inputs);
+    log_lco("reduce: received input %d\n", r->inputs);
+    dbg_assert_str(r->inputs > 0, "reduction: too many threads joined (%d).\n", r->inputs);
   }
 
   lco_unlock(lco);
