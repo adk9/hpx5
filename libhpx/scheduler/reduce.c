@@ -33,8 +33,8 @@
 typedef struct {
   lco_t              lco;
   cvar_t         barrier;
-  hpx_monoid_op_t     op;
   hpx_monoid_id_t     id;
+  hpx_monoid_op_t     op;
   volatile int    inputs;
   void            *value;
 } _reduce_t;
@@ -122,8 +122,8 @@ static hpx_status_t _reduce_wait(lco_t *lco) {
   return _reduce_get(lco, 0, NULL);
 }
 
-static void _reduce_init(_reduce_t *r, int inputs, size_t size, hpx_monoid_op_t op,
-                         hpx_monoid_id_t id) {
+static void _reduce_init(_reduce_t *r, int inputs, size_t size, hpx_monoid_id_t id,
+                         hpx_monoid_op_t op) {
   // vtable
   static const lco_class_t vtable = {
     .on_fini     = _reduce_fini,
@@ -156,10 +156,10 @@ static void _reduce_init(_reduce_t *r, int inputs, size_t size, hpx_monoid_op_t 
 }
 /// @}
 
-hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_monoid_op_t op,
-                              hpx_monoid_id_t id) {
+hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_monoid_id_t id,
+                              hpx_monoid_op_t op) {
   _reduce_t *r = libhpx_global_malloc(sizeof(*r));
   assert(r);
-  _reduce_init(r, inputs, size, op, id);
+  _reduce_init(r, inputs, size, id, op);
   return lva_to_gva(r);
 }
