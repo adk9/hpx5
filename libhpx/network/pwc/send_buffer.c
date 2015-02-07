@@ -80,7 +80,7 @@ static int _start_record(void *buffer, void *record) {
 /// network as is currently possible. This will return the number of remaining
 /// buffered sends.
 ///
-/// Progressing a send buffer mus t be properly synchronized with the send
+/// Progressing a send buffer must be properly synchronized with the send
 /// operation, as well as with concurrent attempts to progress the buffer, since
 /// they may be called concurrently from more than one thread.
 ///
@@ -96,7 +96,9 @@ static int _send_buffer_progress(send_buffer_t *sends) {
     status = HPX_ERROR;
   }
 
-  // If there are still sends remaining, then
+  // If there are still sends remaining, then regenerate the rdma get operation
+  // to read the remote min. This will trigger another instance of this progress
+  // loop when that get completes.
   if (i > 0) {
     if (_start_get_rx_min(sends) != LIBHPX_OK) {
       dbg_error("error initiating an rdma get operation\n");
@@ -121,8 +123,7 @@ static HPX_ACTION(_finish_get_rx_min, void *UNUSED) {
 }
 
 int send_buffer_init(send_buffer_t *sends, struct eager_buffer *tx,
-                     uint32_t size)
-{
+                     uint32_t size) {
   sync_tatas_init(&sends->lock);
   sends->tx = tx;
   return circular_buffer_init(&sends->pending, sizeof(record_t), size);
