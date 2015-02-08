@@ -132,14 +132,14 @@ static int _main_action(int *args) {
   hpx_addr_t complete = hpx_lco_and_new(THREADS);
   hpx_addr_t done = hpx_lco_and_new(THREADS);
   hpx_addr_t collVal = hpx_lco_allreduce_new(THREADS, THREADS, sizeof(double),
-                      (hpx_monoid_op_t)maxDouble, (hpx_monoid_id_t)initDouble);
+                       (hpx_monoid_id_t)initDouble, (hpx_monoid_op_t)maxDouble);
 
   hpx_addr_t maxTime = hpx_lco_allreduce_new(THREADS, THREADS, sizeof(double),
-                      (hpx_monoid_op_t)maxDouble, (hpx_monoid_id_t)initDouble);
+                       (hpx_monoid_id_t)initDouble, (hpx_monoid_op_t)maxDouble);
   hpx_addr_t minTime = hpx_lco_allreduce_new(THREADS, THREADS, sizeof(double),
-                      (hpx_monoid_op_t)minDouble, (hpx_monoid_id_t)initDouble);
+                       (hpx_monoid_id_t)initDouble, (hpx_monoid_op_t)minDouble);
   hpx_addr_t avgTime = hpx_lco_allreduce_new(THREADS, THREADS, sizeof(double),
-                      (hpx_monoid_op_t)sumDouble, (hpx_monoid_id_t)initDouble);
+                       (hpx_monoid_id_t)initDouble, (hpx_monoid_op_t)sumDouble);
 
   for (i = 0; i < THREADS; ++i) {
      InitArgs init = {
