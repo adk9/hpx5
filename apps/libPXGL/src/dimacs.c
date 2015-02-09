@@ -48,7 +48,7 @@ static int _dimacs_visit_vertex_action(const hpx_addr_t *const args) {
 hpx_action_t dimacs_checksum = 0;
 int dimacs_checksum_action(const sssp_uint_t *const num_vertices) {
   const hpx_addr_t adj_list = hpx_thread_current_target();
-  hpx_addr_t checksum_lco = hpx_lco_allreduce_new(*num_vertices, 1, sizeof(distance_t), (hpx_monoid_op_t) dimacs_checksum_op, dimacs_checksum_init);
+  hpx_addr_t checksum_lco = hpx_lco_allreduce_new(*num_vertices, 1, sizeof(distance_t), (hpx_monoid_id_t) dimacs_checksum_init, (hpx_monoid_op_t) dimacs_checksum_op);
   // since we know how we have allocated the index block array, we
   // compute the block size here from the number of vertices.
   uint32_t block_size = ((*num_vertices + HPX_LOCALITIES - 1) / HPX_LOCALITIES) * sizeof(hpx_addr_t);
