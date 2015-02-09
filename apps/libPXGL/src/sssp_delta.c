@@ -135,10 +135,9 @@ static int _init_buckets_action(const size_t * const delta) {
 }
 
 hpx_action_t _delete_buckets = 0;
-static int _delete_buckets_action(const hpx_addr_t const * termination_lco) {
+static int _delete_buckets_action(const void const * arg) {
   buckets_t *temp_buckets = buckets;
   buckets = NULL;
-  hpx_lco_set(*termination_lco, 0, NULL, HPX_NULL, HPX_NULL);
   for(size_t i = 0; i < HPX_THREADS; ++i) {
     free(temp_buckets->buckets[i]);
   }
@@ -307,11 +306,7 @@ int call_delta_sssp_action(const call_sssp_args_t *const args) {
     // printf("Finding next level.\n");
     _find_next_level();
     if (buckets->current_level == size_t_max) {
-      hpx_addr_t delete_termination_lco = hpx_lco_and_new(HPX_LOCALITIES);
-      hpx_bcast(_delete_buckets, HPX_NULL, &delete_termination_lco,
-                sizeof(delete_termination_lco));
-      hpx_lco_wait(delete_termination_lco);
-      hpx_lco_delete(delete_termination_lco, HPX_NULL);
+      hpx_bcast_sync(_delete_buckets, NULL, 0);
       break;
     }
   }
