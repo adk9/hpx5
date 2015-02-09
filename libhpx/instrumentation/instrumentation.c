@@ -87,10 +87,6 @@ _log_create(hpx_inst_class_type_t class, hpx_inst_event_type_t event,
   return HPX_SUCCESS;
 }
 
-static int _enabled(hpx_inst_class_type_t class) {
-  return (here->config->traceclasses & (1 << (class + 1)));
-}
-
 #endif
 
 int hpx_inst_init() {
@@ -139,7 +135,7 @@ int hpx_inst_init() {
   hpx_inst_parcel_enabled = get_env_var("HPX_INST_PARCELS");
 
   for (int class = 0, e = HPX_INST_NUM_CLASSES; class < e; ++class) {
-    if (!_enabled(class)) {
+    if (!config_traceclasses_isset(here->config, class)) {
       continue;
     }
     int event = HPX_INST_CLASS_EVENT_OFFSET[class];
@@ -185,7 +181,7 @@ void hpx_inst_log_event(hpx_inst_class_type_t class,
                         int user_data_size,
                         void* user_data) {
 #ifdef ENABLE_INSTRUMENTATION
-  if (!_enabled(class)) {
+  if (!config_traceclasses_isset(here->config, class)) {
     return;
   }
 

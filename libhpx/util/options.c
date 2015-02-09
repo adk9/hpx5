@@ -42,124 +42,207 @@
 
 typedef struct hpx_options_t hpx_options_t;
 
+/// Special case handling for a config file option.
+static char *_config_file = NULL;
+
 /// The default configuration.
 static const config_t _default_cfg = {
-#define LIBHPX_DECL_OPTION(group, type, ctype, id, default) .id = default,
+#define LIBHPX_OPT(UNUSED1, id, default, UNUSED2) .id = default,
 # include "libhpx/options.def"
-#undef LIBHPX_DECL_OPTION
+#undef LIBHPX_OPT
 };
 
+/// Getenv, but with an upper-case version of @p var.
+static const char *_getenv_upper(const char * const var) {
+  const char *c = NULL;
+  const size_t len = strlen(var);
+  char *uvar = malloc(len + 1);
+  dbg_assert_str(uvar, "Could not malloc %lu bytes during option parsing", len);
+  for (int i = 0; i < len; ++i) {
+    uvar[i] = toupper(var[i]);
+  }
+  uvar[len] = '\0';
+  c = getenv(uvar);
+  free(uvar);
+  return c;
+}
 
 /// Get a configuration value from an environment variable.
 ///
-/// This function looks up a configuration value for an environment
-/// variable @p var (of the form hpx_foo). Since environment variables
-/// could be potentially case-sensitive, if it does not find an
-/// associated configuration value, it turns @p var into uppercase (of
-/// the form (HPX_FOO) and retries. If a value was found eventually,
-/// it is appended to a dynamic string @p str (as --hpx-foo=<val>).
-
-static void _get_config_env(UT_string *str, const char *var, const char *optstr) {
-  char *c = getenv(var);
+/// This function looks up a configuration value for an environment variable @p
+/// var. If a value is not found it will look for an uppercase version. If a
+/// value was found, we append a command-line-option form of the variable to @p
+/// str so that it can be later parsed by our gengetopt infrastructure.
+///
+/// We need two different versions of the key we're looking for, one with
+/// underscores to pass to getopt, and one with hyphens to pass to gengetopt.
+///
+/// @param[out]     str A dynamic string to store the output into.
+/// @param          var The key we are looking for in the environment.
+/// @param          opt The key we will use for gengetopt.
+static void _from_env(UT_string *str, const char * const var,
+                      const char * const arg) {
+  const char *c = getenv(var);
   if (!c) {
-    int len = strlen(var);
-    char *uvar = malloc(sizeof(*uvar)*(len+1));
-    uvar[len] = '\0';
-    for (int i = 0; i < len; ++i) {
-      assert(var[i]);
-      uvar[i] = toupper(var[i]);
-    }
-    c = getenv(uvar);
-    free(uvar);
+    c = _getenv_upper(var);
   }
-
-  if (c)
-    utstring_printf(str, "--%s=%s ", optstr, c);
+  if (!c) {
+    return;
+  }
+  utstring_printf(str, "--%s=%s ", arg, c);
 }
 
-/// Try to read values of all of the configuration variables that we
-/// support from the environment.
-int _read_options_from_env(hpx_options_t *env_args, const char *progname) {
-  UT_string *str;
-
-  utstring_new(str);
-
-#define _GET_CONFIG_ENV(str,opt) _get_config_env(str, "hpx_" #opt, "hpx-" #opt)
-#define LIBHPX_DECL_OPTION(group, type, ctype, id, default) _GET_CONFIG_ENV(str, id);
+/// Get values from the environment for the options declared in options.def.
+///
+/// This uses multiple-inclusion of options.def to call _get_env() for all of
+/// the options declared there. Each found option will be appended to @p str in
+/// a form that can be parsed by the gengetopt infrastructure.
+///
+/// @param[out]     str This will contain the collected values.
+static void _from_env_all(UT_string *str) {
+#define LIBHPX_OPT(u1, id, u3, u4) _from_env(str, "hpx_"#id, "hpx-"#id);
 # include "libhpx/options.def"
-#undef LIBHPX_DECL_OPTION
-#undef _GET_CONFIG_ENV
-
-  const char *cmdline = utstring_body(str);
-
-  if (cmdline)
-    hpx_option_parser_string(cmdline, env_args, progname);
-
-  utstring_free(str);
-  return 0;
+#undef LIBHPX_OPT
 }
 
+/// Accumulate configuration options from the environment.
+///
+/// This will go through the environment and create a command-line-like string
+/// that we can parse using the gengetopt command-line infrastructure.
+///
+/// @param[out]    opts The option structure we will fill from the environment.
+/// @param     progname Required by the gengetopt parser.
+static void _process_env(hpx_options_t *opts, const char *progname) {
+  UT_string *hpx_opts = NULL;
+  utstring_new(hpx_opts);
+  _from_env_all(hpx_opts);
 
-/// Update the configuration structure @p cfg with the option values
-/// specified in @p opts.
-static void _set_config_options(config_t *cfg, hpx_options_t *opts) {
+  const char *cmdline = utstring_body(hpx_opts);
+  if (cmdline) {
+    int e = hpx_option_parser_string(cmdline, opts, progname);
+    dbg_check(e, "failed to parse environment options: %s.\n", cmdline);
+  }
+  utstring_free(hpx_opts);
+}
 
-#define LIBHPX_DECL_OPTION(group, type, ctype, id, default)   \
-  {                                                           \
-    if (opts->hpx_##id##_given)                               \
-      cfg->id = opts->hpx_##id##_##type;                      \
+/// Accumulate configuration options from the command line.
+///
+/// This will go through the command line, splitting out options that are
+/// prefixed with "--hpx-" and processing them into the hpx_options_t.
+///
+/// @param[out]    opts The option structure we will fill from the environment.
+/// @param         argc The number of arguments to process.
+/// @param         argv The arguments to process.
+static void _process_cmdline(hpx_options_t *opts, int *argc, char ***argv) {
+  // Split the arguments into those that should be parsed as --hpx- options
+  // and those that are application level options
+  UT_string *hpx_opts = NULL;
+  utstring_new(hpx_opts);
+  for (int i = 0, n = 0, e = *argc; i < e; ++i) {
+    UT_string *tmp = NULL;
+    utstring_new(tmp);
+    utstring_printf(tmp, "%s ", (*argv)[i]);
+    if (utstring_find(tmp, 0, "--hpx-", 6) < 0) {
+      (*argv)[n++] = (*argv)[i];
+    }
+    else {
+      utstring_concat(hpx_opts, tmp);
+      *argc = *argc - 1;
+    }
+    utstring_free(tmp);
+  }
+
+  const char *cmdline = utstring_body(hpx_opts);
+  if (cmdline) {
+    int e = hpx_option_parser_string(cmdline, opts, argv[0][0]);
+    dbg_check(e, "failed to parse command-line options %s.\n", cmdline);
+  }
+  utstring_free(hpx_opts);
+}
+
+/// Process a bitvector opt.
+///
+/// @param            n The number of args we saw.
+/// @param         args The args from gengetopt.
+/// @param          all An arg that we should interpret as meaning "all bits".
+///
+/// @returns            A bitvector set with the bits specified in @p args.
+static uint64_t _merge_bitvector(int n, uint32_t args[n], uint64_t all) {
+  uint64_t bits = 0;
+  for (int i = 0; i < n; ++i) {
+    dbg_assert_str(args[i] < 64, "bitvector arg %u out of bounds\n", args[i]);
+    if (args[i] == all) {
+      return UINT64_MAX;
+    }
+    bits |= 1 << args[i];
+  }
+  return bits;
+}
+
+/// Process a vector opt.
+///
+/// @param            n The number of option args we need to process.
+/// @param         args The option args to process.
+/// @param         init A default value.
+/// @param         term A value that means "no more values".
+///
+/// @returns            A @p term-terminated vector populated with the @p
+///                       args. This vector must be deleted at shutdown.
+static int *_merge_vector(int n, int args[n], int init, int term) {
+  int *vector = calloc(n + 1, sizeof(int));
+  for (int i = 0; i < n; ++i) {
+    vector[i] = args[i];
+  }
+  vector[n] = (n) ? term : init;
+  return vector;
+}
+
+/// Transform a set of options from gengetopt into a config structure.
+///
+/// This will only overwrite parts of the config structure for which options
+/// were actually given.
+///
+/// @param          cfg The configuration object we are writing to.
+/// @param         opts The gengetopt options we are reading from.
+static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
+
+#define LIBHPX_OPT_FLAG(UNUSED1, id, UNUSED2)     \
+  if (opts->hpx_##id##_given) {                   \
+    cfg->id = opts->hpx_##id##_##flag;            \
+  }
+
+#define LIBHPX_OPT_SCALAR(UNUSED1, id, UNUSED2, UNUSED3)    \
+  if (opts->hpx_##id##_given) {                             \
+    cfg->id = opts->hpx_##id##_##arg;                       \
+  }
+
+#define LIBHPX_OPT_BITSET(UNUSED1, id, init)            \
+  if (opts->hpx_##id##_given) {                         \
+    cfg->id = _merge_bitvector(opts->hpx_##id##_given,  \
+                               opts->hpx_##id##_arg,    \
+                               hpx_##id##_arg_all);     \
+  }
+
+#define LIBHPX_OPT_INTSET(UNUSED1, id, init, all, none) \
+  if (opts->hpx_##id##_given) {                         \
+    cfg->id = _merge_vector(opts->hpx_##id##_given,     \
+                            opts->hpx_##id##_arg,       \
+                            init, none);                \
   }
 # include "libhpx/options.def"
-#undef LIBHPX_DECL_OPTION
-#undef _SET_VAR
+#undef LIBHPX_OPT_INTSET
+#undef LIBHPX_OPT_BITSET
+#undef LIBHPX_OPT_SCALAR
+#undef LIBHPX_OPT_FLAG
 
-  if (opts->hpx_loglevel_given) {
-    cfg->loglevel = 0;
-    for (int i = 0; i < opts->hpx_loglevel_given; ++i) {
-      if (opts->hpx_loglevel_arg[i] == hpx_loglevel_arg_all) {
-        cfg->loglevel = -1;
-        break;
-      }
-      cfg->loglevel |= (1 << opts->hpx_loglevel_arg[i]);
-    }
-  }
-
-  if (opts->hpx_traceclasses_given) {
-    cfg->traceclasses = 0;
-    for (int i = 0; i < opts->hpx_traceclasses_given; ++i) {
-      if (opts->hpx_traceclasses_arg[i] == hpx_traceclasses_arg_all) {
-        cfg->traceclasses = -1;
-        break;
-      }
-      cfg->traceclasses |= (1 << opts->hpx_traceclasses_arg[i]);
-    }
-  }
-
-  if (opts->hpx_logat_given) {
-    if (opts->hpx_logat_arg[0] == HPX_LOCALITY_ALL) {
-      cfg->logat = (int*)HPX_LOCALITY_ALL;
-    } else {
-      cfg->logat = malloc(sizeof(*cfg->logat) * (opts->hpx_logat_given+1));
-      cfg->logat[0] = opts->hpx_logat_given;
-      for (int i = 0; i < opts->hpx_logat_given; ++i) {
-        cfg->logat[i+1] = opts->hpx_logat_arg[i];
-      }
-    }
-  }
-
-  // translate the waitat list into a HPX_LOCALITY_NONE-terminated array
-  cfg->waitat = calloc(opts->hpx_waitat_given + 1, sizeof(int));
-  for (int i = 0, e = opts->hpx_waitat_given; i < e; ++i) {
-    cfg->waitat[i] = opts->hpx_waitat_arg[i];
-  }
-  cfg->waitat[opts->hpx_waitat_given] = HPX_LOCALITY_NONE;
-
-  dbg_assert(!opts->hpx_configfile_given || opts->hpx_configfile_arg);
+  // Special case handling for the config file option, the
+  // opts->hpx_configfile_arg is deleted so we have to duplicate it.
   if (opts->hpx_configfile_given) {
-    dbg_assert(cfg->configfile != opts->hpx_configfile_arg);
-    if (cfg->configfile)
-      free(cfg->configfile);
-    cfg->configfile = strdup(opts->hpx_configfile_arg);
+    dbg_assert(opts->hpx_configfile_arg);
+    if (_config_file) {
+      free(_config_file);
+    }
+    _config_file = strdup(opts->hpx_configfile_arg);
   }
 }
 
@@ -168,82 +251,65 @@ void hpx_print_help(void) {
   hpx_option_parser_print_help();
 }
 
-int config_waitat(config_t *cfg, const hpx_locality_t locality) {
-  for (int i = 0; cfg->waitat[i] != HPX_LOCALITY_NONE; ++i) {
-    if (cfg->waitat[i] == HPX_LOCALITY_ALL) {
-      return 1;
-    }
-
-    if (cfg->waitat[i] == locality) {
-      return 1;
-    }
+#define LIBHPX_OPT_INTSET(UNUSED1, id, init, all, none)         \
+  int config_##id##_isset(const config_t *cfg, int element) {   \
+    if (!cfg->id) {                                             \
+      return (init == all);                                     \
+    }                                                           \
+    for (int i = 0; cfg->id[i] != none; ++i) {                  \
+      if (cfg->id[i] == all) {                                  \
+        return 1;                                               \
+      }                                                         \
+      if (cfg->id[i] == element) {                              \
+        return 1;                                               \
+      }                                                         \
+    }                                                           \
+    return 0;                                                   \
   }
-  return 0;
-}
-
+# include "libhpx/options.def"
+#undef LIBHPX_OPT_INTSET
 
 /// Parse HPX command-line options to create a new config object.
 config_t *config_new(int *argc, char ***argv) {
 
   // first, initialize to the default configuration
   config_t *cfg = malloc(sizeof(*cfg));
+  dbg_assert(cfg);
   *cfg = _default_cfg;
 
-  char *progname = (argv) ? (*argv)[0] : "";
-
-  // then, read the environment for the specified configuration values
-  hpx_options_t opts;
-  int e = _read_options_from_env(&opts, progname);
-  if (e)
-    fprintf(stderr, "failed to read options from the environment variables.\n");
-
-  _set_config_options(cfg, &opts);
-  hpx_option_parser_free(&opts);
-
-  // finally, use the CLI-specified options to override the above
-  // values
-  if (!argc || !argv)
+  if (!argc || !argv) {
+    log("hpx_init(NULL, NULL) called, using default configuration\n");
     return cfg;
-
-  UT_string *str;
-  UT_string *arg;
-
-  utstring_new(str);
-  utstring_new(arg);
-
-  int nargs = *argc;
-  for (int i = 1, n = 1; i < *argc; ++i) {
-    utstring_printf(arg, "%s ", (*argv)[i]);
-    if (utstring_find(arg, 0, "--hpx-", 6) != -1) {
-      utstring_concat(str, arg);
-      nargs--;
-    } else {
-      (*argv)[n++] = (*argv)[i];
-    }
-    utstring_clear(arg);
   }
-  *argc = nargs;
-  utstring_free(arg);
 
-  const char *cmdline = utstring_body(str);
-  e = hpx_option_parser_string(cmdline, &opts, progname);
-  if (e)
-    fprintf(stderr, "failed to parse options specified on the command-line.\n");
+  dbg_assert(*argc > 0 && *argv);
 
-  _set_config_options(cfg, &opts);
-  utstring_free(str);
+  // The executable is used by the gengetopt parser internally.
+  const char *progname = (*argv)[0];
+
+  // Process the environment.
+  hpx_options_t opts;
+  _process_env(&opts, progname);
+  _merge_opts(cfg, &opts);
   hpx_option_parser_free(&opts);
+
+  // Use the command line arguments to override the environment values.
+  _process_cmdline(&opts, argc, argv);
+  _merge_opts(cfg, &opts);
+  hpx_option_parser_free(&opts);
+
 
   // the config file takes the highest precedence in determining the
   // runtime parameters
-  if (cfg->configfile) {
+  if (_config_file) {
     struct hpx_option_parser_params *params = hpx_option_parser_params_create();
     params->initialize = 0;
     params->override = 0;
-    int e = hpx_option_parser_config_file(cfg->configfile, &opts, params);
-    if (!e)
-      _set_config_options(cfg, &opts);
+    int e = hpx_option_parser_config_file(_config_file, &opts, params);
+    dbg_check(e, "could not parse HPX configuration file: %s\n", _config_file);
+    _merge_opts(cfg, &opts);
 
+    free(_config_file);
     free(params);
     hpx_option_parser_free(&opts);
   }

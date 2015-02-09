@@ -111,12 +111,14 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // check to see if everyone is waiting
-  if (config_waitat(here->config, HPX_LOCALITY_ALL)) {
+  if (config_waitat_isset(here->config, HPX_LOCALITY_ALL)) {
     dbg_wait();
   }
 
   // set the log level
-  log_level = here->config->loglevel;
+  if (config_logat_isset(here->config, HPX_LOCALITY_ALL)) {
+    log_level = here->config->loglevel;
+  }
 
   // topology
   int e = hwloc_topology_init(&here->topology);
@@ -138,20 +140,18 @@ int hpx_init(int *argc, char ***argv) {
   }
   here->rank = boot_rank(here->boot);
   here->ranks = boot_n_ranks(here->boot);
-  if (config_waitat(here->config, here->rank)) {
-    if (!config_waitat(here->config, HPX_LOCALITY_ALL)) {
+
+  // Now that we know our rank, we can be more specific about waiting.
+  if (config_waitat_isset(here->config, here->rank)) {
+    // Don't wait twice.
+    if (!config_waitat_isset(here->config, HPX_LOCALITY_ALL)) {
       dbg_wait();
     }
   }
 
-  if (here->config->logat && here->config->logat != (int*)HPX_LOCALITY_ALL) {
-    int orig_level = log_level;
-    log_level = 0;
-    for (int i = 0; i < here->config->logat[0]; ++i) {
-      if (here->config->logat[i+1] == here->rank) {
-        log_level = orig_level;
-      }
-    }
+  // Reset the log level based on our rank-specific information.
+  if (config_logat_isset(here->config, here->rank)) {
+    log_level = here->config->loglevel;
   }
 
   // byte transport
