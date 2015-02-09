@@ -418,11 +418,11 @@ typedef bool (*hpx_predicate_t)(void *i, const size_t bytes);
 ///
 /// @param inputs       The static number of inputs to the reduction.
 /// @param size         The size of the data being reduced.
-/// @param op           The commutative-associative operation we're performing.
-/// @param id            An initialization function for the data, this is used to
+/// @param id           An initialization function for the data, this is used to
 ///                     initialize the data in every epoch.
-hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_monoid_op_t op,
-                              hpx_monoid_id_t id);
+/// @param op           The commutative-associative operation we're performing.
+hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_monoid_id_t id,
+                              hpx_monoid_op_t op);
 
 /// Allocate a new all-reduction LCO.
 ///
@@ -432,10 +432,11 @@ hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_monoid_op_t op,
 /// @param participants The static number of participants in the reduction.
 /// @param readers      The static number of the readers of the result of the reduction.
 /// @param size         The size of the data being reduced.
+/// @param id           A function that is used to initialize the data
+///                     in every epoch.
 /// @param op           The commutative-associative operation we're performing.
-/// @param id           A function that is used to initialize the data in every epoch.
 hpx_addr_t hpx_lco_allreduce_new(size_t participants, size_t readers, size_t size,
-                                 hpx_monoid_op_t op, hpx_monoid_id_t id);
+                                 hpx_monoid_id_t id, hpx_monoid_op_t op);
 
 /// Set an allgather.
 ///

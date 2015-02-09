@@ -24,8 +24,8 @@ typedef struct tatas_lock tatas_lock_t;
 
 #define SYNC_TATAS_LOCK_INIT {0}
 
-HPX_INTERNAL void sync_tatas_init(tatas_lock_t *l) HPX_NON_NULL(1);
-HPX_INTERNAL void sync_tatas_acquire_slow(tatas_lock_t *l) HPX_NON_NULL(1);
+void sync_tatas_init(tatas_lock_t *l) HPX_NON_NULL(1) HPX_INTERNAL;
+void sync_tatas_acquire_slow(tatas_lock_t *l) HPX_NON_NULL(1) HPX_INTERNAL;
 static inline void sync_tatas_acquire(tatas_lock_t *l) HPX_NON_NULL(1);
 static inline void sync_tatas_release(tatas_lock_t *l) HPX_NON_NULL(1);
 

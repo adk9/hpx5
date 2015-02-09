@@ -1,3 +1,19 @@
+// =============================================================================
+//  High Performance ParalleX Library (libhpx)
+//
+//  Copyright (c) 2013, Trustees of Indiana University,
+//  All rights reserved.
+//
+//  This software may be modified and distributed under the terms of the BSD
+//  license.  See the COPYING file for details.
+//
+//  This software was created at the Indiana University Center for Research in
+//  Extreme Scale Technologies (CREST).
+// =============================================================================
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,11 +32,11 @@
 //  return sizeof(hpx_inst_event_t) + user_data_size;
 //}
 
-int logtable_init(logtable_t *logtable, char* filename, size_t total_size) {
+int logtable_init(logtable_t *logtable, const char* filename, size_t total_size) {
   logtable->data_size = total_size;
   unsigned int record_size = sizeof(hpx_inst_event_t); // change this if user data size can vary
   int fd = open(filename, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-  if (fd == -1) { 
+  if (fd == -1) {
     // TODO hpx-specific error handling
     perror("init_action: open");
     return -1;
@@ -30,8 +46,8 @@ int logtable_init(logtable_t *logtable, char* filename, size_t total_size) {
   if (bytes != 1)
     return -1;
 
-  void* data = mmap(NULL, logtable->data_size, 
-                    PROT_READ|PROT_WRITE, MAP_SHARED | MAP_NORESERVE, 
+  void* data = mmap(NULL, logtable->data_size,
+                    PROT_READ|PROT_WRITE, MAP_SHARED | MAP_NORESERVE,
                     fd, 0);
   //  printf("mmap at %p\n", data);
   if (data == MAP_FAILED) {
@@ -42,7 +58,7 @@ int logtable_init(logtable_t *logtable, char* filename, size_t total_size) {
   }
 
   logtable->record_size = record_size;
-  snprintf(filename, 256, "%s", logtable->filename);
+  strncpy(logtable->filename, filename, 256);
   logtable->data_size = total_size;
   logtable->data   = data;
   logtable->record_size = record_size;
@@ -72,6 +88,6 @@ hpx_inst_event_t* logtable_next_and_increment(logtable_t *lt) {
   if (lt->record_size * (lt->index + 1) > lt->data_size)
     return NULL;
 
-  unsigned int index = sync_fadd(&lt->index, 1, SYNC_RELAXED);  
+  unsigned int index = sync_fadd(&lt->index, 1, SYNC_RELAXED);
   return (hpx_inst_event_t*)((uintptr_t)lt->data + lt->record_size * index);
 }
