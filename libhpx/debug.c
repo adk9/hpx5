@@ -81,12 +81,10 @@ static tatas_lock_t _log_lock = SYNC_TATAS_LOCK_INIT;
 
 void log_internal(const hpx_log_t level, unsigned line, const char *filename,
                   const char *fmt, ...) {
-  if (!(log_level & level)) {
-    return;
+  if (log_level & level) {
+    sync_tatas_acquire(&_log_lock);
+    _print(stdout, line, filename, fmt);
+    sync_tatas_release(&_log_lock);
   }
-
-  sync_tatas_acquire(&_log_lock);
-  _print(stdout, line, filename, fmt);
-  sync_tatas_release(&_log_lock);
 }
 

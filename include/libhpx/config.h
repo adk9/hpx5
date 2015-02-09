@@ -135,9 +135,8 @@ static const char* const HPX_LOG_TO_STRING[] = {
 };
 
 typedef enum {
-  HPX_TRACE_CLASS_DEFAULT = (1<<0),
-  HPX_TRACE_CLASS_PARCELS = (1<<1),
-  HPX_TRACE_CLASS_PWC     = (1<<2),
+  HPX_TRACE_CLASS_PARCELS = (1<<0),
+  HPX_TRACE_CLASS_PWC     = (1<<1),
   HPX_TRACE_CLASS_ALL     =   (-1)
 } trace_class_t;
 
@@ -146,9 +145,9 @@ typedef enum {
 /// This configuration is used to control some of the runtime
 /// parameters for the HPX system.
 typedef struct config {
-#define LIBHPX_DECL_OPTION(group, type, ctype, id, init) ctype id;
+#define LIBHPX_OPT(group, id, init, ctype) ctype id;
 # include "options.def"
-#undef LIBHPX_DECL_OPTION
+#undef LIBHPX_OPT
 } config_t;
 
 
@@ -158,13 +157,20 @@ config_t *config_new(int *argc, char ***argv)
 void config_delete(config_t *cfg)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-/// Check to see if the wait flag is set at a particular locality.
+/// Add declarations to query each of the set options.
 ///
-/// @param     locality The locality to check.
-///
-/// @returns          0 The flag is not set.
-///                   1 The flag is set.
-int config_waitat(config_t *cfg, const hpx_locality_t locality)
-  HPX_INTERNAL;
+/// @param          cfg The configuration to query.
+/// @param        value The value to check for.
+#define LIBHPX_OPT_INTSET(UNUSED1, id, UNUSED2, UNUSED3, UNUSED4) \
+  int config_##id##_isset(const config_t *cfg, int value)         \
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+#define LIBHPX_OPT_BITSET(UNUSED1, id, UNUSED2) \
+  static inline uint64_t config_##id##_isset(const config_t *cfg, int bit) { \
+    return (cfg->id & (1 << bit));                                      \
+  }
+# include "options.def"
+#undef LIBHPX_OPT_BITSET
+#undef LIBHPX_OPT_INTSET
 
 #endif // LIBHPX_CONFIG_H
