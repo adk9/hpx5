@@ -7,6 +7,9 @@
 #   HPX_LIBFFI_LDADD
 #
 # ------------------------------------------------------------------------------
+
+AC_ARG_VAR([HPX_LIBFFI_CARGS], [Additional arguments passed to libffi contrib])
+
 AC_DEFUN([HPX_CONTRIB_LIBFFI],
   [AC_ARG_ENABLE([external-libffi],
     [AS_HELP_STRING([--enable-external-libffi],
@@ -19,7 +22,7 @@ AC_DEFUN([HPX_CONTRIB_LIBFFI],
         AC_SUBST(HPX_LIBFFI_LDADD, "$LIBFFI_LIBS")
         AC_SUBST(HPX_LIBFFI_LIBS, "$LIBFFI_LIBS")
 	enable_external_libffi=yes],
-      [ACX_CONFIGURE_DIR([$1], [$1])
+      [ACX_CONFIGURE_DIR([$1], [$1], [" $HPX_LIBFFI_CARGS"])
         AC_SUBST(HPX_LIBFFI_CPPFLAGS, " -I\$(top_builddir)/$1/include")
         AC_SUBST(HPX_LIBFFI_LDADD, "\$(abs_top_builddir)/$1/libffi_convenience.la")
         AC_SUBST(HPX_LIBFFI_DEPS, "\$(abs_top_builddir)/$1/libffi_convenience.la")
