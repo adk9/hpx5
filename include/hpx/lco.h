@@ -64,6 +64,9 @@ void hpx_lco_reset(hpx_addr_t future, hpx_addr_t sync);
 /// An action-based interface to the LCO set operation.
 extern hpx_action_t hpx_lco_set_action;
 
+/// An action-based interface to the LCO delete operation.
+extern hpx_action_t hpx_lco_delete_action;
+
 /// Set an LCO, optionally with data.
 ///
 /// If @p LCO is HPX_NULL then this is equivalent to a no-op.

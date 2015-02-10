@@ -182,7 +182,7 @@ int hpx_call_cc(hpx_addr_t addr, hpx_action_t action, void (*cleanup)(void*),
 /// @param    len the length of @p args
 ///
 /// @returns      HPX_SUCCESS if no errors were encountered
-int hpx_bcast(hpx_action_t action, hpx_addr_t lco, const void *args, size_t len);
+int hpx_bcast(hpx_action_t action, hpx_addr_t lco, ...);
 
 /// HPX collective operations.
 ///
@@ -194,6 +194,6 @@ int hpx_bcast(hpx_action_t action, hpx_addr_t lco, const void *args, size_t len)
 /// @param    len the length of @p args
 ///
 /// @returns      HPX_SUCCESS if no errors were encountered
-int hpx_bcast_sync(hpx_action_t action, const void *args, size_t len);
+int hpx_bcast_sync(hpx_action_t action, ...);
 
 #endif

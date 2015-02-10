@@ -28,23 +28,6 @@
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
 
-typedef struct {
-  hpx_action_t action;
-  char *data[];
-} _bcast_args_t;
-
-static HPX_ACTION(_bcast, _bcast_args_t *args) {
-  hpx_addr_t and = hpx_lco_and_new(here->ranks);
-  uint32_t len = hpx_thread_current_args_size() - sizeof(args->action);
-  for (int i = 0, e = here->ranks; i < e; ++i) {
-    hpx_call(HPX_THERE(i), args->action, and, args->data, len);
-  }
-
-  hpx_lco_wait(and);
-  hpx_lco_delete(and, HPX_NULL);
-  return HPX_SUCCESS;
-}
-
 /// A RPC call with a user-specified continuation action.
 int hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
                                hpx_addr_t c_target, hpx_action_t c_action, ...) {
@@ -148,23 +131,27 @@ int hpx_call_cc(hpx_addr_t addr, hpx_action_t action, void (*cleanup)(void*),
   hpx_thread_continue_cleanup(0, NULL, cleanup, env);
 }
 
+
 /// Encapsulates a RPC called on all available localities.
-int hpx_bcast(hpx_action_t action, hpx_addr_t lco, const void *data, size_t len) {
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, len + sizeof(_bcast_args_t));
-  hpx_parcel_set_target(p, HPX_HERE);
-  hpx_parcel_set_action(p, _bcast);
-  hpx_parcel_set_cont_action(p, hpx_lco_set_action);
-  hpx_parcel_set_cont_target(p, lco);
-
-  _bcast_args_t *args = (_bcast_args_t *)hpx_parcel_get_data(p);
-  args->action = action;
-  memcpy(&args->data, data, len);
-
-  hpx_parcel_send(p, HPX_NULL);
+int hpx_bcast(hpx_action_t action, hpx_addr_t rsync, ...) {
+  hpx_addr_t and = hpx_lco_and_new(here->ranks);
+  hpx_call_when_with_continuation(and, rsync, hpx_lco_set_action,
+                                  and, hpx_lco_delete_action, NULL, 0);
+  va_list vargs;
+  va_start(vargs, rsync);
+  for (int i = 0, e = here->ranks; i < e; ++i) {
+    int e = libhpx_call_action(here->actions, HPX_THERE(i), action,
+                               and, hpx_lco_set_action, HPX_NULL,
+                               HPX_NULL, &vargs);
+    if (e != HPX_SUCCESS) {
+      dbg_error("hpx_bcast returned an error.\n");
+    }
+  }
+  va_end(vargs);
   return HPX_SUCCESS;
 }
 
-int hpx_bcast_sync(hpx_action_t action, const void *data, size_t len) {
+int hpx_bcast_sync(hpx_action_t action, ...) {
   int e;
   hpx_addr_t lco = hpx_lco_future_new(0);
   if (lco == HPX_NULL) {
@@ -172,11 +159,20 @@ int hpx_bcast_sync(hpx_action_t action, const void *data, size_t len) {
     goto unwind0;
   }
 
-  e = hpx_bcast(action, lco, data, len);
-  if (e != HPX_SUCCESS) {
-    e = dbg_error("hpx_bcast returned an error.\n");
-    goto unwind1;
+  hpx_addr_t and = hpx_lco_and_new(here->ranks);
+  hpx_call_when_with_continuation(and, lco, hpx_lco_set_action,
+                                  and, hpx_lco_delete_action, NULL, 0);
+  va_list vargs;
+  va_start(vargs, action);
+  for (int i = 0, e = here->ranks; i < e; ++i) {
+    int e = libhpx_call_action(here->actions, HPX_THERE(i), action,
+                               and, hpx_lco_set_action, HPX_NULL,
+                               HPX_NULL, &vargs);
+    if (e != HPX_SUCCESS) {
+      dbg_error("hpx_bcast returned an error.\n");
+    }
   }
+  va_end(vargs);
 
   e = hpx_lco_wait(lco);
   DEBUG_IF(e != HPX_SUCCESS) {

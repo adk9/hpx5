@@ -14,8 +14,7 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
-static HPX_ACTION(_and_set, hpx_addr_t *args) {
-  hpx_lco_and_set(*args, HPX_NULL);
+static HPX_ACTION(_and_set, void *UNUSED) {
   return HPX_SUCCESS;
 }
 
@@ -23,7 +22,7 @@ static HPX_ACTION(test_libhpx_lco_and, void *UNUSED) {
   // Allocate an and LCO. This is synchronous. An and LCO generates an AND
   // gate. Inputs should be >=0;
   hpx_addr_t lco = hpx_lco_and_new(1);
-  hpx_call(HPX_HERE, _and_set, HPX_NULL, &lco, sizeof(lco));
+  hpx_call(HPX_HERE, _and_set, lco, NULL, 0);
   hpx_lco_wait(lco);
   hpx_lco_delete(lco, HPX_NULL);
   return HPX_SUCCESS;
