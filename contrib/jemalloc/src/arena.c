@@ -405,8 +405,10 @@ arena_chunk_alloc_internal(arena_t *arena, size_t size, size_t alignment,
 	chunk = (arena_chunk_t *)chunk_alloc_arena(chunk_alloc, chunk_dalloc,
 	    arena->ind, NULL, size, alignment, zero);
 	malloc_mutex_lock(&arena->lock);
-	if (config_stats && chunk != NULL)
+	if (config_stats && chunk != NULL) {
 		arena->stats.mapped += chunksize;
+		arena->stats.metadata_mapped += (map_bias << LG_PAGE);
+	}
 
 	return (chunk);
 }
@@ -514,8 +516,10 @@ arena_chunk_dalloc(arena_t *arena, arena_chunk_t *chunk)
 		malloc_mutex_unlock(&arena->lock);
 		chunk_dalloc((void *)spare, chunksize, arena->ind);
 		malloc_mutex_lock(&arena->lock);
-		if (config_stats)
+		if (config_stats) {
 			arena->stats.mapped -= chunksize;
+			arena->stats.metadata_mapped -= (map_bias << LG_PAGE);
+		}
 	} else
 		arena->spare = chunk;
 }
@@ -846,6 +850,7 @@ arena_maybe_purge(arena_t *arena)
 	if (opt_lg_dirty_mult < 0)
 		return;
 	threshold = (arena->nactive >> opt_lg_dirty_mult);
+	threshold = threshold < chunk_npages ? chunk_npages : threshold;
 	/*
 	 * Don't purge unless the number of purgeable pages exceeds the
 	 * threshold.
@@ -889,6 +894,7 @@ arena_compute_npurge(arena_t *arena, bool all)
 	 */
 	if (!all) {
 		size_t threshold = (arena->nactive >> opt_lg_dirty_mult);
+		threshold = threshold < chunk_npages ? chunk_npages : threshold;
 
 		npurge = arena->ndirty - threshold;
 	} else
@@ -2176,8 +2182,7 @@ arena_ralloc_no_move(void *ptr, size_t oldsize, size_t size, size_t extra,
 
 void *
 arena_ralloc(tsd_t *tsd, arena_t *arena, void *ptr, size_t oldsize, size_t size,
-    size_t extra, size_t alignment, bool zero, bool try_tcache_alloc,
-    bool try_tcache_dalloc)
+    size_t extra, size_t alignment, bool zero, tcache_t *tcache)
 {
 	void *ret;
 	size_t copysize;
@@ -2195,12 +2200,9 @@ arena_ralloc(tsd_t *tsd, arena_t *arena, void *ptr, size_t oldsize, size_t size,
 		size_t usize = sa2u(size + extra, alignment);
 		if (usize == 0)
 			return (NULL);
-		ret = ipalloct(tsd, usize, alignment, zero, try_tcache_alloc,
-		    arena);
-	} else {
-		ret = arena_malloc(tsd, arena, size + extra, zero,
-		    try_tcache_alloc);
-	}
+		ret = ipalloct(tsd, usize, alignment, zero, tcache, arena);
+	} else
+		ret = arena_malloc(tsd, arena, size + extra, zero, tcache);
 
 	if (ret == NULL) {
 		if (extra == 0)
@@ -2210,12 +2212,10 @@ arena_ralloc(tsd_t *tsd, arena_t *arena, void *ptr, size_t oldsize, size_t size,
 			size_t usize = sa2u(size, alignment);
 			if (usize == 0)
 				return (NULL);
-			ret = ipalloct(tsd, usize, alignment, zero,
-			    try_tcache_alloc, arena);
-		} else {
-			ret = arena_malloc(tsd, arena, size, zero,
-			    try_tcache_alloc);
-		}
+			ret = ipalloct(tsd, usize, alignment, zero, tcache,
+			    arena);
+		} else
+			ret = arena_malloc(tsd, arena, size, zero, tcache);
 
 		if (ret == NULL)
 			return (NULL);
@@ -2230,7 +2230,7 @@ arena_ralloc(tsd_t *tsd, arena_t *arena, void *ptr, size_t oldsize, size_t size,
 	copysize = (size < oldsize) ? size : oldsize;
 	JEMALLOC_VALGRIND_MAKE_MEM_UNDEFINED(ret, copysize);
 	memcpy(ret, ptr, copysize);
-	isqalloc(tsd, ptr, oldsize, try_tcache_dalloc);
+	isqalloc(tsd, ptr, oldsize, tcache);
 	return (ret);
 }
 
@@ -2273,6 +2273,8 @@ arena_stats_merge(arena_t *arena, const char **dss, size_t *nactive,
 	astats->npurge += arena->stats.npurge;
 	astats->nmadvise += arena->stats.nmadvise;
 	astats->purged += arena->stats.purged;
+	astats->metadata_mapped += arena->stats.metadata_mapped;
+	astats->metadata_allocated += arena_metadata_allocated_get(arena);
 	astats->allocated_large += arena->stats.allocated_large;
 	astats->nmalloc_large += arena->stats.nmalloc_large;
 	astats->ndalloc_large += arena->stats.ndalloc_large;
