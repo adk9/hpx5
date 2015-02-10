@@ -39,7 +39,6 @@
 #include "libhpx/parcel.h"
 #include "logtable.h"
 
-#ifdef ENABLE_INSTRUMENTATION
 static logtable_t logtables[HPX_INST_NUM_EVENTS];
 static size_t inst_max_log_size = 40*1024*1024-1;
 bool hpx_inst_enabled = false;
@@ -87,10 +86,7 @@ _log_create(hpx_inst_class_type_t class, hpx_inst_event_type_t event,
   return HPX_SUCCESS;
 }
 
-#endif
-
 int hpx_inst_init() {
-#ifdef ENABLE_INSTRUMENTATION
   int success = -1;
 
   hpx_inst_enabled = get_env_var("HPX_INST_ENABLE");
@@ -152,19 +148,16 @@ int hpx_inst_init() {
   time_start = hpx_time_now();
 
   inst_active = true;
-#endif
   return HPX_SUCCESS;
 }
 
 void hpx_inst_fini() {
-#ifdef ENABLE_INSTRUMENTATION
   inst_active = false;
   for (int i = 0; i < HPX_INST_NUM_EVENTS; i++) {
     if (logtables[i].inited == true) {
       logtable_fini(&logtables[i]);
     }
   }
-#endif
 }
 
 /// Record an event to the log
@@ -180,7 +173,6 @@ void hpx_inst_log_event(hpx_inst_class_type_t class,
                         int priority,
                         int user_data_size,
                         void* user_data) {
-#ifdef ENABLE_INSTRUMENTATION
   if (!config_traceclasses_isset(here->config, class)) {
     return;
   }
@@ -213,6 +205,5 @@ void hpx_inst_log_event(hpx_inst_class_type_t class,
 
   memcpy(event->data, user_data, user_data_size);
 
-#endif
 }
 

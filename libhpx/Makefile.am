@@ -1,7 +1,7 @@
 ####################
 # Makefile for HPX #
 ####################
-SUBDIRS = system util boot gas transport network scheduler instrumentation
+SUBDIRS = system util boot gas transport network scheduler
 
 # The main libhpx library
 lib_LTLIBRARIES	   = libhpx.la
@@ -17,11 +17,14 @@ libhpx_la_LIBADD   = $(HPX_LIBFFI_LDADD) \
                      network/libnetwork.la \
                      scheduler/libscheduler.la \
                      util/libutil.la \
-                     system/libsystem.la \
-                     instrumentation/libinstrumentation.la
+                     system/libsystem.la
 
 if HAVE_PAPI
 libhpx_la_CFLAGS   = @PAPI_CFLAGS@
 libhpx_la_LIBADD  += @PAPI_LIBS@
 endif
 
+if ENABLE_INSTRUMENTATION
+SUBDIRS += instrumentation
+libhpx_la_LIBADD += instrumentation/libinstrumentation.la
+endif
