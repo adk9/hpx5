@@ -16,5 +16,5 @@ endif
 parcelSend_LDADD              = $(all_LIBS)
 parcelSendSync_LDADD          = $(all_LIBS)
 
-parcelSend_DEPENDENCIES       = $(all_LIBS)
-parcelSendSync_DEPENDENCIES   = $(all_LIBS)
+parcelSend_DEPENDENCIES       = $(HPX_DEPS)
+parcelSendSync_DEPENDENCIES   = $(HPX_DEPS)
