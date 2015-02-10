@@ -15,7 +15,6 @@ pkgconfig_DATA = hpx.pc
 
 SUBDIRS       = contrib libsync libhpx include examples bench
 DIST_SUBDIRS  = contrib libsync libhpx include examples bench
-
 if ENABLE_DOCS
 SUBDIRS      += docs
 DIST_SUBDIRS += docs

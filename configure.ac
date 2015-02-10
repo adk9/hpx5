@@ -93,6 +93,7 @@ AC_ARG_ENABLE([instrumentation],
   [], [enable_instrumentation=no])
 AS_IF([test "x$enable_instrumentation" != xno],
   [AC_DEFINE([ENABLE_INSTRUMENTATION], [1], [Enable instrumentation for performance])])
+AM_CONDITIONAL([ENABLE_INSTRUMENTATION], [test "x$enable_instrumentation" != xno])
 
 AC_ARG_ENABLE([logging],
   [AS_HELP_STRING([--enable-logging],
