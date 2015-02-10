@@ -706,6 +706,7 @@ objroot
 abs_srcroot
 srcroot
 rev
+CONFIG
 target_alias
 host_alias
 build_alias
@@ -2480,6 +2481,9 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
+
+
+CONFIG=`echo ${ac_configure_args} | sed -e 's#'"'"'\([^ ]*\)'"'"'#\1#g'`
 
 
 rev=2
@@ -4899,6 +4903,12 @@ case "${host}" in
 	$as_echo "#define JEMALLOC_PURGE_MADVISE_FREE  " >>confdefs.h
 
 	;;
+  *-*-openbsd*)
+	CFLAGS="$CFLAGS"
+	abi="elf"
+	$as_echo "#define JEMALLOC_PURGE_MADVISE_FREE  " >>confdefs.h
+
+	;;
   *-*-linux*)
 	CFLAGS="$CFLAGS"
 	CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
@@ -6602,7 +6612,7 @@ else
   LG_PAGE="detect"
 fi
 
-if test "x$LG_PAGE" == "xdetect"; then
+if test "x$LG_PAGE" = "xdetect"; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking LG_PAGE" >&5
 $as_echo_n "checking LG_PAGE... " >&6; }
 if ${je_cv_lg_page+:} false; then :
@@ -7848,7 +7858,7 @@ ac_config_headers="$ac_config_headers $cfghdrs_tup"
 
 
 
-ac_config_files="$ac_config_files $cfgoutputs_tup config.stamp bin/jemalloc.sh"
+ac_config_files="$ac_config_files $cfgoutputs_tup config.stamp bin/jemalloc-config bin/jemalloc.sh"
 
 
 
@@ -8617,6 +8627,7 @@ do
     "$cfghdrs_tup") CONFIG_HEADERS="$CONFIG_HEADERS $cfghdrs_tup" ;;
     "$cfgoutputs_tup") CONFIG_FILES="$CONFIG_FILES $cfgoutputs_tup" ;;
     "config.stamp") CONFIG_FILES="$CONFIG_FILES config.stamp" ;;
+    "bin/jemalloc-config") CONFIG_FILES="$CONFIG_FILES bin/jemalloc-config" ;;
     "bin/jemalloc.sh") CONFIG_FILES="$CONFIG_FILES bin/jemalloc.sh" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
@@ -9276,12 +9287,14 @@ $as_echo "jemalloc version   : ${jemalloc_version}" >&6; }
 $as_echo "library revision   : ${rev}" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: " >&5
 $as_echo "" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: CONFIG             : ${CONFIG}" >&5
+$as_echo "CONFIG             : ${CONFIG}" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: CC                 : ${CC}" >&5
 $as_echo "CC                 : ${CC}" >&6; }
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: CPPFLAGS           : ${CPPFLAGS}" >&5
-$as_echo "CPPFLAGS           : ${CPPFLAGS}" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: CFLAGS             : ${CFLAGS}" >&5
 $as_echo "CFLAGS             : ${CFLAGS}" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: CPPFLAGS           : ${CPPFLAGS}" >&5
+$as_echo "CPPFLAGS           : ${CPPFLAGS}" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: LDFLAGS            : ${LDFLAGS}" >&5
 $as_echo "LDFLAGS            : ${LDFLAGS}" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: EXTRA_LDFLAGS      : ${EXTRA_LDFLAGS}" >&5
@@ -9302,12 +9315,12 @@ $as_echo "" >&6; }
 $as_echo "PREFIX             : ${PREFIX}" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: BINDIR             : ${BINDIR}" >&5
 $as_echo "BINDIR             : ${BINDIR}" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: DATADIR            : ${DATADIR}" >&5
+$as_echo "DATADIR            : ${DATADIR}" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: INCLUDEDIR         : ${INCLUDEDIR}" >&5
 $as_echo "INCLUDEDIR         : ${INCLUDEDIR}" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: LIBDIR             : ${LIBDIR}" >&5
 $as_echo "LIBDIR             : ${LIBDIR}" >&6; }
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: DATADIR            : ${DATADIR}" >&5
-$as_echo "DATADIR            : ${DATADIR}" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: MANDIR             : ${MANDIR}" >&5
 $as_echo "MANDIR             : ${MANDIR}" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: " >&5
