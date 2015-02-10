@@ -1,9 +1,9 @@
 examplesdir          = $(datarootdir)/doc/@PACKAGE@
 
-examples_PROGRAMS    = fibonacci pingpong allreduce countdown seqspawn \
-                       parspawn future memput memget guppie sendrecv \
-                       sendrecv-chan allreduce-chan pingpong-chan hello \
-                       qsort call
+noinst_PROGRAMS         = fibonacci pingpong allreduce countdown seqspawn \
+                          parspawn future memput memget guppie sendrecv \
+                          sendrecv-chan allreduce-chan pingpong-chan hello \
+                          qsort call
 
 fibonacci_SOURCES       = fibonacci.c
 pingpong_SOURCES        = pingpong.c
@@ -29,7 +29,7 @@ AM_CPPFLAGS          = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS            =
 
 if HAVE_PHOTON
-examples_PROGRAMS   += netfutures
+noinst_PROGRAMS     += netfutures
 netfutures_SOURCES   = netfutures.c
 endif
 
@@ -56,21 +56,21 @@ qsort_LDADD           = $(all_LIBS)
 hello_LDADD           = $(all_LIBS)
 call_LDADD            = $(all_LIBS)
 
-fibonacci_DEPENDENCIES       = $(all_LIBS)
-pingpong_DEPENDENCIES        = $(all_LIBS)
-allreduce_DEPENDENCIES       = $(all_LIBS)
-countdown_DEPENDENCIES       = $(all_LIBS)
-seqspawn_DEPENDENCIES        = $(all_LIBS)
-parspawn_DEPENDENCIES        = $(all_LIBS)
-future_DEPENDENCIES          = $(all_LIBS)
-memput_DEPENDENCIES          = $(all_LIBS)
-memget_DEPENDENCIES          = $(all_LIBS)
-guppie_DEPENDENCIES          = $(all_LIBS)
-netfutures_DEPENDENCIES      = $(all_LIBS)
-sendrecv_DEPENDENCIES        = $(all_LIBS)
-sendrecv_chan_DEPENDENCIES   = $(all_LIBS)
-allreduce_chan_DEPENDENCIES  = $(all_LIBS)
-pingpong_chan_DEPENDENCIES   = $(all_LIBS)
-qsort_DEPENDENCIES           = $(all_LIBS)
-hello_DEPENDENCIES           = $(all_LIBS)
-call_DEPENDENCIES            = $(all_LIBS)
+fibonacci_DEPENDENCIES       = $(HPX_DEPS)
+pingpong_DEPENDENCIES        = $(HPX_DEPS)
+allreduce_DEPENDENCIES       = $(HPX_DEPS)
+countdown_DEPENDENCIES       = $(HPX_DEPS)
+seqspawn_DEPENDENCIES        = $(HPX_DEPS)
+parspawn_DEPENDENCIES        = $(HPX_DEPS)
+future_DEPENDENCIES          = $(HPX_DEPS)
+memput_DEPENDENCIES          = $(HPX_DEPS)
+memget_DEPENDENCIES          = $(HPX_DEPS)
+guppie_DEPENDENCIES          = $(HPX_DEPS)
+netfutures_DEPENDENCIES      = $(HPX_DEPS)
+sendrecv_DEPENDENCIES        = $(HPX_DEPS)
+sendrecv_chan_DEPENDENCIES   = $(HPX_DEPS)
+allreduce_chan_DEPENDENCIES  = $(HPX_DEPS)
+pingpong_chan_DEPENDENCIES   = $(HPX_DEPS)
+qsort_DEPENDENCIES           = $(HPX_DEPS)
+hello_DEPENDENCIES           = $(HPX_DEPS)
+call_DEPENDENCIES            = $(HPX_DEPS)

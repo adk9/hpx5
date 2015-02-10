@@ -44,25 +44,25 @@ test_call_SOURCES               = test_call.c
 test_sema_SOURCES               = test_sema.c
 test_threads_SOURCES            = test_threads.c
 
-test_and_lco_DEPENDENCIES            = $(HPX_LDADD)
-test_channels_DEPENDENCIES           = $(HPX_LDADD)
-test_futures_DEPENDENCIES            = $(HPX_LDADD)
-test_gencount_DEPENDENCIES           = $(HPX_LDADD)
-test_global_mem_alloc_DEPENDENCIES   = $(HPX_LDADD)
-test_lco_DEPENDENCIES                = $(HPX_LDADD)
-test_collectives_DEPENDENCIES        = $(HPX_LDADD)
-test_mem_alloc_DEPENDENCIES          = $(HPX_LDADD)
-test_memget_DEPENDENCIES             = $(HPX_LDADD)
-test_memput_DEPENDENCIES             = $(HPX_LDADD)
-test_parcel_DEPENDENCIES             = $(HPX_LDADD)
-test_call_DEPENDENCIES               = $(HPX_LDADD)
-test_sema_DEPENDENCIES               = $(HPX_LDADD)
-test_threads_DEPENDENCIES            = $(HPX_LDADD)
+test_and_lco_DEPENDENCIES            = $(HPX_DEPS)
+test_channels_DEPENDENCIES           = $(HPX_DEPS)
+test_futures_DEPENDENCIES            = $(HPX_DEPS)
+test_gencount_DEPENDENCIES           = $(HPX_DEPS)
+test_global_mem_alloc_DEPENDENCIES   = $(HPX_DEPS)
+test_lco_DEPENDENCIES                = $(HPX_DEPS)
+test_collectives_DEPENDENCIES        = $(HPX_DEPS)
+test_mem_alloc_DEPENDENCIES          = $(HPX_DEPS)
+test_memget_DEPENDENCIES             = $(HPX_DEPS)
+test_memput_DEPENDENCIES             = $(HPX_DEPS)
+test_parcel_DEPENDENCIES             = $(HPX_DEPS)
+test_call_DEPENDENCIES               = $(HPX_DEPS)
+test_sema_DEPENDENCIES               = $(HPX_DEPS)
+test_threads_DEPENDENCIES            = $(HPX_DEPS)
 
 if ENABLE_LENGTHY_TESTS
 test_wait_SOURCES               = test_wait.c
 endif
 
-test_wait_DEPENDENCIES               = $(HPX_LDADD)
+test_wait_DEPENDENCIES               = $(HPX_DEPS)
 
 LOG_COMPILER = $(TESTS_CMD)

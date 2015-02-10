@@ -14,4 +14,4 @@ endif
 
 heat_1_LDADD                    = $(all_LIBS)
 
-heat_1_DEPENDENCIES             = $(all_LIBS)
+heat_1_DEPENDENCIES             = $(HPX_DEPS)
