@@ -250,6 +250,7 @@ static hpx_addr_t _pgas_gas_cyclic_calloc(size_t n, uint32_t bsize) {
 /// hpx_addr_t.
 static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
   void *lva = libhpx_global_malloc(bytes);
+  dbg_assert(heap_contains_lva(global_heap, lva));
   return pgas_lva_to_gpa(lva);
 }
 
