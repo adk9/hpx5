@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <jemalloc/jemalloc_hpx.h>
+#include <ffi.h>
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
 #include "libhpx/action.h"
@@ -109,6 +110,39 @@ void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size) {
     memmove(to, data, size);
   }
 }
+
+void _hpx_parcel_set_args(hpx_parcel_t *p, int nargs, ...) {
+  if (p->action == HPX_ACTION_NULL) {
+    dbg_error("parcel must have an action to serialize arguments to its buffer.\n");
+  }
+
+  ffi_cif *cif = action_table_get_cif(here->actions, p->action);
+  if (!cif) {
+    dbg_error("parcel must have an action to serialize arguments to its buffer.\n");
+  }
+  else if (nargs != cif->nargs) {
+    dbg_error("expecting %d arguments for action %s (%d given).\n",
+              cif->nargs, action_table_get_key(here->actions, p->action), nargs);
+  }
+
+  void *argps[nargs];
+  va_list vargs;
+  va_start(vargs, nargs);
+  for (int i = 0; i < nargs; ++i) {
+    argps[i] = va_arg(vargs, void*);
+  }
+  va_end(vargs);
+
+  size_t len = ffi_raw_size(cif);
+  dbg_assert(len > 0);
+
+  if (len) {
+    ffi_raw *to = hpx_parcel_get_data(p);
+    ffi_ptrarray_to_raw(cif, argps, to);
+  }
+  return;
+}
+
 
 void hpx_parcel_set_pid(hpx_parcel_t *p, const hpx_pid_t pid) {
   p->pid = pid;
