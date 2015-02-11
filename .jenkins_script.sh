@@ -54,8 +54,9 @@ make install
 make check
 
 # Check the output of the unit tests:
-if grep -q Failed tests/unit/output.log
+if grep -q "FAIL:" tests/unit/test-suite.log
 then
+    cat tests/unit/test-suite.log
     exit 1
 fi
 
