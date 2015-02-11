@@ -202,12 +202,16 @@ static hpx_addr_t _pgas_there(uint32_t i) {
 /// addresses don't get pinned, so we're really only talking about translating
 /// the address if its local.
 static bool _pgas_try_pin(const hpx_addr_t gpa, void **local) {
+  dbg_assert_str(gpa, "cannot pin HPX_NULL\n");
+
+  // we're safe for HPX_HERE/THERE because gpa_to_rank doesn't range-check
   if (pgas_gpa_to_rank(gpa) != here->rank) {
     return false;
   }
 
+  // special case messages to "here"
   if (local) {
-    *local = pgas_gpa_to_lva(gpa);
+    *local = (gpa != HPX_HERE) ? pgas_gpa_to_lva(gpa) : &here;
   }
 
   return true;
