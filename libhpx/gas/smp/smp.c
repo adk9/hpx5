@@ -67,7 +67,7 @@ static void _smp_unpin(const hpx_addr_t addr) {
 }
 
 static hpx_addr_t _smp_there(uint32_t i) {
-  return _smp_lva_to_gva(0);
+  return _smp_lva_to_gva(here);
 }
 
 static hpx_addr_t _smp_gas_cyclic_alloc(size_t n, uint32_t bsize) {

@@ -187,7 +187,7 @@ static hpx_addr_t _pgas_add(hpx_addr_t gpa, int64_t bytes, uint32_t bsize) {
 
 // Compute a global address for a locality.
 static hpx_addr_t _pgas_there(uint32_t i) {
-  return pgas_offset_to_gpa(i, 0);
+  return pgas_offset_to_gpa(i, UINT64_MAX);
 }
 
 
