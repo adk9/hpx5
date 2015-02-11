@@ -210,7 +210,7 @@ int hpx_init(int *argc, char ***argv) {
 
 
 /// Called to run HPX.
-int hpx_run(hpx_action_t *act, const void *args, size_t size) {
+int _hpx_run(hpx_action_t *act, int nargs, ...) {
   int status = HPX_SUCCESS;
   if (!here || !here->sched) {
     status = dbg_error("hpx_init() must be called before hpx_run()\n");
@@ -235,7 +235,12 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
 
   // create the initial application-level thread to run
   if (here->rank == 0) {
-    status = hpx_call(HPX_HERE, *act, HPX_NULL, args, size);
+    va_list vargs;
+    va_start(vargs, nargs);
+    status = libhpx_call_action(here->actions, HPX_HERE, *act, HPX_NULL,
+                                HPX_ACTION_NULL, HPX_NULL, HPX_NULL,
+                                nargs, &vargs);
+    va_end(vargs);
     if (status != LIBHPX_OK) {
       status = dbg_error("failed to spawn initial action\n");
       goto unwind2;
