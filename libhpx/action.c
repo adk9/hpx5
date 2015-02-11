@@ -168,7 +168,7 @@ void action_table_free(const _table_t *table) {
 _ACTION_TABLE_GET(const char *, key, NULL);
 _ACTION_TABLE_GET(hpx_action_type_t, type, HPX_ACTION_INVALID);
 _ACTION_TABLE_GET(hpx_action_handler_t, handler, NULL);
-static _ACTION_TABLE_GET(ffi_cif *, cif, NULL);
+_ACTION_TABLE_GET(ffi_cif *, cif, NULL);
 
 int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
                        hpx_action_t action, hpx_addr_t c_addr,
