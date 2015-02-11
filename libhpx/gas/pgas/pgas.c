@@ -188,7 +188,13 @@ static hpx_addr_t _pgas_add(hpx_addr_t gpa, int64_t bytes, uint32_t bsize) {
 
 // Compute a global address for a locality.
 static hpx_addr_t _pgas_there(uint32_t i) {
-  return pgas_offset_to_gpa(i, UINT64_MAX);
+  hpx_addr_t there = pgas_offset_to_gpa(i, UINT64_MAX);
+  if (DEBUG) {
+    uint64_t offset = pgas_gpa_to_offset(there);
+    dbg_assert_str(!heap_contains_offset(global_heap, offset),
+                   "HPX_THERE() out of expected range\n");
+  }
+  return there;
 }
 
 
