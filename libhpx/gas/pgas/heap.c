@@ -309,8 +309,7 @@ uint64_t heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize) {
   uint32_t  align = ceil_log2_32(bsize);
   dbg_assert(align < 32);
   uint32_t padded = 1u << align;
-  int flags = MALLOCX_LG_ALIGN(align) | MALLOCX_ARENA(heap->cyclic_arena) |
-              MALLOCX_TCACHE_NONE;
+  int flags = MALLOCX_LG_ALIGN(align) | MALLOCX_ARENA(heap->cyclic_arena);
   void *base = libhpx_global_mallocx(blocks * padded, flags);
   if (!base) {
     dbg_error("failed cyclic allocation\n");
@@ -327,7 +326,7 @@ uint64_t heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize) {
 void heap_free_cyclic(heap_t *heap, uint64_t offset) {
   dbg_assert(heap_offset_is_cyclic(heap, offset));
   void *lva = heap_offset_to_lva(heap, offset);
-  int flags = MALLOCX_ARENA(heap->cyclic_arena) | MALLOCX_TCACHE_NONE;
+  int flags = MALLOCX_ARENA(heap->cyclic_arena);
   libhpx_global_dallocx(lva, flags);
 }
 
