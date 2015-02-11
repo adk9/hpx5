@@ -40,7 +40,7 @@ int action_table_run_handler(const struct action_table *, const hpx_action_t, vo
 int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
                        hpx_action_t action, hpx_addr_t c_addr,
                        hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
-                       va_list *args)
+                       int nargs, va_list *args)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Is the action a pinned action?
