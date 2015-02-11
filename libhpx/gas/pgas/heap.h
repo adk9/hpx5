@@ -126,13 +126,22 @@ bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size)
 int heap_bind_transport(heap_t *heap, struct transport *transport)
   HPX_NON_NULL(1,2) HPX_INTERNAL;
 
-/// Check to see if the heap contains the given, local virtual address.
+/// Check to see if the heap contains the given local virtual address.
 ///
 /// @param         heap The heap object.
 /// @param          lva The local virtual address to test.
 ///
 /// @returns TRUE if the @p lva is contained in the global heap.
 bool heap_contains_lva(const heap_t *heap, const void *lva)
+  HPX_NON_NULL(1) HPX_INTERNAL;
+
+/// Check to see if the heap contains the given offset.
+///
+/// @param         heap The heap object.
+/// @param       offset The offset to check.
+///
+/// @returns TRUE if the @p offset is contained in the global heap.
+bool heap_contains_offset(const heap_t *heap, uint64_t offset)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 /// Compute the relative heap_offset for this address.
