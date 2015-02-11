@@ -118,6 +118,7 @@ static int _continue_parcel(hpx_parcel_t *p, hpx_status_t status, size_t size,
 
 /// Execute a parcel.
 static int _execute(hpx_parcel_t *p) {
+  dbg_assert(p->target != HPX_NULL);
   hpx_action_t id = hpx_parcel_get_action(p);
   bool pinned = action_is_pinned(here->actions, id);
   if (pinned && !hpx_gas_try_pin(p->target, NULL)) {
@@ -210,14 +211,14 @@ static hpx_parcel_t *_try_bind(hpx_parcel_t *p) {
 
 /// Add a parcel to the top of the worker's work queue.
 static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
-  dbg_assert(action_table_get_handler(here->actions, p->action) != HPX_NULL);
+  dbg_assert(p->target != HPX_NULL);
+  dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
   uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
   self->work_first = (size >= here->sched->wf_threshold);
   // if (self->work_first) {
   //   log("work first %lu, %u\n", size, size >= here->sched->wf_threshold);
   // }
 }
-
 
 /// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *_schedule_lifo(struct worker *w) {

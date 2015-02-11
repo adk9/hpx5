@@ -44,7 +44,7 @@ static const lco_class_t *_class(lco_t *lco) {
 
 static lco_t *_target_lco(void) {
   lco_t *lco = hpx_thread_current_local_target();
-  dbg_assert_str(lco, "Could not pin LCO.");
+  dbg_assert_str(lco, "Could not pin LCO.\n");
   return lco;
 }
 
