@@ -315,12 +315,14 @@ hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
 
 hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t gate) {
   _prepare(p);
+  dbg_assert(p->target != HPX_NULL);
   return hpx_call(gate, attach, HPX_NULL, p, parcel_size(p));
 }
 
 hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
                                      hpx_addr_t lsync) {
   _prepare(p);
+  dbg_assert(p->target != HPX_NULL);
   return hpx_call_async(gate, attach, lsync, HPX_NULL, p, parcel_size(p));
 }
 
