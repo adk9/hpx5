@@ -13,6 +13,8 @@
 #ifndef HPX_RPC_H
 #define HPX_RPC_H
 
+#include "hpx/builtins.h"
+
 /// @file
 /// @brief HPX remote procedure call interface
 
@@ -31,8 +33,11 @@
 /// @param   alen The length of the @p args buffer.
 ///
 /// @returns HPX_SUCCESS, or an error code if the action generated an error that
-///          could not be handled remotely/
-int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out, size_t olen, ...);
+///          could not be handled remotely.
+int     _hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out, size_t olen,
+                       int nargs, ...);
+#define hpx_call_sync(addr, action, out, olen, ...) \
+  _hpx_call_sync(addr, action, out, olen, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
 
 
 /// Locally synchronous call interface.
@@ -50,7 +55,10 @@ int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out, size_t olen, 
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
-int hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result, ...);
+int    _hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result,
+                 int nargs, ...);
+#define hpx_call(addr, action, result, ...) \
+  _hpx_call(addr, action, result, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
 
 /// Locally synchronous call interface when LCO is set.
 ///
@@ -67,8 +75,10 @@ int hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result, ...);
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
-int hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
-                  hpx_addr_t result, ...);
+int    _hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
+                      hpx_addr_t result, int nargs, ...);
+#define hpx_call_when(gate, addr, action, result, ...) \
+  _hpx_call_when(gate, addr, action, result, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
 
 /// Locally synchronous call_when with continuation interface.
 ///
@@ -82,9 +92,12 @@ int hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
-int hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr, 
-                                    hpx_action_t action, hpx_addr_t c_target, 
-                                    hpx_action_t c_action, ...);
+int    _hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr,
+                                        hpx_action_t action, hpx_addr_t c_target,
+                                        hpx_action_t c_action, int nargs, ...);
+#define hpx_call_when_with_continuation(gate, addr, action, c_target, c_action, ...) \
+  _hpx_call_when_with_continuation(gate, addr, action, c_target, c_action,           \
+                                   __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
 
 /// Fully synchronous call interface which implements hpx_parcel_send_through()
 /// when LCO is set
@@ -103,9 +116,12 @@ int hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr,
 /// @param   alen The length of the @p args buffer.
 ///
 /// @returns HPX_SUCCESS, or an error code if the action generated an error that
-///          could not be handled remotely/
-int hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
-                       void *out, size_t olen, ...);
+///          could not be handled remotely.
+int    _hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
+                           void *out, size_t olen, int nargs, ...);
+#define hpx_call_when_sync(gate, addr, action, out, olen, ...)          \
+  _hpx_call_when_sync(gate, addr, action, out, olen,                    \
+                      __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
 
 /// Locally synchronous call with continuation interface.
 ///
@@ -122,8 +138,12 @@ int hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
-int hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
-                               hpx_addr_t c_target, hpx_action_t c_action, ...);
+int    _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
+                                   hpx_addr_t c_target, hpx_action_t c_action,
+                                   int nargs, ...);
+#define hpx_call_with_continuation(addr, action, c_target, c_action, ...) \
+  _hpx_call_with_continuation(addr, action, c_target, c_action,           \
+                              __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
 
 
 /// Fully asynchronous call interface.
@@ -146,8 +166,11 @@ int hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call_async invocation.
-int hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t lsync,
-                   hpx_addr_t result, ...);
+int    _hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t lsync,
+                       hpx_addr_t result, int nargs, ...);
+#define hpx_call_async(addr, action, lsync, result, ...)                \
+  _hpx_call_async(addr, action, lsync, result, __HPX_NARGS(__VA_ARGS__),\
+                  __VA_ARGS__)
 
 
 /// Call with current continuation.
@@ -166,8 +189,10 @@ int hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t lsync,
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem during
 ///          the hpx_call_cc invocation.
-int hpx_call_cc(hpx_addr_t addr, hpx_action_t action, void (*cleanup)(void*),
-                void *env, ...);
+int    _hpx_call_cc(hpx_addr_t addr, hpx_action_t action, void (*cleanup)(void*),
+                    void *env, int nargs, ...);
+#define hpx_call_cc(addr, action, cleanup, env, ...)                    \
+  _hpx_call_cc(addr, action, cleanup, env, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
 
 
 /// HPX collective operations.
@@ -181,8 +206,10 @@ int hpx_call_cc(hpx_addr_t addr, hpx_action_t action, void (*cleanup)(void*),
 /// @param   args the argument data for @p action
 /// @param    len the length of @p args
 ///
-/// @returns      HPX_SUCCESS if no errors were encountered
-int hpx_bcast(hpx_action_t action, hpx_addr_t lco, const void *args, size_t len);
+/// @returns      HPX_SUCCESS if no errors were encountered.
+int    _hpx_bcast(hpx_action_t action, hpx_addr_t lco, int nargs, ...);
+#define hpx_bcast(action, lco, ...) \
+  _hpx_bcast(action, lco, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
 
 /// HPX collective operations.
 ///
@@ -193,7 +220,9 @@ int hpx_bcast(hpx_action_t action, hpx_addr_t lco, const void *args, size_t len)
 /// @param   args the argument data for @p action
 /// @param    len the length of @p args
 ///
-/// @returns      HPX_SUCCESS if no errors were encountered
-int hpx_bcast_sync(hpx_action_t action, const void *args, size_t len);
+/// @returns      HPX_SUCCESS if no errors were encountered.
+int    _hpx_bcast_sync(hpx_action_t action, int nargs, ...);
+#define hpx_bcast_sync(action, ...) \
+  _hpx_bcast_sync(action, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
 
 #endif

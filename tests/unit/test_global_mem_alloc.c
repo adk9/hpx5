@@ -82,7 +82,31 @@ static HPX_ACTION(test_libhpx_gas_global_alloc_block, void *UNUSED) {
   return HPX_SUCCESS;
 }
 
+static HPX_ACTION(test_libhpx_gas_global_calloc_block, void *UNUSED) {
+  hpx_addr_t global = hpx_gas_global_calloc(1, 1024 *sizeof(char));
+  hpx_gas_free(global, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
+static HPX_ACTION(test_libhpx_gas_global_mem_alloc, void *UNUSED) {
+  uint64_t size = 1024*1024*100;
+  int blocks = HPX_LOCALITIES;
+
+  hpx_addr_t local = hpx_gas_alloc(size);
+  hpx_gas_free(local, HPX_NULL);
+
+  hpx_addr_t global = hpx_gas_global_alloc(blocks, size);
+  hpx_gas_free(global, HPX_NULL);
+
+  hpx_addr_t calloc = hpx_gas_global_calloc(blocks, size);
+  hpx_gas_free(calloc, HPX_NULL);
+  
+  return HPX_SUCCESS;
+}
+
 TEST_MAIN({
  ADD_TEST(test_libhpx_gas_global_alloc);
  ADD_TEST(test_libhpx_gas_global_alloc_block);
+ ADD_TEST(test_libhpx_gas_global_calloc_block);
+ ADD_TEST(test_libhpx_gas_global_mem_alloc);
 });

@@ -64,6 +64,9 @@ void hpx_lco_reset(hpx_addr_t future, hpx_addr_t sync);
 /// An action-based interface to the LCO set operation.
 extern hpx_action_t hpx_lco_set_action;
 
+/// An action-based interface to the LCO delete operation.
+extern hpx_action_t hpx_lco_delete_action;
+
 /// Set an LCO, optionally with data.
 ///
 /// If @p LCO is HPX_NULL then this is equivalent to a no-op.
@@ -215,6 +218,15 @@ hpx_addr_t hpx_lco_and_new(intptr_t inputs);
 /// @param sync the address of an LCO to set when the "and" LCO is set;
 ///             may be HPX_NULL
 void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t sync);
+
+
+/// Set an "and" LCO @p num times, triggering it if appropriate.
+///
+/// @param  and the global address of the "and" LCO to set.
+/// @param  num number of times to set the "and" LCO.
+/// @param sync the address of an LCO to set when the "and" LCO is set;
+///             may be HPX_NULL
+void hpx_lco_and_set_num(hpx_addr_t and, int num, hpx_addr_t sync);
 /// @}
 
 /// Create a future.

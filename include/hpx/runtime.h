@@ -14,6 +14,7 @@
 #define HPX_RUNTIME_H
 
 #include "hpx/attributes.h"
+#include "hpx/builtins.h"
 #include "hpx/action.h"
 
 /// @file
@@ -63,8 +64,10 @@ int hpx_init(int *argc, char ***argv);
 ///              incoming parcel or a inter-locality steal (if implemented)
 /// @param  args arguments to pass to @p entry
 /// @param  size the size of @p args
-/// @returns     the status code passed to hpx_shutdown() upon termination
-int hpx_run(hpx_action_t *entry, const void *args, size_t size);
+/// @returns     the status code passed to hpx_shutdown() upon
+///              termination.
+int    _hpx_run(hpx_action_t *entry, int nargs, ...);
+#define hpx_run(entry, ...) _hpx_run(entry, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
 
 
 /// Shutdown the HPX runtime.

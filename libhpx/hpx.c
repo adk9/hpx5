@@ -111,12 +111,14 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // check to see if everyone is waiting
-  if (config_waitat(here->config, HPX_LOCALITY_ALL)) {
+  if (config_waitat_isset(here->config, HPX_LOCALITY_ALL)) {
     dbg_wait();
   }
 
   // set the log level
-  log_level = here->config->loglevel;
+  if (config_logat_isset(here->config, HPX_LOCALITY_ALL)) {
+    log_level = here->config->loglevel;
+  }
 
   // topology
   int e = hwloc_topology_init(&here->topology);
@@ -138,20 +140,18 @@ int hpx_init(int *argc, char ***argv) {
   }
   here->rank = boot_rank(here->boot);
   here->ranks = boot_n_ranks(here->boot);
-  if (config_waitat(here->config, here->rank)) {
-    if (!config_waitat(here->config, HPX_LOCALITY_ALL)) {
+
+  // Now that we know our rank, we can be more specific about waiting.
+  if (config_waitat_isset(here->config, here->rank)) {
+    // Don't wait twice.
+    if (!config_waitat_isset(here->config, HPX_LOCALITY_ALL)) {
       dbg_wait();
     }
   }
 
-  if (here->config->logat && here->config->logat != (int*)HPX_LOCALITY_ALL) {
-    int orig_level = log_level;
-    log_level = 0;
-    for (int i = 0; i < here->config->logat[0]; ++i) {
-      if (here->config->logat[i+1] == here->rank) {
-        log_level = orig_level;
-      }
-    }
+  // Reset the log level based on our rank-specific information.
+  if (config_logat_isset(here->config, here->rank)) {
+    log_level = here->config->loglevel;
   }
 
   // byte transport
@@ -210,7 +210,7 @@ int hpx_init(int *argc, char ***argv) {
 
 
 /// Called to run HPX.
-int hpx_run(hpx_action_t *act, const void *args, size_t size) {
+int _hpx_run(hpx_action_t *act, int nargs, ...) {
   int status = HPX_SUCCESS;
   if (!here || !here->sched) {
     status = dbg_error("hpx_init() must be called before hpx_run()\n");
@@ -235,7 +235,12 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
 
   // create the initial application-level thread to run
   if (here->rank == 0) {
-    status = hpx_call(HPX_HERE, *act, HPX_NULL, args, size);
+    va_list vargs;
+    va_start(vargs, nargs);
+    status = libhpx_call_action(here->actions, HPX_HERE, *act, HPX_NULL,
+                                HPX_ACTION_NULL, HPX_NULL, HPX_NULL,
+                                nargs, &vargs);
+    va_end(vargs);
     if (status != LIBHPX_OK) {
       status = dbg_error("failed to spawn initial action\n");
       goto unwind2;

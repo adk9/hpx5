@@ -101,6 +101,7 @@ contrib/photon/
 /tests/perf/perf_lco_future
 /tests/perf/perf_lco_sema
 /tests/unit/test_and_lco
+/tests/unit/test_bcast
 /tests/unit/test_channels
 /tests/unit/test_call
 /tests/unit/test_collectives
