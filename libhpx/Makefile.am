@@ -17,7 +17,9 @@ libhpx_la_LIBADD   = $(HPX_LIBFFI_LDADD) \
                      network/libnetwork.la \
                      scheduler/libscheduler.la \
                      util/libutil.la \
-                     system/libsystem.la
+                     system/libsystem.la \
+		     $(HPX_JEMALLOC_AS_MALLOC_LIBS) \
+	             $(HPX_JEMALLOC_AS_MALLOC_LIBTOOL)
 
 if HAVE_PAPI
 libhpx_la_CFLAGS   = @PAPI_CFLAGS@

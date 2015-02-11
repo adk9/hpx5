@@ -21,5 +21,10 @@ SUBDIRS      += photon
 DIST_SUBDIRS += photon
 endif
 
+if ENABLE_JEMALLOC
+SUBDIRS      += jemalloc
+DIST_SUBDIRS += jemalloc
+endif
+
 check-recursive: all-recursive
 	echo "HPX ignore above warnings, we do not check contrib projects"
