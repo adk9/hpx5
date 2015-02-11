@@ -38,7 +38,7 @@
 #include "libhpx/transport.h"
 #include "network/probe.h"
 
-HPX_ACTION(hpx_143_fix, void *UNUSED) {
+static HPX_ACTION(_hpx_143_fix, void *UNUSED) {
   hpx_gas_global_alloc(sizeof(void*), HPX_LOCALITIES);
   return LIBHPX_OK;
 }
@@ -247,7 +247,7 @@ int _hpx_run(hpx_action_t *act, int nargs, ...) {
     }
 
     // Fix for https://uisapp2.iu.edu/jira-prd/browse/HPX-143
-    status = hpx_call(HPX_HERE, hpx_143_fix, HPX_NULL, NULL, 0);
+    status = hpx_call(HPX_HERE, _hpx_143_fix, HPX_NULL, NULL, 0);
     if (status != LIBHPX_OK) {
       dbg_error("failed to spawn the initial cyclic allocation");
       goto unwind2;
