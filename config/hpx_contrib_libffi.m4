@@ -26,6 +26,7 @@ AC_DEFUN([HPX_CONTRIB_LIBFFI],
         AC_SUBST(HPX_LIBFFI_CPPFLAGS, " -I\$(top_builddir)/$1/include")
         AC_SUBST(HPX_LIBFFI_LDADD, "\$(abs_top_builddir)/$1/libffi_convenience.la")
         AC_SUBST(HPX_LIBFFI_DEPS, "\$(abs_top_builddir)/$1/libffi_convenience.la")
+        AC_SUBST(HPX_LIBFFI_LIBS, "-lffi")
 	# the ffi convenience library allows us to always link this contrib statically
 	# will need to revisit when we figure out building a shared libhpx
 	enable_external_libffi=no])]
