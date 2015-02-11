@@ -26,7 +26,6 @@
 #include "libhpx/locality.h"
 #include "libhpx/utils.h"
 
-
 /// The default libhpx action table size.
 #define LIBHPX_ACTION_TABLE_SIZE 4096
 

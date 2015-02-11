@@ -45,7 +45,7 @@ void dbg_assert_str_internal(bool expression, unsigned line,
 #define dbg_assert_str(e, ...)                                       \
   do {                                                               \
     typeof(e) _e = (e);                                              \
-    dbg_assert_str_internal(_e, __LINE__, __func__, "assert failed: "#e" "__VA_ARGS__); \
+    dbg_assert_str_internal(_e, __LINE__, __func__, "assert failed: ("#e") "__VA_ARGS__); \
     assert(_e);                                                      \
   } while (0)
 
