@@ -72,7 +72,7 @@ network_t *network_new(config_t *cfg, struct boot *boot, struct gas *gas,
     dbg_error("failed to initialize the network\n");
   }
   else {
-    log("network initialized using %s\n", network->id());
+    log("network initialized using %s\n", LIBHPX_NETWORK_TO_STRING[network->type]);
   }
 
   return network;

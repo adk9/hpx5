@@ -60,10 +60,6 @@ static const char *_straction(hpx_action_t id) {
   return action_table_get_key(here->actions, id);
 }
 
-static const char *_pwc_id() {
-  return "Photon put-with-completion\n";
-}
-
 static void _pwc_delete(network_t *network) {
   if (!network) {
     return;
@@ -280,7 +276,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   }
 
   // Initialize the network's virtual function table.
-  pwc->vtable.id = _pwc_id;
+  pwc->vtable.type = LIBHPX_NETWORK_PWC;
   pwc->vtable.delete = _pwc_delete;
   pwc->vtable.progress = _pwc_progress;
   pwc->vtable.send = _pwc_send;
