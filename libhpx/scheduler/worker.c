@@ -210,6 +210,7 @@ static hpx_parcel_t *_try_bind(hpx_parcel_t *p) {
 
 /// Add a parcel to the top of the worker's work queue.
 static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
+  dbg_assert(action_table_get_handler(here->actions, p->action) != HPX_NULL);
   uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
   self->work_first = (size >= here->sched->wf_threshold);
   // if (self->work_first) {
@@ -512,9 +513,9 @@ int worker_init(struct worker *w, struct scheduler *sched, int id, int core,
   dbg_assert(sched);
 
   /// make sure the worker has proper alignment
-  dbg_assert((uintptr_t)w % HPX_CACHELINE_SIZE == 0);
-  dbg_assert((uintptr_t)&w->work % HPX_CACHELINE_SIZE == 0);
-  dbg_assert((uintptr_t)&w->inbox % HPX_CACHELINE_SIZE == 0);
+  dbg_assert(((uintptr_t)w & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&w->work & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&w->inbox & (HPX_CACHELINE_SIZE - 1)) == 0);
 
   w->sched      = sched;
   w->thread     = 0;
@@ -567,9 +568,9 @@ int worker_start(void) {
   dbg_assert(self);
 
   // double-check this
-  dbg_assert((uintptr_t)self % HPX_CACHELINE_SIZE == 0);
-  dbg_assert((uintptr_t)&self->work % HPX_CACHELINE_SIZE == 0);
-  dbg_assert((uintptr_t)&self->inbox % HPX_CACHELINE_SIZE == 0);
+  dbg_assert(((uintptr_t)self & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&self->work & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&self->inbox & (HPX_CACHELINE_SIZE - 1))== 0);
 
   // get a parcel to start the scheduler loop with
   hpx_parcel_t *p = _schedule(true, NULL);
@@ -638,6 +639,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(self->id >= 0);
   dbg_assert(p);
   dbg_assert(hpx_gas_try_pin(p->target, NULL)); // just performs translation
+  dbg_assert(action_table_get_handler(here->actions, p->action) != HPX_NULL);
   profile_ctr(self->stats.spawns++);
 
   // Don't run anything until we have started up. This lets us use parcel_send()
