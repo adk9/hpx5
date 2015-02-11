@@ -16,12 +16,9 @@
 
 #include <stdlib.h>
 
-#include <libhpx/libhpx.h>
-#include <libhpx/network.h>
-
-static const char *_smp_id() {
-  return "SMP\n";
-}
+#include "libhpx/config.h"
+#include "libhpx/libhpx.h"
+#include "libhpx/network.h"
 
 static void _smp_delete(network_t *network) {
 }
@@ -68,7 +65,7 @@ static void _smp_set_flush(network_t *network) {
 
 
 static network_t _smp = {
-  .id = _smp_id,
+  .type = LIBHPX_NETWORK_SMP,
   .delete = _smp_delete,
   .progress = _smp_progress,
   .send = _smp_send,

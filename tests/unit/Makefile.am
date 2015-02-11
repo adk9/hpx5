@@ -24,6 +24,7 @@ TESTS            = test_and_lco           \
                    test_parcel            \
                    test_call              \
                    test_sema              \
+                   test_runtime           \
                    test_threads
 
 if ENABLE_LENGTHY_TESTS
@@ -44,6 +45,7 @@ test_memput_SOURCES             = test_memput.c
 test_parcel_SOURCES             = test_parcel.c
 test_call_SOURCES               = test_call.c
 test_sema_SOURCES               = test_sema.c
+test_runtime_SOURCES            = test_runtime.c
 test_threads_SOURCES            = test_threads.c
 
 test_and_lco_DEPENDENCIES            = $(HPX_DEPS)
@@ -60,6 +62,7 @@ test_memput_DEPENDENCIES             = $(HPX_DEPS)
 test_parcel_DEPENDENCIES             = $(HPX_DEPS)
 test_call_DEPENDENCIES               = $(HPX_DEPS)
 test_sema_DEPENDENCIES               = $(HPX_DEPS)
+test_runtime_DEPENDENCIES            = $(HPX_DEPS)
 test_threads_DEPENDENCIES            = $(HPX_DEPS)
 
 if ENABLE_LENGTHY_TESTS

@@ -275,6 +275,9 @@ bool heap_contains_lva(const heap_t *heap, const void *lva) {
   return (0 <= d && d < heap->nbytes);
 }
 
+bool heap_contains_offset(const heap_t *heap, uint64_t gpa) {
+  return (gpa < heap->nbytes);
+}
 
 uint64_t heap_lva_to_offset(const heap_t *heap, const void *lva) {
   DEBUG_IF (!heap_contains_lva(heap, lva)) {

@@ -134,9 +134,12 @@ int _hpx_call_cc(hpx_addr_t addr, hpx_action_t action, void (*cleanup)(void*),
 
 /// Encapsulates a RPC called on all available localities.
 int _hpx_bcast(hpx_action_t action, hpx_addr_t rsync, int nargs, ...) {
-  hpx_addr_t and = hpx_lco_and_new(here->ranks);
-  hpx_call_when_with_continuation(and, rsync, hpx_lco_set_action,
-                                  and, hpx_lco_delete_action, NULL, 0);
+  hpx_addr_t and = HPX_NULL;
+  if (rsync) {
+    and = hpx_lco_and_new(here->ranks);
+    hpx_call_when_with_continuation(and, rsync, hpx_lco_set_action,
+                                    and, hpx_lco_delete_action, NULL, 0);
+  }
 
   for (int i = 0, e = here->ranks; i < e; ++i) {
     va_list vargs;
