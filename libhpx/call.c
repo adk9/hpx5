@@ -94,8 +94,8 @@ int _hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 }
 
 /// hpx_call_when with a user-specified continuation action.
-int _hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr, 
-                                     hpx_action_t action, hpx_addr_t c_target, 
+int _hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr,
+                                     hpx_action_t action, hpx_addr_t c_target,
                                      hpx_action_t c_action, int nargs, ...) {
   va_list vargs;
   va_start(vargs, nargs);
@@ -137,17 +137,18 @@ int _hpx_bcast(hpx_action_t action, hpx_addr_t rsync, int nargs, ...) {
   hpx_addr_t and = hpx_lco_and_new(here->ranks);
   hpx_call_when_with_continuation(and, rsync, hpx_lco_set_action,
                                   and, hpx_lco_delete_action, NULL, 0);
-  va_list vargs;
-  va_start(vargs, nargs);
+
   for (int i = 0, e = here->ranks; i < e; ++i) {
+    va_list vargs;
+    va_start(vargs, nargs);
     int e = libhpx_call_action(here->actions, HPX_THERE(i), action,
                                and, hpx_lco_set_action, HPX_NULL,
                                HPX_NULL, nargs, &vargs);
+    va_end(vargs);
     if (e != HPX_SUCCESS) {
       dbg_error("hpx_bcast returned an error.\n");
     }
   }
-  va_end(vargs);
   return HPX_SUCCESS;
 }
 
@@ -162,17 +163,19 @@ int _hpx_bcast_sync(hpx_action_t action, int nargs, ...) {
   hpx_addr_t and = hpx_lco_and_new(here->ranks);
   hpx_call_when_with_continuation(and, lco, hpx_lco_set_action,
                                   and, hpx_lco_delete_action, NULL, 0);
-  va_list vargs;
-  va_start(vargs, nargs);
+
   for (int i = 0, e = here->ranks; i < e; ++i) {
+    va_list vargs;
+    va_start(vargs, nargs);
     int e = libhpx_call_action(here->actions, HPX_THERE(i), action,
                                and, hpx_lco_set_action, HPX_NULL,
                                HPX_NULL, nargs, &vargs);
+    va_end(vargs);
+
     if (e != HPX_SUCCESS) {
       dbg_error("hpx_bcast returned an error.\n");
     }
   }
-  va_end(vargs);
 
   e = hpx_lco_wait(lco);
   DEBUG_IF(e != HPX_SUCCESS) {
