@@ -24,3 +24,11 @@ AC_DEFUN([HPX_CONTRIB_JEMALLOC],
         AC_SUBST(HPX_JEMALLOC_LIBS, "-ljemalloc$3")
 	enable_external_jemalloc=no])]
   AM_CONDITIONAL([BUILD_JEMALLOC], [test "x$enable_external_jemalloc" == xno]))
+
+AC_DEFUN([HPX_CONTRIB_JEMALLOC_AS_MALLOC],
+  [ACX_CONFIGURE_DIR([contrib/jemalloc], [contrib/jemalloc],
+    ["--disable-valgrind --disable-fill --disable-stats"])
+    AC_SUBST(HPX_JEMALLOC_AS_MALLOC_LIBS, "-ljemalloc")
+    AC_SUBST(HPX_JEMALLOC_AS_MALLOC_LIBTOOL, "-R\$(abs_top_builddir)/contrib/jemalloc/lib -L\$(abs_top_builddir)/contrib/jemalloc/lib")
+    ])
+
