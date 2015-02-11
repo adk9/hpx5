@@ -28,5 +28,7 @@ AC_DEFUN([HPX_CONTRIB_JEMALLOC],
 AC_DEFUN([HPX_CONTRIB_JEMALLOC_AS_MALLOC],
   [ACX_CONFIGURE_DIR([contrib/jemalloc], [contrib/jemalloc],
     ["--disable-valgrind --disable-fill --disable-stats"])
-  HPX_JEMALLOC_AS_MALLOC_LDADD="\$(top_builddir)/contrib/jemalloc/lib/libjemalloc.a"])
+    AC_SUBST(HPX_JEMALLOC_AS_MALLOC_LIBS, "-ljemalloc")
+    AC_SUBST(HPX_JEMALLOC_AS_MALLOC_LIBTOOL, "-R\$(abs_top_builddir)/contrib/jemalloc/lib -L\$(abs_top_builddir)/contrib/jemalloc/lib")
+    ])
 
