@@ -29,33 +29,33 @@
 #include "libhpx/scheduler.h"
 
 /// A RPC call with a user-specified continuation action.
-int hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
-                               hpx_addr_t c_target, hpx_action_t c_action, ...) {
+int _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
+                                hpx_addr_t c_target, hpx_action_t c_action, int nargs, ...) {
   va_list vargs;
-  va_start(vargs, c_action);
+  va_start(vargs, nargs);
   int e = libhpx_call_action(here->actions, addr, action, c_target, c_action,
-                             HPX_NULL, HPX_NULL, &vargs);
+                             HPX_NULL, HPX_NULL, nargs, &vargs);
   va_end(vargs);
   return e;
 }
 
 /// Encapsulates an asynchronous remote-procedure-call.
-int hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result, ...) {
+int _hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result, int nargs, ...) {
   va_list vargs;
-  va_start(vargs, result);
+  va_start(vargs, nargs);
   int e = libhpx_call_action(here->actions, addr, action, result,
-                             hpx_lco_set_action, HPX_NULL, HPX_NULL, &vargs);
+                             hpx_lco_set_action, HPX_NULL, HPX_NULL, nargs, &vargs);
   va_end(vargs);
   return e;
 }
 
-int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out,
-                  size_t olen, ...) {
+int _hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out,
+                   size_t olen, int nargs, ...) {
   hpx_addr_t result = hpx_lco_future_new(olen);
   va_list vargs;
-  va_start(vargs, olen);
+  va_start(vargs, nargs);
   int e = libhpx_call_action(here->actions, addr, action, result,
-                             hpx_lco_set_action, HPX_NULL, HPX_NULL, &vargs);
+                             hpx_lco_set_action, HPX_NULL, HPX_NULL, nargs, &vargs);
   va_end(vargs);
 
   if (e == HPX_SUCCESS) {
@@ -66,23 +66,23 @@ int hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out,
   return e;
 }
 
-int hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
-                  hpx_addr_t result, ...) {
+int _hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
+                   hpx_addr_t result, int nargs, ...) {
   va_list vargs;
-  va_start(vargs, result);
+  va_start(vargs, nargs);
   int e = libhpx_call_action(here->actions, addr, action, result,
-                             hpx_lco_set_action, HPX_NULL, gate, &vargs);
+                             hpx_lco_set_action, HPX_NULL, gate, nargs, &vargs);
   va_end(vargs);
   return e;
 }
 
-int hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
-                       void *out, size_t olen, ...) {
+int _hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
+                        void *out, size_t olen, int nargs, ...) {
   hpx_addr_t result = hpx_lco_future_new(olen);
   va_list vargs;
-  va_start(vargs, olen);
+  va_start(vargs, nargs);
   int e = libhpx_call_action(here->actions, addr, action, result,
-                             hpx_lco_set_action, HPX_NULL, gate, &vargs);
+                             hpx_lco_set_action, HPX_NULL, gate, nargs, &vargs);
   va_end(vargs);
 
   if (e == HPX_SUCCESS) {
@@ -94,34 +94,34 @@ int hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 }
 
 /// hpx_call_when with a user-specified continuation action.
-int hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr, 
-                                    hpx_action_t action, hpx_addr_t c_target, 
-                                    hpx_action_t c_action, ...) {
+int _hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr, 
+                                     hpx_action_t action, hpx_addr_t c_target, 
+                                     hpx_action_t c_action, int nargs, ...) {
   va_list vargs;
-  va_start(vargs, c_action);
+  va_start(vargs, nargs);
   int e = libhpx_call_action(here->actions, addr, action, c_target, c_action,
-                             HPX_NULL, gate, &vargs);
+                             HPX_NULL, gate, nargs, &vargs);
   va_end(vargs);
   return e;
 }
 
-int hpx_call_async(hpx_addr_t addr, hpx_action_t action,
-                   hpx_addr_t lsync, hpx_addr_t result, ...) {
+int _hpx_call_async(hpx_addr_t addr, hpx_action_t action,
+                    hpx_addr_t lsync, hpx_addr_t result, int nargs, ...) {
   va_list vargs;
-  va_start(vargs, result);
+  va_start(vargs, nargs);
   int e = libhpx_call_action(here->actions, addr, action, result,
-                             hpx_lco_set_action, lsync, HPX_NULL, &vargs);
+                             hpx_lco_set_action, lsync, HPX_NULL, nargs, &vargs);
   va_end(vargs);
   return e;
 }
 
-int hpx_call_cc(hpx_addr_t addr, hpx_action_t action, void (*cleanup)(void*),
-                void *env, ...) {
+int _hpx_call_cc(hpx_addr_t addr, hpx_action_t action, void (*cleanup)(void*),
+                 void *env, int nargs, ...) {
   hpx_parcel_t *p = scheduler_current_parcel();
   va_list vargs;
-  va_start(vargs, env);
+  va_start(vargs, nargs);
   int e = libhpx_call_action(here->actions, addr, action, p->c_target,
-                             p->c_action, HPX_NULL, HPX_NULL, &vargs);
+                             p->c_action, HPX_NULL, HPX_NULL, nargs, &vargs);
   va_end(vargs);
   if (e != HPX_SUCCESS) {
     return e;
@@ -133,16 +133,16 @@ int hpx_call_cc(hpx_addr_t addr, hpx_action_t action, void (*cleanup)(void*),
 
 
 /// Encapsulates a RPC called on all available localities.
-int hpx_bcast(hpx_action_t action, hpx_addr_t rsync, ...) {
+int _hpx_bcast(hpx_action_t action, hpx_addr_t rsync, int nargs, ...) {
   hpx_addr_t and = hpx_lco_and_new(here->ranks);
   hpx_call_when_with_continuation(and, rsync, hpx_lco_set_action,
                                   and, hpx_lco_delete_action, NULL, 0);
   va_list vargs;
-  va_start(vargs, rsync);
+  va_start(vargs, nargs);
   for (int i = 0, e = here->ranks; i < e; ++i) {
     int e = libhpx_call_action(here->actions, HPX_THERE(i), action,
                                and, hpx_lco_set_action, HPX_NULL,
-                               HPX_NULL, &vargs);
+                               HPX_NULL, nargs, &vargs);
     if (e != HPX_SUCCESS) {
       dbg_error("hpx_bcast returned an error.\n");
     }
@@ -151,7 +151,7 @@ int hpx_bcast(hpx_action_t action, hpx_addr_t rsync, ...) {
   return HPX_SUCCESS;
 }
 
-int hpx_bcast_sync(hpx_action_t action, ...) {
+int _hpx_bcast_sync(hpx_action_t action, int nargs, ...) {
   int e;
   hpx_addr_t lco = hpx_lco_future_new(0);
   if (lco == HPX_NULL) {
@@ -163,11 +163,11 @@ int hpx_bcast_sync(hpx_action_t action, ...) {
   hpx_call_when_with_continuation(and, lco, hpx_lco_set_action,
                                   and, hpx_lco_delete_action, NULL, 0);
   va_list vargs;
-  va_start(vargs, action);
+  va_start(vargs, nargs);
   for (int i = 0, e = here->ranks; i < e; ++i) {
     int e = libhpx_call_action(here->actions, HPX_THERE(i), action,
                                and, hpx_lco_set_action, HPX_NULL,
-                               HPX_NULL, &vargs);
+                               HPX_NULL, nargs, &vargs);
     if (e != HPX_SUCCESS) {
       dbg_error("hpx_bcast returned an error.\n");
     }

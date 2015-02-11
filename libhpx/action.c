@@ -173,7 +173,7 @@ static _ACTION_TABLE_GET(ffi_cif *, cif, NULL);
 int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
                        hpx_action_t action, hpx_addr_t c_addr,
                        hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
-                       va_list *args) {
+                       int nargs, va_list *args) {
   size_t len;
   void *outargs;
   hpx_parcel_t *p;
@@ -183,8 +183,13 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
   // variadic argument.
   ffi_cif *cif = action_table_get_cif(table, action);
   if (cif) {
-    void *argps[cif->nargs];
-    for (int i = 0; i < cif->nargs; ++i) {
+    if (nargs != cif->nargs) {
+      return dbg_error("expecting %d arguments for action %s (%d given).\n",
+                       cif->nargs, action_table_get_key(table, action), nargs);
+    }
+
+    void *argps[nargs];
+    for (int i = 0; i < nargs; ++i) {
       argps[i] = va_arg(*args, void*);
     }
 
