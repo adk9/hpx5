@@ -16,8 +16,11 @@ static hpx_action_t _sssp_print_source_adj_list = 0;
 sssp_kind_t _sssp_kind = _CHAOTIC_SSSP_KIND;
 adj_list_t graph = HPX_NULL;
 
-typedef int (*send_vertex_t)(hpx_addr_t, hpx_action_t, hpx_addr_t, ...);
-static send_vertex_t send_vertex = hpx_call;
+typedef int (*send_vertex_t)(hpx_addr_t, hpx_action_t, hpx_addr_t, void*, size_t);
+static int _sssp_hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result, void* arg, size_t size) {
+  return hpx_call(addr, action, result, arg, size);
+}
+static send_vertex_t send_vertex = _sssp_hpx_call;
 
 bool _try_update_vertex_distance(adj_list_vertex_t *const vertex, distance_t distance) {
   // printf("try update, vertex: %zu, distance: %zu\n", vertex, distance);
