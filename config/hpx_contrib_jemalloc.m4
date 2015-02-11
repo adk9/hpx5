@@ -20,6 +20,7 @@ AC_DEFUN([HPX_CONTRIB_JEMALLOC],
         AC_SUBST(HPX_JEMALLOC_CPPFLAGS, "-I\$(top_builddir)/$1$3/include")
         AC_SUBST(HPX_JEMALLOC_LDFLAGS, "-L\$(top_builddir)/$1$3/lib")
         AC_SUBST(HPX_JEMALLOC_LDADD, "\$(abs_top_builddir)/$1$3/lib/libjemalloc$3.a")
+        AC_SUBST(HPX_JEMALLOC_DEPS, "\$(abs_top_builddir)/$1$3/lib/libjemalloc$3.a")
         AC_SUBST(HPX_JEMALLOC_LIBS, "-ljemalloc$3")
 	enable_external_jemalloc=no])]
   AM_CONDITIONAL([BUILD_JEMALLOC], [test "x$enable_external_jemalloc" == xno]))
