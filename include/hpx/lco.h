@@ -218,6 +218,15 @@ hpx_addr_t hpx_lco_and_new(intptr_t inputs);
 /// @param sync the address of an LCO to set when the "and" LCO is set;
 ///             may be HPX_NULL
 void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t sync);
+
+
+/// Set an "and" LCO @p num times, triggering it if appropriate.
+///
+/// @param  and the global address of the "and" LCO to set.
+/// @param  num number of times to set the "and" LCO.
+/// @param sync the address of an LCO to set when the "and" LCO is set;
+///             may be HPX_NULL
+void hpx_lco_and_set_num(hpx_addr_t and, int num, hpx_addr_t sync);
 /// @}
 
 /// Create a future.
