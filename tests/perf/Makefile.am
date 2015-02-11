@@ -26,6 +26,12 @@ perf_lco_chan_SOURCES		= perf_lco_chan.c
 perf_lco_sema_SOURCES		= perf_lco_sema.c
 perf_lco_future_SOURCES		= perf_lco_future.c
 
+perf_gas_alloc_LDADD	= $(HPX_LDADD)
+perf_gas_addr_trans_LDADD= $(HPX_LDADD)
+perf_lco_chan_LDADD	= $(HPX_LDADD)
+perf_lco_sema_LDADD	= $(HPX_LDADD)
+perf_lco_future_LDADD	= $(HPX_LDADD)
+
 perf_gas_alloc_DEPENDENCIES	= $(HPX_DEPS)
 perf_gas_addr_trans_DEPENDENCIES= $(HPX_DEPS)
 perf_lco_chan_DEPENDENCIES	= $(HPX_DEPS)
@@ -34,6 +40,7 @@ perf_lco_future_DEPENDENCIES	= $(HPX_DEPS)
 
 if ENABLE_LENGTHY_TESTS
 perf_lco_and_SOURCES		= perf_lco_and.c
+perf_lco_and_LDADD	= $(HPX_LDADD)
 perf_lco_and_DEPENDENCIES	= $(HPX_DEPS)
 endif
 
@@ -42,8 +49,10 @@ TESTS += perf_lco_netfutures \
          perf_lco_netfutures_msgSize
 
 perf_lco_netfutures_SOURCES		= perf_lco_netfutures.c
+perf_lco_netfutures_LDADD	= $(HPX_LDADD)
 perf_lco_netfutures_DEPENDENCIES	= $(HPX_DEPS)
 perf_lco_netfutures_msgSize_SOURCES	= perf_lco_netfutures_msgSize.c
+perf_lco_netfutures_msgSize_LDADD= $(HPX_LDADD)
 perf_lco_netfutures_msgSize_DEPENDENCIES= $(HPX_DEPS)
 endif
 

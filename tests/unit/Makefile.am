@@ -46,7 +46,23 @@ test_call_SOURCES               = test_call.c
 test_sema_SOURCES               = test_sema.c
 test_threads_SOURCES            = test_threads.c
 
-test_and_lco_DEPENDENCIES            = $(HPX_DEPS)
+test_and_lco_LDADD            = $(HPX_LDADD) 
+test_bcast_LDADD              = $(HPX_LDADD)
+test_channels_LDADD           = $(HPX_LDADD)
+test_futures_LDADD            = $(HPX_LDADD)
+test_gencount_LDADD           = $(HPX_LDADD)
+test_global_mem_alloc_LDADD   = $(HPX_LDADD)
+test_lco_LDADD                = $(HPX_LDADD)
+test_collectives_LDADD        = $(HPX_LDADD)
+test_mem_alloc_LDADD          = $(HPX_LDADD)
+test_memget_LDADD             = $(HPX_LDADD)
+test_memput_LDADD             = $(HPX_LDADD)
+test_parcel_LDADD             = $(HPX_LDADD)
+test_call_LDADD               = $(HPX_LDADD)
+test_sema_LDADD               = $(HPX_LDADD)
+test_threads_LDADD            = $(HPX_LDADD)
+
+test_and_lco_DEPENDENCIES            = $(HPX_DEPS) 
 test_bcast_DEPENDENCIES              = $(HPX_DEPS)
 test_channels_DEPENDENCIES           = $(HPX_DEPS)
 test_futures_DEPENDENCIES            = $(HPX_DEPS)
@@ -65,6 +81,8 @@ test_threads_DEPENDENCIES            = $(HPX_DEPS)
 if ENABLE_LENGTHY_TESTS
 test_wait_SOURCES                    = test_wait.c
 endif
+
+test_wait_LDADD               = $(HPX_LDADD)
 
 test_wait_DEPENDENCIES               = $(HPX_DEPS)
 
