@@ -234,7 +234,7 @@ CPPFLAGS="$hpx_extra_cppflags $CPPFLAGS"
 CFLAGS="$hpx_extra_cflags $CFLAGS"
 CCASFLAGS="$hpx_extra_ccasflags $CCASFLAGS"
 HPX_LIBS="$hpx_extra_libs"
-HPX_DEPS="$hpx_hwloc_deps $HPX_PHOTON_DEPS $HPX_JEMALLOC_DEPS $HPX_LIBFFI_DEPS"
+HPX_DEPS="\$(top_builddir)/libhpx/libhpx.la $hpx_hwloc_deps $HPX_PHOTON_DEPS $HPX_JEMALLOC_DEPS $HPX_LIBFFI_DEPS"
 
 AC_SUBST(HPX_LIBS)
 AC_SUBST(HPX_DEPS)
