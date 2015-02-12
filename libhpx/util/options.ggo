@@ -53,21 +53,16 @@ enum optional
 
 option "hpx-waitat" - "wait for debugger at specific locality"
 typestr="[locality]"
-int optional argoptional multiple
-
-option "hpx-loglevel" - "set the logging level"
-typestr="level"
-values="default","boot","sched","gas","lco","net","trans","parcel","all"
-enum optional argoptional multiple
+int optional multiple
 
 option "hpx-logat" - "selectively output log information"
 typestr="[localities]"
 int optional multiple
 
-option "hpx-traceclasses" - "set the event classes to trace"
-typestr="class"
-values="parcel","pwc","all"
-enum optional multiple
+option "hpx-loglevel" - "set the logging level"
+typestr="level"
+values="default","boot","sched","gas","lco","net","trans","parcel","all"
+enum optional argoptional multiple
 
 option "hpx-statistics" - "print HPX runtime statistics"
 flag off
@@ -89,6 +84,24 @@ flag off
 
 option "hpx-waitonabort" - "call hpx_wait() inside of hpx_abort() for debugging"
 flag off
+
+section "Tracing"
+
+option "hpx-trace" - "enable tracing"
+flag off
+
+option "hpx-tracefilesize" - "set the size of each trace file"
+typestr="# of events"
+long optional
+
+option "hpx-traceat" - "set the localities to trace at"
+typestr="[localities]"
+int optional multiple
+
+option "hpx-traceclasses" - "set the event classes to trace"
+typestr="class"
+values="parcel","pwc","all"
+enum optional multiple
 
 
 section "PWC Network Options"
