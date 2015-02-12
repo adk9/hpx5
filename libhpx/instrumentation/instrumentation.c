@@ -29,7 +29,7 @@
 #include "logtable.h"
 
 /// We're keeping one log per event per locality. Here are their headers.
-static logtable_t _logs[HPX_INST_NUM_EVENTS];
+static logtable_t _logs[HPX_INST_NUM_EVENTS] = {LOGTABLE_INIT};
 
 static void _log_create(int class, int id, size_t size, hpx_time_t now) {
   char filename[256];
@@ -63,10 +63,7 @@ static int _chdir(const char *dir) {
   // try and create the directory---we don't care if it's already there
   int e = mkdir(dirname, 0777);
   if (e) {
-    if (errno == EEXIST) {
-      log("overwriting trace files in %s\n", dirname);
-    }
-    else {
+    if (errno != EEXIST) {
       return log_error("Could not create %s for instrumentation\n", dirname);
     }
   }
@@ -80,12 +77,16 @@ static int _chdir(const char *dir) {
 }
 
 int inst_init(config_t *cfg) {
+#ifndef ENABLE_INSTRUMENTATION
+  return LIBHPX_OK;
+#endif
+
   if (!config_traceat_isset(cfg, hpx_get_my_rank())) {
-    return HPX_SUCCESS;
+    return LIBHPX_OK;
   }
 
   if (_chdir(cfg->tracedir)) {
-    return HPX_SUCCESS;
+    return LIBHPX_OK;
   }
 
   // create log files
@@ -103,7 +104,7 @@ int inst_init(config_t *cfg) {
     }
   }
 
-  return HPX_SUCCESS;
+  return LIBHPX_OK;
 }
 
 void inst_fini(void) {

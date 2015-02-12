@@ -87,8 +87,10 @@ flag off
 
 section "Tracing"
 
-option "hpx-trace" - "enable tracing"
-flag off
+option "hpx-traceclasses" - "set the event classes to trace"
+typestr="class"
+values="parcel","pwc","all"
+enum optional multiple
 
 option "hpx-tracedir" - "directory to output trace files"
 typestr="dir"
@@ -101,12 +103,6 @@ long optional
 option "hpx-traceat" - "set the localities to trace at"
 typestr="[localities]"
 int optional multiple
-
-option "hpx-traceclasses" - "set the event classes to trace"
-typestr="class"
-values="parcel","pwc","all"
-enum optional multiple
-
 
 section "PWC Network Options"
 

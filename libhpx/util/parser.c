@@ -50,11 +50,10 @@ const char *hpx_options_t_help[] = {
   "      --hpx-mprotectstacks      use mprotect() to bracket stacks to look for \n                                  stack overflows  (default=off)",
   "      --hpx-waitonabort         call hpx_wait() inside of hpx_abort() for \n                                  debugging  (default=off)",
   "\nTracing:",
-  "      --hpx-trace               enable tracing  (default=off)",
+  "      --hpx-traceclasses=class  set the event classes to trace  (possible \n                                  values=\"parcel\", \"pwc\", \"all\")",
   "      --hpx-tracedir=dir        directory to output trace files",
   "      --hpx-tracefilesize=# of events\n                                set the size of each trace file",
   "      --hpx-traceat=[localities]\n                                set the localities to trace at",
-  "      --hpx-traceclasses=class  set the event classes to trace  (possible \n                                  values=\"parcel\", \"pwc\", \"all\")",
   "\nPWC Network Options:",
   "      --hpx-parcelbuffersize=bytes\n                                set the size of p2p recv buffers for parcel \n                                  sends",
   "      --hpx-parceleagerlimit=bytes\n                                set the largest eager parcel size (header \n                                  inclusive)",
@@ -137,11 +136,10 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_configfile_given = 0 ;
   args_info->hpx_mprotectstacks_given = 0 ;
   args_info->hpx_waitonabort_given = 0 ;
-  args_info->hpx_trace_given = 0 ;
+  args_info->hpx_traceclasses_given = 0 ;
   args_info->hpx_tracedir_given = 0 ;
   args_info->hpx_tracefilesize_given = 0 ;
   args_info->hpx_traceat_given = 0 ;
-  args_info->hpx_traceclasses_given = 0 ;
   args_info->hpx_parcelbuffersize_given = 0 ;
   args_info->hpx_parceleagerlimit_given = 0 ;
 }
@@ -176,14 +174,13 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_configfile_orig = NULL;
   args_info->hpx_mprotectstacks_flag = 0;
   args_info->hpx_waitonabort_flag = 0;
-  args_info->hpx_trace_flag = 0;
+  args_info->hpx_traceclasses_arg = NULL;
+  args_info->hpx_traceclasses_orig = NULL;
   args_info->hpx_tracedir_arg = NULL;
   args_info->hpx_tracedir_orig = NULL;
   args_info->hpx_tracefilesize_orig = NULL;
   args_info->hpx_traceat_arg = NULL;
   args_info->hpx_traceat_orig = NULL;
-  args_info->hpx_traceclasses_arg = NULL;
-  args_info->hpx_traceclasses_orig = NULL;
   args_info->hpx_parcelbuffersize_orig = NULL;
   args_info->hpx_parceleagerlimit_orig = NULL;
   
@@ -219,17 +216,16 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_configfile_help = hpx_options_t_help[18] ;
   args_info->hpx_mprotectstacks_help = hpx_options_t_help[19] ;
   args_info->hpx_waitonabort_help = hpx_options_t_help[20] ;
-  args_info->hpx_trace_help = hpx_options_t_help[22] ;
+  args_info->hpx_traceclasses_help = hpx_options_t_help[22] ;
+  args_info->hpx_traceclasses_min = -1;
+  args_info->hpx_traceclasses_max = -1;
   args_info->hpx_tracedir_help = hpx_options_t_help[23] ;
   args_info->hpx_tracefilesize_help = hpx_options_t_help[24] ;
   args_info->hpx_traceat_help = hpx_options_t_help[25] ;
   args_info->hpx_traceat_min = -1;
   args_info->hpx_traceat_max = -1;
-  args_info->hpx_traceclasses_help = hpx_options_t_help[26] ;
-  args_info->hpx_traceclasses_min = -1;
-  args_info->hpx_traceclasses_max = -1;
-  args_info->hpx_parcelbuffersize_help = hpx_options_t_help[28] ;
-  args_info->hpx_parceleagerlimit_help = hpx_options_t_help[29] ;
+  args_info->hpx_parcelbuffersize_help = hpx_options_t_help[27] ;
+  args_info->hpx_parceleagerlimit_help = hpx_options_t_help[28] ;
   
 }
 
@@ -368,11 +364,11 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_recvlimit_orig));
   free_string_field (&(args_info->hpx_configfile_arg));
   free_string_field (&(args_info->hpx_configfile_orig));
+  free_multiple_field (args_info->hpx_traceclasses_given, (void **)&(args_info->hpx_traceclasses_arg), &(args_info->hpx_traceclasses_orig));
   free_string_field (&(args_info->hpx_tracedir_arg));
   free_string_field (&(args_info->hpx_tracedir_orig));
   free_string_field (&(args_info->hpx_tracefilesize_orig));
   free_multiple_field (args_info->hpx_traceat_given, (void **)&(args_info->hpx_traceat_arg), &(args_info->hpx_traceat_orig));
-  free_multiple_field (args_info->hpx_traceclasses_given, (void **)&(args_info->hpx_traceclasses_arg), &(args_info->hpx_traceclasses_orig));
   free_string_field (&(args_info->hpx_parcelbuffersize_orig));
   free_string_field (&(args_info->hpx_parceleagerlimit_orig));
   
@@ -489,14 +485,12 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-mprotectstacks", 0, 0 );
   if (args_info->hpx_waitonabort_given)
     write_into_file(outfile, "hpx-waitonabort", 0, 0 );
-  if (args_info->hpx_trace_given)
-    write_into_file(outfile, "hpx-trace", 0, 0 );
+  write_multiple_into_file(outfile, args_info->hpx_traceclasses_given, "hpx-traceclasses", args_info->hpx_traceclasses_orig, hpx_option_parser_hpx_traceclasses_values);
   if (args_info->hpx_tracedir_given)
     write_into_file(outfile, "hpx-tracedir", args_info->hpx_tracedir_orig, 0);
   if (args_info->hpx_tracefilesize_given)
     write_into_file(outfile, "hpx-tracefilesize", args_info->hpx_tracefilesize_orig, 0);
   write_multiple_into_file(outfile, args_info->hpx_traceat_given, "hpx-traceat", args_info->hpx_traceat_orig, 0);
-  write_multiple_into_file(outfile, args_info->hpx_traceclasses_given, "hpx-traceclasses", args_info->hpx_traceclasses_orig, hpx_option_parser_hpx_traceclasses_values);
   if (args_info->hpx_parcelbuffersize_given)
     write_into_file(outfile, "hpx-parcelbuffersize", args_info->hpx_parcelbuffersize_orig, 0);
   if (args_info->hpx_parceleagerlimit_given)
@@ -759,10 +753,10 @@ hpx_option_parser_required2 (struct hpx_options_t *args_info, const char *prog_n
   if (check_multiple_option_occurrences(prog_name, args_info->hpx_loglevel_given, args_info->hpx_loglevel_min, args_info->hpx_loglevel_max, "'--hpx-loglevel'"))
      error = 1;
   
-  if (check_multiple_option_occurrences(prog_name, args_info->hpx_traceat_given, args_info->hpx_traceat_min, args_info->hpx_traceat_max, "'--hpx-traceat'"))
+  if (check_multiple_option_occurrences(prog_name, args_info->hpx_traceclasses_given, args_info->hpx_traceclasses_min, args_info->hpx_traceclasses_max, "'--hpx-traceclasses'"))
      error = 1;
   
-  if (check_multiple_option_occurrences(prog_name, args_info->hpx_traceclasses_given, args_info->hpx_traceclasses_min, args_info->hpx_traceclasses_max, "'--hpx-traceclasses'"))
+  if (check_multiple_option_occurrences(prog_name, args_info->hpx_traceat_given, args_info->hpx_traceat_min, args_info->hpx_traceat_max, "'--hpx-traceat'"))
      error = 1;
   
   
@@ -1056,8 +1050,8 @@ hpx_option_parser_internal (int argc, char * const *argv, struct hpx_options_t *
   struct generic_list * hpx_waitat_list = NULL;
   struct generic_list * hpx_logat_list = NULL;
   struct generic_list * hpx_loglevel_list = NULL;
-  struct generic_list * hpx_traceat_list = NULL;
   struct generic_list * hpx_traceclasses_list = NULL;
+  struct generic_list * hpx_traceat_list = NULL;
   int error = 0;
   struct hpx_options_t local_args_info;
   
@@ -1107,11 +1101,10 @@ hpx_option_parser_internal (int argc, char * const *argv, struct hpx_options_t *
         { "hpx-configfile",	1, NULL, 0 },
         { "hpx-mprotectstacks",	0, NULL, 0 },
         { "hpx-waitonabort",	0, NULL, 0 },
-        { "hpx-trace",	0, NULL, 0 },
+        { "hpx-traceclasses",	1, NULL, 0 },
         { "hpx-tracedir",	1, NULL, 0 },
         { "hpx-tracefilesize",	1, NULL, 0 },
         { "hpx-traceat",	1, NULL, 0 },
-        { "hpx-traceclasses",	1, NULL, 0 },
         { "hpx-parcelbuffersize",	1, NULL, 0 },
         { "hpx-parceleagerlimit",	1, NULL, 0 },
         { NULL,	0, NULL, 0 }
@@ -1376,14 +1369,13 @@ hpx_option_parser_internal (int argc, char * const *argv, struct hpx_options_t *
               goto failure;
           
           }
-          /* enable tracing.  */
-          else if (strcmp (long_options[option_index].name, "hpx-trace") == 0)
+          /* set the event classes to trace.  */
+          else if (strcmp (long_options[option_index].name, "hpx-traceclasses") == 0)
           {
           
-          
-            if (update_arg((void *)&(args_info->hpx_trace_flag), 0, &(args_info->hpx_trace_given),
-                &(local_args_info.hpx_trace_given), optarg, 0, 0, ARG_FLAG,
-                check_ambiguity, override, 1, 0, "hpx-trace", '-',
+            if (update_multiple_arg_temp(&hpx_traceclasses_list, 
+                &(local_args_info.hpx_traceclasses_given), optarg, hpx_option_parser_hpx_traceclasses_values, 0, ARG_ENUM,
+                "hpx-traceclasses", '-',
                 additional_error))
               goto failure;
           
@@ -1423,17 +1415,6 @@ hpx_option_parser_internal (int argc, char * const *argv, struct hpx_options_t *
             if (update_multiple_arg_temp(&hpx_traceat_list, 
                 &(local_args_info.hpx_traceat_given), optarg, 0, 0, ARG_INT,
                 "hpx-traceat", '-',
-                additional_error))
-              goto failure;
-          
-          }
-          /* set the event classes to trace.  */
-          else if (strcmp (long_options[option_index].name, "hpx-traceclasses") == 0)
-          {
-          
-            if (update_multiple_arg_temp(&hpx_traceclasses_list, 
-                &(local_args_info.hpx_traceclasses_given), optarg, hpx_option_parser_hpx_traceclasses_values, 0, ARG_ENUM,
-                "hpx-traceclasses", '-',
                 additional_error))
               goto failure;
           
@@ -1491,14 +1472,14 @@ hpx_option_parser_internal (int argc, char * const *argv, struct hpx_options_t *
     &(args_info->hpx_loglevel_orig), args_info->hpx_loglevel_given,
     local_args_info.hpx_loglevel_given, 0 , 
     ARG_ENUM, hpx_loglevel_list);
-  update_multiple_arg((void *)&(args_info->hpx_traceat_arg),
-    &(args_info->hpx_traceat_orig), args_info->hpx_traceat_given,
-    local_args_info.hpx_traceat_given, 0 , 
-    ARG_INT, hpx_traceat_list);
   update_multiple_arg((void *)&(args_info->hpx_traceclasses_arg),
     &(args_info->hpx_traceclasses_orig), args_info->hpx_traceclasses_given,
     local_args_info.hpx_traceclasses_given, 0 , 
     ARG_ENUM, hpx_traceclasses_list);
+  update_multiple_arg((void *)&(args_info->hpx_traceat_arg),
+    &(args_info->hpx_traceat_orig), args_info->hpx_traceat_given,
+    local_args_info.hpx_traceat_given, 0 , 
+    ARG_INT, hpx_traceat_list);
 
   args_info->hpx_waitat_given += local_args_info.hpx_waitat_given;
   local_args_info.hpx_waitat_given = 0;
@@ -1506,10 +1487,10 @@ hpx_option_parser_internal (int argc, char * const *argv, struct hpx_options_t *
   local_args_info.hpx_logat_given = 0;
   args_info->hpx_loglevel_given += local_args_info.hpx_loglevel_given;
   local_args_info.hpx_loglevel_given = 0;
-  args_info->hpx_traceat_given += local_args_info.hpx_traceat_given;
-  local_args_info.hpx_traceat_given = 0;
   args_info->hpx_traceclasses_given += local_args_info.hpx_traceclasses_given;
   local_args_info.hpx_traceclasses_given = 0;
+  args_info->hpx_traceat_given += local_args_info.hpx_traceat_given;
+  local_args_info.hpx_traceat_given = 0;
   
   if (check_required)
     {
@@ -1527,8 +1508,8 @@ failure:
   free_list (hpx_waitat_list, 0 );
   free_list (hpx_logat_list, 0 );
   free_list (hpx_loglevel_list, 0 );
-  free_list (hpx_traceat_list, 0 );
   free_list (hpx_traceclasses_list, 0 );
+  free_list (hpx_traceat_list, 0 );
   
   hpx_option_parser_release (&local_args_info);
   return (EXIT_FAILURE);

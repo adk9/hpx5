@@ -97,7 +97,6 @@
 LIBHPX_OPT_FLAG(hpx, statistics, 1)
 LIBHPX_OPT_FLAG(dbg, mprotectstacks, 0)
 LIBHPX_OPT_FLAG(dbg, waitonabort, 0)
-LIBHPX_OPT_FLAG(dbg, trace, 0)
 /// @}
 
 /// Scalar options
