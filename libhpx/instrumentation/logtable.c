@@ -47,7 +47,7 @@ static void _time_diff(record_t *r, hpx_time_t *start) {
   }
 }
 
-static int _create_file(const char *filename) {
+static int _create_file(const char *filename, size_t size) {
   static const int flags = O_RDWR | O_CREAT;
   static const int perm = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
   int fd = open(filename, flags, perm);
@@ -56,9 +56,9 @@ static int _create_file(const char *filename) {
     return -1;
   }
 
-  lseek(fd, sizeof(record_t) - 1, SEEK_SET);
+  lseek(fd, size - 1, SEEK_SET);
   if (write(fd, "", 1) != 1) {
-    log_error("could not write log file %s\n", filename);
+    log_error("could not create log file %s\n", filename);
     close(fd);
     return -1;
   }
@@ -99,7 +99,7 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
     return LIBHPX_OK;
   }
 
-  log->fd = _create_file(filename);
+  log->fd = _create_file(filename, size);
   if (log->fd == -1) {
     goto unwind;
   }
