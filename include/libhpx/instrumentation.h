@@ -17,12 +17,12 @@ void inst_fini(void)
 /// @param           id The event id (see hpx_inst_event_type_t)
 /// @param            n The number of user arguments to log, < 5.
 /// @param      va_args The user arguments.
-void inst_vtrace(int class, int id, int n, ...)
+void inst_vtrace(int class, int n, int id, ...)
   HPX_INTERNAL;
 
 #ifdef ENABLE_INSTRUMENTATION
-# define inst_trace(class, id, ...)                             \
-  inst_vtrace(class, id, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
+# define inst_trace(class, ...)                                 \
+  inst_vtrace(class, __HPX_NARGS(__VA_ARGS__) - 1, __VA_ARGS__)
 #else
 # define inst_trace(class, id, ...)             \
   do {                                          \
