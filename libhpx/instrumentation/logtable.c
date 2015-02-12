@@ -91,7 +91,7 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
   log->fd = -1;
   log->class = class;
   log->id = id;
-  sync_store(&log->next, 1, SYNC_RELEASE);
+  sync_store(&log->next, 0, SYNC_RELEASE);
   log->size = size;
   log->records = NULL;
 
