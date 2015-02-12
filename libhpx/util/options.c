@@ -343,8 +343,8 @@ void config_delete(config_t *cfg) {
     free(cfg->logat);
   }
 
-  if (cfg->waitat) {
-    free(cfg->waitat);
+  if (cfg->dbg_waitat) {
+    free(cfg->dbg_waitat);
   }
 
   free(cfg);

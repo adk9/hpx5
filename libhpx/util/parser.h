@@ -79,11 +79,6 @@ struct hpx_options_t
   enum enum_hpx_network hpx_network_arg;	/**< @brief type of network to use.  */
   char * hpx_network_orig;	/**< @brief type of network to use original value given at command line.  */
   const char *hpx_network_help; /**< @brief type of network to use help description.  */
-  int* hpx_waitat_arg;	/**< @brief wait for debugger at specific locality.  */
-  char ** hpx_waitat_orig;	/**< @brief wait for debugger at specific locality original value given at command line.  */
-  unsigned int hpx_waitat_min; /**< @brief wait for debugger at specific locality's minimum occurreces */
-  unsigned int hpx_waitat_max; /**< @brief wait for debugger at specific locality's maximum occurreces */
-  const char *hpx_waitat_help; /**< @brief wait for debugger at specific locality help description.  */
   int* hpx_logat_arg;	/**< @brief selectively output log information.  */
   char ** hpx_logat_orig;	/**< @brief selectively output log information original value given at command line.  */
   unsigned int hpx_logat_min; /**< @brief selectively output log information's minimum occurreces */
@@ -105,10 +100,15 @@ struct hpx_options_t
   char * hpx_configfile_arg;	/**< @brief HPX runtime configuration file.  */
   char * hpx_configfile_orig;	/**< @brief HPX runtime configuration file original value given at command line.  */
   const char *hpx_configfile_help; /**< @brief HPX runtime configuration file help description.  */
-  int hpx_dbg_mprotectstacks_flag;	/**< @brief use mprotect() to bracket stacks to look for stack overflows (default=off).  */
-  const char *hpx_dbg_mprotectstacks_help; /**< @brief use mprotect() to bracket stacks to look for stack overflows help description.  */
+  int* hpx_dbg_waitat_arg;	/**< @brief wait for debugger at specific locality.  */
+  char ** hpx_dbg_waitat_orig;	/**< @brief wait for debugger at specific locality original value given at command line.  */
+  unsigned int hpx_dbg_waitat_min; /**< @brief wait for debugger at specific locality's minimum occurreces */
+  unsigned int hpx_dbg_waitat_max; /**< @brief wait for debugger at specific locality's maximum occurreces */
+  const char *hpx_dbg_waitat_help; /**< @brief wait for debugger at specific locality help description.  */
   int hpx_dbg_waitonabort_flag;	/**< @brief call hpx_wait() inside of hpx_abort() for debugging (default=off).  */
   const char *hpx_dbg_waitonabort_help; /**< @brief call hpx_wait() inside of hpx_abort() for debugging help description.  */
+  int hpx_dbg_mprotectstacks_flag;	/**< @brief use mprotect() to bracket stacks to look for stack overflows (default=off).  */
+  const char *hpx_dbg_mprotectstacks_help; /**< @brief use mprotect() to bracket stacks to look for stack overflows help description.  */
   enum enum_hpx_trace_classes *hpx_trace_classes_arg;	/**< @brief set the event classes to trace.  */
   char ** hpx_trace_classes_orig;	/**< @brief set the event classes to trace original value given at command line.  */
   unsigned int hpx_trace_classes_min; /**< @brief set the event classes to trace's minimum occurreces */
@@ -134,9 +134,9 @@ struct hpx_options_t
   enum enum_hpx_photon_backend hpx_photon_backend_arg;	/**< @brief set the underlying network API to use.  */
   char * hpx_photon_backend_orig;	/**< @brief set the underlying network API to use original value given at command line.  */
   const char *hpx_photon_backend_help; /**< @brief set the underlying network API to use help description.  */
-  char * hpx_photon_ibdev_arg;	/**< @brief set a particular IB device.  */
-  char * hpx_photon_ibdev_orig;	/**< @brief set a particular IB device original value given at command line.  */
-  const char *hpx_photon_ibdev_help; /**< @brief set a particular IB device help description.  */
+  char * hpx_photon_ibdev_arg;	/**< @brief set a particular IB device (also a filter for device and port discovery, e.g. qib0:1+mlx4_0:2).  */
+  char * hpx_photon_ibdev_orig;	/**< @brief set a particular IB device (also a filter for device and port discovery, e.g. qib0:1+mlx4_0:2) original value given at command line.  */
+  const char *hpx_photon_ibdev_help; /**< @brief set a particular IB device (also a filter for device and port discovery, e.g. qib0:1+mlx4_0:2) help description.  */
   char * hpx_photon_ethdev_arg;	/**< @brief set a particular ETH device (for CMA mode only).  */
   char * hpx_photon_ethdev_orig;	/**< @brief set a particular ETH device (for CMA mode only) original value given at command line.  */
   const char *hpx_photon_ethdev_help; /**< @brief set a particular ETH device (for CMA mode only) help description.  */
@@ -171,15 +171,15 @@ struct hpx_options_t
   unsigned int hpx_boot_given ;	/**< @brief Whether hpx-boot was given.  */
   unsigned int hpx_transport_given ;	/**< @brief Whether hpx-transport was given.  */
   unsigned int hpx_network_given ;	/**< @brief Whether hpx-network was given.  */
-  unsigned int hpx_waitat_given ;	/**< @brief Whether hpx-waitat was given.  */
   unsigned int hpx_logat_given ;	/**< @brief Whether hpx-logat was given.  */
   unsigned int hpx_loglevel_given ;	/**< @brief Whether hpx-loglevel was given.  */
   unsigned int hpx_statistics_given ;	/**< @brief Whether hpx-statistics was given.  */
   unsigned int hpx_sendlimit_given ;	/**< @brief Whether hpx-sendlimit was given.  */
   unsigned int hpx_recvlimit_given ;	/**< @brief Whether hpx-recvlimit was given.  */
   unsigned int hpx_configfile_given ;	/**< @brief Whether hpx-configfile was given.  */
-  unsigned int hpx_dbg_mprotectstacks_given ;	/**< @brief Whether hpx-dbg-mprotectstacks was given.  */
+  unsigned int hpx_dbg_waitat_given ;	/**< @brief Whether hpx-dbg-waitat was given.  */
   unsigned int hpx_dbg_waitonabort_given ;	/**< @brief Whether hpx-dbg-waitonabort was given.  */
+  unsigned int hpx_dbg_mprotectstacks_given ;	/**< @brief Whether hpx-dbg-mprotectstacks was given.  */
   unsigned int hpx_trace_classes_given ;	/**< @brief Whether hpx-trace-classes was given.  */
   unsigned int hpx_trace_dir_given ;	/**< @brief Whether hpx-trace-dir was given.  */
   unsigned int hpx_trace_filesize_given ;	/**< @brief Whether hpx-trace-filesize was given.  */

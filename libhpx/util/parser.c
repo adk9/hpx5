@@ -44,7 +44,6 @@ const char *hpx_options_t_help[] = {
   "      --hpx-boot=type           HPX bootstrap method to use  (possible \n                                  values=\"default\", \"smp\", \"mpi\", \n                                  \"pmi\")",
   "      --hpx-transport=type      type of transport to use  (possible \n                                  values=\"default\", \"smp\", \"mpi\", \n                                  \"portals\", \"photon\")",
   "      --hpx-network=type        type of network to use  (possible \n                                  values=\"default\", \"smp\", \"pwc\", \n                                  \"isir\")",
-  "      --hpx-waitat=[locality]   wait for debugger at specific locality",
   "      --hpx-logat=[localities]  selectively output log information",
   "      --hpx-loglevel[=level]    set the logging level  (possible \n                                  values=\"default\", \"boot\", \"sched\", \n                                  \"gas\", \"lco\", \"net\", \"trans\", \n                                  \"parcel\", \"all\")",
   "      --hpx-statistics          print HPX runtime statistics  (default=off)",
@@ -52,8 +51,9 @@ const char *hpx_options_t_help[] = {
   "      --hpx-recvlimit=requests  HPX transport-specific recv limit",
   "      --hpx-configfile=file     HPX runtime configuration file",
   "\nHPX Debug Options:",
-  "      --hpx-dbg-mprotectstacks  use mprotect() to bracket stacks to look for \n                                  stack overflows  (default=off)",
+  "      --hpx-dbg-waitat=[locality]\n                                wait for debugger at specific locality",
   "      --hpx-dbg-waitonabort     call hpx_wait() inside of hpx_abort() for \n                                  debugging  (default=off)",
+  "      --hpx-dbg-mprotectstacks  use mprotect() to bracket stacks to look for \n                                  stack overflows  (default=off)",
   "\nTracing:",
   "      --hpx-trace-classes=class set the event classes to trace  (possible \n                                  values=\"parcel\", \"pwc\", \"sched\", \n                                  \"all\")",
   "      --hpx-trace-dir=dir       directory to output trace files",
@@ -64,7 +64,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-pwc-parceleagerlimit=bytes\n                                set the largest eager parcel size (header \n                                  inclusive)",
   "\nPhoton Transport Options:",
   "      --hpx-photon-backend=type set the underlying network API to use  \n                                  (possible values=\"default\", \"verbs\", \n                                  \"ugni\")",
-  "      --hpx-photon-ibdev=device set a particular IB device",
+  "      --hpx-photon-ibdev=device set a particular IB device (also a filter for \n                                  device and port discovery, e.g. \n                                  qib0:1+mlx4_0:2)",
   "      --hpx-photon-ethdev=device\n                                set a particular ETH device (for CMA mode only)",
   "      --hpx-photon-ibport=integer\n                                set a particular IB port",
   "      --hpx-photon-usecma       enable CMA connection mode  (default=off)",
@@ -144,15 +144,15 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_boot_given = 0 ;
   args_info->hpx_transport_given = 0 ;
   args_info->hpx_network_given = 0 ;
-  args_info->hpx_waitat_given = 0 ;
   args_info->hpx_logat_given = 0 ;
   args_info->hpx_loglevel_given = 0 ;
   args_info->hpx_statistics_given = 0 ;
   args_info->hpx_sendlimit_given = 0 ;
   args_info->hpx_recvlimit_given = 0 ;
   args_info->hpx_configfile_given = 0 ;
-  args_info->hpx_dbg_mprotectstacks_given = 0 ;
+  args_info->hpx_dbg_waitat_given = 0 ;
   args_info->hpx_dbg_waitonabort_given = 0 ;
+  args_info->hpx_dbg_mprotectstacks_given = 0 ;
   args_info->hpx_trace_classes_given = 0 ;
   args_info->hpx_trace_dir_given = 0 ;
   args_info->hpx_trace_filesize_given = 0 ;
@@ -189,8 +189,6 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_transport_orig = NULL;
   args_info->hpx_network_arg = hpx_network__NULL;
   args_info->hpx_network_orig = NULL;
-  args_info->hpx_waitat_arg = NULL;
-  args_info->hpx_waitat_orig = NULL;
   args_info->hpx_logat_arg = NULL;
   args_info->hpx_logat_orig = NULL;
   args_info->hpx_loglevel_arg = NULL;
@@ -200,8 +198,10 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_recvlimit_orig = NULL;
   args_info->hpx_configfile_arg = NULL;
   args_info->hpx_configfile_orig = NULL;
-  args_info->hpx_dbg_mprotectstacks_flag = 0;
+  args_info->hpx_dbg_waitat_arg = NULL;
+  args_info->hpx_dbg_waitat_orig = NULL;
   args_info->hpx_dbg_waitonabort_flag = 0;
+  args_info->hpx_dbg_mprotectstacks_flag = 0;
   args_info->hpx_trace_classes_arg = NULL;
   args_info->hpx_trace_classes_orig = NULL;
   args_info->hpx_trace_dir_arg = NULL;
@@ -242,21 +242,21 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_boot_help = hpx_options_t_help[9] ;
   args_info->hpx_transport_help = hpx_options_t_help[10] ;
   args_info->hpx_network_help = hpx_options_t_help[11] ;
-  args_info->hpx_waitat_help = hpx_options_t_help[12] ;
-  args_info->hpx_waitat_min = 0;
-  args_info->hpx_waitat_max = 0;
-  args_info->hpx_logat_help = hpx_options_t_help[13] ;
+  args_info->hpx_logat_help = hpx_options_t_help[12] ;
   args_info->hpx_logat_min = 0;
   args_info->hpx_logat_max = 0;
-  args_info->hpx_loglevel_help = hpx_options_t_help[14] ;
+  args_info->hpx_loglevel_help = hpx_options_t_help[13] ;
   args_info->hpx_loglevel_min = 0;
   args_info->hpx_loglevel_max = 0;
-  args_info->hpx_statistics_help = hpx_options_t_help[15] ;
-  args_info->hpx_sendlimit_help = hpx_options_t_help[16] ;
-  args_info->hpx_recvlimit_help = hpx_options_t_help[17] ;
-  args_info->hpx_configfile_help = hpx_options_t_help[18] ;
-  args_info->hpx_dbg_mprotectstacks_help = hpx_options_t_help[20] ;
-  args_info->hpx_dbg_waitonabort_help = hpx_options_t_help[21] ;
+  args_info->hpx_statistics_help = hpx_options_t_help[14] ;
+  args_info->hpx_sendlimit_help = hpx_options_t_help[15] ;
+  args_info->hpx_recvlimit_help = hpx_options_t_help[16] ;
+  args_info->hpx_configfile_help = hpx_options_t_help[17] ;
+  args_info->hpx_dbg_waitat_help = hpx_options_t_help[19] ;
+  args_info->hpx_dbg_waitat_min = 0;
+  args_info->hpx_dbg_waitat_max = 0;
+  args_info->hpx_dbg_waitonabort_help = hpx_options_t_help[20] ;
+  args_info->hpx_dbg_mprotectstacks_help = hpx_options_t_help[21] ;
   args_info->hpx_trace_classes_help = hpx_options_t_help[23] ;
   args_info->hpx_trace_classes_min = 0;
   args_info->hpx_trace_classes_max = 0;
@@ -413,8 +413,6 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_boot_orig));
   free_string_field (&(args_info->hpx_transport_orig));
   free_string_field (&(args_info->hpx_network_orig));
-  free_multiple_field (args_info->hpx_waitat_given, (void *)(args_info->hpx_waitat_arg), &(args_info->hpx_waitat_orig));
-  args_info->hpx_waitat_arg = 0;
   free_multiple_field (args_info->hpx_logat_given, (void *)(args_info->hpx_logat_arg), &(args_info->hpx_logat_orig));
   args_info->hpx_logat_arg = 0;
   free_multiple_field (args_info->hpx_loglevel_given, (void *)(args_info->hpx_loglevel_arg), &(args_info->hpx_loglevel_orig));
@@ -423,6 +421,8 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_recvlimit_orig));
   free_string_field (&(args_info->hpx_configfile_arg));
   free_string_field (&(args_info->hpx_configfile_orig));
+  free_multiple_field (args_info->hpx_dbg_waitat_given, (void *)(args_info->hpx_dbg_waitat_arg), &(args_info->hpx_dbg_waitat_orig));
+  args_info->hpx_dbg_waitat_arg = 0;
   free_multiple_field (args_info->hpx_trace_classes_given, (void *)(args_info->hpx_trace_classes_arg), &(args_info->hpx_trace_classes_orig));
   args_info->hpx_trace_classes_arg = 0;
   free_string_field (&(args_info->hpx_trace_dir_arg));
@@ -542,7 +542,6 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-transport", args_info->hpx_transport_orig, hpx_option_parser_hpx_transport_values);
   if (args_info->hpx_network_given)
     write_into_file(outfile, "hpx-network", args_info->hpx_network_orig, hpx_option_parser_hpx_network_values);
-  write_multiple_into_file(outfile, args_info->hpx_waitat_given, "hpx-waitat", args_info->hpx_waitat_orig, 0);
   write_multiple_into_file(outfile, args_info->hpx_logat_given, "hpx-logat", args_info->hpx_logat_orig, 0);
   write_multiple_into_file(outfile, args_info->hpx_loglevel_given, "hpx-loglevel", args_info->hpx_loglevel_orig, hpx_option_parser_hpx_loglevel_values);
   if (args_info->hpx_statistics_given)
@@ -553,10 +552,11 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-recvlimit", args_info->hpx_recvlimit_orig, 0);
   if (args_info->hpx_configfile_given)
     write_into_file(outfile, "hpx-configfile", args_info->hpx_configfile_orig, 0);
-  if (args_info->hpx_dbg_mprotectstacks_given)
-    write_into_file(outfile, "hpx-dbg-mprotectstacks", 0, 0 );
+  write_multiple_into_file(outfile, args_info->hpx_dbg_waitat_given, "hpx-dbg-waitat", args_info->hpx_dbg_waitat_orig, 0);
   if (args_info->hpx_dbg_waitonabort_given)
     write_into_file(outfile, "hpx-dbg-waitonabort", 0, 0 );
+  if (args_info->hpx_dbg_mprotectstacks_given)
+    write_into_file(outfile, "hpx-dbg-mprotectstacks", 0, 0 );
   write_multiple_into_file(outfile, args_info->hpx_trace_classes_given, "hpx-trace-classes", args_info->hpx_trace_classes_orig, hpx_option_parser_hpx_trace_classes_values);
   if (args_info->hpx_trace_dir_given)
     write_into_file(outfile, "hpx-trace-dir", args_info->hpx_trace_dir_orig, 0);
@@ -838,13 +838,13 @@ hpx_option_parser_required2 (struct hpx_options_t *args_info, const char *prog_n
   FIX_UNUSED (additional_error);
 
   /* checks for required options */
-  if (check_multiple_option_occurrences(prog_name, args_info->hpx_waitat_given, args_info->hpx_waitat_min, args_info->hpx_waitat_max, "'--hpx-waitat'"))
-     error = 1;
-  
   if (check_multiple_option_occurrences(prog_name, args_info->hpx_logat_given, args_info->hpx_logat_min, args_info->hpx_logat_max, "'--hpx-logat'"))
      error = 1;
   
   if (check_multiple_option_occurrences(prog_name, args_info->hpx_loglevel_given, args_info->hpx_loglevel_min, args_info->hpx_loglevel_max, "'--hpx-loglevel'"))
+     error = 1;
+  
+  if (check_multiple_option_occurrences(prog_name, args_info->hpx_dbg_waitat_given, args_info->hpx_dbg_waitat_min, args_info->hpx_dbg_waitat_max, "'--hpx-dbg-waitat'"))
      error = 1;
   
   if (check_multiple_option_occurrences(prog_name, args_info->hpx_trace_classes_given, args_info->hpx_trace_classes_min, args_info->hpx_trace_classes_max, "'--hpx-trace-classes'"))
@@ -1146,9 +1146,9 @@ hpx_option_parser_internal (
 {
   int c;	/* Character of the parsed option.  */
 
-  struct generic_list * hpx_waitat_list = NULL;
   struct generic_list * hpx_logat_list = NULL;
   struct generic_list * hpx_loglevel_list = NULL;
+  struct generic_list * hpx_dbg_waitat_list = NULL;
   struct generic_list * hpx_trace_classes_list = NULL;
   struct generic_list * hpx_trace_at_list = NULL;
   int error = 0;
@@ -1191,15 +1191,15 @@ hpx_option_parser_internal (
         { "hpx-boot",	1, NULL, 0 },
         { "hpx-transport",	1, NULL, 0 },
         { "hpx-network",	1, NULL, 0 },
-        { "hpx-waitat",	1, NULL, 0 },
         { "hpx-logat",	1, NULL, 0 },
         { "hpx-loglevel",	2, NULL, 0 },
         { "hpx-statistics",	0, NULL, 0 },
         { "hpx-sendlimit",	1, NULL, 0 },
         { "hpx-recvlimit",	1, NULL, 0 },
         { "hpx-configfile",	1, NULL, 0 },
-        { "hpx-dbg-mprotectstacks",	0, NULL, 0 },
+        { "hpx-dbg-waitat",	1, NULL, 0 },
         { "hpx-dbg-waitonabort",	0, NULL, 0 },
+        { "hpx-dbg-mprotectstacks",	0, NULL, 0 },
         { "hpx-trace-classes",	1, NULL, 0 },
         { "hpx-trace-dir",	1, NULL, 0 },
         { "hpx-trace-filesize",	1, NULL, 0 },
@@ -1367,17 +1367,6 @@ hpx_option_parser_internal (
               goto failure;
           
           }
-          /* wait for debugger at specific locality.  */
-          else if (strcmp (long_options[option_index].name, "hpx-waitat") == 0)
-          {
-          
-            if (update_multiple_arg_temp(&hpx_waitat_list, 
-                &(local_args_info.hpx_waitat_given), optarg, 0, 0, ARG_INT,
-                "hpx-waitat", '-',
-                additional_error))
-              goto failure;
-          
-          }
           /* selectively output log information.  */
           else if (strcmp (long_options[option_index].name, "hpx-logat") == 0)
           {
@@ -1454,14 +1443,13 @@ hpx_option_parser_internal (
               goto failure;
           
           }
-          /* use mprotect() to bracket stacks to look for stack overflows.  */
-          else if (strcmp (long_options[option_index].name, "hpx-dbg-mprotectstacks") == 0)
+          /* wait for debugger at specific locality.  */
+          else if (strcmp (long_options[option_index].name, "hpx-dbg-waitat") == 0)
           {
           
-          
-            if (update_arg((void *)&(args_info->hpx_dbg_mprotectstacks_flag), 0, &(args_info->hpx_dbg_mprotectstacks_given),
-                &(local_args_info.hpx_dbg_mprotectstacks_given), optarg, 0, 0, ARG_FLAG,
-                check_ambiguity, override, 1, 0, "hpx-dbg-mprotectstacks", '-',
+            if (update_multiple_arg_temp(&hpx_dbg_waitat_list, 
+                &(local_args_info.hpx_dbg_waitat_given), optarg, 0, 0, ARG_INT,
+                "hpx-dbg-waitat", '-',
                 additional_error))
               goto failure;
           
@@ -1474,6 +1462,18 @@ hpx_option_parser_internal (
             if (update_arg((void *)&(args_info->hpx_dbg_waitonabort_flag), 0, &(args_info->hpx_dbg_waitonabort_given),
                 &(local_args_info.hpx_dbg_waitonabort_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "hpx-dbg-waitonabort", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* use mprotect() to bracket stacks to look for stack overflows.  */
+          else if (strcmp (long_options[option_index].name, "hpx-dbg-mprotectstacks") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->hpx_dbg_mprotectstacks_flag), 0, &(args_info->hpx_dbg_mprotectstacks_given),
+                &(local_args_info.hpx_dbg_mprotectstacks_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "hpx-dbg-mprotectstacks", '-',
                 additional_error))
               goto failure;
           
@@ -1570,7 +1570,7 @@ hpx_option_parser_internal (
               goto failure;
           
           }
-          /* set a particular IB device.  */
+          /* set a particular IB device (also a filter for device and port discovery, e.g. qib0:1+mlx4_0:2).  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-ibdev") == 0)
           {
           
@@ -1707,10 +1707,6 @@ hpx_option_parser_internal (
     } /* while */
 
 
-  update_multiple_arg((void *)&(args_info->hpx_waitat_arg),
-    &(args_info->hpx_waitat_orig), args_info->hpx_waitat_given,
-    local_args_info.hpx_waitat_given, 0,
-    ARG_INT, hpx_waitat_list);
   update_multiple_arg((void *)&(args_info->hpx_logat_arg),
     &(args_info->hpx_logat_orig), args_info->hpx_logat_given,
     local_args_info.hpx_logat_given, 0,
@@ -1719,6 +1715,10 @@ hpx_option_parser_internal (
     &(args_info->hpx_loglevel_orig), args_info->hpx_loglevel_given,
     local_args_info.hpx_loglevel_given, 0,
     ARG_ENUM, hpx_loglevel_list);
+  update_multiple_arg((void *)&(args_info->hpx_dbg_waitat_arg),
+    &(args_info->hpx_dbg_waitat_orig), args_info->hpx_dbg_waitat_given,
+    local_args_info.hpx_dbg_waitat_given, 0,
+    ARG_INT, hpx_dbg_waitat_list);
   update_multiple_arg((void *)&(args_info->hpx_trace_classes_arg),
     &(args_info->hpx_trace_classes_orig), args_info->hpx_trace_classes_given,
     local_args_info.hpx_trace_classes_given, 0,
@@ -1728,12 +1728,12 @@ hpx_option_parser_internal (
     local_args_info.hpx_trace_at_given, 0,
     ARG_INT, hpx_trace_at_list);
 
-  args_info->hpx_waitat_given += local_args_info.hpx_waitat_given;
-  local_args_info.hpx_waitat_given = 0;
   args_info->hpx_logat_given += local_args_info.hpx_logat_given;
   local_args_info.hpx_logat_given = 0;
   args_info->hpx_loglevel_given += local_args_info.hpx_loglevel_given;
   local_args_info.hpx_loglevel_given = 0;
+  args_info->hpx_dbg_waitat_given += local_args_info.hpx_dbg_waitat_given;
+  local_args_info.hpx_dbg_waitat_given = 0;
   args_info->hpx_trace_classes_given += local_args_info.hpx_trace_classes_given;
   local_args_info.hpx_trace_classes_given = 0;
   args_info->hpx_trace_at_given += local_args_info.hpx_trace_at_given;
@@ -1752,9 +1752,9 @@ hpx_option_parser_internal (
   return 0;
 
 failure:
-  free_list (hpx_waitat_list, 0 );
   free_list (hpx_logat_list, 0 );
   free_list (hpx_loglevel_list, 0 );
+  free_list (hpx_dbg_waitat_list, 0 );
   free_list (hpx_trace_classes_list, 0 );
   free_list (hpx_trace_at_list, 0 );
   
