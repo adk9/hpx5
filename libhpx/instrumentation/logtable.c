@@ -15,79 +15,137 @@
 #endif
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <errno.h>
 #include <fcntl.h>
+#include <time.h>                       /// @todo: use platform independent code
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "libsync/sync.h"
-#include "libhpx/instrumentation.h"
+#include <libsync/sync.h>
 
-//unsigned int get_logging_record_size(unsigned int user_data_size) {
-//  return sizeof(hpx_inst_event_t) + user_data_size;
-//}
+#include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
+#include "logtable.h"
 
-int logtable_init(logtable_t *logtable, const char* filename, size_t total_size) {
-  logtable->data_size = total_size;
-  unsigned int record_size = sizeof(hpx_inst_event_t); // change this if user data size can vary
+typedef struct record {
+  int class;
+  int id;
+  int rank;
+  int worker;
+  uint64_t s;
+  uint64_t ns;
+  uint64_t user[4];
+} record_t;
+
+static void _time_diff(record_t *r, hpx_time_t *start) {
+  hpx_time_t end = hpx_time_now();
+  if (end.tv_nsec < start->tv_nsec) {
+    r->s = end.tv_sec - start->tv_sec - 1;
+    r->ns = (1e9 + end.tv_nsec) - start->tv_nsec;
+  } else {
+    r->s = end.tv_sec - start->tv_sec;
+    r->ns = end.tv_nsec - start->tv_nsec;
+  }
+}
+
+static int _create_file(const char *filename) {
   int fd = open(filename, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
   if (fd == -1) {
-    // TODO hpx-specific error handling
-    perror("init_action: open");
-    return -1;
-  }
-  lseek(fd, logtable->data_size-1, SEEK_SET);
-  int bytes = write(fd, "", 1);
-  if (bytes != 1)
-    return -1;
-
-  void* data = mmap(NULL, logtable->data_size,
-                    PROT_READ|PROT_WRITE, MAP_SHARED | MAP_NORESERVE,
-                    fd, 0);
-  //  printf("mmap at %p\n", data);
-  if (data == MAP_FAILED) {
-    // TODO hpx-specific error handling
-    perror("init_action: mmap");
-    printf("errno = %d (%s)\n", errno, strerror(errno));
+    log_error("failed to open a log file for %s\n", filename);
     return -1;
   }
 
-  logtable->record_size = record_size;
-  strncpy(logtable->filename, filename, 256);
-  logtable->data_size = total_size;
-  logtable->data   = data;
-  logtable->record_size = record_size;
-  logtable->fd     = fd;
-  logtable->index  = 0;
-  logtable->inited = true;
+  lseek(fd, sizeof(record_t) - 1, SEEK_SET);
+  if (write(fd, "", 1) != 1) {
+    log_error("could not write log file %s\n", filename);
+    close(fd);
+    return -1;
+  }
 
-  return HPX_SUCCESS;
+  return fd;
 }
 
-void logtable_fini(logtable_t *logtable) {
-  munmap(logtable->data, logtable->data_size);
-  int error = ftruncate(logtable->fd, logtable->index * logtable->record_size);
-  if (error) {
-    // TODO error handling
-    perror("fini: ftruncate");
-  }
-
-  error = close(logtable->fd);
-  if (error) {
-    // TODO error handling
-    perror("shutdown: close");
-  }
-}
-
-hpx_inst_event_t* logtable_next_and_increment(logtable_t *lt) {
-  if (lt->record_size * (lt->index + 1) > lt->data_size)
+static void *_create_mmap(size_t size, int file) {
+  int prot = PROT_WRITE;
+  int flags = MAP_SHARED | MAP_NORESERVE;
+  void *base = mmap(NULL, size * sizeof(record_t), prot, flags, file, 0);
+  if (base == MAP_FAILED) {
+    log_error("could not mmap log file\n");
     return NULL;
+  }
+  if ((uintptr_t)base % HPX_CACHELINE_SIZE) {
+    log("log records are not cacheline aligned\n");
+  }
+  return base;
+}
 
-  unsigned int index = sync_fadd(&lt->index, 1, SYNC_RELAXED);
-  return (hpx_inst_event_t*)((uintptr_t)lt->data + lt->record_size * index);
+int logtable_init(logtable_t *log, const char* filename, size_t size,
+                  int class, int id, hpx_time_t start) {
+  log->start = start;
+  log->fd = -1;
+  log->class = class;
+  log->id = id;
+  sync_store(&log->next, 1, SYNC_RELEASE);
+  log->size = size;
+  log->records = NULL;
+
+  log->fd = _create_file(filename);
+  if (log->fd == -1) {
+    goto unwind;
+  }
+
+  log->records = _create_mmap(size, log->fd);
+  if (!log->records) {
+    goto unwind;
+  }
+
+  return LIBHPX_OK;
+
+ unwind:
+  logtable_fini(log);
+  return LIBHPX_ERROR;
+}
+
+void logtable_fini(logtable_t *log) {
+  if (!log) {
+    return;
+  }
+
+  if (log->records) {
+    int e = munmap(log->records, log->size * sizeof(record_t));
+    if (e) {
+      log_error("failed to unmap trace file\n");
+    }
+  }
+
+  if (log->fd != -1) {
+    int e = ftruncate(log->fd, log->next * sizeof(record_t));
+    if (e) {
+      log_error("failed to truncate trace file\n");
+    }
+    e = close(log->fd);
+    if (e) {
+      log_error("failed to close trace file\n");
+    }
+  }
+}
+
+void logtable_append(logtable_t *log, uint64_t u1, uint64_t u2, uint64_t u3,
+                     uint64_t u4) {
+  size_t i = sync_fadd(&log->next, sizeof(record_t), SYNC_ACQ_REL);
+  if (i > log->size) {
+    return;
+  }
+
+  record_t *r = &log->records[i];
+  r->class = log->class;
+  r->id = log->id;
+  r->rank = hpx_get_my_rank();
+  r->worker = hpx_get_my_thread_id();
+  _time_diff(r, &log->start);
+  r->user[0] = u1;
+  r->user[1] = u2;
+  r->user[2] = u3;
+  r->user[3] = u4;
 }
