@@ -47,10 +47,12 @@ static char *_config_file = NULL;
 
 /// The default configuration.
 static const config_t _default_cfg = {
-#define LIBHPX_OPT(UNUSED1, id, init, UNUSED2) .id = init,
-#define LIBHPX_OPT_BITSET(UNUSED1, id, init, none, all) .id = ((init == none) ? 0 \
-                                                               : ((init == all) ? UINT64_MAX : 1 << init)),
+#define LIBHPX_OPT(group, id, init, UNUSED2) .group##id = init,
+#define LIBHPX_OPT_BITSET(group, id, init, none, all) .group##id = ((init == none) ? 0 \
+              : ((init == all) ? UINT64_MAX : 1 << init)),
+#define LIBHPX_OPT_STRING(group, id, init) .group##id = init,
 # include "libhpx/options.def"
+#undef LIBHPX_OPT_STRING
 #undef LIBHPX_OPT_BITSET
 #undef LIBHPX_OPT
 };
@@ -209,33 +211,43 @@ static int *_merge_vector(int n, int args[n], int init, int term) {
 /// @param         opts The gengetopt options we are reading from.
 static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
 
-#define LIBHPX_OPT_FLAG(UNUSED1, id, UNUSED2)     \
-  if (opts->hpx_##id##_given) {                   \
-    cfg->id = opts->hpx_##id##_##flag;            \
+#define LIBHPX_OPT_FLAG(group, id, UNUSED2)     \
+  if (opts->hpx_##group##id##_given) {          \
+    cfg->group##id = opts->hpx_##group##id##_flag;  \
   }
 
-#define LIBHPX_OPT_SCALAR(UNUSED1, id, UNUSED2, UNUSED3)    \
-  if (opts->hpx_##id##_given) {                             \
-    cfg->id = opts->hpx_##id##_##arg;                       \
+#define LIBHPX_OPT_SCALAR(group, id, UNUSED2, UNUSED3)        \
+  if (opts->hpx_##group##id##_given) {                \
+    cfg->group##id = opts->hpx_##group##id##_arg;         \
   }
 
-#define LIBHPX_OPT_BITSET(UNUSED1, id, init, none, all) \
-  if (opts->hpx_##id##_given) {                         \
-    cfg->id = _merge_bitvector(opts->hpx_##id##_given,  \
-                               opts->hpx_##id##_arg,    \
-                               hpx_##id##_arg_all);     \
+#define LIBHPX_OPT_STRING(group, id, init)              \
+  if (opts->hpx_##group##id##_given) {                  \
+    if (cfg->group##id) {                       \
+      free(cfg->group##id);                     \
+    }                                   \
+    cfg->group##id = strdup(opts->hpx_##group##id##_arg);       \
   }
 
-#define LIBHPX_OPT_INTSET(UNUSED1, id, init, none, all) \
-  if (opts->hpx_##id##_given) {                         \
-    cfg->id = _merge_vector(opts->hpx_##id##_given,     \
-                            opts->hpx_##id##_arg,       \
-                            init, none);                \
+#define LIBHPX_OPT_BITSET(group, id, init, none, all)             \
+  if (opts->hpx_##group##id##_given) {                    \
+    cfg->group##id = _merge_bitvector(opts->hpx_##group##id##_given,  \
+                                      (uint32_t*)opts->hpx_##group##id##_arg, \
+                      hpx_##group##id##_arg_all);     \
+  }
+
+#define LIBHPX_OPT_INTSET(group, id, init, none, all)             \
+  if (opts->hpx_##group##id##_given) {                    \
+    cfg->group##id = _merge_vector(opts->hpx_##group##id##_given,     \
+                   opts->hpx_##group##id##_arg,       \
+                   init, none);               \
   }
 # include "libhpx/options.def"
 #undef LIBHPX_OPT_INTSET
 #undef LIBHPX_OPT_BITSET
+#undef LIBHPX_OPT_STRING
 #undef LIBHPX_OPT_SCALAR
+#undef LIBHPX_OPT_STRING
 #undef LIBHPX_OPT_FLAG
 
   // Special case handling for the config file option, the
@@ -254,20 +266,20 @@ void hpx_print_help(void) {
   hpx_option_parser_print_help();
 }
 
-#define LIBHPX_OPT_INTSET(UNUSED1, id, init, none, all)         \
-  int config_##id##_isset(const config_t *cfg, int element) {   \
-    if (!cfg->id) {                                             \
-      return (init == all);                                     \
-    }                                                           \
-    for (int i = 0; cfg->id[i] != none; ++i) {                  \
-      if (cfg->id[i] == all) {                                  \
-        return 1;                                               \
-      }                                                         \
-      if (cfg->id[i] == element) {                              \
-        return 1;                                               \
-      }                                                         \
-    }                                                           \
-    return 0;                                                   \
+#define LIBHPX_OPT_INTSET(group, id, init, none, all)           \
+  int config_##group##id##_isset(const config_t *cfg, int element) {    \
+    if (!cfg->group##id) {                      \
+      return (init == all);                     \
+    }                                   \
+    for (int i = 0; cfg->group##id[i] != none; ++i) {           \
+      if (cfg->group##id[i] == all) {                   \
+        return 1;                           \
+      }                                 \
+      if (cfg->group##id[i] == element) {               \
+        return 1;                           \
+      }                                 \
+    }                                   \
+    return 0;                               \
   }
 # include "libhpx/options.def"
 #undef LIBHPX_OPT_INTSET

@@ -228,7 +228,7 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
   p->c_target = HPX_NULL;
   p->credit   = 0;
 #ifdef ENABLE_INSTRUMENTATION
-  if (hpx_inst_enabled && hpx_inst_parcel_enabled) {
+  if (config_trace_classes_isset(here->config, HPX_INST_CLASS_PARCEL)) {
     parcel_count = sync_fadd(&parcel_count, 1, SYNC_RELAXED);
     p->id = ((uint64_t)(0xfffff && hpx_get_my_rank()) << 40) | parcel_count;
   }
@@ -242,7 +242,7 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
     memcpy(&p->buffer, &buffer, sizeof(buffer));
   }
 
-  HPX_INST_EVENT_PARCEL_CREATE(p);
+  INST_EVENT_PARCEL_CREATE(p);
 
   return p;
 }
@@ -293,7 +293,7 @@ int parcel_launch(hpx_parcel_t *p) {
 }
 
 hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p) {
-  HPX_INST_EVENT_PARCEL_SEND(p);
+  INST_EVENT_PARCEL_SEND(p);
   _prepare(p);
   return parcel_launch(p);
 }

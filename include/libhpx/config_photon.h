@@ -10,21 +10,22 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifdef HAVE_CONFIG_H
-# include "config.h"
+#ifndef LIBHPX_CONFIG_PHOTON_H
+#define LIBHPX_CONFIG_PHOTON_H
+
+//! Configuration options for the network transports HPX can use.
+typedef enum {
+  HPX_PHOTON_BACKEND_DEFAULT = 0, //!< Set a default (verbs).
+  HPX_PHOTON_BACKEND_VERBS,       //!< Use Verbs photon backend.
+  HPX_PHOTON_BACKEND_UGNI,        //!< Use uGNI photon backend.
+  HPX_PHOTON_BACKEND_MAX
+} hpx_photon_backend_t;
+
+static const char* const HPX_PHOTON_BACKEND_TO_STRING[] = {
+  "verbs",
+  "verbs",
+  "ugni",
+  "INVALID_BACKEND"
+};
+
 #endif
-
-#include "libhpx/locality.h"
-#include "commands.h"
-#include "../../gas/pgas/gpa.h"                 // big hack
-
-command_t encode_command(hpx_action_t op, hpx_addr_t addr) {
-  dbg_assert(addr != HPX_NULL);
-  return ((uint64_t)op << GPA_OFFSET_BITS) + (addr & GPA_OFFSET_MASK);
-}
-
-void decode_command(command_t cmd, hpx_action_t *op, hpx_addr_t *addr) {
-  *addr = pgas_offset_to_gpa(here->rank, cmd);
-  *op = cmd >> GPA_OFFSET_BITS;
-}
-

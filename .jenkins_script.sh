@@ -23,34 +23,32 @@ function add_photon() {
 
 set -xe
 
-case "$HPXIBDEV" in
-    qib0)
-        export PSM_MEMORY=large
-	TESTCMD="mpirun -np 2 --mca btl_openib_if_include $HPXIBDEV"
-	;;
-    mlx4_0)
-	TESTCMD="mpirun -np 2 --mca mtl ^psm --mca btl_openib_if_include mlx4_0"
-	;;
-    none)
-	TESTCMD=""
-        ;;
-    *)
-	TESTCMD=""
-	;;
-esac
-
 case "$HPXMODE" in
     photon)
-	CFGFLAGS=" --with-mpi=ompi --enable-photon --with-tests-cmd=\"$TESTCMD\""
+	CFGFLAGS=" --with-mpi=ompi --enable-photon "
 	add_mpi
         add_photon
 	;;
     mpi)
-	CFGFLAGS=" --with-mpi=ompi --with-tests-cmd=\"$TESTCMD\""
+	CFGFLAGS=" --with-mpi=ompi "
 	add_mpi	
 	;;
     *)
 	CFGFLAGS=" "
+	;;
+esac
+
+case "$HPXIBDEV" in
+    qib0)
+        export PSM_MEMORY=large
+	CFGFLAGS+="--with-tests-cmd=\"mpirun -np 2 --mca btl_openib_if_include $HPXIBDEV\""
+	;;
+    mlx4_0)
+	CFGFLAGS+="--with-tests-cmd=\"mpirun -np 2 --mca mtl ^psm --mca btl_openib_if_include $HPXIBDEV\""
+	;;
+    none)
+        ;;
+    *)
 	;;
 esac
 
@@ -74,7 +72,7 @@ fi
 mkdir install
 
 echo "Configuring HPX."
-../configure --prefix=$DIR/build/install/ $CFGFLAGS --enable-testsuite $HPXDEBUG
+echo ../configure --prefix=${DIR}/build/install/ $CFGFLAGS --enable-testsuite $HPXDEBUG | sh
 
 echo "Building HPX."
 make

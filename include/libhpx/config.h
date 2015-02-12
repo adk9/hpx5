@@ -22,6 +22,10 @@
 #include <stdint.h>
 #include <hpx/attributes.h>
 
+#ifdef HAVE_PHOTON
+#include "config_photon.h"
+#endif
+
 //! Configuration options for which global memory model to use.
 typedef enum {
   HPX_GAS_DEFAULT = 0, //!< Let HPX choose what memory model to use.
@@ -42,7 +46,6 @@ static const char* const HPX_GAS_TO_STRING[] = {
   "AGAS_SWITCH",
   "INVALID_ID"
 };
-
 
 //! Configuration options for the network transports HPX can use.
 typedef enum {
@@ -139,7 +142,7 @@ typedef enum {
 /// This configuration is used to control some of the runtime
 /// parameters for the HPX system.
 typedef struct config {
-#define LIBHPX_OPT(group, id, init, ctype) ctype id;
+#define LIBHPX_OPT(group, id, init, ctype) ctype group##id;
 # include "options.def"
 #undef LIBHPX_OPT
 } config_t;
@@ -154,13 +157,13 @@ void config_delete(config_t *cfg)
 ///
 /// @param          cfg The configuration to query.
 /// @param        value The value to check for.
-#define LIBHPX_OPT_INTSET(UNUSED1, id, UNUSED2, UNUSED3, UNUSED4) \
-  int config_##id##_isset(const config_t *cfg, int value)         \
+#define LIBHPX_OPT_INTSET(group, id, UNUSED2, UNUSED3, UNUSED4)		\
+  int config_##group##id##_isset(const config_t *cfg, int value)	\
     HPX_INTERNAL HPX_NON_NULL(1);
 
-#define LIBHPX_OPT_BITSET(UNUSED1, id, UNUSED2, UNUSED3, UNUSED4)       \
-  static inline uint64_t config_##id##_isset(const config_t *cfg, int bit) { \
-    return (cfg->id & (1 << bit));                                      \
+#define LIBHPX_OPT_BITSET(group, id, UNUSED2, UNUSED3, UNUSED4)		\
+  static inline uint64_t config_##group##id##_isset(const config_t *cfg, int bit) { \
+    return (cfg->group##id & (1 << bit));				\
   }
 # include "options.def"
 #undef LIBHPX_OPT_BITSET

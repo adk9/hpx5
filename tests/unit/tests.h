@@ -1,6 +1,7 @@
 #ifndef LIBHPX_TESTS_TESTS_H_
 #define LIBHPX_TESTS_TESTS_H_
 
+#include <getopt.h>
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
@@ -20,14 +21,32 @@ static HPX_ACTION(_main, void *UNUSED) {             \
   hpx_shutdown(HPX_SUCCESS);                         \
   return HPX_SUCCESS;                                \
 }                                                    \
-int main(int argc, char *argv[]) {                   \
-  if (hpx_init(&argc, &argv)) {                      \
+static void usage(char *prog, FILE *f) {	     \
+  fprintf(f, "Usage: %s [options]\n"                 \
+	  "\t-h, show help\n", prog);		     \
+  hpx_print_help();                                  \
+  fflush(f);                                         \
+}                                                    \
+int main(int argc, char *argv[]) {		     \
+  if (hpx_init(&argc, &argv)) {			     \
     fprintf(stderr, "failed to initialize HPX.\n");  \
     return 1;                                        \
   }                                                  \
+  int opt = 0;                                       \
+  while ((opt = getopt(argc, argv, "h?")) != -1) {   \
+    switch (opt) {				     \
+    case 'h':					     \
+      usage(argv[0], stdout);			     \
+      return 0;					     \
+    case '?':					     \
+    default:					     \
+      usage(argv[0], stderr);			     \
+      return -1;				     \
+    }						     \
+  }						     \
   return hpx_run(&_main, NULL, 0);                   \
-}                                                    \
-int main(int argc, char *argv[])                     \
+}						     \
+int main(int argc, char *argv[])		     \
 
 
 #endif /* LIBHPX_TESTS_TESTS_H_ */
