@@ -223,9 +223,6 @@ static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
 
 #define LIBHPX_OPT_STRING(group, id, init)              \
   if (opts->hpx_##group##id##_given) {                  \
-    if (cfg->group##id) {                       \
-      free(cfg->group##id);                     \
-    }                                   \
     cfg->group##id = strdup(opts->hpx_##group##id##_arg);       \
   }
 
