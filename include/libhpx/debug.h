@@ -16,71 +16,75 @@
 #include "hpx/hpx.h"
 #include "libhpx/config.h"
 
-HPX_INTERNAL extern hpx_log_t log_level;
+HPX_INTERNAL extern uint64_t log_level;
 
 #ifdef ENABLE_DEBUG
-#define DEBUG 1
-#define DEBUG_IF(S) if (S)
+# define DEBUG 1
+# define DEBUG_IF(S) if (S)
 #else
-#define DEBUG 0
-#define DEBUG_IF(S) if (false)
+# define DEBUG 0
+# define DEBUG_IF(S) if (false)
 #endif
 
 /// Wait for the debugger.
 void dbg_wait(void)
   HPX_INTERNAL;
 
-int dbg_error_internal(unsigned line, const char *filename, const char *fmt,
-                       ...)
-  HPX_INTERNAL HPX_PRINTF(3, 4);
+void dbg_error_internal(unsigned line, const char *filename, const char *fmt, ...)
+  HPX_INTERNAL HPX_PRINTF(3, 4) HPX_NORETURN;
 
-void dbg_assert_str_internal(bool expression, unsigned line,
-                             const char *filename, const char *fmt, ...)
-  HPX_INTERNAL HPX_PRINTF(4, 5);
+#define dbg_error(...)                                      \
+  do {                                                      \
+    dbg_error_internal(__LINE__, __func__, __VA_ARGS__);    \
+    unreachable();                                          \
+  } while (0)
 
 #ifdef ENABLE_DEBUG
 
 // NB: this is complex for clang's benefit, so it can tell that we're asserting
 // e when doing static analysis
-#define dbg_assert_str(e, ...)                                       \
-  do {                                                               \
-    typeof(e) _e = (e);                                              \
-    dbg_assert_str_internal(_e, __LINE__, __func__, "assert failed: ("#e") "__VA_ARGS__); \
-    assert(_e);                                                      \
+# define dbg_assert_str(e, ...)                         \
+  do {                                                  \
+    if (!(e)) {                                         \
+      dbg_error("assert failed: ("#e") "__VA_ARGS__);   \
+    }                                                   \
   } while (0)
 
 
-#define dbg_assert(e) dbg_assert_str(e, "\n")
+# define dbg_assert(e) dbg_assert_str(e, "\n")
 #else
-#define dbg_assert_str(e, ...) assert(e)
-#define dbg_assert(e) assert(e)
+# define dbg_assert_str(e, ...) assert(e)
+# define dbg_assert(e) assert(e)
 #endif
 
-#define dbg_error(...) dbg_error_internal(__LINE__, __func__, __VA_ARGS__)
 #define dbg_check(e, ...) dbg_assert_str((e) == HPX_SUCCESS, __VA_ARGS__)
 
-void log_internal(const hpx_log_t level, unsigned line, const char *filename,
-                  const char *fmt, ...)
-  HPX_INTERNAL HPX_PRINTF(4, 5);
+void log_internal(unsigned line, const char *filename, const char *fmt, ...)
+  HPX_INTERNAL HPX_PRINTF(3, 4);
 
 #ifdef ENABLE_LOGGING
-#define log(...) log_internal(HPX_LOG_DEFAULT, __LINE__, __func__, __VA_ARGS__)
-#define log_boot(...) log_internal(HPX_LOG_BOOT, __LINE__, __func__, __VA_ARGS__)
-#define log_sched(...) log_internal(HPX_LOG_SCHED, __LINE__, __func__, __VA_ARGS__)
-#define log_lco(...) log_internal(HPX_LOG_LCO, __LINE__, __func__, __VA_ARGS__)
-#define log_gas(...) log_internal(HPX_LOG_GAS, __LINE__, __func__, __VA_ARGS__)
-#define log_net(...) log_internal(HPX_LOG_NET, __LINE__, __func__, __VA_ARGS__)
-#define log_trans(...) log_internal(HPX_LOG_TRANS, __LINE__, __func__, __VA_ARGS__)
-#define log_parcel(...) log_internal(HPX_LOG_PARCEL, __LINE__, __func__, __VA_ARGS__)
+# define log_level(level, ...)                          \
+  do {                                                  \
+    if (log_level & (1ul << level)) {                   \
+      log_internal(__LINE__, __func__, __VA_ARGS__);    \
+    }                                                   \
+  } while (0)
 #else
-#define log(...)
-#define log_boot(...)
-#define log_sched(...)
-#define log_lco(...)
-#define log_gas(...)
-#define log_net(...)
-#define log_trans(...)
-#define log_parcel(...)
+# define log_level(level, ...)
 #endif
+
+#define log(...)        log_level(HPX_LOG_DEFAULT, __VA_ARGS__)
+#define log_boot(...)   log_level(HPX_LOG_BOOT, __VA_ARGS__)
+#define log_sched(...)  log_level(HPX_LOG_SCHED, __VA_ARGS__)
+#define log_lco(...)    log_level(HPX_LOG_LCO, __VA_ARGS__)
+#define log_gas(...)    log_level(HPX_LOG_GAS, __VA_ARGS__)
+#define log_net(...)    log_level(HPX_LOG_NET, __VA_ARGS__)
+#define log_trans(...)  log_level(HPX_LOG_TRANS, __VA_ARGS__)
+#define log_parcel(...) log_level(HPX_LOG_PARCEL, __VA_ARGS__)
+
+int log_error_internal(unsigned line, const char *filename, const char *fmt, ...)
+  HPX_INTERNAL HPX_PRINTF(3, 4);
+
+#define log_error(...) log_error_internal(__LINE__, __func__, __VA_ARGS__)
 
 #endif // LIBHPX_DEBUG_H

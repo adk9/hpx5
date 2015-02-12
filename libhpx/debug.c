@@ -58,33 +58,26 @@ static void __print(FILE *file, unsigned line, const char *filename,
     va_end(args);                               \
   } while (0)
 
-int dbg_error_internal(unsigned line, const char *filename, const char *fmt,
+void dbg_error_internal(unsigned line, const char *filename, const char *fmt,
                        ...) {
   _print(stderr, line, filename, fmt);
   hpx_abort();
-  return HPX_ERROR;
 }
 
-void dbg_assert_str_internal(bool e, unsigned line, const char *filename,
-                             const char *fmt, ...) {
-  if (e) {
-    return;
-  }
-
-  _print(stderr, line, filename, fmt);
-  hpx_abort();
-}
-
-hpx_log_t log_level = HPX_LOG_DEFAULT;
+uint64_t log_level = HPX_LOG_DEFAULT;
 
 static tatas_lock_t _log_lock = SYNC_TATAS_LOCK_INIT;
 
-void log_internal(const hpx_log_t level, unsigned line, const char *filename,
-                  const char *fmt, ...) {
-  if (log_level & level) {
-    sync_tatas_acquire(&_log_lock);
-    _print(stdout, line, filename, fmt);
-    sync_tatas_release(&_log_lock);
-  }
+void log_internal(unsigned line, const char *filename, const char *fmt, ...) {
+  sync_tatas_acquire(&_log_lock);
+  _print(stdout, line, filename, fmt);
+  sync_tatas_release(&_log_lock);
+}
+
+int log_error_internal(unsigned line, const char *filename, const char *fmt, ...) {
+  sync_tatas_acquire(&_log_lock);
+  _print(stderr, line, filename, fmt);
+  sync_tatas_release(&_log_lock);
+  return HPX_ERROR;
 }
 

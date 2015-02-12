@@ -576,13 +576,13 @@ int worker_start(void) {
   // get a parcel to start the scheduler loop with
   hpx_parcel_t *p = _schedule(true, NULL);
   if (!p) {
-    return dbg_error("failed to acquire an initial parcel.\n");
+    dbg_error("failed to acquire an initial parcel.\n");
   }
 
   int e = thread_transfer(p, _on_startup, NULL);
   if (e) {
     if (here->rank == 0) {
-      return dbg_error("application exited with a non-zero exit code: %d.\n", e);
+      dbg_error("application exited with a non-zero exit code: %d.\n", e);
     }
     return e;
   }

@@ -147,10 +147,8 @@ int _hpx_bcast(hpx_action_t action, hpx_addr_t rsync, int nargs, ...) {
     int e = libhpx_call_action(here->actions, HPX_THERE(i), action,
                                and, hpx_lco_set_action, HPX_NULL,
                                HPX_NULL, nargs, &vargs);
+    dbg_check(e, "hpx_bcast returned an error.\n");
     va_end(vargs);
-    if (e != HPX_SUCCESS) {
-      dbg_error("hpx_bcast returned an error.\n");
-    }
   }
   return HPX_SUCCESS;
 }
@@ -159,7 +157,7 @@ int _hpx_bcast_sync(hpx_action_t action, int nargs, ...) {
   int e;
   hpx_addr_t lco = hpx_lco_future_new(0);
   if (lco == HPX_NULL) {
-    e = dbg_error("could not allocate an LCO.\n");
+    e = log_error("could not allocate an LCO.\n");
     goto unwind0;
   }
 
@@ -173,16 +171,13 @@ int _hpx_bcast_sync(hpx_action_t action, int nargs, ...) {
     int e = libhpx_call_action(here->actions, HPX_THERE(i), action,
                                and, hpx_lco_set_action, HPX_NULL,
                                HPX_NULL, nargs, &vargs);
+    dbg_check(e, "hpx_bcast returned an error.\n");
     va_end(vargs);
-
-    if (e != HPX_SUCCESS) {
-      dbg_error("hpx_bcast returned an error.\n");
-    }
   }
 
   e = hpx_lco_wait(lco);
   DEBUG_IF(e != HPX_SUCCESS) {
-    e = dbg_error("error waiting for bcast and gate");
+    e = log_error("error waiting for bcast and gate");
     goto unwind1;
   }
 
