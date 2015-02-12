@@ -34,7 +34,7 @@ enum enum_hpx_boot { hpx_boot_arg_default = 0 , hpx_boot_arg_smp, hpx_boot_arg_m
 enum enum_hpx_transport { hpx_transport_arg_default = 0 , hpx_transport_arg_smp, hpx_transport_arg_mpi, hpx_transport_arg_portals, hpx_transport_arg_photon };
 enum enum_hpx_network { hpx_network_arg_default = 0 , hpx_network_arg_smp, hpx_network_arg_pwc, hpx_network_arg_isir };
 enum enum_hpx_loglevel { hpx_loglevel_arg_default = 0 , hpx_loglevel_arg_boot, hpx_loglevel_arg_sched, hpx_loglevel_arg_gas, hpx_loglevel_arg_lco, hpx_loglevel_arg_net, hpx_loglevel_arg_trans, hpx_loglevel_arg_parcel, hpx_loglevel_arg_all };
-enum enum_hpx_traceclasses { hpx_traceclasses_arg_parcel = 0 , hpx_traceclasses_arg_pwc, hpx_traceclasses_arg_all };
+enum enum_hpx_traceclasses { hpx_traceclasses_arg_parcel = 0 , hpx_traceclasses_arg_pwc, hpx_traceclasses_arg_sched, hpx_traceclasses_arg_all };
 
 /** @brief Where the command line options are stored */
 struct hpx_options_t

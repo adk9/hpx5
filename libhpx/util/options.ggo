@@ -89,7 +89,7 @@ section "Tracing"
 
 option "hpx-traceclasses" - "set the event classes to trace"
 typestr="class"
-values="parcel","pwc","all"
+values="parcel","pwc","sched","all"
 enum optional multiple
 
 option "hpx-tracedir" - "directory to output trace files"
