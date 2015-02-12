@@ -50,7 +50,7 @@ static const config_t _default_cfg = {
 #define LIBHPX_OPT(UNUSED1, id, init, UNUSED2) .id = init,
 #define LIBHPX_OPT_BITSET(UNUSED1, id, init, none, all) .id = ((init == none) ? 0 \
                                                                : ((init == all) ? UINT64_MAX : 1 << init)),
-#define LIBHPX_OPT_STRING(UNUSED, id, init) .id = NULL,
+#define LIBHPX_OPT_STRING(UNUSED, id, init) .id = init,
 # include "libhpx/options.def"
 #undef LIBHPX_OPT_STRING
 #undef LIBHPX_OPT_BITSET
