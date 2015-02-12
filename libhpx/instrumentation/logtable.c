@@ -19,8 +19,6 @@
 #include <time.h>                       /// @todo: use platform independent code
 #include <unistd.h>
 #include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 
 #include <libsync/sync.h>
 
@@ -50,7 +48,9 @@ static void _time_diff(record_t *r, hpx_time_t *start) {
 }
 
 static int _create_file(const char *filename) {
-  int fd = open(filename, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+  static const int flags = O_RDWR | O_CREAT;
+  static const int perm = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+  int fd = open(filename, flags, perm);
   if (fd == -1) {
     log_error("failed to open a log file for %s\n", filename);
     return -1;
@@ -73,6 +73,9 @@ static void *_create_mmap(size_t size, int file) {
   if (base == MAP_FAILED) {
     log_error("could not mmap log file\n");
     return NULL;
+  }
+  else {
+    log("mapped %lu byte trace file at %p.\n", size * sizeof(record_t), base);
   }
 
   if ((uintptr_t)base % HPX_CACHELINE_SIZE) {
@@ -118,6 +121,10 @@ void logtable_fini(logtable_t *log) {
     return;
   }
 
+  if (!log->size) {
+    return;
+  }
+
   if (log->records) {
     int e = munmap(log->records, log->size * sizeof(record_t));
     if (e) {
@@ -139,7 +146,7 @@ void logtable_fini(logtable_t *log) {
 
 void logtable_append(logtable_t *log, uint64_t u1, uint64_t u2, uint64_t u3,
                      uint64_t u4) {
-  size_t i = sync_fadd(&log->next, sizeof(record_t), SYNC_ACQ_REL);
+  size_t i = sync_fadd(&log->next, 1, SYNC_ACQ_REL);
   if (i > log->size) {
     return;
   }

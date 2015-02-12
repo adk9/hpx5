@@ -149,7 +149,7 @@ int hpx_init(int *argc, char ***argv) {
     }
   }
 
-  if (!inst_init(here->config)) {
+  if (inst_init(here->config)) {
     log("error detected while initializing instrumentation\n");
   }
 
