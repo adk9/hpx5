@@ -92,7 +92,7 @@ static HPX_ACTION(_proc_call, _call_args_t *args) {
                                        len, args->result,
                                        hpx_lco_set_action, pid, true);
   if (!parcel) {
-    return dbg_error("process: call_action failed.\n");
+    dbg_error("process: call_action failed.\n");
   }
   parcel_set_credit(parcel, credit);
 
@@ -139,7 +139,7 @@ int process_recover_credit(hpx_parcel_t *p) {
                                    sizeof(p->credit), HPX_NULL, HPX_ACTION_NULL,
                                    0, false);
   if (!pp) {
-    return dbg_error("parcel_recover_credit failed.\n");
+    dbg_error("parcel_recover_credit failed.\n");
   }
   parcel_set_credit(pp, 0);
 

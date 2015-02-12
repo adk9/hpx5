@@ -119,7 +119,7 @@ static int _push_back(_table_t *table, hpx_action_t *id, const char *key,
   static const int capacity = LIBHPX_ACTION_TABLE_SIZE;
   int i = table->n++;
   if (i >= capacity) {
-    return dbg_error("exceeded maximum number of actions (%d)\n", capacity);
+    return log_error("exceeded maximum number of actions (%d)\n", capacity);
   }
 
   _entry_t *back = &table->entries[i];
@@ -157,7 +157,6 @@ void action_table_free(const _table_t *table) {
       return (type)init;                                                \
     } else if (id >= table->n) {                                        \
       dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n); \
-      return (type)init;                                                \
     }                                                                   \
     return table->entries[id].name;                                     \
   }                                                                     \
@@ -183,7 +182,7 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
   ffi_cif *cif = action_table_get_cif(table, action);
   if (cif) {
     if (nargs != cif->nargs) {
-      return dbg_error("expecting %d arguments for action %s (%d given).\n",
+      return log_error("expecting %d arguments for action %s (%d given).\n",
                        cif->nargs, action_table_get_key(table, action), nargs);
     }
 

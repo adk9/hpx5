@@ -22,15 +22,31 @@ function add_photon() {
 }
 
 set -xe
-export PSM_MEMORY=large
+
+case "$HPXIBDEV" in
+    qib0)
+        export PSM_MEMORY=large
+	TESTCMD="mpirun -np 2 --mca btl_openib_if_include $HPXIBDEV"
+	;;
+    mlx4_0)
+	TESTCMD="mpirun -np 2 --mca mtl ^psm --mca btl_openib_if_include mlx4_0"
+	;;
+    none)
+	TESTCMD=""
+        ;;
+    *)
+	TESTCMD=""
+	;;
+esac
+
 case "$HPXMODE" in
     photon)
-	CFGFLAGS=" --with-mpi=ompi --enable-photon "
+	CFGFLAGS=" --with-mpi=ompi --enable-photon --with-tests-cmd=\"$TESTCMD\""
 	add_mpi
         add_photon
 	;;
     mpi)
-	CFGFLAGS=" --with-mpi=ompi "
+	CFGFLAGS=" --with-mpi=ompi --with-tests-cmd=\"$TESTCMD\""
 	add_mpi	
 	;;
     *)
@@ -42,12 +58,26 @@ echo "Building HPX in $DIR"
 cd $DIR
 
 module load gcc/4.9.2
-rm -rf ./build/
+
+echo "Bootstrapping HPX."
 ./bootstrap
+
+if [ -d "./build" ]; then
+        rm -rf ./build/
+fi
 mkdir build
 cd build
-../configure --prefix=$DIR/build/HPX5/ $CFGFLAGS --enable-testsuite $HPXDEBUG
-make -j 128
+
+if [ -d "./install" ]; then
+        rm -rf ./install/
+fi
+mkdir install
+
+echo "Configuring HPX."
+../configure --prefix=$DIR/build/install/ $CFGFLAGS --enable-testsuite $HPXDEBUG
+
+echo "Building HPX."
+make
 make install
 
 # Run all the unit tests:

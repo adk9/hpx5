@@ -47,8 +47,11 @@ static char *_config_file = NULL;
 
 /// The default configuration.
 static const config_t _default_cfg = {
-#define LIBHPX_OPT(UNUSED1, id, default, UNUSED2) .id = default,
+#define LIBHPX_OPT(UNUSED1, id, init, UNUSED2) .id = init,
+#define LIBHPX_OPT_BITSET(UNUSED1, id, init, none, all) .id = ((init == none) ? 0 \
+                                                               : ((init == all) ? UINT64_MAX : 1 << init)),
 # include "libhpx/options.def"
+#undef LIBHPX_OPT_BITSET
 #undef LIBHPX_OPT
 };
 
@@ -216,14 +219,14 @@ static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
     cfg->id = opts->hpx_##id##_##arg;                       \
   }
 
-#define LIBHPX_OPT_BITSET(UNUSED1, id, init)            \
+#define LIBHPX_OPT_BITSET(UNUSED1, id, init, none, all) \
   if (opts->hpx_##id##_given) {                         \
     cfg->id = _merge_bitvector(opts->hpx_##id##_given,  \
                                opts->hpx_##id##_arg,    \
                                hpx_##id##_arg_all);     \
   }
 
-#define LIBHPX_OPT_INTSET(UNUSED1, id, init, all, none) \
+#define LIBHPX_OPT_INTSET(UNUSED1, id, init, none, all) \
   if (opts->hpx_##id##_given) {                         \
     cfg->id = _merge_vector(opts->hpx_##id##_given,     \
                             opts->hpx_##id##_arg,       \
@@ -251,7 +254,7 @@ void hpx_print_help(void) {
   hpx_option_parser_print_help();
 }
 
-#define LIBHPX_OPT_INTSET(UNUSED1, id, init, all, none)         \
+#define LIBHPX_OPT_INTSET(UNUSED1, id, init, none, all)         \
   int config_##id##_isset(const config_t *cfg, int element) {   \
     if (!cfg->id) {                                             \
       return (init == all);                                     \

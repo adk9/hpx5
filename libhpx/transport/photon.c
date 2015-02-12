@@ -188,12 +188,12 @@ _put(transport_t *t, int dest, const void *data, size_t n, void *rbuffer,
     photon_addr daddr = {.blkaddr.blk3 = saddr};
     int e = photon_send(&daddr, b, n, 0, r);
     if (e != PHOTON_OK)
-      return dbg_error("photon: could not put %lu bytes to %i.\n", n, dest);
+      return log_error("photon: could not put %lu bytes to %i.\n", n, dest);
   }
   else {
     rc = photon_get_buffer_private(rbuffer, rn, &priv);
     if (rc != PHOTON_OK) {
-      return dbg_error("photon: could not get buffer metadata for put: 0x%016lx (%lu).\n",
+      return log_error("photon: could not get buffer metadata for put: 0x%016lx (%lu).\n",
                (uintptr_t)rbuffer, rn);
     }
 
@@ -211,7 +211,7 @@ _put(transport_t *t, int dest, const void *data, size_t n, void *rbuffer,
 
     rc = photon_post_os_put_direct(dest, b, n, &pbuf, flags, r);
     if (rc != PHOTON_OK) {
-      return dbg_error("photon: could not complete put operation: 0x%016lx (%lu).\n",
+      return log_error("photon: could not complete put operation: 0x%016lx (%lu).\n",
                (uintptr_t)rbuffer, rn);
     }
   }
@@ -239,13 +239,13 @@ _get(transport_t *t, int dest, void *buffer, size_t n, const void *rdata,
     photon_rid *id = (photon_rid*)r;
     int e = photon_recv(*id, buffer, n, 0);
     if (e != PHOTON_OK) {
-      return dbg_error("photon: could not get from %i.\n", dest);
+      return log_error("photon: could not get from %i.\n", dest);
     }
   }
   else {
     rc = photon_get_buffer_private(b, rn, &priv);
     if (rc != PHOTON_OK) {
-      return dbg_error("photon: could not get buffer metadata for get: 0x%016lx (%lu).\n",
+      return log_error("photon: could not get buffer metadata for get: 0x%016lx (%lu).\n",
                (uintptr_t)b, rn);
     }
 
@@ -263,7 +263,7 @@ _get(transport_t *t, int dest, void *buffer, size_t n, const void *rdata,
 
     rc = photon_post_os_get_direct(dest, buffer, n, &pbuf, flags, r);
     if (rc != PHOTON_OK) {
-      return dbg_error("photon: could not complete get operation: 0x%016lx (%lu).\n",
+      return log_error("photon: could not complete get operation: 0x%016lx (%lu).\n",
                (uintptr_t)b, rn);
     }
   }
@@ -287,7 +287,7 @@ _send(transport_t *t, int dest, const void *data, size_t n, void *r)
   do {
     e = photon_post_send_buffer_rdma(dest, b, n, PHOTON_DEFAULT_TAG, r);
     if (e == PHOTON_ERROR)
-      return dbg_error("photon: could not send %lu bytes to %i.\n", n, dest);
+      return log_error("photon: could not send %lu bytes to %i.\n", n, dest);
   } while (e == PHOTON_ERROR_RESOURCE);
   return HPX_SUCCESS;
 }
@@ -313,7 +313,6 @@ _probe(transport_t *transport, int *source)
   int e = photon_probe_ledger(photon_src, &flag, PHOTON_SEND_LEDGER, &status);
   if (e < 0) {
     dbg_error("photon: probe failed.\n");
-    return 0;
   }
 
   if (flag) {
@@ -340,13 +339,13 @@ _recv(transport_t *t, int src, void* buffer, size_t n, void *r)
   // make sure we have remote buffer metadata
   int e = photon_wait_send_buffer_rdma(src, n, PHOTON_DEFAULT_TAG, r);
   if (e != PHOTON_OK) {
-    return dbg_error("error in wait_send_buffer for %i\n", src);
+    return log_error("error in wait_send_buffer for %i\n", src);
   }
 
   // get the remote buffer
   e = photon_post_os_get(*(photon_rid*)r, src, buffer, n, PHOTON_DEFAULT_TAG, 0);
   if (e != PHOTON_OK)
-    return dbg_error("could not receive %lu bytes from %i\n", n, src);
+    return log_error("could not receive %lu bytes from %i\n", n, src);
 
   return HPX_SUCCESS;
 }
@@ -360,14 +359,14 @@ _test(transport_t *t, void *request, int *success)
   photon_rid *id = (photon_rid*)request;
   int e = photon_test(*id, success, &type, &status);
   if (e < 0)
-    return dbg_error("photon: failed photon_test.\n");
+    return log_error("photon: failed photon_test.\n");
 
   // send back the FIN message for local EVQUEUE completions (type==0)
   if ((*success == 1) && (type == 0)) {
     do {
       e = photon_send_FIN(*id, status.src_addr.global.proc_id, 0);
       if (e == PHOTON_ERROR) {
-    return dbg_error("photon: could not send FIN back to %lu.\n",
+    return log_error("photon: could not send FIN back to %lu.\n",
              status.src_addr.global.proc_id);
       }
     } while (e == PHOTON_ERROR_RESOURCE);
@@ -489,8 +488,7 @@ transport_t *transport_new_photon(uint32_t send_limit, uint32_t recv_limit) {
   if (!val) {
     if (photon_init(cfg) != PHOTON_OK) {
       dbg_error("photon: failed to initialize transport.\n");
-      return NULL;
-    };
+    }
   }
 
   photon->progress     = network_progress_new(&photon->class);
