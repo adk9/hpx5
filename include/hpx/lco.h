@@ -64,6 +64,9 @@ void hpx_lco_reset(hpx_addr_t future, hpx_addr_t sync);
 /// An action-based interface to the LCO set operation.
 extern hpx_action_t hpx_lco_set_action;
 
+/// An action-based interface to the LCO delete operation.
+extern hpx_action_t hpx_lco_delete_action;
+
 /// Set an LCO, optionally with data.
 ///
 /// If @p LCO is HPX_NULL then this is equivalent to a no-op.
@@ -215,6 +218,15 @@ hpx_addr_t hpx_lco_and_new(intptr_t inputs);
 /// @param sync the address of an LCO to set when the "and" LCO is set;
 ///             may be HPX_NULL
 void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t sync);
+
+
+/// Set an "and" LCO @p num times, triggering it if appropriate.
+///
+/// @param  and the global address of the "and" LCO to set.
+/// @param  num number of times to set the "and" LCO.
+/// @param sync the address of an LCO to set when the "and" LCO is set;
+///             may be HPX_NULL
+void hpx_lco_and_set_num(hpx_addr_t and, int num, hpx_addr_t sync);
 /// @}
 
 /// Create a future.
@@ -418,11 +430,11 @@ typedef bool (*hpx_predicate_t)(void *i, const size_t bytes);
 ///
 /// @param inputs       The static number of inputs to the reduction.
 /// @param size         The size of the data being reduced.
-/// @param op           The commutative-associative operation we're performing.
-/// @param id            An initialization function for the data, this is used to
+/// @param id           An initialization function for the data, this is used to
 ///                     initialize the data in every epoch.
-hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_monoid_op_t op,
-                              hpx_monoid_id_t id);
+/// @param op           The commutative-associative operation we're performing.
+hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_monoid_id_t id,
+                              hpx_monoid_op_t op);
 
 /// Allocate a new all-reduction LCO.
 ///
@@ -432,10 +444,11 @@ hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_monoid_op_t op,
 /// @param participants The static number of participants in the reduction.
 /// @param readers      The static number of the readers of the result of the reduction.
 /// @param size         The size of the data being reduced.
+/// @param id           A function that is used to initialize the data
+///                     in every epoch.
 /// @param op           The commutative-associative operation we're performing.
-/// @param id           A function that is used to initialize the data in every epoch.
 hpx_addr_t hpx_lco_allreduce_new(size_t participants, size_t readers, size_t size,
-                                 hpx_monoid_op_t op, hpx_monoid_id_t id);
+                                 hpx_monoid_id_t id, hpx_monoid_op_t op);
 
 /// Set an allgather.
 ///

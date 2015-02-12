@@ -96,30 +96,24 @@ static const char* const HPX_BOOT_TO_STRING[] = {
   "INVALID_ID"
 };
 
-
 //! Locality types in HPX.
 typedef enum {
   HPX_LOCALITY_NONE = -2,    //!< Represents no locality.
   HPX_LOCALITY_ALL = -1      //!< Represents all localities.
 } hpx_locality_t;
 
-static const char* const HPX_LOCALITY_TO_STRING[] = {
-  "NONE",
-  "ALL"
-};
-
-
 //! Configuration options for runtime logging in HPX.
 typedef enum {
-  HPX_LOG_DEFAULT = (1<<0),  //!< The default logging level.
-  HPX_LOG_BOOT    = (1<<1),  //!< Log the bootstrapper execution.
-  HPX_LOG_SCHED   = (1<<2),  //!< Log the HPX scheduler operations.
-  HPX_LOG_GAS     = (1<<3),  //!< Log the Global-Address-Space ops.
-  HPX_LOG_LCO     = (1<<4),  //!< Log the LCO operations.
-  HPX_LOG_NET     = (1<<5),  //!< Turn on logging for network ops.
-  HPX_LOG_TRANS   = (1<<6),  //!< Log the transport operations.
-  HPX_LOG_PARCEL  = (1<<7),  //!< Parcel logging.
-  HPX_LOG_ALL     =   (-1)   //!< Turn on all logging.
+  HPX_LOG_DEFAULT = 0,                    //!< The default logging level.
+  HPX_LOG_BOOT,                           //!< Log the bootstrapper execution.
+  HPX_LOG_SCHED,                          //!< Log the HPX scheduler operations.
+  HPX_LOG_GAS,                            //!< Log the Global-Address-Space ops.
+  HPX_LOG_LCO,                            //!< Log the LCO operations.
+  HPX_LOG_NET,                            //!< Turn on logging for network ops.
+  HPX_LOG_TRANS,                          //!< Log the transport operations.
+  HPX_LOG_PARCEL,                         //!< Parcel logging.
+  HPX_LOG_NONE,                           //!< No logging.
+  HPX_LOG_ALL                             //!< Turn on all logging.
 } hpx_log_t;
 
 static const char* const HPX_LOG_TO_STRING[] = {
@@ -131,26 +125,24 @@ static const char* const HPX_LOG_TO_STRING[] = {
   "LOG_NET",
   "LOG_TRANS",
   "LOG_PARCEL",
-  "LOG_ALL"
 };
 
 typedef enum {
-  HPX_TRACE_CLASS_DEFAULT = (1<<0),
-  HPX_TRACE_CLASS_PARCELS = (1<<1),
-  HPX_TRACE_CLASS_PWC     = (1<<2),
-  HPX_TRACE_CLASS_ALL     =   (-1)
-} trace_class_t;
+  HPX_TRACE_PARCELS =  0,
+  HPX_TRACE_PWC,
+  HPX_TRACE_NONE,
+  HPX_TRACE_ALL
+} trace_t;
 
 /// The HPX configuration type.
 ///
 /// This configuration is used to control some of the runtime
 /// parameters for the HPX system.
 typedef struct config {
-#define LIBHPX_DECL_OPTION(group, type, ctype, id, init) ctype id;
+#define LIBHPX_OPT(group, id, init, ctype) ctype id;
 # include "options.def"
-#undef LIBHPX_DECL_OPTION
+#undef LIBHPX_OPT
 } config_t;
-
 
 config_t *config_new(int *argc, char ***argv)
   HPX_INTERNAL HPX_MALLOC;
@@ -158,13 +150,20 @@ config_t *config_new(int *argc, char ***argv)
 void config_delete(config_t *cfg)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-/// Check to see if the wait flag is set at a particular locality.
+/// Add declarations to query each of the set options.
 ///
-/// @param     locality The locality to check.
-///
-/// @returns          0 The flag is not set.
-///                   1 The flag is set.
-int config_waitat(config_t *cfg, const hpx_locality_t locality)
-  HPX_INTERNAL;
+/// @param          cfg The configuration to query.
+/// @param        value The value to check for.
+#define LIBHPX_OPT_INTSET(UNUSED1, id, UNUSED2, UNUSED3, UNUSED4) \
+  int config_##id##_isset(const config_t *cfg, int value)         \
+    HPX_INTERNAL HPX_NON_NULL(1);
+
+#define LIBHPX_OPT_BITSET(UNUSED1, id, UNUSED2, UNUSED3, UNUSED4)       \
+  static inline uint64_t config_##id##_isset(const config_t *cfg, int bit) { \
+    return (cfg->id & (1 << bit));                                      \
+  }
+# include "options.def"
+#undef LIBHPX_OPT_BITSET
+#undef LIBHPX_OPT_INTSET
 
 #endif // LIBHPX_CONFIG_H

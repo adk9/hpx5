@@ -44,7 +44,7 @@ static const lco_class_t *_class(lco_t *lco) {
 
 static lco_t *_target_lco(void) {
   lco_t *lco = hpx_thread_current_local_target();
-  dbg_assert_str(lco, "Could not pin LCO.");
+  dbg_assert_str(lco, "Could not pin LCO.\n");
   return lco;
 }
 
@@ -114,7 +114,7 @@ static hpx_status_t _attach(lco_t *lco, hpx_parcel_t *p) {
 /// resent.
 ///
 /// @{
-static HPX_PINNED(_lco_fini, void *args) {
+HPX_PINNED(hpx_lco_delete_action, void *args) {
   return _fini(_target_lco());
 }
 
@@ -264,7 +264,7 @@ void hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync) {
     return;
   }
 
-  int e = hpx_call_async(target, _lco_fini, HPX_NULL, rsync, NULL, 0);
+  int e = hpx_call_async(target, hpx_lco_delete_action, HPX_NULL, rsync, NULL, 0);
   dbg_check(e, "Could not forward lco_delete\n");
 }
 

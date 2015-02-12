@@ -15,6 +15,7 @@
 
 #include "hpx/action.h"
 #include "hpx/addr.h"
+#include "hpx/builtins.h"
 #include "hpx/process.h"
 
 /// @file
@@ -242,6 +243,16 @@ void hpx_parcel_set_cont_target(hpx_parcel_t *p, const hpx_addr_t addr)
 /// @param         size The size of the @p data buffer.
 void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size)
   HPX_NON_NULL(1);
+
+/// Set the data buffer for a parcel using the given arguments.
+///
+/// @param            p The parcel we're updating.
+/// @param         ...  Variadic arguments to serialize into the
+///                     parcel buffer.
+void   _hpx_parcel_set_args(hpx_parcel_t *p, int nargs, ...)
+  HPX_NON_NULL(1);
+#define hpx_parcel_set_args(p, ...)                                     \
+  _hpx_parcel_set_args(p, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
 
 /// Set the PID for a parcel
 ///

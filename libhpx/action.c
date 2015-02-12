@@ -26,7 +26,6 @@
 #include "libhpx/locality.h"
 #include "libhpx/utils.h"
 
-
 /// The default libhpx action table size.
 #define LIBHPX_ACTION_TABLE_SIZE 4096
 
@@ -120,7 +119,7 @@ static int _push_back(_table_t *table, hpx_action_t *id, const char *key,
   static const int capacity = LIBHPX_ACTION_TABLE_SIZE;
   int i = table->n++;
   if (i >= capacity) {
-    return dbg_error("exceeded maximum number of actions (%d)\n", capacity);
+    return log_error("exceeded maximum number of actions (%d)\n", capacity);
   }
 
   _entry_t *back = &table->entries[i];
@@ -158,7 +157,6 @@ void action_table_free(const _table_t *table) {
       return (type)init;                                                \
     } else if (id >= table->n) {                                        \
       dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n); \
-      return (type)init;                                                \
     }                                                                   \
     return table->entries[id].name;                                     \
   }                                                                     \
@@ -168,12 +166,12 @@ void action_table_free(const _table_t *table) {
 _ACTION_TABLE_GET(const char *, key, NULL);
 _ACTION_TABLE_GET(hpx_action_type_t, type, HPX_ACTION_INVALID);
 _ACTION_TABLE_GET(hpx_action_handler_t, handler, NULL);
-static _ACTION_TABLE_GET(ffi_cif *, cif, NULL);
+_ACTION_TABLE_GET(ffi_cif *, cif, NULL);
 
 int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
                        hpx_action_t action, hpx_addr_t c_addr,
                        hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
-                       va_list *args) {
+                       int nargs, va_list *args) {
   size_t len;
   void *outargs;
   hpx_parcel_t *p;
@@ -183,8 +181,13 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
   // variadic argument.
   ffi_cif *cif = action_table_get_cif(table, action);
   if (cif) {
-    void *argps[cif->nargs];
-    for (int i = 0; i < cif->nargs; ++i) {
+    if (nargs != cif->nargs) {
+      return log_error("expecting %d arguments for action %s (%d given).\n",
+                       cif->nargs, action_table_get_key(table, action), nargs);
+    }
+
+    void *argps[nargs];
+    for (int i = 0; i < nargs; ++i) {
       argps[i] = va_arg(*args, void*);
     }
 

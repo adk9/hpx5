@@ -213,8 +213,8 @@ static int _updateGrid_action(void *args) {
     dTmax = 0.0;
 
     hpx_addr_t max = hpx_lco_allreduce_new(N * N, 1, sizeof(dTmax), 
-                         (hpx_monoid_op_t)maxDouble, 
-                         (hpx_monoid_id_t)initDouble);
+                                          (hpx_monoid_id_t)initDouble,
+                                          (hpx_monoid_op_t)maxDouble);
     //for (int i = 1; i < N + 1; i++) {
     //  for (int j = 1; j < N + 1; j++) {
     //    int args[2] = { i, j };
@@ -330,14 +330,14 @@ static int _main_action(int *input)
   init_globals(grid, new_grid);
 
   hpx_addr_t runtimes = hpx_lco_allreduce_new(HPX_LOCALITIES, HPX_LOCALITIES, 
-                           sizeof(double),
-                          (hpx_monoid_op_t)maxDouble,
-                          (hpx_monoid_id_t)initDouble);
+                                              sizeof(double),
+                                              (hpx_monoid_id_t)initDouble, 
+                                              (hpx_monoid_op_t)maxDouble);
 
   hpx_addr_t dTmax = hpx_lco_allreduce_new(HPX_LOCALITIES, HPX_LOCALITIES, 
-                           sizeof(double),
-                          (hpx_monoid_op_t)maxDouble,
-                          (hpx_monoid_id_t)initDouble); 
+                                           sizeof(double),
+                                           (hpx_monoid_id_t)initDouble, 
+                                           (hpx_monoid_op_t)maxDouble); 
 
   for (int i = 0, e = HPX_LOCALITIES; i < e; ++i) {
     InitArgs init = {

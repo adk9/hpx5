@@ -14,4 +14,4 @@ endif
 
 cpi_LDADD                       = $(all_LIBS)
 
-cpi_DEPENDENCIES                = $(all_LIBS)
+cpi_DEPENDENCIES                = $(HPX_DEPS)

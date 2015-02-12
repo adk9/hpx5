@@ -60,10 +60,6 @@ static const char *_straction(hpx_action_t id) {
   return action_table_get_key(here->actions, id);
 }
 
-static const char *_pwc_id() {
-  return "Photon put-with-completion\n";
-}
-
 static void _pwc_delete(network_t *network) {
   if (!network) {
     return;
@@ -202,7 +198,7 @@ static int _init_peer(pwc_network_t *pwc, peer_t *peer, int self, int rank) {
   peer->rank = rank;
   int status = pwc_buffer_init(&peer->pwc, rank, 8);
   if (LIBHPX_OK != status) {
-    return dbg_error("could not initialize the pwc buffer\n");
+    return log_error("could not initialize the pwc buffer\n");
   }
 
   // Figure out where I receive from in my eager buffer w.r.t. this peer.
@@ -210,19 +206,19 @@ static int _init_peer(pwc_network_t *pwc, peer_t *peer, int self, int rank) {
   char *base = pwc->eager + rank * size;
   status = eager_buffer_init(&peer->rx, peer, 0, base, size);
   if (LIBHPX_OK != status) {
-    return dbg_error("could not initialize the parcel rx endpoint\n");
+    return log_error("could not initialize the parcel rx endpoint\n");
   }
 
   // Figure out where I send to w.r.t. this peer in their eager buffer.
   uint32_t offset = self * size;
   status = eager_buffer_init(&peer->tx, peer, offset, NULL, size);
   if (LIBHPX_OK != status) {
-    return dbg_error("could not initialize the parcel tx endpoint\n");
+    return log_error("could not initialize the parcel tx endpoint\n");
   }
 
   status = send_buffer_init(&peer->send, &peer->tx, 8);
   if (LIBHPX_OK != status) {
-    return dbg_error("could not initialize the send buffer\n");
+    return log_error("could not initialize the send buffer\n");
   }
 
   return LIBHPX_OK;
@@ -253,7 +249,6 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   pwc_network_t *pwc = malloc(sizeof(*pwc) + ranks * sizeof(peer_t));
   if (!pwc) {
     dbg_error("could not allocate put-with-completion network\n");
-    return NULL;
   }
 
   // Store some of the salient information in the network structure.
@@ -264,7 +259,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   // NB: 16 is sizeof(_get_parcel_args_t) in peer.c
   const int limit = sizeof(hpx_parcel_t) - pwc_prefix_size() + 16;
   if (pwc->parcel_eager_limit < limit) {
-    dbg_error("--hpx-parceleagerlimit must be at least %u bytes\n", limit);
+    log_error("--hpx-parceleagerlimit must be at least %u bytes\n", limit);
     goto unwind;
   }
 
@@ -275,12 +270,12 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   pwc->eager_bytes = ranks * pwc->parcel_buffer_size;
   pwc->eager = malloc(pwc->eager_bytes);
   if (!pwc->eager) {
-    dbg_error("malloc(%lu) failed for the eager buffer\n", pwc->eager_bytes);
+    log_error("malloc(%lu) failed for the eager buffer\n", pwc->eager_bytes);
     goto unwind;
   }
 
   // Initialize the network's virtual function table.
-  pwc->vtable.id = _pwc_id;
+  pwc->vtable.type = LIBHPX_NETWORK_PWC;
   pwc->vtable.delete = _pwc_delete;
   pwc->vtable.progress = _pwc_progress;
   pwc->vtable.send = _pwc_send;
@@ -302,7 +297,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   segment_t *null = &local->segments[SEGMENT_NULL];
   e = segment_init(null, NULL, 0);
   if (LIBHPX_OK != e) {
-    dbg_error("could not initialize the NULL segment\n");
+    log_error("could not initialize the NULL segment\n");
     goto unwind;
   }
 
@@ -310,7 +305,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   segment_t *heap = &local->segments[SEGMENT_HEAP];
   e = segment_init(heap, gas_local_base(pwc->gas), gas_local_size(pwc->gas));
   if (LIBHPX_OK != e) {
-    dbg_error("could not register the heap segment\n");
+    log_error("could not register the heap segment\n");
     goto unwind;
   }
 
@@ -318,7 +313,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   segment_t *eager = &local->segments[SEGMENT_EAGER];
   e = segment_init(eager, pwc->eager, pwc->eager_bytes);
   if (LIBHPX_OK != e) {
-    dbg_error("could not register the eager segment\n");
+    log_error("could not register the eager segment\n");
     goto unwind;
   }
 
@@ -326,14 +321,14 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   segment_t *peers = &local->segments[SEGMENT_PEERS];
   e = segment_init(peers, (void*)pwc->peers, pwc->ranks * sizeof(peer_t));
   if (LIBHPX_OK != e) {
-    dbg_error("could not register the peers segment\n");
+    log_error("could not register the peers segment\n");
     goto unwind;
   }
 
   // Exchange all of the peer segments.
   e = boot_allgather(boot, local, &pwc->peers, sizeof(*local));
   if (LIBHPX_OK != e) {
-    dbg_error("could not exchange peers segment\n");
+    log_error("could not exchange peers segment\n");
     goto unwind;
   }
 
@@ -346,7 +341,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
     peer_t *peer = pwc_get_peer(&pwc->vtable, i);
     e = _init_peer(pwc, peer, pwc->rank, i);
     if (LIBHPX_OK != e) {
-      dbg_error("failed to initialize peer %d of %u\n", i, ranks);
+      log_error("failed to initialize peer %d of %u\n", i, ranks);
       goto unwind;
     }
   }

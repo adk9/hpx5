@@ -29,14 +29,14 @@ int segment_init(segment_t *segment, char *base, size_t size) {
   }
 
   if (PHOTON_OK != photon_register_buffer(base, size)) {
-    return dbg_error("failed to register segment with Photon\n");
+    dbg_error("failed to register segment with Photon\n");
   }
   else {
     log_net("registered segment (%p, %lu)\n", base, size);
   }
 
   if (PHOTON_OK != photon_get_buffer_private(base, size , &segment->key)) {
-    return dbg_error("failed to segment key from Photon\n");
+    dbg_error("failed to segment key from Photon\n");
   }
 
   return LIBHPX_OK;

@@ -30,12 +30,10 @@
 #include "isend_buffer.h"
 #include "isir.h"
 
-
 #define _CAT1(S, T) S##T
 #define _CAT(S, T) _CAT1(S, T)
 #define _BYTES(S) (HPX_CACHELINE_SIZE - ((S) % HPX_CACHELINE_SIZE))
 #define _PAD(S) const char _CAT(_padding,__LINE__)[_BYTES(S)]
-
 
 typedef struct {
   network_t       vtable;
@@ -48,7 +46,6 @@ typedef struct {
   irecv_buffer_t  irecvs;
 } _funneled_t;
 
-
 /// Transfer any parcels in the funneled sends queue into the isends buffer.
 static void _send_all(_funneled_t *network) {
   hpx_parcel_t *p = NULL;
@@ -56,13 +53,6 @@ static void _send_all(_funneled_t *network) {
     isend_buffer_append(&network->isends, p, HPX_NULL);
   }
 }
-
-
-/// Return the network ID.
-static const char *_funneled_id() {
-  return "Isend/Irecv Funneled";
-}
-
 
 /// Delete a funneled network.
 static void _funneled_delete(network_t *network) {
@@ -94,26 +84,23 @@ static void _funneled_delete(network_t *network) {
   free(this);
 }
 
-
 static int _funneled_send(network_t *network, hpx_parcel_t *p) {
   _funneled_t *this = (void*)network;
   sync_two_lock_queue_enqueue(&this->sends, p);
   return LIBHPX_OK;
 }
 
-
 static int _funneled_pwc(network_t *network,
                          hpx_addr_t to, const void *from, size_t n,
-                         hpx_addr_t local, hpx_addr_t remote, hpx_action_t op)
-{
+                         hpx_addr_t local, hpx_addr_t remote, hpx_action_t op) {
   if (remote != HPX_NULL) {
-    dbg_error("Remote completion not yet supported\n");
+    log_error("Remote completion not yet supported\n");
     return LIBHPX_EUNIMPLEMENTED;
   }
   hpx_parcel_t *p = parcel_create(to, isir_emulate_pwc, from, n, to, op,
                                   hpx_thread_current_pid(), false);
   if (!p) {
-    dbg_error("could not allocate a parcel to emulate put-with-completion\n");
+    log_error("could not allocate a parcel to emulate put-with-completion\n");
     return LIBHPX_ENOMEM;
   }
 
@@ -121,19 +108,15 @@ static int _funneled_pwc(network_t *network,
   return LIBHPX_OK;
 }
 
-
 static int _funneled_put(network_t *network,
                          hpx_addr_t to, const void *from, size_t n,
-                         hpx_addr_t local, hpx_addr_t remote)
-{
+                         hpx_addr_t local, hpx_addr_t remote) {
   return _funneled_pwc(network, to, from, n, local, remote, HPX_ACTION_NULL);
 }
 
-
 /// Transform the get() operation into a parcel emulation.
 static int _funneled_get(network_t *network,
-                         void *to, hpx_addr_t from, size_t n,
-                         hpx_addr_t local)
+                         void *to, hpx_addr_t from, size_t n, hpx_addr_t local)
 {
   _funneled_t *isir = (_funneled_t*)network;
 
@@ -147,7 +130,7 @@ static int _funneled_get(network_t *network,
 
   // make sure the to address is in the global address space
   if (!isir->gas->is_global(isir->gas, to)) {
-    return dbg_error("network_get() expects a global heap address\n");
+    return log_error("network_get() expects a global heap address\n");
   }
 
   // send the remote endpoint enough information to perform the operation
@@ -162,18 +145,15 @@ static int _funneled_get(network_t *network,
   return hpx_call(from, isir_emulate_gwc, HPX_NULL, &args, sizeof(args));
 }
 
-
 static hpx_parcel_t *_funneled_probe(network_t *network, int nrx) {
   _funneled_t *this = (void*)network;
   return sync_two_lock_queue_dequeue(&this->recvs);
 }
 
-
 static void _funneled_set_flush(network_t *network) {
   _funneled_t *this = (void*)network;
   sync_store(&this->flush, 1, SYNC_RELEASE);
 }
-
 
 static int _funneled_progress(network_t *network) {
   _funneled_t *this = (void*)network;
@@ -202,20 +182,20 @@ static int _funneled_progress(network_t *network) {
   (void)n;
 }
 
-
 network_t *network_isir_funneled_new(struct gas *gas, int nrx) {
   if (gas->type == HPX_GAS_SMP) {
-    log_net("will not initialize a %s network for SMP\n", _funneled_id());
+    log_net("will not initialize a %s network for SMP\n",
+            LIBHPX_NETWORK_TO_STRING[LIBHPX_NETWORK_ISIR]);
     return NULL;
   }
 
   _funneled_t *network = malloc(sizeof(*network));
   if (!network) {
-    dbg_error("could not allocate a funneled Isend/Irecv network\n");
+    log_error("could not allocate a funneled Isend/Irecv network\n");
     return NULL;
   }
 
-  network->vtable.id = _funneled_id;
+  network->vtable.type = LIBHPX_NETWORK_ISIR;
   network->vtable.delete = _funneled_delete;
   network->vtable.progress = _funneled_progress;
   network->vtable.send = _funneled_send;
