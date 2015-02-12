@@ -96,4 +96,13 @@ typedef int (*thread_transfer_cont_t)(hpx_parcel_t *p, void *sp, void *env);
 int thread_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env)
   HPX_INTERNAL HPX_NON_NULL(1, 2);
 
+int trace_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env)
+  HPX_INTERNAL HPX_NON_NULL(1, 2);
+
+#ifdef ENABLE_INSTRUMENTATION
+# define thread_transfer trace_transfer
+#else
+# define thread_transfer thread_transfer
+#endif
+
 #endif  // LIBHPX_THREAD_H
