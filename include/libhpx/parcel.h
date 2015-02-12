@@ -52,32 +52,32 @@ struct hpx_parcel {
 /// Parcel tracing events.
 /// @{
 static inline void INST_EVENT_PARCEL_CREATE(hpx_parcel_t *p) {
-  const int class = HPX_INST_CLASS_PARCEL;
-  const int id = HPX_INST_EVENT_PARCEL_CREATE;
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_CREATE;
   inst_trace(class, id, p->id, p->action, p->size);
 }
 
 static inline void INST_EVENT_PARCEL_SEND(hpx_parcel_t *p) {
-  const int class = HPX_INST_CLASS_PARCEL;
-  const int id = HPX_INST_EVENT_PARCEL_SEND;
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_SEND;
   inst_trace(class, id, p->id, p->action, p->size, p->target);
 }
 
 static inline void INST_EVENT_PARCEL_RECV(hpx_parcel_t *p) {
-  const int class = HPX_INST_CLASS_PARCEL;
-  const int id = HPX_INST_EVENT_PARCEL_RECV;
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_RECV;
   inst_trace(class, id, p->id, p->action, p->size, p->src);
 }
 
 static inline void INST_EVENT_PARCEL_RUN(hpx_parcel_t *p) {
-  const int class = HPX_INST_CLASS_PARCEL;
-  const int id = HPX_INST_EVENT_PARCEL_RUN;
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_RUN;
   inst_trace(class, id, p->id, p->action, p->size);
 }
 
 static inline void INST_EVENT_PARCEL_END(hpx_parcel_t *p) {
-  const int class = HPX_INST_CLASS_PARCEL;
-  const int id = HPX_INST_EVENT_PARCEL_END;
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_END;
   inst_trace(class, id, p->id, p->action);
 }
 /// @}

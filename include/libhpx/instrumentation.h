@@ -24,7 +24,11 @@ void inst_vtrace(int class, int id, int n, ...)
 # define inst_trace(class, id, ...)                             \
   inst_vtrace(class, id, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
 #else
-# define inst_trace(class, id, ...)
+# define inst_trace(class, id, ...)             \
+  do {                                          \
+    (void)class;                                \
+    (void)id;                                   \
+  } while (0)
 #endif
 
 // This matches the order in config.h trace_t.

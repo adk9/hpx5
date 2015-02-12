@@ -28,6 +28,18 @@ typedef struct {
   volatile size_t   next;                       // the next element to write
 } logtable_t;
 
+#define LOGTABLE_INIT {                         \
+    .start = {0},                               \
+    .fd = -1,                                   \
+    .class = -1,                                \
+    .id = -1,                                   \
+    .UNUSED = 0,                                \
+    .size = 0,                                  \
+    .records = NULL,                            \
+    .next = 0                                   \
+    }
+
+
 /// Initialize a logtable.
 ///
 /// If filename is NULL or size == 0 this will not generate a file.
