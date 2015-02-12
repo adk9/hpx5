@@ -55,8 +55,6 @@ static void _cleanup(locality_t *l) {
     l->sched = NULL;
   }
 
-  HPX_INST_FINI();
-
   if (l->network) {
     network_delete(l->network);
     l->network = NULL;
@@ -82,6 +80,8 @@ static void _cleanup(locality_t *l) {
   if (l->actions) {
     action_table_free(l->actions);
   }
+
+  inst_fini();
 
   if (l->config) {
     config_delete(l->config);
@@ -149,6 +149,10 @@ int hpx_init(int *argc, char ***argv) {
     }
   }
 
+  if (inst_init(here->config)) {
+    log("error detected while initializing instrumentation\n");
+  }
+
   // Reset the log level based on our rank-specific information.
   if (config_logat_isset(here->config, here->rank)) {
     log_level = here->config->loglevel;
@@ -191,8 +195,6 @@ int hpx_init(int *argc, char ***argv) {
     status = log_error("failed to create network.\n");
     goto unwind1;
   }
-
-  HPX_INST_INIT();
 
   // thread scheduler
   here->sched = scheduler_new(here->config);
@@ -304,7 +306,7 @@ void hpx_shutdown(int code) {
 /// Called by the application to shutdown the scheduler and network. May be
 /// called from any lightweight HPX thread, or the network thread.
 void hpx_abort(void) {
-  HPX_INST_FINI();
+  inst_fini();
 
   if (here && here->config && here->config->waitonabort) {
     dbg_wait();
