@@ -184,7 +184,8 @@ static int _funneled_progress(network_t *network) {
 
 network_t *network_isir_funneled_new(struct gas *gas, int nrx) {
   if (gas->type == HPX_GAS_SMP) {
-    log_net("will not initialize a %s network for SMP\n", _funneled_id());
+    log_net("will not initialize a %s network for SMP\n",
+            LIBHPX_NETWORK_TO_STRING[LIBHPX_NETWORK_ISIR]);
     return NULL;
   }
 

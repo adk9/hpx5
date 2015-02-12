@@ -8,7 +8,7 @@ AM_CPPFLAGS     += -D_POSIX_C_SOURCE=200809L
 # Turn off some warnings for the tests
 AM_CFLAGS        = -Wno-unused
 
-LDADD = $(HPX_DEPS)
+LDADD = $(HPX_LDADD)
 
 TESTS            = test_and_lco           \
                    test_bcast             \

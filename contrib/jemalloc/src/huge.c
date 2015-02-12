@@ -13,8 +13,7 @@ static malloc_mutex_t	huge_mtx;
 static extent_tree_t	huge;
 
 void *
-huge_malloc(tsd_t *tsd, arena_t *arena, size_t size, bool zero,
-    tcache_t *tcache)
+huge_malloc(tsd_t *tsd, arena_t *arena, size_t size, bool zero, bool try_tcache)
 {
 	size_t usize;
 
@@ -24,12 +23,12 @@ huge_malloc(tsd_t *tsd, arena_t *arena, size_t size, bool zero,
 		return (NULL);
 	}
 
-	return (huge_palloc(tsd, arena, usize, chunksize, zero, tcache));
+	return (huge_palloc(tsd, arena, usize, chunksize, zero, try_tcache));
 }
 
 void *
 huge_palloc(tsd_t *tsd, arena_t *arena, size_t usize, size_t alignment,
-    bool zero, tcache_t *tcache)
+    bool zero, bool try_tcache)
 {
 	void *ret;
 	extent_node_t *node;
@@ -39,7 +38,7 @@ huge_palloc(tsd_t *tsd, arena_t *arena, size_t usize, size_t alignment,
 
 	/* Allocate an extent node with which to track the chunk. */
 	node = ipallocztm(tsd, CACHELINE_CEILING(sizeof(extent_node_t)),
-	    CACHELINE, false, tcache, true, arena);
+	    CACHELINE, false, try_tcache, true, arena);
 	if (node == NULL)
 		return (NULL);
 
@@ -51,7 +50,7 @@ huge_palloc(tsd_t *tsd, arena_t *arena, size_t usize, size_t alignment,
 	arena = arena_choose(tsd, arena);
 	if (unlikely(arena == NULL) || (ret = arena_chunk_alloc_huge(arena,
 	    usize, alignment, &is_zeroed)) == NULL) {
-		idalloctm(tsd, node, tcache, true);
+		idalloctm(tsd, node, try_tcache, true);
 		return (NULL);
 	}
 
@@ -308,7 +307,8 @@ huge_ralloc_no_move(void *ptr, size_t oldsize, size_t size, size_t extra,
 
 void *
 huge_ralloc(tsd_t *tsd, arena_t *arena, void *ptr, size_t oldsize, size_t size,
-    size_t extra, size_t alignment, bool zero, tcache_t *tcache)
+    size_t extra, size_t alignment, bool zero, bool try_tcache_alloc,
+    bool try_tcache_dalloc)
 {
 	void *ret;
 	size_t copysize;
@@ -324,9 +324,11 @@ huge_ralloc(tsd_t *tsd, arena_t *arena, void *ptr, size_t oldsize, size_t size,
 	 */
 	if (alignment > chunksize) {
 		ret = huge_palloc(tsd, arena, size + extra, alignment, zero,
-		    tcache);
-	} else
-		ret = huge_malloc(tsd, arena, size + extra, zero, tcache);
+		    try_tcache_alloc);
+	} else {
+		ret = huge_malloc(tsd, arena, size + extra, zero,
+		    try_tcache_alloc);
+	}
 
 	if (ret == NULL) {
 		if (extra == 0)
@@ -334,9 +336,11 @@ huge_ralloc(tsd_t *tsd, arena_t *arena, void *ptr, size_t oldsize, size_t size,
 		/* Try again, this time without extra. */
 		if (alignment > chunksize) {
 			ret = huge_palloc(tsd, arena, size, alignment, zero,
-			    tcache);
-		} else
-			ret = huge_malloc(tsd, arena, size, zero, tcache);
+			    try_tcache_alloc);
+		} else {
+			ret = huge_malloc(tsd, arena, size, zero,
+			    try_tcache_alloc);
+		}
 
 		if (ret == NULL)
 			return (NULL);
@@ -348,12 +352,12 @@ huge_ralloc(tsd_t *tsd, arena_t *arena, void *ptr, size_t oldsize, size_t size,
 	 */
 	copysize = (size < oldsize) ? size : oldsize;
 	memcpy(ret, ptr, copysize);
-	isqalloc(tsd, ptr, oldsize, tcache);
+	isqalloc(tsd, ptr, oldsize, try_tcache_dalloc);
 	return (ret);
 }
 
 void
-huge_dalloc(tsd_t *tsd, void *ptr, tcache_t *tcache)
+huge_dalloc(tsd_t *tsd, void *ptr, bool try_tcache)
 {
 	extent_node_t *node;
 
@@ -364,7 +368,7 @@ huge_dalloc(tsd_t *tsd, void *ptr, tcache_t *tcache)
 
 	huge_dalloc_junk(node->addr, node->size);
 	arena_chunk_dalloc_huge(node->arena, node->addr, node->size);
-	idalloctm(tsd, node, tcache, true);
+	idalloctm(tsd, node, try_tcache, true);
 }
 
 arena_t *

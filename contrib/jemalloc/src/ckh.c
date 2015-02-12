@@ -270,8 +270,7 @@ ckh_grow(tsd_t *tsd, ckh_t *ckh)
 			ret = true;
 			goto label_return;
 		}
-		tab = (ckhc_t *)ipalloct(tsd, usize, CACHELINE, true, NULL,
-		    NULL);
+		tab = (ckhc_t *)ipalloc(tsd, usize, CACHELINE, true);
 		if (tab == NULL) {
 			ret = true;
 			goto label_return;
@@ -314,7 +313,7 @@ ckh_shrink(tsd_t *tsd, ckh_t *ckh)
 	usize = sa2u(sizeof(ckhc_t) << lg_curcells, CACHELINE);
 	if (usize == 0)
 		return;
-	tab = (ckhc_t *)ipalloct(tsd, usize, CACHELINE, true, NULL, NULL);
+	tab = (ckhc_t *)ipalloc(tsd, usize, CACHELINE, true);
 	if (tab == NULL) {
 		/*
 		 * An OOM error isn't worth propagating, since it doesn't
@@ -390,7 +389,7 @@ ckh_new(tsd_t *tsd, ckh_t *ckh, size_t minitems, ckh_hash_t *hash,
 		ret = true;
 		goto label_return;
 	}
-	ckh->tab = (ckhc_t *)ipalloct(tsd, usize, CACHELINE, true, NULL, NULL);
+	ckh->tab = (ckhc_t *)ipalloc(tsd, usize, CACHELINE, true);
 	if (ckh->tab == NULL) {
 		ret = true;
 		goto label_return;
