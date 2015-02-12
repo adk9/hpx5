@@ -48,7 +48,7 @@ static void *_heap_chunk_alloc_cyclic(heap_t *heap, size_t bytes, size_t align)
   uint64_t offset = bit * heap->bytes_per_chunk;
   heap_set_csbrk(heap, offset + bytes);
   void *p = heap_offset_to_lva(heap, offset);
-  assert((uintptr_t)p % align == 0);
+  dbg_assert(((uintptr_t)p & (align - 1)) == 0);
   return p;
 
  oom:
@@ -275,6 +275,9 @@ bool heap_contains_lva(const heap_t *heap, const void *lva) {
   return (0 <= d && d < heap->nbytes);
 }
 
+bool heap_contains_offset(const heap_t *heap, uint64_t gpa) {
+  return (gpa < heap->nbytes);
+}
 
 uint64_t heap_lva_to_offset(const heap_t *heap, const void *lva) {
   DEBUG_IF (!heap_contains_lva(heap, lva)) {
@@ -294,32 +297,34 @@ void *heap_offset_to_lva(const heap_t *heap, uint64_t offset) {
 
 
 uint64_t heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize) {
-  assert(heap->cyclic_arena < UINT32_MAX);
-  if (ceil_log2_32(bsize) > heap_max_block_lg_size(heap)) {
-    dbg_error("Attempting to allocate block with alignment %"PRIu32
-          " while the maximum alignment is %"PRIu32".\n",
-          ceil_log2_32(bsize), heap_max_block_lg_size(heap));
-  }
+  dbg_assert(heap->cyclic_arena < UINT32_MAX);
+  dbg_assert_str(ceil_log2_32(bsize) <= heap_max_block_lg_size(heap),
+                 "Attempting to allocate block with alignment %"PRIu32
+                 " while the maximum alignment is %"PRIu32".\n",
+                 ceil_log2_32(bsize), heap_max_block_lg_size(heap));
 
   // Figure out how many blocks per node that we need, and then allocate that
   // much cyclic space from the heap.
   uint64_t blocks = ceil_div_64(n, here->ranks);
   uint32_t  align = ceil_log2_32(bsize);
-  assert(align < 32);
+  dbg_assert(align < 32);
   uint32_t padded = 1u << align;
-  int       flags = MALLOCX_LG_ALIGN(align) | MALLOCX_ARENA(heap->cyclic_arena);
-  void      *base = libhpx_global_mallocx(blocks * padded, flags);
-  if (!base)
+  int flags = MALLOCX_LG_ALIGN(align) | MALLOCX_ARENA(heap->cyclic_arena);
+  void *base = libhpx_global_mallocx(blocks * padded, flags);
+  if (!base) {
     dbg_error("failed cyclic allocation\n");
-  const uint64_t ret = heap_lva_to_offset(heap, base);
+  }
+  uint64_t ret = heap_lva_to_offset(heap, base);
   // We are trying to align the offset to block boundary, so "== 0". Otherwise,
   // we could check "< bsize".
-  assert((((1ul << align) - 1) & ret) == 0);
+  dbg_assert((((1ul << align) - 1) & ret) == 0);
+  dbg_assert(heap_offset_is_cyclic(heap, ret));
   return ret;
 }
 
 
 void heap_free_cyclic(heap_t *heap, uint64_t offset) {
+  dbg_assert(heap_offset_is_cyclic(heap, offset));
   void *lva = heap_offset_to_lva(heap, offset);
   int flags = MALLOCX_ARENA(heap->cyclic_arena);
   libhpx_global_dallocx(lva, flags);

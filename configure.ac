@@ -75,11 +75,22 @@ AC_ARG_ENABLE([werror],
                   [Treat warnings as errors @<:@default=no@:>@])],
   [], [enable_werror=no])
 
+AC_ARG_ENABLE([apps],
+  [AS_HELP_STRING([--enable-apps],
+                  [Enable mini-apps @<:@default=no@:>@])],
+  [], [enable_apps=no])
+
 AC_ARG_ENABLE([tutorial],
   [AS_HELP_STRING([--enable-tutorial],
                   [Enable building of code samples from the HPX tutorial @<:@default=no@:>@])],
   [], [enable_tutorial=no])
 
+AC_ARG_ENABLE([jemalloc],
+  [AS_HELP_STRING([--enable-jemalloc],
+                  [Enable using of jemalloc as the default allocator @<:@default=no@:>@])],
+  [], [enable_jemalloc=no])
+AS_IF([test "x$enable_jemalloc" != xno], [HPX_CONTRIB_JEMALLOC_AS_MALLOC])
+  
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug],
                   [Enable debug code @<:@default=no@:>@])],
@@ -93,6 +104,7 @@ AC_ARG_ENABLE([instrumentation],
   [], [enable_instrumentation=no])
 AS_IF([test "x$enable_instrumentation" != xno],
   [AC_DEFINE([ENABLE_INSTRUMENTATION], [1], [Enable instrumentation for performance])])
+AM_CONDITIONAL([ENABLE_INSTRUMENTATION], [test "x$enable_instrumentation" != xno])
 
 AC_ARG_ENABLE([logging],
   [AS_HELP_STRING([--enable-logging],
@@ -205,6 +217,7 @@ AM_CONDITIONAL([CPU_ARM], [test "x$host_cpu" = xarmv7l])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
 AM_CONDITIONAL([ENABLE_TUTORIAL], [test "x$enable_tutorial" != xno])
+AM_CONDITIONAL([ENABLE_JEMALLOC], [test "x$enable_jemalloc" != xno])
 AM_CONDITIONAL([ENABLE_PHOTON], [test "x$enable_photon" != xno])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
 
@@ -217,7 +230,7 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # Finalize flags
 # -----------------------------------------------------------------------------
 hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $HPX_LIBFFI_CPPFLAGS $hpx_hwloc_cppflags $hpx_valgrind_cppflags $hpx_uthash_cppflags"
-hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS $hpx_hwloc_cflags"
+hpx_extra_cflags="$hpx_pe_env_cflags $HPX_JEMALLOC_CFLAGS $HPX_LIBFFI_CFLAGS $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS $hpx_hwloc_cflags $hpx_valgrind_cflags $hpx_uthash_cflags"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
 hpx_extra_libs="$PTHREAD_LIBS $HPX_PHOTON_LIBS $hpx_hwloc_libs $HPX_LIBFFI_LIBS $HPX_JEMALLOC_LIBS $hpx_pe_env_libs"
 AS_IF([test "x$enable_pedantic" != xno],
@@ -233,8 +246,10 @@ CPPFLAGS="$hpx_extra_cppflags $CPPFLAGS"
 CFLAGS="$hpx_extra_cflags $CFLAGS"
 CCASFLAGS="$hpx_extra_ccasflags $CCASFLAGS"
 HPX_LIBS="$hpx_extra_libs"
+HPX_DEPS="\$(top_builddir)/libhpx/libhpx.la $hpx_hwloc_deps $HPX_PHOTON_DEPS $HPX_JEMALLOC_DEPS $HPX_LIBFFI_DEPS"
 
 AC_SUBST(HPX_LIBS)
+AC_SUBST(HPX_DEPS)
 AC_SUBST(HPX_LDADD, "\$(top_builddir)/libhpx/libhpx.la $HPX_JEMALLOC_LDADD $HPX_PHOTON_LDADD $HPX_LIBFFI_LDADD")
 
 # -----------------------------------------------------------------------------
@@ -305,6 +320,7 @@ echo "================================================"
 echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
 echo "               Networks : $networks"
+echo "               jemalloc : $enable_jemalloc"
 echo "              Profiling : $with_papi"
 echo "         hugetlbfs heap : $with_hugetlbfs"
 echo "     Topology Awareness : $with_hwloc"
@@ -314,5 +330,6 @@ echo "             Test Suite : $enable_tests"
 echo "         Extra CPPFLAGS : $hpx_extra_cppflags"
 echo "           Extra CFLAGS : $hpx_extra_cflags"
 echo "        Extra CCASFLAGS : $hpx_extra_ccasflags"
+echo "       Install location : $prefix"
 echo "================================================"
 

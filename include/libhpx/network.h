@@ -22,7 +22,6 @@
 /// scheduler, and send them out via the configured transport.
 #include <hpx/hpx.h>
 
-
 /// Forward declarations.
 /// @{
 struct boot;
@@ -30,10 +29,9 @@ struct config;
 struct gas;
 /// @}
 
-
 /// All network objects implement the network interface.
 typedef struct network {
-  const char *(*id)(void);
+  int type;
 
   void (*delete)(struct network *)
     HPX_NON_NULL(1);

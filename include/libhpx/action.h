@@ -36,11 +36,15 @@ hpx_action_handler_t action_table_get_handler(const struct action_table *, hpx_a
 int action_table_run_handler(const struct action_table *, const hpx_action_t, void *)
   HPX_INTERNAL HPX_NON_NULL(1);
 
+/// Get the FFI type information associated with an action.
+ffi_cif *action_table_get_cif(const struct action_table *, hpx_action_t)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
 /// Call an action by sending a parcel given a list of variable args.
 int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
                        hpx_action_t action, hpx_addr_t c_addr,
                        hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
-                       va_list *args)
+                       int nargs, va_list *args)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Is the action a pinned action?

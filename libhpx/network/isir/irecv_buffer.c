@@ -22,34 +22,33 @@
 #include "irecv_buffer.h"
 #include "parcel_utils.h"
 
-#define ACTIVE_RANGE_CHECK(irecvs, i, R) do {                       \
-  irecv_buffer_t *_irecvs = (irecvs);                               \
-  int _i = i;                                                       \
-  DEBUG_IF (_i < 0 || _i > _irecvs->n) {                            \
-    dbg_error("index %i out of range [0, %u)\n", _i, _irecvs->n);   \
-    return R;                                                       \
-  }                                                                 \
+#define ACTIVE_RANGE_CHECK(irecvs, i, R)                \
+  do {                                                  \
+    irecv_buffer_t *_irecvs = (irecvs);                 \
+    int _i = (i);                                       \
+    dbg_assert_str(0 <= _i && _i < _irecvs->n,          \
+                   "index %i out of range [0, %u)\n",   \
+                   _i, _irecvs->n);                     \
   } while (0)
-
 
 /// Cancel an active irecv request.
 static hpx_parcel_t *_cancel(irecv_buffer_t *buffer, int i) {
   ACTIVE_RANGE_CHECK(buffer, i, NULL);
 
   if (MPI_SUCCESS != MPI_Cancel(buffer->requests + i)) {
-    dbg_error("could not cancel MPI request\n");
+    log_error("could not cancel MPI request\n");
     return NULL;
   }
 
   MPI_Status status;
   if (MPI_SUCCESS != MPI_Wait(buffer->requests + i, &status)) {
-    dbg_error("could not cleanup a canceled MPI request\n");
+    log_error("could not cleanup a canceled MPI request\n");
     return NULL;
   }
 
   int cancelled;
   if (MPI_SUCCESS != MPI_Test_cancelled(&status, &cancelled)) {
-    dbg_error("could not test a status to see if a request was canceled\n");
+    log_error("could not test a status to see if a request was canceled\n");
     return NULL;
   }
 
@@ -63,7 +62,6 @@ static hpx_parcel_t *_cancel(irecv_buffer_t *buffer, int i) {
     return buffer->records[i].parcel;
   }
 }
-
 
 /// Start an irecv for a buffer entry.
 ///
@@ -88,7 +86,7 @@ static int _start(irecv_buffer_t *irecvs, int i) {
   void *b = mpi_network_offset(p);
 
   if (MPI_SUCCESS != MPI_Irecv(b, n, MPI_BYTE, src, tag, com, r)) {
-    return dbg_error("could not start irecv\n");
+    return log_error("could not start irecv\n");
   }
   else {
     irecvs->records[i].parcel = p;
@@ -96,7 +94,6 @@ static int _start(irecv_buffer_t *irecvs, int i) {
     return LIBHPX_OK;
   }
 }
-
 
 /// Resize an irecv buffer to the requested size.
 ///
@@ -148,9 +145,8 @@ int _resize(irecv_buffer_t *buffer, uint32_t size, hpx_parcel_t **out) {
     return LIBHPX_OK;
   }
 
-  return dbg_error("failed to resize buffer from %u to %u", buffer->size, size);
+  return log_error("failed to resize buffer from %u to %u", buffer->size, size);
 }
-
 
 /// Append an irecv request and record for a given tag.
 ///
@@ -168,10 +164,10 @@ static int _append(irecv_buffer_t *irecvs, int tag) {
     uint32_t limit = irecvs->limit;
     uint32_t size = 2 * irecvs->size;
     if (limit && limit < size) {
-      return dbg_error("failed to extend irecvs (limit %u)\n", limit);
+      return log_error("failed to extend irecvs (limit %u)\n", limit);
     }
     if (LIBHPX_OK != _resize(irecvs, size, NULL)) {
-      return dbg_error("failed to extend irecvs (limit %u)\n", limit);
+      return log_error("failed to extend irecvs (limit %u)\n", limit);
     }
   }
 
@@ -184,7 +180,6 @@ static int _append(irecv_buffer_t *irecvs, int tag) {
   // start the irecv
   return _start(irecvs, n);
 }
-
 
 /// Probe for unexpected messages.
 ///
@@ -203,7 +198,7 @@ static int _probe(irecv_buffer_t *irecvs) {
   int flag;
   MPI_Status s;
   if (MPI_SUCCESS != MPI_Iprobe(src, tag, com, &flag, &s)) {
-    return dbg_error("failed MPI_Iprobe\n");
+    return log_error("failed MPI_Iprobe\n");
   }
 
   if (!flag) {
@@ -217,7 +212,6 @@ static int _probe(irecv_buffer_t *irecvs) {
   return _append(irecvs, s.MPI_TAG);
 }
 
-
 /// Finish an irecv operation.
 ///
 /// This extracts and finishes the parcel and regenerates the irecv.
@@ -229,15 +223,9 @@ static int _probe(irecv_buffer_t *irecvs) {
 static hpx_parcel_t *_finish(irecv_buffer_t *irecvs, int i, MPI_Status *s) {
   ACTIVE_RANGE_CHECK(irecvs, i, NULL);
 
-  if (s->MPI_ERROR != MPI_SUCCESS) {
-    dbg_error("irecv failed\n");
-    return NULL;
-  }
-
   int n;
   if (MPI_SUCCESS != MPI_Get_count(s, MPI_BYTE, &n)) {
     dbg_error("could not extract the size of an irecv\n");
-    return NULL;
   }
 
   assert(n > 0);
@@ -252,7 +240,6 @@ static hpx_parcel_t *_finish(irecv_buffer_t *irecvs, int i, MPI_Status *s) {
   }
   return p;
 }
-
 
 int irecv_buffer_init(irecv_buffer_t *buffer, uint32_t size, uint32_t limit) {
   buffer->limit = limit;
@@ -271,7 +258,6 @@ int irecv_buffer_init(irecv_buffer_t *buffer, uint32_t size, uint32_t limit) {
   return e;
 }
 
-
 void irecv_buffer_fini(irecv_buffer_t *buffer) {
   hpx_parcel_t *chain = NULL;
   if (LIBHPX_OK != _resize(buffer, 0, &chain)) {
@@ -288,7 +274,6 @@ void irecv_buffer_fini(irecv_buffer_t *buffer) {
   assert(!buffer->statuses);
   assert(!buffer->requests);
 }
-
 
 hpx_parcel_t *irecv_buffer_progress(irecv_buffer_t *buffer) {
   // see if there is an existing message we're not ready to receive
@@ -309,7 +294,6 @@ hpx_parcel_t *irecv_buffer_progress(irecv_buffer_t *buffer) {
   int count;
   if (MPI_SUCCESS != MPI_Testsome(n, reqs, &count, out, stats)) {
     dbg_error("failed MPI_Testsome\n");
-    return NULL;
   }
 
   hpx_parcel_t *completed = NULL;

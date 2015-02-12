@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <jemalloc/jemalloc_hpx.h>
+#include <ffi.h>
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
 #include "libhpx/action.h"
@@ -51,6 +52,10 @@ static size_t _max(size_t lhs, size_t rhs) {
 
 static uintptr_t _inplace(const hpx_parcel_t *p) {
   return ((uintptr_t)p->ustack & _INPLACE_MASK);
+}
+
+static int _blessed(const hpx_parcel_t *p) {
+  return (!p->pid || p->credit);
 }
 
 static void _serialize(hpx_parcel_t *p) {
@@ -109,6 +114,39 @@ void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size) {
     memmove(to, data, size);
   }
 }
+
+void _hpx_parcel_set_args(hpx_parcel_t *p, int nargs, ...) {
+  if (p->action == HPX_ACTION_NULL) {
+    dbg_error("parcel must have an action to serialize arguments to its buffer.\n");
+  }
+
+  ffi_cif *cif = action_table_get_cif(here->actions, p->action);
+  if (!cif) {
+    dbg_error("parcel must have an action to serialize arguments to its buffer.\n");
+  }
+  else if (nargs != cif->nargs) {
+    dbg_error("expecting %d arguments for action %s (%d given).\n",
+              cif->nargs, action_table_get_key(here->actions, p->action), nargs);
+  }
+
+  void *argps[nargs];
+  va_list vargs;
+  va_start(vargs, nargs);
+  for (int i = 0; i < nargs; ++i) {
+    argps[i] = va_arg(vargs, void*);
+  }
+  va_end(vargs);
+
+  size_t len = ffi_raw_size(cif);
+  dbg_assert(len > 0);
+
+  if (len) {
+    ffi_raw *to = hpx_parcel_get_data(p);
+    ffi_ptrarray_to_raw(cif, argps, to);
+  }
+  return;
+}
+
 
 void hpx_parcel_set_pid(hpx_parcel_t *p, const hpx_pid_t pid) {
   p->pid = pid;
@@ -217,13 +255,8 @@ static HPX_ACTION(_parcel_send_async, hpx_parcel_t **p) {
 }
 
 int parcel_launch(hpx_parcel_t *p) {
-  DEBUG_IF(!_inplace(p)) {
-    return dbg_error("parcel must be serialized before it can be sent\n");
-  }
-
-  DEBUG_IF(p->pid && !p->credit) {
-    return dbg_error("parcel must be blessed before it can be sent\n");
-  }
+  dbg_assert(_inplace(p));
+  dbg_assert(_blessed(p));
 
   // LOG
   if (p->c_action != HPX_ACTION_NULL) {
@@ -255,10 +288,7 @@ int parcel_launch(hpx_parcel_t *p) {
 
   // do a network send
   int e = network_send(here->network, p);
-  if (e) {
-    return dbg_error("failed to perform a network send\n");
-  }
-
+  dbg_check(e, "failed to perform a network send\n");
   return HPX_SUCCESS;
 }
 
@@ -281,12 +311,14 @@ hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
 
 hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t gate) {
   _prepare(p);
+  dbg_assert(p->target != HPX_NULL);
   return hpx_call(gate, attach, HPX_NULL, p, parcel_size(p));
 }
 
 hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
                                      hpx_addr_t lsync) {
   _prepare(p);
+  dbg_assert(p->target != HPX_NULL);
   return hpx_call_async(gate, attach, lsync, HPX_NULL, p, parcel_size(p));
 }
 

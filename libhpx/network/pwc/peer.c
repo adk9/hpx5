@@ -37,7 +37,7 @@ int peer_get(peer_t *peer, void *lva, size_t offset, size_t n, command_t l,
   struct photon_buffer_priv_t key = segment->key;
   int e = photon_get_with_completion(peer->rank, lva, n, (void*)rva, key, l, 0);
   if (PHOTON_OK != e) {
-    return dbg_error("failed transport get operation\n");
+    dbg_error("failed transport get operation\n");
   }
   return LIBHPX_OK;
 }
@@ -64,7 +64,7 @@ static HPX_ACTION(_get_parcel, void *args) {
   // Allocate a parcel to receive in.
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, bytes);
   if (!p) {
-    dbg_error("Could not allocate a parcel for rendezvous protocol\n");
+    log_error("Could not allocate a parcel for rendezvous protocol\n");
     return HPX_ERROR;
   }
 

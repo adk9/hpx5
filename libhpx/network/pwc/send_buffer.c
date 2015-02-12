@@ -57,10 +57,7 @@ static int _start_get_rx_min(send_buffer_t *sends) {
 ///        LIBHPX_ERROR A pending record could not be allocated.
 static int _append(send_buffer_t *sends, hpx_parcel_t *p, hpx_addr_t lsync) {
   record_t *r = circular_buffer_append(&sends->pending);
-  if (!r) {
-    return dbg_error("could not append a send operation to the buffer\n");
-  }
-
+  dbg_assert_str(r, "could not append a send operation to the buffer\n");
   r->p = p;
   r->lsync = lsync;
   return LIBHPX_OK;
@@ -80,7 +77,7 @@ static int _start_record(void *buffer, void *record) {
 /// network as is currently possible. This will return the number of remaining
 /// buffered sends.
 ///
-/// Progressing a send buffer mus t be properly synchronized with the send
+/// Progressing a send buffer must be properly synchronized with the send
 /// operation, as well as with concurrent attempts to progress the buffer, since
 /// they may be called concurrently from more than one thread.
 ///
@@ -92,14 +89,16 @@ static int _send_buffer_progress(send_buffer_t *sends) {
   sync_tatas_acquire(&sends->lock);
   int i = circular_buffer_progress(&sends->pending, _start_record, sends);
   if (i < 0) {
-    dbg_error("failed to progress the send buffer\n");
+    log_error("failed to progress the send buffer\n");
     status = HPX_ERROR;
   }
 
-  // If there are still sends remaining, then
+  // If there are still sends remaining, then regenerate the rdma get operation
+  // to read the remote min. This will trigger another instance of this progress
+  // loop when that get completes.
   if (i > 0) {
     if (_start_get_rx_min(sends) != LIBHPX_OK) {
-      dbg_error("error initiating an rdma get operation\n");
+      log_error("error initiating an rdma get operation\n");
       status = HPX_ERROR;
     }
   }
@@ -121,8 +120,7 @@ static HPX_ACTION(_finish_get_rx_min, void *UNUSED) {
 }
 
 int send_buffer_init(send_buffer_t *sends, struct eager_buffer *tx,
-                     uint32_t size)
-{
+                     uint32_t size) {
   sync_tatas_init(&sends->lock);
   sends->tx = tx;
   return circular_buffer_init(&sends->pending, sizeof(record_t), size);
@@ -134,7 +132,7 @@ void send_buffer_fini(send_buffer_t *sends) {
 
 int send_buffer_send(send_buffer_t *sends, hpx_parcel_t *p, hpx_addr_t lsync) {
   if (lsync != HPX_NULL) {
-    dbg_error("local send complete event unimplemented\n");
+    log_error("local send complete event unimplemented\n");
     return LIBHPX_EUNIMPLEMENTED;
   }
 
@@ -156,16 +154,14 @@ int send_buffer_send(send_buffer_t *sends, hpx_parcel_t *p, hpx_addr_t lsync) {
 
     // If we have an error at this point then report it and buffer the parcel.
     if (status != LIBHPX_OK) {
-      dbg_error("error in parcel send, buffer the operation\n");
+      log_error("error in parcel send, buffer the operation\n");
     }
   }
 
   // We need to buffer this parcel, because either we're already buffering
   // parcels, or we need to buffer while the rdma get occurs.
   status = _append(sends, p, lsync);
-  if (status != LIBHPX_OK) {
-    dbg_error("could not append send operation\n");
-  }
+  dbg_check(status, "could not append send operation\n");
 
  unlock:
   sync_tatas_release(&sends->lock);

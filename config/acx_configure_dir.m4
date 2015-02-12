@@ -34,6 +34,9 @@ AC_DEFUN([ACX_CONFIGURE_DIR],
   ac_prev=
   eval "set x $ac_configure_args"
   shift
+
+  # only append args if we don't pass any to macro
+  if test -z "$ac_sub_configure_args"; then
   for ac_arg
   do
     if test -n "$ac_prev"; then
@@ -67,6 +70,7 @@ AC_DEFUN([ACX_CONFIGURE_DIR],
       AS_VAR_APPEND([ac_sub_configure_args], [" '$ac_arg'"]) ;;
     esac
   done
+  fi
 
   # Always prepend --prefix to ensure using the same prefix
   # in subdir configurations.

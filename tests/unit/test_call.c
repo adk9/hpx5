@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-// Goal of this testcase is to test the hpx_call_when
+// Goal of this testcase is to test hpx_call_when
 
 #include <stdio.h>
 #include <stdlib.h>

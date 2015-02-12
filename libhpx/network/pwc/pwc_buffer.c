@@ -56,7 +56,7 @@ static int _start(pwc_buffer_t *buffer, void *rva, const void *lva, size_t n,
    case PHOTON_ERROR_RESOURCE:
     return LIBHPX_RETRY;
    default:
-    return dbg_error("could not initiate a put-with-completion\n");
+    return log_error("could not initiate a put-with-completion\n");
   }
 }
 
@@ -99,7 +99,7 @@ int pwc_buffer_put(pwc_buffer_t *buffer, size_t roff, const void *lva, size_t n,
     }
 
     if (LIBHPX_RETRY != e) {
-      return dbg_error("buffered put failed\n");
+      return log_error("buffered put failed\n");
     }
   }
 
@@ -107,7 +107,7 @@ int pwc_buffer_put(pwc_buffer_t *buffer, size_t roff, const void *lva, size_t n,
   // so buffer this pwc for now.
   record_t *r = circular_buffer_append(&buffer->pending);
   if (!r) {
-    return dbg_error("could not allocate a circular buffer record\n");
+    return log_error("could not allocate a circular buffer record\n");
   }
 
   r->rva = rva;
@@ -123,8 +123,6 @@ int pwc_buffer_put(pwc_buffer_t *buffer, size_t roff, const void *lva, size_t n,
 
 int pwc_buffer_progress(pwc_buffer_t *buffer) {
   int i = circular_buffer_progress(&buffer->pending, _start_record, buffer);
-  if (i < 0) {
-    dbg_error("failed to progress the pwc buffer\n");
-  }
+  dbg_assert_str(i >= 0, "failed to progress the pwc buffer\n");
   return i;
 }

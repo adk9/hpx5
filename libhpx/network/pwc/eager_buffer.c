@@ -57,7 +57,7 @@ static HPX_TASK(_finish_eager_tx, void *UNUSED) {
   hpx_parcel_t *p = NULL;
   hpx_addr_t target = hpx_thread_current_target();
   if (!hpx_gas_try_pin(target, (void**)&p)) {
-    return dbg_error("could not finish eager tx\n");
+    return log_error("could not finish eager tx\n");
   }
   log_net("releasing sent parcel\n");
   hpx_parcel_release(p);
@@ -113,12 +113,12 @@ static int _wrap(eager_buffer_t *tx, hpx_parcel_t *p, uint32_t bytes) {
 static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   const uint32_t n = pwc_network_size(p);
   if (n > tx->size) {
-    return dbg_error("cannot send %u bytes via eager parcel buffer\n", n);
+    return log_error("cannot send %u bytes via eager parcel buffer\n", n);
   }
 
   const uint64_t end = tx->max + n;
   if (end > (1ull << GPA_OFFSET_BITS)) {
-    dbg_error("lifetime send buffer overflow handling unimplemented\n");
+    log_error("lifetime send buffer overflow handling unimplemented\n");
     return LIBHPX_EUNIMPLEMENTED;
   }
 

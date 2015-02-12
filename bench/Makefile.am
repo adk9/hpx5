@@ -7,7 +7,6 @@ netbench_LDADD    = $(HPX_LDADD)
 
 AM_CPPFLAGS        = -I$(top_srcdir)/include
 AM_CFLAGS          =
-AM_LDFLAGS         = $(HPX_LIBS)
 
 if HAVE_PAPI
 AM_CFLAGS           += @PAPI_CFLAGS@

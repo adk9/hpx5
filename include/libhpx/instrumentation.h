@@ -9,6 +9,7 @@
 #define HPX_INST_PARCEL_ENABLED // for now, enabled by default
 #endif
 
+// This matches the order in config.h trace_t.
 typedef enum {
   HPX_INST_CLASS_PARCEL = 0,
   HPX_INST_CLASS_NETWORK_PWC,
@@ -45,9 +46,9 @@ static const char * const HPX_INST_EVENT_TYPE_TO_STRING[] = {
 };
 
 static const int HPX_INST_CLASS_EVENT_OFFSET[] = {
-  0,
-  5,
-  7
+  HPX_INST_EVENT_PARCEL_CREATE,
+  HPX_INST_EVENT_NETWORK_PWC_SEND,
+  HPX_INST_NUM_EVENTS
 };
 
 static const int HPX_INST_EVENTS_PER_CLASS[] = {5, 0};

@@ -44,14 +44,15 @@ static HPX_ACTION(_probe, void *o) {
 }
 
 int probe_start(network_t *network) {
-  int e = hpx_call(HPX_HERE, _probe, HPX_NULL, &network, sizeof(network));
-  if (e) {
-    return dbg_error("failed to start network probe\n");
-  }
-  else {
-    log_net("started probing the network\n");
+  // NB: we should encapsulate this probe infrastructure inside of the networks
+  // themselves, but for now we just avoid probing for SMP.
+  if (network->type == LIBHPX_NETWORK_SMP) {
+    return HPX_SUCCESS;
   }
 
+  int e = hpx_call(HPX_HERE, _probe, HPX_NULL, &network, sizeof(network));
+  dbg_check(e, "failed to start network probe\n");
+  log_net("started probing the network\n");
   return LIBHPX_OK;
 }
 

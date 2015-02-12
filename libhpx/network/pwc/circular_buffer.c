@@ -104,7 +104,7 @@ static int _reflow(circular_buffer_t *buffer, uint32_t old_capacity) {
     memcpy(to, from, bytes);
   }
   else {
-    return dbg_error("unexpected shift\n");
+    return log_error("unexpected shift\n");
   }
 
   log_net("reflowed a circular buffer from %u to %u\n", old_capacity,
@@ -124,7 +124,7 @@ static int _expand(circular_buffer_t *buffer, uint32_t capacity) {
   assert(capacity != 0);
 
   if (capacity < buffer->capacity) {
-    return dbg_error("cannot shrink a circular buffer\n");
+    return log_error("cannot shrink a circular buffer\n");
   }
 
   if (capacity == buffer->capacity) {
@@ -136,7 +136,7 @@ static int _expand(circular_buffer_t *buffer, uint32_t capacity) {
   buffer->capacity = capacity;
   buffer->records = realloc(buffer->records, capacity * buffer->element_size);
   if (!buffer->records) {
-    dbg_error("failed to resize a circular buffer (%u to %u)\n", old_capacity,
+    log_error("failed to resize a circular buffer (%u to %u)\n", old_capacity,
               capacity);
     return LIBHPX_ENOMEM;
   }
@@ -167,9 +167,7 @@ void circular_buffer_fini(circular_buffer_t *b) {
 
 uint32_t circular_buffer_size(circular_buffer_t *b) {
   uint64_t size = b->max - b->min;
-  DEBUG_IF(size >= UINT32_MAX) {
-    dbg_error("circular buffer size invalid\n");
-  }
+  dbg_assert_str(size < UINT32_MAX, "circular buffer size invalid\n");
   return (uint32_t)size;
 }
 
@@ -180,7 +178,6 @@ void *circular_buffer_append(circular_buffer_t *buffer) {
     if (LIBHPX_OK != _expand(buffer, capacity)) {
       dbg_error("could not expand a circular buffer from %u to %u\n",
                 buffer->capacity, capacity);
-      return NULL;
     }
   }
   uint32_t i = _index_of(next, buffer->capacity);
@@ -197,7 +194,6 @@ int circular_buffer_progress(circular_buffer_t *buffer,
     switch (e) {
      default:
       dbg_error("circular buffer could not progress\n");
-      return -1;
 
      case LIBHPX_RETRY:
       return circular_buffer_size(buffer);

@@ -21,7 +21,7 @@ static extent_tree_t	chunks_ad_mmap;
 static extent_tree_t	chunks_szad_dss;
 static extent_tree_t	chunks_ad_dss;
 
-rtree_t		*chunks_rtree;
+rtree_t		chunks_rtree;
 
 /* Various chunk-related settings. */
 size_t		chunksize;
@@ -48,6 +48,8 @@ chunk_recycle(extent_tree_t *chunks_szad, extent_tree_t *chunks_ad,
 	size_t alloc_size, leadsize, trailsize;
 	bool zeroed;
 
+	assert(new_addr == NULL || alignment == chunksize);
+
 	if (base) {
 		/*
 		 * This function may need to call base_node_{,de}alloc(), but
@@ -65,13 +67,15 @@ chunk_recycle(extent_tree_t *chunks_szad, extent_tree_t *chunks_ad,
 	key.addr = new_addr;
 	key.size = alloc_size;
 	malloc_mutex_lock(&chunks_mtx);
-	node = extent_tree_szad_nsearch(chunks_szad, &key);
-	if (node == NULL || (new_addr && node->addr != new_addr)) {
+	node = (new_addr != NULL) ? extent_tree_ad_search(chunks_ad, &key) :
+	    extent_tree_szad_nsearch(chunks_szad, &key);
+	if (node == NULL) {
 		malloc_mutex_unlock(&chunks_mtx);
 		return (NULL);
 	}
 	leadsize = ALIGNMENT_CEILING((uintptr_t)node->addr, alignment) -
 	    (uintptr_t)node->addr;
+	assert(new_addr == NULL || leadsize == 0);
 	assert(node->size >= leadsize + size);
 	trailsize = node->size - leadsize - size;
 	ret = (void *)((uintptr_t)node->addr + leadsize);
@@ -132,6 +136,19 @@ chunk_recycle(extent_tree_t *chunks_szad, extent_tree_t *chunks_ad,
 	return (ret);
 }
 
+static void *
+chunk_alloc_core_dss(void *new_addr, size_t size, size_t alignment, bool base,
+    bool *zero)
+{
+	void *ret;
+
+	if ((ret = chunk_recycle(&chunks_szad_dss, &chunks_ad_dss,
+	    new_addr, size, alignment, base, zero)) != NULL)
+		return (ret);
+	ret = chunk_alloc_dss(new_addr, size, alignment, zero);
+	return (ret);
+}
+
 /*
  * If the caller specifies (!*zero), it is still possible to receive zeroed
  * memory, in which case *zero is toggled to true.  arena_chunk_alloc() takes
@@ -150,31 +167,26 @@ chunk_alloc_core(void *new_addr, size_t size, size_t alignment, bool base,
 	assert((alignment & chunksize_mask) == 0);
 
 	/* "primary" dss. */
-	if (have_dss && dss_prec == dss_prec_primary) {
-		if ((ret = chunk_recycle(&chunks_szad_dss, &chunks_ad_dss,
-		    new_addr, size, alignment, base, zero)) != NULL)
-			return (ret);
-		if ((ret = chunk_alloc_dss(new_addr, size, alignment, zero))
-		    != NULL)
-			return (ret);
-	}
-	/* mmap. */
-	if ((ret = chunk_recycle(&chunks_szad_mmap, &chunks_ad_mmap, new_addr,
-	    size, alignment, base, zero)) != NULL)
+	if (have_dss && dss_prec == dss_prec_primary && (ret =
+	    chunk_alloc_core_dss(new_addr, size, alignment, base, zero)) !=
+	    NULL)
 		return (ret);
-	/* Requesting an address not implemented for chunk_alloc_mmap(). */
-	if (new_addr == NULL &&
-	    (ret = chunk_alloc_mmap(size, alignment, zero)) != NULL)
+	/* mmap. */
+	if (!config_munmap && (ret = chunk_recycle(&chunks_szad_mmap,
+	    &chunks_ad_mmap, new_addr, size, alignment, base, zero)) != NULL)
+		return (ret);
+	/*
+	 * Requesting an address is not implemented for chunk_alloc_mmap(), so
+	 * only call it if (new_addr == NULL).
+	 */
+	if (new_addr == NULL && (ret = chunk_alloc_mmap(size, alignment, zero))
+	    != NULL)
 		return (ret);
 	/* "secondary" dss. */
-	if (have_dss && dss_prec == dss_prec_secondary) {
-		if ((ret = chunk_recycle(&chunks_szad_dss, &chunks_ad_dss,
-		    new_addr, size, alignment, base, zero)) != NULL)
-			return (ret);
-		if ((ret = chunk_alloc_dss(new_addr, size, alignment, zero))
-		    != NULL)
-			return (ret);
-	}
+	if (have_dss && dss_prec == dss_prec_secondary && (ret =
+	    chunk_alloc_core_dss(new_addr, size, alignment, base, zero)) !=
+	    NULL)
+		return (ret);
 
 	/* All strategies for allocation failed. */
 	return (NULL);
@@ -188,7 +200,7 @@ chunk_register(void *chunk, size_t size, bool base)
 	assert(CHUNK_ADDR2BASE(chunk) == chunk);
 
 	if (config_ivsalloc && !base) {
-		if (rtree_set(chunks_rtree, (uintptr_t)chunk, 1))
+		if (rtree_set(&chunks_rtree, (uintptr_t)chunk, chunk))
 			return (true);
 	}
 	if (config_stats || config_prof) {
@@ -205,7 +217,8 @@ chunk_register(void *chunk, size_t size, bool base)
 		} else if (config_prof)
 			gdump = false;
 		malloc_mutex_unlock(&chunks_mtx);
-		if (config_prof && opt_prof && opt_prof_gdump && gdump)
+		if (config_prof && opt_prof && prof_gdump_get_unlocked() &&
+		    gdump)
 			prof_gdump();
 	}
 	if (config_valgrind)
@@ -219,15 +232,18 @@ chunk_alloc_base(size_t size)
 	void *ret;
 	bool zero;
 
-	zero = false;
-	ret = chunk_alloc_core(NULL, size, chunksize, true, &zero,
-	    chunk_dss_prec_get());
-	if (ret == NULL)
-		return (NULL);
-	if (chunk_register(ret, size, true)) {
+	/*
+	 * Directly call chunk_alloc_mmap() rather than chunk_alloc_core()
+	 * because it's critical that chunk_alloc_base() return untouched
+	 * demand-zeroed virtual memory.
+	 */
+	zero = true;
+	ret = chunk_alloc_mmap(size, chunksize, &zero);
+	if (ret != NULL && chunk_register(ret, size, true)) {
 		chunk_dalloc_core(ret, size);
-		return (NULL);
+		ret = NULL;
 	}
+
 	return (ret);
 }
 
@@ -379,7 +395,7 @@ chunk_dalloc_core(void *chunk, size_t size)
 	assert((size & chunksize_mask) == 0);
 
 	if (config_ivsalloc)
-		rtree_set(chunks_rtree, (uintptr_t)chunk, 0);
+		rtree_set(&chunks_rtree, (uintptr_t)chunk, NULL);
 	if (config_stats || config_prof) {
 		malloc_mutex_lock(&chunks_mtx);
 		assert(stats_chunks.curchunks >= (size / chunksize));
@@ -397,6 +413,14 @@ chunk_dalloc_default(void *chunk, size_t size, unsigned arena_ind)
 
 	chunk_dalloc_core(chunk, size);
 	return (false);
+}
+
+static rtree_node_elm_t *
+chunks_rtree_node_alloc(size_t nelms)
+{
+
+	return ((rtree_node_elm_t *)base_alloc(nelms *
+	    sizeof(rtree_node_elm_t)));
 }
 
 bool
@@ -420,9 +444,8 @@ chunk_boot(void)
 	extent_tree_szad_new(&chunks_szad_dss);
 	extent_tree_ad_new(&chunks_ad_dss);
 	if (config_ivsalloc) {
-		chunks_rtree = rtree_new((ZU(1) << (LG_SIZEOF_PTR+3)) -
-		    opt_lg_chunk, base_alloc, NULL);
-		if (chunks_rtree == NULL)
+		if (rtree_new(&chunks_rtree, (ZU(1) << (LG_SIZEOF_PTR+3)) -
+		    opt_lg_chunk, chunks_rtree_node_alloc, NULL))
 			return (true);
 	}
 
@@ -434,8 +457,6 @@ chunk_prefork(void)
 {
 
 	malloc_mutex_prefork(&chunks_mtx);
-	if (config_ivsalloc)
-		rtree_prefork(chunks_rtree);
 	chunk_dss_prefork();
 }
 
@@ -444,8 +465,6 @@ chunk_postfork_parent(void)
 {
 
 	chunk_dss_postfork_parent();
-	if (config_ivsalloc)
-		rtree_postfork_parent(chunks_rtree);
 	malloc_mutex_postfork_parent(&chunks_mtx);
 }
 
@@ -454,7 +473,5 @@ chunk_postfork_child(void)
 {
 
 	chunk_dss_postfork_child();
-	if (config_ivsalloc)
-		rtree_postfork_child(chunks_rtree);
 	malloc_mutex_postfork_child(&chunks_mtx);
 }

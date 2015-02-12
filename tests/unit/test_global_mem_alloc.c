@@ -18,19 +18,10 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
-typedef struct {
-  int nDoms;
-  int maxCycles;
-  int cores;
-} main_args_t;
-
 typedef struct Domain {
-  hpx_addr_t complete;
-  hpx_addr_t newdt;
   int nDoms;
   int rank;
   int maxcycles;
-  int cycle;
 } Domain;
 
 static int _initDomain_handler(int rank, int max, int n) {
@@ -55,8 +46,8 @@ static HPX_ACTION(test_libhpx_gas_global_alloc, void *UNUSED) {
   hpx_time_t t1 = hpx_time_now();
 
  // output the arguments we're running with
-  printf("Number of domains: %d maxCycles: %d cores: %d\n",
-          nDoms, maxCycles, 8);
+  printf("Number of domains: %d maxCycles: %d.\n",
+          nDoms, maxCycles);
   fflush(stdout);
 
   // Allocate the domain array
@@ -91,7 +82,31 @@ static HPX_ACTION(test_libhpx_gas_global_alloc_block, void *UNUSED) {
   return HPX_SUCCESS;
 }
 
+static HPX_ACTION(test_libhpx_gas_global_calloc_block, void *UNUSED) {
+  hpx_addr_t global = hpx_gas_global_calloc(1, 1024 *sizeof(char));
+  hpx_gas_free(global, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
+static HPX_ACTION(test_libhpx_gas_global_mem_alloc, void *UNUSED) {
+  uint64_t size = 1024*1024*100;
+  int blocks = HPX_LOCALITIES;
+
+  hpx_addr_t local = hpx_gas_alloc(size);
+  hpx_gas_free(local, HPX_NULL);
+
+  hpx_addr_t global = hpx_gas_global_alloc(blocks, size);
+  hpx_gas_free(global, HPX_NULL);
+
+  hpx_addr_t calloc = hpx_gas_global_calloc(blocks, size);
+  hpx_gas_free(calloc, HPX_NULL);
+  
+  return HPX_SUCCESS;
+}
+
 TEST_MAIN({
  ADD_TEST(test_libhpx_gas_global_alloc);
  ADD_TEST(test_libhpx_gas_global_alloc_block);
+ ADD_TEST(test_libhpx_gas_global_calloc_block);
+ ADD_TEST(test_libhpx_gas_global_mem_alloc);
 });

@@ -118,6 +118,7 @@ static int _continue_parcel(hpx_parcel_t *p, hpx_status_t status, size_t size,
 
 /// Execute a parcel.
 static int _execute(hpx_parcel_t *p) {
+  dbg_assert(p->target != HPX_NULL);
   hpx_action_t id = hpx_parcel_get_action(p);
   bool pinned = action_is_pinned(here->actions, id);
   if (pinned && !hpx_gas_try_pin(p->target, NULL)) {
@@ -210,13 +211,14 @@ static hpx_parcel_t *_try_bind(hpx_parcel_t *p) {
 
 /// Add a parcel to the top of the worker's work queue.
 static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
+  dbg_assert(p->target != HPX_NULL);
+  dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
   uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
   self->work_first = (size >= here->sched->wf_threshold);
   // if (self->work_first) {
   //   log("work first %lu, %u\n", size, size >= here->sched->wf_threshold);
   // }
 }
-
 
 /// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *_schedule_lifo(struct worker *w) {
@@ -512,9 +514,9 @@ int worker_init(struct worker *w, struct scheduler *sched, int id, int core,
   dbg_assert(sched);
 
   /// make sure the worker has proper alignment
-  dbg_assert((uintptr_t)w % HPX_CACHELINE_SIZE == 0);
-  dbg_assert((uintptr_t)&w->work % HPX_CACHELINE_SIZE == 0);
-  dbg_assert((uintptr_t)&w->inbox % HPX_CACHELINE_SIZE == 0);
+  dbg_assert(((uintptr_t)w & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&w->work & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&w->inbox & (HPX_CACHELINE_SIZE - 1)) == 0);
 
   w->sched      = sched;
   w->thread     = 0;
@@ -567,20 +569,20 @@ int worker_start(void) {
   dbg_assert(self);
 
   // double-check this
-  dbg_assert((uintptr_t)self % HPX_CACHELINE_SIZE == 0);
-  dbg_assert((uintptr_t)&self->work % HPX_CACHELINE_SIZE == 0);
-  dbg_assert((uintptr_t)&self->inbox % HPX_CACHELINE_SIZE == 0);
+  dbg_assert(((uintptr_t)self & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&self->work & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&self->inbox & (HPX_CACHELINE_SIZE - 1))== 0);
 
   // get a parcel to start the scheduler loop with
   hpx_parcel_t *p = _schedule(true, NULL);
   if (!p) {
-    return dbg_error("failed to acquire an initial parcel.\n");
+    dbg_error("failed to acquire an initial parcel.\n");
   }
 
   int e = thread_transfer(p, _on_startup, NULL);
   if (e) {
     if (here->rank == 0) {
-      return dbg_error("application exited with a non-zero exit code: %d.\n", e);
+      dbg_error("application exited with a non-zero exit code: %d.\n", e);
     }
     return e;
   }
@@ -638,6 +640,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(self->id >= 0);
   dbg_assert(p);
   dbg_assert(hpx_gas_try_pin(p->target, NULL)); // just performs translation
+  dbg_assert(action_table_get_handler(here->actions, p->action) != HPX_NULL);
   profile_ctr(self->stats.spawns++);
 
   // Don't run anything until we have started up. This lets us use parcel_send()

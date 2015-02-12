@@ -93,15 +93,17 @@ void _and_reset(lco_t *lco) {
 /// Fast set decrements the value, and signals when it gets to 0.
 static void _and_set(lco_t *lco, int size, const void *from) {
   _and_t *and = (_and_t *)lco;
+  int num = (size && from) ? *(int*)from : 1;
   lco_lock(&and->lco);
-  intptr_t value = and->value--;
+  and->value -= num;
+  intptr_t value = and->value;
   log_lco("and: reduced count to %ld\n", value);
 
-  if (value == 1) {
+  if (value == 0) {
     scheduler_signal_all(&and->barrier);
   }
   else {
-    dbg_assert_str(value > 1, "and: too many threads joined (%ld).\n", value);
+    dbg_assert_str(value > 0, "and: too many threads joined (%ld).\n", value);
   }
 
   lco_unlock(&and->lco);
@@ -162,4 +164,12 @@ hpx_addr_t hpx_lco_and_new(intptr_t limit) {
 /// Join the and.
 void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t rsync) {
   hpx_lco_set(and, 0, NULL, HPX_NULL, rsync);
+}
+
+/// Set an and "num" times.
+void hpx_lco_and_set_num(hpx_addr_t and, int sum, hpx_addr_t rsync) {
+  hpx_addr_t lsync = hpx_lco_future_new(0);
+  hpx_lco_set(and, sizeof(sum), &sum, lsync, rsync);
+  hpx_lco_wait(lsync);
+  hpx_lco_delete(lsync, HPX_NULL);
 }
