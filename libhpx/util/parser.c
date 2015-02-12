@@ -50,7 +50,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-mprotectstacks      use mprotect() to bracket stacks to look for \n                                  stack overflows  (default=off)",
   "      --hpx-waitonabort         call hpx_wait() inside of hpx_abort() for \n                                  debugging  (default=off)",
   "\nTracing:",
-  "      --hpx-traceclasses=class  set the event classes to trace  (possible \n                                  values=\"parcel\", \"pwc\", \"all\")",
+  "      --hpx-traceclasses=class  set the event classes to trace  (possible \n                                  values=\"parcel\", \"pwc\", \"sched\", \n                                  \"all\")",
   "      --hpx-tracedir=dir        directory to output trace files",
   "      --hpx-tracefilesize=# of events\n                                set the size of each trace file",
   "      --hpx-traceat=[localities]\n                                set the localities to trace at",
@@ -109,7 +109,7 @@ char *hpx_option_parser_hpx_boot_values[] = {"default", "smp", "mpi", "pmi", 0} 
 char *hpx_option_parser_hpx_transport_values[] = {"default", "smp", "mpi", "portals", "photon", 0} ;	/* Possible values for hpx-transport.  */
 char *hpx_option_parser_hpx_network_values[] = {"default", "smp", "pwc", "isir", 0} ;	/* Possible values for hpx-network.  */
 char *hpx_option_parser_hpx_loglevel_values[] = {"default", "boot", "sched", "gas", "lco", "net", "trans", "parcel", "all", 0} ;	/* Possible values for hpx-loglevel.  */
-char *hpx_option_parser_hpx_traceclasses_values[] = {"parcel", "pwc", "all", 0} ;	/* Possible values for hpx-traceclasses.  */
+char *hpx_option_parser_hpx_traceclasses_values[] = {"parcel", "pwc", "sched", "all", 0} ;	/* Possible values for hpx-traceclasses.  */
 
 static char *
 gengetopt_strdup (const char *s);
