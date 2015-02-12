@@ -111,7 +111,7 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // check to see if everyone is waiting
-  if (config_waitat_isset(here->config, HPX_LOCALITY_ALL)) {
+  if (config_dbg_waitat_isset(here->config, HPX_LOCALITY_ALL)) {
     dbg_wait();
   }
 
@@ -142,9 +142,9 @@ int hpx_init(int *argc, char ***argv) {
   here->ranks = boot_n_ranks(here->boot);
 
   // Now that we know our rank, we can be more specific about waiting.
-  if (config_waitat_isset(here->config, here->rank)) {
+  if (config_dbg_waitat_isset(here->config, here->rank)) {
     // Don't wait twice.
-    if (!config_waitat_isset(here->config, HPX_LOCALITY_ALL)) {
+    if (!config_dbg_waitat_isset(here->config, HPX_LOCALITY_ALL)) {
       dbg_wait();
     }
   }
