@@ -1,6 +1,6 @@
-noinst_appsdir       = $(datarootdir)/apps/
+appsdir       = $(datarootdir)/apps/
 
-noinst_apps_PROGRAMS = sssp
+apps_PROGRAMS = sssp
 
 sssp_SOURCES   = sssp.c
 
