@@ -8,19 +8,21 @@
 #include "libsync/sync.h"
 #include <stdio.h>
 
-static hpx_action_t _sssp_process_vertex = HPX_ACTION_INVALID;
+
+hpx_action_t _sssp_process_vertex = HPX_ACTION_INVALID;
 hpx_action_t _sssp_visit_vertex = HPX_ACTION_INVALID;
 
-static hpx_action_t _sssp_visit_source = 0;
-static hpx_action_t _sssp_print_source_adj_list = 0;
+hpx_action_t _sssp_visit_source = 0;
+hpx_action_t _sssp_print_source_adj_list = 0;
 sssp_kind_t _sssp_kind = _CHAOTIC_SSSP_KIND;
 adj_list_t graph = HPX_NULL;
+size_t k_level = 0;
 
-typedef int (*send_vertex_t)(hpx_addr_t, hpx_action_t, hpx_addr_t, void*, size_t);
-static int _sssp_hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result, void* arg, size_t size) {
+int _sssp_hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result, void* arg, size_t size) {
   return hpx_call(addr, action, result, arg, size);
 }
-static send_vertex_t send_vertex = _sssp_hpx_call;
+send_vertex_t send_vertex = _sssp_hpx_call;
+kla_send_vertex_t kla_send_vertex = _sssp_hpx_call;
 
 bool _try_update_vertex_distance(adj_list_vertex_t *const vertex, distance_t distance) {
   // printf("try update, vertex: %zu, distance: %zu\n", vertex, distance);
@@ -157,6 +159,7 @@ int call_sssp_action(const call_sssp_args_t *const args) {
   if (_get_termination() == COUNT_TERMINATION) {
     hpx_addr_t internal_termination_lco = hpx_lco_future_new(0);
 
+
     // Initialize DC if necessary
     hpx_addr_t init_queues_lco = HPX_NULL;
     if(_sssp_kind == _DC_SSSP_KIND || _sssp_kind == _DC1_SSSP_KIND) {
@@ -207,18 +210,36 @@ int initialize_sssp_kind_action(sssp_kind_t *arg) {
   _sssp_kind = *arg;
   if (_sssp_kind == _CHAOTIC_SSSP_KIND) {
     _sssp_process_vertex = _sssp_chaotic_process_vertex;
-  } else {
+  } else if(_sssp_kind == KLEVEL_SSSP_KIND) { 
+    _sssp_process_vertex = _sssp_klevel_process_vertex;
+  }  else {
     if (_sssp_kind == _DC1_SSSP_KIND) _switch_to_dc1();
     _sssp_process_vertex = _sssp_dc_process_vertex;
   }
   return HPX_SUCCESS;
 }
 
+
+
+hpx_action_t set_klevel = 0;
+int set_klevel_action(size_t *arg) {
+  k_level = *arg;
+  return HPX_SUCCESS;
+} 
+
 hpx_action_t sssp_run_delta_stepping = 0;
 int sssp_run_delta_stepping_action(const void * const args) {
   send_vertex = (send_vertex_t)_delta_sssp_send_vertex;
   return HPX_SUCCESS;
 }
+
+
+hpx_action_t sssp_run_kla = 0;
+int sssp_run_kla_action(const void * const args) {
+  kla_send_vertex = (kla_send_vertex_t)_kla_sssp_send_vertex;
+  return HPX_SUCCESS;
+}
+
 
 static HPX_CONSTRUCTOR void _sssp_register_actions() {
   HPX_REGISTER_ACTION(_sssp_visit_vertex_action,
@@ -231,6 +252,9 @@ static HPX_CONSTRUCTOR void _sssp_register_actions() {
                       &initialize_sssp_kind);
   HPX_REGISTER_ACTION(sssp_run_delta_stepping_action,
 		      &sssp_run_delta_stepping);
+  HPX_REGISTER_ACTION(sssp_run_kla_action,
+		      &sssp_run_kla);
+  HPX_REGISTER_ACTION(set_klevel_action, &set_klevel);
   HPX_REGISTER_ACTION(_sssp_visit_source_action, &_sssp_visit_source);
   HPX_REGISTER_ACTION(_sssp_print_source_adj_list_action,
                       &_sssp_print_source_adj_list);

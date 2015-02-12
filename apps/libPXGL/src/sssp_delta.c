@@ -8,33 +8,13 @@
 
 static const size_t size_t_max = (size_t) -1;
 
-typedef struct {
-  hpx_addr_t vertex;
-  distance_t distance;
-} buffer_node_t;
+buckets_t *buckets;
 
-typedef struct {
-  size_t current_size;
-  size_t current_position;
-  double factor;
-  buffer_node_t* buffer;
-} buffer_t;
-
-typedef struct {
-  buffer_t ***buckets;
-  size_t current_level;
-  size_t *num_buckets;
-  size_t *num_vertices;
-  size_t delta;
-} buckets_t;
-
-static buckets_t *buckets;
-
-static distance_t _get_level(const distance_t distance) {
+distance_t _get_level(const distance_t distance) {
   return distance / buckets->delta;
 }
 
-static buffer_t* init_buffer(const size_t init_size, const double factor) {
+buffer_t* init_buffer(const size_t init_size, const double factor) {
   buffer_t *buffer = malloc(sizeof(buffer_t));
   buffer->buffer = malloc(sizeof(buffer_node_t) * init_size);
   assert(buffer->buffer);
@@ -45,7 +25,7 @@ static buffer_t* init_buffer(const size_t init_size, const double factor) {
   return buffer;
 }
 
-static void append(buffer_t * const buffer, const hpx_addr_t vertex, const distance_t distance) {
+void append(buffer_t * const buffer, const hpx_addr_t vertex, const distance_t distance) {
   // printf("Appending %zu to buffer at %" PRIxPTR "\n", vertex, buffer);
   assert(buffer->current_position <= buffer->current_size);
   if(buffer->current_position == buffer->current_size) {
@@ -58,7 +38,7 @@ static void append(buffer_t * const buffer, const hpx_addr_t vertex, const dista
   buffer->buffer[buffer->current_position++] = node;
 }
 
-static void _insert_buckets(const int thread_no, const size_t level, const hpx_addr_t vertex, const distance_t distance) {
+void _insert_buckets(const int thread_no, const size_t level, const hpx_addr_t vertex, const distance_t distance) {
   assert(thread_no == HPX_THREAD_ID);
   //  assert(buckets->num_buckets[thread_no] > 0);
   // printf("_insert_buckets, thread_no: %d, level: %zu, distance: %zu\n", thread_no, level, distance);
@@ -93,22 +73,22 @@ int _delta_sssp_send_vertex(const hpx_addr_t vertex, const hpx_action_t action, 
   return HPX_SUCCESS;
 }
 
-static buffer_node_t pop(buffer_t * const buffer) {
+buffer_node_t pop(buffer_t * const buffer) {
   // printf("Popping from buffer %" PRIxPTR ".\n", buffer);
   assert(buffer->current_position > 0);
   assert(buffer->buffer);
   return buffer->buffer[--buffer->current_position];
 }
 
-static bool empty(const buffer_t * const buffer) {
+bool empty(const buffer_t * const buffer) {
   return buffer->current_position == 0;
 }
 
-static size_t size(const buffer_t * const buffer) {
+size_t size(const buffer_t * const buffer) {
   return buffer->current_position;
 }
 
-static void delete_buffer(buffer_t * const buffer) {
+void delete_buffer(buffer_t * const buffer) {
   // printf("delete_buffer with %" PRIxPTR ".\n", buffer);
   free(buffer->buffer);
   free(buffer);
@@ -116,7 +96,7 @@ static void delete_buffer(buffer_t * const buffer) {
 }
 
 hpx_action_t _init_buckets = 0;
-static int _init_buckets_action(const size_t * const delta) {
+int _init_buckets_action(const size_t * const delta) {
   buckets = malloc(sizeof(buckets_t));
   buckets->delta = *delta;
   // buckets->current_level = malloc(sizeof(size_t) * HPX_THREADS);
@@ -182,19 +162,19 @@ static int _visit_all_in_current_level_action(const hpx_addr_t * const args) {
   return HPX_SUCCESS;
 }
 
-static void _size_t_minimum_op(size_t * const output, const size_t * const input, const size_t bytes) {
+void _size_t_minimum_op(size_t * const output, const size_t * const input, const size_t bytes) {
   // printf("minimum_op(%zu, %zu)\n", *output, *input);
   if(*output > *input) *output = *input;
   return;
 }
 
-static void _size_t_minimum_init(size_t * const output, const size_t bytes) {
+void _size_t_minimum_init(size_t * const output, const size_t bytes) {
   *output = size_t_max;
   return;
 }
 
 hpx_action_t _delta_sssp_increase_active_counts = 0;
-static int _delta_sssp_increase_active_counts_action(const void * args) {
+int _delta_sssp_increase_active_counts_action(const void * args) {
   size_t no_tasks = 0;
   for (size_t i = 0; i < HPX_THREADS; ++i) {
     if (buckets->num_buckets[i] > buckets->current_level && buckets->buckets[i][buckets->current_level] != NULL)
@@ -207,7 +187,7 @@ static int _delta_sssp_increase_active_counts_action(const void * args) {
 }
 
 hpx_action_t _send_next_level = 0;
-static int _send_next_level_action(const hpx_addr_t * const reduce_lco) {
+int _send_next_level_action(const hpx_addr_t * const reduce_lco) {
   size_t max_no_buckets = 0;
   for (size_t i = 0; i < HPX_THREADS; ++i) {
     if (buckets->num_buckets[i] > max_no_buckets) max_no_buckets = buckets->num_buckets[i];
@@ -227,11 +207,11 @@ static int _send_next_level_action(const hpx_addr_t * const reduce_lco) {
   hpx_lco_set(*reduce_lco, sizeof(new_level), &new_level, HPX_NULL, HPX_NULL);
   hpx_lco_get(*reduce_lco, sizeof(new_level), &new_level);
   buckets->current_level = new_level;
-  // printf("Current level is %zu\n", new_level);
+  printf("Current level found in send_next level action is %zu\n", new_level);
   return HPX_SUCCESS;
 }
 
-static void _find_next_level() {
+void _find_next_level() {
   const hpx_addr_t level_reduce_lco = 
     hpx_lco_allreduce_new(
       HPX_LOCALITIES, 
@@ -242,7 +222,9 @@ static void _find_next_level() {
   const hpx_addr_t bcast_lco = hpx_lco_future_new(0);
   hpx_bcast(_send_next_level, bcast_lco, &level_reduce_lco,
             sizeof(level_reduce_lco));
+  printf("Waiting for the find_next_level lco to be finished\n");
   hpx_lco_wait(bcast_lco);
+  printf("The lco for find_next_level has been set\n");
   hpx_lco_delete(bcast_lco, HPX_NULL);
   hpx_lco_delete(level_reduce_lco, HPX_NULL);
 }
