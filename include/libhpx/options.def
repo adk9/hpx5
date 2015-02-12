@@ -116,7 +116,7 @@ LIBHPX_OPT_SCALAR(hpx, sendlimit, 0, uint32_t)
 LIBHPX_OPT_SCALAR(hpx, recvlimit, 0, uint32_t)
 LIBHPX_OPT_SCALAR(pwc, parcelbuffersize, 1lu << 16, size_t)
 LIBHPX_OPT_SCALAR(pwc, parceleagerlimit, 1lu << 13, size_t)
-LIBHPX_OPT_SCALAR(hpx, tracefilesize, 40*1024*1024-1, size_t)
+LIBHPX_OPT_SCALAR(hpx, tracefilesize, 1lu << 24, size_t)
 /// @}
 
 /// String options

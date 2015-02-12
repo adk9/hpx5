@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <errno.h>
 #include <stdarg.h>
 #include <sys/stat.h>
 
@@ -38,7 +39,7 @@ static void _log_create(int class, int id, size_t size, hpx_time_t now) {
            INST_EVENT_TO_STRING[id]);
 
   int e = logtable_init(&_logs[id], filename, size, class, id, now);
-  if (!e) {
+  if (e) {
     log_error("failed to initialize log file %s\n", filename);
   }
 }
@@ -54,32 +55,31 @@ static int _chdir(const char *dir) {
   time_t t = time(NULL);
   struct tm lt;
   localtime_r(&t, &lt);
-  char inst_dir_name[256];
-  snprintf(inst_dir_name, 256, "hpx.%.2d%.2d.%.2d%.2d%.4d",
+  char dirname[256];
+  snprintf(dirname, 256, "hpx.%.2d%.2d.%.2d%.2d%.4d",
            lt.tm_hour, lt.tm_min, lt.tm_mday, lt.tm_mon + 1,
            lt.tm_year + 1900);
 
   // try and create the directory---we don't care if it's already there
-  int success = mkdir(inst_dir_name, 0777);
-  if (success == 0 || EEXIST == success) {
-    success = chdir(inst_dir_name);
-    if (success != 0) {
-      return log_error("could not change directories\n");
+  int e = mkdir(dirname, 0777);
+  if (e) {
+    if (errno == EEXIST) {
+      log("overwriting trace files in %s\n", dirname);
+    }
+    else {
+      return log_error("Could not create %s for instrumentation\n", dirname);
     }
   }
-  else {
-    return log_error("Could not create %s for instrumentation.\n",
-                     inst_dir_name);
+  e = chdir(dirname);
+  if (e) {
+    return log_error("could not change directories to %s\n", dirname);
   }
 
+  log("initialized %s/%s for tracing\n", dir, dirname);
   return LIBHPX_OK;
 }
 
 int inst_init(config_t *cfg) {
-  if (!cfg->trace) {
-    return HPX_SUCCESS;
-  }
-
   if (!config_traceat_isset(cfg, hpx_get_my_rank())) {
     return HPX_SUCCESS;
   }
