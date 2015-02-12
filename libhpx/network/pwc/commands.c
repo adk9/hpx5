@@ -19,6 +19,7 @@
 #include "../../gas/pgas/gpa.h"                 // big hack
 
 command_t encode_command(hpx_action_t op, hpx_addr_t addr) {
+  dbg_assert(addr != HPX_NULL);
   return ((uint64_t)op << GPA_OFFSET_BITS) + (addr & GPA_OFFSET_MASK);
 }
 

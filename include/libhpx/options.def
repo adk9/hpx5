@@ -92,15 +92,10 @@
 # define _LIBHPX_OPT_INTSET_UNDEF
 #endif
 
-/// Flag options
+/// Top-level options
 /// @{
 LIBHPX_OPT_FLAG(, statistics, 1)
-LIBHPX_OPT_FLAG(dbg_, mprotectstacks, 0)
-LIBHPX_OPT_FLAG(dbg_, waitonabort, 0)
-/// @}
 
-/// Scalar options
-/// @{
 LIBHPX_OPT_SCALAR(, cores, 0, int)
 LIBHPX_OPT_SCALAR(, threads, 0, int)
 LIBHPX_OPT_SCALAR(, backoffmax, 1024, unsigned)
@@ -113,21 +108,32 @@ LIBHPX_OPT_SCALAR(, transport, HPX_TRANSPORT_DEFAULT, hpx_transport_t)
 LIBHPX_OPT_SCALAR(, network, LIBHPX_NETWORK_DEFAULT, libhpx_network_t)
 LIBHPX_OPT_SCALAR(, sendlimit, 0, uint32_t)
 LIBHPX_OPT_SCALAR(, recvlimit, 0, uint32_t)
-LIBHPX_OPT_SCALAR(pwc_, parcelbuffersize, 1lu << 16, size_t)
-LIBHPX_OPT_SCALAR(pwc_, parceleagerlimit, 1lu << 13, size_t)
-/// @}
 
-/// Set options that can be stored in a dense bit vector.
-/// @{
 LIBHPX_OPT_BITSET(, loglevel, HPX_LOG_DEFAULT, HPX_LOG_NONE, HPX_LOG_ALL)
-LIBHPX_OPT_BITSET(, traceclasses, HPX_TRACE_NONE, HPX_TRACE_NONE, HPX_TRACE_ALL)
-/// @}
 
-/// Set options that need to be stored as a sparse integer set.
-/// @{
 LIBHPX_OPT_INTSET(, logat, HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
 LIBHPX_OPT_INTSET(, waitat, HPX_LOCALITY_NONE, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
 /// @}
+
+/// Debug options
+/// @{
+LIBHPX_OPT_FLAG(dbg_, mprotectstacks, 0)
+LIBHPX_OPT_FLAG(dbg_, waitonabort, 0)
+/// @}
+
+/// Trace options
+/// @{
+LIBHPX_OPT_STRING(trace_, dir, "/tmp")
+LIBHPX_OPT_SCALAR(trace_, filesize, 1lu << 24, size_t)
+LIBHPX_OPT_BITSET(trace_, classes, HPX_TRACE_NONE, HPX_TRACE_NONE, HPX_TRACE_ALL)
+LIBHPX_OPT_INTSET(trace_, at, HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
+/// @}
+
+/// PWC options
+/// @{
+LIBHPX_OPT_SCALAR(pwc_, parcelbuffersize, 1lu << 16, size_t)
+LIBHPX_OPT_SCALAR(pwc_, parceleagerlimit, 1lu << 13, size_t)
+/// #}
 
 #ifdef HAVE_PHOTON
 /// Photon options

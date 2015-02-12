@@ -264,7 +264,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   }
 
   pwc->parcel_buffer_size = 1u << ceil_log2_32(cfg->pwc_parcelbuffersize);
-  log("initialized a %u-byte buffer size\n", pwc->parcel_buffer_size);
+  log("initialized a %u-byte eager buffer\n", pwc->parcel_buffer_size);
 
   // Allocate the network's eager segment.
   pwc->eager_bytes = ranks * pwc->parcel_buffer_size;

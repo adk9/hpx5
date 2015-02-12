@@ -13,8 +13,8 @@
 #ifndef LIBHPX_PARCEL_H
 #define LIBHPX_PARCEL_H
 
-#include "hpx/hpx.h"
-#include "libsync/sync.h"
+#include <hpx/hpx.h>
+#include "libhpx/instrumentation.h"
 
 struct ustack;
 
@@ -49,6 +49,38 @@ struct hpx_parcel {
   char           buffer[];
 };
 
+/// Parcel tracing events.
+/// @{
+static inline void INST_EVENT_PARCEL_CREATE(hpx_parcel_t *p) {
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_CREATE;
+  inst_trace(class, id, p->id, p->action, p->size);
+}
+
+static inline void INST_EVENT_PARCEL_SEND(hpx_parcel_t *p) {
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_SEND;
+  inst_trace(class, id, p->id, p->action, p->size, p->target);
+}
+
+static inline void INST_EVENT_PARCEL_RECV(hpx_parcel_t *p) {
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_RECV;
+  inst_trace(class, id, p->id, p->action, p->size, p->src);
+}
+
+static inline void INST_EVENT_PARCEL_RUN(hpx_parcel_t *p) {
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_RUN;
+  inst_trace(class, id, p->id, p->action, p->size);
+}
+
+static inline void INST_EVENT_PARCEL_END(hpx_parcel_t *p) {
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_END;
+  inst_trace(class, id, p->id, p->action);
+}
+/// @}
 
 typedef struct parcel_queue {
   hpx_parcel_t *head;

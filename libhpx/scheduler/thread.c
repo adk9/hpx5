@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 /// User level stacks.
@@ -24,8 +24,11 @@
 #include <hpx/builtins.h>
 #include <jemalloc/jemalloc_hpx.h>
 #include <valgrind/valgrind.h>
-#include <libhpx/debug.h>
-#include <libhpx/locality.h>
+#include "libhpx/debug.h"
+#include "libhpx/instrumentation.h"
+#include "libhpx/locality.h"
+#include "libhpx/parcel.h"
+#include "libhpx/scheduler.h"
 #include "thread.h"
 
 static int _buffer_size = 0;
@@ -117,11 +120,11 @@ static size_t _alignment(void) {
   }
   else
 #endif
-  #if defined(__ARMEL__)
+#if defined(__ARMEL__)
     return 8;
-  #else
-    return 16;
-  #endif
+#else
+  return 16;
+#endif
 }
 
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
@@ -140,4 +143,13 @@ void thread_delete(ustack_t *thread) {
   _deregister(thread);
   void *base = _unprotect(thread);
   free(base);
+}
+
+int trace_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
+  static const int class = INST_SCHED;
+  static const int id = INST_SCHED_TRANSFER;
+  hpx_parcel_t *from = scheduler_current_parcel();
+  inst_trace(class, id, (from) ? from->action : 0, p->action);
+#undef thread_transfer
+  return thread_transfer(p, cont, env);
 }
