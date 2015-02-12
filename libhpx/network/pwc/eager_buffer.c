@@ -101,9 +101,10 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p);
 ///                       was injected correctly.
 static int _wrap(eager_buffer_t *tx, hpx_parcel_t *p, uint32_t bytes) {
   dbg_assert(bytes != 0);
+  int target = tx->peer->rank;
   log_net("wrapping rank %d eager buffer (%u bytes) at sequence # %lu\n",
-          tx->peer->rank, bytes, tx->sequence);
-  command_t cmd = encode_command(_eager_rx_wrap, 0);
+          target, bytes, tx->sequence);
+  command_t cmd = encode_command(_eager_rx_wrap, HPX_THERE(target));
   int status = peer_put_command(tx->peer, cmd);
   dbg_check(status, "could not send command to pad eager buffer\n");
   tx->max += bytes;
@@ -139,41 +140,28 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   p->sequence = sequence;
 #endif
 
-#ifdef ENABLE_INSTRUMENTATION
-  if (hpx_inst_enabled) {
-    hpx_inst_event_network_pwc_send_t event = {
-      .sequence = sequence,
-      .bytes = n,
-      .address = (uint64_t)tx->peer->segments[SEGMENT_EAGER].base + tx->tx_base + roff,
-      .target_rank = tx->peer->rank
-    };
-    hpx_inst_log_event(HPX_INST_CLASS_NETWORK_PWC,
-                       HPX_INST_EVENT_NETWORK_PWC_SEND, 0, sizeof(event),
-                       &event);
-  }
-#endif
+  static const int class = HPX_INST_CLASS_NETWORK_PWC;
+  static const int id = HPX_INST_EVENT_NETWORK_PWC_SEND;
+  void *rva = tx->peer->segments[SEGMENT_EAGER].base + tx->tx_base + roff;
+  inst_trace(class, id, sequence, n, (uint64_t)rva, tx->peer->rank);
 
-  // pwc_trace("send %u bytes to (%d, %p) [%lu]\n", n, tx->peer->rank,
-  //           tx->peer->segments[SEGMENT_EAGER].base + tx->tx_base + roff,
-  //           sequence);
-
-  // log_net("sequence: %lu, sending %d bytes to %d at %p (%s)\n",
-  //         p->sequence, n, tx->peer->rank,
-  //         tx->peer->segments[SEGMENT_EAGER].base + tx->tx_base + roff,
-  //         action_table_get_key(here->actions, p->action));
-
-  int e = peer_pwc(tx->peer,                     // peer structure
-                   tx->tx_base + roff,           // remote offset
-                   pwc_network_offset(p),        // local address
-                   n,                            // # bytes
-                   encode_command(_finish_eager_tx, lva_to_gva(p)), // local completion
-                   HPX_NULL,                     // remote completion
-                   encode_command(_eager_rx, 0), // remote command
-                   SEGMENT_EAGER                 // segment
-                  );
+  int target = tx->peer->rank;
+  command_t local = encode_command(_finish_eager_tx, lva_to_gva(p));
+  command_t remote = encode_command(_eager_rx, HPX_THERE(target));
+  int e = peer_pwc(tx->peer,                     /* peer structure */
+                   tx->tx_base + roff,           /* remote offset */
+                   pwc_network_offset(p),        /* local address */
+                   n,                            /* # bytes */
+                   local,                        /* local completion */
+                   HPX_NULL,                     /* remote completion */
+                   remote,                       /* remote command */
+                   SEGMENT_EAGER                 /* segment */);
 
   if (e == LIBHPX_OK) {
     tx->max += n;
+  }
+  else {
+    log_error("failed pwc to peer %d\n", target);
   }
   return e;
 }
@@ -237,22 +225,9 @@ hpx_parcel_t *eager_buffer_rx(eager_buffer_t *rx) {
   // Before we leave, check some basics.
   dbg_assert(hpx_gas_try_pin(p->target, NULL));
 
-#ifdef ENABLE_INSTRUMENTATION
-  if (hpx_inst_enabled) {
-    hpx_inst_event_network_pwc_recv_t event = {
-      .sequence = p->sequence,
-      .bytes = bytes,
-      .address = (uint64_t)from,
-      .source_rank = rx->peer->rank
-    };
-    hpx_inst_log_event(HPX_INST_CLASS_NETWORK_PWC,
-                       HPX_INST_EVENT_NETWORK_PWC_RECV, 0, sizeof(event),
-                       &event);
-  }
-#endif
-
-  // pwc_trace("recv %u bytes at %p from %d [%lu]\n",
-  //           bytes, from, rx->peer->rank, p->sequence);
+  static const int class = HPX_INST_CLASS_NETWORK_PWC;
+  static const int id = HPX_INST_EVENT_NETWORK_PWC_RECV;
+  inst_trace(class, id, p->sequence, bytes, (uint64_t)from, rx->peer->rank);
 
   // Update the progress in this buffer.
   rx->min += bytes;

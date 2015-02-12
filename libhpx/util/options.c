@@ -50,7 +50,9 @@ static const config_t _default_cfg = {
 #define LIBHPX_OPT(UNUSED1, id, init, UNUSED2) .id = init,
 #define LIBHPX_OPT_BITSET(UNUSED1, id, init, none, all) .id = ((init == none) ? 0 \
                                                                : ((init == all) ? UINT64_MAX : 1 << init)),
+#define LIBHPX_OPT_STRING(UNUSED, id, init) .id = init,
 # include "libhpx/options.def"
+#undef LIBHPX_OPT_STRING
 #undef LIBHPX_OPT_BITSET
 #undef LIBHPX_OPT
 };
@@ -211,12 +213,17 @@ static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
 
 #define LIBHPX_OPT_FLAG(UNUSED1, id, UNUSED2)     \
   if (opts->hpx_##id##_given) {                   \
-    cfg->id = opts->hpx_##id##_##flag;            \
+    cfg->id = opts->hpx_##id##_flag;              \
   }
 
 #define LIBHPX_OPT_SCALAR(UNUSED1, id, UNUSED2, UNUSED3)    \
   if (opts->hpx_##id##_given) {                             \
-    cfg->id = opts->hpx_##id##_##arg;                       \
+    cfg->id = opts->hpx_##id##_arg;                         \
+  }
+
+#define LIBHPX_OPT_STRING(UNUSED2, id, init)    \
+  if (opts->hpx_##id##_given) {                 \
+    cfg->id = strdup(opts->hpx_##id##_arg);     \
   }
 
 #define LIBHPX_OPT_BITSET(UNUSED1, id, init, none, all) \
@@ -235,6 +242,7 @@ static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
 # include "libhpx/options.def"
 #undef LIBHPX_OPT_INTSET
 #undef LIBHPX_OPT_BITSET
+#undef LIBHPX_OPT_STRING
 #undef LIBHPX_OPT_SCALAR
 #undef LIBHPX_OPT_FLAG
 
