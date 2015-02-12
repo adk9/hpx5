@@ -213,20 +213,17 @@ static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
 
 #define LIBHPX_OPT_FLAG(UNUSED1, id, UNUSED2)     \
   if (opts->hpx_##id##_given) {                   \
-    cfg->id = opts->hpx_##id##_##flag;            \
+    cfg->id = opts->hpx_##id##_flag;              \
   }
 
 #define LIBHPX_OPT_SCALAR(UNUSED1, id, UNUSED2, UNUSED3)    \
   if (opts->hpx_##id##_given) {                             \
-    cfg->id = opts->hpx_##id##_##arg;                       \
+    cfg->id = opts->hpx_##id##_arg;                         \
   }
 
 #define LIBHPX_OPT_STRING(UNUSED2, id, init)    \
   if (opts->hpx_##id##_given) {                 \
-    if (cfg->id) {                              \
-      free(cfg->id);                            \
-    }                                           \
-    cfg->id = strdup(opts->hpx_##id##_##arg);   \
+    cfg->id = strdup(opts->hpx_##id##_arg);     \
   }
 
 #define LIBHPX_OPT_BITSET(UNUSED1, id, init, none, all) \
