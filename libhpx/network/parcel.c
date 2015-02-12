@@ -54,6 +54,10 @@ static uintptr_t _inplace(const hpx_parcel_t *p) {
   return ((uintptr_t)p->ustack & _INPLACE_MASK);
 }
 
+static int _blessed(const hpx_parcel_t *p) {
+  return (!p->pid || p->credit);
+}
+
 static void _serialize(hpx_parcel_t *p) {
   if (!p->size)
     return;
@@ -251,13 +255,8 @@ static HPX_ACTION(_parcel_send_async, hpx_parcel_t **p) {
 }
 
 int parcel_launch(hpx_parcel_t *p) {
-  DEBUG_IF(!_inplace(p)) {
-    return dbg_error("parcel must be serialized before it can be sent\n");
-  }
-
-  DEBUG_IF(p->pid && !p->credit) {
-    return dbg_error("parcel must be blessed before it can be sent\n");
-  }
+  dbg_assert(_inplace(p));
+  dbg_assert(_blessed(p));
 
   // LOG
   if (p->c_action != HPX_ACTION_NULL) {
@@ -289,10 +288,7 @@ int parcel_launch(hpx_parcel_t *p) {
 
   // do a network send
   int e = network_send(here->network, p);
-  if (e) {
-    return dbg_error("failed to perform a network send\n");
-  }
-
+  dbg_check(e, "failed to perform a network send\n");
   return HPX_SUCCESS;
 }
 

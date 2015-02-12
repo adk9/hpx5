@@ -13,12 +13,14 @@
 
 /// Standard declarative option list, designed for multiple inclusion. Before
 /// including this file #define either the LIBHPX_OPT() macro, or one or more of
-/// the type specific macros to expand as you would like.
+/// the type specific macros to expand as you would like. Any type-specific
+/// macro that is undefined will be defined as LIBHPX_OPT(). If LIBHPX_OPT() is
+/// undefined it will be defined as an empty macro.
 
 /// LIBHPX_OPT(group, id, default, ctype)
 ///
 /// This generic macro can be used to create expansions for all of the macros in
-/// this file. It is mutually exclusive with the type-specific macros.
+/// this file.
 ///
 /// @param     group The option category.
 /// @param        id The option symbol.
@@ -38,63 +40,45 @@
 /// @param        id The option symbol.
 /// @param   default The default value.
 
-/// LIBHPX_OPT_BITSET(group, id, default)
+/// LIBHPX_OPT_BITSET(group, id, default, none, all)
 ///
 /// @param     group The option category.
 /// @param        id The option symbol.
 /// @param   default The default value.
+/// @param      none The value that means "none"
+/// @param       all The value that means "all"
 
-/// LIBHPX_OPT_INTSET(group, id, default, term)
+/// LIBHPX_OPT_INTSET(group, id, default, none, all)
 ///
 /// @param     group The option category.
 /// @param        id The option symbol.
 /// @param   default The default value.
-/// @param      term The termination value for the set.
+/// @param      none The value that means "none"
+/// @param       all The value that means "all"
 
-#ifdef LIBHPX_OPT
-# if defined(LIBHPX_OPT_FLAG)
-#  error LIBHPX_OPT_FLAG and LIBHPX_OPT should not be defined together
-# else
-#  define LIBHPX_OPT_FLAG(group, id, init) LIBHPX_OPT(group, id, init, int)
-#  define _LIBHPX_OPT_FLAG_UNDEF
-# endif
-# if defined(LIBHPX_OPT_SCALAR)
-#  error LIBHPX_OPT_SCALAR and LIBHPX_OPT should not be defined together
-# else
-#  define LIBHPX_OPT_SCALAR(group, id, init, ctype) LIBHPX_OPT(group, id, init, ctype)
-#  define _LIBHPX_OPT_SCALAR_UNDEF
-# endif
-# if defined(LIBHPX_OPT_BITSET)
-#  error LIBHPX_OPT_BITSET and LIBHPX_OPT should not be defined together
-# else
-#  define LIBHPX_OPT_BITSET(group, id, init) LIBHPX_OPT(group, id, init, uint64_t)
-#  define _LIBHPX_OPT_BITSET_UNDEF
-# endif
-# if defined(LIBHPX_OPT_INTSET)
-#  error LIBHPX_OPT_INTSET should not be defined with LIBHPX_OPT
-# else
-#  define LIBHPX_OPT_INTSET(group, id, init, all, none) LIBHPX_OPT(group, id, NULL, int*)
-#  define _LIBHPX_OPT_INTSET_UNDEF
-# endif
-#else
+#ifndef LIBHPX_OPT
 # define LIBHPX_OPT(UNUSED1, UNUSED2, UNUSED3, UNUSED4)
 # define _LIBHPX_OPT_UNDEF 1
-# ifndef LIBHPX_OPT_FLAG
-#  define LIBHPX_OPT_FLAG(UNUSED1, UNUSED2, UNUSED3)
-#  define _LIBHPX_OPT_FLAG_UNDEF
-# endif
-# ifndef LIBHPX_OPT_SCALAR
-#  define LIBHPX_OPT_SCALAR(UNUSED1, UNUSED2, UNUSED3, UNUSED4)
-#  define _LIBHPX_OPT_SCALAR_UNDEF
-# endif
-# ifndef LIBHPX_OPT_BITSET
-#  define LIBHPX_OPT_BITSET(UNUSED1, UNUSED2, UNUSED3)
-#  define _LIBHPX_OPT_BITSET_UNDEF
-# endif
-# ifndef LIBHPX_OPT_INTSET
-#  define LIBHPX_OPT_INTSET(UNUSED1, UNUSED2, UNUSED3, UNUSED4, UNUSED5)
-#  define _LIBHPX_OPT_INTSET_UNDEF
-# endif
+#endif
+
+#ifndef LIBHPX_OPT_FLAG
+# define LIBHPX_OPT_FLAG(group, id, init) LIBHPX_OPT(group, id, init, int)
+# define _LIBHPX_OPT_FLAG_UNDEF
+#endif
+
+#ifndef LIBHPX_OPT_SCALAR
+# define LIBHPX_OPT_SCALAR(group, id, init, ctype) LIBHPX_OPT(group, id, init, ctype)
+# define _LIBHPX_OPT_SCALAR_UNDEF
+#endif
+
+#ifndef LIBHPX_OPT_BITSET
+# define LIBHPX_OPT_BITSET(group, id, init, none, all) LIBHPX_OPT(group, id, init, uint64_t)
+# define _LIBHPX_OPT_BITSET_UNDEF
+#endif
+
+#ifndef LIBHPX_OPT_INTSET
+# define LIBHPX_OPT_INTSET(group, id, init, none, all) LIBHPX_OPT(group, id, NULL, int*)
+# define _LIBHPX_OPT_INTSET_UNDEF
 #endif
 
 /// Flag options
@@ -124,14 +108,14 @@ LIBHPX_OPT_SCALAR(pwc, parceleagerlimit, 1lu << 13, size_t)
 
 /// Set options that can be stored in a dense bit vector.
 /// @{
-LIBHPX_OPT_BITSET(hpx, loglevel, HPX_LOG_DEFAULT)
-LIBHPX_OPT_BITSET(hpx, traceclasses, 0)
+LIBHPX_OPT_BITSET(hpx, loglevel, HPX_LOG_DEFAULT, HPX_LOG_NONE, HPX_LOG_ALL)
+LIBHPX_OPT_BITSET(hpx, traceclasses, HPX_TRACE_NONE, HPX_TRACE_NONE, HPX_TRACE_ALL)
 /// @}
 
 /// Set options that need to be stored as a sparse integer set.
 /// @{
-LIBHPX_OPT_INTSET(hpx, logat, HPX_LOCALITY_ALL, HPX_LOCALITY_ALL, HPX_LOCALITY_NONE)
-LIBHPX_OPT_INTSET(hpx, waitat, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL, HPX_LOCALITY_NONE)
+LIBHPX_OPT_INTSET(hpx, logat, HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
+LIBHPX_OPT_INTSET(hpx, waitat, HPX_LOCALITY_NONE, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
 /// @}
 
 #ifdef _LIBHPX_OPT_INTSET_UNDEF

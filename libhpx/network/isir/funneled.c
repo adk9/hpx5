@@ -94,13 +94,13 @@ static int _funneled_pwc(network_t *network,
                          hpx_addr_t to, const void *from, size_t n,
                          hpx_addr_t local, hpx_addr_t remote, hpx_action_t op) {
   if (remote != HPX_NULL) {
-    dbg_error("Remote completion not yet supported\n");
+    log_error("Remote completion not yet supported\n");
     return LIBHPX_EUNIMPLEMENTED;
   }
   hpx_parcel_t *p = parcel_create(to, isir_emulate_pwc, from, n, to, op,
                                   hpx_thread_current_pid(), false);
   if (!p) {
-    dbg_error("could not allocate a parcel to emulate put-with-completion\n");
+    log_error("could not allocate a parcel to emulate put-with-completion\n");
     return LIBHPX_ENOMEM;
   }
 
@@ -130,7 +130,7 @@ static int _funneled_get(network_t *network,
 
   // make sure the to address is in the global address space
   if (!isir->gas->is_global(isir->gas, to)) {
-    return dbg_error("network_get() expects a global heap address\n");
+    return log_error("network_get() expects a global heap address\n");
   }
 
   // send the remote endpoint enough information to perform the operation
@@ -191,7 +191,7 @@ network_t *network_isir_funneled_new(struct gas *gas, int nrx) {
 
   _funneled_t *network = malloc(sizeof(*network));
   if (!network) {
-    dbg_error("could not allocate a funneled Isend/Irecv network\n");
+    log_error("could not allocate a funneled Isend/Irecv network\n");
     return NULL;
   }
 

@@ -57,9 +57,7 @@ static int _barrier(const boot_t *boot) {
 static int _allgather(const boot_t *boot, const void *cin, void *out, int n) {
   void *in = (void*)cin;
   int e = MPI_Allgather((void*)in, n, MPI_BYTE, out, n, MPI_BYTE, MPI_COMM_WORLD);
-  if (e != MPI_SUCCESS) {
-    return dbg_error("failed MPI_Allgather %d.\n", e);
-  }
+  dbg_assert_str(e == MPI_SUCCESS, "failed MPI_Allgather %d.\n", e);
   return HPX_SUCCESS;
 }
 
@@ -81,7 +79,7 @@ static boot_t _mpi_boot_class = {
 boot_t *boot_new_mpi(void) {
   int init;
   if (MPI_SUCCESS != MPI_Initialized(&init)) {
-    dbg_error("mpi initialization failed\n");
+    log_error("mpi initialization failed\n");
     return NULL;
   }
 
@@ -93,12 +91,12 @@ boot_t *boot_new_mpi(void) {
 
   int level;
   if (MPI_SUCCESS != MPI_Init_thread(NULL, NULL, LIBHPX_THREAD_LEVEL, &level)) {
-    dbg_error("mpi initialization failed\n");
+    log_error("mpi initialization failed\n");
     return NULL;
   }
 
   if (level != LIBHPX_THREAD_LEVEL) {
-    dbg_error("MPI thread level failed requested %d, received %d.\n",
+    log_error("MPI thread level failed requested %d, received %d.\n",
               LIBHPX_THREAD_LEVEL, level);
     return NULL;
   }

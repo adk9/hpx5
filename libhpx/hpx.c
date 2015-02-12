@@ -96,7 +96,7 @@ int hpx_init(int *argc, char ***argv) {
 
   here = malloc(sizeof(*here));
   if (!here) {
-    status = dbg_error("failed to allocate a locality.\n");
+    status = log_error("failed to allocate a locality.\n");
     goto unwind0;
   }
 
@@ -106,7 +106,7 @@ int hpx_init(int *argc, char ***argv) {
 
   here->config = config_new(argc, argv);
   if (!here->config) {
-    status = dbg_error("failed to create a configuration.\n");
+    status = log_error("failed to create a configuration.\n");
     goto unwind1;
   }
 
@@ -123,19 +123,19 @@ int hpx_init(int *argc, char ***argv) {
   // topology
   int e = hwloc_topology_init(&here->topology);
   if (e) {
-    status = dbg_error("failed to initialize a topology.\n");
+    status = log_error("failed to initialize a topology.\n");
     goto unwind1;
   }
   e = hwloc_topology_load(here->topology);
   if (e) {
-    status = dbg_error("failed to load the topology.\n");
+    status = log_error("failed to load the topology.\n");
     goto unwind1;
   }
 
   // bootstrap
   here->boot = boot_new(here->config->boot);
   if (!here->boot) {
-    status = dbg_error("failed to bootstrap.\n");
+    status = log_error("failed to bootstrap.\n");
     goto unwind1;
   }
   here->rank = boot_rank(here->boot);
@@ -159,7 +159,7 @@ int hpx_init(int *argc, char ***argv) {
                                   here->config->sendlimit,
                                   here->config->recvlimit);
   if (!here->transport) {
-    status = dbg_error("failed to create transport.\n");
+    status = log_error("failed to create transport.\n");
     goto unwind1;
   }
 
@@ -167,11 +167,11 @@ int hpx_init(int *argc, char ***argv) {
   here->gas = gas_new(here->config->heapsize, here->boot, here->transport,
                       here->config->gas);
   if (!here->gas) {
-    status = dbg_error("failed to create the global address space.\n");
+    status = log_error("failed to create the global address space.\n");
     goto unwind1;
   }
   if (here->gas->join()) {
-    status = dbg_error("failed to join the global address space.\n");
+    status = log_error("failed to join the global address space.\n");
     goto unwind1;
   }
   HPX_HERE = HPX_THERE(here->rank);
@@ -188,7 +188,7 @@ int hpx_init(int *argc, char ***argv) {
   here->network = network_new(here->config, here->boot, here->gas,
                               here->config->threads);
   if (!here->network) {
-    status = dbg_error("failed to create network.\n");
+    status = log_error("failed to create network.\n");
     goto unwind1;
   }
 
@@ -197,7 +197,7 @@ int hpx_init(int *argc, char ***argv) {
   // thread scheduler
   here->sched = scheduler_new(here->config);
   if (!here->sched) {
-    status = dbg_error("failed to create scheduler.\n");
+    status = log_error("failed to create scheduler.\n");
     goto unwind1;
   }
 
@@ -213,13 +213,13 @@ int hpx_init(int *argc, char ***argv) {
 int _hpx_run(hpx_action_t *act, int nargs, ...) {
   int status = HPX_SUCCESS;
   if (!here || !here->sched) {
-    status = dbg_error("hpx_init() must be called before hpx_run()\n");
+    status = log_error("hpx_init() must be called before hpx_run()\n");
     goto unwind0;
   }
 
   here->actions = action_table_finalize();
   if (!here->actions) {
-    status = dbg_error("failed to finalize the action table.\n");
+    status = log_error("failed to finalize the action table.\n");
     goto unwind0;
   }
 
@@ -229,7 +229,7 @@ int _hpx_run(hpx_action_t *act, int nargs, ...) {
   // }
 
   if (probe_start(here->network) != LIBHPX_OK) {
-    status = dbg_error("could not start network probe\n");
+    status = log_error("could not start network probe\n");
     goto unwind1;
   }
 
@@ -242,21 +242,21 @@ int _hpx_run(hpx_action_t *act, int nargs, ...) {
                                 nargs, &vargs);
     va_end(vargs);
     if (status != LIBHPX_OK) {
-      status = dbg_error("failed to spawn initial action\n");
+      log_error("failed to spawn initial action\n");
       goto unwind2;
     }
 
     // Fix for https://uisapp2.iu.edu/jira-prd/browse/HPX-143
     status = hpx_call(HPX_HERE, _hpx_143_fix, HPX_NULL, NULL, 0);
     if (status != LIBHPX_OK) {
-      dbg_error("failed to spawn the initial cyclic allocation");
+      log_error("failed to spawn the initial cyclic allocation");
       goto unwind2;
     }
   }
 
   // start the scheduler, this will return after scheduler_shutdown()
   if (scheduler_startup(here->sched) != LIBHPX_OK) {
-    status = dbg_error("scheduler shut down with error.\n");
+    log_error("scheduler shut down with error.\n");
     goto unwind2;
   }
 
@@ -291,9 +291,8 @@ int hpx_get_num_threads(void) {
 
 /// Called by the application to terminate the scheduler and network.
 void hpx_shutdown(int code) {
-  if (!here->ranks) {
-    dbg_error("hpx_shutdown can only be called when the system is running.\n");
-  }
+  dbg_assert_str(here->ranks,
+                 "hpx_shutdown can only be called when the system is running.\n");
 
   // make sure we flush our local network when we shutdown
   network_flush_on_shutdown(here->network);
