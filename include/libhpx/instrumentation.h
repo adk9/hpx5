@@ -12,6 +12,11 @@ int inst_init(struct config *cfg)
 void inst_fini(void)
   HPX_INTERNAL;
 
+/// Record an event to the log
+/// @param        class Class this event is part of (see hpx_inst_class_type_t)
+/// @param           id The event id (see hpx_inst_event_type_t)
+/// @param            n The number of user arguments to log, < 5.
+/// @param      va_args The user arguments.
 void inst_vtrace(int class, int id, int n, ...)
   HPX_INTERNAL;
 
@@ -30,7 +35,7 @@ typedef enum {
   HPX_INST_NUM_CLASSES
 } hpx_inst_class_type_t;
 
-static const char * const HPX_INST_CLASS_TYPE_TO_STRING[] = {
+static const char * const INST_CLASS_TO_STRING[] = {
   "CLASS_PARCEL",
   "CLASS_NETWORK_PWC",
 };
@@ -48,7 +53,7 @@ typedef enum {
   HPX_INST_NUM_EVENTS
 } hpx_inst_event_type_t;
 
-static const char * const HPX_INST_EVENT_TYPE_TO_STRING[] = {
+static const char * const INST_EVENT_TO_STRING[] = {
   "EVENT_PARCEL_CREATE",
   "EVENT_PARCEL_SEND",
   "EVENT_PARCEL_RECV",
@@ -58,7 +63,7 @@ static const char * const HPX_INST_EVENT_TYPE_TO_STRING[] = {
   "EVENT_NETWORK_PWC_RECV"
 };
 
-static const int HPX_INST_CLASS_EVENT_OFFSETS[] = {
+static const int INST_OFFSETS[] = {
   HPX_INST_EVENT_PARCEL_CREATE,
   HPX_INST_EVENT_NETWORK_PWC_SEND,
   HPX_INST_NUM_EVENTS

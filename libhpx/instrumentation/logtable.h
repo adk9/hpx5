@@ -28,6 +28,9 @@ typedef struct {
   volatile size_t   next;                       // the next element to write
 } logtable_t;
 
+/// Initialize a logtable.
+///
+/// If filename is NULL or size == 0 this will not generate a file.
 int logtable_init(logtable_t *lt, const char* filename, size_t size,
                   int class, int event, hpx_time_t start)
     HPX_INTERNAL HPX_NON_NULL(1);
