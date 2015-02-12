@@ -90,6 +90,10 @@ section "Tracing"
 option "hpx-trace" - "enable tracing"
 flag off
 
+option "hpx-tracedir" - "directory to output trace files"
+typestr="dir"
+string optional
+
 option "hpx-tracefilesize" - "set the size of each trace file"
 typestr="# of events"
 long optional

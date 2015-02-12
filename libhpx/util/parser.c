@@ -51,6 +51,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-waitonabort         call hpx_wait() inside of hpx_abort() for \n                                  debugging  (default=off)",
   "\nTracing:",
   "      --hpx-trace               enable tracing  (default=off)",
+  "      --hpx-tracedir=dir        directory to output trace files",
   "      --hpx-tracefilesize=# of events\n                                set the size of each trace file",
   "      --hpx-traceat=[localities]\n                                set the localities to trace at",
   "      --hpx-traceclasses=class  set the event classes to trace  (possible \n                                  values=\"parcel\", \"pwc\", \"all\")",
@@ -137,6 +138,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_mprotectstacks_given = 0 ;
   args_info->hpx_waitonabort_given = 0 ;
   args_info->hpx_trace_given = 0 ;
+  args_info->hpx_tracedir_given = 0 ;
   args_info->hpx_tracefilesize_given = 0 ;
   args_info->hpx_traceat_given = 0 ;
   args_info->hpx_traceclasses_given = 0 ;
@@ -175,6 +177,8 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_mprotectstacks_flag = 0;
   args_info->hpx_waitonabort_flag = 0;
   args_info->hpx_trace_flag = 0;
+  args_info->hpx_tracedir_arg = NULL;
+  args_info->hpx_tracedir_orig = NULL;
   args_info->hpx_tracefilesize_orig = NULL;
   args_info->hpx_traceat_arg = NULL;
   args_info->hpx_traceat_orig = NULL;
@@ -216,15 +220,16 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_mprotectstacks_help = hpx_options_t_help[19] ;
   args_info->hpx_waitonabort_help = hpx_options_t_help[20] ;
   args_info->hpx_trace_help = hpx_options_t_help[22] ;
-  args_info->hpx_tracefilesize_help = hpx_options_t_help[23] ;
-  args_info->hpx_traceat_help = hpx_options_t_help[24] ;
+  args_info->hpx_tracedir_help = hpx_options_t_help[23] ;
+  args_info->hpx_tracefilesize_help = hpx_options_t_help[24] ;
+  args_info->hpx_traceat_help = hpx_options_t_help[25] ;
   args_info->hpx_traceat_min = -1;
   args_info->hpx_traceat_max = -1;
-  args_info->hpx_traceclasses_help = hpx_options_t_help[25] ;
+  args_info->hpx_traceclasses_help = hpx_options_t_help[26] ;
   args_info->hpx_traceclasses_min = -1;
   args_info->hpx_traceclasses_max = -1;
-  args_info->hpx_parcelbuffersize_help = hpx_options_t_help[27] ;
-  args_info->hpx_parceleagerlimit_help = hpx_options_t_help[28] ;
+  args_info->hpx_parcelbuffersize_help = hpx_options_t_help[28] ;
+  args_info->hpx_parceleagerlimit_help = hpx_options_t_help[29] ;
   
 }
 
@@ -363,6 +368,8 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_recvlimit_orig));
   free_string_field (&(args_info->hpx_configfile_arg));
   free_string_field (&(args_info->hpx_configfile_orig));
+  free_string_field (&(args_info->hpx_tracedir_arg));
+  free_string_field (&(args_info->hpx_tracedir_orig));
   free_string_field (&(args_info->hpx_tracefilesize_orig));
   free_multiple_field (args_info->hpx_traceat_given, (void **)&(args_info->hpx_traceat_arg), &(args_info->hpx_traceat_orig));
   free_multiple_field (args_info->hpx_traceclasses_given, (void **)&(args_info->hpx_traceclasses_arg), &(args_info->hpx_traceclasses_orig));
@@ -484,6 +491,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-waitonabort", 0, 0 );
   if (args_info->hpx_trace_given)
     write_into_file(outfile, "hpx-trace", 0, 0 );
+  if (args_info->hpx_tracedir_given)
+    write_into_file(outfile, "hpx-tracedir", args_info->hpx_tracedir_orig, 0);
   if (args_info->hpx_tracefilesize_given)
     write_into_file(outfile, "hpx-tracefilesize", args_info->hpx_tracefilesize_orig, 0);
   write_multiple_into_file(outfile, args_info->hpx_traceat_given, "hpx-traceat", args_info->hpx_traceat_orig, 0);
@@ -1099,6 +1108,7 @@ hpx_option_parser_internal (int argc, char * const *argv, struct hpx_options_t *
         { "hpx-mprotectstacks",	0, NULL, 0 },
         { "hpx-waitonabort",	0, NULL, 0 },
         { "hpx-trace",	0, NULL, 0 },
+        { "hpx-tracedir",	1, NULL, 0 },
         { "hpx-tracefilesize",	1, NULL, 0 },
         { "hpx-traceat",	1, NULL, 0 },
         { "hpx-traceclasses",	1, NULL, 0 },
@@ -1374,6 +1384,20 @@ hpx_option_parser_internal (int argc, char * const *argv, struct hpx_options_t *
             if (update_arg((void *)&(args_info->hpx_trace_flag), 0, &(args_info->hpx_trace_given),
                 &(local_args_info.hpx_trace_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "hpx-trace", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* directory to output trace files.  */
+          else if (strcmp (long_options[option_index].name, "hpx-tracedir") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_tracedir_arg), 
+                 &(args_info->hpx_tracedir_orig), &(args_info->hpx_tracedir_given),
+                &(local_args_info.hpx_tracedir_given), optarg, 0, 0, ARG_STRING,
+                check_ambiguity, override, 0, 0,
+                "hpx-tracedir", '-',
                 additional_error))
               goto failure;
           

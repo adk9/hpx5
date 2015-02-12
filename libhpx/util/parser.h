@@ -101,6 +101,9 @@ struct hpx_options_t
   const char *hpx_waitonabort_help; /**< @brief call hpx_wait() inside of hpx_abort() for debugging help description.  */
   int hpx_trace_flag;	/**< @brief enable tracing (default=off).  */
   const char *hpx_trace_help; /**< @brief enable tracing help description.  */
+  char * hpx_tracedir_arg;	/**< @brief directory to output trace files.  */
+  char * hpx_tracedir_orig;	/**< @brief directory to output trace files original value given at command line.  */
+  const char *hpx_tracedir_help; /**< @brief directory to output trace files help description.  */
   long hpx_tracefilesize_arg;	/**< @brief set the size of each trace file.  */
   char * hpx_tracefilesize_orig;	/**< @brief set the size of each trace file original value given at command line.  */
   const char *hpx_tracefilesize_help; /**< @brief set the size of each trace file help description.  */
@@ -141,6 +144,7 @@ struct hpx_options_t
   unsigned int hpx_mprotectstacks_given ;	/**< @brief Whether hpx-mprotectstacks was given.  */
   unsigned int hpx_waitonabort_given ;	/**< @brief Whether hpx-waitonabort was given.  */
   unsigned int hpx_trace_given ;	/**< @brief Whether hpx-trace was given.  */
+  unsigned int hpx_tracedir_given ;	/**< @brief Whether hpx-tracedir was given.  */
   unsigned int hpx_tracefilesize_given ;	/**< @brief Whether hpx-tracefilesize was given.  */
   unsigned int hpx_traceat_given ;	/**< @brief Whether hpx-traceat was given.  */
   unsigned int hpx_traceclasses_given ;	/**< @brief Whether hpx-traceclasses was given.  */

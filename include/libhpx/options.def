@@ -40,6 +40,12 @@
 /// @param        id The option symbol.
 /// @param   default The default value.
 
+/// LIBHPX_OPT_STRING(group, id, default)
+///
+/// @param     group The option category.
+/// @param        id The option symbol.
+/// @param   default The default string.
+
 /// LIBHPX_OPT_BITSET(group, id, default, none, all)
 ///
 /// @param     group The option category.
@@ -69,6 +75,11 @@
 #ifndef LIBHPX_OPT_SCALAR
 # define LIBHPX_OPT_SCALAR(group, id, init, ctype) LIBHPX_OPT(group, id, init, ctype)
 # define _LIBHPX_OPT_SCALAR_UNDEF
+#endif
+
+#ifndef LIBHPX_OPT_STRING
+# define LIBHPX_OPT_STRING(group, id, init) LIBHPX_OPT(group, id, init, char*)
+# define _LIBHPX_OPT_STRING_UNDEF
 #endif
 
 #ifndef LIBHPX_OPT_BITSET
@@ -108,6 +119,11 @@ LIBHPX_OPT_SCALAR(pwc, parceleagerlimit, 1lu << 13, size_t)
 LIBHPX_OPT_SCALAR(hpx, tracefilesize, 40*1024*1024-1, size_t)
 /// @}
 
+/// String options
+/// @{
+LIBHPX_OPT_STRING(hpx, tracedir, "/tmp")
+/// @}
+
 /// Set options that can be stored in a dense bit vector.
 /// @{
 LIBHPX_OPT_BITSET(hpx, loglevel, HPX_LOG_DEFAULT, HPX_LOG_NONE, HPX_LOG_ALL)
@@ -129,6 +145,11 @@ LIBHPX_OPT_INTSET(dbg, traceat, HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALIT
 #ifdef _LIBHPX_OPT_BITSET_UNDEF
 # undef _LIBHPX_OPT_BITSET_UNDEF
 # undef LIBHPX_OPT_BITSET
+#endif
+
+#ifdef _LIBHPX_OPT_STRING_UNDEF
+# undef _LIBHPX_OPT_STRING_UNDEF
+# undef LIBHPX_OPT_STRING
 #endif
 
 #ifdef _LIBHPX_OPT_SCALAR_UNDEF
