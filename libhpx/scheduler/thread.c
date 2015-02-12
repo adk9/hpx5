@@ -27,6 +27,8 @@
 #include "libhpx/debug.h"
 #include "libhpx/instrumentation.h"
 #include "libhpx/locality.h"
+#include "libhpx/parcel.h"
+#include "libhpx/scheduler.h"
 #include "thread.h"
 
 static int _buffer_size = 0;
@@ -146,7 +148,8 @@ void thread_delete(ustack_t *thread) {
 int trace_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
   static const int class = INST_SCHED;
   static const int id = INST_SCHED_TRANSFER;
-  inst_trace(class, id);
+  hpx_parcel_t *from = scheduler_current_parcel();
+  inst_trace(class, id, (from) ? from->action : 0, p->action);
 #undef thread_transfer
   return thread_transfer(p, cont, env);
 }
