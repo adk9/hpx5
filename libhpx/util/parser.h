@@ -34,7 +34,7 @@ enum enum_hpx_boot { hpx_boot_arg_default = 0 , hpx_boot_arg_smp, hpx_boot_arg_m
 enum enum_hpx_transport { hpx_transport_arg_default = 0 , hpx_transport_arg_smp, hpx_transport_arg_mpi, hpx_transport_arg_portals, hpx_transport_arg_photon };
 enum enum_hpx_network { hpx_network_arg_default = 0 , hpx_network_arg_smp, hpx_network_arg_pwc, hpx_network_arg_isir };
 enum enum_hpx_loglevel { hpx_loglevel_arg_default = 0 , hpx_loglevel_arg_boot, hpx_loglevel_arg_sched, hpx_loglevel_arg_gas, hpx_loglevel_arg_lco, hpx_loglevel_arg_net, hpx_loglevel_arg_trans, hpx_loglevel_arg_parcel, hpx_loglevel_arg_all };
-enum enum_hpx_traceclasses { hpx_traceclasses_arg_default = 0 , hpx_traceclasses_arg_parcel, hpx_traceclasses_arg_pwc, hpx_traceclasses_arg_all };
+enum enum_hpx_traceclasses { hpx_traceclasses_arg_parcel = 0 , hpx_traceclasses_arg_pwc, hpx_traceclasses_arg_all };
 
 /** @brief Where the command line options are stored */
 struct hpx_options_t
@@ -74,21 +74,16 @@ struct hpx_options_t
   int hpx_waitat_min; /**< @brief wait for debugger at specific locality's minimum occurreces */
   int hpx_waitat_max; /**< @brief wait for debugger at specific locality's maximum occurreces */
   const char *hpx_waitat_help; /**< @brief wait for debugger at specific locality help description.  */
-  enum enum_hpx_loglevel *hpx_loglevel_arg;	/**< @brief set the logging level.  */
-  char ** hpx_loglevel_orig;	/**< @brief set the logging level original value given at command line.  */
-  int hpx_loglevel_min; /**< @brief set the logging level's minimum occurreces */
-  int hpx_loglevel_max; /**< @brief set the logging level's maximum occurreces */
-  const char *hpx_loglevel_help; /**< @brief set the logging level help description.  */
   int* hpx_logat_arg;	/**< @brief selectively output log information.  */
   char ** hpx_logat_orig;	/**< @brief selectively output log information original value given at command line.  */
   int hpx_logat_min; /**< @brief selectively output log information's minimum occurreces */
   int hpx_logat_max; /**< @brief selectively output log information's maximum occurreces */
   const char *hpx_logat_help; /**< @brief selectively output log information help description.  */
-  enum enum_hpx_traceclasses *hpx_traceclasses_arg;	/**< @brief set the event classes to trace.  */
-  char ** hpx_traceclasses_orig;	/**< @brief set the event classes to trace original value given at command line.  */
-  int hpx_traceclasses_min; /**< @brief set the event classes to trace's minimum occurreces */
-  int hpx_traceclasses_max; /**< @brief set the event classes to trace's maximum occurreces */
-  const char *hpx_traceclasses_help; /**< @brief set the event classes to trace help description.  */
+  enum enum_hpx_loglevel *hpx_loglevel_arg;	/**< @brief set the logging level.  */
+  char ** hpx_loglevel_orig;	/**< @brief set the logging level original value given at command line.  */
+  int hpx_loglevel_min; /**< @brief set the logging level's minimum occurreces */
+  int hpx_loglevel_max; /**< @brief set the logging level's maximum occurreces */
+  const char *hpx_loglevel_help; /**< @brief set the logging level help description.  */
   int hpx_statistics_flag;	/**< @brief print HPX runtime statistics (default=off).  */
   const char *hpx_statistics_help; /**< @brief print HPX runtime statistics help description.  */
   long hpx_sendlimit_arg;	/**< @brief HPX transport-specific send limit.  */
@@ -104,6 +99,21 @@ struct hpx_options_t
   const char *hpx_mprotectstacks_help; /**< @brief use mprotect() to bracket stacks to look for stack overflows help description.  */
   int hpx_waitonabort_flag;	/**< @brief call hpx_wait() inside of hpx_abort() for debugging (default=off).  */
   const char *hpx_waitonabort_help; /**< @brief call hpx_wait() inside of hpx_abort() for debugging help description.  */
+  int hpx_trace_flag;	/**< @brief enable tracing (default=off).  */
+  const char *hpx_trace_help; /**< @brief enable tracing help description.  */
+  long hpx_tracefilesize_arg;	/**< @brief set the size of each trace file.  */
+  char * hpx_tracefilesize_orig;	/**< @brief set the size of each trace file original value given at command line.  */
+  const char *hpx_tracefilesize_help; /**< @brief set the size of each trace file help description.  */
+  int* hpx_traceat_arg;	/**< @brief set the localities to trace at.  */
+  char ** hpx_traceat_orig;	/**< @brief set the localities to trace at original value given at command line.  */
+  int hpx_traceat_min; /**< @brief set the localities to trace at's minimum occurreces */
+  int hpx_traceat_max; /**< @brief set the localities to trace at's maximum occurreces */
+  const char *hpx_traceat_help; /**< @brief set the localities to trace at help description.  */
+  enum enum_hpx_traceclasses *hpx_traceclasses_arg;	/**< @brief set the event classes to trace.  */
+  char ** hpx_traceclasses_orig;	/**< @brief set the event classes to trace original value given at command line.  */
+  int hpx_traceclasses_min; /**< @brief set the event classes to trace's minimum occurreces */
+  int hpx_traceclasses_max; /**< @brief set the event classes to trace's maximum occurreces */
+  const char *hpx_traceclasses_help; /**< @brief set the event classes to trace help description.  */
   long hpx_parcelbuffersize_arg;	/**< @brief set the size of p2p recv buffers for parcel sends.  */
   char * hpx_parcelbuffersize_orig;	/**< @brief set the size of p2p recv buffers for parcel sends original value given at command line.  */
   const char *hpx_parcelbuffersize_help; /**< @brief set the size of p2p recv buffers for parcel sends help description.  */
@@ -122,15 +132,18 @@ struct hpx_options_t
   unsigned int hpx_transport_given ;	/**< @brief Whether hpx-transport was given.  */
   unsigned int hpx_network_given ;	/**< @brief Whether hpx-network was given.  */
   unsigned int hpx_waitat_given ;	/**< @brief Whether hpx-waitat was given.  */
-  unsigned int hpx_loglevel_given ;	/**< @brief Whether hpx-loglevel was given.  */
   unsigned int hpx_logat_given ;	/**< @brief Whether hpx-logat was given.  */
-  unsigned int hpx_traceclasses_given ;	/**< @brief Whether hpx-traceclasses was given.  */
+  unsigned int hpx_loglevel_given ;	/**< @brief Whether hpx-loglevel was given.  */
   unsigned int hpx_statistics_given ;	/**< @brief Whether hpx-statistics was given.  */
   unsigned int hpx_sendlimit_given ;	/**< @brief Whether hpx-sendlimit was given.  */
   unsigned int hpx_recvlimit_given ;	/**< @brief Whether hpx-recvlimit was given.  */
   unsigned int hpx_configfile_given ;	/**< @brief Whether hpx-configfile was given.  */
   unsigned int hpx_mprotectstacks_given ;	/**< @brief Whether hpx-mprotectstacks was given.  */
   unsigned int hpx_waitonabort_given ;	/**< @brief Whether hpx-waitonabort was given.  */
+  unsigned int hpx_trace_given ;	/**< @brief Whether hpx-trace was given.  */
+  unsigned int hpx_tracefilesize_given ;	/**< @brief Whether hpx-tracefilesize was given.  */
+  unsigned int hpx_traceat_given ;	/**< @brief Whether hpx-traceat was given.  */
+  unsigned int hpx_traceclasses_given ;	/**< @brief Whether hpx-traceclasses was given.  */
   unsigned int hpx_parcelbuffersize_given ;	/**< @brief Whether hpx-parcelbuffersize was given.  */
   unsigned int hpx_parceleagerlimit_given ;	/**< @brief Whether hpx-parceleagerlimit was given.  */
 

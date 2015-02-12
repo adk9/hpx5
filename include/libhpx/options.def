@@ -86,6 +86,7 @@
 LIBHPX_OPT_FLAG(hpx, statistics, 1)
 LIBHPX_OPT_FLAG(dbg, mprotectstacks, 0)
 LIBHPX_OPT_FLAG(dbg, waitonabort, 0)
+LIBHPX_OPT_FLAG(dbg, trace, 0)
 /// @}
 
 /// Scalar options
@@ -104,6 +105,7 @@ LIBHPX_OPT_SCALAR(hpx, sendlimit, 0, uint32_t)
 LIBHPX_OPT_SCALAR(hpx, recvlimit, 0, uint32_t)
 LIBHPX_OPT_SCALAR(pwc, parcelbuffersize, 1lu << 16, size_t)
 LIBHPX_OPT_SCALAR(pwc, parceleagerlimit, 1lu << 13, size_t)
+LIBHPX_OPT_SCALAR(hpx, tracefilesize, 40*1024*1024-1, size_t)
 /// @}
 
 /// Set options that can be stored in a dense bit vector.
@@ -116,6 +118,7 @@ LIBHPX_OPT_BITSET(hpx, traceclasses, HPX_TRACE_NONE, HPX_TRACE_NONE, HPX_TRACE_A
 /// @{
 LIBHPX_OPT_INTSET(hpx, logat, HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
 LIBHPX_OPT_INTSET(hpx, waitat, HPX_LOCALITY_NONE, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
+LIBHPX_OPT_INTSET(dbg, traceat, HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
 /// @}
 
 #ifdef _LIBHPX_OPT_INTSET_UNDEF
