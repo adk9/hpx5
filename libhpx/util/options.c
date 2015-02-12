@@ -210,14 +210,14 @@ static int *_merge_vector(int n, int args[n], int init, int term) {
 /// @param          cfg The configuration object we are writing to.
 /// @param         opts The gengetopt options we are reading from.
 static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
-  
+
 #define LIBHPX_OPT_FLAG(group, id, UNUSED2)		\
   if (opts->hpx_##group##id##_given) {			\
     cfg->group##id = opts->hpx_##group##id##_flag;	\
   }
   
 #define LIBHPX_OPT_SCALAR(group, id, UNUSED2, UNUSED3)		  \
-  if (opts->hpx_##group##id##_given) {			  \
+  if (opts->hpx_##group##id##_given) {				  \
     cfg->group##id = opts->hpx_##group##id##_arg;		  \
   }
   
@@ -245,6 +245,7 @@ static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
 # include "libhpx/options.def"
 #undef LIBHPX_OPT_INTSET
 #undef LIBHPX_OPT_BITSET
+#undef LIBHPX_OPT_STRING
 #undef LIBHPX_OPT_SCALAR
 #undef LIBHPX_OPT_STRING
 #undef LIBHPX_OPT_FLAG

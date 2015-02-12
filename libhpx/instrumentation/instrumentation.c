@@ -14,24 +14,13 @@
 # include "config.h"
 #endif
 
-#include <inttypes.h> // PRIuXX
-#include <stdio.h>
-#include <stdlib.h> // atoi and getenv
-#include <string.h>
-#include <time.h> // time()
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/mman.h>
 #include <errno.h>
-
-//#include <dlfcn.h> // dlsym
+#include <stdarg.h>
+#include <sys/stat.h>
 
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
+#include "libhpx/config.h"
 #include "libhpx/debug.h"
 #include "libhpx/instrumentation.h"
 #include "libhpx/libhpx.h"
@@ -39,171 +28,108 @@
 #include "libhpx/parcel.h"
 #include "logtable.h"
 
-static logtable_t logtables[HPX_INST_NUM_EVENTS];
-static size_t inst_max_log_size = 40*1024*1024-1;
-bool hpx_inst_enabled = false;
-bool hpx_inst_parcel_enabled = false;
-static hpx_time_t time_start;
-static bool inst_active = false; // not whether we WANT to log, but whether
-                                 // we are ABLE to (i.e. after initialization
-                                 // and before shutdown)
+/// We're keeping one log per event per locality. Here are their headers.
+static logtable_t _logs[HPX_INST_NUM_EVENTS] = {LOGTABLE_INIT};
 
-static bool get_env_var(char *env_var_name) {
-  char* env_var_text;
-  env_var_text = getenv(env_var_name);
-  if (env_var_text != NULL && atoi(env_var_text))
-    return true;
-  else
-    return false;
-}
-
-static void
-time_diff(uint64_t *out_s, uint64_t *out_ns, hpx_time_t *start, hpx_time_t *end) {
-  {
-    if ((end->tv_nsec-start->tv_nsec)<0) {
-      *out_s = end->tv_sec-start->tv_sec-1;
-      *out_ns = (1e9+end->tv_nsec)-start->tv_nsec;
-    } else {
-      *out_s = end->tv_sec-start->tv_sec;
-      *out_ns = end->tv_nsec-start->tv_nsec;
-    }
-  }
-}
-
-static int
-_log_create(hpx_inst_class_type_t class, hpx_inst_event_type_t event,
-               size_t max_size) {
+static void _log_create(int class, int id, size_t size, hpx_time_t now) {
   char filename[256];
   snprintf(filename, 256, "event.%d.%d.%d.%s.%s.log",
-           class, event, hpx_get_my_rank(),
-           HPX_INST_CLASS_TYPE_TO_STRING[class],
-           HPX_INST_EVENT_TYPE_TO_STRING[event]);
+           class, id, hpx_get_my_rank(),
+           INST_CLASS_TO_STRING[class],
+           INST_EVENT_TO_STRING[id]);
 
-  int success = logtable_init(&logtables[event], filename, max_size);
-  if (success != HPX_ERROR) {
-    return success;
+  int e = logtable_init(&_logs[id], filename, size, class, id, now);
+  if (e) {
+    log_error("failed to initialize log file %s\n", filename);
   }
-  return HPX_SUCCESS;
 }
 
-int hpx_inst_init() {
-  int success = -1;
-
-  hpx_inst_enabled = get_env_var("HPX_INST_ENABLE");
-  if (!hpx_inst_enabled) {
-    return HPX_SUCCESS;
-  }
-
-  char* max_log_size_text;
-  max_log_size_text = getenv("HPX_INST_MAX_LOG_SIZE");
-  if (max_log_size_text != NULL && atoll(max_log_size_text) > 0) {
-    inst_max_log_size = (size_t)atoll(max_log_size_text);
-  }
-
+static int _chdir(const char *dir) {
   // change to user-specified root directory
-  const char* inst_rootdir = getenv("HPX_INST_ROOTDIR");
-  if (0 != chdir(inst_rootdir)) {
-    dbg_error("Specified root directory for instrumentation not found.");
+  if (0 != chdir(dir)) {
+    log_error("Specified root directory for instrumentation not found.");
+    return HPX_SUCCESS;
   }
 
   // create directory name
   time_t t = time(NULL);
   struct tm lt;
   localtime_r(&t, &lt);
-  char inst_dir_name[256];
-  snprintf(inst_dir_name, 256, "hpx.%.2d%.2d.%.2d%.2d%.4d",
+  char dirname[256];
+  snprintf(dirname, 256, "hpx.%.2d%.2d.%.2d%.2d%.4d",
            lt.tm_hour, lt.tm_min, lt.tm_mday, lt.tm_mon + 1,
            lt.tm_year + 1900);
 
   // try and create the directory---we don't care if it's already there
-  success = mkdir(inst_dir_name, 0777);
-  if (success == 0 || EEXIST == success) {
-    success = chdir(inst_dir_name);
-    if (success != 0) {
-      dbg_error("could not change directories\n");
+  int e = mkdir(dirname, 0777);
+  if (e) {
+    if (errno != EEXIST) {
+      return log_error("Could not create %s for instrumentation\n", dirname);
     }
   }
-  else {
-    dbg_error("Could not create %s for instrumentation.\n", inst_dir_name);
+  e = chdir(dirname);
+  if (e) {
+    return log_error("could not change directories to %s\n", dirname);
+  }
+
+  log("initialized %s/%s for tracing\n", dir, dirname);
+  return LIBHPX_OK;
+}
+
+int inst_init(config_t *cfg) {
+#ifndef ENABLE_INSTRUMENTATION
+  return LIBHPX_OK;
+#endif
+
+  if (!config_traceat_isset(cfg, hpx_get_my_rank())) {
+    return LIBHPX_OK;
+  }
+
+  if (_chdir(cfg->tracedir)) {
+    return LIBHPX_OK;
   }
 
   // create log files
-  hpx_inst_parcel_enabled = get_env_var("HPX_INST_PARCELS");
+  hpx_time_t start = hpx_time_now();
+  for (int cl = 0, e = HPX_INST_NUM_CLASSES; cl < e; ++cl) {
+    size_t size = 0;
 
-  for (int class = 0, e = HPX_INST_NUM_CLASSES; class < e; ++class) {
-    if (!config_traceclasses_isset(here->config, class)) {
-      continue;
+    // Do we want a tracefile for events in this class?
+    if (config_traceclasses_isset(here->config, cl)) {
+      size = cfg->tracefilesize;
     }
-    int event = HPX_INST_CLASS_EVENT_OFFSET[class];
-    int e = HPX_INST_CLASS_EVENT_OFFSET[class + 1];
-    for (; event < e; ++event) {
-      int e = _log_create(class, event, inst_max_log_size);
-      if (LIBHPX_OK != e) {
-        dbg_error("failed to create a log for %s\n",
-                  HPX_INST_EVENT_TYPE_TO_STRING[event]);
-      }
+
+    for (int id = INST_OFFSETS[cl], e = INST_OFFSETS[cl + 1]; id < e; ++id) {
+      _log_create(cl, id, size, start);
     }
   }
 
-  time_start = hpx_time_now();
-
-  inst_active = true;
-  return HPX_SUCCESS;
+  return LIBHPX_OK;
 }
 
-void hpx_inst_fini() {
-  inst_active = false;
-  for (int i = 0; i < HPX_INST_NUM_EVENTS; i++) {
-    if (logtables[i].inited == true) {
-      logtable_fini(&logtables[i]);
-    }
+void inst_fini(void) {
+  for (int i = 0, e = HPX_INST_NUM_EVENTS; i < e; ++i) {
+    logtable_fini(&_logs[i]);
   }
 }
 
-/// Record an event to the log
-/// @param class          Class this event is part of (see
-///                       hpx_inst_class_type_t)
-/// @param event_type     The type of this event (see hpx_inst_event_type_t)
-/// @param priority       The priority of this event (may be filtered out if
-///                       below some threshhold)
-/// @param user_data_size The size of the data to record
-/// @param user_data      The data to record (is copied)
-void hpx_inst_log_event(hpx_inst_class_type_t class,
-                        hpx_inst_event_type_t event_type,
-                        int priority,
-                        int user_data_size,
-                        void* user_data) {
-  if (!config_traceclasses_isset(here->config, class)) {
+void inst_vtrace(int UNUNSED, int n, int id, ...) {
+  dbg_assert_str(n < 5, "can only trace up to 4 user values\n");
+  logtable_t *log = &_logs[id];
+  if (!log->records) {
     return;
   }
 
-  if (!inst_active) {
-    return;
+  uint64_t args[4];
+  va_list vargs;
+  va_start(vargs, id);
+  for (int i = 0; i < n; ++i) {
+    args[i] = va_arg(vargs, uint64_t);
   }
-
-  logtable_t *lt = &logtables[event_type];
-
-  hpx_inst_event_t* event = logtable_next_and_increment(lt);
-  if (event == NULL) {
-    return;
+  va_end(vargs);
+  for (int i = n; i < 4; ++i) {
+    args[i] = 0;
   }
-
-  event->class = class;
-  event->event_type = event_type;
-  event->rank = hpx_get_my_rank();
-  event->worker = hpx_get_my_thread_id();
-  //  event->thread = hpx_thread_get_tls_id();
-  hpx_time_t time_now = hpx_time_now();
-  time_diff(&event->s, &event->ns, &time_start, &time_now);
-
-  //  event->priority = priority;
-
-  // generate random id? (can't just increment since we're
-  // distributed) (also can't use time because small change two events
-  // could line up on different ranks)
-  //  event->id = id;
-
-  memcpy(event->data, user_data, user_data_size);
-
+  logtable_append(log, args[0], args[1], args[2], args[3]);
 }
 
