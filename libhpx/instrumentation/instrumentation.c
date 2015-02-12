@@ -113,24 +113,16 @@ void inst_fini(void) {
   }
 }
 
-/// Record an event to the log
-/// @param class          Class this event is part of (see
-///                       hpx_inst_class_type_t)
-/// @param event_type     The type of this event (see hpx_inst_event_type_t)
-/// @param priority       The priority of this event (may be filtered out if
-///                       below some threshhold)
-/// @param user_data_size The size of the data to record
-/// @param user_data      The data to record (is copied)
-void inst_vtrace(int class, int id, int n, ...) {
+void inst_vtrace(int UNUNSED, int n, int id, ...) {
   dbg_assert_str(n < 5, "can only trace up to 4 user values\n");
-  logtable_t *log = &_logs[class];
+  logtable_t *log = &_logs[id];
   if (!log->records) {
     return;
   }
 
   uint64_t args[4];
   va_list vargs;
-  va_start(vargs, n);
+  va_start(vargs, id);
   for (int i = 0; i < n; ++i) {
     args[i] = va_arg(vargs, uint64_t);
   }
