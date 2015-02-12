@@ -89,20 +89,20 @@ flag off
 
 section "Tracing"
 
-option "hpx-traceclasses" - "set the event classes to trace"
+option "hpx-trace-classes" - "set the event classes to trace"
 typestr="class"
 values="parcel","pwc","sched","all"
 enum optional multiple
 
-option "hpx-tracedir" - "directory to output trace files"
+option "hpx-trace-dir" - "directory to output trace files"
 typestr="dir"
 string optional
 
-option "hpx-tracefilesize" - "set the size of each trace file"
+option "hpx-trace-filesize" - "set the size of each trace file"
 typestr="# of events"
 long optional
 
-option "hpx-traceat" - "set the localities to trace at"
+option "hpx-trace-at" - "set the localities to trace at"
 typestr="[localities]"
 int optional multiple
 

@@ -163,7 +163,7 @@ void config_delete(config_t *cfg)
 
 #define LIBHPX_OPT_BITSET(group, id, UNUSED2, UNUSED3, UNUSED4)		\
   static inline uint64_t config_##group##id##_isset(const config_t *cfg, int bit) { \
-    return (cfg->id & (1 << bit));                                      \
+    return (cfg->group##id & (1 << bit));				\
   }
 # include "options.def"
 #undef LIBHPX_OPT_BITSET

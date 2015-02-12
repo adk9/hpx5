@@ -81,11 +81,11 @@ int inst_init(config_t *cfg) {
   return LIBHPX_OK;
 #endif
 
-  if (!config_traceat_isset(cfg, hpx_get_my_rank())) {
+  if (!config_trace_at_isset(cfg, hpx_get_my_rank())) {
     return LIBHPX_OK;
   }
 
-  if (_chdir(cfg->tracedir)) {
+  if (_chdir(cfg->trace_dir)) {
     return LIBHPX_OK;
   }
 
@@ -95,8 +95,8 @@ int inst_init(config_t *cfg) {
     size_t size = 0;
 
     // Do we want a tracefile for events in this class?
-    if (config_traceclasses_isset(here->config, cl)) {
-      size = cfg->tracefilesize;
+    if (config_trace_classes_isset(here->config, cl)) {
+      size = cfg->trace_filesize;
     }
 
     for (int id = INST_OFFSETS[cl], e = INST_OFFSETS[cl + 1]; id < e; ++id) {
