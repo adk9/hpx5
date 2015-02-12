@@ -228,7 +228,7 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
   p->c_target = HPX_NULL;
   p->credit   = 0;
 #ifdef ENABLE_INSTRUMENTATION
-  if (config_traceclasses_isset(here->config, HPX_INST_CLASS_PARCEL)) {
+  if (config_trace_classes_isset(here->config, HPX_INST_CLASS_PARCEL)) {
     parcel_count = sync_fadd(&parcel_count, 1, SYNC_RELAXED);
     p->id = ((uint64_t)(0xfffff && hpx_get_my_rank()) << 40) | parcel_count;
   }
