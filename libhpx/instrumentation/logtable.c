@@ -67,16 +67,18 @@ static int _create_file(const char *filename) {
 }
 
 static void *_create_mmap(size_t size, int file) {
-  int prot = PROT_WRITE;
-  int flags = MAP_SHARED | MAP_NORESERVE;
+  static const int prot = PROT_WRITE;
+  static const int flags = MAP_SHARED | MAP_NORESERVE;
   void *base = mmap(NULL, size * sizeof(record_t), prot, flags, file, 0);
   if (base == MAP_FAILED) {
     log_error("could not mmap log file\n");
     return NULL;
   }
+
   if ((uintptr_t)base % HPX_CACHELINE_SIZE) {
     log("log records are not cacheline aligned\n");
   }
+
   return base;
 }
 
@@ -89,6 +91,10 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
   sync_store(&log->next, 1, SYNC_RELEASE);
   log->size = size;
   log->records = NULL;
+
+  if (filename == NULL || size == 0) {
+    return LIBHPX_OK;
+  }
 
   log->fd = _create_file(filename);
   if (log->fd == -1) {
