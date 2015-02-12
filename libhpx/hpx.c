@@ -156,8 +156,7 @@ int hpx_init(int *argc, char ***argv) {
 
   // byte transport
   here->transport = transport_new(here->config->transport,
-                                  here->config->sendlimit,
-                                  here->config->recvlimit);
+				  here->config);
   if (!here->transport) {
     status = log_error("failed to create transport.\n");
     goto unwind1;
@@ -305,8 +304,8 @@ void hpx_shutdown(int code) {
 /// called from any lightweight HPX thread, or the network thread.
 void hpx_abort(void) {
   HPX_INST_FINI();
-
-  if (here && here->config && here->config->waitonabort) {
+  
+  if (here && here->config && here->config->dbg_waitonabort) {
     dbg_wait();
   }
   if (here && here->boot) {

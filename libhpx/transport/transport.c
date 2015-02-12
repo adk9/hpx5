@@ -19,29 +19,29 @@
 #include "libhpx/debug.h"
 #include "libhpx/transport.h"
 
-static transport_t *_default(uint32_t send_limit, uint32_t recv_limit) {
+static transport_t *_default(config_t *cfg) {
 #ifdef HAVE_PHOTON
-  return transport_new_photon(send_limit, recv_limit);
+  return transport_new_photon(cfg);
 #endif
 
 #ifdef HAVE_PORTALS
-  return transport_new_portals(send_limit, recv_limit);
+  return transport_new_portals(cfg);
 #endif
 
 #ifdef HAVE_MPI
-  return transport_new_mpi(send_limit, recv_limit);
+  return transport_new_mpi(cfg);
 #endif
 
   return transport_new_smp();
 }
 
-transport_t *transport_new(hpx_transport_t type, uint32_t slim, uint32_t rlim) {
+transport_t *transport_new(hpx_transport_t type, config_t *cfg) {
   transport_t *transport = NULL;
 
   switch (type) {
    case (HPX_TRANSPORT_PHOTON):
 #ifdef HAVE_PHOTON
-    transport = transport_new_photon(slim, rlim);
+    transport = transport_new_photon(cfg);
 #else
     dbg_error("Photon transport not supported in current configuration.\n");
 #endif
@@ -49,7 +49,7 @@ transport_t *transport_new(hpx_transport_t type, uint32_t slim, uint32_t rlim) {
 
    case (HPX_TRANSPORT_MPI):
 #ifdef HAVE_MPI
-    transport = transport_new_mpi(slim, rlim);
+    transport = transport_new_mpi(cfg);
 #else
     dbg_error("MPI transport not supported in current configuration.\n");
 #endif
@@ -57,7 +57,7 @@ transport_t *transport_new(hpx_transport_t type, uint32_t slim, uint32_t rlim) {
 
    case (HPX_TRANSPORT_PORTALS):
 #ifdef HAVE_PORTALS
-    transport = transport_new_portals(slim, rlim);
+    transport = transport_new_portals(cfg);
 #else
     dbg_error("Portals transport not supported in current configuration.\n");
 #endif
@@ -69,12 +69,12 @@ transport_t *transport_new(hpx_transport_t type, uint32_t slim, uint32_t rlim) {
 
    case (HPX_TRANSPORT_DEFAULT):
    default:
-    transport = _default(slim, rlim);
+    transport = _default(cfg);
     break;
   };
 
   if (!transport) {
-    transport = _default(slim, rlim);
+    transport = _default(cfg);
   }
 
   if (!transport) {

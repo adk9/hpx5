@@ -84,19 +84,64 @@ option "hpx-configfile" - "HPX runtime configuration file"
 typestr="file"
 string optional
 
-option "hpx-mprotectstacks" - "use mprotect() to bracket stacks to look for stack overflows"
+section "HPX Debug Options"
+
+option "hpx-dbg-mprotectstacks" - "use mprotect() to bracket stacks to look for stack overflows"
 flag off
 
-option "hpx-waitonabort" - "call hpx_wait() inside of hpx_abort() for debugging"
+option "hpx-dbg-waitonabort" - "call hpx_wait() inside of hpx_abort() for debugging"
 flag off
 
 
 section "PWC Network Options"
 
-option "hpx-parcelbuffersize" - "set the size of p2p recv buffers for parcel sends"
+option "hpx-pwc-parcelbuffersize" - "set the size of p2p recv buffers for parcel sends"
 typestr="bytes"
 long optional
 
-option "hpx-parceleagerlimit" - "set the largest eager parcel size (header inclusive)" 
+option "hpx-pwc-parceleagerlimit" - "set the largest eager parcel size (header inclusive)" 
 typestr="bytes"
 long optional
+
+
+section "Photon Transport Options"
+
+option "hpx-photon-backend" - "set the underlying network API to use"
+typestr="type"
+values="default","verbs","ugni"
+enum optional
+
+option "hpx-photon-ibdev" - "set a particular IB device"
+typestr="device"
+string optional
+
+option "hpx-photon-ethdev" - "set a particular ETH device (for CMA mode only)"
+typestr="device"
+string optional
+
+option "hpx-photon-ibport" - "set a particular IB port"
+typestr="integer"
+int optional
+
+option "hpx-photon-usecma" - "enable CMA connection mode"
+flag off
+
+option "hpx-photon-ledgersize" - "set number of ledger entries"
+typestr="integer"
+int optional
+
+option "hpx-photon-eagerbufsize" - "set size of eager buffers"
+typestr="bytes"
+int optional
+
+option "hpx-photon-smallpwcsize" - "set PWC small msg limit"
+typestr="bytes"
+int optional
+
+option "hpx-photon-maxrd" - "set max number of request descriptors"
+typestr="integer"
+int optional
+
+option "hpx-photon-defaultrd" - "set default number of allocated descriptors"
+typestr="integer"
+int optional

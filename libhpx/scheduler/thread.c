@@ -38,7 +38,7 @@ void thread_set_stack_size(int stack_bytes) {
   _buffer_size = _thread_size;
 #ifdef ENABLE_DEBUG
   assert(here && here->config);
-  if (here->config->mprotectstacks)
+  if (here->config->dbg_mprotectstacks)
     _buffer_size = _buffer_size + 2 * HPX_PAGE_SIZE;
 #endif
 }
@@ -70,7 +70,7 @@ static ustack_t *_protect(void *base) {
   ustack_t *stack = base;
 #ifdef ENABLE_DEBUG
   assert(here && here->config);
-  if (!here->config->mprotectstacks) {
+  if (!here->config->dbg_mprotectstacks) {
     return stack;
   }
   _mprot(base, PROT_NONE);
@@ -88,7 +88,7 @@ static void *_unprotect(ustack_t *stack) {
   void *base = stack;
 #ifdef ENABLE_DEBUG
   assert(here && here->config);
-  if (!here->config->mprotectstacks) {
+  if (!here->config->dbg_mprotectstacks) {
     return base;
   }
   base = (char*)stack - HPX_PAGE_SIZE;
@@ -112,7 +112,7 @@ static void _deregister(ustack_t *thread) {
 static size_t _alignment(void) {
 #ifdef ENABLE_DEBUG
   assert(here && here->config);
-  if (here->config->mprotectstacks) {
+  if (here->config->dbg_mprotectstacks) {
     return HPX_PAGE_SIZE;
   }
   else
