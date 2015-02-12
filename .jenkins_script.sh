@@ -32,7 +32,7 @@ case "$HPXIBDEV" in
 	TESTCMD="mpirun -np 2 --mca mtl ^psm --mca btl_openib_if_include mlx4_0"
 	;;
     none)
-        TESTCMD=""
+	TESTCMD=""
         ;;
     *)
 	TESTCMD=""
@@ -41,12 +41,12 @@ esac
 
 case "$HPXMODE" in
     photon)
-	CFGFLAGS=" --with-mpi=ompi --enable-photon $TESTCMD"
+	CFGFLAGS=" --with-mpi=ompi --enable-photon --with-tests-cmd=\"$TESTCMD\""
 	add_mpi
         add_photon
 	;;
     mpi)
-	CFGFLAGS=" --with-mpi=ompi $TESTCMD"
+	CFGFLAGS=" --with-mpi=ompi --with-tests-cmd=\"$TESTCMD\""
 	add_mpi	
 	;;
     *)
@@ -73,7 +73,10 @@ if [ -d "./install" ]; then
 fi
 mkdir install
 
+echo "Configuring HPX."
 ../configure --prefix=$DIR/build/install/ $CFGFLAGS --enable-testsuite $HPXDEBUG
+
+echo "Building HPX."
 make
 make install
 
