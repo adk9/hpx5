@@ -35,10 +35,7 @@
 
 #define PHOTON_DEFAULT_TAG 13
 
-static char* photon_default_eth_dev = "roce0";
-static char* photon_default_ib_dev = "";
-static char* photon_default_backend = "verbs";
-static int   photon_default_srlimit = 32;
+static int photon_default_srlimit = 32;
 
 /// the Photon transport
 typedef struct {
@@ -405,7 +402,7 @@ static uint32_t _photon_get_recv_limit(transport_t *t) {
 
 
 
-transport_t *transport_new_photon(uint32_t send_limit, uint32_t recv_limit) {
+transport_t *transport_new_photon(config_t *cfg) {
   photon_t *photon = malloc(sizeof(*photon));
   photon->class.type           = HPX_TRANSPORT_PHOTON;
   photon->class.id             = _id;
@@ -428,65 +425,39 @@ transport_t *transport_new_photon(uint32_t send_limit, uint32_t recv_limit) {
   photon->class.test       = _test;
   photon->class.testsome   = NULL;
   photon->class.progress   = _progress;
-
-  photon->class.send_limit = (send_limit == 0) ? photon_default_srlimit : send_limit;
-  photon->class.recv_limit = (recv_limit == 0) ? photon_default_srlimit : recv_limit;
+  
+  photon->class.send_limit = (cfg->sendlimit == 0) ?
+    photon_default_srlimit : cfg->sendlimit;
+  photon->class.recv_limit = (cfg->recvlimit == 0) ?
+    photon_default_srlimit : cfg->recvlimit;
+  
   photon->class.rkey_table = NULL;
 
-  // runtime configuration options
-  char* eth_dev;
-  char* ib_dev;
-  char* backend;
-  // int ib_port;
-  int use_cma;
-  int ledger_entries = 512;  // default val (-1) is 64
-  int val = 0;
-
-  // TODO: make eth_dev and ib_dev runtime configurable!
-  eth_dev = getenv("HPX_USE_ETH_DEV");
-  ib_dev = getenv("HPX_USE_IB_DEV");
-  backend = getenv("HPX_USE_BACKEND");
-
-  if (eth_dev == NULL)
-    eth_dev = photon_default_eth_dev;
-  if (ib_dev == NULL)
-    ib_dev = photon_default_ib_dev;
-  if (backend == NULL)
-    backend = photon_default_backend;
-  if(getenv("HPX_USE_CMA") == NULL)
-    use_cma = 0;
-  else
-    use_cma = atoi(getenv("HPX_USE_CMA"));
-  if(getenv("HPX_LEDGER_ENTRIES") != NULL) {
-    ledger_entries = atoi(getenv("HPX_LEDGER_ENTRIES"));
-    if (here->rank == 0)
-      printf("Setting ledger entries limit for photon to %d\n", ledger_entries);
-  }
-
-  struct photon_config_t *cfg = &photon->cfg;
-  cfg->meta_exch       = PHOTON_EXCH_EXTERNAL;
-  cfg->nproc           = here->ranks;
-  cfg->address         = here->rank;
-  cfg->comm            = NULL;
-  cfg->forwarder.use_forwarder   = 0;
-  cfg->ibv.use_cma         = use_cma;
-  cfg->ibv.use_ud          = 0;      // don't enable this unless we're doing HW GAS
-  cfg->ibv.ud_gid_prefix   = "ff0e::ffff:0000:0000";
-  cfg->ibv.eth_dev         = eth_dev;
-  cfg->ibv.ib_dev          = ib_dev;
-  cfg->cap.eager_buf_size  = -1;     // default 256k
-  cfg->cap.small_msg_size  = -1;     // default 4096
-  cfg->cap.small_pwc_size  =  0; //1024;  // 0 disabled
-  cfg->cap.ledger_entries  = ledger_entries;
-  cfg->cap.max_rd          = -1;     // default 1M
-  cfg->cap.default_rd      = -1;     // default 1024
-  cfg->exch.allgather      = (typeof(cfg->exch.allgather))here->boot->allgather;
-  cfg->exch.barrier        = (typeof(cfg->exch.barrier))here->boot->barrier;
-  cfg->backend             = backend;
-
-  val = photon_initialized();
+  struct photon_config_t *pcfg = &photon->cfg;
+  pcfg->meta_exch               = PHOTON_EXCH_EXTERNAL;
+  pcfg->nproc                   = here->ranks;
+  pcfg->address                 = here->rank;
+  pcfg->comm                    = NULL;
+  pcfg->ibv.use_cma             = cfg->photon_usecma;
+  pcfg->ibv.eth_dev             = cfg->photon_ethdev;
+  pcfg->ibv.ib_dev              = cfg->photon_ibdev;
+  pcfg->cap.eager_buf_size      = cfg->photon_eagerbufsize;
+  pcfg->cap.small_pwc_size      = cfg->photon_smallpwcsize;
+  pcfg->cap.ledger_entries      = cfg->photon_ledgersize;
+  pcfg->cap.max_rd              = cfg->photon_maxrd;
+  pcfg->cap.default_rd          = cfg->photon_defaultrd;
+  // static config not relevant for current HPX usage
+  pcfg->forwarder.use_forwarder =  0;
+  pcfg->cap.small_msg_size      = -1;  // default 4096 - not used for PWC
+  pcfg->ibv.use_ud              =  0;  // don't enable this unless we're doing HW GAS
+  pcfg->ibv.ud_gid_prefix       = "ff0e::ffff:0000:0000";
+  pcfg->exch.allgather      = (typeof(pcfg->exch.allgather))here->boot->allgather;
+  pcfg->exch.barrier        = (typeof(pcfg->exch.barrier))here->boot->barrier;
+  pcfg->backend             = (char*)HPX_PHOTON_BACKEND_TO_STRING[cfg->photon_backend];
+  
+  int val = photon_initialized();
   if (!val) {
-    if (photon_init(cfg) != PHOTON_OK) {
+    if (photon_init(pcfg) != PHOTON_OK) {
       dbg_error("photon: failed to initialize transport.\n");
     }
   }
@@ -494,6 +465,6 @@ transport_t *transport_new_photon(uint32_t send_limit, uint32_t recv_limit) {
   photon->progress     = network_progress_new(&photon->class);
   if (!photon->progress)
     dbg_error("photon: failed to start the progress loop.\n");
-
+  
   return &photon->class;
 }

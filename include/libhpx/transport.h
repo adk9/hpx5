@@ -109,11 +109,11 @@ typedef struct transport {
 } transport_t;
 
 
-HPX_INTERNAL transport_t *transport_new_photon(uint32_t send_limit, uint32_t recv_limit);
-HPX_INTERNAL transport_t *transport_new_mpi(uint32_t send_limit, uint32_t recv_limit);
-HPX_INTERNAL transport_t *transport_new_portals(uint32_t send_limit, uint32_t recv_limit);
+HPX_INTERNAL transport_t *transport_new_photon(config_t *cfg);
+HPX_INTERNAL transport_t *transport_new_mpi(config_t *cfg);
+HPX_INTERNAL transport_t *transport_new_portals(config_t *cfg);
 HPX_INTERNAL transport_t *transport_new_smp(void);
-HPX_INTERNAL transport_t *transport_new(hpx_transport_t transport, uint32_t send_limit, uint32_t recv_limit);
+HPX_INTERNAL transport_t *transport_new(hpx_transport_t transport, config_t *cfg);
 
 
 

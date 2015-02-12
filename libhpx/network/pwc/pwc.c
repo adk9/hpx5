@@ -255,7 +255,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   pwc->gas = gas;
   pwc->rank = boot_rank(boot);
   pwc->ranks = ranks;
-  pwc->parcel_eager_limit = 1u << ceil_log2_32(cfg->parceleagerlimit);
+  pwc->parcel_eager_limit = 1u << ceil_log2_32(cfg->pwc_parceleagerlimit);
   // NB: 16 is sizeof(_get_parcel_args_t) in peer.c
   const int limit = sizeof(hpx_parcel_t) - pwc_prefix_size() + 16;
   if (pwc->parcel_eager_limit < limit) {
@@ -263,7 +263,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
     goto unwind;
   }
 
-  pwc->parcel_buffer_size = 1u << ceil_log2_32(cfg->parcelbuffersize);
+  pwc->parcel_buffer_size = 1u << ceil_log2_32(cfg->pwc_parcelbuffersize);
   log("initialized a %u-byte buffer size\n", pwc->parcel_buffer_size);
 
   // Allocate the network's eager segment.

@@ -40,6 +40,12 @@
 /// @param        id The option symbol.
 /// @param   default The default value.
 
+/// LIBHPX_OPT_STRING(group, id, default)
+///
+/// @param     group The option category.
+/// @param        id The option symbol.
+/// @param   default The default string.
+
 /// LIBHPX_OPT_BITSET(group, id, default, none, all)
 ///
 /// @param     group The option category.
@@ -71,6 +77,11 @@
 # define _LIBHPX_OPT_SCALAR_UNDEF
 #endif
 
+#ifndef LIBHPX_OPT_STRING
+# define LIBHPX_OPT_STRING(group, id, init) LIBHPX_OPT(group, id, init, char*)
+# define _LIBHPX_OPT_STRING_UNDEF
+#endif
+
 #ifndef LIBHPX_OPT_BITSET
 # define LIBHPX_OPT_BITSET(group, id, init, none, all) LIBHPX_OPT(group, id, init, uint64_t)
 # define _LIBHPX_OPT_BITSET_UNDEF
@@ -83,40 +94,56 @@
 
 /// Flag options
 /// @{
-LIBHPX_OPT_FLAG(hpx, statistics, 1)
-LIBHPX_OPT_FLAG(dbg, mprotectstacks, 0)
-LIBHPX_OPT_FLAG(dbg, waitonabort, 0)
+LIBHPX_OPT_FLAG(, statistics, 1)
+LIBHPX_OPT_FLAG(dbg_, mprotectstacks, 0)
+LIBHPX_OPT_FLAG(dbg_, waitonabort, 0)
 /// @}
 
 /// Scalar options
 /// @{
-LIBHPX_OPT_SCALAR(hpx, cores, 0, int)
-LIBHPX_OPT_SCALAR(hpx, threads, 0, int)
-LIBHPX_OPT_SCALAR(hpx, backoffmax, 1024, unsigned)
-LIBHPX_OPT_SCALAR(hpx, stacksize, 32768, unsigned)
-LIBHPX_OPT_SCALAR(hpx, heapsize, 1lu << 30, size_t)
-LIBHPX_OPT_SCALAR(hpx, wfthreshold, UINT32_MAX, uint32_t)
-LIBHPX_OPT_SCALAR(hpx, gas, HPX_GAS_PGAS, hpx_gas_t)
-LIBHPX_OPT_SCALAR(hpx, boot, HPX_BOOT_DEFAULT, hpx_boot_t)
-LIBHPX_OPT_SCALAR(hpx, transport, HPX_TRANSPORT_DEFAULT, hpx_transport_t)
-LIBHPX_OPT_SCALAR(hpx, network, LIBHPX_NETWORK_DEFAULT, libhpx_network_t)
-LIBHPX_OPT_SCALAR(hpx, sendlimit, 0, uint32_t)
-LIBHPX_OPT_SCALAR(hpx, recvlimit, 0, uint32_t)
-LIBHPX_OPT_SCALAR(pwc, parcelbuffersize, 1lu << 16, size_t)
-LIBHPX_OPT_SCALAR(pwc, parceleagerlimit, 1lu << 13, size_t)
+LIBHPX_OPT_SCALAR(, cores, 0, int)
+LIBHPX_OPT_SCALAR(, threads, 0, int)
+LIBHPX_OPT_SCALAR(, backoffmax, 1024, unsigned)
+LIBHPX_OPT_SCALAR(, stacksize, 32768, unsigned)
+LIBHPX_OPT_SCALAR(, heapsize, 1lu << 30, size_t)
+LIBHPX_OPT_SCALAR(, wfthreshold, UINT32_MAX, uint32_t)
+LIBHPX_OPT_SCALAR(, gas, HPX_GAS_PGAS, hpx_gas_t)
+LIBHPX_OPT_SCALAR(, boot, HPX_BOOT_DEFAULT, hpx_boot_t)
+LIBHPX_OPT_SCALAR(, transport, HPX_TRANSPORT_DEFAULT, hpx_transport_t)
+LIBHPX_OPT_SCALAR(, network, LIBHPX_NETWORK_DEFAULT, libhpx_network_t)
+LIBHPX_OPT_SCALAR(, sendlimit, 0, uint32_t)
+LIBHPX_OPT_SCALAR(, recvlimit, 0, uint32_t)
+LIBHPX_OPT_SCALAR(pwc_, parcelbuffersize, 1lu << 16, size_t)
+LIBHPX_OPT_SCALAR(pwc_, parceleagerlimit, 1lu << 13, size_t)
 /// @}
 
 /// Set options that can be stored in a dense bit vector.
 /// @{
-LIBHPX_OPT_BITSET(hpx, loglevel, HPX_LOG_DEFAULT, HPX_LOG_NONE, HPX_LOG_ALL)
-LIBHPX_OPT_BITSET(hpx, traceclasses, HPX_TRACE_NONE, HPX_TRACE_NONE, HPX_TRACE_ALL)
+LIBHPX_OPT_BITSET(, loglevel, HPX_LOG_DEFAULT, HPX_LOG_NONE, HPX_LOG_ALL)
+LIBHPX_OPT_BITSET(, traceclasses, HPX_TRACE_NONE, HPX_TRACE_NONE, HPX_TRACE_ALL)
 /// @}
 
 /// Set options that need to be stored as a sparse integer set.
 /// @{
-LIBHPX_OPT_INTSET(hpx, logat, HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
-LIBHPX_OPT_INTSET(hpx, waitat, HPX_LOCALITY_NONE, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
+LIBHPX_OPT_INTSET(, logat, HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
+LIBHPX_OPT_INTSET(, waitat, HPX_LOCALITY_NONE, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
 /// @}
+
+#ifdef HAVE_PHOTON
+/// Photon options
+/// @{
+LIBHPX_OPT_SCALAR(photon_, backend, HPX_PHOTON_BACKEND_DEFAULT, hpx_photon_backend_t)
+LIBHPX_OPT_SCALAR(photon_, ibport, 1, int)
+LIBHPX_OPT_SCALAR(photon_, ledgersize, 512, int)
+LIBHPX_OPT_SCALAR(photon_, eagerbufsize, -1, int)
+LIBHPX_OPT_SCALAR(photon_, smallpwcsize, 0, int)
+LIBHPX_OPT_SCALAR(photon_, maxrd, -1, int)
+LIBHPX_OPT_SCALAR(photon_, defaultrd, -1, int)
+LIBHPX_OPT_FLAG(photon_, usecma, 0)
+LIBHPX_OPT_STRING(photon_, ethdev, "roce0")
+LIBHPX_OPT_STRING(photon_, ibdev, "qib0")
+/// @}
+#endif
 
 #ifdef _LIBHPX_OPT_INTSET_UNDEF
 # undef _LIBHPX_OPT_INTSET_UNDEF
@@ -126,6 +153,11 @@ LIBHPX_OPT_INTSET(hpx, waitat, HPX_LOCALITY_NONE, HPX_LOCALITY_NONE, HPX_LOCALIT
 #ifdef _LIBHPX_OPT_BITSET_UNDEF
 # undef _LIBHPX_OPT_BITSET_UNDEF
 # undef LIBHPX_OPT_BITSET
+#endif
+
+#ifdef _LIBHPX_OPT_STRING_UNDEF
+# undef _LIBHPX_OPT_STRING_UNDEF
+# undef LIBHPX_OPT_STRING
 #endif
 
 #ifdef _LIBHPX_OPT_SCALAR_UNDEF

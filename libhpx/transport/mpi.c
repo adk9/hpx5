@@ -177,7 +177,7 @@ static uint32_t _mpi_get_recv_limit(transport_t *t) {
   return t->recv_limit;
 }
 
-transport_t *transport_new_mpi(uint32_t send_limit, uint32_t recv_limit) {
+transport_t *transport_new_mpi(config_t *cfg) {
   int init = 0;
   MPI_Initialized(&init);
   if (!init) {
@@ -221,8 +221,8 @@ transport_t *transport_new_mpi(uint32_t send_limit, uint32_t recv_limit) {
   mpi->class.testsome       = NULL;
   mpi->class.progress       = _mpi_progress;
 
-  mpi->class.send_limit     = (send_limit == 0) ? UINT16_MAX : send_limit;
-  mpi->class.recv_limit     = (recv_limit == 0) ? UINT16_MAX : recv_limit;
+  mpi->class.send_limit     = (cfg->sendlimit == 0)?UINT16_MAX:cfg->sendlimit;
+  mpi->class.recv_limit     = (cfg->recvlimit == 0)?UINT16_MAX:cfg->recvlimit;
   mpi->class.rkey_table     = NULL;
 
   mpi->progress             = network_progress_new(&mpi->class);
