@@ -333,8 +333,8 @@ void config_delete(config_t *cfg) {
     return;
   }
 
-  if (cfg->logat && cfg->logat != (int*)HPX_LOCALITY_ALL) {
-    free(cfg->logat);
+  if (cfg->log_at) {
+    free(cfg->log_at);
   }
 
   if (cfg->dbg_waitat) {
