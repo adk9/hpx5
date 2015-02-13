@@ -68,7 +68,7 @@ void _hpx_struct_type_create(hpx_type_t *out, int n, ...) {
   va_list vargs;
   va_start(vargs, n);
   for (int i = 0; i < n; ++i) {
-    type->elements[i] = va_arg(&vargs, ffi_type*);
+    type->elements[i] = va_arg(vargs, ffi_type*);
   }
   va_end(vargs);
 
