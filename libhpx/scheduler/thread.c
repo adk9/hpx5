@@ -113,15 +113,13 @@ static void _deregister(ustack_t *thread) {
 }
 
 static size_t _alignment(void) {
-#ifdef ENABLE_DEBUG
-  assert(here && here->config);
-  if (here->config->dbg_mprotectstacks) {
+  dbg_assert(here && here->config);
+  DEBUG_IF(here->config->dbg_mprotectstacks) {
     return HPX_PAGE_SIZE;
   }
-  else
-#endif
+
 #if defined(__ARMEL__)
-    return 8;
+  return 8;
 #else
   return 16;
 #endif
@@ -143,13 +141,4 @@ void thread_delete(ustack_t *thread) {
   _deregister(thread);
   void *base = _unprotect(thread);
   free(base);
-}
-
-int trace_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
-  static const int class = INST_SCHED;
-  static const int id = INST_SCHED_TRANSFER;
-  hpx_parcel_t *from = scheduler_current_parcel();
-  inst_trace(class, id, (from) ? from->action : 0, p->action);
-#undef thread_transfer
-  return thread_transfer(p, cont, env);
 }
