@@ -14,6 +14,7 @@
 #define HPX_TYPES_H
 
 #include <ffi.h>
+#include "hpx/builtins.h"
 
 /// @file include/hpx/types.h
 
@@ -75,7 +76,13 @@ typedef ffi_type* hpx_type_t;
 /// Create an HPX array datatype.
 void hpx_array_type_create(hpx_type_t *out, hpx_type_t basetype, int n);
 
+/// Create a struct datatype.
+void hpx_struct_type_create(hpx_type_t *out, int n, ...);
+#define hpx_struct_type_create(out, ...) \
+  hpx_struct_type_create(out, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
+
+
 /// Release an HPX datatype.
-void hpx_array_type_destroy(hpx_type_t type);
+void hpx_type_destroy(hpx_type_t type);
 
 #endif

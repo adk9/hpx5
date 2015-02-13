@@ -52,8 +52,33 @@ void hpx_array_type_create(hpx_type_t *out, hpx_type_t basetype, int n) {
   *out = type;
 }
 
+void _hpx_struct_type_create(hpx_type_t *out, int n, ...) {
+  dbg_assert(out);
+  dbg_assert(n);
+
+  // Allocate a type co-located with a buffer for the array types.
+  ffi_type *type = malloc(sizeof(ffi_type) + (n + 1) * sizeof(ffi_type*));
+  dbg_assert_str(type, "error allocating an HPX struct datatype.\n");
+
+  type->size = 0;
+  type->alignment = 0;
+  type->type = FFI_TYPE_STRUCT;
+  type->elements = (void*)((char*)type + sizeof(ffi_type));
+
+  va_list vargs;
+  va_start(vargs, n);
+  for (int i = 0; i < n; ++i) {
+    type->elements[i] = va_arg(&vargs, ffi_type*);
+  }
+  va_end(vargs);
+
+  type->elements[n] = NULL;
+  *out = type;
+}
+
+
 /// Unregister an HPX datatype.
-void hpx_array_type_destroy(hpx_type_t type) {
+void hpx_type_destroy(hpx_type_t type) {
   if (type) {
     free(type);
   }

@@ -60,6 +60,6 @@ int main(int argc, char *argv[]) {
   assert(type);
   HPX_REGISTER_TYPED_ACTION(_action, &_act, type);
   int e = hpx_run(&test_datatype, NULL, 0);
-  hpx_array_type_destroy(type);
+  hpx_type_destroy(type);
   return e;
 }
