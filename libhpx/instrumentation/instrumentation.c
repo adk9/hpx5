@@ -80,6 +80,9 @@ int inst_init(config_t *cfg) {
 #ifndef ENABLE_INSTRUMENTATION
   return LIBHPX_OK;
 #endif
+  if (!config_trace_classes_isset(cfg, LIBHPX_OPT_BITSET_ALL)) {
+    return LIBHPX_OK;
+  }
 
   if (!config_trace_at_isset(cfg, hpx_get_my_rank())) {
     return LIBHPX_OK;
@@ -92,15 +95,10 @@ int inst_init(config_t *cfg) {
   // create log files
   hpx_time_t start = hpx_time_now();
   for (int cl = 0, e = HPX_INST_NUM_CLASSES; cl < e; ++cl) {
-    size_t size = 0;
-
-    // Do we want a tracefile for events in this class?
-    if (config_trace_classes_isset(here->config, cl)) {
-      size = cfg->trace_filesize;
-    }
-
     for (int id = INST_OFFSETS[cl], e = INST_OFFSETS[cl + 1]; id < e; ++id) {
-      _log_create(cl, id, size, start);
+      if (config_trace_classes_isset(here->config, cl)) {
+        _log_create(cl, id, cfg->trace_filesize, start);
+      }
     }
   }
 
