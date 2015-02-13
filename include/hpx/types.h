@@ -72,10 +72,10 @@ typedef ffi_type* hpx_type_t;
 #define HPX_ADDR               HPX_UINT64
 /// @}
 
-/// Register an HPX array datatype.
-int hpx_register_array_type(hpx_type_t *arrtype, hpx_type_t basetype, int nelems);
+/// Create an HPX array datatype.
+void hpx_array_type_create(hpx_type_t *out, hpx_type_t basetype, int n);
 
-/// Unregister an HPX datatype.
-void hpx_unregister_type(hpx_type_t datatype);
+/// Release an HPX datatype.
+void hpx_array_type_destroy(hpx_type_t type);
 
 #endif

@@ -15,27 +15,39 @@
 #include "tests.h"
 
 static hpx_action_t _act;
-static hpx_type_t _arr;
 
 struct num {
   int array[10];
-} n;
+};
+
+#define lengthof(array) sizeof(array) / sizeof(array[0])
 
 static int _action(struct num n) {
-  for (int i = 0; i < (sizeof(n.array)/sizeof(n.array[0])); ++i) {
+  for (int i = 0, e = lengthof(n.array); i < e; ++i) {
     printf("n[%d] = %d\n", i, n.array[i]);
   }
   return HPX_SUCCESS;
 }
 
 static HPX_ACTION(test_datatype, void *UNUSED) {
-  struct num n = {.array = {1, 1, 2, 3, 5, 8, 13, 21, 34, 55}};
+  struct num n = {
+    .array = {
+      1,
+      1,
+      2,
+      3,
+      5,
+      8,
+      13,
+      21,
+      34,
+      55 }
+  };
   printf("Test hpx_array_datatype\n");
   hpx_call_sync(HPX_HERE, _act, NULL, 0, &n);
-  hpx_unregister_type(_arr);
   hpx_shutdown(HPX_SUCCESS);
   return HPX_SUCCESS;
-} 
+}
 
 int main(int argc, char *argv[]) {
   if (hpx_init(&argc, &argv)) {
@@ -43,7 +55,11 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  hpx_register_array_type(&_arr, HPX_INT, 10);
-  HPX_REGISTER_TYPED_ACTION(_action, &_act, _arr);
-  return hpx_run(&test_datatype, NULL, 0);
+  hpx_type_t type;
+  hpx_array_type_create(&type, HPX_INT, 10);
+  assert(type);
+  HPX_REGISTER_TYPED_ACTION(_action, &_act, type);
+  int e = hpx_run(&test_datatype, NULL, 0);
+  hpx_array_type_destroy(type);
+  return e;
 }
