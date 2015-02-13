@@ -92,12 +92,13 @@ static int _funneled_send(network_t *network, hpx_parcel_t *p) {
 
 static int _funneled_pwc(network_t *network,
                          hpx_addr_t to, const void *from, size_t n,
-                         hpx_addr_t local, hpx_addr_t remote, hpx_action_t op) {
+                         hpx_addr_t local, hpx_addr_t remote, 
+                         hpx_action_t op, hpx_addr_t op_to) {
   if (remote != HPX_NULL) {
     log_error("Remote completion not yet supported\n");
     return LIBHPX_EUNIMPLEMENTED;
   }
-  hpx_parcel_t *p = parcel_create(to, isir_emulate_pwc, from, n, to, op,
+  hpx_parcel_t *p = parcel_create(to, isir_emulate_pwc, from, n, op_to, op,
                                   hpx_thread_current_pid(), false);
   if (!p) {
     log_error("could not allocate a parcel to emulate put-with-completion\n");
@@ -111,7 +112,7 @@ static int _funneled_pwc(network_t *network,
 static int _funneled_put(network_t *network,
                          hpx_addr_t to, const void *from, size_t n,
                          hpx_addr_t local, hpx_addr_t remote) {
-  return _funneled_pwc(network, to, from, n, local, remote, HPX_ACTION_NULL);
+  return _funneled_pwc(network, to, from, n, local, remote, HPX_ACTION_NULL, HPX_NULL);
 }
 
 /// Transform the get() operation into a parcel emulation.

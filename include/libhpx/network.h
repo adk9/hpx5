@@ -43,7 +43,7 @@ typedef struct network {
     HPX_NON_NULL(1, 2);
 
   int (*pwc)(struct network *, hpx_addr_t to, const void *from, size_t n,
-             hpx_addr_t local, hpx_addr_t remote, hpx_action_t op)
+             hpx_addr_t local, hpx_addr_t remote, hpx_action_t op, hpx_addr_t op_to)
     HPX_NON_NULL(1);
 
   int (*put)(struct network *, hpx_addr_t to, const void *from, size_t n,
@@ -147,13 +147,14 @@ static inline int network_send(network_t *network, hpx_parcel_t *p) {
 /// @param        local An LCO to signal local completion.
 /// @param       remote An LCO to signal remote completion.
 /// @param           op The remote completion event.
+/// @param        op_to The remote completion target.
 ///
 /// @returns            LIBHPX_OK
 static inline int network_pwc(network_t *network,
                               hpx_addr_t to, void *from, size_t n,
                               hpx_addr_t local, hpx_addr_t remote,
-                              hpx_action_t op) {
-  return network->pwc(network, to, from, n, local, remote, op);
+                              hpx_action_t op, hpx_addr_t op_to) {
+  return network->pwc(network, to, from, n, local, remote, op, op_to);
 }
 
 
