@@ -39,7 +39,7 @@ static int _start_get_rx_min(send_buffer_t *sends) {
   // compute the offset into the peer segment
   peer_t *p = sends->tx->peer;
   uint64_t *min = &sends->tx->min;
-  command_t cmd = encode_command(_finish_get_rx_min, p->rank);
+  command_t cmd = encode_command(_finish_get_rx_min, HPX_THERE(p->rank));
   int status = peer_get(p, min, offset, sizeof(*min), cmd, SEGMENT_PEERS);
   if (status != LIBHPX_OK) {
     dbg_error("could not initiate get with transport\n");
