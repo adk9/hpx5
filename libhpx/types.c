@@ -35,10 +35,11 @@
 /// the allocated type.
 void hpx_array_type_create(hpx_type_t *out, hpx_type_t basetype, int n) {
   dbg_assert(out);
+
+  // Allocate a type with an in-place buffer just of of the end for the array
+  // types.
   ffi_type *type = malloc(sizeof(ffi_type) + (n+1) * sizeof(ffi_type));
-  if (!type) {
-    dbg_error("error allocating an HPX array datatype.\n");
-  }
+  dbg_assert_str(type, "error allocating an HPX array datatype.\n");
 
   type->size = 0;
   type->alignment = 0;
