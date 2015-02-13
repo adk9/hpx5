@@ -48,12 +48,7 @@ static char *_config_file = NULL;
 /// The default configuration.
 static const config_t _default_cfg = {
 #define LIBHPX_OPT(group, id, init, UNUSED2) .group##id = init,
-#define LIBHPX_OPT_BITSET(group, id, init, none, all) .group##id = ((init == none) ? 0 \
-              : ((init == all) ? UINT64_MAX : 1 << init)),
-#define LIBHPX_OPT_STRING(group, id, init) .group##id = init,
 # include "libhpx/options.def"
-#undef LIBHPX_OPT_STRING
-#undef LIBHPX_OPT_BITSET
 #undef LIBHPX_OPT
 };
 
@@ -175,9 +170,8 @@ static void _process_cmdline(hpx_options_t *opts, int *argc, char ***argv) {
 static uint64_t _merge_bitvector(int n, uint32_t args[n], uint64_t all) {
   uint64_t bits = 0;
   for (int i = 0; i < n; ++i) {
-    dbg_assert_str(args[i] < 64, "bitvector arg %u out of bounds\n", args[i]);
     if (args[i] == all) {
-      return UINT64_MAX;
+      return LIBHPX_OPT_BITSET_ALL;
     }
     bits |= 1 << args[i];
   }
@@ -211,33 +205,33 @@ static int *_merge_vector(int n, int args[n], int init, int term) {
 /// @param         opts The gengetopt options we are reading from.
 static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
 
-#define LIBHPX_OPT_FLAG(group, id, UNUSED2)     \
-  if (opts->hpx_##group##id##_given) {          \
+#define LIBHPX_OPT_FLAG(group, id, UNUSED2)         \
+  if (opts->hpx_##group##id##_given) {              \
     cfg->group##id = opts->hpx_##group##id##_flag;  \
   }
 
-#define LIBHPX_OPT_SCALAR(group, id, UNUSED2, UNUSED3)        \
-  if (opts->hpx_##group##id##_given) {                \
-    cfg->group##id = opts->hpx_##group##id##_arg;         \
-  }
-
-#define LIBHPX_OPT_STRING(group, id, init)              \
+#define LIBHPX_OPT_SCALAR(group, id, UNUSED2, UNUSED3)  \
   if (opts->hpx_##group##id##_given) {                  \
-    cfg->group##id = strdup(opts->hpx_##group##id##_arg);       \
+    cfg->group##id = opts->hpx_##group##id##_arg;       \
   }
 
-#define LIBHPX_OPT_BITSET(group, id, init, none, all)             \
-  if (opts->hpx_##group##id##_given) {                    \
-    cfg->group##id = _merge_bitvector(opts->hpx_##group##id##_given,  \
+#define LIBHPX_OPT_STRING(group, id, init)                  \
+  if (opts->hpx_##group##id##_given) {                      \
+    cfg->group##id = strdup(opts->hpx_##group##id##_arg);   \
+  }
+
+#define LIBHPX_OPT_BITSET(group, id, init)                              \
+  if (opts->hpx_##group##id##_given) {                                  \
+    cfg->group##id = _merge_bitvector(opts->hpx_##group##id##_given,    \
                                       (uint32_t*)opts->hpx_##group##id##_arg, \
-                      hpx_##group##id##_arg_all);     \
+                                      hpx_##group##id##_arg_all);       \
   }
 
-#define LIBHPX_OPT_INTSET(group, id, init, none, all)             \
-  if (opts->hpx_##group##id##_given) {                    \
-    cfg->group##id = _merge_vector(opts->hpx_##group##id##_given,     \
-                   opts->hpx_##group##id##_arg,       \
-                   init, none);               \
+#define LIBHPX_OPT_INTSET(group, id, init, none, all)               \
+  if (opts->hpx_##group##id##_given) {                              \
+    cfg->group##id = _merge_vector(opts->hpx_##group##id##_given,   \
+                                   opts->hpx_##group##id##_arg,     \
+                                   init, none);                     \
   }
 # include "libhpx/options.def"
 #undef LIBHPX_OPT_INTSET

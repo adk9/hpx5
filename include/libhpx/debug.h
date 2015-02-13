@@ -16,8 +16,6 @@
 #include "hpx/hpx.h"
 #include "libhpx/config.h"
 
-HPX_INTERNAL extern uint64_t log_level;
-
 #ifdef ENABLE_DEBUG
 # define DEBUG 1
 # define DEBUG_IF(S) if (S)
@@ -63,9 +61,11 @@ void log_internal(unsigned line, const char *filename, const char *fmt, ...)
   HPX_INTERNAL HPX_PRINTF(3, 4);
 
 #ifdef ENABLE_LOGGING
+# include "libhpx/locality.h"
 # define log_level(level, ...)                          \
   do {                                                  \
-    if (log_level & (1ul << level)) {                   \
+    if (config_loglevel_isset(here->config, level) &&   \
+        config_logat_isset(here->config, here->rank)) { \
       log_internal(__LINE__, __func__, __VA_ARGS__);    \
     }                                                   \
   } while (0)
