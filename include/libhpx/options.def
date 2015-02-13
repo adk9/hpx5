@@ -106,9 +106,13 @@ LIBHPX_OPT_SCALAR(, transport, HPX_TRANSPORT_DEFAULT, hpx_transport_t)
 LIBHPX_OPT_SCALAR(, network, LIBHPX_NETWORK_DEFAULT, libhpx_network_t)
 LIBHPX_OPT_SCALAR(, sendlimit, 0, uint32_t)
 LIBHPX_OPT_SCALAR(, recvlimit, 0, uint32_t)
+/// @}
 
-LIBHPX_OPT_BITSET(, loglevel, HPX_LOG_DEFAULT)
-LIBHPX_OPT_INTSET(, logat,  HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
+
+/// Log options
+/// @{
+LIBHPX_OPT_BITSET(log_, level, HPX_LOG_DEFAULT)
+LIBHPX_OPT_INTSET(log_, at,  HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
 /// @}
 
 /// Debug options

@@ -51,15 +51,6 @@ typestr="type"
 values="default","smp","pwc","isir"
 enum optional
 
-option "hpx-logat" - "selectively output log information"
-typestr="[localities]"
-int optional multiple
-
-option "hpx-loglevel" - "set the logging level"
-typestr="level"
-values="default","boot","sched","gas","lco","net","trans","parcel","all"
-enum optional argoptional multiple
-
 option "hpx-statistics" - "print HPX runtime statistics"
 flag off
 
@@ -74,6 +65,17 @@ long optional
 option "hpx-configfile" - "HPX runtime configuration file"
 typestr="file"
 string optional
+
+section "Log options"
+
+option "hpx-log-at" - "selectively output log information"
+typestr="[localities]"
+int optional multiple
+
+option "hpx-log-level" - "set the logging level"
+typestr="level"
+values="default","boot","sched","gas","lco","net","trans","parcel","all"
+enum optional argoptional multiple
 
 section "HPX Debug Options"
 

@@ -62,11 +62,11 @@ void log_internal(unsigned line, const char *filename, const char *fmt, ...)
 
 #ifdef ENABLE_LOGGING
 # include "libhpx/locality.h"
-# define log_level(level, ...)                          \
-  do {                                                  \
-    if (config_loglevel_isset(here->config, level) &&   \
-        config_logat_isset(here->config, here->rank)) { \
-      log_internal(__LINE__, __func__, __VA_ARGS__);    \
+# define log_level(level, ...)                           \
+  do {                                                   \
+    if (config_log_level_isset(here->config, level) &&   \
+        config_log_at_isset(here->config, here->rank)) { \
+      log_internal(__LINE__, __func__, __VA_ARGS__);     \
     }                                                   \
   } while (0)
 #else
