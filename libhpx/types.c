@@ -48,7 +48,7 @@ void hpx_array_type_create(hpx_type_t *out, hpx_type_t basetype, int n) {
   for (int i = 0; i < n; ++i) {
     type->elements[i] = basetype;
   }
-  type->elements[n + 1] = NULL;
+  type->elements[n] = NULL;
   *out = type;
 }
 
