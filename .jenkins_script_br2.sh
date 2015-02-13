@@ -50,7 +50,7 @@ fi
 mkdir install
 
 echo "Configuring HPX."
-./configure --prefix=$DIR/build/HPX5/ CC=cc $CFGFLAGS --enable-testsuite --with-tests-cmd="aprun -n 2 -N 2" $HPXDEBUG
+../configure --prefix=$DIR/build/HPX5/ CC=cc $CFGFLAGS --enable-testsuite --with-tests-cmd="aprun -n 2 -N 2" $HPXDEBUG
 
 echo "Building HPX."
 make
