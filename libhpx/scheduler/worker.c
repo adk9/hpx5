@@ -213,6 +213,10 @@ static hpx_parcel_t *_try_bind(hpx_parcel_t *p) {
 static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
   dbg_assert(p->target != HPX_NULL);
   dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
+  DEBUG_IF(action_is_task(here->actions, p->action)) {
+    dbg_assert(!parcel_get_stack(p));
+  }
+
   uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
   self->work_first = (size >= here->sched->wf_threshold);
   // if (self->work_first) {
@@ -338,7 +342,7 @@ static int _run_task(hpx_parcel_t *to, void *sp, void *env) {
   // task's parcel. Otherwise we are transferring from a thread and we want to
   // checkpoint the current thread so that we can return to it and then push it
   // so we can find it later (or have it stolen later).
-  if (parcel_get_stack(from) == NULL) {
+  if (action_is_task(here->actions, from->action)) {
     hpx_parcel_release(from);
   }
   else {
@@ -369,6 +373,8 @@ static hpx_parcel_t *_try_task(hpx_parcel_t *p) {
   if (!action_is_task(here->actions, p->action)) {
     return p;
   }
+
+  dbg_assert(!parcel_get_stack(p));
 
   void **sp = &self->sp;
   int e = thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
@@ -953,4 +959,26 @@ void hpx_thread_set_affinity(int affinity) {
 
   hpx_parcel_t *to = _schedule(false, NULL);
   thread_transfer(to, _move_to, (void*)(intptr_t)affinity);
+}
+
+/// This transfer handler is the right place to put all debug, logging, and
+/// instrumentation code for lightweight-thread transfers.
+int debug_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
+  // Trace this transfer, if transfer-tracing is enabled.
+  static const int class = INST_SCHED;
+  static const int id = INST_SCHED_TRANSFER;
+  hpx_parcel_t *from = scheduler_current_parcel();
+  inst_trace(class, id, (from) ? from->action : 0, p->action);
+
+  // Verify some properties before the transfer.
+  // if (self->current) {
+  //   dbg_assert(!action_is_interrupt(here->actions, self->current->action));
+
+  //   // if (parcel_get_stack(self->current)) {
+  //   //   dbg_assert(!action_is_task(here->actions, self->current->action));
+  //   // }
+  // }
+
+#undef thread_transfer
+  return thread_transfer(p, cont, env);
 }
