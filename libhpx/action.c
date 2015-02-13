@@ -260,7 +260,7 @@ int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_hand
     return _push_back(_get_actions(), id, key, f, type, NULL);
   }
 
-  ffi_cif *cif = malloc(sizeof(*cif));
+  ffi_cif *cif = calloc(1, sizeof(*cif));
   assert(cif);
 
   hpx_type_t *args = calloc(nargs, sizeof(args[0]));

@@ -112,7 +112,10 @@ int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_hand
 #define HPX_TASK(id, args)      HPX_ACTION_DEF_USER(TASK, id, args)
 #define HPX_INTERRUPT(id, args) HPX_ACTION_DEF_USER(INTERRUPT, id, args)
 
-#define HPX_REGISTER_ACTION(handler, id) \
+#define HPX_REGISTER_ACTION(handler, id)                        \
   _HPX_REGISTER_ACTION(DEFAULT, handler, id)
+
+#define HPX_REGISTER_TYPED_ACTION(handler, id, ...)             \
+  _HPX_REGISTER_ACTION(DEFAULT, handler, id, __VA_ARGS__)
 
 #endif

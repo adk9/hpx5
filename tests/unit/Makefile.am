@@ -13,6 +13,7 @@ LDADD = $(HPX_LDADD)
 TESTS            = test_and_lco           \
                    test_bcast             \
                    test_channels          \
+                   test_datatype          \
                    test_futures           \
                    test_gencount          \
                    test_global_mem_alloc  \
@@ -34,6 +35,7 @@ endif
 test_and_lco_SOURCES            = test_and_lco.c
 test_bcast_SOURCES              = test_bcast.c
 test_channels_SOURCES           = test_channels.c
+test_datatype_SOURCES           = test_datatype.c
 test_futures_SOURCES            = test_futures.c
 test_gencount_SOURCES           = test_gencount.c
 test_global_mem_alloc_SOURCES   = test_global_mem_alloc.c
@@ -51,6 +53,7 @@ test_threads_SOURCES            = test_threads.c
 test_and_lco_DEPENDENCIES            = $(HPX_DEPS)
 test_bcast_DEPENDENCIES              = $(HPX_DEPS)
 test_channels_DEPENDENCIES           = $(HPX_DEPS)
+test_datatype_DEPENDENCIES           = $(HPX_DEPS)
 test_futures_DEPENDENCIES            = $(HPX_DEPS)
 test_gencount_DEPENDENCIES           = $(HPX_DEPS)
 test_global_mem_alloc_DEPENDENCIES   = $(HPX_DEPS)

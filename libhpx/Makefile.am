@@ -6,7 +6,7 @@ SUBDIRS = system util boot gas transport network scheduler instrumentation
 # The main libhpx library
 lib_LTLIBRARIES	   = libhpx.la
 
-libhpx_la_SOURCES  = hpx.c call.c par.c action.c debug.c 
+libhpx_la_SOURCES  = hpx.c call.c par.c action.c debug.c types.c
 
 libhpx_la_CPPFLAGS = -I$(top_srcdir)/include
 libhpx_la_LIBADD   = $(HPX_LIBFFI_LDADD) \
@@ -21,9 +21,4 @@ libhpx_la_LIBADD   = $(HPX_LIBFFI_LDADD) \
                      instrumentation/libinstrumentation.la \
 		             $(HPX_JEMALLOC_AS_MALLOC_LIBS) \
 	                 $(HPX_JEMALLOC_AS_MALLOC_LIBTOOL)
-
-if HAVE_PAPI
-libhpx_la_CFLAGS   = @PAPI_CFLAGS@
-libhpx_la_LIBADD  += @PAPI_LIBS@
-endif
 
