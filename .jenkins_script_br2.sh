@@ -13,8 +13,9 @@ function add_mpi() {
 
 function add_photon() {
     # This is currently cutter-specific and needs to be generalized.
-    export HPX_PHOTON_CARGS="--with-ugni"
     export HPX_USE_IB_DEV=$HPXIBDEV
+    export HPX_PHOTON_BACKEND=ugni
+    export HPX_NETWORK=pwc
 }
 
 set -xe
@@ -22,7 +23,7 @@ set -xe
 export PSM_MEMORY=large
 case "$HPXMODE" in
     photon)
-	CFGFLAGS=" --with-mpi --enable-photon --with-hugetlbfs"
+	CFGFLAGS=" --with-mpi --enable-photon HPX_PHOTON_CARGS="--with-ugni" --with-hugetlbfs"
 	add_mpi
         add_photon
 	;;
