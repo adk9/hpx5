@@ -39,11 +39,24 @@ esac
 echo "Building HPX in $DIR"
 cd $DIR
 
-rm -rf ./build/
+echo "Bootstrapping HPX."
 ./bootstrap
+
+if [ -d "./build" ]; then
+        rm -rf ./build/
+fi
 mkdir build
 cd build
-../configure --prefix=$DIR/build/HPX5/ CC=cc $CFGFLAGS --enable-testsuite --with-tests-cmd="aprun -n 2 -N 2" $HPXDEBUG
+
+if [ -d "./install" ]; then
+        rm -rf ./install/
+fi
+mkdir install
+
+echo "Configuring HPX."
+echo ../configure --prefix=$DIR/build/HPX5/ CC=cc $CFGFLAGS --enable-testsuite --with-tests-cmd="aprun -n 2 -N 2" $HPXDEBUG | sh
+
+echo "Building HPX."
 make
 make install
 
@@ -51,8 +64,9 @@ make install
 make check
 
 # Check the output of the unit tests:
-if grep -q Failed tests/unit/output.log
+if grep "FAIL:" tests/unit/test-suite.log
 then
+    cat tests/unit/test-suite.log
     exit 1
 fi
 
