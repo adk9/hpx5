@@ -169,11 +169,12 @@ static int _funneled_progress(network_t *network) {
     log_net("completed %d recvs\n", n);
   }
 
+#ifdef ENABLE_DEBUG
   int m = isend_buffer_progress(&this->isends);
-
-  DEBUG_IF(m) {
-    log_net("completed %d sends\n", m);
-  }
+  log_net("completed %d sends\n", m);
+#else
+  isend_buffer_progress(&this->isends);
+#endif
 
   _send_all(this);
 
