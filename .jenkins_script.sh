@@ -54,11 +54,11 @@ esac
 
 case "$HPXCC" in
     gcc-4.6.4)
-        CFGFLAGS+=" CC=cc"
+        CFGFLAGS+=" CC=gcc"
 	;;
     gcc-4.9.2)
         module load gcc/4.9.2
-        CFGFLAGS+=" CC=cc"
+        CFGFLAGS+=" CC=gcc"
 	;;
     clang)
         CFGFLAGS+=" CC=clang"
