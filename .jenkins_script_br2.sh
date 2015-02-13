@@ -5,6 +5,7 @@ shift
 
 function add_mpi() {
     # This is currently cutter-specific and needs to be generalized.
+    module load cray-mpich/7.0.4
     module switch PrgEnv-cray PrgEnv-gnu
     module load craype-hugepages8M
     export CRAYPE_LINK_TYPE=dynamic
