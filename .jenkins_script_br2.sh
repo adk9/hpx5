@@ -12,18 +12,16 @@ function add_mpi() {
 
 function add_photon() {
     # This is currently cutter-specific and needs to be generalized.
-    export HPX_USE_IB_DEV=mlx4_0
-    export HPX_USE_IB_PORT=1
-    export HPX_USE_CMA=0
-    export HPX_USE_ETH_DEV=roce0
-    export HPX_USE_BACKEND=ugni
+    export HPX_PHOTON_CARGS="--with-ugni"
+    export HPX_USE_IB_DEV=$HPXIBDEV
 }
 
 set -xe
+
 export PSM_MEMORY=large
 case "$HPXMODE" in
     photon)
-	CFGFLAGS=" --with-mpi --enable-photon --with-ugni --with-hugetlbfs"
+	CFGFLAGS=" --with-mpi --enable-photon --with-hugetlbfs"
 	add_mpi
         add_photon
 	;;
@@ -36,14 +34,37 @@ case "$HPXMODE" in
 	;;
 esac
 
+case "$HPXIBDEV" in
+    mlx4_0)
+        CFGFLAGS+=" --with-tests-cmd=\"aprun -n 2 --mca mtl ^psm --mca btl_openib_if_include $HPXIBDEV\""
+        ;;
+    none)
+        ;;
+    *)
+        ;;
+esac
+
 echo "Building HPX in $DIR"
 cd $DIR
 
-rm -rf ./build/
+echo "Bootstrapping HPX."
 ./bootstrap
+
+if [ -d "./build" ]; then
+        rm -rf ./build/
+fi
 mkdir build
 cd build
-../configure --prefix=$DIR/build/HPX5/ CC=cc $CFGFLAGS --enable-testsuite --with-tests-cmd="aprun -n 2 -N 2" $HPXDEBUG
+
+if [ -d "./install" ]; then
+        rm -rf ./install/
+fi
+mkdir install
+
+echo "Configuring HPX."
+../configure --prefix=$DIR/build/HPX5/ CC=cc $CFGFLAGS --enable-testsuite $HPXDEBUG
+
+echo "Building HPX."
 make
 make install
 
@@ -51,8 +72,9 @@ make install
 make check
 
 # Check the output of the unit tests:
-if grep -q Failed tests/unit/output.log
+if grep "FAIL:" tests/unit/test-suite.log
 then
+    cat tests/unit/test-suite.log
     exit 1
 fi
 
