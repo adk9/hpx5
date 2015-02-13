@@ -28,12 +28,13 @@
 void dbg_wait(void)
   HPX_INTERNAL;
 
-void dbg_error_internal(unsigned line, const char *filename, const char *fmt, ...)
-  HPX_INTERNAL HPX_PRINTF(3, 4) HPX_NORETURN;
+void dbg_error_internal(unsigned line, const char *filename, const char *func,
+                        const char *fmt, ...)
+  HPX_INTERNAL HPX_PRINTF(4, 5) HPX_NORETURN;
 
 #define dbg_error(...)                                      \
   do {                                                      \
-    dbg_error_internal(__LINE__, __func__, __VA_ARGS__);    \
+    dbg_error_internal(__LINE__, __FILE__, __func__, __VA_ARGS__); \
     unreachable();                                          \
   } while (0)
 
@@ -57,8 +58,9 @@ void dbg_error_internal(unsigned line, const char *filename, const char *fmt, ..
 
 #define dbg_check(e, ...) dbg_assert_str((e) == HPX_SUCCESS, __VA_ARGS__)
 
-void log_internal(unsigned line, const char *filename, const char *fmt, ...)
-  HPX_INTERNAL HPX_PRINTF(3, 4);
+void log_internal(unsigned line, const char *filename, const char *func,
+                  const char *fmt, ...)
+  HPX_INTERNAL HPX_PRINTF(4, 5);
 
 #ifdef ENABLE_LOGGING
 # include "libhpx/locality.h"
@@ -66,7 +68,7 @@ void log_internal(unsigned line, const char *filename, const char *fmt, ...)
   do {                                                   \
     if (config_log_level_isset(here->config, level) &&   \
         config_log_at_isset(here->config, here->rank)) { \
-      log_internal(__LINE__, __func__, __VA_ARGS__);     \
+      log_internal(__LINE__, __FILE__, __func__, __VA_ARGS__); \
     }                                                   \
   } while (0)
 #else
@@ -82,9 +84,11 @@ void log_internal(unsigned line, const char *filename, const char *fmt, ...)
 #define log_trans(...)  log_level(HPX_LOG_TRANS, __VA_ARGS__)
 #define log_parcel(...) log_level(HPX_LOG_PARCEL, __VA_ARGS__)
 
-int log_error_internal(unsigned line, const char *filename, const char *fmt, ...)
-  HPX_INTERNAL HPX_PRINTF(3, 4);
+int log_error_internal(unsigned line, const char *filename, const char *func,
+                       const char *fmt, ...)
+  HPX_INTERNAL HPX_PRINTF(4, 5);
 
-#define log_error(...) log_error_internal(__LINE__, __func__, __VA_ARGS__)
+#define log_error(...)                                                  \
+  log_error_internal(__LINE__, __FILE__, __func__, __VA_ARGS__)
 
 #endif // LIBHPX_DEBUG_H
