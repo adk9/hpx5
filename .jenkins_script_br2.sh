@@ -19,7 +19,7 @@ set -xe
 export PSM_MEMORY=large
 case "$HPXMODE" in
     photon)
-	CFGFLAGS=" --with-mpi --enable-photon --hpx-photon-backend=ugni --with-hugetlbfs"
+	CFGFLAGS=" --with-mpi --enable-photon --with-hugetlbfs"
 	add_mpi
         add_photon
 	;;
