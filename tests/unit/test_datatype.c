@@ -10,11 +10,16 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include "hpx/hpx.h"
 #include "tests.h"
 
-static struct num {
+#define lengthof(array) sizeof(array) / sizeof(array[0])
+
+static const struct num {
   int array[10];
 } fib = {
   .array = {
@@ -30,16 +35,35 @@ static struct num {
     55 }
 };
 
-#define lengthof(array) sizeof(array) / sizeof(array[0])
-
 static HPX_ACTION_DECL(_test_array);
 static HPX_ACTION_DECL(_test_struct);
 static int _test_fib(struct num n) {
-  assert(&n.array != &fib.array);
+  assert(&n != &fib);
   for (int i = 0, e = lengthof(n.array); i < e; ++i) {
     printf("n[%d] = %d\n", i, n.array[i]);
     assert(n.array[i] == fib.array[i]);
   }
+  return HPX_SUCCESS;
+}
+
+static const struct point {
+  int n;
+  double x;
+  double y;
+  double z;
+} p = {
+  .n = 999,
+  .x = 3.1415,
+  .y = 2.7184,
+  .z = 0.110001
+};
+
+static HPX_ACTION_DECL(_test_point);
+static int _test_nxyz(struct point point) {
+  assert(p.n == point.n);
+  assert(p.x == point.x);
+  assert(p.y == point.y);
+  assert(p.z == point.z);
   return HPX_SUCCESS;
 }
 
@@ -48,9 +72,13 @@ static HPX_ACTION(test_datatype, void *UNUSED) {
   struct num n = fib;
   hpx_call_sync(HPX_HERE, _test_array, NULL, 0, &n);
 
-  printf("Test hpx struct types\n");
+  printf("Test hpx struct types 1\n");
   struct num m = fib;
   hpx_call_sync(HPX_HERE, _test_struct, NULL, 0, &m);
+
+  printf("Test hpx struct types 2\n");
+  struct point point = p;
+  hpx_call_sync(HPX_HERE, _test_point, NULL, 0, &point);
 
   hpx_shutdown(HPX_SUCCESS);
   return HPX_SUCCESS;
@@ -68,14 +96,20 @@ int main(int argc, char *argv[]) {
   HPX_REGISTER_TYPED_ACTION(_test_fib, &_test_array, array_type);
 
   hpx_type_t struct_type;
-  hpx_struct_type_create(&struct_type,
-                         HPX_INT, HPX_INT, HPX_INT, HPX_INT,
-                         HPX_INT, HPX_INT, HPX_INT, HPX_INT,
-                         HPX_INT, HPX_INT);
+  hpx_struct_type_create(&struct_type, HPX_INT, HPX_INT, HPX_INT, HPX_INT,
+                         HPX_INT, HPX_INT, HPX_INT, HPX_INT, HPX_INT, HPX_INT);
   assert(struct_type);
   HPX_REGISTER_TYPED_ACTION(_test_fib, &_test_struct, struct_type);
+
+  hpx_type_t point_struct_type;
+  hpx_struct_type_create(&point_struct_type, HPX_INT, HPX_DOUBLE, HPX_DOUBLE,
+                         HPX_DOUBLE);
+  assert(point_struct_type);
+  HPX_REGISTER_TYPED_ACTION(_test_nxyz, &_test_point, point_struct_type);
+
   int e = hpx_run(&test_datatype, NULL, 0);
 
+  hpx_type_destroy(point_struct_type);
   hpx_type_destroy(struct_type);
   hpx_type_destroy(array_type);
   return e;
