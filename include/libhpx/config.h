@@ -144,9 +144,10 @@ void config_delete(config_t *cfg)
   int config_##group##id##_isset(const config_t *cfg, int value)    \
     HPX_INTERNAL HPX_NON_NULL(1);
 
-#define LIBHPX_OPT_BITSET(group, id, UNUSED2)                           \
-  static uint64_t config_##group##id##_isset(const config_t *cfg, int mask) { \
-    return (cfg->group##id & mask);                                     \
+#define LIBHPX_OPT_BITSET(group, id, UNUSED2)                       \
+  static inline uint64_t                                            \
+  config_##group##id##_isset(const config_t *cfg, uint64_t mask) {  \
+    return (cfg->group##id & mask);                                 \
   }
 # include "options.def"
 #undef LIBHPX_OPT_BITSET
