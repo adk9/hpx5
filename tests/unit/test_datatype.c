@@ -32,9 +32,9 @@ static struct num {
 
 #define lengthof(array) sizeof(array) / sizeof(array[0])
 
-static HPX_ACTION_DECL(_act_array);
-static HPX_ACTION_DECL(_act_struct);
-static int _action(struct num n) {
+static HPX_ACTION_DECL(_test_array);
+static HPX_ACTION_DECL(_test_struct);
+static int _test_fib(struct num n) {
   assert(&n.array != &fib.array);
   for (int i = 0, e = lengthof(n.array); i < e; ++i) {
     printf("n[%d] = %d\n", i, n.array[i]);
@@ -46,11 +46,11 @@ static int _action(struct num n) {
 static HPX_ACTION(test_datatype, void *UNUSED) {
   printf("Test hpx array types\n");
   struct num n = fib;
-  hpx_call_sync(HPX_HERE, _act_array, NULL, 0, &n);
+  hpx_call_sync(HPX_HERE, _test_array, NULL, 0, &n);
 
   printf("Test hpx struct types\n");
   struct num m = fib;
-  hpx_call_sync(HPX_HERE, _act_struct, NULL, 0, &m);
+  hpx_call_sync(HPX_HERE, _test_struct, NULL, 0, &m);
 
   hpx_shutdown(HPX_SUCCESS);
   return HPX_SUCCESS;
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
   hpx_type_t array_type;
   hpx_array_type_create(&array_type, HPX_INT, 10);
   assert(array_type);
-  HPX_REGISTER_TYPED_ACTION(_action, &_act_array, array_type);
+  HPX_REGISTER_TYPED_ACTION(_test_fib, &_test_array, array_type);
 
   hpx_type_t struct_type;
   hpx_struct_type_create(&struct_type,
@@ -73,9 +73,10 @@ int main(int argc, char *argv[]) {
                          HPX_INT, HPX_INT, HPX_INT, HPX_INT,
                          HPX_INT, HPX_INT);
   assert(struct_type);
-  HPX_REGISTER_TYPED_ACTION(_action, &_act_struct, struct_type);
-
+  HPX_REGISTER_TYPED_ACTION(_test_fib, &_test_struct, struct_type);
   int e = hpx_run(&test_datatype, NULL, 0);
+
+  hpx_type_destroy(struct_type);
   hpx_type_destroy(array_type);
   return e;
 }
