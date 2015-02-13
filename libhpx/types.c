@@ -25,7 +25,6 @@
 #include "libhpx/locality.h"
 #include "libhpx/debug.h"
 
-
 /// Register an HPX array datatype.
 ///
 /// This is used to construct an array datatype that can be registered
@@ -34,29 +33,28 @@
 /// type @p arrtype is allocated by this function; hence the caller
 /// must call the corresponding `hpx_unregister_type` function to free
 /// the allocated type.
-int hpx_register_array_type(hpx_type_t *arrtype, hpx_type_t basetype, int nelems) {
-  dbg_assert(arrtype);
-  ffi_type *type = malloc(sizeof(ffi_type) + (nelems+1)*sizeof(ffi_type));
+void hpx_array_type_create(hpx_type_t *out, hpx_type_t basetype, int n) {
+  dbg_assert(out);
+  ffi_type *type = malloc(sizeof(ffi_type) + (n+1) * sizeof(ffi_type));
   if (!type) {
-    return log_error("error allocating an HPX array datatype.\n");
+    dbg_error("error allocating an HPX array datatype.\n");
   }
 
   type->size = 0;
   type->alignment = 0;
   type->type = FFI_TYPE_STRUCT;
-  type->elements = (ffi_type**)((char*)type+(sizeof(ffi_type)));
+  type->elements = (void*)((char*)type + sizeof(ffi_type));
 
-  for (int i = 0; i < nelems; ++i) {
+  for (int i = 0; i < n; ++i) {
     type->elements[i] = basetype;
   }
-  type->elements[nelems+1] = NULL;
-  *arrtype = type;
-  return HPX_SUCCESS;
+  type->elements[n + 1] = NULL;
+  *out = type;
 }
 
 /// Unregister an HPX datatype.
-void hpx_unregister_type(hpx_type_t datatype) {
-  if (datatype) {
-    free(datatype);
+void hpx_array_type_destroy(hpx_type_t type) {
+  if (type) {
+    free(type);
   }
 }
