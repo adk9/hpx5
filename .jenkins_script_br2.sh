@@ -34,16 +34,6 @@ case "$HPXMODE" in
 	;;
 esac
 
-case "$HPXIBDEV" in
-    mlx4_0)
-        CFGFLAGS+=" --with-tests-cmd=\"aprun -n 2 --mca mtl ^psm --mca btl_openib_if_include $HPXIBDEV\""
-        ;;
-    none)
-        ;;
-    *)
-        ;;
-esac
-
 echo "Building HPX in $DIR"
 cd $DIR
 
@@ -62,7 +52,7 @@ fi
 mkdir install
 
 echo "Configuring HPX."
-../configure --prefix=$DIR/build/HPX5/ CC=cc $CFGFLAGS --enable-testsuite $HPXDEBUG
+../configure --prefix=$DIR/build/HPX5/ CC=cc $CFGFLAGS --enable-testsuite --with-tests-cmd="aprun -n 2" $HPXDEBUG
 
 echo "Building HPX."
 make
