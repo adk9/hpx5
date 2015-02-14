@@ -100,7 +100,20 @@ static void _from_env(UT_string *str, const char * const var,
 ///
 /// @param[out]     str This will contain the collected values.
 static void _from_env_all(UT_string *str) {
-#define LIBHPX_OPT(u1, id, u3, u4) _from_env(str, "hpx_"#id, "hpx-"#id);
+  char *cfgstr, *substr;
+#define LIBHPX_OPT(g, id, u3, u4)			\
+  cfgstr = malloc(strlen("hpx-"#g"-"#id));		\
+  if (strlen(#g)) {					\
+    substr = malloc(strlen(#g));			\
+    strncpy(substr, #g, strlen(#g)-1);			\
+    sprintf(cfgstr, "hpx-%s-"#id, substr);		\
+    free(substr);					\
+  }							\
+  else {						\
+    sprintf(cfgstr, "hpx-"#id);				\
+  }							\
+  _from_env(str, "hpx_"#g#id, cfgstr);			\
+  free(cfgstr);
 # include "libhpx/options.def"
 #undef LIBHPX_OPT
 }
