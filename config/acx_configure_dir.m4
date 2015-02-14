@@ -19,10 +19,6 @@
 #   - SRC-DIR-NAME is the source directory, relative to $srcdir.
 #   - BUILD-DIR-NAME is `top-build -> build'
 
-dnl autoconf < 2.63 compatibility
-m4_ifndef([AS_VAR_APPEND],
-	  AC_DEFUN([AS_VAR_APPEND], $1=$$1$2))
-
 AC_DEFUN([ACX_CONFIGURE_DIR],
 [
   in_src=$1
@@ -67,7 +63,7 @@ AC_DEFUN([ACX_CONFIGURE_DIR],
       case $ac_arg in
       *\'*) ac_arg=`AS_ECHO(["$ac_arg"]) | sed "s/'/'\\\\\\\\''/g"` ;;
       esac
-      AS_VAR_APPEND([ac_sub_configure_args], [" '$ac_arg'"]) ;;
+      ac_sub_configure_args = "'$ac_sub_configure_args' '$ac_arg'" ;;
     esac
   done
   fi
