@@ -17,49 +17,6 @@
 #include "libsync/barriers.h"
 #include "tests.h"
 
-static hpx_action_t _typed_task1;
-static int _typed_task1_action(int i, float f, char c) {
-  printf("Typed task 1 %d %f %c!\n", i, f, c);
-  return HPX_SUCCESS;
-}
-static HPX_ACTION_DEF(TASK, _typed_task1_action, _typed_task1,
-                      HPX_INT, HPX_FLOAT, HPX_CHAR);
-
-static hpx_action_t _typed_task2;
-static int _typed_task2_action(int i, float f, char c) {
-  printf("Typed task 2 %d %f %c!\n", i, f, c);
-  sleep(1);
-  return HPX_SUCCESS;
-}
-static HPX_ACTION_DEF(TASK, _typed_task2_action, _typed_task2,
-                      HPX_INT, HPX_FLOAT, HPX_CHAR);
-
-static HPX_ACTION(test_libhpx_task, void *UNUSED) {
-  int i = 42;
-  float f = 1.0;
-  char c = 'a';
-
-  printf("Test hpx typed task\n");
-  hpx_call_sync(HPX_HERE, _typed_task1, NULL, 0, &i, &f, &c);
-  hpx_call_sync(HPX_HERE, _typed_task2, NULL, 0, &i, &f, &c);
-  return HPX_SUCCESS;
-}
-
-static HPX_ACTION(test_libhpx_task2, void *UNUSED) {
-  int i = 42;
-  float f = 1.0;
-  char c = 'a';
-
-  printf("Test hpx typed task 2\n");
-  hpx_addr_t and = hpx_lco_and_new(2);
-  hpx_call(HPX_HERE, _typed_task1, and, &i, &f, &c);
-  hpx_call(HPX_HERE, _typed_task2, and, &i, &f, &c);
-  hpx_lco_wait(and);
-  hpx_lco_delete(and, HPX_NULL);
-  return HPX_SUCCESS;
-}
-
-
 static barrier_t *barrier = NULL;
 static volatile int n = 0;
 static char * volatile task_sp = NULL;
@@ -152,6 +109,30 @@ static HPX_ACTION(_test_try_task, void *UNUSED) {
   return HPX_SUCCESS;
 }
 
+static HPX_ACTION_DECL(_test_recursion);
+static int _test_recursion_task(int n, hpx_addr_t and) {
+  if (!--n) {
+    return HPX_SUCCESS;
+  }
+  else {
+    // not 'n' was decremented
+    return hpx_call(HPX_HERE, _test_recursion, and, &n, &and);
+  }
+}
+static HPX_ACTION_DEF(TASK, _test_recursion_task, _test_recursion, HPX_INT, HPX_ADDR);
+
+static HPX_ACTION(_test_recursion_top, void *UNUNSED) {
+  static int DEPTH = 500;
+  hpx_addr_t and = hpx_lco_and_new(DEPTH);
+  int e = hpx_call(HPX_HERE, _test_recursion, and, &DEPTH, &and);
+  if (HPX_SUCCESS == e) {
+    e = hpx_lco_wait(and);
+  }
+  hpx_lco_delete(and, HPX_NULL);
+  return e;
+}
+
 TEST_MAIN({
- ADD_TEST(_test_try_task);
+    ADD_TEST(_test_recursion_top);
+    ADD_TEST(_test_try_task);
 });
