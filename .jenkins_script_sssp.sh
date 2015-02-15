@@ -44,7 +44,7 @@ rm -rf ./build/
 ./bootstrap
 mkdir build
 cd build
-../configure $CFGFLAGS --disable-jemalloc --enable-apps --enable-testsuite --with-check $HPXDEBUG CFLAGS="-O3"
+../configure $CFGFLAGS --enable-jemalloc --enable-apps --enable-testsuite --with-check $HPXDEBUG CFLAGS="-O3"
 make -j 128
 
 # We need this for the included jemalloc. I think that libtool should take care of this, but until it does, we need this line.
