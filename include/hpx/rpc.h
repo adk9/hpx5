@@ -60,6 +60,13 @@ int    _hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result,
 #define hpx_call(addr, action, result, ...) \
   _hpx_call(addr, action, result, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
 
+
+/// An experimental version of call that takes parameter symbols directly.
+#define _HPX_ADDRESSOF(x) &x
+#define hpx_xcall(addr, action, result, ...) \
+  hpx_call(addr, action, result, __HPX_FOREACH(_HPX_ADDRESSOF, __VA_ARGS__))
+
+
 /// Locally synchronous call interface when LCO is set.
 ///
 /// This is a locally-synchronous, globally-asynchronous variant of
