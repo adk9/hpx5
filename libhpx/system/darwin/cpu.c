@@ -20,6 +20,7 @@
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
+#include "libhpx/debug.h"
 #include "libhpx/system.h"
 #include "hpx/hpx.h"
 
@@ -38,5 +39,11 @@ int system_get_cores(void)
 
 int system_set_affinity(pthread_t thread, int core_id) {
   // there's no good way to do this on darwin yet, so we do nothing.
+  log("thread binding not supported on darwin.\n");
+  return HPX_SUCCESS;
+}
+
+int system_set_affinity_group(pthread_t thread, int ncores) {
+  log("thread binding not supported on darwin.\n");
   return HPX_SUCCESS;
 }
