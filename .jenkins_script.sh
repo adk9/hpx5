@@ -61,7 +61,7 @@ case "$HPXCC" in
         CFGFLAGS+=" CC=gcc"
 	;;
     clang)
-        CFGFLAGS+=" CC=clang"
+        CFGFLAGS+=" CC=clang CFLAGS=-Wno-gnu-zero-variadic-macro-arguments "
         ;;
     *)
 	;;
