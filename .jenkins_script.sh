@@ -41,10 +41,10 @@ esac
 case "$HPXIBDEV" in
     qib0)
         export PSM_MEMORY=large
-	CFGFLAGS+="--with-tests-cmd=\"mpirun -np 2 --mca btl_openib_if_include $HPXIBDEV\""
+	CFGFLAGS+=" --with-tests-cmd=\"mpirun -np 2 --mca btl_openib_if_include $HPXIBDEV\""
 	;;
     mlx4_0)
-	CFGFLAGS+="--with-tests-cmd=\"mpirun -np 2 --mca mtl ^psm --mca btl_openib_if_include $HPXIBDEV\""
+	CFGFLAGS+=" --with-tests-cmd=\"mpirun -np 2 --mca mtl ^psm --mca btl_openib_if_include $HPXIBDEV\""
 	;;
     none)
         ;;
@@ -52,10 +52,23 @@ case "$HPXIBDEV" in
 	;;
 esac
 
+case "$HPXCC" in
+    gcc-4.6.4)
+        CFGFLAGS+=" CC=gcc"
+	;;
+    gcc-4.9.2)
+        module load gcc/4.9.2
+        CFGFLAGS+=" CC=gcc"
+	;;
+    clang)
+        CFGFLAGS+=" CC=clang"
+        ;;
+    *)
+	;;
+esac
+
 echo "Building HPX in $DIR"
 cd $DIR
-
-module load gcc/4.9.2
 
 echo "Bootstrapping HPX."
 ./bootstrap
@@ -82,7 +95,7 @@ make install
 make check
 
 # Check the output of the unit tests:
-if grep -q "FAIL:" tests/unit/test-suite.log
+if grep "FAIL:" tests/unit/test-suite.log
 then
     cat tests/unit/test-suite.log
     exit 1

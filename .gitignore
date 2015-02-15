@@ -115,6 +115,8 @@ contrib/photon/
 /tests/unit/test_parcel
 /tests/unit/test_sema
 /tests/unit/test_threads
+/tests/unit/test_runtime
+/tests/unit/test_datatype
 /tests/unit/test_wait
 /tests/Makefile
 /tests/Makefile.in

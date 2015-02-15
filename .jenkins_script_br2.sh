@@ -5,25 +5,26 @@ shift
 
 function add_mpi() {
     # This is currently cutter-specific and needs to be generalized.
-    module switch PrgEnv-cray PrgEnv-gnu
+    module load cray-mpich/7.0.4
+    module unload PrgEnv-cray 
+    module load PrgEnv-gnu
     module load craype-hugepages8M
     export CRAYPE_LINK_TYPE=dynamic
 }
 
 function add_photon() {
     # This is currently cutter-specific and needs to be generalized.
-    export HPX_USE_IB_DEV=mlx4_0
-    export HPX_USE_IB_PORT=1
-    export HPX_USE_CMA=0
-    export HPX_USE_ETH_DEV=roce0
-    export HPX_USE_BACKEND=ugni
+    export HPX_USE_IB_DEV=$HPXIBDEV
+    export HPX_PHOTON_BACKEND=ugni
+    export HPX_NETWORK=pwc
 }
 
 set -xe
+
 export PSM_MEMORY=large
 case "$HPXMODE" in
     photon)
-	CFGFLAGS=" --with-mpi --enable-photon --with-ugni --with-hugetlbfs"
+	CFGFLAGS=" --with-mpi=cray-mpich --enable-photon HPX_PHOTON_CARGS="--with-ugni --with-mpi" --with-hugetlbfs"
 	add_mpi
         add_photon
 	;;
@@ -39,11 +40,24 @@ esac
 echo "Building HPX in $DIR"
 cd $DIR
 
-rm -rf ./build/
+echo "Bootstrapping HPX."
 ./bootstrap
+
+if [ -d "./build" ]; then
+        rm -rf ./build/
+fi
 mkdir build
 cd build
-../configure --prefix=$DIR/build/HPX5/ CC=cc $CFGFLAGS --enable-testsuite --with-tests-cmd="aprun -n 2 -N 2" $HPXDEBUG
+
+if [ -d "./install" ]; then
+        rm -rf ./install/
+fi
+mkdir install
+
+echo "Configuring HPX."
+../configure --prefix=$DIR/build/HPX5/ CC=cc $CFGFLAGS --enable-testsuite --with-tests-cmd="aprun -n 2" $HPXDEBUG
+
+echo "Building HPX."
 make
 make install
 
@@ -51,8 +65,9 @@ make install
 make check
 
 # Check the output of the unit tests:
-if grep -q Failed tests/unit/output.log
+if grep "FAIL:" tests/unit/test-suite.log
 then
+    cat tests/unit/test-suite.log
     exit 1
 fi
 
