@@ -199,7 +199,7 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
     ffi_ptrarray_to_raw(cif, argps, (ffi_raw*)outargs);
   } else {
     outargs = va_arg(*args, void *);
-    len = va_arg(*args, size_t);
+    len = va_arg(*args, int);
 
     p = hpx_parcel_acquire(outargs, len);
   }
