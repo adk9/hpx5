@@ -116,7 +116,7 @@ static int _test_recursion_task(int n, hpx_addr_t and) {
   }
   else {
     // not 'n' was decremented
-    return hpx_call(HPX_HERE, _test_recursion, and, &n, &and);
+    return hpx_xcall(HPX_HERE, _test_recursion, and, n, and);
   }
 }
 static HPX_ACTION_DEF(TASK, _test_recursion_task, _test_recursion, HPX_INT, HPX_ADDR);
@@ -124,7 +124,7 @@ static HPX_ACTION_DEF(TASK, _test_recursion_task, _test_recursion, HPX_INT, HPX_
 static HPX_ACTION(_test_recursion_top, void *UNUNSED) {
   static int DEPTH = 500;
   hpx_addr_t and = hpx_lco_and_new(DEPTH);
-  int e = hpx_call(HPX_HERE, _test_recursion, and, &DEPTH, &and);
+  int e = hpx_xcall(HPX_HERE, _test_recursion, and, DEPTH, and);
   if (HPX_SUCCESS == e) {
     e = hpx_lco_wait(and);
   }
