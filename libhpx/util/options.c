@@ -101,18 +101,18 @@ static void _from_env(UT_string *str, const char * const var,
 /// @param[out]     str This will contain the collected values.
 static void _from_env_all(UT_string *str) {
   char *cfgstr, *substr;
-#define LIBHPX_OPT(g, id, u3, u4)			\
-  cfgstr = malloc(strlen("hpx-"#g"-"#id));		\
-  if (strlen(#g)) {					\
-    substr = malloc(strlen(#g));			\
-    strncpy(substr, #g, strlen(#g)-1);			\
-    sprintf(cfgstr, "hpx-%s-"#id, substr);		\
-    free(substr);					\
-  }							\
-  else {						\
-    sprintf(cfgstr, "hpx-"#id);				\
-  }							\
-  _from_env(str, "hpx_"#g#id, cfgstr);			\
+#define LIBHPX_OPT(g, id, u3, u4)           \
+  cfgstr = malloc(strlen("hpx-"#g"-"#id));      \
+  if (strlen(#g)) {                 \
+    substr = malloc(strlen(#g));            \
+    strncpy(substr, #g, strlen(#g)-1);          \
+    sprintf(cfgstr, "hpx-%s-"#id, substr);      \
+    free(substr);                   \
+  }                         \
+  else {                        \
+    sprintf(cfgstr, "hpx-"#id);             \
+  }                         \
+  _from_env(str, "hpx_"#g#id, cfgstr);          \
   free(cfgstr);
 # include "libhpx/options.def"
 #undef LIBHPX_OPT
@@ -223,9 +223,9 @@ static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
     cfg->group##id = opts->hpx_##group##id##_flag;  \
   }
 
-#define LIBHPX_OPT_SCALAR(group, id, UNUSED2, UNUSED3)  \
+#define LIBHPX_OPT_SCALAR(group, id, UNUSED2, type)     \
   if (opts->hpx_##group##id##_given) {                  \
-    cfg->group##id = opts->hpx_##group##id##_arg;       \
+    cfg->group##id = (type)opts->hpx_##group##id##_arg; \
   }
 
 #define LIBHPX_OPT_STRING(group, id, init)                  \
