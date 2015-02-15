@@ -24,12 +24,12 @@ set -xe
 export PSM_MEMORY=large
 case "$HPXMODE" in
     photon)
-	CFGFLAGS=" --with-mpi=cray-mpich --enable-photon HPX_PHOTON_CARGS="--with-ugni --with-mpi" --with-hugetlbfs"
+	CFGFLAGS=" --with-mpi=cray-mpich --enable-photon HPX_PHOTON_CARGS=\"--with-ugni --with-mpi\" --with-hugetlbfs"
 	add_mpi
         add_photon
 	;;
     mpi)
-	CFGFLAGS=" --with-mpi "
+	CFGFLAGS=" --with-mpi=cray-mpich "
 	add_mpi	
 	;;
     *)
