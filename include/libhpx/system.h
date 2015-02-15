@@ -22,4 +22,7 @@ int system_get_cores(void)
 int system_set_affinity(pthread_t thread, int core_id)
   HPX_INTERNAL;
 
+int system_set_affinity_group(pthread_t thread, int ncores)
+  HPX_INTERNAL;
+
 #endif // LIBHPX_SYSTEM_H

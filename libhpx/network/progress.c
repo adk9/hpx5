@@ -25,14 +25,15 @@
 #include "progress.h"
 
 static void *_pthread_progress(void *arg) {
-  cpu_set_t cpu_set;
-  CPU_ZERO(&cpu_set);
-  CPU_SET(system_get_cores()-1, &cpu_set);
-  pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpu_set);
+  int e = system_set_affinity_group(pthread_self(), system_get_cores()-1);
+  if (e) {
+    dbg_error("failed to bind heavyweight network thread.\n");
+    return NULL;
+  }
 
   locality_t *l = arg;
 
-  int e = l->gas->join();
+  e = l->gas->join();
   if (e) {
     dbg_error("heavyweight network thread failed to join GAS\n");
     return NULL;
