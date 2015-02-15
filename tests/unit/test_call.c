@@ -31,11 +31,6 @@ static int _is_hpxnull(hpx_addr_t addr) {
   return (addr == HPX_NULL);
 }
 
-static int _is_null(void *addr) {
-  assert(addr != NULL);
-  return (addr == NULL);
-}
-
 /// Store a value to an integer in memory.
 static HPX_PINNED(_store_int, void *val) {
   int *addr = hpx_thread_current_local_target();
@@ -85,8 +80,6 @@ hpx_addr_t _cascade(hpx_addr_t done, hpx_addr_t val, const int n) {
 
   return gates;
 
- unwind1:
-  hpx_lco_delete(gates, HPX_NULL);
  unwind0:
   return HPX_NULL;
 }
@@ -95,10 +88,10 @@ hpx_addr_t _cascade(hpx_addr_t done, hpx_addr_t val, const int n) {
 /// Test the hpx_call_when functionality.
 static HPX_ACTION(test_libhpx_call_when, void *UNUSED) {
   const int n = 2 * HPX_LOCALITIES;
-  
+
   printf("Testing call when LCO is set\n");
   fflush(stdout);
-  
+
   hpx_time_t t1 = hpx_time_now();
 
   // allocate a future to signal the completion of the cascade
@@ -106,7 +99,7 @@ static HPX_ACTION(test_libhpx_call_when, void *UNUSED) {
   if (_is_hpxnull(done)) {
     goto unwind0;
   }
-  
+
   // allocate and initialize a shared integer for the cascade to update
   hpx_addr_t val = hpx_gas_alloc(sizeof(int));
   if (_is_hpxnull(val)) {

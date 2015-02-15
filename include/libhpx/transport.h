@@ -50,8 +50,7 @@ typedef struct transport {
   uint32_t (*get_send_limit)(struct transport*);
   uint32_t (*get_recv_limit)(struct transport*);
 
-  const char *(*id)(void)
-    HPX_RETURNS_NON_NULL;
+  const char *(*id)(void);
 
   void (*delete)(struct transport*)
     HPX_NON_NULL(1);

@@ -20,7 +20,7 @@
 typedef struct boot {
   hpx_boot_t type;
 
-  const char *(*id)(void) HPX_RETURNS_NON_NULL;
+  const char *(*id)(void);
 
   void (*delete)(struct boot*);
   int (*rank)(const struct boot*);
@@ -30,12 +30,10 @@ typedef struct boot {
   void (*abort)(const struct boot*);
 } boot_t;
 
-
-HPX_INTERNAL boot_t *boot_new_mpi(void);
-HPX_INTERNAL boot_t *boot_new_pmi(void);
-HPX_INTERNAL boot_t *boot_new_smp(void);
-HPX_INTERNAL boot_t *boot_new(hpx_boot_t type);
-
+boot_t *boot_new_mpi(void) HPX_INTERNAL;
+boot_t *boot_new_pmi(void) HPX_INTERNAL;
+boot_t *boot_new_smp(void) HPX_INTERNAL;
+boot_t *boot_new(hpx_boot_t type) HPX_INTERNAL;
 
 static inline void boot_delete(boot_t *boot) {
   boot->delete(boot);
@@ -49,25 +47,21 @@ static inline int boot_rank(const boot_t *boot) {
   return boot->rank(boot);
 }
 
-
 static inline int boot_n_ranks(const boot_t *boot) {
   return boot->n_ranks(boot);
 }
-
 
 static inline int boot_allgather(const boot_t *boot,
                                  const void *in, void *out, int n) {
   return boot->allgather(boot, in, out, n);
 }
 
-
 static inline int boot_barrier(const boot_t *boot) {
   return boot->barrier(boot);
 }
-
 
 static inline void boot_abort(const boot_t *boot) {
   boot->abort(boot);
 }
 
-#endif // LIBHPX_BOOT_H
+#endif
