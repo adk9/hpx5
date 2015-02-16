@@ -5,12 +5,10 @@ shift
 
 function add_mpi() {
     # This is currently cutter-specific and needs to be generalized.
-    module load cray-mpich/7.0.4
     module unload PrgEnv-cray 
     module load PrgEnv-gnu
     module load craype-hugepages8M
     export CRAYPE_LINK_TYPE=dynamic
-    export C_INCLUDE_PATH=$C_INCLUDE_PATH:"/opt/cray/mpt/7.0.4/gni/mpich2-gnu/49/include"
 }
 
 function add_photon() {
@@ -25,12 +23,12 @@ set -xe
 export PSM_MEMORY=large
 case "$HPXMODE" in
     photon)
-	CFGFLAGS=" --with-mpi=cray-mpich --enable-photon HPX_PHOTON_CARGS=\"--with-ugni --with-mpi\" --with-hugetlbfs --with-tests-cmd=\"aprun -n 2\""
+	CFGFLAGS=" --with-mpi --enable-photon HPX_PHOTON_CARGS=\"--with-ugni --with-mpi\" --with-hugetlbfs --with-tests-cmd=\"aprun -n 2\""
 	add_mpi
         add_photon
 	;;
     mpi)
-	CFGFLAGS=" --with-mpi=cray-mpich --with-tests-cmd=\"aprun -n 2\""
+	CFGFLAGS=" --with-mpi --with-tests-cmd=\"aprun -n 2\""
 	add_mpi	
 	;;
     *)
