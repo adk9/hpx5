@@ -227,9 +227,10 @@ int action_table_run_handler(const struct action_table *table,
   dbg_assert_str(id != HPX_ACTION_INVALID,
                  "action registration is not complete\n");
 
-  dbg_assert_str(id < table->n,
-                 "action id, %d, out of bounds [0,%u)\n", id, table->n);
-  // hack to bypass a libffi bug
+  dbg_assert_str(id < table->n, "action id, %d, out of bounds [0,%u)\n", id,
+                 table->n);
+
+  // allocate 8 bytes to avoid https://github.com/atgreen/libffi/issues/35
   char retbuffer[8];
   int *ret = (int*)retbuffer;
   hpx_action_handler_t handler = table->entries[id].handler;
