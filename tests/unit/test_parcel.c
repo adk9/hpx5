@@ -155,7 +155,7 @@ static HPX_ACTION(test_libhpx_parcelRelease, void *UNUSED) {
   return HPX_SUCCESS;
 }
 
-static volatile int counter = 0;
+static volatile int counter HPX_USED = 0;
 
 // This testcase tests hpx_parcel_send function, which sends a parcel with
 // asynchronout local completion symantics, hpx_parcel_set_cont_action - set

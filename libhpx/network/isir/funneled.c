@@ -180,6 +180,7 @@ static int _funneled_progress(network_t *network) {
 
   // suppress unused warnings
   (void)n;
+  (void)m;
 }
 
 network_t *network_isir_funneled_new(struct gas *gas, int nrx) {
