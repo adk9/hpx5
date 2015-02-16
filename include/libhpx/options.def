@@ -148,7 +148,7 @@ LIBHPX_OPT_SCALAR(photon_, maxrd, -1, int)
 LIBHPX_OPT_SCALAR(photon_, defaultrd, -1, int)
 LIBHPX_OPT_FLAG(photon_, usecma, 0)
 LIBHPX_OPT_STRING(photon_, ethdev, "roce0")
-LIBHPX_OPT_STRING(photon_, ibdev, "qib0")
+LIBHPX_OPT_STRING(photon_, ibdev, "qib0+mlx4_0")
 /// @}
 #endif
 

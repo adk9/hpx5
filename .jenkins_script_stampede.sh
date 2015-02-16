@@ -3,17 +3,17 @@
 DIR=$1
 shift
 
+function add_init() {
+    module load intel/14.0.1.106
+}
+
 function add_mpi() {
-    # This is currently cutter-specific and needs to be generalized.
-    module unload PrgEnv-cray 
-    module load PrgEnv-gnu
-    module load craype-hugepages8M
-    export CRAYPE_LINK_TYPE=dynamic
+    # most recent mvapich gets aut-loaded by init() above
 }
 
 function add_photon() {
-    # This is currently cutter-specific and needs to be generalized.
-    export HPX_PHOTON_BACKEND=ugni
+    export HPX_PHOTON_IBDEV=$HPXIBDEV
+    export HPX_PHOTON_BACKEND=verbs
     export HPX_NETWORK=pwc
 }
 
@@ -22,16 +22,19 @@ set -xe
 export PSM_MEMORY=large
 case "$HPXMODE" in
     photon)
-	CFGFLAGS=" --with-mpi --enable-photon HPX_PHOTON_CARGS=\"--with-ugni --with-mpi\" --with-tests-cmd=\"aprun -n 2\""
+	CFGFLAGS=" --with-mpi --enable-photon --with-tests-cmd=\"ibrun -n 2 -o 0\""
+	add_init
 	add_mpi
         add_photon
 	;;
     mpi)
-	CFGFLAGS=" --with-mpi --with-tests-cmd=\"aprun -n 2\""
-	add_mpi	
+	CFGFLAGS=" --with-mpi --with-tests-cmd=\"ibrun -n 2 -o 0\""
+	add_init
+	add_mpi
 	;;
     *)
 	CFGFLAGS=" --with-tests-cmd=\"aprun -n 1\""
+	add_init
 	;;
 esac
 
@@ -53,7 +56,7 @@ fi
 mkdir install
 
 echo "Configuring HPX."
-echo ../configure --prefix=$DIR/build/HPX5/ CC=cc $CFGFLAGS --enable-testsuite $HPXDEBUG | sh
+echo ../configure --prefix=$DIR/build/HPX5/ CC=mpicc $CFGFLAGS --enable-testsuite $HPXDEBUG | sh
 
 echo "Building HPX."
 make
