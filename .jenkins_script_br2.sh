@@ -10,7 +10,7 @@ function add_mpi() {
     module load PrgEnv-gnu
     module load craype-hugepages8M
     export CRAYPE_LINK_TYPE=dynamic
-    export C_INCLUDE_PATH=$C_INCLUDE_PATH:"/opt/cray/mpt/7.0.4/gni/mpich2-gnu/49/include”
+    export C_INCLUDE_PATH=$C_INCLUDE_PATH:"/opt/cray/mpt/7.0.4/gni/mpich2-gnu/49/include"
 }
 
 function add_photon() {
