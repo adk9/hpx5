@@ -292,9 +292,9 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
               pwc->parcel_eager_limit, pwc->parcel_buffer_size);
   }
 
-  peer_t *local = pwc_get_peer(&pwc->vtable, pwc->rank);
+  peer_t local;
   // Prepare the null segment.
-  segment_t *null = &local->segments[SEGMENT_NULL];
+  segment_t *null = &local.segments[SEGMENT_NULL];
   e = segment_init(null, NULL, 0);
   if (LIBHPX_OK != e) {
     log_error("could not initialize the NULL segment\n");
@@ -302,7 +302,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   }
 
   // Register the heap segment.
-  segment_t *heap = &local->segments[SEGMENT_HEAP];
+  segment_t *heap = &local.segments[SEGMENT_HEAP];
   e = segment_init(heap, gas_local_base(pwc->gas), gas_local_size(pwc->gas));
   if (LIBHPX_OK != e) {
     log_error("could not register the heap segment\n");
@@ -310,7 +310,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   }
 
   // Register the eager segment.
-  segment_t *eager = &local->segments[SEGMENT_EAGER];
+  segment_t *eager = &local.segments[SEGMENT_EAGER];
   e = segment_init(eager, pwc->eager, pwc->eager_bytes);
   if (LIBHPX_OK != e) {
     log_error("could not register the eager segment\n");
@@ -318,7 +318,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   }
 
   // Register the peers segment.
-  segment_t *peers = &local->segments[SEGMENT_PEERS];
+  segment_t *peers = &local.segments[SEGMENT_PEERS];
   e = segment_init(peers, (void*)pwc->peers, pwc->ranks * sizeof(peer_t));
   if (LIBHPX_OK != e) {
     log_error("could not register the peers segment\n");
@@ -326,7 +326,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   }
 
   // Exchange all of the peer segments.
-  e = boot_allgather(boot, local, &pwc->peers, sizeof(*local));
+  e = boot_allgather(boot, &local, &pwc->peers, sizeof(local));
   if (LIBHPX_OK != e) {
     log_error("could not exchange peers segment\n");
     goto unwind;
