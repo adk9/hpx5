@@ -229,16 +229,17 @@ int action_table_run_handler(const struct action_table *table,
 
   dbg_assert_str(id < table->n,
                  "action id, %d, out of bounds [0,%u)\n", id, table->n);
-
-  int ret;
+  // hack to bypass a libffi bug
+  char retbuffer[8];
+  int *ret = (int*)retbuffer;
   hpx_action_handler_t handler = table->entries[id].handler;
   ffi_cif *cif = table->entries[id].cif;
   if (!cif) {
-    ret = handler(args);
+    *ret = handler(args);
   } else {
-    ffi_raw_call(cif, FFI_FN(handler), &ret, args);
+    ffi_raw_call(cif, FFI_FN(handler), ret, args);
   }
-  return ret;
+  return *ret;
 }
 
 bool action_is_pinned(const struct action_table *table, hpx_action_t id) {
