@@ -981,4 +981,7 @@ int debug_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
 
 #undef thread_transfer
   return thread_transfer(p, cont, env);
+
+  // squash unused warnings
+  (void)from;
 }

@@ -70,11 +70,6 @@ AC_ARG_ENABLE([wall],
                   [Enable all warnings @<:@default=yes@:>@])],
   [], [enable_wall=yes])
 
-AC_ARG_ENABLE([werror],
-  [AS_HELP_STRING([--enable-werror],
-                  [Treat warnings as errors @<:@default=no@:>@])],
-  [], [enable_werror=no])
-
 AC_ARG_ENABLE([apps],
   [AS_HELP_STRING([--enable-apps],
                   [Enable mini-apps @<:@default=no@:>@])],
@@ -129,8 +124,6 @@ AC_ARG_ENABLE([testsuite],
   [AS_HELP_STRING([--enable-testsuite],
                   [Enable test suite @<:@default=yes@:>@])],
   [], [enable_tests=yes])
-
-#HPX_OPENFLOW
 
 # ---------------------------------------------------------------------------
 # --with-options, see config/hpx_with_pkg.m4 for details
@@ -239,9 +232,6 @@ AS_IF([test "x$enable_pedantic" != xno],
 
 AS_IF([test "x$enable_wall" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_wall $hpx_extra_cflags"])
-  
-AS_IF([test "x$enable_werror" != xno],
-  [hpx_extra_cflags="$hpx_pe_env_cflags_werror $hpx_extra_cflags"])
 
 CPPFLAGS="$hpx_extra_cppflags $CPPFLAGS"
 CFLAGS="$hpx_extra_cflags $CFLAGS"

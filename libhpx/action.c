@@ -199,7 +199,7 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
     ffi_ptrarray_to_raw(cif, argps, (ffi_raw*)outargs);
   } else {
     outargs = va_arg(*args, void *);
-    len = va_arg(*args, size_t);
+    len = va_arg(*args, int);
 
     p = hpx_parcel_acquire(outargs, len);
   }
@@ -227,18 +227,20 @@ int action_table_run_handler(const struct action_table *table,
   dbg_assert_str(id != HPX_ACTION_INVALID,
                  "action registration is not complete\n");
 
-  dbg_assert_str(id < table->n,
-                 "action id, %d, out of bounds [0,%u)\n", id, table->n);
+  dbg_assert_str(id < table->n, "action id, %d, out of bounds [0,%u)\n", id,
+                 table->n);
 
-  int ret;
+  // allocate 8 bytes to avoid https://github.com/atgreen/libffi/issues/35
+  char retbuffer[8];
+  int *ret = (int*)retbuffer;
   hpx_action_handler_t handler = table->entries[id].handler;
   ffi_cif *cif = table->entries[id].cif;
   if (!cif) {
-    ret = handler(args);
+    *ret = handler(args);
   } else {
-    ffi_raw_call(cif, FFI_FN(handler), &ret, args);
+    ffi_raw_call(cif, FFI_FN(handler), ret, args);
   }
-  return ret;
+  return *ret;
 }
 
 bool action_is_pinned(const struct action_table *table, hpx_action_t id) {
