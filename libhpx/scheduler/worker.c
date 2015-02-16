@@ -300,7 +300,6 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   return status;
 }
 
-
 /// A transfer continuation that resends the current parcel.
 ///
 /// If a parcel has arrived at the wrong locality because its target address has
@@ -322,7 +321,6 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
   return HPX_SUCCESS;
 }
 
-
 /// Called by the worker from the scheduler loop to shut itself down.
 ///
 /// This will transfer back to the original system stack, returning the shutdown
@@ -333,7 +331,6 @@ static void _worker_shutdown(struct worker *w) {
   thread_transfer((hpx_parcel_t*)&sp, _free_parcel, (void*)shutdown);
   unreachable();
 }
-
 
 static int _run_task(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *from = self->current;
@@ -588,10 +585,12 @@ int worker_start(void) {
   int e = thread_transfer(p, _on_startup, NULL);
   if (e) {
     if (here->rank == 0) {
-      dbg_error("application exited with a non-zero exit code: %d.\n", e);
+      log_error("application exited with a non-zero exit code: %d.\n", e);
     }
     return e;
   }
+
+  self->current = NULL;
 
   return LIBHPX_OK;
 }
