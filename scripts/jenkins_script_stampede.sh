@@ -5,6 +5,9 @@ shift
 
 function add_init() {
     module load intel/14.0.1.106
+    export PSM_MEMORY=large
+    export LDFLAGS="-L/opt/ofed/lib64 -lpthread"
+    export CPPFLAGS="-I/opt/ofed/include"
 }
 
 function add_mpi() {
@@ -19,7 +22,6 @@ function add_photon() {
 
 set -xe
 
-export PSM_MEMORY=large
 case "$HPXMODE" in
     photon)
 	CFGFLAGS=" --with-mpi --enable-photon --with-tests-cmd=\"ibrun -n 2 -o 0\""
