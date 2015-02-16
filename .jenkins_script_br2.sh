@@ -5,7 +5,6 @@ shift
 
 function add_mpi() {
     # This is currently cutter-specific and needs to be generalized.
-    module load cray-mpich/7.0.4
     module unload PrgEnv-cray 
     module load PrgEnv-gnu
     module load craype-hugepages8M
@@ -24,16 +23,16 @@ set -xe
 export PSM_MEMORY=large
 case "$HPXMODE" in
     photon)
-	CFGFLAGS=" --with-mpi=cray-mpich --enable-photon HPX_PHOTON_CARGS="--with-ugni --with-mpi" --with-hugetlbfs"
+	CFGFLAGS=" --with-mpi --enable-photon HPX_PHOTON_CARGS=\"--with-ugni --with-mpi\" --with-hugetlbfs --with-tests-cmd=\"aprun -n 2\""
 	add_mpi
         add_photon
 	;;
     mpi)
-	CFGFLAGS=" --with-mpi "
+	CFGFLAGS=" --with-mpi --with-tests-cmd=\"aprun -n 2\""
 	add_mpi	
 	;;
     *)
-	CFGFLAGS=" "
+	CFGFLAGS=" --with-tests-cmd=\"aprun -n 1\""
 	;;
 esac
 
@@ -55,7 +54,7 @@ fi
 mkdir install
 
 echo "Configuring HPX."
-../configure --prefix=$DIR/build/HPX5/ CC=cc $CFGFLAGS --enable-testsuite --with-tests-cmd="aprun -n 2" $HPXDEBUG
+echo ../configure --prefix=$DIR/build/HPX5/ CC=cc $CFGFLAGS --enable-testsuite $HPXDEBUG | sh
 
 echo "Building HPX."
 make
