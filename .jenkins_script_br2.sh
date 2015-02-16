@@ -33,7 +33,7 @@ case "$HPXMODE" in
 	add_mpi	
 	;;
     *)
-	CFGFLAGS=" --with-tests-cmd=\"aprun -n 1\" "
+	CFGFLAGS=" --with-tests-cmd=\"aprun -n 1\""
 	;;
 esac
 
@@ -55,7 +55,7 @@ fi
 mkdir install
 
 echo "Configuring HPX."
-../configure --prefix=$DIR/build/HPX5/ CC=cc $CFGFLAGS --enable-testsuite $HPXDEBUG
+echo ../configure --prefix=$DIR/build/HPX5/ CC=cc $CFGFLAGS --enable-testsuite $HPXDEBUG | sh
 
 echo "Building HPX."
 make
