@@ -71,6 +71,14 @@ struct buffer {
 };
 
 int main(int argc, char *argv[]) {
+  int e = hpx_init(&argc, &argv);
+  if (e) {
+    fprintf(stderr, "Failed to initialize hpx\n");
+    return -1;
+  }
+
+  _register_actions();
+
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:T:d:Dmvh")) != -1) {
     switch (opt) {
@@ -121,14 +129,6 @@ int main(int argc, char *argv[]) {
 
   printf("Running: {iterations: %d}, {message: %d}, {verbose: %d}\n",
          args.iterations, _text, _verbose);
-
-  int e = hpx_init(&argc, &argv);
-  if (e) {
-    fprintf(stderr, "Failed to initialize hpx\n");
-    return -1;
-  }
-
-  _register_actions();
 
   hpx_time_t start = hpx_time_now();
   e = hpx_run(&_main, &args, sizeof(args));

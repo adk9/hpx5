@@ -3,7 +3,7 @@ examplesdir          = $(datarootdir)/doc/@PACKAGE@
 noinst_PROGRAMS         = fibonacci pingpong allreduce countdown seqspawn \
                           parspawn future memput memget guppie sendrecv \
                           sendrecv-chan allreduce-chan pingpong-chan hello \
-                          qsort call netbench
+                          qsort call netbench netfutures
 
 fibonacci_SOURCES       = fibonacci.c
 pingpong_SOURCES        = pingpong.c
@@ -23,16 +23,13 @@ qsort_SOURCES           = qsort.c
 hello_SOURCES           = hello.c
 call_SOURCES            = call.c
 netbench_SOURCES        = netbench.c
+netfutures_SOURCES      = netfutures.c
 
 all_LIBS = $(HPX_LDADD)
 
 AM_CPPFLAGS          = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS            =
 
-if HAVE_PHOTON
-noinst_PROGRAMS     += netfutures
-netfutures_SOURCES   = netfutures.c
-endif
 
 if HAVE_MPI
 AM_CFLAGS           += @MPI_CFLAGS@
