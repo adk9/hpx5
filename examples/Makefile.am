@@ -3,7 +3,7 @@ examplesdir          = $(datarootdir)/doc/@PACKAGE@
 noinst_PROGRAMS         = fibonacci pingpong allreduce countdown seqspawn \
                           parspawn future memput memget guppie sendrecv \
                           sendrecv-chan allreduce-chan pingpong-chan hello \
-                          qsort call
+                          qsort call netbench
 
 fibonacci_SOURCES       = fibonacci.c
 pingpong_SOURCES        = pingpong.c
@@ -22,6 +22,7 @@ pingpong_chan_SOURCES   = pingpong-chan.c
 qsort_SOURCES           = qsort.c
 hello_SOURCES           = hello.c
 call_SOURCES            = call.c
+netbench_SOURCES        = netbench.c
 
 all_LIBS = $(HPX_LDADD)
 
@@ -55,6 +56,7 @@ pingpong_chan_LDADD   = $(all_LIBS)
 qsort_LDADD           = $(all_LIBS)
 hello_LDADD           = $(all_LIBS)
 call_LDADD            = $(all_LIBS)
+netbench_LDADD        = $(all_LIBS)
 
 fibonacci_DEPENDENCIES       = $(HPX_DEPS)
 pingpong_DEPENDENCIES        = $(HPX_DEPS)
@@ -74,3 +76,4 @@ pingpong_chan_DEPENDENCIES   = $(HPX_DEPS)
 qsort_DEPENDENCIES           = $(HPX_DEPS)
 hello_DEPENDENCIES           = $(HPX_DEPS)
 call_DEPENDENCIES            = $(HPX_DEPS)
+netbench_DEPENDENCIES        = $(HPX_DEPS)

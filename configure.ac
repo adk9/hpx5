@@ -11,10 +11,12 @@ AC_PREREQ([2.63])
 AC_INIT([hpx], [5.0.0a1], [hpx@indiana.edu])
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
+AC_USE_SYSTEM_EXTENSIONS
 
 # ---------------------------------------------------------------------------
 # Detect the programming environment.
 # ---------------------------------------------------------------------------
+AX_COMPILER_VENDOR
 HPX_PE_ENV
 
 AC_LANG([C])
@@ -23,7 +25,6 @@ AC_CONFIG_SRCDIR([include/config.h.in])
 AC_CONFIG_HEADERS([include/config.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
-AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 
@@ -128,15 +129,15 @@ AC_ARG_ENABLE([testsuite],
 # ---------------------------------------------------------------------------
 # --with-options, see config/hpx_with_pkg.m4 for details
 # ---------------------------------------------------------------------------
-HPX_WITH_PKG([papi],[papi],[build with profiling],[no],[PAPI])
 HPX_WITH_PKG([pmi],[pmi],[build with support for PMI],[no],[PMI])
 
 AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray PMI extensions]))
 HPX_WITH_PKG([hugetlbfs],[hugetlbfs],[build with hugepages for heap],[no],[HUGETLBFS])
 AS_IF([test "x$with_hugetlbfs" != xno],
   [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [0], [Enable huge pages heap allocation])],
-  [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANONYMOUS], [Disable huge pages heap allocation])])
-
+  [AS_CASE([$host_os],
+    [darwin*], [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANON], [Disable huge pages heap allocation])],
+               [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANONYMOUS], [Disable huge pages heap allocation])])])
 
 HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[no],[MPI])
 HPX_WITH_PKG([portals],[portals],[build with Portals networking],[no],[PORTALS])
@@ -266,7 +267,6 @@ AC_CONFIG_FILES([
   include/Makefile
   include/libhpx/Makefile
   examples/Makefile
-  bench/Makefile
   hpx.pc])
 
 AS_IF([test "x$enable_tutorial" != xno],
@@ -319,7 +319,7 @@ echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
 echo "               Networks : $networks"
 echo "               jemalloc : $enable_jemalloc"
-echo "              Profiling : $with_papi"
+echo "              Profiling : $enable_profiling"
 echo "         hugetlbfs heap : $with_hugetlbfs"
 echo "     Topology Awareness : $with_hwloc"
 echo "          Documentation : $enable_docs"

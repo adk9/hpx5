@@ -21,11 +21,10 @@ static barrier_t *barrier = NULL;
 static volatile int n = 0;
 static char * volatile task_sp = NULL;
 
-static HPX_TASK(_test_task, int *id) {
+static HPX_TASK(_test_task, void *UNUSED) {
   char local;
 
-  printf("thread %d running the subtask %d on stack %p\n", HPX_THREAD_ID, *id,
-         &local);
+  printf("thread %d running the subtask on stack %p\n", HPX_THREAD_ID, &local);
   fflush(stdout);
 
   // Record my stack address so that we can verify that an eager transfer really
@@ -35,7 +34,7 @@ static HPX_TASK(_test_task, int *id) {
   // Let everyone else make progress---one of them should start running my
   // parent, if it's been exposed to the world. Otherwise, no one else will
   // run.
-  sync_barrier_join(barrier, *id);
+  sync_barrier_join(barrier, HPX_THREAD_ID);
 
   // Wait for a while. This give the rest of the threads plenty of time to steal
   // my parent if they're going to.
@@ -48,13 +47,13 @@ static HPX_TASK(_test_task, int *id) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(_test_action, int *id) {
+static HPX_ACTION(_test_action, void *UNUSED) {
   char local;
 
-  if (sync_barrier_join(barrier, *id)) {
+  // Everyone joins the barrier once.
+  if (sync_barrier_join(barrier, HPX_THREAD_ID)) {
     // I win the race.
-    printf("thread %d running action %d on stack %p\n", HPX_THREAD_ID, *id,
-           &local);
+    printf("thread %d running action on stack %p\n", HPX_THREAD_ID, &local);
 
     // This will push the task onto my queue, then I have to induce myself to
     // transfer to it---everyone else is blocked, so all I have to do is call
@@ -64,9 +63,13 @@ static HPX_ACTION(_test_action, int *id) {
     // Note that the _test_task task actually releases the lock here, this
     // prevents anyone from stealing the parent thread (or getting it from the
     // yield queue) until I have already transferred to the child.
-    hpx_call(HPX_HERE, _test_task, HPX_NULL, id, sizeof(*id));
+    //
+    // We send our continuation along so that the test doesn't terminate early.
+    hpx_addr_t and = hpx_thread_current_cont_target();
+    int e = hpx_call(HPX_HERE, _test_task, and, NULL, 0);
+    assert(e == HPX_SUCCESS);
     hpx_thread_yield();
-    printf("action %d stolen by %d\n", *id, HPX_THREAD_ID);
+    printf("action stolen by %d\n", HPX_THREAD_ID);
 
     // Now, this thread should have been "stolen" or taken from the yield queue
     // or whatnot. We expect that we're running concurrent with, and on the same
@@ -89,19 +92,20 @@ static HPX_ACTION(_test_action, int *id) {
   else {
     // I lost the race, wait for the entire thing to be set up before
     // returning and becoming a "stealer".
-    sync_barrier_join(barrier, *id);
+    sync_barrier_join(barrier, HPX_THREAD_ID);
   }
-  printf("finishing %d\n", *id);
+  printf("finishing %d\n", HPX_THREAD_ID);
   return HPX_SUCCESS;
 }
 
 static HPX_ACTION(_test_try_task, void *UNUSED) {
   barrier = sr_barrier_new(HPX_THREADS);
   assert(barrier);
-  hpx_addr_t and = hpx_lco_and_new(HPX_THREADS);
+  hpx_addr_t and = hpx_lco_and_new(HPX_THREADS + 1);
   assert(and);
   for (int i = 0; i < HPX_THREADS; ++i) {
-    hpx_call(HPX_HERE, _test_action, and, &i, sizeof(i));
+    int e = hpx_call(HPX_HERE, _test_action, and, NULL, 0);
+    assert(e == HPX_SUCCESS);
   }
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);
