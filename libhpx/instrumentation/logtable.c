@@ -16,7 +16,7 @@
 
 #include <stdio.h>
 #include <fcntl.h>
-#include <time.h>                       /// @todo: use platform independent code
+#include <time.h>
 #include <unistd.h>
 #include <sys/mman.h>
 
@@ -35,17 +35,6 @@ typedef struct record {
   uint64_t ns;
   uint64_t user[4];
 } record_t;
-
-static void _time_diff(record_t *r, hpx_time_t *start) {
-  hpx_time_t end = hpx_time_now();
-  if (end.tv_nsec < start->tv_nsec) {
-    r->s = end.tv_sec - start->tv_sec - 1;
-    r->ns = (1e9 + end.tv_nsec) - start->tv_nsec;
-  } else {
-    r->s = end.tv_sec - start->tv_sec;
-    r->ns = end.tv_nsec - start->tv_nsec;
-  }
-}
 
 static int _create_file(const char *filename, size_t size) {
   static const int flags = O_RDWR | O_CREAT;
@@ -117,10 +106,6 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
 }
 
 void logtable_fini(logtable_t *log) {
-  if (!log) {
-    return;
-  }
-
   if (!log->size) {
     return;
   }
@@ -156,7 +141,9 @@ void logtable_append(logtable_t *log, uint64_t u1, uint64_t u2, uint64_t u3,
   r->id = log->id;
   r->rank = hpx_get_my_rank();
   r->worker = hpx_get_my_thread_id();
-  _time_diff(r, &log->start);
+  double us = hpx_time_elapsed_us(log->start);
+  r->s = us / 1e6;
+  r->ns = us * 1e3;
   r->user[0] = u1;
   r->user[1] = u2;
   r->user[2] = u3;

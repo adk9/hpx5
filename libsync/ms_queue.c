@@ -64,10 +64,10 @@ void sync_ms_queue_fini(ms_queue_t *q) {
 
 
 void sync_ms_queue_delete(ms_queue_t *q) {
-  if (!q)
-    return;
-  sync_ms_queue_fini(q);
-  free(q);
+  if (q) {
+    sync_ms_queue_fini(q);
+    free(q);
+  }
 }
 
 

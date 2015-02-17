@@ -55,6 +55,7 @@
 /examples/netfutures
 /examples/qsort
 /examples/call
+/examples/netbench
 
 # /include/
 /include/stamp-h1
@@ -130,11 +131,6 @@ contrib/photon/
 /docs/html/
 /docs/man/
 /docs/latex/
-
-# /bench/
-/bench/Makefile
-/bench/Makefile.in
-/bench/netbench
 
 # /tutorials/
 tutorial/Beginners/Makefile

@@ -13,10 +13,8 @@ CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
 
 # ---------------------------------------------------------------------------
-# Detect the programming environment.
+  # Detect the programming environment.
 # ---------------------------------------------------------------------------
-HPX_PE_ENV
-
 AC_LANG([C])
 
 AC_CONFIG_SRCDIR([include/config.h.in])
@@ -24,6 +22,8 @@ AC_CONFIG_HEADERS([include/config.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_USE_SYSTEM_EXTENSIONS
+AX_COMPILER_VENDOR
+HPX_PE_ENV
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 
@@ -42,6 +42,12 @@ LT_INIT([disable-shared]) # we don't support dynamic linking correctly
 
 # Initialize pthreads
 AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
+
+# Check for parallel configuration
+AC_ARG_ENABLE([parallel-config],
+  [AS_HELP_STRING([--enable-parallel-config],
+                  [Enable parallel configuration of contribs @<:@default=no@:>@])],
+  [trap 'kill $(jobs -p)' SIGINT], [enable_parallel_config=no])
 
 # Initialize contribs
 HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [hpx_])
@@ -128,15 +134,15 @@ AC_ARG_ENABLE([testsuite],
 # ---------------------------------------------------------------------------
 # --with-options, see config/hpx_with_pkg.m4 for details
 # ---------------------------------------------------------------------------
-HPX_WITH_PKG([papi],[papi],[build with profiling],[no],[PAPI])
 HPX_WITH_PKG([pmi],[pmi],[build with support for PMI],[no],[PMI])
 
 AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray PMI extensions]))
 HPX_WITH_PKG([hugetlbfs],[hugetlbfs],[build with hugepages for heap],[no],[HUGETLBFS])
 AS_IF([test "x$with_hugetlbfs" != xno],
   [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [0], [Enable huge pages heap allocation])],
-  [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANONYMOUS], [Disable huge pages heap allocation])])
-
+  [AS_CASE([$host_os],
+    [darwin*], [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANON], [Disable huge pages heap allocation])],
+               [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANONYMOUS], [Disable huge pages heap allocation])])])
 
 HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[no],[MPI])
 HPX_WITH_PKG([portals],[portals],[build with Portals networking],[no],[PORTALS])
@@ -265,7 +271,6 @@ AC_CONFIG_FILES([
   include/Makefile
   include/libhpx/Makefile
   examples/Makefile
-  bench/Makefile
   hpx.pc])
 
 AS_IF([test "x$enable_tutorial" != xno],
@@ -290,6 +295,11 @@ AS_IF([test "x$enable_tests" != xno],
   
 AC_OUTPUT
 
+if test "x$enable_parallel_config" != xno; then
+   echo "*** Waiting for contrib's configuration to finish..."
+   wait
+fi
+
 # ---------------------------------------------------------------------------
 # Output a summary of the results.
 # ---------------------------------------------------------------------------
@@ -311,7 +321,7 @@ echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
 echo "               Networks : $networks"
 echo "               jemalloc : $enable_jemalloc"
-echo "              Profiling : $with_papi"
+echo "              Profiling : $enable_profiling"
 echo "         hugetlbfs heap : $with_hugetlbfs"
 echo "     Topology Awareness : $with_hwloc"
 echo "          Documentation : $enable_docs"
@@ -322,4 +332,3 @@ echo "           Extra CFLAGS : $hpx_extra_cflags"
 echo "        Extra CCASFLAGS : $hpx_extra_ccasflags"
 echo "       Install location : $prefix"
 echo "================================================"
-

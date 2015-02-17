@@ -41,18 +41,15 @@ static const block_t BLOCK_ALL_FREE = UINTPTR_MAX;
 static const uint32_t   BLOCK_BYTES = sizeof(block_t);
 static const uint32_t    BLOCK_BITS = sizeof(block_t) * 8;
 
-
 /// Bitwise and between blocks.
 static inline block_t block_and(block_t lhs, block_t rhs) {
   return (lhs & rhs);
 }
 
-
 /// Bitwise xor between blocks.
 static inline block_t block_xor(block_t lhs, block_t rhs) {
   return (lhs ^ rhs);
 }
-
 
 /// Return the 0-based index of the first 1 bit in the block. At least one bit
 /// in @p b must be set.
@@ -66,7 +63,6 @@ static inline uint32_t block_ifs(block_t b) {
   return ctzl(b);
 }
 
-
 /// Return the 0-based index of the last 1 bit in the block. At least one bit in
 /// @p b must be set.
 ///
@@ -79,12 +75,10 @@ static inline uint32_t block_ils(block_t b) {
   return BLOCK_BITS - clzl(b) - 1;
 }
 
-
 /// Count the number of bits set in a block.
 static inline uint32_t block_popcount(block_t b) {
   return popcountl(b);
 }
-
 
 /// Create a block bitmask of min(@p length, BLOCK_BITS - offset) 1s starting at
 /// @p offset.
@@ -106,7 +100,6 @@ static inline block_t _create_mask(uint32_t offset, uint32_t length) {
   return (BLOCK_ALL_FREE >> rshift) << offset;
 }
 /// @}
-
 
 /// The bitmap structure.
 ///
@@ -131,7 +124,6 @@ struct bitmap {
   uint32_t       nblocks;
   block_t       blocks[];
 } HPX_ALIGNED(HPX_CACHELINE_SIZE);
-
 
 /// Try to match the range of bits from [@p bit, @p bit + @p nbits).
 ///
@@ -182,7 +174,6 @@ static uint32_t _match(const block_t *blocks, uint32_t bit, uint32_t nbits,
   return n;
 }
 
-
 /// Scan through the blocks looking for the first free bit.
 ///
 /// @param       blocks The blocks to scan.
@@ -216,7 +207,6 @@ static uint32_t _first_free(const block_t *blocks, uint32_t bit, uint32_t max) {
   return max;
 }
 
-
 /// Set a contiguous number of bits in the bitmap.
 ///
 /// @param          map The bitmap we're updating.
@@ -246,7 +236,6 @@ static void _set(block_t *blocks, uint32_t bit, uint32_t nbits) {
     mask = _create_mask(0, nbits);
   }
 }
-
 
 /// Clear a continuous number of bits in the bitmap.
 ///
@@ -278,7 +267,6 @@ static void _clear(block_t *blocks, uint32_t bit, uint32_t nbits) {
   }
 }
 
-
 /// Count the number of unused blocks in the bitmap.
 static int32_t _bitmap_unused_blocks(const bitmap_t *map) {
   uint32_t unused = 0;
@@ -289,7 +277,6 @@ static int32_t _bitmap_unused_blocks(const bitmap_t *map) {
   uint32_t extra = BLOCK_BITS - (map->nbits % BLOCK_BITS);
   return (int32_t)(unused - extra);
 }
-
 
 /// Handle an out-of-memory condition.
 ///
@@ -311,7 +298,6 @@ static int _bitmap_oom(const bitmap_t *map, uint32_t nbits, uint32_t align) {
   return LIBHPX_ENOMEM;
 }
 
-
 bitmap_t *bitmap_new(uint32_t nbits, uint32_t min_align, uint32_t base_align) {
   uint32_t nblocks = ceil_div_32(nbits, BLOCK_BITS);
   bitmap_t *map = NULL;
@@ -331,13 +317,11 @@ bitmap_t *bitmap_new(uint32_t nbits, uint32_t min_align, uint32_t base_align) {
   return map;
 }
 
-
 void bitmap_delete(bitmap_t *map) {
   if (map) {
     free(map);
   }
 }
-
 
 int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i) {
   log_gas("searching for %u blocks with alignment %u.\n", nbits, align);
@@ -388,13 +372,9 @@ int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i) {
 
   log_gas("found at offset %u.\n", bit);
 
-  if (i) {
-    *i = bit;
-  }
-
+  *i = bit;
   return LIBHPX_OK;
 }
-
 
 int bitmap_rreserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i)
 {
@@ -456,13 +436,9 @@ int bitmap_rreserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i)
 
   log_gas("found at offset %u.\n", bit);
 
-  if (i) {
-    *i = bit;
-  }
-
+  *i = bit;
   return LIBHPX_OK;
 }
-
 
 void bitmap_release(bitmap_t *map, uint32_t bit, uint32_t nbits) {
   log_gas("release %u blocks at %u.\n", nbits, bit);
@@ -484,7 +460,6 @@ void bitmap_release(bitmap_t *map, uint32_t bit, uint32_t nbits) {
   }
   sync_tatas_release(&map->lock);
 }
-
 
 bool bitmap_is_set(const bitmap_t *map, uint32_t bit, uint32_t nbits) {
   assert(map);
