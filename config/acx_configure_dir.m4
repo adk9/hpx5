@@ -113,15 +113,20 @@ config() {
   esac
 
   AC_MSG_NOTICE([running $SHELL $ac_sub_configure $ac_sub_configure_args --cache-file=$ac_sub_cache_file --srcdir=$ac_srcdir])
+  config_cmd="\$SHELL \"\$ac_sub_configure\" $ac_sub_configure_args \
+       --cache-file=\"\$ac_sub_cache_file\" --srcdir=\"\$ac_srcdir\""
+  if test "x$enable_parallel_config" != xno; then
+    touch config.output
+    config_cmd+=" > config.output"
+  fi
+
   # The eval makes quoting arguments work.
-  eval "\$SHELL \"\$ac_sub_configure\" $ac_sub_configure_args \
-       --cache-file=\"\$ac_sub_cache_file\" --srcdir=\"\$ac_srcdir\"" ||
-    AC_MSG_ERROR([$ac_sub_configure failed for $ac_dir])
+  eval $config_cmd || AC_MSG_ERROR([$ac_sub_configure failed for $ac_dir])
 
   cd "$ac_popdir"
 }
 
-AS_IF([test "x$enable_parallel_contrib" == xno],
+AS_IF([test "x$enable_parallel_config" == xno],
       [config],
       [config&])
 
