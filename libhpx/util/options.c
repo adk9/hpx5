@@ -92,6 +92,23 @@ static void _from_env(UT_string *str, const char * const var,
   utstring_printf(str, "--%s=%s ", arg, c);
 }
 
+/// Merge the option id and the group.
+///
+/// We need the key for the environment and the key for gengetopt as separate
+/// things in the -from_env call. The function takes the env key, copies it, and
+/// replaces underscores with hyphens.
+void _xform_string(UT_string *str, const char *env) {
+  char *opt = strdup(env);
+  dbg_assert(opt);
+  for (int i = 0, e = strlen(env); i < e; ++i) {
+    if (opt[i] == '_') {
+      opt[i] = '-';
+    }
+  }
+  _from_env(str, env, opt);
+  free(opt);
+}
+
 /// Get values from the environment for the options declared in options.def.
 ///
 /// This uses multiple-inclusion of options.def to call _get_env() for all of
@@ -100,20 +117,7 @@ static void _from_env(UT_string *str, const char * const var,
 ///
 /// @param[out]     str This will contain the collected values.
 static void _from_env_all(UT_string *str) {
-  char *cfgstr, *substr;
-#define LIBHPX_OPT(g, id, u3, u4)          \
-  cfgstr = malloc(strlen("hpx-"#g"-"#id)); \
-  if (strlen(#g)) {                        \
-    substr = malloc(strlen(#g));           \
-    strncpy(substr, #g, strlen(#g)-1);     \
-    sprintf(cfgstr, "hpx-%s-"#id, substr); \
-    free(substr);                          \
-  }                                        \
-  else {                                   \
-    sprintf(cfgstr, "hpx-"#id);            \
-  }                                        \
-  _from_env(str, "hpx_"#g#id, cfgstr);     \
-  free(cfgstr);
+#define LIBHPX_OPT(g, id, u3, u4) _xform_string(str, "hpx_"#g#id);
 # include "libhpx/options.def"
 #undef LIBHPX_OPT
 }
