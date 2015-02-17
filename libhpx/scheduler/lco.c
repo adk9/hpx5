@@ -201,6 +201,7 @@ HPX_PINNED(attach, void *args) {
 /// LCO bit packing and manipulation
 /// @{
 void lco_lock(lco_t *lco) {
+  dbg_assert(lco);
   sync_lockable_ptr_lock(&lco->lock);
   dbg_assert(self && self->current);
   struct ustack *stack = parcel_get_stack(self->current);
@@ -211,6 +212,7 @@ void lco_lock(lco_t *lco) {
 }
 
 void lco_unlock(lco_t *lco) {
+  dbg_assert(lco);
   dbg_assert(self && self->current);
   struct ustack *stack = parcel_get_stack(self->current);
   log_lco("%p released lco %p\n", (void*)self->current, (void*)stack->in_lco);

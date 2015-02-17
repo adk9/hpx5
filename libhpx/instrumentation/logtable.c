@@ -117,10 +117,6 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
 }
 
 void logtable_fini(logtable_t *log) {
-  if (!log) {
-    return;
-  }
-
   if (!log->size) {
     return;
   }

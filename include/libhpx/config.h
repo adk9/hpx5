@@ -131,7 +131,7 @@ config_t *config_new(int *argc, char ***argv)
   HPX_INTERNAL HPX_MALLOC;
 
 void config_delete(config_t *cfg)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_INTERNAL;
 
 /// Add declarations to query each of the set options.
 ///

@@ -71,10 +71,10 @@ void sync_two_lock_queue_fini(two_lock_queue_t *q) {
 
 
 void sync_two_lock_queue_delete(two_lock_queue_t *q) {
-  if (!q)
-    return;
-  sync_two_lock_queue_fini(q);
-  free(q);
+  if (q) {
+    sync_two_lock_queue_fini(q);
+    free(q);
+  }
 }
 
 
