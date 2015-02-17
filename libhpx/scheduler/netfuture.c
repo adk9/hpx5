@@ -133,7 +133,7 @@ _netfuture_get_offset(hpx_netfuture_t *f) {
 static uintptr_t
 _netfuture_get_addr(hpx_netfuture_t *f) {
   uintptr_t offset =  _netfuture_get_offset(f);
-  return _netfuture_table.base + offset;
+  return (uintptr_t)_netfuture_table.base + offset;
 }
 
 /// Return the native address of the _netfuture_t representation of the
@@ -141,10 +141,10 @@ _netfuture_get_addr(hpx_netfuture_t *f) {
 /// Returns the address of the netfuture's data only, not the netfuture
 /// itself.
 /// @p f must have the proper netfuture index set.
-static uintptr_t
-_netfuture_get_data_addr(hpx_netfuture_t *f) {
-  return _netfuture_get_addr(f) + sizeof(_netfuture_t);
-}
+// static uintptr_t
+// _netfuture_get_data_addr(hpx_netfuture_t *f) {
+//   return _netfuture_get_addr(f) + sizeof(_netfuture_t);
+// }
 
 /// Will set a netfuture as empty. The caller must hold the lock.
 static void
@@ -357,8 +357,9 @@ _future_get(lco_t *lco, int size, void *out, bool set_empty)
 }
 
 static void _nf_lco_set(lco_t *lco, int size, const void *from) {
-  _netfuture_t* nf = (_netfuture_t**)&lco;
-  hpx_status_t status = _future_set_no_copy_from_remote_action(nf);
+  _netfuture_t* nf = (_netfuture_t*)lco;
+  //  hpx_status_t status = _future_set_no_copy_from_remote_action(nf);
+  _future_set_no_copy_from_remote_action(&nf);
 }
 
 /// Initialize a single netfuture.
