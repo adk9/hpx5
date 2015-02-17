@@ -89,7 +89,7 @@ struct scheduler *scheduler_new(struct config *config)
 ///
 /// @param    scheduler The scheduler to free.
 void scheduler_delete(struct scheduler *scheduler)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_INTERNAL;
 
 /// Print collected statistics.
 ///

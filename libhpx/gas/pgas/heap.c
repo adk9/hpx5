@@ -32,7 +32,6 @@
 
 const uint64_t MAX_HEAP_BYTES = (uint64_t)1lu << GPA_OFFSET_BITS;
 
-
 static void *_heap_chunk_alloc_cyclic(heap_t *heap, size_t bytes, size_t align)
 {
   assert(bytes % heap->bytes_per_chunk == 0);
@@ -42,7 +41,7 @@ static void *_heap_chunk_alloc_cyclic(heap_t *heap, size_t bytes, size_t align)
 
   uint32_t bit = 0;
   if (bitmap_reserve(heap->chunks, bits, log2_align, &bit)) {
-    goto oom;
+    dbg_error("out-of-memory detected\n");
   }
 
   uint64_t offset = bit * heap->bytes_per_chunk;
@@ -50,12 +49,7 @@ static void *_heap_chunk_alloc_cyclic(heap_t *heap, size_t bytes, size_t align)
   void *p = heap_offset_to_lva(heap, offset);
   dbg_assert(((uintptr_t)p & (align - 1)) == 0);
   return p;
-
- oom:
-  dbg_error("out-of-memory detected\n");
-  return NULL;
 }
-
 
 /// The static chunk allocator callback that we give to jemalloc arenas that
 /// manage the cyclic portion of our global heap.
@@ -78,13 +72,12 @@ static void *_heap_chunk_alloc_cyclic(heap_t *heap, size_t bytes, size_t align)
 ///
 /// @returns The base pointer of the newly allocated chunk.
 static void *_chunk_alloc_cyclic(void *UNUSED1, size_t size, size_t align,
-                                   bool *zero, unsigned UNUSED) {
+                                 bool *zero, unsigned UNUSED) {
   void *chunk = _heap_chunk_alloc_cyclic(global_heap, size, align);
   if (zero && *zero)
     memset(chunk, 0, size);
   return chunk;
 }
-
 
 /// The static chunk de-allocator callback that we give to jemalloc arenas that
 /// manage the cyclic region of our global heap.
@@ -115,7 +108,6 @@ static bool _chunk_dalloc_cyclic(void *chunk, size_t size, unsigned UNUSED) {
   return heap_chunk_dalloc(global_heap, chunk, size);
 }
 
-
 ///
 static bitmap_t *_new_bitmap(const heap_t *heap) {
   size_t nchunks = heap->nchunks;
@@ -128,7 +120,6 @@ static bitmap_t *_new_bitmap(const heap_t *heap) {
   }
   return bitmap;
 }
-
 
 static void* _mmap_heap(heap_t *const heap) {
   const int prot  = PROT_READ | PROT_WRITE;
@@ -158,10 +149,8 @@ static void* _mmap_heap(heap_t *const heap) {
   }
 
   dbg_error("Could not allocate heap with minimum alignment of %zu.\n",
-        heap->bytes_per_chunk);
-  return NULL;
+            heap->bytes_per_chunk);
 }
-
 
 int heap_init(heap_t *heap, const size_t size, bool init_cyclic) {
   assert(heap);
@@ -185,7 +174,7 @@ int heap_init(heap_t *heap, const size_t size, bool init_cyclic) {
   // use one extra chunk to deal with alignment
   heap->base  = _mmap_heap(heap);
   if (!heap->base) {
-    dbg_error("could not allocate %zu bytes for the global heap\n",
+    log_error("could not allocate %zu bytes for the global heap\n",
               heap->nbytes);
     return LIBHPX_ENOMEM;
   }
@@ -209,11 +198,7 @@ int heap_init(heap_t *heap, const size_t size, bool init_cyclic) {
   return LIBHPX_OK;
 }
 
-
 void heap_fini(heap_t *heap) {
-  if (!heap)
-    return;
-
   if (heap->chunks)
     bitmap_delete(heap->chunks);
 
@@ -224,7 +209,6 @@ void heap_fini(heap_t *heap) {
   }
 }
 
-
 void *heap_chunk_alloc(heap_t *heap, size_t bytes, size_t align) {
   assert(bytes % heap->bytes_per_chunk == 0);
   assert(bytes / heap->bytes_per_chunk < UINT32_MAX);
@@ -233,23 +217,18 @@ void *heap_chunk_alloc(heap_t *heap, size_t bytes, size_t align) {
 
   uint32_t bit = 0;
   if (bitmap_rreserve(heap->chunks, bits, log2_align, &bit)) {
-    goto oom;
+    dbg_error("out-of-memory detected\n");
   }
 
   uint64_t offset = bit * heap->bytes_per_chunk;
   assert(offset % align == 0);
 
   if (offset < heap->csbrk) {
-    goto oom;
+    dbg_error("out-of-memory detected\n");
   }
 
   return heap->base + offset;
-
- oom:
-  dbg_error("out-of-memory detected\n");
-  return NULL;
 }
-
 
 bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size) {
   const uint64_t offset = (char*)chunk - heap->base;
@@ -263,12 +242,10 @@ bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size) {
   return true;
 }
 
-
 int heap_bind_transport(heap_t *heap, transport_t *transport) {
   heap->transport = transport;
   return transport->pin(transport, heap->base, heap->nbytes);
 }
-
 
 bool heap_contains_lva(const heap_t *heap, const void *lva) {
   const ptrdiff_t d = (char*)lva - heap->base;
@@ -286,7 +263,6 @@ uint64_t heap_lva_to_offset(const heap_t *heap, const void *lva) {
   return ((char*)lva - heap->base);
 }
 
-
 void *heap_offset_to_lva(const heap_t *heap, uint64_t offset) {
   DEBUG_IF (heap->nbytes < offset) {
     dbg_error("offset %"PRIu64" out of range (0,%zu)\n", offset, heap->nbytes);
@@ -294,7 +270,6 @@ void *heap_offset_to_lva(const heap_t *heap, uint64_t offset) {
 
   return heap->base + offset;
 }
-
 
 uint64_t heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize) {
   dbg_assert(heap->cyclic_arena < UINT32_MAX);
@@ -322,14 +297,12 @@ uint64_t heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize) {
   return ret;
 }
 
-
 void heap_free_cyclic(heap_t *heap, uint64_t offset) {
   dbg_assert(heap_offset_is_cyclic(heap, offset));
   void *lva = heap_offset_to_lva(heap, offset);
   int flags = MALLOCX_ARENA(heap->cyclic_arena);
   libhpx_global_dallocx(lva, flags);
 }
-
 
 bool heap_offset_is_cyclic(const heap_t *heap, uint64_t offset) {
   if (offset >= heap->nbytes) {
@@ -340,18 +313,15 @@ bool heap_offset_is_cyclic(const heap_t *heap, uint64_t offset) {
   return (offset < heap->csbrk);
 }
 
-
 static bool _chunks_are_used(const heap_t *heap, uint64_t offset, size_t n) {
   uint32_t from = offset / heap->bytes_per_chunk;
   uint32_t to = (offset + n) / heap->bytes_per_chunk + 1;
   return bitmap_is_set(heap->chunks, from, to - from);
 }
 
-
 uint64_t heap_get_csbrk(const heap_t *heap) {
   return sync_load(&heap->csbrk, SYNC_ACQUIRE);
 }
-
 
 int heap_set_csbrk(heap_t *heap, uint64_t offset) {
   // csbrk is monotonically increasing, so if we see a value in the csbrk field
@@ -365,7 +335,6 @@ int heap_set_csbrk(heap_t *heap, uint64_t offset) {
   // otherwise we have an old allocation and it's fine
   return HPX_SUCCESS;
 }
-
 
 uint32_t heap_max_block_lg_size(const heap_t *heap) {
   return heap->max_block_lg_size;

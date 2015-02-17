@@ -32,10 +32,10 @@ void dbg_error_internal(unsigned line, const char *filename, const char *func,
                         const char *fmt, ...)
   HPX_INTERNAL HPX_PRINTF(4, 5) HPX_NORETURN;
 
-#define dbg_error(...)                                      \
-  do {                                                      \
+#define dbg_error(...)                                             \
+  do {                                                             \
     dbg_error_internal(__LINE__, __FILE__, __func__, __VA_ARGS__); \
-    unreachable();                                          \
+    unreachable();                                                 \
   } while (0)
 
 #ifdef ENABLE_DEBUG
@@ -64,12 +64,12 @@ void log_internal(unsigned line, const char *filename, const char *func,
 
 #ifdef ENABLE_LOGGING
 # include "libhpx/locality.h"
-# define log_level(level, ...)                           \
-  do {                                                   \
-    if (config_log_level_isset(here->config, level) &&   \
-        config_log_at_isset(here->config, here->rank)) { \
+# define log_level(level, ...)                                 \
+  do {                                                         \
+    if (config_log_level_isset(here->config, level) &&         \
+        config_log_at_isset(here->config, here->rank)) {       \
       log_internal(__LINE__, __FILE__, __func__, __VA_ARGS__); \
-    }                                                   \
+    }                                                          \
   } while (0)
 #else
 # define log_level(level, ...)

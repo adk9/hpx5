@@ -137,8 +137,9 @@ static int HPX_USED _put_buffer(char *kvs, int rank, void *buffer, size_t len)
 
   // allocate key
   int e = PMI_KVS_Get_key_length_max(&length);
-  if (e != PMI_SUCCESS)
-    return dbg_error("pmi: failed to get max key length.\n");
+  if (e != PMI_SUCCESS) {
+    return log_error("pmi: failed to get max key length.\n");
+  }
   char *key = malloc(sizeof(*key) * length);
   snprintf(key, length, "%d", rank);
 
@@ -146,7 +147,7 @@ static int HPX_USED _put_buffer(char *kvs, int rank, void *buffer, size_t len)
   e = PMI_KVS_Get_value_length_max(&length);
   if (e != PMI_SUCCESS) {
     free(key);
-    return dbg_error("pmi: failed to get max value length.\n");
+    return log_error("pmi: failed to get max value length.\n");
   }
   char *value = malloc(sizeof(*value) * length);
   if ((_encode(buffer, len, value, (size_t*)&length)) != HPX_SUCCESS)
@@ -168,7 +169,7 @@ static int HPX_USED _put_buffer(char *kvs, int rank, void *buffer, size_t len)
 error:
   free(key);
   free(value);
-  return dbg_error("pmi: failed to put buffer in PMI's KVS.\n");
+  return log_error("pmi: failed to put buffer in PMI's KVS.\n");
 }
 
 /// ----------------------------------------------------------------------------
@@ -182,7 +183,7 @@ static int HPX_USED _get_buffer(char *kvs, int rank, void *buffer, size_t len)
   // allocate key
   int e = PMI_KVS_Get_key_length_max(&length);
   if (e != PMI_SUCCESS)
-    return dbg_error("pmi: failed to get max key length.\n");
+    return log_error("pmi: failed to get max key length.\n");
   char *key = malloc(sizeof(*key) * length);
   snprintf(key, length, "%d", rank);
 
@@ -190,7 +191,7 @@ static int HPX_USED _get_buffer(char *kvs, int rank, void *buffer, size_t len)
   e = PMI_KVS_Get_value_length_max(&length);
   if (e != PMI_SUCCESS) {
     free(key);
-    return dbg_error("pmi: failed to get max value length.\n");
+    return log_error("pmi: failed to get max value length.\n");
   }
   char *value = malloc(sizeof(*value) * length);
   if ((PMI_KVS_Get(kvs, key, value, length)) != PMI_SUCCESS)
@@ -206,7 +207,7 @@ static int HPX_USED _get_buffer(char *kvs, int rank, void *buffer, size_t len)
 error:
   free(key);
   free(value);
-  return dbg_error("pmi: failed to put buffer in PMI's KVS.\n");
+  return log_error("pmi: failed to put buffer in PMI's KVS.\n");
 }
 
 
@@ -221,7 +222,7 @@ static int _allgather(const boot_t *boot, const void *cin, void *out, int n) {
   int *nranks = malloc(sizeof(*nranks) * here->ranks);
   if ((PMI_Allgather(&here->rank, nranks, here->ranks)) != PMI_SUCCESS) {
     free(nranks);
-    return dbg_error("pmi: failed in PMI_Allgather.\n");
+    return log_error("pmi: failed in PMI_Allgather.\n");
   }
 
   void *buf = malloc(sizeof(char) * n * here->ranks);
@@ -229,7 +230,7 @@ static int _allgather(const boot_t *boot, const void *cin, void *out, int n) {
   if ((PMI_Allgather(in, buf, n)) != PMI_SUCCESS) {
     free(buf);
     free(nranks);
-    return dbg_error("pmi: failed in PMI_Allgather.\n");
+    return log_error("pmi: failed in PMI_Allgather.\n");
   }
 
   for (int i = 0; i < here->ranks; i++) {
@@ -249,7 +250,7 @@ static int _allgather(const boot_t *boot, const void *cin, void *out, int n) {
   e = PMI_KVS_Get_my_name(name, length);
   if (e != PMI_SUCCESS) {
     free(name);
-    return dbg_error("pmi: failed to get kvs name.\n");
+    return log_error("pmi: failed to get kvs name.\n");
   }
 
   _put_buffer(name, here->rank, (void*)in, n);
