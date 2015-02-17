@@ -115,7 +115,7 @@ int _init_buckets_action(const size_t * const delta) {
 }
 
 hpx_action_t _delete_buckets = 0;
-static int _delete_buckets_action(const void const * arg) {
+int _delete_buckets_action(const void const * arg) {
   buckets_t *temp_buckets = buckets;
   buckets = NULL;
   for(size_t i = 0; i < HPX_THREADS; ++i) {
@@ -207,7 +207,7 @@ int _send_next_level_action(const hpx_addr_t * const reduce_lco) {
   hpx_lco_set(*reduce_lco, sizeof(new_level), &new_level, HPX_NULL, HPX_NULL);
   hpx_lco_get(*reduce_lco, sizeof(new_level), &new_level);
   buckets->current_level = new_level;
-  printf("Current level found in send_next level action is %zu\n", new_level);
+  //printf("Current level found in send_next level action is %zu\n", new_level);
   return HPX_SUCCESS;
 }
 
@@ -222,9 +222,9 @@ void _find_next_level() {
   const hpx_addr_t bcast_lco = hpx_lco_future_new(0);
   hpx_bcast(_send_next_level, bcast_lco, &level_reduce_lco,
             sizeof(level_reduce_lco));
-  printf("Waiting for the find_next_level lco to be finished\n");
+  //printf("Waiting for the find_next_level lco to be finished\n");
   hpx_lco_wait(bcast_lco);
-  printf("The lco for find_next_level has been set\n");
+  //printf("The lco for find_next_level has been set\n");
   hpx_lco_delete(bcast_lco, HPX_NULL);
   hpx_lco_delete(level_reduce_lco, HPX_NULL);
 }

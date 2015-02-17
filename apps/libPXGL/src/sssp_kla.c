@@ -90,17 +90,17 @@ static int _sssp_klevel_process_vertex_action(const _sssp_visit_vertex_klevel_ar
     return HPX_RESEND;
 
   size_t k_current = (args->k_current);
-   printf("Distance Action on %" SSSP_UINT_PRI " with distance %" SSSP_UINT_PRI "\n", target, args->distance);
-  printf("k_current = %zu, k_level = %zu\n", k_current, k_level);
+  //printf("Distance Action on %" SSSP_UINT_PRI " with distance %" SSSP_UINT_PRI "\n", target, args->distance);
+  //printf("k_current = %zu, k_level = %zu\n", k_current, k_level);
   if (_try_update_vertex_distance(vertex, args->distance)) {
     k_current += 1;
     if(k_current <= k_level) {
-      printf("Sending updates to neighbours\n");
+      //printf("Sending updates to neighbours\n");
       _send_update_to_klevel_neighbors(args->graph, vertex, args->distance, k_current);
     }
     else {
       //enqueue all the neighbours in the next bucket for next klevel
-      printf("Calling action for inserting into buckets for the next level\n");
+      //printf("Calling action for inserting into buckets for the next level\n");
       _insert_neighbors_next_klevel(HPX_THREAD_ID, buckets->current_level + 1,args->graph, vertex, args->distance, k_current);
     }
       //if (_get_termination() == AND_LCO_TERMINATION) hpx_lco_set(result, 0, NULL, HPX_NULL, HPX_NULL);//TODO
@@ -264,17 +264,19 @@ int call_kla_sssp_action(const call_sssp_args_t *const args) {
     hpx_lco_wait(termination_lco);
     hpx_lco_delete(termination_lco, HPX_NULL);
 
-    printf("Finding next level.\n");
+    //printf("Finding next level.\n");
     _find_next_level();
-    printf("After calling finding next level of buckets, next bucket level is:%zu\n", buckets->current_level);
+    //printf("After calling finding next level of buckets, next bucket level is:%zu\n", buckets->current_level);
     if (buckets->current_level == size_t_max) {
-      printf("before deleting buckets bucket current level %zu\n", buckets->current_level);
-      hpx_addr_t delete_termination_lco = hpx_lco_and_new(HPX_LOCALITIES);
-      hpx_bcast(_delete_buckets, HPX_NULL, &delete_termination_lco, sizeof(delete_termination_lco));
-      hpx_lco_wait(delete_termination_lco);
-      hpx_lco_set(args->termination_lco, 0, NULL, HPX_NULL, HPX_NULL);
-      hpx_lco_delete(delete_termination_lco, HPX_NULL);
+      //printf("before deleting buckets bucket current level %zu\n", buckets->current_level);
+      hpx_bcast_sync(_delete_buckets, NULL, 0);
       break;
+      /* hpx_addr_t delete_termination_lco = hpx_lco_and_new(HPX_LOCALITIES); */
+      /* hpx_bcast(_delete_buckets, HPX_NULL, &delete_termination_lco, sizeof(delete_termination_lco)); */
+      /* hpx_lco_wait(delete_termination_lco); */
+      /* hpx_lco_set(args->termination_lco, 0, NULL, HPX_NULL, HPX_NULL); */
+      /* hpx_lco_delete(delete_termination_lco, HPX_NULL); */
+      /* break; */
     }
   }
   hpx_lco_set(args->termination_lco, 0, NULL, HPX_NULL, HPX_NULL);
