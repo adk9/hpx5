@@ -13,6 +13,7 @@
 #include <netdb.h>
 
 #include "libphoton.h"
+#include "photon_exchange.h"
 #include "photon_ugni_connect.h"
 #include "utility_functions.h"
 #include "logging.h"
