@@ -602,8 +602,8 @@ static int verbs_unregister_addr(photonAddr addr, int af) {
 static int verbs_get_dev_name(char **ib_dev) {
   printf("verbs dev_name = %s\n", verbs_ctx.ib_dev);
   printf("verbs char %c at %d\n", verbs_ctx.ib_dev[0], &verbs_ctx.ib_dev[0]);
-  **ib_dev = verbs_ctx.ib_dev;
-  printf("ib_dev char %c at %d\n", ***ib_dev, **ib_dev);
+  *ib_dev = verbs_ctx.ib_dev;
+  printf("ib_dev char %c at %d\n", **ib_dev, *ib_dev);
   printf("ib_dev = %s\n", *ib_dev);
   return PHOTON_OK;
 }
