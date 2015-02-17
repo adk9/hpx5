@@ -53,7 +53,7 @@ void sync_chase_lev_ws_deque_fini(chase_lev_ws_deque_t *d)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 void sync_chase_lev_ws_deque_delete(chase_lev_ws_deque_t *d)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_INTERNAL;
 
 /// Query the size of the deque.
 ///

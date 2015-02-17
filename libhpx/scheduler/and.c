@@ -97,7 +97,7 @@ static void _and_set(lco_t *lco, int size, const void *from) {
   lco_lock(&and->lco);
   and->value -= num;
   intptr_t value = and->value;
-  log_lco("and: reduced count to %ld\n", value);
+  log_lco("and: reduced count to %ld lco %p\n", value, (void*)lco);
 
   if (value == 0) {
     scheduler_signal_all(&and->barrier);
