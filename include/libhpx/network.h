@@ -134,11 +134,12 @@ static inline int network_send(network_t *network, hpx_parcel_t *p) {
 /// remote LCO when the remote operation is complete.
 ///
 /// Furthermore, it will generate a remote completion event encoding (@p op,
-/// @to) at the locality at which @to is currently mapped, allowing two-sided
-/// active-message semantics.
+/// @p op_to) at the locality at which @to is currently mapped, allowing 
+/// two-sided active-message semantics.
 ///
 /// In this context, signaling the @p remote LCO and the delivery of the remote
-/// completion are independent events that potentially proceed in parallel.
+/// completion via @p op are independent events that potentially proceed in 
+/// parallel.
 ///
 /// @param      network The network instance to use.
 /// @param           to The global target for the put.
