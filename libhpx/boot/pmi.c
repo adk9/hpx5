@@ -220,7 +220,7 @@ static int _allgather(const boot_t *boot, const void *cin, void *out, int n) {
   // deterministic for all allgather invocations.
 
   int *nranks = malloc(sizeof(*nranks) * here->ranks);
-  if ((PMI_Allgather(&here->rank, nranks, here->ranks)) != PMI_SUCCESS) {
+  if ((PMI_Allgather(&here->rank, nranks, sizeof(here->ranks))) != PMI_SUCCESS) {
     free(nranks);
     return log_error("pmi: failed in PMI_Allgather.\n");
   }
