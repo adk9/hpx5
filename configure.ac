@@ -11,20 +11,19 @@ AC_PREREQ([2.63])
 AC_INIT([hpx], [5.0.0a1], [hpx@indiana.edu])
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
-AC_USE_SYSTEM_EXTENSIONS
 
 # ---------------------------------------------------------------------------
-# Detect the programming environment.
+  # Detect the programming environment.
 # ---------------------------------------------------------------------------
-AX_COMPILER_VENDOR
-HPX_PE_ENV
-
 AC_LANG([C])
 
 AC_CONFIG_SRCDIR([include/config.h.in])
 AC_CONFIG_HEADERS([include/config.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
+AC_USE_SYSTEM_EXTENSIONS
+AX_COMPILER_VENDOR
+HPX_PE_ENV
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 
@@ -43,6 +42,12 @@ LT_INIT([disable-shared]) # we don't support dynamic linking correctly
 
 # Initialize pthreads
 AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
+
+# Check for parallel configuration
+AC_ARG_ENABLE([parallel-config],
+  [AS_HELP_STRING([--enable-parallel-config],
+                  [Enable parallel configuration of contribs @<:@default=no@:>@])],
+  [trap 'kill $(jobs -p)' SIGINT], [enable_parallel_config=no])
 
 # Initialize contribs
 HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [hpx_])
@@ -298,6 +303,11 @@ AS_IF([test "x$enable_tests" != xno],
   
 AC_OUTPUT
 
+if test "x$enable_parallel_config" != xno; then
+   echo "*** Waiting for contrib's configuration to finish..."
+   wait
+fi
+
 # ---------------------------------------------------------------------------
 # Output a summary of the results.
 # ---------------------------------------------------------------------------
@@ -330,4 +340,3 @@ echo "           Extra CFLAGS : $hpx_extra_cflags"
 echo "        Extra CCASFLAGS : $hpx_extra_ccasflags"
 echo "       Install location : $prefix"
 echo "================================================"
-
