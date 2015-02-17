@@ -176,13 +176,13 @@ _future_set_no_copy(_netfuture_t *f) {
 static int
 _future_set_no_copy_from_remote_action(_netfuture_t **fp) {
   _netfuture_t *f = *fp;
-  dbg_printf("  _future_set_no_copy_from_remote_action on %p\n", (void*)f);
+  dbg_printf("  _future_set_no_copy_from_remote_action on netfuture at pa %p\n", (void*)f);
   lco_lock(&f->lco);
   if (!_empty(f))
     scheduler_wait(&f->lco.lock, &f->empty);
   _future_set_no_copy(f);
   lco_unlock(&f->lco);
-  dbg_printf("  _future_set_no_copy_from_remote_action on %p DONE\n", (void*)f);
+  dbg_printf("  _future_set_no_copy_from_remote_action on netfuture at pa %p DONE\n", (void*)f);
   return HPX_SUCCESS;
 }
 
@@ -228,9 +228,16 @@ _initialize_netfutures_action(_nf_init_args_t *args) {
   memset(_netfuture_table.base, -1, _netfuture_cfg.max_size);
 #endif
 
-  dbg_printf("  At %d netfutures base = %p\n", hpx_get_my_rank(), _netfuture_table.base);
-  dbg_printf0("  At %d netfutures base = %p top = %p\n", hpx_get_my_rank(), 
+  dbg_printf("  At %d netfutures base pa = %p\n", hpx_get_my_rank(), _netfuture_table.base);
+  dbg_printf0("  At %d netfutures base pa = %p top pa = %p\n", hpx_get_my_rank(), 
               _netfuture_table.base, _netfuture_table.base + _netfuture_cfg.max_size);
+
+  hpx_addr_t temp_base = _netfuture_table.base_gas;
+  hpx_lco_allgather_setid(ag, hpx_get_my_rank(),
+                          sizeof(temp_base), &temp_base,
+                          HPX_NULL, HPX_NULL);
+  hpx_lco_get(ag, hpx_get_num_ranks() * sizeof(_netfuture_table.buffers[0]), 
+              _netfuture_table.buffers);
 
   if (hpx_get_num_ranks() > 1) {
     for (int i = 0; i < hpx_get_num_ranks(); i++) {
@@ -238,12 +245,7 @@ _initialize_netfutures_action(_nf_init_args_t *args) {
                  i, _netfuture_table.buffers[i]);
     }
   }
-  hpx_addr_t temp_base = _netfuture_table.base_gas;
-  hpx_lco_allgather_setid(ag, hpx_get_my_rank(),
-                          sizeof(temp_base), &temp_base,
-                          HPX_NULL, HPX_NULL);
-  hpx_lco_get(ag, hpx_get_num_ranks() * sizeof(_netfuture_table.buffers[0]), 
-              _netfuture_table.buffers);
+
 
   _netfuture_table.inited = 1;
 
@@ -354,6 +356,10 @@ _future_get(lco_t *lco, int size, void *out, bool set_empty)
   return status;
 }
 
+static void _nf_lco_set(lco_t *lco, int size, const void *from) {
+  _netfuture_t* nf = (_netfuture_t**)&lco;
+  hpx_status_t status = _future_set_no_copy_from_remote_action(nf);
+}
 
 /// Initialize a single netfuture.
 /// Does not apply to a netfuture array, only a single netfuture, possibly
@@ -370,7 +376,7 @@ _future_init(_netfuture_t *f, int size, bool shared)
   static const lco_class_t vtable = {
     .on_fini = NULL,
     .on_error = NULL,
-    .on_set = NULL,
+    .on_set = _nf_lco_set,
     .on_get = NULL,
     .on_getref = NULL,
     .on_release = NULL,
@@ -416,8 +422,8 @@ int _add_futures(hpx_netfuture_t *f) {
   for (int i = 0; i < _netfutures_at_rank(f); i ++) {
     _netfuture_t *nf = (_netfuture_t*)_netfuture_get_addr(&fi);
     _future_init(nf, f->size, false);
-    dbg_printf("  Initing future on rank %d at %p\n", hpx_get_my_rank(), (void*)nf);
-    dbg_printf0("  Initing future on rank %d at %p\n", hpx_get_my_rank(), (void*)nf);
+    dbg_printf("  Initing future on rank %d at pa %p\n", hpx_get_my_rank(), (void*)nf);
+    dbg_printf0("  Initing future on rank %d at pa %p\n", hpx_get_my_rank(), (void*)nf);
     fi.index += hpx_get_num_ranks();
   }
   fi.index = 0;
@@ -520,15 +526,15 @@ void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_ad
 
   hpx_netfuture_t future_i = hpx_lco_netfuture_at(future, id);
 
-  dbg_printf("  Setating to %d (%d, future at %p) from %d\n", future_i.index, _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr_gas(&future_i), hpx_get_my_rank());
+  dbg_printf("  Setating to %d (%d, future at ga %p) from %d\n", future_i.index, _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr_gas(&future_i), hpx_get_my_rank());
   void *lco_addr;
   hpx_gas_try_pin(lsync_lco, &lco_addr);
-  dbg_printf0("  Setating to %d (%d, future at %p data at %p) with lco %p from %d\n", future_i.index, _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr_gas(&future_i), (void*)_netfuture_get_data_addr_gas(&future_i), lco_addr, hpx_get_my_rank());
+  dbg_printf0("  Setating to %d (%d, future at ga %p data at ga %p) with lco pa %p from %d\n", future_i.index, _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr_gas(&future_i), (void*)_netfuture_get_data_addr_gas(&future_i), lco_addr, hpx_get_my_rank());
   hpx_gas_unpin(lsync_lco);
 
   // normally lco_set does all this
   if (_netfuture_get_rank(&future_i) != hpx_get_my_rank()) {
-    dbg_printf0("  Enqueuing setat to %d (%d, future at %p) from %d\n", future_i.index, _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr_gas(&future_i), hpx_get_my_rank());
+    dbg_printf0("  Enqueuing setat to %d (rank %d, future at ga %p) from %d\n", future_i.index, _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr_gas(&future_i), hpx_get_my_rank());
 
   // PWC HERE
   hpx_addr_t remote_lco_addr = _netfuture_get_addr_gas(&future_i);
@@ -545,7 +551,7 @@ void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_ad
       hpx_lco_set(rsync_lco, 0, NULL, HPX_NULL, HPX_NULL);
   }
 
-  dbg_printf("  Done setting to (%d, %p) from %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr_gas(&future_i), hpx_get_my_rank());
+  dbg_printf("  Done setting to (rank %d, ga %p) from %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr_gas(&future_i), hpx_get_my_rank());
 }
 
 void hpx_lco_netfuture_emptyat(hpx_netfuture_t base, int i, hpx_addr_t rsync_lco) {
@@ -573,12 +579,12 @@ hpx_addr_t hpx_lco_netfuture_getat(hpx_netfuture_t base, int i, size_t size) {
   hpx_addr_t retval = HPX_NULL;
   lco_t *lco = (lco_t*)_netfuture_get_addr(&future_i);
 
-  dbg_printf("  Getating %d from (%d, future at %p) to %d\n", future_i.index, _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr(&future_i), hpx_get_my_rank());
+  dbg_printf("  Getating %d from (%d, future at ga %p) to %d\n", future_i.index, _netfuture_get_rank(&future_i), _netfuture_get_addr_gas(&future_i), hpx_get_my_rank());
 
   retval = hpx_addr_add(_netfuture_table.base_gas, _netfuture_get_offset(&future_i) + sizeof(_netfuture_t), 1);
   _future_get(lco, size, NULL, false);
 
-  dbg_printf("  Done getting from (%d, %p) to %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr(&future_i), hpx_get_my_rank());
+  dbg_printf("  Done getting from (%d, ga %p) to %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr_gas(&future_i), hpx_get_my_rank());
   return retval;
 }
 
