@@ -128,7 +128,6 @@ AC_ARG_ENABLE([testsuite],
 # ---------------------------------------------------------------------------
 # --with-options, see config/hpx_with_pkg.m4 for details
 # ---------------------------------------------------------------------------
-HPX_WITH_PKG([papi],[papi],[build with profiling],[no],[PAPI])
 HPX_WITH_PKG([pmi],[pmi],[build with support for PMI],[no],[PMI])
 
 AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray PMI extensions]))
@@ -311,7 +310,7 @@ echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
 echo "               Networks : $networks"
 echo "               jemalloc : $enable_jemalloc"
-echo "              Profiling : $with_papi"
+echo "              Profiling : $enable_profiling"
 echo "         hugetlbfs heap : $with_hugetlbfs"
 echo "     Topology Awareness : $with_hwloc"
 echo "          Documentation : $enable_docs"
