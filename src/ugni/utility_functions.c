@@ -37,6 +37,8 @@ int v_option = 0;
 #endif
 
 #ifdef HAVE_PMI
+#include <pmi.h>
+
 /*
  * allgather gather the requested information from all of the ranks.
  */
