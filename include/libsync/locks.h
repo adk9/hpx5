@@ -111,7 +111,7 @@ void sync_clh_lock_acquire(struct clh_lock *lock, struct clh_node *n)
 ///                       sync_clh_lock_start_acquire() or
 ///                       sync_clh_lock_acquire().
 struct clh_node *sync_clh_lock_release(struct clh_lock *lock, struct clh_node *n)
-  HPX_NON_NULL(1, 2) HPX_INTERNAL HPX_RETURNS_NON_NULL;
+  HPX_NON_NULL(1, 2) HPX_INTERNAL;
 
 
 struct mcs_node {
