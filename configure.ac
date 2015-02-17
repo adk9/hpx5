@@ -264,7 +264,6 @@ AC_CONFIG_FILES([
   include/Makefile
   include/libhpx/Makefile
   examples/Makefile
-  bench/Makefile
   hpx.pc])
 
 AS_IF([test "x$enable_tutorial" != xno],
