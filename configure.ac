@@ -44,6 +44,12 @@ LT_INIT([disable-shared]) # we don't support dynamic linking correctly
 # Initialize pthreads
 AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
 
+# Check for parallel configuration
+AC_ARG_ENABLE([parallel-config],
+  [AS_HELP_STRING([--enable-parallel-config],
+                  [Enable parallel configuration of contribs @<:@default=no@:>@])],
+  [trap 'kill $(jobs -p)' SIGINT], [enable_parallel_config=no])
+
 # Initialize contribs
 HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [hpx_])
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
@@ -61,11 +67,6 @@ AX_CFI_DIRECTIVES
 # ---------------------------------------------------------------------------
 # --enable options
 # ---------------------------------------------------------------------------
-AC_ARG_ENABLE([parallel-config],
-  [AS_HELP_STRING([--enable-parallel-config],
-                  [Enable parallel configuration of contribs @<:@default=no@:>@])],
-  [trap 'kill $(jobs -p)' SIGINT], [enable_parallel_config=no])
-
 AC_ARG_ENABLE([pedantic],
   [AS_HELP_STRING([--enable-pedantic],
                   [Enable pedantic C99 @<:@default=yes@:>@])],
