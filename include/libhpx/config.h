@@ -104,18 +104,18 @@ static const char* const HPX_BOOT_TO_STRING[] = {
 #define HPX_LOCALITY_ALL   -1                   //!< Represents all localities.
 
 //! Configuration options for runtime logging in HPX.
-#define HPX_LOG_DEFAULT 0x1               //!< The default logging level.
-#define HPX_LOG_BOOT    0x2               //!< Log the bootstrapper execution.
-#define HPX_LOG_SCHED   0x4               //!< Log the HPX scheduler operations.
-#define HPX_LOG_GAS     0x8               //!< Log the Global-Address-Space ops.
-#define HPX_LOG_LCO     0x16              //!< Log the LCO operations.
-#define HPX_LOG_NET     0x32              //!< Turn on logging for network ops.
-#define HPX_LOG_TRANS   0x64              //!< Log the transport operations.
-#define HPX_LOG_PARCEL  0x128             //!< Parcel logging.
+#define HPX_LOG_DEFAULT 1               //!< The default logging level.
+#define HPX_LOG_BOOT    2               //!< Log the bootstrapper execution.
+#define HPX_LOG_SCHED   4               //!< Log the HPX scheduler operations.
+#define HPX_LOG_GAS     8               //!< Log the Global-Address-Space ops.
+#define HPX_LOG_LCO     16              //!< Log the LCO operations.
+#define HPX_LOG_NET     32              //!< Turn on logging for network ops.
+#define HPX_LOG_TRANS   64              //!< Log the transport operations.
+#define HPX_LOG_PARCEL  128             //!< Parcel logging.
 
-#define HPX_TRACE_PARCELS 0x1
-#define HPX_TRACE_PWC     0x2
-#define HPX_TRACE_SCHED   0x4
+#define HPX_TRACE_PARCELS 1
+#define HPX_TRACE_PWC     2
+#define HPX_TRACE_SCHED   4
 
 /// The HPX configuration type.
 ///
