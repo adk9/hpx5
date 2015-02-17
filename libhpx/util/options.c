@@ -89,7 +89,11 @@ static void _from_env(UT_string *str, const char * const var,
   if (!c) {
     return;
   }
-  utstring_printf(str, "--%s=%s ", arg, c);
+  if (strlen(c) == 0 || !strcmp(c, "1") || !strcmp(c, "on")) {
+    utstring_printf(str, "--%s ", arg);
+  } else {
+    utstring_printf(str, "--%s=%s ", arg, c);
+  }
 }
 
 /// Merge the option id and the group.
