@@ -126,8 +126,8 @@ config() {
   cd "$ac_popdir"
 }
 
-AS_IF([test "x$enable_parallel_config" == xno],
-      [config],
-      [config&])
+AS_IF([test "x$enable_parallel_config" != xno],
+      [config&],
+      [config])
 
 ])# ACX_CONFIGURE_DIR
