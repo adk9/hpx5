@@ -34,8 +34,7 @@ static int _smp_send(network_t *network, hpx_parcel_t *p) {
 
 static int _smp_pwc(network_t *network,
                     hpx_addr_t to, const void *from, size_t n,
-                    hpx_addr_t local, hpx_addr_t remote, 
-                    hpx_action_t op, hpx_addr_t op_to)
+                    hpx_addr_t local, hpx_addr_t remote, hpx_action_t op)
 {
   return LIBHPX_EUNIMPLEMENTED;
 }

@@ -142,4 +142,3 @@ void thread_delete(ustack_t *thread) {
   void *base = _unprotect(thread);
   free(base);
 }
-
