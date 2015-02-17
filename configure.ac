@@ -135,8 +135,9 @@ AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray
 HPX_WITH_PKG([hugetlbfs],[hugetlbfs],[build with hugepages for heap],[no],[HUGETLBFS])
 AS_IF([test "x$with_hugetlbfs" != xno],
   [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [0], [Enable huge pages heap allocation])],
-  [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANONYMOUS], [Disable huge pages heap allocation])])
-
+  [AS_CASE([$host_os],
+    [darwin*], [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANON], [Disable huge pages heap allocation])],
+               [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANONYMOUS], [Disable huge pages heap allocation])])])
 
 HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[no],[MPI])
 HPX_WITH_PKG([portals],[portals],[build with Portals networking],[no],[PORTALS])
