@@ -62,6 +62,11 @@ AX_CFI_DIRECTIVES
 # --enable options
 # ---------------------------------------------------------------------------
 AC_ARG_ENABLE([pedantic],
+  [AS_HELP_STRING([--enable-perallel-contrib],
+                  [Enable parallel configuration of contribs @<:@default=no@:>@])],
+  [], [enable_parallel_contrib=no])
+
+AC_ARG_ENABLE([pedantic],
   [AS_HELP_STRING([--enable-pedantic],
                   [Enable pedantic C99 @<:@default=yes@:>@])],
   [], [enable_pedantic=yes])
@@ -322,3 +327,5 @@ echo "        Extra CCASFLAGS : $hpx_extra_ccasflags"
 echo "       Install location : $prefix"
 echo "================================================"
 
+trap 'kill $(jobs -p)' SIGINT
+wait
