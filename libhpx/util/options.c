@@ -101,18 +101,18 @@ static void _from_env(UT_string *str, const char * const var,
 /// @param[out]     str This will contain the collected values.
 static void _from_env_all(UT_string *str) {
   char *cfgstr, *substr;
-#define LIBHPX_OPT(g, id, u3, u4)           \
-  cfgstr = malloc(strlen("hpx-"#g"-"#id));      \
-  if (strlen(#g)) {                 \
-    substr = malloc(strlen(#g));            \
-    strncpy(substr, #g, strlen(#g)-1);          \
-    sprintf(cfgstr, "hpx-%s-"#id, substr);      \
-    free(substr);                   \
-  }                         \
-  else {                        \
-    sprintf(cfgstr, "hpx-"#id);             \
-  }                         \
-  _from_env(str, "hpx_"#g#id, cfgstr);          \
+#define LIBHPX_OPT(g, id, u3, u4)          \
+  cfgstr = malloc(strlen("hpx-"#g"-"#id)); \
+  if (strlen(#g)) {                        \
+    substr = malloc(strlen(#g));           \
+    strncpy(substr, #g, strlen(#g)-1);     \
+    sprintf(cfgstr, "hpx-%s-"#id, substr); \
+    free(substr);                          \
+  }                                        \
+  else {                                   \
+    sprintf(cfgstr, "hpx-"#id);            \
+  }                                        \
+  _from_env(str, "hpx_"#g#id, cfgstr);     \
   free(cfgstr);
 # include "libhpx/options.def"
 #undef LIBHPX_OPT
@@ -233,11 +233,11 @@ static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
     cfg->group##id = strdup(opts->hpx_##group##id##_arg);   \
   }
 
-#define LIBHPX_OPT_BITSET(group, id, init)                              \
-  if (opts->hpx_##group##id##_given) {                                  \
-    cfg->group##id = _merge_bitvector(opts->hpx_##group##id##_given,    \
+#define LIBHPX_OPT_BITSET(group, id, init)                                    \
+  if (opts->hpx_##group##id##_given) {                                        \
+    cfg->group##id = _merge_bitvector(opts->hpx_##group##id##_given,          \
                                       (uint32_t*)opts->hpx_##group##id##_arg, \
-                                      hpx_##group##id##_arg_all);       \
+                                      hpx_##group##id##_arg_all);             \
   }
 
 #define LIBHPX_OPT_INTSET(group, id, init, none, all)               \
@@ -270,20 +270,20 @@ void hpx_print_help(void) {
   hpx_option_parser_print_help();
 }
 
-#define LIBHPX_OPT_INTSET(group, id, init, none, all)           \
-  int config_##group##id##_isset(const config_t *cfg, int element) {    \
-    if (!cfg->group##id) {                      \
-      return (init == all);                     \
-    }                                   \
-    for (int i = 0; cfg->group##id[i] != none; ++i) {           \
-      if (cfg->group##id[i] == all) {                   \
-        return 1;                           \
-      }                                 \
-      if (cfg->group##id[i] == element) {               \
-        return 1;                           \
-      }                                 \
-    }                                   \
-    return 0;                               \
+#define LIBHPX_OPT_INTSET(group, id, init, none, all)                \
+  int config_##group##id##_isset(const config_t *cfg, int element) { \
+    if (!cfg->group##id) {                                           \
+      return (init == all);                                          \
+    }                                                                \
+    for (int i = 0; cfg->group##id[i] != none; ++i) {                \
+      if (cfg->group##id[i] == all) {                                \
+        return 1;                                                    \
+      }                                                              \
+      if (cfg->group##id[i] == element) {                            \
+        return 1;                                                    \
+      }                                                              \
+    }                                                                \
+    return 0;                                                        \
   }
 # include "libhpx/options.def"
 #undef LIBHPX_OPT_INTSET
