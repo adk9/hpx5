@@ -21,6 +21,7 @@
 
 AC_DEFUN([ACX_CONFIGURE_DIR],
 [
+config() {
   in_src=$1
   in_build=$2
   ac_sub_configure_args=$3
@@ -118,4 +119,10 @@ AC_DEFUN([ACX_CONFIGURE_DIR],
     AC_MSG_ERROR([$ac_sub_configure failed for $ac_dir])
 
   cd "$ac_popdir"
+}
+
+AS_IF([test "x$enable_parallel_contrib" == xno],
+      [config],
+      [config&])
+
 ])# ACX_CONFIGURE_DIR
