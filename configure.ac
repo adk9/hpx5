@@ -61,6 +61,11 @@ AX_CFI_DIRECTIVES
 # ---------------------------------------------------------------------------
 # --enable options
 # ---------------------------------------------------------------------------
+AC_ARG_ENABLE([parallel-config],
+  [AS_HELP_STRING([--enable-parallel-config],
+                  [Enable parallel configuration of contribs @<:@default=no@:>@])],
+  [trap 'kill $(jobs -p)' SIGINT], [enable_parallel_config=no])
+
 AC_ARG_ENABLE([pedantic],
   [AS_HELP_STRING([--enable-pedantic],
                   [Enable pedantic C99 @<:@default=yes@:>@])],
@@ -290,6 +295,11 @@ AS_IF([test "x$enable_tests" != xno],
   
 AC_OUTPUT
 
+if test "x$enable_parallel_config" != xno; then
+   echo "*** Waiting for contrib's configuration to finish..."
+   wait
+fi
+
 # ---------------------------------------------------------------------------
 # Output a summary of the results.
 # ---------------------------------------------------------------------------
@@ -322,4 +332,3 @@ echo "           Extra CFLAGS : $hpx_extra_cflags"
 echo "        Extra CCASFLAGS : $hpx_extra_ccasflags"
 echo "       Install location : $prefix"
 echo "================================================"
-
