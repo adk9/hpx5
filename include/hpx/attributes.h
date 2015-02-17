@@ -17,7 +17,7 @@
 /// @brief Attribute definitions for HPX functions.
 
 #define HPX_ATTRIBUTE(S)     __attribute__(S)
-#define HPX_ALIGNED(N)       HPX_ATTRIBUTE((aligned(N)))
+#define HPX_ALIGNED(...)       HPX_ATTRIBUTE((aligned(__VA_ARGS__)))
 #define HPX_INTERNAL         HPX_ATTRIBUTE((visibility("internal")))
 #define HPX_RETURNS_TWICE    HPX_ATTRIBUTE((returns_twice))
 #define HPX_NORETURN         HPX_ATTRIBUTE((noreturn))
