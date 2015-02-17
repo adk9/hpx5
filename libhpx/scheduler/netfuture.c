@@ -34,10 +34,10 @@
 #include "cvar.h"
 #include "future.h"
 
-//#define dbg_printf0(...)
-#define dbg_printf0 printf
-//#define dbg_printf(...)
-#define dbg_printf printf
+#define dbg_printf0(...)
+//#define dbg_printf0 printf
+#define dbg_printf(...)
+//#define dbg_printf printf
 #define FT_SHARED 1<<3
 
 /// This is the guts of the netfuture, containing all locks, condition
