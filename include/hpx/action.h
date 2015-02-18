@@ -40,7 +40,13 @@ typedef enum {
   HPX_ACTION_INVALID = UINT16_MAX
 } hpx_action_type_t;
 
-
+static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
+  "DEFAULT",
+  "PINNED",
+  "TASK",
+  "INTERRUPT",
+  "INVALID"
+};
 
 /// Register an HPX action of a given @p type.
 ///
