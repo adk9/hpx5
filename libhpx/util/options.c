@@ -89,7 +89,7 @@ static void _from_env(UT_string *str, const char * const var,
   if (!c) {
     return;
   }
-  if (strlen(c) == 0 || !strcmp(c, "1") || !strcmp(c, "on")) {
+  if (strlen(c) == 0 || !strcmp(c, "on")) {
     utstring_printf(str, "--%s ", arg);
   } else {
     utstring_printf(str, "--%s=%s ", arg, c);
