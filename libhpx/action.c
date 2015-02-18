@@ -135,6 +135,15 @@ const _table_t *action_table_finalize(void) {
   _table_t *table = _get_actions();
   _sort_entries(table);
   _assign_ids(table);
+
+  for (int i = 1, e = table->n; i < e; ++i) {
+    log_action("%d: %s (%p) %s%s.\n", *table->entries[i].id,
+               table->entries[i].key,
+               (void*)(uintptr_t)table->entries[i].handler,
+               HPX_ACTION_TYPE_TO_STRING[table->entries[i].type],
+               table->entries[i].cif ? "(TYPED)" : "");
+  }
+
   return table;
 }
 
