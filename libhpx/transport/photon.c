@@ -172,7 +172,7 @@ static int
 _put(transport_t *t, int dest, const void *data, size_t n, void *rbuffer,
      size_t rn, void *rid, void *r)
 {
-  int rc, flags;
+  int rc, flags = 0;
   photon_t *photon = (photon_t *)t;
   void *b = (void*)data;
   struct photon_buffer_priv_t priv;
@@ -224,7 +224,7 @@ static int
 _get(transport_t *t, int dest, void *buffer, size_t n, const void *rdata,
      size_t rn, void *rid, void *r)
 {
-  int rc, flags;
+  int rc, flags = 0;
   photon_t *photon = (photon_t*)t;
   void *b = (void*)rdata;
   struct photon_buffer_priv_t priv;
@@ -425,12 +425,12 @@ transport_t *transport_new_photon(config_t *cfg) {
   photon->class.test       = _test;
   photon->class.testsome   = NULL;
   photon->class.progress   = _progress;
-  
+
   photon->class.send_limit = (cfg->sendlimit == 0) ?
     photon_default_srlimit : cfg->sendlimit;
   photon->class.recv_limit = (cfg->recvlimit == 0) ?
     photon_default_srlimit : cfg->recvlimit;
-  
+
   photon->class.rkey_table = NULL;
 
   struct photon_config_t *pcfg = &photon->cfg;
@@ -451,10 +451,10 @@ transport_t *transport_new_photon(config_t *cfg) {
   pcfg->cap.small_msg_size      = -1;  // default 4096 - not used for PWC
   pcfg->ibv.use_ud              =  0;  // don't enable this unless we're doing HW GAS
   pcfg->ibv.ud_gid_prefix       = "ff0e::ffff:0000:0000";
-  pcfg->exch.allgather      = (typeof(pcfg->exch.allgather))here->boot->allgather;
-  pcfg->exch.barrier        = (typeof(pcfg->exch.barrier))here->boot->barrier;
+  pcfg->exch.allgather      = (__typeof__(pcfg->exch.allgather))here->boot->allgather;
+  pcfg->exch.barrier        = (__typeof__(pcfg->exch.barrier))here->boot->barrier;
   pcfg->backend             = (char*)HPX_PHOTON_BACKEND_TO_STRING[cfg->photon_backend];
-  
+
   int val = photon_initialized();
   if (!val) {
     if (photon_init(pcfg) != PHOTON_OK) {
@@ -465,6 +465,6 @@ transport_t *transport_new_photon(config_t *cfg) {
   photon->progress     = network_progress_new(&photon->class);
   if (!photon->progress)
     dbg_error("photon: failed to start the progress loop.\n");
-  
+
   return &photon->class;
 }
