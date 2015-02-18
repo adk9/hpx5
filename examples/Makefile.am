@@ -25,7 +25,7 @@ call_SOURCES            = call.c
 netbench_SOURCES        = netbench.c
 netfutures_SOURCES      = netfutures.c
 
-all_LIBS = $(HPX_LDADD)
+all_LIBS = $(HPX_LIBS)
 
 AM_CPPFLAGS          = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS            =
