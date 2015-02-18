@@ -37,8 +37,8 @@ AM_INIT_AUTOMAKE([1.11 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.2.6])
-#LT_INIT()
-LT_INIT([disable-shared]) # we don't support dynamic linking correctly 
+LT_INIT()
+#LT_INIT([disable-shared]) # we don't support dynamic linking correctly 
 
 # Initialize pthreads
 AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
@@ -50,11 +50,11 @@ AC_ARG_ENABLE([parallel-config],
   [trap 'kill $(jobs -p)' SIGINT], [enable_parallel_config=no])
 
 # Initialize contribs
-HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [hpx_])
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
 HPX_CONTRIB_LIBFFI([contrib/libffi], [hpx_])
 HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [libhpx_global_], [_hpx])
 HPX_CONTRIB_VALGRIND([contrib/valgrind], [hpx_])
+HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [hpx_])
 
 # Check if the assembler supports CFI directives
 AX_CFI_DIRECTIVES
@@ -134,7 +134,7 @@ AC_ARG_ENABLE([testsuite],
 # ---------------------------------------------------------------------------
 # --with-options, see config/hpx_with_pkg.m4 for details
 # ---------------------------------------------------------------------------
-HPX_WITH_PKG([pmi],[pmi],[build with support for PMI],[no],[PMI])
+HPX_WITH_PKG([pmi],[cray-pmi],[build with support for PMI],[no],[PMI])
 
 AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray PMI extensions]))
 HPX_WITH_PKG([hugetlbfs],[hugetlbfs],[build with hugepages for heap],[no],[HUGETLBFS])
@@ -230,9 +230,9 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # Finalize flags
 # -----------------------------------------------------------------------------
 hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $HPX_LIBFFI_CPPFLAGS $HPX_HWLOC_CPPFLAGS $hpx_valgrind_cppflags $hpx_uthash_cppflags"
-hpx_extra_cflags="$hpx_pe_env_cflags $HPX_JEMALLOC_CFLAGS $HPX_LIBFFI_CFLAGS $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS $HPX_HWLOC_CFLAGS $hpx_valgrind_cflags $hpx_uthash_cflags"
+hpx_extra_cflags="$hpx_pe_env_cflags $HPX_JEMALLOC_CFLAGS $HPX_LIBFFI_CFLAGS $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS $hpx_valgrind_cflags $hpx_uthash_cflags"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
-hpx_extra_libs="$PTHREAD_LIBS $HPX_PHOTON_LIBS $HPX_HWLOC_LIBS $HPX_LIBFFI_LIBS $HPX_JEMALLOC_LIBS $hpx_pe_env_libs"
+hpx_extra_libs="\$(top_builddir)/libhpx/libhpx.la $PTHREAD_LIBS $HPX_PHOTOXN_LIBS $HPX_HWLOC_LIBS $HPX_LIBFFI_LIBS $HPX_JEMALLOC_LIBS $HPX_JEMALLOC_AS_MALLOC_LIBS $hpx_pe_env_libs"
 AS_IF([test "x$enable_pedantic" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_pedantic $hpx_extra_cflags"])
 
@@ -247,7 +247,6 @@ HPX_DEPS="\$(top_builddir)/libhpx/libhpx.la $HPX_HWLOC_DEPS $HPX_PHOTON_DEPS $HP
 
 AC_SUBST(HPX_LIBS)
 AC_SUBST(HPX_DEPS)
-AC_SUBST(HPX_LDADD, "\$(top_builddir)/libhpx/libhpx.la $HPX_HWLOC_LDADD $HPX_JEMALLOC_LDADD $HPX_PHOTON_LDADD $HPX_LIBFFI_LDADD $HPX_JEMALLOC_AS_MALLOC_LDADD")
 
 # -----------------------------------------------------------------------------
 # Use autoconf to configure all of the Makefiles that need to be processed.

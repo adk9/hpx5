@@ -9,11 +9,13 @@ PREFIX=$1
 
 DLDIR=$(mktemp)
 SAVEDIR=$PWD
+SAVEPATH=$PATH
+PATH=${PREFIX}/bin:$SAVEPATH
 
 M4=m4-1.4.17
 AM=automake-1.15
 AC=autoconf-2.69
-LT=libtool-2.4.2
+LT=libtool-2.4.6
 
 echo -n "Downloading packages..."
 wget -q -P $DLDIR http://ftp.gnu.org/gnu/m4/${M4}.tar.gz 
@@ -24,7 +26,7 @@ echo "done"
 
 cd $DLDIR
 
-for PKG in $M4 $AM $AC $LT; do
+for PKG in $M4 $AC $AM $LT; do
     echo -n "Installing $PKG..."
     tar -xf ${PKG}.tar.gz
     cd $PKG
@@ -34,6 +36,7 @@ for PKG in $M4 $AM $AC $LT; do
     echo "done"
 done
 
+PATH=$SAVEPATH
 cd $SAVEDIR
 rm -rf $DLDIR
 
