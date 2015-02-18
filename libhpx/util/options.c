@@ -80,8 +80,9 @@ static const char *_getenv_upper(const char * const var) {
 /// @param[out]     str A dynamic string to store the output into.
 /// @param          var The key we are looking for in the environment.
 /// @param          opt The key we will use for gengetopt.
+/// @param         flag Indicates if the option key is a flag or not.
 static void _from_env(UT_string *str, const char * const var,
-                      const char * const arg) {
+                      const char * const arg, bool flag) {
   const char *c = getenv(var);
   if (!c) {
     c = _getenv_upper(var);
@@ -89,7 +90,9 @@ static void _from_env(UT_string *str, const char * const var,
   if (!c) {
     return;
   }
-  if (strlen(c) == 0 || !strcmp(c, "on")) {
+
+  if (flag && (strlen(c) == 0 || !strcmp(c, "1") ||
+               !strcmp(c, "on") || !strcmp(c, "true"))) {
     utstring_printf(str, "--%s ", arg);
   } else {
     utstring_printf(str, "--%s=%s ", arg, c);
@@ -101,7 +104,7 @@ static void _from_env(UT_string *str, const char * const var,
 /// We need the key for the environment and the key for gengetopt as separate
 /// things in the -from_env call. The function takes the env key, copies it, and
 /// replaces underscores with hyphens.
-void _xform_string(UT_string *str, const char *env) {
+static void _xform_string(UT_string *str, const char *env, bool flag) {
   char *opt = strdup(env);
   dbg_assert(opt);
   for (int i = 0, e = strlen(env); i < e; ++i) {
@@ -109,7 +112,7 @@ void _xform_string(UT_string *str, const char *env) {
       opt[i] = '-';
     }
   }
-  _from_env(str, env, opt);
+  _from_env(str, env, opt, flag);
   free(opt);
 }
 
@@ -121,8 +124,10 @@ void _xform_string(UT_string *str, const char *env) {
 ///
 /// @param[out]     str This will contain the collected values.
 static void _from_env_all(UT_string *str) {
-#define LIBHPX_OPT(g, id, u3, u4) _xform_string(str, "hpx_"#g#id);
+#define LIBHPX_OPT_FLAG(g, id, u3) _xform_string(str, "hpx_"#g#id, true);
+#define LIBHPX_OPT(g, id, u3, u4) _xform_string(str, "hpx_"#g#id, false);
 # include "libhpx/options.def"
+#undef LIBHPX_OPT_FLAG
 #undef LIBHPX_OPT
 }
 
