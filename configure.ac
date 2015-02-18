@@ -147,11 +147,6 @@ AS_IF([test "x$with_hugetlbfs" != xno],
 HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[no],[MPI])
 HPX_WITH_PKG([portals],[portals],[build with Portals networking],[no],[PORTALS])
 
-HPX_WITH_VERBS
-HPX_WITH_PKG([ugni],[cray-ugni],[Build with UGNI],[no],[UGNI])
-
-AM_CONDITIONAL([HAVE_XSP], [false])
-
 AC_ARG_ENABLE([photon],
  [AS_HELP_STRING([--enable-photon], [build with Photon networking @<:@default=no@:>@])], [],
  [enable_photon=no])
