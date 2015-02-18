@@ -226,7 +226,7 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $HPX_LIBFFI_CPPFLAGS $HPX_HWLOC_CPPFLAGS $hpx_valgrind_cppflags $hpx_uthash_cppflags"
 hpx_extra_cflags="$hpx_pe_env_cflags $HPX_JEMALLOC_CFLAGS $HPX_LIBFFI_CFLAGS $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS $hpx_valgrind_cflags $hpx_uthash_cflags"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
-hpx_extra_libs="\$(top_builddir)/libhpx/libhpx.la $PTHREAD_LIBS $HPX_PHOTOXN_LIBS $HPX_LIBFFI_LIBS $HPX_JEMALLOC_AS_MALLOC_LIBS $hpx_pe_env_libs"
+hpx_extra_libs="\$(top_builddir)/libhpx/libhpx.la $PTHREAD_LIBS $hpx_pe_env_libs"
 AS_IF([test "x$enable_pedantic" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_pedantic $hpx_extra_cflags"])
 
