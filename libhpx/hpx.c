@@ -75,7 +75,7 @@ static void _cleanup(locality_t *l) {
     l->boot = NULL;
   }
 
-  hwloc_topology_destroy(l->topology);
+  hpx_hwloc_topology_destroy(l->topology);
 
   if (l->actions) {
     action_table_free(l->actions);
@@ -116,12 +116,12 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // topology
-  int e = hwloc_topology_init(&here->topology);
+  int e = hpx_hwloc_topology_init(&here->topology);
   if (e) {
     status = log_error("failed to initialize a topology.\n");
     goto unwind1;
   }
-  e = hwloc_topology_load(here->topology);
+  e = hpx_hwloc_topology_load(here->topology);
   if (e) {
     status = log_error("failed to load the topology.\n");
     goto unwind1;
