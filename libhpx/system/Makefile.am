@@ -3,7 +3,7 @@ noinst_LTLIBRARIES	   = libsystem.la
 
 # libsystem files and flags
 libsystem_la_CPPFLAGS  = -I$(top_srcdir)/include
-libsystem_la_SOURCES   = null.c
+libsystem_la_SOURCES   = 
 libsystem_la_LIBADD    =
 
 if OS_LINUX
