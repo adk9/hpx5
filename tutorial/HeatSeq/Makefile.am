@@ -3,7 +3,7 @@ HeatSeq_PROGRAMS                = heat_1
 
 heat_1_SOURCES                  = heat_1.c 
 
-all_LIBS                        = $(HPX_LDADD)
+all_LIBS                        = $(HPX_LIBS)
 
 AM_CPPFLAGS                     = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS                       =

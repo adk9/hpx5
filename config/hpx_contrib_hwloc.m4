@@ -11,7 +11,6 @@ AC_DEFUN([HPX_CONTRIB_HWLOC],
         HPX_HWLOC_CPPFLAGS="$HWLOC_CPPFLAGS"
         HPX_HWLOC_CFLAGS="$HWLOC_CFLAGS"
         HPX_HWLOC_LIBS="$HWLOC_LIBS"
-        HPX_HWLOC_LDADD="$HWLOC_LIBS"
         enable_external_hwloc=yes],
       [HWLOC_SET_SYMBOL_PREFIX([$2])
         # Disable features that are not required for our embedded build
@@ -34,8 +33,7 @@ AC_DEFUN([HPX_CONTRIB_HWLOC],
               [AC_MSG_ERROR([could not configure hwloc])],
               [HPX_HWLOC_CPPFLAGS="$HWLOC_EMBEDDED_CPPFLAGS"
                HPX_HWLOC_CFLAGS="$HWLOC_EMBEDDED_CFLAGS"
-               HPX_HWLOC_LDADD="$HWLOC_EMBEDDED_LDADD"
-               HPX_HWLOC_LIBS="$HWLOC_EMBEDDED_LIBS"]
+               HPX_HWLOC_LIBS="$HWLOC_EMBEDDED_LDADD"]
                HPX_HWLOC_DEPS="$HWLOC_EMBEDDED_LDADD")
         enable_external_hwloc=no])
    HWLOC_DO_AM_CONDITIONALS

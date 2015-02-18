@@ -4,7 +4,7 @@ parcel_PROGRAMS               = parcelSend parcelSendSync
 parcelSend_SOURCES            = parcelSend.c 
 parcelSendSync_SOURCES        = parcelSendSync.c
 
-all_LIBS                      = $(HPX_LDADD)
+all_LIBS                      = $(HPX_LIBS)
 
 AM_CPPFLAGS                   = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS                     =
