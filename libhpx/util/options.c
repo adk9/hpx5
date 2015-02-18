@@ -91,8 +91,7 @@ static void _from_env(UT_string *str, const char * const var,
     return;
   }
 
-  if (flag && (strlen(c) == 0 || !strcmp(c, "1") ||
-               !strcmp(c, "on") || !strcmp(c, "true"))) {
+  if (flag) {
     utstring_printf(str, "--%s ", arg);
   } else {
     utstring_printf(str, "--%s=%s ", arg, c);
