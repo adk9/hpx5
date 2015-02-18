@@ -13,9 +13,9 @@ cd build
 make check
 
 # Check the output of the unit tests:
-if grep "FAIL:" tests/unit/test-suite.log
+if grep "FAIL:" $DIR/build/tests/unit/test-suite.log
 then
-    cat tests/unit/test-suite.log
+    cat $DIR/build/tests/unit/test-suite.log
     exit 1
 fi
 
