@@ -148,21 +148,22 @@ static int _pwc_send(network_t *network, hpx_parcel_t *p) {
 /// peer for the request, and forwards to the p2p put operation.
 static int _pwc_pwc(network_t *network,
                     hpx_addr_t to, const void *lva, size_t n,
-                    hpx_addr_t lsync, hpx_addr_t rsync, hpx_action_t op) {
+                    hpx_addr_t lsync, hpx_addr_t rsync, hpx_action_t op,
+                    hpx_addr_t raddr) {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(pwc->gas, to);
   peer_t *peer = &pwc->peers[rank];
   uint64_t offset = gas_offset_of(pwc->gas, to);
-  command_t cmd = encode_command(op, offset);
+  command_t cmd = encode_command(op, raddr);
   return peer_pwc(peer, offset, lva, n, lsync, rsync, cmd, SEGMENT_HEAP);
 }
 
 /// Perform a put operation to a global heap address.
 ///
 /// This simply forwards to the pwc handler with no remote command.
-static int _pwc_put(network_t *network, hpx_addr_t to, const void *from,
+static int _pwc_put(network_t *net, hpx_addr_t to, const void *from,
                     size_t n, hpx_addr_t lsync, hpx_addr_t rsync) {
-  return _pwc_pwc(network, to, from, n, lsync, rsync, HPX_NULL);
+  return _pwc_pwc(net, to, from, n, lsync, rsync, HPX_ACTION_NULL, HPX_NULL);
 }
 
 /// Perform a get operation to a global heap address.
@@ -235,12 +236,12 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
 
   if (boot->type == HPX_BOOT_SMP) {
     log_net("will not instantiate photon for the SMP boot network\n");
-    return LIBHPX_OK;
+    return NULL;
   }
 
   if (gas->type == HPX_GAS_SMP) {
     log_net("will not instantiate photon for the SMP GAS\n");
-    return LIBHPX_OK;
+    return NULL;
   }
 
   // Allocate the network object, with enough space for the peer array that
