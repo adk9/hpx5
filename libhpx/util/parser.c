@@ -46,7 +46,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-configfile=file     HPX runtime configuration file",
   "\nLog options:",
   "      --hpx-log-at=[localities] selectively output log information",
-  "      --hpx-log-level[=level]   set the logging level  (possible \n                                  values=\"default\", \"boot\", \"sched\", \n                                  \"gas\", \"lco\", \"net\", \"trans\", \n                                  \"parcel\", \"all\")",
+  "      --hpx-log-level[=level]   set the logging level  (possible \n                                  values=\"default\", \"boot\", \"sched\", \n                                  \"gas\", \"lco\", \"net\", \"trans\", \n                                  \"parcel\", \"action\", \"all\")",
   "\nHPX Debug Options:",
   "      --hpx-dbg-waitat=[locality]\n                                wait for debugger at specific locality",
   "      --hpx-dbg-waitonabort     call hpx_wait() inside of hpx_abort() for \n                                  debugging  (default=off)",
@@ -121,7 +121,7 @@ char *hpx_option_parser_hpx_gas_values[] = {"default", "smp", "pgas", "agas", "p
 char *hpx_option_parser_hpx_boot_values[] = {"default", "smp", "mpi", "pmi", 0} ;	/* Possible values for hpx-boot.  */
 char *hpx_option_parser_hpx_transport_values[] = {"default", "smp", "mpi", "portals", "photon", 0} ;	/* Possible values for hpx-transport.  */
 char *hpx_option_parser_hpx_network_values[] = {"default", "smp", "pwc", "isir", 0} ;	/* Possible values for hpx-network.  */
-char *hpx_option_parser_hpx_log_level_values[] = {"default", "boot", "sched", "gas", "lco", "net", "trans", "parcel", "all", 0} ;	/* Possible values for hpx-log-level.  */
+char *hpx_option_parser_hpx_log_level_values[] = {"default", "boot", "sched", "gas", "lco", "net", "trans", "parcel", "action", "all", 0} ;	/* Possible values for hpx-log-level.  */
 char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "pwc", "sched", "all", 0} ;	/* Possible values for hpx-trace-classes.  */
 char *hpx_option_parser_hpx_photon_backend_values[] = {"default", "verbs", "ugni", 0} ;	/* Possible values for hpx-photon-backend.  */
 

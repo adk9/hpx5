@@ -83,6 +83,7 @@ void log_internal(unsigned line, const char *filename, const char *func,
 #define log_net(...)    log_level(HPX_LOG_NET, __VA_ARGS__)
 #define log_trans(...)  log_level(HPX_LOG_TRANS, __VA_ARGS__)
 #define log_parcel(...) log_level(HPX_LOG_PARCEL, __VA_ARGS__)
+#define log_action(...) log_level(HPX_LOG_ACTION, __VA_ARGS__)
 
 int log_error_internal(unsigned line, const char *filename, const char *func,
                        const char *fmt, ...)
