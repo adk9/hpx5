@@ -196,3 +196,7 @@ scheduler_stats_t *scheduler_get_stats(struct scheduler *sched) {
     return NULL;
   }
 }
+
+HPX_INTERRUPT(scheduler_nop, void) {
+  return HPX_SUCCESS;
+}

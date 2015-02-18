@@ -22,7 +22,7 @@
 #define HPX_RETURNS_TWICE    HPX_ATTRIBUTE((returns_twice))
 #define HPX_NORETURN         HPX_ATTRIBUTE((noreturn))
 #define HPX_NOINLINE         HPX_ATTRIBUTE((noinline))
-#define HPX_AWAYS_INLINE     HPX_ATTRIBUTE((always_inline))
+#define HPX_ALWAYS_INLINE    HPX_ATTRIBUTE((always_inline))
 #define HPX_OPTIMIZE(S)      HPX_ATTRIBUTE((optimize(S)))
 #define HPX_MALLOC           HPX_ATTRIBUTE((malloc))
 #define HPX_USED             HPX_ATTRIBUTE((used))

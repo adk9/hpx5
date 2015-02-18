@@ -28,8 +28,8 @@ typedef uint16_t hpx_action_t;
 /// The type of functions that can be registered with hpx_register_action().
 typedef int (*hpx_action_handler_t)(void*);
 
-/// This special action does nothing (i.e. it is a nop).
-extern hpx_action_t HPX_ACTION_NULL;
+/// The equivalent of NULL for HPX actions.
+#define HPX_ACTION_NULL ((hpx_action_t)0u)
 
 /// Action types.
 typedef enum {
