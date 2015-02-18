@@ -15,7 +15,7 @@ PATH=${PREFIX}/bin:$SAVEPATH
 M4=m4-1.4.17
 AM=automake-1.15
 AC=autoconf-2.69
-LT=libtool-2.4.2
+LT=libtool-2.4.6
 
 echo -n "Downloading packages..."
 wget -q -P $DLDIR http://ftp.gnu.org/gnu/m4/${M4}.tar.gz 
