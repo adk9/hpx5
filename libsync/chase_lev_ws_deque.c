@@ -189,7 +189,7 @@ uint64_t sync_chase_lev_ws_deque_push(chase_lev_ws_deque_t *d, void *val) {
 }
 
 
-void *sync_chase_lev_ws_deque_pop(chase_lev_ws_deque_t *d) {
+HPX_NO_OPTIMIZE void *sync_chase_lev_ws_deque_pop(chase_lev_ws_deque_t *d) {
   // read and update bottom
   uint64_t bottom = sync_addf(&d->bottom, -1, SYNC_RELEASE);
   uint64_t top = sync_load(&d->top, SYNC_ACQUIRE);
@@ -219,7 +219,7 @@ void *sync_chase_lev_ws_deque_pop(chase_lev_ws_deque_t *d) {
 }
 
 
-void *sync_chase_lev_ws_deque_steal(chase_lev_ws_deque_t *d) {
+HPX_NO_OPTIMIZE void *sync_chase_lev_ws_deque_steal(chase_lev_ws_deque_t *d) {
   // read top and bottom
   uint64_t top = sync_load(&d->top, SYNC_ACQUIRE);
   uint64_t bottom = sync_load(&d->bottom, SYNC_ACQUIRE);
