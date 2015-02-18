@@ -349,9 +349,7 @@ int isend_buffer_init(isend_buffer_t *buffer, gas_t *gas, uint32_t size,
 }
 
 void isend_buffer_fini(isend_buffer_t *buffer) {
-  if (!buffer) {
-    return;
-  }
+  dbg_assert(buffer);
 
   _cancel_all(buffer);
 
