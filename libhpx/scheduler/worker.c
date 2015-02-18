@@ -204,8 +204,10 @@ static hpx_parcel_t *_try_bind(hpx_parcel_t *p) {
   dbg_assert(p);
   if (!parcel_get_stack(p)) {
     ustack_t *stack = thread_new(p, _execute_thread);
-    stack = parcel_set_stack(p, stack);
-    dbg_assert(!stack);
+    ustack_t *prev = parcel_set_stack(p, stack);
+    if (prev) {
+      log_error("replaced stack %p with %p in parcel %p\n", prev, stack, p);
+    }
   }
   return p;
 }
