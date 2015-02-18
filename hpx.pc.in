@@ -9,4 +9,4 @@ URL: https://gitlab.crest.iu.edu/extreme/hpx
 Version: @PACKAGE_VERSION@
 Cflags: -I${includedir} -I${libdir}/libffi-3.99999/include/
 Libs: -L${libdir} -lhpx -L${exec_prefix}/lib64/
-Libs.private: @HPX_LIBS@ @HPX_JEMALLOC_AS_MALLOC_LIBS@
+Requires.private: jemalloc libffi
