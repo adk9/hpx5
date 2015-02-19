@@ -31,9 +31,9 @@ AC_DEFUN([HPX_CONTRIB_JEMALLOC_AS_MALLOC],
   AS_IF([test "x$enable_shared" != xno],
     [JEMALLOC_CARGS="$JEMALLOC_CARGS --enable-shared"],
     [JEMALLOC_CARGS="$JEMALLOC_CARGS --disable-shared"])
-  ACX_CONFIGURE_DIR([contrib/jemalloc], [contrib/jemalloc],
+  ACX_CONFIGURE_DIR([contrib/jemalloc], [contrib/jemalloc_as_malloc],
     ["--disable-valgrind --disable-fill --disable-stats $JEMALLOC_CARGS"])
-  AC_SUBST(HPX_JEMALLOC_AS_MALLOC_LIBS, "-ljemalloc -L\$(abs_top_builddir)/contrib/jemalloc/lib")
-  AC_SUBST(HPX_JEMALLOC_AS_MALLOC_RPATH, "-R \$(abs_top_builddir)/contrib/jemalloc/lib")
+  AC_SUBST(HPX_JEMALLOC_AS_MALLOC_LIBS, "-ljemalloc -L\$(abs_top_builddir)/contrib/jemalloc_as_malloc/lib")
+  AC_SUBST(HPX_JEMALLOC_AS_MALLOC_RPATH, "-R \$(abs_top_builddir)/contrib/jemalloc_as_malloc/lib")
 ])
 
