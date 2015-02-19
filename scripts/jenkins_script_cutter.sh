@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 OP=$1
 DIR=$2
@@ -11,6 +11,8 @@ function add_mpi() {
 function add_photon() {
     export HPX_PHOTON_IBDEV=$HPXIBDEV
     export HPX_PHOTON_BACKEND=verbs
+    # verbs/rdmacm library not in jenkins node config
+    export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
 }
 
 function do_build() {
@@ -38,8 +40,6 @@ function do_build() {
     make -j 8
     make install
 }
-
-set -xe
 
 case "$HPXMODE" in
     photon)
@@ -94,6 +94,13 @@ if [ "$OP" == "run" ]; then
     cd $DIR/build
     # Run all the unit tests:
     make check
+
+    # Check the output of the unit tests:
+    if grep --quiet "FAIL:" $DIR/build/tests/unit/test-suite.log
+    then
+	cat $DIR/build/tests/unit/test-suite.log
+	exit 1
+    fi
 fi
 
 exit 0
