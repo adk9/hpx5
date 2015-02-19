@@ -499,8 +499,14 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
 }
 
 /// Initialize a block of array of lco.
-static hpx_status_t _block_init(void *lco, hpx_lco_type_t type, int n, 
-                                int arg) {
+static HPX_PINNED (_block_init, uint32_t *args) {
+  void *lco = hpx_thread_current_local_target();
+  dbg_assert(lco);
+
+  hpx_lco_type_t type = args[0];
+  int n = args[1];
+  int arg = args[2];
+
   for (int i = 0; i < n; i++) {
     void *addr;
     switch (type) {
@@ -550,9 +556,9 @@ hpx_addr_t hpx_lco_type_array_new(hpx_lco_type_t type, int n,
   uint32_t  block_bytes = n * lco_bytes;
   hpx_addr_t base = hpx_gas_alloc(block_bytes);
 
-  void *local;
-  hpx_gas_try_pin(base, &local); 
-  _block_init(local, type, n , arg);
+  uint32_t args[] = {type, n, arg};
+  int e = hpx_call_sync(base, _block_init, NULL, 0, args, sizeof(args));
+  dbg_check(e, "call of _block_init_action failed\n");
 
   // return the base address of the allocation
   return base;
