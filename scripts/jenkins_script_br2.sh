@@ -61,12 +61,13 @@ case "$HPXMODE" in
 	add_mpi	
 	;;
     *)
+	add_init
 	;;
 esac
 
 case "$HPXCC" in
     *)
-	CFGCFLAGS+=" CC=cc"
+	CFGFLAGS+=" CC=cc"
 	;;
 esac
 
