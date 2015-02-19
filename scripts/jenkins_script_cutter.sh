@@ -1,20 +1,42 @@
 #!/bin/bash
 
-DIR=$1
+OP=$1
+DIR=$2
 shift
 
 function add_mpi() {
-    # This is currently cutter-specific and needs to be generalized.
     module load openmpi/1.8.4_thread
-    export C_INCLUDE_PATH=$C_INCLUDE_PATH:/opt/openmpi/1.8.4_thread/include/
 }
 
 function add_photon() {
-    # This is currently cutter-specific and needs to be generalized.
     export HPX_PHOTON_IBDEV=$HPXIBDEV
     export HPX_PHOTON_BACKEND=verbs
-    export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
-    export LIBRARY_PATH=/usr/lib64:$LIBRARY_PATH
+}
+
+function do_build() {
+    echo "Building HPX in $DIR"
+    cd $DIR
+    
+    echo "Bootstrapping HPX."
+    ./bootstrap
+    
+    if [ -d "./build" ]; then
+        rm -rf ./build/
+    fi
+    mkdir build
+    cd build
+    
+    if [ -d "./install" ]; then
+        rm -rf ./install/
+    fi
+    mkdir install
+    
+    echo "Configuring HPX."
+    ../configure --prefix=${DIR}/build/install/ $CFGFLAGS --enable-testsuite $HPXDEBUG
+    
+    echo "Building HPX."
+    make
+    make install
 }
 
 set -xe
@@ -63,38 +85,21 @@ case "$HPXCC" in
 	;;
 esac
 
-echo "Building HPX in $DIR"
-cd $DIR
-
-echo "Bootstrapping HPX."
-./bootstrap
-
-if [ -d "./build" ]; then
-        rm -rf ./build/
+if [ "$OP" == "build" ]; then
+    do_build;
 fi
-mkdir build
-cd build
 
-if [ -d "./install" ]; then
-        rm -rf ./install/
-fi
-mkdir install
-
-echo "Configuring HPX."
-echo ../configure --prefix=${DIR}/build/install/ $CFGFLAGS --enable-testsuite $HPXDEBUG | sh
-
-echo "Building HPX."
-make
-make install
-
-# Run all the unit tests:
-make check
-
-# Check the output of the unit tests:
-if grep "FAIL:" $DIR/build/tests/unit/test-suite.log
-then
-    cat $DIR/build/tests/unit/test-suite.log
-    exit 1
+if [ "$OP" == "run" ]; then
+    cd $DIR/build
+    # Run all the unit tests:
+    make check
+    
+    # Check the output of the unit tests:
+    if grep "FAIL:" $DIR/build/tests/unit/test-suite.log
+    then
+	cat $DIR/build/tests/unit/test-suite.log
+	exit 1
+    fi
 fi
 
 exit 0
