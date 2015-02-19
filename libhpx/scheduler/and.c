@@ -155,7 +155,7 @@ static void _and_init(_and_t *and, intptr_t value) {
 hpx_addr_t hpx_lco_and_new(intptr_t limit) {
   _and_t *and = libhpx_global_malloc(sizeof(*and));
   dbg_assert_str(and, "Could not malloc global memory\n");
-  log_lco("allocated lco %p\n", and);
+  log_lco("allocated lco %p\n", (void*)and);
   _and_init(and, limit);
   return lva_to_gva(and);;
 }

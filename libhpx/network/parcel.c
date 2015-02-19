@@ -347,10 +347,20 @@ hpx_parcel_t *parcel_create(hpx_addr_t target, hpx_action_t action,
   return p;
 }
 
-void parcel_set_stack(hpx_parcel_t *p, struct ustack *stack) {
+struct ustack* parcel_set_stack(hpx_parcel_t *p, struct ustack *stack) {
   assert((uintptr_t)stack % sizeof(void*) == 0);
   uintptr_t state = (uintptr_t)p->ustack & _STATE_MASK;
-  p->ustack = (struct ustack*)(state | (uintptr_t)stack);
+  struct ustack *next = (struct ustack*)(state | (uintptr_t)stack);
+  // This can detect races in the scheduler when two threads try and process the
+  // same parcel.
+  if (DEBUG) {
+    struct ustack *prev = sync_swap(&p->ustack, next, SYNC_ACQ_REL);
+    return (void*)((uintptr_t)prev & ~_STATE_MASK);
+  }
+  else {
+    p->ustack = next;
+    return NULL;
+  }
 }
 
 struct ustack *parcel_get_stack(const hpx_parcel_t *p) {

@@ -59,7 +59,18 @@ typedef struct {
 static int _cmp_keys(const void *lhs, const void *rhs) {
   const _entry_t *el = lhs;
   const _entry_t *er = rhs;
-  return strcmp(el->key, er->key);
+
+  // if either the left or right entry's id is NULL, that means it is
+  // our reserved action (user-registered actions can never have the
+  // ID as NULL), and we always want it to be "less" than any other
+  // registered action.
+  if (el->id == NULL) {
+    return -1;
+  } else if (er->id == NULL) {
+    return 1;
+  } else {
+    return strcmp(el->key, er->key);
+  }
 }
 
 /// An action table is simply an array that stores its size.
@@ -86,8 +97,11 @@ static _table_t *_get_actions(void) {
   if (!_actions) {
     static const int capacity = LIBHPX_ACTION_TABLE_SIZE;
     _actions = malloc(sizeof(*_actions) + capacity * sizeof(_entry_t));
-    _actions->n = 0;
     memset(&_actions->entries, 0, capacity * sizeof(_entry_t));
+
+    // reserve the first entry as hpx_action_id = 0 implies
+    // that it's an invalid action (HPX_ACTION_NULL)
+    _actions->n = 1;
   }
 
   return _actions;
@@ -100,7 +114,7 @@ static void _sort_entries(_table_t *table) {
 
 /// Assign all of the entry ids in the table.
 static void _assign_ids(_table_t *table) {
-  for (int i = 0, e = table->n; i < e; ++i) {
+  for (int i = 1, e = table->n; i < e; ++i) {
     *table->entries[i].id = i;
   }
 }
@@ -135,6 +149,19 @@ const _table_t *action_table_finalize(void) {
   _table_t *table = _get_actions();
   _sort_entries(table);
   _assign_ids(table);
+
+  for (int i = 1, e = table->n; i < e; ++i) {
+    log_action("%d: %s (%p) %s%s.\n", *table->entries[i].id,
+               table->entries[i].key,
+               (void*)(uintptr_t)table->entries[i].handler,
+               HPX_ACTION_TYPE_TO_STRING[table->entries[i].type],
+               table->entries[i].cif ? "(TYPED)" : "");
+  }
+
+  // this is a sanity check to ensure that the reserved "null" action
+  // is still at index 0.
+  dbg_assert_str(table->entries[0].id == NULL,
+                 "could not reserve space for HPX_ACTION_NULL in the action table.");
   return table;
 }
 
@@ -257,13 +284,15 @@ bool action_is_interrupt(const struct action_table *table, hpx_action_t id) {
 
 int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_handler_t f,
                         unsigned int nargs, hpx_action_t *id, ...) {
+  dbg_assert(id);
+
   *id = HPX_ACTION_INVALID;
   if (!nargs) {
     return _push_back(_get_actions(), id, key, f, type, NULL);
   }
 
   ffi_cif *cif = calloc(1, sizeof(*cif));
-  assert(cif);
+  dbg_assert(cif);
 
   hpx_type_t *args = calloc(nargs, sizeof(args[0]));
   va_list vargs;

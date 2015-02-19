@@ -93,7 +93,7 @@ hpx_parcel_t *parcel_create(hpx_addr_t addr, hpx_action_t action,
                             hpx_action_t c_action, hpx_pid_t pid, bool inplace)
   HPX_INTERNAL;
 
-void parcel_set_stack(hpx_parcel_t *p, struct ustack *stack)
+struct ustack *parcel_set_stack(hpx_parcel_t *p, struct ustack *stack)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 struct ustack *parcel_get_stack(const hpx_parcel_t *p)

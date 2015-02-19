@@ -117,6 +117,13 @@ static int _continue_parcel(hpx_parcel_t *p, hpx_status_t status, size_t size,
 }
 
 /// Execute a parcel.
+static hpx_parcel_t *_get_nop_parcel(void) {
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
+  p->action = scheduler_nop;
+  return p;
+}
+
+/// Execute a parcel.
 static int _execute(hpx_parcel_t *p) {
   dbg_assert(p->target != HPX_NULL);
   hpx_action_t id = hpx_parcel_get_action(p);
@@ -204,7 +211,8 @@ static hpx_parcel_t *_try_bind(hpx_parcel_t *p) {
   dbg_assert(p);
   if (!parcel_get_stack(p)) {
     ustack_t *stack = thread_new(p, _execute_thread);
-    parcel_set_stack(p, stack);
+    ustack_t *old = parcel_set_stack(p, stack);
+    dbg_assert_str(!old, "replaced stack %p with %p in %p\n", old, stack, p);
   }
   return p;
 }
@@ -414,7 +422,7 @@ static hpx_parcel_t *_schedule_in_lco(hpx_parcel_t *final) {
 
   // return so we can release the lock
   if (scheduler_is_shutdown(self->sched)) {
-    p = hpx_parcel_acquire(NULL, 0);
+    p = _get_nop_parcel();
     goto exit;
   }
 
@@ -427,7 +435,7 @@ static hpx_parcel_t *_schedule_in_lco(hpx_parcel_t *final) {
     goto exit;
   }
 
-  p = hpx_parcel_acquire(NULL, 0);
+  p = _get_nop_parcel();
  exit:
   dbg_assert(p);
   return _try_bind(p);
@@ -503,7 +511,7 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
     // couldn't find any work to do, we're not going to go into an infinite loop
     // here because the caller might be trying to yield() and we need to
     // guarantee some sort of progress in the system in that case.
-    p = hpx_parcel_acquire(NULL, 0);
+    p = _get_nop_parcel();
   }
 
   return _try_bind(p);
