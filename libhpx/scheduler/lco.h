@@ -29,21 +29,13 @@ typedef union {
   uintptr_t            bits;
 } lco_t HPX_ALIGNED(16);
 
-/// Array LCO class interface.
-/// @{
-typedef struct {
-  hpx_lco_type_t type;
-  uint32_t size;
-  volatile intptr_t value;
-} _lco_array_t;
-
 /// And LCO class interface.
 /// @{
 typedef struct {
   lco_t               lco;
   cvar_t          barrier;
   volatile intptr_t value;                  // the threshold
-} _and_t;
+} and_t;
 
 /// Local future interface.
 /// @{
@@ -51,7 +43,7 @@ typedef struct {
   lco_t     lco;
   cvar_t   full;
   char  value[];
-} _future_t;
+} future_t;
 
 /// Local channel interface.
 ///
@@ -61,27 +53,27 @@ typedef struct {
 /// wait for remote completion for sets or sends().
 /// @{
 
-typedef struct _node {
-  struct _node *next;
+typedef struct node {
+  struct node  *next;
   void       *buffer;                           // out-of place because we want
   int           size;                           // to be able to recv it
-} _node_t;
+} node_t;
 
 
 typedef struct {
   lco_t          lco;
   cvar_t    nonempty;
-  _node_t      *head;
-  _node_t      *tail;
-} _chan_t;
+  node_t      *head;
+  node_t      *tail;
+} chan_t;
 
-extern void _and_init(_and_t *and, intptr_t value)
+extern void and_init(and_t *and, intptr_t value)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-extern void _future_init(_future_t *f, int size) 
+extern void future_init(future_t *f, int size) 
   HPX_INTERNAL HPX_NON_NULL(1);
 
-extern void _chan_init(_chan_t *c)
+extern void chan_init(chan_t *c)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 // The LCO abstract class interface.

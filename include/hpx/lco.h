@@ -30,11 +30,6 @@ typedef enum {
   HPX_TYPE_AND,
   HPX_TYPE_FUTURE,
   HPX_TYPE_CHAN,
-  HPX_TYPE_ALLGATHER,
-  HPX_TYPE_ALLREDUCE,
-  HPX_TYPE_ALLTOALL,
-  HPX_TYPE_REDUCE,
-  HPX_TYPE_USER_LCO,
   HPX_TYPE_INVALID = UINT16_MAX
 } hpx_lco_type_t;
 
@@ -274,22 +269,22 @@ hpx_addr_t hpx_lco_future_array_at(hpx_addr_t base, int i, int size, int bsize);
 /// Allocate an array of LCO local to the calling locality.
 /// @param       type the type of the LCO
 /// @param          n The (total) number of lcos to allocate
-/// @param       size The size of each lco's value
-/// @param     inputs The number of inputs to the and (must be >= 0)
+/// @param        arg The size of each lco's value or the number of inputs 
+///                   to the and (must be >= 0)
 ///
 /// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_type_array_new(hpx_lco_type_t type, int n, ...);
+hpx_addr_t hpx_lco_type_array_new(hpx_lco_type_t type, int n, int arg);
 
 /// Get an address of a lco in a lco array
 ///
 /// @param       type the type of the LCO
 /// @param      base The base address of the array of lcos.
 /// @param         i The index of the future to return.
-/// @param      size The size of the data stored with each future.
+/// @param      size The size of the data stored with each lco.
 ///
 /// @returns The address of the ith lco in the array.
 hpx_addr_t hpx_lco_type_array_at(hpx_lco_type_t type, hpx_addr_t base, int i,
-                                 ...);
+                                 int arg);
 
 /// Channels.
 ///

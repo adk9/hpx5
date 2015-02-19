@@ -32,14 +32,14 @@
 
 /// Local future interface.
 
-static hpx_status_t _wait(_future_t *f) {
+static hpx_status_t _wait(future_t *f) {
   if (!lco_get_triggered(&f->lco))
     return scheduler_wait(&f->lco.lock, &f->full);
 
   return cvar_get_error(&f->full);
 }
 
-static bool _trigger(_future_t *f) {
+static bool _trigger(future_t *f) {
   if (lco_get_triggered(&f->lco))
     return false;
   lco_set_triggered(&f->lco);
@@ -60,7 +60,7 @@ static void _future_fini(lco_t *lco) {
 /// Copies @p from into the appropriate location.
 static void _future_set(lco_t *lco, int size, const void *from) {
   lco_lock(lco);
-  _future_t *f = (_future_t *)lco;
+  future_t *f = (future_t *)lco;
   // futures are write-once
   if (!_trigger(f)) {
     dbg_error("cannot set an already set future\n");
@@ -82,14 +82,14 @@ void lco_future_set(lco_t *lco, int size, const void *from) {
 
 static void _future_error(lco_t *lco, hpx_status_t code) {
   lco_lock(lco);
-  _future_t *f = (_future_t *)lco;
+  future_t *f = (future_t *)lco;
   _trigger(f);
   scheduler_signal_error(&f->full, code);
   lco_unlock(lco);
 }
 
 static void _future_reset(lco_t *lco) {
-  _future_t *f = (_future_t *)lco;
+  future_t *f = (future_t *)lco;
   lco_lock(&f->lco);
   dbg_assert_str(cvar_empty(&f->full),
                  "Reset on a future that has waiting threads.\n");
@@ -101,7 +101,7 @@ static void _future_reset(lco_t *lco) {
 static hpx_status_t _future_attach(lco_t *lco, hpx_parcel_t *p) {
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
-  _future_t *f = (_future_t *)lco;
+  future_t *f = (future_t *)lco;
 
   // if the future isn't triggered, then attach this parcel to the full
   // condition
@@ -132,7 +132,7 @@ static hpx_status_t _future_get(lco_t *lco, int size, void *out) {
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
 
-  _future_t *f = (_future_t *)lco;
+  future_t *f = (future_t *)lco;
   status = _wait(f);
   if ((status == HPX_SUCCESS) && out) {
     memcpy(out, &f->value, size);
@@ -145,7 +145,7 @@ static hpx_status_t _future_get(lco_t *lco, int size, void *out) {
 /// Returns the reference to the future's value in @p out, waiting if
 /// the lco isn't set yet.
 static hpx_status_t _future_getref(lco_t *lco, int size, void **out) {
-  _future_t *f = (_future_t *)lco;
+  future_t *f = (future_t *)lco;
   lco_lock(&f->lco);
   hpx_status_t status = _wait(f);
 
@@ -162,7 +162,7 @@ static hpx_status_t _future_getref(lco_t *lco, int size, void **out) {
 /// be released matches the reference to the future's value.
 static bool _future_release(lco_t *lco, void *out) {
   bool ret = false;
-  _future_t *f = (_future_t *)lco;
+  future_t *f = (future_t *)lco;
   lco_lock(&f->lco);
   if (out && out != f->value) {
     free(out);
@@ -175,14 +175,14 @@ static bool _future_release(lco_t *lco, void *out) {
 static hpx_status_t _future_wait(lco_t *lco) {
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
-  _future_t *f = (_future_t *)lco;
+  future_t *f = (future_t *)lco;
   status = _wait(f);
   lco_unlock(lco);
   return status;
 }
 
 /// initialize the future
-void _future_init(_future_t *f, int size) {
+void future_init(future_t *f, int size) {
   // the future vtable
   static const lco_class_t vtable = {
     .on_fini     = _future_fini,
@@ -212,16 +212,16 @@ static HPX_PINNED(_block_init, uint32_t *args) {
 
   // sequentially initialize each future
   for (uint32_t i = 0; i < nfutures; ++i) {
-    _future_init((_future_t*)(base + i * size), size);
+    future_init((future_t*)(base + i * size), size);
   }
 
   return HPX_SUCCESS;
 }
 
 hpx_addr_t hpx_lco_future_new(int size) {
-  _future_t *local = libhpx_global_malloc(sizeof(*local) + size);
+  future_t *local = libhpx_global_malloc(sizeof(*local) + size);
   dbg_assert(local);
-  _future_init(local, size);
+  future_init(local, size);
   return lva_to_gva(local);
 }
 
@@ -229,7 +229,7 @@ hpx_addr_t hpx_lco_future_new(int size) {
 hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {
   // perform the global allocation
   uint32_t       blocks = ceil_div_32(n, futures_per_block);
-  uint32_t future_bytes = sizeof(_future_t) + size;
+  uint32_t future_bytes = sizeof(future_t) + size;
   uint32_t  block_bytes = futures_per_block * future_bytes;
   hpx_addr_t       base = hpx_gas_global_alloc(blocks, block_bytes);
 
@@ -254,9 +254,9 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {
 // provide this array indexer.
 hpx_addr_t hpx_lco_future_array_at(hpx_addr_t array, int i, int size, int bsize)
 {
-  uint32_t future_bytes = sizeof(_future_t) + size;
+  uint32_t future_bytes = sizeof(future_t) + size;
   uint32_t  block_bytes = bsize * future_bytes;
-  return hpx_addr_add(array, i * (sizeof(_future_t) + size), block_bytes);
+  return hpx_addr_add(array, i * (sizeof(future_t) + size), block_bytes);
 }
 
 

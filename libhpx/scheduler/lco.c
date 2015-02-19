@@ -499,69 +499,61 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
 }
 
 /// Initialize a block of array of lco.
-static hpx_status_t _block_init(void *lco, _lco_array_t *args) {
-  switch (args->type) {
-    case HPX_TYPE_AND:
-      // this takes intptr_t limit as parameter
-      _and_init(lco, args->value);
-      break;
-    case HPX_TYPE_FUTURE:
-      _future_init(lco, args->size);
-      break;
-    case HPX_TYPE_CHAN:
-      _chan_init(lco);
-    default:
-      dbg_assert_str(args->type, "Invalid type for HPX_TYPE_LCO\n");
+static hpx_status_t _block_init(void *lco, hpx_lco_type_t type, int n, 
+                                int arg) {
+  for (int i = 0; i < n; i++) {
+    void *addr;
+    switch (type) {
+      case HPX_TYPE_AND:
+        // this takes intptr_t limit as parameter
+        addr = (void *)((uintptr_t)lco + i * sizeof(and_t));
+        and_init(addr, (intptr_t)arg);
+        break;
+      case HPX_TYPE_FUTURE:
+        addr = (void *)((uintptr_t)lco + i * (sizeof(future_t) + arg));
+        future_init(addr, arg);
+        break;
+      case HPX_TYPE_CHAN:
+        addr = (void *)((uintptr_t)lco + i * (sizeof(chan_t) + arg));
+        chan_init(addr);
+      default:
+        dbg_assert_str(type, "Invalid type for HPX_TYPE_LCO\n");
+    }
   }
-
   return HPX_SUCCESS;
 }
 
 /// Allocate an array of LCO local to the calling locality.
 /// @param       type the type of the LCO
 /// @param          n The (total) number of lcos to allocate
-/// @param       size The size of each lco's value
-/// @param     inputs The number of inputs to the and (must be >= 0)
+/// @param        arg The size of each lco's value or the 
+///                   number of inputs to the and (must be >= 0)
 ///
 /// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_type_array_new(hpx_lco_type_t type, int n, ...) {
-  // perform the global allocation
-  uint32_t blocks = 1;
+hpx_addr_t hpx_lco_type_array_new(hpx_lco_type_t type, int n, 
+                                  int arg) {
   // Get the sizeof lco class structure
-  int size;
   uint32_t lco_bytes;
-  _lco_array_t init;
-  init.type = type;
-
-  va_list vargs;
-  va_start(vargs, n);
-
   switch (type) {
     case HPX_TYPE_AND:
-      init.value = va_arg(vargs, intptr_t);
-      lco_bytes = sizeof(_and_t);
+      lco_bytes = sizeof(and_t);
       break;
     case HPX_TYPE_FUTURE:
-      size = va_arg(vargs, int);
-      lco_bytes = sizeof(_future_t) + size;
-      init.size = size;
+      lco_bytes = sizeof(future_t) + arg;
       break;
     case HPX_TYPE_CHAN:
-      size = va_arg(vargs, int);
-      lco_bytes = sizeof(_chan_t) + size;
-      init.size = size;
+      lco_bytes = sizeof(chan_t) + arg;
     default:
       dbg_assert_str(type, "Invalid type for hpx_lco_type_array_new\n");
   }
 
   uint32_t  block_bytes = n * lco_bytes;
-  hpx_addr_t base = hpx_gas_global_alloc(blocks, block_bytes);
+  hpx_addr_t base = hpx_gas_alloc(block_bytes);
 
   void *local;
   hpx_gas_try_pin(base, &local); 
-  _block_init(local, &init);
+  _block_init(local, type, n , arg);
 
-  va_end(vargs);
   // return the base address of the allocation
   return base;
 }
@@ -569,28 +561,21 @@ hpx_addr_t hpx_lco_type_array_new(hpx_lco_type_t type, int n, ...) {
 // Application level programmer doesn't know how big the lco is, so we
 // provide this array indexer.
 hpx_addr_t hpx_lco_type_array_at(hpx_lco_type_t type, hpx_addr_t array, 
-                                 int i, ...) {
+                                 int i, int arg) {
   uint32_t lco_bytes;
-  int size;
-  va_list vargs;
-  va_start(vargs, i);
-  
   switch (type) {
     case HPX_TYPE_AND:
-      lco_bytes = sizeof(_and_t);
+      lco_bytes = sizeof(and_t);
       break;
     case HPX_TYPE_FUTURE:
-      size = va_arg(vargs, int);
-      lco_bytes = sizeof(_future_t) + size;
+      lco_bytes = sizeof(future_t) + arg;
       break;
     case HPX_TYPE_CHAN:
-      size = va_arg(vargs, int);
-      lco_bytes = sizeof(_chan_t) + size;
+      lco_bytes = sizeof(chan_t) + arg;
     default:
       dbg_assert_str(type, "Invalid type for hpx_lco_type_array_at\n");
   }
   
-  va_end(vargs);
   void *local = here->gas->gva_to_lva(array);
   return lva_to_gva((void *)((uintptr_t)local + i * lco_bytes));
 } 

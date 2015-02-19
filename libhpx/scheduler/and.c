@@ -30,7 +30,7 @@
 
 /// And LCO class interface.
 
-static hpx_status_t _wait(_and_t *and) {
+static hpx_status_t _wait(and_t *and) {
   hpx_status_t status = cvar_get_error(&and->barrier);
   if (status != HPX_SUCCESS) {
     return status;
@@ -45,7 +45,7 @@ static hpx_status_t _wait(_and_t *and) {
   return scheduler_wait(&and->lco.lock, &and->barrier);
 }
 
-static hpx_status_t _attach(_and_t *and, hpx_parcel_t *p) {
+static hpx_status_t _attach(and_t *and, hpx_parcel_t *p) {
   hpx_status_t status = cvar_get_error(&and->barrier);
   if (status != HPX_SUCCESS) {
     return status;
@@ -67,14 +67,14 @@ static void _and_fini(lco_t *lco) {
 }
 
 static void _and_error(lco_t *lco, hpx_status_t code) {
-  _and_t *and = (_and_t *)lco;
+  and_t *and = (and_t *)lco;
   lco_lock(&and->lco);
   scheduler_signal_error(&and->barrier, code);
   lco_unlock(&and->lco);
 }
 
 void _and_reset(lco_t *lco) {
-  _and_t *and = (_and_t *)lco;
+  and_t *and = (and_t *)lco;
   lco_lock(&and->lco);
   dbg_assert_str(cvar_empty(&and->barrier),
                  "Reset on AND LCO that has waiting threads.\n");
@@ -84,7 +84,7 @@ void _and_reset(lco_t *lco) {
 
 /// Fast set decrements the value, and signals when it gets to 0.
 static void _and_set(lco_t *lco, int size, const void *from) {
-  _and_t *and = (_and_t *)lco;
+  and_t *and = (and_t *)lco;
   int num = (size && from) ? *(int*)from : 1;
   lco_lock(&and->lco);
   and->value -= num;
@@ -102,7 +102,7 @@ static void _and_set(lco_t *lco, int size, const void *from) {
 }
 
 static hpx_status_t _and_wait(lco_t *lco) {
-  _and_t *and = (_and_t *)lco;
+  and_t *and = (and_t *)lco;
   lco_lock(&and->lco);
   hpx_status_t status = _wait(and);
   lco_unlock(&and->lco);
@@ -110,7 +110,7 @@ static hpx_status_t _and_wait(lco_t *lco) {
 }
 
 static hpx_status_t _and_attach(lco_t *lco, hpx_parcel_t *p) {
-  _and_t *and = (_and_t *)lco;
+  and_t *and = (and_t *)lco;
   lco_lock(&and->lco);
   hpx_status_t status = _attach(and, p);
   lco_unlock(&and->lco);
@@ -133,7 +133,7 @@ static const lco_class_t _and_vtable = {
   .on_reset    = _and_reset
 };
 
-void _and_init(_and_t *and, intptr_t value) {
+void and_init(and_t *and, intptr_t value) {
   assert(value >= 0);
   lco_init(&and->lco, &_and_vtable);
   cvar_reset(&and->barrier);
@@ -146,10 +146,10 @@ void _and_init(_and_t *and, intptr_t value) {
 
 /// Allocate an and LCO. This is synchronous.
 hpx_addr_t hpx_lco_and_new(intptr_t limit) {
-  _and_t *and = libhpx_global_malloc(sizeof(*and));
+  and_t *and = libhpx_global_malloc(sizeof(*and));
   dbg_assert_str(and, "Could not malloc global memory\n");
   log_lco("allocated lco %p\n", (void*)and);
-  _and_init(and, limit);
+  and_init(and, limit);
   return lva_to_gva(and);;
 }
 
