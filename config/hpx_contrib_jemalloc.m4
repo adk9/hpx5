@@ -22,10 +22,18 @@ AC_DEFUN([HPX_CONTRIB_JEMALLOC],
 	enable_external_jemalloc=no])]
   AM_CONDITIONAL([BUILD_JEMALLOC], [test "x$enable_external_jemalloc" == xno]))
 
+AC_ARG_VAR([JEMALLOC_CARGS], [Additional arguments passed to jemalloc contrib])
+
 AC_DEFUN([HPX_CONTRIB_JEMALLOC_AS_MALLOC],
-  [ACX_CONFIGURE_DIR([contrib/jemalloc], [contrib/jemalloc],
-    ["--disable-valgrind --disable-fill --disable-stats"])
-    AC_SUBST(HPX_JEMALLOC_AS_MALLOC_LIBS, "-ljemalloc -L\$(abs_top_builddir)/contrib/jemalloc/lib")
-    AC_SUBST(HPX_JEMALLOC_AS_MALLOC_RPATH, "-R \$(abs_top_builddir)/contrib/jemalloc/lib")
-    ])
+  [AS_IF([test "x$enable_static" != xno],
+    [JEMALLOC_CARGS="$JEMALLOC_CARGS --enable-static"],
+    [JEMALLOC_CARGS="$JEMALLOC_CARGS --disable-static"])
+  AS_IF([test "x$enable_shared" != xno],
+    [JEMALLOC_CARGS="$JEMALLOC_CARGS --enable-shared"],
+    [JEMALLOC_CARGS="$JEMALLOC_CARGS --disable-shared"])
+  ACX_CONFIGURE_DIR([contrib/jemalloc], [contrib/jemalloc],
+    ["--disable-valgrind --disable-fill --disable-stats $JEMALLOC_CARGS"])
+  AC_SUBST(HPX_JEMALLOC_AS_MALLOC_LIBS, "-ljemalloc -L\$(abs_top_builddir)/contrib/jemalloc/lib")
+  AC_SUBST(HPX_JEMALLOC_AS_MALLOC_RPATH, "-R \$(abs_top_builddir)/contrib/jemalloc/lib")
+])
 
