@@ -1,6 +1,7 @@
-#!/bin/bash
+#!/bin/bash -x
 
-DIR=$1
+OP=$1
+DIR=$2
 shift
 
 function add_init() {
@@ -11,67 +12,80 @@ function add_init() {
 }
 
 function add_mpi() {
-    # most recent mvapich gets aut-loaded by init() above
+    add_init
+    # most recent mvapich gets loaded with intel above
 }
 
 function add_photon() {
+    add_init
     export HPX_PHOTON_IBDEV=$HPXIBDEV
     export HPX_PHOTON_BACKEND=verbs
     export HPX_NETWORK=pwc
 }
 
-set -xe
+function do_build() {
+    echo "Building HPX in $DIR"
+    cd $DIR
+    
+    echo "Bootstrapping HPX."
+    ./bootstrap
+    
+    if [ -d "./build" ]; then
+        rm -rf ./build/
+    fi
+    mkdir build
+    cd build
+    
+    if [ -d "./install" ]; then
+        rm -rf ./install/
+    fi
+    mkdir install
+    
+    echo "Configuring HPX."
+    eval $CFG_CMD
+    
+    echo "Building HPX."
+    make -j 8
+    make install
+}
 
+CFGFLAGS=" --enable-testsuite --enable-parallel-config"
+    
 case "$HPXMODE" in
     photon)
-	CFGFLAGS=" --with-mpi --enable-photon --with-tests-cmd=\"ibrun -n 2 -o 0\""
-	add_init
-	add_mpi
+	CFGFLAGS+=" --with-mpi --enable-photon --with-tests-cmd=\"ibrun -n 2 -o 0\""
         add_photon
 	;;
     mpi)
-	CFGFLAGS=" --with-mpi --with-tests-cmd=\"ibrun -n 2 -o 0\""
-	add_init
-	add_mpi
+	CFGFLAGS+=" --with-mpi --with-tests-cmd=\"ibrun -n 2 -o 0\""
+	add_mpi	
 	;;
     *)
-	CFGFLAGS=" --with-tests-cmd=\"aprun -n 1\""
-	add_init
 	;;
 esac
 
-echo "Building HPX in $DIR"
-cd $DIR
+case "$HPXCC" in
+    *)
+	CFGCFLAGS+=" CC=cc"
+	;;
+esac
 
-echo "Bootstrapping HPX."
-./bootstrap
-
-if [ -d "./build" ]; then
-        rm -rf ./build/
+if [ "$OP" == "build" ]; then
+    CFG_CMD="../configure --prefix=${DIR}/build/install/ ${CFGFLAGS} ${HPXDEBUG}"
+    do_build
 fi
-mkdir build
-cd build
 
-if [ -d "./install" ]; then
-        rm -rf ./install/
-fi
-mkdir install
+if [ "$OP" == "run" ]; then
+    cd $DIR/build
+    # Run all the unit tests:
+    make check -C tests
 
-echo "Configuring HPX."
-echo ../configure --prefix=$DIR/build/HPX5/ CC=mpicc $CFGFLAGS --enable-testsuite $HPXDEBUG | sh
-
-echo "Building HPX."
-make
-make install
-
-# Run all the unit tests:
-make check
-
-# Check the output of the unit tests:
-if grep "FAIL:" $DIR/build/tests/unit/test-suite.log
-then
-    cat $DIR/build/tests/unit/test-suite.log
-    exit 1
+    # Check the output of the unit tests:
+    if egrep -q "(FAIL:|XFAIL:|ERROR:)\s+[1-9][0-9]*" $DIR/build/tests/unit/test-suite.log
+    then
+	cat $DIR/build/tests/unit/test-suite.log
+	exit 1
+    fi
 fi
 
 exit 0

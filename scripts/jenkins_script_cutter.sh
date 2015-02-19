@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 OP=$1
 DIR=$2
@@ -11,6 +11,9 @@ function add_mpi() {
 function add_photon() {
     export HPX_PHOTON_IBDEV=$HPXIBDEV
     export HPX_PHOTON_BACKEND=verbs
+    # verbs/rdmacm library not in jenkins node config
+    export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
+    export LIBRARY_PATH=/usr/lib64:$LIBRARY_PATH
 }
 
 function do_build() {
@@ -32,23 +35,23 @@ function do_build() {
     mkdir install
     
     echo "Configuring HPX."
-    ../configure --prefix=${DIR}/build/install/ $CFGFLAGS --enable-testsuite $HPXDEBUG
+    eval $CFG_CMD
     
     echo "Building HPX."
-    make
+    make -j 8
     make install
 }
 
-set -xe
+CFGFLAGS=" --enable-testsuite --enable-parallel-config"
 
 case "$HPXMODE" in
     photon)
-	CFGFLAGS=" --with-mpi=ompi --enable-photon "
+	CFGFLAGS+=" --with-mpi=ompi --enable-photon"
 	add_mpi
         add_photon
 	;;
     mpi)
-	CFGFLAGS=" --with-mpi=ompi "
+	CFGFLAGS+=" --with-mpi=ompi"
 	add_mpi	
 	;;
     *)
@@ -59,10 +62,10 @@ esac
 case "$HPXIBDEV" in
     qib0)
         export PSM_MEMORY=large
-	CFGFLAGS+=" --with-tests-cmd=\"mpirun -np 2 --mca btl_openib_if_include $HPXIBDEV\""
+	CFGFLAGS+=" --with-tests-cmd=\"mpirun -np 2 --mca btl_openib_if_include ${HPXIBDEV}\""
 	;;
     mlx4_0)
-	CFGFLAGS+=" --with-tests-cmd=\"mpirun -np 2 --mca mtl ^psm --mca btl_openib_if_include $HPXIBDEV\""
+	CFGFLAGS+=" --with-tests-cmd=\"mpirun -np 2 --mca mtl ^psm --mca btl_openib_if_include ${HPXIBDEV}\""
 	;;
     none)
         ;;
@@ -86,13 +89,21 @@ case "$HPXCC" in
 esac
 
 if [ "$OP" == "build" ]; then
+    CFG_CMD="../configure --prefix=${DIR}/build/install/ ${CFGFLAGS} ${HPXDEBUG}"
     do_build
 fi
 
 if [ "$OP" == "run" ]; then
     cd $DIR/build
     # Run all the unit tests:
-    make check
+    make check -C tests
+
+    # Check the output of the unit tests:
+    if egrep -q "(FAIL:|XFAIL:|ERROR:)\s+[1-9][0-9]*" $DIR/build/tests/unit/test-suite.log
+    then
+	cat $DIR/build/tests/unit/test-suite.log
+	exit 1
+    fi
 fi
 
 exit 0
