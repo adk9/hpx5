@@ -18,7 +18,7 @@ function do_build() {
     cd $DIR
     
     echo "Bootstrapping HPX."
-    ./bootstrap
+    #./bootstrap
     
     if [ -d "./build" ]; then
         rm -rf ./build/
@@ -32,10 +32,10 @@ function do_build() {
     mkdir install
     
     echo "Configuring HPX."
-    ../configure --prefix=${DIR}/build/install/ $CFGFLAGS --enable-testsuite $HPXDEBUG
+    eval $CFG_CMD
     
     echo "Building HPX."
-    make
+    make -j 8
     make install
 }
 
@@ -43,12 +43,12 @@ set -xe
 
 case "$HPXMODE" in
     photon)
-	CFGFLAGS=" --with-mpi=ompi --enable-photon "
+	CFGFLAGS=" --with-mpi=ompi --enable-photon"
 	add_mpi
         add_photon
 	;;
     mpi)
-	CFGFLAGS=" --with-mpi=ompi "
+	CFGFLAGS=" --with-mpi=ompi"
 	add_mpi	
 	;;
     *)
@@ -59,10 +59,10 @@ esac
 case "$HPXIBDEV" in
     qib0)
         export PSM_MEMORY=large
-	CFGFLAGS+=" --with-tests-cmd=\"mpirun -np 2 --mca btl_openib_if_include $HPXIBDEV\""
+	CFGFLAGS+=" --with-tests-cmd=\"mpirun -np 2 --mca btl_openib_if_include ${HPXIBDEV}\""
 	;;
     mlx4_0)
-	CFGFLAGS+=" --with-tests-cmd=\"mpirun -np 2 --mca mtl ^psm --mca btl_openib_if_include $HPXIBDEV\""
+	CFGFLAGS+=" --with-tests-cmd=\"mpirun -np 2 --mca mtl ^psm --mca btl_openib_if_include ${HPXIBDEV}\""
 	;;
     none)
         ;;
@@ -86,6 +86,7 @@ case "$HPXCC" in
 esac
 
 if [ "$OP" == "build" ]; then
+    CFG_CMD="../configure --prefix=${DIR}/build/install/ --enable-testsuite --enable-parallel-config ${CFGFLAGS} ${HPXDEBUG}"
     do_build
 fi
 
