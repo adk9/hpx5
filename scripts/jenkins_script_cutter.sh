@@ -21,7 +21,7 @@ function do_build() {
     cd $DIR
     
     echo "Bootstrapping HPX."
-    #./bootstrap
+    ./bootstrap
     
     if [ -d "./build" ]; then
         rm -rf ./build/
@@ -42,14 +42,16 @@ function do_build() {
     make install
 }
 
+CFGFLAGS=" --enable-testsuite --enable-parallel-config"
+
 case "$HPXMODE" in
     photon)
-	CFGFLAGS=" --with-mpi=ompi --enable-photon"
+	CFGFLAGS+=" --with-mpi=ompi --enable-photon"
 	add_mpi
         add_photon
 	;;
     mpi)
-	CFGFLAGS=" --with-mpi=ompi"
+	CFGFLAGS+=" --with-mpi=ompi"
 	add_mpi	
 	;;
     *)
@@ -87,14 +89,14 @@ case "$HPXCC" in
 esac
 
 if [ "$OP" == "build" ]; then
-    CFG_CMD="../configure --prefix=${DIR}/build/install/ --enable-testsuite --enable-parallel-config ${CFGFLAGS} ${HPXDEBUG}"
+    CFG_CMD="../configure --prefix=${DIR}/build/install/ ${CFGFLAGS} ${HPXDEBUG}"
     do_build
 fi
 
 if [ "$OP" == "run" ]; then
     cd $DIR/build
     # Run all the unit tests:
-    make check
+    make check -C tests
 
     # Check the output of the unit tests:
     if egrep -q "(FAIL:|XFAIL:|ERROR:)\s+[1-9][0-9]*" $DIR/build/tests/unit/test-suite.log
