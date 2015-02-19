@@ -31,12 +31,6 @@
 #include "future.h"
 
 /// Local future interface.
-/// @{
-typedef struct {
-  lco_t     lco;
-  cvar_t   full;
-  char  value[];
-} _future_t;
 
 static hpx_status_t _wait(_future_t *f) {
   if (!lco_get_triggered(&f->lco))
@@ -188,7 +182,7 @@ static hpx_status_t _future_wait(lco_t *lco) {
 }
 
 /// initialize the future
-static void _future_init(_future_t *f, int size) {
+void _future_init(_future_t *f, int size) {
   // the future vtable
   static const lco_class_t vtable = {
     .on_fini     = _future_fini,

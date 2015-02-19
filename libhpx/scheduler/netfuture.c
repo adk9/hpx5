@@ -356,7 +356,7 @@ static void _nf_lco_fini(lco_t *lco) {
 ///               non-inline storage for netfutures, if desired.)
 /// @param shared Will this be a shared future?
 static void
-_future_init(_netfuture_t *f, int size, bool shared)
+_netfuture_init(_netfuture_t *f, int size, bool shared)
 {
   // the future vtable
   static const lco_class_t vtable = {
@@ -406,7 +406,7 @@ int _add_futures(hpx_netfuture_t *f) {
 
   for (int i = 0; i < _netfutures_at_rank(f); i ++) {
     _netfuture_t *nf = (_netfuture_t*)_netfuture_get_addr(&fi);
-    _future_init(nf, f->size, false);
+    _netfuture_init(nf, f->size, false);
     dbg_printf("  Initing future on rank %d at pa %p\n", hpx_get_my_rank(), 
                (void*)nf);
     dbg_printf0("  Initing future on rank %d at pa %p\n", hpx_get_my_rank(), 

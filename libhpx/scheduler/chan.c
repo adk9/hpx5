@@ -36,22 +36,6 @@
 /// buffers. It can be used to support a thread-based, point-to-point
 /// communication mechanism. An in-order channel forces a sender to
 /// wait for remote completion for sets or sends().
-/// @{
-
-typedef struct _node {
-  struct _node *next;
-  void       *buffer;                           // out-of place because we want
-  int           size;                           // to be able to recv it
-} _node_t;
-
-
-typedef struct {
-  lco_t          lco;
-  cvar_t    nonempty;
-  _node_t      *head;
-  _node_t      *tail;
-} _chan_t;
-
 
 /// Internal actions.
 
@@ -215,7 +199,7 @@ static hpx_status_t _chan_wait(lco_t *lco) {
 }
 
 /// Initialize the channel
-static void _chan_init(_chan_t *c) {
+void _chan_init(_chan_t *c) {
   static const lco_class_t vtable = {
     .on_fini     = _chan_fini,
     .on_error    = _chan_error,

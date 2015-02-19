@@ -29,13 +29,6 @@
 
 
 /// And LCO class interface.
-/// @{
-typedef struct {
-  lco_t               lco;
-  cvar_t          barrier;
-  volatile intptr_t value;                  // the threshold
-} _and_t;
-
 
 static hpx_status_t _wait(_and_t *and) {
   hpx_status_t status = cvar_get_error(&and->barrier);
@@ -140,7 +133,7 @@ static const lco_class_t _and_vtable = {
   .on_reset    = _and_reset
 };
 
-static void _and_init(_and_t *and, intptr_t value) {
+void _and_init(_and_t *and, intptr_t value) {
   assert(value >= 0);
   lco_init(&and->lco, &_and_vtable);
   cvar_reset(&and->barrier);

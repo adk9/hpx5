@@ -16,6 +16,7 @@
 #include <hpx/attributes.h>
 #include <jemalloc/jemalloc_hpx.h>
 #include <libsync/lockable_ptr.h>
+#include "cvar.h"
 
 /// This constant is used to determine when a set should be performed
 /// asynchronously, even if the set is actually local.
@@ -28,8 +29,62 @@ typedef union {
   uintptr_t            bits;
 } lco_t HPX_ALIGNED(16);
 
+/// Array LCO class interface.
+/// @{
+typedef struct {
+  hpx_lco_type_t type;
+  uint32_t size;
+  volatile intptr_t value;
+} _lco_array_t;
 
-/// The LCO abstract class interface.
+/// And LCO class interface.
+/// @{
+typedef struct {
+  lco_t               lco;
+  cvar_t          barrier;
+  volatile intptr_t value;                  // the threshold
+} _and_t;
+
+/// Local future interface.
+/// @{
+typedef struct {
+  lco_t     lco;
+  cvar_t   full;
+  char  value[];
+} _future_t;
+
+/// Local channel interface.
+///
+/// A channel LCO maintains a linked-list of dynamically sized
+/// buffers. It can be used to support a thread-based, point-to-point
+/// communication mechanism. An in-order channel forces a sender to
+/// wait for remote completion for sets or sends().
+/// @{
+
+typedef struct _node {
+  struct _node *next;
+  void       *buffer;                           // out-of place because we want
+  int           size;                           // to be able to recv it
+} _node_t;
+
+
+typedef struct {
+  lco_t          lco;
+  cvar_t    nonempty;
+  _node_t      *head;
+  _node_t      *tail;
+} _chan_t;
+
+extern void _and_init(_and_t *and, intptr_t value)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+extern void _future_init(_future_t *f, int size) 
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+extern void _chan_init(_chan_t *c)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+// The LCO abstract class interface.
 ///
 /// All LCOs will implement this interface, which is accessible through the
 /// hpx_lco set of generic actions. Concrete classes may implement extended
