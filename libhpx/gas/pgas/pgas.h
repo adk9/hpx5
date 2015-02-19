@@ -96,6 +96,14 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize)
 void *pgas_gpa_to_lva(hpx_addr_t gpa)
   HPX_INTERNAL;
 
+/// Convert a heap offset into a local virtual address.
+///
+/// @param       offset The heap offset.
+///
+/// @returns The corresponding local virtual address, or NULL if the offset is
+///          outside the bounds of the heap.
+void *pgas_offset_to_lva(uint64_t offset)
+  HPX_INTERNAL;
 
 /// Convert a local address into a global physical address.
 ///

@@ -168,6 +168,10 @@ void *pgas_gpa_to_lva(hpx_addr_t gpa) {
    return heap_offset_to_lva(global_heap, offset);
 }
 
+void *pgas_offset_to_lva(uint64_t offset) {
+  return heap_offset_to_lva(global_heap, offset);
+}
+
 static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   const bool l = _gpa_is_cyclic(lhs);
   const bool r = _gpa_is_cyclic(rhs);
