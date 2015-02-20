@@ -24,7 +24,7 @@
 ///
 /// This will copy the data buffer into the correct place, and then continue to
 /// the completion handler.
-HPX_TASK(isir_emulate_pwc, void *buffer) {
+HPX_ACTION(isir_emulate_pwc, void *buffer) {
   hpx_parcel_t *p = scheduler_current_parcel();
   if (!p->size) {
     return HPX_SUCCESS;
