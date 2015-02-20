@@ -97,6 +97,11 @@ void hpx_parcel_release(hpx_parcel_t *p)
 hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync)
   HPX_NON_NULL(1);
 
+hpx_status_t hpx_parcel_send_ext(hpx_parcel_t *p, hpx_action_t lop,
+                                 hpx_addr_t laddr)
+  HPX_NON_NULL(1);
+
+
 /// Send a parcel with synchronous local completion semantics.
 ///
 /// hpx_parcel_send_sync() performs a synchronous local send. After returning
