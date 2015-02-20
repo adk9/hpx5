@@ -92,8 +92,8 @@ static int _wrap(eager_buffer_t *tx, hpx_parcel_t *p, uint32_t bytes) {
   int target = tx->peer->rank;
   log_net("wrapping rank %d eager buffer (%u bytes) at sequence # %lu\n",
           target, bytes, tx->sequence);
-  command_t cmd = encode_command(_eager_rx_wrap, HPX_THERE(target));
-  int status = peer_put_command(tx->peer, cmd);
+  command_t rsync = encode_command(_eager_rx_wrap, HPX_THERE(target));
+  int status = peer_put_command(tx->peer, rsync);
   dbg_check(status, "could not send command to pad eager buffer\n");
   tx->max += bytes;
   return _buffer_tx(tx, p);
@@ -134,15 +134,14 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   inst_trace(class, id, sequence, n, (uint64_t)rva, tx->peer->rank);
 
   int target = tx->peer->rank;
-  command_t local = encode_command(free_parcel, lva_to_gva(p));
-  command_t remote = encode_command(_eager_rx, HPX_THERE(target));
+  command_t lsync = encode_command(free_parcel, lva_to_gva(p));
+  command_t rsync = encode_command(_eager_rx, HPX_THERE(target));
   int e = peer_pwc(tx->peer,                     /* peer structure */
                    tx->tx_base + roff,           /* remote offset */
                    pwc_network_offset(p),        /* local address */
                    n,                            /* # bytes */
-                   local,                        /* local completion */
-                   HPX_NULL,                     /* remote completion */
-                   remote,                       /* remote command */
+                   lsync,                        /* local completion */
+                   rsync,                        /* remote completion */
                    SEGMENT_EAGER                 /* segment */);
 
   if (e == LIBHPX_OK) {

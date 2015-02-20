@@ -152,22 +152,23 @@ static int _pwc_send(network_t *network, hpx_parcel_t *p) {
 /// peer for the request, and forwards to the p2p put operation.
 static int _pwc_pwc(network_t *network,
                     hpx_addr_t to, const void *lva, size_t n,
-                    hpx_addr_t lsync, hpx_addr_t rsync, hpx_action_t op,
-                    hpx_addr_t raddr) {
+                    hpx_action_t lop, hpx_addr_t laddr,
+                    hpx_action_t rop, hpx_addr_t raddr) {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(pwc->gas, to);
   peer_t *peer = &pwc->peers[rank];
   uint64_t offset = gas_offset_of(pwc->gas, to);
-  command_t cmd = encode_command(op, raddr);
-  return peer_pwc(peer, offset, lva, n, lsync, rsync, cmd, SEGMENT_HEAP);
+  command_t lsync = encode_command(lop, laddr);
+  command_t rsync = encode_command(rop, raddr);
+  return peer_pwc(peer, offset, lva, n, lsync, rsync, SEGMENT_HEAP);
 }
 
 /// Perform a put operation to a global heap address.
 ///
 /// This simply forwards to the pwc handler with no remote command.
 static int _pwc_put(network_t *net, hpx_addr_t to, const void *from,
-                    size_t n, hpx_addr_t lsync, hpx_addr_t rsync) {
-  return _pwc_pwc(net, to, from, n, lsync, rsync, HPX_ACTION_NULL, HPX_NULL);
+                    size_t n, hpx_action_t lop, hpx_addr_t laddr) {
+  return _pwc_pwc(net, to, from, n, lop, laddr, HPX_ACTION_NULL, HPX_NULL);
 }
 
 /// Perform a get operation to a global heap address.
@@ -175,13 +176,13 @@ static int _pwc_put(network_t *net, hpx_addr_t to, const void *from,
 /// This simply the global address into a symmetric-heap offset, finds the
 /// peer for the request, and forwards to the p2p get operation.
 static int _pwc_get(network_t *network, void *lva, hpx_addr_t from, size_t n,
-                    hpx_addr_t lsync) {
+                    hpx_action_t lop, hpx_addr_t laddr) {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(pwc->gas, from);
   peer_t *peer = pwc->peers + rank;
   uint64_t offset = gas_offset_of(pwc->gas, from);
-  command_t cmd = encode_command(hpx_lco_set_action, lsync);
-  return peer_get(peer, lva, n, offset, cmd, SEGMENT_HEAP);
+  command_t lsync = encode_command(lop, laddr);
+  return peer_get(peer, lva, n, offset, lsync, SEGMENT_HEAP);
 }
 
 static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
