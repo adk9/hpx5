@@ -9,9 +9,9 @@
 #define FIELD_WIDTH 20
 
 /* actions */
-static hpx_action_t _main = 0;
-static hpx_action_t _ping = 0;
-static hpx_action_t _pong = 0;
+static HPX_ACTION_DECL(_main);
+static HPX_ACTION_DECL(_ping);
+static HPX_ACTION_DECL(_pong);
 
 #define MAX_MSG_SIZE 1024*1024
 
@@ -28,8 +28,6 @@ static void _usage(FILE *stream) {
   hpx_print_help();
   fflush(stream);
 }
-
-static void _register_actions(void);
 
 /** the pingpong message type */
 typedef struct {
@@ -78,12 +76,11 @@ int main(int argc, char *argv[]) {
 
   fprintf(stdout, "Starting the cost of Netfutures pingpong benchmark\n");
   fprintf(stdout, "%s%*s\n", "# MESG_SIZE ", FIELD_WIDTH, "LATENCY (ms)");
-  _register_actions();
 
   return hpx_run(&_main, NULL, 0);
 }
 
-static int _action_main(void *args) {
+static HPX_ACTION(_main, void *args) {
   hpx_time_t start;
   hpx_netfuture_config_t cfg = HPX_NETFUTURE_CONFIG_DEFAULTS;
   cfg.max_array_number = ((int)ceil(log2(MAX_MSG_SIZE)) + 1) * (loop + skip);
@@ -123,7 +120,7 @@ static int _action_main(void *args) {
 /**
  * Send a ping message.
  */
-static int _action_ping(args_t *args) {
+static HPX_ACTION(_ping, args_t *args) {
   hpx_addr_t msg_ping_gas = hpx_gas_alloc(args->msg_size);
   hpx_addr_t msg_pong_gas = hpx_gas_alloc(args->msg_size);
   char *msg_ping;
@@ -136,7 +133,7 @@ static int _action_ping(args_t *args) {
   for (int i = 0; i < myiters; i++) {
     hpx_addr_t lsync = hpx_lco_future_new(0);
     hpx_lco_netfuture_setat(args->pingpong, 1, args->msg_size,
-                            msg_ping_gas, lsync, HPX_NULL);
+                            msg_ping_gas, lsync);
     hpx_lco_wait(lsync);
     hpx_lco_delete(lsync, HPX_NULL);
     msg_pong_gas = hpx_lco_netfuture_getat(args->pingpong, 0, args->msg_size);
@@ -153,7 +150,7 @@ static int _action_ping(args_t *args) {
 /**
  * Handle a pong action.
  */
-static int _action_pong(args_t *args) {
+static HPX_ACTION(_pong, args_t *args) {
   hpx_addr_t msg_ping_gas = hpx_gas_alloc(args->msg_size);
   hpx_addr_t msg_pong_gas = hpx_gas_alloc(args->msg_size);
   char *msg_ping;
@@ -171,21 +168,10 @@ static int _action_pong(args_t *args) {
 
     hpx_addr_t lsync = hpx_lco_future_new(0);
     hpx_lco_netfuture_setat(args->pingpong, 0, args->msg_size, msg_pong_gas,
-                            lsync, HPX_NULL);
+                            lsync);
     hpx_lco_wait(lsync);
     hpx_lco_delete(lsync, HPX_NULL);
   }
 
   return HPX_SUCCESS;
 }
-
-/**
- * Registers functions as actions.
- */
-void _register_actions(void) {
-  /* register action for parcel (must be done by all ranks) */
-  HPX_REGISTER_ACTION(_action_main, &_main);
-  HPX_REGISTER_ACTION(_action_ping, &_ping);
-  HPX_REGISTER_ACTION(_action_pong, &_pong);
-}
-
