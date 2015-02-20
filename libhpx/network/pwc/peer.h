@@ -127,4 +127,8 @@ int peer_get(peer_t *peer, void *lva, size_t offset, size_t n,
              command_t sync, segid_t segment)
   HPX_INTERNAL HPX_NON_NULL(1);
 
+/// Declare an interrupt that can be used to extract the offset from a command,
+/// and free it as a parcel.
+extern HPX_ACTION_DECL(free_parcel);
+
 #endif
