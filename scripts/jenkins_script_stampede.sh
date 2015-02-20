@@ -6,7 +6,6 @@ shift
 
 function add_init() {
     module load intel/14.0.1.106
-    export PSM_MEMORY=large
     export LDFLAGS="-L/opt/ofed/lib64 -lpthread"
     export CPPFLAGS="-I/opt/ofed/include"
 }
@@ -20,7 +19,6 @@ function add_photon() {
     add_init
     export HPX_PHOTON_IBDEV=$HPXIBDEV
     export HPX_PHOTON_BACKEND=verbs
-    export HPX_NETWORK=pwc
 }
 
 function do_build() {
@@ -61,6 +59,7 @@ case "$HPXMODE" in
 	add_mpi	
 	;;
     *)
+	add_init
 	;;
 esac
 

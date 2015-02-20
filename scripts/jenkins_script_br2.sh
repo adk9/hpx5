@@ -21,6 +21,7 @@ function add_mpi() {
 function add_photon() {
     add_init
     export HPX_PHOTON_BACKEND=ugni
+    export HPX_PHOTON_CARGS="--with-ugni"
 }
 
 function do_build() {
@@ -53,11 +54,11 @@ CFGFLAGS=" --enable-testsuite --enable-parallel-config"
     
 case "$HPXMODE" in
     photon)
-	CFGFLAGS+=" --with-pmi --enable-photon --with-tests-cmd=\"aprun -n 1 -N 1\""
+	CFGFLAGS+=" --with-pmi --with-hugetlbfs --enable-photon --with-tests-cmd=\"aprun -n 2 -N 1\""
         add_photon
 	;;
     mpi)
-	CFGFLAGS+=" --with-mpi=cray-mpich --with-tests-cmd=\"aprun -n 1 -N 1\""
+	CFGFLAGS+=" --with-mpi=cray-mpich --with-tests-cmd=\"aprun -n 2 -N 1\""
 	add_mpi	
 	;;
     *)
