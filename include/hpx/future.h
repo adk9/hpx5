@@ -35,7 +35,7 @@ typedef struct {
 
 typedef struct  {
   int table_index;
-  hpx_addr_t base_gas;
+  uintptr_t base_offset;
   int size;
   int count;
   int index;

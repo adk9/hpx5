@@ -4,7 +4,7 @@ noinst_PROGRAMS  = $(TESTS)
 
 AM_CPPFLAGS      = -I$(top_srcdir)/include 
 AM_CPPFLAGS     += -D_POSIX_C_SOURCE=200809L
-AM_LDFLAGS       = $(HPX_JEMALLOC_AS_MALLOC_RPATH) $(HPX_JEMALLOC_RPATH)
+AM_LDFLAGS       = $(HPX_JEMALLOC_AS_MALLOC_RPATH) $(HPX_JEMALLOC_RPATH) -no-install
 
 # Turn off some warnings for the tests
 AM_CFLAGS        = -Wno-unused
