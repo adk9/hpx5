@@ -138,8 +138,9 @@ static void* _mmap_heap(heap_t *const heap) {
     void *addr = (void*)(1ul << i);
     void *ret  = mmap(addr, heap->nbytes, prot, flags, hp_fd, 0);
     if (ret != addr) {
-      if (!munmap(ret, heap->nbytes)) {
-        dbg_error("munpap failed.\n");
+      int e = munmap(ret, heap->nbytes);
+      if (e < 0) {
+        dbg_error("munmap failed: %s.\n", strerror(e));
       }
       continue;
     }
