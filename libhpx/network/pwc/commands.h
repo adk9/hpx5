@@ -17,7 +17,16 @@
 
 typedef uint64_t command_t;
 
-command_t encode_command(hpx_action_t op, hpx_addr_t addr);
-void decode_command(command_t cmd, hpx_action_t *op, hpx_addr_t *addr);
+hpx_action_t command_get_op(command_t command)
+  HPX_INTERNAL;
+
+uint64_t command_get_arg(command_t command)
+  HPX_INTERNAL;
+
+command_t encode_command(hpx_action_t op, hpx_addr_t addr)
+  HPX_INTERNAL;
+
+void decode_command(command_t cmd, hpx_action_t *op, hpx_addr_t *addr)
+  HPX_INTERNAL;
 
 #endif // LIBHPX_NETWORK_PWC_COMMANDS_H

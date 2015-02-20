@@ -29,22 +29,40 @@ typedef struct {
   hpx_addr_t lsync;
 } record_t;
 
+static HPX_ACTION_DECL (_finish_get_rx_min);
 
-static hpx_action_t _finish_get_rx_min;
+/// Compute the offset, in bytes, of the rx buffer's min field for a rank.
+///
+/// This value is the same at all of the ranks, as the peer segment is
+/// completely symmetric.
+static size_t _get_offset_of_min(int rank) {
+  const size_t rx_field_offset = offsetof(peer_t, rx);
+  const size_t min_field_offset = offsetof(eager_buffer_t, min);
+  return rank * sizeof(peer_t) + rx_field_offset + min_field_offset;
+}
 
 /// Initiate an rdma get operation for the send buffer.
+///
+/// When we expect to overflow the send buffer, we need to find out how far the
+/// receiver has progressed in processing it. We do that by issuing an RDMA get
+/// operation to retrieve the remote "min" index, which represents this
+/// progress.
+///
+/// The entire system of send buffers is a distributed 2D array of eager
+/// buffers. My ("my" means the local rank) destination buffers are the "row" of
+/// eager buffers at pwc->peers[rank], and as the peers segment is symmetric
+/// (here symmetric has the same meaning as it does in SHMEM), the remote "min"
+/// value is at the same offset in all of the ranks.
+///
+/// We encode the rank of "there" in
 static int _start_get_rx_min(send_buffer_t *sends) {
-  const size_t minoffset = offsetof(peer_t, rx) + offsetof(eager_buffer_t, min);
-  size_t offset = here->rank * sizeof(peer_t) + minoffset;
-  // compute the offset into the peer segment
+  size_t offset = _get_offset_of_min(here->rank);
   peer_t *p = sends->tx->peer;
   uint64_t *min = &sends->tx->min;
-  command_t cmd = encode_command(_finish_get_rx_min, HPX_THERE(p->rank));
-  int status = peer_get(p, min, offset, sizeof(*min), cmd, SEGMENT_PEERS);
-  if (status != LIBHPX_OK) {
-    dbg_error("could not initiate get with transport\n");
-  }
-  return status;
+  command_t cmd = encode_command(_finish_get_rx_min, p->rank);
+  int e = peer_get(p, min, offset, sizeof(*min), cmd, SEGMENT_PEERS);
+  dbg_check(e, "could not initiate get with transport\n");
+  return e;
 }
 
 /// Append a record to the parcel's pending send buffer.
@@ -111,13 +129,18 @@ static int _send_buffer_progress(send_buffer_t *sends) {
 /// The handler uses the target data to encode the peer for which the rDMA
 /// occurred. This signal indicates that we have an opportunity to progress the
 /// peer's eager send buffer.
-static HPX_ACTION(_finish_get_rx_min, void *UNUSED) {
-  uint32_t id = pgas_gpa_to_offset(hpx_thread_current_target());
-  peer_t *peer = pwc_get_peer(here->network, id);
+///
+static int _finish_get_rx_min_handler(command_t command) {
+  uint64_t arg = command_get_arg(command);
+  dbg_assert(arg < UINT32_MAX);
+  uint32_t id = (uint32_t)arg;
+  peer_t *peer = pwc_get_peer(id);
   dbg_assert_str(peer, "invalid peer id %u\n", id);
   log_net("updated min to %lu\n", peer->tx.min);
   return _send_buffer_progress(&peer->send);
 }
+static HPX_ACTION_DEF(INTERRUPT, _finish_get_rx_min_handler, _finish_get_rx_min,
+                      HPX_UINT64);
 
 int send_buffer_init(send_buffer_t *sends, struct eager_buffer *tx,
                      uint32_t size) {
