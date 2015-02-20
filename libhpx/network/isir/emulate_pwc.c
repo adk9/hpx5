@@ -22,7 +22,8 @@
 
 /// Emulate a put-with-completion operation.
 ///
-/// This will copy the data buffer into the correct place, and then
+/// This will copy the data buffer into the correct place, and then continue to
+/// the completion handler.
 HPX_TASK(isir_emulate_pwc, void *buffer) {
   hpx_parcel_t *p = scheduler_current_parcel();
   if (!p->size) {
@@ -39,7 +40,6 @@ HPX_TASK(isir_emulate_pwc, void *buffer) {
   gas->unpin(p->target);
   return HPX_SUCCESS;
 }
-
 
 /// Emulate the remote side of a get-with-completion.
 ///
