@@ -33,6 +33,7 @@
 #include "lco.h"
 #include "cvar.h"
 #include "future.h"
+#include "../gas/pgas/gpa.h"
 
 #define dbg_printf0(...)
 //#define dbg_printf0 printf
@@ -516,6 +517,20 @@ hpx_addr_t _netfuture_get_data_addr_gas(hpx_netfuture_t *f) {
   return hpx_addr_add(rank_base_gas, offset, bs);
 }
 
+static int _local_set_wrapper_handler(uint64_t offset) {
+  hpx_addr_t target = pgas_offset_to_gpa(here->rank, offset);
+  hpx_lco_set(target, 0, NULL, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
+}
+static HPX_ACTION_DEF(INTERRUPT, _local_set_wrapper_handler, _local_set_wrapper,
+                      HPX_UINT64);
+
+static HPX_ACTION(_set_wrapper, int *rank) {
+  hpx_addr_t target = hpx_thread_current_target();
+  hpx_lco_set(target, 0, NULL, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
 void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_addr_t value,
                  hpx_addr_t lsync_lco) {
 
@@ -541,8 +556,8 @@ void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_ad
   hpx_addr_t remote_lco_addr = _netfuture_get_addr_gas(&future_i);
   hpx_addr_t remote_addr = _netfuture_get_data_addr_gas(&future_i);
   network_pwc(here->network, remote_addr, data, size,
-              hpx_lco_set_action, lsync_lco,
-              hpx_lco_set_action, remote_lco_addr);
+              _local_set_wrapper, lsync_lco,
+              _set_wrapper, remote_lco_addr);
   }
   else {
     _future_set_with_copy((_netfuture_t*)_netfuture_get_addr(&future_i), size, data);
