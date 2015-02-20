@@ -48,7 +48,6 @@ heap_t *global_heap = NULL;
 static __thread unsigned _global_arena = UINT_MAX;
 static __thread unsigned _primordial_arena = UINT_MAX;
 
-
 /// The static chunk allocator callback that we give to jemalloc arenas that
 /// manage our global heap.
 ///
@@ -82,7 +81,6 @@ static void *_chunk_alloc(void *UNUSED1, size_t size, size_t align, bool *zero,
   return chunk;
 }
 
-
 /// The static chunk de-allocator callback that we give to jemalloc arenas that
 /// manage our global heap.
 ///
@@ -112,7 +110,6 @@ static bool _chunk_dalloc(void *chunk, size_t size, unsigned UNUSED) {
   return heap_chunk_dalloc(global_heap, chunk, size);
 }
 
-
 int pgas_join(void) {
   if (!global_heap) {
     dbg_error("attempt to join GAS before global heap allocation.\n");
@@ -128,7 +125,6 @@ int pgas_join(void) {
   return LIBHPX_OK;
 }
 
-
 void pgas_leave(void) {
   dbg_assert_str(_global_arena != UINT_MAX,
                  "trying to leave the GAS before joining it.\n");
@@ -136,7 +132,6 @@ void pgas_leave(void) {
   mallctl_thread_flush_cache();
   mallctl_thread_set_arena(_primordial_arena);
 }
-
 
 static void _pgas_delete(gas_t *gas) {
   if (global_heap) {
@@ -146,22 +141,18 @@ static void _pgas_delete(gas_t *gas) {
   }
 }
 
-
 static bool _pgas_is_global(gas_t *gas, void *lva) {
   return heap_contains_lva(global_heap, lva);
 }
-
 
 static bool _gpa_is_cyclic(hpx_addr_t gpa) {
   return heap_offset_is_cyclic(global_heap, pgas_gpa_to_offset(gpa));
 }
 
-
 hpx_addr_t pgas_lva_to_gpa(void *lva) {
   const uint64_t offset = heap_lva_to_offset(global_heap, lva);
   return pgas_offset_to_gpa(here->rank, offset);
 }
-
 
 void *pgas_gpa_to_lva(hpx_addr_t gpa) {
    const uint64_t offset = pgas_gpa_to_offset(gpa);
@@ -170,6 +161,10 @@ void *pgas_gpa_to_lva(hpx_addr_t gpa) {
 
 void *pgas_offset_to_lva(uint64_t offset) {
   return heap_offset_to_lva(global_heap, offset);
+}
+
+uint64_t pgas_max_offset(void) {
+  return (1ull << GPA_OFFSET_BITS);
 }
 
 static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
@@ -181,7 +176,6 @@ static int64_t _pgas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   return (l && r) ? pgas_gpa_sub_cyclic(lhs, rhs, bsize)
                   : pgas_gpa_sub(lhs, rhs);
 }
-
 
 static hpx_addr_t _pgas_add(hpx_addr_t gpa, int64_t bytes, uint32_t bsize) {
   const bool cyclic = _gpa_is_cyclic(gpa);
