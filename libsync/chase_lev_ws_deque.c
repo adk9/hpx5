@@ -24,9 +24,7 @@
 #include <string.h>
 
 #include <hpx/builtins.h>
-
 #include "libsync/deques.h"
-
 
 /// A Chase-Lev WS Deque buffer.
 ///
@@ -41,9 +39,9 @@ typedef struct chase_lev_ws_deque_buffer {
   void      *buffer[];
 } _buffer_t;
 
-
 /// Allocate a new buffer of the right capacity.
-static _buffer_t *_buffer_new(_buffer_t *parent, uint32_t capacity) {
+static HPX_NOINLINE _buffer_t *_buffer_new(_buffer_t *parent, uint32_t capacity)
+{
   assert(capacity > 0);
 
   // best-fit power of two
@@ -59,28 +57,24 @@ static _buffer_t *_buffer_new(_buffer_t *parent, uint32_t capacity) {
   return b;
 }
 
-
 /// Delete a buffer, and all of its parents.
-static void _buffer_delete(_buffer_t *b) {
-  if (!b)
-    return;
+static HPX_NOINLINE void _buffer_delete(_buffer_t *b) {
   _buffer_t *parent = b->parent;
   free(b);
-  _buffer_delete(parent);
+  if (parent) {
+    _buffer_delete(parent);
+  }
 }
-
 
 /// Insert into the buffer, modulo its capacity.
 static void _buffer_put(_buffer_t *b, uint64_t i, void *val) {
   b->buffer[i & b->mask] = val;
 }
 
-
 /// Lookup in the buffer, modulo its capacity.
 static void *_buffer_get(_buffer_t *b, uint64_t i) {
   return b->buffer[i & b->mask];
 }
-
 
 /// Grow a Chase-Lev WS Deque buffer.
 ///
@@ -88,13 +82,14 @@ static void *_buffer_get(_buffer_t *b, uint64_t i) {
 /// @param bottom - the deque bottom index
 /// @param    top - the deque top index
 /// @returns      - the new buffer
-static _buffer_t *_buffer_grow(_buffer_t *old, uint64_t bottom, uint64_t top) {
+static HPX_NOINLINE
+_buffer_t *_buffer_grow(_buffer_t *old, uint64_t bottom, uint64_t top) {
   _buffer_t *new = _buffer_new(old, 2 * old->capacity);
-  for (; top < bottom; ++top)
+  for (; top < bottom; ++top) {
     _buffer_put(new, top, _buffer_get(old, top));
+  }
   return new;
 }
-
 
 /// Utility functions to set and CAS deque fields.
 ///
@@ -107,30 +102,26 @@ static void _deque_set_bottom(chase_lev_ws_deque_t *deque, uint64_t val) {
   sync_store(&deque->bottom, val, SYNC_RELEASE);
 }
 
-
 static void _deque_set_buffer(chase_lev_ws_deque_t *deque, _buffer_t *buffer) {
   sync_store(&deque->buffer, buffer, SYNC_RELEASE);
 }
 
-
 static void _deque_set_top(chase_lev_ws_deque_t *deque, uint64_t top) {
   sync_store(&deque->top, top, SYNC_RELEASE);
 }
-
 
 static bool _deque_try_inc_top(chase_lev_ws_deque_t *deque, uint64_t top) {
   return sync_cas(&deque->top, top, top + 1, SYNC_RELEASE, SYNC_RELAXED);
 }
 /// @}
 
-
 chase_lev_ws_deque_t *sync_chase_lev_ws_deque_new(uint32_t size) {
   chase_lev_ws_deque_t *deque = malloc(sizeof(*deque));
-  if (deque)
+  if (deque) {
     sync_chase_lev_ws_deque_init(deque, size);
+  }
   return deque;
 }
-
 
 void sync_chase_lev_ws_deque_init(chase_lev_ws_deque_t *d, uint32_t capacity) {
   _buffer_t *buffer = _buffer_new(NULL, capacity);
@@ -143,19 +134,18 @@ void sync_chase_lev_ws_deque_init(chase_lev_ws_deque_t *d, uint32_t capacity) {
   d->top_bound = 1;
 }
 
-
 void sync_chase_lev_ws_deque_fini(chase_lev_ws_deque_t *d) {
   _buffer_t *buffer = sync_load(&d->buffer, SYNC_RELAXED);
-  if (buffer)
+  if (buffer) {
     _buffer_delete(buffer);
+  }
 }
 
-
 void sync_chase_lev_ws_deque_delete(chase_lev_ws_deque_t *d) {
-  if (!d)
-    return;
-  sync_chase_lev_ws_deque_fini(d);
-  free(d);
+  if (d) {
+    sync_chase_lev_ws_deque_fini(d);
+    free(d);
+  }
 }
 
 uint64_t sync_chase_lev_ws_deque_size(chase_lev_ws_deque_t *d) {
@@ -188,7 +178,6 @@ uint64_t sync_chase_lev_ws_deque_push(chase_lev_ws_deque_t *d, void *val) {
   return (size + 1);
 }
 
-
 void *sync_chase_lev_ws_deque_pop(chase_lev_ws_deque_t *d) {
   // read and update bottom
   uint64_t bottom = sync_addf(&d->bottom, -1, SYNC_RELEASE);
@@ -206,18 +195,19 @@ void *sync_chase_lev_ws_deque_pop(chase_lev_ws_deque_t *d) {
   // read the value from the buffer
   _buffer_t *buffer = sync_load(&d->buffer, SYNC_RELAXED);
   void *val = _buffer_get(buffer, bottom);
-  if (bottom > top)
+  if (bottom > top) {
     return val;
+  }
 
   // we're popping the last element, need to race with concurrent
   // steal()s on top. Either way, canonicalize the list after the CAS.
-  if (!_deque_try_inc_top(d, top))
+  if (!_deque_try_inc_top(d, top)) {
     val = NULL;
+  }
 
   _deque_set_bottom(d, top + 1);
   return val;
 }
-
 
 void *sync_chase_lev_ws_deque_steal(chase_lev_ws_deque_t *d) {
   // read top and bottom
@@ -225,8 +215,9 @@ void *sync_chase_lev_ws_deque_steal(chase_lev_ws_deque_t *d) {
   uint64_t bottom = sync_load(&d->bottom, SYNC_ACQUIRE);
 
   // if the deque seems to be empty, fail the steal
-  if (bottom <= top)
+  if (bottom <= top) {
     return NULL;
+  }
 
   // Read the buffer and the value. Have to read the value before the CAS,
   // otherwise we could miss some push-pops and get the wrong value due to the
@@ -241,8 +232,9 @@ void *sync_chase_lev_ws_deque_steal(chase_lev_ws_deque_t *d) {
   void *val = _buffer_get(buffer, top);
 
   // if we update the bottom, return the stolen value, otherwise retry
-  if (_deque_try_inc_top(d, top))
+  if (_deque_try_inc_top(d, top)) {
     return val;
+  }
 
   return NULL;
 }

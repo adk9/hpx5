@@ -51,19 +51,6 @@ typestr="type"
 values="default","smp","pwc","isir"
 enum optional
 
-option "hpx-waitat" - "wait for debugger at specific locality"
-typestr="[locality]"
-int optional multiple
-
-option "hpx-logat" - "selectively output log information"
-typestr="[localities]"
-int optional multiple
-
-option "hpx-loglevel" - "set the logging level"
-typestr="level"
-values="default","boot","sched","gas","lco","net","trans","parcel","all"
-enum optional argoptional multiple
-
 option "hpx-statistics" - "print HPX runtime statistics"
 flag off
 
@@ -79,12 +66,27 @@ option "hpx-configfile" - "HPX runtime configuration file"
 typestr="file"
 string optional
 
+section "Log options"
+
+option "hpx-log-at" - "selectively output log information"
+typestr="[localities]"
+int optional multiple
+
+option "hpx-log-level" - "set the logging level"
+typestr="level"
+values="default","boot","sched","gas","lco","net","trans","parcel","action","all"
+enum optional argoptional multiple
+
 section "HPX Debug Options"
 
-option "hpx-dbg-mprotectstacks" - "use mprotect() to bracket stacks to look for stack overflows"
-flag off
+option "hpx-dbg-waitat" - "wait for debugger at specific locality"
+typestr="[locality]"
+int optional multiple
 
 option "hpx-dbg-waitonabort" - "call hpx_wait() inside of hpx_abort() for debugging"
+flag off
+
+option "hpx-dbg-mprotectstacks" - "use mprotect() to bracket stacks to look for stack overflows"
 flag off
 
 section "Tracing"
@@ -124,7 +126,7 @@ typestr="type"
 values="default","verbs","ugni"
 enum optional
 
-option "hpx-photon-ibdev" - "set a particular IB device"
+option "hpx-photon-ibdev" - "set a particular IB device (also a filter for device and port discovery, e.g. qib0:1+mlx4_0:2)"
 typestr="device"
 string optional
 

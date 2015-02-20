@@ -35,7 +35,6 @@
 #include <unistd.h>
 #include "hpx/hpx.h"
 #include "tests.h"
-#include "libhpx/debug.h"
 #include "libsync/sync.h"
 
 #define BUFFER_SIZE 128
@@ -57,7 +56,7 @@ static HPX_ACTION(_send, int *args) {
   int n = *args;
   //printf( "locality: %d, thread: %d, count: %d\n", hpx_get_my_rank(),
   //       hpx_get_my_thread_id(), n);
-  log("count: %d\n", n);
+  //printf("count: %d\n", n);
   if (n-- <= 0) {
     //printf("terminating.\n");
     return HPX_SUCCESS;
@@ -155,14 +154,15 @@ static HPX_ACTION(test_libhpx_parcelRelease, void *UNUSED) {
   return HPX_SUCCESS;
 }
 
-static volatile int counter = 0;
+static volatile int counter HPX_USED = 0;
 
 // This testcase tests hpx_parcel_send function, which sends a parcel with
 // asynchronout local completion symantics, hpx_parcel_set_cont_action - set
 // the continuous action, hpx_pargel_set_cont_target - set the continuous
 // address for a parcel.
 static HPX_ACTION(_recv, double *args) {
-  log("recv %d\n", sync_fadd(&counter, 1, SYNC_ACQ_REL));
+  //printf("recv %d\n", sync_fadd(&counter, 1, SYNC_ACQ_REL));
+  sync_fadd(&counter, 1, SYNC_ACQ_REL);
   return HPX_SUCCESS;
 }
 

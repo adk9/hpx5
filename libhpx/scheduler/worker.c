@@ -117,6 +117,13 @@ static int _continue_parcel(hpx_parcel_t *p, hpx_status_t status, size_t size,
 }
 
 /// Execute a parcel.
+static hpx_parcel_t *_get_nop_parcel(void) {
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
+  p->action = scheduler_nop;
+  return p;
+}
+
+/// Execute a parcel.
 static int _execute(hpx_parcel_t *p) {
   dbg_assert(p->target != HPX_NULL);
   hpx_action_t id = hpx_parcel_get_action(p);
@@ -204,7 +211,8 @@ static hpx_parcel_t *_try_bind(hpx_parcel_t *p) {
   dbg_assert(p);
   if (!parcel_get_stack(p)) {
     ustack_t *stack = thread_new(p, _execute_thread);
-    parcel_set_stack(p, stack);
+    ustack_t *old = parcel_set_stack(p, stack);
+    dbg_assert_str(!old, "replaced stack %p with %p in %p\n", old, stack, p);
   }
   return p;
 }
@@ -213,6 +221,10 @@ static hpx_parcel_t *_try_bind(hpx_parcel_t *p) {
 static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
   dbg_assert(p->target != HPX_NULL);
   dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
+  DEBUG_IF(action_is_task(here->actions, p->action)) {
+    dbg_assert(!parcel_get_stack(p));
+  }
+
   uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
   self->work_first = (size >= here->sched->wf_threshold);
   // if (self->work_first) {
@@ -296,7 +308,6 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   return status;
 }
 
-
 /// A transfer continuation that resends the current parcel.
 ///
 /// If a parcel has arrived at the wrong locality because its target address has
@@ -318,7 +329,6 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
   return HPX_SUCCESS;
 }
 
-
 /// Called by the worker from the scheduler loop to shut itself down.
 ///
 /// This will transfer back to the original system stack, returning the shutdown
@@ -330,7 +340,6 @@ static void _worker_shutdown(struct worker *w) {
   unreachable();
 }
 
-
 static int _run_task(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *from = self->current;
 
@@ -338,7 +347,7 @@ static int _run_task(hpx_parcel_t *to, void *sp, void *env) {
   // task's parcel. Otherwise we are transferring from a thread and we want to
   // checkpoint the current thread so that we can return to it and then push it
   // so we can find it later (or have it stolen later).
-  if (parcel_get_stack(from) == NULL) {
+  if (action_is_task(here->actions, from->action)) {
     hpx_parcel_release(from);
   }
   else {
@@ -369,6 +378,8 @@ static hpx_parcel_t *_try_task(hpx_parcel_t *p) {
   if (!action_is_task(here->actions, p->action)) {
     return p;
   }
+
+  dbg_assert(!parcel_get_stack(p));
 
   void **sp = &self->sp;
   int e = thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
@@ -411,7 +422,7 @@ static hpx_parcel_t *_schedule_in_lco(hpx_parcel_t *final) {
 
   // return so we can release the lock
   if (scheduler_is_shutdown(self->sched)) {
-    p = hpx_parcel_acquire(NULL, 0);
+    p = _get_nop_parcel();
     goto exit;
   }
 
@@ -424,7 +435,7 @@ static hpx_parcel_t *_schedule_in_lco(hpx_parcel_t *final) {
     goto exit;
   }
 
-  p = hpx_parcel_acquire(NULL, 0);
+  p = _get_nop_parcel();
  exit:
   dbg_assert(p);
   return _try_bind(p);
@@ -500,7 +511,7 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
     // couldn't find any work to do, we're not going to go into an infinite loop
     // here because the caller might be trying to yield() and we need to
     // guarantee some sort of progress in the system in that case.
-    p = hpx_parcel_acquire(NULL, 0);
+    p = _get_nop_parcel();
   }
 
   return _try_bind(p);
@@ -582,10 +593,12 @@ int worker_start(void) {
   int e = thread_transfer(p, _on_startup, NULL);
   if (e) {
     if (here->rank == 0) {
-      dbg_error("application exited with a non-zero exit code: %d.\n", e);
+      log_error("application exited with a non-zero exit code: %d.\n", e);
     }
     return e;
   }
+
+  self->current = NULL;
 
   return LIBHPX_OK;
 }
@@ -953,4 +966,29 @@ void hpx_thread_set_affinity(int affinity) {
 
   hpx_parcel_t *to = _schedule(false, NULL);
   thread_transfer(to, _move_to, (void*)(intptr_t)affinity);
+}
+
+/// This transfer handler is the right place to put all debug, logging, and
+/// instrumentation code for lightweight-thread transfers.
+int debug_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
+  // Trace this transfer, if transfer-tracing is enabled.
+  static const int class = INST_SCHED;
+  static const int id = INST_SCHED_TRANSFER;
+  hpx_parcel_t *from = scheduler_current_parcel();
+  inst_trace(class, id, (from) ? from->action : 0, p->action);
+
+  // Verify some properties before the transfer.
+  // if (self->current) {
+  //   dbg_assert(!action_is_interrupt(here->actions, self->current->action));
+
+  //   // if (parcel_get_stack(self->current)) {
+  //   //   dbg_assert(!action_is_task(here->actions, self->current->action));
+  //   // }
+  // }
+
+#undef thread_transfer
+  return thread_transfer(p, cont, env);
+
+  // squash unused warnings
+  (void)from;
 }

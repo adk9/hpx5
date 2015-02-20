@@ -31,8 +31,7 @@ HPX_INTERNAL void sync_cuckoo_hashtable_init(cuckoo_hashtable_t *)
   HPX_NON_NULL(1);
 
 
-HPX_INTERNAL void sync_cuckoo_hashtable_delete(cuckoo_hashtable_t *)
-  HPX_NON_NULL(1);
+HPX_INTERNAL void sync_cuckoo_hashtable_delete(cuckoo_hashtable_t *);
 
 
 HPX_INTERNAL int sync_cuckoo_hashtable_insert(cuckoo_hashtable_t *, long key,

@@ -16,7 +16,7 @@ threadYield_SOURCES         = threadYield.c
 threadExit_SOURCES          = threadExit.c
 threadCurrentTarget_SOURCES = threadCurrentTarget.c
 
-all_LIBS                    = $(HPX_LDADD)
+all_LIBS                    = $(HPX_LIBS)
 
 AM_CPPFLAGS                 = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS                   =

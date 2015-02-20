@@ -15,16 +15,16 @@
 
 /// @file
 /// @brief Types and constants needed for configuring HPX at run-time.
-#include <stdint.h>
-#include <hpx/attributes.h>
-
 #include <stddef.h>
 #include <stdint.h>
 #include <hpx/attributes.h>
 
 #ifdef HAVE_PHOTON
-#include "config_photon.h"
+# include "config_photon.h"
 #endif
+
+#define LIBHPX_OPT_BITSET_ALL UINT64_MAX
+#define LIBHPX_OPT_BITSET_NONE 0
 
 //! Configuration options for which global memory model to use.
 typedef enum {
@@ -100,42 +100,23 @@ static const char* const HPX_BOOT_TO_STRING[] = {
 };
 
 //! Locality types in HPX.
-typedef enum {
-  HPX_LOCALITY_NONE = -2,    //!< Represents no locality.
-  HPX_LOCALITY_ALL = -1      //!< Represents all localities.
-} hpx_locality_t;
+#define HPX_LOCALITY_NONE  -2                   //!< Represents no locality.
+#define HPX_LOCALITY_ALL   -1                   //!< Represents all localities.
 
 //! Configuration options for runtime logging in HPX.
-typedef enum {
-  HPX_LOG_DEFAULT = 0,                    //!< The default logging level.
-  HPX_LOG_BOOT,                           //!< Log the bootstrapper execution.
-  HPX_LOG_SCHED,                          //!< Log the HPX scheduler operations.
-  HPX_LOG_GAS,                            //!< Log the Global-Address-Space ops.
-  HPX_LOG_LCO,                            //!< Log the LCO operations.
-  HPX_LOG_NET,                            //!< Turn on logging for network ops.
-  HPX_LOG_TRANS,                          //!< Log the transport operations.
-  HPX_LOG_PARCEL,                         //!< Parcel logging.
-  HPX_LOG_NONE,                           //!< No logging.
-  HPX_LOG_ALL                             //!< Turn on all logging.
-} hpx_log_t;
+#define HPX_LOG_DEFAULT 1               //!< The default logging level.
+#define HPX_LOG_BOOT    2               //!< Log the bootstrapper execution.
+#define HPX_LOG_SCHED   4               //!< Log the HPX scheduler operations.
+#define HPX_LOG_GAS     8               //!< Log the Global-Address-Space ops.
+#define HPX_LOG_LCO     16              //!< Log the LCO operations.
+#define HPX_LOG_NET     32              //!< Turn on logging for network ops.
+#define HPX_LOG_TRANS   64              //!< Log the transport operations.
+#define HPX_LOG_PARCEL  128             //!< Parcel logging.
+#define HPX_LOG_ACTION  256             //!< Log action registration.
 
-static const char* const HPX_LOG_TO_STRING[] = {
-  "LOG_DEFAULT",
-  "LOG_BOOT",
-  "LOG_SCHED",
-  "LOG_GAS",
-  "LOG_LCO",
-  "LOG_NET",
-  "LOG_TRANS",
-  "LOG_PARCEL",
-};
-
-typedef enum {
-  HPX_TRACE_PARCELS =  0,
-  HPX_TRACE_PWC,
-  HPX_TRACE_NONE,
-  HPX_TRACE_ALL
-} trace_t;
+#define HPX_TRACE_PARCELS 1
+#define HPX_TRACE_PWC     2
+#define HPX_TRACE_SCHED   4
 
 /// The HPX configuration type.
 ///
@@ -151,19 +132,20 @@ config_t *config_new(int *argc, char ***argv)
   HPX_INTERNAL HPX_MALLOC;
 
 void config_delete(config_t *cfg)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_INTERNAL;
 
 /// Add declarations to query each of the set options.
 ///
 /// @param          cfg The configuration to query.
 /// @param        value The value to check for.
-#define LIBHPX_OPT_INTSET(group, id, UNUSED2, UNUSED3, UNUSED4)		\
-  int config_##group##id##_isset(const config_t *cfg, int value)	\
+#define LIBHPX_OPT_INTSET(group, id, UNUSED2, UNUSED3, UNUSED4)     \
+  int config_##group##id##_isset(const config_t *cfg, int value)    \
     HPX_INTERNAL HPX_NON_NULL(1);
 
-#define LIBHPX_OPT_BITSET(group, id, UNUSED2, UNUSED3, UNUSED4)		\
-  static inline uint64_t config_##group##id##_isset(const config_t *cfg, int bit) { \
-    return (cfg->group##id & (1 << bit));				\
+#define LIBHPX_OPT_BITSET(group, id, UNUSED2)                       \
+  static inline uint64_t                                            \
+  config_##group##id##_isset(const config_t *cfg, uint64_t mask) {  \
+    return (cfg->group##id & mask);                                 \
   }
 # include "options.def"
 #undef LIBHPX_OPT_BITSET

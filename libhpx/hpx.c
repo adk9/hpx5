@@ -75,7 +75,7 @@ static void _cleanup(locality_t *l) {
     l->boot = NULL;
   }
 
-  hwloc_topology_destroy(l->topology);
+  hpx_hwloc_topology_destroy(l->topology);
 
   if (l->actions) {
     action_table_free(l->actions);
@@ -111,22 +111,17 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // check to see if everyone is waiting
-  if (config_waitat_isset(here->config, HPX_LOCALITY_ALL)) {
+  if (config_dbg_waitat_isset(here->config, HPX_LOCALITY_ALL)) {
     dbg_wait();
   }
 
-  // set the log level
-  if (config_logat_isset(here->config, HPX_LOCALITY_ALL)) {
-    log_level = here->config->loglevel;
-  }
-
   // topology
-  int e = hwloc_topology_init(&here->topology);
+  int e = hpx_hwloc_topology_init(&here->topology);
   if (e) {
     status = log_error("failed to initialize a topology.\n");
     goto unwind1;
   }
-  e = hwloc_topology_load(here->topology);
+  e = hpx_hwloc_topology_load(here->topology);
   if (e) {
     status = log_error("failed to load the topology.\n");
     goto unwind1;
@@ -142,9 +137,9 @@ int hpx_init(int *argc, char ***argv) {
   here->ranks = boot_n_ranks(here->boot);
 
   // Now that we know our rank, we can be more specific about waiting.
-  if (config_waitat_isset(here->config, here->rank)) {
+  if (config_dbg_waitat_isset(here->config, here->rank)) {
     // Don't wait twice.
-    if (!config_waitat_isset(here->config, HPX_LOCALITY_ALL)) {
+    if (!config_dbg_waitat_isset(here->config, HPX_LOCALITY_ALL)) {
       dbg_wait();
     }
   }
@@ -153,14 +148,9 @@ int hpx_init(int *argc, char ***argv) {
     log("error detected while initializing instrumentation\n");
   }
 
-  // Reset the log level based on our rank-specific information.
-  if (config_logat_isset(here->config, here->rank)) {
-    log_level = here->config->loglevel;
-  }
-
   // byte transport
   here->transport = transport_new(here->config->transport,
-				  here->config);
+                                  here->config);
   if (!here->transport) {
     status = log_error("failed to create transport.\n");
     goto unwind1;
@@ -306,7 +296,7 @@ void hpx_shutdown(int code) {
 /// called from any lightweight HPX thread, or the network thread.
 void hpx_abort(void) {
   inst_fini();
-  
+
   if (here && here->config && here->config->dbg_waitonabort) {
     dbg_wait();
   }

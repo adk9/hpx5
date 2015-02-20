@@ -96,11 +96,17 @@ typedef int (*thread_transfer_cont_t)(hpx_parcel_t *p, void *sp, void *env);
 int thread_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env)
   HPX_INTERNAL HPX_NON_NULL(1, 2);
 
-int trace_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env)
+/// This transfer wrapper is used for logging, debugging, and instrumentation.
+///
+/// Internally, it will perform it's pre-transfer operations, call
+/// thread_transfer(), and then perform post-transfer operations on the return.
+int debug_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env)
   HPX_INTERNAL HPX_NON_NULL(1, 2);
 
-#ifdef ENABLE_INSTRUMENTATION
-# define thread_transfer trace_transfer
+#if defined(ENABLE_INSTRUMENTATION) || \
+  defined(ENABLE_DEBUG) ||             \
+  defined(ENABLE_LOGGING)
+# define thread_transfer debug_transfer
 #else
 # define thread_transfer thread_transfer
 #endif

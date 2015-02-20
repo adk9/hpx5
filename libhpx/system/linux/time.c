@@ -18,10 +18,8 @@
 #include "config.h"
 #endif
 
-/// ----------------------------------------------------------------------------
 /// @file libhpx/platform/linux/time.c
 /// @brief Implements HPX's time interface on linux.
-/// ----------------------------------------------------------------------------
 #include <assert.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -30,8 +28,7 @@
 #include "libhpx/debug.h"
 
 
-hpx_time_t
-hpx_time_now(void) {
+hpx_time_t hpx_time_now(void) {
   hpx_time_t time;
   if (clock_gettime(CLOCK_MONOTONIC, &time)) {
     dbg_error("system: hpx_time_now() failed to get time.\n");
@@ -39,43 +36,49 @@ hpx_time_now(void) {
   return time;
 }
 
-static double
-_diff_ns(hpx_time_t from, hpx_time_t to) {
+static double _diff_ns(hpx_time_t from, hpx_time_t to) {
   return (double)(((to.tv_sec - from.tv_sec) * 1e9) + (to.tv_nsec - from.tv_nsec));
 }
 
-double
-hpx_time_diff_us(hpx_time_t from, hpx_time_t to) {
+double hpx_time_diff_us(hpx_time_t from, hpx_time_t to) {
   return _diff_ns(from, to)/1e3;
 }
 
-double
-hpx_time_diff_ms(hpx_time_t from, hpx_time_t to) {
+double hpx_time_diff_ms(hpx_time_t from, hpx_time_t to) {
   return _diff_ns(from, to)/1e6;
 }
 
-double
-hpx_time_elapsed_us(hpx_time_t from) {
+void hpx_time_diff(hpx_time_t start, hpx_time_t end, hpx_time_t *diff) {
+  if (end.tv_nsec < start.tv_nsec) {
+    diff->tv_sec = end.tv_sec - start.tv_sec - 1;
+    diff->tv_nsec = (1e9 + end.tv_nsec) - start.tv_nsec;
+  } else {
+    diff->tv_sec = end.tv_sec - start.tv_sec;
+    diff->tv_nsec = end.tv_nsec - start.tv_nsec;
+  }
+}
+
+double hpx_time_elapsed_us(hpx_time_t from) {
   return hpx_time_diff_us(from, hpx_time_now());
 }
 
-double
-hpx_time_elapsed_ms(hpx_time_t from) {
+double hpx_time_elapsed_ms(hpx_time_t from) {
   return hpx_time_diff_ms(from, hpx_time_now());
 }
 
-static double
-_ns(hpx_time_t time) {
+void hpx_time_elapsed(hpx_time_t start, hpx_time_t *diff) {
+  hpx_time_diff(start, hpx_time_now(), diff);
+}
+
+static double _ns(hpx_time_t time) {
   return (time.tv_sec * 1e9) + time.tv_nsec;
 }
 
-double
-hpx_time_us(hpx_time_t time) {
+double hpx_time_us(hpx_time_t time) {
   return _ns(time)/1e3;
 }
 
-double
-hpx_time_ms(hpx_time_t time) {
+double hpx_time_ms(hpx_time_t time) {
   return _ns(time)/1e6;
 }
 

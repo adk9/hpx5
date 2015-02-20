@@ -48,12 +48,7 @@ static char *_config_file = NULL;
 /// The default configuration.
 static const config_t _default_cfg = {
 #define LIBHPX_OPT(group, id, init, UNUSED2) .group##id = init,
-#define LIBHPX_OPT_BITSET(group, id, init, none, all) .group##id = ((init == none) ? 0 \
-              : ((init == all) ? UINT64_MAX : 1 << init)),
-#define LIBHPX_OPT_STRING(group, id, init) .group##id = init,
 # include "libhpx/options.def"
-#undef LIBHPX_OPT_STRING
-#undef LIBHPX_OPT_BITSET
 #undef LIBHPX_OPT
 };
 
@@ -85,8 +80,9 @@ static const char *_getenv_upper(const char * const var) {
 /// @param[out]     str A dynamic string to store the output into.
 /// @param          var The key we are looking for in the environment.
 /// @param          opt The key we will use for gengetopt.
+/// @param         flag Indicates if the option key is a flag or not.
 static void _from_env(UT_string *str, const char * const var,
-                      const char * const arg) {
+                      const char * const arg, bool flag) {
   const char *c = getenv(var);
   if (!c) {
     c = _getenv_upper(var);
@@ -94,7 +90,29 @@ static void _from_env(UT_string *str, const char * const var,
   if (!c) {
     return;
   }
-  utstring_printf(str, "--%s=%s ", arg, c);
+
+  if (flag) {
+    utstring_printf(str, "--%s ", arg);
+  } else {
+    utstring_printf(str, "--%s=%s ", arg, c);
+  }
+}
+
+/// Merge the option id and the group.
+///
+/// We need the key for the environment and the key for gengetopt as separate
+/// things in the -from_env call. The function takes the env key, copies it, and
+/// replaces underscores with hyphens.
+static void _xform_string(UT_string *str, const char *env, bool flag) {
+  char *opt = strdup(env);
+  dbg_assert(opt);
+  for (int i = 0, e = strlen(env); i < e; ++i) {
+    if (opt[i] == '_') {
+      opt[i] = '-';
+    }
+  }
+  _from_env(str, env, opt, flag);
+  free(opt);
 }
 
 /// Get values from the environment for the options declared in options.def.
@@ -105,8 +123,10 @@ static void _from_env(UT_string *str, const char * const var,
 ///
 /// @param[out]     str This will contain the collected values.
 static void _from_env_all(UT_string *str) {
-#define LIBHPX_OPT(u1, id, u3, u4) _from_env(str, "hpx_"#id, "hpx-"#id);
+#define LIBHPX_OPT_FLAG(g, id, u3) _xform_string(str, "hpx_"#g#id, true);
+#define LIBHPX_OPT(g, id, u3, u4) _xform_string(str, "hpx_"#g#id, false);
 # include "libhpx/options.def"
+#undef LIBHPX_OPT_FLAG
 #undef LIBHPX_OPT
 }
 
@@ -175,9 +195,8 @@ static void _process_cmdline(hpx_options_t *opts, int *argc, char ***argv) {
 static uint64_t _merge_bitvector(int n, uint32_t args[n], uint64_t all) {
   uint64_t bits = 0;
   for (int i = 0; i < n; ++i) {
-    dbg_assert_str(args[i] < 64, "bitvector arg %u out of bounds\n", args[i]);
     if (args[i] == all) {
-      return UINT64_MAX;
+      return LIBHPX_OPT_BITSET_ALL;
     }
     bits |= 1 << args[i];
   }
@@ -211,36 +230,33 @@ static int *_merge_vector(int n, int args[n], int init, int term) {
 /// @param         opts The gengetopt options we are reading from.
 static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
 
-#define LIBHPX_OPT_FLAG(group, id, UNUSED2)     \
-  if (opts->hpx_##group##id##_given) {          \
+#define LIBHPX_OPT_FLAG(group, id, UNUSED2)         \
+  if (opts->hpx_##group##id##_given) {              \
     cfg->group##id = opts->hpx_##group##id##_flag;  \
   }
 
-#define LIBHPX_OPT_SCALAR(group, id, UNUSED2, UNUSED3)        \
-  if (opts->hpx_##group##id##_given) {                \
-    cfg->group##id = opts->hpx_##group##id##_arg;         \
-  }
-
-#define LIBHPX_OPT_STRING(group, id, init)              \
+#define LIBHPX_OPT_SCALAR(group, id, UNUSED2, type)     \
   if (opts->hpx_##group##id##_given) {                  \
-    if (cfg->group##id) {                       \
-      free(cfg->group##id);                     \
-    }                                   \
-    cfg->group##id = strdup(opts->hpx_##group##id##_arg);       \
+    cfg->group##id = (type)opts->hpx_##group##id##_arg; \
   }
 
-#define LIBHPX_OPT_BITSET(group, id, init, none, all)             \
-  if (opts->hpx_##group##id##_given) {                    \
-    cfg->group##id = _merge_bitvector(opts->hpx_##group##id##_given,  \
+#define LIBHPX_OPT_STRING(group, id, init)                  \
+  if (opts->hpx_##group##id##_given) {                      \
+    cfg->group##id = strdup(opts->hpx_##group##id##_arg);   \
+  }
+
+#define LIBHPX_OPT_BITSET(group, id, init)                                    \
+  if (opts->hpx_##group##id##_given) {                                        \
+    cfg->group##id = _merge_bitvector(opts->hpx_##group##id##_given,          \
                                       (uint32_t*)opts->hpx_##group##id##_arg, \
-                      hpx_##group##id##_arg_all);     \
+                                      hpx_##group##id##_arg_all);             \
   }
 
-#define LIBHPX_OPT_INTSET(group, id, init, none, all)             \
-  if (opts->hpx_##group##id##_given) {                    \
-    cfg->group##id = _merge_vector(opts->hpx_##group##id##_given,     \
-                   opts->hpx_##group##id##_arg,       \
-                   init, none);               \
+#define LIBHPX_OPT_INTSET(group, id, init, none, all)               \
+  if (opts->hpx_##group##id##_given) {                              \
+    cfg->group##id = _merge_vector(opts->hpx_##group##id##_given,   \
+                                   opts->hpx_##group##id##_arg,     \
+                                   init, none);                     \
   }
 # include "libhpx/options.def"
 #undef LIBHPX_OPT_INTSET
@@ -266,20 +282,20 @@ void hpx_print_help(void) {
   hpx_option_parser_print_help();
 }
 
-#define LIBHPX_OPT_INTSET(group, id, init, none, all)           \
-  int config_##group##id##_isset(const config_t *cfg, int element) {    \
-    if (!cfg->group##id) {                      \
-      return (init == all);                     \
-    }                                   \
-    for (int i = 0; cfg->group##id[i] != none; ++i) {           \
-      if (cfg->group##id[i] == all) {                   \
-        return 1;                           \
-      }                                 \
-      if (cfg->group##id[i] == element) {               \
-        return 1;                           \
-      }                                 \
-    }                                   \
-    return 0;                               \
+#define LIBHPX_OPT_INTSET(group, id, init, none, all)                \
+  int config_##group##id##_isset(const config_t *cfg, int element) { \
+    if (!cfg->group##id) {                                           \
+      return (init == all);                                          \
+    }                                                                \
+    for (int i = 0; cfg->group##id[i] != none; ++i) {                \
+      if (cfg->group##id[i] == all) {                                \
+        return 1;                                                    \
+      }                                                              \
+      if (cfg->group##id[i] == element) {                            \
+        return 1;                                                    \
+      }                                                              \
+    }                                                                \
+    return 0;                                                        \
   }
 # include "libhpx/options.def"
 #undef LIBHPX_OPT_INTSET
@@ -342,12 +358,12 @@ void config_delete(config_t *cfg) {
     return;
   }
 
-  if (cfg->logat && cfg->logat != (int*)HPX_LOCALITY_ALL) {
-    free(cfg->logat);
+  if (cfg->log_at) {
+    free(cfg->log_at);
   }
 
-  if (cfg->waitat) {
-    free(cfg->waitat);
+  if (cfg->dbg_waitat) {
+    free(cfg->dbg_waitat);
   }
 
   free(cfg);

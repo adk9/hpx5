@@ -33,6 +33,8 @@ static HPX_ACTION(_init_array, void* args) {
   return HPX_SUCCESS;
 }
 
+#define lengthof(a) sizeof(a) / sizeof(a[0])
+
 // Test code -- for memget
 static HPX_ACTION(test_libhpx_memget, void *UNUSED) {
   printf("Starting the memget test\n");
@@ -48,8 +50,7 @@ static HPX_ACTION(test_libhpx_memget, void *UNUSED) {
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
 
-  const size_t BLOCK_ELEMS = sizeof(block) / sizeof(block[0]);
-  uint64_t local[BLOCK_ELEMS];
+  uint64_t local[lengthof(block)];
   memset(&local, 0xFF, sizeof(local));
 
   // allocate and start a timer
@@ -60,10 +61,10 @@ static HPX_ACTION(test_libhpx_memget, void *UNUSED) {
   hpx_lco_delete(completed, HPX_NULL);
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 
-  for (int i = 0; i < BLOCK_ELEMS; ++i) {
-    if(local[i] != block[i]) {
-      fprintf(stderr, "failed to get element %d correctly, expected %" PRIu64", got %" PRIu64"\n",
-              i, block[i], local[i]);
+  for (int i = 0, e = lengthof(block); i < e; ++i) {
+    if (local[i] != block[i]) {
+      fprintf(stderr, "failed to get element %d correctly, expected %" PRIu64
+              ", got %" PRIu64"\n", i, block[i], local[i]);
       exit(EXIT_FAILURE);
     }
   }

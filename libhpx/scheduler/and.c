@@ -48,6 +48,7 @@ static hpx_status_t _wait(_and_t *and) {
   }
 
   // otherwise wait for the and to be signaled
+  log_lco("waiting for lco %p\n", (void*)&and->lco);
   return scheduler_wait(&and->lco.lock, &and->barrier);
 }
 
@@ -65,13 +66,11 @@ static hpx_status_t _attach(_and_t *and, hpx_parcel_t *p) {
 }
 
 static void _and_fini(lco_t *lco) {
-  if (!lco) {
-    return;
+  if (lco) {
+    lco_lock(lco);
+    lco_fini(lco);
+    libhpx_global_free(lco);
   }
-
-  lco_lock(lco);
-  lco_fini(lco);
-  libhpx_global_free(lco);
 }
 
 static void _and_error(lco_t *lco, hpx_status_t code) {
@@ -97,13 +96,13 @@ static void _and_set(lco_t *lco, int size, const void *from) {
   lco_lock(&and->lco);
   and->value -= num;
   intptr_t value = and->value;
-  log_lco("and: reduced count to %ld\n", value);
+  log_lco("reduced count to %ld lco %p\n", value, (void*)&and->lco);
 
   if (value == 0) {
     scheduler_signal_all(&and->barrier);
   }
   else {
-    dbg_assert_str(value > 0, "and: too many threads joined (%ld).\n", value);
+    dbg_assert_str(value > 0, "too many threads joined (%ld).\n", value);
   }
 
   lco_unlock(&and->lco);
@@ -129,24 +128,24 @@ static hpx_status_t _and_get(lco_t *lco, int size, void *out) {
   return _and_wait(lco);
 }
 
-static void _and_init(_and_t *and, intptr_t value) {
-  static const lco_class_t vtable = {
-    .on_fini     = _and_fini,
-    .on_error    = _and_error,
-    .on_set      = _and_set,
-    .on_get      = _and_get,
-    .on_getref   = NULL,
-    .on_release  = NULL,
-    .on_wait     = _and_wait,
-    .on_attach   = _and_attach,
-    .on_reset    = _and_reset
-  };
+static const lco_class_t _and_vtable = {
+  .on_fini     = _and_fini,
+  .on_error    = _and_error,
+  .on_set      = _and_set,
+  .on_get      = _and_get,
+  .on_getref   = NULL,
+  .on_release  = NULL,
+  .on_wait     = _and_wait,
+  .on_attach   = _and_attach,
+  .on_reset    = _and_reset
+};
 
+static void _and_init(_and_t *and, intptr_t value) {
   assert(value >= 0);
-  lco_init(&and->lco, &vtable);
+  lco_init(&and->lco, &_and_vtable);
   cvar_reset(&and->barrier);
   and->value = value;
-  log_lco("and: initialized with %ld inputs\n", and->value);
+  log_lco("initialized with %ld inputs lco %p\n", and->value, (void*)and);
 }
 
 /// @}
@@ -156,6 +155,7 @@ static void _and_init(_and_t *and, intptr_t value) {
 hpx_addr_t hpx_lco_and_new(intptr_t limit) {
   _and_t *and = libhpx_global_malloc(sizeof(*and));
   dbg_assert_str(and, "Could not malloc global memory\n");
+  log_lco("allocated lco %p\n", (void*)and);
   _and_init(and, limit);
   return lva_to_gva(and);;
 }

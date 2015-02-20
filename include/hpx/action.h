@@ -28,8 +28,8 @@ typedef uint16_t hpx_action_t;
 /// The type of functions that can be registered with hpx_register_action().
 typedef int (*hpx_action_handler_t)(void*);
 
-/// This special action does nothing (i.e. it is a nop).
-extern hpx_action_t HPX_ACTION_NULL;
+/// The equivalent of NULL for HPX actions.
+#define HPX_ACTION_NULL ((hpx_action_t)0u)
 
 /// Action types.
 typedef enum {
@@ -40,7 +40,13 @@ typedef enum {
   HPX_ACTION_INVALID = UINT16_MAX
 } hpx_action_type_t;
 
-
+static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
+  "DEFAULT",
+  "PINNED",
+  "TASK",
+  "INTERRUPT",
+  "INVALID"
+};
 
 /// Register an HPX action of a given @p type.
 ///
@@ -112,7 +118,10 @@ int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_hand
 #define HPX_TASK(id, args)      HPX_ACTION_DEF_USER(TASK, id, args)
 #define HPX_INTERRUPT(id, args) HPX_ACTION_DEF_USER(INTERRUPT, id, args)
 
-#define HPX_REGISTER_ACTION(handler, id) \
+#define HPX_REGISTER_ACTION(handler, id)                        \
   _HPX_REGISTER_ACTION(DEFAULT, handler, id)
+
+#define HPX_REGISTER_TYPED_ACTION(handler, id, ...)             \
+  _HPX_REGISTER_ACTION(DEFAULT, handler, id, __VA_ARGS__)
 
 #endif

@@ -46,13 +46,11 @@
 /// @param        id The option symbol.
 /// @param   default The default string.
 
-/// LIBHPX_OPT_BITSET(group, id, default, none, all)
+/// LIBHPX_OPT_BITSET(group, id, default)
 ///
 /// @param     group The option category.
 /// @param        id The option symbol.
 /// @param   default The default value.
-/// @param      none The value that means "none"
-/// @param       all The value that means "all"
 
 /// LIBHPX_OPT_INTSET(group, id, default, none, all)
 ///
@@ -83,7 +81,7 @@
 #endif
 
 #ifndef LIBHPX_OPT_BITSET
-# define LIBHPX_OPT_BITSET(group, id, init, none, all) LIBHPX_OPT(group, id, init, uint64_t)
+# define LIBHPX_OPT_BITSET(group, id, init) LIBHPX_OPT(group, id, init, uint64_t)
 # define _LIBHPX_OPT_BITSET_UNDEF
 #endif
 
@@ -108,24 +106,27 @@ LIBHPX_OPT_SCALAR(, transport, HPX_TRANSPORT_DEFAULT, hpx_transport_t)
 LIBHPX_OPT_SCALAR(, network, LIBHPX_NETWORK_DEFAULT, libhpx_network_t)
 LIBHPX_OPT_SCALAR(, sendlimit, 0, uint32_t)
 LIBHPX_OPT_SCALAR(, recvlimit, 0, uint32_t)
+/// @}
 
-LIBHPX_OPT_BITSET(, loglevel, HPX_LOG_DEFAULT, HPX_LOG_NONE, HPX_LOG_ALL)
 
-LIBHPX_OPT_INTSET(, logat, HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
-LIBHPX_OPT_INTSET(, waitat, HPX_LOCALITY_NONE, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
+/// Log options
+/// @{
+LIBHPX_OPT_BITSET(log_, level, LIBHPX_OPT_BITSET_NONE)
+LIBHPX_OPT_INTSET(log_, at,  HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
 /// @}
 
 /// Debug options
 /// @{
 LIBHPX_OPT_FLAG(dbg_, mprotectstacks, 0)
 LIBHPX_OPT_FLAG(dbg_, waitonabort, 0)
+LIBHPX_OPT_INTSET(dbg_, waitat, HPX_LOCALITY_NONE, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
 /// @}
 
 /// Trace options
 /// @{
 LIBHPX_OPT_STRING(trace_, dir, "/tmp")
 LIBHPX_OPT_SCALAR(trace_, filesize, 1lu << 24, size_t)
-LIBHPX_OPT_BITSET(trace_, classes, HPX_TRACE_NONE, HPX_TRACE_NONE, HPX_TRACE_ALL)
+LIBHPX_OPT_BITSET(trace_, classes, LIBHPX_OPT_BITSET_NONE)
 LIBHPX_OPT_INTSET(trace_, at, HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
 /// @}
 
@@ -147,7 +148,7 @@ LIBHPX_OPT_SCALAR(photon_, maxrd, -1, int)
 LIBHPX_OPT_SCALAR(photon_, defaultrd, -1, int)
 LIBHPX_OPT_FLAG(photon_, usecma, 0)
 LIBHPX_OPT_STRING(photon_, ethdev, "roce0")
-LIBHPX_OPT_STRING(photon_, ibdev, "qib0")
+LIBHPX_OPT_STRING(photon_, ibdev, "qib0+mlx4_0")
 /// @}
 #endif
 

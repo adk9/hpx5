@@ -1,3 +1,4 @@
+#include <math.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
@@ -84,7 +85,9 @@ int main(int argc, char *argv[]) {
 
 static int _action_main(void *args) {
   hpx_time_t start;
-  hpx_status_t status =  hpx_netfutures_init(NULL);
+  hpx_netfuture_config_t cfg = HPX_NETFUTURE_CONFIG_DEFAULTS;
+  cfg.max_array_number = ((int)ceil(log2(MAX_MSG_SIZE)) + 1) * (loop + skip);
+  hpx_status_t status =  hpx_netfutures_init(&cfg);
   if (status != HPX_SUCCESS)
     return status;
 

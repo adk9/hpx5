@@ -15,6 +15,7 @@
 #endif
 
 #include <stdio.h>
+#include <libgen.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <unistd.h>
@@ -29,8 +30,7 @@
 
 // Used for debugging. Causes a process to wait for a debugger to
 // attach, and set the value if i != 0.
-HPX_OPTIMIZE("O0")
-void dbg_wait(void) {
+HPX_NO_OPTIMIZE void dbg_wait(void) {
   int i = 0;
   char hostname[255];
   gethostname(hostname, 255);
@@ -41,26 +41,26 @@ void dbg_wait(void) {
 }
 
 static void __print(FILE *file, unsigned line, const char *filename,
-                    const char *fmt, va_list *list) {
+                    const char *func, const char *fmt, va_list *list) {
   int tid = hpx_get_my_thread_id();
   int rank = hpx_get_my_rank();
-  fprintf(file, "LIBHPX<%d,%d>: (%s:%u) ", rank, tid, filename, line);
+  fprintf(file, "LIBHPX<%d,%d>: (%s:%s:%u) ", rank, tid, basename((char*)filename), func, line);
   vfprintf(file, fmt, *list);
   fflush(file);
 }
 
 /// Helper macro, extracts the va-args and forwards to __print.
-#define _print(file, line, filename, fmt)       \
-  do {                                          \
-    va_list args;                               \
-    va_start(args, fmt);                        \
-    __print(file, line, filename, fmt, &args);  \
-    va_end(args);                               \
+#define _print(file, line, filename, func, fmt)      \
+  do {                                               \
+    va_list args;                                    \
+    va_start(args, fmt);                             \
+    __print(file, line, filename, func, fmt, &args); \
+    va_end(args);                                    \
   } while (0)
 
-void dbg_error_internal(unsigned line, const char *filename, const char *fmt,
-                       ...) {
-  _print(stderr, line, filename, fmt);
+void dbg_error_internal(unsigned line, const char *filename, const char *func,
+                       const char *fmt, ...) {
+  _print(stderr, line, filename, func, fmt);
   hpx_abort();
 }
 
@@ -68,16 +68,17 @@ uint64_t log_level = HPX_LOG_DEFAULT;
 
 static tatas_lock_t _log_lock = SYNC_TATAS_LOCK_INIT;
 
-void log_internal(unsigned line, const char *filename, const char *fmt, ...) {
+void log_internal(unsigned line, const char *filename, const char *func,
+                  const char *fmt, ...) {
   sync_tatas_acquire(&_log_lock);
-  _print(stdout, line, filename, fmt);
+  _print(stdout, line, filename, func, fmt);
   sync_tatas_release(&_log_lock);
 }
 
-int log_error_internal(unsigned line, const char *filename, const char *fmt, ...) {
+int log_error_internal(unsigned line, const char *filename, const char *func,
+                       const char *fmt, ...) {
   sync_tatas_acquire(&_log_lock);
-  _print(stderr, line, filename, fmt);
+  _print(stderr, line, filename, func, fmt);
   sync_tatas_release(&_log_lock);
   return HPX_ERROR;
 }
-

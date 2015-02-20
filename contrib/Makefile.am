@@ -22,8 +22,8 @@ DIST_SUBDIRS += photon
 endif
 
 if ENABLE_JEMALLOC
-SUBDIRS      += jemalloc
-DIST_SUBDIRS += jemalloc
+SUBDIRS      += jemalloc_as_malloc
+DIST_SUBDIRS += jemalloc_as_malloc
 endif
 
 check-recursive: all-recursive

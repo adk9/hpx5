@@ -55,6 +55,7 @@
 /examples/netfutures
 /examples/qsort
 /examples/call
+/examples/netbench
 
 # /include/
 /include/stamp-h1
@@ -79,6 +80,7 @@ contrib/photon/
 /libhpx/Makefile
 /libhpx/boot/Makefile
 /libhpx/gas/Makefile
+/libhpx/instrumentation/Makefile
 /libhpx/network/Makefile
 /libhpx/network/isir/Makefile
 /libhpx/network/pwc/Makefile
@@ -115,11 +117,16 @@ contrib/photon/
 /tests/unit/test_parcel
 /tests/unit/test_sema
 /tests/unit/test_threads
+/tests/unit/test_runtime
+/tests/unit/test_datatype
 /tests/unit/test_wait
+/tests/unit/test_task
+/tests/unit/Makefile
 /tests/Makefile
 /tests/Makefile.in
 /tests/perf/Makefile
-/tests/unit/Makefile
+/tests/perf/perf_lco_netfutures
+/tests/perf/perf_lco_netfutures_msgSize
 
 # /docs
 /docs/doxyfile.stamp
@@ -128,11 +135,6 @@ contrib/photon/
 /docs/html/
 /docs/man/
 /docs/latex/
-
-# /bench/
-/bench/Makefile
-/bench/Makefile.in
-/bench/netbench
 
 # /tutorials/
 tutorial/Beginners/Makefile

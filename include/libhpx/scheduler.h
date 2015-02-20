@@ -89,7 +89,12 @@ struct scheduler *scheduler_new(struct config *config)
 ///
 /// @param    scheduler The scheduler to free.
 void scheduler_delete(struct scheduler *scheduler)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_INTERNAL;
+
+/// A NOP action for the scheduler.
+///
+/// This action does nothing (i.e. it is a nop).
+HPX_INTERNAL extern hpx_action_t scheduler_nop;
 
 /// Print collected statistics.
 ///
