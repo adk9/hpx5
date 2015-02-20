@@ -25,9 +25,9 @@ static bool         _text = false;            //!< send text data with the ping
 static bool      _verbose = false;            //!< print to the terminal
 
 /* actions */
-static hpx_action_t _main = 0;
-static hpx_action_t _ping = 0;
-static hpx_action_t _pong = 0;
+static HPX_ACTION_DECL(_main);
+static HPX_ACTION_DECL(_ping);
+static HPX_ACTION_DECL(_pong);
 
 /* helper functions */
 static void _usage(FILE *stream) {
@@ -41,8 +41,6 @@ static void _usage(FILE *stream) {
           "\t-d, wait for debugger at specific locality\n"
           "\t-h, show help\n");
 }
-
-static void _register_actions(void);
 
 /** the pingpong message type */
 typedef struct {
@@ -76,8 +74,6 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Failed to initialize hpx\n");
     return -1;
   }
-
-  _register_actions();
 
   int opt = 0;
   while ((opt = getopt(argc, argv, "c:t:T:d:Dmvh")) != -1) {
@@ -138,7 +134,7 @@ int main(int argc, char *argv[]) {
   return e;
 }
 
-static int _action_main(args_t *args) {
+static HPX_ACTION(_action_main, args_t *args) {
   printf("In main on rank %d\n", hpx_get_my_rank());
   hpx_status_t status =  hpx_netfutures_init(NULL);
   if (status != HPX_SUCCESS)
@@ -162,11 +158,11 @@ static int _action_main(args_t *args) {
 /**
  * Send a ping message.
  */
-static int _action_ping(args_t *args) {
+static HPX_ACTION(_ping, args_t *args) {
   printf("In ping on rank %d\n", hpx_get_my_rank());
   hpx_addr_t msg_ping_gas = hpx_gas_alloc(sizeof(struct buffer));
   hpx_addr_t msg_pong_gas = hpx_gas_alloc(sizeof(struct buffer));
-  
+
   struct buffer *msg_ping;
   struct buffer *msg_pong;
   hpx_gas_try_pin(msg_ping_gas, (void**)&msg_ping);
@@ -174,12 +170,12 @@ static int _action_ping(args_t *args) {
   for (int i = 0; i < args->iterations; i++) {
     if (_text)
       snprintf(msg_ping->data, BUFFER_SIZE, "ping %d from (%d, %d)", i,
-	       hpx_get_my_rank(), hpx_get_my_thread_id());
-    
+           hpx_get_my_rank(), hpx_get_my_thread_id());
+
     RANK_PRINTF("pinging block %d, msg= '%s'\n", 1, msg_ping->data);
 
-    hpx_addr_t lsync = hpx_lco_future_new(0);    
-    hpx_lco_netfuture_setat(args->pingpong, 1, BUFFER_SIZE, msg_ping_gas, lsync, HPX_NULL);
+    hpx_addr_t lsync = hpx_lco_future_new(0);
+    hpx_lco_netfuture_setat(args->pingpong, 1, BUFFER_SIZE, msg_ping_gas, lsync);
     hpx_lco_wait(lsync);
     hpx_lco_delete(lsync, HPX_NULL);
     msg_pong_gas = hpx_lco_netfuture_getat(args->pingpong, 0, BUFFER_SIZE);
@@ -197,7 +193,7 @@ static int _action_ping(args_t *args) {
 /**
  * Handle a pong action.
  */
-static int _action_pong(args_t *args) {
+static HPX_ACTION(_pong, args_t *args) {
   printf("In pong on rank %d\n", hpx_get_my_rank());
   hpx_addr_t msg_ping_gas = hpx_gas_alloc(sizeof(struct buffer));
   hpx_addr_t msg_pong_gas = hpx_gas_alloc(sizeof(struct buffer));
@@ -212,7 +208,7 @@ static int _action_pong(args_t *args) {
 
     if (_text)
       snprintf(msg_pong->data, BUFFER_SIZE, "pong %d from (%d, %d)", i,
-	       hpx_get_my_rank(), hpx_get_my_thread_id());
+           hpx_get_my_rank(), hpx_get_my_thread_id());
 
     RANK_PRINTF("ponging block %d, msg= '%s'\n", 0, msg_pong->data);
 
@@ -220,20 +216,10 @@ static int _action_pong(args_t *args) {
     hpx_lco_netfuture_emptyat(args->pingpong, 1, HPX_NULL);
 
     hpx_addr_t lsync = hpx_lco_future_new(0);
-    hpx_lco_netfuture_setat(args->pingpong, 0, BUFFER_SIZE, msg_pong_gas, lsync, HPX_NULL);
+    hpx_lco_netfuture_setat(args->pingpong, 0, BUFFER_SIZE, msg_pong_gas, lsync);
     hpx_lco_wait(lsync);
     hpx_lco_delete(lsync, HPX_NULL);
   }
 
   return HPX_SUCCESS;
-}
-
-/**
- * Registers functions as actions.
- */
-void _register_actions(void) {
-  /* register action for parcel (must be done by all ranks) */
-  HPX_REGISTER_ACTION(_action_main, &_main);
-  HPX_REGISTER_ACTION(_action_ping, &_ping);
-  HPX_REGISTER_ACTION(_action_pong, &_pong);
 }
