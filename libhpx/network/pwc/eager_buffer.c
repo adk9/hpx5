@@ -26,7 +26,7 @@
 #include "parcel_utils.h"
 #include "peer.h"
 #include "pwc.h"
-#include "../../gas/pgas/gpa.h"                 // sort of a hack
+#include "../../gas/pgas/pgas.h"                 // sort of a hack
 
 static uint32_t _index_of(eager_buffer_t *buffer, uint64_t i) {
   return (i & (buffer->size - 1));
@@ -34,7 +34,7 @@ static uint32_t _index_of(eager_buffer_t *buffer, uint64_t i) {
 
 /// Command sent to receive in the eager buffer.
 static HPX_INTERRUPT(_eager_rx, int *src) {
-  peer_t *peer = pwc_get_peer(here->network, *src);
+  peer_t *peer = pwc_get_peer(*src);
   eager_buffer_t *eager = &peer->rx;
   hpx_parcel_t *parcel = eager_buffer_rx(eager);
   log_net("received eager parcel bytes from %d (%s)\n", *src,
@@ -43,27 +43,15 @@ static HPX_INTERRUPT(_eager_rx, int *src) {
   return HPX_SUCCESS;
 }
 
-/// Finish a local eager parcel send operation.
-///
-/// This is run as a local completion command. We'd prefer this to be an
-/// interrupt, but the current framework doesn't have any way to pass the parcel
-/// address through into the handler, it has to come out of band through
-/// hpx_thread_current_target(). Interrupts don't have access to this
-/// out-of-band data, so a task it is.
-///
-/// This is okay, but is likely to be higher overhead than we really want. We
-/// could consider changing the type of network commands...
-static HPX_TASK(_finish_eager_tx, void *UNUSED) {
-  hpx_parcel_t *p = NULL;
-  hpx_addr_t target = hpx_thread_current_target();
-  if (!hpx_gas_try_pin(target, (void**)&p)) {
-    return log_error("could not finish eager tx\n");
-  }
-  log_net("releasing sent parcel\n");
+/// Free a parcel.
+static int _free_parcel_handler(command_t command) {
+  uint64_t offset = command_get_arg(command);
+  hpx_parcel_t *p = pgas_offset_to_lva(offset);
+  log_net("releasing sent parcel %p\n", (void*)p);
   hpx_parcel_release(p);
-  hpx_gas_unpin(target);
   return HPX_SUCCESS;
 }
+HPX_ACTION_DEF(INTERRUPT, _free_parcel_handler, free_parcel, HPX_UINT64);
 
 /// This handles the wrap operation at the receiver.
 ///
@@ -71,7 +59,7 @@ static HPX_TASK(_finish_eager_tx, void *UNUSED) {
 /// when the wrap commands arrives we can just increment the min index the
 /// amount remaining to exactly wrap the buffer.
 static HPX_INTERRUPT(_eager_rx_wrap, int *src) {
-  peer_t *peer = pwc_get_peer(here->network, *src);
+  peer_t *peer = pwc_get_peer(*src);
   eager_buffer_t *rx = &peer->rx;
   uint32_t min = _index_of(rx, rx->min);
   uint32_t r = (rx->size - min);
@@ -104,8 +92,8 @@ static int _wrap(eager_buffer_t *tx, hpx_parcel_t *p, uint32_t bytes) {
   int target = tx->peer->rank;
   log_net("wrapping rank %d eager buffer (%u bytes) at sequence # %lu\n",
           target, bytes, tx->sequence);
-  command_t cmd = encode_command(_eager_rx_wrap, HPX_THERE(target));
-  int status = peer_put_command(tx->peer, cmd);
+  command_t rsync = encode_command(_eager_rx_wrap, HPX_THERE(target));
+  int status = peer_put_command(tx->peer, rsync);
   dbg_check(status, "could not send command to pad eager buffer\n");
   tx->max += bytes;
   return _buffer_tx(tx, p);
@@ -118,7 +106,7 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   }
 
   const uint64_t end = tx->max + n;
-  if (end > (1ull << GPA_OFFSET_BITS)) {
+  if (end > pgas_max_offset()) {
     log_error("lifetime send buffer overflow handling unimplemented\n");
     return LIBHPX_EUNIMPLEMENTED;
   }
@@ -146,15 +134,14 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   inst_trace(class, id, sequence, n, (uint64_t)rva, tx->peer->rank);
 
   int target = tx->peer->rank;
-  command_t local = encode_command(_finish_eager_tx, lva_to_gva(p));
-  command_t remote = encode_command(_eager_rx, HPX_THERE(target));
+  command_t lsync = encode_command(free_parcel, lva_to_gva(p));
+  command_t rsync = encode_command(_eager_rx, HPX_THERE(target));
   int e = peer_pwc(tx->peer,                     /* peer structure */
                    tx->tx_base + roff,           /* remote offset */
                    pwc_network_offset(p),        /* local address */
                    n,                            /* # bytes */
-                   local,                        /* local completion */
-                   HPX_NULL,                     /* remote completion */
-                   remote,                       /* remote command */
+                   lsync,                        /* local completion */
+                   rsync,                        /* remote completion */
                    SEGMENT_EAGER                 /* segment */);
 
   if (e == LIBHPX_OK) {

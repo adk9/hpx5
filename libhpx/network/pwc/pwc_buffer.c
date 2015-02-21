@@ -26,30 +26,24 @@
 typedef struct photon_buffer_priv_t rdma_key_t;
 
 typedef struct {
-  void        *rva;
-  const void  *lva;
-  size_t         n;
-  hpx_addr_t lsync;
-  hpx_addr_t rsync;
-  command_t    cmd;
-  rdma_key_t   key;
+  void       *rva;
+  const void *lva;
+  size_t        n;
+  command_t lsync;
+  command_t rsync;
+  rdma_key_t  key;
 } record_t;
 
 /// Try to start a pwc.
 static int _start(pwc_buffer_t *buffer, void *rva, const void *lva, size_t n,
-                  hpx_addr_t lsync, hpx_addr_t rsync, command_t cmd,
-                  rdma_key_t key) {
-  if (rsync != HPX_NULL) {
-    dbg_error("remote complete event currently unsupported");
-  }
-
+                  command_t lsync, command_t rsync, rdma_key_t key) {
   int flag = ((lsync) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
-             ((cmd) ? 0 : PHOTON_REQ_PWC_NO_RCE);
+             ((rsync) ? 0 : PHOTON_REQ_PWC_NO_RCE);
 
   // int flags = 0;
-  int rank = buffer->rank;
+  int r = buffer->rank;
   void *vlva = (void*)lva;
-  int e = photon_put_with_completion(rank, vlva, n, rva, key, lsync, cmd, flag);
+  int e = photon_put_with_completion(r, vlva, n, rva, key, lsync, rsync, flag);
   switch (e) {
    case PHOTON_OK:
     return LIBHPX_OK;
@@ -67,11 +61,10 @@ static int _start_record(void *buffer, void *record) {
   void *rva = r->rva;
   const void *lva = r->lva;
   size_t n = r->n;
-  hpx_addr_t lsync = r->lsync;
-  hpx_addr_t rsync = r->rsync;
-  uint64_t cmd = r->cmd;
+  command_t lsync = r->lsync;
+  command_t rsync = r->rsync;
   rdma_key_t key = r->key;
-  return _start(b, rva, lva, n, lsync, rsync, cmd, key);
+  return _start(b, rva, lva, n, lsync, rsync, key);
 }
 
 int pwc_buffer_init(pwc_buffer_t *buffer, uint32_t rank, uint32_t size) {
@@ -84,15 +77,14 @@ void pwc_buffer_fini(pwc_buffer_t *buffer) {
 }
 
 int pwc_buffer_put(pwc_buffer_t *buffer, size_t roff, const void *lva, size_t n,
-                   hpx_addr_t lsync, hpx_addr_t rsync, command_t cmd,
-                   segment_t *segment) {
+                   command_t lsync, command_t rsync, segment_t *segment) {
   void *rva = segment_offset_to_rva(segment, roff);
   rdma_key_t key = segment->key;
 
   // Before performing this put, try to progress the buffer. The progress call
   // returns the number of buffered requests remaining.
   if (pwc_buffer_progress(buffer) == 0) {
-    int e = _start(buffer, rva, lva, n, lsync, rsync, cmd, key);
+    int e = _start(buffer, rva, lva, n, lsync, rsync, key);
 
     if (LIBHPX_OK == e) {
       return LIBHPX_OK;
@@ -115,7 +107,6 @@ int pwc_buffer_put(pwc_buffer_t *buffer, size_t roff, const void *lva, size_t n,
   r->n = n;
   r->lsync = lsync;
   r->rsync = rsync;
-  r->cmd = cmd;
   r->key = key;
 
   return LIBHPX_OK;

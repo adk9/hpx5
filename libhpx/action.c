@@ -199,6 +199,9 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
                        hpx_action_t action, hpx_addr_t c_addr,
                        hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
                        int nargs, va_list *args) {
+  dbg_assert(addr != HPX_NULL);
+  dbg_assert(action != HPX_ACTION_NULL);
+
   size_t len;
   void *outargs;
   hpx_parcel_t *p;

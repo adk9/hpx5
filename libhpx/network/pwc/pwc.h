@@ -13,9 +13,7 @@
 #ifndef LIBHPX_NETWORK_PWC_PWC_H
 #define LIBHPX_NETWORK_PWC_PWC_H
 
-
-#include <hpx/hpx.h>
-
+#include <hpx/attributes.h>
 
 /// Forward declarations.
 /// @{
@@ -26,12 +24,11 @@ struct network;
 struct peer;
 /// @}
 
-
 struct network *network_pwc_funneled_new(struct config *, struct boot *,
-                                         struct gas *, int nrx)
-  HPX_NON_NULL(1, 2) HPX_MALLOC HPX_INTERNAL;
+                                    struct gas *, int nrx)
+  HPX_NON_NULL(1,2,3) HPX_MALLOC HPX_INTERNAL;
 
-struct peer *pwc_get_peer(struct network *pwc, int src)
+struct peer *pwc_get_peer(int n)
   HPX_INTERNAL;
 
 #endif
