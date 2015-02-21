@@ -24,14 +24,14 @@ struct lco_class;
 /// @}
 
 typedef struct ustack {
-  void                       *sp;               // checkpointed stack pointer
-  hpx_parcel_t           *parcel;               // the progenitor parcel
-  struct ustack            *next;               // freelists and condition vars
-  const struct lco_class *in_lco;               // an lco if we're holding one
-  int                     tls_id;
-  int                   stack_id;
-  short                 affinity;               // set by user
-  char                   stack[];
+  void             *sp;                         // checkpointed stack pointer
+  hpx_parcel_t *parcel;                         // the progenitor parcel
+  struct ustack  *next;                         // freelists and condition vars
+  int        lco_depth;                         // how many lco locks we hold
+  int           tls_id;
+  int         stack_id;
+  short       affinity;                         // set by user
+  char           stack[];
 } ustack_t;
 
 /// This is the type of an HPX thread entry function.
