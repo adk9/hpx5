@@ -72,23 +72,21 @@ void peer_fini(peer_t *peer)
 /// @param         roff The remote offset for the put operation.
 /// @param          lva The source buffer for the put.
 /// @param            n The number of bytes in the put operation.
-/// @param        lsync An event identifier for local command.
-/// @param        rsync An event identifier for remote command.
-/// @param      command The command to transmit.
+/// @param        lsync A local continuation to run.
+/// @param        rsync A remote continuation to run.
 /// @param   segment_id The segment corresponding to @p roff.
 ///
 /// @return  LIBHPX_OK The operation was successful.
 static inline int peer_pwc(peer_t *peer, size_t roff, const void *lva, size_t n,
-                           hpx_addr_t lsync, hpx_addr_t rsync,
-                           command_t command, segid_t segid) {
+                           command_t lsync, command_t rsync, segid_t segid) {
   pwc_buffer_t *pwc = &peer->pwc;
   segment_t *segment = &peer->segments[segid];
-  return pwc_buffer_put(pwc, roff, lva, n, lsync, rsync, command, segment);
+  return pwc_buffer_put(pwc, roff, lva, n, lsync, rsync, segment);
 }
 
 /// Simply put a command.
-static inline int peer_put_command(peer_t *p, command_t op) {
-  return peer_pwc(p, 0, NULL, 0, HPX_NULL, HPX_NULL, op, SEGMENT_NULL);
+static inline int peer_put_command(peer_t *p, command_t rsync) {
+  return peer_pwc(p, 0, NULL, 0, 0, rsync, SEGMENT_NULL);
 }
 
 /// Perform a parcel send operation to a specific peer.
@@ -126,5 +124,9 @@ int peer_send_rendezvous(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync)
 int peer_get(peer_t *peer, void *lva, size_t offset, size_t n,
              command_t sync, segid_t segment)
   HPX_INTERNAL HPX_NON_NULL(1);
+
+/// Declare an interrupt that can be used to extract the offset from a command,
+/// and free it as a parcel.
+extern HPX_ACTION_DECL(free_parcel);
 
 #endif

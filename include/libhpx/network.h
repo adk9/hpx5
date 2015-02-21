@@ -43,15 +43,16 @@ typedef struct network {
     HPX_NON_NULL(1, 2);
 
   int (*pwc)(struct network *, hpx_addr_t to, const void *from, size_t n,
-             hpx_addr_t local, hpx_addr_t remote, hpx_action_t op, hpx_addr_t op_to)
+             hpx_action_t lop, hpx_addr_t laddr, hpx_action_t rop,
+             hpx_addr_t raddr)
     HPX_NON_NULL(1);
 
   int (*put)(struct network *, hpx_addr_t to, const void *from, size_t n,
-             hpx_addr_t local, hpx_addr_t remote)
+             hpx_action_t lop, hpx_addr_t laddr)
     HPX_NON_NULL(1);
 
   int (*get)(struct network *, void *to, hpx_addr_t from, size_t n,
-             hpx_addr_t local)
+             hpx_action_t lop, hpx_addr_t laddr)
     HPX_NON_NULL(1, 2);
 
   hpx_parcel_t *(*probe)(struct network *, int nrx)
@@ -134,28 +135,28 @@ static inline int network_send(network_t *network, hpx_parcel_t *p) {
 /// remote LCO when the remote operation is complete.
 ///
 /// Furthermore, it will generate a remote completion event encoding (@p op,
-/// @p op_to) at the locality at which @to is currently mapped, allowing 
+/// @p op_to) at the locality at which @to is currently mapped, allowing
 /// two-sided active-message semantics.
 ///
 /// In this context, signaling the @p remote LCO and the delivery of the remote
-/// completion via @p op are independent events that potentially proceed in 
+/// completion via @p op are independent events that potentially proceed in
 /// parallel.
 ///
 /// @param      network The network instance to use.
 /// @param           to The global target for the put.
 /// @param         from The local source for the put.
 /// @param            n The number of bytes to put.
-/// @param        local An LCO to signal local completion.
-/// @param       remote An LCO to signal remote completion.
-/// @param           op The remote completion event.
-/// @param        op_to The remote completion target.
+/// @param          lop The local continuation operation.
+/// @param        lsync The local continuation address.
+/// @param          rop The remote continuation operation.
+/// @param        op_to The remote continuation address.
 ///
 /// @returns            LIBHPX_OK
 static inline int network_pwc(network_t *network,
                               hpx_addr_t to, void *from, size_t n,
-                              hpx_addr_t local, hpx_addr_t remote,
-                              hpx_action_t op, hpx_addr_t op_to) {
-  return network->pwc(network, to, from, n, local, remote, op, op_to);
+                              hpx_action_t lop, hpx_addr_t lsync,
+                              hpx_action_t rop, hpx_addr_t rsync) {
+  return network->pwc(network, to, from, n, lop, lsync, rop, rsync);
 }
 
 
@@ -169,14 +170,14 @@ static inline int network_pwc(network_t *network,
 /// @param           to The global target for the put.
 /// @param         from The local source for the put.
 /// @param            n The number of bytes to put.
-/// @param        local An LCO to signal local completion.
-/// @param       remote An LCO to signal remote completion.
+/// @param          lop A local continuation, run when @p from can be modified.
+/// @param        laddr A local local continuation address.
 ///
 /// @returns            LIBHPX_OK
 static inline int network_put(network_t *network,
                               hpx_addr_t to, void *from, size_t n,
-                              hpx_addr_t local, hpx_addr_t remote) {
-  return network->put(network, to, from, n, local, remote);
+                              hpx_action_t lop, hpx_addr_t laddr) {
+  return network->put(network, to, from, n, lop, laddr);
 }
 
 
@@ -189,13 +190,14 @@ static inline int network_put(network_t *network,
 /// @param           to The local target for the get.
 /// @param         from The global source for the get.
 /// @param            n The number of bytes to get.
-/// @param        local An LCO to signal local completion.
+/// @param          lop A local continuation, run when @p from can be modified.
+/// @param        laddr A local local continuation address.
 ///
 /// @returns            LIBHPX_OK
 static inline int network_get(network_t *network,
                               void *to, hpx_addr_t from, size_t n,
-                              hpx_addr_t local) {
-  return network->get(network, to, from, n, local);
+                              hpx_action_t lop, hpx_addr_t laddr) {
+  return network->get(network, to, from, n, lop, laddr);
 }
 
 

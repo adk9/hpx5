@@ -33,6 +33,7 @@
 #include "lco.h"
 #include "cvar.h"
 #include "future.h"
+#include "../gas/pgas/gpa.h"
 
 #define dbg_printf0(...)
 //#define dbg_printf0 printf
@@ -126,7 +127,7 @@ _netfuture_get_offset(hpx_netfuture_t *f) {
   return _netfuture_table.fut_infos[f->table_index].offset + (size * (f->index / hpx_get_num_ranks()));
 }
 
-/// Return the native address of the _netfuture_t representation of a future 
+/// Return the native address of the _netfuture_t representation of a future
 /// that MUST BE LOCAL
 /// Returns the address of the netfuture itself, not the data it contains.
 /// @p f must have the proper netfuture index set.
@@ -229,14 +230,14 @@ _initialize_netfutures_action(_nf_init_args_t *args) {
 #endif
 
   dbg_printf("  At %d netfutures base pa = %p\n", hpx_get_my_rank(), _netfuture_table.base);
-  dbg_printf0("  At %d netfutures base pa = %p top pa = %p\n", hpx_get_my_rank(), 
+  dbg_printf0("  At %d netfutures base pa = %p top pa = %p\n", hpx_get_my_rank(),
               _netfuture_table.base, _netfuture_table.base + _netfuture_cfg.max_size);
 
   hpx_addr_t temp_base = _netfuture_table.base_gas;
   hpx_lco_allgather_setid(ag, hpx_get_my_rank(),
                           sizeof(temp_base), &temp_base,
                           HPX_NULL, HPX_NULL);
-  hpx_lco_get(ag, hpx_get_num_ranks() * sizeof(_netfuture_table.buffers[0]), 
+  hpx_lco_get(ag, hpx_get_num_ranks() * sizeof(_netfuture_table.buffers[0]),
               _netfuture_table.buffers);
 
   if (hpx_get_num_ranks() > 1) {
@@ -501,7 +502,7 @@ hpx_lco_netfuture_at(hpx_netfuture_t array, int i) {
 
 hpx_addr_t _netfuture_get_addr_gas(hpx_netfuture_t *f) {
   uintptr_t offset =  _netfuture_get_offset(f);
-  int rank = _netfuture_get_rank(f); 
+  int rank = _netfuture_get_rank(f);
   hpx_addr_t rank_base_gas = _netfuture_table.buffers[rank];
   size_t bs = _netfuture_table.mem_size;
   return hpx_addr_add(rank_base_gas, offset, bs);
@@ -510,14 +511,28 @@ hpx_addr_t _netfuture_get_addr_gas(hpx_netfuture_t *f) {
 hpx_addr_t _netfuture_get_data_addr_gas(hpx_netfuture_t *f) {
   uintptr_t offset =  _netfuture_get_offset(f);
   offset += sizeof(_netfuture_t);
-  int rank = _netfuture_get_rank(f); 
+  int rank = _netfuture_get_rank(f);
   hpx_addr_t rank_base_gas = _netfuture_table.buffers[rank];
   size_t bs = _netfuture_table.mem_size;
   return hpx_addr_add(rank_base_gas, offset, bs);
 }
 
+static int _local_set_wrapper_handler(uint64_t offset) {
+  hpx_addr_t target = pgas_offset_to_gpa(here->rank, offset);
+  hpx_lco_set(target, 0, NULL, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
+}
+static HPX_ACTION_DEF(INTERRUPT, _local_set_wrapper_handler, _local_set_wrapper,
+                      HPX_UINT64);
+
+static HPX_ACTION(_set_wrapper, int *rank) {
+  hpx_addr_t target = hpx_thread_current_target();
+  hpx_lco_set(target, 0, NULL, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
 void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_addr_t value,
-                 hpx_addr_t lsync_lco, hpx_addr_t rsync_lco) {
+                 hpx_addr_t lsync_lco) {
 
   //  if (!(id >= 0 && id <= future.count))
   //    printf("Error id = %d is not in valid range >= 0 <= %d !!!\n", id, future.count);
@@ -541,15 +556,13 @@ void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_ad
   hpx_addr_t remote_lco_addr = _netfuture_get_addr_gas(&future_i);
   hpx_addr_t remote_addr = _netfuture_get_data_addr_gas(&future_i);
   network_pwc(here->network, remote_addr, data, size,
-              lsync_lco, rsync_lco, 
-              hpx_lco_set_action, remote_lco_addr);
+              _local_set_wrapper, lsync_lco,
+              _set_wrapper, remote_lco_addr);
   }
   else {
     _future_set_with_copy((_netfuture_t*)_netfuture_get_addr(&future_i), size, data);
     if (!(lsync_lco == HPX_NULL))
       hpx_lco_set(lsync_lco, 0, NULL, HPX_NULL, HPX_NULL);
-    if (!(rsync_lco == HPX_NULL))
-      hpx_lco_set(rsync_lco, 0, NULL, HPX_NULL, HPX_NULL);
   }
 
   dbg_printf("  Done setting to (rank %d, ga %p) from %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr_gas(&future_i), hpx_get_my_rank());

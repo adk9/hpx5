@@ -15,15 +15,8 @@
 
 #include <hpx/hpx.h>
 
-extern hpx_action_t isir_emulate_pwc;
-
-struct isir_emulate_gwc_args {
-  size_t            n;
-  hpx_addr_t       to;
-  hpx_addr_t complete;
-};
-
-extern hpx_action_t isir_emulate_gwc;
+extern HPX_ACTION_DECL(isir_emulate_pwc);
+extern HPX_ACTION_DECL(isir_emulate_gwc);
 
 
 #endif

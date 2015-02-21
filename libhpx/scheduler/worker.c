@@ -700,7 +700,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
 
   // 2) We can't work-first if we are holding an LCO lock.
   ustack_t *thread = parcel_get_stack(current);
-  if (thread->in_lco) {
+  if (thread->lco_depth) {
     _spawn_lifo(self, p);
     return;
   }
@@ -780,6 +780,7 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   // push the current thread onto the condition variable---no lost-update
   // problem here because we're holing the @p lock
   ustack_t *thread = parcel_get_stack(self->current);
+  dbg_assert(thread->lco_depth == 1);
   hpx_status_t status = cvar_push_thread(condition, thread);
 
   // if we successfully pushed, then do a transfer away from this thread

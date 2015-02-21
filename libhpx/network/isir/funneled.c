@@ -92,41 +92,60 @@ static int _funneled_send(network_t *network, hpx_parcel_t *p) {
 
 static int _funneled_pwc(network_t *network,
                          hpx_addr_t to, const void *from, size_t n,
-                         hpx_addr_t local, hpx_addr_t remote, 
-                         hpx_action_t op, hpx_addr_t op_to) {
-  if (remote != HPX_NULL) {
-    log_error("Remote completion not yet supported\n");
-    return LIBHPX_EUNIMPLEMENTED;
-  }
-  hpx_parcel_t *p = parcel_create(to, isir_emulate_pwc, from, n, op_to, op,
-                                  hpx_thread_current_pid(), false);
+                         hpx_action_t lop, hpx_addr_t laddr,
+                         hpx_action_t rop, hpx_addr_t raddr) {
+  dbg_assert(lop || !laddr); // !lop => !lsync
+
+  hpx_parcel_t *p = hpx_parcel_acquire(from, n);
   if (!p) {
     log_error("could not allocate a parcel to emulate put-with-completion\n");
     return LIBHPX_ENOMEM;
   }
 
-  hpx_parcel_send(p, local);
-  return LIBHPX_OK;
+  p->target = to;
+  p->action = isir_emulate_pwc;
+  p->c_action = rop;
+  p->c_target = raddr;
+
+  // if there's a local operation, then chain it through an lco that gets
+  // triggered when the send finishes
+  hpx_addr_t lsync = HPX_NULL;
+  if (lop) {
+    lsync = hpx_lco_future_new(0);
+    dbg_assert(lsync);
+    int e = hpx_call_when_with_continuation(lsync, laddr, lop, lsync,
+                                            hpx_lco_delete_action,  &laddr);
+    dbg_check(e, "failed to chain parcel\n");
+  }
+  return hpx_parcel_send(p, lsync);
 }
 
-static int _funneled_put(network_t *network,
+static int _funneled_put(network_t *net,
                          hpx_addr_t to, const void *from, size_t n,
-                         hpx_addr_t local, hpx_addr_t remote) {
-  return _funneled_pwc(network, to, from, n, local, remote, HPX_ACTION_NULL, HPX_NULL);
+                         hpx_action_t lop, hpx_addr_t laddr) {
+  return _funneled_pwc(net, to, from, n, lop, laddr, HPX_ACTION_NULL, HPX_NULL);
 }
 
 /// Transform the get() operation into a parcel emulation.
 static int _funneled_get(network_t *network,
-                         void *to, hpx_addr_t from, size_t n, hpx_addr_t local)
+                         void *to, hpx_addr_t from, size_t n,
+                         hpx_action_t lop, hpx_addr_t laddr)
 {
   _funneled_t *isir = (_funneled_t*)network;
 
+  // we only support future set externally
+  if (lop && lop != hpx_lco_set_action) {
+    log_error("Local completion other than hpx_lco_set_action not supported\n");
+    return LIBHPX_EUNIMPLEMENTED;
+  }
+
+  // if there isn't a lop, then laddr should be HPX_NULL
+  dbg_assert(lop || !laddr); // !lop => !laddr
+
   // go ahead an set the local lco if there is nothing to do
   if (!n) {
-    if (local) {
-      hpx_lco_set(local, 0, NULL, HPX_NULL, HPX_NULL);
-    }
-    return LIBHPX_OK;
+    hpx_lco_set(laddr, 0, NULL, HPX_NULL, HPX_NULL);
+    return HPX_SUCCESS;
   }
 
   // make sure the to address is in the global address space
@@ -134,16 +153,10 @@ static int _funneled_get(network_t *network,
     return log_error("network_get() expects a global heap address\n");
   }
 
-  // send the remote endpoint enough information to perform the operation
-  struct isir_emulate_gwc_args args = {
-    .n = n,
-    .to = isir->gas->lva_to_gva(to),
-    .complete = local
-  };
-
   // and spawn the remote operation---hpx_call eagerly copies the args buffer so
   // there is no need to wait
-  return hpx_call(from, isir_emulate_gwc, HPX_NULL, &args, sizeof(args));
+  hpx_addr_t raddr = isir->gas->lva_to_gva(to);
+  return hpx_xcall(from, isir_emulate_gwc, HPX_NULL, n, raddr, laddr);
 }
 
 static hpx_parcel_t *_funneled_probe(network_t *network, int nrx) {

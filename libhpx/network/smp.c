@@ -31,38 +31,30 @@ static int _smp_send(network_t *network, hpx_parcel_t *p) {
   hpx_abort();
 }
 
-
 static int _smp_pwc(network_t *network,
                     hpx_addr_t to, const void *from, size_t n,
-                    hpx_addr_t local, hpx_addr_t remote, hpx_action_t op, hpx_addr_t op_to)
-{
+                    hpx_action_t lop, hpx_addr_t laddr,
+                    hpx_action_t rop, hpx_addr_t raddr) {
   return LIBHPX_EUNIMPLEMENTED;
 }
-
 
 static int _smp_put(network_t *network, hpx_addr_t to,
                     const void *from, size_t n,
-                    hpx_addr_t local, hpx_addr_t remote)
-{
+                    hpx_action_t lop, hpx_addr_t laddr) {
   return LIBHPX_EUNIMPLEMENTED;
 }
-
 
 static int _smp_get(network_t *network, void *to, hpx_addr_t from, size_t n,
-                    hpx_addr_t local)
-{
+                    hpx_action_t lop, hpx_addr_t laddr) {
   return LIBHPX_EUNIMPLEMENTED;
 }
-
 
 static hpx_parcel_t *_smp_probe(network_t *network, int nrx) {
   return NULL;
 }
 
-
 static void _smp_set_flush(network_t *network) {
 }
-
 
 static network_t _smp = {
   .type = LIBHPX_NETWORK_SMP,
@@ -75,7 +67,6 @@ static network_t _smp = {
   .probe = _smp_probe,
   .set_flush = _smp_set_flush
 };
-
 
 network_t *network_smp_new(void) {
   return &_smp;

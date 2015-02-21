@@ -18,13 +18,21 @@
 #include "commands.h"
 #include "../../gas/pgas/gpa.h"                 // big hack
 
-command_t encode_command(hpx_action_t op, hpx_addr_t addr) {
-  dbg_assert(addr != HPX_NULL);
-  return ((uint64_t)op << GPA_OFFSET_BITS) + (addr & GPA_OFFSET_MASK);
+hpx_action_t command_get_op(command_t command) {
+  return (command >> GPA_OFFSET_BITS);
+}
+
+uint64_t command_get_arg(command_t command) {
+  return (command & GPA_OFFSET_MASK);
+}
+
+command_t encode_command(hpx_action_t op, uint64_t arg) {
+  dbg_assert(op != HPX_ACTION_NULL);
+  return ((uint64_t)op << GPA_OFFSET_BITS) + (arg & GPA_OFFSET_MASK);
 }
 
 void decode_command(command_t cmd, hpx_action_t *op, hpx_addr_t *addr) {
   *addr = pgas_offset_to_gpa(here->rank, cmd);
-  *op = cmd >> GPA_OFFSET_BITS;
+  *op = command_get_op(cmd);
 }
 
