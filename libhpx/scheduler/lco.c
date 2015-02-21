@@ -206,23 +206,20 @@ void lco_lock(lco_t *lco) {
   dbg_assert(self && self->current);
   struct ustack *stack = parcel_get_stack(self->current);
   dbg_assert(stack);
-  dbg_assert(!stack->in_lco || stack->in_lco == _class(lco));
-  stack->in_lco = _class(lco);
+  stack->lco_depth++;
   log_lco("%p acquired lco %p (in lco class %p)\n", (void*)self->current, (void*)lco,
-          (void*)stack->in_lco);
+          (void*)_class(lco));
 }
 
 void lco_unlock(lco_t *lco) {
   dbg_assert(lco);
   dbg_assert(self && self->current);
   struct ustack *stack = parcel_get_stack(self->current);
-  log_lco("%p released lco %p (in lco class %p)\n", (void*)self->current, (void*)lco,
-          (void*)stack->in_lco);
+  log_lco("%p released lco %p\n", (void*)self->current, (void*)lco);
   dbg_assert(stack);
-  dbg_assert(stack->in_lco);
-  dbg_assert_str(stack->in_lco == _class(lco), "lco %p in %p expected %p\n",
-                 (void*)self->current, (void*)lco, (void*)_class(lco));
-  stack->in_lco = NULL;
+  int depth = stack->lco_depth--;
+  dbg_assert_str(depth > 0, "mismatched lco acquire release (lco %p)\n",
+                 (void*)lco);
   sync_lockable_ptr_unlock(&lco->lock);
 }
 
