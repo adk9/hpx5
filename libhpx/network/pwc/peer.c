@@ -18,9 +18,12 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/parcel.h"
+#include "commands.h"
 #include "parcel_utils.h"
 #include "peer.h"
 #include "pwc.h"
+#include "../../gas/pgas/gpa.h"
+#include "../../gas/pgas/pgas.h"
 
 void peer_fini(peer_t *peer) {
   pwc_buffer_fini(&peer->pwc);
@@ -29,37 +32,33 @@ void peer_fini(peer_t *peer) {
   eager_buffer_fini(&peer->rx);
 }
 
-
 int peer_get(peer_t *peer, void *lva, size_t offset, size_t n, command_t l,
              segid_t segid) {
   segment_t *segment = &peer->segments[segid];
   const void *rva = segment_offset_to_rva(segment, offset);
   struct photon_buffer_priv_t key = segment->key;
   int e = photon_get_with_completion(peer->rank, lva, n, (void*)rva, key, l, 0);
-  if (PHOTON_OK != e) {
-    dbg_error("failed transport get operation\n");
-  }
+  dbg_assert_str(PHOTON_OK == e, "failed transport get operation\n");
   return LIBHPX_OK;
 }
 
-typedef struct {
-  size_t bytes;
-  hpx_addr_t addr;
-} _get_parcel_args_t;
-
-
-static HPX_PINNED(_free_parcel, void) {
-  hpx_parcel_t *p = hpx_thread_current_local_target();
-  assert(p);
-  hpx_parcel_release(p);
+/// This local action just wraps the hpx_lco_set operation in an action that can
+/// be used as a network operation.
+static int _lco_set_handler(command_t command) {
+  uint64_t offset = command_get_arg(command);
+  hpx_addr_t lco = pgas_offset_to_gpa(here->rank, offset);
+  hpx_lco_set(lco, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
+static HPX_ACTION_DEF(INTERRUPT, _lco_set_handler, _lco_set, HPX_UINT64);
 
-static HPX_ACTION(_get_parcel, void *args) {
-  // Extract arguments.
-  _get_parcel_args_t *a = args;
-  size_t bytes = a->bytes;
-  hpx_addr_t addr = a->addr;
+/// Perform a rendezvous get operation on a parcel.
+///
+/// The source of a parcel send will generate this event at the target, in order
+/// to get the target to RDMA-get a large parcel.
+static int _get_parcel_handler(size_t bytes, hpx_addr_t from) {
+  // figure out where the parcel is coming from.
+  int src = gas_owner_of(here->gas, from);
 
   // Allocate a parcel to receive in.
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, bytes);
@@ -68,50 +67,37 @@ static HPX_ACTION(_get_parcel, void *args) {
     return HPX_ERROR;
   }
 
-  // Find the peer and set the parcel's src.
-  p->src = gas_owner_of(here->gas, addr);
-  peer_t *peer = pwc_get_peer(here->network, p->src);
+  // initialize the parcel's source
+  p->src = src;
 
-  // get the local destination, size, and remote offset for an rdma transfer
+  // use our peer to src in order to figure out the arguments we need to do a
+  // memget(p, from, bytes).
+  peer_t *peer = pwc_get_peer(src);
   void *to = pwc_network_offset(p);
   uint32_t n = pwc_network_size(p);
-  hpx_addr_t paddr = hpx_addr_add(addr, pwc_prefix_size(), UINT32_MAX);
-  size_t offset = gas_offset_of(here->gas, paddr);
+  hpx_addr_t addr = hpx_addr_add(from, pwc_prefix_size(), UINT32_MAX);
+  size_t offset = gas_offset_of(here->gas, addr);
 
-  // create a local command that we can wait for
+  // Create a future and a command to run when this rdma completes.
   hpx_addr_t lsync = hpx_lco_future_new(0);
-  command_t cmp = encode_command(hpx_lco_set_action, lsync);
+  command_t cmp = encode_command(_lco_set, lsync);
 
-  // perform the get operation
-  int status = HPX_SUCCESS;
-  if (LIBHPX_OK != peer_get(peer, to, offset, n, cmp, SEGMENT_HEAP)) {
-    status = HPX_ERROR;
-    goto unwind;
+  if (LIBHPX_OK != peer_get(peer, to, offset, n, cmp, SEGMENT_HEAP) ||
+      LIBHPX_OK != hpx_lco_wait(lsync)) {
+    hpx_parcel_release(p);
+    hpx_lco_delete(lsync, HPX_NULL);
+    return HPX_ERROR;
+  } else {
+    hpx_lco_delete(lsync, HPX_NULL);
+    parcel_launch(p);
+    return hpx_call_cc(from, free_parcel, NULL, NULL, &from);
   }
-
-  // wait until it completes
-  if (LIBHPX_OK != hpx_lco_wait(lsync)) {
-    status = HPX_ERROR;
-    goto unwind;
-  }
-
-  // launch the parcel
-  parcel_launch(p);
-  hpx_lco_delete(lsync, HPX_NULL);
-  hpx_call_cc(addr, _free_parcel, NULL, 0, NULL, NULL);
-
- unwind:
-  hpx_parcel_release(p);
-  hpx_lco_delete(lsync, HPX_NULL);
-  return status;
 }
+static HPX_ACTION_DEF(DEFAULT, _get_parcel_handler, _get_parcel, HPX_SIZE_T,
+                      HPX_ADDR);
 
 int peer_send_rendezvous(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync) {
-  _get_parcel_args_t args = {
-    .bytes = parcel_size(p),
-    .addr = lva_to_gva(p)
-  };
-  assert(args.addr != HPX_NULL);
-  return hpx_call(HPX_THERE(peer->rank), _get_parcel, lsync, &args,
-                  sizeof(args));
+  uint32_t bytes = parcel_size(p);
+  hpx_addr_t gva = lva_to_gva(p);
+  return hpx_xcall(HPX_THERE(peer->rank), _get_parcel, lsync, bytes, gva);
 }

@@ -20,14 +20,11 @@
 #include "libhpx/scheduler.h"
 #include "emulate_pwc.h"
 
-hpx_action_t isir_emulate_pwc = 0;
-hpx_action_t isir_emulate_gwc = 0;
-
-
 /// Emulate a put-with-completion operation.
 ///
-/// This will copy the data buffer into the correct place, and then
-static int _emulate_pwc_handler(void *buffer) {
+/// This will copy the data buffer into the correct place, and then continue to
+/// the completion handler.
+HPX_ACTION(isir_emulate_pwc, void *buffer) {
   hpx_parcel_t *p = scheduler_current_parcel();
   if (!p->size) {
     return HPX_SUCCESS;
@@ -44,13 +41,12 @@ static int _emulate_pwc_handler(void *buffer) {
   return HPX_SUCCESS;
 }
 
-
 /// Emulate the remote side of a get-with-completion.
 ///
 /// This will copy the requested data into a parcel and send it back to the
 /// correct source location using the pwc emulation, which does the correct
 /// thing.
-static int _emulate_gwc_handler(struct isir_emulate_gwc_args *args) {
+static int _emulate_gwc_handler(size_t n, hpx_addr_t to, hpx_addr_t complete) {
   hpx_parcel_t *p = scheduler_current_parcel();
 
   gas_t *gas = here->gas;
@@ -60,19 +56,11 @@ static int _emulate_gwc_handler(struct isir_emulate_gwc_args *args) {
     return HPX_RESEND;
   }
 
-  size_t n = args->n;
-  hpx_addr_t to = args->to;
-  hpx_addr_t complete = args->complete;
-
   // hpx_call copies the data out of the buffer and into the parcel
   // synchronously, so we can unpin that buffer as soon as the call returns.
   int e = hpx_call(to, isir_emulate_pwc, complete, from, n);
   gas->unpin(p->target);
   return e;
 }
-
-
-static void HPX_CONSTRUCTOR _register_actions(void) {
-  HPX_REGISTER_ACTION(_emulate_pwc_handler, &isir_emulate_pwc);
-  HPX_REGISTER_ACTION(_emulate_gwc_handler, &isir_emulate_gwc);
-}
+HPX_ACTION_DEF(DEFAULT, _emulate_gwc_handler, isir_emulate_gwc, HPX_SIZE_T,
+               HPX_ADDR, HPX_ADDR);
