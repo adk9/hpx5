@@ -309,17 +309,6 @@ hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
   return status;
 }
 
-hpx_status_t hpx_parcel_send_ext(hpx_parcel_t *p, hpx_action_t lop, hpx_addr_t laddr) {
-  if (p->size >= _SMALL_THRESHOLD && !_inplace(p)) {
-    return hpx_call_with_continuation(HPX_HERE, _parcel_send_async, lop, laddr, &p, sizeof(p));
-  }
-
-  _prepare(p);
-  hpx_status_t status = parcel_launch(p);
-  hpx_lco_error(laddr, status, HPX_NULL);
-  return status;
-}
-
 hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t gate) {
   _prepare(p);
   dbg_assert(p->target != HPX_NULL);
