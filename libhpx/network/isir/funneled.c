@@ -92,14 +92,9 @@ static int _funneled_send(network_t *network, hpx_parcel_t *p) {
 
 static int _funneled_pwc(network_t *network,
                          hpx_addr_t to, const void *from, size_t n,
-                         hpx_action_t lop, hpx_addr_t lsync,
-                         hpx_action_t rop, hpx_addr_t rsync) {
-  if (lop && lop != hpx_lco_set_action) {
-    log_error("Local completion other than hpx_lco_set_action not supported\n");
-    return LIBHPX_EUNIMPLEMENTED;
-  }
-
-  dbg_assert(lop || !lsync); // !lop => !lsync
+                         hpx_action_t lop, hpx_addr_t laddr,
+                         hpx_action_t rop, hpx_addr_t raddr) {
+  dbg_assert(lop || !laddr); // !lop => !lsync
 
   hpx_parcel_t *p = hpx_parcel_acquire(from, n);
   if (!p) {
@@ -110,8 +105,18 @@ static int _funneled_pwc(network_t *network,
   p->target = to;
   p->action = isir_emulate_pwc;
   p->c_action = rop;
-  p->c_target = rsync;
-  p->pid = hpx_thread_current_pid();
+  p->c_target = raddr;
+
+  // if there's a local operation, then chain it through an lco that gets
+  // triggered when the send finishes
+  hpx_addr_t lsync = HPX_NULL;
+  if (lop) {
+    lsync = hpx_lco_future_new(0);
+    dbg_assert(lsync);
+    int e = hpx_call_when_with_continuation(lsync, laddr, lop, lsync,
+                                            hpx_lco_delete_action,  &laddr);
+    dbg_check(e, "failed to chain parcel\n");
+  }
   return hpx_parcel_send(p, lsync);
 }
 
