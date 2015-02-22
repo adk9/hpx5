@@ -11,6 +11,7 @@ libpxgl_la_SOURCES   = src/adjacency_list.c \
                        src/sssp_dc.c \
                        src/sssp_dc1.c \
                        src/sssp_delta.c \
+		       src/sssp_kla.c \
 		       src/dimacs.c \
 		       src/gteps.c \
 		       src/statistics.c \

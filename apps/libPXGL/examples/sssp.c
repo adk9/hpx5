@@ -140,6 +140,7 @@ typedef struct {
   int scale;                    
   int edgefactor;
   bool checksum;
+  size_t level;
 } _sssp_args_t;
 
 static hpx_action_t _main;
@@ -216,10 +217,22 @@ static int _main_action(_sssp_args_t *args) {
     hpx_bcast_sync(sssp_init_dc, &args->sssp_init_dc_args, sizeof(args->sssp_init_dc_args));
   }
   if(args->delta > 0) {
-    hpx_bcast_sync(sssp_run_delta_stepping, NULL, 0);
-    sargs.delta = args->delta;
+    if(args->level > 0) {
+      printf("Calling sssp_run_kla action\n");
+      hpx_bcast_sync(sssp_run_kla, NULL, 0);
+    } else {
+      hpx_bcast_sync(sssp_run_delta_stepping, NULL, 0);
+      sargs.delta = args->delta;
+    } 
   } else {
-    sargs.delta = 0;
+      sargs.delta = 0;
+  }
+  
+
+  if(args->sssp_kind == KLEVEL_SSSP_KIND) {
+    printf("Calling set_klevel action\n");
+    hpx_bcast_sync(set_klevel, &args->level, sizeof(args->level));
+    printf("Returned from  broadcasting k\n");
   }
 
   // printf("About to enter problem loop.\n");
@@ -238,15 +251,18 @@ static int _main_action(_sssp_args_t *args) {
     }
 
     sargs.source = args->problems[i];
-
+    sargs.k_level = args-> level;
     hpx_time_t now = hpx_time_now();
 
     // Call the SSSP algorithm
     hpx_addr_t sssp_lco = hpx_lco_future_new(0);
     sargs.termination_lco = sssp_lco;
-    if (args->delta == 0) {
+    if (args->delta == 0 && args->sssp_kind != KLEVEL_SSSP_KIND) {
       printf("Calling SSSP (%s).\n", sssp_kind_str[args->sssp_kind]);
       hpx_call(HPX_HERE, call_sssp, HPX_NULL, &sargs, sizeof(sargs));
+    } else if (args->sssp_kind == KLEVEL_SSSP_KIND) { //TODO:merge this condition
+      printf("Calling KLA sssp\n");
+      hpx_call(HPX_HERE, call_kla_sssp, HPX_NULL, &sargs, sizeof(sargs));
     } else {
       printf("Calling delta-stepping with delta %zu.\n", sargs.delta);
       hpx_call(HPX_HERE, call_delta_sssp, HPX_NULL, &sargs, sizeof(sargs));
@@ -380,6 +396,7 @@ int main(int argc, char *argv[argc]) {
   sssp_init_dc_args_t sssp_init_dc_args = { .num_pq = 0, .yield_count = 0, .queue_threshold = 50, .freq = 100, .num_elem = 100 };
   sssp_kind_t sssp_kind = _DC_SSSP_KIND;
   size_t delta = 0;
+  size_t level = 0;
   termination_t termination = COUNT_TERMINATION;
   graph_generator_type_t graph_generator_type = _DIMACS;
   int SCALE = 16 ;
@@ -396,7 +413,7 @@ int main(int argc, char *argv[argc]) {
   }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "f:g:l:q:s:t:y:z:abcdhkpu?")) != -1) {
+  while ((opt = getopt(argc, argv, "e:f:g:l:q:s:t:y:z:abcdhkpu?")) != -1) {
     switch (opt) {
     case 'q':
       time_limit = strtoul(optarg, NULL, 0);
@@ -448,6 +465,10 @@ int main(int argc, char *argv[argc]) {
     case 'y':
       sssp_init_dc_args.yield_count = strtoul(optarg, NULL, 0);
       break;
+    case 'e':
+      sssp_kind = KLEVEL_SSSP_KIND;
+      level = strtoul(optarg, NULL, 0);
+      break;
     case '?':
     default:
       _usage(stderr);
@@ -497,7 +518,8 @@ int main(int argc, char *argv[argc]) {
 			.graph_generator_type = graph_generator_type, 
 			.scale = SCALE, 
 			.edgefactor = edgefactor,
-			.checksum = checksum
+			.checksum = checksum,
+			.level = level
   };
 
   // register the actions
