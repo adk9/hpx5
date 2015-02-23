@@ -16,8 +16,8 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
-// This testcase tests the hpx_lco_type_array_new API function which
-// allocates a global array of lcos
+// This testcase tests the hpx_lco_array_new API function which
+// allocates a global array of LCOs.
 static HPX_PINNED(_set_future_value, void *args) {
   int size = hpx_thread_current_args_size();
   hpx_addr_t addr = hpx_thread_current_target();
@@ -34,12 +34,12 @@ static HPX_ACTION(test_libhpx_lco_future_array, void *UNUSED) {
   hpx_time_t t1 = hpx_time_now();
 
   // allocate 8 futures with size of each future's value 
-  hpx_addr_t base = hpx_lco_type_array_new(HPX_TYPE_FUTURE, array_size, 
-                                           sizeof(uint64_t));
+  hpx_addr_t base = hpx_lco_array_new(HPX_TYPE_FUTURE, array_size, 
+                                      sizeof(uint64_t));
   for (int i = 0; i < array_size; i++) {
     value = (rand() / (float)RAND_MAX) * 100;
-    hpx_addr_t other = hpx_lco_type_array_at(HPX_TYPE_FUTURE, base, i, 
-                                           sizeof(uint64_t));
+    hpx_addr_t other = hpx_lco_array_at(HPX_TYPE_FUTURE, base, i, 
+                                        sizeof(uint64_t));
     hpx_call_sync(other, _set_future_value, NULL, 0, &value, sizeof(value));
 
     uint64_t result;
@@ -68,10 +68,10 @@ static HPX_ACTION(test_libhpx_lco_and_array, void *UNUSED) {
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t lcos = hpx_lco_type_array_new(HPX_TYPE_AND, array_size, 0);
+  hpx_addr_t lcos = hpx_lco_array_new(HPX_TYPE_AND, array_size, 0);
   for (int i = 0; i < array_size; i++) {
     hpx_addr_t done = hpx_lco_future_new(0);
-    hpx_addr_t other = hpx_lco_type_array_at(HPX_TYPE_AND, lcos, i, 0);
+    hpx_addr_t other = hpx_lco_array_at(HPX_TYPE_AND, lcos, i, 0);
     hpx_call(other, _set, done, NULL, 0);
     hpx_lco_wait(done);
     hpx_lco_delete(done, HPX_NULL);  

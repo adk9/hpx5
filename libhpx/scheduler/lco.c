@@ -522,6 +522,7 @@ static HPX_PINNED (_block_init, uint32_t *args) {
       case HPX_TYPE_CHAN:
         addr = (void *)((uintptr_t)lco + i * (sizeof(chan_t) + arg));
         chan_init(addr);
+        break;
       default:
         dbg_assert_str(type, "Invalid type for HPX_TYPE_LCO\n");
     }
@@ -536,8 +537,7 @@ static HPX_PINNED (_block_init, uint32_t *args) {
 ///                   number of inputs to the and (must be >= 0)
 ///
 /// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_type_array_new(hpx_lco_type_t type, int n, 
-                                  int arg) {
+hpx_addr_t hpx_lco_array_new(hpx_lco_type_t type, int n, int arg) {
   // Get the sizeof lco class structure
   uint32_t lco_bytes;
   switch (type) {
@@ -549,8 +549,9 @@ hpx_addr_t hpx_lco_type_array_new(hpx_lco_type_t type, int n,
       break;
     case HPX_TYPE_CHAN:
       lco_bytes = sizeof(chan_t) + arg;
+      break;
     default:
-      dbg_assert_str(type, "Invalid type for hpx_lco_type_array_new\n");
+      dbg_error("Invalid type for hpx_lco_array_new\n");
   }
 
   uint32_t  block_bytes = n * lco_bytes;
@@ -566,8 +567,8 @@ hpx_addr_t hpx_lco_type_array_new(hpx_lco_type_t type, int n,
 
 // Application level programmer doesn't know how big the lco is, so we
 // provide this array indexer.
-hpx_addr_t hpx_lco_type_array_at(hpx_lco_type_t type, hpx_addr_t array, 
-                                 int i, int arg) {
+hpx_addr_t hpx_lco_array_at(hpx_lco_type_t type, hpx_addr_t array, 
+                            int i, int arg) {
   uint32_t lco_bytes;
   switch (type) {
     case HPX_TYPE_AND:
@@ -578,8 +579,9 @@ hpx_addr_t hpx_lco_type_array_at(hpx_lco_type_t type, hpx_addr_t array,
       break;
     case HPX_TYPE_CHAN:
       lco_bytes = sizeof(chan_t) + arg;
+      break;
     default:
-      dbg_assert_str(type, "Invalid type for hpx_lco_type_array_at\n");
+      dbg_error("Invalid type for hpx_lco_array_at\n");
   }
   
   void *local = here->gas->gva_to_lva(array);

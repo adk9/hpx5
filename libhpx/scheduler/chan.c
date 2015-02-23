@@ -39,7 +39,7 @@
 
 /// Internal actions.
 
-static int _chan_enqueue(chan_t *chan, node_t *node) {
+static int _chan_enqueue(chan_t *chan, chan_node_t *node) {
   if (chan->tail) {
     chan->tail->next = node;
     chan->tail = node;
@@ -51,8 +51,8 @@ static int _chan_enqueue(chan_t *chan, node_t *node) {
   }
 }
 
-static node_t *_chan_dequeue(chan_t *chan) {
-  node_t *node = chan->head;
+static chan_node_t *_chan_dequeue(chan_t *chan) {
+  chan_node_t *node = chan->head;
   if (node == NULL) {
     return NULL;
   }
@@ -72,7 +72,7 @@ static void _chan_fini(lco_t *lco) {
 
   lco_lock(lco);
   chan_t *c = (chan_t *)lco;
-  node_t *node = NULL;
+  chan_node_t *node = NULL;
   while ((node = c->head) != NULL) {
     c->head = c->head->next;
     free(node->buffer);
@@ -92,7 +92,7 @@ static void _chan_error(lco_t *lco, hpx_status_t code) {
 /// Copies the @p from pointer into channel's buffer.
 static void _chan_set(lco_t *lco, int size, const void *from) {
   // set up the node that we're going to enqueue
-  node_t *node = malloc(sizeof(*node));
+  chan_node_t *node = malloc(sizeof(*node));
   node->next = NULL;
   node->size = size;
   if (size != 0) {
@@ -121,7 +121,7 @@ static hpx_status_t _chan_try_recv(chan_t *chan, int *size, void **buffer) {
   lco_lock(&chan->lco);
   hpx_status_t status = cvar_get_error(&chan->nonempty);
   if (status == HPX_SUCCESS) {
-    node_t *node = _chan_dequeue(chan);
+    chan_node_t *node = _chan_dequeue(chan);
     if (!node) {
       status = HPX_LCO_CHAN_EMPTY;
     }
@@ -140,7 +140,7 @@ static hpx_status_t _chan_try_recv(chan_t *chan, int *size, void **buffer) {
 static hpx_status_t _chan_recv(chan_t *chan, int *size, void **buffer) {
   lco_lock(&chan->lco);
   hpx_status_t status = cvar_get_error(&chan->nonempty);
-  node_t       *node = _chan_dequeue(chan);
+  chan_node_t       *node = _chan_dequeue(chan);
 
   while (status == HPX_SUCCESS && !node) {
     status = scheduler_wait(&chan->lco.lock, &chan->nonempty);
@@ -185,9 +185,9 @@ static hpx_status_t _chan_get(lco_t *lco, int size, void *out) {
 // doesn't really provide any useful information.
 static hpx_status_t _chan_wait(lco_t *lco) {
   lco_lock(lco);
-  chan_t       *chan = (chan_t *)lco;
+  chan_t        *chan = (chan_t *)lco;
   hpx_status_t status = cvar_get_error(&chan->nonempty);
-  node_t       *node = chan->head;
+  chan_node_t   *node = chan->head;
 
   while (status == HPX_SUCCESS && !node) {
     status = scheduler_wait(&chan->lco.lock, &chan->nonempty);
