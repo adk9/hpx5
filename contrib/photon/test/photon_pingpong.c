@@ -97,7 +97,7 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
     photon_rid request;
     int flag;
     do {
-      photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
+      photon_probe_completion(PHOTON_ANY_SOURCE, &flag, NULL, &request, PHOTON_PROBE_EVQ);
     } while (!flag || request != PHOTON_TAG);
   }
 
@@ -171,7 +171,7 @@ void *receiver(void *args) {
       photon_rid request;
       int flag;
       do {
-        photon_probe_completion(other_rank, &flag, &request, PHOTON_PROBE_LEDGER);
+        photon_probe_completion(other_rank, &flag, NULL, &request, PHOTON_PROBE_LEDGER);
       } while (!flag || request != 0xcafebabe);
     }
 
