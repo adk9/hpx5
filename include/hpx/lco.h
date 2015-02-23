@@ -273,7 +273,7 @@ hpx_addr_t hpx_lco_future_array_at(hpx_addr_t base, int i, int size, int bsize);
 ///                   to the and (must be >= 0)
 ///
 /// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_type_array_new(hpx_lco_type_t type, int n, int arg);
+hpx_addr_t hpx_lco_array_new(hpx_lco_type_t type, int n, int arg);
 
 /// Get an address of a lco in a lco array
 ///
@@ -283,7 +283,7 @@ hpx_addr_t hpx_lco_type_array_new(hpx_lco_type_t type, int n, int arg);
 /// @param      size The size of the data stored with each lco.
 ///
 /// @returns The address of the ith lco in the array.
-hpx_addr_t hpx_lco_type_array_at(hpx_lco_type_t type, hpx_addr_t base, int i,
+hpx_addr_t hpx_lco_array_at(hpx_lco_type_t type, hpx_addr_t base, int i,
                                  int arg);
 
 /// Channels.

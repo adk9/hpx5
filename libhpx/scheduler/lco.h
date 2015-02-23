@@ -57,14 +57,14 @@ typedef struct node {
   struct node  *next;
   void       *buffer;                           // out-of place because we want
   int           size;                           // to be able to recv it
-} node_t;
+} chan_node_t;
 
 
 typedef struct {
   lco_t          lco;
   cvar_t    nonempty;
-  node_t      *head;
-  node_t      *tail;
+  chan_node_t  *head;
+  chan_node_t  *tail;
 } chan_t;
 
 extern void and_init(and_t *and, intptr_t value)
