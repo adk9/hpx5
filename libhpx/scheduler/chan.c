@@ -273,8 +273,7 @@ static HPX_ACTION(_chan_try_recv_proxy, void *args) {
 
 
 /// Initialize a block of futures.
-static HPX_PINNED(_block_init, uint32_t *args) {
-  _chan_t *channels = hpx_thread_current_local_target();
+static HPX_PINNED(_block_init, _chan_t *channels, uint32_t *args) {
   dbg_assert(channels);
 
   // sequentially initialize each channel

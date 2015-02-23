@@ -46,11 +46,11 @@ static bool _is_tracked(_process_t *p) {
   return (p->termination != HPX_NULL);
 }
 
-
 /// Remote action to delete a process.
 static void _free(_process_t *p) {
-  if (!p)
+  if (!p) {
     return;
+  }
 
   cr_bitmap_delete(p->debt);
 
@@ -59,7 +59,6 @@ static void _free(_process_t *p) {
   //   hpx_lco_set(p->termination, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
-
 /// Initialize a process.
 static void _init(_process_t *p, hpx_addr_t termination) {
   sync_store(&p->credit, 0, SYNC_RELEASE);
@@ -67,7 +66,6 @@ static void _init(_process_t *p, hpx_addr_t termination) {
   assert(p->debt);
   p->termination = termination;
 }
-
 
 typedef struct {
   hpx_addr_t   target;
@@ -100,19 +98,14 @@ static HPX_ACTION(_proc_call, _call_args_t *args) {
   return HPX_SUCCESS;
 }
 
-
-static HPX_PINNED(_proc_delete, void *args) {
-  _process_t *p = hpx_thread_current_local_target();
+static HPX_PINNED(_proc_delete, _process_t *p, void *args) {
   assert(p);
   _free(p);
   return HPX_SUCCESS;
 }
 
-
-static HPX_PINNED(_proc_return_credit, uint64_t *args) {
-  _process_t *p = hpx_thread_current_local_target();
+static HPX_PINNED(_proc_return_credit, _process_t *p, uint64_t *args) {
   assert(p);
-
   // add credit to the credit-accounting bitmap
   uint64_t debt = cr_bitmap_add_and_test(p->debt, *args);
   for (;;) {
@@ -129,7 +122,6 @@ static HPX_PINNED(_proc_return_credit, uint64_t *args) {
   }
   return HPX_SUCCESS;
 }
-
 
 int process_recover_credit(hpx_parcel_t *p) {
   hpx_addr_t process = p->pid;
@@ -153,7 +145,6 @@ int process_recover_credit(hpx_parcel_t *p) {
   return HPX_SUCCESS;
 }
 
-
 hpx_addr_t hpx_process_new(hpx_addr_t termination) {
   if (termination == HPX_NULL) {
     return HPX_NULL;
@@ -169,11 +160,9 @@ hpx_addr_t hpx_process_new(hpx_addr_t termination) {
   return process;
 }
 
-
 hpx_pid_t hpx_process_getpid(hpx_addr_t process) {
   return (hpx_pid_t)process;
 }
-
 
 int hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
                      hpx_addr_t result, const void *args, size_t len) {
@@ -193,11 +182,11 @@ int hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
   return HPX_SUCCESS;
 }
 
-
-/// Deletes a process.
+/// Delete a process.
 void hpx_process_delete(hpx_addr_t process, hpx_addr_t sync) {
-  if (process == HPX_NULL)
+  if (process == HPX_NULL) {
     return;
+  }
 
   hpx_call_sync(process, _proc_delete, NULL, 0, NULL, 0);
   hpx_gas_free(process, sync);

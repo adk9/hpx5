@@ -42,12 +42,6 @@ static const lco_class_t *_class(lco_t *lco) {
   return (lco_class_t*)bits;
 }
 
-static lco_t *_target_lco(void) {
-  lco_t *lco = hpx_thread_current_local_target();
-  dbg_assert_str(lco, "Could not pin LCO.\n");
-  return lco;
-}
-
 static hpx_status_t _fini(lco_t *lco) {
   dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
   dbg_assert_str(_class(lco)->on_fini, "LCO implementation incomplete\n");
@@ -120,31 +114,26 @@ static hpx_status_t _attach(lco_t *lco, hpx_parcel_t *p) {
 /// resent.
 ///
 /// @{
-HPX_PINNED(hpx_lco_delete_action, void *args) {
-  return _fini(_target_lco());
+HPX_PINNED(hpx_lco_delete_action, lco_t *lco, void *args) {
+  return _fini(lco);
 }
 
-HPX_PINNED(hpx_lco_set_action, void *data) {
-  return _set(_target_lco(), hpx_thread_current_args_size(), data);
+HPX_PINNED(hpx_lco_set_action, lco_t *lco, void *data) {
+  return _set(lco, hpx_thread_current_args_size(), data);
 }
 
-static HPX_PINNED(_lco_error, void *args) {
+static HPX_PINNED(_lco_error, lco_t *lco, void *args) {
   hpx_status_t *code = args;
-  return _error(_target_lco(), *code);
+  return _error(lco, *code);
 }
 
-HPX_PINNED(hpx_lco_reset_action, void *UNUSED) {
-  return _reset(_target_lco());
+HPX_PINNED(hpx_lco_reset_action, lco_t *lco, void *UNUSED) {
+  return _reset(lco);
 }
 
-static HPX_PINNED(_lco_size, void *UNUSED) {
-  return _size(_target_lco());
-}
-
-static HPX_PINNED(_lco_get, void *args) {
+static HPX_PINNED(_lco_get, lco_t *lco, void *args) {
   dbg_assert(args);
   int *n = args;
-  lco_t *lco = _target_lco();
   // convert to wait if there's no buffer
   if (*n == 0) {
     return _wait(lco);
@@ -162,10 +151,9 @@ static HPX_PINNED(_lco_get, void *args) {
   }
 }
 
-static HPX_PINNED(_lco_getref, void *args) {
+static HPX_PINNED(_lco_getref, lco_t *lco, void *args) {
   dbg_assert(args);
   int *n = args;
-  lco_t *lco = _target_lco();
   // convert to wait if there's no buffer
   if (*n == 0) {
     return _wait(lco);
@@ -182,8 +170,7 @@ static HPX_PINNED(_lco_getref, void *args) {
   }
 }
 
-static HPX_PINNED(_lco_getref_reply, void *data) {
-  void **local = hpx_thread_current_local_target();
+static HPX_PINNED(_lco_getref_reply, void **local, void *data) {
   dbg_assert(*local);
   size_t bytes = hpx_thread_current_args_size();
   dbg_assert(bytes);
@@ -191,11 +178,11 @@ static HPX_PINNED(_lco_getref_reply, void *data) {
   return HPX_SUCCESS;
 }
 
-static HPX_PINNED(_lco_wait, void *args) {
-  return _wait(_target_lco());
+static HPX_PINNED(_lco_wait, lco_t *lco, void *args) {
+  return _wait(lco);
 }
 
-HPX_PINNED(attach, void *args) {
+HPX_PINNED(attach, lco_t *lco, void *args) {
   /// @todo: This parcel copy shouldn't be necessary. If we can retain the
   ///        parent parcel and free it appropriately, then we could just enqueue
   ///        the args directly.
@@ -204,7 +191,7 @@ HPX_PINNED(attach, void *args) {
   assert(parcel_size(p) == parcel_size(parcel));
   dbg_assert_str(parcel, "could not allocate a parcel to attach\n");
   memcpy(parcel, p, parcel_size(p));
-  return _attach(_target_lco(), parcel);
+  return _attach(lco, parcel);
 }
 /// @}
 

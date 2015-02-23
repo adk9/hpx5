@@ -218,10 +218,9 @@ static void _future_init(_future_t *f, int size) {
 }
 
 /// Initialize a block of futures.
-static HPX_PINNED(_block_init, uint32_t *args) {
+static HPX_PINNED(_block_init, char *base, uint32_t *args) {
   const uint32_t size = args[0];
   const uint32_t nfutures = args[1];
-  char *base = hpx_thread_current_local_target();
   dbg_assert(base);
 
   // sequentially initialize each future
