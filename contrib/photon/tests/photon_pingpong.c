@@ -82,9 +82,9 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
   else if (pp_test == PWC_TEST) {
     photon_put_with_completion(dst, send_args, msize, (void*)rbuf.addr, rbuf.priv, PHOTON_TAG, 0xcafebabe, 0);
     photon_rid request;
-    int flag;
+    int flag, remaining;
     do {
-      photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
+      photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &request, PHOTON_PROBE_EVQ);
     } while (!flag || request != PHOTON_TAG);
   }
 
@@ -124,9 +124,9 @@ void *receiver(void *args __attribute__((unused))) {
     }
     else if (pp_test == PWC_TEST) {
       photon_rid request;
-      int flag;
+      int flag, remaining;
       do {
-        photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
+        photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &request, PHOTON_PROBE_LEDGER);
       } while (!flag || request != 0xcafebabe);
     }
 
