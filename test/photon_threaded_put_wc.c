@@ -81,12 +81,12 @@ void *wait_local_completion_thread() {
   int flag, rc;
 
   do {
-    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_EVQ);
+    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, NULL, &request, PHOTON_PROBE_EVQ);
     if (rc < 0) {
       exit(1);
     }
     if ((flag > 0) && (request == PHOTON_TAG)) {
-      // Increments the counter  
+      // Increments the counter
       sem_post(&sem);
     }
   } while (!DONE);
@@ -103,7 +103,7 @@ void *wait_ledger_completions_thread(void *arg) {
   
   do {
     //photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
-    photon_probe_completion(inputrank, &flag, &request, PHOTON_PROBE_LEDGER);
+    photon_probe_completion(inputrank, &flag, NULL, &request, PHOTON_PROBE_LEDGER);
     if (flag && request == 0xcafebabe)
       recvCompT[inputrank]++;
   } while (!DONE);
