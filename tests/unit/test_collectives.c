@@ -45,8 +45,7 @@ static void _maxDouble(double *lhs, const double *rhs, const size_t bytes) {
   *lhs = (*lhs > *rhs) ? *lhs : *rhs;
 }
 
-static HPX_PINNED(_initDomain, const InitArgs *args) {
-  Domain *ld = hpx_thread_current_local_target();
+static HPX_PINNED(_initDomain, Domain *ld, const InitArgs *args) {
   ld->maxcycles = args->maxcycles;
   ld->nDoms = args->nDoms;
   ld->complete = args->complete;

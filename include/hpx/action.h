@@ -28,6 +28,9 @@ typedef uint16_t hpx_action_t;
 /// The type of functions that can be registered with hpx_register_action().
 typedef int (*hpx_action_handler_t)(void*);
 
+/// The type of functions that can be registed with pinned actions.
+typedef int (*hpx_pinned_action_handler_t)(void *, void*);
+
 /// The equivalent of NULL for HPX actions.
 #define HPX_ACTION_NULL ((hpx_action_t)0u)
 
@@ -113,10 +116,20 @@ int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_hand
   static int id##_##type(args)
 
 
-#define HPX_ACTION(id, args)    HPX_ACTION_DEF_USER(DEFAULT, id, args)
-#define HPX_PINNED(id, args)    HPX_ACTION_DEF_USER(PINNED, id, args)
-#define HPX_TASK(id, args)      HPX_ACTION_DEF_USER(TASK, id, args)
-#define HPX_INTERRUPT(id, args) HPX_ACTION_DEF_USER(INTERRUPT, id, args)
+#define HPX_ACTION_DEF_USER_PINNED(type, id, tgt, args)         \
+  HPX_ACTION_DECL(id) = -1;                                     \
+  static int id##_##type(tgt, args);                            \
+  static HPX_CONSTRUCTOR void _register_##id##_##type(void) {   \
+    _HPX_REGISTER_ACTION(type, id##_##type , &id);              \
+  }                                                             \
+  static int id##_##type(tgt, args)
+
+
+
+#define HPX_ACTION(id, args)      HPX_ACTION_DEF_USER(DEFAULT, id, args)
+#define HPX_PINNED(id, tgt, args) HPX_ACTION_DEF_USER_PINNED(PINNED, id, tgt, args)
+#define HPX_TASK(id, args)        HPX_ACTION_DEF_USER(TASK, id, args)
+#define HPX_INTERRUPT(id, args)   HPX_ACTION_DEF_USER(INTERRUPT, id, args)
 
 #define HPX_REGISTER_ACTION(handler, id)                        \
   _HPX_REGISTER_ACTION(DEFAULT, handler, id)

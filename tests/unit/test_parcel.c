@@ -287,15 +287,13 @@ static int _is_null(void *addr) {
 }
 
 /// Store a value to an integer in memory.
-static HPX_PINNED(_store_int, void *val) {
-  int *addr = hpx_thread_current_local_target();
-  *addr = *(int*)val;
+static HPX_PINNED(_store_int, int *addr, int *val) {
+  *addr = *val;
   return HPX_SUCCESS;
 }
 
 /// Load a value from an integer in memory.
-static HPX_PINNED(_load_int, void) {
-  int *addr = hpx_thread_current_local_target();
+static HPX_PINNED(_load_int, int *addr, void *UNUSED) {
   HPX_THREAD_CONTINUE(*addr);
 }
 
@@ -304,9 +302,8 @@ static HPX_PINNED(_load_int, void) {
 /// This is slightly more complicated than an increment. We send along the value
 /// that we expect to see, to make sure our cascade is running in the correct
 /// order.
-static HPX_PINNED(_parcelSendThrough_increment, void *arg) {
+static HPX_PINNED(_parcelSendThrough_increment, int *val, void *arg) {
   // don't need synchronization since this is done in a sequential cascade
-  int *val = hpx_thread_current_local_target();
   int i = val[0]++;
   int j = *(int*)arg;
   printf("expected %d, got %d\n", i, j);

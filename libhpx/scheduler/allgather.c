@@ -250,10 +250,9 @@ hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id,
 }
 
 
-static HPX_PINNED(_allgather_setid_proxy, void *args) {
+static HPX_PINNED(_allgather_setid_proxy, _allgather_t *g, void *args) {
   // try and pin the allgather LCO, if we fail, we need to resend the underlying
   // parcel to "catch up" to the moving LCO
-  _allgather_t *g = hpx_thread_current_local_target();
   assert(g);
 
   // otherwise we pinned the LCO, extract the arguments from @p args and use the

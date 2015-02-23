@@ -123,28 +123,10 @@ static hpx_parcel_t *_get_nop_parcel(void) {
   return p;
 }
 
-/// Execute a parcel.
-static int _execute(hpx_parcel_t *p) {
-  dbg_assert(p->target != HPX_NULL);
-  hpx_action_t id = hpx_parcel_get_action(p);
-  bool pinned = action_is_pinned(here->actions, id);
-  if (pinned && !hpx_gas_try_pin(p->target, NULL)) {
-    log_sched("pinned action resend\n");
-    return HPX_RESEND;
-  }
-
-  void *args = hpx_parcel_get_data(p);
-  int status = action_table_run_handler(here->actions, id, args);
-  if (pinned) {
-    hpx_gas_unpin(p->target);
-  }
-  return status;
-}
-
 /// The entry function for all interrupts.
 ///
 static void _execute_interrupt(hpx_parcel_t *p) {
-  int e = _execute(p);
+  int e = action_execute(p);
   switch (e) {
    case HPX_SUCCESS:
     log_sched("completed interrupt\n");
@@ -165,7 +147,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
 ///
 /// @param       parcel The parcel that describes the thread to run.
 static void _execute_thread(hpx_parcel_t *p) {
-  int e = _execute(p);
+  int e = action_execute(p);
   switch (e) {
     default:
      dbg_error("thread produced unhandled error %s.\n", hpx_strerror(e));
@@ -912,24 +894,15 @@ hpx_pid_t hpx_thread_current_pid(void) {
   return (self && self->current) ? self->current->pid : HPX_NULL;
 }
 
-void *hpx_thread_current_local_target(void) {
-  void *local;
-  hpx_parcel_t *p = scheduler_current_parcel();
-  if (p) {
-    hpx_gas_try_pin(p->target, &local);
-    return local;
-  }
-  return NULL;
-}
-
 uint32_t hpx_thread_current_credit(void) {
   return (self && self->current) ? parcel_get_credit(self->current) : 0;
 }
 
 int hpx_thread_get_tls_id(void) {
   ustack_t *stack = parcel_get_stack(self->current);
-  if (stack->tls_id < 0)
+  if (stack->tls_id < 0) {
     stack->tls_id = sync_fadd(&here->sched->next_tls_id, 1, SYNC_ACQ_REL);
+  }
 
   return stack->tls_id;
 }
