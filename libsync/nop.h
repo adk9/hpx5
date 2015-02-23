@@ -22,13 +22,13 @@
 /// ----------------------------------------------------------------------------
 /// Your basic no-op.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void sync_nop(void);
+SYNC_INTERNAL void sync_nop(void);
 
 
 /// ----------------------------------------------------------------------------
 /// Like a nop, but with fancier semantics.
 /// ----------------------------------------------------------------------------
-HPX_INTERNAL void sync_pause(void);
+SYNC_INTERNAL void sync_pause(void);
 
 
 #endif /* HPX_LIBSYNC_NOP_H_ */
