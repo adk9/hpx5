@@ -288,7 +288,6 @@ bool action_is_interrupt(const struct action_table *table, hpx_action_t id) {
 int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_handler_t f,
                         unsigned int nargs, hpx_action_t *id, ...) {
   dbg_assert(id);
-  dbg_assert_str(type != HPX_ACTION_TASK, "Task action type not supported.\n");
 
   *id = HPX_ACTION_INVALID;
   if (!nargs) {

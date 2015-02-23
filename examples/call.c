@@ -21,17 +21,15 @@ static HPX_INTERRUPT(_my_interrupt, void *args) {
   return HPX_SUCCESS;
 }
 
-#if 0
 static HPX_TASK(_my_task, void *args) {
   printf("Hi, I am a task!\n");
   hpx_call_cc(HPX_HERE, _my_interrupt, NULL, NULL, NULL, 0);
   return HPX_SUCCESS;
 }
-#endif
 
 static HPX_ACTION(_my_action, void *args) {
   printf("Hi, I am an action!\n");
-  hpx_call_cc(HPX_HERE, _my_interrupt, NULL, NULL, NULL, 0);
+  hpx_call_cc(HPX_HERE, _my_task, NULL, NULL, NULL, 0);
   return HPX_SUCCESS;
 }
 
