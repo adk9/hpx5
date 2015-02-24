@@ -42,7 +42,7 @@ case "$HPXCORES_AXIS" in
     export HPXCORES=" --hpx-cores=$HPXCORES_AXIS"
     ;;
 esac
-case "$BUILD_AXIS"; in
+case "$BUILD_AXIS" in
   static)
     CFGFLAGS+=" --enable-static --disable-shared"
     ;;
