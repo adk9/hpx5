@@ -10,3 +10,4 @@ Version: @PACKAGE_VERSION@
 Cflags: -I${includedir} -I${libdir}/libffi-3.99999/include/
 Libs: -L${libdir} -lhpx
 Libs.private: @PMI_LIBS@ @HUGETLBFS_LIBS@ @MPI_LIBS@ @PORTALS_LIBS@ @PTHREAD_LIBS@
+Requires.private: libffi
