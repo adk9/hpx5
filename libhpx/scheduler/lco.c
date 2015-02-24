@@ -405,8 +405,10 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
   // Will partition the lcos up into local and remote LCOs. We waste some stack
   // space here, since, for each lco in lcos, we either have a local mapping or
   // a remote address.
-  lco_t *locals[n];
-  hpx_addr_t remotes[n];
+  lco_t **locals = calloc(n, sizeof(*locals));
+  dbg_assert_str(locals, "failed to allocate array for %d elements", n);
+  hpx_addr_t *remotes = calloc(n, sizeof(*remotes));
+  dbg_assert_str(remotes, "failed to allocate array for %d elements", n);
 
   // Try and translate (and pin) all of the lcos, for any of the lcos that
   // aren't local, allocate a proxy future and initiate the remote wait. This
@@ -443,6 +445,9 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
       statuses[i] = status;
     }
   }
+
+  free(remotes);
+  free(locals);
   return errors;
 }
 
@@ -453,8 +458,10 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
   // Will partition the lcos up into local and remote LCOs. We waste some stack
   // space here, since, for each lco in lcos, we either have a local mapping or
   // a remote address.
-  lco_t *locals[n];
-  hpx_addr_t remotes[n];
+  lco_t **locals = calloc(n, sizeof(*locals));
+  dbg_assert_str(locals, "failed to allocate array for %d elements", n);
+  hpx_addr_t *remotes = calloc(n, sizeof(*remotes));
+  dbg_assert_str(remotes, "failed to allocate array for %d elements", n);
 
   // Try and translate (and pin) all of the lcos, for any of the lcos that
   // aren't local, allocate a proxy future and initiate the remote get. This
@@ -492,6 +499,9 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
       statuses[i] = status;
     }
   }
+
+  free(remotes);
+  free(locals);
   return errors;
 }
 
@@ -530,7 +540,7 @@ static HPX_PINNED (_block_init, uint32_t *args) {
 /// Allocate an array of LCO local to the calling locality.
 /// @param       type the type of the LCO
 /// @param          n The (total) number of lcos to allocate
-/// @param        arg The size of each lco's value or the 
+/// @param        arg The size of each lco's value or the
 ///                   number of inputs to the and (must be >= 0)
 ///
 /// @returns the global address of the allocated array lco.
@@ -564,7 +574,7 @@ hpx_addr_t hpx_lco_array_new(hpx_lco_type_t type, int n, int arg) {
 
 // Application level programmer doesn't know how big the lco is, so we
 // provide this array indexer.
-hpx_addr_t hpx_lco_array_at(hpx_lco_type_t type, hpx_addr_t array, 
+hpx_addr_t hpx_lco_array_at(hpx_lco_type_t type, hpx_addr_t array,
                             int i, int arg) {
   uint32_t lco_bytes;
   switch (type) {
@@ -580,7 +590,7 @@ hpx_addr_t hpx_lco_array_at(hpx_lco_type_t type, hpx_addr_t array,
     default:
       dbg_error("Invalid type for hpx_lco_array_at\n");
   }
-  
+
   void *local = here->gas->gva_to_lva(array);
   return lva_to_gva((void *)((uintptr_t)local + i * lco_bytes));
-} 
+}
