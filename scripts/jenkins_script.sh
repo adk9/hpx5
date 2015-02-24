@@ -140,7 +140,7 @@ case "$SYSTEM" in
 esac
 
 if [ "$OP" == "build" ]; then
-    CFG_CMD="../configure --prefix=${DIR}/build/install/ ${HPXDEBUG} ${CFGFLAGS}"
+    CFG_CMD="../configure --prefix=\"${DIR}/build/install/\" ${HPXDEBUG} ${CFGFLAGS}"
     do_build
 fi
 
