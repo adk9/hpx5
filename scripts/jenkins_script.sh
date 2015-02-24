@@ -158,7 +158,7 @@ if [ "$OP" == "run" ]; then
 
     # TBD: fine tune the limits
     # TBD: copy the inputs to the jenkins accounts
-        cd "$DIR/apps/libPXGL/examples"
+        cd apps/libPXGL/examples
         # Delta-Stepping
 	$RUNCMD ./sssp -q $TIMEOUT -c -z 40000 $HPXCORES --hpx-heap=$((1024 * 1024 * 1024 * 3)) --hpx-sendlimit=128 --hpx-transport=$HPXMODE_AXIS --hpx-recvlimit=512 $INPUT_DIR/Random4-n.22.0.gr $INPUT_DIR/Random4-n.22.0.ss || { echo 'SSSP test failed' ; exit 1; }
         # Chaotic
