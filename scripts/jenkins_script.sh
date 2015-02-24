@@ -58,7 +58,7 @@ case "$SYSTEM" in
     module load openmpi/1.8.4_thread
     CFGFLAGS+=" --with-mpi=ompi"
     ;;
-  HPX_BIGRED2)
+  HPX5_BIGRED2)
     CFGFLAGS+=" --with-mpi"
     ;;
 esac
