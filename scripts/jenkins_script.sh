@@ -108,7 +108,7 @@ function do_build() {
     make install
 }
 
-CFGFLAGS=" ${JEMALLOC_AXIS} ${BUILD_AXIS} --enable-apps --enable-parallel-config"
+CFGFLAGS=" ${JEMALLOC_AXIS} --enable-apps --enable-parallel-config"
 
 add_init
 
