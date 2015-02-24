@@ -73,7 +73,7 @@ esac
 
 function do_build() {
     echo "Building HPX in $DIR"
-    cd $DIR
+    cd "$DIR"
     
     echo "Bootstrapping HPX."
     ./bootstrap
@@ -143,11 +143,11 @@ if [ "$OP" == "build" ]; then
 fi
 
 if [ "$OP" == "run" ]; then
-    cd $DIR/build
+    cd "$DIR/build"
 
     # TBD: fine tune the limits
     # TBD: copy the inputs to the jenkins accounts
-        cd $DIR/apps/libPXGL/examples
+        cd "$DIR/apps/libPXGL/examples"
         # Delta-Stepping
 	$(RUNCMD) sssp -q $TIMEOUT -c -z 40000 $HPXCORES --hpx-heap=$((1024 * 1024 * 1024 * 3)) --hpx-sendlimit=128 --hpx-transport=$HPXMODE_AXIS --hpx-recvlimit=512 $INPUT_DIR/Random4-n.22.0.gr $INPUT_DIR/Random4-n.22.0.ss
         # Chaotic
