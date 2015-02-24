@@ -74,7 +74,7 @@ case "$SYSTEM" in
     export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
     export LIBRARY_PATH=/usr/lib64:$LIBRARY_PATH
     ;;
-  HPX_BIGRED2)
+  HPX5_BIGRED2)
     export HPX_PHOTON_BACKEND=ugni
     export HPX_PHOTON_CARGS="--with-ugni"
     CFGFLAGS+=" --with-pmi --with-hugetlbfs"
@@ -140,7 +140,7 @@ case "$SYSTEM" in
   CREST_cutter)
     CFGFLAGS+=" CC=gcc"
     ;;
-  HPX_BIGRED2)
+  HPX5_BIGRED2)
     CFGFLAGS+=" CC=cc"
     ;;
   *)
