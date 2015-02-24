@@ -92,7 +92,7 @@ function do_build() {
     mkdir install
     
     echo "Configuring HPX."
-    eval $CFG_CMD
+    eval $CFG_CMD --prefix="${DIR}/build/install/" ${HPXDEBUG} ${CFGFLAGS}
     
     echo "Building HPX."
     make -j 128
@@ -140,7 +140,7 @@ case "$SYSTEM" in
 esac
 
 if [ "$OP" == "build" ]; then
-    CFG_CMD="../configure --prefix=\"${DIR}/build/install/\" ${HPXDEBUG} ${CFGFLAGS}"
+    CFG_CMD="../configure"
     do_build
 fi
 
