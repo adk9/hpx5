@@ -174,7 +174,7 @@ uint32_t circular_buffer_size(circular_buffer_t *b) {
 void *circular_buffer_append(circular_buffer_t *buffer) {
   uint64_t next = buffer->max++;
   if (circular_buffer_size(buffer) >= buffer->capacity) {
-    uint32_t capacity = 1 << buffer->capacity;
+    uint32_t capacity = buffer->capacity * 2;
     if (LIBHPX_OK != _expand(buffer, capacity)) {
       dbg_error("could not expand a circular buffer from %u to %u\n",
                 buffer->capacity, capacity);
