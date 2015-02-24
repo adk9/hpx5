@@ -41,6 +41,14 @@ case "$HPXCORES_AXIS" in
   *)
     export HPXCORES=" --hpx-cores=$HPXCORES_AXIS"
 esac
+case "$BUILD_AXIS"; in
+  static)
+    CFGFLAGS+=" --enable-static --disable-shared"
+    ;;
+  *)
+    CFGFLAGS+=" --disable-static --enable-shared"
+    ;;
+esac
 }
 
 function add_mpi() {
