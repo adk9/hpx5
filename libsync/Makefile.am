@@ -3,7 +3,7 @@
 ####################
 SUBDIRS = arch
 
-noinst_LTLIBRARIES  = libsync.la
+lib_LTLIBRARIES  = libsync.la
 
 libsync_la_SOURCES  = locks.c sr_barrier.c ms_queue.c two_lock_queue.c \
                       chase_lev_ws_deque.c cuckoo.c backoff.c lockable_ptr.c \

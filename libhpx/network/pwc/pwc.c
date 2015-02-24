@@ -48,7 +48,7 @@ typedef struct pwc_network {
 /// Utility to wrap a poll completion.
 static int _poll(unsigned type, int rank, uint64_t *op) {
   int flag = 0;
-  int e = photon_probe_completion(rank, &flag, op, type);
+  int e = photon_probe_completion(rank, &flag, NULL, op, type);
   if (PHOTON_OK != e) {
     dbg_error("photon probe error\n");
   }
