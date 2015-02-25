@@ -48,9 +48,9 @@ typedef struct pwc_network {
 } pwc_network_t;
 
 /// Utility to wrap a poll completion.
-static int _poll(unsigned type, int rank, uint64_t *op) {
+static int _poll(unsigned type, int rank, uint64_t *op, int *remaining) {
   int flag = 0;
-  int e = photon_probe_completion(rank, &flag, NULL, op, type);
+  int e = photon_probe_completion(rank, &flag, remaining, op, type);
   if (PHOTON_OK != e) {
     dbg_error("photon probe error\n");
   }
@@ -64,12 +64,20 @@ static const char *_straction(hpx_action_t id) {
 
 static void _pwc_delete(network_t *network) {
   dbg_assert(network);
-
+  log_error("got here\n");
   pwc_network_t *pwc = (pwc_network_t*)network;
 
-  // If we're supposed to flush our send-side network, then go ahead and do so.
-  if (pwc->flush_on_delete) {
-
+  // Finish up our outstanding rDMA, and then wait. This prevents us from
+  // deregistering segments while there are outstanding requests.
+  {
+    int remaining;
+    command_t command;
+    int e;
+    do {
+      e = _poll(PHOTON_PROBE_EVQ, here->rank, &command, &remaining);
+    } while (e == PHOTON_OK && remaining > 0);
+    log_error("got here\n");
+    boot_barrier(here->boot);
   }
 
   for (int i = 0; i < pwc->ranks; ++i) {
@@ -96,7 +104,7 @@ static void _probe_local(pwc_network_t *pwc) {
 
   // Each time through the loop, we deal with local completions.
   command_t command;
-  while (_poll(PHOTON_PROBE_EVQ, rank, &command)) {
+  while (_poll(PHOTON_PROBE_EVQ, rank, &command, NULL)) {
     hpx_addr_t op = command_get_op(command);
     log_net("processing local command: %s\n", _straction(op));
     int e = hpx_xcall(HPX_HERE, op, HPX_NULL, command);
@@ -110,7 +118,7 @@ static void _probe_local(pwc_network_t *pwc) {
 /// all messages internally, using the local work-queue directly.
 static hpx_parcel_t *_probe(network_t *network, int rank) {
   command_t command;
-  while (_poll(PHOTON_PROBE_LEDGER, rank, &command)) {
+  while (_poll(PHOTON_PROBE_LEDGER, rank, &command, NULL)) {
     hpx_addr_t addr;
     hpx_action_t op;
     decode_command(command, &op, &addr);
