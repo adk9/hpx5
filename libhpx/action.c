@@ -288,10 +288,6 @@ bool action_is_interrupt(const struct action_table *table, hpx_action_t id) {
 int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_handler_t f,
                         unsigned int nargs, hpx_action_t *id, ...) {
   dbg_assert(id);
-  if (type == HPX_ACTION_TASK) {
-    type = HPX_ACTION_DEFAULT;
-    log_error("Tasks not supported. Promoting the task to an action...\n");
-  }
 
   *id = HPX_ACTION_INVALID;
   if (!nargs) {
