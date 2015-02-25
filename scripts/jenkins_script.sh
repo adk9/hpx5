@@ -22,6 +22,7 @@ case "$SYSTEM" in
     . /opt/modules/Modules/3.2.10/init/bash
     export INPUT_DIR=/u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n
     export RUNCMD="mpirun -n $NUMNODES --map-by node:PE=16 --tag-output"
+    module load openmpi/1.8.4_thread 
     ;;
   HPX5_BIGRED2)
     module load java
