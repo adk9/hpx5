@@ -108,7 +108,7 @@ static void _probe_local(pwc_network_t *pwc) {
 ///
 /// This function claims to return a list of parcels, but it actually processes
 /// all messages internally, using the local work-queue directly.
-static hpx_parcel_t *_pwc_probe(network_t *network, int rank) {
+static hpx_parcel_t *_probe(network_t *network, int rank) {
   command_t command;
   while (_poll(PHOTON_PROBE_LEDGER, rank, &command)) {
     hpx_addr_t addr;
@@ -129,9 +129,13 @@ static int _pwc_progress(network_t *network) {
   pwc_network_t *pwc = (void*)network;
   _probe_local(pwc);
   for (int i = 0, e = pwc->ranks; i < e; ++i) {
-    _pwc_probe(network, i);
+    _probe(network, i);
   }
   return 0;
+}
+
+static hpx_parcel_t *_pwc_probe(network_t *network, int rank) {
+  return NULL;
 }
 
 /// Perform a parcel send operation.
