@@ -64,10 +64,3 @@ static int _emulate_gwc_handler(size_t n, hpx_addr_t to, hpx_addr_t complete) {
 }
 HPX_ACTION_DEF(DEFAULT, _emulate_gwc_handler, isir_emulate_gwc, HPX_SIZE_T,
                HPX_ADDR, HPX_ADDR);
-
-/// Emulate a put-command.
-static int _emulate_command_handler(int src, hpx_action_t op, uint64_t args) {
-  return hpx_xcall(HPX_HERE, op, HPX_NULL, src, args);
-}
-HPX_ACTION_DEF(INTERRUPT, _emulate_command_handler, isir_emulate_command,
-               HPX_INT, HPX_ACTION_T, HPX_UINT64);

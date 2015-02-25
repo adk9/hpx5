@@ -92,9 +92,7 @@ static int _funneled_send(network_t *network, hpx_parcel_t *p) {
 
 static int _funneled_command(network_t *network, hpx_addr_t locality,
                              hpx_action_t op, uint64_t args) {
-  dbg_assert(network);
-  int rank = here->rank;
-  return hpx_xcall(locality, isir_emulate_command, HPX_NULL, rank, op, args);
+  return hpx_xcall(locality, op, HPX_NULL, here->rank, args);
 }
 
 static int _funneled_pwc(network_t *network,
