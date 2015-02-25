@@ -89,6 +89,13 @@ static int _funneled_send(network_t *network, hpx_parcel_t *p) {
   return LIBHPX_OK;
 }
 
+static int _funneled_command(network_t *network, hpx_addr_t rank,
+                             hpx_action_t op, uint64_t args) {
+  dbg_assert(network);
+  return hpx_xcall(HPX_THERE(rank), isir_emulate_command, HPX_NULL, here->rank,
+                   op, args);
+}
+
 static int _funneled_pwc(network_t *network,
                          hpx_addr_t to, const void *from, size_t n,
                          hpx_action_t lop, hpx_addr_t laddr,
@@ -213,6 +220,7 @@ network_t *network_isir_funneled_new(struct gas *gas, int nrx) {
   network->vtable.delete = _funneled_delete;
   network->vtable.progress = _funneled_progress;
   network->vtable.send = _funneled_send;
+  network->vtable.command = _funneled_command;
   network->vtable.pwc = _funneled_pwc;
   network->vtable.put = _funneled_put;
   network->vtable.get = _funneled_get;
