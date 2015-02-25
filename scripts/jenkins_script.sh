@@ -7,8 +7,10 @@ DIR=$2
 shift
 
 if [ "$HPXMODE_AXIS" == smp ] ;
+then
   export NUMNODES=1
 elif [ "$SYSTEM" == CREST_cutter ] ;
+then
   export NUMNODES=10
 else
   export NUMNODES=16
