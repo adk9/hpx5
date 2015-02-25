@@ -41,6 +41,10 @@ typedef struct network {
   int (*send)(struct network *, hpx_parcel_t *p)
     HPX_NON_NULL(1, 2);
 
+  int (*command)(struct network *network, hpx_addr_t rank,
+                 hpx_action_t op, uint64_t args)
+    HPX_NON_NULL(1);
+
   int (*pwc)(struct network *, hpx_addr_t to, const void *from, size_t n,
              hpx_action_t lop, hpx_addr_t laddr, hpx_action_t rop,
              hpx_addr_t raddr)
@@ -120,6 +124,21 @@ static inline int network_progress(network_t *network) {
 /// @returns  LIBHPX_OK The send was buffered successfully
 static inline int network_send(network_t *network, hpx_parcel_t *p) {
   return network->send(network, p);
+}
+
+
+/// Send a network command.
+///
+/// This sends a remote completion event to a locality. There is no data
+/// associated with this command. This is always locally synchronous.
+///
+/// @param      network The network to use.
+/// @param         rank The target rank.
+/// @param           op The operation for the command.
+/// @param         args The arguments for the command (40 bits packed with op).
+static inline int network_command(network_t *network, hpx_addr_t rank,
+                                  hpx_action_t op, uint64_t args) {
+  return network->command(network, rank, op, args);
 }
 
 /// Initiate an rDMA put operation with a remote completion event.

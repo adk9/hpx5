@@ -48,28 +48,32 @@ typedef struct pwc_network {
 } pwc_network_t;
 
 /// Utility to wrap a poll completion.
-static int _poll(unsigned type, int rank, uint64_t *op) {
+static int _poll(unsigned type, int rank, uint64_t *op, int *remaining) {
   int flag = 0;
-  int e = photon_probe_completion(rank, &flag, NULL, op, type);
+  int e = photon_probe_completion(rank, &flag, remaining, op, type);
   if (PHOTON_OK != e) {
     dbg_error("photon probe error\n");
   }
   return flag;
 }
 
-static const char *_straction(hpx_action_t id) {
+static HPX_USED const char *_straction(hpx_action_t id) {
   dbg_assert(here && here->actions);
   return action_table_get_key(here->actions, id);
 }
 
 static void _pwc_delete(network_t *network) {
   dbg_assert(network);
-
   pwc_network_t *pwc = (pwc_network_t*)network;
-
-  // If we're supposed to flush our send-side network, then go ahead and do so.
-  if (pwc->flush_on_delete) {
-
+  // Finish up our outstanding rDMA, and then wait. This prevents us from
+  // deregistering segments while there are outstanding requests.
+  {
+    int remaining;
+    command_t command;
+    do {
+      _poll(PHOTON_PROBE_EVQ, here->rank, &command, &remaining);
+    } while (remaining > 0);
+    boot_barrier(here->boot);
   }
 
   for (int i = 0; i < pwc->ranks; ++i) {
@@ -96,10 +100,10 @@ static void _probe_local(pwc_network_t *pwc) {
 
   // Each time through the loop, we deal with local completions.
   command_t command;
-  while (_poll(PHOTON_PROBE_EVQ, rank, &command)) {
+  while (_poll(PHOTON_PROBE_EVQ, rank, &command, NULL)) {
     hpx_addr_t op = command_get_op(command);
     log_net("processing local command: %s\n", _straction(op));
-    int e = hpx_xcall(HPX_HERE, op, HPX_NULL, command);
+    int e = hpx_xcall(HPX_HERE, op, HPX_NULL, rank, command);
     dbg_assert_str(HPX_SUCCESS == e, "failed to process local command\n");
   }
 }
@@ -110,12 +114,10 @@ static void _probe_local(pwc_network_t *pwc) {
 /// all messages internally, using the local work-queue directly.
 static hpx_parcel_t *_probe(network_t *network, int rank) {
   command_t command;
-  while (_poll(PHOTON_PROBE_LEDGER, rank, &command)) {
-    hpx_addr_t addr;
-    hpx_action_t op;
-    decode_command(command, &op, &addr);
+  while (_poll(PHOTON_PROBE_LEDGER, rank, &command, NULL)) {
+    hpx_addr_t op = command_get_op(command);
     log_net("processing command %s from rank %d\n", _straction(op), rank);
-    int e = hpx_call(addr, op, HPX_NULL, &rank, sizeof(rank));
+    int e = hpx_xcall(HPX_HERE, op, HPX_NULL, rank, command);
     dbg_assert_str(HPX_SUCCESS == e, "failed to process command\n");
   }
   return NULL;
@@ -164,6 +166,15 @@ static int _pwc_send(network_t *network, hpx_parcel_t *p) {
   else {
     return peer_send_rendezvous(peer, p, HPX_NULL);
   }
+}
+
+static int _pwc_command(network_t *network, hpx_addr_t locality,
+                        hpx_action_t op, uint64_t args) {
+  pwc_network_t *pwc = (void*)network;
+  int rank = gas_owner_of(pwc->gas, locality);
+  peer_t *peer = &pwc->peers[rank];
+  command_t rsync = encode_command(op, args);
+  return peer_pwc(peer, 0, NULL, 0, 0, rsync, SEGMENT_NULL);
 }
 
 /// Perform a put-with-command operation to a global heap address.
@@ -302,6 +313,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   pwc->vtable.delete = _pwc_delete;
   pwc->vtable.progress = _pwc_progress;
   pwc->vtable.send = _pwc_send;
+  pwc->vtable.command = _pwc_command;
   pwc->vtable.pwc = _pwc_pwc;
   pwc->vtable.put = _pwc_put;
   pwc->vtable.get = _pwc_get;

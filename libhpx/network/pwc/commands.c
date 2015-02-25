@@ -27,7 +27,7 @@ uint64_t command_get_arg(command_t command) {
 }
 
 command_t encode_command(hpx_action_t op, uint64_t arg) {
-  dbg_assert(op != HPX_ACTION_NULL);
+  dbg_assert(op != HPX_ACTION_NULL || arg == HPX_NULL);
   return ((uint64_t)op << GPA_OFFSET_BITS) + (arg & GPA_OFFSET_MASK);
 }
 
