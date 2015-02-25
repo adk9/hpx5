@@ -10,5 +10,6 @@ Version: @PACKAGE_VERSION@
 Requires: libffi
 Cflags: -I${includedir} -I${libdir}/libffi-3.99999/include/
 Libs: -L${libdir} -lhpx
-Libs.private: @PMI_LIBS@ @HUGETLBFS_LIBS@ @MPI_LIBS@ @PORTALS_LIBS@ @PTHREAD_LIBS@ @PE_ENV_LIBS@ @PTHREAD_CFLAGS@  -lsync -ljemalloc_hpx
+Libs.private: @PMI_LIBS@ @HUGETLBFS_LIBS@ @MPI_LIBS@ @PORTALS_LIBS@ @PTHREAD_LIBS@ @PE_ENV_LIBS@ @PTHREAD_CFLAGS@ -lsync -ljemalloc_hpx
+Requires.private: @HPX_PRIVATE_PKGS@
 

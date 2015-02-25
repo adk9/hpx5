@@ -28,6 +28,6 @@ AC_DEFUN([HPX_CONTRIB_PHOTON],
       [ACX_CONFIGURE_DIR([$1], [$1], [" $HPX_PHOTON_CARGS"])
       	AC_SUBST(HPX_PHOTON_CPPFLAGS, " -I\$(top_srcdir)/$1/include")
 	AC_SUBST(HPX_PHOTON_DEPS, "\$(top_builddir)/$1/src/libphoton.la")
-        AC_SUBST(HPX_PHOTON_LIBS, "\$(top_builddir)/$1/src/libphoton.la $VERBS_LIBS $UGNI_LIBS")
+        AC_SUBST(HPX_PHOTON_LIBS, "\$(top_builddir)/$1/src/libphoton.la")
 	enable_external_photon=no])]
   AC_DEFINE([HAVE_PHOTON], [1], [Photon support enabled]))
