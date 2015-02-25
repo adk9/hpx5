@@ -196,11 +196,11 @@ int    _hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t lsync,
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem during
 ///          the hpx_call_cc invocation.
-int    _hpx_call_cc(hpx_addr_t addr, hpx_action_t action, void (*cleanup)(void*),
-                    void *env, int nargs, ...);
-#define hpx_call_cc(addr, action, cleanup, env, ...)                    \
-  _hpx_call_cc(addr, action, cleanup, env, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
-
+int    _hpx_call_cc(hpx_addr_t addr, hpx_action_t action,
+                    void (*cleanup)(void*), void *env, int nargs, ...);
+#define hpx_call_cc(addr, action, cleanup, env, ...)                 \
+  _hpx_call_cc(addr, action, cleanup, env, __HPX_NARGS(__VA_ARGS__), \
+               __VA_ARGS__)
 
 /// HPX collective operations.
 ///
