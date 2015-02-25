@@ -6,12 +6,20 @@ OP=$1
 DIR=$2
 shift
 
+if [ "$HPXMODE_AXIS" == smp ] ;
+  export NUMNODES=1
+elif [ "$SYSTEM" == CREST_cutter ] ;
+  export NUMNODES=10
+else
+  export NUMNODES=16
+fi
+
 function add_init() {
 case "$SYSTEM" in
   CREST_cutter)
     . /opt/modules/Modules/3.2.10/init/bash
     export INPUT_DIR=/u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n
-    export RUNCMD="mpirun -n 10 --map-by node:PE=16 --tag-output"
+    export RUNCMD="mpirun -n $NUMNODES --map-by node:PE=16 --tag-output"
     ;;
   HPX5_BIGRED2 | MARCINS_SWAN)
     module load java
@@ -21,7 +29,7 @@ case "$SYSTEM" in
     export CRAYPE_LINK_TYPE=dynamic
     export PATH=/N/home/h/p/hpx5/BigRed2/new_modules/bin:$PATH
     export INPUT_DIR=/N/dc2/scratch/zalewski/dimacs/Random4-n
-    export RUNCMD="aprun -n 16 -N 1 -b"
+    export RUNCMD="aprun -n $NUMNODES -N 1 -b"
     ;;
   *)
     echo "Unknown system $SYSTEM."
