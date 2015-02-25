@@ -80,7 +80,7 @@ HPX_ALIGNED(8)
 /// @{
 
 /// Used to cause a locality to shutdown.
-HPX_INTERNAL extern hpx_action_t locality_shutdown;
+HPX_INTERNAL extern HPX_ACTION_DECL(locality_shutdown);
 
 typedef struct {
   hpx_action_t action;
