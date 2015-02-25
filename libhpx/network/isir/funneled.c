@@ -56,8 +56,7 @@ static void _send_all(_funneled_t *network) {
 
 /// Delete a funneled network.
 static void _funneled_delete(network_t *network) {
-  if (!network)
-    return;
+  dbg_assert(network);
 
   _funneled_t *this = (void*)network;
 
