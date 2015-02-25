@@ -93,19 +93,19 @@ int main(int argc, char *argv[]) {
   hpx_type_t array_type;
   hpx_array_type_create(&array_type, HPX_INT, 10);
   assert(array_type);
-  HPX_REGISTER_TYPED_ACTION(_test_fib, &_test_array, array_type);
+  HPX_REGISTER_TYPED_ACTION(DEFAULT, _test_fib, &_test_array, array_type);
 
   hpx_type_t struct_type;
   hpx_struct_type_create(&struct_type, HPX_INT, HPX_INT, HPX_INT, HPX_INT,
                          HPX_INT, HPX_INT, HPX_INT, HPX_INT, HPX_INT, HPX_INT);
   assert(struct_type);
-  HPX_REGISTER_TYPED_ACTION(_test_fib, &_test_struct, struct_type);
+  HPX_REGISTER_TYPED_ACTION(DEFAULT, _test_fib, &_test_struct, struct_type);
 
   hpx_type_t point_struct_type;
   hpx_struct_type_create(&point_struct_type, HPX_INT, HPX_DOUBLE, HPX_DOUBLE,
                          HPX_DOUBLE);
   assert(point_struct_type);
-  HPX_REGISTER_TYPED_ACTION(_test_nxyz, &_test_point, point_struct_type);
+  HPX_REGISTER_TYPED_ACTION(DEFAULT, _test_nxyz, &_test_point, point_struct_type);
 
   int e = hpx_run(&test_datatype, NULL, 0);
 
