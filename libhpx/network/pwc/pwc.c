@@ -65,7 +65,6 @@ static const char *_straction(hpx_action_t id) {
 static void _pwc_delete(network_t *network) {
   dbg_assert(network);
   pwc_network_t *pwc = (pwc_network_t*)network;
-
   // Finish up our outstanding rDMA, and then wait. This prevents us from
   // deregistering segments while there are outstanding requests.
   {
@@ -104,7 +103,7 @@ static void _probe_local(pwc_network_t *pwc) {
   while (_poll(PHOTON_PROBE_EVQ, rank, &command, NULL)) {
     hpx_addr_t op = command_get_op(command);
     log_net("processing local command: %s\n", _straction(op));
-    int e = hpx_xcall(HPX_HERE, op, HPX_NULL, command);
+    int e = hpx_xcall(HPX_HERE, op, HPX_NULL, rank, command);
     dbg_assert_str(HPX_SUCCESS == e, "failed to process local command\n");
   }
 }
@@ -116,11 +115,9 @@ static void _probe_local(pwc_network_t *pwc) {
 static hpx_parcel_t *_probe(network_t *network, int rank) {
   command_t command;
   while (_poll(PHOTON_PROBE_LEDGER, rank, &command, NULL)) {
-    hpx_addr_t addr;
-    hpx_action_t op;
-    decode_command(command, &op, &addr);
+    hpx_addr_t op = command_get_op(command);
     log_net("processing command %s from rank %d\n", _straction(op), rank);
-    int e = hpx_call(addr, op, HPX_NULL, &rank, sizeof(rank));
+    int e = hpx_xcall(HPX_HERE, op, HPX_NULL, rank, command);
     dbg_assert_str(HPX_SUCCESS == e, "failed to process command\n");
   }
   return NULL;
@@ -169,6 +166,15 @@ static int _pwc_send(network_t *network, hpx_parcel_t *p) {
   else {
     return peer_send_rendezvous(peer, p, HPX_NULL);
   }
+}
+
+static int _pwc_command(network_t *network, hpx_addr_t locality,
+                        hpx_action_t op, uint64_t args) {
+  pwc_network_t *pwc = (void*)network;
+  int rank = gas_owner_of(pwc->gas, locality);
+  peer_t *peer = &pwc->peers[rank];
+  command_t rsync = encode_command(op, args);
+  return peer_pwc(peer, 0, NULL, 0, 0, rsync, SEGMENT_NULL);
 }
 
 /// Perform a put-with-command operation to a global heap address.
@@ -307,6 +313,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   pwc->vtable.delete = _pwc_delete;
   pwc->vtable.progress = _pwc_progress;
   pwc->vtable.send = _pwc_send;
+  pwc->vtable.command = _pwc_command;
   pwc->vtable.pwc = _pwc_pwc;
   pwc->vtable.put = _pwc_put;
   pwc->vtable.get = _pwc_get;

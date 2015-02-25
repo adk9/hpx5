@@ -33,33 +33,36 @@ static uint32_t _index_of(eager_buffer_t *buffer, uint64_t i) {
 }
 
 /// Command sent to receive in the eager buffer.
-static HPX_INTERRUPT(_eager_rx, int *src) {
-  peer_t *peer = pwc_get_peer(*src);
+static int _eager_rx_handler(int src, uint64_t command) {
+  peer_t *peer = pwc_get_peer(src);
   eager_buffer_t *eager = &peer->rx;
   hpx_parcel_t *parcel = eager_buffer_rx(eager);
-  log_net("received eager parcel bytes from %d (%s)\n", *src,
+  log_net("received eager parcel bytes from %d (%s)\n", src,
           action_table_get_key(here->actions, parcel->action));
   scheduler_spawn(parcel);
   return HPX_SUCCESS;
 }
+static HPX_ACTION_DEF(INTERRUPT, _eager_rx_handler, _eager_rx, HPX_INT,
+                      HPX_UINT64);
 
 /// Free a parcel.
-static int _free_parcel_handler(command_t command) {
+static int _free_parcel_handler(int src, command_t command) {
   uint64_t offset = command_get_arg(command);
   hpx_parcel_t *p = pgas_offset_to_lva(offset);
   log_net("releasing sent parcel %p\n", (void*)p);
   hpx_parcel_release(p);
   return HPX_SUCCESS;
 }
-HPX_ACTION_DEF(INTERRUPT, _free_parcel_handler, free_parcel, HPX_UINT64);
+HPX_ACTION_DEF(INTERRUPT, _free_parcel_handler, free_parcel, HPX_INT,
+               HPX_UINT64);
 
 /// This handles the wrap operation at the receiver.
 ///
 /// This currently assumes that rx buffer operations occur in-order, so that
 /// when the wrap commands arrives we can just increment the min index the
 /// amount remaining to exactly wrap the buffer.
-static HPX_INTERRUPT(_eager_rx_wrap, int *src) {
-  peer_t *peer = pwc_get_peer(*src);
+static int _eager_rx_wrap_handler(int src, command_t command) {
+  peer_t *peer = pwc_get_peer(src);
   eager_buffer_t *rx = &peer->rx;
   uint32_t min = _index_of(rx, rx->min);
   uint32_t r = (rx->size - min);
@@ -67,9 +70,11 @@ static HPX_INTERRUPT(_eager_rx_wrap, int *src) {
   rx->min += r;
   dbg_assert_str(_index_of(rx, rx->min) == 0,
                  "%u bytes did not unwrap the buffer\n", r);
-  log_net("eager buffer %d wrapped (%u bytes)\n", *src, r);
+  log_net("eager buffer %d wrapped (%u bytes)\n", src, r);
   return HPX_SUCCESS;
 }
+static HPX_ACTION_DEF(INTERRUPT, _eager_rx_wrap_handler, _eager_rx_wrap,
+                      HPX_INT, HPX_UINT64);
 
 static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p);
 
@@ -151,6 +156,10 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
     log_error("failed pwc to peer %d\n", target);
   }
   return e;
+
+  // suppress warnings
+  (void)rva;
+  (void)sequence;
 }
 
 int eager_buffer_init(eager_buffer_t* b, peer_t *p, uint64_t tx_base,

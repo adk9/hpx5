@@ -130,7 +130,7 @@ static int _send_buffer_progress(send_buffer_t *sends) {
 /// occurred. This signal indicates that we have an opportunity to progress the
 /// peer's eager send buffer.
 ///
-static int _finish_get_rx_min_handler(command_t command) {
+static int _finish_get_rx_min_handler(int src, command_t command) {
   uint64_t arg = command_get_arg(command);
   dbg_assert(arg < UINT32_MAX);
   uint32_t id = (uint32_t)arg;
@@ -140,7 +140,7 @@ static int _finish_get_rx_min_handler(command_t command) {
   return _send_buffer_progress(&peer->send);
 }
 static HPX_ACTION_DEF(INTERRUPT, _finish_get_rx_min_handler, _finish_get_rx_min,
-                      HPX_UINT64);
+                      HPX_INT, HPX_UINT64);
 
 int send_buffer_init(send_buffer_t *sends, struct eager_buffer *tx,
                      uint32_t size) {
