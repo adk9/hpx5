@@ -759,7 +759,7 @@ void scheduler_yield(void) {
   dbg_assert(parcel_get_stack(to));
   dbg_assert(parcel_get_stack(to)->sp);
   // transfer to the new thread
-  thread_transfer(to, _checkpoint_yield, self->current);
+  thread_transfer(to, _checkpoint_yield, from);
 }
 
 void hpx_thread_yield(void) {
