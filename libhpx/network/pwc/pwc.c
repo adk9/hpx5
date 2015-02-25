@@ -42,6 +42,8 @@ typedef struct pwc_network {
   gas_t                  *gas;
   size_t          eager_bytes;
   char                 *eager;
+  int         flush_on_delete;
+  int          UNUSED_PADDING;
   peer_t                peers[];
 } pwc_network_t;
 
@@ -64,6 +66,12 @@ static void _pwc_delete(network_t *network) {
   dbg_assert(network);
 
   pwc_network_t *pwc = (pwc_network_t*)network;
+
+  // If we're supposed to flush our send-side network, then go ahead and do so.
+  if (pwc->flush_on_delete) {
+
+  }
+
   for (int i = 0; i < pwc->ranks; ++i) {
     peer_t *peer = &pwc->peers[i];
     if (i == pwc->rank) {
@@ -96,8 +104,11 @@ static void _probe_local(pwc_network_t *pwc) {
   }
 }
 
-/// Probe for remote completions.
-static void _probe(pwc_network_t *pwc, int rank) {
+/// Probe for remote completions from @p rank.
+///
+/// This function claims to return a list of parcels, but it actually processes
+/// all messages internally, using the local work-queue directly.
+static hpx_parcel_t *_pwc_probe(network_t *network, int rank) {
   command_t command;
   while (_poll(PHOTON_PROBE_LEDGER, rank, &command)) {
     hpx_addr_t addr;
@@ -107,13 +118,18 @@ static void _probe(pwc_network_t *pwc, int rank) {
     int e = hpx_call(addr, op, HPX_NULL, &rank, sizeof(rank));
     dbg_assert_str(HPX_SUCCESS == e, "failed to process command\n");
   }
+  return NULL;
 }
 
+/// Progress the pwc() network.
+///
+/// Currently, this processes all outstanding local completions and then probes
+/// each potential source for commands. It is not thread safe.
 static int _pwc_progress(network_t *network) {
   pwc_network_t *pwc = (void*)network;
   _probe_local(pwc);
   for (int i = 0, e = pwc->ranks; i < e; ++i) {
-    _probe(pwc, i);
+    _pwc_probe(network, i);
   }
   return 0;
 }
@@ -183,10 +199,6 @@ static int _pwc_get(network_t *network, void *lva, hpx_addr_t from, size_t n,
   uint64_t offset = gas_offset_of(pwc->gas, from);
   command_t lsync = encode_command(lop, laddr);
   return peer_get(peer, lva, n, offset, lsync, SEGMENT_HEAP);
-}
-
-static hpx_parcel_t *_pwc_probe(network_t *network, int nrx) {
-  return NULL;
 }
 
 static void _pwc_set_flush(network_t *network) {
