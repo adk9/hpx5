@@ -184,9 +184,9 @@ if [ "$OP" == "run" ]; then
         # Delta-Stepping
 	$RUNCMD ./sssp -q $TIMEOUT -c -z 40000 $HPXCORES --hpx-heap=$((1024 * 1024 * 1024 * 3)) --hpx-sendlimit=128 --hpx-transport=$HPXMODE_AXIS --hpx-recvlimit=512 "$INPUT_DIR/Random4-n.22.0.gr" "$INPUT_DIR/Random4-n.22.0.ss" || { echo 'SSSP test failed' ; exit 1; }
         # Chaotic
-        $RUNCMD ./sssp -q $TIMEOUT $HPXCORES --hpx-heap=$((1024 * 1024 * 1024 * 3)) --hpx-sendlimit=128 --hpx-transport=$HPXMODE_AXIS --hpx-recvlimit=512 "$INPUT_DIR/Random4-n.20.0.gr" "$INPUT_DIR/Random4-n.20.0.ss" || { echo 'SSSP test failed' ; exit 1; }
+        $RUNCMD ./sssp -q $TIMEOUT -c $HPXCORES --hpx-heap=$((1024 * 1024 * 1024 * 3)) --hpx-sendlimit=128 --hpx-transport=$HPXMODE_AXIS --hpx-recvlimit=512 "$INPUT_DIR/Random4-n.18.0.gr" "$INPUT_DIR/Random4-n.18.0.ss" || { echo 'SSSP test failed' ; exit 1; }
         # Distributed control
-        $RUNCMD ./sssp -q $TIMEOUT -d $HPXCORES --hpx-heap=$((1024 * 1024 * 1024 * 3)) --hpx-sendlimit=128 --hpx-transport=$HPXMODE_AXIS --hpx-recvlimit=512 $INPUT_DIR/Random4-n.12.0.gr $INPUT_DIR/Random4-n.12.0.ss || { echo 'SSSP test failed' ; exit 1; }
+        $RUNCMD ./sssp -q $TIMEOUT -d $HPXCORES --hpx-heap=$((1024 * 1024 * 1024 * 3)) --hpx-sendlimit=128 --hpx-transport=$HPXMODE_AXIS --hpx-recvlimit=512 $INPUT_DIR/Random4-n.18.0.gr $INPUT_DIR/Random4-n.18.0.ss || { echo 'SSSP test failed' ; exit 1; }
 fi
 
 exit 0
