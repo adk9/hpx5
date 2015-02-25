@@ -57,7 +57,7 @@ static int _poll(unsigned type, int rank, uint64_t *op, int *remaining) {
   return flag;
 }
 
-static const char *_straction(hpx_action_t id) {
+static HPX_USED const char *_straction(hpx_action_t id) {
   dbg_assert(here && here->actions);
   return action_table_get_key(here->actions, id);
 }
