@@ -64,7 +64,6 @@ static const char *_straction(hpx_action_t id) {
 
 static void _pwc_delete(network_t *network) {
   dbg_assert(network);
-  log_error("got here\n");
   pwc_network_t *pwc = (pwc_network_t*)network;
 
   // Finish up our outstanding rDMA, and then wait. This prevents us from
@@ -72,11 +71,9 @@ static void _pwc_delete(network_t *network) {
   {
     int remaining;
     command_t command;
-    int e;
     do {
-      e = _poll(PHOTON_PROBE_EVQ, here->rank, &command, &remaining);
-    } while (e == PHOTON_OK && remaining > 0);
-    log_error("got here\n");
+      _poll(PHOTON_PROBE_EVQ, here->rank, &command, &remaining);
+    } while (remaining > 0);
     boot_barrier(here->boot);
   }
 
