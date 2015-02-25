@@ -40,7 +40,6 @@ case "$SYSTEM" in
     module load PrgEnv-gnu
     module load craype-hugepages8M
     export CRAYPE_LINK_TYPE=dynamic
-    export PATH=/lus/scratch/p02087/jenkins/new_modules/bin:$PATH
     export INPUT_DIR=/lus/scratch/p02087/crest/Random4-n
     export RUNCMD="aprun -n $NUMNODES -N 1 -b"
     ;;
