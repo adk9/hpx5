@@ -405,8 +405,10 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
   // Will partition the lcos up into local and remote LCOs. We waste some stack
   // space here, since, for each lco in lcos, we either have a local mapping or
   // a remote address.
-  lco_t *locals[n];
-  hpx_addr_t remotes[n];
+  lco_t **locals = calloc(n, sizeof(*locals));
+  dbg_assert_str(locals, "failed to allocate array for %d elements", n);
+  hpx_addr_t *remotes = calloc(n, sizeof(*remotes));
+  dbg_assert_str(remotes, "failed to allocate array for %d elements", n);
 
   // Try and translate (and pin) all of the lcos, for any of the lcos that
   // aren't local, allocate a proxy future and initiate the remote wait. This
@@ -443,6 +445,9 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
       statuses[i] = status;
     }
   }
+
+  free(remotes);
+  free(locals);
   return errors;
 }
 
@@ -453,8 +458,10 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
   // Will partition the lcos up into local and remote LCOs. We waste some stack
   // space here, since, for each lco in lcos, we either have a local mapping or
   // a remote address.
-  lco_t *locals[n];
-  hpx_addr_t remotes[n];
+  lco_t **locals = calloc(n, sizeof(*locals));
+  dbg_assert_str(locals, "failed to allocate array for %d elements", n);
+  hpx_addr_t *remotes = calloc(n, sizeof(*remotes));
+  dbg_assert_str(remotes, "failed to allocate array for %d elements", n);
 
   // Try and translate (and pin) all of the lcos, for any of the lcos that
   // aren't local, allocate a proxy future and initiate the remote get. This
@@ -492,5 +499,98 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
       statuses[i] = status;
     }
   }
+
+  free(remotes);
+  free(locals);
   return errors;
+}
+
+/// Initialize a block of array of lco.
+static HPX_PINNED (_block_init, uint32_t *args) {
+  void *lco = hpx_thread_current_local_target();
+  dbg_assert(lco);
+
+  hpx_lco_type_t type = args[0];
+  int n = args[1];
+  int arg = args[2];
+
+  for (int i = 0; i < n; i++) {
+    void *addr;
+    switch (type) {
+      case HPX_TYPE_AND:
+        // this takes intptr_t limit as parameter
+        addr = (void *)((uintptr_t)lco + i * sizeof(and_t));
+        and_init(addr, (intptr_t)arg);
+        break;
+      case HPX_TYPE_FUTURE:
+        addr = (void *)((uintptr_t)lco + i * (sizeof(future_t) + arg));
+        future_init(addr, arg);
+        break;
+      case HPX_TYPE_CHAN:
+        addr = (void *)((uintptr_t)lco + i * (sizeof(chan_t) + arg));
+        chan_init(addr);
+        break;
+      default:
+        dbg_assert_str(type, "Invalid type for HPX_TYPE_LCO\n");
+    }
+  }
+  return HPX_SUCCESS;
+}
+
+/// Allocate an array of LCO local to the calling locality.
+/// @param       type the type of the LCO
+/// @param          n The (total) number of lcos to allocate
+/// @param        arg The size of each lco's value or the
+///                   number of inputs to the and (must be >= 0)
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_array_new(hpx_lco_type_t type, int n, int arg) {
+  // Get the sizeof lco class structure
+  uint32_t lco_bytes;
+  switch (type) {
+    case HPX_TYPE_AND:
+      lco_bytes = sizeof(and_t);
+      break;
+    case HPX_TYPE_FUTURE:
+      lco_bytes = sizeof(future_t) + arg;
+      break;
+    case HPX_TYPE_CHAN:
+      lco_bytes = sizeof(chan_t) + arg;
+      break;
+    default:
+      dbg_error("Invalid type for hpx_lco_array_new\n");
+  }
+
+  uint32_t  block_bytes = n * lco_bytes;
+  hpx_addr_t base = hpx_gas_alloc(block_bytes);
+
+  uint32_t args[] = {type, n, arg};
+  int e = hpx_call_sync(base, _block_init, NULL, 0, args, sizeof(args));
+  dbg_check(e, "call of _block_init_action failed\n");
+
+  // return the base address of the allocation
+  return base;
+}
+
+// Application level programmer doesn't know how big the lco is, so we
+// provide this array indexer.
+hpx_addr_t hpx_lco_array_at(hpx_lco_type_t type, hpx_addr_t array,
+                            int i, int arg) {
+  uint32_t lco_bytes;
+  switch (type) {
+    case HPX_TYPE_AND:
+      lco_bytes = sizeof(and_t);
+      break;
+    case HPX_TYPE_FUTURE:
+      lco_bytes = sizeof(future_t) + arg;
+      break;
+    case HPX_TYPE_CHAN:
+      lco_bytes = sizeof(chan_t) + arg;
+      break;
+    default:
+      dbg_error("Invalid type for hpx_lco_array_at\n");
+  }
+
+  void *local = here->gas->gva_to_lva(array);
+  return lva_to_gva((void *)((uintptr_t)local + i * lco_bytes));
 }

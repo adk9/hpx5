@@ -90,7 +90,6 @@ static void _cleanup(locality_t *l) {
   free(l);
 }
 
-
 int hpx_init(int *argc, char ***argv) {
   int status = HPX_SUCCESS;
 
@@ -199,7 +198,6 @@ int hpx_init(int *argc, char ***argv) {
   return status;
 }
 
-
 /// Called to run HPX.
 int _hpx_run(hpx_action_t *act, int nargs, ...) {
   int status = HPX_SUCCESS;
@@ -264,21 +262,17 @@ int _hpx_run(hpx_action_t *act, int nargs, ...) {
   return status;
 }
 
-
 int hpx_get_my_rank(void) {
   return (here) ? here->rank : -1;
 }
-
 
 int hpx_get_num_ranks(void) {
   return (here && here->boot) ? here->ranks : -1;
 }
 
-
 int hpx_get_num_threads(void) {
   return (here && here->sched) ? here->sched->n_workers : 0;
 }
-
 
 /// Called by the application to terminate the scheduler and network.
 void hpx_shutdown(int code) {
@@ -287,10 +281,13 @@ void hpx_shutdown(int code) {
 
   // make sure we flush our local network when we shutdown
   network_flush_on_shutdown(here->network);
-  int e = hpx_bcast(locality_shutdown, HPX_NULL, &code, sizeof(code));
-  hpx_thread_exit(e);
+  for (int i = 0, e = here->ranks; i < e; ++i) {
+    int e = network_command(here->network, HPX_THERE(i), locality_shutdown,
+                            (uint64_t)code);
+    dbg_assert(e == LIBHPX_OK);
+  }
+  hpx_thread_exit(HPX_SUCCESS);
 }
-
 
 /// Called by the application to shutdown the scheduler and network. May be
 /// called from any lightweight HPX thread, or the network thread.

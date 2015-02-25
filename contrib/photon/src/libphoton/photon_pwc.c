@@ -132,7 +132,11 @@ static int photon_pwc_try_packed(photonRequest req) {
     // size is too large, try something else
     return PHOTON_ERROR_RESOURCE;
   }
-
+  
+  dbg_trace("Posted Request: %d/0x%016lx/0x%016lx", req->proc,
+	    req->local_info.id,
+	    req->remote_info.id);
+  
   return PHOTON_OK;
   
  error_exit:
@@ -198,6 +202,10 @@ static int photon_pwc_try_ledger(photonRequest req, int curr) {
       goto error_exit;
     }
   }
+  
+  dbg_trace("Posted Request: %d/0x%016lx/0x%016lx", req->proc,
+	    req->local_info.id,
+	    req->remote_info.id);
 
   return PHOTON_OK;
   
@@ -294,7 +302,6 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
  queue_exit:
   sync_ms_queue_enqueue(rt->req_q, req);
   sync_fadd(&rt->qcount, 1, SYNC_RELAXED);
-  dbg_trace("Posted Request ID: %d/0x%016lx/0x%016lx", proc, local, remote);
   return PHOTON_OK;
   
  error_exit:
@@ -351,7 +358,7 @@ int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
     goto error_exit;
   }
 
-  dbg_trace("Posted Request ID: %d/0x%016lx/0x%016lx", proc, local, req->rattr.cookie);
+  dbg_trace("Posted Request: %d/0x%016lx/0x%016lx", proc, local, req->rattr.cookie);
 
   return PHOTON_OK;
 
@@ -359,7 +366,7 @@ int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   return PHOTON_ERROR;
 }
 
-int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags) {
+int _photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *request, int flags) {
   photonLedger ledger;
   photonLedgerEntry entry_iter;
   photonRequest req;
@@ -390,6 +397,10 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       dbg_trace("Completed and removing queued pwc request: 0x%016lx (ind=0x%016lx)",
 		req->id, req->local_info.id);
       photon_free_request(req);
+      if (remaining) {
+	*remaining = photon_count_request(proc);
+	dbg_trace("%d requests remaining", *remaining);
+      }
       return PHOTON_OK;
     }
 
@@ -422,6 +433,10 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
 	dbg_trace("Completed and removing pwc request: 0x%016lx (id=0x%016lx)",
 		  req->id, req->local_info.id);
 	photon_free_request(req);
+	if (remaining) {
+	  *remaining = photon_count_request(proc);
+	  dbg_trace("%d requests remaining", *remaining);
+	}
 	return PHOTON_OK;
       }
       else {

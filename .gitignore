@@ -7,6 +7,7 @@
 *~
 *.swp
 *.log
+*.trs
 *Makefile.in
 
 # /
@@ -111,6 +112,7 @@ contrib/photon/
 /tests/unit/test_gencount
 /tests/unit/test_global_mem_alloc
 /tests/unit/test_lco
+/tests/unit/test_array_lco
 /tests/unit/test_mem_alloc
 /tests/unit/test_memget
 /tests/unit/test_memput

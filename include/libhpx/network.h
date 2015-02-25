@@ -13,7 +13,6 @@
 #ifndef LIBHPX_NETWORK_H
 #define LIBHPX_NETWORK_H
 
-
 /// @file include/libhpx/network.h
 /// @brief Declare the network_t interface.
 ///
@@ -42,6 +41,10 @@ typedef struct network {
   int (*send)(struct network *, hpx_parcel_t *p)
     HPX_NON_NULL(1, 2);
 
+  int (*command)(struct network *network, hpx_addr_t rank,
+                 hpx_action_t op, uint64_t args)
+    HPX_NON_NULL(1);
+
   int (*pwc)(struct network *, hpx_addr_t to, const void *from, size_t n,
              hpx_action_t lop, hpx_addr_t laddr, hpx_action_t rop,
              hpx_addr_t raddr)
@@ -62,7 +65,6 @@ typedef struct network {
     HPX_NON_NULL(1);
 } network_t;
 
-
 /// Create a new network.
 ///
 /// This depends on the current boot and transport object to be configured in
@@ -78,7 +80,6 @@ network_t *network_new(struct config *config, struct boot *boot,
                        struct gas *gas, int nrx)
   HPX_NON_NULL(2, 3) HPX_MALLOC HPX_INTERNAL;
 
-
 /// Delete a network object.
 ///
 /// This does not synchronize. The caller is required to ensure that no other
@@ -88,7 +89,6 @@ network_t *network_new(struct config *config, struct boot *boot,
 static inline void network_delete(network_t *network) {
   network->delete(network);
 }
-
 
 /// Perform one network progress operation.
 ///
@@ -102,7 +102,6 @@ static inline int network_progress(network_t *network) {
   assert(network);
   return network->progress(network);
 }
-
 
 /// Initiate a parcel send over the network.
 ///
@@ -127,6 +126,20 @@ static inline int network_send(network_t *network, hpx_parcel_t *p) {
   return network->send(network, p);
 }
 
+
+/// Send a network command.
+///
+/// This sends a remote completion event to a locality. There is no data
+/// associated with this command. This is always locally synchronous.
+///
+/// @param      network The network to use.
+/// @param         rank The target rank.
+/// @param           op The operation for the command.
+/// @param         args The arguments for the command (40 bits packed with op).
+static inline int network_command(network_t *network, hpx_addr_t rank,
+                                  hpx_action_t op, uint64_t args) {
+  return network->command(network, rank, op, args);
+}
 
 /// Initiate an rDMA put operation with a remote completion event.
 ///
@@ -159,8 +172,7 @@ static inline int network_pwc(network_t *network,
   return network->pwc(network, to, from, n, lop, lsync, rop, rsync);
 }
 
-
-/// Initiate an rDMA put operation with a remote completion event.
+/// Initiate an rDMA put operation with a local completion event.
 ///
 /// This will copy @p n bytes between the @p from buffer and the @p to buffer,
 /// setting the @p local LCO when the @p from buffer can be reused, and the @p
@@ -180,8 +192,7 @@ static inline int network_put(network_t *network,
   return network->put(network, to, from, n, lop, laddr);
 }
 
-
-/// Initiate an rDMA put operation with a remote completion event.
+/// Initiate an rDMA get operation with a local completion event.
 ///
 /// This will copy @p n bytes between the @p from buffer and the @p to buffer,
 /// setting the @p local LCO when the @p from buffer can be accessed.
@@ -200,12 +211,10 @@ static inline int network_get(network_t *network,
   return network->get(network, to, from, n, lop, laddr);
 }
 
-
 /// Probe for received parcels.
-static inline hpx_parcel_t *network_probe(network_t *network, int nrx) {
-  return network->probe(network, nrx);
+static inline hpx_parcel_t *network_probe(network_t *network, int rank) {
+  return network->probe(network, rank);
 }
-
 
 /// Set the network's flush-on-shutdown flag.
 ///
@@ -219,6 +228,5 @@ static inline hpx_parcel_t *network_probe(network_t *network, int nrx) {
 static inline void network_flush_on_shutdown(network_t *network) {
   network->set_flush(network);
 }
-
 
 #endif // LIBHPX_NETWORK_H

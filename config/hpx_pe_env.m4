@@ -55,4 +55,5 @@ AC_DEFUN([HPX_PE_ENV],
                   hpx_pe_env_cflags_wall="-Wall"
                   hpx_pe_env_libs="$PE_ENV_LIBS"
                   hpx_pe_env="GNU"])
-   AC_MSG_RESULT([$hpx_pe_env])])
+   AC_MSG_RESULT([$hpx_pe_env])
+   AC_SUBST([PE_ENV_LIBS])])

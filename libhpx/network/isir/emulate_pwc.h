@@ -18,5 +18,4 @@
 extern HPX_ACTION_DECL(isir_emulate_pwc);
 extern HPX_ACTION_DECL(isir_emulate_gwc);
 
-
 #endif

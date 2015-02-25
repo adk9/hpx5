@@ -54,7 +54,7 @@ typedef struct {
   cvar_t full;
   cvar_t empty;
   uint32_t bits;
-  char data[] HPX_ALIGNED();
+  char data[] HPX_ALIGNED(8);
 } _netfuture_t;
 
 /// This data is used to locate netfutures within the system. An array of
@@ -372,7 +372,7 @@ static void _nf_lco_set(lco_t *lco, int size, const void *from) {
 ///               non-inline storage for netfutures, if desired.)
 /// @param shared Will this be a shared future?
 static void
-_future_init(_netfuture_t *f, int size, bool shared)
+_netfuture_init(_netfuture_t *f, int size, bool shared)
 {
   // the future vtable
   static const lco_class_t vtable = {
@@ -423,7 +423,7 @@ int _add_futures(hpx_netfuture_t *f) {
     //    _netfuture_t *nf = (_netfuture_t*)_netfuture_get_addr(&fi) + (sizeof(_netfuture_t) + fi.size) * i;
   for (int i = 0; i < _netfutures_at_rank(f); i ++) {
     _netfuture_t *nf = (_netfuture_t*)_netfuture_get_addr(&fi);
-    _future_init(nf, f->size, false);
+    _netfuture_init(nf, f->size, false);
     dbg_printf("  Initing future on rank %d at pa %p\n", hpx_get_my_rank(), (void*)nf);
     dbg_printf0("  Initing future on rank %d at pa %p\n", hpx_get_my_rank(), (void*)nf);
     fi.index += hpx_get_num_ranks();
@@ -517,19 +517,24 @@ hpx_addr_t _netfuture_get_data_addr_gas(hpx_netfuture_t *f) {
   return hpx_addr_add(rank_base_gas, offset, bs);
 }
 
-static int _local_set_wrapper_handler(uint64_t offset) {
+static int _local_set_wrapper_handler(int src, uint64_t offset) {
   hpx_addr_t target = pgas_offset_to_gpa(here->rank, offset);
   hpx_lco_set(target, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
 static HPX_ACTION_DEF(INTERRUPT, _local_set_wrapper_handler, _local_set_wrapper,
-                      HPX_UINT64);
+                      HPX_INT, HPX_UINT64);
 
-static HPX_ACTION(_set_wrapper, int *rank) {
-  hpx_addr_t target = hpx_thread_current_target();
+static int _set_wrapper_handler(int src, uint64_t offset) {
+  // @todo This is a hack because we don't export "commands" through the network
+  //       header. We should be able to use the commands defined in
+  //       network/commands directly.
+  hpx_addr_t target = pgas_offset_to_gpa(here->rank, offset);
   hpx_lco_set(target, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
+static HPX_ACTION_DEF(INTERRUPT, _set_wrapper_handler, _set_wrapper, HPX_INT,
+                      HPX_UINT64);
 
 void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_addr_t value,
                  hpx_addr_t lsync_lco) {

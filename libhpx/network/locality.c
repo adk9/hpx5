@@ -30,10 +30,14 @@
 locality_t *here = NULL;
 
 /// The action that shuts down the HPX scheduler.
-HPX_ACTION(locality_shutdown, int *code) {
-  scheduler_shutdown(here->sched, *code);
+static int _locality_shutdown_handler(int src, uint64_t code) {
+  dbg_assert(code < UINT64_MAX);
+  log_net("received shutdown from %d (code %i)\n", src, (uint32_t)code);
+  scheduler_shutdown(here->sched, (uint32_t)code);
   return HPX_SUCCESS;
 }
+HPX_ACTION_DEF(INTERRUPT, _locality_shutdown_handler, locality_shutdown,
+               HPX_INT, HPX_UINT64);
 
 HPX_ACTION(locality_call_continuation, locality_cont_args_t *args) {
   // just doing address translation, not pinning
