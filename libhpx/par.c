@@ -115,7 +115,7 @@ int hpx_par_call(hpx_action_t action, const int min, const int max,
                  const size_t env_size, const void *env,
                  hpx_addr_t sync) {
   dbg_assert(max - min > 0);
-  dbg_assert(branching_factor > 1);
+  dbg_assert(branching_factor > 0);
   dbg_assert(cutoff > 0);
 
   hpx_addr_t and = HPX_NULL;
