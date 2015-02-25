@@ -18,6 +18,7 @@
 
 #include "libhpx/config.h"
 #include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
 #include "libhpx/network.h"
 
 static void _smp_delete(network_t *network) {
@@ -33,7 +34,7 @@ static int _smp_send(network_t *network, hpx_parcel_t *p) {
 
 static int _smp_command(network_t *network, hpx_addr_t rank,
                         hpx_action_t op, uint64_t args) {
-  hpx_abort();
+  return hpx_xcall(HPX_HERE, op, HPX_NULL, here->rank, args);
 }
 
 static int _smp_pwc(network_t *network,
