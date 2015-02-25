@@ -94,10 +94,10 @@ boot_t *boot_new_mpi(void) {
     log_error("mpi initialization failed\n");
     return NULL;
   }
-
+  
   if (level != LIBHPX_THREAD_LEVEL) {
-    log_error("MPI thread level failed requested %d, received %d.\n",
-              LIBHPX_THREAD_LEVEL, level);
+    log_boot("MPI thread level failed requested %d, received %d.\n",
+	     LIBHPX_THREAD_LEVEL, level);
   }
 
   log_boot("thread_support_provided = %d\n", level);

@@ -54,7 +54,7 @@ typedef struct {
   cvar_t full;
   cvar_t empty;
   uint32_t bits;
-  char data[] HPX_ALIGNED();
+  char data[] HPX_ALIGNED(8);
 } _netfuture_t;
 
 /// This data is used to locate netfutures within the system. An array of
