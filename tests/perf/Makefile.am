@@ -14,8 +14,8 @@ TESTS = perf_gas_alloc		\
         perf_lco_chan		\
         perf_lco_sema		\
         perf_lco_future		\
-        perf_lco_netfutures	
-#        perf_lco_netfutures_msgSize
+        perf_lco_netfutures	\
+        perf_lco_netfutures_msgSize
 
 
 if ENABLE_LENGTHY_TESTS
@@ -37,8 +37,8 @@ perf_lco_sema_DEPENDENCIES			= $(HPX_DEPS)
 perf_lco_future_DEPENDENCIES			= $(HPX_DEPS)
 perf_lco_netfutures_SOURCES			= perf_lco_netfutures.c
 perf_lco_netfutures_DEPENDENCIES		= $(HPX_DEPS)
-#perf_lco_netfutures_msgSize_SOURCES		= perf_lco_netfutures_msgSize.c
-#perf_lco_netfutures_msgSize_DEPENDENCIES	= $(HPX_DEPS)
+perf_lco_netfutures_msgSize_SOURCES		= perf_lco_netfutures_msgSize.c
+perf_lco_netfutures_msgSize_DEPENDENCIES	= $(HPX_DEPS)
 
 if ENABLE_LENGTHY_TESTS
 perf_lco_and_SOURCES		= perf_lco_and.c
