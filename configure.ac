@@ -238,9 +238,14 @@ CFLAGS="$hpx_extra_cflags $CFLAGS"
 CCASFLAGS="$hpx_extra_ccasflags $CCASFLAGS"
 HPX_LIBS="$hpx_extra_libs"
 HPX_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la $HPX_HWLOC_DEPS $HPX_PHOTON_DEPS $HPX_JEMALLOC_DEPS $HPX_LIBFFI_DEPS"
+HPX_PRIVATE_PKGS=""
+if test "x$enable_photon" != xno; then
+  HPX_PRIVATE_PKGS="$HPX_PRIVATE_PKGS photon"
+fi
 
 AC_SUBST(HPX_LIBS)
 AC_SUBST(HPX_DEPS)
+AC_SUBST(HPX_PRIVATE_PKGS)
 
 # -----------------------------------------------------------------------------
 # Use autoconf to configure all of the Makefiles that need to be processed.

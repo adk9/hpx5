@@ -97,7 +97,8 @@ static HPX_ACTION_DEF(DEFAULT, _get_parcel_handler, _get_parcel, HPX_SIZE_T,
                       HPX_ADDR);
 
 int peer_send_rendezvous(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync) {
-  uint32_t bytes = parcel_size(p);
+  size_t bytes = parcel_size(p); // this type must match the type of 
+                                 // _get_parcel'a first argument 
   hpx_addr_t gva = lva_to_gva(p);
   return hpx_xcall(HPX_THERE(peer->rank), _get_parcel, lsync, bytes, gva);
 }
