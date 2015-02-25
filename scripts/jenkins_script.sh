@@ -21,7 +21,7 @@ case "$SYSTEM" in
     export CRAYPE_LINK_TYPE=dynamic
     export PATH=/N/home/h/p/hpx5/BigRed2/new_modules/bin:$PATH
     export INPUT_DIR=/N/dc2/scratch/zalewski/dimacs/Random4-n
-    export RUNCMD="aprun -n 10 -N 1 -d 16"
+    export RUNCMD="aprun -n 16 -N 1 -b"
     ;;
   *)
     echo "Unknown system $SYSTEM."
