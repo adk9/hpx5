@@ -71,6 +71,7 @@ typedef ffi_type* hpx_type_t;
 
 #define HPX_SIZE_T             HPX_ULONG
 #define HPX_ADDR               HPX_UINT64
+#define HPX_ACTION_T           HPX_UINT16
 /// @}
 
 /// Create an HPX array datatype.
