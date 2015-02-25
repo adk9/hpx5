@@ -129,7 +129,7 @@ function do_build() {
     mkdir install
     
     echo "Configuring HPX."
-    $CFG_CMD --prefix="${DIR}/build/install/" ${HPXDEBUG} ${CFGFLAGS}
+    $CFG_CMD --prefix="${DIR}/build/install/" ${HPXDEBUG} ${CFGFLAGS} CFLAGS="-O3 -g"
     
     echo "Building HPX."
     make -j 128
@@ -173,6 +173,15 @@ case "$SYSTEM" in
     ;;
   *)
     exit 1
+    ;;
+esac
+
+case "$HPXDEBUG_CHOICE" in
+  on)
+    HPXDEBUG="--enable-debug"
+    ;;
+  off)
+    HPXDEBUG="--disable-debug"
     ;;
 esac
 
