@@ -23,7 +23,7 @@ case "$SYSTEM" in
     export INPUT_DIR=/u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n
     export RUNCMD="mpirun -n $NUMNODES --map-by node:PE=16 --tag-output"
     ;;
-  HPX5_BIGRED2 | MARCINS_SWAN)
+  HPX5_BIGRED2)
     module load java
     module unload PrgEnv-cray
     module load PrgEnv-gnu
@@ -31,6 +31,16 @@ case "$SYSTEM" in
     export CRAYPE_LINK_TYPE=dynamic
     export PATH=/N/home/h/p/hpx5/BigRed2/new_modules/bin:$PATH
     export INPUT_DIR=/N/dc2/scratch/zalewski/dimacs/Random4-n
+    export RUNCMD="aprun -n $NUMNODES -N 1 -b"
+    ;;
+  MARCINS_SWAN)
+    module load java
+    module unload PrgEnv-cray
+    module load PrgEnv-gnu
+    module load craype-hugepages8M
+    export CRAYPE_LINK_TYPE=dynamic
+    export PATH=/lus/scratch/p02087/jenkins/new_modules/bin:$PATH
+    export INPUT_DIR=/lus/scratch/p02087/crest/Random4-n
     export RUNCMD="aprun -n $NUMNODES -N 1 -b"
     ;;
   *)
@@ -122,7 +132,7 @@ CFGFLAGS=" ${JEMALLOC_AXIS} --enable-apps --enable-parallel-config"
 
 add_init
 
-case "$HPXMODE" in
+case "$HPXMODE_AXIS" in
     photon)
 	add_mpi
         add_photon
@@ -134,7 +144,7 @@ case "$HPXMODE" in
 	;;
 esac
 
-case "$HPXIBDEV" in
+case "$HPXIBDEV_AXIS" in
     qib0)
         export PSM_MEMORY=large
 	RUNCMD+=" --mca btl_openib_if_include ${HPXIBDEV}"
