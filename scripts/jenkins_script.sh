@@ -13,7 +13,7 @@ case "$SYSTEM" in
     export INPUT_DIR=/u/jsfiroz/DIMACS/ch9-1.1/inputs/Random4-n
     export RUNCMD="mpirun -n 10 --map-by node:PE=16 --tag-output"
     ;;
-  HPX5_BIGRED2)
+  HPX5_BIGRED2 | MARCINS_SWAN)
     module load java
     module unload PrgEnv-cray
     module load PrgEnv-gnu
@@ -58,7 +58,7 @@ case "$SYSTEM" in
     module load openmpi/1.8.4_thread
     CFGFLAGS+=" --with-mpi=ompi"
     ;;
-  HPX5_BIGRED2)
+  HPX5_BIGRED2 | MARCINS_SWAN)
     CFGFLAGS+=" --with-mpi"
     ;;
 esac
@@ -74,7 +74,7 @@ case "$SYSTEM" in
     export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
     export LIBRARY_PATH=/usr/lib64:$LIBRARY_PATH
     ;;
-  HPX5_BIGRED2)
+  HPX5_BIGRED2 | MARCINS_SWAN)
     export HPX_PHOTON_BACKEND=ugni
     export HPX_PHOTON_CARGS="--with-ugni"
     CFGFLAGS+=" --with-pmi --with-hugetlbfs"
@@ -140,7 +140,7 @@ case "$SYSTEM" in
   CREST_cutter)
     CFGFLAGS+=" CC=gcc"
     ;;
-  HPX5_BIGRED2)
+  HPX5_BIGRED2 | MARCINS_SWAN)
     CFGFLAGS+=" CC=cc"
     ;;
   *)
