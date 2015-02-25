@@ -50,11 +50,17 @@ case "$SYSTEM" in
     ;;
 esac
 case "$SIZE_CHOICE" in
-  long)
-    export TIMEOUT="60"
+  tiny)
+    export LARGE_SIZE=10
+    export SMALL_SIZE=10
     ;;
-  *)
-    export TIMEOUT="1"
+  medium)
+    export LARGE_SIZE=20
+    export SMALL_SIZE=14
+    ;;
+  large)
+    export LARGE_SIZE=22
+    export SMALL_SIZE=16
     ;;
 esac
 case "$HPXCORES_AXIS" in
@@ -182,11 +188,11 @@ if [ "$OP" == "run" ]; then
     # TBD: copy the inputs to the jenkins accounts
         cd apps/libPXGL/examples
         # Delta-Stepping
-	$RUNCMD ./sssp -q $TIMEOUT -c -z 40000 $HPXCORES --hpx-heap=$((1024 * 1024 * 1024 * 3)) --hpx-sendlimit=128 --hpx-transport=$HPXMODE_AXIS --hpx-recvlimit=512 "$INPUT_DIR/Random4-n.22.0.gr" "$INPUT_DIR/Random4-n.22.0.ss" || { echo 'SSSP test failed' ; exit 1; }
+	$RUNCMD ./sssp -q $TIME_CHOICE -c -z 40000 $HPXCORES --hpx-heap=$((1024 * 1024 * 1024 * 3)) --hpx-sendlimit=128 --hpx-transport=$HPXMODE_AXIS --hpx-recvlimit=512 $INPUT_DIR/Random4-n.$LARGE_SIZE.0.gr $INPUT_DIR/Random4-n.$LARGE_SIZE.0.ss || { echo 'SSSP test failed' ; exit 1; }
         # Chaotic
-        $RUNCMD ./sssp -q $TIMEOUT -c $HPXCORES --hpx-heap=$((1024 * 1024 * 1024 * 3)) --hpx-sendlimit=128 --hpx-transport=$HPXMODE_AXIS --hpx-recvlimit=512 "$INPUT_DIR/Random4-n.18.0.gr" "$INPUT_DIR/Random4-n.18.0.ss" || { echo 'SSSP test failed' ; exit 1; }
+        $RUNCMD ./sssp -q $TIME_CHOICE -c $HPXCORES --hpx-heap=$((1024 * 1024 * 1024 * 3)) --hpx-sendlimit=128 --hpx-transport=$HPXMODE_AXIS --hpx-recvlimit=512 $INPUT_DIR/Random4-n.$SMALL_SIZE.0.gr $INPUT_DIR/Random4-n.$SMALL_SIZE.0.ss || { echo 'SSSP test failed' ; exit 1; }
         # Distributed control
-        $RUNCMD ./sssp -q $TIMEOUT -d $HPXCORES --hpx-heap=$((1024 * 1024 * 1024 * 3)) --hpx-sendlimit=128 --hpx-transport=$HPXMODE_AXIS --hpx-recvlimit=512 $INPUT_DIR/Random4-n.18.0.gr $INPUT_DIR/Random4-n.18.0.ss || { echo 'SSSP test failed' ; exit 1; }
+        $RUNCMD ./sssp -q $TIME_CHOICE -d $HPXCORES --hpx-heap=$((1024 * 1024 * 1024 * 3)) --hpx-sendlimit=128 --hpx-transport=$HPXMODE_AXIS --hpx-recvlimit=512 $INPUT_DIR/Random4-n.$SMALL_SIZE.0.gr $INPUT_DIR/Random4-n.$SMALL_SIZE.0.ss || { echo 'SSSP test failed' ; exit 1; }
 fi
 
 exit 0
