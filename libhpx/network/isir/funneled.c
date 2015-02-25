@@ -22,6 +22,7 @@
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
 #include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
 
@@ -89,11 +90,11 @@ static int _funneled_send(network_t *network, hpx_parcel_t *p) {
   return LIBHPX_OK;
 }
 
-static int _funneled_command(network_t *network, hpx_addr_t rank,
+static int _funneled_command(network_t *network, hpx_addr_t locality,
                              hpx_action_t op, uint64_t args) {
   dbg_assert(network);
-  return hpx_xcall(HPX_THERE(rank), isir_emulate_command, HPX_NULL, here->rank,
-                   op, args);
+  int rank = here->rank;
+  return hpx_xcall(locality, isir_emulate_command, HPX_NULL, rank, op, args);
 }
 
 static int _funneled_pwc(network_t *network,
@@ -102,28 +103,28 @@ static int _funneled_pwc(network_t *network,
                          hpx_action_t rop, hpx_addr_t raddr) {
   dbg_assert(lop || !laddr); // !lop => !lsync
 
-  hpx_parcel_t *p = hpx_parcel_acquire(from, n);
-  if (!p) {
-    log_error("could not allocate a parcel to emulate put-with-completion\n");
-    return LIBHPX_ENOMEM;
-  }
 
-  p->target = to;
-  p->action = isir_emulate_pwc;
-  p->c_action = rop;
-  p->c_target = raddr;
-
-  // if there's a local operation, then chain it through an lco that gets
-  // triggered when the send finishes
   hpx_addr_t lsync = HPX_NULL;
+  hpx_addr_t rsync = HPX_NULL;
   if (lop) {
     lsync = hpx_lco_future_new(0);
     dbg_assert(lsync);
     int e = hpx_call_when_with_continuation(lsync, laddr, lop, lsync,
-                                            hpx_lco_delete_action,  &laddr);
+                                            hpx_lco_delete_action, &here->rank,
+                                            &laddr);
     dbg_check(e, "failed to chain parcel\n");
   }
-  return hpx_parcel_send(p, lsync);
+
+  if (rop) {
+    rsync = hpx_lco_future_new(0);
+    dbg_assert(rsync);
+    int e = hpx_call_when_with_continuation(rsync, raddr, rop, rsync,
+                                            hpx_lco_delete_action, &here->rank,
+                                            &raddr);
+    dbg_check(e, "failed to chain parcel\n");
+  }
+
+  return hpx_call_async(to, isir_emulate_pwc, lsync, rsync, from, n);
 }
 
 static int _funneled_put(network_t *net,
