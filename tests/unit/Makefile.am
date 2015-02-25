@@ -20,6 +20,7 @@ TESTS            = test_and_lco           \
                    test_global_mem_alloc  \
                    test_lco               \
                    test_array_lco         \
+                   test_user_lco          \
                    test_collectives       \
                    test_mem_alloc         \
                    test_memget            \
@@ -44,6 +45,7 @@ test_gencount_SOURCES           = test_gencount.c
 test_global_mem_alloc_SOURCES   = test_global_mem_alloc.c
 test_lco_SOURCES                = test_lco.c
 test_array_lco_SOURCES          = test_array_lco.c
+test_user_lco_SOURCES           = test_user_lco.c 
 test_collectives_SOURCES        = test_collectives.c
 test_mem_alloc_SOURCES          = test_mem_alloc.c
 test_memget_SOURCES             = test_memget.c
@@ -64,6 +66,7 @@ test_gencount_DEPENDENCIES           = $(HPX_DEPS)
 test_global_mem_alloc_DEPENDENCIES   = $(HPX_DEPS)
 test_lco_DEPENDENCIES                = $(HPX_DEPS)
 test_array_lco_DEPENDENCIES          = $(HPX_DEPS)
+test_user_lco_DEPENDENCIES          = $(HPX_DEPS)
 test_collectives_DEPENDENCIES        = $(HPX_DEPS)
 test_mem_alloc_DEPENDENCIES          = $(HPX_DEPS)
 test_memget_DEPENDENCIES             = $(HPX_DEPS)
