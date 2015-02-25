@@ -517,19 +517,24 @@ hpx_addr_t _netfuture_get_data_addr_gas(hpx_netfuture_t *f) {
   return hpx_addr_add(rank_base_gas, offset, bs);
 }
 
-static int _local_set_wrapper_handler(uint64_t offset) {
+static int _local_set_wrapper_handler(int src, uint64_t offset) {
   hpx_addr_t target = pgas_offset_to_gpa(here->rank, offset);
   hpx_lco_set(target, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
 static HPX_ACTION_DEF(INTERRUPT, _local_set_wrapper_handler, _local_set_wrapper,
-                      HPX_UINT64);
+                      HPX_INT, HPX_UINT64);
 
-static HPX_ACTION(_set_wrapper, int *rank) {
-  hpx_addr_t target = hpx_thread_current_target();
+static int _set_wrapper_handler(int src, uint64_t offset) {
+  // @todo This is a hack because we don't export "commands" through the network
+  //       header. We should be able to use the commands defined in
+  //       network/commands directly.
+  hpx_addr_t target = pgas_offset_to_gpa(here->rank, offset);
   hpx_lco_set(target, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
+static HPX_ACTION_DEF(INTERRUPT, _set_wrapper_handler, _set_wrapper, HPX_INT,
+                      HPX_UINT64);
 
 void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_addr_t value,
                  hpx_addr_t lsync_lco) {

@@ -44,13 +44,14 @@ int peer_get(peer_t *peer, void *lva, size_t offset, size_t n, command_t l,
 
 /// This local action just wraps the hpx_lco_set operation in an action that can
 /// be used as a network operation.
-static int _lco_set_handler(command_t command) {
+static int _lco_set_handler(int src, command_t command) {
   uint64_t offset = command_get_arg(command);
   hpx_addr_t lco = pgas_offset_to_gpa(here->rank, offset);
   hpx_lco_set(lco, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
-static HPX_ACTION_DEF(INTERRUPT, _lco_set_handler, _lco_set, HPX_UINT64);
+static HPX_ACTION_DEF(INTERRUPT, _lco_set_handler, _lco_set, HPX_INT,
+                      HPX_UINT64);
 
 /// Perform a rendezvous get operation on a parcel.
 ///
@@ -90,15 +91,15 @@ static int _get_parcel_handler(size_t bytes, hpx_addr_t from) {
   } else {
     hpx_lco_delete(lsync, HPX_NULL);
     parcel_launch(p);
-    return hpx_call_cc(from, free_parcel, NULL, NULL, &from);
+    return hpx_call_cc(from, free_parcel, NULL, NULL, &here->rank, &from);
   }
 }
 static HPX_ACTION_DEF(DEFAULT, _get_parcel_handler, _get_parcel, HPX_SIZE_T,
                       HPX_ADDR);
 
 int peer_send_rendezvous(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync) {
-  size_t bytes = parcel_size(p); // this type must match the type of 
-                                 // _get_parcel'a first argument 
+  size_t bytes = parcel_size(p); // this type must match the type of
+                                 // _get_parcel'a first argument
   hpx_addr_t gva = lva_to_gva(p);
   return hpx_xcall(HPX_THERE(peer->rank), _get_parcel, lsync, bytes, gva);
 }

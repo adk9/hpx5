@@ -31,7 +31,7 @@ void segment_fini(segment_t *segment)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 static inline void *segment_offset_to_rva(segment_t *segment, size_t offset) {
-  assert(!segment->size || offset < segment->size);
+  dbg_assert(!segment->size || offset < segment->size);
   return segment->base + offset;
 }
 

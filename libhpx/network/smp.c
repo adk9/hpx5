@@ -31,6 +31,11 @@ static int _smp_send(network_t *network, hpx_parcel_t *p) {
   hpx_abort();
 }
 
+static int _smp_command(network_t *network, hpx_addr_t rank,
+                        hpx_action_t op, uint64_t args) {
+  hpx_abort();
+}
+
 static int _smp_pwc(network_t *network,
                     hpx_addr_t to, const void *from, size_t n,
                     hpx_action_t lop, hpx_addr_t laddr,
@@ -61,6 +66,7 @@ static network_t _smp = {
   .delete = _smp_delete,
   .progress = _smp_progress,
   .send = _smp_send,
+  .command = _smp_command,
   .pwc = _smp_pwc,
   .put = _smp_put,
   .get = _smp_get,
