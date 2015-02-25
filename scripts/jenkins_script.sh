@@ -90,7 +90,7 @@ function add_photon() {
 CFGFLAGS+=" --enable-photon"
 case "$SYSTEM" in
   CREST_cutter)
-    export HPX_PHOTON_IBDEV=$HPXIBDEV
+    export HPX_PHOTON_IBDEV=$HPXDEV_AXIS
     export HPX_PHOTON_BACKEND=verbs
     # verbs/rdmacm library not in jenkins node config
     export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
@@ -146,13 +146,13 @@ case "$HPXMODE_AXIS" in
 	;;
 esac
 
-case "$HPXIBDEV_AXIS" in
+case "$HPXDEV_AXIS" in
     qib0)
         export PSM_MEMORY=large
-	RUNCMD+=" --mca btl_openib_if_include ${HPXIBDEV}"
+	RUNCMD+=" --mca btl_openib_if_include ${HPXDEV_AXIS}"
 	;;
     mlx4_0)
-	RUNCMD+=" --mca mtl ^psm --mca btl_openib_if_include ${HPXIBDEV}"
+	RUNCMD+=" --mca mtl ^psm --mca btl_openib_if_include ${HPXDEV_AXIS}"
 	;;
     *)
 	;;
