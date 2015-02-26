@@ -98,6 +98,8 @@ struct hpx_options_t
   const char *hpx_dbg_waitat_help; /**< @brief wait for debugger at specific locality help description.  */
   int hpx_dbg_waitonabort_flag;	/**< @brief call hpx_wait() inside of hpx_abort() for debugging (default=off).  */
   const char *hpx_dbg_waitonabort_help; /**< @brief call hpx_wait() inside of hpx_abort() for debugging help description.  */
+  int hpx_dbg_waitonsegv_flag;	/**< @brief call hpx_wait() for SIGSEGV for debugging (unreliable) (default=off).  */
+  const char *hpx_dbg_waitonsegv_help; /**< @brief call hpx_wait() for SIGSEGV for debugging (unreliable) help description.  */
   int hpx_dbg_mprotectstacks_flag;	/**< @brief use mprotect() to bracket stacks to look for stack overflows (default=off).  */
   const char *hpx_dbg_mprotectstacks_help; /**< @brief use mprotect() to bracket stacks to look for stack overflows help description.  */
   enum enum_hpx_trace_classes *hpx_trace_classes_arg;	/**< @brief set the event classes to trace.  */
@@ -170,6 +172,7 @@ struct hpx_options_t
   unsigned int hpx_log_level_given ;	/**< @brief Whether hpx-log-level was given.  */
   unsigned int hpx_dbg_waitat_given ;	/**< @brief Whether hpx-dbg-waitat was given.  */
   unsigned int hpx_dbg_waitonabort_given ;	/**< @brief Whether hpx-dbg-waitonabort was given.  */
+  unsigned int hpx_dbg_waitonsegv_given ;	/**< @brief Whether hpx-dbg-waitonsegv was given.  */
   unsigned int hpx_dbg_mprotectstacks_given ;	/**< @brief Whether hpx-dbg-mprotectstacks was given.  */
   unsigned int hpx_trace_classes_given ;	/**< @brief Whether hpx-trace-classes was given.  */
   unsigned int hpx_trace_dir_given ;	/**< @brief Whether hpx-trace-dir was given.  */
