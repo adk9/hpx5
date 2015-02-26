@@ -404,6 +404,7 @@ static hpx_parcel_t *_try_interrupt(hpx_parcel_t *p) {
   }
 
   _execute_interrupt(p);
+  hpx_parcel_release(p);
   return NULL;
 }
 
