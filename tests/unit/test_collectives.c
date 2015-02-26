@@ -41,7 +41,7 @@ static void _initDouble(double *input, const size_t bytes) {
 }
 
 /// Update *lhs with with the max(lhs, rhs);
-static void _maxDouble(double *lhs, const double *rhs) {
+static void _maxDouble(double *lhs, const double *rhs, const size_t bytes) {
   *lhs = (*lhs > *rhs) ? *lhs : *rhs;
 }
 
