@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <libgen.h>
 #include <limits.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <unistd.h>
 #include "libsync/locks.h"
@@ -24,6 +25,7 @@
 
 #include "libhpx/action.h"
 #include "libhpx/config.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/debug.h"
 
@@ -81,4 +83,26 @@ int log_error_internal(unsigned line, const char *filename, const char *func,
   _print(stderr, line, filename, func, fmt);
   sync_tatas_release(&_log_lock);
   return HPX_ERROR;
+}
+
+/// This is unsafe because we can't use gethostname or printf in a signal
+/// handler, particularly a SEGV handler.
+static void dbg_wait_on_segv(int signum) {
+  dbg_wait();
+}
+
+int dbg_init(config_t *config) {
+  if (DEBUG && config->dbg_waitonsegv) {
+    if (SIG_ERR == signal(SIGSEGV, dbg_wait_on_segv)) {
+      log_error("could not register dbg_wait_on_segv for SIGSEGV\n");
+      return LIBHPX_ERROR;
+    }
+    else {
+      log("registered dbg_wait_on_segv for SIGSEGV\n");
+    }
+  }
+  return LIBHPX_OK;
+}
+
+void dbg_fini(void) {
 }

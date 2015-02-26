@@ -50,6 +50,7 @@ const char *hpx_options_t_help[] = {
   "\nHPX Debug Options:",
   "      --hpx-dbg-waitat=[locality]\n                                wait for debugger at specific locality",
   "      --hpx-dbg-waitonabort     call hpx_wait() inside of hpx_abort() for \n                                  debugging  (default=off)",
+  "      --hpx-dbg-waitonsegv      call hpx_wait() for SIGSEGV for debugging \n                                  (unreliable)  (default=off)",
   "      --hpx-dbg-mprotectstacks  use mprotect() to bracket stacks to look for \n                                  stack overflows  (default=off)",
   "\nTracing:",
   "      --hpx-trace-classes=class set the event classes to trace  (possible \n                                  values=\"parcel\", \"pwc\", \"sched\", \n                                  \"all\")",
@@ -149,6 +150,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_log_level_given = 0 ;
   args_info->hpx_dbg_waitat_given = 0 ;
   args_info->hpx_dbg_waitonabort_given = 0 ;
+  args_info->hpx_dbg_waitonsegv_given = 0 ;
   args_info->hpx_dbg_mprotectstacks_given = 0 ;
   args_info->hpx_trace_classes_given = 0 ;
   args_info->hpx_trace_dir_given = 0 ;
@@ -197,6 +199,7 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_dbg_waitat_arg = NULL;
   args_info->hpx_dbg_waitat_orig = NULL;
   args_info->hpx_dbg_waitonabort_flag = 0;
+  args_info->hpx_dbg_waitonsegv_flag = 0;
   args_info->hpx_dbg_mprotectstacks_flag = 0;
   args_info->hpx_trace_classes_arg = NULL;
   args_info->hpx_trace_classes_orig = NULL;
@@ -252,27 +255,28 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_dbg_waitat_min = -1;
   args_info->hpx_dbg_waitat_max = -1;
   args_info->hpx_dbg_waitonabort_help = hpx_options_t_help[21] ;
-  args_info->hpx_dbg_mprotectstacks_help = hpx_options_t_help[22] ;
-  args_info->hpx_trace_classes_help = hpx_options_t_help[24] ;
+  args_info->hpx_dbg_waitonsegv_help = hpx_options_t_help[22] ;
+  args_info->hpx_dbg_mprotectstacks_help = hpx_options_t_help[23] ;
+  args_info->hpx_trace_classes_help = hpx_options_t_help[25] ;
   args_info->hpx_trace_classes_min = -1;
   args_info->hpx_trace_classes_max = -1;
-  args_info->hpx_trace_dir_help = hpx_options_t_help[25] ;
-  args_info->hpx_trace_filesize_help = hpx_options_t_help[26] ;
-  args_info->hpx_trace_at_help = hpx_options_t_help[27] ;
+  args_info->hpx_trace_dir_help = hpx_options_t_help[26] ;
+  args_info->hpx_trace_filesize_help = hpx_options_t_help[27] ;
+  args_info->hpx_trace_at_help = hpx_options_t_help[28] ;
   args_info->hpx_trace_at_min = -1;
   args_info->hpx_trace_at_max = -1;
-  args_info->hpx_pwc_parcelbuffersize_help = hpx_options_t_help[29] ;
-  args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[30] ;
-  args_info->hpx_photon_backend_help = hpx_options_t_help[32] ;
-  args_info->hpx_photon_ibdev_help = hpx_options_t_help[33] ;
-  args_info->hpx_photon_ethdev_help = hpx_options_t_help[34] ;
-  args_info->hpx_photon_ibport_help = hpx_options_t_help[35] ;
-  args_info->hpx_photon_usecma_help = hpx_options_t_help[36] ;
-  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[37] ;
-  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[38] ;
-  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[39] ;
-  args_info->hpx_photon_maxrd_help = hpx_options_t_help[40] ;
-  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[41] ;
+  args_info->hpx_pwc_parcelbuffersize_help = hpx_options_t_help[30] ;
+  args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[31] ;
+  args_info->hpx_photon_backend_help = hpx_options_t_help[33] ;
+  args_info->hpx_photon_ibdev_help = hpx_options_t_help[34] ;
+  args_info->hpx_photon_ethdev_help = hpx_options_t_help[35] ;
+  args_info->hpx_photon_ibport_help = hpx_options_t_help[36] ;
+  args_info->hpx_photon_usecma_help = hpx_options_t_help[37] ;
+  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[38] ;
+  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[39] ;
+  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[40] ;
+  args_info->hpx_photon_maxrd_help = hpx_options_t_help[41] ;
+  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[42] ;
   
 }
 
@@ -541,6 +545,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
   write_multiple_into_file(outfile, args_info->hpx_dbg_waitat_given, "hpx-dbg-waitat", args_info->hpx_dbg_waitat_orig, 0);
   if (args_info->hpx_dbg_waitonabort_given)
     write_into_file(outfile, "hpx-dbg-waitonabort", 0, 0 );
+  if (args_info->hpx_dbg_waitonsegv_given)
+    write_into_file(outfile, "hpx-dbg-waitonsegv", 0, 0 );
   if (args_info->hpx_dbg_mprotectstacks_given)
     write_into_file(outfile, "hpx-dbg-mprotectstacks", 0, 0 );
   write_multiple_into_file(outfile, args_info->hpx_trace_classes_given, "hpx-trace-classes", args_info->hpx_trace_classes_orig, hpx_option_parser_hpx_trace_classes_values);
@@ -1178,6 +1184,7 @@ hpx_option_parser_internal (int argc, char * const *argv, struct hpx_options_t *
         { "hpx-log-level",	2, NULL, 0 },
         { "hpx-dbg-waitat",	1, NULL, 0 },
         { "hpx-dbg-waitonabort",	0, NULL, 0 },
+        { "hpx-dbg-waitonsegv",	0, NULL, 0 },
         { "hpx-dbg-mprotectstacks",	0, NULL, 0 },
         { "hpx-trace-classes",	1, NULL, 0 },
         { "hpx-trace-dir",	1, NULL, 0 },
@@ -1441,6 +1448,18 @@ hpx_option_parser_internal (int argc, char * const *argv, struct hpx_options_t *
             if (update_arg((void *)&(args_info->hpx_dbg_waitonabort_flag), 0, &(args_info->hpx_dbg_waitonabort_given),
                 &(local_args_info.hpx_dbg_waitonabort_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "hpx-dbg-waitonabort", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* call hpx_wait() for SIGSEGV for debugging (unreliable).  */
+          else if (strcmp (long_options[option_index].name, "hpx-dbg-waitonsegv") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->hpx_dbg_waitonsegv_flag), 0, &(args_info->hpx_dbg_waitonsegv_given),
+                &(local_args_info.hpx_dbg_waitonsegv_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "hpx-dbg-waitonsegv", '-',
                 additional_error))
               goto failure;
           

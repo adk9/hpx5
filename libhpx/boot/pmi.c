@@ -134,11 +134,13 @@ _decode(const char *src, size_t slen, void *dst, size_t dlen) {
 static int HPX_USED _put_buffer(char *kvs, int rank, void *buffer, size_t len)
 {
   int length;
+  const int pmi_maxlen = 256;
 
   // allocate key
   int e = PMI_KVS_Get_key_length_max(&length);
   if (e != PMI_SUCCESS) {
-    return log_error("pmi: failed to get max key length.\n");
+    log_error("pmi: failed to get max key length.\n");
+    length = pmi_maxlen;
   }
   char *key = malloc(sizeof(*key) * length);
   snprintf(key, length, "%d", rank);
@@ -147,21 +149,24 @@ static int HPX_USED _put_buffer(char *kvs, int rank, void *buffer, size_t len)
   e = PMI_KVS_Get_value_length_max(&length);
   if (e != PMI_SUCCESS) {
     free(key);
-    return log_error("pmi: failed to get max value length.\n");
+    log_error("pmi: failed to get max value length.\n");
+    length = pmi_maxlen;
   }
   char *value = malloc(sizeof(*value) * length);
-  if ((_encode(buffer, len, value, (size_t*)&length)) != HPX_SUCCESS)
+  if ((_encode(buffer, len, value, (size_t*)&length)) != HPX_SUCCESS) {
     goto error;
+  }
 
   // do the key-value pair exchange
-  if ((PMI_KVS_Put(kvs, key, value)) != PMI_SUCCESS)
+  if ((PMI_KVS_Put(kvs, key, value)) != PMI_SUCCESS) {
     goto error;
+  }
 
-  if ((PMI_KVS_Commit(kvs)) != PMI_SUCCESS)
+  if ((PMI_KVS_Commit(kvs)) != PMI_SUCCESS) {
     goto error;
+  }
 
   PMI_Barrier();
-
   free(key);
   free(value);
   return length;
@@ -244,8 +249,9 @@ static int _allgather(const boot_t *boot, const void *cin, void *out, int n) {
 
   // allocate name for the nidpid map exchange
   int e = PMI_KVS_Get_name_length_max(&length);
-  if (e != PMI_SUCCESS)
-    return dbg_error("pmi: failed to get max name length.\n");
+  if (e != PMI_SUCCESS) {
+    return log_error("pmi: failed to get max name length.\n");
+  }
   char *name = malloc(sizeof(*name) * length);
   e = PMI_KVS_Get_my_name(name, length);
   if (e != PMI_SUCCESS) {

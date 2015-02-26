@@ -22,10 +22,10 @@ AC_CONFIG_HEADERS([include/config.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_USE_SYSTEM_EXTENSIONS
-AX_COMPILER_VENDOR
-HPX_PE_ENV
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
+AX_COMPILER_VENDOR
+HPX_PE_ENV
 
 # Checks for programs.
 AC_PROG_CC_C99
@@ -36,7 +36,7 @@ AM_PROG_AS
 AM_INIT_AUTOMAKE([1.11 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror parallel-tests color-tests])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
-LT_PREREQ([2.2.6])
+#LT_PREREQ([2.4.6])
 LT_INIT()
 #LT_INIT([disable-shared]) # we don't support dynamic linking correctly 
 
