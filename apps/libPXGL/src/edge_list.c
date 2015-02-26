@@ -111,6 +111,7 @@ int edge_list_from_file_action(const edge_list_from_file_args_t * const args) {
   // printf("Waiting on bcast.\n");
   hpx_lco_wait(init_termination_count_lco);
   hpx_lco_delete(init_termination_count_lco, HPX_NULL);
+  _increment_active_count(el->num_edges);  
 
   size_t filename_len = strlen(args->filename) + 1;
   const size_t local_args_size = sizeof(_edge_list_from_file_local_args_t) + filename_len;
@@ -130,7 +131,6 @@ int edge_list_from_file_action(const edge_list_from_file_args_t * const args) {
   printf("Waiting for completion LCO.  Time took to start local read loops: %fs\n", elapsed);
   now = hpx_time_now();
   hpx_addr_t edges_sync = hpx_lco_and_new(2);
-  _increment_active_count(el->num_edges);
   _detect_termination(edges_sync, edges_sync);
   hpx_lco_wait(edges_sync);
   elapsed = hpx_time_elapsed_ms(now)/1e3;

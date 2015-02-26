@@ -55,6 +55,7 @@ static int _send_termination_count_action(const hpx_addr_t *const args) {
   sync_fence(SYNC_SEQ_CST);
   current_counts[1] = sync_load(&finished_count, SYNC_RELAXED);
   current_counts[0] = sync_load(&active_count, SYNC_RELAXED);
+  hpx_thread_yield();
   hpx_lco_set(*args, sizeof(current_counts), current_counts, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
