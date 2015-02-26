@@ -36,7 +36,7 @@ AM_PROG_AS
 AM_INIT_AUTOMAKE([1.11 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror parallel-tests color-tests])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
-LT_PREREQ([2.2.6])
+LT_PREREQ([2.4.6])
 LT_INIT()
 #LT_INIT([disable-shared]) # we don't support dynamic linking correctly 
 
