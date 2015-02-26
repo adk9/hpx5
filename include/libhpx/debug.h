@@ -24,6 +24,14 @@
 # define DEBUG_IF(S) if (false)
 #endif
 
+/// Initialize any configurable debug data.
+int dbg_init(config_t *config)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+/// Finalize any debug data.
+void dbg_fini(void)
+  HPX_INTERNAL;
+
 /// Wait for the debugger.
 void dbg_wait(void)
   HPX_INTERNAL;
