@@ -101,30 +101,33 @@ typedef struct {
   char env[];
 } par_call_async_args_t;
 
+static int
+_hpx_par_call_helper(hpx_action_t action, const int min,
+                     const int max, const int branching_factor,
+                     const int cutoff,
+                     const size_t arg_size,
+                     void (*arg_init)(void*, const int, const void*),
+                     const size_t env_size, const void *env,
+                     hpx_addr_t sync);
+
 static HPX_ACTION(_par_call_async, par_call_async_args_t *args) {
   const size_t env_size = hpx_thread_current_args_size() - sizeof(*args);
-  return hpx_par_call(args->action, args->min, args->max, args->branching_factor, args->cutoff,
+  return _hpx_par_call_helper(args->action, args->min, args->max, args->branching_factor, args->cutoff,
                       args->arg_size, args->arg_init, env_size, &args->env, args->sync);
 }
 
-int hpx_par_call(hpx_action_t action, const int min, const int max,
-                 const int branching_factor,
-                 const int cutoff,
-                 const size_t arg_size,
-                 void (*arg_init)(void*, const int, const void*),
-                 const size_t env_size, const void *env,
-                 hpx_addr_t sync) {
+static int
+_hpx_par_call_helper(hpx_action_t action, const int min,
+                     const int max, const int branching_factor,
+                     const int cutoff,
+                     const size_t arg_size,
+                     void (*arg_init)(void*, const int, const void*),
+                     const size_t env_size, const void *env,
+                     hpx_addr_t sync) {  
   dbg_assert(max - min > 0);
   dbg_assert(branching_factor > 0);
   dbg_assert(cutoff > 0);
 
-  hpx_addr_t and = HPX_NULL;
-  if (sync) {
-    and = hpx_lco_and_new(max - min);
-    hpx_call_when_with_continuation(and, sync, hpx_lco_set_action,
-                                    and, hpx_lco_delete_action, NULL, 0);
-  }
-  
   const int n = max - min;
 
   // if we're still doing divide and conquer, then do it
@@ -141,7 +144,7 @@ int hpx_par_call(hpx_action_t action, const int min, const int max,
     args->branching_factor = branching_factor;
     args->arg_size = arg_size;
     args->arg_init = arg_init;
-    args->sync = and;
+    args->sync = sync;
     memcpy(&args->env, env, env_size);
 
     for (int i = 0, e = branching_factor; i < e; ++i) {
@@ -165,15 +168,35 @@ int hpx_par_call(hpx_action_t action, const int min, const int max,
       hpx_parcel_t *p = hpx_parcel_acquire(NULL, arg_size);
       hpx_parcel_set_action(p, action);
       hpx_parcel_set_cont_action(p, hpx_lco_set_action);
-      hpx_parcel_set_cont_target(p, and);
+      hpx_parcel_set_cont_target(p, sync);
       if (arg_init) {
         arg_init(hpx_parcel_get_data(p), i, env);
       }
       hpx_parcel_send(p, HPX_NULL);
     }
   }
-
   return HPX_SUCCESS;
+}
+
+int hpx_par_call(hpx_action_t action, const int min, const int max,
+                 const int branching_factor,
+                 const int cutoff,
+                 const size_t arg_size,
+                 void (*arg_init)(void*, const int, const void*),
+                 const size_t env_size, const void *env,
+                 hpx_addr_t sync) {
+  dbg_assert(max - min > 0);
+  dbg_assert(branching_factor > 0);
+  dbg_assert(cutoff > 0);
+
+  hpx_addr_t and = HPX_NULL;
+  if (sync) {
+    and = hpx_lco_and_new(max - min);
+    hpx_call_when_with_continuation(and, sync, hpx_lco_set_action,
+                                    and, hpx_lco_delete_action, NULL, 0);
+  }
+  return _hpx_par_call_helper(action, min, max, branching_factor, cutoff,
+                              arg_size, arg_init, env_size, env, and);
 }
 
 int hpx_par_call_sync(hpx_action_t action,
