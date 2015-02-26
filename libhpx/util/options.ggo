@@ -86,6 +86,9 @@ int optional multiple
 option "hpx-dbg-waitonabort" - "call hpx_wait() inside of hpx_abort() for debugging"
 flag off
 
+option "hpx-dbg-waitonsegv" - "call hpx_wait() for SIGSEGV for debugging (unreliable)"
+flag off
+
 option "hpx-dbg-mprotectstacks" - "use mprotect() to bracket stacks to look for stack overflows"
 flag off
 
