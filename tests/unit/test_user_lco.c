@@ -44,7 +44,7 @@ static bool _lco_predicate(bool *val, const size_t size) {
 
 static HPX_ACTION(_lco_set, int *i) {
   hpx_addr_t addr = hpx_thread_current_target();
-  int val = (*i == (rand() % 16));
+  int val = (*i == 16) ? 1 : (*i == (rand() % 15));
   hpx_lco_set(addr, sizeof(val), &val, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
