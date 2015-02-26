@@ -39,6 +39,7 @@ case "$SYSTEM" in
     module unload PrgEnv-cray
     module load PrgEnv-gnu
     module load craype-hugepages8M
+    export PATH=/home/users/p02087/tools/bin:$PATH
     export CRAYPE_LINK_TYPE=dynamic
     export INPUT_DIR=/lus/scratch/p02087/crest/Random4-n
     export RUNCMD="aprun -n $NUMNODES -N 1 -b"
