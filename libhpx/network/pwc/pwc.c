@@ -100,7 +100,7 @@ static void _probe_local(pwc_network_t *pwc) {
 
   // Each time through the loop, we deal with local completions.
   command_t command;
-  while (_poll(PHOTON_PROBE_EVQ, rank, &command, NULL)) {
+  while (_poll(PHOTON_PROBE_EVQ, PHOTON_ANY_SOURCE, &command, NULL)) {
     hpx_addr_t op = command_get_op(command);
     log_net("processing local command: %s\n", _straction(op));
     int e = hpx_xcall(HPX_HERE, op, HPX_NULL, rank, command);
