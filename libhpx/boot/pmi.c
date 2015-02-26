@@ -244,8 +244,9 @@ static int _allgather(const boot_t *boot, const void *cin, void *out, int n) {
 
   // allocate name for the nidpid map exchange
   int e = PMI_KVS_Get_name_length_max(&length);
-  if (e != PMI_SUCCESS)
-    return dbg_error("pmi: failed to get max name length.\n");
+  if (e != PMI_SUCCESS) {
+    return log_error("pmi: failed to get max name length.\n");
+  }
   char *name = malloc(sizeof(*name) * length);
   e = PMI_KVS_Get_my_name(name, length);
   if (e != PMI_SUCCESS) {
