@@ -20,53 +20,49 @@
 // Goal of this testcase is to use the user-defined LCO to achieve 
 // the “OR” gate
 
-static void _initBool (bool *input, const size_t size) {
-  *input = 0;
+typedef struct or_gate {
+  bool latch;
+  int  count;
+} _or_gate_t;
+
+static void _lco_init (bool *val, const size_t size) {
+  *val = 0;
 }
 
 // Update *lhs with the or gate value
-static void _orBool (bool *lhs, const bool *rhs, const size_t size) {
-  if ((*lhs == 0) && (*rhs == 0))
-    *lhs = 0;
-  else if ((*lhs == 1) && (*rhs == 0)) 
-    *lhs = 1;
-  else if ((*lhs == 0) && (*rhs == 1))
-    *lhs = 1;
-  else if ((*lhs == 1) && (*rhs == 1)) 
-    *lhs = 1;
+static void _lco_op (bool *val, const bool *new, const size_t size) {
+  *val ^= *new;
 }
 
 // A predicate that "guards" the LCO.
 // This has to return true as soon as soon as first one gets set to 
 // true.
-static bool _predicateBool(bool *lhs, const size_t size) {
-  if (*lhs == 1) 
-    return 1;
-  else
-    return 0;
+static bool _lco_predicate(bool *val, const size_t size) {
+  assert(val);
+  return (*val);
 }
 
-static HPX_PINNED(_or_set, void *UNUSED) {
+static HPX_ACTION(_lco_set, int *i) {
   hpx_addr_t addr = hpx_thread_current_target();
-  hpx_lco_set(addr, 0, NULL, HPX_NULL, HPX_NULL);
+  int val = (*i == (rand() % 16));
+  hpx_lco_set(addr, sizeof(val), &val, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
 
 static HPX_ACTION(test_libhpx_user_lco, void *UNUSED) {
-  printf("Starting the array of futures test\n");
-
-  // allocate and start a timer
-  hpx_time_t t1 = hpx_time_now();
-
-  hpx_addr_t lco = hpx_lco_user_new(sizeof(bool), (hpx_monoid_id_t)_initBool,
-                                     (hpx_monoid_op_t)_orBool,
-                                     (hpx_predicate_t)_predicateBool);
-  hpx_call(lco, _or_set, HPX_NULL, NULL, 0);
-
-  hpx_lco_wait(lco);
-  hpx_lco_delete(lco, HPX_NULL);
-
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  printf("Test user lco.\n");
+  hpx_addr_t lco[2];
+  lco[0] = hpx_lco_user_new(sizeof(_or_gate_t),
+                            (hpx_monoid_id_t)_lco_init,
+                            (hpx_monoid_op_t)_lco_op,
+                            (hpx_predicate_t)_lco_predicate);
+  lco[1] = hpx_lco_and_new(16);
+  for (int i = 0; i < 16; ++i) {
+    hpx_call(lco[0], _lco_set, lco[1], &i, sizeof(i));
+  }
+  hpx_lco_wait_all(2, lco, NULL);
+  hpx_lco_delete(lco[0], HPX_NULL);
+  hpx_lco_delete(lco[1], HPX_NULL);
   return HPX_SUCCESS;
 }
 
