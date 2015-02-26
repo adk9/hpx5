@@ -70,6 +70,8 @@ static void _cleanup(locality_t *l) {
     l->transport = NULL;
   }
 
+  dbg_fini();
+
   if (l->boot) {
     boot_delete(l->boot);
     l->boot = NULL;
@@ -134,6 +136,13 @@ int hpx_init(int *argc, char ***argv) {
   }
   here->rank = boot_rank(here->boot);
   here->ranks = boot_n_ranks(here->boot);
+
+  // initialize the debugging system
+  // @todo We would like to do this earlier but MPI_init() for the bootstrap
+  //       network overwrites our segv handler.
+  if (LIBHPX_OK != dbg_init(here->config)) {
+    goto unwind1;
+  }
 
   // Now that we know our rank, we can be more specific about waiting.
   if (config_dbg_waitat_isset(here->config, here->rank)) {
