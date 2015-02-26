@@ -20,11 +20,6 @@
 // Goal of this testcase is to use the user-defined LCO to achieve 
 // the “OR” gate
 
-typedef struct or_gate {
-  bool latch;
-  int  count;
-} _or_gate_t;
-
 static void _lco_init (bool *val, const size_t size) {
   *val = 0;
 }
@@ -44,7 +39,7 @@ static bool _lco_predicate(bool *val, const size_t size) {
 
 static HPX_ACTION(_lco_set, int *i) {
   hpx_addr_t addr = hpx_thread_current_target();
-  int val = (*i == 16) ? 1 : (*i == (rand() % 15));
+  int val = (*i == 15) ? 1 : (*i == (rand() % 15));
   hpx_lco_set(addr, sizeof(val), &val, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
@@ -52,7 +47,7 @@ static HPX_ACTION(_lco_set, int *i) {
 static HPX_ACTION(test_libhpx_user_lco, void *UNUSED) {
   printf("Test user lco.\n");
   hpx_addr_t lco[2];
-  lco[0] = hpx_lco_user_new(sizeof(_or_gate_t),
+  lco[0] = hpx_lco_user_new(sizeof(bool),
                             (hpx_monoid_id_t)_lco_init,
                             (hpx_monoid_op_t)_lco_op,
                             (hpx_predicate_t)_lco_predicate);
