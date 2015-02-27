@@ -41,7 +41,7 @@ static void _initDouble(double *input, const size_t bytes) {
 }
 
 /// Update *lhs with with the max(lhs, rhs);
-static void _maxDouble(double *lhs, const double *rhs) {
+static void _maxDouble(double *lhs, const double *rhs, const size_t bytes) {
   *lhs = (*lhs > *rhs) ? *lhs : *rhs;
 }
 
@@ -64,19 +64,21 @@ static HPX_ACTION(_advanceDomain_reduce, const unsigned long *epoch) {
     return HPX_RESEND;
   }
 
-  if (domain->maxcycles <= domain->cycle) {
+  if (domain->cycle >= domain->maxcycles) {
     hpx_gas_unpin(local);
     return HPX_SUCCESS;
   }
 
   // Compute my gnewdt, and then start the reduce
-  double gnewdt = (domain->cycle == 42) ? 3141592653.58979 :
+  double gnewdt = (domain->cycle == 0) ? 3141592653.58979 :
       3.14*(domain->rank+1) + domain->cycle;
   hpx_lco_set(domain->newdt, sizeof(double), &gnewdt, HPX_NULL, HPX_NULL);
 
-  ++domain->cycle;
-  const unsigned long next = *epoch + 1;
-  return hpx_call(local, _advanceDomain_reduce, HPX_NULL, &next, sizeof(next));
+  domain->cycle += 1;
+  //const unsigned long next = *epoch + 1;
+  hpx_gas_unpin(local);
+  //return hpx_call(local, _advanceDomain_reduce, HPX_NULL, &next, sizeof(next));
+  return HPX_SUCCESS;
 }
 
 static HPX_ACTION(test_libhpx_lco_reduce, void *UNUSED) {
@@ -86,7 +88,7 @@ static HPX_ACTION(test_libhpx_lco_reduce, void *UNUSED) {
   hpx_addr_t domain = hpx_gas_global_alloc(nDoms, sizeof(Domain));
   hpx_addr_t done = hpx_lco_and_new(nDoms);
 
-  hpx_addr_t newdt = hpx_lco_reduce_new(nDoms*maxCycles, sizeof(double),
+  hpx_addr_t newdt = hpx_lco_reduce_new(nDoms, sizeof(double),
                                         (hpx_monoid_id_t)_initDouble,
                                         (hpx_monoid_op_t)_maxDouble);
 

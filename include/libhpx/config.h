@@ -32,8 +32,6 @@ typedef enum {
   HPX_GAS_SMP,         //!< Do not use global memory.
   HPX_GAS_PGAS,        //!< Use PGAS (i.e. global memory is fixed).
   HPX_GAS_AGAS,        //!< Use AGAS (i.e. global memory may move).
-  HPX_GAS_PGAS_SWITCH, //!< Use hardware-accelerated PGAS.
-  HPX_GAS_AGAS_SWITCH, //!< Use hardware-accelerated AGAS.
   HPX_GAS_MAX
 } hpx_gas_t;
 
@@ -42,8 +40,6 @@ static const char* const HPX_GAS_TO_STRING[] = {
   "SMP",
   "PGAS",
   "AGAS",
-  "PGAS_SWITCH",
-  "AGAS_SWITCH",
   "INVALID_ID"
 };
 
@@ -67,14 +63,14 @@ static const char* const HPX_TRANSPORT_TO_STRING[] = {
 };
 
 typedef enum {
-  LIBHPX_NETWORK_DEFAULT = 0,
-  LIBHPX_NETWORK_SMP,
-  LIBHPX_NETWORK_PWC,
-  LIBHPX_NETWORK_ISIR,
-  LIBHPX_NETWORK_MAX
+  HPX_NETWORK_DEFAULT = 0,
+  HPX_NETWORK_SMP,
+  HPX_NETWORK_PWC,
+  HPX_NETWORK_ISIR,
+  HPX_NETWORK_MAX
 } libhpx_network_t;
 
-static const char * const LIBHPX_NETWORK_TO_STRING[] = {
+static const char * const HPX_NETWORK_TO_STRING[] = {
   "DEFAULT",
   "NONE",
   "PWC",

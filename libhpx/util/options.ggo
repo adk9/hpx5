@@ -15,10 +15,6 @@ option "hpx-threads" - "number of scheduler threads"
 typestr="threads"
 int optional
 
-option "hpx-backoffmax" - "upper bound for worker-thread backoff"
-typestr="count"
-int optional
-
 option "hpx-stacksize" - "set HPX stack size"
 typestr="bytes"
 long optional
@@ -33,7 +29,7 @@ long optional
 
 option "hpx-gas" - "type of Global Address Space (GAS)"
 typestr="type"
-values="default","smp","pgas","agas","pgas_switch","agas_switch"
+values="default","smp","pgas","agas"
 enum optional
 
 option "hpx-boot" - "HPX bootstrap method to use"

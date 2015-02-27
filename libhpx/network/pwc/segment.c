@@ -20,6 +20,10 @@
 #include "segment.h"
 
 int segment_init(segment_t *segment, char *base, size_t size) {
+#ifndef HAVE_PHOTON
+  return LIBHPX_ERROR;
+#endif
+
   segment->base = base;
   segment->size = size;
   if (!base) {
@@ -43,6 +47,10 @@ int segment_init(segment_t *segment, char *base, size_t size) {
 }
 
 void segment_fini(segment_t *segment) {
+#ifndef HAVE_PHOTON
+  return LIBHPX_ERROR;
+#endif
+
   void *base = segment->base;
   size_t size = segment->size;
   if (!base) {

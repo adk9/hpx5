@@ -25,6 +25,7 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
+#include "libhpx/transport.h"
 #include "libhpx/parcel.h"
 
 #include "commands.h"
@@ -32,6 +33,9 @@
 #include "peer.h"
 #include "pwc.h"
 #include "pwc_buffer.h"
+
+// Define the transports allowed for the PWC network
+static int PWC_TRANSPORTS[] = {HPX_TRANSPORT_PHOTON};
 
 typedef struct pwc_network {
   network_t            vtable;
@@ -275,8 +279,17 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   if (gas->type == HPX_GAS_SMP) {
     log_net("will not instantiate photon for the SMP GAS\n");
     return NULL;
+  }  
+  
+  e = network_supported_transport(here->transport, PWC_TRANSPORTS,
+				  _HPX_NELEM(PWC_TRANSPORTS));
+  if (e) {
+    log_error("%s network is not supported with current transport: %s\n",
+	      HPX_NETWORK_TO_STRING[HPX_NETWORK_PWC],
+	      HPX_TRANSPORT_TO_STRING[here->transport->type]);
+    return NULL;
   }
-
+  
   // Allocate the network object, with enough space for the peer array that
   // contains one peer per rank.
   int ranks = boot_n_ranks(boot);
@@ -309,7 +322,8 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   }
 
   // Initialize the network's virtual function table.
-  pwc->vtable.type = LIBHPX_NETWORK_PWC;
+  pwc->vtable.type = HPX_NETWORK_PWC;
+  pwc->vtable.transports = PWC_TRANSPORTS;
   pwc->vtable.delete = _pwc_delete;
   pwc->vtable.progress = _pwc_progress;
   pwc->vtable.send = _pwc_send;
@@ -320,13 +334,12 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   pwc->vtable.probe = _pwc_probe;
   pwc->vtable.set_flush = _pwc_set_flush;
 
-
   if (pwc->parcel_eager_limit > pwc->parcel_buffer_size) {
     dbg_error(" --hpx-parceleagerlimit (%u) must be less than "
               "--hpx-parcelbuffersize (%u)\n",
               pwc->parcel_eager_limit, pwc->parcel_buffer_size);
   }
-
+  
   peer_t local;
   // Prepare the null segment.
   segment_t *null = &local.segments[SEGMENT_NULL];
