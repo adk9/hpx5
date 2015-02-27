@@ -73,7 +73,6 @@ struct scheduler *scheduler_new(config_t *cfg) {
   sync_store(&s->next_tls_id, 0, SYNC_RELEASE);
   s->cores        = cores;
   s->n_workers    = workers;
-  s->backoff_max  = cfg->backoffmax;
   s->wf_threshold = cfg->wfthreshold;
   scheduler_stats_init(&s->stats);
 

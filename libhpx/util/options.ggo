@@ -15,10 +15,6 @@ option "hpx-threads" - "number of scheduler threads"
 typestr="threads"
 int optional
 
-option "hpx-backoffmax" - "upper bound for worker-thread backoff"
-typestr="count"
-int optional
-
 option "hpx-stacksize" - "set HPX stack size"
 typestr="bytes"
 long optional

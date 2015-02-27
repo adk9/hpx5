@@ -66,7 +66,6 @@ struct scheduler {
   volatile int    next_tls_id;
   int                   cores;
   int               n_workers;
-  unsigned int    backoff_max;
   uint32_t       wf_threshold;
   struct barrier     *barrier;
   struct worker      *workers;
