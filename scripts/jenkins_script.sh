@@ -56,11 +56,11 @@ case "$SIZE_CHOICE" in
     ;;
   medium)
     export LARGE_SIZE=20
-    export SMALL_SIZE=14
+    export SMALL_SIZE=12
     ;;
   large)
     export LARGE_SIZE=22
-    export SMALL_SIZE=16
+    export SMALL_SIZE=14
     ;;
 esac
 case "$HPXCORES_AXIS" in
