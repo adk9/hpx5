@@ -32,7 +32,7 @@ case "$SYSTEM" in
     export CRAYPE_LINK_TYPE=dynamic
     export PATH=/N/home/h/p/hpx5/BigRed2/new_modules/bin:$PATH
     export INPUT_DIR=/N/dc2/scratch/zalewski/dimacs/Random4-n
-    export RUNCMD="aprun -n $NUMNODES -N 1 -b"
+    export RUNCMD="aprun -B -b"
     ;;
   MARCINS_SWAN)
     module load java
@@ -42,7 +42,7 @@ case "$SYSTEM" in
     export PATH=/home/users/p02087/tools/bin:$PATH
     export CRAYPE_LINK_TYPE=dynamic
     export INPUT_DIR=/lus/scratch/p02087/crest/Random4-n
-    export RUNCMD="aprun -n $NUMNODES -N 1 -b"
+    export RUNCMD="aprun -B-b"
     ;;
   *)
     echo "Unknown system $SYSTEM."
@@ -67,7 +67,7 @@ case "$HPXCORES_AXIS" in
   all)
     ;;
   *)
-    export HPXCORES=" --hpx-cores=$HPXCORES_AXIS"
+    export HPXCORES=" --hpx-threads=$HPXCORES_AXIS"
     ;;
 esac
 case "$BUILD_AXIS" in
