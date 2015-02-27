@@ -39,7 +39,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-stacksize=bytes     set HPX stack size",
   "      --hpx-heapsize=bytes      set HPX per-PE global heap size",
   "      --hpx-wfthreshold=tasks   bound on help-first tasks before work-first \n                                  scheduling",
-  "      --hpx-gas=type            type of Global Address Space (GAS)  (possible \n                                  values=\"default\", \"smp\", \"pgas\", \n                                  \"agas\", \"pgas_switch\", \"agas_switch\")",
+  "      --hpx-gas=type            type of Global Address Space (GAS)  (possible \n                                  values=\"default\", \"smp\", \"pgas\", \n                                  \"agas\")",
   "      --hpx-boot=type           HPX bootstrap method to use  (possible \n                                  values=\"default\", \"smp\", \"mpi\", \n                                  \"pmi\")",
   "      --hpx-transport=type      type of transport to use  (possible \n                                  values=\"default\", \"smp\", \"mpi\", \n                                  \"portals\", \"photon\")",
   "      --hpx-network=type        type of network to use  (possible \n                                  values=\"default\", \"smp\", \"pwc\", \n                                  \"isir\")",
@@ -121,7 +121,7 @@ free_cmd_list(void)
 }
 
 
-const char *hpx_option_parser_hpx_gas_values[] = {"default", "smp", "pgas", "agas", "pgas_switch", "agas_switch", 0}; /*< Possible values for hpx-gas. */
+const char *hpx_option_parser_hpx_gas_values[] = {"default", "smp", "pgas", "agas", 0}; /*< Possible values for hpx-gas. */
 const char *hpx_option_parser_hpx_boot_values[] = {"default", "smp", "mpi", "pmi", 0}; /*< Possible values for hpx-boot. */
 const char *hpx_option_parser_hpx_transport_values[] = {"default", "smp", "mpi", "portals", "photon", 0}; /*< Possible values for hpx-transport. */
 const char *hpx_option_parser_hpx_network_values[] = {"default", "smp", "pwc", "isir", 0}; /*< Possible values for hpx-network. */

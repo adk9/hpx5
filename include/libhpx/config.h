@@ -32,8 +32,6 @@ typedef enum {
   HPX_GAS_SMP,         //!< Do not use global memory.
   HPX_GAS_PGAS,        //!< Use PGAS (i.e. global memory is fixed).
   HPX_GAS_AGAS,        //!< Use AGAS (i.e. global memory may move).
-  HPX_GAS_PGAS_SWITCH, //!< Use hardware-accelerated PGAS.
-  HPX_GAS_AGAS_SWITCH, //!< Use hardware-accelerated AGAS.
   HPX_GAS_MAX
 } hpx_gas_t;
 

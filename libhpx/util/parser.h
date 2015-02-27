@@ -38,7 +38,7 @@ extern "C" {
 #define HPX_OPTION_PARSER_VERSION VERSION
 #endif
 
-enum enum_hpx_gas { hpx_gas__NULL = -1, hpx_gas_arg_default = 0, hpx_gas_arg_smp, hpx_gas_arg_pgas, hpx_gas_arg_agas, hpx_gas_arg_pgas_switch, hpx_gas_arg_agas_switch };
+enum enum_hpx_gas { hpx_gas__NULL = -1, hpx_gas_arg_default = 0, hpx_gas_arg_smp, hpx_gas_arg_pgas, hpx_gas_arg_agas };
 enum enum_hpx_boot { hpx_boot__NULL = -1, hpx_boot_arg_default = 0, hpx_boot_arg_smp, hpx_boot_arg_mpi, hpx_boot_arg_pmi };
 enum enum_hpx_transport { hpx_transport__NULL = -1, hpx_transport_arg_default = 0, hpx_transport_arg_smp, hpx_transport_arg_mpi, hpx_transport_arg_portals, hpx_transport_arg_photon };
 enum enum_hpx_network { hpx_network__NULL = -1, hpx_network_arg_default = 0, hpx_network_arg_smp, hpx_network_arg_pwc, hpx_network_arg_isir };
