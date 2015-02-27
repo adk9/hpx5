@@ -55,7 +55,7 @@ static HPX_ACTION(test_libhpx_user_lco, void *UNUSED) {
   for (int i = 0; i < 16; ++i) {
     hpx_call(lco[0], _lco_set, lco[1], &i, sizeof(i));
   }
-  hpx_lco_wait_all(2, lco, NULL);
+  hpx_lco_wait(lco[1]);
   hpx_lco_delete(lco[0], HPX_NULL);
   hpx_lco_delete(lco[1], HPX_NULL);
   return HPX_SUCCESS;
