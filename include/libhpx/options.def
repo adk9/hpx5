@@ -103,7 +103,7 @@ LIBHPX_OPT_SCALAR(, wfthreshold, UINT32_MAX, uint32_t)
 LIBHPX_OPT_SCALAR(, gas, HPX_GAS_PGAS, hpx_gas_t)
 LIBHPX_OPT_SCALAR(, boot, HPX_BOOT_DEFAULT, hpx_boot_t)
 LIBHPX_OPT_SCALAR(, transport, HPX_TRANSPORT_DEFAULT, hpx_transport_t)
-LIBHPX_OPT_SCALAR(, network, LIBHPX_NETWORK_DEFAULT, libhpx_network_t)
+LIBHPX_OPT_SCALAR(, network, HPX_NETWORK_DEFAULT, libhpx_network_t)
 LIBHPX_OPT_SCALAR(, sendlimit, 0, uint32_t)
 LIBHPX_OPT_SCALAR(, recvlimit, 0, uint32_t)
 /// @}

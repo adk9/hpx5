@@ -19,10 +19,12 @@
 /// @{
 struct gas;
 struct network;
+struct config;
 /// @}
 
 /// Allocate a new Isend/Irecv funneled network.
-struct network *network_isir_funneled_new(struct gas *gas, int nrx)
+struct network *network_isir_funneled_new(struct config *cfg, struct gas *gas,
+					  int nrx)
   HPX_NON_NULL(1) HPX_MALLOC HPX_INTERNAL;
 
 

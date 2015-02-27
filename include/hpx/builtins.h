@@ -85,6 +85,7 @@ static inline int32_t max_i32(int32_t lhs, int32_t rhs) {
 
 /// Miscellaneous utility macros.
 
+#define _HPX_NELEM(e) (sizeof(e)/sizeof(e[0]))
 #define _HPX_XSTR(s) _HPX_STR(s)
 #define _HPX_STR(l) #l
 
