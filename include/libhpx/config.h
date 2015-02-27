@@ -40,8 +40,6 @@ static const char* const HPX_GAS_TO_STRING[] = {
   "SMP",
   "PGAS",
   "AGAS",
-  "PGAS_SWITCH",
-  "AGAS_SWITCH",
   "INVALID_ID"
 };
 
