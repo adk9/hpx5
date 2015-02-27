@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -16,19 +16,31 @@
 #include <hpx/hpx.h>
 #include "libhpx/config.h"
 
-struct boot_class;
-struct transport_class;
+/// Forward declarations.
+/// @{
+struct boot;
+struct transport;
+/// @}
 
 /// Generic object oriented interface to the global address space.
-typedef struct gas_class gas_class_t;
-struct gas_class {
+typedef struct gas {
   hpx_gas_t type;
 
   // Initialization
-  void (*delete)(gas_class_t *gas);
+  void (*delete)(struct gas *gas)
+    HPX_NON_NULL(1);
+
   int (*join)(void);
   void (*leave)(void);
-  bool (*is_global)(gas_class_t *gas, void *addr);
+
+  bool (*is_global)(struct gas *gas, void *addr)
+    HPX_NON_NULL(1);
+
+  size_t (*local_size)(struct gas *gas)
+    HPX_NON_NULL(1);
+
+  void *(*local_base)(struct gas *gas)
+    HPX_NON_NULL(1);
 
   // Dealing with global addresses
   uint32_t (*locality_of)(hpx_addr_t gva);
@@ -38,6 +50,9 @@ struct gas_class {
 
   hpx_addr_t (*lva_to_gva)(void *lva);
   void *(*gva_to_lva)(hpx_addr_t gva);
+
+  hpx_addr_t (*embed)(hpx_addr_t addr, hpx_action_t action);
+  hpx_action_t (*extract)(hpx_addr_t addr, uint32_t locality);
 
   // implement hpx/gas.h
   __typeof(HPX_THERE) *there;
@@ -53,39 +68,63 @@ struct gas_class {
   __typeof(hpx_gas_memcpy) *memcpy;
 
   // network operation
-  uint32_t (*owner_of)(hpx_addr_t gva);
-};
+  uint32_t (*owner_of)(hpx_addr_t gpa);
+  uint64_t (*offset_of)(hpx_addr_t gpa);
+} gas_t;
 
-gas_class_t *gas_smp_new(size_t heap_size, struct boot_class *boot,
-                         struct transport_class *transport)
+gas_t *gas_smp_new(void)
+  HPX_INTERNAL;
+
+gas_t *gas_pgas_new(size_t heap_size, struct boot *, struct transport *)
   HPX_INTERNAL HPX_NON_NULL(2,3);
 
-gas_class_t *gas_pgas_new(size_t heap_size, struct boot_class *boot,
-                          struct transport_class *transport)
+gas_t *gas_new(size_t heap_size, struct boot *, struct transport *, hpx_gas_t type)
   HPX_INTERNAL HPX_NON_NULL(2,3);
 
-gas_class_t *gas_new(size_t heap_size, struct boot_class *boot,
-                     struct transport_class *transport, hpx_gas_t type)
-  HPX_INTERNAL HPX_NON_NULL(2,3);
-
-inline static void gas_delete(gas_class_t *gas) {
+inline static void gas_delete(gas_t *gas) {
   assert(gas && gas->delete);
   gas->delete(gas);
 }
 
-inline static int gas_join(gas_class_t *gas) {
+inline static int gas_join(gas_t *gas) {
   assert(gas && gas->join);
   return gas->join();
 }
 
-inline static void gas_leave(gas_class_t *gas) {
+inline static void gas_leave(gas_t *gas) {
   assert(gas && gas->leave);
   gas->leave();
 }
 
-inline static uint32_t gas_owner_of(gas_class_t *gas, hpx_addr_t addr) {
+inline static uint32_t gas_owner_of(gas_t *gas, hpx_addr_t addr) {
   assert(gas && gas->owner_of);
   return gas->owner_of(addr);
 }
+
+inline static uint64_t gas_offset_of(gas_t *gas, hpx_addr_t gpa) {
+  assert(gas && gas->offset_of);
+  return gas->offset_of(gpa);
+}
+
+static inline size_t gas_local_size(gas_t *gas) {
+  assert(gas && gas->local_size);
+  return gas->local_size(gas);
+}
+
+inline static void *gas_local_base(gas_t *gas) {
+  assert(gas && gas->local_base);
+  return gas->local_base(gas);
+}
+
+inline static hpx_addr_t gas_embed(gas_t *gas, hpx_addr_t addr, hpx_action_t action) {
+  assert(gas && gas->embed);
+  return gas->embed(addr, action);
+}
+
+inline static hpx_action_t gas_extract(gas_t *gas, hpx_addr_t addr, uint32_t locality) {
+  assert(gas && gas->extract);
+  return gas->extract(addr, locality);
+}
+
 
 #endif// LIBHPX_GAS_H

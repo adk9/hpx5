@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -72,7 +72,7 @@ Main action:
 static int _main_action(uint64_t *args) {
   hpx_time_t start;
   srand(time(NULL)); //seed random
-  uint64_t NUM = *(uint64_t *)args;
+  uint64_t NUM = *args;
 
   printf("parallel Quick Sort for %"PRIu64"\n", NUM);
   //Want to compare sorting on the same list,
@@ -124,7 +124,7 @@ int main (int argc, char *argv[])
 {
   int opt = 0;
   srand(time(NULL)); //seed random
-  int NUM = DNUM;
+  uint64_t NUM = DNUM;
 
   while ((opt = getopt(argc, argv,  "h?")) != -1) {
     switch (opt) {

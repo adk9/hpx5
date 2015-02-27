@@ -100,7 +100,7 @@ typedef struct photon_req_table_t * photonRequestTable;
 PHOTON_INTERNAL photonRequest photon_get_request(int proc);
 PHOTON_INTERNAL photonRequest photon_lookup_request(photon_rid rid);
 PHOTON_INTERNAL int photon_free_request(photonRequest req);
-PHOTON_INTERNAL int photon_count_request();
+PHOTON_INTERNAL int photon_count_request(int proc);
 
 PHOTON_INTERNAL photonRequest photon_setup_request_direct(photonBuffer lbuf, photonBuffer rbuf, uint64_t size, int proc, int events);
 PHOTON_INTERNAL photonRequest photon_setup_request_ledger_info(photonRILedgerEntry ri_entry, int curr, int proc);

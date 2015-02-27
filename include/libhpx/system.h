@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -20,6 +20,9 @@ int system_get_cores(void)
   HPX_INTERNAL;
 
 int system_set_affinity(pthread_t thread, int core_id)
+  HPX_INTERNAL;
+
+int system_set_affinity_group(pthread_t thread, int ncores)
   HPX_INTERNAL;
 
 #endif // LIBHPX_SYSTEM_H

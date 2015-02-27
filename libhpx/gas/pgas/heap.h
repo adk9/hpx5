@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -51,19 +51,22 @@
 
 #define HEAP_USE_CYCLIC_CSBRK_BARRIER 0
 
-struct transport_class;
+/// Forward declarations.
+/// @{
+struct transport;
 struct bitmap;
+/// @}
 
 typedef struct heap {
-  volatile uint64_t           csbrk;
-  size_t            bytes_per_chunk;
-  size_t                    nchunks;
-  struct bitmap             *chunks;
-  size_t                     nbytes;
-  char                        *base;
-  struct transport_class *transport;
-  unsigned             cyclic_arena;
-  uint32_t        max_block_lg_size;
+  volatile uint64_t     csbrk;
+  size_t      bytes_per_chunk;
+  size_t              nchunks;
+  struct bitmap       *chunks;
+  size_t               nbytes;
+  char                  *base;
+  struct transport *transport;
+  unsigned       cyclic_arena;
+  uint32_t  max_block_lg_size;
 } heap_t;
 
 /// Initialize a heap to manage the specified number of bytes.
@@ -78,13 +81,11 @@ typedef struct heap {
 int heap_init(heap_t *heap, size_t size, bool init_cyclic)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
-
 /// Finalize a heap.
 ///
 /// @param         heap The heap pointer to finalize.
 void heap_fini(heap_t *heap)
   HPX_NON_NULL(1) HPX_INTERNAL;
-
 
 /// Allocate a chunk of the global address space.
 ///
@@ -99,7 +100,6 @@ void heap_fini(heap_t *heap)
 void *heap_chunk_alloc(heap_t *heap, size_t size, size_t align)
   HPX_INTERNAL;
 
-
 /// Release a chunk of the global address space.
 ///
 /// This satisfies requests from jemalloc's chunk allocator to release global
@@ -113,7 +113,6 @@ void *heap_chunk_alloc(heap_t *heap, size_t size, size_t align)
 bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size)
   HPX_NON_NULL(1,2) HPX_INTERNAL;
 
-
 /// This operation binds the heap to a network.
 ///
 /// Some transports need to know about the heap in order to perform network
@@ -124,11 +123,10 @@ bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size)
 /// @param    transport The transport to bind.
 ///
 /// @returns TRUE if the transport requires mallctl_disable_dirty_page_purge().
-int heap_bind_transport(heap_t *heap, struct transport_class *transport)
+int heap_bind_transport(heap_t *heap, struct transport *transport)
   HPX_NON_NULL(1,2) HPX_INTERNAL;
 
-
-/// Check to see if the heap contains the given, local virtual address.
+/// Check to see if the heap contains the given local virtual address.
 ///
 /// @param         heap The heap object.
 /// @param          lva The local virtual address to test.
@@ -137,6 +135,14 @@ int heap_bind_transport(heap_t *heap, struct transport_class *transport)
 bool heap_contains_lva(const heap_t *heap, const void *lva)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
+/// Check to see if the heap contains the given offset.
+///
+/// @param         heap The heap object.
+/// @param       offset The offset to check.
+///
+/// @returns TRUE if the @p offset is contained in the global heap.
+bool heap_contains_offset(const heap_t *heap, uint64_t offset)
+  HPX_NON_NULL(1) HPX_INTERNAL;
 
 /// Compute the relative heap_offset for this address.
 ///
@@ -147,7 +153,6 @@ bool heap_contains_lva(const heap_t *heap, const void *lva)
 uint64_t heap_lva_to_offset(const heap_t *heap, const void *lva)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
-
 /// Convert a heap offset into a local virtual address.
 ///
 /// @param         heap The heap object.
@@ -157,14 +162,11 @@ uint64_t heap_lva_to_offset(const heap_t *heap, const void *lva)
 void *heap_offset_to_lva(const heap_t *heap, uint64_t offset)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
-
 uint64_t heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
-
 void heap_free_cyclic(heap_t *heap, uint64_t offset)
   HPX_NON_NULL(1) HPX_INTERNAL;
-
 
 /// Check to see if the given offset is cyclic.
 ///
@@ -178,7 +180,6 @@ void heap_free_cyclic(heap_t *heap, uint64_t offset)
 bool heap_offset_is_cyclic(const heap_t *heap, uint64_t offset)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
-
 /// Get the csbrk.
 ///
 /// @param         heap The heap.
@@ -187,15 +188,13 @@ bool heap_offset_is_cyclic(const heap_t *heap, uint64_t offset)
 uint64_t heap_get_csbrk(const heap_t *heap)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
-
 /// Set the csbrk to correspond to the given heap_offset value.
 ///
 /// @returns LIBHPX_OK for success, LIBHPX_ENOMEM for failure.
 int heap_set_csbrk(heap_t *heap, uint64_t offset)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
-
-/// Get the maximum number of bits that can be used for block size in the 
+/// Get the maximum number of bits that can be used for block size in the
 /// current heap.
 /// @param         heap The heap to check.
 ///

@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -18,10 +18,10 @@
 /// @file libhpx/locality/boot.c
 /// @brief Handles boot initialization.
 /// ----------------------------------------------------------------------------
-#include "libhpx/boot.h"
-#include "libhpx/debug.h"
+#include <libhpx/boot.h>
+#include <libhpx/debug.h>
 
-static boot_class_t *_default(void) {
+static boot_t *_default(void) {
 #ifdef HAVE_PMI
   return boot_new_pmi();
 #endif
@@ -33,8 +33,8 @@ static boot_class_t *_default(void) {
   return boot_new_smp();
 }
 
-boot_class_t *boot_new(hpx_boot_t type) {
-  boot_class_t *boot = NULL;
+boot_t *boot_new(hpx_boot_t type) {
+  boot_t *boot = NULL;
 
   switch (type) {
    case (HPX_BOOT_PMI):

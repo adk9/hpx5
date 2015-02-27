@@ -1,4 +1,4 @@
-# Copyright (c) 2013, Trustees of Indiana University 
+# Copyright (c) 2013-2015, Trustees of Indiana University 
 # All rights reserved.
 
 # This software may be modified and distributed under the terms of
@@ -13,10 +13,8 @@ CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
 
 # ---------------------------------------------------------------------------
-# Detect the programming environment.
+  # Detect the programming environment.
 # ---------------------------------------------------------------------------
-HPX_PE_ENV
-
 AC_LANG([C])
 
 AC_CONFIG_SRCDIR([include/config.h.in])
@@ -26,6 +24,8 @@ AC_CONFIG_MACRO_DIR([config])
 AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
+AX_COMPILER_VENDOR
+HPX_PE_ENV
 
 # Checks for programs.
 AC_PROG_CC_C99
@@ -33,22 +33,28 @@ AC_PROG_INSTALL
 AM_PROG_AS
 
 # Initialize automake and libtool
-AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror])
+AM_INIT_AUTOMAKE([1.11 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror parallel-tests color-tests])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
-LT_PREREQ([2.2.6])
-#LT_INIT()
-LT_INIT([disable-shared]) # we don't support dynamic linking correctly 
+LT_PREREQ([2.4.6])
+LT_INIT()
+#LT_INIT([disable-shared]) # we don't support dynamic linking correctly 
 
 # Initialize pthreads
 AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
 
+# Check for parallel configuration
+AC_ARG_ENABLE([parallel-config],
+  [AS_HELP_STRING([--enable-parallel-config],
+                  [Enable parallel configuration of contribs @<:@default=no@:>@])],
+  [trap 'kill $(jobs -p)' SIGINT], [enable_parallel_config=no])
+
 # Initialize contribs
-HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [libhpx_])
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
 HPX_CONTRIB_LIBFFI([contrib/libffi], [hpx_])
 HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [libhpx_global_], [_hpx])
 HPX_CONTRIB_VALGRIND([contrib/valgrind], [hpx_])
+HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [hpx_])
 
 # Check if the assembler supports CFI directives
 AX_CFI_DIRECTIVES
@@ -70,22 +76,36 @@ AC_ARG_ENABLE([wall],
                   [Enable all warnings @<:@default=yes@:>@])],
   [], [enable_wall=yes])
 
-AC_ARG_ENABLE([werror],
-  [AS_HELP_STRING([--enable-werror],
-                  [Treat warnings as errors @<:@default=no@:>@])],
-  [], [enable_werror=no])
+AC_ARG_ENABLE([apps],
+  [AS_HELP_STRING([--enable-apps],
+                  [Enable mini-apps @<:@default=no@:>@])],
+  [], [enable_apps=no])
 
 AC_ARG_ENABLE([tutorial],
   [AS_HELP_STRING([--enable-tutorial],
                   [Enable building of code samples from the HPX tutorial @<:@default=no@:>@])],
   [], [enable_tutorial=no])
 
+AC_ARG_ENABLE([jemalloc],
+  [AS_HELP_STRING([--enable-jemalloc],
+                  [Enable using of jemalloc as the default allocator @<:@default=no@:>@])],
+  [], [enable_jemalloc=no])
+AS_IF([test "x$enable_jemalloc" != xno], [HPX_CONTRIB_JEMALLOC_AS_MALLOC])
+  
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug],
                   [Enable debug code @<:@default=no@:>@])],
   [], [enable_debug=no])
 AS_IF([test "x$enable_debug" != xno],
   [AC_DEFINE([ENABLE_DEBUG], [1], [Enable debugging stuff])])
+
+AC_ARG_ENABLE([instrumentation],
+  [AS_HELP_STRING([--enable-instrumentation],
+                  [Enable instrumentation code @<:@default=no@:>@])],
+  [], [enable_instrumentation=no])
+AS_IF([test "x$enable_instrumentation" != xno],
+  [AC_DEFINE([ENABLE_INSTRUMENTATION], [1], [Enable instrumentation for performance])])
+AM_CONDITIONAL([ENABLE_INSTRUMENTATION], [test "x$enable_instrumentation" != xno])
 
 AC_ARG_ENABLE([logging],
   [AS_HELP_STRING([--enable-logging],
@@ -108,32 +128,24 @@ AM_CONDITIONAL([ENABLE_LENGTHY_TESTS], [test "$enable_lengthy_tests" = "yes"])
 
 AC_ARG_ENABLE([testsuite],
   [AS_HELP_STRING([--enable-testsuite],
-                  [Enable test suite (requires check) @<:@default=yes@:>@])],
-  [], [enable_testsuite=yes])
-
-#HPX_OPENFLOW
+                  [Enable test suite @<:@default=yes@:>@])],
+  [], [enable_tests=yes])
 
 # ---------------------------------------------------------------------------
 # --with-options, see config/hpx_with_pkg.m4 for details
 # ---------------------------------------------------------------------------
-HPX_WITH_PKG([papi],[papi],[build with profiling],[no],[PAPI])
-HPX_WITH_PKG([pmi],[pmi],[build with support for PMI],[no],[PMI])
+HPX_WITH_PKG([pmi],[cray-pmi],[build with support for PMI],[no],[PMI])
 
 AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray PMI extensions]))
 HPX_WITH_PKG([hugetlbfs],[hugetlbfs],[build with hugepages for heap],[no],[HUGETLBFS])
 AS_IF([test "x$with_hugetlbfs" != xno],
   [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [0], [Enable huge pages heap allocation])],
-  [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANONYMOUS], [Disableh huge pages heap allocation])])
-
-
+  [AS_CASE([$host_os],
+    [darwin*], [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANON], [Disable huge pages heap allocation])],
+               [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANONYMOUS], [Disable huge pages heap allocation])])])
 
 HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[no],[MPI])
 HPX_WITH_PKG([portals],[portals],[build with Portals networking],[no],[PORTALS])
-
-HPX_WITH_VERBS
-HPX_WITH_PKG([ugni],[cray-ugni],[Build with UGNI],[no],[UGNI])
-
-AM_CONDITIONAL([HAVE_XSP], [false])
 
 AC_ARG_ENABLE([photon],
  [AS_HELP_STRING([--enable-photon], [build with Photon networking @<:@default=no@:>@])], [],
@@ -141,19 +153,22 @@ AC_ARG_ENABLE([photon],
 AS_IF([test "x$enable_photon" != xno],
   [HPX_CONTRIB_PHOTON([contrib/photon], [hpx_])],
   [hpx_have_photon=no])
+AM_CONDITIONAL([BUILD_PHOTON], [test "x$enable_external_photon" == xno])
 AM_CONDITIONAL([HAVE_PHOTON], [test "x$hpx_have_photon" != xno])
 
 AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno],
-  [AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])])
+  [AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])
+   TESTS_CMD='mpirun -np 2'],
+  [TESTS_CMD=''])
 
-HPX_WITH_PKG([check],[check],[build with check unit tests],[no],[CHECK])
-AS_IF([test "x$enable_testsuite" != xno -a "x$with_check" != xno],
-  [enable_tests=yes],
-  [enable_tests=no])
-    
+AC_ARG_WITH([tests-cmd],
+  [AS_HELP_STRING([--with-tests-cmd], [Use this command for running the test harness @<:@default=mpirun -np 2@:>@])],
+  [TESTS_CMD="$with_tests_cmd"], [])
+AC_SUBST(TESTS_CMD)
+
 AC_ARG_WITH([doxygen],
   [AS_HELP_STRING([--with-doxygen], [build documentation @<:@default=no@:>@])],
-  [], [with_doxygen=yes])
+  [with_doxygen=yes], [with_doxygen=no])
 AS_IF([test "x$with_doxygen" != xno],
   [AC_CHECK_PROGS([DOXYGEN], [doxygen])])
 AS_IF([test "x$DOXYGEN" != x],
@@ -196,6 +211,7 @@ AM_CONDITIONAL([CPU_ARM], [test "x$host_cpu" = xarmv7l])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
 AM_CONDITIONAL([ENABLE_TUTORIAL], [test "x$enable_tutorial" != xno])
+AM_CONDITIONAL([ENABLE_JEMALLOC], [test "x$enable_jemalloc" != xno])
 AM_CONDITIONAL([ENABLE_PHOTON], [test "x$enable_photon" != xno])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
 
@@ -207,26 +223,29 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # -----------------------------------------------------------------------------
 # Finalize flags
 # -----------------------------------------------------------------------------
-hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $HPX_LIBFFI_CPPFLAGS $libhpx_hwloc_cppflags $hpx_valgrind_cppflags $hpx_uthash_cppflags"
-hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS $libhpx_hwloc_cflags"
+hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $HPX_LIBFFI_CPPFLAGS $HPX_HWLOC_CPPFLAGS $hpx_valgrind_cppflags $hpx_uthash_cppflags"
+hpx_extra_cflags="$hpx_pe_env_cflags $HPX_JEMALLOC_CFLAGS $HPX_LIBFFI_CFLAGS $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS $hpx_valgrind_cflags $hpx_uthash_cflags"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
-hpx_extra_libs="$PTHREAD_LIBS $HPX_PHOTON_LIBS $libhpx_hwloc_libs $HPX_LIBFFI_LIBS $HPX_JEMALLOC_LIBS"
+hpx_extra_libs="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la $PTHREAD_LIBS $hpx_pe_env_libs"
 AS_IF([test "x$enable_pedantic" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_pedantic $hpx_extra_cflags"])
 
 AS_IF([test "x$enable_wall" != xno],
   [hpx_extra_cflags="$hpx_pe_env_cflags_wall $hpx_extra_cflags"])
-  
-AS_IF([test "x$enable_werror" != xno],
-  [hpx_extra_cflags="$hpx_pe_env_cflags_werror $hpx_extra_cflags"])
 
 CPPFLAGS="$hpx_extra_cppflags $CPPFLAGS"
 CFLAGS="$hpx_extra_cflags $CFLAGS"
 CCASFLAGS="$hpx_extra_ccasflags $CCASFLAGS"
 HPX_LIBS="$hpx_extra_libs"
+HPX_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la $HPX_HWLOC_DEPS $HPX_PHOTON_DEPS $HPX_JEMALLOC_DEPS $HPX_LIBFFI_DEPS"
+HPX_PRIVATE_PKGS=""
+if test "x$enable_photon" != xno; then
+  HPX_PRIVATE_PKGS="$HPX_PRIVATE_PKGS photon"
+fi
 
 AC_SUBST(HPX_LIBS)
-AC_SUBST(HPX_LDADD, "\$(top_builddir)/libhpx/libhpx.la $HPX_JEMALLOC_LDADD $HPX_PHOTON_LDADD $HPX_LIBFFI_LDADD")
+AC_SUBST(HPX_DEPS)
+AC_SUBST(HPX_PRIVATE_PKGS)
 
 # -----------------------------------------------------------------------------
 # Use autoconf to configure all of the Makefiles that need to be processed.
@@ -241,14 +260,16 @@ AC_CONFIG_FILES([
   libhpx/gas/Makefile
   libhpx/transport/Makefile
   libhpx/network/Makefile
+  libhpx/network/isir/Makefile
+  libhpx/network/pwc/Makefile
   libhpx/system/Makefile
   libhpx/util/Makefile
   libhpx/scheduler/Makefile
   libhpx/scheduler/arch/Makefile
+  libhpx/instrumentation/Makefile
   include/Makefile
   include/libhpx/Makefile
   examples/Makefile
-  bench/Makefile
   hpx.pc])
 
 AS_IF([test "x$enable_tutorial" != xno],
@@ -267,16 +288,16 @@ AS_IF([test "x$enable_docs" != xno],
   [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
   
 AS_IF([test "x$enable_tests" != xno],
-  [AC_CONFIG_FILES([tests/unit/run_tests.sh],
-		   [chmod +x tests/unit/run_tests.sh])]
-  [AC_CONFIG_FILES([tests/perf/overheads/run_tests.sh],
-		   [chmod +x tests/perf/overheads/run_tests.sh])]
   [AC_CONFIG_FILES([tests/Makefile
   tests/unit/Makefile
-  tests/perf/Makefile
-  tests/perf/overheads/Makefile])])
+  tests/perf/Makefile])])
   
 AC_OUTPUT
+
+if test "x$enable_parallel_config" != xno; then
+   echo "*** Waiting for contrib's configuration to finish..."
+   wait
+fi
 
 # ---------------------------------------------------------------------------
 # Output a summary of the results.
@@ -298,7 +319,8 @@ echo "================================================"
 echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
 echo "               Networks : $networks"
-echo "              Profiling : $with_papi"
+echo "               jemalloc : $enable_jemalloc"
+echo "              Profiling : $enable_profiling"
 echo "         hugetlbfs heap : $with_hugetlbfs"
 echo "     Topology Awareness : $with_hwloc"
 echo "          Documentation : $enable_docs"
@@ -307,5 +329,5 @@ echo "             Test Suite : $enable_tests"
 echo "         Extra CPPFLAGS : $hpx_extra_cppflags"
 echo "           Extra CFLAGS : $hpx_extra_cflags"
 echo "        Extra CCASFLAGS : $hpx_extra_ccasflags"
+echo "       Install location : $prefix"
 echo "================================================"
-

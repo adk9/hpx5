@@ -24,7 +24,7 @@ char *sendP, *recvP;
 START_TEST (test_photon_get_remote_buffers) 
 {
   photon_rid sendReq, recvReq, req;
-  int flag, rc;
+  int flag, rc, remaining;
   int send_comp = 0;
   int recv_comp = 0;
 
@@ -61,7 +61,7 @@ START_TEST (test_photon_get_remote_buffers)
   send_comp++;
   recv_comp++;
   while (send_comp || recv_comp) {
-    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &req, PHOTON_PROBE_ANY);
+    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &req, PHOTON_PROBE_ANY);
     if (rc != PHOTON_OK)
       continue;  // no events
     if (flag) {

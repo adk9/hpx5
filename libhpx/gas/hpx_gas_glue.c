@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -22,57 +22,57 @@
 hpx_addr_t HPX_HERE = 0;
 
 hpx_addr_t HPX_THERE(uint32_t i) {
-  assert(here && here->gas && here->gas->there);
+  dbg_assert(here && here->gas && here->gas->there);
   return here->gas->there(i);
 }
 
 hpx_addr_t hpx_addr_add(hpx_addr_t addr, int64_t bytes, uint32_t bsize) {
-  assert(here && here->gas && here->gas->add);
+  dbg_assert(here && here->gas && here->gas->add);
   return here->gas->add(addr, bytes, bsize);
 }
 
 int64_t hpx_addr_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
-  assert(here && here->gas && here->gas->sub);
+  dbg_assert(here && here->gas && here->gas->sub);
   return here->gas->sub(lhs, rhs, bsize);
 }
 
 bool hpx_gas_try_pin(const hpx_addr_t addr, void **local) {
-  assert(here && here->gas);
+  dbg_assert(here && here->gas);
   return here->gas->try_pin(addr, local);
 }
 
 void hpx_gas_unpin(const hpx_addr_t addr) {
-  assert(here && here->gas);
+  dbg_assert(here && here->gas);
   here->gas->unpin(addr);
 }
 
 hpx_addr_t hpx_gas_global_alloc(size_t n, uint32_t bsize) {
-  assert(here && here->gas);
+  dbg_assert(here && here->gas);
   return here->gas->cyclic_alloc(n, bsize);
 }
 
 hpx_addr_t hpx_gas_global_calloc(size_t n, uint32_t bsize) {
-  assert(here && here->gas);
+  dbg_assert(here && here->gas);
   return here->gas->cyclic_calloc(n, bsize);
 }
 
 hpx_addr_t hpx_gas_alloc(uint32_t bsize) {
-  assert(here && here->gas);
+  dbg_assert(here && here->gas);
   return here->gas->local_alloc(bsize);
 }
 
 void hpx_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
-  assert(here && here->gas);
+  dbg_assert(here && here->gas);
   here->gas->free(addr, sync);
 }
 
 void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
-  assert(here && here->gas && here->gas->move);
+  dbg_assert(here && here->gas && here->gas->move);
   here->gas->move(src, dst, lco);
 }
 
 int hpx_gas_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync) {
-  assert(here && here->gas && here->gas->memget);
+  dbg_assert(here && here->gas && here->gas->memget);
   return here->gas->memget(to, from, size, lsync);
 }
 
@@ -88,12 +88,12 @@ int hpx_gas_memget_sync(void *to, hpx_addr_t from, size_t size) {
 
 int hpx_gas_memput(hpx_addr_t to, const void *from, size_t size,
                    hpx_addr_t lsync, hpx_addr_t rsync) {
-  assert(here && here->gas && here->gas->memput);
+  dbg_assert(here && here->gas && here->gas->memput);
   return here->gas->memput(to, from, size, lsync, rsync);
 }
 
 int hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
 {
-  assert(here && here->gas && here->gas->memcpy);
+  dbg_assert(here && here->gas && here->gas->memcpy);
   return (*here->gas->memcpy)(to, from, size, sync);
 }

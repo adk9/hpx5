@@ -1,1 +1,1 @@
-mpirun -np 2 photontest
+mpirun -np 2 .libs/photontest

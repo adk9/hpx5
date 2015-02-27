@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -15,6 +15,16 @@
 
 /// @file
 /// @brief Types and constants needed for configuring HPX at run-time.
+#include <stddef.h>
+#include <stdint.h>
+#include <hpx/attributes.h>
+
+#ifdef HAVE_PHOTON
+# include "config_photon.h"
+#endif
+
+#define LIBHPX_OPT_BITSET_ALL UINT64_MAX
+#define LIBHPX_OPT_BITSET_NONE 0
 
 //! Configuration options for which global memory model to use.
 typedef enum {
@@ -22,8 +32,6 @@ typedef enum {
   HPX_GAS_SMP,         //!< Do not use global memory.
   HPX_GAS_PGAS,        //!< Use PGAS (i.e. global memory is fixed).
   HPX_GAS_AGAS,        //!< Use AGAS (i.e. global memory may move).
-  HPX_GAS_PGAS_SWITCH, //!< Use hardware-accelerated PGAS.
-  HPX_GAS_AGAS_SWITCH, //!< Use hardware-accelerated AGAS.
   HPX_GAS_MAX
 } hpx_gas_t;
 
@@ -32,11 +40,8 @@ static const char* const HPX_GAS_TO_STRING[] = {
   "SMP",
   "PGAS",
   "AGAS",
-  "PGAS_SWITCH",
-  "AGAS_SWITCH",
   "INVALID_ID"
 };
-
 
 //! Configuration options for the network transports HPX can use.
 typedef enum {
@@ -58,20 +63,18 @@ static const char* const HPX_TRANSPORT_TO_STRING[] = {
 };
 
 typedef enum {
-  LIBHPX_NETWORK_DEFAULT = 0,
-  LIBHPX_NETWORK_NONE,
-  LIBHPX_NETWORK_PHOTON,
-  LIBHPX_NETWORK_PORTALS,
-  LIBHPX_NETWORK_MPI,
-  LIBHPX_NETWORK_MAX
+  HPX_NETWORK_DEFAULT = 0,
+  HPX_NETWORK_SMP,
+  HPX_NETWORK_PWC,
+  HPX_NETWORK_ISIR,
+  HPX_NETWORK_MAX
 } libhpx_network_t;
 
-static const char * const LIBHPX_NETWORK_TO_STRING[] = {
+static const char * const HPX_NETWORK_TO_STRING[] = {
   "DEFAULT",
   "NONE",
-  "PHOTON",
-  "PORTALS",
-  "MPI",
+  "PWC",
+  "ISIR",
   "INVALID_ID"
 };
 
@@ -89,63 +92,59 @@ static const char* const HPX_BOOT_TO_STRING[] = {
   "SMP",
   "MPI",
   "PMI",
-  ""
+  "INVALID_ID"
 };
-
 
 //! Locality types in HPX.
-typedef enum {
-  HPX_LOCALITY_NONE = -2,    //!< Represents no locality.
-  HPX_LOCALITY_ALL = -1      //!< Represents all localities.
-} hpx_locality_t;
-
-static const char* const HPX_LOCALITY_TO_STRING[] = {
-  "NONE",
-  "ALL"
-};
-
+#define HPX_LOCALITY_NONE  -2                   //!< Represents no locality.
+#define HPX_LOCALITY_ALL   -1                   //!< Represents all localities.
 
 //! Configuration options for runtime logging in HPX.
-typedef enum {
-  HPX_LOG_DEFAULT = (1<<0),  //!< The default logging level.
-  HPX_LOG_BOOT    = (1<<1),  //!< Log the bootstrapper execution.
-  HPX_LOG_SCHED   = (1<<2),  //!< Log the HPX scheduler operations.
-  HPX_LOG_GAS     = (1<<3),  //!< Log the Global-Address-Space ops.
-  HPX_LOG_LCO     = (1<<4),  //!< Log the LCO operations.
-  HPX_LOG_NET     = (1<<5),  //!< Turn on logging for network ops.
-  HPX_LOG_TRANS   = (1<<6),  //!< Log the transport operations.
-  HPX_LOG_PARCEL  = (1<<7),  //!< Parcel logging.
-  HPX_LOG_ALL     =   (-1)   //!< Turn on all logging.
-} hpx_log_t;
+#define HPX_LOG_DEFAULT 1               //!< The default logging level.
+#define HPX_LOG_BOOT    2               //!< Log the bootstrapper execution.
+#define HPX_LOG_SCHED   4               //!< Log the HPX scheduler operations.
+#define HPX_LOG_GAS     8               //!< Log the Global-Address-Space ops.
+#define HPX_LOG_LCO     16              //!< Log the LCO operations.
+#define HPX_LOG_NET     32              //!< Turn on logging for network ops.
+#define HPX_LOG_TRANS   64              //!< Log the transport operations.
+#define HPX_LOG_PARCEL  128             //!< Parcel logging.
+#define HPX_LOG_ACTION  256             //!< Log action registration.
 
-static const char* const HPX_LOG_TO_STRING[] = {
-  "LOG_DEFAULT",
-  "LOG_BOOT",
-  "LOG_SCHED",
-  "LOG_GAS",
-  "LOG_LCO",
-  "LOG_NET",
-  "LOG_TRANS",
-  "LOG_PARCEL",
-  "LOG_ALL"
-};
-
+#define HPX_TRACE_PARCELS 1
+#define HPX_TRACE_PWC     2
+#define HPX_TRACE_SCHED   4
 
 /// The HPX configuration type.
 ///
 /// This configuration is used to control some of the runtime
 /// parameters for the HPX system.
-typedef struct {
-#define LIBHPX_DECL_OPTION(group, type, ctype, id, init) ctype id;
+typedef struct config {
+#define LIBHPX_OPT(group, id, init, ctype) ctype group##id;
 # include "options.def"
-#undef LIBHPX_DECL_OPTION
-} hpx_config_t;
+#undef LIBHPX_OPT
+} config_t;
 
-hpx_config_t *parse_options(int *argc, char ***argv)
+config_t *config_new(int *argc, char ***argv)
+  HPX_INTERNAL HPX_MALLOC;
+
+void config_delete(config_t *cfg)
   HPX_INTERNAL;
 
-/// Free an HPX configuration type.
-void config_free(hpx_config_t *config)
-  HPX_INTERNAL;
+/// Add declarations to query each of the set options.
+///
+/// @param          cfg The configuration to query.
+/// @param        value The value to check for.
+#define LIBHPX_OPT_INTSET(group, id, UNUSED2, UNUSED3, UNUSED4)     \
+  int config_##group##id##_isset(const config_t *cfg, int value)    \
+    HPX_INTERNAL HPX_NON_NULL(1);
+
+#define LIBHPX_OPT_BITSET(group, id, UNUSED2)                       \
+  static inline uint64_t                                            \
+  config_##group##id##_isset(const config_t *cfg, uint64_t mask) {  \
+    return (cfg->group##id & mask);                                 \
+  }
+# include "options.def"
+#undef LIBHPX_OPT_BITSET
+#undef LIBHPX_OPT_INTSET
 
 #endif // LIBHPX_CONFIG_H

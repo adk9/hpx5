@@ -15,10 +15,6 @@ option "hpx-threads" - "number of scheduler threads"
 typestr="threads"
 int optional
 
-option "hpx-backoffmax" - "upper bound for worker-thread backoff"
-typestr="count"
-int optional
-
 option "hpx-stacksize" - "set HPX stack size"
 typestr="bytes"
 long optional
@@ -27,9 +23,13 @@ option "hpx-heapsize" - "set HPX per-PE global heap size"
 typestr="bytes"
 long optional
 
+option "hpx-wfthreshold" - "bound on help-first tasks before work-first scheduling"
+typestr="tasks"
+long optional
+
 option "hpx-gas" - "type of Global Address Space (GAS)"
 typestr="type"
-values="default","smp","pgas","agas","pgas_switch","agas_switch"
+values="default","smp","pgas","agas"
 enum optional
 
 option "hpx-boot" - "HPX bootstrap method to use"
@@ -42,18 +42,10 @@ typestr="type"
 values="default","smp","mpi","portals","photon"
 enum optional
 
-option "hpx-waitat" - "wait for debugger at specific locality"
-typestr="locality"
-int optional argoptional
-
-option "hpx-loglevel" - "set the logging level"
-typestr="level"
-values="default","boot","sched","gas","lco","net","trans","parcel","all"
-enum optional argoptional multiple
-
-option "hpx-logat" - "selectively output log information"
-typestr="[localities]"
-int optional multiple
+option "hpx-network" - "type of network to use"
+typestr="type"
+values="default","smp","pwc","isir"
+enum optional
 
 option "hpx-statistics" - "print HPX runtime statistics"
 flag off
@@ -70,8 +62,100 @@ option "hpx-configfile" - "HPX runtime configuration file"
 typestr="file"
 string optional
 
-option "hpx-mprotectstacks" - "use mprotect() to bracket stacks to look for stack overflows"
+section "Log options"
+
+option "hpx-log-at" - "selectively output log information"
+typestr="[localities]"
+int optional multiple
+
+option "hpx-log-level" - "set the logging level"
+typestr="level"
+values="default","boot","sched","gas","lco","net","trans","parcel","action","all"
+enum optional argoptional multiple
+
+section "HPX Debug Options"
+
+option "hpx-dbg-waitat" - "wait for debugger at specific locality"
+typestr="[locality]"
+int optional multiple
+
+option "hpx-dbg-waitonabort" - "call hpx_wait() inside of hpx_abort() for debugging"
 flag off
 
-option "hpx-waitonabort" - "call hpx_wait() inside of hpx_abort() for debugging"
+option "hpx-dbg-waitonsegv" - "call hpx_wait() for SIGSEGV for debugging (unreliable)"
 flag off
+
+option "hpx-dbg-mprotectstacks" - "use mprotect() to bracket stacks to look for stack overflows"
+flag off
+
+section "Tracing"
+
+option "hpx-trace-classes" - "set the event classes to trace"
+typestr="class"
+values="parcel","pwc","sched","all"
+enum optional multiple
+
+option "hpx-trace-dir" - "directory to output trace files"
+typestr="dir"
+string optional
+
+option "hpx-trace-filesize" - "set the size of each trace file"
+typestr="# of events"
+long optional
+
+option "hpx-trace-at" - "set the localities to trace at"
+typestr="[localities]"
+int optional multiple
+
+section "PWC Network Options"
+
+option "hpx-pwc-parcelbuffersize" - "set the size of p2p recv buffers for parcel sends"
+typestr="bytes"
+long optional
+
+option "hpx-pwc-parceleagerlimit" - "set the largest eager parcel size (header inclusive)" 
+typestr="bytes"
+long optional
+
+
+section "Photon Transport Options"
+
+option "hpx-photon-backend" - "set the underlying network API to use"
+typestr="type"
+values="default","verbs","ugni"
+enum optional
+
+option "hpx-photon-ibdev" - "set a particular IB device (also a filter for device and port discovery, e.g. qib0:1+mlx4_0:2)"
+typestr="device"
+string optional
+
+option "hpx-photon-ethdev" - "set a particular ETH device (for CMA mode only)"
+typestr="device"
+string optional
+
+option "hpx-photon-ibport" - "set a particular IB port"
+typestr="integer"
+int optional
+
+option "hpx-photon-usecma" - "enable CMA connection mode"
+flag off
+
+option "hpx-photon-ledgersize" - "set number of ledger entries"
+typestr="integer"
+int optional
+
+option "hpx-photon-eagerbufsize" - "set size of eager buffers"
+typestr="bytes"
+int optional
+
+option "hpx-photon-smallpwcsize" - "set PWC small msg limit"
+typestr="bytes"
+int optional
+
+option "hpx-photon-maxrd" - "set max number of request descriptors"
+typestr="integer"
+int optional
+
+option "hpx-photon-defaultrd" - "set default number of allocated descriptors"
+typestr="integer"
+int optional

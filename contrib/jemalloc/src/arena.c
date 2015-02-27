@@ -405,8 +405,10 @@ arena_chunk_alloc_internal(arena_t *arena, size_t size, size_t alignment,
 	chunk = (arena_chunk_t *)chunk_alloc_arena(chunk_alloc, chunk_dalloc,
 	    arena->ind, NULL, size, alignment, zero);
 	malloc_mutex_lock(&arena->lock);
-	if (config_stats && chunk != NULL)
+	if (config_stats && chunk != NULL) {
 		arena->stats.mapped += chunksize;
+		arena->stats.metadata_mapped += (map_bias << LG_PAGE);
+	}
 
 	return (chunk);
 }
@@ -514,8 +516,10 @@ arena_chunk_dalloc(arena_t *arena, arena_chunk_t *chunk)
 		malloc_mutex_unlock(&arena->lock);
 		chunk_dalloc((void *)spare, chunksize, arena->ind);
 		malloc_mutex_lock(&arena->lock);
-		if (config_stats)
+		if (config_stats) {
 			arena->stats.mapped -= chunksize;
+			arena->stats.metadata_mapped -= (map_bias << LG_PAGE);
+		}
 	} else
 		arena->spare = chunk;
 }
@@ -846,6 +850,7 @@ arena_maybe_purge(arena_t *arena)
 	if (opt_lg_dirty_mult < 0)
 		return;
 	threshold = (arena->nactive >> opt_lg_dirty_mult);
+	threshold = threshold < chunk_npages ? chunk_npages : threshold;
 	/*
 	 * Don't purge unless the number of purgeable pages exceeds the
 	 * threshold.
@@ -889,6 +894,7 @@ arena_compute_npurge(arena_t *arena, bool all)
 	 */
 	if (!all) {
 		size_t threshold = (arena->nactive >> opt_lg_dirty_mult);
+		threshold = threshold < chunk_npages ? chunk_npages : threshold;
 
 		npurge = arena->ndirty - threshold;
 	} else
@@ -2273,6 +2279,8 @@ arena_stats_merge(arena_t *arena, const char **dss, size_t *nactive,
 	astats->npurge += arena->stats.npurge;
 	astats->nmadvise += arena->stats.nmadvise;
 	astats->purged += arena->stats.purged;
+	astats->metadata_mapped += arena->stats.metadata_mapped;
+	astats->metadata_allocated += arena_metadata_allocated_get(arena);
 	astats->allocated_large += arena->stats.allocated_large;
 	astats->nmalloc_large += arena->stats.nmalloc_large;
 	astats->ndalloc_large += arena->stats.ndalloc_large;

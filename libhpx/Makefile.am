@@ -1,27 +1,26 @@
 ####################
 # Makefile for HPX #
 ####################
-SUBDIRS = system util boot gas transport network scheduler
+SUBDIRS = system util boot gas transport network scheduler instrumentation 
 
 # The main libhpx library
 lib_LTLIBRARIES	   = libhpx.la
 
-libhpx_la_SOURCES  = hpx.c call.c par.c action.c debug.c 
+libhpx_la_SOURCES  = hpx.c call.c par.c action.c debug.c types.c
 
 libhpx_la_CPPFLAGS = -I$(top_srcdir)/include
-libhpx_la_LIBADD   = $(HPX_LIBFFI_LDADD) \
-                     $(HPX_PHOTON_LDADD) \
-                     $(HWLOC_EMBEDDED_LDADD) \
+libhpx_la_LIBADD   = $(HPX_LIBFFI_LIBS) \
+                     $(HPX_HWLOC_LIBS) \
+                     $(top_builddir)/libsync/libsync.la \
                      boot/libboot.la \
                      gas/libgas.la \
                      transport/libtransport.la \
                      network/libnetwork.la \
                      scheduler/libscheduler.la \
                      util/libutil.la \
-                     system/libsystem.la
-
-if HAVE_PAPI
-libhpx_la_CFLAGS   = @PAPI_CFLAGS@
-libhpx_la_LIBADD  += @PAPI_LIBS@
-endif
+                     system/libsystem.la \
+                     instrumentation/libinstrumentation.la \
+		     $(HPX_JEMALLOC_AS_MALLOC_LIBS) \
+                     $(HPX_PHOTON_LIBS) \
+                     $(HPX_JEMALLOC_LIBS)
 

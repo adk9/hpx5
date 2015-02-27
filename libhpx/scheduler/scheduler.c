@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -24,16 +24,17 @@
 #include <hpx/builtins.h>
 #include <libsync/barriers.h>
 
-#include <libhpx/debug.h>
-#include <libhpx/libhpx.h>
-#include <libhpx/scheduler.h>
+#include "libhpx/config.h"
+#include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
+#include "libhpx/scheduler.h"
 #include "thread.h"
 
 
-struct scheduler *
-scheduler_new(int cores, int workers, int stack_size, unsigned int backoff_max,
-              bool stats)
-{
+struct scheduler *scheduler_new(config_t *cfg) {
+  const int cores = cfg->cores;
+  const int workers = cfg->threads;
+
   struct scheduler *s = malloc(sizeof(*s));
   if (!s) {
     dbg_error("could not allocate a scheduler.\n");
@@ -70,12 +71,12 @@ scheduler_new(int cores, int workers, int stack_size, unsigned int backoff_max,
 
   sync_store(&s->shutdown, INT_MAX, SYNC_RELEASE);
   sync_store(&s->next_tls_id, 0, SYNC_RELEASE);
-  s->cores       = cores;
-  s->n_workers   = workers;
-  s->backoff_max = backoff_max;
+  s->cores        = cores;
+  s->n_workers    = workers;
+  s->wf_threshold = cfg->wfthreshold;
   scheduler_stats_init(&s->stats);
 
-  thread_set_stack_size(stack_size);
+  thread_set_stack_size(cfg->stacksize);
   log_sched("initialized a new scheduler.\n");
 
   // bind a worker for this thread so that we can spawn lightweight threads
@@ -193,4 +194,8 @@ scheduler_stats_t *scheduler_get_stats(struct scheduler *sched) {
   else {
     return NULL;
   }
+}
+
+HPX_INTERRUPT(scheduler_nop, void) {
+  return HPX_SUCCESS;
 }

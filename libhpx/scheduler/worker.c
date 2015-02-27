@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -31,6 +31,7 @@
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
+#include <libhpx/instrumentation.h>
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>                      // used as thread-control block
 #include <libhpx/process.h>
@@ -41,8 +42,7 @@
 #include "thread.h"
 #include "termination.h"
 
-static __thread struct worker *self = NULL;
-
+__thread struct worker *self = NULL;
 
 /// The pthread entry function for dedicated worker threads.
 ///
@@ -69,48 +69,122 @@ static void *_run(void *worker) {
   return NULL;
 }
 
+static int _call_continuation(hpx_addr_t target, hpx_action_t action,
+                              const void *args, size_t len, hpx_status_t status) {
+  dbg_assert(!args || len);
+  dbg_assert(!len || args);
+
+  // get a parcel we can use to call locality_call_continuation().
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(locality_cont_args_t) + len);
+  dbg_assert(p);
+  hpx_parcel_set_target(p, target);
+  hpx_parcel_set_action(p, locality_call_continuation);
+
+  locality_cont_args_t *cargs = hpx_parcel_get_data(p);
+  cargs->action = action;
+  cargs->status = status;
+
+  // perform the single serialization, if necessary
+  if (args) {
+    memcpy(&cargs->data, args, len);
+  }
+
+  return hpx_parcel_send(p, HPX_NULL);
+}
+
+/// continue a parcel by invoking its parcel continuation
+static int _continue_parcel(hpx_parcel_t *p, hpx_status_t status, size_t size,
+                            const void *value) {
+  int e = HPX_SUCCESS;
+  hpx_action_t c_act = hpx_parcel_get_cont_action(p);
+  hpx_addr_t c_target = hpx_parcel_get_cont_target(p);
+  if ((c_target != HPX_NULL) && c_act != HPX_ACTION_NULL) {
+    // Double the credit so that we can pass it on to the continuation
+    // without splitting it up.
+    if (p->pid != HPX_NULL) {
+      --p->credit;
+    }
+
+    if (c_act == hpx_lco_set_action) {
+      e = hpx_call_with_continuation(c_target, c_act, HPX_NULL, HPX_ACTION_NULL,
+                                     value, size);
+    }
+    else {
+      e = _call_continuation(c_target, c_act, value, size, status);
+    }
+  }
+  return e;
+}
+
+/// Execute a parcel.
+static hpx_parcel_t *_get_nop_parcel(void) {
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
+  p->action = scheduler_nop;
+  return p;
+}
+
+/// Execute a parcel.
+static int _execute(hpx_parcel_t *p) {
+  dbg_assert(p->target != HPX_NULL);
+  hpx_action_t id = hpx_parcel_get_action(p);
+  bool pinned = action_is_pinned(here->actions, id);
+  if (pinned && !hpx_gas_try_pin(p->target, NULL)) {
+    log_sched("pinned action resend\n");
+    return HPX_RESEND;
+  }
+
+  void *args = hpx_parcel_get_data(p);
+  int status = action_table_run_handler(here->actions, id, args);
+  if (pinned) {
+    hpx_gas_unpin(p->target);
+  }
+  return status;
+}
+
+/// The entry function for all interrupts.
+///
+static void _execute_interrupt(hpx_parcel_t *p) {
+  int e = _execute(p);
+  switch (e) {
+   case HPX_SUCCESS:
+    log_sched("completed interrupt\n");
+    _continue_parcel(p, HPX_SUCCESS, 0, NULL);
+    return;
+   case HPX_RESEND:
+    log_sched("resending interrupt to %lu\n", p->target);
+    if (HPX_SUCCESS != parcel_launch(p)) {
+      dbg_error("failed to resend parcel\n");
+    }
+    return;
+   default:
+    dbg_error("interrupt produced unexpected error %s.\n", hpx_strerror(e));
+  }
+}
 
 /// The entry function for all of the lightweight threads.
 ///
-/// This entry function extracts the action and the arguments from the parcel,
-/// and then invokes the action on the arguments. If the action returns to this
-/// entry function, we dispatch to the correct thread termination handler.
-///
 /// @param       parcel The parcel that describes the thread to run.
-static void HPX_NORETURN _thread_enter(hpx_parcel_t *parcel) {
-  const hpx_addr_t target = hpx_parcel_get_target(parcel);
-  const uint32_t owner = gas_owner_of(here->gas, target);
-  DEBUG_IF (owner != here->rank) {
-    log_sched("received parcel at incorrect rank, resend likely\n");
-  }
-
-  const hpx_action_t id = hpx_parcel_get_action(parcel);
-  void *args = hpx_parcel_get_data(parcel);
-
-  bool pinned = action_is_pinned(here->actions, id);
-  if (pinned) {
-    hpx_gas_try_pin(target, NULL);
-  }
-
-  int status = action_table_run_handler(here->actions, id, args);
-
-  if (pinned) {
-    hpx_gas_unpin(target);
-  }
-
-  switch (status) {
+static void _execute_thread(hpx_parcel_t *p) {
+  int e = _execute(p);
+  switch (e) {
     default:
-      dbg_error("action: produced unhandled error %i.\n", (int)status);
+     dbg_error("thread produced unhandled error %s.\n", hpx_strerror(e));
+     return;
     case HPX_ERROR:
-      dbg_error("action: produced error.\n");
+     dbg_error("thread produced error.\n");
+     return;
     case HPX_RESEND:
+     log_sched("resending interrupt to %lu\n", p->target);
+     if (HPX_SUCCESS != parcel_launch(p)) {
+       dbg_error("failed to resend parcel\n");
+     }
+     return;
     case HPX_SUCCESS:
     case HPX_LCO_ERROR:
-      hpx_thread_exit(status);
+      hpx_thread_exit(e);
   }
   unreachable();
 }
-
 
 /// A thread_transfer() continuation that runs after a worker first starts it's
 /// scheduling loop, but before any user defined lightweight threads run.
@@ -125,7 +199,6 @@ static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
   return HPX_SUCCESS;
 }
 
-
 /// Create a new lightweight thread based on the parcel.
 ///
 /// The newly created thread is runnable, and can be thread_transfer()ed to in
@@ -137,30 +210,42 @@ static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
 static hpx_parcel_t *_try_bind(hpx_parcel_t *p) {
   dbg_assert(p);
   if (!parcel_get_stack(p)) {
-    ustack_t *stack = thread_new(p, _thread_enter);
-    parcel_set_stack(p, stack);
+    ustack_t *stack = thread_new(p, _execute_thread);
+    ustack_t *old = parcel_set_stack(p, stack);
+    dbg_assert_str(!old, "replaced stack %p with %p in %p\n", (void*)old, (void*)stack,
+                   (void*)p);
   }
   return p;
 }
 
-
 /// Add a parcel to the top of the worker's work queue.
 static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
-  sync_chase_lev_ws_deque_push(&w->work, p);
-}
+  dbg_assert(p->target != HPX_NULL);
+  dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
+  DEBUG_IF(action_is_task(here->actions, p->action)) {
+    dbg_assert(!parcel_get_stack(p));
+  }
 
+  uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
+  self->work_first = (size >= here->sched->wf_threshold);
+  // if (self->work_first) {
+  //   log("work first %lu, %u\n", size, size >= here->sched->wf_threshold);
+  // }
+}
 
 /// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *_schedule_lifo(struct worker *w) {
-  return sync_chase_lev_ws_deque_pop(&w->work);
+  hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&w->work);
+  if (p != NULL) {
+    INST_EVENT_PARCEL_RUN(p);
+  }
+  return p;
 }
-
 
 /// Process the next available yielded thread.
 static hpx_parcel_t *_schedule_yielded(struct worker *w) {
   return sync_two_lock_queue_dequeue(&w->sched->yielded);
 }
-
 
 /// Steal a lightweight thread during scheduling.
 ///
@@ -185,14 +270,12 @@ static hpx_parcel_t *_schedule_steal(struct worker *w) {
   return p;
 }
 
-
 /// Send a mail message to another worker.
 static void _send_mail(int id, hpx_parcel_t *p) {
   dbg_assert(id >= 0);
   struct worker *w = scheduler_get_worker(here->sched, id);
   sync_two_lock_queue_enqueue(&w->inbox, p);
 }
-
 
 /// Process my mail queue.
 static void _handle_mail(struct worker *w) {
@@ -205,7 +288,6 @@ static void _handle_mail(struct worker *w) {
     }
   }
 }
-
 
 /// A transfer continuation that frees the current parcel.
 ///
@@ -221,11 +303,11 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   if (stack) {
     thread_delete(stack);
   }
+  INST_EVENT_PARCEL_END(prev);
   hpx_parcel_release(prev);
   int status = (intptr_t)env;
   return status;
 }
-
 
 /// A transfer continuation that resends the current parcel.
 ///
@@ -248,7 +330,6 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
   return HPX_SUCCESS;
 }
 
-
 /// Called by the worker from the scheduler loop to shut itself down.
 ///
 /// This will transfer back to the original system stack, returning the shutdown
@@ -260,7 +341,6 @@ static void _worker_shutdown(struct worker *w) {
   unreachable();
 }
 
-
 static int _run_task(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *from = self->current;
 
@@ -268,7 +348,7 @@ static int _run_task(hpx_parcel_t *to, void *sp, void *env) {
   // task's parcel. Otherwise we are transferring from a thread and we want to
   // checkpoint the current thread so that we can return to it and then push it
   // so we can find it later (or have it stolen later).
-  if (parcel_get_stack(from) == NULL) {
+  if (action_is_task(here->actions, from->action)) {
     hpx_parcel_release(from);
   }
   else {
@@ -279,7 +359,7 @@ static int _run_task(hpx_parcel_t *to, void *sp, void *env) {
   // otherwise run the action
   self->current = env;
   dbg_assert(parcel_get_stack(self->current) == NULL);
-  _thread_enter(env);
+  _execute_thread(env);
   unreachable();
   return HPX_SUCCESS;
 }
@@ -292,14 +372,41 @@ static int _run_task(hpx_parcel_t *to, void *sp, void *env) {
 /// @returns       NULL The parcel was processed as a task.
 ///                  @p The parcel was not a task.
 static hpx_parcel_t *_try_task(hpx_parcel_t *p) {
-  if (action_is_task(here->actions, hpx_parcel_get_action(p))) {
-    void **sp = &self->sp;
-    thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
-    return NULL;
+  if (scheduler_is_shutdown(self->sched)) {
+    return p;
   }
-  return p;
+
+  if (!action_is_task(here->actions, p->action)) {
+    return p;
+  }
+
+  dbg_assert(!parcel_get_stack(p));
+
+  void **sp = &self->sp;
+  int e = thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
+  dbg_check(e, "Error post _try_task: %s\n", hpx_strerror(e));
+  return NULL;
 }
 
+/// Try to execute a parcel as an interrupt.
+///
+/// @param            p The parcel to test.
+///
+/// @returns       NULL The parcel was processed as a task.
+///                  @p The parcel was not a task.
+static hpx_parcel_t *_try_interrupt(hpx_parcel_t *p) {
+  if (scheduler_is_shutdown(self->sched)) {
+    return p;
+  }
+
+  if (!action_is_interrupt(here->actions, p->action)) {
+    return p;
+  }
+
+  _execute_interrupt(p);
+  hpx_parcel_release(p);
+  return NULL;
+}
 
 /// Schedule something quickly.
 ///
@@ -317,7 +424,7 @@ static hpx_parcel_t *_schedule_in_lco(hpx_parcel_t *final) {
 
   // return so we can release the lock
   if (scheduler_is_shutdown(self->sched)) {
-    p = hpx_parcel_acquire(NULL, 0);
+    p = _get_nop_parcel();
     goto exit;
   }
 
@@ -330,7 +437,7 @@ static hpx_parcel_t *_schedule_in_lco(hpx_parcel_t *final) {
     goto exit;
   }
 
-  p = hpx_parcel_acquire(NULL, 0);
+  p = _get_nop_parcel();
  exit:
   dbg_assert(p);
   return _try_bind(p);
@@ -406,7 +513,7 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
     // couldn't find any work to do, we're not going to go into an infinite loop
     // here because the caller might be trying to yield() and we need to
     // guarantee some sort of progress in the system in that case.
-    p = hpx_parcel_acquire(NULL, 0);
+    p = _get_nop_parcel();
   }
 
   return _try_bind(p);
@@ -414,15 +521,15 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
 
 
 int worker_init(struct worker *w, struct scheduler *sched, int id, int core,
-                 unsigned seed, unsigned work_size)
+                unsigned seed, unsigned work_size)
 {
   dbg_assert(w);
   dbg_assert(sched);
 
   /// make sure the worker has proper alignment
-  dbg_assert((uintptr_t)w % HPX_CACHELINE_SIZE == 0);
-  dbg_assert((uintptr_t)&w->work % HPX_CACHELINE_SIZE == 0);
-  dbg_assert((uintptr_t)&w->inbox % HPX_CACHELINE_SIZE == 0);
+  dbg_assert(((uintptr_t)w & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&w->work & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&w->inbox & (HPX_CACHELINE_SIZE - 1)) == 0);
 
   w->sched      = sched;
   w->thread     = 0;
@@ -432,6 +539,7 @@ int worker_init(struct worker *w, struct scheduler *sched, int id, int core,
   w->UNUSED     = 0;
   w->sp         = NULL;
   w->current    = NULL;
+  w->work_first = 0;
 
   sync_chase_lev_ws_deque_init(&w->work, work_size);
   sync_two_lock_queue_init(&w->inbox, NULL);
@@ -474,27 +582,28 @@ int worker_start(void) {
   dbg_assert(self);
 
   // double-check this
-  dbg_assert((uintptr_t)self % HPX_CACHELINE_SIZE == 0);
-  dbg_assert((uintptr_t)&self->work % HPX_CACHELINE_SIZE == 0);
-  dbg_assert((uintptr_t)&self->inbox % HPX_CACHELINE_SIZE == 0);
+  dbg_assert(((uintptr_t)self & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&self->work & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&self->inbox & (HPX_CACHELINE_SIZE - 1))== 0);
 
   // get a parcel to start the scheduler loop with
   hpx_parcel_t *p = _schedule(true, NULL);
   if (!p) {
-    return dbg_error("failed to acquire an initial parcel.\n");
+    dbg_error("failed to acquire an initial parcel.\n");
   }
 
   int e = thread_transfer(p, _on_startup, NULL);
   if (e) {
     if (here->rank == 0) {
-      return dbg_error("application exited with a non-zero exit code: %d.\n", e);
+      log_error("application exited with a non-zero exit code: %d.\n", e);
     }
     return e;
   }
 
+  self->current = NULL;
+
   return LIBHPX_OK;
 }
-
 
 int worker_create(struct worker *worker) {
   pthread_t thread;
@@ -507,43 +616,110 @@ int worker_create(struct worker *worker) {
 
   // unbind the worker thread (-1 indicates run on all available cores)
   system_set_affinity(thread, -1);
-
   return LIBHPX_OK;
 }
 
-
 void worker_join(struct worker *worker) {
-  if (worker->thread != pthread_self()) {
-    if (pthread_join(worker->thread, NULL)) {
-      dbg_error("cannot join worker thread %d.\n", worker->id);
-    }
+  dbg_assert(worker);
+
+  if (worker->thread == pthread_self()) {
+    return;
+  }
+
+  if (pthread_join(worker->thread, NULL)) {
+    dbg_error("cannot join worker thread %d.\n", worker->id);
   }
 }
 
-
 void worker_cancel(struct worker *worker) {
   dbg_assert(worker);
+  dbg_assert(worker->thread != pthread_self());
   if (pthread_cancel(worker->thread)) {
     dbg_error("cannot cancel worker thread %d.\n", worker->id);
   }
 }
 
+static int _work_first(hpx_parcel_t *to, void *sp, void *env) {
+  hpx_parcel_t *prev = self->current;
+  parcel_get_stack(prev)->sp = sp;
+  self->current = to;
+  return HPX_SUCCESS;
+}
 
-/// Spawn a user-level thread.
+/// Spawn a parcel.
+///
+/// This complicated function does a bunch of logic to figure out the proper
+/// method of computation for the parcel.
 void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(self);
   dbg_assert(self->id >= 0);
   dbg_assert(p);
-  dbg_assert(hpx_gas_try_pin(hpx_parcel_get_target(p), NULL)); // NULL doesn't pin
-  if (action_is_interrupt(here->actions, hpx_parcel_get_action(p))) {
-    void **sp = &self->sp;
-    thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
+  dbg_assert(hpx_gas_try_pin(p->target, NULL)); // just performs translation
+  dbg_assert(action_table_get_handler(here->actions, p->action) != HPX_NULL);
+  profile_ctr(self->stats.spawns++);
+
+  // Don't run anything until we have started up. This lets us use parcel_send()
+  // before hpx_run() without worrying about weird work-first or interrupt
+  // effects.
+  if (!self->sp) {
+    _spawn_lifo(self, p);
     return;
   }
-  profile_ctr(self->stats.spawns++);
-  _spawn_lifo(self, p);
-}
 
+  // We always try and run interrupts eagerly. This should always be safe.
+  p = _try_interrupt(p);
+  if (!p) {
+    return;
+  }
+
+  // If we're in help-first mode, or we're supposed to shutdown, we go ahead and
+  // buffer this parcel. It will get pulled from the buffer later for
+  // processing.
+  if (!self->work_first || scheduler_is_shutdown(self->sched)) {
+    _spawn_lifo(self, p);
+    return;
+  }
+
+  // Otherwise we're in work-first mode, which means we should do our best to go
+  // ahead and run the parcel ourselves. There are some things that inhibit
+  // work-first scheduling.
+
+  // 1) We can't work-first anything if we're running a task, because blocking
+  //    the task will also block its parent.
+  //
+  //    NB: We probably can actually run tasks from tasks, since they're
+  //        guaranteed not to block (note we already do this for interrupts),
+  //        the issue is that we can't use _try_task() to do this because we get
+  //        parcel releases that we don't want when we do that. We could
+  //        restructure _try_task() to deal with that, in which case it would
+  //        make sense to hoist the _try_task() farther up this decision tree.
+  hpx_parcel_t *current = self->current;
+  if (action_is_task(here->actions, current->action)) {
+    _spawn_lifo(self, p);
+    return;
+  }
+
+  // 2) We can't work-first if we are holding an LCO lock.
+  ustack_t *thread = parcel_get_stack(current);
+  if (thread->lco_depth) {
+    _spawn_lifo(self, p);
+    return;
+  }
+
+  // 3) We can't work-first from an interrupt.
+  if (action_is_interrupt(here->actions, current->action)) {
+    _spawn_lifo(self, p);
+    return;
+  }
+
+  // We can process the parcel work-first, but we need to use a thread to do it
+  // so that our continuation can be stolen. We first make a check to see if
+  // we're supposed to transition out of work-first scheduling.
+  uint64_t size = sync_chase_lev_ws_deque_size(&self->work);
+  self->work_first = (size >= self->sched->wf_threshold);
+  int e = thread_transfer(_try_bind(p), _work_first, NULL);
+  dbg_check(e, "Detected a work-first scheduling error: %s\n", hpx_strerror(e));
+}
 
 /// This is the continuation that we use to yield a thread.
 ///
@@ -568,7 +744,6 @@ static int _checkpoint_yield(hpx_parcel_t *to, void *sp, void *env) {
   return HPX_SUCCESS;
 }
 
-
 void scheduler_yield(void) {
   // if there's nothing else to do, we can be rescheduled
   hpx_parcel_t *from = self->current;
@@ -585,14 +760,12 @@ void scheduler_yield(void) {
   dbg_assert(parcel_get_stack(to));
   dbg_assert(parcel_get_stack(to)->sp);
   // transfer to the new thread
-  thread_transfer(to, _checkpoint_yield, self->current);
+  thread_transfer(to, _checkpoint_yield, from);
 }
-
 
 void hpx_thread_yield(void) {
   scheduler_yield();
 }
-
 
 /// A transfer continuation that unlocks a lock.
 static int _unlock(hpx_parcel_t *to, void *sp, void *env) {
@@ -604,11 +777,11 @@ static int _unlock(hpx_parcel_t *to, void *sp, void *env) {
   return HPX_SUCCESS;
 }
 
-
 hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   // push the current thread onto the condition variable---no lost-update
   // problem here because we're holing the @p lock
   ustack_t *thread = parcel_get_stack(self->current);
+  dbg_assert(thread->lco_depth == 1);
   hpx_status_t status = cvar_push_thread(condition, thread);
 
   // if we successfully pushed, then do a transfer away from this thread
@@ -639,64 +812,19 @@ void scheduler_signal(cvar_t *cvar) {
   _resume(cvar_pop(cvar));
 }
 
-
 void scheduler_signal_all(struct cvar *cvar) {
   _resume(cvar_pop_all(cvar));
 }
-
 
 void scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
   _resume(cvar_set_error(cvar, code));
 }
 
-
-static void _call_continuation(hpx_addr_t target, hpx_action_t action,
-                               const void *args, size_t len,
-                               hpx_status_t status) {
-  dbg_assert(!args || len);
-  dbg_assert(!len || args);
-
-  // get a parcel we can use to call locality_call_continuation().
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(locality_cont_args_t) + len);
-  dbg_assert(p);
-  hpx_parcel_set_target(p, target);
-  hpx_parcel_set_action(p, locality_call_continuation);
-
-  locality_cont_args_t *cargs = hpx_parcel_get_data(p);
-  cargs->action = action;
-  cargs->status = status;
-
-  // perform the single serialization, if necessary
-  if (args) {
-    memcpy(&cargs->data, args, len);
-  }
-
-  hpx_parcel_send(p, HPX_NULL);
-}
-
-
 /// unified continuation handler
-static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
-                                   const void *value,
+static void HPX_NORETURN _continue(hpx_status_t status, size_t size, const void *value,
                                    void (*cleanup)(void*), void *env) {
   hpx_parcel_t *parcel = self->current;
-  hpx_action_t c_act = hpx_parcel_get_cont_action(parcel);
-  hpx_addr_t c_target = hpx_parcel_get_cont_target(parcel);
-  if ((c_target != HPX_NULL) && c_act != HPX_ACTION_NULL) {
-    // Double the credit so that we can pass it on to the continuation
-    // without splitting it up.
-    if (parcel->pid != HPX_NULL) {
-      --parcel->credit;
-    }
-
-    if (c_act == hpx_lco_set_action) {
-      hpx_call_with_continuation(c_target, c_act, HPX_NULL, HPX_ACTION_NULL,
-                                 value, size);
-    }
-    else {
-      _call_continuation(c_target, c_act, value, size, status);
-    }
-  }
+  _continue_parcel(parcel, status, size, value);
 
   // run the cleanup handler
   if (cleanup != NULL) {
@@ -711,17 +839,14 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size,
   unreachable();
 }
 
-
 void hpx_thread_continue(size_t size, const void *value) {
   _continue(HPX_SUCCESS, size, value, NULL, NULL);
 }
-
 
 void hpx_thread_continue_cleanup(size_t size, const void *value,
                                  void (*cleanup)(void*), void *env) {
   _continue(HPX_SUCCESS, size, value, cleanup, env);
 }
-
 
 void hpx_thread_exit(int status) {
   hpx_parcel_t *parcel = self->current;
@@ -746,7 +871,6 @@ void hpx_thread_exit(int status) {
   hpx_abort();
 }
 
-
 scheduler_stats_t *thread_get_stats(void) {
   if (self) {
     return &self->stats;
@@ -756,46 +880,37 @@ scheduler_stats_t *thread_get_stats(void) {
   }
 }
 
-
 hpx_parcel_t *scheduler_current_parcel(void) {
   return self->current;
 }
-
 
 int hpx_get_my_thread_id(void) {
   return (self) ? self->id : -1;
 }
 
-
 hpx_addr_t hpx_thread_current_target(void) {
   return (self && self->current) ? self->current->target : HPX_NULL;
 }
-
 
 hpx_addr_t hpx_thread_current_cont_target(void) {
   return (self && self->current) ? self->current->c_target : HPX_NULL;
 }
 
-
 hpx_action_t hpx_thread_current_action(void) {
   return (self && self->current) ? self->current->action : HPX_ACTION_NULL;
 }
-
 
 hpx_action_t hpx_thread_current_cont_action(void) {
   return (self && self->current) ? self->current->c_action : HPX_ACTION_NULL;
 }
 
-
 uint32_t hpx_thread_current_args_size(void) {
   return (self && self->current) ? self->current->size : 0;
 }
 
-
 hpx_pid_t hpx_thread_current_pid(void) {
   return (self && self->current) ? self->current->pid : HPX_NULL;
 }
-
 
 void *hpx_thread_current_local_target(void) {
   void *local;
@@ -807,11 +922,9 @@ void *hpx_thread_current_local_target(void) {
   return NULL;
 }
 
-
 uint32_t hpx_thread_current_credit(void) {
   return (self && self->current) ? parcel_get_credit(self->current) : 0;
 }
-
 
 int hpx_thread_get_tls_id(void) {
   ustack_t *stack = parcel_get_stack(self->current);
@@ -856,4 +969,29 @@ void hpx_thread_set_affinity(int affinity) {
 
   hpx_parcel_t *to = _schedule(false, NULL);
   thread_transfer(to, _move_to, (void*)(intptr_t)affinity);
+}
+
+/// This transfer handler is the right place to put all debug, logging, and
+/// instrumentation code for lightweight-thread transfers.
+int debug_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
+  // Trace this transfer, if transfer-tracing is enabled.
+  static const int class = INST_SCHED;
+  static const int id = INST_SCHED_TRANSFER;
+  hpx_parcel_t *from = scheduler_current_parcel();
+  inst_trace(class, id, (from) ? from->action : 0, p->action);
+
+  // Verify some properties before the transfer.
+  // if (self->current) {
+  //   dbg_assert(!action_is_interrupt(here->actions, self->current->action));
+
+  //   // if (parcel_get_stack(self->current)) {
+  //   //   dbg_assert(!action_is_task(here->actions, self->current->action));
+  //   // }
+  // }
+
+#undef thread_transfer
+  return thread_transfer(p, cont, env);
+
+  // squash unused warnings
+  (void)from;
 }

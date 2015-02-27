@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -115,8 +115,8 @@ static int _main_action(void *args) {
   hpx_addr_t done     = hpx_lco_and_new(nDoms);
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
   hpx_addr_t gsum = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(double),
-                                         (hpx_commutative_associative_op_t)sumdouble,
-                                         (void (*)(void *, const size_t size)) initdouble);
+                                         (hpx_monoid_id_t)initdouble,
+                                         (hpx_monoid_op_t)sumdouble);
 
   for (int i = 0, e = nDoms; i < e; ++i) {
     InitArgs init = {

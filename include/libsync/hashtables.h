@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -24,27 +24,26 @@ typedef struct {
   cuckoo_bucket_t *table;
 } cuckoo_hashtable_t;
 
-HPX_INTERNAL cuckoo_hashtable_t *sync_cuckoo_hashtable_new(void);
+SYNC_INTERNAL cuckoo_hashtable_t *sync_cuckoo_hashtable_new(void);
 
 
-HPX_INTERNAL void sync_cuckoo_hashtable_init(cuckoo_hashtable_t *)
+SYNC_INTERNAL void sync_cuckoo_hashtable_init(cuckoo_hashtable_t *)
   HPX_NON_NULL(1);
 
 
-HPX_INTERNAL void sync_cuckoo_hashtable_delete(cuckoo_hashtable_t *)
-  HPX_NON_NULL(1);
+SYNC_INTERNAL void sync_cuckoo_hashtable_delete(cuckoo_hashtable_t *);
 
 
-HPX_INTERNAL int sync_cuckoo_hashtable_insert(cuckoo_hashtable_t *, long key,
+SYNC_INTERNAL int sync_cuckoo_hashtable_insert(cuckoo_hashtable_t *, long key,
                                               const void *val)
   HPX_NON_NULL(1);
 
 
-HPX_INTERNAL const void *sync_cuckoo_hashtable_lookup(cuckoo_hashtable_t *, long key)
+SYNC_INTERNAL const void *sync_cuckoo_hashtable_lookup(cuckoo_hashtable_t *, long key)
   HPX_NON_NULL(1);
 
 
-HPX_INTERNAL void sync_cuckoo_hashtable_remove(cuckoo_hashtable_t *, long key)
+SYNC_INTERNAL void sync_cuckoo_hashtable_remove(cuckoo_hashtable_t *, long key)
   HPX_NON_NULL(1);
 
 

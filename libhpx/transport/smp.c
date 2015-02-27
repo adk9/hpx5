@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -54,44 +54,44 @@ static int _adjust_size(int size) {
 }
 
 
-static void _delete(transport_class_t *transport) {
+static void _delete(transport_t *transport) {
 }
 
 
-static int _pin(transport_class_t *transport, const void* buffer, size_t len) {
+static int _pin(transport_t *transport, const void* buffer, size_t len) {
   return LIBHPX_OK;
 }
 
 
-static void _unpin(transport_class_t *transport, const void* buffer, size_t len) {
+static void _unpin(transport_t *transport, const void* buffer, size_t len) {
 }
 
 
-static int _send(transport_class_t *t, int d, const void *b, size_t n, void *r) {
-  return dbg_error("smp: should never call send.\n");
+static int _send(transport_t *t, int d, const void *b, size_t n, void *r) {
+  dbg_error("should never call send.\n");
 }
 
 
-static size_t _probe(transport_class_t *transport, int *src) {
+static size_t _probe(transport_t *transport, int *src) {
   return 0;
 }
 
 
-static int _recv(transport_class_t *t, int src, void *buffer, size_t size, void *r) {
-  return dbg_error("smp: should never receive a parcel.\n");
+static int _recv(transport_t *t, int src, void *buffer, size_t size, void *r) {
+  dbg_error("should never receive a parcel.\n");
 }
 
 
-static int _test(transport_class_t *t, void *request, int *success) {
-  return dbg_error("smp: should never call test.\n");
+static int _test(transport_t *t, void *request, int *success) {
+  dbg_error("should never call test.\n");
 }
 
 
-static void _progress(transport_class_t *transport, transport_op_t op) {
+static void _progress(transport_t *transport, transport_op_t op) {
 }
 
 
-static transport_class_t _smp = {
+static transport_t _smp = {
   .type           = HPX_TRANSPORT_SMP,
   .id             = _id,
   .barrier        = _barrier,
@@ -114,6 +114,6 @@ static transport_class_t _smp = {
 };
 
 
-transport_class_t *transport_new_smp(uint32_t UNUSED1, uint32_t UNUSED2) {
+transport_t *transport_new_smp(void) {
   return &_smp;
 }

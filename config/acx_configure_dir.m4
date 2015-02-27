@@ -19,12 +19,9 @@
 #   - SRC-DIR-NAME is the source directory, relative to $srcdir.
 #   - BUILD-DIR-NAME is `top-build -> build'
 
-dnl autoconf < 2.63 compatibility
-m4_ifndef([AS_VAR_APPEND],
-	  AC_DEFUN([AS_VAR_APPEND], $1=$$1$2))
-
 AC_DEFUN([ACX_CONFIGURE_DIR],
 [
+config() {
   in_src=$1
   in_build=$2
   ac_sub_configure_args=$3
@@ -34,6 +31,9 @@ AC_DEFUN([ACX_CONFIGURE_DIR],
   ac_prev=
   eval "set x $ac_configure_args"
   shift
+
+  # only append args if we don't pass any to macro
+  if test -z "$ac_sub_configure_args"; then
   for ac_arg
   do
     if test -n "$ac_prev"; then
@@ -64,9 +64,10 @@ AC_DEFUN([ACX_CONFIGURE_DIR],
       case $ac_arg in
       *\'*) ac_arg=`AS_ECHO(["$ac_arg"]) | sed "s/'/'\\\\\\\\''/g"` ;;
       esac
-      AS_VAR_APPEND([ac_sub_configure_args], [" '$ac_arg'"]) ;;
+      ac_sub_configure_args = "'$ac_sub_configure_args' '$ac_arg'" ;;
     esac
   done
+  fi
 
   # Always prepend --prefix to ensure using the same prefix
   # in subdir configurations.
@@ -112,10 +113,21 @@ AC_DEFUN([ACX_CONFIGURE_DIR],
   esac
 
   AC_MSG_NOTICE([running $SHELL $ac_sub_configure $ac_sub_configure_args --cache-file=$ac_sub_cache_file --srcdir=$ac_srcdir])
+  config_cmd="\$SHELL \"\$ac_sub_configure\" $ac_sub_configure_args \
+       --cache-file=\"\$ac_sub_cache_file\" --srcdir=\"\$ac_srcdir\""
+  if test "x$enable_parallel_config" != xno; then
+    touch config.output
+    config_cmd+=" > config.output"
+  fi
+
   # The eval makes quoting arguments work.
-  eval "\$SHELL \"\$ac_sub_configure\" $ac_sub_configure_args \
-       --cache-file=\"\$ac_sub_cache_file\" --srcdir=\"\$ac_srcdir\"" ||
-    AC_MSG_ERROR([$ac_sub_configure failed for $ac_dir])
+  eval $config_cmd || AC_MSG_ERROR([$ac_sub_configure failed for $ac_dir])
 
   cd "$ac_popdir"
+}
+
+AS_IF([test "x$enable_parallel_config" != xno],
+      [config&],
+      [config])
+
 ])# ACX_CONFIGURE_DIR

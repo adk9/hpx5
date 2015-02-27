@@ -1,30 +1,87 @@
-noinst_PROGRAMS 	= hpxtest
-check_SCRIPTS           = run_tests.sh
-TESTS                   = run_tests.sh
-check_PROGRAMS		= hpxtest
-hpxtest_SOURCES		= 00_hpxtest.c \
-                          01_TestRuntime.c \
-                          02_TestMemAlloc.c \
-                          03_TestGlobalMemAlloc.c \
-                          04_TestParcel.c \
-                          05_TestThreads.c \
-                          06_TestFutures.c \
-                          07_TestLCO.c \
-                          08_TestSema.c \
-                          09_TestChannels.c \
-                          10_TestAndLCO.c \
-                          11_TestGenCount.c \
-                          12_TestMemget.c \
-                          13_TestMemput.c \
-			  15_TestWait.c
+noinst_HEADERS   = tests.h
 
-hpxtest_LDADD           = $(HPX_LDADD) @CHECK_LIBS@ -lm
-hpxtest_DEPENDENCIES    = $(HPX_LDADD)
-hpxtest_CPPFLAGS        = -I$(top_srcdir)/include 
-hpxtest_CPPFLAGS       += -D_POSIX_C_SOURCE=200809L
+noinst_PROGRAMS  = $(TESTS)
 
-hpxtest_CFLAGS          = @MPI_CFLAGS@ @CHECK_CFLAGS@
-hpxtest_CFLAGS         += @HWLOC_CFLAGS@ @PAPI_CFLAGS@
+AM_CPPFLAGS      = -I$(top_srcdir)/include 
+AM_CPPFLAGS     += -D_POSIX_C_SOURCE=200809L
+AM_LDFLAGS       = $(HPX_JEMALLOC_AS_MALLOC_RPATH) $(HPX_JEMALLOC_RPATH) -no-install
 
 # Turn off some warnings for the tests
-hpxtest_CFLAGS         += -Wno-unused
+AM_CFLAGS        = -Wno-unused
+
+LIBS = $(HPX_LIBS)
+
+TESTS            = test_and_lco           \
+                   test_bcast             \
+                   test_channels          \
+                   test_datatype          \
+                   test_futures           \
+                   test_gencount          \
+                   test_global_mem_alloc  \
+                   test_lco               \
+                   test_array_lco         \
+                   test_user_lco          \
+                   test_collectives       \
+                   test_mem_alloc         \
+                   test_memget            \
+                   test_memput            \
+                   test_parcel            \
+                   test_call              \
+                   test_sema              \
+                   test_task              \
+                   test_runtime           \
+                   test_threads
+
+if ENABLE_LENGTHY_TESTS
+TESTS           += test_wait
+endif
+
+test_and_lco_SOURCES            = test_and_lco.c
+test_bcast_SOURCES              = test_bcast.c
+test_channels_SOURCES           = test_channels.c
+test_datatype_SOURCES           = test_datatype.c
+test_futures_SOURCES            = test_futures.c
+test_gencount_SOURCES           = test_gencount.c
+test_global_mem_alloc_SOURCES   = test_global_mem_alloc.c
+test_lco_SOURCES                = test_lco.c
+test_array_lco_SOURCES          = test_array_lco.c
+test_user_lco_SOURCES           = test_user_lco.c 
+test_collectives_SOURCES        = test_collectives.c
+test_mem_alloc_SOURCES          = test_mem_alloc.c
+test_memget_SOURCES             = test_memget.c
+test_memput_SOURCES             = test_memput.c
+test_parcel_SOURCES             = test_parcel.c
+test_call_SOURCES               = test_call.c
+test_sema_SOURCES               = test_sema.c
+test_task_SOURCES               = test_task.c
+test_runtime_SOURCES            = test_runtime.c
+test_threads_SOURCES            = test_threads.c
+
+test_and_lco_DEPENDENCIES            = $(HPX_DEPS)
+test_bcast_DEPENDENCIES              = $(HPX_DEPS)
+test_channels_DEPENDENCIES           = $(HPX_DEPS)
+test_datatype_DEPENDENCIES           = $(HPX_DEPS)
+test_futures_DEPENDENCIES            = $(HPX_DEPS)
+test_gencount_DEPENDENCIES           = $(HPX_DEPS)
+test_global_mem_alloc_DEPENDENCIES   = $(HPX_DEPS)
+test_lco_DEPENDENCIES                = $(HPX_DEPS)
+test_array_lco_DEPENDENCIES          = $(HPX_DEPS)
+test_user_lco_DEPENDENCIES          = $(HPX_DEPS)
+test_collectives_DEPENDENCIES        = $(HPX_DEPS)
+test_mem_alloc_DEPENDENCIES          = $(HPX_DEPS)
+test_memget_DEPENDENCIES             = $(HPX_DEPS)
+test_memput_DEPENDENCIES             = $(HPX_DEPS)
+test_parcel_DEPENDENCIES             = $(HPX_DEPS)
+test_call_DEPENDENCIES               = $(HPX_DEPS)
+test_sema_DEPENDENCIES               = $(HPX_DEPS)
+test_task_DEPENDENCIES               = $(HPX_DEPS)
+test_runtime_DEPENDENCIES            = $(HPX_DEPS)
+test_threads_DEPENDENCIES            = $(HPX_DEPS)
+
+if ENABLE_LENGTHY_TESTS
+test_wait_SOURCES                    = test_wait.c
+endif
+
+test_wait_DEPENDENCIES               = $(HPX_DEPS)
+
+LOG_COMPILER = $(TESTS_CMD)

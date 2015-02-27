@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -103,7 +103,13 @@ static int offset_of(int i, int j) {
   return (i * (N + 2) * sizeof(double)) + (j * sizeof(double));
 }
 
-static int _stencil_action(int *ij) {
+struct spawn_stencil_args {
+  int i;
+  int j;
+  hpx_addr_t max;
+};
+
+static int _stencil_action(struct spawn_stencil_args *args) {
   // read the value in this cell
   hpx_addr_t target = hpx_thread_current_target();
   double *addr = NULL;
@@ -142,8 +148,8 @@ static int _stencil_action(int *ij) {
     sizeof(double)
   };
 
-  int i = ij[0];
-  int j = ij[1];
+  int i = args->i;
+  int j = args->j;
 
   hpx_addr_t neighbors[4] = {
     hpx_addr_add(grid, offset_of(i + 1, j), BLOCKSIZE),
@@ -175,19 +181,19 @@ static int _stencil_action(int *ij) {
 }
 
 static void spawn_stencil_args_init(void *out, const int i, const void *env) {
-  int *ij = out;
+  struct spawn_stencil_args *args = out;
 
-  ij[0] = 1+((i-1)/(N));
-  ij[1] = 1+((i-1)%(N));
+  args->i = 1+((i-1)/(N));
+  args->j = 1+((i-1)%(N));
+  args->max = *(hpx_addr_t*)env;
 }
 
-static int _spawn_stencil_action(int *ij) {
-  int i = ij[0];
-  int j = ij[1];
+static int _spawn_stencil_action(struct spawn_stencil_args *args) {
+  int i = args->i;
+  int j = args->j;
 
   hpx_addr_t cell = hpx_addr_add(grid, offset_of(i, j), BLOCKSIZE);
-  hpx_call_cc(cell, _stencil, NULL, NULL, ij, 2 * sizeof(int));
-  return HPX_SUCCESS;
+  return hpx_call(cell, _stencil, args->max, args, sizeof(*args));
 }
 
 static int _updateGrid_action(void *args) {
@@ -213,21 +219,22 @@ static int _updateGrid_action(void *args) {
     dTmax = 0.0;
 
     hpx_addr_t max = hpx_lco_allreduce_new(N * N, 1, sizeof(dTmax), 
-                         (hpx_commutative_associative_op_t)maxDouble, 
-                         (void (*)(void *, const size_t size))initDouble);
+                                          (hpx_monoid_id_t)initDouble,
+                                          (hpx_monoid_op_t)maxDouble);
     //for (int i = 1; i < N + 1; i++) {
     //  for (int j = 1; j < N + 1; j++) {
     //    int args[2] = { i, j };
     //     hpx_addr_t cell = hpx_addr_add(grid, offset_of(i, j), BLOCKSIZE);
-    //     hpx_call(cell, _stencil, min, args, sizeof(args));
+    //     hpx_call(cell, _stencil, max, args, sizeof(args));
     //   }
     // }
-    hpx_par_call(_spawn_stencil, 1, (N)*(N)+1 , N*N, (N+2)*(N+2), 
-                 sizeof(int), spawn_stencil_args_init, 0, NULL, max);
+    hpx_par_call(_spawn_stencil, 1, N*N+1 , HPX_THREADS, (N*N)/HPX_THREADS, 
+                 sizeof(struct spawn_stencil_args), spawn_stencil_args_init, sizeof(max),
+                 &max, HPX_NULL);
    
     hpx_lco_get(max, sizeof(dTmax), &dTmax);
 
-    //printf("%g\n", dTmax);
+    // printf("%g\n", dTmax);
 
     // reduce to get the max of dTmax 
     hpx_lco_set(domain->dTmax, sizeof(double), &dTmax, HPX_NULL, HPX_NULL);
@@ -330,14 +337,14 @@ static int _main_action(int *input)
   init_globals(grid, new_grid);
 
   hpx_addr_t runtimes = hpx_lco_allreduce_new(HPX_LOCALITIES, HPX_LOCALITIES, 
-                           sizeof(double),
-                          (hpx_commutative_associative_op_t)maxDouble,
-                          (void (*)(void *, const size_t size))initDouble);
+                                              sizeof(double),
+                                              (hpx_monoid_id_t)initDouble, 
+                                              (hpx_monoid_op_t)maxDouble);
 
   hpx_addr_t dTmax = hpx_lco_allreduce_new(HPX_LOCALITIES, HPX_LOCALITIES, 
-                           sizeof(double),
-                          (hpx_commutative_associative_op_t)maxDouble,
-                          (void (*)(void *, const size_t size))initDouble); 
+                                           sizeof(double),
+                                           (hpx_monoid_id_t)initDouble, 
+                                           (hpx_monoid_op_t)maxDouble); 
 
   for (int i = 0, e = HPX_LOCALITIES; i < e; ++i) {
     InitArgs init = {

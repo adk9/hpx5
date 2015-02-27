@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -26,6 +26,11 @@ typedef struct cvar {
 
 /// Reset a condition variable.
 void cvar_reset(cvar_t *cvar)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+/// Check if a condition variable is empty---there are not waiting
+/// threads associated with the condition variable.
+bool cvar_empty(cvar_t *cvar)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Set the condition with an error code.

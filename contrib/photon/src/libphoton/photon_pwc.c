@@ -51,7 +51,7 @@ static int photon_pwc_process_queued_req2(int proc, photonRequestTable rt) {
   }
   return PHOTON_OK;
 }
-*/  
+*/
 
 static int photon_pwc_process_queued_req(int proc, photonRequestTable rt) {
   photonRequest req;
@@ -79,7 +79,7 @@ static int photon_pwc_process_queued_req(int proc, photonRequestTable rt) {
     // if we could not send, indicate that the request is still in the queue
     sync_fadd(&rt->qcount, 1, SYNC_RELAXED);
   }
-  
+
   return PHOTON_OK;
 }
 
@@ -99,14 +99,14 @@ static int photon_pwc_try_packed(photonRequest req) {
 
     eb = photon_processes[req->proc].remote_pwc_buf;
     offset = photon_rdma_eager_buf_get_offset(req->proc, eb, asize,
-					      ALIGN(EB_MSG_SIZE(_photon_spsize), PWC_ALIGN));
+                          ALIGN(EB_MSG_SIZE(_photon_spsize), PWC_ALIGN));
     if (offset < 0) {
       return PHOTON_ERROR_RESOURCE;
     }
-    
+
     req->flags        |= REQUEST_FLAG_1PWC;
     req->rattr.events  = 1;
-    
+
     eager_addr = (uintptr_t)eb->remote.addr + offset;
     hdr = (photon_eb_hdr *)&(eb->data[offset]);
     hdr->header  = UINT8_MAX;
@@ -119,22 +119,26 @@ static int photon_pwc_try_packed(photonRequest req) {
     // set a tail flag, the last byte in aligned buffer
     tail = (uint8_t*)((uintptr_t)hdr + asize - 1);
     *tail = UINT8_MAX;
-    
+
     rc = __photon_backend->rdma_put(req->proc, (uintptr_t)hdr, (uintptr_t)eager_addr, asize,
                                     &(shared_storage->buf), &eb->remote, req->rattr.cookie,
-				    RDMA_FLAG_NIL);
+                    RDMA_FLAG_NIL);
     if (rc != PHOTON_OK) {
       dbg_err("RDMA PUT (PWC EAGER) failed for 0x%016lx", req->rattr.cookie);
       goto error_exit;
     }
-  } 
+  }
   else {
     // size is too large, try something else
     return PHOTON_ERROR_RESOURCE;
   }
 
+  dbg_trace("Posted Request: %d/0x%016lx/0x%016lx", req->proc,
+        req->local_info.id,
+        req->remote_info.id);
+
   return PHOTON_OK;
-  
+
  error_exit:
   return PHOTON_ERROR;
 }
@@ -168,57 +172,61 @@ static int photon_pwc_try_ledger(photonRequest req, int curr) {
 
     if (! (req->flags & REQUEST_FLAG_NO_RCE))
       req->rattr.events = 2;
-    
+
     rc = __photon_backend->rdma_put(req->proc, req->local_info.buf.addr,
-				    req->remote_info.buf.addr, req->size, &(db->buf),
-				    &req->remote_info.buf, req->rattr.cookie,
-				    RDMA_FLAG_NIL);
+                    req->remote_info.buf.addr, req->size, &(db->buf),
+                    &req->remote_info.buf, req->rattr.cookie,
+                    RDMA_FLAG_NIL);
     if (rc != PHOTON_OK) {
       dbg_err("RDMA PUT (PWC data) failed for 0x%016lx", req->rattr.cookie);
       goto error_exit;
     }
   }
-  
+
   if (! (req->flags & REQUEST_FLAG_NO_RCE)) {
     photonLedger l = photon_processes[req->proc].remote_pwc_ledger;
     assert(curr >= 0);
     entry = &(l->entries[curr]);
     entry->request = req->remote_info.id;
-    
+
     rmt_addr = (uintptr_t)l->remote.addr + (sizeof(*entry) * curr);
     dbg_trace("putting into remote ledger addr: 0x%016lx", rmt_addr);
-    
+
     rc = __photon_backend->rdma_put(req->proc, (uintptr_t)entry, rmt_addr,
-				    sizeof(*entry), &(shared_storage->buf),
-				    &(l->remote), req->rattr.cookie,
-				    RDMA_FLAG_NIL);
-    
+                    sizeof(*entry), &(shared_storage->buf),
+                    &(l->remote), req->rattr.cookie,
+                    RDMA_FLAG_NIL);
+
     if (rc != PHOTON_OK) {
       dbg_err("RDMA PUT (PWC comp) failed for 0x%016lx", req->rattr.cookie);
       goto error_exit;
     }
   }
 
+  dbg_trace("Posted Request: %d/0x%016lx/0x%016lx", req->proc,
+        req->local_info.id,
+        req->remote_info.id);
+
   return PHOTON_OK;
-  
+
  error_exit:
   return PHOTON_ERROR;
 }
-  
+
 int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
-				       struct photon_buffer_priv_t priv,
+                       struct photon_buffer_priv_t priv,
                                        photon_rid local, photon_rid remote, int flags) {
   photonRequest req;
   photonRequestTable rt;
   int rc;
-  
+
   dbg_trace("(%d, %p, %lu, %p, 0x%016lx, 0x%016lx)", proc, ptr, size, rptr, local, remote);
 
   if (size && !ptr) {
     log_err("Trying to put size %lu and NULL ptr", size);
     goto error_exit;
   }
-  
+
   if (size && !rptr) {
     log_err("Tring to put size %lu and NULL rptr", size);
     goto error_exit;
@@ -241,7 +249,7 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   req->type  = EVQUEUE;
   req->state = REQUEST_PENDING;
   req->size  = size;
-  
+
   req->local_info.id        = local;
   req->local_info.buf.addr  = (uintptr_t)ptr;
   req->local_info.buf.size  = size;
@@ -268,13 +276,13 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   req->rattr.cookie = req->id;
 
   rt = photon_processes[proc].request_table;
-  
+
   // process any queued requests for this peer first
   rc = photon_pwc_process_queued_req(proc, rt);
   if (rc == PHOTON_OK) {
     goto queue_exit;
   }
-  
+
   // otherwise try to send the current request
   rc = photon_pwc_try_packed(req);
   if (rc == PHOTON_ERROR_RESOURCE) {
@@ -294,16 +302,15 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
  queue_exit:
   sync_ms_queue_enqueue(rt->req_q, req);
   sync_fadd(&rt->qcount, 1, SYNC_RELAXED);
-  dbg_trace("Posted Request ID: %d/0x%016lx/0x%016lx", proc, local, remote);
   return PHOTON_OK;
-  
+
  error_exit:
   return PHOTON_ERROR;
 }
 
 int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
-				struct photon_buffer_priv_t priv,
-				photon_rid local, int flags) {
+                struct photon_buffer_priv_t priv,
+                photon_rid local, int flags) {
   photonBI db;
   photonRequest req;
   struct photon_buffer_t lbuf;
@@ -340,18 +347,18 @@ int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
     dbg_trace("Could not setup direct buffer request");
     goto error_exit;
   }
-  
+
   req->op = REQUEST_OP_PWC;
   req->local_info.id = local;
 
   rc = __photon_backend->rdma_get(proc, (uintptr_t)ptr, (uintptr_t)rptr, size, &(db->buf),
-				  &req->remote_info.buf, req->rattr.cookie, RDMA_FLAG_NIL);
+                  &req->remote_info.buf, req->rattr.cookie, RDMA_FLAG_NIL);
   if (rc != PHOTON_OK) {
     dbg_err("RDMA GET (PWC data) failed for 0x%016lx", req->rattr.cookie);
     goto error_exit;
   }
 
-  dbg_trace("Posted Request ID: %d/0x%016lx/0x%016lx", proc, local, req->rattr.cookie);
+  dbg_trace("Posted Request: %d/0x%016lx/0x%016lx", proc, local, req->rattr.cookie);
 
   return PHOTON_OK;
 
@@ -359,7 +366,7 @@ int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   return PHOTON_ERROR;
 }
 
-int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags) {
+int _photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *request, int flags) {
   photonLedger ledger;
   photonLedgerEntry entry_iter;
   photonRequest req;
@@ -367,7 +374,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
   photon_eb_hdr *hdr;
   photon_rid cookie = NULL_REQUEST;
   int i, rc, start, end;
-  
+
   *flag = 0;
 
   if (proc == PHOTON_ANY_SOURCE) {
@@ -384,13 +391,13 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
     req = photon_pwc_pop_req();
     if (req != NULL) {
       if (! (req->flags & REQUEST_FLAG_NO_LCE)) {
-	*flag = 1;
-	*request = req->local_info.id;
+    *flag = 1;
+    *request = req->local_info.id;
       }
       dbg_trace("Completed and removing queued pwc request: 0x%016lx (ind=0x%016lx)",
-		req->id, req->local_info.id);
+        req->id, req->local_info.id);
       photon_free_request(req);
-      return PHOTON_OK;
+      goto exit;
     }
 
     rc = __photon_get_event(&cookie);
@@ -402,7 +409,7 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       cookie = NULL_REQUEST;
       // no event so process any queued PWC requests
       for (i=start; i<end; i++) {
-	photon_pwc_process_queued_req(i, photon_processes[i].request_table);
+    photon_pwc_process_queued_req(i, photon_processes[i].request_table);
       }
     }
     else {
@@ -410,26 +417,26 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       int rc;
       rc = __photon_handle_cq_event(NULL, cookie, &req);
       if (rc == PHOTON_EVENT_ERROR) {
-	goto error_exit;
+    goto error_exit;
       }
       else if ((rc == PHOTON_EVENT_REQCOMP) && req &&
-	       (req->op == REQUEST_OP_PWC)) {
-	// sometimes the requestor doesn't care about the completion
-	if (! (req->flags & REQUEST_FLAG_NO_LCE)) {
-	  *flag = 1;
-	  *request = req->local_info.id;
-	}
-	dbg_trace("Completed and removing pwc request: 0x%016lx (id=0x%016lx)",
-		  req->id, req->local_info.id);
-	photon_free_request(req);
-	return PHOTON_OK;
+           (req->op == REQUEST_OP_PWC)) {
+    // sometimes the requestor doesn't care about the completion
+    if (! (req->flags & REQUEST_FLAG_NO_LCE)) {
+      *flag = 1;
+      *request = req->local_info.id;
+    }
+    dbg_trace("Completed and removing pwc request: 0x%016lx (id=0x%016lx)",
+          req->id, req->local_info.id);
+    photon_free_request(req);
+    goto exit;
       }
       else {
-	dbg_trace("PWC probe handled non-completion event: 0x%016lx", cookie);
+    dbg_trace("PWC probe handled non-completion event: 0x%016lx", cookie);
       }
     }
   }
-  
+
   // only check recv ledgers if an event we don't care about was popped
   if ((cookie == NULL_REQUEST) && (flags & PHOTON_PROBE_LEDGER)) {
     uint64_t offset, curr, new, left;
@@ -440,52 +447,57 @@ int _photon_probe_completion(int proc, int *flag, photon_rid *request, int flags
       offset = curr & (eb->size - 1);
       left = eb->size - offset;
       if (left < ALIGN(EB_MSG_SIZE(_photon_spsize), PWC_ALIGN)) {
-	new = left + curr;
-	offset = 0;
+    new = left + curr;
+    offset = 0;
       }
       else {
-	new = curr;
+    new = curr;
       }
 
       hdr = (photon_eb_hdr *)&(eb->data[offset]);
       if ((hdr->header == UINT8_MAX) && (hdr->footer == UINT8_MAX)) {
-	photon_rid req = hdr->request;
-	uintptr_t addr = hdr->addr;
-	uint16_t size = hdr->length;
-	uint64_t asize = ALIGN(EB_MSG_SIZE(size), PWC_ALIGN);
-	if (sync_cas(&eb->curr, curr, new+asize, SYNC_RELAXED, SYNC_RELAXED)) {
-	  // now check for tail flag (or we could return to check later)
-	  volatile uint8_t *tail = (uint8_t*)((uintptr_t)hdr + asize - 1);
-	  while (*tail != UINT8_MAX)
-	    ;
-	  memcpy((void*)addr, (void*)((uintptr_t)hdr + sizeof(*hdr)), size);
-	  *request = req;
-	  *flag = 1;
-	  dbg_trace("Copied message of size %u into 0x%016lx for request 0x%016lx",
-		   size, addr, req);
-	  memset((void*)hdr, 0, asize);
-	  sync_store(&eb->prog, new+asize, SYNC_RELAXED);
-	  return PHOTON_OK;
-	}
+    photon_rid req = hdr->request;
+    uintptr_t addr = hdr->addr;
+    uint16_t size = hdr->length;
+    uint64_t asize = ALIGN(EB_MSG_SIZE(size), PWC_ALIGN);
+    if (sync_cas(&eb->curr, curr, new+asize, SYNC_RELAXED, SYNC_RELAXED)) {
+      // now check for tail flag (or we could return to check later)
+      volatile uint8_t *tail = (uint8_t*)((uintptr_t)hdr + asize - 1);
+      while (*tail != UINT8_MAX)
+        ;
+      memcpy((void*)addr, (void*)((uintptr_t)hdr + sizeof(*hdr)), size);
+      *request = req;
+      *flag = 1;
+      dbg_trace("Copied message of size %u into 0x%016lx for request 0x%016lx",
+           size, addr, req);
+      memset((void*)hdr, 0, asize);
+      sync_store(&eb->prog, new+asize, SYNC_RELAXED);
+      goto exit;
+    }
       }
-      
+
       // then check pwc ledger
       ledger = photon_processes[i].local_pwc_ledger;
       curr = sync_load(&ledger->curr, SYNC_RELAXED);
       offset = curr & (ledger->num_entries - 1);
       entry_iter = &(ledger->entries[offset]);
       if (entry_iter->request != (photon_rid) UINT64_MAX &&
-	  sync_cas(&ledger->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
-	*request = entry_iter->request;
-	entry_iter->request = UINT64_MAX;
-	*flag = 1;
-	sync_fadd(&ledger->prog, 1, SYNC_RELAXED);
-	dbg_trace("Popped ledger event with id: 0x%016lx (%lu)", *request, *request);
-	return PHOTON_OK;
+      sync_cas(&ledger->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
+    *request = entry_iter->request;
+    entry_iter->request = UINT64_MAX;
+    *flag = 1;
+    sync_fadd(&ledger->prog, 1, SYNC_RELAXED);
+    dbg_trace("Popped ledger event with id: 0x%016lx (%lu)", *request, *request);
+    goto exit;
       }
     }
   }
-    
+
+ exit:
+  if (remaining) {
+    *remaining = photon_count_request(proc);
+    dbg_trace("%d requests remaining", *remaining);
+  }
   return PHOTON_OK;
 
  error_exit:

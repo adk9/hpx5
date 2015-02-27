@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -19,30 +19,29 @@
 #include "libhpx/debug.h"
 #include "libhpx/transport.h"
 
-static transport_class_t *_default(uint32_t send_limit, uint32_t recv_limit) {
+static transport_t *_default(config_t *cfg) {
 #ifdef HAVE_PHOTON
-  return transport_new_photon(send_limit, recv_limit);
+  return transport_new_photon(cfg);
 #endif
 
 #ifdef HAVE_PORTALS
-  return transport_new_portals(send_limit, recv_limit);
+  return transport_new_portals(cfg);
 #endif
 
 #ifdef HAVE_MPI
-  return transport_new_mpi(send_limit, recv_limit);
+  return transport_new_mpi(cfg);
 #endif
 
-  return transport_new_smp(send_limit, recv_limit);
+  return transport_new_smp();
 }
 
-transport_class_t *transport_new(hpx_transport_t type, uint32_t send_limit,
-                                 uint32_t recv_limit) {
-  transport_class_t *transport = NULL;
+transport_t *transport_new(hpx_transport_t type, config_t *cfg) {
+  transport_t *transport = NULL;
 
   switch (type) {
    case (HPX_TRANSPORT_PHOTON):
 #ifdef HAVE_PHOTON
-    transport = transport_new_photon(send_limit, recv_limit);
+    transport = transport_new_photon(cfg);
 #else
     dbg_error("Photon transport not supported in current configuration.\n");
 #endif
@@ -50,7 +49,7 @@ transport_class_t *transport_new(hpx_transport_t type, uint32_t send_limit,
 
    case (HPX_TRANSPORT_MPI):
 #ifdef HAVE_MPI
-    transport = transport_new_mpi(send_limit, recv_limit);
+    transport = transport_new_mpi(cfg);
 #else
     dbg_error("MPI transport not supported in current configuration.\n");
 #endif
@@ -58,24 +57,24 @@ transport_class_t *transport_new(hpx_transport_t type, uint32_t send_limit,
 
    case (HPX_TRANSPORT_PORTALS):
 #ifdef HAVE_PORTALS
-    transport = transport_new_portals(send_limit, recv_limit);
+    transport = transport_new_portals(cfg);
 #else
     dbg_error("Portals transport not supported in current configuration.\n");
 #endif
     break;
 
    case (HPX_TRANSPORT_SMP):
-    transport = transport_new_smp(send_limit, recv_limit);
+    transport = transport_new_smp();
     break;
 
    case (HPX_TRANSPORT_DEFAULT):
    default:
-    transport = _default(send_limit, recv_limit);
+    transport = _default(cfg);
     break;
   };
 
   if (!transport) {
-    transport = _default(send_limit, recv_limit);
+    transport = _default(cfg);
   }
 
   if (!transport) {

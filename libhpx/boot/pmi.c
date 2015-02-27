@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -22,9 +22,9 @@
 #include <assert.h>
 #include <pmi.h>
 
-#include "libhpx/boot.h"
-#include "libhpx/locality.h"
-#include "libhpx/debug.h"
+#include <libhpx/boot.h>
+#include <libhpx/locality.h>
+#include <libhpx/debug.h>
 
 
 static HPX_RETURNS_NON_NULL const char *_id(void) {
@@ -32,12 +32,12 @@ static HPX_RETURNS_NON_NULL const char *_id(void) {
 }
 
 
-static void _delete(boot_class_t *boot) {
+static void _delete(boot_t *boot) {
   PMI_Finalize();
 }
 
 
-static int _rank(const boot_class_t *boot) {
+static int _rank(const boot_t *boot) {
   int rank;
   if (PMI_Get_rank(&rank) != PMI_SUCCESS)
     hpx_abort();
@@ -45,7 +45,7 @@ static int _rank(const boot_class_t *boot) {
 }
 
 
-static int _n_ranks(const boot_class_t *boot) {
+static int _n_ranks(const boot_t *boot) {
   int ranks;
   if (PMI_Get_size(&ranks) != PMI_SUCCESS)
     hpx_abort();
@@ -53,12 +53,12 @@ static int _n_ranks(const boot_class_t *boot) {
 }
 
 
-static int _barrier(const boot_class_t *boot) {
+static int _barrier(const boot_t *boot) {
   return (PMI_Barrier() != PMI_SUCCESS) ? HPX_ERROR : HPX_SUCCESS;
 }
 
 
-static void _abort(const boot_class_t *boot) {
+static void _abort(const boot_t *boot) {
   PMI_Abort(-6, "HPX aborted.");
 }
 
@@ -134,11 +134,14 @@ _decode(const char *src, size_t slen, void *dst, size_t dlen) {
 static int HPX_USED _put_buffer(char *kvs, int rank, void *buffer, size_t len)
 {
   int length;
+  const int pmi_maxlen = 256;
 
   // allocate key
   int e = PMI_KVS_Get_key_length_max(&length);
-  if (e != PMI_SUCCESS)
-    return dbg_error("pmi: failed to get max key length.\n");
+  if (e != PMI_SUCCESS) {
+    log_error("pmi: failed to get max key length.\n");
+    length = pmi_maxlen;
+  }
   char *key = malloc(sizeof(*key) * length);
   snprintf(key, length, "%d", rank);
 
@@ -146,21 +149,24 @@ static int HPX_USED _put_buffer(char *kvs, int rank, void *buffer, size_t len)
   e = PMI_KVS_Get_value_length_max(&length);
   if (e != PMI_SUCCESS) {
     free(key);
-    return dbg_error("pmi: failed to get max value length.\n");
+    log_error("pmi: failed to get max value length.\n");
+    length = pmi_maxlen;
   }
   char *value = malloc(sizeof(*value) * length);
-  if ((_encode(buffer, len, value, (size_t*)&length)) != HPX_SUCCESS)
+  if ((_encode(buffer, len, value, (size_t*)&length)) != HPX_SUCCESS) {
     goto error;
+  }
 
   // do the key-value pair exchange
-  if ((PMI_KVS_Put(kvs, key, value)) != PMI_SUCCESS)
+  if ((PMI_KVS_Put(kvs, key, value)) != PMI_SUCCESS) {
     goto error;
+  }
 
-  if ((PMI_KVS_Commit(kvs)) != PMI_SUCCESS)
+  if ((PMI_KVS_Commit(kvs)) != PMI_SUCCESS) {
     goto error;
+  }
 
   PMI_Barrier();
-
   free(key);
   free(value);
   return length;
@@ -168,7 +174,7 @@ static int HPX_USED _put_buffer(char *kvs, int rank, void *buffer, size_t len)
 error:
   free(key);
   free(value);
-  return dbg_error("pmi: failed to put buffer in PMI's KVS.\n");
+  return log_error("pmi: failed to put buffer in PMI's KVS.\n");
 }
 
 /// ----------------------------------------------------------------------------
@@ -182,7 +188,7 @@ static int HPX_USED _get_buffer(char *kvs, int rank, void *buffer, size_t len)
   // allocate key
   int e = PMI_KVS_Get_key_length_max(&length);
   if (e != PMI_SUCCESS)
-    return dbg_error("pmi: failed to get max key length.\n");
+    return log_error("pmi: failed to get max key length.\n");
   char *key = malloc(sizeof(*key) * length);
   snprintf(key, length, "%d", rank);
 
@@ -190,7 +196,7 @@ static int HPX_USED _get_buffer(char *kvs, int rank, void *buffer, size_t len)
   e = PMI_KVS_Get_value_length_max(&length);
   if (e != PMI_SUCCESS) {
     free(key);
-    return dbg_error("pmi: failed to get max value length.\n");
+    return log_error("pmi: failed to get max value length.\n");
   }
   char *value = malloc(sizeof(*value) * length);
   if ((PMI_KVS_Get(kvs, key, value, length)) != PMI_SUCCESS)
@@ -206,20 +212,22 @@ static int HPX_USED _get_buffer(char *kvs, int rank, void *buffer, size_t len)
 error:
   free(key);
   free(value);
-  return dbg_error("pmi: failed to put buffer in PMI's KVS.\n");
+  return log_error("pmi: failed to put buffer in PMI's KVS.\n");
 }
 
 
-static int _allgather(const boot_class_t *boot, void *in, void *out, int n) {
+static int _allgather(const boot_t *boot, const void *cin, void *out, int n) {
+  void *in = (void*)cin;
+
 #if HAVE_PMI_CRAY_EXT
   // nb: Cray PMI allgather does not guarantee process-rank
   // order. Here, we assume that the ordering is, at least,
   // deterministic for all allgather invocations.
 
   int *nranks = malloc(sizeof(*nranks) * here->ranks);
-  if ((PMI_Allgather(&here->rank, nranks, here->ranks)) != PMI_SUCCESS) {
+  if ((PMI_Allgather(&here->rank, nranks, sizeof(here->ranks))) != PMI_SUCCESS) {
     free(nranks);
-    return dbg_error("pmi: failed in PMI_Allgather.\n");
+    return log_error("pmi: failed in PMI_Allgather.\n");
   }
 
   void *buf = malloc(sizeof(char) * n * here->ranks);
@@ -227,11 +235,12 @@ static int _allgather(const boot_class_t *boot, void *in, void *out, int n) {
   if ((PMI_Allgather(in, buf, n)) != PMI_SUCCESS) {
     free(buf);
     free(nranks);
-    return dbg_error("pmi: failed in PMI_Allgather.\n");
+    return log_error("pmi: failed in PMI_Allgather.\n");
   }
 
-  for (int i = 0; i < here->ranks; i++)
+  for (int i = 0; i < here->ranks; i++) {
     memcpy((char*)out+(nranks[i]*n), (char*)buf+(i*n), n);
+  }
 
   free(buf);
   free(nranks);
@@ -240,13 +249,14 @@ static int _allgather(const boot_class_t *boot, void *in, void *out, int n) {
 
   // allocate name for the nidpid map exchange
   int e = PMI_KVS_Get_name_length_max(&length);
-  if (e != PMI_SUCCESS)
-    return dbg_error("pmi: failed to get max name length.\n");
+  if (e != PMI_SUCCESS) {
+    return log_error("pmi: failed to get max name length.\n");
+  }
   char *name = malloc(sizeof(*name) * length);
   e = PMI_KVS_Get_my_name(name, length);
   if (e != PMI_SUCCESS) {
     free(name);
-    return dbg_error("pmi: failed to get kvs name.\n");
+    return log_error("pmi: failed to get kvs name.\n");
   }
 
   _put_buffer(name, here->rank, (void*)in, n);
@@ -259,7 +269,7 @@ static int _allgather(const boot_class_t *boot, void *in, void *out, int n) {
 }
 
 
-static boot_class_t _pmi = {
+static boot_t _pmi = {
   .type      = HPX_BOOT_PMI,
   .id        = _id,
   .delete    = _delete,
@@ -271,11 +281,12 @@ static boot_class_t _pmi = {
 };
 
 
-boot_class_t *boot_new_pmi(void) {
+boot_t *boot_new_pmi(void) {
   int init;
   PMI_Initialized(&init);
-  if (init)
+  if (init) {
     return &_pmi;
+  }
 
   int spawned;
   if (PMI_Init(&spawned) == PMI_SUCCESS) {
@@ -283,5 +294,6 @@ boot_class_t *boot_new_pmi(void) {
     return &_pmi;
   }
 
+  log_boot("failed to initialize PMI bootstrap network\n");
   return NULL;
 }

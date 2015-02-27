@@ -22,7 +22,7 @@ void
 malloc_tsd_dalloc(void *wrapper)
 {
 
-	a0free(wrapper);
+	a0dalloc(wrapper);
 }
 
 void
