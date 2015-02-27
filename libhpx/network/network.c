@@ -24,13 +24,20 @@
 #include "smp.h"
 
 static network_t *_default(config_t *cfg, struct boot *boot, struct gas *gas,
-                           int nrx) {
+			   int nrx) {
+  network_t *network = NULL;
 #ifdef HAVE_PHOTON
-  return network_pwc_funneled_new(cfg, boot, gas, nrx);
+  network = network_pwc_funneled_new(cfg, boot, gas, nrx);
+  if (network) {
+    return network;
+  }
 #endif
-
+  
 #ifdef HAVE_MPI
-  return network_isir_funneled_new(cfg, gas, nrx);
+  network =  network_isir_funneled_new(cfg, gas, nrx);
+  if (network) {
+    return network;
+  }
 #endif
   
   return network_smp_new();

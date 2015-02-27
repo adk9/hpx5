@@ -81,6 +81,7 @@ static network_t _smp = {
 };
 
 network_t *network_smp_new(void) {
+  /*
   int e = network_supported_transport(here->transport, SMP_TRANSPORTS,
 				      _HPX_NELEM(SMP_TRANSPORTS));
   if (e) {
@@ -89,5 +90,6 @@ network_t *network_smp_new(void) {
 	      HPX_TRANSPORT_TO_STRING[here->transport->type]);
     return NULL;
   }
+  */
   return &_smp;
 }
