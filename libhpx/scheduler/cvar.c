@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -99,4 +99,8 @@ hpx_parcel_t *cvar_pop_all(cvar_t *cvar) {
 
 void cvar_reset(cvar_t *cvar) {
   cvar->top = NULL;
+}
+
+bool cvar_empty(cvar_t *cvar) {
+  return (cvar->top == NULL);
 }

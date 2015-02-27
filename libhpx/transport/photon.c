@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -35,14 +35,11 @@
 
 #define PHOTON_DEFAULT_TAG 13
 
-static char* photon_default_eth_dev = "roce0";
-static char* photon_default_ib_dev = "";
-static char* photon_default_backend = "verbs";
-static int   photon_default_srlimit = 32;
+static int photon_default_srlimit = 32;
 
 /// the Photon transport
 typedef struct {
-  transport_class_t     class;
+  transport_t           class;
   struct photon_config_t  cfg;
   progress_t        *progress;
   unsigned              arena;
@@ -112,7 +109,7 @@ _request_cancel(void *request)
 /// Shut down Photon, and delete the transport.
 /// ----------------------------------------------------------------------------
 static void
-_delete(transport_class_t *transport)
+_delete(transport_t *transport)
 {
   photon_t *photon = (photon_t*)transport;
   network_progress_delete(photon->progress);
@@ -125,7 +122,7 @@ _delete(transport_class_t *transport)
 /// Pinning necessary.
 /// ----------------------------------------------------------------------------
 static int
-_pin(transport_class_t *transport, const void* buffer, size_t len)
+_pin(transport_t *transport, const void* buffer, size_t len)
 {
   void *b = (void*)buffer;
   if (photon_register_buffer(b, len)) {
@@ -157,7 +154,7 @@ _pin(transport_class_t *transport, const void* buffer, size_t len)
 /// Pinning necessary.
 /// ----------------------------------------------------------------------------
 static void
-_unpin(transport_class_t *transport, const void* buffer, size_t len)
+_unpin(transport_t *transport, const void* buffer, size_t len)
 {
   void *b = (void*)buffer;
   if (photon_unregister_buffer(b, len))
@@ -172,10 +169,10 @@ _unpin(transport_class_t *transport, const void* buffer, size_t len)
 /// Put data via Photon
 /// ----------------------------------------------------------------------------
 static int
-_put(transport_class_t *t, int dest, const void *data, size_t n, void *rbuffer,
+_put(transport_t *t, int dest, const void *data, size_t n, void *rbuffer,
      size_t rn, void *rid, void *r)
 {
-  int rc, flags;
+  int rc, flags = 0;
   photon_t *photon = (photon_t *)t;
   void *b = (void*)data;
   struct photon_buffer_priv_t priv;
@@ -188,12 +185,12 @@ _put(transport_class_t *t, int dest, const void *data, size_t n, void *rbuffer,
     photon_addr daddr = {.blkaddr.blk3 = saddr};
     int e = photon_send(&daddr, b, n, 0, r);
     if (e != PHOTON_OK)
-      return dbg_error("photon: could not put %lu bytes to %i.\n", n, dest);
+      return log_error("photon: could not put %lu bytes to %i.\n", n, dest);
   }
   else {
     rc = photon_get_buffer_private(rbuffer, rn, &priv);
     if (rc != PHOTON_OK) {
-      return dbg_error("photon: could not get buffer metadata for put: 0x%016lx (%lu).\n",
+      return log_error("photon: could not get buffer metadata for put: 0x%016lx (%lu).\n",
                (uintptr_t)rbuffer, rn);
     }
 
@@ -211,7 +208,7 @@ _put(transport_class_t *t, int dest, const void *data, size_t n, void *rbuffer,
 
     rc = photon_post_os_put_direct(dest, b, n, &pbuf, flags, r);
     if (rc != PHOTON_OK) {
-      return dbg_error("photon: could not complete put operation: 0x%016lx (%lu).\n",
+      return log_error("photon: could not complete put operation: 0x%016lx (%lu).\n",
                (uintptr_t)rbuffer, rn);
     }
   }
@@ -224,10 +221,10 @@ _put(transport_class_t *t, int dest, const void *data, size_t n, void *rbuffer,
 /// Get data via Photon
 /// ----------------------------------------------------------------------------
 static int
-_get(transport_class_t *t, int dest, void *buffer, size_t n, const void *rdata,
+_get(transport_t *t, int dest, void *buffer, size_t n, const void *rdata,
      size_t rn, void *rid, void *r)
 {
-  int rc, flags;
+  int rc, flags = 0;
   photon_t *photon = (photon_t*)t;
   void *b = (void*)rdata;
   struct photon_buffer_priv_t priv;
@@ -239,13 +236,13 @@ _get(transport_class_t *t, int dest, void *buffer, size_t n, const void *rdata,
     photon_rid *id = (photon_rid*)r;
     int e = photon_recv(*id, buffer, n, 0);
     if (e != PHOTON_OK) {
-      return dbg_error("photon: could not get from %i.\n", dest);
+      return log_error("photon: could not get from %i.\n", dest);
     }
   }
   else {
     rc = photon_get_buffer_private(b, rn, &priv);
     if (rc != PHOTON_OK) {
-      return dbg_error("photon: could not get buffer metadata for get: 0x%016lx (%lu).\n",
+      return log_error("photon: could not get buffer metadata for get: 0x%016lx (%lu).\n",
                (uintptr_t)b, rn);
     }
 
@@ -263,7 +260,7 @@ _get(transport_class_t *t, int dest, void *buffer, size_t n, const void *rdata,
 
     rc = photon_post_os_get_direct(dest, buffer, n, &pbuf, flags, r);
     if (rc != PHOTON_OK) {
-      return dbg_error("photon: could not complete get operation: 0x%016lx (%lu).\n",
+      return log_error("photon: could not complete get operation: 0x%016lx (%lu).\n",
                (uintptr_t)b, rn);
     }
   }
@@ -278,7 +275,7 @@ _get(transport_class_t *t, int dest, void *buffer, size_t n, const void *rdata,
 /// Presumably this will be an "eager" send. Don't use "data" until it's done!
 /// ----------------------------------------------------------------------------
 static int
-_send(transport_class_t *t, int dest, const void *data, size_t n, void *r)
+_send(transport_t *t, int dest, const void *data, size_t n, void *r)
 {
   void *b = (void*)data;
   int e;
@@ -287,7 +284,7 @@ _send(transport_class_t *t, int dest, const void *data, size_t n, void *r)
   do {
     e = photon_post_send_buffer_rdma(dest, b, n, PHOTON_DEFAULT_TAG, r);
     if (e == PHOTON_ERROR)
-      return dbg_error("photon: could not send %lu bytes to %i.\n", n, dest);
+      return log_error("photon: could not send %lu bytes to %i.\n", n, dest);
   } while (e == PHOTON_ERROR_RESOURCE);
   return HPX_SUCCESS;
 }
@@ -297,7 +294,7 @@ _send(transport_class_t *t, int dest, const void *data, size_t n, void *r)
 /// Probe Photon ledger to see if anything has been received.
 /// ----------------------------------------------------------------------------
 static size_t
-_probe(transport_class_t *transport, int *source)
+_probe(transport_t *transport, int *source)
 {
   int photon_src = *source;
   int flag = 0;
@@ -313,7 +310,6 @@ _probe(transport_class_t *transport, int *source)
   int e = photon_probe_ledger(photon_src, &flag, PHOTON_SEND_LEDGER, &status);
   if (e < 0) {
     dbg_error("photon: probe failed.\n");
-    return 0;
   }
 
   if (flag) {
@@ -332,7 +328,7 @@ _probe(transport_class_t *transport, int *source)
 /// Receive a buffer.
 /// ----------------------------------------------------------------------------
 static int
-_recv(transport_class_t *t, int src, void* buffer, size_t n, void *r)
+_recv(transport_t *t, int src, void* buffer, size_t n, void *r)
 {
   //photon_t *photon = (photon_t*)t;
   //uint64_t *id = (uint64_t*)r;
@@ -340,34 +336,34 @@ _recv(transport_class_t *t, int src, void* buffer, size_t n, void *r)
   // make sure we have remote buffer metadata
   int e = photon_wait_send_buffer_rdma(src, n, PHOTON_DEFAULT_TAG, r);
   if (e != PHOTON_OK) {
-    return dbg_error("error in wait_send_buffer for %i\n", src);
+    return log_error("error in wait_send_buffer for %i\n", src);
   }
 
   // get the remote buffer
   e = photon_post_os_get(*(photon_rid*)r, src, buffer, n, PHOTON_DEFAULT_TAG, 0);
   if (e != PHOTON_OK)
-    return dbg_error("could not receive %lu bytes from %i\n", n, src);
+    return log_error("could not receive %lu bytes from %i\n", n, src);
 
   return HPX_SUCCESS;
 }
 
 
 static int
-_test(transport_class_t *t, void *request, int *success)
+_test(transport_t *t, void *request, int *success)
 {
   int type = 0;
   struct photon_status_t status;
   photon_rid *id = (photon_rid*)request;
   int e = photon_test(*id, success, &type, &status);
   if (e < 0)
-    return dbg_error("photon: failed photon_test.\n");
+    return log_error("photon: failed photon_test.\n");
 
   // send back the FIN message for local EVQUEUE completions (type==0)
   if ((*success == 1) && (type == 0)) {
     do {
       e = photon_send_FIN(*id, status.src_addr.global.proc_id, 0);
       if (e == PHOTON_ERROR) {
-    return dbg_error("photon: could not send FIN back to %lu.\n",
+    return log_error("photon: could not send FIN back to %lu.\n",
              status.src_addr.global.proc_id);
       }
     } while (e == PHOTON_ERROR_RESOURCE);
@@ -378,7 +374,7 @@ _test(transport_class_t *t, void *request, int *success)
 
 
 static void
-_progress(transport_class_t *t, transport_op_t op)
+_progress(transport_t *t, transport_op_t op)
 {
   photon_t *photon = (photon_t*)t;
   switch (op) {
@@ -396,17 +392,17 @@ _progress(transport_class_t *t, transport_op_t op)
 }
 
 
-static uint32_t _photon_get_send_limit(transport_class_t *t) {
+static uint32_t _photon_get_send_limit(transport_t *t) {
   return t->send_limit;
 }
 
-static uint32_t _photon_get_recv_limit(transport_class_t *t) {
+static uint32_t _photon_get_recv_limit(transport_t *t) {
   return t->recv_limit;
 }
 
 
 
-transport_class_t *transport_new_photon(uint32_t send_limit, uint32_t recv_limit) {
+transport_t *transport_new_photon(config_t *cfg) {
   photon_t *photon = malloc(sizeof(*photon));
   photon->class.type           = HPX_TRANSPORT_PHOTON;
   photon->class.id             = _id;
@@ -430,67 +426,40 @@ transport_class_t *transport_new_photon(uint32_t send_limit, uint32_t recv_limit
   photon->class.testsome   = NULL;
   photon->class.progress   = _progress;
 
-  photon->class.send_limit = (send_limit == 0) ? photon_default_srlimit : send_limit;
-  photon->class.recv_limit = (recv_limit == 0) ? photon_default_srlimit : recv_limit;
+  photon->class.send_limit = (cfg->sendlimit == 0) ?
+    photon_default_srlimit : cfg->sendlimit;
+  photon->class.recv_limit = (cfg->recvlimit == 0) ?
+    photon_default_srlimit : cfg->recvlimit;
+
   photon->class.rkey_table = NULL;
 
-  // runtime configuration options
-  char* eth_dev;
-  char* ib_dev;
-  char* backend;
-  // int ib_port;
-  int use_cma;
-  int ledger_entries = 512;  // default val (-1) is 64
-  int val = 0;
+  struct photon_config_t *pcfg = &photon->cfg;
+  pcfg->meta_exch               = PHOTON_EXCH_EXTERNAL;
+  pcfg->nproc                   = here->ranks;
+  pcfg->address                 = here->rank;
+  pcfg->comm                    = NULL;
+  pcfg->ibv.use_cma             = cfg->photon_usecma;
+  pcfg->ibv.eth_dev             = cfg->photon_ethdev;
+  pcfg->ibv.ib_dev              = cfg->photon_ibdev;
+  pcfg->cap.eager_buf_size      = cfg->photon_eagerbufsize;
+  pcfg->cap.small_pwc_size      = cfg->photon_smallpwcsize;
+  pcfg->cap.ledger_entries      = cfg->photon_ledgersize;
+  pcfg->cap.max_rd              = cfg->photon_maxrd;
+  pcfg->cap.default_rd          = cfg->photon_defaultrd;
+  // static config not relevant for current HPX usage
+  pcfg->forwarder.use_forwarder =  0;
+  pcfg->cap.small_msg_size      = -1;  // default 4096 - not used for PWC
+  pcfg->ibv.use_ud              =  0;  // don't enable this unless we're doing HW GAS
+  pcfg->ibv.ud_gid_prefix       = "ff0e::ffff:0000:0000";
+  pcfg->exch.allgather      = (__typeof__(pcfg->exch.allgather))here->boot->allgather;
+  pcfg->exch.barrier        = (__typeof__(pcfg->exch.barrier))here->boot->barrier;
+  pcfg->backend             = (char*)HPX_PHOTON_BACKEND_TO_STRING[cfg->photon_backend];
 
-  // TODO: make eth_dev and ib_dev runtime configurable!
-  eth_dev = getenv("HPX_USE_ETH_DEV");
-  ib_dev = getenv("HPX_USE_IB_DEV");
-  backend = getenv("HPX_USE_BACKEND");
-
-  if (eth_dev == NULL)
-    eth_dev = photon_default_eth_dev;
-  if (ib_dev == NULL)
-    ib_dev = photon_default_ib_dev;
-  if (backend == NULL)
-    backend = photon_default_backend;
-  if(getenv("HPX_USE_CMA") == NULL)
-    use_cma = 0;
-  else
-    use_cma = atoi(getenv("HPX_USE_CMA"));
-  if(getenv("HPX_LEDGER_ENTRIES") != NULL) {
-    ledger_entries = atoi(getenv("HPX_LEDGER_ENTRIES"));
-    if (here->rank == 0)
-      printf("Setting ledger entries limit for photon to %d\n", ledger_entries);
-  }
-
-  struct photon_config_t *cfg = &photon->cfg;
-  cfg->meta_exch       = PHOTON_EXCH_EXTERNAL;
-  cfg->nproc           = here->ranks;
-  cfg->address         = here->rank;
-  cfg->comm            = NULL;
-  cfg->forwarder.use_forwarder   = 0;
-  cfg->ibv.use_cma         = use_cma;
-  cfg->ibv.use_ud          = 0;      // don't enable this unless we're doing HW GAS
-  cfg->ibv.ud_gid_prefix   = "ff0e::ffff:0000:0000";
-  cfg->ibv.eth_dev         = eth_dev;
-  cfg->ibv.ib_dev          = ib_dev;
-  cfg->cap.eager_buf_size  = -1;     // default 256k
-  cfg->cap.small_msg_size  = -1;     // default 4096
-  cfg->cap.small_pwc_size  =  1024;  // 0 disabled
-  cfg->cap.ledger_entries  = ledger_entries;
-  cfg->cap.max_rd          = -1;     // default 1M
-  cfg->cap.default_rd      = -1;     // default 1024
-  cfg->exch.allgather      = (typeof(cfg->exch.allgather))here->boot->allgather;
-  cfg->exch.barrier        = (typeof(cfg->exch.barrier))here->boot->barrier;
-  cfg->backend             = backend;
-
-  val = photon_initialized();
+  int val = photon_initialized();
   if (!val) {
-    if (photon_init(cfg) != PHOTON_OK) {
+    if (photon_init(pcfg) != PHOTON_OK) {
       dbg_error("photon: failed to initialize transport.\n");
-      return NULL;
-    };
+    }
   }
 
   photon->progress     = network_progress_new(&photon->class);

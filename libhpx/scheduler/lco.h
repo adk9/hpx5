@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -13,14 +13,13 @@
 #ifndef LIBHPX_LCO_H
 #define LIBHPX_LCO_H
 
-#include <jemalloc/jemalloc_hpx.h>
 #include <hpx/attributes.h>
+#include <jemalloc/jemalloc_hpx.h>
 #include <libsync/lockable_ptr.h>
+#include "cvar.h"
 
-/// ----------------------------------------------------------------------------
 /// This constant is used to determine when a set should be performed
 /// asynchronously, even if the set is actually local.
-/// ----------------------------------------------------------------------------
 static const int HPX_LCO_SET_ASYNC = 512;
 
 typedef struct lco_class lco_class_t;
@@ -30,8 +29,54 @@ typedef union {
   uintptr_t            bits;
 } lco_t HPX_ALIGNED(16);
 
-/// ----------------------------------------------------------------------------
-/// The LCO abstract class interface.
+/// And LCO class interface.
+/// @{
+typedef struct {
+  lco_t               lco;
+  cvar_t          barrier;
+  volatile intptr_t value;                  // the threshold
+} and_t;
+
+/// Local future interface.
+/// @{
+typedef struct {
+  lco_t     lco;
+  cvar_t   full;
+  char  value[];
+} future_t;
+
+/// Local channel interface.
+///
+/// A channel LCO maintains a linked-list of dynamically sized
+/// buffers. It can be used to support a thread-based, point-to-point
+/// communication mechanism. An in-order channel forces a sender to
+/// wait for remote completion for sets or sends().
+/// @{
+
+typedef struct node {
+  struct node  *next;
+  void       *buffer;                           // out-of place because we want
+  int           size;                           // to be able to recv it
+} chan_node_t;
+
+
+typedef struct {
+  lco_t          lco;
+  cvar_t    nonempty;
+  chan_node_t  *head;
+  chan_node_t  *tail;
+} chan_t;
+
+extern void and_init(and_t *and, intptr_t value)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+extern void future_init(future_t *f, int size) 
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+extern void chan_init(chan_t *c)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+// The LCO abstract class interface.
 ///
 /// All LCOs will implement this interface, which is accessible through the
 /// hpx_lco set of generic actions. Concrete classes may implement extended
@@ -39,16 +84,15 @@ typedef union {
 ///
 /// This interface is locally synchronous, but will be invoked externally
 /// through the set of hpx_lco_* operations that may use them asynchronously.
-/// ----------------------------------------------------------------------------
 typedef void (*lco_fini_t)(lco_t *lco);
 typedef void (*lco_set_t)(lco_t *lco, int size, const void *value);
 typedef void (*lco_error_t)(lco_t *lco, hpx_status_t code);
 typedef hpx_status_t (*lco_get_t)(lco_t *lco, int size, void *value);
+typedef hpx_status_t (*lco_getref_t)(lco_t *lco, int size, void **out);
+typedef bool (*lco_release_t)(lco_t *lco, void *out);
 typedef hpx_status_t (*lco_wait_t)(lco_t *lco);
 typedef hpx_status_t (*lco_attach_t)(lco_t *lco, hpx_parcel_t *p);
-typedef hpx_status_t (*lco_try_get_t)(lco_t *lco, int size, void *value, hpx_time_t time);
-typedef hpx_status_t (*lco_try_wait_t)(lco_t *lco, hpx_time_t time);
-
+typedef void (*lco_reset_t)(lco_t *lco);
 
 struct lco_class {
   lco_fini_t         on_fini;
@@ -56,9 +100,10 @@ struct lco_class {
   lco_set_t           on_set;
   lco_attach_t     on_attach;
   lco_get_t           on_get;
+  lco_getref_t     on_getref;
+  lco_release_t   on_release;
   lco_wait_t         on_wait;
-  lco_try_get_t   on_try_get;
-  lco_try_wait_t on_try_wait;
+  lco_reset_t       on_reset;
 } HPX_ALIGNED(16);
 
 // -----------------------------------------------------------------------------
@@ -68,8 +113,7 @@ struct lco_class {
 /// Lock an LCO.
 ///
 /// @param lco  The LCO to lock
-/// @returns    The vtable pointer for the LCO, with any packed state removed
-const lco_class_t *lco_lock(lco_t *lco)
+void lco_lock(lco_t *lco)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Unlock an LCO.
@@ -91,15 +135,6 @@ void lco_init(lco_t *lco, const lco_class_t *class)
 ///
 /// @param           lco The pointer to finalize.
 void lco_fini(lco_t *lco)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
-/// Set the deleted state bit to one.
-///
-/// This operation does not acquire the LCO lock---the caller must lock the
-/// pointer first if this could occur concurrently.
-///
-/// @param           lco The LCO to reset.
-void lco_set_deleted(lco_t *lco)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Resets the user state bit to zero.

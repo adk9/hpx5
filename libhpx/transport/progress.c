@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -23,6 +23,7 @@
 #include "libhpx/debug.h"
 #include "libhpx/gas.h"
 #include "libhpx/locality.h"
+#include "libhpx/instrumentation.h"
 #include "libhpx/network.h"
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
@@ -30,6 +31,14 @@
 #include "libhpx/transport.h"
 #include "progress.h"
 
+/// NB: here temporarily while we convert to new progress model.
+static hpx_parcel_t *network_tx_dequeue(network_t *network) {
+  return NULL;
+}
+
+static int network_try_notify_rx(network_t *network, hpx_parcel_t *p) {
+  return 0;
+}
 
 static request_t *request_init(request_t *request, hpx_parcel_t *p) {
   request->next = NULL;
@@ -104,6 +113,7 @@ static void _flush_request(progress_t *progress, request_t *r) {
 /// @param     progress The progress object.
 /// @param            r The request to finish.
 static void _finish_recv(progress_t *progress, request_t *r) {
+  INST_EVENT_PARCEL_RECV(r->parcel);
   r->parcel->next = progress->recvs;
   progress->recvs = r->parcel;
   // network_rx_enqueue(here->network, r->parcel);
@@ -211,7 +221,7 @@ unwind0:
 /// @returns The total number of completed requests.
 static int _test(progress_t *p, request_t **i,
                  void (*finish)(progress_t*, request_t*)) {
-  transport_class_t *t = here->transport;
+  transport_t *t = here->transport;
   int n = 0;
   while (*i != NULL) {
     request_t *j = *i;
@@ -317,7 +327,7 @@ void network_progress_poll(progress_t *p) {
   }
 }
 
-progress_t *network_progress_new(transport_class_t *t) {
+progress_t *network_progress_new(transport_t *t) {
   progress_t *p = malloc(sizeof(*p));
   assert(p);
   p->psend_limit   = t->get_send_limit(t);

@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -14,18 +14,23 @@
 #include "config.h"
 #endif
 
-#include "libhpx/gas.h"
-#include "libhpx/debug.h"
+#include <libhpx/gas.h>
+#include <libhpx/debug.h>
+#include <libhpx/boot.h>
 
-gas_class_t *gas_new(size_t heap_size, struct boot_class *boot,
-                     struct transport_class *transport, hpx_gas_t type) {
-  gas_class_t *gas = NULL;
+gas_t *gas_new(size_t heap_size, struct boot *boot, struct transport *transport,
+               hpx_gas_t type) {
+  gas_t *gas = NULL;
 
-  if (type == HPX_GAS_DEFAULT) {
-    log_gas("HPX GAS defaults to PGAS.\n");
+  if (type != HPX_GAS_PGAS && boot_n_ranks(boot) > 1) {
+    log_gas("GAS %s selection override to PGAS.\n", HPX_GAS_TO_STRING[type]);
   }
 
-  if (type == HPX_GAS_PGAS) {
+  if (type != HPX_GAS_SMP && boot_n_ranks(boot) == 1) {
+    log_gas("GAS %s selection override to SMP.\n", HPX_GAS_TO_STRING[type]);
+  }
+
+  if (boot_n_ranks(boot) > 1) {
     gas = gas_pgas_new(heap_size, boot, transport);
     if (!gas) {
       log_gas("PGAS failed to initialize\n");
@@ -36,8 +41,8 @@ gas_class_t *gas_new(size_t heap_size, struct boot_class *boot,
     }
   }
 
-  if (type == HPX_GAS_SMP || !gas) {
-    gas = gas_smp_new(heap_size, boot, transport);
+  if (boot_n_ranks(boot) == 1) {
+    gas = gas_smp_new();
     if (!gas) {
       log_gas("SMP failed to initialize\n");
     }

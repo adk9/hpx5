@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -45,18 +45,17 @@ void scheduler_stats_init(struct scheduler_stats *stats) {
 struct scheduler_stats *scheduler_stats_accum(struct scheduler_stats *lhs,
                                               const struct scheduler_stats *rhs)
 {
-  if (lhs && rhs) {
-    lhs->spins    += rhs->spins;
-    lhs->spawns   += rhs->spawns;
-    lhs->steals   += rhs->steals;
-    lhs->stacks   += rhs->stacks;
-    lhs->mail     += rhs->mail;
-    lhs->started  += rhs->started;
-    lhs->finished += rhs->finished;
-    lhs->progress += rhs->progress;
-    lhs->backoffs += rhs->backoffs;
-    lhs->backoff  += rhs->backoff;
-  }
+  lhs->spins    += rhs->spins;
+  lhs->spawns   += rhs->spawns;
+  lhs->steals   += rhs->steals;
+  lhs->stacks   += rhs->stacks;
+  lhs->mail     += rhs->mail;
+  lhs->started  += rhs->started;
+  lhs->finished += rhs->finished;
+  lhs->progress += rhs->progress;
+  lhs->backoffs += rhs->backoffs;
+  lhs->backoff  += rhs->backoff;
+
   return lhs;
 }
 

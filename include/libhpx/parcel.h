@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -13,8 +13,8 @@
 #ifndef LIBHPX_PARCEL_H
 #define LIBHPX_PARCEL_H
 
-#include "hpx/hpx.h"
-#include "libsync/sync.h"
+#include <hpx/hpx.h>
+#include "libhpx/instrumentation.h"
 
 struct ustack;
 
@@ -34,21 +34,66 @@ struct hpx_parcel {
   struct hpx_parcel *next;
   int                 src;
   uint32_t           size;
+#if defined(ENABLE_DEBUG) || defined(ENABLE_LOGGING) || defined(ENABLE_INSTRUMENTATION)
+  uint64_t       sequence;
+#endif
   hpx_action_t     action;
   hpx_addr_t       target;
   hpx_action_t   c_action;
   hpx_addr_t     c_target;
   hpx_pid_t           pid;
   uint64_t         credit;
+#ifdef ENABLE_INSTRUMENTATION
+  uint64_t             id;
+#endif
   char           buffer[];
 };
+
+/// Parcel tracing events.
+/// @{
+static inline void INST_EVENT_PARCEL_CREATE(hpx_parcel_t *p) {
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_CREATE;
+  inst_trace(class, id, p->id, p->action, p->size);
+}
+
+static inline void INST_EVENT_PARCEL_SEND(hpx_parcel_t *p) {
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_SEND;
+  inst_trace(class, id, p->id, p->action, p->size, p->target);
+}
+
+static inline void INST_EVENT_PARCEL_RECV(hpx_parcel_t *p) {
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_RECV;
+  inst_trace(class, id, p->id, p->action, p->size, p->src);
+}
+
+static inline void INST_EVENT_PARCEL_RUN(hpx_parcel_t *p) {
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_RUN;
+  inst_trace(class, id, p->id, p->action, p->size);
+}
+
+static inline void INST_EVENT_PARCEL_END(hpx_parcel_t *p) {
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_END;
+  inst_trace(class, id, p->id, p->action);
+}
+/// @}
+
+typedef struct parcel_queue {
+  hpx_parcel_t *head;
+  hpx_parcel_t *tail;
+} parcel_queue_t;
+
 
 hpx_parcel_t *parcel_create(hpx_addr_t addr, hpx_action_t action,
                             const void *args, size_t len, hpx_addr_t c_target,
                             hpx_action_t c_action, hpx_pid_t pid, bool inplace)
   HPX_INTERNAL;
 
-void parcel_set_stack(hpx_parcel_t *p, struct ustack *stack)
+struct ustack *parcel_set_stack(hpx_parcel_t *p, struct ustack *stack)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 struct ustack *parcel_get_stack(const hpx_parcel_t *p)
@@ -85,10 +130,38 @@ hpx_parcel_t *parcel_stack_pop(hpx_parcel_t **stack)
 void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *parcel)
   HPX_INTERNAL HPX_NON_NULL(1, 2);
 
+/// Scan through a parcel list applying the passed function to each one.
+void parcel_stack_foreach(hpx_parcel_t *p, void *env,
+                          void (*f)(hpx_parcel_t*, void*))
+  HPX_INTERNAL HPX_NON_NULL(3);
 
-static inline size_t parcel_size(const hpx_parcel_t *p) {
-  assert(p);
+
+void parcel_queue_init(parcel_queue_t *q)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+
+void parcel_queue_fini(parcel_queue_t *q)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+
+void parcel_queue_enqueue(parcel_queue_t *q, hpx_parcel_t *p)
+  HPX_INTERNAL HPX_NON_NULL(1, 2);
+
+
+hpx_parcel_t *parcel_queue_dequeue(parcel_queue_t *q)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+
+hpx_parcel_t *parcel_queue_dequeue_all(parcel_queue_t *q)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+
+static inline uint32_t parcel_size(const hpx_parcel_t *p) {
   return sizeof(*p) + p->size;
+}
+
+static inline uint32_t parcel_payload_size(const hpx_parcel_t *p) {
+  return p->size;
 }
 
 #endif // LIBHPX_PARCEL_H

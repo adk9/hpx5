@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -36,20 +36,22 @@ typedef struct {
 
 static void _sema_fini(lco_t *lco);
 static void _sema_error(lco_t *lco, hpx_status_t code);
+static void _sema_reset(lco_t *lco);
 static void _sema_set(lco_t *lco, int size, const void *from);
 static hpx_status_t _sema_wait(lco_t *lco);
 static hpx_status_t _sema_get(lco_t *lco, int size, void *out);
 
 // the semaphore vtable
 static const lco_class_t _sema_vtable = {
-  .on_fini = _sema_fini,
-  .on_error = _sema_error,
-  .on_set = _sema_set,
-  .on_get = _sema_get,
-  .on_wait = _sema_wait,
-  .on_attach = NULL,
-  .on_try_get = NULL,
-  .on_try_wait = NULL
+  .on_fini     = _sema_fini,
+  .on_error    = _sema_error,
+  .on_set      = _sema_set,
+  .on_get      = _sema_get,
+  .on_getref   = NULL,
+  .on_release  = NULL,
+  .on_wait     = _sema_wait,
+  .on_attach   = NULL,
+  .on_reset    = _sema_reset
 };
 
 /// Allocate a semaphore LCO.
@@ -103,39 +105,48 @@ void hpx_lco_sema_v_sync(hpx_addr_t sema) {
 }
 
 void _sema_fini(lco_t *lco) {
-  if (!lco)
+  if (!lco) {
     return;
+  }
 
-  _sema_t *sema = (_sema_t *)lco;
-  lco_lock(&sema->lco);
-  lco_fini(&sema->lco);
-  libhpx_global_free(sema);
+  lco_lock(lco);
+  lco_fini(lco);
+  libhpx_global_free(lco);
 }
 
 void _sema_error(lco_t *lco, hpx_status_t code) {
+  lco_lock(lco);
+  _sema_t *sema = (_sema_t *)lco;
+  scheduler_signal_error(&sema->avail, code);
+  lco_unlock(lco);
+}
+
+void _sema_reset(lco_t *lco) {
   _sema_t *sema = (_sema_t *)lco;
   lco_lock(&sema->lco);
-  scheduler_signal_error(&sema->avail, code);
+  dbg_assert_str(cvar_empty(&sema->avail),
+                 "Reset on a sema that has waiting threads.\n");
+  cvar_reset(&sema->avail);
   lco_unlock(&sema->lco);
 }
 
 /// Set is equivalent to returning a resource to the semaphore.
 void _sema_set(lco_t *lco, int size, const void *from) {
+  lco_lock(lco);
   _sema_t *sema = (_sema_t *)lco;
-  lco_lock(&sema->lco);
   if (sema->count++ == 0) {
     // only signal one sleeping thread since we're only returning one resource,
     // waking everyone up is inefficient
     scheduler_signal(&sema->avail);
   }
 
-  lco_unlock(&sema->lco);
+  lco_unlock(lco);
 }
 
 hpx_status_t _sema_wait(lco_t *lco) {
   hpx_status_t status = HPX_SUCCESS;
+  lco_lock(lco);
   _sema_t *sema = (_sema_t *)lco;
-  lco_lock(&sema->lco);
 
   // wait until the count is non-zero, use while here and re-read count because
   // our condition variables have MESA semantics
@@ -150,7 +161,7 @@ hpx_status_t _sema_wait(lco_t *lco) {
     sema->count = count - 1;
   }
 
-  lco_unlock(&sema->lco);
+  lco_unlock(lco);
   return status;
 }
 

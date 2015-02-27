@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 /// User level stacks.
@@ -24,8 +24,11 @@
 #include <hpx/builtins.h>
 #include <jemalloc/jemalloc_hpx.h>
 #include <valgrind/valgrind.h>
-#include <libhpx/debug.h>
-#include <libhpx/locality.h>
+#include "libhpx/debug.h"
+#include "libhpx/instrumentation.h"
+#include "libhpx/locality.h"
+#include "libhpx/parcel.h"
+#include "libhpx/scheduler.h"
 #include "thread.h"
 
 static int _buffer_size = 0;
@@ -38,7 +41,7 @@ void thread_set_stack_size(int stack_bytes) {
   _buffer_size = _thread_size;
 #ifdef ENABLE_DEBUG
   assert(here && here->config);
-  if (here->config->mprotectstacks)
+  if (here->config->dbg_mprotectstacks)
     _buffer_size = _buffer_size + 2 * HPX_PAGE_SIZE;
 #endif
 }
@@ -70,7 +73,7 @@ static ustack_t *_protect(void *base) {
   ustack_t *stack = base;
 #ifdef ENABLE_DEBUG
   assert(here && here->config);
-  if (!here->config->mprotectstacks) {
+  if (!here->config->dbg_mprotectstacks) {
     return stack;
   }
   _mprot(base, PROT_NONE);
@@ -88,7 +91,7 @@ static void *_unprotect(ustack_t *stack) {
   void *base = stack;
 #ifdef ENABLE_DEBUG
   assert(here && here->config);
-  if (!here->config->mprotectstacks) {
+  if (!here->config->dbg_mprotectstacks) {
     return base;
   }
   base = (char*)stack - HPX_PAGE_SIZE;
@@ -110,18 +113,16 @@ static void _deregister(ustack_t *thread) {
 }
 
 static size_t _alignment(void) {
-#ifdef ENABLE_DEBUG
-  assert(here && here->config);
-  if (here->config->mprotectstacks) {
+  dbg_assert(here && here->config);
+  DEBUG_IF(here->config->dbg_mprotectstacks) {
     return HPX_PAGE_SIZE;
   }
-  else
+
+#if defined(__ARMEL__)
+  return 8;
+#else
+  return 16;
 #endif
-  #if defined(__ARMEL__)
-    return 8;
-  #else
-    return 16;
-  #endif
 }
 
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {

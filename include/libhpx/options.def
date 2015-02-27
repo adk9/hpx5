@@ -1,7 +1,7 @@
-// =============================================================================
+// -*- C -*- ===================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -12,45 +12,172 @@
 // =============================================================================
 
 /// Standard declarative option list, designed for multiple inclusion. Before
-/// including this file #define the LIBHPX_DECL_OPTION() macro to expand the
-/// options as you wish.
-///
+/// including this file #define either the LIBHPX_OPT() macro, or one or more of
+/// the type specific macros to expand as you would like. Any type-specific
+/// macro that is undefined will be defined as LIBHPX_OPT(). If LIBHPX_OPT() is
+/// undefined it will be defined as an empty macro.
 
-/// LIBHPX_DECL_OPTION(group, type, id, default)
+/// LIBHPX_OPT(group, id, default, ctype)
+///
+/// This generic macro can be used to create expansions for all of the macros in
+/// this file.
 ///
 /// @param     group The option category.
-/// @param      type The option type.
-/// @param     ctype The C type for the option.
-/// @param        id The option category.
+/// @param        id The option symbol.
+/// @param   default The default value.
+/// @param     ctype The C language type for the option.
+
+/// LIBHPX_OPT_FLAG(group, id, default)
+///
+/// @param     group The option category.
+/// @param        id The option symbol.
 /// @param   default The default value.
 
-#ifndef LIBHPX_DECL_OPTION
-# warning options.def included without LIBHPX_DECL_OPTION define
-# define LIBHPX_DECL_OPTION(group, type, ctype, id, default)
-# define _LIBHXP_DECL_OPTION_UNDEF
+/// LIBHPX_OPT_SCALAR(group, id, default, ctype)
+///
+/// @param     group The option category.
+/// @param     ctype The C type for the option.
+/// @param        id The option symbol.
+/// @param   default The default value.
+
+/// LIBHPX_OPT_STRING(group, id, default)
+///
+/// @param     group The option category.
+/// @param        id The option symbol.
+/// @param   default The default string.
+
+/// LIBHPX_OPT_BITSET(group, id, default)
+///
+/// @param     group The option category.
+/// @param        id The option symbol.
+/// @param   default The default value.
+
+/// LIBHPX_OPT_INTSET(group, id, default, none, all)
+///
+/// @param     group The option category.
+/// @param        id The option symbol.
+/// @param   default The default value.
+/// @param      none The value that means "none"
+/// @param       all The value that means "all"
+
+#ifndef LIBHPX_OPT
+# define LIBHPX_OPT(UNUSED1, UNUSED2, UNUSED3, UNUSED4)
+# define _LIBHPX_OPT_UNDEF 1
 #endif
 
-LIBHPX_DECL_OPTION(hpx, arg, int, cores, 0)
-LIBHPX_DECL_OPTION(hpx, arg, int, threads, 0)
-LIBHPX_DECL_OPTION(hpx, arg, unsigned int, backoffmax, 1024)
-LIBHPX_DECL_OPTION(hpx, arg, int, stacksize, 32768)
-LIBHPX_DECL_OPTION(hpx, arg, size_t, heapsize, 1lu << 30)
-LIBHPX_DECL_OPTION(hpx, arg, hpx_gas_t, gas, HPX_GAS_PGAS)
-LIBHPX_DECL_OPTION(hpx, arg, hpx_boot_t, boot, HPX_BOOT_DEFAULT)
-LIBHPX_DECL_OPTION(hpx, arg, hpx_transport_t, transport, HPX_TRANSPORT_DEFAULT)
-LIBHPX_DECL_OPTION(hpx, arg, hpx_locality_t, waitat, HPX_LOCALITY_NONE)
-LIBHPX_DECL_OPTION(hpx, arg[0], hpx_log_t, loglevel, HPX_LOG_DEFAULT)
-LIBHPX_DECL_OPTION(hpx, arg, int *, logat, NULL)
-LIBHPX_DECL_OPTION(hpx, arg, uint32_t, sendlimit, 0)
-LIBHPX_DECL_OPTION(hpx, arg, uint32_t, recvlimit, 0)
-LIBHPX_DECL_OPTION(hpx, arg, char *, configfile, 0)
-LIBHPX_DECL_OPTION(hpx, flag, int, statistics, 1)
+#ifndef LIBHPX_OPT_FLAG
+# define LIBHPX_OPT_FLAG(group, id, init) LIBHPX_OPT(group, id, init, int)
+# define _LIBHPX_OPT_FLAG_UNDEF
+#endif
 
-LIBHPX_DECL_OPTION(dbg, flag, int, mprotectstacks, 0)
-LIBHPX_DECL_OPTION(dbg, flag, int, waitonabort, 0)
+#ifndef LIBHPX_OPT_SCALAR
+# define LIBHPX_OPT_SCALAR(group, id, init, ctype) LIBHPX_OPT(group, id, init, ctype)
+# define _LIBHPX_OPT_SCALAR_UNDEF
+#endif
+
+#ifndef LIBHPX_OPT_STRING
+# define LIBHPX_OPT_STRING(group, id, init) LIBHPX_OPT(group, id, init, char*)
+# define _LIBHPX_OPT_STRING_UNDEF
+#endif
+
+#ifndef LIBHPX_OPT_BITSET
+# define LIBHPX_OPT_BITSET(group, id, init) LIBHPX_OPT(group, id, init, uint64_t)
+# define _LIBHPX_OPT_BITSET_UNDEF
+#endif
+
+#ifndef LIBHPX_OPT_INTSET
+# define LIBHPX_OPT_INTSET(group, id, init, none, all) LIBHPX_OPT(group, id, NULL, int*)
+# define _LIBHPX_OPT_INTSET_UNDEF
+#endif
+
+/// Top-level options
+/// @{
+LIBHPX_OPT_FLAG(, statistics, 1)
+
+LIBHPX_OPT_SCALAR(, cores, 0, int)
+LIBHPX_OPT_SCALAR(, threads, 0, int)
+LIBHPX_OPT_SCALAR(, stacksize, 32768, unsigned)
+LIBHPX_OPT_SCALAR(, heapsize, 1lu << 30, size_t)
+LIBHPX_OPT_SCALAR(, wfthreshold, UINT32_MAX, uint32_t)
+LIBHPX_OPT_SCALAR(, gas, HPX_GAS_PGAS, hpx_gas_t)
+LIBHPX_OPT_SCALAR(, boot, HPX_BOOT_DEFAULT, hpx_boot_t)
+LIBHPX_OPT_SCALAR(, transport, HPX_TRANSPORT_DEFAULT, hpx_transport_t)
+LIBHPX_OPT_SCALAR(, network, HPX_NETWORK_DEFAULT, libhpx_network_t)
+LIBHPX_OPT_SCALAR(, sendlimit, 0, uint32_t)
+LIBHPX_OPT_SCALAR(, recvlimit, 0, uint32_t)
+/// @}
 
 
-#ifdef _LIBHPX_DECL_OPTION_UNDEF
-# undef LIBHPX_DECL_OPTION
-# undef _LIBHPX_DECL_OPTION_UNDEF
+/// Log options
+/// @{
+LIBHPX_OPT_BITSET(log_, level, LIBHPX_OPT_BITSET_NONE)
+LIBHPX_OPT_INTSET(log_, at,  HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
+/// @}
+
+/// Debug options
+/// @{
+LIBHPX_OPT_FLAG(dbg_, mprotectstacks, 0)
+LIBHPX_OPT_FLAG(dbg_, waitonabort, 0)
+LIBHPX_OPT_FLAG(dbg_, waitonsegv, 0)
+LIBHPX_OPT_INTSET(dbg_, waitat, HPX_LOCALITY_NONE, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
+/// @}
+
+/// Trace options
+/// @{
+LIBHPX_OPT_STRING(trace_, dir, "/tmp")
+LIBHPX_OPT_SCALAR(trace_, filesize, 1lu << 24, size_t)
+LIBHPX_OPT_BITSET(trace_, classes, LIBHPX_OPT_BITSET_NONE)
+LIBHPX_OPT_INTSET(trace_, at, HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
+/// @}
+
+/// PWC options
+/// @{
+LIBHPX_OPT_SCALAR(pwc_, parcelbuffersize, 1lu << 16, size_t)
+LIBHPX_OPT_SCALAR(pwc_, parceleagerlimit, 1lu << 13, size_t)
+/// #}
+
+#ifdef HAVE_PHOTON
+/// Photon options
+/// @{
+LIBHPX_OPT_SCALAR(photon_, backend, HPX_PHOTON_BACKEND_DEFAULT, hpx_photon_backend_t)
+LIBHPX_OPT_SCALAR(photon_, ibport, 1, int)
+LIBHPX_OPT_SCALAR(photon_, ledgersize, 512, int)
+LIBHPX_OPT_SCALAR(photon_, eagerbufsize, -1, int)
+LIBHPX_OPT_SCALAR(photon_, smallpwcsize, 0, int)
+LIBHPX_OPT_SCALAR(photon_, maxrd, -1, int)
+LIBHPX_OPT_SCALAR(photon_, defaultrd, -1, int)
+LIBHPX_OPT_FLAG(photon_, usecma, 0)
+LIBHPX_OPT_STRING(photon_, ethdev, "roce0")
+LIBHPX_OPT_STRING(photon_, ibdev, "qib0+mlx4_0")
+/// @}
+#endif
+
+#ifdef _LIBHPX_OPT_INTSET_UNDEF
+# undef _LIBHPX_OPT_INTSET_UNDEF
+# undef LIBHPX_OPT_INTSET
+#endif
+
+#ifdef _LIBHPX_OPT_BITSET_UNDEF
+# undef _LIBHPX_OPT_BITSET_UNDEF
+# undef LIBHPX_OPT_BITSET
+#endif
+
+#ifdef _LIBHPX_OPT_STRING_UNDEF
+# undef _LIBHPX_OPT_STRING_UNDEF
+# undef LIBHPX_OPT_STRING
+#endif
+
+#ifdef _LIBHPX_OPT_SCALAR_UNDEF
+# undef _LIBHPX_OPT_SCALAR_UNDEF
+# undef LIBHPX_OPT_SCALAR
+#endif
+
+#ifdef _LIBHPX_OPT_FLAG_UNDEF
+# undef _LIBHPX_OPT_FLAG_UNDEF
+# undef LIBHPX_OPT_FLAG
+#endif
+
+#ifdef _LIBHPX_OPT_UNDEF
+# undef _LIBHPX_OPT_UNDEF
+# undef LIBHPX_OPT
 #endif

@@ -16,7 +16,7 @@ threadYield_SOURCES         = threadYield.c
 threadExit_SOURCES          = threadExit.c
 threadCurrentTarget_SOURCES = threadCurrentTarget.c
 
-all_LIBS                    = $(HPX_LDADD)
+all_LIBS                    = $(HPX_LIBS)
 
 AM_CPPFLAGS                 = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS                   =
@@ -37,14 +37,14 @@ threadYield_LDADD           = $(all_LIBS)
 threadExit_LDADD            = $(all_LIBS)
 threadCurrentTarget_LDADD   = $(all_LIBS)
 
-threadSpawn1_DEPENDENCIES          = $(all_LIBS)
-threadSpawn2_DEPENDENCIES          = $(all_LIBS)
-threadSpawn3_DEPENDENCIES          = $(all_LIBS)
-threadSpawn4_DEPENDENCIES          = $(all_LIBS)
-threadArgPassing_DEPENDENCIES      = $(all_LIBS)
-threadContinue_DEPENDENCIES        = $(all_LIBS)
-threadContCleanup_DEPENDENCIES     = $(all_LIBS)
-threadSemaphores_DEPENDENCIES      = $(all_LIBS)
-threadYield_DEPENDENCIES           = $(all_LIBS)
-threadExit_DEPENDENCIES            = $(all_LIBS)
-threadCurrentTarget_DEPENDENCIES   = $(all_LIBS)
+threadSpawn1_DEPENDENCIES          = $(HPX_DEPS)
+threadSpawn2_DEPENDENCIES          = $(HPX_DEPS)
+threadSpawn3_DEPENDENCIES          = $(HPX_DEPS)
+threadSpawn4_DEPENDENCIES          = $(HPX_DEPS)
+threadArgPassing_DEPENDENCIES      = $(HPX_DEPS)
+threadContinue_DEPENDENCIES        = $(HPX_DEPS)
+threadContCleanup_DEPENDENCIES     = $(HPX_DEPS)
+threadSemaphores_DEPENDENCIES      = $(HPX_DEPS)
+threadYield_DEPENDENCIES           = $(HPX_DEPS)
+threadExit_DEPENDENCIES            = $(HPX_DEPS)
+threadCurrentTarget_DEPENDENCIES   = $(HPX_DEPS)

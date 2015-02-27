@@ -75,7 +75,7 @@ photonRequest photon_lookup_request(photon_rid rid) {
     req = &rt->reqs[level][id];
     if (req->state == REQUEST_FREE) {
       dbg_warn("Looking up a request that is freed, op=%d, type=%d, id=0x%016lx",
-	       req->op, req->type, req->id);
+	       req->op, req->type, id);
     }
   }
   sync_tatas_release(&rt->tloc);
@@ -85,9 +85,26 @@ photonRequest photon_lookup_request(photon_rid rid) {
 
 int photon_count_request(int proc) {
   photonRequestTable rt;
-  assert(IS_VALID_PROC(proc));
-  rt = photon_processes[proc].request_table;
-  return rt->free[rt->level];
+  int i, j, start, end, count = 0;
+  if (proc == PHOTON_ANY_SOURCE) {
+    start = 0;
+    end = _photon_nproc;
+  }
+  else {
+    start = proc;
+    end = proc+1;
+  }
+  for (i=start; i<end; i++) {
+    rt = photon_processes[i].request_table;
+    sync_tatas_acquire(&rt->tloc);
+    {
+      for (j=(rt->level); j >= 0; j--) {
+	count += ((rt->size >> (rt->level-j)) - rt->free[j]);
+      }
+    }
+    sync_tatas_release(&rt->tloc);
+  }
+  return count;
 }
 
 int photon_free_request(photonRequest req) {

@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -79,9 +79,6 @@ bitmap_t *cr_bitmap_new(void) {
 
 
 void cr_bitmap_delete(bitmap_t *b) {
-  if (!b)
-    return;
-
   // delete all pages
   for (int i = 0; i < _bitmap_num_pages; ++i) {
     _bitmap_page_t p = sync_load(&b[i].page, SYNC_ACQUIRE);

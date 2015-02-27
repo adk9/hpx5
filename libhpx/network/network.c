@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -15,239 +15,81 @@
 #endif
 
 /// @file libhpx/network/network.c
-/// @brief Manages the HPX network.
-///
-/// This file deals with the complexities of the HPX network interface,
-/// shielding it from the details of the underlying transport interface.
-#include <assert.h>
-#include <stdlib.h>
-#include <pthread.h>
-#include <sched.h>
+#include "libhpx/config.h"
+#include "libhpx/debug.h"
+#include "libhpx/network.h"
+#include "libhpx/transport.h"
+#include "isir/isir.h"
+#include "pwc/pwc.h"
+#include "smp.h"
 
-#include <libsync/sync.h>
-#include <libsync/queues.h>
-#include <libsync/spscq.h>
-#include <libsync/locks.h>
-
-#include <libhpx/boot.h>
-#include <libhpx/debug.h>
-#include <libhpx/libhpx.h>
-#include <libhpx/locality.h>
-#include <libhpx/network.h>
-#include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
-#include <libhpx/stats.h>
-#include <libhpx/system.h>
-#include <libhpx/transport.h>
-#include <libhpx/routing.h>
-
-
-//#define _QUEUE(pre, post) pre##spscq##post
-//#define _QUEUE(pre, post) pre##ms_queue##post
-#define _QUEUE(pre, post) pre##two_lock_queue##post
-#define _QUEUE_T _QUEUE(, _t)
-#define _QUEUE_INIT _QUEUE(sync_, _init)
-#define _QUEUE_FINI _QUEUE(sync_, _fini)
-#define _QUEUE_ENQUEUE _QUEUE(sync_, _enqueue)
-#define _QUEUE_DEQUEUE _QUEUE(sync_, _dequeue)
-#define _QUEUE_NODE _QUEUE(,_node_t)
-
-/// The network class data.
-struct _network {
-  struct network             vtable;
-  volatile int                flush;
-  struct transport_class *transport;
-  pthread_t                progress;
-  int                           nrx;
-
-  // make sure the rest of this structure is cacheline aligned
-  const char _paddinga[HPX_CACHELINE_SIZE - ((sizeof(struct network) +
-                                              sizeof(int) +
-                                              sizeof(struct transport_class*) +
-                                              sizeof(pthread_t) +
-                                              sizeof(int)) %
-                                             HPX_CACHELINE_SIZE)];
-
-  _QUEUE_T                 tx;                  // half duplex port for send
-  _QUEUE_T                 rx;
-};
-
-static int stop_progress = 0;
-
-static void *_progress(void *o) {
-  //system_set_affinity(pthread_self(), 0);
-
-  int stop;
-  struct _network *network = o;
-
-  // we have to join the GAS so that we can allocate parcels in here.
-  int e = here->gas->join();
-  if (e) {
-    dbg_error("network failed to join the global address space.\n");
+static network_t *_default(config_t *cfg, struct boot *boot, struct gas *gas,
+			   int nrx) {
+  network_t *network = NULL;
+#ifdef HAVE_PHOTON
+  network = network_pwc_funneled_new(cfg, boot, gas, nrx);
+  if (network) {
+    return network;
   }
-
-  do {
-    profile_ctr(scheduler_get_stats(here->sched)->progress++);
-    transport_progress(network->transport, TRANSPORT_POLL);
-    sched_yield();
-    stop = sync_load(&stop_progress, SYNC_RELAXED);
-  } while (!stop);
-
-  pthread_exit(NULL);
+#endif
+  
+#ifdef HAVE_MPI
+  network =  network_isir_funneled_new(cfg, gas, nrx);
+  if (network) {
+    return network;
+  }
+#endif
+  
+  return network_smp_new();
 }
 
-
-static HPX_ACTION(_probe, void *o) {
-  struct network *network = *(struct network **)o;
-  hpx_parcel_t *p = NULL;
-  int e = hpx_call(HPX_HERE, _probe, HPX_NULL, &network, sizeof(network));
-  if (e != HPX_SUCCESS)
-    return e;
-
-  while ((p = network_rx_dequeue(network, hpx_get_my_thread_id()))) {
-    while (p != NULL) {
-      scheduler_spawn(p);
-      p = p->next;
+int network_supported_transport(transport_t *t, const int tports[], int n) {
+  int i;
+  for (i=0; i<n; i++) {
+    if (t->type == tports[i]) {
+      return 0;
     }
   }
-  return HPX_SUCCESS;
-}
-
-
-static void _delete(struct network *o) {
-  if (!o)
-    return;
-
-  struct _network *network = (struct _network*)o;
-
-  hpx_parcel_t *p = NULL;
-
-  while ((p = _QUEUE_DEQUEUE(&network->tx))) {
-    hpx_parcel_release(p);
-  }
-  _QUEUE_FINI(&network->tx);
-  _QUEUE_FINI(&network->rx);
-  free(network);
-}
-
-
-static int _startup(struct network *o) {
-  struct _network *network = (struct _network*)o;
-  if (network->transport->type == HPX_TRANSPORT_SMP)
-    return LIBHPX_OK;
-
-  int e = pthread_create(&network->progress, NULL, _progress, network);
-  if (e) {
-    return dbg_error("failed to start network progress.\n");
-  }
-  else {
-    log("started network progress.\n");
-  }
-
-  system_set_affinity(network->progress, -1);
-
-  e = hpx_call(HPX_HERE, _probe, HPX_NULL, &network, sizeof(network));
-  if (e) {
-    return dbg_error("failed to start network probe\n");
-  }
-  else {
-    log("started probing the network.\n");
-  }
-
-  return HPX_SUCCESS;
-}
-
-
-static void _shutdown(struct network *o) {
-  struct _network *network = (struct _network*)o;
-  if (network->transport->type == HPX_TRANSPORT_SMP)
-    return;
-
-  sync_store(&stop_progress, 1, SYNC_RELAXED);
-
-  int e = pthread_join(network->progress, NULL);
-  if (e) {
-    dbg_error("could not join the network progress thread.\n");
-  }
-  else {
-    log("shutdown network progress.\n");
-  }
-
-  int flush = sync_load(&network->flush, SYNC_ACQUIRE);
-  if (flush) {
-    transport_progress(network->transport, TRANSPORT_FLUSH);
-  }
-  else {
-    transport_progress(network->transport, TRANSPORT_CANCEL);
-  }
-}
-
-
-static void _barrier(struct network *o) {
-  struct _network *network = (struct _network*)o;
-  transport_barrier(network->transport);
-}
-
-
-void network_tx_enqueue(struct network *o, hpx_parcel_t *p) {
-  struct _network *network = (struct _network*)o;
-  _QUEUE_ENQUEUE(&network->tx, p);
-}
-
-
-hpx_parcel_t *network_tx_dequeue(struct network *o) {
-  struct _network *network = (struct _network*)o;
-  return _QUEUE_DEQUEUE(&network->tx);
-}
-
-
-void network_rx_enqueue(struct network *o, hpx_parcel_t *p) {
-  assert(false);
-}
-
-
-hpx_parcel_t *network_rx_dequeue(struct network *o, int nrx) {
-  struct _network *network = (struct _network*)o;
-  return _QUEUE_DEQUEUE(&network->rx);
-}
-
-
-int network_try_notify_rx(struct network *o, hpx_parcel_t *p) {
-  struct _network *network = (struct _network*)o;
-  _QUEUE_ENQUEUE(&network->rx, p);
   return 1;
 }
 
-
-void network_flush_on_shutdown(struct network *o) {
-  struct _network *network = (struct _network*)o;
-  sync_store(&network->flush, 1, SYNC_RELEASE);
-}
-
-
-struct network *network_new(libhpx_network_t type, int nrx) {
-  struct _network *n = NULL;
-  int e = posix_memalign((void**)&n, HPX_CACHELINE_SIZE, sizeof(*n));
-  if (e) {
-    dbg_error("failed to allocate a network.\n");
-    return NULL;
+network_t *network_new(config_t *cfg, struct boot *boot, struct gas *gas,
+                       int nrx) {
+  network_t *network = NULL;
+  
+  switch (cfg->network) {
+   case HPX_NETWORK_PWC:
+#ifdef HAVE_PHOTON
+    network = network_pwc_funneled_new(cfg, boot, gas, nrx);
+#else
+    dbg_error("PWC network not supported in current configuration.\n");
+#endif
+    break;
+   case HPX_NETWORK_ISIR:
+#ifdef HAVE_MPI
+    network = network_isir_funneled_new(cfg, gas, nrx);
+#else
+    dbg_error("ISIR network not supported in current configuration.\n");
+#endif
+    break;
+   case HPX_NETWORK_SMP:
+    network = network_smp_new();
+    break;
+   default:
+    network = _default(cfg, boot, gas, nrx);
+    break;
+  }
+    
+  if (!network && (cfg->network == HPX_NETWORK_DEFAULT)) {
+    network = _default(cfg, boot, gas, nrx);
+  }
+  
+  if (!network) {
+    dbg_error("failed to initialize the network\n");
+  }
+  else {
+    log("network initialized using %s\n", HPX_NETWORK_TO_STRING[network->type]);
   }
 
-  assert((uintptr_t)&n->tx % HPX_CACHELINE_SIZE == 0);
-
-  n->vtable.delete = _delete;
-  n->vtable.startup = _startup;
-  n->vtable.shutdown = _shutdown;
-  n->vtable.barrier = _barrier;
-
-  n->transport = here->transport;
-  sync_store(&n->flush, 0, SYNC_RELEASE);
-  n->nrx = nrx;
-
-  assert(n->nrx < 128);
-
-  _QUEUE_INIT(&n->tx, 0);
-  _QUEUE_INIT(&n->rx, 0);
-
-  return &n->vtable;
+  return network;
 }

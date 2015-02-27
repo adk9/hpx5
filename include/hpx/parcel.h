@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -15,6 +15,7 @@
 
 #include "hpx/action.h"
 #include "hpx/addr.h"
+#include "hpx/builtins.h"
 #include "hpx/process.h"
 
 /// @file
@@ -129,13 +130,9 @@ hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p)
 ///                       written to or freed), or HPX_NULL if the caller does
 ///                       not care.
 ///
-/// @param        rsync An LCO to be set when the parcel has arrived at the
-///                       LCO. This will not indicate if the parcel was buffered
-///                       or simply forwarded.
-///
 /// @returns            HPX_SUCCESS or an error code.
 hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
-                                     hpx_addr_t lsync, hpx_addr_t rsync)
+                                     hpx_addr_t lsync)
   HPX_NON_NULL(1);
 
 /// Send a parcel "through" an LCO.
@@ -150,13 +147,8 @@ hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
 ///
 /// @param         gate The LCO that will serve as the gate.
 ///
-/// @param        rsync An LCO to be set when the parcel has arrived at the
-///                       LCO. This will not indicate if the parcel was buffered
-///                       or simply forwarded.
-///
 /// @returns            HPX_SUCCESS or an error code.
-hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t lco,
-                                          hpx_addr_t rsync)
+hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t lco)
   HPX_NON_NULL(1);
 
 /// Get the action associated with a parcel.
@@ -251,6 +243,16 @@ void hpx_parcel_set_cont_target(hpx_parcel_t *p, const hpx_addr_t addr)
 /// @param         size The size of the @p data buffer.
 void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size)
   HPX_NON_NULL(1);
+
+/// Set the data buffer for a parcel using the given arguments.
+///
+/// @param            p The parcel we're updating.
+/// @param         ...  Variadic arguments to serialize into the
+///                     parcel buffer.
+void   _hpx_parcel_set_args(hpx_parcel_t *p, int nargs, ...)
+  HPX_NON_NULL(1);
+#define hpx_parcel_set_args(p, ...)                                     \
+  _hpx_parcel_set_args(p, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
 
 /// Set the PID for a parcel
 ///

@@ -544,13 +544,13 @@ int photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, s
   return __photon_default->get_with_completion(proc, ptr, size, rptr, priv, local, flags);
 }
 
-int photon_probe_completion(int proc, int *flag, photon_rid *request, int flags) {
+int photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *request, int flags) {
   //if(__photon_default->initialized() != PHOTON_OK) {
   //  init_err();
   //  return PHOTON_ERROR_NOINIT;
   //}
   
-  return __photon_default->probe_completion(proc, flag, request, flags);
+  return __photon_default->probe_completion(proc, flag, remaining, request, flags);
 }
 /* end with completion */
 

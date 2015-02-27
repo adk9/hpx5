@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -15,7 +15,7 @@
 
 #include "hpx/hpx.h"
 
-struct transport_class;
+struct transport;
 
 typedef struct request request_t;
 struct request {
@@ -36,7 +36,7 @@ struct progress {
 };
 
 
-progress_t *network_progress_new(struct transport_class *transport)
+progress_t *network_progress_new(struct transport *transport)
   HPX_INTERNAL HPX_MALLOC HPX_NON_NULL(1);
 
 

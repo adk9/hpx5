@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -15,7 +15,8 @@
 #endif
 
 #include <stdlib.h>
-#include "libhpx/boot.h"
+#include <libhpx/boot.h>
+#include <libhpx/debug.h>
 
 static const char * const _smp_id_string = "SMP";
 
@@ -24,38 +25,42 @@ static const char *_smp_id(void) {
 }
 
 
-static void _delete(boot_class_t *boot) {
+static void _delete(boot_t *boot) {
   free(boot);
 }
 
 
-static int _rank(const boot_class_t *boot) {
+static int _rank(const boot_t *boot) {
   return 0;
 }
 
 
-static int _n_ranks(const boot_class_t *boot) {
+static int _n_ranks(const boot_t *boot) {
   return 1;
 }
 
 
-static int _barrier(const boot_class_t *boot) {
+static int _barrier(const boot_t *boot) {
   return 0;
 }
 
 
-static int _allgather(const boot_class_t *boot, /* const */ void *in, void *out, int n) {
+static int _allgather(const boot_t *boot, const void *in, void *out, int n) {
   return 0;
 }
 
 
-static void _abort(const boot_class_t *boot) {
+static void _abort(const boot_t *boot) {
   abort();
 }
 
 
-boot_class_t *boot_new_smp(void) {
-  boot_class_t *smp = malloc(sizeof(*smp));
+boot_t *boot_new_smp(void) {
+  boot_t *smp = malloc(sizeof(*smp));
+  if (!smp) {
+    dbg_error("could not allocate an SMP network object\n");
+  }
+
   smp->type      = HPX_BOOT_SMP;
   smp->id        = _smp_id;
   smp->delete    = _delete;

@@ -1,3 +1,15 @@
+// =============================================================================
+//  High Performance ParalleX Library (libhpx)
+//
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  All rights reserved.
+//
+//  This software may be modified and distributed under the terms of the BSD
+//  license.  See the COPYING file for details.
+//
+//  This software was created at the Indiana University Center for Research in
+//  Extreme Scale Technologies (CREST).
+// =============================================================================
 #ifndef HPX_FUTURE_H
 #define HPX_FUTURE_H
 
@@ -28,8 +40,8 @@ typedef struct {
 } hpx_netfuture_config_t;
 
 #define HPX_NETFUTURE_CONFIG_DEFAULTS { \
-    .max_size = 1024*1024*100,	\
-    .max_array_number = 100,	\
+    .max_size = 1024*1024*100,  \
+    .max_array_number = 100,    \
     .max_number = 100000        \
 }
 
@@ -51,7 +63,7 @@ typedef struct  {
 hpx_netfuture_t hpx_lco_netfuture_new(size_t size);
 
 /// Creates a shared future
-/// 
+///
 /// Shared futures can be accessed mutiple times. They must be manually emptied
 /// with hpx_lco_netfuture_emptyat()
 /// @param size                 The number of bytes
@@ -76,7 +88,7 @@ hpx_netfuture_t hpx_lco_netfuture_shared_new(size_t size);
 hpx_netfuture_t hpx_lco_netfuture_new_all(int num_participants, size_t size_per_participant);
 
 /// Creates an array of shared futures
-/// 
+///
 /// Shared futures can be accessed mutiple times
 /// @param num_participants The number of shared futures to allocate
 /// @param size             The number of bytes per shared future
@@ -94,14 +106,13 @@ hpx_netfuture_t hpx_lco_netfuture_at(hpx_netfuture_t base, int id);
 /// Set future @p future with @p data of @p size bytes. Set @p lsync_lco
 /// when the data is sent to the future, and set @p rsync_lco when the future is
 /// set at the (possibly) remote locality.
-/// @param future    The global address of the future
-/// @param  id       The index in array of futures
-/// @param   size    The size of @p data in bytes
-/// @param   data    The data the future will be set with
-/// @param lsync_lco An LCO to be set when the data is sent to the future
-/// @param rsync_lco An LCO to be set when the future has been successfully set
+/// @param       future The global address of the future
+/// @param           id The index in array of futures
+/// @param         size The size of @p data in bytes
+/// @param         data The data the future will be set with
+/// @param        lsync An LCO to be set when the data is sent to the future.
 void hpx_lco_netfuture_setat(hpx_netfuture_t future,  int id, size_t size, hpx_addr_t value,
-                                  hpx_addr_t lsync_lco, hpx_addr_t rsync_lco);
+                             hpx_addr_t lsync);
 
 /// Reset a future to empty
 ///
@@ -133,7 +144,7 @@ hpx_addr_t hpx_lco_netfuture_getat(hpx_netfuture_t future, int id, size_t size);
 /// @param[in]   sizes The amount of data to get at each location, in bytes
 /// @param[out] values Array of the addresses of the values of the futures
 void hpx_lco_netfuture_get_all(size_t num, hpx_netfuture_t futures, size_t size,
-			       void *values[]);
+                   void *values[]);
 
 /// Wait on a future
 ///
@@ -187,8 +198,8 @@ void hpx_lco_netfuture_wait_all(size_t num, hpx_netfuture_t netfutures, hpx_set_
 /// @param     set Wait until future is set or reset?
 /// @param    time An amount of time to wait for before returning
 /// @returns      HPX_SUCCESS if all futures are ready before time expires
-hpx_status_t hpx_lco_netfuture_wait_all_for(size_t num, hpx_netfuture_t netfutures, 
-				     hpx_set_t set, hpx_time_t time);
+hpx_status_t hpx_lco_netfuture_wait_all_for(size_t num, hpx_netfuture_t netfutures,
+                     hpx_set_t set, hpx_time_t time);
 
 /// Wait on a multiple futures until a set time
 ///
@@ -200,8 +211,8 @@ hpx_status_t hpx_lco_netfuture_wait_all_for(size_t num, hpx_netfuture_t netfutur
 /// @param     set Wait until future is set or reset?
 /// @param    time A time to wait until
 /// @returns      HPX_SUCCESS if all futures are ready before time expires
-hpx_status_t hpx_lco_netfuture_wait_all_until(size_t num, hpx_netfuture_t netfutures, 
-				       hpx_set_t set, hpx_time_t time);
+hpx_status_t hpx_lco_netfuture_wait_all_until(size_t num, hpx_netfuture_t netfutures,
+                       hpx_set_t set, hpx_time_t time);
 
 /// Free a future
 ///

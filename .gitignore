@@ -6,12 +6,13 @@
 *.la
 *~
 *.swp
+*.log
+*.trs
 *Makefile.in
 
 # /
 /aclocal.m4
 /configure
-/config.log
 /config.status
 /libtool
 /autom4te.cache
@@ -55,6 +56,7 @@
 /examples/netfutures
 /examples/qsort
 /examples/call
+/examples/netbench
 
 # /include/
 /include/stamp-h1
@@ -79,7 +81,10 @@ contrib/photon/
 /libhpx/Makefile
 /libhpx/boot/Makefile
 /libhpx/gas/Makefile
+/libhpx/instrumentation/Makefile
 /libhpx/network/Makefile
+/libhpx/network/isir/Makefile
+/libhpx/network/pwc/Makefile
 /libhpx/scheduler/Makefile
 /libhpx/scheduler/arch/Makefile
 /libhpx/system/Makefile
@@ -90,28 +95,41 @@ contrib/photon/
 
 # /tests/
 /tests/.deps
-/tests/hpxtest
+/tests/perf/perf_gas_addr_trans
+/tests/perf/perf_gas_alloc
+/tests/perf/perf_lco_allgather
+/tests/perf/perf_lco_allreduce
+/tests/perf/perf_lco_alltoall
+/tests/perf/perf_lco_chan
+/tests/perf/perf_lco_future
+/tests/perf/perf_lco_sema
+/tests/unit/test_and_lco
+/tests/unit/test_bcast
+/tests/unit/test_channels
+/tests/unit/test_call
+/tests/unit/test_collectives
+/tests/unit/test_futures
+/tests/unit/test_gencount
+/tests/unit/test_global_mem_alloc
+/tests/unit/test_lco
+/tests/unit/test_array_lco
+/tests/unit/test_user_lco
+/tests/unit/test_mem_alloc
+/tests/unit/test_memget
+/tests/unit/test_memput
+/tests/unit/test_parcel
+/tests/unit/test_sema
+/tests/unit/test_threads
+/tests/unit/test_runtime
+/tests/unit/test_datatype
+/tests/unit/test_wait
+/tests/unit/test_task
+/tests/unit/Makefile
 /tests/Makefile
 /tests/Makefile.in
 /tests/perf/Makefile
-/tests/perf/overheads/Makefile
-/tests/perf/overheads/run_tests.sh
-/tests/perf/overheads/time_gas_addr_trans
-/tests/perf/overheads/time_gas_alloc
-/tests/perf/overheads/time_lco_allgather
-/tests/perf/overheads/time_lco_allreduce
-/tests/perf/overheads/time_lco_alltoall
-/tests/perf/overheads/time_lco_and
-/tests/perf/overheads/time_lco_chan
-/tests/perf/overheads/time_lco_future
-/tests/perf/overheads/time_lco_netfutures
-/tests/perf/overheads/time_lco_netfutures_msgSize
-/tests/perf/overheads/time_lco_sema
-/tests/unit/Makefile
-/tests/unit/run_tests.sh
-/tests/unit/hpxtest
-
-
+/tests/perf/perf_lco_netfutures
+/tests/perf/perf_lco_netfutures_msgSize
 
 # /docs
 /docs/doxyfile.stamp
@@ -121,8 +139,54 @@ contrib/photon/
 /docs/man/
 /docs/latex/
 
-# /bench/
-/bench/Makefile
-/bench/Makefile.in
-/bench/netbench
+# /tutorials/
+tutorial/Beginners/Makefile
+tutorial/Beginners/collectives/Makefile
+tutorial/Beginners/collectives/allgather
+tutorial/Beginners/collectives/allreduce
+tutorial/Beginners/collectives/alltoall
+tutorial/Beginners/gas/Makefile
+tutorial/Beginners/gas/allocZeroBytes
+tutorial/Beginners/gas/gasalloc
+tutorial/Beginners/gas/memTryPin
+tutorial/Beginners/gas/memcpy
+tutorial/Beginners/gas/memget
+tutorial/Beginners/gas/memget1
+tutorial/Beginners/gas/memput
+tutorial/Beginners/gas/memput1
+tutorial/Beginners/lco/Makefile
+tutorial/Beginners/lco/chan
+tutorial/Beginners/lco/chanSendInorder
+tutorial/Beginners/lco/chanarray
+tutorial/Beginners/lco/lcoAll
+tutorial/Beginners/lco/lcoAnd
+tutorial/Beginners/lco/lcoError
+tutorial/Beginners/lco/lcoFutureArray
+tutorial/Beginners/lco/lcoSetGet
+tutorial/Beginners/lco/probe
+tutorial/Beginners/lco/sema
+tutorial/Beginners/parcel/Makefile
+tutorial/Beginners/parcel/parcelSend
+tutorial/Beginners/parcel/parcelSendSync
+tutorial/Beginners/threads/Makefile
+tutorial/Beginners/threads/threadArgPassing
+tutorial/Beginners/threads/threadContCleanup
+tutorial/Beginners/threads/threadContinue
+tutorial/Beginners/threads/threadCurrentTarget
+tutorial/Beginners/threads/threadExit
+tutorial/Beginners/threads/threadSemaphores
+tutorial/Beginners/threads/threadSpawn1
+tutorial/Beginners/threads/threadSpawn2
+tutorial/Beginners/threads/threadSpawn3
+tutorial/Beginners/threads/threadSpawn4
+tutorial/Beginners/threads/threadYield
+tutorial/CollectiveBench/Makefile
+tutorial/CollectiveBench/hpx_allgather
+tutorial/CollectiveBench/hpx_allreduce
+tutorial/CollectiveBench/hpx_alltoall
+tutorial/HeatSeq/Makefile
+tutorial/HeatSeq/heat_1
+tutorial/Makefile
+tutorial/cpi/Makefile
+tutorial/cpi/cpi
 

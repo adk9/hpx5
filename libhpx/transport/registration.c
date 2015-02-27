@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -29,7 +29,7 @@
 
 
 
-rkey_t *new_rkey(transport_class_t *t, char *heap_base) {
+rkey_t *new_rkey(transport_t *t, char *heap_base) {
   //int bytes = transport_rkey_size(t);
   rkey_t *r = malloc(sizeof(*r));
   if (!r) {
@@ -41,7 +41,7 @@ rkey_t *new_rkey(transport_class_t *t, char *heap_base) {
 }
 
 
-rkey_t *exchange_rkey_table(transport_class_t *t, rkey_t *my_rkey) {
+rkey_t *exchange_rkey_table(transport_t *t, rkey_t *my_rkey) {
   // allocate the rkey table
   int bytes = sizeof(*my_rkey);
   rkey_t *rkey_table = malloc(bytes * here->ranks);

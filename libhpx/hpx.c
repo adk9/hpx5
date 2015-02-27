@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -23,10 +23,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
-
 #include <hpx/hpx.h>
-
 #include "libhpx/action.h"
 #include "libhpx/boot.h"
 #include "libhpx/config.h"
@@ -34,12 +31,14 @@
 #include "libhpx/gas.h"
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
+#include "libhpx/instrumentation.h"
 #include "libhpx/network.h"
 #include "libhpx/scheduler.h"
 #include "libhpx/system.h"
 #include "libhpx/transport.h"
+#include "network/probe.h"
 
-HPX_ACTION(hpx_143_fix, void *UNUSED) {
+static HPX_ACTION(_hpx_143_fix, void *UNUSED) {
   hpx_gas_global_alloc(sizeof(void*), HPX_LOCALITIES);
   return LIBHPX_OK;
 }
@@ -71,170 +70,191 @@ static void _cleanup(locality_t *l) {
     l->transport = NULL;
   }
 
+  dbg_fini();
+
   if (l->boot) {
     boot_delete(l->boot);
     l->boot = NULL;
   }
 
-  hwloc_topology_destroy(l->topology);
+  hpx_hwloc_topology_destroy(l->topology);
 
   if (l->actions) {
     action_table_free(l->actions);
   }
 
+  inst_fini();
+
   if (l->config) {
-    config_free(l->config);
+    config_delete(l->config);
   }
 
   free(l);
 }
 
-
 int hpx_init(int *argc, char ***argv) {
-  hpx_config_t *cfg = parse_options(argc, argv);
-  if (!cfg) {
-    return dbg_error("failed to create a configuration.\n");
-  }
-  log_level = cfg->loglevel;
-  if (cfg->waitat == HPX_LOCALITY_ALL) {
-    dbg_wait();
-  }
+  int status = HPX_SUCCESS;
 
-  // locality
   here = malloc(sizeof(*here));
   if (!here) {
-    return dbg_error("failed to allocate a locality.\n");
+    status = log_error("failed to allocate a locality.\n");
+    goto unwind0;
   }
+
   here->rank = -1;
   here->ranks = 0;
   here->actions = NULL;
-  here->config = cfg;
 
-  // topology
-  int e = hwloc_topology_init(&here->topology);
-  if (e) {
-    _cleanup(here);
-    return dbg_error("failed to initialize a topology.\n");
-  }
-  e = hwloc_topology_load(here->topology);
-  if (e) {
-    _cleanup(here);
-    return dbg_error("failed to load the topology.\n");
+  here->config = config_new(argc, argv);
+  if (!here->config) {
+    status = log_error("failed to create a configuration.\n");
+    goto unwind1;
   }
 
-  // bootstrap
-  here->boot = boot_new(cfg->boot);
-  if (!here->boot) {
-    _cleanup(here);
-    return dbg_error("failed to bootstrap.\n");
-  }
-  here->rank = boot_rank(here->boot);
-  here->ranks = boot_n_ranks(here->boot);
-  if (cfg->waitat == here->rank) {
+  // check to see if everyone is waiting
+  if (config_dbg_waitat_isset(here->config, HPX_LOCALITY_ALL)) {
     dbg_wait();
   }
 
-  if (cfg->logat && cfg->logat != (int*)HPX_LOCALITY_ALL) {
-    int orig_level = log_level;
-    log_level = 0;
-    for (int i = 0; i < cfg->logat[0]; ++i) {
-      if (cfg->logat[i+1] == here->rank) {
-        log_level = orig_level;
-      }
+  // topology
+  int e = hpx_hwloc_topology_init(&here->topology);
+  if (e) {
+    status = log_error("failed to initialize a topology.\n");
+    goto unwind1;
+  }
+  e = hpx_hwloc_topology_load(here->topology);
+  if (e) {
+    status = log_error("failed to load the topology.\n");
+    goto unwind1;
+  }
+
+  // bootstrap
+  here->boot = boot_new(here->config->boot);
+  if (!here->boot) {
+    status = log_error("failed to bootstrap.\n");
+    goto unwind1;
+  }
+  here->rank = boot_rank(here->boot);
+  here->ranks = boot_n_ranks(here->boot);
+
+  // initialize the debugging system
+  // @todo We would like to do this earlier but MPI_init() for the bootstrap
+  //       network overwrites our segv handler.
+  if (LIBHPX_OK != dbg_init(here->config)) {
+    goto unwind1;
+  }
+
+  // Now that we know our rank, we can be more specific about waiting.
+  if (config_dbg_waitat_isset(here->config, here->rank)) {
+    // Don't wait twice.
+    if (!config_dbg_waitat_isset(here->config, HPX_LOCALITY_ALL)) {
+      dbg_wait();
     }
+  }
+
+  if (inst_init(here->config)) {
+    log("error detected while initializing instrumentation\n");
   }
 
   // byte transport
-  here->transport = transport_new(cfg->transport, cfg->sendlimit, cfg->recvlimit);
+  here->transport = transport_new(here->config->transport,
+                                  here->config);
   if (!here->transport) {
-    _cleanup(here);
-    return dbg_error("failed to create transport.\n");
+    status = log_error("failed to create transport.\n");
+    goto unwind1;
   }
 
   // global address space
-  here->gas = gas_new(cfg->heapsize, here->boot, here->transport, cfg->gas);
+  here->gas = gas_new(here->config->heapsize, here->boot, here->transport,
+                      here->config->gas);
   if (!here->gas) {
-    _cleanup(here);
-    return dbg_error("failed to create the global address space.\n");
+    status = log_error("failed to create the global address space.\n");
+    goto unwind1;
   }
   if (here->gas->join()) {
-    _cleanup(here);
-    return dbg_error("failed to join the global address space.\n");
+    status = log_error("failed to join the global address space.\n");
+    goto unwind1;
   }
   HPX_HERE = HPX_THERE(here->rank);
 
-  int cores = cfg->cores;
-  if (!cores) {
-    cores = system_get_cores();
+  if (!here->config->cores) {
+    here->config->cores = system_get_cores();
   }
 
-  int workers = cfg->threads;
-  if (!workers) {
-    if (cores == system_get_cores()) {
-      workers = cores - 1;
-    }
-    else {
-      workers = cores;
-    }
+  if (!here->config->threads) {
+    here->config->threads = here->config->cores;
   }
 
   // parcel network
-  here->network = network_new(LIBHPX_NETWORK_DEFAULT, workers);
+  here->network = network_new(here->config, here->boot, here->gas,
+                              here->config->threads);
   if (!here->network) {
-    _cleanup(here);
-    return dbg_error("failed to create network.\n");
+    status = log_error("failed to create network.\n");
+    goto unwind1;
   }
 
   // thread scheduler
-  here->sched = scheduler_new(cores, workers, cfg->stacksize,
-                              cfg->backoffmax, cfg->statistics);
+  here->sched = scheduler_new(here->config);
   if (!here->sched) {
-    _cleanup(here);
-    return dbg_error("failed to create scheduler.\n");
+    status = log_error("failed to create scheduler.\n");
+    goto unwind1;
   }
 
-  return HPX_SUCCESS;
+  return status;
+ unwind1:
+  _cleanup(here);
+ unwind0:
+  return status;
 }
 
-
 /// Called to run HPX.
-int hpx_run(hpx_action_t *act, const void *args, size_t size) {
+int _hpx_run(hpx_action_t *act, int nargs, ...) {
   int status = HPX_SUCCESS;
   if (!here || !here->sched) {
-    status = dbg_error("hpx_init() must be called before hpx_run()\n");
+    status = log_error("hpx_init() must be called before hpx_run()\n");
     goto unwind0;
   }
 
   here->actions = action_table_finalize();
   if (!here->actions) {
-    status = dbg_error("failed to finalize the action table.\n");
+    status = log_error("failed to finalize the action table.\n");
     goto unwind0;
   }
 
-  if (network_startup(here->network) != LIBHPX_OK) {
-    status = dbg_error("could not start network progress\n");
+  // pthread_t _progress = progress_start(here);
+  // if (pthread_equal(_progress, pthread_self())) {
+  //   dbg_error("failed to start progress\n");
+  // }
+
+  if (probe_start(here->network) != LIBHPX_OK) {
+    status = log_error("could not start network probe\n");
     goto unwind1;
   }
 
   // create the initial application-level thread to run
   if (here->rank == 0) {
-    status = hpx_call(HPX_HERE, *act, HPX_NULL, args, size);
+    va_list vargs;
+    va_start(vargs, nargs);
+    status = libhpx_call_action(here->actions, HPX_HERE, *act, HPX_NULL,
+                                HPX_ACTION_NULL, HPX_NULL, HPX_NULL,
+                                nargs, &vargs);
+    va_end(vargs);
     if (status != LIBHPX_OK) {
-      dbg_error("failed to spawn initial action\n");
+      log_error("failed to spawn initial action\n");
       goto unwind2;
     }
 
     // Fix for https://uisapp2.iu.edu/jira-prd/browse/HPX-143
-    status = hpx_call(HPX_HERE, hpx_143_fix, HPX_NULL, NULL, 0);
+    status = hpx_call(HPX_HERE, _hpx_143_fix, HPX_NULL, NULL, 0);
     if (status != LIBHPX_OK) {
-      dbg_error("failed to spawn the initial cyclic allocation");
+      log_error("failed to spawn the initial cyclic allocation");
       goto unwind2;
     }
   }
 
   // start the scheduler, this will return after scheduler_shutdown()
   if (scheduler_startup(here->sched) != LIBHPX_OK) {
-    status = dbg_error("scheduler shut down with error.\n");
+    log_error("scheduler shut down with error.\n");
     goto unwind2;
   }
 
@@ -243,46 +263,47 @@ int hpx_run(hpx_action_t *act, const void *args, size_t size) {
 #endif
 
  unwind2:
-  network_shutdown(here->network);
+  // progress_stop(_progress);
+  probe_stop();
  unwind1:
   _cleanup(here);
  unwind0:
   return status;
 }
 
-
 int hpx_get_my_rank(void) {
   return (here) ? here->rank : -1;
 }
-
 
 int hpx_get_num_ranks(void) {
   return (here && here->boot) ? here->ranks : -1;
 }
 
-
 int hpx_get_num_threads(void) {
   return (here && here->sched) ? here->sched->n_workers : 0;
 }
 
-
 /// Called by the application to terminate the scheduler and network.
 void hpx_shutdown(int code) {
-  if (!here->ranks) {
-    dbg_error("hpx_shutdown can only be called when the system is running.\n");
-  }
+  dbg_assert_str(here->ranks,
+                 "hpx_shutdown can only be called when the system is running.\n");
 
   // make sure we flush our local network when we shutdown
   network_flush_on_shutdown(here->network);
-  int e = hpx_bcast(locality_shutdown, HPX_NULL, &code, sizeof(code));
-  hpx_thread_exit(e);
+  for (int i = 0, e = here->ranks; i < e; ++i) {
+    int e = network_command(here->network, HPX_THERE(i), locality_shutdown,
+                            (uint64_t)code);
+    dbg_assert(e == LIBHPX_OK);
+  }
+  hpx_thread_exit(HPX_SUCCESS);
 }
-
 
 /// Called by the application to shutdown the scheduler and network. May be
 /// called from any lightweight HPX thread, or the network thread.
 void hpx_abort(void) {
-  if (here && here->config && here->config->waitonabort) {
+  inst_fini();
+
+  if (here && here->config && here->config->dbg_waitonabort) {
     dbg_wait();
   }
   if (here && here->boot) {
