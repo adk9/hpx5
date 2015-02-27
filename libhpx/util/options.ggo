@@ -29,7 +29,7 @@ long optional
 
 option "hpx-gas" - "type of Global Address Space (GAS)"
 typestr="type"
-values="default","smp","pgas","agas","pgas_switch","agas_switch"
+values="default","smp","pgas","agas"
 enum optional
 
 option "hpx-boot" - "HPX bootstrap method to use"
