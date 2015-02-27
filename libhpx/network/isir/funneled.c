@@ -24,6 +24,7 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
+#include "libhpx/transport.h"
 #include "libhpx/parcel.h"
 
 #include "emulate_pwc.h"
@@ -35,6 +36,9 @@
 #define _CAT(S, T) _CAT1(S, T)
 #define _BYTES(S) (HPX_CACHELINE_SIZE - ((S) % HPX_CACHELINE_SIZE))
 #define _PAD(S) const char _CAT(_padding,__LINE__)[_BYTES(S)]
+
+// Define the transports allowed for the ISIR network
+static int ISIR_TRANSPORTS[] = {HPX_TRANSPORT_MPI};
 
 typedef struct {
   network_t       vtable;
@@ -202,10 +206,19 @@ static int _funneled_progress(network_t *network) {
   (void)m;
 }
 
-network_t *network_isir_funneled_new(struct gas *gas, int nrx) {
+network_t *network_isir_funneled_new(config_t *cfg, struct gas *gas, int nrx) {
   if (gas->type == HPX_GAS_SMP) {
     log_net("will not initialize a %s network for SMP\n",
-            LIBHPX_NETWORK_TO_STRING[LIBHPX_NETWORK_ISIR]);
+            HPX_NETWORK_TO_STRING[HPX_NETWORK_ISIR]);
+    return NULL;
+  }
+  
+  int e = network_supported_transport(here->transport, ISIR_TRANSPORTS,
+				      _HPX_NELEM(ISIR_TRANSPORTS));
+  if (e) {
+    log_error("%s network is not supported with current transport: %s\n",
+	      HPX_NETWORK_TO_STRING[HPX_NETWORK_ISIR],
+	      HPX_TRANSPORT_TO_STRING[here->transport->type]);
     return NULL;
   }
 
@@ -215,7 +228,8 @@ network_t *network_isir_funneled_new(struct gas *gas, int nrx) {
     return NULL;
   }
 
-  network->vtable.type = LIBHPX_NETWORK_ISIR;
+  network->vtable.type = HPX_NETWORK_ISIR;
+  network->vtable.transports = ISIR_TRANSPORTS;
   network->vtable.delete = _funneled_delete;
   network->vtable.progress = _funneled_progress;
   network->vtable.send = _funneled_send;

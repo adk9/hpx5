@@ -26,11 +26,13 @@
 struct boot;
 struct config;
 struct gas;
+struct transport;
 /// @}
 
 /// All network objects implement the network interface.
 typedef struct network {
   int type;
+  int *transports;
 
   void (*delete)(struct network *)
     HPX_NON_NULL(1);
@@ -79,6 +81,17 @@ typedef struct network {
 network_t *network_new(struct config *config, struct boot *boot,
                        struct gas *gas, int nrx)
   HPX_NON_NULL(2, 3) HPX_MALLOC HPX_INTERNAL;
+
+/// Finds a transport match for a given network.
+///
+/// @param            t The transport to test.
+/// @param   transports The list of transports to test against.
+/// @param            n The number of entries.
+///
+/// @ returns 0 on match, or 1 if no match was found.
+int network_supported_transport(struct transport *t, const int tranports[],
+				int n)
+  HPX_NON_NULL(1, 2) HPX_INTERNAL;
 
 /// Delete a network object.
 ///

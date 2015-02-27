@@ -20,6 +20,10 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
+#include "libhpx/transport.h"
+
+// Define the transports allowed for the SMP network
+static int SMP_TRANSPORTS[] = {HPX_TRANSPORT_SMP};
 
 static void _smp_delete(network_t *network) {
 }
@@ -63,7 +67,8 @@ static void _smp_set_flush(network_t *network) {
 }
 
 static network_t _smp = {
-  .type = LIBHPX_NETWORK_SMP,
+  .type = HPX_NETWORK_SMP,
+  .transports = SMP_TRANSPORTS,
   .delete = _smp_delete,
   .progress = _smp_progress,
   .send = _smp_send,
@@ -76,5 +81,13 @@ static network_t _smp = {
 };
 
 network_t *network_smp_new(void) {
+  int e = network_supported_transport(here->transport, SMP_TRANSPORTS,
+				      _HPX_NELEM(SMP_TRANSPORTS));
+  if (e) {
+    log_error("%s network is not supported with current transport: %s\n",
+	      HPX_NETWORK_TO_STRING[HPX_NETWORK_SMP],
+	      HPX_TRANSPORT_TO_STRING[here->transport->type]);
+    return NULL;
+  }
   return &_smp;
 }

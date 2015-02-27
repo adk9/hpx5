@@ -67,14 +67,14 @@ static const char* const HPX_TRANSPORT_TO_STRING[] = {
 };
 
 typedef enum {
-  LIBHPX_NETWORK_DEFAULT = 0,
-  LIBHPX_NETWORK_SMP,
-  LIBHPX_NETWORK_PWC,
-  LIBHPX_NETWORK_ISIR,
-  LIBHPX_NETWORK_MAX
+  HPX_NETWORK_DEFAULT = 0,
+  HPX_NETWORK_SMP,
+  HPX_NETWORK_PWC,
+  HPX_NETWORK_ISIR,
+  HPX_NETWORK_MAX
 } libhpx_network_t;
 
-static const char * const LIBHPX_NETWORK_TO_STRING[] = {
+static const char * const HPX_NETWORK_TO_STRING[] = {
   "DEFAULT",
   "NONE",
   "PWC",
