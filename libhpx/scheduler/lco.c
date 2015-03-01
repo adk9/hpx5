@@ -127,7 +127,7 @@ static HPX_PINNED(_lco_error, void *args) {
   return _error(_target_lco(), *code);
 }
 
-static HPX_PINNED(_lco_reset, void *UNUSED) {
+HPX_PINNED(hpx_lco_reset_action, void *UNUSED) {
   return _reset(_target_lco());
 }
 
@@ -293,21 +293,37 @@ void hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync) {
   dbg_check(e, "Could not forward lco_error\n");
 }
 
-void hpx_lco_reset(hpx_addr_t target, hpx_addr_t rsync) {
-  if (target == HPX_NULL) {
+void hpx_lco_reset(hpx_addr_t addr, hpx_addr_t rsync) {
+  if (addr == HPX_NULL) {
     return;
   }
 
   lco_t *lco = NULL;
-  if (hpx_gas_try_pin(target, (void**)&lco)) {
+  if (hpx_gas_try_pin(addr, (void**)&lco)) {
     _reset(lco);
-    hpx_gas_unpin(target);
+    hpx_gas_unpin(addr);
     hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
     return;
   }
 
-  int e = hpx_call_async(target, _lco_reset, HPX_NULL, rsync, NULL, 0);
+  int e = hpx_call(addr, hpx_lco_reset_action, rsync, NULL, 0);
   dbg_check(e, "Could not forward lco_reset\n");
+}
+
+void hpx_lco_reset_sync(hpx_addr_t addr) {
+  if (addr == HPX_NULL) {
+    return;
+  }
+
+  lco_t *lco = NULL;
+  if (hpx_gas_try_pin(addr, (void**)&lco)) {
+    _reset(lco);
+    hpx_gas_unpin(addr);
+    return;
+  }
+
+  int e = hpx_call_sync(addr, hpx_lco_reset_action, NULL, 0, NULL, 0);
+  dbg_check(e, "Could not forward to lco_reset_sync\n");
 }
 
 void hpx_lco_set(hpx_addr_t target, int size, const void *value,

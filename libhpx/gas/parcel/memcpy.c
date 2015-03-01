@@ -36,9 +36,7 @@ static HPX_PINNED(_memcpy_reply, void *data) {
 
 static int _memcpy_request_handler(size_t size, hpx_addr_t to) {
   char *local = hpx_thread_current_local_target();
-  int e = hpx_call_cc(to, _memcpy_reply, NULL, NULL, local, size);
-  dbg_check(e, "could not initiate a memcpy reply.\n");
-  return e;
+  hpx_call_cc(to, _memcpy_reply, NULL, NULL, local, size);
 }
 
 static HPX_ACTION_DEF(PINNED, _memcpy_request_handler, _memcpy_request,

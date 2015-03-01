@@ -186,6 +186,7 @@ int    _hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t lsync,
 /// the continuation for the called action. It finishes the current
 /// thread's execution, and does not yield control back to the thread.
 ///
+/// @param    gate An LCO for a dependent call.
 /// @param    addr The address where the action is executed.
 /// @param  action The action to perform.
 /// @param cleanup A callback function that is run after the action
@@ -196,11 +197,18 @@ int    _hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t lsync,
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem during
 ///          the hpx_call_cc invocation.
-int    _hpx_call_cc(hpx_addr_t addr, hpx_action_t action,
-                    void (*cleanup)(void*), void *env, int nargs, ...);
+void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
+                       void (*cleanup)(void*), void *env, int nargs, ...)
+  HPX_NORETURN;
+
+#define hpx_call_when_cc(gate, addr, action, cleanup, env, ...) \
+  _hpx_call_when_cc(gate, addr, action, cleanup, env,           \
+                    __HPX_NARGS(__VA_ARGS__),##__VA_ARGS__)
+
 #define hpx_call_cc(addr, action, cleanup, env, ...)                 \
-  _hpx_call_cc(addr, action, cleanup, env, __HPX_NARGS(__VA_ARGS__), \
-               __VA_ARGS__)
+  _hpx_call_when_cc(HPX_NULL, addr, action, cleanup, env,            \
+                    __HPX_NARGS(__VA_ARGS__),##__VA_ARGS__)
+
 
 /// HPX collective operations.
 ///
