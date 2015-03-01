@@ -35,7 +35,9 @@ typedef struct {
   cvar_t         barrier;
   hpx_monoid_id_t     id;
   hpx_monoid_op_t     op;
-  volatile int    inputs;
+  size_t            size;
+  int             inputs;
+  volatile int remaining;
   void            *value;
 } _reduce_t;
 
@@ -68,6 +70,8 @@ static void _reduce_reset(lco_t *lco) {
   dbg_assert_str(cvar_empty(&r->barrier),
                  "Reset on allreduce LCO that has waiting threads.\n");
   cvar_reset(&r->barrier);
+  r->remaining = r->inputs;
+  r->id(r->value, r->size);
   lco_unlock(lco);
 }
 
@@ -80,12 +84,12 @@ static void _reduce_set(lco_t *lco, int size, const void *from) {
   assert(size && from);
   r->op(r->value, from, size);
 
-  if (--r->inputs == 0) {
+  if (--r->remaining == 0) {
     scheduler_signal_all(&r->barrier);
   }
   else {
-    log_lco("reduce: received input %d\n", r->inputs);
-    dbg_assert_str(r->inputs > 0, "reduction: too many threads joined (%d).\n", r->inputs);
+    log_lco("reduce: received input %d\n", r->remaining);
+    dbg_assert_str(r->remaining > 0, "reduction: too many threads joined (%d).\n", r->remaining);
   }
 
   lco_unlock(lco);
@@ -97,10 +101,10 @@ static hpx_status_t _reduce_get(lco_t *lco, int size, void *out) {
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
 
-  int inputs = r->inputs;
-  while (inputs > 0 && status == HPX_SUCCESS) {
+  int remaining = r->remaining;
+  while (remaining > 0 && status == HPX_SUCCESS) {
     status = scheduler_wait(&lco->lock, &r->barrier);
-    inputs = r->inputs;
+    remaining = r->remaining;
   }
 
   // if there was an error signal, unlock and return it
@@ -123,29 +127,31 @@ static hpx_status_t _reduce_wait(lco_t *lco) {
   return _reduce_get(lco, 0, NULL);
 }
 
+  // vtable
+static const lco_class_t _reduce_vtable = {
+  .on_fini     = _reduce_fini,
+  .on_error    = _reduce_error,
+  .on_set      = _reduce_set,
+  .on_attach   = NULL,
+  .on_get      = _reduce_get,
+  .on_getref   = NULL,
+  .on_release  = NULL,
+  .on_wait     = _reduce_wait,
+  .on_reset    = _reduce_reset
+};
+
 static void _reduce_init(_reduce_t *r, int inputs, size_t size, hpx_monoid_id_t id,
                          hpx_monoid_op_t op) {
-  // vtable
-  static const lco_class_t vtable = {
-    .on_fini     = _reduce_fini,
-    .on_error    = _reduce_error,
-    .on_set      = _reduce_set,
-    .on_attach   = NULL,
-    .on_get      = _reduce_get,
-    .on_getref   = NULL,
-    .on_release  = NULL,
-    .on_wait     = _reduce_wait,
-    .on_reset    = _reduce_reset
-  };
-
   assert(id);
   assert(op);
 
-  lco_init(&r->lco, &vtable);
+  lco_init(&r->lco, &_reduce_vtable);
   cvar_reset(&r->barrier);
   r->op = op;
   r->id = id;
+  r->size = size;
   r->inputs = inputs;
+  r->remaining = inputs;
   r->value = NULL;
 
   if (size) {
