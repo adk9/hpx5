@@ -56,6 +56,34 @@ static void _reduce_fini(lco_t *lco) {
   libhpx_global_free(lco);
 }
 
+static hpx_status_t _reduce_attach(lco_t *lco, hpx_parcel_t *p) {
+  hpx_status_t status = HPX_SUCCESS;
+  lco_lock(lco);
+  _reduce_t *r = (_reduce_t *)lco;
+
+  // if the reduce is still waiting
+  if (r->remaining) {
+    status = cvar_attach(&r->barrier, p);
+    goto unlock;
+  }
+
+  // if the reduce has an error, then return that error without sending the
+  // parcel
+  //
+  // NB: should we actually send some sort of error condition?
+  status = cvar_get_error(&r->barrier);
+  if (status != HPX_SUCCESS) {
+    goto unlock;
+  }
+
+  // go ahead and send this parcel eagerly
+  hpx_parcel_send(p, HPX_NULL);
+
+ unlock:
+  lco_unlock(lco);
+  return status;
+}
+
 /// Handle an error condition.
 static void _reduce_error(lco_t *lco, hpx_status_t code) {
   lco_lock(lco);
@@ -132,7 +160,7 @@ static const lco_class_t _reduce_vtable = {
   .on_fini     = _reduce_fini,
   .on_error    = _reduce_error,
   .on_set      = _reduce_set,
-  .on_attach   = NULL,
+  .on_attach   = _reduce_attach,
   .on_get      = _reduce_get,
   .on_getref   = NULL,
   .on_release  = NULL,
