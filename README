@@ -7,7 +7,7 @@ Building and Running a network-capable HPX
 There are several pre-requisites to successfully configure and run HPX.
 
 Requirements
-------------
+-------------------------
 * GCC 4.8.4 or newer (Tested with 4.8.4, 4.9.1, 4.9.2)
 * GNU Make 3.81+    
 * autoconf 2.6.9     (only required for developer builds)
@@ -28,11 +28,12 @@ HPX can build and run successfully without any network backend, but at
 present, MPI or Photon is required for networking by HPX. Photon can
 take advantage of RDMA over IB resulting in better performance.
 
-The latest autotools can be installed by using setup_autotools.sh in scripts folder. The script takes an path to install autotools to. After installing autotools, be 
-sure to update your PATH variable.
+**The latest autotools can be installed by using setup_autotools.sh in scripts folder. The script takes an path to install autotools to. After installing autotools, be sure to update your PATH variable. Only after the above steps should the user run ./bootstrap.**
 
 Bootstrapping
--------------- 
+--------------------------
+**Note: ./bootstrap should not be used with release tarballs.**
+ 
 HPX provides a bootstrap script in its build. In the HPX directory run the bootstrap script using
 
 $ ./bootstrap
@@ -40,16 +41,14 @@ Bootstrap is a bash script that generate the initialization required to create a
 
 Building without MPI enables the SMP bootstrapper. This allows you to run HPX on a single node. However, if you launch HPX with –np > 1 then either MPI / Photon transport should be enabled which is detailed in next section.
 
-Note: ./bootstrap should not be used with release tarballs.
-
 Configuration
--------------
+--------------------------
 The number of HPX configuration supports to use ‘pkg-config’ to look for installed packages. In particular, if your compilation environment requires explicit paths to MPI, you should compile --with-mpi=ompi, mcapich2, etc
 
 See ‘./configure --help’ for further details.
 
 HPX Network Transports
-************************
+**************************
 HPX can build and run successfully without any network backend, but at present, MPI or Photon is required for networking by HPX.
 
 HPX can be built with one, both, or none of the network transports depending on application needs. Each transport is runtime configurable. MPI and PMI are currently used as job launchers and bootstrap mechanism for HPX.
@@ -61,7 +60,7 @@ If you build with Photon and/or MPI on a system without networking, you may stil
 Configuring on InfiniBand Systems
 ******************************************
 Configuring with MPI
-------------------------
+------------------------------------------
 $ ./configure --prefix=/path/to/install --with-mpi=ompi
 
 On stampede use
@@ -69,12 +68,12 @@ $ module load intel/14.0.1.106
 $ LDFLAGS=-L/opt/ofed/lib64 CPPFLAGS=-I/opt/ofed/include ./configure --with-mpi CC=mpicc
 
 Configuring with Photon
--------------------------
+------------------------------------------
 The Photon transport is included in HPX within the contrib directory. To configure HPX with Photon use option --enable-photon
 ./configure --prefix=/path/to/install/ --with-mpi=ompi --enable-photon
 
 Configuring on CRAY Systems
-*****************************
+******************************************
 $ module unload PrgEnv-cray
 $ module unload PrgEnv-intel/5.2.40
 $ module load PrgEnv-gnu
@@ -82,15 +81,15 @@ $ setenv CRAYPE_LINK_TYPE dynamic
 $ ./configure --prefix=/path/to/install/ CC=cc
 
 Configuring with MPI on cray
---------------------------------
+------------------------------------------
 If you have MPICH installed, you need to specify: ‘$ ./configure --prefix=/path/to/install --with-mpi=mpich CC=cc’ will instruct ‘configure’ to look for ‘mpich.pc’.
 
 Configuring with Photon on cray
---------------------------------
+------------------------------------------
 $ ./configure --prefix=/path/to/install/ CC=cc --enable-photon --with-pmi --with-mpi HPX_PHOTON_CARGS="--with-ugni"
 
 Configuring with the test-suite enabled
-*****************************************
+******************************************
 * To build and run the unit and performance testsuite enabled:
 
 $ ./configure  --enable-testsuite --with-tests-cmd="mpirun -np 2" 
@@ -98,12 +97,12 @@ $ make check
 --with-tests-cmd is used to specify the application launch command on various systems. This has to be set appropriately for your system.
 
 To complete the build and install use:
-***************************************
+******************************************
 make
 make install
 
 Running
-------------
+------------------------------------------
 The Photon default is to use the first detected IB device and active port. This behavior can be overridden with the following environment variable:
 
 $ export HPX_PHOTON_IBDEV="mlx4_0"
@@ -131,3 +130,5 @@ HPX programs can be run using any of the MPI or PMI launchers such as mpirun/mpi
 E.g. to run the pingpong example,
 
 $ mpirun -np 2 examples/pingpong 10 -m -v
+
+Detailed build instructions can be found at Getting started with HPX Runtime Systems in docs folder.
