@@ -115,20 +115,21 @@ int _hpx_call_async(hpx_addr_t addr, hpx_action_t action,
   return e;
 }
 
-int _hpx_call_cc(hpx_addr_t addr, hpx_action_t action, void (*cleanup)(void*),
-                 void *env, int nargs, ...) {
+void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
+                      void (*cleanup)(void*), void *env, int nargs, ...) {
   hpx_parcel_t *p = scheduler_current_parcel();
   va_list vargs;
   va_start(vargs, nargs);
   int e = libhpx_call_action(here->actions, addr, action, p->c_target,
-                             p->c_action, HPX_NULL, HPX_NULL, nargs, &vargs);
+                             p->c_action, HPX_NULL, gate, nargs, &vargs);
   va_end(vargs);
-  if (e != HPX_SUCCESS) {
-    return e;
+  if (e == HPX_SUCCESS) {
+    p->c_target = HPX_NULL;
+    p->c_action = HPX_NULL;
+    hpx_thread_continue_cleanup(0, NULL, cleanup, env);
   }
-  p->c_target = HPX_NULL;
-  p->c_action = HPX_NULL;
-  hpx_thread_continue_cleanup(0, NULL, cleanup, env);
+
+  hpx_thread_exit(e);
 }
 
 
