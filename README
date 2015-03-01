@@ -24,15 +24,13 @@ Requirements
 * Uthash             (embedded with HPX)
 * Valgrind           (embedded with HPX)
 
-HPX can build and run successfully without any network backend, but at
-present, MPI or Photon is required for networking by HPX. Photon can
-take advantage of RDMA over IB resulting in better performance.
+HPX can build and run successfully without any network backend, but at present, MPI or Photon is required for networking by HPX. Photon can take advantage of RDMA over IB resulting in better performance.
 
-**The latest autotools can be installed by using setup_autotools.sh in scripts folder. The script takes an path to install autotools to. After installing autotools, be sure to update your PATH variable. Only after the above steps should the user run ./bootstrap.**
+The latest autotools can be installed by using setup_autotools.sh in scripts folder. The script takes an path to install autotools to. After installing autotools, be sure to update your PATH variable. Only after installing the latest autotools should the user run ./bootstrap.
 
 Bootstrapping
 --------------------------
-**Note: ./bootstrap should not be used with release tarballs.**
+Note: ./bootstrap should not be used with release tarballs.
  
 HPX provides a bootstrap script in its build. In the HPX directory run the bootstrap script using
 
