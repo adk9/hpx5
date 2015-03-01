@@ -68,12 +68,12 @@ void hpx_lco_error(hpx_addr_t lco, hpx_status_t code, hpx_addr_t rsync);
 /// @param    sync the address of an LCO to set when the future is reset;
 ///                may be HPX_NULL
 void hpx_lco_reset(hpx_addr_t future, hpx_addr_t sync);
+void hpx_lco_reset_sync(hpx_addr_t future);
 
-/// An action-based interface to the LCO set operation.
-extern hpx_action_t hpx_lco_set_action;
-
-/// An action-based interface to the LCO delete operation.
-extern hpx_action_t hpx_lco_delete_action;
+/// An action-based interface to the interface;
+extern HPX_ACTION_DECL(hpx_lco_set_action);
+extern HPX_ACTION_DECL(hpx_lco_delete_action);
+extern HPX_ACTION_DECL(hpx_lco_reset_action);
 
 /// Set an LCO, optionally with data.
 ///
@@ -269,7 +269,7 @@ hpx_addr_t hpx_lco_future_array_at(hpx_addr_t base, int i, int size, int bsize);
 /// Allocate an array of LCO local to the calling locality.
 /// @param       type the type of the LCO
 /// @param          n The (total) number of lcos to allocate
-/// @param        arg The size of each lco's value or the number of inputs 
+/// @param        arg The size of each lco's value or the number of inputs
 ///                   to the and (must be >= 0)
 ///
 /// @returns the global address of the allocated array lco.
