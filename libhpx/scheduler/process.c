@@ -83,7 +83,7 @@ static HPX_ACTION(_proc_call, _call_args_t *args) {
     return HPX_RESEND;
   }
 
-  uint64_t credit = sync_addf(&p->credit, 1, SYNC_ACQ_REL);
+  sync_fadd(&p->credit, 1, SYNC_ACQ_REL);
   hpx_gas_unpin(process);
 
   hpx_pid_t pid = hpx_process_getpid(process);
@@ -94,7 +94,6 @@ static HPX_ACTION(_proc_call, _call_args_t *args) {
   if (!parcel) {
     dbg_error("process: call_action failed.\n");
   }
-  parcel_set_credit(parcel, credit);
 
   hpx_parcel_send_sync(parcel);
   return HPX_SUCCESS;
@@ -149,8 +148,10 @@ int process_recover_credit(hpx_parcel_t *p) {
 
 
 hpx_addr_t hpx_process_new(hpx_addr_t termination) {
-  if (termination == HPX_NULL)
+  if (termination == HPX_NULL) {
     return HPX_NULL;
+  }
+
   _process_t *p;
   hpx_addr_t process = hpx_gas_alloc(sizeof(*p));
   if (!hpx_gas_try_pin(process, (void**)&p)) {
