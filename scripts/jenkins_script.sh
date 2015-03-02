@@ -116,6 +116,7 @@ function do_build() {
     cd "$DIR"
     
     echo "Bootstrapping HPX."
+    git clean -xdf
     ./bootstrap
     
     if [ -d "./build" ]; then
