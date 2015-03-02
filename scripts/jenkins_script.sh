@@ -200,7 +200,7 @@ if [ "$OP" == "run" ]; then
         cd apps/libPXGL/examples
 	# Trying to get NFS to find the files on cutter
 	if [ "$SYSTEM" == "CREST_cutter" ]; then
-          $RUNCMDfind `pwd` > /dev/null
+          $RUNCMD find `pwd` > /dev/null
           sleep 5
         fi
         # Delta-Stepping
