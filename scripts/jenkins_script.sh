@@ -201,6 +201,7 @@ if [ "$OP" == "run" ]; then
 	# Trying to get NFS to find the files on cutter
 	if [ "$SYSTEM" == "CREST_cutter" ]; then
           $RUNCMD find `pwd` > /dev/null
+	  $RUNCMD ls `pwd`/.libs/lt-sssp
           sleep 5
         fi
         # Delta-Stepping
