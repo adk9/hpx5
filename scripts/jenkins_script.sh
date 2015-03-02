@@ -198,6 +198,11 @@ if [ "$OP" == "run" ]; then
     # TBD: fine tune the limits
     # TBD: copy the inputs to the jenkins accounts
         cd apps/libPXGL/examples
+	# Trying to get NFS to find the files on cutter
+	if [ "$SYSTEM" == "CREST_cutter" ]; then
+          $RUNCMDfind `pwd` > /dev/null
+          sleep 5
+        fi
         # Delta-Stepping
 	$RUNCMD `pwd`/sssp -q $TIME_CHOICE -c -z 40000 $HPXCORES --hpx-heap=$((1024 * 1024 * 1024 * 3)) --hpx-sendlimit=128 --hpx-transport=$HPXMODE_AXIS --hpx-recvlimit=512 $INPUT_DIR/Random4-n.$LARGE_SIZE.0.gr $INPUT_DIR/Random4-n.$LARGE_SIZE.0.ss || { echo 'SSSP test failed' ; exit 1; }
         # Chaotic
