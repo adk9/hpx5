@@ -17,48 +17,8 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
-typedef float real4;
-typedef double real8;
-typedef long double real10;
-typedef real8 real_t;
-typedef int int_t;
-
-static hpx_type_t index_type;
-
-typedef struct index_t {
-  int_t x;
-  int_t y;
-  int_t z;
-} index_t;
-
-static hpx_action_t _create_source_box;
-static hpx_action_t _partition_sources;
-
 static HPX_ACTION_DECL(_test_array);
 static HPX_ACTION_DECL(_test_struct);
-
-int_t create_source_box(index_t index) {
-  printf("create_source_box: index is %d %d %d\n", index.x, index.y, index.z);
-  hpx_call_cc(HPX_HERE, _partition_sources, NULL, NULL, &index);
-  return HPX_SUCCESS;
-}
-
-int_t partition_sources(index_t index) {
-  printf("partition_sources: index is %d %d %d\n", index.x, index.y, index.z);
-  if (index.x != 11 && index.y != 22 && index.z != 33) {
-    // fail here.
-  }
-  return HPX_SUCCESS;
-}
-
-HPX_ACTION(_test_index, void *unused) {
-  index_t temp = (index_t) {11, 22, 33};
-  hpx_addr_t sync = hpx_lco_future_new(0);
-  hpx_call(HPX_HERE, _create_source_box, sync, &temp);
-  hpx_lco_wait(sync);
-  hpx_lco_delete(sync, HPX_NULL);
-  return HPX_SUCCESS;
-}
 
 #define lengthof(array) sizeof(array) / sizeof(array[0])
 
@@ -120,9 +80,6 @@ static HPX_ACTION(test_datatype, void *UNUSED) {
   printf("Test hpx struct types 2\n");
   struct point point = p;
   hpx_call_sync(HPX_HERE, _test_point, NULL, 0, &point);
-
-  // printf("Test hpx struct types 3\n");
-  // hpx_call_sync(HPX_HERE, _test_index, NULL, 0, NULL);
   
   hpx_shutdown(HPX_SUCCESS);
   return HPX_SUCCESS;
@@ -151,20 +108,10 @@ int main(int argc, char *argv[]) {
   assert(point_struct_type);
   HPX_REGISTER_TYPED_ACTION(DEFAULT, _test_nxyz, &_test_point, point_struct_type);
 
-
-  hpx_struct_type_create(&index_type, HPX_INT, HPX_INT, HPX_INT); 
-
-  HPX_REGISTER_TYPED_ACTION(PINNED, create_source_box, &_create_source_box,
-                            index_type);
-
-  HPX_REGISTER_TYPED_ACTION(PINNED, partition_sources, &_partition_sources,
-                            index_type); 
-  
   int e = hpx_run(&test_datatype, NULL, 0);
 
   hpx_type_destroy(point_struct_type);
   hpx_type_destroy(struct_type);
   hpx_type_destroy(array_type);
-  hpx_type_destroy(index_type);
   return e;
 }

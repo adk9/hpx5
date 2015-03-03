@@ -30,7 +30,9 @@ TESTS            = test_and_lco           \
                    test_sema              \
                    test_task              \
                    test_runtime           \
-                   test_threads
+                   test_threads           \
+                   test_typed_struct
+
 
 if ENABLE_LENGTHY_TESTS
 TESTS           += test_wait
@@ -56,6 +58,7 @@ test_sema_SOURCES               = test_sema.c
 test_task_SOURCES               = test_task.c
 test_runtime_SOURCES            = test_runtime.c
 test_threads_SOURCES            = test_threads.c
+test_typed_struct_SOURCES       = test_typed_struct.c
 
 test_and_lco_DEPENDENCIES            = $(HPX_DEPS)
 test_bcast_DEPENDENCIES              = $(HPX_DEPS)
@@ -77,6 +80,7 @@ test_sema_DEPENDENCIES               = $(HPX_DEPS)
 test_task_DEPENDENCIES               = $(HPX_DEPS)
 test_runtime_DEPENDENCIES            = $(HPX_DEPS)
 test_threads_DEPENDENCIES            = $(HPX_DEPS)
+test_typed_struct_DEPENDENCIES       = $(HPX_DEPS)
 
 if ENABLE_LENGTHY_TESTS
 test_wait_SOURCES                    = test_wait.c
