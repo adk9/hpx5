@@ -176,8 +176,7 @@ hpx_pid_t hpx_process_getpid(hpx_addr_t process) {
 
 
 int hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
-                     const void *args, size_t len, hpx_addr_t result)
-{
+                     hpx_addr_t result, const void *args, size_t len) {
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, len + sizeof(_call_args_t));
   hpx_parcel_set_target(p, process);
   hpx_parcel_set_action(p, _proc_call);

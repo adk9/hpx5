@@ -27,7 +27,7 @@ typedef hpx_addr_t hpx_pid_t;
 hpx_addr_t hpx_process_new(hpx_addr_t termination);
 
 int hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
-                     const void *args, size_t len, hpx_addr_t result);
+                     hpx_addr_t result, const void *args, size_t len);
 
 void hpx_process_delete(hpx_addr_t process, hpx_addr_t sync);
 
