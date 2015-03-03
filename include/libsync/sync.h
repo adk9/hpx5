@@ -176,7 +176,7 @@
 
 #if __STDC_VERSION__ == 201112L
 #define sync_cas(addr, from, to, onsucces, onfailure)               \
-    _Generic((addr),                                                    \
+    _Generic((addr),                                                \
         int8_t*      :sync_cas_i8,                                  \
         int16_t*     :sync_cas_i16,                                 \
         int32_t*     :sync_cas_i32,                                 \
