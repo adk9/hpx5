@@ -83,7 +83,7 @@ static HPX_ACTION(_proc_call, _call_args_t *args) {
     return HPX_RESEND;
   }
 
-  sync_fadd(&p->credit, 1, SYNC_ACQ_REL);
+  uint64_t credit = sync_addf(&p->credit, 1, SYNC_RELAXED);
   hpx_gas_unpin(process);
 
   hpx_pid_t pid = hpx_process_getpid(process);
@@ -94,6 +94,7 @@ static HPX_ACTION(_proc_call, _call_args_t *args) {
   if (!parcel) {
     dbg_error("process: call_action failed.\n");
   }
+  parcel_set_credit(parcel, credit);
 
   hpx_parcel_send_sync(parcel);
   return HPX_SUCCESS;
@@ -113,12 +114,18 @@ static HPX_PINNED(_proc_return_credit, uint64_t *args) {
   assert(p);
 
   // add credit to the credit-accounting bitmap
-  if (cr_bitmap_add_and_test(p->debt, *args)) {
-    //log("detected quiescence...\n");
-    uint64_t total_credit = sync_addf(&p->credit, -1, SYNC_ACQ_REL);
-    assert(total_credit == 0);
-    assert(_is_tracked(p));
-    hpx_lco_set(p->termination, 0, NULL, HPX_NULL, HPX_NULL);
+  uint64_t debt = cr_bitmap_add_and_test(p->debt, *args);
+  for (;;) {
+    uint64_t credit = sync_load(&p->credit, SYNC_ACQUIRE);
+    if ((credit != 0) && ~(debt | ((1UL << (64-credit)) - 1)) == 0) {
+      // log("detected quiescence...\n");
+      if (!sync_cas(&p->credit, credit, 0, SYNC_RELEASE, SYNC_RELAXED)) {
+        continue;
+      }
+      dbg_assert(_is_tracked(p));
+      hpx_lco_set(p->termination, 0, NULL, HPX_NULL, HPX_NULL);
+    }
+    break;
   }
   return HPX_SUCCESS;
 }
