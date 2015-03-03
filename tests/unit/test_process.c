@@ -15,11 +15,28 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
-static HPX_ACTION(_spawn, void *UNUSED) {
+static HPX_ACTION(_spawn1, hpx_addr_t *sync) {
   int spawns = rand()%3;
   if (spawns) {
     for (int i = 0; i < spawns; ++i) {
-      hpx_call(HPX_HERE, _spawn, HPX_NULL, 0, NULL);
+      hpx_call(HPX_HERE, _spawn1, HPX_NULL, 0, NULL);
+    }
+  }
+
+  if (sync) {
+    hpx_lco_wait(*sync);
+  }
+  return HPX_SUCCESS;
+}
+
+static HPX_ACTION(_spawn2, hpx_addr_t *sync) {
+  if (sync) {
+    hpx_lco_set(*sync, 0, NULL, HPX_NULL, HPX_NULL);
+  }
+  int spawns = rand()%3;
+  if (spawns) {
+    for (int i = 0; i < spawns; ++i) {
+      hpx_call(HPX_HERE, _spawn2, HPX_NULL, 0, NULL);
     }
   }
   return HPX_SUCCESS;
@@ -28,11 +45,13 @@ static HPX_ACTION(_spawn, void *UNUSED) {
 static HPX_ACTION(test_libhpx_process, void *UNUSED) {
   printf("Test hpx_lco_process\n");
 
+  hpx_addr_t psync = hpx_lco_future_new(0);
   hpx_addr_t sync = hpx_lco_future_new(0);
-  hpx_addr_t proc = hpx_process_new(sync);
-  hpx_process_call(proc, HPX_HERE, _spawn, NULL, 0, HPX_NULL);
-  hpx_process_call(proc, HPX_HERE, _spawn, NULL, 0, HPX_NULL);
-  hpx_lco_wait(sync);
+  hpx_addr_t proc = hpx_process_new(psync);
+  hpx_process_call(proc, HPX_HERE, _spawn1, HPX_NULL, &sync, sizeof(sync));
+  hpx_process_call(proc, HPX_HERE, _spawn2, HPX_NULL, &sync, sizeof(sync));
+  hpx_lco_wait(psync);
+  hpx_lco_delete(psync, HPX_NULL);
   hpx_lco_delete(sync, HPX_NULL);
   hpx_process_delete(proc, HPX_NULL);
   hpx_shutdown(HPX_SUCCESS);
