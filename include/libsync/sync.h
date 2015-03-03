@@ -14,7 +14,7 @@
 #ifndef HPX_SYNC_SYNC_H_
 #define HPX_SYNC_SYNC_H_
 
-#define SYNC_INTERNAL __attribute__((visibility("default")))   
+#define SYNC_INTERNAL __attribute__((visibility("default")))
 
 /*
   ====================================================================
@@ -38,7 +38,7 @@
 #include <stdbool.h>
 #endif
 
-#if defined(__ATOMIC_ACQUIRE) && !defined(__clang__)
+#if defined(__ATOMIC_ACQUIRE)
 #include "gcc/atomic.h"
 #elif defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1)
 #include "gcc/sync.h"
@@ -71,7 +71,6 @@
   ====================================================================
 */
 
-#define SYNC_FLOAT_TY(T, s)
 #define SYNC_INT_TY(T, s) T sync_load_##s(T *addr, int mm);
 #include "types.def"
 #undef SYNC_INT_TY
@@ -290,8 +289,6 @@
 */
 
 void sync_fence(int);
-
-#undef SYNC_FLOAT_TY
 
 #endif
 
