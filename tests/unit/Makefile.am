@@ -34,6 +34,7 @@ TESTS            = test_and_lco           \
                    test_threads           \
                    test_typed_struct
 
+XFAIL_TESTS      = test_typed_struct
 
 if ENABLE_LENGTHY_TESTS
 TESTS           += test_wait
