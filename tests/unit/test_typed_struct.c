@@ -38,7 +38,7 @@ static hpx_addr_t debug;
 
 int_t create_source_box(index_t index) {
   printf("create_source_box: index is %d %d %d\n", index.x, index.y, index.z);
-  hpx_call_cc(HPX_HERE, _partition_sources, NULL, NULL, &index);
+  hpx_call(HPX_HERE, _partition_sources, HPX_NULL, &index);
 }
 
 int_t partition_sources(index_t index) {
