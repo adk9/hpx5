@@ -26,6 +26,7 @@ TESTS            = test_and_lco           \
                    test_memget            \
                    test_memput            \
                    test_parcel            \
+                   test_process           \
                    test_call              \
                    test_sema              \
                    test_task              \
@@ -53,6 +54,7 @@ test_mem_alloc_SOURCES          = test_mem_alloc.c
 test_memget_SOURCES             = test_memget.c
 test_memput_SOURCES             = test_memput.c
 test_parcel_SOURCES             = test_parcel.c
+test_process_SOURCES            = test_process.c
 test_call_SOURCES               = test_call.c
 test_sema_SOURCES               = test_sema.c
 test_task_SOURCES               = test_task.c
@@ -69,12 +71,13 @@ test_gencount_DEPENDENCIES           = $(HPX_DEPS)
 test_global_mem_alloc_DEPENDENCIES   = $(HPX_DEPS)
 test_lco_DEPENDENCIES                = $(HPX_DEPS)
 test_array_lco_DEPENDENCIES          = $(HPX_DEPS)
-test_user_lco_DEPENDENCIES          = $(HPX_DEPS)
+test_user_lco_DEPENDENCIES           = $(HPX_DEPS)
 test_collectives_DEPENDENCIES        = $(HPX_DEPS)
 test_mem_alloc_DEPENDENCIES          = $(HPX_DEPS)
 test_memget_DEPENDENCIES             = $(HPX_DEPS)
 test_memput_DEPENDENCIES             = $(HPX_DEPS)
 test_parcel_DEPENDENCIES             = $(HPX_DEPS)
+test_process_DEPENDENCIES            = $(HPX_DEPS)
 test_call_DEPENDENCIES               = $(HPX_DEPS)
 test_sema_DEPENDENCIES               = $(HPX_DEPS)
 test_task_DEPENDENCIES               = $(HPX_DEPS)
