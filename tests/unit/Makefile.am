@@ -32,9 +32,11 @@ TESTS            = test_and_lco           \
                    test_task              \
                    test_runtime           \
                    test_threads           \
-                   test_typed_struct
+                   test_typed_struct      \
+                   test_many_ands
 
-XFAIL_TESTS      = test_typed_struct
+XFAIL_TESTS      = test_typed_struct      \
+		   test_many_ands
 
 if ENABLE_LENGTHY_TESTS
 TESTS           += test_wait
@@ -62,6 +64,7 @@ test_task_SOURCES               = test_task.c
 test_runtime_SOURCES            = test_runtime.c
 test_threads_SOURCES            = test_threads.c
 test_typed_struct_SOURCES       = test_typed_struct.c
+test_many_ands_SOURCES          = test_many_ands.c
 
 test_and_lco_DEPENDENCIES            = $(HPX_DEPS)
 test_bcast_DEPENDENCIES              = $(HPX_DEPS)
@@ -85,6 +88,7 @@ test_task_DEPENDENCIES               = $(HPX_DEPS)
 test_runtime_DEPENDENCIES            = $(HPX_DEPS)
 test_threads_DEPENDENCIES            = $(HPX_DEPS)
 test_typed_struct_DEPENDENCIES       = $(HPX_DEPS)
+test_many_ands_DEPENDENCIES          = $(HPX_DEPS)
 
 if ENABLE_LENGTHY_TESTS
 test_wait_SOURCES                    = test_wait.c
