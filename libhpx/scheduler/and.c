@@ -36,7 +36,8 @@ static hpx_status_t _wait(and_t *and) {
     return status;
   }
 
-  if (and->value == 0) {
+  intptr_t value = sync_load(&and->value, SYNC_RELAXED);
+  if (value == 0) {
     return status;
   }
 
@@ -84,21 +85,21 @@ void _and_reset(lco_t *lco) {
 
 /// Fast set decrements the value, and signals when it gets to 0.
 static void _and_set(lco_t *lco, int size, const void *from) {
+  dbg_assert_str(lco != NULL, "lco-set on a NULL lco.\n");
+
   and_t *and = (and_t *)lco;
   int num = (size && from) ? *(int*)from : 1;
-  lco_lock(&and->lco);
-  and->value -= num;
-  intptr_t value = and->value;
+  intptr_t value = sync_addf(&and->value, -num, SYNC_RELAXED);
   log_lco("reduced count to %ld lco %p\n", value, (void*)&and->lco);
 
   if (value == 0) {
+    lco_lock(&and->lco);
     scheduler_signal_all(&and->barrier);
+    lco_unlock(&and->lco);
   }
   else {
     dbg_assert_str(value > 0, "too many threads joined (%ld).\n", value);
   }
-
-  lco_unlock(&and->lco);
 }
 
 static hpx_status_t _and_wait(lco_t *lco) {
