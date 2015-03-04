@@ -14,7 +14,6 @@ LIBS = $(HPX_LIBS)
 TESTS            = test_and_lco           \
                    test_bcast             \
                    test_channels          \
-                   test_datatype          \
                    test_futures           \
                    test_gencount          \
                    test_global_mem_alloc  \
@@ -32,11 +31,9 @@ TESTS            = test_and_lco           \
                    test_task              \
                    test_runtime           \
                    test_threads           \
-                   test_typed_struct      \
                    test_many_ands
 
-XFAIL_TESTS      = test_typed_struct      \
-		   test_many_ands
+XFAIL_TESTS      = test_many_ands
 
 if ENABLE_LENGTHY_TESTS
 TESTS           += test_wait
@@ -45,7 +42,6 @@ endif
 test_and_lco_SOURCES            = test_and_lco.c
 test_bcast_SOURCES              = test_bcast.c
 test_channels_SOURCES           = test_channels.c
-test_datatype_SOURCES           = test_datatype.c
 test_futures_SOURCES            = test_futures.c
 test_gencount_SOURCES           = test_gencount.c
 test_global_mem_alloc_SOURCES   = test_global_mem_alloc.c
@@ -63,13 +59,11 @@ test_sema_SOURCES               = test_sema.c
 test_task_SOURCES               = test_task.c
 test_runtime_SOURCES            = test_runtime.c
 test_threads_SOURCES            = test_threads.c
-test_typed_struct_SOURCES       = test_typed_struct.c
 test_many_ands_SOURCES          = test_many_ands.c
 
 test_and_lco_DEPENDENCIES            = $(HPX_DEPS)
 test_bcast_DEPENDENCIES              = $(HPX_DEPS)
 test_channels_DEPENDENCIES           = $(HPX_DEPS)
-test_datatype_DEPENDENCIES           = $(HPX_DEPS)
 test_futures_DEPENDENCIES            = $(HPX_DEPS)
 test_gencount_DEPENDENCIES           = $(HPX_DEPS)
 test_global_mem_alloc_DEPENDENCIES   = $(HPX_DEPS)
@@ -87,7 +81,6 @@ test_sema_DEPENDENCIES               = $(HPX_DEPS)
 test_task_DEPENDENCIES               = $(HPX_DEPS)
 test_runtime_DEPENDENCIES            = $(HPX_DEPS)
 test_threads_DEPENDENCIES            = $(HPX_DEPS)
-test_typed_struct_DEPENDENCIES       = $(HPX_DEPS)
 test_many_ands_DEPENDENCIES          = $(HPX_DEPS)
 
 if ENABLE_LENGTHY_TESTS
