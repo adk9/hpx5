@@ -78,12 +78,6 @@ struct hpx_options_t
   const char *hpx_network_help; /**< @brief type of network to use help description.  */
   int hpx_statistics_flag;	/**< @brief print HPX runtime statistics (default=off).  */
   const char *hpx_statistics_help; /**< @brief print HPX runtime statistics help description.  */
-  long hpx_sendlimit_arg;	/**< @brief HPX transport-specific send limit.  */
-  char * hpx_sendlimit_orig;	/**< @brief HPX transport-specific send limit original value given at command line.  */
-  const char *hpx_sendlimit_help; /**< @brief HPX transport-specific send limit help description.  */
-  long hpx_recvlimit_arg;	/**< @brief HPX transport-specific recv limit.  */
-  char * hpx_recvlimit_orig;	/**< @brief HPX transport-specific recv limit original value given at command line.  */
-  const char *hpx_recvlimit_help; /**< @brief HPX transport-specific recv limit help description.  */
   char * hpx_configfile_arg;	/**< @brief HPX runtime configuration file.  */
   char * hpx_configfile_orig;	/**< @brief HPX runtime configuration file original value given at command line.  */
   const char *hpx_configfile_help; /**< @brief HPX runtime configuration file help description.  */
@@ -124,6 +118,15 @@ struct hpx_options_t
   unsigned int hpx_trace_at_min; /**< @brief set the localities to trace at's minimum occurreces */
   unsigned int hpx_trace_at_max; /**< @brief set the localities to trace at's maximum occurreces */
   const char *hpx_trace_at_help; /**< @brief set the localities to trace at help description.  */
+  long hpx_isir_testwindow_arg;	/**< @brief number of ISIR requests to test in progress loop.  */
+  char * hpx_isir_testwindow_orig;	/**< @brief number of ISIR requests to test in progress loop original value given at command line.  */
+  const char *hpx_isir_testwindow_help; /**< @brief number of ISIR requests to test in progress loop help description.  */
+  long hpx_isir_sendlimit_arg;	/**< @brief ISIR network send limit.  */
+  char * hpx_isir_sendlimit_orig;	/**< @brief ISIR network send limit original value given at command line.  */
+  const char *hpx_isir_sendlimit_help; /**< @brief ISIR network send limit help description.  */
+  long hpx_isir_recvlimit_arg;	/**< @brief ISIR network recv limit.  */
+  char * hpx_isir_recvlimit_orig;	/**< @brief ISIR network recv limit original value given at command line.  */
+  const char *hpx_isir_recvlimit_help; /**< @brief ISIR network recv limit help description.  */
   long hpx_pwc_parcelbuffersize_arg;	/**< @brief set the size of p2p recv buffers for parcel sends.  */
   char * hpx_pwc_parcelbuffersize_orig;	/**< @brief set the size of p2p recv buffers for parcel sends original value given at command line.  */
   const char *hpx_pwc_parcelbuffersize_help; /**< @brief set the size of p2p recv buffers for parcel sends help description.  */
@@ -170,8 +173,6 @@ struct hpx_options_t
   unsigned int hpx_transport_given ;	/**< @brief Whether hpx-transport was given.  */
   unsigned int hpx_network_given ;	/**< @brief Whether hpx-network was given.  */
   unsigned int hpx_statistics_given ;	/**< @brief Whether hpx-statistics was given.  */
-  unsigned int hpx_sendlimit_given ;	/**< @brief Whether hpx-sendlimit was given.  */
-  unsigned int hpx_recvlimit_given ;	/**< @brief Whether hpx-recvlimit was given.  */
   unsigned int hpx_configfile_given ;	/**< @brief Whether hpx-configfile was given.  */
   unsigned int hpx_log_at_given ;	/**< @brief Whether hpx-log-at was given.  */
   unsigned int hpx_log_level_given ;	/**< @brief Whether hpx-log-level was given.  */
@@ -183,6 +184,9 @@ struct hpx_options_t
   unsigned int hpx_trace_dir_given ;	/**< @brief Whether hpx-trace-dir was given.  */
   unsigned int hpx_trace_filesize_given ;	/**< @brief Whether hpx-trace-filesize was given.  */
   unsigned int hpx_trace_at_given ;	/**< @brief Whether hpx-trace-at was given.  */
+  unsigned int hpx_isir_testwindow_given ;	/**< @brief Whether hpx-isir-testwindow was given.  */
+  unsigned int hpx_isir_sendlimit_given ;	/**< @brief Whether hpx-isir-sendlimit was given.  */
+  unsigned int hpx_isir_recvlimit_given ;	/**< @brief Whether hpx-isir-recvlimit was given.  */
   unsigned int hpx_pwc_parcelbuffersize_given ;	/**< @brief Whether hpx-pwc-parcelbuffersize was given.  */
   unsigned int hpx_pwc_parceleagerlimit_given ;	/**< @brief Whether hpx-pwc-parceleagerlimit was given.  */
   unsigned int hpx_photon_backend_given ;	/**< @brief Whether hpx-photon-backend was given.  */

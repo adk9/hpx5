@@ -44,8 +44,6 @@ const char *hpx_options_t_help[] = {
   "      --hpx-transport=type      type of transport to use  (possible \n                                  values=\"default\", \"smp\", \"mpi\", \n                                  \"portals\", \"photon\")",
   "      --hpx-network=type        type of network to use  (possible \n                                  values=\"default\", \"smp\", \"pwc\", \n                                  \"isir\")",
   "      --hpx-statistics          print HPX runtime statistics  (default=off)",
-  "      --hpx-sendlimit=requests  HPX transport-specific send limit",
-  "      --hpx-recvlimit=requests  HPX transport-specific recv limit",
   "      --hpx-configfile=file     HPX runtime configuration file",
   "\nLog options:",
   "      --hpx-log-at=[localities] selectively output log information",
@@ -60,6 +58,10 @@ const char *hpx_options_t_help[] = {
   "      --hpx-trace-dir=dir       directory to output trace files",
   "      --hpx-trace-filesize=# of events\n                                set the size of each trace file",
   "      --hpx-trace-at=[localities]\n                                set the localities to trace at",
+  "\nISIR Network Options:",
+  "      --hpx-isir-testwindow=requests\n                                number of ISIR requests to test in progress \n                                  loop",
+  "      --hpx-isir-sendlimit=requests\n                                ISIR network send limit",
+  "      --hpx-isir-recvlimit=requests\n                                ISIR network recv limit",
   "\nPWC Network Options:",
   "      --hpx-pwc-parcelbuffersize=bytes\n                                set the size of p2p recv buffers for parcel \n                                  sends",
   "      --hpx-pwc-parceleagerlimit=bytes\n                                set the largest eager parcel size (header \n                                  inclusive)",
@@ -145,8 +147,6 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_transport_given = 0 ;
   args_info->hpx_network_given = 0 ;
   args_info->hpx_statistics_given = 0 ;
-  args_info->hpx_sendlimit_given = 0 ;
-  args_info->hpx_recvlimit_given = 0 ;
   args_info->hpx_configfile_given = 0 ;
   args_info->hpx_log_at_given = 0 ;
   args_info->hpx_log_level_given = 0 ;
@@ -158,6 +158,9 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_trace_dir_given = 0 ;
   args_info->hpx_trace_filesize_given = 0 ;
   args_info->hpx_trace_at_given = 0 ;
+  args_info->hpx_isir_testwindow_given = 0 ;
+  args_info->hpx_isir_sendlimit_given = 0 ;
+  args_info->hpx_isir_recvlimit_given = 0 ;
   args_info->hpx_pwc_parcelbuffersize_given = 0 ;
   args_info->hpx_pwc_parceleagerlimit_given = 0 ;
   args_info->hpx_photon_backend_given = 0 ;
@@ -190,8 +193,6 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_network_arg = hpx_network__NULL;
   args_info->hpx_network_orig = NULL;
   args_info->hpx_statistics_flag = 0;
-  args_info->hpx_sendlimit_orig = NULL;
-  args_info->hpx_recvlimit_orig = NULL;
   args_info->hpx_configfile_arg = NULL;
   args_info->hpx_configfile_orig = NULL;
   args_info->hpx_log_at_arg = NULL;
@@ -210,6 +211,9 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_trace_filesize_orig = NULL;
   args_info->hpx_trace_at_arg = NULL;
   args_info->hpx_trace_at_orig = NULL;
+  args_info->hpx_isir_testwindow_orig = NULL;
+  args_info->hpx_isir_sendlimit_orig = NULL;
+  args_info->hpx_isir_recvlimit_orig = NULL;
   args_info->hpx_pwc_parcelbuffersize_orig = NULL;
   args_info->hpx_pwc_parceleagerlimit_orig = NULL;
   args_info->hpx_photon_backend_arg = hpx_photon_backend__NULL;
@@ -243,41 +247,42 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_transport_help = hpx_options_t_help[9] ;
   args_info->hpx_network_help = hpx_options_t_help[10] ;
   args_info->hpx_statistics_help = hpx_options_t_help[11] ;
-  args_info->hpx_sendlimit_help = hpx_options_t_help[12] ;
-  args_info->hpx_recvlimit_help = hpx_options_t_help[13] ;
-  args_info->hpx_configfile_help = hpx_options_t_help[14] ;
-  args_info->hpx_log_at_help = hpx_options_t_help[16] ;
+  args_info->hpx_configfile_help = hpx_options_t_help[12] ;
+  args_info->hpx_log_at_help = hpx_options_t_help[14] ;
   args_info->hpx_log_at_min = 0;
   args_info->hpx_log_at_max = 0;
-  args_info->hpx_log_level_help = hpx_options_t_help[17] ;
+  args_info->hpx_log_level_help = hpx_options_t_help[15] ;
   args_info->hpx_log_level_min = 0;
   args_info->hpx_log_level_max = 0;
-  args_info->hpx_dbg_waitat_help = hpx_options_t_help[19] ;
+  args_info->hpx_dbg_waitat_help = hpx_options_t_help[17] ;
   args_info->hpx_dbg_waitat_min = 0;
   args_info->hpx_dbg_waitat_max = 0;
-  args_info->hpx_dbg_waitonabort_help = hpx_options_t_help[20] ;
-  args_info->hpx_dbg_waitonsegv_help = hpx_options_t_help[21] ;
-  args_info->hpx_dbg_mprotectstacks_help = hpx_options_t_help[22] ;
-  args_info->hpx_trace_classes_help = hpx_options_t_help[24] ;
+  args_info->hpx_dbg_waitonabort_help = hpx_options_t_help[18] ;
+  args_info->hpx_dbg_waitonsegv_help = hpx_options_t_help[19] ;
+  args_info->hpx_dbg_mprotectstacks_help = hpx_options_t_help[20] ;
+  args_info->hpx_trace_classes_help = hpx_options_t_help[22] ;
   args_info->hpx_trace_classes_min = 0;
   args_info->hpx_trace_classes_max = 0;
-  args_info->hpx_trace_dir_help = hpx_options_t_help[25] ;
-  args_info->hpx_trace_filesize_help = hpx_options_t_help[26] ;
-  args_info->hpx_trace_at_help = hpx_options_t_help[27] ;
+  args_info->hpx_trace_dir_help = hpx_options_t_help[23] ;
+  args_info->hpx_trace_filesize_help = hpx_options_t_help[24] ;
+  args_info->hpx_trace_at_help = hpx_options_t_help[25] ;
   args_info->hpx_trace_at_min = 0;
   args_info->hpx_trace_at_max = 0;
-  args_info->hpx_pwc_parcelbuffersize_help = hpx_options_t_help[29] ;
-  args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[30] ;
-  args_info->hpx_photon_backend_help = hpx_options_t_help[32] ;
-  args_info->hpx_photon_ibdev_help = hpx_options_t_help[33] ;
-  args_info->hpx_photon_ethdev_help = hpx_options_t_help[34] ;
-  args_info->hpx_photon_ibport_help = hpx_options_t_help[35] ;
-  args_info->hpx_photon_usecma_help = hpx_options_t_help[36] ;
-  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[37] ;
-  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[38] ;
-  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[39] ;
-  args_info->hpx_photon_maxrd_help = hpx_options_t_help[40] ;
-  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[41] ;
+  args_info->hpx_isir_testwindow_help = hpx_options_t_help[27] ;
+  args_info->hpx_isir_sendlimit_help = hpx_options_t_help[28] ;
+  args_info->hpx_isir_recvlimit_help = hpx_options_t_help[29] ;
+  args_info->hpx_pwc_parcelbuffersize_help = hpx_options_t_help[31] ;
+  args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[32] ;
+  args_info->hpx_photon_backend_help = hpx_options_t_help[34] ;
+  args_info->hpx_photon_ibdev_help = hpx_options_t_help[35] ;
+  args_info->hpx_photon_ethdev_help = hpx_options_t_help[36] ;
+  args_info->hpx_photon_ibport_help = hpx_options_t_help[37] ;
+  args_info->hpx_photon_usecma_help = hpx_options_t_help[38] ;
+  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[39] ;
+  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[40] ;
+  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[41] ;
+  args_info->hpx_photon_maxrd_help = hpx_options_t_help[42] ;
+  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[43] ;
   
 }
 
@@ -413,8 +418,6 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_boot_orig));
   free_string_field (&(args_info->hpx_transport_orig));
   free_string_field (&(args_info->hpx_network_orig));
-  free_string_field (&(args_info->hpx_sendlimit_orig));
-  free_string_field (&(args_info->hpx_recvlimit_orig));
   free_string_field (&(args_info->hpx_configfile_arg));
   free_string_field (&(args_info->hpx_configfile_orig));
   free_multiple_field (args_info->hpx_log_at_given, (void *)(args_info->hpx_log_at_arg), &(args_info->hpx_log_at_orig));
@@ -430,6 +433,9 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_trace_filesize_orig));
   free_multiple_field (args_info->hpx_trace_at_given, (void *)(args_info->hpx_trace_at_arg), &(args_info->hpx_trace_at_orig));
   args_info->hpx_trace_at_arg = 0;
+  free_string_field (&(args_info->hpx_isir_testwindow_orig));
+  free_string_field (&(args_info->hpx_isir_sendlimit_orig));
+  free_string_field (&(args_info->hpx_isir_recvlimit_orig));
   free_string_field (&(args_info->hpx_pwc_parcelbuffersize_orig));
   free_string_field (&(args_info->hpx_pwc_parceleagerlimit_orig));
   free_string_field (&(args_info->hpx_photon_backend_orig));
@@ -542,10 +548,6 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-network", args_info->hpx_network_orig, hpx_option_parser_hpx_network_values);
   if (args_info->hpx_statistics_given)
     write_into_file(outfile, "hpx-statistics", 0, 0 );
-  if (args_info->hpx_sendlimit_given)
-    write_into_file(outfile, "hpx-sendlimit", args_info->hpx_sendlimit_orig, 0);
-  if (args_info->hpx_recvlimit_given)
-    write_into_file(outfile, "hpx-recvlimit", args_info->hpx_recvlimit_orig, 0);
   if (args_info->hpx_configfile_given)
     write_into_file(outfile, "hpx-configfile", args_info->hpx_configfile_orig, 0);
   write_multiple_into_file(outfile, args_info->hpx_log_at_given, "hpx-log-at", args_info->hpx_log_at_orig, 0);
@@ -563,6 +565,12 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
   if (args_info->hpx_trace_filesize_given)
     write_into_file(outfile, "hpx-trace-filesize", args_info->hpx_trace_filesize_orig, 0);
   write_multiple_into_file(outfile, args_info->hpx_trace_at_given, "hpx-trace-at", args_info->hpx_trace_at_orig, 0);
+  if (args_info->hpx_isir_testwindow_given)
+    write_into_file(outfile, "hpx-isir-testwindow", args_info->hpx_isir_testwindow_orig, 0);
+  if (args_info->hpx_isir_sendlimit_given)
+    write_into_file(outfile, "hpx-isir-sendlimit", args_info->hpx_isir_sendlimit_orig, 0);
+  if (args_info->hpx_isir_recvlimit_given)
+    write_into_file(outfile, "hpx-isir-recvlimit", args_info->hpx_isir_recvlimit_orig, 0);
   if (args_info->hpx_pwc_parcelbuffersize_given)
     write_into_file(outfile, "hpx-pwc-parcelbuffersize", args_info->hpx_pwc_parcelbuffersize_orig, 0);
   if (args_info->hpx_pwc_parceleagerlimit_given)
@@ -1191,8 +1199,6 @@ hpx_option_parser_internal (
         { "hpx-transport",	1, NULL, 0 },
         { "hpx-network",	1, NULL, 0 },
         { "hpx-statistics",	0, NULL, 0 },
-        { "hpx-sendlimit",	1, NULL, 0 },
-        { "hpx-recvlimit",	1, NULL, 0 },
         { "hpx-configfile",	1, NULL, 0 },
         { "hpx-log-at",	1, NULL, 0 },
         { "hpx-log-level",	2, NULL, 0 },
@@ -1204,6 +1210,9 @@ hpx_option_parser_internal (
         { "hpx-trace-dir",	1, NULL, 0 },
         { "hpx-trace-filesize",	1, NULL, 0 },
         { "hpx-trace-at",	1, NULL, 0 },
+        { "hpx-isir-testwindow",	1, NULL, 0 },
+        { "hpx-isir-sendlimit",	1, NULL, 0 },
+        { "hpx-isir-recvlimit",	1, NULL, 0 },
         { "hpx-pwc-parcelbuffersize",	1, NULL, 0 },
         { "hpx-pwc-parceleagerlimit",	1, NULL, 0 },
         { "hpx-photon-backend",	1, NULL, 0 },
@@ -1365,34 +1374,6 @@ hpx_option_parser_internal (
               goto failure;
           
           }
-          /* HPX transport-specific send limit.  */
-          else if (strcmp (long_options[option_index].name, "hpx-sendlimit") == 0)
-          {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_sendlimit_arg), 
-                 &(args_info->hpx_sendlimit_orig), &(args_info->hpx_sendlimit_given),
-                &(local_args_info.hpx_sendlimit_given), optarg, 0, 0, ARG_LONG,
-                check_ambiguity, override, 0, 0,
-                "hpx-sendlimit", '-',
-                additional_error))
-              goto failure;
-          
-          }
-          /* HPX transport-specific recv limit.  */
-          else if (strcmp (long_options[option_index].name, "hpx-recvlimit") == 0)
-          {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_recvlimit_arg), 
-                 &(args_info->hpx_recvlimit_orig), &(args_info->hpx_recvlimit_given),
-                &(local_args_info.hpx_recvlimit_given), optarg, 0, 0, ARG_LONG,
-                check_ambiguity, override, 0, 0,
-                "hpx-recvlimit", '-',
-                additional_error))
-              goto failure;
-          
-          }
           /* HPX runtime configuration file.  */
           else if (strcmp (long_options[option_index].name, "hpx-configfile") == 0)
           {
@@ -1522,6 +1503,48 @@ hpx_option_parser_internal (
             if (update_multiple_arg_temp(&hpx_trace_at_list, 
                 &(local_args_info.hpx_trace_at_given), optarg, 0, 0, ARG_INT,
                 "hpx-trace-at", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* number of ISIR requests to test in progress loop.  */
+          else if (strcmp (long_options[option_index].name, "hpx-isir-testwindow") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_isir_testwindow_arg), 
+                 &(args_info->hpx_isir_testwindow_orig), &(args_info->hpx_isir_testwindow_given),
+                &(local_args_info.hpx_isir_testwindow_given), optarg, 0, 0, ARG_LONG,
+                check_ambiguity, override, 0, 0,
+                "hpx-isir-testwindow", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* ISIR network send limit.  */
+          else if (strcmp (long_options[option_index].name, "hpx-isir-sendlimit") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_isir_sendlimit_arg), 
+                 &(args_info->hpx_isir_sendlimit_orig), &(args_info->hpx_isir_sendlimit_given),
+                &(local_args_info.hpx_isir_sendlimit_given), optarg, 0, 0, ARG_LONG,
+                check_ambiguity, override, 0, 0,
+                "hpx-isir-sendlimit", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* ISIR network recv limit.  */
+          else if (strcmp (long_options[option_index].name, "hpx-isir-recvlimit") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_isir_recvlimit_arg), 
+                 &(args_info->hpx_isir_recvlimit_orig), &(args_info->hpx_isir_recvlimit_given),
+                &(local_args_info.hpx_isir_recvlimit_given), optarg, 0, 0, ARG_LONG,
+                check_ambiguity, override, 0, 0,
+                "hpx-isir-recvlimit", '-',
                 additional_error))
               goto failure;
           

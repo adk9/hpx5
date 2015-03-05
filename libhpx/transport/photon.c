@@ -35,8 +35,6 @@
 
 #define PHOTON_DEFAULT_TAG 13
 
-static int photon_default_srlimit = 32;
-
 /// the Photon transport
 typedef struct {
   transport_t           class;
@@ -425,11 +423,6 @@ transport_t *transport_new_photon(config_t *cfg) {
   photon->class.test       = _test;
   photon->class.testsome   = NULL;
   photon->class.progress   = _progress;
-
-  photon->class.send_limit = (cfg->sendlimit == 0) ?
-    photon_default_srlimit : cfg->sendlimit;
-  photon->class.recv_limit = (cfg->recvlimit == 0) ?
-    photon_default_srlimit : cfg->recvlimit;
 
   photon->class.rkey_table = NULL;
 

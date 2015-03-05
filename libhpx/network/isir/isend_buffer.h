@@ -25,6 +25,7 @@ typedef struct {
   uint64_t          max;
   MPI_Request *requests;
   int              *out;
+  int              twin;
   struct {
     hpx_parcel_t *parcel;
     hpx_addr_t   handler;
@@ -40,7 +41,7 @@ typedef struct {
 ///
 /// @returns            LIBHPX_OK or an error code.
 int isend_buffer_init(isend_buffer_t *buffer, struct gas *gas, uint32_t size,
-                      uint32_t limit)
+                      uint32_t limit, uint32_t twin)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 

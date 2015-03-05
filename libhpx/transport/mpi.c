@@ -221,8 +221,6 @@ transport_t *transport_new_mpi(config_t *cfg) {
   mpi->class.testsome       = NULL;
   mpi->class.progress       = _mpi_progress;
 
-  mpi->class.send_limit     = (cfg->sendlimit == 0)?UINT16_MAX:cfg->sendlimit;
-  mpi->class.recv_limit     = (cfg->recvlimit == 0)?UINT16_MAX:cfg->recvlimit;
   mpi->class.rkey_table     = NULL;
 
   mpi->progress             = network_progress_new(&mpi->class);
