@@ -98,11 +98,17 @@ if [ "$OP" == "run" ]; then
     # Run all the unit tests:
     make check -C tests
 
-    # Check the output of the unit tests:
-    if egrep -Fxq "(# FAIL:|# ERROR:)\s+[1-9][0-9]*" $DIR/build/tests/unit/test-suite.log
+   if grep '^# FAIL: *0$' $DIR/build/tests/unit/test-suite.log
+     then
+       echo "FAIL: 0"
+   else
+        cat $DIR/build/tests/unit/test-suite.log
+   fi
+
+   if egrep -q "(ERROR:)\s+[1-9][0-9]*" $DIR/build/tests/unit/test-suite.log
     then
-	cat $DIR/build/tests/unit/test-suite.log
-	exit 1
+        cat $DIR/build/tests/unit/test-suite.log
+        exit 1
     fi
 fi
 
