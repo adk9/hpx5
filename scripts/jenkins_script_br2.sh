@@ -88,6 +88,7 @@ if [ "$OP" == "run" ]; then
         echo "FAIL: 0"
     else
       cat $DIR/build/tests/unit/test-suite.log
+      exit 1
     fi  
     
     if egrep -q "(ERROR:)\s+[1-9][0-9]*" $DIR/build/tests/unit/test-suite.log
