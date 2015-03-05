@@ -63,10 +63,6 @@ transport_t *transport_new(hpx_transport_t type, config_t *cfg) {
 #endif
     break;
 
-   case (HPX_TRANSPORT_SMP):
-    transport = transport_new_smp();
-    break;
-
    case (HPX_TRANSPORT_DEFAULT):
    default:
     transport = _default(cfg);

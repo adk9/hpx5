@@ -92,7 +92,7 @@ static void _progress(transport_t *transport, transport_op_t op) {
 
 
 static transport_t _smp = {
-  .type           = HPX_TRANSPORT_SMP,
+  .type           = 0,
   .id             = _id,
   .barrier        = _barrier,
   .request_size   = _request_size,
