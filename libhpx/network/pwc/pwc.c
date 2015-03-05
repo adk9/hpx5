@@ -43,7 +43,6 @@ typedef struct pwc_network {
   uint32_t              ranks;
   uint32_t parcel_buffer_size;
   uint32_t parcel_eager_limit;
-  gas_t                  *gas;
   size_t          eager_bytes;
   char                 *eager;
   int         flush_on_delete;
@@ -161,7 +160,7 @@ static hpx_parcel_t *_pwc_probe(network_t *network, int rank) {
 ///        LIBHPX_ERROR The operation produced an error.
 static int _pwc_send(network_t *network, hpx_parcel_t *p) {
   pwc_network_t *pwc = (void*)network;
-  int rank = gas_owner_of(pwc->gas, p->target);
+  int rank = gas_owner_of(here->gas, p->target);
   peer_t *peer = &pwc->peers[rank];
   size_t bytes = pwc_network_size(p);
   if (bytes < pwc->parcel_eager_limit) {
@@ -175,7 +174,7 @@ static int _pwc_send(network_t *network, hpx_parcel_t *p) {
 static int _pwc_command(network_t *network, hpx_addr_t locality,
                         hpx_action_t op, uint64_t args) {
   pwc_network_t *pwc = (void*)network;
-  int rank = gas_owner_of(pwc->gas, locality);
+  int rank = gas_owner_of(here->gas, locality);
   peer_t *peer = &pwc->peers[rank];
   command_t rsync = encode_command(op, args);
   return peer_pwc(peer, 0, NULL, 0, 0, rsync, SEGMENT_NULL);
@@ -190,9 +189,9 @@ static int _pwc_pwc(network_t *network,
                     hpx_action_t lop, hpx_addr_t laddr,
                     hpx_action_t rop, hpx_addr_t raddr) {
   pwc_network_t *pwc = (void*)network;
-  int rank = gas_owner_of(pwc->gas, to);
+  int rank = gas_owner_of(here->gas, to);
   peer_t *peer = &pwc->peers[rank];
-  uint64_t offset = gas_offset_of(pwc->gas, to);
+  uint64_t offset = gas_offset_of(here->gas, to);
   command_t lsync = encode_command(lop, laddr);
   command_t rsync = encode_command(rop, raddr);
   return peer_pwc(peer, offset, lva, n, lsync, rsync, SEGMENT_HEAP);
@@ -213,9 +212,9 @@ static int _pwc_put(network_t *net, hpx_addr_t to, const void *from,
 static int _pwc_get(network_t *network, void *lva, hpx_addr_t from, size_t n,
                     hpx_action_t lop, hpx_addr_t laddr) {
   pwc_network_t *pwc = (void*)network;
-  int rank = gas_owner_of(pwc->gas, from);
+  int rank = gas_owner_of(here->gas, from);
   peer_t *peer = pwc->peers + rank;
-  uint64_t offset = gas_offset_of(pwc->gas, from);
+  uint64_t offset = gas_offset_of(here->gas, from);
   command_t lsync = encode_command(lop, laddr);
   return peer_get(peer, lva, n, offset, lsync, SEGMENT_HEAP);
 }
@@ -267,8 +266,8 @@ peer_t *pwc_get_peer(int src) {
   return &pwc->peers[src];
 }
 
-network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
-                                    int nrx) {
+network_t *network_pwc_funneled_new(const config_t *cfg, boot_t *boot,
+                                    gas_t *gas) {
   int e;
 
   if (boot->type == HPX_BOOT_SMP) {
@@ -276,20 +275,15 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
     return NULL;
   }
 
-  if (gas->type == HPX_GAS_SMP) {
-    log_net("will not instantiate photon for the SMP GAS\n");
-    return NULL;
-  }  
-  
   e = network_supported_transport(here->transport, PWC_TRANSPORTS,
-				  _HPX_NELEM(PWC_TRANSPORTS));
+                  _HPX_NELEM(PWC_TRANSPORTS));
   if (e) {
     log_error("%s network is not supported with current transport: %s\n",
-	      HPX_NETWORK_TO_STRING[HPX_NETWORK_PWC],
-	      HPX_TRANSPORT_TO_STRING[here->transport->type]);
+          HPX_NETWORK_TO_STRING[HPX_NETWORK_PWC],
+          HPX_TRANSPORT_TO_STRING[here->transport->type]);
     return NULL;
   }
-  
+
   // Allocate the network object, with enough space for the peer array that
   // contains one peer per rank.
   int ranks = boot_n_ranks(boot);
@@ -299,7 +293,6 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
   }
 
   // Store some of the salient information in the network structure.
-  pwc->gas = gas;
   pwc->rank = boot_rank(boot);
   pwc->ranks = ranks;
   pwc->parcel_eager_limit = 1u << ceil_log2_32(cfg->pwc_parceleagerlimit);
@@ -339,7 +332,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
               "--hpx-parcelbuffersize (%u)\n",
               pwc->parcel_eager_limit, pwc->parcel_buffer_size);
   }
-  
+
   peer_t local;
   // Prepare the null segment.
   segment_t *null = &local.segments[SEGMENT_NULL];
@@ -351,7 +344,7 @@ network_t *network_pwc_funneled_new(config_t *cfg, boot_t *boot, gas_t *gas,
 
   // Register the heap segment.
   segment_t *heap = &local.segments[SEGMENT_HEAP];
-  e = segment_init(heap, gas_local_base(pwc->gas), gas_local_size(pwc->gas));
+  e = segment_init(heap, gas_local_base(here->gas), gas_local_size(here->gas));
   if (LIBHPX_OK != e) {
     log_error("could not register the heap segment\n");
     goto unwind;

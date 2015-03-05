@@ -147,7 +147,7 @@ static int _start(isend_buffer_t *isends, int i) {
 
   MPI_Request *r = isends->requests + i;
   void *from = mpi_network_offset(p);
-  int to = gas_owner_of(isends->gas, p->target);
+  int to = gas_owner_of(here->gas, p->target);
   int n = payload_size_to_mpi_bytes(p->size);
   int tag = _payload_size_to_tag(p->size);
 
@@ -327,9 +327,7 @@ static void _cancel_all(isend_buffer_t *buffer) {
   }
 }
 
-int isend_buffer_init(isend_buffer_t *buffer, gas_t *gas, uint32_t size,
-                      uint32_t limit) {
-  buffer->gas = gas;
+int isend_buffer_init(isend_buffer_t *buffer, uint32_t size, uint32_t limit) {
   buffer->limit = limit;
   buffer->size = 0;
   buffer->min = 0;

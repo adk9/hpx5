@@ -152,9 +152,13 @@ int hpx_init(int *argc, char ***argv) {
     }
   }
 
+  // Initialize out instrumentation.
   if (inst_init(here->config)) {
     log("error detected while initializing instrumentation\n");
   }
+
+  // Initialize the network.
+
 
   // byte transport
   here->transport = transport_new(here->config->transport,
@@ -186,8 +190,7 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // parcel network
-  here->network = network_new(here->config, here->boot, here->gas,
-                              here->config->threads);
+  here->network = network_new(here->config, here->boot, here->gas);
   if (!here->network) {
     status = log_error("failed to create network.\n");
     goto unwind1;
