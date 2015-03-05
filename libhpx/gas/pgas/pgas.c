@@ -420,10 +420,6 @@ gas_t *gas_pgas_new(size_t heap_size, boot_t *boot, struct transport *transport)
     goto unwind1;
   }
 
-  if (heap_bind_transport(global_heap, transport) != LIBHPX_OK) {
-    dbg_error("failed to bind the transport\n");
-  }
-
   if (mallctl_disable_dirty_page_purge() != LIBHPX_OK) {
     dbg_error("failed to disable dirty page purging\n");
     goto unwind1;

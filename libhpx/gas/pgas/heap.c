@@ -19,11 +19,10 @@
 #include <sys/mman.h>
 #include <jemalloc/jemalloc_hpx.h>
 #include <libsync/sync.h>
-#include "hpx/builtins.h"
-#include "libhpx/debug.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/transport.h"
+#include <hpx/builtins.h>
+#include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
 #include "../mallctl.h"
 #include "bitmap.h"
 #include "gpa.h"
@@ -204,8 +203,6 @@ void heap_fini(heap_t *heap) {
     bitmap_delete(heap->chunks);
 
   if (heap->base) {
-    if (heap->transport)
-      heap->transport->unpin(heap->transport, heap->base, heap->nbytes);
     munmap(heap->base, heap->nbytes);
   }
 }
@@ -241,11 +238,6 @@ bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size) {
 
   bitmap_release(heap->chunks, bit, nbits);
   return true;
-}
-
-int heap_bind_transport(heap_t *heap, transport_t *transport) {
-  heap->transport = transport;
-  return transport->pin(transport, heap->base, heap->nbytes);
 }
 
 bool heap_contains_lva(const heap_t *heap, const void *lva) {
