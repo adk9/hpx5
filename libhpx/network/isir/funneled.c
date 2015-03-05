@@ -245,8 +245,8 @@ network_t *network_isir_funneled_new(config_t *cfg, struct gas *gas, int nrx) {
   sync_store(&network->flush, 0, SYNC_RELEASE);
   sync_two_lock_queue_init(&network->sends, NULL);
   sync_two_lock_queue_init(&network->recvs, NULL);
-  isend_buffer_init(&network->isends, gas, 64, 0);
-  irecv_buffer_init(&network->irecvs, 64, 0);
+  isend_buffer_init(&network->isends, gas, 64, cfg->sendlimit);
+  irecv_buffer_init(&network->irecvs, 64, cfg->recvlimit);
 
   return &network->vtable;
 }

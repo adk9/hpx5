@@ -24,7 +24,7 @@
 #include "smp.h"
 
 static network_t *_default(config_t *cfg, struct boot *boot, struct gas *gas,
-			   int nrx) {
+               int nrx) {
   network_t *network = NULL;
 #ifdef HAVE_PHOTON
   network = network_pwc_funneled_new(cfg, boot, gas, nrx);
@@ -32,15 +32,16 @@ static network_t *_default(config_t *cfg, struct boot *boot, struct gas *gas,
     return network;
   }
 #endif
-  
+
 #ifdef HAVE_MPI
   network =  network_isir_funneled_new(cfg, gas, nrx);
   if (network) {
     return network;
   }
 #endif
-  
-  return network_smp_new();
+
+  network = network_smp_new();
+  return network;
 }
 
 int network_supported_transport(transport_t *t, const int tports[], int n) {
@@ -56,7 +57,7 @@ int network_supported_transport(transport_t *t, const int tports[], int n) {
 network_t *network_new(config_t *cfg, struct boot *boot, struct gas *gas,
                        int nrx) {
   network_t *network = NULL;
-  
+
   switch (cfg->network) {
    case HPX_NETWORK_PWC:
 #ifdef HAVE_PHOTON
@@ -79,11 +80,11 @@ network_t *network_new(config_t *cfg, struct boot *boot, struct gas *gas,
     network = _default(cfg, boot, gas, nrx);
     break;
   }
-    
+
   if (!network && (cfg->network == HPX_NETWORK_DEFAULT)) {
     network = _default(cfg, boot, gas, nrx);
   }
-  
+
   if (!network) {
     dbg_error("failed to initialize the network\n");
   }
