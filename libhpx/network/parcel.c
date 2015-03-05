@@ -76,15 +76,13 @@ static void _bless(hpx_parcel_t *p) {
     return;
 
   uint64_t credit = p->credit;
-  DEBUG_IF(credit) {
-    dbg_error("parcel already blessed, pid %lu, credit %lu\n", pid, credit);
+  if (!credit) {
+    // split the parent's current credit. the parent retains half..
+    hpx_parcel_t *parent = scheduler_current_parcel();
+    dbg_assert_str(parent, "no parent to bless child parcel\n");
+    // parent and child each get half a credit
+    p->credit = ++parent->credit;
   }
-
-  // split the parent's current credit. the parent retains half..
-  hpx_parcel_t *parent = scheduler_current_parcel();
-  dbg_assert_str(parent, "no parent to bless child parcel\n");
-  // parent and child each get half a credit
-  p->credit = ++parent->credit;
 }
 
 static void _prepare(hpx_parcel_t *p) {

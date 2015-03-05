@@ -122,8 +122,10 @@ contrib/photon/
 /tests/unit/test_threads
 /tests/unit/test_runtime
 /tests/unit/test_datatype
+/tests/unit/test_process
 /tests/unit/test_wait
 /tests/unit/test_task
+/tests/unit/test_typed_struct
 /tests/unit/Makefile
 /tests/Makefile
 /tests/Makefile.in
