@@ -43,10 +43,7 @@ static hpx_status_t _wait(and_t *and) {
 
   // otherwise wait for the and to be signaled
   log_lco("waiting for lco %p\n", (void*)&and->lco);
-  lco_lock(&and->lco);
-  status = scheduler_wait(&and->lco.lock, &and->barrier);
-  lco_unlock(&and->lco);
-  return status;
+  return scheduler_wait(&and->lco.lock, &and->barrier);
 }
 
 static hpx_status_t _attach(and_t *and, hpx_parcel_t *p) {
@@ -108,7 +105,10 @@ static void _and_set(lco_t *lco, int size, const void *from) {
 
 static hpx_status_t _and_wait(lco_t *lco) {
   and_t *and = (and_t *)lco;
-  return _wait(and);
+  lco_lock(&and->lco);
+  hpx_status_t status = _wait(and);
+  lco_unlock(&and->lco);
+  return status;
 }
 
 static hpx_status_t _and_attach(lco_t *lco, hpx_parcel_t *p) {
