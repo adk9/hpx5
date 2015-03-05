@@ -83,7 +83,7 @@ if [ "$OP" == "run" ]; then
     make check -C tests
 
     # Check the output of the unit tests:
-    if egrep -q "(FAIL:|XFAIL:|ERROR:)\s+[1-9][0-9]*" $DIR/build/tests/unit/test-suite.log
+    if egrep -q "(FAIL:|ERROR:)\s+[1-9][0-9]*" $DIR/build/tests/unit/test-suite.log
     then
 	cat $DIR/build/tests/unit/test-suite.log
 	exit 1
