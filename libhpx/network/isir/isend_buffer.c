@@ -280,7 +280,7 @@ static int _test_all(isend_buffer_t *buffer) {
   if (total) {
     _compact(buffer, total);
   }
-  if (total > twin) {
+  if (total >= twin) {
     buffer->twin += ISIR_TWIN_ADD;
     log_net("increased test window to %d\n", buffer->twin);
   }
