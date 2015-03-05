@@ -206,19 +206,13 @@ static int _funneled_progress(network_t *network) {
   (void)m;
 }
 
-network_t *network_isir_funneled_new(config_t *cfg, struct gas *gas, int nrx) {
-  if (gas->type == HPX_GAS_SMP) {
-    log_net("will not initialize a %s network for SMP\n",
-            HPX_NETWORK_TO_STRING[HPX_NETWORK_ISIR]);
-    return NULL;
-  }
-  
+network_t *network_isir_funneled_new(const config_t *cfg) {
   int e = network_supported_transport(here->transport, ISIR_TRANSPORTS,
-				      _HPX_NELEM(ISIR_TRANSPORTS));
+                      _HPX_NELEM(ISIR_TRANSPORTS));
   if (e) {
     log_error("%s network is not supported with current transport: %s\n",
-	      HPX_NETWORK_TO_STRING[HPX_NETWORK_ISIR],
-	      HPX_TRANSPORT_TO_STRING[here->transport->type]);
+          HPX_NETWORK_TO_STRING[HPX_NETWORK_ISIR],
+          HPX_TRANSPORT_TO_STRING[here->transport->type]);
     return NULL;
   }
 
@@ -240,12 +234,11 @@ network_t *network_isir_funneled_new(config_t *cfg, struct gas *gas, int nrx) {
   network->vtable.probe = _funneled_probe;
   network->vtable.set_flush = _funneled_set_flush;
 
-  network->gas = gas;
-
   sync_store(&network->flush, 0, SYNC_RELEASE);
   sync_two_lock_queue_init(&network->sends, NULL);
   sync_two_lock_queue_init(&network->recvs, NULL);
-  isend_buffer_init(&network->isends, gas, 64, cfg->sendlimit);
+
+  isend_buffer_init(&network->isends, 64, cfg->sendlimit);
   irecv_buffer_init(&network->irecvs, 64, cfg->recvlimit);
 
   return &network->vtable;
