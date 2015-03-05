@@ -113,19 +113,6 @@ void *heap_chunk_alloc(heap_t *heap, size_t size, size_t align)
 bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size)
   HPX_NON_NULL(1,2) HPX_INTERNAL;
 
-/// This operation binds the heap to a network.
-///
-/// Some transports need to know about the heap in order to perform network
-/// operations to and from it. In particular, Photon needs to register the
-/// heap's [base, base + nbytes) range.
-///
-/// @param         heap The heap in question---must be initialized.
-/// @param    transport The transport to bind.
-///
-/// @returns TRUE if the transport requires mallctl_disable_dirty_page_purge().
-int heap_bind_transport(heap_t *heap, struct transport *transport)
-  HPX_NON_NULL(1,2) HPX_INTERNAL;
-
 /// Check to see if the heap contains the given local virtual address.
 ///
 /// @param         heap The heap object.
