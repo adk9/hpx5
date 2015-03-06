@@ -26,6 +26,8 @@
 #include "parcel_utils.h"
 #include "xport.h"
 
+#define ISIR_TWIN_INC  10
+
 /// Compute the buffer index of an abstract index.
 ///
 /// @param            i The abstract index.
@@ -272,6 +274,7 @@ static void _compact(isend_buffer_t *buffer, int n) {
 ///
 /// @returns            The number of sends completed.
 static int _test_all(isend_buffer_t *buffer) {
+  uint32_t twin = buffer->twin;
   uint32_t size = buffer->size;
   uint32_t i = _index_of(buffer->min, size);
   uint32_t j = _index_of(buffer->active, size);
@@ -281,12 +284,25 @@ static int _test_all(isend_buffer_t *buffer) {
   uint32_t n = (wrapped) ? buffer->size - i : j - i;
   uint32_t m = (wrapped) ? j : 0;
 
+  // limit how many requests we test
+  n = (n > twin) ? twin : n;
+  m = (m > (twin - n)) ? (twin - n) : m;
+
   int total = 0;
   total += _test_range(buffer, i, n, total);
   total += _test_range(buffer, 0, m, total);
   if (total) {
     _compact(buffer, total);
   }
+  if (total >= twin) {
+    buffer->twin += ISIR_TWIN_INC;
+    log_net("increased test window to %d\n", buffer->twin);
+  }
+  else if ((twin - total) > ISIR_TWIN_INC) {
+    buffer->twin -= ISIR_TWIN_INC;
+    log_net("decreased test window to %d\n", buffer->twin);
+  }
+  
   log_net("tested %u sends, completed %d\n", n+m, total);
   return total;
 }
@@ -334,7 +350,7 @@ static void _cancel_all(isend_buffer_t *buffer) {
 }
 
 int isend_buffer_init(isend_buffer_t *buffer, isir_xport_t *xport,
-                      uint32_t size, uint32_t limit) {
+                      uint32_t size, uint32_t limit, uint32_t twin) {
   buffer->xport = xport;
   buffer->limit = limit;
   buffer->size = 0;
@@ -344,6 +360,7 @@ int isend_buffer_init(isend_buffer_t *buffer, isir_xport_t *xport,
   buffer->requests = NULL;
   buffer->out = NULL;
   buffer->records = NULL;
+  buffer->twin = twin;
 
   size = 1 << ceil_log2_32(size);
   int e = _resize(buffer, size);

@@ -20,6 +20,7 @@ struct isir_xport;
 typedef struct {
   struct isir_xport *xport;
   uint32_t  limit;
+  uint32_t   twin;
   uint32_t   size;
   uint64_t    min;
   uint64_t active;
@@ -37,10 +38,11 @@ typedef struct {
 /// @param       buffer The buffer to initialize.
 /// @param         size The initial size for the buffer.
 /// @param        limit The limit of the number of active requests.
+/// @param         twin The initial number of requests tested.
 ///
 /// @returns            LIBHPX_OK or an error code.
 int isend_buffer_init(isend_buffer_t *buffer, struct isir_xport *xport,
-                      uint32_t size, uint32_t limit)
+                      uint32_t size, uint32_t limit, uint32_t twin)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Finalize a send buffer.

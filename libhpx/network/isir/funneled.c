@@ -211,7 +211,7 @@ network_t *network_isir_funneled_new(const config_t *cfg) {
     log_error("could not allocate a funneled Isend/Irecv network\n");
     return NULL;
   }
-
+  
   network->xport = isir_xport_new(cfg);
   if (!network->xport) {
     log_error("could not initialize a transport.\n");
@@ -235,8 +235,9 @@ network_t *network_isir_funneled_new(const config_t *cfg) {
   sync_two_lock_queue_init(&network->sends, NULL);
   sync_two_lock_queue_init(&network->recvs, NULL);
 
-  isend_buffer_init(&network->isends, network->xport, 64, cfg->sendlimit);
-  irecv_buffer_init(&network->irecvs, network->xport, 64, cfg->recvlimit);
+  isend_buffer_init(&network->isends, network->xport, 64, cfg->isir_sendlimit,
+		    cfg->isir_testwindow);
+  irecv_buffer_init(&network->irecvs, network->xport, 64, cfg->isir_recvlimit);
 
   return &network->vtable;
 }
