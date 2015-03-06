@@ -131,7 +131,7 @@ case "$SYSTEM" in
     esac
   ;;
   HPX5_BIGRED2)
-    CFGFLAGS+=" --with-mpi=cray-mpich --with-tests-cmd=\"aprun -n 2 -N 1 ${HPXIBDEV}\""
+    CFGFLAGS+=" --with-mpi=cray-mpich --with-tests-cmd=\"aprun -n 2 -N 1\""
   ;;
   *)
     exit 1
