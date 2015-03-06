@@ -16,6 +16,10 @@
 #include "tests.h"
 
 static HPX_ACTION(_spawn1, hpx_addr_t *sync) {
+  if (sync) {
+    hpx_lco_wait(*sync);
+  }
+
   int spawns = rand()%3;
   if (spawns) {
     for (int i = 0; i < spawns; ++i) {
@@ -23,21 +27,19 @@ static HPX_ACTION(_spawn1, hpx_addr_t *sync) {
     }
   }
 
-  if (sync) {
-    hpx_lco_wait(*sync);
-  }
   return HPX_SUCCESS;
 }
 
 static HPX_ACTION(_spawn2, hpx_addr_t *sync) {
-  if (sync) {
-    hpx_lco_set(*sync, 0, NULL, HPX_NULL, HPX_NULL);
-  }
   int spawns = rand()%3;
   if (spawns) {
     for (int i = 0; i < spawns; ++i) {
       hpx_call(HPX_HERE, _spawn2, HPX_NULL, 0, NULL);
     }
+  }
+
+  if (sync) {
+    hpx_lco_set(*sync, 0, NULL, HPX_NULL, HPX_NULL);
   }
   return HPX_SUCCESS;
 }

@@ -83,7 +83,7 @@ static HPX_ACTION(_proc_call, _call_args_t *args) {
     return HPX_RESEND;
   }
 
-  uint64_t credit = sync_addf(&p->credit, 1, SYNC_RELAXED);
+  uint64_t credit = sync_addf(&p->credit, 1, SYNC_ACQ_REL);
   hpx_gas_unpin(process);
 
   hpx_pid_t pid = hpx_process_getpid(process);
@@ -119,7 +119,7 @@ static HPX_PINNED(_proc_return_credit, uint64_t *args) {
     uint64_t credit = sync_load(&p->credit, SYNC_ACQUIRE);
     if ((credit != 0) && ~(debt | ((1UL << (64-credit)) - 1)) == 0) {
       // log("detected quiescence...\n");
-      if (!sync_cas(&p->credit, credit, 0, SYNC_RELEASE, SYNC_RELAXED)) {
+      if (!sync_cas(&p->credit, credit, -credit, SYNC_RELEASE, SYNC_RELAXED)) {
         continue;
       }
       dbg_assert(_is_tracked(p));
