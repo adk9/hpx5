@@ -16,11 +16,11 @@
 
 #include <stdlib.h>
 
-#include "libhpx/config.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/network.h"
-#include "libhpx/transport.h"
+#include <libhpx/boot.h>
+#include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/network.h>
+#include "smp.h"
 
 // Define the transports allowed for the SMP network
 static void _smp_delete(network_t *network) {
@@ -36,7 +36,8 @@ static int _smp_send(network_t *network, hpx_parcel_t *p) {
 
 static int _smp_command(network_t *network, hpx_addr_t rank,
                         hpx_action_t op, uint64_t args) {
-  return hpx_xcall(HPX_HERE, op, HPX_NULL, here->rank, args);
+  static const int zero = 0;
+  return hpx_xcall(HPX_HERE, op, HPX_NULL, zero, args);
 }
 
 static int _smp_pwc(network_t *network,
@@ -78,16 +79,10 @@ static network_t _smp = {
   .set_flush = _smp_set_flush
 };
 
-network_t *network_smp_new(void) {
-  /*
-  int e = network_supported_transport(here->transport, SMP_TRANSPORTS,
-                      _HPX_NELEM(SMP_TRANSPORTS));
-  if (e) {
-    log_error("%s network is not supported with current transport: %s\n",
-          HPX_NETWORK_TO_STRING[HPX_NETWORK_SMP],
-          HPX_TRANSPORT_TO_STRING[here->transport->type]);
+network_t *network_smp_new(const struct config *cfg, boot_t *boot) {
+  if (boot_n_ranks(boot) > 1) {
+    dbg_error("SMP network does not support multiple ranks.\n");
     return NULL;
   }
-  */
   return &_smp;
 }

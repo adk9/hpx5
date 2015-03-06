@@ -15,9 +15,9 @@
 #endif
 
 #include <libhpx/debug.h>
-#include "transport.h"
+#include "xport.h"
 
-void *isir_transport_new(const config_t *cfg, struct boot *boot) {
+isir_xport_t *isir_xport_new(const config_t *cfg) {
   switch (cfg->transport) {
    case (HPX_TRANSPORT_PHOTON):
     dbg_error("Photon support for the ISIR network is not yet available.\n");
@@ -27,14 +27,14 @@ void *isir_transport_new(const config_t *cfg, struct boot *boot) {
 
    case (HPX_TRANSPORT_MPI):
 #ifdef HAVE_MPI
-    return isir_transport_new_mpi(cfg);
+    return isir_xport_new_mpi(cfg);
 #else
     dbg_error("MPI transport not enabled in current configuration.\n");
 #endif
 
    default:
 #ifdef HAVE_MPI
-    return isir_transport_new_mpi(cfg);
+    return isir_xport_new_mpi(cfg);
 #else
     dbg_error("MPI transport required for ISIR network.\n");
 #endif
