@@ -14,6 +14,8 @@
 # include "config.h"
 #endif
 
+#include <stdlib.h>
+#include <string.h>
 #include <photon.h>
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
