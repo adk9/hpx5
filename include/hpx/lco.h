@@ -384,17 +384,6 @@ hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size,
 /// @returns the size of the LCO type structure.
 size_t hpx_lco_size(hpx_lco_type_t type);
 
-/// Get an address of a lco in a lco array
-///
-/// @param       type the type of the LCO
-/// @param      base The base address of the array of lcos.
-/// @param         i The index of the future to return.
-/// @param      size The size of the data stored with each lco.
-///
-/// @returns The address of the ith lco in the array.
-hpx_addr_t hpx_lco_array_at(hpx_lco_type_t type, hpx_addr_t base, int i,
-                                 int size);
-
 /// Channels.
 ///
 /// The channel LCO approximates an MPI channel.
