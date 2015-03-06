@@ -258,7 +258,6 @@ AC_CONFIG_FILES([
   libhpx/Makefile
   libhpx/boot/Makefile
   libhpx/gas/Makefile
-  libhpx/transport/Makefile
   libhpx/network/Makefile
   libhpx/network/isir/Makefile
   libhpx/network/pwc/Makefile
