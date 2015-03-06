@@ -559,7 +559,7 @@ size_t hpx_lco_size(hpx_lco_type_t type) {
       lco_bytes = sizeof(alltoall_t);
       break;
     default:
-      dbg_error("Invalid type for hpx_lco_array_at\n");
+      dbg_error("Invalid type for hpx_lco_size\n");
   }
   return lco_bytes;  
 }
