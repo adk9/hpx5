@@ -100,7 +100,8 @@ static int _mpi_cancel(void *request, int *cancelled) {
     return log_error("could not cleanup a canceled MPI request\n");
   }
 
-  if (MPI_SUCCESS != MPI_Test_cancelled(&status, cancelled)) {
+  int c;
+  if (MPI_SUCCESS != MPI_Test_cancelled(&status, (cancelled) ? cancelled : &c)) {
     return log_error("could not test a status to see if a request was canceled\n");
   }
 
