@@ -13,24 +13,24 @@
 #ifndef LIBHPX_NETWORK_ISIR_ISEND_BUFFER_H
 #define LIBHPX_NETWORK_ISIR_ISEND_BUFFER_H
 
-#include <mpi.h>
 #include <hpx/hpx.h>
 
+struct isir_xport;
+
 typedef struct {
-  struct       gas *gas;
-  uint32_t        limit;
-  uint32_t         size;
-  uint64_t          min;
-  uint64_t       active;
-  uint64_t          max;
-  MPI_Request *requests;
-  int              *out;
+  struct isir_xport *xport;
+  uint32_t  limit;
+  uint32_t   size;
+  uint64_t    min;
+  uint64_t active;
+  uint64_t    max;
+  void  *requests;
+  int        *out;
   struct {
     hpx_parcel_t *parcel;
     hpx_addr_t   handler;
   } *records;
 } isend_buffer_t;
-
 
 /// Initialize a send buffer.
 ///
@@ -39,17 +39,15 @@ typedef struct {
 /// @param        limit The limit of the number of active requests.
 ///
 /// @returns            LIBHPX_OK or an error code.
-int isend_buffer_init(isend_buffer_t *buffer, struct gas *gas, uint32_t size,
-                      uint32_t limit)
+int isend_buffer_init(isend_buffer_t *buffer, struct isir_xport *xport,
+                      uint32_t size, uint32_t limit)
   HPX_INTERNAL HPX_NON_NULL(1);
-
 
 /// Finalize a send buffer.
 ///
 /// @param       buffer The buffer to initialize.
 void isend_buffer_fini(isend_buffer_t *buffer)
   HPX_INTERNAL HPX_NON_NULL(1);
-
 
 /// Append a send to the buffer.
 ///
@@ -64,7 +62,6 @@ void isend_buffer_fini(isend_buffer_t *buffer)
 int isend_buffer_append(isend_buffer_t *buffer, hpx_parcel_t *p, hpx_addr_t h)
   HPX_INTERNAL HPX_NON_NULL(1,2);
 
-
 /// Progress the sends in the buffer.
 ///
 /// @param       buffer The buffer to progress().
@@ -72,7 +69,6 @@ int isend_buffer_append(isend_buffer_t *buffer, hpx_parcel_t *p, hpx_addr_t h)
 /// @returns            The number of completed requests.
 int isend_buffer_progress(isend_buffer_t *buffer)
   HPX_INTERNAL HPX_NON_NULL(1);
-
 
 /// Flush all outstanding sends.
 ///
@@ -84,6 +80,5 @@ int isend_buffer_progress(isend_buffer_t *buffer)
 /// @returns            The number of completed requests during the flush.
 int isend_buffer_flush(isend_buffer_t *buffer)
   HPX_INTERNAL HPX_NON_NULL(1);
-
 
 #endif // LIBHPX_NETWORK_ISIR_ISEND_BUFFER_H

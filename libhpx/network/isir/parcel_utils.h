@@ -13,29 +13,28 @@
 #ifndef LIBHPX_NETWORK_ISIR_PARCEL_UTILS_H
 #define LIBHPX_NETWORK_ISIR_PARCEL_UTILS_H
 
-#include <mpi.h>
-#include "libhpx/debug.h"
-#include "libhpx/parcel.h"
+#include <libhpx/debug.h>
+#include <libhpx/parcel.h>
 
-static inline uint32_t mpi_prefix_size(void) {
+static inline uint32_t isir_prefix_size(void) {
   return offsetof(hpx_parcel_t, action);
 }
 
-static inline uint32_t mpi_network_size(const hpx_parcel_t *p) {
-  return parcel_size(p) - mpi_prefix_size();
+static inline uint32_t isir_network_size(const hpx_parcel_t *p) {
+  return parcel_size(p) - isir_prefix_size();
 }
 
-static inline void *mpi_network_offset(hpx_parcel_t *p) {
+static inline void *isir_network_offset(hpx_parcel_t *p) {
   return &p->action;
 }
 
-static inline int payload_size_to_mpi_bytes(uint32_t payload) {
-  return payload + sizeof(hpx_parcel_t) - mpi_prefix_size();
+static inline int payload_size_to_isir_bytes(uint32_t payload) {
+  return payload + sizeof(hpx_parcel_t) - isir_prefix_size();
 }
 
-static inline uint32_t mpi_bytes_to_payload_size(int bytes) {
+static inline uint32_t isir_bytes_to_payload_size(int bytes) {
   dbg_assert(bytes > 0);
-  return bytes + mpi_prefix_size() - sizeof(hpx_parcel_t);
+  return bytes + isir_prefix_size() - sizeof(hpx_parcel_t);
 }
 
 static inline uint32_t tag_to_payload_size(int tag) {
@@ -43,7 +42,7 @@ static inline uint32_t tag_to_payload_size(int tag) {
   return parcel_size - sizeof(hpx_parcel_t);
 }
 
-static inline uint32_t tag_to_mpi_bytes(int tag) {
+static inline uint32_t tag_to_isir_bytes(int tag) {
   uint32_t parcel_size = tag * HPX_CACHELINE_SIZE;
   return parcel_size - offsetof(hpx_parcel_t, action);
 }

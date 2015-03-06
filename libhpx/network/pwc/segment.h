@@ -14,20 +14,21 @@
 #define LIBHPX_NETWORK_PWC_SEGMENT_H
 
 #include <hpx/hpx.h>
-#include <photon.h>
 
+struct pwc_xport;
 
 typedef struct segment {
-  char                      *base;
-  size_t                     size;
-  struct photon_buffer_priv_t key;
+  char  *base;
+  size_t size;
+  char    key[16];
 } segment_t;
 
 ///
-int segment_init(segment_t *segment, char *base, size_t size)
+int segment_init(segment_t *segment, struct pwc_xport *xport, char *base,
+                 size_t size)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-void segment_fini(segment_t *segment)
+void segment_fini(segment_t *segment, struct pwc_xport *xport)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 static inline void *segment_offset_to_rva(segment_t *segment, size_t offset) {

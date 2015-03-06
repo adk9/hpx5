@@ -24,8 +24,8 @@ struct network;
 struct peer;
 /// @}
 
-struct network *network_pwc_funneled_new(struct config *, struct boot *,
-                                    struct gas *, int nrx)
+struct network *network_pwc_funneled_new(const struct config *cfg,
+                                         struct boot *boot, struct gas *gas)
   HPX_NON_NULL(1,2,3) HPX_MALLOC HPX_INTERNAL;
 
 struct peer *pwc_get_peer(int n)

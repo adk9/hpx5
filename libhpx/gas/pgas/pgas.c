@@ -397,8 +397,10 @@ static gas_t _pgas_vtable = {
   .offset_of     = _pgas_offset_of
 };
 
-gas_t *gas_pgas_new(size_t heap_size, boot_t *boot, struct transport *transport)
+gas_t *gas_pgas_new(const config_t *cfg, boot_t *boot)
 {
+  size_t heap_size = cfg->heapsize;
+
   if (here->ranks == 1) {
     log_gas("PGAS requires at least two ranks\n");
     return NULL;
@@ -418,10 +420,6 @@ gas_t *gas_pgas_new(size_t heap_size, boot_t *boot, struct transport *transport)
   if (e != LIBHPX_OK) {
     dbg_error("failed to allocate global heap\n");
     goto unwind1;
-  }
-
-  if (heap_bind_transport(global_heap, transport) != LIBHPX_OK) {
-    dbg_error("failed to bind the transport\n");
   }
 
   if (mallctl_disable_dirty_page_purge() != LIBHPX_OK) {

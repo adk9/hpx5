@@ -22,24 +22,40 @@
 #include "parcel_utils.h"
 #include "peer.h"
 #include "pwc.h"
+#include "xport.h"
 #include "../../gas/pgas/gpa.h"
 #include "../../gas/pgas/pgas.h"
 
 void peer_fini(peer_t *peer) {
-  pwc_buffer_fini(&peer->pwc);
   send_buffer_fini(&peer->send);
   eager_buffer_fini(&peer->tx);
   eager_buffer_fini(&peer->rx);
 }
 
-int peer_get(peer_t *peer, void *lva, size_t offset, size_t n, command_t l,
+int peer_pwc(peer_t *peer, size_t roff, const void *lva, size_t n,
+                           command_t lsync, command_t rsync, segid_t segid) {
+  segment_t *segment = &peer->segments[segid];
+  void *rva = segment_offset_to_rva(segment, roff);
+  void *key = segment->key;
+  int rank = peer->rank;
+  return peer->xport->pwc(rank, rva, lva, n, lsync, rsync, key);
+}
+
+int peer_put_command(peer_t *p, command_t rsync) {
+  return peer_pwc(p, 0, NULL, 0, 0, rsync, SEGMENT_NULL);
+}
+
+int peer_send(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync) {
+  return send_buffer_send(&peer->send, p, lsync);
+}
+
+int peer_get(peer_t *peer, void *lva, size_t offset, size_t n, command_t lsync,
              segid_t segid) {
   segment_t *segment = &peer->segments[segid];
   const void *rva = segment_offset_to_rva(segment, offset);
-  struct photon_buffer_priv_t key = segment->key;
-  int e = photon_get_with_completion(peer->rank, lva, n, (void*)rva, key, l, 0);
-  dbg_assert_str(PHOTON_OK == e, "failed transport get operation\n");
-  return LIBHPX_OK;
+  void *key  = segment->key;
+  int rank = peer->rank;
+  return peer->xport->gwc(rank, lva, rva, n, lsync, key);
 }
 
 /// This local action just wraps the hpx_lco_set operation in an action that can

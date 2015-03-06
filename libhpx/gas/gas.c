@@ -18,8 +18,8 @@
 #include <libhpx/debug.h>
 #include <libhpx/boot.h>
 
-gas_t *gas_new(size_t heap_size, struct boot *boot, struct transport *transport,
-               hpx_gas_t type) {
+gas_t *gas_new(const config_t *cfg, struct boot *boot) {
+  hpx_gas_t type = cfg->gas;
   gas_t *gas = NULL;
 
   if (type != HPX_GAS_PGAS && boot_n_ranks(boot) > 1) {
@@ -31,7 +31,7 @@ gas_t *gas_new(size_t heap_size, struct boot *boot, struct transport *transport,
   }
 
   if (boot_n_ranks(boot) > 1) {
-    gas = gas_pgas_new(heap_size, boot, transport);
+    gas = gas_pgas_new(cfg, boot);
     if (!gas) {
       log_gas("PGAS failed to initialize\n");
     }
@@ -52,8 +52,9 @@ gas_t *gas_new(size_t heap_size, struct boot *boot, struct transport *transport,
     }
   }
 
-  if (gas)
+  if (gas) {
     return gas;
+  }
 
   dbg_error("Could not initialize GAS model %s", HPX_GAS_TO_STRING[type]);
   return NULL;
