@@ -67,14 +67,93 @@ typedef struct {
   chan_node_t  *tail;
 } chan_t;
 
-extern void and_init(and_t *and, intptr_t value)
-  HPX_INTERNAL HPX_NON_NULL(1);
+/// Local gencount interface.
+/// @{
+typedef struct {
+  lco_t              lco;
+  cvar_t           oflow;
+  unsigned long      gen;
+  unsigned long ninplace;
+  cvar_t       inplace[];
+} gencount_t;
 
-extern void future_init(future_t *f, int size) 
-  HPX_INTERNAL HPX_NON_NULL(1);
+/// Local allgather interface.
+/// @{
+typedef struct {
+  lco_t           lco;
+  cvar_t         wait;
+  size_t participants;
+  size_t        count;
+  volatile int  phase;
+  void         *value;
+} allgather_t;
 
-extern void chan_init(chan_t *c)
-  HPX_INTERNAL HPX_NON_NULL(1);
+/// Local allreduce interface.
+/// @{
+typedef struct {
+  lco_t               lco;
+  cvar_t             wait;
+  size_t          readers;
+  size_t          writers;
+  hpx_monoid_id_t      id;
+  hpx_monoid_op_t      op;
+  size_t            count;
+  volatile int      phase;
+  void             *value;  // out-of-place for alignment reasons
+} allreduce_t;
+
+/// Local alltoall interface.
+/// @{
+typedef struct {
+  lco_t           lco;
+  cvar_t         wait;
+  size_t participants;
+  size_t        count;
+  volatile int  phase;
+  void         *value;
+} alltoall_t;
+
+/// Local reduce interface.
+/// @{
+typedef struct {
+  lco_t              lco;
+  cvar_t         barrier;
+  hpx_monoid_id_t     id;
+  hpx_monoid_op_t     op;
+  size_t            size;
+  int             inputs;
+  volatile int remaining;
+  void            *value;
+} reduce_t;
+
+/// Local netfuture interface.
+/// @{
+typedef struct {
+  lco_t lco;
+  cvar_t full;
+  cvar_t empty;
+  uint32_t bits;
+  char data[] HPX_ALIGNED(8);
+} netfuture_t;
+
+/// Local sema interface.
+/// @{
+typedef struct {
+  lco_t       lco;
+  cvar_t    avail;
+  volatile uintptr_t count;
+} sema_t;
+
+/// Generic LCO interface.
+/// @{
+typedef struct {
+  lco_t                 lco;
+  cvar_t               cvar;
+  hpx_monoid_id_t        id;
+  hpx_monoid_op_t        op;
+  hpx_predicate_t predicate;
+  void                 *buf;
+} user_lco_t;
 
 // The LCO abstract class interface.
 ///

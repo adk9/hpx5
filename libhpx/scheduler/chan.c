@@ -199,7 +199,7 @@ static hpx_status_t _chan_wait(lco_t *lco) {
 }
 
 /// Initialize the channel
-void chan_init(chan_t *c) {
+static void _chan_init(chan_t *c) {
   static const lco_class_t vtable = {
     .on_fini     = _chan_fini,
     .on_error    = _chan_error,
@@ -263,7 +263,7 @@ static HPX_PINNED(_block_init, uint32_t *args) {
   // sequentially initialize each channel
   uint32_t block_size = args[0];
   for (uint32_t i = 0; i < block_size; ++i) {
-    chan_init(&channels[i]);
+    _chan_init(&channels[i]);
   }
 
   return HPX_SUCCESS;
@@ -292,7 +292,7 @@ static HPX_PINNED(_block_init, uint32_t *args) {
 hpx_addr_t hpx_lco_chan_new(void) {
   chan_t *local = libhpx_global_malloc(sizeof(chan_t));
   assert(local);
-  chan_init(local);
+  _chan_init(local);
   return lva_to_gva(local);
 }
 
@@ -413,3 +413,35 @@ hpx_status_t hpx_lco_chan_array_select(int n, hpx_addr_t channels[], int *i,
   return status;
 }
 
+/// Initialize a block of array of lco.
+static HPX_PINNED(_block_local_init, uint32_t *args) {
+  void *lco = hpx_thread_current_local_target();
+  dbg_assert(lco);
+
+  for (int i = 0; i < args[0]; i++) {
+    void *addr = (void *)((uintptr_t)lco + i * (sizeof(chan_t) + args[1]));
+    _chan_init(addr);
+  }
+
+  return HPX_SUCCESS;
+}
+
+/// Allocate an array of chan local to the calling locality.
+/// @param          n The (total) number of futures to allocate
+/// @param       size The size of each future's value 
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_chan_local_array_new(int n, int size) {
+  uint32_t lco_bytes = sizeof(chan_t) + size;
+  dbg_assert(n * lco_bytes < UINT32_MAX);
+  uint32_t  block_bytes = n * lco_bytes;
+  hpx_addr_t base = hpx_gas_alloc(block_bytes);
+
+  // for each block, initialize the future.
+  uint32_t args[] = {n, size};
+  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &args, sizeof(args));
+  dbg_check(e, "call of _block_init_action failed\n");
+
+  return base;
+}
+ 

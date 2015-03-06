@@ -182,7 +182,7 @@ static hpx_status_t _future_wait(lco_t *lco) {
 }
 
 /// initialize the future
-void future_init(future_t *f, int size) {
+static void _future_init(future_t *f, int size) {
   // the future vtable
   static const lco_class_t vtable = {
     .on_fini     = _future_fini,
@@ -212,7 +212,7 @@ static HPX_PINNED(_block_init, uint32_t *args) {
 
   // sequentially initialize each future
   for (uint32_t i = 0; i < nfutures; ++i) {
-    future_init((future_t*)(base + i * size), size);
+    _future_init((future_t*)(base + i * size), size);
   }
 
   return HPX_SUCCESS;
@@ -221,7 +221,7 @@ static HPX_PINNED(_block_init, uint32_t *args) {
 hpx_addr_t hpx_lco_future_new(int size) {
   future_t *local = libhpx_global_malloc(sizeof(*local) + size);
   dbg_assert(local);
-  future_init(local, size);
+  _future_init(local, size);
   return lva_to_gva(local);
 }
 
@@ -259,4 +259,34 @@ hpx_addr_t hpx_lco_future_array_at(hpx_addr_t array, int i, int size, int bsize)
   return hpx_addr_add(array, i * (sizeof(future_t) + size), block_bytes);
 }
 
+/// Initialize a block of array of lco.
+static HPX_PINNED(_block_local_init, uint32_t *args) {
+  void *lco = hpx_thread_current_local_target();
+  dbg_assert(lco);
+ 
+  for (int i = 0; i < args[0]; i++) {
+    void *addr = (void *)((uintptr_t)lco + i * (sizeof(future_t) + args[1]));
+    _future_init(addr, args[1]);
+  }
 
+  return HPX_SUCCESS;
+}
+
+/// Allocate an array of future local to the calling locality.
+/// @param          n The (total) number of futures to allocate
+/// @param       size The size of each future's value 
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_future_local_array_new(int n, int size) {
+  uint32_t lco_bytes = sizeof(future_t) + size;
+  dbg_assert(n * lco_bytes < UINT32_MAX);
+  uint32_t  block_bytes = n * lco_bytes;
+  hpx_addr_t base = hpx_gas_alloc(block_bytes);
+
+  // for each block, initialize the future.
+  uint32_t args[] = {n, size};
+  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &args, sizeof(args));
+  dbg_check(e, "call of _block_init_action failed\n");
+
+  return base;  
+}

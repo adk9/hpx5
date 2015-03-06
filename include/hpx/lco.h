@@ -30,8 +30,38 @@ typedef enum {
   HPX_TYPE_AND,
   HPX_TYPE_FUTURE,
   HPX_TYPE_CHAN,
+  HPX_TYPE_SEMA,
+  HPX_TYPE_GENCOUNT,
+  HPX_TYPE_NETFUTURE,
+  HPX_TYPE_USER_LCO,
+  HPX_TYPE_REDUCE,
+  HPX_TYPE_ALLGATHER,
+  HPX_TYPE_ALLREDUCE,
+  HPX_TYPE_ALLTOALL,
   HPX_TYPE_INVALID = UINT16_MAX
 } hpx_lco_type_t;
+
+/// Perform a commutative-associative reduction.
+///
+/// This is similar to an ALLREDUCE. It is statically sized at creation time,
+/// and is used cyclically. There is no non-blocking hpx_lco_get() operation, so
+/// users should wait to call it until they know that they need it.
+/// @{
+
+/// The commutative-associative (monoid) operation type.
+///
+/// Common operations would be min, max, +, *, etc. The runtime will pass the
+/// number of bytes that the allreduce was allocated with.
+typedef void (*hpx_monoid_id_t)(void *i, const size_t bytes);
+typedef void (*hpx_monoid_op_t)(void *i, const void *j, const size_t bytes);
+
+/// A predicate that "guards" the LCO.
+///
+/// This has to return true when the value pointed to by the buffer @p
+/// i is fully resolved and can be bound to the buffer associated
+/// with the LCO. All of the waiting threads are signalled once the
+/// predicate returns true.
+typedef bool (*hpx_predicate_t)(void *i, const size_t bytes);
 
 /// Delete an LCO.
 ///
@@ -266,14 +296,93 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int block_size);
 /// @returns The address of the ith future in the array.
 hpx_addr_t hpx_lco_future_array_at(hpx_addr_t base, int i, int size, int bsize);
 
-/// Allocate an array of LCO local to the calling locality.
-/// @param       type the type of the LCO
+/// Allocate an array of future LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate
-/// @param        arg The size of each lco's value or the number of inputs
-///                   to the and (must be >= 0)
+/// @param       size The size of each future's value 
 ///
 /// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_array_new(hpx_lco_type_t type, int n, int arg);
+hpx_addr_t hpx_lco_future_local_array_new(int n, int size);
+
+/// Allocate an array of and LCO local to the calling locality.
+/// @param          n The (total) number of lcos to allocate
+/// @param     inputs number of inputs to the and (must be >= 0)
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_and_local_array_new(int n, int inputs);
+
+/// Allocate an array of chan LCO local to the calling locality.
+/// @param          n The (total) number of lcos to allocate
+/// @param       size The size of each lco's value
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_chan_local_array_new(int n, int size);
+
+/// Allocate an array of reduce LCO local to the calling locality.
+/// @param          n The (total) number of lcos to allocate
+/// @param     inputs The static number of inputs to the reduction.
+/// @param       size The size of the data being reduced.
+/// @param         id An initialization function for the data, this is
+///                   used to initialize the data in every epoch.
+/// @param         op The commutative-associative operation we're
+///                   performing.
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_reduce_local_array_new(int n, int inputs, size_t size, 
+                                          hpx_monoid_id_t id, 
+                                          hpx_monoid_op_t op);
+
+
+/// Allocate an array of allgather LCO local to the calling locality.
+/// @param          n The (total) number of lcos to allocate
+/// @param     inputs Number of inputs to the allgather
+/// @param       size The size of the value for allgather LCO
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_allgather_local_array_new(int n, size_t inputs, size_t size);
+
+/// Allocate an array of allreduce LCO local to the calling locality.
+/// @param            n The (total) number of lcos to allocate
+/// @param participants The static number of participants in the reduction.
+/// @param      readers The static number of the readers of the result of the reduction.
+/// @param         size The size of the data being reduced.
+/// @param           id An initialization function for the data, this is
+///                     used to initialize the data in every epoch.
+/// @param           op The commutative-associative operation we're
+///                     performing.
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_allreduce_local_array_new(int n, size_t participants, 
+                                             size_t readers, size_t size,
+                                             hpx_monoid_id_t id, 
+                                             hpx_monoid_op_t op);
+
+/// Allocate an array of alltoall LCO local to the calling locality.
+/// @param          n The (total) number of lcos to allocate
+/// @param     inputs Number of inputs to alltoall LCO
+/// @param       size The size of the value that we're gathering
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_alltoall_local_array_new(int n, size_t inputs, size_t size);
+
+/// Allocate an array of user LCO local to the calling locality.
+/// @param          n The (total) number of lcos to allocate
+/// @param       size The size of the LCO Buffer
+/// @param         id An initialization function for the data, this is
+///                   used to initialize the data in every epoch.
+/// @param         op The commutative-associative operation we're
+///                   performing.
+/// @param  predicate Predicate to guard the LCO.
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size,
+                                        hpx_monoid_id_t id, hpx_monoid_op_t op,
+                                        hpx_predicate_t predicate);
+
+/// Generic LCO interface to return the LCO's structure size.
+/// @param       type the type of the LCO
+///
+/// @returns the size of the LCO type structure.
+size_t hpx_lco_size(hpx_lco_type_t type);
 
 /// Get an address of a lco in a lco array
 ///
@@ -284,7 +393,7 @@ hpx_addr_t hpx_lco_array_new(hpx_lco_type_t type, int n, int arg);
 ///
 /// @returns The address of the ith lco in the array.
 hpx_addr_t hpx_lco_array_at(hpx_lco_type_t type, hpx_addr_t base, int i,
-                                 int arg);
+                                 int size);
 
 /// Channels.
 ///
@@ -428,28 +537,6 @@ void hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync);
 ///
 /// @returns HPX_SUCCESS or an error code.
 hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen);
-
-/// Perform a commutative-associative reduction.
-///
-/// This is similar to an ALLREDUCE. It is statically sized at creation time,
-/// and is used cyclically. There is no non-blocking hpx_lco_get() operation, so
-/// users should wait to call it until they know that they need it.
-/// @{
-
-/// The commutative-associative (monoid) operation type.
-///
-/// Common operations would be min, max, +, *, etc. The runtime will pass the
-/// number of bytes that the allreduce was allocated with.
-typedef void (*hpx_monoid_id_t)(void *i, const size_t bytes);
-typedef void (*hpx_monoid_op_t)(void *i, const void *j, const size_t bytes);
-
-/// A predicate that "guards" the LCO.
-///
-/// This has to return true when the value pointed to by the buffer @p
-/// i is fully resolved and can be bound to the buffer associated
-/// with the LCO. All of the waiting threads are signalled once the
-/// predicate returns true.
-typedef bool (*hpx_predicate_t)(void *i, const size_t bytes);
 
 /// Allocate a new reduction LCO.
 ///
