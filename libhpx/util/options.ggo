@@ -50,14 +50,6 @@ enum optional
 option "hpx-statistics" - "print HPX runtime statistics"
 flag off
 
-option "hpx-sendlimit" - "HPX transport-specific send limit"
-typestr="requests"
-long optional
-
-option "hpx-recvlimit" - "HPX transport-specific recv limit"
-typestr="requests"
-long optional
-
 option "hpx-configfile" - "HPX runtime configuration file"
 typestr="file"
 string optional
@@ -107,6 +99,20 @@ option "hpx-trace-at" - "set the localities to trace at"
 typestr="[localities]"
 int optional multiple
 
+section "ISIR Network Options"
+
+option "hpx-isir-testwindow" - "number of ISIR requests to test in progress loop"
+typestr="requests"
+long optional
+
+option "hpx-isir-sendlimit" - "ISIR network send limit"
+typestr="requests"
+long optional
+
+option "hpx-isir-recvlimit" - "ISIR network recv limit"
+typestr="requests"
+long optional
+
 section "PWC Network Options"
 
 option "hpx-pwc-parcelbuffersize" - "set the size of p2p recv buffers for parcel sends"
@@ -116,7 +122,6 @@ long optional
 option "hpx-pwc-parceleagerlimit" - "set the largest eager parcel size (header inclusive)" 
 typestr="bytes"
 long optional
-
 
 section "Photon Transport Options"
 
