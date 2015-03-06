@@ -121,16 +121,25 @@ static bitmap_t *_new_bitmap(const heap_t *heap) {
 }
 
 static void* _mmap_heap(heap_t *const heap) {
-  const int prot  = PROT_READ | PROT_WRITE;
-  const int flags = HPX_HUGETLBFS_MAP_ANON | MAP_PRIVATE;
+  static const int prot  = PROT_READ | PROT_WRITE;
+#if defined(HAVE_HUGETLBFS)
+  static const int flags = MAP_PRIVATE;
+#elif defined(__APPLE__)
+  static const int flags = MAP_ANON | MAP_PRIVATE;
+# else
+  static const int flags = MAP_ANONYMOUS | MAP_PRIVATE;
+#endif
+
   const uint32_t chunk_lg_align = ceil_log2_64(heap->bytes_per_chunk);
-  int hp_fd = -1;
+
 #if defined(HAVE_HUGETLBFS)
   log_gas("Using huge pages.\n");
-  hp_fd = hugetlbfs_unlinked_fd();
+  int hp_fd = hugetlbfs_unlinked_fd();
   if (hp_fd < 1) {
     dbg_error("Failed to open huge pages file descriptor.");
   }
+#else
+  int hp_fd = -1;
 #endif
 
   for (unsigned int i = GPA_MAX_LG_BSIZE; i >= chunk_lg_align; ++i) {
