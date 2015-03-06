@@ -25,7 +25,6 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
-#include "libhpx/transport.h"
 #include "libhpx/parcel.h"
 
 #include "commands.h"
@@ -33,12 +32,11 @@
 #include "peer.h"
 #include "pwc.h"
 #include "pwc_buffer.h"
-
-// Define the transports allowed for the PWC network
-static int PWC_TRANSPORTS[] = {HPX_TRANSPORT_PHOTON};
+#include "transport.h"
 
 typedef struct pwc_network {
   network_t            vtable;
+  void             *transport;
   uint32_t               rank;
   uint32_t              ranks;
   uint32_t parcel_buffer_size;
@@ -268,19 +266,8 @@ peer_t *pwc_get_peer(int src) {
 
 network_t *network_pwc_funneled_new(const config_t *cfg, boot_t *boot,
                                     gas_t *gas) {
-  int e;
-
   if (boot->type == HPX_BOOT_SMP) {
     log_net("will not instantiate photon for the SMP boot network\n");
-    return NULL;
-  }
-
-  e = network_supported_transport(here->transport, PWC_TRANSPORTS,
-                  _HPX_NELEM(PWC_TRANSPORTS));
-  if (e) {
-    log_error("%s network is not supported with current transport: %s\n",
-          HPX_NETWORK_TO_STRING[HPX_NETWORK_PWC],
-          HPX_TRANSPORT_TO_STRING[here->transport->type]);
     return NULL;
   }
 
@@ -290,6 +277,13 @@ network_t *network_pwc_funneled_new(const config_t *cfg, boot_t *boot,
   pwc_network_t *pwc = malloc(sizeof(*pwc) + ranks * sizeof(peer_t));
   if (!pwc) {
     dbg_error("could not allocate put-with-completion network\n");
+  }
+
+  // Allocate the requested transport.
+  pwc->transport = pwc_transport_new(cfg, boot);
+  if (!pwc->transport) {
+    log_error("PWC network could not initialize a transport.\n");
+    goto unwind;
   }
 
   // Store some of the salient information in the network structure.
@@ -316,7 +310,7 @@ network_t *network_pwc_funneled_new(const config_t *cfg, boot_t *boot,
 
   // Initialize the network's virtual function table.
   pwc->vtable.type = HPX_NETWORK_PWC;
-  pwc->vtable.transports = PWC_TRANSPORTS;
+  pwc->vtable.transports = NULL;
   pwc->vtable.delete = _pwc_delete;
   pwc->vtable.progress = _pwc_progress;
   pwc->vtable.send = _pwc_send;
@@ -333,6 +327,7 @@ network_t *network_pwc_funneled_new(const config_t *cfg, boot_t *boot,
               pwc->parcel_eager_limit, pwc->parcel_buffer_size);
   }
 
+  int e;
   peer_t local;
   // Prepare the null segment.
   segment_t *null = &local.segments[SEGMENT_NULL];

@@ -39,7 +39,6 @@ struct boot;
 struct config;
 struct network;
 struct scheduler;
-struct transport;
 /// @}
 
 /// The locality object.
@@ -50,9 +49,7 @@ struct transport;
 ///                  as some basic, IP-based networking functionality.
 /// @field       gas The global address space object. This provides global
 ///                  memory allocation and address space functionality.
-/// @field transport The byte transport object. This provides a basic,
-///                  high-speed byte transport interface.
-/// @field   network The parcel transport layer. This provides an active message
+/// @field   network The network layer. This provides an active message
 ///                  interface targeting global addresses.
 /// @field     sched The lightweight thread scheduler. This provides the
 ///                  infrastructure required to create lightweight threads, and
@@ -63,18 +60,12 @@ typedef struct locality {
   uint32_t                     ranks;
   struct boot                  *boot;
   struct gas                    *gas;
-  struct transport        *transport;
   struct network            *network;
   struct scheduler            *sched;
   struct config              *config;
   const struct action_table *actions;
   hwloc_topology_t          topology;
-} locality_t
-#ifdef __ARMEL__
-HPX_ALIGNED(8)
-#endif
-;
-
+} locality_t;
 
 /// Inter-locality action interface.
 /// @{

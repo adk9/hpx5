@@ -35,7 +35,6 @@
 #include "libhpx/network.h"
 #include "libhpx/scheduler.h"
 #include "libhpx/system.h"
-#include "libhpx/transport.h"
 #include "network/probe.h"
 
 static HPX_ACTION(_hpx_143_fix, void *UNUSED) {
@@ -63,11 +62,6 @@ static void _cleanup(locality_t *l) {
   if (l->gas) {
     gas_delete(l->gas);
     l->gas = NULL;
-  }
-
-  if (l->transport) {
-    transport_delete(l->transport);
-    l->transport = NULL;
   }
 
   dbg_fini();
@@ -157,20 +151,8 @@ int hpx_init(int *argc, char ***argv) {
     log("error detected while initializing instrumentation\n");
   }
 
-  // Initialize the network.
-
-
-  // byte transport
-  here->transport = transport_new(here->config->transport,
-                                  here->config);
-  if (!here->transport) {
-    status = log_error("failed to create transport.\n");
-    goto unwind1;
-  }
-
-  // global address space
-  here->gas = gas_new(here->config->heapsize, here->boot, here->transport,
-                      here->config->gas);
+  // Allocate the global heap.
+  here->gas = gas_new(here->config, here->boot);
   if (!here->gas) {
     status = log_error("failed to create the global address space.\n");
     goto unwind1;

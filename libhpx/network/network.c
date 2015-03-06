@@ -40,7 +40,7 @@ static network_t *_default(const config_t *cfg, struct boot *boot,
   }
 #endif
 
-  network = network_smp_new();
+  network = network_smp_new(cfg, boot);
   return network;
 }
 
@@ -68,7 +68,7 @@ network_t *network_new(const config_t *cfg, struct boot *boot, struct gas *gas)
     break;
 
    case HPX_NETWORK_SMP:
-    network = network_smp_new();
+    network = network_smp_new(cfg, boot);
     break;
 
    default:

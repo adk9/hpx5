@@ -14,12 +14,11 @@
 #define LIBHPX_GAS_H
 
 #include <hpx/hpx.h>
-#include "libhpx/config.h"
+#include <libhpx/config.h>
 
 /// Forward declarations.
 /// @{
 struct boot;
-struct transport;
 /// @}
 
 /// Generic object oriented interface to the global address space.
@@ -75,11 +74,11 @@ typedef struct gas {
 gas_t *gas_smp_new(void)
   HPX_INTERNAL;
 
-gas_t *gas_pgas_new(size_t heap_size, struct boot *, struct transport *)
-  HPX_INTERNAL HPX_NON_NULL(2,3);
+gas_t *gas_pgas_new(const config_t *cfg, struct boot *boot)
+  HPX_INTERNAL HPX_NON_NULL(1,2);
 
-gas_t *gas_new(size_t heap_size, struct boot *, struct transport *, hpx_gas_t type)
-  HPX_INTERNAL HPX_NON_NULL(2,3);
+gas_t *gas_new(const config_t *cfg, struct boot *boot)
+  HPX_INTERNAL HPX_NON_NULL(1,2);
 
 inline static void gas_delete(gas_t *gas) {
   assert(gas && gas->delete);
