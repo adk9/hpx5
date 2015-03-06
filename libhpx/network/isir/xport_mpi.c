@@ -142,6 +142,7 @@ isir_xport_t *isir_xport_new_mpi(const config_t *cfg) {
   dbg_assert(xport);
   _init_mpi();
 
+  xport->type           = HPX_TRANSPORT_MPI;
   xport->check_tag      = _mpi_check_tag;
   xport->sizeof_request = _mpi_sizeof_request;
   xport->sizeof_status  = _mpi_sizeof_status;
