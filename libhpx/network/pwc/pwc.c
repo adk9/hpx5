@@ -31,12 +31,11 @@
 #include "parcel_utils.h"
 #include "peer.h"
 #include "pwc.h"
-#include "pwc_buffer.h"
-#include "transport.h"
+#include "xport.h"
 
 typedef struct pwc_network {
   network_t            vtable;
-  void             *transport;
+  pwc_xport_t          *xport;
   uint32_t               rank;
   uint32_t              ranks;
   uint32_t parcel_buffer_size;
@@ -47,16 +46,6 @@ typedef struct pwc_network {
   int          UNUSED_PADDING;
   peer_t                peers[];
 } pwc_network_t;
-
-/// Utility to wrap a poll completion.
-static int _poll(unsigned type, int rank, uint64_t *op, int *remaining) {
-  int flag = 0;
-  int e = photon_probe_completion(rank, &flag, remaining, op, type);
-  if (PHOTON_OK != e) {
-    dbg_error("photon probe error\n");
-  }
-  return flag;
-}
 
 static HPX_USED const char *_straction(hpx_action_t id) {
   dbg_assert(here && here->actions);
@@ -72,7 +61,7 @@ static void _pwc_delete(network_t *network) {
     int remaining;
     command_t command;
     do {
-      _poll(PHOTON_PROBE_EVQ, here->rank, &command, &remaining);
+      pwc->xport->test(&command, &remaining);
     } while (remaining > 0);
     boot_barrier(here->boot);
   }
@@ -80,13 +69,15 @@ static void _pwc_delete(network_t *network) {
   for (int i = 0; i < pwc->ranks; ++i) {
     peer_t *peer = &pwc->peers[i];
     if (i == pwc->rank) {
-      segment_fini(&peer->segments[SEGMENT_NULL]);
-      segment_fini(&peer->segments[SEGMENT_HEAP]);
-      segment_fini(&peer->segments[SEGMENT_PEERS]);
-      segment_fini(&peer->segments[SEGMENT_EAGER]);
+      segment_fini(&peer->segments[SEGMENT_NULL], pwc->xport);
+      segment_fini(&peer->segments[SEGMENT_HEAP], pwc->xport);
+      segment_fini(&peer->segments[SEGMENT_PEERS], pwc->xport);
+      segment_fini(&peer->segments[SEGMENT_EAGER], pwc->xport);
     }
     peer_fini(peer);
   }
+
+  pwc_xport_delete(pwc->xport);
 
   if (pwc->eager) {
     free(pwc->eager);
@@ -101,7 +92,7 @@ static void _probe_local(pwc_network_t *pwc) {
 
   // Each time through the loop, we deal with local completions.
   command_t command;
-  while (_poll(PHOTON_PROBE_EVQ, PHOTON_ANY_SOURCE, &command, NULL)) {
+  while (pwc->xport->test(&command, NULL)) {
     hpx_addr_t op = command_get_op(command);
     log_net("processing local command: %s\n", _straction(op));
     int e = hpx_xcall(HPX_HERE, op, HPX_NULL, rank, command);
@@ -113,9 +104,9 @@ static void _probe_local(pwc_network_t *pwc) {
 ///
 /// This function claims to return a list of parcels, but it actually processes
 /// all messages internally, using the local work-queue directly.
-static hpx_parcel_t *_probe(network_t *network, int rank) {
+static hpx_parcel_t *_probe(pwc_network_t *pwc, int rank) {
   command_t command;
-  while (_poll(PHOTON_PROBE_LEDGER, rank, &command, NULL)) {
+  while (pwc->xport->probe(&command, NULL, rank)) {
     hpx_addr_t op = command_get_op(command);
     log_net("processing command %s from rank %d\n", _straction(op), rank);
     int e = hpx_xcall(HPX_HERE, op, HPX_NULL, rank, command);
@@ -132,7 +123,7 @@ static int _pwc_progress(network_t *network) {
   pwc_network_t *pwc = (void*)network;
   _probe_local(pwc);
   for (int i = 0, e = pwc->ranks; i < e; ++i) {
-    _probe(network, i);
+    _probe(pwc, i);
   }
   return 0;
 }
@@ -230,15 +221,12 @@ static void _pwc_set_flush(network_t *network) {
 /// @returns  LIBHPX_OK The peer was initialized successfully.
 static int _init_peer(pwc_network_t *pwc, peer_t *peer, int self, int rank) {
   peer->rank = rank;
-  int status = pwc_buffer_init(&peer->pwc, rank, 8);
-  if (LIBHPX_OK != status) {
-    return log_error("could not initialize the pwc buffer\n");
-  }
+  peer->xport = pwc->xport;
 
   // Figure out where I receive from in my eager buffer w.r.t. this peer.
   uint32_t size = pwc->parcel_buffer_size;
   char *base = pwc->eager + rank * size;
-  status = eager_buffer_init(&peer->rx, peer, 0, base, size);
+  int status = eager_buffer_init(&peer->rx, peer, 0, base, size);
   if (LIBHPX_OK != status) {
     return log_error("could not initialize the parcel rx endpoint\n");
   }
@@ -280,8 +268,8 @@ network_t *network_pwc_funneled_new(const config_t *cfg, boot_t *boot,
   }
 
   // Allocate the requested transport.
-  pwc->transport = pwc_transport_new(cfg, boot);
-  if (!pwc->transport) {
+  pwc->xport = pwc_xport_new(cfg, boot);
+  if (!pwc->xport) {
     log_error("PWC network could not initialize a transport.\n");
     goto unwind;
   }
@@ -331,7 +319,7 @@ network_t *network_pwc_funneled_new(const config_t *cfg, boot_t *boot,
   peer_t local;
   // Prepare the null segment.
   segment_t *null = &local.segments[SEGMENT_NULL];
-  e = segment_init(null, NULL, 0);
+  e = segment_init(null, pwc->xport, NULL, 0);
   if (LIBHPX_OK != e) {
     log_error("could not initialize the NULL segment\n");
     goto unwind;
@@ -339,7 +327,7 @@ network_t *network_pwc_funneled_new(const config_t *cfg, boot_t *boot,
 
   // Register the heap segment.
   segment_t *heap = &local.segments[SEGMENT_HEAP];
-  e = segment_init(heap, gas_local_base(here->gas), gas_local_size(here->gas));
+  e = segment_init(heap, pwc->xport, gas_local_base(here->gas), gas_local_size(here->gas));
   if (LIBHPX_OK != e) {
     log_error("could not register the heap segment\n");
     goto unwind;
@@ -347,7 +335,7 @@ network_t *network_pwc_funneled_new(const config_t *cfg, boot_t *boot,
 
   // Register the eager segment.
   segment_t *eager = &local.segments[SEGMENT_EAGER];
-  e = segment_init(eager, pwc->eager, pwc->eager_bytes);
+  e = segment_init(eager, pwc->xport, pwc->eager, pwc->eager_bytes);
   if (LIBHPX_OK != e) {
     log_error("could not register the eager segment\n");
     goto unwind;
@@ -355,7 +343,7 @@ network_t *network_pwc_funneled_new(const config_t *cfg, boot_t *boot,
 
   // Register the peers segment.
   segment_t *peers = &local.segments[SEGMENT_PEERS];
-  e = segment_init(peers, (void*)pwc->peers, pwc->ranks * sizeof(peer_t));
+  e = segment_init(peers, pwc->xport, (void*)pwc->peers, pwc->ranks * sizeof(peer_t));
   if (LIBHPX_OK != e) {
     log_error("could not register the peers segment\n");
     goto unwind;

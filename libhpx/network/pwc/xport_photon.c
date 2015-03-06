@@ -17,17 +17,11 @@
 #include <photon.h>
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
-#include "transport.h"
-
-typedef struct photon_config_t photon_config_t;
-
-typedef struct {
-  hpx_transport_t type;
-  struct photon_config_t cfg;
-} photon_transport_t;
+#include <libhpx/libhpx.h>
+#include "xport.h"
 
 static void _init_photon_config(const config_t *cfg, boot_t *boot,
-                                photon_config_t *pcfg) {
+                                struct photon_config_t *pcfg) {
   pcfg->meta_exch               = PHOTON_EXCH_EXTERNAL;
   pcfg->nproc                   = boot_n_ranks(boot);
   pcfg->address                 = boot_rank(boot);
@@ -50,21 +44,108 @@ static void _init_photon_config(const config_t *cfg, boot_t *boot,
   pcfg->backend             = (char*)HPX_PHOTON_BACKEND_TO_STRING[cfg->photon_backend];
 }
 
-static void _init_photon(photon_config_t *pcfg) {
+static void _init_photon(const config_t *cfg, boot_t *boot) {
   if (photon_initialized()) {
     return;
   }
 
-  if (photon_init(pcfg) != PHOTON_OK) {
+  struct photon_config_t pcfg;
+  _init_photon_config(cfg, boot, &pcfg);
+  if (photon_init(&pcfg) != PHOTON_OK) {
     dbg_error("failed to initialize transport.\n");
   }
 }
 
-void *pwc_transport_new_photon(const config_t *cfg, boot_t *boot) {
-  photon_transport_t *photon = malloc(sizeof(*photon));
+static size_t _photon_sizeof_rdma_key(void) {
+  return sizeof(struct photon_buffer_priv_t);
+}
+
+static void _photon_clear(void *key) {
+  memset(key, 0, sizeof(struct photon_buffer_priv_t));
+}
+
+static void _photon_pin(void *base, size_t n, void *key) {
+  if (PHOTON_OK != photon_register_buffer(base, n)) {
+    dbg_error("failed to register segment with Photon\n");
+  }
+  else {
+    log_net("registered segment (%p, %lu)\n", base, n);
+  }
+
+  if (PHOTON_OK != photon_get_buffer_private(base, n, key)) {
+    dbg_error("failed to segment key from Photon\n");
+  }
+}
+
+static void _photon_unpin(void *base, size_t n) {
+  if (PHOTON_OK != photon_unregister_buffer(base, n)) {
+    log_net("could not unregister the local heap segment %p\n", base);
+  }
+}
+
+static int _photon_pwc(int r, void *rva, const void *rolva, size_t n,
+                       uint64_t lsync, uint64_t rsync, void *rkey) {
+  int flag = ((lsync) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
+             ((rsync) ? 0 : PHOTON_REQ_PWC_NO_RCE);
+
+  struct photon_buffer_priv_t *key = rkey;
+  void *lva = (void*)rolva;
+  int e = photon_put_with_completion(r, lva, n, rva, *key, lsync, rsync, flag);
+  switch (e) {
+   case PHOTON_OK:
+    return LIBHPX_OK;
+   case PHOTON_ERROR_RESOURCE:
+    return LIBHPX_RETRY;
+   default:
+    return log_error("could not initiate a put-with-completion\n");
+  }
+}
+
+static int _photon_gwc(int r, void *lva, const void *rorva, size_t n,
+                       uint64_t lsync, void *rkey) {
+  struct photon_buffer_priv_t *key = rkey;
+  void *rva = (void*)rorva;
+  int e = photon_get_with_completion(r, lva, n, rva, *key, lsync, 0);
+  dbg_assert_str(PHOTON_OK == e, "failed transport get operation\n");
+  return LIBHPX_OK;
+
+}
+
+static int _poll(uint64_t *op, int *remaining, int src, int type) {
+  int flag = 0;
+  int e = photon_probe_completion(src, &flag, remaining, op, type);
+  if (PHOTON_OK != e) {
+    dbg_error("photon probe error\n");
+  }
+  return flag;
+}
+
+static int _photon_test(uint64_t *op, int *remaining) {
+  return _poll(op, remaining, PHOTON_ANY_SOURCE, PHOTON_PROBE_EVQ);
+}
+
+static int _photon_probe(uint64_t *op, int *remaining, int src) {
+  return _poll(op, remaining, src, PHOTON_PROBE_LEDGER);
+}
+
+static void _photon_delete(void *photon) {
+  free(photon);
+}
+
+pwc_xport_t *pwc_xport_new_photon(const config_t *cfg, boot_t *boot) {
+  pwc_xport_t *photon = malloc(sizeof(*photon));
   dbg_assert(photon);
+  _init_photon(cfg, boot);
+
   photon->type = HPX_TRANSPORT_PHOTON;
-  _init_photon_config(cfg, boot, &photon->cfg);
-  _init_photon(&photon->cfg);
+  photon->delete = _photon_delete;
+  photon->sizeof_rdma_key = _photon_sizeof_rdma_key;
+  photon->clear = _photon_clear;
+  photon->pin = _photon_pin;
+  photon->unpin = _photon_unpin;
+  photon->pwc = _photon_pwc;
+  photon->gwc = _photon_gwc;
+  photon->test = _photon_test;
+  photon->probe = _photon_probe;
   return photon;
 }

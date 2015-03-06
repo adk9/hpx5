@@ -15,11 +15,11 @@
 
 #include "commands.h"
 #include "eager_buffer.h"
-#include "pwc_buffer.h"
 #include "segment.h"
 #include "send_buffer.h"
 
 struct gas;
+struct pwc_xport;
 
 /// Each peer maintains these RDMA segments for remote access.
 typedef enum {
@@ -50,13 +50,13 @@ typedef enum {
 /// Each source has a reference to the remote peer's receive buffer, which it
 /// accesses through its local send buffer.
 typedef struct peer {
-  uint32_t         rank;                        // the peer's rank
-  const uint32_t UNUSED;                        // padding
-  segment_t    segments[SEGMENT_MAX];           // RDMA segments
-  pwc_buffer_t      pwc;                        // the pwc buffer
-  eager_buffer_t     rx;                        // the eager tx endpoint
-  eager_buffer_t     tx;                        // the eager rx endpoint
-  send_buffer_t    send;                        // the parcel send buffer
+  uint32_t           rank;                      // the peer's rank
+  const uint32_t   UNUSED;                      // padding
+  segment_t      segments[SEGMENT_MAX];         // RDMA segments
+  struct pwc_xport *xport;
+  eager_buffer_t       rx;                      // the eager tx endpoint
+  eager_buffer_t       tx;                      // the eager rx endpoint
+  send_buffer_t      send;                      // the parcel send buffer
 } peer_t;
 
 /// Finalize a peer structure.
@@ -77,17 +77,13 @@ void peer_fini(peer_t *peer)
 /// @param   segment_id The segment corresponding to @p roff.
 ///
 /// @return  LIBHPX_OK The operation was successful.
-static inline int peer_pwc(peer_t *peer, size_t roff, const void *lva, size_t n,
-                           command_t lsync, command_t rsync, segid_t segid) {
-  pwc_buffer_t *pwc = &peer->pwc;
-  segment_t *segment = &peer->segments[segid];
-  return pwc_buffer_put(pwc, roff, lva, n, lsync, rsync, segment);
-}
+int peer_pwc(peer_t *peer, size_t roff, const void *lva, size_t n,
+             command_t lsync, command_t rsync, segid_t segid)
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Simply put a command.
-static inline int peer_put_command(peer_t *p, command_t rsync) {
-  return peer_pwc(p, 0, NULL, 0, 0, rsync, SEGMENT_NULL);
-}
+int peer_put_command(peer_t *p, command_t rsync)
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Perform a parcel send operation to a specific peer.
 ///
@@ -103,13 +99,12 @@ static inline int peer_put_command(peer_t *p, command_t rsync) {
 /// @param        lsync An event identifier representing local command.
 ///
 /// @returns  LIBHPX_OK The send operation was initiated successfully..
-static inline int peer_send(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync) {
-  return send_buffer_send(&peer->send, p, lsync);
-}
+int peer_send(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync)
+  HPX_INTERNAL HPX_NON_NULL(1,2);
 
 /// Perform a lazy parcel send operation.
 int peer_send_rendezvous(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync)
-  HPX_INTERNAL HPX_NON_NULL(1, 2);
+  HPX_INTERNAL HPX_NON_NULL(1,2);
 
 /// Perform a get operation from a specific peer.
 ///
