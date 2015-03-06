@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <stdlib.h>
 #include <mpi.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
