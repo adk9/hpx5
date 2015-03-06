@@ -39,8 +39,10 @@
 typedef struct {
   network_t       vtable;
   gas_t             *gas;
+  isir_xport_t    *xport;
   volatile int     flush;
-  _PAD(sizeof(network_t) + sizeof(gas_t*) + sizeof(void*) + sizeof(int));
+  _PAD(sizeof(network_t) + sizeof(gas_t*) + sizeof(isir_xport_t*) +
+       sizeof(int));
   two_lock_queue_t sends;
   two_lock_queue_t recvs;
   isend_buffer_t  isends;
@@ -81,6 +83,7 @@ static void _funneled_delete(network_t *network) {
   sync_two_lock_queue_fini(&this->sends);
   sync_two_lock_queue_fini(&this->recvs);
 
+  isir_xport_delete(this->xport);
   free(this);
 }
 
@@ -209,8 +212,8 @@ network_t *network_isir_funneled_new(const config_t *cfg) {
     return NULL;
   }
 
-  struct isir_xport *xport = isir_xport_new(cfg);
-  if (!xport) {
+  network->xport = isir_xport_new(cfg);
+  if (!network->xport) {
     log_error("could not initialize a transport.\n");
     free(network);
     return NULL;
@@ -232,8 +235,8 @@ network_t *network_isir_funneled_new(const config_t *cfg) {
   sync_two_lock_queue_init(&network->sends, NULL);
   sync_two_lock_queue_init(&network->recvs, NULL);
 
-  isend_buffer_init(&network->isends, xport, 64, cfg->sendlimit);
-  irecv_buffer_init(&network->irecvs, xport, 64, cfg->recvlimit);
+  isend_buffer_init(&network->isends, network->xport, 64, cfg->sendlimit);
+  irecv_buffer_init(&network->irecvs, network->xport, 64, cfg->recvlimit);
 
   return &network->vtable;
 }

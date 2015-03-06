@@ -117,6 +117,10 @@ static void _mpi_finish(void *status, int *src, int *bytes) {
   *src = s->MPI_SOURCE;
 }
 
+static void _mpi_delete(void *mpi) {
+  free(mpi);
+}
+
 static void _init_mpi(void) {
   int init = 0;
   MPI_Initialized(&init);
@@ -143,6 +147,7 @@ isir_xport_t *isir_xport_new_mpi(const config_t *cfg) {
   _init_mpi();
 
   xport->type           = HPX_TRANSPORT_MPI;
+  xport->delete         = _mpi_delete;
   xport->check_tag      = _mpi_check_tag;
   xport->sizeof_request = _mpi_sizeof_request;
   xport->sizeof_status  = _mpi_sizeof_status;
