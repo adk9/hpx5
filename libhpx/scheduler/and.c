@@ -135,7 +135,7 @@ static const lco_class_t _and_vtable = {
   .on_reset    = _and_reset
 };
 
-void and_init(and_t *and, intptr_t value) {
+static void _and_init(and_t *and, intptr_t value) {
   assert(value >= 0);
   lco_init(&and->lco, &_and_vtable);
   cvar_reset(&and->barrier);
@@ -151,7 +151,7 @@ hpx_addr_t hpx_lco_and_new(intptr_t limit) {
   and_t *and = libhpx_global_malloc(sizeof(*and));
   dbg_assert_str(and, "Could not malloc global memory\n");
   log_lco("allocated lco %p\n", (void*)and);
-  and_init(and, limit);
+  _and_init(and, limit);
   return lva_to_gva(and);;
 }
 
@@ -168,3 +168,36 @@ void hpx_lco_and_set_num(hpx_addr_t and, int sum, hpx_addr_t rsync) {
   hpx_lco_wait(lsync);
   hpx_lco_delete(lsync, HPX_NULL);
 }
+
+/// Initialize a block of array of and lco.
+static HPX_PINNED(_block_local_init, uint32_t *args) {
+  void *lco = hpx_thread_current_local_target();
+  dbg_assert(lco);
+
+  for (int i = 0; i < args[0]; i++) {
+    void *addr = (void *)((uintptr_t)lco + i * sizeof(and_t));
+    _and_init(addr, (intptr_t)args[1]);
+  }
+  return HPX_SUCCESS;
+}
+
+/// Allocate an array of and LCO local to the calling locality.
+/// @param          n The (total) number of lcos to allocate
+/// @param     inputs number of inputs to the and (must be >= 0)
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_and_local_array_new(int n, int arg) {
+  // Get the sizeof lco class structure
+  uint32_t lco_bytes = sizeof(and_t);
+  dbg_assert(n * lco_bytes < UINT32_MAX);
+  uint32_t  block_bytes = n * lco_bytes;
+  hpx_addr_t base = hpx_gas_alloc(block_bytes);
+
+  uint32_t args[] = {n, arg};
+  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &args, sizeof(args));
+  dbg_check(e, "call of _block_init_action failed\n");
+
+  // return the base address of the allocation
+  return base;
+}
+

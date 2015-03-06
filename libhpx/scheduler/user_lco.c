@@ -28,17 +28,6 @@
 #include "cvar.h"
 #include "lco.h"
 
-/// Generic LCO interface.
-/// @{
-typedef struct {
-  lco_t                 lco;
-  cvar_t               cvar;
-  hpx_monoid_id_t        id;
-  hpx_monoid_op_t        op;
-  hpx_predicate_t predicate;
-  void                 *buf;
-} _user_lco_t;
-
 /// Deletes a user-defined LCO.
 static void _user_lco_fini(lco_t *lco) {
   if (!lco) {
@@ -46,7 +35,7 @@ static void _user_lco_fini(lco_t *lco) {
   }
 
   lco_lock(lco);
-  _user_lco_t *u = (_user_lco_t *)lco;
+  user_lco_t *u = (user_lco_t *)lco;
   if (u->buf) {
     free(u->buf);
   }
@@ -56,14 +45,14 @@ static void _user_lco_fini(lco_t *lco) {
 
 /// Handle an error condition.
 static void _user_lco_error(lco_t *lco, hpx_status_t code) {
-  _user_lco_t *u = (_user_lco_t *)lco;
+  user_lco_t *u = (user_lco_t *)lco;
   lco_lock(lco);
   scheduler_signal_error(&u->cvar, code);
   lco_unlock(lco);
 }
 
 static void _user_lco_reset(lco_t *lco) {
-  _user_lco_t *u = (_user_lco_t *)lco;
+  user_lco_t *u = (user_lco_t *)lco;
   lco_lock(lco);
   dbg_assert_str(cvar_empty(&u->cvar),
                  "Reset on an LCO that has waiting threads.\n");
@@ -73,7 +62,7 @@ static void _user_lco_reset(lco_t *lco) {
 
 /// Invoke an operation on the user-defined LCO's buffer.
 static void _user_lco_set(lco_t *lco, int size, const void *from) {
-  _user_lco_t *u = (_user_lco_t *)lco;
+  user_lco_t *u = (user_lco_t *)lco;
 
   lco_lock(lco);
   // perform the op()
@@ -87,7 +76,7 @@ static void _user_lco_set(lco_t *lco, int size, const void *from) {
 
 /// Get the user-defined LCO's buffer.
 static hpx_status_t _user_lco_get(lco_t *lco, int size, void *out) {
-  _user_lco_t *u = (_user_lco_t *)lco;
+  user_lco_t *u = (user_lco_t *)lco;
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
 
@@ -115,8 +104,8 @@ static hpx_status_t _user_lco_wait(lco_t *lco) {
   return _user_lco_get(lco, 0, NULL);
 }
 
-static void _user_lco_init(_user_lco_t *u, size_t size, hpx_monoid_op_t op,
-                           hpx_monoid_id_t id, hpx_predicate_t predicate) {
+static void _user_lco_init(user_lco_t *u, size_t size, hpx_monoid_id_t id,
+                           hpx_monoid_op_t op, hpx_predicate_t predicate) {
   // vtable
   static const lco_class_t vtable = {
     .on_fini     = _user_lco_fini,
@@ -152,8 +141,60 @@ static void _user_lco_init(_user_lco_t *u, size_t size, hpx_monoid_op_t op,
 
 hpx_addr_t hpx_lco_user_new(size_t size, hpx_monoid_id_t id, hpx_monoid_op_t op,
                             hpx_predicate_t predicate) {
-  _user_lco_t *u = libhpx_global_malloc(sizeof(*u));
+  user_lco_t *u = libhpx_global_malloc(sizeof(*u));
   assert(u);
-  _user_lco_init(u, size, op, id, predicate);
+  _user_lco_init(u, size, id, op, predicate);
   return lva_to_gva(u);
+}
+
+typedef struct {
+  int                     n;
+  size_t               size;
+  hpx_monoid_id_t        id;
+  hpx_monoid_op_t        op;
+  hpx_predicate_t predicate;
+} _user_array_args_t;
+
+/// Initialize a block of array of lco.
+static HPX_PINNED(_block_local_init, const _user_array_args_t *args) {
+  _user_array_args_t *lco = hpx_thread_current_local_target();
+  dbg_assert(lco);
+
+  for (int i = 0; i < args->n; i++) {
+    void *addr = (void *)((uintptr_t)lco + i * (sizeof(user_lco_t) + args->size));
+    _user_lco_init(addr, args->size, args->id, args->op, args->predicate);
+  }
+
+  return HPX_SUCCESS;
+}
+
+/// Allocate an array of user LCO local to the calling locality.
+/// @param          n The (total) number of lcos to allocate
+/// @param       size The size of the LCO Buffer
+/// @param         id An initialization function for the data, this is
+///                   used to initialize the data in every epoch.
+/// @param         op The commutative-associative operation we're
+///                   performing.
+/// @param  predicate Predicate to guard the LCO.
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size,
+                                        hpx_monoid_id_t id, hpx_monoid_op_t op,
+                                        hpx_predicate_t predicate) {
+  _user_array_args_t args;
+  uint32_t lco_bytes = sizeof(user_lco_t) + size;
+  dbg_assert(n * lco_bytes < UINT32_MAX);
+  uint32_t  block_bytes = n * lco_bytes;
+  hpx_addr_t base = hpx_gas_alloc(block_bytes);
+
+  args.n = n;
+  args.size = size;
+  args.id   = id;
+  args.op   = op;
+  args.predicate = predicate;
+  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &args, sizeof(args));
+  dbg_check(e, "call of _block_init_action failed\n");
+
+  // return the base address of the allocation
+  return base;
 }

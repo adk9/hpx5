@@ -44,17 +44,10 @@
 /// variables, the state bit array, and the data (or potentially in the
 /// future, a pointer to it).
 /// This structure is used very differently than the hpx_netfuture_t type.
-/// There will be exactly one instance of _netfuture_t for each individual
+/// There will be exactly one instance of netfuture_t for each individual
 /// netfuture somewhere in the system. For hpx_netfuture_t on the other hand,
 /// there may be as many, and the structure contains no actual data; it is
 /// effectively a pointer.
-typedef struct {
-  lco_t lco;
-  cvar_t full;
-  cvar_t empty;
-  uint32_t bits;
-  char data[] HPX_ALIGNED(8);
-} _netfuture_t;
 
 /// This data is used to locate netfutures within the system. An array of
 /// these, representing each netfuture array, is stored within the netfuture
@@ -93,12 +86,12 @@ static hpx_action_t _initialize_netfutures = 0;
 static _netfuture_table_t _netfuture_table = {.inited = 0};
 
 /// Is this netfuture empty?
-static bool _empty(const _netfuture_t *f) {
+static bool _empty(const netfuture_t *f) {
   return f->bits & HPX_UNSET;
 }
 
 /// Is this netfuture full?
-static bool _full(const _netfuture_t *f) {
+static bool _full(const netfuture_t *f) {
   return f->bits & HPX_SET;
 }
 
@@ -122,11 +115,11 @@ _netfutures_at_rank(hpx_netfuture_t *f) {
 /// @p f must have the proper netfuture index set.
 static size_t
 _netfuture_get_offset(hpx_netfuture_t *f) {
-  size_t size = sizeof(_netfuture_t) + f->size;
+  size_t size = sizeof(netfuture_t) + f->size;
   return _netfuture_table.fut_infos[f->table_index].offset + (size * (f->index / hpx_get_num_ranks()));
 }
 
-/// Return the native address of the _netfuture_t representation of a future
+/// Return the native address of the netfuture_t representation of a future
 /// that MUST BE LOCAL
 /// Returns the address of the netfuture itself, not the data it contains.
 /// @p f must have the proper netfuture index set.
@@ -136,19 +129,19 @@ _netfuture_get_addr(hpx_netfuture_t *f) {
   return (uintptr_t)_netfuture_table.base + offset;
 }
 
-/// Return the native address of the _netfuture_t representation of the
+/// Return the native address of the netfuture_t representation of the
 /// future's data. The future MUST BE LOCAL
 /// Returns the address of the netfuture's data only, not the netfuture
 /// itself.
 /// @p f must have the proper netfuture index set.
 // static uintptr_t
 // _netfuture_get_data_addr(hpx_netfuture_t *f) {
-//   return _netfuture_get_addr(f) + sizeof(_netfuture_t);
+//   return _netfuture_get_addr(f) + sizeof(netfuture_t);
 // }
 
 /// Will set a netfuture as empty. The caller must hold the lock.
 static void
-_future_signal_empty(_netfuture_t *f)
+_future_signal_empty(netfuture_t *f)
 {
   f->bits ^= HPX_SET;
   f->bits |= HPX_UNSET;
@@ -158,7 +151,7 @@ _future_signal_empty(_netfuture_t *f)
 
 /// Will set a netfuture as full. The caller must hold the lock.
 static void
-_future_signal_full(_netfuture_t *f)
+_future_signal_full(netfuture_t *f)
 {
   f->bits ^= HPX_UNSET;
   f->bits |= HPX_SET;
@@ -169,13 +162,13 @@ _future_signal_full(_netfuture_t *f)
 /// This is what we use when we do NOT need to copy memory into the future,
 /// as it has been set via RDMA
 static void
-_future_set_no_copy(_netfuture_t *f) {
+_future_set_no_copy(netfuture_t *f) {
   _future_signal_full(f);
 }
 
 static int
-_future_set_no_copy_from_remote_action(_netfuture_t **fp) {
-  _netfuture_t *f = *fp;
+_future_set_no_copy_from_remote_action(netfuture_t **fp) {
+  netfuture_t *f = *fp;
   dbg_printf("  _future_set_no_copy_from_remote_action on netfuture at pa %p\n", (void*)f);
   lco_lock(&f->lco);
   if (!_empty(f))
@@ -263,7 +256,7 @@ hpx_status_t hpx_netfutures_init(hpx_netfuture_config_t *cfg) {
   if (cfg != NULL) {
     assert(cfg->max_size != 0);
     assert(cfg->max_array_number != 0);
-    _netfuture_cfg.max_size = cfg->max_size + cfg->max_number*sizeof(_netfuture_t);
+    _netfuture_cfg.max_size = cfg->max_size + cfg->max_number*sizeof(netfuture_t);
     _netfuture_cfg.max_number = cfg->max_number;
     _netfuture_cfg.max_array_number = cfg->max_array_number;
   }
@@ -286,7 +279,7 @@ hpx_status_t hpx_netfutures_init(hpx_netfuture_config_t *cfg) {
 }
 
 static hpx_status_t
-_wait(_netfuture_t *f) {
+_wait(netfuture_t *f) {
   if (!_full(f))
     return scheduler_wait(&f->lco.lock, &f->full);
   else
@@ -295,7 +288,7 @@ _wait(_netfuture_t *f) {
 
 // this version is for when we need to copy memory
 static void
-_future_set_with_copy(_netfuture_t *f, int size, const void *from)
+_future_set_with_copy(netfuture_t *f, int size, const void *from)
 {
   lco_lock(&f->lco);
 
@@ -334,7 +327,7 @@ _future_set_with_copy(_netfuture_t *f, int size, const void *from)
 static hpx_status_t
 _future_get(lco_t *lco, int size, void *out, bool set_empty)
 {
-  _netfuture_t *f = (_netfuture_t *)lco;
+  netfuture_t *f = (netfuture_t *)lco;
   lco_lock(&f->lco);
 
   hpx_status_t status = _wait(f);
@@ -357,7 +350,7 @@ _future_get(lco_t *lco, int size, void *out, bool set_empty)
 }
 
 static void _nf_lco_set(lco_t *lco, int size, const void *from) {
-  _netfuture_t* nf = (_netfuture_t*)lco;
+  netfuture_t* nf = (netfuture_t*)lco;
   //  hpx_status_t status = _future_set_no_copy_from_remote_action(nf);
   _future_set_no_copy_from_remote_action(&nf);
 }
@@ -371,7 +364,7 @@ static void _nf_lco_set(lco_t *lco, int size, const void *from) {
 ///               non-inline storage for netfutures, if desired.)
 /// @param shared Will this be a shared future?
 static void
-_netfuture_init(_netfuture_t *f, int size, bool shared)
+_netfuture_init(netfuture_t *f, int size, bool shared)
 {
   // the future vtable
   static const lco_class_t vtable = {
@@ -412,16 +405,16 @@ int _update_table(hpx_netfuture_t *f) {
   _netfuture_table.fut_infos[f->table_index].table_index = f->table_index;
   _netfuture_table.fut_infos[f->table_index].offset = f->base_offset;
 
-  _netfuture_table.curr_offset += (_netfutures_at_rank(f)) * (f->size + sizeof(_netfuture_t));
+  _netfuture_table.curr_offset += (_netfutures_at_rank(f)) * (f->size + sizeof(netfuture_t));
   _netfuture_table.curr_index++;
   return HPX_SUCCESS;
 }
 
 int _add_futures(hpx_netfuture_t *f) {
     hpx_netfuture_t fi = hpx_lco_netfuture_at(*f, hpx_get_my_rank());
-    //    _netfuture_t *nf = (_netfuture_t*)_netfuture_get_addr(&fi) + (sizeof(_netfuture_t) + fi.size) * i;
+    //    netfuture_t *nf = (netfuture_t*)_netfuture_get_addr(&fi) + (sizeof(netfuture_t) + fi.size) * i;
   for (int i = 0; i < _netfutures_at_rank(f); i ++) {
-    _netfuture_t *nf = (_netfuture_t*)_netfuture_get_addr(&fi);
+    netfuture_t *nf = (netfuture_t*)_netfuture_get_addr(&fi);
     _netfuture_init(nf, f->size, false);
     dbg_printf("  Initing future on rank %d at pa %p\n", hpx_get_my_rank(), (void*)nf);
     dbg_printf0("  Initing future on rank %d at pa %p\n", hpx_get_my_rank(), (void*)nf);
@@ -447,7 +440,7 @@ hpx_lco_netfuture_new_all(int n, size_t size) {
   hpx_netfuture_t f;
 
   int num_futures_per_rank = (n / hpx_get_num_ranks()) + ((n % hpx_get_num_ranks()) % 2);
-  assert(_netfuture_table.curr_offset + num_futures_per_rank * (size + sizeof(_netfuture_t))
+  assert(_netfuture_table.curr_offset + num_futures_per_rank * (size + sizeof(netfuture_t))
      <= _netfuture_cfg.max_size);
 
     assert(_netfuture_table.curr_index < _netfuture_cfg.max_array_number);
@@ -509,7 +502,7 @@ hpx_addr_t _netfuture_get_addr_gas(hpx_netfuture_t *f) {
 
 hpx_addr_t _netfuture_get_data_addr_gas(hpx_netfuture_t *f) {
   uintptr_t offset =  _netfuture_get_offset(f);
-  offset += sizeof(_netfuture_t);
+  offset += sizeof(netfuture_t);
   int rank = _netfuture_get_rank(f);
   hpx_addr_t rank_base_gas = _netfuture_table.buffers[rank];
   size_t bs = _netfuture_table.mem_size;
@@ -564,7 +557,7 @@ void hpx_lco_netfuture_setat(hpx_netfuture_t future, int id, size_t size, hpx_ad
               _set_wrapper, remote_lco_addr);
   }
   else {
-    _future_set_with_copy((_netfuture_t*)_netfuture_get_addr(&future_i), size, data);
+    _future_set_with_copy((netfuture_t*)_netfuture_get_addr(&future_i), size, data);
     if (!(lsync_lco == HPX_NULL))
       hpx_lco_set(lsync_lco, 0, NULL, HPX_NULL, HPX_NULL);
   }
@@ -578,7 +571,7 @@ void hpx_lco_netfuture_emptyat(hpx_netfuture_t base, int i, hpx_addr_t rsync_lco
   assert(i >= 0 && i <= base.count);
   assert(_netfuture_get_rank(&future_i) == hpx_get_my_rank());
 
-  _netfuture_t *f = (_netfuture_t*)_netfuture_get_addr(&future_i);
+  netfuture_t *f = (netfuture_t*)_netfuture_get_addr(&future_i);
 
   assert(_full(f));
 
@@ -599,7 +592,7 @@ hpx_addr_t hpx_lco_netfuture_getat(hpx_netfuture_t base, int i, size_t size) {
 
   dbg_printf("  Getating %d from (%d, future at ga %p) to %d\n", future_i.index, _netfuture_get_rank(&future_i), _netfuture_get_addr_gas(&future_i), hpx_get_my_rank());
 
-  retval = hpx_addr_add(_netfuture_table.base_gas, _netfuture_get_offset(&future_i) + sizeof(_netfuture_t), 1);
+  retval = hpx_addr_add(_netfuture_table.base_gas, _netfuture_get_offset(&future_i) + sizeof(netfuture_t), 1);
   _future_get(lco, size, NULL, false);
 
   dbg_printf("  Done getting from (%d, ga %p) to %d\n", _netfuture_get_rank(&future_i), (void*)_netfuture_get_addr_gas(&future_i), hpx_get_my_rank());
