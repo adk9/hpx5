@@ -23,21 +23,20 @@
 #include <ctype.h>
 #include <string.h>
 #include <unistd.h>
+#include <utstring.h>
 
-#include "hpx/hpx.h"
-#include "libhpx/action.h"
-#include "libhpx/boot.h"
-#include "libhpx/config.h"
-#include "libhpx/gas.h"
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/network.h"
-#include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
-#include "libhpx/system.h"
-#include "libhpx/transport.h"
+#include <hpx/hpx.h>
+#include <libhpx/action.h>
+#include <libhpx/boot.h>
+#include <libhpx/config.h>
+#include <libhpx/gas.h>
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/network.h>
+#include <libhpx/parcel.h>
+#include <libhpx/scheduler.h>
+#include <libhpx/system.h>
 
-#include "utstring.h"
 #include "parser.h"
 
 typedef struct hpx_options_t hpx_options_t;

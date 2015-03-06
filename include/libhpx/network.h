@@ -81,17 +81,6 @@ network_t *network_new(const struct config *cfg, struct boot *boot,
                        struct gas *gas)
   HPX_NON_NULL(1,2,3) HPX_MALLOC HPX_INTERNAL;
 
-/// Finds a transport match for a given network.
-///
-/// @param            t The transport to test.
-/// @param   transports The list of transports to test against.
-/// @param            n The number of entries.
-///
-/// @ returns 0 on match, or 1 if no match was found.
-int network_supported_transport(struct transport *t, const int tranports[],
-                                int n)
-  HPX_NON_NULL(1, 2) HPX_INTERNAL;
-
 /// Delete a network object.
 ///
 /// This does not synchronize. The caller is required to ensure that no other
