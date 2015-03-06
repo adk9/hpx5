@@ -19,6 +19,7 @@ struct boot;
 
 typedef struct isir_xport {
   hpx_transport_t type;
+  void   (*delete)(void *xport);
 
   void   (*check_tag)(int tag);
   size_t (*sizeof_request)(void);
@@ -38,5 +39,10 @@ isir_xport_t *isir_xport_new_mpi(const config_t *cfg)
 
 isir_xport_t *isir_xport_new(const config_t *cfg)
   HPX_INTERNAL;
+
+
+static inline void isir_xport_delete(isir_xport_t *xport) {
+  xport->delete(xport);
+}
 
 #endif // LIBHPX_NETWORK_ISIR_XPORT_H
