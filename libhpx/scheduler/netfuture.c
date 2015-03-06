@@ -23,13 +23,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "libhpx/action.h"
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/network.h"
-#include "libhpx/scheduler.h"
-#include "libhpx/transport.h"
-#include "libsync/queues.h"
+#include <libhpx/action.h>
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/network.h>
+#include <libhpx/scheduler.h>
+#include <libsync/queues.h>
 #include "lco.h"
 #include "cvar.h"
 #include "future.h"

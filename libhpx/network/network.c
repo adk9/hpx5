@@ -15,10 +15,9 @@
 #endif
 
 /// @file libhpx/network/network.c
-#include "libhpx/config.h"
-#include "libhpx/debug.h"
-#include "libhpx/network.h"
-#include "libhpx/transport.h"
+#include <libhpx/config.h>
+#include <libhpx/debug.h>
+#include <libhpx/network.h>
 #include "isir/isir.h"
 #include "pwc/pwc.h"
 #include "smp.h"
@@ -42,16 +41,6 @@ static network_t *_default(const config_t *cfg, struct boot *boot,
 
   network = network_smp_new(cfg, boot);
   return network;
-}
-
-int network_supported_transport(transport_t *t, const int tports[], int n) {
-  int i;
-  for (i=0; i<n; i++) {
-    if (t->type == tports[i]) {
-      return 0;
-    }
-  }
-  return 1;
 }
 
 network_t *network_new(const config_t *cfg, struct boot *boot, struct gas *gas)
