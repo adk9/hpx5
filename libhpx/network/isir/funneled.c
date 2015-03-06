@@ -14,7 +14,6 @@
 # include "config.h"
 #endif
 
-#include <mpi.h>
 #include <stdlib.h>
 #include <hpx/builtins.h>
 #include <libsync/queues.h>
@@ -24,27 +23,26 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/network.h"
-#include "libhpx/transport.h"
 #include "libhpx/parcel.h"
 
 #include "emulate_pwc.h"
 #include "irecv_buffer.h"
 #include "isend_buffer.h"
 #include "isir.h"
+#include "xport.h"
 
 #define _CAT1(S, T) S##T
 #define _CAT(S, T) _CAT1(S, T)
 #define _BYTES(S) (HPX_CACHELINE_SIZE - ((S) % HPX_CACHELINE_SIZE))
 #define _PAD(S) const char _CAT(_padding,__LINE__)[_BYTES(S)]
 
-// Define the transports allowed for the ISIR network
-static int ISIR_TRANSPORTS[] = {HPX_TRANSPORT_MPI};
-
 typedef struct {
   network_t       vtable;
   gas_t             *gas;
+  isir_xport_t    *xport;
   volatile int     flush;
-  _PAD(sizeof(network_t) + sizeof(gas_t*) + sizeof(int));
+  _PAD(sizeof(network_t) + sizeof(gas_t*) + sizeof(isir_xport_t*) +
+       sizeof(int));
   two_lock_queue_t sends;
   two_lock_queue_t recvs;
   isend_buffer_t  isends;
@@ -85,6 +83,7 @@ static void _funneled_delete(network_t *network) {
   sync_two_lock_queue_fini(&this->sends);
   sync_two_lock_queue_fini(&this->recvs);
 
+  isir_xport_delete(this->xport);
   free(this);
 }
 
@@ -206,30 +205,22 @@ static int _funneled_progress(network_t *network) {
   (void)m;
 }
 
-network_t *network_isir_funneled_new(config_t *cfg, struct gas *gas, int nrx) {
-  if (gas->type == HPX_GAS_SMP) {
-    log_net("will not initialize a %s network for SMP\n",
-            HPX_NETWORK_TO_STRING[HPX_NETWORK_ISIR]);
-    return NULL;
-  }
-  
-  int e = network_supported_transport(here->transport, ISIR_TRANSPORTS,
-				      _HPX_NELEM(ISIR_TRANSPORTS));
-  if (e) {
-    log_error("%s network is not supported with current transport: %s\n",
-	      HPX_NETWORK_TO_STRING[HPX_NETWORK_ISIR],
-	      HPX_TRANSPORT_TO_STRING[here->transport->type]);
-    return NULL;
-  }
-
+network_t *network_isir_funneled_new(const config_t *cfg) {
   _funneled_t *network = malloc(sizeof(*network));
   if (!network) {
     log_error("could not allocate a funneled Isend/Irecv network\n");
     return NULL;
   }
 
+  network->xport = isir_xport_new(cfg);
+  if (!network->xport) {
+    log_error("could not initialize a transport.\n");
+    free(network);
+    return NULL;
+  }
+
   network->vtable.type = HPX_NETWORK_ISIR;
-  network->vtable.transports = ISIR_TRANSPORTS;
+  network->vtable.transports = NULL;
   network->vtable.delete = _funneled_delete;
   network->vtable.progress = _funneled_progress;
   network->vtable.send = _funneled_send;
@@ -240,13 +231,12 @@ network_t *network_isir_funneled_new(config_t *cfg, struct gas *gas, int nrx) {
   network->vtable.probe = _funneled_probe;
   network->vtable.set_flush = _funneled_set_flush;
 
-  network->gas = gas;
-
   sync_store(&network->flush, 0, SYNC_RELEASE);
   sync_two_lock_queue_init(&network->sends, NULL);
   sync_two_lock_queue_init(&network->recvs, NULL);
-  isend_buffer_init(&network->isends, gas, 64, cfg->sendlimit);
-  irecv_buffer_init(&network->irecvs, 64, cfg->recvlimit);
+
+  isend_buffer_init(&network->isends, network->xport, 64, cfg->sendlimit);
+  irecv_buffer_init(&network->irecvs, network->xport, 64, cfg->recvlimit);
 
   return &network->vtable;
 }

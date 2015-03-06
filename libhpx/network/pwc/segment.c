@@ -18,47 +18,23 @@
 #include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
 #include "segment.h"
+#include "xport.h"
 
-int segment_init(segment_t *segment, char *base, size_t size) {
-#ifndef HAVE_PHOTON
-  return LIBHPX_ERROR;
-#endif
-
+int segment_init(segment_t *segment, pwc_xport_t *xport, char *base,
+                 size_t size) {
+  dbg_assert(base || !size);
   segment->base = base;
   segment->size = size;
-  if (!base) {
-    assert(!size);
-    memset(&segment->key, 0, sizeof(segment->key));
-    return LIBHPX_OK;
-  }
-
-  if (PHOTON_OK != photon_register_buffer(base, size)) {
-    dbg_error("failed to register segment with Photon\n");
+  if (base) {
+    xport->pin(base, size, &segment->key);
   }
   else {
-    log_net("registered segment (%p, %lu)\n", base, size);
+    xport->clear(&segment->key);
   }
-
-  if (PHOTON_OK != photon_get_buffer_private(base, size , &segment->key)) {
-    dbg_error("failed to segment key from Photon\n");
-  }
-
   return LIBHPX_OK;
 }
 
-void segment_fini(segment_t *segment) {
-#ifndef HAVE_PHOTON
-  return LIBHPX_ERROR;
-#endif
-
-  void *base = segment->base;
-  size_t size = segment->size;
-  if (!base) {
-    return;
-  }
-
-  if (PHOTON_OK != photon_unregister_buffer(base, size)) {
-    log_net("could not unregister the local heap segment %p\n", base);
-  }
+void segment_fini(segment_t *segment, pwc_xport_t *xport) {
+  xport->unpin(segment->base, segment->size);
 }
 
