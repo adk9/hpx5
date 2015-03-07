@@ -22,13 +22,13 @@
 #include <errno.h>
 
 #include <hpx/builtins.h>
-#include <jemalloc/jemalloc_hpx.h>
+#include <jemalloc/jemalloc_global.h>
 #include <valgrind/valgrind.h>
-#include "libhpx/debug.h"
-#include "libhpx/instrumentation.h"
-#include "libhpx/locality.h"
-#include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/debug.h>
+#include <libhpx/instrumentation.h>
+#include <libhpx/locality.h>
+#include <libhpx/parcel.h>
+#include <libhpx/scheduler.h>
 #include "thread.h"
 
 static int _buffer_size = 0;
