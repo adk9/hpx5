@@ -52,7 +52,8 @@ AC_ARG_ENABLE([parallel-config],
 # Initialize contribs
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
 HPX_CONTRIB_LIBFFI([contrib/libffi], [hpx_])
-HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [libhpx_global_], [_hpx])
+HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [libhpx_global_], [_global])
+HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [libhpx_registered_], [_registered])
 HPX_CONTRIB_VALGRIND([contrib/valgrind], [hpx_])
 HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [hpx_])
 
@@ -90,7 +91,8 @@ AC_ARG_ENABLE([jemalloc],
   [AS_HELP_STRING([--enable-jemalloc],
                   [Enable using of jemalloc as the default allocator @<:@default=no@:>@])],
   [], [enable_jemalloc=no])
-AS_IF([test "x$enable_jemalloc" != xno], [HPX_CONTRIB_JEMALLOC_AS_MALLOC])
+AS_IF([test "x$enable_jemalloc" != xno],
+  [HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [], [_local])]) 
   
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug],
@@ -138,12 +140,6 @@ HPX_WITH_PKG([pmi],[cray-pmi],[build with support for PMI],[no],[PMI])
 
 AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray PMI extensions]))
 HPX_WITH_PKG([hugetlbfs],[hugetlbfs],[build with hugepages for heap],[no],[HUGETLBFS])
-AS_IF([test "x$with_hugetlbfs" != xno],
-  [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [0], [Enable huge pages heap allocation])],
-  [AS_CASE([$host_os],
-    [darwin*], [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANON], [Disable huge pages heap allocation])],
-               [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANONYMOUS], [Disable huge pages heap allocation])])])
-
 HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[no],[MPI])
 HPX_WITH_PKG([portals],[portals],[build with Portals networking],[no],[PORTALS])
 
@@ -223,8 +219,8 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # -----------------------------------------------------------------------------
 # Finalize flags
 # -----------------------------------------------------------------------------
-hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $HPX_LIBFFI_CPPFLAGS $HPX_HWLOC_CPPFLAGS $hpx_valgrind_cppflags $hpx_uthash_cppflags"
-hpx_extra_cflags="$hpx_pe_env_cflags $HPX_JEMALLOC_CFLAGS $HPX_LIBFFI_CFLAGS $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS $hpx_valgrind_cflags $hpx_uthash_cflags"
+hpx_extra_cppflags="$hpx_pe_env_cppflags $hpx_jemalloc_cppflags $HPX_PHOTON_CPPFLAGS $HPX_LIBFFI_CPPFLAGS $HPX_HWLOC_CPPFLAGS $hpx_valgrind_cppflags $hpx_uthash_cppflags"
+hpx_extra_cflags="$hpx_pe_env_cflags $HPX_LIBFFI_CFLAGS $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS $hpx_valgrind_cflags $hpx_uthash_cflags"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
 hpx_extra_libs="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la $PTHREAD_LIBS $hpx_pe_env_libs"
 AS_IF([test "x$enable_pedantic" != xno],

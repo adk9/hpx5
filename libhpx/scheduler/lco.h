@@ -14,7 +14,7 @@
 #define LIBHPX_LCO_H
 
 #include <hpx/attributes.h>
-#include <jemalloc/jemalloc_hpx.h>
+#include <jemalloc/jemalloc_global.h>
 #include <libsync/lockable_ptr.h>
 #include "cvar.h"
 
@@ -70,7 +70,7 @@ typedef struct {
 extern void and_init(and_t *and, intptr_t value)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-extern void future_init(future_t *f, int size) 
+extern void future_init(future_t *f, int size)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 extern void chan_init(chan_t *c)
