@@ -1,14 +1,9 @@
-SUBDIRS       =
-DIST_SUBDIRS  =
+SUBDIRS       = jemalloc_build_hpx
+DIST_SUBDIRS  = jemalloc_build_hpx
 
 if BUILD_LIBFFI
 SUBDIRS      += libffi
 DIST_SUBDIRS += libffi
-endif
-
-if BUILD_JEMALLOC
-SUBDIRS      += jemalloc_hpx
-DIST_SUBDIRS += jemalloc_hpx
 endif
 
 if BUILD_HWLOC
@@ -22,8 +17,8 @@ DIST_SUBDIRS += photon
 endif
 
 if ENABLE_JEMALLOC
-SUBDIRS      += jemalloc_as_malloc
-DIST_SUBDIRS += jemalloc_as_malloc
+SUBDIRS      += jemalloc_build
+DIST_SUBDIRS += jemalloc_build
 endif
 
 check-recursive: all-recursive
