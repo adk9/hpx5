@@ -16,10 +16,10 @@
 
 #include <stdbool.h>
 #include <string.h>
-#include <jemalloc/jemalloc_hpx.h>
-#include "libhpx/gas.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
+#include <jemalloc/jemalloc_global.h>
+#include <libhpx/gas.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
 
 static int _smp_join(void) {
   return LIBHPX_OK;
