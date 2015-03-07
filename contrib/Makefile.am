@@ -1,5 +1,5 @@
-SUBDIRS       = jemalloc_build_hpx
-DIST_SUBDIRS  = jemalloc_build_hpx
+SUBDIRS       = jemalloc_build_global jemalloc_build_registered
+DIST_SUBDIRS  = jemalloc_build_global jemalloc_build_registered
 
 if BUILD_LIBFFI
 SUBDIRS      += libffi
