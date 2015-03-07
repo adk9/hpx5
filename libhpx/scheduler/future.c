@@ -22,10 +22,11 @@
 #include <string.h>
 
 #include <hpx/builtins.h>
-#include "libhpx/action.h"
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/action.h>
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+#include <libhpx/scheduler.h>
 #include "lco.h"
 #include "cvar.h"
 #include "future.h"
@@ -54,7 +55,7 @@ static void _future_fini(lco_t *lco) {
 
   lco_lock(lco);
   lco_fini(lco);
-  libhpx_global_free(lco);
+  global_free(lco);
 }
 
 /// Copies @p from into the appropriate location.
@@ -67,8 +68,9 @@ static void _future_set(lco_t *lco, int size, const void *from) {
     goto unlock;
   }
 
-  if (from && size)
+  if (from && size) {
     memcpy(&f->value, from, size);
+  }
 
   scheduler_signal_all(&f->full);
 
@@ -219,7 +221,7 @@ static HPX_PINNED(_block_init, uint32_t *args) {
 }
 
 hpx_addr_t hpx_lco_future_new(int size) {
-  future_t *local = libhpx_global_malloc(sizeof(*local) + size);
+  future_t *local = global_malloc(sizeof(*local) + size);
   dbg_assert(local);
   future_init(local, size);
   return lva_to_gva(local);

@@ -49,11 +49,19 @@ network_t *network_new(const config_t *cfg, struct boot *boot, struct gas *gas)
 
   switch (cfg->network) {
    case HPX_NETWORK_PWC:
+#ifdef HAVE_NETWORK
     network = network_pwc_funneled_new(cfg, boot, gas);
+#else
+    log_cfg("network support not enabled\n");
+#endif
     break;
 
    case HPX_NETWORK_ISIR:
+#ifdef HAVE_NETWORK
     network = network_isir_funneled_new(cfg);
+#else
+    log_cfg("network support not enabled\n");
+#endif
     break;
 
    case HPX_NETWORK_SMP:
