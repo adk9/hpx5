@@ -90,7 +90,8 @@ AC_ARG_ENABLE([jemalloc],
   [AS_HELP_STRING([--enable-jemalloc],
                   [Enable using of jemalloc as the default allocator @<:@default=no@:>@])],
   [], [enable_jemalloc=no])
-AS_IF([test "x$enable_jemalloc" != xno], [HPX_CONTRIB_JEMALLOC_AS_MALLOC])
+AS_IF([test "x$enable_jemalloc" != xno],
+  [HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [], [])]) 
   
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug],
@@ -217,8 +218,8 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # -----------------------------------------------------------------------------
 # Finalize flags
 # -----------------------------------------------------------------------------
-hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $HPX_LIBFFI_CPPFLAGS $HPX_HWLOC_CPPFLAGS $hpx_valgrind_cppflags $hpx_uthash_cppflags"
-hpx_extra_cflags="$hpx_pe_env_cflags $HPX_JEMALLOC_CFLAGS $HPX_LIBFFI_CFLAGS $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS $hpx_valgrind_cflags $hpx_uthash_cflags"
+hpx_extra_cppflags="$hpx_pe_env_cppflags $hpx_jemalloc_cppflags $HPX_PHOTON_CPPFLAGS $HPX_LIBFFI_CPPFLAGS $HPX_HWLOC_CPPFLAGS $hpx_valgrind_cppflags $hpx_uthash_cppflags"
+hpx_extra_cflags="$hpx_pe_env_cflags $HPX_LIBFFI_CFLAGS $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS $hpx_valgrind_cflags $hpx_uthash_cflags"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
 hpx_extra_libs="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la $PTHREAD_LIBS $hpx_pe_env_libs"
 AS_IF([test "x$enable_pedantic" != xno],
