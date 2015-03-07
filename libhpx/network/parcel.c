@@ -23,20 +23,20 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
-#include <jemalloc/jemalloc_hpx.h>
+#include <jemalloc/jemalloc_global.h>
 #include <ffi.h>
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
-#include "libhpx/action.h"
-#include "libhpx/attach.h"
-#include "libhpx/debug.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/gas.h"
-#include "libhpx/locality.h"
-#include "libhpx/instrumentation.h"
-#include "libhpx/network.h"
-#include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/action.h>
+#include <libhpx/attach.h>
+#include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/gas.h>
+#include <libhpx/locality.h>
+#include <libhpx/instrumentation.h>
+#include <libhpx/network.h>
+#include <libhpx/parcel.h>
+#include <libhpx/scheduler.h>
 #include "padding.h"
 
 static const uintptr_t _INPLACE_MASK = 0x1;
