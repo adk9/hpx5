@@ -17,7 +17,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <jemalloc/jemalloc_hpx.h>
+#include <jemalloc/jemalloc_global.h>
 #include <libsync/sync.h>
 #include <hpx/builtins.h>
 #include <libhpx/debug.h>
