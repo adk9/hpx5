@@ -14,7 +14,7 @@
 #define LIBHPX_LCO_H
 
 #include <hpx/attributes.h>
-#include <jemalloc/jemalloc_hpx.h>
+#include <jemalloc/jemalloc_global.h>
 #include <libsync/lockable_ptr.h>
 #include "cvar.h"
 

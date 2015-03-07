@@ -15,10 +15,10 @@
 #endif
 
 #include <string.h>
-#include <jemalloc/jemalloc_hpx.h>
+#include <jemalloc/jemalloc_global.h>
 #include <hpx/builtins.h>
-#include "libhpx/locality.h"
-#include "libhpx/action.h"
+#include <libhpx/locality.h>
+#include <libhpx/action.h>
 
 #include "gpa.h"
 #include "heap.h"
