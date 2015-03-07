@@ -24,17 +24,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <hpx/hpx.h>
-#include "libhpx/action.h"
-#include "libhpx/boot.h"
-#include "libhpx/config.h"
-#include "libhpx/debug.h"
-#include "libhpx/gas.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/instrumentation.h"
-#include "libhpx/network.h"
-#include "libhpx/scheduler.h"
-#include "libhpx/system.h"
+#include <libhpx/action.h>
+#include <libhpx/boot.h>
+#include <libhpx/config.h>
+#include <libhpx/debug.h>
+#include <libhpx/gas.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
+#include <libhpx/instrumentation.h>
+#include <libhpx/network.h>
+#include <libhpx/scheduler.h>
+#include <libhpx/system.h>
 #include "network/probe.h"
 
 static HPX_ACTION(_hpx_143_fix, void *UNUSED) {
@@ -146,7 +146,7 @@ int hpx_init(int *argc, char ***argv) {
     }
   }
 
-  // Initialize out instrumentation.
+  // Initialize our instrumentation.
   if (inst_init(here->config)) {
     log("error detected while initializing instrumentation\n");
   }
