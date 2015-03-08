@@ -25,22 +25,6 @@
 struct hpx_parcel;
 /// @}
 
-/// LCO types.
-typedef enum {
-  HPX_TYPE_AND,
-  HPX_TYPE_FUTURE,
-  HPX_TYPE_CHAN,
-  HPX_TYPE_SEMA,
-  HPX_TYPE_GENCOUNT,
-  HPX_TYPE_NETFUTURE,
-  HPX_TYPE_USER_LCO,
-  HPX_TYPE_REDUCE,
-  HPX_TYPE_ALLGATHER,
-  HPX_TYPE_ALLREDUCE,
-  HPX_TYPE_ALLTOALL,
-  HPX_TYPE_INVALID = UINT16_MAX
-} hpx_lco_type_t;
-
 /// Perform a commutative-associative reduction.
 ///
 /// This is similar to an ALLREDUCE. It is statically sized at creation time,
@@ -296,6 +280,17 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int block_size);
 /// @returns The address of the ith future in the array.
 hpx_addr_t hpx_lco_future_array_at(hpx_addr_t base, int i, int size, int bsize);
 
+/// Get an address of a lco in a LCO array
+///
+/// @param      base The base address of the array of lcos.
+/// @param         i The index of the lco to return.
+/// @param      size The size of the data stored with each lco. Should be 0 for
+///                  and lco.
+///
+/// @returns The address of the ith lco in the array.
+hpx_addr_t hpx_lco_array_at(hpx_addr_t base, int i, int size);
+
+
 /// Allocate an array of future LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate
 /// @param       size The size of each future's value 
@@ -377,12 +372,6 @@ hpx_addr_t hpx_lco_alltoall_local_array_new(int n, size_t inputs, size_t size);
 hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size,
                                         hpx_monoid_id_t id, hpx_monoid_op_t op,
                                         hpx_predicate_t predicate);
-
-/// Generic LCO interface to return the LCO's structure size.
-/// @param       type the type of the LCO
-///
-/// @returns the size of the LCO type structure.
-size_t hpx_lco_size(hpx_lco_type_t type);
 
 /// Channels.
 ///

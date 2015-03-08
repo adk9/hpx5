@@ -29,132 +29,6 @@ typedef union {
   uintptr_t            bits;
 } lco_t HPX_ALIGNED(16);
 
-/// And LCO class interface.
-/// @{
-typedef struct {
-  lco_t               lco;
-  cvar_t          barrier;
-  volatile intptr_t value;                  // the threshold
-} and_t;
-
-/// Local future interface.
-/// @{
-typedef struct {
-  lco_t     lco;
-  cvar_t   full;
-  char  value[];
-} future_t;
-
-/// Local channel interface.
-///
-/// A channel LCO maintains a linked-list of dynamically sized
-/// buffers. It can be used to support a thread-based, point-to-point
-/// communication mechanism. An in-order channel forces a sender to
-/// wait for remote completion for sets or sends().
-/// @{
-
-typedef struct node {
-  struct node  *next;
-  void       *buffer;                           // out-of place because we want
-  int           size;                           // to be able to recv it
-} chan_node_t;
-
-
-typedef struct {
-  lco_t          lco;
-  cvar_t    nonempty;
-  chan_node_t  *head;
-  chan_node_t  *tail;
-} chan_t;
-
-/// Local gencount interface.
-/// @{
-typedef struct {
-  lco_t              lco;
-  cvar_t           oflow;
-  unsigned long      gen;
-  unsigned long ninplace;
-  cvar_t       inplace[];
-} gencount_t;
-
-/// Local allgather interface.
-/// @{
-typedef struct {
-  lco_t           lco;
-  cvar_t         wait;
-  size_t participants;
-  size_t        count;
-  volatile int  phase;
-  void         *value;
-} allgather_t;
-
-/// Local allreduce interface.
-/// @{
-typedef struct {
-  lco_t               lco;
-  cvar_t             wait;
-  size_t          readers;
-  size_t          writers;
-  hpx_monoid_id_t      id;
-  hpx_monoid_op_t      op;
-  size_t            count;
-  volatile int      phase;
-  void             *value;  // out-of-place for alignment reasons
-} allreduce_t;
-
-/// Local alltoall interface.
-/// @{
-typedef struct {
-  lco_t           lco;
-  cvar_t         wait;
-  size_t participants;
-  size_t        count;
-  volatile int  phase;
-  void         *value;
-} alltoall_t;
-
-/// Local reduce interface.
-/// @{
-typedef struct {
-  lco_t              lco;
-  cvar_t         barrier;
-  hpx_monoid_id_t     id;
-  hpx_monoid_op_t     op;
-  size_t            size;
-  int             inputs;
-  volatile int remaining;
-  void            *value;
-} reduce_t;
-
-/// Local netfuture interface.
-/// @{
-typedef struct {
-  lco_t lco;
-  cvar_t full;
-  cvar_t empty;
-  uint32_t bits;
-  char data[] HPX_ALIGNED(8);
-} netfuture_t;
-
-/// Local sema interface.
-/// @{
-typedef struct {
-  lco_t       lco;
-  cvar_t    avail;
-  volatile uintptr_t count;
-} sema_t;
-
-/// Generic LCO interface.
-/// @{
-typedef struct {
-  lco_t                 lco;
-  cvar_t               cvar;
-  hpx_monoid_id_t        id;
-  hpx_monoid_op_t        op;
-  hpx_predicate_t predicate;
-  void                 *buf;
-} user_lco_t;
-
 // The LCO abstract class interface.
 ///
 /// All LCOs will implement this interface, which is accessible through the
@@ -172,6 +46,7 @@ typedef bool (*lco_release_t)(lco_t *lco, void *out);
 typedef hpx_status_t (*lco_wait_t)(lco_t *lco);
 typedef hpx_status_t (*lco_attach_t)(lco_t *lco, hpx_parcel_t *p);
 typedef void (*lco_reset_t)(lco_t *lco);
+typedef size_t (*lco_size_t)(lco_t *lco);
 
 struct lco_class {
   lco_fini_t         on_fini;
@@ -183,6 +58,7 @@ struct lco_class {
   lco_release_t   on_release;
   lco_wait_t         on_wait;
   lco_reset_t       on_reset;
+  lco_size_t         on_size;
 } HPX_ALIGNED(16);
 
 // -----------------------------------------------------------------------------

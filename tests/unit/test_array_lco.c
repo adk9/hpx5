@@ -41,8 +41,7 @@ static HPX_ACTION(test_libhpx_lco_future_array, void *UNUSED) {
                                       sizeof(uint64_t));
   for (int i = 0; i < ARRAY_SIZE; i++) {
     value = (rand() / (float)RAND_MAX) * 100;
-    hpx_addr_t other = hpx_lco_array_at(HPX_TYPE_FUTURE, base, i, 
-                                        sizeof(uint64_t));
+    hpx_addr_t other = hpx_lco_array_at(base, i, sizeof(uint64_t));
     hpx_call_sync(other, _set_future_value, NULL, 0, &value, sizeof(value));
 
     uint64_t result;
@@ -73,7 +72,7 @@ static HPX_ACTION(test_libhpx_lco_and_array, void *UNUSED) {
   hpx_addr_t lcos = hpx_lco_and_local_array_new(ARRAY_SIZE, 0);
   for (int i = 0; i < ARRAY_SIZE; i++) {
     hpx_addr_t done = hpx_lco_future_new(0);
-    hpx_addr_t other = hpx_lco_array_at(HPX_TYPE_AND, lcos, i, 0);
+    hpx_addr_t other = hpx_lco_array_at(lcos, i, 0);
     hpx_call(other, _set, done, NULL, 0);
     hpx_lco_wait(done);
     hpx_lco_delete(done, HPX_NULL);  
@@ -107,7 +106,7 @@ static HPX_ACTION(test_libhpx_lco_reduce_array, void *UNUSED) {
                                        (hpx_monoid_op_t)_maxDouble);
 
   for (int i = 0; i < ARRAY_SIZE; i++) {
-    hpx_addr_t other = hpx_lco_array_at(HPX_TYPE_REDUCE, newdt, i, sizeof(double));
+    hpx_addr_t other = hpx_lco_array_at(newdt, i, sizeof(double));
     // Compute my gnewdt, and then start the reduce
     for (int j = 0; j < ARRAY_SIZE; j++) {
       double gnewdt = 3.14*(j+1);
@@ -119,7 +118,7 @@ static HPX_ACTION(test_libhpx_lco_reduce_array, void *UNUSED) {
   // Get the gathered value and print the debugging string.
   for (int i = 0; i < ARRAY_SIZE; i++) {
     double ans;
-    hpx_addr_t other = hpx_lco_array_at(HPX_TYPE_REDUCE, newdt, i, sizeof(double));
+    hpx_addr_t other = hpx_lco_array_at(newdt, i, sizeof(double));
     hpx_lco_get(newdt, sizeof(double), &ans);
     printf("Reduce LCO Value got = %g\n", ans);
     assert(ans == 3.14*(ARRAY_SIZE));

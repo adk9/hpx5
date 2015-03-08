@@ -24,12 +24,32 @@
 #include "lco.h"
 #include "cvar.h"
 
+/// Local sema interface.
+/// @{
+typedef struct {
+  lco_t       lco;
+  cvar_t    avail;
+  volatile uintptr_t count;
+} _sema_t;
+
 static void _sema_fini(lco_t *lco);
 static void _sema_error(lco_t *lco, hpx_status_t code);
 static void _sema_reset(lco_t *lco);
 static void _sema_set(lco_t *lco, int size, const void *from);
 static hpx_status_t _sema_wait(lco_t *lco);
 static hpx_status_t _sema_get(lco_t *lco, int size, void *out);
+
+static size_t _size(_sema_t *sema) {
+  return sizeof(_sema_t);
+}
+
+static size_t _sema_size(lco_t *lco) {
+  _sema_t *sema = (_sema_t *)lco;
+  lco_lock(&sema->lco);
+  size_t size = _size(sema);
+  lco_unlock(&sema->lco);
+  return size;
+}
 
 // the semaphore vtable
 static const lco_class_t _sema_vtable = {
@@ -41,7 +61,8 @@ static const lco_class_t _sema_vtable = {
   .on_release  = NULL,
   .on_wait     = _sema_wait,
   .on_attach   = NULL,
-  .on_reset    = _sema_reset
+  .on_reset    = _sema_reset,
+  .on_size     = _sema_size
 };
 
 /// Allocate a semaphore LCO.
@@ -50,7 +71,7 @@ static const lco_class_t _sema_vtable = {
 ///
 /// @returns The global address of the new semaphore.
 hpx_addr_t hpx_lco_sema_new(unsigned count) {
-  sema_t *local = libhpx_global_malloc(sizeof(*local));;
+  _sema_t *local = libhpx_global_malloc(sizeof(*local));;
   dbg_assert(local);
   lco_init(&local->lco, &_sema_vtable);
   cvar_reset(&local->avail);
@@ -106,13 +127,13 @@ void _sema_fini(lco_t *lco) {
 
 void _sema_error(lco_t *lco, hpx_status_t code) {
   lco_lock(lco);
-  sema_t *sema = (sema_t *)lco;
+  _sema_t *sema = (_sema_t *)lco;
   scheduler_signal_error(&sema->avail, code);
   lco_unlock(lco);
 }
 
 void _sema_reset(lco_t *lco) {
-  sema_t *sema = (sema_t *)lco;
+  _sema_t *sema = (_sema_t *)lco;
   lco_lock(&sema->lco);
   dbg_assert_str(cvar_empty(&sema->avail),
                  "Reset on a sema that has waiting threads.\n");
@@ -123,7 +144,7 @@ void _sema_reset(lco_t *lco) {
 /// Set is equivalent to returning a resource to the semaphore.
 void _sema_set(lco_t *lco, int size, const void *from) {
   lco_lock(lco);
-  sema_t *sema = (sema_t *)lco;
+  _sema_t *sema = (_sema_t *)lco;
   if (sema->count++ == 0) {
     // only signal one sleeping thread since we're only returning one resource,
     // waking everyone up is inefficient
@@ -136,7 +157,7 @@ void _sema_set(lco_t *lco, int size, const void *from) {
 hpx_status_t _sema_wait(lco_t *lco) {
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
-  sema_t *sema = (sema_t *)lco;
+  _sema_t *sema = (_sema_t *)lco;
 
   // wait until the count is non-zero, use while here and re-read count because
   // our condition variables have MESA semantics

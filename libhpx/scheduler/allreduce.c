@@ -30,13 +30,37 @@
 
 /// Local reduce interface.
 /// @{
+typedef struct {
+  lco_t               lco;
+  cvar_t             wait;
+  size_t          readers;
+  size_t          writers;
+  hpx_monoid_id_t      id;
+  hpx_monoid_op_t      op;
+  size_t            count;
+  volatile int      phase;
+  void             *value;  // out-of-place for alignment reasons
+} _allreduce_t;
+
 static const int _reducing = 0;
 static const  int _reading = 1;
+
+static size_t _size(_allreduce_t *allreduce) {
+  return sizeof(_allreduce_t);
+}
+
+static size_t _allreduce_size(lco_t *lco) {
+  _allreduce_t *allreduce = (_allreduce_t *)lco;
+  lco_lock(&allreduce->lco);
+  size_t size = _size(allreduce);
+  lco_unlock(&allreduce->lco);
+  return size;
+}
 
 /// Deletes a reduction.
 static void _allreduce_fini(lco_t *lco) {
   lco_lock(lco);
-  allreduce_t *r = (allreduce_t *)lco;
+  _allreduce_t *r = (_allreduce_t *)lco;
   if (r->value) {
     free(r->value);
   }
@@ -47,13 +71,13 @@ static void _allreduce_fini(lco_t *lco) {
 /// Handle an error condition.
 static void _allreduce_error(lco_t *lco, hpx_status_t code) {
   lco_lock(lco);
-  allreduce_t *r = (allreduce_t *)lco;
+  _allreduce_t *r = (_allreduce_t *)lco;
   scheduler_signal_error(&r->wait, code);
   lco_unlock(lco);
 }
 
 static void _allreduce_reset(lco_t *lco) {
-  allreduce_t *r = (allreduce_t *)lco;
+  _allreduce_t *r = (_allreduce_t *)lco;
   lco_lock(&r->lco);
   dbg_assert_str(cvar_empty(&r->wait),
                  "Reset on allreduce LCO that has waiting threads.\n");
@@ -65,7 +89,7 @@ static void _allreduce_reset(lco_t *lco) {
 static void _allreduce_set(lco_t *lco, int size, const void *from) {
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
-  allreduce_t *r = (allreduce_t *)lco;
+  _allreduce_t *r = (_allreduce_t *)lco;
 
   // wait until we're reducing, then perform the op() and join the reduction
   while ((r->phase != _reducing) && (status == HPX_SUCCESS)) {
@@ -93,7 +117,7 @@ static void _allreduce_set(lco_t *lco, int size, const void *from) {
 
 /// Get the value of the reduction, will wait if the phase is reducing.
 static hpx_status_t _allreduce_get(lco_t *lco, int size, void *out) {
-  allreduce_t *r = (allreduce_t *)lco;
+  _allreduce_t *r = (_allreduce_t *)lco;
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
 
@@ -136,7 +160,7 @@ static hpx_status_t _allreduce_wait(lco_t *lco) {
   return _allreduce_get(lco, 0, NULL);
 }
 
-static void _allreduce_init(allreduce_t *r, size_t writers, size_t readers,
+static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
                             size_t size, hpx_monoid_id_t id, hpx_monoid_op_t op) {
   // vtable
   static const lco_class_t vtable = {
@@ -148,7 +172,8 @@ static void _allreduce_init(allreduce_t *r, size_t writers, size_t readers,
     .on_getref   = NULL,
     .on_release  = NULL,
     .on_wait     = _allreduce_wait,
-    .on_reset    = _allreduce_reset
+    .on_reset    = _allreduce_reset,
+    .on_size     = _allreduce_size
   };
 
   assert(id);
@@ -176,7 +201,7 @@ static void _allreduce_init(allreduce_t *r, size_t writers, size_t readers,
 
 hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
                                  hpx_monoid_id_t id, hpx_monoid_op_t op) {
-  allreduce_t *r = libhpx_global_malloc(sizeof(*r));
+  _allreduce_t *r = libhpx_global_malloc(sizeof(*r));
   assert(r);
   _allreduce_init(r, inputs, outputs, size, id, op);
   return lva_to_gva(r);
@@ -198,7 +223,7 @@ static HPX_PINNED(_block_local_init, const _allreduce_array_args_t *args) {
   dbg_assert(lco);
 
   for (int i = 0; i < args->n; i++) {
-    void *addr = (void *)((uintptr_t)lco + i * (sizeof(allreduce_t) + args->size));
+    void *addr = (void *)((uintptr_t)lco + i * (sizeof(_allreduce_t) + args->size));
     _allreduce_init(addr, args->participants, args->readers, args->size, 
                     args->id, args->op);
   }
@@ -222,7 +247,7 @@ hpx_addr_t hpx_lco_allreduce_local_array_new(int n, size_t participants,
                                              hpx_monoid_id_t id,
                                              hpx_monoid_op_t op) {
   _allreduce_array_args_t args;
-  uint32_t lco_bytes = sizeof(allreduce_t) + size;
+  uint32_t lco_bytes = sizeof(_allreduce_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
   uint32_t  block_bytes = n * lco_bytes;
   hpx_addr_t base = hpx_gas_alloc(block_bytes);
