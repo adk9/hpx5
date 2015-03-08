@@ -1,7 +1,7 @@
 ####################
 # Makefile for HPX #
 ####################
-SUBDIRS = system util boot gas network scheduler instrumentation 
+SUBDIRS = system util boot memory gas network scheduler instrumentation 
 
 # The main libhpx library
 lib_LTLIBRARIES	   = libhpx.la
@@ -14,6 +14,7 @@ libhpx_la_LIBADD   = $(HPX_LIBFFI_LIBS) \
                      $(HPX_HWLOC_LIBS) \
                      $(top_builddir)/libsync/libsync.la \
                      boot/libboot.la \
+                     memory/libmemory.la \
                      gas/libgas.la \
                      network/libnetwork.la \
                      scheduler/libscheduler.la \

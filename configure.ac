@@ -153,6 +153,7 @@ AS_IF([test "x$enable_photon" != xno],
 
 AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno],
  [enable_network=yes
+  AC_DEFINE([HAVE_NETWORK], [1], [We have a network])
   AC_DEFINE([HAVE_JEMALLOC_GLOBAL], [1], [We have global allocation])
   HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [libhpx_global_], [_global])
   TESTS_CMD='mpirun -np 2'],
@@ -261,6 +262,7 @@ AC_CONFIG_FILES([
   libhpx/Makefile
   libhpx/boot/Makefile
   libhpx/gas/Makefile
+  libhpx/memory/Makefile
   libhpx/network/Makefile
   libhpx/network/isir/Makefile
   libhpx/network/pwc/Makefile
