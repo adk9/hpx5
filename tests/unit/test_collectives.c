@@ -85,7 +85,7 @@ static HPX_ACTION(test_libhpx_lco_reduce, void *UNUSED) {
   int nDoms = 8;
   int maxCycles = 100;
 
-  hpx_addr_t domain = hpx_gas_global_alloc(nDoms, sizeof(Domain));
+  hpx_addr_t domain = hpx_gas_global_calloc(nDoms, sizeof(Domain));
   hpx_addr_t done = hpx_lco_and_new(nDoms);
 
   hpx_addr_t newdt = hpx_lco_reduce_new(nDoms, sizeof(double),
@@ -153,7 +153,7 @@ static HPX_ACTION(test_libhpx_lco_allreduce, void *UNUSED) {
   int nDoms = 8;
   int maxCycles = 100;
 
-  hpx_addr_t domain = hpx_gas_global_alloc(nDoms, sizeof(Domain));
+  hpx_addr_t domain = hpx_gas_global_calloc(nDoms, sizeof(Domain));
   hpx_addr_t done = hpx_lco_and_new(nDoms);
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
 
@@ -185,6 +185,7 @@ static HPX_ACTION(test_libhpx_lco_allreduce, void *UNUSED) {
   hpx_lco_wait(complete);
   hpx_lco_delete(complete, HPX_NULL);
 
+  hpx_lco_delete(newdt, HPX_NULL);
   hpx_gas_free(domain, HPX_NULL);
 
   return HPX_SUCCESS;
@@ -220,7 +221,7 @@ static HPX_ACTION(test_libhpx_lco_allgather, void *UNUSED) {
   int nDoms = 8;
   int maxCycles = 100;
 
-  hpx_addr_t domain = hpx_gas_global_alloc(nDoms, sizeof(Domain));
+  hpx_addr_t domain = hpx_gas_global_calloc(nDoms, sizeof(Domain));
   hpx_addr_t done = hpx_lco_and_new(nDoms);
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
 
@@ -248,7 +249,7 @@ static HPX_ACTION(test_libhpx_lco_allgather, void *UNUSED) {
 
   hpx_lco_wait(complete);
   hpx_lco_delete(complete, HPX_NULL);
-
+  hpx_lco_delete(newdt, HPX_NULL);
   hpx_gas_free(domain, HPX_NULL);
   return HPX_SUCCESS;
 }
@@ -256,8 +257,9 @@ static HPX_ACTION(test_libhpx_lco_allgather, void *UNUSED) {
 static HPX_ACTION(_advanceDomain_alltoall, const unsigned long *epoch) {
   hpx_addr_t local = hpx_thread_current_target();
   Domain *domain = NULL;
-  if (!hpx_gas_try_pin(local, (void**)&domain))
+  if (!hpx_gas_try_pin(local, (void**)&domain)) {
     return HPX_RESEND;
+  }
 
   if (domain->maxcycles <= domain->cycle) {
     hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
@@ -288,7 +290,7 @@ static HPX_ACTION(test_libhpx_lco_alltoall, void *UNUSED) {
   int nDoms = 8;
   int maxCycles = 100;
 
-  hpx_addr_t domain = hpx_gas_global_alloc(nDoms, sizeof(Domain));
+  hpx_addr_t domain = hpx_gas_global_calloc(nDoms, sizeof(Domain));
   hpx_addr_t done = hpx_lco_and_new(nDoms);
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
 
@@ -316,7 +318,7 @@ static HPX_ACTION(test_libhpx_lco_alltoall, void *UNUSED) {
 
   hpx_lco_wait(complete);
   hpx_lco_delete(complete, HPX_NULL);
-
+  hpx_lco_delete(newdt, HPX_NULL);
   hpx_gas_free(domain, HPX_NULL);
   return HPX_SUCCESS;
 }
