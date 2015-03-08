@@ -62,6 +62,12 @@ static hpx_status_t _set(lco_t *lco, size_t size, const void *data) {
   return HPX_SUCCESS;
 }
 
+static size_t _size(lco_t *lco) {
+  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
+  dbg_assert_str(_class(lco)->on_size, "LCO implementation incomplete\n");
+  return _class(lco)->on_size(lco);
+}
+
 static hpx_status_t _error(lco_t *lco, hpx_status_t code) {
   dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
   dbg_assert_str(_class(lco)->on_error, "LCO implementation incomplete\n");
@@ -356,6 +362,17 @@ hpx_status_t hpx_lco_wait(hpx_addr_t target) {
   return hpx_call_sync(target, _lco_wait, NULL, 0, NULL, 0);
 }
 
+size_t hpx_lco_size(hpx_addr_t target) {
+  lco_t *lco;
+  size_t size = 0;
+  if (hpx_gas_try_pin(target, (void**)&lco)) {
+    size = _size(lco);
+    hpx_gas_unpin(target);
+    return size;
+  }  
+  return size;
+}
+
 /// If the LCO is local, then we use the local get functionality.
 hpx_status_t hpx_lco_get(hpx_addr_t target, int size, void *value) {
   lco_t *lco;
@@ -521,81 +538,8 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
   return errors;
 }
 
-// Generic LCO interface to return the LCO's structure size
-size_t hpx_lco_size(hpx_lco_type_t type) {
-  size_t lco_bytes;
-  switch (type) {
-    case HPX_TYPE_AND:
-      lco_bytes = sizeof(and_t);
-      break;
-    case HPX_TYPE_FUTURE:
-      lco_bytes = sizeof(future_t);
-      break;
-    case HPX_TYPE_CHAN:
-      lco_bytes = sizeof(chan_t);
-      break;
-    case HPX_TYPE_GENCOUNT:
-      lco_bytes = sizeof(gencount_t);
-      break;
-    case HPX_TYPE_SEMA:
-      lco_bytes = sizeof(sema_t);
-      break;
-    case HPX_TYPE_USER_LCO:
-      lco_bytes = sizeof(user_lco_t);
-      break;
-    case HPX_TYPE_NETFUTURE:
-      lco_bytes = sizeof(netfuture_t);
-      break;
-    case HPX_TYPE_REDUCE:
-      lco_bytes = sizeof(reduce_t);
-      break;
-    case HPX_TYPE_ALLGATHER:
-      lco_bytes = sizeof(allgather_t);
-      break;
-    case HPX_TYPE_ALLREDUCE:
-      lco_bytes = sizeof(allreduce_t);
-      break;
-    case HPX_TYPE_ALLTOALL:
-      lco_bytes = sizeof(alltoall_t);
-      break;
-    default:
-      dbg_error("Invalid type for hpx_lco_size\n");
-  }
-  return lco_bytes;  
-}
-
 // Generic array indexer API.
-hpx_addr_t hpx_lco_array_at(hpx_lco_type_t type, hpx_addr_t array,
-                            int i, int arg) {
-  uint32_t lco_bytes;
-  switch (type) {
-    case HPX_TYPE_AND:
-      lco_bytes = sizeof(and_t);
-      break;
-    case HPX_TYPE_FUTURE:
-      lco_bytes = sizeof(future_t) + arg;
-      break;
-    case HPX_TYPE_CHAN:
-      lco_bytes = sizeof(chan_t) + arg;
-      break;
-    case HPX_TYPE_REDUCE:
-      lco_bytes = sizeof(reduce_t) + arg;
-      break;
-    case HPX_TYPE_ALLGATHER:
-      lco_bytes = sizeof(allgather_t) + arg;
-      break;
-    case HPX_TYPE_ALLREDUCE:
-      lco_bytes = sizeof(allreduce_t) + arg;
-      break;
-    case HPX_TYPE_ALLTOALL:
-      lco_bytes = sizeof(alltoall_t) + arg;
-      break;
-    case HPX_TYPE_USER_LCO:
-      lco_bytes = sizeof(user_lco_t) + arg;
-      break;
-    default:
-      dbg_error("Invalid type for hpx_lco_array_at\n");
-  }
-
+hpx_addr_t hpx_lco_array_at(hpx_addr_t array, int i, int arg) {
+  uint32_t lco_bytes = hpx_lco_size(array) + arg;
   return hpx_addr_add(array, i * lco_bytes, UINT32_MAX);
 }

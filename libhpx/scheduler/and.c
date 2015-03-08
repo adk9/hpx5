@@ -27,10 +27,19 @@
 #include "lco.h"
 #include "cvar.h"
 
-
 /// And LCO class interface.
+/// @{
+typedef struct {
+  lco_t               lco;
+  cvar_t          barrier;
+  volatile intptr_t value;                  // the threshold
+} _and_t;
 
-static hpx_status_t _wait(and_t *and) {
+static size_t _size(_and_t *and) {
+  return sizeof(_and_t);
+}
+
+static hpx_status_t _wait(_and_t *and) {
   hpx_status_t status = cvar_get_error(&and->barrier);
   if (status != HPX_SUCCESS) {
     return status;
@@ -46,7 +55,7 @@ static hpx_status_t _wait(and_t *and) {
   return scheduler_wait(&and->lco.lock, &and->barrier);
 }
 
-static hpx_status_t _attach(and_t *and, hpx_parcel_t *p) {
+static hpx_status_t _attach(_and_t *and, hpx_parcel_t *p) {
   hpx_status_t status = cvar_get_error(&and->barrier);
   if (status != HPX_SUCCESS) {
     return status;
@@ -69,14 +78,14 @@ static void _and_fini(lco_t *lco) {
 }
 
 static void _and_error(lco_t *lco, hpx_status_t code) {
-  and_t *and = (and_t *)lco;
+  _and_t *and = (_and_t *)lco;
   lco_lock(&and->lco);
   scheduler_signal_error(&and->barrier, code);
   lco_unlock(&and->lco);
 }
 
 void _and_reset(lco_t *lco) {
-  and_t *and = (and_t *)lco;
+  _and_t *and = (_and_t *)lco;
   lco_lock(&and->lco);
   dbg_assert_str(cvar_empty(&and->barrier),
                  "Reset on AND LCO that has waiting threads.\n");
@@ -88,7 +97,7 @@ void _and_reset(lco_t *lco) {
 static void _and_set(lco_t *lco, int size, const void *from) {
   dbg_assert_str(lco != NULL, "lco-set on a NULL lco.\n");
 
-  and_t *and = (and_t *)lco;
+  _and_t *and = (_and_t *)lco;
   int num = (size && from) ? *(int*)from : 1;
   intptr_t value = sync_addf(&and->value, -num, SYNC_ACQ_REL);
   log_lco("reduced count to %ld lco %p\n", value, (void*)&and->lco);
@@ -103,8 +112,16 @@ static void _and_set(lco_t *lco, int size, const void *from) {
   }
 }
 
+static size_t _and_size(lco_t *lco) {
+  _and_t *and = (_and_t *)lco;
+  lco_lock(&and->lco);
+  size_t size = _size(and);
+  lco_unlock(&and->lco);
+  return size;
+}
+
 static hpx_status_t _and_wait(lco_t *lco) {
-  and_t *and = (and_t *)lco;
+  _and_t *and = (_and_t *)lco;
   lco_lock(&and->lco);
   hpx_status_t status = _wait(and);
   lco_unlock(&and->lco);
@@ -112,7 +129,7 @@ static hpx_status_t _and_wait(lco_t *lco) {
 }
 
 static hpx_status_t _and_attach(lco_t *lco, hpx_parcel_t *p) {
-  and_t *and = (and_t *)lco;
+  _and_t *and = (_and_t *)lco;
   lco_lock(&and->lco);
   hpx_status_t status = _attach(and, p);
   lco_unlock(&and->lco);
@@ -132,10 +149,11 @@ static const lco_class_t _and_vtable = {
   .on_release  = NULL,
   .on_wait     = _and_wait,
   .on_attach   = _and_attach,
-  .on_reset    = _and_reset
+  .on_reset    = _and_reset,
+  .on_size     = _and_size
 };
 
-static void _and_init(and_t *and, intptr_t value) {
+static void _and_init(_and_t *and, intptr_t value) {
   assert(value >= 0);
   lco_init(&and->lco, &_and_vtable);
   cvar_reset(&and->barrier);
@@ -148,7 +166,7 @@ static void _and_init(and_t *and, intptr_t value) {
 
 /// Allocate an and LCO. This is synchronous.
 hpx_addr_t hpx_lco_and_new(intptr_t limit) {
-  and_t *and = libhpx_global_malloc(sizeof(*and));
+  _and_t *and = libhpx_global_malloc(sizeof(*and));
   dbg_assert_str(and, "Could not malloc global memory\n");
   log_lco("allocated lco %p\n", (void*)and);
   _and_init(and, limit);
@@ -175,7 +193,7 @@ static HPX_PINNED(_block_local_init, uint32_t *args) {
   dbg_assert(lco);
 
   for (int i = 0; i < args[0]; i++) {
-    void *addr = (void *)((uintptr_t)lco + i * sizeof(and_t));
+    void *addr = (void *)((uintptr_t)lco + i * sizeof(_and_t));
     _and_init(addr, (intptr_t)args[1]);
   }
   return HPX_SUCCESS;
@@ -188,7 +206,7 @@ static HPX_PINNED(_block_local_init, uint32_t *args) {
 /// @returns the global address of the allocated array lco.
 hpx_addr_t hpx_lco_and_local_array_new(int n, int arg) {
   // Get the sizeof lco class structure
-  uint32_t lco_bytes = sizeof(and_t);
+  uint32_t lco_bytes = sizeof(_and_t);
   dbg_assert(n * lco_bytes < UINT32_MAX);
   uint32_t  block_bytes = n * lco_bytes;
   hpx_addr_t base = hpx_gas_alloc(block_bytes);
