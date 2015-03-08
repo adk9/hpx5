@@ -11,7 +11,8 @@ libgas_la_SOURCES  = hpx_gas_glue.c \
                      parcel/memcpy.c 
 
 if HAVE_NETWORK
-libgas_la_SOURCES += pgas/actions.c \
+libgas_la_SOURCES += mallctl.c \
+                     pgas/actions.c \
                      pgas/bitmap.c \
                      pgas/gpa.c \
                      pgas/pgas.c \
