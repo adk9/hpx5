@@ -15,6 +15,7 @@
 #endif
 
 /// @file libhpx/network/network.c
+#include <libhpx/boot.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/network.h>
@@ -25,6 +26,13 @@
 static network_t *_default(const config_t *cfg, struct boot *boot,
                            struct gas *gas) {
   network_t *network = NULL;
+  if (boot_n_ranks(boot) == 1) {
+    network = network_smp_new(cfg, boot);
+    if (network) {
+      return network;
+    }
+  }
+
 #ifdef HAVE_PHOTON
   network = network_pwc_funneled_new(cfg, boot, gas);
   if (network) {
