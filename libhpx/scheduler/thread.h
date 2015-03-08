@@ -83,7 +83,7 @@ typedef int (*thread_transfer_cont_t)(hpx_parcel_t *p, void *sp, void *env);
 /// The actual routine to transfer between thread.
 ///
 /// This pushes the callee-saves state on the current stack, and swaps the stack
-/// pointer to @p t->sp. It calls the provided continuation with the old stack
+/// pointer to @p p->sp. It calls the provided continuation with the old stack
 /// pointer, passing through the provided environment, which might be null.
 ///
 /// The continuation's return value is also returned by transfer.
