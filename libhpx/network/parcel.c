@@ -208,7 +208,7 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
 
   // Allocate a parcel with enough space to buffer the @p buffer. Parcels come
   // from a registered memory region so that we can RDMA to and from them.
-  hpx_parcel_t *p = registered_memalign(HPX_CACHELINE_SIZE, size);
+  hpx_parcel_t *p = global_memalign(HPX_CACHELINE_SIZE, size);
 
   if (!p) {
     dbg_error("parcel: failed to get an %zu bytes from the allocator.\n", bytes);
@@ -322,7 +322,7 @@ hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
 }
 
 void hpx_parcel_release(hpx_parcel_t *p) {
-  registered_free(p);
+  global_free(p);
 }
 
 hpx_parcel_t *parcel_create(hpx_addr_t target, hpx_action_t action,
