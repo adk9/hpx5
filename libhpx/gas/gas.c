@@ -11,25 +11,26 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
-#include <libhpx/gas.h>
-#include <libhpx/debug.h>
 #include <libhpx/boot.h>
+#include <libhpx/debug.h>
+#include <libhpx/gas.h>
 
 gas_t *gas_new(const config_t *cfg, struct boot *boot) {
   hpx_gas_t type = cfg->gas;
   gas_t *gas = NULL;
 
   if (type != HPX_GAS_PGAS && boot_n_ranks(boot) > 1) {
-    log_gas("GAS %s selection override to PGAS.\n", HPX_GAS_TO_STRING[type]);
+    log_cfg("GAS %s selection override to PGAS.\n", HPX_GAS_TO_STRING[type]);
   }
 
   if (type != HPX_GAS_SMP && boot_n_ranks(boot) == 1) {
-    log_gas("GAS %s selection override to SMP.\n", HPX_GAS_TO_STRING[type]);
+    log_cfg("GAS %s selection override to SMP.\n", HPX_GAS_TO_STRING[type]);
   }
 
+#ifdef HAVE_NETWORK
   if (boot_n_ranks(boot) > 1) {
     gas = gas_pgas_new(cfg, boot);
     if (!gas) {
@@ -40,6 +41,7 @@ gas_t *gas_new(const config_t *cfg, struct boot *boot) {
       gas->type = HPX_GAS_PGAS;
     }
   }
+#endif
 
   if (boot_n_ranks(boot) == 1) {
     gas = gas_smp_new();

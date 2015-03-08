@@ -1,5 +1,5 @@
-SUBDIRS       = jemalloc_build_global jemalloc_build_registered
-DIST_SUBDIRS  = jemalloc_build_global jemalloc_build_registered
+SUBDIRS       =
+DIST_SUBDIRS  =
 
 if BUILD_LIBFFI
 SUBDIRS      += libffi
@@ -19,6 +19,16 @@ endif
 if ENABLE_JEMALLOC
 SUBDIRS      += jemalloc_build_local
 DIST_SUBDIRS += jemalloc_build_local
+endif
+
+if BUILD_JEMALLOC_GLOBAL
+SUBDIRS      += jemalloc_build_global
+DIST_SUBDIRS += jemalloc_build_global
+endif
+
+if BUILD_JEMALLOC_REGISTERED
+SUBDIRS      += jemalloc_build_registered
+DIST_SUBDIRS += jemalloc_build_registered
 endif
 
 check-recursive: all-recursive
