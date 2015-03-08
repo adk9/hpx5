@@ -128,7 +128,7 @@ static size_t _alignment(void) {
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
   void *base = registered_memalign(_alignment(), _buffer_size);
   dbg_assert(base);
-  dbg_assert((uintptr_t)base % _alignment() == 0);
+  assert((uintptr_t)base % _alignment() == 0);
 
   ustack_t *thread = _protect(base);
   thread->stack_id = _register(thread);
