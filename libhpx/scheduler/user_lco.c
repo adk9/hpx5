@@ -11,20 +11,17 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 /// @file libhpx/scheduler/user_lco.c
 /// @brief A user-defined LCO.
-
 #include <assert.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
 
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+#include <libhpx/scheduler.h>
 #include "cvar.h"
 #include "lco.h"
 
@@ -51,7 +48,7 @@ static void _user_lco_fini(lco_t *lco) {
     free(u->buf);
   }
   lco_fini(lco);
-  libhpx_global_free(lco);
+  global_free(lco);
 }
 
 /// Handle an error condition.
@@ -152,7 +149,7 @@ static void _user_lco_init(_user_lco_t *u, size_t size, hpx_monoid_op_t op,
 
 hpx_addr_t hpx_lco_user_new(size_t size, hpx_monoid_id_t id, hpx_monoid_op_t op,
                             hpx_predicate_t predicate) {
-  _user_lco_t *u = libhpx_global_malloc(sizeof(*u));
+  _user_lco_t *u = global_malloc(sizeof(*u));
   assert(u);
   _user_lco_init(u, size, op, id, predicate);
   return lva_to_gva(u);

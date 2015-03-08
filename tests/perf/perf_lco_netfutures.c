@@ -108,7 +108,7 @@ static HPX_ACTION(_main, void *args) {
     args.pingpong = base;
 
     hpx_call(HPX_HERE, _ping, done, &args, sizeof(args));
-    hpx_call(HPX_THERE(1), _pong, done, &args, sizeof(args));
+    hpx_call(HPX_THERE(HPX_LOCALITIES-1), _pong, done, &args, sizeof(args));
 
     hpx_lco_wait(done);
     hpx_lco_delete(done, HPX_NULL);

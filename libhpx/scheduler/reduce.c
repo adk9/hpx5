@@ -22,9 +22,10 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+#include <libhpx/scheduler.h>
 #include "cvar.h"
 #include "lco.h"
 
@@ -53,7 +54,7 @@ static void _reduce_fini(lco_t *lco) {
     free(r->value);
   }
   lco_fini(lco);
-  libhpx_global_free(lco);
+  global_free(lco);
 }
 
 static hpx_status_t _reduce_attach(lco_t *lco, hpx_parcel_t *p) {
@@ -193,7 +194,7 @@ static void _reduce_init(_reduce_t *r, int inputs, size_t size, hpx_monoid_id_t 
 
 hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_monoid_id_t id,
                               hpx_monoid_op_t op) {
-  _reduce_t *r = libhpx_global_malloc(sizeof(*r));
+  _reduce_t *r = global_malloc(sizeof(*r));
   assert(r);
   _reduce_init(r, inputs, size, id, op);
   return lva_to_gva(r);

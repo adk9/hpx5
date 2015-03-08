@@ -31,7 +31,7 @@ unsigned mallctl_create_arena(chunk_alloc_t alloc, chunk_dalloc_t dalloc)
 unsigned mallctl_thread_get_arena(void)
   HPX_INTERNAL;
 
-unsigned mallctl_thread_set_arena(unsigned)
+unsigned mallctl_thread_set_arena(unsigned arena)
   HPX_INTERNAL;
 
 void mallctl_thread_enable_cache(void)

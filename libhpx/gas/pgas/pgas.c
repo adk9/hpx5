@@ -18,16 +18,16 @@
 #include <limits.h>
 #include <string.h>
 #include <hpx/hpx.h>
-#include "libhpx/boot.h"
-#include "libhpx/debug.h"
-#include "libhpx/gas.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "../mallctl.h"
+#include <libhpx/boot.h>
+#include <libhpx/debug.h>
+#include <libhpx/gas.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
 #include "bitmap.h"
 #include "gpa.h"
 #include "heap.h"
 #include "pgas.h"
+#include "../mallctl.h"
 #include "../parcel/emulation.h"
 
 /// The PGAS type is a global address space that manages a shared heap.
