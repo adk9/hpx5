@@ -37,8 +37,9 @@
 #include <libhpx/system.h>
 #include "network/probe.h"
 
+static hpx_addr_t _hpx_143 = HPX_NULL;
 static HPX_ACTION(_hpx_143_fix, void *UNUSED) {
-  hpx_gas_global_alloc(sizeof(void*), HPX_LOCALITIES);
+  _hpx_143 = hpx_gas_global_alloc(sizeof(void*), HPX_LOCALITIES);
   return LIBHPX_OK;
 }
 
@@ -206,11 +207,6 @@ int _hpx_run(hpx_action_t *act, int nargs, ...) {
     goto unwind0;
   }
 
-  // pthread_t _progress = progress_start(here);
-  // if (pthread_equal(_progress, pthread_self())) {
-  //   dbg_error("failed to start progress\n");
-  // }
-
   if (probe_start(here->network) != LIBHPX_OK) {
     status = log_error("could not start network probe\n");
     goto unwind1;
@@ -243,12 +239,16 @@ int _hpx_run(hpx_action_t *act, int nargs, ...) {
     goto unwind2;
   }
 
+  // clean up after _hpx_143
+  if (_hpx_143 != HPX_NULL) {
+    hpx_gas_free(_hpx_143, HPX_NULL);
+  }
+
 #ifdef ENABLE_PROFILING
   scheduler_dump_stats(here->sched);
 #endif
 
  unwind2:
-  // progress_stop(_progress);
   probe_stop();
  unwind1:
   _cleanup(here);
