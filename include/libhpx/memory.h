@@ -26,47 +26,25 @@
 ///
 ///        Global memory is memory that has a corresponding GAS address. It is
 ///        also registered with the network.
-#ifdef HAVE_JEMALLOC_GLOBAL
-# include <libhpx/jemalloc_global.h>
-static inline void global_free(void *p) {
-  libhpx_global_free(p);
-}
+#include <stddef.h>
+#include <hpx/attributes.h>
 
-static inline void *global_malloc(size_t bytes) {
-  return libhpx_global_malloc(bytes);
-}
-#else
-# include <stdlib.h>
-static inline void global_free(void *p) {
-  free(p);
-}
+void global_free(void *p)
+  HPX_INTERNAL;
 
-static inline void *global_malloc(size_t bytes) {
-  return malloc(bytes);
-}
-#endif
+void *global_malloc(size_t bytes)
+  HPX_INTERNAL HPX_MALLOC;
 
-#ifdef HAVE_JEMALLOC_REGISTERED
-# include <libhpx/jemalloc_registered.h>
-static inline void registered_free(void *addr) {
-  libhpx_registered_free(addr);
-}
+void *global_memalign(size_t boundary, size_t size)
+  HPX_INTERNAL HPX_MALLOC;
 
-static inline void *registered_memalign(size_t boundary, size_t size) {
-  return libhpx_registered_memalign(boundary, size);
-}
+void registered_free(void *p)
+  HPX_INTERNAL;
 
-#else
-# include <stdlib.h>
-static inline void registered_free(void *addr) {
-  free(addr);
-}
+void *registered_malloc(size_t bytes)
+  HPX_INTERNAL HPX_MALLOC;
 
-static inline void *registered_memalign(size_t boundary, size_t size) {
-  void *p;
-  posix_memalign(&p, boundary, size);
-  return p;
-}
-#endif
+void *registered_memalign(size_t boundary, size_t size)
+  HPX_INTERNAL HPX_MALLOC;
 
 #endif // LIBHPX_MEMORY_H
