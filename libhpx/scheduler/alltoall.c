@@ -109,16 +109,9 @@ typedef struct {
 static HPX_ACTION_DECL(_alltoall_setid_proxy);
 static HPX_ACTION_DECL(_alltoall_getid_proxy);
 
-static size_t _size(_alltoall_t *alltoall) {
-  return sizeof(_alltoall_t);
-}
-
 static size_t _alltoall_size(lco_t *lco) {
   _alltoall_t *alltoall = (_alltoall_t *)lco;
-  lco_lock(&alltoall->lco);
-  size_t size = _size(alltoall);
-  lco_unlock(&alltoall->lco);
-  return size;
+  return sizeof(*alltoall);
 }
 
 /// Deletes a gathering.

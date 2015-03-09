@@ -39,16 +39,9 @@ typedef struct {
   void                 *buf;
 } _user_lco_t;
 
-static size_t _size(_user_lco_t *user_lco) {
-  return sizeof(_user_lco_t);
-}
-
 static size_t _user_lco_size(lco_t *lco) {
   _user_lco_t *user_lco = (_user_lco_t *)lco;
-  lco_lock(&user_lco->lco);
-  size_t size = _size(user_lco);
-  lco_unlock(&user_lco->lco);
-  return size;
+  return sizeof(*user_lco);
 }
 
 /// Deletes a user-defined LCO.

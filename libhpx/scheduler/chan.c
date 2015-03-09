@@ -80,16 +80,9 @@ static _chan_node_t *_chan_dequeue(_chan_t *chan) {
   return node;
 }
 
-static size_t _size(_chan_t *chan) {
-  return sizeof(_chan_t);
-}
-
 static size_t _chan_size(lco_t *lco) {
   _chan_t *chan = (_chan_t *)lco;
-  lco_lock(&chan->lco);
-  size_t size = _size(chan);
-  lco_unlock(&chan->lco);
-  return size;
+  return sizeof(*chan);
 }
 
 /// Deletes a channel and its internal buffers.

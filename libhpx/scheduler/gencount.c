@@ -39,16 +39,10 @@ typedef struct {
   cvar_t       inplace[];
 } _gencount_t;
 
-static size_t _size(_gencount_t *gencount) {
-  return sizeof(_gencount_t);
-}
 
 static size_t _gencount_size(lco_t *lco) {
   _gencount_t *gencount = (_gencount_t *)lco;
-  lco_lock(&gencount->lco);
-  size_t size = _size(gencount);
-  lco_unlock(&gencount->lco);
-  return size;
+  return sizeof(*gencount);
 }
 
 static void _gencount_fini(lco_t *lco) {

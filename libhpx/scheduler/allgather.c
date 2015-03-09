@@ -101,16 +101,9 @@ typedef struct {
   char buffer[];
 } _allgather_set_offset_t;
 
-static size_t _size(_allgather_t *allgather) {
-  return sizeof(_allgather_t);
-}
-
 static size_t _allgather_size(lco_t *lco) {
   _allgather_t *allgather = (_allgather_t *)lco;
-  lco_lock(&allgather->lco);
-  size_t size = _size(allgather);
-  lco_unlock(&allgather->lco);
-  return size;
+  return sizeof(*allgather);
 }
 
 /// Deletes a gathering.

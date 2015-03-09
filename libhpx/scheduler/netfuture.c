@@ -94,16 +94,9 @@ static hpx_action_t _initialize_netfutures = 0;
 
 static _netfuture_table_t _netfuture_table = {.inited = 0};
 
-static size_t _size(_netfuture_t *netfuture) {
-  return sizeof(_netfuture_t);
-}
-
 static size_t _netfuture_size(lco_t *lco) {
   _netfuture_t *netfuture = (_netfuture_t *)lco;
-  lco_lock(&netfuture->lco);
-  size_t size = _size(netfuture);
-  lco_unlock(&netfuture->lco);
-  return size;
+  return sizeof(*netfuture);
 }
 
 /// Is this netfuture empty?
