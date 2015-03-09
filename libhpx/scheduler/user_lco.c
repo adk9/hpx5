@@ -36,6 +36,11 @@ typedef struct {
   void                 *buf;
 } _user_lco_t;
 
+static size_t _user_lco_size(lco_t *lco) {
+  _user_lco_t *user_lco = (_user_lco_t *)lco;
+  return sizeof(*user_lco);
+}
+
 /// Deletes a user-defined LCO.
 static void _user_lco_fini(lco_t *lco) {
   if (!lco) {
@@ -112,8 +117,8 @@ static hpx_status_t _user_lco_wait(lco_t *lco) {
   return _user_lco_get(lco, 0, NULL);
 }
 
-static void _user_lco_init(_user_lco_t *u, size_t size, hpx_monoid_op_t op,
-                           hpx_monoid_id_t id, hpx_predicate_t predicate) {
+static void _user_lco_init(_user_lco_t *u, size_t size, hpx_monoid_id_t id,
+                           hpx_monoid_op_t op, hpx_predicate_t predicate) {
   // vtable
   static const lco_class_t vtable = {
     .on_fini     = _user_lco_fini,
@@ -124,7 +129,8 @@ static void _user_lco_init(_user_lco_t *u, size_t size, hpx_monoid_op_t op,
     .on_getref   = NULL,
     .on_release  = NULL,
     .on_wait     = _user_lco_wait,
-    .on_reset    = _user_lco_reset
+    .on_reset    = _user_lco_reset,
+    .on_size     = _user_lco_size
   };
 
   assert(id);
@@ -151,6 +157,48 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_monoid_id_t id, hpx_monoid_op_t op,
                             hpx_predicate_t predicate) {
   _user_lco_t *u = global_malloc(sizeof(*u));
   assert(u);
-  _user_lco_init(u, size, op, id, predicate);
+  _user_lco_init(u, size, id, op, predicate);
   return lva_to_gva(u);
+}
+
+/// Initialize a block of array of lco.
+static int _block_local_init_handler(int n, size_t size, hpx_monoid_id_t id,
+                                     hpx_monoid_op_t op, hpx_predicate_t predicate) {
+  void *lco = hpx_thread_current_local_target();
+  dbg_assert(lco);
+
+  for (int i = 0; i < n; i++) {
+    void *addr = (void *)((uintptr_t)lco + i * (sizeof(_user_lco_t) + size));
+    _user_lco_init(addr, size, id, op, predicate);
+  }
+
+  return HPX_SUCCESS;
+}
+
+static HPX_ACTION_DEF(PINNED, _block_local_init_handler, _block_local_init,
+                      HPX_INT, HPX_SIZE_T, HPX_POINTER, HPX_POINTER, HPX_POINTER);
+
+/// Allocate an array of user LCO local to the calling locality.
+/// @param          n The (total) number of lcos to allocate
+/// @param       size The size of the LCO Buffer
+/// @param         id An initialization function for the data, this is
+///                   used to initialize the data in every epoch.
+/// @param         op The commutative-associative operation we're
+///                   performing.
+/// @param  predicate Predicate to guard the LCO.
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size,
+                                        hpx_monoid_id_t id, hpx_monoid_op_t op,
+                                        hpx_predicate_t predicate) {
+  uint32_t lco_bytes = sizeof(_user_lco_t) + size;
+  dbg_assert(n * lco_bytes < UINT32_MAX);
+  uint32_t  block_bytes = n * lco_bytes;
+  hpx_addr_t base = hpx_gas_alloc(block_bytes);
+
+  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &n, &size, &id, &op, &predicate);
+  dbg_check(e, "call of _block_init_action failed\n");
+
+  // return the base address of the allocation
+  return base;
 }

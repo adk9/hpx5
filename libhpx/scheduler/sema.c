@@ -24,9 +24,7 @@
 #include "cvar.h"
 #include "lco.h"
 
-/// ----------------------------------------------------------------------------
-/// Local semaphore interface.
-/// ----------------------------------------------------------------------------
+/// Local sema interface.
 /// @{
 typedef struct {
   lco_t       lco;
@@ -41,6 +39,11 @@ static void _sema_set(lco_t *lco, int size, const void *from);
 static hpx_status_t _sema_wait(lco_t *lco);
 static hpx_status_t _sema_get(lco_t *lco, int size, void *out);
 
+static size_t _sema_size(lco_t *lco) {
+  _sema_t *sema = (_sema_t *)lco;
+  return sizeof(*sema);
+}
+
 // the semaphore vtable
 static const lco_class_t _sema_vtable = {
   .on_fini     = _sema_fini,
@@ -51,7 +54,8 @@ static const lco_class_t _sema_vtable = {
   .on_release  = NULL,
   .on_wait     = _sema_wait,
   .on_attach   = NULL,
-  .on_reset    = _sema_reset
+  .on_reset    = _sema_reset,
+  .on_size     = _sema_size
 };
 
 /// Allocate a semaphore LCO.

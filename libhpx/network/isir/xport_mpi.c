@@ -160,5 +160,7 @@ isir_xport_t *isir_xport_new_mpi(const config_t *cfg) {
   xport->clear          = _mpi_clear;
   xport->cancel         = _mpi_cancel;
   xport->finish         = _mpi_finish;
+  xport->pin            = NULL;
+  xport->unpin          = NULL;
   return xport;
 }
