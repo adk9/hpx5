@@ -173,7 +173,7 @@ case "$SYSTEM" in
           ;;
       clang)
           module load llvm/3.6.0 
-          CFGFLAGS+=" CC=clang CFLAGS=-Wno-gnu-zero-variadic-macro-arguments "
+          CFGFLAGS+=" CC=clang"
           ;;
       *)
           ;;
