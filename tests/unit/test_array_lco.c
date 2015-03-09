@@ -98,8 +98,6 @@ static HPX_ACTION(test_libhpx_lco_reduce_array, void *UNUSED) {
   hpx_time_t t1 = hpx_time_now();
 
   hpx_addr_t domain = hpx_gas_global_alloc(ARRAY_SIZE, sizeof(double));
-  hpx_addr_t done = hpx_lco_and_new(ARRAY_SIZE);
-
   hpx_addr_t newdt = hpx_lco_reduce_local_array_new(ARRAY_SIZE, 
                                        ARRAY_SIZE, sizeof(double),
                                        (hpx_monoid_id_t)_initDouble,
@@ -119,7 +117,7 @@ static HPX_ACTION(test_libhpx_lco_reduce_array, void *UNUSED) {
   for (int i = 0; i < ARRAY_SIZE; i++) {
     double ans;
     hpx_addr_t other = hpx_lco_array_at(newdt, i, sizeof(double));
-    hpx_lco_get(newdt, sizeof(double), &ans);
+    hpx_lco_get(other, sizeof(double), &ans);
     printf("Reduce LCO Value got = %g\n", ans);
     assert(ans == 3.14*(ARRAY_SIZE));
   }
