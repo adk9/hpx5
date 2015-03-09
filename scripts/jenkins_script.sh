@@ -133,9 +133,9 @@ case "$SYSTEM" in
   ;;
   HPX5_BIGRED2)
     if [ "$HPXMODE_AXIS" == smp ] ; then
-      CFGFLAGS+=" --with-mpi=cray-mpich --with-tests-cmd=\"aprun -n 1 -N 1\""
+      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 1 -N 1\""
     else
-      CFGFLAGS+=" --with-mpi=cray-mpich --with-tests-cmd=\"aprun -n 2 -N 2\""
+      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 2 -N 2\""
     fi
     ;;
   *)
