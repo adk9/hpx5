@@ -20,12 +20,12 @@
 
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
-#include "libhpx/config.h"
-#include "libhpx/debug.h"
-#include "libhpx/instrumentation.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/parcel.h"
+#include <libhpx/config.h>
+#include <libhpx/debug.h>
+#include <libhpx/instrumentation.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
+#include <libhpx/parcel.h>
 #include "logtable.h"
 
 /// We're keeping one log per event per locality. Here are their headers.

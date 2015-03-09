@@ -14,6 +14,7 @@
 #define INSTRUMENTATION_H
 
 #include <stdint.h>
+#include <hpx/attributes.h>
 #include <hpx/builtins.h>
 
 struct config;
