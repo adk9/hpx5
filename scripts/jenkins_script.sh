@@ -48,8 +48,7 @@ case "$SYSTEM" in
     CFGFLAGS+=" --with-mpi=ompi"
     ;;
   HPX5_BIGRED2)
-    module load cray-mpich
-    CFGFLAGS+=" --with-mpi=cray-mpich"
+    CFGFLAGS+=" --with-mpi"
     ;;
 esac
 }
