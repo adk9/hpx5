@@ -18,6 +18,7 @@
 #include <mpi.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
+#include <libhpx/memory.h>
 #include "parcel_utils.h"
 #include "xport.h"
 
@@ -160,5 +161,15 @@ isir_xport_t *isir_xport_new_mpi(const config_t *cfg) {
   xport->clear          = _mpi_clear;
   xport->cancel         = _mpi_cancel;
   xport->finish         = _mpi_finish;
+<<<<<<< Updated upstream
+=======
+  xport->pin            = NULL;
+  xport->unpin          = NULL;
+
+  local = address_space_new_default(cfg);
+  registered = address_space_new_default(cfg);
+  global = address_space_new_jemalloc_global(cfg);
+
+>>>>>>> Stashed changes
   return xport;
 }
