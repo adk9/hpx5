@@ -307,7 +307,7 @@ static HPX_PINNED(_block_init, uint32_t *args) {
 ///
 /// @returns the global address of the allocated channel
 hpx_addr_t hpx_lco_chan_new(void) {
-  _chan_t *local = global_malloc(sizeof(chan_t));
+  _chan_t *local = global_malloc(sizeof(_chan_t));
   assert(local);
   _chan_init(local);
   return lva_to_gva(local);
