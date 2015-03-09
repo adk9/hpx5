@@ -974,24 +974,6 @@ void hpx_thread_set_affinity(int affinity) {
 /// This transfer handler is the right place to put all debug, logging, and
 /// instrumentation code for lightweight-thread transfers.
 int debug_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
-  // Trace this transfer, if transfer-tracing is enabled.
-  static const int class = INST_SCHED;
-  static const int id = INST_SCHED_TRANSFER;
-  hpx_parcel_t *from = scheduler_current_parcel();
-  inst_trace(class, id, (from) ? from->action : 0, p->action);
-
-  // Verify some properties before the transfer.
-  // if (self->current) {
-  //   dbg_assert(!action_is_interrupt(here->actions, self->current->action));
-
-  //   // if (parcel_get_stack(self->current)) {
-  //   //   dbg_assert(!action_is_task(here->actions, self->current->action));
-  //   // }
-  // }
-
 #undef thread_transfer
   return thread_transfer(p, cont, env);
-
-  // squash unused warnings
-  (void)from;
 }

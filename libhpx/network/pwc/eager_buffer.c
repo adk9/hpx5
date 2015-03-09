@@ -14,13 +14,13 @@
 # include "config.h"
 #endif
 
-#include "libhpx/action.h"
-#include "libhpx/debug.h"
-#include "libhpx/instrumentation.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/action.h>
+#include <libhpx/debug.h>
+#include <libhpx/instrumentation.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
+#include <libhpx/parcel.h>
+#include <libhpx/scheduler.h>
 #include "commands.h"
 #include "eager_buffer.h"
 #include "parcel_utils.h"

@@ -24,46 +24,46 @@
 #include "smp.h"
 
 // Define the transports allowed for the SMP network
-static void _smp_delete(network_t *network) {
+static void _smp_delete(void *network) {
 }
 
-static int _smp_progress(network_t *network) {
+static int _smp_progress(void *network) {
   return 0;
 }
 
-static int _smp_send(network_t *network, hpx_parcel_t *p) {
+static int _smp_send(void *network, hpx_parcel_t *p) {
   hpx_abort();
 }
 
-static int _smp_command(network_t *network, hpx_addr_t rank,
+static int _smp_command(void *network, hpx_addr_t rank,
                         hpx_action_t op, uint64_t args) {
   static const int zero = 0;
   return hpx_xcall(HPX_HERE, op, HPX_NULL, zero, args);
 }
 
-static int _smp_pwc(network_t *network,
+static int _smp_pwc(void *network,
                     hpx_addr_t to, const void *from, size_t n,
                     hpx_action_t lop, hpx_addr_t laddr,
                     hpx_action_t rop, hpx_addr_t raddr) {
   return LIBHPX_EUNIMPLEMENTED;
 }
 
-static int _smp_put(network_t *network, hpx_addr_t to,
+static int _smp_put(void *network, hpx_addr_t to,
                     const void *from, size_t n,
                     hpx_action_t lop, hpx_addr_t laddr) {
   return LIBHPX_EUNIMPLEMENTED;
 }
 
-static int _smp_get(network_t *network, void *to, hpx_addr_t from, size_t n,
+static int _smp_get(void *network, void *to, hpx_addr_t from, size_t n,
                     hpx_action_t lop, hpx_addr_t laddr) {
   return LIBHPX_EUNIMPLEMENTED;
 }
 
-static hpx_parcel_t *_smp_probe(network_t *network, int nrx) {
+static hpx_parcel_t *_smp_probe(void *network, int nrx) {
   return NULL;
 }
 
-static void _smp_set_flush(network_t *network) {
+static void _smp_set_flush(void *network) {
 }
 
 static network_t _smp = {

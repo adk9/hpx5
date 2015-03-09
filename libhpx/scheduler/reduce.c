@@ -22,9 +22,10 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+#include <libhpx/scheduler.h>
 #include "cvar.h"
 #include "lco.h"
 
@@ -41,6 +42,11 @@ typedef struct {
   void            *value;
 } _reduce_t;
 
+static size_t _reduce_size(lco_t *lco) {
+  _reduce_t *reduce = (_reduce_t *)lco;
+  return sizeof(*reduce);
+}
+
 /// Deletes a reduction.
 static void _reduce_fini(lco_t *lco) {
   if (!lco) {
@@ -53,7 +59,7 @@ static void _reduce_fini(lco_t *lco) {
     free(r->value);
   }
   lco_fini(lco);
-  libhpx_global_free(lco);
+  global_free(lco);
 }
 
 static hpx_status_t _reduce_attach(lco_t *lco, hpx_parcel_t *p) {
@@ -165,7 +171,8 @@ static const lco_class_t _reduce_vtable = {
   .on_getref   = NULL,
   .on_release  = NULL,
   .on_wait     = _reduce_wait,
-  .on_reset    = _reduce_reset
+  .on_reset    = _reduce_reset,
+  .on_size     = _reduce_size
 };
 
 static void _reduce_init(_reduce_t *r, int inputs, size_t size, hpx_monoid_id_t id,
@@ -193,8 +200,50 @@ static void _reduce_init(_reduce_t *r, int inputs, size_t size, hpx_monoid_id_t 
 
 hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_monoid_id_t id,
                               hpx_monoid_op_t op) {
-  _reduce_t *r = libhpx_global_malloc(sizeof(*r));
+  _reduce_t *r = global_malloc(sizeof(*r));
   assert(r);
   _reduce_init(r, inputs, size, id, op);
   return lva_to_gva(r);
 }
+
+/// Initialize a block of array of lco.
+static int _block_local_init_handler(int n, int inputs, size_t size,
+                                     hpx_monoid_id_t id, hpx_monoid_op_t op) {
+  void *lco = hpx_thread_current_local_target();
+  dbg_assert(lco);
+
+  for (int i = 0; i < n; i++) {
+    void *addr = (void *)((uintptr_t)lco + i * (sizeof(_reduce_t) + size));
+    _reduce_init(addr, inputs, size, id, op);
+  }
+
+  return HPX_SUCCESS;
+}
+
+static HPX_ACTION_DEF(PINNED, _block_local_init_handler, _block_local_init,
+                      HPX_INT, HPX_INT, HPX_SIZE_T, HPX_POINTER, HPX_POINTER);
+
+/// Allocate an array of reduce LCO local to the calling locality.
+/// @param          n The (total) number of lcos to allocate
+/// @param     inputs The static number of inputs to the reduction.
+/// @param       size The size of the data being reduced.
+/// @param         id An initialization function for the data, this is
+///                   used to initialize the data in every epoch.
+/// @param         op The commutative-associative operation we're
+///                   performing.
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_reduce_local_array_new(int n, int inputs, size_t size,
+                                          hpx_monoid_id_t id, 
+                                          hpx_monoid_op_t op) {
+  uint32_t lco_bytes = sizeof(_reduce_t) + size;
+  dbg_assert(n * lco_bytes < UINT32_MAX);
+  uint32_t  block_bytes = n * lco_bytes;
+  hpx_addr_t base = hpx_gas_alloc(block_bytes);
+
+  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &n, &inputs, &size, &id, &op);
+  dbg_check(e, "call of _block_init_action failed\n");
+
+  // return the base address of the allocation
+  return base;
+} 

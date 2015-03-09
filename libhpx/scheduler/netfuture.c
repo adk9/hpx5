@@ -48,6 +48,8 @@
 /// netfuture somewhere in the system. For hpx_netfuture_t on the other hand,
 /// there may be as many, and the structure contains no actual data; it is
 /// effectively a pointer.
+/// Local netfuture interface.
+/// @{
 typedef struct {
   lco_t lco;
   cvar_t full;
@@ -91,6 +93,11 @@ static hpx_action_t _add_future_to_table = 0;
 static hpx_action_t _initialize_netfutures = 0;
 
 static _netfuture_table_t _netfuture_table = {.inited = 0};
+
+static size_t _netfuture_size(lco_t *lco) {
+  _netfuture_t *netfuture = (_netfuture_t *)lco;
+  return sizeof(*netfuture);
+}
 
 /// Is this netfuture empty?
 static bool _empty(const _netfuture_t *f) {
@@ -383,7 +390,8 @@ _netfuture_init(_netfuture_t *f, int size, bool shared)
     .on_release = NULL,
     .on_wait = NULL,
     .on_attach = NULL,
-    .on_reset = NULL
+    .on_reset = NULL,
+    .on_size = _netfuture_size
   };
 
   lco_init(&f->lco, &vtable);

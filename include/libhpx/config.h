@@ -107,6 +107,7 @@ static const char* const HPX_BOOT_TO_STRING[] = {
 #define HPX_LOG_TRANS   64              //!< Log the transport operations.
 #define HPX_LOG_PARCEL  128             //!< Parcel logging.
 #define HPX_LOG_ACTION  256             //!< Log action registration.
+#define HPX_LOG_CONFIG  512             //!< Log configuration.
 
 #define HPX_TRACE_PARCELS 1
 #define HPX_TRACE_PWC     2

@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 /// @file libhpx/scheduler/schedule.c
@@ -20,16 +20,13 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
-
-#include <hpx/builtins.h>
 #include <libsync/barriers.h>
-
-#include "libhpx/config.h"
-#include "libhpx/debug.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/scheduler.h"
+#include <hpx/builtins.h>
+#include <libhpx/config.h>
+#include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/scheduler.h>
 #include "thread.h"
-
 
 struct scheduler *scheduler_new(config_t *cfg) {
   const int cores = cfg->cores;
