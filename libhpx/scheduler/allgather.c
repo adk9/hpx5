@@ -79,9 +79,8 @@
 #include "cvar.h"
 #include "lco.h"
 
-static const int _gathering = 0;
-static const int _reading   = 1;
-
+/// Local allgather interface.
+/// @{
 typedef struct {
   lco_t           lco;
   cvar_t         wait;
@@ -91,11 +90,18 @@ typedef struct {
   void         *value;
 } _allgather_t;
 
+static const int _gathering = 0;
+static const int _reading   = 1;
 
 typedef struct {
   int offset;
   char buffer[];
 } _allgather_set_offset_t;
+
+static size_t _allgather_size(lco_t *lco) {
+  _allgather_t *allgather = (_allgather_t *)lco;
+  return sizeof(*allgather);
+}
 
 /// Deletes a gathering.
 static void _allgather_fini(lco_t *lco) {
@@ -276,7 +282,8 @@ static void _allgather_init(_allgather_t *g, size_t participants, size_t size) {
     .on_getref   = NULL,
     .on_release  = NULL,
     .on_wait     = _allgather_wait,
-    .on_reset    = _allgather_reset
+    .on_reset    = _allgather_reset,
+    .on_size     = _allgather_size
   };
 
   lco_init(&g->lco, &vtable);
@@ -309,4 +316,38 @@ hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size) {
   _allgather_init(g, inputs, size);
   return lva_to_gva(g);
 }
+
+/// Initialize a block of array of lco.
+static HPX_PINNED(_block_local_init, uint32_t *args) {
+  void *lco = hpx_thread_current_local_target();
+  dbg_assert(lco);
+
+  for (int i = 0; i < args[0]; i++) {
+    void *addr = (void *)((uintptr_t)lco + i * (sizeof(_allgather_t) + args[2]));
+    _allgather_init(addr, args[1], args[2]);
+  }
+
+  return HPX_SUCCESS;
+}
+
+/// Allocate an array of allgather LCO local to the calling locality.
+/// @param          n The (total) number of lcos to allocate
+/// @param     inputs Number of inputs to allgather LCO
+/// @param       size The size of the value for allgather LCO
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_allgather_local_array_new(int n, size_t inputs, size_t size) {
+  uint32_t lco_bytes = sizeof(_allgather_t) + size;
+  dbg_assert(n * lco_bytes < UINT32_MAX);
+  uint32_t block_bytes = n * lco_bytes;
+  hpx_addr_t base = hpx_gas_alloc(block_bytes);
+
+  uint32_t args[] = {n, inputs, size};
+  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &args, sizeof(args));
+  dbg_check(e, "call of _block_init_action failed\n");
+
+  // return the base address of the allocation
+  return base;
+}
+ 
 
