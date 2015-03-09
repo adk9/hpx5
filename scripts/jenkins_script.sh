@@ -25,6 +25,10 @@ case "$SYSTEM" in
     export CRAYPE_LINK_TYPE=dynamic
     export PATH=/N/home/h/p/hpx5/BigRed2/new_modules/bin:$PATH
     ;;
+  HPX5_STAMPEDE)
+    module load intel/14.0.1.106
+    export LDFLAGS="-L/opt/ofed/lib64 -lpthread"
+    export CPPFLAGS="-I/opt/ofed/include"
   *)
     echo "Unknown system $SYSTEM."
     exit 1
@@ -50,6 +54,9 @@ case "$SYSTEM" in
   HPX5_BIGRED2)
     CFGFLAGS+=" --with-mpi"
     ;;
+  HPX5_STAMPEDE)
+    CFGFLAGS+=" --with-mpi"
+    ;;
 esac
 }
 
@@ -67,6 +74,10 @@ case "$SYSTEM" in
     export HPX_PHOTON_BACKEND=ugni
     export HPX_PHOTON_CARGS="--with-ugni"
     CFGFLAGS+=" --with-pmi --with-hugetlbfs"
+    ;;
+  HPX5_STAMPEDE)
+    export HPX_PHOTON_IBDEV=mlx4_0
+    export HPX_PHOTON_BACKEND=verbs
     ;;
 esac
 }
@@ -137,6 +148,13 @@ case "$SYSTEM" in
       CFGFLAGS+=" --with-tests-cmd=\"aprun -n 2 -N 2\""
     fi
     ;;
+  HPX5_STAMPEDE)
+    if [ "$HPXMODE_AXIS" == smp ] ; then
+      CFGFLAGS+=" --with-tests-cmd=\"ibrun -n 1 -o 0\""
+    else
+      CFGFLAGS+=" --with-tests-cmd=\"ibrun -n 2 -o 0\""
+    fi
+   ;;
   *)
     exit 1
     ;;
@@ -160,6 +178,9 @@ case "$SYSTEM" in
     esac  
     ;; 
   HPX5_BIGRED2)
+    CFGFLAGS+=" CC=cc"
+    ;;
+  HPX5_STAMPEDE)
     CFGFLAGS+=" CC=cc"
     ;;
   *)
