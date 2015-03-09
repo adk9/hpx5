@@ -64,21 +64,17 @@
 ///           ####################################
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 /// @file libhpx/scheduler/allgather.c
 /// @brief Defines the allgather LCO.
-#include <stdio.h>
 #include <assert.h>
-#include <stdlib.h>
 #include <string.h>
-
-#include "libhpx/action.h"
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+#include <libhpx/scheduler.h>
 #include "cvar.h"
 #include "lco.h"
 
@@ -126,7 +122,7 @@ static void _alltoall_fini(lco_t *lco) {
     free(g->value);
   }
   lco_fini(lco);
-  libhpx_global_free(lco);
+  global_free(lco);
 }
 
 /// Handle an error condition.
@@ -380,7 +376,7 @@ static void _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
 /// @param participants The static number of participants in the gathering.
 /// @param size         The size of the data being gathered.
 hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) {
-  _alltoall_t *g = libhpx_global_malloc(sizeof(*g));
+  _alltoall_t *g = global_malloc(sizeof(*g));
   assert(g);
   _alltoall_init(g, inputs, size);
   return lva_to_gva(g);

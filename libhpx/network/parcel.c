@@ -23,17 +23,17 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
-#include <jemalloc/jemalloc_global.h>
 #include <ffi.h>
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
 #include <libhpx/action.h>
 #include <libhpx/attach.h>
 #include <libhpx/debug.h>
-#include <libhpx/libhpx.h>
 #include <libhpx/gas.h>
-#include <libhpx/locality.h>
 #include <libhpx/instrumentation.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
@@ -206,8 +206,9 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
     size += _max(sizeof(void*), bytes);
   }
 
-  // allocate a parcel with enough space to buffer the @p buffer
-  hpx_parcel_t *p = libhpx_global_memalign(HPX_CACHELINE_SIZE, size);
+  // Allocate a parcel with enough space to buffer the @p buffer. Parcels come
+  // from a registered memory region so that we can RDMA to and from them.
+  hpx_parcel_t *p = global_memalign(HPX_CACHELINE_SIZE, size);
 
   if (!p) {
     dbg_error("parcel: failed to get an %zu bytes from the allocator.\n", bytes);
@@ -321,7 +322,7 @@ hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
 }
 
 void hpx_parcel_release(hpx_parcel_t *p) {
-  libhpx_global_free(p);
+  global_free(p);
 }
 
 hpx_parcel_t *parcel_create(hpx_addr_t target, hpx_action_t action,

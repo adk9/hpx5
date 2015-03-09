@@ -18,8 +18,8 @@
 #define SET_VALUE 1234
 static uint64_t value;
 
-// hpx_lco_future_new test: This tests creation of future. Futures are built
-// -in LCO's that represent values returned from async computation. Futures
+// hpx_lco_future_new test: This tests creation of future. Futures are built in
+// in LCOs that represent values returned from async computation. Futures
 // are always allocated in the global address space, because their addresses
 // are used as the targets of parcels.
 static HPX_ACTION(_get_value, void *args) {
@@ -28,18 +28,13 @@ static HPX_ACTION(_get_value, void *args) {
 
 static HPX_ACTION(_set_value, uint64_t *args) {
   value = *args;
-  //printf("At rank %d received value %"PRIu64" \n", hpx_get_my_rank(), value);
   return HPX_SUCCESS;
 }
 
 static HPX_ACTION(test_libhpx_lco_future_new, void *UNUSED) {
-  int count;
   printf("Starting the Future LCO test\n");
-  if(HPX_LOCALITIES < 2)
-    count = 2;
-  else
-    count = HPX_LOCALITIES;
 
+  int count = HPX_LOCALITIES;
   uint64_t values[count];
   void *addresses[count];
   int sizes[count];
@@ -67,8 +62,9 @@ static HPX_ACTION(test_libhpx_lco_future_new, void *UNUSED) {
 
   hpx_lco_get_all(count, futures, sizes, addresses, NULL);
 
-  for (int i = 0; i < count; i++)
+  for (int i = 0; i < count; i++) {
     hpx_lco_delete(futures[i], HPX_NULL);
+  }
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;

@@ -18,17 +18,12 @@
 /// Defines a channel structure.
 
 #include <assert.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <hpx/builtins.h>
-#include "libhpx/action.h"
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+#include <libhpx/scheduler.h>
 #include "cvar.h"
 #include "lco.h"
-
 
 /// Local channel interface.
 ///
@@ -100,7 +95,7 @@ static void _chan_fini(lco_t *lco) {
     free(node);
   }
   lco_fini(lco);
-  libhpx_global_free(lco);
+  global_free(lco);
 }
 
 static void _chan_error(lco_t *lco, hpx_status_t code) {
@@ -312,7 +307,7 @@ static HPX_PINNED(_block_init, uint32_t *args) {
 ///
 /// @returns the global address of the allocated channel
 hpx_addr_t hpx_lco_chan_new(void) {
-  _chan_t *local = libhpx_global_malloc(sizeof(_chan_t));
+  _chan_t *local = global_malloc(sizeof(chan_t));
   assert(local);
   _chan_init(local);
   return lva_to_gva(local);
