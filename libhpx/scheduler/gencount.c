@@ -29,7 +29,6 @@
 #include "cvar.h"
 #include "lco.h"
 
-
 /// Local gencount interface.
 /// @{
 typedef struct {
@@ -40,6 +39,11 @@ typedef struct {
   cvar_t       inplace[];
 } _gencount_t;
 
+
+static size_t _gencount_size(lco_t *lco) {
+  _gencount_t *gencount = (_gencount_t *)lco;
+  return sizeof(*gencount);
+}
 
 static void _gencount_fini(lco_t *lco) {
   if (!lco) {
@@ -149,7 +153,8 @@ static void _gencount_init(_gencount_t *gencnt, unsigned long ninplace) {
     .on_release  = NULL,
     .on_wait     = _gencount_wait,
     .on_attach   = NULL,
-    .on_reset    = _gencount_reset
+    .on_reset    = _gencount_reset,
+    .on_size     = _gencount_size
   };
 
   lco_init(&gencnt->lco, &gencount_vtable);
