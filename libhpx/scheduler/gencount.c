@@ -22,10 +22,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "hpx/hpx.h"
-#include "libhpx/action.h"
-#include "libhpx/scheduler.h"
-#include "libhpx/locality.h"
+#include <libhpx/action.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+#include <libhpx/scheduler.h>
 #include "cvar.h"
 #include "lco.h"
 
@@ -52,7 +52,7 @@ static void _gencount_fini(lco_t *lco) {
 
   lco_lock(lco);
   lco_fini(lco);
-  libhpx_global_free(lco);
+  global_free(lco);
 }
 
 
@@ -173,7 +173,7 @@ static HPX_ACTION(_gencount_wait_gen_proxy, unsigned long *gen) {
 
 hpx_addr_t hpx_lco_gencount_new(unsigned long ninplace) {
   size_t bytes = sizeof(_gencount_t) + ninplace * sizeof(cvar_t);
-  _gencount_t *cnt = libhpx_global_malloc(bytes);
+  _gencount_t *cnt = global_malloc(bytes);
   dbg_assert(cnt);
   _gencount_init(cnt, ninplace);
   return lva_to_gva(cnt);

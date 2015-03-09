@@ -20,11 +20,11 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+#include <libhpx/scheduler.h>
 #include "cvar.h"
 #include "lco.h"
 
@@ -58,7 +58,7 @@ static void _allreduce_fini(lco_t *lco) {
     free(r->value);
   }
   lco_fini(lco);
-  libhpx_global_free(lco);
+  global_free(lco);
 }
 
 /// Handle an error condition.
@@ -194,7 +194,7 @@ static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
 
 hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
                                  hpx_monoid_id_t id, hpx_monoid_op_t op) {
-  _allreduce_t *r = libhpx_global_malloc(sizeof(*r));
+  _allreduce_t *r = global_malloc(sizeof(*r));
   assert(r);
   _allreduce_init(r, inputs, outputs, size, id, op);
   return lva_to_gva(r);

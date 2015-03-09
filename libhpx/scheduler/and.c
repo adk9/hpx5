@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 /// @file libhpx/scheduler/and.c
@@ -19,13 +19,12 @@
 
 #include <assert.h>
 #include <stdint.h>
-
-#include "hpx/hpx.h"
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/scheduler.h"
-#include "lco.h"
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+#include <libhpx/scheduler.h>
 #include "cvar.h"
+#include "lco.h"
 
 /// And LCO class interface.
 /// @{
@@ -70,7 +69,7 @@ static void _and_fini(lco_t *lco) {
   if (lco) {
     lco_lock(lco);
     lco_fini(lco);
-    libhpx_global_free(lco);
+    global_free(lco);
   }
 }
 
@@ -160,7 +159,7 @@ static void _and_init(_and_t *and, intptr_t value) {
 
 /// Allocate an and LCO. This is synchronous.
 hpx_addr_t hpx_lco_and_new(intptr_t limit) {
-  _and_t *and = libhpx_global_malloc(sizeof(*and));
+  _and_t *and = global_malloc(sizeof(*and));
   dbg_assert_str(and, "Could not malloc global memory\n");
   log_lco("allocated lco %p\n", (void*)and);
   _and_init(and, limit);
