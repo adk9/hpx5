@@ -201,28 +201,24 @@ hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
 }
 
 
-typedef struct {
-  int               n;
-  size_t participants;
-  size_t      readers;
-  size_t         size;
-  hpx_monoid_id_t  id;
-  hpx_monoid_op_t  op;
-} _allreduce_array_args_t;
-
 /// Initialize a block of array of lco.
-static HPX_PINNED(_block_local_init, const _allreduce_array_args_t *args) {
-  _allreduce_array_args_t *lco = hpx_thread_current_local_target();
+static int _block_local_init_handler(int n, size_t participants, size_t readers,
+                                     size_t size, hpx_monoid_id_t id,
+                                     hpx_monoid_op_t op) {
+  void *lco = hpx_thread_current_local_target();
   dbg_assert(lco);
 
-  for (int i = 0; i < args->n; i++) {
-    void *addr = (void *)((uintptr_t)lco + i * (sizeof(_allreduce_t) + args->size));
-    _allreduce_init(addr, args->participants, args->readers, args->size, 
-                    args->id, args->op);
+  for (int i = 0; i < n; i++) {
+    void *addr = (void *)((uintptr_t)lco + i * (sizeof(_allreduce_t) + size));
+    _allreduce_init(addr, participants, readers, size, id, op);
   }
-
   return HPX_SUCCESS;
 }
+
+static HPX_ACTION_DEF(PINNED, _block_local_init_handler, _block_local_init,
+                      HPX_INT, HPX_SIZE_T, HPX_SIZE_T, HPX_SIZE_T,
+                      HPX_POINTER, HPX_POINTER);
+
 
 /// Allocate an array of allreduce LCO local to the calling locality.
 /// @param            n The (total) number of lcos to allocate
@@ -239,19 +235,13 @@ hpx_addr_t hpx_lco_allreduce_local_array_new(int n, size_t participants,
                                              size_t readers, size_t size,
                                              hpx_monoid_id_t id,
                                              hpx_monoid_op_t op) {
-  _allreduce_array_args_t args;
   uint32_t lco_bytes = sizeof(_allreduce_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
   uint32_t  block_bytes = n * lco_bytes;
   hpx_addr_t base = hpx_gas_alloc(block_bytes);
 
-  args.n = n;
-  args.participants = participants;
-  args.readers = readers;
-  args.size = size;
-  args.id   = id;
-  args.op   = op;
-  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &args, sizeof(args));
+  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &n, &participants, &readers,
+                        &size, &id, &op);
   dbg_check(e, "call of _block_init_action failed\n");
 
   // return the base address of the allocation
