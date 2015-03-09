@@ -29,6 +29,7 @@ case "$SYSTEM" in
     module load intel/14.0.1.106
     export LDFLAGS="-L/opt/ofed/lib64 -lpthread"
     export CPPFLAGS="-I/opt/ofed/include"
+    ;;
   *)
     echo "Unknown system $SYSTEM."
     exit 1
