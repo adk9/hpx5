@@ -41,16 +41,9 @@ typedef struct {
   void            *value;
 } _reduce_t;
 
-static size_t _size(_reduce_t *reduce) {
-  return sizeof(_reduce_t);
-}
-
 static size_t _reduce_size(lco_t *lco) {
   _reduce_t *reduce = (_reduce_t *)lco;
-  lco_lock(&reduce->lco);
-  size_t size = _size(reduce);
-  lco_unlock(&reduce->lco);
-  return size;
+  return sizeof(*reduce);
 }
 
 /// Deletes a reduction.

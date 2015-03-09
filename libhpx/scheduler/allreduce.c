@@ -45,16 +45,9 @@ typedef struct {
 static const int _reducing = 0;
 static const  int _reading = 1;
 
-static size_t _size(_allreduce_t *allreduce) {
-  return sizeof(_allreduce_t);
-}
-
 static size_t _allreduce_size(lco_t *lco) {
   _allreduce_t *allreduce = (_allreduce_t *)lco;
-  lco_lock(&allreduce->lco);
-  size_t size = _size(allreduce);
-  lco_unlock(&allreduce->lco);
-  return size;
+  return sizeof(*allreduce);
 }
 
 /// Deletes a reduction.

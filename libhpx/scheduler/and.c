@@ -35,9 +35,6 @@ typedef struct {
   volatile intptr_t value;                  // the threshold
 } _and_t;
 
-static size_t _size(_and_t *and) {
-  return sizeof(_and_t);
-}
 
 static hpx_status_t _wait(_and_t *and) {
   hpx_status_t status = cvar_get_error(&and->barrier);
@@ -114,10 +111,7 @@ static void _and_set(lco_t *lco, int size, const void *from) {
 
 static size_t _and_size(lco_t *lco) {
   _and_t *and = (_and_t *)lco;
-  lco_lock(&and->lco);
-  size_t size = _size(and);
-  lco_unlock(&and->lco);
-  return size;
+  return sizeof(*and);
 }
 
 static hpx_status_t _and_wait(lco_t *lco) {

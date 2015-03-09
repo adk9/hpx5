@@ -38,16 +38,9 @@ typedef struct {
   char  value[];
 } _future_t;
 
-static size_t _size(_future_t *future) {
-  return sizeof(_future_t);
-}
-
 static size_t _future_size(lco_t *lco) {
   _future_t *future = (_future_t *)lco;
-  lco_lock(&future->lco);
-  size_t size = _size(future);
-  lco_unlock(&future->lco);
-  return size;
+  return sizeof(*future);
 }
 
 static hpx_status_t _wait(_future_t *f) {

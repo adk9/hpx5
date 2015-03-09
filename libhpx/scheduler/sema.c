@@ -39,16 +39,9 @@ static void _sema_set(lco_t *lco, int size, const void *from);
 static hpx_status_t _sema_wait(lco_t *lco);
 static hpx_status_t _sema_get(lco_t *lco, int size, void *out);
 
-static size_t _size(_sema_t *sema) {
-  return sizeof(_sema_t);
-}
-
 static size_t _sema_size(lco_t *lco) {
   _sema_t *sema = (_sema_t *)lco;
-  lco_lock(&sema->lco);
-  size_t size = _size(sema);
-  lco_unlock(&sema->lco);
-  return size;
+  return sizeof(*sema);
 }
 
 // the semaphore vtable
