@@ -212,9 +212,11 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
   // variadic argument.
   ffi_cif *cif = action_table_get_cif(table, action);
   if (cif) {
-    if (nargs != cif->nargs) {
+    hpx_action_type_t type = action_table_get_type(table, action);
+    int expected = (type == HPX_ACTION_PINNED) ? (cif->nargs-1) : cif->nargs;
+    if (nargs != expected) {
       return log_error("expecting %d arguments for action %s (%d given).\n",
-                       cif->nargs, action_table_get_key(table, action), nargs);
+                       expected, action_table_get_key(table, action), nargs);
     }
 
     void *argps[nargs];
@@ -292,7 +294,7 @@ int action_execute(const hpx_parcel_t *p) {
       return HPX_RESEND;
     }
     void **avalue = (void**) alloca((cif->nargs+1) * sizeof(void*));
-    avalue[0] = target;
+    avalue[0] = &target;
     ffi_raw_to_ptrarray(cif, args, &avalue[1]);
     ffi_call(cif, FFI_FN(handler), ret, avalue);
     hpx_gas_unpin(p->target);
@@ -325,13 +327,24 @@ int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_hand
   ffi_cif *cif = calloc(1, sizeof(*cif));
   dbg_assert(cif);
 
-  hpx_type_t *args = calloc(nargs, sizeof(args[0]));
   va_list vargs;
   va_start(vargs, id);
-  for (int i = 0; i < nargs; ++i) {
+
+  int begin = 0;
+  if (type == HPX_ACTION_PINNED) {
+    nargs++;
+    begin = 1;
+  }
+
+  hpx_type_t *args = calloc(nargs, sizeof(args[0]));
+  for (int i = begin; i < nargs; ++i) {
     args[i] = va_arg(vargs, hpx_type_t);
   }
   va_end(vargs);
+
+  if (type == HPX_ACTION_PINNED) {
+    args[0] = HPX_POINTER;
+  }
 
   ffi_status s = ffi_prep_cif(cif, FFI_DEFAULT_ABI, nargs, HPX_INT, args);
   if (s != FFI_OK) {

@@ -107,29 +107,18 @@ int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_hand
 /// @param         type The type of the action (DEFAULT, PINNED, etc).
 /// @param           id The id that you pass to hpx_call to call the action.
 /// @param         args The C argument type (must be a pointer type).
-#define HPX_ACTION_DEF_USER(type, id, args)                     \
+#define HPX_ACTION_DEF_USER(type, id, ...)                      \
   HPX_ACTION_DECL(id) = -1;                                     \
-  static int id##_##type(args);                                 \
+  static int id##_##type(__VA_ARGS__);                          \
   static HPX_CONSTRUCTOR void _register_##id##_##type(void) {   \
     _HPX_REGISTER_ACTION(type, id##_##type , &id);              \
   }                                                             \
-  static int id##_##type(args)
+  static int id##_##type(__VA_ARGS__)
 
-
-#define HPX_ACTION_DEF_USER_PINNED(type, id, tgt, args)         \
-  HPX_ACTION_DECL(id) = -1;                                     \
-  static int id##_##type(tgt, args);                            \
-  static HPX_CONSTRUCTOR void _register_##id##_##type(void) {   \
-    _HPX_REGISTER_ACTION(type, id##_##type , &id);              \
-  }                                                             \
-  static int id##_##type(tgt, args)
-
-
-
-#define HPX_ACTION(id, args)      HPX_ACTION_DEF_USER(DEFAULT, id, args)
-#define HPX_PINNED(id, tgt, args) HPX_ACTION_DEF_USER_PINNED(PINNED, id, tgt, args)
-#define HPX_TASK(id, args)        HPX_ACTION_DEF_USER(TASK, id, args)
-#define HPX_INTERRUPT(id, args)   HPX_ACTION_DEF_USER(INTERRUPT, id, args)
+#define HPX_ACTION(id, ...)    HPX_ACTION_DEF_USER(DEFAULT, id, __VA_ARGS__)
+#define HPX_PINNED(id, ...)    HPX_ACTION_DEF_USER(PINNED, id, __VA_ARGS__)
+#define HPX_TASK(id, ...)      HPX_ACTION_DEF_USER(TASK, id, __VA_ARGS__)
+#define HPX_INTERRUPT(id, ...) HPX_ACTION_DEF_USER(INTERRUPT, id, __VA_ARGS__)
 
 #define HPX_REGISTER_ACTION(handler, id)                        \
   _HPX_REGISTER_ACTION(DEFAULT, handler, id)

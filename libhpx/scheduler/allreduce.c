@@ -202,12 +202,10 @@ hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
 
 
 /// Initialize a block of array of lco.
-static int _block_local_init_handler(int n, size_t participants, size_t readers,
-                                     size_t size, hpx_monoid_id_t id,
-                                     hpx_monoid_op_t op) {
-  void *lco = hpx_thread_current_local_target();
+static int
+_block_local_init_handler(void *lco, int n, size_t participants, size_t readers,
+                          size_t size, hpx_monoid_id_t id, hpx_monoid_op_t op) {
   dbg_assert(lco);
-
   for (int i = 0; i < n; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_allreduce_t) + size));
     _allreduce_init(addr, participants, readers, size, id, op);
@@ -218,7 +216,6 @@ static int _block_local_init_handler(int n, size_t participants, size_t readers,
 static HPX_ACTION_DEF(PINNED, _block_local_init_handler, _block_local_init,
                       HPX_INT, HPX_SIZE_T, HPX_SIZE_T, HPX_SIZE_T,
                       HPX_POINTER, HPX_POINTER);
-
 
 /// Allocate an array of allreduce LCO local to the calling locality.
 /// @param            n The (total) number of lcos to allocate

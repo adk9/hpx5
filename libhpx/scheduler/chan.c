@@ -430,15 +430,12 @@ hpx_status_t hpx_lco_chan_array_select(int n, hpx_addr_t channels[], int *i,
 }
 
 /// Initialize a block of array of lco.
-static HPX_PINNED(_block_local_init, uint32_t *args) {
-  void *lco = hpx_thread_current_local_target();
+static HPX_PINNED(_block_local_init, void *lco, uint32_t *args) {
   dbg_assert(lco);
-
   for (int i = 0; i < args[0]; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_chan_t) + args[1]));
     _chan_init(addr);
   }
-
   return HPX_SUCCESS;
 }
 

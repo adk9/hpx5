@@ -207,16 +207,13 @@ hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_monoid_id_t id,
 }
 
 /// Initialize a block of array of lco.
-static int _block_local_init_handler(int n, int inputs, size_t size,
+static int _block_local_init_handler(void *lco, int n, int inputs, size_t size,
                                      hpx_monoid_id_t id, hpx_monoid_op_t op) {
-  void *lco = hpx_thread_current_local_target();
   dbg_assert(lco);
-
   for (int i = 0; i < n; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_reduce_t) + size));
     _reduce_init(addr, inputs, size, id, op);
   }
-
   return HPX_SUCCESS;
 }
 
