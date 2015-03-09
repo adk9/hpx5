@@ -273,15 +273,12 @@ hpx_addr_t hpx_lco_future_array_at(hpx_addr_t array, int i, int size, int bsize)
 }
 
 /// Initialize a block of array of lco.
-static HPX_PINNED(_block_local_init, uint32_t *args) {
-  void *lco = hpx_thread_current_local_target();
-  dbg_assert(lco);
- 
+static HPX_PINNED(_block_local_init, void *lco, uint32_t *args) {
+  dbg_assert(lco); 
   for (int i = 0; i < args[0]; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_future_t) + args[1]));
     _future_init(addr, args[1]);
   }
-
   return HPX_SUCCESS;
 }
 

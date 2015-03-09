@@ -131,6 +131,10 @@ HPX_PINNED(hpx_lco_reset_action, lco_t *lco, void *UNUSED) {
   return _reset(lco);
 }
 
+static HPX_PINNED(_lco_size, lco_t *lco, void *UNUSED) {
+  return _size(lco);
+}
+
 static HPX_PINNED(_lco_get, lco_t *lco, void *args) {
   dbg_assert(args);
   int *n = args;
@@ -361,7 +365,7 @@ size_t hpx_lco_size(hpx_addr_t target) {
     hpx_gas_unpin(target);
     return size;
   }
-  return hpx_call_sync(target, _lco_size, &size, size, NULL, 0);;
+  return hpx_call_sync(target, _lco_size, &size, size, NULL, 0);
 }
 
 /// If the LCO is local, then we use the local get functionality.

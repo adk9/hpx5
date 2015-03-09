@@ -317,15 +317,12 @@ hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size) {
 }
 
 /// Initialize a block of array of lco.
-static HPX_PINNED(_block_local_init, uint32_t *args) {
-  void *lco = hpx_thread_current_local_target();
+static HPX_PINNED(_block_local_init, void *lco, uint32_t *args) {
   dbg_assert(lco);
-
   for (int i = 0; i < args[0]; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_allgather_t) + args[2]));
     _allgather_init(addr, args[1], args[2]);
   }
-
   return HPX_SUCCESS;
 }
 

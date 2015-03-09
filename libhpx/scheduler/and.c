@@ -181,10 +181,8 @@ void hpx_lco_and_set_num(hpx_addr_t and, int sum, hpx_addr_t rsync) {
 }
 
 /// Initialize a block of array of and lco.
-static HPX_PINNED(_block_local_init, uint32_t *args) {
-  void *lco = hpx_thread_current_local_target();
+static HPX_PINNED(_block_local_init, void *lco, uint32_t *args) {
   dbg_assert(lco);
-
   for (int i = 0; i < args[0]; i++) {
     void *addr = (void *)((uintptr_t)lco + i * sizeof(_and_t));
     _and_init(addr, (intptr_t)args[1]);
