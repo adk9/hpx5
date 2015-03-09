@@ -17,15 +17,25 @@
 
 struct record;
 
+/// The header needed for our data file format
 typedef struct {
-  hpx_time_t       start;                       // start time
-  int                 fd;                       // file backing the log
-  int              class;                       // the class we're logging
-  int                 id;                       // the event we're logging
-  int             UNUSED;                       // padding
-  size_t            size;                       // # records
-  struct record *records;                       // pointer to data for log
-  volatile size_t   next;                       // the next element to write
+  const char magic_number[8];
+  const uint32_t order;
+  uint32_t table_offset;
+  char header_data[];
+} logtable_header_t;
+
+/// All of the data needed to keep the state of an individual event log
+typedef struct {
+  hpx_time_t          start;                    // start time
+  int                    fd;                    // file backing the log
+  int                 class;                    // the class we're logging
+  int                    id;                    // the event we're logging
+  int                UNUSED;                    // padding
+  size_t           max_size;                    // max size in bytes
+  logtable_header_t *header;                    // pointer to file header
+  struct record    *records;                    // pointer to data for log
+  volatile size_t      next;                    // the next element to write
 } logtable_t;
 
 #define LOGTABLE_INIT {                         \
@@ -34,11 +44,19 @@ typedef struct {
     .class = -1,                                \
     .id = -1,                                   \
     .UNUSED = 0,                                \
-    .size = 0,                                  \
+    .max_size = 0,                              \
+    .header = NULL,                             \
     .records = NULL,                            \
     .next = 0                                   \
     }
 
+#define _LOGTABLE_HEADER                                        \
+  {                                                             \
+    .magic_number = {'h', 'p', 'x', ' ', 'l', 'o', 'g', '\0'},  \
+      .order = 0xFF00AA55                                       \
+         }
+
+extern logtable_header_t LOGTABLE_HEADER; // == _LOGTABLE_HEADER
 
 /// Initialize a logtable.
 ///

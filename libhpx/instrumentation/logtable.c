@@ -14,27 +14,25 @@
 # include "config.h"
 #endif
 
-#include <stdio.h>
 #include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 #include <sys/mman.h>
 
 #include <libsync/sync.h>
 
-#include "libhpx/debug.h"
-#include "libhpx/libhpx.h"
+#include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/instrumentation_events.h>
 #include "logtable.h"
 
-typedef struct record {
-  int class;
-  int id;
-  int rank;
-  int worker;
-  uint64_t s;
-  uint64_t ns;
-  uint64_t user[4];
-} record_t;
+logtable_header_t LOGTABLE_HEADER = _LOGTABLE_HEADER;
+
+static size_t _header_size(logtable_t *log) {
+  return (size_t)((uintptr_t)log->records - (uintptr_t)log->header);
+}
 
 static int _create_file(const char *filename, size_t size) {
   static const int flags = O_RDWR | O_CREAT;
@@ -74,6 +72,22 @@ static void *_create_mmap(size_t size, int file) {
   return base;
 }
 
+/// Write the metadata for the event to the header portion of the log
+static void *_write_event_metadata(void* base, int id) {
+  inst_event_metadata_t event_md = INST_EVENT_METADATA[id];
+  memcpy(base, &event_md, sizeof(event_md));
+  return (void*)((uintptr_t)base + sizeof(event_md));
+}
+
+// Write the metadata for this event to the header of the log file
+static void *_write_header(void* base, int id) {
+  logtable_header_t *header = (logtable_header_t*)base;
+  memcpy(header, &LOGTABLE_HEADER, sizeof(LOGTABLE_HEADER));
+  void *new_base = _write_event_metadata(base, id);
+  header->table_offset = (uint32_t)((uintptr_t)base - (uintptr_t)new_base);
+  return new_base;
+}
+
 int logtable_init(logtable_t *log, const char* filename, size_t size,
                   int class, int id, hpx_time_t start) {
   log->start = start;
@@ -81,7 +95,7 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
   log->class = class;
   log->id = id;
   sync_store(&log->next, 0, SYNC_RELEASE);
-  log->size = size;
+  log->max_size = size;
   log->records = NULL;
 
   if (filename == NULL || size == 0) {
@@ -93,10 +107,12 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
     goto unwind;
   }
 
-  log->records = _create_mmap(size, log->fd);
-  if (!log->records) {
+  log->header = _create_mmap(size, log->fd);
+  if (!log->header) {
     goto unwind;
   }
+
+  log->records = _write_header(log->header, id);
 
   return LIBHPX_OK;
 
@@ -106,12 +122,12 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
 }
 
 void logtable_fini(logtable_t *log) {
-  if (!log->size) {
+  if (!log->max_size) {
     return;
   }
 
-  if (log->records) {
-    int e = munmap(log->records, log->size * sizeof(record_t));
+  if (log->header) {
+    int e = munmap(log->header, log->max_size);
     if (e) {
       log_error("failed to unmap trace file\n");
     }
@@ -132,7 +148,7 @@ void logtable_fini(logtable_t *log) {
 void logtable_append(logtable_t *log, uint64_t u1, uint64_t u2, uint64_t u3,
                      uint64_t u4) {
   size_t i = sync_fadd(&log->next, 1, SYNC_ACQ_REL);
-  if (i > log->size) {
+  if (_header_size(log) + i * sizeof(record_t) > log->max_size) {
     return;
   }
 
