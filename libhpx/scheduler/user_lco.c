@@ -164,14 +164,6 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_monoid_id_t id, hpx_monoid_op_t op,
   return lva_to_gva(u);
 }
 
-typedef struct {
-  int                     n;
-  size_t               size;
-  hpx_monoid_id_t        id;
-  hpx_monoid_op_t        op;
-  hpx_predicate_t predicate;
-} _user_array_args_t;
-
 /// Initialize a block of array of lco.
 static int _block_local_init_handler(int n, size_t size, hpx_monoid_id_t id,
                                      hpx_monoid_op_t op, hpx_predicate_t predicate) {
