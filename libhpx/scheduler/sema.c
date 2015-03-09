@@ -17,16 +17,14 @@
 /// @file libhpx/scheduler/sema.c
 /// @brief Implements the semaphore LCO.
 #include <assert.h>
-#include "hpx/hpx.h"
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/scheduler.h"
-#include "lco.h"
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+#include <libhpx/scheduler.h>
 #include "cvar.h"
+#include "lco.h"
 
-/// ----------------------------------------------------------------------------
-/// Local semaphore interface.
-/// ----------------------------------------------------------------------------
+/// Local sema interface.
 /// @{
 typedef struct {
   lco_t       lco;
@@ -41,6 +39,11 @@ static void _sema_set(lco_t *lco, int size, const void *from);
 static hpx_status_t _sema_wait(lco_t *lco);
 static hpx_status_t _sema_get(lco_t *lco, int size, void *out);
 
+static size_t _sema_size(lco_t *lco) {
+  _sema_t *sema = (_sema_t *)lco;
+  return sizeof(*sema);
+}
+
 // the semaphore vtable
 static const lco_class_t _sema_vtable = {
   .on_fini     = _sema_fini,
@@ -51,7 +54,8 @@ static const lco_class_t _sema_vtable = {
   .on_release  = NULL,
   .on_wait     = _sema_wait,
   .on_attach   = NULL,
-  .on_reset    = _sema_reset
+  .on_reset    = _sema_reset,
+  .on_size     = _sema_size
 };
 
 /// Allocate a semaphore LCO.
@@ -60,7 +64,7 @@ static const lco_class_t _sema_vtable = {
 ///
 /// @returns The global address of the new semaphore.
 hpx_addr_t hpx_lco_sema_new(unsigned count) {
-  _sema_t *local = libhpx_global_malloc(sizeof(*local));;
+  _sema_t *local = global_malloc(sizeof(*local));;
   dbg_assert(local);
   lco_init(&local->lco, &_sema_vtable);
   cvar_reset(&local->avail);
@@ -111,7 +115,7 @@ void _sema_fini(lco_t *lco) {
 
   lco_lock(lco);
   lco_fini(lco);
-  libhpx_global_free(lco);
+  global_free(lco);
 }
 
 void _sema_error(lco_t *lco, hpx_status_t code) {

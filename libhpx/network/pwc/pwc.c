@@ -17,15 +17,14 @@
 #include <stdlib.h>
 #include <hpx/builtins.h>
 
-#include "libhpx/action.h"
-#include "libhpx/boot.h"
-#include "libhpx/config.h"
-#include "libhpx/debug.h"
-#include "libhpx/gas.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/network.h"
-#include "libhpx/parcel.h"
+#include <libhpx/action.h>
+#include <libhpx/boot.h>
+#include <libhpx/config.h>
+#include <libhpx/debug.h>
+#include <libhpx/gas.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
+#include <libhpx/parcel.h>
 
 #include "commands.h"
 #include "parcel_utils.h"
@@ -52,9 +51,9 @@ static HPX_USED const char *_straction(hpx_action_t id) {
   return action_table_get_key(here->actions, id);
 }
 
-static void _pwc_delete(network_t *network) {
+static void _pwc_delete(void *network) {
   dbg_assert(network);
-  pwc_network_t *pwc = (pwc_network_t*)network;
+  pwc_network_t *pwc = network;
   // Finish up our outstanding rDMA, and then wait. This prevents us from
   // deregistering segments while there are outstanding requests.
   {
@@ -119,8 +118,8 @@ static hpx_parcel_t *_probe(pwc_network_t *pwc, int rank) {
 ///
 /// Currently, this processes all outstanding local completions and then probes
 /// each potential source for commands. It is not thread safe.
-static int _pwc_progress(network_t *network) {
-  pwc_network_t *pwc = (void*)network;
+static int _pwc_progress(void *network) {
+  pwc_network_t *pwc = network;
   _probe_local(pwc);
   for (int i = 0, e = pwc->ranks; i < e; ++i) {
     _probe(pwc, i);
@@ -128,8 +127,35 @@ static int _pwc_progress(network_t *network) {
   return 0;
 }
 
-static hpx_parcel_t *_pwc_probe(network_t *network, int rank) {
+/// Probe is used in the generic progress loop to retrieve completed parcels.
+///
+/// The pwc network currently does all of its parcel processing inline during
+/// progress(), so this is a no-op.
+static hpx_parcel_t *_pwc_probe(void *network, int rank) {
   return NULL;
+}
+
+/// Create a network registration.
+static void _pwc_register_dma(void *network, void *base, size_t extent) {
+  pwc_network_t *pwc = network;
+  if (!pwc->xport->pin) {
+    return;
+  }
+
+  int e = pwc->xport->pin(base, extent, NULL);
+  dbg_check(e, "Could not register [%p, %p) for rmda\n", base,
+            (char*)base + extent);
+}
+
+/// Release a network registration.
+static void _pwc_release_dma(void *network, void* base, size_t extent) {
+  pwc_network_t *pwc = network;
+  if (!pwc->xport->unpin) {
+    return;
+  }
+
+  int e = pwc ->xport->unpin(base, extent);
+  dbg_check(e, "Could not release [%p, %p)\n", base, (char*)base + extent);
 }
 
 /// Perform a parcel send operation.
@@ -147,8 +173,8 @@ static hpx_parcel_t *_pwc_probe(network_t *network, int rank) {
 ///
 /// @returns  LIBHPX_OK The operation completed successfully.
 ///        LIBHPX_ERROR The operation produced an error.
-static int _pwc_send(network_t *network, hpx_parcel_t *p) {
-  pwc_network_t *pwc = (void*)network;
+static int _pwc_send(void *network, hpx_parcel_t *p) {
+  pwc_network_t *pwc = network;
   int rank = gas_owner_of(here->gas, p->target);
   peer_t *peer = &pwc->peers[rank];
   size_t bytes = pwc_network_size(p);
@@ -160,7 +186,7 @@ static int _pwc_send(network_t *network, hpx_parcel_t *p) {
   }
 }
 
-static int _pwc_command(network_t *network, hpx_addr_t locality,
+static int _pwc_command(void *network, hpx_addr_t locality,
                         hpx_action_t op, uint64_t args) {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(here->gas, locality);
@@ -173,7 +199,7 @@ static int _pwc_command(network_t *network, hpx_addr_t locality,
 ///
 /// This simply the global address into a symmetric-heap offset, finds the
 /// peer for the request, and forwards to the p2p put operation.
-static int _pwc_pwc(network_t *network,
+static int _pwc_pwc(void *network,
                     hpx_addr_t to, const void *lva, size_t n,
                     hpx_action_t lop, hpx_addr_t laddr,
                     hpx_action_t rop, hpx_addr_t raddr) {
@@ -189,18 +215,20 @@ static int _pwc_pwc(network_t *network,
 /// Perform a put operation to a global heap address.
 ///
 /// This simply forwards to the pwc handler with no remote command.
-static int _pwc_put(network_t *net, hpx_addr_t to, const void *from,
+static int _pwc_put(void *network, hpx_addr_t to, const void *from,
                     size_t n, hpx_action_t lop, hpx_addr_t laddr) {
-  return _pwc_pwc(net, to, from, n, lop, laddr, HPX_ACTION_NULL, HPX_NULL);
+  hpx_action_t rop = HPX_ACTION_NULL;
+  hpx_addr_t raddr = HPX_NULL;
+  return _pwc_pwc(network, to, from, n, lop, laddr, rop, raddr);
 }
 
 /// Perform a get operation to a global heap address.
 ///
 /// This simply the global address into a symmetric-heap offset, finds the
 /// peer for the request, and forwards to the p2p get operation.
-static int _pwc_get(network_t *network, void *lva, hpx_addr_t from, size_t n,
+static int _pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
                     hpx_action_t lop, hpx_addr_t laddr) {
-  pwc_network_t *pwc = (void*)network;
+  pwc_network_t *pwc = network;
   int rank = gas_owner_of(here->gas, from);
   peer_t *peer = pwc->peers + rank;
   uint64_t offset = gas_offset_of(here->gas, from);
@@ -208,7 +236,8 @@ static int _pwc_get(network_t *network, void *lva, hpx_addr_t from, size_t n,
   return peer_get(peer, lva, n, offset, lsync, SEGMENT_HEAP);
 }
 
-static void _pwc_set_flush(network_t *network) {
+///
+static void _pwc_set_flush(void *network) {
 }
 
 /// Initialize a peer structure.
@@ -308,6 +337,8 @@ network_t *network_pwc_funneled_new(const config_t *cfg, boot_t *boot,
   pwc->vtable.get = _pwc_get;
   pwc->vtable.probe = _pwc_probe;
   pwc->vtable.set_flush = _pwc_set_flush;
+  pwc->vtable.register_dma = _pwc_register_dma;
+  pwc->vtable.release_dma = _pwc_release_dma;
 
   if (pwc->parcel_eager_limit > pwc->parcel_buffer_size) {
     dbg_error(" --hpx-parceleagerlimit (%u) must be less than "
