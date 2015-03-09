@@ -82,7 +82,8 @@ case "$HPXCC" in
         CFGFLAGS+=" CC=gcc"
 	;;
     clang)
-        CFGFLAGS+=" CC=clang CFLAGS=-Wno-gnu-zero-variadic-macro-arguments "
+        module load llvm/3.6.0
+        CFGFLAGS+=" CC=clang"
         ;;
     *)
 	;;
