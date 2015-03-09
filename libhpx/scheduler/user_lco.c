@@ -173,17 +173,21 @@ typedef struct {
 } _user_array_args_t;
 
 /// Initialize a block of array of lco.
-static HPX_PINNED(_block_local_init, const _user_array_args_t *args) {
-  _user_array_args_t *lco = hpx_thread_current_local_target();
+static int _block_local_init_handler(int n, size_t size, hpx_monoid_id_t id,
+                                     hpx_monoid_op_t op, hpx_predicate_t predicate) {
+  void *lco = hpx_thread_current_local_target();
   dbg_assert(lco);
 
-  for (int i = 0; i < args->n; i++) {
-    void *addr = (void *)((uintptr_t)lco + i * (sizeof(_user_lco_t) + args->size));
-    _user_lco_init(addr, args->size, args->id, args->op, args->predicate);
+  for (int i = 0; i < n; i++) {
+    void *addr = (void *)((uintptr_t)lco + i * (sizeof(_user_lco_t) + size));
+    _user_lco_init(addr, size, id, op, predicate);
   }
 
   return HPX_SUCCESS;
 }
+
+static HPX_ACTION_DEF(PINNED, _block_local_init_handler, _block_local_init,
+                      HPX_INT, HPX_SIZE_T, HPX_POINTER, HPX_POINTER, HPX_POINTER);
 
 /// Allocate an array of user LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate
@@ -198,18 +202,12 @@ static HPX_PINNED(_block_local_init, const _user_array_args_t *args) {
 hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size,
                                         hpx_monoid_id_t id, hpx_monoid_op_t op,
                                         hpx_predicate_t predicate) {
-  _user_array_args_t args;
   uint32_t lco_bytes = sizeof(_user_lco_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
   uint32_t  block_bytes = n * lco_bytes;
   hpx_addr_t base = hpx_gas_alloc(block_bytes);
 
-  args.n = n;
-  args.size = size;
-  args.id   = id;
-  args.op   = op;
-  args.predicate = predicate;
-  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &args, sizeof(args));
+  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &n, &size, &id, &op, &predicate);
   dbg_check(e, "call of _block_init_action failed\n");
 
   // return the base address of the allocation
