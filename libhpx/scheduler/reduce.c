@@ -205,14 +205,6 @@ hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_monoid_id_t id,
   return lva_to_gva(r);
 }
 
-typedef struct {
-  int               n;
-  int          inputs;
-  size_t         size;
-  hpx_monoid_id_t  id;
-  hpx_monoid_op_t  op;
-} _reduce_array_args_t;
-
 /// Initialize a block of array of lco.
 static int _block_local_init_handler(int n, int inputs, size_t size,
                                      hpx_monoid_id_t id, hpx_monoid_op_t op) {
