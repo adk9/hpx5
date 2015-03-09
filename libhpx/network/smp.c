@@ -19,6 +19,7 @@
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
+#include <libhpx/memory.h>
 #include <libhpx/network.h>
 #include "smp.h"
 
@@ -84,5 +85,10 @@ network_t *network_smp_new(const struct config *cfg, boot_t *boot) {
     dbg_error("SMP network does not support multiple ranks.\n");
     return NULL;
   }
+
+  local = address_space_new_default(cfg);
+  global = address_space_new_default(cfg);
+  registered = address_space_new_default(cfg);
+
   return &_smp;
 }
