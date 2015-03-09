@@ -20,19 +20,19 @@ struct boot;
 typedef struct pwc_xport {
   hpx_transport_t type;
 
-  void (*delete)(void *xport);
+  void   (*delete)(void *xport);
 
   size_t (*sizeof_rdma_key)(void);
-  void (*pin)(void *base, size_t n, void *key);
-  void (*unpin)(void *base, size_t n);
-  void (*clear)(void *key);
-  int (*pwc)(int target, void *rva, const void *lva, size_t n, uint64_t lsync,
-             uint64_t rsync, void *rkey);
-  int (*gwc)(int target, void *lva, const void *rva, size_t n, uint64_t lsync,
-             void *rkey);
+  int    (*pin)(void *base, size_t n, void *key);
+  int    (*unpin)(void *base, size_t n);
+  void   (*clear)(void *key);
+  int    (*pwc)(int target, void *rva, const void *lva, size_t n,
+                uint64_t lsync, uint64_t rsync, void *rkey);
+  int    (*gwc)(int target, void *lva, const void *rva, size_t n,
+                uint64_t lsync, void *rkey);
 
-  int (*test)(uint64_t *op, int *remaining);
-  int (*probe)(uint64_t *op, int *remaining, int rank);
+  int    (*test)(uint64_t *op, int *remaining);
+  int    (*probe)(uint64_t *op, int *remaining, int rank);
 } pwc_xport_t;
 
 pwc_xport_t *pwc_xport_new_photon(const config_t *config, struct boot *boot)

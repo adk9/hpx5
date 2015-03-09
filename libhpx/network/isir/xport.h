@@ -32,6 +32,8 @@ typedef struct isir_xport {
   int    (*iprobe)(int *tag);
   void   (*finish)(void *request, int *src, int *bytes);
   void   (*testsome)(int n, void *requests, int *cnt, int *out, void *statuses);
+  int    (*pin)(void *base, size_t bytes, void *key);
+  int    (*unpin)(void *base, size_t bytes);
 } isir_xport_t;
 
 isir_xport_t *isir_xport_new_mpi(const config_t *cfg)
@@ -39,7 +41,6 @@ isir_xport_t *isir_xport_new_mpi(const config_t *cfg)
 
 isir_xport_t *isir_xport_new(const config_t *cfg)
   HPX_INTERNAL;
-
 
 static inline void isir_xport_delete(isir_xport_t *xport) {
   xport->delete(xport);

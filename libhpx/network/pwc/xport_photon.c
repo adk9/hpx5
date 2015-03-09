@@ -66,7 +66,7 @@ static void _photon_clear(void *key) {
   memset(key, 0, sizeof(struct photon_buffer_priv_t));
 }
 
-static void _photon_pin(void *base, size_t n, void *key) {
+static int _photon_pin(void *base, size_t n, void *key) {
   if (PHOTON_OK != photon_register_buffer(base, n)) {
     dbg_error("failed to register segment with Photon\n");
   }
@@ -74,15 +74,22 @@ static void _photon_pin(void *base, size_t n, void *key) {
     log_net("registered segment (%p, %lu)\n", base, n);
   }
 
-  if (PHOTON_OK != photon_get_buffer_private(base, n, key)) {
-    dbg_error("failed to segment key from Photon\n");
+  if (key) {
+    if (PHOTON_OK != photon_get_buffer_private(base, n, key)) {
+      dbg_error("failed to segment key from Photon\n");
+    }
   }
+
+  return LIBHPX_OK;
 }
 
-static void _photon_unpin(void *base, size_t n) {
+static int _photon_unpin(void *base, size_t n) {
   if (PHOTON_OK != photon_unregister_buffer(base, n)) {
     log_net("could not unregister the local heap segment %p\n", base);
+    return LIBHPX_ERROR;
   }
+
+  return LIBHPX_OK;
 }
 
 static int _photon_pwc(int r, void *rva, const void *rolva, size_t n,

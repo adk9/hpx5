@@ -30,9 +30,6 @@
 
 /// Local reduce interface.
 /// @{
-static const int _reducing = 0;
-static const  int _reading = 1;
-
 typedef struct {
   lco_t               lco;
   cvar_t             wait;
@@ -44,6 +41,14 @@ typedef struct {
   volatile int      phase;
   void             *value;  // out-of-place for alignment reasons
 } _allreduce_t;
+
+static const int _reducing = 0;
+static const  int _reading = 1;
+
+static size_t _allreduce_size(lco_t *lco) {
+  _allreduce_t *allreduce = (_allreduce_t *)lco;
+  return sizeof(*allreduce);
+}
 
 /// Deletes a reduction.
 static void _allreduce_fini(lco_t *lco) {
@@ -160,7 +165,8 @@ static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
     .on_getref   = NULL,
     .on_release  = NULL,
     .on_wait     = _allreduce_wait,
-    .on_reset    = _allreduce_reset
+    .on_reset    = _allreduce_reset,
+    .on_size     = _allreduce_size
   };
 
   assert(id);
@@ -192,4 +198,52 @@ hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
   assert(r);
   _allreduce_init(r, inputs, outputs, size, id, op);
   return lva_to_gva(r);
+}
+
+
+/// Initialize a block of array of lco.
+static int _block_local_init_handler(int n, size_t participants, size_t readers,
+                                     size_t size, hpx_monoid_id_t id,
+                                     hpx_monoid_op_t op) {
+  void *lco = hpx_thread_current_local_target();
+  dbg_assert(lco);
+
+  for (int i = 0; i < n; i++) {
+    void *addr = (void *)((uintptr_t)lco + i * (sizeof(_allreduce_t) + size));
+    _allreduce_init(addr, participants, readers, size, id, op);
+  }
+  return HPX_SUCCESS;
+}
+
+static HPX_ACTION_DEF(PINNED, _block_local_init_handler, _block_local_init,
+                      HPX_INT, HPX_SIZE_T, HPX_SIZE_T, HPX_SIZE_T,
+                      HPX_POINTER, HPX_POINTER);
+
+
+/// Allocate an array of allreduce LCO local to the calling locality.
+/// @param            n The (total) number of lcos to allocate
+/// @param participants The static number of participants in the reduction.
+/// @param      readers The static number of the readers of the result of the reduction.
+/// @param         size The size of the data being reduced.
+/// @param           id An initialization function for the data, this is
+///                     used to initialize the data in every epoch.
+/// @param           op The commutative-associative operation we're
+///                     performing.
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_allreduce_local_array_new(int n, size_t participants,
+                                             size_t readers, size_t size,
+                                             hpx_monoid_id_t id,
+                                             hpx_monoid_op_t op) {
+  uint32_t lco_bytes = sizeof(_allreduce_t) + size;
+  dbg_assert(n * lco_bytes < UINT32_MAX);
+  uint32_t  block_bytes = n * lco_bytes;
+  hpx_addr_t base = hpx_gas_alloc(block_bytes);
+
+  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &n, &participants, &readers,
+                        &size, &id, &op);
+  dbg_check(e, "call of _block_init_action failed\n");
+
+  // return the base address of the allocation
+  return base;
 }
