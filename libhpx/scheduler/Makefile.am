@@ -9,3 +9,8 @@ libscheduler_la_SOURCES  = cvar.c scheduler.c worker.c thread.c lco.c future.c \
                            reduce.c allgather.c alltoall.c process.c termination.c \
                            user_lco.c netfuture.c
 libscheduler_la_LIBADD   = arch/libarch.la #$(top_builddir)/libsync/libsync.la
+
+if HAVE_APEX
+libscheduler_la_CPPFLAGS  += @APEX_CFLAGS@ -I$(top_srcdir)/libapex
+libscheduler_la_LIBADD  += @APEX_LIBS@ $(top_builddir)/libapex/libapex_hpx.la
+endif

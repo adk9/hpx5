@@ -42,7 +42,42 @@
 #include "thread.h"
 #include "termination.h"
 
+#ifdef HAVE_APEX
+#include "apex.h"
+#include "apex_throttling.h"
+#endif
+
 __thread struct worker *self = NULL;
+
+#ifdef HAVE_APEX
+/* Wrap the thread_transfer call so that we can stop the current timer before
+ * the transfer, and resume the timer (if necessary) if/when the execution actually
+ * returns to this point. This is infrequent, but possible - whenever there is
+ * a scheduled wait on a future, the thread is transferred to the future and then
+ * returns back to this context to proceed with the result.  Because APEX uses
+ * TAU, and TAU expects perfectly nested timers, we have to start and stop timers
+ * very carefully. Currently there is irregular behavior with null actions, so
+ * ignore those for now.
+ */
+int apex_thread_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
+  // make sure there is a current parcel with a current action
+  if (self->current && env) {
+    apex_function_address action = (apex_function_address)hpx_parcel_get_action(self->current);
+    // ignore null actions for now
+    //if (action != HPX_ACTION_NULL && action != HPX_ACTION_LCO_SET && action != HPX_ACTION_PAR_FOR_ASYNC) {
+    if (action != HPX_ACTION_NULL) {
+      apex_stop_profiler(APEX_NULL_PROFILER_HANDLE);
+      int rc = thread_transfer(p, cont, env);
+      // IF the context resumes here, make sure we resume the timer.
+      //apex_resume_addr(action);
+      apex_start_address(action);
+      return rc;
+    }
+  }
+  // If any of the above conditions fail, fall through and just do the transfer.
+  return thread_transfer(p, cont, env);
+}
+#endif
 
 /// The pthread entry function for dedicated worker threads.
 ///
@@ -58,6 +93,11 @@ static void *_run(void *worker) {
     dbg_error("failed to join the global address space.\n");
     return NULL;
   }
+
+#ifdef HAVE_APEX
+  // let APEX know there is a new thread
+  apex_register_thread("HPX WORKER THREAD");
+#endif
 
   if (worker_start()) {
     dbg_error("failed to start processing lightweight threads.\n");
@@ -478,6 +518,20 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
       _worker_shutdown(self);
     }
 
+  //akp: throttling code -- if the throttling flag is set don't use some threads
+#if defined(HAVE_APEX)
+    if (apex_checkThrottling && apex_throttleOn) {
+      if (self->id > apex_get_thread_cap()) { 
+/* because we can't change the power level, sleep instead. */
+        struct timespec tim, tim2;
+        tim.tv_sec = 1; // 1 second. Same as our periodic policy.
+        tim.tv_nsec = 0;
+        nanosleep(&tim , &tim2);
+        continue;
+      }
+    }
+#endif
+
     // prioritize our mailbox
     _handle_mail(self);
 
@@ -559,6 +613,12 @@ void worker_fini(struct worker *w) {
   while ((p = _schedule_lifo(w))) {
     hpx_parcel_release(p);
   }
+#ifdef HAVE_APEX
+  // stop throttling
+  apex_shutdown_throttling();
+  // shutdown APEX.
+  apex_finalize();
+#endif
   sync_chase_lev_ws_deque_fini(&w->work);
 }
 
@@ -592,7 +652,11 @@ int worker_start(void) {
     dbg_error("failed to acquire an initial parcel.\n");
   }
 
+#ifdef HAVE_APEX
+  int e = apex_thread_transfer(p, _on_startup, NULL);
+#else
   int e = thread_transfer(p, _on_startup, NULL);
+#endif
   if (e) {
     if (here->rank == 0) {
       log_error("application exited with a non-zero exit code: %d.\n", e);
@@ -760,7 +824,11 @@ void scheduler_yield(void) {
   dbg_assert(parcel_get_stack(to));
   dbg_assert(parcel_get_stack(to)->sp);
   // transfer to the new thread
+#ifdef HAVE_APEX
+  apex_thread_transfer(to, _checkpoint_yield, from);
+#else
   thread_transfer(to, _checkpoint_yield, from);
+#endif
 }
 
 void hpx_thread_yield(void) {
@@ -787,7 +855,11 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   // if we successfully pushed, then do a transfer away from this thread
   if (status == HPX_SUCCESS) {
     hpx_parcel_t *to = _schedule(true, NULL);
+#ifdef HAVE_APEX
+    apex_thread_transfer(to, _unlock, (void*)lock);
+#else
     thread_transfer(to, _unlock, (void*)lock);
+#endif
     sync_lockable_ptr_lock(lock);
     status = cvar_get_error(condition);
   }
@@ -835,7 +907,11 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size, const void 
   dbg_assert(to);
   dbg_assert(parcel_get_stack(to));
   dbg_assert(parcel_get_stack(to)->sp);
+#ifdef HAVE_APEX
+  apex_thread_transfer(to, _free_parcel, (void*)(intptr_t)status);
+#else
   thread_transfer(to, _free_parcel, (void*)(intptr_t)status);
+#endif
   unreachable();
 }
 
@@ -857,7 +933,11 @@ void hpx_thread_exit(int status) {
     //      task inside of schedule() which would cause the current task to be
     //      freed.
     hpx_parcel_t *to = _schedule(true, NULL);
+#ifdef HAVE_APEX
+    apex_thread_transfer(to, _resend_parcel, parcel);
+#else
     thread_transfer(to, _resend_parcel, parcel);
+#endif
     unreachable();
   }
 
@@ -968,7 +1048,11 @@ void hpx_thread_set_affinity(int affinity) {
   }
 
   hpx_parcel_t *to = _schedule(false, NULL);
+#ifdef HAVE_APEX
+  apex_thread_transfer(to, _move_to, (void*)(intptr_t)affinity);
+#else
   thread_transfer(to, _move_to, (void*)(intptr_t)affinity);
+#endif
 }
 
 /// This transfer handler is the right place to put all debug, logging, and

@@ -38,6 +38,10 @@
 #include "libhpx/transport.h"
 #include "network/probe.h"
 
+#ifdef HAVE_APEX
+#include "apex.h"
+#endif
+
 static HPX_ACTION(_hpx_143_fix, void *UNUSED) {
   hpx_gas_global_alloc(sizeof(void*), HPX_LOCALITIES);
   return LIBHPX_OK;
@@ -200,6 +204,12 @@ int hpx_init(int *argc, char ***argv) {
     goto unwind1;
   }
 
+#ifdef HAVE_APEX 
+  // initialize APEX, give this main thread a name
+  apex_init("HPX WORKER THREAD");
+  apex_set_node_id(here->rank);
+#endif
+
   return status;
  unwind1:
   _cleanup(here);
@@ -262,6 +272,10 @@ int _hpx_run(hpx_action_t *act, int nargs, ...) {
   scheduler_dump_stats(here->sched);
 #endif
 
+#ifdef HAVE_APEX
+  scheduler_save_apex_stats(here->sched);
+#endif
+
  unwind2:
   // progress_stop(_progress);
   probe_stop();
@@ -296,6 +310,9 @@ void hpx_shutdown(int code) {
     dbg_assert(e == LIBHPX_OK);
   }
   hpx_thread_exit(HPX_SUCCESS);
+#ifdef HAVE_APEX 
+  apex_finalize();
+#endif
 }
 
 /// Called by the application to shutdown the scheduler and network. May be

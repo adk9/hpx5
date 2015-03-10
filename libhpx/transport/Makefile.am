@@ -24,3 +24,8 @@ libtransport_la_SOURCES  += portals.c
 libtransport_la_LIBADD   += @PORTALS_LIBS@
 endif
 
+if HAVE_APEX
+libtransport_la_CFLAGS  += @APEX_CFLAGS@
+libtransport_la_LIBADD  += @APEX_LIBS@
+endif
+

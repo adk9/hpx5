@@ -26,3 +26,7 @@ if HAVE_PHOTON
 libnetwork_la_LIBADD  += pwc/libpwc.la
 endif
 
+if HAVE_APEX
+libnetwork_la_CFLAGS  += @APEX_CFLAGS@
+libnetwork_la_LIBADD  += @APEX_LIBS@
+endif

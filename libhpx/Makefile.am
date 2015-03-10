@@ -24,3 +24,7 @@ libhpx_la_LIBADD   = $(HPX_LIBFFI_LIBS) \
                      $(HPX_PHOTON_LIBS) \
                      $(HPX_JEMALLOC_LIBS)
 
+if HAVE_APEX
+libhpx_la_CPPFLAGS  += @APEX_CFLAGS@
+libhpx_la_LIBADD  += @APEX_LIBS@
+endif

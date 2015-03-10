@@ -25,6 +25,11 @@ if HAVE_MPI
 AM_CFLAGS                  += @MPI_CFLAGS@
 endif
 
+if HAVE_APEX
+AM_CFLAGS           += @APEX_CFLAGS@
+LIBS            += @APEX_LIBS@
+endif
+
 threadSpawn1_LDADD          = $(all_LIBS)
 threadSpawn2_LDADD          = $(all_LIBS)
 threadSpawn3_LDADD          = $(all_LIBS)

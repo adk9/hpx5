@@ -31,6 +31,11 @@ AM_CPPFLAGS          = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS            =
 AM_LDFLAGS           = $(HPX_JEMALLOC_AS_MALLOC_RPATH) $(HPX_JEMALLOC_RPATH) -no-install
 
+if HAVE_APEX
+AM_CFLAGS           += @APEX_CFLAGS@
+all_LIBS            += @APEX_LIBS@
+endif
+
 fibonacci_LDADD       = $(all_LIBS)
 pingpong_LDADD        = $(all_LIBS)
 allreduce_LDADD       = $(all_LIBS)

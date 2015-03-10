@@ -30,7 +30,6 @@
 #include "libhpx/scheduler.h"
 #include "thread.h"
 
-
 struct scheduler *scheduler_new(config_t *cfg) {
   const int cores = cfg->cores;
   const int workers = cfg->threads;
@@ -73,6 +72,9 @@ struct scheduler *scheduler_new(config_t *cfg) {
   sync_store(&s->next_tls_id, 0, SYNC_RELEASE);
   s->cores        = cores;
   s->n_workers    = workers;
+#if defined(HAVE_APEX)
+  s->n_active_workers   = workers; // akp
+#endif
   s->wf_threshold = cfg->wfthreshold;
   scheduler_stats_init(&s->stats);
 

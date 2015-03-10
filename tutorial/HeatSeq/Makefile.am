@@ -12,6 +12,11 @@ if HAVE_MPI
 AM_CFLAGS                      += @MPI_CFLAGS@
 endif
 
+if HAVE_APEX
+AM_CFLAGS           += @APEX_CFLAGS@
+LIBS            += @APEX_LIBS@
+endif
+
 heat_1_LDADD                    = $(all_LIBS)
 
 heat_1_DEPENDENCIES             = $(HPX_DEPS)

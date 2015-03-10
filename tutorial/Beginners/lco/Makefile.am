@@ -28,6 +28,11 @@ if HAVE_MPI
 AM_CFLAGS                    += @MPI_CFLAGS@
 endif
 
+if HAVE_APEX
+AM_CFLAGS           += @APEX_CFLAGS@
+LIBS            += @APEX_LIBS@
+endif
+
 chan_LDADD                    = $(all_LIBS)
 probe_LDADD                   = $(all_LIBS)
 chanarray_LDADD               = $(all_LIBS)

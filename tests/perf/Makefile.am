@@ -9,6 +9,11 @@ AM_CFLAGS        = -Wno-unused
 
 LIBS = $(HPX_LIBS)
 
+if HAVE_APEX
+AM_CPPFLAGS           += @APEX_CFLAGS@
+LIBS            += @APEX_LIBS@
+endif
+
 TESTS = perf_gas_alloc		\
         perf_gas_addr_trans	\
         perf_lco_chan		\

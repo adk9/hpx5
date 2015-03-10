@@ -11,6 +11,11 @@ AM_CFLAGS        = -Wno-unused
 
 LIBS = $(HPX_LIBS)
 
+if HAVE_APEX
+AM_CFLAGS           += @APEX_CFLAGS@
+LIBS            += @APEX_LIBS@
+endif
+
 TESTS            = test_and_lco           \
                    test_bcast             \
                    test_channels          \

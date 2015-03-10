@@ -160,6 +160,7 @@ AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" 
   [AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])
    TESTS_CMD='mpirun -np 2'],
   [TESTS_CMD=''])
+HPX_WITH_PKG([apex],[apex],[build with APEX Measurement and Control],[no],[APEX])
 
 AC_ARG_WITH([tests-cmd],
   [AS_HELP_STRING([--with-tests-cmd], [Use this command for running the test harness @<:@default=mpirun -np 2@:>@])],
@@ -219,6 +220,8 @@ AM_CONDITIONAL([GNU_PE_ENV], [test "x$hpx_pe_env" = xGNU])
 AM_CONDITIONAL([CRAY_PE_ENV], [test "x$hpx_pe_env" = xCRAY])
 AM_CONDITIONAL([PGI_PE_ENV], [test "x$hpx_pe_env" = xPGI])
 AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
+
+AM_CONDITIONAL([HAVE_APEX], [test "x$with_apex" != xno])
 
 # -----------------------------------------------------------------------------
 # Finalize flags
@@ -287,6 +290,9 @@ AS_IF([test "x$enable_tutorial" != xno],
 AS_IF([test "x$enable_docs" != xno],
   [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
   
+AS_IF([test "x$with_apex" != xno],
+  [AC_CONFIG_FILES([libapex/Makefile])])
+
 AS_IF([test "x$enable_tests" != xno],
   [AC_CONFIG_FILES([tests/Makefile
   tests/unit/Makefile
@@ -323,6 +329,7 @@ echo "               jemalloc : $enable_jemalloc"
 echo "              Profiling : $enable_profiling"
 echo "         hugetlbfs heap : $with_hugetlbfs"
 echo "     Topology Awareness : $with_hwloc"
+echo "           APEX support : $with_apex"
 echo "          Documentation : $enable_docs"
 echo "               Tutorial : $enable_tutorial"
 echo "             Test Suite : $enable_tests"
