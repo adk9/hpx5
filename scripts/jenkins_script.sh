@@ -56,7 +56,7 @@ case "$SYSTEM" in
     CFGFLAGS+=" --with-mpi"
     ;;
   HPX5_STAMPEDE)
-    CFGFLAGS+=" --with-mpi"
+    CFGFLAGS+=" --with-mpi=mvapich2"
     ;;
 esac
 }
