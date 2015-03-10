@@ -164,7 +164,6 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_monoid_id_t id, hpx_monoid_op_t op,
 /// Initialize a block of array of lco.
 static int _block_local_init_handler(void *lco, int n, size_t size, hpx_monoid_id_t id,
                                      hpx_monoid_op_t op, hpx_predicate_t predicate) {
-  dbg_assert(lco);
   for (int i = 0; i < n; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_user_lco_t) + size));
     _user_lco_init(addr, size, id, op, predicate);

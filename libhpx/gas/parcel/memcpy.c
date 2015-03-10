@@ -26,7 +26,6 @@
 #include "emulation.h"
 
 static HPX_PINNED(_memcpy_reply, char *local, void *data) {
-  dbg_assert(local);
   size_t bytes = hpx_thread_current_args_size();
   dbg_assert(bytes);
   memcpy(local, data, bytes);
