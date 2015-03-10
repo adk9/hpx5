@@ -451,12 +451,20 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
   // aren't local, allocate a proxy future and initiate the remote wait. This
   // two-phase approach achieves some parallelism.
   for (int i = 0; i < n; ++i) {
-    if (!hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
+    // We neither issue a remote proxy for HPX_NULL, nor wait locally on 
+    // HPX_NULL. We manually set the status output for these elements to 
+    // indicate success. 
+    if (!(lcos[i] == HPX_NULL)) {
+      if (!hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
+        locals[i] = NULL;
+        remotes[i] = hpx_lco_future_new(0);
+        hpx_call_async(lcos[i], _lco_wait, HPX_NULL, remotes[i], NULL, 0);
+      }
+      else {
+        remotes[i] = HPX_NULL;
+      }
+    } else {
       locals[i] = NULL;
-      remotes[i] = hpx_lco_future_new(0);
-      hpx_call_async(lcos[i], _lco_wait, HPX_NULL, remotes[i], NULL, 0);
-    }
-    else {
       remotes[i] = HPX_NULL;
     }
   }
@@ -472,8 +480,12 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
       hpx_gas_unpin(lcos[i]);
     }
     else {
-      status = hpx_lco_wait(remotes[i]);
-      hpx_lco_delete(remotes[i], HPX_NULL);
+      if (remotes[i] != HPX_NULL) {
+        status = hpx_lco_wait(remotes[i]);
+        hpx_lco_delete(remotes[i], HPX_NULL);
+      } else {
+        status = HPX_SUCCESS;
+      }
     }
     if (status != HPX_SUCCESS) {
       ++errors;
@@ -504,13 +516,18 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
   // aren't local, allocate a proxy future and initiate the remote get. This
   // two-phase approach achieves some parallelism.
   for (int i = 0; i < n; ++i) {
-    if (!hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
+    if (!(lcos[i] == HPX_NULL)) {
+      if (!hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
+        locals[i] = NULL;
+        remotes[i] = hpx_lco_future_new(sizes[i]);
+        hpx_call_async(lcos[i], _lco_get, HPX_NULL, remotes[i], &sizes[i],
+                       sizeof(sizes[i]));
+      }
+      else {
+        remotes[i] = HPX_NULL;
+      }
+    } else {
       locals[i] = NULL;
-      remotes[i] = hpx_lco_future_new(sizes[i]);
-      hpx_call_async(lcos[i], _lco_get, HPX_NULL, remotes[i], &sizes[i],
-                     sizeof(sizes[i]));
-    }
-    else {
       remotes[i] = HPX_NULL;
     }
   }
@@ -526,8 +543,12 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
       hpx_gas_unpin(lcos[i]);
     }
     else {
-      status = hpx_lco_get(remotes[i], sizes[i], values[i]);
-      hpx_lco_delete(remotes[i], HPX_NULL);
+      if (remotes[i] != HPX_NULL) {
+        status = hpx_lco_get(remotes[i], sizes[i], values[i]);
+        hpx_lco_delete(remotes[i], HPX_NULL);
+      } else {
+        status = HPX_SUCCESS;
+      }
     }
     if (status != HPX_SUCCESS) {
       ++errors;
