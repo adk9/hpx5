@@ -251,10 +251,6 @@ hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id,
 
 
 static HPX_PINNED(_allgather_setid_proxy, _allgather_t *g, void *args) {
-  // try and pin the allgather LCO, if we fail, we need to resend the underlying
-  // parcel to "catch up" to the moving LCO
-  assert(g);
-
   // otherwise we pinned the LCO, extract the arguments from @p args and use the
   // local setid routine
   _allgather_set_offset_t *a = args;
@@ -318,7 +314,6 @@ hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size) {
 
 /// Initialize a block of array of lco.
 static HPX_PINNED(_block_local_init, void *lco, uint32_t *args) {
-  dbg_assert(lco);
   for (int i = 0; i < args[0]; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_allgather_t) + args[2]));
     _allgather_init(addr, args[1], args[2]);

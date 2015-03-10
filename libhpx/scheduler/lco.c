@@ -175,7 +175,6 @@ static HPX_PINNED(_lco_getref, lco_t *lco, void *args) {
 }
 
 static HPX_PINNED(_lco_getref_reply, void **local, void *data) {
-  dbg_assert(*local);
   size_t bytes = hpx_thread_current_args_size();
   dbg_assert(bytes);
   memcpy(*local, data, bytes);

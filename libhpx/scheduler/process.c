@@ -99,13 +99,11 @@ static HPX_ACTION(_proc_call, _call_args_t *args) {
 }
 
 static HPX_PINNED(_proc_delete, _process_t *p, void *args) {
-  assert(p);
   _free(p);
   return HPX_SUCCESS;
 }
 
 static HPX_PINNED(_proc_return_credit, _process_t *p, uint64_t *args) {
-  assert(p);
   // add credit to the credit-accounting bitmap
   uint64_t debt = cr_bitmap_add_and_test(p->debt, *args);
   for (;;) {
