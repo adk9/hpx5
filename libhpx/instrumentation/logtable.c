@@ -83,8 +83,8 @@ static void *_write_event_metadata(void* base, int id) {
 static void *_write_header(void* base, int id) {
   logtable_header_t *header = (logtable_header_t*)base;
   memcpy(header, &LOGTABLE_HEADER, sizeof(LOGTABLE_HEADER));
-  void *new_base = _write_event_metadata(base, id);
-  header->table_offset = (uint32_t)((uintptr_t)base - (uintptr_t)new_base);
+  void *new_base = _write_event_metadata(header->header_data, id);
+  header->table_offset = (uint32_t)((uintptr_t)new_base - (uintptr_t)base);
   return new_base;
 }
 
