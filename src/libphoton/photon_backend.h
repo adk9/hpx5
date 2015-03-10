@@ -69,12 +69,6 @@ typedef struct proc_info_t {
 #endif
 } ProcessInfo;
 
-typedef struct photon_event_status_t {
-  photon_rid id;
-  int proc;
-  void *priv;
-} photon_event_status;
-
 /* photon memory registration requests */
 struct photon_mem_register_req {
   SLIST_ENTRY(photon_mem_register_req) list;
@@ -98,8 +92,6 @@ typedef struct photon_eb_hdr_t {
   uint16_t length;
   volatile uint8_t footer;
 } photon_eb_hdr;
-
-typedef struct photon_event_status_t * photonEventStatus;
 
 struct photon_backend_t {
   void *context;
@@ -153,7 +145,7 @@ struct photon_backend_t {
                    photonBuffer lbuf, uint64_t id, int flags);
   int (*rdma_recv)(photonAddr addr, uintptr_t laddr, uint64_t size,
                    photonBuffer lbuf, uint64_t id, int flags);
-  int (*get_event)(photonEventStatus stat);
+  int (*get_event)(int proc, int max, photon_rid *ids, int *n);
 };
 
 extern struct photon_backend_t  photon_default_backend;

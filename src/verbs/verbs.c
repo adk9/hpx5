@@ -57,7 +57,7 @@ static int verbs_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
                            photonBuffer lbuf, uint64_t id, int flags);
 static int verbs_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
                            photonBuffer lbuf, uint64_t id, int flags);
-static int verbs_get_event(photonEventStatus stat);
+static int verbs_get_event(int proc, int max, photon_rid *ids, int *n);
 static int verbs_get_dev_addr(int af, photonAddr addr);
 static int verbs_register_addr(photonAddr addr, int af);
 static int verbs_unregister_addr(photonAddr addr, int af);
@@ -87,7 +87,8 @@ static verbs_cnct_ctx verbs_ctx = {
   .rx_depth = DEF_LEDGER_SIZE,
   .atomic_depth = 16,
   .max_sge = 16,
-  .max_inline = -1
+  .max_inline = -1,
+  .num_cq = 1
 };
 
 /* we are now a Photon backend */
@@ -513,41 +514,67 @@ static int verbs_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
   return __verbs_do_recv(&args, flags);
 }
 
-static int verbs_get_event(photonEventStatus stat) {
-  int ne;
+static int verbs_get_event(int proc, int max, photon_rid *ids, int *n) {
+  int i, j, ne, comp;
+  int start, end;
   int retries = MAX_RETRIES;
-  struct ibv_wc wc;
+  struct ibv_wc *wc = verbs_ctx.wcs;
 
-  if (!stat) {
-    log_err("NULL status pointer");
+  *n = 0;
+  comp = 0;
+
+  if (!ids) {
+    log_err("NULL return id pointer");
     goto error_exit;
   }
 
-  do {
-    ne = ibv_poll_cq(verbs_ctx.ib_cq, 1, &wc);
-    if (ne < 0) {
-      log_err("ibv_poll_cq() failed");
-      goto error_exit;
+  if (max > MAX_CQ_POLL) {
+    log_err("Exceeding max poll count: %d > %d", max, MAX_CQ_POLL);
+    goto error_exit;
+  }
+
+  if (verbs_ctx.num_cq == 1) {
+    start = 0;
+    end = 1;
+  }
+  else if (proc == PHOTON_ANY_SOURCE) {
+    start = 0;
+    end = _photon_nproc;
+  }
+  else {
+    start = proc;
+    end = proc+1;
+  }
+
+  for (i=start; i<end && comp<max; i++) {
+    do {
+      ne = ibv_poll_cq(&verbs_ctx.ib_cq[i], max, wc);
+      if (ne < 0) {
+	log_err("ibv_poll_cq() failed");
+	goto error_exit;
+      }
     }
-  }
-  while ((ne < 1) && --retries);
-
-  // CQ is empty
-  if (ne == 0) {
-    return PHOTON_EVENT_NONE;
-  }
-  else if (wc.status != IBV_WC_SUCCESS) {
-    log_err("(status==%d) != IBV_WC_SUCCESS: %s",
-            wc.status, ibv_wc_status_str(wc.status));
-    goto error_exit;
+    while ((ne < 1) && --retries);
+    
+    for (j=0; j<ne; j++) {
+      if (wc[j].status != IBV_WC_SUCCESS) {
+	log_err("(status==%d) != IBV_WC_SUCCESS: %s",
+		wc[j].status, ibv_wc_status_str(wc[j].status));
+      }
+      ids[j+comp] = wc[j].wr_id;
+    }
+    comp += ne;
   }
   
-  stat->id = wc.wr_id;
-  stat->proc = 0x0;
-  stat->priv = NULL;
+  *n = comp;
 
+  // CQs are empty
+  if (comp == 0) {
+    return PHOTON_EVENT_NONE;
+  }
+  
   return PHOTON_EVENT_OK;
-
+  
 error_exit:
   return PHOTON_EVENT_ERROR;
 }

@@ -374,9 +374,9 @@ int _photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *re
   photon_eb_hdr *hdr;
   photon_rid cookie = NULL_REQUEST;
   int i, rc, start, end;
-
+  
   *flag = 0;
-
+  
   if (proc == PHOTON_ANY_SOURCE) {
     start = 0;
     end = _photon_nproc;
@@ -385,31 +385,31 @@ int _photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *re
     start = proc;
     end = proc+1;
   }
-
+  
   if (flags & PHOTON_PROBE_EVQ) {
     // handle any pwc requests that were popped in some other path
     req = photon_pwc_pop_req();
     if (req != NULL) {
       if (! (req->flags & REQUEST_FLAG_NO_LCE)) {
-    *flag = 1;
-    *request = req->local_info.id;
+	*flag = 1;
+	*request = req->local_info.id;
       }
       dbg_trace("Completed and removing queued pwc request: 0x%016lx (ind=0x%016lx)",
-        req->id, req->local_info.id);
+		req->id, req->local_info.id);
       photon_free_request(req);
       goto exit;
     }
-
-    rc = __photon_get_event(&cookie);
+    
+    rc = __photon_get_event(proc, &cookie);
     if (rc == PHOTON_EVENT_ERROR) {
       dbg_err("Error getting event, rc=%d", rc);
       goto error_exit;
     }
     else if (rc == PHOTON_EVENT_NONE) {
       cookie = NULL_REQUEST;
-      // no event so process any queued PWC requests
-      for (i=start; i<end; i++) {
-    photon_pwc_process_queued_req(i, photon_processes[i].request_table);
+      // no event so process any queued PWC requests, for any peer
+      for (i=0; i<_photon_nproc; i++) {
+	photon_pwc_process_queued_req(i, photon_processes[i].request_table);
       }
     }
     else {
@@ -417,26 +417,26 @@ int _photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *re
       int rc;
       rc = __photon_handle_cq_event(NULL, cookie, &req);
       if (rc == PHOTON_EVENT_ERROR) {
-    goto error_exit;
+	goto error_exit;
       }
       else if ((rc == PHOTON_EVENT_REQCOMP) && req &&
-           (req->op == REQUEST_OP_PWC)) {
-    // sometimes the requestor doesn't care about the completion
-    if (! (req->flags & REQUEST_FLAG_NO_LCE)) {
-      *flag = 1;
-      *request = req->local_info.id;
-    }
-    dbg_trace("Completed and removing pwc request: 0x%016lx (id=0x%016lx)",
-          req->id, req->local_info.id);
-    photon_free_request(req);
-    goto exit;
+	       (req->op == REQUEST_OP_PWC)) {
+	// sometimes the requestor doesn't care about the completion
+	if (! (req->flags & REQUEST_FLAG_NO_LCE)) {
+	  *flag = 1;
+	  *request = req->local_info.id;
+	}
+	dbg_trace("Completed and removing pwc request: 0x%016lx (id=0x%016lx)",
+		  req->id, req->local_info.id);
+	photon_free_request(req);
+	goto exit;
       }
       else {
-    dbg_trace("PWC probe handled non-completion event: 0x%016lx", cookie);
+	dbg_trace("PWC probe handled non-completion event: 0x%016lx", cookie);
       }
     }
   }
-
+  
   // only check recv ledgers if an event we don't care about was popped
   if ((cookie == NULL_REQUEST) && (flags & PHOTON_PROBE_LEDGER)) {
     uint64_t offset, curr, new, left;
@@ -447,59 +447,59 @@ int _photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *re
       offset = curr & (eb->size - 1);
       left = eb->size - offset;
       if (left < ALIGN(EB_MSG_SIZE(_photon_spsize), PWC_ALIGN)) {
-    new = left + curr;
-    offset = 0;
+	new = left + curr;
+	offset = 0;
       }
       else {
-    new = curr;
+	new = curr;
       }
-
+      
       hdr = (photon_eb_hdr *)&(eb->data[offset]);
       if ((hdr->header == UINT8_MAX) && (hdr->footer == UINT8_MAX)) {
-    photon_rid req = hdr->request;
-    uintptr_t addr = hdr->addr;
-    uint16_t size = hdr->length;
-    uint64_t asize = ALIGN(EB_MSG_SIZE(size), PWC_ALIGN);
-    if (sync_cas(&eb->curr, curr, new+asize, SYNC_RELAXED, SYNC_RELAXED)) {
-      // now check for tail flag (or we could return to check later)
-      volatile uint8_t *tail = (uint8_t*)((uintptr_t)hdr + asize - 1);
-      while (*tail != UINT8_MAX)
-        ;
-      memcpy((void*)addr, (void*)((uintptr_t)hdr + sizeof(*hdr)), size);
-      *request = req;
-      *flag = 1;
-      dbg_trace("Copied message of size %u into 0x%016lx for request 0x%016lx",
-           size, addr, req);
-      memset((void*)hdr, 0, asize);
-      sync_store(&eb->prog, new+asize, SYNC_RELAXED);
-      goto exit;
-    }
+	photon_rid req = hdr->request;
+	uintptr_t addr = hdr->addr;
+	uint16_t size = hdr->length;
+	uint64_t asize = ALIGN(EB_MSG_SIZE(size), PWC_ALIGN);
+	if (sync_cas(&eb->curr, curr, new+asize, SYNC_RELAXED, SYNC_RELAXED)) {
+	  // now check for tail flag (or we could return to check later)
+	  volatile uint8_t *tail = (uint8_t*)((uintptr_t)hdr + asize - 1);
+	  while (*tail != UINT8_MAX)
+	    ;
+	  memcpy((void*)addr, (void*)((uintptr_t)hdr + sizeof(*hdr)), size);
+	  *request = req;
+	  *flag = 1;
+	  dbg_trace("Copied message of size %u into 0x%016lx for request 0x%016lx",
+		    size, addr, req);
+	  memset((void*)hdr, 0, asize);
+	  sync_store(&eb->prog, new+asize, SYNC_RELAXED);
+	  goto exit;
+	}
       }
-
+      
       // then check pwc ledger
       ledger = photon_processes[i].local_pwc_ledger;
       curr = sync_load(&ledger->curr, SYNC_RELAXED);
       offset = curr & (ledger->num_entries - 1);
       entry_iter = &(ledger->entries[offset]);
       if (entry_iter->request != (photon_rid) UINT64_MAX &&
-      sync_cas(&ledger->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
-    *request = entry_iter->request;
-    entry_iter->request = UINT64_MAX;
-    *flag = 1;
-    sync_fadd(&ledger->prog, 1, SYNC_RELAXED);
-    dbg_trace("Popped ledger event with id: 0x%016lx (%lu)", *request, *request);
-    goto exit;
+	  sync_cas(&ledger->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
+	*request = entry_iter->request;
+	entry_iter->request = UINT64_MAX;
+	*flag = 1;
+	sync_fadd(&ledger->prog, 1, SYNC_RELAXED);
+	dbg_trace("Popped ledger event with id: 0x%016lx (%lu)", *request, *request);
+	goto exit;
       }
     }
   }
-
+  
  exit:
   if (remaining) {
     *remaining = photon_count_request(proc);
     dbg_trace("%d requests remaining", *remaining);
   }
   return PHOTON_OK;
-
+  
  error_exit:
   return PHOTON_ERROR;
 }
