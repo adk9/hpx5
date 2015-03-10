@@ -10,3 +10,8 @@ libisir_la_CFLAGS   = $(MPI_CFLAGS)
 libisir_la_LIBADD   = $(MPI_LIBS)
 libisir_la_SOURCES += xport_mpi.c
 endif
+
+if HAVE_APEX
+libisir_la_CPPFLAGS += @APEX_CFLAGS@
+libisir_la_LIBADD   += @APEX_LIBS@
+endif

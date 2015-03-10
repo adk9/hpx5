@@ -10,6 +10,11 @@ AM_CFLAGS        = -Wno-unused
 
 LIBS = $(HPX_LIBS)
 
+if HAVE_APEX
+AM_CFLAGS           += @APEX_CFLAGS@
+LIBS            += @APEX_LIBS@
+endif
+
 TESTS = bcast                   \
         call_when               \
         gas_alloc               \

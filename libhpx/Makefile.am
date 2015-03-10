@@ -23,3 +23,8 @@ libhpx_la_LIBADD   = $(HPX_HWLOC_LIBS) \
                      instrumentation/libinstrumentation.la \
                      $(top_builddir)/libsync/libsync.la \
                      $(HPX_PHOTON_LIBS) 
+
+if HAVE_APEX
+libhpx_la_CPPFLAGS  += @APEX_CFLAGS@
+libhpx_la_LIBADD  += @APEX_LIBS@
+endif

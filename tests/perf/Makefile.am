@@ -8,6 +8,11 @@ AM_CFLAGS        = -Wno-unused
 
 LIBS = $(HPX_LIBS)
 
+if HAVE_APEX
+AM_CPPFLAGS           += @APEX_CFLAGS@
+LIBS            += @APEX_LIBS@
+endif
+
 TESTS = gas_alloc	\
         gas_addr_trans	\
         lco_sema	\

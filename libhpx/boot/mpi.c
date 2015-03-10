@@ -20,6 +20,10 @@
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
 
+#if HAVE_APEX
+#include "apex.h"
+#endif
+
 static HPX_RETURNS_NON_NULL const char *_id(void) {
   return "MPI";
 }
@@ -37,6 +41,9 @@ static int _rank(const boot_t *boot) {
   if (MPI_Comm_rank(MPI_COMM_WORLD, &rank) != MPI_SUCCESS) {
     hpx_abort();
   }
+#if HAVE_APEX
+  apex_set_node_id(rank);
+#endif
   return rank;
 }
 

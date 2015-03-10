@@ -15,10 +15,14 @@
 
 #include "hpx/hpx.h"
 
+#ifdef HAVE_APEX
+#include "apex.h"
+#endif
+
 /// @file libhpx/scheduler/stats.h
 /// @brief The libhpx stats definitions.
 
-#ifdef ENABLE_PROFILING
+#if defined(ENABLE_PROFILING) || defined(HAVE_APEX)
 #define profile_ctr(e) e
 #else
 #define profile_ctr(e)

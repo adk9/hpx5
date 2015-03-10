@@ -27,6 +27,9 @@
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
 
+#if HAVE_APEX
+#include "apex.h"
+#endif
 
 static HPX_RETURNS_NON_NULL const char *_id(void) {
   return "PMI";
@@ -42,6 +45,9 @@ static int _rank(const boot_t *boot) {
   int rank;
   if (PMI_Get_rank(&rank) != PMI_SUCCESS)
     hpx_abort();
+#if HAVE_APEX
+  apex_set_node_id(rank);
+#endif
   return rank;
 }
 

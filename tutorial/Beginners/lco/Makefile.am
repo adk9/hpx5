@@ -19,6 +19,11 @@ if HAVE_MPI
 AM_CFLAGS                    += @MPI_CFLAGS@
 endif
 
+if HAVE_APEX
+AM_CFLAGS           += @APEX_CFLAGS@
+LIBS            += @APEX_LIBS@
+endif
+
 sema_LDADD                    = $(all_LIBS)
 lcoAnd_LDADD                  = $(all_LIBS)
 lcoSetGet_LDADD               = $(all_LIBS)

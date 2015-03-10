@@ -13,6 +13,9 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+#ifdef HAVE_APEX
+#include "apex.h"
+#endif
 
 /// ----------------------------------------------------------------------------
 /// @file libhpx/scheduler/statistics.c
@@ -81,4 +84,23 @@ void scheduler_stats_print(const char *id, const struct scheduler_stats *counts)
   fflush(stdout);
 #endif
 }
+
+#ifdef HAVE_APEX
+void scheduler_save_apex_stats(const scheduler_stats_t *counts) {
+  static tatas_lock_t lock = SYNC_TATAS_LOCK_INIT;
+  sync_tatas_acquire(&lock);
+  apex_sample_value("spins", (double)counts->spins);
+  apex_sample_value("spawns", (double)counts->spawns);
+  apex_sample_value("steals", (double)counts->steals);
+  apex_sample_value("stacks", (double)counts->stacks);
+  apex_sample_value("mail", (double)counts->mail);
+  apex_sample_value("started", (double)counts->started);
+  apex_sample_value("finished", (double)counts->finished);
+  apex_sample_value("progress", (double)counts->progress);
+  apex_sample_value("backoffs", (double)counts->backoffs);
+  apex_sample_value("backoff (ms)", (double)counts->backoff);
+  sync_tatas_release(&lock);
+}
+#endif
+
 

@@ -15,6 +15,11 @@ if HAVE_MPI
 AM_CFLAGS                      += @MPI_CFLAGS@
 endif
 
+if HAVE_APEX
+AM_CFLAGS           += @APEX_CFLAGS@
+LIBS            += @APEX_LIBS@
+endif
+
 hpx_allreduce_LDADD             = $(all_LIBS)
 hpx_allgather_LDADD             = $(all_LIBS)
 hpx_alltoall_LDADD              = $(all_LIBS)

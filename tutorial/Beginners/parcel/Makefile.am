@@ -14,6 +14,11 @@ if HAVE_MPI
 AM_CFLAGS                    += @MPI_CFLAGS@
 endif
 
+if HAVE_APEX
+AM_CFLAGS           += @APEX_CFLAGS@
+LIBS            += @APEX_LIBS@
+endif
+
 parcelSend_LDADD              = $(all_LIBS)
 parcelSendSync_LDADD          = $(all_LIBS)
 

@@ -12,3 +12,7 @@ libpwc_la_SOURCES  = pwc.c \
 if HAVE_PHOTON
 libpwc_la_SOURCES += xport_photon.c
 endif
+
+if HAVE_APEX
+libpwc_la_CPPFLAGS  += @APEX_CFLAGS@
+endif

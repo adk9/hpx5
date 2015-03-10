@@ -21,6 +21,11 @@ if HAVE_MPI
 AM_CFLAGS                    += @MPI_CFLAGS@
 endif
 
+if HAVE_APEX
+AM_CFLAGS           += @APEX_CFLAGS@
+LIBS            += @APEX_LIBS@
+endif
+
 allocZeroBytes_LDADD          = $(all_LIBS)
 gasalloc_LDADD                = $(all_LIBS)
 memget_LDADD                  = $(all_LIBS)

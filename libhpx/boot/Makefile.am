@@ -25,3 +25,8 @@ libboot_la_CFLAGS  += @PMI_CFLAGS@
 libboot_la_SOURCES += pmi.c
 libboot_la_LIBADD  += @PMI_LIBS@
 endif
+
+if HAVE_APEX
+libboot_la_CFLAGS  += @APEX_CFLAGS@
+libboot_la_LIBADD  += @APEX_LIBS@
+endif

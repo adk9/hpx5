@@ -11,7 +11,10 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-# include "config.h"
+#include "config.h"
+#endif
+#ifdef HAVE_APEX
+#include "apex.h"
 #endif
 
 #include <stdlib.h>
@@ -327,6 +330,15 @@ int action_execute(hpx_parcel_t *p) {
     *ret = ((hpx_pinned_action_handler_t)handler)(target, args, p->size);
     hpx_gas_unpin(p->target);
   } else if (cif && !pinned) {
+#ifdef HAVE_APEX
+  // if this is not a null or lightweight action, 
+  // send a "start" event to APEX
+  apex_profiler_handle profiler = 0L;
+  //if (id != HPX_ACTION_NULL && id != HPX_LCO_SET && id != HPX_PAR_FOR_ASYNC) {
+  if (id != HPX_ACTION_NULL) {
+    profiler = apex_start_address((apex_function_address)handler);
+  }
+#endif
     ffi_raw_call(cif, FFI_FN(handler), ret, args);
   } else {
     void *target;
@@ -342,6 +354,11 @@ int action_execute(hpx_parcel_t *p) {
     hpx_gas_unpin(p->target);
   }
 
+#ifdef HAVE_APEX
+  //if (profiler != 0L) {
+    //apex_stop_profiler(profiler);
+  //}
+#endif
   return *ret;
 }
 
