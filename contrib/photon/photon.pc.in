@@ -9,4 +9,4 @@ URL: https://gitlab.crest.iu.edu/damsl/photon
 Version: @VERSION@
 Cflags: -I${includedir}
 Libs: -L${libdir} -lphoton
-Libs.private: @VERBS_LIBS@ @PHOTON_LIBS@
+Libs.private: @VERBS_LIBS@ @UGNI_LIBS@
