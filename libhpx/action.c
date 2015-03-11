@@ -255,7 +255,7 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
   return hpx_parcel_send_through(p, gate, lsync);
 }
 
-int action_execute(const hpx_parcel_t *p) {
+int action_execute(hpx_parcel_t *p) {
   const _table_t *table = _get_actions();
 
   dbg_assert(p->target != HPX_NULL);
