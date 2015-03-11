@@ -130,4 +130,3 @@ void inst_vtrace(int UNUNSED, int n, int id, ...) {
   }
   logtable_append(log, args[0], args[1], args[2], args[3]);
 }
-
