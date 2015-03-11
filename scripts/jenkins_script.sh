@@ -26,8 +26,6 @@ case "$SYSTEM" in
     export PATH=/N/home/h/p/hpx5/BigRed2/new_modules/bin:$PATH
     ;;
   HPX5_STAMPEDE)
-    module laod intel/13.1.1.163
-    module load  impi/4.1.3.049
     export LDFLAGS="-L/opt/ofed/lib64 -lpthread"
     export CPPFLAGS="-I/opt/ofed/include"
     ;;
@@ -57,6 +55,8 @@ case "$SYSTEM" in
     CFGFLAGS+=" --with-mpi"
     ;;
   HPX5_STAMPEDE)
+    module switch intel/13.1.1.163
+    module load  impi/4.1.3.049
     CFGFLAGS+=" --with-mpi"
     ;;
 esac
@@ -220,13 +220,6 @@ fi
 
 if [ "$OP" == "run" ]; then
     cd "$DIR/build"
-
-    case "$SYSTEM" in
-    HPX5_STAMPEDE)
-      module laod intel/13.1.1.163
-      module load  impi/4.1.3.049
-      ;;
-    esac
 
     # Run all the unit tests:
     make check -C tests
