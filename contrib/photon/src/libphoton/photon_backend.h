@@ -114,6 +114,7 @@ struct photon_backend_t {
   int (*register_buffer)(void *buffer, uint64_t size);
   int (*unregister_buffer)(void *buffer, uint64_t size);
   int (*get_dev_addr)(int af, photonAddr addr);
+  int (*get_dev_name)(char **ib_dev);
   int (*register_addr)(photonAddr addr, int af);
   int (*unregister_addr)(photonAddr addr, int af);
   int (*test)(photon_rid request, int *flag, int *type, photonStatus status);

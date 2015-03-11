@@ -207,6 +207,7 @@ int photon_unregister_addr(photonAddr addr, int af);
 // Fill in addr with the local device address, using af as the hint
 // default will be AF_INET6 and port gid
 int photon_get_dev_addr(int af, photonAddr addr);
+int photon_get_dev_name(char **dev_name);
 
 int photon_probe(photonAddr addr, int *flag, photonStatus status);
 
