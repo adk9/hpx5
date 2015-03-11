@@ -191,7 +191,7 @@ hpx_addr_t hpx_parcel_get_cont_target(const hpx_parcel_t *p)
 /// @param            p The parcel to query.
 ///
 /// @returns            A pointer to the data buffer for the parcel.
-void *hpx_parcel_get_data(const hpx_parcel_t *p)
+void *hpx_parcel_get_data(hpx_parcel_t *p)
   HPX_NON_NULL(1);
 
 /// Get the process ID for a parcel.

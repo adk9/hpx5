@@ -166,7 +166,7 @@ hpx_addr_t hpx_parcel_get_cont_target(const hpx_parcel_t *p) {
   return p->c_target;
 }
 
-void *hpx_parcel_get_data(const hpx_parcel_t *p) {
+void *hpx_parcel_get_data(hpx_parcel_t *p) {
   void *buffer = NULL;
   if (p->size == 0) {
     return buffer;
