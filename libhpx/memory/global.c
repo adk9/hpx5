@@ -21,14 +21,31 @@
 #include <jemalloc/jemalloc_global.h>
 #include <libhpx/memory.h>
 
+static address_space_t _global_address_space_vtable;
+
+static void _global_delete(void *space) {
+  dbg_assert(space == &_global_address_space_vtable);
+}
+
+static void _global_join(void *space) {
+  dbg_assert(space == &_global_address_space_vtable);
+}
+
+static void _global_leave(void *space) {
+  dbg_assert(space == &_global_address_space_vtable);
+}
+
+static address_space_t _global_address_space_vtable = {
+  .delete = _global_delete,
+  .join = _global_join,
+  .leave = _global_leave,
+  .free = libhpx_global_free,
+  .malloc = libhpx_global_malloc,
+  .calloc = libhpx_global_calloc,
+  .memalign = libhpx_global_memalign
+};
+
 address_space_t *
 address_space_new_jemalloc_global(const struct config *UNUSED) {
-  address_space_t *space = malloc(sizeof(*space));
-  dbg_assert(space);
-  space->delete = free;
-  space->free = libhpx_global_free;
-  space->malloc = libhpx_global_malloc;
-  space->calloc = libhpx_global_calloc;
-  space->memalign = libhpx_global_memalign;
-  return space;
+  return &_global_address_space_vtable;
 }

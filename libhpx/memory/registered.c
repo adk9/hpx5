@@ -58,6 +58,8 @@
 ///     registrations when jemalloc says that we can.
 const char *libhpx_registered_malloc_conf = "lg_dirty_mult:-1";
 
+static address_space_t _registered_address_space_vtable;
+
 /// jemalloc requires static callbacks for chunk allocation. We need to know the
 /// transport-specific mechanism for registering and releasing memory, so we use
 /// these globals to store the callback. We'd prefer to be able to make the
@@ -99,13 +101,14 @@ static bool _registered_chunk_dalloc(void *chunk, size_t size, unsigned arena) {
 
 /// A no-op delete function, since we're not allocating an object.
 static void _registered_delete(void *space) {
+  dbg_assert(space == &_registered_address_space_vtable);
 }
 
 /// Join the registered address space.
 static void _registered_join(void *space) {
   // We know that the registered space is a singleton object, so we make sure
   // it's been allocated and that it's the right "class".
-  dbg_assert(registered && registered == space);
+  dbg_assert(space == &_registered_address_space_vtable);
 
   // If we've (the current pthread) already joined this address space then we
   // will have stored our primordial arena.
@@ -147,6 +150,7 @@ static void _registered_join(void *space) {
 
 /// Leave the registered address space.
 static void _registered_leave(void *space) {
+  dbg_assert(space == &_registered_address_space_vtable);
 }
 
 /// The registered address space class.
