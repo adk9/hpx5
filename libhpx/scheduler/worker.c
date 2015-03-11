@@ -65,7 +65,7 @@ int apex_thread_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env
     apex_function_address action = (apex_function_address)hpx_parcel_get_action(self->current);
     // ignore null actions for now
     //if (action != HPX_ACTION_NULL && action != HPX_ACTION_LCO_SET && action != HPX_ACTION_PAR_FOR_ASYNC) {
-    if (action != HPX_ACTION_NULL) {
+    if (action != HPX_ACTION_NULL && !action_is_interrupt(here->actions, action)) {
       apex_stop_profiler(APEX_NULL_PROFILER_HANDLE);
       int rc = thread_transfer(p, cont, env);
       // IF the context resumes here, make sure we resume the timer.
@@ -523,10 +523,12 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
     if (apex_checkThrottling && apex_throttleOn) {
       if (self->id > apex_get_thread_cap()) { 
 /* because we can't change the power level, sleep instead. */
-        struct timespec tim, tim2;
-        tim.tv_sec = 1; // 1 second. Same as our periodic policy.
-        tim.tv_nsec = 0;
-        nanosleep(&tim , &tim2);
+        if (apex_energyThrottling) {
+            struct timespec tim, tim2;
+            tim.tv_sec = 0;
+            tim.tv_nsec = 10000; // 10 useconds.
+            nanosleep(&tim , &tim2);
+        }
         continue;
       }
     }
@@ -652,11 +654,11 @@ int worker_start(void) {
     dbg_error("failed to acquire an initial parcel.\n");
   }
 
-#ifdef HAVE_APEX
-  int e = apex_thread_transfer(p, _on_startup, NULL);
-#else
+//#ifdef HAVE_APEX
+  //int e = apex_thread_transfer(p, _on_startup, NULL);
+//#else
   int e = thread_transfer(p, _on_startup, NULL);
-#endif
+//#endif
   if (e) {
     if (here->rank == 0) {
       log_error("application exited with a non-zero exit code: %d.\n", e);
@@ -824,11 +826,11 @@ void scheduler_yield(void) {
   dbg_assert(parcel_get_stack(to));
   dbg_assert(parcel_get_stack(to)->sp);
   // transfer to the new thread
-#ifdef HAVE_APEX
-  apex_thread_transfer(to, _checkpoint_yield, from);
-#else
+//#ifdef HAVE_APEX
+  //apex_thread_transfer(to, _checkpoint_yield, from);
+//#else
   thread_transfer(to, _checkpoint_yield, from);
-#endif
+//#endif
 }
 
 void hpx_thread_yield(void) {
@@ -855,11 +857,11 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   // if we successfully pushed, then do a transfer away from this thread
   if (status == HPX_SUCCESS) {
     hpx_parcel_t *to = _schedule(true, NULL);
-#ifdef HAVE_APEX
-    apex_thread_transfer(to, _unlock, (void*)lock);
-#else
+//#ifdef HAVE_APEX
+    //apex_thread_transfer(to, _unlock, (void*)lock);
+//#else
     thread_transfer(to, _unlock, (void*)lock);
-#endif
+//#endif
     sync_lockable_ptr_lock(lock);
     status = cvar_get_error(condition);
   }
@@ -907,11 +909,11 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size, const void 
   dbg_assert(to);
   dbg_assert(parcel_get_stack(to));
   dbg_assert(parcel_get_stack(to)->sp);
-#ifdef HAVE_APEX
-  apex_thread_transfer(to, _free_parcel, (void*)(intptr_t)status);
-#else
+//#ifdef HAVE_APEX
+  //apex_thread_transfer(to, _free_parcel, (void*)(intptr_t)status);
+//#else
   thread_transfer(to, _free_parcel, (void*)(intptr_t)status);
-#endif
+//#endif
   unreachable();
 }
 
@@ -933,11 +935,11 @@ void hpx_thread_exit(int status) {
     //      task inside of schedule() which would cause the current task to be
     //      freed.
     hpx_parcel_t *to = _schedule(true, NULL);
-#ifdef HAVE_APEX
-    apex_thread_transfer(to, _resend_parcel, parcel);
-#else
+//#ifdef HAVE_APEX
+    //apex_thread_transfer(to, _resend_parcel, parcel);
+//#else
     thread_transfer(to, _resend_parcel, parcel);
-#endif
+//#endif
     unreachable();
   }
 
@@ -1048,11 +1050,11 @@ void hpx_thread_set_affinity(int affinity) {
   }
 
   hpx_parcel_t *to = _schedule(false, NULL);
-#ifdef HAVE_APEX
-  apex_thread_transfer(to, _move_to, (void*)(intptr_t)affinity);
-#else
+//#ifdef HAVE_APEX
+  //apex_thread_transfer(to, _move_to, (void*)(intptr_t)affinity);
+//#else
   thread_transfer(to, _move_to, (void*)(intptr_t)affinity);
-#endif
+//#endif
 }
 
 /// This transfer handler is the right place to put all debug, logging, and
