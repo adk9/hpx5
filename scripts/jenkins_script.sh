@@ -56,7 +56,7 @@ case "$SYSTEM" in
     CFGFLAGS+=" --with-mpi"
     ;;
   HPX5_STAMPEDE)
-    CFGFLAGS+=" --with-mpi"
+    CFGFLAGS+=" --with-mpi=mvapich2"
     ;;
 esac
 }
@@ -151,9 +151,9 @@ case "$SYSTEM" in
     ;;
   HPX5_STAMPEDE)
     if [ "$HPXMODE_AXIS" == smp ] ; then
-      CFGFLAGS+=" --with-tests-cmd=\"ibrun -n 1 -o 0\""
+      CFGFLAGS+=" --with-tests-cmd=\"ibrun -np 1\""
     else
-      CFGFLAGS+=" --with-tests-cmd=\"ibrun -n 2 -o 0\""
+      CFGFLAGS+=" --with-tests-cmd=\"ibrun -np 2\""
     fi
    ;;
   *)
@@ -206,6 +206,12 @@ fi
 
 if [ "$OP" == "run" ]; then
     cd "$DIR/build"
+
+    case "$SYSTEM" in
+    HPX5_STAMPEDE)
+      module load intel/14.0.1.106 
+      ;;
+    esac
 
     # Run all the unit tests:
     make check -C tests
