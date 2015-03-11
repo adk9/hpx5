@@ -25,4 +25,13 @@ int system_set_affinity(pthread_t thread, int core_id)
 int system_set_affinity_group(pthread_t thread, int ncores)
   HPX_INTERNAL;
 
+void *system_mmap(void *addr, size_t size, size_t align)
+  HPX_INTERNAL;
+
+void *system_mmap_huge_pages(void *addr, size_t size, size_t align)
+  HPX_INTERNAL;
+
+void system_munmap(void *addr, size_t size)
+  HPX_INTERNAL;
+
 #endif // LIBHPX_SYSTEM_H
