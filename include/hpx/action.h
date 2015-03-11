@@ -74,7 +74,7 @@ int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_hand
 /// @param (car __VA_ARGS__) The action id (the hpx_action_t address)
 /// @param (cdr __VA_ARGS__) The parameter types (HPX_INT, ...)
 #define _HPX_REGISTER_ACTION(type, handler, ...)                    \
-  hpx_register_action(HPX_ACTION_##type, _HPX_XSTR(_id##handler),   \
+  hpx_register_action(HPX_ACTION_##type, __FILE__":"_HPX_XSTR(handler), \
                       (hpx_action_handler_t)handler,                \
                       __HPX_NARGS(__VA_ARGS__) - 1, __VA_ARGS__)
 
