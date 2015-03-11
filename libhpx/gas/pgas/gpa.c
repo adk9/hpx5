@@ -24,27 +24,20 @@
 
 /// Compute the phase (offset within block) of a global address.
 static uint32_t _phase_of(hpx_addr_t gpa, uint32_t bsize) {
-  // the phase is stored in the least significant bits of the gpa, we merely
-  // mask it out
-  //
-  // before: (locality, offset, phase)
-  //  after: (00000000  000000  phase)
-  const uint64_t mask = (1ul << ceil_log2_32(bsize)) - 1;
-  return (uint32_t)(gpa & mask);
+  uint32_t bsize_log2 = ceil_log2_32(bsize);
+  uint64_t mask = (1ul << bsize_log2) - 1;
+  uint64_t phase = mask & gpa;
+  dbg_assert(phase < UINT32_MAX);
+  return (uint32_t)phase;
 }
-
 
 /// Compute the block ID for a global address.
 static uint64_t _block_of(hpx_addr_t gpa, uint32_t bsize) {
-  // clear the upper bits by shifting them out, and then shifting the offset
-  // down to the right place
-  //
-  // before: (locality, block, phase)
-  //  after: (00000000000      block)
-  const uint32_t rshift = ceil_log2_32(bsize);
-  return (gpa & GPA_OFFSET_MASK) >> rshift;
+  uint32_t rshift = ceil_log2_32(bsize);
+  uint64_t offset = gpa & GPA_OFFSET_MASK;
+  uint64_t block = offset >> rshift;
+  return block;
 }
-
 
 static hpx_addr_t _triple_to_gpa(uint32_t rank, uint64_t bid, uint32_t phase,
                                  uint32_t bsize) {
@@ -61,8 +54,8 @@ static hpx_addr_t _triple_to_gpa(uint32_t rank, uint64_t bid, uint32_t phase,
 
   // forward to pgas_offset_to_gpa(), by computing the offset by combining bid
   // and phase
-  const uint32_t shift = (bsize) ? ceil_log2_32(bsize) : 0;
-  const uint64_t offset = (bid << shift) + phase;
+  uint32_t shift = (bsize) ? ceil_log2_32(bsize) : 0;
+  uint64_t offset = (bid << shift) + phase;
   return pgas_offset_to_gpa(rank, offset);
 }
 
