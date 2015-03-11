@@ -30,19 +30,41 @@
 #include <hpx/attributes.h>
 #include <libhpx/debug.h>
 
+/// Forward declarations.
+/// @{
 struct config;
+/// }@
 
+/// This abstract class defines the external interface to an address space.
 typedef struct address_space {
   void  (*delete)(void *space);
+  void  (*join)(void *space);
+  void  (*leave)(void *space);
   void  (*free)(void *addr);
   void *(*malloc)(size_t bytes);
   void *(*calloc)(size_t n, size_t bytes);
   void *(*memalign)(size_t boundary, size_t size);
 } address_space_t;
 
-address_space_t *address_space_new_default(const struct config *cfg);
-address_space_t *address_space_new_jemalloc_registered(const struct config *cfg);
-address_space_t *address_space_new_jemalloc_global(const struct config *cfg);
+/// These function types are used to parameterize the implementation of some of
+/// the address spaces.
+typedef void *(*mmap_t)(void *base, size_t size, size_t align);
+typedef void  (*munmap_t)(void *base, size_t size);
+typedef int   (*memory_register_t)(void *base, size_t n, void *key);
+typedef int   (*memory_release_t)(void *base, size_t n);
+
+address_space_t *address_space_new_default(const struct config *cfg)
+  HPX_INTERNAL;
+
+address_space_t *address_space_new_jemalloc_registered(const struct config *cfg,
+                                                       memory_register_t pin,
+                                                       memory_release_t unpin,
+                                                       mmap_t mmap,
+                                                       munmap_t munmap)
+  HPX_INTERNAL;
+
+address_space_t *address_space_new_jemalloc_global(const struct config *cfg)
+  HPX_INTERNAL;
 
 extern address_space_t *local;
 extern address_space_t *registered;
