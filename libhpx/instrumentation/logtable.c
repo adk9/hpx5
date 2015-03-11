@@ -73,19 +73,19 @@ static void *_create_mmap(size_t size, int file) {
 }
 
 /// Write the metadata for the event to the header portion of the log
-static void *_write_event_metadata(void* base, int id) {
+static size_t _write_event_metadata(void* base, int id) {
   inst_event_metadata_t event_md = INST_EVENT_METADATA[id];
   memcpy(base, &event_md, sizeof(event_md));
-  return (void*)((uintptr_t)base + sizeof(event_md));
+  return sizeof(event_md);
 }
 
 // Write the metadata for this event to the header of the log file
-static void *_write_header(void* base, int id) {
+static size_t _write_header(void* base, int id) {
   logtable_header_t *header = (logtable_header_t*)base;
   memcpy(header, &LOGTABLE_HEADER, sizeof(LOGTABLE_HEADER));
-  void *new_base = _write_event_metadata(header->header_data, id);
-  header->table_offset = (uint32_t)((uintptr_t)new_base - (uintptr_t)base);
-  return new_base;
+  size_t header_size = _write_event_metadata(header->header_data, id);
+  header->table_offset = offsetof(logtable_header_t, header_data) + header_size;
+  return header_size;
 }
 
 int logtable_init(logtable_t *log, const char* filename, size_t size,
@@ -112,7 +112,9 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
     goto unwind;
   }
 
-  log->records = _write_header(log->header, id);
+  size_t header_size = _write_header(log->header, id);
+  assert(((uintptr_t)log->header + header_size) % 8 == 0);
+  log->records = (void*)((uintptr_t)log->header + log->header->table_offset);
 
   return LIBHPX_OK;
 
@@ -134,7 +136,9 @@ void logtable_fini(logtable_t *log) {
   }
 
   if (log->fd != -1) {
-    int e = ftruncate(log->fd, log->next * sizeof(record_t));
+    size_t filesize =
+      (uintptr_t)&log->records[log->next] - (uintptr_t)log->header;
+    int e = ftruncate(log->fd, filesize);
     if (e) {
       log_error("failed to truncate trace file\n");
     }
