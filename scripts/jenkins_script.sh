@@ -55,7 +55,7 @@ case "$SYSTEM" in
     CFGFLAGS+=" --with-mpi"
     ;;
   HPX5_STAMPEDE)
-    module switch intel/13.1.1.163
+    module load intel/13.1.1.163
     module load  impi/4.1.3.049
     CFGFLAGS+=" --with-mpi"
     ;;
@@ -220,6 +220,13 @@ fi
 
 if [ "$OP" == "run" ]; then
     cd "$DIR/build"
+   
+    case "$SYSTEM" in	 
+      HPX5_STAMPEDE)
+      module load intel/13.1.1.163
+      module load  impi/4.1.3.049
+      ;;
+    esac
 
     # Run all the unit tests:
     make check -C tests
