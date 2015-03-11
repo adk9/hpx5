@@ -159,28 +159,44 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
 #define INST_EVENT_COL_METADATA_EMPTY0          \
   { .mask = 0x3,                                \
       .data_type = 'l',                         \
-      .offset = INST_EVENT_COL_OFFSET_USER0     \
+      .offset = INST_EVENT_COL_OFFSET_USER0,    \
+      .min = 0,                                 \
+      .max = UINT64_MAX,                        \
+      .printf_code = "zu",                      \
+      .name = ""                                \
       }
 
 // typeof(INST_EVENT_COL_METADATA_EMPTY1) == inst_event_col_metadata_t
 #define INST_EVENT_COL_METADATA_EMPTY1          \
   { .mask = 0x3,                                \
       .data_type = 'l',                         \
-      .offset = INST_EVENT_COL_OFFSET_USER1     \
+      .offset = INST_EVENT_COL_OFFSET_USER1,    \
+      .min = 0,                                 \
+      .max = UINT64_MAX,                        \
+      .printf_code = "zu",                      \
+      .name = ""                                \
       }
 
 // typeof(INST_EVENT_COL_METADATA_EMPTY2) == inst_event_col_metadata_t
 #define INST_EVENT_COL_METADATA_EMPTY2          \
   { .mask = 0x3,                                \
       .data_type = 'l',                         \
-      .offset = INST_EVENT_COL_OFFSET_USER2     \
+      .offset = INST_EVENT_COL_OFFSET_USER2,    \
+      .min = 0,                                 \
+      .max = UINT64_MAX,                        \
+      .printf_code = "zu",                      \
+      .name = ""                                \
       }
 
 // typeof(INST_EVENT_COL_METADATA_EMPTY3) == inst_event_col_metadata_t
 #define INST_EVENT_COL_METADATA_EMPTY3          \
   { .mask = 0x3,                                \
       .data_type = 'l',                         \
-      .offset = INST_EVENT_COL_OFFSET_USER3     \
+      .offset = INST_EVENT_COL_OFFSET_USER3,    \
+      .min = 0,                                 \
+      .max = UINT64_MAX,                        \
+      .printf_code = "zu",                      \
+      .name = ""                                \
       }
 
 // typeof(INST_EVENT_COL_METADATA_PARCEL_ID) == inst_event_col_metadata_t
