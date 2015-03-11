@@ -26,7 +26,8 @@ case "$SYSTEM" in
     export PATH=/N/home/h/p/hpx5/BigRed2/new_modules/bin:$PATH
     ;;
   HPX5_STAMPEDE)
-    module load intel/14.0.1.106
+    module laod intel/13.1.1.163
+    module load  impi/4.1.3.049
     export LDFLAGS="-L/opt/ofed/lib64 -lpthread"
     export CPPFLAGS="-I/opt/ofed/include"
     ;;
@@ -56,7 +57,7 @@ case "$SYSTEM" in
     CFGFLAGS+=" --with-mpi"
     ;;
   HPX5_STAMPEDE)
-    CFGFLAGS+=" --with-mpi=mvapich2"
+    CFGFLAGS+=" --with-mpi"
     ;;
 esac
 }
@@ -183,7 +184,7 @@ case "$SYSTEM" in
     CFGFLAGS+=" CC=cc"
     ;;
   HPX5_STAMPEDE)
-    CFGFLAGS+=" CC=cc"
+    CFGFLAGS+=" CC=icc"
     ;;
   *)
     exit 1
@@ -200,8 +201,21 @@ case "$HPXDEBUG_CHOICE" in
 esac
 
 if [ "$OP" == "build" ]; then
-    CFG_CMD="../configure"
-    do_build
+    case "$SYSTEM" in
+      CREST_cutter)
+        CFG_CMD="../configure"
+        ;;
+      HPX5_BIGRED2)
+        CFG_CMD="../configure"
+        ;;
+      HPX5_STAMPEDE)
+        CFG_CMD=" MPI_CFLAGS=-I/opt/apps/intel13/impi/4.1.3.049/intel64/include MPI_LIBS=\"-L/opt/apps/intel13/impi/4.1.3.049/intel64/lib -lmpi\" ../configure"
+        ;;  
+      *)
+       exit 1
+       ;;
+   esac
+   do_build
 fi
 
 if [ "$OP" == "run" ]; then
@@ -209,7 +223,8 @@ if [ "$OP" == "run" ]; then
 
     case "$SYSTEM" in
     HPX5_STAMPEDE)
-      module load intel/14.0.1.106 
+      module laod intel/13.1.1.163
+      module load  impi/4.1.3.049
       ;;
     esac
 
