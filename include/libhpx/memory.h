@@ -48,8 +48,8 @@ typedef struct address_space {
 
 /// These function types are used to parameterize the implementation of some of
 /// the address spaces.
-typedef void *(*mmap_t)(void *base, size_t size, size_t align);
-typedef void  (*munmap_t)(void *base, size_t size);
+typedef void *(*mmap_t)(void *base, size_t n, size_t align);
+typedef void  (*munmap_t)(void *base, size_t n);
 typedef int   (*memory_register_t)(void *base, size_t n, void *key);
 typedef int   (*memory_release_t)(void *base, size_t n);
 

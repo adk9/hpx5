@@ -25,12 +25,33 @@ int system_set_affinity(pthread_t thread, int core_id)
 int system_set_affinity_group(pthread_t thread, int ncores)
   HPX_INTERNAL;
 
-void *system_mmap(void *addr, size_t size, size_t align)
+/// An abstract interface to mmap-like operations.
+///
+/// As opposed to mmap, this guarantees alignment. It will try and place the
+/// corresponding allocation at @p addr, but it won't try too hard.
+///
+/// @param         addr A hint about where to try and place the allocation.
+/// @param         size The size in bytes of the allocation (must be 2^n).
+/// @param        align The alignment in bytes of the allocation (must be 2^n).
+///
+/// @returns The allocated region.
+void *system_mmap(void *addr, size_t bytes, size_t align)
   HPX_INTERNAL;
 
-void *system_mmap_huge_pages(void *addr, size_t size, size_t align)
+/// An abstract interface to mmap-like operations for huge pages.
+///
+/// As opposed to mmap, this guarantees alignment. It will try and place the
+/// corresponding allocation at @p addr, but it won't try too hard.
+///
+/// @param         addr A hint about where to try and place the allocation.
+/// @param         size The size in bytes of the allocation (must be 2^n).
+/// @param        align The alignment in bytes of the allocation (must be 2^n).
+///
+/// @returns The allocated region.
+void *system_mmap_huge_pages(void *addr, size_t bytes, size_t align)
   HPX_INTERNAL;
 
+/// Unmap memory.
 void system_munmap(void *addr, size_t size)
   HPX_INTERNAL;
 
