@@ -22,6 +22,7 @@
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
+#include <libhpx/padding.h>
 #include <libhpx/parcel.h>
 
 #include "emulate_pwc.h"
@@ -30,18 +31,13 @@
 #include "isir.h"
 #include "xport.h"
 
-#define _CAT1(S, T) S##T
-#define _CAT(S, T) _CAT1(S, T)
-#define _BYTES(S) (HPX_CACHELINE_SIZE - ((S) % HPX_CACHELINE_SIZE))
-#define _PAD(S) const char _CAT(_padding,__LINE__)[_BYTES(S)]
-
 typedef struct {
   network_t       vtable;
   gas_t             *gas;
   isir_xport_t    *xport;
   volatile int     flush;
-  _PAD(sizeof(network_t) + sizeof(gas_t*) + sizeof(isir_xport_t*) +
-       sizeof(int));
+  PAD_TO_CACHELINE(sizeof(network_t) + sizeof(gas_t*) + sizeof(isir_xport_t*) +
+                   sizeof(int));
   two_lock_queue_t sends;
   two_lock_queue_t recvs;
   isend_buffer_t  isends;
@@ -183,7 +179,7 @@ static void _funneled_register_dma(void *network, void *base, size_t extent) {
     return;
   }
 
-  int e = isir->xport->pin(base, extent, NULL);
+  int e = isir->xport->pin(isir->xport, base, extent, NULL);
   dbg_check(e, "Could not register [%p, %p) for rmda\n", base,
             (char*)base + extent);
 }
@@ -195,7 +191,7 @@ static void _funneled_release_dma(void *network, void* base, size_t extent) {
     return;
   }
 
-  int e = isir->xport->unpin(base, extent);
+  int e = isir->xport->unpin(isir->xport, base, extent);
   dbg_check(e, "Could not release [%p, %p)\n", base, (char*)base + extent);
 }
 
