@@ -15,18 +15,28 @@
 
 #include <hpx/hpx.h>
 
+typedef uint16_t op_t;
+typedef uint64_t arg_t;
 typedef uint64_t command_t;
 
-hpx_action_t command_get_op(command_t command)
-  HPX_INTERNAL;
+#define ARG_BITS (8 * (sizeof(command_t) - sizeof(op_t)))
+#define ARG_MASK (UINT64_MAX >> (8 * sizeof(op_t)))
 
-uint64_t command_get_arg(command_t command)
-  HPX_INTERNAL;
+static inline op_t command_get_op(command_t command) {
+  return (command >> ARG_BITS);
+}
 
-command_t encode_command(hpx_action_t op, hpx_addr_t addr)
-  HPX_INTERNAL;
+static inline arg_t command_get_arg(command_t command) {
+  return (command & ARG_MASK);
+}
 
-void decode_command(command_t cmd, hpx_action_t *op, hpx_addr_t *addr)
-  HPX_INTERNAL;
+static inline command_t encode_command(op_t op, arg_t arg) {
+  return ((uint64_t)op << ARG_BITS) + (arg & ARG_MASK);
+}
+
+static inline void decode_command(command_t cmd, op_t *op, arg_t *arg) {
+  *arg = (cmd & ARG_MASK);
+  *op = (cmd >> ARG_BITS);
+}
 
 #endif // LIBHPX_NETWORK_PWC_COMMANDS_H
