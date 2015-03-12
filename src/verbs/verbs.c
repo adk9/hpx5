@@ -519,8 +519,8 @@ static int verbs_get_event(int proc, int max, photon_rid *ids, int *n) {
   int i, j, ne, comp;
   int start, end;
   int retries;
-  struct ibv_wc *wc = verbs_ctx.wcs;
-
+  struct ibv_wc wc[MAX_CQ_POLL];
+  
   *n = 0;
   comp = 0;
 

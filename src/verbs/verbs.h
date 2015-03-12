@@ -12,7 +12,7 @@
 
 #include "verbs_buffer.h"
 
-#define MAX_CQ_POLL  16
+#define MAX_CQ_POLL   8
 #define MAX_QP        1
 
 extern struct photon_backend_t photon_verbs_backend;

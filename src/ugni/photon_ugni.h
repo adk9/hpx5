@@ -12,7 +12,7 @@
 #include "photon_rdma_ledger.h"
 #include "photon_ugni_buffer.h"
 
-#define MAX_CQ_POLL    16
+#define MAX_CQ_POLL    8
 
 extern struct photon_backend_t photon_ugni_backend;
 

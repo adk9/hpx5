@@ -25,8 +25,6 @@ typedef struct verbs_cnct_ctx_t {
   int                        ib_mtu;
   enum ibv_mtu               ib_mtu_attr;
 
-  struct ibv_wc              wcs[MAX_CQ_POLL];
-
   struct rdma_event_channel *cm_schannel;
   struct rdma_cm_id        **cm_id;
 
