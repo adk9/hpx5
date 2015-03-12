@@ -100,7 +100,7 @@ START_TEST (test_photon_test_put_wc_bw_bench)
     while(num_bytes_sent < MYBUFSIZE) {
       if (send_count < SQ_SIZE) {
         // put directly into that recv buffer
-        photon_put_with_completion(prev, s_buf, k, (void*)rbuf.addr, rbuf.priv, PHOTON_TAG, 0xcafebabe, 0);
+        photon_put_with_completion(prev, s_buf, k, (void*)rbuf.addr, &rbuf.priv, PHOTON_TAG, 0xcafebabe, 0);
         send_count++;
         num_bytes_sent+=k;
       }

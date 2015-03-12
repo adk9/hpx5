@@ -45,6 +45,7 @@ struct photon_config_t {
     int ledger_entries;     // The number of ledger entries (default 64)
     int max_rd;             // Max number of request descriptors, power of 2 (default 1M, set 0 for unbounded)
     int default_rd;         // Initial number of request descriptors allocated per peer (default 1024)
+    int num_cq;             // Number of completion queues to assign peers (default 1)
   } cap;
 
   struct {
@@ -173,9 +174,9 @@ int photon_post_os_getv_direct(int proc, void *ptr[], uint64_t size[], photonBuf
 // The remote buffer is specified in @p rptr and the rkey in @p priv
 // The default behavior is to enable all CQ events and local and
 // remote rids from probe_completion() (flags=PHOTON_REQ_NIL {0})
-int photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
+int photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr, photonBufferPriv priv,
                                photon_rid local, photon_rid remote, int flags);
-int photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
+int photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, photonBufferPriv priv,
                                photon_rid local, int flags);
 // Can probe ANY_SOURCE but given @p proc will only poll the CQ (if available) and completion
 // ledger associated with that rank
