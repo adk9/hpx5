@@ -172,6 +172,13 @@ int photon_init(photonConfig cfg) {
     lcfg->cap.max_rd = DEF_MAX_REQUESTS;
   if (lcfg->cap.default_rd <= 0)
     lcfg->cap.default_rd = DEF_NUM_REQUESTS;
+  if (lcfg->cap.num_cq <= 0)
+    lcfg->cap.num_cq = DEF_NUM_CQ;
+  
+  if (lcfg->cap.num_cq > _photon_nproc) {
+    lcfg->cap.num_cq = _photon_nproc;
+    log_warn("Requesting (num_cq > nproc), setting num_cq to nproc");
+  }
   
   assert(is_power_of_2(_LEDGER_SIZE));
   assert(is_power_of_2(_photon_ebsize));
@@ -525,7 +532,7 @@ int photon_recv(uint64_t request, void *ptr, uint64_t size, int flags) {
 /* end SR interface */
 
 /* begin with completion */
-int photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
+int photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr, photonBufferPriv priv,
                                photon_rid local, photon_rid remote, int flags) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
@@ -535,7 +542,7 @@ int photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr, s
   return __photon_default->put_with_completion(proc, ptr, size, rptr, priv, local, remote, flags);
 }
 
-int photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
+int photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, photonBufferPriv priv,
                                photon_rid local, int flags) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();

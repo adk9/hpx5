@@ -131,6 +131,9 @@ START_TEST (test_photon_test_put_bench)
   }
   MPI_Barrier(MPI_COMM_WORLD);
 
+  photon_send_FIN(sendReq, prev, PHOTON_REQ_COMPLETED);
+  photon_wait(recvReq);
+  
   photon_unregister_buffer(s_buf_heap, MYBUFSIZE);
   photon_unregister_buffer(r_buf_heap, MYBUFSIZE);
   free(s_buf_heap);

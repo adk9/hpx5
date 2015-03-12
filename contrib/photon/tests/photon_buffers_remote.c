@@ -57,7 +57,7 @@ START_TEST (test_photon_get_remote_buffers)
   photon_wait(recvReq);
 
   photon_put_with_completion(other_rank, send, PHOTON_SEND_SIZE, (void*)rbuf.addr,
-			     rbuf.priv, PHOTON_TAG, 0xcafebabe, 0);
+			     &rbuf.priv, PHOTON_TAG, 0xcafebabe, 0);
   send_comp++;
   recv_comp++;
   while (send_comp || recv_comp) {
