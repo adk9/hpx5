@@ -38,6 +38,7 @@ static void _init_photon_config(const config_t *cfg, boot_t *boot,
   pcfg->cap.ledger_entries      = cfg->photon_ledgersize;
   pcfg->cap.max_rd              = cfg->photon_maxrd;
   pcfg->cap.default_rd          = cfg->photon_defaultrd;
+  pcfg->cap.num_cq              = cfg->photon_numcq;
   // static config not relevant for current HPX usage
   pcfg->forwarder.use_forwarder =  0;
   pcfg->cap.small_msg_size      = -1;  // default 4096 - not used for PWC
@@ -101,7 +102,7 @@ static int _photon_pwc(int r, void *rva, const void *rolva, size_t n,
 
   struct photon_buffer_priv_t *key = rkey;
   void *lva = (void*)rolva;
-  int e = photon_put_with_completion(r, lva, n, rva, *key, lsync, rsync, flag);
+  int e = photon_put_with_completion(r, lva, n, rva, key, lsync, rsync, flag);
   switch (e) {
    case PHOTON_OK:
     return LIBHPX_OK;
@@ -116,7 +117,7 @@ static int _photon_gwc(int r, void *lva, const void *rorva, size_t n,
                        uint64_t lsync, void *rkey) {
   struct photon_buffer_priv_t *key = rkey;
   void *rva = (void*)rorva;
-  int e = photon_get_with_completion(r, lva, n, rva, *key, lsync, 0);
+  int e = photon_get_with_completion(r, lva, n, rva, key, lsync, 0);
   dbg_assert_str(PHOTON_OK == e, "failed transport get operation\n");
   return LIBHPX_OK;
 
