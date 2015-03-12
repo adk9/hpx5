@@ -15,6 +15,9 @@
 #endif
 
 #include <string.h>
+#ifdef HAVE_HUGETLBFS
+# include <hugetlbfs.h>
+#endif
 #include <sys/mman.h>
 #include <libhpx/debug.h>
 #include <libhpx/system.h>
@@ -102,6 +105,19 @@ void *system_mmap_huge_pages(void *addr, size_t n, size_t align) {
 #else
   static const int  prot = PROT_READ | PROT_WRITE;
   static const int flags = MAP_PRIVATE;
+  long hugepagesize = gethugepagesize();
+  long hugepagemask = hugepagesize - 1;
+  if (align & hugepagemask) {
+    log_mem("increasing alignment from %zu to %ld in huge page allocation\n",
+            align, hugepagesize);
+    align = hugepagesize;
+  }
+  if (n & hugepagemask) {
+    long r = n & hugepagemask;
+    long padding = hugepagesize - r;
+    log_mem("adding %ld bytes to huge page allocation request\n", padding);
+    n += padding;
+  }
   int fd = hugetlbfs_unlinked_fd();
   dbg_assert_str(fd > 0, "could not get huge tlb file descriptor.");
   return _mmap_lucky(addr, n, prot, flags, fd, 0, align);
