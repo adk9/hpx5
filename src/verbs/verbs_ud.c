@@ -15,8 +15,8 @@ int __verbs_ud_create_qp(verbs_cnct_ctx *ctx) {
   
   struct ibv_qp_init_attr attr = {
     .qp_context     = ctx,
-    .send_cq        = ctx->ib_cq,
-    .recv_cq        = ctx->ib_cq,
+    .send_cq        = ctx->ib_cq[0],
+    .recv_cq        = ctx->ib_cq[0],
     .srq            = NULL,
     .cap            = {
       .max_send_wr     = dattr.max_qp_wr - 16,

@@ -14,10 +14,10 @@ PHOTON_INTERNAL int photon_pwc_add_req(photonRequest req);
 PHOTON_INTERNAL photonRequest photon_pwc_pop_req();
 
 PHOTON_INTERNAL int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
-						struct photon_buffer_priv_t priv,
+						photonBufferPriv priv,
 						photon_rid local, photon_rid remote, int flags);
 PHOTON_INTERNAL int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
-						struct photon_buffer_priv_t priv,
+						photonBufferPriv priv,
 						photon_rid local, int flags);
 PHOTON_INTERNAL int _photon_probe_completion(int proc, int *flag, int *remaining,
 					     photon_rid *request, int flags);

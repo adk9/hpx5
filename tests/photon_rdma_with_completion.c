@@ -57,7 +57,7 @@ START_TEST(test_rdma_with_completion)
 
   // Put
   photon_put_with_completion(prev, send, PHOTON_SEND_SIZE, (void*)rbuf.addr,
-                               rbuf.priv, PHOTON_TAG, 0xcafebabe, 0);
+			     &rbuf.priv, PHOTON_TAG, 0xcafebabe, 0);
   send_comp++;
   recv_comp++;
   while (send_comp || recv_comp) {
@@ -77,7 +77,7 @@ START_TEST(test_rdma_with_completion)
   // Get
   send_comp = 0;
   photon_get_with_completion(prev, send, PHOTON_SEND_SIZE, (void*)rbuf.addr, 
-                             rbuf.priv, PHOTON_TAG, 0);
+                             &rbuf.priv, PHOTON_TAG, 0);
   send_comp++;
   while (send_comp) {
     rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &req, PHOTON_PROBE_ANY);
