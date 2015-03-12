@@ -14,8 +14,12 @@
 # include "config.h"
 #endif
 
+#ifndef HAVE_NETWORK
+# error global implementation should not be compiled without a network
+#endif
+
 #ifndef HAVE_JEMALLOC_GLOBAL
-# error global implementation should not be compiled a network
+# error global implementation should not be compiled without jemalloc support
 #endif
 
 #include <jemalloc/jemalloc_global.h>
