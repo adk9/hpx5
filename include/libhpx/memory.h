@@ -50,13 +50,14 @@ typedef struct address_space {
 /// the address spaces.
 typedef void *(*mmap_t)(void *base, size_t n, size_t align);
 typedef void  (*munmap_t)(void *base, size_t n);
-typedef int   (*memory_register_t)(void *base, size_t n, void *key);
-typedef int   (*memory_release_t)(void *base, size_t n);
+typedef int   (*memory_register_t)(void *obj, void *base, size_t n, void *key);
+typedef int   (*memory_release_t)(void *obj, void *base, size_t n);
 
 address_space_t *address_space_new_default(const struct config *cfg)
   HPX_INTERNAL;
 
 address_space_t *address_space_new_jemalloc_registered(const struct config *cfg,
+                                                       void *xport,
                                                        memory_register_t pin,
                                                        memory_release_t unpin,
                                                        mmap_t mmap,

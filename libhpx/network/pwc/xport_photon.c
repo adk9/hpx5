@@ -17,12 +17,20 @@
 #include <stdlib.h>
 #include <string.h>
 #include <photon.h>
+#include <libsync/locks.h>
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/memory.h>
+#include <libhpx/padding.h>
 #include <libhpx/system.h>
 #include "xport.h"
+
+typedef struct {
+  pwc_xport_t  vtable;
+  PAD_TO_CACHELINE(sizeof(pwc_xport_t));
+  tatas_lock_t registration_lock;
+} photon_pwc_xport_t;
 
 static void _init_photon_config(const config_t *cfg, boot_t *boot,
                                 struct photon_config_t *pcfg) {
@@ -68,12 +76,14 @@ static void _photon_clear(void *key) {
   memset(key, 0, sizeof(struct photon_buffer_priv_t));
 }
 
-static int _photon_pin(void *base, size_t n, void *key) {
+static int _photon_pin(void *xport, void *base, size_t n, void *key) {
+  photon_pwc_xport_t *photon = xport;
+  sync_tatas_acquire(&photon->registration_lock);
   if (PHOTON_OK != photon_register_buffer(base, n)) {
     dbg_error("failed to register segment with Photon\n");
   }
   else {
-    log_net("registered segment (%p, %lu)\n", base, n);
+    log_net("registered segment (%p, %zu)\n", base, n);
   }
 
   if (key) {
@@ -82,15 +92,21 @@ static int _photon_pin(void *base, size_t n, void *key) {
     }
   }
 
+  sync_tatas_release(&photon->registration_lock);
   return LIBHPX_OK;
 }
 
-static int _photon_unpin(void *base, size_t n) {
-  if (PHOTON_OK != photon_unregister_buffer(base, n)) {
-    log_net("could not unregister the local heap segment %p\n", base);
-    return LIBHPX_ERROR;
+static int _photon_unpin(void *xport, void *base, size_t n) {
+  photon_pwc_xport_t *photon = xport;
+  sync_tatas_acquire(&photon->registration_lock);
+  int e = photon_unregister_buffer(base, n);
+  if (PHOTON_OK != e) {
+    dbg_error("unhandled error %d during release of segment (%p, %zu)\n", e,
+              base, n);
   }
 
+  sync_tatas_release(&photon->registration_lock);
+  log_net("released the segment (%p, %zu)\n", base, n);
   return LIBHPX_OK;
 }
 
@@ -108,7 +124,7 @@ static int _photon_pwc(int r, void *rva, const void *rolva, size_t n,
    case PHOTON_ERROR_RESOURCE:
     return LIBHPX_RETRY;
    default:
-    return log_error("could not initiate a put-with-completion\n");
+    dbg_error("could not initiate a put-with-completion\n");
   }
 }
 
@@ -144,28 +160,31 @@ static void _photon_delete(void *photon) {
 }
 
 pwc_xport_t *pwc_xport_new_photon(const config_t *cfg, boot_t *boot) {
-  pwc_xport_t *photon = malloc(sizeof(*photon));
+  photon_pwc_xport_t *photon = malloc(sizeof(*photon));
   dbg_assert(photon);
   _init_photon(cfg, boot);
 
-  photon->type = HPX_TRANSPORT_PHOTON;
-  photon->delete = _photon_delete;
-  photon->sizeof_rdma_key = _photon_sizeof_rdma_key;
-  photon->clear = _photon_clear;
-  photon->pin = _photon_pin;
-  photon->unpin = _photon_unpin;
-  photon->pwc = _photon_pwc;
-  photon->gwc = _photon_gwc;
-  photon->test = _photon_test;
-  photon->probe = _photon_probe;
+  photon->vtable.type = HPX_TRANSPORT_PHOTON;
+  photon->vtable.delete = _photon_delete;
+  photon->vtable.sizeof_rdma_key = _photon_sizeof_rdma_key;
+  photon->vtable.clear = _photon_clear;
+  photon->vtable.pin = _photon_pin;
+  photon->vtable.unpin = _photon_unpin;
+  photon->vtable.pwc = _photon_pwc;
+  photon->vtable.gwc = _photon_gwc;
+  photon->vtable.test = _photon_test;
+  photon->vtable.probe = _photon_probe;
+
+  sync_tatas_init(&photon->registration_lock);
 
   local = address_space_new_default(cfg);
   registered = address_space_new_jemalloc_registered(cfg,
+                                                     photon,
                                                      _photon_pin,
                                                      _photon_unpin,
                                                      system_mmap_huge_pages,
                                                      system_munmap);
   global = address_space_new_jemalloc_global(cfg);
 
-  return photon;
+  return &photon->vtable;
 }
