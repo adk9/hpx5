@@ -48,7 +48,7 @@ static HPX_ACTION_DEF(INTERRUPT, _eager_rx_handler, _eager_rx, HPX_INT,
 /// Free a parcel.
 static int _free_parcel_handler(int src, command_t command) {
   uint64_t offset = command_get_arg(command);
-  hpx_parcel_t *p = pgas_offset_to_lva(offset);
+  hpx_parcel_t *p = (void*)(uintptr_t)offset;
   log_net("releasing sent parcel %p\n", (void*)p);
   hpx_parcel_release(p);
   return HPX_SUCCESS;
@@ -139,7 +139,7 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   inst_trace(class, id, sequence, n, (uint64_t)rva, tx->peer->rank);
 
   int target = tx->peer->rank;
-  command_t lsync = encode_command(free_parcel, lva_to_gva(p));
+  command_t lsync = encode_command(free_parcel, (uint64_t)(uintptr_t)p);
   command_t rsync = encode_command(_eager_rx, HPX_THERE(target));
   int e = peer_pwc(tx->peer,                     /* peer structure */
                    tx->tx_base + roff,           /* remote offset */

@@ -14,41 +14,42 @@
 # include "config.h"
 #endif
 
-#ifdef HAVE_JEMALLOC_GLOBAL
-# include <jemalloc/jemalloc_global.h>
-#else
-# include <stdlib.h>
+#ifndef HAVE_NETWORK
+# error global implementation should not be compiled without a network
 #endif
 
-#include <libhpx/debug.h>
+#ifndef HAVE_JEMALLOC_GLOBAL
+# error global implementation should not be compiled without jemalloc support
+#endif
+
+#include <jemalloc/jemalloc_global.h>
 #include <libhpx/memory.h>
 
-#ifdef HAVE_JEMALLOC_GLOBAL
-void global_free(void *p) {
-  libhpx_global_free(p);
+static address_space_t _global_address_space_vtable;
+
+static void _global_delete(void *space) {
+  dbg_assert(space == &_global_address_space_vtable);
 }
 
-void *global_malloc(size_t bytes) {
-  return libhpx_global_malloc(bytes);
+static void _global_join(void *space) {
+  dbg_assert(space == &_global_address_space_vtable);
 }
 
-void *global_memalign(size_t boundary, size_t size) {
-  return libhpx_global_memalign(boundary, size);
-}
-#else
-void global_free(void *p) {
-  free(p);
+static void _global_leave(void *space) {
+  dbg_assert(space == &_global_address_space_vtable);
 }
 
-void *global_malloc(size_t bytes) {
-  return malloc(bytes);
-}
+static address_space_t _global_address_space_vtable = {
+  .delete = _global_delete,
+  .join = _global_join,
+  .leave = _global_leave,
+  .free = libhpx_global_free,
+  .malloc = libhpx_global_malloc,
+  .calloc = libhpx_global_calloc,
+  .memalign = libhpx_global_memalign
+};
 
-void *global_memalign(size_t boundary, size_t size) {
-  void *p;
-  int e = posix_memalign(&p, boundary, size);
-  dbg_assert(!e);
-  return p;
-  (void)e;
+address_space_t *
+address_space_new_jemalloc_global(const struct config *UNUSED) {
+  return &_global_address_space_vtable;
 }
-#endif

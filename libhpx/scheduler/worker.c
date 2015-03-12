@@ -32,6 +32,7 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/instrumentation.h>
+#include <libhpx/memory.h>
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>                      // used as thread-control block
 #include <libhpx/process.h>
@@ -58,6 +59,11 @@ static void *_run(void *worker) {
     dbg_error("failed to join the global address space.\n");
     return NULL;
   }
+
+  // Ensure that all of the threads have joined the address spaces.
+  local->join(local);
+  registered->join(registered);
+  global->join(global);
 
   if (worker_start()) {
     dbg_error("failed to start processing lightweight threads.\n");

@@ -429,9 +429,10 @@ void hpx_lco_release(hpx_addr_t target, void *out) {
 int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
   dbg_assert(n > 0);
 
-  // Will partition the lcos up into local and remote LCOs. We waste some stack
+  // Will partition the lcos up into local and remote LCOs. We waste some
   // space here, since, for each lco in lcos, we either have a local mapping or
-  // a remote address.
+  // a remote address. We don't use the stack because we can't control how big
+  // @p n gets.
   lco_t **locals = calloc(n, sizeof(*locals));
   dbg_assert_str(locals, "failed to allocate array for %d elements", n);
   hpx_addr_t *remotes = calloc(n, sizeof(*remotes));
@@ -441,13 +442,20 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
   // aren't local, allocate a proxy future and initiate the remote wait. This
   // two-phase approach achieves some parallelism.
   for (int i = 0; i < n; ++i) {
-    if (!hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
+    // We neither issue a remote proxy for HPX_NULL, nor wait locally on
+    // HPX_NULL. We manually set the status output for these elements to
+    // indicate success.
+    if (lcos[i] == HPX_NULL) {
+      locals[i] = NULL;
+      remotes[i] = HPX_NULL;
+    }
+    else if (hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
+      remotes[i] = HPX_NULL;
+    }
+    else {
       locals[i] = NULL;
       remotes[i] = hpx_lco_future_new(0);
       hpx_call_async(lcos[i], _lco_wait, HPX_NULL, remotes[i], NULL, 0);
-    }
-    else {
-      remotes[i] = HPX_NULL;
     }
   }
 
@@ -461,13 +469,18 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
       status = _wait(locals[i]);
       hpx_gas_unpin(lcos[i]);
     }
-    else {
+    else if (remotes[i] != HPX_NULL) {
       status = hpx_lco_wait(remotes[i]);
       hpx_lco_delete(remotes[i], HPX_NULL);
     }
+    else {
+      status = HPX_SUCCESS;
+    }
+
     if (status != HPX_SUCCESS) {
       ++errors;
     }
+
     if (statuses) {
       statuses[i] = status;
     }
@@ -482,9 +495,10 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
                     hpx_status_t statuses[]) {
   dbg_assert(n > 0);
 
-  // Will partition the lcos up into local and remote LCOs. We waste some stack
+  // Will partition the lcos up into local and remote LCOs. We waste some
   // space here, since, for each lco in lcos, we either have a local mapping or
-  // a remote address.
+  // a remote address. We don't use the stack because we can't control how big
+  // @p n gets.
   lco_t **locals = calloc(n, sizeof(*locals));
   dbg_assert_str(locals, "failed to allocate array for %d elements", n);
   hpx_addr_t *remotes = calloc(n, sizeof(*remotes));
@@ -494,14 +508,18 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
   // aren't local, allocate a proxy future and initiate the remote get. This
   // two-phase approach achieves some parallelism.
   for (int i = 0; i < n; ++i) {
-    if (!hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
+    if (lcos[i] == HPX_NULL) {
+      locals[i] = NULL;
+      remotes[i] = HPX_NULL;
+    }
+    else if (hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
+      remotes[i] = HPX_NULL;
+    }
+    else {
       locals[i] = NULL;
       remotes[i] = hpx_lco_future_new(sizes[i]);
       hpx_call_async(lcos[i], _lco_get, HPX_NULL, remotes[i], &sizes[i],
                      sizeof(sizes[i]));
-    }
-    else {
-      remotes[i] = HPX_NULL;
     }
   }
 
@@ -515,13 +533,18 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
       status = _get(locals[i], sizes[i], values[i]);
       hpx_gas_unpin(lcos[i]);
     }
-    else {
+    else if (remotes[i] != HPX_NULL) {
       status = hpx_lco_get(remotes[i], sizes[i], values[i]);
       hpx_lco_delete(remotes[i], HPX_NULL);
     }
+    else {
+      status = HPX_SUCCESS;
+    }
+
     if (status != HPX_SUCCESS) {
       ++errors;
     }
+
     if (statuses) {
       statuses[i] = status;
     }
