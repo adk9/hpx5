@@ -642,7 +642,7 @@ int worker_start(void) {
   return LIBHPX_OK;
 }
 
-int worker_create(struct worker *worker) {
+int worker_create(struct worker *worker, const config_t *cfg) {
   pthread_t thread;
 
   int e = pthread_create(&thread, NULL, _run, worker);
