@@ -37,7 +37,6 @@
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
-#include "padding.h"
 
 static const uintptr_t _INPLACE_MASK = 0x1;
 static const uintptr_t   _STATE_MASK = 0x1;

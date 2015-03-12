@@ -66,6 +66,12 @@ static hpx_parcel_t *_smp_probe(void *network, int nrx) {
 static void _smp_set_flush(void *network) {
 }
 
+static void _smp_register_dma(void *network, void *addr, size_t n) {
+}
+
+static void _smp_release_dma(void *network, void *addr, size_t n) {
+}
+
 static network_t _smp = {
   .type = HPX_NETWORK_SMP,
   .transports = NULL,
@@ -77,7 +83,9 @@ static network_t _smp = {
   .put = _smp_put,
   .get = _smp_get,
   .probe = _smp_probe,
-  .set_flush = _smp_set_flush
+  .set_flush = _smp_set_flush,
+  .register_dma = _smp_register_dma,
+  .release_dma = _smp_release_dma
 };
 
 network_t *network_smp_new(const struct config *cfg, boot_t *boot) {
