@@ -19,7 +19,9 @@
 /// structure definitions for padding.
 /// ----------------------------------------------------------------------------
 
-#define PAD_TO_CACHELINE(N_)                                            \
-  ((HPX_CACHELINE_SIZE - (N_ % HPX_CACHELINE_SIZE)) % HPX_CACHELINE_SIZE)
+#define _CAT1(S, T) S##T
+#define _CAT(S, T) _CAT1(S, T)
+#define _BYTES(S) (HPX_CACHELINE_SIZE - ((S) % HPX_CACHELINE_SIZE))
+#define PAD_TO_CACHELINE(S) const char _CAT(_padding,__LINE__)[_BYTES(S)]
 
 #endif // LIBHPX_PADDING_H
