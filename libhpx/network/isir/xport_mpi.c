@@ -124,6 +124,14 @@ static void _mpi_delete(void *mpi) {
   free(mpi);
 }
 
+static int _mpi_pin(void *xport, void *base, size_t bytes, void *key) {
+  return LIBHPX_OK;
+}
+
+static int _mpi_unpin(void *xport, void *base, size_t bytes) {
+  return LIBHPX_OK;
+}
+
 static void _init_mpi(void) {
   int init = 0;
   MPI_Initialized(&init);
@@ -161,8 +169,8 @@ isir_xport_t *isir_xport_new_mpi(const config_t *cfg) {
   xport->clear          = _mpi_clear;
   xport->cancel         = _mpi_cancel;
   xport->finish         = _mpi_finish;
-  xport->pin            = NULL;
-  xport->unpin          = NULL;
+  xport->pin            = _mpi_pin;
+  xport->unpin          = _mpi_unpin;
 
   local = address_space_new_default(cfg);
   registered = address_space_new_default(cfg);
