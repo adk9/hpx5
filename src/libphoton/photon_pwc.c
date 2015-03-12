@@ -214,12 +214,12 @@ static int photon_pwc_try_ledger(photonRequest req, int curr) {
 }
 
 int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
-                       struct photon_buffer_priv_t priv,
-                                       photon_rid local, photon_rid remote, int flags) {
+				photonBufferPriv priv,
+				photon_rid local, photon_rid remote, int flags) {
   photonRequest req;
   photonRequestTable rt;
   int rc;
-
+  
   dbg_trace("(%d, %p, %lu, %p, 0x%016lx, 0x%016lx)", proc, ptr, size, rptr, local, remote);
 
   if (size && !ptr) {
@@ -259,8 +259,8 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   req->remote_info.id       = remote;
   req->remote_info.buf.addr = (uintptr_t)rptr;
   req->remote_info.buf.size = size;
-  req->remote_info.buf.priv = priv;
-
+  req->remote_info.buf.priv = (priv) ? *priv: (struct photon_buffer_priv_t){0,0};
+  
   // control the return of the local id
   if (flags & PHOTON_REQ_PWC_NO_LCE) {
     req->flags |= REQUEST_FLAG_NO_LCE;
@@ -309,8 +309,8 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
 }
 
 int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
-                struct photon_buffer_priv_t priv,
-                photon_rid local, int flags) {
+				photonBufferPriv priv,
+				photon_rid local, int flags) {
   photonBI db;
   photonRequest req;
   struct photon_buffer_t lbuf;
@@ -340,8 +340,8 @@ int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
 
   rbuf.addr = (uintptr_t)rptr;
   rbuf.size = size;
-  rbuf.priv = priv;
-
+  rbuf.priv = (priv) ? *priv : (struct photon_buffer_priv_t){0,0};
+  
   req = photon_setup_request_direct(&lbuf, &rbuf, size, proc, 1);
   if (req == NULL) {
     dbg_trace("Could not setup direct buffer request");

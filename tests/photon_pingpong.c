@@ -80,7 +80,7 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
     }
   }
   else if (pp_test == PWC_TEST) {
-    photon_put_with_completion(dst, send_args, msize, (void*)rbuf.addr, rbuf.priv, PHOTON_TAG, 0xcafebabe, 0);
+    photon_put_with_completion(dst, send_args, msize, (void*)rbuf.addr, &rbuf.priv, PHOTON_TAG, 0xcafebabe, 0);
     photon_rid request;
     int flag, remaining;
     do {

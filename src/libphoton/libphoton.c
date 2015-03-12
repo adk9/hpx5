@@ -532,7 +532,7 @@ int photon_recv(uint64_t request, void *ptr, uint64_t size, int flags) {
 /* end SR interface */
 
 /* begin with completion */
-int photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
+int photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr, photonBufferPriv priv,
                                photon_rid local, photon_rid remote, int flags) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
@@ -542,7 +542,7 @@ int photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr, s
   return __photon_default->put_with_completion(proc, ptr, size, rptr, priv, local, remote, flags);
 }
 
-int photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
+int photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, photonBufferPriv priv,
                                photon_rid local, int flags) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();

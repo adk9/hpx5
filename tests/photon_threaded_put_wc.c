@@ -219,7 +219,7 @@ START_TEST(test_photon_threaded_put_wc)
         for (k=0; k<ITERS; k++) {
 	  if (sem_wait(&sem) == 0) {
 	    int rc;
-	    rc = photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0);
+	    rc = photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, &rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0);
 	    if (rc == PHOTON_ERROR) {
 	      fprintf(stderr, "Error doing PWC\n");
 	      exit(1);
@@ -250,7 +250,7 @@ START_TEST(test_photon_threaded_put_wc)
           clock_gettime(CLOCK_MONOTONIC, &time_s);
           for (k=0; k<ITERS; k++) {
               if (sem_wait(&sem) == 0) {
-                photon_get_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0);
+                photon_get_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, &rbuf[j].priv, PHOTON_TAG, 0);
               }
           }
         }

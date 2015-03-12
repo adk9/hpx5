@@ -132,9 +132,9 @@ struct photon_backend_t {
   int (*wait_any_ledger)(int *ret_proc, photon_rid *ret_req);
   int (*probe_ledger)(int proc, int *flag, int type, photonStatus status);
   int (*probe)(photonAddr addr, int *flag, photonStatus status);
-  int (*put_with_completion)(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
+  int (*put_with_completion)(int proc, void *ptr, uint64_t size, void *rptr, photonBufferPriv priv,
                              photon_rid local, photon_rid remote, int flags);
-  int (*get_with_completion)(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
+  int (*get_with_completion)(int proc, void *ptr, uint64_t size, void *rptr, photonBufferPriv priv,
                              photon_rid local, int flags);
   int (*probe_completion)(int proc, int *flag, int *remaining, photon_rid *request, int flags);
   int (*io_init)(char *file, int amode, void *view, int niter);
