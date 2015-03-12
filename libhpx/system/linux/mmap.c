@@ -39,7 +39,7 @@
 static void *_mmap_aligned(void *addr, size_t n, int prot, int flags, int fd,
                            int off, size_t align) {
   char *buffer = mmap(addr, n + align, prot, flags, fd, off);
-  if (!buffer) {
+  if (buffer == MAP_FAILED) {
     dbg_error("could not map %zu bytes with %zu alignment\n", n, align);
   }
 
@@ -75,8 +75,8 @@ static void *_mmap_aligned(void *addr, size_t n, int prot, int flags, int fd,
 static void *_mmap_lucky(void *addr, size_t n, int prot, int flags, int fd,
                          int off, size_t align) {
   void *buffer = mmap(addr, n, prot, flags, fd, off);
-  if (!buffer) {
-    dbg_error("could not mmap %zu bytes\n", n);
+  if (buffer == MAP_FAILED) {
+    dbg_error("could not mmap %zu bytes from file %d\n", n, fd);
   }
 
   uintptr_t   bits = (uintptr_t)buffer;
@@ -100,7 +100,7 @@ void *system_mmap_huge_pages(void *addr, size_t n, size_t align) {
 #ifndef HAVE_HUGETLBFS
   return system_mmap(addr, n, align);
 #else
-  static const int  prot = PROT_READ | PROTE_WRITE;
+  static const int  prot = PROT_READ | PROT_WRITE;
   static const int flags = MAP_PRIVATE;
   int fd = hugetlbfs_unlinked_fd();
   dbg_assert_str(fd > 0, "could not get huge tlb file descriptor.");
