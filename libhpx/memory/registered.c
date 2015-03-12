@@ -77,9 +77,16 @@ static __thread unsigned _primordial_arena = UINT_MAX;
 /// The registered memory chunk allocation callback.
 static void *_registered_chunk_alloc(void *addr, size_t size, size_t align,
                                      bool *zero, unsigned arena) {
+  dbg_assert(!addr || !((uintptr_t)addr & (align -1)));
   void *chunk = _mmap(addr, size, align);
-  dbg_assert(!addr || addr == chunk);
-  dbg_assert(((uintptr_t)chunk & (align -1)) == 0);
+
+  // If we found nothing, anywhere in memory, then we have a problem.
+  if (!chunk) {
+    dbg_error("failed to mmap %zu bytes anywhere in memory\n", size);
+  }
+
+  // Our mmap interface guarantees alignment, so just go ahead and register it
+  // and return.
   int e = _pin(chunk, size, NULL);
   dbg_check(e);
   if (zero && *zero) {
