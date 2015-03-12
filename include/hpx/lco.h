@@ -16,9 +16,9 @@
 /// @file include/hpx/lco.h
 /// @brief The HPX LCO interface.
 
-#include "hpx/addr.h"
-#include "hpx/attributes.h"
-#include "hpx/types.h"
+#include <hpx/addr.h>
+#include <hpx/attributes.h>
+#include <hpx/types.h>
 
 /// Forward declarations.
 /// @{
@@ -146,10 +146,12 @@ hpx_status_t hpx_lco_getref(hpx_addr_t lco, int size, void **ref);
 /// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
 void hpx_lco_release(hpx_addr_t lco, void *ref);
 
-/// Blocks the thread until all of the LCOs have been set.
+/// Wait for all of the LCOs to be set.
 ///
 /// This admits some parallelism in the implementation, and is preferable to
-/// using hpx_lco_wait() in a loop.
+/// using hpx_lco_wait() in a loop. The calling thread will block until all of
+/// the LCOs have been set. Entries in @p lcos that are HPX_NULL will be
+/// ignored.
 ///
 /// @param             n the number of LCOs in @p lcos
 /// @param          lcos an array of LCO addresses (must be uniformly
@@ -162,11 +164,12 @@ void hpx_lco_release(hpx_addr_t lco, void *ref);
 ///                      @p statuses is NULL
 int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]);
 
-/// Blocks the thread until all of the LCOs have been set, returning their
-/// values.
+/// Get values for all of the LCOs.
 ///
 /// This admits some parallelism in the implementation, and is preferable to
-/// using hpx_lco_get() in a loop.
+/// using hpx_lco_get() in a loop. The calling thread will block until all of
+/// the LCOs are available. Entries in @p lcos that are set to HPX_NULL are
+/// ignored, their corresponding values in @p values will not be written to.
 ///
 /// @param             n the number of LCOs
 /// @param          lcos an array of @p n global LCO addresses
@@ -293,7 +296,7 @@ hpx_addr_t hpx_lco_array_at(hpx_addr_t base, int i, int size);
 
 /// Allocate an array of future LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate
-/// @param       size The size of each future's value 
+/// @param       size The size of each future's value
 ///
 /// @returns the global address of the allocated array lco.
 hpx_addr_t hpx_lco_future_local_array_new(int n, int size);
@@ -322,8 +325,8 @@ hpx_addr_t hpx_lco_chan_local_array_new(int n, int size);
 ///                   performing.
 ///
 /// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_reduce_local_array_new(int n, int inputs, size_t size, 
-                                          hpx_monoid_id_t id, 
+hpx_addr_t hpx_lco_reduce_local_array_new(int n, int inputs, size_t size,
+                                          hpx_monoid_id_t id,
                                           hpx_monoid_op_t op);
 
 
@@ -346,9 +349,9 @@ hpx_addr_t hpx_lco_allgather_local_array_new(int n, size_t inputs, size_t size);
 ///                     performing.
 ///
 /// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_allreduce_local_array_new(int n, size_t participants, 
+hpx_addr_t hpx_lco_allreduce_local_array_new(int n, size_t participants,
                                              size_t readers, size_t size,
-                                             hpx_monoid_id_t id, 
+                                             hpx_monoid_id_t id,
                                              hpx_monoid_op_t op);
 
 /// Allocate an array of alltoall LCO local to the calling locality.
