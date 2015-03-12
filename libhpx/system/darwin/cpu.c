@@ -61,6 +61,6 @@ int system_set_affinity_group(pthread_t thread, int ncores) {
 
 void system_get_stack(pthread_t thread, void **base, size_t *size) {
   dbg_assert(base && size);
-  *base = pthread_get_stackaddr_np(thread);
   *size = pthread_get_stacksize_np(thread);
+  *base = pthread_get_stackaddr_np(thread);
 }
