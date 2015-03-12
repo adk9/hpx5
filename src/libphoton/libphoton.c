@@ -172,6 +172,13 @@ int photon_init(photonConfig cfg) {
     lcfg->cap.max_rd = DEF_MAX_REQUESTS;
   if (lcfg->cap.default_rd <= 0)
     lcfg->cap.default_rd = DEF_NUM_REQUESTS;
+  if (lcfg->cap.num_cq <= 0)
+    lcfg->cap.num_cq = DEF_NUM_CQ;
+  
+  if (lcfg->cap.num_cq > _photon_nproc) {
+    lcfg->cap.num_cq = _photon_nproc;
+    log_warn("Requesting (num_cq > nproc), setting num_cq to nproc");
+  }
   
   assert(is_power_of_2(_LEDGER_SIZE));
   assert(is_power_of_2(_photon_ebsize));

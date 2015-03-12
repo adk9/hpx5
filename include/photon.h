@@ -45,6 +45,7 @@ struct photon_config_t {
     int ledger_entries;     // The number of ledger entries (default 64)
     int max_rd;             // Max number of request descriptors, power of 2 (default 1M, set 0 for unbounded)
     int default_rd;         // Initial number of request descriptors allocated per peer (default 1024)
+    int num_cq;             // Number of completion queues to assign peers (default 1)
   } cap;
 
   struct {

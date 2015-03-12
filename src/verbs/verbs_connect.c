@@ -30,10 +30,20 @@
 
 static pthread_t cma_listener;
 
-static verbs_cnct_info **__exch_cnct_info(verbs_cnct_ctx *ctx, verbs_cnct_info **local_info, int num_qp);
-static int __verbs_connect_qps_cma(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info, verbs_cnct_info *remote_info, int pindex, int num_qp);
-static int __verbs_connect_qps(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info, verbs_cnct_info *remote_info, int pindex, int num_qp);
-static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_id);
+static verbs_cnct_info **__exch_cnct_info(verbs_cnct_ctx *ctx,
+					  verbs_cnct_info **local_info,
+					  int num_qp);
+static int __verbs_connect_qps_cma(verbs_cnct_ctx *ctx,
+				   verbs_cnct_info *local_info,
+				   verbs_cnct_info *remote_info,
+				   int pindex, int num_qp);
+static int __verbs_connect_qps(verbs_cnct_ctx *ctx,
+			       verbs_cnct_info *local_info,
+			       verbs_cnct_info *remote_info,
+			       int pindex, int num_qp);
+static int __verbs_init_context_cma(verbs_cnct_ctx *ctx,
+				    struct rdma_cm_id *cm_id,
+				    int pindex);
 static int __verbs_create_connect_info(verbs_cnct_ctx *ctx);
 static void *__rdma_cma_listener_thread(void *arg);
 
@@ -52,8 +62,9 @@ struct rdma_cma_thread_args {
 int __verbs_init_context(verbs_cnct_ctx *ctx) {
   struct ibv_device **dev_list;
   struct ibv_context **ctx_list;
-  int i, iproc, num_devs, rc, found = 0;
-
+  int i, iproc, num_devs, cqind;
+  int rc, found = 0;
+  
   // initialize the QP array
   ctx->num_qp = MAX_QP;
   ctx->qp = (struct ibv_qp**)malloc((_photon_nproc + _photon_nforw) * sizeof(struct ibv_qp*));
@@ -200,15 +211,23 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
       return PHOTON_ERROR;
     }
 
-    // create a completion queue
-    // The second argument (cq_size) can be something like 40K.	 It should be
-    // within NIC MaxCQEntries limit
-    ctx->ib_cq = ibv_create_cq(ctx->ib_context, MAX_CQ_ENTRIES, ctx, NULL,  0);
+    // create completion queues
+    ctx->ib_cq = (struct ibv_cq **)malloc(ctx->num_cq * sizeof(struct ibv_cq *));
     if (!ctx->ib_cq) {
-      dbg_err("Could not create completion queue");
+      log_err("Could not create CQ pointer array of size %d", ctx->num_cq);
       return PHOTON_ERROR;
     }
+    
+    for (i = 0; i < ctx->num_cq; i++) {
+      ctx->ib_cq[i] = ibv_create_cq(ctx->ib_context, MAX_CQ_ENTRIES, ctx, NULL,  0);
+      if (!ctx->ib_cq[i]) {
+	dbg_err("Could not create completion queue %d of %d", i, ctx->num_cq);
+	return PHOTON_ERROR;
+      }
+    }
 
+    dbg_trace("created %d CQs", ctx->num_cq);
+    
     {
       // create shared receive queue
       struct ibv_srq_init_attr attr = {
@@ -241,10 +260,12 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
         return PHOTON_ERROR;
       }
 
+      cqind = PHOTON_GET_CQ_IND(ctx->num_cq, iproc);
+      dbg_trace("cqind for rank %d: %d", iproc, cqind);
       struct ibv_qp_init_attr attr = {
         .qp_context     = ctx,
-        .send_cq        = ctx->ib_cq,
-        .recv_cq        = ctx->ib_cq,
+        .send_cq        = ctx->ib_cq[cqind],
+        .recv_cq        = ctx->ib_cq[cqind],
         .srq            = ctx->ib_srq,
         .cap            = {
           .max_send_wr	   = ctx->tx_depth,
@@ -372,8 +393,10 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-int __verbs_connect_single(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info, verbs_cnct_info *remote_info, int pindex,
-                           verbs_cnct_info **ret_ci, int *ret_len, photon_connect_mode_t mode) {
+int __verbs_connect_single(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info,
+			   verbs_cnct_info *remote_info, int pindex,
+                           verbs_cnct_info **ret_ci, int *ret_len,
+			   photon_connect_mode_t mode) {
   switch (mode) {
   case PHOTON_CONN_ACTIVE:
     if (__photon_config->ibv.use_cma) {
@@ -458,7 +481,8 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_id) {
+static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_id, int pindex) {
+  int i, cqind;
   // assign the verbs context if this is the first connection
   if (!ctx->ib_context) {
     ctx->ib_context = cm_id->verbs;
@@ -474,26 +498,20 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
       goto error_exit;
     }
     
-    /*
-    ctx->ib_cc = ibv_create_comp_channel(ctx->ib_context);
-    if (!ctx->ib_cc) {
-      dbg_err("could not create completion channel");
-      goto error_exit;
-    }
-    */
-
-    ctx->ib_cq = ibv_create_cq(ctx->ib_context, MAX_CQ_ENTRIES, ctx, NULL, 0);
+    // create completion queues
+    ctx->ib_cq = (struct ibv_cq **)malloc(ctx->num_cq * sizeof(struct ibv_cq *));
     if (!ctx->ib_cq) {
-      dbg_err("could not create CQ");
-      goto error_exit;
+      log_err("Could not create CQ pointer array of size %d", ctx->num_cq);
+      return PHOTON_ERROR;
     }
-
-    /*
-    if (ibv_req_notify_cq(ctx->ib_cq, 0)) {
-      dbg_err("could not request CQ notifications");
-      goto error_exit;
+    
+    for (i = 0; i < ctx->num_cq; i++) {
+      ctx->ib_cq[i] = ibv_create_cq(ctx->ib_context, MAX_CQ_ENTRIES, ctx, NULL,  0);
+      if (!ctx->ib_cq[i]) {
+	dbg_err("Could not create completion queue %d of %d", i, ctx->num_cq);
+	return PHOTON_ERROR;
+      }
     }
-    */    
 
     struct ibv_port_attr port_attr;
     if (ibv_query_port(cm_id->verbs, cm_id->port_num, &port_attr)) {
@@ -546,10 +564,11 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
     }
   }
 
+  cqind = PHOTON_GET_CQ_IND(ctx->num_cq, pindex); 
   struct ibv_qp_init_attr attr = {
     .qp_context = ctx,
-    .send_cq = ctx->ib_cq,
-    .recv_cq = ctx->ib_cq,
+    .send_cq = ctx->ib_cq[cqind],
+    .recv_cq = ctx->ib_cq[cqind],
     .cap     = {
       .max_send_wr  = ctx->tx_depth,
       .max_recv_wr  = ctx->rx_depth,
@@ -673,12 +692,6 @@ static void *__rdma_cma_listener_thread(void *arg) {
 
       dbg_trace("got connection request from %d", (int)priv->address);
 
-      if (__verbs_init_context_cma(ctx, child_cm_id) != PHOTON_OK) {
-        goto error_exit;
-      }
-
-      dbg_trace("created context");
-
       if (args->pindex >= 0) {
         pindex = args->pindex;
       }
@@ -686,6 +699,12 @@ static void *__rdma_cma_listener_thread(void *arg) {
         pindex = (int)priv->address;
       }
 
+      if (__verbs_init_context_cma(ctx, child_cm_id, pindex) != PHOTON_OK) {
+        goto error_exit;
+      }
+      
+      dbg_trace("created context");
+      
       // save the child CM_ID in our process list
       ctx->cm_id[pindex] = child_cm_id;
       // save the QP in our process list
@@ -733,7 +752,10 @@ error_exit:
   return NULL;
 }
 
-static int __verbs_connect_qps_cma(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info, verbs_cnct_info *remote_info, int i, int num_qp) {
+static int __verbs_connect_qps_cma(verbs_cnct_ctx *ctx,
+				   verbs_cnct_info *local_info,
+				   verbs_cnct_info *remote_info,
+				   int i, int num_qp) {
   struct addrinfo *res;
   struct addrinfo hints = {
     .ai_family   = AF_UNSPEC,
@@ -821,7 +843,7 @@ retry_route:
   }
   rdma_ack_cm_event(event);
 
-  if (__verbs_init_context_cma(ctx, ctx->cm_id[i]) != PHOTON_OK) {
+  if (__verbs_init_context_cma(ctx, ctx->cm_id[i], i) != PHOTON_OK) {
     goto error_exit;
   }
 
@@ -868,7 +890,10 @@ error_exit:
   return PHOTON_ERROR;
 }
 
-static int __verbs_connect_qps(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info, verbs_cnct_info *remote_info, int pindex, int num_qp) {
+static int __verbs_connect_qps(verbs_cnct_ctx *ctx,
+			       verbs_cnct_info *local_info,
+			       verbs_cnct_info *remote_info,
+			       int pindex, int num_qp) {
   int i;
   int err;
 #ifdef ENABLE_CALLTRACE

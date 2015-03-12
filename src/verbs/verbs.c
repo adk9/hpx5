@@ -88,7 +88,7 @@ static verbs_cnct_ctx verbs_ctx = {
   .atomic_depth = 16,
   .max_sge = 16,
   .max_inline = -1,
-  .num_cq = 1
+  .num_cq = DEF_NUM_CQ
 };
 
 /* we are now a Photon backend */
@@ -150,6 +150,7 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
 
   verbs_ctx.tx_depth = _LEDGER_SIZE;
   verbs_ctx.rx_depth = _LEDGER_SIZE;
+  verbs_ctx.num_cq   = cfg->cap.num_cq;
 
   if (cfg->ibv.use_cma && !cfg->ibv.eth_dev) {
     log_err("CMA specified but Ethernet dev missing");
@@ -517,7 +518,7 @@ static int verbs_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
 static int verbs_get_event(int proc, int max, photon_rid *ids, int *n) {
   int i, j, ne, comp;
   int start, end;
-  int retries = MAX_RETRIES;
+  int retries;
   struct ibv_wc *wc = verbs_ctx.wcs;
 
   *n = 0;
@@ -539,16 +540,17 @@ static int verbs_get_event(int proc, int max, photon_rid *ids, int *n) {
   }
   else if (proc == PHOTON_ANY_SOURCE) {
     start = 0;
-    end = _photon_nproc;
+    end = verbs_ctx.num_cq;
   }
   else {
-    start = proc;
-    end = proc+1;
+    start = PHOTON_GET_CQ_IND(verbs_ctx.num_cq, proc);
+    end = start+1;
   }
 
   for (i=start; i<end && comp<max; i++) {
+    retries = MAX_RETRIES;
     do {
-      ne = ibv_poll_cq(&verbs_ctx.ib_cq[i], max, wc);
+      ne = ibv_poll_cq(verbs_ctx.ib_cq[i], max, wc);
       if (ne < 0) {
 	log_err("ibv_poll_cq() failed");
 	goto error_exit;
@@ -565,7 +567,7 @@ static int verbs_get_event(int proc, int max, photon_rid *ids, int *n) {
     }
     comp += ne;
   }
-  
+
   *n = comp;
 
   // CQs are empty
