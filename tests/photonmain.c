@@ -30,7 +30,6 @@ int main(int argc, char *argv[]) {
   tcase_add_unchecked_fixture(tc, photontest_core_setup, photontest_core_teardown);
   /* set timeout */
   tcase_set_timeout(tc, 1200);
-
   add_photon_pingpong(tc);                // BEGIN tests that care about PWC payload
   add_photon_rdma_with_completion(tc);
   add_photon_buffers_remote_test(tc);
