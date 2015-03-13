@@ -147,7 +147,7 @@ case "$SYSTEM" in
     if [ "$HPXMODE_AXIS" == smp ] ; then
       CFGFLAGS+=" --with-tests-cmd=\"aprun -n 1 -N 1\""
     else
-      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 2 -N 2\""
+      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 2 -N 1\""
     fi
     ;;
   HPX5_STAMPEDE)

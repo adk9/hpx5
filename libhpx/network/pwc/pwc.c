@@ -142,9 +142,8 @@ static void _pwc_register_dma(void *network, void *base, size_t extent) {
     return;
   }
 
-  int e = pwc->xport->pin(base, extent, NULL);
-  dbg_check(e, "Could not register [%p, %p) for rmda\n", base,
-            (char*)base + extent);
+  int e = pwc->xport->pin(pwc->xport, base, extent, NULL);
+  dbg_check(e, "Could not register (%p, %zu) for rmda\n", base, extent);
 }
 
 /// Release a network registration.
@@ -154,8 +153,8 @@ static void _pwc_release_dma(void *network, void* base, size_t extent) {
     return;
   }
 
-  int e = pwc ->xport->unpin(base, extent);
-  dbg_check(e, "Could not release [%p, %p)\n", base, (char*)base + extent);
+  int e = pwc ->xport->unpin(pwc->xport, base, extent);
+  dbg_check(e, "Could not release (%p, %zu)\n", base, extent);
 }
 
 /// Perform a parcel send operation.

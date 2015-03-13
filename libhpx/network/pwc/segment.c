@@ -26,7 +26,7 @@ int segment_init(segment_t *segment, pwc_xport_t *xport, char *base,
   segment->base = base;
   segment->size = size;
   if (base) {
-    xport->pin(base, size, &segment->key);
+    xport->pin(xport, base, size, &segment->key);
   }
   else {
     xport->clear(&segment->key);
@@ -35,6 +35,8 @@ int segment_init(segment_t *segment, pwc_xport_t *xport, char *base,
 }
 
 void segment_fini(segment_t *segment, pwc_xport_t *xport) {
-  xport->unpin(segment->base, segment->size);
+  if (segment->base && segment->size) {
+    xport->unpin(xport, segment->base, segment->size);
+  }
 }
 

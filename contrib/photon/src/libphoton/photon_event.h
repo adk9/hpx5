@@ -9,7 +9,8 @@
 #define PHOTON_EVENT_REQCOMP   0x04
 #define PHOTON_EVENT_REQFOUND  0x05
 
-PHOTON_INTERNAL int __photon_get_event(photon_rid *id);
+PHOTON_INTERNAL int __photon_get_event(int proc, photon_rid *id);
+PHOTON_INTERNAL int __photon_get_nevents(int proc, int max, photon_rid **id, int *n);
 
 PHOTON_INTERNAL int __photon_nbpop_event(photonRequest req);
 PHOTON_INTERNAL int __photon_nbpop_sr(photonRequest req);

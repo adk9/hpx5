@@ -25,8 +25,8 @@ int __verbs_find_max_inline(verbs_cnct_ctx *ctx, int *ret_mi) {
     
     memset(&init_attr, 0, sizeof(init_attr));
     init_attr.qp_type = IBV_QPT_RC;
-    init_attr.send_cq = ctx->ib_cq;
-    init_attr.recv_cq = ctx->ib_cq;
+    init_attr.send_cq = cq;
+    init_attr.recv_cq = cq;
     init_attr.srq = 0;
     init_attr.cap.max_send_sge = 1;
     init_attr.cap.max_recv_sge = 1;
@@ -64,8 +64,8 @@ int __verbs_sync_qpn(verbs_cnct_ctx *ctx) {
   int status, i;
 
   struct ibv_qp_init_attr attr = {
-    .send_cq        = ctx->ib_cq,
-    .recv_cq        = ctx->ib_cq,
+    .send_cq        = ctx->ib_cq[0],
+    .recv_cq        = ctx->ib_cq[0],
     .cap            = {
       .max_send_wr     = 1,
       .max_send_sge    = 1,
