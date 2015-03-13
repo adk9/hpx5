@@ -34,8 +34,14 @@ typedef struct {
   hpx_monoid_op_t        op;
   hpx_predicate_t predicate;
   void                 *buf;
-  size_t               size;
 } _user_lco_t;
+
+static bool _trigger(_user_lco_t *u) {
+  if (lco_get_triggered(&u->lco))
+    return false;
+  lco_set_triggered(&u->lco);
+  return true;
+}
 
 static size_t _user_lco_size(lco_t *lco) {
   _user_lco_t *user_lco = (_user_lco_t *)lco;
@@ -59,8 +65,9 @@ static void _user_lco_fini(lco_t *lco) {
 
 /// Handle an error condition.
 static void _user_lco_error(lco_t *lco, hpx_status_t code) {
-  _user_lco_t *u = (_user_lco_t *)lco;
   lco_lock(lco);
+  _user_lco_t *u = (_user_lco_t *)lco;
+  _trigger(u);
   scheduler_signal_error(&u->cvar, code);
   lco_unlock(lco);
 }
@@ -70,22 +77,30 @@ static void _user_lco_reset(lco_t *lco) {
   lco_lock(lco);
   dbg_assert_str(cvar_empty(&u->cvar),
                  "Reset on an LCO that has waiting threads.\n");
+  lco_reset_triggered(&u->lco);
   cvar_reset(&u->cvar);
   lco_unlock(lco);
 }
 
 /// Invoke an operation on the user-defined LCO's buffer.
 static void _user_lco_set(lco_t *lco, int size, const void *from) {
+  lco_lock(lco);
   _user_lco_t *u = (_user_lco_t *)lco;
 
-  lco_lock(lco);
-  // perform the op()
+  if (lco_get_triggered(&u->lco)) {
+    dbg_error("cannot set an already set user_lco\n");
+    goto unlock;
+  }
 
+  // perform the op()
   u->op(u->buf, from, size);
   if (u->predicate(u->buf, size)) {
+    lco_set_triggered(&u->lco);
     scheduler_signal_all(&u->cvar);
   }
-  lco_unlock(lco);
+
+  unlock:
+   lco_unlock(lco);
 }
 
 static hpx_status_t _user_lco_attach(lco_t *lco, hpx_parcel_t *p) {
@@ -93,7 +108,7 @@ static hpx_status_t _user_lco_attach(lco_t *lco, hpx_parcel_t *p) {
   lco_lock(lco);
   _user_lco_t *u = (_user_lco_t *)lco;
 
-  if (!u->predicate(u->buf, u->size)) {
+  if (!lco_get_triggered(lco)) {
     status = cvar_attach(&u->cvar, p);
     goto unlock;
   }
@@ -112,24 +127,23 @@ static hpx_status_t _user_lco_attach(lco_t *lco, hpx_parcel_t *p) {
   return status;  
 }
 
+static hpx_status_t _wait(_user_lco_t *u) {
+  if (!lco_get_triggered(&u->lco))
+    return scheduler_wait(&u->lco.lock, &u->cvar);
+
+  return cvar_get_error(&u->cvar);
+}
+
 /// Get the user-defined LCO's buffer.
 static hpx_status_t _user_lco_get(lco_t *lco, int size, void *out) {
-  _user_lco_t *u = (_user_lco_t *)lco;
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
 
-  while (!u->predicate(u->buf, size) && (status == HPX_SUCCESS)) {
-    status = scheduler_wait(&lco->lock, &u->cvar);
-  }
+  _user_lco_t *u = (_user_lco_t *)lco;
 
-  // if there was an error signal, unlock and return it
-  if (status != HPX_SUCCESS) {
-    lco_unlock(lco);
-    return status;
-  }
-
+  status = _wait(u);
   // copy out the value if the caller wants it
-  if (size && out) {
+  if ((status == HPX_SUCCESS) && out) {
     memcpy(out, u->buf, size);
   }
 
@@ -139,7 +153,12 @@ static hpx_status_t _user_lco_get(lco_t *lco, int size, void *out) {
 
 // Wait for the reduction.
 static hpx_status_t _user_lco_wait(lco_t *lco) {
-  return _user_lco_get(lco, 0, NULL);
+  hpx_status_t status = HPX_SUCCESS;
+  lco_lock(lco);
+  _user_lco_t *u = (_user_lco_t *)lco;
+  status = _wait(u);
+  lco_unlock(lco);
+  return status;
 }
 
 static void _user_lco_init(_user_lco_t *u, size_t size, hpx_monoid_id_t id,
@@ -168,7 +187,6 @@ static void _user_lco_init(_user_lco_t *u, size_t size, hpx_monoid_id_t id,
   u->id = id;
   u->predicate = predicate;
   u->buf = NULL;
-  u->size = size;
 
   if (size) {
     u->buf = malloc(size);
