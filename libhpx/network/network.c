@@ -41,7 +41,7 @@ static network_t *_default(const config_t *cfg, struct boot *boot,
 #endif
 
 #ifdef HAVE_MPI
-  network =  network_isir_funneled_new(cfg);
+  network =  network_isir_funneled_new(cfg, boot, gas);
   if (network) {
     return network;
   }
@@ -66,7 +66,7 @@ network_t *network_new(const config_t *cfg, struct boot *boot, struct gas *gas)
 
    case HPX_NETWORK_ISIR:
 #ifdef HAVE_NETWORK
-    network = network_isir_funneled_new(cfg);
+    network = network_isir_funneled_new(cfg, boot, gas);
 #else
     log_cfg("network support not enabled\n");
 #endif

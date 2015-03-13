@@ -18,11 +18,14 @@
 
 /// Forward declarations.
 /// @{
+struct boot;
 struct config;
+struct gas;
 /// @}
 
 /// Allocate a new Isend/Irecv funneled network.
-network_t *network_isir_funneled_new(const struct config *cfg)
+network_t *network_isir_funneled_new(const struct config *cfg,
+                                     struct boot *boot, struct gas *gas)
   HPX_MALLOC HPX_INTERNAL;
 
 #endif
