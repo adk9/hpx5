@@ -218,17 +218,14 @@ static void _future_init(_future_t *f, int size) {
 }
 
 /// Initialize a block of futures.
-static HPX_PINNED(_block_init, uint32_t *args) {
+static HPX_PINNED(_block_init, char *base, uint32_t *args) {
   const uint32_t size = args[0];
   const uint32_t nfutures = args[1];
-  char *base = hpx_thread_current_local_target();
-  dbg_assert(base);
 
   // sequentially initialize each future
   for (uint32_t i = 0; i < nfutures; ++i) {
     _future_init((_future_t*)(base + i * size), size);
   }
-
   return HPX_SUCCESS;
 }
 
@@ -274,15 +271,11 @@ hpx_addr_t hpx_lco_future_array_at(hpx_addr_t array, int i, int size, int bsize)
 }
 
 /// Initialize a block of array of lco.
-static HPX_PINNED(_block_local_init, uint32_t *args) {
-  void *lco = hpx_thread_current_local_target();
-  dbg_assert(lco);
- 
+static HPX_PINNED(_block_local_init, void *lco, uint32_t *args) {
   for (int i = 0; i < args[0]; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_future_t) + args[1]));
     _future_init(addr, args[1]);
   }
-
   return HPX_SUCCESS;
 }
 

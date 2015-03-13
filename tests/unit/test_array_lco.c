@@ -22,7 +22,7 @@
 
 // This testcase tests the hpx_lco_array_new API function which
 // allocates a global array of LCOs.
-static HPX_PINNED(_set_future_value, void *args) {
+static HPX_PINNED(_set_future_value, void *UNUSED, void *args) {
   int size = hpx_thread_current_args_size();
   hpx_addr_t addr = hpx_thread_current_target();
   hpx_lco_set(addr, size, args, HPX_NULL, HPX_NULL);
