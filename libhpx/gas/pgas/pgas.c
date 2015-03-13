@@ -23,6 +23,7 @@
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
+#include <libhpx/network.h>
 #include "bitmap.h"
 #include "gpa.h"
 #include "heap.h"
@@ -314,41 +315,43 @@ static int _pgas_parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size,
   return HPX_SUCCESS;
 }
 
-static int _pgas_parcel_memput(hpx_addr_t to, const void *from, size_t size,
+static int _pgas_parcel_memput(hpx_addr_t to, const void *from, size_t n,
                                hpx_addr_t lsync, hpx_addr_t rsync) {
-  if (!size) {
+  if (!n) {
     return HPX_SUCCESS;
   }
 
   if (pgas_gpa_to_rank(to) == here->rank) {
     void *lto = pgas_gpa_to_lva(to);
-    memcpy(lto, from, size);
+    memcpy(lto, from, n);
+    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    return HPX_SUCCESS;
+  }
+  else if (rsync) {
+    return network_pwc(here->network, to, from, n, lco_set, lsync, memput_rsync,
+                       rsync);
   }
   else {
-    return parcel_memput(to, from, size, lsync, rsync);
+    return network_put(here->network, to, from, n, lco_set, lsync);
   }
-
-  hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-  hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
-  return HPX_SUCCESS;
 }
 
-static int _pgas_parcel_memget(void *to, hpx_addr_t from, size_t size,
+static int _pgas_parcel_memget(void *to, hpx_addr_t from, size_t n,
                                hpx_addr_t lsync) {
-  if (!size) {
+  if (!n) {
     return HPX_SUCCESS;
   }
 
   if (pgas_gpa_to_rank(from) == here->rank) {
     const void *lfrom = pgas_gpa_to_lva(from);
-    memcpy(to, lfrom, size);
+    memcpy(to, lfrom, n);
+    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+    return HPX_SUCCESS;
   }
   else {
-    return parcel_memget(to, from, size, lsync);
+    return network_get(here->network, to, from, n, hpx_lco_set_action, lsync);
   }
-
-  hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-  return HPX_SUCCESS;
 }
 
 static void _pgas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
