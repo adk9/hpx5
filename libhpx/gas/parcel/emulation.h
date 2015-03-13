@@ -18,11 +18,4 @@
 int parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
   HPX_INTERNAL;
 
-int parcel_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync)
-  HPX_INTERNAL;
-
-int parcel_memput(hpx_addr_t to, const void *from, size_t size,
-                  hpx_addr_t lsync, hpx_addr_t rsync)
-  HPX_INTERNAL;
-
 #endif // LIBHPX_GAS_PARCELS_EMULATION_H

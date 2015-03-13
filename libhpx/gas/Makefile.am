@@ -5,10 +5,8 @@ noinst_LTLIBRARIES	= libgas.la
 libgas_la_CPPFLAGS = -I$(top_srcdir)/include
 libgas_la_SOURCES  = hpx_gas_glue.c \
                      gas.c \
-                     smp/smp.c \
-                     parcel/memget.c \
-                     parcel/memput.c \
-                     parcel/memcpy.c 
+                     smp/smp.c  \
+                     parcel/memcpy.c
 
 if HAVE_NETWORK
 libgas_la_SOURCES += mallctl.c \
