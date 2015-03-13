@@ -153,11 +153,8 @@ static hpx_status_t _allgather_attach(lco_t *lco, hpx_parcel_t *p) {
     goto unlock;
   }
 
-  // We want to wait for gathering to complete before sending the parcel.
-  if (g->count == 1) {
-    // Go ahead and send this parcel.
-    hpx_parcel_send(p, HPX_NULL);
-  }
+  // Go ahead and send this parcel eagerly.
+  hpx_parcel_send(p, HPX_NULL);
 
   unlock:
     lco_unlock(lco);
