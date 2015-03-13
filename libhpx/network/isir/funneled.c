@@ -149,7 +149,7 @@ static int _funneled_get(void *network,
     return HPX_SUCCESS;
   }
 
-  // Concoct a global address that points to @p to, and send it over.
+  // Concoct a global address that points to @p to @ here, and send it over.
   hpx_addr_t addr = ((uint64_t)here->rank << 48) + (uint64_t)to;
   return hpx_xcall(from, isir_emulate_gwc, lsync, n, addr);
 }
