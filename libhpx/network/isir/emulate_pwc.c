@@ -24,20 +24,10 @@
 ///
 /// This will copy the data buffer into the correct place, and then continue to
 /// the completion handler.
-HPX_ACTION(isir_emulate_pwc, void *buffer) {
-  hpx_parcel_t *p = scheduler_current_parcel();
-  if (!p->size) {
-    return HPX_SUCCESS;
-  }
-
-  gas_t *gas = here->gas;
-  void *to;
-  if (!gas->try_pin(p->target, &to)) {
-    log_net("put-with-completion emulation resend\n");
-    return HPX_RESEND;
-  }
-  memcpy(to, buffer, p->size);
-  gas->unpin(p->target);
+HPX_PINNED(isir_emulate_pwc, const void *buffer) {
+  void *to = hpx_thread_current_local_target();
+  size_t n = hpx_thread_current_args_size();
+  memcpy(to, buffer, n);
   return HPX_SUCCESS;
 }
 
@@ -60,6 +50,8 @@ static HPX_TASK(_gwc_reply, const void *data) {
 ///
 /// This means copying n bytes from the local target to @p to through a parcel,
 /// and then signaling whatever the lsync should be over there.
+///
+/// NB: once the PINNED changes get incorporated, this can be an interrupt.
 static int _gwc_request_handler(size_t n, hpx_addr_t to) {
   void *from = hpx_thread_current_local_target();
   hpx_call_cc(to, _gwc_reply, NULL, NULL, from, n);
