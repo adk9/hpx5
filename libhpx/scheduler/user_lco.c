@@ -34,6 +34,7 @@ typedef struct {
   hpx_monoid_op_t        op;
   hpx_predicate_t predicate;
   void                 *buf;
+  size_t               size;
 } _user_lco_t;
 
 static size_t _user_lco_size(lco_t *lco) {
@@ -87,6 +88,30 @@ static void _user_lco_set(lco_t *lco, int size, const void *from) {
   lco_unlock(lco);
 }
 
+static hpx_status_t _user_lco_attach(lco_t *lco, hpx_parcel_t *p) {
+  hpx_status_t status = HPX_SUCCESS;
+  lco_lock(lco);
+  _user_lco_t *u = (_user_lco_t *)lco;
+
+  if (!u->predicate(u->buf, u->size)) {
+    status = cvar_attach(&u->cvar, p);
+    goto unlock;
+  }
+
+  // If there was and error, then return that error without sending the parcel
+  status = cvar_get_error(&u->cvar);
+  if (status != HPX_SUCCESS) {
+    goto unlock;
+  }
+
+  // go ahead and send this parcel eagerly
+  hpx_parcel_send(p, HPX_NULL);
+
+ unlock:
+  lco_unlock(lco);
+  return status;  
+}
+
 /// Get the user-defined LCO's buffer.
 static hpx_status_t _user_lco_get(lco_t *lco, int size, void *out) {
   _user_lco_t *u = (_user_lco_t *)lco;
@@ -124,7 +149,7 @@ static void _user_lco_init(_user_lco_t *u, size_t size, hpx_monoid_id_t id,
     .on_fini     = _user_lco_fini,
     .on_error    = _user_lco_error,
     .on_set      = _user_lco_set,
-    .on_attach   = NULL,
+    .on_attach   = _user_lco_attach,
     .on_get      = _user_lco_get,
     .on_getref   = NULL,
     .on_release  = NULL,
@@ -143,6 +168,7 @@ static void _user_lco_init(_user_lco_t *u, size_t size, hpx_monoid_id_t id,
   u->id = id;
   u->predicate = predicate;
   u->buf = NULL;
+  u->size = size;
 
   if (size) {
     u->buf = malloc(size);
