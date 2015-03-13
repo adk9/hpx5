@@ -134,6 +134,36 @@ static void _allgather_reset(lco_t *lco) {
   lco_unlock(&g->lco);
 }
 
+static hpx_status_t _allgather_attach(lco_t *lco, hpx_parcel_t *p) {
+  hpx_status_t status = HPX_SUCCESS;
+  lco_lock(lco);
+  _allgather_t *g = (_allgather_t *)lco;
+
+  // Pick attach to mean "set" for allgather. We have to wait for gathering to 
+  // complete before sending the parcel.
+  if (g->phase != _gathering) {
+    status = cvar_attach(&g->wait, p);
+    goto unlock;
+  }
+
+  // If the allgather has an error, then return that error without sending the
+  // parcel.
+  status = cvar_get_error(&g->wait);
+  if (status != HPX_SUCCESS) {
+    goto unlock;
+  }
+
+  // We want to wait for gathering to complete before sending the parcel.
+  if (g->count == 1) {
+    // Go ahead and send this parcel.
+    hpx_parcel_send(p, HPX_NULL);
+  }
+
+  unlock:
+    lco_unlock(lco);
+    return status;
+}
+
 /// Get the value of the gathering, will wait if the phase is gathering.
 static hpx_status_t _allgather_get(lco_t *lco, int size, void *out) {
   _allgather_t *g = (_allgather_t *)lco;
@@ -277,7 +307,7 @@ static void _allgather_init(_allgather_t *g, size_t participants, size_t size) {
     .on_fini     = _allgather_fini,
     .on_error    = _allgather_error,
     .on_set      = _allgather_set,
-    .on_attach   = NULL,
+    .on_attach   = _allgather_attach,
     .on_get      = _allgather_get,
     .on_getref   = NULL,
     .on_release  = NULL,
