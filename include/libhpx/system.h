@@ -14,7 +14,7 @@
 #define LIBHPX_SYSTEM_H
 
 #include <pthread.h>
-#include "hpx/attributes.h"
+#include <hpx/attributes.h>
 
 int system_get_cores(void)
   HPX_INTERNAL;
@@ -23,6 +23,14 @@ int system_set_affinity(pthread_t thread, int core_id)
   HPX_INTERNAL;
 
 int system_set_affinity_group(pthread_t thread, int ncores)
+  HPX_INTERNAL;
+
+/// Get the pthread's stack extent.
+///
+/// @param       thread The thread id to query.
+/// @param[out]    base The bottom (lowest address) of the stack.
+/// @param[out]    size The size of the stack.
+void system_get_stack(pthread_t thread, void **base, size_t *size)
   HPX_INTERNAL;
 
 /// An abstract interface to mmap-like operations.

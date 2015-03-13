@@ -380,7 +380,7 @@ AM_CFLAGS = @CFLAGS@                         \
 	    @MPI_CFLAGS@                     \
 	    -I@top_srcdir@/include
 
-AM_LDFLAGS = $(top_builddir)/src/libphoton.la -lm -lcrypto @THREAD_LIBS@ @UGNI_LIBS@ @VERBS_LIBS@ @MPI_LIBS@ -lrt
+AM_LDFLAGS = $(top_builddir)/src/libphoton.la -lm -lcrypto @THREAD_LIBS@ @UGNI_LIBS@ @VERBS_LIBS@ @MPI_LIBS@ -lrt -no-install
 photon_test_SOURCES = kernel.c photon_test.c
 photon_test_get_SOURCES = photon_test_get.c
 photon_test_put_SOURCES = photon_test_put.c

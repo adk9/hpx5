@@ -86,7 +86,7 @@ START_TEST (test_photon_send_buffer_bd_bench)
     t_end = TIME();
 
     photontest_clear_evq();
-
+    
     MPI_Barrier(MPI_COMM_WORLD);
 
     if (rank == 0) {

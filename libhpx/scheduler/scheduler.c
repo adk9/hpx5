@@ -28,7 +28,7 @@
 #include <libhpx/scheduler.h>
 #include "thread.h"
 
-struct scheduler *scheduler_new(config_t *cfg) {
+struct scheduler *scheduler_new(const config_t *cfg) {
   const int cores = cfg->cores;
   const int workers = cfg->threads;
 
@@ -125,14 +125,14 @@ struct worker *scheduler_get_worker(struct scheduler *sched, int id) {
 }
 
 
-int scheduler_startup(struct scheduler *sched) {
+int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
   struct worker *worker = NULL;
   int status = LIBHPX_OK;
 
   // start all of the other worker threads
   for (int i = 1, e = sched->n_workers; i < e; ++i) {
     worker = scheduler_get_worker(sched, i);
-    status = worker_create(worker);
+    status = worker_create(worker, cfg);
 
     if (status != LIBHPX_OK) {
       dbg_error("could not start worker %d.\n", i);

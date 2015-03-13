@@ -164,3 +164,7 @@ int optional
 option "hpx-photon-defaultrd" - "set default number of allocated descriptors"
 typestr="integer"
 int optional
+
+option "hpx-photon-numcq" - "set number of completion queues to use (cyclic assignment to ranks)"
+typestr="integer"
+int optional

@@ -249,7 +249,7 @@ int main(int argc, char **argv) {
         for (k=0; k<ITERS; k++) {
 	  if (sem_wait(&sem) == 0) {
 	    int rc;
-	    rc = photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0);
+	    rc = photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, &rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0);
 	    if (rc == PHOTON_ERROR) {
 	      fprintf(stderr, "Error doing PWC\n");
 	      exit(1);
@@ -280,7 +280,7 @@ int main(int argc, char **argv) {
           clock_gettime(CLOCK_MONOTONIC, &time_s);
           for (k=0; k<ITERS; k++) {
               if (sem_wait(&sem) == 0) {
-                if (photon_get_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0)) {
+                if (photon_get_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, &rbuf[j].priv, PHOTON_TAG, 0)) {
 		  fprintf(stderr, "Error doing GWC\n");
 		  exit(1);
 		}

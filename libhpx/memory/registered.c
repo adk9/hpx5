@@ -64,6 +64,7 @@ static address_space_t _registered_address_space_vtable;
 /// transport-specific mechanism for registering and releasing memory, so we use
 /// these globals to store the callback. We'd prefer to be able to make the
 /// member variables of the registered address space class in the future.
+static            void *_xport = NULL;
 static memory_register_t  _pin = NULL;
 static memory_release_t _unpin = NULL;
 static mmap_t            _mmap = NULL;
@@ -87,7 +88,7 @@ static void *_registered_chunk_alloc(void *addr, size_t size, size_t align,
 
   // Our mmap interface guarantees alignment, so just go ahead and register it
   // and return.
-  int e = _pin(chunk, size, NULL);
+  int e = _pin(_xport, chunk, size, NULL);
   dbg_check(e);
   if (zero && *zero) {
     memset(chunk, 0, size);
@@ -100,7 +101,7 @@ static void *_registered_chunk_alloc(void *addr, size_t size, size_t align,
 
 /// The registered memory chunk de-allocation callback.
 static bool _registered_chunk_dalloc(void *chunk, size_t size, unsigned arena) {
-  int e = _unpin(chunk, size);
+  int e = _unpin(_xport, chunk, size);
   dbg_check(e, "\n");
   _munmap(chunk, size);
   return true;
@@ -173,15 +174,18 @@ static address_space_t _registered_address_space_vtable = {
 
 address_space_t *
 address_space_new_jemalloc_registered(const struct config *UNUSED,
+                                      void *xport,
                                       memory_register_t pin,
                                       memory_release_t unpin,
                                       mmap_t mmap,
                                       munmap_t munmap) {
+  dbg_assert(!_xport || _xport == xport);
   dbg_assert(!_pin || _pin == pin);
   dbg_assert(!_unpin || _unpin == unpin);
   dbg_assert(!_mmap || _mmap == mmap);
   dbg_assert(!_munmap || _munmap == munmap);
 
+  _xport = xport;
   _pin = pin;
   _unpin = unpin;
   _mmap = mmap;

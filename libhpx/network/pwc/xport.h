@@ -23,8 +23,8 @@ typedef struct pwc_xport {
   void   (*delete)(void *xport);
 
   size_t (*sizeof_rdma_key)(void);
-  int    (*pin)(void *base, size_t n, void *key);
-  int    (*unpin)(void *base, size_t n);
+  int    (*pin)(void *xport, void *base, size_t n, void *key);
+  int    (*unpin)(void *xport, void *base, size_t n);
   void   (*clear)(void *key);
   int    (*pwc)(int target, void *rva, const void *lva, size_t n,
                 uint64_t lsync, uint64_t rsync, void *rkey);
