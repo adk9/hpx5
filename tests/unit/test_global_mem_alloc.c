@@ -24,8 +24,7 @@ typedef struct Domain {
   int maxcycles;
 } Domain;
 
-static int _initDomain_handler(int rank, int max, int n) {
-  Domain *ld = hpx_thread_current_local_target();
+static int _initDomain_handler(Domain *ld, int rank, int max, int n) {
   ld->rank = rank;
   ld->maxcycles = max;
   ld->nDoms = n;

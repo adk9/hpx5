@@ -172,7 +172,7 @@ void *hpx_parcel_get_data(hpx_parcel_t *p) {
   }
 
   if (_inplace(p)) {
-    buffer = &p->buffer;
+    buffer = (void*)&p->buffer;
   }
   else {
     memcpy(&buffer, &p->buffer, sizeof(buffer));

@@ -273,10 +273,7 @@ static HPX_ACTION(_chan_try_recv_proxy, void *args) {
 
 
 /// Initialize a block of futures.
-static HPX_PINNED(_block_init, uint32_t *args) {
-  _chan_t *channels = hpx_thread_current_local_target();
-  dbg_assert(channels);
-
+static HPX_PINNED(_block_init, _chan_t *channels, uint32_t *args) {
   // sequentially initialize each channel
   uint32_t block_size = args[0];
   for (uint32_t i = 0; i < block_size; ++i) {
@@ -431,15 +428,11 @@ hpx_status_t hpx_lco_chan_array_select(int n, hpx_addr_t channels[], int *i,
 }
 
 /// Initialize a block of array of lco.
-static HPX_PINNED(_block_local_init, uint32_t *args) {
-  void *lco = hpx_thread_current_local_target();
-  dbg_assert(lco);
-
+static HPX_PINNED(_block_local_init, void *lco, uint32_t *args) {
   for (int i = 0; i < args[0]; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_chan_t) + args[1]));
     _chan_init(addr);
   }
-
   return HPX_SUCCESS;
 }
 

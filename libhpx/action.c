@@ -21,6 +21,7 @@
 #include "hpx/builtins.h"
 #include "hpx/types.h"
 #include "libhpx/action.h"
+#include "libhpx/parcel.h"
 #include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
@@ -211,9 +212,11 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
   // variadic argument.
   ffi_cif *cif = action_table_get_cif(table, action);
   if (cif) {
-    if (nargs != cif->nargs) {
+    hpx_action_type_t type = action_table_get_type(table, action);
+    int expected = (type == HPX_ACTION_PINNED) ? (cif->nargs-1) : cif->nargs;
+    if (nargs != expected) {
       return log_error("expecting %d arguments for action %s (%d given).\n",
-                       cif->nargs, action_table_get_key(table, action), nargs);
+                       expected, action_table_get_key(table, action), nargs);
     }
 
     void *argps[nargs];
@@ -252,8 +255,13 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
   return hpx_parcel_send_through(p, gate, lsync);
 }
 
-int action_table_run_handler(const struct action_table *table,
-                             const hpx_action_t id, void *args) {
+int action_execute(hpx_parcel_t *p) {
+  const _table_t *table = _get_actions();
+
+  dbg_assert(p->target != HPX_NULL);
+  hpx_action_t id = hpx_parcel_get_action(p);
+  void *args = hpx_parcel_get_data(p);
+
   dbg_assert_str(id != HPX_ACTION_INVALID,
                  "action registration is not complete\n");
 
@@ -265,11 +273,33 @@ int action_table_run_handler(const struct action_table *table,
   int *ret = (int*)retbuffer;
   hpx_action_handler_t handler = table->entries[id].handler;
   ffi_cif *cif = table->entries[id].cif;
-  if (!cif) {
+
+  bool pinned = action_is_pinned(table, id);
+  if (!cif && !pinned) {
     *ret = handler(args);
-  } else {
+  } else if (!cif && pinned) {
+    void *target;
+    if (!hpx_gas_try_pin(p->target, &target)) {
+      log_action("pinned action resend.\n");
+      return HPX_RESEND;
+    }
+    *ret = ((hpx_pinned_action_handler_t)handler)(target, args);
+    hpx_gas_unpin(p->target);
+  } else if (cif && !pinned) {
     ffi_raw_call(cif, FFI_FN(handler), ret, args);
+  } else {
+    void *target;
+    if (!hpx_gas_try_pin(p->target, &target)) {
+      log_action("pinned action resend.\n");
+      return HPX_RESEND;
+    }
+    void **avalue = (void**) alloca((cif->nargs+1) * sizeof(void*));
+    avalue[0] = &target;
+    ffi_raw_to_ptrarray(cif, args, &avalue[1]);
+    ffi_call(cif, FFI_FN(handler), ret, avalue);
+    hpx_gas_unpin(p->target);
   }
+
   return *ret;
 }
 
@@ -297,13 +327,24 @@ int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_hand
   ffi_cif *cif = calloc(1, sizeof(*cif));
   dbg_assert(cif);
 
-  hpx_type_t *args = calloc(nargs, sizeof(args[0]));
   va_list vargs;
   va_start(vargs, id);
-  for (int i = 0; i < nargs; ++i) {
+
+  int begin = 0;
+  if (type == HPX_ACTION_PINNED) {
+    nargs++;
+    begin = 1;
+  }
+
+  hpx_type_t *args = calloc(nargs, sizeof(args[0]));
+  for (int i = begin; i < nargs; ++i) {
     args[i] = va_arg(vargs, hpx_type_t);
   }
   va_end(vargs);
+
+  if (type == HPX_ACTION_PINNED) {
+    args[0] = HPX_POINTER;
+  }
 
   ffi_status s = ffi_prep_cif(cif, FFI_DEFAULT_ABI, nargs, HPX_INT, args);
   if (s != FFI_OK) {
