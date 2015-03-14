@@ -62,7 +62,9 @@ static HPX_ACTION(gas_memput, void *UNUSED) {
   double elapsed = hpx_time_elapsed_ms(t1);
   printf(" Elapsed: %g\n", elapsed);
 
-  hpx_call_cc(remote, _verify, NULL, NULL, block, sizeof(block));
+  hpx_call_sync(remote, _verify, NULL, 0, block, sizeof(block));
+  hpx_gas_free(data, HPX_NULL);
+  return HPX_SUCCESS;
 }
 
 TEST_MAIN({
