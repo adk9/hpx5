@@ -16,6 +16,7 @@
 // 2. hpx_gas_global_free() -- Free a global allocation.
 // 3. hpx_gas_try_pin() -- Performs address translation.
 // 4. hpx_gas_unpin() -- Allows an address to be remapped.   
+
 #include "hpx/hpx.h"
 #include "tests.h"
 
@@ -48,7 +49,7 @@ static HPX_ACTION(_init_sources, void* args) {
 }
 
 // Test code -- for GAS local memory allocation
-static HPX_ACTION(test_libhpx_gas_alloc, void *UNUSED) {
+static HPX_ACTION(gas_alloc, void *UNUSED) {
   printf("Starting the GAS local memory allocation test\n");
   hpx_addr_t local;
   // the number of bytes to allocate
@@ -89,5 +90,5 @@ static HPX_ACTION(test_libhpx_gas_alloc, void *UNUSED) {
 } 
 
 TEST_MAIN({
-  ADD_TEST(test_libhpx_gas_alloc);
+  ADD_TEST(gas_alloc);
 });

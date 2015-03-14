@@ -36,7 +36,7 @@ static HPX_ACTION(_memput_verify, void *args) {
 }
 
 // Test code -- for memput
-static HPX_ACTION(test_libhpx_memput, void *UNUSED) {
+static HPX_ACTION(gas_memput, void *UNUSED) {
   printf("Starting the memput test\n");
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
@@ -67,5 +67,5 @@ static HPX_ACTION(test_libhpx_memput, void *UNUSED) {
 }
 
 TEST_MAIN({
-  ADD_TEST(test_libhpx_memput);
+  ADD_TEST(gas_memput);
 });

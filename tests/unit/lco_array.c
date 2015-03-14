@@ -22,14 +22,14 @@
 
 // This testcase tests the hpx_lco_array_new API function which
 // allocates a global array of LCOs.
-static HPX_PINNED(_set_future_value, void *args) {
+static HPX_PINNED(_set_future_value, void *UNUSED, void *args) {
   int size = hpx_thread_current_args_size();
   hpx_addr_t addr = hpx_thread_current_target();
   hpx_lco_set(addr, size, args, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;  
 }
 
-static HPX_ACTION(test_libhpx_lco_future_array, void *UNUSED) {
+static HPX_ACTION(lco_future_array, void *UNUSED) {
   printf("Starting the array of futures test\n");
   uint64_t value = 0;
   srand(time(NULL));
@@ -64,7 +64,7 @@ static HPX_ACTION(_set, void *args) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_libhpx_lco_and_array, void *UNUSED) {
+static HPX_ACTION(lco_and_array, void *UNUSED) {
   printf("Starting the array of lco test\n");
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
@@ -92,7 +92,7 @@ static void _maxDouble(double *lhs, const double *rhs, const size_t bytes) {
   *lhs = (*lhs > *rhs) ? *lhs : *rhs;
 }
 
-static HPX_ACTION(test_libhpx_lco_reduce_array, void *UNUSED) {
+static HPX_ACTION(lco_reduce_array, void *UNUSED) {
   printf("Starting the array of reduce test\n");
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
@@ -129,7 +129,7 @@ static HPX_ACTION(test_libhpx_lco_reduce_array, void *UNUSED) {
 }
 
 TEST_MAIN({
- ADD_TEST(test_libhpx_lco_future_array);
- ADD_TEST(test_libhpx_lco_and_array);
- ADD_TEST(test_libhpx_lco_reduce_array);
+ ADD_TEST(lco_future_array);
+ ADD_TEST(lco_and_array);
+ ADD_TEST(lco_reduce_array);
 });

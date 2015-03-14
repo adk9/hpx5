@@ -78,7 +78,7 @@ static HPX_ACTION(_receiver, hpx_addr_t *channels) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_libhpx_lco_channelSendRecv, void *UNUSED) {
+static HPX_ACTION(lco_channel_send_recv, void *UNUSED) {
   printf("Starting the HPX LCO Channels test\n");
   hpx_time_t t1 = hpx_time_now();
 
@@ -110,7 +110,7 @@ static HPX_ACTION(test_libhpx_lco_channelSendRecv, void *UNUSED) {
 // threads. 
 #define PING_PONG_LIMIT 5
 
-static HPX_ACTION(_sendInOrder, hpx_addr_t *chans) {
+static HPX_ACTION(_send_in_order, hpx_addr_t *chans) {
   int count = 0;
   while (count < PING_PONG_LIMIT) {
     //printf("Source sending data = %d\n", count);
@@ -129,7 +129,7 @@ static HPX_ACTION(_sendInOrder, hpx_addr_t *chans) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(_receiveInOrder, hpx_addr_t *chans) {
+static HPX_ACTION(_receive_in_order, hpx_addr_t *chans) {
   int count = 0;
   while (count < PING_PONG_LIMIT) {
     void *rbuf;
@@ -148,7 +148,7 @@ static HPX_ACTION(_receiveInOrder, hpx_addr_t *chans) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_libhpx_lco_channelSendInOrder, void *UNUSED) {
+static HPX_ACTION(lco_channel_send_in_order, void *UNUSED) {
   printf("Starting the HPX LCO Channels In order send test\n");
   hpx_time_t t1 = hpx_time_now();
 
@@ -158,8 +158,8 @@ static HPX_ACTION(test_libhpx_lco_channelSendInOrder, void *UNUSED) {
     hpx_lco_chan_new()
   };
 
-  hpx_call(HPX_HERE, _sendInOrder, done, channel, sizeof(channel));
-  hpx_call(HPX_HERE, _receiveInOrder, done, channel, sizeof(channel));
+  hpx_call(HPX_HERE, _send_in_order, done, channel, sizeof(channel));
+  hpx_call(HPX_HERE, _receive_in_order, done, channel, sizeof(channel));
   hpx_lco_wait(done);
 
   hpx_lco_delete(channel[0], HPX_NULL);
@@ -173,7 +173,7 @@ static HPX_ACTION(test_libhpx_lco_channelSendInOrder, void *UNUSED) {
 // Testcase to test hpx_lco_chan_try_recv function, which probes a single 
 // channel to attempt to read. The hpx_lco_chan_try_recv() operation will 
 // return HPX_LCO_CHAN_EMPTY to indicate that no buffer was available.
-static HPX_ACTION(_tryRecvEmpty, hpx_addr_t *args) {
+static HPX_ACTION(_tryrecvempty, hpx_addr_t *args) {
   void *rbuf;
   hpx_addr_t addr = *args;
   hpx_status_t status = hpx_lco_chan_try_recv(addr, NULL, &rbuf);
@@ -183,13 +183,13 @@ static HPX_ACTION(_tryRecvEmpty, hpx_addr_t *args) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_libhpx_lco_channelTryRecvEmpty, void *UNUSED) {
+static HPX_ACTION(lco_channel_tryrecvempty, void *UNUSED) {
   printf("Starting the HPX LCO Channel Try Receive empty buffer test\n");
   hpx_time_t t1 = hpx_time_now();
 
   hpx_addr_t done = hpx_lco_and_new(1);
   hpx_addr_t channel = hpx_lco_chan_new();
-  hpx_call(HPX_HERE, _tryRecvEmpty, done, &channel, sizeof(channel));
+  hpx_call(HPX_HERE, _tryrecvempty, done, &channel, sizeof(channel));
   hpx_lco_wait(done);
   hpx_lco_delete(channel, HPX_NULL);
   hpx_lco_delete(done, HPX_NULL);
@@ -201,7 +201,7 @@ static HPX_ACTION(test_libhpx_lco_channelTryRecvEmpty, void *UNUSED) {
 // This testcase tests the functions, hpx_lco_array_new and hpx_lco_chan_array
 // _at functions == Allocate a global array of channels, and receive from one
 // of a set of channels. 
-static HPX_ACTION(_senderChannel, hpx_addr_t *args) {
+static HPX_ACTION(_senderchannel, hpx_addr_t *args) {
   uint64_t *result;
   uint64_t data = 1234;
   hpx_addr_t channels = *args;
@@ -220,7 +220,7 @@ static HPX_ACTION(_senderChannel, hpx_addr_t *args) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(_receiverChannel, hpx_addr_t *args) {
+static HPX_ACTION(_receiverchannel, hpx_addr_t *args) {
   uint64_t *result;
   uint64_t data = 5678;
   hpx_addr_t channels = *args;
@@ -238,7 +238,7 @@ static HPX_ACTION(_receiverChannel, hpx_addr_t *args) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_libhpx_lco_channelArray, void *UNUSED) {
+static HPX_ACTION(lco_channel_array, void *UNUSED) {
   printf("Starting the HPX LCO global array of channels test\n");
   hpx_addr_t addr1, addr2;  
 
@@ -249,9 +249,9 @@ static HPX_ACTION(test_libhpx_lco_channelArray, void *UNUSED) {
   hpx_addr_t completed = hpx_lco_and_new(2);
     
   addr1 = hpx_lco_chan_array_at(channels, 0, 8, 1);
-  hpx_call(addr1, _senderChannel, completed, &channels, sizeof(channels));
+  hpx_call(addr1, _senderchannel, completed, &channels, sizeof(channels));
   addr2 = hpx_lco_chan_array_at(channels, 1, 8, 1);
-  hpx_call(addr2, _receiverChannel, completed, &channels, sizeof(channels));
+  hpx_call(addr2, _receiverchannel, completed, &channels, sizeof(channels));
 
   hpx_lco_wait(completed);
   hpx_lco_delete(completed, HPX_NULL);
@@ -262,8 +262,8 @@ static HPX_ACTION(test_libhpx_lco_channelArray, void *UNUSED) {
 }
 
 TEST_MAIN({
- ADD_TEST(test_libhpx_lco_channelSendRecv);
- ADD_TEST(test_libhpx_lco_channelSendInOrder);
- ADD_TEST(test_libhpx_lco_channelTryRecvEmpty);
- ADD_TEST(test_libhpx_lco_channelArray);
+ ADD_TEST(lco_channel_send_recv);
+ ADD_TEST(lco_channel_send_in_order);
+ ADD_TEST(lco_channel_tryrecvempty);
+ ADD_TEST(lco_channel_array);
 });

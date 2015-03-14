@@ -10,13 +10,13 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_TESTS_TESTS_H_
-#define LIBHPX_TESTS_TESTS_H_
+#ifndef LIBHPX_TESTS_H_
+#define LIBHPX_TESTS_H_
 
-#include <getopt.h>
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
+#include <getopt.h>
 #include <hpx/hpx.h>
 
 #define assert_msg(cond, msg) assert(cond && msg)
@@ -61,4 +61,4 @@ int main(int argc, char *argv[]) {		     \
 int main(int argc, char *argv[])		     \
 
 
-#endif /* LIBHPX_TESTS_TESTS_H_ */
+#endif /* LIBHPX_TESTS_H_ */

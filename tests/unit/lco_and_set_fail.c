@@ -28,9 +28,7 @@ static HPX_ACTION(_and_wait, hpx_addr_t *lco) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_libhpx_many_ands, void *UNUSED) {
-  printf("Test hpx_lco_many_ands\n");
-
+static HPX_ACTION(lco_and_set_fail, void *UNUSED) {
   hpx_addr_t lco = hpx_lco_and_new(8);
   for (int i = 0; i < 16; ++i) {
     hpx_call_sync(HPX_HERE, _and_set, NULL, 0, &lco, sizeof(lco));
@@ -42,5 +40,5 @@ static HPX_ACTION(test_libhpx_many_ands, void *UNUSED) {
 }
 
 TEST_MAIN({
- ADD_TEST(test_libhpx_many_ands);
+ ADD_TEST(lco_and_set_fail);
 });

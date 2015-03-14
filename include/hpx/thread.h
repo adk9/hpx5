@@ -49,13 +49,6 @@ uint32_t hpx_thread_current_args_size(void);
 /// @returns the PID for the current thread
 hpx_pid_t hpx_thread_current_pid(void);
 
-/// Get the local target of the current thread.
-/// The local target of a thread is the local address that the target
-/// maps to.
-/// @returns the local (pinned) address of the thread's target
-void *hpx_thread_current_local_target(void);
-
-
 /// Pause execution and gives other threads the opportunity to be scheduled
 void hpx_thread_yield(void);
 

@@ -49,7 +49,7 @@ static HPX_ACTION(_handler, uint32_t *args) {
 
 
 // Test code -- for HPX LCO Semaphores
-static HPX_ACTION(test_libhpx_lco_Semaphores, void *UNUSED) {
+static HPX_ACTION(lco_sema, void *UNUSED) {
   hpx_addr_t peers[] = {HPX_HERE, HPX_HERE};
   uint32_t i[] = {0, 1};
   int sizes[] = {sizeof(uint32_t), sizeof(uint32_t)};
@@ -82,5 +82,5 @@ static HPX_ACTION(test_libhpx_lco_Semaphores, void *UNUSED) {
 }
 
 TEST_MAIN({
-  ADD_TEST(test_libhpx_lco_Semaphores);
+  ADD_TEST(lco_sema);
 });

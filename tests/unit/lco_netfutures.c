@@ -31,7 +31,7 @@ static HPX_ACTION(_waitforempty, hpx_netfuture_t fut) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_hpx_lco_newfuture_waitat_empty, void *UNUSED) {
+static HPX_ACTION(lco_newfuture_waitat_empty, void *UNUSED) {
   printf("Starting the hpx_lco_newfuture_waitat() empty test\n");
 
   // allocate and start a timer
@@ -79,7 +79,7 @@ static HPX_ACTION(_waitforfull, hpx_netfuture_t fut) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_hpx_lco_newfuture_waitat_full, void *UNUSED) {
+static HPX_ACTION(lco_newfuture_waitat_full, void *UNUSED) {
   printf("Starting the hpx_lco_newfuture_waitat() full test\n");
 
   // allocate and start a timer
@@ -104,7 +104,7 @@ static HPX_ACTION(test_hpx_lco_newfuture_waitat_full, void *UNUSED) {
 
 // hpx_lco_newfuture_waitat full remote test: 
 // This tests the setting of a single future and waiting for a future to be set.
-static HPX_ACTION(test_hpx_lco_newfuture_waitat_full_remote, void *UNUSED) {
+static HPX_ACTION(lco_newfuture_waitat_full_remote, void *UNUSED) {
   if (hpx_get_num_ranks() > 1) {
     printf("Starting the hpx_lco_newfuture_waitat() full remote test\n");
 
@@ -138,7 +138,7 @@ static HPX_ACTION(_getat, hpx_netfuture_t fut) {
   hpx_thread_continue(sizeof(value), &value);
 }
 
-static HPX_ACTION(test_hpx_lco_newfuture_getat, void *UNUSED) {
+static HPX_ACTION(lco_newfuture_getat, void *UNUSED) {
   printf("Starting the hpx_lco_newfuture_getat() test\n");
 
   // allocate and start a timer
@@ -162,11 +162,12 @@ static HPX_ACTION(test_hpx_lco_newfuture_getat, void *UNUSED) {
   hpx_lco_delete(done, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 } 
 
 // hpx_lco_newfuture_getat remote test: 
 // This tests the getting of a future's value at a remote location.
-static HPX_ACTION(test_hpx_lco_newfuture_getat_remote, void *UNUSED) {
+static HPX_ACTION(lco_newfuture_getat_remote, void *UNUSED) {
   if (hpx_get_num_ranks() > 0) {
     printf("Starting the hpx_lco_newfuture_getat() remote test\n");
     
@@ -192,6 +193,7 @@ static HPX_ACTION(test_hpx_lco_newfuture_getat_remote, void *UNUSED) {
     
     printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   }
+  return HPX_SUCCESS;
 } 
 
 // This testcase tests for future wait for function.
@@ -201,7 +203,7 @@ static HPX_ACTION(test_hpx_lco_newfuture_getat_remote, void *UNUSED) {
 // This function may block for longer than timeout_duration due to
 // scheduling or resource contention delay
 /*
-static HPX_ACTION(test_hpx_lco_newfuture_waitfor) 
+static HPX_ACTION(lco_newfuture_waitfor) 
 {
   printf("Starting the future wait for test\n");
   // allocate and start a timer
@@ -242,7 +244,7 @@ static HPX_ACTION(test_hpx_lco_newfuture_waitfor)
 // to this function. In this case throw a future error with an error condition
 // no state.
 /*
-static HPX_ACTION(test_hpx_lco_newfuture_waituntil) 
+static HPX_ACTION(lco_newfuture_waituntil) 
 {
   printf("Starting the future wait for test\n");
   // allocate and start a timer
@@ -285,7 +287,7 @@ static HPX_ACTION(_lcoSetGet, int *args) {
 }
 
 #if 0
-static HPX_ACTION(test_hpx_lco_newfuture_shared, void *UNUSED) {
+static HPX_ACTION(lco_newfuture_shared, void *UNUSED) {
     int n = 10, result;
     printf("Starting the hpx_lco_newfuture_shared_new test\n");
     // allocate and start a timer
@@ -320,7 +322,7 @@ static HPX_ACTION(_waitforempty_id, void *vargs) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_hpx_lco_newfuture_waitat_empty_array, void *UNUSED) {
+static HPX_ACTION(lco_newfuture_waitat_empty_array, void *UNUSED) {
   printf("Starting the hpx_lco_newfuture_waitat() empty array test\n");
 
   // allocate and start a timer
@@ -348,7 +350,7 @@ static HPX_ACTION(test_hpx_lco_newfuture_waitat_empty_array, void *UNUSED) {
 // This tests the creation of an array of futures. In the test, we wait on the
 // futures to see if they are empty, since a future should be empty on creation.
 // Finally we free the futures.
-static HPX_ACTION(test_hpx_lco_newfuture_waitat_empty_array_remote, void *UNUSED) {
+static HPX_ACTION(lco_newfuture_waitat_empty_array_remote, void *UNUSED) {
   int ranks = hpx_get_num_ranks();
   if (ranks > 1) {
     printf("Starting the hpx_lco_newfuture_waitat() empty array remote test\n");
@@ -386,7 +388,7 @@ static HPX_ACTION(_waitforfull_id, void *vargs) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_hpx_lco_newfuture_waitat_full_array, void *UNUSED) {
+static HPX_ACTION(lco_newfuture_waitat_full_array, void *UNUSED) {
   printf("Starting the hpx_lco_newfuture_waitat() full array test\n");
 
   // allocate and start a timer
@@ -418,7 +420,7 @@ static HPX_ACTION(test_hpx_lco_newfuture_waitat_full_array, void *UNUSED) {
 } 
 
 // hpx_lco_newfuture_waitat for full remote test, array version
-static HPX_ACTION(test_hpx_lco_newfuture_waitat_full_array_remote, void *UNUSED) {
+static HPX_ACTION(lco_newfuture_waitat_full_array_remote, void *UNUSED) {
   int ranks = hpx_get_num_ranks();
   if (ranks > 1) {
     printf("Starting the hpx_lco_newfuture_waitat() full array remote test\n");
@@ -450,7 +452,8 @@ static HPX_ACTION(test_hpx_lco_newfuture_waitat_full_array_remote, void *UNUSED)
     hpx_lco_delete(done, HPX_NULL);
     
     printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
-  } 
+  }
+  return HPX_SUCCESS;
 }
 
 // hpx_lco_newfuture_getat test: 
@@ -464,7 +467,7 @@ static HPX_ACTION(_getat_id, void* vargs) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_hpx_lco_newfuture_getat_array, void *UNUSED) {
+static HPX_ACTION(lco_newfuture_getat_array, void *UNUSED) {
   printf("Starting the hpx_lco_newfuture_getat() array test\n");
 
   // allocate and start a timer
@@ -499,11 +502,12 @@ static HPX_ACTION(test_hpx_lco_newfuture_getat_array, void *UNUSED) {
     hpx_lco_delete(done[i], HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 } 
 
 
 // hpx_lco_newfuture_getat for full remote test, array version
-static HPX_ACTION(test_hpx_lco_newfuture_getat_array_remote, void *UNUSED) {
+static HPX_ACTION(lco_newfuture_getat_array_remote, void *UNUSED) {
   int ranks = hpx_get_num_ranks();
   if (ranks > 1) {
     printf("Starting the hpx_lco_newfuture_getat() array remote test\n");
@@ -538,8 +542,8 @@ static HPX_ACTION(test_hpx_lco_newfuture_getat_array_remote, void *UNUSED) {
   } 
 }
 
-// test_hpx_lco_newfuture_wait_all
-static HPX_ACTION(test_hpx_lco_newfuture_wait_all, void *UNUSED) {
+// lco_newfuture_wait_all
+static HPX_ACTION(lco_newfuture_wait_all, void *UNUSED) {
   printf("Starting the hpx_lco_newfuture_wait_all() test\n");
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
@@ -555,7 +559,7 @@ static HPX_ACTION(test_hpx_lco_newfuture_wait_all, void *UNUSED) {
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
 
-// test_hpx_lco_newfuture_wait_all_remote
+// lco_newfuture_wait_all_remote
 struct _set_args {
   hpx_netfuture_t fut;
   int i;
@@ -567,7 +571,7 @@ static HPX_ACTION(_set, void *vargs) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_hpx_lco_newfuture_wait_all_remote, void *UNUSED) {
+static HPX_ACTION(lco_newfuture_wait_all_remote, void *UNUSED) {
   int ranks = hpx_get_num_ranks();
   if (ranks > 1) {
     printf("Starting the hpx_lco_newfuture_wait_all() remote test\n");
@@ -588,10 +592,11 @@ static HPX_ACTION(test_hpx_lco_newfuture_wait_all_remote, void *UNUSED) {
     
     printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   }
+  return HPX_SUCCESS;
 }
 
-// test_hpx_lco_newfuture_get_all
-static HPX_ACTION(test_hpx_lco_newfuture_get_all, void *UNUSED) {
+// lco_newfuture_get_all
+static HPX_ACTION(lco_newfuture_get_all, void *UNUSED) {
   printf("Starting the hpx_lco_newfuture_get_all() test\n");
   
   // allocate and start a timer
@@ -620,10 +625,11 @@ static HPX_ACTION(test_hpx_lco_newfuture_get_all, void *UNUSED) {
   free(values);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  return HPX_SUCCESS;
 }
 
-// test_hpx_lco_newfuture_get_all_remote
-static HPX_ACTION(test_hpx_lco_newfuture_get_all_remote, void *UNUSED) {
+// lco_newfuture_get_all_remote
+static HPX_ACTION(lco_newfuture_get_all_remote, void *UNUSED) {
   int ranks = hpx_get_num_ranks();
   if (ranks > 1) {
     printf("Starting the hpx_lco_newfuture_get_all() remote test\n");
@@ -657,11 +663,12 @@ static HPX_ACTION(test_hpx_lco_newfuture_get_all_remote, void *UNUSED) {
     
     printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   }
+  return HPX_SUCCESS;
 }
 
-// test_hpx_lco_newfuture_wait_all_for
+// lco_newfuture_wait_all_for
 /*
-static HPX_ACTION(test_hpx_lco_newfuture_wait_all_for) 
+static HPX_ACTION(lco_newfuture_wait_all_for) 
 {
   printf("Starting the future wait for test\n");
   // allocate and start a timer
@@ -684,9 +691,9 @@ static HPX_ACTION(test_hpx_lco_newfuture_wait_all_for)
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
 }
 */
-// test_hpx_lco_newfuture_wait_all_until
+// lco_newfuture_wait_all_until
 /*
-static HPX_ACTION(test_hpx_lco_newfuture_wait_all_until) 
+static HPX_ACTION(lco_newfuture_wait_all_until) 
 {
   hpx_time_t now, duration, timeout;
   printf("Starting the future wait for test\n");
@@ -717,7 +724,7 @@ static HPX_ACTION(test_hpx_lco_newfuture_wait_all_until)
 }
 */
 // Testcase to test shared future, array version
-static HPX_ACTION(test_hpx_lco_newfuture_shared_array, void *UNUSED) {
+static HPX_ACTION(lco_newfuture_shared_array, void *UNUSED) {
     printf("Starting the hpx_lco_newfuture_shared_new test\n");
     // allocate and start a timer
     hpx_time_t t1 = hpx_time_now();
@@ -737,25 +744,26 @@ static HPX_ACTION(test_hpx_lco_newfuture_shared_array, void *UNUSED) {
     }
 
     printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+    return HPX_SUCCESS;
 }
 
 TEST_MAIN({
-  ADD_TEST(test_hpx_lco_newfuture_waitat_empty);
+  ADD_TEST(lco_newfuture_waitat_empty);
   ADD_TEST(test_libhpx_lco_newfuture_waitat_empty_remote);
-  ADD_TEST(test_hpx_lco_newfuture_waitat_full);
-  ADD_TEST(test_hpx_lco_newfuture_waitat_full_remote);
-  ADD_TEST(test_hpx_lco_newfuture_getat);
-  ADD_TEST(test_hpx_lco_newfuture_getat_remote);
-  ADD_TEST(test_hpx_lco_newfuture_shared);
-  ADD_TEST(test_hpx_lco_newfuture_waitat_empty_array);
-  ADD_TEST(test_hpx_lco_newfuture_waitat_empty_array_remote);
-  ADD_TEST(test_hpx_lco_newfuture_waitat_full_array);
-  ADD_TEST(test_hpx_lco_newfuture_waitat_full_array_remote);
-  ADD_TEST(test_hpx_lco_newfuture_getat_array);
-  ADD_TEST(test_hpx_lco_newfuture_getat_array_remote);
-  ADD_TEST(test_hpx_lco_newfuture_wait_all);
-  ADD_TEST(test_hpx_lco_newfuture_wait_all_remote);
-  ADD_TEST(test_hpx_lco_newfuture_get_all);
-  ADD_TEST(test_hpx_lco_newfuture_get_all_remote);
-  ADD_TEST(test_hpx_lco_newfuture_shared_array);    
+  ADD_TEST(lco_newfuture_waitat_full);
+  ADD_TEST(lco_newfuture_waitat_full_remote);
+  ADD_TEST(lco_newfuture_getat);
+  ADD_TEST(lco_newfuture_getat_remote);
+  ADD_TEST(lco_newfuture_shared);
+  ADD_TEST(lco_newfuture_waitat_empty_array);
+  ADD_TEST(lco_newfuture_waitat_empty_array_remote);
+  ADD_TEST(lco_newfuture_waitat_full_array);
+  ADD_TEST(lco_newfuture_waitat_full_array_remote);
+  ADD_TEST(lco_newfuture_getat_array);
+  ADD_TEST(lco_newfuture_getat_array_remote);
+  ADD_TEST(lco_newfuture_wait_all);
+  ADD_TEST(lco_newfuture_wait_all_remote);
+  ADD_TEST(lco_newfuture_get_all);
+  ADD_TEST(lco_newfuture_get_all_remote);
+  ADD_TEST(lco_newfuture_shared_array);    
 });

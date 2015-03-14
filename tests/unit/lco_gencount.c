@@ -32,7 +32,7 @@ static HPX_ACTION(_increment, hpx_addr_t *args) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_libhpx_lco_gencount, void *UNUSED) {
+static HPX_ACTION(lco_gencount, void *UNUSED) {
   printf("Starting the HPX gencount lco test\n");
   //int ninplace = 4;
   // allocate and start a timer
@@ -61,5 +61,5 @@ static HPX_ACTION(test_libhpx_lco_gencount, void *UNUSED) {
 } 
 
 TEST_MAIN({
- ADD_TEST(test_libhpx_lco_gencount);
+ ADD_TEST(lco_gencount);
 });

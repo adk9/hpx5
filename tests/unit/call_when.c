@@ -32,15 +32,13 @@ static int _is_hpxnull(hpx_addr_t addr) {
 }
 
 /// Store a value to an integer in memory.
-static HPX_PINNED(_store_int, void *val) {
-  int *addr = hpx_thread_current_local_target();
-  *addr = *(int*)val;
+static HPX_PINNED(_store_int, int *addr, int *val) {
+  *addr = *val;
   return HPX_SUCCESS;
 }
 
 /// Load a value from an integer in memory.
-static HPX_PINNED(_load_int, void) {
-  int *addr = hpx_thread_current_local_target();
+static HPX_PINNED(_load_int, int *addr, void *UNUSED) {
   HPX_THREAD_CONTINUE(*addr);
 }
 
@@ -49,9 +47,8 @@ static HPX_PINNED(_load_int, void) {
 /// This is slightly more complicated than an increment. We send along the value
 /// that we expect to see, to make sure our cascade is running in the correct
 /// order.
-static HPX_PINNED(_call_when_increment, void *arg) {
+static HPX_PINNED(_call_when_increment, int *val, void *arg) {
   // don't need synchronization since this is done in a sequential cascade
-  int *val = hpx_thread_current_local_target();
   int i = val[0]++;
   int j = *(int*)arg;
   printf("expected %d, got %d\n", i, j);
@@ -86,7 +83,7 @@ hpx_addr_t _cascade(hpx_addr_t done, hpx_addr_t val, const int n) {
 
 
 /// Test the hpx_call_when functionality.
-static HPX_ACTION(test_libhpx_call_when, void *UNUSED) {
+static HPX_ACTION(call_when, void *UNUSED) {
   const int n = 2 * HPX_LOCALITIES;
 
   printf("Testing call when LCO is set\n");
@@ -151,5 +148,5 @@ static HPX_ACTION(test_libhpx_call_when, void *UNUSED) {
 }
 
 TEST_MAIN({
-  ADD_TEST(test_libhpx_call_when);
+  ADD_TEST(call_when);
 });
