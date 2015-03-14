@@ -13,11 +13,10 @@
 #ifndef HPX_GAS_H
 #define HPX_GAS_H
 
-/// @file
+/// @file  include/hpx/gas.h
 /// @brief Functions for allocating and using memory in the HPX global address
-///        space
-#include "hpx/addr.h"
-
+///        space.
+#include <hpx/addr.h>
 
 /// Performs address translation.
 ///
@@ -40,14 +39,12 @@
 ///                       successful.
 ///               false If @p is not local.
 ///               false If @p is local and @local is not NULL and pin fails.
-bool hpx_gas_try_pin(const hpx_addr_t addr, void **local);
-
+bool hpx_gas_try_pin(hpx_addr_t addr, void **local);
 
 /// Unpin a previously pinned block.
 ///
 /// @param         addr The address of global memory to unpin.
-void hpx_gas_unpin(const hpx_addr_t addr);
-
+void hpx_gas_unpin(hpx_addr_t addr);
 
 /// Allocate distributed global memory.
 ///
@@ -68,7 +65,6 @@ void hpx_gas_unpin(const hpx_addr_t addr);
 /// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_global_alloc(size_t n, uint32_t bsize);
 
-
 /// Allocate distributed global zeroed-memory.
 ///
 /// This call is similar to hpx_gas_global_alloc except that the
@@ -87,7 +83,6 @@ hpx_addr_t hpx_gas_global_alloc(size_t n, uint32_t bsize);
 /// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_global_calloc(size_t n, uint32_t bsize);
 
-
 /// Allocate a block of global memory.
 ///
 /// This is a non-collective call to allocate memory in the global
@@ -102,7 +97,6 @@ hpx_addr_t hpx_gas_global_calloc(size_t n, uint32_t bsize);
 /// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_alloc(uint32_t bytes);
 
-
 /// Free a global allocation.
 ///
 /// This global free is asynchronous. The @p sync LCO address can be used to
@@ -111,7 +105,6 @@ hpx_addr_t hpx_gas_alloc(uint32_t bytes);
 /// @param         addr The global address of the memory to free.
 /// @param        rsync An LCO we can use to detect that the free has occurred.
 void hpx_gas_free(hpx_addr_t addr, hpx_addr_t rsync);
-
 
 /// Change the locality-affinity of a global distributed memory address.
 ///
@@ -124,6 +117,17 @@ void hpx_gas_free(hpx_addr_t addr, hpx_addr_t rsync);
 /// @param[out]     lco LCO object to check to wait for the completion of move.
 void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
 
+/// Allocate local memory for use in the memget/memput functions.
+///
+/// @param        bytes The number of bytes to allocate.
+///
+/// @returns            The buffer, or NULL if there was an error.
+void *hpx_malloc_registered(size_t bytes);
+
+/// Free local memory that was allocated with hpx_malloc_registered().
+///
+/// @param            p The buffer.
+void hpx_free_registered(void *p);
 
 /// This copies data from a global address to a local buffer, asynchronously.
 ///
@@ -132,11 +136,15 @@ void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
 /// requirement may not be checked. Copying data across a block boundary, or
 /// from unallocated memory, will result in undefined behavior.
 ///
+/// The local address must be a stack location, or a buffer allocated with
+/// hpx_malloc_registered().
+///
 /// This operation is not atomic. memgets with concurrent memputs to overlapping
 /// addresses ranges will result in a data race with undefined behavior. Users
 /// should synchronize with some out-of-band mechanism.
 ///
-/// @param           to The local address to copy to.
+/// @param           to The local address to copy to, must be a stack location
+///                       or an address allocated with hpx_malloc_registered().
 /// @param         from The global address to copy from.
 /// @param         size The size, in bytes, of the buffer to copy
 /// @param        lsync The address of a zero-sized future that can be used to
@@ -145,10 +153,8 @@ void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
 /// @returns HPX_SUCCESS
 int hpx_gas_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync);
 
-
 /// Synchronous interface to memget.
 int hpx_gas_memget_sync(void *to, hpx_addr_t from, size_t size);
-
 
 /// This copies data from a local buffer to a global address, asynchronously.
 ///
@@ -157,6 +163,9 @@ int hpx_gas_memget_sync(void *to, hpx_addr_t from, size_t size);
 /// requirement is not checked. Copying data across a block boundary, or to
 /// unallocated memory, will result in undefined behavior.
 ///
+/// The local address must be a stack location, or a buffer allocated with
+/// hpx_malloc_registered().
+///
 /// This operation is not atomic. Concurrent memputs to overlapping addresses
 /// ranges will result in a data race with undefined behavior. Users should
 /// synchronize with some out-of-band mechanism.
@@ -164,7 +173,8 @@ int hpx_gas_memget_sync(void *to, hpx_addr_t from, size_t size);
 /// @note A set to @p rsync implies @p lsync has also been set.
 ///
 /// @param           to The global address to copy to.
-/// @param         from The local address to copy from.
+/// @param         from The local address to copy from, must be a stack location
+///                       or an address allocated with hpx_malloc_registered().
 /// @param         size The size, in bytes, of the buffer to copy
 /// @param        lsync The address of a zero-sized future that can be used to
 ///                       wait for local completion of the memput. Once this is
@@ -176,7 +186,6 @@ int hpx_gas_memget_sync(void *to, hpx_addr_t from, size_t size);
 /// @returns  HPX_SUCCESS
 int hpx_gas_memput(hpx_addr_t to, const void *from, size_t size,
                    hpx_addr_t lsync, hpx_addr_t rsync);
-
 
 /// This copies data from a global address to a global address, asynchronously.
 ///

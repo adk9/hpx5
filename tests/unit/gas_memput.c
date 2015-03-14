@@ -12,57 +12,58 @@
 // =============================================================================
 
 #include <stdlib.h>
-#include "hpx/hpx.h"
+#include <hpx/hpx.h>
 #include "tests.h"
 
-static uint64_t block[] = {
-  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-  22, 23, 24, 25, 26, 27, 28, 29, 30, 31
-};
+static void HPX_NORETURN fail(int i, uint64_t expected, uint64_t actual) {
+  fprintf(stderr, "failed to set element %d correctly, "
+          "expected %lu, got %lu\n", i, expected, actual);
+  exit(EXIT_FAILURE);
+}
 
-static HPX_ACTION(_memput_verify, void *args) {
-  hpx_addr_t target = hpx_thread_current_target();
-  uint64_t *local;
-  if (!hpx_gas_try_pin(target, (void**)&local))
-    return HPX_RESEND;
-
-  bool result = false;
-  const size_t BLOCK_ELEMS = sizeof(block) / sizeof(block[0]);
-  for (int i = 0; i < BLOCK_ELEMS; ++i)
-    result |= (local[i] != block[i]);
-
-  hpx_gas_unpin(target);
-  HPX_THREAD_CONTINUE(result);
+static HPX_PINNED(_verify, uint64_t *local, uint64_t *args) {
+  for (int i = 0, e = 32; i < e; ++i) {
+    if (local[i] != args[i]) {
+      fail(i, args[i], local[i]);
+    }
+  }
+  return HPX_SUCCESS;
 }
 
 // Test code -- for memput
 static HPX_ACTION(gas_memput, void *UNUSED) {
   printf("Starting the memput test\n");
+  fflush(stdout);
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
-  int peerid = (rank+1)%size;
+  int peer = (rank+1)%size;
 
+  // Need a registered memory address for memput. Stack addresses are
+  // registered. We can't use static or const here because the compiler will
+  // allocate that as .data.
+  uint64_t block[32] = {
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+    22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+  };
+
+  // Allocate some global memory to put into.
   hpx_addr_t data = hpx_gas_global_alloc(size, sizeof(block));
-  hpx_addr_t remote = hpx_addr_add(data, peerid * sizeof(block), sizeof(block));
+  hpx_addr_t remote = hpx_addr_add(data, peer * sizeof(block), sizeof(block));
 
   hpx_time_t t1 = hpx_time_now();
-  hpx_addr_t localComplete = hpx_lco_future_new(0);
-  hpx_addr_t remoteComplete = hpx_lco_future_new(0);
-  hpx_gas_memput(remote, block, sizeof(block), localComplete, remoteComplete);
-  hpx_lco_wait(localComplete);
-  hpx_lco_wait(remoteComplete);
-  hpx_lco_delete(localComplete, HPX_NULL);
-  hpx_lco_delete(remoteComplete, HPX_NULL);
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  hpx_addr_t complete[2] = {
+    hpx_lco_future_new(0),
+    hpx_lco_future_new(0)
+  };
+  hpx_gas_memput(remote, block, sizeof(block), complete[0], complete[1]);
+  hpx_lco_wait_all(2, complete, NULL);
+  hpx_lco_delete(complete[0], HPX_NULL);
+  hpx_lco_delete(complete[1], HPX_NULL);
+  double elapsed = hpx_time_elapsed_ms(t1);
+  printf(" Elapsed: %g\n", elapsed);
 
-  bool output = false;
-  int e = hpx_call_sync(remote, _memput_verify,
-                        &output, sizeof(output), NULL, 0);
-  if (e != HPX_SUCCESS) {
-    fprintf(stderr, "hpx_call_sync failed with %d", e);
-    exit(EXIT_FAILURE);
-  }
-  assert_msg(output == false, "gas_memput failed");
+  hpx_call_sync(remote, _verify, NULL, 0, block, sizeof(block));
+  hpx_gas_free(data, HPX_NULL);
   return HPX_SUCCESS;
 }
 

@@ -134,32 +134,29 @@ static int _funneled_put(void *network,
 static int _funneled_get(void *network,
                          void *to, hpx_addr_t from, size_t n,
                          hpx_action_t lop, hpx_addr_t laddr) {
-  _funneled_t *isir = network;
-
-  // we only support future set externally
-  if (lop && lop != hpx_lco_set_action) {
-    log_error("Local completion other than hpx_lco_set_action not supported\n");
-    return LIBHPX_EUNIMPLEMENTED;
-  }
-
-  // if there isn't a lop, then laddr should be HPX_NULL
+  // if there isn't a lop, then lsync should be HPX_NULL
   dbg_assert(lop || !laddr); // !lop => !laddr
 
   // go ahead an set the local lco if there is nothing to do
   if (!n) {
-    hpx_lco_set(laddr, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_call(laddr, lop, HPX_NULL, &here->rank, &laddr);
     return HPX_SUCCESS;
   }
 
-  // make sure the to address is in the global address space
-  if (!isir->gas->is_global(isir->gas, to)) {
-    return log_error("network_get() expects a global heap address\n");
+  // Chain the lop handler to an LCO.
+  hpx_addr_t lsync = HPX_NULL;
+  if (lop) {
+    lsync = hpx_lco_future_new(0);
+    dbg_assert(lsync);
+    int e = hpx_call_when_with_continuation(lsync, laddr, lop, lsync,
+                                            hpx_lco_delete_action, &here->rank,
+                                            &laddr);
+    dbg_check(e, "failed to chain parcel\n");
   }
 
-  // and spawn the remote operation---hpx_call eagerly copies the args buffer so
-  // there is no need to wait
-  hpx_addr_t raddr = isir->gas->lva_to_gva(to);
-  return hpx_xcall(from, isir_emulate_gwc, HPX_NULL, n, raddr, laddr);
+  // Concoct a global address that points to @p to @ here, and send it over.
+  hpx_addr_t addr = ((uint64_t)here->rank << 48) + (uint64_t)to;
+  return hpx_call(from, isir_emulate_gwc, lsync, &n, &addr);
 }
 
 static hpx_parcel_t *_funneled_probe(void *network, int nrx) {
@@ -223,7 +220,8 @@ static int _funneled_progress(void *network) {
   (void)m;
 }
 
-network_t *network_isir_funneled_new(const config_t *cfg) {
+network_t *network_isir_funneled_new(const config_t *cfg, struct boot *boot,
+                                     gas_t *gas) {
   _funneled_t *network = malloc(sizeof(*network));
   if (!network) {
     log_error("could not allocate a funneled Isend/Irecv network\n");
@@ -250,6 +248,7 @@ network_t *network_isir_funneled_new(const config_t *cfg) {
   network->vtable.set_flush = _funneled_set_flush;
   network->vtable.register_dma = _funneled_register_dma;
   network->vtable.release_dma = _funneled_release_dma;
+  network->gas = gas;
 
   sync_store(&network->flush, 0, SYNC_RELEASE);
   sync_two_lock_queue_init(&network->sends, NULL);

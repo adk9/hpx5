@@ -179,3 +179,18 @@ static HPX_ACTION(_set_csbrk, size_t *offset) {
   dbg_check(e, "cyclic allocation ran out of memory at rank %u", here->rank);
   return e;
 }
+
+static int _memput_rsync_handler(int src, uint64_t command) {
+  hpx_addr_t rsync = pgas_offset_to_gpa(src, command);
+  hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
+}
+HPX_ACTION_DEF(DEFAULT, _memput_rsync_handler, memput_rsync, HPX_INT,
+               HPX_UINT64);
+
+static int _lco_set_handler(int src, uint64_t command) {
+  hpx_addr_t lco = pgas_offset_to_gpa(here->rank, command);
+  hpx_lco_set(lco, 0, NULL, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
+}
+HPX_ACTION_DEF(INTERRUPT, _lco_set_handler, lco_set, HPX_INT, HPX_UINT64);

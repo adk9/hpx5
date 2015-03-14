@@ -10,12 +10,21 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_GAS_PARCELS_EMULATION_H
-#define LIBHPX_GAS_PARCELS_EMULATION_H
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
-#include <hpx/attributes.h>
+/// @file  libhpx/memory/glue.c
+///
+/// @brief This file just bind hpx_malloc_registered() and hpx_free_registered()
+///        to their counterparts in the memory.h header.
+#include <hpx/hpx.h>
+#include <libhpx/memory.h>
 
-int parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
-  HPX_INTERNAL;
+void *hpx_malloc_registered(size_t bytes) {
+  return registered_malloc(bytes);
+}
 
-#endif // LIBHPX_GAS_PARCELS_EMULATION_H
+void hpx_free_registered(void *p) {
+  registered_free(p);
+}

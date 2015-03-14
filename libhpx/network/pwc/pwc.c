@@ -232,7 +232,7 @@ static int _pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
   peer_t *peer = pwc->peers + rank;
   uint64_t offset = gas_offset_of(here->gas, from);
   command_t lsync = encode_command(lop, laddr);
-  return peer_get(peer, lva, n, offset, lsync, SEGMENT_HEAP);
+  return peer_get(peer, lva, offset, n, lsync, SEGMENT_HEAP);
 }
 
 ///
