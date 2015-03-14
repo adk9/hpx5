@@ -134,12 +134,6 @@ static int _funneled_put(void *network,
 static int _funneled_get(void *network,
                          void *to, hpx_addr_t from, size_t n,
                          hpx_action_t lop, hpx_addr_t lsync) {
-  // we only support future set externally
-  if (lop && lop != hpx_lco_set_action) {
-    log_error("Local completion other than hpx_lco_set_action not supported\n");
-    return LIBHPX_EUNIMPLEMENTED;
-  }
-
   // if there isn't a lop, then lsync should be HPX_NULL
   dbg_assert(lop || !lsync); // !lop => !laddr
 
@@ -151,7 +145,8 @@ static int _funneled_get(void *network,
 
   // Concoct a global address that points to @p to @ here, and send it over.
   hpx_addr_t addr = ((uint64_t)here->rank << 48) + (uint64_t)to;
-  return hpx_call(from, isir_emulate_gwc, lsync, &n, &addr);
+  return hpx_call_with_continuation(from, isir_emulate_gwc, lsync, lop, &n,
+                                    &addr);
 }
 
 static hpx_parcel_t *_funneled_probe(void *network, int nrx) {
