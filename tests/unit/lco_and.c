@@ -18,7 +18,7 @@ static HPX_ACTION(_and_set, void *UNUSED) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_libhpx_lco_and, void *UNUSED) {
+static HPX_ACTION(lco_and, void *UNUSED) {
   printf("Test hpx_lco_and\n");
   hpx_addr_t lco = hpx_lco_and_new(8);
   for (int i = 0; i < 8; ++i) {
@@ -34,7 +34,7 @@ static HPX_ACTION(_and_set_num, hpx_addr_t *lco) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_libhpx_lco_and_num, void *UNUSED) {
+static HPX_ACTION(lco_and_num, void *UNUSED) {
   printf("Test hpx_lco_and_set_num\n");
   hpx_addr_t lco = hpx_lco_and_new(8);
   for (int i = 0; i < 4; ++i) {
@@ -47,6 +47,6 @@ static HPX_ACTION(test_libhpx_lco_and_num, void *UNUSED) {
 } 
 
 TEST_MAIN({
- ADD_TEST(test_libhpx_lco_and);
- ADD_TEST(test_libhpx_lco_and_num);
+ ADD_TEST(lco_and);
+ ADD_TEST(lco_and_num);
 });

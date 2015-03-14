@@ -36,7 +36,7 @@ static HPX_ACTION(_init_array, void* args) {
 #define lengthof(a) sizeof(a) / sizeof(a[0])
 
 // Test code -- for memget
-static HPX_ACTION(test_libhpx_memget, void *UNUSED) {
+static HPX_ACTION(gas_memget, void *UNUSED) {
   printf("Starting the memget test\n");
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
@@ -72,5 +72,5 @@ static HPX_ACTION(test_libhpx_memget, void *UNUSED) {
 }
 
 TEST_MAIN({
-  ADD_TEST(test_libhpx_memget);
+  ADD_TEST(gas_memget);
 });
