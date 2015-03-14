@@ -656,7 +656,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(self->id >= 0);
   dbg_assert(p);
   dbg_assert(hpx_gas_try_pin(p->target, NULL)); // just performs translation
-  dbg_assert(action_table_get_handler(here->actions, p->action) != HPX_NULL);
+  dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
   profile_ctr(self->stats.spawns++);
 
   // Don't run anything until we have started up. This lets us use parcel_send()
