@@ -27,7 +27,7 @@ static uint64_t block[32] = {
 };
 
 
-static HPX_PINNED(_init_array, uint64_t *local, void* args) {
+static HPX_PINNED(_init, uint64_t *local, void* args) {
   size_t n = hpx_thread_current_args_size();
   memcpy(local, args, n);
   return HPX_SUCCESS;
@@ -44,7 +44,7 @@ static HPX_ACTION(gas_memget, void *UNUSED) {
   hpx_addr_t remote = hpx_addr_add(data, peer * sizeof(block), sizeof(block));
 
   hpx_addr_t done = hpx_lco_future_new(sizeof(void*));
-  hpx_call(remote, _init_array, done, block, sizeof(block));
+  hpx_call(remote, _init, done, block, sizeof(block));
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
 
