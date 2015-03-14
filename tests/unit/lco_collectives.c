@@ -80,7 +80,7 @@ static HPX_ACTION(_advanceDomain_reduce, const unsigned long *epoch) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_libhpx_lco_reduce, void *UNUSED) {
+static HPX_ACTION(lco_reduce, void *UNUSED) {
   int nDoms = 8;
   int maxCycles = 100;
 
@@ -148,7 +148,7 @@ static HPX_ACTION(_advanceDomain_allreduce, const unsigned long *epoch) {
   return hpx_call(local, _advanceDomain_allreduce, HPX_NULL, &next, sizeof(next));
 }
 
-static HPX_ACTION(test_libhpx_lco_allreduce, void *UNUSED) {
+static HPX_ACTION(lco_allreduce, void *UNUSED) {
   int nDoms = 8;
   int maxCycles = 100;
 
@@ -216,7 +216,7 @@ static HPX_ACTION(_advanceDomain_allgather, const unsigned long *epoch) {
   return hpx_call(local, _advanceDomain_allgather, HPX_NULL, &next, sizeof(next));
 }
 
-static HPX_ACTION(test_libhpx_lco_allgather, void *UNUSED) {
+static HPX_ACTION(lco_allgather, void *UNUSED) {
   int nDoms = 8;
   int maxCycles = 100;
 
@@ -285,7 +285,7 @@ static HPX_ACTION(_advanceDomain_alltoall, const unsigned long *epoch) {
   return hpx_call(local, _advanceDomain_alltoall, HPX_NULL, &next, sizeof(next));
 }
 
-static HPX_ACTION(test_libhpx_lco_alltoall, void *UNUSED) {
+static HPX_ACTION(lco_alltoall, void *UNUSED) {
   int nDoms = 8;
   int maxCycles = 100;
 
@@ -323,8 +323,8 @@ static HPX_ACTION(test_libhpx_lco_alltoall, void *UNUSED) {
 }
 
 TEST_MAIN({
-  ADD_TEST(test_libhpx_lco_reduce);
-  ADD_TEST(test_libhpx_lco_allreduce);
-  ADD_TEST(test_libhpx_lco_allgather);
-  ADD_TEST(test_libhpx_lco_alltoall);
+  ADD_TEST(lco_reduce);
+  ADD_TEST(lco_allreduce);
+  ADD_TEST(lco_allgather);
+  ADD_TEST(lco_alltoall);
 });

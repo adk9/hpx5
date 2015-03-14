@@ -31,7 +31,7 @@ static HPX_ACTION(_set_value, uint64_t *args) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_libhpx_lco_future_new, void *UNUSED) {
+static HPX_ACTION(lco_future_new, void *UNUSED) {
   printf("Starting the Future LCO test\n");
 
   int count = HPX_LOCALITIES;
@@ -78,7 +78,7 @@ static HPX_ACTION(_get_future_value, void *args) {
   HPX_THREAD_CONTINUE(data);
 }
 
-static HPX_ACTION(test_libhpx_lco_future_array, void *UNUSED) {
+static HPX_ACTION(lco_future_array, void *UNUSED) {
   printf("Starting the array of futures test\n");
   uint64_t value = 0;
   // allocate and start a timer
@@ -97,6 +97,6 @@ static HPX_ACTION(test_libhpx_lco_future_array, void *UNUSED) {
 }
 
 TEST_MAIN({
- ADD_TEST(test_libhpx_lco_future_new);
- ADD_TEST(test_libhpx_lco_future_array);
+ ADD_TEST(lco_future_new);
+ ADD_TEST(lco_future_array);
 });

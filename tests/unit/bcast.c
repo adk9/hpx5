@@ -27,7 +27,7 @@ static HPX_ACTION_DEF(DEFAULT, _bcast_typed_action, _bcast_typed,
                       HPX_INT, HPX_FLOAT, HPX_CHAR);
 
 
-static HPX_ACTION(test_libhpx_bcast, void *UNUSED) {
+static HPX_ACTION(bcast, void *UNUSED) {
   printf("Test hpx_bcast (untyped)\n");
   hpx_addr_t lco = hpx_lco_future_new(0);
   hpx_bcast(_bcast_untyped, lco, NULL, 0);
@@ -53,5 +53,5 @@ static HPX_ACTION(test_libhpx_bcast, void *UNUSED) {
 } 
 
 TEST_MAIN({
- ADD_TEST(test_libhpx_bcast);
+ ADD_TEST(bcast);
 });

@@ -90,7 +90,7 @@ static HPX_ACTION(_spawn, const hpx_addr_t * const termination_lco) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_libhpx_lco_wait, void *UNUSED) {
+static HPX_ACTION(lco_wait, void *UNUSED) {
   printf("Starting the LCO wait test.\n");
 
   // allocate and start a timer
@@ -106,5 +106,5 @@ static HPX_ACTION(test_libhpx_lco_wait, void *UNUSED) {
 }
 
 TEST_MAIN({
-  ADD_TEST(test_libhpx_lco_wait);
+  ADD_TEST(lco_wait);
 });
