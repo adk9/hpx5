@@ -174,12 +174,20 @@ static void _execute_thread(hpx_parcel_t *p) {
   unreachable();
 }
 
-/// A thread_transfer() continuation that runs after a worker first starts it's
+/// A thread_transfer() continuation that runs after a worker first starts its
 /// scheduling loop, but before any user defined lightweight threads run.
 static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
   // checkpoint my native stack pointer
   self->sp = sp;
   self->current = to;
+
+  // Register the native stack for use as the "task" stack.
+  //
+  // Tasks are unusual because we run them from the _run_task continuation,
+  // which always runs "below" sp on the stack. This gets released in
+  // _worker_shutdown.
+  void *base = (char*)sp - here->config->stacksize;
+  network_register_dma(here->network, base, here->config->stacksize);
 
   // wait for the rest of the scheduler to catch up to me
   sync_barrier_join(here->sched->barrier, self->id);
@@ -321,8 +329,11 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
 /// Called by the worker from the scheduler loop to shut itself down.
 ///
 /// This will transfer back to the original system stack, returning the shutdown
-/// code.
+/// code. We release our registration of the pthread stack here as well.
 static void _worker_shutdown(struct worker *w) {
+  void *base = (char*)w->sp - here->config->stacksize;
+  network_release_dma(here->network, base, here->config->stacksize);
+
   void **sp = &w->sp;
   intptr_t shutdown = sync_load(&w->sched->shutdown, SYNC_ACQUIRE);
   thread_transfer((hpx_parcel_t*)&sp, _free_parcel, (void*)shutdown);
@@ -344,7 +355,6 @@ static int _run_task(hpx_parcel_t *to, void *sp, void *env) {
     _spawn_lifo(self, from);
   }
 
-  // otherwise run the action
   self->current = env;
   dbg_assert(parcel_get_stack(self->current) == NULL);
   _execute_thread(env);
@@ -583,32 +593,6 @@ int worker_start(void) {
     dbg_error("failed to acquire an initial parcel.\n");
   }
 
-  // get some information about this stack
-  void *base = NULL;
-  size_t size = 0;
-  system_get_stack(self->thread, &base, &size);
-  void *top = (char*)base + size;
-
-  // how much stack space do we need to safely run tasks on this stack? pthreads
-  // use a large quantity of space at the top of their stacks when we compile
-  // with O0 for some reason, so we need at least 2 extra pages
-  size_t task_stack_size = here->config->stacksize + 2 * HPX_PAGE_SIZE;
-
-  // make sure the stack is laid out like we expect.
-  dbg_assert(top > (void*)&task_stack_size);
-  dbg_assert((intptr_t)top - (intptr_t)&task_stack_size < 2 * HPX_PAGE_SIZE);
-
-  // make sure the pthread stack is big enough to transfer to for task execution
-  if (size < task_stack_size) {
-    dbg_error("pthread will not support HPX task execution\n");
-  }
-
-  // register the pthread stack for rdma---we don't register the entire thing
-  // because that takes a bunch of time and space for the chunk of the stack we
-  // won't ever use from HPX.
-  void *bottom = (char*)top - task_stack_size;
-  network_register_dma(here->network, bottom, task_stack_size);
-
   int e = thread_transfer(p, _on_startup, NULL);
   if (e) {
     if (here->rank == 0) {
@@ -616,8 +600,6 @@ int worker_start(void) {
     }
     return e;
   }
-
-  network_release_dma(here->network, bottom, task_stack_size);
 
   self->current = NULL;
 
