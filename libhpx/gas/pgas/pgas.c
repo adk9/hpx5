@@ -315,8 +315,8 @@ static int _pgas_parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size,
   return HPX_SUCCESS;
 }
 
-static int _pgas_parcel_memput(hpx_addr_t to, const void *from, size_t n,
-                               hpx_addr_t lsync, hpx_addr_t rsync) {
+static int _pgas_memput(hpx_addr_t to, const void *from, size_t n,
+                        hpx_addr_t lsync, hpx_addr_t rsync) {
   if (!n) {
     return HPX_SUCCESS;
   }
@@ -337,8 +337,7 @@ static int _pgas_parcel_memput(hpx_addr_t to, const void *from, size_t n,
   }
 }
 
-static int _pgas_parcel_memget(void *to, hpx_addr_t from, size_t n,
-                               hpx_addr_t lsync) {
+static int _pgas_memget(void *to, hpx_addr_t from, size_t n, hpx_addr_t lsync) {
   if (!n) {
     return HPX_SUCCESS;
   }
@@ -350,7 +349,7 @@ static int _pgas_parcel_memget(void *to, hpx_addr_t from, size_t n,
     return HPX_SUCCESS;
   }
   else {
-    return network_get(here->network, to, from, n, hpx_lco_set_action, lsync);
+    return network_get(here->network, to, from, n, lco_set, lsync);
   }
 }
 
@@ -393,8 +392,8 @@ static gas_t _pgas_vtable = {
   .local_alloc   = _pgas_gas_alloc,
   .free          = _pgas_gas_free,
   .move          = _pgas_move,
-  .memget        = _pgas_parcel_memget,
-  .memput        = _pgas_parcel_memput,
+  .memget        = _pgas_memget,
+  .memput        = _pgas_memput,
   .memcpy        = _pgas_parcel_memcpy,
   .owner_of      = pgas_gpa_to_rank,
   .offset_of     = _pgas_offset_of
