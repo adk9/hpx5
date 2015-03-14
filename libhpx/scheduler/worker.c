@@ -608,12 +608,8 @@ int worker_start(void) {
 
 int worker_create(struct worker *worker, const config_t *cfg) {
   pthread_t thread;
-  pthread_attr_t attr;
-  int e = pthread_attr_init(&attr);
-  dbg_assert(!e);
-  e = pthread_attr_setstacksize(&attr, cfg->stacksize + 3 * HPX_PAGE_SIZE);
-  dbg_assert(!e);
-  e = pthread_create(&thread, &attr, _run, worker);
+
+  int e = pthread_create(&thread, NULL, _run, worker);
   if (e) {
     dbg_error("failed to start a scheduler worker pthread.\n");
     return e;
