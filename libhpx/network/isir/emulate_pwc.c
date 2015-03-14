@@ -24,8 +24,7 @@
 ///
 /// This will copy the data buffer into the correct place, and then continue to
 /// the completion handler.
-HPX_PINNED(isir_emulate_pwc, const void *buffer) {
-  void *to = hpx_thread_current_local_target();
+HPX_PINNED(isir_emulate_pwc, void *to, const void *buffer) {
   size_t n = hpx_thread_current_args_size();
   memcpy(to, buffer, n);
   return HPX_SUCCESS;
@@ -52,8 +51,7 @@ static HPX_TASK(_gwc_reply, const void *data) {
 /// and then signaling whatever the lsync should be over there.
 ///
 /// NB: once the PINNED changes get incorporated, this can be an interrupt.
-static int _gwc_request_handler(size_t n, hpx_addr_t to) {
-  void *from = hpx_thread_current_local_target();
+static int _gwc_request_handler(void *from, size_t n, hpx_addr_t to) {
   hpx_call_cc(to, _gwc_reply, NULL, NULL, from, n);
 }
 HPX_ACTION_DEF(PINNED, _gwc_request_handler, isir_emulate_gwc, HPX_SIZE_T,
