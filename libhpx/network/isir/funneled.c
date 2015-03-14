@@ -133,20 +133,30 @@ static int _funneled_put(void *network,
 /// Transform the get() operation into a parcel emulation.
 static int _funneled_get(void *network,
                          void *to, hpx_addr_t from, size_t n,
-                         hpx_action_t lop, hpx_addr_t lsync) {
+                         hpx_action_t lop, hpx_addr_t laddr) {
   // if there isn't a lop, then lsync should be HPX_NULL
-  dbg_assert(lop || !lsync); // !lop => !laddr
+  dbg_assert(lop || !laddr); // !lop => !laddr
 
   // go ahead an set the local lco if there is nothing to do
   if (!n) {
-    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_call(laddr, lop, HPX_NULL, &here->rank, &laddr);
     return HPX_SUCCESS;
+  }
+
+  // Chain the lop handler to an LCO.
+  hpx_addr_t lsync = HPX_NULL;
+  if (lop) {
+    lsync = hpx_lco_future_new(0);
+    dbg_assert(lsync);
+    int e = hpx_call_when_with_continuation(lsync, laddr, lop, lsync,
+                                            hpx_lco_delete_action, &here->rank,
+                                            &laddr);
+    dbg_check(e, "failed to chain parcel\n");
   }
 
   // Concoct a global address that points to @p to @ here, and send it over.
   hpx_addr_t addr = ((uint64_t)here->rank << 48) + (uint64_t)to;
-  return hpx_call_with_continuation(from, isir_emulate_gwc, lsync, lop, &n,
-                                    &addr);
+  return hpx_call(from, isir_emulate_gwc, lsync, &n, &addr);
 }
 
 static hpx_parcel_t *_funneled_probe(void *network, int nrx) {
