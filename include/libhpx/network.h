@@ -160,7 +160,7 @@ static inline int network_command(network_t *network, hpx_addr_t rank,
 ///
 /// @returns            LIBHPX_OK
 static inline int network_pwc(network_t *network,
-                              hpx_addr_t to, void *from, size_t n,
+                              hpx_addr_t to, const void *from, size_t n,
                               hpx_action_t lop, hpx_addr_t lsync,
                               hpx_action_t rop, hpx_addr_t rsync) {
   return network->pwc(network, to, from, n, lop, lsync, rop, rsync);
@@ -181,7 +181,7 @@ static inline int network_pwc(network_t *network,
 ///
 /// @returns            LIBHPX_OK
 static inline int network_put(network_t *network,
-                              hpx_addr_t to, void *from, size_t n,
+                              hpx_addr_t to, const void *from, size_t n,
                               hpx_action_t lop, hpx_addr_t laddr) {
   return network->put(network, to, from, n, lop, laddr);
 }

@@ -57,6 +57,11 @@ extern HPX_ACTION_DECL(pgas_cyclic_calloc);
 /// Asynchronous entry point for free.
 extern HPX_ACTION_DECL(pgas_free);
 
+/// Asynchronous entry point for the rsync handler for memput
+extern HPX_ACTION_DECL(memput_rsync);
+
+extern HPX_ACTION_DECL(lco_set);
+
 /// Synchronous entry point for alloc.
 ///
 /// @param            n The total number of bytes to allocate.
