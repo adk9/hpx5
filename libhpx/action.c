@@ -206,6 +206,7 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
   size_t len;
   void *outargs;
   hpx_parcel_t *p;
+  int start = 0;
 
   // if it is a typed action, marshall variadic arguments into a
   // contiguous buffer, otherwise simply return the pointer to the
@@ -213,14 +214,18 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
   ffi_cif *cif = action_table_get_cif(table, action);
   if (cif) {
     hpx_action_type_t type = action_table_get_type(table, action);
-    int expected = (type == HPX_ACTION_PINNED) ? (cif->nargs-1) : cif->nargs;
-    if (nargs != expected) {
+    if (type == HPX_ACTION_PINNED) {
+      nargs++;
+      start = 1;
+    }
+
+    if (nargs != cif->nargs) {
       return log_error("expecting %d arguments for action %s (%d given).\n",
-                       expected, action_table_get_key(table, action), nargs);
+                       cif->nargs, action_table_get_key(table, action), nargs);
     }
 
     void *argps[nargs];
-    for (int i = 0; i < nargs; ++i) {
+    for (int i = start; i < nargs; ++i) {
       argps[i] = va_arg(*args, void*);
     }
 
@@ -229,6 +234,10 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
 
     p = hpx_parcel_acquire(NULL, len);
     outargs = hpx_parcel_get_data(p);
+    if (type == HPX_ACTION_PINNED) {
+      // this junk pointer gets overwritten at the destination
+      argps[0] = &argps[0];
+    }
     ffi_ptrarray_to_raw(cif, argps, (ffi_raw*)outargs);
   } else {
     outargs = va_arg(*args, void *);
@@ -293,9 +302,10 @@ int action_execute(hpx_parcel_t *p) {
       log_action("pinned action resend.\n");
       return HPX_RESEND;
     }
-    void **avalue = (void**) alloca((cif->nargs+1) * sizeof(void*));
+    void *avalue[cif->nargs];
+    ffi_raw_to_ptrarray(cif, args, avalue);
     avalue[0] = &target;
-    ffi_raw_to_ptrarray(cif, args, &avalue[1]);
+
     ffi_call(cif, FFI_FN(handler), ret, avalue);
     hpx_gas_unpin(p->target);
   }
@@ -330,14 +340,14 @@ int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_hand
   va_list vargs;
   va_start(vargs, id);
 
-  int begin = 0;
+  int start = 0;
   if (type == HPX_ACTION_PINNED) {
     nargs++;
-    begin = 1;
+    start = 1;
   }
 
   hpx_type_t *args = calloc(nargs, sizeof(args[0]));
-  for (int i = begin; i < nargs; ++i) {
+  for (int i = start; i < nargs; ++i) {
     args[i] = va_arg(vargs, hpx_type_t);
   }
   va_end(vargs);
