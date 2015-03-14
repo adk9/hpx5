@@ -44,7 +44,7 @@ static HPX_ACTION(_spawn2, hpx_addr_t *sync) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_libhpx_process, void *UNUSED) {
+static HPX_ACTION(process, void *UNUSED) {
   printf("Test hpx_lco_process\n");
 
   hpx_addr_t psync = hpx_lco_future_new(0);
@@ -60,5 +60,5 @@ static HPX_ACTION(test_libhpx_process, void *UNUSED) {
 }
 
 TEST_MAIN({
- ADD_TEST(test_libhpx_process);
+ ADD_TEST(process);
 });

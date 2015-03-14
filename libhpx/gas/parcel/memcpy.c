@@ -25,17 +25,14 @@
 #include "libhpx/parcel.h"
 #include "emulation.h"
 
-static HPX_PINNED(_memcpy_reply, void *data) {
-  char *local = hpx_thread_current_local_target();
-  dbg_assert(local);
+static HPX_PINNED(_memcpy_reply, char *local, void *data) {
   size_t bytes = hpx_thread_current_args_size();
   dbg_assert(bytes);
   memcpy(local, data, bytes);
   return HPX_SUCCESS;
 }
 
-static int _memcpy_request_handler(size_t size, hpx_addr_t to) {
-  char *local = hpx_thread_current_local_target();
+static int _memcpy_request_handler(char *local, size_t size, hpx_addr_t to) {
   hpx_call_cc(to, _memcpy_reply, NULL, NULL, local, size);
 }
 

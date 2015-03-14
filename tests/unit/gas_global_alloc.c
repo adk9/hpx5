@@ -24,8 +24,7 @@ typedef struct Domain {
   int maxcycles;
 } Domain;
 
-static int _initDomain_handler(int rank, int max, int n) {
-  Domain *ld = hpx_thread_current_local_target();
+static int _initDomain_handler(Domain *ld, int rank, int max, int n) {
   ld->rank = rank;
   ld->maxcycles = max;
   ld->nDoms = n;
@@ -35,7 +34,7 @@ static int _initDomain_handler(int rank, int max, int n) {
 HPX_ACTION_DEF(PINNED, _initDomain_handler, _initDomain, HPX_INT, HPX_INT, HPX_INT);
 
 // Test code -- for global memory allocation
-static HPX_ACTION(test_libhpx_gas_global_alloc, void *UNUSED) {
+static HPX_ACTION(gas_global_alloc, void *UNUSED) {
   // allocate the default argument structure on the stack
 
   int nDoms = 8;
@@ -76,19 +75,19 @@ static HPX_ACTION(test_libhpx_gas_global_alloc, void *UNUSED) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_libhpx_gas_global_alloc_block, void *UNUSED) {
+static HPX_ACTION(gas_global_alloc_block, void *UNUSED) {
   hpx_addr_t data = hpx_gas_global_alloc(1, 1024 * sizeof(char));
   hpx_gas_free(data, HPX_NULL);
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_libhpx_gas_global_calloc_block, void *UNUSED) {
+static HPX_ACTION(gas_global_calloc_block, void *UNUSED) {
   hpx_addr_t global = hpx_gas_global_calloc(1, 1024 *sizeof(char));
   hpx_gas_free(global, HPX_NULL);
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_libhpx_gas_global_mem_alloc, void *UNUSED) {
+static HPX_ACTION(gas_global_mem_alloc, void *UNUSED) {
   uint64_t size = 1024*1024*100;
   int blocks = HPX_LOCALITIES;
 
@@ -105,8 +104,8 @@ static HPX_ACTION(test_libhpx_gas_global_mem_alloc, void *UNUSED) {
 }
 
 TEST_MAIN({
- ADD_TEST(test_libhpx_gas_global_alloc);
- ADD_TEST(test_libhpx_gas_global_alloc_block);
- ADD_TEST(test_libhpx_gas_global_calloc_block);
- ADD_TEST(test_libhpx_gas_global_mem_alloc);
+ ADD_TEST(gas_global_alloc);
+ ADD_TEST(gas_global_alloc_block);
+ ADD_TEST(gas_global_calloc_block);
+ ADD_TEST(gas_global_mem_alloc);
 });

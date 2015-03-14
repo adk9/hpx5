@@ -23,12 +23,13 @@
         /// For newly allocated stacks, we have to "forge" a thread_transfer()
         /// frame that we can start up through a thread_transfer() to it. We
         /// know what the frame looks like, so we can manufacture one. The only
-        /// sneakiness in doign this is that we need to make sure that the stack
+        /// sneakiness in doing this is that we need to make sure that the stack
         /// pointer is aligned correctly, which is what the
         /// align_rsp_trampoline is for. See frame.c for details.
         ///
-        /// The stack pointer pointer may have some extra bits set in its least
-        /// significant bits, so we mask them out before trying to load from it.
+        /// The stack pointer pointer (%rdi) may have some extra bits set in its
+        /// least significant bits, so we mask them out before trying to load
+        /// from it. 
         ///
         /// @param %rdi A (mangled) pointer to the stack pointer to transfer to.
         /// @param %rsi The continuation to call after the sp exchange.

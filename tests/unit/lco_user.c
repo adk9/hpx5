@@ -44,7 +44,7 @@ static HPX_ACTION(_lco_set, int *i) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_libhpx_user_lco, void *UNUSED) {
+static HPX_ACTION(lco_user, void *UNUSED) {
   printf("Test user lco.\n");
   hpx_addr_t lco[2];
   lco[0] = hpx_lco_user_new(sizeof(bool),
@@ -62,5 +62,5 @@ static HPX_ACTION(test_libhpx_user_lco, void *UNUSED) {
 }
 
 TEST_MAIN({
- ADD_TEST(test_libhpx_user_lco);
+ ADD_TEST(lco_user);
 });
