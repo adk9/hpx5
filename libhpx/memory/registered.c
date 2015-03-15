@@ -14,10 +14,6 @@
 # include "config.h"
 #endif
 
-#ifndef HAVE_JEMALLOC_REGISTERED
-# error registered implementation should not be compiled without a network
-#endif
-
 /// @file  libhpx/memory/registered.c
 /// @brief An address space implementation that uses the jemalloc_registered
 ///        instance.
@@ -67,9 +63,9 @@ static bool _registered_chunk_dalloc(void *chunk, size_t n, unsigned arena) {
 
 /// Join the registered address space.
 static void _registered_join(void *common) {
-  common_join(common, &_primordial_arena,
-              (void*)&_registered_chunk_alloc,
-              (void*)&_registered_chunk_dalloc);
+  void *alloc = (void*)&_registered_chunk_alloc;
+  void *dalloc = (void*)&_registered_chunk_dalloc;
+  common_join(common, &_primordial_arena, alloc, dalloc);
 }
 
 address_space_t *
