@@ -17,22 +17,31 @@
 #include <libhpx/memory.h>
 
 /// This file declares a common interface for jemalloc address spaces.
+typedef struct {
+  address_space_t vtable;
+  void *xport;
+  memory_register_t pin;
+  memory_release_t unpin;
+  void *mmap_obj;
+  system_mmap_t mmap;
+  system_munmap_t munmap;
+  int (*mallctl)(const char *, void *, size_t *, void *, size_t);
+} common_allocator_t;
 
-
-void *common_chunk_alloc(void *addr, size_t size, size_t align, bool *zero,
-                         unsigned arena, void *mmap_obj, system_mmap_t mmap,
-                         void *xport, memory_register_t pin)
+void *common_chunk_alloc(void *common, void *addr, size_t size, size_t align,
+                         bool *zero, unsigned arena)
   HPX_INTERNAL;
 
-bool common_chunk_dalloc(void *chunk, size_t size, unsigned arena,
-                         void *mmap_obj, system_munmap_t munmap,
-                         void *xport, memory_release_t unpin)
+bool common_chunk_dalloc(void *common, void *chunk, size_t size, unsigned arena)
   HPX_INTERNAL;
 
-typedef int (*mallctl_t)(const char *, void *, size_t *, void *, size_t);
+void common_join(void *common, unsigned *arena, void *alloc, void *dalloc)
+  HPX_INTERNAL;
 
-void common_join(void *space, const void *class, unsigned *primordial_arena,
-                 mallctl_t mallctl, void *alloc, void *dalloc)
+void common_leave(void *common)
+  HPX_INTERNAL;
+
+void common_delete(void *common)
   HPX_INTERNAL;
 
 #endif

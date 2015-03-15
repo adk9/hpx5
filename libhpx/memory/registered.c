@@ -49,19 +49,6 @@
 ///     registrations when jemalloc says that we can.
 const char *libhpx_registered_malloc_conf = "lg_dirty_mult:-1";
 
-static address_space_t _registered_address_space_vtable;
-
-/// jemalloc requires static callbacks for chunk allocation. We need to know the
-/// transport-specific mechanism for registering and releasing memory, so we use
-/// these globals to store the callback. We'd prefer to be able to make the
-/// member variables of the registered address space class in the future.
-static            void *_xport = NULL;
-static memory_register_t  _pin = NULL;
-static memory_release_t _unpin = NULL;
-static         void *_mmap_obj = NULL;
-static system_mmap_t     _mmap = NULL;
-static system_munmap_t _munmap = NULL;
-
 /// Each thread needs to join and leave the address space. We remember the
 /// thread's primordial arena as an indication that it already joined. 0 is a
 /// valid arena, so we use UINT_MAX to indicate an unset handler.
@@ -70,19 +57,12 @@ static __thread unsigned _primordial_arena = UINT_MAX;
 /// The registered memory chunk allocation callback.
 static void *_registered_chunk_alloc(void *addr, size_t n, size_t align,
                                      bool *zero, unsigned arena) {
-  return common_chunk_alloc(addr, n, align, zero, arena, _mmap_obj, _mmap,
-                            _xport, _pin);
+  return common_chunk_alloc(addr, n, align, zero, arena, registered);
 }
 
 /// The registered memory chunk de-allocation callback.
 static bool _registered_chunk_dalloc(void *chunk, size_t n, unsigned arena) {
-  return common_chunk_dalloc(chunk, n, arena, _mmap_obj, _munmap, _xport,
-                             _unpin);
-}
-
-/// A no-op delete function, since we're not allocating an object.
-static void _registered_delete(void *space) {
-  dbg_assert(space == &_registered_address_space_vtable);
+  return common_chunk_dalloc(chunk, n, arena, registered);
 }
 
 /// Join the registered address space.
@@ -93,22 +73,6 @@ static void _registered_join(void *space) {
               (void*)&_registered_chunk_dalloc);
 }
 
-/// Leave the registered address space.
-static void _registered_leave(void *space) {
-  dbg_assert(space == &_registered_address_space_vtable);
-}
-
-/// The registered address space class.
-static address_space_t _registered_address_space_vtable = {
-  .delete = _registered_delete,
-  .join = _registered_join,
-  .leave = _registered_leave,
-  .free = libhpx_registered_free,
-  .malloc = libhpx_registered_malloc,
-  .calloc = libhpx_registered_calloc,
-  .memalign = libhpx_registered_memalign
-};
-
 address_space_t *
 address_space_new_jemalloc_registered(const struct config *UNUSED,
                                       void *xport,
@@ -117,19 +81,27 @@ address_space_new_jemalloc_registered(const struct config *UNUSED,
                                       void *mmap_obj,
                                       system_mmap_t mmap,
                                       system_munmap_t munmap) {
-  dbg_assert(!_xport || _xport == xport);
-  dbg_assert(!_pin || _pin == pin);
-  dbg_assert(!_unpin || _unpin == unpin);
-  dbg_assert(!_mmap_obj || _mmap_obj == mmap_obj);
-  dbg_assert(!_mmap || _mmap == mmap);
-  dbg_assert(!_munmap || _munmap == munmap);
+  // we cheat because we know that the registered manager is a singleton
+  if (registered) {
+    return registered;
+  }
 
-  _xport = xport;
-  _pin = pin;
-  _unpin = unpin;
-  _mmap_obj = mmap_obj;
-  _mmap = mmap;
-  _munmap = munmap;
+  common_allocator_t *allocator = malloc(sizeof(*allocator));
+  dbg_assert(allocator);
+  allocator->vtable.delete = common_delete;
+  allocator->vtable.join = _registered_join;
+  allocator->vtable.leave = common_leave;
+  allocator->vtable.free = libhpx_registered_free;
+  allocator->vtable.malloc = libhpx_registered_malloc;
+  allocator->vtable.calloc = libhpx_registered_calloc;
+  allocator->vtable.memalign = libhpx_registered_memalign;
 
-  return &_registered_address_space_vtable;
+  allocator->xport = xport;
+  allocator->pin = pin;
+  allocator->unpin = unpin;
+  allocator->mmap_obj = mmap_obj;
+  allocator->mmap = mmap;
+  allocator->munmap = munmap;
+
+  return &allocator->vtable;
 }
