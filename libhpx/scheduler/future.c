@@ -106,7 +106,7 @@ static void _future_reset(lco_t *lco) {
   lco_lock(&f->lco);
   dbg_assert_str(cvar_empty(&f->full),
                  "Reset on a future that has waiting threads.\n");
-  _trigger(f);
+  lco_reset_triggered(&f->lco);
   cvar_reset(&f->full);
   lco_unlock(&f->lco);
 }

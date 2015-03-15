@@ -107,6 +107,33 @@ static void _allreduce_set(lco_t *lco, int size, const void *from) {
    lco_unlock(lco);
 }
 
+static hpx_status_t _allreduce_attach(lco_t *lco, hpx_parcel_t *p) {
+  hpx_status_t status = HPX_SUCCESS;
+  lco_lock(lco);
+  _allreduce_t *r = (_allreduce_t *)lco;
+
+  // Pick attach to mean "set" for allreduce. We have to wait for reducing to 
+  // complete before sending the parcel.
+  if (r->phase != _reducing) {
+    status = cvar_attach(&r->wait, p);
+    goto unlock;
+  }
+
+  // If the allreduce has an error, then return that error without sending the
+  // parcel.
+  status = cvar_get_error(&r->wait);
+  if (status != HPX_SUCCESS) {
+    goto unlock;
+  }
+
+  // Go ahead and send this parcel eagerly.
+  hpx_parcel_send(p, HPX_NULL);
+   
+  unlock:
+    lco_unlock(lco);
+    return status;
+}
+
 
 /// Get the value of the reduction, will wait if the phase is reducing.
 static hpx_status_t _allreduce_get(lco_t *lco, int size, void *out) {
@@ -160,7 +187,7 @@ static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
     .on_fini     = _allreduce_fini,
     .on_error    = _allreduce_error,
     .on_set      = _allreduce_set,
-    .on_attach   = NULL,
+    .on_attach   = _allreduce_attach,
     .on_get      = _allreduce_get,
     .on_getref   = NULL,
     .on_release  = NULL,
