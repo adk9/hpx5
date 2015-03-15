@@ -15,7 +15,7 @@
 #endif
 
 #ifndef HAVE_JEMALLOC_REGISTERED
-# error registered implementation should not be compiled a network
+# error registered implementation should not be compiled without a network
 #endif
 
 /// @file  libhpx/memory/registered.c
