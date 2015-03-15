@@ -38,29 +38,35 @@ void system_get_stack(pthread_t thread, void **base, size_t *size)
 /// As opposed to mmap, this guarantees alignment. It will try and place the
 /// corresponding allocation at @p addr, but it won't try too hard.
 ///
+/// @param          obj User data to match the object oriented mmap interface.
 /// @param         addr A hint about where to try and place the allocation.
 /// @param         size The size in bytes of the allocation (must be 2^n).
 /// @param        align The alignment in bytes of the allocation (must be 2^n).
 ///
 /// @returns The allocated region.
-void *system_mmap(void *addr, size_t bytes, size_t align)
+void *system_mmap(void *obj, void *addr, size_t bytes, size_t align)
   HPX_INTERNAL;
+
+typedef void *(*system_mmap_t)(void *, void *, size_t, size_t);
 
 /// An abstract interface to mmap-like operations for huge pages.
 ///
 /// As opposed to mmap, this guarantees alignment. It will try and place the
 /// corresponding allocation at @p addr, but it won't try too hard.
 ///
+/// @param          obj User data to match the object oriented mmap interface.
 /// @param         addr A hint about where to try and place the allocation.
 /// @param         size The size in bytes of the allocation (must be 2^n).
 /// @param        align The alignment in bytes of the allocation (must be 2^n).
 ///
 /// @returns The allocated region.
-void *system_mmap_huge_pages(void *addr, size_t bytes, size_t align)
+void *system_mmap_huge_pages(void *obj, void *addr, size_t bytes, size_t align)
   HPX_INTERNAL;
 
 /// Unmap memory.
-void system_munmap(void *addr, size_t size)
+void system_munmap(void *obj, void *addr, size_t size)
   HPX_INTERNAL;
+
+typedef void (*system_munmap_t)(void *, void *, size_t);
 
 #endif // LIBHPX_SYSTEM_H
