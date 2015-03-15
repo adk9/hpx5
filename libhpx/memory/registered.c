@@ -36,16 +36,7 @@
 /// smaller pages in this context.
 #include <jemalloc/jemalloc_registered.h>
 #include <libhpx/memory.h>
-
-/// The mallctl interface is a bit complicated so we use this function to deal
-/// with it.
-#define call_mallctl(str, ...)                              \
-  do {                                                      \
-    int e = libhpx_registered_mallctl(str, __VA_ARGS__);    \
-    if (e) {                                                \
-      dbg_error("failed registered mallctl(%s).\n", str);   \
-    }                                                       \
-  } while (0)
+#include "common.h"
 
 /// Transports that actually register memory can't handle having page mappings
 /// dropped. Currently, jemalloc doesn't expose this on a per-arena basis, nor
@@ -76,35 +67,14 @@ static munmap_t        _munmap = NULL;
 static __thread unsigned _primordial_arena = UINT_MAX;
 
 /// The registered memory chunk allocation callback.
-static void *_registered_chunk_alloc(void *addr, size_t size, size_t align,
+static void *_registered_chunk_alloc(void *addr, size_t n, size_t align,
                                      bool *zero, unsigned arena) {
-  dbg_assert(!addr || !((uintptr_t)addr & (align -1)));
-  void *chunk = _mmap(addr, size, align);
-
-  // If we found nothing, anywhere in memory, then we have a problem.
-  if (!chunk) {
-    dbg_error("failed to mmap %zu bytes anywhere in memory\n", size);
-  }
-
-  // Our mmap interface guarantees alignment, so just go ahead and register it
-  // and return.
-  int e = _pin(_xport, chunk, size, NULL);
-  dbg_check(e);
-  if (zero && *zero) {
-    memset(chunk, 0, size);
-  }
-  else {
-    *zero = false;
-  }
-  return chunk;
+  return common_chunk_alloc(addr, n, align, zero, arena, _xport, _mmap, _pin);
 }
 
 /// The registered memory chunk de-allocation callback.
-static bool _registered_chunk_dalloc(void *chunk, size_t size, unsigned arena) {
-  int e = _unpin(_xport, chunk, size);
-  dbg_check(e, "\n");
-  _munmap(chunk, size);
-  return true;
+static bool _registered_chunk_dalloc(void *chunk, size_t n, unsigned arena) {
+  return common_chunk_dalloc(chunk, n, arena, _xport, _munmap, _unpin);
 }
 
 /// A no-op delete function, since we're not allocating an object.
@@ -114,46 +84,10 @@ static void _registered_delete(void *space) {
 
 /// Join the registered address space.
 static void _registered_join(void *space) {
-  // We know that the registered space is a singleton object, so we make sure
-  // it's been allocated and that it's the right "class".
-  dbg_assert(space == &_registered_address_space_vtable);
-
-  // If we've (the current pthread) already joined this address space then we
-  // will have stored our primordial arena.
-  if (_primordial_arena != UINT_MAX) {
-    return;
-  }
-
-  // Verify that the user hasn't overridden the lg_dirty_mult flags.
-  ssize_t opt = 0;
-  size_t sz = sizeof(opt);
-  call_mallctl("opt.lg_dirty_mult", &opt, &sz, NULL, 0);
-  if (opt != -1) {
-    dbg_error("jemalloc instance expects MALLOC_CONF=lg_dirty_mult:-1");
-  }
-
-  // Create an arena that uses the right allocators.
-  unsigned arena = 0;
-  sz = sizeof(arena);
-  call_mallctl("arenas.extend", &arena, &sz, NULL, 0);
-
-  char path[128];
-  void *alloc = (void*)&_registered_chunk_alloc;
-  snprintf(path, sizeof(path), "arena.%u.chunk.alloc", arena);
-  call_mallctl(path, NULL, NULL, &alloc, sizeof(alloc));
-
-  void *dalloc = (void*)&_registered_chunk_dalloc;
-  snprintf(path, sizeof(path), "arena.%u.chunk.dalloc", arena);
-  call_mallctl(path, NULL, NULL, &dalloc, sizeof(dalloc));
-
-  // Enable and flush the cache.
-  bool enabled = true;
-  call_mallctl("thread.tcache.enabled", NULL, NULL, &enabled, sizeof(enabled));
-  call_mallctl("thread.tcache.flush", NULL, NULL, NULL, 0);
-
-  // And replace the current arena.
-  sz = sizeof(_primordial_arena);
-  call_mallctl("thread.arena", &_primordial_arena, &sz, &arena, sizeof(arena));
+  common_join(space, &_registered_address_space_vtable, &_primordial_arena,
+              libhpx_registered_mallctl,
+              (void*)&_registered_chunk_alloc,
+              (void*)&_registered_chunk_dalloc);
 }
 
 /// Leave the registered address space.
