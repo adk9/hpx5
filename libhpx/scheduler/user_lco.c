@@ -209,7 +209,7 @@ static void _user_lco_init(_user_lco_t *u, size_t size, hpx_monoid_id_t id,
 
 hpx_addr_t hpx_lco_user_new(size_t size, hpx_monoid_id_t id, hpx_monoid_op_t op,
                             hpx_predicate_t predicate) {
-  _user_lco_t *u = global_malloc(sizeof(*u));
+  _user_lco_t *u = global_calloc(1, sizeof(*u));
   assert(u);
   _user_lco_init(u, size, id, op, predicate);
   return lva_to_gva(u);
