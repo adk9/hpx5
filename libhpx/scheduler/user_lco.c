@@ -30,11 +30,17 @@
 typedef struct {
   lco_t                 lco;
   cvar_t               cvar;
+  size_t               size;
   hpx_monoid_id_t        id;
   hpx_monoid_op_t        op;
   hpx_predicate_t predicate;
   void                 *buf;
 } _user_lco_t;
+
+
+// Forward declaration
+static void _user_lco_init(_user_lco_t *u, size_t size, hpx_monoid_id_t id,
+                           hpx_monoid_op_t op, hpx_predicate_t predicate);
 
 static bool _trigger(_user_lco_t *u) {
   if (lco_get_triggered(&u->lco))
@@ -75,10 +81,11 @@ static void _user_lco_error(lco_t *lco, hpx_status_t code) {
 static void _user_lco_reset(lco_t *lco) {
   _user_lco_t *u = (_user_lco_t *)lco;
   lco_lock(lco);
+  cvar_clear_error(&u->cvar);
   dbg_assert_str(cvar_empty(&u->cvar),
                  "Reset on an LCO that has waiting threads.\n");
   lco_reset_triggered(&u->lco);
-  cvar_reset(&u->cvar);
+  _user_lco_init(u, u->size, u->id, u->op, u->predicate);
   lco_unlock(lco);
 }
 
@@ -88,7 +95,7 @@ static void _user_lco_set(lco_t *lco, int size, const void *from) {
   _user_lco_t *u = (_user_lco_t *)lco;
 
   if (lco_get_triggered(&u->lco)) {
-    dbg_error("cannot set an already set user_lco\n");
+    dbg_error("cannot set an already set user_lco.\n");
     goto unlock;
   }
 
@@ -183,17 +190,20 @@ static void _user_lco_init(_user_lco_t *u, size_t size, hpx_monoid_id_t id,
 
   lco_init(&u->lco, &vtable);
   cvar_reset(&u->cvar);
+  u->size = size;
   u->op = op;
   u->id = id;
   u->predicate = predicate;
-  u->buf = NULL;
+  if (u->buf) {
+    free(u->buf);
+  }
 
-  if (size) {
-    u->buf = malloc(size);
+  if (u->size) {
+    u->buf = malloc(u->size);
     assert(u->buf);
   }
 
-  u->id(u->buf, size);
+  u->id(u->buf, u->size);
 }
 /// @}
 
