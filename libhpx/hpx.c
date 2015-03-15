@@ -38,7 +38,7 @@
 #include <libhpx/system.h>
 #include "network/probe.h"
 
-static hpx_addr_t _hpx_143 = HPX_NULL;
+static hpx_addr_t _hpx_143 = 0;
 static HPX_ACTION(_hpx_143_fix, void *UNUSED) {
   _hpx_143 = hpx_gas_global_alloc(sizeof(void*), HPX_LOCALITIES);
   return LIBHPX_OK;
