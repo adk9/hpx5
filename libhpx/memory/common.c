@@ -18,10 +18,10 @@
 #include "common.h"
 
 void *common_chunk_alloc(void *addr, size_t size, size_t align, bool *zero,
-                         unsigned arena, void *xport, mmap_t mmap,
-                         memory_register_t pin) {
+                         unsigned arena, void *mmap_obj, system_mmap_t mmap,
+                         void *xport, memory_register_t pin) {
   dbg_assert(!addr || !((uintptr_t)addr & (align -1)));
-  void *chunk = mmap(addr, size, align);
+  void *chunk = mmap(mmap_obj, addr, size, align);
 
   // If we found nothing, anywhere in memory, then we have a problem.
   if (!chunk) {
@@ -41,11 +41,12 @@ void *common_chunk_alloc(void *addr, size_t size, size_t align, bool *zero,
   return chunk;
 }
 
-bool common_chunk_dalloc(void *chunk, size_t size, unsigned arena, void *xport,
-                         munmap_t munmap, memory_release_t unpin) {
+bool common_chunk_dalloc(void *chunk, size_t size, unsigned arena,
+                         void *mmap_obj, system_munmap_t munmap,
+                         void *xport, memory_release_t unpin) {
   int e = unpin(xport, chunk, size);
   dbg_check(e, "\n");
-  munmap(chunk, size);
+  munmap(mmap_obj, chunk, size);
   return true;
 }
 

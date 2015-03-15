@@ -20,12 +20,13 @@
 
 
 void *common_chunk_alloc(void *addr, size_t size, size_t align, bool *zero,
-                         unsigned arena, void *xport, mmap_t mmap,
-                         memory_register_t pin)
+                         unsigned arena, void *mmap_obj, system_mmap_t mmap,
+                         void *xport, memory_register_t pin)
   HPX_INTERNAL;
 
-bool common_chunk_dalloc(void *chunk, size_t size, unsigned arena, void *xport,
-                         munmap_t munmap, memory_release_t unpin)
+bool common_chunk_dalloc(void *chunk, size_t size, unsigned arena,
+                         void *mmap_obj, system_munmap_t munmap,
+                         void *xport, memory_release_t unpin)
   HPX_INTERNAL;
 
 typedef int (*mallctl_t)(const char *, void *, size_t *, void *, size_t);
