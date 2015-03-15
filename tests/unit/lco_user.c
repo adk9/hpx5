@@ -37,27 +37,40 @@ static bool _lco_predicate(bool *val, const size_t size) {
   return (*val);
 }
 
+static HPX_ACTION(_lco_get, void *UNUSED) {
+  hpx_addr_t addr = hpx_thread_current_target();
+  int e = hpx_lco_wait(addr);
+  hpx_lco_reset_sync(addr);
+  return HPX_SUCCESS;
+}
+
 static HPX_ACTION(_lco_set, int *i) {
   hpx_addr_t addr = hpx_thread_current_target();
-  int val = (*i == 15) ? 1 : (*i == (rand() % 15));
+  int val = (*i == 15) ? 1 : (0 == (rand() % 5));
   hpx_lco_set(addr, sizeof(val), &val, HPX_NULL, HPX_NULL);
+  if (val == 0) {
+    hpx_lco_error_sync(addr, HPX_LCO_ERROR);
+  }
   return HPX_SUCCESS;
 }
 
 static HPX_ACTION(lco_user, void *UNUSED) {
   printf("Test user lco.\n");
-  hpx_addr_t lco[2];
-  lco[0] = hpx_lco_user_new(sizeof(bool),
-                            (hpx_monoid_id_t)_lco_init,
-                            (hpx_monoid_op_t)_lco_op,
-                            (hpx_predicate_t)_lco_predicate);
-  lco[1] = hpx_lco_and_new(16);
+  srand(time(NULL));
+  hpx_addr_t lco;
+  lco = hpx_lco_user_new(sizeof(bool),
+                         (hpx_monoid_id_t)_lco_init,
+                         (hpx_monoid_op_t)_lco_op,
+                         (hpx_predicate_t)_lco_predicate);
   for (int i = 0; i < 16; ++i) {
-    hpx_call(lco[0], _lco_set, lco[1], &i, sizeof(i));
+    hpx_addr_t and = hpx_lco_and_new(2);
+    hpx_call(lco, _lco_set, and, &i, sizeof(i));
+    hpx_call(lco, _lco_get, and, NULL, 0);
+    hpx_lco_wait(and);
+    hpx_lco_delete(and, HPX_NULL);
+    hpx_lco_reset_sync(lco);
   }
-  hpx_lco_wait(lco[1]);
-  hpx_lco_delete(lco[0], HPX_NULL);
-  hpx_lco_delete(lco[1], HPX_NULL);
+  hpx_lco_delete(lco, HPX_NULL);
   return HPX_SUCCESS;
 }
 
