@@ -142,6 +142,32 @@ static void _alltoall_reset(lco_t *lco) {
   lco_unlock(&g->lco);
 }
 
+static hpx_status_t _alltoall_attach(lco_t *lco, hpx_parcel_t *p) {
+  hpx_status_t status = HPX_SUCCESS;
+  lco_lock(lco);
+  _alltoall_t *g = (_alltoall_t *)lco;
+
+  // We have to wait for gathering to complete before sending the parcel.
+  if (g->phase != _gathering) {
+    status = cvar_attach(&g->wait, p);
+    goto unlock;
+  }
+
+  // If the alltoall has an error, then return that error without sending the
+  // parcel.
+  status = cvar_get_error(&g->wait);
+  if (status != HPX_SUCCESS) {
+    goto unlock;
+  }
+  
+  // Go ahead and send this parcel eagerly.
+  hpx_parcel_send(p, HPX_NULL);
+
+  unlock:
+    lco_unlock(lco);
+    return status;
+}
+
 /// Get the value of the gathering, will wait if the phase is gathering.
 static hpx_status_t _alltoall_getid(_alltoall_t *g, unsigned offset, int size,
                                     void *out) {
@@ -341,7 +367,7 @@ static void _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
     .on_getref   = NULL,
     .on_release  = NULL,
     .on_wait     = _alltoall_wait,
-    .on_attach   = NULL,
+    .on_attach   = _alltoall_attach,
     .on_reset    = _alltoall_reset,
     .on_size     = _alltoall_size
   };
