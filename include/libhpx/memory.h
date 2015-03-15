@@ -64,7 +64,13 @@ address_space_t *address_space_new_jemalloc_registered(const struct config *cfg,
                                                        system_munmap_t munmap)
   HPX_INTERNAL;
 
-address_space_t *address_space_new_jemalloc_global(const struct config *cfg)
+address_space_t *address_space_new_jemalloc_global(const struct config *cfg,
+                                                   void *xport,
+                                                   memory_register_t pin,
+                                                   memory_release_t unpin,
+                                                   void *mmap_obj,
+                                                   system_mmap_t mmap,
+                                                   system_munmap_t munmap)
   HPX_INTERNAL;
 
 extern address_space_t *local;
