@@ -293,6 +293,13 @@ void hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync) {
   dbg_check(e, "Could not forward lco_error\n");
 }
 
+void hpx_lco_error_sync(hpx_addr_t addr, hpx_status_t code) {
+  hpx_addr_t sync = hpx_lco_future_new(0);
+  hpx_lco_error(addr, code, sync);
+  hpx_lco_wait(sync);
+  hpx_lco_delete(sync, HPX_NULL);
+}
+
 void hpx_lco_reset(hpx_addr_t addr, hpx_addr_t rsync) {
   if (addr == HPX_NULL) {
     return;
@@ -311,19 +318,10 @@ void hpx_lco_reset(hpx_addr_t addr, hpx_addr_t rsync) {
 }
 
 void hpx_lco_reset_sync(hpx_addr_t addr) {
-  if (addr == HPX_NULL) {
-    return;
-  }
-
-  lco_t *lco = NULL;
-  if (hpx_gas_try_pin(addr, (void**)&lco)) {
-    _reset(lco);
-    hpx_gas_unpin(addr);
-    return;
-  }
-
-  int e = hpx_call_sync(addr, hpx_lco_reset_action, NULL, 0, NULL, 0);
-  dbg_check(e, "Could not forward to lco_reset_sync\n");
+  hpx_addr_t sync = hpx_lco_future_new(0);
+  hpx_lco_reset(addr, sync);
+  hpx_lco_wait(sync);
+  hpx_lco_delete(sync, HPX_NULL);
 }
 
 void hpx_lco_set(hpx_addr_t target, int size, const void *value,
