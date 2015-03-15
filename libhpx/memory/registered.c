@@ -57,18 +57,17 @@ static __thread unsigned _primordial_arena = UINT_MAX;
 /// The registered memory chunk allocation callback.
 static void *_registered_chunk_alloc(void *addr, size_t n, size_t align,
                                      bool *zero, unsigned arena) {
-  return common_chunk_alloc(addr, n, align, zero, arena, registered);
+  return common_chunk_alloc(registered, addr, n, align, zero, arena);
 }
 
 /// The registered memory chunk de-allocation callback.
 static bool _registered_chunk_dalloc(void *chunk, size_t n, unsigned arena) {
-  return common_chunk_dalloc(chunk, n, arena, registered);
+  return common_chunk_dalloc(registered, chunk, n, arena);
 }
 
 /// Join the registered address space.
-static void _registered_join(void *space) {
-  common_join(space, &_registered_address_space_vtable, &_primordial_arena,
-              libhpx_registered_mallctl,
+static void _registered_join(void *common) {
+  common_join(common, &_primordial_arena,
               (void*)&_registered_chunk_alloc,
               (void*)&_registered_chunk_dalloc);
 }
@@ -102,6 +101,7 @@ address_space_new_jemalloc_registered(const struct config *UNUSED,
   allocator->mmap_obj = mmap_obj;
   allocator->mmap = mmap;
   allocator->munmap = munmap;
+  allocator->mallctl = libhpx_registered_mallctl;
 
   return &allocator->vtable;
 }
