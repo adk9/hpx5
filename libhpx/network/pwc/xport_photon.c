@@ -183,6 +183,7 @@ pwc_xport_t *pwc_xport_new_photon(const config_t *cfg, boot_t *boot) {
                                                      photon,
                                                      _photon_pin,
                                                      _photon_unpin,
+                                                     NULL,
                                                      system_mmap_huge_pages,
                                                      system_munmap);
   global = address_space_new_jemalloc_global(cfg);

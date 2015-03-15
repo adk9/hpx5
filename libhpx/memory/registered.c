@@ -58,8 +58,9 @@ static address_space_t _registered_address_space_vtable;
 static            void *_xport = NULL;
 static memory_register_t  _pin = NULL;
 static memory_release_t _unpin = NULL;
-static mmap_t            _mmap = NULL;
-static munmap_t        _munmap = NULL;
+static         void *_mmap_obj = NULL;
+static system_mmap_t     _mmap = NULL;
+static system_munmap_t _munmap = NULL;
 
 /// Each thread needs to join and leave the address space. We remember the
 /// thread's primordial arena as an indication that it already joined. 0 is a
@@ -69,12 +70,14 @@ static __thread unsigned _primordial_arena = UINT_MAX;
 /// The registered memory chunk allocation callback.
 static void *_registered_chunk_alloc(void *addr, size_t n, size_t align,
                                      bool *zero, unsigned arena) {
-  return common_chunk_alloc(addr, n, align, zero, arena, _xport, _mmap, _pin);
+  return common_chunk_alloc(addr, n, align, zero, arena, _mmap_obj, _mmap,
+                            _xport, _pin);
 }
 
 /// The registered memory chunk de-allocation callback.
 static bool _registered_chunk_dalloc(void *chunk, size_t n, unsigned arena) {
-  return common_chunk_dalloc(chunk, n, arena, _xport, _munmap, _unpin);
+  return common_chunk_dalloc(chunk, n, arena, _mmap_obj, _munmap, _xport,
+                             _unpin);
 }
 
 /// A no-op delete function, since we're not allocating an object.
@@ -111,17 +114,20 @@ address_space_new_jemalloc_registered(const struct config *UNUSED,
                                       void *xport,
                                       memory_register_t pin,
                                       memory_release_t unpin,
-                                      mmap_t mmap,
-                                      munmap_t munmap) {
+                                      void *mmap_obj,
+                                      system_mmap_t mmap,
+                                      system_munmap_t munmap) {
   dbg_assert(!_xport || _xport == xport);
   dbg_assert(!_pin || _pin == pin);
   dbg_assert(!_unpin || _unpin == unpin);
+  dbg_assert(!_mmap_obj || _mmap_obj == mmap_obj);
   dbg_assert(!_mmap || _mmap == mmap);
   dbg_assert(!_munmap || _munmap == munmap);
 
   _xport = xport;
   _pin = pin;
   _unpin = unpin;
+  _mmap_obj = mmap_obj;
   _mmap = mmap;
   _munmap = munmap;
 
