@@ -67,6 +67,7 @@ void hpx_lco_delete(hpx_addr_t lco, hpx_addr_t rsync);
 /// @param  code a user-defined error code
 /// @param rsync an LCO to signal remote completion
 void hpx_lco_error(hpx_addr_t lco, hpx_status_t code, hpx_addr_t rsync);
+void hpx_lco_error_sync(hpx_addr_t lco, hpx_status_t code);
 
 /// Reset an LCO.
 ///
