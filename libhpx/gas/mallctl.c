@@ -21,8 +21,6 @@
 #include <libhpx/libhpx.h>
 #include <jemalloc/jemalloc_global.h>
 
-const char * libhpx_global_malloc_conf = "lg_dirty_mult:-1";
-
 #define call_mallctl(str, ...)                          \
   do {                                                  \
     int e = libhpx_global_mallctl(str, __VA_ARGS__);    \
