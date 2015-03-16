@@ -20,6 +20,7 @@
 #include <libsync/locks.h>
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
+#include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/memory.h>
 #include <libhpx/padding.h>
