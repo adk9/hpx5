@@ -63,8 +63,11 @@ static bool _registered_chunk_dalloc(void *chunk, size_t n, unsigned arena) {
 
 /// Join the registered address space.
 static void _registered_join(void *common) {
+  // POSIX says this is okay
+  HPX_PUSH_IGNORE(-Wpedantic);
   void *alloc = (void*)&_registered_chunk_alloc;
   void *dalloc = (void*)&_registered_chunk_dalloc;
+  HPX_POP_IGNORE;
   common_join(common, &_primordial_arena, alloc, dalloc);
 }
 

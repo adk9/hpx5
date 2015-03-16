@@ -58,8 +58,11 @@ static bool _global_chunk_dalloc(void *chunk, size_t n, unsigned arena) {
 
 /// Join the global address space.
 static void _global_join(void *common) {
-  void *alloc = (void*)&_global_chunk_alloc;
-  void *dalloc = (void*)&_global_chunk_dalloc;
+  // POSIX says this is okay
+  HPX_PUSH_IGNORE(-Wpedantic);
+  void* alloc = (void*)&_global_chunk_alloc;
+  void* dalloc = (void*)&_global_chunk_dalloc;
+  HPX_POP_IGNORE
   common_join(common, &_primordial_arena, alloc, dalloc);
 }
 
