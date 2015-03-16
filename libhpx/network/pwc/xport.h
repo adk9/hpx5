@@ -16,6 +16,7 @@
 #include <libhpx/config.h>
 
 struct boot;
+struct gas;
 
 typedef struct pwc_xport {
   hpx_transport_t type;
