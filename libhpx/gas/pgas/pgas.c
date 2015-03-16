@@ -226,6 +226,7 @@ static int _pgas_memput(hpx_addr_t to, const void *from, size_t n,
     return HPX_SUCCESS;
   }
 
+  hpx_action_t lop = lsync ? lco_set : HPX_ACTION_NULL;
   if (pgas_gpa_to_rank(to) == here->rank) {
     void *lto = pgas_gpa_to_lva(to);
     memcpy(lto, from, n);
@@ -234,11 +235,11 @@ static int _pgas_memput(hpx_addr_t to, const void *from, size_t n,
     return HPX_SUCCESS;
   }
   else if (rsync) {
-    return network_pwc(here->network, to, from, n, lco_set, lsync, memput_rsync,
-                       rsync);
+    return network_pwc(here->network, to, from, n, lop, lsync,
+                       memput_rsync, rsync);
   }
   else {
-    return network_put(here->network, to, from, n, lco_set, lsync);
+    return network_put(here->network, to, from, n, lop, lsync);
   }
 }
 
