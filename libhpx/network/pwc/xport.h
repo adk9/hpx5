@@ -20,7 +20,7 @@ struct gas;
 
 typedef struct {
   int             rank;
-  int            flags;
+  int   UNUSED_PADDING;
   size_t             n;
   void           *dest;
   const void *dest_key;
@@ -40,8 +40,7 @@ typedef struct pwc_xport {
   int    (*unpin)(void *xport, void *base, size_t n);
   void   (*clear)(void *key);
   int    (*pwc)(xport_op_t *op);
-  int    (*gwc)(xport_op_t *op);
-
+  int    (*get)(xport_op_t *op);
   int    (*test)(uint64_t *op, int *remaining);
   int    (*probe)(uint64_t *op, int *remaining, int rank);
 } pwc_xport_t;

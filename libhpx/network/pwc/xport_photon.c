@@ -107,8 +107,8 @@ static int _photon_unpin(void *xport, void *base, size_t n) {
 }
 
 static int _photon_pwc(xport_op_t *op) {
-  op->flags |= ((op->lop) ? 0 : PHOTON_REQ_PWC_NO_LCE);
-  op->flags |= ((op->rop) ? 0 : PHOTON_REQ_PWC_NO_RCE);
+  int flags = ((op->lop) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
+              ((op->rop) ? 0 : PHOTON_REQ_PWC_NO_RCE);
 
   struct photon_buffer_t rbuf = {
     .addr = (uintptr_t)op->dest,
@@ -125,7 +125,7 @@ static int _photon_pwc(xport_op_t *op) {
   int e = photon_put_with_completion(op->rank,
                                      &lbuf,
                                      &rbuf,
-                                     op->flags);
+                                     flags);
   if (PHOTON_OK == e) {
     return LIBHPX_OK;
   }
@@ -155,7 +155,7 @@ static int _photon_gwc(xport_op_t *op) {
   int e = photon_get_with_completion(op->rank,
                                      &lbuf,
                                      &rbuf,
-                                     op->flags & PHOTON_REQ_PWC_NO_RCE);
+                                     PHOTON_REQ_PWC_NO_RCE);
   if (PHOTON_OK == e) {
     return LIBHPX_OK;
   }
@@ -199,7 +199,7 @@ pwc_xport_t *pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas)
   photon->vtable.pin = _photon_pin;
   photon->vtable.unpin = _photon_unpin;
   photon->vtable.pwc = _photon_pwc;
-  photon->vtable.gwc = _photon_gwc;
+  photon->vtable.get = _photon_get;
   photon->vtable.test = _photon_test;
   photon->vtable.probe = _photon_probe;
 
