@@ -193,7 +193,6 @@ static int _pwc_command(void *network, hpx_addr_t locality,
 
   xport_op_t op = {
     .rank = rank,
-    .flags = 0,
     .n = 0,
     .dest = NULL,
     .dest_key = NULL,
@@ -220,7 +219,6 @@ static int _pwc_pwc(void *network,
 
   xport_op_t op = {
     .rank = rank,
-    .flags = 0,
     .n = n,
     .dest = NULL,
     .dest_key = NULL,
@@ -253,7 +251,6 @@ static int _pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
   pwc_network_t *pwc = network;
   xport_op_t op = {
     .rank = gas_owner_of(here->gas, from),
-    .flags = 0,
     .n = n,
     .dest = lva,
     .dest_key = NULL,

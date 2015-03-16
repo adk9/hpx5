@@ -141,7 +141,6 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   peer_t *peer = tx->peer;
   xport_op_t op = {
     .rank = peer->rank,
-    .flags = 0,
     .n = n,
     .dest = NULL,
     .dest_key = NULL,

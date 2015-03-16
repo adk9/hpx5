@@ -42,7 +42,6 @@ int peer_pwc(xport_op_t *op, peer_t *peer, size_t roff, segid_t segment_id) {
 int peer_put_command(peer_t *p, command_t rsync) {
   xport_op_t op = {
     .rank = p->rank,
-    .flags = 0,
     .n = 0,
     .dest = NULL,
     .dest_key = NULL,
@@ -62,7 +61,7 @@ int peer_get(xport_op_t *op, peer_t *peer, size_t offset, segid_t segid) {
   segment_t *segment = &peer->segments[segid];
   op->src = segment_offset_to_rva(segment, offset);
   op->src_key = segment->key;
-  return peer->xport->gwc(op);
+  return peer->xport->get(op);
 }
 
 /// This local action just wraps the hpx_lco_set operation in an action that can
@@ -103,7 +102,6 @@ static int _get_parcel_handler(size_t bytes, hpx_addr_t from) {
 
   xport_op_t op = {
     .rank = peer->rank,
-    .flags = 0,
     .n = pwc_network_size(p),
     .dest = pwc_network_offset(p),
     .dest_key = NULL,

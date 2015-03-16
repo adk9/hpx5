@@ -59,7 +59,6 @@ static int _start_get_rx_min(send_buffer_t *sends) {
   peer_t *p = sends->tx->peer;
   xport_op_t op = {
     .rank = p->rank,
-    .flags = 0,
     .n = sizeof(sends->tx->min),
     .dest = &sends->tx->min,
     .dest_key = NULL,
