@@ -32,25 +32,26 @@ void peer_fini(peer_t *peer) {
   eager_buffer_fini(&peer->rx);
 }
 
-int peer_pwc(peer_t *peer, size_t roff, const void *lva, size_t n,
-                           command_t lsync, command_t rsync, segid_t segid) {
-  segment_t *segment = &peer->segments[segid];
-  xport_op_t op = {
-    .rank = peer->rank,
-    .flags = 0,
-    .n = n,
-    .dest = segment_offset_to_rva(segment, roff),
-    .dest_key = segment->key,
-    .src = lva,
-    .src_key = NULL,
-    .lop = lsync,
-    .rop = rsync
-  };
-  return peer->xport->pwc(&op);
+int peer_pwc(xport_op_t *op, peer_t *peer, size_t roff, segid_t segment_id) {
+  segment_t *segment = &peer->segments[segment_id];
+  op->dest = segment_offset_to_rva(segment, roff);
+  op->dest_key =segment->key;
+  return peer->xport->pwc(op);
 }
 
 int peer_put_command(peer_t *p, command_t rsync) {
-  return peer_pwc(p, 0, NULL, 0, 0, rsync, SEGMENT_NULL);
+  xport_op_t op = {
+    .rank = p->rank,
+    .flags = 0,
+    .n = 0,
+    .dest = NULL,
+    .dest_key = NULL,
+    .src = NULL,
+    .src_key = NULL,
+    .lop = 0,
+    .rop = rsync
+  };
+  return peer_pwc(&op, p, 0, SEGMENT_NULL);
 }
 
 int peer_send(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync) {
