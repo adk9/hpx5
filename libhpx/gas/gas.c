@@ -17,6 +17,8 @@
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
+#include "smp/smp.h"
+#include "pgas/pgas.h"
 
 gas_t *gas_new(const config_t *cfg, struct boot *boot) {
   hpx_gas_t type = cfg->gas;

@@ -15,6 +15,7 @@
 
 #include <hpx/hpx.h>
 #include <libhpx/config.h>
+#include <libhpx/system.h>
 
 /// Forward declarations.
 /// @{
@@ -28,9 +29,6 @@ typedef struct gas {
   // Initialization
   void (*delete)(struct gas *gas)
     HPX_NON_NULL(1);
-
-  int (*join)(void);
-  void (*leave)(void);
 
   bool (*is_global)(struct gas *gas, void *addr)
     HPX_NON_NULL(1);
@@ -69,13 +67,11 @@ typedef struct gas {
   // network operation
   uint32_t (*owner_of)(hpx_addr_t gpa);
   uint64_t (*offset_of)(hpx_addr_t gpa);
+
+  // quick hack for the global allocator
+  system_mmap_t mmap;
+  system_munmap_t munmap;
 } gas_t;
-
-gas_t *gas_smp_new(void)
-  HPX_INTERNAL;
-
-gas_t *gas_pgas_new(const config_t *cfg, struct boot *boot)
-  HPX_INTERNAL HPX_NON_NULL(1,2);
 
 gas_t *gas_new(const config_t *cfg, struct boot *boot)
   HPX_INTERNAL HPX_NON_NULL(1,2);
@@ -83,16 +79,6 @@ gas_t *gas_new(const config_t *cfg, struct boot *boot)
 inline static void gas_delete(gas_t *gas) {
   assert(gas && gas->delete);
   gas->delete(gas);
-}
-
-inline static int gas_join(gas_t *gas) {
-  assert(gas && gas->join);
-  return gas->join();
-}
-
-inline static void gas_leave(gas_t *gas) {
-  assert(gas && gas->leave);
-  gas->leave();
 }
 
 inline static uint32_t gas_owner_of(gas_t *gas, hpx_addr_t addr) {
@@ -125,5 +111,14 @@ inline static hpx_action_t gas_extract(gas_t *gas, hpx_addr_t addr, uint32_t loc
   return gas->extract(addr, locality);
 }
 
+static inline void *gas_mmap(void *obj, void *addr, size_t bytes, size_t align) {
+  gas_t *gas = obj;
+  return gas->mmap(obj, addr, bytes, align);
+}
+
+static inline void gas_munmap(void *obj, void *addr, size_t size) {
+  gas_t *gas = obj;
+  gas->munmap(obj, addr, size);
+}
 
 #endif// LIBHPX_GAS_H

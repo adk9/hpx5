@@ -54,10 +54,10 @@ static void *_mmap_aligned(void *addr, size_t n, int prot, int flags, int fd,
 
   // return the overallocated pages back to the OS
   if (prefix) {
-    system_munmap(buffer, prefix);
+    system_munmap(NULL, buffer, prefix);
   }
   if (suffix) {
-    system_munmap(buffer + prefix + n, suffix);
+    system_munmap(NULL, buffer + prefix + n, suffix);
   }
 
   // and return the correctly aligned range
@@ -89,19 +89,19 @@ static void *_mmap_lucky(void *addr, size_t n, int prot, int flags, int fd,
     return buffer;
   }
 
-  system_munmap(buffer, n);
+  system_munmap(NULL, buffer, n);
   return _mmap_aligned(addr, n, prot, flags, fd, off, align);
 }
 
-void *system_mmap(void *addr, size_t n, size_t align) {
+void *system_mmap(void *UNUSED, void *addr, size_t n, size_t align) {
   static const  int prot = PROT_READ | PROT_WRITE;
   static const int flags = MAP_ANONYMOUS | MAP_PRIVATE;
   return _mmap_lucky(addr, n, prot, flags, -1, 0, align);
 }
 
-void *system_mmap_huge_pages(void *addr, size_t n, size_t align) {
+void *system_mmap_huge_pages(void *UNUSED, void *addr, size_t n, size_t align) {
 #ifndef HAVE_HUGETLBFS
-  return system_mmap(addr, n, align);
+  return system_mmap(UNUSED, addr, n, align);
 #else
   static const int  prot = PROT_READ | PROT_WRITE;
   static const int flags = MAP_PRIVATE;
@@ -124,7 +124,7 @@ void *system_mmap_huge_pages(void *addr, size_t n, size_t align) {
 #endif
 }
 
-void system_munmap(void *addr, size_t size) {
+void system_munmap(void *UNUSED, void *addr, size_t size) {
   int e = munmap(addr, size);
   if (e < 0) {
     dbg_error("munmap failed: %s.\n", strerror(e));
