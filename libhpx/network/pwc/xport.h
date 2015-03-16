@@ -28,7 +28,7 @@ typedef struct {
   const void  *src_key;
   uint64_t         lop;
   uint64_t         rop;
-} xport_op_t;
+} xport_op_t HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
 typedef struct pwc_xport {
   hpx_transport_t type;
