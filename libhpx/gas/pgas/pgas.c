@@ -396,7 +396,9 @@ static gas_t _pgas_vtable = {
   .memput        = _pgas_memput,
   .memcpy        = _pgas_parcel_memcpy,
   .owner_of      = pgas_gpa_to_rank,
-  .offset_of     = _pgas_offset_of
+  .offset_of     = _pgas_offset_of,
+  .mmap = NULL,
+  .munmap = NULL
 };
 
 gas_t *gas_pgas_new(const config_t *cfg, boot_t *boot)

@@ -15,6 +15,7 @@
 
 #include <hpx/hpx.h>
 #include <libhpx/config.h>
+#include <libhpx/system.h>
 
 /// Forward declarations.
 /// @{
@@ -69,13 +70,11 @@ typedef struct gas {
   // network operation
   uint32_t (*owner_of)(hpx_addr_t gpa);
   uint64_t (*offset_of)(hpx_addr_t gpa);
+
+  // quick hack for the global allocator
+  system_mmap_t mmap;
+  system_munmap_t munmap;
 } gas_t;
-
-gas_t *gas_smp_new(void)
-  HPX_INTERNAL;
-
-gas_t *gas_pgas_new(const config_t *cfg, struct boot *boot)
-  HPX_INTERNAL HPX_NON_NULL(1,2);
 
 gas_t *gas_new(const config_t *cfg, struct boot *boot)
   HPX_INTERNAL HPX_NON_NULL(1,2);
@@ -125,5 +124,14 @@ inline static hpx_action_t gas_extract(gas_t *gas, hpx_addr_t addr, uint32_t loc
   return gas->extract(addr, locality);
 }
 
+static inline void *gas_mmap(void *obj, void *addr, size_t bytes, size_t align) {
+  gas_t *gas = obj;
+  return gas->mmap(obj, addr, bytes, align);
+}
+
+static inline void gas_munmap(void *obj, void *addr, size_t size) {
+  gas_t *gas = obj;
+  gas->munmap(obj, addr, size);
+}
 
 #endif// LIBHPX_GAS_H
