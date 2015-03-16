@@ -251,11 +251,21 @@ static int _pwc_put(void *network, hpx_addr_t to, const void *from,
 static int _pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
                     hpx_action_t lop, hpx_addr_t laddr) {
   pwc_network_t *pwc = network;
-  int rank = gas_owner_of(here->gas, from);
-  peer_t *peer = pwc->peers + rank;
+  xport_op_t op = {
+    .rank = gas_owner_of(here->gas, from),
+    .flags = 0,
+    .n = n,
+    .dest = lva,
+    .dest_key = NULL,
+    .src = NULL,
+    .src_key = NULL,
+    .lop = encode_command(lop, laddr),
+    .rop = 0
+  };
+
+  peer_t *peer = pwc->peers + op.rank;
   uint64_t offset = gas_offset_of(here->gas, from);
-  command_t lsync = encode_command(lop, laddr);
-  return peer_get(peer, lva, offset, n, lsync, SEGMENT_HEAP);
+  return peer_get(&op, peer, offset, SEGMENT_HEAP);
 }
 
 ///

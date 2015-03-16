@@ -58,21 +58,11 @@ int peer_send(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync) {
   return send_buffer_send(&peer->send, p, lsync);
 }
 
-int peer_get(peer_t *peer, void *lva, size_t offset, size_t n, command_t lsync,
-             segid_t segid) {
+int peer_get(xport_op_t *op, peer_t *peer, size_t offset, segid_t segid) {
   segment_t *segment = &peer->segments[segid];
-  xport_op_t op = {
-    .rank = peer->rank,
-    .flags = 0,
-    .n = n,
-    .dest = lva,
-    .dest_key = NULL,
-    .src = segment_offset_to_rva(segment, offset),
-    .src_key = segment->key,
-    .lop = lsync,
-    .rop = 0
-  };
-  return peer->xport->gwc(&op);
+  op->src = segment_offset_to_rva(segment, offset);
+  op->src_key = segment->key;
+  return peer->xport->gwc(op);
 }
 
 /// This local action just wraps the hpx_lco_set operation in an action that can
@@ -107,16 +97,26 @@ static int _get_parcel_handler(size_t bytes, hpx_addr_t from) {
   // use our peer to src in order to figure out the arguments we need to do a
   // memget(p, from, bytes).
   peer_t *peer = pwc_get_peer(src);
-  void *to = pwc_network_offset(p);
-  uint32_t n = pwc_network_size(p);
-  hpx_addr_t addr = hpx_addr_add(from, pwc_prefix_size(), UINT32_MAX);
-  size_t offset = gas_offset_of(here->gas, addr);
 
   // Create a future and a command to run when this rdma completes.
   hpx_addr_t lsync = hpx_lco_future_new(0);
-  command_t cmp = encode_command(_lco_set, lsync);
 
-  if (LIBHPX_OK != peer_get(peer, to, offset, n, cmp, SEGMENT_HEAP) ||
+  xport_op_t op = {
+    .rank = peer->rank,
+    .flags = 0,
+    .n = pwc_network_size(p),
+    .dest = pwc_network_offset(p),
+    .dest_key = NULL,
+    .src = NULL,
+    .src_key = NULL,
+    .lop = encode_command(_lco_set, lsync),
+    .rop = 0
+  };
+
+  hpx_addr_t addr = hpx_addr_add(from, pwc_prefix_size(), UINT32_MAX);
+  size_t offset = gas_offset_of(here->gas, addr);
+
+  if (LIBHPX_OK != peer_get(&op, peer, offset, SEGMENT_HEAP) ||
       LIBHPX_OK != hpx_lco_wait(lsync)) {
     hpx_parcel_release(p);
     hpx_lco_delete(lsync, HPX_NULL);
