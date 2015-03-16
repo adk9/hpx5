@@ -296,7 +296,7 @@ network_t *network_pwc_funneled_new(const config_t *cfg, boot_t *boot,
   }
 
   // Allocate the requested transport.
-  pwc->xport = pwc_xport_new(cfg, boot);
+  pwc->xport = pwc_xport_new(cfg, boot, gas);
   if (!pwc->xport) {
     log_error("PWC network could not initialize a transport.\n");
     goto unwind;

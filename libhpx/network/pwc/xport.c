@@ -17,7 +17,8 @@
 #include <libhpx/debug.h>
 #include "xport.h"
 
-pwc_xport_t *pwc_xport_new(const config_t *cfg, struct boot *boot) {
+pwc_xport_t *pwc_xport_new(const config_t *cfg, struct boot *boot,
+                           struct gas *gas) {
   switch (cfg->transport) {
    case (HPX_TRANSPORT_MPI):
     dbg_error("MPI support for the PWC network is not yet available.\n");
@@ -27,14 +28,14 @@ pwc_xport_t *pwc_xport_new(const config_t *cfg, struct boot *boot) {
 
    case (HPX_TRANSPORT_PHOTON):
 #ifdef HAVE_PHOTON
-    return pwc_xport_new_photon(cfg, boot);
+    return pwc_xport_new_photon(cfg, boot, gas);
 #else
     dbg_error("Photon transport not enabled in current configuration.\n");
 #endif
 
    default:
 #ifdef HAVE_PHOTON
-    return pwc_xport_new_photon(cfg, boot);
+    return pwc_xport_new_photon(cfg, boot, gas);
 #else
     dbg_error("Photon transport required for PWC network.\n");
 #endif
