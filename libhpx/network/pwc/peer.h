@@ -17,6 +17,7 @@
 #include "eager_buffer.h"
 #include "segment.h"
 #include "send_buffer.h"
+#include "xport.h"
 
 struct gas;
 struct pwc_xport;
@@ -68,17 +69,13 @@ void peer_fini(peer_t *peer)
 /// This simply translates the segment id into the appropriate segment structure
 /// for this peer, and then forwards the request through the PWC buffer.
 ///
+/// @param           op The operation we are assembling.
 /// @param         peer The peer structure representing the target of the pwc.
-/// @param         roff The remote offset for the put operation.
-/// @param          lva The source buffer for the put.
-/// @param            n The number of bytes in the put operation.
-/// @param        lsync A local continuation to run.
-/// @param        rsync A remote continuation to run.
+/// @param       offset The remote offset for the put operation.
 /// @param   segment_id The segment corresponding to @p roff.
 ///
 /// @return  LIBHPX_OK The operation was successful.
-int peer_pwc(peer_t *peer, size_t roff, const void *lva, size_t n,
-             command_t lsync, command_t rsync, segid_t segid)
+int peer_pwc(xport_op_t *op, peer_t *peer, size_t offset, segid_t segment_id)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Simply put a command.

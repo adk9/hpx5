@@ -138,22 +138,26 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   void *rva = tx->peer->segments[SEGMENT_EAGER].base + tx->tx_base + roff;
   inst_trace(class, id, sequence, n, (uint64_t)rva, tx->peer->rank);
 
-  int target = tx->peer->rank;
-  command_t lsync = encode_command(free_parcel, (uint64_t)(uintptr_t)p);
-  command_t rsync = encode_command(_eager_rx, HPX_THERE(target));
-  int e = peer_pwc(tx->peer,                     /* peer structure */
-                   tx->tx_base + roff,           /* remote offset */
-                   pwc_network_offset(p),        /* local address */
-                   n,                            /* # bytes */
-                   lsync,                        /* local completion */
-                   rsync,                        /* remote completion */
-                   SEGMENT_EAGER                 /* segment */);
+  peer_t *peer = tx->peer;
+  xport_op_t op = {
+    .rank = peer->rank,
+    .flags = 0,
+    .n = n,
+    .dest = NULL,
+    .dest_key = NULL,
+    .src = pwc_network_offset(p),
+    .src_key = NULL,
+    .lop = encode_command(free_parcel, (uint64_t)(uintptr_t)p),
+    .rop = encode_command(_eager_rx, HPX_THERE(peer->rank))
+  };
+
+  int e = peer_pwc(&op, tx->peer, tx->tx_base + roff, SEGMENT_EAGER);
 
   if (e == LIBHPX_OK) {
     tx->max += n;
   }
   else {
-    log_error("failed pwc to peer %d\n", target);
+    log_error("failed pwc to peer %d\n", peer->rank);
   }
   return e;
 

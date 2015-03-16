@@ -186,12 +186,24 @@ static int _pwc_send(void *network, hpx_parcel_t *p) {
 }
 
 static int _pwc_command(void *network, hpx_addr_t locality,
-                        hpx_action_t op, uint64_t args) {
+                        hpx_action_t rop, uint64_t args) {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(here->gas, locality);
   peer_t *peer = &pwc->peers[rank];
-  command_t rsync = encode_command(op, args);
-  return peer_pwc(peer, 0, NULL, 0, 0, rsync, SEGMENT_NULL);
+
+  xport_op_t op = {
+    .rank = rank,
+    .flags = 0,
+    .n = 0,
+    .dest = NULL,
+    .dest_key = NULL,
+    .src = NULL,
+    .src_key = NULL,
+    .lop = 0,
+    .rop = encode_command(rop, args)
+  };
+
+  return peer_pwc(&op, peer, 0, SEGMENT_NULL);
 }
 
 /// Perform a put-with-command operation to a global heap address.
@@ -205,10 +217,21 @@ static int _pwc_pwc(void *network,
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(here->gas, to);
   peer_t *peer = &pwc->peers[rank];
+
+  xport_op_t op = {
+    .rank = rank,
+    .flags = 0,
+    .n = n,
+    .dest = NULL,
+    .dest_key = NULL,
+    .src = lva,
+    .src_key = NULL,
+    .lop = encode_command(lop, laddr),
+    .rop = encode_command(rop, raddr)
+  };
+
   uint64_t offset = gas_offset_of(here->gas, to);
-  command_t lsync = encode_command(lop, laddr);
-  command_t rsync = encode_command(rop, raddr);
-  return peer_pwc(peer, offset, lva, n, lsync, rsync, SEGMENT_HEAP);
+  return peer_pwc(&op, peer, offset, SEGMENT_HEAP);
 }
 
 /// Perform a put operation to a global heap address.
