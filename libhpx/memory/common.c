@@ -35,7 +35,7 @@ void *common_chunk_alloc(void *obj, void *addr, size_t size, size_t align,
   // Our mmap interface guarantees alignment, so just go ahead and register it
   // and return.
   int e = common->pin(common->xport, chunk, size, NULL);
-  dbg_check(e);
+  dbg_check(e, "\n");
   if (zero && *zero) {
     memset(chunk, 0, size);
   }
