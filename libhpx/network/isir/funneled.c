@@ -101,7 +101,7 @@ static int _funneled_pwc(void *network,
 
   hpx_addr_t lsync = HPX_NULL;
   hpx_addr_t rsync = HPX_NULL;
-  if (lop) {
+  if (lop && laddr) {
     lsync = hpx_lco_future_new(0);
     dbg_assert(lsync);
     int e = hpx_call_when_with_continuation(lsync, laddr, lop, lsync,
@@ -110,7 +110,7 @@ static int _funneled_pwc(void *network,
     dbg_check(e, "failed to chain parcel\n");
   }
 
-  if (rop) {
+  if (rop && raddr) {
     rsync = hpx_lco_future_new(0);
     dbg_assert(rsync);
     int e = hpx_call_when_with_continuation(rsync, raddr, rop, rsync,
