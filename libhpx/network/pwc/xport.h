@@ -35,10 +35,12 @@ typedef struct pwc_xport {
   int    (*probe)(uint64_t *op, int *remaining, int rank);
 } pwc_xport_t;
 
-pwc_xport_t *pwc_xport_new_photon(const config_t *config, struct boot *boot)
+pwc_xport_t *pwc_xport_new_photon(const config_t *config, struct boot *boot,
+                                  struct gas *gas)
   HPX_INTERNAL;
 
-pwc_xport_t *pwc_xport_new(const config_t *config, struct boot *boot)
+pwc_xport_t *pwc_xport_new(const config_t *config, struct boot *boot,
+                           struct gas *gas)
   HPX_INTERNAL;
 
 static inline void pwc_xport_delete(pwc_xport_t *xport) {

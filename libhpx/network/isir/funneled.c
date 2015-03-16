@@ -228,7 +228,7 @@ network_t *network_isir_funneled_new(const config_t *cfg, struct boot *boot,
     return NULL;
   }
 
-  network->xport = isir_xport_new(cfg);
+  network->xport = isir_xport_new(cfg, gas);
   if (!network->xport) {
     log_error("could not initialize a transport.\n");
     free(network);

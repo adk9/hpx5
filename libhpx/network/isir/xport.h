@@ -16,6 +16,7 @@
 #include <libhpx/config.h>
 
 struct boot;
+struct gas;
 
 typedef struct isir_xport {
   hpx_transport_t type;
@@ -36,10 +37,10 @@ typedef struct isir_xport {
   int    (*unpin)(void *xport, void *base, size_t bytes);
 } isir_xport_t;
 
-isir_xport_t *isir_xport_new_mpi(const config_t *cfg)
+isir_xport_t *isir_xport_new_mpi(const config_t *cfg, struct gas *gas)
   HPX_INTERNAL;
 
-isir_xport_t *isir_xport_new(const config_t *cfg)
+isir_xport_t *isir_xport_new(const config_t *cfg, struct gas *gas)
   HPX_INTERNAL;
 
 static inline void isir_xport_delete(isir_xport_t *xport) {
