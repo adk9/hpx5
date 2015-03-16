@@ -39,7 +39,7 @@ static bool _lco_predicate(bool *val, const size_t size) {
 
 static HPX_ACTION(_lco_get, void *UNUSED) {
   hpx_addr_t addr = hpx_thread_current_target();
-  int e = hpx_lco_wait(addr);
+  hpx_lco_wait(addr);
   hpx_lco_reset_sync(addr);
   return HPX_SUCCESS;
 }
