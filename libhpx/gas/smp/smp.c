@@ -23,6 +23,7 @@
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
+#include <libhpx/system.h>
 
 /// Called by each pthread before they attempt to allocate using the GAS.
 static int _smp_join(void) {
@@ -217,7 +218,9 @@ static gas_t _smp_vtable = {
   .memget        = _smp_memget,
   .memput        = _smp_memput,
   .memcpy        = _smp_memcpy,
-  .owner_of      = _smp_owner_of
+  .owner_of      = _smp_owner_of,
+  .mmap          = system_mmap,
+  .munmap        = system_munmap
 };
 
 gas_t *gas_smp_new(void) {
