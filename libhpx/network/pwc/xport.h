@@ -18,6 +18,18 @@
 struct boot;
 struct gas;
 
+typedef struct {
+  int             rank;
+  int            flags;
+  size_t             n;
+  void           *dest;
+  const void *dest_key;
+  const void      *src;
+  const void  *src_key;
+  uint64_t         lop;
+  uint64_t         rop;
+} xport_op_t;
+
 typedef struct pwc_xport {
   hpx_transport_t type;
 
@@ -27,10 +39,8 @@ typedef struct pwc_xport {
   int    (*pin)(void *xport, void *base, size_t n, void *key);
   int    (*unpin)(void *xport, void *base, size_t n);
   void   (*clear)(void *key);
-  int    (*pwc)(int target, void *rva, const void *lva, size_t n,
-                uint64_t lsync, uint64_t rsync, void *rkey);
-  int    (*gwc)(int target, void *lva, const void *rva, size_t n,
-                uint64_t lsync, void *rkey);
+  int    (*pwc)(xport_op_t *op);
+  int    (*gwc)(xport_op_t *op);
 
   int    (*test)(uint64_t *op, int *remaining);
   int    (*probe)(uint64_t *op, int *remaining, int rank);

@@ -85,7 +85,7 @@ static int _photon_pin(void *xport, void *base, size_t n, void *key) {
   else {
     log_net("registered segment (%p, %zu)\n", base, n);
   }
-  
+
   const struct photon_buffer_priv_t *bkey;
   if (key) {
     if (PHOTON_OK != photon_get_buffer_private(base, n, &bkey)) {
@@ -106,48 +106,63 @@ static int _photon_unpin(void *xport, void *base, size_t n) {
   return LIBHPX_OK;
 }
 
-static int _photon_pwc(int r, void *rva, const void *rolva, size_t n,
-                       uint64_t lsync, uint64_t rsync, void *rkey) {
-  int flag = ((lsync) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
-             ((rsync) ? 0 : PHOTON_REQ_PWC_NO_RCE);
+static int _photon_pwc(xport_op_t *op) {
+  op->flags |= ((op->lop) ? 0 : PHOTON_REQ_PWC_NO_LCE);
+  op->flags |= ((op->rop) ? 0 : PHOTON_REQ_PWC_NO_RCE);
 
-  struct photon_buffer_t lbuf, rbuf;
-  rbuf.addr = (uintptr_t)rva;
-  rbuf.size = n;
-  rbuf.priv = *(struct photon_buffer_priv_t*)rkey;
-  
-  lbuf.addr = (uintptr_t)rolva;
-  lbuf.size = n;
-  lbuf.priv = (struct photon_buffer_priv_t){0,0};
-  
-  int e = photon_put_with_completion(r, n, &lbuf, &rbuf, lsync, rsync, flag);
-  switch (e) {
-   case PHOTON_OK:
+  struct photon_buffer_t rbuf = {
+    .addr = (uintptr_t)op->dest,
+    .size = op->n,
+    .priv = *(struct photon_buffer_priv_t*)op->dest_key
+  };
+
+  struct photon_buffer_t lbuf = {
+    .addr = (uintptr_t)op->src,
+    .size = op->n,
+    .priv = {0, 0},
+  }
+
+  int e = photon_put_with_completion(op->rank,
+                                     &lbuf,
+                                     &rbuf,
+                                     op->flags);
+  if (PHOTON_OK == e) {
     return LIBHPX_OK;
-   case PHOTON_ERROR_RESOURCE:
+  }
+  else if (PHOTON_ERROR_RESOURCE == e) {
     return LIBHPX_RETRY;
-   default:
+  }
+  else {
     dbg_error("could not initiate a put-with-completion\n");
   }
+  unreachable();
 }
 
-static int _photon_gwc(int r, void *lva, const void *rorva, size_t n,
-                       uint64_t lsync, void *rkey) {
+static int _photon_gwc(xport_op_t *op) {
 
-  photon_rid rsync = 0;
-  struct photon_buffer_t lbuf, rbuf;
-  rbuf.addr = (uintptr_t)rorva;
-  rbuf.size = n;
-  rbuf.priv = *(struct photon_buffer_priv_t*)rkey;
-  
-  lbuf.addr = (uintptr_t)lva;
-  lbuf.size = n;
-  lbuf.priv = (struct photon_buffer_priv_t){0,0};
+  struct photon_buffer_t lbuf = {
+    .addr = (uintptr_t)op->dest,
+    .size = op->n,
+    .priv = *(struct photon_buffer_priv_t*)op->dest_key
+  };
 
-  int e = photon_get_with_completion(r, n, &lbuf, &rbuf, lsync, rsync,
-				     PHOTON_REQ_PWC_NO_RCE);
-  dbg_assert_str(PHOTON_OK == e, "failed transport get operation\n");
-  return LIBHPX_OK;
+  struct photon_buffer_t rbuf = {
+    .addr = (uintptr_t)op->src,
+    .size = op->n,
+    .priv = {0, 0},
+  }
+
+  int e = photon_get_with_completion(op->rank,
+                                     &lbuf,
+                                     &rbuf,
+                                     op->flags & PHOTON_REQ_PWC_NO_RCE);
+  if (PHOTON_OK == e) {
+    return LIBHPX_OK;
+  }
+  else {
+    dbg_error("failed transport get operation\n");
+  }
+  unreachable();
 }
 
 static int _poll(uint64_t *op, int *remaining, int src, int type) {
