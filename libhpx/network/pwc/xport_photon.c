@@ -160,7 +160,8 @@ static void _photon_delete(void *photon) {
   free(photon);
 }
 
-pwc_xport_t *pwc_xport_new_photon(const config_t *cfg, boot_t *boot) {
+pwc_xport_t *pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas)
+{
   photon_pwc_xport_t *photon = malloc(sizeof(*photon));
   dbg_assert(photon);
   _init_photon(cfg, boot);
@@ -179,13 +180,13 @@ pwc_xport_t *pwc_xport_new_photon(const config_t *cfg, boot_t *boot) {
   sync_tatas_init(&photon->registration_lock);
 
   local = address_space_new_default(cfg);
-  registered = address_space_new_jemalloc_registered(cfg,
-                                                     photon,
-                                                     _photon_pin,
-                                                     _photon_unpin,
+  registered = address_space_new_jemalloc_registered(cfg, photon, _photon_pin,
+                                                     _photon_unpin, NULL,
                                                      system_mmap_huge_pages,
                                                      system_munmap);
-  global = address_space_new_jemalloc_global(cfg);
+  global = address_space_new_jemalloc_global(cfg, photon, _photon_pin,
+                                             _photon_unpin, gas, gas_mmap,
+                                             gas_munmap);
 
   return &photon->vtable;
 }

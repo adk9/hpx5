@@ -92,12 +92,13 @@ void heap_fini(heap_t *heap)
 /// This satisfies requests from jemalloc's chunk allocator for global memory.
 ///
 /// @param         heap The heap object.
+/// @param         addr A "suggested" address---ignored by the heap for now.
 /// @param         size The number of bytes to allocate.
 /// @param        align The alignment required for the chunk.
 ///
 /// @returns The address of the base of the allocated chunk, or NULL if we are
 ///          out of memory.
-void *heap_chunk_alloc(heap_t *heap, size_t size, size_t align)
+void *heap_chunk_alloc(heap_t *heap, void *addr, size_t size, size_t align)
   HPX_INTERNAL;
 
 /// Release a chunk of the global address space.

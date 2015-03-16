@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <mpi.h>
 #include <libhpx/debug.h>
+#include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/memory.h>
 #include "parcel_utils.h"
@@ -152,7 +153,7 @@ static void _init_mpi(void) {
   }
 }
 
-isir_xport_t *isir_xport_new_mpi(const config_t *cfg) {
+isir_xport_t *isir_xport_new_mpi(const config_t *cfg, gas_t *gas) {
   isir_xport_t *xport = malloc(sizeof(*xport));
   dbg_assert(xport);
   _init_mpi();
@@ -174,7 +175,8 @@ isir_xport_t *isir_xport_new_mpi(const config_t *cfg) {
 
   local = address_space_new_default(cfg);
   registered = address_space_new_default(cfg);
-  global = address_space_new_jemalloc_global(cfg);
+  global = address_space_new_jemalloc_global(cfg, xport, _mpi_pin, _mpi_unpin,
+                                             gas, gas_mmap, gas_munmap);
 
   return xport;
 }
