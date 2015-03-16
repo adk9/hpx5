@@ -56,11 +56,21 @@ static size_t _get_offset_of_min(int rank) {
 ///
 /// We encode the rank of "there" in
 static int _start_get_rx_min(send_buffer_t *sends) {
-  size_t offset = _get_offset_of_min(here->rank);
   peer_t *p = sends->tx->peer;
-  uint64_t *min = &sends->tx->min;
-  command_t cmd = encode_command(_finish_get_rx_min, p->rank);
-  int e = peer_get(p, min, offset, sizeof(*min), cmd, SEGMENT_PEERS);
+  xport_op_t op = {
+    .rank = p->rank,
+    .flags = 0,
+    .n = sizeof(sends->tx->min),
+    .dest = &sends->tx->min,
+    .dest_key = NULL,
+    .src = NULL,
+    .src_key = NULL,
+    .lop = encode_command(_finish_get_rx_min, p->rank),
+    .rop = 0
+  };
+
+  size_t offset = _get_offset_of_min(here->rank);
+  int e = peer_get(&op, p, offset, SEGMENT_PEERS);
   dbg_check(e, "could not initiate get with transport\n");
   return e;
 }

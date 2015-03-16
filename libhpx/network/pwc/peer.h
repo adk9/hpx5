@@ -105,16 +105,13 @@ int peer_send_rendezvous(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync)
 
 /// Perform a get operation from a specific peer.
 ///
+/// @param           op The partially-specified operation to perform.
 /// @param         peer The peer structure representing the get target.
-/// @param          lva The local virtual address to copy to.
 /// @param       offset The remote offset to get from.
-/// @param            n The number of bytes to copy.
-/// @param         sync An command specification for get command.
 /// @param      segment The segment corresponding to @p offset
 ///
 /// @returns  LIBHPX_OK The get operation was initiated successfully.
-int peer_get(peer_t *peer, void *lva, size_t offset, size_t n,
-             command_t sync, segid_t segment)
+int peer_get(xport_op_t *op, peer_t *peer,  size_t offset, segid_t segment_id)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Declare an interrupt that can be used to extract the offset from a command,
