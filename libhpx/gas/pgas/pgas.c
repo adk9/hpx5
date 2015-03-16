@@ -22,13 +22,13 @@
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
+#include <libhpx/memory.h>
 #include <libhpx/locality.h>
 #include <libhpx/network.h>
 #include "bitmap.h"
 #include "gpa.h"
 #include "heap.h"
 #include "pgas.h"
-#include "../mallctl.h"
 #include "../parcel/emulation.h"
 
 /// The PGAS type is a global address space that manages a shared heap.
@@ -164,7 +164,7 @@ static hpx_addr_t _pgas_gas_cyclic_calloc(size_t n, uint32_t bsize) {
 /// Allocate a single global block from the global heap, and return it as an
 /// hpx_addr_t.
 static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
-  void *lva = libhpx_global_malloc(bytes);
+  void *lva = global_malloc(bytes);
   dbg_assert(heap_contains_lva(global_heap, lva));
   return pgas_lva_to_gpa(lva);
 }
@@ -189,7 +189,7 @@ static void _pgas_gas_free(hpx_addr_t gpa, hpx_addr_t sync) {
     heap_free_cyclic(global_heap, offset);
   }
   else if (pgas_gpa_to_rank(gpa) == here->rank) {
-    libhpx_global_free(pgas_gpa_to_lva(offset));
+    global_free(pgas_gpa_to_lva(offset));
   }
   else {
     int e = hpx_call(gpa, pgas_free, sync, NULL, 0);

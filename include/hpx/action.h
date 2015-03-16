@@ -85,7 +85,7 @@ int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_hand
 /// storage modifier (i.e., extern, static).
 ///
 /// @param       symbol The symbol for the action.
-#define HPX_ACTION_DECL(symbol, ...) hpx_action_t symbol
+#define HPX_ACTION_DECL(symbol) hpx_action_t symbol
 
 /// Create an action id for a function, so that it can be called asynchronously.
 ///

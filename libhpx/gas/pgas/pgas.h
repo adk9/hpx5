@@ -47,18 +47,22 @@ void pgas_leave(void)
 /// @{
 
 /// Asynchronous entry point for alloc.
-extern HPX_ACTION_DECL(pgas_cyclic_alloc, hpx_addr_t, size_t bytes, size_t align);
+/// type hpx_addr_t (size_t bytes, size_t align)
+extern HPX_ACTION_DECL(pgas_cyclic_alloc);
 
 /// Asynchronous entry point for calloc.
-extern HPX_ACTION_DECL(pgas_cyclic_calloc, hpx_addr_t, size_t bytes, size_t align);
+/// type hpx_addr_t (size_t bytes, size_t align)
+extern HPX_ACTION_DECL(pgas_cyclic_calloc);
 
 /// Asynchronous entry point for free.
 extern HPX_ACTION_DECL(pgas_free);
 
 /// Asynchronous entry point for the rsync handler for memput
-extern HPX_ACTION_DECL(memput_rsync, void, int src, uint64_t command);
+/// void (int src, uint64_t command)
+extern HPX_ACTION_DECL(memput_rsync);
 
-extern HPX_ACTION_DECL(lco_set, void, int src, uint64_t command);
+/// void (int src, uint64_t command)
+extern HPX_ACTION_DECL(lco_set);
 
 /// Synchronous entry point for alloc.
 ///
