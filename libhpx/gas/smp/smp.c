@@ -25,15 +25,6 @@
 #include <libhpx/locality.h>
 #include <libhpx/system.h>
 
-/// Called by each pthread before they attempt to allocate using the GAS.
-static int _smp_join(void) {
-  return LIBHPX_OK;
-}
-
-/// Called by each pthraed at shutdown.
-static void _smp_leave(void) {
-}
-
 /// Delete the gas instance.
 ///
 /// The SMP GAS instance is global and immutable. We do not need to do anything
@@ -197,8 +188,6 @@ static void *_smp_local_base(gas_t *gas) {
 static gas_t _smp_vtable = {
   .type          = HPX_GAS_SMP,
   .delete        = _smp_delete,
-  .join          = _smp_join,
-  .leave         = _smp_leave,
   .is_global     = _smp_is_global,
   .local_size    = _smp_local_size,
   .local_base    = _smp_local_base,

@@ -30,9 +30,6 @@ typedef struct gas {
   void (*delete)(struct gas *gas)
     HPX_NON_NULL(1);
 
-  int (*join)(void);
-  void (*leave)(void);
-
   bool (*is_global)(struct gas *gas, void *addr)
     HPX_NON_NULL(1);
 
@@ -82,16 +79,6 @@ gas_t *gas_new(const config_t *cfg, struct boot *boot)
 inline static void gas_delete(gas_t *gas) {
   assert(gas && gas->delete);
   gas->delete(gas);
-}
-
-inline static int gas_join(gas_t *gas) {
-  assert(gas && gas->join);
-  return gas->join();
-}
-
-inline static void gas_leave(gas_t *gas) {
-  assert(gas && gas->leave);
-  gas->leave();
 }
 
 inline static uint32_t gas_owner_of(gas_t *gas, hpx_addr_t addr) {

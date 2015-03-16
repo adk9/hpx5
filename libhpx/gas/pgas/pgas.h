@@ -46,26 +46,19 @@ void pgas_leave(void)
 /// and calloc.
 /// @{
 
-/// The structure that describes the cyclic operations, we just need to know the
-/// overall number of bytes to allocate, and the block size.
-typedef struct {
-  size_t n;
-  uint32_t bsize;
-} pgas_alloc_args_t;
-
 /// Asynchronous entry point for alloc.
-extern HPX_ACTION_DECL(pgas_cyclic_alloc);
+extern HPX_ACTION_DECL(pgas_cyclic_alloc, hpx_addr_t, size_t bytes, size_t align);
 
 /// Asynchronous entry point for calloc.
-extern HPX_ACTION_DECL(pgas_cyclic_calloc);
+extern HPX_ACTION_DECL(pgas_cyclic_calloc, hpx_addr_t, size_t bytes, size_t align);
 
 /// Asynchronous entry point for free.
 extern HPX_ACTION_DECL(pgas_free);
 
 /// Asynchronous entry point for the rsync handler for memput
-extern HPX_ACTION_DECL(memput_rsync);
+extern HPX_ACTION_DECL(memput_rsync, void, int src, uint64_t command);
 
-extern HPX_ACTION_DECL(lco_set);
+extern HPX_ACTION_DECL(lco_set, void, int src, uint64_t command);
 
 /// Synchronous entry point for alloc.
 ///
