@@ -55,11 +55,6 @@ static void *_run(void *worker) {
 
   worker_bind_self(worker);
 
-  if (gas_join(here->gas)) {
-    dbg_error("failed to join the global address space.\n");
-    return NULL;
-  }
-
   // Ensure that all of the threads have joined the address spaces.
   local->join(local);
   registered->join(registered);
@@ -71,7 +66,10 @@ static void *_run(void *worker) {
   }
 
   // leave the global address space
-  gas_leave(here->gas);
+  global->join(global);
+  registered->join(registered);
+  local->join(local);
+
   return NULL;
 }
 

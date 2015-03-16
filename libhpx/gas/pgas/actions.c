@@ -63,6 +63,12 @@ hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
   return addr;
 }
 
+static int _cyclic_alloc_handler(size_t n, size_t bsize) {
+  hpx_addr_t addr = pgas_cyclic_alloc_sync(n, bsize);
+  HPX_THREAD_CONTINUE(addr);
+}
+HPX_ACTION_DEF(DEFAULT, _cyclic_alloc_handler, pgas_cyclic_alloc, HPX_SIZE_T,
+               HPX_SIZE_T);
 
 /// Allocate zeroed memory from the cyclic space.
 ///
@@ -109,25 +115,12 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
   return addr;
 }
 
-
-/// This is the hpx_call_* target for a cyclic allocation.
-///
-/// This just unpacks the arguments and forwards to the synchronous form of
-/// alloc locally, and continues the resulting base.
-HPX_ACTION(pgas_cyclic_alloc, pgas_alloc_args_t *args) {
-  hpx_addr_t addr = pgas_cyclic_alloc_sync(args->n, args->bsize);
+static int _cyclic_calloc_handler(size_t n, size_t bsize) {
+  hpx_addr_t addr = pgas_cyclic_calloc_sync(n, bsize);
   HPX_THREAD_CONTINUE(addr);
 }
-
-
-/// This is the hpx_call_* target for cyclic zeroed allocation.
-///
-/// This just unpacks the arguments and forwards to the synchronous form of
-/// calloc locally, and continues the resulting base.
-HPX_ACTION(pgas_cyclic_calloc, pgas_alloc_args_t *args) {
-  hpx_addr_t addr = pgas_cyclic_calloc_sync(args->n, args->bsize);
-  HPX_THREAD_CONTINUE(addr);
-}
+HPX_ACTION_DEF(DEFAULT, _cyclic_calloc_handler, pgas_cyclic_calloc, HPX_SIZE_T,
+               HPX_SIZE_T);
 
 
 /// This is the hpx_call_* target for doing a calloc initialization.

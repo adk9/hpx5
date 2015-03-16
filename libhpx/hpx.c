@@ -159,10 +159,6 @@ int hpx_init(int *argc, char ***argv) {
     status = log_error("failed to create the global address space.\n");
     goto unwind1;
   }
-  if (here->gas->join()) {
-    status = log_error("failed to join the global address space.\n");
-    goto unwind1;
-  }
   HPX_HERE = HPX_THERE(here->rank);
 
   if (!here->config->cores) {
@@ -174,6 +170,7 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // Initialize the network. This will initialize a transport and, as a side
+  // effect initialize our allocators.
   here->network = network_new(here->config, here->boot, here->gas);
   if (!here->network) {
     status = log_error("failed to create network.\n");
