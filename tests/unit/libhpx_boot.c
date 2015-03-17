@@ -23,21 +23,14 @@
 
 static int alltoall_handler(hpx_addr_t done) {
   printf("Entering alltoall_handler at %d\n", HPX_LOCALITY_ID);
-  struct {
-    int lhs;
-    int rhs;
-  } src[HPX_LOCALITIES];
-
-  struct {
-    int lhs;
-    int rhs;
-  } dst[HPX_LOCALITIES];
+  int src[HPX_LOCALITIES][2];
+  int dst[HPX_LOCALITIES][2];
 
   for (int i = 0, e = HPX_LOCALITIES; i < e; ++i) {
-    src[i].lhs = here->rank;
-    src[i].rhs = here->rank;
-    dst[i].lhs = here->rank;
-    dst[i].rhs = here->rank;
+    for (int j = 0, e = 2; j < e; ++j) {
+      src[i][j] = here->rank;
+      dst[i][j] = here->rank;
+    }
   }
 
   boot_t *boot = here->boot;
@@ -49,9 +42,9 @@ static int alltoall_handler(hpx_addr_t done) {
   static tatas_lock_t lock = SYNC_TATAS_LOCK_INIT;
   sync_tatas_acquire(&lock);
   {
-    printf("dst@%d {", here->rank);
+    printf("dst@%d { ", here->rank);
     for (int i = 0, e = HPX_LOCALITIES; i < e; ++i) {
-      printf(" {%d,%d} ", dst[i].lhs, dst[i].rhs);
+      printf("{%d,%d} ", dst[i][0], dst[i][1]);
     }
     printf("}\n");
     fflush(stdout);
@@ -59,11 +52,11 @@ static int alltoall_handler(hpx_addr_t done) {
   sync_tatas_release(&lock);
 
   for (int i = 0, e = HPX_LOCALITIES; i < e; ++i) {
-    if (dst[i].lhs != i) {
-      FAIL(dst, "dst[%d].lhs=%d, expected %d\n", i, dst[i].lhs, i);
+    if (dst[i][0] != i) {
+      FAIL(dst, "dst[%d][0]=%d, expected %d\n", i, dst[i][0], i);
     }
-    if (dst[i].rhs != here->rank) {
-      FAIL(dst, "dst[%d].rhs=%d, expected %d\n", i, dst[i].rhs, here->rank);
+    if (dst[i][1] != here->rank) {
+      FAIL(dst, "dst[%d][1]=%d, expected %d\n", i, dst[i][1], here->rank);
     }
   }
 
