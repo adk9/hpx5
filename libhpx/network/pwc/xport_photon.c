@@ -195,6 +195,7 @@ pwc_xport_t *pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas)
   photon->vtable.type = HPX_TRANSPORT_PHOTON;
   photon->vtable.delete = _photon_delete;
   photon->vtable.sizeof_rdma_key = _photon_sizeof_rdma_key;
+  photon->vtable.find_key = NULL;
   photon->vtable.clear = _photon_clear;
   photon->vtable.pin = _photon_pin;
   photon->vtable.unpin = _photon_unpin;
