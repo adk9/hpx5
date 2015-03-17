@@ -97,3 +97,25 @@ int hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
   dbg_assert(here && here->gas && here->gas->memcpy);
   return (*here->gas->memcpy)(to, from, size, sync);
 }
+
+static int hpx_gas_alloc_at_handler(uint32_t bytes) {
+  hpx_addr_t addr = hpx_gas_alloc(bytes);
+  dbg_assert(addr);
+  HPX_THREAD_CONTINUE(addr);
+}
+HPX_ACTION_DEF(DEFAULT, hpx_gas_alloc_at_handler, hpx_gas_alloc_at_action,
+               HPX_UINT32);
+
+hpx_addr_t hpx_gas_alloc_at_sync(uint32_t bytes, hpx_addr_t loc) {
+  hpx_addr_t addr = 0;
+  int e = hpx_call_sync(loc, hpx_gas_alloc_at_action, &addr, sizeof(addr),
+                        &bytes);
+  dbg_check(e, "Failed synchronous call during allocation\n");
+  dbg_assert(addr);
+  return addr;
+}
+
+void hpx_gas_alloc_at_async(uint32_t bytes, hpx_addr_t loc, hpx_addr_t lco) {
+  int e = hpx_call(loc, hpx_gas_alloc_at_action, lco, &bytes);
+  dbg_check(e, "Failed async call during allocation\n");
+}
