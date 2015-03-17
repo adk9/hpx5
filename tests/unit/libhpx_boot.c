@@ -15,6 +15,11 @@
 #include <libhpx/boot.h>
 #include "tests.h"
 
+#define FAIL(...) do {                          \
+    fprintf(stderr, __VA_ARGS__);               \
+    exit(EXIT_FAILURE);                         \
+  } while (0)
+
 static int alltoall_handler(hpx_addr_t done) {
   printf("Entering alltoall_handler at %d\n", HPX_LOCALITY_ID);
   int src[HPX_LOCALITIES][2];
@@ -30,15 +35,15 @@ static int alltoall_handler(hpx_addr_t done) {
   boot_t *boot = here->boot;
   int e = boot_alltoall(boot, dst, src, sizeof(int), 2*sizeof(int));
   if (e) {
-    exit(EXIT_FAILURE);
+    FAIL("boot_alltoall returned failure code\n");
   }
 
   for (int i = 0, e = HPX_LOCALITIES; i < e; ++i) {
     if (dst[i][0] != i) {
-      exit(EXIT_FAILURE);
+      FAIL("dst[%d][0]=%d, expected %d\n", i, dst[i][0], i);
     }
     if (dst[i][1] != here->rank) {
-      exit(EXIT_FAILURE);
+      FAIL("dst[%d][1]=%d, expected %d\n", i, dst[i][1], here->rank);
     }
   }
 
