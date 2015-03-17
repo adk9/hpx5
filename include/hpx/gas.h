@@ -96,6 +96,9 @@ hpx_addr_t hpx_gas_global_calloc(size_t n, uint32_t bsize);
 ///
 /// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_alloc(uint32_t bytes);
+hpx_addr_t hpx_gas_alloc_at_sync(uint32_t bytes, hpx_addr_t loc);
+void hpx_gas_alloc_at_async(uint32_t butes, hpx_addr_t loc, hpx_addr_t lco);
+extern HPX_ACTION_DECL(hpx_gas_alloc_at_action);
 
 /// Free a global allocation.
 ///

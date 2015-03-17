@@ -12,10 +12,10 @@
 // =============================================================================
 
 // Goal of this testcase is to test the HPX Memory Allocation
-// 1. hpx_gas_alloc() -- Allocates the global memory. 
+// 1. hpx_gas_alloc() -- Allocates the global memory.
 // 2. hpx_gas_global_free() -- Free a global allocation.
 // 3. hpx_gas_try_pin() -- Performs address translation.
-// 4. hpx_gas_unpin() -- Allows an address to be remapped.   
+// 4. hpx_gas_unpin() -- Allows an address to be remapped.
 
 #include "hpx/hpx.h"
 #include "tests.h"
@@ -28,7 +28,7 @@ static HPX_ACTION(_init_sources, void* args) {
   // movement, so resend the parcel.
   hpx_addr_t local = hpx_thread_current_target();
 
-  // The pinned local address 
+  // The pinned local address
   int *sources_p = NULL;
 
   // Performs address translation. This will try to perform a global-to-local
@@ -58,24 +58,24 @@ static HPX_ACTION(gas_alloc, void *UNUSED) {
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
 
-  // Allocate the local global memory to hold the data of 10 bytes. 
-  // This is a non-collective, local call to allocate memory in the global 
+  // Allocate the local global memory to hold the data of 10 bytes.
+  // This is a non-collective, local call to allocate memory in the global
   // address space that can be moved. This allocates one block with 10
   // bytes of memory
   local = hpx_gas_alloc(ndata * sizeof(double));
 
   // Populate the test data -- Allocate an and gate that we can wait on to
   // detect that all of the data have been populated. This creates a future.
-  // Futures are builtin LCOs that represent values returned from asynchronous 
-  // computation. Futures are always allocated in the global address space, 
+  // Futures are builtin LCOs that represent values returned from asynchronous
+  // computation. Futures are always allocated in the global address space,
   // because their addresses are used as the targets of parcels.
   hpx_addr_t done = hpx_lco_future_new(sizeof(double));
-  
+
   // and send the init_sources action, with the done LCO as the continuation
   hpx_call(local, _init_sources, done, NULL, 0);
 
-  // wait for initialization. The LCO blocks the caller until an LCO set 
-  // operation triggers the LCO. 
+  // wait for initialization. The LCO blocks the caller until an LCO set
+  // operation triggers the LCO.
   int err = hpx_lco_wait(done);
   assert_msg(err == HPX_SUCCESS, "hpx_lco_wait propagated error");
 
@@ -83,12 +83,22 @@ static HPX_ACTION(gas_alloc, void *UNUSED) {
   hpx_lco_delete(done, HPX_NULL);
 
   // Cleanup - Free the global allocation of local global memory.
-  hpx_gas_free(local, HPX_NULL);  
+  hpx_gas_free(local, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
-} 
+}
+
+static HPX_ACTION(gas_alloc_at, void *UNUSED){
+  printf("Starting the GAS remote memory allocation test\n");
+  hpx_addr_t addr = hpx_gas_alloc_at_sync(sizeof(UNUSED),
+                                          HPX_THERE(HPX_LOCALITY_ID + 1 %
+                                                    HPX_LOCALITIES));
+  assert(addr != HPX_NULL);
+  return HPX_SUCCESS;
+}
 
 TEST_MAIN({
   ADD_TEST(gas_alloc);
+  ADD_TEST(gas_alloc_at);
 });
