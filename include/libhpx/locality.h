@@ -83,7 +83,7 @@ HPX_INTERNAL extern hpx_action_t locality_call_continuation;
 /// @}
 
 /// The global locality is exposed through this "here" pointer.
-HPX_INTERNAL extern locality_t *here;
+extern locality_t *here;
 
 /// A set of inline convenience functions.
 /// @{
