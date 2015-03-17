@@ -84,17 +84,23 @@ static inline void local_free(void *p) {
 
 static inline void *local_malloc(size_t bytes) {
   dbg_assert(local && local->malloc);
-  return local->malloc(bytes);
+  void *p = local->malloc(bytes);
+  dbg_assert(p);
+  return p;
 }
 
 static inline void *local_calloc(size_t n, size_t bytes) {
   dbg_assert(local && local->calloc);
-  return local->calloc(n, bytes);
+  void *p = local->calloc(n, bytes);
+  dbg_assert(p);
+  return p;
 }
 
 static inline void *local_memalign(size_t boundary, size_t size) {
   dbg_assert(local && local->memalign);
-  return local->memalign(boundary, size);
+  void *p = local->memalign(boundary, size);
+  dbg_assert(p);
+  return p;
 }
 
 static inline void registered_free(void *p) {
@@ -104,17 +110,23 @@ static inline void registered_free(void *p) {
 
 static inline void *registered_malloc(size_t bytes) {
   dbg_assert(registered && registered->malloc);
-  return registered->malloc(bytes);
+  void *p = registered->malloc(bytes);
+  dbg_assert(p);
+  return p;
 }
 
 static inline void *registered_calloc(size_t n, size_t bytes) {
   dbg_assert(registered && registered->calloc);
-  return registered->calloc(n, bytes);
+  void *p = registered->calloc(n, bytes);
+  dbg_assert(p);
+  return p;
 }
 
 static inline void *registered_memalign(size_t boundary, size_t size) {
   dbg_assert(registered && registered->memalign);
-  return registered->memalign(boundary, size);
+  void *p = registered->memalign(boundary, size);
+  dbg_assert(p);
+  return p;
 }
 
 static inline void global_free(void *p) {
@@ -124,17 +136,23 @@ static inline void global_free(void *p) {
 
 static inline void *global_malloc(size_t bytes) {
   dbg_assert(global && global->malloc);
-  return global->malloc(bytes);
+  void *p = global->malloc(bytes);
+  dbg_assert(p);
+  return p;
 }
 
 static inline void *global_calloc(size_t n, size_t bytes) {
   dbg_assert(global && global->calloc);
-  return global->calloc(n, bytes);
+  void *p = global->calloc(n, bytes);
+  dbg_assert(p);
+  return p;
 }
 
 static inline void *global_memalign(size_t boundary, size_t size) {
   dbg_assert(global && global->memalign);
-  return global->memalign(boundary, size);
+  void *p = global->memalign(boundary, size);
+  dbg_assert(p);
+  return p;
 }
 
 #endif // LIBHPX_MEMORY_H
