@@ -20,13 +20,13 @@
 #include "segment.h"
 #include "xport.h"
 
-int segment_init(segment_t *segment, pwc_xport_t *xport, char *base,
-                 size_t size) {
-  dbg_assert(base || !size);
+int segment_init(segment_t *segment, pwc_xport_t *xport, char *base, size_t n) {
+  dbg_assert(xport->sizeof_rdma_key() <= sizeof(segment->key));
+  dbg_assert(base || !n);
   segment->base = base;
-  segment->size = size;
+  segment->size = n;
   if (base) {
-    xport->pin(xport, base, size, &segment->key);
+    xport->pin(xport, base, n, &segment->key);
   }
   else {
     xport->clear(&segment->key);
