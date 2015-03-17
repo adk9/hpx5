@@ -66,20 +66,24 @@ static int _allgather(const boot_t *boot, const void *restrict src,
 
 static int _mpi_alltoall(const void *boot, void *restrict dest,
                          const void *restrict src, int n, int stride) {
-  MPI_Datatype type;
-  int e = MPI_Type_vector(1, n, stride, MPI_BYTE, &type);
-  if (MPI_SUCCESS != e) {
-    dbg_error("MPI_Alltoall type constructor error.\n");
+  const boot_t *mpi = boot;
+  int ranks = mpi->n_ranks(mpi);
+  int *offsets = calloc(ranks, sizeof(*offsets));
+  int *sizes = calloc(ranks, sizeof(*sizes));
+  assert(offsets);
+  assert(sizes);
+  for (int i = 0, e = ranks; i < e; ++i) {
+    offsets[i] = i * stride;
+    sizes[i] = n;
   }
-  e = MPI_Type_commit(&type);
-  if (MPI_SUCCESS != e) {
-    dbg_error("MPI_Alltoall could not commit vector type.\n");
+  if (MPI_SUCCESS != MPI_Alltoallv(src, sizes, offsets, MPI_BYTE,
+                                   dest, sizes, offsets, MPI_BYTE,
+                                   MPI_COMM_WORLD)) {
+    dbg_error("MPI_Alltoallv failed at bootstrap\n");
   }
-  e = MPI_Alltoall(src, 1, type, dest, 1, type, MPI_COMM_WORLD);
-  if (MPI_SUCCESS != e) {
-    dbg_error("MPI_Alltoall failed at bootstrap\n");
-  }
-  MPI_Type_free(&type);
+
+  free(sizes);
+  free(offsets);
   return LIBHPX_OK;
 }
 
