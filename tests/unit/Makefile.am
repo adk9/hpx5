@@ -26,6 +26,7 @@ TESTS = bcast			\
 	lco_sema		\
 	lco_setget		\
 	lco_user		\
+    libhpx_boot \
 	parcel_continuation	\
 	parcel_create		\
 	parcel_send		\
@@ -61,6 +62,7 @@ lco_gencount_SOURCES                =  lco_gencount.c
 lco_sema_SOURCES                    =  lco_sema.c
 lco_setget_SOURCES                  =  lco_setget.c
 lco_user_SOURCES                    =  lco_user.c
+libhpx_boot_SOURCES                 =  libhpx_boot.c
 parcel_continuation_SOURCES         =  parcel_continuation.c
 parcel_create_SOURCES               =  parcel_create.c
 parcel_send_SOURCES                 =  parcel_send.c
@@ -91,6 +93,7 @@ lco_sema_DEPENDENCIES               = $(HPX_DEPS)
 lco_setget_DEPENDENCIES             = $(HPX_DEPS)
 lco_user_DEPENDENCIES               = $(HPX_DEPS)
 lco_wait_DEPENDENCIES               = $(HPX_DEPS)
+libhpx_boot_DEPENDENCIES            = $(HPX_DEPS)
 parcel_continuation_DEPENDENCIE     = $(HPX_DEPS)
 parcel_create_DEPENDENCIES          = $(HPX_DEPS)
 parcel_send_DEPENDENCIES            = $(HPX_DEPS)
