@@ -26,7 +26,10 @@ typedef struct boot {
   int (*rank)(const struct boot*);
   int (*n_ranks)(const struct boot*);
   int (*barrier)(const struct boot*);
-  int (*allgather)(const struct boot*, const void*, void*, int);
+  int (*allgather)(const struct boot *boot, const void *restrict src,
+                   void *restrict dest, int n);
+  int (*alltoall)(const void *boot, void *restrict dest,
+                  const void *restrict src, int n, int stride);
   void (*abort)(const struct boot*);
 } boot_t;
 
@@ -51,9 +54,14 @@ static inline int boot_n_ranks(const boot_t *boot) {
   return boot->n_ranks(boot);
 }
 
-static inline int boot_allgather(const boot_t *boot,
-                                 const void *in, void *out, int n) {
+static inline int boot_allgather(const boot_t *boot, const void *restrict in,
+                                 void *restrict out, int n) {
   return boot->allgather(boot, in, out, n);
+}
+
+static inline int boot_alltoall(const boot_t *boot, void *restrict dest,
+                                const void *restrict src, int n, int stride) {
+  return boot->alltoall(boot, dest, src, n, stride);
 }
 
 static inline int boot_barrier(const boot_t *boot) {
