@@ -49,7 +49,7 @@ static int alltoall_handler(hpx_addr_t done) {
   sync_tatas_release(&lock);
 
   boot_barrier(boot);
-  int e = boot_alltoall(boot, dst, src, 2*sizeof(int), 2*sizeof(int));
+  int e = boot_alltoall(boot, dst, src, 1*sizeof(int), 2*sizeof(int));
   if (e) {
     FAIL(dst, "boot_alltoall returned failure code\n");
   }
@@ -70,8 +70,8 @@ static int alltoall_handler(hpx_addr_t done) {
     if (dst[i][0] != i * here->ranks + here->rank) {
       FAIL(dst, "%d:dst[%d][0]=%d, expected %d\n", here->rank, i, dst[i][0], i * here->ranks + here->rank);
     }
-    if (dst[i][1] != i) {
-      FAIL(dst, "%d:dst[%d][1]=%d, expected %d\n", here->rank, i, dst[i][1], i);
+    if (dst[i][1] != here->rank) {
+      FAIL(dst, "%d:dst[%d][1]=%d, expected %d\n", here->rank, i, dst[i][1], here->rank);
     }
   }
 
