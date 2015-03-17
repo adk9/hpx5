@@ -5,7 +5,7 @@
 #include "tests.h"
 #include "photon.h"
 
-#define PHOTON_SEND_SIZE 32
+#define PHOTON_SEND_SIZE (1024*16)
 
 //****************************************************************************
 // This unit testcase tests photon buffers functions:
@@ -33,10 +33,15 @@ START_TEST (test_photon_get_private_buffers)
   ck_assert_msg(rc == PHOTON_OK, "photon_register_buffer failed");
 
   rc = photon_get_buffer_private(mybuf, PHOTON_SEND_SIZE, &rpriv);
-  ck_assert_msg(rc == PHOTON_OK, "photon_get_buffer_private after register buffer failed"); 
-  ck_assert_msg(rpriv.key0 != UINT64_MAX, "key0 is not set"); 
-  ck_assert_msg(rpriv.key1 != UINT64_MAX, "key1 is not set"); 
-
+  ck_assert_msg(rc == PHOTON_OK, "photon_get_buffer_private after register buffer failed");
+  ck_assert_msg(rpriv.key0 != UINT64_MAX, "key0 is not set");
+  ck_assert_msg(rpriv.key1 != UINT64_MAX, "key1 is not set");
+  
+  rc = photon_get_buffer_private(mybuf+1024, PHOTON_SEND_SIZE-2048, &rpriv);
+  ck_assert_msg(rc == PHOTON_OK, "photon_get_buffer_private with offset after register buffer failed");
+  ck_assert_msg(rpriv.key0 != UINT64_MAX, "key0 is not set");
+  ck_assert_msg(rpriv.key1 != UINT64_MAX, "key1 is not set");
+  
   photon_unregister_buffer(mybuf, PHOTON_SEND_SIZE);
   free(mybuf);
 }
