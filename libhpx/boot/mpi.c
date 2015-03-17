@@ -71,6 +71,10 @@ static int _mpi_alltoall(const void *boot, void *restrict dest,
   if (MPI_SUCCESS != e) {
     dbg_error("MPI_Alltoall type constructor error.\n");
   }
+  e = MPI_Type_commit(&type);
+  if (MPI_SUCCESS != e) {
+    dbg_error("MPI_Alltoall could not commit vector type.\n");
+  }
   e = MPI_Alltoall(src, 1, type, dest, 1, type, MPI_COMM_WORLD);
   if (MPI_SUCCESS != e) {
     dbg_error("MPI_Alltoall failed at bootstrap\n");
