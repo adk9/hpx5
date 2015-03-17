@@ -78,6 +78,11 @@ static void _photon_clear(void *key) {
   memset(key, 0, sizeof(struct photon_buffer_priv_t));
 }
 
+static void *_photon_find_key(const void *xport, const void *addr) {
+  log_error("Photon find_key is unimplemented\n");
+  return NULL;
+}
+
 static int _photon_pin(void *xport, void *base, size_t n, void *key) {
   if (PHOTON_OK != photon_register_buffer(base, n)) {
     dbg_error("failed to register segment with Photon\n");
@@ -195,7 +200,7 @@ pwc_xport_t *pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas)
   photon->vtable.type = HPX_TRANSPORT_PHOTON;
   photon->vtable.delete = _photon_delete;
   photon->vtable.sizeof_rdma_key = _photon_sizeof_rdma_key;
-  photon->vtable.find_key = NULL;
+  photon->vtable.find_key = _photon_find_key;
   photon->vtable.clear = _photon_clear;
   photon->vtable.pin = _photon_pin;
   photon->vtable.unpin = _photon_unpin;

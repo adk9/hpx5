@@ -17,6 +17,7 @@
 #include <libhpx/config.h>
 #include <libhpx/boot.h>
 #include <libhpx/memory.h>
+#include "parcel_emulation.h"
 #include "xport.h"
 
 typedef struct {
@@ -33,47 +34,64 @@ typedef struct {
 } buffer_t;
 
 typedef struct {
-  int           rank;
-  int          ranks;
-  buffer_t     *recv;
-  buffer_t     *send;
-  segment_t *remotes;
+  parcel_emulator_t vtable;
+  int                 rank;
+  int                ranks;
+  buffer_t           *recv;
+  buffer_t           *send;
+  segment_t       *remotes;
 } reload_t;
 
-reload_t *parcel_buffer_new_reload(config_t *cfg, boot_t *boot, pwc_xport_t *x)
-{
+static void _reload_delete(void *obj) {
+  if (obj) {
+    local_free(obj);
+  }
+}
+
+void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
+                                 pwc_xport_t *xport) {
   int rank = boot_rank(boot);
   int ranks = boot_n_ranks(boot);
 
   // Allocate the buffer.
   reload_t *reload = local_calloc(1, sizeof(*reload));
+  reload->vtable.delete = _reload_delete;
   reload->rank = rank;
   reload->ranks = ranks;
 
   // Allocate and initialize my initial recv buffers.
   reload->recv = local_calloc(ranks, sizeof(*reload->recv));
   for (int i = 0, e = ranks; i < e; ++i) {
-    reload->recv[i].n = cfg->parcelbuffersize;
-    reload->recv[i].base = registered_malloc(1, cfg->parcelbuffersize);
-    reload->recv[i].key = x->find_key(x, buffer);
-    reload->recv[i].rank = i;
+    int n = cfg->pwc_parcelbuffersize;
+    segment_t *segment = &reload->recv[i].segment;
+    segment->n = n;
+    segment->base = registered_calloc(1, n);
+    segment->key = xport->find_key(xport, segment->base);
+    segment->rank = i;
   }
 
-  // Allocate my array of send buffers.
+  // Allocate my array of send buffers and do an initial all-to-all to exchange
+  // the segments allocated above: send[j][i] = recv[i][j].
   reload->send = registered_calloc(ranks, sizeof(*reload->send));
 
-  // Perform an initial all-to-all to exchange all of the send-recv matrix.
+  int n = sizeof(segment_t);
+  int stride = sizeof(buffer_t);
+  boot_alltoall(boot, reload->send, reload->recv, n, stride);
 
-
-  // Create a segment for my element in the remotes
-  segment_t s = {
+  // Create a segment for my element in the remotes (i.e., the segment
+  // corresponding to my send buffer row which peers use to update my send
+  // buffer to point to their recv buffer) allreduce the
+  segment_t sends = {
     .n = sizeof(segment_t) * ranks,
     .base = reload->remotes,
-    .key = x->find_key(x, reload->remote),
+    .key = xport->find_key(xport, reload->remotes),
     .rank = rank
   };
 
-  // Exchange remotes with everyone
+  // Allocate the remotes array, and exchange all of the sends segments.
+  reload->remotes = local_calloc(ranks, sizeof(*reload->remotes));
+  boot_allgather(boot, &sends, reload->remotes, sizeof(sends));
+  dbg_assert(reload->remotes[rank].key == sends.key);
 
-  return buffer;
+  return reload;
 }

@@ -27,6 +27,7 @@
 #include <libhpx/parcel.h>
 
 #include "commands.h"
+#include "parcel_emulation.h"
 #include "parcel_utils.h"
 #include "peer.h"
 #include "pwc.h"
@@ -429,6 +430,10 @@ network_t *network_pwc_funneled_new(const config_t *cfg, boot_t *boot,
       goto unwind;
     }
   }
+
+  void *parcels = parcel_emulator_new_reload(cfg, boot, pwc->xport);
+  assert(parcels);
+  parcel_emulator_delete(parcels);
 
   return &pwc->vtable;
 

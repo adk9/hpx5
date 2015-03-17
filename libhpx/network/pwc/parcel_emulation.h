@@ -10,22 +10,24 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_NETWORK_PWC_PARCEL_UTILS_H
-#define LIBHPX_NETWORK_PWC_PARCEL_UTILS_H
+#ifndef LIBHPX_NETWORK_PWC_PARCEL_EMULATION_H
+#define LIBHPX_NETWORK_PWC_PARCEL_EMULATION_H
 
-#include <libhpx/parcel.h>
+struct boot;
+struct config;
+struct pwc_xport;
 
+typedef struct {
+  void (*delete)(void *obj);
+} parcel_emulator_t;
 
-static inline uint32_t pwc_prefix_size(void) {
-  return offsetof(hpx_parcel_t, size);
+void *parcel_emulator_new_reload(const struct config *cfg, struct boot *boot,
+                                 struct pwc_xport *xport)
+  HPX_INTERNAL;
+
+static inline void parcel_emulator_delete(void *obj) {
+  parcel_emulator_t *emulator = obj;
+  emulator->delete(obj);
 }
 
-static inline uint32_t pwc_network_size(const hpx_parcel_t *p) {
-  return parcel_size(p) - pwc_prefix_size();
-}
-
-static inline void *pwc_network_offset(hpx_parcel_t *p) {
-  return &p->size;
-}
-
-#endif // LIBHPX_NETWORK_ISIR_PARCEL_UTILS_H
+#endif
