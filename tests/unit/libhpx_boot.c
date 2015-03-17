@@ -13,37 +13,57 @@
 #include <hpx/hpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/boot.h>
+#include <libsync/locks.h>
 #include "tests.h"
 
-#define FAIL(...) do {                          \
-    fprintf(stderr, __VA_ARGS__);               \
-    exit(EXIT_FAILURE);                         \
+#define FAIL(dst, ...) do {                                 \
+    fprintf(stderr, __VA_ARGS__);                           \
+    exit(EXIT_FAILURE);                                     \
   } while (0)
 
 static int alltoall_handler(hpx_addr_t done) {
   printf("Entering alltoall_handler at %d\n", HPX_LOCALITY_ID);
-  int src[HPX_LOCALITIES][2];
-  int dst[HPX_LOCALITIES][2];
+  struct {
+    int lhs;
+    int rhs;
+  } src[HPX_LOCALITIES];
+
+  struct {
+    int lhs;
+    int rhs;
+  } dst[HPX_LOCALITIES];
 
   for (int i = 0, e = HPX_LOCALITIES; i < e; ++i) {
-    src[i][0] = here->rank;
-    src[i][1] = here->rank;
-    dst[i][0] = here->rank;
-    dst[i][1] = here->rank;
+    src[i].lhs = here->rank;
+    src[i].rhs = here->rank;
+    dst[i].lhs = here->rank;
+    dst[i].rhs = here->rank;
   }
 
   boot_t *boot = here->boot;
   int e = boot_alltoall(boot, dst, src, sizeof(int), 2*sizeof(int));
   if (e) {
-    FAIL("boot_alltoall returned failure code\n");
+    FAIL(dst, "boot_alltoall returned failure code\n");
   }
 
-  for (int i = 0, e = HPX_LOCALITIES; i < e; ++i) {
-    if (dst[i][0] != i) {
-      FAIL("dst[%d][0]=%d, expected %d\n", i, dst[i][0], i);
+  static tatas_lock_t lock = SYNC_TATAS_LOCK_INIT;
+  sync_tatas_acquire(&lock);
+  {
+    printf("dst@%d {", here->rank);
+    for (int i = 0, e = HPX_LOCALITIES; i < e; ++i) {
+      printf(" {%d,%d} ", dst[i].lhs, dst[i].rhs);
     }
-    if (dst[i][1] != here->rank) {
-      FAIL("dst[%d][1]=%d, expected %d\n", i, dst[i][1], here->rank);
+    printf("}\n");
+    fflush(stdout);
+  }
+  sync_tatas_release(&lock);
+
+  for (int i = 0, e = HPX_LOCALITIES; i < e; ++i) {
+    if (dst[i].lhs != i) {
+      FAIL(dst, "dst[%d].lhs=%d, expected %d\n", i, dst[i].lhs, i);
+    }
+    if (dst[i].rhs != here->rank) {
+      FAIL(dst, "dst[%d].rhs=%d, expected %d\n", i, dst[i].rhs, here->rank);
     }
   }
 
