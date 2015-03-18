@@ -14,6 +14,7 @@
 #define LIBHPX_NETWORK_PWC_XPORT_H
 
 #include <libhpx/config.h>
+#include <libhpx/memory.h>
 
 struct boot;
 struct gas;
@@ -33,17 +34,17 @@ typedef struct {
 typedef struct pwc_xport {
   hpx_transport_t type;
 
-  void   (*delete)(void *xport);
+  void (*delete)(void *xport);
 
   size_t (*sizeof_rdma_key)(void);
-  void  *(*find_key)(const void *xport, const void *addr, size_t n);
-  int    (*pin)(void *xport, void *base, size_t n, void *key);
-  int    (*unpin)(void *xport, void *base, size_t n);
-  void   (*clear)(void *key);
-  int    (*pwc)(xport_op_t *op);
-  int    (*get)(xport_op_t *op);
-  int    (*test)(uint64_t *op, int *remaining);
-  int    (*probe)(uint64_t *op, int *remaining, int rank);
+  const void *(*find_key)(const void *xport, const void *addr, size_t n);
+  void (*clear)(void *key);
+  int (*pwc)(xport_op_t *op);
+  int (*get)(xport_op_t *op);
+  int (*test)(uint64_t *op, int *remaining);
+  int (*probe)(uint64_t *op, int *remaining, int rank);
+  memory_register_t  pin;
+  memory_release_t unpin;
 } pwc_xport_t;
 
 pwc_xport_t *pwc_xport_new_photon(const config_t *config, struct boot *boot,

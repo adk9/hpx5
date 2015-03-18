@@ -78,31 +78,30 @@ static void _photon_clear(void *key) {
   memset(key, 0, sizeof(struct photon_buffer_priv_t));
 }
 
-static void *_photon_find_key(const void *xport, const void *addr) {
+static const void *_photon_find_key(const void *obj, const void *addr, size_t n) {
   log_error("Photon find_key is unimplemented\n");
   return NULL;
 }
 
-static int _photon_pin(void *xport, void *base, size_t n, void *key) {
-  if (PHOTON_OK != photon_register_buffer(base, n)) {
+static int _photon_pin(void *obj, const void *base, size_t n, const void *key) {
+  if (PHOTON_OK != photon_register_buffer((void*)base, n)) {
     dbg_error("failed to register segment with Photon\n");
   }
   else {
     log_net("registered segment (%p, %zu)\n", base, n);
   }
 
-  const struct photon_buffer_priv_t *bkey;
   if (key) {
-    if (PHOTON_OK != photon_get_buffer_private(base, n, &bkey)) {
+    const void *pkey = NULL;
+    if (PHOTON_OK != photon_get_buffer_private(base, n, &pkey)) {
       dbg_error("failed to get segment key from Photon\n");
     }
-    memcpy(key, bkey, sizeof(*bkey));
   }
   return LIBHPX_OK;
 }
 
-static int _photon_unpin(void *xport, void *base, size_t n) {
-  int e = photon_unregister_buffer(base, n);
+static int _photon_unpin(void *obj, const void *base, size_t n) {
+  int e = photon_unregister_buffer((void*)base, n);
   if (PHOTON_OK != e) {
     dbg_error("unhandled error %d during release of segment (%p, %zu)\n", e,
               base, n);
@@ -117,13 +116,13 @@ static int _photon_pwc(xport_op_t *op) {
 
   struct photon_buffer_t rbuf = {
     .addr = (uintptr_t)op->dest,
-    .size = op->n,
+    .size = 0,
     .priv = *(struct photon_buffer_priv_t*)op->dest_key
   };
 
   struct photon_buffer_t lbuf = {
     .addr = (uintptr_t)op->src,
-    .size = op->n,
+    .size = 0,
     .priv = {0, 0},
   };
 
@@ -145,13 +144,13 @@ static int _photon_get(xport_op_t *op) {
 
   struct photon_buffer_t lbuf = {
     .addr = (uintptr_t)op->dest,
-    .size = op->n,
+    .size = 0,
     .priv = *(struct photon_buffer_priv_t*)op->dest_key
   };
 
   struct photon_buffer_t rbuf = {
     .addr = (uintptr_t)op->src,
-    .size = op->n,
+    .size = 0,
     .priv = {0, 0},
   };
 
