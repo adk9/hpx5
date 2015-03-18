@@ -20,7 +20,7 @@ static HPX_ACTION(_spawn1, hpx_addr_t *sync) {
     hpx_lco_wait(*sync);
   }
 
-  int spawns = rand()%3;
+  int spawns = rand()%2;
   if (spawns) {
     for (int i = 0; i < spawns; ++i) {
       hpx_call(HPX_HERE, _spawn1, HPX_NULL, 0, NULL);
@@ -31,7 +31,7 @@ static HPX_ACTION(_spawn1, hpx_addr_t *sync) {
 }
 
 static HPX_ACTION(_spawn2, hpx_addr_t *sync) {
-  int spawns = rand()%3;
+  int spawns = rand()%2;
   if (spawns) {
     for (int i = 0; i < spawns; ++i) {
       hpx_call(HPX_HERE, _spawn2, HPX_NULL, 0, NULL);

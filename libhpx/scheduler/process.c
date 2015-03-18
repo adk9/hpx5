@@ -78,7 +78,7 @@ static HPX_ACTION(_proc_call, hpx_parcel_t *arg) {
   hpx_gas_unpin(process);
 
   hpx_pid_t pid = hpx_process_getpid(process);
-  hpx_parcel_t *parcel = calloc(1, parcel_size(arg));
+  hpx_parcel_t *parcel = hpx_parcel_acquire(NULL, parcel_size(arg));
   memcpy(parcel, arg, parcel_size(arg));
   hpx_parcel_set_pid(parcel, pid);
   parcel_set_credit(parcel, credit);
@@ -169,6 +169,8 @@ int _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
   hpx_parcel_set_pid(p, 0);
   parcel_set_credit(p, 0);
   hpx_parcel_send_sync(p);
+
+  hpx_parcel_release(parcel);
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
   return HPX_SUCCESS;
