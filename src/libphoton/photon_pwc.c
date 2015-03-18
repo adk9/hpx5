@@ -165,14 +165,13 @@ static int photon_pwc_try_ledger(photonRequest req, int curr) {
   req->rattr.events = 1;
 
   if (req->size > 0) {
-    
     if (!req->local_info.buf.priv.key0 && !req->local_info.buf.priv.key1) {
       if (buffertable_find_containing( (void *)req->local_info.buf.addr,
 				       req->size, &db) != 0) {
 	log_err("Tried posting from a buffer that's not registered");
 	goto error_exit;
       }
-      memcpy(&req->local_info.buf, &(db->buf), sizeof(db->buf));
+      req->local_info.buf.priv = db->buf.priv;
     }
     
     if (! (req->flags & REQUEST_FLAG_NO_RCE))
@@ -274,9 +273,6 @@ int _photon_put_with_completion(int proc, uint64_t size,
     return photon_pwc_try_ledger(req, 0);
   }
 
-  // set a cookie for the completion events
-  req->rattr.cookie = req->id;
-
   rt = photon_processes[proc].request_table;
 
   // process any queued requests for this peer first
@@ -350,7 +346,7 @@ int _photon_get_with_completion(int proc, uint64_t size,
       log_err("Tried posting from a buffer that's not registered");
       goto error_exit;
     }
-    memcpy(&req->local_info.buf, &(db->buf), sizeof(db->buf));
+    req->local_info.buf.priv = db->buf.priv;
   }
  
   rc = __photon_backend->rdma_get(proc, lbuf->addr, rbuf->addr, size,
