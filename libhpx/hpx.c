@@ -224,9 +224,8 @@ int _hpx_run(hpx_action_t *act, int nargs, ...) {
   if (here->rank == 0) {
     va_list vargs;
     va_start(vargs, nargs);
-    status = libhpx_call_action(here->actions, HPX_HERE, *act, HPX_NULL,
-                                HPX_ACTION_NULL, HPX_NULL, HPX_NULL,
-                                nargs, &vargs);
+    status = libhpx_call_action(HPX_HERE, *act, HPX_NULL, HPX_ACTION_NULL, HPX_NULL,
+                                HPX_NULL, nargs, &vargs);
     va_end(vargs);
     if (status != LIBHPX_OK) {
       log_error("failed to spawn initial action\n");
