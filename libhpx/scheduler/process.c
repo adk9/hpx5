@@ -67,7 +67,7 @@ static void _init(_process_t *p, hpx_addr_t termination) {
   p->termination = termination;
 }
 
-static HPX_ACTION(_proc_call, hpx_parcel_t *parcel) {
+static HPX_ACTION(_proc_call, hpx_parcel_t *arg) {
   hpx_addr_t process = hpx_thread_current_target();
   _process_t *p = NULL;
   if (!hpx_gas_try_pin(process, (void**)&p)) {
@@ -78,6 +78,8 @@ static HPX_ACTION(_proc_call, hpx_parcel_t *parcel) {
   hpx_gas_unpin(process);
 
   hpx_pid_t pid = hpx_process_getpid(process);
+  hpx_parcel_t *parcel = calloc(1, parcel_size(arg));
+  memcpy(parcel, arg, parcel_size(arg));
   hpx_parcel_set_pid(parcel, pid);
   parcel_set_credit(parcel, credit);
   hpx_parcel_send_sync(parcel);
@@ -157,13 +159,18 @@ int _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
                                                HPX_NULL, nargs, &vargs);
   va_end(vargs);
 
-  hpx_parcel_t *p = hpx_parcel_acquire(parcel, parcel->size);
+  hpx_addr_t sync = hpx_lco_future_new(0);
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, parcel_size(parcel));
   hpx_parcel_set_target(p, process);
   hpx_parcel_set_action(p, _proc_call);
+  hpx_parcel_set_cont_target(p, sync);
+  hpx_parcel_set_cont_action(p, hpx_lco_set_action);
+  hpx_parcel_set_data(p, parcel, parcel_size(parcel));
   hpx_parcel_set_pid(p, 0);
   parcel_set_credit(p, 0);
   hpx_parcel_send_sync(p);
-  hpx_parcel_release(parcel);
+  hpx_lco_wait(sync);
+  hpx_lco_delete(sync, HPX_NULL);
   return HPX_SUCCESS;
 }
 
