@@ -248,7 +248,8 @@ action_acquire_parcel(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
     outargs = va_arg(*args, void *);
     len = va_arg(*args, int);
 
-    p = hpx_parcel_acquire(outargs, len);
+    p = hpx_parcel_acquire(NULL, len);
+    hpx_parcel_set_data(p, outargs, len);
   }
 
   hpx_parcel_set_target(p, addr);
