@@ -75,33 +75,8 @@ METADATA_HANDLER(data_type, 0, char)
 METADATA_HANDLER(offset, 1, int)
 METADATA_HANDLER(min, 4, uint64_t)
 METADATA_HANDLER(max, 5, uint64_t)
-//METADATA_HANDLER_STR(printf_code, 3, 8)
+METADATA_HANDLER_STR(printf_code, 3, 8)
 METADATA_HANDLER_STR(name, 2, 256)
-
-static size_t _write_event_metadata_printf_code(void* base,
-                     inst_event_metadata_t const *event_md
-                                                ) {
-  int md_kind = 3;
-  int _length = 8;
-  int md_data_size = event_md->num_cols * (_length + 1);
-  int md_size = sizeof(struct cols_metadata) + md_data_size;
-  struct cols_metadata *md = malloc(md_size);
-  md->kind = (md_kind);
-  char *data = malloc(md_data_size);
-  strncpy(data, event_md->col_metadata[0].printf_code, (_length));
-  for (int i = 1; i < event_md->num_cols; i++) {
-    strncat(data, "|", 1);
-    strncat(data, event_md->col_metadata[i].printf_code, (_length));
-  }
-  strncpy(md->metadata, data, md_data_size);
-  md->length = strlen(data);
-  md_size = sizeof(struct cols_metadata) + md->length;
-  memcpy(base, md, md_size);
-  free(data);
-  free(md);
-  return md_size;
-}
-
 
 /// Write the metadata for the event to the header portion of the log
 static size_t _write_event_metadata(void* base, int id) {
