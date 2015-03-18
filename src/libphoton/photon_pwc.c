@@ -231,7 +231,7 @@ int _photon_put_with_completion(int proc, uint64_t size,
   photonRequestTable rt;
   int rc;
   
-  dbg_trace("(%d, %lu, %p, %p, 0x%016lx, 0x%016lx)", proc, size
+  dbg_trace("(%d, %lu, %p, %p, 0x%016lx, 0x%016lx)", proc, size,
 	    (void*)lbuf->addr, (void*)rbuf->addr, local, remote);
 
   if (size && !lbuf) {
@@ -318,7 +318,7 @@ int _photon_get_with_completion(int proc, uint64_t size,
   photonRequest req;
   int rc;
   
-  dbg_trace("(%d, %lu, %p, %p, 0x%016lx)", proc, size
+  dbg_trace("(%d, %lu, %p, %p, 0x%016lx)", proc, size,
 	    (void*)lbuf->addr, (void*)rbuf->addr, local);
   
   if (size && !rbuf) {
