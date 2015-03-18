@@ -240,6 +240,10 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
     }
     ffi_ptrarray_to_raw(cif, argps, (ffi_raw*)outargs);
   } else {
+    if (nargs != 2) {
+      return log_error("expecting 2 arguments for action %s (%d given).\n",
+                       action_table_get_key(table, action), nargs);
+    }
     outargs = va_arg(*args, void *);
     len = va_arg(*args, int);
 
