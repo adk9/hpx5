@@ -56,9 +56,8 @@ static int _chdir(const char *dir) {
   struct tm lt;
   localtime_r(&t, &lt);
   char dirname[256];
-  snprintf(dirname, 256, "hpx.%.2d%.2d.%.2d%.2d%.4d",
-           lt.tm_hour, lt.tm_min, lt.tm_mday, lt.tm_mon + 1,
-           lt.tm_year + 1900);
+  snprintf(dirname, 256, "hpx.%.4d%.2d%.2d.%.2d%.2d",
+           lt.tm_year + 1900, lt.tm_mon + 1, lt.tm_mday, lt.tm_hour, lt.tm_min);
 
   // try and create the directory---we don't care if it's already there
   int e = mkdir(dirname, 0777);
