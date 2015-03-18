@@ -119,7 +119,7 @@ void _hpx_parcel_set_args(hpx_parcel_t *p, int nargs, ...) {
 
   ffi_cif *cif = action_table_get_cif(here->actions, p->action);
   if (!cif) {
-    dbg_error("parcel must have an action to serialize arguments to its buffer.\n");
+    dbg_error("parcel action must be a typed action.\n");
   }
   else if (nargs != cif->nargs) {
     dbg_error("expecting %d arguments for action %s (%d given).\n",
