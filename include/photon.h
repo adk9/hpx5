@@ -170,13 +170,16 @@ int photon_post_os_getv_direct(int proc, void *ptr[], uint64_t size[], photonBuf
                                int flags, photon_rid *request);
 
 // RDMA with completion
-// If @p ptr is NULL, then only completion value in @p remote is sent
-// The remote buffer is specified in @p rptr and the rkey in @p priv
+// If @p lbuf is NULL and @p size is 0, then only completion value in @p remote is sent
+// The remote buffer is specified in @p rbuf along with the remote key
+// Local AND remote keys can be specified in @p lbuf and @p rbuf
+// If @p lbuf keys are zeroed, Photon will attempt to find matching registered buffer
+//
 // The default behavior is to enable all CQ events and local and
-// remote rids from probe_completion() (flags=PHOTON_REQ_NIL {0})
-int photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr, photonBufferPriv priv,
+// remote rids from probe_completion() (flags=PHOTON_REQ_NIL)
+int photon_put_with_completion(int proc, uint64_t size, photonBuffer lbuf, photonBuffer rbuf,
                                photon_rid local, photon_rid remote, int flags);
-int photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, photonBufferPriv priv,
+int photon_get_with_completion(int proc, uint64_t size, photonBuffer lbuf, photonBuffer rbuf,
                                photon_rid local, int flags);
 // Can probe ANY_SOURCE but given @p proc will only poll the CQ (if available) and completion
 // ledger associated with that rank

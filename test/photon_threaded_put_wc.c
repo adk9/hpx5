@@ -137,6 +137,7 @@ int main(int argc, char **argv) {
   if (argc > 3)
     aff_ledg = atoi(argv[3]);
 
+  struct photon_buffer_t lbuf;
   struct photon_buffer_t rbuf[nproc];
   photon_rid recvReq[nproc], sendReq[nproc];
   char *send, *recv[nproc];
@@ -249,7 +250,10 @@ int main(int argc, char **argv) {
         for (k=0; k<ITERS; k++) {
 	  if (sem_wait(&sem) == 0) {
 	    int rc;
-	    rc = photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, &rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0);
+	    lbuf.addr = (uintptr_t)send;
+	    lbuf.size = sizes[i];
+	    lbuf.priv = (struct photon_buffer_priv_t){0,0};
+	    rc = photon_put_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0xcafebabe, 0);
 	    if (rc == PHOTON_ERROR) {
 	      fprintf(stderr, "Error doing PWC\n");
 	      exit(1);
@@ -274,17 +278,20 @@ int main(int argc, char **argv) {
         printf("%1.4f     ", latency);
         fflush(stdout);
       }
-
+      
       if (rank <= ns) {
         if (i && !(sizes[i] % 8)) {
           clock_gettime(CLOCK_MONOTONIC, &time_s);
           for (k=0; k<ITERS; k++) {
-              if (sem_wait(&sem) == 0) {
-                if (photon_get_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, &rbuf[j].priv, PHOTON_TAG, 0)) {
-		  fprintf(stderr, "Error doing GWC\n");
-		  exit(1);
-		}
-              }
+	    if (sem_wait(&sem) == 0) {
+	      lbuf.addr = (uintptr_t)send;
+	      lbuf.size = sizes[i];
+	      lbuf.priv = (struct photon_buffer_priv_t){0,0};
+	      if (photon_get_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0)) {
+		fprintf(stderr, "Error doing GWC\n");
+		exit(1);
+	      }
+	    }
           }
         }
       }
