@@ -23,9 +23,9 @@
 #include "xport.h"
 
 typedef struct {
-  size_t   n;
-  void *base;
-  void  *key;
+  size_t        n;
+  void      *base;
+  const void *key;
 } segment_t;
 
 typedef struct {

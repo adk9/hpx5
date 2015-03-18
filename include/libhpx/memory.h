@@ -49,8 +49,9 @@ typedef struct address_space {
 
 /// These function types are used to parameterize the implementation of some of
 /// the address spaces.
-typedef int (*memory_register_t)(void *obj, void *base, size_t n, void *key);
-typedef int (*memory_release_t)(void *obj, void *base, size_t n);
+typedef int (*memory_register_t)(void *obj, const void *base, size_t n,
+                                 const void *key);
+typedef int (*memory_release_t)(void *obj, const void *base, size_t n);
 
 address_space_t *address_space_new_default(const struct config *cfg)
   HPX_INTERNAL;
