@@ -24,8 +24,6 @@
 
 #include <hpx/builtins.h>
 
-#include <libsync/barriers.h>
-
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
@@ -186,9 +184,6 @@ static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
   // _worker_shutdown.
   void *base = (char*)sp - here->config->stacksize;
   network_register_dma(here->network, base, here->config->stacksize);
-
-  // wait for the rest of the scheduler to catch up to me
-  sync_barrier_join(here->sched->barrier, self->id);
 
   return HPX_SUCCESS;
 }
@@ -601,6 +596,9 @@ int worker_start(void) {
 
   self->current = NULL;
 
+  // wait for everyone here---this prevents a short execution from getting here
+  // before all of the pthreads have started
+  pthread_barrier_wait(&self->sched->barrier);
   return LIBHPX_OK;
 }
 
@@ -625,8 +623,9 @@ void worker_join(struct worker *worker) {
     return;
   }
 
-  if (pthread_join(worker->thread, NULL)) {
-    dbg_error("cannot join worker thread %d.\n", worker->id);
+  int e = pthread_join(worker->thread, NULL);
+  if (e) {
+    dbg_error("cannot join worker thread %d (%s).\n", worker->id, strerror(e));
   }
 }
 

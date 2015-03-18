@@ -20,7 +20,6 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <libsync/barriers.h>
 #include <hpx/builtins.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
@@ -57,9 +56,9 @@ struct scheduler *scheduler_new(const config_t *cfg) {
     }
   }
 
-  s->barrier = sr_barrier_new(workers);
-  if (!s->barrier) {
-    dbg_error("failed to allocate the startup barrier.\n");
+  e = pthread_barrier_init(&s->barrier, NULL, workers);
+  if (e) {
+    dbg_error("failed to allocate the scheduler barrier.\n");
     scheduler_delete(s);
     return NULL;
   }
@@ -87,9 +86,7 @@ void scheduler_delete(struct scheduler *sched) {
     return;
   }
 
-  if (sched->barrier) {
-    sync_barrier_delete(sched->barrier);
-  }
+  pthread_barrier_destroy(&sched->barrier);
 
   if (sched->workers) {
     for (int i = 0, e = sched->n_workers; i < e; ++i) {
