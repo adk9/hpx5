@@ -249,7 +249,7 @@ int _photon_put_with_completion(int proc, uint64_t size,
     return PHOTON_OK;
   }
 
-  if (!rbuf->priv.key0 && !rbuf->priv.key1) {
+  if (size && !rbuf->priv.key0 && !rbuf->priv.key1) {
     dbg_warn("No remote buffer keys specified!");
   }
   
@@ -331,7 +331,7 @@ int _photon_get_with_completion(int proc, uint64_t size,
     goto error_exit;
   }
 
-  if (!rbuf->priv.key0 && !rbuf->priv.key1) {
+  if (size && !rbuf->priv.key0 && !rbuf->priv.key1) {
     dbg_warn("No remote buffer keys specified!");
   }
 
