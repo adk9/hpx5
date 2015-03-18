@@ -92,7 +92,7 @@ int __photon_get_nevents(int proc, int max, photon_rid **ids, int *n) {
   }
 
   if (rc == PHOTON_EVENT_OK) {
-    dbg_trace("got events: 0x%016lx", event.id);
+    dbg_trace("got %d events", *n);
   }
   
   return rc;

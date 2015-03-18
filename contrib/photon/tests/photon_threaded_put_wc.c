@@ -112,6 +112,7 @@ START_TEST(test_photon_threaded_put_wc)
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
   myrank = rank;
 
+  struct photon_buffer_t lbuf;
   struct photon_buffer_t rbuf[nproc];
   photon_rid recvReq[nproc], sendReq[nproc];
   char *send, *recv[nproc];
@@ -219,7 +220,10 @@ START_TEST(test_photon_threaded_put_wc)
         for (k=0; k<ITERS; k++) {
 	  if (sem_wait(&sem) == 0) {
 	    int rc;
-	    rc = photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, &rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0);
+	    lbuf.addr = (uintptr_t)send;
+	    lbuf.size = sizes[i];
+	    lbuf.priv = (struct photon_buffer_priv_t){0,0};
+	    rc = photon_put_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0xcafebabe, 0);
 	    if (rc == PHOTON_ERROR) {
 	      fprintf(stderr, "Error doing PWC\n");
 	      exit(1);
@@ -249,11 +253,17 @@ START_TEST(test_photon_threaded_put_wc)
         if (i && !(sizes[i] % 8)) {
           clock_gettime(CLOCK_MONOTONIC, &time_s);
           for (k=0; k<ITERS; k++) {
-              if (sem_wait(&sem) == 0) {
-                photon_get_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, &rbuf[j].priv, PHOTON_TAG, 0);
+	    if (sem_wait(&sem) == 0) {
+	      lbuf.addr = (uintptr_t)send;
+	      lbuf.size = sizes[i];
+	      lbuf.priv = (struct photon_buffer_priv_t){0,0};
+	      if (photon_get_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0)) {
+		fprintf(stderr, "Error doing GWC\n");
+		exit(1);
               }
-          }
-        }
+	    }
+	  }
+	}
       }
 
       // clear remaining local completions

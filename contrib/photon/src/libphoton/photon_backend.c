@@ -396,7 +396,7 @@ static int _photon_register_buffer(void *buffer, uint64_t size) {
     goto error_exit_db;
   }
 
-  dbg_trace("added buffer to hash table");
+  dbg_trace("added buffer to table");
 
 normal_exit:
   return PHOTON_OK;
@@ -417,7 +417,7 @@ static int _photon_unregister_buffer(void *buffer, uint64_t size) {
   }
 
   if (buffertable_find_exact(buffer, size, &db) != 0) {
-    dbg_trace("no such buffer is registered");
+    dbg_err("no such buffer is registered at %p", buffer);
     goto error_exit;
   }
 
@@ -1670,11 +1670,11 @@ int _photon_handle_addr(photonAddr addr, photonAddr raddr) {
 int _photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv) {
   photonBI db;
 
-  if (buffertable_find_exact(buf, size, &db) == 0) {
+  if (buffertable_find_containing(buf, size, &db) == 0) {
     return photon_buffer_get_private(db, ret_priv);
   }
   else {
-    dbg_err("Could not find buffer: 0x%016lx of size %lu", (uintptr_t)buf, size);
+    dbg_warn("Could not find buffer: 0x%016lx of size %lu", (uintptr_t)buf, size);
     return PHOTON_ERROR;
   }
 }
