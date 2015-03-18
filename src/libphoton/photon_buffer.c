@@ -53,15 +53,6 @@ int photon_buffer_unregister(photonBI buf, void *ctx) {
   return bi->buffer_unregister(buf, ctx);
 }
 
-int photon_buffer_get_private(photonBI buf, photonBufferPriv ret_priv) {
-  if (!bi) {
-    log_err("Buffer interface not set!");
-    return PHOTON_ERROR;
-  }
-
-  return bi->buffer_get_private(buf, ret_priv);
-}
-
 /* default buffer interface methods */
 photonBI _photon_buffer_create(void *buf, uint64_t size) {
   photonBI new_buf;

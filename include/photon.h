@@ -145,7 +145,7 @@ int photon_finalize();
 // Buffers
 int photon_register_buffer(void *buf, uint64_t size);
 int photon_unregister_buffer(void *buf, uint64_t size);
-int photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv);
+int photon_get_buffer_private(void *buf, uint64_t size, const struct photon_buffer_priv_t **pptr);
 int photon_get_buffer_remote(photon_rid request, photonBuffer ret_buf);
 
 // RDMA rendezvous

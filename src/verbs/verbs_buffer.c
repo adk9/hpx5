@@ -10,14 +10,12 @@
 
 static int __verbs_buffer_register(photonBI dbuffer, void *ctx);
 static int __verbs_buffer_unregister(photonBI dbuffer, void *ctx);
-static int __verbs_buffer_get_private(photonBI buf, photonBufferPriv ret_priv);
 
 struct photon_buffer_interface_t verbs_buffer_interface = {
   .buffer_create = _photon_buffer_create,
   .buffer_free = _photon_buffer_free,
   .buffer_register = __verbs_buffer_register,
   .buffer_unregister = __verbs_buffer_unregister,
-  .buffer_get_private = __verbs_buffer_get_private
 };
 
 static int __verbs_buffer_register(photonBI dbuffer, void *ctx) {
@@ -63,15 +61,4 @@ static int __verbs_buffer_unregister(photonBI dbuffer, void *ctx) {
   dbuffer->is_registered = 0;
 
   return PHOTON_OK;
-}
-
-static int __verbs_buffer_get_private(photonBI buf, photonBufferPriv ret_priv) {
-  struct ibv_mr *mr = (struct ibv_mr *)buf->priv_ptr;
-  if (buf->is_registered && mr) {
-    (*ret_priv).key0 = mr->lkey;
-    (*ret_priv).key1 = mr->rkey;
-    return PHOTON_OK;
-  }
-
-  return PHOTON_ERROR;
 }

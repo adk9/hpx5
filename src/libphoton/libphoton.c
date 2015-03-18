@@ -590,13 +590,14 @@ void photon_io_print_info(void *io) {
 /* end I/O */
 
 /* utility API method to get backend-specific buffer info */
-int photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv) {
-  return _photon_get_buffer_private(buf, size, ret_priv);
+int photon_get_buffer_private(void *buf, uint64_t size,
+			      const struct photon_buffer_priv_t **pptr) {
+  return _photon_get_buffer_private(buf, size, pptr);
 }
 
 /* utility method to get the remote buffer info set after a wait buffer request */
-int photon_get_buffer_remote(photon_rid request, photonBuffer ret_desc) {
-  return _photon_get_buffer_remote(request, ret_desc);
+int photon_get_buffer_remote(photon_rid request, photonBuffer ret_buf) {
+  return _photon_get_buffer_remote(request, ret_buf);
 }
 
 int photon_get_dev_name(char **dev_name) {
