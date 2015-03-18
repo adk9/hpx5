@@ -78,6 +78,16 @@ extern address_space_t *local;
 extern address_space_t *registered;
 extern address_space_t *global;
 
+static inline void local_join(void) {
+  dbg_assert(local && local->join);
+  local->join(local);
+}
+
+static inline void local_leave(void) {
+  dbg_assert(local && local->leave);
+  local->leave(local);
+}
+
 static inline void local_free(void *p) {
   dbg_assert(local && local->free);
   local->free(p);
@@ -104,6 +114,16 @@ static inline void *local_memalign(size_t boundary, size_t size) {
   return p;
 }
 
+static inline void registered_join(void) {
+  dbg_assert(registered && registered->join);
+  registered->join(registered);
+}
+
+static inline void registered_leave(void) {
+  dbg_assert(registered && registered->leave);
+  registered->leave(local);
+}
+
 static inline void registered_free(void *p) {
   dbg_assert(registered && registered->free);
   registered->free(p);
@@ -128,6 +148,16 @@ static inline void *registered_memalign(size_t boundary, size_t size) {
   void *p = registered->memalign(boundary, size);
   dbg_assert(p);
   return p;
+}
+
+static inline void global_join(void) {
+  dbg_assert(global && global->join);
+  global->join(global);
+}
+
+static inline void global_leave(void) {
+  dbg_assert(global && global->leave);
+  global->leave(global);
 }
 
 static inline void global_free(void *p) {
