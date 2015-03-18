@@ -10,34 +10,35 @@ AM_CFLAGS        = -Wno-unused
 
 LIBS = $(HPX_LIBS)
 
-TESTS = bcast			\
-	call_when		\
-	gas_alloc		\
-	gas_global_alloc	\
-	gas_memget		\
-	gas_memput		\
-	lco_and			\
-	lco_and_set_fail	\
-	lco_array		\
-	lco_channels		\
-	lco_collectives		\
-	lco_futures		\
-	lco_gencount		\
-	lco_sema		\
-	lco_setget		\
-	lco_user		\
-    libhpx_boot \
-	parcel_continuation	\
-	parcel_create		\
-	parcel_send		\
-	parcel_send_through	\
-	runtime			\
-	task			\
-	thread_cont_action	\
-	thread_continue		\
-	thread_create		\
-	thread_gettlsid		\
-	thread_yield
+TESTS = bcast                   \
+        call_when               \
+        gas_alloc               \
+        gas_global_alloc        \
+        gas_memget              \
+        gas_memput              \
+        lco_and                 \
+        lco_and_set_fail        \
+        lco_array               \
+        lco_channels            \
+        lco_collectives         \
+        lco_futures             \
+        lco_gencount            \
+        lco_sema                \
+        lco_setget              \
+        lco_user                \
+        libhpx_boot             \
+        parcel_continuation     \
+        parcel_create           \
+        parcel_send             \
+        parcel_send_through     \
+        process                 \
+        runtime                 \
+        task                    \
+        thread_cont_action      \
+        thread_continue         \
+        thread_create           \
+        thread_gettlsid         \
+        thread_yield
 
 XFAIL_TESTS      = lco_and_set_fail process
 
