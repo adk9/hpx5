@@ -25,6 +25,7 @@
 #include <libhpx/boot.h>
 #include <libhpx/locality.h>
 #include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
 
 
 static HPX_RETURNS_NON_NULL const char *_id(void) {
@@ -275,7 +276,7 @@ static int _pmi_alltoall(const void *boot, void *restrict dest,
   const boot_t *pmi = boot;
 
   // Allocate a temporary buffer to allgather into
-  int gather_bytes = boot->ranks * stride;
+  int gather_bytes = pmi->n_ranks(pmi) * stride;
   void *gather = malloc(gather_bytes);
   if (!gather) {
     dbg_error("could not allocate enough space for PMI alltoall emulation\n");
@@ -290,7 +291,7 @@ static int _pmi_alltoall(const void *boot, void *restrict dest,
   // Copy out the data
   const char *from = gather;
   char *to = dest;
-  for (int i = 0, e = pmi->ranks; i < e; ++i) {
+  for (int i = 0, e = pmi->n_ranks(pmi); i < e; ++i) {
     int offset = i * stride;
     memcpy(to + offset, from + offset, n);
   }
