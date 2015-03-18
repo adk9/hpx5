@@ -13,6 +13,7 @@
 #include <hpx/hpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/boot.h>
+#include <libhpx/config.h>
 #include <libsync/locks.h>
 #include "tests.h"
 
@@ -21,7 +22,7 @@
     exit(EXIT_FAILURE);                                     \
   } while (0)
 
-static int alltoall_handler(hpx_addr_t done) {
+static int alltoall_handler(boot_t *boot) {
   printf("Entering alltoall_handler at %d\n", HPX_LOCALITY_ID);
   int src[HPX_LOCALITIES][2];
   int dst[HPX_LOCALITIES][2];
@@ -34,7 +35,6 @@ static int alltoall_handler(hpx_addr_t done) {
     dst[i][1] = here->rank;
   }
 
-  boot_t *boot = here->boot;
   boot_barrier(boot);
   static tatas_lock_t lock = SYNC_TATAS_LOCK_INIT;
   sync_tatas_acquire(&lock);
@@ -75,19 +75,17 @@ static int alltoall_handler(hpx_addr_t done) {
     }
   }
 
-  hpx_call_cc(done, hpx_lco_set_action, NULL, NULL, NULL, 0);
-}
-static HPX_ACTION_DEF(DEFAULT, alltoall_handler, alltoall, HPX_ADDR);
-
-static HPX_ACTION(libhpx_boot_alltoall, void *UNUSED) {
-  printf("Starting libpx_boot_alltoall on %d localities\n", HPX_LOCALITIES);
-  hpx_addr_t done = hpx_lco_and_new(HPX_LOCALITIES);
-  hpx_bcast_sync(alltoall, &done);
-  hpx_lco_wait(done);
-  printf("Completed libhpx_boot_alltoall\n");
-  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL, NULL, 0);
+  return 0;
 }
 
-TEST_MAIN({
- ADD_TEST(libhpx_boot_alltoall);
-});
+int main(int argc, char *argv[]) {
+  if (hpx_init(&argc, &argv)) {
+    fprintf(stderr, "failed to initialize HPX.\n");
+    return 1;
+  }
+
+  boot_t *boot = here->boot;
+  int e = alltoall_handler(boot);
+  boot_delete(boot);
+  return e;
+}
