@@ -22,7 +22,7 @@ typedef enum {
 } hpx_photon_backend_t;
 
 static const char* const HPX_PHOTON_BACKEND_TO_STRING[] = {
-  "verbs",
+  "default",
   "verbs",
   "ugni",
   "INVALID_BACKEND"
