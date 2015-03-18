@@ -40,7 +40,7 @@ TESTS = bcast                   \
         thread_gettlsid         \
         thread_yield
 
-XFAIL_TESTS      = lco_and_set_fail process
+XFAIL_TESTS      = lco_and_set_fail
 
 if ENABLE_LENGTHY_TESTS
 TESTS           += lco_wait
