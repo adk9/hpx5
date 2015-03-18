@@ -30,7 +30,6 @@
 typedef struct {
   pwc_xport_t  vtable;
   PAD_TO_CACHELINE(sizeof(pwc_xport_t));
-  tatas_lock_t registration_lock;
 } photon_pwc_xport_t;
 
 static void _init_photon_config(const config_t *cfg, boot_t *boot,
@@ -79,8 +78,6 @@ static void _photon_clear(void *key) {
 }
 
 static int _photon_pin(void *xport, void *base, size_t n, void *key) {
-  photon_pwc_xport_t *photon = xport;
-  sync_tatas_acquire(&photon->registration_lock);
   if (PHOTON_OK != photon_register_buffer(base, n)) {
     dbg_error("failed to register segment with Photon\n");
   }
@@ -93,21 +90,15 @@ static int _photon_pin(void *xport, void *base, size_t n, void *key) {
       dbg_error("failed to segment key from Photon\n");
     }
   }
-
-  sync_tatas_release(&photon->registration_lock);
   return LIBHPX_OK;
 }
 
 static int _photon_unpin(void *xport, void *base, size_t n) {
-  photon_pwc_xport_t *photon = xport;
-  sync_tatas_acquire(&photon->registration_lock);
   int e = photon_unregister_buffer(base, n);
   if (PHOTON_OK != e) {
     dbg_error("unhandled error %d during release of segment (%p, %zu)\n", e,
               base, n);
   }
-
-  sync_tatas_release(&photon->registration_lock);
   log_net("released the segment (%p, %zu)\n", base, n);
   return LIBHPX_OK;
 }
@@ -117,9 +108,16 @@ static int _photon_pwc(int r, void *rva, const void *rolva, size_t n,
   int flag = ((lsync) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
              ((rsync) ? 0 : PHOTON_REQ_PWC_NO_RCE);
 
-  struct photon_buffer_priv_t *key = rkey;
-  void *lva = (void*)rolva;
-  int e = photon_put_with_completion(r, lva, n, rva, key, lsync, rsync, flag);
+  struct photon_buffer_t lbuf, rbuf;
+  rbuf.addr = (uintptr_t)rva;
+  rbuf.size = n;
+  rbuf.priv = *(struct photon_buffer_priv_t*)rkey;
+  
+  lbuf.addr = (uintptr_t)rolva;
+  lbuf.size = n;
+  lbuf.priv = (struct photon_buffer_priv_t){0,0};
+  
+  int e = photon_put_with_completion(r, n, &lbuf, &rbuf, lsync, rsync, flag);
   switch (e) {
    case PHOTON_OK:
     return LIBHPX_OK;
@@ -132,12 +130,19 @@ static int _photon_pwc(int r, void *rva, const void *rolva, size_t n,
 
 static int _photon_gwc(int r, void *lva, const void *rorva, size_t n,
                        uint64_t lsync, void *rkey) {
-  struct photon_buffer_priv_t *key = rkey;
-  void *rva = (void*)rorva;
-  int e = photon_get_with_completion(r, lva, n, rva, key, lsync, 0);
+
+  struct photon_buffer_t lbuf, rbuf;
+  rbuf.addr = (uintptr_t)rorva;
+  rbuf.size = n;
+  rbuf.priv = *(struct photon_buffer_priv_t*)rkey;
+  
+  lbuf.addr = (uintptr_t)lva;
+  lbuf.size = n;
+  lbuf.priv = (struct photon_buffer_priv_t){0,0};
+
+  int e = photon_get_with_completion(r, n, &lbuf, &rbuf, lsync, 0);
   dbg_assert_str(PHOTON_OK == e, "failed transport get operation\n");
   return LIBHPX_OK;
-
 }
 
 static int _poll(uint64_t *op, int *remaining, int src, int type) {
@@ -177,8 +182,6 @@ pwc_xport_t *pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas)
   photon->vtable.gwc = _photon_gwc;
   photon->vtable.test = _photon_test;
   photon->vtable.probe = _photon_probe;
-
-  sync_tatas_init(&photon->registration_lock);
 
   local = address_space_new_default(cfg);
   registered = address_space_new_jemalloc_registered(cfg, photon, _photon_pin,
