@@ -253,24 +253,15 @@ int _photon_put_with_completion(int proc, uint64_t size,
     dbg_warn("No remote buffer keys specified!");
   }
   
-  req = photon_get_request(proc);
+  req = photon_setup_request_direct(lbuf, rbuf, size, proc, 0);
   if (!req) {
     dbg_err("Could not allocate request");
     goto error_exit;
   }
-
-  req->proc  = proc;
-  req->flags = REQUEST_FLAG_NIL;
-  req->op    = REQUEST_OP_PWC;
-  req->type  = EVQUEUE;
-  req->state = REQUEST_PENDING;
-  req->size  = size;
-
-  req->local_info.id = local;
-  memcpy(&req->local_info.buf, lbuf, sizeof(*lbuf));
-
+  
+  req->op             = REQUEST_OP_PWC;
+  req->local_info.id  = local;
   req->remote_info.id = remote;
-  memcpy(&req->remote_info.buf, rbuf, sizeof(*rbuf));
   
   // control the return of the local id
   if (flags & PHOTON_REQ_PWC_NO_LCE) {

@@ -176,7 +176,7 @@ int photon_post_os_getv_direct(int proc, void *ptr[], uint64_t size[], photonBuf
 // If @p lbuf keys are zeroed, Photon will attempt to find matching registered buffer
 //
 // The default behavior is to enable all CQ events and local and
-// remote rids from probe_completion() (flags=PHOTON_REQ_NIL {0})
+// remote rids from probe_completion() (flags=PHOTON_REQ_NIL)
 int photon_put_with_completion(int proc, uint64_t size, photonBuffer lbuf, photonBuffer rbuf,
                                photon_rid local, photon_rid remote, int flags);
 int photon_get_with_completion(int proc, uint64_t size, photonBuffer lbuf, photonBuffer rbuf,
