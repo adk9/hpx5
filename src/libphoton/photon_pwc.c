@@ -165,18 +165,27 @@ static int photon_pwc_try_ledger(photonRequest req, int curr) {
   req->rattr.events = 1;
 
   if (req->size > 0) {
-    if (buffertable_find_containing( (void *)req->local_info.buf.addr, req->size, &db) != 0) {
-      log_err("Tried posting from a buffer that's not registered");
-      goto error_exit;
+    
+    if (!req->local_info.buf.priv.key0 && !req->local_info.buf.priv.key1) {
+      if (buffertable_find_containing( (void *)req->local_info.buf.addr,
+				       req->size, &db) != 0) {
+	log_err("Tried posting from a buffer that's not registered");
+	goto error_exit;
+      }
+      memcpy(&req->local_info.buf, &(db->buf), sizeof(db->buf));
     }
-
+    
     if (! (req->flags & REQUEST_FLAG_NO_RCE))
       req->rattr.events = 2;
-
-    rc = __photon_backend->rdma_put(req->proc, req->local_info.buf.addr,
-                    req->remote_info.buf.addr, req->size, &(db->buf),
-                    &req->remote_info.buf, req->rattr.cookie,
-                    RDMA_FLAG_NIL);
+    
+    rc = __photon_backend->rdma_put(req->proc,
+				    req->local_info.buf.addr,
+				    req->remote_info.buf.addr,
+				    req->size,
+				    &req->local_info.buf,
+				    &req->remote_info.buf,
+				    req->rattr.cookie,
+				    RDMA_FLAG_NIL);
     if (rc != PHOTON_OK) {
       dbg_err("RDMA PUT (PWC data) failed for 0x%016lx", req->rattr.cookie);
       goto error_exit;
@@ -213,22 +222,25 @@ static int photon_pwc_try_ledger(photonRequest req, int curr) {
   return PHOTON_ERROR;
 }
 
-int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
-				photonBufferPriv priv,
-				photon_rid local, photon_rid remote, int flags) {
+int _photon_put_with_completion(int proc, uint64_t size,
+				photonBuffer lbuf,
+				photonBuffer rbuf,
+				photon_rid local, photon_rid remote,
+				int flags) {
   photonRequest req;
   photonRequestTable rt;
   int rc;
   
-  dbg_trace("(%d, %p, %lu, %p, 0x%016lx, 0x%016lx)", proc, ptr, size, rptr, local, remote);
+  dbg_trace("(%d, %lu, %p, %p, 0x%016lx, 0x%016lx)", proc, size
+	    (void*)lbuf->addr, (void*)rbuf->addr, local, remote);
 
-  if (size && !ptr) {
-    log_err("Trying to put size %lu and NULL ptr", size);
+  if (size && !lbuf) {
+    log_err("Trying to put size %lu and NULL lbuf", size);
     goto error_exit;
   }
 
-  if (size && !rptr) {
-    log_err("Tring to put size %lu and NULL rptr", size);
+  if (size && !rbuf) {
+    log_err("Trying to put size %lu and NULL rbuf", size);
     goto error_exit;
   }
 
@@ -237,6 +249,10 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
     return PHOTON_OK;
   }
 
+  if (!rbuf->priv.key0 && !rbuf->priv.key1) {
+    dbg_warn("No remote buffer keys specified!");
+  }
+  
   req = photon_get_request(proc);
   if (!req) {
     dbg_err("Could not allocate request");
@@ -250,16 +266,11 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   req->state = REQUEST_PENDING;
   req->size  = size;
 
-  req->local_info.id        = local;
-  req->local_info.buf.addr  = (uintptr_t)ptr;
-  req->local_info.buf.size  = size;
-  // local buffer should have been registered to photon
-  // but we only need buffer metadata if doing 2-put
+  req->local_info.id = local;
+  memcpy(&req->local_info.buf, lbuf, sizeof(*lbuf));
 
-  req->remote_info.id       = remote;
-  req->remote_info.buf.addr = (uintptr_t)rptr;
-  req->remote_info.buf.size = size;
-  req->remote_info.buf.priv = (priv) ? *priv: (struct photon_buffer_priv_t){0,0};
+  req->remote_info.id = remote;
+  memcpy(&req->remote_info.buf, rbuf, sizeof(*rbuf));
   
   // control the return of the local id
   if (flags & PHOTON_REQ_PWC_NO_LCE) {
@@ -308,51 +319,53 @@ int _photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   return PHOTON_ERROR;
 }
 
-int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
-				photonBufferPriv priv,
+int _photon_get_with_completion(int proc, uint64_t size,
+				photonBuffer lbuf,
+				photonBuffer rbuf,
 				photon_rid local, int flags) {
   photonBI db;
   photonRequest req;
-  struct photon_buffer_t lbuf;
-  struct photon_buffer_t rbuf;
   int rc;
-
-  dbg_trace("(%d, %p, %lu, %p, 0x%016lx)", proc, ptr, size, rptr, local);
-
-  if (size && !rptr) {
-    log_err("Tring to get size %lu and NULL rptr", size);
-    goto error_exit;
-  }
-
-  if (!size || !ptr) {
-    log_err("Trying to get 0 bytes or into NULL ptr");
-    goto error_exit;
-  }
-
-  if (buffertable_find_containing( (void *)ptr, (int)size, &db) != 0) {
-    log_err("Tried posting from a buffer that's not registered");
-    goto error_exit;
-  }
-
-  lbuf.addr = (uintptr_t)ptr;
-  lbuf.size = size;
-  lbuf.priv = db->buf.priv;
-
-  rbuf.addr = (uintptr_t)rptr;
-  rbuf.size = size;
-  rbuf.priv = (priv) ? *priv : (struct photon_buffer_priv_t){0,0};
   
-  req = photon_setup_request_direct(&lbuf, &rbuf, size, proc, 1);
+  dbg_trace("(%d, %lu, %p, %p, 0x%016lx)", proc, size
+	    (void*)lbuf->addr, (void*)rbuf->addr, local);
+  
+  if (size && !rbuf) {
+    log_err("Tring to get size %lu and NULL rbuf", size);
+    goto error_exit;
+  }
+
+  if (!size || !lbuf) {
+    log_err("Trying to get 0 bytes or into NULL lbuf");
+    goto error_exit;
+  }
+
+  if (!rbuf->priv.key0 && !rbuf->priv.key1) {
+    dbg_warn("No remote buffer keys specified!");
+  }
+
+  req = photon_setup_request_direct(lbuf, rbuf, size, proc, 1);
   if (req == NULL) {
     dbg_trace("Could not setup direct buffer request");
     goto error_exit;
   }
-
+  
   req->op = REQUEST_OP_PWC;
   req->local_info.id = local;
 
-  rc = __photon_backend->rdma_get(proc, (uintptr_t)ptr, (uintptr_t)rptr, size, &(db->buf),
-                  &req->remote_info.buf, req->rattr.cookie, RDMA_FLAG_NIL);
+  if (!req->local_info.buf.priv.key0 && !req->local_info.buf.priv.key1) {
+    if (buffertable_find_containing( (void *)req->local_info.buf.addr,
+				     req->size, &db) != 0) {
+      log_err("Tried posting from a buffer that's not registered");
+      goto error_exit;
+    }
+    memcpy(&req->local_info.buf, &(db->buf), sizeof(db->buf));
+  }
+ 
+  rc = __photon_backend->rdma_get(proc, lbuf->addr, rbuf->addr, size,
+				  &req->local_info.buf,
+				  &req->remote_info.buf,
+				  req->rattr.cookie, RDMA_FLAG_NIL);
   if (rc != PHOTON_OK) {
     dbg_err("RDMA GET (PWC data) failed for 0x%016lx", req->rattr.cookie);
     goto error_exit;
@@ -361,7 +374,7 @@ int _photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr,
   dbg_trace("Posted Request: %d/0x%016lx/0x%016lx", proc, local, req->rattr.cookie);
 
   return PHOTON_OK;
-
+  
  error_exit:
   return PHOTON_ERROR;
 }
