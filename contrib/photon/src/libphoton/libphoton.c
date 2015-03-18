@@ -67,6 +67,20 @@ int photon_init(photonConfig cfg) {
   photonConfig lcfg = NULL;
   char *errmsg = "";
 
+  if(__photon_backend && 
+     (__photon_backend->initialized() == PHOTON_OK)) {
+    log_warn("Photon already initialized");
+    return PHOTON_OK;
+  }
+  
+  if (__photon_backend && 
+      (__photon_backend->initialized() != PHOTON_OK)) {
+    log_warn("Photon backend is still initializing");
+    return PHOTON_OK;
+  }
+  
+  dbg_info("Photon initializing");
+
   /* copy the configuration */
   lcfg = calloc(1, sizeof(struct photon_config_t));
   if (!lcfg) {
@@ -109,8 +123,18 @@ int photon_init(photonConfig cfg) {
 #endif
     }
     else {
-      errmsg = "unknown backend";
+#ifdef HAVE_UGNI
+      __photon_backend = be = &photon_ugni_backend;
+      photon_buffer_init(&ugni_buffer_interface);
+      dbg_info("Using uGNI backend");
+#elif HAVE_VERBS
+      __photon_backend = be = &photon_verbs_backend;
+      photon_buffer_init(&verbs_buffer_interface);
+      dbg_info("Using Verbs backend");
+#else
+      errmsg = "network backend";
       goto error_exit;
+#endif
     }
   }
   else {
@@ -239,13 +263,6 @@ int photon_init(photonConfig cfg) {
   __photon_default->io_init = (be->io_init)?(be->io_init):__photon_default->io_init;
   __photon_default->io_init = (be->io_finalize)?(be->io_finalize):__photon_default->io_finalize;
   __photon_default->get_dev_name = (be->get_dev_name)?(be->get_dev_name):__photon_default->get_dev_name;
-
-  if(__photon_backend->initialized() == PHOTON_OK) {
-    log_warn("Photon already initialized");
-    return PHOTON_OK;
-  }
-
-  dbg_info("Photon initializing");
 
   /* the configured backend init gets called from within the default library init */
   return __photon_default->init(lcfg, NULL, NULL);
@@ -590,13 +607,14 @@ void photon_io_print_info(void *io) {
 /* end I/O */
 
 /* utility API method to get backend-specific buffer info */
-int photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv) {
-  return _photon_get_buffer_private(buf, size, ret_priv);
+int photon_get_buffer_private(void *buf, uint64_t size,
+			      const struct photon_buffer_priv_t **pptr) {
+  return _photon_get_buffer_private(buf, size, pptr);
 }
 
 /* utility method to get the remote buffer info set after a wait buffer request */
-int photon_get_buffer_remote(photon_rid request, photonBuffer ret_desc) {
-  return _photon_get_buffer_remote(request, ret_desc);
+int photon_get_buffer_remote(photon_rid request, photonBuffer ret_buf) {
+  return _photon_get_buffer_remote(request, ret_buf);
 }
 
 int photon_get_dev_name(char **dev_name) {
