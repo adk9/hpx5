@@ -196,10 +196,11 @@ _ACTION_TABLE_GET(hpx_action_type_t, type, HPX_ACTION_INVALID);
 _ACTION_TABLE_GET(hpx_action_handler_t, handler, NULL);
 _ACTION_TABLE_GET(ffi_cif *, cif, NULL);
 
-int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
-                       hpx_action_t action, hpx_addr_t c_addr,
-                       hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
-                       int nargs, va_list *args) {
+hpx_parcel_t *
+action_acquire_parcel(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
+                      hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
+                      int nargs, va_list *args) {
+  const _table_t *table = _get_actions();
   dbg_assert(addr != HPX_NULL);
   dbg_assert(action != HPX_ACTION_NULL);
 
@@ -220,8 +221,8 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
     }
 
     if (nargs != cif->nargs) {
-      return log_error("expecting %d arguments for action %s (%d given).\n",
-                       cif->nargs, action_table_get_key(table, action), nargs);
+      log_error("expecting %d arguments for action %s (%d given).\n",
+                cif->nargs, action_table_get_key(table, action), nargs);
     }
 
     void *argps[nargs];
@@ -241,8 +242,8 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
     ffi_ptrarray_to_raw(cif, argps, (ffi_raw*)outargs);
   } else {
     if (nargs != 2) {
-      return log_error("expecting 2 arguments for action %s (%d given).\n",
-                       action_table_get_key(table, action), nargs);
+      log_error("expecting 2 arguments for action %s (%d given).\n",
+                action_table_get_key(table, action), nargs);
     }
     outargs = va_arg(*args, void *);
     len = va_arg(*args, int);
@@ -250,12 +251,18 @@ int libhpx_call_action(const struct action_table *table, hpx_addr_t addr,
     p = hpx_parcel_acquire(outargs, len);
   }
 
-  hpx_parcel_set_pid(p, hpx_thread_current_pid());
   hpx_parcel_set_target(p, addr);
   hpx_parcel_set_action(p, action);
   hpx_parcel_set_cont_action(p, c_action);
   hpx_parcel_set_cont_target(p, c_addr);
+  return p;
+}
 
+int libhpx_call_action(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
+                       hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
+                       int nargs, va_list *args) {
+  hpx_parcel_t *p = action_acquire_parcel(addr, action, c_addr, c_action, lsync,
+                                          gate, nargs, args);
   if (likely(!gate && !lsync)) {
     return hpx_parcel_send_sync(p);
   }
