@@ -49,36 +49,6 @@
 
 __thread struct worker *self = NULL;
 
-#ifdef HAVE_APEX
-/* Wrap the thread_transfer call so that we can stop the current timer before
- * the transfer, and resume the timer (if necessary) if/when the execution actually
- * returns to this point. This is infrequent, but possible - whenever there is
- * a scheduled wait on a future, the thread is transferred to the future and then
- * returns back to this context to proceed with the result.  Because APEX uses
- * TAU, and TAU expects perfectly nested timers, we have to start and stop timers
- * very carefully. Currently there is irregular behavior with null actions, so
- * ignore those for now.
- */
-int apex_thread_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
-  // make sure there is a current parcel with a current action
-  if (self->current && env) {
-    apex_function_address action = (apex_function_address)hpx_parcel_get_action(self->current);
-    // ignore null actions for now
-    //if (action != HPX_ACTION_NULL && action != HPX_ACTION_LCO_SET && action != HPX_ACTION_PAR_FOR_ASYNC) {
-    if (action != HPX_ACTION_NULL && !action_is_interrupt(here->actions, action)) {
-      apex_stop_profiler(APEX_NULL_PROFILER_HANDLE);
-      int rc = thread_transfer(p, cont, env);
-      // IF the context resumes here, make sure we resume the timer.
-      //apex_resume_addr(action);
-      apex_start_address(action);
-      return rc;
-    }
-  }
-  // If any of the above conditions fail, fall through and just do the transfer.
-  return thread_transfer(p, cont, env);
-}
-#endif
-
 /// The pthread entry function for dedicated worker threads.
 ///
 /// This is used by worker_create().
@@ -514,6 +484,17 @@ static hpx_parcel_t *_schedule_in_lco(hpx_parcel_t *final) {
   return _try_bind(p);
 }
 
+#if defined(HAVE_APEX)
+// This is the condition that "sleeping" threads will wait on
+static pthread_cond_t release = PTHREAD_COND_INITIALIZER;
+// Mutex for the pthread_cond_wait() call. Typically, it is used
+// to save the shared state, but we don't need it for our use.
+static pthread_mutex_t release_mutex = PTHREAD_MUTEX_INITIALIZER;
+// Flag to indicate whether this thread is processing a yield.
+// If so, it can't be throttled, because it holds a lock that
+// will be requested by the thread trying to take the yielded work.
+__thread bool yielded = false;
+#endif
 
 /// The main scheduling "loop."
 ///
@@ -546,27 +527,56 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
   // that does not represent a task.
   while (p == NULL) {
     if (scheduler_is_shutdown(self->sched)) {
+      pthread_cond_broadcast(&release);
       _worker_shutdown(self);
     }
 
-  //akp: throttling code -- if the throttling flag is set don't use some threads
+    // prioritize our mailbox
+    _handle_mail(self);
+
 #if defined(HAVE_APEX)
-    if (apex_checkThrottling && apex_throttleOn) {
-      if (self->id > apex_get_thread_cap()) { 
+    //akp: throttling code -- if the throttling flag is set don't use some threads
+    // NB: There is a possible race condition here. It's possible that mail needs
+    //     to be checked again just before throttling.
+    if (apex_checkThrottling) {
+      // am I inactive?
+      if (self->active == false) {
 /* because we can't change the power level, sleep instead. */
-        if (apex_energyThrottling) {
-            struct timespec tim, tim2;
-            tim.tv_sec = 0;
-            tim.tv_nsec = 10000; // 10 useconds.
-            nanosleep(&tim , &tim2);
+        pthread_mutex_lock(&release_mutex);
+        pthread_cond_wait(&release, &release_mutex);
+        pthread_mutex_unlock(&release_mutex);
+        // We've been signaled, see if we are the first to re-activate
+        if (__sync_fetch_and_add(&(self->sched->n_active_workers),1) <= apex_get_thread_cap()) { 
+          // yes, we are good to go
+          self->active = true;
+          apex_set_state(APEX_BUSY);
+        } else {
+          //no, another thread beat us to it.  This thread should stay idle. 
+          __sync_fetch_and_sub(&(self->sched->n_active_workers),1);
+          continue; // restart the scheduler loop
         }
-        continue;
+      } else {
+        if (apex_throttleOn && !yielded) {
+          // randomly de-activate a thread?
+          if (self->sched->n_active_workers > apex_get_thread_cap()) {
+            // try to decrement the active worker counter
+            if (__sync_fetch_and_sub(&(self->sched->n_active_workers),1) > apex_get_thread_cap()) { 
+              // success? then we are now inactive. go back to the top of the loop.
+              self->active = false;
+              apex_set_state(APEX_THROTTLED);
+              continue; // restart the loop
+            }
+            //no, this thread should keep working. 
+            __sync_fetch_and_add(&(self->sched->n_active_workers),1);
+          // has the thread cap increased?
+          } else if (self->sched->n_active_workers < apex_get_thread_cap()) {
+            // release a worker
+            pthread_cond_signal(&release);
+          }
+        }
       }
     }
 #endif
-
-    // prioritize our mailbox
-    _handle_mail(self);
 
     // if there is any LIFO work, process it
     p = _schedule_lifo(self);
@@ -627,6 +637,9 @@ int worker_init(struct worker *w, struct scheduler *sched, int id,
   w->sp         = NULL;
   w->current    = NULL;
   w->stacks     = NULL;
+#ifdef HAVE_APEX
+  w->active     = true;
+#endif
 
   sync_chase_lev_ws_deque_init(&w->work, work_size);
   sync_two_lock_queue_init(&w->inbox, NULL);
@@ -692,11 +705,7 @@ int worker_start(void) {
     dbg_error("failed to acquire an initial parcel.\n");
   }
 
-//#ifdef HAVE_APEX
-  //int e = apex_thread_transfer(p, _on_startup, NULL);
-//#else
   int e = thread_transfer(p, _on_startup, NULL);
-//#endif
   if (e) {
     if (here->rank == 0) {
       log_error("application exited with a non-zero exit code: %d.\n", e);
@@ -843,6 +852,7 @@ static int _checkpoint_yield(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = env;
   parcel_get_stack(prev)->sp = sp;
   sync_two_lock_queue_enqueue(&here->sched->yielded, prev);
+  yielded = false;
   return HPX_SUCCESS;
 }
 
@@ -862,14 +872,12 @@ void scheduler_yield(void) {
   dbg_assert(parcel_get_stack(to));
   dbg_assert(parcel_get_stack(to)->sp);
   // transfer to the new thread
-//#ifdef HAVE_APEX
-  //apex_thread_transfer(to, _checkpoint_yield, from);
-//#else
   thread_transfer(to, _checkpoint_yield, from);
-//#endif
 }
 
 void hpx_thread_yield(void) {
+  yielded = true;
+  ++self->stats.yields;
   scheduler_yield();
 }
 
@@ -893,11 +901,7 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   // if we successfully pushed, then do a transfer away from this thread
   if (status == HPX_SUCCESS) {
     hpx_parcel_t *to = _schedule(true, NULL);
-//#ifdef HAVE_APEX
-    //apex_thread_transfer(to, _unlock, (void*)lock);
-//#else
     thread_transfer(to, _unlock, (void*)lock);
-//#endif
     sync_lockable_ptr_lock(lock);
     status = cvar_get_error(condition);
   }
@@ -945,11 +949,7 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size, const void 
   dbg_assert(to);
   dbg_assert(parcel_get_stack(to));
   dbg_assert(parcel_get_stack(to)->sp);
-//#ifdef HAVE_APEX
-  //apex_thread_transfer(to, _free_parcel, (void*)(intptr_t)status);
-//#else
   thread_transfer(to, _free_parcel, (void*)(intptr_t)status);
-//#endif
   unreachable();
 }
 
@@ -980,11 +980,7 @@ void hpx_thread_exit(int status) {
     //      task inside of schedule() which would cause the current task to be
     //      freed.
     hpx_parcel_t *to = _schedule(true, NULL);
-//#ifdef HAVE_APEX
-    //apex_thread_transfer(to, _resend_parcel, parcel);
-//#else
     thread_transfer(to, _resend_parcel, parcel);
-//#endif
     unreachable();
   }
 
@@ -1082,11 +1078,7 @@ void hpx_thread_set_affinity(int affinity) {
   }
 
   hpx_parcel_t *to = _schedule(false, NULL);
-//#ifdef HAVE_APEX
-  //apex_thread_transfer(to, _move_to, (void*)(intptr_t)affinity);
-//#else
   thread_transfer(to, _move_to, (void*)(intptr_t)affinity);
-//#endif
 }
 
 /// This transfer handler is the right place to put all debug, logging, and

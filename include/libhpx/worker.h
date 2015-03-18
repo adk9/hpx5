@@ -56,6 +56,9 @@ struct worker {
   PAD_TO_CACHELINE(sizeof(chase_lev_ws_deque_t));
   two_lock_queue_t    inbox;                    // mail sent to me
   scheduler_stats_t   stats;                    // scheduler statistics
+#if HAVE_APEX
+  bool               active;  // used by APEX scheduler throttling : akp
+#endif
 } HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
 extern __thread struct worker *self;

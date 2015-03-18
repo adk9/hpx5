@@ -267,12 +267,15 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
     hpx_gas_free(_hpx_143, HPX_NULL);
   }
 
-#ifdef ENABLE_PROFILING
+#if defined(ENABLE_PROFILING) || defined (HAVE_APEX)
+  // this will aggregate stats, they won't be printed unless 
+  // ENABLE_PROFILING is set
   scheduler_dump_stats(here->sched);
 #endif
 
 #ifdef HAVE_APEX
-  scheduler_save_apex_stats(here->sched);
+  // this will add the stats to the APEX data set
+  scheduler_save_apex_stats(&(here->sched->stats));
 #endif
 
  unwind2:
@@ -309,6 +312,7 @@ void hpx_shutdown(int code) {
   }
   hpx_thread_exit(HPX_SUCCESS);
 #ifdef HAVE_APEX 
+  // finalize APEX
   apex_finalize();
 #endif
 }
