@@ -67,14 +67,7 @@ static void _init(_process_t *p, hpx_addr_t termination) {
   p->termination = termination;
 }
 
-typedef struct {
-  hpx_addr_t   target;
-  hpx_action_t action;
-  hpx_addr_t   result;
-  char         data[];
-} _call_args_t;
-
-static HPX_ACTION(_proc_call, _call_args_t *args) {
+static HPX_ACTION(_proc_call, hpx_parcel_t *parcel) {
   hpx_addr_t process = hpx_thread_current_target();
   _process_t *p = NULL;
   if (!hpx_gas_try_pin(process, (void**)&p)) {
@@ -85,15 +78,8 @@ static HPX_ACTION(_proc_call, _call_args_t *args) {
   hpx_gas_unpin(process);
 
   hpx_pid_t pid = hpx_process_getpid(process);
-  uint32_t len = hpx_thread_current_args_size() - sizeof(*args);
-  hpx_parcel_t *parcel = parcel_create(args->target, args->action, args->data,
-                                       len, args->result,
-                                       hpx_lco_set_action, pid, true);
-  if (!parcel) {
-    dbg_error("process: call_action failed.\n");
-  }
+  hpx_parcel_set_pid(parcel, pid);
   parcel_set_credit(parcel, credit);
-
   hpx_parcel_send_sync(parcel);
   return HPX_SUCCESS;
 }
@@ -162,21 +148,22 @@ hpx_pid_t hpx_process_getpid(hpx_addr_t process) {
   return (hpx_pid_t)process;
 }
 
-int hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
-                     hpx_addr_t result, const void *args, size_t len) {
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, len + sizeof(_call_args_t));
+int _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
+                      hpx_addr_t result, int nargs, ...) {
+  va_list vargs;
+  va_start(vargs, nargs);
+  hpx_parcel_t *parcel = action_acquire_parcel(addr, action, result,
+                                               hpx_lco_set_action, HPX_NULL,
+                                               HPX_NULL, nargs, &vargs);
+  va_end(vargs);
+
+  hpx_parcel_t *p = hpx_parcel_acquire(parcel, parcel->size);
   hpx_parcel_set_target(p, process);
   hpx_parcel_set_action(p, _proc_call);
   hpx_parcel_set_pid(p, 0);
   parcel_set_credit(p, 0);
-
-  _call_args_t *call_args = (_call_args_t *)hpx_parcel_get_data(p);
-  call_args->result = result;
-  call_args->target = addr;
-  call_args->action = action;
-  memcpy(&call_args->data, args, len);
-
   hpx_parcel_send_sync(p);
+  hpx_parcel_release(parcel);
   return HPX_SUCCESS;
 }
 
