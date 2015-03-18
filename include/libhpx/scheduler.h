@@ -67,7 +67,8 @@ struct scheduler {
   int                   cores;
   int               n_workers;
   uint32_t       wf_threshold;
-  struct barrier     *barrier;
+  // struct barrier     *barrier;
+  pthread_barrier_t   barrier;
   struct worker      *workers;
   scheduler_stats_t     stats;
 };
