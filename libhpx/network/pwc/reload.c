@@ -16,7 +16,9 @@
 
 #include <libhpx/config.h>
 #include <libhpx/boot.h>
+#include <libhpx/libhpx.h>
 #include <libhpx/memory.h>
+#include <libhpx/parcel.h>
 #include "parcel_emulation.h"
 #include "xport.h"
 
@@ -24,8 +26,6 @@ typedef struct {
   size_t   n;
   void *base;
   void  *key;
-  int   rank;
-  int UNUSED_PADDING;
 } segment_t;
 
 typedef struct {
@@ -37,6 +37,7 @@ typedef struct {
   parcel_emulator_t vtable;
   int                 rank;
   int                ranks;
+  pwc_xport_t       *xport;
   buffer_t           *recv;
   buffer_t           *send;
   segment_t       *remotes;
@@ -46,6 +47,38 @@ static void _reload_delete(void *obj) {
   if (obj) {
     local_free(obj);
   }
+}
+
+static int _segment_reload(segment_t *s, xport_op_t *op, pwc_xport_t *xport) {
+  return LIBHPX_RETRY;
+}
+
+static int _segment_send(segment_t *s, xport_op_t *op, pwc_xport_t *xport,
+                         uint64_t offset) {
+  if (s->n < offset + op->n) {
+    return _segment_reload(s, op, xport);
+  }
+
+  op->dest = (char*)s->base + offset;
+  op->dest_key = s->key;
+  return xport->pwc(op);
+}
+
+static int _buffer_send(buffer_t *b, xport_op_t *op, pwc_xport_t *xport) {
+  segment_t *segment = &b->segment;
+  uint64_t offset = b->offset;
+  b->offset += op->n;
+  return _segment_send(segment, op, xport, offset);
+}
+
+static int _reload_send(void *obj, xport_op_t *op, hpx_parcel_t *p) {
+  reload_t *reload = obj;
+  pwc_xport_t *xport = reload->xport;
+  op->n = parcel_size(p);
+  op->src = p;
+  op->src_key = xport->find_key(xport, op->src, op->n);
+  buffer_t *buffer = &reload->send[op->rank];
+  return _buffer_send(buffer, op, xport);
 }
 
 void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
@@ -66,8 +99,7 @@ void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
     segment_t *segment = &reload->recv[i].segment;
     segment->n = n;
     segment->base = registered_calloc(1, n);
-    segment->key = xport->find_key(xport, segment->base);
-    segment->rank = i;
+    segment->key = xport->find_key(xport, segment->base, n);
   }
 
   // Allocate my array of send buffers and do an initial all-to-all to exchange
@@ -84,8 +116,7 @@ void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
   segment_t sends = {
     .n = sizeof(segment_t) * ranks,
     .base = reload->remotes,
-    .key = xport->find_key(xport, reload->remotes),
-    .rank = rank
+    .key = xport->find_key(xport, reload->remotes, n),
   };
 
   // Allocate the remotes array, and exchange all of the sends segments.
