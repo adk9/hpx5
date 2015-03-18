@@ -1667,21 +1667,32 @@ int _photon_handle_addr(photonAddr addr, photonAddr raddr) {
   return PHOTON_OK;
 }
 
-int _photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv) {
+int _photon_get_buffer_private(void *buf, uint64_t size,
+			       const struct photon_buffer_priv_t **pptr) {
   photonBI db;
-
-  if (buffertable_find_containing(buf, size, &db) == 0) {
-    return photon_buffer_get_private(db, ret_priv);
-  }
-  else {
+  
+  if (buffertable_find_containing(buf, size, &db) != 0) {
     dbg_warn("Could not find buffer: 0x%016lx of size %lu", (uintptr_t)buf, size);
-    return PHOTON_ERROR;
+    goto error_exit;
   }
+  
+  if (!db->is_registered) {
+    dbg_err("Could not lookup private buffer info on unregistered buffer");
+    goto error_exit;
+  }
+  
+  *pptr = (const struct photon_buffer_priv_t *)&(db->buf.priv);
+  
+  return PHOTON_OK;
+
+ error_exit:
+  *pptr = NULL;
+  return PHOTON_ERROR;
 }
 
 int _photon_get_buffer_remote(photon_rid request, photonBuffer ret_buf) {
   photonRequest req;
-
+  
   if ((req = photon_lookup_request(request)) == NULL) {
     log_err("Could not find request 0x%016lx", request);
     goto error_exit;
@@ -1697,7 +1708,7 @@ int _photon_get_buffer_remote(photon_rid request, photonBuffer ret_buf) {
     (*ret_buf).size = req->remote_info.buf.size;
     (*ret_buf).priv = req->remote_info.buf.priv;
   }
-
+  
   return PHOTON_OK;
 
  error_exit:

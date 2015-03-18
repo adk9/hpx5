@@ -31,5 +31,5 @@ struct photon_config_t cfg = {
   },
   .meta_exch = PHOTON_EXCH_MPI,
   .comm = NULL,
-  .backend = "verbs"
+  .backend = "default"
 };
