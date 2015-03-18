@@ -79,7 +79,11 @@ static void _photon_clear(void *key) {
 }
 
 static const void *_photon_find_key(const void *obj, const void *addr, size_t n) {
-  log_error("Photon find_key is unimplemented\n");
+  // const void *key = NULL;
+  struct photon_buffer_priv_t key;
+  int e = photon_get_buffer_private((void*)addr, n, &key);
+  dbg_assert_str(PHOTON_OK == e, "no rdma key for range (%p, %zu)\n", addr, n);
+  // dbg_assert_str(key, "rdma key address is NULL\n");
   return NULL;
 }
 
@@ -203,6 +207,7 @@ pwc_xport_t *pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas)
   photon->vtable.test = _photon_test;
   photon->vtable.probe = _photon_probe;
 
+  // initialize our memory allocation
   local = address_space_new_default(cfg);
   registered = address_space_new_jemalloc_registered(cfg, photon, _photon_pin,
                                                      _photon_unpin, NULL,
@@ -211,6 +216,9 @@ pwc_xport_t *pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas)
   global = address_space_new_jemalloc_global(cfg, photon, _photon_pin,
                                              _photon_unpin, gas, gas_mmap,
                                              gas_munmap);
+  local_join();
+  registered_join();
+  global_join();
 
   return &photon->vtable;
 }
