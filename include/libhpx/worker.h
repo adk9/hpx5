@@ -57,6 +57,9 @@ struct worker {
                                          HPX_CACHELINE_SIZE)];
   two_lock_queue_t    inbox;                    // mail sent to me
   scheduler_stats_t   stats;                    // scheduler statistics
+#if HAVE_APEX
+  bool               active;  // used by APEX scheduler throttling : akp
+#endif
 } HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
 HPX_INTERNAL extern __thread struct worker *self;

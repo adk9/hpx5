@@ -42,6 +42,7 @@ void scheduler_stats_init(struct scheduler_stats *stats) {
   stats->backoffs   = 0;
   stats->max_stacks = 0;
   stats->stacks     = 0;
+  stats->yields     = 0;
   stats->backoff  = 0.0;
 }
 
@@ -57,6 +58,7 @@ struct scheduler_stats *scheduler_stats_accum(struct scheduler_stats *lhs,
   lhs->finished += rhs->finished;
   lhs->progress += rhs->progress;
   lhs->backoffs += rhs->backoffs;
+  lhs->yields   += rhs->yields;
   lhs->backoff  += rhs->backoff;
 
   return lhs;
@@ -71,6 +73,7 @@ void scheduler_stats_print(const char *id, const struct scheduler_stats *counts)
 
   printf("node %d, ", here->rank);
   printf("thread %s, ", id);
+  printf("yields: %lu, ", counts->yields);
   printf("spins: %lu, ", counts->spins);
   printf("spawns: %lu, ", counts->spawns);
   printf("steals: %lu, ", counts->steals);
@@ -87,9 +90,8 @@ void scheduler_stats_print(const char *id, const struct scheduler_stats *counts)
 
 #ifdef HAVE_APEX
 void scheduler_save_apex_stats(const scheduler_stats_t *counts) {
-  static tatas_lock_t lock = SYNC_TATAS_LOCK_INIT;
-  sync_tatas_acquire(&lock);
   apex_sample_value("spins", (double)counts->spins);
+  apex_sample_value("yields", (double)counts->yields);
   apex_sample_value("spawns", (double)counts->spawns);
   apex_sample_value("steals", (double)counts->steals);
   apex_sample_value("stacks", (double)counts->stacks);
@@ -99,7 +101,6 @@ void scheduler_save_apex_stats(const scheduler_stats_t *counts) {
   apex_sample_value("progress", (double)counts->progress);
   apex_sample_value("backoffs", (double)counts->backoffs);
   apex_sample_value("backoff (ms)", (double)counts->backoff);
-  sync_tatas_release(&lock);
 }
 #endif
 
