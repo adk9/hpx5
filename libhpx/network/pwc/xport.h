@@ -36,7 +36,7 @@ typedef struct pwc_xport {
   void   (*delete)(void *xport);
 
   size_t (*sizeof_rdma_key)(void);
-  void  *(*find_key)(const void *xport, const void *addr);
+  void  *(*find_key)(const void *xport, const void *addr, size_t n);
   int    (*pin)(void *xport, void *base, size_t n, void *key);
   int    (*unpin)(void *xport, void *base, size_t n);
   void   (*clear)(void *key);
