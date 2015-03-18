@@ -31,7 +31,6 @@ TESTS = bcast			\
 	parcel_create		\
 	parcel_send		\
 	parcel_send_through	\
-	process			\
 	runtime			\
 	task			\
 	thread_cont_action	\
@@ -40,7 +39,7 @@ TESTS = bcast			\
 	thread_gettlsid		\
 	thread_yield
 
-XFAIL_TESTS      = lco_and_set_fail
+XFAIL_TESTS      = lco_and_set_fail process
 
 if ENABLE_LENGTHY_TESTS
 TESTS           += lco_wait
