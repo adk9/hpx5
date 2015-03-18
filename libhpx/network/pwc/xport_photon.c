@@ -85,11 +85,13 @@ static int _photon_pin(void *xport, void *base, size_t n, void *key) {
   else {
     log_net("registered segment (%p, %zu)\n", base, n);
   }
-
+  
+  const struct photon_buffer_priv_t *bkey;
   if (key) {
-    if (PHOTON_OK != photon_get_buffer_private(base, n, key)) {
-      dbg_error("failed to segment key from Photon\n");
+    if (PHOTON_OK != photon_get_buffer_private(base, n, &bkey)) {
+      dbg_error("failed to get segment key from Photon\n");
     }
+    memcpy(key, bkey, sizeof(*bkey));
   }
   return LIBHPX_OK;
 }
