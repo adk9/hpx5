@@ -125,12 +125,10 @@ static int _photon_pwc(xport_op_t *op) {
     .addr = (uintptr_t)op->src,
     .size = op->n,
     .priv = {0, 0},
-  }
+  };
 
-  int e = photon_put_with_completion(op->rank,
-                                     &lbuf,
-                                     &rbuf,
-                                     flags);
+  int e = photon_put_with_completion(op->rank, op->n, &lbuf, &rbuf, op->lop,
+                                     op->rop, flags);
   if (PHOTON_OK == e) {
     return LIBHPX_OK;
   }
@@ -143,7 +141,7 @@ static int _photon_pwc(xport_op_t *op) {
   unreachable();
 }
 
-static int _photon_gwc(xport_op_t *op) {
+static int _photon_get(xport_op_t *op) {
 
   struct photon_buffer_t lbuf = {
     .addr = (uintptr_t)op->dest,
@@ -155,12 +153,9 @@ static int _photon_gwc(xport_op_t *op) {
     .addr = (uintptr_t)op->src,
     .size = op->n,
     .priv = {0, 0},
-  }
+  };
 
-  int e = photon_get_with_completion(op->rank,
-                                     &lbuf,
-                                     &rbuf,
-                                     PHOTON_REQ_PWC_NO_RCE);
+  int e = photon_get_with_completion(op->rank, op->n, &lbuf, &rbuf, op->lop, 0, PHOTON_REQ_PWC_NO_RCE);
   if (PHOTON_OK == e) {
     return LIBHPX_OK;
   }
