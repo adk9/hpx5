@@ -92,12 +92,15 @@ static int _reload_send(void *obj, pwc_xport_t *xport, int rank,
 }
 
 static hpx_parcel_t *_buffer_recv(buffer_t *recv) {
-  hpx_parcel_t *p = (void*)(recv->base + recv->i);
+  const hpx_parcel_t *p = (void*)(recv->base + recv->i);
   recv->i += parcel_size(p);
   if (recv->i >= recv->n) {
     dbg_error("reload buffer recv overload\n");
   }
-  return p;
+  // todo: don't do this, reference count the buffer
+  hpx_parcel_t *clone = hpx_parcel_acquire(NULL, parcel_payload_size(p));
+  memcpy(clone, p, parcel_size(p));
+  return clone;
 }
 
 static hpx_parcel_t *_reload_recv(void *obj, int rank) {
