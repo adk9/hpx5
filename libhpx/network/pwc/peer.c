@@ -35,7 +35,7 @@ void peer_fini(peer_t *peer) {
 int peer_pwc(xport_op_t *op, peer_t *peer, size_t roff, segid_t segment_id) {
   segment_t *segment = &peer->segments[segment_id];
   op->dest = segment_offset_to_rva(segment, roff);
-  op->dest_key =segment->key;
+  op->dest_key = &segment->key;
   return peer->xport->pwc(op);
 }
 

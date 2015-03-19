@@ -21,7 +21,7 @@
 #include "xport.h"
 
 int segment_init(segment_t *segment, pwc_xport_t *xport, char *base, size_t n) {
-  dbg_assert(xport->sizeof_rdma_key() <= sizeof(segment->key));
+  dbg_assert(xport->key_size() <= sizeof(segment->key));
   dbg_assert(base || !n);
   segment->base = base;
   segment->size = n;
@@ -29,7 +29,7 @@ int segment_init(segment_t *segment, pwc_xport_t *xport, char *base, size_t n) {
     xport->pin(xport, base, n, &segment->key);
   }
   else {
-    xport->clear(&segment->key);
+    xport->key_clear(&segment->key);
   }
   return LIBHPX_OK;
 }

@@ -26,6 +26,7 @@
 #include "parcel_utils.h"
 #include "peer.h"
 #include "pwc.h"
+#include "xport.h"
 #include "../../gas/pgas/pgas.h"                 // sort of a hack
 
 static uint32_t _index_of(eager_buffer_t *buffer, uint64_t i) {
@@ -138,13 +139,14 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
   void *rva = tx->peer->segments[SEGMENT_EAGER].base + tx->tx_base + roff;
   inst_trace(class, id, sequence, n, (uint64_t)rva, tx->peer->rank);
 
+  const void *base = pwc_network_offset(p);
   peer_t *peer = tx->peer;
   xport_op_t op = {
     .rank = peer->rank,
     .n = n,
     .dest = NULL,
     .dest_key = NULL,
-    .src = pwc_network_offset(p),
+    .src = base,
     .src_key = NULL,
     .lop = encode_command(free_parcel, (uint64_t)(uintptr_t)p),
     .rop = encode_command(_eager_rx, HPX_THERE(peer->rank))

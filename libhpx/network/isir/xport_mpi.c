@@ -125,8 +125,7 @@ static void _mpi_delete(void *mpi) {
   free(mpi);
 }
 
-static int _mpi_pin(void *xport, const void *base, size_t bytes,
-                    const void *key) {
+static int _mpi_pin(void *xport, const void *base, size_t bytes, void *key) {
   return LIBHPX_OK;
 }
 

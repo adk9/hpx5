@@ -70,24 +70,42 @@ static void _init_photon(const config_t *cfg, boot_t *boot) {
   }
 }
 
-static size_t _photon_sizeof_rdma_key(void) {
+static size_t _photon_key_size(void) {
   return sizeof(struct photon_buffer_priv_t);
 }
 
-static void _photon_clear(void *key) {
+static int _photon_key_clear(void *key) {
   memset(key, 0, sizeof(struct photon_buffer_priv_t));
+  return LIBHPX_OK;
 }
 
-static const void *_photon_find_key(const void *obj, const void *addr, size_t n) {
-  // const void *key = NULL;
-  struct photon_buffer_priv_t key;
-  int e = photon_get_buffer_private((void*)addr, n, &key);
+static int _photon_key_copy(void *restrict dest, const void *restrict src) {
+  if (src) {
+    dbg_assert(dest);
+    memcpy(dest, src, sizeof(struct photon_buffer_priv_t));
+  }
+  return LIBHPX_OK;
+}
+
+static const void *_photon_key_find_ref(const void *obj, const void *addr,
+                                        size_t n) {
+  const struct photon_buffer_priv_t *found = NULL;
+  int e = photon_get_buffer_private((void*)addr, n, &found);
   dbg_assert_str(PHOTON_OK == e, "no rdma key for range (%p, %zu)\n", addr, n);
-  // dbg_assert_str(key, "rdma key address is NULL\n");
-  return NULL;
+  return found;
 }
 
-static int _photon_pin(void *obj, const void *base, size_t n, const void *key) {
+static int _photon_key_find(const void *obj, const void *addr, size_t n,
+                            void *key) {
+  const void *found = _photon_key_find_ref(obj, addr, n);
+  if (found)  {
+    return _photon_key_copy(key, found);
+  }
+  log_error("failed to find rdma key for (%p, %zu)\n", addr, n);
+  return LIBHPX_OK;
+}
+
+static int _photon_pin(void *obj, const void *base, size_t n, void *key) {
   if (PHOTON_OK != photon_register_buffer((void*)base, n)) {
     dbg_error("failed to register segment with Photon\n");
   }
@@ -96,11 +114,9 @@ static int _photon_pin(void *obj, const void *base, size_t n, const void *key) {
   }
 
   if (key) {
-    const void *pkey = NULL;
-    if (PHOTON_OK != photon_get_buffer_private(base, n, &pkey)) {
-      dbg_error("failed to get segment key from Photon\n");
-    }
+    return _photon_key_find(obj, base, n, key);
   }
+
   return LIBHPX_OK;
 }
 
@@ -120,15 +136,15 @@ static int _photon_pwc(xport_op_t *op) {
 
   struct photon_buffer_t rbuf = {
     .addr = (uintptr_t)op->dest,
-    .size = 0,
-    .priv = *(struct photon_buffer_priv_t*)op->dest_key
+    .size = 0
   };
+  _photon_key_copy(&rbuf.priv, op->dest_key);
 
   struct photon_buffer_t lbuf = {
     .addr = (uintptr_t)op->src,
-    .size = 0,
-    .priv = {0, 0},
+    .size = 0
   };
+  _photon_key_copy(&lbuf.priv, op->src_key);
 
   int e = photon_put_with_completion(op->rank, op->n, &lbuf, &rbuf, op->lop,
                                      op->rop, flags);
@@ -148,15 +164,15 @@ static int _photon_get(xport_op_t *op) {
 
   struct photon_buffer_t lbuf = {
     .addr = (uintptr_t)op->dest,
-    .size = 0,
-    .priv = *(struct photon_buffer_priv_t*)op->dest_key
+    .size = 0
   };
+  _photon_key_copy(&lbuf.priv, op->dest_key);
 
   struct photon_buffer_t rbuf = {
     .addr = (uintptr_t)op->src,
-    .size = 0,
-    .priv = {0, 0},
+    .size = 0
   };
+  _photon_key_copy(&rbuf.priv, op->src_key);
 
   int e = photon_get_with_completion(op->rank, op->n, &lbuf, &rbuf, op->lop, 0, PHOTON_REQ_PWC_NO_RCE);
   if (PHOTON_OK == e) {
@@ -197,9 +213,11 @@ pwc_xport_t *pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas)
 
   photon->vtable.type = HPX_TRANSPORT_PHOTON;
   photon->vtable.delete = _photon_delete;
-  photon->vtable.sizeof_rdma_key = _photon_sizeof_rdma_key;
-  photon->vtable.find_key = _photon_find_key;
-  photon->vtable.clear = _photon_clear;
+  photon->vtable.key_size = _photon_key_size;
+  photon->vtable.key_find_ref = _photon_key_find_ref;
+  photon->vtable.key_find = _photon_key_find;
+  photon->vtable.key_clear = _photon_key_clear;
+  photon->vtable.key_copy = _photon_key_copy;
   photon->vtable.pin = _photon_pin;
   photon->vtable.unpin = _photon_unpin;
   photon->vtable.pwc = _photon_pwc;
