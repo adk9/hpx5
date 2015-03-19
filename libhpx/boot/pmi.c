@@ -295,7 +295,7 @@ static int _pmi_alltoall(const void *boot, void *restrict dest,
   char *to = dest;
   for (int i = 0, e = pmi->n_ranks(pmi); i < e; ++i) {
     int offset = (i * nranks * stride) + (rank * stride);
-    memcpy(to + (i * stride), from + offset, n * stride);
+    memcpy(to + (i * stride), from + offset, n);
   }
 
   free(gather);

@@ -70,8 +70,8 @@ static int alltoall_handler(boot_t *boot) {
     if (dst[i][0] != i * HPX_LOCALITIES + here->rank) {
       FAIL(dst, "%d:dst[%d][0]=%d, expected %d\n", here->rank, i, dst[i][0], i * HPX_LOCALITIES + here->rank);
     }
-    if (dst[i][1] != i) {
-      FAIL(dst, "%d:dst[%d][1]=%d, expected %d\n", here->rank, i, dst[i][1], i);
+    if (dst[i][1] != here->rank) {
+      FAIL(dst, "%d:dst[%d][1]=%d, expected %d\n", here->rank, i, dst[i][1], here->rank);
     }
   }
 
