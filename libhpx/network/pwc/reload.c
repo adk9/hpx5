@@ -38,7 +38,6 @@ typedef struct {
   parcel_emulator_t vtable;
   int                 rank;
   int                ranks;
-  pwc_xport_t       *xport;
   buffer_t           *recv;
   buffer_t           *send;
   remote_t        *remotes;
@@ -57,31 +56,59 @@ static void _buffer_init(buffer_t *b, size_t n, pwc_xport_t *xport) {
   dbg_check(e, "no key for newly allocated buffer (%p, %zu)\n", b->base, n);
 }
 
-static int _buffer_reload(buffer_t *b, xport_op_t *op, pwc_xport_t *xport) {
+static int _buffer_reload(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
+  dbg_error("reload unimplemented.\n");
   return LIBHPX_RETRY;
 }
 
-static int _buffer_send(buffer_t *b, xport_op_t *op, pwc_xport_t *xport) {
-  size_t i = b->i;
-  b->i += op->n;
-  if (b->i >= b->n) {
-    return _buffer_reload(b, op, xport);
+static int _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
+  size_t i = send->i;
+  send->i += op->n;
+  if (send->i >= send->n) {
+    return _buffer_reload(send, xport, op);
   }
 
-  xport->key_copy(&op->dest_key, &b->key);
-  op->dest = (char*)b->base + i;
+  xport->key_copy(&op->dest_key, &send->key);
+  op->dest = (char*)send->base + i;
   return xport->pwc(op);
 }
 
-static int _reload_send(void *obj, xport_op_t *op, hpx_parcel_t *p) {
+static int _reload_send(void *obj, pwc_xport_t *xport, int rank,
+                        const hpx_parcel_t *p) {
+  size_t n = parcel_size(p);
+  xport_op_t op = {
+    .rank = rank,
+    .n = n,
+    .dest = NULL,
+    .dest_key = NULL,
+    .src = p,
+    .src_key = xport->key_find_ref(xport, p, n),
+    .lop = UINT64_MAX,
+    .rop = UINT64_MAX
+  };
+
+  if (!op.src_key) {
+    dbg_error("no rdma key for local parcel (%p, %zu)\n", p, n);
+  }
+
   reload_t *reload = obj;
-  pwc_xport_t *xport = reload->xport;
-  op->n = parcel_size(p);
-  op->src = p;
-  int e = xport->key_find(xport, op->src, op->n, &op->src_key);
-  dbg_check(e, "no rdma key for local parcel (%p, %zu)\n", op->src, op->n);
-  buffer_t *buffer = &reload->send[op->rank];
-  return _buffer_send(buffer, op, xport);
+  buffer_t *send = &reload->send[rank];
+  return _buffer_send(send, xport, &op);
+}
+
+static hpx_parcel_t *_buffer_recv(buffer_t *recv) {
+  hpx_parcel_t *p = (void*)((char*)recv->base + recv->i);
+  recv->i += parcel_size(p);
+  if (recv->i >= recv->n) {
+    dbg_error("reload buffer recv overload\n");
+  }
+  return p;
+}
+
+static hpx_parcel_t *_reload_recv(void *obj, int rank) {
+  reload_t *reload = obj;
+  buffer_t *recv = &reload->recv[rank];
+  return _buffer_recv(recv);
 }
 
 void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
@@ -92,6 +119,8 @@ void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
   // Allocate the buffer.
   reload_t *reload = local_calloc(1, sizeof(*reload));
   reload->vtable.delete = _reload_delete;
+  reload->vtable.send = _reload_send;
+  reload->vtable.recv = _reload_recv;
   reload->rank = rank;
   reload->ranks = ranks;
 
