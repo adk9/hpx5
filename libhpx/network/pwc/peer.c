@@ -122,7 +122,7 @@ static int _get_parcel_handler(size_t bytes, hpx_addr_t from) {
   } else {
     hpx_lco_delete(lsync, HPX_NULL);
     parcel_launch(p);
-    hpx_call_cc(from, free_parcel, NULL, NULL, &here->rank, &from);
+    hpx_call_cc(from, release_parcel, NULL, NULL, &here->rank, &from);
   }
 }
 static HPX_ACTION_DEF(DEFAULT, _get_parcel_handler, _get_parcel, HPX_SIZE_T,

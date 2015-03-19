@@ -46,17 +46,6 @@ static int _eager_rx_handler(int src, uint64_t command) {
 static HPX_ACTION_DEF(INTERRUPT, _eager_rx_handler, _eager_rx, HPX_INT,
                       HPX_UINT64);
 
-/// Free a parcel.
-static int _free_parcel_handler(int src, command_t command) {
-  uint64_t offset = command_get_arg(command);
-  hpx_parcel_t *p = (void*)(uintptr_t)offset;
-  log_net("releasing sent parcel %p\n", (void*)p);
-  hpx_parcel_release(p);
-  return HPX_SUCCESS;
-}
-HPX_ACTION_DEF(INTERRUPT, _free_parcel_handler, free_parcel, HPX_INT,
-               HPX_UINT64);
-
 /// This handles the wrap operation at the receiver.
 ///
 /// This currently assumes that rx buffer operations occur in-order, so that
@@ -148,7 +137,7 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
     .dest_key = NULL,
     .src = base,
     .src_key = NULL,
-    .lop = command_pack(free_parcel, (uint64_t)(uintptr_t)p),
+    .lop = command_pack(release_parcel, (uintptr_t)p),
     .rop = command_pack(_eager_rx, HPX_THERE(peer->rank))
   };
 
