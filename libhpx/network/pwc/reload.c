@@ -39,10 +39,31 @@ typedef struct {
   parcel_emulator_t vtable;
   int                 rank;
   int                ranks;
-  buffer_t           *recv;
-  buffer_t           *send;
-  remote_t        *remotes;
+  size_t          key_size;
+  char               *recv;
+  char               *send;
+  char            *remotes;
 } reload_t;
+
+static reload_t *_remote_at(char *array, int i, size_t key_size) {
+  return (reload_t*)(array + i * (sizeof(remote_t) + key_size));
+}
+
+static buffer_t *_buffer_at(char *array, int i, size_t key_size) {
+  return (buffer_t*)(array + i * (sizeof(buffer_t) + key_size));
+}
+
+static buffer_t *_reload_send_at(reload_t *reload, int i) {
+  return _buffer_at(reload->send, i, reload->key_size);
+}
+
+static buffer_t *_reload_recv_at(reload_t *reload, int i) {
+  return _buffer_at(reload->recv, i, reload->key_size);
+}
+
+static reload_t *_reload_remote_at(reload_t *reload, int i) {
+  return _remote_at(reload->remotes, i, reload->key_size);
+}
 
 static void _buffer_fini(buffer_t *b) {
   if (b) {
@@ -94,7 +115,7 @@ static int _reload_send(void *obj, pwc_xport_t *xport, int rank,
   }
 
   reload_t *reload = obj;
-  buffer_t *send = &reload->send[rank];
+  buffer_t *send = _reload_send_at(reload, rank);
   return _buffer_send(send, xport, &op);
 }
 
@@ -112,7 +133,7 @@ static hpx_parcel_t *_buffer_recv(buffer_t *recv) {
 
 static hpx_parcel_t *_reload_recv(void *obj, int rank) {
   reload_t *reload = obj;
-  buffer_t *recv = &reload->recv[rank];
+  buffer_t *recv = _reload_recv_at(reload, rank);
   return _buffer_recv(recv);
 }
 
@@ -120,7 +141,8 @@ static void _reload_delete(void *obj) {
   if (obj) {
     reload_t *reload = obj;
     for (int i = 0, e = reload->ranks; i < e; ++i) {
-      _buffer_fini(&reload->recv[i]);
+      buffer_t *recv = _reload_recv_at(reload, i);
+      _buffer_fini(recv);
     }
     local_free(reload->recv);
     registered_free(reload->send);
@@ -143,10 +165,10 @@ void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
   reload->ranks = ranks;
 
   // Compute the size of some dynamically sized stuff.
-  size_t key_size = xport->key_size();
-  size_t buffer_size = sizeof(buffer_t) + key_size;
+  reload->key_size = xport->key_size();
+  size_t buffer_size = sizeof(buffer_t) + reload->key_size;
   size_t buffer_row_size = ranks * buffer_size;
-  size_t remote_size = sizeof(remote_t) + key_size;
+  size_t remote_size = sizeof(remote_t) + reload->key_size;
   size_t remote_table_size = ranks * remote_size;
 
   // Allocate my buffers (send is written via rdma, so it is registered).
@@ -156,11 +178,12 @@ void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
 
   // Initialize the recv buffers for this rank.
   for (int i = 0, e = ranks; i < e; ++i) {
-    _buffer_init(&reload->recv[i], cfg->pwc_parcelbuffersize, xport);
+    buffer_t *recv = _reload_recv_at(reload, i);
+    _buffer_init(recv, cfg->pwc_parcelbuffersize, xport);
   }
 
   // Initialize a temporary array of remote pointers for this rank's sends.
-  char key[key_size];
+  char key[reload->key_size];
   int e = xport->key_find(xport, reload->send, buffer_row_size, &key);
   dbg_check(e, "no key for send (%p, %zu)\n", reload->send, buffer_row_size);
 
@@ -178,10 +201,14 @@ void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
   local_free(sends);
 
   // just do a sanity check to make sure the alltoalls worked
-  dbg_assert(reload->send[rank].n == reload->recv[rank].n);
-  dbg_assert(reload->send[rank].i == reload->recv[rank].i);
-  dbg_assert(reload->send[rank].base == reload->recv[rank].base);
-  dbg_assert(!strncmp(reload->send[rank].key, reload->recv[rank].key, key_size));
+  if (DEBUG) {
+    buffer_t *send = _reload_send_at(reload, rank);
+    buffer_t *recv = _reload_recv_at(reload, rank);
+    dbg_assert(send->n == recv->n);
+    dbg_assert(send->i == recv->i);
+    dbg_assert(send->base == recv->base);
+    dbg_assert(!strncmp(send->key, recv->key, reload->key_size));
+  }
 
   // Now reload contains:
   //
