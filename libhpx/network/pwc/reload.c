@@ -26,7 +26,7 @@
 typedef struct {
   size_t   n;
   size_t   i;
-  void *base;
+  char *base;
   char   key[];
 } buffer_t;
 
@@ -70,7 +70,7 @@ static int _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
   }
 
   xport->key_copy(&op->dest_key, &send->key);
-  op->dest = (char*)send->base + i;
+  op->dest = send->base + i;
   return xport->pwc(op);
 }
 
@@ -98,7 +98,7 @@ static int _reload_send(void *obj, pwc_xport_t *xport, int rank,
 }
 
 static hpx_parcel_t *_buffer_recv(buffer_t *recv) {
-  hpx_parcel_t *p = (void*)((char*)recv->base + recv->i);
+  hpx_parcel_t *p = (void*)(recv->base + recv->i);
   recv->i += parcel_size(p);
   if (recv->i >= recv->n) {
     dbg_error("reload buffer recv overload\n");
