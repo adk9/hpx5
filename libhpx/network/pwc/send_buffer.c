@@ -64,7 +64,7 @@ static int _start_get_rx_min(send_buffer_t *sends) {
     .dest_key = NULL,
     .src = NULL,
     .src_key = NULL,
-    .lop = encode_command(_finish_get_rx_min, p->rank),
+    .lop = command_pack(_finish_get_rx_min, p->rank),
     .rop = 0
   };
 

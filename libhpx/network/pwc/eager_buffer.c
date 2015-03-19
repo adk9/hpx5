@@ -98,7 +98,7 @@ static int _wrap(eager_buffer_t *tx, hpx_parcel_t *p, uint32_t bytes) {
   int target = tx->peer->rank;
   log_net("wrapping rank %d eager buffer (%u bytes) at sequence # %lu\n",
           target, bytes, tx->sequence);
-  command_t rsync = encode_command(_eager_rx_wrap, HPX_THERE(target));
+  command_t rsync = command_pack(_eager_rx_wrap, HPX_THERE(target));
   int status = peer_put_command(tx->peer, rsync);
   dbg_check(status, "could not send command to pad eager buffer\n");
   tx->max += bytes;
@@ -148,8 +148,8 @@ static int _buffer_tx(eager_buffer_t *tx, hpx_parcel_t *p) {
     .dest_key = NULL,
     .src = base,
     .src_key = NULL,
-    .lop = encode_command(free_parcel, (uint64_t)(uintptr_t)p),
-    .rop = encode_command(_eager_rx, HPX_THERE(peer->rank))
+    .lop = command_pack(free_parcel, (uint64_t)(uintptr_t)p),
+    .rop = command_pack(_eager_rx, HPX_THERE(peer->rank))
   };
 
   int e = peer_pwc(&op, tx->peer, tx->tx_base + roff, SEGMENT_EAGER);
