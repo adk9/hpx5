@@ -19,7 +19,7 @@
 struct boot;
 struct gas;
 
-typedef struct {
+typedef struct xport_op {
   int             rank;
   int   UNUSED_PADDING;
   size_t             n;

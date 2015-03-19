@@ -200,7 +200,7 @@ static int _pwc_command(void *network, hpx_addr_t locality,
     .src = NULL,
     .src_key = NULL,
     .lop = 0,
-    .rop = encode_command(rop, args)
+    .rop = command_pack(rop, args)
   };
 
   return peer_pwc(&op, peer, 0, SEGMENT_NULL);
@@ -225,8 +225,8 @@ static int _pwc_pwc(void *network,
     .dest_key = NULL,
     .src = lva,
     .src_key = pwc->xport->key_find_ref(pwc->xport, lva, n),
-    .lop = encode_command(lop, laddr),
-    .rop = encode_command(rop, raddr)
+    .lop = command_pack(lop, laddr),
+    .rop = command_pack(rop, raddr)
   };
 
   uint64_t offset = gas_offset_of(here->gas, to);
@@ -257,7 +257,7 @@ static int _pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
     .dest_key = pwc->xport->key_find_ref(pwc->xport, lva, n),
     .src = NULL,
     .src_key = NULL,
-    .lop = encode_command(lop, laddr),
+    .lop = command_pack(lop, laddr),
     .rop = 0
   };
 

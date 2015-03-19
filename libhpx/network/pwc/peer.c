@@ -107,7 +107,7 @@ static int _get_parcel_handler(size_t bytes, hpx_addr_t from) {
     .dest_key = NULL,
     .src = NULL,
     .src_key = NULL,
-    .lop = encode_command(_lco_set, lsync),
+    .lop = command_pack(_lco_set, lsync),
     .rop = 0
   };
 

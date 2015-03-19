@@ -30,11 +30,11 @@ static inline arg_t command_get_arg(command_t command) {
   return (command & ARG_MASK);
 }
 
-static inline command_t encode_command(op_t op, arg_t arg) {
+static inline command_t command_pack(op_t op, arg_t arg) {
   return ((uint64_t)op << ARG_BITS) + (arg & ARG_MASK);
 }
 
-static inline void decode_command(command_t cmd, op_t *op, arg_t *arg) {
+static inline void command_unpack(command_t cmd, op_t *op, arg_t *arg) {
   *arg = (cmd & ARG_MASK);
   *op = (cmd >> ARG_BITS);
 }
