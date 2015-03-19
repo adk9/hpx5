@@ -96,12 +96,12 @@ int peer_put_command(peer_t *p, command_t rsync)
 /// @param        lsync An event identifier representing local command.
 ///
 /// @returns  LIBHPX_OK The send operation was initiated successfully..
-int peer_send(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync)
-  HPX_INTERNAL HPX_NON_NULL(1,2);
+int peer_send(peer_t *peer, hpx_addr_t lsync, const hpx_parcel_t *p)
+  HPX_INTERNAL;
 
 /// Perform a lazy parcel send operation.
-int peer_send_rendezvous(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync)
-  HPX_INTERNAL HPX_NON_NULL(1,2);
+int peer_send_rendezvous(peer_t *peer, hpx_addr_t lsync, const hpx_parcel_t *p)
+  HPX_INTERNAL;
 
 /// Perform a get operation from a specific peer.
 ///

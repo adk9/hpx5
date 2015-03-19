@@ -179,10 +179,10 @@ static int _pwc_send(void *network, hpx_parcel_t *p) {
   peer_t *peer = &pwc->peers[rank];
   size_t bytes = pwc_network_size(p);
   if (bytes < pwc->parcel_eager_limit) {
-    return peer_send(peer, p, HPX_NULL);
+    return peer_send(peer, HPX_NULL, p);
   }
   else {
-    return peer_send_rendezvous(peer, p, HPX_NULL);
+    return peer_send_rendezvous(peer, HPX_NULL, p);
   }
 }
 
@@ -297,7 +297,7 @@ static int _init_peer(pwc_network_t *pwc, peer_t *peer, int self, int rank) {
     return log_error("could not initialize the parcel tx endpoint\n");
   }
 
-  status = send_buffer_init(&peer->send, &peer->tx, 8);
+  status = send_buffer_init(&peer->send, rank, NULL, peer->xport, 8);
   if (LIBHPX_OK != status) {
     return log_error("could not initialize the send buffer\n");
   }

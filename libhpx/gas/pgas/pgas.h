@@ -108,7 +108,7 @@ void *pgas_offset_to_lva(uint64_t offset)
 /// @param          lva The local virtual address.
 ///
 /// @returns            The corresponding local virtual address.
-hpx_addr_t pgas_lva_to_gpa(void *lva)
+hpx_addr_t pgas_lva_to_gpa(const void *lva)
   HPX_INTERNAL;
 
 /// Get the current maximum heap offset.

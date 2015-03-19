@@ -97,7 +97,7 @@ inline static bool lva_is_global(void *addr) {
 
 /// Translate a local address to a global address. This only works for some
 /// local addresses, so we need to use it carefully.
-inline static hpx_addr_t lva_to_gva(void *lva) {
+inline static hpx_addr_t lva_to_gva(const void *lva) {
   dbg_assert(here && here->gas && here->gas->lva_to_gva);
   return here->gas->lva_to_gva(lva);
 }

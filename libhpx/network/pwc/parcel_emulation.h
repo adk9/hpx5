@@ -17,7 +17,7 @@ struct boot;
 struct config;
 struct pwc_xport;
 
-typedef struct {
+typedef struct parcel_emulator {
   void (*delete)(void *obj);
   int (*send)(void *obj, struct pwc_xport *xport, int rank,
               const hpx_parcel_t *p);
