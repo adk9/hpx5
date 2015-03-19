@@ -53,8 +53,8 @@ int peer_put_command(peer_t *p, command_t rsync) {
   return peer_pwc(&op, p, 0, SEGMENT_NULL);
 }
 
-int peer_send(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync) {
-  return send_buffer_send(&peer->send, p, lsync);
+int peer_send(peer_t *peer, hpx_addr_t lsync, const hpx_parcel_t *p) {
+  return send_buffer_send(&peer->send, lsync, p);
 }
 
 int peer_get(xport_op_t *op, peer_t *peer, size_t offset, segid_t segid) {
@@ -128,7 +128,7 @@ static int _get_parcel_handler(size_t bytes, hpx_addr_t from) {
 static HPX_ACTION_DEF(DEFAULT, _get_parcel_handler, _get_parcel, HPX_SIZE_T,
                       HPX_ADDR);
 
-int peer_send_rendezvous(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync) {
+int peer_send_rendezvous(peer_t *peer, hpx_addr_t lsync, const hpx_parcel_t *p) {
   size_t bytes = parcel_size(p); // this type must match the type of
                                  // _get_parcel'a first argument
   hpx_addr_t gva = lva_to_gva(p);
