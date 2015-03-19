@@ -20,6 +20,7 @@
 /// network's primary responsibility is to accept send requests from the
 /// scheduler, and send them out via the configured transport.
 #include <hpx/hpx.h>
+#include <libhpx/memory.h>
 
 /// Forward declarations.
 /// @{
@@ -32,7 +33,6 @@ struct transport;
 /// All network objects implement the network interface.
 typedef struct network {
   int type;
-  int *transports;
 
   void (*delete)(void*);
 
@@ -56,8 +56,8 @@ typedef struct network {
 
   void (*set_flush)(void*);
 
-  void (*register_dma)(void *network, void *segment, size_t bytes);
-  void (*release_dma)(void *network, void *segment, size_t bytes);
+  memory_register_t register_dma;
+  memory_release_t release_dma;
 } network_t;
 
 /// Create a new network.
@@ -232,9 +232,9 @@ static inline void network_flush_on_shutdown(network_t *network) {
 /// @param      network The network object.
 /// @param      segment The beginning of the region to register.
 /// @param        bytes The number of bytes to register.
-static inline void network_register_dma(network_t *network, void *segment,
-                                        size_t bytes) {
-  network->register_dma(network, segment, bytes);
+static inline void network_register_dma(network_t *network, const void *base,
+                                        size_t bytes, void *key) {
+  network->register_dma(network, base, bytes, key);
 }
 
 /// Release a registered memory region.
@@ -245,9 +245,9 @@ static inline void network_register_dma(network_t *network, void *segment,
 /// @param      network The network object.
 /// @param      segment The beginning of the region to release.
 /// @param        bytes The number of bytes to release.
-static inline void network_release_dma(network_t *network, void *segment,
+static inline void network_release_dma(network_t *network, const void *base,
                                        size_t bytes) {
-  network->release_dma(network, segment, bytes);
+  network->release_dma(network, base, bytes);
 }
 
 #endif // LIBHPX_NETWORK_H

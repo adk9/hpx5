@@ -40,8 +40,8 @@ typedef struct pwc_xport {
   int (*key_find)(const void *xport, const void *addr, size_t n, void *key);
   int (*key_copy)(void *restrict dest, const void *restrict src);
   int (*key_clear)(void *key);
-  int (*pwc)(xport_op_t *op);
-  int (*get)(xport_op_t *op);
+  int (*pwc)(const xport_op_t *op);
+  int (*get)(const xport_op_t *op);
   int (*test)(uint64_t *op, int *remaining);
   int (*probe)(uint64_t *op, int *remaining, int rank);
   memory_register_t  pin;

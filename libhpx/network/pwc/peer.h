@@ -26,8 +26,6 @@ struct pwc_xport;
 typedef enum {
   SEGMENT_NULL,
   SEGMENT_HEAP,
-  SEGMENT_EAGER,
-  SEGMENT_PEERS,
   SEGMENT_MAX
 } segid_t;
 
@@ -52,11 +50,7 @@ typedef enum {
 /// accesses through its local send buffer.
 typedef struct peer {
   uint32_t           rank;                      // the peer's rank
-  const uint32_t   UNUSED;                      // padding
-  segment_t      segments[SEGMENT_MAX];         // RDMA segments
-  struct pwc_xport *xport;
-  eager_buffer_t       rx;                      // the eager tx endpoint
-  eager_buffer_t       tx;                      // the eager rx endpoint
+  uint32_t         UNUSED;                      // padding
   send_buffer_t      send;                      // the parcel send buffer
 } peer_t;
 
@@ -69,13 +63,13 @@ void peer_fini(peer_t *peer)
 /// This simply translates the segment id into the appropriate segment structure
 /// for this peer, and then forwards the request through the PWC buffer.
 ///
-/// @param           op The operation we are assembling.
 /// @param         peer The peer structure representing the target of the pwc.
+/// @param           op The operation we are assembling.
 /// @param       offset The remote offset for the put operation.
 /// @param   segment_id The segment corresponding to @p roff.
 ///
 /// @return  LIBHPX_OK The operation was successful.
-int peer_pwc(xport_op_t *op, peer_t *peer, size_t offset, segid_t segment_id)
+int peer_pwc(peer_t *peer, xport_op_t *op)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Simply put a command.

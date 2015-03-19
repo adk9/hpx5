@@ -130,7 +130,7 @@ static int _photon_unpin(void *obj, const void *base, size_t n) {
   return LIBHPX_OK;
 }
 
-static int _photon_pwc(xport_op_t *op) {
+static int _photon_pwc(const xport_op_t *op) {
   int flags = ((op->lop) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
               ((op->rop) ? 0 : PHOTON_REQ_PWC_NO_RCE);
 
@@ -160,7 +160,7 @@ static int _photon_pwc(xport_op_t *op) {
   unreachable();
 }
 
-static int _photon_get(xport_op_t *op) {
+static int _photon_get(const xport_op_t *op) {
 
   struct photon_buffer_t lbuf = {
     .addr = (uintptr_t)op->dest,

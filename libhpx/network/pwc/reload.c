@@ -44,7 +44,14 @@ typedef struct {
   remote_t        *remotes;
 } reload_t;
 
+static void _buffer_fini(buffer_t *b) {
+  if (b) {
+    registered_free(b->base);
+  }
+}
+
 static void _buffer_init(buffer_t *b, size_t n, pwc_xport_t *xport) {
+  b->i = 0;
   b->n = n;
   b->base = registered_calloc(1, n);
   int e = xport->key_find(xport, b->base, n, &b->key);
@@ -112,6 +119,9 @@ static hpx_parcel_t *_reload_recv(void *obj, int rank) {
 static void _reload_delete(void *obj) {
   if (obj) {
     reload_t *reload = obj;
+    for (int i = 0, e = reload->ranks; i < e; ++i) {
+      _buffer_fini(&reload->recv[i]);
+    }
     local_free(reload->recv);
     registered_free(reload->send);
     local_free(reload->remotes);
@@ -166,6 +176,12 @@ void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
 
   // free the temporary array of remote pointers
   local_free(sends);
+
+  // just do a sanity check to make sure the alltoalls worked
+  dbg_assert(reload->send[rank].n == reload->recv[rank].n);
+  dbg_assert(reload->send[rank].i == reload->recv[rank].i);
+  dbg_assert(reload->send[rank].base == reload->recv[rank].base);
+  dbg_assert(!strncmp(reload->send[rank].key, reload->recv[rank].key, key_size));
 
   // Now reload contains:
   //

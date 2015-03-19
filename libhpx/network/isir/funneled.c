@@ -170,26 +170,24 @@ static void _funneled_set_flush(void *network) {
 }
 
 /// Create a network registration.
-static void _funneled_register_dma(void *network, void *base, size_t extent) {
-  _funneled_t *isir = network;
-  if (!isir->xport->pin) {
-    return;
+static int _funneled_register_dma(void *obj, const void *base, size_t n,
+                                   void *key) {
+  _funneled_t *isir = obj;
+  if (isir->xport->pin) {
+    int e = isir->xport->pin(isir->xport, base, n, key);
+    dbg_check(e, "Could not register (%p, %zu) for rmda\n", base, n);
   }
-
-  int e = isir->xport->pin(isir->xport, base, extent, NULL);
-  dbg_check(e, "Could not register [%p, %p) for rmda\n", base,
-            (char*)base + extent);
+  return LIBHPX_OK;
 }
 
 /// Release a network registration.
-static void _funneled_release_dma(void *network, void* base, size_t extent) {
-  _funneled_t *isir = network;
-  if (!isir->xport->unpin) {
-    return;
+static int _funneled_release_dma(void *obj, const void* base, size_t n) {
+  _funneled_t *isir = obj;
+  if (isir->xport->unpin) {
+    int e = isir->xport->unpin(isir->xport, base, n);
+    dbg_check(e, "Could not release (%p, %zu) for rdma\n", base, n);
   }
-
-  int e = isir->xport->unpin(isir->xport, base, extent);
-  dbg_check(e, "Could not release [%p, %p)\n", base, (char*)base + extent);
+  return LIBHPX_OK;
 }
 
 static int _funneled_progress(void *network) {
@@ -236,7 +234,6 @@ network_t *network_isir_funneled_new(const config_t *cfg, struct boot *boot,
   }
 
   network->vtable.type = HPX_NETWORK_ISIR;
-  network->vtable.transports = NULL;
   network->vtable.delete = _funneled_delete;
   network->vtable.progress = _funneled_progress;
   network->vtable.send = _funneled_send;
