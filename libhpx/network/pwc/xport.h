@@ -35,10 +35,11 @@ typedef struct pwc_xport {
   hpx_transport_t type;
 
   void (*delete)(void *xport);
-
-  size_t (*sizeof_rdma_key)(void);
-  const void *(*find_key)(const void *xport, const void *addr, size_t n);
-  void (*clear)(void *key);
+  size_t (*key_size)(void);
+  const void *(*key_find_ref)(const void *xport, const void *addr, size_t n);
+  int (*key_find)(const void *xport, const void *addr, size_t n, void *key);
+  int (*key_copy)(void *restrict dest, const void *restrict src);
+  int (*key_clear)(void *key);
   int (*pwc)(xport_op_t *op);
   int (*get)(xport_op_t *op);
   int (*test)(uint64_t *op, int *remaining);

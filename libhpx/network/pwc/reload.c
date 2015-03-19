@@ -23,15 +23,16 @@
 #include "xport.h"
 
 typedef struct {
-  size_t        n;
-  void      *base;
-  const void *key;
-} segment_t;
+  size_t   n;
+  size_t   i;
+  void *base;
+  char   key[];
+} buffer_t;
 
 typedef struct {
-  segment_t segment;
-  uint64_t   offset;
-} buffer_t;
+  void *addr;
+  char   key[];
+} remote_t;
 
 typedef struct {
   parcel_emulator_t vtable;
@@ -40,7 +41,7 @@ typedef struct {
   pwc_xport_t       *xport;
   buffer_t           *recv;
   buffer_t           *send;
-  segment_t       *remotes;
+  remote_t        *remotes;
 } reload_t;
 
 static void _reload_delete(void *obj) {
@@ -49,26 +50,27 @@ static void _reload_delete(void *obj) {
   }
 }
 
-static int _segment_reload(segment_t *s, xport_op_t *op, pwc_xport_t *xport) {
+static void _buffer_init(buffer_t *b, size_t n, pwc_xport_t *xport) {
+  b->n = n;
+  b->base = registered_calloc(1, n);
+  int e = xport->key_find(xport, b->base, n, &b->key);
+  dbg_check(e, "no key for newly allocated buffer (%p, %zu)\n", b->base, n);
+}
+
+static int _buffer_reload(buffer_t *b, xport_op_t *op, pwc_xport_t *xport) {
   return LIBHPX_RETRY;
 }
 
-static int _segment_send(segment_t *s, xport_op_t *op, pwc_xport_t *xport,
-                         uint64_t offset) {
-  if (s->n < offset + op->n) {
-    return _segment_reload(s, op, xport);
+static int _buffer_send(buffer_t *b, xport_op_t *op, pwc_xport_t *xport) {
+  size_t i = b->i;
+  b->i += op->n;
+  if (b->i >= b->n) {
+    return _buffer_reload(b, op, xport);
   }
 
-  op->dest = (char*)s->base + offset;
-  op->dest_key = s->key;
+  xport->key_copy(&op->dest_key, &b->key);
+  op->dest = (char*)b->base + i;
   return xport->pwc(op);
-}
-
-static int _buffer_send(buffer_t *b, xport_op_t *op, pwc_xport_t *xport) {
-  segment_t *segment = &b->segment;
-  uint64_t offset = b->offset;
-  b->offset += op->n;
-  return _segment_send(segment, op, xport, offset);
 }
 
 static int _reload_send(void *obj, xport_op_t *op, hpx_parcel_t *p) {
@@ -76,7 +78,8 @@ static int _reload_send(void *obj, xport_op_t *op, hpx_parcel_t *p) {
   pwc_xport_t *xport = reload->xport;
   op->n = parcel_size(p);
   op->src = p;
-  op->src_key = xport->find_key(xport, op->src, op->n);
+  int e = xport->key_find(xport, op->src, op->n, &op->src_key);
+  dbg_check(e, "no rdma key for local parcel (%p, %zu)\n", op->src, op->n);
   buffer_t *buffer = &reload->send[op->rank];
   return _buffer_send(buffer, op, xport);
 }
@@ -92,37 +95,46 @@ void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
   reload->rank = rank;
   reload->ranks = ranks;
 
-  // Allocate and initialize my initial recv buffers.
-  reload->recv = local_calloc(ranks, sizeof(*reload->recv));
+  // Compute the size of some dynamically sized stuff.
+  size_t key_size = xport->key_size();
+  size_t buffer_size = sizeof(buffer_t) + key_size;
+  size_t buffer_row_size = ranks * buffer_size;
+  size_t remote_size = sizeof(remote_t) + key_size;
+  size_t remote_table_size = ranks * remote_size;
+
+  // Allocate my buffers (send is written via rdma, so it is registered).
+  reload->recv = local_malloc(buffer_row_size);
+  reload->send = registered_malloc(buffer_row_size);
+  reload->remotes = local_malloc(remote_table_size);
+
+  // Initialize the recv buffers for this rank.
   for (int i = 0, e = ranks; i < e; ++i) {
-    int n = cfg->pwc_parcelbuffersize;
-    segment_t *segment = &reload->recv[i].segment;
-    segment->n = n;
-    segment->base = registered_calloc(1, n);
-    segment->key = xport->find_key(xport, segment->base, n);
+    _buffer_init(&reload->recv[i], cfg->pwc_parcelbuffersize, xport);
   }
 
-  // Allocate my array of send buffers and do an initial all-to-all to exchange
-  // the segments allocated above: send[j][i] = recv[i][j].
-  reload->send = registered_calloc(ranks, sizeof(*reload->send));
+  // Initialize a temporary array of remote pointers for this rank's sends.
+  char key[key_size];
+  int e = xport->key_find(xport, reload->send, buffer_row_size, &key);
+  dbg_check(e, "no key for send (%p, %zu)\n", reload->send, buffer_row_size);
 
-  int n = sizeof(segment_t);
-  int stride = sizeof(buffer_t);
-  boot_alltoall(boot, reload->send, reload->recv, n, stride);
+  remote_t *sends = local_malloc(remote_table_size);
+  for (int i = 0, e = ranks; i < e; ++i) {
+    sends[i].addr = &reload->send[i];
+    xport->key_copy(&sends[i].key, &key);
+  }
 
-  // Create a segment for my element in the remotes (i.e., the segment
-  // corresponding to my send buffer row which peers use to update my send
-  // buffer to point to their recv buffer) allreduce the
-  segment_t sends = {
-    .n = sizeof(segment_t) * ranks,
-    .base = reload->remotes,
-    .key = xport->find_key(xport, reload->remotes, n),
-  };
+  // exchange all of the recv buffers, and all of the remote send pointers
+  boot_alltoall(boot, reload->send, reload->recv, buffer_size, buffer_size);
+  boot_alltoall(boot, reload->remotes, sends, remote_size, remote_size);
 
-  // Allocate the remotes array, and exchange all of the sends segments.
-  reload->remotes = local_calloc(ranks, sizeof(*reload->remotes));
-  boot_allgather(boot, &sends, reload->remotes, sizeof(sends));
-  dbg_assert(reload->remotes[rank].key == sends.key);
+  // free the temporary array of remote pointers
+  local_free(sends);
 
+  // Now reload contains:
+  //
+  // 1) A row of initialized recv buffers, one for each sender.
+  // 2) A row of initialized send buffers, one for each target (corresponding to
+  //    their recv buffer for me).
+  // 3) A table of remote pointers, one for each send buffer targeting me.
   return reload;
 }
