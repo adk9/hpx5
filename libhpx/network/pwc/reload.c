@@ -91,7 +91,7 @@ static int _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
     return _buffer_reload(send, xport, op);
   }
 
-  xport->key_copy(&op->dest_key, &send->key);
+  op->dest_key = &send->key;
   op->dest = send->base + i;
   return xport->pwc(op);
 }
