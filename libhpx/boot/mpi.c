@@ -68,22 +68,21 @@ static int _mpi_alltoall(const void *boot, void *restrict dest,
                          const void *restrict src, int n, int stride) {
   const boot_t *mpi = boot;
   int ranks = mpi->n_ranks(mpi);
+  int *counts = calloc(ranks, sizeof(*counts));
   int *offsets = calloc(ranks, sizeof(*offsets));
-  int *sizes = calloc(ranks, sizeof(*sizes));
   assert(offsets);
-  assert(sizes);
+  assert(counts);
   for (int i = 0, e = ranks; i < e; ++i) {
+    counts[i] = n;
     offsets[i] = i * stride;
-    sizes[i] = n;
   }
-  if (MPI_SUCCESS != MPI_Alltoallv(src, sizes, offsets, MPI_BYTE,
-                                   dest, sizes, offsets, MPI_BYTE,
+  if (MPI_SUCCESS != MPI_Alltoallv(src, counts, offsets, MPI_BYTE,
+                                   dest, counts, offsets, MPI_BYTE,
                                    MPI_COMM_WORLD)) {
     dbg_error("MPI_Alltoallv failed at bootstrap\n");
   }
-
-  free(sizes);
   free(offsets);
+  free(counts);
   return LIBHPX_OK;
 }
 

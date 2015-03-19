@@ -183,7 +183,7 @@ static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
   // which always runs "below" sp on the stack. This gets released in
   // _worker_shutdown.
   void *base = (char*)sp - here->config->stacksize;
-  network_register_dma(here->network, base, here->config->stacksize);
+  network_register_dma(here->network, base, here->config->stacksize, NULL);
 
   return HPX_SUCCESS;
 }

@@ -18,9 +18,9 @@
 struct pwc_xport;
 
 typedef struct segment {
+  size_t    n;
   char  *base;
-  size_t size;
-  char    key[16];
+  char    key[];
 } segment_t;
 
 ///

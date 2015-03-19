@@ -17,9 +17,9 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include "hpx/builtins.h"
-#include "libhpx/debug.h"
-#include "libhpx/libhpx.h"
+#include <hpx/builtins.h>
+#include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
 #include "circular_buffer.h"
 
 /// Compute the index into the buffer for an abstract index.

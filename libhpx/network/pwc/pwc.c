@@ -28,23 +28,22 @@
 
 #include "commands.h"
 #include "parcel_emulation.h"
-#include "parcel_utils.h"
-#include "peer.h"
 #include "pwc.h"
+#include "send_buffer.h"
 #include "xport.h"
 
+typedef struct {
+  size_t   n;
+  char *base;
+  char   key[];
+} heap_segment_t;
+
 typedef struct pwc_network {
-  network_t            vtable;
-  pwc_xport_t          *xport;
-  uint32_t               rank;
-  uint32_t              ranks;
-  uint32_t parcel_buffer_size;
-  uint32_t parcel_eager_limit;
-  size_t          eager_bytes;
-  char                 *eager;
-  int         flush_on_delete;
-  int          UNUSED_PADDING;
-  peer_t                peers[];
+  network_t              vtable;
+  pwc_xport_t            *xport;
+  parcel_emulator_t    *parcels;
+  send_buffer_t   *send_buffers;
+  heap_segment_t *heap_segments;
 } pwc_network_t;
 
 static HPX_USED const char *_straction(hpx_action_t id) {
@@ -52,43 +51,8 @@ static HPX_USED const char *_straction(hpx_action_t id) {
   return action_table_get_key(here->actions, id);
 }
 
-static void _pwc_delete(void *network) {
-  dbg_assert(network);
-  pwc_network_t *pwc = network;
-  // Finish up our outstanding rDMA, and then wait. This prevents us from
-  // deregistering segments while there are outstanding requests.
-  {
-    int remaining;
-    command_t command;
-    do {
-      pwc->xport->test(&command, &remaining);
-    } while (remaining > 0);
-    boot_barrier(here->boot);
-  }
-
-  for (int i = 0; i < pwc->ranks; ++i) {
-    peer_t *peer = &pwc->peers[i];
-    if (i == pwc->rank) {
-      segment_fini(&peer->segments[SEGMENT_NULL], pwc->xport);
-      segment_fini(&peer->segments[SEGMENT_HEAP], pwc->xport);
-      segment_fini(&peer->segments[SEGMENT_PEERS], pwc->xport);
-      segment_fini(&peer->segments[SEGMENT_EAGER], pwc->xport);
-    }
-    peer_fini(peer);
-  }
-
-  pwc_xport_delete(pwc->xport);
-
-  if (pwc->eager) {
-    free(pwc->eager);
-  }
-
-  free(pwc);
-}
-
-/// Poll and handle local completions.
 static void _probe_local(pwc_network_t *pwc) {
-  int rank = pwc->rank;
+  int rank = here->rank;
 
   // Each time through the loop, we deal with local completions.
   command_t command;
@@ -100,10 +64,6 @@ static void _probe_local(pwc_network_t *pwc) {
   }
 }
 
-/// Probe for remote completions from @p rank.
-///
-/// This function claims to return a list of parcels, but it actually processes
-/// all messages internally, using the local work-queue directly.
 static hpx_parcel_t *_probe(pwc_network_t *pwc, int rank) {
   command_t command;
   while (pwc->xport->probe(&command, NULL, rank)) {
@@ -115,14 +75,10 @@ static hpx_parcel_t *_probe(pwc_network_t *pwc, int rank) {
   return NULL;
 }
 
-/// Progress the pwc() network.
-///
-/// Currently, this processes all outstanding local completions and then probes
-/// each potential source for commands. It is not thread safe.
 static int _pwc_progress(void *network) {
   pwc_network_t *pwc = network;
   _probe_local(pwc);
-  for (int i = 0, e = pwc->ranks; i < e; ++i) {
+  for (int i = 0, e = here->ranks; i < e; ++i) {
     _probe(pwc, i);
   }
   return 0;
@@ -137,60 +93,35 @@ static hpx_parcel_t *_pwc_probe(void *network, int rank) {
 }
 
 /// Create a network registration.
-static void _pwc_register_dma(void *network, void *base, size_t extent) {
+static int _pwc_register_dma(void *network, const void *base, size_t n,
+                             void *key) {
   pwc_network_t *pwc = network;
-  if (!pwc->xport->pin) {
-    return;
-  }
-
-  int e = pwc->xport->pin(pwc->xport, base, extent, NULL);
-  dbg_check(e, "Could not register (%p, %zu) for rmda\n", base, extent);
+  dbg_assert(pwc && pwc->xport && pwc->xport->pin);
+  int e = pwc->xport->pin(pwc->xport, base, n, key);
+  dbg_check(e, "Could not register (%p, %zu) for rmda\n", base, n);
+  return e;
 }
 
 /// Release a network registration.
-static void _pwc_release_dma(void *network, void* base, size_t extent) {
+static int _pwc_release_dma(void *network, const void* base, size_t n) {
   pwc_network_t *pwc = network;
-  if (!pwc->xport->unpin) {
-    return;
-  }
-
-  int e = pwc ->xport->unpin(pwc->xport, base, extent);
-  dbg_check(e, "Could not release (%p, %zu)\n", base, extent);
+  dbg_assert(pwc && pwc->xport && pwc->xport->unpin);
+  int e = pwc->xport->unpin(pwc->xport, base, n);
+  dbg_check(e, "Could not release (%p, %zu) for rdma\n", base, n);
+  return e;
 }
 
-/// Perform a parcel send operation.
-///
-/// This determines which peer the operation is occurring to, and which send
-/// protocol to use, and then forwards to the appropriate peer/handler pair.
-///
-/// This is basically exposed directly to the application programmer through the
-/// network interface, and could be called concurrently by a number of different
-/// threads. It does not perform any internal locking, as it is merely finding
-/// the right peer structure to send through.
-///
-/// @param      network The network object.
-/// @param            p The parcel to send.
-///
-/// @returns  LIBHPX_OK The operation completed successfully.
-///        LIBHPX_ERROR The operation produced an error.
 static int _pwc_send(void *network, hpx_parcel_t *p) {
   pwc_network_t *pwc = network;
   int rank = gas_owner_of(here->gas, p->target);
-  peer_t *peer = &pwc->peers[rank];
-  size_t bytes = pwc_network_size(p);
-  if (bytes < pwc->parcel_eager_limit) {
-    return peer_send(peer, HPX_NULL, p);
-  }
-  else {
-    return peer_send_rendezvous(peer, HPX_NULL, p);
-  }
+  send_buffer_t *buffer = &pwc->send_buffers[rank];
+  return send_buffer_send(buffer, HPX_NULL, p);
 }
 
 static int _pwc_command(void *network, hpx_addr_t locality,
                         hpx_action_t rop, uint64_t args) {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(here->gas, locality);
-  peer_t *peer = &pwc->peers[rank];
 
   xport_op_t op = {
     .rank = rank,
@@ -203,39 +134,31 @@ static int _pwc_command(void *network, hpx_addr_t locality,
     .rop = command_pack(rop, args)
   };
 
-  return peer_pwc(&op, peer, 0, SEGMENT_NULL);
+  return pwc->xport->pwc(&op);
 }
 
-/// Perform a put-with-command operation to a global heap address.
-///
-/// This simply the global address into a symmetric-heap offset, finds the
-/// peer for the request, and forwards to the p2p put operation.
 static int _pwc_pwc(void *network,
                     hpx_addr_t to, const void *lva, size_t n,
                     hpx_action_t lop, hpx_addr_t laddr,
                     hpx_action_t rop, hpx_addr_t raddr) {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(here->gas, to);
-  peer_t *peer = &pwc->peers[rank];
+  uint64_t offset = gas_offset_of(here->gas, to);
 
   xport_op_t op = {
     .rank = rank,
     .n = n,
-    .dest = NULL,
-    .dest_key = NULL,
+    .dest = pwc->heap_segments[rank].base + offset,
+    .dest_key = &pwc->heap_segments[rank].key,
     .src = lva,
     .src_key = pwc->xport->key_find_ref(pwc->xport, lva, n),
     .lop = command_pack(lop, laddr),
     .rop = command_pack(rop, raddr)
   };
 
-  uint64_t offset = gas_offset_of(here->gas, to);
-  return peer_pwc(&op, peer, offset, SEGMENT_HEAP);
+  return pwc->xport->pwc(&op);
 }
 
-/// Perform a put operation to a global heap address.
-///
-/// This simply forwards to the pwc handler with no remote command.
 static int _pwc_put(void *network, hpx_addr_t to, const void *from,
                     size_t n, hpx_action_t lop, hpx_addr_t laddr) {
   hpx_action_t rop = HPX_ACTION_NULL;
@@ -243,121 +166,78 @@ static int _pwc_put(void *network, hpx_addr_t to, const void *from,
   return _pwc_pwc(network, to, from, n, lop, laddr, rop, raddr);
 }
 
-/// Perform a get operation to a global heap address.
-///
-/// This simply the global address into a symmetric-heap offset, finds the
-/// peer for the request, and forwards to the p2p get operation.
 static int _pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
                     hpx_action_t lop, hpx_addr_t laddr) {
   pwc_network_t *pwc = network;
+  int rank = gas_owner_of(here->gas, from);
+  uint64_t offset = gas_offset_of(here->gas, from);
   xport_op_t op = {
-    .rank = gas_owner_of(here->gas, from),
+    .rank = rank,
     .n = n,
     .dest = lva,
     .dest_key = pwc->xport->key_find_ref(pwc->xport, lva, n),
-    .src = NULL,
-    .src_key = NULL,
+    .src = pwc->heap_segments[rank].base + offset,
+    .src_key = &pwc->heap_segments[rank].key,
     .lop = command_pack(lop, laddr),
     .rop = 0
   };
 
-  peer_t *peer = pwc->peers + op.rank;
-  uint64_t offset = gas_offset_of(here->gas, from);
-  return peer_get(&op, peer, offset, SEGMENT_HEAP);
+  return pwc->xport->get(&op);
 }
 
-///
 static void _pwc_set_flush(void *network) {
+  // pwc networks always flush their rdma
 }
 
-/// Initialize a peer structure.
-///
-/// @precondition The peer must already have its segments initialized.
-///
-/// @param          pwc The network structure.
-/// @param         peer The peer to initialize.
-///
-/// @returns  LIBHPX_OK The peer was initialized successfully.
-static int _init_peer(pwc_network_t *pwc, peer_t *peer, int self, int rank) {
-  peer->rank = rank;
-  peer->xport = pwc->xport;
-
-  // Figure out where I receive from in my eager buffer w.r.t. this peer.
-  uint32_t size = pwc->parcel_buffer_size;
-  char *base = pwc->eager + rank * size;
-  int status = eager_buffer_init(&peer->rx, peer, 0, base, size);
-  if (LIBHPX_OK != status) {
-    return log_error("could not initialize the parcel rx endpoint\n");
-  }
-
-  // Figure out where I send to w.r.t. this peer in their eager buffer.
-  uint32_t offset = self * size;
-  status = eager_buffer_init(&peer->tx, peer, offset, NULL, size);
-  if (LIBHPX_OK != status) {
-    return log_error("could not initialize the parcel tx endpoint\n");
-  }
-
-  status = send_buffer_init(&peer->send, rank, NULL, peer->xport, 8);
-  if (LIBHPX_OK != status) {
-    return log_error("could not initialize the send buffer\n");
-  }
-
-  return LIBHPX_OK;
+static void _pwc_flush(pwc_network_t *pwc) {
+  int remaining;
+  command_t command;
+  do {
+    pwc->xport->test(&command, &remaining);
+  } while (remaining > 0);
+  boot_barrier(here->boot);
 }
 
-peer_t *pwc_get_peer(int src) {
-  dbg_assert(here && here->network);
-  pwc_network_t *pwc = (void*)here->network;
-  return &pwc->peers[src];
+static void _pwc_delete(void *network) {
+  dbg_assert(network);
+  pwc_network_t *pwc = network;
+  _pwc_flush(pwc);
+
+  for (int i = 0, e = here->ranks; i < e; ++i) {
+    send_buffer_fini(&pwc->send_buffers[i]);
+  }
+
+  heap_segment_t *heap = &pwc->heap_segments[here->rank];
+  _pwc_release_dma(pwc, heap->base, heap->n);
+  local_free(pwc->heap_segments);
+  local_free(pwc->send_buffers);
+  parcel_emulator_delete(pwc->parcels);
+  pwc_xport_delete(pwc->xport);
+  free(pwc);
 }
 
 network_t *network_pwc_funneled_new(const config_t *cfg, boot_t *boot,
                                     gas_t *gas) {
+  // Validate parameters.
   if (boot->type == HPX_BOOT_SMP) {
     log_net("will not instantiate photon for the SMP boot network\n");
     return NULL;
   }
 
-  // Allocate the network object, with enough space for the peer array that
-  // contains one peer per rank.
-  int ranks = boot_n_ranks(boot);
-  pwc_network_t *pwc = malloc(sizeof(*pwc) + ranks * sizeof(peer_t));
-  if (!pwc) {
-    dbg_error("could not allocate put-with-completion network\n");
+  // Validate configuration.
+  if (cfg->pwc_parceleagerlimit > cfg->pwc_parcelbuffersize) {
+    dbg_error(" --hpx-pwc-parceleagerlimit (%lu) must be less than "
+              "--hpx-pwc-parcelbuffersize (%lu)\n",
+              cfg->pwc_parceleagerlimit, cfg->pwc_parcelbuffersize);
   }
 
-  // Allocate the requested transport.
-  pwc->xport = pwc_xport_new(cfg, boot, gas);
-  if (!pwc->xport) {
-    log_error("PWC network could not initialize a transport.\n");
-    goto unwind;
-  }
 
-  // Store some of the salient information in the network structure.
-  pwc->rank = boot_rank(boot);
-  pwc->ranks = ranks;
-  pwc->parcel_eager_limit = 1u << ceil_log2_32(cfg->pwc_parceleagerlimit);
-  // NB: 16 is sizeof(_get_parcel_args_t) in peer.c
-  const int limit = sizeof(hpx_parcel_t) - pwc_prefix_size() + 16;
-  if (pwc->parcel_eager_limit < limit) {
-    log_error("--hpx-parceleagerlimit must be at least %u bytes\n", limit);
-    goto unwind;
-  }
-
-  pwc->parcel_buffer_size = 1u << ceil_log2_32(cfg->pwc_parcelbuffersize);
-  log("initialized a %u-byte eager buffer\n", pwc->parcel_buffer_size);
-
-  // Allocate the network's eager segment.
-  pwc->eager_bytes = ranks * pwc->parcel_buffer_size;
-  pwc->eager = malloc(pwc->eager_bytes);
-  if (!pwc->eager) {
-    log_error("malloc(%lu) failed for the eager buffer\n", pwc->eager_bytes);
-    goto unwind;
-  }
+  // Allocate the network object.
+  pwc_network_t *pwc = malloc(sizeof(*pwc));
+  dbg_assert_str(pwc, "could not allocate put-with-completion network\n");
 
   // Initialize the network's virtual function table.
   pwc->vtable.type = HPX_NETWORK_PWC;
-  pwc->vtable.transports = NULL;
   pwc->vtable.delete = _pwc_delete;
   pwc->vtable.progress = _pwc_progress;
   pwc->vtable.send = _pwc_send;
@@ -370,74 +250,30 @@ network_t *network_pwc_funneled_new(const config_t *cfg, boot_t *boot,
   pwc->vtable.register_dma = _pwc_register_dma;
   pwc->vtable.release_dma = _pwc_release_dma;
 
-  if (pwc->parcel_eager_limit > pwc->parcel_buffer_size) {
-    dbg_error(" --hpx-parceleagerlimit (%u) must be less than "
-              "--hpx-parcelbuffersize (%u)\n",
-              pwc->parcel_eager_limit, pwc->parcel_buffer_size);
-  }
-
-  int e;
-  peer_t local;
-  // Prepare the null segment.
-  segment_t *null = &local.segments[SEGMENT_NULL];
-  e = segment_init(null, pwc->xport, NULL, 0);
-  if (LIBHPX_OK != e) {
-    log_error("could not initialize the NULL segment\n");
-    goto unwind;
-  }
+  // Initialize transports.
+  pwc->xport = pwc_xport_new(cfg, boot, gas);
+  pwc->parcels = parcel_emulator_new_reload(cfg, boot, pwc->xport);
+  pwc->send_buffers = local_calloc(here->ranks, sizeof(send_buffer_t));
+  pwc->heap_segments = local_calloc(here->ranks, sizeof(heap_segment_t));
 
   // Register the heap segment.
-  segment_t *heap = &local.segments[SEGMENT_HEAP];
-  e = segment_init(heap, pwc->xport, gas_local_base(here->gas), gas_local_size(here->gas));
-  if (LIBHPX_OK != e) {
-    log_error("could not register the heap segment\n");
-    goto unwind;
-  }
+  size_t heap_segment_size = sizeof(heap_segment_t) + pwc->xport->key_size();
+  heap_segment_t *heap = alloca(heap_segment_size);
+  heap->n = gas_local_size(here->gas);
+  heap->base = gas_local_base(here->gas);
+  _pwc_register_dma(pwc, heap->base, heap->n, &heap->key);
 
-  // Register the eager segment.
-  segment_t *eager = &local.segments[SEGMENT_EAGER];
-  e = segment_init(eager, pwc->xport, pwc->eager, pwc->eager_bytes);
-  if (LIBHPX_OK != e) {
-    log_error("could not register the eager segment\n");
-    goto unwind;
-  }
+  // Exchange all the heap keys
+  boot_allgather(boot, heap, pwc->heap_segments, heap_segment_size);
 
-  // Register the peers segment.
-  segment_t *peers = &local.segments[SEGMENT_PEERS];
-  e = segment_init(peers, pwc->xport, (void*)pwc->peers, pwc->ranks * sizeof(peer_t));
-  if (LIBHPX_OK != e) {
-    log_error("could not register the peers segment\n");
-    goto unwind;
-  }
-
-  // Exchange all of the peer segments.
-  e = boot_allgather(boot, &local, &pwc->peers, sizeof(local));
-  if (LIBHPX_OK != e) {
-    log_error("could not exchange peers segment\n");
-    goto unwind;
-  }
-
-  // Wait until everyone has exchanged segments.
-  // NB: is the allgather synchronous? Why are we waiting otherwise...?
-  boot_barrier(boot);
-
-  // Initialize each of the peer structures.
-  for (int i = 0; i < ranks; ++i) {
-    peer_t *peer = &pwc->peers[i];
-    int e = _init_peer(pwc, peer, pwc->rank, i);
-    if (LIBHPX_OK != e) {
-      log_error("failed to initialize peer %d of %u\n", i, ranks);
-      goto unwind;
+  // Initialize the send buffers.
+  for (int i = 0, e = here->ranks; i < e; ++i) {
+    send_buffer_t *send = &pwc->send_buffers[i];
+    int rc = send_buffer_init(send, i, pwc->parcels, pwc->xport, 8);
+    if (LIBHPX_OK != rc) {
+      dbg_error("failed to initialize send buffer %d of %u\n", i, e);
     }
   }
 
-  void *parcels = parcel_emulator_new_reload(cfg, boot, pwc->xport);
-  assert(parcels);
-  parcel_emulator_delete(parcels);
-
   return &pwc->vtable;
-
- unwind:
-  _pwc_delete(&pwc->vtable);
-  return NULL;
 }
