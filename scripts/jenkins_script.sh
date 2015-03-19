@@ -29,6 +29,15 @@ case "$SYSTEM" in
     export LDFLAGS="-L/opt/ofed/lib64 -lpthread"
     export CPPFLAGS="-I/opt/ofed/include"
     ;;
+  HPX5_EDISON)
+    module unload darshan
+    module load atp
+    module load git/2.0.0
+    module swap PrgEnv-intel PrgEnv-gnu
+    module load craype-hugepages8M
+    setenv CRAYPE_LINK_TYPE dynamic
+    setenv PATH /global/homes/j/jayaajay/autotools/bin:$PATH
+    ;;
   *)
     echo "Unknown system $SYSTEM."
     exit 1
@@ -59,6 +68,9 @@ case "$SYSTEM" in
     module load  impi/4.1.3.049
     CFGFLAGS+=" --with-mpi"
     ;;
+  HPX5_EDISON)
+    CFGFLAGS+=" --with-mpi"
+    ;;
 esac
 }
 
@@ -80,6 +92,11 @@ case "$SYSTEM" in
   HPX5_STAMPEDE)
     export HPX_PHOTON_IBDEV=mlx4_0
     export HPX_PHOTON_BACKEND=verbs
+    ;;
+  HPX5_EDISON)
+    setenv HPX_PHOTON_BACKEND ugni
+    setenv HPX_PHOTON_CARGS "--with-ugni"
+    CFGFLAGS+=" --with-pmi --with-hugetlbfs"
     ;;
 esac
 }
@@ -157,6 +174,13 @@ case "$SYSTEM" in
       CFGFLAGS+=" --with-tests-cmd=\"ibrun -np 2\""
     fi
    ;;
+  HPX5_EDISON)
+    if [ "$HPXMODE_AXIS" == smp ] ; then
+      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 1 -N 1\""
+    else
+      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 2 -N 1\""
+    fi
+    ;;
   *)
     exit 1
     ;;
@@ -186,6 +210,9 @@ case "$SYSTEM" in
   HPX5_STAMPEDE)
     CFGFLAGS+=" CC=icc"
     ;;
+  HPX5_EDISON)
+    CFGFLAGS+=" CC=cc"
+    ;;
   *)
     exit 1
     ;;
@@ -210,7 +237,10 @@ if [ "$OP" == "build" ]; then
         ;;
       HPX5_STAMPEDE)
         CFG_CMD=" MPI_CFLAGS=-I/opt/apps/intel13/impi/4.1.3.049/intel64/include MPI_LIBS=\"-L/opt/apps/intel13/impi/4.1.3.049/intel64/lib -lmpi\" ../configure"
-        ;;  
+        ;; 
+      HPX5_EDISON)
+        CFG_CMD="../configure"
+        ;; 
       *)
        exit 1
        ;;
