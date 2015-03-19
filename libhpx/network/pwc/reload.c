@@ -44,12 +44,6 @@ typedef struct {
   remote_t        *remotes;
 } reload_t;
 
-static void _reload_delete(void *obj) {
-  if (obj) {
-    local_free(obj);
-  }
-}
-
 static void _buffer_init(buffer_t *b, size_t n, pwc_xport_t *xport) {
   b->n = n;
   b->base = registered_calloc(1, n);
@@ -110,6 +104,16 @@ static hpx_parcel_t *_reload_recv(void *obj, int rank) {
   reload_t *reload = obj;
   buffer_t *recv = &reload->recv[rank];
   return _buffer_recv(recv);
+}
+
+static void _reload_delete(void *obj) {
+  if (obj) {
+    reload_t *reload = obj;
+    local_free(reload->recv);
+    registered_free(reload->send);
+    local_free(reload->remotes);
+    free(reload);
+  }
 }
 
 void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
