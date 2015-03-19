@@ -274,16 +274,18 @@ static int _pmi_alltoall(const void *boot, void *restrict dest,
                          const void *restrict src, int n, int stride) {
   // Emulate alltoall with allgather for now.
   const boot_t *pmi = boot;
+  int rank = pmi->rank(pmi);
+  int nranks = pmi->n_ranks(pmi);
 
   // Allocate a temporary buffer to allgather into
-  int gather_bytes = pmi->n_ranks(pmi) * stride;
+  int gather_bytes = nranks * nranks * stride;
   void *gather = malloc(gather_bytes);
   if (!gather) {
     dbg_error("could not allocate enough space for PMI alltoall emulation\n");
   }
-
+  
   // Perform the allgather
-  int e = _allgather(pmi, src, gather, gather_bytes);
+  int e = _allgather(pmi, src, gather, nranks * stride);
   if (LIBHPX_OK != e) {
     dbg_error("could not gather in PMI alltoall emulation\n");
   }
@@ -292,8 +294,8 @@ static int _pmi_alltoall(const void *boot, void *restrict dest,
   const char *from = gather;
   char *to = dest;
   for (int i = 0, e = pmi->n_ranks(pmi); i < e; ++i) {
-    int offset = i * stride;
-    memcpy(to + offset, from + offset, n);
+    int offset = (i * nranks * stride) + (rank * stride);
+    memcpy(to + (i * stride), from + offset, n * stride);
   }
 
   free(gather);
