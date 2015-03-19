@@ -114,9 +114,6 @@ uint64_t cr_bitmap_add_and_test(bitmap_t *b, int64_t i) {
   uint32_t word = pg_offset/_bitmap_word_size;
 
   int word_offset = (_bitmap_word_size-1) - (pg_offset%_bitmap_word_size);
-  sync_lockable_ptr_lock(&ptr);
   _bitmap_add_at(b, page, word, word_offset);
-  _bitmap_word_t w = sync_load(&b[0].page[0], SYNC_ACQUIRE);
-  sync_lockable_ptr_unlock(&ptr);
-  return (uint64_t)w;
+  return (uint64_t)sync_load(&b[0].page[0], SYNC_ACQUIRE);
 }
