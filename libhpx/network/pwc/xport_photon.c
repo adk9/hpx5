@@ -27,6 +27,10 @@
 #include <libhpx/system.h>
 #include "xport.h"
 
+// check to make sure we can fit a photon key in the key size
+static HPX_USED const int KEY_CHECK[XPORT_KEY_SIZE + 1 -
+                                    sizeof(struct photon_buffer_priv_t)];
+
 typedef struct {
   pwc_xport_t  vtable;
   PAD_TO_CACHELINE(sizeof(pwc_xport_t));
@@ -68,10 +72,6 @@ static void _init_photon(const config_t *cfg, boot_t *boot) {
   if (photon_init(&pcfg) != PHOTON_OK) {
     dbg_error("failed to initialize transport.\n");
   }
-}
-
-static size_t _photon_key_size(void) {
-  return sizeof(struct photon_buffer_priv_t);
 }
 
 static int _photon_key_clear(void *key) {
@@ -213,7 +213,6 @@ pwc_xport_t *pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas)
 
   photon->vtable.type = HPX_TRANSPORT_PHOTON;
   photon->vtable.delete = _photon_delete;
-  photon->vtable.key_size = _photon_key_size;
   photon->vtable.key_find_ref = _photon_key_find_ref;
   photon->vtable.key_find = _photon_key_find;
   photon->vtable.key_clear = _photon_key_clear;

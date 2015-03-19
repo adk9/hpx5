@@ -35,7 +35,7 @@
 typedef struct {
   size_t   n;
   char *base;
-  char   key[];
+  char   key[XPORT_KEY_SIZE];
 } heap_segment_t;
 
 typedef struct pwc_network {
@@ -257,14 +257,22 @@ network_t *network_pwc_funneled_new(const config_t *cfg, boot_t *boot,
   pwc->heap_segments = local_calloc(here->ranks, sizeof(heap_segment_t));
 
   // Register the heap segment.
-  size_t heap_segment_size = sizeof(heap_segment_t) + pwc->xport->key_size();
-  heap_segment_t *heap = alloca(heap_segment_size);
-  heap->n = gas_local_size(here->gas);
-  heap->base = gas_local_base(here->gas);
-  _pwc_register_dma(pwc, heap->base, heap->n, &heap->key);
+  heap_segment_t heap = {
+    .n = gas_local_size(here->gas),
+    .base = gas_local_base(here->gas)
+  };
+  _pwc_register_dma(pwc, heap.base, heap.n, &heap.key);
 
   // Exchange all the heap keys
-  boot_allgather(boot, heap, pwc->heap_segments, heap_segment_size);
+  boot_allgather(boot, &heap, pwc->heap_segments, sizeof(heap));
+
+  // Make sure the exchange went well.
+  if (DEBUG) {
+    heap_segment_t *segment = &pwc->heap_segments[here->rank];
+    dbg_assert(heap.n == segment->n);
+    dbg_assert(heap.base == segment->base);
+    dbg_assert(!strncmp(heap.key, segment->key, XPORT_KEY_SIZE));
+  }
 
   // Initialize the send buffers.
   for (int i = 0, e = here->ranks; i < e; ++i) {

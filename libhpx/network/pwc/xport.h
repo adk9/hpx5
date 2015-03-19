@@ -19,6 +19,8 @@
 struct boot;
 struct gas;
 
+#define XPORT_KEY_SIZE 16
+
 typedef struct xport_op {
   int             rank;
   int   UNUSED_PADDING;
@@ -35,7 +37,6 @@ typedef struct pwc_xport {
   hpx_transport_t type;
 
   void (*delete)(void *xport);
-  size_t (*key_size)(void);
   const void *(*key_find_ref)(const void *xport, const void *addr, size_t n);
   int (*key_find)(const void *xport, const void *addr, size_t n, void *key);
   int (*key_copy)(void *restrict dest, const void *restrict src);
