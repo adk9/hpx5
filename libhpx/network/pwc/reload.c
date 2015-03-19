@@ -19,6 +19,7 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/memory.h>
 #include <libhpx/parcel.h>
+#include "commands.h"
 #include "parcel_emulation.h"
 #include "xport.h"
 
@@ -83,8 +84,8 @@ static int _reload_send(void *obj, pwc_xport_t *xport, int rank,
     .dest_key = NULL,
     .src = p,
     .src_key = xport->key_find_ref(xport, p, n),
-    .lop = UINT64_MAX,
-    .rop = UINT64_MAX
+    .lop = command_pack(release_parcel, (uintptr_t)p),
+    .rop = command_pack(recv_parcel, n)
   };
 
   if (!op.src_key) {

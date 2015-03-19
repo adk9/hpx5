@@ -114,8 +114,4 @@ int peer_send_rendezvous(peer_t *peer, hpx_parcel_t *p, hpx_addr_t lsync)
 int peer_get(xport_op_t *op, peer_t *peer,  size_t offset, segid_t segment_id)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-/// Declare an interrupt that can be used to extract the offset from a command,
-/// and free it as a parcel.
-extern HPX_ACTION_DECL(free_parcel);
-
 #endif
