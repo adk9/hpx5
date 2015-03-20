@@ -32,19 +32,11 @@
 #include "send_buffer.h"
 #include "xport.h"
 
-typedef struct {
+typedef struct heap_segment {
   size_t   n;
   char *base;
   char   key[XPORT_KEY_SIZE];
 } heap_segment_t;
-
-typedef struct pwc_network {
-  network_t              vtable;
-  pwc_xport_t            *xport;
-  parcel_emulator_t    *parcels;
-  send_buffer_t   *send_buffers;
-  heap_segment_t *heap_segments;
-} pwc_network_t;
 
 static HPX_USED const char *_straction(hpx_action_t id) {
   dbg_assert(here && here->actions);
@@ -134,7 +126,7 @@ static int _pwc_command(void *network, hpx_addr_t locality,
     .rop = command_pack(rop, args)
   };
 
-  return pwc->xport->pwc(&op);
+  return pwc->xport->command(&op);
 }
 
 static int _pwc_pwc(void *network,

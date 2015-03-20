@@ -17,22 +17,25 @@
 #include <libhpx/config.h>
 #include <libhpx/boot.h>
 #include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/parcel.h>
 #include "commands.h"
 #include "parcel_emulation.h"
+#include "pwc.h"
+#include "send_buffer.h"
 #include "xport.h"
 
 typedef struct {
-  size_t   n;
-  size_t   i;
-  char *base;
-  char   key[XPORT_KEY_SIZE];
+  size_t        n;
+  size_t        i;
+  char      *base;
+  xport_key_t key;
 } buffer_t;
 
 typedef struct {
-  void *addr;
-  char   key[XPORT_KEY_SIZE];
+  void      *addr;
+  xport_key_t key;
 } remote_t;
 
 typedef struct {
@@ -40,9 +43,14 @@ typedef struct {
   int                 rank;
   int                ranks;
   buffer_t           *recv;
+  xport_key_t     recv_key;
   buffer_t           *send;
+  xport_key_t     send_key;
   remote_t        *remotes;
 } reload_t;
+
+static COMMAND_DECL(_reload_request);
+static COMMAND_DECL(_reload_reply);
 
 static void _buffer_fini(buffer_t *b) {
   if (b) {
@@ -50,29 +58,40 @@ static void _buffer_fini(buffer_t *b) {
   }
 }
 
-static void _buffer_init(buffer_t *b, size_t n, pwc_xport_t *xport) {
+static void _buffer_reload(buffer_t *b, pwc_xport_t *xport) {
   b->i = 0;
-  b->n = n;
-  b->base = registered_calloc(1, n);
-  int e = xport->key_find(xport, b->base, n, &b->key);
-  dbg_check(e, "no key for newly allocated buffer (%p, %zu)\n", b->base, n);
+  b->base = registered_calloc(1, b->n);
+  int e = xport->key_find(xport, b->base, b->n, &b->key);
+  dbg_check(e, "no key for newly allocated buffer (%p, %zu)\n", b->base, b->n);
 }
 
-static int _buffer_reload(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
-  dbg_error("reload unimplemented.\n");
-  return LIBHPX_RETRY;
+static void _buffer_init(buffer_t *b, size_t n, pwc_xport_t *xport) {
+  b->n = n;
+  _buffer_reload(b, xport);
 }
 
 static int _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
-  size_t i = send->i;
-  send->i += op->n;
-  if (send->i >= send->n) {
-    return _buffer_reload(send, xport, op);
+  int i = send->i;
+  size_t r = send->n - i;
+  if (op->n < r) {
+    send->i += op->n;
+    op->dest_key = &send->key;
+    op->dest = send->base + i;
+    op->rop = command_pack(recv_parcel, (uintptr_t)op->dest);
+    return xport->pwc(op);
   }
 
-  op->dest_key = &send->key;
-  op->dest = send->base + i;
-  return xport->pwc(op);
+  op->n = 0;
+  op->src = NULL;
+  op->src_key = NULL;
+  op->lop = 0;
+  op->rop = command_pack(_reload_request, r);
+  int e = xport->command(op);
+  if (LIBHPX_OK == e) {
+    return LIBHPX_RETRY;
+  }
+
+  dbg_error("could not complete send operation\n");
 }
 
 static int _reload_send(void *obj, pwc_xport_t *xport, int rank,
@@ -86,7 +105,7 @@ static int _reload_send(void *obj, pwc_xport_t *xport, int rank,
     .src = p,
     .src_key = xport->key_find_ref(xport, p, n),
     .lop = command_pack(release_parcel, (uintptr_t)p),
-    .rop = command_pack(recv_parcel, n)
+    .rop = 0
   };
 
   if (!op.src_key) {
@@ -131,6 +150,7 @@ static void _reload_delete(void *obj) {
 
 void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
                                  pwc_xport_t *xport) {
+  int e;
   int rank = boot_rank(boot);
   int ranks = boot_n_ranks(boot);
 
@@ -142,10 +162,18 @@ void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
   reload->rank = rank;
   reload->ranks = ranks;
 
-  // Allocate my buffers (send is written via rdma, so it is registered).
-  reload->recv = local_malloc(ranks * sizeof(buffer_t));
-  reload->send = registered_malloc(ranks * sizeof(buffer_t));
-  reload->remotes = local_malloc(ranks * sizeof(remote_t));
+  // Allocate my buffers.
+  size_t buffer_row_size = ranks * sizeof(buffer_t);
+  size_t remote_table_size = ranks * sizeof(remote_t);
+  reload->recv = registered_malloc(buffer_row_size);
+  reload->send = registered_malloc(buffer_row_size);
+  reload->remotes = local_malloc(remote_table_size);
+
+  // Grab the keys for the recv and send rows
+  e = xport->key_find(xport, reload->send, buffer_row_size, &reload->send_key);
+  dbg_check(e, "no key for send (%p, %zu)\n", reload->send, buffer_row_size);
+  e = xport->key_find(xport, reload->recv, buffer_row_size, &reload->recv_key);
+  dbg_check(e, "no key for recv (%p, %zu)\n", reload->recv, buffer_row_size);
 
   // Initialize the recv buffers for this rank.
   for (int i = 0, e = ranks; i < e; ++i) {
@@ -154,23 +182,20 @@ void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
   }
 
   // Initialize a temporary array of remote pointers for this rank's sends.
-  char key[XPORT_KEY_SIZE];
-  int e = xport->key_find(xport, reload->send, ranks * sizeof(buffer_t), &key);
-  dbg_check(e, "no key for send (%p, %zu)\n", reload->send,
-            ranks * sizeof(buffer_t));
-
-  remote_t *sends = local_malloc(ranks * sizeof(remote_t));
+  remote_t *remotes = local_malloc(remote_table_size);
   for (int i = 0, e = ranks; i < e; ++i) {
-    sends[i].addr = &reload->send[i];
-    xport->key_copy(&sends[i].key, &key);
+    remotes[i].addr = &reload->send[i];
+    xport->key_copy(&remotes[i].key, &reload->send_key);
   }
 
   // exchange all of the recv buffers, and all of the remote send pointers
-  boot_alltoall(boot, reload->send, reload->recv, sizeof(buffer_t), sizeof(buffer_t));
-  boot_alltoall(boot, reload->remotes, sends, sizeof(remote_t), sizeof(remote_t));
+  size_t buffer_size = sizeof(buffer_t);
+  size_t remote_size = sizeof(remote_t);
+  boot_alltoall(boot, reload->send, reload->recv, buffer_size, buffer_size);
+  boot_alltoall(boot, reload->remotes, remotes, remote_size, remote_size);
 
   // free the temporary array of remote pointers
-  local_free(sends);
+  local_free(remotes);
 
   // just do a sanity check to make sure the alltoalls worked
   if (DEBUG) {
@@ -190,3 +215,34 @@ void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
   // 3) A table of remote pointers, one for each send buffer targeting me.
   return reload;
 }
+
+static int _reload_reply_handler(int src, command_t cmd) {
+  pwc_network_t *pwc = (pwc_network_t*)here->network;
+  send_buffer_t *sends = &pwc->send_buffers[src];
+  return send_buffer_progress(sends);
+}
+static COMMAND_DEF(DEFAULT, _reload_reply_handler, _reload_reply);
+
+static int _reload_request_handler(int src, command_t cmd) {
+  pwc_network_t *pwc = (pwc_network_t*)here->network;
+  pwc_xport_t *xport = pwc->xport;
+  reload_t *reload = (reload_t*)pwc->parcels;
+  buffer_t *recv = &reload->recv[src];
+  _buffer_fini(recv);
+  _buffer_reload(recv, xport);
+
+  xport_op_t op = {
+    .rank = src,
+    .n = sizeof(*recv),
+    .dest = reload->remotes[src].addr,
+    .dest_key = reload->remotes[src].key,
+    .src = recv,
+    .src_key = reload->recv_key,
+    .lop = 0,
+    .rop = command_pack(_reload_reply, 0)
+  };
+
+  return xport->pwc(&op);
+}
+static COMMAND_DEF(INTERRUPT, _reload_request_handler, _reload_request);
+

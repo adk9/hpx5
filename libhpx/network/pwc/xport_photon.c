@@ -130,6 +130,24 @@ static int _photon_unpin(void *obj, const void *base, size_t n) {
   return LIBHPX_OK;
 }
 
+static int _photon_command(const xport_op_t *op) {
+  int flags = ((op->lop) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
+              ((op->rop) ? 0 : PHOTON_REQ_PWC_NO_RCE);
+
+  int e = photon_put_with_completion(op->rank, 0, NULL, NULL, op->lop, op->rop,
+                                     flags);
+  if (PHOTON_OK == e) {
+    return LIBHPX_OK;
+  }
+
+  if (PHOTON_ERROR_RESOURCE == e) {
+    log_error("could not initiate command due to resource constraint\n");
+    return LIBHPX_RETRY;
+  }
+
+  dbg_error("could not initiate a put-with-completion\n");
+}
+
 static int _photon_pwc(const xport_op_t *op) {
   int flags = ((op->lop) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
               ((op->rop) ? 0 : PHOTON_REQ_PWC_NO_RCE);
@@ -151,13 +169,13 @@ static int _photon_pwc(const xport_op_t *op) {
   if (PHOTON_OK == e) {
     return LIBHPX_OK;
   }
-  else if (PHOTON_ERROR_RESOURCE == e) {
+
+  if (PHOTON_ERROR_RESOURCE == e) {
+    log_error("could not initiate pwc due to resource constraint\n");
     return LIBHPX_RETRY;
   }
-  else {
-    dbg_error("could not initiate a put-with-completion\n");
-  }
-  unreachable();
+
+  dbg_error("could not initiate a put-with-completion\n");
 }
 
 static int _photon_get(const xport_op_t *op) {
@@ -178,10 +196,8 @@ static int _photon_get(const xport_op_t *op) {
   if (PHOTON_OK == e) {
     return LIBHPX_OK;
   }
-  else {
-    dbg_error("failed transport get operation\n");
-  }
-  unreachable();
+
+  dbg_error("failed transport get operation\n");
 }
 
 static int _poll(uint64_t *op, int *remaining, int src, int type) {
@@ -219,6 +235,7 @@ pwc_xport_t *pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas)
   photon->vtable.key_copy = _photon_key_copy;
   photon->vtable.pin = _photon_pin;
   photon->vtable.unpin = _photon_unpin;
+  photon->vtable.command = _photon_command;
   photon->vtable.pwc = _photon_pwc;
   photon->vtable.get = _photon_get;
   photon->vtable.test = _photon_test;

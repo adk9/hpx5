@@ -21,6 +21,8 @@ struct gas;
 
 #define XPORT_KEY_SIZE 16
 
+typedef char xport_key_t[XPORT_KEY_SIZE];
+
 typedef struct xport_op {
   int             rank;
   int   UNUSED_PADDING;
@@ -41,6 +43,7 @@ typedef struct pwc_xport {
   int (*key_find)(const void *xport, const void *addr, size_t n, void *key);
   int (*key_copy)(void *restrict dest, const void *restrict src);
   int (*key_clear)(void *key);
+  int (*command)(const xport_op_t *op);
   int (*pwc)(const xport_op_t *op);
   int (*get)(const xport_op_t *op);
   int (*test)(uint64_t *op, int *remaining);

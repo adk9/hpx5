@@ -69,20 +69,13 @@ static int _start_record(void *buffer, void *record) {
 /// @param        sends The send buffer.
 ///
 /// @returns            HPX_SUCCESS or an error code.
-static int _send_buffer_progress(send_buffer_t *sends) {
+int send_buffer_progress(send_buffer_t *sends) {
   int status = HPX_SUCCESS;
   sync_tatas_acquire(&sends->lock);
   int i = circular_buffer_progress(&sends->pending, _start_record, sends);
   if (i < 0) {
     log_error("failed to progress the send buffer\n");
     status = HPX_ERROR;
-  }
-
-  // If there are still sends remaining, then regenerate the rdma get operation
-  // to read the remote min. This will trigger another instance of this progress
-  // loop when that get completes.
-  if (i > 0) {
-    dbg_error("send buffer progress unimplemented");
   }
   sync_tatas_release(&sends->lock);
   return status;
@@ -119,20 +112,14 @@ int send_buffer_send(send_buffer_t *sends, hpx_addr_t lsync,
       goto unlock;
     }
 
-    // If it the eager buffer tells us to retry, then we start an rmda request
-    // to read the remote rx progress.
-    if (status == LIBHPX_RETRY) {
-      dbg_error("retry unimplemented");
-    }
-
     // If we have an error at this point then report it and buffer the parcel.
-    if (status != LIBHPX_OK) {
+    if (status != LIBHPX_RETRY) {
       log_error("error in parcel send, buffer the operation\n");
     }
   }
 
   // We need to buffer this parcel, because either we're already buffering
-  // parcels, or we need to buffer while the rdma get occurs.
+  // parcels, or we need to buffer while the parcel transport refreshes.
   status = _append(sends, lsync, p);
   dbg_check(status, "could not append send operation\n");
 
