@@ -144,7 +144,8 @@ static int _photon_gwc(int r, void *lva, const void *rorva, size_t n,
   lbuf.size = n;
   lbuf.priv = (struct photon_buffer_priv_t){0,0};
 
-  int e = photon_get_with_completion(r, n, &lbuf, &rbuf, lsync, rsync, 0);
+  int e = photon_get_with_completion(r, n, &lbuf, &rbuf, lsync, rsync,
+				     PHOTON_REQ_PWC_NO_RCE);
   dbg_assert_str(PHOTON_OK == e, "failed transport get operation\n");
   return LIBHPX_OK;
 }
