@@ -169,6 +169,14 @@ static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
   return pgas_lva_to_gpa(lva);
 }
 
+/// Allocate a single global block, filled with 0, from the global heap, and
+/// return it as an hpx_addr_t.
+static hpx_addr_t _pgas_gas_calloc(size_t nmemb, size_t size) {
+  void *lva = global_calloc(nmemb, size);
+  dbg_assert(heap_contains_lva(global_heap, lva));
+  return pgas_lva_to_gpa(lva);
+}
+
 /// Free a global address.
 ///
 /// This global address must either be the base of a cyclic allocation, or a
@@ -302,6 +310,7 @@ static gas_t _pgas_vtable = {
   .cyclic_alloc  = _pgas_gas_cyclic_alloc,
   .cyclic_calloc = _pgas_gas_cyclic_calloc,
   .local_alloc   = _pgas_gas_alloc,
+  .local_calloc  = _pgas_gas_calloc,
   .free          = _pgas_gas_free,
   .move          = _pgas_move,
   .memget        = _pgas_memget,

@@ -109,6 +109,12 @@ static hpx_addr_t _smp_gas_alloc(uint32_t bytes) {
   return _smp_lva_to_gva(p);
 }
 
+/// Allocate a bunch of initialized global memory
+static hpx_addr_t _smp_gas_calloc(size_t nmemb, size_t size) {
+  void *p = calloc(nmemb, size);
+  return _smp_lva_to_gva(p);
+}
+
 /// Free an allocation.
 static void _smp_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
   void *p = _smp_gva_to_lva(addr);
@@ -202,6 +208,7 @@ static gas_t _smp_vtable = {
   .cyclic_alloc  = _smp_gas_cyclic_alloc,
   .cyclic_calloc = _smp_gas_cyclic_calloc,
   .local_alloc   = _smp_gas_alloc,
+  .local_calloc  = _smp_gas_calloc,
   .free          = _smp_gas_free,
   .move          = _smp_move,
   .memget        = _smp_memget,

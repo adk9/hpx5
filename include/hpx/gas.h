@@ -97,8 +97,31 @@ hpx_addr_t hpx_gas_global_calloc(size_t n, uint32_t bsize);
 /// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_alloc(uint32_t bytes);
 hpx_addr_t hpx_gas_alloc_at_sync(uint32_t bytes, hpx_addr_t loc);
-void hpx_gas_alloc_at_async(uint32_t butes, hpx_addr_t loc, hpx_addr_t lco);
+void hpx_gas_alloc_at_async(uint32_t bytes, hpx_addr_t loc, hpx_addr_t lco);
 extern HPX_ACTION_DECL(hpx_gas_alloc_at_action);
+
+/// Allocate a 0-initialized block of global memory.
+///
+/// This is a non-collective call to allocate memory in the global
+/// address space that can be moved. The allocated memory, by default,
+/// has affinity to the allocating node, however in low memory conditions the
+/// allocated memory may not be local to the caller. As it allocated in the GAS,
+/// it is accessible from any locality, and may be relocated by the
+/// runtime.
+///
+/// This interface is designed to match programmers' expectations with respect
+/// to libc `calloc()`, however it *only allocates one GAS block of @p nmemb *
+/// @p size bytes*.
+///
+/// @param        nmemb The number of elements to allocate.
+/// @param         size The number of bytes per element
+///
+/// @returns            The global address of the allocated memory.
+hpx_addr_t hpx_gas_calloc(size_t nmemb, size_t size);
+hpx_addr_t hpx_gas_calloc_at_sync(size_t nmemb, size_t size, hpx_addr_t loc);
+void hpx_gas_calloc_at_async(size_t nmemb, size_t size, hpx_addr_t loc,
+                             hpx_addr_t out);
+extern HPX_ACTION_DECL(hpx_gas_calloc_at_action);
 
 /// Free a global allocation.
 ///
