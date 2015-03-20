@@ -50,5 +50,6 @@ static inline void command_unpack(command_t cmd, op_t *op, arg_t *arg) {
 // parameters.
 HPX_INTERNAL extern HPX_ACTION_DECL(release_parcel);
 HPX_INTERNAL extern HPX_ACTION_DECL(recv_parcel);
+HPX_INTERNAL extern HPX_ACTION_DECL(rendezvous_get_parcel);
 
 #endif // LIBHPX_NETWORK_PWC_COMMANDS_H
