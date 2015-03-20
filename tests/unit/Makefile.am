@@ -30,6 +30,7 @@ TESTS = bcast                   \
         parcel_continuation     \
         parcel_create           \
         parcel_send             \
+        parcel_send_rendezvous  \
         parcel_send_through     \
         process                 \
         runtime                 \
@@ -66,6 +67,7 @@ libhpx_boot_SOURCES                 =  libhpx_boot.c
 parcel_continuation_SOURCES         =  parcel_continuation.c
 parcel_create_SOURCES               =  parcel_create.c
 parcel_send_SOURCES                 =  parcel_send.c
+parcel_send_rendezvous_SOURCES      =  parcel_send_rendezvous.c
 parcel_send_through_SOURCES         =  parcel_send_through.c
 process_SOURCES                     =  process.c
 runtime_SOURCES                     =  runtime.c
@@ -97,6 +99,7 @@ libhpx_boot_DEPENDENCIES            = $(HPX_DEPS)
 parcel_continuation_DEPENDENCIE     = $(HPX_DEPS)
 parcel_create_DEPENDENCIES          = $(HPX_DEPS)
 parcel_send_DEPENDENCIES            = $(HPX_DEPS)
+parcel_send_rendezvous_DEPENDENCIES = $(HPX_DEPS)
 parcel_send_through_DEPENDENCIE     = $(HPX_DEPS)
 process_DEPENDENCIES                = $(HPX_DEPS)
 runtime_DEPENDENCIES                = $(HPX_DEPS)
