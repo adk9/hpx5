@@ -125,7 +125,6 @@ typedef struct photon_buffer_t      * photonBuffer;
 #define PHOTON_REQ_COMPLETED   0x0001  // explitily set a request completed for FIN
 #define PHOTON_REQ_PWC_NO_LCE  0x0002  // don't return a local rid (pwc-specific)
 #define PHOTON_REQ_PWC_NO_RCE  0x0004  // don't send a remote rid (pwc-specific)
-#define PHOTON_REQ_GWC_ROP     0x0008  // send a remote completion on GET local completion
 
 #define PHOTON_AMO_FADD        0x0001
 #define PHOTON_AMO_CSWAP       0x0002
