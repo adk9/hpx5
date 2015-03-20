@@ -13,6 +13,7 @@
 static int photon_pwc_test_ledger(int proc, int *ret_offset);
 static int photon_pwc_try_ledger(photonRequest req, int curr);
 static int photon_pwc_try_packed(photonRequest req);
+static int photon_pwc_handle_comp_req(photonRequest req, int *flag, photon_rid *r);
 
 static ms_queue_t          *pwc_q;
 
@@ -33,6 +34,46 @@ int photon_pwc_add_req(photonRequest req) {
 
 photonRequest photon_pwc_pop_req() {
   return sync_ms_queue_dequeue(pwc_q);
+}
+
+static int photon_pwc_handle_comp_req(photonRequest req, int *flag, photon_rid *request) {
+  int rc;
+
+  // sometimes the requestor doesn't care about the completion
+  if (! (req->flags & REQUEST_FLAG_NO_LCE)) {
+    *flag = 1;
+    *request = req->local_info.id;
+  }
+  
+  if (req->flags & REQUEST_FLAG_ROP) {
+    // sends a remote completion after the GWC
+    // this GWC request now becomes a PWC
+    // and we reap the put completion internally
+    int offset;
+    req->size = 0;
+    req->flags = REQUEST_FLAG_NO_LCE;
+    rc = photon_pwc_test_ledger(req->proc, &offset);
+    if (rc == PHOTON_OK) {
+      rc = photon_pwc_try_ledger(req, offset);
+      if (rc != PHOTON_OK) {
+	return PHOTON_ERROR;
+      }
+    }
+    else {
+      photonRequestTable rt;
+      rt = photon_processes[req->proc].request_table;      
+      sync_ms_queue_enqueue(rt->req_q, req);
+      sync_fadd(&rt->qcount, 1, SYNC_RELAXED);
+    }
+    goto no_free;
+  }
+  
+  dbg_trace("Completed and removing PWC/GWC request: 0x%016lx (ind=0x%016lx)",
+	    req->id, req->local_info.id);
+  photon_free_request(req);
+  
+ no_free:
+  return PHOTON_OK;
 }
 
 /*
@@ -309,7 +350,8 @@ int _photon_put_with_completion(int proc, uint64_t size,
 int _photon_get_with_completion(int proc, uint64_t size,
 				photonBuffer lbuf,
 				photonBuffer rbuf,
-				photon_rid local, int flags) {
+				photon_rid local, photon_rid remote,
+				int flags) {
   photonBI db;
   photonRequest req;
   int rc;
@@ -339,6 +381,12 @@ int _photon_get_with_completion(int proc, uint64_t size,
   
   req->op = REQUEST_OP_PWC;
   req->local_info.id = local;
+  req->remote_info.id = remote;
+
+  // control the return of the remote id to proc
+  if (flags & PHOTON_REQ_GWC_ROP) {
+    req->flags |= REQUEST_FLAG_ROP;
+  }
 
   if (!req->local_info.buf.priv.key0 && !req->local_info.buf.priv.key1) {
     if (buffertable_find_containing( (void *)req->local_info.buf.addr,
@@ -390,13 +438,7 @@ int _photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *re
     // handle any pwc requests that were popped in some other path
     req = photon_pwc_pop_req();
     if (req != NULL) {
-      if (! (req->flags & REQUEST_FLAG_NO_LCE)) {
-	*flag = 1;
-	*request = req->local_info.id;
-      }
-      dbg_trace("Completed and removing queued pwc request: 0x%016lx (ind=0x%016lx)",
-		req->id, req->local_info.id);
-      photon_free_request(req);
+      photon_pwc_handle_comp_req(req, flag, request);
       goto exit;
     }
     
@@ -421,14 +463,7 @@ int _photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *re
       }
       else if ((rc == PHOTON_EVENT_REQCOMP) && req &&
 	       (req->op == REQUEST_OP_PWC)) {
-	// sometimes the requestor doesn't care about the completion
-	if (! (req->flags & REQUEST_FLAG_NO_LCE)) {
-	  *flag = 1;
-	  *request = req->local_info.id;
-	}
-	dbg_trace("Completed and removing pwc request: 0x%016lx (id=0x%016lx)",
-		  req->id, req->local_info.id);
-	photon_free_request(req);
+	photon_pwc_handle_comp_req(req, flag, request);
 	goto exit;
       }
       else {
