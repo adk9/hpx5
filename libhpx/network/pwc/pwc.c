@@ -124,7 +124,7 @@ static HPX_INTERRUPT(_rendezvous_get, _rendezvous_get_args_t *args) {
     .lop = command_pack(rendezvous_launch, (uintptr_t)p),
     .rop = command_pack(release_parcel, (uintptr_t)args->p)
   };
-  int e = pwc->xport->get(&op);
+  int e = pwc->xport->gwc(&op);
   dbg_check(e, "could not issue get during rendezvous parcel\n");
   return HPX_SUCCESS;
 }
@@ -218,7 +218,7 @@ static int _pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
     .rop = 0
   };
 
-  return pwc->xport->get(&op);
+  return pwc->xport->gwc(&op);
 }
 
 static void _pwc_set_flush(void *network) {
