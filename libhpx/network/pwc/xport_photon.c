@@ -179,6 +179,7 @@ static int _photon_pwc(const xport_op_t *op) {
 }
 
 static int _photon_get(const xport_op_t *op) {
+  int flags = (op->rop) ? 0 : PHOTON_REQ_PWC_NO_RCE;
 
   struct photon_buffer_t lbuf = {
     .addr = (uintptr_t)op->dest,
@@ -193,7 +194,7 @@ static int _photon_get(const xport_op_t *op) {
   _photon_key_copy(&rbuf.priv, op->src_key);
 
   int e = photon_get_with_completion(op->rank, op->n, &lbuf, &rbuf, op->lop,
-                                     op->rop, PHOTON_REQ_PWC_NO_RCE);
+                                     op->rop, flags);
   if (PHOTON_OK == e) {
     return LIBHPX_OK;
   }
