@@ -103,15 +103,14 @@ static int _pwc_release_dma(void *network, const void* base, size_t n) {
   return e;
 }
 
-
 typedef struct {
   int        rank;
   hpx_parcel_t *p;
   size_t        n;
   xport_key_t key;
-} _pwc_rendezvous_get_args_t;
+} _rendezvous_get_args_t;
 
-static HPX_INTERRUPT(_pwc_rendezvous_get, _pwc_rendezvous_get_args_t *args) {
+static HPX_INTERRUPT(_rendezvous_get, _rendezvous_get_args_t *args) {
   pwc_network_t *pwc = (pwc_network_t*)here->network;
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, args->n - sizeof(*p));
   dbg_assert(p);
@@ -130,19 +129,28 @@ static HPX_INTERRUPT(_pwc_rendezvous_get, _pwc_rendezvous_get_args_t *args) {
   return HPX_SUCCESS;
 }
 
-static int _pwc_rendezvous_send(void *network, hpx_parcel_t *p) {
-  dbg_error("unimplemented\n");
+static int _pwc_rendezvous_send(pwc_network_t *pwc, hpx_parcel_t *p, int rank) {
+  size_t n = parcel_size(p);
+  const _rendezvous_get_args_t args = {
+    .rank = rank,
+    .p = p,
+    .n = n
+  };
+  int e = pwc->xport->key_find(pwc->xport, p, n, &args.key);
+  dbg_check(e, "failed to find an rdma for a parcel (%p)\n", (void*)p);
+  hpx_addr_t there = HPX_THERE(rank);
+  return hpx_call(there, _rendezvous_get, HPX_NULL, &args, sizeof(args));
 }
 
 static int _pwc_send(void *network, hpx_parcel_t *p) {
   pwc_network_t *pwc = network;
+  int rank = gas_owner_of(here->gas, p->target);
   if (parcel_size(p) < pwc->cfg->pwc_parceleagerlimit) {
-    int rank = gas_owner_of(here->gas, p->target);
     send_buffer_t *buffer = &pwc->send_buffers[rank];
     return send_buffer_send(buffer, HPX_NULL, p);
   }
   else {
-    return _pwc_rendezvous_send(network, p);
+    return _pwc_rendezvous_send(network, p, rank);
   }
 }
 
