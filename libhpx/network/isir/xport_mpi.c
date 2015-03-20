@@ -125,11 +125,11 @@ static void _mpi_delete(void *mpi) {
   free(mpi);
 }
 
-static int _mpi_pin(void *xport, void *base, size_t bytes, void *key) {
+static int _mpi_pin(void *xport, const void *base, size_t bytes, void *key) {
   return LIBHPX_OK;
 }
 
-static int _mpi_unpin(void *xport, void *base, size_t bytes) {
+static int _mpi_unpin(void *xport, const void *base, size_t bytes) {
   return LIBHPX_OK;
 }
 

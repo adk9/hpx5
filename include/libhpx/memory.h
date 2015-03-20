@@ -49,8 +49,9 @@ typedef struct address_space {
 
 /// These function types are used to parameterize the implementation of some of
 /// the address spaces.
-typedef int (*memory_register_t)(void *obj, void *base, size_t n, void *key);
-typedef int (*memory_release_t)(void *obj, void *base, size_t n);
+typedef int (*memory_register_t)(void *obj, const void *base, size_t n,
+                                 void *key);
+typedef int (*memory_release_t)(void *obj, const void *base, size_t n);
 
 address_space_t *address_space_new_default(const struct config *cfg)
   HPX_INTERNAL;
@@ -77,6 +78,16 @@ extern address_space_t *local;
 extern address_space_t *registered;
 extern address_space_t *global;
 
+static inline void local_join(void) {
+  dbg_assert(local && local->join);
+  local->join(local);
+}
+
+static inline void local_leave(void) {
+  dbg_assert(local && local->leave);
+  local->leave(local);
+}
+
 static inline void local_free(void *p) {
   dbg_assert(local && local->free);
   local->free(p);
@@ -84,17 +95,33 @@ static inline void local_free(void *p) {
 
 static inline void *local_malloc(size_t bytes) {
   dbg_assert(local && local->malloc);
-  return local->malloc(bytes);
+  void *p = local->malloc(bytes);
+  dbg_assert(p);
+  return p;
 }
 
 static inline void *local_calloc(size_t n, size_t bytes) {
   dbg_assert(local && local->calloc);
-  return local->calloc(n, bytes);
+  void *p = local->calloc(n, bytes);
+  dbg_assert(p);
+  return p;
 }
 
 static inline void *local_memalign(size_t boundary, size_t size) {
   dbg_assert(local && local->memalign);
-  return local->memalign(boundary, size);
+  void *p = local->memalign(boundary, size);
+  dbg_assert(p);
+  return p;
+}
+
+static inline void registered_join(void) {
+  dbg_assert(registered && registered->join);
+  registered->join(registered);
+}
+
+static inline void registered_leave(void) {
+  dbg_assert(registered && registered->leave);
+  registered->leave(local);
 }
 
 static inline void registered_free(void *p) {
@@ -104,17 +131,33 @@ static inline void registered_free(void *p) {
 
 static inline void *registered_malloc(size_t bytes) {
   dbg_assert(registered && registered->malloc);
-  return registered->malloc(bytes);
+  void *p = registered->malloc(bytes);
+  dbg_assert(p);
+  return p;
 }
 
 static inline void *registered_calloc(size_t n, size_t bytes) {
   dbg_assert(registered && registered->calloc);
-  return registered->calloc(n, bytes);
+  void *p = registered->calloc(n, bytes);
+  dbg_assert(p);
+  return p;
 }
 
 static inline void *registered_memalign(size_t boundary, size_t size) {
   dbg_assert(registered && registered->memalign);
-  return registered->memalign(boundary, size);
+  void *p = registered->memalign(boundary, size);
+  dbg_assert(p);
+  return p;
+}
+
+static inline void global_join(void) {
+  dbg_assert(global && global->join);
+  global->join(global);
+}
+
+static inline void global_leave(void) {
+  dbg_assert(global && global->leave);
+  global->leave(global);
 }
 
 static inline void global_free(void *p) {
@@ -124,17 +167,23 @@ static inline void global_free(void *p) {
 
 static inline void *global_malloc(size_t bytes) {
   dbg_assert(global && global->malloc);
-  return global->malloc(bytes);
+  void *p = global->malloc(bytes);
+  dbg_assert(p);
+  return p;
 }
 
 static inline void *global_calloc(size_t n, size_t bytes) {
   dbg_assert(global && global->calloc);
-  return global->calloc(n, bytes);
+  void *p = global->calloc(n, bytes);
+  dbg_assert(p);
+  return p;
 }
 
 static inline void *global_memalign(size_t boundary, size_t size) {
   dbg_assert(global && global->memalign);
-  return global->memalign(boundary, size);
+  void *p = global->memalign(boundary, size);
+  dbg_assert(p);
+  return p;
 }
 
 #endif // LIBHPX_MEMORY_H

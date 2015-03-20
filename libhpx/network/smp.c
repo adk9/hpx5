@@ -66,15 +66,17 @@ static hpx_parcel_t *_smp_probe(void *network, int nrx) {
 static void _smp_set_flush(void *network) {
 }
 
-static void _smp_register_dma(void *network, void *addr, size_t n) {
+static int _smp_register_dma(void *obj, const void *addr, size_t n, void *key)
+{
+  return LIBHPX_OK;
 }
 
-static void _smp_release_dma(void *network, void *addr, size_t n) {
+static int _smp_release_dma(void *obj, const void *addr, size_t n) {
+  return LIBHPX_OK;
 }
 
 static network_t _smp = {
   .type = HPX_NETWORK_SMP,
-  .transports = NULL,
   .delete = _smp_delete,
   .progress = _smp_progress,
   .send = _smp_send,

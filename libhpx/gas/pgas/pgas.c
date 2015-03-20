@@ -61,7 +61,7 @@ static bool _gpa_is_cyclic(hpx_addr_t gpa) {
   return heap_offset_is_cyclic(global_heap, pgas_gpa_to_offset(gpa));
 }
 
-hpx_addr_t pgas_lva_to_gpa(void *lva) {
+hpx_addr_t pgas_lva_to_gpa(const void *lva) {
   const uint64_t offset = heap_lva_to_offset(global_heap, lva);
   return pgas_offset_to_gpa(here->rank, offset);
 }

@@ -30,13 +30,26 @@ static inline arg_t command_get_arg(command_t command) {
   return (command & ARG_MASK);
 }
 
-static inline command_t encode_command(op_t op, arg_t arg) {
+static inline command_t command_pack(op_t op, arg_t arg) {
   return ((uint64_t)op << ARG_BITS) + (arg & ARG_MASK);
 }
 
-static inline void decode_command(command_t cmd, op_t *op, arg_t *arg) {
+static inline void command_unpack(command_t cmd, op_t *op, arg_t *arg) {
   *arg = (cmd & ARG_MASK);
   *op = (cmd >> ARG_BITS);
 }
+
+#define COMMAND_DEF(type, handler, symbol)                      \
+  HPX_ACTION_DEF(type, handler, symbol, HPX_INT, HPX_UINT64)
+
+#define COMMAND_DECL(symbol) HPX_ACTION_DECL(symbol)
+
+// Commands used internally
+//
+// These are actions (probably interrupts) the take the src and command as
+// parameters.
+HPX_INTERNAL extern HPX_ACTION_DECL(release_parcel);
+HPX_INTERNAL extern HPX_ACTION_DECL(recv_parcel);
+HPX_INTERNAL extern HPX_ACTION_DECL(rendezvous_launch);
 
 #endif // LIBHPX_NETWORK_PWC_COMMANDS_H
