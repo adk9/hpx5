@@ -85,7 +85,7 @@ static int _verify_at(hpx_addr_t addr, int zero) {
   hpx_gas_unpin(addr);
   return HPX_SUCCESS;
 }
-static HPX_ACTION_DEF(INTERRUPT, _verify_at, verify_at, HPX_ADDR);
+static HPX_ACTION_DEF(INTERRUPT, _verify_at, verify_at, HPX_ADDR, HPX_INT);
 
 static HPX_ACTION(gas_alloc_at, void *UNUSED){
   printf("Starting the GAS remote memory allocation test\n");
