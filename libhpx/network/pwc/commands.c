@@ -39,3 +39,12 @@ static int _recv_parcel_handler(int src, command_t command) {
   return HPX_SUCCESS;
 }
 COMMAND_DEF(INTERRUPT, _recv_parcel_handler, recv_parcel);
+
+
+static int _rendezvous_launch_handler(int src, command_t cmd) {
+  uintptr_t arg = command_get_arg(cmd);
+  hpx_parcel_t *p = (void*)arg;
+  scheduler_spawn(p);
+  return HPX_SUCCESS;
+}
+COMMAND_DEF(INTERRUPT, _rendezvous_launch_handler, rendezvous_launch);
