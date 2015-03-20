@@ -192,7 +192,8 @@ static int _photon_get(const xport_op_t *op) {
   };
   _photon_key_copy(&rbuf.priv, op->src_key);
 
-  int e = photon_get_with_completion(op->rank, op->n, &lbuf, &rbuf, op->lop, 0, PHOTON_REQ_PWC_NO_RCE);
+  int e = photon_get_with_completion(op->rank, op->n, &lbuf, &rbuf, op->lop,
+                                     op->rop, PHOTON_REQ_PWC_NO_RCE);
   if (PHOTON_OK == e) {
     return LIBHPX_OK;
   }
