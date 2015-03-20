@@ -30,13 +30,14 @@ case "$SYSTEM" in
     export CPPFLAGS="-I/opt/ofed/include"
     ;;
   HPX5_EDISON)
+    source /etc/profile.d/modules.sh
     module unload darshan
     module load atp
     module load git/2.0.0
     module swap PrgEnv-intel PrgEnv-gnu
     module load craype-hugepages8M
-    setenv CRAYPE_LINK_TYPE dynamic
-    setenv PATH /global/homes/j/jayaajay/autotools/bin:$PATH
+    export CRAYPE_LINK_TYPE=dynamic
+    export PATH=/global/homes/j/jayaajay/autotools/bin:$PATH
     ;;
   *)
     echo "Unknown system $SYSTEM."
@@ -94,8 +95,8 @@ case "$SYSTEM" in
     export HPX_PHOTON_BACKEND=verbs
     ;;
   HPX5_EDISON)
-    setenv HPX_PHOTON_BACKEND ugni
-    setenv HPX_PHOTON_CARGS "--with-ugni"
+    export HPX_PHOTON_BACKEND=ugni
+    export HPX_PHOTON_CARGS="--with-ugni"
     CFGFLAGS+=" --with-pmi --with-hugetlbfs"
     ;;
 esac
