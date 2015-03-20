@@ -14,7 +14,7 @@
 #define LIBHPX_NETWORK_PWC_SEND_BUFFER_H
 
 #include <hpx/hpx.h>
-#include "libsync/locks.h"
+#include <libsync/locks.h>
 #include "circular_buffer.h"
 
 struct parcel_emulator;
