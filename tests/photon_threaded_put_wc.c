@@ -56,6 +56,7 @@ static int sizes[] = {
 
 static int DONE = 0;
 static int *recvCompT;
+static int *gwcCompT;
 static int myrank;
 static sem_t sem;
 
@@ -119,6 +120,7 @@ START_TEST(test_photon_threaded_put_wc)
   pthread_t th, recv_threads[nproc];
 
   recvCompT = calloc(nproc, sizeof(int));
+  gwcCompT = calloc(nproc, sizeof(int));
 
   // only need one send buffer
   //posix_memalign((void **) &send, 8, PHOTON_BUF_SIZE*sizeof(uint8_t));
@@ -257,7 +259,7 @@ START_TEST(test_photon_threaded_put_wc)
 	      lbuf.addr = (uintptr_t)send;
 	      lbuf.size = sizes[i];
 	      lbuf.priv = (struct photon_buffer_priv_t){0,0};
-	      if (photon_get_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0xfacefeed, 0)) {
+	      if (photon_get_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0xfacefeed, PHOTON_REQ_PWC_NO_RCE)) {
 		fprintf(stderr, "Error doing GWC\n");
 		exit(1);
               }
@@ -296,7 +298,7 @@ START_TEST(test_photon_threaded_put_wc)
   pthread_join(th, NULL);
 
   for (i=0; i<nproc; i++) {
-    printf("%d received %d\n", i, recvCompT[i]);
+    printf("%d received from %d: pwc_comp: %d, gwc_comp: %d\n", rank, i, recvCompT[i], gwcCompT[i]);
   }
   
   // Clean up and destroy the mutex

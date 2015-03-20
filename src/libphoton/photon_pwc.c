@@ -384,7 +384,7 @@ int _photon_get_with_completion(int proc, uint64_t size,
   req->remote_info.id = remote;
 
   // control the return of the remote id to proc
-  if (flags & PHOTON_REQ_GWC_ROP) {
+  if (! (flags & PHOTON_REQ_PWC_NO_RCE)) {
     req->flags |= REQUEST_FLAG_ROP;
   }
 
