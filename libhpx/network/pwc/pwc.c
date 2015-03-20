@@ -33,9 +33,9 @@
 #include "xport.h"
 
 typedef struct heap_segment {
-  size_t   n;
-  char *base;
-  char   key[XPORT_KEY_SIZE];
+  size_t        n;
+  char      *base;
+  xport_key_t key;
 } heap_segment_t;
 
 static HPX_USED const char *_straction(hpx_action_t id) {
@@ -103,11 +103,47 @@ static int _pwc_release_dma(void *network, const void* base, size_t n) {
   return e;
 }
 
+
+typedef struct {
+  int        rank;
+  hpx_parcel_t *p;
+  size_t        n;
+  xport_key_t key;
+} _pwc_rendezvous_get_args_t;
+
+static HPX_INTERRUPT(_pwc_rendezvous_get, _pwc_rendezvous_get_args_t *args) {
+  pwc_network_t *pwc = (pwc_network_t*)here->network;
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, args->n - sizeof(*p));
+  dbg_assert(p);
+  const xport_op_t op = {
+    .rank = args->rank,
+    .n = args->n,
+    .dest = p,
+    .dest_key = pwc->xport->key_find_ref(pwc->xport, p, args->n),
+    .src = args->p,
+    .src_key = &args->key,
+    .lop = command_pack(rendezvous_launch, (uintptr_t)p),
+    .rop = 0
+  };
+  int e = pwc->xport->get(&op);
+  dbg_check(e, "could not issue get during rendezvous parcel\n");
+  return HPX_SUCCESS;
+}
+
+static int _pwc_rendezvous_send(void *network, hpx_parcel_t *p) {
+  dbg_error("unimplemented\n");
+}
+
 static int _pwc_send(void *network, hpx_parcel_t *p) {
   pwc_network_t *pwc = network;
-  int rank = gas_owner_of(here->gas, p->target);
-  send_buffer_t *buffer = &pwc->send_buffers[rank];
-  return send_buffer_send(buffer, HPX_NULL, p);
+  if (parcel_size(p) < pwc->cfg->pwc_parceleagerlimit) {
+    int rank = gas_owner_of(here->gas, p->target);
+    send_buffer_t *buffer = &pwc->send_buffers[rank];
+    return send_buffer_send(buffer, HPX_NULL, p);
+  }
+  else {
+    return _pwc_rendezvous_send(network, p);
+  }
 }
 
 static int _pwc_command(void *network, hpx_addr_t locality,
@@ -243,6 +279,7 @@ network_t *network_pwc_funneled_new(const config_t *cfg, boot_t *boot,
   pwc->vtable.release_dma = _pwc_release_dma;
 
   // Initialize transports.
+  pwc->cfg = cfg;
   pwc->xport = pwc_xport_new(cfg, boot, gas);
   pwc->parcels = parcel_emulator_new_reload(cfg, boot, pwc->xport);
   pwc->send_buffers = local_calloc(here->ranks, sizeof(send_buffer_t));
