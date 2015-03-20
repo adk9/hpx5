@@ -28,11 +28,13 @@ static HPX_ACTION(gas_alloc, void *UNUSED) {
   hpx_addr_t local = hpx_gas_alloc(N);
 
   if (!local) {
+    fflush(stdout);
     fprintf(stderr, "hpx_gas_alloc returned HPX_NULL\n");
     exit(EXIT_FAILURE);
   }
 
   if (!hpx_gas_try_pin(local, NULL)) {
+    fflush(stdout);
     fprintf(stderr, "gas alloc returned non-local memory\n");
     exit(EXIT_FAILURE);
   }
@@ -46,18 +48,21 @@ static HPX_ACTION(gas_calloc, void *UNUSED) {
   hpx_addr_t local = hpx_gas_calloc(N, sizeof(int));
 
   if (!local) {
+    fflush(stdout);
     fprintf(stderr, "hpx_gas_calloc returned HPX_NULL\n");
     exit(EXIT_FAILURE);
   }
 
   int *buffer = NULL;
   if (!hpx_gas_try_pin(local, (void**)&buffer)) {
+    fflush(stdout);
     fprintf(stderr, "gas calloc returned non-local memory\n");
     exit(EXIT_FAILURE);
   }
 
   for (int i = 0; i < N; ++i) {
     if (buffer[i] != 0) {
+      fflush(stdout);
       fprintf(stderr, "gas calloc returned uninitialized memory\n");
       exit(EXIT_FAILURE);
     }
@@ -77,6 +82,7 @@ static int _verify_at(hpx_addr_t addr, int zero) {
 
   for (int i = 0; i < N; ++i) {
     if (zero && buffer[i] != 0) {
+      fflush(stdout);
       fprintf(stderr, "gas calloc returned uninitialized memory\n");
       exit(EXIT_FAILURE);
     }
@@ -92,6 +98,7 @@ static HPX_ACTION(gas_alloc_at, void *UNUSED){
   int peer = (HPX_LOCALITY_ID + 1) % HPX_LOCALITIES;
   hpx_addr_t addr = hpx_gas_alloc_at_sync(N * sizeof(int), HPX_THERE(peer));
   if (!addr) {
+    fflush(stdout);
     fprintf(stderr, "failed to allocate memory at %d\n", peer);
     exit(EXIT_FAILURE);
   }
@@ -106,10 +113,11 @@ static HPX_ACTION(gas_alloc_at, void *UNUSED){
 }
 
 static HPX_ACTION(gas_calloc_at, void *UNUSED){
-  printf("Starting the GAS remote memory allocation test\n");
+  printf("Starting the GAS initialized remote memory allocation test\n");
   int peer = (HPX_LOCALITY_ID + 1) % HPX_LOCALITIES;
   hpx_addr_t addr = hpx_gas_alloc_at_sync(N, HPX_THERE(peer));
   if (!addr) {
+    fflush(stdout);
     fprintf(stderr, "failed to allocate memory at %d\n", peer);
     exit(EXIT_FAILURE);
   }
