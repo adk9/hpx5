@@ -31,10 +31,10 @@ COMMAND_DEF(INTERRUPT, _release_parcel_handler, release_parcel);
 static int _recv_parcel_handler(int src, command_t command) {
   const void *addr = (const void*)command_get_arg(command);
   const hpx_parcel_t *p = addr;
-  dbg_assert(p->src == src);
   // todo: don't make this copy
   hpx_parcel_t *clone = hpx_parcel_acquire(NULL, parcel_payload_size(p));
   memcpy(clone, p, parcel_size(p));
+  clone->src = src;
   scheduler_spawn(clone);
   return HPX_SUCCESS;
 }

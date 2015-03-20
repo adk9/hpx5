@@ -141,7 +141,7 @@ static void _reload_delete(void *obj) {
     for (int i = 0, e = reload->ranks; i < e; ++i) {
       _buffer_fini(&reload->recv[i]);
     }
-    local_free(reload->recv);
+    registered_free(reload->recv);
     registered_free(reload->send);
     local_free(reload->remotes);
     free(reload);
