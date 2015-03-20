@@ -13,92 +13,119 @@
 
 // Goal of this testcase is to test the HPX Memory Allocation
 // 1. hpx_gas_alloc() -- Allocates the global memory.
-// 2. hpx_gas_global_free() -- Free a global allocation.
 // 3. hpx_gas_try_pin() -- Performs address translation.
 // 4. hpx_gas_unpin() -- Allows an address to be remapped.
 
-#include "hpx/hpx.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <hpx/hpx.h>
 #include "tests.h"
 
-// Source action to populate the data
-static HPX_ACTION(_init_sources, void* args) {
-  printf("Populating the data\n");
-  // Get the address this parcel was sent to, and map it to a local address---if
-  // this fails then the message arrived at the wrong place due to AGAS
-  // movement, so resend the parcel.
-  hpx_addr_t local = hpx_thread_current_target();
+static const int N = 10;
 
-  // The pinned local address
-  int *sources_p = NULL;
-
-  // Performs address translation. This will try to perform a global-to-local
-  // translation on the global addr, and set local to the local address if it
-  // it is successful.
-  if (!hpx_gas_try_pin(local, (void **)&sources_p))
-    return HPX_RESEND;
-
-  for (int i=0; i<10; i++){
-    sources_p[i] = i;
-    //printf("Sources_p[i] = '%d'\n", sources_p[i]);
-  }
-
-  // make sure to unpin so that AGAS can move it if it wants to
-  hpx_gas_unpin(local);
-
-  return HPX_SUCCESS;
-}
-
-// Test code -- for GAS local memory allocation
 static HPX_ACTION(gas_alloc, void *UNUSED) {
   printf("Starting the GAS local memory allocation test\n");
-  hpx_addr_t local;
-  // the number of bytes to allocate
-  int ndata = 10;
+  hpx_addr_t local = hpx_gas_alloc(N);
 
-  // allocate and start a timer
-  hpx_time_t t1 = hpx_time_now();
+  if (!local) {
+    fprintf(stderr, "hpx_gas_alloc returned HPX_NULL\n");
+    exit(EXIT_FAILURE);
+  }
 
-  // Allocate the local global memory to hold the data of 10 bytes.
-  // This is a non-collective, local call to allocate memory in the global
-  // address space that can be moved. This allocates one block with 10
-  // bytes of memory
-  local = hpx_gas_alloc(ndata * sizeof(double));
+  if (!hpx_gas_try_pin(local, NULL)) {
+    fprintf(stderr, "gas alloc returned non-local memory\n");
+    exit(EXIT_FAILURE);
+  }
 
-  // Populate the test data -- Allocate an and gate that we can wait on to
-  // detect that all of the data have been populated. This creates a future.
-  // Futures are builtin LCOs that represent values returned from asynchronous
-  // computation. Futures are always allocated in the global address space,
-  // because their addresses are used as the targets of parcels.
-  hpx_addr_t done = hpx_lco_future_new(sizeof(double));
-
-  // and send the init_sources action, with the done LCO as the continuation
-  hpx_call(local, _init_sources, done, NULL, 0);
-
-  // wait for initialization. The LCO blocks the caller until an LCO set
-  // operation triggers the LCO.
-  int err = hpx_lco_wait(done);
-  assert_msg(err == HPX_SUCCESS, "hpx_lco_wait propagated error");
-
-  // Deletes an LCO - done -the address of the lco to delete
-  hpx_lco_delete(done, HPX_NULL);
-
-  // Cleanup - Free the global allocation of local global memory.
   hpx_gas_free(local, HPX_NULL);
-
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
 }
+
+static HPX_ACTION(gas_calloc, void *UNUSED) {
+  printf("Starting the GAS local memory allocation test\n");
+  hpx_addr_t local = hpx_gas_calloc(N, sizeof(int));
+
+  if (!local) {
+    fprintf(stderr, "hpx_gas_calloc returned HPX_NULL\n");
+    exit(EXIT_FAILURE);
+  }
+
+  int *buffer = NULL;
+  if (!hpx_gas_try_pin(local, (void**)&buffer)) {
+    fprintf(stderr, "gas calloc returned non-local memory\n");
+    exit(EXIT_FAILURE);
+  }
+
+  for (int i = 0; i < N; ++i) {
+    if (buffer[i] != 0) {
+      fprintf(stderr, "gas calloc returned uninitialized memory\n");
+      exit(EXIT_FAILURE);
+    }
+  }
+
+  hpx_gas_unpin(local);
+  hpx_gas_free(local, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
+static int _verify_at(hpx_addr_t addr, int zero) {
+  int *buffer = NULL;
+  if (!hpx_gas_try_pin(addr, (void**)&buffer)) {
+    fprintf(stderr, "address not located at correct locality\n");
+    exit(EXIT_FAILURE);
+  }
+
+  for (int i = 0; i < N; ++i) {
+    if (zero && buffer[i] != 0) {
+      fprintf(stderr, "gas calloc returned uninitialized memory\n");
+      exit(EXIT_FAILURE);
+    }
+  }
+
+  hpx_gas_unpin(addr);
+  return HPX_SUCCESS;
+}
+static HPX_ACTION_DEF(INTERRUPT, _verify_at, verify_at, HPX_ADDR);
 
 static HPX_ACTION(gas_alloc_at, void *UNUSED){
   printf("Starting the GAS remote memory allocation test\n");
-  hpx_addr_t addr = hpx_gas_alloc_at_sync(sizeof(UNUSED),
-                                          HPX_THERE(HPX_LOCALITY_ID + 1 %
-                                                    HPX_LOCALITIES));
-  assert(addr != HPX_NULL);
+  int peer = (HPX_LOCALITY_ID + 1) % HPX_LOCALITIES;
+  hpx_addr_t addr = hpx_gas_alloc_at_sync(N * sizeof(int), HPX_THERE(peer));
+  if (!addr) {
+    fprintf(stderr, "failed to allocate memory at %d\n", peer);
+    exit(EXIT_FAILURE);
+  }
+
+  int zero = 0;
+  hpx_call_sync(HPX_THERE(peer), verify_at, NULL, 0, &addr, &zero);
+  hpx_addr_t wait = hpx_lco_future_new(0);
+  hpx_gas_free(addr, wait);
+  hpx_lco_wait(wait);
+  hpx_lco_delete(wait, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
+static HPX_ACTION(gas_calloc_at, void *UNUSED){
+  printf("Starting the GAS remote memory allocation test\n");
+  int peer = (HPX_LOCALITY_ID + 1) % HPX_LOCALITIES;
+  hpx_addr_t addr = hpx_gas_alloc_at_sync(N, HPX_THERE(peer));
+  if (!addr) {
+    fprintf(stderr, "failed to allocate memory at %d\n", peer);
+    exit(EXIT_FAILURE);
+  }
+
+  int zero = 1;
+  hpx_call_sync(HPX_THERE(peer), verify_at, NULL, 0, &addr, &zero);
+  hpx_addr_t wait = hpx_lco_future_new(0);
+  hpx_gas_free(addr, wait);
+  hpx_lco_wait(wait);
+  hpx_lco_delete(wait, HPX_NULL);
   return HPX_SUCCESS;
 }
 
 TEST_MAIN({
   ADD_TEST(gas_alloc);
   ADD_TEST(gas_alloc_at);
+  ADD_TEST(gas_calloc);
+  ADD_TEST(gas_calloc_at);
 });

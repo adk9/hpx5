@@ -119,3 +119,31 @@ void hpx_gas_alloc_at_async(uint32_t bytes, hpx_addr_t loc, hpx_addr_t lco) {
   int e = hpx_call(loc, hpx_gas_alloc_at_action, lco, &bytes);
   dbg_check(e, "Failed async call during allocation\n");
 }
+
+hpx_addr_t hpx_gas_calloc(size_t nmemb, size_t size) {
+  dbg_assert(here && here->gas && here->gas->local_calloc);
+  return here->gas->local_calloc(nmemb, size);
+}
+
+static int _gas_calloc_at_handler(size_t nmemb, size_t size) {
+  hpx_addr_t addr = hpx_gas_calloc(nmemb, size);
+  dbg_assert(addr);
+  HPX_THREAD_CONTINUE(addr);
+}
+HPX_ACTION_DEF(DEFAULT, _gas_calloc_at_handler, hpx_gas_calloc_at_action,
+               HPX_UINT64, HPX_UINT64);
+
+hpx_addr_t hpx_gas_calloc_at_sync(size_t nmemb, size_t size, hpx_addr_t loc) {
+  hpx_addr_t addr = 0;
+  int e = hpx_call_sync(loc, hpx_gas_calloc_at_action, &addr, sizeof(addr),
+                        &nmemb, &size);
+  dbg_check(e, "Failed synchronous call during allocation\n");
+  dbg_assert(addr);
+  return addr;
+}
+
+void hpx_gas_calloc_at_async(size_t nmemb, size_t size, hpx_addr_t loc,
+                             hpx_addr_t lco) {
+  int e = hpx_call(loc, hpx_gas_calloc_at_action, lco, &nmemb, &size);
+  dbg_check(e, "Failed async call during allocation\n");
+}
