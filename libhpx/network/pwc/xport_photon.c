@@ -178,7 +178,7 @@ static int _photon_pwc(const xport_op_t *op) {
   dbg_error("could not initiate a put-with-completion\n");
 }
 
-static int _photon_get(const xport_op_t *op) {
+static int _photon_gwc(const xport_op_t *op) {
   int flags = (op->rop) ? 0 : PHOTON_REQ_PWC_NO_RCE;
 
   struct photon_buffer_t lbuf = {
@@ -239,7 +239,7 @@ pwc_xport_t *pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas)
   photon->vtable.unpin = _photon_unpin;
   photon->vtable.command = _photon_command;
   photon->vtable.pwc = _photon_pwc;
-  photon->vtable.get = _photon_get;
+  photon->vtable.gwc = _photon_gwc;
   photon->vtable.test = _photon_test;
   photon->vtable.probe = _photon_probe;
 
