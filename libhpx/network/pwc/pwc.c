@@ -131,8 +131,8 @@ static HPX_INTERRUPT(_rendezvous_get, _rendezvous_get_args_t *args) {
 
 static int _pwc_rendezvous_send(pwc_network_t *pwc, hpx_parcel_t *p, int rank) {
   size_t n = parcel_size(p);
-  const _rendezvous_get_args_t args = {
-    .rank = rank,
+  _rendezvous_get_args_t args = {
+    .rank = here->rank,
     .p = p,
     .n = n
   };
@@ -145,12 +145,12 @@ static int _pwc_rendezvous_send(pwc_network_t *pwc, hpx_parcel_t *p, int rank) {
 static int _pwc_send(void *network, hpx_parcel_t *p) {
   pwc_network_t *pwc = network;
   int rank = gas_owner_of(here->gas, p->target);
-  if (parcel_size(p) < pwc->cfg->pwc_parceleagerlimit) {
-    send_buffer_t *buffer = &pwc->send_buffers[rank];
-    return send_buffer_send(buffer, HPX_NULL, p);
+  if (parcel_size(p) > pwc->cfg->pwc_parceleagerlimit) {
+    return _pwc_rendezvous_send(network, p, rank);
   }
   else {
-    return _pwc_rendezvous_send(network, p, rank);
+    send_buffer_t *buffer = &pwc->send_buffers[rank];
+    return send_buffer_send(buffer, HPX_NULL, p);
   }
 }
 
