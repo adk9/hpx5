@@ -125,6 +125,7 @@ typedef struct photon_buffer_t      * photonBuffer;
 #define PHOTON_REQ_COMPLETED   0x0001  // explitily set a request completed for FIN
 #define PHOTON_REQ_PWC_NO_LCE  0x0002  // don't return a local rid (pwc-specific)
 #define PHOTON_REQ_PWC_NO_RCE  0x0004  // don't send a remote rid (pwc-specific)
+#define PHOTON_REQ_GWC_ROP     0x0008  // send a remote completion on GET local completion
 
 #define PHOTON_AMO_FADD        0x0001
 #define PHOTON_AMO_CSWAP       0x0002
@@ -180,7 +181,7 @@ int photon_post_os_getv_direct(int proc, void *ptr[], uint64_t size[], photonBuf
 int photon_put_with_completion(int proc, uint64_t size, photonBuffer lbuf, photonBuffer rbuf,
                                photon_rid local, photon_rid remote, int flags);
 int photon_get_with_completion(int proc, uint64_t size, photonBuffer lbuf, photonBuffer rbuf,
-                               photon_rid local, int flags);
+                               photon_rid local, photon_rid remote, int flags);
 // Can probe ANY_SOURCE but given @p proc will only poll the CQ (if available) and completion
 // ledger associated with that rank
 // @p remaining returns the number of requests still pending

@@ -257,7 +257,7 @@ START_TEST(test_photon_threaded_put_wc)
 	      lbuf.addr = (uintptr_t)send;
 	      lbuf.size = sizes[i];
 	      lbuf.priv = (struct photon_buffer_priv_t){0,0};
-	      if (photon_get_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0)) {
+	      if (photon_get_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0xfacefeed, 0)) {
 		fprintf(stderr, "Error doing GWC\n");
 		exit(1);
               }
