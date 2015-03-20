@@ -72,6 +72,7 @@ typedef enum {
   HPX_INST_EVENT_NETWORK_PWC_RECV,
 
   INST_SCHED_TRANSFER,
+  INST_SCHED_WQSIZE,
 
   HPX_INST_NUM_EVENTS
 } hpx_inst_event_type_t;
@@ -84,7 +85,8 @@ static const char * const INST_EVENT_TO_STRING[] = {
   "EVENT_PARCEL_END",
   "EVENT_NETWORK_PWC_SEND",
   "EVENT_NETWORK_PWC_RECV",
-  "INST_SCED_TRANSFER"
+  "INST_SCHED_TRANSFER",
+  "WQSIZE"
 };
 
 static const int INST_OFFSETS[] = {
