@@ -122,7 +122,7 @@ static HPX_INTERRUPT(_rendezvous_get, _rendezvous_get_args_t *args) {
     .src = args->p,
     .src_key = &args->key,
     .lop = command_pack(rendezvous_launch, (uintptr_t)p),
-    .rop = 0
+    .rop = command_pack(release_parcel, (uintptr_t)args->p)
   };
   int e = pwc->xport->get(&op);
   dbg_check(e, "could not issue get during rendezvous parcel\n");
