@@ -27,6 +27,10 @@
 #include <libhpx/system.h>
 #include "xport.h"
 
+// check to make sure we can fit a photon key in the key size
+static HPX_USED const int KEY_CHECK[XPORT_KEY_SIZE + 1 -
+                                    sizeof(struct photon_buffer_priv_t)];
+
 typedef struct {
   pwc_xport_t  vtable;
   PAD_TO_CACHELINE(sizeof(pwc_xport_t));
@@ -70,34 +74,54 @@ static void _init_photon(const config_t *cfg, boot_t *boot) {
   }
 }
 
-static size_t _photon_sizeof_rdma_key(void) {
-  return sizeof(struct photon_buffer_priv_t);
-}
-
-static void _photon_clear(void *key) {
+static int _photon_key_clear(void *key) {
   memset(key, 0, sizeof(struct photon_buffer_priv_t));
+  return LIBHPX_OK;
 }
 
-static int _photon_pin(void *xport, void *base, size_t n, void *key) {
-  if (PHOTON_OK != photon_register_buffer(base, n)) {
+static int _photon_key_copy(void *restrict dest, const void *restrict src) {
+  if (src) {
+    dbg_assert(dest);
+    memcpy(dest, src, sizeof(struct photon_buffer_priv_t));
+  }
+  return LIBHPX_OK;
+}
+
+static const void *_photon_key_find_ref(const void *obj, const void *addr,
+                                        size_t n) {
+  const struct photon_buffer_priv_t *found = NULL;
+  int e = photon_get_buffer_private((void*)addr, n, &found);
+  dbg_assert_str(PHOTON_OK == e, "no rdma key for range (%p, %zu)\n", addr, n);
+  return found;
+}
+
+static int _photon_key_find(const void *obj, const void *addr, size_t n,
+                            void *key) {
+  const void *found = _photon_key_find_ref(obj, addr, n);
+  if (found)  {
+    return _photon_key_copy(key, found);
+  }
+  log_error("failed to find rdma key for (%p, %zu)\n", addr, n);
+  return LIBHPX_OK;
+}
+
+static int _photon_pin(void *obj, const void *base, size_t n, void *key) {
+  if (PHOTON_OK != photon_register_buffer((void*)base, n)) {
     dbg_error("failed to register segment with Photon\n");
   }
   else {
     log_net("registered segment (%p, %zu)\n", base, n);
   }
-  
-  const struct photon_buffer_priv_t *bkey;
+
   if (key) {
-    if (PHOTON_OK != photon_get_buffer_private(base, n, &bkey)) {
-      dbg_error("failed to get segment key from Photon\n");
-    }
-    memcpy(key, bkey, sizeof(*bkey));
+    return _photon_key_find(obj, base, n, key);
   }
+
   return LIBHPX_OK;
 }
 
-static int _photon_unpin(void *xport, void *base, size_t n) {
-  int e = photon_unregister_buffer(base, n);
+static int _photon_unpin(void *obj, const void *base, size_t n) {
+  int e = photon_unregister_buffer((void*)base, n);
   if (PHOTON_OK != e) {
     dbg_error("unhandled error %d during release of segment (%p, %zu)\n", e,
               base, n);
@@ -106,48 +130,76 @@ static int _photon_unpin(void *xport, void *base, size_t n) {
   return LIBHPX_OK;
 }
 
-static int _photon_pwc(int r, void *rva, const void *rolva, size_t n,
-                       uint64_t lsync, uint64_t rsync, void *rkey) {
-  int flag = ((lsync) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
-             ((rsync) ? 0 : PHOTON_REQ_PWC_NO_RCE);
+static int _photon_command(const xport_op_t *op) {
+  int flags = ((op->lop) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
+              ((op->rop) ? 0 : PHOTON_REQ_PWC_NO_RCE);
 
-  struct photon_buffer_t lbuf, rbuf;
-  rbuf.addr = (uintptr_t)rva;
-  rbuf.size = n;
-  rbuf.priv = *(struct photon_buffer_priv_t*)rkey;
-  
-  lbuf.addr = (uintptr_t)rolva;
-  lbuf.size = n;
-  lbuf.priv = (struct photon_buffer_priv_t){0,0};
-  
-  int e = photon_put_with_completion(r, n, &lbuf, &rbuf, lsync, rsync, flag);
-  switch (e) {
-   case PHOTON_OK:
+  int e = photon_put_with_completion(op->rank, 0, NULL, NULL, op->lop, op->rop,
+                                     flags);
+  if (PHOTON_OK == e) {
     return LIBHPX_OK;
-   case PHOTON_ERROR_RESOURCE:
-    return LIBHPX_RETRY;
-   default:
-    dbg_error("could not initiate a put-with-completion\n");
   }
+
+  if (PHOTON_ERROR_RESOURCE == e) {
+    log_error("could not initiate command due to resource constraint\n");
+    return LIBHPX_RETRY;
+  }
+
+  dbg_error("could not initiate a put-with-completion\n");
 }
 
-static int _photon_gwc(int r, void *lva, const void *rorva, size_t n,
-                       uint64_t lsync, void *rkey) {
+static int _photon_pwc(const xport_op_t *op) {
+  int flags = ((op->lop) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
+              ((op->rop) ? 0 : PHOTON_REQ_PWC_NO_RCE);
 
-  photon_rid rsync = 0;
-  struct photon_buffer_t lbuf, rbuf;
-  rbuf.addr = (uintptr_t)rorva;
-  rbuf.size = n;
-  rbuf.priv = *(struct photon_buffer_priv_t*)rkey;
-  
-  lbuf.addr = (uintptr_t)lva;
-  lbuf.size = n;
-  lbuf.priv = (struct photon_buffer_priv_t){0,0};
+  struct photon_buffer_t rbuf = {
+    .addr = (uintptr_t)op->dest,
+    .size = 0
+  };
+  _photon_key_copy(&rbuf.priv, op->dest_key);
 
-  int e = photon_get_with_completion(r, n, &lbuf, &rbuf, lsync, rsync,
-				     PHOTON_REQ_PWC_NO_RCE);
-  dbg_assert_str(PHOTON_OK == e, "failed transport get operation\n");
-  return LIBHPX_OK;
+  struct photon_buffer_t lbuf = {
+    .addr = (uintptr_t)op->src,
+    .size = 0
+  };
+  _photon_key_copy(&lbuf.priv, op->src_key);
+
+  int e = photon_put_with_completion(op->rank, op->n, &lbuf, &rbuf, op->lop,
+                                     op->rop, flags);
+  if (PHOTON_OK == e) {
+    return LIBHPX_OK;
+  }
+
+  if (PHOTON_ERROR_RESOURCE == e) {
+    log_error("could not initiate pwc due to resource constraint\n");
+    return LIBHPX_RETRY;
+  }
+
+  dbg_error("could not initiate a put-with-completion\n");
+}
+
+static int _photon_gwc(const xport_op_t *op) {
+  int flags = (op->rop) ? 0 : PHOTON_REQ_PWC_NO_RCE;
+
+  struct photon_buffer_t lbuf = {
+    .addr = (uintptr_t)op->dest,
+    .size = 0
+  };
+  _photon_key_copy(&lbuf.priv, op->dest_key);
+
+  struct photon_buffer_t rbuf = {
+    .addr = (uintptr_t)op->src,
+    .size = 0
+  };
+  _photon_key_copy(&rbuf.priv, op->src_key);
+
+  int e = photon_get_with_completion(op->rank, op->n, &lbuf, &rbuf, op->lop,
+                                     op->rop, flags);
+  if (PHOTON_OK == e) {
+    return LIBHPX_OK;
+  }
+
+  dbg_error("failed transport get operation\n");
 }
 
 static int _poll(uint64_t *op, int *remaining, int src, int type) {
@@ -179,15 +231,19 @@ pwc_xport_t *pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas)
 
   photon->vtable.type = HPX_TRANSPORT_PHOTON;
   photon->vtable.delete = _photon_delete;
-  photon->vtable.sizeof_rdma_key = _photon_sizeof_rdma_key;
-  photon->vtable.clear = _photon_clear;
+  photon->vtable.key_find_ref = _photon_key_find_ref;
+  photon->vtable.key_find = _photon_key_find;
+  photon->vtable.key_clear = _photon_key_clear;
+  photon->vtable.key_copy = _photon_key_copy;
   photon->vtable.pin = _photon_pin;
   photon->vtable.unpin = _photon_unpin;
+  photon->vtable.command = _photon_command;
   photon->vtable.pwc = _photon_pwc;
   photon->vtable.gwc = _photon_gwc;
   photon->vtable.test = _photon_test;
   photon->vtable.probe = _photon_probe;
 
+  // initialize our memory allocation
   local = address_space_new_default(cfg);
   registered = address_space_new_jemalloc_registered(cfg, photon, _photon_pin,
                                                      _photon_unpin, NULL,
@@ -196,6 +252,9 @@ pwc_xport_t *pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas)
   global = address_space_new_jemalloc_global(cfg, photon, _photon_pin,
                                              _photon_unpin, gas, gas_mmap,
                                              gas_munmap);
+  local_join();
+  registered_join();
+  global_join();
 
   return &photon->vtable;
 }

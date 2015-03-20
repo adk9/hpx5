@@ -45,7 +45,7 @@ typedef struct gas {
   int64_t (*sub)(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize);
   hpx_addr_t (*add)(hpx_addr_t gva, int64_t bytes, uint32_t bsize);
 
-  hpx_addr_t (*lva_to_gva)(void *lva);
+  hpx_addr_t (*lva_to_gva)(const void *lva);
   void *(*gva_to_lva)(hpx_addr_t gva);
 
   hpx_addr_t (*embed)(hpx_addr_t addr, hpx_action_t action);

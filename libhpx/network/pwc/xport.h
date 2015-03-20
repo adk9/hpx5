@@ -14,26 +14,42 @@
 #define LIBHPX_NETWORK_PWC_XPORT_H
 
 #include <libhpx/config.h>
+#include <libhpx/memory.h>
 
 struct boot;
 struct gas;
 
+#define XPORT_KEY_SIZE 16
+
+typedef char xport_key_t[XPORT_KEY_SIZE];
+
+typedef struct xport_op {
+  int             rank;
+  int   UNUSED_PADDING;
+  size_t             n;
+  void           *dest;
+  const void *dest_key;
+  const void      *src;
+  const void  *src_key;
+  uint64_t         lop;
+  uint64_t         rop;
+} xport_op_t HPX_ALIGNED(HPX_CACHELINE_SIZE);
+
 typedef struct pwc_xport {
   hpx_transport_t type;
 
-  void   (*delete)(void *xport);
-
-  size_t (*sizeof_rdma_key)(void);
-  int    (*pin)(void *xport, void *base, size_t n, void *key);
-  int    (*unpin)(void *xport, void *base, size_t n);
-  void   (*clear)(void *key);
-  int    (*pwc)(int target, void *rva, const void *lva, size_t n,
-                uint64_t lsync, uint64_t rsync, void *rkey);
-  int    (*gwc)(int target, void *lva, const void *rva, size_t n,
-                uint64_t lsync, void *rkey);
-
-  int    (*test)(uint64_t *op, int *remaining);
-  int    (*probe)(uint64_t *op, int *remaining, int rank);
+  void (*delete)(void *xport);
+  const void *(*key_find_ref)(const void *xport, const void *addr, size_t n);
+  int (*key_find)(const void *xport, const void *addr, size_t n, void *key);
+  int (*key_copy)(void *restrict dest, const void *restrict src);
+  int (*key_clear)(void *key);
+  int (*command)(const xport_op_t *op);
+  int (*pwc)(const xport_op_t *op);
+  int (*gwc)(const xport_op_t *op);
+  int (*test)(uint64_t *op, int *remaining);
+  int (*probe)(uint64_t *op, int *remaining, int rank);
+  memory_register_t  pin;
+  memory_release_t unpin;
 } pwc_xport_t;
 
 pwc_xport_t *pwc_xport_new_photon(const config_t *config, struct boot *boot,

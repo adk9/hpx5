@@ -97,14 +97,14 @@ void common_join(void *obj, unsigned *primordial_arena, void *alloc,
     mallctl(obj, path, NULL, NULL, (void*)&dalloc, sizeof(dalloc));
   }
 
-  // Enable and flush the cache.
-  bool enabled = true;
-  mallctl(obj, "thread.tcache.enabled", NULL, NULL, &enabled, sizeof(enabled));
-  mallctl(obj, "thread.tcache.flush", NULL, NULL, NULL, 0);
-
   // And replace the current arena.
   sz = sizeof(*primordial_arena);
   mallctl(obj, "thread.arena", primordial_arena, &sz, &arena, sizeof(arena));
+
+  // Flush the cache.
+  bool enabled = true;
+  mallctl(obj, "thread.tcache.enabled", NULL, NULL, &enabled, sizeof(enabled));
+  mallctl(obj, "thread.tcache.flush", NULL, NULL, NULL, 0);
 }
 
 void common_leave(void *common) {

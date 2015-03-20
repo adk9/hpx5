@@ -60,7 +60,7 @@ static hpx_addr_t _smp_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
 }
 
 /// Compute the global address for a local address.
-static hpx_addr_t _smp_lva_to_gva(void *lva) {
+static hpx_addr_t _smp_lva_to_gva(const void *lva) {
   return (hpx_addr_t)lva;
 }
 
