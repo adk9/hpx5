@@ -383,6 +383,11 @@ int _photon_get_with_completion(int proc, uint64_t size,
   req->local_info.id = local;
   req->remote_info.id = remote;
 
+  // control the return of the local id
+  if (flags & PHOTON_REQ_PWC_NO_LCE) {
+    req->flags |= REQUEST_FLAG_NO_LCE;
+  }
+
   // control the return of the remote id to proc
   if (! (flags & PHOTON_REQ_PWC_NO_RCE)) {
     req->flags |= REQUEST_FLAG_ROP;
