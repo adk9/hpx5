@@ -17,7 +17,6 @@
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
-#include <eager_buffer.h>
 #include "parcel_emulation.h"
 #include "send_buffer.h"
 
