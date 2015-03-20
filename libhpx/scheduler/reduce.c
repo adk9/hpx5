@@ -123,7 +123,8 @@ static void _reduce_set(lco_t *lco, int size, const void *from) {
   }
   else {
     log_lco("reduce: received input %d\n", r->remaining);
-    dbg_assert_str(r->remaining > 0, "reduction: too many threads joined (%d).\n", r->remaining);
+    dbg_assert_str(r->remaining > 0,
+                   "reduction: too many threads joined (%d).\n", r->remaining);
   }
 
   lco_unlock(lco);
@@ -156,6 +157,48 @@ static hpx_status_t _reduce_get(lco_t *lco, int size, void *out) {
   return status;
 }
 
+/// Joins the reduction and returns with a reference to the reduced value.
+static hpx_status_t _reduce_getref(lco_t *lco, int size, void **out) {
+  _reduce_t *r = (_reduce_t *)lco;
+  hpx_status_t status = HPX_SUCCESS;
+  lco_lock(lco);
+
+  int remaining = r->remaining;
+  while (remaining > 0 && status == HPX_SUCCESS) {
+    status = scheduler_wait(&lco->lock, &r->barrier);
+    remaining = r->remaining;
+  }
+
+  // if there was an error signal, unlock and return it
+  if (status != HPX_SUCCESS) {
+    lco_unlock(lco);
+    return status;
+  }
+
+  // copy out the value if the caller wants it
+  if (out) {
+    *out = (size) ? r->value : NULL;
+  }
+
+  lco_unlock(lco);
+  return status;
+}
+
+/// Free the reference to the reduced value. If the buffer was
+/// _moved_ to our locality after a getref, check if the reference to
+/// be released matches the reference to the future's value.
+static bool _reduce_release(lco_t *lco, void *out) {
+  bool ret = false;
+  _reduce_t *r = (_reduce_t *)lco;
+  lco_lock(&r->lco);
+  if (out && out != r->value) {
+    free(out);
+    ret = true;
+  }
+  lco_unlock(&r->lco);
+  return ret;
+}
+
 // Wait for the reduction.
 static hpx_status_t _reduce_wait(lco_t *lco) {
   return _reduce_get(lco, 0, NULL);
@@ -168,8 +211,8 @@ static const lco_class_t _reduce_vtable = {
   .on_set      = _reduce_set,
   .on_attach   = _reduce_attach,
   .on_get      = _reduce_get,
-  .on_getref   = NULL,
-  .on_release  = NULL,
+  .on_getref   = _reduce_getref,
+  .on_release  = _reduce_release,
   .on_wait     = _reduce_wait,
   .on_reset    = _reduce_reset,
   .on_size     = _reduce_size
@@ -230,7 +273,7 @@ static HPX_ACTION_DEF(PINNED, _block_local_init_handler, _block_local_init,
 ///
 /// @returns the global address of the allocated array lco.
 hpx_addr_t hpx_lco_reduce_local_array_new(int n, int inputs, size_t size,
-                                          hpx_monoid_id_t id, 
+                                          hpx_monoid_id_t id,
                                           hpx_monoid_op_t op) {
   uint32_t lco_bytes = sizeof(_reduce_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
@@ -242,4 +285,4 @@ hpx_addr_t hpx_lco_reduce_local_array_new(int n, int inputs, size_t size,
 
   // return the base address of the allocation
   return base;
-} 
+}
