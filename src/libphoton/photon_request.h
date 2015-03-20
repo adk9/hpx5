@@ -48,8 +48,9 @@
 #define REQUEST_FLAG_LDONE   (1<<4)
 #define REQUEST_FLAG_NO_LCE  (1<<5)
 #define REQUEST_FLAG_NO_RCE  (1<<6)
-#define REQUEST_FLAG_1PWC    (1<<7)
-#define REQUEST_FLAG_2PWC    (1<<8)
+#define REQUEST_FLAG_ROP     (1<<7)
+#define REQUEST_FLAG_1PWC    (1<<8)
+#define REQUEST_FLAG_2PWC    (1<<9)
 
 #define MARK_DONE(e,s)         (sync_fadd(&e->tail, s, SYNC_RELAXED))
 #define EB_MSG_SIZE(s)         (sizeof(struct photon_eb_hdr_t) + s + sizeof(uint8_t))

@@ -51,6 +51,7 @@ static int sizes[] = {
 
 static int DONE = 0;
 static int *recvCompT;
+static int *gwcCompT;
 static int myrank;
 static sem_t sem;
 
@@ -106,6 +107,8 @@ void *wait_ledger_completions_thread(void *arg) {
     photon_probe_completion(inputrank, &flag, NULL, &request, PHOTON_PROBE_LEDGER);
     if (flag && request == 0xcafebabe)
       recvCompT[inputrank]++;
+    if (flag && request == 0xfacefeed)
+      gwcCompT[inputrank]++;
   } while (!DONE);
   
   pthread_exit(NULL);
@@ -145,6 +148,7 @@ int main(int argc, char **argv) {
   //pthread_t th2;
 
   recvCompT = calloc(nproc, sizeof(int));
+  gwcCompT = calloc(nproc, sizeof(int));
 
   // only need one send buffer
   //posix_memalign((void **) &send, 8, PHOTON_BUF_SIZE*sizeof(uint8_t));
@@ -287,7 +291,7 @@ int main(int argc, char **argv) {
 	      lbuf.addr = (uintptr_t)send;
 	      lbuf.size = sizes[i];
 	      lbuf.priv = (struct photon_buffer_priv_t){0,0};
-	      if (photon_get_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0)) {
+	      if (photon_get_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0xfacefeed, PHOTON_REQ_GWC_ROP)) {
 		fprintf(stderr, "Error doing GWC\n");
 		exit(1);
 	      }
@@ -326,7 +330,7 @@ int main(int argc, char **argv) {
   pthread_join(th, NULL);
 
   for (i=0; i<nproc; i++) {
-    printf("%d received %d\n", i, recvCompT[i]);
+    printf("%d received from %d: pwc_comp: %d, gwc_comp: %d\n", rank, i, recvCompT[i], gwcCompT[i]);
   }
   
   // Clean up and destroy the mutex
