@@ -109,7 +109,7 @@ static int _reload_send(void *obj, pwc_xport_t *xport, int rank,
   };
 
   if (!op.src_key) {
-    dbg_error("no rdma key for local parcel (%p, %zu)\n", p, n);
+    dbg_error("no rdma key for local parcel (%p, %zu)\n", (void*)p, n);
   }
 
   reload_t *reload = obj;
@@ -171,9 +171,9 @@ void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
 
   // Grab the keys for the recv and send rows
   e = xport->key_find(xport, reload->send, buffer_row_size, &reload->send_key);
-  dbg_check(e, "no key for send (%p, %zu)\n", reload->send, buffer_row_size);
+  dbg_check(e, "no rdma key for send row (%p)\n", (void*)reload->send);
   e = xport->key_find(xport, reload->recv, buffer_row_size, &reload->recv_key);
-  dbg_check(e, "no key for recv (%p, %zu)\n", reload->recv, buffer_row_size);
+  dbg_check(e, "no rdma key for recv row (%p)\n", (void*)reload->recv);
 
   // Initialize the recv buffers for this rank.
   for (int i = 0, e = ranks; i < e; ++i) {
