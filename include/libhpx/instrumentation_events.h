@@ -249,6 +249,16 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
       .printf_code = "zu",                      \
       .name = "source rank"}
 
+// typeof(METADATA_SCHEDUER_WQ_SIZE) == inst_event_col_metadata_t
+#define METADATA_SCHEDULER_WQSIZE               \
+  { .mask = 0x3f,                               \
+      .data_type = 'l',                         \
+      .offset = INST_EVENT_COL_OFFSET_USER0,    \
+      .min = 0,                                 \
+      .max = UINT64_MAX,                        \
+      .printf_code = "zu",                      \
+      .name = "work_queue_size"}
+
 // typeof(PARCEL_CREATE_METADATA) == inst_event_metadata_t 
 #define PARCEL_CREATE_METADATA                  \
   {                                             \
@@ -339,4 +349,21 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
     }                                           \
 }
 
+// typeof(PARCEL_END_METADATA) == inst_event_metadata_t 
+#define SCHEDULER_WQSIZE_METADATA               \
+  {                                             \
+  .num_cols = 10,                               \
+    .col_metadata = {                           \
+      INST_EVENT_COL_METADATA_CLASS,            \
+      INST_EVENT_COL_METADATA_ID,               \
+      INST_EVENT_COL_METADATA_RANK,             \
+      INST_EVENT_COL_METADATA_WORKER,           \
+      INST_EVENT_COL_METADATA_S,                \
+      INST_EVENT_COL_METADATA_NS,               \
+      METADATA_SCHEDULER_WQ_SIZE,               \
+      INST_EVENT_COL_METADATA_EMPTY2,           \
+      INST_EVENT_COL_METADATA_EMPTY2,           \
+      INST_EVENT_COL_METADATA_EMPTY3            \
+    }                                           \
+}
 #endif
