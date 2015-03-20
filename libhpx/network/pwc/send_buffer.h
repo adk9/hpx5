@@ -20,7 +20,7 @@
 struct parcel_emulator;
 struct pwc_xport;
 
-typedef struct {
+typedef struct send_buffer {
   struct tatas_lock       lock;
   int                     rank;
   int           UNUSED_PADDING;
@@ -65,6 +65,9 @@ void send_buffer_fini(send_buffer_t *sends)
 ///        LIBHPX_ERROR An unexpected error occurred.
 int send_buffer_send(send_buffer_t *sends, hpx_addr_t lsync,
                      const hpx_parcel_t *p)
+  HPX_INTERNAL;
+
+int send_buffer_progress(send_buffer_t *sends)
   HPX_INTERNAL;
 
 #endif // LIBHPX_NETWORK_PWC_EAGER_BUFFER_H

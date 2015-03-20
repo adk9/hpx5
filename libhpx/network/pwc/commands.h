@@ -39,6 +39,11 @@ static inline void command_unpack(command_t cmd, op_t *op, arg_t *arg) {
   *op = (cmd >> ARG_BITS);
 }
 
+#define COMMAND_DEF(type, handler, symbol)                      \
+  HPX_ACTION_DEF(type, handler, symbol, HPX_INT, HPX_UINT64)
+
+#define COMMAND_DECL(symbol) HPX_ACTION_DECL(symbol)
+
 // Commands used internally
 //
 // These are actions (probably interrupts) the take the src and command as
