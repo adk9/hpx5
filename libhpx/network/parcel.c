@@ -332,8 +332,8 @@ hpx_parcel_t *parcel_create(hpx_addr_t target, hpx_action_t action,
     return NULL;
   }
 
-  hpx_parcel_set_pid(p, pid);
-  parcel_set_credit(p, 0);
+  p->pid = pid;
+  p->credit = 0;
   hpx_parcel_set_action(p, action);
   hpx_parcel_set_target(p, target);
   hpx_parcel_set_cont_action(p, c_action);
@@ -359,14 +359,6 @@ struct ustack* parcel_set_stack(hpx_parcel_t *p, struct ustack *next) {
 
 struct ustack *parcel_get_stack(const hpx_parcel_t *p) {
   return p->ustack;
-}
-
-void parcel_set_credit(hpx_parcel_t *p, const uint64_t credit) {
-  p->credit = credit;
-}
-
-uint64_t parcel_get_credit(const hpx_parcel_t *p) {
-  return p->credit;
 }
 
 hpx_parcel_t *parcel_stack_pop(hpx_parcel_t **stack) {
