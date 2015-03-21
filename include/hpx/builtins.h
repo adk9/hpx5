@@ -85,6 +85,11 @@ static inline int32_t max_i32(int32_t lhs, int32_t rhs) {
 
 /// Miscellaneous utility macros.
 
+/// Macros for static assertions
+/// Source: http://stackoverflow.com/questions/3385515/static-assert-in-c
+#define _HPX_ASSERT(COND,MSG) \
+  typedef char static_assertion_##MSG[(!!(COND))*2-1]
+
 #define _HPX_NELEM(e) (sizeof(e)/sizeof(e[0]))
 #define _HPX_XSTR(s) _HPX_STR(s)
 #define _HPX_STR(l) #l
