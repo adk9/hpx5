@@ -170,7 +170,8 @@ void *hpx_parcel_get_data(hpx_parcel_t *p) {
     return (void*)&p->buffer;
   }
 
-  // Don't
+  // Copy out the pointer stored in the bufferm but don't violate strict
+  // aliasing.
   void *buffer = NULL;
   memcpy(&buffer, &p->buffer, sizeof(buffer));
   return buffer;
@@ -334,10 +335,10 @@ hpx_parcel_t *parcel_create(hpx_addr_t target, hpx_action_t action,
 
   p->pid = pid;
   p->credit = 0;
-  hpx_parcel_set_action(p, action);
-  hpx_parcel_set_target(p, target);
-  hpx_parcel_set_cont_action(p, c_action);
-  hpx_parcel_set_cont_target(p, c_target);
+  p->action = action;
+  p->target = target;
+  p->c_action = c_action;
+  p->c_target = c_target;
   if (inplace) {
     hpx_parcel_set_data(p, args, len);
   }
@@ -359,21 +360,4 @@ struct ustack* parcel_set_stack(hpx_parcel_t *p, struct ustack *next) {
 
 struct ustack *parcel_get_stack(const hpx_parcel_t *p) {
   return p->ustack;
-}
-
-hpx_parcel_t *parcel_stack_pop(hpx_parcel_t **stack) {
-  hpx_parcel_t *top = *stack;
-  if (top) {
-    *stack = top->next;
-    top->next = NULL;
-  }
-  return top;
-}
-
-void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *parcel) {
-  DEBUG_IF (parcel->next != NULL) {
-    dbg_error("parcel should not have an active next during push.\n");
-  }
-  parcel->next = *stack;
-  *stack = parcel;
 }

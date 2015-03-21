@@ -54,7 +54,7 @@ struct hpx_parcel {
 #ifdef ENABLE_INSTRUMENTATION
   uint64_t             id;
 #endif
-  char           buffer[];
+  char             buffer[];
 };
 
 // Verify an assumption about how big the parcel structure is.
@@ -121,18 +121,24 @@ int parcel_launch(hpx_parcel_t *p)
 ///                      as a side effect of the call.
 ///
 /// @returns            NULL, or the parcel that was on top of the stack.
-hpx_parcel_t *parcel_stack_pop(hpx_parcel_t **stack)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
+static inline hpx_parcel_t *parcel_stack_pop(hpx_parcel_t **stack) {
+  hpx_parcel_t *top = *stack;
+  if (top) {
+    *stack = top->next;
+    top->next = NULL;
+  }
+  return top;
+}
 
 /// Treat a parcel as a stack of parcels, and push the parcel.
 ///
 /// @param[in,out] stack The address of the top parcel in the stack, modified
 ///                      as a side effect of the call.
 /// @param[in]    parcel The new top of the stack.
-void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *parcel)
-  HPX_INTERNAL HPX_NON_NULL(1, 2);
-
+static inline void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *p) {
+  p->next = *stack;
+  *stack = p;
+}
 
 static inline uint32_t parcel_size(const hpx_parcel_t *p) {
   return sizeof(*p) + p->size;
