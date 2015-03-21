@@ -911,7 +911,7 @@ hpx_pid_t hpx_thread_current_pid(void) {
 }
 
 uint32_t hpx_thread_current_credit(void) {
-  return (self && self->current) ? parcel_get_credit(self->current) : 0;
+  return (self && self->current) ? self->current->credit : 0;
 }
 
 int hpx_thread_get_tls_id(void) {

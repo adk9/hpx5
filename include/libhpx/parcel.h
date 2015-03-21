@@ -108,12 +108,6 @@ struct ustack *parcel_set_stack(hpx_parcel_t *p, struct ustack *stack)
 struct ustack *parcel_get_stack(const hpx_parcel_t *p)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
-void parcel_set_credit(hpx_parcel_t *p, const uint64_t credit)
-  HPX_NON_NULL(1) HPX_INTERNAL;
-
-uint64_t parcel_get_credit(const hpx_parcel_t *p)
-  HPX_NON_NULL(1) HPX_INTERNAL;
-
 /// The core send operation.
 ///
 /// This sends the parcel synchronously. This assumes that the parcel has been
