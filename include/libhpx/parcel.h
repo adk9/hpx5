@@ -30,11 +30,22 @@ struct ustack;
 /// @field     c_action The continuation action identifier.
 /// @field     c_target The target address for the continuation.
 /// @field       buffer Either an in-place payload, or a pointer.
+typedef struct {
+  uint16_t inplace:1;
+  uint16_t blessed:1;
+  uint16_t        :14;
+} parcel_state_t;
+
+// Verify that this bitfield is actually being packed correctly.
+_HPX_ASSERT(sizeof(parcel_state_t) == 2, packed_parcel_state);
+
 struct hpx_parcel {
   struct ustack   *ustack;
   struct hpx_parcel *next;
   int                 src;
   uint32_t           size;
+  parcel_state_t    state;
+  uint16_t         offset;
   hpx_action_t     action;
   hpx_action_t   c_action;
   hpx_addr_t       target;
@@ -46,6 +57,13 @@ struct hpx_parcel {
 #endif
   char           buffer[];
 };
+
+// Verify an assumption about how big the parcel structure is.
+#ifdef ENABLE_INSTRUMENTATION
+_HPX_ASSERT(sizeof(hpx_parcel_t) == 72, parcel_size);
+#else
+_HPX_ASSERT(sizeof(hpx_parcel_t) == HPX_CACHELINE_SIZE, parcel_size);
+#endif
 
 /// Parcel tracing events.
 /// @{
