@@ -35,12 +35,9 @@ struct hpx_parcel {
   struct hpx_parcel *next;
   int                 src;
   uint32_t           size;
-#if defined(ENABLE_DEBUG) || defined(ENABLE_LOGGING) || defined(ENABLE_INSTRUMENTATION)
-  uint64_t       sequence;
-#endif
   hpx_action_t     action;
-  hpx_addr_t       target;
   hpx_action_t   c_action;
+  hpx_addr_t       target;
   hpx_addr_t     c_target;
   hpx_pid_t           pid;
   uint64_t         credit;
