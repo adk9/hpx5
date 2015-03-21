@@ -32,8 +32,7 @@ struct ustack;
 /// @field       buffer Either an in-place payload, or a pointer.
 typedef struct {
   uint16_t inplace:1;
-  uint16_t blessed:1;
-  uint16_t        :14;
+  uint16_t        :15;
 } parcel_state_t;
 
 // Verify that this bitfield is actually being packed correctly.

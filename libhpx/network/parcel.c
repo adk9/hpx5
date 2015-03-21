@@ -38,8 +38,6 @@
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
 
-static const uintptr_t _INPLACE_MASK = 0x1;
-static const uintptr_t   _STATE_MASK = 0x1;
 static const size_t _SMALL_THRESHOLD = HPX_PAGE_SIZE;
 #ifdef ENABLE_INSTRUMENTATION
 static uint64_t parcel_count = 0;
@@ -47,10 +45,6 @@ static uint64_t parcel_count = 0;
 
 static size_t _max(size_t lhs, size_t rhs) {
   return (lhs > rhs) ? lhs : rhs;
-}
-
-static uintptr_t _inplace(const hpx_parcel_t *p) {
-  return ((uintptr_t)p->ustack & _INPLACE_MASK);
 }
 
 static int _blessed(const hpx_parcel_t *p) {
@@ -61,12 +55,12 @@ static void _serialize(hpx_parcel_t *p) {
   if (!p->size)
     return;
 
-  if (_inplace(p))
+  if (p->state.inplace)
     return;
 
   void *buffer = hpx_parcel_get_data(p);
   memcpy(&p->buffer, buffer, p->size);
-  p->ustack = (struct ustack*)((uintptr_t)p->ustack | _INPLACE_MASK);
+  p->state.inplace = 1;
 }
 
 static void _bless(hpx_parcel_t *p) {
@@ -171,7 +165,7 @@ void *hpx_parcel_get_data(hpx_parcel_t *p) {
     return buffer;
   }
 
-  if (_inplace(p)) {
+  if (p->state.inplace) {
     buffer = (void*)&p->buffer;
   }
   else {
@@ -215,16 +209,19 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
   }
 
   // initialize the structure with defaults
-  p->ustack   = (struct ustack*)_INPLACE_MASK;
+  p->ustack   = NULL;
   p->next     = NULL;
   p->pid      = hpx_thread_current_pid();
   p->src      = here->rank;
   p->size     = bytes;
+  p->state    = (parcel_state_t){ .inplace = 0 };
+  p->offset   = 0;
   p->action   = HPX_ACTION_NULL;
-  p->target   = HPX_HERE;
   p->c_action = HPX_ACTION_NULL;
+  p->target   = HPX_HERE;
   p->c_target = HPX_NULL;
   p->credit   = 0;
+
 #ifdef ENABLE_INSTRUMENTATION
   if (config_trace_classes_isset(here->config, HPX_INST_CLASS_PARCEL)) {
     parcel_count = sync_fadd(&parcel_count, 1, SYNC_RELAXED);
@@ -236,8 +233,10 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
   // later, during the send operation. We occasionally see a buffer without
   // bytes so skip in that context too.
   if (buffer && bytes) {
-    p->ustack = NULL;
     memcpy(&p->buffer, &buffer, sizeof(buffer));
+  }
+  else {
+    p->state.inplace = 1;
   }
 
   INST_EVENT_PARCEL_CREATE(p);
@@ -253,7 +252,7 @@ static HPX_ACTION(_parcel_send_async, hpx_parcel_t **p) {
 }
 
 int parcel_launch(hpx_parcel_t *p) {
-  dbg_assert(_inplace(p));
+  dbg_assert(p->state.inplace);
   dbg_assert(_blessed(p));
 
   // LOG
@@ -297,7 +296,7 @@ hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p) {
 }
 
 hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
-  if (p->size >= _SMALL_THRESHOLD && !_inplace(p)) {
+  if (p->size >= _SMALL_THRESHOLD && !p->state.inplace) {
     return hpx_call(HPX_HERE, _parcel_send_async, lsync, &p, sizeof(p));
   }
 
@@ -345,15 +344,12 @@ hpx_parcel_t *parcel_create(hpx_addr_t target, hpx_action_t action,
   return p;
 }
 
-struct ustack* parcel_set_stack(hpx_parcel_t *p, struct ustack *stack) {
-  assert((uintptr_t)stack % sizeof(void*) == 0);
-  uintptr_t state = (uintptr_t)p->ustack & _STATE_MASK;
-  struct ustack *next = (struct ustack*)(state | (uintptr_t)stack);
+struct ustack* parcel_set_stack(hpx_parcel_t *p, struct ustack *next) {
+  assert((uintptr_t)next % sizeof(void*) == 0);
   // This can detect races in the scheduler when two threads try and process the
   // same parcel.
   if (DEBUG) {
-    struct ustack *prev = sync_swap(&p->ustack, next, SYNC_ACQ_REL);
-    return (void*)((uintptr_t)prev & ~_STATE_MASK);
+    return sync_swap(&p->ustack, next, SYNC_ACQ_REL);
   }
   else {
     p->ustack = next;
@@ -362,7 +358,7 @@ struct ustack* parcel_set_stack(hpx_parcel_t *p, struct ustack *stack) {
 }
 
 struct ustack *parcel_get_stack(const hpx_parcel_t *p) {
-  return (struct ustack*)((uintptr_t)p->ustack & ~_STATE_MASK);
+  return p->ustack;
 }
 
 void parcel_set_credit(hpx_parcel_t *p, const uint64_t credit) {
