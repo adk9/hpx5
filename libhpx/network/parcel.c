@@ -385,12 +385,3 @@ void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *parcel) {
   parcel->next = *stack;
   *stack = parcel;
 }
-
-void parcel_stack_foreach(hpx_parcel_t *p, void *env,
-                         void (*f)(hpx_parcel_t*, void*))
-{
-  while (p) {
-    f(p, env);
-    p = (void*)parcel_get_stack(p);
-  }
-}
