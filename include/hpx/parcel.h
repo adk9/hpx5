@@ -13,10 +13,11 @@
 #ifndef HPX_PARCEL_H
 #define HPX_PARCEL_H
 
-#include "hpx/action.h"
-#include "hpx/addr.h"
-#include "hpx/builtins.h"
-#include "hpx/process.h"
+#include <stdarg.h>
+#include <hpx/action.h>
+#include <hpx/addr.h>
+#include <hpx/builtins.h>
+#include <hpx/process.h>
 
 /// @file
 /// @brief HPX parcel interface.
@@ -249,6 +250,7 @@ void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size)
 /// @param            p The parcel we're updating.
 /// @param         ...  Variadic arguments to serialize into the
 ///                     parcel buffer.
+void   _hpx_parcel_set_args_va(hpx_parcel_t *p, int nargs, va_list *args);
 void   _hpx_parcel_set_args(hpx_parcel_t *p, int nargs, ...)
   HPX_NON_NULL(1);
 #define hpx_parcel_set_args(p, ...)                                     \
