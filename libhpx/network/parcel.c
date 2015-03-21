@@ -105,39 +105,10 @@ void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size) {
   }
 }
 
-void _hpx_parcel_set_args_va(hpx_parcel_t *p, int nargs, va_list *vargs) {
-  if (p->action == HPX_ACTION_NULL) {
-    dbg_error("parcel must have an action to serialize arguments.\n");
-  }
-
-  ffi_cif *cif = action_table_get_cif(here->actions, p->action);
-  if (!cif) {
-    dbg_error("parcel action must be a typed action.\n");
-  }
-
-  const char *key = action_table_get_key(here->actions, p->action);
-  if (nargs != cif->nargs) {
-    dbg_error("%s requires %d arguments (%d given).\n", key, cif->nargs, nargs);
-  }
-
-  if (!nargs) {
-    return;
-  }
-
-  dbg_assert(ffi_raw_size(cif) > 0);
-  void *argps[nargs];
-  for (int i = 0; i < nargs; ++i) {
-    argps[i] = va_arg(*vargs, void*);
-  }
-
-  ffi_raw *to = hpx_parcel_get_data(p);
-  ffi_ptrarray_to_raw(cif, argps, to);
-}
-
 void _hpx_parcel_set_args(hpx_parcel_t *p, int nargs, ...) {
   va_list vargs;
   va_start(vargs, nargs);
-  _hpx_parcel_set_args_va(p, nargs, &vargs);
+  action_table_set_args_va(here->actions, p, nargs, &vargs);
   va_end(vargs);
 }
 

@@ -196,6 +196,46 @@ _ACTION_TABLE_GET(hpx_action_type_t, type, HPX_ACTION_INVALID);
 _ACTION_TABLE_GET(hpx_action_handler_t, handler, NULL);
 _ACTION_TABLE_GET(ffi_cif *, cif, NULL);
 
+void action_table_set_args_va(const struct action_table *actions,
+                              hpx_parcel_t *p, int nargs, va_list *vargs) {
+  dbg_assert(actions);
+  dbg_assert(p);
+  dbg_assert(!nargs || vargs);
+
+  if (p->action == HPX_ACTION_NULL) {
+    dbg_error("parcel must have an action to serialize arguments.\n");
+  }
+
+  ffi_cif *cif = action_table_get_cif(actions, p->action);
+  if (!cif) {
+    dbg_error("parcel action must be a typed action.\n");
+  }
+
+  hpx_action_type_t type = action_table_get_type(actions, p->action);
+  if (type == HPX_ACTION_PINNED) {
+    nargs++;
+  }
+
+  const char *key = action_table_get_key(actions, p->action);
+  if (nargs != cif->nargs) {
+    dbg_error("%s requires %d arguments (%d given).\n", key, cif->nargs, nargs);
+  }
+
+  if (!nargs) {
+    return;
+  }
+
+  dbg_assert(ffi_raw_size(cif) > 0);
+
+  void *argps[nargs];
+  for (int i = ((type == HPX_ACTION_PINNED) ? 1 :0), e = nargs; i < e; ++i) {
+    argps[i] = va_arg(*vargs, void*);
+  }
+
+  ffi_raw *to = hpx_parcel_get_data(p);
+  ffi_ptrarray_to_raw(cif, argps, to);
+}
+
 hpx_parcel_t *
 action_acquire_parcel(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
                       hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
