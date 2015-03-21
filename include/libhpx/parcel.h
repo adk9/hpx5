@@ -139,11 +139,6 @@ hpx_parcel_t *parcel_stack_pop(hpx_parcel_t **stack)
 void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *parcel)
   HPX_INTERNAL HPX_NON_NULL(1, 2);
 
-/// Scan through a parcel list applying the passed function to each one.
-void parcel_stack_foreach(hpx_parcel_t *p, void *env,
-                          void (*f)(hpx_parcel_t*, void*))
-  HPX_INTERNAL HPX_NON_NULL(3);
-
 
 static inline uint32_t parcel_size(const hpx_parcel_t *p) {
   return sizeof(*p) + p->size;
