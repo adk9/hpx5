@@ -151,20 +151,19 @@ hpx_pid_t hpx_process_getpid(hpx_addr_t process) {
 }
 
 int _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
-                      hpx_addr_t result, int nargs, ...) {
+                      hpx_addr_t result, int n, ...) {
   va_list vargs;
-  va_start(vargs, nargs);
-  hpx_parcel_t *parcel = action_acquire_parcel(addr, action, result,
-                                               hpx_lco_set_action, HPX_NULL,
-                                               HPX_NULL, nargs, &vargs);
+  va_start(vargs, n);
+  hpx_parcel_t *parcel = action_parcel_create(addr, action, result,
+                                              hpx_lco_set_action, n, &vargs);
   va_end(vargs);
 
   hpx_addr_t sync = hpx_lco_future_new(0);
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, parcel_size(parcel));
-  hpx_parcel_set_target(p, process);
-  hpx_parcel_set_action(p, _proc_call);
-  hpx_parcel_set_cont_target(p, sync);
-  hpx_parcel_set_cont_action(p, hpx_lco_set_action);
+  p->target = process;
+  p->action = _proc_call;
+  p->c_target = sync;
+  p->c_action = hpx_lco_set_action;
   hpx_parcel_set_data(p, parcel, parcel_size(parcel));
   p->pid = 0;
   p->credit = 0;
