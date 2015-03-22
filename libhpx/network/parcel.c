@@ -105,10 +105,10 @@ void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size) {
   }
 }
 
-void _hpx_parcel_set_args(hpx_parcel_t *p, int nargs, ...) {
+void _hpx_parcel_set_args(hpx_parcel_t *p, int n, ...) {
   va_list vargs;
-  va_start(vargs, nargs);
-  action_table_set_args_va(here->actions, p, nargs, &vargs);
+  va_start(vargs, n);
+  action_pack_args(p, n, &vargs);
   va_end(vargs);
 }
 
