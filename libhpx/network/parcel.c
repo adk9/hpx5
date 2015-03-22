@@ -72,8 +72,6 @@ static void _bless(hpx_parcel_t *p) {
 
   // split the parent's current credit. the parent retains half..
   hpx_parcel_t *parent = scheduler_current_parcel();
-  dbg_assert_str(parent, "no parent to bless child parcel\n");
-  // parent and child each get half a credit
   p->credit = ++parent->credit;
 }
 
@@ -82,19 +80,19 @@ static void _prepare(hpx_parcel_t *p) {
   _bless(p);
 }
 
-void hpx_parcel_set_action(hpx_parcel_t *p, const hpx_action_t action) {
+void hpx_parcel_set_action(hpx_parcel_t *p, hpx_action_t action) {
   p->action = action;
 }
 
-void hpx_parcel_set_target(hpx_parcel_t *p, const hpx_addr_t addr) {
+void hpx_parcel_set_target(hpx_parcel_t *p, hpx_addr_t addr) {
   p->target = addr;
 }
 
-void hpx_parcel_set_cont_action(hpx_parcel_t *p, const hpx_action_t action) {
+void hpx_parcel_set_cont_action(hpx_parcel_t *p, hpx_action_t action) {
   p->c_action = action;
 }
 
-void hpx_parcel_set_cont_target(hpx_parcel_t *p, const hpx_addr_t cont) {
+void hpx_parcel_set_cont_target(hpx_parcel_t *p, hpx_addr_t cont) {
   p->c_target = cont;
 }
 
@@ -187,7 +185,7 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
   p->pid      = hpx_thread_current_pid();
   p->src      = here->rank;
   p->size     = bytes;
-  p->state    = (parcel_state_t){ .inplace = 0 };
+  p->state    = (parcel_state_t){ .inplace = 0, .blocked = 0 };
   p->offset   = 0;
   p->action   = HPX_ACTION_NULL;
   p->c_action = HPX_ACTION_NULL;
@@ -292,7 +290,11 @@ hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
 }
 
 void hpx_parcel_release(hpx_parcel_t *p) {
-  registered_free(p);
+  if (p->state.blocked) {
+  }
+  else {
+    registered_free(p);
+  }
 }
 
 hpx_parcel_t *parcel_create(hpx_addr_t target, hpx_action_t action,
