@@ -28,8 +28,8 @@
 #include "xport.h"
 
 // check to make sure we can fit a photon key in the key size
-static HPX_USED const int KEY_CHECK[XPORT_KEY_SIZE + 1 -
-                                    sizeof(struct photon_buffer_priv_t)];
+_HPX_ASSERT(XPORT_KEY_SIZE == sizeof(struct photon_buffer_priv_t),
+            incompatible_key_size);
 
 typedef struct {
   pwc_xport_t  vtable;

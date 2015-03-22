@@ -12,7 +12,6 @@ libnetwork_la_CFLAGS   =
 libnetwork_la_SOURCES  = locality.c \
                          network.c \
                          parcel.c \
-                         parcel_queue.c \
                          progress.c \
                          probe.c \
                          smp.c
