@@ -30,25 +30,39 @@ struct ustack;
 /// @field     c_action The continuation action identifier.
 /// @field     c_target The target address for the continuation.
 /// @field       buffer Either an in-place payload, or a pointer.
+typedef struct {
+  uint16_t inplace:1;
+  uint16_t        :15;
+} parcel_state_t;
+
+// Verify that this bitfield is actually being packed correctly.
+_HPX_ASSERT(sizeof(parcel_state_t) == 2, packed_parcel_state);
+
 struct hpx_parcel {
   struct ustack   *ustack;
   struct hpx_parcel *next;
   int                 src;
   uint32_t           size;
-#if defined(ENABLE_DEBUG) || defined(ENABLE_LOGGING) || defined(ENABLE_INSTRUMENTATION)
-  uint64_t       sequence;
-#endif
+  parcel_state_t    state;
+  uint16_t         offset;
   hpx_action_t     action;
-  hpx_addr_t       target;
   hpx_action_t   c_action;
+  hpx_addr_t       target;
   hpx_addr_t     c_target;
   hpx_pid_t           pid;
   uint64_t         credit;
 #ifdef ENABLE_INSTRUMENTATION
   uint64_t             id;
 #endif
-  char           buffer[];
+  char             buffer[];
 };
+
+// Verify an assumption about how big the parcel structure is.
+#ifdef ENABLE_INSTRUMENTATION
+_HPX_ASSERT(sizeof(hpx_parcel_t) == 72, parcel_size);
+#else
+_HPX_ASSERT(sizeof(hpx_parcel_t) == HPX_CACHELINE_SIZE, parcel_size);
+#endif
 
 /// Parcel tracing events.
 /// @{
@@ -83,12 +97,6 @@ static inline void INST_EVENT_PARCEL_END(hpx_parcel_t *p) {
 }
 /// @}
 
-typedef struct parcel_queue {
-  hpx_parcel_t *head;
-  hpx_parcel_t *tail;
-} parcel_queue_t;
-
-
 hpx_parcel_t *parcel_create(hpx_addr_t addr, hpx_action_t action,
                             const void *args, size_t len, hpx_addr_t c_target,
                             hpx_action_t c_action, hpx_pid_t pid, bool inplace)
@@ -98,12 +106,6 @@ struct ustack *parcel_set_stack(hpx_parcel_t *p, struct ustack *stack)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 struct ustack *parcel_get_stack(const hpx_parcel_t *p)
-  HPX_NON_NULL(1) HPX_INTERNAL;
-
-void parcel_set_credit(hpx_parcel_t *p, const uint64_t credit)
-  HPX_NON_NULL(1) HPX_INTERNAL;
-
-uint64_t parcel_get_credit(const hpx_parcel_t *p)
   HPX_NON_NULL(1) HPX_INTERNAL;
 
 /// The core send operation.
@@ -119,43 +121,24 @@ int parcel_launch(hpx_parcel_t *p)
 ///                      as a side effect of the call.
 ///
 /// @returns            NULL, or the parcel that was on top of the stack.
-hpx_parcel_t *parcel_stack_pop(hpx_parcel_t **stack)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
+static inline hpx_parcel_t *parcel_stack_pop(hpx_parcel_t **stack) {
+  hpx_parcel_t *top = *stack;
+  if (top) {
+    *stack = top->next;
+    top->next = NULL;
+  }
+  return top;
+}
 
 /// Treat a parcel as a stack of parcels, and push the parcel.
 ///
 /// @param[in,out] stack The address of the top parcel in the stack, modified
 ///                      as a side effect of the call.
 /// @param[in]    parcel The new top of the stack.
-void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *parcel)
-  HPX_INTERNAL HPX_NON_NULL(1, 2);
-
-/// Scan through a parcel list applying the passed function to each one.
-void parcel_stack_foreach(hpx_parcel_t *p, void *env,
-                          void (*f)(hpx_parcel_t*, void*))
-  HPX_INTERNAL HPX_NON_NULL(3);
-
-
-void parcel_queue_init(parcel_queue_t *q)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
-
-void parcel_queue_fini(parcel_queue_t *q)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
-
-void parcel_queue_enqueue(parcel_queue_t *q, hpx_parcel_t *p)
-  HPX_INTERNAL HPX_NON_NULL(1, 2);
-
-
-hpx_parcel_t *parcel_queue_dequeue(parcel_queue_t *q)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
-
-hpx_parcel_t *parcel_queue_dequeue_all(parcel_queue_t *q)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
+static inline void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *p) {
+  p->next = *stack;
+  *stack = p;
+}
 
 static inline uint32_t parcel_size(const hpx_parcel_t *p) {
   return sizeof(*p) + p->size;

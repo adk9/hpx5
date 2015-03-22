@@ -41,13 +41,16 @@ int action_execute(struct hpx_parcel *)
 ffi_cif *action_table_get_cif(const struct action_table *, hpx_action_t)
   HPX_INTERNAL HPX_NON_NULL(1);
 
+/// Serialize the vargs into the parcel.
+hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs)
+  HPX_INTERNAL;
+
 /// Returns a parcel that encodes the target address, an action and
 /// its argument, and the continuation. The parcel is ready to be sent
 /// to effect a call operation.
-hpx_parcel_t *
-action_acquire_parcel(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
-                      hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
-                      int nargs, va_list *args)
+hpx_parcel_t *action_parcel_create(hpx_addr_t addr, hpx_action_t action,
+                                   hpx_addr_t c_addr, hpx_action_t c_action,
+                                   int nargs, va_list *args)
   HPX_INTERNAL;
 
 /// Call an action by sending a parcel given a list of variable args.

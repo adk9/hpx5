@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 /// @brief The parcel layer.
@@ -38,8 +38,6 @@
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
 
-static const uintptr_t _INPLACE_MASK = 0x1;
-static const uintptr_t   _STATE_MASK = 0x1;
 static const size_t _SMALL_THRESHOLD = HPX_PAGE_SIZE;
 #ifdef ENABLE_INSTRUMENTATION
 static uint64_t parcel_count = 0;
@@ -47,10 +45,6 @@ static uint64_t parcel_count = 0;
 
 static size_t _max(size_t lhs, size_t rhs) {
   return (lhs > rhs) ? lhs : rhs;
-}
-
-static uintptr_t _inplace(const hpx_parcel_t *p) {
-  return ((uintptr_t)p->ustack & _INPLACE_MASK);
 }
 
 static int _blessed(const hpx_parcel_t *p) {
@@ -61,27 +55,26 @@ static void _serialize(hpx_parcel_t *p) {
   if (!p->size)
     return;
 
-  if (_inplace(p))
+  if (p->state.inplace)
     return;
 
   void *buffer = hpx_parcel_get_data(p);
   memcpy(&p->buffer, buffer, p->size);
-  p->ustack = (struct ustack*)((uintptr_t)p->ustack | _INPLACE_MASK);
+  p->state.inplace = 1;
 }
 
 static void _bless(hpx_parcel_t *p) {
-  hpx_pid_t pid = p->pid;
-  if (!pid)
+  if (!p->pid)
     return;
 
-  uint64_t credit = p->credit;
-  if (!credit) {
-    // split the parent's current credit. the parent retains half..
-    hpx_parcel_t *parent = scheduler_current_parcel();
-    dbg_assert_str(parent, "no parent to bless child parcel\n");
-    // parent and child each get half a credit
-    p->credit = ++parent->credit;
-  }
+  if (p->credit)
+    return;
+
+  // split the parent's current credit. the parent retains half..
+  hpx_parcel_t *parent = scheduler_current_parcel();
+  dbg_assert_str(parent, "no parent to bless child parcel\n");
+  // parent and child each get half a credit
+  p->credit = ++parent->credit;
 }
 
 static void _prepare(hpx_parcel_t *p) {
@@ -112,38 +105,12 @@ void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size) {
   }
 }
 
-void _hpx_parcel_set_args(hpx_parcel_t *p, int nargs, ...) {
-  if (p->action == HPX_ACTION_NULL) {
-    dbg_error("parcel must have an action to serialize arguments to its buffer.\n");
-  }
-
-  ffi_cif *cif = action_table_get_cif(here->actions, p->action);
-  if (!cif) {
-    dbg_error("parcel action must be a typed action.\n");
-  }
-  else if (nargs != cif->nargs) {
-    dbg_error("expecting %d arguments for action %s (%d given).\n",
-              cif->nargs, action_table_get_key(here->actions, p->action), nargs);
-  }
-
-  void *argps[nargs];
+void _hpx_parcel_set_args(hpx_parcel_t *p, int n, ...) {
   va_list vargs;
-  va_start(vargs, nargs);
-  for (int i = 0; i < nargs; ++i) {
-    argps[i] = va_arg(vargs, void*);
-  }
+  va_start(vargs, n);
+  action_pack_args(p, n, &vargs);
   va_end(vargs);
-
-  size_t len = ffi_raw_size(cif);
-  dbg_assert(len > 0);
-
-  if (len) {
-    ffi_raw *to = hpx_parcel_get_data(p);
-    ffi_ptrarray_to_raw(cif, argps, to);
-  }
-  return;
 }
-
 
 void hpx_parcel_set_pid(hpx_parcel_t *p, const hpx_pid_t pid) {
   p->pid = pid;
@@ -166,18 +133,18 @@ hpx_addr_t hpx_parcel_get_cont_target(const hpx_parcel_t *p) {
 }
 
 void *hpx_parcel_get_data(hpx_parcel_t *p) {
-  void *buffer = NULL;
   if (p->size == 0) {
-    return buffer;
+    return NULL;
   }
 
-  if (_inplace(p)) {
-    buffer = (void*)&p->buffer;
-  }
-  else {
-    memcpy(&buffer, &p->buffer, sizeof(buffer));
+  if (p->state.inplace) {
+    return (void*)&p->buffer;
   }
 
+  // Copy out the pointer stored in the bufferm but don't violate strict
+  // aliasing.
+  void *buffer = NULL;
+  memcpy(&buffer, &p->buffer, sizeof(buffer));
   return buffer;
 }
 
@@ -215,16 +182,19 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
   }
 
   // initialize the structure with defaults
-  p->ustack   = (struct ustack*)_INPLACE_MASK;
+  p->ustack   = NULL;
   p->next     = NULL;
   p->pid      = hpx_thread_current_pid();
   p->src      = here->rank;
   p->size     = bytes;
+  p->state    = (parcel_state_t){ .inplace = 0 };
+  p->offset   = 0;
   p->action   = HPX_ACTION_NULL;
-  p->target   = HPX_HERE;
   p->c_action = HPX_ACTION_NULL;
+  p->target   = HPX_HERE;
   p->c_target = HPX_NULL;
   p->credit   = 0;
+
 #ifdef ENABLE_INSTRUMENTATION
   if (config_trace_classes_isset(here->config, HPX_INST_CLASS_PARCEL)) {
     parcel_count = sync_fadd(&parcel_count, 1, SYNC_RELAXED);
@@ -236,12 +206,13 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
   // later, during the send operation. We occasionally see a buffer without
   // bytes so skip in that context too.
   if (buffer && bytes) {
-    p->ustack = NULL;
     memcpy(&p->buffer, &buffer, sizeof(buffer));
+  }
+  else {
+    p->state.inplace = 1;
   }
 
   INST_EVENT_PARCEL_CREATE(p);
-
   return p;
 }
 
@@ -253,7 +224,7 @@ static HPX_ACTION(_parcel_send_async, hpx_parcel_t **p) {
 }
 
 int parcel_launch(hpx_parcel_t *p) {
-  dbg_assert(_inplace(p));
+  dbg_assert(p->state.inplace);
   dbg_assert(_blessed(p));
 
   // LOG
@@ -297,7 +268,7 @@ hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p) {
 }
 
 hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
-  if (p->size >= _SMALL_THRESHOLD && !_inplace(p)) {
+  if (p->size >= _SMALL_THRESHOLD && !p->state.inplace) {
     return hpx_call(HPX_HERE, _parcel_send_async, lsync, &p, sizeof(p));
   }
 
@@ -333,27 +304,24 @@ hpx_parcel_t *parcel_create(hpx_addr_t target, hpx_action_t action,
     return NULL;
   }
 
-  hpx_parcel_set_pid(p, pid);
-  parcel_set_credit(p, 0);
-  hpx_parcel_set_action(p, action);
-  hpx_parcel_set_target(p, target);
-  hpx_parcel_set_cont_action(p, c_action);
-  hpx_parcel_set_cont_target(p, c_target);
+  p->pid = pid;
+  p->credit = 0;
+  p->action = action;
+  p->target = target;
+  p->c_action = c_action;
+  p->c_target = c_target;
   if (inplace) {
     hpx_parcel_set_data(p, args, len);
   }
   return p;
 }
 
-struct ustack* parcel_set_stack(hpx_parcel_t *p, struct ustack *stack) {
-  assert((uintptr_t)stack % sizeof(void*) == 0);
-  uintptr_t state = (uintptr_t)p->ustack & _STATE_MASK;
-  struct ustack *next = (struct ustack*)(state | (uintptr_t)stack);
+struct ustack* parcel_set_stack(hpx_parcel_t *p, struct ustack *next) {
+  assert((uintptr_t)next % sizeof(void*) == 0);
   // This can detect races in the scheduler when two threads try and process the
   // same parcel.
   if (DEBUG) {
-    struct ustack *prev = sync_swap(&p->ustack, next, SYNC_ACQ_REL);
-    return (void*)((uintptr_t)prev & ~_STATE_MASK);
+    return sync_swap(&p->ustack, next, SYNC_ACQ_REL);
   }
   else {
     p->ustack = next;
@@ -362,39 +330,5 @@ struct ustack* parcel_set_stack(hpx_parcel_t *p, struct ustack *stack) {
 }
 
 struct ustack *parcel_get_stack(const hpx_parcel_t *p) {
-  return (struct ustack*)((uintptr_t)p->ustack & ~_STATE_MASK);
-}
-
-void parcel_set_credit(hpx_parcel_t *p, const uint64_t credit) {
-  p->credit = credit;
-}
-
-uint64_t parcel_get_credit(const hpx_parcel_t *p) {
-  return p->credit;
-}
-
-hpx_parcel_t *parcel_stack_pop(hpx_parcel_t **stack) {
-  hpx_parcel_t *top = *stack;
-  if (top) {
-    *stack = top->next;
-    top->next = NULL;
-  }
-  return top;
-}
-
-void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *parcel) {
-  DEBUG_IF (parcel->next != NULL) {
-    dbg_error("parcel should not have an active next during push.\n");
-  }
-  parcel->next = *stack;
-  *stack = parcel;
-}
-
-void parcel_stack_foreach(hpx_parcel_t *p, void *env,
-                         void (*f)(hpx_parcel_t*, void*))
-{
-  while (p) {
-    f(p, env);
-    p = (void*)parcel_get_stack(p);
-  }
+  return p->ustack;
 }
