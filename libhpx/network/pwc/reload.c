@@ -123,10 +123,7 @@ static hpx_parcel_t *_buffer_recv(buffer_t *recv) {
   if (recv->i >= recv->n) {
     dbg_error("reload buffer recv overload\n");
   }
-  // todo: don't do this, reference count the buffer
-  hpx_parcel_t *clone = hpx_parcel_acquire(NULL, parcel_payload_size(p));
-  memcpy(clone, p, parcel_size(p));
-  return clone;
+  return parcel_clone(p);
 }
 
 static hpx_parcel_t *_reload_recv(void *obj, int rank) {

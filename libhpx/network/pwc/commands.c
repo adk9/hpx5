@@ -32,9 +32,7 @@ COMMAND_DEF(INTERRUPT, _release_parcel_handler, release_parcel);
 static int _recv_parcel_handler(int src, command_t command) {
   const void *addr = (const void*)command_get_arg(command);
   const hpx_parcel_t *p = addr;
-  // todo: don't make this copy
-  hpx_parcel_t *clone = hpx_parcel_acquire(NULL, parcel_payload_size(p));
-  memcpy(clone, p, parcel_size(p));
+  hpx_parcel_t *clone = parcel_clone(p);
   clone->src = src;
   scheduler_spawn(clone);
   return HPX_SUCCESS;
@@ -43,8 +41,15 @@ COMMAND_DEF(INTERRUPT, _recv_parcel_handler, recv_parcel);
 
 
 static int _rendezvous_launch_handler(int src, command_t cmd) {
+  static const parcel_state_t state = {
+    .serialized = 1,
+    .retain = 0,
+    .nested = 0,
+    .block_allocated = 0
+  };
   uintptr_t arg = command_get_arg(cmd);
   hpx_parcel_t *p = (void*)arg;
+  parcel_set_state(p, state);
   scheduler_spawn(p);
   return HPX_SUCCESS;
 }

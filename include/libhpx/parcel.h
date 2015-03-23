@@ -21,9 +21,16 @@ struct ustack;
 
 typedef struct {
   uint16_t      serialized :1;
+  uint16_t          retain :1;
+  uint16_t          nested :1;
   uint16_t block_allocated :1;
-  uint16_t                 :14;
+  uint16_t                 :12;
 } parcel_state_t;
+
+typedef union {
+  parcel_state_t flags;
+  uint16_t bits;
+} atomic_state_t;
 
 // Verify that this bitfield is actually being packed correctly.
 _HPX_ASSERT(sizeof(parcel_state_t) == 2, packed_parcel_state);
@@ -47,7 +54,7 @@ struct hpx_parcel {
   struct hpx_parcel *next;
   int                 src;
   uint32_t           size;
-  parcel_state_t    state;
+  atomic_state_t    state;
   uint16_t         offset;
   hpx_action_t     action;
   hpx_action_t   c_action;
@@ -111,6 +118,9 @@ hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_ta
                          size_t len)
   HPX_INTERNAL;
 
+hpx_parcel_t *parcel_clone(const hpx_parcel_t *p)
+  HPX_INTERNAL;
+
 void parcel_delete(hpx_parcel_t *p)
   HPX_INTERNAL;
 
@@ -129,6 +139,15 @@ int parcel_launch(hpx_parcel_t *p)
   HPX_INTERNAL;
 
 int parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate)
+  HPX_INTERNAL;
+
+void parcel_set_state(hpx_parcel_t *p, parcel_state_t state)
+  HPX_INTERNAL;
+
+parcel_state_t parcel_get_state(const hpx_parcel_t *p)
+  HPX_INTERNAL;
+
+parcel_state_t parcel_exchange_state(hpx_parcel_t *p, parcel_state_t state)
   HPX_INTERNAL;
 
 /// Treat a parcel as a stack of parcels, and pop the top.
