@@ -49,6 +49,8 @@ enum enum_hpx_photon_backend { hpx_photon_backend__NULL = -1, hpx_photon_backend
 /** @brief Where the command line options are stored */
 struct hpx_options_t
 {
+  int hpx_help_flag;	/**< @brief print HPX help (default=off).  */
+  const char *hpx_help_help; /**< @brief print HPX help help description.  */
   int hpx_cores_arg;	/**< @brief number of cores to run on.  */
   char * hpx_cores_orig;	/**< @brief number of cores to run on original value given at command line.  */
   const char *hpx_cores_help; /**< @brief number of cores to run on help description.  */
@@ -166,6 +168,7 @@ struct hpx_options_t
   char * hpx_photon_numcq_orig;	/**< @brief set number of completion queues to use (cyclic assignment to ranks) original value given at command line.  */
   const char *hpx_photon_numcq_help; /**< @brief set number of completion queues to use (cyclic assignment to ranks) help description.  */
   
+  unsigned int hpx_help_given ;	/**< @brief Whether hpx-help was given.  */
   unsigned int hpx_cores_given ;	/**< @brief Whether hpx-cores was given.  */
   unsigned int hpx_threads_given ;	/**< @brief Whether hpx-threads was given.  */
   unsigned int hpx_stacksize_given ;	/**< @brief Whether hpx-stacksize was given.  */

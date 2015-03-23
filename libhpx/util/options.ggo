@@ -7,6 +7,9 @@ command-line using the flags given below, or through environment
 variables of the form HPX_OPTION=value, where the option corresponds
 to the flag suffix given below."
 
+option "hpx-help" - "print HPX help"
+flag off
+
 option "hpx-cores" - "number of cores to run on"
 typestr="cores"
 int optional
