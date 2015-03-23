@@ -39,7 +39,8 @@ hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p) {
 static HPX_ACTION_DEF(DEFAULT, hpx_parcel_send_sync, _send_async, HPX_POINTER);
 
 hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
-  if (p->size < HPX_SMALL_THRESHOLD || p->state.serialized) {
+  parcel_state_t state = parcel_get_state(p);
+  if (p->size < HPX_SMALL_THRESHOLD || state.serialized) {
     hpx_status_t status = parcel_launch(p);
     hpx_lco_error(lsync, status, HPX_NULL);
     return status;
@@ -137,7 +138,8 @@ void *hpx_parcel_get_data(hpx_parcel_t *p) {
     return NULL;
   }
 
-  if (p->state.serialized) {
+  parcel_state_t state = parcel_get_state(p);
+  if (state.serialized) {
     return (void*)&p->buffer;
   }
 

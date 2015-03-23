@@ -184,15 +184,22 @@ static HPX_PINNED(_lco_wait, lco_t *lco, void *args) {
   return _wait(lco);
 }
 
-HPX_PINNED(attach, lco_t *lco, const hpx_parcel_t *p) {
-  /// @todo: This parcel copy shouldn't be necessary. If we can retain the
-  ///        parent parcel and free it appropriately, then we could just enqueue
-  ///        the args directly.
-  hpx_parcel_t *parcel = hpx_parcel_acquire(NULL, p->size);
-  assert(parcel_size(p) == parcel_size(parcel));
-  dbg_assert_str(parcel, "could not allocate a parcel to attach\n");
-  memcpy(parcel, p, parcel_size(p));
-  return _attach(lco, parcel);
+HPX_PINNED(attach, lco_t *lco, hpx_parcel_t *p) {
+  hpx_parcel_t *parent = scheduler_current_parcel();
+  dbg_assert(hpx_parcel_get_data(parent) == p);
+  log("retaining %p, nesting %p\n", parent, p);
+
+  parcel_state_t state = parcel_get_state(parent);
+  dbg_assert(!state.retain);
+  state.retain = 1;
+  parcel_set_state(parent, state);
+
+  state = parcel_get_state(p);
+  dbg_assert(!state.nested);
+  state.nested = 1;
+  parcel_set_state(p, state);
+
+  return _attach(lco, p);
 }
 /// @}
 
