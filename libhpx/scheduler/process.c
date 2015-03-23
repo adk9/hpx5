@@ -119,9 +119,8 @@ int process_recover_credit(hpx_parcel_t *p) {
     return HPX_SUCCESS;
   }
 
-  hpx_parcel_t *pp = parcel_create(process, _proc_return_credit, &p->credit,
-                                   sizeof(p->credit), HPX_NULL, HPX_ACTION_NULL,
-                                   0, false);
+  hpx_parcel_t *pp = parcel_new(process, _proc_return_credit, 0, 0, 0,
+                                &p->credit, sizeof(p->credit));
   if (!pp) {
     dbg_error("parcel_recover_credit failed.\n");
   }
