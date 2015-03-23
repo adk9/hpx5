@@ -47,5 +47,5 @@ const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS] =
   PARCEL_END_METADATA,
   {0},
   {0},
-  {0}
+  SCHEDULER_WQSIZE_METADATA
 };

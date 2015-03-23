@@ -360,8 +360,8 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
       INST_EVENT_COL_METADATA_WORKER,           \
       INST_EVENT_COL_METADATA_S,                \
       INST_EVENT_COL_METADATA_NS,               \
-      METADATA_SCHEDULER_WQ_SIZE,               \
-      INST_EVENT_COL_METADATA_EMPTY2,           \
+      METADATA_SCHEDULER_WQSIZE,                \
+      INST_EVENT_COL_METADATA_EMPTY1,           \
       INST_EVENT_COL_METADATA_EMPTY2,           \
       INST_EVENT_COL_METADATA_EMPTY3            \
     }                                           \

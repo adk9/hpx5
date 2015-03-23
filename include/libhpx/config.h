@@ -112,7 +112,7 @@ static const char* const HPX_BOOT_TO_STRING[] = {
 
 #define HPX_TRACE_PARCELS 1
 #define HPX_TRACE_PWC     2
-#define HPX_TRACE_SCHED   4
+#define HPX_TRACE_SCHED   3
 
 /// The HPX configuration type.
 ///
