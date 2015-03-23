@@ -14,10 +14,19 @@
 #define LIBHPX_PARCEL_H
 
 #include <hpx/hpx.h>
-#include "libhpx/instrumentation.h"
-#include "libhpx/instrumentation_events.h"
+#include <libhpx/instrumentation.h>
+#include <libhpx/instrumentation_events.h>
 
 struct ustack;
+
+typedef struct {
+  uint16_t      serialized :1;
+  uint16_t block_allocated :1;
+  uint16_t                 :13;
+} parcel_state_t;
+
+// Verify that this bitfield is actually being packed correctly.
+_HPX_ASSERT(sizeof(parcel_state_t) == 2, packed_parcel_state);
 
 /// The hpx_parcel structure is what the user-level interacts with.
 ///
@@ -25,20 +34,14 @@ struct ustack;
 /// @field         next A pointer to the next parcel.
 /// @field          src The src rank for the parcel.
 /// @field         size The data size in bytes.
+/// @field        state The parcel's state bits.
+/// @field       offset Reserved for future use.
 /// @field       action The target action identifier.
-/// @field       target The target address for parcel_send().
 /// @field     c_action The continuation action identifier.
+/// @field       target The target address for parcel_send().
 /// @field     c_target The target address for the continuation.
+/// @field           id A unique identifier for parcel tracing.
 /// @field       buffer Either an in-place payload, or a pointer.
-typedef struct {
-  uint16_t inplace:1;
-  uint16_t blocked:1;
-  uint16_t        :14;
-} parcel_state_t;
-
-// Verify that this bitfield is actually being packed correctly.
-_HPX_ASSERT(sizeof(parcel_state_t) == 2, packed_parcel_state);
-
 struct hpx_parcel {
   struct ustack   *ustack;
   struct hpx_parcel *next;
@@ -98,9 +101,17 @@ static inline void INST_EVENT_PARCEL_END(hpx_parcel_t *p) {
 }
 /// @}
 
-hpx_parcel_t *parcel_create(hpx_addr_t addr, hpx_action_t action,
-                            const void *args, size_t len, hpx_addr_t c_target,
-                            hpx_action_t c_action, hpx_pid_t pid, bool inplace)
+void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
+                 hpx_action_t c_action, hpx_pid_t pid, const void *data,
+                 size_t len, hpx_parcel_t *p)
+  HPX_INTERNAL;
+
+hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
+                         hpx_action_t c_action, hpx_pid_t pid, const void *data,
+                         size_t len)
+  HPX_INTERNAL;
+
+void parcel_delete(hpx_parcel_t *p)
   HPX_INTERNAL;
 
 struct ustack *parcel_set_stack(hpx_parcel_t *p, struct ustack *stack)
@@ -111,10 +122,11 @@ struct ustack *parcel_get_stack(const hpx_parcel_t *p)
 
 /// The core send operation.
 ///
-/// This sends the parcel synchronously. This assumes that the parcel has been
-/// serialized and has credit already, if necessary.
+/// This sends the parcel synchronously. This will eagerly serialize the parcel,
+/// and will assign it credit from the currently executing process if it has a
+/// pid set.
 int parcel_launch(hpx_parcel_t *p)
-  HPX_NON_NULL(1);
+  HPX_INTERNAL;
 
 /// Treat a parcel as a stack of parcels, and pop the top.
 ///

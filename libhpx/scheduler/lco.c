@@ -20,11 +20,11 @@
 #include <string.h>
 
 #include <libsync/sync.h>
-#include "libhpx/action.h"
-#include "libhpx/attach.h"
-#include "libhpx/locality.h"
-#include "libhpx/scheduler.h"
-#include "libhpx/parcel.h"
+#include <libhpx/action.h>
+#include <libhpx/attach.h>
+#include <libhpx/locality.h>
+#include <libhpx/scheduler.h>
+#include <libhpx/parcel.h>
 #include "lco.h"
 #include "thread.h"
 
@@ -155,9 +155,8 @@ static HPX_PINNED(_lco_get, lco_t *lco, void *args) {
   }
 }
 
-static HPX_PINNED(_lco_getref, lco_t *lco, void *args) {
-  dbg_assert(args);
-  int *n = args;
+static HPX_PINNED(_lco_getref, lco_t *lco, int *n) {
+  dbg_assert(n);
   // convert to wait if there's no buffer
   if (*n == 0) {
     return _wait(lco);
@@ -185,11 +184,10 @@ static HPX_PINNED(_lco_wait, lco_t *lco, void *args) {
   return _wait(lco);
 }
 
-HPX_PINNED(attach, lco_t *lco, void *args) {
+HPX_PINNED(attach, lco_t *lco, const hpx_parcel_t *p) {
   /// @todo: This parcel copy shouldn't be necessary. If we can retain the
   ///        parent parcel and free it appropriately, then we could just enqueue
   ///        the args directly.
-  const hpx_parcel_t *p = args;
   hpx_parcel_t *parcel = hpx_parcel_acquire(NULL, p->size);
   assert(parcel_size(p) == parcel_size(parcel));
   dbg_assert_str(parcel, "could not allocate a parcel to attach\n");
