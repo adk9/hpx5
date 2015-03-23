@@ -73,7 +73,9 @@ static void _cleanup(locality_t *l) {
     l->boot = NULL;
   }
 
-  hpx_hwloc_topology_destroy(l->topology);
+  if (l->topology) {
+    hpx_hwloc_topology_destroy(l->topology);
+  }
 
   if (l->actions) {
     action_table_free(l->actions);
