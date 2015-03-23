@@ -265,6 +265,11 @@ static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
 #undef LIBHPX_OPT_STRING
 #undef LIBHPX_OPT_FLAG
 
+  if (opts->hpx_help_given) {
+    hpx_print_help();
+    exit(EXIT_SUCCESS);
+  }
+
   // Special case handling for the config file option, the
   // opts->hpx_configfile_arg is deleted so we have to duplicate it.
   if (opts->hpx_configfile_given) {
@@ -277,7 +282,7 @@ static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
 }
 
 /// Print the help associated with the HPX runtime options
-void hpx_print_help(void) {
+void hpx_print_help(void) { 
   hpx_option_parser_print_help();
 }
 
