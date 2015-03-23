@@ -22,7 +22,7 @@ struct ustack;
 typedef struct {
   uint16_t      serialized :1;
   uint16_t block_allocated :1;
-  uint16_t                 :13;
+  uint16_t                 :14;
 } parcel_state_t;
 
 // Verify that this bitfield is actually being packed correctly.
@@ -126,6 +126,9 @@ struct ustack *parcel_get_stack(const hpx_parcel_t *p)
 /// and will assign it credit from the currently executing process if it has a
 /// pid set.
 int parcel_launch(hpx_parcel_t *p)
+  HPX_INTERNAL;
+
+int parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate)
   HPX_INTERNAL;
 
 /// Treat a parcel as a stack of parcels, and pop the top.
