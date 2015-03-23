@@ -17,7 +17,6 @@
 #include <string.h>
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
-#include <libhpx/attach.h>
 #include <libhpx/debug.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/parcel.h>
@@ -35,6 +34,8 @@ hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p) {
   return parcel_launch(p);
 }
 
+// Register a thread entry point to do an asynchronous send. It's important that
+// this is a DEFAULT action so that we don't try to work-first it.
 static HPX_ACTION_DEF(DEFAULT, hpx_parcel_send_sync, _send_async, HPX_POINTER);
 
 hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
@@ -50,36 +51,31 @@ hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
 
 hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t gate) {
   dbg_assert(p->target != HPX_NULL);
-  int e = hpx_call(gate, attach, HPX_NULL, p, parcel_size(p));
+  int e = parcel_launch_through(p, gate);
   parcel_delete(p);
   return e;
 }
 
-static int _delete_send_through_parcel_handler(hpx_parcel_t *p) {
-  hpx_addr_t lsync = hpx_thread_current_target();
-  hpx_lco_wait(lsync);
-  parcel_delete(p);
-  return HPX_SUCCESS;
-}
-static HPX_ACTION_DEF(DEFAULT, _delete_send_through_parcel_handler,
-                      _delete_send_through_parcel, HPX_POINTER);
+// Register a thread entry point to do an asynchronous send-through. It's
+// important that this is a DEFAULT action so that we don't try to work-first
+// it.
+static HPX_ACTION_DEF(DEFAULT, hpx_parcel_send_through_sync,
+                      _send_through_async, HPX_POINTER, HPX_ADDR);
 
 hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
                                      hpx_addr_t lsync) {
-  dbg_assert(p->target != HPX_NULL);
-  hpx_parcel_t *pattach = parcel_new(gate, attach, 0, 0,
-                                     hpx_thread_current_pid(), p,
-                                     parcel_size(p));
-
-  int e = hpx_parcel_send(pattach, lsync);
-  if (lsync) {
-    int e = hpx_call(lsync, _delete_send_through_parcel, HPX_NULL, &p);
-    dbg_check(e, "failed call\n");
+  // If the parcel is small, regardless of if its been serialized already, we
+  // want to do the send through eagerly, otherwise we want to spawn a thread to
+  // do it.
+  if (parcel_size(p) < HPX_SMALL_THRESHOLD) {
+    hpx_status_t status = parcel_launch_through(p, gate);
+    parcel_delete(p);
+    hpx_lco_error(lsync, status, HPX_NULL);
+    return status;
   }
   else {
-    parcel_delete(p);
+    return hpx_call(HPX_HERE, _send_through_async, lsync, &p, gate);
   }
-  return e;
 }
 
 void hpx_parcel_release(hpx_parcel_t *p) {

@@ -27,6 +27,7 @@
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
 #include <libhpx/action.h>
+#include <libhpx/attach.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/instrumentation.h>
@@ -45,9 +46,16 @@ static size_t _max(size_t lhs, size_t rhs) {
   return (lhs > rhs) ? lhs : rhs;
 }
 
-int parcel_launch(hpx_parcel_t *p) {
-  dbg_assert(p->action);
+static int _delete_launch_through_parcel_handler(hpx_parcel_t *p) {
+  hpx_addr_t lsync = hpx_thread_current_target();
+  hpx_lco_wait(lsync);
+  parcel_delete(p);
+  return HPX_SUCCESS;
+}
+static HPX_ACTION_DEF(DEFAULT, _delete_launch_through_parcel_handler,
+                      _delete_launch_through_parcel, HPX_POINTER);
 
+static void _prepare(hpx_parcel_t *p) {
   if (!p->state.serialized && p->size) {
     void *buffer = hpx_parcel_get_data(p);
     memcpy(&p->buffer, buffer, p->size);
@@ -59,6 +67,12 @@ int parcel_launch(hpx_parcel_t *p) {
     dbg_assert(parent->pid == p->pid);
     p->credit = ++parent->credit;
   }
+}
+
+int parcel_launch(hpx_parcel_t *p) {
+  dbg_assert(p->action);
+
+  _prepare(p);
 
   log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64") => %s@(%"PRIu64")\n",
              p->pid,
@@ -81,6 +95,16 @@ int parcel_launch(hpx_parcel_t *p) {
     dbg_check(e, "failed to perform a network send\n");
     return e;
   }
+}
+
+int parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate) {
+  dbg_assert(p->action);
+  _prepare(p);
+
+  hpx_parcel_t *pattach = parcel_new(gate, attach, 0, 0,
+                                     hpx_thread_current_pid(), p,
+                                     parcel_size(p));
+  return parcel_launch(pattach);
 }
 
 void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
