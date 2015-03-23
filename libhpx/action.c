@@ -214,7 +214,7 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs) {
   }
 
   if (cif == NULL) {
-    log_parcel("%s is user-packed\n");
+    log_parcel("%s is user-packed\n", key);
     return p;
   }
 
@@ -281,6 +281,7 @@ int libhpx_call_action(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
                        int nargs, va_list *args) {
   hpx_parcel_t *p = action_parcel_create(addr, action, c_addr, c_action, nargs,
                                          args);
+
   if (likely(!gate && !lsync)) {
     return hpx_parcel_send_sync(p);
   }

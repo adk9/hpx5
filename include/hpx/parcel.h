@@ -209,28 +209,28 @@ hpx_pid_t hpx_parcel_get_pid(const hpx_parcel_t *p)
 /// @param            p The parcel we're updating.
 /// @param       action The action to be invoked when the parcel arrives at its
 ///                     target.
-void hpx_parcel_set_action(hpx_parcel_t *p, const hpx_action_t action)
+void hpx_parcel_set_action(hpx_parcel_t *p, hpx_action_t action)
   HPX_NON_NULL(1);
 
 /// Set a target address for a parcel.
 ///
 /// @param            p The parcel we're updating.
 /// @param         addr The global address of the target to send the parcel to.
-void hpx_parcel_set_target(hpx_parcel_t *p, const hpx_addr_t addr)
+void hpx_parcel_set_target(hpx_parcel_t *p, hpx_addr_t addr)
   HPX_NON_NULL(1);
 
 /// Set the continuation action for a parcel.
 ///
 /// @param            p The parcel we're updating.
 /// @param       action The continuation action to set for the parcel.
-void hpx_parcel_set_cont_action(hpx_parcel_t *p, const hpx_action_t action)
+void hpx_parcel_set_cont_action(hpx_parcel_t *p, hpx_action_t action)
   HPX_NON_NULL(1);
 
 /// Set the continuation address for a parcel.
 ///
 /// @param            p The parcel we're updating.
 /// @param         addr The global address of the continuation.
-void hpx_parcel_set_cont_target(hpx_parcel_t *p, const hpx_addr_t addr)
+void hpx_parcel_set_cont_target(hpx_parcel_t *p, hpx_addr_t addr)
   HPX_NON_NULL(1);
 
 /// Set the data buffer for a parcel.
