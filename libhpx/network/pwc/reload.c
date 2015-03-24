@@ -61,7 +61,8 @@ typedef struct {
 static COMMAND_DECL(_reload_request);
 static COMMAND_DECL(_reload_reply);
 
-static parcel_block_t *_block_memalign(size_t align, size_t n, size_t *offset) {
+static parcel_block_t *_parcel_block_new(size_t align, size_t n, size_t *offset)
+{
   size_t bytes = n - sizeof(parcel_block_t);
   dbg_assert(bytes < n);
   parcel_block_t *block = registered_memalign(align, n);
@@ -70,26 +71,26 @@ static parcel_block_t *_block_memalign(size_t align, size_t n, size_t *offset) {
   return block;
 }
 
-static void _block_free(parcel_block_t *block) {
+static void _parcel_block_delete(parcel_block_t *block) {
   if (block->remaining != 0) {
     log_parcel("block freed with %zu bytes remaining\n", block->remaining);
   }
   registered_free(block);
 }
 
-static char *_block_at(parcel_block_t *block, size_t offset) {
+static char *_parcel_block_at(parcel_block_t *block, size_t offset) {
   return &block->bytes[offset - sizeof(*block)];
 }
 
 static void _buffer_fini(buffer_t *b) {
   if (b) {
-    _block_free(b->block);
+    _parcel_block_delete(b->block);
   }
 }
 
 static void _buffer_reload(buffer_t *b, pwc_xport_t *xport) {
   dbg_assert(1ul << ceil_log2_64(b->n) == b->n);
-  b->block = _block_memalign(b->n, b->n, &b->i);
+  b->block = _parcel_block_new(b->n, b->n, &b->i);
   int e = xport->key_find(xport, b->block, b->n, &b->key);
   dbg_check(e, "no key for newly allocated block (%p, %zu)\n", b->block, b->n);
 }
@@ -105,7 +106,7 @@ static int _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
   if (op->n < r) {
     send->i += op->n;
     op->dest_key = &send->key;
-    op->dest = _block_at(send->block, i);
+    op->dest = _parcel_block_at(send->block, i);
     op->rop = command_pack(recv_parcel, (uintptr_t)op->dest);
     return xport->pwc(op);
   }
@@ -147,7 +148,7 @@ static int _reload_send(void *obj, pwc_xport_t *xport, int rank,
 }
 
 static hpx_parcel_t *_buffer_recv(buffer_t *recv) {
-  const hpx_parcel_t *p = (void*)_block_at(recv->block, recv->i);
+  const hpx_parcel_t *p = (void*)_parcel_block_at(recv->block, recv->i);
   recv->i += parcel_size(p);
   if (recv->i >= recv->n) {
     dbg_error("reload buffer recv overload\n");
