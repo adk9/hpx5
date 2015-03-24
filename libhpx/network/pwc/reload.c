@@ -19,21 +19,14 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
-#include <libhpx/padding.h>
 #include <libhpx/parcel.h>
+#include <libhpx/parcel_block.h>
 #include "commands.h"
 #include "parcel_emulation.h"
 #include "pwc.h"
 #include "send_buffer.h"
 #include "xport.h"
 
-typedef struct {
-  size_t remaining;
-  PAD_TO_CACHELINE(sizeof(size_t));
-  char       bytes[];
-} parcel_block_t;
-
-_HPX_ASSERT(sizeof(parcel_block_t) == HPX_CACHELINE_SIZE, block_header_size);
 
 typedef struct {
   size_t              n;
@@ -61,45 +54,15 @@ typedef struct {
 static COMMAND_DECL(_reload_request);
 static COMMAND_DECL(_reload_reply);
 
-static parcel_block_t *_parcel_block_new(size_t align, size_t n, size_t *offset)
-{
-  size_t bytes = n - sizeof(parcel_block_t);
-  dbg_assert(bytes < n);
-  parcel_block_t *block = registered_memalign(align, n);
-  block->remaining = bytes;
-  *offset = offsetof(parcel_block_t, bytes);
-  return block;
-}
-
-static void _parcel_block_delete(parcel_block_t *block) {
-  if (block->remaining != 0) {
-    log_parcel("block freed with %zu bytes remaining\n", block->remaining);
-  }
-  registered_free(block);
-}
-
-static char *_parcel_block_at(parcel_block_t *block, size_t offset) {
-  return &block->bytes[offset - sizeof(*block)];
-}
-
-static void _parcel_block_deduct(parcel_block_t *block, size_t bytes) {
-  dbg_assert(bytes < SIZE_MAX/2);
-  log("deducting %zu bytes from parcel block %p\n", bytes, (void*)block);
-  size_t r = sync_fadd(&block->remaining, -bytes, SYNC_ACQ_REL) - bytes;
-  if (!r) {
-    _parcel_block_delete(block);
-  }
-}
-
 static void _buffer_fini(buffer_t *b) {
   if (b) {
-    _parcel_block_delete(b->block);
+    parcel_block_delete(b->block);
   }
 }
 
 static void _buffer_reload(buffer_t *b, pwc_xport_t *xport) {
   dbg_assert(1ul << ceil_log2_64(b->n) == b->n);
-  b->block = _parcel_block_new(b->n, b->n, &b->i);
+  b->block = parcel_block_new(b->n, b->n, &b->i);
   int e = xport->key_find(xport, b->block, b->n, &b->key);
   dbg_check(e, "no key for newly allocated block (%p, %zu)\n", b->block, b->n);
 }
@@ -115,7 +78,7 @@ static int _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
   if (op->n < r) {
     send->i += op->n;
     op->dest_key = &send->key;
-    op->dest = _parcel_block_at(send->block, i);
+    op->dest = parcel_block_at(send->block, i);
     op->rop = command_pack(recv_parcel, (uintptr_t)op->dest);
     return xport->pwc(op);
   }
@@ -157,7 +120,7 @@ static int _reload_send(void *obj, pwc_xport_t *xport, int rank,
 }
 
 static hpx_parcel_t *_buffer_recv(buffer_t *recv) {
-  const hpx_parcel_t *p = (void*)_parcel_block_at(recv->block, recv->i);
+  const hpx_parcel_t *p = parcel_block_at(recv->block, recv->i);
   recv->i += parcel_size(p);
   if (recv->i >= recv->n) {
     dbg_error("reload buffer recv overload\n");
@@ -265,7 +228,7 @@ static int _reload_request_handler(int src, command_t cmd) {
   reload_t *reload = (reload_t*)pwc->parcels;
   buffer_t *recv = &reload->recv[src];
   size_t n = command_get_arg(cmd);
-  _parcel_block_deduct(recv->block, n);
+  parcel_block_deduct(recv->block, n);
   _buffer_reload(recv, xport);
 
   xport_op_t op = {
