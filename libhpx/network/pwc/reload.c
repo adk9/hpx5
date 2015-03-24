@@ -82,6 +82,15 @@ static char *_parcel_block_at(parcel_block_t *block, size_t offset) {
   return &block->bytes[offset - sizeof(*block)];
 }
 
+static void _parcel_block_deduct(parcel_block_t *block, size_t bytes) {
+  dbg_assert(bytes < SIZE_MAX/2);
+  log("deducting %zu bytes from parcel block %p\n", bytes, (void*)block);
+  size_t r = sync_fadd(&block->remaining, -bytes, SYNC_ACQ_REL) - bytes;
+  if (!r) {
+    _parcel_block_delete(block);
+  }
+}
+
 static void _buffer_fini(buffer_t *b) {
   if (b) {
     _parcel_block_delete(b->block);
@@ -255,7 +264,8 @@ static int _reload_request_handler(int src, command_t cmd) {
   pwc_xport_t *xport = pwc->xport;
   reload_t *reload = (reload_t*)pwc->parcels;
   buffer_t *recv = &reload->recv[src];
-  _buffer_fini(recv);
+  size_t n = command_get_arg(cmd);
+  _parcel_block_deduct(recv->block, n);
   _buffer_reload(recv, xport);
 
   xport_op_t op = {

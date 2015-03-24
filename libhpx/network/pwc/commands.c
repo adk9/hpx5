@@ -36,9 +36,12 @@ static int _recv_parcel_handler(int src, command_t command) {
   clone->src = src;
   scheduler_spawn(clone);
   return HPX_SUCCESS;
+  // hpx_parcel_t *p = (hpx_parcel_t*)command_get_arg(command);
+  // p->src = src;
+  // parcel_set_state(p, PARCEL_SERIALIZED | PARCEL_BLOCK_ALLOCATED);
+  // scheduler_spawn(p);
 }
 COMMAND_DEF(INTERRUPT, _recv_parcel_handler, recv_parcel);
-
 
 static int _rendezvous_launch_handler(int src, command_t cmd) {
   uintptr_t arg = command_get_arg(cmd);
