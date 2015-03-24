@@ -53,6 +53,21 @@ typedef bool (*hpx_predicate_t)(void *i, const size_t bytes);
 /// @param rsync an LCO to signal remote completion
 void hpx_lco_delete(hpx_addr_t lco, hpx_addr_t rsync);
 
+/// Delete a local array of LCOs.
+///
+/// This interface does not permit the user to wait on individual delete
+/// operations to complete, it assumes that the user either wants to know when
+/// all of the operations completed or that the user doesn't care at all. The @p
+/// rsync lco will only be set *once*, and any errors will be reported there.
+///
+/// @param     n The number of LCOs to delete.
+/// @param   lco An array of the addresses of the LCOs to delete.
+/// @param rsync An LCO to signal remote completion of all of the deletes.
+///
+/// @returns HPX_SUCCESS, or an error if the operation failed (errors in the
+///          individual delete operations are reported through rsync).
+int hpx_lco_delete_all(int n, hpx_addr_t *lcos, hpx_addr_t rsync);
+
 /// Propagate an error to an LCO.
 ///
 /// If the error code is HPX_SUCCESS then this is equivalent to
@@ -86,8 +101,13 @@ void hpx_lco_reset(hpx_addr_t future, hpx_addr_t sync);
 void hpx_lco_reset_sync(hpx_addr_t future);
 
 /// An action-based interface to the interface;
+/// The set action is a user-packed action that takes a buffer.
 extern HPX_ACTION_DECL(hpx_lco_set_action);
+
+/// The delete action us a user-packed action that takes a NULL buffer.
 extern HPX_ACTION_DECL(hpx_lco_delete_action);
+
+/// The reset action is a user-packed action that takes a NULL buffer.
 extern HPX_ACTION_DECL(hpx_lco_reset_action);
 
 /// Set an LCO, optionally with data.
