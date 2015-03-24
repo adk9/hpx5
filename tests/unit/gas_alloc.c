@@ -43,8 +43,37 @@ static HPX_ACTION(gas_alloc, void *UNUSED) {
   return HPX_SUCCESS;
 }
 
+static HPX_ACTION(gas_memalign, void *UNUSED) {
+  printf("Starting GAS memalign\n");
+  int alignments[20];
+  for (int i = 4, e = 24; i < e; ++i) {
+    alignments[i] = 1ul << i;
+  }
+
+  for (int i = 4, e = 24; i < e; ++i) {
+    printf("checking alignment %d\n", alignments[i]);
+    hpx_addr_t local = hpx_gas_memalign(alignments[i], N);
+    if (!local) {
+      fflush(stdout);
+      fprintf(stderr, "hpx_gas_memalign returned HPX_NULL\n");
+    }
+    void *ptr = NULL;
+    if (!hpx_gas_try_pin(local, &ptr)) {
+      fflush(stdout);
+      fprintf(stderr, "hpx_gas_memalign returned non-local memory\n");
+    }
+    if ((uintptr_t)ptr & (alignments[i] - 1)) {
+      fflush(stdout);
+      fprintf(stderr, "hpx_gas_memalign failed to return aligned address\n");
+    }
+    hpx_gas_free(local, HPX_NULL);
+  }
+
+  return HPX_SUCCESS;
+}
+
 static HPX_ACTION(gas_calloc, void *UNUSED) {
-  printf("Starting the GAS local memory allocation test\n");
+  printf("Starting GAS calloc\n");
   hpx_addr_t local = hpx_gas_calloc(N, sizeof(int));
 
   if (!local) {
@@ -136,4 +165,5 @@ TEST_MAIN({
   ADD_TEST(gas_alloc_at);
   ADD_TEST(gas_calloc);
   ADD_TEST(gas_calloc_at);
-});
+  ADD_TEST(gas_memalign);
+  });

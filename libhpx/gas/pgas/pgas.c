@@ -169,6 +169,13 @@ static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
   return pgas_lva_to_gpa(lva);
 }
 
+/// Allocate a single aligned block.
+static hpx_addr_t _pgas_gas_memalign(size_t boundary, size_t size) {
+  void *lva = global_memalign(boundary, size);
+  dbg_assert(heap_contains_lva(global_heap, lva));
+  return pgas_lva_to_gpa(lva);
+}
+
 /// Allocate a single global block, filled with 0, from the global heap, and
 /// return it as an hpx_addr_t.
 static hpx_addr_t _pgas_gas_calloc(size_t nmemb, size_t size) {
@@ -294,32 +301,33 @@ static void _pgas_munmap(void *gas, void *addr, size_t n) {
 }
 
 static gas_t _pgas_vtable = {
-  .type          = HPX_GAS_PGAS,
-  .delete        = _pgas_delete,
-  .is_global     = _pgas_is_global,
-  .local_size    = _pgas_local_size,
-  .local_base    = _pgas_local_base,
-  .locality_of   = pgas_gpa_to_rank,
-  .sub           = _pgas_sub,
-  .add           = _pgas_add,
-  .lva_to_gva    = pgas_lva_to_gpa,
-  .gva_to_lva    = pgas_gpa_to_lva,
-  .there         = _pgas_there,
-  .try_pin       = _pgas_try_pin,
-  .unpin         = _pgas_unpin,
-  .cyclic_alloc  = _pgas_gas_cyclic_alloc,
-  .cyclic_calloc = _pgas_gas_cyclic_calloc,
-  .local_alloc   = _pgas_gas_alloc,
-  .local_calloc  = _pgas_gas_calloc,
-  .free          = _pgas_gas_free,
-  .move          = _pgas_move,
-  .memget        = _pgas_memget,
-  .memput        = _pgas_memput,
-  .memcpy        = _pgas_parcel_memcpy,
-  .owner_of      = pgas_gpa_to_rank,
-  .offset_of     = _pgas_offset_of,
-  .mmap          = _pgas_mmap,
-  .munmap        = _pgas_munmap
+  .type           = HPX_GAS_PGAS,
+  .delete         = _pgas_delete,
+  .is_global      = _pgas_is_global,
+  .local_size     = _pgas_local_size,
+  .local_base     = _pgas_local_base,
+  .locality_of    = pgas_gpa_to_rank,
+  .sub            = _pgas_sub,
+  .add            = _pgas_add,
+  .lva_to_gva     = pgas_lva_to_gpa,
+  .gva_to_lva     = pgas_gpa_to_lva,
+  .there          = _pgas_there,
+  .try_pin        = _pgas_try_pin,
+  .unpin          = _pgas_unpin,
+  .cyclic_alloc   = _pgas_gas_cyclic_alloc,
+  .cyclic_calloc  = _pgas_gas_cyclic_calloc,
+  .local_alloc    = _pgas_gas_alloc,
+  .local_memalign = _pgas_gas_memalign,
+  .local_calloc   = _pgas_gas_calloc,
+  .free           = _pgas_gas_free,
+  .move           = _pgas_move,
+  .memget         = _pgas_memget,
+  .memput         = _pgas_memput,
+  .memcpy         = _pgas_parcel_memcpy,
+  .owner_of       = pgas_gpa_to_rank,
+  .offset_of      = _pgas_offset_of,
+  .mmap           = _pgas_mmap,
+  .munmap         = _pgas_munmap
 };
 
 gas_t *gas_pgas_new(const config_t *cfg, boot_t *boot)
