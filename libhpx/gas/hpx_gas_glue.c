@@ -147,3 +147,33 @@ void hpx_gas_calloc_at_async(size_t nmemb, size_t size, hpx_addr_t loc,
   int e = hpx_call(loc, hpx_gas_calloc_at_action, lco, &nmemb, &size);
   dbg_check(e, "Failed async call during allocation\n");
 }
+
+
+hpx_addr_t hpx_gas_memalign(size_t boundary, size_t size) {
+  dbg_assert(here && here->gas && here->gas->local_memalign);
+  return here->gas->local_memalign(boundary, size);
+}
+
+static int _gas_memalign_at_handler(size_t boundary, size_t size) {
+  hpx_addr_t addr = hpx_gas_memalign(boundary, size);
+  dbg_assert(addr);
+  HPX_THREAD_CONTINUE(addr);
+}
+HPX_ACTION_DEF(DEFAULT, _gas_memalign_at_handler, hpx_gas_memalign_at_action,
+               HPX_UINT64, HPX_UINT64);
+
+hpx_addr_t hpx_gas_memalign_at_sync(size_t boundary, size_t size,
+                                    hpx_addr_t loc) {
+  hpx_addr_t addr = 0;
+  int e = hpx_call_sync(loc, hpx_gas_memalign_at_action, &addr, sizeof(addr),
+                        &boundary, &size);
+  dbg_check(e, "Failed synchronous call during allocation\n");
+  dbg_assert(addr);
+  return addr;
+}
+
+void hpx_gas_memalign_at_async(size_t boundary, size_t size, hpx_addr_t loc,
+                             hpx_addr_t lco) {
+  int e = hpx_call(loc, hpx_gas_memalign_at_action, lco, &boundary, &size);
+  dbg_check(e, "Failed async call during allocation\n");
+}
