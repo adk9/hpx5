@@ -187,7 +187,7 @@ static HPX_PINNED(_lco_wait, lco_t *lco, void *args) {
 HPX_PINNED(attach, lco_t *lco, hpx_parcel_t *p) {
   hpx_parcel_t *parent = scheduler_current_parcel();
   dbg_assert(hpx_parcel_get_data(parent) == p);
-  log("retaining %p, nesting %p\n", (void*)parent, (void*)p);
+  log_lco("retaining %p, nesting %p\n", (void*)parent, (void*)p);
 
   parcel_state_t state = parcel_get_state(parent);
   dbg_assert(!parcel_retained(state));
