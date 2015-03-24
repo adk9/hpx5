@@ -13,11 +13,9 @@
 #ifndef LIBHPX_PADDING_H
 #define LIBHPX_PADDING_H
 
-/// ----------------------------------------------------------------------------
 /// Given a number of bytes, how many bytes of padding do we need to get a size
 /// that is a multiple of HPX_CACHELINE_SIZE? Macro because it's used in
 /// structure definitions for padding.
-/// ----------------------------------------------------------------------------
 
 #define _CAT1(S, T) S##T
 #define _CAT(S, T) _CAT1(S, T)
