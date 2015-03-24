@@ -19,18 +19,29 @@
 
 struct ustack;
 
-typedef struct {
-  uint16_t      serialized :1;
-  uint16_t          retain :1;
-  uint16_t          nested :1;
-  uint16_t block_allocated :1;
-  uint16_t                 :12;
-} parcel_state_t;
 
-typedef union {
-  parcel_state_t flags;
-  uint16_t bits;
-} atomic_state_t;
+typedef uint16_t parcel_state_t;
+
+static const parcel_state_t PARCEL_SERIALIZED = 1;
+static const parcel_state_t PARCEL_RETAINED = 2;
+static const parcel_state_t PARCEL_NESTED = 4;
+static const parcel_state_t PARCEL_BLOCK_ALLOCATED = 8;
+
+static inline uint16_t parcel_serialized(parcel_state_t state) {
+  return state & PARCEL_SERIALIZED;
+}
+
+static inline uint16_t parcel_retained(parcel_state_t state) {
+  return state & PARCEL_RETAINED;
+}
+
+static inline uint16_t parcel_nested(parcel_state_t state) {
+  return state & PARCEL_NESTED;
+}
+
+static inline uint16_t parcel_block_allocated(parcel_state_t state) {
+  return state & PARCEL_BLOCK_ALLOCATED;
+}
 
 // Verify that this bitfield is actually being packed correctly.
 _HPX_ASSERT(sizeof(parcel_state_t) == 2, packed_parcel_state);
@@ -54,7 +65,7 @@ struct hpx_parcel {
   struct hpx_parcel *next;
   int                 src;
   uint32_t           size;
-  atomic_state_t    state;
+  parcel_state_t    state;
   uint16_t         offset;
   hpx_action_t     action;
   hpx_action_t   c_action;

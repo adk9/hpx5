@@ -57,10 +57,10 @@ static HPX_ACTION_DEF(DEFAULT, _delete_launch_through_parcel_handler,
 
 static void _prepare(hpx_parcel_t *p) {
   parcel_state_t state = parcel_get_state(p);
-  if (!state.serialized && p->size) {
+  if (!parcel_serialized(state) && p->size) {
     void *buffer = hpx_parcel_get_data(p);
     memcpy(&p->buffer, buffer, p->size);
-    state.serialized = 1;
+    state |= PARCEL_SERIALIZED;
     parcel_set_state(p, state);
   }
 
@@ -72,25 +72,15 @@ static void _prepare(hpx_parcel_t *p) {
 }
 
 void parcel_set_state(hpx_parcel_t *p, parcel_state_t state) {
-  atomic_state_t atomic = {
-    .flags = state
-  };
-  sync_store(&p->state.bits, atomic.bits, SYNC_RELEASE);
+  sync_store(&p->state, state, SYNC_RELEASE);
 }
 
 parcel_state_t parcel_get_state(const hpx_parcel_t *p) {
-  atomic_state_t atomic = {
-    .bits = sync_load(&p->state.bits, SYNC_ACQUIRE)
-  };
-  return atomic.flags;
+  return sync_load(&p->state, SYNC_ACQUIRE);
 }
 
 parcel_state_t parcel_exchange_state(hpx_parcel_t *p, parcel_state_t state) {
-  atomic_state_t atomic = {
-    .flags = state
-  };
-  atomic.bits = sync_swap(&p->state.bits, atomic.bits, SYNC_ACQ_REL);
-  return atomic.flags;
+  return sync_swap(&p->state, state, SYNC_ACQ_REL);
 }
 
 int parcel_launch(hpx_parcel_t *p) {
@@ -135,20 +125,6 @@ void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
                  hpx_action_t c_action, hpx_pid_t pid, const void *data,
                  size_t len, hpx_parcel_t *p)
 {
-  static const parcel_state_t serialized = {
-    .serialized = 1,
-    .retain = 0,
-    .nested = 0,
-    .block_allocated = 0
-  };
-
-  static const parcel_state_t unserialized = {
-    .serialized = 0,
-    .retain = 0,
-    .nested = 0,
-    .block_allocated = 0
-  };
-
   p->ustack   = NULL;
   p->next     = NULL;
   p->src      = here->rank;
@@ -173,10 +149,10 @@ void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
   if (data && len) {
     // use memcpy to preserve strict aliasing
     memcpy(&p->buffer, &data, sizeof(data));
-    parcel_set_state(p, unserialized);
+    parcel_set_state(p, 0);
   }
   else {
-    parcel_set_state(p, serialized);
+    parcel_set_state(p, PARCEL_SERIALIZED);
   }
 }
 
@@ -196,20 +172,13 @@ hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action,
 }
 
 hpx_parcel_t *parcel_clone(const hpx_parcel_t *p) {
-  static const parcel_state_t state = {
-    .serialized = 1,
-    .retain = 0,
-    .nested = 0,
-    .block_allocated = 0
-  };
-
-  dbg_assert(parcel_get_state(p).serialized || p->size == 0);
+  dbg_assert(parcel_serialized(parcel_get_state(p)) || p->size == 0);
   size_t n = parcel_size(p);
   hpx_parcel_t *clone = registered_memalign(HPX_CACHELINE_SIZE, n);
   memcpy(clone, p, n);
   clone->ustack = NULL;
   clone->next = NULL;
-  parcel_set_state(clone, state);
+  parcel_set_state(clone, PARCEL_SERIALIZED);
   return clone;
 }
 
@@ -220,7 +189,7 @@ void parcel_delete(hpx_parcel_t *p) {
 
   parcel_state_t state = parcel_get_state(p);
 
-  if (state.nested) {
+  if (parcel_nested(state)) {
     size_t n = parcel_size(p);
     hpx_parcel_t *parent = (void*)((char*)p - sizeof(*p));
     size_t m = parent->size;
@@ -231,12 +200,12 @@ void parcel_delete(hpx_parcel_t *p) {
     return;
   }
 
-  if (state.retain) {
-    state.retain = 0;
+  if (parcel_retained(state)) {
+    state &= ~PARCEL_RETAINED;
     state = parcel_exchange_state(p, state);
   }
 
-  if (!state.retain) {
+  if (!parcel_retained(state)) {
     registered_free(p);
   }
 }

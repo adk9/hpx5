@@ -41,15 +41,9 @@ COMMAND_DEF(INTERRUPT, _recv_parcel_handler, recv_parcel);
 
 
 static int _rendezvous_launch_handler(int src, command_t cmd) {
-  static const parcel_state_t state = {
-    .serialized = 1,
-    .retain = 0,
-    .nested = 0,
-    .block_allocated = 0
-  };
   uintptr_t arg = command_get_arg(cmd);
   hpx_parcel_t *p = (void*)arg;
-  parcel_set_state(p, state);
+  parcel_set_state(p, PARCEL_SERIALIZED);
   scheduler_spawn(p);
   return HPX_SUCCESS;
 }
