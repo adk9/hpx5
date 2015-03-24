@@ -563,10 +563,8 @@ int hpx_lco_delete_all(int n, hpx_addr_t *lcos, hpx_addr_t rsync) {
   if (rsync) {
     and = hpx_lco_and_new(n);
     int e;
-    e = hpx_call_when(and, and, hpx_lco_delete_action, 0, NULL, 0);
+    e = hpx_call_when_with_continuation(and, rsync, hpx_lco_set_action, and, hpx_lco_delete_action, NULL, 0);
     dbg_check(e, "failed to enqueue delete action\n");
-    e = hpx_call_when(and, rsync, hpx_lco_set_action, 0, NULL, 0);
-    dbg_check(e, "failed to enqueue set action\n");
   }
 
   for (int i = 0, e = n; i < e; ++i) {
