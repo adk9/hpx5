@@ -12,7 +12,7 @@
 // =============================================================================
 
 #include <inttypes.h>
-#include "hpx/hpx.h"
+#include <hpx/hpx.h>
 #include "tests.h"
 
 #define BUFFER_SIZE 128
@@ -25,16 +25,16 @@ static HPX_ACTION(_init_array, size_t *args) {
   if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
 
-  for(int i = 0; i < n; i++) 
+  for(int i = 0; i < n; i++)
     local[i] = (HPX_LOCALITY_ID == 0) ? 'a' : 'b';
 
-  HPX_THREAD_CONTINUE(local); 
+  HPX_THREAD_CONTINUE(local);
 }
 
 static HPX_ACTION(lco_function, void *UNUSED) {
   int size = HPX_LOCALITIES;
   int peerID = (HPX_LOCALITY_ID + 1) % size;
- 
+
   printf("Starting the HPX LCO test\n");
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
@@ -43,7 +43,7 @@ static HPX_ACTION(lco_function, void *UNUSED) {
   hpx_addr_t remote = hpx_addr_add(addr, BUFFER_SIZE*2 * peerID, BUFFER_SIZE*2);
 
   hpx_addr_t done;
-  
+
   for (size_t i = 1; i <= BUFFER_SIZE; i*=2) {
     char *local;
     // Create a future. Futures are builtin LCO's that represent from async
@@ -51,9 +51,9 @@ static HPX_ACTION(lco_function, void *UNUSED) {
     done = hpx_lco_future_new(sizeof(void*));
     hpx_call(remote, _init_array, done, &i, sizeof(i));
     hpx_call_sync(addr, _init_array, &local, sizeof(local), &i, sizeof(i));
-    
+
     // Perform a wait operation. The LCO blocks the caller until an LCO set
-    // operation triggers the LCO. 
+    // operation triggers the LCO.
     hpx_status_t status = hpx_lco_wait(done);
     assert(status == HPX_SUCCESS);
 
@@ -61,7 +61,7 @@ static HPX_ACTION(lco_function, void *UNUSED) {
     // remote completion.
     hpx_lco_delete(done, HPX_NULL);
   }
-  
+
   hpx_gas_free(addr, HPX_NULL);
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
@@ -76,7 +76,7 @@ static HPX_ACTION(_lco_setget, uint64_t *args) {
   hpx_lco_set(future, sizeof(uint64_t), &val, HPX_NULL, HPX_NULL);
 
   // Get the value and print for debugging purpose. An LCO blocks the caller
-  // until the future is set, and then copies its value to data into the 
+  // until the future is set, and then copies its value to data into the
   // provided output location.
   uint64_t setVal;
   hpx_lco_get(future, sizeof(setVal), &setVal);
@@ -89,7 +89,7 @@ static HPX_ACTION(_lco_setget, uint64_t *args) {
 static HPX_ACTION(lco_setget, void *UNUSED) {
   int size = HPX_LOCALITIES;
   uint64_t n = 0;
-  
+
   printf("Starting the HPX LCO Set and Get test\n");
   printf("localities: %d\n", size);
   // Start the timer
@@ -108,7 +108,7 @@ static HPX_ACTION(lco_setget, void *UNUSED) {
 }
 
 // Testcase to test hpx_lco_wait_all function.
-static HPX_ACTION(_init_block, uint32_t *args) 
+static HPX_ACTION(_init_block, uint32_t *args)
 {
   hpx_addr_t target = hpx_thread_current_target();
   uint32_t *buffer = NULL;
@@ -119,14 +119,14 @@ static HPX_ACTION(_init_block, uint32_t *args)
   for (int i = 0; i < block_size; i++){
     // Initialixe the buffer
     buffer[i] = 1234;
-    //printf("Initializing the buffer for locality ID %d: %d\n", 
+    //printf("Initializing the buffer for locality ID %d: %d\n",
     //       HPX_LOCALITY_ID, buffer[i]);
-  } 
+  }
   hpx_gas_unpin(target);
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(_init_memory, uint32_t *args) 
+static HPX_ACTION(_init_memory, uint32_t *args)
 {
   hpx_addr_t local = hpx_thread_current_target();
   uint32_t block_size = args[0];
@@ -184,9 +184,7 @@ static HPX_ACTION(lco_waitall, void *UNUSED) {
 
   // Blocks the thread until all of the LCO's have been set.
   hpx_lco_wait_all(2, done, NULL);
-  hpx_lco_delete(done[0], HPX_NULL);
-  hpx_lco_delete(done[1], HPX_NULL);
-  
+  hpx_lco_delete_all(2, done, HPX_NULL);
   hpx_gas_free(addr, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
@@ -237,10 +235,12 @@ static HPX_ACTION(_getAll, uint32_t *args) {
   hpx_lco_wait(futures[0]);
   hpx_lco_wait(futures[1]);
 
-  hpx_lco_delete(futures[0], HPX_NULL);
-  hpx_lco_delete(futures[1], HPX_NULL);
+  hpx_addr_t wait = hpx_lco_future_new(0);
+  hpx_lco_delete_all(2, futures, wait);
+  hpx_lco_wait(wait);
+  hpx_lco_delete(wait, HPX_NULL);
 
-  uint32_t sn = ssn[0] * ssn[0] + ssn[1] * ssn[1]; 
+  uint32_t sn = ssn[0] * ssn[0] + ssn[1] * ssn[1];
 
   HPX_THREAD_CONTINUE(sn);
   return HPX_SUCCESS;
@@ -283,7 +283,7 @@ static HPX_ACTION(lco_error, void *UNUSED) {
 
   hpx_lco_delete(lco, HPX_NULL);
   hpx_lco_delete(done, HPX_NULL);
- 
+
   printf(" Elapsed: %.7f\n", hpx_time_elapsed_ms(t1)/1e3);
   return HPX_SUCCESS;
 }
