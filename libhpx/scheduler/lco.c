@@ -558,6 +558,26 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
   return errors;
 }
 
+int hpx_lco_delete_all(int n, hpx_addr_t *lcos, hpx_addr_t rsync) {
+  hpx_addr_t and = HPX_NULL;
+  if (rsync) {
+    and = hpx_lco_and_new(n);
+    int e;
+    e = hpx_call_when(and, and, hpx_lco_delete_action, 0, NULL, 0);
+    dbg_check(e, "failed to enqueue delete action\n");
+    e = hpx_call_when(and, rsync, hpx_lco_set_action, 0, NULL, 0);
+    dbg_check(e, "failed to enqueue set action\n");
+  }
+
+  for (int i = 0, e = n; i < e; ++i) {
+    if (lcos[i]) {
+      hpx_lco_delete(lcos[i], and);
+    }
+  }
+
+  return HPX_SUCCESS;
+}
+
 // Generic array indexer API.
 hpx_addr_t hpx_lco_array_at(hpx_addr_t array, int i, int arg) {
   uint32_t lco_bytes = hpx_lco_size(array) + arg;
