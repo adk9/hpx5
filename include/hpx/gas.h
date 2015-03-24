@@ -54,6 +54,10 @@ void hpx_gas_unpin(hpx_addr_t addr);
 ///
 /// The total amount of usable memory allocated is @p n * @p bsize.
 ///
+/// The alignment of each block (and thus the base alignment of the entire
+/// array), will be 2^{align=ceil_log2_32(bsize)}, i.e., the minimum power of 2 to
+/// bsize such that align >= bsize.
+///
 /// In UPC-land, the returned global address would have the following
 /// distribution:
 ///
