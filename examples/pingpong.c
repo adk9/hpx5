@@ -21,12 +21,12 @@
 #define BUFFER_SIZE 128
 
 /* command line options */
-static bool         _text = false;            //!< send text data with the ping
-static bool      _verbose = false;            //!< print to the terminal
+static bool    _text = false;                  //!< send text data with the ping
+static bool _verbose = false;                  //!< print to the terminal
 
 /* actions */
-static hpx_action_t _ping = 0;
-static hpx_action_t _pong = 0;
+static HPX_ACTION_DECL(_ping);
+static HPX_ACTION_DECL(_pong);
 
 /* helper functions */
 static void _usage(FILE *f, int error) {
@@ -34,12 +34,10 @@ static void _usage(FILE *f, int error) {
           "\t-m, send text in message\n"
           "\t-v, print verbose output \n"
           "\t-h, show help\n");
-  hpx_print_help();
   fflush(f);
   exit(error);
 }
 
-static void _register_actions(void);
 static hpx_addr_t _partner(void);
 
 /** the pingpong message type */
@@ -57,15 +55,15 @@ typedef struct {
     }                                                         \
   } while (0)
 
-#define RANK_PRINTF(format, ...)                                        \
-  do {                                                                  \
-    if (_verbose)                                                       \
+#define RANK_PRINTF(format, ...) do {                                   \
+    if (_verbose) {                                                     \
       printf("\t%d,%d: " format, hpx_get_my_rank(), hpx_get_my_thread_id(), \
              __VA_ARGS__);                                              \
+    }                                                                   \
   } while (0)
 
 int main(int argc, char *argv[]) {
-  
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "Failed to initialize hpx\n");
@@ -77,6 +75,7 @@ int main(int argc, char *argv[]) {
     switch (opt) {
      case 'm':
        _text = true;
+       break;
      case 'v':
        _verbose = true;
        break;
@@ -109,8 +108,6 @@ int main(int argc, char *argv[]) {
   printf("Running: {iterations: %d}, {message: %d}, {verbose: %d}\n",
          args.id, _text, _verbose);
 
-  _register_actions();
-
   hpx_time_t start = hpx_time_now();
   e = hpx_run(&_ping, &args, sizeof(args));
   double elapsed = (double)hpx_time_elapsed_ms(start);
@@ -122,7 +119,7 @@ int main(int argc, char *argv[]) {
 /**
  * Send a ping message.
  */
-static int _action_ping(args_t *args) {
+static HPX_ACTION(_ping, args_t *args) {
   RANK_PRINTF("received '%s'\n", args->msg);
 
   // Reuse the message space for the next ping message.
@@ -155,7 +152,7 @@ static int _action_ping(args_t *args) {
 /**
  * Handle a pong action.
  */
-static int _action_pong(args_t *args) {
+static HPX_ACTION(_pong, args_t *args) {
   RANK_PRINTF("received '%s'\n", args->msg);
 
   // reuse args
@@ -177,17 +174,6 @@ static int _action_pong(args_t *args) {
   hpx_parcel_send_sync(p);
   return HPX_SUCCESS;
 }
-
-
-/**
- * Registers functions as actions.
- */
-void _register_actions(void) {
-  /* register action for parcel (must be done by all ranks) */
-  HPX_REGISTER_ACTION(_action_ping, &_ping);
-  HPX_REGISTER_ACTION(_action_pong, &_pong);
-}
-
 
 hpx_addr_t _partner(void) {
   int rank = hpx_get_my_rank();
