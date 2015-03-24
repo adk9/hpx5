@@ -45,14 +45,10 @@ static HPX_ACTION(gas_alloc, void *UNUSED) {
 
 static HPX_ACTION(gas_memalign, void *UNUSED) {
   printf("Starting GAS memalign\n");
-  int alignments[20];
   for (int i = 4, e = 24; i < e; ++i) {
-    alignments[i] = 1ul << i;
-  }
-
-  for (int i = 4, e = 24; i < e; ++i) {
-    printf("checking alignment %d\n", alignments[i]);
-    hpx_addr_t local = hpx_gas_memalign(alignments[i], N);
+    unsigned long alignment = (1UL << i);
+    printf("checking alignment %lu\n", alignment);
+    hpx_addr_t local = hpx_gas_memalign(alignment, N);
     if (!local) {
       fflush(stdout);
       fprintf(stderr, "hpx_gas_memalign returned HPX_NULL\n");
@@ -62,7 +58,7 @@ static HPX_ACTION(gas_memalign, void *UNUSED) {
       fflush(stdout);
       fprintf(stderr, "hpx_gas_memalign returned non-local memory\n");
     }
-    if ((uintptr_t)ptr & (alignments[i] - 1)) {
+    if ((uintptr_t)ptr & (alignment - 1)) {
       fflush(stdout);
       fprintf(stderr, "hpx_gas_memalign failed to return aligned address\n");
     }
