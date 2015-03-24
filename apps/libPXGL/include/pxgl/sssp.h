@@ -9,9 +9,10 @@
 //
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
-// =============================================================================
+//=============================================================================
 
 #include "defs.h"
+#include "termination.h"
 
 #ifndef PXGL_SSSP_H
 #define PXGL_SSSP_H
@@ -42,5 +43,13 @@ typedef struct {
   size_t num_elem;
 } sssp_init_dc_args_t;
 extern hpx_action_t initialize_sssp_kind;
+
+// Arguments for the main SSSP action
+typedef struct {
+  sssp_kind_t sssp_kind;
+  sssp_init_dc_args_t sssp_init_dc_args;
+  size_t delta;
+  size_t level;
+} _sssp_args_t;
 
 #endif // PXGL_SSSP_H

@@ -6,7 +6,7 @@
 
 #include "hpx/hpx.h"
 #include "libsync/sync.h"
-#include "libpxgl/adjacency_list.h"
+#include "pxgl/adjacency_list.h"
 #include "libpxgl/sssp_dc.h"
 #include "libpxgl/sssp_common.h"
 #include "libpxgl/pqueue_wrapper.h"

@@ -31,7 +31,7 @@
  * @{
  */
 
-#include "adjacency_list.h"
+#include "pxgl/adjacency_list.h"
 
 #ifndef PQUEUE_H
 #define PQUEUE_H

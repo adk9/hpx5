@@ -151,7 +151,7 @@ void sample_roots(sssp_uint_t *root, sssp_uint_t nroot, size_t KEY,sssp_uint_t n
   /* double r; */
   sssp_uint_t m, t;
 
-  for (m = 0; m < nroot; ++m) root[m] = SSSP_UINT_MAX;
+  for (m = 0; m < nroot; ++m) root[m] = PXGL_UINT_MAX;
   m = 0; t = 0;
   while (m < nroot && t < numvertices) {
     size_t num_edges = 0;
@@ -189,7 +189,7 @@ void sample_roots(sssp_uint_t *root, sssp_uint_t nroot, size_t KEY,sssp_uint_t n
   /*   S = floor (n * r); */
   /*   cur += S+1; */
   /*   const hpx_addr_t index = hpx_addr_add(*graph, cur * sizeof(hpx_addr_t), _index_array_block_size); */
-  /*   SSSP_UINT_T num_edges; */
+  /*   PXGL_UINT_T num_edges; */
   /*   hpx_call_sync(index, _sssp_visit_source, &num_edges,sizeof(num_edges), NULL, 0); */
   /*   if(num_edges==0){ */
   /*     continue; */
@@ -200,7 +200,7 @@ void sample_roots(sssp_uint_t *root, sssp_uint_t nroot, size_t KEY,sssp_uint_t n
 
 #if !defined (NDEBUG)
   for (sssp_uint_t m = 0; m < nroot; ++m) {
-    // printf("root[%" SSSP_UINT_PRI "] is %" SSSP_UINT_PRI ".\n", m, root[m]);
+    // printf("root[%" PXGL_UINT_PRI "] is %" PXGL_UINT_PRI ".\n", m, root[m]);
     assert (root[m] >= 0 && root[m] < numvertices);
     for (sssp_uint_t m2 = m+1; m2 < nroot; ++m2)
       assert (root[m2] != root[m]);

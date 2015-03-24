@@ -63,7 +63,7 @@ void _send_update_to_neighbors(adj_list_vertex_t *const vertex, distance_t dista
                 &distance, sizeof(distance));
   }
   
-  // printf("Distance Action waiting on edges on (%" SSSP_UINT_PRI ", %" PRIu32 ", %" PRIu32 ")\n", target.offset, target.base_id, target.block_bytes);
+  // printf("Distance Action waiting on edges on (%" PXGL_UINT_PRI ", %" PRIu32 ", %" PRIu32 ")\n", target.offset, target.base_id, target.block_bytes);
   if (_get_termination() == AND_LCO_TERMINATION) {
     hpx_lco_wait(edges);
     hpx_lco_delete(edges, HPX_NULL);
@@ -73,7 +73,7 @@ void _send_update_to_neighbors(adj_list_vertex_t *const vertex, distance_t dista
 int _sssp_visit_vertex_action(const distance_t *const args) {
   const hpx_addr_t target = hpx_thread_current_target();
 
-  // printf("visit_vertex at %zu with distance %" SSSP_UINT_PRI"\n", target, *args);
+  // printf("visit_vertex at %zu with distance %" PXGL_UINT_PRI"\n", target, *args);
 
   hpx_addr_t vertex;
   hpx_addr_t *v;
@@ -83,7 +83,7 @@ int _sssp_visit_vertex_action(const distance_t *const args) {
   vertex = *v;
   hpx_gas_unpin(target);
 
-  // printf("Calling update distance on %" SSSP_UINT_PRI "\n", vertex);
+  // printf("Calling update distance on %" PXGL_UINT_PRI "\n", vertex);
 
   if (_get_termination() == AND_LCO_TERMINATION) {
     return hpx_call_sync(vertex, _sssp_process_vertex, NULL, 0, args, sizeof(*args));
@@ -97,7 +97,7 @@ static int _sssp_print_source_adj_list_action(const void *const args) {
   adj_list_vertex_t *vertex;
   if (!hpx_gas_try_pin(target, (void**)&vertex))
     return HPX_RESEND;
-  const SSSP_UINT_T num_edges = vertex->num_edges;
+  const PXGL_UINT_T num_edges = vertex->num_edges;
  
   printf("Printing source stat\n-------------------------------\n");
   if(num_edges>0){
@@ -122,7 +122,7 @@ static int _sssp_visit_source_action(const void *const args) {
     return HPX_RESEND;
   vertex = *v;
   hpx_gas_unpin(target);
-  printf("printing adjacency list for source %" SSSP_UINT_PRI "\n", vertex);
+  printf("printing adjacency list for source %" PXGL_UINT_PRI "\n", vertex);
 
   return hpx_call_sync(vertex, _sssp_print_source_adj_list, NULL, 0, NULL, 0);
 }

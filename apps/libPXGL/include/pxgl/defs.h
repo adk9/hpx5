@@ -15,24 +15,30 @@
 
 #include <inttypes.h>
 
-#ifdef SSSP_64BIT
-#define SSSP_UINT_T uint64_t
-#define SSSP_UINT_PRI PRIu64
-#define SSSP_UINT_MAX UINT64_MAX
-#define SSSP_INT_T int64_t
-#define SSSP_INT_PRI PRId64
-#define SSSP_INT_MAX INT64_MAX
-#elif defined(SSSP_32BIT)
-#define SSSP_UINT_T uint32_t
-#define SSSP_UINT_PRI PRIu32
-#define SSSP_UINT_MAX UINT32_MAX
-#define SSSP_INT_T int32_t
-#define SSSP_INT_PRI PRId32
-#define SSSP_INT_MAX INT32_MAX
+#ifdef PXGL_64BIT
+#define PXGL_UINT_T uint64_t
+#define PXGL_UINT_PRI PRIu64
+#define PXGL_UINT_MAX UINT64_MAX
+#define PXGL_INT_T int64_t
+#define PXGL_INT_PRI PRId64
+#define PXGL_INT_MAX INT64_MAX
+#elif defined(PXGL_32BIT)
+#define PXGL_UINT_T uint32_t
+#define PXGL_UINT_PRI PRIu32
+#define PXGL_UINT_MAX UINT32_MAX
+#define PXGL_INT_T int32_t
+#define PXGL_INT_PRI PRId32
+#define PXGL_INT_MAX INT32_MAX
 #endif
 
+typedef PXGL_UINT_T pxgl_uint_t;
+typedef PXGL_INT_T pxgl_int_t;
 
-typedef SSSP_UINT_T sssp_uint_t;
-typedef SSSP_INT_T sssp_int_t;
+typedef PXGL_UINT_T sssp_uint_t;
+typedef PXGL_INT_T sssp_int_t;
+
+typedef PXGL_UINT_T bfs_uint_t;
+typedef PXGL_INT_T bfs_int_t;
+
 
 #endif // LIBPXGL_DEFS_H

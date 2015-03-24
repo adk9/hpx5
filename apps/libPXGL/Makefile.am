@@ -19,14 +19,15 @@ libpxgl_la_SOURCES   = src/adjacency_list.c \
                        src/termination.c \
 		       src/graph500_edge_list_generator.c \
                        src/graph_generator.c \
+		       src/bfs.c \
                        generatorhelper/src/globals.c \
                        generatorhelper/src/prng.c  \
                        generatorhelper/src/splittable_mrg.c
                        #generatorhelper/src/mrg_transitions.c
 
 if CPU_ARM
-libpxgl_la_CPPFLAGS  = -I$(top_srcdir)/include -I$(srcdir)/include -DSSSP_32BIT
+libpxgl_la_CPPFLAGS  = -I$(top_srcdir)/include -I$(srcdir)/include -DPXGL_32BIT
 else
-libpxgl_la_CPPFLAGS  = -I$(top_srcdir)/include -I$(srcdir)/include -DSSSP_64BIT 
+libpxgl_la_CPPFLAGS  = -I$(top_srcdir)/include -I$(srcdir)/include -DPXGL_64BIT 
 endif
-libpxgl_la_LIBADD    = $(top_builddir)/libhpx/libhpx.la -lm
+libpxgl_la_LIBADD    = $(top_builddir)/libhpx/libhpx.la $(top_builddir)/libsync/libsync.la $(top_builddir)/libsync/arch/libarch.la -lm

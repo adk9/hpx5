@@ -1,0 +1,1 @@
+./configure --enable-pedantic --enable-wall --enable-debug --with-doxygen --enable-apps --enable-testsuite --with-mpi --with-check --enable-photon --with-ugni PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/home/users/p02119/software/install/pkconfig CC=cc CFLAGS="-g3 -ggdb"

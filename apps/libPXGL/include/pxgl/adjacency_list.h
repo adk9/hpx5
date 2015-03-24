@@ -34,11 +34,14 @@ typedef struct {
   distance_t weight;
 } adj_list_edge_t;
 
+#define COLOR_GRAY 0 // not visited
+#define COLOR_WHITE 1 // visited
 
 // Graph Vertex
 typedef struct {
   size_t num_edges;
   distance_t distance;
+  unsigned int color;
   adj_list_edge_t edge_list[];
 } adj_list_vertex_t;
 

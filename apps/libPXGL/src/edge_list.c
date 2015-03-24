@@ -54,7 +54,7 @@ int _edge_list_from_file_local_action(const _edge_list_from_file_local_args_t *a
 	skipped++;
 	continue;
       }
-      sscanf(&line[1], " %" SSSP_UINT_PRI " %" SSSP_UINT_PRI " %" SSSP_UINT_PRI, &edge->source, &edge->dest, &edge->weight);
+      sscanf(&line[1], " %" PXGL_UINT_PRI " %" PXGL_UINT_PRI " %" PXGL_UINT_PRI, &edge->source, &edge->dest, &edge->weight);
       // printf("%s", &line[1]);
       const sssp_uint_t position = count++ + skipped;
       hpx_addr_t e = hpx_addr_add(args->el.edge_list, position * sizeof(edge_list_edge_t), args->el.edge_list_bsize);
@@ -88,7 +88,7 @@ int edge_list_from_file_action(const edge_list_from_file_args_t * const args) {
     case 'c': continue;
     case 'a': continue;
     case 'p':
-      sscanf(&line[1], " sp %" SSSP_UINT_PRI " %" SSSP_UINT_PRI, &el->num_vertices, &el->num_edges);
+      sscanf(&line[1], " sp %" PXGL_UINT_PRI " %" PXGL_UINT_PRI, &el->num_vertices, &el->num_edges);
       // Account for the  DIMACS graph format (.gr) where the node
       // ids range from 1..n
       el->num_vertices++;

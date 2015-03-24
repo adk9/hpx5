@@ -39,18 +39,18 @@ termination_t _get_termination() {
   return sync_load(&_termination, SYNC_RELAXED);
 }
 
-static void _termination_detection_op(SSSP_UINT_T *const output, const SSSP_UINT_T *const input, const size_t size) {
+static void _termination_detection_op(PXGL_UINT_T *const output, const PXGL_UINT_T *const input, const size_t size) {
   output[0] = output[0] + input[0];
   output[1] = output[1] + input[1];
 }
 
 static void _termination_detection_init(void *init_val, const size_t init_val_size) {
-  ((SSSP_UINT_T*)init_val)[0] = 0;
-  ((SSSP_UINT_T*)init_val)[1] = 0;  
+  ((PXGL_UINT_T*)init_val)[0] = 0;
+  ((PXGL_UINT_T*)init_val)[1] = 0;  
 }
 
 static int _send_termination_count_action(const hpx_addr_t *const args) {
-  SSSP_UINT_T current_counts[2];
+  PXGL_UINT_T current_counts[2];
   // Order all previous relaxed memory accesses.
   sync_fence(SYNC_SEQ_CST);
   current_counts[1] = sync_load(&finished_count, SYNC_RELAXED);
@@ -91,7 +91,7 @@ void _initialize_termination() {
 void _detect_termination(const hpx_addr_t termination_lco, const hpx_addr_t internal_termination_lco) {
   hpx_addr_t termination_count_lco = hpx_lco_allreduce_new(HPX_LOCALITIES, 1, 2*sizeof(sssp_int_t), (hpx_monoid_id_t)_termination_detection_init, (hpx_monoid_op_t) _termination_detection_op);
   enum { PHASE_1, PHASE_2 } phase = PHASE_1;
-  SSSP_UINT_T last_finished_count = 0;
+  PXGL_UINT_T last_finished_count = 0;
 
   while(true) {
     hpx_bcast(_send_termination_count, HPX_NULL, &termination_count_lco,
@@ -101,7 +101,7 @@ void _detect_termination(const hpx_addr_t termination_lco, const hpx_addr_t inte
     const sssp_uint_t active_count = activity_counts[0];
     const sssp_uint_t finished_count = activity_counts[1];
     sssp_int_t activity_count = active_count - finished_count;
-    //printf("activity_count: %" SSSP_INT_PRI ", active: %" SSSP_UINT_PRI ", finished %" SSSP_UINT_PRI ", phase: %d\n", activity_count, active_count, finished_count, phase);
+    //printf("activity_count: %" PXGL_INT_PRI ", active: %" PXGL_UINT_PRI ", finished %" PXGL_UINT_PRI ", phase: %d\n", activity_count, active_count, finished_count, phase);
     if (activity_count != 0) {
       phase = PHASE_1;
       continue;
@@ -110,7 +110,7 @@ void _detect_termination(const hpx_addr_t termination_lco, const hpx_addr_t inte
       hpx_lco_set(termination_lco, 0, NULL, HPX_NULL, HPX_NULL);
       hpx_lco_set(internal_termination_lco, 0, NULL, HPX_NULL, HPX_NULL);
       // printf("Termination LCOs set.\n");
-      // printf("Finished termination detection with active: %" SSSP_UINT_PRI ", finished %" SSSP_UINT_PRI "\n", active_count, finished_count);
+      // printf("Finished termination detection with active: %" PXGL_UINT_PRI ", finished %" PXGL_UINT_PRI "\n", active_count, finished_count);
       break;
     } else {
       phase = PHASE_2;

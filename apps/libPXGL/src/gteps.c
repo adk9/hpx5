@@ -25,7 +25,7 @@ static int _gteps_send_dist_action(const hpx_addr_t *const args) {
   vertex = *v;
   hpx_gas_unpin(target);
 
-  if(vertex.distance==SSSP_UINT_MAX){
+  if(vertex.distance==PXGL_UINT_MAX){
     const size_t edge_traversed = 0;
     hpx_lco_set(*args, sizeof(edge_traversed), &edge_traversed, HPX_NULL, HPX_NULL);
   }

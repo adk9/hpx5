@@ -6,7 +6,7 @@
 #include "hpx/hpx.h"
 #include "libsync/sync.h"
 #include "libpxgl/termination.h"
-#include "libpxgl/adjacency_list.h"
+#include "pxgl/adjacency_list.h"
 
 #define PXGL_ADJ_SYNC_ARG(orig, lco_name, arg_name) \
 typedef struct { \
@@ -97,7 +97,7 @@ static int _init_vertex_action(const hpx_addr_t * const vertices_sync) {
      return HPX_RESEND;
 
    vertex->num_edges = 0;
-   vertex->distance = SSSP_UINT_MAX;
+   vertex->distance = PXGL_UINT_MAX;
 
    _increment_finished_count();
 
@@ -220,7 +220,7 @@ static int _print_edge_action(int *i)
     return HPX_RESEND;
 
   hpx_gas_unpin(target);
-  printf("%d %" SSSP_UINT_PRI " %" SSSP_UINT_PRI " %" SSSP_UINT_PRI ".\n", *i, edge->source, edge->dest, edge->weight);
+  printf("%d %" PXGL_UINT_PRI " %" PXGL_UINT_PRI " %" PXGL_UINT_PRI ".\n", *i, edge->source, edge->dest, edge->weight);
   return HPX_SUCCESS;
 }
 
@@ -234,7 +234,7 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
   _index_array_block_size = ((el->num_vertices + HPX_LOCALITIES - 1) / HPX_LOCALITIES) * sizeof(hpx_addr_t);
   // Array is allocated while the broadst of the block size is performed
   index_array = hpx_gas_global_alloc(HPX_LOCALITIES, _index_array_block_size);
-  // printf("Index array block size is %" SSSP_UINT_PRI ".\n", _index_array_block_size); 
+  // printf("Index array block size is %" PXGL_UINT_PRI ".\n", _index_array_block_size); 
   hpx_bcast(_set_index_array_bsize, allocs_sync_lco,
 	    &_index_array_block_size, sizeof(_index_array_block_size));
   hpx_bcast(_set_index_array, allocs_sync_lco, &index_array,
@@ -258,7 +258,7 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
 
   _initialize_termination();
 
-  // printf("edge_list is %" PRIxPTR " with source %" SSSP_UINT_PRI ", target %" SSSP_UINT_PRI ", and weight %" SSSP_UINT_PRI ".\n", edge_list, edge_list->source, edge_list->dest, edge_list->weight);
+  // printf("edge_list is %" PRIxPTR " with source %" PXGL_UINT_PRI ", target %" PXGL_UINT_PRI ", and weight %" PXGL_UINT_PRI ".\n", edge_list, edge_list->source, edge_list->dest, edge_list->weight);
   //#include <sys/mman.h>
   //mprotect(edge_list, el->edge_list_bsize * 24, PROT_READ);
 
@@ -267,10 +267,14 @@ int adj_list_from_edge_list_action(const edge_list_t * const el) {
     //hpx_addr_t edge = hpx_addr_add(el->edge_list, i * sizeof(edge_list_edge_t), el->edge_list_bsize);
    //hpx_call(edge, _count_edge, HPX_NULL, &count_array, sizeof(count_array));
    //}
+
+  // TODO what is going on here ?
   hpx_count_range_call(_count_edge, el->edge_list, el->num_edges, sizeof(edge_list_edge_t), el->edge_list_bsize, 0, NULL);
   double elapsed = hpx_time_elapsed_ms(now)/1e3;
   printf("Time elapsed in the loop: %f\n", elapsed);
   now = hpx_time_now();
+
+  // What is happening here ? Why termination is called ?
   hpx_addr_t edges_sync = hpx_lco_and_new(2);
   _increment_active_count(el->num_edges);
   _detect_termination(edges_sync, edges_sync);
@@ -327,7 +331,8 @@ static int _init_vertex_distance_action(void *arg) {
    if (!hpx_gas_try_pin(target, (void**)&vertex))
      return HPX_RESEND;
 
-   vertex->distance = SSSP_UINT_MAX;
+   vertex->distance = PXGL_UINT_MAX;
+   vertex->color = COLOR_GRAY;
 
    hpx_gas_unpin(target);
    return HPX_SUCCESS;

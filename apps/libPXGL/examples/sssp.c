@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <inttypes.h>
+#include <assert.h>
 
 #include "hpx/hpx.h"
 #include "pxgl/pxgl.h"
@@ -53,7 +54,8 @@ static void _usage(FILE *stream) {
 	  "\t-t, queue size threshold for chatoic relaxation\n"
 	  "\t-u, use the DC1 implementation of distributed control\n"
 	  "\t-y, yield count\n"
-	  "\t-z, use delta stepping (with chaotic or DC), specify delta parameter\n");
+	  "\t-z, use delta stepping (with chaotic or DC), specify delta parameter\n"
+	  "\t-m, which algorithm to run; available algorithms - sssp, bfs\n");
   hpx_print_help();
   fflush(stream);
 }
@@ -111,7 +113,7 @@ static int _read_dimacs_spec(char **filename, sssp_uint_t *nproblems, sssp_uint_
         sscanf(&line[1], " %lu", &((*problems)[count++]));
         break;
       case 'p':
-        sscanf(&line[1], " aux sp ss %" SSSP_UINT_PRI, nproblems);
+        sscanf(&line[1], " aux sp ss %" PXGL_UINT_PRI, nproblems);
         *problems = malloc(*nproblems * sizeof(sssp_uint_t));
         assert(*problems);
         break;
@@ -124,86 +126,103 @@ static int _read_dimacs_spec(char **filename, sssp_uint_t *nproblems, sssp_uint_
   return 0;
 }
 
-// Arguments for the main SSSP action
-typedef struct {
-  char *filename;
-  sssp_uint_t nproblems;
-  sssp_uint_t *problems;
-  char *prob_file;
-  sssp_uint_t time_limit;
-  int realloc_adj_list;
-  sssp_kind_t sssp_kind;
-  sssp_init_dc_args_t sssp_init_dc_args;
-  size_t delta;
-  termination_t termination;
-  graph_generator_type_t graph_generator_type;
-  int scale;                    
-  int edgefactor;
-  bool checksum;
-  size_t level;
-} _sssp_args_t;
+static void _execute_bfs(_pxgl_args_t *pxgl_args, edge_list_t* p_el,
+			 FILE *results_file) {
+  const int realloc_adj_list = pxgl_args->realloc_adj_list;
 
-static hpx_action_t _main;
-static int _main_action(_sssp_args_t *args) {
-  const int realloc_adj_list = args->realloc_adj_list;
+  call_bfs_args_t bfs_args;
 
-  // set the termination-detection algorithm type.
-  set_termination(args->termination);
-  edge_list_t el;
+  double total_elapsed_time = 0.0;
+
+  //  size_t *edge_traversed =(size_t *) calloc(pxgl_args->nproblems, sizeof(size_t));
+  double *elapsed_time = (double *) calloc(pxgl_args->nproblems, sizeof(double));
   
-  if (args->graph_generator_type == _GRAPH500) {
-    // Create an edge list structure          
-    // printf("Generating edge-list as Graph500 spec\n");
-    const graph500_edge_list_generator_args_t graph500_edge_list_generator_args = {
-      .scale = args->scale,
-      .locality_readers = HPX_LOCALITIES,
-      .thread_readers = HPX_THREADS,
-      .edgefactor = args->edgefactor
-    };
-    hpx_call_sync(HPX_HERE, graph500_edge_list_generator, &el, sizeof(el),
-                  &graph500_edge_list_generator_args,
-                  sizeof(graph500_edge_list_generator_args));
-    printf("Edge List: #v = %lu, #e = %lu\n", el.num_vertices, el.num_edges);
+  if (!realloc_adj_list) {
+    // Construct the graph as an adjacency list
+    hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &bfs_args.graph,
+                  sizeof(bfs_args.graph), p_el, sizeof(edge_list_t));
+  }
+  
+  if (pxgl_args->graph_generator_type == _GRAPH500) {
+    // printf("Starting sampling the graph for sources\n");
+    sample_graph(&pxgl_args->problems, pxgl_args->nproblems,pxgl_args->edgefactor,
+		 p_el->num_vertices,&bfs_args.graph);
+    // printf("Sampling done\n");
+  }
+  
+  // printf("Calling BFS init \n");
+  hpx_bcast_sync(bfs_init, NULL, 0);
+  //  printf("Calling BFS init Done. \n");
 
+  for (int i = 0; i < pxgl_args->nproblems; ++i) {
+    printf("Iterating problems ... \n");
+    if (total_elapsed_time > pxgl_args->time_limit) {
+      printf("Inside loop \n");
+      printf("Time limit of %" PXGL_UINT_PRI " seconds reached. Stopping further SSSP runs.\n", 
+	     pxgl_args->time_limit);
+      pxgl_args->nproblems = i;
+      break;
+    }
+
+    printf("BFS: Before reallocation ...\n");
+    if (realloc_adj_list) {
+      // Construct the graph as an adjacency list
+      hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &bfs_args.graph,
+                    sizeof(bfs_args.graph), p_el, sizeof(edge_list_t));
+    }
+    printf("BFS: After reallocation ...\n");
+
+    bfs_args.source = pxgl_args->problems[i];
+    hpx_time_t now = hpx_time_now();
+
+    // Call the BFS algorithm
+    hpx_addr_t bfs_lco = hpx_lco_future_new(0);
+    bfs_args.termination_lco = bfs_lco;
+
+    printf("Calling BFS ...\n");
+    hpx_call(HPX_HERE, call_bfs, HPX_NULL, &bfs_args, sizeof(bfs_args));
+
+    // printf("Waiting for termination LCO at: %zu\n", sssp_lco);
+    hpx_lco_wait(bfs_lco);
+    // printf("Finished waiting for termination LCO at: %zu\n", sssp_lco);
+    hpx_lco_delete(bfs_lco, HPX_NULL);
+
+    double elapsed = hpx_time_elapsed_ms(now)/1e3;
+    elapsed_time[i] = elapsed;
+    total_elapsed_time += elapsed;
   }
 
-  else if (args->graph_generator_type == _DIMACS) {
-    // Create an edge list structure from the given filename
-    printf("Allocating edge-list from file %s.\n", args->filename);
-    const edge_list_from_file_args_t edge_list_from_file_args = {
-      .locality_readers = HPX_LOCALITIES,
-      .thread_readers = HPX_THREADS/2 + 1,
-      .filename = args->filename
-    };
-    hpx_call_sync(HPX_HERE, edge_list_from_file, &el, sizeof(el),
-                  &edge_list_from_file_args, sizeof(edge_list_from_file_args));
-    printf("Edge List: #v = %lu, #e = %lu\n",
-	   el.num_vertices, el.num_edges);
+  if (!realloc_adj_list) {
+    hpx_call_sync(bfs_args.graph, free_adj_list, NULL, 0, NULL, 0);
   }
-  // Open the results file and write the basic info out
-  FILE *results_file = fopen("sample.ss.chk", "w");
-  fprintf(results_file, "%s\n","p chk sp ss sssp");
-  fprintf(results_file, "%s %s %s\n","f", args->filename,args->prob_file);
-  fprintf(results_file, "%s %lu %lu %lu %lu\n","g", el.num_vertices, el.num_edges, 0L, 0L);
-  // min and max edge weight needs to be reimplemented
-  // el.min_edge_weight, el.max_edge_weight);
+
+  double avg_time_per_source = total_elapsed_time/pxgl_args->nproblems;
+
+  printf("Average time per visit : %.7f seconds", avg_time_per_source);
+ 
+}
+
+static void _execute_sssp(_pxgl_args_t *pxgl_args, _sssp_args_t* args, edge_list_t* p_el,
+			  FILE *results_file) {
+  const int realloc_adj_list = pxgl_args->realloc_adj_list;
 
   call_sssp_args_t sargs;
 
   double total_elapsed_time = 0.0;
 
-  size_t *edge_traversed =(size_t *) calloc(args->nproblems, sizeof(size_t));
-  double *elapsed_time = (double *) calloc(args->nproblems, sizeof(double));
+  size_t *edge_traversed =(size_t *) calloc(pxgl_args->nproblems, sizeof(size_t));
+  double *elapsed_time = (double *) calloc(pxgl_args->nproblems, sizeof(double));
   
   if (!realloc_adj_list) {
     // Construct the graph as an adjacency list
     hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &sargs.graph,
-                  sizeof(sargs.graph), &el, sizeof(el));
+                  sizeof(sargs.graph), p_el, sizeof(edge_list_t));
   }
   
-  if (args->graph_generator_type == _GRAPH500) {
+  if (pxgl_args->graph_generator_type == _GRAPH500) {
     // printf("Starting sampling the graph for sources\n");
-    sample_graph(&args->problems, args->nproblems,args->edgefactor,el.num_vertices,&sargs.graph);
+    sample_graph(&pxgl_args->problems, pxgl_args->nproblems,pxgl_args->edgefactor,
+		 p_el->num_vertices,&sargs.graph);
     // printf("Sampling done\n");
   }
   
@@ -225,7 +244,7 @@ static int _main_action(_sssp_args_t *args) {
       sargs.delta = args->delta;
     } 
   } else {
-      sargs.delta = 0;
+    sargs.delta = 0;
   }
   
 
@@ -237,20 +256,21 @@ static int _main_action(_sssp_args_t *args) {
 
   // printf("About to enter problem loop.\n");
 
-  for (int i = 0; i < args->nproblems; ++i) {
-    if (total_elapsed_time > args->time_limit) {
-      printf("Time limit of %" SSSP_UINT_PRI " seconds reached. Stopping further SSSP runs.\n", args->time_limit);
-      args->nproblems = i;
+  for (int i = 0; i < pxgl_args->nproblems; ++i) {
+    if (total_elapsed_time > pxgl_args->time_limit) {
+      printf("Time limit of %" PXGL_UINT_PRI " seconds reached. Stopping further SSSP runs.\n", 
+	     pxgl_args->time_limit);
+      pxgl_args->nproblems = i;
       break;
     }
 
     if (realloc_adj_list) {
       // Construct the graph as an adjacency list
       hpx_call_sync(HPX_HERE, adj_list_from_edge_list, &sargs.graph,
-                    sizeof(sargs.graph), &el, sizeof(el));
+                    sizeof(sargs.graph), p_el, sizeof(edge_list_t));
     }
 
-    sargs.source = args->problems[i];
+    sargs.source = pxgl_args->problems[i];
     sargs.k_level = args-> level;
     hpx_time_t now = hpx_time_now();
 
@@ -302,11 +322,11 @@ static int _main_action(_sssp_args_t *args) {
 
     
     hpx_addr_t checksum_lco = HPX_NULL;
-    if(args->checksum)hpx_call_sync(sargs.graph, dimacs_checksum,
+    if(pxgl_args->checksum)hpx_call_sync(sargs.graph, dimacs_checksum,
                                     &checksum_lco, sizeof(checksum_lco),
-                                    &el.num_vertices, sizeof(el.num_vertices));
+                                    p_el->num_vertices, sizeof(p_el->num_vertices));
     size_t checksum = 0;
-    if(args->checksum) {
+    if(pxgl_args->checksum) {
       hpx_lco_get(checksum_lco, sizeof(checksum), &checksum);
       hpx_lco_delete(checksum_lco, HPX_NULL);
     }
@@ -314,8 +334,8 @@ static int _main_action(_sssp_args_t *args) {
     //printf("Computing GTEPS...\n");
     hpx_addr_t gteps_lco = HPX_NULL;
     hpx_call_sync(sargs.graph, gteps_calculate, &gteps_lco,
-                  sizeof(gteps_lco), &el.num_vertices,
-                  sizeof(el.num_vertices));
+                  sizeof(gteps_lco), p_el->num_vertices,
+                  sizeof(p_el->num_vertices));
     size_t gteps = 0;
     hpx_lco_get(gteps_lco, sizeof(gteps), &gteps);
     hpx_lco_delete(gteps_lco, HPX_NULL);
@@ -323,12 +343,12 @@ static int _main_action(_sssp_args_t *args) {
     //printf("Gteps is %zu\n", gteps);
 
     printf("Finished problem %d in %.7f seconds (csum = %zu).\n", i, elapsed, checksum);
-    if(args->checksum) fprintf(results_file, "d %zu\n", checksum);
+    if(pxgl_args->checksum) fprintf(results_file, "d %zu\n", checksum);
 
     if (realloc_adj_list) {
       hpx_call_sync(sargs.graph, free_adj_list, NULL, 0, NULL, 0);
     } else {
-      reset_adj_list(sargs.graph, &el);
+      reset_adj_list(sargs.graph, p_el);
     }
   }
 
@@ -370,13 +390,13 @@ static int _main_action(_sssp_args_t *args) {
 #endif
 
   printf("\nTEPS statistics:\n");
-  double *tm = (double*)malloc(sizeof(double)*args->nproblems);
+  double *tm = (double*)malloc(sizeof(double)*pxgl_args->nproblems);
   double *stats = (double*)malloc(sizeof(double)*9);
 
-  for(int i = 0; i < args->nproblems; i++)
+  for(int i = 0; i < pxgl_args->nproblems; i++)
     tm[i] = edge_traversed[i]/elapsed_time[i];
 
-  statistics (stats, tm, args->nproblems);
+  statistics (stats, tm, pxgl_args->nproblems);
   PRINT_STATS("TEPS", 1);
 
   free(tm);
@@ -384,6 +404,63 @@ static int _main_action(_sssp_args_t *args) {
   free(edge_traversed);
   free(elapsed_time);
 
+}
+
+static hpx_action_t _main;
+static int _main_action(_pxgl_args_t *pxgl_args) {
+  // set the termination-detection algorithm type.
+  set_termination(pxgl_args->termination);
+  edge_list_t el;
+  
+  if (pxgl_args->graph_generator_type == _GRAPH500) {
+    // Create an edge list structure          
+    // printf("Generating edge-list as Graph500 spec\n");
+    const graph500_edge_list_generator_args_t graph500_edge_list_generator_args = {
+      .scale = pxgl_args->scale,
+      .locality_readers = HPX_LOCALITIES,
+      .thread_readers = HPX_THREADS,
+      .edgefactor = pxgl_args->edgefactor
+    };
+    hpx_call_sync(HPX_HERE, graph500_edge_list_generator, &el, sizeof(el),
+                  &graph500_edge_list_generator_args,
+                  sizeof(graph500_edge_list_generator_args));
+    printf("Edge List: #v = %lu, #e = %lu\n", el.num_vertices, el.num_edges);
+
+  }
+
+  else if (pxgl_args->graph_generator_type == _DIMACS) {
+    // Create an edge list structure from the given filename
+    printf("Allocating edge-list from file %s.\n", pxgl_args->filename);
+    const edge_list_from_file_args_t edge_list_from_file_args = {
+      .locality_readers = HPX_LOCALITIES,
+      .thread_readers = HPX_THREADS/2 + 1,
+      .filename = pxgl_args->filename
+    };
+    hpx_call_sync(HPX_HERE, edge_list_from_file, &el, sizeof(el),
+                  &edge_list_from_file_args, sizeof(edge_list_from_file_args));
+    printf("Edge List: #v = %lu, #e = %lu\n",
+	   el.num_vertices, el.num_edges);
+  }
+  // Open the results file and write the basic info out
+  FILE *results_file = fopen("sample.ss.chk", "w");
+  fprintf(results_file, "%s\n","p chk sp ss sssp");
+  fprintf(results_file, "%s %s %s\n","f", pxgl_args->filename,pxgl_args->prob_file);
+  fprintf(results_file, "%s %lu %lu %lu %lu\n","g", el.num_vertices, el.num_edges, 0L, 0L);
+  // min and max edge weight needs to be reimplemented
+  // el.min_edge_weight, el.max_edge_weight);
+
+  //printf("About to call the algorithm\n");
+
+  if (pxgl_args->mode == _MODE_SSSP) {
+    _sssp_args_t* sssp_args = (_sssp_args_t*)pxgl_args->algorithm_args;
+    _execute_sssp(pxgl_args, sssp_args, &el, results_file);
+  } else if (pxgl_args->mode == _MODE_BFS) {
+    printf("Calling BFS \n");
+    _execute_bfs(pxgl_args, &el, results_file);
+    // TODO
+  } else 
+    assert(false);
+ 
   hpx_shutdown(HPX_SUCCESS);
   return HPX_SUCCESS;
 }
@@ -406,6 +483,8 @@ int main(int argc, char *argv[argc]) {
   sssp_uint_t nproblems = 2;
   sssp_uint_t *problems;
 
+  algorithm_mode_t mode = _MODE_SSSP;
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
@@ -413,7 +492,7 @@ int main(int argc, char *argv[argc]) {
   }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "e:f:g:l:q:s:t:y:z:abcdhkpu?")) != -1) {
+  while ((opt = getopt(argc, argv, "m:e:f:g:l:q:s:t:y:z:abcdhkpu?")) != -1) {
     switch (opt) {
     case 'q':
       time_limit = strtoul(optarg, NULL, 0);
@@ -469,6 +548,18 @@ int main(int argc, char *argv[argc]) {
       sssp_kind = KLEVEL_SSSP_KIND;
       level = strtoul(optarg, NULL, 0);
       break;
+    case 'm':
+      // sets the algorithm mode, values available sssp, bfs
+      printf("Inside mode selection %s\n", optarg);
+      if(strcmp(optarg, "bfs") == 0) {
+	mode = _MODE_BFS;
+      } else if (strcmp(optarg, "sssp") == 0) {
+	mode = _MODE_SSSP;
+      } else {
+	fprintf(stderr, "Invalid algorithm - available options are bfs and sssp\n");
+	_usage(stderr);
+      }
+      break;
     case '?':
     default:
       _usage(stderr);
@@ -504,23 +595,6 @@ int main(int argc, char *argv[argc]) {
     // Read the DIMACS problem specification file
     _read_dimacs_spec(&problem_file, &nproblems, &problems);
   }
-  
-  _sssp_args_t args = { .filename = graph_file,
-                        .nproblems = nproblems,
-                        .problems = problems,
-                        .prob_file = problem_file,
-                        .time_limit = time_limit,
-                        .realloc_adj_list = realloc_adj_list,
-			.sssp_kind = sssp_kind,
-			.sssp_init_dc_args = sssp_init_dc_args,
-			.delta = delta,
-                        .termination = termination,
-			.graph_generator_type = graph_generator_type, 
-			.scale = SCALE, 
-			.edgefactor = edgefactor,
-			.checksum = checksum,
-			.level = level
-  };
 
   // register the actions
   HPX_REGISTER_ACTION(_print_vertex_distance_index_action,
@@ -528,7 +602,55 @@ int main(int argc, char *argv[argc]) {
   HPX_REGISTER_ACTION(_print_vertex_distance_action, &_print_vertex_distance);
   HPX_REGISTER_ACTION(_main_action, &_main);
 
-  e = hpx_run(&_main, &args, sizeof(args));
+  if (mode == _MODE_SSSP) {
+    _sssp_args_t sssp_args = {
+			  .sssp_kind = sssp_kind,
+			  .sssp_init_dc_args = sssp_init_dc_args,
+			  .delta = delta,
+			  .level = level
+    };
+
+    _pxgl_args_t args = { .filename = graph_file,
+			  .nproblems = nproblems,
+			  .problems = problems,
+			  .prob_file = problem_file,
+			  .time_limit = time_limit,
+			  .realloc_adj_list = realloc_adj_list,
+			  .termination = termination,
+			  .graph_generator_type = graph_generator_type, 
+			  .scale = SCALE, 
+			  .edgefactor = edgefactor,
+			  .checksum = checksum,
+			  .mode = _MODE_SSSP,
+			  .algorithm_args = &sssp_args
+			
+    };
+
+
+    e = hpx_run(&_main, &args, sizeof(args));
+  } else if (mode == _MODE_BFS) {
+    _pxgl_args_t args = { .filename = graph_file,
+			  .nproblems = nproblems,
+			  .problems = problems,
+			  .prob_file = problem_file,
+			  .time_limit = time_limit,
+			  .realloc_adj_list = realloc_adj_list,
+			  .termination = termination,
+			  .graph_generator_type = graph_generator_type, 
+			  .scale = SCALE, 
+			  .edgefactor = edgefactor,
+			  .checksum = checksum,
+			  .mode = _MODE_BFS,
+			  .algorithm_args = NULL
+			
+    };
+
+    e = hpx_run(&_main, &args, sizeof(args));
+  } else {
+    // shouldnt be coming here
+    assert(false);
+  }
+
   free(problems);
   return e;
 }

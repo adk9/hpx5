@@ -53,6 +53,10 @@ void sync_two_lock_queue_init(two_lock_queue_t *q, two_lock_queue_node_t *n) {
   q->head = q->tail = (n) ? n : _node_new(NULL);
 }
 
+int sync_two_lock_queue_empty(two_lock_queue_t *q) {
+  return ((q->head == NULL) && (q->tail == NULL));
+}
+
 
 two_lock_queue_t *sync_two_lock_queue_new(void) {
   two_lock_queue_t *q = NULL;

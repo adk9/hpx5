@@ -6,7 +6,7 @@
 #define MODUL ((distance_t) 1 << (sizeof(distance_t) * 8 - 2))
 
 static void dimacs_checksum_op(distance_t *const output, const distance_t *const input, const size_t size) {
-  *output = *output + (*input == SSSP_UINT_MAX ? 0 : *input % MODUL) % MODUL;
+  *output = *output + (*input == PXGL_UINT_MAX ? 0 : *input % MODUL) % MODUL;
 }
 
 static void dimacs_checksum_init(void *init_val, const size_t init_val_size) {
