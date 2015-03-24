@@ -19,6 +19,7 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
+#include <libhpx/padding.h>
 #include <libhpx/parcel.h>
 #include "commands.h"
 #include "parcel_emulation.h"
@@ -27,10 +28,18 @@
 #include "xport.h"
 
 typedef struct {
-  size_t        n;
-  size_t        i;
-  char      *base;
-  xport_key_t key;
+  size_t remaining;
+  PAD_TO_CACHELINE(sizeof(size_t));
+  char       bytes[];
+} parcel_block_t;
+
+_HPX_ASSERT(sizeof(parcel_block_t) == HPX_CACHELINE_SIZE, block_header_size);
+
+typedef struct {
+  size_t              n;
+  size_t              i;
+  parcel_block_t *block;
+  xport_key_t       key;
 } buffer_t;
 
 typedef struct {
@@ -52,17 +61,37 @@ typedef struct {
 static COMMAND_DECL(_reload_request);
 static COMMAND_DECL(_reload_reply);
 
+static parcel_block_t *_block_memalign(size_t align, size_t n, size_t *offset) {
+  size_t bytes = n - sizeof(parcel_block_t);
+  dbg_assert(bytes < n);
+  parcel_block_t *block = registered_memalign(align, n);
+  block->remaining = bytes;
+  *offset = offsetof(parcel_block_t, bytes);
+  return block;
+}
+
+static void _block_free(parcel_block_t *block) {
+  if (block->remaining != 0) {
+    log_parcel("block freed with %zu bytes remaining\n", block->remaining);
+  }
+  registered_free(block);
+}
+
+static char *_block_at(parcel_block_t *block, size_t offset) {
+  return &block->bytes[offset - sizeof(*block)];
+}
+
 static void _buffer_fini(buffer_t *b) {
   if (b) {
-    registered_free(b->base);
+    _block_free(b->block);
   }
 }
 
 static void _buffer_reload(buffer_t *b, pwc_xport_t *xport) {
-  b->i = 0;
-  b->base = registered_calloc(1, b->n);
-  int e = xport->key_find(xport, b->base, b->n, &b->key);
-  dbg_check(e, "no key for newly allocated buffer (%p, %zu)\n", b->base, b->n);
+  dbg_assert(1ul << ceil_log2_64(b->n) == b->n);
+  b->block = _block_memalign(b->n, b->n, &b->i);
+  int e = xport->key_find(xport, b->block, b->n, &b->key);
+  dbg_check(e, "no key for newly allocated block (%p, %zu)\n", b->block, b->n);
 }
 
 static void _buffer_init(buffer_t *b, size_t n, pwc_xport_t *xport) {
@@ -76,7 +105,7 @@ static int _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
   if (op->n < r) {
     send->i += op->n;
     op->dest_key = &send->key;
-    op->dest = send->base + i;
+    op->dest = _block_at(send->block, i);
     op->rop = command_pack(recv_parcel, (uintptr_t)op->dest);
     return xport->pwc(op);
   }
@@ -118,7 +147,7 @@ static int _reload_send(void *obj, pwc_xport_t *xport, int rank,
 }
 
 static hpx_parcel_t *_buffer_recv(buffer_t *recv) {
-  const hpx_parcel_t *p = (void*)(recv->base + recv->i);
+  const hpx_parcel_t *p = (void*)_block_at(recv->block, recv->i);
   recv->i += parcel_size(p);
   if (recv->i >= recv->n) {
     dbg_error("reload buffer recv overload\n");
@@ -200,7 +229,7 @@ void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
     buffer_t *recv = &reload->recv[rank];
     dbg_assert(send->n == recv->n);
     dbg_assert(send->i == recv->i);
-    dbg_assert(send->base == recv->base);
+    dbg_assert(send->block == recv->block);
     dbg_assert(!strncmp(send->key, recv->key, XPORT_KEY_SIZE));
   }
 
