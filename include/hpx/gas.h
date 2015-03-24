@@ -54,6 +54,10 @@ void hpx_gas_unpin(hpx_addr_t addr);
 ///
 /// The total amount of usable memory allocated is @p n * @p bsize.
 ///
+/// The alignment of each block (and thus the base alignment of the entire
+/// array), will be 2^{align=ceil_log2_32(bsize)}, i.e., the minimum power of 2 to
+/// bsize such that align >= bsize.
+///
 /// In UPC-land, the returned global address would have the following
 /// distribution:
 ///
@@ -100,7 +104,7 @@ hpx_addr_t hpx_gas_alloc_at_sync(uint32_t bytes, hpx_addr_t loc);
 void hpx_gas_alloc_at_async(uint32_t bytes, hpx_addr_t loc, hpx_addr_t lco);
 extern HPX_ACTION_DECL(hpx_gas_alloc_at_action);
 
-/// Allocate a 0-initialized block of global memory.
+/// Allocate aligned memory.
 ///
 /// This is a non-collective call to allocate memory in the global
 /// address space that can be moved. The allocated memory, by default,
@@ -112,6 +116,28 @@ extern HPX_ACTION_DECL(hpx_gas_alloc_at_action);
 /// This interface is designed to match programmers' expectations with respect
 /// to libc `calloc()`, however it *only allocates one GAS block of @p nmemb *
 /// @p size bytes*.
+///
+/// @param     boundary The alignment (2^k).
+/// @param         size The number of bytes to allocate.
+///
+/// @returns            The global address of the allocated memory.
+hpx_addr_t hpx_gas_memalign(size_t boundary, size_t size);
+hpx_addr_t hpx_gas_memalign_at_sync(size_t boundary, size_t size,
+                                    hpx_addr_t loc);
+void hpx_gas_memalign_at_async(size_t boundary, size_t size, hpx_addr_t loc,
+                               hpx_addr_t lco);
+extern HPX_ACTION_DECL(hpx_gas_memalign_at_action);
+
+/// Allocate a 0-initialized block of global memory.
+///
+/// This is a non-collective call to allocate memory in the global address space
+/// that can be moved. The allocated memory, by default, has affinity to the
+/// allocating node, however in low memory conditions the allocated memory may
+/// not be local to the caller. As it allocated in the GAS, it is accessible
+/// from any locality, and may be relocated by the runtime.
+///
+/// *Note however that we do not track the alignment of allocations.* Users
+/// should make sure to preserve alignment during move.
 ///
 /// @param        nmemb The number of elements to allocate.
 /// @param         size The number of bytes per element

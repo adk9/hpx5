@@ -23,6 +23,7 @@
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
+#include <libhpx/memory.h>
 #include <libhpx/system.h>
 
 /// Delete the gas instance.
@@ -93,25 +94,31 @@ static hpx_addr_t _smp_there(uint32_t i) {
 
 /// Allocate a global array.
 static hpx_addr_t _smp_gas_cyclic_alloc(size_t n, uint32_t bsize) {
-  void *p = malloc(n * bsize);
+  void *p = local_malloc(n * bsize);
   return _smp_lva_to_gva(p);
 }
 
 /// Allocate a 0-filled global array.
 static hpx_addr_t _smp_gas_cyclic_calloc(size_t n, uint32_t bsize) {
-  void *p = calloc(n, bsize);
+  void *p = local_calloc(n, bsize);
   return _smp_lva_to_gva(p);
 }
 
 /// Allocate a bunch of global memory
 static hpx_addr_t _smp_gas_alloc(uint32_t bytes) {
-  void *p = malloc(bytes);
+  void *p = local_malloc(bytes);
+  return _smp_lva_to_gva(p);
+}
+
+/// Allocate a bunch of aligned memory
+static hpx_addr_t _smp_gas_memalign(size_t boundary, size_t size) {
+  void *p = local_memalign(boundary, size);
   return _smp_lva_to_gva(p);
 }
 
 /// Allocate a bunch of initialized global memory
 static hpx_addr_t _smp_gas_calloc(size_t nmemb, size_t size) {
-  void *p = calloc(nmemb, size);
+  void *p = local_calloc(nmemb, size);
   return _smp_lva_to_gva(p);
 }
 
@@ -192,31 +199,32 @@ static void *_smp_local_base(gas_t *gas) {
 }
 
 static gas_t _smp_vtable = {
-  .type          = HPX_GAS_SMP,
-  .delete        = _smp_delete,
-  .is_global     = _smp_is_global,
-  .local_size    = _smp_local_size,
-  .local_base    = _smp_local_base,
-  .locality_of   = _smp_locality_of,
-  .sub           = _smp_sub,
-  .add           = _smp_add,
-  .lva_to_gva    = _smp_lva_to_gva,
-  .gva_to_lva    = _smp_gva_to_lva,
-  .there         = _smp_there,
-  .try_pin       = _smp_try_pin,
-  .unpin         = _smp_unpin,
-  .cyclic_alloc  = _smp_gas_cyclic_alloc,
-  .cyclic_calloc = _smp_gas_cyclic_calloc,
-  .local_alloc   = _smp_gas_alloc,
-  .local_calloc  = _smp_gas_calloc,
-  .free          = _smp_gas_free,
-  .move          = _smp_move,
-  .memget        = _smp_memget,
-  .memput        = _smp_memput,
-  .memcpy        = _smp_memcpy,
-  .owner_of      = _smp_owner_of,
-  .mmap          = system_mmap,
-  .munmap        = system_munmap
+  .type           = HPX_GAS_SMP,
+  .delete         = _smp_delete,
+  .is_global      = _smp_is_global,
+  .local_size     = _smp_local_size,
+  .local_base     = _smp_local_base,
+  .locality_of    = _smp_locality_of,
+  .sub            = _smp_sub,
+  .add            = _smp_add,
+  .lva_to_gva     = _smp_lva_to_gva,
+  .gva_to_lva     = _smp_gva_to_lva,
+  .there          = _smp_there,
+  .try_pin        = _smp_try_pin,
+  .unpin          = _smp_unpin,
+  .cyclic_alloc   = _smp_gas_cyclic_alloc,
+  .cyclic_calloc  = _smp_gas_cyclic_calloc,
+  .local_alloc    = _smp_gas_alloc,
+  .local_calloc   = _smp_gas_calloc,
+  .local_memalign = _smp_gas_memalign,
+  .free           = _smp_gas_free,
+  .move           = _smp_move,
+  .memget         = _smp_memget,
+  .memput         = _smp_memput,
+  .memcpy         = _smp_memcpy,
+  .owner_of       = _smp_owner_of,
+  .mmap           = system_mmap,
+  .munmap         = system_munmap
 };
 
 gas_t *gas_smp_new(void) {

@@ -59,6 +59,7 @@ typedef struct gas {
   __typeof(hpx_gas_global_calloc) *cyclic_calloc;
   __typeof(hpx_gas_alloc) *local_alloc;
   __typeof(hpx_gas_calloc) *local_calloc;
+  __typeof(hpx_gas_memalign) *local_memalign;
   __typeof(hpx_gas_free) *free;
   __typeof(hpx_gas_move) *move;
   __typeof(hpx_gas_memget) *memget;
