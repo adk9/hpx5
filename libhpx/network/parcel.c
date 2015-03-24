@@ -205,9 +205,15 @@ void parcel_delete(hpx_parcel_t *p) {
     state = parcel_exchange_state(p, state);
   }
 
-  if (!parcel_retained(state)) {
-    registered_free(p);
+  if (parcel_retained(state)) {
+    return;
   }
+
+  if (parcel_block_allocated(state)) {
+    return;
+  }
+
+  registered_free(p);
 }
 
 struct ustack* parcel_set_stack(hpx_parcel_t *p, struct ustack *next) {
