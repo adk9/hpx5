@@ -30,16 +30,11 @@ static int _release_parcel_handler(int src, command_t command) {
 COMMAND_DEF(INTERRUPT, _release_parcel_handler, release_parcel);
 
 static int _recv_parcel_handler(int src, command_t command) {
-  const void *addr = (const void*)command_get_arg(command);
-  const hpx_parcel_t *p = addr;
-  hpx_parcel_t *clone = parcel_clone(p);
-  clone->src = src;
-  scheduler_spawn(clone);
+  hpx_parcel_t *p = (hpx_parcel_t*)command_get_arg(command);
+  p->src = src;
+  parcel_set_state(p, PARCEL_SERIALIZED | PARCEL_BLOCK_ALLOCATED);
+  scheduler_spawn(p);
   return HPX_SUCCESS;
-  // hpx_parcel_t *p = (hpx_parcel_t*)command_get_arg(command);
-  // p->src = src;
-  // parcel_set_state(p, PARCEL_SERIALIZED | PARCEL_BLOCK_ALLOCATED);
-  // scheduler_spawn(p);
 }
 COMMAND_DEF(INTERRUPT, _recv_parcel_handler, recv_parcel);
 
