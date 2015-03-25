@@ -12,6 +12,7 @@ libnetwork_la_CFLAGS   =
 libnetwork_la_SOURCES  = locality.c \
                          network.c \
                          parcel.c \
+                         parcel_block.c \
                          hpx_parcel_glue.c \
                          progress.c \
                          probe.c \

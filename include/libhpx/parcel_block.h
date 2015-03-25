@@ -10,16 +10,16 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_PADDING_H
-#define LIBHPX_PADDING_H
+#ifndef LIBHPX_PARCEL_BLOCK_H
+#define LIBHPX_PARCEL_BLOCK_H
 
-/// Given a number of bytes, how many bytes of padding do we need to get a size
-/// that is a multiple of HPX_CACHELINE_SIZE? Macro because it's used in
-/// structure definitions for padding.
+#include <stddef.h>
 
-#define _CAT1(S, T) S##T
-#define _CAT(S, T) _CAT1(S, T)
-#define _BYTES(S) (HPX_CACHELINE_SIZE - ((S) % HPX_CACHELINE_SIZE))
-#define PAD_TO_CACHELINE(S) const char _CAT(_padding,__LINE__)[_BYTES(S)]
+typedef struct parcel_block parcel_block_t;
 
-#endif // LIBHPX_PADDING_H
+parcel_block_t *parcel_block_new(size_t align, size_t n, size_t *offset);
+void parcel_block_delete(parcel_block_t *block);
+void *parcel_block_at(parcel_block_t *block, size_t offset);
+void parcel_block_deduct(parcel_block_t *block, size_t bytes);
+
+#endif // LIBHPX_PARCEL_BLOCK_H
