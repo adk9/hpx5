@@ -36,6 +36,7 @@
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>
+#include <libhpx/parcel_block.h>
 #include <libhpx/scheduler.h>
 
 #ifdef ENABLE_INSTRUMENTATION
@@ -210,6 +211,12 @@ void parcel_delete(hpx_parcel_t *p) {
   }
 
   if (parcel_block_allocated(state)) {
+    dbg_assert(parcel_serialized(state));
+    uintptr_t block_size = here->config->pwc_parcelbuffersize;
+    dbg_assert(1lu << ceil_log2_64(block_size) == block_size);
+    uintptr_t block_mask = ~(block_size - 1);
+    parcel_block_t *block = (void*)((uintptr_t)p & block_mask);
+    parcel_block_deduct(block, parcel_size(p));
     return;
   }
 
