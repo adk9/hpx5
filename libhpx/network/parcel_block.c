@@ -17,6 +17,7 @@
 #include <libsync/sync.h>
 #include <hpx/builtins.h>
 #include <libhpx/debug.h>
+#include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/padding.h>
 #include <libhpx/parcel_block.h>
@@ -30,11 +31,16 @@ struct parcel_block {
 _HPX_ASSERT(sizeof(parcel_block_t) == HPX_CACHELINE_SIZE, block_header_size);
 
 parcel_block_t *parcel_block_new(size_t align, size_t n, size_t *offset) {
+  dbg_assert_str(align == here->config->pwc_parcelbuffersize,
+                 "Parcel block alignment is currently limited to "
+                 "--hpx-pwc-parcelbuffersize (%zu), %zu requested\n",
+                 here->config->pwc_parcelbuffersize, align);
   size_t bytes = n - sizeof(parcel_block_t);
   dbg_assert(bytes < n);
   parcel_block_t *block = registered_memalign(align, n);
   block->remaining = bytes;
   *offset = offsetof(parcel_block_t, bytes);
+  log("allocated parcel block at %p\n", (void*)block);
   return block;
 }
 
@@ -42,6 +48,7 @@ void parcel_block_delete(parcel_block_t *block) {
   if (block->remaining != 0) {
     log_parcel("block freed with %zu bytes remaining\n", block->remaining);
   }
+  log_parcel("deleting parcel block at %p\n", (void*)block);
   registered_free(block);
 }
 
@@ -51,8 +58,10 @@ void *parcel_block_at(parcel_block_t *block, size_t offset) {
 
 void parcel_block_deduct(parcel_block_t *block, size_t bytes) {
   dbg_assert(bytes < SIZE_MAX/2);
-  log("deducting %zu bytes from parcel block %p\n", bytes, (void*)block);
-  size_t r = sync_fadd(&block->remaining, -bytes, SYNC_ACQ_REL) - bytes;
+  int64_t n = -bytes;
+  size_t r = sync_addf(&block->remaining, n, SYNC_ACQ_REL);
+  log_parcel("deducting %zu bytes from parcel block %p (%zu remain)\n", bytes,
+             (void*)block, r);
   if (!r) {
     parcel_block_delete(block);
   }
