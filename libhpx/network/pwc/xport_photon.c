@@ -25,7 +25,11 @@
 #include <libhpx/memory.h>
 #include <libhpx/padding.h>
 #include <libhpx/system.h>
+
 #include "xport.h"
+
+#include "../commands.h"
+#include "../../gas/pgas/gpa.h"
 
 // check to make sure we can fit a photon key in the key size
 _HPX_ASSERT(XPORT_KEY_SIZE == sizeof(struct photon_buffer_priv_t),
@@ -137,6 +141,21 @@ static int _photon_unpin(void *obj, const void *base, size_t n) {
 static HPX_ACTION_DEF(INTERRUPT, _photon_unpin, unpin, HPX_POINTER, HPX_POINTER,
                       HPX_SIZE_T);
 
+static command_t _chain_unpin(const void *addr, size_t n, command_t op) {
+  const void *const null = NULL;
+  hpx_addr_t lsync = hpx_lco_future_new(0);
+  hpx_call_when_with_continuation(lsync, HPX_HERE, unpin, lsync,
+                                  hpx_lco_delete_action, &null, &addr, &n);
+  if (op) {
+    int rank = here->rank;
+    hpx_action_t lop = command_get_op(op);
+    hpx_addr_t laddr = pgas_offset_to_gpa(rank, command_get_arg(op));
+    hpx_call_when_with_continuation(lsync, laddr, lop, 0, 0, &rank, &laddr);
+  }
+
+  return command_pack(lco_set, lsync);
+}
+
 static int _photon_command(const xport_op_t *op) {
   int flags = ((op->lop) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
               ((op->rop) ? 0 : PHOTON_REQ_PWC_NO_RCE);
@@ -155,7 +174,7 @@ static int _photon_command(const xport_op_t *op) {
   dbg_error("could not initiate a put-with-completion\n");
 }
 
-static int _photon_pwc(const xport_op_t *op) {
+static int _photon_pwc(xport_op_t *op) {
   int flags = ((op->lop) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
               ((op->rop) ? 0 : PHOTON_REQ_PWC_NO_RCE);
 
@@ -174,7 +193,9 @@ static int _photon_pwc(const xport_op_t *op) {
     _photon_key_copy(&lbuf.priv, op->src_key);
   }
   else {
+    log_net("temporarily registering buffer (%p, %lu)\n", op->src, op->n);
     _photon_pin(NULL, op->src, op->n, &lbuf.priv);
+    op->lop = _chain_unpin(op->src, op->n, op->lop);
   }
 
   int e = photon_put_with_completion(op->rank, op->n, &lbuf, &rbuf, op->lop,
@@ -191,26 +212,7 @@ static int _photon_pwc(const xport_op_t *op) {
   dbg_error("could not initiate a put-with-completion\n");
 }
 
-
-  // if (op.dest_key == NULL) {
-  //   xport_key_t *key = alloca(sizeof(*key));
-  //   int e = pwc->xport->pin(pwc->xport, op.dest, op.n, key);
-  //   dbg_check(e, "failed to dynamically pin buffer for get\n");
-  //   log_net("temporarily pinned buffer (%p, %zu)\n", op.dest, op.n);
-  //   op.dest_key = key;
-  //   hpx_addr_t lsync = hpx_lco_future_new(0);
-  //   dbg_assert(lsync);
-  //   hpx_call_when_with_continuation(lsync, HPX_HERE, _release_registered_buffer,
-  //                                   lsync, hpx_lco_delete_action, &pwc->xport,
-  //                                   &op.dest, &op.n);
-  //   if (op.lop) {
-  //     hpx_call_when_with_continuation(lsync, laddr, lop, 0, 0, &here->rank,
-  //                                     &laddr);
-  //   }
-  //   op.lop = command_pack(lco_set, lsync);
-  // }
-
-static int _photon_gwc(const xport_op_t *op) {
+static int _photon_gwc(xport_op_t *op) {
   int flags = (op->rop) ? 0 : PHOTON_REQ_PWC_NO_RCE;
 
   struct photon_buffer_t lbuf = {
@@ -222,7 +224,9 @@ static int _photon_gwc(const xport_op_t *op) {
     _photon_key_copy(&lbuf.priv, op->dest_key);
   }
   else {
+    log_net("temporarily registering buffer (%p, %lu)\n", op->dest, op->n);
     _photon_pin(NULL, op->dest, op->n, &lbuf.priv);
+    op->lop = _chain_unpin(op->dest, op->n, op->lop);
   }
 
   struct photon_buffer_t rbuf = {
