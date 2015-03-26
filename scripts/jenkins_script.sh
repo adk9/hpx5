@@ -125,16 +125,12 @@ function do_build() {
     mkdir install
     
     echo "Configuring HPX."
-    eval "$CFG_CMD --prefix=${DIR}/build/install/ ${HPXDEBUG} ${CFGFLAGS} CFLAGS=\"-O3 -g\""  
+    eval "$CFG_CMD --prefix=${DIR}/build/install/ ${HPXDEBUG} ${CFGFLAGS} CFLAGS=\"-O3 -g\" --enable-testsuite --enable-parallel-config"  
   
     echo "Building HPX."
     make -j 8
     make install
 }
-
-CFGFLAGS+=" --enable-testsuite --enable-parallel-config"
-
-add_init
 
 case "$HPXMODE_AXIS" in
     photon)
@@ -147,8 +143,6 @@ case "$HPXMODE_AXIS" in
     *)
 	;;
 esac
-
-echo $SYSTEM
 
 case "$SYSTEM" in
   CREST_cutter)
