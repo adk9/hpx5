@@ -256,9 +256,6 @@ if [ "$OP" == "run" ]; then
       module load intel/13.1.1.163
       module load  impi/4.1.3.049
       ;;
-      HPX5_EDISON)
-      source /etc/profile.d/modules.sh
-      ;;
     esac
 
     # Run all the unit tests:
