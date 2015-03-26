@@ -39,17 +39,11 @@ static inline void command_unpack(command_t cmd, op_t *op, arg_t *arg) {
   *op = (cmd >> ARG_BITS);
 }
 
-#define COMMAND_DEF(type, handler, symbol)                      \
-  HPX_ACTION_DEF(type, handler, symbol, HPX_INT, HPX_UINT64)
-
-#define COMMAND_DECL(symbol) HPX_ACTION_DECL(symbol)
-
 // Commands used internally
 //
 // These are actions (probably interrupts) the take the src and command as
 // parameters.
-HPX_INTERNAL extern HPX_ACTION_DECL(release_parcel);
-HPX_INTERNAL extern HPX_ACTION_DECL(recv_parcel);
-HPX_INTERNAL extern HPX_ACTION_DECL(rendezvous_launch);
+HPX_INTERNAL extern COMMAND_DECL(recv_parcel);
+HPX_INTERNAL extern COMMAND_DECL(rendezvous_launch);
 
 #endif // LIBHPX_NETWORK_PWC_COMMANDS_H

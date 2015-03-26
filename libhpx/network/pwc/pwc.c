@@ -25,12 +25,14 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
+#include <libhpx/scheduler.h>
 
-#include "commands.h"
 #include "parcel_emulation.h"
 #include "pwc.h"
 #include "send_buffer.h"
 #include "xport.h"
+
+#include "../commands.h"
 
 typedef struct heap_segment {
   size_t        n;
@@ -110,6 +112,15 @@ typedef struct {
   xport_key_t key;
 } _rendezvous_get_args_t;
 
+static int _rendezvous_launch_handler(int src, command_t cmd) {
+  uintptr_t arg = command_get_arg(cmd);
+  hpx_parcel_t *p = (void*)arg;
+  parcel_set_state(p, PARCEL_SERIALIZED);
+  scheduler_spawn(p);
+  return HPX_SUCCESS;
+}
+COMMAND_DEF(INTERRUPT, _rendezvous_launch_handler, _rendezvous_launch);
+
 static HPX_INTERRUPT(_rendezvous_get, _rendezvous_get_args_t *args) {
   pwc_network_t *pwc = (pwc_network_t*)here->network;
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, args->n - sizeof(*p));
@@ -121,7 +132,7 @@ static HPX_INTERRUPT(_rendezvous_get, _rendezvous_get_args_t *args) {
     .dest_key = pwc->xport->key_find_ref(pwc->xport, p, args->n),
     .src = args->p,
     .src_key = &args->key,
-    .lop = command_pack(rendezvous_launch, (uintptr_t)p),
+    .lop = command_pack(_rendezvous_launch, (uintptr_t)p),
     .rop = command_pack(release_parcel, (uintptr_t)args->p)
   };
   int e = pwc->xport->gwc(&op);
@@ -202,6 +213,15 @@ static int _pwc_put(void *network, hpx_addr_t to, const void *from,
   return _pwc_pwc(network, to, from, n, lop, laddr, rop, raddr);
 }
 
+static int _release_registered_buffer_handler(pwc_xport_t *xport,
+                                              const void *base,
+                                              size_t n) {
+  return xport->unpin(xport, base, n);
+}
+static HPX_ACTION_DEF(INTERRUPT, _release_registered_buffer_handler,
+                      _release_registered_buffer, HPX_POINTER, HPX_POINTER,
+                      HPX_SIZE_T);
+
 static int _pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
                     hpx_action_t lop, hpx_addr_t laddr) {
   pwc_network_t *pwc = network;
@@ -217,6 +237,19 @@ static int _pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
     .lop = command_pack(lop, laddr),
     .rop = 0
   };
+
+  if (op.dest_key == NULL) {
+    xport_key_t *key = alloca(sizeof(*key));
+    int e = pwc->xport->pin(pwc->xport, op.dest, op.n, key);
+    dbg_check(e, "failed to dynamically pin buffer for get\n");
+    op.dest_key = key;
+    hpx_addr_t lsync = hpx_lco_future_new(0);
+    dbg_assert(lsync);
+    hpx_call_when_with_continuation(lsync, HPX_HERE, _release_registered_buffer,
+                                    hpx_lco_delete_action, lsync, &pwc->xport,
+                                    &op.dest, &op.n);
+    op.lop = command_pack(lco_set, lsync);
+  }
 
   return pwc->xport->gwc(&op);
 }

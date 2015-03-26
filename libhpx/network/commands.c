@@ -14,11 +14,17 @@
 # include "config.h"
 #endif
 
-#include <string.h>
-#include <libhpx/debug.h>
-#include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
+#include <libhpx/network.h>
 #include "commands.h"
+
+#include "../gas/pgas/gpa.h"
+
+static int _lco_set_handler(int src, uint64_t command) {
+  hpx_addr_t lco = pgas_offset_to_gpa(here->rank, command);
+  hpx_lco_set(lco, 0, NULL, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
+}
+COMMAND_DEF(INTERRUPT, _lco_set_handler, lco_set);
 
 static int _release_parcel_handler(int src, command_t command) {
   uintptr_t arg = command_get_arg(command);
@@ -28,21 +34,3 @@ static int _release_parcel_handler(int src, command_t command) {
   return HPX_SUCCESS;
 }
 COMMAND_DEF(INTERRUPT, _release_parcel_handler, release_parcel);
-
-static int _recv_parcel_handler(int src, command_t command) {
-  hpx_parcel_t *p = (hpx_parcel_t*)command_get_arg(command);
-  p->src = src;
-  parcel_set_state(p, PARCEL_SERIALIZED | PARCEL_BLOCK_ALLOCATED);
-  scheduler_spawn(p);
-  return HPX_SUCCESS;
-}
-COMMAND_DEF(INTERRUPT, _recv_parcel_handler, recv_parcel);
-
-static int _rendezvous_launch_handler(int src, command_t cmd) {
-  uintptr_t arg = command_get_arg(cmd);
-  hpx_parcel_t *p = (void*)arg;
-  parcel_set_state(p, PARCEL_SERIALIZED);
-  scheduler_spawn(p);
-  return HPX_SUCCESS;
-}
-COMMAND_DEF(INTERRUPT, _rendezvous_launch_handler, rendezvous_launch);
