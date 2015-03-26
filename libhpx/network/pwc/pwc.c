@@ -125,7 +125,7 @@ static HPX_INTERRUPT(_rendezvous_get, _rendezvous_get_args_t *args) {
   pwc_network_t *pwc = (pwc_network_t*)here->network;
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, args->n - sizeof(*p));
   dbg_assert(p);
-  const xport_op_t op = {
+  xport_op_t op = {
     .rank = args->rank,
     .n = args->n,
     .dest = p,
