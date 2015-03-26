@@ -14,7 +14,9 @@
 # include "config.h"
 #endif
 
+#include <libhpx/locality.h>
 #include <libhpx/network.h>
+
 #include "commands.h"
 
 #include "../gas/pgas/gpa.h"
