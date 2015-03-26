@@ -12,6 +12,7 @@ else
 fi
 
 function add_init() {
+echo $SYSTEM
 case "$SYSTEM" in
   CREST_cutter)
     . /opt/modules/Modules/3.2.10/init/bash
@@ -56,6 +57,7 @@ esac
 }
 
 function add_mpi() {
+echo $SYSTEM
 case "$SYSTEM" in
   CREST_cutter)
     module load openmpi/1.8.4_thread
@@ -76,6 +78,7 @@ esac
 }
 
 function add_photon() {
+echo $SYSTEM
 CFGFLAGS+=" --enable-photon"
 case "$SYSTEM" in
   CREST_cutter)
@@ -144,6 +147,8 @@ case "$HPXMODE_AXIS" in
     *)
 	;;
 esac
+
+echo $SYSTEM
 
 case "$SYSTEM" in
   CREST_cutter)
@@ -256,6 +261,9 @@ if [ "$OP" == "run" ]; then
       HPX5_STAMPEDE)
       module load intel/13.1.1.163
       module load  impi/4.1.3.049
+      ;;
+      HPX5_EDISON)
+      source /etc/profile.d/modules.sh
       ;;
     esac
 
