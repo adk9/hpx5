@@ -14,6 +14,7 @@
 #define LIBHPX_NETWORK_PWC_COMMANDS_H
 
 #include <hpx/hpx.h>
+#include <libhpx/network.h>
 
 typedef uint16_t op_t;
 typedef uint64_t arg_t;
@@ -33,17 +34,5 @@ static inline arg_t command_get_arg(command_t command) {
 static inline command_t command_pack(op_t op, arg_t arg) {
   return ((uint64_t)op << ARG_BITS) + (arg & ARG_MASK);
 }
-
-static inline void command_unpack(command_t cmd, op_t *op, arg_t *arg) {
-  *arg = (cmd & ARG_MASK);
-  *op = (cmd >> ARG_BITS);
-}
-
-// Commands used internally
-//
-// These are actions (probably interrupts) the take the src and command as
-// parameters.
-HPX_INTERNAL extern COMMAND_DECL(recv_parcel);
-HPX_INTERNAL extern COMMAND_DECL(rendezvous_launch);
 
 #endif // LIBHPX_NETWORK_PWC_COMMANDS_H
