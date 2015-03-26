@@ -17,10 +17,22 @@
 // Size of the data we're transferring.
 enum { ELEMENTS = 32 };
 
-static void HPX_NORETURN fail(int i, uint64_t expected, uint64_t actual) {
+static hpx_addr_t   _data = 0;
+static hpx_addr_t _remote = 0;
+
+static void HPX_NORETURN _fail(int i, uint64_t expected, uint64_t actual) {
   fprintf(stderr, "failed to set element %d correctly, "
           "expected %lu, got %lu\n", i, expected, actual);
   exit(EXIT_FAILURE);
+}
+
+static int _verify(uint64_t *local) {
+  for (int i = 0, e = ELEMENTS; i < e; ++i) {
+    if (local[i] != i) {
+      _fail(i, i, local[i]);
+    }
+  }
+  return HPX_SUCCESS;
 }
 
 static HPX_PINNED(_init, uint64_t *local, void* args) {
@@ -30,34 +42,35 @@ static HPX_PINNED(_init, uint64_t *local, void* args) {
   return HPX_SUCCESS;
 }
 
-// Test code -- for memget
-static HPX_ACTION(gas_memget, void *UNUSED) {
-  printf("Starting the memget test\n");
-  int peer = (HPX_LOCALITY_ID + 1) % HPX_LOCALITIES;
+static HPX_ACTION(_init_globals, void *UNUSED) {
+  size_t n = ELEMENTS * sizeof(uint64_t);
+  int rank = HPX_LOCALITY_ID;
+  int size = HPX_LOCALITIES;
+  int peer = (rank + 1) % size;
+  _data = hpx_gas_global_alloc(HPX_LOCALITIES, n);
+  assert(_data);
+  _remote = hpx_addr_add(_data, peer * n, n);
+  assert(_remote);
+  return hpx_call_sync(_remote, _init, NULL, 0, NULL, 0);
+}
 
-  // We need a place in registered memory to get() to. We're using the stack in
-  // this test. We could also use a registered malloc.
-  uint64_t local[ELEMENTS];
-  hpx_addr_t data = hpx_gas_global_alloc(HPX_LOCALITIES, sizeof(local));
-  hpx_addr_t remote = hpx_addr_add(data, peer * sizeof(local), sizeof(local));
-  hpx_call_sync(remote, _init, NULL, 0, NULL, 0);
-
-  // perform the memget
-  hpx_time_t t1 = hpx_time_now();
-  hpx_gas_memget_sync(local, remote, sizeof(local));
-  double elapsed = hpx_time_elapsed_ms(t1);
-  printf(" Elapsed: %g\n", elapsed);
-
-  for (int i = 0, e = ELEMENTS; i < e; ++i) {
-    if (local[i] != i) {
-      fail(i, i, local[i]);
-    }
-  }
-
-  hpx_gas_free(data, HPX_NULL);
+static HPX_ACTION(_fini_globals, void *UNUSED) {
+  hpx_gas_free(_data, HPX_NULL);
   return HPX_SUCCESS;
 }
 
+// Test code -- for memget
+static HPX_ACTION(gas_memget_stack, void *UNUSED) {
+  printf("Testing memget to a stack address\n");
+  uint64_t local[ELEMENTS];
+  hpx_gas_memget_sync(local, _remote, sizeof(local));
+  return _verify(local);
+}
+
 TEST_MAIN({
-  ADD_TEST(gas_memget);
-});
+    ADD_TEST(_init_globals);
+    ADD_TEST(gas_memget_stack);
+    // ADD_TEST(gas_memget_malloc);
+    // ADD_TEST(gas_memget_global);
+    ADD_TEST(_fini_globals);
+  });
