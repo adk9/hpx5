@@ -93,8 +93,35 @@ static HPX_ACTION(gas_memput_stack, void *UNUSED) {
   return _test_memput(local);
 }
 
+static HPX_ACTION(gas_memput_registered, void *UNUSED) {
+  printf("Testing memput from a registered address\n");
+  uint64_t *local = hpx_malloc_registered(ELEMENTS * sizeof(*local));
+  assert(local);
+  int e = _test_memput(local);
+  hpx_free_registered(local);
+  return e;
+}
+
+static HPX_ACTION(gas_memput_malloc, void *UNUSED) {
+  printf("Testing memput from a malloced address\n");
+  uint64_t *local = calloc(ELEMENTS, sizeof(*local));
+  assert(local);
+  int e = _test_memput(local);
+  free(local);
+  return e;
+}
+
+static HPX_ACTION(gas_memput_global, void *UNUSED) {
+  printf("Testing memput from a global address\n");
+  static uint64_t local[ELEMENTS];
+  return _test_memput(local);
+}
+
 TEST_MAIN({
     ADD_TEST(_init_globals);
     ADD_TEST(gas_memput_stack);
+    ADD_TEST(gas_memput_registered);
+    ADD_TEST(gas_memput_malloc);
+    ADD_TEST(gas_memput_global);
     ADD_TEST(_fini_globals);
   });

@@ -59,7 +59,6 @@ static HPX_ACTION(_fini_globals, void *UNUSED) {
   return HPX_SUCCESS;
 }
 
-// Test code -- for memget
 static HPX_ACTION(gas_memget_stack, void *UNUSED) {
   printf("Testing memget to a stack address\n");
   uint64_t local[ELEMENTS];
@@ -67,10 +66,38 @@ static HPX_ACTION(gas_memget_stack, void *UNUSED) {
   return _verify(local);
 }
 
+static HPX_ACTION(gas_memget_registered, void *UNUSED) {
+  printf("Testing memget to a registered address\n");
+  size_t n = ELEMENTS * sizeof(uint64_t);
+  uint64_t *local = hpx_malloc_registered(n);
+  hpx_gas_memget_sync(local, _remote, n);
+  _verify(local);
+  hpx_free_registered(local);
+  return HPX_SUCCESS;
+}
+
+static HPX_ACTION(gas_memget_global, void *UNUSED) {
+  printf("Testing memget to a global address\n");
+  static uint64_t local[ELEMENTS];
+  hpx_gas_memget_sync(local, _remote, sizeof(local));
+  return _verify(local);
+}
+
+static HPX_ACTION(gas_memget_malloc, void *UNUSED) {
+  printf("Testing memget to a malloced address\n");
+  size_t n = ELEMENTS * sizeof(uint64_t);
+  uint64_t *local = malloc(n);
+  hpx_gas_memget_sync(local, _remote, n);
+  _verify(local);
+  free(local);
+  return HPX_SUCCESS;
+}
+
 TEST_MAIN({
     ADD_TEST(_init_globals);
     ADD_TEST(gas_memget_stack);
-    // ADD_TEST(gas_memget_malloc);
-    // ADD_TEST(gas_memget_global);
+    ADD_TEST(gas_memget_registered);
+    ADD_TEST(gas_memget_global);
+    ADD_TEST(gas_memget_malloc);
     ADD_TEST(_fini_globals);
   });
