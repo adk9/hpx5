@@ -133,6 +133,10 @@ static int _photon_unpin(void *obj, const void *base, size_t n) {
   return LIBHPX_OK;
 }
 
+// async entry point for unpin
+static HPX_ACTION_DEF(INTERRUPT, _photon_unpin, unpin, HPX_POINTER, HPX_POINTER,
+                      HPX_SIZE_T);
+
 static int _photon_command(const xport_op_t *op) {
   int flags = ((op->lop) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
               ((op->rop) ? 0 : PHOTON_REQ_PWC_NO_RCE);
@@ -157,15 +161,21 @@ static int _photon_pwc(const xport_op_t *op) {
 
   struct photon_buffer_t rbuf = {
     .addr = (uintptr_t)op->dest,
-    .size = 0
+    .size = op->n
   };
   _photon_key_copy(&rbuf.priv, op->dest_key);
 
   struct photon_buffer_t lbuf = {
     .addr = (uintptr_t)op->src,
-    .size = 0
+    .size = op->n
   };
-  _photon_key_copy(&lbuf.priv, op->src_key);
+
+  if (op->src_key) {
+    _photon_key_copy(&lbuf.priv, op->src_key);
+  }
+  else {
+    _photon_pin(NULL, op->src, op->n, &lbuf.priv);
+  }
 
   int e = photon_put_with_completion(op->rank, op->n, &lbuf, &rbuf, op->lop,
                                      op->rop, flags);
@@ -181,19 +191,45 @@ static int _photon_pwc(const xport_op_t *op) {
   dbg_error("could not initiate a put-with-completion\n");
 }
 
+
+  // if (op.dest_key == NULL) {
+  //   xport_key_t *key = alloca(sizeof(*key));
+  //   int e = pwc->xport->pin(pwc->xport, op.dest, op.n, key);
+  //   dbg_check(e, "failed to dynamically pin buffer for get\n");
+  //   log_net("temporarily pinned buffer (%p, %zu)\n", op.dest, op.n);
+  //   op.dest_key = key;
+  //   hpx_addr_t lsync = hpx_lco_future_new(0);
+  //   dbg_assert(lsync);
+  //   hpx_call_when_with_continuation(lsync, HPX_HERE, _release_registered_buffer,
+  //                                   lsync, hpx_lco_delete_action, &pwc->xport,
+  //                                   &op.dest, &op.n);
+  //   if (op.lop) {
+  //     hpx_call_when_with_continuation(lsync, laddr, lop, 0, 0, &here->rank,
+  //                                     &laddr);
+  //   }
+  //   op.lop = command_pack(lco_set, lsync);
+  // }
+
 static int _photon_gwc(const xport_op_t *op) {
   int flags = (op->rop) ? 0 : PHOTON_REQ_PWC_NO_RCE;
 
   struct photon_buffer_t lbuf = {
     .addr = (uintptr_t)op->dest,
-    .size = 0
+    .size = op->n
   };
-  _photon_key_copy(&lbuf.priv, op->dest_key);
+
+  if (op->dest_key) {
+    _photon_key_copy(&lbuf.priv, op->dest_key);
+  }
+  else {
+    _photon_pin(NULL, op->dest, op->n, &lbuf.priv);
+  }
 
   struct photon_buffer_t rbuf = {
     .addr = (uintptr_t)op->src,
-    .size = 0
+    .size = op->n
   };
+  dbg_assert(op->src_key);
   _photon_key_copy(&rbuf.priv, op->src_key);
 
   int e = photon_get_with_completion(op->rank, op->n, &lbuf, &rbuf, op->lop,
