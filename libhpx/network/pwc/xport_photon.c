@@ -91,7 +91,10 @@ static const void *_photon_key_find_ref(const void *obj, const void *addr,
                                         size_t n) {
   const struct photon_buffer_priv_t *found = NULL;
   int e = photon_get_buffer_private((void*)addr, n, &found);
-  dbg_assert_str(PHOTON_OK == e, "no rdma key for range (%p, %zu)\n", addr, n);
+  if (PHOTON_OK != e) {
+    dbg_assert(found == NULL);
+    log_net("no rdma key for range (%p, %zu)\n", addr, n);
+  }
   return found;
 }
 
