@@ -95,7 +95,7 @@ int inst_init(config_t *cfg) {
   hpx_time_t start = hpx_time_now();
   for (int cl = 0, e = HPX_INST_NUM_CLASSES; cl < e; ++cl) {
     for (int id = INST_OFFSETS[cl], e = INST_OFFSETS[cl + 1]; id < e; ++id) {
-      if (config_trace_classes_isset(here->config, 1 << cl)) {
+      if (inst_trace_class(cl)) {
         _log_create(cl, id, cfg->trace_filesize, start);
       }
     }
