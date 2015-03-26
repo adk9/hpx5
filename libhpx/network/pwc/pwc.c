@@ -25,12 +25,14 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
+#include <libhpx/scheduler.h>
 
-#include "commands.h"
 #include "parcel_emulation.h"
 #include "pwc.h"
 #include "send_buffer.h"
 #include "xport.h"
+
+#include "../commands.h"
 
 typedef struct heap_segment {
   size_t        n;
@@ -110,18 +112,27 @@ typedef struct {
   xport_key_t key;
 } _rendezvous_get_args_t;
 
+static int _rendezvous_launch_handler(int src, command_t cmd) {
+  uintptr_t arg = command_get_arg(cmd);
+  hpx_parcel_t *p = (void*)arg;
+  parcel_set_state(p, PARCEL_SERIALIZED);
+  scheduler_spawn(p);
+  return HPX_SUCCESS;
+}
+COMMAND_DEF(INTERRUPT, _rendezvous_launch_handler, _rendezvous_launch);
+
 static HPX_INTERRUPT(_rendezvous_get, _rendezvous_get_args_t *args) {
   pwc_network_t *pwc = (pwc_network_t*)here->network;
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, args->n - sizeof(*p));
   dbg_assert(p);
-  const xport_op_t op = {
+  xport_op_t op = {
     .rank = args->rank,
     .n = args->n,
     .dest = p,
     .dest_key = pwc->xport->key_find_ref(pwc->xport, p, args->n),
     .src = args->p,
     .src_key = &args->key,
-    .lop = command_pack(rendezvous_launch, (uintptr_t)p),
+    .lop = command_pack(_rendezvous_launch, (uintptr_t)p),
     .rop = command_pack(release_parcel, (uintptr_t)args->p)
   };
   int e = pwc->xport->gwc(&op);

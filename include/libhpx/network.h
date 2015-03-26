@@ -30,6 +30,24 @@ struct gas;
 struct transport;
 /// @}
 
+/// The network interface uses a particular action type, the network *command*,
+/// which takes an integer indicating the source of the command, and an optional
+/// command argument.
+
+/// Command actions should be declared and defined using the following macros.
+/// @{
+#define COMMAND_DEF(type, handler, symbol)                      \
+  HPX_ACTION_DEF(type, handler, symbol, HPX_INT, HPX_UINT64)
+
+#define COMMAND_DECL(symbol) HPX_ACTION_DECL(symbol)
+/// @}
+
+/// The release_parcel command will release a parcel.
+HPX_INTERNAL extern COMMAND_DECL(release_parcel);
+
+/// The lco_set command will set an lco.
+HPX_INTERNAL extern COMMAND_DECL(lco_set);
+
 /// All network objects implement the network interface.
 typedef struct network {
   int type;
