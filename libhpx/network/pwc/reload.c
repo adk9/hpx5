@@ -21,12 +21,14 @@
 #include <libhpx/memory.h>
 #include <libhpx/parcel.h>
 #include <libhpx/parcel_block.h>
-#include "commands.h"
+#include <libhpx/scheduler.h>
+
 #include "parcel_emulation.h"
 #include "pwc.h"
 #include "send_buffer.h"
 #include "xport.h"
 
+#include "../commands.h"
 
 typedef struct {
   size_t              n;
@@ -72,6 +74,15 @@ static void _buffer_init(buffer_t *b, size_t n, pwc_xport_t *xport) {
   _buffer_reload(b, xport);
 }
 
+static int _recv_parcel_handler(int src, command_t command) {
+  hpx_parcel_t *p = (hpx_parcel_t*)command_get_arg(command);
+  p->src = src;
+  parcel_set_state(p, PARCEL_SERIALIZED | PARCEL_BLOCK_ALLOCATED);
+  scheduler_spawn(p);
+  return HPX_SUCCESS;
+}
+COMMAND_DEF(INTERRUPT, _recv_parcel_handler, _recv_parcel);
+
 static int _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
   int i = send->i;
   dbg_assert(!(i & 7));
@@ -84,7 +95,7 @@ static int _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
                op->n + align, (void*)send->block, send->n - send->i);
     op->dest_key = &send->key;
     op->dest = parcel_block_at(send->block, i);
-    op->rop = command_pack(recv_parcel, (uintptr_t)op->dest);
+    op->rop = command_pack(_recv_parcel, (uintptr_t)op->dest);
     return xport->pwc(op);
   }
 

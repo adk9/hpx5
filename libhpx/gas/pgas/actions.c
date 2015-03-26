@@ -180,10 +180,3 @@ static int _memput_rsync_handler(int src, uint64_t command) {
 }
 HPX_ACTION_DEF(DEFAULT, _memput_rsync_handler, memput_rsync, HPX_INT,
                HPX_UINT64);
-
-static int _lco_set_handler(int src, uint64_t command) {
-  hpx_addr_t lco = pgas_offset_to_gpa(here->rank, command);
-  hpx_lco_set(lco, 0, NULL, HPX_NULL, HPX_NULL);
-  return HPX_SUCCESS;
-}
-HPX_ACTION_DEF(INTERRUPT, _lco_set_handler, lco_set, HPX_INT, HPX_UINT64);
