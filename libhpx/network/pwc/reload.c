@@ -64,7 +64,7 @@ static void _buffer_reload(buffer_t *b, pwc_xport_t *xport) {
   dbg_assert(1ul << ceil_log2_64(b->n) == b->n);
   b->block = parcel_block_new(b->n, b->n, &b->i);
   int e = xport->key_find(xport, b->block, b->n, &b->key);
-  dbg_check(e, "no key for newly allocated block (%p, %zu)\n", b->block, b->n);
+  dbg_check(e, "no key for parcel block at (%p, %zu)\n", (void*)b->block, b->n);
 }
 
 static void _buffer_init(buffer_t *b, size_t n, pwc_xport_t *xport) {
@@ -74,9 +74,14 @@ static void _buffer_init(buffer_t *b, size_t n, pwc_xport_t *xport) {
 
 static int _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
   int i = send->i;
+  dbg_assert(!(i & 7));
   size_t r = send->n - i;
   if (op->n < r) {
-    send->i += op->n;
+    // make sure i stays 8-byte aligned
+    size_t align = (8ul - (op->n & 7ul)) & 7ul;
+    send->i += op->n + align;
+    log_parcel("allocating %zu bytes in buffer %p (%zu remain)\n",
+               op->n + align, (void*)send->block, send->n - send->i);
     op->dest_key = &send->key;
     op->dest = parcel_block_at(send->block, i);
     op->rop = command_pack(recv_parcel, (uintptr_t)op->dest);

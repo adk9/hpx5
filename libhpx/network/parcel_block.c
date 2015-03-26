@@ -20,6 +20,7 @@
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/padding.h>
+#include <libhpx/parcel.h>
 #include <libhpx/parcel_block.h>
 
 struct parcel_block {
@@ -40,7 +41,7 @@ parcel_block_t *parcel_block_new(size_t align, size_t n, size_t *offset) {
   parcel_block_t *block = registered_memalign(align, n);
   block->remaining = bytes;
   *offset = offsetof(parcel_block_t, bytes);
-  log("allocated parcel block at %p\n", (void*)block);
+  log_parcel("allocated parcel block at %p\n", (void*)block);
   return block;
 }
 
@@ -58,11 +59,22 @@ void *parcel_block_at(parcel_block_t *block, size_t offset) {
 
 void parcel_block_deduct(parcel_block_t *block, size_t bytes) {
   dbg_assert(bytes < SIZE_MAX/2);
-  int64_t n = -bytes;
-  size_t r = sync_addf(&block->remaining, n, SYNC_ACQ_REL);
+  size_t r = sync_fadd(&block->remaining, -bytes, SYNC_ACQ_REL);
+  dbg_assert(r >= bytes);
+  r = r - bytes;
   log_parcel("deducting %zu bytes from parcel block %p (%zu remain)\n", bytes,
              (void*)block, r);
   if (!r) {
     parcel_block_delete(block);
   }
+}
+
+void parcel_block_delete_parcel(hpx_parcel_t *p) {
+    uintptr_t block_size = here->config->pwc_parcelbuffersize;
+    dbg_assert(1lu << ceil_log2_64(block_size) == block_size);
+    uintptr_t block_mask = ~(block_size - 1);
+    parcel_block_t *block = (void*)((uintptr_t)p & block_mask);
+    size_t n = parcel_size(p);
+    size_t align = (8ul - (n & 7ul)) & 7ul;
+    parcel_block_deduct(block, n + align);
 }
