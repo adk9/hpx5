@@ -28,6 +28,7 @@ typedef struct {
   void           *header;                       // pointer to file header
   struct record *records;                       // pointer to data for log
   volatile size_t   next;                       // the next element to write
+  volatile size_t   last;                       // the last element written
 } logtable_t;
 
 #define LOGTABLE_INIT {                         \
@@ -39,7 +40,8 @@ typedef struct {
     .max_size = 0,                              \
     .header = NULL,                             \
     .records = NULL,                            \
-    .next = 0                                   \
+    .next = 0,                                  \
+    .last = 0                                   \
     }
 
 /// Initialize a logtable.

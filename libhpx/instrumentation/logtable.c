@@ -78,6 +78,7 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
   log->class = class;
   log->id = id;
   sync_store(&log->next, 0, SYNC_RELEASE);
+  sync_store(&log->last, 0, SYNC_RELEASE);
   log->max_size = size;
   log->records = NULL;
 
@@ -120,7 +121,7 @@ void logtable_fini(logtable_t *log) {
 
   if (log->fd != -1) {
     size_t filesize =
-      (uintptr_t)&log->records[log->next] - (uintptr_t)log->header;
+      (uintptr_t)&log->records[log->last] - (uintptr_t)log->header;
     int e = ftruncate(log->fd, filesize);
     if (e) {
       log_error("failed to truncate trace file\n");
@@ -138,7 +139,8 @@ void logtable_append(logtable_t *log, uint64_t u1, uint64_t u2, uint64_t u3,
   if (_header_size(log) + i * sizeof(record_t) > log->max_size) {
     return;
   }
-
+  sync_fadd(&log->last, 1, SYNC_ACQ_REL); // update size
+ 
   record_t *r = &log->records[i];
   r->class = log->class;
   r->id = log->id;
