@@ -40,7 +40,12 @@
 #include <libhpx/scheduler.h>
 
 #ifdef ENABLE_INSTRUMENTATION
-static uint64_t parcel_count = 0;
+#define ID_RANK_OFFSET 46 // 18 bits for 16k ranks
+#define ID_WORKER_OFFSET 38 // ID_RANK_OFFSET - 8, for 256 cores
+#define ID_RANK_MASK 0x3ffffUL
+#define ID_WORKER_MASK 0x7fUL
+#define ID_COUNT_MASK 0x7fffffffffUL
+__thread uint64_t parcel_count = 0;
 #endif
 
 static size_t _max(size_t lhs, size_t rhs) {
@@ -139,9 +144,11 @@ void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
   p->credit   = 0;
 
 #ifdef ENABLE_INSTRUMENTATION
-  if (config_trace_classes_isset(here->config, HPX_INST_CLASS_PARCEL)) {
-    parcel_count = sync_fadd(&parcel_count, 1, SYNC_RELAXED);
-    p->id = ((uint64_t)(0xfffff && hpx_get_my_rank()) << 40) | parcel_count;
+  if (inst_trace_class(HPX_INST_CLASS_PARCEL)) {
+    parcel_count++;
+    p->id = ((uint64_t)(hpx_get_my_rank() && ID_RANK_MASK) << ID_RANK_OFFSET) | 
+      ((uint64_t)(hpx_get_my_thread_id() && ID_WORKER_MASK) << ID_WORKER_OFFSET) |
+      (parcel_count & ID_COUNT_MASK);
   }
 #endif
 

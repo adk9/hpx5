@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <hpx/attributes.h>
 #include <hpx/builtins.h>
+#include <libhpx/locality.h> // for here object
 
 struct config;
 
@@ -92,5 +93,9 @@ static const int INST_OFFSETS[] = {
   INST_SCHED_TRANSFER,
   HPX_INST_NUM_EVENTS
 };
+
+static inline bool inst_trace_class(int class) {
+  return config_trace_classes_isset(here->config, 1 << class);
+}
 
 #endif
