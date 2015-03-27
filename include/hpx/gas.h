@@ -46,7 +46,7 @@ bool hpx_gas_try_pin(hpx_addr_t addr, void **local);
 /// @param         addr The address of global memory to unpin.
 void hpx_gas_unpin(hpx_addr_t addr);
 
-/// Allocate distributed global memory.
+/// Allocate cyclically distributed global memory.
 ///
 /// This is not a collective operation; the returned address is returned only to
 /// the calling thread, and must either be written into already-allocated global
@@ -69,17 +69,10 @@ void hpx_gas_unpin(hpx_addr_t addr);
 /// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_alloc_cyclic(size_t n, uint32_t bsize);
 
-/// Allocate distributed global zeroed-memory.
+/// Allocate cyclically distributed global zeroed memory.
 ///
 /// This call is similar to hpx_gas_global_alloc except that the
-/// global memory returned is set to 0.
-///
-/// The total amount of usable memory allocated is @p n * @p bsize.
-///
-/// In UPC-land, the returned global address would have the following
-/// distribution:
-///
-///    shared [bytes] char foo[n * bytes];
+/// global memory returned is initialized to 0.
 ///
 /// @param            n The number of blocks to allocate.
 /// @param        bsize The number of bytes per block.
