@@ -121,7 +121,7 @@ static HPX_ACTION_DEF(INTERRUPT, _verify_at, verify_at, HPX_ADDR, HPX_INT);
 static HPX_ACTION(gas_alloc_at, void *UNUSED){
   printf("Starting the GAS remote memory allocation test\n");
   int peer = (HPX_LOCALITY_ID + 1) % HPX_LOCALITIES;
-  hpx_addr_t addr = hpx_gas_alloc_at_sync(N * sizeof(int), HPX_THERE(peer));
+  hpx_addr_t addr = hpx_gas_alloc_local_at_sync(N * sizeof(int), HPX_THERE(peer));
   if (!addr) {
     fflush(stdout);
     fprintf(stderr, "failed to allocate memory at %d\n", peer);
@@ -140,7 +140,7 @@ static HPX_ACTION(gas_alloc_at, void *UNUSED){
 static HPX_ACTION(gas_calloc_at, void *UNUSED){
   printf("Starting the GAS initialized remote memory allocation test\n");
   int peer = (HPX_LOCALITY_ID + 1) % HPX_LOCALITIES;
-  hpx_addr_t addr = hpx_gas_calloc_at_sync(N, sizeof(int), HPX_THERE(peer));
+  hpx_addr_t addr = hpx_gas_calloc_local_at_sync(N, sizeof(int), HPX_THERE(peer));
   if (!addr) {
     fflush(stdout);
     fprintf(stderr, "failed to allocate memory at %d\n", peer);
