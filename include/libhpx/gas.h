@@ -55,8 +55,8 @@ typedef struct gas {
   __typeof(HPX_THERE) *there;
   __typeof(hpx_gas_try_pin) *try_pin;
   __typeof(hpx_gas_unpin) *unpin;
-  __typeof(hpx_gas_global_alloc) *cyclic_alloc;
-  __typeof(hpx_gas_global_calloc) *cyclic_calloc;
+  __typeof(hpx_gas_alloc_cyclic) *cyclic_alloc;
+  __typeof(hpx_gas_calloc_cyclic) *cyclic_calloc;
   __typeof(hpx_gas_alloc_local) *local_alloc;
   __typeof(hpx_gas_calloc_local) *local_calloc;
   __typeof(hpx_gas_memalign) *local_memalign;

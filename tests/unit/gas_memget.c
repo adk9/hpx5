@@ -47,7 +47,7 @@ static HPX_ACTION(_init_globals, void *UNUSED) {
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
   int peer = (rank + 1) % size;
-  _data = hpx_gas_global_alloc(HPX_LOCALITIES, n);
+  _data = hpx_gas_alloc_cyclic(HPX_LOCALITIES, n);
   assert(_data);
   _remote = hpx_addr_add(_data, peer * n, n);
   assert(_remote);

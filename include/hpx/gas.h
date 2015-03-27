@@ -67,7 +67,7 @@ void hpx_gas_unpin(hpx_addr_t addr);
 /// @param        bsize The number of bytes per block.
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_global_alloc(size_t n, uint32_t bsize);
+hpx_addr_t hpx_gas_alloc_cyclic(size_t n, uint32_t bsize);
 
 /// Allocate distributed global zeroed-memory.
 ///
@@ -85,7 +85,7 @@ hpx_addr_t hpx_gas_global_alloc(size_t n, uint32_t bsize);
 /// @param        bsize The number of bytes per block.
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_global_calloc(size_t n, uint32_t bsize);
+hpx_addr_t hpx_gas_calloc_cyclic(size_t n, uint32_t bsize);
 
 /// Allocate a block of global memory.
 ///

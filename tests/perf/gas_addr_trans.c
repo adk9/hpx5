@@ -86,7 +86,7 @@ static int _main_action(void *args) {
     hpx_lco_delete(completed, HPX_NULL);
     hpx_gas_free(local, HPX_NULL);
 
-    hpx_addr_t global = hpx_gas_global_alloc(blocks, TEST_BUF_SIZE);
+    hpx_addr_t global = hpx_gas_alloc_cyclic(blocks, TEST_BUF_SIZE);
     hpx_addr_t done = hpx_lco_and_new(num[i]);
     now = hpx_time_now();
     for (int j = 0; j < num[i]; j++)
@@ -97,7 +97,7 @@ static int _main_action(void *args) {
     hpx_lco_delete(done, HPX_NULL);
     hpx_gas_free(global, HPX_NULL);
 
-    hpx_addr_t callocMem = hpx_gas_global_calloc(blocks, TEST_BUF_SIZE);
+    hpx_addr_t callocMem = hpx_gas_calloc_cyclic(blocks, TEST_BUF_SIZE);
     hpx_addr_t and = hpx_lco_and_new(num[i]);
     now = hpx_time_now();
     for (int j = 0; j < num[i]; j++)
