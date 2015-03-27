@@ -12,7 +12,6 @@ else
 fi
 
 function add_init() {
-echo $SYSTEM
 case "$SYSTEM" in
   CREST_cutter)
     . /opt/modules/Modules/3.2.10/init/bash
@@ -57,13 +56,12 @@ esac
 }
 
 function add_mpi() {
-echo $SYSTEM
 case "$SYSTEM" in
   CREST_cutter)
     module load openmpi/1.8.4_thread
     CFGFLAGS+=" --with-mpi=ompi"
     ;;
-  HPX5_BIGRED2)
+  HPX5_BIGRED2 | HPX5_EDISON)
     CFGFLAGS+=" --with-mpi"
     ;;
   HPX5_STAMPEDE)
@@ -71,14 +69,10 @@ case "$SYSTEM" in
     module load  impi/4.1.3.049
     CFGFLAGS+=" --with-mpi"
     ;;
-  HPX5_EDISON)
-    CFGFLAGS+=" --with-mpi"
-    ;;
 esac
 }
 
 function add_photon() {
-echo $SYSTEM
 CFGFLAGS+=" --enable-photon"
 case "$SYSTEM" in
   CREST_cutter)
@@ -88,7 +82,7 @@ case "$SYSTEM" in
     export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
     export LIBRARY_PATH=/usr/lib64:$LIBRARY_PATH
     ;;
-  HPX5_BIGRED2)
+  HPX5_BIGRED2 | HPX5_EDISON)
     export HPX_PHOTON_BACKEND=ugni
     export HPX_PHOTON_CARGS="--with-ugni"
     CFGFLAGS+=" --with-pmi --with-hugetlbfs"
@@ -96,11 +90,6 @@ case "$SYSTEM" in
   HPX5_STAMPEDE)
     export HPX_PHOTON_IBDEV=mlx4_0
     export HPX_PHOTON_BACKEND=verbs
-    ;;
-  HPX5_EDISON)
-    export HPX_PHOTON_BACKEND=ugni
-    export HPX_PHOTON_CARGS="--with-ugni"
-    CFGFLAGS+=" --with-pmi --with-hugetlbfs"
     ;;
 esac
 }
@@ -132,6 +121,8 @@ function do_build() {
     make install
 }
 
+add_init
+
 case "$HPXMODE_AXIS" in
     photon)
 	add_mpi
@@ -160,7 +151,7 @@ case "$SYSTEM" in
           ;;
     esac
   ;;
-  HPX5_BIGRED2)
+  HPX5_BIGRED2 | HPX5_EDISON)
     if [ "$HPXMODE_AXIS" == smp ] ; then
       CFGFLAGS+=" --with-tests-cmd=\"aprun -n 1 -N 1\""
     else
@@ -174,13 +165,6 @@ case "$SYSTEM" in
       CFGFLAGS+=" --with-tests-cmd=\"ibrun -np 2\""
     fi
    ;;
-  HPX5_EDISON)
-    if [ "$HPXMODE_AXIS" == smp ] ; then
-      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 1 -N 1\""
-    else
-      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 2 -N 1\""
-    fi
-    ;;
   *)
     exit 1
     ;;
@@ -204,14 +188,11 @@ case "$SYSTEM" in
           ;;
     esac  
     ;; 
-  HPX5_BIGRED2)
+  HPX5_BIGRED2 | HPX5_EDISON)
     CFGFLAGS+=" CC=cc"
     ;;
   HPX5_STAMPEDE)
     CFGFLAGS+=" CC=icc"
-    ;;
-  HPX5_EDISON)
-    CFGFLAGS+=" CC=cc"
     ;;
   *)
     exit 1
@@ -232,14 +213,11 @@ if [ "$OP" == "build" ]; then
       CREST_cutter)
         CFG_CMD="../configure"
         ;;
-      HPX5_BIGRED2)
+      HPX5_BIGRED2 | HPX5_EDISON)
         CFG_CMD="../configure"
         ;;
       HPX5_STAMPEDE)
         CFG_CMD=" MPI_CFLAGS=-I/opt/apps/intel13/impi/4.1.3.049/intel64/include MPI_LIBS=\"-L/opt/apps/intel13/impi/4.1.3.049/intel64/lib -lmpi\" ../configure"
-        ;; 
-      HPX5_EDISON)
-        CFG_CMD="../configure"
         ;; 
       *)
        exit 1
