@@ -151,7 +151,7 @@ case "$SYSTEM" in
           ;;
     esac
   ;;
-  HPX5_BIGRED2 | HPX5_EDISON)
+  HPX5_BIGRED2)
     if [ "$HPXMODE_AXIS" == smp ] ; then
       CFGFLAGS+=" --with-tests-cmd=\"aprun -n 1 -N 1\""
     else
@@ -165,6 +165,13 @@ case "$SYSTEM" in
       CFGFLAGS+=" --with-tests-cmd=\"ibrun -np 2\""
     fi
    ;;
+  HPX5_EDISON)
+    if [ "$HPXMODE_AXIS" == smp ] ; then
+      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 1 -N 1\""
+    else
+      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 2 -N 2\""
+    fi
+    ;;
   *)
     exit 1
     ;;
