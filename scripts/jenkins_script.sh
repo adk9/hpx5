@@ -227,12 +227,16 @@ if [ "$OP" == "build" ]; then
 fi
 
 if [ "$OP" == "run" ]; then
+    echo "Running the regression test"
     cd "$DIR/build"
    
     case "$SYSTEM" in	 
       HPX5_STAMPEDE)
-      module load intel/13.1.1.163
-      module load  impi/4.1.3.049
+        module load intel/13.1.1.163
+        module load  impi/4.1.3.049
+      ;;
+      *)
+        exit 1
       ;;
     esac
 
