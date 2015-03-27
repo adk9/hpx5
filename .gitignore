@@ -128,6 +128,8 @@ tests/unit/thread_gettlsid
 tests/unit/task
 tests/unit/lco_and
 tests/unit/runtime
+tests/unit/libhpx_boot
+tests/unit/parcel_send_rendezvous
 tests/perf/gas_alloc
 tests/perf/gas_addr_trans
 tests/perf/lco_sema
