@@ -91,7 +91,7 @@ static HPX_ACTION(gas_global_mem_alloc, void *UNUSED) {
   uint64_t size = 1024*1024*100;
   int blocks = HPX_LOCALITIES;
 
-  hpx_addr_t local = hpx_gas_alloc(size);
+  hpx_addr_t local = hpx_gas_alloc_local(size);
   hpx_gas_free(local, HPX_NULL);
 
   hpx_addr_t global = hpx_gas_global_alloc(blocks, size);

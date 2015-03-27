@@ -99,7 +99,7 @@ hpx_addr_t hpx_gas_global_calloc(size_t n, uint32_t bsize);
 /// @param        bytes The number of bytes to allocate.
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_alloc(uint32_t bytes);
+hpx_addr_t hpx_gas_alloc_local(uint32_t bytes);
 hpx_addr_t hpx_gas_alloc_at_sync(uint32_t bytes, hpx_addr_t loc);
 void hpx_gas_alloc_at_async(uint32_t bytes, hpx_addr_t loc, hpx_addr_t lco);
 extern HPX_ACTION_DECL(hpx_gas_alloc_at_action);

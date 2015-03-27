@@ -41,7 +41,7 @@ hpx_addr_t HPX_THERE(uint32_t i);
 /// associated with the same allocation as @p addr, or one-off-the-end if the
 /// allocation was an array. The @p bsize must correspond to the block size
 /// specified during the initial allocation (or the size of the object for
-/// allocations performed by hpx_gas_alloc()).
+/// allocations performed by hpx_gas_alloc_local()).
 ///
 /// @param     addr A valid  global address.
 /// @param    bytes An offset in bytes into the memory referenced by @p addr.
@@ -56,7 +56,7 @@ hpx_addr_t hpx_addr_add(hpx_addr_t addr, int64_t bytes, uint32_t bsize);
 /// standard C pointer arithmetic, both @p lhs and @p rhs must be part of the
 /// same allocation. Furthermore, @p bsize must correspond to the block size
 /// specified during the initial allocation (or the size of the object for
-/// allocations performed by hpx_gas_alloc()).
+/// allocations performed by hpx_gas_alloc_local()).
 ///
 /// @param      lhs The "left-hand-size" address for the computation.
 /// @param      rhs The "right-hand-size" address for the computation.
