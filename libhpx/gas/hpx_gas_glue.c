@@ -120,13 +120,13 @@ void hpx_gas_alloc_at_async(uint32_t bytes, hpx_addr_t loc, hpx_addr_t lco) {
   dbg_check(e, "Failed async call during allocation\n");
 }
 
-hpx_addr_t hpx_gas_calloc(size_t nmemb, size_t size) {
+hpx_addr_t hpx_gas_calloc_local(size_t nmemb, size_t size) {
   dbg_assert(here && here->gas && here->gas->local_calloc);
   return here->gas->local_calloc(nmemb, size);
 }
 
 static int _gas_calloc_at_handler(size_t nmemb, size_t size) {
-  hpx_addr_t addr = hpx_gas_calloc(nmemb, size);
+  hpx_addr_t addr = hpx_gas_calloc_local(nmemb, size);
   dbg_assert(addr);
   HPX_THREAD_CONTINUE(addr);
 }
