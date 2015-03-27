@@ -445,7 +445,7 @@ hpx_addr_t hpx_lco_chan_local_array_new(int n, int size) {
   uint32_t lco_bytes = sizeof(_chan_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
   uint32_t  block_bytes = n * lco_bytes;
-  hpx_addr_t base = hpx_gas_alloc(block_bytes);
+  hpx_addr_t base = hpx_gas_alloc_local(block_bytes);
 
   // for each block, initialize the future.
   uint32_t args[] = {n, size};

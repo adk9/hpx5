@@ -75,7 +75,7 @@ static int _main_action(void *args) {
   for (int i = 0; i < sizeof(num)/sizeof(num[0]); i++) {
     fprintf(stdout, "%d", num[i]);
 
-    hpx_addr_t local = hpx_gas_alloc(TEST_BUF_SIZE);
+    hpx_addr_t local = hpx_gas_alloc_local(TEST_BUF_SIZE);
     hpx_addr_t completed = hpx_lco_and_new(num[i]);
     now = hpx_time_now();
     for (int j = 0; j < num[i]; j++)

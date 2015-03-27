@@ -12,7 +12,7 @@
 // =============================================================================
 
 // Goal of this testcase is to test the HPX Memory Allocation
-// 1. hpx_gas_alloc() -- Allocates the global memory.
+// 1. hpx_gas_alloc_local() -- Allocates the global memory.
 // 3. hpx_gas_try_pin() -- Performs address translation.
 // 4. hpx_gas_unpin() -- Allows an address to be remapped.
 
@@ -25,7 +25,7 @@ static const int N = 10;
 
 static HPX_ACTION(gas_alloc, void *UNUSED) {
   printf("Starting the GAS local memory allocation test\n");
-  hpx_addr_t local = hpx_gas_alloc(N);
+  hpx_addr_t local = hpx_gas_alloc_local(N);
 
   if (!local) {
     fflush(stdout);

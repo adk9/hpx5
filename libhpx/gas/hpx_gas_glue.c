@@ -56,7 +56,7 @@ hpx_addr_t hpx_gas_global_calloc(size_t n, uint32_t bsize) {
   return here->gas->cyclic_calloc(n, bsize);
 }
 
-hpx_addr_t hpx_gas_alloc(uint32_t bsize) {
+hpx_addr_t hpx_gas_alloc_local(uint32_t bsize) {
   dbg_assert(here && here->gas);
   return here->gas->local_alloc(bsize);
 }
@@ -99,7 +99,7 @@ int hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
 }
 
 static int hpx_gas_alloc_at_handler(uint32_t bytes) {
-  hpx_addr_t addr = hpx_gas_alloc(bytes);
+  hpx_addr_t addr = hpx_gas_alloc_local(bytes);
   dbg_assert(addr);
   HPX_THREAD_CONTINUE(addr);
 }
