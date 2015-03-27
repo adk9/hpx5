@@ -121,8 +121,6 @@ function do_build() {
     make install
 }
 
-add_init
-
 case "$HPXMODE_AXIS" in
     photon)
 	add_mpi
@@ -209,6 +207,7 @@ case "$HPXDEBUG_CHOICE" in
 esac
 
 if [ "$OP" == "build" ]; then
+    add_init
     case "$SYSTEM" in
       CREST_cutter)
         CFG_CMD="../configure"
