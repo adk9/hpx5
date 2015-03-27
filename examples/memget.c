@@ -71,7 +71,7 @@ static HPX_ACTION(_main, void *args) {
     hpx_shutdown(HPX_ERROR);
   }
 
-  hpx_addr_t data = hpx_gas_global_alloc(size, MAX_MSG_SIZE * 2);
+  hpx_addr_t data = hpx_gas_alloc_cyclic(size, MAX_MSG_SIZE * 2);
   hpx_addr_t remote = hpx_addr_add(data, MAX_MSG_SIZE * 2 * peer, MAX_MSG_SIZE *2);
 
   fprintf(stdout, HEADER);

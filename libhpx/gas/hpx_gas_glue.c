@@ -46,12 +46,12 @@ void hpx_gas_unpin(const hpx_addr_t addr) {
   here->gas->unpin(addr);
 }
 
-hpx_addr_t hpx_gas_global_alloc(size_t n, uint32_t bsize) {
+hpx_addr_t hpx_gas_alloc_cyclic(size_t n, uint32_t bsize) {
   dbg_assert(here && here->gas);
   return here->gas->cyclic_alloc(n, bsize);
 }
 
-hpx_addr_t hpx_gas_global_calloc(size_t n, uint32_t bsize) {
+hpx_addr_t hpx_gas_calloc_cyclic(size_t n, uint32_t bsize) {
   dbg_assert(here && here->gas);
   return here->gas->cyclic_calloc(n, bsize);
 }
