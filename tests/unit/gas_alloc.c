@@ -70,7 +70,7 @@ static HPX_ACTION(gas_memalign, void *UNUSED) {
 
 static HPX_ACTION(gas_calloc, void *UNUSED) {
   printf("Starting GAS calloc\n");
-  hpx_addr_t local = hpx_gas_calloc(N, sizeof(int));
+  hpx_addr_t local = hpx_gas_calloc_local(N, sizeof(int));
 
   if (!local) {
     fflush(stdout);

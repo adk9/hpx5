@@ -119,7 +119,7 @@ extern HPX_ACTION_DECL(hpx_gas_alloc_at_action);
 /// @param         size The number of bytes per element
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_calloc(size_t nmemb, size_t size);
+hpx_addr_t hpx_gas_calloc_local(size_t nmemb, size_t size);
 hpx_addr_t hpx_gas_calloc_at_sync(size_t nmemb, size_t size, hpx_addr_t loc);
 void hpx_gas_calloc_at_async(size_t nmemb, size_t size, hpx_addr_t loc,
                              hpx_addr_t out);
