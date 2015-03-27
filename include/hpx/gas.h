@@ -100,9 +100,9 @@ hpx_addr_t hpx_gas_global_calloc(size_t n, uint32_t bsize);
 ///
 /// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_alloc_local(uint32_t bytes);
-hpx_addr_t hpx_gas_alloc_at_sync(uint32_t bytes, hpx_addr_t loc);
-void hpx_gas_alloc_at_async(uint32_t bytes, hpx_addr_t loc, hpx_addr_t lco);
-extern HPX_ACTION_DECL(hpx_gas_alloc_at_action);
+hpx_addr_t hpx_gas_alloc_local_at_sync(uint32_t bytes, hpx_addr_t loc);
+void hpx_gas_alloc_local_at_async(uint32_t bytes, hpx_addr_t loc, hpx_addr_t lco);
+extern HPX_ACTION_DECL(hpx_gas_alloc_local_at_action);
 
 /// Allocate a 0-initialized block of global memory.
 ///
@@ -120,10 +120,10 @@ extern HPX_ACTION_DECL(hpx_gas_alloc_at_action);
 ///
 /// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_calloc_local(size_t nmemb, size_t size);
-hpx_addr_t hpx_gas_calloc_at_sync(size_t nmemb, size_t size, hpx_addr_t loc);
-void hpx_gas_calloc_at_async(size_t nmemb, size_t size, hpx_addr_t loc,
+hpx_addr_t hpx_gas_calloc_local_at_sync(size_t nmemb, size_t size, hpx_addr_t loc);
+void hpx_gas_calloc_local_at_async(size_t nmemb, size_t size, hpx_addr_t loc,
                              hpx_addr_t out);
-extern HPX_ACTION_DECL(hpx_gas_calloc_at_action);
+extern HPX_ACTION_DECL(hpx_gas_calloc_local_at_action);
 
 /// Allocate aligned memory.
 ///
