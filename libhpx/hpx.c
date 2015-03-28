@@ -163,13 +163,19 @@ int hpx_init(int *argc, char ***argv) {
   }
   HPX_HERE = HPX_THERE(here->rank);
 
-  if (!here->config->cores) {
-    here->config->cores = system_get_cores();
+  if (here->config->cores) {
+    log_error("--hpx-cores is deprecated, ignoring\n");
+  }
+  status = system_get_affinity_group_size(pthread_self(), &here->config->cores);
+  if (status) {
+    goto unwind1;
   }
 
   if (!here->config->threads) {
     here->config->threads = here->config->cores;
   }
+  log("HPX running %d worker threads on %d cores\n", here->config->threads,
+      here->config->cores);
 
   // Initialize the network. This will initialize a transport and, as a side
   // effect initialize our allocators.
