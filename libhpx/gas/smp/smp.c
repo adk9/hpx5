@@ -95,7 +95,8 @@ static hpx_addr_t _smp_there(uint32_t i) {
 /// Allocate a global array.
 static hpx_addr_t _smp_gas_alloc_cyclic(size_t n, uint32_t bsize,
                                         uint32_t boundary) {
-  void *p = boundary ? local_memalign(boundary, n * bsize) : local_malloc(n * bsize);
+  void *p = boundary ?
+      local_memalign(boundary, n * bsize) : local_malloc(n * bsize);
   return _smp_lva_to_gva(p);
 }
 
@@ -120,7 +121,8 @@ static hpx_addr_t _smp_gas_alloc_local(uint32_t bytes, uint32_t boundary) {
 }
 
 /// Allocate a bunch of initialized global memory
-static hpx_addr_t _smp_gas_calloc_local(size_t nmemb, size_t size, uint32_t boundary) {
+static hpx_addr_t _smp_gas_calloc_local(size_t nmemb, size_t size,
+                                        uint32_t boundary) {
   size_t bytes = nmemb * size;
   void *p;
   if (boundary) {
