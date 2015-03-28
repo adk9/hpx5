@@ -54,7 +54,8 @@ static void *_mmap_aligned(void *addr, size_t n, int prot, int flags, int fd,
   uintptr_t suffix = bits & mask;
   uintptr_t prefix = align - suffix;
 
-  // return the overallocated pages back to the OS
+  // return the overallocated pages back to the OS, system_munmap here is fine
+  // because we know our sizes are okay even for huge allocations
   if (prefix) {
     system_munmap(NULL, buffer, prefix);
   }
@@ -127,6 +128,14 @@ void *system_mmap_huge_pages(void *UNUSED, void *addr, size_t n, size_t align) {
 }
 
 void system_munmap(void *UNUSED, void *addr, size_t size) {
+  int e = munmap(addr, size);
+  if (e < 0) {
+    dbg_error("munmap failed: %s.  addr is %"PRIuPTR", and size is %zu\n",
+          strerror(errno), (uintptr_t)addr, size);
+  }
+}
+
+void system_munmap_huge_pages(void *UNUSED, void *addr, size_t size) {
 #ifdef HAVE_HUGETLBFS
   long hugepagesize = gethugepagesize();
   long hugepagemask = hugepazesize - 1;
@@ -136,9 +145,5 @@ void system_munmap(void *UNUSED, void *addr, size_t size) {
     size += padding;
   }
 #endif
-  int e = munmap(addr, size);
-  if (e < 0) {
-    dbg_error("munmap failed: %s.  addr is %"PRIuPTR", and size is %zu\n",
-          strerror(errno), (uintptr_t)addr, size);
-  }
+  system_munmap(UNUSED, addr, size);
 }
