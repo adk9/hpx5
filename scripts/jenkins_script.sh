@@ -140,10 +140,10 @@ case "$SYSTEM" in
     case "$HPXIBDEV" in
       qib0)
           export PSM_MEMORY=large
-          CFGFLAGS+=" --with-tests-cmd=\"mpirun -np 2 --mca btl_openib_if_include ${HPXIBDEV}\""
+          CFGFLAGS+=" --with-tests-cmd=\"mpirun -np 2 --map-by node:PE=16 --mca btl_openib_if_include ${HPXIBDEV}\""
           ;;
       mlx4_0)
-          CFGFLAGS+=" --with-tests-cmd=\"mpirun -np 2 --mca mtl ^psm --mca btl_openib_if_include ${HPXIBDEV}\""
+          CFGFLAGS+=" --with-tests-cmd=\"mpirun -np 2 --map-by node:PE=16 --mca mtl ^psm --mca btl_openib_if_include ${HPXIBDEV}\""
           ;;
       none)
           ;;
