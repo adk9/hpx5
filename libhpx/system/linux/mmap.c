@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <errno.h>
 #include <inttypes.h>
 #include <string.h>
 #ifdef HAVE_HUGETLBFS
