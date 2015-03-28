@@ -18,6 +18,31 @@
 ///        space.
 #include <hpx/addr.h>
 
+/// Global address-space layout and distribution.
+typedef enum {
+  HPX_DIST_TYPE_USER = 0,  //!< User-defined distribution.
+  HPX_DIST_TYPE_LOCAL,     //!< Allocation local to calling locality.
+  HPX_DIST_TYPE_CYCLIC,    //!< Cyclic distribution.
+  HPX_DIST_TYPE_BLOCKED,   //!< Blocked sequential distribution.
+} hpx_gas_dist_type_t;
+
+/// User-defined GAS distribution function.
+typedef int (*hpx_gas_dist_t)(uint32_t i, size_t n, uint32_t bsize);
+
+#define HPX_GAS_DIST_LOCAL   (hpx_gas_dist_t)HPX_DIST_TYPE_LOCAL
+#define HPX_GAS_DIST_CYCLIC  (hpx_gas_dist_t)HPX_DIST_TYPE_CYCLIC
+#define HPX_GAS_DIST_BLOCKED (hpx_gas_dist_t)HPX_DIST_TYPE_BLOCKED
+
+/// Allocate distributed global memory given a distribution.
+///
+hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bsize, uint32_t alignment,
+                         hpx_gas_dist_t dist);
+
+/// Allocate distributed zeroed global memory given a distribution.
+///
+hpx_addr_t hpx_gas_calloc(size_t n, uint32_t bsize, uint32_t alignment,
+                          hpx_gas_dist_t dist);
+
 /// Performs address translation.
 ///
 /// This will try to perform a global-to-local translation on the global @p
