@@ -27,7 +27,7 @@ typedef enum {
 } hpx_gas_dist_type_t;
 
 /// User-defined GAS distribution function.
-typedef int (*hpx_gas_dist_t)(uint32_t i, size_t n, uint32_t bsize);
+typedef hpx_addr_t (*hpx_gas_dist_t)(uint32_t i, size_t n, uint32_t bsize);
 
 #define HPX_GAS_DIST_LOCAL   (hpx_gas_dist_t)HPX_DIST_TYPE_LOCAL
 #define HPX_GAS_DIST_CYCLIC  (hpx_gas_dist_t)HPX_DIST_TYPE_CYCLIC
