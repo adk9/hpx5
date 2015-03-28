@@ -562,12 +562,6 @@ void worker_bind_self(struct worker *worker) {
   }
   self = worker;
   self->thread = pthread_self();
-
-  // we set worker thread affinity in worker_create()
-  //if (self->core >= 0) {
-  //   log_sched("binding affinity for worker %d to core %d.\n", self->id, self->core);
-  //  system_set_affinity(self->thread, self->core);
-  //}
 }
 
 int worker_start(void) {
@@ -611,9 +605,6 @@ int worker_create(struct worker *worker, const config_t *cfg) {
     dbg_error("failed to start a scheduler worker pthread.\n");
     return e;
   }
-
-  // unbind the worker thread (-1 indicates run on all available cores)
-  system_set_affinity(thread, -1);
   return LIBHPX_OK;
 }
 
