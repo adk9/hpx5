@@ -125,8 +125,14 @@ void *system_mmap_huge_pages(void *UNUSED, void *addr, size_t n, size_t align) {
 }
 
 void system_munmap(void *UNUSED, void *addr, size_t size) {
-  int e = munmap(addr, size);
+  const long hugepagesize = gethugepagesize();
+  int e = munmap(addr, size
+#ifdef HAVE_HUGETLBFS
+        + (size < hugepagesize ? (hugepagesize - (size % hugepagesize)) : 0)
+#endif
+  );
   if (e < 0) {
-    dbg_error("munmap failed: %s.\n", strerror(e));
+    dbg_error("munmap failed: %s.  addr is %"PRIuPTR", and size is %zu\n",
+	      strerror(errno), (uintptr_t)addr, size);
   }
 }
