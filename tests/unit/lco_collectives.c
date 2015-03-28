@@ -84,7 +84,7 @@ static HPX_ACTION(lco_reduce, void *UNUSED) {
   int nDoms = 8;
   int maxCycles = 100;
 
-  hpx_addr_t domain = hpx_gas_global_calloc(nDoms, sizeof(Domain));
+  hpx_addr_t domain = hpx_gas_calloc_cyclic(nDoms, sizeof(Domain), sizeof(Domain));
   hpx_addr_t done = hpx_lco_and_new(nDoms);
 
   hpx_addr_t newdt = hpx_lco_reduce_new(nDoms, sizeof(double),
@@ -152,7 +152,7 @@ static HPX_ACTION(lco_allreduce, void *UNUSED) {
   int nDoms = 8;
   int maxCycles = 100;
 
-  hpx_addr_t domain = hpx_gas_global_calloc(nDoms, sizeof(Domain));
+  hpx_addr_t domain = hpx_gas_calloc_cyclic(nDoms, sizeof(Domain), sizeof(Domain));
   hpx_addr_t done = hpx_lco_and_new(nDoms);
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
 
@@ -220,7 +220,7 @@ static HPX_ACTION(lco_allgather, void *UNUSED) {
   int nDoms = 8;
   int maxCycles = 100;
 
-  hpx_addr_t domain = hpx_gas_global_calloc(nDoms, sizeof(Domain));
+  hpx_addr_t domain = hpx_gas_calloc_cyclic(nDoms, sizeof(Domain), sizeof(Domain));
   hpx_addr_t done = hpx_lco_and_new(nDoms);
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
 
@@ -289,7 +289,7 @@ static HPX_ACTION(lco_alltoall, void *UNUSED) {
   int nDoms = 8;
   int maxCycles = 100;
 
-  hpx_addr_t domain = hpx_gas_global_calloc(nDoms, sizeof(Domain));
+  hpx_addr_t domain = hpx_gas_calloc_cyclic(nDoms, sizeof(Domain), sizeof(Domain));
   hpx_addr_t done = hpx_lco_and_new(nDoms);
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
 

@@ -40,7 +40,7 @@
 
 static hpx_addr_t _hpx_143 = 0;
 static HPX_ACTION(_hpx_143_fix, void *UNUSED) {
-  _hpx_143 = hpx_gas_global_alloc(sizeof(void*), HPX_LOCALITIES);
+  _hpx_143 = hpx_gas_alloc_cyclic(sizeof(void*), HPX_LOCALITIES, 0);
   return LIBHPX_OK;
 }
 

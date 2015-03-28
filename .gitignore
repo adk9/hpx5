@@ -76,6 +76,8 @@ contrib/libffi/
 contrib/jemalloc/
 contrib/jemalloc_hpx/
 contrib/photon/
+contrib/jemalloc_build_global/
+contrib/jemalloc_build_registered/
 
 # /libhpx/
 /libhpx/Makefile
@@ -128,6 +130,8 @@ tests/unit/thread_gettlsid
 tests/unit/task
 tests/unit/lco_and
 tests/unit/runtime
+tests/unit/libhpx_boot
+tests/unit/parcel_send_rendezvous
 tests/perf/gas_alloc
 tests/perf/gas_addr_trans
 tests/perf/lco_sema

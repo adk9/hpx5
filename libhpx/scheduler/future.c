@@ -242,7 +242,7 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {
   uint32_t       blocks = ceil_div_32(n, futures_per_block);
   uint32_t future_bytes = sizeof(_future_t) + size;
   uint32_t  block_bytes = futures_per_block * future_bytes;
-  hpx_addr_t       base = hpx_gas_global_alloc(blocks, block_bytes);
+  hpx_addr_t       base = hpx_gas_alloc_cyclic(blocks, block_bytes, 0);
 
   // for each block, initialize the future
   uint32_t args[] = { size, futures_per_block };
@@ -288,7 +288,7 @@ hpx_addr_t hpx_lco_future_local_array_new(int n, int size) {
   uint32_t lco_bytes = sizeof(_future_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
   uint32_t  block_bytes = n * lco_bytes;
-  hpx_addr_t base = hpx_gas_alloc(block_bytes);
+  hpx_addr_t base = hpx_gas_alloc_local(block_bytes, 0);
 
   // for each block, initialize the future.
   uint32_t args[] = {n, size};
