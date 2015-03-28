@@ -27,12 +27,12 @@ hpx_gas_dist_type_t gas_get_dist_type(hpx_gas_dist_t dist) {
   return ((uintptr_t)dist & GAS_DIST_TYPE_MASK);
 }
 
-hpx_addr_t hpx_gas_alloc_user(size_t n, uint32_t bsize, hpx_gas_dist_t dist) {
+static hpx_addr_t hpx_gas_alloc_user(size_t n, uint32_t bsize, hpx_gas_dist_t dist) {
   dbg_assert(gas_get_dist_type(dist) == HPX_DIST_TYPE_USER);
   dbg_error("User-defined GAS distribution not supported.\n");
 }
 
-hpx_addr_t hpx_gas_calloc_user(size_t n, uint32_t bsize, hpx_gas_dist_t dist) {
+static hpx_addr_t hpx_gas_calloc_user(size_t n, uint32_t bsize, hpx_gas_dist_t dist) {
   dbg_assert(gas_get_dist_type(dist) == HPX_DIST_TYPE_USER);
   dbg_error("User-defined GAS distribution not supported.\n");
 }
