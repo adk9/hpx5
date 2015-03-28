@@ -58,7 +58,7 @@ static HPX_ACTION(thread_create, void *UNUSED) {
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t addr = hpx_gas_alloc_cyclic(NUM_THREADS, sizeof(initBuffer_t));
+  hpx_addr_t addr = hpx_gas_alloc_cyclic(NUM_THREADS, sizeof(initBuffer_t), 0);
   hpx_addr_t done = hpx_lco_and_new(NUM_THREADS);
 
   // HPX Threads are spawned as a result of hpx_parcel_send() / hpx_parcel_

@@ -62,9 +62,10 @@ hpx_addr_t hpx_gas_calloc(size_t n, uint32_t bsize, uint32_t boundary,
 ///
 /// @param            n The number of blocks to allocate.
 /// @param        bsize The number of bytes per block.
+/// @param     boundary The alignment (2^k).
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_alloc_cyclic(size_t n, uint32_t bsize);
+hpx_addr_t hpx_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary);
 
 /// Allocate cyclically distributed global zeroed memory.
 ///
@@ -73,9 +74,10 @@ hpx_addr_t hpx_gas_alloc_cyclic(size_t n, uint32_t bsize);
 ///
 /// @param            n The number of blocks to allocate.
 /// @param        bsize The number of bytes per block.
+/// @param     boundary The alignment (2^k).
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_calloc_cyclic(size_t n, uint32_t bsize);
+hpx_addr_t hpx_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary);
 
 /// Allocate distributed global memory laid out in a
 /// super-block-cyclic manner where the size of each super-block is
@@ -117,11 +119,13 @@ hpx_addr_t hpx_gas_calloc_blocked(size_t n, uint32_t bsize, uint32_t boundary);
 /// runtime.
 ///
 /// @param        bytes The number of bytes to allocate.
+/// @param     boundary The alignment (2^k).
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_alloc_local(uint32_t bytes);
-hpx_addr_t hpx_gas_alloc_local_at_sync(uint32_t bytes, hpx_addr_t loc);
-void hpx_gas_alloc_local_at_async(uint32_t bytes, hpx_addr_t loc, hpx_addr_t lco);
+hpx_addr_t hpx_gas_alloc_local(uint32_t bytes, uint32_t boundary);
+hpx_addr_t hpx_gas_alloc_local_at_sync(uint32_t bytes, uint32_t boundary, hpx_addr_t loc);
+void hpx_gas_alloc_local_at_async(uint32_t bytes, uint32_t boundary, hpx_addr_t loc,
+                                  hpx_addr_t lco);
 extern HPX_ACTION_DECL(hpx_gas_alloc_local_at_action);
 
 /// Allocate a 0-initialized block of global memory.
@@ -137,37 +141,15 @@ extern HPX_ACTION_DECL(hpx_gas_alloc_local_at_action);
 ///
 /// @param        nmemb The number of elements to allocate.
 /// @param         size The number of bytes per element
-///
-/// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_calloc_local(size_t nmemb, size_t size);
-hpx_addr_t hpx_gas_calloc_local_at_sync(size_t nmemb, size_t size, hpx_addr_t loc);
-void hpx_gas_calloc_local_at_async(size_t nmemb, size_t size, hpx_addr_t loc,
-                             hpx_addr_t out);
-extern HPX_ACTION_DECL(hpx_gas_calloc_local_at_action);
-
-/// Allocate aligned memory.
-///
-/// This is a non-collective call to allocate memory in the global
-/// address space that can be moved. The allocated memory, by default,
-/// has affinity to the allocating node, however in low memory conditions the
-/// allocated memory may not be local to the caller. As it allocated in the GAS,
-/// it is accessible from any locality, and may be relocated by the
-/// runtime.
-///
-/// This interface is designed to match programmers' expectations with respect
-/// to libc `calloc()`, however it *only allocates one GAS block of @p nmemb *
-/// @p size bytes*.
-///
 /// @param     boundary The alignment (2^k).
-/// @param         size The number of bytes to allocate.
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_memalign(size_t boundary, size_t size);
-hpx_addr_t hpx_gas_memalign_at_sync(size_t boundary, size_t size,
-                                    hpx_addr_t loc);
-void hpx_gas_memalign_at_async(size_t boundary, size_t size, hpx_addr_t loc,
-                               hpx_addr_t lco);
-extern HPX_ACTION_DECL(hpx_gas_memalign_at_action);
+hpx_addr_t hpx_gas_calloc_local(size_t nmemb, size_t size, uint32_t boundary);
+hpx_addr_t hpx_gas_calloc_local_at_sync(size_t nmemb, size_t size, uint32_t boundary,
+                                        hpx_addr_t loc);
+void hpx_gas_calloc_local_at_async(size_t nmemb, size_t size, uint32_t boundary,
+                                   hpx_addr_t loc, hpx_addr_t out);
+extern HPX_ACTION_DECL(hpx_gas_calloc_local_at_action);
 
 /// Free a global allocation.
 ///

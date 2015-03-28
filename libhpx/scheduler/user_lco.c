@@ -244,7 +244,7 @@ hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size,
   uint32_t lco_bytes = sizeof(_user_lco_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
   uint32_t  block_bytes = n * lco_bytes;
-  hpx_addr_t base = hpx_gas_alloc_local(block_bytes);
+  hpx_addr_t base = hpx_gas_alloc_local(block_bytes, 0);
 
   int e = hpx_call_sync(base, _block_local_init, NULL, 0, &n, &size, &id, &op, &predicate);
   dbg_check(e, "call of _block_init_action failed\n");

@@ -50,7 +50,7 @@ static HPX_ACTION(gas_global_alloc, void *UNUSED) {
   fflush(stdout);
 
   // Allocate the domain array
-  hpx_addr_t domain = hpx_gas_alloc_cyclic(nDoms, sizeof(Domain));
+  hpx_addr_t domain = hpx_gas_alloc_cyclic(nDoms, sizeof(Domain), 0);
 
   // Allocate an and gate that we can wait on to detect that all of the domains
   // have completed initialization.
@@ -76,13 +76,13 @@ static HPX_ACTION(gas_global_alloc, void *UNUSED) {
 }
 
 static HPX_ACTION(gas_global_alloc_block, void *UNUSED) {
-  hpx_addr_t data = hpx_gas_alloc_cyclic(1, 1024 * sizeof(char));
+  hpx_addr_t data = hpx_gas_alloc_cyclic(1, 1024 * sizeof(char), 0);
   hpx_gas_free(data, HPX_NULL);
   return HPX_SUCCESS;
 }
 
 static HPX_ACTION(gas_global_calloc_block, void *UNUSED) {
-  hpx_addr_t global = hpx_gas_calloc_cyclic(1, 1024 *sizeof(char));
+  hpx_addr_t global = hpx_gas_calloc_cyclic(1, 1024 *sizeof(char), 0);
   hpx_gas_free(global, HPX_NULL);
   return HPX_SUCCESS;
 }
@@ -91,13 +91,13 @@ static HPX_ACTION(gas_global_mem_alloc, void *UNUSED) {
   uint64_t size = 1024*1024*100;
   int blocks = HPX_LOCALITIES;
 
-  hpx_addr_t local = hpx_gas_alloc_local(size);
+  hpx_addr_t local = hpx_gas_alloc_local(size, 0);
   hpx_gas_free(local, HPX_NULL);
 
-  hpx_addr_t global = hpx_gas_alloc_cyclic(blocks, size);
+  hpx_addr_t global = hpx_gas_alloc_cyclic(blocks, size, 0);
   hpx_gas_free(global, HPX_NULL);
 
-  hpx_addr_t calloc = hpx_gas_calloc_cyclic(blocks, size);
+  hpx_addr_t calloc = hpx_gas_calloc_cyclic(blocks, size, 0);
   hpx_gas_free(calloc, HPX_NULL);
   
   return HPX_SUCCESS;

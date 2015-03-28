@@ -56,7 +56,7 @@ static int _main_action(void *args) {
 
   for (size_t size = 1; size <= MAX_BYTES; size*=2) {
     t = hpx_time_now();
-    local = hpx_gas_alloc_local(size);
+    local = hpx_gas_alloc_local(size, 0);
     fprintf(stdout, "%-*zu%*g", 10,  size, FIELD_WIDTH, hpx_time_elapsed_ms(t));
 
     t = hpx_time_now();
@@ -64,7 +64,7 @@ static int _main_action(void *args) {
     fprintf(stdout, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
 
     t = hpx_time_now();
-    global = hpx_gas_alloc_cyclic(blocks, size);
+    global = hpx_gas_alloc_cyclic(blocks, size, 0);
     fprintf(stdout, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
 
     t = hpx_time_now();
@@ -72,7 +72,7 @@ static int _main_action(void *args) {
     fprintf(stdout, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
 
     t = hpx_time_now();
-    calloc_global = hpx_gas_calloc_cyclic(blocks, size);
+    calloc_global = hpx_gas_calloc_cyclic(blocks, size, 0);
     fprintf(stdout, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
 
     t = hpx_time_now();

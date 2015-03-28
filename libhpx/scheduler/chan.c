@@ -382,7 +382,7 @@ hpx_addr_t hpx_lco_chan_array_new(int n, int size, int chans_per_block) {
   uint32_t     blocks   = ceil_div_32(n, chans_per_block);;
   uint32_t chan_bytes   = sizeof(_chan_t) + size;
   uint32_t  block_bytes = chans_per_block * chan_bytes;
-  hpx_addr_t       base = hpx_gas_alloc_cyclic(blocks, block_bytes);
+  hpx_addr_t       base = hpx_gas_alloc_cyclic(blocks, block_bytes, 0);
 
   // for each rank, send an initialization message
   uint32_t args[] = { chans_per_block, size };
@@ -445,7 +445,7 @@ hpx_addr_t hpx_lco_chan_local_array_new(int n, int size) {
   uint32_t lco_bytes = sizeof(_chan_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
   uint32_t  block_bytes = n * lco_bytes;
-  hpx_addr_t base = hpx_gas_alloc_local(block_bytes);
+  hpx_addr_t base = hpx_gas_alloc_local(block_bytes, 0);
 
   // for each block, initialize the future.
   uint32_t args[] = {n, size};

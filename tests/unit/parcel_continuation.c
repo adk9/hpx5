@@ -37,7 +37,7 @@ static HPX_ACTION(parcel_get_continuation, void *UNUSED) {
 
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t addr = hpx_gas_alloc_cyclic(1, sizeof(uint64_t));
+  hpx_addr_t addr = hpx_gas_alloc_cyclic(1, sizeof(uint64_t), sizeof(uint64_t));
 
   hpx_addr_t done = hpx_lco_and_new(1);
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(uint64_t));
