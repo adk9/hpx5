@@ -21,6 +21,48 @@
 
 hpx_addr_t HPX_HERE = 0;
 
+#define GAS_DIST_TYPE_MASK  (0x7)
+
+hpx_gas_dist_type_t gas_get_dist_type(hpx_gas_dist_t dist) {
+  return ((uintptr_t)dist & GAS_DIST_TYPE_MASK);
+}
+
+hpx_addr_t hpx_gas_alloc_user(size_t n, uint32_t bsize, hpx_gas_dist_t dist) {
+  dbg_assert(gas_get_dist_type(dist) == HPX_DIST_TYPE_USER);
+  dbg_error("User-defined GAS distribution not supported.\n");
+}
+
+hpx_addr_t hpx_gas_calloc_user(size_t n, uint32_t bsize, hpx_gas_dist_t dist) {
+  dbg_assert(gas_get_dist_type(dist) == HPX_DIST_TYPE_USER);
+  dbg_error("User-defined GAS distribution not supported.\n");
+}
+
+hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bsize, uint32_t alignment,
+                         hpx_gas_dist_t dist) {
+  dbg_assert(dist);
+  int type = (int)gas_get_dist_type(dist);
+  switch (type) {
+   case (HPX_DIST_TYPE_LOCAL): return hpx_gas_alloc_local(n*bsize);
+   case (HPX_DIST_TYPE_CYCLIC): return hpx_gas_alloc_cyclic(n, bsize);
+   case (HPX_DIST_TYPE_BLOCKED): return hpx_gas_alloc_blocked(n, bsize);
+   case (HPX_DIST_TYPE_USER): return hpx_gas_alloc_user(n, bsize, dist);
+   default: dbg_error("Unknown gas distribution type %d.\n", type);
+  }
+}
+
+hpx_addr_t hpx_gas_calloc(size_t n, uint32_t bsize, uint32_t alignment,
+                          hpx_gas_dist_t dist) {
+  dbg_assert(dist);
+  int type = (int)gas_get_dist_type(dist);
+  switch (type) {
+   case (HPX_DIST_TYPE_LOCAL): return hpx_gas_calloc_local(n, bsize);
+   case (HPX_DIST_TYPE_CYCLIC): return hpx_gas_calloc_cyclic(n, bsize);
+   case (HPX_DIST_TYPE_BLOCKED): return hpx_gas_calloc_blocked(n, bsize);
+   case (HPX_DIST_TYPE_USER): return hpx_gas_calloc_user(n, bsize, dist);
+   default: dbg_error("Unknown gas distribution type %d.\n", type);
+  }
+}
+
 hpx_addr_t HPX_THERE(uint32_t i) {
   dbg_assert(here && here->gas && here->gas->there);
   return here->gas->there(i);
