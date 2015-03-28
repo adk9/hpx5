@@ -137,7 +137,7 @@ esac
 
 case "$SYSTEM" in
   CREST_cutter)
-    case "$HPXIBDEV" in
+    case "$HPXDEV_AXIS" in
       qib0)
           export PSM_MEMORY=large
           CFGFLAGS+=" --with-tests-cmd=\"mpirun -np 2 --map-by node:PE=16 --mca btl_openib_if_include ${HPXIBDEV}\""
