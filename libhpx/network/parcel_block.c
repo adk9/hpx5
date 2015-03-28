@@ -58,7 +58,7 @@ void *parcel_block_at(parcel_block_t *block, size_t offset) {
 }
 
 void parcel_block_deduct(parcel_block_t *block, size_t bytes) {
-  dbg_assert(bytes < SIZE_MAX/2);
+  dbg_assert(0 < bytes && bytes < SIZE_MAX/2);
   size_t r = sync_fadd(&block->remaining, -bytes, SYNC_ACQ_REL);
   dbg_assert(r >= bytes);
   r = r - bytes;

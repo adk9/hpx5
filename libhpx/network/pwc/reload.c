@@ -244,7 +244,9 @@ static int _reload_request_handler(int src, command_t cmd) {
   reload_t *reload = (reload_t*)pwc->parcels;
   buffer_t *recv = &reload->recv[src];
   size_t n = command_get_arg(cmd);
-  parcel_block_deduct(recv->block, n);
+  if (n) {
+    parcel_block_deduct(recv->block, n);
+  }
   _buffer_reload(recv, xport);
 
   xport_op_t op = {
