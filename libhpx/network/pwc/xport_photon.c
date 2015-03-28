@@ -294,7 +294,7 @@ pwc_xport_t *pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas)
   registered = address_space_new_jemalloc_registered(cfg, photon, _photon_pin,
                                                      _photon_unpin, NULL,
                                                      system_mmap_huge_pages,
-                                                     system_munmap);
+                                                     system_munmap_huge_pages);
   global = address_space_new_jemalloc_global(cfg, photon, _photon_pin,
                                              _photon_unpin, gas, gas_mmap,
                                              gas_munmap);
