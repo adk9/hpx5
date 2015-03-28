@@ -35,12 +35,12 @@ typedef hpx_addr_t (*hpx_gas_dist_t)(uint32_t i, size_t n, uint32_t bsize);
 
 /// Allocate distributed global memory given a distribution.
 ///
-hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bsize, uint32_t alignment,
+hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bsize, uint32_t boundary,
                          hpx_gas_dist_t dist);
 
 /// Allocate distributed zeroed global memory given a distribution.
 ///
-hpx_addr_t hpx_gas_calloc(size_t n, uint32_t bsize, uint32_t alignment,
+hpx_addr_t hpx_gas_calloc(size_t n, uint32_t bsize, uint32_t boundary,
                           hpx_gas_dist_t dist);
 
 /// Allocate cyclically distributed global memory.
@@ -89,9 +89,10 @@ hpx_addr_t hpx_gas_calloc_cyclic(size_t n, uint32_t bsize);
 ///
 /// @param            n The number of blocks to allocate.
 /// @param        bsize The number of bytes per block.
+/// @param     boundary The alignment (2^k).
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_alloc_blocked(size_t n, uint32_t bsize);
+hpx_addr_t hpx_gas_alloc_blocked(size_t n, uint32_t bsize, uint32_t boundary);
 
 /// Allocate partitioned, super-block-cyclically distributed global
 /// zeroed memory.
@@ -101,9 +102,10 @@ hpx_addr_t hpx_gas_alloc_blocked(size_t n, uint32_t bsize);
 ///
 /// @param            n The number of blocks to allocate.
 /// @param        bsize The number of bytes per block.
+/// @param     boundary The alignment (2^k).
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_calloc_blocked(size_t n, uint32_t bsize);
+hpx_addr_t hpx_gas_calloc_blocked(size_t n, uint32_t bsize, uint32_t boundary);
 
 /// Allocate a block of global memory.
 ///
