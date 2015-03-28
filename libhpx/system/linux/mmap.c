@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <inttypes.h>
 #include <string.h>
 #ifdef HAVE_HUGETLBFS
 # include <hugetlbfs.h>
@@ -125,14 +126,18 @@ void *system_mmap_huge_pages(void *UNUSED, void *addr, size_t n, size_t align) {
 }
 
 void system_munmap(void *UNUSED, void *addr, size_t size) {
-  const long hugepagesize = gethugepagesize();
-  int e = munmap(addr, size
 #ifdef HAVE_HUGETLBFS
-        + (size < hugepagesize ? (hugepagesize - (size % hugepagesize)) : 0)
+  long hugepagesize = gethugepagesize();
+  long hugepagemask = hugepazesize - 1;
+  if (size & hugepagemask) {
+    long r = size & hugepagemask;
+    long padding = hugepagesize - r;
+    size += padding;
+  }
 #endif
-  );
+  int e = munmap(addr, size);
   if (e < 0) {
     dbg_error("munmap failed: %s.  addr is %"PRIuPTR", and size is %zu\n",
-	      strerror(errno), (uintptr_t)addr, size);
+          strerror(errno), (uintptr_t)addr, size);
   }
 }
