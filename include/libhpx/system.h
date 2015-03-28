@@ -67,6 +67,10 @@ void *system_mmap_huge_pages(void *obj, void *addr, size_t bytes, size_t align)
 void system_munmap(void *obj, void *addr, size_t size)
   HPX_INTERNAL;
 
+/// Unmap memory from a huge page allocation.
+void system_munmap_huge_pages(void *obj, void *addr, size_t size)
+  HPX_INTERNAL;
+
 typedef void (*system_munmap_t)(void *, void *, size_t);
 
 #endif // LIBHPX_SYSTEM_H
