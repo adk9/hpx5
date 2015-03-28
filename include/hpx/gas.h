@@ -71,7 +71,7 @@ hpx_addr_t hpx_gas_alloc_cyclic(size_t n, uint32_t bsize);
 
 /// Allocate cyclically distributed global zeroed memory.
 ///
-/// This call is similar to hpx_gas_global_alloc except that the
+/// This call is similar to hpx_gas_alloc_cyclic except that the
 /// global memory returned is initialized to 0.
 ///
 /// @param            n The number of blocks to allocate.
@@ -79,6 +79,34 @@ hpx_addr_t hpx_gas_alloc_cyclic(size_t n, uint32_t bsize);
 ///
 /// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_calloc_cyclic(size_t n, uint32_t bsize);
+
+/// Allocate distributed global memory laid out in a
+/// super-block-cyclic manner where the size of each super-block is
+/// equal to @p n/HPX_LOCALITIES.
+///
+/// This is not a collective operation; the returned address is returned only to
+/// the calling thread, and must either be written into already-allocated global
+/// memory, or sent via a parcel, for anyone else to address the allocation.
+///
+/// The total amount of usable memory allocated is @p n * @p bsize.
+///
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
+///
+/// @returns            The global address of the allocated memory.
+hpx_addr_t hpx_gas_alloc_blocked(size_t n, uint32_t bsize);
+
+/// Allocate partitioned, super-block-cyclically distributed global
+/// zeroed memory.
+///
+/// This call is similar to hpx_gas_alloc_blocked except that the
+/// global memory returned is initialized to 0.
+///
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
+///
+/// @returns            The global address of the allocated memory.
+hpx_addr_t hpx_gas_calloc_blocked(size_t n, uint32_t bsize);
 
 /// Allocate a block of global memory.
 ///

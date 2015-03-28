@@ -47,18 +47,33 @@ void hpx_gas_unpin(const hpx_addr_t addr) {
 }
 
 hpx_addr_t hpx_gas_alloc_cyclic(size_t n, uint32_t bsize) {
-  dbg_assert(here && here->gas);
-  return here->gas->cyclic_alloc(n, bsize);
+  dbg_assert(here && here->gas && here->gas->alloc_cyclic);
+  return here->gas->alloc_cyclic(n, bsize);
 }
 
 hpx_addr_t hpx_gas_calloc_cyclic(size_t n, uint32_t bsize) {
-  dbg_assert(here && here->gas);
-  return here->gas->cyclic_calloc(n, bsize);
+  dbg_assert(here && here->gas && here->gas->calloc_cyclic);
+  return here->gas->calloc_cyclic(n, bsize);
+}
+
+hpx_addr_t hpx_gas_alloc_blocked(size_t n, uint32_t bsize) {
+  dbg_assert(here && here->gas && here->gas->alloc_blocked);
+  return here->gas->alloc_blocked(n, bsize);
+}
+
+hpx_addr_t hpx_gas_calloc_blocked(size_t n, uint32_t bsize) {
+  dbg_assert(here && here->gas && here->gas->calloc_blocked);
+  return here->gas->calloc_blocked(n, bsize);
 }
 
 hpx_addr_t hpx_gas_alloc_local(uint32_t bsize) {
-  dbg_assert(here && here->gas);
-  return here->gas->local_alloc(bsize);
+  dbg_assert(here && here->gas && here->gas->alloc_local);
+  return here->gas->alloc_local(bsize);
+}
+
+hpx_addr_t hpx_gas_calloc_local(size_t nmemb, size_t size) {
+  dbg_assert(here && here->gas && here->gas->calloc_local);
+  return here->gas->calloc_local(nmemb, size);
 }
 
 void hpx_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
@@ -118,11 +133,6 @@ hpx_addr_t hpx_gas_alloc_local_at_sync(uint32_t bytes, hpx_addr_t loc) {
 void hpx_gas_alloc_local_at_async(uint32_t bytes, hpx_addr_t loc, hpx_addr_t lco) {
   int e = hpx_call(loc, hpx_gas_alloc_local_at_action, lco, &bytes);
   dbg_check(e, "Failed async call during allocation\n");
-}
-
-hpx_addr_t hpx_gas_calloc_local(size_t nmemb, size_t size) {
-  dbg_assert(here && here->gas && here->gas->local_calloc);
-  return here->gas->local_calloc(nmemb, size);
 }
 
 static int _gas_calloc_at_handler(size_t nmemb, size_t size) {
