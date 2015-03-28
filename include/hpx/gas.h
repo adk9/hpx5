@@ -43,34 +43,6 @@ hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bsize, uint32_t alignment,
 hpx_addr_t hpx_gas_calloc(size_t n, uint32_t bsize, uint32_t alignment,
                           hpx_gas_dist_t dist);
 
-/// Performs address translation.
-///
-/// This will try to perform a global-to-local translation on the global @p
-/// addr, and set @p local to the local address if it is successful. If @p
-/// local is NULL, then this only performs address translation.
-///
-/// If the address is not local, will return false. Or, if @p local is not
-/// NULL and the pin fails, this will return false, otherwise it will return
-/// true.
-///
-/// Successful pinning operations must be matched with an unpin operation, if
-/// the underlying data is ever to be moved.
-///
-/// @param         addr The global address.
-/// @param[out]   local The pinned local address.
-///
-/// @returns       true If @p addr is local and @p local is NULL
-///                true If @p addr is local and @p local is not NULL and pin is
-///                       successful.
-///               false If @p is not local.
-///               false If @p is local and @local is not NULL and pin fails.
-bool hpx_gas_try_pin(hpx_addr_t addr, void **local);
-
-/// Unpin a previously pinned block.
-///
-/// @param         addr The address of global memory to unpin.
-void hpx_gas_unpin(hpx_addr_t addr);
-
 /// Allocate cyclically distributed global memory.
 ///
 /// This is not a collective operation; the returned address is returned only to
@@ -214,6 +186,34 @@ void hpx_gas_free(hpx_addr_t addr, hpx_addr_t rsync);
 ///                       source address @p src to.
 /// @param[out]     lco LCO object to check to wait for the completion of move.
 void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
+
+/// Performs address translation.
+///
+/// This will try to perform a global-to-local translation on the global @p
+/// addr, and set @p local to the local address if it is successful. If @p
+/// local is NULL, then this only performs address translation.
+///
+/// If the address is not local, will return false. Or, if @p local is not
+/// NULL and the pin fails, this will return false, otherwise it will return
+/// true.
+///
+/// Successful pinning operations must be matched with an unpin operation, if
+/// the underlying data is ever to be moved.
+///
+/// @param         addr The global address.
+/// @param[out]   local The pinned local address.
+///
+/// @returns       true If @p addr is local and @p local is NULL
+///                true If @p addr is local and @p local is not NULL and pin is
+///                       successful.
+///               false If @p is not local.
+///               false If @p is local and @local is not NULL and pin fails.
+bool hpx_gas_try_pin(hpx_addr_t addr, void **local);
+
+/// Unpin a previously pinned block.
+///
+/// @param         addr The address of global memory to unpin.
+void hpx_gas_unpin(hpx_addr_t addr);
 
 /// Allocate local memory for use in the memget/memput functions.
 ///
