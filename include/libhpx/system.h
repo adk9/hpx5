@@ -25,6 +25,10 @@ int system_set_affinity(pthread_t thread, int core_id)
 int system_set_affinity_group(pthread_t thread, int ncores)
   HPX_INTERNAL;
 
+/// Find out how many cores are in the thread's affinity group.
+int system_get_affinity_group_size(pthread_t thread, int *ncores)
+  HPX_INTERNAL;
+
 /// Get the pthread's stack extent.
 ///
 /// @param       thread The thread id to query.

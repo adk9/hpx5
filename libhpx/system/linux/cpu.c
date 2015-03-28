@@ -63,6 +63,14 @@ int system_set_affinity_group(pthread_t thread, int ncores) {
   return LIBHPX_OK;
 }
 
+int system_get_affinity_group_size(pthread_t thread, int *ncores) {
+  cpu_set_t set;
+  CPU_ZERO(&set);
+  CHECK_LOG(pthread_getaffinity_np(thread, sizeof(cpu_set_t), &set));
+  *ncores = CPU_COUNT(&set);
+  return HPX_SUCCESS;
+}
+
 void system_get_stack(pthread_t thread, void **base, size_t *size) {
   dbg_assert(base && size);
 
