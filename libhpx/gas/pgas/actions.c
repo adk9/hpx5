@@ -46,7 +46,7 @@ typedef struct {
 /// @param    bsize The block size for this allocation.
 ///
 /// @returns The base address of the global allocation.
-hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
+hpx_addr_t pgas_alloc_cyclic_sync(size_t n, uint32_t bsize) {
   uint64_t offset = heap_alloc_cyclic(global_heap, n, bsize);
   assert(offset != 0);
 
@@ -63,11 +63,11 @@ hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
   return addr;
 }
 
-static int _cyclic_alloc_handler(size_t n, size_t bsize) {
-  hpx_addr_t addr = pgas_cyclic_alloc_sync(n, bsize);
+static int _alloc_cyclic_handler(size_t n, size_t bsize) {
+  hpx_addr_t addr = pgas_alloc_cyclic_sync(n, bsize);
   HPX_THREAD_CONTINUE(addr);
 }
-HPX_ACTION_DEF(DEFAULT, _cyclic_alloc_handler, pgas_cyclic_alloc, HPX_SIZE_T,
+HPX_ACTION_DEF(DEFAULT, _alloc_cyclic_handler, pgas_alloc_cyclic, HPX_SIZE_T,
                HPX_SIZE_T);
 
 /// Allocate zeroed memory from the cyclic space.
@@ -81,7 +81,7 @@ HPX_ACTION_DEF(DEFAULT, _cyclic_alloc_handler, pgas_cyclic_alloc, HPX_SIZE_T,
 /// @param    bsize The block size for this allocation.
 ///
 /// @returns The base address of the global allocation.
-hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
+hpx_addr_t pgas_calloc_cyclic_sync(size_t n, uint32_t bsize) {
   assert(here->rank == 0);
 
   // Figure out how many blocks ber node that we need, and then allocate that
@@ -115,11 +115,11 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
   return addr;
 }
 
-static int _cyclic_calloc_handler(size_t n, size_t bsize) {
-  hpx_addr_t addr = pgas_cyclic_calloc_sync(n, bsize);
+static int _calloc_cyclic_handler(size_t n, size_t bsize) {
+  hpx_addr_t addr = pgas_calloc_cyclic_sync(n, bsize);
   HPX_THREAD_CONTINUE(addr);
 }
-HPX_ACTION_DEF(DEFAULT, _cyclic_calloc_handler, pgas_cyclic_calloc, HPX_SIZE_T,
+HPX_ACTION_DEF(DEFAULT, _calloc_cyclic_handler, pgas_calloc_cyclic, HPX_SIZE_T,
                HPX_SIZE_T);
 
 

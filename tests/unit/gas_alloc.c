@@ -12,7 +12,7 @@
 // =============================================================================
 
 // Goal of this testcase is to test the HPX Memory Allocation
-// 1. hpx_gas_alloc() -- Allocates the global memory.
+// 1. hpx_gas_alloc_local() -- Allocates the global memory.
 // 3. hpx_gas_try_pin() -- Performs address translation.
 // 4. hpx_gas_unpin() -- Allows an address to be remapped.
 
@@ -25,7 +25,7 @@ static const int N = 10;
 
 static HPX_ACTION(gas_alloc, void *UNUSED) {
   printf("Starting the GAS local memory allocation test\n");
-  hpx_addr_t local = hpx_gas_alloc(N);
+  hpx_addr_t local = hpx_gas_alloc_local(N, 0);
 
   if (!local) {
     fflush(stdout);
@@ -48,19 +48,19 @@ static HPX_ACTION(gas_memalign, void *UNUSED) {
   for (int i = 4, e = 24; i < e; ++i) {
     unsigned long alignment = (1UL << i);
     printf("checking alignment %lu\n", alignment);
-    hpx_addr_t local = hpx_gas_memalign(alignment, N);
+    hpx_addr_t local = hpx_gas_alloc_local(N, alignment);
     if (!local) {
       fflush(stdout);
-      fprintf(stderr, "hpx_gas_memalign returned HPX_NULL\n");
+      fprintf(stderr, "hpx_gas_alloc_local returned HPX_NULL\n");
     }
     void *ptr = NULL;
     if (!hpx_gas_try_pin(local, &ptr)) {
       fflush(stdout);
-      fprintf(stderr, "hpx_gas_memalign returned non-local memory\n");
+      fprintf(stderr, "hpx_gas_alloc_local returned non-local memory\n");
     }
     if ((uintptr_t)ptr & (alignment - 1)) {
       fflush(stdout);
-      fprintf(stderr, "hpx_gas_memalign failed to return aligned address\n");
+      fprintf(stderr, "hpx_gas_alloc_local failed to return aligned address\n");
     }
     hpx_gas_free(local, HPX_NULL);
   }
@@ -70,7 +70,7 @@ static HPX_ACTION(gas_memalign, void *UNUSED) {
 
 static HPX_ACTION(gas_calloc, void *UNUSED) {
   printf("Starting GAS calloc\n");
-  hpx_addr_t local = hpx_gas_calloc(N, sizeof(int));
+  hpx_addr_t local = hpx_gas_calloc_local(N, sizeof(int), 0);
 
   if (!local) {
     fflush(stdout);
@@ -121,7 +121,7 @@ static HPX_ACTION_DEF(INTERRUPT, _verify_at, verify_at, HPX_ADDR, HPX_INT);
 static HPX_ACTION(gas_alloc_at, void *UNUSED){
   printf("Starting the GAS remote memory allocation test\n");
   int peer = (HPX_LOCALITY_ID + 1) % HPX_LOCALITIES;
-  hpx_addr_t addr = hpx_gas_alloc_at_sync(N * sizeof(int), HPX_THERE(peer));
+  hpx_addr_t addr = hpx_gas_alloc_local_at_sync(N * sizeof(int), 0, HPX_THERE(peer));
   if (!addr) {
     fflush(stdout);
     fprintf(stderr, "failed to allocate memory at %d\n", peer);
@@ -140,7 +140,7 @@ static HPX_ACTION(gas_alloc_at, void *UNUSED){
 static HPX_ACTION(gas_calloc_at, void *UNUSED){
   printf("Starting the GAS initialized remote memory allocation test\n");
   int peer = (HPX_LOCALITY_ID + 1) % HPX_LOCALITIES;
-  hpx_addr_t addr = hpx_gas_calloc_at_sync(N, sizeof(int), HPX_THERE(peer));
+  hpx_addr_t addr = hpx_gas_calloc_local_at_sync(N, sizeof(int), 0, HPX_THERE(peer));
   if (!addr) {
     fflush(stdout);
     fprintf(stderr, "failed to allocate memory at %d\n", peer);

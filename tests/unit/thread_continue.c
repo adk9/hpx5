@@ -92,7 +92,7 @@ static HPX_ACTION(thread_continue_cleanup, void *UNUSED) {
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t src = hpx_gas_alloc(sizeof(uint64_t));
+  hpx_addr_t src = hpx_gas_alloc_local(sizeof(uint64_t), sizeof(uint64_t));
   int rank = hpx_get_my_rank();
 
   uint64_t *block = malloc(DATA_SIZE);

@@ -18,6 +18,159 @@
 ///        space.
 #include <hpx/addr.h>
 
+/// Global address-space layout and distribution.
+typedef enum {
+  HPX_DIST_TYPE_USER = 0,  //!< User-defined distribution.
+  HPX_DIST_TYPE_LOCAL,     //!< Allocation local to calling locality.
+  HPX_DIST_TYPE_CYCLIC,    //!< Cyclic distribution.
+  HPX_DIST_TYPE_BLOCKED,   //!< Blocked sequential distribution.
+} hpx_gas_dist_type_t;
+
+/// User-defined GAS distribution function.
+typedef hpx_addr_t (*hpx_gas_dist_t)(uint32_t i, size_t n, uint32_t bsize);
+
+#define HPX_GAS_DIST_LOCAL   (hpx_gas_dist_t)HPX_DIST_TYPE_LOCAL
+#define HPX_GAS_DIST_CYCLIC  (hpx_gas_dist_t)HPX_DIST_TYPE_CYCLIC
+#define HPX_GAS_DIST_BLOCKED (hpx_gas_dist_t)HPX_DIST_TYPE_BLOCKED
+
+/// Allocate distributed global memory given a distribution.
+///
+hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bsize, uint32_t boundary,
+                         hpx_gas_dist_t dist);
+
+/// Allocate distributed zeroed global memory given a distribution.
+///
+hpx_addr_t hpx_gas_calloc(size_t n, uint32_t bsize, uint32_t boundary,
+                          hpx_gas_dist_t dist);
+
+/// Allocate cyclically distributed global memory.
+///
+/// This is not a collective operation; the returned address is returned only to
+/// the calling thread, and must either be written into already-allocated global
+/// memory, or sent via a parcel, for anyone else to address the allocation.
+///
+/// The total amount of usable memory allocated is @p n * @p bsize.
+///
+/// The alignment of each block (and thus the base alignment of the entire
+/// array), will be 2^{align=ceil_log2_32(bsize)}, i.e., the minimum power of 2 to
+/// bsize such that align >= bsize.
+///
+/// In UPC-land, the returned global address would have the following
+/// distribution:
+///
+///    shared [bytes] char foo[n * bytes];
+///
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
+/// @param     boundary The alignment (2^k).
+///
+/// @returns            The global address of the allocated memory.
+hpx_addr_t hpx_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary);
+
+/// Allocate cyclically distributed global zeroed memory.
+///
+/// This call is similar to hpx_gas_alloc_cyclic except that the
+/// global memory returned is initialized to 0.
+///
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
+/// @param     boundary The alignment (2^k).
+///
+/// @returns            The global address of the allocated memory.
+hpx_addr_t hpx_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary);
+
+/// Allocate distributed global memory laid out in a
+/// super-block-cyclic manner where the size of each super-block is
+/// equal to @p n/HPX_LOCALITIES.
+///
+/// This is not a collective operation; the returned address is returned only to
+/// the calling thread, and must either be written into already-allocated global
+/// memory, or sent via a parcel, for anyone else to address the allocation.
+///
+/// The total amount of usable memory allocated is @p n * @p bsize.
+///
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
+/// @param     boundary The alignment (2^k).
+///
+/// @returns            The global address of the allocated memory.
+hpx_addr_t hpx_gas_alloc_blocked(size_t n, uint32_t bsize, uint32_t boundary);
+
+/// Allocate partitioned, super-block-cyclically distributed global
+/// zeroed memory.
+///
+/// This call is similar to hpx_gas_alloc_blocked except that the
+/// global memory returned is initialized to 0.
+///
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
+/// @param     boundary The alignment (2^k).
+///
+/// @returns            The global address of the allocated memory.
+hpx_addr_t hpx_gas_calloc_blocked(size_t n, uint32_t bsize, uint32_t boundary);
+
+/// Allocate a block of global memory.
+///
+/// This is a non-collective call to allocate memory in the global
+/// address space that can be moved. The allocated memory, by default,
+/// has affinity to the allocating node, however in low memory conditions the
+/// allocated memory may not be local to the caller. As it allocated in the GAS,
+/// it is accessible from any locality, and may be relocated by the
+/// runtime.
+///
+/// @param        bytes The number of bytes to allocate.
+/// @param     boundary The alignment (2^k).
+///
+/// @returns            The global address of the allocated memory.
+hpx_addr_t hpx_gas_alloc_local(uint32_t bytes, uint32_t boundary);
+hpx_addr_t hpx_gas_alloc_local_at_sync(uint32_t bytes, uint32_t boundary, hpx_addr_t loc);
+void hpx_gas_alloc_local_at_async(uint32_t bytes, uint32_t boundary, hpx_addr_t loc,
+                                  hpx_addr_t lco);
+extern HPX_ACTION_DECL(hpx_gas_alloc_local_at_action);
+
+/// Allocate a 0-initialized block of global memory.
+///
+/// This is a non-collective call to allocate memory in the global address space
+/// that can be moved. The allocated memory, by default, has affinity to the
+/// allocating node, however in low memory conditions the allocated memory may
+/// not be local to the caller. As it allocated in the GAS, it is accessible
+/// from any locality, and may be relocated by the runtime.
+///
+/// *Note however that we do not track the alignment of allocations.* Users
+/// should make sure to preserve alignment during move.
+///
+/// @param        nmemb The number of elements to allocate.
+/// @param         size The number of bytes per element
+/// @param     boundary The alignment (2^k).
+///
+/// @returns            The global address of the allocated memory.
+hpx_addr_t hpx_gas_calloc_local(size_t nmemb, size_t size, uint32_t boundary);
+hpx_addr_t hpx_gas_calloc_local_at_sync(size_t nmemb, size_t size, uint32_t boundary,
+                                        hpx_addr_t loc);
+void hpx_gas_calloc_local_at_async(size_t nmemb, size_t size, uint32_t boundary,
+                                   hpx_addr_t loc, hpx_addr_t out);
+extern HPX_ACTION_DECL(hpx_gas_calloc_local_at_action);
+
+/// Free a global allocation.
+///
+/// This global free is asynchronous. The @p sync LCO address can be used to
+/// test for completion of the free.
+///
+/// @param         addr The global address of the memory to free.
+/// @param        rsync An LCO we can use to detect that the free has occurred.
+void hpx_gas_free(hpx_addr_t addr, hpx_addr_t rsync);
+
+/// Change the locality-affinity of a global distributed memory address.
+///
+/// This operation is only valid in the AGAS GAS mode. For PGAS, it is effectively
+/// a no-op.
+///
+/// @param          src The source address to move.
+/// @param          dst The address pointing to the target locality to move the
+///                       source address @p src to.
+/// @param[out]     lco LCO object to check to wait for the completion of move.
+void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
+
 /// Performs address translation.
 ///
 /// This will try to perform a global-to-local translation on the global @p
@@ -45,129 +198,6 @@ bool hpx_gas_try_pin(hpx_addr_t addr, void **local);
 ///
 /// @param         addr The address of global memory to unpin.
 void hpx_gas_unpin(hpx_addr_t addr);
-
-/// Allocate distributed global memory.
-///
-/// This is not a collective operation; the returned address is returned only to
-/// the calling thread, and must either be written into already-allocated global
-/// memory, or sent via a parcel, for anyone else to address the allocation.
-///
-/// The total amount of usable memory allocated is @p n * @p bsize.
-///
-/// The alignment of each block (and thus the base alignment of the entire
-/// array), will be 2^{align=ceil_log2_32(bsize)}, i.e., the minimum power of 2 to
-/// bsize such that align >= bsize.
-///
-/// In UPC-land, the returned global address would have the following
-/// distribution:
-///
-///    shared [bytes] char foo[n * bytes];
-///
-/// @param            n The number of blocks to allocate.
-/// @param        bsize The number of bytes per block.
-///
-/// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_global_alloc(size_t n, uint32_t bsize);
-
-/// Allocate distributed global zeroed-memory.
-///
-/// This call is similar to hpx_gas_global_alloc except that the
-/// global memory returned is set to 0.
-///
-/// The total amount of usable memory allocated is @p n * @p bsize.
-///
-/// In UPC-land, the returned global address would have the following
-/// distribution:
-///
-///    shared [bytes] char foo[n * bytes];
-///
-/// @param            n The number of blocks to allocate.
-/// @param        bsize The number of bytes per block.
-///
-/// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_global_calloc(size_t n, uint32_t bsize);
-
-/// Allocate a block of global memory.
-///
-/// This is a non-collective call to allocate memory in the global
-/// address space that can be moved. The allocated memory, by default,
-/// has affinity to the allocating node, however in low memory conditions the
-/// allocated memory may not be local to the caller. As it allocated in the GAS,
-/// it is accessible from any locality, and may be relocated by the
-/// runtime.
-///
-/// @param        bytes The number of bytes to allocate.
-///
-/// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_alloc(uint32_t bytes);
-hpx_addr_t hpx_gas_alloc_at_sync(uint32_t bytes, hpx_addr_t loc);
-void hpx_gas_alloc_at_async(uint32_t bytes, hpx_addr_t loc, hpx_addr_t lco);
-extern HPX_ACTION_DECL(hpx_gas_alloc_at_action);
-
-/// Allocate aligned memory.
-///
-/// This is a non-collective call to allocate memory in the global
-/// address space that can be moved. The allocated memory, by default,
-/// has affinity to the allocating node, however in low memory conditions the
-/// allocated memory may not be local to the caller. As it allocated in the GAS,
-/// it is accessible from any locality, and may be relocated by the
-/// runtime.
-///
-/// This interface is designed to match programmers' expectations with respect
-/// to libc `calloc()`, however it *only allocates one GAS block of @p nmemb *
-/// @p size bytes*.
-///
-/// @param     boundary The alignment (2^k).
-/// @param         size The number of bytes to allocate.
-///
-/// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_memalign(size_t boundary, size_t size);
-hpx_addr_t hpx_gas_memalign_at_sync(size_t boundary, size_t size,
-                                    hpx_addr_t loc);
-void hpx_gas_memalign_at_async(size_t boundary, size_t size, hpx_addr_t loc,
-                               hpx_addr_t lco);
-extern HPX_ACTION_DECL(hpx_gas_memalign_at_action);
-
-/// Allocate a 0-initialized block of global memory.
-///
-/// This is a non-collective call to allocate memory in the global address space
-/// that can be moved. The allocated memory, by default, has affinity to the
-/// allocating node, however in low memory conditions the allocated memory may
-/// not be local to the caller. As it allocated in the GAS, it is accessible
-/// from any locality, and may be relocated by the runtime.
-///
-/// *Note however that we do not track the alignment of allocations.* Users
-/// should make sure to preserve alignment during move.
-///
-/// @param        nmemb The number of elements to allocate.
-/// @param         size The number of bytes per element
-///
-/// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_calloc(size_t nmemb, size_t size);
-hpx_addr_t hpx_gas_calloc_at_sync(size_t nmemb, size_t size, hpx_addr_t loc);
-void hpx_gas_calloc_at_async(size_t nmemb, size_t size, hpx_addr_t loc,
-                             hpx_addr_t out);
-extern HPX_ACTION_DECL(hpx_gas_calloc_at_action);
-
-/// Free a global allocation.
-///
-/// This global free is asynchronous. The @p sync LCO address can be used to
-/// test for completion of the free.
-///
-/// @param         addr The global address of the memory to free.
-/// @param        rsync An LCO we can use to detect that the free has occurred.
-void hpx_gas_free(hpx_addr_t addr, hpx_addr_t rsync);
-
-/// Change the locality-affinity of a global distributed memory address.
-///
-/// This operation is only valid in the AGAS GAS mode. For PGAS, it is effectively
-/// a no-op.
-///
-/// @param          src The source address to move.
-/// @param          dst The address pointing to the target locality to move the
-///                       source address @p src to.
-/// @param[out]     lco LCO object to check to wait for the completion of move.
-void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
 
 /// Allocate local memory for use in the memget/memput functions.
 ///

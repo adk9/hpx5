@@ -160,8 +160,8 @@ static HPX_ACTION(_action_main, args_t *args) {
  */
 static HPX_ACTION(_ping, args_t *args) {
   printf("In ping on rank %d\n", hpx_get_my_rank());
-  hpx_addr_t msg_ping_gas = hpx_gas_alloc(sizeof(struct buffer));
-  hpx_addr_t msg_pong_gas = hpx_gas_alloc(sizeof(struct buffer));
+  hpx_addr_t msg_ping_gas = hpx_gas_alloc_local(sizeof(struct buffer), sizeof(struct buffer));
+  hpx_addr_t msg_pong_gas = hpx_gas_alloc_local(sizeof(struct buffer), sizeof(struct buffer));
 
   struct buffer *msg_ping;
   struct buffer *msg_pong;
@@ -195,8 +195,8 @@ static HPX_ACTION(_ping, args_t *args) {
  */
 static HPX_ACTION(_pong, args_t *args) {
   printf("In pong on rank %d\n", hpx_get_my_rank());
-  hpx_addr_t msg_ping_gas = hpx_gas_alloc(sizeof(struct buffer));
-  hpx_addr_t msg_pong_gas = hpx_gas_alloc(sizeof(struct buffer));
+  hpx_addr_t msg_ping_gas = hpx_gas_alloc_local(sizeof(struct buffer), sizeof(struct buffer));
+  hpx_addr_t msg_pong_gas = hpx_gas_alloc_local(sizeof(struct buffer), sizeof(struct buffer));
   struct buffer *msg_ping;
   struct buffer *msg_pong;
   hpx_gas_try_pin(msg_pong_gas, (void**)&msg_pong);

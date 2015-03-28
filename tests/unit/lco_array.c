@@ -97,7 +97,7 @@ static HPX_ACTION(lco_reduce_array, void *UNUSED) {
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t domain = hpx_gas_global_alloc(ARRAY_SIZE, sizeof(double));
+  hpx_addr_t domain = hpx_gas_alloc_cyclic(ARRAY_SIZE, sizeof(double), sizeof(double));
   hpx_addr_t newdt = hpx_lco_reduce_local_array_new(ARRAY_SIZE, 
                                        ARRAY_SIZE, sizeof(double),
                                        (hpx_monoid_id_t)_initDouble,

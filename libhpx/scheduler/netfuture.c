@@ -226,7 +226,7 @@ _initialize_netfutures_action(_nf_init_args_t *args) {
   _netfuture_table.buffers = calloc(hpx_get_num_ranks(), sizeof(_netfuture_table.buffers[0]));
   _netfuture_table.fut_infos = calloc(_netfuture_table.curr_capacity, sizeof(_fut_info_t)) ;
   _netfuture_table.mem_size = _netfuture_cfg.max_size;
-  _netfuture_table.base_gas = hpx_gas_alloc(_netfuture_cfg.max_size);
+  _netfuture_table.base_gas = hpx_gas_alloc_local(_netfuture_cfg.max_size, 0);
   assert(_netfuture_table.base_gas != HPX_NULL);
   dbg_printf("GAS base = 0x%"PRIx64".\n", _netfuture_table.base_gas);
   assert(hpx_gas_try_pin(_netfuture_table.base_gas, &_netfuture_table.base));

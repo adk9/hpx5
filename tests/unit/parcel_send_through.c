@@ -132,7 +132,7 @@ static HPX_ACTION(parcel_send_through, void *UNUSED) {
   }
 
   // allocate and initialize a shared integer for the cascade to update
-  hpx_addr_t val = hpx_gas_alloc(sizeof(int));
+  hpx_addr_t val = hpx_gas_alloc_local(sizeof(int), 0);
   if (_is_hpxnull(val)) {
     goto unwind1;
   }

@@ -422,7 +422,7 @@ hpx_addr_t hpx_lco_alltoall_local_array_new(int n, size_t inputs, size_t size) {
   uint32_t lco_bytes = sizeof(_alltoall_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
   uint32_t block_bytes = n * lco_bytes;
-  hpx_addr_t base = hpx_gas_alloc(block_bytes);
+  hpx_addr_t base = hpx_gas_alloc_local(block_bytes, 0);
 
   uint32_t args[] = {n, inputs, size};
   int e = hpx_call_sync(base, _block_local_init, NULL, 0, &args, sizeof(args));

@@ -93,32 +93,44 @@ static hpx_addr_t _smp_there(uint32_t i) {
 }
 
 /// Allocate a global array.
-static hpx_addr_t _smp_gas_cyclic_alloc(size_t n, uint32_t bsize) {
-  void *p = local_malloc(n * bsize);
+static hpx_addr_t _smp_gas_alloc_cyclic(size_t n, uint32_t bsize,
+                                        uint32_t boundary) {
+  void *p = boundary ?
+      local_memalign(boundary, n * bsize) : local_malloc(n * bsize);
   return _smp_lva_to_gva(p);
 }
 
 /// Allocate a 0-filled global array.
-static hpx_addr_t _smp_gas_cyclic_calloc(size_t n, uint32_t bsize) {
-  void *p = local_calloc(n, bsize);
+static hpx_addr_t _smp_gas_calloc_cyclic(size_t n, uint32_t bsize,
+                                         uint32_t boundary) {
+  size_t bytes = n * bsize;
+  void *p;
+  if (boundary) {
+    p = local_memalign(boundary, bytes);
+    p = memset(p, 0, bytes);
+  } else {
+    p = local_calloc(n, bsize);
+  }
   return _smp_lva_to_gva(p);
 }
 
 /// Allocate a bunch of global memory
-static hpx_addr_t _smp_gas_alloc(uint32_t bytes) {
-  void *p = local_malloc(bytes);
-  return _smp_lva_to_gva(p);
-}
-
-/// Allocate a bunch of aligned memory
-static hpx_addr_t _smp_gas_memalign(size_t boundary, size_t size) {
-  void *p = local_memalign(boundary, size);
+static hpx_addr_t _smp_gas_alloc_local(uint32_t bytes, uint32_t boundary) {
+  void *p = boundary ? local_memalign(boundary, bytes) : local_malloc(bytes);
   return _smp_lva_to_gva(p);
 }
 
 /// Allocate a bunch of initialized global memory
-static hpx_addr_t _smp_gas_calloc(size_t nmemb, size_t size) {
-  void *p = local_calloc(nmemb, size);
+static hpx_addr_t _smp_gas_calloc_local(size_t nmemb, size_t size,
+                                        uint32_t boundary) {
+  size_t bytes = nmemb * size;
+  void *p;
+  if (boundary) {
+    p = local_memalign(boundary, bytes);
+    p = memset(p, 0, bytes);
+  } else {
+    p = local_calloc(nmemb, size);
+  }
   return _smp_lva_to_gva(p);
 }
 
@@ -212,11 +224,12 @@ static gas_t _smp_vtable = {
   .there          = _smp_there,
   .try_pin        = _smp_try_pin,
   .unpin          = _smp_unpin,
-  .cyclic_alloc   = _smp_gas_cyclic_alloc,
-  .cyclic_calloc  = _smp_gas_cyclic_calloc,
-  .local_alloc    = _smp_gas_alloc,
-  .local_calloc   = _smp_gas_calloc,
-  .local_memalign = _smp_gas_memalign,
+  .alloc_cyclic   = _smp_gas_alloc_cyclic,
+  .calloc_cyclic  = _smp_gas_calloc_cyclic,
+  .alloc_blocked  = NULL,
+  .calloc_blocked = NULL,
+  .alloc_local    = _smp_gas_alloc_local,
+  .calloc_local   = _smp_gas_calloc_local,
   .free           = _smp_gas_free,
   .move           = _smp_move,
   .memget         = _smp_memget,

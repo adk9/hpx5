@@ -39,7 +39,7 @@ static HPX_ACTION(lco_function, void *UNUSED) {
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t addr = hpx_gas_global_alloc(size, BUFFER_SIZE*2);
+  hpx_addr_t addr = hpx_gas_alloc_cyclic(size, BUFFER_SIZE*2, 0);
   hpx_addr_t remote = hpx_addr_add(addr, BUFFER_SIZE*2 * peerID, BUFFER_SIZE*2);
 
   hpx_addr_t done;
@@ -159,7 +159,7 @@ static HPX_ACTION(lco_waitall, void *UNUSED) {
 
   printf("Number of blocks and bytes per block = %d, %d\n", blocks, block_bytes);
   printf("Ranks and blocks per rank = %d, %d\n", ranks, blocks / ranks);
-  hpx_addr_t addr = hpx_gas_global_alloc(blocks, block_bytes);
+  hpx_addr_t addr = hpx_gas_alloc_cyclic(blocks, block_bytes, 0);
 
   uint32_t args[2] = {
     block_size,

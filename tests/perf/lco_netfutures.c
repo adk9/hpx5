@@ -125,8 +125,8 @@ static HPX_ACTION(_main, void *args) {
  * Send a ping message.
  */
 static HPX_ACTION(_ping, args_t *args) {
-  hpx_addr_t msg_ping_gas = hpx_gas_alloc(BUFFER_SIZE);
-  hpx_addr_t msg_pong_gas = hpx_gas_alloc(BUFFER_SIZE);
+  hpx_addr_t msg_ping_gas = hpx_gas_alloc_local(BUFFER_SIZE, 0);
+  hpx_addr_t msg_pong_gas = hpx_gas_alloc_local(BUFFER_SIZE, 0);
   char *msg_ping;
   char *msg_pong;
   hpx_gas_try_pin(msg_ping_gas, (void**)&msg_ping);
@@ -151,8 +151,8 @@ static HPX_ACTION(_ping, args_t *args) {
  * Handle a pong action.
  */
 static HPX_ACTION(_pong, args_t *args) {
-  hpx_addr_t msg_ping_gas = hpx_gas_alloc(BUFFER_SIZE);
-  hpx_addr_t msg_pong_gas = hpx_gas_alloc(BUFFER_SIZE);
+  hpx_addr_t msg_ping_gas = hpx_gas_alloc_local(BUFFER_SIZE, 0);
+  hpx_addr_t msg_pong_gas = hpx_gas_alloc_local(BUFFER_SIZE, 0);
   char *msg_ping;
   char *msg_pong;
   hpx_gas_try_pin(msg_pong_gas, (void**)&msg_pong);

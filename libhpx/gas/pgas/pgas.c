@@ -95,7 +95,6 @@ static hpx_addr_t _pgas_add(hpx_addr_t gpa, int64_t bytes, uint32_t bsize) {
                   : pgas_gpa_add(gpa, bytes);
 }
 
-
 // Compute a global address for a locality.
 static hpx_addr_t _pgas_there(uint32_t i) {
   hpx_addr_t there = pgas_offset_to_gpa(i, UINT64_MAX);
@@ -106,7 +105,6 @@ static hpx_addr_t _pgas_there(uint32_t i) {
   }
   return there;
 }
-
 
 /// Pin and translate an hpx address into a local virtual address. PGAS
 /// addresses don't get pinned, so we're really only talking about translating
@@ -132,30 +130,29 @@ static void _pgas_unpin(const hpx_addr_t addr) {
                  addr, here->rank);
 }
 
-
-static hpx_addr_t _pgas_gas_cyclic_alloc(size_t n, uint32_t bsize) {
+static hpx_addr_t _pgas_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
   hpx_addr_t addr;
   if (here->rank == 0) {
-    addr = pgas_cyclic_alloc_sync(n, bsize);
+    addr = pgas_alloc_cyclic_sync(n, bsize);
   }
   else {
-    int e = hpx_call_sync(HPX_THERE(0), pgas_cyclic_alloc, &addr, sizeof(addr),
+    int e = hpx_call_sync(HPX_THERE(0), pgas_alloc_cyclic, &addr, sizeof(addr),
                           &n, &bsize);
-    dbg_check(e, "Failed to call pgas_cyclic_alloc_handler.\n");
+    dbg_check(e, "Failed to call pgas_alloc_cyclic_handler.\n");
   }
   dbg_assert_str(addr != HPX_NULL, "HPX_NULL is not a valid allocation\n");
   return addr;
 }
 
-static hpx_addr_t _pgas_gas_cyclic_calloc(size_t n, uint32_t bsize) {
+static hpx_addr_t _pgas_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
   hpx_addr_t addr;
   if (here->rank == 0) {
-    addr = pgas_cyclic_calloc_sync(n, bsize);
+    addr = pgas_calloc_cyclic_sync(n, bsize);
   }
   else {
-    int e = hpx_call_sync(HPX_THERE(0), pgas_cyclic_calloc, &addr, sizeof(addr),
+    int e = hpx_call_sync(HPX_THERE(0), pgas_calloc_cyclic, &addr, sizeof(addr),
                           &n, &bsize);
-    dbg_check(e, "Failed to call pgas_cyclic_calloc_handler.\n");
+    dbg_check(e, "Failed to call pgas_calloc_cyclic_handler.\n");
   }
   dbg_assert_str(addr != HPX_NULL, "HPX_NULL is not a valid allocation\n");
   return addr;
@@ -163,23 +160,23 @@ static hpx_addr_t _pgas_gas_cyclic_calloc(size_t n, uint32_t bsize) {
 
 /// Allocate a single global block from the global heap, and return it as an
 /// hpx_addr_t.
-static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
-  void *lva = global_malloc(bytes);
-  dbg_assert(heap_contains_lva(global_heap, lva));
-  return pgas_lva_to_gpa(lva);
-}
-
-/// Allocate a single aligned block.
-static hpx_addr_t _pgas_gas_memalign(size_t boundary, size_t size) {
-  void *lva = global_memalign(boundary, size);
+static hpx_addr_t _pgas_gas_alloc_local(uint32_t bytes, uint32_t boundary) {
+  void *lva = boundary ? global_memalign(boundary, bytes) : global_malloc(bytes);
   dbg_assert(heap_contains_lva(global_heap, lva));
   return pgas_lva_to_gpa(lva);
 }
 
 /// Allocate a single global block, filled with 0, from the global heap, and
 /// return it as an hpx_addr_t.
-static hpx_addr_t _pgas_gas_calloc(size_t nmemb, size_t size) {
-  void *lva = global_calloc(nmemb, size);
+static hpx_addr_t _pgas_gas_calloc_local(size_t nmemb, size_t size, uint32_t boundary) {
+  size_t bytes = nmemb * size;
+  void *lva;
+  if (boundary) {
+    lva = global_memalign(boundary, bytes);
+    lva = memset(lva, 0, bytes);
+  } else {
+    lva = global_calloc(nmemb, size);
+  }
   dbg_assert(heap_contains_lva(global_heap, lva));
   return pgas_lva_to_gpa(lva);
 }
@@ -187,7 +184,7 @@ static hpx_addr_t _pgas_gas_calloc(size_t nmemb, size_t size) {
 /// Free a global address.
 ///
 /// This global address must either be the base of a cyclic allocation, or a
-/// block allocated by _pgas_gas_alloc. At this time, we do not attempt to deal
+/// block allocated by _pgas_gas_alloc_local. At this time, we do not attempt to deal
 /// with the cyclic allocations, as they are using a simple csbrk allocator.
 static void _pgas_gas_free(hpx_addr_t gpa, hpx_addr_t sync) {
   if (gpa == HPX_NULL) {
@@ -314,11 +311,12 @@ static gas_t _pgas_vtable = {
   .there          = _pgas_there,
   .try_pin        = _pgas_try_pin,
   .unpin          = _pgas_unpin,
-  .cyclic_alloc   = _pgas_gas_cyclic_alloc,
-  .cyclic_calloc  = _pgas_gas_cyclic_calloc,
-  .local_alloc    = _pgas_gas_alloc,
-  .local_memalign = _pgas_gas_memalign,
-  .local_calloc   = _pgas_gas_calloc,
+  .alloc_cyclic   = _pgas_gas_alloc_cyclic,
+  .calloc_cyclic  = _pgas_gas_calloc_cyclic,
+  .alloc_blocked  = NULL,
+  .calloc_blocked = NULL,
+  .alloc_local    = _pgas_gas_alloc_local,
+  .calloc_local   = _pgas_gas_calloc_local,
   .free           = _pgas_gas_free,
   .move           = _pgas_move,
   .memget         = _pgas_memget,
