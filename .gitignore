@@ -76,6 +76,8 @@ contrib/libffi/
 contrib/jemalloc/
 contrib/jemalloc_hpx/
 contrib/photon/
+contrib/jemalloc_build_global/
+contrib/jemalloc_build_registered/
 
 # /libhpx/
 /libhpx/Makefile
