@@ -93,32 +93,32 @@ static hpx_addr_t _smp_there(uint32_t i) {
 }
 
 /// Allocate a global array.
-static hpx_addr_t _smp_gas_cyclic_alloc(size_t n, uint32_t bsize) {
+static hpx_addr_t _smp_gas_alloc_cyclic(size_t n, uint32_t bsize) {
   void *p = local_malloc(n * bsize);
   return _smp_lva_to_gva(p);
 }
 
 /// Allocate a 0-filled global array.
-static hpx_addr_t _smp_gas_cyclic_calloc(size_t n, uint32_t bsize) {
+static hpx_addr_t _smp_gas_calloc_cyclic(size_t n, uint32_t bsize) {
   void *p = local_calloc(n, bsize);
   return _smp_lva_to_gva(p);
 }
 
 /// Allocate a bunch of global memory
-static hpx_addr_t _smp_gas_alloc(uint32_t bytes) {
+static hpx_addr_t _smp_gas_alloc_local(uint32_t bytes) {
   void *p = local_malloc(bytes);
+  return _smp_lva_to_gva(p);
+}
+
+/// Allocate a bunch of initialized global memory
+static hpx_addr_t _smp_gas_calloc_local(size_t nmemb, size_t size) {
+  void *p = local_calloc(nmemb, size);
   return _smp_lva_to_gva(p);
 }
 
 /// Allocate a bunch of aligned memory
 static hpx_addr_t _smp_gas_memalign(size_t boundary, size_t size) {
   void *p = local_memalign(boundary, size);
-  return _smp_lva_to_gva(p);
-}
-
-/// Allocate a bunch of initialized global memory
-static hpx_addr_t _smp_gas_calloc(size_t nmemb, size_t size) {
-  void *p = local_calloc(nmemb, size);
   return _smp_lva_to_gva(p);
 }
 
@@ -212,10 +212,12 @@ static gas_t _smp_vtable = {
   .there          = _smp_there,
   .try_pin        = _smp_try_pin,
   .unpin          = _smp_unpin,
-  .cyclic_alloc   = _smp_gas_cyclic_alloc,
-  .cyclic_calloc  = _smp_gas_cyclic_calloc,
-  .local_alloc    = _smp_gas_alloc,
-  .local_calloc   = _smp_gas_calloc,
+  .alloc_cyclic   = _smp_gas_alloc_cyclic,
+  .calloc_cyclic  = _smp_gas_calloc_cyclic,
+  .alloc_blocked  = NULL,
+  .calloc_blocked = NULL,
+  .alloc_local    = _smp_gas_alloc_local,
+  .calloc_local   = _smp_gas_calloc_local,
   .local_memalign = _smp_gas_memalign,
   .free           = _smp_gas_free,
   .move           = _smp_move,
