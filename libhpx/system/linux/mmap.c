@@ -138,7 +138,7 @@ void system_munmap(void *UNUSED, void *addr, size_t size) {
 void system_munmap_huge_pages(void *UNUSED, void *addr, size_t size) {
 #ifdef HAVE_HUGETLBFS
   long hugepagesize = gethugepagesize();
-  long hugepagemask = hugepazesize - 1;
+  long hugepagemask = hugepagesize - 1;
   if (size & hugepagemask) {
     long r = size & hugepagemask;
     long padding = hugepagesize - r;
