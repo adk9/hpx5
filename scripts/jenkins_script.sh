@@ -191,6 +191,10 @@ case "$SYSTEM" in
           module load llvm/3.6.0 
           CFGFLAGS+=" CC=clang"
           ;;
+      icc)
+          module load intel/15.0.1/compiler
+          CFGFLAGS+=" CC=icc"
+          ;;
       *)
           ;;
     esac  
