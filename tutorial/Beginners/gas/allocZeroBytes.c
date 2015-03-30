@@ -38,7 +38,7 @@ static int _main_action(void *args) {
 
   // malloc(0) returns "either" a null pointer or a unique pointer that can be 
   // successfully passed to free()"."
-  hpx_addr_t local = hpx_gas_alloc(0);
+  hpx_addr_t local = hpx_gas_alloc_local(0, 0);
   hpx_addr_t done = hpx_lco_future_new(sizeof(double));
   hpx_call(local, _pin, done, NULL, 0);
   hpx_lco_wait(done);

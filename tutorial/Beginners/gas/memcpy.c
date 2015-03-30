@@ -47,7 +47,7 @@ static int _main_action(void *args) {
     for (int j = 0; j < BLOCK_COUNT; j++)
       src[i * BLOCK_COUNT + j] = (uint64_t)(i);
 
-  hpx_addr_t data = hpx_gas_global_alloc(size, BLOCK_SIZE);
+  hpx_addr_t data = hpx_gas_alloc_cyclic(size, BLOCK_SIZE, 0);
   
   hpx_addr_t done = hpx_lco_and_new(size);
   for (int i = 0; i < size; i++) {
