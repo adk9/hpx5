@@ -43,7 +43,7 @@ static int _main_action(void *args) {
   for (int i = 0; i < SIZE; i++)
     src[i] = (uint64_t)i;
 
-  hpx_addr_t data = hpx_gas_global_alloc(size, sizeof(src));
+  hpx_addr_t data = hpx_gas_alloc_cyclic(size, sizeof(src), 0);
 
   hpx_addr_t done = hpx_lco_future_new(0);
   hpx_gas_memput(data, src, sizeof(src), HPX_NULL, done);

@@ -29,7 +29,7 @@ typedef struct {
 } args_t;
 
 static int _get_action(args_t *args) {
-  hpx_addr_t msg = hpx_gas_alloc(sizeof(struct buffer));
+  hpx_addr_t msg = hpx_gas_alloc_local(sizeof(struct buffer), 0);
   struct buffer *hello_msg;
   hpx_gas_try_pin(msg, (void**)&hello_msg);
 
@@ -42,7 +42,7 @@ static int _get_action(args_t *args) {
   hpx_lco_delete(lsync, HPX_NULL);
 
   struct buffer *result_msg;
-  hpx_addr_t msg_set = hpx_gas_alloc(sizeof(struct buffer));
+  hpx_addr_t msg_set = hpx_gas_alloc_local(sizeof(struct buffer), 0);
   msg_set = hpx_lco_netfuture_getat(args->message, 0, BUFFER_SIZE);
   hpx_gas_try_pin(msg_set, (void**)&result_msg);
   printf("Message got = '%s'\n", result_msg->data);

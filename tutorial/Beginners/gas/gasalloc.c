@@ -23,19 +23,19 @@ static int _main_action(void *args) {
   int blocks = HPX_LOCALITIES;
 
   printf("Allocating a block of global memory of size = %" PRIu64 "\n", size);
-  hpx_addr_t local = hpx_gas_alloc(size);
+  hpx_addr_t local = hpx_gas_alloc_local(size, 0);
   printf("Free a global allocation\n");
   hpx_gas_free(local, HPX_NULL);
 
   printf("Allocating distributed global memory of num locailities = %d, \
          size = %" PRIu64 "\n", blocks, size);
-  hpx_addr_t global = hpx_gas_global_alloc(blocks, size);
+  hpx_addr_t global = hpx_gas_alloc_cyclic(blocks, size, 0);
   printf("Free a global allocation\n");
   hpx_gas_free(global, HPX_NULL);
  
   printf("Allocating distributed global zeroed memory of num localities = %d, \
           size = %" PRIu64 "\n", blocks, size);
-  hpx_addr_t calloc = hpx_gas_global_calloc(blocks, size);
+  hpx_addr_t calloc = hpx_gas_calloc_cyclic(blocks, size, 0);
   printf("Free a global allocation\n");
   hpx_gas_free(calloc, HPX_NULL);
  
