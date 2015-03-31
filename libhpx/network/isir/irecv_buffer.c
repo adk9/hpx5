@@ -57,12 +57,10 @@ static hpx_parcel_t *_cancel(irecv_buffer_t *buffer, int i) {
   }
 
   if (cancelled) {
-    hpx_gas_free(buffer->records[i].handler, HPX_NULL);
     hpx_parcel_release(buffer->records[i].parcel);
     return NULL;
   }
   else {
-    hpx_gas_free(buffer->records[i].handler, HPX_NULL);
     return buffer->records[i].parcel;
   }
 }
@@ -177,7 +175,6 @@ static int _append(irecv_buffer_t *irecvs, int tag) {
   irecvs->xport->clear(request);
   irecvs->records[n].tag = tag;
   irecvs->records[n].parcel = NULL;
-  irecvs->records[n].handler = HPX_NULL;
 
   // start the irecv
   return _start(irecvs, n);
@@ -212,7 +209,6 @@ static int _probe(irecv_buffer_t *irecvs) {
 /// @returns            The parcel that we received.
 static hpx_parcel_t *_finish(irecv_buffer_t *irecvs, int i, void *status) {
   ACTIVE_RANGE_CHECK(irecvs, i, NULL);
-  dbg_assert(irecvs->records[i].handler == HPX_NULL);
 
   int n;
   int src;

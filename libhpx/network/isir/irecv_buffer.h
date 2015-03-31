@@ -29,7 +29,6 @@ typedef struct {
   struct {
     int              tag;
     hpx_parcel_t *parcel;
-    hpx_addr_t   handler;
   } *records;
 } irecv_buffer_t;
 
