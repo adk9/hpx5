@@ -575,6 +575,9 @@ int worker_start(void) {
   // make sure the system is initialized
   dbg_assert(here && here->config && here->network);
 
+  // wait for local threads to start up
+  pthread_barrier_wait(&self->sched->barrier);
+
   // get a parcel to start the scheduler loop with
   hpx_parcel_t *p = _schedule(true, NULL);
   if (!p) {
@@ -591,9 +594,6 @@ int worker_start(void) {
 
   self->current = NULL;
 
-  // wait for everyone here---this prevents a short execution from getting here
-  // before all of the pthreads have started
-  pthread_barrier_wait(&self->sched->barrier);
   return LIBHPX_OK;
 }
 
