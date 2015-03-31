@@ -14,10 +14,11 @@ lcoAll_SOURCES                = lcoAll.c
 lcoError_SOURCES              = lcoError.c
 lcoFutureArray_SOURCES        = lcoFutureArray.c
 
-all_LIBS                      = $(HPX_LIBS)
+all_LIBS                    = $(HPX_JEMALLOC_LIBS) $(HPX_LIBS)
 
-AM_CPPFLAGS                   = -D_GNU_SOURCE -I$(top_srcdir)/include
-AM_CFLAGS                     =
+AM_CPPFLAGS                 = -D_GNU_SOURCE -I$(top_srcdir)/include
+AM_CFLAGS                   =
+AM_LDFLAGS                  = $(HPX_JEMALLOC_LDFLAGS) -no-install
 
 if HAVE_PHOTON
 lco_PROGRAMS                 += lcoNetfuture
