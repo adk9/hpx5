@@ -61,7 +61,7 @@ static int _main_action(void *args) {
   int peerid = (rank+1)%size;
  
   // Allocate the domain array
-  hpx_addr_t global = hpx_gas_global_alloc(size, sizeof(block));
+  hpx_addr_t global = hpx_gas_alloc_cyclic(size, sizeof(block), 0);
   hpx_addr_t remote = hpx_addr_add(global, peerid * sizeof(block), sizeof(block));
 
   hpx_addr_t done = hpx_lco_future_new(sizeof(void*));

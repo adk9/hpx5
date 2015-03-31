@@ -20,11 +20,11 @@
 #include <string.h>
 
 #include <libsync/sync.h>
-#include "libhpx/action.h"
-#include "libhpx/attach.h"
-#include "libhpx/locality.h"
-#include "libhpx/scheduler.h"
-#include "libhpx/parcel.h"
+#include <libhpx/action.h>
+#include <libhpx/attach.h>
+#include <libhpx/locality.h>
+#include <libhpx/scheduler.h>
+#include <libhpx/parcel.h>
 #include "lco.h"
 #include "thread.h"
 
@@ -42,12 +42,6 @@ static const lco_class_t *_class(lco_t *lco) {
   return (lco_class_t*)bits;
 }
 
-static lco_t *_target_lco(void) {
-  lco_t *lco = hpx_thread_current_local_target();
-  dbg_assert_str(lco, "Could not pin LCO.\n");
-  return lco;
-}
-
 static hpx_status_t _fini(lco_t *lco) {
   dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
   dbg_assert_str(_class(lco)->on_fini, "LCO implementation incomplete\n");
@@ -60,6 +54,12 @@ static hpx_status_t _set(lco_t *lco, size_t size, const void *data) {
   dbg_assert_str(_class(lco)->on_set, "LCO implementation incomplete\n");
   _class(lco)->on_set(lco, size, data);
   return HPX_SUCCESS;
+}
+
+static size_t _size(lco_t *lco) {
+  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
+  dbg_assert_str(_class(lco)->on_size, "LCO implementation incomplete\n");
+  return _class(lco)->on_size(lco);
 }
 
 static hpx_status_t _error(lco_t *lco, hpx_status_t code) {
@@ -114,27 +114,30 @@ static hpx_status_t _attach(lco_t *lco, hpx_parcel_t *p) {
 /// resent.
 ///
 /// @{
-HPX_PINNED(hpx_lco_delete_action, void *args) {
-  return _fini(_target_lco());
+HPX_PINNED(hpx_lco_delete_action, lco_t *lco, void *args) {
+  return _fini(lco);
 }
 
-HPX_PINNED(hpx_lco_set_action, void *data) {
-  return _set(_target_lco(), hpx_thread_current_args_size(), data);
+HPX_PINNED(hpx_lco_set_action, lco_t *lco, void *data) {
+  return _set(lco, hpx_thread_current_args_size(), data);
 }
 
-static HPX_PINNED(_lco_error, void *args) {
+static HPX_PINNED(_lco_error, lco_t *lco, void *args) {
   hpx_status_t *code = args;
-  return _error(_target_lco(), *code);
+  return _error(lco, *code);
 }
 
-HPX_PINNED(hpx_lco_reset_action, void *UNUSED) {
-  return _reset(_target_lco());
+HPX_PINNED(hpx_lco_reset_action, lco_t *lco, void *UNUSED) {
+  return _reset(lco);
 }
 
-static HPX_PINNED(_lco_get, void *args) {
+static HPX_PINNED(_lco_size, lco_t *lco, void *UNUSED) {
+  return _size(lco);
+}
+
+static HPX_PINNED(_lco_get, lco_t *lco, void *args) {
   dbg_assert(args);
   int *n = args;
-  lco_t *lco = _target_lco();
   // convert to wait if there's no buffer
   if (*n == 0) {
     return _wait(lco);
@@ -152,10 +155,8 @@ static HPX_PINNED(_lco_get, void *args) {
   }
 }
 
-static HPX_PINNED(_lco_getref, void *args) {
-  dbg_assert(args);
-  int *n = args;
-  lco_t *lco = _target_lco();
+static HPX_PINNED(_lco_getref, lco_t *lco, int *n) {
+  dbg_assert(n);
   // convert to wait if there's no buffer
   if (*n == 0) {
     return _wait(lco);
@@ -172,29 +173,33 @@ static HPX_PINNED(_lco_getref, void *args) {
   }
 }
 
-static HPX_PINNED(_lco_getref_reply, void *data) {
-  void **local = hpx_thread_current_local_target();
-  dbg_assert(*local);
+static HPX_PINNED(_lco_getref_reply, void **local, void *data) {
   size_t bytes = hpx_thread_current_args_size();
   dbg_assert(bytes);
   memcpy(*local, data, bytes);
   return HPX_SUCCESS;
 }
 
-static HPX_PINNED(_lco_wait, void *args) {
-  return _wait(_target_lco());
+static HPX_PINNED(_lco_wait, lco_t *lco, void *args) {
+  return _wait(lco);
 }
 
-HPX_PINNED(attach, void *args) {
-  /// @todo: This parcel copy shouldn't be necessary. If we can retain the
-  ///        parent parcel and free it appropriately, then we could just enqueue
-  ///        the args directly.
-  const hpx_parcel_t *p = args;
-  hpx_parcel_t *parcel = hpx_parcel_acquire(NULL, p->size);
-  assert(parcel_size(p) == parcel_size(parcel));
-  dbg_assert_str(parcel, "could not allocate a parcel to attach\n");
-  memcpy(parcel, p, parcel_size(p));
-  return _attach(_target_lco(), parcel);
+HPX_PINNED(attach, lco_t *lco, hpx_parcel_t *p) {
+  hpx_parcel_t *parent = scheduler_current_parcel();
+  dbg_assert(hpx_parcel_get_data(parent) == p);
+  log_lco("retaining %p, nesting %p\n", (void*)parent, (void*)p);
+
+  parcel_state_t state = parcel_get_state(parent);
+  dbg_assert(!parcel_retained(state));
+  state |= PARCEL_RETAINED;
+  parcel_set_state(parent, state);
+
+  state = parcel_get_state(p);
+  dbg_assert(!parcel_nested(state));
+  state |= PARCEL_NESTED;
+  parcel_set_state(p, state);
+
+  return _attach(lco, p);
 }
 /// @}
 
@@ -293,6 +298,13 @@ void hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync) {
   dbg_check(e, "Could not forward lco_error\n");
 }
 
+void hpx_lco_error_sync(hpx_addr_t addr, hpx_status_t code) {
+  hpx_addr_t sync = hpx_lco_future_new(0);
+  hpx_lco_error(addr, code, sync);
+  hpx_lco_wait(sync);
+  hpx_lco_delete(sync, HPX_NULL);
+}
+
 void hpx_lco_reset(hpx_addr_t addr, hpx_addr_t rsync) {
   if (addr == HPX_NULL) {
     return;
@@ -311,19 +323,10 @@ void hpx_lco_reset(hpx_addr_t addr, hpx_addr_t rsync) {
 }
 
 void hpx_lco_reset_sync(hpx_addr_t addr) {
-  if (addr == HPX_NULL) {
-    return;
-  }
-
-  lco_t *lco = NULL;
-  if (hpx_gas_try_pin(addr, (void**)&lco)) {
-    _reset(lco);
-    hpx_gas_unpin(addr);
-    return;
-  }
-
-  int e = hpx_call_sync(addr, hpx_lco_reset_action, NULL, 0, NULL, 0);
-  dbg_check(e, "Could not forward to lco_reset_sync\n");
+  hpx_addr_t sync = hpx_lco_future_new(0);
+  hpx_lco_reset(addr, sync);
+  hpx_lco_wait(sync);
+  hpx_lco_delete(sync, HPX_NULL);
 }
 
 void hpx_lco_set(hpx_addr_t target, int size, const void *value,
@@ -354,6 +357,17 @@ hpx_status_t hpx_lco_wait(hpx_addr_t target) {
   }
 
   return hpx_call_sync(target, _lco_wait, NULL, 0, NULL, 0);
+}
+
+size_t hpx_lco_size(hpx_addr_t target) {
+  lco_t *lco;
+  size_t size = 0;
+  if (hpx_gas_try_pin(target, (void**)&lco)) {
+    size = _size(lco);
+    hpx_gas_unpin(target);
+    return size;
+  }
+  return hpx_call_sync(target, _lco_size, &size, size, NULL, 0);
 }
 
 /// If the LCO is local, then we use the local get functionality.
@@ -418,9 +432,10 @@ void hpx_lco_release(hpx_addr_t target, void *out) {
 int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
   dbg_assert(n > 0);
 
-  // Will partition the lcos up into local and remote LCOs. We waste some stack
+  // Will partition the lcos up into local and remote LCOs. We waste some
   // space here, since, for each lco in lcos, we either have a local mapping or
-  // a remote address.
+  // a remote address. We don't use the stack because we can't control how big
+  // @p n gets.
   lco_t **locals = calloc(n, sizeof(*locals));
   dbg_assert_str(locals, "failed to allocate array for %d elements", n);
   hpx_addr_t *remotes = calloc(n, sizeof(*remotes));
@@ -430,13 +445,20 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
   // aren't local, allocate a proxy future and initiate the remote wait. This
   // two-phase approach achieves some parallelism.
   for (int i = 0; i < n; ++i) {
-    if (!hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
+    // We neither issue a remote proxy for HPX_NULL, nor wait locally on
+    // HPX_NULL. We manually set the status output for these elements to
+    // indicate success.
+    if (lcos[i] == HPX_NULL) {
+      locals[i] = NULL;
+      remotes[i] = HPX_NULL;
+    }
+    else if (hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
+      remotes[i] = HPX_NULL;
+    }
+    else {
       locals[i] = NULL;
       remotes[i] = hpx_lco_future_new(0);
       hpx_call_async(lcos[i], _lco_wait, HPX_NULL, remotes[i], NULL, 0);
-    }
-    else {
-      remotes[i] = HPX_NULL;
     }
   }
 
@@ -450,13 +472,18 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
       status = _wait(locals[i]);
       hpx_gas_unpin(lcos[i]);
     }
-    else {
+    else if (remotes[i] != HPX_NULL) {
       status = hpx_lco_wait(remotes[i]);
       hpx_lco_delete(remotes[i], HPX_NULL);
     }
+    else {
+      status = HPX_SUCCESS;
+    }
+
     if (status != HPX_SUCCESS) {
       ++errors;
     }
+
     if (statuses) {
       statuses[i] = status;
     }
@@ -471,9 +498,10 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
                     hpx_status_t statuses[]) {
   dbg_assert(n > 0);
 
-  // Will partition the lcos up into local and remote LCOs. We waste some stack
+  // Will partition the lcos up into local and remote LCOs. We waste some
   // space here, since, for each lco in lcos, we either have a local mapping or
-  // a remote address.
+  // a remote address. We don't use the stack because we can't control how big
+  // @p n gets.
   lco_t **locals = calloc(n, sizeof(*locals));
   dbg_assert_str(locals, "failed to allocate array for %d elements", n);
   hpx_addr_t *remotes = calloc(n, sizeof(*remotes));
@@ -483,14 +511,18 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
   // aren't local, allocate a proxy future and initiate the remote get. This
   // two-phase approach achieves some parallelism.
   for (int i = 0; i < n; ++i) {
-    if (!hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
+    if (lcos[i] == HPX_NULL) {
+      locals[i] = NULL;
+      remotes[i] = HPX_NULL;
+    }
+    else if (hpx_gas_try_pin(lcos[i], (void**)&locals[i])) {
+      remotes[i] = HPX_NULL;
+    }
+    else {
       locals[i] = NULL;
       remotes[i] = hpx_lco_future_new(sizes[i]);
       hpx_call_async(lcos[i], _lco_get, HPX_NULL, remotes[i], &sizes[i],
                      sizeof(sizes[i]));
-    }
-    else {
-      remotes[i] = HPX_NULL;
     }
   }
 
@@ -504,13 +536,18 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
       status = _get(locals[i], sizes[i], values[i]);
       hpx_gas_unpin(lcos[i]);
     }
-    else {
+    else if (remotes[i] != HPX_NULL) {
       status = hpx_lco_get(remotes[i], sizes[i], values[i]);
       hpx_lco_delete(remotes[i], HPX_NULL);
     }
+    else {
+      status = HPX_SUCCESS;
+    }
+
     if (status != HPX_SUCCESS) {
       ++errors;
     }
+
     if (statuses) {
       statuses[i] = status;
     }
@@ -521,92 +558,26 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
   return errors;
 }
 
-/// Initialize a block of array of lco.
-static HPX_PINNED (_block_init, uint32_t *args) {
-  void *lco = hpx_thread_current_local_target();
-  dbg_assert(lco);
+int hpx_lco_delete_all(int n, hpx_addr_t *lcos, hpx_addr_t rsync) {
+  hpx_addr_t and = HPX_NULL;
+  if (rsync) {
+    and = hpx_lco_and_new(n);
+    int e;
+    e = hpx_call_when_with_continuation(and, rsync, hpx_lco_set_action, and, hpx_lco_delete_action, NULL, 0);
+    dbg_check(e, "failed to enqueue delete action\n");
+  }
 
-  hpx_lco_type_t type = args[0];
-  int n = args[1];
-  int arg = args[2];
-
-  for (int i = 0; i < n; i++) {
-    void *addr;
-    switch (type) {
-      case HPX_TYPE_AND:
-        // this takes intptr_t limit as parameter
-        addr = (void *)((uintptr_t)lco + i * sizeof(and_t));
-        and_init(addr, (intptr_t)arg);
-        break;
-      case HPX_TYPE_FUTURE:
-        addr = (void *)((uintptr_t)lco + i * (sizeof(future_t) + arg));
-        future_init(addr, arg);
-        break;
-      case HPX_TYPE_CHAN:
-        addr = (void *)((uintptr_t)lco + i * (sizeof(chan_t) + arg));
-        chan_init(addr);
-        break;
-      default:
-        dbg_assert_str(type, "Invalid type for HPX_TYPE_LCO\n");
+  for (int i = 0, e = n; i < e; ++i) {
+    if (lcos[i]) {
+      hpx_lco_delete(lcos[i], and);
     }
   }
+
   return HPX_SUCCESS;
 }
 
-/// Allocate an array of LCO local to the calling locality.
-/// @param       type the type of the LCO
-/// @param          n The (total) number of lcos to allocate
-/// @param        arg The size of each lco's value or the
-///                   number of inputs to the and (must be >= 0)
-///
-/// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_array_new(hpx_lco_type_t type, int n, int arg) {
-  // Get the sizeof lco class structure
-  uint32_t lco_bytes;
-  switch (type) {
-    case HPX_TYPE_AND:
-      lco_bytes = sizeof(and_t);
-      break;
-    case HPX_TYPE_FUTURE:
-      lco_bytes = sizeof(future_t) + arg;
-      break;
-    case HPX_TYPE_CHAN:
-      lco_bytes = sizeof(chan_t) + arg;
-      break;
-    default:
-      dbg_error("Invalid type for hpx_lco_array_new\n");
-  }
-
-  uint32_t  block_bytes = n * lco_bytes;
-  hpx_addr_t base = hpx_gas_alloc(block_bytes);
-
-  uint32_t args[] = {type, n, arg};
-  int e = hpx_call_sync(base, _block_init, NULL, 0, args, sizeof(args));
-  dbg_check(e, "call of _block_init_action failed\n");
-
-  // return the base address of the allocation
-  return base;
-}
-
-// Application level programmer doesn't know how big the lco is, so we
-// provide this array indexer.
-hpx_addr_t hpx_lco_array_at(hpx_lco_type_t type, hpx_addr_t array,
-                            int i, int arg) {
-  uint32_t lco_bytes;
-  switch (type) {
-    case HPX_TYPE_AND:
-      lco_bytes = sizeof(and_t);
-      break;
-    case HPX_TYPE_FUTURE:
-      lco_bytes = sizeof(future_t) + arg;
-      break;
-    case HPX_TYPE_CHAN:
-      lco_bytes = sizeof(chan_t) + arg;
-      break;
-    default:
-      dbg_error("Invalid type for hpx_lco_array_at\n");
-  }
-
-  void *local = here->gas->gva_to_lva(array);
-  return lva_to_gva((void *)((uintptr_t)local + i * lco_bytes));
+// Generic array indexer API.
+hpx_addr_t hpx_lco_array_at(hpx_addr_t array, int i, int arg) {
+  uint32_t lco_bytes = hpx_lco_size(array) + arg;
+  return hpx_addr_add(array, i * lco_bytes, UINT32_MAX);
 }

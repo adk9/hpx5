@@ -45,7 +45,7 @@ static int _main_action(void *args) {
   int size = HPX_LOCALITIES;
   int peerid = (rank + 1) % size;
 
-  hpx_addr_t data = hpx_gas_global_alloc(size, sizeof(block));
+  hpx_addr_t data = hpx_gas_alloc_cyclic(size, sizeof(block), 0);
   hpx_addr_t remote = hpx_addr_add(data, peerid * sizeof(block), sizeof(block)); 
 
   hpx_addr_t rfut = hpx_lco_future_new(0);

@@ -45,6 +45,7 @@ struct photon_config_t {
     int ledger_entries;     // The number of ledger entries (default 64)
     int max_rd;             // Max number of request descriptors, power of 2 (default 1M, set 0 for unbounded)
     int default_rd;         // Initial number of request descriptors allocated per peer (default 1024)
+    int num_cq;             // Number of completion queues to assign peers (default 1)
   } cap;
 
   struct {
@@ -144,7 +145,7 @@ int photon_finalize();
 // Buffers
 int photon_register_buffer(void *buf, uint64_t size);
 int photon_unregister_buffer(void *buf, uint64_t size);
-int photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv);
+int photon_get_buffer_private(void *buf, uint64_t size, const struct photon_buffer_priv_t **pptr);
 int photon_get_buffer_remote(photon_rid request, photonBuffer ret_buf);
 
 // RDMA rendezvous
@@ -169,14 +170,17 @@ int photon_post_os_getv_direct(int proc, void *ptr[], uint64_t size[], photonBuf
                                int flags, photon_rid *request);
 
 // RDMA with completion
-// If @p ptr is NULL, then only completion value in @p remote is sent
-// The remote buffer is specified in @p rptr and the rkey in @p priv
+// If @p lbuf is NULL and @p size is 0, then only completion value in @p remote is sent
+// The remote buffer is specified in @p rbuf along with the remote key
+// Local AND remote keys can be specified in @p lbuf and @p rbuf
+// If @p lbuf keys are zeroed, Photon will attempt to find matching registered buffer
+//
 // The default behavior is to enable all CQ events and local and
-// remote rids from probe_completion() (flags=PHOTON_REQ_NIL {0})
-int photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
+// remote rids from probe_completion() (flags=PHOTON_REQ_NIL)
+int photon_put_with_completion(int proc, uint64_t size, photonBuffer lbuf, photonBuffer rbuf,
                                photon_rid local, photon_rid remote, int flags);
-int photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
-                               photon_rid local, int flags);
+int photon_get_with_completion(int proc, uint64_t size, photonBuffer lbuf, photonBuffer rbuf,
+                               photon_rid local, photon_rid remote, int flags);
 // Can probe ANY_SOURCE but given @p proc will only poll the CQ (if available) and completion
 // ledger associated with that rank
 // @p remaining returns the number of requests still pending
@@ -207,6 +211,7 @@ int photon_unregister_addr(photonAddr addr, int af);
 // Fill in addr with the local device address, using af as the hint
 // default will be AF_INET6 and port gid
 int photon_get_dev_addr(int af, photonAddr addr);
+int photon_get_dev_name(char **dev_name);
 
 int photon_probe(photonAddr addr, int *flag, photonStatus status);
 

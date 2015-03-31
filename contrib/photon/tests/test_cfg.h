@@ -11,7 +11,7 @@ struct photon_config_t cfg = {
     .use_cma = 0,
     .use_ud = 1,
     .eth_dev = "roce0",
-    .ib_dev = "mlx4_0",
+    .ib_dev = "mlx4_0+qib0",
     .ud_gid_prefix = "ff0e::ffff:0000:0000",  // mcast
   },
   .ugni = {
@@ -24,7 +24,8 @@ struct photon_config_t cfg = {
     .eager_buf_size = -1,
     .ledger_entries = -1,
     .max_rd         = -1,
-    .default_rd     = -1
+    .default_rd     = -1,
+    .num_cq         =  2
   },
   .exch = {
     .allgather = NULL,
@@ -32,5 +33,5 @@ struct photon_config_t cfg = {
   },
   .meta_exch = PHOTON_EXCH_MPI,
   .comm = NULL,
-  .backend = "verbs"
+  .backend = "default"
 };

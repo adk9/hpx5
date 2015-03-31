@@ -11,9 +11,10 @@ typedef struct ugni_cnct_ctx_t {
   uint32_t            cdm_id;
   gni_cdm_handle_t    cdm_handle;
   gni_nic_handle_t    nic_handle;
-  gni_cq_handle_t     local_cq_handle;
-  gni_cq_handle_t     remote_cq_handle;
+  gni_cq_handle_t    *local_cq_handles;
+  gni_cq_handle_t    *remote_cq_handles;
   gni_ep_handle_t    *ep_handles;
+  int                 num_cq;
 } ugni_cnct_ctx;
 
 typedef struct ugni_cnct_info_t {

@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
-#include "hpx/hpx.h"
+#include <hpx/hpx.h>
 
 #define MAX_MSG_SIZE        (1<<22)
 #define SKIP_LARGE          10
@@ -51,29 +51,19 @@ void wtime(double *t)
   *t = (tv.tv_sec - sec)*1.0e+6 + tv.tv_usec;
 }
 
-static hpx_action_t _main        = 0;
-static hpx_action_t _init_array  = 0;
-
-static int _init_array_action(size_t *args) {
-  size_t n = *args;
-  hpx_addr_t target = hpx_thread_current_target();
-  char *local;
-  if (!hpx_gas_try_pin(target, (void**)&local))
-    return HPX_RESEND;
-
-  for(int i = 0; i < n; i++)
+static int _init_array_handler(char *local, size_t n) {
+  for(int i = 0; i < n; i++) {
     local[i] = (HPX_LOCALITY_ID == 0) ? 'a' : 'b';
-
-  hpx_gas_unpin(target);
-  HPX_THREAD_CONTINUE(local);
+  }
+  return HPX_SUCCESS;
 }
+static HPX_ACTION_DEF(PINNED, _init_array_handler, _init_array, HPX_SIZE_T);
 
-
-static int _main_action(void *args) {
+static HPX_ACTION(_main, void *args) {
   double t_start = 0.0, t_end = 0.0;
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
-  int peerid = (rank+1)%size;
+  int peer = (rank + 1) % size;
   int i;
 
   if (size == 1) {
@@ -81,8 +71,8 @@ static int _main_action(void *args) {
     hpx_shutdown(HPX_ERROR);
   }
 
-  hpx_addr_t data = hpx_gas_global_alloc(size, MAX_MSG_SIZE*2);
-  hpx_addr_t remote = hpx_addr_add(data, MAX_MSG_SIZE*2 * peerid, MAX_MSG_SIZE*2);
+  hpx_addr_t data = hpx_gas_alloc_cyclic(size, MAX_MSG_SIZE * 2, 0);
+  hpx_addr_t remote = hpx_addr_add(data, MAX_MSG_SIZE * 2 * peer, MAX_MSG_SIZE *2);
 
   fprintf(stdout, HEADER);
   fprintf(stdout, "# [ pairs: %d ]\n", size/2);
@@ -90,12 +80,12 @@ static int _main_action(void *args) {
   fflush(stdout);
 
   for (size_t size = 1; size <= MAX_MSG_SIZE; size*=2) {
-    char *local;
+    hpx_addr_t rfut = hpx_lco_future_new(0);
+    hpx_call(remote, _init_array, rfut, &size);
 
-    hpx_addr_t rfut = hpx_lco_future_new(sizeof(void*));
-    hpx_call(remote, _init_array, rfut, &size, sizeof(size));
-    hpx_call_sync(data, _init_array, &local, sizeof(local), &size,
-                  sizeof(size));
+    char *local = hpx_malloc_registered(size);
+    _init_array_handler(local, size);
+
     hpx_lco_wait(rfut);
     hpx_lco_delete(rfut, HPX_NULL);
 
@@ -105,16 +95,15 @@ static int _main_action(void *args) {
     }
 
     for (i = 0; i < loop + skip; i++) {
-      if(i == skip)
+      if (i == skip) {
         wtime(&t_start);
+      }
 
-      hpx_addr_t done = hpx_lco_future_new(0);
-      hpx_gas_memcpy(data, remote, size, done);
-      hpx_lco_wait(done);
-      hpx_lco_delete(done, HPX_NULL);
+      hpx_gas_memget_sync(local, remote, size);
     }
 
     wtime(&t_end);
+    hpx_free_registered(local);
 
     double latency = (t_end - t_start)/(1.0 * loop);
     fprintf(stdout, "%-*zu%*.*f\n", 10, size, FIELD_WIDTH,
@@ -156,9 +145,6 @@ int main(int argc, char *argv[argc]) {
     fprintf(stderr, "A minimum of 2 localities are required to run this test.\n");
     return -1;
   }
-
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(_init_array_action, &_init_array);
 
   return hpx_run(&_main, NULL, 0);
 }

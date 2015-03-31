@@ -18,12 +18,13 @@
 #include <limits.h>
 #include <string.h>
 #include <hpx/hpx.h>
-#include "libhpx/boot.h"
-#include "libhpx/debug.h"
-#include "libhpx/gas.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "../mallctl.h"
+#include <libhpx/boot.h>
+#include <libhpx/debug.h>
+#include <libhpx/gas.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/memory.h>
+#include <libhpx/locality.h>
+#include <libhpx/network.h>
 #include "bitmap.h"
 #include "gpa.h"
 #include "heap.h"
@@ -44,95 +45,6 @@
 ///
 heap_t *global_heap = NULL;
 
-/// Some arena stuff for jemalloc.
-static __thread unsigned _global_arena = UINT_MAX;
-static __thread unsigned _primordial_arena = UINT_MAX;
-
-/// The static chunk allocator callback that we give to jemalloc arenas that
-/// manage our global heap.
-///
-/// When a jemalloc arena needs to service an allocation request that it does
-/// not currently have enough correctly aligned space to deal with, it will use
-/// the its currently configured chunk_alloc_t callback to get more space from
-/// the system. This is typically done using mmap(), however for memory
-/// corresponding to the global address space we want to provide memory from our
-/// pre-registered global heap. This callback performs that operation.
-///
-/// @note This callback is only necessary to pick up the global heap pointer,
-///       because the jemalloc callback registration doesn't allow us to
-///       register user data to be passed back to us.
-///
-/// @note I do not know what the @p arena index is useful for---Luke.
-///
-/// @param[in]   UNUSED1 A requested address for chunk extension.
-/// @param[in]      size The number of bytes we need to allocate.
-/// @param[in]     align The alignment that is being requested.
-/// @param[in/out]  zero Set to zero if the chunk should be zeroed.
-/// @param[in]   UNUSED2 The index of the arena making this allocation request.
-///
-/// @returns The base pointer of the newly allocated chunk.
-static void *_chunk_alloc(void *UNUSED1, size_t size, size_t align, bool *zero,
-                          unsigned UNUSED2)
-{
-  void *chunk = heap_chunk_alloc(global_heap, size, align);
-  if (zero && *zero) {
-    memset(chunk, 0, size);
-  }
-  return chunk;
-}
-
-/// The static chunk de-allocator callback that we give to jemalloc arenas that
-/// manage our global heap.
-///
-/// When a jemalloc arena wants to de-allocate a previously-allocated chunk for
-/// any reason, it will use its currently configured chunk_dalloc_t callback to
-/// do so. This is typically munmap(), however for memory corresponding to the
-/// global address space we want to return the memory to our heap. This callback
-/// performs that operation.
-///
-/// @note This callback is only necessary to pick up the global heap pointer,
-///       because the jemalloc callback registration doesn't allows us to
-///       register user data to be passed back to us.
-///
-/// @note I do not know what use the @p arena index is---Luke.
-///
-/// @note I do not know what the return value is used for---Luke.
-///
-/// @param   chunk The base address of the chunk to de-allocate, must match an
-///                address returned from _chunk_alloc().
-/// @param    size The number of bytes that were originally requested, must
-///                match the number of bytes provided to the _chunk_alloc()
-///                request associated with @p chunk.
-/// @param   arena The index of the arena making the call to _chunk_dalloc().
-///
-/// @returns UNKNOWN---Luke.
-static bool _chunk_dalloc(void *chunk, size_t size, unsigned UNUSED) {
-  return heap_chunk_dalloc(global_heap, chunk, size);
-}
-
-int pgas_join(void) {
-  if (!global_heap) {
-    dbg_error("attempt to join GAS before global heap allocation.\n");
-    return LIBHPX_ERROR;
-  }
-
-  if (_global_arena == UINT_MAX) {
-    _global_arena = mallctl_create_arena(_chunk_alloc, _chunk_dalloc);
-    mallctl_thread_enable_cache();
-    mallctl_thread_flush_cache();
-    _primordial_arena = mallctl_thread_set_arena(_global_arena);
-  }
-  return LIBHPX_OK;
-}
-
-void pgas_leave(void) {
-  dbg_assert_str(_global_arena != UINT_MAX,
-                 "trying to leave the GAS before joining it.\n");
-
-  mallctl_thread_flush_cache();
-  mallctl_thread_set_arena(_primordial_arena);
-}
-
 static void _pgas_delete(gas_t *gas) {
   if (global_heap) {
     heap_fini(global_heap);
@@ -149,7 +61,7 @@ static bool _gpa_is_cyclic(hpx_addr_t gpa) {
   return heap_offset_is_cyclic(global_heap, pgas_gpa_to_offset(gpa));
 }
 
-hpx_addr_t pgas_lva_to_gpa(void *lva) {
+hpx_addr_t pgas_lva_to_gpa(const void *lva) {
   const uint64_t offset = heap_lva_to_offset(global_heap, lva);
   return pgas_offset_to_gpa(here->rank, offset);
 }
@@ -183,7 +95,6 @@ static hpx_addr_t _pgas_add(hpx_addr_t gpa, int64_t bytes, uint32_t bsize) {
                   : pgas_gpa_add(gpa, bytes);
 }
 
-
 // Compute a global address for a locality.
 static hpx_addr_t _pgas_there(uint32_t i) {
   hpx_addr_t there = pgas_offset_to_gpa(i, UINT64_MAX);
@@ -194,7 +105,6 @@ static hpx_addr_t _pgas_there(uint32_t i) {
   }
   return there;
 }
-
 
 /// Pin and translate an hpx address into a local virtual address. PGAS
 /// addresses don't get pinned, so we're really only talking about translating
@@ -220,45 +130,53 @@ static void _pgas_unpin(const hpx_addr_t addr) {
                  addr, here->rank);
 }
 
-
-static hpx_addr_t _pgas_gas_cyclic_alloc(size_t n, uint32_t bsize) {
-  if (here->rank == 0) {
-    return pgas_cyclic_alloc_sync(n, bsize);
-  }
-
+static hpx_addr_t _pgas_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
   hpx_addr_t addr;
-  pgas_alloc_args_t args = {
-    .n = n,
-    .bsize = bsize
-  };
-  int e = hpx_call_sync(HPX_THERE(0), pgas_cyclic_alloc, &addr, sizeof(addr),
-                        &args, sizeof(args));
-  dbg_check(e, "Failed to call pgas_cyclic_alloc_handler.\n");
+  if (here->rank == 0) {
+    addr = pgas_alloc_cyclic_sync(n, bsize);
+  }
+  else {
+    int e = hpx_call_sync(HPX_THERE(0), pgas_alloc_cyclic, &addr, sizeof(addr),
+                          &n, &bsize);
+    dbg_check(e, "Failed to call pgas_alloc_cyclic_handler.\n");
+  }
   dbg_assert_str(addr != HPX_NULL, "HPX_NULL is not a valid allocation\n");
   return addr;
 }
 
-static hpx_addr_t _pgas_gas_cyclic_calloc(size_t n, uint32_t bsize) {
-  if (here->rank == 0) {
-    return pgas_cyclic_calloc_sync(n, bsize);
-  }
-
+static hpx_addr_t _pgas_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
   hpx_addr_t addr;
-  pgas_alloc_args_t args = {
-    .n = n,
-    .bsize = bsize
-  };
-  int e = hpx_call_sync(HPX_THERE(0), pgas_cyclic_calloc,
-                        &addr, sizeof(addr), &args, sizeof(args));
-  dbg_check(e, "Failed to call pgas_cyclic_calloc_handler.\n");
+  if (here->rank == 0) {
+    addr = pgas_calloc_cyclic_sync(n, bsize);
+  }
+  else {
+    int e = hpx_call_sync(HPX_THERE(0), pgas_calloc_cyclic, &addr, sizeof(addr),
+                          &n, &bsize);
+    dbg_check(e, "Failed to call pgas_calloc_cyclic_handler.\n");
+  }
   dbg_assert_str(addr != HPX_NULL, "HPX_NULL is not a valid allocation\n");
   return addr;
 }
 
 /// Allocate a single global block from the global heap, and return it as an
 /// hpx_addr_t.
-static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
-  void *lva = libhpx_global_malloc(bytes);
+static hpx_addr_t _pgas_gas_alloc_local(uint32_t bytes, uint32_t boundary) {
+  void *lva = boundary ? global_memalign(boundary, bytes) : global_malloc(bytes);
+  dbg_assert(heap_contains_lva(global_heap, lva));
+  return pgas_lva_to_gpa(lva);
+}
+
+/// Allocate a single global block, filled with 0, from the global heap, and
+/// return it as an hpx_addr_t.
+static hpx_addr_t _pgas_gas_calloc_local(size_t nmemb, size_t size, uint32_t boundary) {
+  size_t bytes = nmemb * size;
+  void *lva;
+  if (boundary) {
+    lva = global_memalign(boundary, bytes);
+    lva = memset(lva, 0, bytes);
+  } else {
+    lva = global_calloc(nmemb, size);
+  }
   dbg_assert(heap_contains_lva(global_heap, lva));
   return pgas_lva_to_gpa(lva);
 }
@@ -266,7 +184,7 @@ static hpx_addr_t _pgas_gas_alloc(uint32_t bytes) {
 /// Free a global address.
 ///
 /// This global address must either be the base of a cyclic allocation, or a
-/// block allocated by _pgas_gas_alloc. At this time, we do not attempt to deal
+/// block allocated by _pgas_gas_alloc_local. At this time, we do not attempt to deal
 /// with the cyclic allocations, as they are using a simple csbrk allocator.
 static void _pgas_gas_free(hpx_addr_t gpa, hpx_addr_t sync) {
   if (gpa == HPX_NULL) {
@@ -283,7 +201,7 @@ static void _pgas_gas_free(hpx_addr_t gpa, hpx_addr_t sync) {
     heap_free_cyclic(global_heap, offset);
   }
   else if (pgas_gpa_to_rank(gpa) == here->rank) {
-    libhpx_global_free(pgas_gpa_to_lva(offset));
+    global_free(pgas_gpa_to_lva(offset));
   }
   else {
     int e = hpx_call(gpa, pgas_free, sync, NULL, 0);
@@ -314,52 +232,52 @@ static int _pgas_parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size,
   return HPX_SUCCESS;
 }
 
-static int _pgas_parcel_memput(hpx_addr_t to, const void *from, size_t size,
-                               hpx_addr_t lsync, hpx_addr_t rsync) {
-  if (!size) {
+static int _pgas_memput(hpx_addr_t to, const void *from, size_t n,
+                        hpx_addr_t lsync, hpx_addr_t rsync) {
+  if (!n) {
     return HPX_SUCCESS;
   }
 
+  hpx_action_t lop = lsync ? lco_set : HPX_ACTION_NULL;
   if (pgas_gpa_to_rank(to) == here->rank) {
     void *lto = pgas_gpa_to_lva(to);
-    memcpy(lto, from, size);
+    memcpy(lto, from, n);
+    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    return HPX_SUCCESS;
+  }
+  else if (rsync) {
+    return network_pwc(here->network, to, from, n, lop, lsync,
+                       memput_rsync, rsync);
   }
   else {
-    return parcel_memput(to, from, size, lsync, rsync);
+    return network_put(here->network, to, from, n, lop, lsync);
   }
-
-  hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-  hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
-  return HPX_SUCCESS;
 }
 
-static int _pgas_parcel_memget(void *to, hpx_addr_t from, size_t size,
-                               hpx_addr_t lsync) {
-  if (!size) {
+static int _pgas_memget(void *to, hpx_addr_t from, size_t n, hpx_addr_t lsync) {
+  if (!n) {
     return HPX_SUCCESS;
   }
 
   if (pgas_gpa_to_rank(from) == here->rank) {
     const void *lfrom = pgas_gpa_to_lva(from);
-    memcpy(to, lfrom, size);
+    memcpy(to, lfrom, n);
+    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+    return HPX_SUCCESS;
   }
   else {
-    return parcel_memget(to, from, size, lsync);
+    return network_get(here->network, to, from, n, lco_set, lsync);
   }
-
-  hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-  return HPX_SUCCESS;
 }
 
 static void _pgas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
-
 static size_t _pgas_local_size(gas_t *gas) {
   return global_heap->nbytes;
 }
-
 
 static void *_pgas_local_base(gas_t *gas) {
   return global_heap->base;
@@ -369,36 +287,51 @@ static uint64_t _pgas_offset_of(hpx_addr_t gpa) {
   return pgas_gpa_to_offset(gpa);
 }
 
+static void *_pgas_mmap(void *gas, void *addr, size_t n, size_t align) {
+  dbg_assert(global_heap);
+  return heap_chunk_alloc(global_heap, addr, n, align);
+}
+
+static void _pgas_munmap(void *gas, void *addr, size_t n) {
+  dbg_assert(global_heap);
+  heap_chunk_dalloc(global_heap, addr, n);
+}
+
 static gas_t _pgas_vtable = {
-  .type          = HPX_GAS_PGAS,
-  .delete        = _pgas_delete,
-  .join          = pgas_join,
-  .leave         = pgas_leave,
-  .is_global     = _pgas_is_global,
-  .local_size    = _pgas_local_size,
-  .local_base    = _pgas_local_base,
-  .locality_of   = pgas_gpa_to_rank,
-  .sub           = _pgas_sub,
-  .add           = _pgas_add,
-  .lva_to_gva    = pgas_lva_to_gpa,
-  .gva_to_lva    = pgas_gpa_to_lva,
-  .there         = _pgas_there,
-  .try_pin       = _pgas_try_pin,
-  .unpin         = _pgas_unpin,
-  .cyclic_alloc  = _pgas_gas_cyclic_alloc,
-  .cyclic_calloc = _pgas_gas_cyclic_calloc,
-  .local_alloc   = _pgas_gas_alloc,
-  .free          = _pgas_gas_free,
-  .move          = _pgas_move,
-  .memget        = _pgas_parcel_memget,
-  .memput        = _pgas_parcel_memput,
-  .memcpy        = _pgas_parcel_memcpy,
-  .owner_of      = pgas_gpa_to_rank,
-  .offset_of     = _pgas_offset_of
+  .type           = HPX_GAS_PGAS,
+  .delete         = _pgas_delete,
+  .is_global      = _pgas_is_global,
+  .local_size     = _pgas_local_size,
+  .local_base     = _pgas_local_base,
+  .locality_of    = pgas_gpa_to_rank,
+  .sub            = _pgas_sub,
+  .add            = _pgas_add,
+  .lva_to_gva     = pgas_lva_to_gpa,
+  .gva_to_lva     = pgas_gpa_to_lva,
+  .there          = _pgas_there,
+  .try_pin        = _pgas_try_pin,
+  .unpin          = _pgas_unpin,
+  .alloc_cyclic   = _pgas_gas_alloc_cyclic,
+  .calloc_cyclic  = _pgas_gas_calloc_cyclic,
+  .alloc_blocked  = NULL,
+  .calloc_blocked = NULL,
+  .alloc_local    = _pgas_gas_alloc_local,
+  .calloc_local   = _pgas_gas_calloc_local,
+  .free           = _pgas_gas_free,
+  .move           = _pgas_move,
+  .memget         = _pgas_memget,
+  .memput         = _pgas_memput,
+  .memcpy         = _pgas_parcel_memcpy,
+  .owner_of       = pgas_gpa_to_rank,
+  .offset_of      = _pgas_offset_of,
+  .mmap           = _pgas_mmap,
+  .munmap         = _pgas_munmap
 };
 
-gas_t *gas_pgas_new(size_t heap_size, boot_t *boot, struct transport *transport)
+gas_t *gas_pgas_new(const config_t *cfg, boot_t *boot)
 {
+  size_t heap_size = cfg->heapsize;
+
   if (here->ranks == 1) {
     log_gas("PGAS requires at least two ranks\n");
     return NULL;
@@ -417,15 +350,6 @@ gas_t *gas_pgas_new(size_t heap_size, boot_t *boot, struct transport *transport)
   int e = heap_init(global_heap, heap_size, (here->rank == 0));
   if (e != LIBHPX_OK) {
     dbg_error("failed to allocate global heap\n");
-    goto unwind1;
-  }
-
-  if (heap_bind_transport(global_heap, transport) != LIBHPX_OK) {
-    dbg_error("failed to bind the transport\n");
-  }
-
-  if (mallctl_disable_dirty_page_purge() != LIBHPX_OK) {
-    dbg_error("failed to disable dirty page purging\n");
     goto unwind1;
   }
 

@@ -40,15 +40,17 @@ extern "C" {
 
 enum enum_hpx_gas { hpx_gas__NULL = -1, hpx_gas_arg_default = 0, hpx_gas_arg_smp, hpx_gas_arg_pgas, hpx_gas_arg_agas };
 enum enum_hpx_boot { hpx_boot__NULL = -1, hpx_boot_arg_default = 0, hpx_boot_arg_smp, hpx_boot_arg_mpi, hpx_boot_arg_pmi };
-enum enum_hpx_transport { hpx_transport__NULL = -1, hpx_transport_arg_default = 0, hpx_transport_arg_smp, hpx_transport_arg_mpi, hpx_transport_arg_portals, hpx_transport_arg_photon };
+enum enum_hpx_transport { hpx_transport__NULL = -1, hpx_transport_arg_default = 0, hpx_transport_arg_mpi, hpx_transport_arg_portals, hpx_transport_arg_photon };
 enum enum_hpx_network { hpx_network__NULL = -1, hpx_network_arg_default = 0, hpx_network_arg_smp, hpx_network_arg_pwc, hpx_network_arg_isir };
-enum enum_hpx_log_level { hpx_log_level__NULL = -1, hpx_log_level_arg_default = 0, hpx_log_level_arg_boot, hpx_log_level_arg_sched, hpx_log_level_arg_gas, hpx_log_level_arg_lco, hpx_log_level_arg_net, hpx_log_level_arg_trans, hpx_log_level_arg_parcel, hpx_log_level_arg_action, hpx_log_level_arg_all };
+enum enum_hpx_log_level { hpx_log_level__NULL = -1, hpx_log_level_arg_default = 0, hpx_log_level_arg_boot, hpx_log_level_arg_sched, hpx_log_level_arg_gas, hpx_log_level_arg_lco, hpx_log_level_arg_net, hpx_log_level_arg_trans, hpx_log_level_arg_parcel, hpx_log_level_arg_action, hpx_log_level_arg_config, hpx_log_level_arg_memory, hpx_log_level_arg_all };
 enum enum_hpx_trace_classes { hpx_trace_classes__NULL = -1, hpx_trace_classes_arg_parcel = 0, hpx_trace_classes_arg_pwc, hpx_trace_classes_arg_sched, hpx_trace_classes_arg_all };
 enum enum_hpx_photon_backend { hpx_photon_backend__NULL = -1, hpx_photon_backend_arg_default = 0, hpx_photon_backend_arg_verbs, hpx_photon_backend_arg_ugni };
 
 /** @brief Where the command line options are stored */
 struct hpx_options_t
 {
+  int hpx_help_flag;	/**< @brief print HPX help (default=off).  */
+  const char *hpx_help_help; /**< @brief print HPX help help description.  */
   int hpx_cores_arg;	/**< @brief number of cores to run on.  */
   char * hpx_cores_orig;	/**< @brief number of cores to run on original value given at command line.  */
   const char *hpx_cores_help; /**< @brief number of cores to run on help description.  */
@@ -78,12 +80,6 @@ struct hpx_options_t
   const char *hpx_network_help; /**< @brief type of network to use help description.  */
   int hpx_statistics_flag;	/**< @brief print HPX runtime statistics (default=off).  */
   const char *hpx_statistics_help; /**< @brief print HPX runtime statistics help description.  */
-  long hpx_sendlimit_arg;	/**< @brief HPX transport-specific send limit.  */
-  char * hpx_sendlimit_orig;	/**< @brief HPX transport-specific send limit original value given at command line.  */
-  const char *hpx_sendlimit_help; /**< @brief HPX transport-specific send limit help description.  */
-  long hpx_recvlimit_arg;	/**< @brief HPX transport-specific recv limit.  */
-  char * hpx_recvlimit_orig;	/**< @brief HPX transport-specific recv limit original value given at command line.  */
-  const char *hpx_recvlimit_help; /**< @brief HPX transport-specific recv limit help description.  */
   char * hpx_configfile_arg;	/**< @brief HPX runtime configuration file.  */
   char * hpx_configfile_orig;	/**< @brief HPX runtime configuration file original value given at command line.  */
   const char *hpx_configfile_help; /**< @brief HPX runtime configuration file help description.  */
@@ -124,6 +120,15 @@ struct hpx_options_t
   unsigned int hpx_trace_at_min; /**< @brief set the localities to trace at's minimum occurreces */
   unsigned int hpx_trace_at_max; /**< @brief set the localities to trace at's maximum occurreces */
   const char *hpx_trace_at_help; /**< @brief set the localities to trace at help description.  */
+  long hpx_isir_testwindow_arg;	/**< @brief number of ISIR requests to test in progress loop.  */
+  char * hpx_isir_testwindow_orig;	/**< @brief number of ISIR requests to test in progress loop original value given at command line.  */
+  const char *hpx_isir_testwindow_help; /**< @brief number of ISIR requests to test in progress loop help description.  */
+  long hpx_isir_sendlimit_arg;	/**< @brief ISIR network send limit.  */
+  char * hpx_isir_sendlimit_orig;	/**< @brief ISIR network send limit original value given at command line.  */
+  const char *hpx_isir_sendlimit_help; /**< @brief ISIR network send limit help description.  */
+  long hpx_isir_recvlimit_arg;	/**< @brief ISIR network recv limit.  */
+  char * hpx_isir_recvlimit_orig;	/**< @brief ISIR network recv limit original value given at command line.  */
+  const char *hpx_isir_recvlimit_help; /**< @brief ISIR network recv limit help description.  */
   long hpx_pwc_parcelbuffersize_arg;	/**< @brief set the size of p2p recv buffers for parcel sends.  */
   char * hpx_pwc_parcelbuffersize_orig;	/**< @brief set the size of p2p recv buffers for parcel sends original value given at command line.  */
   const char *hpx_pwc_parcelbuffersize_help; /**< @brief set the size of p2p recv buffers for parcel sends help description.  */
@@ -159,7 +164,11 @@ struct hpx_options_t
   int hpx_photon_defaultrd_arg;	/**< @brief set default number of allocated descriptors.  */
   char * hpx_photon_defaultrd_orig;	/**< @brief set default number of allocated descriptors original value given at command line.  */
   const char *hpx_photon_defaultrd_help; /**< @brief set default number of allocated descriptors help description.  */
+  int hpx_photon_numcq_arg;	/**< @brief set number of completion queues to use (cyclic assignment to ranks).  */
+  char * hpx_photon_numcq_orig;	/**< @brief set number of completion queues to use (cyclic assignment to ranks) original value given at command line.  */
+  const char *hpx_photon_numcq_help; /**< @brief set number of completion queues to use (cyclic assignment to ranks) help description.  */
   
+  unsigned int hpx_help_given ;	/**< @brief Whether hpx-help was given.  */
   unsigned int hpx_cores_given ;	/**< @brief Whether hpx-cores was given.  */
   unsigned int hpx_threads_given ;	/**< @brief Whether hpx-threads was given.  */
   unsigned int hpx_stacksize_given ;	/**< @brief Whether hpx-stacksize was given.  */
@@ -170,8 +179,6 @@ struct hpx_options_t
   unsigned int hpx_transport_given ;	/**< @brief Whether hpx-transport was given.  */
   unsigned int hpx_network_given ;	/**< @brief Whether hpx-network was given.  */
   unsigned int hpx_statistics_given ;	/**< @brief Whether hpx-statistics was given.  */
-  unsigned int hpx_sendlimit_given ;	/**< @brief Whether hpx-sendlimit was given.  */
-  unsigned int hpx_recvlimit_given ;	/**< @brief Whether hpx-recvlimit was given.  */
   unsigned int hpx_configfile_given ;	/**< @brief Whether hpx-configfile was given.  */
   unsigned int hpx_log_at_given ;	/**< @brief Whether hpx-log-at was given.  */
   unsigned int hpx_log_level_given ;	/**< @brief Whether hpx-log-level was given.  */
@@ -183,6 +190,9 @@ struct hpx_options_t
   unsigned int hpx_trace_dir_given ;	/**< @brief Whether hpx-trace-dir was given.  */
   unsigned int hpx_trace_filesize_given ;	/**< @brief Whether hpx-trace-filesize was given.  */
   unsigned int hpx_trace_at_given ;	/**< @brief Whether hpx-trace-at was given.  */
+  unsigned int hpx_isir_testwindow_given ;	/**< @brief Whether hpx-isir-testwindow was given.  */
+  unsigned int hpx_isir_sendlimit_given ;	/**< @brief Whether hpx-isir-sendlimit was given.  */
+  unsigned int hpx_isir_recvlimit_given ;	/**< @brief Whether hpx-isir-recvlimit was given.  */
   unsigned int hpx_pwc_parcelbuffersize_given ;	/**< @brief Whether hpx-pwc-parcelbuffersize was given.  */
   unsigned int hpx_pwc_parceleagerlimit_given ;	/**< @brief Whether hpx-pwc-parceleagerlimit was given.  */
   unsigned int hpx_photon_backend_given ;	/**< @brief Whether hpx-photon-backend was given.  */
@@ -195,6 +205,7 @@ struct hpx_options_t
   unsigned int hpx_photon_smallpwcsize_given ;	/**< @brief Whether hpx-photon-smallpwcsize was given.  */
   unsigned int hpx_photon_maxrd_given ;	/**< @brief Whether hpx-photon-maxrd was given.  */
   unsigned int hpx_photon_defaultrd_given ;	/**< @brief Whether hpx-photon-defaultrd was given.  */
+  unsigned int hpx_photon_numcq_given ;	/**< @brief Whether hpx-photon-numcq was given.  */
 
 } ;
 

@@ -59,7 +59,7 @@ int send_done(int n, int r) {
   for (i=0; i<n; i++) {
     if (i==r)
       continue;
-    photon_put_with_completion(i, NULL, 0, NULL, (struct photon_buffer_priv_t) {0,0}, PHOTON_TAG, 0xdeadbeef, 0);
+    photon_put_with_completion(i, 0, NULL, NULL, PHOTON_TAG, 0xdeadbeef, 0);
     sendComp++;
   }
   return 0;
@@ -91,7 +91,7 @@ int handle_ack_loop(int wait) {
         sendComp--;
       else {
         int ret = request>>32;
-        photon_put_with_completion(ret, NULL, 0, NULL, (struct photon_buffer_priv_t) {0,0}, PHOTON_TAG, request, 0);
+        photon_put_with_completion(ret, 0, NULL, NULL, PHOTON_TAG, request, 0);
         sendComp++;
       }
     }
@@ -122,6 +122,7 @@ START_TEST(test_photon_put_wc)
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
   myrank = rank;
 
+  struct photon_buffer_t lbuf;
   struct photon_buffer_t rbuf[nproc];
   photon_rid recvReq[nproc], sendReq[nproc], request;
   char *send, *recv[nproc];
@@ -177,7 +178,10 @@ START_TEST(test_photon_put_wc)
       if (rank <= ns) {
         clock_gettime(CLOCK_MONOTONIC, &time_s);
         for (k=0; k<ITERS; k++) {
-          photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, PHOTON_REQ_NIL);
+	  lbuf.addr = (uintptr_t)send;
+	  lbuf.size = sizes[i];
+	  lbuf.priv = (struct photon_buffer_priv_t){0,0};
+          photon_put_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0xcafebabe, PHOTON_REQ_NIL);
           sendComp++;
           wait_local(NULL);
         }
@@ -202,7 +206,10 @@ START_TEST(test_photon_put_wc)
         if (i && !(sizes[i] % 8)) {
           clock_gettime(CLOCK_MONOTONIC, &time_s);
           for (k=0; k<ITERS; k++) {
-            photon_get_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0);
+	    lbuf.addr = (uintptr_t)send;
+	    lbuf.size = sizes[i];
+	    lbuf.priv = (struct photon_buffer_priv_t){0,0};
+            photon_get_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0xfacefeed, 0);
             sendComp++;
             wait_local(NULL);
           }
@@ -229,7 +236,10 @@ START_TEST(test_photon_put_wc)
       if (rank <= ns) {
         clock_gettime(CLOCK_MONOTONIC, &time_s);
         for (k=0; k<ASYNC_ITERS; k++) {
-          if (photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, PHOTON_REQ_NIL)) {
+	  lbuf.addr = (uintptr_t)send;
+	  lbuf.size = sizes[i];
+	  lbuf.priv = (struct photon_buffer_priv_t){0,0};
+          if (photon_put_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0xcafebabe, PHOTON_REQ_NIL)) {
             fprintf(stderr, "error: exceeded max outstanding work events (k=%d)\n", k);
             exit(1);
           }

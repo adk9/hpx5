@@ -248,7 +248,7 @@ void _main_action(guppie_config_t *cfg)
   fflush(stdout);
 
   // Allocate main table.
-  cfg->table = hpx_gas_global_alloc(cfg->tabsize, sizeof(uint64_t));
+  cfg->table = hpx_gas_alloc_cyclic(cfg->tabsize, sizeof(uint64_t), sizeof(uint64_t));
 
   // Begin timing here
   icputime = -CPUSEC();

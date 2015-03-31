@@ -64,27 +64,22 @@
 ///           ####################################
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 /// @file libhpx/scheduler/allgather.c
 /// @brief Defines the allgather LCO.
-#include <stdio.h>
 #include <assert.h>
-#include <stdlib.h>
 #include <string.h>
-
-#include "libhpx/action.h"
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+#include <libhpx/scheduler.h>
 #include "cvar.h"
 #include "lco.h"
 
-static const int _gathering = 0;
-static const int _reading   = 1;
-
+/// Local alltoall interface.
+/// @{
 typedef struct {
   lco_t           lco;
   cvar_t         wait;
@@ -94,6 +89,8 @@ typedef struct {
   void         *value;
 } _alltoall_t;
 
+static const int _gathering = 0;
+static const int _reading   = 1;
 
 typedef struct {
   int offset;
@@ -108,6 +105,11 @@ typedef struct {
 static HPX_ACTION_DECL(_alltoall_setid_proxy);
 static HPX_ACTION_DECL(_alltoall_getid_proxy);
 
+static size_t _alltoall_size(lco_t *lco) {
+  _alltoall_t *alltoall = (_alltoall_t *)lco;
+  return sizeof(*alltoall);
+}
+
 /// Deletes a gathering.
 static void _alltoall_fini(lco_t *lco) {
   if (!lco) {
@@ -120,7 +122,7 @@ static void _alltoall_fini(lco_t *lco) {
     free(g->value);
   }
   lco_fini(lco);
-  libhpx_global_free(lco);
+  global_free(lco);
 }
 
 /// Handle an error condition.
@@ -138,6 +140,32 @@ static void _alltoall_reset(lco_t *lco) {
                  "Reset on alltoall LCO that has waiting threads.\n");
   cvar_reset(&g->wait);
   lco_unlock(&g->lco);
+}
+
+static hpx_status_t _alltoall_attach(lco_t *lco, hpx_parcel_t *p) {
+  hpx_status_t status = HPX_SUCCESS;
+  lco_lock(lco);
+  _alltoall_t *g = (_alltoall_t *)lco;
+
+  // We have to wait for gathering to complete before sending the parcel.
+  if (g->phase != _gathering) {
+    status = cvar_attach(&g->wait, p);
+    goto unlock;
+  }
+
+  // If the alltoall has an error, then return that error without sending the
+  // parcel.
+  status = cvar_get_error(&g->wait);
+  if (status != HPX_SUCCESS) {
+    goto unlock;
+  }
+  
+  // Go ahead and send this parcel eagerly.
+  hpx_parcel_send(p, HPX_NULL);
+
+  unlock:
+    lco_unlock(lco);
+    return status;
 }
 
 /// Get the value of the gathering, will wait if the phase is gathering.
@@ -312,12 +340,7 @@ hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id, int size,
 }
 
 
-static HPX_PINNED(_alltoall_setid_proxy, void *args) {
-  // try and pin the allgather LCO, if we fail, we need to resend the underlying
-  // parcel to "catch up" to the moving LCO
-  _alltoall_t *g = hpx_thread_current_local_target();
-  dbg_assert(g);
-
+static HPX_PINNED(_alltoall_setid_proxy, _alltoall_t *g, void *args) {
   // otherwise we pinned the LCO, extract the arguments from @p args and use the
   // local setid routine
   _alltoall_set_offset_t *a = args;
@@ -344,8 +367,9 @@ static void _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
     .on_getref   = NULL,
     .on_release  = NULL,
     .on_wait     = _alltoall_wait,
-    .on_attach   = NULL,
-    .on_reset    = _alltoall_reset
+    .on_attach   = _alltoall_attach,
+    .on_reset    = _alltoall_reset,
+    .on_size     = _alltoall_size
   };
 
   lco_init(&g->lco, &vtable);
@@ -373,8 +397,38 @@ static void _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
 /// @param participants The static number of participants in the gathering.
 /// @param size         The size of the data being gathered.
 hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) {
-  _alltoall_t *g = libhpx_global_malloc(sizeof(*g));
+  _alltoall_t *g = global_malloc(sizeof(*g));
   assert(g);
   _alltoall_init(g, inputs, size);
   return lva_to_gva(g);
 }
+
+/// Initialize a block of array of lco.
+static HPX_PINNED(_block_local_init, void *lco, uint32_t *args) {
+  for (int i = 0; i < args[0]; i++) {
+    void *addr = (void *)((uintptr_t)lco + i * (sizeof(_alltoall_t) + args[2]));
+    _alltoall_init(addr, args[1], args[2]);
+  }
+  return HPX_SUCCESS;
+}
+
+/// Allocate an array of alltoall LCO local to the calling locality.
+/// @param          n The (total) number of lcos to allocate
+/// @param     inputs Number of inputs to alltoall LCO
+/// @param       size The size of the value for alltoall LCO
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_alltoall_local_array_new(int n, size_t inputs, size_t size) {
+  uint32_t lco_bytes = sizeof(_alltoall_t) + size;
+  dbg_assert(n * lco_bytes < UINT32_MAX);
+  uint32_t block_bytes = n * lco_bytes;
+  hpx_addr_t base = hpx_gas_alloc_local(block_bytes, 0);
+
+  uint32_t args[] = {n, inputs, size};
+  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &args, sizeof(args));
+  dbg_check(e, "call of _block_init_action failed\n");
+
+  // return the base address of the allocation
+  return base;
+}
+

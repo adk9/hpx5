@@ -7,8 +7,8 @@ libsystem_la_SOURCES   =
 libsystem_la_LIBADD    =
 
 if OS_LINUX
-libsystem_la_CPPFLAGS += -D_POSIX_C_SOURCE=200809L
-libsystem_la_SOURCES  += linux/time.c linux/cpu.c
+libsystem_la_CPPFLAGS += -D_POSIX_C_SOURCE=200809L -D_GNU_SOURCE
+libsystem_la_SOURCES  += linux/time.c linux/cpu.c linux/mmap.c
 libsystem_la_LIBADD   += -lrt
 endif
 

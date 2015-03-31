@@ -19,9 +19,12 @@
 #include "photon_xsp_forwarder.h"
 #endif
 
+#define PHOTON_GET_CQ_IND(n, i) ((n > 1) ? (i % n) : 0)
+
 #define DEF_EAGER_BUF_SIZE   (1024*256) // 256K bytes of space per rank
 #define DEF_SMALL_MSG_SIZE   (4096)
 #define DEF_LEDGER_SIZE      (64)       // This should not exceed MCA max_qp_wr (typically 16K)
+#define DEF_NUM_CQ           1
 
 #define UD_MASK_SIZE         1<<6
 
@@ -69,12 +72,6 @@ typedef struct proc_info_t {
 #endif
 } ProcessInfo;
 
-typedef struct photon_event_status_t {
-  photon_rid id;
-  int proc;
-  void *priv;
-} photon_event_status;
-
 /* photon memory registration requests */
 struct photon_mem_register_req {
   SLIST_ENTRY(photon_mem_register_req) list;
@@ -99,8 +96,6 @@ typedef struct photon_eb_hdr_t {
   volatile uint8_t footer;
 } photon_eb_hdr;
 
-typedef struct photon_event_status_t * photonEventStatus;
-
 struct photon_backend_t {
   void *context;
   int (*initialized)(void);
@@ -114,6 +109,7 @@ struct photon_backend_t {
   int (*register_buffer)(void *buffer, uint64_t size);
   int (*unregister_buffer)(void *buffer, uint64_t size);
   int (*get_dev_addr)(int af, photonAddr addr);
+  int (*get_dev_name)(char **ib_dev);
   int (*register_addr)(photonAddr addr, int af);
   int (*unregister_addr)(photonAddr addr, int af);
   int (*test)(photon_rid request, int *flag, int *type, photonStatus status);
@@ -136,10 +132,10 @@ struct photon_backend_t {
   int (*wait_any_ledger)(int *ret_proc, photon_rid *ret_req);
   int (*probe_ledger)(int proc, int *flag, int type, photonStatus status);
   int (*probe)(photonAddr addr, int *flag, photonStatus status);
-  int (*put_with_completion)(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
+  int (*put_with_completion)(int proc, uint64_t size, photonBuffer lbuf, photonBuffer rbuf,
                              photon_rid local, photon_rid remote, int flags);
-  int (*get_with_completion)(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
-                             photon_rid local, int flags);
+  int (*get_with_completion)(int proc, uint64_t size, photonBuffer lbuf, photonBuffer rbuf,
+                             photon_rid local, photon_rid remote, int flags);
   int (*probe_completion)(int proc, int *flag, int *remaining, photon_rid *request, int flags);
   int (*io_init)(char *file, int amode, void *view, int niter);
   int (*io_finalize)();
@@ -152,7 +148,7 @@ struct photon_backend_t {
                    photonBuffer lbuf, uint64_t id, int flags);
   int (*rdma_recv)(photonAddr addr, uintptr_t laddr, uint64_t size,
                    photonBuffer lbuf, uint64_t id, int flags);
-  int (*get_event)(photonEventStatus stat);
+  int (*get_event)(int proc, int max, photon_rid *ids, int *n);
 };
 
 extern struct photon_backend_t  photon_default_backend;
@@ -166,7 +162,7 @@ int photon_xsp_unused_proc(ProcessInfo **ret_pi, int *index);
 #endif
 
 /* util */
-PHOTON_INTERNAL int _photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv);
+PHOTON_INTERNAL int _photon_get_buffer_private(void *buf, uint64_t size, const struct photon_buffer_priv_t **pptr);
 PHOTON_INTERNAL int _photon_get_buffer_remote(photon_rid request, photonBuffer ret_buf);
 PHOTON_INTERNAL int _photon_handle_addr(photonAddr addr, photonAddr ret_addr);
 

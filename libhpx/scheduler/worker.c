@@ -24,14 +24,13 @@
 
 #include <hpx/builtins.h>
 
-#include <libsync/barriers.h>
-
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/instrumentation.h>
+#include <libhpx/memory.h>
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>                      // used as thread-control block
 #include <libhpx/process.h>
@@ -54,10 +53,10 @@ static void *_run(void *worker) {
 
   worker_bind_self(worker);
 
-  if (gas_join(here->gas)) {
-    dbg_error("failed to join the global address space.\n");
-    return NULL;
-  }
+  // Ensure that all of the threads have joined the address spaces.
+  local->join(local);
+  registered->join(registered);
+  global->join(global);
 
   if (worker_start()) {
     dbg_error("failed to start processing lightweight threads.\n");
@@ -65,7 +64,10 @@ static void *_run(void *worker) {
   }
 
   // leave the global address space
-  gas_leave(here->gas);
+  global->join(global);
+  registered->join(registered);
+  local->join(local);
+
   return NULL;
 }
 
@@ -123,28 +125,10 @@ static hpx_parcel_t *_get_nop_parcel(void) {
   return p;
 }
 
-/// Execute a parcel.
-static int _execute(hpx_parcel_t *p) {
-  dbg_assert(p->target != HPX_NULL);
-  hpx_action_t id = hpx_parcel_get_action(p);
-  bool pinned = action_is_pinned(here->actions, id);
-  if (pinned && !hpx_gas_try_pin(p->target, NULL)) {
-    log_sched("pinned action resend\n");
-    return HPX_RESEND;
-  }
-
-  void *args = hpx_parcel_get_data(p);
-  int status = action_table_run_handler(here->actions, id, args);
-  if (pinned) {
-    hpx_gas_unpin(p->target);
-  }
-  return status;
-}
-
 /// The entry function for all interrupts.
 ///
 static void _execute_interrupt(hpx_parcel_t *p) {
-  int e = _execute(p);
+  int e = action_execute(p);
   switch (e) {
    case HPX_SUCCESS:
     log_sched("completed interrupt\n");
@@ -165,7 +149,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
 ///
 /// @param       parcel The parcel that describes the thread to run.
 static void _execute_thread(hpx_parcel_t *p) {
-  int e = _execute(p);
+  int e = action_execute(p);
   switch (e) {
     default:
      dbg_error("thread produced unhandled error %s.\n", hpx_strerror(e));
@@ -186,15 +170,20 @@ static void _execute_thread(hpx_parcel_t *p) {
   unreachable();
 }
 
-/// A thread_transfer() continuation that runs after a worker first starts it's
+/// A thread_transfer() continuation that runs after a worker first starts its
 /// scheduling loop, but before any user defined lightweight threads run.
 static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
   // checkpoint my native stack pointer
   self->sp = sp;
   self->current = to;
 
-  // wait for the rest of the scheduler to catch up to me
-  sync_barrier_join(here->sched->barrier, self->id);
+  // Register the native stack for use as the "task" stack.
+  //
+  // Tasks are unusual because we run them from the _run_task continuation,
+  // which always runs "below" sp on the stack. This gets released in
+  // _worker_shutdown.
+  void *base = (char*)sp - here->config->stacksize;
+  network_register_dma(here->network, base, here->config->stacksize, NULL);
 
   return HPX_SUCCESS;
 }
@@ -236,6 +225,7 @@ static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
 /// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *_schedule_lifo(struct worker *w) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&w->work);
+  inst_trace(INST_SCHED, INST_SCHED_WQSIZE, sync_chase_lev_ws_deque_size(&w->work));
   if (p != NULL) {
     INST_EVENT_PARCEL_RUN(p);
   }
@@ -333,8 +323,11 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
 /// Called by the worker from the scheduler loop to shut itself down.
 ///
 /// This will transfer back to the original system stack, returning the shutdown
-/// code.
+/// code. We release our registration of the pthread stack here as well.
 static void _worker_shutdown(struct worker *w) {
+  void *base = (char*)w->sp - here->config->stacksize;
+  network_release_dma(here->network, base, here->config->stacksize);
+
   void **sp = &w->sp;
   intptr_t shutdown = sync_load(&w->sched->shutdown, SYNC_ACQUIRE);
   thread_transfer((hpx_parcel_t*)&sp, _free_parcel, (void*)shutdown);
@@ -356,7 +349,6 @@ static int _run_task(hpx_parcel_t *to, void *sp, void *env) {
     _spawn_lifo(self, from);
   }
 
-  // otherwise run the action
   self->current = env;
   dbg_assert(parcel_get_stack(self->current) == NULL);
   _execute_thread(env);
@@ -570,12 +562,6 @@ void worker_bind_self(struct worker *worker) {
   }
   self = worker;
   self->thread = pthread_self();
-
-  // we set worker thread affinity in worker_create()
-  //if (self->core >= 0) {
-  //   log_sched("binding affinity for worker %d to core %d.\n", self->id, self->core);
-  //  system_set_affinity(self->thread, self->core);
-  //}
 }
 
 int worker_start(void) {
@@ -585,6 +571,12 @@ int worker_start(void) {
   dbg_assert(((uintptr_t)self & (HPX_CACHELINE_SIZE - 1)) == 0);
   dbg_assert(((uintptr_t)&self->work & (HPX_CACHELINE_SIZE - 1)) == 0);
   dbg_assert(((uintptr_t)&self->inbox & (HPX_CACHELINE_SIZE - 1))== 0);
+
+  // make sure the system is initialized
+  dbg_assert(here && here->config && here->network);
+
+  // wait for local threads to start up
+  pthread_barrier_wait(&self->sched->barrier);
 
   // get a parcel to start the scheduler loop with
   hpx_parcel_t *p = _schedule(true, NULL);
@@ -605,7 +597,7 @@ int worker_start(void) {
   return LIBHPX_OK;
 }
 
-int worker_create(struct worker *worker) {
+int worker_create(struct worker *worker, const config_t *cfg) {
   pthread_t thread;
 
   int e = pthread_create(&thread, NULL, _run, worker);
@@ -613,9 +605,6 @@ int worker_create(struct worker *worker) {
     dbg_error("failed to start a scheduler worker pthread.\n");
     return e;
   }
-
-  // unbind the worker thread (-1 indicates run on all available cores)
-  system_set_affinity(thread, -1);
   return LIBHPX_OK;
 }
 
@@ -626,8 +615,9 @@ void worker_join(struct worker *worker) {
     return;
   }
 
-  if (pthread_join(worker->thread, NULL)) {
-    dbg_error("cannot join worker thread %d.\n", worker->id);
+  int e = pthread_join(worker->thread, NULL);
+  if (e) {
+    dbg_error("cannot join worker thread %d (%s).\n", worker->id, strerror(e));
   }
 }
 
@@ -655,7 +645,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(self->id >= 0);
   dbg_assert(p);
   dbg_assert(hpx_gas_try_pin(p->target, NULL)); // just performs translation
-  dbg_assert(action_table_get_handler(here->actions, p->action) != HPX_NULL);
+  dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
   profile_ctr(self->stats.spawns++);
 
   // Don't run anything until we have started up. This lets us use parcel_send()
@@ -912,24 +902,15 @@ hpx_pid_t hpx_thread_current_pid(void) {
   return (self && self->current) ? self->current->pid : HPX_NULL;
 }
 
-void *hpx_thread_current_local_target(void) {
-  void *local;
-  hpx_parcel_t *p = scheduler_current_parcel();
-  if (p) {
-    hpx_gas_try_pin(p->target, &local);
-    return local;
-  }
-  return NULL;
-}
-
 uint32_t hpx_thread_current_credit(void) {
-  return (self && self->current) ? parcel_get_credit(self->current) : 0;
+  return (self && self->current) ? self->current->credit : 0;
 }
 
 int hpx_thread_get_tls_id(void) {
   ustack_t *stack = parcel_get_stack(self->current);
-  if (stack->tls_id < 0)
+  if (stack->tls_id < 0) {
     stack->tls_id = sync_fadd(&here->sched->next_tls_id, 1, SYNC_ACQ_REL);
+  }
 
   return stack->tls_id;
 }
@@ -974,24 +955,6 @@ void hpx_thread_set_affinity(int affinity) {
 /// This transfer handler is the right place to put all debug, logging, and
 /// instrumentation code for lightweight-thread transfers.
 int debug_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
-  // Trace this transfer, if transfer-tracing is enabled.
-  static const int class = INST_SCHED;
-  static const int id = INST_SCHED_TRANSFER;
-  hpx_parcel_t *from = scheduler_current_parcel();
-  inst_trace(class, id, (from) ? from->action : 0, p->action);
-
-  // Verify some properties before the transfer.
-  // if (self->current) {
-  //   dbg_assert(!action_is_interrupt(here->actions, self->current->action));
-
-  //   // if (parcel_get_stack(self->current)) {
-  //   //   dbg_assert(!action_is_task(here->actions, self->current->action));
-  //   // }
-  // }
-
 #undef thread_transfer
   return thread_transfer(p, cont, env);
-
-  // squash unused warnings
-  (void)from;
 }

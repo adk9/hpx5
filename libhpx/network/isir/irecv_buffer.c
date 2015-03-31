@@ -21,6 +21,7 @@
 #include <libhpx/parcel.h>
 #include "irecv_buffer.h"
 #include "parcel_utils.h"
+#include "xport.h"
 
 #define ACTIVE_RANGE_CHECK(irecvs, i, R)                \
   do {                                                  \
@@ -31,34 +32,35 @@
                    _i, _irecvs->n);                     \
   } while (0)
 
+static void *_request_at(irecv_buffer_t *buffer, int i) {
+  dbg_assert(i >= 0);
+  char *base = buffer->requests;
+  int bytes = i * buffer->xport->sizeof_request();
+  return base + bytes;
+}
+
+static void *_status_at(irecv_buffer_t *buffer, int i) {
+  dbg_assert(i >= 0);
+  char *base = buffer->statuses;
+  int bytes = i * buffer->xport->sizeof_status();
+  return base + bytes;
+}
+
 /// Cancel an active irecv request.
 static hpx_parcel_t *_cancel(irecv_buffer_t *buffer, int i) {
   ACTIVE_RANGE_CHECK(buffer, i, NULL);
-
-  if (MPI_SUCCESS != MPI_Cancel(buffer->requests + i)) {
+  int cancelled;
+  void *request = _request_at(buffer, i);
+  if (buffer->xport->cancel(request, &cancelled)) {
     log_error("could not cancel MPI request\n");
     return NULL;
   }
 
-  MPI_Status status;
-  if (MPI_SUCCESS != MPI_Wait(buffer->requests + i, &status)) {
-    log_error("could not cleanup a canceled MPI request\n");
-    return NULL;
-  }
-
-  int cancelled;
-  if (MPI_SUCCESS != MPI_Test_cancelled(&status, &cancelled)) {
-    log_error("could not test a status to see if a request was canceled\n");
-    return NULL;
-  }
-
   if (cancelled) {
-    hpx_gas_free(buffer->records[i].handler, HPX_NULL);
     hpx_parcel_release(buffer->records[i].parcel);
     return NULL;
   }
   else {
-    hpx_gas_free(buffer->records[i].handler, HPX_NULL);
     return buffer->records[i].parcel;
   }
 }
@@ -79,20 +81,17 @@ static int _start(irecv_buffer_t *irecvs, int i) {
   uint32_t payload = tag_to_payload_size(tag);
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, payload);
 
-  const int src = MPI_ANY_SOURCE;
-  const MPI_Comm com = MPI_COMM_WORLD;
-  MPI_Request *r = irecvs->requests + i;
-  int n = payload_size_to_mpi_bytes(payload);
-  void *b = mpi_network_offset(p);
+  void  *request = _request_at(irecvs, i);
+  int n = payload_size_to_isir_bytes(payload);
+  void *b = isir_network_offset(p);
+  int e = irecvs->xport->irecv(b, n, tag, request);
+  if (LIBHPX_OK != e) {
+    return e;
+  }
 
-  if (MPI_SUCCESS != MPI_Irecv(b, n, MPI_BYTE, src, tag, com, r)) {
-    return log_error("could not start irecv\n");
-  }
-  else {
-    irecvs->records[i].parcel = p;
-    log_net("started an MPI_Irecv operation: %u bytes\n", n);
-    return LIBHPX_OK;
-  }
+  irecvs->records[i].parcel = p;
+  log_net("started an MPI_Irecv operation: %u bytes\n", n);
+  return LIBHPX_OK;
 }
 
 /// Resize an irecv buffer to the requested size.
@@ -126,8 +125,8 @@ int _resize(irecv_buffer_t *buffer, uint32_t size, hpx_parcel_t **out) {
     return LIBHPX_OK;
   }
 
-  buffer->requests = realloc(buffer->requests, size * sizeof(MPI_Request));
-  buffer->statuses = realloc(buffer->statuses, size * sizeof(MPI_Status));
+  buffer->requests = realloc(buffer->requests, size * buffer->xport->sizeof_request());
+  buffer->statuses = realloc(buffer->statuses, size * buffer->xport->sizeof_status());
   buffer->out = realloc(buffer->out, size * sizeof(int));
   buffer->records = realloc(buffer->records, size * sizeof(*buffer->records));
 
@@ -172,10 +171,10 @@ static int _append(irecv_buffer_t *irecvs, int tag) {
   }
 
   // initialize the request
-  irecvs->requests[n] = MPI_REQUEST_NULL;
+  void *request = _request_at(irecvs, n);
+  irecvs->xport->clear(request);
   irecvs->records[n].tag = tag;
   irecvs->records[n].parcel = NULL;
-  irecvs->records[n].handler = HPX_NULL;
 
   // start the irecv
   return _start(irecvs, n);
@@ -192,24 +191,12 @@ static int _append(irecv_buffer_t *irecvs, int tag) {
 /// @returns  LIBHPX_OK The call completed successfully.
 ///        LIBHPX_ERROR We encountered an MPI error during the Iprobe.
 static int _probe(irecv_buffer_t *irecvs) {
-  const int src = MPI_ANY_SOURCE;
-  const int tag = MPI_ANY_TAG;
-  const MPI_Comm com = MPI_COMM_WORLD;
-  int flag;
-  MPI_Status s;
-  if (MPI_SUCCESS != MPI_Iprobe(src, tag, com, &flag, &s)) {
-    return log_error("failed MPI_Iprobe\n");
+  int tag;
+  int e = irecvs->xport->iprobe(&tag);
+  if (LIBHPX_OK != e || tag < 0) {
+    return e;
   }
-
-  if (!flag) {
-    return LIBHPX_OK;
-  }
-
-  // There's a pending message that we haven't matched yet. Append a record to
-  // match it in the future.
-  log_net("probe detected irecv for %u-byte parcel\n",
-              tag_to_payload_size(s.MPI_TAG));
-  return _append(irecvs, s.MPI_TAG);
+  return _append(irecvs, tag);
 }
 
 /// Finish an irecv operation.
@@ -220,20 +207,16 @@ static int _probe(irecv_buffer_t *irecvs) {
 /// @param            i The index to finish.
 ///
 /// @returns            The parcel that we received.
-static hpx_parcel_t *_finish(irecv_buffer_t *irecvs, int i, MPI_Status *s) {
+static hpx_parcel_t *_finish(irecv_buffer_t *irecvs, int i, void *status) {
   ACTIVE_RANGE_CHECK(irecvs, i, NULL);
 
   int n;
-  if (MPI_SUCCESS != MPI_Get_count(s, MPI_BYTE, &n)) {
-    dbg_error("could not extract the size of an irecv\n");
-  }
-
-  assert(n > 0);
-  assert(irecvs->records[i].handler == HPX_NULL);
+  int src;
+  irecvs->xport->finish(status, &src, &n);
 
   hpx_parcel_t *p = irecvs->records[i].parcel;
-  p->src = s->MPI_SOURCE;
-  p->size = mpi_bytes_to_payload_size(n);
+  p->src = src;
+  p->size = isir_bytes_to_payload_size(n);
   log_net("finished a recv for a %u-byte payload\n", p->size);
   if (LIBHPX_OK != _start(irecvs, i)) {
     dbg_error("failed to regenerate an irecv\n");
@@ -241,7 +224,9 @@ static hpx_parcel_t *_finish(irecv_buffer_t *irecvs, int i, MPI_Status *s) {
   return p;
 }
 
-int irecv_buffer_init(irecv_buffer_t *buffer, uint32_t size, uint32_t limit) {
+int irecv_buffer_init(irecv_buffer_t *buffer, isir_xport_t *xport,
+                      uint32_t size, uint32_t limit) {
+  buffer->xport = xport;
   buffer->limit = limit;
   buffer->size = 0;
   buffer->n = 0;
@@ -288,19 +273,17 @@ hpx_parcel_t *irecv_buffer_progress(irecv_buffer_t *buffer) {
   }
 
   int *out = buffer->out;
-  MPI_Request *reqs = buffer->requests;
-  MPI_Status *stats = buffer->statuses;
+  void *reqs = buffer->requests;
+  void *stats = buffer->statuses;
 
   int count;
-  if (MPI_SUCCESS != MPI_Testsome(n, reqs, &count, out, stats)) {
-    dbg_error("failed MPI_Testsome\n");
-  }
+  buffer->xport->testsome(n, reqs, &count, out, stats);
 
   hpx_parcel_t *completed = NULL;
   for (int i = 0; i < count; ++i) {
     int j = out[i];
-    MPI_Status *s = stats + i;
-    hpx_parcel_t *p = _finish(buffer, j, s);
+    void *status = _status_at(buffer, i);
+    hpx_parcel_t *p = _finish(buffer, j, status);
     parcel_stack_push(&completed, p);
   }
 

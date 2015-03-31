@@ -67,7 +67,8 @@ struct scheduler {
   int                   cores;
   int               n_workers;
   uint32_t       wf_threshold;
-  struct barrier     *barrier;
+  // struct barrier     *barrier;
+  pthread_barrier_t   barrier;
   struct worker      *workers;
   scheduler_stats_t     stats;
 };
@@ -77,7 +78,7 @@ struct scheduler {
 /// @param       config The configuration object.
 ///
 /// @returns            The scheduler object, or NULL if there was an error.
-struct scheduler *scheduler_new(struct config *config)
+struct scheduler *scheduler_new(const struct config *config)
   HPX_INTERNAL HPX_MALLOC;
 
 /// Finalize and free the scheduler object.
@@ -110,9 +111,10 @@ void scheduler_dump_stats(struct scheduler *scheduler)
 /// may come from the network, or from the main thread.
 ///
 /// @param    scheduler The scheduler to start.
+/// @param          cfg The configuration object.
 ///
 /// @returns            LIBHPX_OK or an error code.
-int scheduler_startup(struct scheduler *scheduler)
+int scheduler_startup(struct scheduler *scheduler, const struct config *cfg)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Stops the scheduler cooperatively.

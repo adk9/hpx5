@@ -14,21 +14,30 @@
 #define LIBHPX_NETWORK_PWC_PWC_H
 
 #include <hpx/attributes.h>
+#include <libhpx/network.h>
 
 /// Forward declarations.
 /// @{
 struct boot;
 struct config;
 struct gas;
-struct network;
-struct peer;
+struct parcel_emulator;
+struct pwc_xport;
+struct send_buffer;
 /// @}
 
-struct network *network_pwc_funneled_new(struct config *, struct boot *,
-                                    struct gas *, int nrx)
-  HPX_NON_NULL(1,2,3) HPX_MALLOC HPX_INTERNAL;
+typedef struct {
+  network_t                   vtable;
+  const struct config           *cfg;
+  struct pwc_xport            *xport;
+  struct parcel_emulator    *parcels;
+  struct send_buffer   *send_buffers;
+  struct heap_segment *heap_segments;
+} pwc_network_t;
 
-struct peer *pwc_get_peer(int n)
-  HPX_INTERNAL;
+network_t *network_pwc_funneled_new(const struct config *cfg, struct boot *boot,
+                                    struct gas *gas)
+  HPX_MALLOC HPX_INTERNAL;
+
 
 #endif

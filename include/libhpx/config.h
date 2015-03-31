@@ -46,7 +46,6 @@ static const char* const HPX_GAS_TO_STRING[] = {
 //! Configuration options for the network transports HPX can use.
 typedef enum {
   HPX_TRANSPORT_DEFAULT = 0, //!< Let HPX choose what transport to use.
-  HPX_TRANSPORT_SMP,         //!< Do not use a network transport.
   HPX_TRANSPORT_MPI,         //!< Use MPI for network transport.
   HPX_TRANSPORT_PORTALS,     //!< Use Portals for network transport.
   HPX_TRANSPORT_PHOTON,      //!< Use Photon for network transport.
@@ -55,7 +54,6 @@ typedef enum {
 
 static const char* const HPX_TRANSPORT_TO_STRING[] = {
   "DEFAULT",
-  "SMP",
   "MPI",
   "PORTALS",
   "PHOTON",
@@ -109,10 +107,12 @@ static const char* const HPX_BOOT_TO_STRING[] = {
 #define HPX_LOG_TRANS   64              //!< Log the transport operations.
 #define HPX_LOG_PARCEL  128             //!< Parcel logging.
 #define HPX_LOG_ACTION  256             //!< Log action registration.
+#define HPX_LOG_CONFIG  512             //!< Log configuration.
+#define HPX_LOG_MEMORY  1024            //!< Log memory (coarse grained)
 
 #define HPX_TRACE_PARCELS 1
 #define HPX_TRACE_PWC     2
-#define HPX_TRACE_SCHED   4
+#define HPX_TRACE_SCHED   3
 
 /// The HPX configuration type.
 ///

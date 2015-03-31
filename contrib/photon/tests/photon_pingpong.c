@@ -43,6 +43,7 @@ struct pingpong_args {
 
 struct pingpong_args *send_args;
 struct pingpong_args *recv_args;
+struct photon_buffer_t lbuf;
 struct photon_buffer_t rbuf;
 
 int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
@@ -80,7 +81,10 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
     }
   }
   else if (pp_test == PWC_TEST) {
-    photon_put_with_completion(dst, send_args, msize, (void*)rbuf.addr, rbuf.priv, PHOTON_TAG, 0xcafebabe, 0);
+    lbuf.addr = (uintptr_t)send_args;
+    lbuf.size = msize;
+    lbuf.priv = (struct photon_buffer_priv_t){0,0};
+    photon_put_with_completion(dst, msize, &lbuf, &rbuf, PHOTON_TAG, 0xcafebabe, 0);
     photon_rid request;
     int flag, remaining;
     do {

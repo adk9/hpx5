@@ -24,8 +24,8 @@ htable_t *htable_create(int size) {
 
   htable->size = size;
   htable->elements = 0;
-  pthread_mutex_init(&htable->mtx, NULL);
-
+  sync_tatas_init(&htable->tlock);
+  
   return htable;
 
 error_exit2:
@@ -35,21 +35,19 @@ error_exit:
 
 }
 
-
 static int hash_key(uint64_t key, int table_size) {
-  return (int)(key%table_size);
+  return (int)(key % table_size);
 }
-
 
 int htable_insert(htable_t *htable, uint64_t key, void *value) {
   int hash;
   hash_element_t *temp;
 
-  pthread_mutex_lock(&htable->mtx);
+  sync_tatas_acquire(&htable->tlock);
   {
     // TODO: Do we need to verify that the element doesn't exist?
     if (__htable_lookup(htable, key) != NULL) {
-      pthread_mutex_unlock(&htable->mtx);
+      sync_tatas_release(&htable->tlock);
       return -2;
     }
 
@@ -69,7 +67,7 @@ int htable_insert(htable_t *htable, uint64_t key, void *value) {
 
     htable->elements++;
   }
-  pthread_mutex_unlock(&htable->mtx);
+  sync_tatas_release(&htable->tlock);
 
   return 0;
 }
@@ -91,18 +89,18 @@ static hash_element_t *__htable_lookup(htable_t *htable, uint64_t key) {
 int htable_lookup(htable_t *htable, uint64_t key, void **value) {
   hash_element_t *temp;
 
-  pthread_mutex_lock(&htable->mtx);
+  sync_tatas_acquire(&htable->tlock);
   {
     temp = __htable_lookup(htable, key);
     if (!temp) {
-      pthread_mutex_unlock(&htable->mtx);
+      sync_tatas_release(&htable->tlock);
       return -1;
     }
 
     if (value)
       *value = temp->value;
   }
-  pthread_mutex_unlock(&htable->mtx);
+  sync_tatas_release(&htable->tlock);
 
   return 0;
 }
@@ -112,11 +110,11 @@ int htable_remove(htable_t *htable, uint64_t key, void **value) {
   hash_element_t *temp;
   int hash;
 
-  pthread_mutex_lock(&htable->mtx);
+  sync_tatas_acquire(&htable->tlock);
   {
     temp = __htable_lookup(htable, key);
     if (!temp) {
-      pthread_mutex_unlock(&htable->mtx);
+      sync_tatas_release(&htable->tlock);
       return -1;
     }
 
@@ -140,7 +138,7 @@ int htable_remove(htable_t *htable, uint64_t key, void **value) {
 
     htable->elements--;
   }
-  pthread_mutex_unlock(&htable->mtx);
+  sync_tatas_release(&htable->tlock);
 
   return 0;
 }
@@ -181,11 +179,11 @@ int htable_count(htable_t *htable) {
 int htable_update(htable_t *htable, uint64_t key, void *value, void **old_value) {
   hash_element_t *temp;
 
-  pthread_mutex_lock(&htable->mtx);
+  sync_tatas_acquire(&htable->tlock);
   {
     temp = __htable_lookup(htable, key);
     if (!temp) {
-      pthread_mutex_unlock(&htable->mtx);
+      sync_tatas_release(&htable->tlock);
       return htable_insert(htable, key, value);
     }
 
@@ -193,7 +191,7 @@ int htable_update(htable_t *htable, uint64_t key, void *value, void **old_value)
       old_value = temp->value;
     temp->value = value;
   }
-  pthread_mutex_unlock(&htable->mtx);
+  sync_tatas_release(&htable->tlock);
 
   return 1;
 }
@@ -201,11 +199,11 @@ int htable_update(htable_t *htable, uint64_t key, void *value, void **old_value)
 int htable_update_if_exists(htable_t *htable, uint64_t key, void *value, void **old_value) {
   hash_element_t *temp;
 
-  pthread_mutex_lock(&htable->mtx);
+  sync_tatas_acquire(&htable->tlock);
   {
     temp = __htable_lookup(htable, key);
     if (!temp) {
-      pthread_mutex_unlock(&htable->mtx);
+      sync_tatas_release(&htable->tlock);
       return -1;
     }
 
@@ -213,7 +211,7 @@ int htable_update_if_exists(htable_t *htable, uint64_t key, void *value, void **
       *old_value = temp->value;
     temp->value = value;
   }
-  pthread_mutex_unlock(&htable->mtx);
+  sync_tatas_release(&htable->tlock);
 
   return 1;
 }

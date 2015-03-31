@@ -10,12 +10,8 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef __linux__
-#error The HPX time implementation is configured incorrectly
-#endif
-
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 /// @file libhpx/platform/linux/time.c
@@ -24,8 +20,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "hpx/hpx.h"
-#include "libhpx/debug.h"
+#include <hpx/hpx.h>
+#include <libhpx/debug.h>
 
 
 hpx_time_t hpx_time_now(void) {
@@ -100,6 +96,6 @@ hpx_time_t hpx_time_point(hpx_time_t time, hpx_time_t duration) {
     t.tv_nsec = ns;
     t.tv_sec = time.tv_nsec + duration.tv_nsec;
   }
-    
+
   return t;
 }

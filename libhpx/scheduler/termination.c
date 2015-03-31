@@ -107,16 +107,13 @@ void _bitmap_add_at(bitmap_t *b, uint32_t page, uint32_t word, uint32_t offset) 
 
 // set a bit at index i and then test if the bit at the 0th
 // position (page 0 word 0) is set
-bool cr_bitmap_add_and_test(bitmap_t *b, int64_t i) {
+uint64_t cr_bitmap_add_and_test(bitmap_t *b, int64_t i) {
   if (!i) return false;
   uint32_t page = (i-1)/_bitmap_num_pages;
   uint32_t pg_offset = (i-1)%_bitmap_page_size;
   uint32_t word = pg_offset/_bitmap_word_size;
 
   int word_offset = (_bitmap_word_size-1) - (pg_offset%_bitmap_word_size);
-  sync_lockable_ptr_lock(&ptr);
   _bitmap_add_at(b, page, word, word_offset);
-  _bitmap_word_t w = sync_load(&b[0].page[0], SYNC_ACQUIRE);
-  sync_lockable_ptr_unlock(&ptr);
-  return (w == 0x8000000000000000);
+  return (uint64_t)sync_load(&b[0].page[0], SYNC_ACQUIRE);
 }

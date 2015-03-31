@@ -25,6 +25,7 @@
 #include <libhpx/boot.h>
 #include <libhpx/locality.h>
 #include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
 
 
 static HPX_RETURNS_NON_NULL const char *_id(void) {
@@ -54,7 +55,7 @@ static int _n_ranks(const boot_t *boot) {
 
 
 static int _barrier(const boot_t *boot) {
-  return (PMI_Barrier() != PMI_SUCCESS) ? HPX_ERROR : HPX_SUCCESS;
+  return (PMI_Barrier() != PMI_SUCCESS) ? LIBHPX_ERROR : LIBHPX_OK;
 }
 
 
@@ -95,7 +96,7 @@ _encode(const void *src, size_t slen, char *dst, size_t *dlen) {
     d = stpcpy(d, l64a(htonl(w)));
   }
   *d = '\0';
-  return HPX_SUCCESS;
+  return LIBHPX_OK;
 }
 
 /// ----------------------------------------------------------------------------
@@ -122,7 +123,7 @@ _decode(const char *src, size_t slen, void *dst, size_t dlen) {
   }
   // handle left-over?
 
-  return HPX_SUCCESS;
+  return LIBHPX_OK;
 }
 
 /// ----------------------------------------------------------------------------
@@ -153,7 +154,7 @@ static int HPX_USED _put_buffer(char *kvs, int rank, void *buffer, size_t len)
     length = pmi_maxlen;
   }
   char *value = malloc(sizeof(*value) * length);
-  if ((_encode(buffer, len, value, (size_t*)&length)) != HPX_SUCCESS) {
+  if ((_encode(buffer, len, value, (size_t*)&length)) != LIBHPX_OK) {
     goto error;
   }
 
@@ -202,12 +203,12 @@ static int HPX_USED _get_buffer(char *kvs, int rank, void *buffer, size_t len)
   if ((PMI_KVS_Get(kvs, key, value, length)) != PMI_SUCCESS)
     goto error;
 
-  if ((_decode(value, strlen(value), buffer, len)) != HPX_SUCCESS)
+  if ((_decode(value, strlen(value), buffer, len)) != LIBHPX_OK)
     goto error;
 
   free(key);
   free(value);
-  return HPX_SUCCESS;
+  return LIBHPX_OK;
 
 error:
   free(key);
@@ -216,7 +217,8 @@ error:
 }
 
 
-static int _allgather(const boot_t *boot, const void *cin, void *out, int n) {
+static int _allgather(const boot_t *boot, const void *restrict cin,
+                      void *restrict out, int n) {
   void *in = (void*)cin;
 
 #if HAVE_PMI_CRAY_EXT
@@ -265,9 +267,40 @@ static int _allgather(const boot_t *boot, const void *cin, void *out, int n) {
     _get_buffer(name, r, (char*)out+(r*n), n);
 
 #endif
-  return HPX_SUCCESS;
+  return LIBHPX_OK;
 }
 
+static int _pmi_alltoall(const void *boot, void *restrict dest,
+                         const void *restrict src, int n, int stride) {
+  // Emulate alltoall with allgather for now.
+  const boot_t *pmi = boot;
+  int rank = pmi->rank(pmi);
+  int nranks = pmi->n_ranks(pmi);
+
+  // Allocate a temporary buffer to allgather into
+  int gather_bytes = nranks * nranks * stride;
+  void *gather = malloc(gather_bytes);
+  if (!gather) {
+    dbg_error("could not allocate enough space for PMI alltoall emulation\n");
+  }
+  
+  // Perform the allgather
+  int e = _allgather(pmi, src, gather, nranks * stride);
+  if (LIBHPX_OK != e) {
+    dbg_error("could not gather in PMI alltoall emulation\n");
+  }
+
+  // Copy out the data
+  const char *from = gather;
+  char *to = dest;
+  for (int i = 0, e = pmi->n_ranks(pmi); i < e; ++i) {
+    int offset = (i * nranks * stride) + (rank * stride);
+    memcpy(to + (i * stride), from + offset, n);
+  }
+
+  free(gather);
+  return LIBHPX_OK;
+}
 
 static boot_t _pmi = {
   .type      = HPX_BOOT_PMI,
@@ -277,9 +310,9 @@ static boot_t _pmi = {
   .n_ranks   = _n_ranks,
   .barrier   = _barrier,
   .allgather = _allgather,
+  .alltoall  = _pmi_alltoall,
   .abort     = _abort
 };
-
 
 boot_t *boot_new_pmi(void) {
   int init;

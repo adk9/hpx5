@@ -15,10 +15,10 @@
 #endif
 
 #include <string.h>
-#include <jemalloc/jemalloc_hpx.h>
+#include <jemalloc/jemalloc_global.h>
 #include <hpx/builtins.h>
-#include "libhpx/locality.h"
-#include "libhpx/action.h"
+#include <libhpx/locality.h>
+#include <libhpx/action.h>
 
 #include "gpa.h"
 #include "heap.h"
@@ -46,7 +46,7 @@ typedef struct {
 /// @param    bsize The block size for this allocation.
 ///
 /// @returns The base address of the global allocation.
-hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
+hpx_addr_t pgas_alloc_cyclic_sync(size_t n, uint32_t bsize) {
   uint64_t offset = heap_alloc_cyclic(global_heap, n, bsize);
   assert(offset != 0);
 
@@ -63,6 +63,12 @@ hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
   return addr;
 }
 
+static int _alloc_cyclic_handler(size_t n, size_t bsize) {
+  hpx_addr_t addr = pgas_alloc_cyclic_sync(n, bsize);
+  HPX_THREAD_CONTINUE(addr);
+}
+HPX_ACTION_DEF(DEFAULT, _alloc_cyclic_handler, pgas_alloc_cyclic, HPX_SIZE_T,
+               HPX_SIZE_T);
 
 /// Allocate zeroed memory from the cyclic space.
 ///
@@ -75,7 +81,7 @@ hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize) {
 /// @param    bsize The block size for this allocation.
 ///
 /// @returns The base address of the global allocation.
-hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
+hpx_addr_t pgas_calloc_cyclic_sync(size_t n, uint32_t bsize) {
   assert(here->rank == 0);
 
   // Figure out how many blocks ber node that we need, and then allocate that
@@ -109,25 +115,12 @@ hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize) {
   return addr;
 }
 
-
-/// This is the hpx_call_* target for a cyclic allocation.
-///
-/// This just unpacks the arguments and forwards to the synchronous form of
-/// alloc locally, and continues the resulting base.
-HPX_ACTION(pgas_cyclic_alloc, pgas_alloc_args_t *args) {
-  hpx_addr_t addr = pgas_cyclic_alloc_sync(args->n, args->bsize);
+static int _calloc_cyclic_handler(size_t n, size_t bsize) {
+  hpx_addr_t addr = pgas_calloc_cyclic_sync(n, bsize);
   HPX_THREAD_CONTINUE(addr);
 }
-
-
-/// This is the hpx_call_* target for cyclic zeroed allocation.
-///
-/// This just unpacks the arguments and forwards to the synchronous form of
-/// calloc locally, and continues the resulting base.
-HPX_ACTION(pgas_cyclic_calloc, pgas_alloc_args_t *args) {
-  hpx_addr_t addr = pgas_cyclic_calloc_sync(args->n, args->bsize);
-  HPX_THREAD_CONTINUE(addr);
-}
+HPX_ACTION_DEF(DEFAULT, _calloc_cyclic_handler, pgas_calloc_cyclic, HPX_SIZE_T,
+               HPX_SIZE_T);
 
 
 /// This is the hpx_call_* target for doing a calloc initialization.
@@ -179,3 +172,11 @@ static HPX_ACTION(_set_csbrk, size_t *offset) {
   dbg_check(e, "cyclic allocation ran out of memory at rank %u", here->rank);
   return e;
 }
+
+static int _memput_rsync_handler(int src, uint64_t command) {
+  hpx_addr_t rsync = pgas_offset_to_gpa(src, command);
+  hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
+}
+HPX_ACTION_DEF(DEFAULT, _memput_rsync_handler, memput_rsync, HPX_INT,
+               HPX_UINT64);

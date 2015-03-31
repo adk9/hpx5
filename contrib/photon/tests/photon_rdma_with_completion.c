@@ -28,6 +28,7 @@ START_TEST(test_rdma_with_completion)
   next = (rank + 1) % size;
   prev = (size + rank - 1) % size;
 
+  struct photon_buffer_t lbuf;
   struct photon_buffer_t rbuf;
   photon_rid sendReq, recvReq, req;
   char *send, *recv;
@@ -56,8 +57,11 @@ START_TEST(test_rdma_with_completion)
   photon_wait(recvReq);
 
   // Put
-  photon_put_with_completion(prev, send, PHOTON_SEND_SIZE, (void*)rbuf.addr,
-                               rbuf.priv, PHOTON_TAG, 0xcafebabe, 0);
+  lbuf.addr = (uintptr_t)send;
+  lbuf.size = PHOTON_SEND_SIZE;
+  lbuf.priv = (struct photon_buffer_priv_t){0,0};
+  photon_put_with_completion(prev, PHOTON_SEND_SIZE, &lbuf,
+			     &rbuf, PHOTON_TAG, 0xcafebabe, 0);
   send_comp++;
   recv_comp++;
   while (send_comp || recv_comp) {
@@ -76,8 +80,11 @@ START_TEST(test_rdma_with_completion)
 
   // Get
   send_comp = 0;
-  photon_get_with_completion(prev, send, PHOTON_SEND_SIZE, (void*)rbuf.addr, 
-                             rbuf.priv, PHOTON_TAG, 0);
+  lbuf.addr = (uintptr_t)send;
+  lbuf.size = PHOTON_SEND_SIZE;
+  lbuf.priv = (struct photon_buffer_priv_t){0,0};
+  photon_get_with_completion(prev, PHOTON_SEND_SIZE, &lbuf,
+                             &rbuf, PHOTON_TAG, 0xfacefeed, PHOTON_REQ_PWC_NO_RCE);
   send_comp++;
   while (send_comp) {
     rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &req, PHOTON_PROBE_ANY);

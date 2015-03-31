@@ -39,7 +39,6 @@ struct boot;
 struct config;
 struct network;
 struct scheduler;
-struct transport;
 /// @}
 
 /// The locality object.
@@ -50,9 +49,7 @@ struct transport;
 ///                  as some basic, IP-based networking functionality.
 /// @field       gas The global address space object. This provides global
 ///                  memory allocation and address space functionality.
-/// @field transport The byte transport object. This provides a basic,
-///                  high-speed byte transport interface.
-/// @field   network The parcel transport layer. This provides an active message
+/// @field   network The network layer. This provides an active message
 ///                  interface targeting global addresses.
 /// @field     sched The lightweight thread scheduler. This provides the
 ///                  infrastructure required to create lightweight threads, and
@@ -63,18 +60,12 @@ typedef struct locality {
   uint32_t                     ranks;
   struct boot                  *boot;
   struct gas                    *gas;
-  struct transport        *transport;
   struct network            *network;
   struct scheduler            *sched;
   struct config              *config;
   const struct action_table *actions;
   hwloc_topology_t          topology;
-} locality_t
-#ifdef __ARMEL__
-HPX_ALIGNED(8)
-#endif
-;
-
+} locality_t;
 
 /// Inter-locality action interface.
 /// @{
@@ -92,7 +83,7 @@ HPX_INTERNAL extern hpx_action_t locality_call_continuation;
 /// @}
 
 /// The global locality is exposed through this "here" pointer.
-HPX_INTERNAL extern locality_t *here;
+extern locality_t *here;
 
 /// A set of inline convenience functions.
 /// @{
@@ -106,7 +97,7 @@ inline static bool lva_is_global(void *addr) {
 
 /// Translate a local address to a global address. This only works for some
 /// local addresses, so we need to use it carefully.
-inline static hpx_addr_t lva_to_gva(void *lva) {
+inline static hpx_addr_t lva_to_gva(const void *lva) {
   dbg_assert(here && here->gas && here->gas->lva_to_gva);
   return here->gas->lva_to_gva(lva);
 }

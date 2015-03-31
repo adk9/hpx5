@@ -23,21 +23,20 @@
 #include <ctype.h>
 #include <string.h>
 #include <unistd.h>
+#include <utstring.h>
 
-#include "hpx/hpx.h"
-#include "libhpx/action.h"
-#include "libhpx/boot.h"
-#include "libhpx/config.h"
-#include "libhpx/gas.h"
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/network.h"
-#include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
-#include "libhpx/system.h"
-#include "libhpx/transport.h"
+#include <hpx/hpx.h>
+#include <libhpx/action.h>
+#include <libhpx/boot.h>
+#include <libhpx/config.h>
+#include <libhpx/gas.h>
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/network.h>
+#include <libhpx/parcel.h>
+#include <libhpx/scheduler.h>
+#include <libhpx/system.h>
 
-#include "utstring.h"
 #include "parser.h"
 
 typedef struct hpx_options_t hpx_options_t;
@@ -266,6 +265,11 @@ static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
 #undef LIBHPX_OPT_STRING
 #undef LIBHPX_OPT_FLAG
 
+  if (opts->hpx_help_given) {
+    hpx_print_help();
+    exit(EXIT_SUCCESS);
+  }
+
   // Special case handling for the config file option, the
   // opts->hpx_configfile_arg is deleted so we have to duplicate it.
   if (opts->hpx_configfile_given) {
@@ -278,7 +282,7 @@ static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
 }
 
 /// Print the help associated with the HPX runtime options
-void hpx_print_help(void) {
+void hpx_print_help(void) { 
   hpx_option_parser_print_help();
 }
 

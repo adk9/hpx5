@@ -17,11 +17,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <hpx/hpx.h>
+
 #include "hpx/builtins.h"
 #include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
 #include "segment.h"
-#include "pwc_buffer.h"
+#include "circular_buffer.h"
+#include "commands.h"
+
 
 typedef struct photon_buffer_priv_t rdma_key_t;
 
@@ -78,8 +82,6 @@ void pwc_buffer_fini(pwc_buffer_t *buffer) {
 
 int pwc_buffer_put(pwc_buffer_t *buffer, size_t roff, const void *lva, size_t n,
                    command_t lsync, command_t rsync, segment_t *segment) {
-  void *rva = segment_offset_to_rva(segment, roff);
-  rdma_key_t key = segment->key;
 
   // Before performing this put, try to progress the buffer. The progress call
   // returns the number of buffered requests remaining.

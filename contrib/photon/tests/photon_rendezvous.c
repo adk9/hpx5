@@ -41,9 +41,9 @@ START_TEST (test_photon_send_request)
   }
 
   // post send request RDMA to the next rank
-  photon_post_send_request_rdma(next, PHOTON_SEND_SIZE, PHOTON_TAG, &sendReq);
+  //photon_post_send_request_rdma(next, PHOTON_SEND_SIZE, PHOTON_TAG, &sendReq);
   // Wait for the send buffer request that was posted from the prev rank
-  photon_wait_send_request_rdma(PHOTON_TAG);
+  //photon_wait_send_request_rdma(PHOTON_TAG);
 
   // everyone posts their recv buffer to their next rank
   photon_post_recv_buffer_rdma(next, recv, PHOTON_SEND_SIZE, PHOTON_TAG, &recvReq);
@@ -51,7 +51,6 @@ START_TEST (test_photon_send_request)
   photon_wait_recv_buffer_rdma(prev, PHOTON_ANY_SIZE, PHOTON_TAG, &sendReq);
   // put directly into that recv buffer
   photon_post_os_put(sendReq, prev, send, PHOTON_SEND_SIZE, PHOTON_TAG, 0);
-  photon_send_FIN(sendReq, prev, 0);
 
  while(1) {
     int flag, type;
@@ -67,7 +66,9 @@ START_TEST (test_photon_send_request)
     }
     else {
       if (flag > 0) {
-        fprintf(detailed_log,"%d: put(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
+        fprintf(detailed_log,"%d: put(%d, %d) of size %d completed successfully\n", rank,
+		(int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
+	photon_send_FIN(sendReq, prev, 0);
         break;
       }
     }
@@ -87,7 +88,8 @@ START_TEST (test_photon_send_request)
     }
     else {
       if (flag > 0) {
-        fprintf(detailed_log,"%d: recv(%d, %d) of size %d completed successfully\n", rank, (int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
+        fprintf(detailed_log,"%d: recv(%d, %d) of size %d completed successfully\n", rank,
+		(int)stat.src_addr.global.proc_id, stat.tag, PHOTON_SEND_SIZE);
         break;
       }
     }

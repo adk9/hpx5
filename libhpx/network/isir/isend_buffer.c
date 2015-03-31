@@ -20,9 +20,13 @@
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
 #include <libhpx/parcel.h>
 #include "isend_buffer.h"
 #include "parcel_utils.h"
+#include "xport.h"
+
+#define ISIR_TWIN_INC  10
 
 /// Compute the buffer index of an abstract index.
 ///
@@ -39,18 +43,25 @@ static int _index_of(uint64_t i, uint32_t n) {
 /// @param       payload The payload size.
 ///
 /// @returns             The correct tag.
-static int _payload_size_to_tag(uint32_t payload) {
+static int _payload_size_to_tag(isend_buffer_t *isends, uint32_t payload) {
   uint32_t parcel_size = payload + sizeof(hpx_parcel_t);
   int tag = ceil_div_32(parcel_size, HPX_CACHELINE_SIZE);
   if (DEBUG) {
-    int *tag_ub;
-    int flag = 0;
-    int e = MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &tag_ub, &flag);
-    dbg_check(e, "Could not extract tag upper bound\n");
-    dbg_assert_str(*tag_ub > tag, "tag value out of bounds (%d > %d)\n", tag,
-                   *tag_ub);
+    isends->xport->check_tag(tag);
   }
   return tag;
+}
+
+static void *_request_at(isend_buffer_t *buffer, int i) {
+  dbg_assert(i >= 0);
+  char *base = buffer->requests;
+  int bytes = i * buffer->xport->sizeof_request();
+  return base + bytes;
+}
+
+static void *_record_at(isend_buffer_t *buffer, int i) {
+  dbg_assert(i >= 0);
+  return buffer->records + i;
 }
 
 /// Re-size an isend buffer to the requested size.
@@ -73,7 +84,7 @@ static int _resize(isend_buffer_t *buffer, uint32_t size) {
   // start by resizing the buffers
   uint32_t oldsize = buffer->size;
   buffer->size = size;
-  buffer->requests = realloc(buffer->requests, size * sizeof(MPI_Request));
+  buffer->requests = realloc(buffer->requests, size * buffer->xport->sizeof_request());
   buffer->out = realloc(buffer->out, size * sizeof(int));
   buffer->records = realloc(buffer->records, size * sizeof(*buffer->records));
 
@@ -107,19 +118,32 @@ static int _resize(isend_buffer_t *buffer, uint32_t size) {
   if (min == nmin) {
     assert(max != nmax);
     assert(min + prefix == nmax - suffix);
-
-    size_t bytes = suffix * sizeof(*buffer->requests);
-    memcpy(buffer->requests + min + prefix, buffer->requests, bytes);
-    bytes = suffix * sizeof(*buffer->records);
-    memcpy(buffer->records + min + prefix, buffer->records, bytes);
+    {
+      size_t bytes = suffix * buffer->xport->sizeof_request();
+      void *to = _request_at(buffer, min + prefix);
+      memcpy(to, buffer->requests, bytes);
+    }
+    {
+      size_t bytes = suffix * sizeof(*buffer->records);
+      void *to = _record_at(buffer, min + prefix);
+      memcpy(to, buffer->records, bytes);
+    }
   }
   else if (max == nmax) {
     assert(0 < prefix);
     assert(nmin + prefix <= size);
-    size_t bytes = prefix * sizeof(*buffer->requests);
-    memcpy(buffer->requests + nmin, buffer->requests + min, bytes);
-    bytes = prefix * sizeof(*buffer->records);
-    memcpy(buffer->records + nmin, buffer->records + min, bytes);
+    {
+      size_t bytes = prefix * buffer->xport->sizeof_request();
+      void *to = _request_at(buffer, nmin);
+      void *from = _request_at(buffer, min);
+      memcpy(to, from, bytes);
+    }
+    {
+      size_t bytes = prefix * sizeof(*buffer->records);
+      void *to = _record_at(buffer, nmin);
+      void *from = _record_at(buffer, min);
+      memcpy(to, from, bytes);
+    }
   }
   else {
     return log_error("unexpected shift in isend buffer _resize\n");
@@ -144,20 +168,12 @@ static int _start(isend_buffer_t *isends, int i) {
   assert(0 <= i && i < isends->size);
 
   hpx_parcel_t *p = isends->records[i].parcel;
-
-  MPI_Request *r = isends->requests + i;
-  void *from = mpi_network_offset(p);
-  int to = gas_owner_of(isends->gas, p->target);
-  int n = payload_size_to_mpi_bytes(p->size);
-  int tag = _payload_size_to_tag(p->size);
-
-
-  if (MPI_SUCCESS != MPI_Isend(from, n, MPI_BYTE, to, tag, MPI_COMM_WORLD, r)) {
-    return log_error("failed MPI_Isend: %u bytes to %d\n", n, to);
-  }
-
-  log_net("started MPI_Isend: %u bytes to %d\n", n, to);
-  return LIBHPX_OK;
+  void *from = isir_network_offset(p);
+  int to = gas_owner_of(here->gas, p->target);
+  int n = payload_size_to_isir_bytes(p->size);
+  int tag = _payload_size_to_tag(isends, p->size);
+  void *r = _request_at(isends, i);
+  return isends->xport->isend(to, from, n, tag, r);
 }
 
 /// Start as many isend operations as we can.
@@ -197,12 +213,9 @@ static int _test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n, int o) {
     return 0;
 
   int cnt = 0;
-  MPI_Request *requests = buffer->requests + i;
+  void *requests = _request_at(buffer, i);
   int *out = buffer->out + o;
-  if (MPI_SUCCESS != MPI_Testsome(n, requests, &cnt, out, MPI_STATUS_IGNORE)) {
-    dbg_error("MPI_Testsome error is fatal.\n");
-  }
-  dbg_assert_str(cnt != MPI_UNDEFINED, "Silent MPI_Testsome error detected\n");
+  buffer->xport->testsome(n, requests, &cnt, out, NULL);
 
   for (int j = 0; j < cnt; ++j) {
     out[j] += i;
@@ -235,12 +248,15 @@ static void _compact(isend_buffer_t *buffer, int n) {
   for (int i = 0; i < n; ++i) {
     int j = buffer->out[i];
     DEBUG_IF(true) {
-      buffer->requests[j] = NULL;
+      void *request = _request_at(buffer, j);
+      buffer->xport->clear(request);
     }
 
     uint64_t min = buffer->min++;
     int k = _index_of(min, size);
-    buffer->requests[j] = buffer->requests[k];
+    void *to = _request_at(buffer, j);
+    const void *from = _request_at(buffer, k);
+    memcpy(to, from, buffer->xport->sizeof_request());
     buffer->records[j] = buffer->records[k];
   }
 
@@ -258,6 +274,7 @@ static void _compact(isend_buffer_t *buffer, int n) {
 ///
 /// @returns            The number of sends completed.
 static int _test_all(isend_buffer_t *buffer) {
+  uint32_t twin = buffer->twin;
   uint32_t size = buffer->size;
   uint32_t i = _index_of(buffer->min, size);
   uint32_t j = _index_of(buffer->active, size);
@@ -267,12 +284,25 @@ static int _test_all(isend_buffer_t *buffer) {
   uint32_t n = (wrapped) ? buffer->size - i : j - i;
   uint32_t m = (wrapped) ? j : 0;
 
+  // limit how many requests we test
+  n = (n > twin) ? twin : n;
+  m = (m > (twin - n)) ? (twin - n) : m;
+
   int total = 0;
   total += _test_range(buffer, i, n, total);
   total += _test_range(buffer, 0, m, total);
   if (total) {
     _compact(buffer, total);
   }
+  if (total >= twin) {
+    buffer->twin += ISIR_TWIN_INC;
+    log_net("increased test window to %d\n", buffer->twin);
+  }
+  else if ((twin - total) > ISIR_TWIN_INC) {
+    buffer->twin -= ISIR_TWIN_INC;
+    log_net("decreased test window to %d\n", buffer->twin);
+  }
+  
   log_net("tested %u sends, completed %d\n", n+m, total);
   return total;
 }
@@ -290,18 +320,10 @@ static int _test_all(isend_buffer_t *buffer) {
 static int _cancel(isend_buffer_t *buffer, int i) {
   assert(0 <= i && i < buffer->size);
 
-  if (MPI_SUCCESS != MPI_Cancel(buffer->requests + i)) {
-    return log_error("could not cancel MPI request\n");
-  }
-
-  MPI_Status status;
-  if (MPI_SUCCESS != MPI_Wait(buffer->requests + i, &status)) {
-    return log_error("could not cleanup a canceled MPI request\n");
-  }
-
-  int cancelled;
-  if (MPI_SUCCESS != MPI_Test_cancelled(&status, &cancelled)) {
-    return log_error("could not test a status\n");
+  void *request = _request_at(buffer, i);
+  int e = buffer->xport->cancel(request, NULL);
+  if (LIBHPX_OK != e) {
+    return e;
   }
 
   if (buffer->records) {
@@ -327,18 +349,18 @@ static void _cancel_all(isend_buffer_t *buffer) {
   }
 }
 
-int isend_buffer_init(isend_buffer_t *buffer, gas_t *gas, uint32_t size,
-                      uint32_t limit) {
-  buffer->gas = gas;
+int isend_buffer_init(isend_buffer_t *buffer, isir_xport_t *xport,
+                      uint32_t size, uint32_t limit, uint32_t twin) {
+  buffer->xport = xport;
   buffer->limit = limit;
   buffer->size = 0;
   buffer->min = 0;
   buffer->active = 0;
   buffer->max = 0;
-
   buffer->requests = NULL;
   buffer->out = NULL;
   buffer->records = NULL;
+  buffer->twin = twin;
 
   size = 1 << ceil_log2_32(size);
   int e = _resize(buffer, size);
@@ -379,7 +401,8 @@ int isend_buffer_append(isend_buffer_t *buffer, hpx_parcel_t *p, hpx_addr_t h) {
   int j = _index_of(i, size);
   assert(0 <= j && j < buffer->size);
   if (DEBUG) {
-    buffer->requests[j] = MPI_REQUEST_NULL;
+    void *request = _request_at(buffer, j);
+    buffer->xport->clear(request);
   }
   buffer->records[j].parcel = p;
   buffer->records[j].handler = h;

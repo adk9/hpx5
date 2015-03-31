@@ -14,37 +14,30 @@
 # include "config.h"
 #endif
 
-#include <mpi.h>
 #include <stdlib.h>
 #include <hpx/builtins.h>
 #include <libsync/queues.h>
 
-#include "libhpx/debug.h"
-#include "libhpx/gas.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/network.h"
-#include "libhpx/transport.h"
-#include "libhpx/parcel.h"
+#include <libhpx/debug.h>
+#include <libhpx/gas.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
+#include <libhpx/padding.h>
+#include <libhpx/parcel.h>
 
 #include "emulate_pwc.h"
 #include "irecv_buffer.h"
 #include "isend_buffer.h"
 #include "isir.h"
-
-#define _CAT1(S, T) S##T
-#define _CAT(S, T) _CAT1(S, T)
-#define _BYTES(S) (HPX_CACHELINE_SIZE - ((S) % HPX_CACHELINE_SIZE))
-#define _PAD(S) const char _CAT(_padding,__LINE__)[_BYTES(S)]
-
-// Define the transports allowed for the ISIR network
-static int ISIR_TRANSPORTS[] = {HPX_TRANSPORT_MPI};
+#include "xport.h"
 
 typedef struct {
   network_t       vtable;
   gas_t             *gas;
+  isir_xport_t    *xport;
   volatile int     flush;
-  _PAD(sizeof(network_t) + sizeof(gas_t*) + sizeof(int));
+  PAD_TO_CACHELINE(sizeof(network_t) + sizeof(gas_t*) + sizeof(isir_xport_t*) +
+                   sizeof(int));
   two_lock_queue_t sends;
   two_lock_queue_t recvs;
   isend_buffer_t  isends;
@@ -60,55 +53,55 @@ static void _send_all(_funneled_t *network) {
 }
 
 /// Delete a funneled network.
-static void _funneled_delete(network_t *network) {
+static void _funneled_delete(void *network) {
   dbg_assert(network);
 
-  _funneled_t *this = (void*)network;
+  _funneled_t *isir = network;
 
   // flush sends if we're supposed to
-  if (this->flush) {
-    _send_all(this);
-    isend_buffer_flush(&this->isends);
+  if (isir->flush) {
+    _send_all(isir);
+    isend_buffer_flush(&isir->isends);
   }
 
-  isend_buffer_fini(&this->isends);
-  irecv_buffer_fini(&this->irecvs);
+  isend_buffer_fini(&isir->isends);
+  irecv_buffer_fini(&isir->irecvs);
 
   hpx_parcel_t *p = NULL;
-  while ((p = sync_two_lock_queue_dequeue(&this->sends))) {
+  while ((p = sync_two_lock_queue_dequeue(&isir->sends))) {
     hpx_parcel_release(p);
   }
-  while ((p = sync_two_lock_queue_dequeue(&this->recvs))) {
+  while ((p = sync_two_lock_queue_dequeue(&isir->recvs))) {
     hpx_parcel_release(p);
   }
 
-  sync_two_lock_queue_fini(&this->sends);
-  sync_two_lock_queue_fini(&this->recvs);
+  sync_two_lock_queue_fini(&isir->sends);
+  sync_two_lock_queue_fini(&isir->recvs);
 
-  free(this);
+  isir_xport_delete(isir->xport);
+  free(isir);
 }
 
-static int _funneled_send(network_t *network, hpx_parcel_t *p) {
-  _funneled_t *this = (void*)network;
-  sync_two_lock_queue_enqueue(&this->sends, p);
+static int _funneled_send(void *network, hpx_parcel_t *p) {
+  _funneled_t *isir = network;
+  sync_two_lock_queue_enqueue(&isir->sends, p);
   return LIBHPX_OK;
 }
 
-static int _funneled_command(network_t *network, hpx_addr_t locality,
+static int _funneled_command(void *network, hpx_addr_t locality,
                              hpx_action_t op, uint64_t args) {
   return hpx_xcall(locality, op, HPX_NULL, here->rank, args);
 }
 
-static int _funneled_pwc(network_t *network,
+static int _funneled_pwc(void *network,
                          hpx_addr_t to, const void *from, size_t n,
                          hpx_action_t lop, hpx_addr_t laddr,
                          hpx_action_t rop, hpx_addr_t raddr) {
   dbg_assert(lop || !laddr); // !lop => !lsync
 
-
   hpx_addr_t lsync = HPX_NULL;
   hpx_addr_t rsync = HPX_NULL;
-  if (lop) {
+  if (lop && laddr) {
     lsync = hpx_lco_future_new(0);
     dbg_assert(lsync);
     int e = hpx_call_when_with_continuation(lsync, laddr, lop, lsync,
@@ -117,7 +110,7 @@ static int _funneled_pwc(network_t *network,
     dbg_check(e, "failed to chain parcel\n");
   }
 
-  if (rop) {
+  if (rop && raddr) {
     rsync = hpx_lco_future_new(0);
     dbg_assert(rsync);
     int e = hpx_call_when_with_continuation(rsync, raddr, rop, rsync,
@@ -129,75 +122,94 @@ static int _funneled_pwc(network_t *network,
   return hpx_call_async(to, isir_emulate_pwc, lsync, rsync, from, n);
 }
 
-static int _funneled_put(network_t *net,
+static int _funneled_put(void *network,
                          hpx_addr_t to, const void *from, size_t n,
                          hpx_action_t lop, hpx_addr_t laddr) {
-  return _funneled_pwc(net, to, from, n, lop, laddr, HPX_ACTION_NULL, HPX_NULL);
+  hpx_action_t rop = HPX_ACTION_NULL;
+  hpx_addr_t raddr = HPX_NULL;
+  return _funneled_pwc(network, to, from, n, lop, laddr, rop, raddr);
 }
 
 /// Transform the get() operation into a parcel emulation.
-static int _funneled_get(network_t *network,
+static int _funneled_get(void *network,
                          void *to, hpx_addr_t from, size_t n,
-                         hpx_action_t lop, hpx_addr_t laddr)
-{
-  _funneled_t *isir = (_funneled_t*)network;
-
-  // we only support future set externally
-  if (lop && lop != hpx_lco_set_action) {
-    log_error("Local completion other than hpx_lco_set_action not supported\n");
-    return LIBHPX_EUNIMPLEMENTED;
-  }
-
-  // if there isn't a lop, then laddr should be HPX_NULL
+                         hpx_action_t lop, hpx_addr_t laddr) {
+  // if there isn't a lop, then lsync should be HPX_NULL
   dbg_assert(lop || !laddr); // !lop => !laddr
 
   // go ahead an set the local lco if there is nothing to do
   if (!n) {
-    hpx_lco_set(laddr, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_call(laddr, lop, HPX_NULL, &here->rank, &laddr);
     return HPX_SUCCESS;
   }
 
-  // make sure the to address is in the global address space
-  if (!isir->gas->is_global(isir->gas, to)) {
-    return log_error("network_get() expects a global heap address\n");
+  // Chain the lop handler to an LCO.
+  hpx_addr_t lsync = HPX_NULL;
+  if (lop) {
+    lsync = hpx_lco_future_new(0);
+    dbg_assert(lsync);
+    int e = hpx_call_when_with_continuation(lsync, laddr, lop, lsync,
+                                            hpx_lco_delete_action, &here->rank,
+                                            &laddr);
+    dbg_check(e, "failed to chain parcel\n");
   }
 
-  // and spawn the remote operation---hpx_call eagerly copies the args buffer so
-  // there is no need to wait
-  hpx_addr_t raddr = isir->gas->lva_to_gva(to);
-  return hpx_xcall(from, isir_emulate_gwc, HPX_NULL, n, raddr, laddr);
+  // Concoct a global address that points to @p to @ here, and send it over.
+  hpx_addr_t addr = ((uint64_t)here->rank << 48) + (uint64_t)to;
+  return hpx_call(from, isir_emulate_gwc, lsync, &n, &addr);
 }
 
-static hpx_parcel_t *_funneled_probe(network_t *network, int nrx) {
-  _funneled_t *this = (void*)network;
-  return sync_two_lock_queue_dequeue(&this->recvs);
+static hpx_parcel_t *_funneled_probe(void *network, int nrx) {
+  _funneled_t *isir = network;
+  return sync_two_lock_queue_dequeue(&isir->recvs);
 }
 
-static void _funneled_set_flush(network_t *network) {
-  _funneled_t *this = (void*)network;
-  sync_store(&this->flush, 1, SYNC_RELEASE);
+static void _funneled_set_flush(void *network) {
+  _funneled_t *isir = network;
+  sync_store(&isir->flush, 1, SYNC_RELEASE);
 }
 
-static int _funneled_progress(network_t *network) {
-  _funneled_t *this = (void*)network;
-  hpx_parcel_t *chain = irecv_buffer_progress(&this->irecvs);
+/// Create a network registration.
+static int _funneled_register_dma(void *obj, const void *base, size_t n,
+                                   void *key) {
+  _funneled_t *isir = obj;
+  if (isir->xport->pin) {
+    int e = isir->xport->pin(isir->xport, base, n, key);
+    dbg_check(e, "Could not register (%p, %zu) for rmda\n", base, n);
+  }
+  return LIBHPX_OK;
+}
+
+/// Release a network registration.
+static int _funneled_release_dma(void *obj, const void* base, size_t n) {
+  _funneled_t *isir = obj;
+  if (isir->xport->unpin) {
+    int e = isir->xport->unpin(isir->xport, base, n);
+    dbg_check(e, "Could not release (%p, %zu) for rdma\n", base, n);
+  }
+  return LIBHPX_OK;
+}
+
+static int _funneled_progress(void *network) {
+  _funneled_t *isir = network;
+  hpx_parcel_t *chain = irecv_buffer_progress(&isir->irecvs);
   int n = 0;
   if (chain) {
     ++n;
-    sync_two_lock_queue_enqueue(&this->recvs, chain);
+    sync_two_lock_queue_enqueue(&isir->recvs, chain);
   }
 
   DEBUG_IF(n) {
     log_net("completed %d recvs\n", n);
   }
 
-  int m = isend_buffer_progress(&this->isends);
+  int m = isend_buffer_progress(&isir->isends);
 
   DEBUG_IF(m) {
     log_net("completed %d sends\n", m);
   }
 
-  _send_all(this);
+  _send_all(isir);
 
   return LIBHPX_OK;
 
@@ -206,30 +218,22 @@ static int _funneled_progress(network_t *network) {
   (void)m;
 }
 
-network_t *network_isir_funneled_new(config_t *cfg, struct gas *gas, int nrx) {
-  if (gas->type == HPX_GAS_SMP) {
-    log_net("will not initialize a %s network for SMP\n",
-            HPX_NETWORK_TO_STRING[HPX_NETWORK_ISIR]);
-    return NULL;
-  }
-  
-  int e = network_supported_transport(here->transport, ISIR_TRANSPORTS,
-				      _HPX_NELEM(ISIR_TRANSPORTS));
-  if (e) {
-    log_error("%s network is not supported with current transport: %s\n",
-	      HPX_NETWORK_TO_STRING[HPX_NETWORK_ISIR],
-	      HPX_TRANSPORT_TO_STRING[here->transport->type]);
-    return NULL;
-  }
-
+network_t *network_isir_funneled_new(const config_t *cfg, struct boot *boot,
+                                     gas_t *gas) {
   _funneled_t *network = malloc(sizeof(*network));
   if (!network) {
     log_error("could not allocate a funneled Isend/Irecv network\n");
     return NULL;
   }
 
+  network->xport = isir_xport_new(cfg, gas);
+  if (!network->xport) {
+    log_error("could not initialize a transport.\n");
+    free(network);
+    return NULL;
+  }
+
   network->vtable.type = HPX_NETWORK_ISIR;
-  network->vtable.transports = ISIR_TRANSPORTS;
   network->vtable.delete = _funneled_delete;
   network->vtable.progress = _funneled_progress;
   network->vtable.send = _funneled_send;
@@ -239,14 +243,17 @@ network_t *network_isir_funneled_new(config_t *cfg, struct gas *gas, int nrx) {
   network->vtable.get = _funneled_get;
   network->vtable.probe = _funneled_probe;
   network->vtable.set_flush = _funneled_set_flush;
-
+  network->vtable.register_dma = _funneled_register_dma;
+  network->vtable.release_dma = _funneled_release_dma;
   network->gas = gas;
 
   sync_store(&network->flush, 0, SYNC_RELEASE);
   sync_two_lock_queue_init(&network->sends, NULL);
   sync_two_lock_queue_init(&network->recvs, NULL);
-  isend_buffer_init(&network->isends, gas, 64, 0);
-  irecv_buffer_init(&network->irecvs, 64, 0);
+
+  isend_buffer_init(&network->isends, network->xport, 64, cfg->isir_sendlimit,
+            cfg->isir_testwindow);
+  irecv_buffer_init(&network->irecvs, network->xport, 64, cfg->isir_recvlimit);
 
   return &network->vtable;
 }

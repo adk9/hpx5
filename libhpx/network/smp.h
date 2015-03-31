@@ -17,11 +17,13 @@
 
 /// Forward declarations.
 /// @{
+struct boot;
+struct config;
 struct network;
 /// @}
 
 
-struct network *network_smp_new(void)
+struct network *network_smp_new(const struct config *cfg, struct boot *boot)
   HPX_INTERNAL;
 
 

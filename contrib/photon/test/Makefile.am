@@ -14,7 +14,7 @@ bin_PROGRAMS = photon_test             \
 	       photon_ud_pingpong      \
 	       photon_ud_mton
 
-AM_LDFLAGS = $(top_builddir)/src/libphoton.la -lm -lcrypto @THREAD_LIBS@ @UGNI_LIBS@ @VERBS_LIBS@ @MPI_LIBS@ -lrt
+AM_LDFLAGS = $(top_builddir)/src/libphoton.la -lm -lcrypto @THREAD_LIBS@ @UGNI_LIBS@ @VERBS_LIBS@ @MPI_LIBS@ -lrt -no-install
 
 photon_test_SOURCES = kernel.c photon_test.c
 photon_test_get_SOURCES = photon_test_get.c

@@ -70,18 +70,29 @@ int __photon_handle_cq_special(photon_rid cookie) {
   return PHOTON_EVENT_OK;
 }
 
-int __photon_get_event(photon_rid *id) {
-  int rc;
-  photon_event_status event;
-
-  rc = __photon_backend->get_event(&event);
+int __photon_get_event(int proc, photon_rid *id) {
+  int rc, nevents;
+  rc = __photon_backend->get_event(proc, 1, id, &nevents);
   if (rc == PHOTON_EVENT_ERROR) {
     dbg_err("Error getting event");
   }
 
   if (rc == PHOTON_EVENT_OK) {
-    *id = event.id;
-    dbg_trace("got event: 0x%016lx", event.id);
+    dbg_trace("got event: 0x%016lx", *id);
+  }
+  
+  return rc;
+}
+
+int __photon_get_nevents(int proc, int max, photon_rid **ids, int *n) {
+  int rc;
+  rc = __photon_backend->get_event(proc, max, *ids, n);
+  if (rc == PHOTON_EVENT_ERROR) {
+    dbg_err("Error getting event");
+  }
+
+  if (rc == PHOTON_EVENT_OK) {
+    dbg_trace("got %d events", *n);
   }
   
   return rc;
@@ -161,7 +172,7 @@ int __photon_nbpop_event(photonRequest req) {
   if (req->state == REQUEST_PENDING) {
     photon_rid cookie;
     photonRequest treq;
-    rc = __photon_get_event(&cookie);
+    rc = __photon_get_event(PHOTON_ANY_SOURCE, &cookie);
     if (rc == PHOTON_EVENT_OK) {
       rc = __photon_handle_cq_event(req, cookie, &treq);
       if (rc == PHOTON_EVENT_ERROR) {
@@ -304,7 +315,7 @@ int __photon_try_one_event(photonRequest *rreq) {
   photon_rid cookie;
   photonRequest treq;
 
-  rc = __photon_get_event(&cookie);
+  rc = __photon_get_event(PHOTON_ANY_SOURCE, &cookie);
   if (rc != PHOTON_OK) {
     return rc;
   }

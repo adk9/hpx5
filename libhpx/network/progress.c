@@ -14,13 +14,14 @@
 # include <config.h>
 #endif
 
-#include "libhpx/debug.h"
-#include "libhpx/gas.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/network.h"
-#include "libhpx/stats.h"
-#include "libhpx/system.h"
+#include <libhpx/debug.h>
+#include <libhpx/gas.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+#include <libhpx/network.h>
+#include <libhpx/stats.h>
+#include <libhpx/system.h>
 
 #include "progress.h"
 
@@ -32,8 +33,7 @@ static void *_pthread_progress(void *arg) {
   }
 
   locality_t *l = arg;
-
-  e = l->gas->join();
+  global->join(global);
   if (e) {
     dbg_error("heavyweight network thread failed to join GAS\n");
     return NULL;
@@ -53,8 +53,9 @@ static void *_pthread_progress(void *arg) {
 }
 
 pthread_t progress_start(locality_t *locality) {
-  if (locality->config->transport == HPX_TRANSPORT_SMP)
+  if (locality->config->network == HPX_NETWORK_SMP) {
     return pthread_self();
+  }
 
   pthread_t id;
   int e = pthread_create(&id, NULL, _pthread_progress, locality);

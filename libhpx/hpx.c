@@ -24,22 +24,23 @@
 #include <stdlib.h>
 #include <string.h>
 #include <hpx/hpx.h>
-#include "libhpx/action.h"
-#include "libhpx/boot.h"
-#include "libhpx/config.h"
-#include "libhpx/debug.h"
-#include "libhpx/gas.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/instrumentation.h"
-#include "libhpx/network.h"
-#include "libhpx/scheduler.h"
-#include "libhpx/system.h"
-#include "libhpx/transport.h"
+#include <libhpx/action.h>
+#include <libhpx/boot.h>
+#include <libhpx/config.h>
+#include <libhpx/debug.h>
+#include <libhpx/gas.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
+#include <libhpx/instrumentation.h>
+#include <libhpx/memory.h>
+#include <libhpx/network.h>
+#include <libhpx/scheduler.h>
+#include <libhpx/system.h>
 #include "network/probe.h"
 
+static hpx_addr_t _hpx_143 = 0;
 static HPX_ACTION(_hpx_143_fix, void *UNUSED) {
-  hpx_gas_global_alloc(sizeof(void*), HPX_LOCALITIES);
+  _hpx_143 = hpx_gas_alloc_cyclic(sizeof(void*), HPX_LOCALITIES, 0);
   return LIBHPX_OK;
 }
 
@@ -65,11 +66,6 @@ static void _cleanup(locality_t *l) {
     l->gas = NULL;
   }
 
-  if (l->transport) {
-    transport_delete(l->transport);
-    l->transport = NULL;
-  }
-
   dbg_fini();
 
   if (l->boot) {
@@ -77,7 +73,9 @@ static void _cleanup(locality_t *l) {
     l->boot = NULL;
   }
 
-  hpx_hwloc_topology_destroy(l->topology);
+  if (l->topology) {
+    hpx_hwloc_topology_destroy(l->topology);
+  }
 
   if (l->actions) {
     action_table_free(l->actions);
@@ -152,46 +150,50 @@ int hpx_init(int *argc, char ***argv) {
     }
   }
 
+  // Initialize our instrumentation.
   if (inst_init(here->config)) {
     log("error detected while initializing instrumentation\n");
   }
 
-  // byte transport
-  here->transport = transport_new(here->config->transport,
-                                  here->config);
-  if (!here->transport) {
-    status = log_error("failed to create transport.\n");
-    goto unwind1;
-  }
-
-  // global address space
-  here->gas = gas_new(here->config->heapsize, here->boot, here->transport,
-                      here->config->gas);
+  // Allocate the global heap.
+  here->gas = gas_new(here->config, here->boot);
   if (!here->gas) {
     status = log_error("failed to create the global address space.\n");
     goto unwind1;
   }
-  if (here->gas->join()) {
-    status = log_error("failed to join the global address space.\n");
-    goto unwind1;
-  }
   HPX_HERE = HPX_THERE(here->rank);
 
-  if (!here->config->cores) {
-    here->config->cores = system_get_cores();
+  if (here->config->cores) {
+    log_error("--hpx-cores is deprecated, ignoring\n");
+  }
+  status = system_get_affinity_group_size(pthread_self(), &here->config->cores);
+  if (status) {
+    goto unwind1;
   }
 
   if (!here->config->threads) {
     here->config->threads = here->config->cores;
   }
+  log("HPX running %d worker threads on %d cores\n", here->config->threads,
+      here->config->cores);
 
-  // parcel network
-  here->network = network_new(here->config, here->boot, here->gas,
-                              here->config->threads);
+  // Initialize the network. This will initialize a transport and, as a side
+  // effect initialize our allocators.
+  here->network = network_new(here->config, here->boot, here->gas);
   if (!here->network) {
     status = log_error("failed to create network.\n");
     goto unwind1;
   }
+  if (!local || !registered || !global) {
+    status = log_error("expected network to initialize address spaces\n");
+    goto unwind1;
+  }
+
+  // Join the various address spaces.
+  // NB: is there a cleaner way to deal with this?
+  local->join(local);
+  registered->join(registered);
+  global->join(global);
 
   // thread scheduler
   here->sched = scheduler_new(here->config);
@@ -208,7 +210,7 @@ int hpx_init(int *argc, char ***argv) {
 }
 
 /// Called to run HPX.
-int _hpx_run(hpx_action_t *act, int nargs, ...) {
+int _hpx_run(hpx_action_t *act, int n, ...) {
   int status = HPX_SUCCESS;
   if (!here || !here->sched) {
     status = log_error("hpx_init() must be called before hpx_run()\n");
@@ -221,11 +223,6 @@ int _hpx_run(hpx_action_t *act, int nargs, ...) {
     goto unwind0;
   }
 
-  // pthread_t _progress = progress_start(here);
-  // if (pthread_equal(_progress, pthread_self())) {
-  //   dbg_error("failed to start progress\n");
-  // }
-
   if (probe_start(here->network) != LIBHPX_OK) {
     status = log_error("could not start network probe\n");
     goto unwind1;
@@ -234,11 +231,11 @@ int _hpx_run(hpx_action_t *act, int nargs, ...) {
   // create the initial application-level thread to run
   if (here->rank == 0) {
     va_list vargs;
-    va_start(vargs, nargs);
-    status = libhpx_call_action(here->actions, HPX_HERE, *act, HPX_NULL,
-                                HPX_ACTION_NULL, HPX_NULL, HPX_NULL,
-                                nargs, &vargs);
+    va_start(vargs, n);
+    hpx_parcel_t *p = action_parcel_create(HPX_HERE, *act, 0, 0, n, &vargs);
+    int status = hpx_parcel_send(p, HPX_NULL);
     va_end(vargs);
+
     if (status != LIBHPX_OK) {
       log_error("failed to spawn initial action\n");
       goto unwind2;
@@ -253,9 +250,14 @@ int _hpx_run(hpx_action_t *act, int nargs, ...) {
   }
 
   // start the scheduler, this will return after scheduler_shutdown()
-  if (scheduler_startup(here->sched) != LIBHPX_OK) {
+  if (scheduler_startup(here->sched, here->config) != LIBHPX_OK) {
     log_error("scheduler shut down with error.\n");
     goto unwind2;
+  }
+
+  // clean up after _hpx_143
+  if (_hpx_143 != HPX_NULL) {
+    hpx_gas_free(_hpx_143, HPX_NULL);
   }
 
 #ifdef ENABLE_PROFILING
@@ -263,7 +265,6 @@ int _hpx_run(hpx_action_t *act, int nargs, ...) {
 #endif
 
  unwind2:
-  // progress_stop(_progress);
   probe_stop();
  unwind1:
   _cleanup(here);

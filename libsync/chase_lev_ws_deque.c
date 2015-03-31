@@ -150,7 +150,7 @@ void sync_chase_lev_ws_deque_delete(chase_lev_ws_deque_t *d) {
 
 uint64_t sync_chase_lev_ws_deque_size(chase_lev_ws_deque_t *d) {
   uint64_t bottom = sync_load(&d->bottom, SYNC_RELAXED);
-  uint64_t top = sync_load(&d->bottom, SYNC_ACQUIRE);
+  uint64_t top = sync_load(&d->top, SYNC_ACQUIRE);
   return (bottom - top);
 }
 

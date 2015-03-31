@@ -92,12 +92,13 @@ void heap_fini(heap_t *heap)
 /// This satisfies requests from jemalloc's chunk allocator for global memory.
 ///
 /// @param         heap The heap object.
+/// @param         addr A "suggested" address---ignored by the heap for now.
 /// @param         size The number of bytes to allocate.
 /// @param        align The alignment required for the chunk.
 ///
 /// @returns The address of the base of the allocated chunk, or NULL if we are
 ///          out of memory.
-void *heap_chunk_alloc(heap_t *heap, size_t size, size_t align)
+void *heap_chunk_alloc(heap_t *heap, void *addr, size_t size, size_t align)
   HPX_INTERNAL;
 
 /// Release a chunk of the global address space.
@@ -111,19 +112,6 @@ void *heap_chunk_alloc(heap_t *heap, size_t size, size_t align)
 ///
 /// @returns I have no idea what the return value should be used for---Luke.
 bool heap_chunk_dalloc(heap_t *heap, void *chunk, size_t size)
-  HPX_NON_NULL(1,2) HPX_INTERNAL;
-
-/// This operation binds the heap to a network.
-///
-/// Some transports need to know about the heap in order to perform network
-/// operations to and from it. In particular, Photon needs to register the
-/// heap's [base, base + nbytes) range.
-///
-/// @param         heap The heap in question---must be initialized.
-/// @param    transport The transport to bind.
-///
-/// @returns TRUE if the transport requires mallctl_disable_dirty_page_purge().
-int heap_bind_transport(heap_t *heap, struct transport *transport)
   HPX_NON_NULL(1,2) HPX_INTERNAL;
 
 /// Check to see if the heap contains the given local virtual address.

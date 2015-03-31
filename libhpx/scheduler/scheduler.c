@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 /// @file libhpx/scheduler/schedule.c
@@ -20,18 +20,14 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
-
 #include <hpx/builtins.h>
-#include <libsync/barriers.h>
-
-#include "libhpx/config.h"
-#include "libhpx/debug.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/config.h>
+#include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/scheduler.h>
 #include "thread.h"
 
-
-struct scheduler *scheduler_new(config_t *cfg) {
+struct scheduler *scheduler_new(const config_t *cfg) {
   const int cores = cfg->cores;
   const int workers = cfg->threads;
 
@@ -60,9 +56,9 @@ struct scheduler *scheduler_new(config_t *cfg) {
     }
   }
 
-  s->barrier = sr_barrier_new(workers);
-  if (!s->barrier) {
-    dbg_error("failed to allocate the startup barrier.\n");
+  e = pthread_barrier_init(&s->barrier, NULL, workers);
+  if (e) {
+    dbg_error("failed to allocate the scheduler barrier.\n");
     scheduler_delete(s);
     return NULL;
   }
@@ -90,9 +86,7 @@ void scheduler_delete(struct scheduler *sched) {
     return;
   }
 
-  if (sched->barrier) {
-    sync_barrier_delete(sched->barrier);
-  }
+  pthread_barrier_destroy(&sched->barrier);
 
   if (sched->workers) {
     for (int i = 0, e = sched->n_workers; i < e; ++i) {
@@ -128,14 +122,14 @@ struct worker *scheduler_get_worker(struct scheduler *sched, int id) {
 }
 
 
-int scheduler_startup(struct scheduler *sched) {
+int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
   struct worker *worker = NULL;
   int status = LIBHPX_OK;
 
   // start all of the other worker threads
   for (int i = 1, e = sched->n_workers; i < e; ++i) {
     worker = scheduler_get_worker(sched, i);
-    status = worker_create(worker);
+    status = worker_create(worker, cfg);
 
     if (status != LIBHPX_OK) {
       dbg_error("could not start worker %d.\n", i);

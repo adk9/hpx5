@@ -21,6 +21,58 @@
 
 hpx_addr_t HPX_HERE = 0;
 
+#define GAS_DIST_TYPE_MASK  (0x7)
+
+hpx_gas_dist_type_t gas_get_dist_type(hpx_gas_dist_t dist) {
+  return ((uintptr_t)dist & GAS_DIST_TYPE_MASK);
+}
+
+static hpx_addr_t hpx_gas_alloc_user(size_t n, uint32_t bsize, uint32_t boundary,
+                                     hpx_gas_dist_t dist) {
+  dbg_assert(gas_get_dist_type(dist) == HPX_DIST_TYPE_USER);
+  dbg_error("User-defined GAS distributions are not supported.\n");
+}
+
+static hpx_addr_t hpx_gas_calloc_user(size_t n, uint32_t bsize, uint32_t boundary,
+                                      hpx_gas_dist_t dist) {
+  dbg_assert(gas_get_dist_type(dist) == HPX_DIST_TYPE_USER);
+  dbg_error("User-defined GAS distributions are not supported.\n");
+}
+
+hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bsize, uint32_t boundary,
+                         hpx_gas_dist_t dist) {
+  dbg_assert(dist);
+  int type = (int)gas_get_dist_type(dist);
+  switch (type) {
+   case (HPX_DIST_TYPE_LOCAL):
+     return hpx_gas_alloc_local(n*bsize, boundary);
+   case (HPX_DIST_TYPE_CYCLIC):
+     return hpx_gas_alloc_cyclic(n, bsize, boundary);
+   case (HPX_DIST_TYPE_BLOCKED):
+     return hpx_gas_alloc_blocked(n, bsize, boundary);
+   case (HPX_DIST_TYPE_USER):
+     return hpx_gas_alloc_user(n, bsize, boundary, dist);
+   default: dbg_error("Unknown gas distribution type %d.\n", type);
+  }
+}
+
+hpx_addr_t hpx_gas_calloc(size_t n, uint32_t bsize, uint32_t boundary,
+                          hpx_gas_dist_t dist) {
+  dbg_assert(dist);
+  int type = (int)gas_get_dist_type(dist);
+  switch (type) {
+   case (HPX_DIST_TYPE_LOCAL):
+     return hpx_gas_calloc_local(n, bsize, boundary);
+   case (HPX_DIST_TYPE_CYCLIC):
+     return hpx_gas_calloc_cyclic(n, bsize, boundary);
+   case (HPX_DIST_TYPE_BLOCKED):
+     return hpx_gas_calloc_blocked(n, bsize, boundary);
+   case (HPX_DIST_TYPE_USER):
+     return hpx_gas_calloc_user(n, bsize, boundary, dist);
+   default: dbg_error("Unknown gas distribution type %d.\n", type);
+  }
+}
+
 hpx_addr_t HPX_THERE(uint32_t i) {
   dbg_assert(here && here->gas && here->gas->there);
   return here->gas->there(i);
@@ -46,19 +98,34 @@ void hpx_gas_unpin(const hpx_addr_t addr) {
   here->gas->unpin(addr);
 }
 
-hpx_addr_t hpx_gas_global_alloc(size_t n, uint32_t bsize) {
-  dbg_assert(here && here->gas);
-  return here->gas->cyclic_alloc(n, bsize);
+hpx_addr_t hpx_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
+  dbg_assert(here && here->gas && here->gas->alloc_cyclic);
+  return here->gas->alloc_cyclic(n, bsize, boundary);
 }
 
-hpx_addr_t hpx_gas_global_calloc(size_t n, uint32_t bsize) {
-  dbg_assert(here && here->gas);
-  return here->gas->cyclic_calloc(n, bsize);
+hpx_addr_t hpx_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
+  dbg_assert(here && here->gas && here->gas->calloc_cyclic);
+  return here->gas->calloc_cyclic(n, bsize, boundary);
 }
 
-hpx_addr_t hpx_gas_alloc(uint32_t bsize) {
-  dbg_assert(here && here->gas);
-  return here->gas->local_alloc(bsize);
+hpx_addr_t hpx_gas_alloc_blocked(size_t n, uint32_t bsize, uint32_t boundary) {
+  dbg_assert(here && here->gas && here->gas->alloc_blocked);
+  return here->gas->alloc_blocked(n, bsize, boundary);
+}
+
+hpx_addr_t hpx_gas_calloc_blocked(size_t n, uint32_t bsize, uint32_t boundary) {
+  dbg_assert(here && here->gas && here->gas->calloc_blocked);
+  return here->gas->calloc_blocked(n, bsize, boundary);
+}
+
+hpx_addr_t hpx_gas_alloc_local(uint32_t bsize, uint32_t boundary) {
+  dbg_assert(here && here->gas && here->gas->alloc_local);
+  return here->gas->alloc_local(bsize, boundary);
+}
+
+hpx_addr_t hpx_gas_calloc_local(size_t nmemb, size_t size, uint32_t boundary) {
+  dbg_assert(here && here->gas && here->gas->calloc_local);
+  return here->gas->calloc_local(nmemb, size, boundary);
 }
 
 void hpx_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
@@ -96,4 +163,52 @@ int hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
 {
   dbg_assert(here && here->gas && here->gas->memcpy);
   return (*here->gas->memcpy)(to, from, size, sync);
+}
+
+static int hpx_gas_alloc_local_at_handler(uint32_t bytes, uint32_t boundary) {
+  hpx_addr_t addr = hpx_gas_alloc_local(bytes, boundary);
+  dbg_assert(addr);
+  HPX_THREAD_CONTINUE(addr);
+}
+HPX_ACTION_DEF(DEFAULT, hpx_gas_alloc_local_at_handler, hpx_gas_alloc_local_at_action,
+               HPX_UINT32, HPX_UINT32);
+
+hpx_addr_t hpx_gas_alloc_local_at_sync(uint32_t bytes, uint32_t boundary, hpx_addr_t loc) {
+  hpx_addr_t addr = 0;
+  int e = hpx_call_sync(loc, hpx_gas_alloc_local_at_action, &addr, sizeof(addr),
+                        &bytes, &boundary);
+  dbg_check(e, "Failed synchronous call during allocation\n");
+  dbg_assert(addr);
+  return addr;
+}
+
+void hpx_gas_alloc_local_at_async(uint32_t bytes, uint32_t boundary, hpx_addr_t loc,
+                                  hpx_addr_t lco) {
+  int e = hpx_call(loc, hpx_gas_alloc_local_at_action, lco, &bytes, &boundary);
+  dbg_check(e, "Failed async call during allocation\n");
+}
+
+static int _gas_calloc_at_handler(size_t nmemb, size_t size, uint32_t boundary) {
+  hpx_addr_t addr = hpx_gas_calloc_local(nmemb, size, boundary);
+  dbg_assert(addr);
+  HPX_THREAD_CONTINUE(addr);
+}
+HPX_ACTION_DEF(DEFAULT, _gas_calloc_at_handler, hpx_gas_calloc_local_at_action,
+               HPX_UINT64, HPX_UINT64, HPX_UINT32);
+
+hpx_addr_t hpx_gas_calloc_local_at_sync(size_t nmemb, size_t size, uint32_t boundary,
+                                        hpx_addr_t loc) {
+  hpx_addr_t addr = 0;
+  int e = hpx_call_sync(loc, hpx_gas_calloc_local_at_action, &addr, sizeof(addr),
+                        &nmemb, &size, &boundary);
+  dbg_check(e, "Failed synchronous call during allocation\n");
+  dbg_assert(addr);
+  return addr;
+}
+
+void hpx_gas_calloc_local_at_async(size_t nmemb, size_t size, uint32_t boundary,
+                                   hpx_addr_t loc, hpx_addr_t lco) {
+  int e = hpx_call(loc, hpx_gas_calloc_local_at_action, lco, &nmemb, &size,
+                   &boundary);
+  dbg_check(e, "Failed async call during allocation\n");
 }

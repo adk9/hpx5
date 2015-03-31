@@ -103,8 +103,6 @@ LIBHPX_OPT_SCALAR(, gas, HPX_GAS_PGAS, hpx_gas_t)
 LIBHPX_OPT_SCALAR(, boot, HPX_BOOT_DEFAULT, hpx_boot_t)
 LIBHPX_OPT_SCALAR(, transport, HPX_TRANSPORT_DEFAULT, hpx_transport_t)
 LIBHPX_OPT_SCALAR(, network, HPX_NETWORK_DEFAULT, libhpx_network_t)
-LIBHPX_OPT_SCALAR(, sendlimit, 0, uint32_t)
-LIBHPX_OPT_SCALAR(, recvlimit, 0, uint32_t)
 /// @}
 
 
@@ -136,6 +134,13 @@ LIBHPX_OPT_SCALAR(pwc_, parcelbuffersize, 1lu << 16, size_t)
 LIBHPX_OPT_SCALAR(pwc_, parceleagerlimit, 1lu << 13, size_t)
 /// #}
 
+/// ISIR options
+/// @{
+LIBHPX_OPT_SCALAR(isir_, testwindow, 10, uint32_t)
+LIBHPX_OPT_SCALAR(isir_, sendlimit, 1lu << 14, uint32_t)
+LIBHPX_OPT_SCALAR(isir_, recvlimit, 1lu << 14, uint32_t)
+//// #}
+
 #ifdef HAVE_PHOTON
 /// Photon options
 /// @{
@@ -146,6 +151,7 @@ LIBHPX_OPT_SCALAR(photon_, eagerbufsize, -1, int)
 LIBHPX_OPT_SCALAR(photon_, smallpwcsize, 0, int)
 LIBHPX_OPT_SCALAR(photon_, maxrd, -1, int)
 LIBHPX_OPT_SCALAR(photon_, defaultrd, -1, int)
+LIBHPX_OPT_SCALAR(photon_, numcq, 1, int)
 LIBHPX_OPT_FLAG(photon_, usecma, 0)
 LIBHPX_OPT_STRING(photon_, ethdev, "roce0")
 LIBHPX_OPT_STRING(photon_, ibdev, "qib0+mlx4_0")

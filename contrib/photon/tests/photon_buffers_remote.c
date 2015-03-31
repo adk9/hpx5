@@ -10,6 +10,7 @@
 #define PHOTON_TAG       13
 
 int rank, other_rank, size;
+struct photon_buffer_t lbuf;
 struct photon_buffer_t rbuf;
 char *send, *recv;
 char *sendP, *recvP;
@@ -56,8 +57,11 @@ START_TEST (test_photon_get_remote_buffers)
   photon_send_FIN(sendReq, other_rank, PHOTON_REQ_COMPLETED);
   photon_wait(recvReq);
 
-  photon_put_with_completion(other_rank, send, PHOTON_SEND_SIZE, (void*)rbuf.addr,
-			     rbuf.priv, PHOTON_TAG, 0xcafebabe, 0);
+  lbuf.addr = (uintptr_t)send;
+  lbuf.size = PHOTON_SEND_SIZE;
+  lbuf.priv = (struct photon_buffer_priv_t){0,0};
+  photon_put_with_completion(other_rank, PHOTON_SEND_SIZE, &lbuf,
+			     &rbuf, PHOTON_TAG, 0xcafebabe, 0);
   send_comp++;
   recv_comp++;
   while (send_comp || recv_comp) {

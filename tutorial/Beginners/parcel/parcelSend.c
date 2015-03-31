@@ -55,7 +55,7 @@ static int _initDomain_action(const InitArgs *args)
 
 static int _main_action(void *args) {
   // Allocate the domain array
-  hpx_addr_t domain = hpx_gas_global_alloc(NDOMS, sizeof(Domain));
+  hpx_addr_t domain = hpx_gas_alloc_cyclic(NDOMS, sizeof(Domain), 0);
 
   // Allocate an and gate that we can wait on to detect that all of the domains
   // have completed initialization.

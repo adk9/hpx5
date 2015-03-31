@@ -15,8 +15,14 @@
 
 #include <hpx/hpx.h>
 #include <hpx/attributes.h>
+#include <libhpx/network.h>
+
+struct gas;
 
 extern struct heap *global_heap;
+
+struct gas *gas_pgas_new(const config_t *cfg, struct boot *boot)
+  HPX_INTERNAL HPX_NON_NULL(1,2);
 
 /// Called by each OS thread (pthread) to initialize and setup the thread local
 /// structures required for it to use PGAS.
@@ -41,21 +47,20 @@ void pgas_leave(void)
 /// and calloc.
 /// @{
 
-/// The structure that describes the cyclic operations, we just need to know the
-/// overall number of bytes to allocate, and the block size.
-typedef struct {
-  size_t n;
-  uint32_t bsize;
-} pgas_alloc_args_t;
-
 /// Asynchronous entry point for alloc.
-extern HPX_ACTION_DECL(pgas_cyclic_alloc);
+/// type hpx_addr_t (size_t bytes, size_t align)
+HPX_INTERNAL extern HPX_ACTION_DECL(pgas_alloc_cyclic);
 
 /// Asynchronous entry point for calloc.
-extern HPX_ACTION_DECL(pgas_cyclic_calloc);
+/// type hpx_addr_t (size_t bytes, size_t align)
+HPX_INTERNAL extern HPX_ACTION_DECL(pgas_calloc_cyclic);
 
 /// Asynchronous entry point for free.
-extern HPX_ACTION_DECL(pgas_free);
+HPX_INTERNAL extern HPX_ACTION_DECL(pgas_free);
+
+/// Asynchronous entry point for the rsync handler for memput
+/// void (int src, uint64_t command)
+HPX_INTERNAL extern COMMAND_DECL(memput_rsync);
 
 /// Synchronous entry point for alloc.
 ///
@@ -64,7 +69,7 @@ extern HPX_ACTION_DECL(pgas_free);
 ///
 /// @returns            A global address representing the base of the
 ///                     allocation, or HPX_NULL if there is an error.
-hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize)
+hpx_addr_t pgas_alloc_cyclic_sync(size_t n, uint32_t bsize)
   HPX_INTERNAL;
 
 /// Synchronous entry point for calloc.
@@ -74,7 +79,7 @@ hpx_addr_t pgas_cyclic_alloc_sync(size_t n, uint32_t bsize)
 ///
 /// @returns            A global address representing the base of the
 ///                     allocation, or HPX_NULL if there is an error.
-hpx_addr_t pgas_cyclic_calloc_sync(size_t n, uint32_t bsize)
+hpx_addr_t pgas_calloc_cyclic_sync(size_t n, uint32_t bsize)
   HPX_INTERNAL;
 
 /// @}
@@ -101,7 +106,7 @@ void *pgas_offset_to_lva(uint64_t offset)
 /// @param          lva The local virtual address.
 ///
 /// @returns            The corresponding local virtual address.
-hpx_addr_t pgas_lva_to_gpa(void *lva)
+hpx_addr_t pgas_lva_to_gpa(const void *lva)
   HPX_INTERNAL;
 
 /// Get the current maximum heap offset.

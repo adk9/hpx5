@@ -20,12 +20,12 @@
 
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
-#include "libhpx/config.h"
-#include "libhpx/debug.h"
-#include "libhpx/instrumentation.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/parcel.h"
+#include <libhpx/config.h>
+#include <libhpx/debug.h>
+#include <libhpx/instrumentation.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
+#include <libhpx/parcel.h>
 #include "logtable.h"
 
 /// We're keeping one log per event per locality. Here are their headers.
@@ -56,9 +56,8 @@ static int _chdir(const char *dir) {
   struct tm lt;
   localtime_r(&t, &lt);
   char dirname[256];
-  snprintf(dirname, 256, "hpx.%.2d%.2d.%.2d%.2d%.4d",
-           lt.tm_hour, lt.tm_min, lt.tm_mday, lt.tm_mon + 1,
-           lt.tm_year + 1900);
+  snprintf(dirname, 256, "hpx.%.4d%.2d%.2d.%.2d%.2d",
+           lt.tm_year + 1900, lt.tm_mon + 1, lt.tm_mday, lt.tm_hour, lt.tm_min);
 
   // try and create the directory---we don't care if it's already there
   int e = mkdir(dirname, 0777);
@@ -96,7 +95,7 @@ int inst_init(config_t *cfg) {
   hpx_time_t start = hpx_time_now();
   for (int cl = 0, e = HPX_INST_NUM_CLASSES; cl < e; ++cl) {
     for (int id = INST_OFFSETS[cl], e = INST_OFFSETS[cl + 1]; id < e; ++id) {
-      if (config_trace_classes_isset(here->config, cl)) {
+      if (inst_trace_class(cl)) {
         _log_create(cl, id, cfg->trace_filesize, start);
       }
     }
@@ -130,4 +129,3 @@ void inst_vtrace(int UNUNSED, int n, int id, ...) {
   }
   logtable_append(log, args[0], args[1], args[2], args[3]);
 }
-

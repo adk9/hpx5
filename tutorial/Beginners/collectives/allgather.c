@@ -107,7 +107,7 @@ static int _check_sum_action(int *args) {
 }
 
 static int _main_action(void *args) {
-  hpx_addr_t domain   = hpx_gas_global_alloc(nDoms, sizeof(Domain));
+  hpx_addr_t domain   = hpx_gas_alloc_cyclic(nDoms, sizeof(Domain), 0);
   hpx_addr_t done     = hpx_lco_and_new(nDoms);
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
   hpx_addr_t gsum = hpx_lco_allgather_new(nDoms, sizeof(double));

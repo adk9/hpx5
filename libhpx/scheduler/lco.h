@@ -14,7 +14,6 @@
 #define LIBHPX_LCO_H
 
 #include <hpx/attributes.h>
-#include <jemalloc/jemalloc_hpx.h>
 #include <libsync/lockable_ptr.h>
 #include "cvar.h"
 
@@ -28,53 +27,6 @@ typedef union {
   const lco_class_t *vtable;
   uintptr_t            bits;
 } lco_t HPX_ALIGNED(16);
-
-/// And LCO class interface.
-/// @{
-typedef struct {
-  lco_t               lco;
-  cvar_t          barrier;
-  volatile intptr_t value;                  // the threshold
-} and_t;
-
-/// Local future interface.
-/// @{
-typedef struct {
-  lco_t     lco;
-  cvar_t   full;
-  char  value[];
-} future_t;
-
-/// Local channel interface.
-///
-/// A channel LCO maintains a linked-list of dynamically sized
-/// buffers. It can be used to support a thread-based, point-to-point
-/// communication mechanism. An in-order channel forces a sender to
-/// wait for remote completion for sets or sends().
-/// @{
-
-typedef struct node {
-  struct node  *next;
-  void       *buffer;                           // out-of place because we want
-  int           size;                           // to be able to recv it
-} chan_node_t;
-
-
-typedef struct {
-  lco_t          lco;
-  cvar_t    nonempty;
-  chan_node_t  *head;
-  chan_node_t  *tail;
-} chan_t;
-
-extern void and_init(and_t *and, intptr_t value)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
-extern void future_init(future_t *f, int size) 
-  HPX_INTERNAL HPX_NON_NULL(1);
-
-extern void chan_init(chan_t *c)
-  HPX_INTERNAL HPX_NON_NULL(1);
 
 // The LCO abstract class interface.
 ///
@@ -93,6 +45,7 @@ typedef bool (*lco_release_t)(lco_t *lco, void *out);
 typedef hpx_status_t (*lco_wait_t)(lco_t *lco);
 typedef hpx_status_t (*lco_attach_t)(lco_t *lco, hpx_parcel_t *p);
 typedef void (*lco_reset_t)(lco_t *lco);
+typedef size_t (*lco_size_t)(lco_t *lco);
 
 struct lco_class {
   lco_fini_t         on_fini;
@@ -104,6 +57,7 @@ struct lco_class {
   lco_release_t   on_release;
   lco_wait_t         on_wait;
   lco_reset_t       on_reset;
+  lco_size_t         on_size;
 } HPX_ALIGNED(16);
 
 // -----------------------------------------------------------------------------
