@@ -2,7 +2,7 @@
 #define HTABLE_H
 
 #include <stdint.h>
-#include <pthread.h>
+#include "libsync/locks.h"
 
 typedef struct hash_element {
   uint64_t key;
@@ -15,7 +15,7 @@ typedef struct htable {
   hash_element_t **table;
   int size;
   int elements;
-  pthread_mutex_t mtx;
+  tatas_lock_t tlock;
 } htable_t;
 
 htable_t *htable_create(int size);

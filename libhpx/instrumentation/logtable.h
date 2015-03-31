@@ -17,15 +17,18 @@
 
 struct record;
 
+/// All of the data needed to keep the state of an individual event log
 typedef struct {
   hpx_time_t       start;                       // start time
   int                 fd;                       // file backing the log
   int              class;                       // the class we're logging
   int                 id;                       // the event we're logging
   int             UNUSED;                       // padding
-  size_t            size;                       // # records
+  size_t        max_size;                       // max size in bytes
+  void           *header;                       // pointer to file header
   struct record *records;                       // pointer to data for log
   volatile size_t   next;                       // the next element to write
+  volatile size_t   last;                       // the last element written
 } logtable_t;
 
 #define LOGTABLE_INIT {                         \
@@ -34,11 +37,12 @@ typedef struct {
     .class = -1,                                \
     .id = -1,                                   \
     .UNUSED = 0,                                \
-    .size = 0,                                  \
+    .max_size = 0,                              \
+    .header = NULL,                             \
     .records = NULL,                            \
-    .next = 0                                   \
+    .next = 0,                                  \
+    .last = 0                                   \
     }
-
 
 /// Initialize a logtable.
 ///

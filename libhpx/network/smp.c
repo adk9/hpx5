@@ -16,59 +16,67 @@
 
 #include <stdlib.h>
 
-#include "libhpx/config.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/network.h"
-#include "libhpx/transport.h"
+#include <libhpx/boot.h>
+#include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/memory.h>
+#include <libhpx/network.h>
+#include "smp.h"
 
 // Define the transports allowed for the SMP network
-static int SMP_TRANSPORTS[] = {HPX_TRANSPORT_SMP};
-
-static void _smp_delete(network_t *network) {
+static void _smp_delete(void *network) {
 }
 
-static int _smp_progress(network_t *network) {
+static int _smp_progress(void *network) {
   return 0;
 }
 
-static int _smp_send(network_t *network, hpx_parcel_t *p) {
+static int _smp_send(void *network, hpx_parcel_t *p) {
   hpx_abort();
 }
 
-static int _smp_command(network_t *network, hpx_addr_t rank,
+static int _smp_command(void *network, hpx_addr_t rank,
                         hpx_action_t op, uint64_t args) {
-  return hpx_xcall(HPX_HERE, op, HPX_NULL, here->rank, args);
+  static const int zero = 0;
+  return hpx_xcall(HPX_HERE, op, HPX_NULL, zero, args);
 }
 
-static int _smp_pwc(network_t *network,
+static int _smp_pwc(void *network,
                     hpx_addr_t to, const void *from, size_t n,
                     hpx_action_t lop, hpx_addr_t laddr,
                     hpx_action_t rop, hpx_addr_t raddr) {
   return LIBHPX_EUNIMPLEMENTED;
 }
 
-static int _smp_put(network_t *network, hpx_addr_t to,
+static int _smp_put(void *network, hpx_addr_t to,
                     const void *from, size_t n,
                     hpx_action_t lop, hpx_addr_t laddr) {
   return LIBHPX_EUNIMPLEMENTED;
 }
 
-static int _smp_get(network_t *network, void *to, hpx_addr_t from, size_t n,
+static int _smp_get(void *network, void *to, hpx_addr_t from, size_t n,
                     hpx_action_t lop, hpx_addr_t laddr) {
   return LIBHPX_EUNIMPLEMENTED;
 }
 
-static hpx_parcel_t *_smp_probe(network_t *network, int nrx) {
+static hpx_parcel_t *_smp_probe(void *network, int nrx) {
   return NULL;
 }
 
-static void _smp_set_flush(network_t *network) {
+static void _smp_set_flush(void *network) {
+}
+
+static int _smp_register_dma(void *obj, const void *addr, size_t n, void *key)
+{
+  return LIBHPX_OK;
+}
+
+static int _smp_release_dma(void *obj, const void *addr, size_t n) {
+  return LIBHPX_OK;
 }
 
 static network_t _smp = {
   .type = HPX_NETWORK_SMP,
-  .transports = SMP_TRANSPORTS,
   .delete = _smp_delete,
   .progress = _smp_progress,
   .send = _smp_send,
@@ -77,19 +85,20 @@ static network_t _smp = {
   .put = _smp_put,
   .get = _smp_get,
   .probe = _smp_probe,
-  .set_flush = _smp_set_flush
+  .set_flush = _smp_set_flush,
+  .register_dma = _smp_register_dma,
+  .release_dma = _smp_release_dma
 };
 
-network_t *network_smp_new(void) {
-  /*
-  int e = network_supported_transport(here->transport, SMP_TRANSPORTS,
-				      _HPX_NELEM(SMP_TRANSPORTS));
-  if (e) {
-    log_error("%s network is not supported with current transport: %s\n",
-	      HPX_NETWORK_TO_STRING[HPX_NETWORK_SMP],
-	      HPX_TRANSPORT_TO_STRING[here->transport->type]);
+network_t *network_smp_new(const struct config *cfg, boot_t *boot) {
+  if (boot_n_ranks(boot) > 1) {
+    dbg_error("SMP network does not support multiple ranks.\n");
     return NULL;
   }
-  */
+
+  local = address_space_new_default(cfg);
+  global = address_space_new_default(cfg);
+  registered = address_space_new_default(cfg);
+
   return &_smp;
 }

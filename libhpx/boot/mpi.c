@@ -18,6 +18,7 @@
 #include <mpi.h>
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
 
 static HPX_RETURNS_NON_NULL const char *_id(void) {
   return "MPI";
@@ -51,14 +52,38 @@ static int _barrier(const boot_t *boot) {
   if (MPI_Barrier(MPI_COMM_WORLD) != MPI_SUCCESS) {
     return HPX_ERROR;
   }
-  return HPX_SUCCESS;
+  return LIBHPX_OK;
 }
 
-static int _allgather(const boot_t *boot, const void *cin, void *out, int n) {
-  void *in = (void*)cin;
-  int e = MPI_Allgather((void*)in, n, MPI_BYTE, out, n, MPI_BYTE, MPI_COMM_WORLD);
-  dbg_assert_str(e == MPI_SUCCESS, "failed MPI_Allgather %d.\n", e);
-  return HPX_SUCCESS;
+static int _allgather(const boot_t *boot, const void *restrict src,
+                      void *restrict dest, int n) {
+  int e = MPI_Allgather(src, n, MPI_BYTE, dest, n, MPI_BYTE, MPI_COMM_WORLD);
+  if (MPI_SUCCESS != e) {
+    dbg_error("failed MPI_Allgather %d.\n", e);
+  }
+  return LIBHPX_OK;
+}
+
+static int _mpi_alltoall(const void *boot, void *restrict dest,
+                         const void *restrict src, int n, int stride) {
+  const boot_t *mpi = boot;
+  int ranks = mpi->n_ranks(mpi);
+  int *counts = calloc(ranks, sizeof(*counts));
+  int *offsets = calloc(ranks, sizeof(*offsets));
+  assert(offsets);
+  assert(counts);
+  for (int i = 0, e = ranks; i < e; ++i) {
+    counts[i] = n;
+    offsets[i] = i * stride;
+  }
+  if (MPI_SUCCESS != MPI_Alltoallv(src, counts, offsets, MPI_BYTE,
+                                   dest, counts, offsets, MPI_BYTE,
+                                   MPI_COMM_WORLD)) {
+    dbg_error("MPI_Alltoallv failed at bootstrap\n");
+  }
+  free(offsets);
+  free(counts);
+  return LIBHPX_OK;
 }
 
 static void _abort(const boot_t *boot) {
@@ -73,6 +98,7 @@ static boot_t _mpi_boot_class = {
   .n_ranks   = _n_ranks,
   .barrier   = _barrier,
   .allgather = _allgather,
+  .alltoall  = _mpi_alltoall,
   .abort     = _abort
 };
 
@@ -88,16 +114,16 @@ boot_t *boot_new_mpi(void) {
   }
 
   static const int LIBHPX_THREAD_LEVEL = MPI_THREAD_FUNNELED;
-  
+
   int level;
   if (MPI_SUCCESS != MPI_Init_thread(NULL, NULL, LIBHPX_THREAD_LEVEL, &level)) {
     log_error("mpi initialization failed\n");
     return NULL;
   }
-  
+
   if (level != LIBHPX_THREAD_LEVEL) {
     log_boot("MPI thread level failed requested %d, received %d.\n",
-	     LIBHPX_THREAD_LEVEL, level);
+         LIBHPX_THREAD_LEVEL, level);
   }
 
   log_boot("thread_support_provided = %d\n", level);

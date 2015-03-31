@@ -50,7 +50,7 @@ static int ugni_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
                           photonBuffer lbuf, uint64_t id, int flags);
 static int ugni_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
                           photonBuffer lbuf, uint64_t id, int flags);
-static int ugni_get_event(photonEventStatus stat);
+static int ugni_get_event(int proc, int max, photon_rid *ids, int *n);
 
 static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags);
 static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags);
@@ -125,6 +125,8 @@ static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI s
     ugni_ctx.gemini_dev = "ipogif0";
   }
 
+  ugni_ctx.num_cq = cfg->cap.num_cq;
+
   if(__ugni_init_context(&ugni_ctx)) {
     log_err("Could not initialize ugni context");
     goto error_exit;
@@ -174,8 +176,9 @@ static int ugni_finalize() {
 
 static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
   gni_post_descriptor_t *fma_desc;
-  int err, curr, curr_ind;
+  int err, curr, curr_ind, cqind;
   
+  cqind = PHOTON_GET_CQ_IND(ugni_ctx.num_cq, args->proc);
   curr = sync_fadd(&descriptors[args->proc].curr, 1, SYNC_RELAXED);
   curr_ind = curr & (MAX_CQ_ENTRIES - 1);
   fma_desc = &(descriptors[args->proc].entries[curr_ind]);
@@ -186,7 +189,7 @@ static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
   }
   else {
     fma_desc->cq_mode = GNI_CQMODE_LOCAL_EVENT;
-    fma_desc->src_cq_hndl = ugni_ctx.local_cq_handle;
+    fma_desc->src_cq_hndl = ugni_ctx.local_cq_handles[cqind];
   }
 
   fma_desc->type = opcode;
@@ -221,8 +224,9 @@ error_exit:
 
 static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags) {
   gni_post_descriptor_t *fma_desc;
-  int err, curr, curr_ind;
-  
+  int err, curr, curr_ind, cqind;
+
+  cqind = PHOTON_GET_CQ_IND(ugni_ctx.num_cq, args->proc);  
   curr = sync_fadd(&descriptors[args->proc].curr, 1, SYNC_RELAXED);
   curr_ind = curr & (MAX_CQ_ENTRIES - 1);
   fma_desc = &(descriptors[args->proc].entries[curr_ind]);
@@ -233,7 +237,7 @@ static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags) {
   }
   else {
     fma_desc->cq_mode = GNI_CQMODE_GLOBAL_EVENT;
-    fma_desc->src_cq_hndl = ugni_ctx.local_cq_handle;
+    fma_desc->src_cq_hndl = ugni_ctx.local_cq_handles[cqind];
   }
 
   fma_desc->type = opcode;
@@ -314,39 +318,74 @@ static int ugni_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
   return PHOTON_OK;
 }
 
-static int ugni_get_event(photonEventStatus stat) {
+static int ugni_get_event(int proc, int max, photon_rid *ids, int *n) {
   gni_post_descriptor_t *event_post_desc_ptr;
   gni_cq_entry_t current_event;
   uint64_t cookie = NULL_REQUEST;
-  int rc;
+  int i, rc, start, end, comp;
 
-  sync_tatas_acquire(&cq_lock);
-  rc = get_cq_event(ugni_ctx.local_cq_handle, 1, 0, &current_event);
-  if (rc == 0) {
-    rc = GNI_GetCompleted(ugni_ctx.local_cq_handle, current_event, &event_post_desc_ptr);
-    cookie = event_post_desc_ptr->post_id;
-    sync_tatas_release(&cq_lock);
-    if (rc != GNI_RC_SUCCESS) {
-      dbg_err("GNI_GetCompleted  data ERROR status: %s (%d)", gni_err_str[rc], rc);
-    }
+  *n = 0;
+  comp = 0;
+
+  if (!ids) {
+    log_err("NULL return id pointer");
+    goto error_exit;
   }
-  else if (rc == 3) {
-    /* nothing available */
+
+  if (max > MAX_CQ_POLL) {
+    log_err("Exceeding max poll count: %d > %d", max, MAX_CQ_POLL);
+    goto error_exit;
+  }
+
+  if (ugni_ctx.num_cq == 1) {
+    start = 0;
+    end = 1;
+  }
+  else if (proc == PHOTON_ANY_SOURCE) {
+    start = 0;
+    end = ugni_ctx.num_cq;
+  }
+  else {
+    start = PHOTON_GET_CQ_IND(ugni_ctx.num_cq, proc);
+    end = start+1;
+  }
+  
+  sync_tatas_acquire(&cq_lock);
+  for (i=start; i<end && comp<max; i++) {
+    rc = get_cq_event(ugni_ctx.local_cq_handles[i], 1, 0, &current_event);
+    if (rc == 0) {
+      rc = GNI_GetCompleted(ugni_ctx.local_cq_handles[i], current_event, &event_post_desc_ptr);
+      cookie = event_post_desc_ptr->post_id;
+      sync_tatas_release(&cq_lock);
+      if (rc != GNI_RC_SUCCESS) {
+	dbg_err("GNI_GetCompleted data ERROR status: %s (%d)", gni_err_str[rc], rc);
+      }
+    }
+    else if (rc == 3) {
+      // nothing available
+      continue;
+    }
+    else {
+      sync_tatas_release(&cq_lock);
+      // rc == 2 is an overrun
+      dbg_err("Error getting CQ event: %d", rc);
+      goto error_exit;
+    }
+    
+    dbg_trace("received event with cookie:%"PRIx64, cookie);
+    ids[comp] = cookie;
+    comp++;
+  }
+  
+  *n = comp;
+  
+  if (comp == 0) {
     sync_tatas_release(&cq_lock);
     return PHOTON_EVENT_NONE;
   }
-  else {
-    sync_tatas_release(&cq_lock);
-    /* rc == 2 is an overrun */
-    dbg_err("Error getting CQ event: %d", rc);
-    return PHOTON_EVENT_ERROR;
-  }
   
-  dbg_trace("received event with cookie:%"PRIx64, cookie);
-
-  stat->id = cookie;
-  stat->proc = 0x0;
-  stat->priv = NULL;
-
   return PHOTON_EVENT_OK;
+  
+ error_exit:
+  return PHOTON_EVENT_ERROR;
 }

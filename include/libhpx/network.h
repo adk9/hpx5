@@ -20,6 +20,7 @@
 /// network's primary responsibility is to accept send requests from the
 /// scheduler, and send them out via the configured transport.
 #include <hpx/hpx.h>
+#include <libhpx/memory.h>
 
 /// Forward declarations.
 /// @{
@@ -29,42 +30,52 @@ struct gas;
 struct transport;
 /// @}
 
+/// The network interface uses a particular action type, the network *command*,
+/// which takes an integer indicating the source of the command, and an optional
+/// command argument.
+
+/// Command actions should be declared and defined using the following macros.
+/// @{
+#define COMMAND_DEF(type, handler, symbol)                      \
+  HPX_ACTION_DEF(type, handler, symbol, HPX_INT, HPX_UINT64)
+
+#define COMMAND_DECL(symbol) HPX_ACTION_DECL(symbol)
+/// @}
+
+/// The release_parcel command will release a parcel.
+HPX_INTERNAL extern COMMAND_DECL(release_parcel);
+
+/// The lco_set command will set an lco.
+HPX_INTERNAL extern COMMAND_DECL(lco_set);
+
 /// All network objects implement the network interface.
 typedef struct network {
   int type;
-  int *transports;
 
-  void (*delete)(struct network *)
-    HPX_NON_NULL(1);
+  void (*delete)(void*);
 
-  int (*progress)(struct network *)
-    HPX_NON_NULL(1);
+  int (*progress)(void*);
 
-  int (*send)(struct network *, hpx_parcel_t *p)
-    HPX_NON_NULL(1, 2);
+  int (*send)(void*, hpx_parcel_t *p);
 
-  int (*command)(struct network *network, hpx_addr_t rank,
-                 hpx_action_t op, uint64_t args)
-    HPX_NON_NULL(1);
+  int (*command)(void*, hpx_addr_t rank, hpx_action_t op, uint64_t args);
 
-  int (*pwc)(struct network *, hpx_addr_t to, const void *from, size_t n,
+  int (*pwc)(void*, hpx_addr_t to, const void *from, size_t n,
              hpx_action_t lop, hpx_addr_t laddr, hpx_action_t rop,
-             hpx_addr_t raddr)
-    HPX_NON_NULL(1);
+             hpx_addr_t raddr);
 
-  int (*put)(struct network *, hpx_addr_t to, const void *from, size_t n,
-             hpx_action_t lop, hpx_addr_t laddr)
-    HPX_NON_NULL(1);
+  int (*put)(void*, hpx_addr_t to, const void *from, size_t n,
+             hpx_action_t lop, hpx_addr_t laddr);
 
-  int (*get)(struct network *, void *to, hpx_addr_t from, size_t n,
-             hpx_action_t lop, hpx_addr_t laddr)
-    HPX_NON_NULL(1, 2);
+  int (*get)(void*, void *to, hpx_addr_t from, size_t n,
+             hpx_action_t lop, hpx_addr_t laddr);
 
-  hpx_parcel_t *(*probe)(struct network *, int nrx)
-    HPX_NON_NULL(1);
+  hpx_parcel_t *(*probe)(void*, int nrx);
 
-  void (*set_flush)(struct network *)
-    HPX_NON_NULL(1);
+  void (*set_flush)(void*);
+
+  memory_register_t register_dma;
+  memory_release_t release_dma;
 } network_t;
 
 /// Create a new network.
@@ -72,26 +83,14 @@ typedef struct network {
 /// This depends on the current boot and transport object to be configured in
 /// the "here" locality.
 ///
-/// @param         type The type of the network to instantiate.
+/// @param          cfg The current configuration.
 /// @param         boot The bootstrap network object.
 /// @param          gas The global address space.
-/// @param          nrx The number of receive queues.
 ///
 /// @returns            The network object, or NULL if there was an issue.
-network_t *network_new(struct config *config, struct boot *boot,
-                       struct gas *gas, int nrx)
-  HPX_NON_NULL(2, 3) HPX_MALLOC HPX_INTERNAL;
-
-/// Finds a transport match for a given network.
-///
-/// @param            t The transport to test.
-/// @param   transports The list of transports to test against.
-/// @param            n The number of entries.
-///
-/// @ returns 0 on match, or 1 if no match was found.
-int network_supported_transport(struct transport *t, const int tranports[],
-				int n)
-  HPX_NON_NULL(1, 2) HPX_INTERNAL;
+network_t *network_new(const struct config *cfg, struct boot *boot,
+                       struct gas *gas)
+  HPX_MALLOC HPX_INTERNAL;
 
 /// Delete a network object.
 ///
@@ -179,7 +178,7 @@ static inline int network_command(network_t *network, hpx_addr_t rank,
 ///
 /// @returns            LIBHPX_OK
 static inline int network_pwc(network_t *network,
-                              hpx_addr_t to, void *from, size_t n,
+                              hpx_addr_t to, const void *from, size_t n,
                               hpx_action_t lop, hpx_addr_t lsync,
                               hpx_action_t rop, hpx_addr_t rsync) {
   return network->pwc(network, to, from, n, lop, lsync, rop, rsync);
@@ -200,7 +199,7 @@ static inline int network_pwc(network_t *network,
 ///
 /// @returns            LIBHPX_OK
 static inline int network_put(network_t *network,
-                              hpx_addr_t to, void *from, size_t n,
+                              hpx_addr_t to, const void *from, size_t n,
                               hpx_action_t lop, hpx_addr_t laddr) {
   return network->put(network, to, from, n, lop, laddr);
 }
@@ -240,6 +239,33 @@ static inline hpx_parcel_t *network_probe(network_t *network, int rank) {
 /// @param      network The network to modify.
 static inline void network_flush_on_shutdown(network_t *network) {
   network->set_flush(network);
+}
+
+/// Register a memory region for dma access.
+///
+/// Network registration is a limited resource. Currently, we handle
+/// registration failures as unrecoverable. In the future it will make sense to
+/// implement a registration cache or other mechanism for resource management.
+///
+/// @param      network The network object.
+/// @param      segment The beginning of the region to register.
+/// @param        bytes The number of bytes to register.
+static inline void network_register_dma(network_t *network, const void *base,
+                                        size_t bytes, void *key) {
+  network->register_dma(network, base, bytes, key);
+}
+
+/// Release a registered memory region.
+///
+/// The region denotated by @p segment, @p bytes must correspond to a region
+/// previously registered.
+///
+/// @param      network The network object.
+/// @param      segment The beginning of the region to release.
+/// @param        bytes The number of bytes to release.
+static inline void network_release_dma(network_t *network, const void *base,
+                                       size_t bytes) {
+  network->release_dma(network, base, bytes);
 }
 
 #endif // LIBHPX_NETWORK_H

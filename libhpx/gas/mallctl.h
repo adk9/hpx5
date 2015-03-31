@@ -14,9 +14,7 @@
 #define LIBHPX_GAS_MALLCTL_H
 
 #include <hpx/attributes.h>
-#include <jemalloc/jemalloc_hpx.h>
-
-extern const char * libhpx_global_malloc_conf;
+#include <jemalloc/jemalloc_global.h>
 
 int mallctl_get_lg_dirty_mult(void)
   HPX_INTERNAL;
@@ -33,7 +31,7 @@ unsigned mallctl_create_arena(chunk_alloc_t alloc, chunk_dalloc_t dalloc)
 unsigned mallctl_thread_get_arena(void)
   HPX_INTERNAL;
 
-unsigned mallctl_thread_set_arena(unsigned)
+unsigned mallctl_thread_set_arena(unsigned arena)
   HPX_INTERNAL;
 
 void mallctl_thread_enable_cache(void)

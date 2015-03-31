@@ -15,7 +15,6 @@
 
 typedef hpx_addr_t hpx_pid_t;
 
-/// ----------------------------------------------------------------------------
 /// HPX Process creation.
 ///
 /// This function calls the specified @p action with the @p args and @
@@ -25,10 +24,18 @@ typedef hpx_addr_t hpx_pid_t;
 /// and permits operations to be executed on the process.
 ///
 /// NB: a process spawn is always local to the calling locality.
-/// ----------------------------------------------------------------------------
 hpx_addr_t hpx_process_new(hpx_addr_t termination);
 
-int hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action, const void *args, size_t len, hpx_addr_t result);
+
+/// A process-specific call interface.
+///
+/// This calls an action @p action inside a process @p process putting
+/// the resulting value in @p result at some point in the future.
+int    _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
+                         hpx_addr_t result, int nargs, ...);
+#define hpx_process_call(process, addr, action, result, ...)                \
+  _hpx_process_call(process, addr, action, result, __HPX_NARGS(__VA_ARGS__),\
+                    __VA_ARGS__)
 
 void hpx_process_delete(hpx_addr_t process, hpx_addr_t sync);
 

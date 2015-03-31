@@ -67,6 +67,20 @@ int photon_init(photonConfig cfg) {
   photonConfig lcfg = NULL;
   char *errmsg = "";
 
+  if(__photon_backend && 
+     (__photon_backend->initialized() == PHOTON_OK)) {
+    log_warn("Photon already initialized");
+    return PHOTON_OK;
+  }
+  
+  if (__photon_backend && 
+      (__photon_backend->initialized() != PHOTON_OK)) {
+    log_warn("Photon backend is still initializing");
+    return PHOTON_OK;
+  }
+  
+  dbg_info("Photon initializing");
+
   /* copy the configuration */
   lcfg = calloc(1, sizeof(struct photon_config_t));
   if (!lcfg) {
@@ -109,8 +123,18 @@ int photon_init(photonConfig cfg) {
 #endif
     }
     else {
-      errmsg = "unknown backend";
+#ifdef HAVE_UGNI
+      __photon_backend = be = &photon_ugni_backend;
+      photon_buffer_init(&ugni_buffer_interface);
+      dbg_info("Using uGNI backend");
+#elif HAVE_VERBS
+      __photon_backend = be = &photon_verbs_backend;
+      photon_buffer_init(&verbs_buffer_interface);
+      dbg_info("Using Verbs backend");
+#else
+      errmsg = "network backend";
       goto error_exit;
+#endif
     }
   }
   else {
@@ -172,6 +196,13 @@ int photon_init(photonConfig cfg) {
     lcfg->cap.max_rd = DEF_MAX_REQUESTS;
   if (lcfg->cap.default_rd <= 0)
     lcfg->cap.default_rd = DEF_NUM_REQUESTS;
+  if (lcfg->cap.num_cq <= 0)
+    lcfg->cap.num_cq = DEF_NUM_CQ;
+  
+  if (lcfg->cap.num_cq > _photon_nproc) {
+    lcfg->cap.num_cq = _photon_nproc;
+    log_warn("Requesting (num_cq > nproc), setting num_cq to nproc");
+  }
   
   assert(is_power_of_2(_LEDGER_SIZE));
   assert(is_power_of_2(_photon_ebsize));
@@ -231,13 +262,7 @@ int photon_init(photonConfig cfg) {
   __photon_default->probe_completion = (be->probe_completion)?(be->probe_completion):__photon_default->probe_completion;
   __photon_default->io_init = (be->io_init)?(be->io_init):__photon_default->io_init;
   __photon_default->io_init = (be->io_finalize)?(be->io_finalize):__photon_default->io_finalize;
-
-  if(__photon_backend->initialized() == PHOTON_OK) {
-    log_warn("Photon already initialized");
-    return PHOTON_OK;
-  }
-
-  dbg_info("Photon initializing");
+  __photon_default->get_dev_name = (be->get_dev_name)?(be->get_dev_name):__photon_default->get_dev_name;
 
   /* the configured backend init gets called from within the default library init */
   return __photon_default->init(lcfg, NULL, NULL);
@@ -524,24 +549,24 @@ int photon_recv(uint64_t request, void *ptr, uint64_t size, int flags) {
 /* end SR interface */
 
 /* begin with completion */
-int photon_put_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
+int photon_put_with_completion(int proc, uint64_t size, photonBuffer lbuf, photonBuffer rbuf,
                                photon_rid local, photon_rid remote, int flags) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
   }
   
-  return __photon_default->put_with_completion(proc, ptr, size, rptr, priv, local, remote, flags);
+  return __photon_default->put_with_completion(proc, size, lbuf, rbuf, local, remote, flags);
 }
 
-int photon_get_with_completion(int proc, void *ptr, uint64_t size, void *rptr, struct photon_buffer_priv_t priv,
-                               photon_rid local, int flags) {
+int photon_get_with_completion(int proc, uint64_t size, photonBuffer lbuf, photonBuffer rbuf,
+                               photon_rid local, photon_rid remote, int flags) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
     return PHOTON_ERROR_NOINIT;
   }
   
-  return __photon_default->get_with_completion(proc, ptr, size, rptr, priv, local, flags);
+  return __photon_default->get_with_completion(proc, size, lbuf, rbuf, local, remote, flags);
 }
 
 int photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *request, int flags) {
@@ -582,11 +607,21 @@ void photon_io_print_info(void *io) {
 /* end I/O */
 
 /* utility API method to get backend-specific buffer info */
-int photon_get_buffer_private(void *buf, uint64_t size, photonBufferPriv ret_priv) {
-  return _photon_get_buffer_private(buf, size, ret_priv);
+int photon_get_buffer_private(void *buf, uint64_t size,
+			      const struct photon_buffer_priv_t **pptr) {
+  return _photon_get_buffer_private(buf, size, pptr);
 }
 
 /* utility method to get the remote buffer info set after a wait buffer request */
-int photon_get_buffer_remote(photon_rid request, photonBuffer ret_desc) {
-  return _photon_get_buffer_remote(request, ret_desc);
+int photon_get_buffer_remote(photon_rid request, photonBuffer ret_buf) {
+  return _photon_get_buffer_remote(request, ret_buf);
+}
+
+int photon_get_dev_name(char **dev_name) {
+  if(__photon_default->initialized() != PHOTON_OK) {
+    init_err();
+    return PHOTON_ERROR_NOINIT;
+  }
+
+  return __photon_default->get_dev_name(dev_name);
 }

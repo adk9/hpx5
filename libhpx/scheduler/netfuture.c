@@ -23,13 +23,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "libhpx/action.h"
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/network.h"
-#include "libhpx/scheduler.h"
-#include "libhpx/transport.h"
-#include "libsync/queues.h"
+#include <libhpx/action.h>
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/network.h>
+#include <libhpx/scheduler.h>
+#include <libsync/queues.h>
 #include "lco.h"
 #include "cvar.h"
 #include "future.h"
@@ -49,6 +48,8 @@
 /// netfuture somewhere in the system. For hpx_netfuture_t on the other hand,
 /// there may be as many, and the structure contains no actual data; it is
 /// effectively a pointer.
+/// Local netfuture interface.
+/// @{
 typedef struct {
   lco_t lco;
   cvar_t full;
@@ -92,6 +93,11 @@ static hpx_action_t _add_future_to_table = 0;
 static hpx_action_t _initialize_netfutures = 0;
 
 static _netfuture_table_t _netfuture_table = {.inited = 0};
+
+static size_t _netfuture_size(lco_t *lco) {
+  _netfuture_t *netfuture = (_netfuture_t *)lco;
+  return sizeof(*netfuture);
+}
 
 /// Is this netfuture empty?
 static bool _empty(const _netfuture_t *f) {
@@ -220,7 +226,7 @@ _initialize_netfutures_action(_nf_init_args_t *args) {
   _netfuture_table.buffers = calloc(hpx_get_num_ranks(), sizeof(_netfuture_table.buffers[0]));
   _netfuture_table.fut_infos = calloc(_netfuture_table.curr_capacity, sizeof(_fut_info_t)) ;
   _netfuture_table.mem_size = _netfuture_cfg.max_size;
-  _netfuture_table.base_gas = hpx_gas_alloc(_netfuture_cfg.max_size);
+  _netfuture_table.base_gas = hpx_gas_alloc_local(_netfuture_cfg.max_size, 0);
   assert(_netfuture_table.base_gas != HPX_NULL);
   dbg_printf("GAS base = 0x%"PRIx64".\n", _netfuture_table.base_gas);
   assert(hpx_gas_try_pin(_netfuture_table.base_gas, &_netfuture_table.base));
@@ -384,7 +390,8 @@ _netfuture_init(_netfuture_t *f, int size, bool shared)
     .on_release = NULL,
     .on_wait = NULL,
     .on_attach = NULL,
-    .on_reset = NULL
+    .on_reset = NULL,
+    .on_size = _netfuture_size
   };
 
   lco_init(&f->lco, &vtable);

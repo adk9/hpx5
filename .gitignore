@@ -76,6 +76,8 @@ contrib/libffi/
 contrib/jemalloc/
 contrib/jemalloc_hpx/
 contrib/photon/
+contrib/jemalloc_build_global/
+contrib/jemalloc_build_registered/
 
 # /libhpx/
 /libhpx/Makefile
@@ -85,6 +87,7 @@ contrib/photon/
 /libhpx/network/Makefile
 /libhpx/network/isir/Makefile
 /libhpx/network/pwc/Makefile
+/libhpx/memory/Makefile
 /libhpx/scheduler/Makefile
 /libhpx/scheduler/arch/Makefile
 /libhpx/system/Makefile
@@ -95,41 +98,47 @@ contrib/photon/
 
 # /tests/
 /tests/.deps
-/tests/perf/perf_gas_addr_trans
-/tests/perf/perf_gas_alloc
-/tests/perf/perf_lco_allgather
-/tests/perf/perf_lco_allreduce
-/tests/perf/perf_lco_alltoall
-/tests/perf/perf_lco_chan
-/tests/perf/perf_lco_future
-/tests/perf/perf_lco_sema
-/tests/unit/test_and_lco
-/tests/unit/test_bcast
-/tests/unit/test_channels
-/tests/unit/test_call
-/tests/unit/test_collectives
-/tests/unit/test_futures
-/tests/unit/test_gencount
-/tests/unit/test_global_mem_alloc
-/tests/unit/test_lco
-/tests/unit/test_array_lco
-/tests/unit/test_user_lco
-/tests/unit/test_mem_alloc
-/tests/unit/test_memget
-/tests/unit/test_memput
-/tests/unit/test_parcel
-/tests/unit/test_sema
-/tests/unit/test_threads
-/tests/unit/test_runtime
-/tests/unit/test_datatype
-/tests/unit/test_wait
-/tests/unit/test_task
-/tests/unit/Makefile
 /tests/Makefile
 /tests/Makefile.in
+/tests/unit/Makefile
 /tests/perf/Makefile
-/tests/perf/perf_lco_netfutures
-/tests/perf/perf_lco_netfutures_msgSize
+tests/unit/thread_create
+tests/unit/call_when
+tests/unit/gas_alloc
+tests/unit/parcel_send_through
+tests/unit/lco_and_set_fail
+tests/unit/gas_global_alloc
+tests/unit/process
+tests/unit/lco_collectives
+tests/unit/lco_array
+tests/unit/lco_futures
+tests/unit/lco_channels
+tests/unit/parcel_create
+tests/unit/lco_user
+tests/unit/gas_memget
+tests/unit/parcel_send
+tests/unit/thread_continue
+tests/unit/gas_memput
+tests/unit/thread_yield
+tests/unit/lco_gencount
+tests/unit/parcel_continuation
+tests/unit/thread_cont_action
+tests/unit/bcast
+tests/unit/lco_sema
+tests/unit/lco_setget
+tests/unit/thread_gettlsid
+tests/unit/task
+tests/unit/lco_and
+tests/unit/runtime
+tests/unit/libhpx_boot
+tests/unit/parcel_send_rendezvous
+tests/perf/gas_alloc
+tests/perf/gas_addr_trans
+tests/perf/lco_sema
+tests/perf/lco_chan
+tests/perf/lco_netfutures_msgSize
+tests/perf/lco_future
+tests/perf/lco_netfutures
 
 # /docs
 /docs/doxyfile.stamp

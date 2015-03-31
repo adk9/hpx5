@@ -14,11 +14,28 @@
 #include "tests.h"
 #include <semaphore.h>
 #include <sched.h>
+#include <err.h>
+
 #include "photon.h"
+
+#if defined(linux)
+#define HAVE_SETAFFINITY
+#include <sched.h>
+#endif
+
+#ifndef CPU_SETSIZE
+#undef HAVE_SETAFFINITY
+#endif
 
 #define PHOTON_BUF_SIZE (1024*64) // 64k
 #define PHOTON_TAG UINT32_MAX
-#define SQ_SIZE 10
+#define SQ_SIZE 3000
+
+#ifdef HAVE_SETAFFINITY
+static int ncores = 1;                 /* number of CPU cores */
+static cpu_set_t cpu_set;              /* processor CPU set */
+static cpu_set_t def_set;
+#endif
 
 static int ITERS = 10000;
 
@@ -39,6 +56,7 @@ static int sizes[] = {
 
 static int DONE = 0;
 static int *recvCompT;
+static int *gwcCompT;
 static int myrank;
 static sem_t sem;
 
@@ -84,27 +102,25 @@ void *wait_ledger_completions_thread(void *arg) {
 START_TEST(test_photon_threaded_put_wc) 
 {
   printf("Starting the photon threaded put wc test\n");
-  int i, j, k, ns, val, ncores;
+  int i, j, k, ns, val;
   int rank, nproc;
+  int aff_main, aff_evq, aff_ledg;
   long t;
-  cpu_set_t def_set;
 
-  if ((ncores = sysconf(_SC_NPROCESSORS_CONF)) <= 0)
-    fprintf(stderr, "sysconf: couldn't get _SC_NPROCESSORS_CONF");
-  CPU_ZERO(&def_set);
-  for (i=0; i<ncores; i++)
-    CPU_SET(i, &def_set);
+  aff_main = aff_evq = aff_ledg = -1;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
   myrank = rank;
 
+  struct photon_buffer_t lbuf;
   struct photon_buffer_t rbuf[nproc];
   photon_rid recvReq[nproc], sendReq[nproc];
   char *send, *recv[nproc];
   pthread_t th, recv_threads[nproc];
 
   recvCompT = calloc(nproc, sizeof(int));
+  gwcCompT = calloc(nproc, sizeof(int));
 
   // only need one send buffer
   //posix_memalign((void **) &send, 8, PHOTON_BUF_SIZE*sizeof(uint8_t));
@@ -136,14 +152,50 @@ START_TEST(test_photon_threaded_put_wc)
 
   // Create a thread to wait for local completions 
   pthread_create(&th, NULL, wait_local_completion_thread, NULL);
-  sched_setaffinity(th, sizeof(cpu_set_t), &def_set);
-
+  
   // Create receive threads one per rank
   for (t=0; t<nproc; t++) {
     pthread_create(&recv_threads[t], NULL, wait_ledger_completions_thread, (void*)t);
-    sched_setaffinity(recv_threads[t], sizeof(cpu_set_t), &def_set);
   }
-  sched_setaffinity(0, sizeof(cpu_set_t), &def_set);
+  
+  // set affinity as requested
+#ifdef HAVE_SETAFFINITY
+  if ((ncores = sysconf(_SC_NPROCESSORS_CONF)) <= 0)
+    err(1, "sysconf: couldn't get _SC_NPROCESSORS_CONF");
+  CPU_ZERO(&def_set);
+  for (i=0; i<ncores; i++)
+    CPU_SET(i, &def_set);
+  if (aff_main >= 0) {
+    printf("Setting main thread affinity to core %d\n", aff_main);
+    CPU_ZERO(&cpu_set);
+    CPU_SET(aff_main, &cpu_set);
+    if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpu_set) != 0)
+      err(1, "couldn't change CPU affinity");
+  }
+  else
+    pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &def_set);
+  if (aff_evq >= 0) {
+    printf("Setting EVQ probe thread affinity to core %d\n", aff_evq);
+    CPU_ZERO(&cpu_set);
+    CPU_SET(aff_evq, &cpu_set);
+    pthread_setaffinity_np(th, sizeof(cpu_set_t), &cpu_set);
+  }
+  else
+    pthread_setaffinity_np(th, sizeof(cpu_set_t), &def_set);
+  if (aff_evq >= 0) {
+    printf("Setting LEDGER probe thread affinity to core %d\n", aff_ledg);
+    CPU_ZERO(&cpu_set);
+    CPU_SET(aff_ledg, &cpu_set);
+    for (i=0; i<nproc; i++)
+      pthread_setaffinity_np(recv_threads[i], sizeof(cpu_set_t), &cpu_set);
+  }
+  else {
+    for (i=0; i<nproc; i++)
+      pthread_setaffinity_np(recv_threads[i], sizeof(cpu_set_t), &def_set);
+  }
+
+  //pthread_setaffinity_np(th2, sizeof(cpu_set_t), &def_set);
+#endif
   
   // now we can proceed with our benchmark
   if (rank == 0)
@@ -170,7 +222,10 @@ START_TEST(test_photon_threaded_put_wc)
         for (k=0; k<ITERS; k++) {
 	  if (sem_wait(&sem) == 0) {
 	    int rc;
-	    rc = photon_put_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0xcafebabe, 0);
+	    lbuf.addr = (uintptr_t)send;
+	    lbuf.size = sizes[i];
+	    lbuf.priv = (struct photon_buffer_priv_t){0,0};
+	    rc = photon_put_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0xcafebabe, 0);
 	    if (rc == PHOTON_ERROR) {
 	      fprintf(stderr, "Error doing PWC\n");
 	      exit(1);
@@ -200,11 +255,17 @@ START_TEST(test_photon_threaded_put_wc)
         if (i && !(sizes[i] % 8)) {
           clock_gettime(CLOCK_MONOTONIC, &time_s);
           for (k=0; k<ITERS; k++) {
-              if (sem_wait(&sem) == 0) {
-                photon_get_with_completion(j, send, sizes[i], (void*)rbuf[j].addr, rbuf[j].priv, PHOTON_TAG, 0);
+	    if (sem_wait(&sem) == 0) {
+	      lbuf.addr = (uintptr_t)send;
+	      lbuf.size = sizes[i];
+	      lbuf.priv = (struct photon_buffer_priv_t){0,0};
+	      if (photon_get_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0xfacefeed, PHOTON_REQ_PWC_NO_RCE)) {
+		fprintf(stderr, "Error doing GWC\n");
+		exit(1);
               }
-          }
-        }
+	    }
+	  }
+	}
       }
 
       // clear remaining local completions
@@ -237,7 +298,7 @@ START_TEST(test_photon_threaded_put_wc)
   pthread_join(th, NULL);
 
   for (i=0; i<nproc; i++) {
-    printf("%d received %d\n", i, recvCompT[i]);
+    printf("%d received from %d: pwc_comp: %d, gwc_comp: %d\n", rank, i, recvCompT[i], gwcCompT[i]);
   }
   
   // Clean up and destroy the mutex

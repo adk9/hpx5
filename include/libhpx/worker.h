@@ -23,6 +23,7 @@
 
 /// Forward declarations.
 /// @{
+struct config;
 struct scheduler;
 struct ustack;
 /// @}
@@ -95,10 +96,11 @@ int worker_start(void)
 /// processing lightweight threads.
 ///
 /// @param       worker The worker structure for this worker thread.
+/// @param          cfg The configuration object.
 ///
 /// @returns            LIBHPX_OK or an error code if the worker failed to
 ///                     start.
-int worker_create(struct worker *worker)
+int worker_create(struct worker *worker, const struct config *cfg)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Joins a worker after scheduler_shutdown().

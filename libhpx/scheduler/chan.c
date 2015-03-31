@@ -18,17 +18,12 @@
 /// Defines a channel structure.
 
 #include <assert.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <hpx/builtins.h>
-#include "libhpx/action.h"
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+#include <libhpx/scheduler.h>
 #include "cvar.h"
 #include "lco.h"
-
 
 /// Local channel interface.
 ///
@@ -36,10 +31,26 @@
 /// buffers. It can be used to support a thread-based, point-to-point
 /// communication mechanism. An in-order channel forces a sender to
 /// wait for remote completion for sets or sends().
+/// Local channel interface.
+/// @{
+
+typedef struct node {
+  struct node  *next;
+  void       *buffer;                           // out-of place because we want
+  int           size;                           // to be able to recv it
+} _chan_node_t;
+
+
+typedef struct {
+  lco_t          lco;
+  cvar_t    nonempty;
+  _chan_node_t  *head;
+  _chan_node_t  *tail;
+} _chan_t;
 
 /// Internal actions.
 
-static int _chan_enqueue(chan_t *chan, chan_node_t *node) {
+static int _chan_enqueue(_chan_t *chan, _chan_node_t *node) {
   if (chan->tail) {
     chan->tail->next = node;
     chan->tail = node;
@@ -51,8 +62,8 @@ static int _chan_enqueue(chan_t *chan, chan_node_t *node) {
   }
 }
 
-static chan_node_t *_chan_dequeue(chan_t *chan) {
-  chan_node_t *node = chan->head;
+static _chan_node_t *_chan_dequeue(_chan_t *chan) {
+  _chan_node_t *node = chan->head;
   if (node == NULL) {
     return NULL;
   }
@@ -64,6 +75,11 @@ static chan_node_t *_chan_dequeue(chan_t *chan) {
   return node;
 }
 
+static size_t _chan_size(lco_t *lco) {
+  _chan_t *chan = (_chan_t *)lco;
+  return sizeof(*chan);
+}
+
 /// Deletes a channel and its internal buffers.
 static void _chan_fini(lco_t *lco) {
   if (!lco) {
@@ -71,19 +87,19 @@ static void _chan_fini(lco_t *lco) {
   }
 
   lco_lock(lco);
-  chan_t *c = (chan_t *)lco;
-  chan_node_t *node = NULL;
+  _chan_t *c = (_chan_t *)lco;
+  _chan_node_t *node = NULL;
   while ((node = c->head) != NULL) {
     c->head = c->head->next;
     free(node->buffer);
     free(node);
   }
   lco_fini(lco);
-  libhpx_global_free(lco);
+  global_free(lco);
 }
 
 static void _chan_error(lco_t *lco, hpx_status_t code) {
-  chan_t *chan = (chan_t *)lco;
+  _chan_t *chan = (_chan_t *)lco;
   lco_lock(&chan->lco);
   scheduler_signal_error(&chan->nonempty, code);
   lco_unlock(&chan->lco);
@@ -92,7 +108,7 @@ static void _chan_error(lco_t *lco, hpx_status_t code) {
 /// Copies the @p from pointer into channel's buffer.
 static void _chan_set(lco_t *lco, int size, const void *from) {
   // set up the node that we're going to enqueue
-  chan_node_t *node = malloc(sizeof(*node));
+  _chan_node_t *node = malloc(sizeof(*node));
   node->next = NULL;
   node->size = size;
   if (size != 0) {
@@ -103,7 +119,7 @@ static void _chan_set(lco_t *lco, int size, const void *from) {
 
   // lock the channel and enqueue the node
   lco_lock(lco);
-  chan_t *chan = (chan_t *)lco;
+  _chan_t *chan = (_chan_t *)lco;
   if (_chan_enqueue(chan, node)) {
     scheduler_signal(&chan->nonempty);
   }
@@ -117,11 +133,11 @@ static void _chan_set(lco_t *lco, int size, const void *from) {
 ///
 /// If the return value is not HPX_SUCCESS then neither @p size nor @p buffer is
 /// set.
-static hpx_status_t _chan_try_recv(chan_t *chan, int *size, void **buffer) {
+static hpx_status_t _chan_try_recv(_chan_t *chan, int *size, void **buffer) {
   lco_lock(&chan->lco);
   hpx_status_t status = cvar_get_error(&chan->nonempty);
   if (status == HPX_SUCCESS) {
-    chan_node_t *node = _chan_dequeue(chan);
+    _chan_node_t *node = _chan_dequeue(chan);
     if (!node) {
       status = HPX_LCO_CHAN_EMPTY;
     }
@@ -137,10 +153,10 @@ static hpx_status_t _chan_try_recv(chan_t *chan, int *size, void **buffer) {
 
 /// The channel recv is like a channel get, except that we don't copy out to a
 /// user supplied buffer, but instead return the buffer directly.
-static hpx_status_t _chan_recv(chan_t *chan, int *size, void **buffer) {
+static hpx_status_t _chan_recv(_chan_t *chan, int *size, void **buffer) {
   lco_lock(&chan->lco);
   hpx_status_t status = cvar_get_error(&chan->nonempty);
-  chan_node_t       *node = _chan_dequeue(chan);
+  _chan_node_t       *node = _chan_dequeue(chan);
 
   while (status == HPX_SUCCESS && !node) {
     status = scheduler_wait(&chan->lco.lock, &chan->nonempty);
@@ -170,7 +186,7 @@ static hpx_status_t _chan_recv(chan_t *chan, int *size, void **buffer) {
 static hpx_status_t _chan_get(lco_t *lco, int size, void *out) {
   int           bsize = 0;
   void        *buffer = NULL;
-  hpx_status_t status = _chan_recv((chan_t *)lco, &bsize, &buffer);
+  hpx_status_t status = _chan_recv((_chan_t *)lco, &bsize, &buffer);
 
   if (status == HPX_SUCCESS) {
     dbg_assert(size == bsize);
@@ -185,9 +201,9 @@ static hpx_status_t _chan_get(lco_t *lco, int size, void *out) {
 // doesn't really provide any useful information.
 static hpx_status_t _chan_wait(lco_t *lco) {
   lco_lock(lco);
-  chan_t        *chan = (chan_t *)lco;
+  _chan_t        *chan = (_chan_t *)lco;
   hpx_status_t status = cvar_get_error(&chan->nonempty);
-  chan_node_t   *node = chan->head;
+  _chan_node_t   *node = chan->head;
 
   while (status == HPX_SUCCESS && !node) {
     status = scheduler_wait(&chan->lco.lock, &chan->nonempty);
@@ -199,7 +215,7 @@ static hpx_status_t _chan_wait(lco_t *lco) {
 }
 
 /// Initialize the channel
-void chan_init(chan_t *c) {
+static void _chan_init(_chan_t *c) {
   static const lco_class_t vtable = {
     .on_fini     = _chan_fini,
     .on_error    = _chan_error,
@@ -209,7 +225,8 @@ void chan_init(chan_t *c) {
     .on_release  = NULL,
     .on_wait     = _chan_wait,
     .on_attach   = NULL,
-    .on_reset    = NULL
+    .on_reset    = NULL,
+    .on_size     = _chan_size
   };
 
   lco_init(&c->lco, &vtable);
@@ -256,14 +273,11 @@ static HPX_ACTION(_chan_try_recv_proxy, void *args) {
 
 
 /// Initialize a block of futures.
-static HPX_PINNED(_block_init, uint32_t *args) {
-  chan_t *channels = hpx_thread_current_local_target();
-  dbg_assert(channels);
-
+static HPX_PINNED(_block_init, _chan_t *channels, uint32_t *args) {
   // sequentially initialize each channel
   uint32_t block_size = args[0];
   for (uint32_t i = 0; i < block_size; ++i) {
-    chan_init(&channels[i]);
+    _chan_init(&channels[i]);
   }
 
   return HPX_SUCCESS;
@@ -290,9 +304,9 @@ static HPX_PINNED(_block_init, uint32_t *args) {
 ///
 /// @returns the global address of the allocated channel
 hpx_addr_t hpx_lco_chan_new(void) {
-  chan_t *local = libhpx_global_malloc(sizeof(chan_t));
+  _chan_t *local = global_malloc(sizeof(_chan_t));
   assert(local);
-  chan_init(local);
+  _chan_init(local);
   return lva_to_gva(local);
 }
 
@@ -320,7 +334,7 @@ void hpx_lco_chan_send_inorder(hpx_addr_t chan, int size, const void *value,
 /// of a future because we don't know the size that we're receiving, so the
 /// channel needs to allocate the buffer internally on it's own.
 hpx_status_t hpx_lco_chan_recv(hpx_addr_t chan, int *size, void **buffer) {
-  chan_t *c = NULL;
+  _chan_t *c = NULL;
   hpx_status_t status = HPX_SUCCESS;
   if (hpx_gas_try_pin(chan, (void**)&c)) {
     status = _chan_recv(c, size, buffer);
@@ -343,7 +357,7 @@ hpx_status_t hpx_lco_chan_recv(hpx_addr_t chan, int *size, void **buffer) {
 /// we don't know size) and use the _chan_try_recv action to get the remote
 /// value.
 hpx_status_t hpx_lco_chan_try_recv(hpx_addr_t chan, int *size, void **buffer) {
-  chan_t          *c = NULL;
+  _chan_t          *c = NULL;
   hpx_status_t status = HPX_SUCCESS;
   if (hpx_gas_try_pin(chan, (void**)&c)) {
     status = _chan_try_recv(c, size, buffer);
@@ -366,9 +380,9 @@ hpx_status_t hpx_lco_chan_try_recv(hpx_addr_t chan, int *size, void **buffer) {
 hpx_addr_t hpx_lco_chan_array_new(int n, int size, int chans_per_block) {
   // perform the global allocation
   uint32_t     blocks   = ceil_div_32(n, chans_per_block);;
-  uint32_t chan_bytes   = sizeof(chan_t) + size;
+  uint32_t chan_bytes   = sizeof(_chan_t) + size;
   uint32_t  block_bytes = chans_per_block * chan_bytes;
-  hpx_addr_t       base = hpx_gas_global_alloc(blocks, block_bytes);
+  hpx_addr_t       base = hpx_gas_alloc_cyclic(blocks, block_bytes, 0);
 
   // for each rank, send an initialization message
   uint32_t args[] = { chans_per_block, size };
@@ -388,9 +402,9 @@ hpx_addr_t hpx_lco_chan_array_new(int n, int size, int chans_per_block) {
 
 
 hpx_addr_t hpx_lco_chan_array_at(hpx_addr_t array, int i, int size, int bsize) {
-  uint32_t chan_bytes = sizeof(chan_t) + size;
+  uint32_t chan_bytes = sizeof(_chan_t) + size;
   uint32_t  block_bytes = bsize * chan_bytes;
-  return hpx_addr_add(array, i * (sizeof(chan_t) + size), block_bytes);
+  return hpx_addr_add(array, i * (sizeof(_chan_t) + size), block_bytes);
 }
 
 
@@ -413,3 +427,31 @@ hpx_status_t hpx_lco_chan_array_select(int n, hpx_addr_t channels[], int *i,
   return status;
 }
 
+/// Initialize a block of array of lco.
+static HPX_PINNED(_block_local_init, void *lco, uint32_t *args) {
+  for (int i = 0; i < args[0]; i++) {
+    void *addr = (void *)((uintptr_t)lco + i * (sizeof(_chan_t) + args[1]));
+    _chan_init(addr);
+  }
+  return HPX_SUCCESS;
+}
+
+/// Allocate an array of chan local to the calling locality.
+/// @param          n The (total) number of futures to allocate
+/// @param       size The size of each future's value 
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_chan_local_array_new(int n, int size) {
+  uint32_t lco_bytes = sizeof(_chan_t) + size;
+  dbg_assert(n * lco_bytes < UINT32_MAX);
+  uint32_t  block_bytes = n * lco_bytes;
+  hpx_addr_t base = hpx_gas_alloc_local(block_bytes, 0);
+
+  // for each block, initialize the future.
+  uint32_t args[] = {n, size};
+  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &args, sizeof(args));
+  dbg_check(e, "call of _block_init_action failed\n");
+
+  return base;
+}
+ 

@@ -14,7 +14,9 @@
 #define INSTRUMENTATION_H
 
 #include <stdint.h>
+#include <hpx/attributes.h>
 #include <hpx/builtins.h>
+#include <libhpx/locality.h> // for here object
 
 struct config;
 
@@ -47,7 +49,6 @@ void inst_vtrace(int class, int n, int id, ...)
 typedef enum {
   HPX_INST_CLASS_PARCEL = 0,
   HPX_INST_CLASS_NETWORK_PWC,
-
   INST_SCHED,
 
   HPX_INST_NUM_CLASSES
@@ -69,7 +70,7 @@ typedef enum {
   HPX_INST_EVENT_NETWORK_PWC_SEND,
   HPX_INST_EVENT_NETWORK_PWC_RECV,
 
-  INST_SCHED_TRANSFER,
+  INST_SCHED_WQSIZE,
 
   HPX_INST_NUM_EVENTS
 } hpx_inst_event_type_t;
@@ -82,14 +83,18 @@ static const char * const INST_EVENT_TO_STRING[] = {
   "EVENT_PARCEL_END",
   "EVENT_NETWORK_PWC_SEND",
   "EVENT_NETWORK_PWC_RECV",
-  "INST_SCED_TRANSFER"
+  "WQSIZE"
 };
 
 static const int INST_OFFSETS[] = {
   HPX_INST_EVENT_PARCEL_CREATE,
   HPX_INST_EVENT_NETWORK_PWC_SEND,
-  INST_SCHED_TRANSFER,
+  INST_SCHED_WQSIZE,
   HPX_INST_NUM_EVENTS
 };
+
+static inline bool inst_trace_class(int class) {
+  return config_trace_classes_isset(here->config, 1 << class);
+}
 
 #endif

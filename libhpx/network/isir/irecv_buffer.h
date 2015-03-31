@@ -13,25 +13,24 @@
 #ifndef LIBHPX_NETWORK_ISIR_IRECV_BUFFER_H
 #define LIBHPX_NETWORK_ISIR_IRECV_BUFFER_H
 
-#include <mpi.h>
 #include <hpx/hpx.h>
 
+struct isir_xport;
 
 typedef struct {
-  uint32_t limit;
-  uint32_t size;
-  uint32_t n;
-  uint32_t UNUSED;
-  MPI_Request *requests;
-  MPI_Status  *statuses;
-  int              *out;
+  struct isir_xport *xport;
+  uint32_t           limit;
+  uint32_t            size;
+  uint32_t               n;
+  uint32_t          UNUSED;
+  void           *requests;
+  void           *statuses;
+  int                 *out;
   struct {
     int              tag;
     hpx_parcel_t *parcel;
-    hpx_addr_t   handler;
   } *records;
 } irecv_buffer_t;
-
 
 /// Initialize an irecv buffer.
 ///
@@ -40,9 +39,9 @@ typedef struct {
 /// @param        limit The limit of the number of active requests.
 ///
 /// @returns            LIBHPX_OK or an error code.
-int irecv_buffer_init(irecv_buffer_t *buffer, uint32_t size, uint32_t limit)
+int irecv_buffer_init(irecv_buffer_t *buffer, struct isir_xport *xport,
+                      uint32_t size, uint32_t limit)
   HPX_INTERNAL HPX_NON_NULL(1);
-
 
 /// Finalize an irecv buffer.
 ///
@@ -52,7 +51,6 @@ int irecv_buffer_init(irecv_buffer_t *buffer, uint32_t size, uint32_t limit)
 /// @param       buffer The buffer to finalize.
 void irecv_buffer_fini(irecv_buffer_t *buffer)
   HPX_INTERNAL HPX_NON_NULL(1);
-
 
 /// Progress an irecv buffer.
 ///
@@ -66,6 +64,5 @@ void irecv_buffer_fini(irecv_buffer_t *buffer)
 ///                     the parcels that were received in this epoch.
 hpx_parcel_t *irecv_buffer_progress(irecv_buffer_t *buffer)
   HPX_INTERNAL HPX_NON_NULL(1);
-
 
 #endif // LIBHPX_NETWORK_ISIR_IRECV_BUFFER_H

@@ -15,75 +15,76 @@
 #endif
 
 /// @file libhpx/network/network.c
-#include "libhpx/config.h"
-#include "libhpx/debug.h"
-#include "libhpx/network.h"
-#include "libhpx/transport.h"
+#include <libhpx/boot.h>
+#include <libhpx/config.h>
+#include <libhpx/debug.h>
+#include <libhpx/network.h>
 #include "isir/isir.h"
 #include "pwc/pwc.h"
 #include "smp.h"
 
-static network_t *_default(config_t *cfg, struct boot *boot, struct gas *gas,
-			   int nrx) {
+static network_t *_default(const config_t *cfg, struct boot *boot,
+                           struct gas *gas) {
   network_t *network = NULL;
-#ifdef HAVE_PHOTON
-  network = network_pwc_funneled_new(cfg, boot, gas, nrx);
-  if (network) {
-    return network;
-  }
-#endif
-  
-#ifdef HAVE_MPI
-  network =  network_isir_funneled_new(cfg, gas, nrx);
-  if (network) {
-    return network;
-  }
-#endif
-  
-  return network_smp_new();
-}
-
-int network_supported_transport(transport_t *t, const int tports[], int n) {
-  int i;
-  for (i=0; i<n; i++) {
-    if (t->type == tports[i]) {
-      return 0;
+  if (boot_n_ranks(boot) == 1) {
+    network = network_smp_new(cfg, boot);
+    if (network) {
+      return network;
     }
   }
-  return 1;
+
+#ifdef HAVE_PHOTON
+  network = network_pwc_funneled_new(cfg, boot, gas);
+  if (network) {
+    return network;
+  }
+#endif
+
+#ifdef HAVE_MPI
+  network =  network_isir_funneled_new(cfg, boot, gas);
+  if (network) {
+    return network;
+  }
+#endif
+
+  network = network_smp_new(cfg, boot);
+  return network;
 }
 
-network_t *network_new(config_t *cfg, struct boot *boot, struct gas *gas,
-                       int nrx) {
+network_t *network_new(const config_t *cfg, struct boot *boot, struct gas *gas)
+{
   network_t *network = NULL;
-  
+
   switch (cfg->network) {
    case HPX_NETWORK_PWC:
-#ifdef HAVE_PHOTON
-    network = network_pwc_funneled_new(cfg, boot, gas, nrx);
+#ifdef HAVE_NETWORK
+    network = network_pwc_funneled_new(cfg, boot, gas);
 #else
-    dbg_error("PWC network not supported in current configuration.\n");
+    log_cfg("network support not enabled\n");
 #endif
     break;
+
    case HPX_NETWORK_ISIR:
-#ifdef HAVE_MPI
-    network = network_isir_funneled_new(cfg, gas, nrx);
+#ifdef HAVE_NETWORK
+    network = network_isir_funneled_new(cfg, boot, gas);
 #else
-    dbg_error("ISIR network not supported in current configuration.\n");
+    log_cfg("network support not enabled\n");
 #endif
     break;
+
    case HPX_NETWORK_SMP:
-    network = network_smp_new();
+    network = network_smp_new(cfg, boot);
     break;
+
    default:
-    network = _default(cfg, boot, gas, nrx);
+    network = _default(cfg, boot, gas);
     break;
   }
-    
+
   if (!network && (cfg->network == HPX_NETWORK_DEFAULT)) {
-    network = _default(cfg, boot, gas, nrx);
+    network = _default(cfg, boot, gas);
   }
-  
+
   if (!network) {
     dbg_error("failed to initialize the network\n");
   }

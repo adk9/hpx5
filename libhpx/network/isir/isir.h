@@ -14,18 +14,18 @@
 #define LIBHPX_NETWORK_ISIR_ISIR_H
 
 #include <hpx/attributes.h>
+#include <libhpx/network.h>
 
 /// Forward declarations.
 /// @{
-struct gas;
-struct network;
+struct boot;
 struct config;
+struct gas;
 /// @}
 
 /// Allocate a new Isend/Irecv funneled network.
-struct network *network_isir_funneled_new(struct config *cfg, struct gas *gas,
-					  int nrx)
-  HPX_NON_NULL(1) HPX_MALLOC HPX_INTERNAL;
-
+network_t *network_isir_funneled_new(const struct config *cfg,
+                                     struct boot *boot, struct gas *gas)
+  HPX_MALLOC HPX_INTERNAL;
 
 #endif

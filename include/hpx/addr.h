@@ -19,15 +19,12 @@
 /// An HPX global address.
 typedef uint64_t hpx_addr_t;
 
-
 /// The equivalent of NULL for global memory
-#define HPX_NULL ((hpx_addr_t)0u)
-
+static const hpx_addr_t HPX_NULL = 0;
 
 /// An address representing this locality in general, that is suitable for use
 /// as a parcel target.
 extern hpx_addr_t HPX_HERE;
-
 
 /// An address representing some other locality, that is suitable for use as a
 /// parcel target.
@@ -37,7 +34,6 @@ extern hpx_addr_t HPX_HERE;
 /// @returns An address representing that locality.
 hpx_addr_t HPX_THERE(uint32_t i);
 
-
 /// Perform global address displacement arithmetic.
 ///
 /// Get the address of @p bytes into memory with address @p addr. As with normal
@@ -45,7 +41,7 @@ hpx_addr_t HPX_THERE(uint32_t i);
 /// associated with the same allocation as @p addr, or one-off-the-end if the
 /// allocation was an array. The @p bsize must correspond to the block size
 /// specified during the initial allocation (or the size of the object for
-/// allocations performed by hpx_gas_alloc()).
+/// allocations performed by hpx_gas_alloc_local()).
 ///
 /// @param     addr A valid  global address.
 /// @param    bytes An offset in bytes into the memory referenced by @p addr.
@@ -54,14 +50,13 @@ hpx_addr_t HPX_THERE(uint32_t i);
 /// @returns The address of the memory at offset @p bytes from @p addr.
 hpx_addr_t hpx_addr_add(hpx_addr_t addr, int64_t bytes, uint32_t bsize);
 
-
 /// Perform global address distance arithmetic.
 ///
 /// Computes the (signed) distance between @p lhs and @p rhs, in bytes. As with
 /// standard C pointer arithmetic, both @p lhs and @p rhs must be part of the
 /// same allocation. Furthermore, @p bsize must correspond to the block size
 /// specified during the initial allocation (or the size of the object for
-/// allocations performed by hpx_gas_alloc()).
+/// allocations performed by hpx_gas_alloc_local()).
 ///
 /// @param      lhs The "left-hand-size" address for the computation.
 /// @param      rhs The "right-hand-size" address for the computation.
@@ -72,6 +67,5 @@ hpx_addr_t hpx_addr_add(hpx_addr_t addr, int64_t bytes, uint32_t bsize);
 ///          - 0 if @p lhs == @p rhs
 ///          - negative if @p lhs < @p rhs
 int64_t hpx_addr_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize);
-
 
 #endif

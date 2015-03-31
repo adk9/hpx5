@@ -47,12 +47,11 @@ AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
 AC_ARG_ENABLE([parallel-config],
   [AS_HELP_STRING([--enable-parallel-config],
                   [Enable parallel configuration of contribs @<:@default=no@:>@])],
-  [trap 'kill $(jobs -p)' SIGINT], [enable_parallel_config=no])
+  [trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM], [enable_parallel_config=no])
 
 # Initialize contribs
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
 HPX_CONTRIB_LIBFFI([contrib/libffi], [hpx_])
-HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [libhpx_global_], [_hpx])
 HPX_CONTRIB_VALGRIND([contrib/valgrind], [hpx_])
 HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [hpx_])
 
@@ -90,7 +89,9 @@ AC_ARG_ENABLE([jemalloc],
   [AS_HELP_STRING([--enable-jemalloc],
                   [Enable using of jemalloc as the default allocator @<:@default=no@:>@])],
   [], [enable_jemalloc=no])
-AS_IF([test "x$enable_jemalloc" != xno], [HPX_CONTRIB_JEMALLOC_AS_MALLOC])
+AS_IF([test "x$enable_jemalloc" != xno],
+  [HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [], [_local])
+   AC_DEFINE([HAVE_JEMALLOC], [1], [We have jemalloc support for malloc/free/etc])]) 
   
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug],
@@ -138,43 +139,42 @@ HPX_WITH_PKG([pmi],[cray-pmi],[build with support for PMI],[no],[PMI])
 
 AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray PMI extensions]))
 HPX_WITH_PKG([hugetlbfs],[hugetlbfs],[build with hugepages for heap],[no],[HUGETLBFS])
-AS_IF([test "x$with_hugetlbfs" != xno],
-  [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [0], [Enable huge pages heap allocation])],
-  [AS_CASE([$host_os],
-    [darwin*], [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANON], [Disable huge pages heap allocation])],
-               [AC_DEFINE([HPX_HUGETLBFS_MAP_ANON], [MAP_ANONYMOUS], [Disable huge pages heap allocation])])])
-
 HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[no],[MPI])
 HPX_WITH_PKG([portals],[portals],[build with Portals networking],[no],[PORTALS])
 
 AC_ARG_ENABLE([photon],
  [AS_HELP_STRING([--enable-photon], [build with Photon networking @<:@default=no@:>@])], [],
  [enable_photon=no])
+
 AS_IF([test "x$enable_photon" != xno],
-  [HPX_CONTRIB_PHOTON([contrib/photon], [hpx_])],
-  [hpx_have_photon=no])
-AM_CONDITIONAL([BUILD_PHOTON], [test "x$enable_external_photon" == xno])
-AM_CONDITIONAL([HAVE_PHOTON], [test "x$hpx_have_photon" != xno])
+ [HPX_CONTRIB_PHOTON([contrib/photon], [hpx_])
+  HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [libhpx_registered_], [_registered])
+  AC_DEFINE([HAVE_JEMALLOC_REGISTERED], [1], [We have a registered memory manager])],
+ [hpx_have_photon=no])
 
 AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno],
-  [AC_DEFINE([HAVE_NETWORK], [1], [Enable networking support])
-   TESTS_CMD='mpirun -np 2'],
-  [TESTS_CMD=''])
+ [enable_network=yes
+  AC_DEFINE([HAVE_NETWORK], [1], [We have a network])
+  AC_DEFINE([HAVE_JEMALLOC_GLOBAL], [1], [We have global allocation])
+  HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [libhpx_global_], [_global])
+  TESTS_CMD='mpirun -np 2'],
+ [enable_network=no
+  TESTS_CMD=''])
 
 AC_ARG_WITH([tests-cmd],
-  [AS_HELP_STRING([--with-tests-cmd], [Use this command for running the test harness @<:@default=mpirun -np 2@:>@])],
-  [TESTS_CMD="$with_tests_cmd"], [])
+ [AS_HELP_STRING([--with-tests-cmd], [Use this command for running the test harness @<:@default=mpirun -np 2@:>@])],
+ [TESTS_CMD="$with_tests_cmd"], [])
 AC_SUBST(TESTS_CMD)
 
 AC_ARG_WITH([doxygen],
-  [AS_HELP_STRING([--with-doxygen], [build documentation @<:@default=no@:>@])],
-  [with_doxygen=yes], [with_doxygen=no])
+ [AS_HELP_STRING([--with-doxygen], [build documentation @<:@default=no@:>@])],
+ [with_doxygen=yes], [with_doxygen=no])
 AS_IF([test "x$with_doxygen" != xno],
-  [AC_CHECK_PROGS([DOXYGEN], [doxygen])])
+ [AC_CHECK_PROGS([DOXYGEN], [doxygen])])
 AS_IF([test "x$DOXYGEN" != x],
-  [enable_docs=yes],
-  [AC_MSG_WARN([Doxygen not found, disabling source documentation build.])
-   enable_docs=no])
+ [enable_docs=yes],
+ [AC_MSG_WARN([Doxygen not found, disabling source documentation build.])
+  enable_docs=no])
 
 # ---------------------------------------------------------------------------
 # Perform host-specific work here.
@@ -208,7 +208,12 @@ AM_CONDITIONAL([OS_LINUX], [[[[ "x$host_os" = xlinux* ]]]])
 AM_CONDITIONAL([OS_DARWIN], [[[[ "x$host_os" = xdarwin* ]]]])
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([CPU_ARM], [test "x$host_cpu" = xarmv7l])
-AM_CONDITIONAL([HAVE_NETWORK], [test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno])
+
+AM_CONDITIONAL([HAVE_PHOTON], [test "x$hpx_have_photon" != xno])
+AM_CONDITIONAL([HAVE_NETWORK], [test "x$enable_network" != xno])
+AM_CONDITIONAL([BUILD_JEMALLOC_GLOBAL], [test "x$enable_network" != xno])
+AM_CONDITIONAL([BUILD_JEMALLOC_REGISTERED], [test "x$enable_photon" != xno])
+AM_CONDITIONAL([BUILD_PHOTON], [test "x$enable_external_photon" == xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
 AM_CONDITIONAL([ENABLE_TUTORIAL], [test "x$enable_tutorial" != xno])
 AM_CONDITIONAL([ENABLE_JEMALLOC], [test "x$enable_jemalloc" != xno])
@@ -223,8 +228,8 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # -----------------------------------------------------------------------------
 # Finalize flags
 # -----------------------------------------------------------------------------
-hpx_extra_cppflags="$hpx_pe_env_cppflags $HPX_JEMALLOC_CPPFLAGS $HPX_PHOTON_CPPFLAGS $HPX_LIBFFI_CPPFLAGS $HPX_HWLOC_CPPFLAGS $hpx_valgrind_cppflags $hpx_uthash_cppflags"
-hpx_extra_cflags="$hpx_pe_env_cflags $HPX_JEMALLOC_CFLAGS $HPX_LIBFFI_CFLAGS $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS $hpx_valgrind_cflags $hpx_uthash_cflags"
+hpx_extra_cppflags="$hpx_pe_env_cppflags $hpx_jemalloc_cppflags $HPX_PHOTON_CPPFLAGS $HPX_LIBFFI_CPPFLAGS $HPX_HWLOC_CPPFLAGS $hpx_valgrind_cppflags $hpx_uthash_cppflags"
+hpx_extra_cflags="$hpx_pe_env_cflags $HPX_LIBFFI_CFLAGS $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS $hpx_valgrind_cflags $hpx_uthash_cflags"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
 hpx_extra_libs="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la $PTHREAD_LIBS $hpx_pe_env_libs"
 AS_IF([test "x$enable_pedantic" != xno],
@@ -258,7 +263,7 @@ AC_CONFIG_FILES([
   libhpx/Makefile
   libhpx/boot/Makefile
   libhpx/gas/Makefile
-  libhpx/transport/Makefile
+  libhpx/memory/Makefile
   libhpx/network/Makefile
   libhpx/network/isir/Makefile
   libhpx/network/pwc/Makefile

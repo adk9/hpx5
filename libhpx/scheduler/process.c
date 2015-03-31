@@ -46,11 +46,11 @@ static bool _is_tracked(_process_t *p) {
   return (p->termination != HPX_NULL);
 }
 
-
 /// Remote action to delete a process.
 static void _free(_process_t *p) {
-  if (!p)
+  if (!p) {
     return;
+  }
 
   cr_bitmap_delete(p->debt);
 
@@ -58,7 +58,6 @@ static void _free(_process_t *p) {
   // if (_is_tracked(p))
   //   hpx_lco_set(p->termination, 0, NULL, HPX_NULL, HPX_NULL);
 }
-
 
 /// Initialize a process.
 static void _init(_process_t *p, hpx_addr_t termination) {
@@ -68,15 +67,7 @@ static void _init(_process_t *p, hpx_addr_t termination) {
   p->termination = termination;
 }
 
-
-typedef struct {
-  hpx_addr_t   target;
-  hpx_action_t action;
-  hpx_addr_t   result;
-  char         data[];
-} _call_args_t;
-
-static HPX_ACTION(_proc_call, _call_args_t *args) {
+static HPX_ACTION(_proc_call, hpx_parcel_t *arg) {
   hpx_addr_t process = hpx_thread_current_target();
   _process_t *p = NULL;
   if (!hpx_gas_try_pin(process, (void**)&p)) {
@@ -87,43 +78,36 @@ static HPX_ACTION(_proc_call, _call_args_t *args) {
   hpx_gas_unpin(process);
 
   hpx_pid_t pid = hpx_process_getpid(process);
-  uint32_t len = hpx_thread_current_args_size() - sizeof(*args);
-  hpx_parcel_t *parcel = parcel_create(args->target, args->action, args->data,
-                                       len, args->result,
-                                       hpx_lco_set_action, pid, true);
-  if (!parcel) {
-    dbg_error("process: call_action failed.\n");
-  }
-  parcel_set_credit(parcel, credit);
-
+  hpx_parcel_t *parcel = hpx_parcel_acquire(NULL, parcel_size(arg));
+  memcpy(parcel, arg, parcel_size(arg));
+  hpx_parcel_set_pid(parcel, pid);
+  parcel->credit = credit;
   hpx_parcel_send_sync(parcel);
   return HPX_SUCCESS;
 }
 
-
-static HPX_PINNED(_proc_delete, void *args) {
-  _process_t *p = hpx_thread_current_local_target();
-  assert(p);
+static HPX_PINNED(_proc_delete, _process_t *p, void *args) {
   _free(p);
   return HPX_SUCCESS;
 }
 
-
-static HPX_PINNED(_proc_return_credit, uint64_t *args) {
-  _process_t *p = hpx_thread_current_local_target();
-  assert(p);
-
+static HPX_PINNED(_proc_return_credit, _process_t *p, uint64_t *args) {
   // add credit to the credit-accounting bitmap
-  if (cr_bitmap_add_and_test(p->debt, *args)) {
-    //log("detected quiescence...\n");
-    uint64_t total_credit = sync_addf(&p->credit, -1, SYNC_ACQ_REL);
-    assert(total_credit == 0);
-    assert(_is_tracked(p));
-    hpx_lco_set(p->termination, 0, NULL, HPX_NULL, HPX_NULL);
+  uint64_t debt = cr_bitmap_add_and_test(p->debt, *args);
+  for (;;) {
+    uint64_t credit = sync_load(&p->credit, SYNC_ACQUIRE);
+    if ((credit != 0) && ~(debt | ((1UL << (64-credit)) - 1)) == 0) {
+      // log("detected quiescence...\n");
+      if (!sync_cas(&p->credit, credit, -credit, SYNC_RELEASE, SYNC_RELAXED)) {
+        continue;
+      }
+      dbg_assert(_is_tracked(p));
+      hpx_lco_set(p->termination, 0, NULL, HPX_NULL, HPX_NULL);
+    }
+    break;
   }
   return HPX_SUCCESS;
 }
-
 
 int process_recover_credit(hpx_parcel_t *p) {
   hpx_addr_t process = p->pid;
@@ -135,24 +119,24 @@ int process_recover_credit(hpx_parcel_t *p) {
     return HPX_SUCCESS;
   }
 
-  hpx_parcel_t *pp = parcel_create(process, _proc_return_credit, &p->credit,
-                                   sizeof(p->credit), HPX_NULL, HPX_ACTION_NULL,
-                                   0, false);
+  hpx_parcel_t *pp = parcel_new(process, _proc_return_credit, 0, 0, 0,
+                                &p->credit, sizeof(p->credit));
   if (!pp) {
     dbg_error("parcel_recover_credit failed.\n");
   }
-  parcel_set_credit(pp, 0);
+  pp->credit = 0;
 
   hpx_parcel_send_sync(pp);
   return HPX_SUCCESS;
 }
 
-
 hpx_addr_t hpx_process_new(hpx_addr_t termination) {
-  if (termination == HPX_NULL)
+  if (termination == HPX_NULL) {
     return HPX_NULL;
+  }
+
   _process_t *p;
-  hpx_addr_t process = hpx_gas_alloc(sizeof(*p));
+  hpx_addr_t process = hpx_gas_alloc_local(sizeof(*p), 0);
   if (!hpx_gas_try_pin(process, (void**)&p)) {
     dbg_error("Could not pin newly allocated process.\n");
   }
@@ -161,36 +145,40 @@ hpx_addr_t hpx_process_new(hpx_addr_t termination) {
   return process;
 }
 
-
 hpx_pid_t hpx_process_getpid(hpx_addr_t process) {
   return (hpx_pid_t)process;
 }
 
+int _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
+                      hpx_addr_t result, int n, ...) {
+  va_list vargs;
+  va_start(vargs, n);
+  hpx_parcel_t *parcel = action_parcel_create(addr, action, result,
+                                              hpx_lco_set_action, n, &vargs);
+  va_end(vargs);
 
-int hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
-                     const void *args, size_t len, hpx_addr_t result)
-{
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, len + sizeof(_call_args_t));
-  hpx_parcel_set_target(p, process);
-  hpx_parcel_set_action(p, _proc_call);
-  hpx_parcel_set_pid(p, 0);
-  parcel_set_credit(p, 0);
-
-  _call_args_t *call_args = (_call_args_t *)hpx_parcel_get_data(p);
-  call_args->result = result;
-  call_args->target = addr;
-  call_args->action = action;
-  memcpy(&call_args->data, args, len);
-
+  hpx_addr_t sync = hpx_lco_future_new(0);
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, parcel_size(parcel));
+  p->target = process;
+  p->action = _proc_call;
+  p->c_target = sync;
+  p->c_action = hpx_lco_set_action;
+  hpx_parcel_set_data(p, parcel, parcel_size(parcel));
+  p->pid = 0;
+  p->credit = 0;
   hpx_parcel_send_sync(p);
+
+  hpx_parcel_release(parcel);
+  hpx_lco_wait(sync);
+  hpx_lco_delete(sync, HPX_NULL);
   return HPX_SUCCESS;
 }
 
-
-/// Deletes a process.
+/// Delete a process.
 void hpx_process_delete(hpx_addr_t process, hpx_addr_t sync) {
-  if (process == HPX_NULL)
+  if (process == HPX_NULL) {
     return;
+  }
 
   hpx_call_sync(process, _proc_delete, NULL, 0, NULL, 0);
   hpx_gas_free(process, sync);

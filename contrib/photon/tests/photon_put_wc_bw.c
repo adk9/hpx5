@@ -44,6 +44,7 @@ START_TEST (test_photon_test_put_wc_bw_bench)
   uint64_t num_bytes_sent;
   int rank, size, prev, next;
   int ret;
+  struct photon_buffer_t lbuf;
   struct photon_buffer_t rbuf;
   fprintf(detailed_log, "Starting the photon put with completion bandwidth benchmark test\n");
 
@@ -100,7 +101,10 @@ START_TEST (test_photon_test_put_wc_bw_bench)
     while(num_bytes_sent < MYBUFSIZE) {
       if (send_count < SQ_SIZE) {
         // put directly into that recv buffer
-        photon_put_with_completion(prev, s_buf, k, (void*)rbuf.addr, rbuf.priv, PHOTON_TAG, 0xcafebabe, 0);
+	lbuf.addr = (uintptr_t)s_buf;
+	lbuf.size = k;
+	lbuf.priv = (struct photon_buffer_priv_t){0,0};
+        photon_put_with_completion(prev, k, &lbuf, &rbuf, PHOTON_TAG, 0xcafebabe, 0);
         send_count++;
         num_bytes_sent+=k;
       }

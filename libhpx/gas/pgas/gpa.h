@@ -19,29 +19,24 @@
 #include <stdint.h>
 #include <hpx/hpx.h>
 
+// the number of bits for each part of the address
+#define     GPA_PE_BITS (16)
+#define   GPA_CORE_BITS (8)
+#define GPA_OFFSET_BITS (8 * sizeof(hpx_addr_t) - GPA_PE_BITS - GPA_CORE_BITS)
 
-#define     GPA_PE_BITS  (16)
-#define   GPA_CORE_BITS  (8)
-#define GPA_OFFSET_BITS  (8 * sizeof(hpx_addr_t) - GPA_PE_BITS - GPA_CORE_BITS)
-#ifdef __ARMEL__
-#define     GPA_PE_MASK  ((uint64_t)UINT32_MAX << GPA_OFFSET_BITS)
-#else
-#define     GPA_PE_MASK  (UINTPTR_MAX << GPA_OFFSET_BITS)
-#endif
-#define GPA_OFFSET_MASK  (~(GPA_PE_MASK))
+// shift values for the three parts of the gpa
+#define     GPA_PE_SHIFT (GPA_CORE_BITS + GPA_OFFSET_BITS)
+#define GPA_OFFSET_SHIFT (0)
+
+// masks to clobber bits of the address (use with &)
+#define      GPA_PE_MASK (UINT64_MAX << GPA_OFFSET_BITS)
+#define  GPA_OFFSET_MASK (~(GPA_PE_MASK))
 #define GPA_MAX_LG_BSIZE (sizeof(uint32_t)*8)
 
 /// Extract the locality from a gpa.
 static inline uint32_t pgas_gpa_to_rank(hpx_addr_t gpa) {
-  return gpa >> GPA_OFFSET_BITS;
+  return (gpa & GPA_PE_MASK) >> GPA_PE_SHIFT;
 }
-
-
-/// Extract the core id from a global physical address.
-static inline uint32_t pgas_gpa_to_core(hpx_addr_t gpa) {
-  return (gpa << GPA_PE_BITS) >> (GPA_CORE_BITS + GPA_OFFSET_BITS);
-}
-
 
 /// Extract the heap offset of a gpa, given the number of ranks.
 ///
@@ -54,9 +49,8 @@ static inline uint32_t pgas_gpa_to_core(hpx_addr_t gpa) {
 /// @returns            The offset within the global heap that corresponds to
 ///                     the address.
 static inline uint64_t pgas_gpa_to_offset(hpx_addr_t gpa) {
-  return gpa & GPA_OFFSET_MASK;
+  return (gpa & GPA_OFFSET_MASK) >> GPA_OFFSET_SHIFT;
 }
-
 
 /// Create a global physical address from a locality and heap offset pair.
 ///
@@ -67,9 +61,10 @@ static inline uint64_t pgas_gpa_to_offset(hpx_addr_t gpa) {
 ///                     locality.
 static inline hpx_addr_t pgas_offset_to_gpa(uint32_t locality, uint64_t offset)
 {
-  return (((uint64_t)locality) << GPA_OFFSET_BITS) + (offset & GPA_OFFSET_MASK);
+  uint64_t pe = (((uint64_t)locality) << GPA_PE_SHIFT) & GPA_PE_MASK;
+  uint64_t off = (offset << GPA_OFFSET_SHIFT) & GPA_OFFSET_MASK;
+  return pe + off;
 }
-
 
 /// Compute the (signed) distance, in bytes, between two global addresses.
 ///
@@ -84,12 +79,10 @@ static inline int64_t pgas_gpa_sub(hpx_addr_t lhs, hpx_addr_t rhs) {
     return (lhs - rhs);
 }
 
-
 /// Compute standard address arithmetic on the global address.
 static inline hpx_addr_t pgas_gpa_add(hpx_addr_t gpa, int64_t bytes) {
   return gpa + bytes;
 }
-
 
 /// Compute the (signed) distance, in bytes, between two global addresses from a
 /// cyclic allocation.
@@ -110,7 +103,6 @@ static inline hpx_addr_t pgas_gpa_add(hpx_addr_t gpa, int64_t bytes) {
 int64_t pgas_gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize)
   HPX_INTERNAL;
 
-
 /// Compute cyclic address arithmetic on the global address.
 ///
 /// @param          gpa The global address base.
@@ -122,6 +114,5 @@ int64_t pgas_gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize)
 ///                     from @gpa.
 hpx_addr_t pgas_gpa_add_cyclic(hpx_addr_t gpa, int64_t bytes, uint32_t bsize)
   HPX_INTERNAL;
-
 
 #endif // LIBHPX_GAS_PGAS_GPA_H

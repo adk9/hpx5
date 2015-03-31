@@ -14,27 +14,24 @@
 # include "config.h"
 #endif
 
-#include <stdio.h>
 #include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 #include <sys/mman.h>
 
 #include <libsync/sync.h>
 
-#include "libhpx/debug.h"
-#include "libhpx/libhpx.h"
+#include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/instrumentation_events.h>
+#include "file_header.h"
 #include "logtable.h"
 
-typedef struct record {
-  int class;
-  int id;
-  int rank;
-  int worker;
-  uint64_t s;
-  uint64_t ns;
-  uint64_t user[4];
-} record_t;
+static size_t _header_size(logtable_t *log) {
+  return (size_t)((uintptr_t)log->records - (uintptr_t)log->header);
+}
 
 static int _create_file(const char *filename, size_t size) {
   static const int flags = O_RDWR | O_CREAT;
@@ -81,7 +78,8 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
   log->class = class;
   log->id = id;
   sync_store(&log->next, 0, SYNC_RELEASE);
-  log->size = size;
+  sync_store(&log->last, 0, SYNC_RELEASE);
+  log->max_size = size;
   log->records = NULL;
 
   if (filename == NULL || size == 0) {
@@ -93,10 +91,14 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
     goto unwind;
   }
 
-  log->records = _create_mmap(size, log->fd);
-  if (!log->records) {
+  log->header = _create_mmap(size, log->fd);
+  if (!log->header) {
     goto unwind;
   }
+
+  size_t header_size = write_trace_header(log->header, id);
+  assert(((uintptr_t)log->header + header_size) % 8 == 0);
+  log->records = (void*)((uintptr_t)log->header + header_size);
 
   return LIBHPX_OK;
 
@@ -106,19 +108,21 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
 }
 
 void logtable_fini(logtable_t *log) {
-  if (!log->size) {
+  if (!log->max_size) {
     return;
   }
 
-  if (log->records) {
-    int e = munmap(log->records, log->size * sizeof(record_t));
+  if (log->header) {
+    int e = munmap(log->header, log->max_size);
     if (e) {
       log_error("failed to unmap trace file\n");
     }
   }
 
   if (log->fd != -1) {
-    int e = ftruncate(log->fd, log->next * sizeof(record_t));
+    size_t filesize =
+      (uintptr_t)&log->records[log->last] - (uintptr_t)log->header;
+    int e = ftruncate(log->fd, filesize);
     if (e) {
       log_error("failed to truncate trace file\n");
     }
@@ -132,10 +136,11 @@ void logtable_fini(logtable_t *log) {
 void logtable_append(logtable_t *log, uint64_t u1, uint64_t u2, uint64_t u3,
                      uint64_t u4) {
   size_t i = sync_fadd(&log->next, 1, SYNC_ACQ_REL);
-  if (i > log->size) {
+  if (_header_size(log) + i * sizeof(record_t) > log->max_size) {
     return;
   }
-
+  sync_fadd(&log->last, 1, SYNC_ACQ_REL); // update size
+ 
   record_t *r = &log->records[i];
   r->class = log->class;
   r->id = log->id;

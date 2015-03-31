@@ -22,13 +22,13 @@
 #include <errno.h>
 
 #include <hpx/builtins.h>
-#include <jemalloc/jemalloc_hpx.h>
 #include <valgrind/valgrind.h>
-#include "libhpx/debug.h"
-#include "libhpx/instrumentation.h"
-#include "libhpx/locality.h"
-#include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/debug.h>
+#include <libhpx/instrumentation.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+#include <libhpx/parcel.h>
+#include <libhpx/scheduler.h>
 #include "thread.h"
 
 static int _buffer_size = 0;
@@ -126,9 +126,8 @@ static size_t _alignment(void) {
 }
 
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
-  void *base = NULL;
-  int e = posix_memalign((void**)&base, _alignment(), _buffer_size);
-  assert(!e);
+  void *base = registered_memalign(_alignment(), _buffer_size);
+  dbg_assert(base);
   assert((uintptr_t)base % _alignment() == 0);
 
   ustack_t *thread = _protect(base);
@@ -140,5 +139,5 @@ ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
 void thread_delete(ustack_t *thread) {
   _deregister(thread);
   void *base = _unprotect(thread);
-  free(base);
+  registered_free(base);
 }

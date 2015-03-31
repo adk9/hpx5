@@ -135,8 +135,9 @@ photonRequest photon_setup_request_direct(photonBuffer lbuf, photonBuffer rbuf, 
   dbg_trace("Setting up a direct request: %d/0x%016lx/%p", proc, req->id, req);
 
   req->state = REQUEST_PENDING;
-  req->proc = proc;
   req->type = EVQUEUE;
+  req->proc = proc;
+  req->size = size;
   req->tag = 0;
   req->rattr.events = events;
   req->rattr.cookie = req->id;

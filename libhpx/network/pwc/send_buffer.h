@@ -14,25 +14,30 @@
 #define LIBHPX_NETWORK_PWC_SEND_BUFFER_H
 
 #include <hpx/hpx.h>
-#include "libsync/locks.h"
+#include <libsync/locks.h>
 #include "circular_buffer.h"
 
-struct eager_buffer;
+struct parcel_emulator;
+struct pwc_xport;
 
-typedef struct {
-  struct tatas_lock    lock;
-  struct eager_buffer   *tx;
-  circular_buffer_t pending;
+typedef struct send_buffer {
+  struct tatas_lock       lock;
+  int                     rank;
+  int           UNUSED_PADDING;
+  struct parcel_emulator *emul;
+  struct pwc_xport      *xport;
+  circular_buffer_t    pending;
 } send_buffer_t;
 
 /// Initialize a send buffer.
-int send_buffer_init(send_buffer_t *sends, struct eager_buffer *tx,
+int send_buffer_init(send_buffer_t *sends, int rank,
+                     struct parcel_emulator *emul, struct pwc_xport *xport,
                      uint32_t size)
-  HPX_INTERNAL HPX_NON_NULL(1, 2);
+  HPX_INTERNAL;
 
 /// Finalize a send buffer.
 void send_buffer_fini(send_buffer_t *sends)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_INTERNAL;
 
 /// Perform a parcel send operation.
 ///
@@ -50,15 +55,19 @@ void send_buffer_fini(send_buffer_t *sends)
 ///     will delete the parcel.
 ///
 /// @param        sends The send buffer.
-/// @param            p The parcel to send.
 /// @param        lsync An event to signal when the send completes locally.
+/// @param            p The parcel to send.
 ///
 /// @returns  LIBHPX_OK The send operation was successful (i.e., it was passed
 ///                       to the network or it was buffered).
 ///       LIBHPX_ENOMEM The send operation could not complete because it needed
 ///                       to be buffered but the system was out of memory.
 ///        LIBHPX_ERROR An unexpected error occurred.
-int send_buffer_send(send_buffer_t *sends, hpx_parcel_t *p, hpx_addr_t lsync)
-  HPX_INTERNAL HPX_NON_NULL(1, 2);
+int send_buffer_send(send_buffer_t *sends, hpx_addr_t lsync,
+                     const hpx_parcel_t *p)
+  HPX_INTERNAL;
+
+int send_buffer_progress(send_buffer_t *sends)
+  HPX_INTERNAL;
 
 #endif // LIBHPX_NETWORK_PWC_EAGER_BUFFER_H

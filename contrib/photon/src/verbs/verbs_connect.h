@@ -17,7 +17,7 @@ typedef struct verbs_cnct_ctx_t {
   int                        ib_port;
   struct ibv_context        *ib_context;
   struct ibv_pd             *ib_pd;
-  struct ibv_cq             *ib_cq;
+  struct ibv_cq            **ib_cq;
   struct ibv_cp             *ib_ud_cq;
   struct ibv_srq            *ib_srq;
   struct ibv_comp_channel   *ib_cc;
@@ -40,6 +40,7 @@ typedef struct verbs_cnct_ctx_t {
   int                        max_sge;
   int                        max_inline;
   int                        max_srq_wr;
+  int                        num_cq;
 
   verbs_cnct_info          **local_ci;
   verbs_cnct_info          **remote_ci;

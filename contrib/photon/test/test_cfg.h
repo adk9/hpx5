@@ -22,7 +22,8 @@ struct photon_config_t cfg = {
     .eager_buf_size = -1,
     .ledger_entries = -1,
     .max_rd         = -1,
-    .default_rd     = -1
+    .default_rd     = -1,
+    .num_cq         = 2
   },
   .exch = {
     .allgather = NULL,
@@ -30,5 +31,5 @@ struct photon_config_t cfg = {
   },
   .meta_exch = PHOTON_EXCH_MPI,
   .comm = NULL,
-  .backend = "verbs"
+  .backend = "default"
 };
