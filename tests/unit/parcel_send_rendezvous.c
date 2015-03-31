@@ -55,6 +55,9 @@ static HPX_ACTION(parcel_send_rendezvous, void *UNUSED) {
         exit(EXIT_FAILURE);
       }
     }
+
+    free(send);
+    free(recv);
   }
   return HPX_SUCCESS;
 }
