@@ -47,7 +47,7 @@ AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
 AC_ARG_ENABLE([parallel-config],
   [AS_HELP_STRING([--enable-parallel-config],
                   [Enable parallel configuration of contribs @<:@default=no@:>@])],
-  [trap 'kill $(jobs -p)' SIGINT], [enable_parallel_config=no])
+  [trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM], [enable_parallel_config=no])
 
 # Initialize contribs
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
