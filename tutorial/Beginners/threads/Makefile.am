@@ -16,10 +16,11 @@ threadYield_SOURCES         = threadYield.c
 threadExit_SOURCES          = threadExit.c
 threadCurrentTarget_SOURCES = threadCurrentTarget.c
 
-all_LIBS                    = $(HPX_LIBS)
+all_LIBS                    = $(HPX_JEMALLOC_LIBS) $(HPX_LIBS)
 
 AM_CPPFLAGS                 = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS                   =
+AM_LDFLAGS                  = $(HPX_JEMALLOC_LDFLAGS) -no-install
 
 if HAVE_MPI
 AM_CFLAGS                  += @MPI_CFLAGS@
