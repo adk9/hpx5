@@ -3,12 +3,12 @@ noinst_HEADERS   = tests.h
 noinst_PROGRAMS  = $(TESTS)
 
 AM_CPPFLAGS      = -I$(top_srcdir)/include 
-AM_LDFLAGS       =  $(HPX_JEMALLOC_LDFLAGS) -no-install
+AM_LDFLAGS       = $(HPX_JEMALLOC_RPATH) -no-install
 
 # Turn off some warnings for the tests
 AM_CFLAGS        = -Wno-unused
 
-LIBS = $(HPX_JEMALLOC_LIBS) $(HPX_LIBS)
+LIBS = $(HPX_LIBS)
 
 TESTS = bcast                   \
         call_when               \
