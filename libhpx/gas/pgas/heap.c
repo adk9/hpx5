@@ -21,11 +21,11 @@
 #include <libsync/sync.h>
 #include <hpx/builtins.h>
 #include <libhpx/debug.h>
+#include <libhpx/gpa.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include "../mallctl.h"
 #include "bitmap.h"
-#include "gpa.h"
 #include "heap.h"
 #include "pgas.h"
 
