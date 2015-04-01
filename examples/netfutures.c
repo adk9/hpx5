@@ -31,8 +31,7 @@ static HPX_ACTION_DECL(_pong);
 
 /* helper functions */
 static void _usage(FILE *stream) {
-  fprintf(stream, "Usage: pingponghpx [options] ITERATIONS\n"
-          "\t-c, the number of cores to run on\n"
+  fprintf(stream, "Usage: netfutures [options] ITERATIONS\n"
           "\t-t, the number of scheduler threads\n"
           "\t-T, select a transport by number (see hpx_config.h)\n"
           "\t-m, send text in message\n"
@@ -76,10 +75,8 @@ int main(int argc, char *argv[]) {
   }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "c:t:T:d:Dmvh")) != -1) {
+  while ((opt = getopt(argc, argv, "t:T:d:Dmvh")) != -1) {
     switch (opt) {
-     case 'c':
-      break;
      case 't':
       break;
      case 'T':
@@ -134,7 +131,7 @@ int main(int argc, char *argv[]) {
   return e;
 }
 
-static HPX_ACTION(_action_main, args_t *args) {
+static HPX_ACTION(_main, args_t *args) {
   printf("In main on rank %d\n", hpx_get_my_rank());
   hpx_status_t status =  hpx_netfutures_init(NULL);
   if (status != HPX_SUCCESS)
