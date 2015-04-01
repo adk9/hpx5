@@ -25,6 +25,7 @@
 
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
+#include <libhpx/gpa.h>
 #include <libhpx/locality.h>
 #include <libhpx/network.h>
 #include <libhpx/scheduler.h>
@@ -32,7 +33,6 @@
 #include "lco.h"
 #include "cvar.h"
 #include "future.h"
-#include "../gas/pgas/gpa.h"
 
 #define dbg_printf0(...)
 //#define dbg_printf0 printf
@@ -525,7 +525,7 @@ hpx_addr_t _netfuture_get_data_addr_gas(hpx_netfuture_t *f) {
 }
 
 static int _local_set_wrapper_handler(int src, uint64_t offset) {
-  hpx_addr_t target = pgas_offset_to_gpa(here->rank, offset);
+  hpx_addr_t target = offset_to_gpa(here->rank, offset);
   hpx_lco_set(target, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
@@ -536,7 +536,7 @@ static int _set_wrapper_handler(int src, uint64_t offset) {
   // @todo This is a hack because we don't export "commands" through the network
   //       header. We should be able to use the commands defined in
   //       network/commands directly.
-  hpx_addr_t target = pgas_offset_to_gpa(here->rank, offset);
+  hpx_addr_t target = offset_to_gpa(here->rank, offset);
   hpx_lco_set(target, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
