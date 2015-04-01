@@ -48,9 +48,6 @@ typedef struct gas {
   hpx_addr_t (*lva_to_gva)(const void *lva);
   void *(*gva_to_lva)(hpx_addr_t gva);
 
-  hpx_addr_t (*embed)(hpx_addr_t addr, hpx_action_t action);
-  hpx_action_t (*extract)(hpx_addr_t addr, uint32_t locality);
-
   // implement hpx/gas.h
   __typeof(HPX_THERE) *there;
   __typeof(hpx_gas_try_pin) *try_pin;
@@ -102,16 +99,6 @@ static inline size_t gas_local_size(gas_t *gas) {
 inline static void *gas_local_base(gas_t *gas) {
   assert(gas && gas->local_base);
   return gas->local_base(gas);
-}
-
-inline static hpx_addr_t gas_embed(gas_t *gas, hpx_addr_t addr, hpx_action_t action) {
-  assert(gas && gas->embed);
-  return gas->embed(addr, action);
-}
-
-inline static hpx_action_t gas_extract(gas_t *gas, hpx_addr_t addr, uint32_t locality) {
-  assert(gas && gas->extract);
-  return gas->extract(addr, locality);
 }
 
 static inline void *gas_mmap(void *obj, void *addr, size_t bytes, size_t align) {
