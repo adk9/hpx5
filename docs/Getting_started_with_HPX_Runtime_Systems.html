@@ -27,24 +27,27 @@ code > span.er { color: #ff0000; font-weight: bold; }
   </style>
 </head>
 <body>
-<h1 id="getting-started-with-hpx-runtime-systems">Getting started with HPX Runtime Systems</h1>
+<h1 id="getting-started-with-hpx">Getting started with HPX</h1>
 <ul>
 <li><a href="#overview">Overview</a></li>
+<li><a href="#other-ways-to-get-help">Other Ways to Get Help</a></li>
 <li><a href="#getting-started-a-summary">Summary</a></li>
 <li><a href="#requirements">Requirements</a></li>
 <li><a href="#bootstrapping">Building and Installing</a></li>
-<li><a href="#bootstrapping">Bootstrapping</a></li>
 <li><a href="#configuration">Configuring</a></li>
 <li><a href="#complete-the-build-and-install">Installing</a></li>
+<li><a href="#bootstrap-for-developer-builds">Developer Builds</a></li>
 <li><a href="#running-jobs-on-computational-systems">Running</a></li>
 <li><a href="#notes-on-building-hpx-on-arm">HPX on ARM</a></li>
 <li><a href="#an-example-using-the-hpx-runtime-system">HPX Example</a></li>
 <li><a href="#development-systems">HPX Development Systems</a></li>
 </ul>
 <h2 id="overview">Overview</h2>
-<p>Welcome to the HPX runtime system library! In order to get started with HPX, you first need to know some basic information and how to go about using it. This document discusses how to get up and running quickly with the HPX Runtime System. Everything from unpacking and compilation of the distribution to execution of some tools.</p>
-<p>This document is designed to be an extremely gentle introduction, so we included a fair amount of material that may already be very familiar to you. We'll refer to resources that can help advance users to pursue with HPX topics further.</p>
+<p>Welcome to the HPX runtime system library! This document discusses how to get up and running quickly with the HPX. Everything from building to executing some of the HPX examples. Since this document is designed to be an extremely gentle introduction, we included a fair amount of material that may already be very familiar to you. We'll refer to resources that can help expert users to pursue with advanced HPX topics further.</p>
+<h2 id="other-ways-to-get-help">Other Ways to Get Help</h2>
+<p>There is a hpx-users mailing list for support for problems building, installing, and using HPX. You can subscribe at <a href="http://www.crest.iu.edu/mailman/listinfo.cgi/hpx-users"><a href="http://www.crest.iu.edu/mailman/listinfo.cgi/hpx-users" class="uri">http://www.crest.iu.edu/mailman/listinfo.cgi/hpx-users</a></a>.</p>
 <h2 id="getting-started-a-summary">Getting Started (A Summary)</h2>
+<p><em>Cray users must set <code>export CRAYPE_LINK_TYPE=dynamic</code> to use HPX.</em></p>
 <p>Please find the quick summary to building HPX and running a network-capable HPX:</p>
 <ol>
 <li>Read the documentation.</li>
@@ -62,23 +65,23 @@ $ git clone --recursive git@gitlab.crest.iu.edu:extreme/hpx.git</code></pre></li
 <tr class="header">
 <th align="left">OS</th>
 <th align="center">Arch</th>
-<th align="right">Compilers</th>
+<th align="right">Notes</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td align="left">Linux</td>
 <td align="center">x86-64</td>
-<td align="right">GCC</td>
+<td align="right"></td>
 </tr>
 <tr class="even">
 <td align="left">Linux</td>
 <td align="center">ARMv7</td>
-<td align="right">GCC</td>
+<td align="right"></td>
 </tr>
 </tbody>
 </table>
-<p>HPX runtime system may compile on other platforms, but it is not guaranteed to do so. We do not test HPX with other platforms, so please be warned.</p>
+<p>HPX runtime system may compile on other platforms, but it is not guaranteed to do so. We do not test HPX with other platforms.</p>
 <h3 id="software">Software</h3>
 <p>Compiling HPX requires that you have several software packages installed. The table below lists those required packages. The package column is the usual name for the software package that HPX depends on. The Version column provides &quot;known to work&quot; versions of the package. The Notes column describes how HPX uses the package and provides other details.</p>
 <table>
@@ -94,9 +97,19 @@ $ git clone --recursive git@gitlab.crest.iu.edu:extreme/hpx.git</code></pre></li
 <td align="left"><strong>Compilers</strong></td>
 </tr>
 <tr class="even">
-<td align="left">GCC</td>
-<td align="center">4.8.4 or newer</td>
-<td align="right">Tested with 4.8.4, 4.9.1, 4.9.2</td>
+<td align="left">C99 compatible compiler</td>
+<td align="center">gcc</td>
+<td align="right">Tested with 4.6.4, 4.8.4, 4.9.2</td>
+</tr>
+<tr class="odd">
+<td align="left"></td>
+<td align="center">clang</td>
+<td align="right">Tested with 3.6, 3.5 and earlier are known to be broken</td>
+</tr>
+<tr class="even">
+<td align="left"></td>
+<td align="center">icc</td>
+<td align="right">Tested with 15.0.1</td>
 </tr>
 <tr class="odd">
 <td align="left"><strong>Build System</strong></td>
@@ -122,125 +135,79 @@ $ git clone --recursive git@gitlab.crest.iu.edu:extreme/hpx.git</code></pre></li
 <td align="right">Macro processor for configuration</td>
 </tr>
 <tr class="even">
+<td align="left"></td>
+</tr>
+<tr class="odd">
 <td align="left">Libtool</td>
 <td align="center">2.4.6</td>
 <td align="right">Shared library manager (only required for developer builds)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left">Pkg-config</td>
 <td align="center"></td>
-<td align="right">Only required for developer builds</td>
-</tr>
-<tr class="even">
-<td align="left"><strong>Required Libraries</strong></td>
+<td align="right"></td>
 </tr>
 <tr class="odd">
+<td align="left"><strong>Library Dependencies</strong></td>
+</tr>
+<tr class="even">
 <td align="left">MPI (optional)</td>
 <td align="center">1.6.3+</td>
 <td align="right">Tested with 1.6.3, 1.6.5, 1.8.1, 1.8.4 MPICH 3.0.4, mvapich2/2.0b (Stampede)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left">Doxygen (Optional)</td>
 <td align="center">1.8.7+</td>
 <td align="right">Required to build the documentation</td>
 </tr>
-<tr class="odd">
-<td align="left">Photon (embedded)</td>
-</tr>
 <tr class="even">
-<td align="left">Jemalloc (embedded)</td>
-<td align="center"></td>
-<td align="right">HPX works with latest version as well.</td>
+<td align="left"></td>
 </tr>
 <tr class="odd">
-<td align="left">Hwloc (embedded)</td>
+<td align="left">Photon (included)</td>
 <td align="center"></td>
-<td align="right">Used for OS-thread pinning and NUMA awareness</td>
+<td align="right"></td>
 </tr>
 <tr class="even">
-<td align="left">Uthash (embedded)</td>
+<td align="left">Jemalloc (included)</td>
 <td align="center"></td>
-<td align="right">C Macro for Hash tables and more.</td>
+<td align="right"></td>
 </tr>
 <tr class="odd">
-<td align="left">Valgrind (embedded)</td>
+<td align="left">Hwloc (included)</td>
 <td align="center"></td>
-<td align="right">A memory error detector</td>
+<td align="right"></td>
 </tr>
 <tr class="even">
-<td align="left">libffi (embedded)</td>
+<td align="left">Uthash (included)</td>
 <td align="center"></td>
-<td align="right">A foreign function interface library</td>
+<td align="right"></td>
+</tr>
+<tr class="odd">
+<td align="left">libffi (included)</td>
+<td align="center"></td>
+<td align="right"></td>
 </tr>
 </tbody>
 </table>
 <p>Notes:</p>
 <ol>
-<li><p>HPX can build and run successfully without any network backend, but at present, MPI or Photon is required for networking by HPX. Photon can take advantage of RDMA over IB resulting in better performance</p></li>
-<li><p>Only the C and architecture specific (x86_64, arm) assembly languages are needed so there's no need to build the other languages for HPX's purposes</p></li>
-<li><p>If you want to make changes to the configure scripts, you will need GNU autoconf (2.69), M4(1.4.17), automake(1.15), libtool-2.4.6</p></li>
-<li><p>Additionally, your compilation host is expected to have the usual plethora of Unix utilities</p></li>
+<li><p>HPX can build and run successfully without any network backend, but at present, MPI or Photon is required for networking by HPX.</p></li>
+<li><p>If you want to make changes to the configure scripts, you will need GNU autoconf (2.69), M4(1.4.17), automake(1.15), libtool-2.4.6.</p></li>
 </ol>
-<h2 id="bootstrapping">Bootstrapping</h2>
-<p>HPX provides a bootstrap script in its build. In the HPX directory run the bootstrap script using</p>
-<pre><code>$ ./bootstrap</code></pre>
-<p>Bootstrap is a bash script that generate the initialization required to create a configure script when using GNU autotools. This calls the autoreconf.</p>
-<p>Building without MPI enables the SMP bootstrapper. This allows you to run HPX on a single node. However, if you launch HPX with -np &gt; 1 then either MPI / Photon transport should be enabled which is detailed in next section.</p>
-<p>Note: ./bootstrap should not be used with release tarballs.</p>
 <h2 id="configuration">Configuration</h2>
 <h3 id="environment-dependencies">Environment dependencies</h3>
-<p>The HPX configuration relies on <code>pkg-config</code> to look for installed packages. For custom builds using non-default configuration options, you need to</p>
+<p>The HPX configuration uses <code>pkg-config</code> to find dependencies. For custom builds using non-default configuration options, you need to</p>
 <p>a) point to the appropriate <code>pkg-config</code> (.pc) files or</p>
 <p>b) set the appropriate <code>LIBS</code> and <code>CFLAGS</code> environment variables.</p>
 <p>See <code>./configure --help</code> for further details.</p>
-<h3 id="getting-a-modern-host-gcc-toolchain">Getting a Modern Host GCC Toolchain</h3>
-<p>The first step is to get a recent GCC toolchain installed.<br />Easy steps for installing GCC 4.8.2:</p>
-<pre><code>$ sudo port install gcc48</code></pre>
-<p>or can be built from the sources using</p>
-<ol>
-<li><p>Download all the three tar balls.</p>
-<pre><code>$ cd $HOME/devel
-$ wget http://mirrors.concertpass.com/gcc/releases/gcc-4.9.2/gcc-4.9.2.tar.gz
-$ wget http://ftp.gnu.org/gnu/gdb/gdb-7.8.2.tar.gz
-$ wget http://ftp.gnu.org/gnu/binutils/binutils-2.25.tar.gz</code></pre></li>
-<li><p>Uncompress them all.</p>
-<pre><code>$ tar xzf gcc-4.9.2.tar.gz
-$ tar xzf gdb-7.8.2.tar.gz
-$ tar xzf binutils-2.25.tar.gz</code></pre></li>
-<li><p>Configure, make, and make install</p>
-<pre><code>$ cd gcc-4.9.2
-$ ./contrib/download_prerequisites
-$ ./configure --prefix=&lt;YOUR_GCC_PREFIX&gt; --disable-nls --enable-languages=c,c++,fortran --with-system-glib --enable-__cxa_atexit --with-ppl --with-cloog --with-isl --enable-lto
-$ make &amp;&amp; make install
-$ cd gdb-7.8.2
-$ ../gcc-4.9.2/contrib/download_prerequisites
-$ ./configure --prefix=&lt;YOUR_GDB_PREFIX&gt; --disable-nls --enable-languages=c,c++,fortran --with-system-glib --enable-__cxa_atexit --with-ppl --with-cloog --with-isl --enable-lto
-$ make &amp;&amp; make install
-$ cd binutils-2.25
-$ ../gcc-4.9.2/contrib/download_prerequisites
-$ ./configure --prefix=&lt;YOUR_BINUTILS_PREFIX&gt; --disable-nls --enable-languages=c,c++,fortran --with-system-glib --enable-__cxa_atexit --with-ppl --with-cloog --with-isl --enable-lto
-$ make &amp;&amp; make install</code></pre>
-<p>For more details, check out the <a href="http://gcc.gnu.org/wiki/InstallingGCC">GCC wiki entry</a>.</p></li>
-</ol>
-<p>On cutter use</p>
-<pre><code>$ module load gcc/4.9.2
-$ module load gdb/7.8.2
-$ module load openmpi/1.8.4_thread
-$ module load valgrind
-</code></pre>
-<p>On BigRed2 use</p>
-<pre><code>$ module unload PrgEnv-cray
-$ module load PrgEnv-gnu</code></pre>
-<p>No special steps is required on Stampede to use GCC</p>
-<p>Notes on building HPX on ARM</p>
-<p>Build HPX with armv7l-unknown-linux-gnueabihf as host and target. The HPX has been tested on Parallella-16 with most popular Linaro/Ubuntu OS's for ARM boards and they have hard-float platforms. More details about building HPX with ARM is detailed further in this manual.</p>
 <h3 id="hpx-network-transports">HPX Network Transports</h3>
 <p>HPX can be built with two network transport options: MPI and Photon. HPX can be built with one, both, or none of the network transports depending on application needs.<br />Each transport is runtime configurable. MPI and PMI are currently used as job launchers and bootstrap mechanism for HPX.</p>
 <p>Note that if you are building with Photon, the libraries for the given<br />network interconnect you are targeting need to be present on the build system.<br />The two supported interconnects are InfiniBand (libibverbs and librdmacm) and<br />Cray's GEMINI and ARIES via uGNI (libugni). You may build with IBV and/or uGNI<br />support on a workstation where the development packages are installed, but<br />launching an HPX application with Photon requires that the actual network<br />devices be present so the library can initialize.</p>
 <p>If you build with Photon and/or MPI on a system without networking, you may<br />still use the SMP transport to run applications that are not distributed.</p>
 <h4 id="configuring-with-mpi">Configuring with MPI</h4>
 <p>When building HPX, by default, HPX will try to find the pkg-config file<br /><code>ompi.pc</code> installed by Open MPI. (Instead, if you have MPICH installed, you need<br />to specify: <code>$ ./configure --with-mpi=mpich</code> will instruct <code>configure</code> to look<br />for <code>mpich.pc</code>.)</p>
-<pre><code>b. If the relevant `pkg-config` file is not installed in the standard system
+<pre><code>a. If the relevant `pkg-config` file is not installed in the standard system
 path (say, for a local MPI installation), append the relevant paths to
 `$PKG_CONFIG_PATH`.  If OpenMPI is installed in `$HOME/opt/`; the configure
 flags would be:
@@ -249,9 +216,9 @@ i.  $ export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$HOME/opt/lib/pkgconfig
 
 ii. $ ./configure --with-mpi=ompi
 
-c. Alternatively, you can also set `MPI_CFLAGS` and `MPI_LIBS` appropriately. Eg: `$ ./configure --with-mpi MPI_CFLAGS=$MPI_HOME/include MPI_LIBS=$MPI_HOME/lib`
+b. Alternatively, you can also set `MPI_CFLAGS` and `MPI_LIBS` appropriately. Eg: `$ ./configure --with-mpi MPI_CFLAGS=$MPI_HOME/include MPI_LIBS=$MPI_HOME/lib`
 
-d. Ensure that `mpicc` and `mpirun` are in your `$PATH`.</code></pre>
+c. Alternatively, you may use `CC=mpicc`.</code></pre>
 <p>On Cutter use</p>
 <pre><code>$ module load openmpi/1.8.4_thread
 $ ./configure --with-mpi=ompi</code></pre>
@@ -269,10 +236,10 @@ $ LDFLAGS=-L/opt/ofed/lib64 CPPFLAGS=-I/opt/ofed/include ./configure --with-mpi 
 $ ./configure --enable-photon --with-mpi=/opt/apps/intel14/mvapich2/2.0b/lib/pkgconfig/mvapich2.pc</code></pre>
 <p>On BigRed2 use</p>
 <pre><code>$ module switch PrgEnv-cray PrgEnv-gnu
-$ module load craype-hugepages8M
+$ module load craype-hugepages4M
 $ export CRAYPE_LINK_TYPE=dynamic
-$ ./configure --enable-photon --with-mpi --with-ugni --with-hugetlbfs CC=cc </code></pre>
-<p>The <code>--with-hugetlbfs</code> option causes the HPX heap to be mapped with huge pages, which is necessary for larger heaps on Cray machines. The hugepages module provides the environment necessary for compilation, and the size of the pages chosen has no effects. The size of hugepages used can be chosen by setting the <code>HUGETLB_DEFAULT_PAGE_SIZE</code> to one of the supported sizes. Loading any of the hugepages modules will set this variable appropriately, and, in addition, it will cause system malloc to use huge pages as well.</p>
+$ ./configure --enable-photon --with-mpi=cray-mpich HPX_PHOTON_CARGS=--with-ugni --with-hugetlbfs CC=cc </code></pre>
+<p>The <code>--with-hugetlbfs</code> option causes the HPX heap to be mapped with huge pages, which is necessary for larger heaps on Cray machines. The hugepages modules provide the environment necessary for compilation.</p>
 <p>If you want to install photon from sources then get the sources using</p>
 <pre><code>$ git clone git@gitlab.crest.iu.edu:damsl/photon.git
 $ cd photon
@@ -284,11 +251,7 @@ $ cd my_photon_build</code></pre>
 <pre><code>$ ./configure --prefix=/path/to/photon/installation CC=mpicc LDFLAGS=-L/opt/ofed/lib64 CPPFLAGS=-I/opt/ofed/include --with-mpi  </code></pre>
 <p>On Big Red 2 use</p>
 <pre><code>$ ./configure --prefix=/path/to/photon/installation CC=cc --with-mpi --with-ugni</code></pre>
-<p>Another option is to configure HPX with dynamic linking using Cray dynamic linking flags:</p>
-<pre><code>$ export CRAYPE_LINK_TYPE=dynamic  
-$ export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/path/to/photon/installation:$PATH</code></pre>
 <p>To configure HPX with external source photon, use the <code>--enable-external-photon</code> flag and set PHOTON_CFLAGS, PHOTON_CPPFLAGS, PHOTON_LIBS environment variable as appropriate.</p>
-<p>If the HPX is built with multiple transports then by default Photon is<br />enabled. Users can choose different transporta using the option --hpx-transport<br />during at run-time: <code>--hpx-transport=&lt;mpi|photon|smp&gt;</code></p>
 <h3 id="photon-hca-and-backend-selection">Photon HCA and backend selection</h3>
 <p>The Photon default is to use the first detected IB device and active port. This behavior can be overridden with the following environment variable:</p>
 <pre><code>$ export HPX_PHOTON_IBDEV=&quot;mlx4_0&quot;</code></pre>
@@ -300,17 +263,15 @@ $ export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/path/to/photon/installation:$PATH</co
 <p>The Photon default backend is also set to verbs. On BigRed2, or any other Cray system with a uGNI-supported interconnect, set the following environment variable:</p>
 <pre><code>$ export HPX_PHOTON_BACKEND=ugni</code></pre>
 <p>OR, use --hpx-photon-backend=ugni as a command line flag.</p>
-<p>In addition, for huge pages builds, the size of huge pages can be controlled:</p>
-<pre><code>$ export HUGETLB_DEFAULT_PAGE_SIZE=64M</code></pre>
 <p>The list of supported sizes can be obtained as follows:</p>
 <pre><code>$ module avail craype-hugepages</code></pre>
 <h4 id="cutter-mpi-specifics">Cutter MPI specifics</h4>
 <p>On Cutter, both Qlogic (qib0) and Mellanox (mlx4_0) HCAs are available. The MPI transport will use qib0 unless otherwise instructed. Additionally, OpenMPI on cutter has support for Performance Scaled Messaging that works with qib0.</p>
 <p>To run MPI with the Mellanox HCA on cutter:</p>
-<pre><code>$ mpirun -np N --mca mtl ^psm --mca btl_openib_if_include mlx4_0 &lt;...&gt;</code></pre>
+<pre><code>$ mpirun -np N --map-by node:PE=C --mca mtl ^psm --mca btl_openib_if_include mlx4_0 &lt;...&gt;</code></pre>
 <p>Photon will attempt to use the first discovered HCA with an active port. For most testing on cutter, the only variable needed is:</p>
 <pre><code>$ export HPX_PHOTON_IBDEV=mlx4_0     // or qib0 if desired</code></pre>
-<p>Four additional environment variables specific to Photon transport are recognized: HPX_PHOTON_ETHDEV,<br />HPX_PHOTON_IBDEV, HPX_PHOTON_USECMA, HPX_PHOTON_BACKEND but are typically not needed on cutter.</p>
+<p>Four additional environment variables specific to Photon transport are recognized: HPX_PHOTON_ETHDEV,<br />HPX_PHOTON_IBDEV, HPX_PHOTON_USECMA, HPX_PHOTON_BACKEND.</p>
 <p>(Alternatively, these parameters can be set at run time using <code>--hpx-photon-ethdev=&lt;...&gt;</code>, etc.)</p>
 <h4 id="stampede-specifics">Stampede specifics</h4>
 <pre><code>$ export HPX_PHOTON_IBDEV=mlx4_0
@@ -323,7 +284,7 @@ $ ./configure --enable-photon --with-mpi=/opt/crc/openmpi/1.8.1/intel-14.0/lib/p
 <p>To build and run the unit and performance testsuite enabled:</p>
 <pre><code>$ ./configure --with-mpi --enable-photon --enable-testsuite
  
---with-tests-cmd=&quot;mpirun -np 2&quot; for instance can be used to specify the application launch command on various systems.</code></pre>
+--with-tests-cmd=&quot;mpirun -np 2 --map-by node:PE=16&quot; for instance can be used to specify the application launch command on various systems.</code></pre>
 <h3 id="additional-optional-configure-options">Additional optional configure options</h3>
 <p>Some additional optional features that HPX supports are the following</p>
 <table>
@@ -336,27 +297,38 @@ $ ./configure --enable-photon --with-mpi=/opt/crc/openmpi/1.8.1/intel-14.0/lib/p
 <tbody>
 <tr class="odd">
 <td align="left">--enable-logging</td>
-<td align="center">Enable logging but not debug code. When this option is enabled we can get further debugging information when code is run using the flag --hpx-loglevel=$boot, sched, lco, gas, net, trans, parcel, all</td>
+<td align="center">Enable logging (--hpx-log-level, --hpx-log-at)</td>
 </tr>
 <tr class="even">
-<td align="left">--enable-debug</td>
-<td align="center">Enable debug code</td>
+<td align="left"></td>
 </tr>
 <tr class="odd">
-<td align="left">--enable-profiling</td>
-<td align="center">Enable profiling support</td>
+<td align="left">--enable-debug</td>
+<td align="center">Enable debugging (--hpx-dbg prefixed flags and runtime checks)</td>
 </tr>
 <tr class="even">
-<td align="left">--enable-floodlight</td>
-<td align="center">Enable Floodloght controller support</td>
+<td align="left"></td>
+</tr>
+<tr class="odd">
+<td align="left">--enable-instrumentation</td>
+<td align="center">Enable instrumentation (expensive).</td>
+</tr>
+<tr class="even">
+<td align="left"></td>
 </tr>
 <tr class="odd">
 <td align="left">--enable-doxygen</td>
-<td align="center">Look for the doxygen program and enable construction of doxygen based documentation from the source code. This is disabled by default.</td>
+<td align="center">Build doxygen documentation.</td>
 </tr>
 <tr class="even">
+<td align="left"></td>
+</tr>
+<tr class="odd">
 <td align="left">--enable-tutorial</td>
-<td align="center">Enables the tutorial examples</td>
+<td align="center">Build tutorial examples.</td>
+</tr>
+<tr class="even">
+<td align="left"></td>
 </tr>
 </tbody>
 </table>
@@ -365,112 +337,52 @@ $ ./configure --enable-photon --with-mpi=/opt/crc/openmpi/1.8.1/intel-14.0/lib/p
 <pre><code>$ make
 $ make install
 $ make check (for testsuite) on compute node</code></pre>
+<h2 id="bootstrap-for-developer-builds">Bootstrap for developer builds</h2>
+<p>HPX releases have already been bootstrapped. Developers using other branches will need to bootstrap before configuration. In the HPX directory run the bootstrap script. You may need updated tools, which can be installed using the <code>scripts/setup_autotools.sh</code> script.</p>
+<pre><code>$ ./bootstrap</code></pre>
 <h2 id="running-jobs-on-computational-systems">Running jobs on Computational Systems</h2>
 <p>HPX applications are executed on parallel computers. All the clusters have a batch server referred to as the cluster management server running on the headnode. Batch server monitors the status of the cluster and controls or monitors the various queues and job lists. For instance Cutter and Big Red II uses qsub interface into the batch server and lets the job to get requested resources on the cluster. Once the job was successfully scheduled, the user can run the code on compute nodes.<br />Here is the sample of commands to run the jobs on compute nodes (2 nodes)</p>
-<pre><code>Cutter: qsub -I -l nodes=2 -l walltime=1:00:00 
+<pre><code>Cutter: qsub -I -l nodes=2:ppn=16 -l walltime=1:00:00 
 Big Red II: qsub -I -l walltime=1:00:00 -l nodes=2:ppn=32 -q debug_cpu
 Stampede: idev -N 2 -n 2 </code></pre>
 <p>The nodes=2:ppn=32 directive will cause two compute nodes to be allocated for the application with each node of 32 cores.</p>
 <p>More information and scheduling job options can be found at</p>
 <pre><code>https://portal.tacc.utexas.edu/user-guides/stampede
 https://kb.iu.edu/d/bdkt</code></pre>
-<p>The HPX allows selecting the number of cores to run the code during run-time as well with the parameter --hpx-cores=$value.</p>
+<p>HPX will use the core count and affinity set by the launcher.</p>
 <p>Application launch command on various systems is as follows</p>
 <pre><code>Cutter: mpirun
 Stampede: ibrun
 BigRed2: aprun</code></pre>
 <p>Note that each launcher will have different options to control the same parameters. Important things to think about when launching a job is how many hpx processes to run per node and how many cores should each process take. The number of processes per node is controlled by the launcher, and hpx controls the number of cores that will be used.</p>
 <h3 id="runtime-options">Runtime options</h3>
-<p>HPX provides runtime options that can be specified on the command line or in the environment. The list of options can be obtained from any HPX program by adding <code>--help</code> option. The current list of options is as follows:</p>
-<pre><code>HPX Runtime Options:
-All of the following options can either be set through the
-command-line using the flags given below, or through environment
-variables of the form HPX_OPTION=value, where the option corresponds
-to the flag suffix given below.
-      --hpx-cores=cores         number of cores to run on
-      --hpx-threads=threads     number of scheduler threads
-      --hpx-stacksize=bytes     set HPX stack size
-      --hpx-heapsize=bytes      set HPX per-PE global heap size
-      --hpx-wfthreshold=tasks   bound on help-first tasks before work-first
-                                  scheduling
-      --hpx-gas=type            type of Global Address Space (GAS)  (possible
-                                  values=&quot;default&quot;, &quot;smp&quot;, &quot;pgas&quot;,
-                                  &quot;agas&quot;, &quot;pgas_switch&quot;, &quot;agas_switch&quot;)
-      --hpx-boot=type           HPX bootstrap method to use  (possible
-                                  values=&quot;default&quot;, &quot;smp&quot;, &quot;mpi&quot;,
-                                  &quot;pmi&quot;)
-      --hpx-transport=type      type of transport to use  (possible
-                                  values=&quot;default&quot;, &quot;smp&quot;, &quot;mpi&quot;,
-                                  &quot;portals&quot;, &quot;photon&quot;)
-      --hpx-network=type        type of network to use  (possible
-                                  values=&quot;default&quot;, &quot;smp&quot;, &quot;pwc&quot;,
-                                  &quot;isir&quot;)
-      --hpx-statistics          print HPX runtime statistics  (default=off)
-      --hpx-sendlimit=requests  HPX transport-specific send limit
-      --hpx-recvlimit=requests  HPX transport-specific recv limit
-      --hpx-configfile=file     HPX runtime configuration file
-
-Log options:
-      --hpx-log-at=[localities] selectively output log information
-      --hpx-log-level[=level]   set the logging level  (possible
-                                  values=&quot;default&quot;, &quot;boot&quot;, &quot;sched&quot;,
-                                  &quot;gas&quot;, &quot;lco&quot;, &quot;net&quot;, &quot;trans&quot;,
-                                  &quot;parcel&quot;, &quot;action&quot;, &quot;all&quot;)
-
-HPX Debug Options:
-      --hpx-dbg-waitat=[locality]
-                                wait for debugger at specific locality
-      --hpx-dbg-waitonabort     call hpx_wait() inside of hpx_abort() for
-                                  debugging  (default=off)
-      --hpx-dbg-waitonsegv      call hpx_wait() for SIGSEGV for debugging
-                                  (unreliable)  (default=off)
-      --hpx-dbg-mprotectstacks  use mprotect() to bracket stacks to look for
-                                  stack overflows  (default=off)
-
-Tracing:
-      --hpx-trace-classes=class set the event classes to trace  (possible
-                                  values=&quot;parcel&quot;, &quot;pwc&quot;, &quot;sched&quot;,
-                                  &quot;all&quot;)
-      --hpx-trace-dir=dir       directory to output trace files
-      --hpx-trace-filesize=# of events
-                                set the size of each trace file
-      --hpx-trace-at=[localities]
-                                set the localities to trace at
-
-PWC Network Options:
-      --hpx-pwc-parcelbuffersize=bytes
-                                set the size of p2p recv buffers for parcel
-                                  sends
-      --hpx-pwc-parceleagerlimit=bytes
-                                set the largest eager parcel size (header
-                                  inclusive)
-
-Photon Transport Options:
-      --hpx-photon-backend=type set the underlying network API to use
-                                  (possible values=&quot;default&quot;, &quot;verbs&quot;,
-                                  &quot;ugni&quot;)
-      --hpx-photon-ibdev=device set a particular IB device (also a filter for
-                                  device and port discovery, e.g.
-                                  qib0:1+mlx4_0:2)
-      --hpx-photon-ethdev=device
-                                set a particular ETH device (for CMA mode only)
-      --hpx-photon-ibport=integer
-                                set a particular IB port
-      --hpx-photon-usecma       enable CMA connection mode  (default=off)
-      --hpx-photon-ledgersize=integer
-                                set number of ledger entries
-      --hpx-photon-eagerbufsize=bytes
-                                set size of eager buffers
-      --hpx-photon-smallpwcsize=bytes
-                                set PWC small msg limit
-      --hpx-photon-maxrd=integer
-                                set max number of request descriptors
-      --hpx-photon-defaultrd=integer
-                                set default number of allocated descriptors</code></pre>
+<p>HPX provides runtime options that can be specified on the command line or in the environment. The list of options can be obtained from any HPX program by adding <code>--hpx-help</code> option.</p>
 <h4 id="general-options">General Options</h4>
+<pre class="sourceCode bash"><code class="sourceCode bash">      <span class="kw">--hpx-help</span>                print HPX help  (default=off)
+      <span class="kw">--hpx-cores</span>=cores         number of cores to run on
+      <span class="kw">--hpx-threads</span>=threads     number of scheduler threads
+      <span class="kw">--hpx-stacksize</span>=bytes     set HPX stack size
+      <span class="kw">--hpx-heapsize</span>=bytes      set HPX per-PE global heap size
+      <span class="kw">--hpx-wfthreshold</span>=tasks   bound on help-first tasks before 
+                                  <span class="kw">work-first</span> scheduling
+      <span class="kw">--hpx-gas</span>=type            type of Global Address Space (GAS)  
+                                  <span class="kw">(possible</span> values=<span class="st">&quot;default&quot;</span>, <span class="st">&quot;smp&quot;</span>, 
+                                  <span class="st">&quot;pgas&quot;</span>, <span class="st">&quot;agas&quot;</span><span class="kw">)</span>
+      <span class="kw">--hpx-boot</span>=type           HPX bootstrap method to use  
+                                  <span class="kw">(possible</span> values=<span class="st">&quot;default&quot;</span>, <span class="st">&quot;smp&quot;</span>, 
+                                  <span class="st">&quot;mpi&quot;</span>, <span class="st">&quot;pmi&quot;</span><span class="kw">)</span>
+      <span class="kw">--hpx-transport</span>=type      type of transport to use  (possible 
+                                  <span class="ot">values=</span><span class="st">&quot;default&quot;</span>, <span class="st">&quot;mpi&quot;</span>, <span class="st">&quot;portals&quot;</span>, 
+                                  <span class="st">&quot;photon&quot;</span>)
+      <span class="kw">--hpx-network</span>=type        type of network to use  (possible 
+                                  <span class="ot">values=</span><span class="st">&quot;default&quot;</span>, <span class="st">&quot;smp&quot;</span>, <span class="st">&quot;pwc&quot;</span>, 
+                                  <span class="st">&quot;isir&quot;</span>)
+      <span class="kw">--hpx-statistics</span>          print HPX runtime statistics  
+                                  <span class="kw">(</span><span class="ot">default=</span>off<span class="kw">)</span>
+      <span class="kw">--hpx-configfile</span>=file     HPX runtime configuration file</code></pre>
 <p>Options in this group pertain to general properties of the hpx runtime execution. In the list of options above, these are the options without a heading.</p>
-<h5 id="threads-and-cores">Threads and cores</h5>
-<p>The <code>--hpx-threads</code> and <code>--hpx-cores</code> otpions control the threading aspects of HPX. <code>--hpx-threads</code> controls the number of workers threads started by HPX. <code>--hpx-cores</code> will in the future support oversubribing cores with multiple worker threads, but currently it has no effect when the number of cores is set to a different number than the number of threads, and it should not be used. Always use <code>--hpx-threads</code> to set the number of worker threads.</p>
+<h5 id="system-threads">System Threads</h5>
+<p>The <code>--hpx-threads</code> controls the threading aspects of HPX. <code>--hpx-threads</code> controls the number of workers threads started by HPX.</p>
 <h5 id="memory-control">Memory control</h5>
 <p>There are two kinds of memory controls for HPX. First, HPX reserves a global heap for all global allocations, both cyclic and non-cyclic. The <code>--hpx-stacksize</code> option controls the size of the stacks reserved for every HPX action. Note that HPX tasks and interrupts do not allocate their own stack.</p>
 <h5 id="runtime-properties">Runtime properties</h5>
@@ -491,18 +403,42 @@ Photon Transport Options:
 <li><code>mpi</code> + <code>isir</code>: Use MPI ISend and IRecv interfaces.</li>
 <li>Other combinations of networks and transports are not currently supported.</li>
 </ul>
-<h5 id="receive-and-send-limits.">Receive and send limits.</h5>
-<p>The ISIR network (<code>--hpx-network=isir</code>) supports send and receive limits with <code>--hpx-sendlimit</code> and <code>--hpx-recvlimit</code>. The limits control how many asynchronous requsets are created with MPI at any given time.</p>
-<h4 id="logging-debugging-and-tracing-options">Logging, debugging, and tracing options</h4>
+<h4 id="logging-options">Logging Options</h4>
+<p>Note that in order to use the logging options, <code>--enable-logging</code> must be set at configuration time.</p>
+<pre class="sourceCode bash"><code class="sourceCode bash">      <span class="kw">--hpx-log-at</span>=[localities] selectively output log information
+      <span class="kw">--hpx-log-level</span>[=level]   set the logging level  (possible 
+                                  <span class="ot">values=</span><span class="st">&quot;default&quot;</span>, <span class="st">&quot;boot&quot;</span>, <span class="st">&quot;sched&quot;</span>, 
+                                  <span class="st">&quot;gas&quot;</span>, <span class="st">&quot;lco&quot;</span>, <span class="st">&quot;net&quot;</span>, <span class="st">&quot;trans&quot;</span>, 
+                                  <span class="st">&quot;parcel&quot;</span>, <span class="st">&quot;action&quot;</span>, <span class="st">&quot;config&quot;</span>, 
+                                  <span class="st">&quot;memory&quot;</span>, <span class="st">&quot;all&quot;</span>)</code></pre>
 <p>The logging options <code>--hpx-log-at</code> and <code>--hpx-log-level</code> produce logging output for selected subsystems at selected localities. If no locality is selected, all localities will produce log messages. Log messages are not errors. Instead, they provide an insight into what the HPX runtime is doing &quot;under the hood.&quot;</p>
-<p>The <code>wait</code> options in the debug section provide a way to stop the hpx runtime and wait for a debugger to be attached. The <code>--hpx-waitat</code> option causes HPX to stop at start of the application. A wait loop will be executed. The loop can be broken in the debugger with the following commands (assuming a freshly attached gdb):</p>
+<h4 id="debugging-options">Debugging Options</h4>
+<p>Note that in order to use the debugging options, <code>--enable-debug</code> must be set during configuration.</p>
+<pre class="sourceCode bash"><code class="sourceCode bash"><span class="kw">HPX</span> Debug Options:
+      <span class="kw">--hpx-dbg-waitat</span>=[locality]
+                                <span class="kw">wait</span> for debugger at specific locality
+      <span class="kw">--hpx-dbg-waitonabort</span>     call hpx_wait() <span class="kw">inside</span> of hpx_abort() <span class="kw">for</span> 
+                                  <span class="kw">debugging</span>  (default=off)
+      <span class="kw">--hpx-dbg-waitonsegv</span>      call hpx_wait() <span class="kw">for</span> <span class="kw">SIGSEGV</span> for debugging 
+                                  <span class="kw">(unreliable)</span>  <span class="kw">(</span><span class="ot">default=</span>off<span class="kw">)</span>
+      <span class="kw">--hpx-dbg-mprotectstacks</span>  use mprotect() <span class="kw">to</span> bracket stacks to look for 
+                                  <span class="kw">stack</span> overflows  (default=off)</code></pre>
+<p>The <code>wait</code> options in the debug section provide a way to stop the hpx runtime and wait for a debugger to be attached. The <code>–hpx-dbg-waitat</code> option causes HPX to stop at start of the application. A wait loop will be executed. The loop can be broken in the debugger with the following commands (assuming a freshly attached gdb):</p>
 <pre><code>up 2
 p i=1
 c</code></pre>
 <p>The two other <code>wait</code> options work in the same way. It is important to note that the <code>--hpx-dbg-waitonsegv</code> is implemented using non-portable techniques, and it is not guaranteed to work on all systems.</p>
 <p>The <code>--hpx-dbg-mprotectstacks</code> uses the <code>mprotect()</code> interface to protect memory pages around task stacks. This provides a way to debug stack overflows, but if the incorrect memory access skips the proteceted page, the problem will not be detected.</p>
-<h4 id="tracing">Tracing</h4>
+<h4 id="tracing-options">Tracing Options</h4>
 <p>Note that in order to use the tracing interface, hpx must be compiled with the <code>--enable-instrumentation</code> option set.</p>
+<pre class="sourceCode bash"><code class="sourceCode bash">      <span class="kw">--hpx-trace-classes</span>=class set the event classes to trace  (possible 
+                                  <span class="ot">values=</span><span class="st">&quot;parcel&quot;</span>, <span class="st">&quot;pwc&quot;</span>, <span class="st">&quot;sched&quot;</span>, 
+                                  <span class="st">&quot;all&quot;</span>)
+      <span class="kw">--hpx-trace-dir</span>=dir       directory to output trace files
+      <span class="kw">--hpx-trace-filesize</span>=# of events
+                                <span class="kw">set</span> <span class="kw">the</span> size of each trace file
+      <span class="kw">--hpx-trace-at</span>=[localities]
+                                <span class="kw">set</span> <span class="kw">the</span> localities to trace at</code></pre>
 <p>There are four options that affect tracing:</p>
 <ul>
 <li><code>--hpx-trace-dir=&lt;directory name as string&gt;</code> (defaults to <code>&quot;/tmp&quot;</code> - which is strongly recommended) which is where the tracing infrastructure will save the traces</li>
@@ -512,7 +448,55 @@ c</code></pre>
 </ul>
 <p>Tracing records certain events and writes all the events for one rank to a file within a time-stamped subdirectory (which will be located in the specified trace directory) at that rank. Each event is assigned a time, accurate to the nearest microsecond.</p>
 <p>The current trace file format is an ad hoc binary format that can be easily deserialized and processed.</p>
-<h4 id="pohoton-and-pwc-options">Pohoton and PWC options</h4>
+<h4 id="isendirecv-network-options">Isend/Irecv network options</h4>
+<pre class="sourceCode bash"><code class="sourceCode bash">      <span class="kw">--hpx-isir-testwindow</span>=requests
+                                <span class="kw">number</span> of ISIR requests to test in 
+                                  <span class="kw">progress</span> loop
+      <span class="kw">--hpx-isir-sendlimit</span>=requests
+                                <span class="kw">ISIR</span> network send limit
+      <span class="kw">--hpx-isir-recvlimit</span>=requests
+                                <span class="kw">ISIR</span> network recv limit</code></pre>
+<p>The Isend/Irecv network implementation currently uses MPI Isend/Irecv-inspired two-sided messaging as a transport layer.</p>
+<h4 id="pwc-network-options">PWC Network Options</h4>
+<pre class="sourceCode bash"><code class="sourceCode bash">      <span class="kw">--hpx-pwc-parcelbuffersize</span>=bytes
+                                <span class="kw">set</span> <span class="kw">the</span> size of p2p recv buffers for 
+                                  <span class="kw">parcel</span> sends
+      <span class="kw">--hpx-pwc-parceleagerlimit</span>=bytes
+                                <span class="kw">set</span> <span class="kw">the</span> largest eager parcel size 
+                                  <span class="kw">(header</span> inclusive<span class="kw">)</span></code></pre>
+<p>The PWC network implementation currently uses Photon <code>put-with-completion</code> inspired messaging as a transport layer. HPX parcels are emulated using eager buffers, and these two options control these buffers.</p>
+<p>The <code>parcelbuffersize</code> is used for point-to-point eager parcel sends, and controls how many parcel bytes may be sent between p2p synchronization. The default value is 65k. If there are N localities, then N^2 buffers are allocated.</p>
+<p>The <code>parceleagerlimit</code> is used to switch to a rendezvous-send algorithm for parcel transfers. It must be smaller than the <code>parcelbuffersize</code>.</p>
+<h4 id="photon-transport-options">Photon Transport Options</h4>
+<pre class="sourceCode bash"><code class="sourceCode bash">      <span class="kw">--hpx-photon-backend</span>=type 
+                                <span class="kw">set</span> <span class="kw">the</span> underlying network API to use  
+                                  <span class="kw">(possible</span> values=<span class="st">&quot;default&quot;</span>, 
+                                  <span class="st">&quot;verbs&quot;</span>, <span class="st">&quot;ugni&quot;</span><span class="kw">)</span>
+      <span class="kw">--hpx-photon-ibdev</span>=device 
+                                <span class="kw">set</span> <span class="kw">a</span> particular IB device (also a 
+                                  <span class="kw">filter</span> for device and port
+                                  <span class="kw">discovery</span>, e.g. qib0:1+mlx4_0:2)
+      <span class="kw">--hpx-photon-ethdev</span>=device
+                                <span class="kw">set</span> <span class="kw">a</span> particular ETH device (for CMA 
+                                  <span class="kw">mode</span> only)
+      <span class="kw">--hpx-photon-ibport</span>=integer
+                                <span class="kw">set</span> <span class="kw">a</span> particular IB port
+      <span class="kw">--hpx-photon-usecma</span>       enable CMA connection mode  
+                                  <span class="kw">(</span><span class="ot">default=</span>off<span class="kw">)</span>
+      <span class="kw">--hpx-photon-ledgersize</span>=integer
+                                <span class="kw">set</span> <span class="kw">number</span> of ledger entries
+      <span class="kw">--hpx-photon-eagerbufsize</span>=bytes
+                                <span class="kw">set</span> <span class="kw">size</span> of eager buffers
+      <span class="kw">--hpx-photon-smallpwcsize</span>=bytes
+                                <span class="kw">set</span> <span class="kw">PWC</span> small msg limit
+      <span class="kw">--hpx-photon-maxrd</span>=integer
+                                <span class="kw">set</span> <span class="kw">max</span> number of request descriptors
+      <span class="kw">--hpx-photon-defaultrd</span>=integer
+                                <span class="kw">set</span> <span class="kw">default</span> number of allocated 
+                                  <span class="kw">descriptors</span>
+      <span class="kw">--hpx-photon-numcq</span>=integer
+                                <span class="kw">set</span> <span class="kw">number</span> of completion queues to 
+                                  <span class="kw">use</span> (cyclic assignment to ranks)</code></pre>
 <h2 id="notes-on-building-hpx-on-arm">Notes on building HPX on ARM</h2>
 <p>Here are some notes on building/testing HPX on ARM. This is primarily based on ARMv7 architecture on parallella-16.</p>
 <h3 id="ensure-that-you-have-the-required-accessories">Ensure that you have the required accessories</h3>
@@ -586,7 +570,7 @@ $ <span class="kw">export</span> <span class="ot">hpx_threads=</span>2</code></p
 <li>HPX on ARM works only with SMP and MPI transport.</li>
 <li>Since, parallella board has only 1 GB of memory, some of the apps and examples might not work at higher scale due to memory limitation.</li>
 </ol>
-<h2 id="getting-started-with-hpx">Getting Started with HPX</h2>
+<h2 id="getting-started-with-hpx-1">Getting Started with HPX</h2>
 <p>The remainder of this guide is meant to get you up and running with HPX and to give you some basic information about the HPX environment.</p>
 <p>The later section of this guide describe the general layout of the HPX source tree, a simple example using the HPX, and links to find more information about HPX or to get help via e-mail.</p>
 <h3 id="unpacking-the-hpx-archives">Unpacking the HPX Archives</h3>
