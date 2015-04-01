@@ -10,10 +10,7 @@ libhpx_la_SOURCES  = hpx.c call.c par.c action.c debug.c
 
 libhpx_la_CPPFLAGS = -I$(top_srcdir)/include
 libhpx_la_LDFLAGS  = $(HPX_JEMALLOC_LDFLAGS)
-libhpx_la_LIBADD   = $(HPX_LIBFFI_LIBS) \
-                     $(HPX_HWLOC_LIBS) \
-                     $(top_builddir)/libsync/libsync.la \
-                     boot/libboot.la \
+libhpx_la_LIBADD   = boot/libboot.la \
                      memory/libmemory.la \
                      gas/libgas.la \
                      network/libnetwork.la \
@@ -21,6 +18,8 @@ libhpx_la_LIBADD   = $(HPX_LIBFFI_LIBS) \
                      util/libutil.la \
                      system/libsystem.la \
                      instrumentation/libinstrumentation.la \
+                     $(top_builddir)/libsync/libsync.la \
+                     $(HPX_LIBFFI_LIBS) \
+                     $(HPX_HWLOC_LIBS) \
                      $(HPX_PHOTON_LIBS) \
                      $(HPX_JEMALLOC_LIBS)
-

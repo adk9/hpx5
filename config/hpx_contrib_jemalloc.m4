@@ -24,8 +24,8 @@ AC_DEFUN([HPX_CONTRIB_JEMALLOC],
    hpx_jemalloc_cppflags="$hpx_jemalloc_cppflags -I\$(abs_top_builddir)/$1_build$3/include"
    hpx_jemalloc_ldflags="$hpx_jemalloc_ldflags  -L\$(abs_top_builddir)/$1_build$3/lib"
    hpx_jemalloc_libs="$hpx_jemalloc_libs -ljemalloc$3"
-   hpx_jemalloc_rpath="$hpx_jemalloc_rpath -R \$(abs_top_builddir)/$1_build$3/lib"
-   AC_SUBST(HPX_JEMALLOC_RPATH, "$hpx_jemalloc_cppflags")
+   hpx_jemalloc_rpath="$hpx_jemalloc_rpath -Wl,-rpath,\$(abs_top_builddir)/$1_build$3/lib"
+   AC_SUBST(HPX_JEMALLOC_CPPFLAGS, "$hpx_jemalloc_cppflags")
    AC_SUBST(HPX_JEMALLOC_LDFLAGS, "$hpx_jemalloc_ldflags")
    AC_SUBST(HPX_JEMALLOC_LIBS, "$hpx_jemalloc_libs")
    AC_SUBST(HPX_JEMALLOC_RPATH, "$hpx_jemalloc_rpath")])
