@@ -3,10 +3,11 @@ cpi_PROGRAMS                    = cpi
 
 cpi_SOURCES                     = cpi.c 
 
-all_LIBS                        = $(HPX_LIBS)
+all_LIBS                    = $(HPX_LIBS)
 
-AM_CPPFLAGS                     = -D_GNU_SOURCE -I$(top_srcdir)/include
-AM_CFLAGS                       =
+AM_CPPFLAGS                 = -D_GNU_SOURCE -I$(top_srcdir)/include
+AM_CFLAGS                   =
+AM_LDFLAGS                  = $(HPX_JEMALLOC_RPATH) -no-install
 
 if HAVE_MPI
 AM_CFLAGS                       += @MPI_CFLAGS@
