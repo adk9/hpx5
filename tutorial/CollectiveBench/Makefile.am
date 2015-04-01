@@ -5,11 +5,11 @@ hpx_allreduce_SOURCES           = hpx_allreduce.c
 hpx_allgather_SOURCES           = hpx_allgather.c
 hpx_alltoall_SOURCES            = hpx_alltoall.c
 
-all_LIBS                    = $(HPX_JEMALLOC_LIBS) $(HPX_LIBS)
+all_LIBS                    = $(HPX_LIBS)
 
 AM_CPPFLAGS                 = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS                   =
-AM_LDFLAGS                  = $(HPX_JEMALLOC_LDFLAGS) -no-install
+AM_LDFLAGS                  = $(HPX_JEMALLOC_RPATH) -no-install
 
 if HAVE_MPI
 AM_CFLAGS                      += @MPI_CFLAGS@
