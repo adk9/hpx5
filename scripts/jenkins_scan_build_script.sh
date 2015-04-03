@@ -34,7 +34,7 @@ eval "/u/crest-team/LLVM/llvm-3.6.0.src/tools/clang/tools/scan-build/scan-build 
 echo "Building HPX."
 
 # generate the scan-build report
-eval "/u/crest-team/LLVM/llvm-3.6.0.src/tools/clang/tools/scan-build/scan-build --use-analyzer=/usr/bin/clang -v -v -k -o  ${SCAN_BUILD_TMPDIR} make" 
+eval "/u/crest-team/LLVM/llvm-3.6.0.src/tools/clang/tools/scan-build/scan-build --use-analyzer=/usr/bin/clang  -k -o  ${SCAN_BUILD_TMPDIR} make" 
 
 # get the directory name of the report created by scan-build
 SCAN_BUILD_REPORT=$( find ${SCAN_BUILD_TMPDIR} -maxdepth 1 -not -empty -not -name `basename ${SCAN_BUILD_TMPDIR}` )
@@ -48,7 +48,7 @@ else
  
         if [ ! -d "${SCAN_BUILD_ARCHIVE}" ]; then
                 echo ">>> Creating scan-build archive directory"
-                install -d -o jenkins -g jenkins -m 0755 "${SCAN_BUILD_ARCHIVE}"
+                install -d -o crest-team -g crest-team -m 0755 "${SCAN_BUILD_ARCHIVE}"
         else
                 echo ">>> Removing any previous scan-build reports from ${SCAN_BUILD_ARCHIVE}"
                 rm -f ${SCAN_BUILD_ARCHIVE}/*
