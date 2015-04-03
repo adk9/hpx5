@@ -20,7 +20,8 @@ fi
 mkdir build
 cd build
    
-echo "Configuring HPX.
+echo "Configuring HPX."
+CFG_CMD="../configure"
 eval "/u/crest-team/LLVM/llvm-3.6.0.src/tools/clang/tools/scan-build/scan-build --use-analyzer=/usr/bin/clang $CFG_CMD CC=clang CFLAGS=\"-std=gnu99 -O0\" --enable-debug --enable-instrumentation --enable-logging"  
 
 echo "Building HPX."
