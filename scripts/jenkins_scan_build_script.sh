@@ -48,7 +48,7 @@ else
  
         if [ ! -d "${SCAN_BUILD_ARCHIVE}" ]; then
                 echo ">>> Creating scan-build archive directory"
-                install -d -o cutter -g cutter -m 0755 "${SCAN_BUILD_ARCHIVE}"
+                install -d -o crest-team -g cutter -m 0755 "${SCAN_BUILD_ARCHIVE}"
         else
                 echo ">>> Removing any previous scan-build reports from ${SCAN_BUILD_ARCHIVE}"
                 rm -f ${SCAN_BUILD_ARCHIVE}/*
