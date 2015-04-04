@@ -66,7 +66,7 @@ typedef struct gas {
 
   // network operation
   uint32_t (*owner_of)(hpx_addr_t gpa);
-  uint64_t (*offset_of)(hpx_addr_t gpa);
+  // uint64_t (*offset_of)(hpx_addr_t gpa);
 
   // quick hack for the global allocator
   system_mmap_t mmap;
@@ -86,10 +86,10 @@ inline static uint32_t gas_owner_of(gas_t *gas, hpx_addr_t addr) {
   return gas->owner_of(addr);
 }
 
-inline static uint64_t gas_offset_of(gas_t *gas, hpx_addr_t gpa) {
-  assert(gas && gas->offset_of);
-  return gas->offset_of(gpa);
-}
+// inline static uint64_t gas_offset_of(gas_t *gas, hpx_addr_t gpa) {
+//   assert(gas && gas->offset_of);
+//   return gas->offset_of(gpa);
+// }
 
 static inline size_t gas_local_size(gas_t *gas) {
   assert(gas && gas->local_size);
