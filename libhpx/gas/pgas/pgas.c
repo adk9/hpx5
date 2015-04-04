@@ -281,10 +281,6 @@ static void *_pgas_local_base(gas_t *gas) {
   return global_heap->base;
 }
 
-static uint64_t _pgas_offset_of(hpx_addr_t gpa) {
-  return gpa_to_offset(gpa);
-}
-
 static void *_pgas_mmap(void *gas, void *addr, size_t n, size_t align) {
   dbg_assert(global_heap);
   return heap_chunk_alloc(global_heap, addr, n, align);
@@ -321,7 +317,6 @@ static gas_t _pgas_vtable = {
   .memput         = _pgas_memput,
   .memcpy         = _pgas_parcel_memcpy,
   .owner_of       = gpa_to_rank,
-  .offset_of      = _pgas_offset_of,
   .mmap           = _pgas_mmap,
   .munmap         = _pgas_munmap
 };

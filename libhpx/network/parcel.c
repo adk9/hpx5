@@ -106,7 +106,7 @@ int parcel_launch(hpx_parcel_t *p) {
 
   // do a local send through loopback, bypassing the network, otherwise dump the
   // parcel out to the network
-  if (gas_owner_of(here->gas, p->target) == here->rank) {
+  if (here->gas->try_pin(p->target, NULL)) {
     scheduler_spawn(p);
     return HPX_SUCCESS;
   }
@@ -146,7 +146,7 @@ void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
 #ifdef ENABLE_INSTRUMENTATION
   if (inst_trace_class(HPX_INST_CLASS_PARCEL)) {
     parcel_count++;
-    p->id = ((uint64_t)(hpx_get_my_rank() & ID_RANK_MASK) << ID_RANK_OFFSET) | 
+    p->id = ((uint64_t)(hpx_get_my_rank() & ID_RANK_MASK) << ID_RANK_OFFSET) |
       ((uint64_t)(hpx_get_my_thread_id() & ID_WORKER_MASK) << ID_WORKER_OFFSET) |
       (parcel_count & ID_COUNT_MASK);
   }
