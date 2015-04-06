@@ -152,6 +152,11 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
   verbs_ctx.rx_depth = _LEDGER_SIZE;
   verbs_ctx.num_cq   = cfg->cap.num_cq;
 
+  if ((2 * _LEDGER_SIZE * _photon_nproc / verbs_ctx.num_cq) > MAX_CQ_ENTRIES) {
+    dbg_warn("Possible CQ overrun with current config (nproc=%d, nledger=%d, ncq=%d)",
+	     _photon_nproc, _LEDGER_SIZE, verbs_ctx.num_cq);
+  }
+  
   if (cfg->ibv.use_cma && !cfg->ibv.eth_dev) {
     log_err("CMA specified but Ethernet dev missing");
     goto error_exit;
