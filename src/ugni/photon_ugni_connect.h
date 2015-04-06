@@ -4,7 +4,7 @@
 #include <netinet/in.h>
 #include "photon_ugni.h"
 
-#define MAX_CQ_ENTRIES 16384
+#define MAX_CQ_ENTRIES 262144
 
 typedef struct ugni_cnct_ctx_t {
   char               *gemini_dev;
