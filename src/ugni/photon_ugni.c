@@ -127,6 +127,11 @@ static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI s
 
   ugni_ctx.num_cq = cfg->cap.num_cq;
 
+  if ((2 * _LEDGER_SIZE * _photon_nproc / ugni_ctx.num_cq) > MAX_CQ_ENTRIES) {
+    dbg_warn("Possible CQ overrun with current config (nproc=%d, nledger=%d, ncq=%d)",
+	     _photon_nproc, _LEDGER_SIZE, ugni_ctx.num_cq);
+  }
+
   if(__ugni_init_context(&ugni_ctx)) {
     log_err("Could not initialize ugni context");
     goto error_exit;
