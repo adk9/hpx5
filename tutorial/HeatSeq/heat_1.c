@@ -79,9 +79,9 @@ static void maxDouble(double *lhs, const double *rhs) {
 static int _write_double_action(double *d) {
   hpx_addr_t target = hpx_thread_current_target();
   double *addr = NULL;
-  if (!hpx_gas_try_pin(target, (void**)&addr)) 
+  if (!hpx_gas_try_pin(target, (void**)&addr))
     return HPX_RESEND;
-  
+
   *addr = d[0];
   hpx_gas_unpin(target);
   hpx_thread_continue(sizeof(double), &d[1]);
@@ -92,7 +92,7 @@ static int _read_double_action(void *unused) {
   double *addr = NULL;
   if (!hpx_gas_try_pin(target, (void**)&addr))
     return HPX_RESEND;
-  
+
   double d = *addr;
 
   hpx_gas_unpin(target);
@@ -113,9 +113,9 @@ static int _stencil_action(struct spawn_stencil_args *args) {
   // read the value in this cell
   hpx_addr_t target = hpx_thread_current_target();
   double *addr = NULL;
-  if (!hpx_gas_try_pin(target, (void**)&addr)) 
+  if (!hpx_gas_try_pin(target, (void**)&addr))
     return HPX_RESEND;
-  
+
   double v = *addr;
   hpx_gas_unpin(target);
 
@@ -218,7 +218,7 @@ static int _updateGrid_action(void *args) {
   do {
     dTmax = 0.0;
 
-    hpx_addr_t max = hpx_lco_allreduce_new(N * N, 1, sizeof(dTmax), 
+    hpx_addr_t max = hpx_lco_allreduce_new(N * N, 1, sizeof(dTmax),
                                           (hpx_monoid_id_t)initDouble,
                                           (hpx_monoid_op_t)maxDouble);
     //for (int i = 1; i < N + 1; i++) {
@@ -228,18 +228,18 @@ static int _updateGrid_action(void *args) {
     //     hpx_call(cell, _stencil, max, args, sizeof(args));
     //   }
     // }
-    hpx_par_call(_spawn_stencil, 1, N*N+1 , HPX_THREADS, (N*N)/HPX_THREADS, 
+    hpx_par_call(_spawn_stencil, 1, N*N+1 , HPX_THREADS, (N*N)/HPX_THREADS,
                  sizeof(struct spawn_stencil_args), spawn_stencil_args_init, sizeof(max),
                  &max, HPX_NULL);
-   
+
     hpx_lco_get(max, sizeof(dTmax), &dTmax);
 
     // printf("%g\n", dTmax);
 
-    // reduce to get the max of dTmax 
+    // reduce to get the max of dTmax
     hpx_lco_set(domain->dTmax, sizeof(double), &dTmax, HPX_NULL, HPX_NULL);
     hpx_lco_get(domain->dTmax, sizeof(double), &dTmax_global);
-   
+
     dTmax = dTmax_global;
 
     if (dTmax < epsilon ) // is the precision reached good enough ?
@@ -258,14 +258,14 @@ static int _updateGrid_action(void *args) {
   time = ts_end.tv_sec + (ts_end.tv_usec / 1000000.0);
   time -= ts_st.tv_sec + (ts_st.tv_usec / 1000000.0);
 
-  printf("Rank = #%d: %d iteration in %.3lf sec\n", domain->rank, nr_iter, 
-          time); 
+  printf("Rank = #%d: %d iteration in %.3lf sec\n", domain->rank, nr_iter,
+          time);
 
   hpx_lco_set(domain->runtimes, sizeof(double), &time, HPX_NULL, HPX_NULL);
   hpx_lco_get(domain->runtimes, sizeof(double), &max_time);
 
   if (domain->rank == 0) {
-    printf("Max Execution time =  %.3lf sec\n", max_time); 
+    printf("Max Execution time =  %.3lf sec\n", max_time);
   }
   return HPX_SUCCESS;
 }
@@ -277,11 +277,10 @@ static int _initGlobals_action(global_args_t *args) {
 }
 
 void init_globals(hpx_addr_t grid, hpx_addr_t new_grid) {
-  hpx_addr_t init_lco = hpx_lco_future_new(0);
   const global_args_t init_args = { .grid = grid, .new_grid = new_grid };
-  hpx_bcast(_initGlobals, init_lco, &init_args, sizeof(init_args));
-  hpx_lco_wait(init_lco);
-  hpx_lco_delete(init_lco, HPX_NULL);
+  int e = hpx_bcast_lsync(_initGlobals, HPX_NULL, &init_args,
+                          sizeof(init_args));
+  assert(e == HPX_SUCCESS);
 }
 
 static int _initDomain_action(const InitArgs *args)
@@ -321,7 +320,7 @@ static int _main_action(int *input)
   new_grid = hpx_gas_calloc_cyclic(HPX_LOCALITIES, (N+2)*(N+2)*sizeof(double), 0);
 
   hpx_addr_t domain = hpx_gas_alloc_cyclic(HPX_LOCALITIES, sizeof(Domain), 0);
-  hpx_addr_t done = hpx_lco_and_new(HPX_LOCALITIES);  
+  hpx_addr_t done = hpx_lco_and_new(HPX_LOCALITIES);
   hpx_addr_t complete = hpx_lco_and_new(HPX_LOCALITIES);
 
   hpx_addr_t gDone   = hpx_lco_future_new(0);
@@ -336,15 +335,15 @@ static int _main_action(int *input)
 
   init_globals(grid, new_grid);
 
-  hpx_addr_t runtimes = hpx_lco_allreduce_new(HPX_LOCALITIES, HPX_LOCALITIES, 
+  hpx_addr_t runtimes = hpx_lco_allreduce_new(HPX_LOCALITIES, HPX_LOCALITIES,
                                               sizeof(double),
-                                              (hpx_monoid_id_t)initDouble, 
+                                              (hpx_monoid_id_t)initDouble,
                                               (hpx_monoid_op_t)maxDouble);
 
-  hpx_addr_t dTmax = hpx_lco_allreduce_new(HPX_LOCALITIES, HPX_LOCALITIES, 
+  hpx_addr_t dTmax = hpx_lco_allreduce_new(HPX_LOCALITIES, HPX_LOCALITIES,
                                            sizeof(double),
-                                           (hpx_monoid_id_t)initDouble, 
-                                           (hpx_monoid_op_t)maxDouble); 
+                                           (hpx_monoid_id_t)initDouble,
+                                           (hpx_monoid_op_t)maxDouble);
 
   for (int i = 0, e = HPX_LOCALITIES; i < e; ++i) {
     InitArgs init = {
@@ -352,7 +351,7 @@ static int _main_action(int *input)
       .runtimes = runtimes,
       .dTmax = dTmax
     };
-    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, 
+    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i,
                                     sizeof(Domain));
     hpx_call(block, _initDomain, done, &init, sizeof(init));
   }
@@ -360,11 +359,11 @@ static int _main_action(int *input)
   hpx_lco_delete(done, HPX_NULL);
 
   for (int i = 0; i < HPX_LOCALITIES; i++) {
-    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain)*i, sizeof(Domain)); 
+    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain)*i, sizeof(Domain));
     hpx_call(block, _updateGrid, complete, NULL, 0);
   }
   hpx_lco_wait(complete);
-  hpx_lco_delete(complete, HPX_NULL); 
+  hpx_lco_delete(complete, HPX_NULL);
 
   hpx_gas_free(grid, HPX_NULL);
   hpx_gas_free(new_grid, HPX_NULL);
