@@ -22,9 +22,6 @@
 #include <stdarg.h>
 #include <hpx/hpx.h>
 #include "libhpx/action.h"
-#include "libhpx/debug.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
 
@@ -132,58 +129,4 @@ void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
   }
 
   hpx_thread_exit(e);
-}
-
-
-/// Encapsulates a RPC called on all available localities.
-int _hpx_bcast(hpx_action_t action, hpx_addr_t rsync, int nargs, ...) {
-  hpx_addr_t and = HPX_NULL;
-  if (rsync) {
-    and = hpx_lco_and_new(here->ranks);
-    hpx_call_when_with_continuation(and, rsync, hpx_lco_set_action,
-                                    and, hpx_lco_delete_action, NULL, 0);
-  }
-
-  for (int i = 0, e = here->ranks; i < e; ++i) {
-    va_list vargs;
-    va_start(vargs, nargs);
-    int e = libhpx_call_action(HPX_THERE(i), action, and, hpx_lco_set_action,
-                               HPX_NULL, HPX_NULL, nargs, &vargs);
-    dbg_check(e, "hpx_bcast returned an error.\n");
-    va_end(vargs);
-  }
-  return HPX_SUCCESS;
-}
-
-int _hpx_bcast_sync(hpx_action_t action, int nargs, ...) {
-  int e;
-  hpx_addr_t lco = hpx_lco_future_new(0);
-  if (lco == HPX_NULL) {
-    e = log_error("could not allocate an LCO.\n");
-    goto unwind0;
-  }
-
-  hpx_addr_t and = hpx_lco_and_new(here->ranks);
-  hpx_call_when_with_continuation(and, lco, hpx_lco_set_action,
-                                  and, hpx_lco_delete_action, NULL, 0);
-
-  for (int i = 0, e = here->ranks; i < e; ++i) {
-    va_list vargs;
-    va_start(vargs, nargs);
-    int e = libhpx_call_action(HPX_THERE(i), action, and, hpx_lco_set_action,
-                               HPX_NULL, HPX_NULL, nargs, &vargs);
-    dbg_check(e, "hpx_bcast returned an error.\n");
-    va_end(vargs);
-  }
-
-  e = hpx_lco_wait(lco);
-  DEBUG_IF(e != HPX_SUCCESS) {
-    e = log_error("error waiting for bcast and gate");
-    goto unwind1;
-  }
-
- unwind1:
-  hpx_lco_delete(lco, HPX_NULL);
- unwind0:
-  return e;
 }
