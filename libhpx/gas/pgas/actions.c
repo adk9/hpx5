@@ -35,7 +35,6 @@ typedef struct {
   uint32_t  bsize;
 } _calloc_init_args_t;
 
-
 /// Allocate from the cyclic space.
 ///
 /// This is performed at the single cyclic server node (usually rank 0), and
@@ -51,10 +50,8 @@ hpx_addr_t pgas_alloc_cyclic_sync(size_t n, uint32_t bsize) {
   assert(offset != 0);
 
   uint64_t csbrk = heap_get_csbrk(global_heap);
-  hpx_addr_t sync = hpx_lco_future_new(0);
-  hpx_bcast(_set_csbrk, sync, &csbrk, sizeof(csbrk));
-  hpx_lco_wait(sync);
-  hpx_lco_delete(sync, HPX_NULL);
+  int e = hpx_bcast_lsync(_set_csbrk, HPX_NULL, &csbrk, sizeof(csbrk));
+  dbg_check(e, "\n");
 
   hpx_addr_t addr = pgas_offset_to_gpa(here->rank, offset);
   DEBUG_IF(addr == HPX_NULL) {
@@ -91,10 +88,8 @@ hpx_addr_t pgas_calloc_cyclic_sync(size_t n, uint32_t bsize) {
   // We broadcast the csbrk to the system to make sure that people can do
   // effective heap_is_cyclic tests.
   uint64_t csbrk = heap_get_csbrk(global_heap);
-  hpx_addr_t sync = hpx_lco_future_new(0);
-  hpx_bcast(_set_csbrk, sync, &csbrk, sizeof(csbrk));
-  hpx_lco_wait(sync);
-  hpx_lco_delete(sync, HPX_NULL);
+  int e = hpx_bcast_lsync(_set_csbrk, HPX_NULL, &csbrk, sizeof(csbrk));
+  dbg_check(e, "\n");
 
   // Broadcast the calloc so that each locality can zero the correct memory.
   _calloc_init_args_t args = {
@@ -103,10 +98,8 @@ hpx_addr_t pgas_calloc_cyclic_sync(size_t n, uint32_t bsize) {
     .bsize  = bsize
   };
 
-  sync = hpx_lco_future_new(0);
-  hpx_bcast(_calloc_init, sync, &args, sizeof(args));
-  hpx_lco_wait(sync);
-  hpx_lco_delete(sync, HPX_NULL);
+  e = hpx_bcast_lsync(_calloc_init, HPX_NULL, &args, sizeof(args));
+  dbg_check(e, "\n");
 
   hpx_addr_t addr = pgas_offset_to_gpa(here->rank, offset);
   DEBUG_IF(addr == HPX_NULL) {
