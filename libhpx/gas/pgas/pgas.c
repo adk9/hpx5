@@ -292,7 +292,6 @@ static gas_t _pgas_vtable = {
   .delete         = _pgas_delete,
   .local_size     = _pgas_local_size,
   .local_base     = _pgas_local_base,
-  .locality_of    = gpa_to_rank,
   .sub            = _pgas_sub,
   .add            = _pgas_add,
   .lva_to_gva     = pgas_lva_to_gpa,
