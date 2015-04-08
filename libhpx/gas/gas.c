@@ -24,42 +24,43 @@ gas_t *gas_new(const config_t *cfg, struct boot *boot) {
   hpx_gas_t type = cfg->gas;
   gas_t *gas = NULL;
 
-  if (type != HPX_GAS_PGAS && boot_n_ranks(boot) > 1) {
-    log_cfg("GAS %s selection override to PGAS.\n", HPX_GAS_TO_STRING[type]);
+  if (boot_n_ranks(boot) == 1) {
+    if (type != HPX_GAS_SMP) {
+      log_level(HPX_LOG_CONFIG | HPX_LOG_GAS,
+                "GAS %s selection override to SMP.\n", HPX_GAS_TO_STRING[type]);
+    }
+    type = HPX_GAS_SMP;
   }
 
-  if (type != HPX_GAS_SMP && boot_n_ranks(boot) == 1) {
-    log_cfg("GAS %s selection override to SMP.\n", HPX_GAS_TO_STRING[type]);
-  }
-
-#ifdef HAVE_NETWORK
   if (boot_n_ranks(boot) > 1) {
+    if (type == HPX_GAS_SMP) {
+      log_level(HPX_LOG_CONFIG | HPX_LOG_GAS,
+                "GAS %s selection override to PGAS.\n", HPX_GAS_TO_STRING[type]);
+      type = HPX_GAS_PGAS;
+    }
+  }
+
+  if (type == HPX_GAS_SMP) {
+    gas = gas_smp_new();
+  }
+#ifdef HAVE_NETWORK
+  else if (type == HPX_GAS_AGAS) {
+    gas = NULL;
+  }
+  else if (type == HPX_GAS_PGAS) {
     gas = gas_pgas_new(cfg, boot);
-    if (!gas) {
-      log_gas("PGAS failed to initialize\n");
-    }
-    else {
-      log_gas("PGAS initialized\n");
-      gas->type = HPX_GAS_PGAS;
-    }
   }
 #endif
-
-  if (boot_n_ranks(boot) == 1) {
-    gas = gas_smp_new();
-    if (!gas) {
-      log_gas("SMP failed to initialize\n");
-    }
-    else {
-      log_gas("SMP initialized\n");
-      gas->type = HPX_GAS_SMP;
-    }
+  else {
+    dbg_error("unexpected configuration value for gas\n");
   }
 
-  if (gas) {
-    return gas;
+  if (!gas) {
+    log_error("GAS %s failed to initialize\n", HPX_GAS_TO_STRING[type]);
+  }
+  else {
+    log_gas("GAS %s initialized\n", HPX_GAS_TO_STRING[type]);
   }
 
-  dbg_error("Could not initialize GAS model %s", HPX_GAS_TO_STRING[type]);
-  return NULL;
+  return gas;
 }
