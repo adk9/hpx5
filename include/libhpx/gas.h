@@ -36,9 +36,6 @@ typedef struct gas {
   void *(*local_base)(struct gas *gas)
     HPX_NON_NULL(1);
 
-  // Dealing with global addresses
-  uint32_t (*locality_of)(hpx_addr_t gva);
-
   int64_t (*sub)(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize);
   hpx_addr_t (*add)(hpx_addr_t gva, int64_t bytes, uint32_t bsize);
 
@@ -82,11 +79,6 @@ inline static uint32_t gas_owner_of(gas_t *gas, hpx_addr_t addr) {
   assert(gas && gas->owner_of);
   return gas->owner_of(addr);
 }
-
-// inline static uint64_t gas_offset_of(gas_t *gas, hpx_addr_t gpa) {
-//   assert(gas && gas->offset_of);
-//   return gas->offset_of(gpa);
-// }
 
 static inline size_t gas_local_size(gas_t *gas) {
   assert(gas && gas->local_size);

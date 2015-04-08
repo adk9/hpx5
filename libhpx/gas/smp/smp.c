@@ -33,12 +33,6 @@
 static void _smp_delete(gas_t *gas) {
 }
 
-/// Find out which locality the address is owned by.
-static uint32_t _smp_locality_of(hpx_addr_t addr) {
-  // SMP global addresses are all owned by the single, rank 0 locality.
-  return 0;
-}
-
 /// Figure out how far apart two addresses are.
 static int64_t _smp_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   dbg_assert(lhs != HPX_NULL);
@@ -201,7 +195,6 @@ static gas_t _smp_vtable = {
   .delete         = _smp_delete,
   .local_size     = _smp_local_size,
   .local_base     = _smp_local_base,
-  .locality_of    = _smp_locality_of,
   .sub            = _smp_sub,
   .add            = _smp_add,
   .lva_to_gva     = _smp_lva_to_gva,
