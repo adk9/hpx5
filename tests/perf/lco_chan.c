@@ -125,7 +125,7 @@ static int _main_action(void *args) {
 }
 
 int main(int argc, char *argv[argc]) {
-
+  return 77;
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "HPX failed to initialize.\n");
     return 1;
