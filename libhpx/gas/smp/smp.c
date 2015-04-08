@@ -33,14 +33,6 @@
 static void _smp_delete(gas_t *gas) {
 }
 
-/// Check to see if an address is a global address.
-static bool _smp_is_global(gas_t *gas, void *addr) {
-  // All of the SMP addresses can be considered global given that they're all in
-  // the normal virtual address space and thus globally visible. The only thing
-  // that is not global is NULL.
-  return (addr != NULL);
-}
-
 /// Find out which locality the address is owned by.
 static uint32_t _smp_locality_of(hpx_addr_t addr) {
   // SMP global addresses are all owned by the single, rank 0 locality.
@@ -207,7 +199,6 @@ static void *_smp_local_base(gas_t *gas) {
 static gas_t _smp_vtable = {
   .type           = HPX_GAS_SMP,
   .delete         = _smp_delete,
-  .is_global      = _smp_is_global,
   .local_size     = _smp_local_size,
   .local_base     = _smp_local_base,
   .locality_of    = _smp_locality_of,
