@@ -14,7 +14,8 @@ libgas_la_SOURCES += mallctl.c \
                      pgas/actions.c \
                      pgas/bitmap.c \
                      pgas/pgas.c \
-                     pgas/heap.c
+                     pgas/heap.c \
+                     agas/agas.c
 endif
 
 if HAVE_HUGETLBFS
