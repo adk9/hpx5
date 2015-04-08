@@ -18,9 +18,7 @@
 #include <hpx/builtins.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
-#include "heap.h"
-#include "gpa.h"
-#include "pgas.h"
+#include <libhpx/gpa.h>
 
 /// Compute the phase (offset within block) of a global address.
 static uint32_t _phase_of(hpx_addr_t gpa, uint32_t bsize) {
@@ -56,7 +54,7 @@ static hpx_addr_t _triple_to_gpa(uint32_t rank, uint64_t bid, uint32_t phase,
   // and phase
   uint32_t shift = (bsize) ? ceil_log2_32(bsize) : 0;
   uint64_t offset = (bid << shift) + phase;
-  return pgas_offset_to_gpa(rank, offset);
+  return offset_to_gpa(rank, offset);
 }
 
 
@@ -71,8 +69,8 @@ static int64_t _sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize,
   // separately, and combine them to get the overall offset
   const uint32_t plhs = _phase_of(lhs, bsize);
   const uint32_t prhs = _phase_of(rhs, bsize);
-  const uint32_t llhs = pgas_gpa_to_rank(lhs);
-  const uint32_t lrhs = pgas_gpa_to_rank(rhs);
+  const uint32_t llhs = gpa_to_rank(lhs);
+  const uint32_t lrhs = gpa_to_rank(rhs);
   const uint64_t blhs = _block_of(lhs, bsize);
   const uint64_t brhs = _block_of(rhs, bsize);
 
@@ -108,8 +106,8 @@ static hpx_addr_t _add_cyclic(hpx_addr_t gpa, int64_t n, uint32_t bsize,
 
   const uint32_t phase = (_phase_of(gpa, bsize) + n) % bsize;
   const uint32_t blocks = (_phase_of(gpa, bsize) + n) / bsize;
-  const uint32_t rank = (pgas_gpa_to_rank(gpa) + blocks) % here->ranks;
-  const uint32_t cycles = (pgas_gpa_to_rank(gpa) + blocks) / here->ranks;
+  const uint32_t rank = (gpa_to_rank(gpa) + blocks) % here->ranks;
+  const uint32_t cycles = (gpa_to_rank(gpa) + blocks) / here->ranks;
   const uint64_t block = _block_of(gpa, bsize) + cycles;
 
   const hpx_addr_t addr = _triple_to_gpa(rank, block, phase, bsize);
@@ -118,18 +116,16 @@ static hpx_addr_t _add_cyclic(hpx_addr_t gpa, int64_t n, uint32_t bsize,
   }
 
   // sanity check
-  const void *lva = pgas_gpa_to_lva(addr);
-  dbg_assert_str(heap_contains_lva(global_heap, lva), "addr out of bounds\n");
   const int64_t diff = _sub_cyclic(addr, gpa, bsize, false);
   dbg_assert_str(diff == n, "Address %"PRIu64"+%"PRId64" computed as %"PRIu64"."
                  " Expected %"PRId64".\n", gpa, n, addr, diff);
   return addr;
 }
 
-int64_t pgas_gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
+int64_t gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   return _sub_cyclic(lhs, rhs, bsize, true);
 }
 
-hpx_addr_t pgas_gpa_add_cyclic(hpx_addr_t gpa, int64_t bytes, uint32_t bsize) {
+hpx_addr_t gpa_add_cyclic(hpx_addr_t gpa, int64_t bytes, uint32_t bsize) {
   return _add_cyclic(gpa, bytes, bsize, true);
 }

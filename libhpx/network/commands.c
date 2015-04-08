@@ -14,15 +14,14 @@
 # include "config.h"
 #endif
 
+#include <libhpx/gpa.h>
 #include <libhpx/locality.h>
 #include <libhpx/network.h>
 
 #include "commands.h"
 
-#include "../gas/pgas/gpa.h"
-
 static int _lco_set_handler(int src, uint64_t command) {
-  hpx_addr_t lco = pgas_offset_to_gpa(here->rank, command);
+  hpx_addr_t lco = offset_to_gpa(here->rank, command);
   hpx_lco_set(lco, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }

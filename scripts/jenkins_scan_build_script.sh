@@ -49,9 +49,9 @@ else
         if [ ! -d "${SCAN_BUILD_ARCHIVE}" ]; then
                 echo ">>> Creating scan-build archive directory"
                 install -d -o crest-team -g crestweb -m 0755 "${SCAN_BUILD_ARCHIVE}"
-        else
-                echo ">>> Removing any previous scan-build reports from ${SCAN_BUILD_ARCHIVE}"
-                rm -f ${SCAN_BUILD_ARCHIVE}/*
+        #else
+        #        echo ">>> Removing any previous scan-build reports from ${SCAN_BUILD_ARCHIVE}"
+        #        rm -f ${SCAN_BUILD_ARCHIVE}/*
         fi
  
         echo ">>> Archiving scan-build report to ${SCAN_BUILD_ARCHIVE}"
