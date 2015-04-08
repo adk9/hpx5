@@ -55,7 +55,7 @@ else
         fi
  
         echo ">>> Archiving scan-build report to ${SCAN_BUILD_ARCHIVE}"
-        mv ${SCAN_BUILD_REPORT}/* ${SCAN_BUILD_ARCHIVE}/
+        cp ${SCAN_BUILD_REPORT}/* ${SCAN_BUILD_ARCHIVE}/
        
         echo ">>> Removing any temporary files and directories"
         rm -rf "${SCAN_BUILD_TMPDIR}"
