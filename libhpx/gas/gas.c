@@ -17,6 +17,7 @@
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
+#include "agas/agas.h"
 #include "smp/smp.h"
 #include "pgas/pgas.h"
 
@@ -45,7 +46,7 @@ gas_t *gas_new(const config_t *cfg, struct boot *boot) {
   }
 #ifdef HAVE_NETWORK
   else if (type == HPX_GAS_AGAS) {
-    gas = NULL;
+    gas = gas_agas_new(cfg, boot);
   }
   else if (type == HPX_GAS_PGAS) {
     gas = gas_pgas_new(cfg, boot);
