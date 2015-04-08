@@ -205,7 +205,7 @@ case "$SYSTEM" in
   HPX5_BIGRED2 | HPX5_EDISON)
     CFGFLAGS+=" CC=cc"
     ;;
-  HPX_STAMPEDE)
+  HPX5_STAMPEDE)
     if [ "$HPXMODE_AXIS" == smp ] ; then
       CFGFLAGS+=" CC=icc"
     else
