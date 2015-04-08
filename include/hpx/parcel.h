@@ -37,15 +37,18 @@ typedef struct hpx_parcel hpx_parcel_t;
 ///
 /// If the @p data pointer is NULL, then the runtime will allocate a @p bytes
 /// sized buffer with the parcel that can be accessed using the
-/// hpx_parcel_{get,set}_data() interface. The parcel owns this buffer, and it
-/// will be deallocated when the local send completes. The benefit to this mode
-/// of operation is that the runtime has the opportunity to allocate an in-line
-/// buffer for the data---which can improve performance, particularly for small
-/// buffers---and often results in low-latency local completion. The
-/// disadvantage of this approach is that the application programmer must
-/// explicitly copy data into the parcel, which incurs serial overhead that may
-/// be avoided in some cases. In this mode, there is no semantic difference
-/// between hpx_parcel_send() and hpx_parcel_send_sync().
+/// hpx_parcel_{get,set}_data() interface. *The parcel buffer data is not
+/// initialized during this allocation routine.*
+///
+/// The parcel owns this buffer, and it will be deallocated when the local send
+/// completes. The benefit to this mode of operation is that the runtime has the
+/// opportunity to allocate an in-line buffer for the data---which can improve
+/// performance, particularly for small buffers---and often results in
+/// low-latency local completion. The disadvantage of this approach is that the
+/// application programmer must explicitly copy data into the parcel, which
+/// incurs serial overhead that may be avoided in some cases. In this mode,
+/// there is no semantic difference between hpx_parcel_send() and
+/// hpx_parcel_send_sync().
 ///
 /// If the @p data pointer is NULL, and the @p bytes is 0, then
 /// hpx_parcel_get_data() or hpx_parcel_set_data() may fail.

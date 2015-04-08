@@ -19,8 +19,8 @@
 #include <hpx/builtins.h>
 #include <libhpx/locality.h>
 #include <libhpx/action.h>
+#include <libhpx/gpa.h>
 
-#include "gpa.h"
 #include "heap.h"
 #include "pgas.h"
 
@@ -48,7 +48,7 @@ hpx_addr_t pgas_alloc_cyclic_sync(size_t n, uint32_t bsize) {
   int e = hpx_bcast_lsync(_set_csbrk, HPX_NULL, &csbrk);
   dbg_check(e, "\n");
 
-  hpx_addr_t addr = pgas_offset_to_gpa(here->rank, offset);
+  hpx_addr_t addr = offset_to_gpa(here->rank, offset);
   DEBUG_IF(addr == HPX_NULL) {
     dbg_error("should not get HPX_NULL during allocation\n");
   }
@@ -90,7 +90,7 @@ hpx_addr_t pgas_calloc_cyclic_sync(size_t n, uint32_t bsize) {
   e = hpx_bcast_lsync(_calloc_init, HPX_NULL, &offset, &n, &bsize);
   dbg_check(e, "\n");
 
-  hpx_addr_t addr = pgas_offset_to_gpa(here->rank, offset);
+  hpx_addr_t addr = offset_to_gpa(here->rank, offset);
   DEBUG_IF(addr == HPX_NULL) {
     dbg_error("should not get HPX_NULL during allocation\n");
   }
@@ -126,7 +126,7 @@ static int _calloc_init_handler(uint64_t offset, uint32_t bytes, uint32_t bsize)
   // Then compute the gpa for each local block, convert it to an lva, and then
   // memset it.
   uint32_t blocks = ceil_div_64(bytes, here->ranks);
-  hpx_addr_t gpa = pgas_offset_to_gpa(here->rank, offset);
+  hpx_addr_t gpa = offset_to_gpa(here->rank, offset);
   for (int i = 0, e = blocks; i < e; ++i) {
     void *lva = pgas_gpa_to_lva(gpa);
     memset(lva, 0, bsize);
@@ -141,9 +141,9 @@ static HPX_ACTION_DEF(INTERRUPT, _calloc_init_handler, _calloc_init, HPX_UINT64,
 
 HPX_ACTION(pgas_free, void) {
   hpx_addr_t gpa = hpx_thread_current_target();
-  if (here->rank != pgas_gpa_to_rank(gpa)) {
+  if (here->rank != gpa_to_rank(gpa)) {
     dbg_error("PGAS free operation for rank %u arrived at rank %u instead.\n",
-              pgas_gpa_to_rank(gpa), here->rank);
+              gpa_to_rank(gpa), here->rank);
     return HPX_ERROR;
   }
   void *lva = pgas_gpa_to_lva(gpa);
@@ -160,7 +160,7 @@ static int _set_csbrk_handler(size_t offset) {
 static HPX_ACTION_DEF(INTERRUPT, _set_csbrk_handler, _set_csbrk, HPX_SIZE_T);
 
 static int _memput_rsync_handler(int src, uint64_t command) {
-  hpx_addr_t rsync = pgas_offset_to_gpa(src, command);
+  hpx_addr_t rsync = offset_to_gpa(src, command);
   hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
