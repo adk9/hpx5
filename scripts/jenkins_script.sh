@@ -65,8 +65,11 @@ case "$SYSTEM" in
     CFGFLAGS+=" --with-mpi"
     ;;
   HPX5_STAMPEDE)
-    module load intel/13.1.1.163
-    module load  impi/4.1.3.049
+    module unload intel
+    module unload impi
+    module unload mvapich2
+    module load intel/14.0.1.106
+    module load impi/4.1.3.049
     CFGFLAGS+=" --with-mpi"
     ;;
 esac
@@ -202,8 +205,12 @@ case "$SYSTEM" in
   HPX5_BIGRED2 | HPX5_EDISON)
     CFGFLAGS+=" CC=cc"
     ;;
-  HPX5_STAMPEDE)
-    CFGFLAGS+=" CC=icc"
+  HPX_STAMPEDE)
+    if [ "$HPXMODE_AXIS" == smp ] ; then
+      CFGFLAGS+=" CC=icc"
+    else
+      CFGFLAGS+=" CC=mpicc"
+    fi
     ;;
   *)
     exit 1
@@ -243,8 +250,11 @@ if [ "$OP" == "run" ]; then
    
     case "$SYSTEM" in	 
       HPX5_STAMPEDE)
-        module load intel/13.1.1.163
-        module load  impi/4.1.3.049
+      module unload intel
+      module unload impi
+      module unload mvapich2
+      module load intel/14.0.1.106
+      module load impi/4.1.3.049
       ;;
     esac
 
