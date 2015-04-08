@@ -75,7 +75,7 @@ hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
     return status;
   }
   else {
-    return hpx_call(HPX_HERE, _send_through_async, lsync, &p, gate);
+    return hpx_call(HPX_HERE, _send_through_async, lsync, &p, &gate);
   }
 }
 

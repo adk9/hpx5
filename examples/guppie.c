@@ -255,10 +255,8 @@ void _main_action(guppie_config_t *cfg)
   is = -WSEC();
 
   // Initialize main table
-  lco = hpx_lco_future_new(0);
-  hpx_bcast(_init_table, lco, cfg, sizeof(*cfg));
-  hpx_lco_wait(lco);
-  hpx_lco_delete(lco, HPX_NULL);
+  int e = hpx_bcast_lsync(_init_table, HPX_NULL, cfg, sizeof(*cfg));
+  assert(e == HPX_SUCCESS);
 
   printf("Initialization complete.\n");
   fflush(stdout);
@@ -276,10 +274,8 @@ void _main_action(guppie_config_t *cfg)
   s = -WSEC();
 
   // Update the table
-  lco = hpx_lco_future_new(0);
-  hpx_bcast(_update_table, lco, cfg, sizeof(*cfg));
-  hpx_lco_wait(lco);
-  hpx_lco_delete(lco, HPX_NULL);
+  e = hpx_bcast_lsync(_update_table, HPX_NULL, cfg, sizeof(*cfg));
+  assert(e == HPX_SUCCESS);
 
   printf("Completed updates.\n");
   fflush(stdout);

@@ -194,12 +194,6 @@ static void _smp_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
-/// Figure out who owns a global address.
-static uint32_t _smp_owner_of(hpx_addr_t addr) {
-  dbg_assert(addr != HPX_NULL);
-  return 0;
-}
-
 /// Return the size of the global heap stored locally.
 static size_t _smp_local_size(gas_t *gas) {
   dbg_error("SMP execution should not call this function\n");
@@ -235,7 +229,6 @@ static gas_t _smp_vtable = {
   .memget         = _smp_memget,
   .memput         = _smp_memput,
   .memcpy         = _smp_memcpy,
-  .owner_of       = _smp_owner_of,
   .mmap           = system_mmap,
   .munmap         = system_munmap
 };
