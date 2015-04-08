@@ -21,6 +21,7 @@
 #include <libhpx/boot.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
+#include <libhpx/gpa.h>
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
@@ -190,7 +191,7 @@ static int _pwc_pwc(void *network,
                     hpx_action_t rop, hpx_addr_t raddr) {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(here->gas, to);
-  uint64_t offset = gas_offset_of(here->gas, to);
+  uint64_t offset = gpa_to_offset(to);
 
   xport_op_t op = {
     .rank = rank,
@@ -217,7 +218,8 @@ static int _pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
                     hpx_action_t lop, hpx_addr_t laddr) {
   pwc_network_t *pwc = network;
   int rank = gas_owner_of(here->gas, from);
-  uint64_t offset = gas_offset_of(here->gas, from);
+  uint64_t offset = gpa_to_offset(from);
+
   xport_op_t op = {
     .rank = rank,
     .n = n,

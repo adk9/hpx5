@@ -10,9 +10,8 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_GAS_PGAS_GPA_H
-#define LIBHPX_GAS_PGAS_GPA_H
-
+#ifndef LIBHPX_GAS_GPA_H
+#define LIBHPX_GAS_GPA_H
 
 /// @file libhpx/gas/pgas/addr.h
 /// @brief Declaration of the PGAS-specific global physical address.
@@ -34,7 +33,7 @@
 #define GPA_MAX_LG_BSIZE (sizeof(uint32_t)*8)
 
 /// Extract the locality from a gpa.
-static inline uint32_t pgas_gpa_to_rank(hpx_addr_t gpa) {
+static inline uint32_t gpa_to_rank(hpx_addr_t gpa) {
   return (gpa & GPA_PE_MASK) >> GPA_PE_SHIFT;
 }
 
@@ -48,7 +47,7 @@ static inline uint32_t pgas_gpa_to_rank(hpx_addr_t gpa) {
 ///
 /// @returns            The offset within the global heap that corresponds to
 ///                     the address.
-static inline uint64_t pgas_gpa_to_offset(hpx_addr_t gpa) {
+static inline uint64_t gpa_to_offset(hpx_addr_t gpa) {
   return (gpa & GPA_OFFSET_MASK) >> GPA_OFFSET_SHIFT;
 }
 
@@ -59,7 +58,7 @@ static inline uint64_t pgas_gpa_to_offset(hpx_addr_t gpa) {
 ///
 /// @returns            A global address representing the offset at the
 ///                     locality.
-static inline hpx_addr_t pgas_offset_to_gpa(uint32_t locality, uint64_t offset)
+static inline hpx_addr_t offset_to_gpa(uint32_t locality, uint64_t offset)
 {
   uint64_t pe = (((uint64_t)locality) << GPA_PE_SHIFT) & GPA_PE_MASK;
   uint64_t off = (offset << GPA_OFFSET_SHIFT) & GPA_OFFSET_MASK;
@@ -75,12 +74,12 @@ static inline hpx_addr_t pgas_offset_to_gpa(uint32_t locality, uint64_t offset)
 /// @param          rhs The right-hand-side address.
 ///
 /// @returns            (lhs - rhs)
-static inline int64_t pgas_gpa_sub(hpx_addr_t lhs, hpx_addr_t rhs) {
+static inline int64_t gpa_sub(hpx_addr_t lhs, hpx_addr_t rhs) {
     return (lhs - rhs);
 }
 
 /// Compute standard address arithmetic on the global address.
-static inline hpx_addr_t pgas_gpa_add(hpx_addr_t gpa, int64_t bytes) {
+static inline hpx_addr_t gpa_add(hpx_addr_t gpa, int64_t bytes) {
   return gpa + bytes;
 }
 
@@ -96,11 +95,11 @@ static inline hpx_addr_t pgas_gpa_add(hpx_addr_t gpa, int64_t bytes) {
 ///
 /// @returns            The difference between the two addresses such that
 ///                     @code
-///                       lhs == pgas_gpa_add_cyclic(rhs,
-///                                                  pgas_gpa_sub_cyclic(lhs, rhs, bsize),
-///                                                  bsize)
+///                       lhs == gpa_add_cyclic(rhs,
+///                                             gpa_sub_cyclic(lhs, rhs, bsize),
+///                                             bsize)
 ///                     @endcode
-int64_t pgas_gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize)
+int64_t gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize)
   HPX_INTERNAL;
 
 /// Compute cyclic address arithmetic on the global address.
@@ -112,7 +111,8 @@ int64_t pgas_gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize)
 ///
 /// @returns            The global address representation that is @p bytes away
 ///                     from @gpa.
-hpx_addr_t pgas_gpa_add_cyclic(hpx_addr_t gpa, int64_t bytes, uint32_t bsize)
+hpx_addr_t gpa_add_cyclic(hpx_addr_t gpa, int64_t bytes, uint32_t bsize)
   HPX_INTERNAL;
 
-#endif // LIBHPX_GAS_PGAS_GPA_H
+
+#endif // LIBHPX_GAS_GPA_H
