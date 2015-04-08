@@ -53,10 +53,6 @@ static void _pgas_delete(gas_t *gas) {
   }
 }
 
-static bool _pgas_is_global(gas_t *gas, void *lva) {
-  return heap_contains_lva(global_heap, lva);
-}
-
 static bool _gpa_is_cyclic(hpx_addr_t gpa) {
   return heap_offset_is_cyclic(global_heap, gpa_to_offset(gpa));
 }
@@ -294,7 +290,6 @@ static void _pgas_munmap(void *gas, void *addr, size_t n) {
 static gas_t _pgas_vtable = {
   .type           = HPX_GAS_PGAS,
   .delete         = _pgas_delete,
-  .is_global      = _pgas_is_global,
   .local_size     = _pgas_local_size,
   .local_base     = _pgas_local_base,
   .locality_of    = gpa_to_rank,

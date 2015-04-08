@@ -30,9 +30,6 @@ typedef struct gas {
   void (*delete)(struct gas *gas)
     HPX_NON_NULL(1);
 
-  bool (*is_global)(struct gas *gas, void *addr)
-    HPX_NON_NULL(1);
-
   size_t (*local_size)(struct gas *gas)
     HPX_NON_NULL(1);
 
