@@ -1,10 +1,7 @@
 SUBDIRS = 
 
 if HAVE_NETWORK
-SUBDIRS += isir
-if ENABLE_PWC
-SUBDIRS += pwc
-endif
+SUBDIRS += isir pwc
 endif
 
 # The networking library
@@ -23,8 +20,6 @@ libnetwork_la_SOURCES  = locality.c \
                          commands.c
 
 if HAVE_NETWORK
-libnetwork_la_LIBADD   = isir/libisir.la
-if ENABLE_PWC
-libnetwork_la_LIBADD  += pwc/libpwc.la
-endif
+libnetwork_la_LIBADD   = isir/libisir.la \
+                         pwc/libpwc.la
 endif
