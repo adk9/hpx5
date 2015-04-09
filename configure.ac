@@ -152,11 +152,6 @@ AS_IF([test "x$enable_photon" != xno],
   AC_DEFINE([HAVE_JEMALLOC_REGISTERED], [1], [We have a registered memory manager])],
  [hpx_have_photon=no])
 
-AC_ARG_ENABLE([pwc],
-  [AS_HELP_STRING([--enable-pwc],
-                  [Enable the Put-With-Command (PWC) network @<:@default=yes@:>@])],
-  [], [enable_pwc=yes])
-
 AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno],
  [enable_network=yes
   AC_DEFINE([HAVE_NETWORK], [1], [We have a network])
@@ -216,7 +211,6 @@ AM_CONDITIONAL([CPU_ARM], [test "x$host_cpu" = xarmv7l])
 
 AM_CONDITIONAL([HAVE_PHOTON], [test "x$hpx_have_photon" != xno])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$enable_network" != xno])
-AM_CONDITIONAL([ENABLE_PWC], [test "x$enable_pwc" != xno])
 AM_CONDITIONAL([BUILD_JEMALLOC_GLOBAL], [test "x$enable_network" != xno])
 AM_CONDITIONAL([BUILD_JEMALLOC_REGISTERED], [test "x$enable_photon" != xno])
 AM_CONDITIONAL([BUILD_PHOTON], [test "x$enable_external_photon" == xno])

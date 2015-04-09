@@ -33,7 +33,7 @@ static network_t *_default(const config_t *cfg, struct boot *boot,
     }
   }
 
-#if defined(ENABLE_PWC) && defined(HAVE_PHOTON)
+#ifdef HAVE_PHOTON
   network = network_pwc_funneled_new(cfg, boot, gas);
   if (network) {
     return network;
@@ -57,7 +57,7 @@ network_t *network_new(const config_t *cfg, struct boot *boot, struct gas *gas)
 
   switch (cfg->network) {
    case HPX_NETWORK_PWC:
-#if defined(ENABLE_PWC) && defined(HAVE_NETWORK)
+#ifdef HAVE_NETWORK
     network = network_pwc_funneled_new(cfg, boot, gas);
 #else
     log_cfg("network support not enabled\n");
