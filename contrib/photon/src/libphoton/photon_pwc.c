@@ -481,41 +481,43 @@ int _photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *re
   if ((cookie == NULL_REQUEST) && (flags & PHOTON_PROBE_LEDGER)) {
     uint64_t offset, curr, new, left;
     for (i=start; i<end; i++) {
-      // check eager region first
-      eb = photon_processes[i].local_pwc_buf;
-      curr = sync_load(&eb->curr, SYNC_RELAXED);
-      offset = curr & (eb->size - 1);
-      left = eb->size - offset;
-      if (left < ALIGN(EB_MSG_SIZE(_photon_spsize), PWC_ALIGN)) {
-	new = left + curr;
-	offset = 0;
-      }
-      else {
-	new = curr;
-      }
-      
-      hdr = (photon_eb_hdr *)&(eb->data[offset]);
-      if ((hdr->header == UINT8_MAX) && (hdr->footer == UINT8_MAX)) {
-	photon_rid req = hdr->request;
-	uintptr_t addr = hdr->addr;
-	uint16_t size = hdr->length;
-	uint64_t asize = ALIGN(EB_MSG_SIZE(size), PWC_ALIGN);
-	if (sync_cas(&eb->curr, curr, new+asize, SYNC_RELAXED, SYNC_RELAXED)) {
-	  // now check for tail flag (or we could return to check later)
-	  volatile uint8_t *tail = (uint8_t*)((uintptr_t)hdr + asize - 1);
-	  while (*tail != UINT8_MAX)
-	    ;
-	  memcpy((void*)addr, (void*)((uintptr_t)hdr + sizeof(*hdr)), size);
-	  *request = req;
-	  *flag = 1;
-	  dbg_trace("Copied message of size %u into 0x%016lx for request 0x%016lx",
-		    size, addr, req);
-	  memset((void*)hdr, 0, asize);
-	  sync_store(&eb->prog, new+asize, SYNC_RELAXED);
-	  goto exit;
+      // check eager region first, only if small_pwc is enabled
+      if (_photon_spsize > 0) {
+	eb = photon_processes[i].local_pwc_buf;
+	curr = sync_load(&eb->curr, SYNC_RELAXED);
+	offset = curr & (eb->size - 1);
+	left = eb->size - offset;
+	if (left < ALIGN(EB_MSG_SIZE(_photon_spsize), PWC_ALIGN)) {
+	  new = left + curr;
+	  offset = 0;
 	}
-      }
-      
+	else {
+	  new = curr;
+	}
+	
+	hdr = (photon_eb_hdr *)&(eb->data[offset]);
+	if ((hdr->header == UINT8_MAX) && (hdr->footer == UINT8_MAX)) {
+	  photon_rid req = hdr->request;
+	  uintptr_t addr = hdr->addr;
+	  uint16_t size = hdr->length;
+	  uint64_t asize = ALIGN(EB_MSG_SIZE(size), PWC_ALIGN);
+	  if (sync_cas(&eb->curr, curr, new+asize, SYNC_RELAXED, SYNC_RELAXED)) {
+	    // now check for tail flag (or we could return to check later)
+	    volatile uint8_t *tail = (uint8_t*)((uintptr_t)hdr + asize - 1);
+	    while (*tail != UINT8_MAX)
+	      ;
+	    memcpy((void*)addr, (void*)((uintptr_t)hdr + sizeof(*hdr)), size);
+	    *request = req;
+	    *flag = 1;
+	    dbg_trace("Copied message of size %u into 0x%016lx for request 0x%016lx",
+		      size, addr, req);
+	    memset((void*)hdr, 0, asize);
+	    sync_store(&eb->prog, new+asize, SYNC_RELAXED);
+	    goto exit;
+	  }
+	}
+      }	
+
       // then check pwc ledger
       ledger = photon_processes[i].local_pwc_ledger;
       curr = sync_load(&ledger->curr, SYNC_RELAXED);

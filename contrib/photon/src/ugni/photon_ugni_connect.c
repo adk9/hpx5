@@ -55,10 +55,16 @@ int __ugni_init_context(ugni_cnct_ctx *ctx) {
 
   ctx->local_cq_handles = (gni_cq_handle_t *)calloc(ctx->num_cq, sizeof(gni_cq_handle_t));
   if (!ctx->local_cq_handles) {
-    dbg_err("Could not allocated CQ handles");
+    dbg_err("Could not allocate local CQ handles");
     goto error_exit;
   }
 
+  ctx->remote_cq_handles = (gni_cq_handle_t *)calloc(ctx->num_cq, sizeof(gni_cq_handle_t));
+  if (!ctx->remote_cq_handles) {
+    dbg_err("Could not allocate remote CQ handles");
+    goto error_exit;
+  }
+  
   for (i = 0; i < ctx->num_cq; i++) {
     // setup completion queue for local events
     status = GNI_CqCreate(ctx->nic_handle, MAX_CQ_ENTRIES, 0, GNI_CQ_NOBLOCK, NULL, NULL, &(ctx->local_cq_handles[i]));
@@ -66,16 +72,15 @@ int __ugni_init_context(ugni_cnct_ctx *ctx) {
       dbg_err("GNI_CqCreate local_cq ERROR status: %s (%d)\n", gni_err_str[status], status);
       goto error_exit;
     }
-  }
-
-  /* setup completion queue for remote memory events
-    status = GNI_CqCreate(ctx->nic_handle, MAX_CQ_ENTRIES, 0, GNI_CQ_NOBLOCK, NULL, NULL, &(ctx->remote_cq_handle));
+    
+    // setup completion queue for remote events
+    status = GNI_CqCreate(ctx->nic_handle, MAX_CQ_ENTRIES, 0, GNI_CQ_NOBLOCK, NULL, NULL, &(ctx->remote_cq_handles[i]));
     if (status != GNI_RC_SUCCESS) {
-  	dbg_err("GNI_CqCreate remote_cq ERROR status: %s (%d)\n", gni_err_str[status], status);
-        goto error_exit;
+      dbg_err("GNI_CqCreate remote_cq ERROR status: %s (%d)\n", gni_err_str[status], status);
+      goto error_exit;
     }
-  */
-
+  }
+  
   ctx->ep_handles = (gni_ep_handle_t *)calloc(_photon_nproc, sizeof(gni_ep_handle_t));
   if (!ctx->ep_handles) {
     dbg_err("Could not allocate endpoint array");
