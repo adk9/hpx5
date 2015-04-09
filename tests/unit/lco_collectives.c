@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "hpx/hpx.h"
+#include <hpx/hpx.h>
 #include "tests.h"
 
 typedef struct Domain {
@@ -24,16 +24,9 @@ typedef struct Domain {
   hpx_addr_t complete;
   int nDoms;
   int rank;
-  int maxcycles;
+  int maxCycles;
   int cycle;
 } Domain;
-
-typedef struct {
-  int           nDoms;
-  int       maxcycles;
-  hpx_addr_t complete;
-  hpx_addr_t newdt;
-} InitArgs;
 
 /// Initialize a double zero.
 static void _initDouble(double *input, const size_t bytes) {
@@ -45,38 +38,30 @@ static void _maxDouble(double *lhs, const double *rhs, const size_t bytes) {
   *lhs = (*lhs > *rhs) ? *lhs : *rhs;
 }
 
-static HPX_PINNED(_initDomain, Domain *ld, const InitArgs *args) {
-  ld->maxcycles = args->maxcycles;
-  ld->nDoms = args->nDoms;
-  ld->complete = args->complete;
-  ld->cycle = 0;
-
-  // record the newdt allgather
-  ld->newdt = args->newdt;
+static int _initDomain_handler(Domain *domain, hpx_addr_t newdt,
+                               hpx_addr_t complete, int nDoms, int maxCycles) {
+  domain->newdt = newdt;
+  domain->complete = complete;
+  domain->nDoms = nDoms;
+  domain->rank = 0;
+  domain->maxCycles = maxCycles;
+  domain->cycle = 0;
   return HPX_SUCCESS;
 }
+static HPX_ACTION_DEF(PINNED, _initDomain_handler, _initDomain,
+                      HPX_ADDR, HPX_ADDR, HPX_INT, HPX_INT);
 
-static HPX_ACTION(_advanceDomain_reduce, const unsigned long *epoch) {
-  hpx_addr_t local = hpx_thread_current_target();
-  Domain *domain = NULL;
-  if (!hpx_gas_try_pin(local, (void**)&domain)) {
-    return HPX_RESEND;
-  }
-
-  if (domain->cycle >= domain->maxcycles) {
-    hpx_gas_unpin(local);
+static HPX_PINNED(_advanceDomain_reduce, Domain *domain, const unsigned long *epoch) {
+  if (domain->cycle >= domain->maxCycles) {
     return HPX_SUCCESS;
   }
 
   // Compute my gnewdt, and then start the reduce
-  double gnewdt = (domain->cycle == 0) ? 3141592653.58979 :
-      3.14*(domain->rank+1) + domain->cycle;
+  double gnewdt = (domain->cycle) ? 3.14 * (domain->rank + 1) + domain->cycle :
+                  3141592653.58979;
   hpx_lco_set(domain->newdt, sizeof(double), &gnewdt, HPX_NULL, HPX_NULL);
 
   domain->cycle += 1;
-  //const unsigned long next = *epoch + 1;
-  hpx_gas_unpin(local);
-  //return hpx_call(local, _advanceDomain_reduce, HPX_NULL, &next, sizeof(next));
   return HPX_SUCCESS;
 }
 
@@ -92,14 +77,8 @@ static HPX_ACTION(lco_reduce, void *UNUSED) {
                                         (hpx_monoid_op_t)_maxDouble);
 
   for (int i = 0, e = nDoms; i < e; ++i) {
-    InitArgs init = {
-      .nDoms = nDoms,
-      .maxcycles = maxCycles,
-      .complete = HPX_NULL,
-      .newdt = newdt
-    };
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
-    hpx_call(block, _initDomain, done, &init, sizeof(init));
+    hpx_call(block, _initDomain, done, &newdt, &HPX_NULL, &nDoms, &maxCycles);
   }
 
   hpx_lco_wait(done);
@@ -123,20 +102,14 @@ static HPX_ACTION(lco_reduce, void *UNUSED) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(_advanceDomain_allreduce, const unsigned long *epoch) {
-  hpx_addr_t local = hpx_thread_current_target();
-  Domain *domain = NULL;
-  if (!hpx_gas_try_pin(local, (void**)&domain))
-    return HPX_RESEND;
-
-  if (domain->maxcycles <= domain->cycle) {
+static HPX_PINNED(_advanceDomain_allreduce, Domain *domain, const unsigned long *epoch) {
+  if (domain->maxCycles <= domain->cycle) {
     hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
-    hpx_gas_unpin(local);
     return HPX_SUCCESS;
   }
 
   // Compute my gnewdt, and then start the allreduce
-  double gnewdt = 3.14*(domain->rank+1) + domain->cycle;
+  double gnewdt = 3.14 * (domain->rank + 1) + domain->cycle;
   hpx_lco_set(domain->newdt, sizeof(double), &gnewdt, HPX_NULL, HPX_NULL);
 
   // Get the gathered value, and print the debugging string.
@@ -144,7 +117,8 @@ static HPX_ACTION(_advanceDomain_allreduce, const unsigned long *epoch) {
   hpx_lco_get(domain->newdt, sizeof(double), &newdt);
 
   ++domain->cycle;
-  const unsigned long next = *epoch + 1;
+  unsigned long next = *epoch + 1;
+  hpx_addr_t local = hpx_thread_current_target();
   return hpx_call(local, _advanceDomain_allreduce, HPX_NULL, &next, sizeof(next));
 }
 
@@ -161,14 +135,8 @@ static HPX_ACTION(lco_allreduce, void *UNUSED) {
                                            (hpx_monoid_op_t)_maxDouble);
 
   for (int i = 0, e = nDoms; i < e; ++i) {
-    InitArgs init = {
-      .nDoms = nDoms,
-      .maxcycles = maxCycles,
-      .complete = complete,
-      .newdt = newdt
-    };
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
-    hpx_call(block, _initDomain, done, &init, sizeof(init));
+    hpx_call(block, _initDomain, done, &newdt, &complete, &nDoms, &maxCycles);
   }
 
   hpx_lco_wait(done);
@@ -190,20 +158,15 @@ static HPX_ACTION(lco_allreduce, void *UNUSED) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(_advanceDomain_allgather, const unsigned long *epoch) {
-  hpx_addr_t local = hpx_thread_current_target();
-  Domain *domain = NULL;
-  if (!hpx_gas_try_pin(local, (void**)&domain))
-    return HPX_RESEND;
-
-  if (domain->maxcycles <= domain->cycle) {
+static HPX_PINNED(_advanceDomain_allgather, Domain *domain,
+                  unsigned long *epoch) {
+  if (domain->maxCycles <= domain->cycle) {
     hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
-    hpx_gas_unpin(local);
     return HPX_SUCCESS;
   }
 
   // Compute my gnewdt, and then start the allgather
-  double gnewdt = 3.14*(domain->rank+1) + domain->cycle;
+  double gnewdt = 3.14 * (domain->rank + 1) + domain->cycle;
   hpx_lco_allgather_setid(domain->newdt, domain->rank, sizeof(double), &gnewdt,
                           HPX_NULL, HPX_NULL);
 
@@ -212,7 +175,8 @@ static HPX_ACTION(_advanceDomain_allgather, const unsigned long *epoch) {
   hpx_lco_get(domain->newdt, sizeof(newdt), &newdt);
 
   ++domain->cycle;
-  const unsigned long next = *epoch + 1;
+  unsigned long next = *epoch + 1;
+  hpx_addr_t local = hpx_thread_current_target();
   return hpx_call(local, _advanceDomain_allgather, HPX_NULL, &next, sizeof(next));
 }
 
@@ -227,14 +191,8 @@ static HPX_ACTION(lco_allgather, void *UNUSED) {
   hpx_addr_t newdt = hpx_lco_allgather_new(nDoms, sizeof(double));
 
   for (int i = 0, e = nDoms; i < e; ++i) {
-    InitArgs init = {
-      .nDoms = nDoms,
-      .maxcycles = maxCycles,
-      .complete = complete,
-      .newdt = newdt
-    };
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
-    hpx_call(block, _initDomain, done, &init, sizeof(init));
+    hpx_call(block, _initDomain, done, &newdt, &complete, &nDoms, &maxCycles);
   }
 
   hpx_lco_wait(done);
@@ -253,16 +211,9 @@ static HPX_ACTION(lco_allgather, void *UNUSED) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(_advanceDomain_alltoall, const unsigned long *epoch) {
-  hpx_addr_t local = hpx_thread_current_target();
-  Domain *domain = NULL;
-  if (!hpx_gas_try_pin(local, (void**)&domain)) {
-    return HPX_RESEND;
-  }
-
-  if (domain->maxcycles <= domain->cycle) {
+static HPX_PINNED(_advanceDomain_alltoall, Domain *domain, unsigned long *epoch) {
+  if (domain->maxCycles <= domain->cycle) {
     hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
-    hpx_gas_unpin(local);
     return HPX_SUCCESS;
   }
 
@@ -281,7 +232,8 @@ static HPX_ACTION(_advanceDomain_alltoall, const unsigned long *epoch) {
   hpx_lco_alltoall_getid(domain->newdt, domain->rank, sizeof(newdt), &newdt);
 
   ++domain->cycle;
-  const unsigned long next = *epoch + 1;
+  unsigned long next = *epoch + 1;
+  hpx_addr_t local = hpx_thread_current_target();
   return hpx_call(local, _advanceDomain_alltoall, HPX_NULL, &next, sizeof(next));
 }
 
@@ -296,14 +248,8 @@ static HPX_ACTION(lco_alltoall, void *UNUSED) {
   hpx_addr_t newdt = hpx_lco_alltoall_new(nDoms, nDoms * sizeof(int));
 
   for (int i = 0, e = nDoms; i < e; ++i) {
-    InitArgs init = {
-      .nDoms = nDoms,
-      .maxcycles = maxCycles,
-      .complete = complete,
-      .newdt = newdt
-    };
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
-    hpx_call(block, _initDomain, done, &init, sizeof(init));
+    hpx_call(block, _initDomain, done, &newdt, &complete, &nDoms, &maxCycles);
   }
 
   hpx_lco_wait(done);
