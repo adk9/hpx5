@@ -238,13 +238,15 @@ static void _reduce_init(_reduce_t *r, int inputs, size_t size, hpx_monoid_id_t 
   }
 
   r->id(r->value, size);
+  log_lco("initialized with %d inputs lco %p\n", r->inputs, (void*)r);
 }
 /// @}
 
 hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_monoid_id_t id,
                               hpx_monoid_op_t op) {
   _reduce_t *r = global_malloc(sizeof(*r));
-  assert(r);
+  dbg_assert(r);
+  log_lco("allocated lco %p\n", (void*)r);
   _reduce_init(r, inputs, size, id, op);
   return lva_to_gva(r);
 }
