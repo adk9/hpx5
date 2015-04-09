@@ -131,25 +131,6 @@ AC_ARG_ENABLE([testsuite],
   [AS_HELP_STRING([--enable-testsuite],
                   [Enable test suite @<:@default=yes@:>@])],
   [], [enable_tests=yes])
-  
-AC_ARG_ENABLE([pwc],
-  [AS_HELP_STRING([--enable-pwc],
-                  [Enable the Put-With-Command (PWC) network @<:@default=yes@:>@])],
-  [], [enable_pwc=yes])
-
-AS_IF([test "x$enable_pwc" != xno],
-  [AC_DEFINE([ENABLE_PWC], [1], [Enable pwc networking])])
-
-AC_ARG_ENABLE([photon],
- [AS_HELP_STRING([--enable-photon],
-                 [build with Photon networking @<:@default=no@:>@])],
-  [], [enable_photon=no])
-
-AS_IF([test "x$enable_photon" != xno],
- [HPX_CONTRIB_PHOTON([contrib/photon], [hpx_])
-  HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [libhpx_registered_], [_registered])
-  AC_DEFINE([HAVE_JEMALLOC_REGISTERED], [1], [We have a registered memory manager])],
- [hpx_have_photon=no])
 
 # ---------------------------------------------------------------------------
 # --with-options, see config/hpx_with_pkg.m4 for details
@@ -160,6 +141,21 @@ AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray
 HPX_WITH_PKG([hugetlbfs],[hugetlbfs],[build with hugepages for heap],[no],[HUGETLBFS])
 HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[no],[MPI])
 HPX_WITH_PKG([portals],[portals],[build with Portals networking],[no],[PORTALS])
+
+AC_ARG_ENABLE([photon],
+ [AS_HELP_STRING([--enable-photon], [build with Photon networking @<:@default=no@:>@])], [],
+ [enable_photon=no])
+
+AS_IF([test "x$enable_photon" != xno],
+ [HPX_CONTRIB_PHOTON([contrib/photon], [hpx_])
+  HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [libhpx_registered_], [_registered])
+  AC_DEFINE([HAVE_JEMALLOC_REGISTERED], [1], [We have a registered memory manager])],
+ [hpx_have_photon=no])
+
+AC_ARG_ENABLE([pwc],
+  [AS_HELP_STRING([--enable-pwc],
+                  [Enable the Put-With-Command (PWC) network @<:@default=yes@:>@])],
+  [], [enable_pwc=yes])
 
 AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno],
  [enable_network=yes
