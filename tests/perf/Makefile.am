@@ -10,12 +10,8 @@ LIBS = $(HPX_LIBS)
 
 TESTS = gas_alloc	\
         gas_addr_trans	\
-        lco_chan	\
         lco_sema	\
-        lco_future	\
-        lco_netfutures	\
-        lco_netfutures_msgSize
-
+        lco_future	
 
 if ENABLE_LENGTHY_TESTS
 TESTS += lco_and
@@ -25,19 +21,13 @@ LOG_COMPILER = $(TESTS_CMD)
 
 gas_alloc_SOURCES			= gas_alloc.c
 gas_addr_trans_SOURCES			= gas_addr_trans.c
-lco_chan_SOURCES			= lco_chan.c
 lco_sema_SOURCES			= lco_sema.c
 lco_future_SOURCES			= lco_future.c
-lco_netfutures_SOURCES			= lco_netfutures.c
-lco_netfutures_msgSize_SOURCES		= lco_netfutures_msgSize.c
 
 gas_alloc_DEPENDENCIES			= $(HPX_DEPS)
 gas_addr_trans_DEPENDENCIES		= $(HPX_DEPS)
-lco_chan_DEPENDENCIES			= $(HPX_DEPS)
 lco_sema_DEPENDENCIES			= $(HPX_DEPS)
 lco_future_DEPENDENCIES			= $(HPX_DEPS)
-lco_netfutures_DEPENDENCIES		= $(HPX_DEPS)
-lco_netfutures_msgSize_DEPENDENCIES	= $(HPX_DEPS)
 
 if ENABLE_LENGTHY_TESTS
 lco_and_SOURCES		= lco_and.c
