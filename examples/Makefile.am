@@ -2,8 +2,7 @@ examplesdir          = $(datarootdir)/doc/@PACKAGE@
 
 noinst_PROGRAMS         = fibonacci pingpong allreduce countdown seqspawn \
                           parspawn future memput memget guppie sendrecv \
-                          sendrecv-chan allreduce-chan pingpong-chan hello \
-                          qsort call netbench netfutures
+                          hello qsort call netbench 
 
 fibonacci_SOURCES       = fibonacci.c
 pingpong_SOURCES        = pingpong.c
@@ -16,14 +15,10 @@ memput_SOURCES          = memput.c
 memget_SOURCES          = memget.c
 guppie_SOURCES          = guppie.c
 sendrecv_SOURCES        = sendrecv.c
-sendrecv_chan_SOURCES   = sendrecv-chan.c
-allreduce_chan_SOURCES  = allreduce-chan.c
-pingpong_chan_SOURCES   = pingpong-chan.c
 qsort_SOURCES           = qsort.c
 hello_SOURCES           = hello.c
 call_SOURCES            = call.c
 netbench_SOURCES        = netbench.c
-netfutures_SOURCES      = netfutures.c
 
 all_LIBS = $(HPX_LIBS)
 
@@ -41,11 +36,7 @@ future_LDADD          = $(all_LIBS)
 memput_LDADD          = $(all_LIBS)
 memget_LDADD          = $(all_LIBS)
 guppie_LDADD          = $(all_LIBS)
-netfutures_LDADD      = $(all_LIBS)
 sendrecv_LDADD        = $(all_LIBS)
-sendrecv_chan_LDADD   = $(all_LIBS)
-allreduce_chan_LDADD  = $(all_LIBS)
-pingpong_chan_LDADD   = $(all_LIBS)
 qsort_LDADD           = $(all_LIBS)
 hello_LDADD           = $(all_LIBS)
 call_LDADD            = $(all_LIBS)
@@ -61,11 +52,7 @@ future_DEPENDENCIES          = $(HPX_DEPS)
 memput_DEPENDENCIES          = $(HPX_DEPS)
 memget_DEPENDENCIES          = $(HPX_DEPS)
 guppie_DEPENDENCIES          = $(HPX_DEPS)
-netfutures_DEPENDENCIES      = $(HPX_DEPS)
 sendrecv_DEPENDENCIES        = $(HPX_DEPS)
-sendrecv_chan_DEPENDENCIES   = $(HPX_DEPS)
-allreduce_chan_DEPENDENCIES  = $(HPX_DEPS)
-pingpong_chan_DEPENDENCIES   = $(HPX_DEPS)
 qsort_DEPENDENCIES           = $(HPX_DEPS)
 hello_DEPENDENCIES           = $(HPX_DEPS)
 call_DEPENDENCIES            = $(HPX_DEPS)

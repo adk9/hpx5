@@ -38,13 +38,9 @@
 #include <libhpx/parcel.h>
 #include <libhpx/parcel_block.h>
 #include <libhpx/scheduler.h>
+#include <libhpx/topo.h>
 
 #ifdef ENABLE_INSTRUMENTATION
-#define ID_RANK_OFFSET 46 // 18 bits for 16k ranks
-#define ID_WORKER_OFFSET 38 // ID_RANK_OFFSET - 8, for 256 cores
-#define ID_RANK_MASK 0x3ffffUL
-#define ID_WORKER_MASK 0x7fUL
-#define ID_COUNT_MASK 0x7fffffffffUL
 __thread uint64_t parcel_count = 0;
 #endif
 
@@ -146,9 +142,8 @@ void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
 #ifdef ENABLE_INSTRUMENTATION
   if (inst_trace_class(HPX_INST_CLASS_PARCEL)) {
     parcel_count++;
-    p->id = ((uint64_t)(hpx_get_my_rank() & ID_RANK_MASK) << ID_RANK_OFFSET) |
-      ((uint64_t)(hpx_get_my_thread_id() & ID_WORKER_MASK) << ID_WORKER_OFFSET) |
-      (parcel_count & ID_COUNT_MASK);
+    p->id = topo_offset_to_value(hpx_get_my_rank(), hpx_get_my_thread_id(),
+                                 parcel_count);
   }
 #endif
 
