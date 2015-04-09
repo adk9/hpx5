@@ -95,11 +95,4 @@ inline static hpx_addr_t lva_to_gva(const void *lva) {
   return here->gas->lva_to_gva(lva);
 }
 
-/// Translate a global address to a local address.
-inline static void *gva_to_lva(hpx_addr_t gva) {
-  dbg_assert(here && here->gas && here->gas->gva_to_lva);
-  return here->gas->gva_to_lva(gva);
-}
-
-
 #endif // LIBHPX_LOCALITY_H
