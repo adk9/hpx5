@@ -26,7 +26,6 @@ extern "C" {
 #include "hpx/types.h"
 #include "hpx/action.h"
 #include "hpx/addr.h"
-#include "hpx/future.h"
 #include "hpx/gas.h"
 #include "hpx/lco.h"
 #include "hpx/par.h"
