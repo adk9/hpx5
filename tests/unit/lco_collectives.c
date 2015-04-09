@@ -34,7 +34,7 @@ static void _initDouble(double *input, const size_t bytes) {
 }
 
 /// Update *lhs with with the max(lhs, rhs);
-static void _maxDouble(double *lhs, const double *rhs, const size_t bytes) {
+static void _maxDouble(double *lhs, const double *rhs, size_t UNUSED) {
   *lhs = (*lhs > *rhs) ? *lhs : *rhs;
 }
 
@@ -50,57 +50,6 @@ static int _initDomain_handler(Domain *domain, hpx_addr_t newdt,
 }
 static HPX_ACTION_DEF(PINNED, _initDomain_handler, _initDomain,
                       HPX_ADDR, HPX_ADDR, HPX_INT, HPX_INT);
-
-static HPX_PINNED(_advanceDomain_reduce, Domain *domain, const unsigned long *epoch) {
-  if (domain->cycle >= domain->maxCycles) {
-    return HPX_SUCCESS;
-  }
-
-  // Compute my gnewdt, and then start the reduce
-  double gnewdt = (domain->cycle) ? 3.14 * (domain->rank + 1) + domain->cycle :
-                  3141592653.58979;
-  hpx_lco_set(domain->newdt, sizeof(double), &gnewdt, HPX_NULL, HPX_NULL);
-
-  domain->cycle += 1;
-  return HPX_SUCCESS;
-}
-
-static HPX_ACTION(lco_reduce, void *UNUSED) {
-  int nDoms = 8;
-  int maxCycles = 100;
-
-  hpx_addr_t domain = hpx_gas_calloc_cyclic(nDoms, sizeof(Domain), sizeof(Domain));
-  hpx_addr_t done = hpx_lco_and_new(nDoms);
-
-  hpx_addr_t newdt = hpx_lco_reduce_new(nDoms, sizeof(double),
-                                        (hpx_monoid_id_t)_initDouble,
-                                        (hpx_monoid_op_t)_maxDouble);
-
-  for (int i = 0, e = nDoms; i < e; ++i) {
-    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
-    hpx_call(block, _initDomain, done, &newdt, &HPX_NULL, &nDoms, &maxCycles);
-  }
-
-  hpx_lco_wait(done);
-  hpx_lco_delete(done, HPX_NULL);
-
-  const unsigned long epoch = 0;
-
-  for (int i = 0, e = nDoms; i < e; ++i) {
-    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
-    hpx_call(block, _advanceDomain_reduce, HPX_NULL, &epoch, sizeof(epoch));
-  }
-
-  // Get the gathered value, and print the debugging string.
-  double ans;
-  hpx_lco_get(newdt, sizeof(double), &ans);
-  assert(ans == 3141592653.58979);
-
-  hpx_lco_delete(newdt, HPX_NULL);
-  hpx_gas_free(domain, HPX_NULL);
-
-  return HPX_SUCCESS;
-}
 
 static HPX_PINNED(_advanceDomain_allreduce, Domain *domain, const unsigned long *epoch) {
   if (domain->maxCycles <= domain->cycle) {
@@ -269,7 +218,6 @@ static HPX_ACTION(lco_alltoall, void *UNUSED) {
 }
 
 TEST_MAIN({
-  ADD_TEST(lco_reduce);
   ADD_TEST(lco_allreduce);
   ADD_TEST(lco_allgather);
   ADD_TEST(lco_alltoall);

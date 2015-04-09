@@ -23,6 +23,7 @@ TESTS = bcast                   \
         lco_collectives         \
         lco_futures             \
         lco_gencount            \
+        lco_reduce              \
         lco_sema                \
         lco_setget              \
         lco_user                \
