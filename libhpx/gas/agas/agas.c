@@ -23,15 +23,26 @@ static void _agas_delete(gas_t *gas) {
   free(gas);
 }
 
+static int64_t _agas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
+  return INT64_MAX;;
+}
+
+static hpx_addr_t _agas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
+  return HPX_NULL;
+}
+
+static hpx_addr_t _agas_lva_to_gva(const void *lva) {
+  return HPX_NULL;
+}
+
 static gas_t _agas_vtable = {
   .type           = HPX_GAS_AGAS,
   .delete         = _agas_delete,
   .local_size     = NULL,
   .local_base     = NULL,
-  .sub            = NULL,
-  .add            = NULL,
-  .lva_to_gva     = NULL,
-  .gva_to_lva     = NULL,
+  .sub            = _agas_sub,
+  .add            = _agas_add,
+  .lva_to_gva     = _agas_lva_to_gva,
   .there          = NULL,
   .try_pin        = NULL,
   .unpin          = NULL,

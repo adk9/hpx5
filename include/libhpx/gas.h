@@ -40,7 +40,6 @@ typedef struct gas {
   hpx_addr_t (*add)(hpx_addr_t gva, int64_t bytes, uint32_t bsize);
 
   hpx_addr_t (*lva_to_gva)(const void *lva);
-  void *(*gva_to_lva)(hpx_addr_t gva);
 
   // implement hpx/gas.h
   __typeof(HPX_THERE) *there;
