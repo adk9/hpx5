@@ -21,39 +21,42 @@
 #include "smp/smp.h"
 #include "pgas/pgas.h"
 
+static const int LEVEL = HPX_LOG_CONFIG | HPX_LOG_GAS;
+
 gas_t *gas_new(const config_t *cfg, struct boot *boot) {
   hpx_gas_t type = cfg->gas;
+  int ranks = boot_n_ranks(boot);
   gas_t *gas = NULL;
 
-  if (boot_n_ranks(boot) == 1) {
-    if (type != HPX_GAS_SMP) {
-      log_level(HPX_LOG_CONFIG | HPX_LOG_GAS,
-                "GAS %s selection override to SMP.\n", HPX_GAS_TO_STRING[type]);
+  if (ranks == 1) {
+    if (type != HPX_GAS_SMP && type != HPX_GAS_DEFAULT) {
+      log_level(LEVEL, "GAS %s overriden to SMP.\n", HPX_GAS_TO_STRING[type]);
     }
     type = HPX_GAS_SMP;
   }
 
-  if (boot_n_ranks(boot) > 1) {
-    if (type == HPX_GAS_SMP) {
-      log_level(HPX_LOG_CONFIG | HPX_LOG_GAS,
-                "GAS %s selection override to PGAS.\n", HPX_GAS_TO_STRING[type]);
-      type = HPX_GAS_PGAS;
-    }
+  if (ranks > 1 && type == HPX_GAS_SMP) {
+    dbg_error("SMP GAS selection fails for %d ranks\n", ranks);
   }
 
-  if (type == HPX_GAS_SMP) {
+  switch (type) {
+   case HPX_GAS_SMP:
     gas = gas_smp_new();
-  }
+    break;
+
+   case HPX_GAS_AGAS:
 #ifdef HAVE_NETWORK
-  else if (type == HPX_GAS_AGAS) {
     gas = gas_agas_new(cfg, boot);
-  }
-  else if (type == HPX_GAS_PGAS) {
-    gas = gas_pgas_new(cfg, boot);
-  }
 #endif
-  else {
-    dbg_error("unexpected configuration value for gas\n");
+    break;
+   case HPX_GAS_PGAS:
+#ifdef HAVE_NETWORK
+    gas = gas_pgas_new(cfg, boot);
+#endif
+    break;
+
+   default:
+    dbg_error("unexpected configuration value for --hpx-gas\n");
   }
 
   if (!gas) {
