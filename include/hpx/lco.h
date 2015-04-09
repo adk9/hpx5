@@ -329,13 +329,6 @@ hpx_addr_t hpx_lco_future_local_array_new(int n, int size);
 /// @returns the global address of the allocated array lco.
 hpx_addr_t hpx_lco_and_local_array_new(int n, int inputs);
 
-/// Allocate an array of chan LCO local to the calling locality.
-/// @param          n The (total) number of lcos to allocate
-/// @param       size The size of each lco's value
-///
-/// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_chan_local_array_new(int n, int size);
-
 /// Allocate an array of reduce LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate
 /// @param     inputs The static number of inputs to the reduction.
@@ -396,107 +389,6 @@ hpx_addr_t hpx_lco_alltoall_local_array_new(int n, size_t inputs, size_t size);
 hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size,
                                         hpx_monoid_id_t id, hpx_monoid_op_t op,
                                         hpx_predicate_t predicate);
-
-/// Channels.
-///
-/// The channel LCO approximates an MPI channel.
-///
-/// The channel send operation creates at least one copy of the sent buffer,
-/// possibly asynchronously, and the channel recv operation returns a pointer to
-/// this buffer (any intermediate copies are managed by the runtime).
-
-/// Allocate a new channel.
-///
-/// @returns The global address of the newly allocated channel.
-hpx_addr_t hpx_lco_chan_new(void);
-
-/// Send a buffer through a channel.
-///
-/// Sending the @p buffer entails creating at least one copy of the buffer. The
-/// @p lsync LCO will be set when the @p buffer can be safely written to. The @p
-/// rsync LCO can be used to provide an ordered channel---if every send operation
-/// waits on remote completion before sending on the same channel again then the
-/// receives from the channel will occur in that same order. No ordering
-/// guarantees are supplied between channels, or given an out-of-band
-/// communication mechanism, other than those that can be deduced through
-/// waiting on @p rsync.
-///
-/// The send operation is equivalent to hpx_lco_set() for the channel.
-///
-/// @param   chan The channel to use.
-/// @param   size The size of the @p buffer.
-/// @param buffer The buffer to send.
-/// @param  lsync An LCO to signal on local completion (i.e., R/W access or free
-///               to @p buffer is safe), HPX_NULL if we don't care.
-/// @param  rsync An LCO to signal remote completion (i.e., the buffer has been
-///               enqueued remotely), HPX_NULL if we don't care.
-void hpx_lco_chan_send(hpx_addr_t chan, int size, const void *buffer,
-                       hpx_addr_t lsync, hpx_addr_t rsync);
-
-/// Send a buffer through an ordered channel.
-///
-/// All in order sends from a thread are guaranteed to be received in the order
-/// that they were sent. No guarantee is made for inorder sends on the same
-/// channel from different threads. More complicated ordering can be provided
-/// using the @p rsync LCO and the hpx_lco_chan_send() interface.
-///
-/// @param   chan The channel to use.
-/// @param   size The size of the @p buffer.
-/// @param buffer The buffer to send.
-/// @param  lsync An LCO to signal on local completion (i.e., R/W access or free
-///               to @p buffer is safe), HPX_NULL if we don't care.
-void hpx_lco_chan_send_inorder(hpx_addr_t chan, int size, const void *buffer,
-                               hpx_addr_t lsync);
-
-/// Receive a buffer from a channel.
-///
-/// This is a blocking call. The user is responsible for freeing the returned
-/// buffer.
-///
-/// @param[in]    chan the global address of the channel to receive from
-/// @param[out]   size the size of the received buffer
-/// @param[out] buffer the address of the received buffer
-///
-/// @returns HPX_SUCCESS or an error code
-hpx_status_t hpx_lco_chan_recv(hpx_addr_t chan, int *size, void **buffer);
-
-/// Probe a single channel to attempt to read.
-///
-/// The hpx_lco_chan_recv() interface blocks the caller until a buffer is
-/// available. This hpx_lco_chan_try_recv() operation will instead return
-/// HPX_LCO_CHAN_EMPTY to indicate that no buffer was available.
-///
-/// @param[in]    chan the global address of the channel
-/// @param[out]   size the size of the received buffer, if there was one
-/// @param[out] buffer the received buffer, if there was one
-///
-/// @returns HPX_SUCCESS if a buffer was received,
-///          HPX_LCO_CHAN_EMPY if there was no buffer available
-///          HPX_LCO_ERROR if the channel has an error
-hpx_status_t hpx_lco_chan_try_recv(hpx_addr_t chan, int *size, void **buffer);
-
-/// Receive from one of a set of channels.
-///
-/// This is a blocking call, and the user is responsible for freeing the
-/// returned buffer. The return value corresponds to the error condition for the
-/// channel that we matched on, if it is not HPX_SUCCESS, then @p index
-/// indicates the channel, but the @p size and @p buffer should not be
-/// inspected.
-///
-/// @param[in]        n the number of channels we're probing
-/// @param[in] channels an array of channels to probe
-/// @param[out]   index the index of the channel that we matched
-/// @param[out]    size the size of the buffer that we matched
-/// @param[out]     out the buffer that we matched
-///
-/// @returns HPX_SUCCESS or an error code if the channel associated with @p
-///          index has an error set.
-hpx_status_t hpx_lco_chan_array_select(int n, hpx_addr_t channels[],
-                                       int *index, int *size, void **out);
-
-hpx_addr_t hpx_lco_chan_array_new(int n, int size, int chans_per_block);
-hpx_addr_t hpx_lco_chan_array_at(hpx_addr_t base, int i, int size, int bsize);
-void hpx_lco_chan_array_delete(hpx_addr_t array, hpx_addr_t sync);
 
 /// Allocate a new generation counter.
 ///

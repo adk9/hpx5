@@ -29,7 +29,6 @@
 #include <libhpx/scheduler.h>
 #include "lco.h"
 #include "cvar.h"
-#include "future.h"
 
 /// Local future interface.
 /// @{
