@@ -10,7 +10,9 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 /// Given a set of elements distributed across all processes, Allgather will
 /// gather all of the elements to all the processes. It gathers and broadcasts
@@ -62,11 +64,6 @@
 ///           #      #      #      #      #      #
 ///           ####################################
 
-
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 /// @file libhpx/scheduler/allgather.c
 /// @brief Defines the allgather LCO.
 #include <assert.h>
@@ -74,7 +71,6 @@
 
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
-#include <libhpx/memory.h>
 #include <libhpx/scheduler.h>
 #include "cvar.h"
 #include "lco.h"
@@ -292,22 +288,21 @@ _allgather_set(lco_t *lco, int size, const void *from)
   hpx_abort();
 }
 
-static void _allgather_init(_allgather_t *g, size_t participants, size_t size) {
-  // vtable
-  static const lco_class_t vtable = {
-    .on_fini     = _allgather_fini,
-    .on_error    = _allgather_error,
-    .on_set      = _allgather_set,
-    .on_attach   = _allgather_attach,
-    .on_get      = _allgather_get,
-    .on_getref   = NULL,
-    .on_release  = NULL,
-    .on_wait     = _allgather_wait,
-    .on_reset    = _allgather_reset,
-    .on_size     = _allgather_size
-  };
+static const lco_class_t _allgather_vtable = {
+  .on_fini     = _allgather_fini,
+  .on_error    = _allgather_error,
+  .on_set      = _allgather_set,
+  .on_attach   = _allgather_attach,
+  .on_get      = _allgather_get,
+  .on_getref   = NULL,
+  .on_release  = NULL,
+  .on_wait     = _allgather_wait,
+  .on_reset    = _allgather_reset,
+  .on_size     = _allgather_size
+};
 
-  lco_init(&g->lco, &vtable);
+static int _allgather_init(_allgather_t *g, size_t participants, size_t size) {
+  lco_init(&g->lco, &_allgather_vtable);
   cvar_reset(&g->wait);
   g->participants = participants;
   g->count = participants;
@@ -320,7 +315,11 @@ static void _allgather_init(_allgather_t *g, size_t participants, size_t size) {
     g->value = malloc(size * participants);
     assert(g->value);
   }
+
+  return HPX_SUCCESS;
 }
+static HPX_ACTION_DEF(PINNED, _allgather_init, _allgather_init_async,
+                      HPX_SIZE_T, HPX_SIZE_T);
 
 /// Allocate a new gather LCO. It gathers elements from each process in order
 /// of their rank and sends the result to all the processes
@@ -332,10 +331,18 @@ static void _allgather_init(_allgather_t *g, size_t participants, size_t size) {
 /// @param participants The static number of participants in the gathering.
 /// @param size         The size of the data being gathered.
 hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size) {
-  _allgather_t *g = global_malloc(sizeof(*g));
-  assert(g);
-  _allgather_init(g, inputs, size);
-  return lva_to_gva(g);
+  _allgather_t *g = NULL;
+  hpx_addr_t gva = hpx_gas_alloc_local(sizeof(*g), 0);
+  dbg_assert_str(gva, "Could not malloc global memory\n");
+  if (!hpx_gas_try_pin(gva, (void**)&g)) {
+    int e = hpx_call_sync(gva, _allgather_init_async, NULL, 0, &inputs, &size);
+    dbg_check(e, "couldn't initialize allgather at %lu\n", gva);
+  }
+  else {
+    _allgather_init(g, inputs, size);
+    hpx_gas_unpin(gva);
+  }
+  return gva;
 }
 
 /// Initialize a block of array of lco.
