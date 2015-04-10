@@ -29,7 +29,7 @@ case "$SYSTEM" in
     export LDFLAGS="-L/opt/ofed/lib64 -lpthread"
     export CPPFLAGS="-I/opt/ofed/include"
     ;;
-  HPX5_EDISON)
+  HPX5_EDISON | HPX5_HOPPER)
     source /etc/profile.d/modules.sh
     module unload darshan
     module load atp
@@ -61,7 +61,7 @@ case "$SYSTEM" in
     module load openmpi/1.8.4_thread
     CFGFLAGS+=" --with-mpi=ompi"
     ;;
-  HPX5_BIGRED2 | HPX5_EDISON)
+  HPX5_BIGRED2 | HPX5_EDISON | HPX5_HOPPER)
     CFGFLAGS+=" --with-mpi"
     ;;
   HPX5_STAMPEDE)
@@ -85,7 +85,7 @@ case "$SYSTEM" in
     export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
     export LIBRARY_PATH=/usr/lib64:$LIBRARY_PATH
     ;;
-  HPX5_BIGRED2 | HPX5_EDISON)
+  HPX5_BIGRED2 | HPX5_EDISON | HPX5_HOPPER)
     export HPX_PHOTON_BACKEND=ugni
     export HPX_PHOTON_CARGS="--with-ugni"
     CFGFLAGS+=" --with-pmi --with-hugetlbfs"
@@ -168,7 +168,7 @@ case "$SYSTEM" in
       CFGFLAGS+=" --with-tests-cmd=\"ibrun -np 2\""
     fi
    ;;
-  HPX5_EDISON)
+  HPX5_EDISON | HPX5_HOPPER)
     if [ "$HPXMODE_AXIS" == smp ] ; then
       CFGFLAGS+=" --with-tests-cmd=\"aprun -n 1 -N 1\""
     else
@@ -202,7 +202,7 @@ case "$SYSTEM" in
           ;;
     esac  
     ;; 
-  HPX5_BIGRED2 | HPX5_EDISON)
+  HPX5_BIGRED2 | HPX5_EDISON | HPX5_HOPPER)
     CFGFLAGS+=" CC=cc"
     ;;
   HPX5_STAMPEDE)
@@ -231,7 +231,7 @@ if [ "$OP" == "build" ]; then
       CREST_cutter)
         CFG_CMD="../configure"
         ;;
-      HPX5_BIGRED2 | HPX5_EDISON)
+      HPX5_BIGRED2 | HPX5_EDISON | HPX5_HOPPER)
         CFG_CMD="../configure"
         ;;
       HPX5_STAMPEDE)
