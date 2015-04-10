@@ -255,7 +255,7 @@ void _main_action(guppie_config_t *cfg)
   is = -WSEC();
 
   // Initialize main table
-  int e = hpx_bcast_lsync(_init_table, HPX_NULL, cfg, sizeof(*cfg));
+  int e = hpx_bcast_rsync(_init_table, cfg, sizeof(*cfg));
   assert(e == HPX_SUCCESS);
 
   printf("Initialization complete.\n");
@@ -274,7 +274,7 @@ void _main_action(guppie_config_t *cfg)
   s = -WSEC();
 
   // Update the table
-  e = hpx_bcast_lsync(_update_table, HPX_NULL, cfg, sizeof(*cfg));
+  e = hpx_bcast_rsync(_update_table, cfg, sizeof(*cfg));
   assert(e == HPX_SUCCESS);
 
   printf("Completed updates.\n");
