@@ -29,12 +29,23 @@ case "$SYSTEM" in
     export LDFLAGS="-L/opt/ofed/lib64 -lpthread"
     export CPPFLAGS="-I/opt/ofed/include"
     ;;
-  HPX5_EDISON | HPX5_HOPPER)
+  HPX5_EDISON)
     source /etc/profile.d/modules.sh
     module unload darshan
     module load atp
     module load git/2.0.0
     module swap PrgEnv-intel PrgEnv-gnu
+    module load craype-hugepages8M
+    export CRAYPE_LINK_TYPE=dynamic
+    export PATH=/global/homes/j/jayaajay/autotools/bin:$PATH
+    ;;
+  HPX5_HOPPER)
+    source /etc/profile.d/modules.sh
+    module unload darshan
+    module load atp
+    module load git/2.0.0
+    module unload PrgEnv-intel 
+    module swap PrgEnv-pgi PrgEnv-gnu
     module load craype-hugepages8M
     export CRAYPE_LINK_TYPE=dynamic
     export PATH=/global/homes/j/jayaajay/autotools/bin:$PATH
