@@ -48,6 +48,14 @@ case "$SYSTEM" in
     export CRAYPE_LINK_TYPE=dynamic
     export PATH=/global/homes/j/jayaajay/autotools/bin:$PATH
     ;;
+  MARCINS_SWAN)
+    module load java
+    module unload PrgEnv-cray
+    module load PrgEnv-gnu
+    module load craype-hugepages8M
+    export PATH=/home/users/p02087/tools/bin:$PATH
+    export CRAYPE_LINK_TYPE=dynamic
+    ;;
   *)
     echo "Unknown system $SYSTEM."
     exit 1
@@ -70,7 +78,7 @@ case "$SYSTEM" in
     module load openmpi/1.8.4_thread
     CFGFLAGS+=" --with-mpi=ompi"
     ;;
-  HPX5_BIGRED2 | HPX5_EDISON | HPX5_HOPPER)
+  HPX5_BIGRED2 | MARCINS_SWAN | HPX5_EDISON | HPX5_HOPPER)
     CFGFLAGS+=" --with-mpi"
     ;;
   HPX5_STAMPEDE)
@@ -94,12 +102,12 @@ case "$SYSTEM" in
     export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
     export LIBRARY_PATH=/usr/lib64:$LIBRARY_PATH
     ;;
-  HPX5_BIGRED2 | HPX5_EDISON)
+  HPX5_BIGRED2 | MARCINS_SWAN | HPX5_EDISON)
     export HPX_PHOTON_BACKEND=ugni
     export HPX_PHOTON_CARGS="--with-ugni"
     CFGFLAGS+=" --with-pmi --with-hugetlbfs"
     ;;
-  HPX5_BIGRED2 | HPX5_EDISON | HPX5_HOPPER)
+  HPX5_HOPPER)
     export HPX_PHOTON_BACKEND=ugni
     export HPX_PHOTON_CARGS="--with-ugni"
     CFGFLAGS+=" --with-pmi"
@@ -182,11 +190,25 @@ case "$SYSTEM" in
       CFGFLAGS+=" --with-tests-cmd=\"ibrun -np 2\""
     fi
    ;;
-  HPX5_EDISON | HPX5_HOPPER)
+  HPX5_EDISON)
     if [ "$HPXMODE_AXIS" == smp ] ; then
       CFGFLAGS+=" --with-tests-cmd=\"aprun -n 1 -N 1\""
     else
       CFGFLAGS+=" --with-tests-cmd=\"aprun -n 2 -N 2\""
+    fi
+    ;;
+  HPX5_HOPPER)
+    if [ "$HPXMODE_AXIS" == smp ] ; then
+      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 1 -N 1 -d 24\""
+    else
+      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 2 -N 1 -d 24\""
+    fi
+    ;;
+  MARCINS_SWAN)
+    if [ "$HPXMODE_AXIS" == smp ] ; then
+      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 1 -N 1 -b -d 32\""
+    else
+      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 2 -N 1 -b -d 32\""
     fi
     ;;
   *)
@@ -216,7 +238,7 @@ case "$SYSTEM" in
           ;;
     esac  
     ;; 
-  HPX5_BIGRED2 | HPX5_EDISON | HPX5_HOPPER)
+  HPX5_BIGRED2 | MARCINS_SWAN | HPX5_EDISON | HPX5_HOPPER)
     CFGFLAGS+=" CC=cc"
     ;;
   HPX5_STAMPEDE)
@@ -242,10 +264,7 @@ esac
 
 if [ "$OP" == "build" ]; then
     case "$SYSTEM" in
-      CREST_cutter)
-        CFG_CMD="../configure"
-        ;;
-      HPX5_BIGRED2 | HPX5_EDISON | HPX5_HOPPER)
+      CREST_cutter | HPX5_BIGRED2 | MARCINS_SWAN | HPX5_EDISON | HPX5_HOPPER)
         CFG_CMD="../configure"
         ;;
       HPX5_STAMPEDE)
