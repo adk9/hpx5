@@ -19,6 +19,7 @@
 /// @brief This file contains an implementation of the GAS interface for use
 ///        when no network is available, or when we are running on a single
 ///        locality. It simply forwards all requests to the system allocator.
+#include <libhpx/arch.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
@@ -62,12 +63,21 @@ static hpx_addr_t _smp_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
 
 /// Compute the global address for a local address.
 static hpx_addr_t _smp_lva_to_gva(const void *lva) {
+#ifdef HPX_BITNESS_64
   return (hpx_addr_t)lva;
+#else
+  return (hpx_addr_t)(uint32_t)lva;
+#endif
 }
 
 /// Compute the local address for a global address.
 static void *_smp_gva_to_lva(hpx_addr_t addr) {
+#ifdef HPX_BITNESS_64
   return (void*)addr;
+#else
+  dbg_assert((0xffffffff & addr) == addr);
+  return (void*)(uint32_t)(addr);
+#endif
 }
 
 /// Perform address translation and pin the global address.
