@@ -45,7 +45,6 @@ case "$SYSTEM" in
     module load atp
     module load git/2.0.0
     module swap PrgEnv-pgi PrgEnv-gnu
-    module load craype-hugepages8M
     export CRAYPE_LINK_TYPE=dynamic
     export PATH=/global/homes/j/jayaajay/autotools/bin:$PATH
     ;;
@@ -95,10 +94,15 @@ case "$SYSTEM" in
     export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
     export LIBRARY_PATH=/usr/lib64:$LIBRARY_PATH
     ;;
-  HPX5_BIGRED2 | HPX5_EDISON | HPX5_HOPPER)
+  HPX5_BIGRED2 | HPX5_EDISON)
     export HPX_PHOTON_BACKEND=ugni
     export HPX_PHOTON_CARGS="--with-ugni"
     CFGFLAGS+=" --with-pmi --with-hugetlbfs"
+    ;;
+  HPX5_BIGRED2 | HPX5_EDISON | HPX5_HOPPER)
+    export HPX_PHOTON_BACKEND=ugni
+    export HPX_PHOTON_CARGS="--with-ugni"
+    CFGFLAGS+=" --with-pmi"
     ;;
   HPX5_STAMPEDE)
     export HPX_PHOTON_IBDEV=mlx4_0
@@ -130,7 +134,7 @@ function do_build() {
     eval "$CFG_CMD --prefix=${DIR}/build/install/ ${HPXDEBUG} ${CFGFLAGS} CFLAGS=\"-O3 -g\" --enable-testsuite --enable-parallel-config"  
   
     echo "Building HPX."
-    make -j 8 V=1
+    make -j 8
     make install
 }
 
