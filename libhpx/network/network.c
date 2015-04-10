@@ -90,7 +90,7 @@ network_t *network_new(const config_t *cfg, boot_t *boot, struct gas *gas) {
   }
 
   if (!network) {
-    dbg_error("%s did not initialize\n", HPX_NETWORK_TO_STRING[network->type]);
+    dbg_error("%s did not initialize\n", HPX_NETWORK_TO_STRING[cfg->network]);
   }
   else {
     log_level(LEVEL, "%s network initialized\n", HPX_NETWORK_TO_STRING[type]);
