@@ -85,14 +85,4 @@ HPX_INTERNAL extern hpx_action_t locality_call_continuation;
 /// The global locality is exposed through this "here" pointer.
 extern locality_t *here;
 
-/// A set of inline convenience functions.
-/// @{
-
-/// Translate a local address to a global address. This only works for some
-/// local addresses, so we need to use it carefully.
-inline static hpx_addr_t lva_to_gva(const void *lva) {
-  dbg_assert(here && here->gas && here->gas->lva_to_gva);
-  return here->gas->lva_to_gva(lva);
-}
-
 #endif // LIBHPX_LOCALITY_H
