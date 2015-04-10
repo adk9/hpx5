@@ -96,9 +96,15 @@ case "$SYSTEM" in
     export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
     export LIBRARY_PATH=/usr/lib64:$LIBRARY_PATH
     ;;
-  HPX5_BIGRED2 | HPX5_EDISON | HPX5_HOPPER)
+  HPX5_BIGRED2 | HPX5_EDISON)
     export HPX_PHOTON_BACKEND=ugni
     export HPX_PHOTON_CARGS="--with-ugni"
+    CFGFLAGS+=" --with-pmi --with-hugetlbfs"
+    ;;
+  HPX5_HOPPER)
+    export HPX_PHOTON_BACKEND=ugni
+    export HPX_PHOTON_CARGS="--with-ugni"
+    export HUGETLBFS_LIBS="-L/usr/lib64 -lhugetlbfs $HUGETLB8M_POST_LINK_OPTS"
     CFGFLAGS+=" --with-pmi --with-hugetlbfs"
     ;;
   HPX5_STAMPEDE)
