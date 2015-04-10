@@ -59,7 +59,6 @@ static void _reduce_fini(lco_t *lco) {
     free(r->value);
   }
   lco_fini(lco);
-  global_free(lco);
 }
 
 static hpx_status_t _reduce_attach(lco_t *lco, hpx_parcel_t *p) {

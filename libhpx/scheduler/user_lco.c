@@ -66,7 +66,6 @@ static void _user_lco_fini(lco_t *lco) {
     free(u->buf);
   }
   lco_fini(lco);
-  global_free(lco);
 }
 
 /// Handle an error condition.
@@ -131,7 +130,7 @@ static hpx_status_t _user_lco_attach(lco_t *lco, hpx_parcel_t *p) {
 
  unlock:
   lco_unlock(lco);
-  return status;  
+  return status;
 }
 
 static hpx_status_t _wait(_user_lco_t *u) {

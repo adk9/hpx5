@@ -65,7 +65,6 @@ static void _future_fini(lco_t *lco) {
 
   lco_lock(lco);
   lco_fini(lco);
-  global_free(lco);
 }
 
 /// Copies @p from into the appropriate location.
@@ -280,7 +279,7 @@ static HPX_PINNED(_block_local_init, void *lco, uint32_t *args) {
 
 /// Allocate an array of future local to the calling locality.
 /// @param          n The (total) number of futures to allocate
-/// @param       size The size of each future's value 
+/// @param       size The size of each future's value
 ///
 /// @returns the global address of the allocated array lco.
 hpx_addr_t hpx_lco_future_local_array_new(int n, int size) {
@@ -294,5 +293,5 @@ hpx_addr_t hpx_lco_future_local_array_new(int n, int size) {
   int e = hpx_call_sync(base, _block_local_init, NULL, 0, &args, sizeof(args));
   dbg_check(e, "call of _block_init_action failed\n");
 
-  return base;  
+  return base;
 }

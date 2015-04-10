@@ -115,7 +115,6 @@ void _sema_fini(lco_t *lco) {
 
   lco_lock(lco);
   lco_fini(lco);
-  global_free(lco);
 }
 
 void _sema_error(lco_t *lco, hpx_status_t code) {
