@@ -122,7 +122,6 @@ static void _alltoall_fini(lco_t *lco) {
     free(g->value);
   }
   lco_fini(lco);
-  global_free(lco);
 }
 
 /// Handle an error condition.
@@ -159,7 +158,7 @@ static hpx_status_t _alltoall_attach(lco_t *lco, hpx_parcel_t *p) {
   if (status != HPX_SUCCESS) {
     goto unlock;
   }
-  
+
   // Go ahead and send this parcel eagerly.
   hpx_parcel_send(p, HPX_NULL);
 

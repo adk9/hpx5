@@ -46,13 +46,10 @@ static size_t _gencount_size(lco_t *lco) {
 }
 
 static void _gencount_fini(lco_t *lco) {
-  if (!lco) {
-    return;
+  if (lco) {
+    lco_lock(lco);
+    lco_fini(lco);
   }
-
-  lco_lock(lco);
-  lco_fini(lco);
-  global_free(lco);
 }
 
 

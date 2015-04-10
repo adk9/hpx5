@@ -69,7 +69,6 @@ static void _and_fini(lco_t *lco) {
   if (lco) {
     lco_lock(lco);
     lco_fini(lco);
-    global_free(lco);
   }
 }
 

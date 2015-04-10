@@ -114,7 +114,6 @@ static void _allgather_fini(lco_t *lco) {
     free(g->value);
   }
   lco_fini(lco);
-  global_free(lco);
 }
 
 /// Handle an error condition.
@@ -139,7 +138,7 @@ static hpx_status_t _allgather_attach(lco_t *lco, hpx_parcel_t *p) {
   lco_lock(lco);
   _allgather_t *g = (_allgather_t *)lco;
 
-  // Pick attach to mean "set" for allgather. We have to wait for gathering to 
+  // Pick attach to mean "set" for allgather. We have to wait for gathering to
   // complete before sending the parcel.
   if (g->phase != _gathering) {
     status = cvar_attach(&g->wait, p);
@@ -367,5 +366,5 @@ hpx_addr_t hpx_lco_allgather_local_array_new(int n, size_t inputs, size_t size) 
   // return the base address of the allocation
   return base;
 }
- 
+
 

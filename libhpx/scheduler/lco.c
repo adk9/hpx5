@@ -114,8 +114,17 @@ static hpx_status_t _attach(lco_t *lco, hpx_parcel_t *p) {
 /// resent.
 ///
 /// @{
-HPX_PINNED(hpx_lco_delete_action, lco_t *lco, void *args) {
-  return _fini(lco);
+HPX_ACTION(hpx_lco_delete_action, void *args) {
+  hpx_addr_t target = hpx_thread_current_target();
+  lco_t *lco = NULL;
+  if (!hpx_gas_try_pin(target, (void**)&lco)) {
+    hpx_call_cc(target, hpx_lco_delete_action, NULL, 0, NULL, 0);
+  }
+  log_lco("deleting lco %p\n", (void*)lco);
+  _fini(lco);
+  hpx_gas_unpin(target);
+  hpx_gas_free(target, HPX_NULL);
+  return HPX_SUCCESS;
 }
 
 HPX_PINNED(hpx_lco_set_action, lco_t *lco, void *data) {
@@ -263,16 +272,16 @@ uintptr_t lco_get_triggered(const lco_t *lco) {
 
 void hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync) {
   lco_t *lco = NULL;
-  if (hpx_gas_try_pin(target, (void**)&lco)) {
+  if (!hpx_gas_try_pin(target, (void**)&lco)) {
+    int e = hpx_call(target, hpx_lco_delete_action, rsync, NULL, 0);
+    dbg_check(e, "Could not forward lco_delete\n");
+  }
+  else {
     log_lco("deleting lco %p\n", (void*)lco);
     _fini(lco);
     hpx_gas_unpin(target);
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
-    return;
+    hpx_gas_free(target, HPX_NULL);
   }
-
-  int e = hpx_call_async(target, hpx_lco_delete_action, HPX_NULL, rsync, NULL, 0);
-  dbg_check(e, "Could not forward lco_delete\n");
 }
 
 void hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync) {

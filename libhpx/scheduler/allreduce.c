@@ -58,7 +58,6 @@ static void _allreduce_fini(lco_t *lco) {
     free(r->value);
   }
   lco_fini(lco);
-  global_free(lco);
 }
 
 /// Handle an error condition.
@@ -112,7 +111,7 @@ static hpx_status_t _allreduce_attach(lco_t *lco, hpx_parcel_t *p) {
   lco_lock(lco);
   _allreduce_t *r = (_allreduce_t *)lco;
 
-  // Pick attach to mean "set" for allreduce. We have to wait for reducing to 
+  // Pick attach to mean "set" for allreduce. We have to wait for reducing to
   // complete before sending the parcel.
   if (r->phase != _reducing) {
     status = cvar_attach(&r->wait, p);
@@ -128,7 +127,7 @@ static hpx_status_t _allreduce_attach(lco_t *lco, hpx_parcel_t *p) {
 
   // Go ahead and send this parcel eagerly.
   hpx_parcel_send(p, HPX_NULL);
-   
+
   unlock:
     lco_unlock(lco);
     return status;
