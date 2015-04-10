@@ -99,7 +99,7 @@ case "$SYSTEM" in
     export HPX_PHOTON_CARGS="--with-ugni"
     CFGFLAGS+=" --with-pmi --with-hugetlbfs"
     ;;
-  HPX5_BIGRED2 | HPX5_EDISON | HPX5_HOPPER)
+  HPX5_HOPPER)
     export HPX_PHOTON_BACKEND=ugni
     export HPX_PHOTON_CARGS="--with-ugni"
     CFGFLAGS+=" --with-pmi"
@@ -182,11 +182,18 @@ case "$SYSTEM" in
       CFGFLAGS+=" --with-tests-cmd=\"ibrun -np 2\""
     fi
    ;;
-  HPX5_EDISON | HPX5_HOPPER)
+  HPX5_EDISON)
     if [ "$HPXMODE_AXIS" == smp ] ; then
       CFGFLAGS+=" --with-tests-cmd=\"aprun -n 1 -N 1\""
     else
       CFGFLAGS+=" --with-tests-cmd=\"aprun -n 2 -N 2\""
+    fi
+    ;;
+  HPX5_HOPPER)
+    if [ "$HPXMODE_AXIS" == smp ] ; then
+      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 1 -N 1 -d 24\""
+    else
+      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 2 -N 1 -d 24\""
     fi
     ;;
   *)
