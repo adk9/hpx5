@@ -278,8 +278,7 @@ static int _initGlobals_action(global_args_t *args) {
 
 void init_globals(hpx_addr_t grid, hpx_addr_t new_grid) {
   const global_args_t init_args = { .grid = grid, .new_grid = new_grid };
-  int e = hpx_bcast_lsync(_initGlobals, HPX_NULL, &init_args,
-                          sizeof(init_args));
+  int e = hpx_bcast_rsync(_initGlobals, &init_args, sizeof(init_args));
   assert(e == HPX_SUCCESS);
 }
 

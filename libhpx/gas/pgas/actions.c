@@ -45,7 +45,7 @@ hpx_addr_t pgas_alloc_cyclic_sync(size_t n, uint32_t bsize) {
   assert(offset != 0);
 
   uint64_t csbrk = heap_get_csbrk(global_heap);
-  int e = hpx_bcast_lsync(_set_csbrk, HPX_NULL, &csbrk);
+  int e = hpx_bcast_rsync(_set_csbrk, &csbrk);
   dbg_check(e, "\n");
 
   hpx_addr_t addr = offset_to_gpa(here->rank, offset);
@@ -83,11 +83,11 @@ hpx_addr_t pgas_calloc_cyclic_sync(size_t n, uint32_t bsize) {
   // We broadcast the csbrk to the system to make sure that people can do
   // effective heap_is_cyclic tests.
   uint64_t csbrk = heap_get_csbrk(global_heap);
-  int e = hpx_bcast_lsync(_set_csbrk, HPX_NULL, &csbrk);
+  int e = hpx_bcast_rsync(_set_csbrk, &csbrk);
   dbg_check(e, "\n");
 
   // Broadcast the calloc so that each locality can zero the correct memory.
-  e = hpx_bcast_lsync(_calloc_init, HPX_NULL, &offset, &n, &bsize);
+  e = hpx_bcast_rsync(_calloc_init, &offset, &n, &bsize);
   dbg_check(e, "\n");
 
   hpx_addr_t addr = offset_to_gpa(here->rank, offset);
