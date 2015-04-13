@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
@@ -31,15 +32,15 @@
 /// Local reduce interface.
 /// @{
 typedef struct {
-  lco_t               lco;
-  cvar_t             wait;
-  size_t          readers;
-  size_t          writers;
-  hpx_monoid_id_t      id;
-  hpx_monoid_op_t      op;
-  size_t            count;
-  volatile int      phase;
-  void             *value;  // out-of-place for alignment reasons
+  lco_t          lco;
+  cvar_t        wait;
+  size_t     readers;
+  size_t     writers;
+  hpx_action_t    id;
+  hpx_action_t    op;
+  size_t       count;
+  volatile int phase;
+  void        *value;  // out-of-place for alignment reasons
 } _allreduce_t;
 
 static const int _reducing = 0;
@@ -94,7 +95,9 @@ static void _allreduce_set(lco_t *lco, int size, const void *from) {
 
   //perform the op()
   assert(size && from);
-  r->op(r->value, from, size);
+  hpx_action_handler_t f = action_table_get_handler(here->actions, r->op);
+  hpx_monoid_op_t op = (hpx_monoid_op_t)f;
+  op(r->value, from, size);
 
   // if we're the last one to arrive, switch the phase and signal readers.
   if (--r->count == 0) {
@@ -161,7 +164,9 @@ static hpx_status_t _allreduce_get(lco_t *lco, int size, void *out) {
   if (++r->count == r->readers) {
     r->count = r->writers;
     r->phase = _reducing;
-    r->id(r->value, size);
+    hpx_action_handler_t f = action_table_get_handler(here->actions, r->id);
+    hpx_monoid_id_t id = (hpx_monoid_id_t)f;
+    id(r->value, size);
     scheduler_signal_all(&r->wait);
   }
   else {
@@ -179,22 +184,22 @@ static hpx_status_t _allreduce_wait(lco_t *lco) {
   return _allreduce_get(lco, 0, NULL);
 }
 
-static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
-                            size_t size, hpx_monoid_id_t id, hpx_monoid_op_t op) {
-  // vtable
-  static const lco_class_t vtable = {
-    .on_fini     = _allreduce_fini,
-    .on_error    = _allreduce_error,
-    .on_set      = _allreduce_set,
-    .on_attach   = _allreduce_attach,
-    .on_get      = _allreduce_get,
-    .on_getref   = NULL,
-    .on_release  = NULL,
-    .on_wait     = _allreduce_wait,
-    .on_reset    = _allreduce_reset,
-    .on_size     = _allreduce_size
-  };
+// vtable
+static const lco_class_t vtable = {
+  .on_fini     = _allreduce_fini,
+  .on_error    = _allreduce_error,
+  .on_set      = _allreduce_set,
+  .on_attach   = _allreduce_attach,
+  .on_get      = _allreduce_get,
+  .on_getref   = NULL,
+  .on_release  = NULL,
+  .on_wait     = _allreduce_wait,
+  .on_reset    = _allreduce_reset,
+  .on_size     = _allreduce_size
+};
 
+static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
+                            size_t size, hpx_action_t id, hpx_action_t op) {
   assert(id);
   assert(op);
 
@@ -213,13 +218,15 @@ static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
     assert(r->value);
   }
 
-  r->id(r->value, size);
+  hpx_action_handler_t f = action_table_get_handler(here->actions, r->id);
+  hpx_monoid_id_t lid = (hpx_monoid_id_t)f;
+  lid(r->value, size);
 }
 
 /// @}
 
 hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
-                                 hpx_monoid_id_t id, hpx_monoid_op_t op) {
+                                 hpx_action_t id, hpx_action_t op) {
   _allreduce_t *r = global_malloc(sizeof(*r));
   assert(r);
   _allreduce_init(r, inputs, outputs, size, id, op);
@@ -230,7 +237,7 @@ hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
 /// Initialize a block of array of lco.
 static int
 _block_local_init_handler(void *lco, int n, size_t participants, size_t readers,
-                          size_t size, hpx_monoid_id_t id, hpx_monoid_op_t op) {
+                          size_t size, hpx_action_t id, hpx_action_t op) {
   for (int i = 0; i < n; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_allreduce_t) + size));
     _allreduce_init(addr, participants, readers, size, id, op);
@@ -255,8 +262,8 @@ static HPX_ACTION_DEF(PINNED, _block_local_init_handler, _block_local_init,
 /// @returns the global address of the allocated array lco.
 hpx_addr_t hpx_lco_allreduce_local_array_new(int n, size_t participants,
                                              size_t readers, size_t size,
-                                             hpx_monoid_id_t id,
-                                             hpx_monoid_op_t op) {
+                                             hpx_action_t id,
+                                             hpx_action_t op) {
   uint32_t lco_bytes = sizeof(_allreduce_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
   uint32_t  block_bytes = n * lco_bytes;

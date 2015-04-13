@@ -29,14 +29,16 @@ typedef struct Domain {
 } Domain;
 
 /// Initialize a double zero.
-static void _initDouble(double *input, const size_t bytes) {
+static void _initDouble_handler(double *input, const size_t bytes) {
   *input = 0;
 }
+static HPX_FUNCTION_DEF(_initDouble_handler, _initDouble);
 
 /// Update *lhs with with the max(lhs, rhs);
-static void _maxDouble(double *lhs, const double *rhs, size_t UNUSED) {
+static void _maxDouble_handler(double *lhs, const double *rhs, size_t UNUSED) {
   *lhs = (*lhs > *rhs) ? *lhs : *rhs;
 }
+static HPX_FUNCTION_DEF(_maxDouble_handler, _maxDouble);
 
 static int _initDomain_handler(Domain *domain, hpx_addr_t newdt,
                                hpx_addr_t complete, int nDoms, int maxCycles) {
@@ -80,8 +82,7 @@ static HPX_ACTION(lco_allreduce, void *UNUSED) {
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
 
   hpx_addr_t newdt = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(double),
-                                           (hpx_monoid_id_t)_initDouble,
-                                           (hpx_monoid_op_t)_maxDouble);
+                                           _initDouble, _maxDouble);
 
   for (int i = 0, e = nDoms; i < e; ++i) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));

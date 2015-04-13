@@ -67,14 +67,16 @@ static void _usage(FILE *f, int error) {
 static void _register_actions(void);
 
 /// Initialize a double zero
-static void initDouble(double *input) {
+static void initDouble_handler(double *input, size_t UNUSED) {
   *input = 0;
 }
+static HPX_FUNCTION_DEF(initDouble_handler, initDouble);
 
 /// Update *lhs with with the max(lhs, rhs);
-static void maxDouble(double *lhs, const double *rhs) {
+static void maxDouble_handler(double *lhs, const double *rhs, size_t UNUSED) {
   *lhs = (*lhs > *rhs) ? *lhs : *rhs;
 }
+static HPX_FUNCTION_DEF(maxDouble_handler, maxDouble);
 
 static int _write_double_action(double *d) {
   hpx_addr_t target = hpx_thread_current_target();
@@ -219,8 +221,8 @@ static int _updateGrid_action(void *args) {
     dTmax = 0.0;
 
     hpx_addr_t max = hpx_lco_allreduce_new(N * N, 1, sizeof(dTmax),
-                                          (hpx_monoid_id_t)initDouble,
-                                          (hpx_monoid_op_t)maxDouble);
+                                          initDouble,
+                                          maxDouble);
     //for (int i = 1; i < N + 1; i++) {
     //  for (int j = 1; j < N + 1; j++) {
     //    int args[2] = { i, j };
@@ -336,13 +338,13 @@ static int _main_action(int *input)
 
   hpx_addr_t runtimes = hpx_lco_allreduce_new(HPX_LOCALITIES, HPX_LOCALITIES,
                                               sizeof(double),
-                                              (hpx_monoid_id_t)initDouble,
-                                              (hpx_monoid_op_t)maxDouble);
+                                              initDouble,
+                                              maxDouble);
 
   hpx_addr_t dTmax = hpx_lco_allreduce_new(HPX_LOCALITIES, HPX_LOCALITIES,
                                            sizeof(double),
-                                           (hpx_monoid_id_t)initDouble,
-                                           (hpx_monoid_op_t)maxDouble);
+                                           initDouble,
+                                           maxDouble);
 
   for (int i = 0, e = HPX_LOCALITIES; i < e; ++i) {
     InitArgs init = {

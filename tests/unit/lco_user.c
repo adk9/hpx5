@@ -17,25 +17,28 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
-// Goal of this testcase is to use the user-defined LCO to achieve 
+// Goal of this testcase is to use the user-defined LCO to achieve
 // the “OR” gate
 
-static void _lco_init (bool *val, const size_t size) {
+static void _lco_init_handler(bool *val, const size_t size) {
   *val = 0;
 }
+static HPX_FUNCTION_DEF(_lco_init_handler, _lco_init);
 
 // Update *lhs with the or gate value
-static void _lco_op (bool *val, const bool *new, const size_t size) {
+static void _lco_op_handler(bool *val, const bool *new, const size_t size) {
   *val ^= *new;
 }
+static HPX_FUNCTION_DEF(_lco_op_handler, _lco_op);
 
 // A predicate that "guards" the LCO.
-// This has to return true as soon as soon as first one gets set to 
+// This has to return true as soon as soon as first one gets set to
 // true.
-static bool _lco_predicate(bool *val, const size_t size) {
+static bool _lco_predicate_handler(bool *val, const size_t size) {
   assert(val);
   return (*val);
 }
+static HPX_FUNCTION_DEF(_lco_predicate_handler, _lco_predicate);
 
 static HPX_ACTION(_lco_get, void *UNUSED) {
   hpx_addr_t addr = hpx_thread_current_target();
@@ -58,10 +61,7 @@ static HPX_ACTION(lco_user, void *UNUSED) {
   printf("Test user lco.\n");
   srand(time(NULL));
   hpx_addr_t lco;
-  lco = hpx_lco_user_new(sizeof(bool),
-                         (hpx_monoid_id_t)_lco_init,
-                         (hpx_monoid_op_t)_lco_op,
-                         (hpx_predicate_t)_lco_predicate);
+  lco = hpx_lco_user_new(sizeof(bool), _lco_init, _lco_op, _lco_predicate);
   for (int i = 0; i < 16; ++i) {
     hpx_addr_t and = hpx_lco_and_new(2);
     hpx_call(lco, _lco_set, and, &i, sizeof(i));

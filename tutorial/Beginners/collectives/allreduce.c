@@ -48,16 +48,17 @@ float *create_rand_nums(int num_elements) {
   return rand_nums;
 }
 
-static void initdouble(double *input, const size_t size) {
+static void initdouble_handler(double *input, const size_t size) {
   assert(sizeof(double) == size);
   *input = 0.0;
 }
+static HPX_FUNCTION_DEF(initdouble_handler, initdouble);
 
-static void sumdouble(double *output,const double *input, const size_t size) {
+static void sumdouble_handler(double *lhs, const double *rhs, size_t size) {
   assert(sizeof(double) == size);
-  *output += *input;
-  return;
+  *lhs += *rhs;
 }
+static HPX_FUNCTION_DEF(sumdouble_handler, sumdouble);
 
 static int _init_action(const InitArgs *args) {
   hpx_addr_t local = hpx_thread_current_target();
@@ -115,8 +116,7 @@ static int _main_action(void *args) {
   hpx_addr_t done     = hpx_lco_and_new(nDoms);
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
   hpx_addr_t gsum = hpx_lco_allreduce_new(nDoms, nDoms, sizeof(double),
-                                         (hpx_monoid_id_t)initdouble,
-                                         (hpx_monoid_op_t)sumdouble);
+                                          initdouble, sumdouble);
 
   for (int i = 0, e = nDoms; i < e; ++i) {
     InitArgs init = {

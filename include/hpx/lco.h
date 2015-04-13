@@ -36,16 +36,16 @@ struct hpx_parcel;
 ///
 /// Common operations would be min, max, +, *, etc. The runtime will pass the
 /// number of bytes that the allreduce was allocated with.
-typedef void (*hpx_monoid_id_t)(void *i, const size_t bytes);
-typedef void (*hpx_monoid_op_t)(void *i, const void *j, const size_t bytes);
+typedef void (*hpx_monoid_id_t)(void *i, size_t bytes);
+typedef void (*hpx_monoid_op_t)(void *lhs, const void *rhs, size_t bytes);
 
 /// A predicate that "guards" the LCO.
 ///
 /// This has to return true when the value pointed to by the buffer @p
 /// i is fully resolved and can be bound to the buffer associated
-/// with the LCO. All of the waiting threads are signalled once the
+/// with the LCO. All of the waiting threads are signaled once the
 /// predicate returns true.
-typedef bool (*hpx_predicate_t)(void *i, const size_t bytes);
+typedef bool (*hpx_predicate_t)(void *i, size_t bytes);
 
 /// Delete an LCO.
 ///
@@ -340,8 +340,8 @@ hpx_addr_t hpx_lco_and_local_array_new(int n, int inputs);
 ///
 /// @returns the global address of the allocated array lco.
 hpx_addr_t hpx_lco_reduce_local_array_new(int n, int inputs, size_t size,
-                                          hpx_monoid_id_t id,
-                                          hpx_monoid_op_t op);
+                                          hpx_action_t id,
+                                          hpx_action_t op);
 
 
 /// Allocate an array of allgather LCO local to the calling locality.
@@ -365,8 +365,8 @@ hpx_addr_t hpx_lco_allgather_local_array_new(int n, size_t inputs, size_t size);
 /// @returns the global address of the allocated array lco.
 hpx_addr_t hpx_lco_allreduce_local_array_new(int n, size_t participants,
                                              size_t readers, size_t size,
-                                             hpx_monoid_id_t id,
-                                             hpx_monoid_op_t op);
+                                             hpx_action_t id,
+                                             hpx_action_t op);
 
 /// Allocate an array of alltoall LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate
@@ -387,8 +387,8 @@ hpx_addr_t hpx_lco_alltoall_local_array_new(int n, size_t inputs, size_t size);
 ///
 /// @returns the global address of the allocated array lco.
 hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size,
-                                        hpx_monoid_id_t id, hpx_monoid_op_t op,
-                                        hpx_predicate_t predicate);
+                                        hpx_action_t id, hpx_action_t op,
+                                        hpx_action_t predicate);
 
 /// Allocate a new generation counter.
 ///
@@ -442,8 +442,8 @@ hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen);
 /// @param id           An initialization function for the data, this is used to
 ///                     initialize the data in every epoch.
 /// @param op           The commutative-associative operation we're performing.
-hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_monoid_id_t id,
-                              hpx_monoid_op_t op);
+hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_action_t id,
+                              hpx_action_t op);
 
 /// Allocate a new all-reduction LCO.
 ///
@@ -457,7 +457,7 @@ hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_monoid_id_t id,
 ///                     in every epoch.
 /// @param op           The commutative-associative operation we're performing.
 hpx_addr_t hpx_lco_allreduce_new(size_t participants, size_t readers, size_t size,
-                                 hpx_monoid_id_t id, hpx_monoid_op_t op);
+                                 hpx_action_t id, hpx_action_t op);
 
 /// Set an allgather.
 ///
@@ -522,8 +522,8 @@ hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size);
 /// @param id           An initialization function for the data, this is used to
 ///                     initialize the data in every epoch.
 /// @param predicate    Predicate to guard the LCO.
-hpx_addr_t hpx_lco_user_new(size_t size, hpx_monoid_id_t id, hpx_monoid_op_t op,
-                            hpx_predicate_t predicate);
+hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
+                            hpx_action_t predicate);
 /// @}
 
 #endif

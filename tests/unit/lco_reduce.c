@@ -17,13 +17,15 @@
 #include "tests.h"
 
 /// Initialize a double zero.
-static void _initDouble(double *input, const size_t bytes) {
+static void _initDouble_handler(double *input, const size_t bytes) {
   *input = 0.0;
 }
+static HPX_FUNCTION_DEF(_initDouble_handler, _initDouble);
 
-static void _addDouble(double *lhs, const double *rhs, size_t UNUSED) {
+static void _addDouble_handler(double *lhs, const double *rhs, size_t UNUSED) {
   *lhs += *rhs;
 }
+static HPX_FUNCTION_DEF(_addDouble_handler, _addDouble);
 
 static int _reduce_handler(double data) {
   HPX_THREAD_CONTINUE(data);
@@ -35,9 +37,8 @@ static HPX_ACTION(lco_reduce, void *UNUSED) {
   static const int nDoms = 91;
   static const int cycles = 10;
   hpx_addr_t domain = hpx_gas_calloc_cyclic(nDoms, sizeof(int), 0);
-  hpx_addr_t newdt = hpx_lco_reduce_new(nDoms, sizeof(double),
-                                        (hpx_monoid_id_t)_initDouble,
-                                        (hpx_monoid_op_t)_addDouble);
+  hpx_addr_t newdt = hpx_lco_reduce_new(nDoms, sizeof(double), _initDouble,
+                                        _addDouble);
 
   for (int i = 0, e = cycles; i < e; ++i) {
     printf("reducing iteration %d \n", i);

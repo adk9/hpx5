@@ -26,7 +26,7 @@ static HPX_PINNED(_set_future_value, void *UNUSED, void *args) {
   int size = hpx_thread_current_args_size();
   hpx_addr_t addr = hpx_thread_current_target();
   hpx_lco_set(addr, size, args, HPX_NULL, HPX_NULL);
-  return HPX_SUCCESS;  
+  return HPX_SUCCESS;
 }
 
 static HPX_ACTION(lco_future_array, void *UNUSED) {
@@ -36,8 +36,8 @@ static HPX_ACTION(lco_future_array, void *UNUSED) {
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
 
-  // allocate 8 futures with size of each future's value 
-  hpx_addr_t base = hpx_lco_future_local_array_new(ARRAY_SIZE, 
+  // allocate 8 futures with size of each future's value
+  hpx_addr_t base = hpx_lco_future_local_array_new(ARRAY_SIZE,
                                       sizeof(uint64_t));
   for (int i = 0; i < ARRAY_SIZE; i++) {
     value = (rand() / (float)RAND_MAX) * 100;
@@ -75,7 +75,7 @@ static HPX_ACTION(lco_and_array, void *UNUSED) {
     hpx_addr_t other = hpx_lco_array_at(lcos, i, 0);
     hpx_call(other, _set, done, NULL, 0);
     hpx_lco_wait(done);
-    hpx_lco_delete(done, HPX_NULL);  
+    hpx_lco_delete(done, HPX_NULL);
   }
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
@@ -83,14 +83,16 @@ static HPX_ACTION(lco_and_array, void *UNUSED) {
 }
 
 /// Initialize a double zero.
-static void _initDouble(double *input, const size_t bytes) {
+static void _initDouble_handler(double *input, const size_t bytes) {
   *input = 0;
 }
+static HPX_FUNCTION_DEF(_initDouble_handler, _initDouble);
 
 /// Update *lhs with with the max(lhs, rhs);
-static void _maxDouble(double *lhs, const double *rhs, const size_t bytes) {
+static void _maxDouble_handler(double *lhs, const double *rhs, const size_t bytes) {
   *lhs = (*lhs > *rhs) ? *lhs : *rhs;
 }
+static HPX_FUNCTION_DEF(_maxDouble_handler, _maxDouble);
 
 static HPX_ACTION(lco_reduce_array, void *UNUSED) {
   printf("Starting the array of reduce test\n");
@@ -98,10 +100,10 @@ static HPX_ACTION(lco_reduce_array, void *UNUSED) {
   hpx_time_t t1 = hpx_time_now();
 
   hpx_addr_t domain = hpx_gas_alloc_cyclic(ARRAY_SIZE, sizeof(double), sizeof(double));
-  hpx_addr_t newdt = hpx_lco_reduce_local_array_new(ARRAY_SIZE, 
-                                       ARRAY_SIZE, sizeof(double),
-                                       (hpx_monoid_id_t)_initDouble,
-                                       (hpx_monoid_op_t)_maxDouble);
+  hpx_addr_t newdt = hpx_lco_reduce_local_array_new(ARRAY_SIZE,
+                                                    ARRAY_SIZE, sizeof(double),
+                                                    _initDouble,
+                                                    _maxDouble);
 
   for (int i = 0; i < ARRAY_SIZE; i++) {
     hpx_addr_t other = hpx_lco_array_at(newdt, i, sizeof(double));

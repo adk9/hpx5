@@ -18,6 +18,7 @@
 /// @brief A user-defined LCO.
 #include <assert.h>
 
+#include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
@@ -28,23 +29,24 @@
 /// Generic LCO interface.
 /// @{
 typedef struct {
-  lco_t                 lco;
-  cvar_t               cvar;
-  size_t               size;
-  hpx_monoid_id_t        id;
-  hpx_monoid_op_t        op;
-  hpx_predicate_t predicate;
-  void                 *buf;
+  lco_t              lco;
+  cvar_t            cvar;
+  size_t            size;
+  hpx_action_t        id;
+  hpx_action_t        op;
+  hpx_action_t predicate;
+  void              *buf;
 } _user_lco_t;
 
 
 // Forward declaration
-static void _user_lco_init(_user_lco_t *u, size_t size, hpx_monoid_id_t id,
-                           hpx_monoid_op_t op, hpx_predicate_t predicate);
+static void _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
+                           hpx_action_t op, hpx_action_t predicate);
 
 static bool _trigger(_user_lco_t *u) {
-  if (lco_get_triggered(&u->lco))
+  if (lco_get_triggered(&u->lco)) {
     return false;
+  }
   lco_set_triggered(&u->lco);
   return true;
 }
@@ -99,8 +101,14 @@ static void _user_lco_set(lco_t *lco, int size, const void *from) {
   }
 
   // perform the op()
-  u->op(u->buf, from, size);
-  if (u->predicate(u->buf, size)) {
+  hpx_action_handler_t f = 0;
+  f = action_table_get_handler(here->actions, u->op);
+  hpx_monoid_op_t op = (hpx_monoid_op_t)f;
+  op(u->buf, from, size);
+
+  f = action_table_get_handler(here->actions, u->predicate);
+  hpx_predicate_t predicate = (hpx_predicate_t)f;
+  if (predicate(u->buf, size)) {
     lco_set_triggered(&u->lco);
     scheduler_signal_all(&u->cvar);
   }
@@ -167,27 +175,27 @@ static hpx_status_t _user_lco_wait(lco_t *lco) {
   return status;
 }
 
-static void _user_lco_init(_user_lco_t *u, size_t size, hpx_monoid_id_t id,
-                           hpx_monoid_op_t op, hpx_predicate_t predicate) {
-  // vtable
-  static const lco_class_t vtable = {
-    .on_fini     = _user_lco_fini,
-    .on_error    = _user_lco_error,
-    .on_set      = _user_lco_set,
-    .on_attach   = _user_lco_attach,
-    .on_get      = _user_lco_get,
-    .on_getref   = NULL,
-    .on_release  = NULL,
-    .on_wait     = _user_lco_wait,
-    .on_reset    = _user_lco_reset,
-    .on_size     = _user_lco_size
-  };
+// vtable
+static const lco_class_t _user_lco_vtable = {
+  .on_fini     = _user_lco_fini,
+  .on_error    = _user_lco_error,
+  .on_set      = _user_lco_set,
+  .on_attach   = _user_lco_attach,
+  .on_get      = _user_lco_get,
+  .on_getref   = NULL,
+  .on_release  = NULL,
+  .on_wait     = _user_lco_wait,
+  .on_reset    = _user_lco_reset,
+  .on_size     = _user_lco_size
+};
 
+static void _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
+                           hpx_action_t op, hpx_action_t predicate) {
   assert(id);
   assert(op);
   assert(predicate);
 
-  lco_init(&u->lco, &vtable);
+  lco_init(&u->lco, &_user_lco_vtable);
   cvar_reset(&u->cvar);
   u->size = size;
   u->op = op;
@@ -202,12 +210,14 @@ static void _user_lco_init(_user_lco_t *u, size_t size, hpx_monoid_id_t id,
     assert(u->buf);
   }
 
-  u->id(u->buf, u->size);
+  hpx_action_handler_t f = action_table_get_handler(here->actions, u->id);
+  hpx_monoid_id_t lid = (hpx_monoid_id_t)f;
+  lid(u->buf, u->size);
 }
 /// @}
 
-hpx_addr_t hpx_lco_user_new(size_t size, hpx_monoid_id_t id, hpx_monoid_op_t op,
-                            hpx_predicate_t predicate) {
+hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
+                            hpx_action_t predicate) {
   _user_lco_t *u = global_calloc(1, sizeof(*u));
   assert(u);
   _user_lco_init(u, size, id, op, predicate);
@@ -215,8 +225,8 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_monoid_id_t id, hpx_monoid_op_t op,
 }
 
 /// Initialize a block of array of lco.
-static int _block_local_init_handler(void *lco, int n, size_t size, hpx_monoid_id_t id,
-                                     hpx_monoid_op_t op, hpx_predicate_t predicate) {
+static int _block_local_init_handler(void *lco, int n, size_t size, hpx_action_t id,
+                                     hpx_action_t op, hpx_action_t predicate) {
   for (int i = 0; i < n; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_user_lco_t) + size));
     _user_lco_init(addr, size, id, op, predicate);
@@ -237,9 +247,9 @@ static HPX_ACTION_DEF(PINNED, _block_local_init_handler, _block_local_init,
 /// @param  predicate Predicate to guard the LCO.
 ///
 /// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size,
-                                        hpx_monoid_id_t id, hpx_monoid_op_t op,
-                                        hpx_predicate_t predicate) {
+hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size, hpx_action_t id,
+                                        hpx_action_t op, hpx_action_t predicate)
+{
   uint32_t lco_bytes = sizeof(_user_lco_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
   uint32_t  block_bytes = n * lco_bytes;
