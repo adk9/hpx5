@@ -14,7 +14,7 @@
 #define BENCHMARK "HPX AllReduce Latency Benchmark"
 /*
  * Copyright (C) 2002-2014 the Network-Based Computing Laboratory
- * (NBCL), The Ohio State University. 
+ * (NBCL), The Ohio State University.
  *
  * Contact: Dr. D. K. Panda (panda@cse.ohio-state.edu)
  *
@@ -29,8 +29,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <inttypes.h>
-#include "hpx/hpx.h"
-#include "common.c"
+#include "common.h"
 
 # define HEADER "# " BENCHMARK "\n"
 
@@ -63,7 +62,7 @@ static int _reduce_action(const InitArgs *args) {
       skip = SKIP;
     }
 
-    timer = 0;    
+    timer = 0;
     for (int i = 0; i < iterations + skip ; i++) {
       t_start = TIME();
 
@@ -74,10 +73,10 @@ static int _reduce_action(const InitArgs *args) {
 
       if (i >= skip) {
         timer += t_stop - t_start;
-      }     
+      }
     }
-        
-    latency = (1.0 * timer) / iterations;  
+
+    latency = (1.0 * timer) / iterations;
 
     hpx_lco_set(ld->minTime, sizeof(double), &latency, HPX_NULL, HPX_NULL);
     hpx_lco_get(ld->minTime, sizeof(double), &min_time);
@@ -90,11 +89,11 @@ static int _reduce_action(const InitArgs *args) {
 
     if (!MYTHREAD)
       avg_time = avg_time/THREADS;
-  
-    print_data(MYTHREAD, full, size*sizeof(char), avg_time, min_time, 
-               max_time, iterations);  
+
+    print_data(MYTHREAD, full, size*sizeof(char), avg_time, min_time,
+               max_time, iterations);
   }
-  
+
   hpx_lco_set(ld->complete, 0, NULL, HPX_NULL, HPX_NULL);
   hpx_gas_unpin(target);
 
@@ -127,19 +126,19 @@ static int _main_action(int *args) {
   int THREADS = HPX_LOCALITIES;
 
   print_header(HEADER, HPX_LOCALITY_ID, full);
-  
+
   hpx_addr_t src = hpx_gas_alloc_cyclic(THREADS, max_msg_size*sizeof(char), 0);
   hpx_addr_t complete = hpx_lco_and_new(THREADS);
   hpx_addr_t done = hpx_lco_and_new(THREADS);
   hpx_addr_t collVal = hpx_lco_allreduce_new(THREADS, THREADS, sizeof(double),
-                       (hpx_monoid_id_t)initDouble, (hpx_monoid_op_t)maxDouble);
+                       initDouble, maxDouble);
 
   hpx_addr_t maxTime = hpx_lco_allreduce_new(THREADS, THREADS, sizeof(double),
-                       (hpx_monoid_id_t)initDouble, (hpx_monoid_op_t)maxDouble);
+                       initDouble, maxDouble);
   hpx_addr_t minTime = hpx_lco_allreduce_new(THREADS, THREADS, sizeof(double),
-                       (hpx_monoid_id_t)initDouble, (hpx_monoid_op_t)minDouble);
+                       initDouble, minDouble);
   hpx_addr_t avgTime = hpx_lco_allreduce_new(THREADS, THREADS, sizeof(double),
-                       (hpx_monoid_id_t)initDouble, (hpx_monoid_op_t)sumDouble);
+                       initDouble, sumDouble);
 
   for (i = 0; i < THREADS; ++i) {
      InitArgs init = {

@@ -40,6 +40,7 @@ typedef enum {
   HPX_ACTION_PINNED,
   HPX_ACTION_TASK,
   HPX_ACTION_INTERRUPT,
+  HPX_FUNCTION,
   HPX_ACTION_INVALID = UINT16_MAX
 } hpx_action_type_t;
 
@@ -125,5 +126,13 @@ int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_hand
 
 #define HPX_REGISTER_TYPED_ACTION(type, handler, id, ...)       \
   _HPX_REGISTER_ACTION(type, handler, id, __VA_ARGS__)
+
+#define HPX_FUNCTION_DEF(handler, id)                                   \
+  HPX_ACTION_DECL(id) = -1;                                             \
+  static HPX_CONSTRUCTOR void _register##_##handler(void) {             \
+    hpx_register_action(HPX_FUNCTION, __FILE__":"_HPX_XSTR(handler),    \
+                        (hpx_action_handler_t)handler, 0, &id);         \
+  }                                                                     \
+  static HPX_CONSTRUCTOR void _register##_##handler(void)
 
 #endif

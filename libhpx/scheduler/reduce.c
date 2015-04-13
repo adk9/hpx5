@@ -22,6 +22,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
@@ -34,8 +35,8 @@
 typedef struct {
   lco_t              lco;
   cvar_t         barrier;
-  hpx_monoid_id_t     id;
-  hpx_monoid_op_t     op;
+  hpx_action_t        id;
+  hpx_action_t        op;
   size_t            size;
   int             inputs;
   volatile int remaining;
@@ -104,7 +105,10 @@ static void _reduce_reset(lco_t *lco) {
                  "Reset on allreduce LCO that has waiting threads.\n");
   cvar_reset(&r->barrier);
   r->remaining = r->inputs;
-  r->id(r->value, r->size);
+
+  hpx_action_handler_t f = action_table_get_handler(here->actions, r->id);
+  hpx_monoid_id_t id = (hpx_monoid_id_t)f;
+  id(r->value, r->size);
   lco_unlock(lco);
 }
 
@@ -115,7 +119,9 @@ static void _reduce_set(lco_t *lco, int size, const void *from) {
 
   // perform the op()
   assert(size && from);
-  r->op(r->value, from, size);
+  hpx_action_handler_t f = action_table_get_handler(here->actions, r->op);
+  hpx_monoid_op_t op = (hpx_monoid_op_t)f;
+  op(r->value, from, size);
 
   if (--r->remaining == 0) {
     scheduler_signal_all(&r->barrier);
@@ -217,8 +223,8 @@ static const lco_class_t _reduce_vtable = {
   .on_size     = _reduce_size
 };
 
-static void _reduce_init(_reduce_t *r, int inputs, size_t size, hpx_monoid_id_t id,
-                         hpx_monoid_op_t op) {
+static void _reduce_init(_reduce_t *r, int inputs, size_t size, hpx_action_t id,
+                         hpx_action_t op) {
   assert(id);
   assert(op);
 
@@ -236,13 +242,16 @@ static void _reduce_init(_reduce_t *r, int inputs, size_t size, hpx_monoid_id_t 
     assert(r->value);
   }
 
-  r->id(r->value, size);
+  hpx_action_handler_t f = action_table_get_handler(here->actions, r->id);
+  hpx_monoid_id_t lid = (hpx_monoid_id_t)f;
+  lid(r->value, size);
+
   log_lco("initialized with %d inputs lco %p\n", r->inputs, (void*)r);
 }
 /// @}
 
-hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_monoid_id_t id,
-                              hpx_monoid_op_t op) {
+hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_action_t id,
+                              hpx_action_t op) {
   _reduce_t *r = global_malloc(sizeof(*r));
   dbg_assert(r);
   log_lco("allocated lco %p\n", (void*)r);
@@ -252,11 +261,12 @@ hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_monoid_id_t id,
 
 /// Initialize a block of array of lco.
 static int _block_local_init_handler(void *lco, int n, int inputs, size_t size,
-                                     hpx_monoid_id_t id, hpx_monoid_op_t op) {
+                                     hpx_action_t id, hpx_action_t op) {
   for (int i = 0; i < n; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_reduce_t) + size));
     _reduce_init(addr, inputs, size, id, op);
   }
+
   return HPX_SUCCESS;
 }
 
@@ -274,8 +284,8 @@ static HPX_ACTION_DEF(PINNED, _block_local_init_handler, _block_local_init,
 ///
 /// @returns the global address of the allocated array lco.
 hpx_addr_t hpx_lco_reduce_local_array_new(int n, int inputs, size_t size,
-                                          hpx_monoid_id_t id,
-                                          hpx_monoid_op_t op) {
+                                          hpx_action_t id,
+                                          hpx_action_t op) {
   uint32_t lco_bytes = sizeof(_reduce_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
   uint32_t  block_bytes = n * lco_bytes;

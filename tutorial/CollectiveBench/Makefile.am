@@ -1,9 +1,9 @@
 CollectiveBenchdir              = $(datarootdir)/doc/@PACKAGE@
 CollectiveBench_PROGRAMS        = hpx_allreduce hpx_allgather hpx_alltoall
 
-hpx_allreduce_SOURCES           = hpx_allreduce.c 
-hpx_allgather_SOURCES           = hpx_allgather.c
-hpx_alltoall_SOURCES            = hpx_alltoall.c
+hpx_allreduce_SOURCES           = hpx_allreduce.c common.c
+hpx_allgather_SOURCES           = hpx_allgather.c common.c
+hpx_alltoall_SOURCES            = hpx_alltoall.c common.c
 
 all_LIBS                    = $(HPX_LIBS)
 

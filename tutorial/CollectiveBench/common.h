@@ -10,18 +10,22 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+#ifndef LIBHPX_TUTORIALS_COLLECTIVE_BENCH_COMMON_H
+#define LIBHPX_TUTORIALS_COLLECTIVE_BENCH_COMMON_H
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
 #include <stdint.h>
+#include <hpx/hpx.h>
 
 #define TIME() getMicrosecondTimeStamp()
 int64_t getMicrosecondTimeStamp();
 
 #ifndef DEFAULT_MAX_MESSAGE_SIZE
-#define DEFAULT_MAX_MESSAGE_SIZE (1 << 20)
+# define DEFAULT_MAX_MESSAGE_SIZE (1 << 20)
 #endif
 
 #define SKIP 200
@@ -29,20 +33,21 @@ int64_t getMicrosecondTimeStamp();
 #define LARGE_MESSAGE_SIZE 8192
 
 #ifndef FIELD_WIDTH
-#   define FIELD_WIDTH 20
+# define FIELD_WIDTH 20
 #endif
 
 #ifndef FLOAT_PRECISION
-#   define FLOAT_PRECISION 2
+# define FLOAT_PRECISION 2
 #endif
 
-static int iterations = 1000;
-static int iterations_large = 100;
-static int print_size = 1;
+extern int iterations;
+extern int iterations_large;
+extern int print_size;
 
-static void print_header (char *header, int rank, int full) __attribute__((unused));
-static void print_data (int rank, int full, int size, double avg_time, double
-        min_time, double max_time, int iterations) __attribute__((unused));
+void usage(FILE *f);
+void print_header(char *header, int rank, int full);
+void print_data(int rank, int full, int size, double avg_time, double min_time,
+                double max_time, int iterations);
 
 typedef struct {
   int index;
@@ -63,3 +68,10 @@ typedef struct Domain {
   hpx_addr_t minTime;
   hpx_addr_t avgTime;
 } Domain;
+
+extern hpx_action_t initDouble;
+extern hpx_action_t maxDouble;
+extern hpx_action_t minDouble;
+extern hpx_action_t sumDouble;
+
+#endif // LIBHPX_TUTORIALS_COLLECTIVE_BENCH_COMMON_H
