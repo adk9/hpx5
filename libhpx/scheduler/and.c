@@ -159,8 +159,7 @@ static HPX_ACTION_DEF(PINNED, _and_init, _and_init_async, HPX_SINT64);
 hpx_addr_t hpx_lco_and_new(int64_t limit) {
   _and_t *and = NULL;
   hpx_addr_t gva = hpx_gas_alloc_local(sizeof(*and), 0);
-  dbg_assert_str(gva, "Could not malloc global memory\n");
-  log_lco("allocated lco %lu\n", gva);
+  LCO_LOG_NEW(gva);
 
   if (!hpx_gas_try_pin(gva, (void**)&and)) {
     int e = hpx_call_sync(gva, _and_init_async, NULL, 0, &limit);
