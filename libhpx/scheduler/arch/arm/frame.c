@@ -54,6 +54,7 @@ void thread_init(ustack_t *thread, hpx_parcel_t *parcel, thread_entry_t f,
   thread->sp            = frame;
   thread->next          = NULL;
   thread->parcel        = parcel;
+  thread->lco_depth = 0;
   thread->tls_id        = -1;
   thread->affinity      = -1;
 }
