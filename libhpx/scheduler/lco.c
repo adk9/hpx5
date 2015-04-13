@@ -278,9 +278,10 @@ void hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync) {
   }
   else {
     log_lco("deleting lco %p\n", (void*)lco);
-    _fini(lco);
+    int e = _fini(lco);
     hpx_gas_unpin(target);
     hpx_gas_free(target, HPX_NULL);
+    hpx_lco_error(rsync, e, HPX_NULL);
   }
 }
 
