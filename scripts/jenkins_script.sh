@@ -61,6 +61,7 @@ case "$SYSTEM" in
     module load java
     module load gcc/4.9.2
     module load ompi/1.8.1-intel
+    module load emacs
     export PATH=/afs/crc.nd.edu/user/j/jajaycan/Projects/autotools/bin:$PATH
     ;;
   *)
