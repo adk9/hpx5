@@ -57,6 +57,12 @@ case "$SYSTEM" in
     export PATH=/home/users/p02087/tools/bin:$PATH
     export CRAYPE_LINK_TYPE=dynamic
     ;;
+  HPX5_C-SWARM)
+    module load java
+    module load gcc/4.9.2
+    module load ompi/1.8.1-intel
+    export PATH=/afs/crc.nd.edu/user/j/jajaycan/Projects/autotools/bin:$PATH
+    ;;
   *)
     echo "Unknown system $SYSTEM."
     exit 1
@@ -81,6 +87,9 @@ case "$SYSTEM" in
     ;;
   HPX5_BIGRED2 | MARCINS_SWAN | HPX5_EDISON | HPX5_HOPPER)
     CFGFLAGS+=" --with-mpi"
+    ;;
+  HPX5_C-SWARM)
+    CFGFLAGS+=" --with-mpi=/opt/crc/openmpi/1.8.1/intel-14.0/lib/pkgconfig/ompi.pc"
     ;;
   HPX5_STAMPEDE)
     module unload intel
@@ -214,6 +223,13 @@ case "$SYSTEM" in
       CFGFLAGS+=" --with-tests-cmd=\"aprun -n 2 -N 1 -b -d 32\""
     fi
     ;;
+  HPX5_C-SWARM)
+    if [ "$HPXMODE_AXIS" == smp ] ; then
+      CFGFLAGS+=" --with-tests-cmd=\"mpiexec -np 1 --map-by node:PE=16\""
+    else
+      CFGFLAGS+=" --with-tests-cmd=\"mpiexec -np 2 --map-by node:PE=16\""
+    fi
+   ;;
   *)
     exit 1
     ;;
@@ -251,6 +267,9 @@ case "$SYSTEM" in
       CFGFLAGS+=" CC=mpicc"
     fi
     ;;
+  HPX5_C-SWARM)
+    CFGFLAGS+=" CC=gcc"
+    ;;
   *)
     exit 1
     ;;
@@ -267,7 +286,7 @@ esac
 
 if [ "$OP" == "build" ]; then
     case "$SYSTEM" in
-      CREST_cutter | HPX5_BIGRED2 | MARCINS_SWAN | HPX5_EDISON | HPX5_HOPPER)
+      CREST_cutter | HPX5_BIGRED2 | MARCINS_SWAN | HPX5_EDISON | HPX5_HOPPER | HPX5_C-SWARM)
         CFG_CMD="../configure"
         ;;
       HPX5_STAMPEDE)
@@ -295,7 +314,19 @@ if [ "$OP" == "run" ]; then
     esac
 
     # Run all the unit tests:
-    make check -C tests
+    if [ "$SYSTEM" != "HPX5_C-SWARM" ]; then
+      make check -C tests
+    else
+      if [ "$HPXMODE_AXIS" == smp ] ; then
+        JOBID = $(qsub $DIR/scripts/run_check_smp.job)
+      else
+        JOBID = $(qsub $DIR/scripts/run_check_distributed.job)
+      fi    
+      
+      while qstat $JOBID &> /dev/null; do
+        sleep 5;
+      done 
+    fi
 
     # Check the output of the unit tests:
     if grep '^# FAIL: *0$' $DIR/build/tests/unit/test-suite.log
