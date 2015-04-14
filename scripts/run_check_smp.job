@@ -3,7 +3,6 @@
 #$ -q *@@cswarm
 #$ -N regression_test
 
-. /opt/crc/Modules/3.2.10/init/bash
 module load gcc/4.9.2
 module load ompi/1.8.1-intel
 module load emacs
