@@ -17,49 +17,54 @@
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
+#include "agas/agas.h"
 #include "smp/smp.h"
 #include "pgas/pgas.h"
 
+static const int LEVEL = HPX_LOG_CONFIG | HPX_LOG_GAS;
+
 gas_t *gas_new(const config_t *cfg, struct boot *boot) {
   hpx_gas_t type = cfg->gas;
+  int ranks = boot_n_ranks(boot);
   gas_t *gas = NULL;
 
-  if (type != HPX_GAS_PGAS && boot_n_ranks(boot) > 1) {
-    log_cfg("GAS %s selection override to PGAS.\n", HPX_GAS_TO_STRING[type]);
-  }
-
-  if (type != HPX_GAS_SMP && boot_n_ranks(boot) == 1) {
-    log_cfg("GAS %s selection override to SMP.\n", HPX_GAS_TO_STRING[type]);
-  }
-
-#ifdef HAVE_NETWORK
-  if (boot_n_ranks(boot) > 1) {
-    gas = gas_pgas_new(cfg, boot);
-    if (!gas) {
-      log_gas("PGAS failed to initialize\n");
+  if (ranks == 1) {
+    if (type != HPX_GAS_SMP && type != HPX_GAS_DEFAULT) {
+      log_level(LEVEL, "GAS %s overriden to SMP.\n", HPX_GAS_TO_STRING[type]);
     }
-    else {
-      log_gas("PGAS initialized\n");
-      gas->type = HPX_GAS_PGAS;
-    }
+    type = HPX_GAS_SMP;
   }
-#endif
 
-  if (boot_n_ranks(boot) == 1) {
+  if (ranks > 1 && type == HPX_GAS_SMP) {
+    dbg_error("SMP GAS selection fails for %d ranks\n", ranks);
+  }
+
+  switch (type) {
+   case HPX_GAS_SMP:
     gas = gas_smp_new();
-    if (!gas) {
-      log_gas("SMP failed to initialize\n");
-    }
-    else {
-      log_gas("SMP initialized\n");
-      gas->type = HPX_GAS_SMP;
-    }
+    break;
+
+   case HPX_GAS_AGAS:
+#ifdef HAVE_NETWORK
+    gas = gas_agas_new(cfg, boot);
+#endif
+    break;
+   case HPX_GAS_PGAS:
+#ifdef HAVE_NETWORK
+    gas = gas_pgas_new(cfg, boot);
+#endif
+    break;
+
+   default:
+    dbg_error("unexpected configuration value for --hpx-gas\n");
   }
 
-  if (gas) {
-    return gas;
+  if (!gas) {
+    log_error("GAS %s failed to initialize\n", HPX_GAS_TO_STRING[type]);
+  }
+  else {
+    log_gas("GAS %s initialized\n", HPX_GAS_TO_STRING[type]);
   }
 
-  dbg_error("Could not initialize GAS model %s", HPX_GAS_TO_STRING[type]);
-  return NULL;
+  return gas;
 }

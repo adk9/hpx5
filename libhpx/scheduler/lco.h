@@ -17,6 +17,11 @@
 #include <libsync/lockable_ptr.h>
 #include "cvar.h"
 
+#define LCO_LOG_NEW(gva) do {                                   \
+    dbg_assert_str(gva, "Could not malloc global memory\n");    \
+    log_lco("allocated lco %lu\n", gva);                        \
+  } while (0)
+
 /// This constant is used to determine when a set should be performed
 /// asynchronously, even if the set is actually local.
 static const int HPX_LCO_SET_ASYNC = 512;

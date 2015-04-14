@@ -192,28 +192,30 @@ static hpx_status_t _future_wait(lco_t *lco) {
   return status;
 }
 
-/// initialize the future
-static void _future_init(_future_t *f, int size) {
-  // the future vtable
-  static const lco_class_t vtable = {
-    .on_fini     = _future_fini,
-    .on_error    = _future_error,
-    .on_set      = _future_set,
-    .on_get      = _future_get,
-    .on_getref   = _future_getref,
-    .on_release  = _future_release,
-    .on_wait     = _future_wait,
-    .on_attach   = _future_attach,
-    .on_reset    = _future_reset,
-    .on_size     = _future_size
-  };
+// the future vtable
+static const lco_class_t _future_vtable = {
+  .on_fini     = _future_fini,
+  .on_error    = _future_error,
+  .on_set      = _future_set,
+  .on_get      = _future_get,
+  .on_getref   = _future_getref,
+  .on_release  = _future_release,
+  .on_wait     = _future_wait,
+  .on_attach   = _future_attach,
+  .on_reset    = _future_reset,
+  .on_size     = _future_size
+};
 
-  lco_init(&f->lco, &vtable);
+/// initialize the future
+static int _future_init(_future_t *f, int size) {
+  lco_init(&f->lco, &_future_vtable);
   cvar_reset(&f->full);
   if (size) {
     memset(&f->value, 0, size);
   }
+  return HPX_SUCCESS;
 }
+static HPX_ACTION_DEF(PINNED, _future_init, _future_init_async, HPX_INT);
 
 /// Initialize a block of futures.
 static HPX_PINNED(_block_init, char *base, uint32_t *args) {
@@ -228,10 +230,19 @@ static HPX_PINNED(_block_init, char *base, uint32_t *args) {
 }
 
 hpx_addr_t hpx_lco_future_new(int size) {
-  _future_t *local = global_malloc(sizeof(*local) + size);
-  dbg_assert(local);
-  _future_init(local, size);
-  return lva_to_gva(local);
+  _future_t *future = NULL;
+  hpx_addr_t gva = hpx_gas_alloc_local(sizeof(*future) + size, 0);
+  LCO_LOG_NEW(gva);
+
+  if (!hpx_gas_try_pin(gva, (void**)&future)) {
+    int e = hpx_call_sync(gva, _future_init_async, NULL, 0, &size);
+    dbg_check(e, "could not initialize a future at %lu\n", gva);
+  }
+  else {
+    _future_init(future, size);
+    hpx_gas_unpin(gva);
+  }
+  return gva;
 }
 
 // Allocate a global array of futures.

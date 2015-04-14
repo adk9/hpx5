@@ -223,7 +223,7 @@ static const lco_class_t _reduce_vtable = {
   .on_size     = _reduce_size
 };
 
-static void _reduce_init(_reduce_t *r, int inputs, size_t size, hpx_action_t id,
+static int _reduce_init(_reduce_t *r, int inputs, size_t size, hpx_action_t id,
                          hpx_action_t op) {
   assert(id);
   assert(op);
@@ -247,16 +247,29 @@ static void _reduce_init(_reduce_t *r, int inputs, size_t size, hpx_action_t id,
   lid(r->value, size);
 
   log_lco("initialized with %d inputs lco %p\n", r->inputs, (void*)r);
+  return HPX_SUCCESS;
 }
+static HPX_ACTION_DEF(PINNED, _reduce_init, _reduce_init_async, HPX_INT,
+                      HPX_SIZE_T, HPX_ACTION_T, HPX_ACTION_T);
 /// @}
 
 hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_action_t id,
                               hpx_action_t op) {
-  _reduce_t *r = global_malloc(sizeof(*r));
-  dbg_assert(r);
-  log_lco("allocated lco %p\n", (void*)r);
-  _reduce_init(r, inputs, size, id, op);
-  return lva_to_gva(r);
+  _reduce_t *r = NULL;
+  hpx_addr_t gva = hpx_gas_alloc_local(sizeof(*r), 0);
+  LCO_LOG_NEW(gva);
+
+  if (!hpx_gas_try_pin(gva, (void**)&r)) {
+    int e = hpx_call_sync(gva, _reduce_init_async, NULL, 0, &inputs, &size, &id,
+                          &op);
+    dbg_check(e, "could not initialize an allreduce at %lu\n", gva);
+  }
+  else {
+    _reduce_init(r, inputs, size, id, op);
+    hpx_gas_unpin(gva);
+  }
+
+  return gva;
 }
 
 /// Initialize a block of array of lco.

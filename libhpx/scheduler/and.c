@@ -21,7 +21,6 @@
 #include <stdint.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
-#include <libhpx/memory.h>
 #include <libhpx/scheduler.h>
 #include "cvar.h"
 #include "lco.h"
@@ -33,7 +32,6 @@ typedef struct {
   cvar_t          barrier;
   volatile intptr_t value;                  // the threshold
 } _and_t;
-
 
 static hpx_status_t _wait(_and_t *and) {
   hpx_status_t status = cvar_get_error(&and->barrier);
@@ -145,26 +143,34 @@ static const lco_class_t _and_vtable = {
   .on_size     = _and_size
 };
 
-static void _and_init(_and_t *and, intptr_t value) {
+static int _and_init(_and_t *and, int64_t value) {
   assert(value >= 0);
   lco_init(&and->lco, &_and_vtable);
   cvar_reset(&and->barrier);
   sync_store(&and->value, value, SYNC_RELEASE);
   log_lco("initialized with %ld inputs lco %p\n", and->value, (void*)and);
+  return HPX_SUCCESS;
 }
+static HPX_ACTION_DEF(PINNED, _and_init, _and_init_async, HPX_SINT64);
 
 /// @}
 
-
 /// Allocate an and LCO. This is synchronous.
-hpx_addr_t hpx_lco_and_new(intptr_t limit) {
-  _and_t *and = global_malloc(sizeof(*and));
-  dbg_assert_str(and, "Could not malloc global memory\n");
-  log_lco("allocated lco %p\n", (void*)and);
-  _and_init(and, limit);
-  return lva_to_gva(and);;
-}
+hpx_addr_t hpx_lco_and_new(int64_t limit) {
+  _and_t *and = NULL;
+  hpx_addr_t gva = hpx_gas_alloc_local(sizeof(*and), 0);
+  LCO_LOG_NEW(gva);
 
+  if (!hpx_gas_try_pin(gva, (void**)&and)) {
+    int e = hpx_call_sync(gva, _and_init_async, NULL, 0, &limit);
+    dbg_check(e, "could not initialize an and gate at %lu\n", gva);
+  }
+  else {
+    _and_init(and, limit);
+    hpx_gas_unpin(gva);
+  }
+  return gva;
+}
 
 /// Join the and.
 void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t rsync) {

@@ -39,9 +39,9 @@ typedef struct {
 } _user_lco_t;
 
 
-// Forward declaration
-static void _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
-                           hpx_action_t op, hpx_action_t predicate);
+// Forward declaration---used during reset as well.
+static int _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
+                          hpx_action_t op, hpx_action_t predicate);
 
 static bool _trigger(_user_lco_t *u) {
   if (lco_get_triggered(&u->lco)) {
@@ -189,8 +189,8 @@ static const lco_class_t _user_lco_vtable = {
   .on_size     = _user_lco_size
 };
 
-static void _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
-                           hpx_action_t op, hpx_action_t predicate) {
+static int _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
+                          hpx_action_t op, hpx_action_t predicate) {
   assert(id);
   assert(op);
   assert(predicate);
@@ -213,15 +213,30 @@ static void _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
   hpx_action_handler_t f = action_table_get_handler(here->actions, u->id);
   hpx_monoid_id_t lid = (hpx_monoid_id_t)f;
   lid(u->buf, u->size);
+
+  return HPX_SUCCESS;
 }
+static HPX_ACTION_DEF(PINNED, _user_lco_init, _user_lco_init_async, HPX_SIZE_T,
+                      HPX_ACTION_T, HPX_ACTION_T, HPX_ACTION_T);
 /// @}
 
 hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
                             hpx_action_t predicate) {
-  _user_lco_t *u = global_calloc(1, sizeof(*u));
-  assert(u);
-  _user_lco_init(u, size, id, op, predicate);
-  return lva_to_gva(u);
+  _user_lco_t *u = NULL;
+  hpx_addr_t gva = hpx_gas_calloc_local(1, sizeof(*u), 0);
+  LCO_LOG_NEW(gva);
+
+  if (!hpx_gas_try_pin(gva, (void**)&u)) {
+    int e = hpx_call_sync(gva, _user_lco_init_async, NULL, 0, &size, &id, &op,
+                          &predicate);
+    dbg_check(e, "could not initialize an allreduce at %lu\n", gva);
+  }
+  else {
+    _user_lco_init(u, size, id, op, predicate);
+    hpx_gas_unpin(gva);
+  }
+
+  return gva;
 }
 
 /// Initialize a block of array of lco.
