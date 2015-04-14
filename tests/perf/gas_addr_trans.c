@@ -10,11 +10,12 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttypes.h>
 #include <unistd.h>
-#include "hpx/hpx.h"
+#include <hpx/hpx.h>
+#include "timeout.h"
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: time_gas_addr_trans [options]\n"
@@ -136,6 +137,8 @@ main(int argc, char *argv[]) {
   // register the actions
   HPX_REGISTER_ACTION(_address_translation_action, &_address_translation);
   HPX_REGISTER_ACTION(_main_action, &_main);
+
+  set_timeout(30);
 
   // run the main action
   return hpx_run(&_main, NULL, 0);
