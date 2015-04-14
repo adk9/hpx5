@@ -327,8 +327,8 @@ if [ "$OP" == "run" ]; then
 
       # The job id is actually the first numbers in the string (slurm support)
       JOBID=`echo $JOBID | awk 'match($0,/[0-9]+/){print substr($0, RSTART, RLENGTH)}'`
-      qstat $JOBID      
-      while [ qstat $JOBID 2>&1 > /dev/null ]; do
+      qstat -j $JOBID      
+      while [ qstat -j $JOBID 2>&1 > /dev/null ]; do
         sleep 5;
       done 
     fi
