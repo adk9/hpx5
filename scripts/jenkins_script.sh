@@ -340,7 +340,7 @@ if [ "$OP" == "run" ]; then
       sleep 5;
 
       echo "$(cat $DIR/build/regression_test.o*)"
-      sleep 120;
+      sleep 10;
     fi
   
     # Check the output of the unit tests:
