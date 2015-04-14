@@ -80,6 +80,9 @@ static int alltoall_handler(boot_t *boot) {
 }
 
 int main(int argc, char *argv[]) {
+  signal(SIGALRM, timeout);
+  alarm(TIMEOUT);
+
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "failed to initialize HPX.\n");
     return 1;
