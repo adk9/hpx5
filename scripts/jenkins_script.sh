@@ -338,6 +338,8 @@ if [ "$OP" == "run" ]; then
     done;
     sleep 1;
 
+    cat $DIR/build/regression_test.o*
+
     # Check the output of the unit tests:
     if grep '^# FAIL: *0$' $DIR/build/tests/unit/test-suite.log
      then
