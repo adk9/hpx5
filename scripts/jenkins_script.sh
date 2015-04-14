@@ -319,9 +319,9 @@ if [ "$OP" == "run" ]; then
       make check -C tests
     else
       if [ "$HPXMODE_AXIS" == smp ] ; then
-        JOBID = $(qsub $DIR/scripts/run_check_smp.job)
+        JOBID=$(qsub $DIR/scripts/run_check_smp.job 2>&1)
       else
-        JOBID = $(qsub $DIR/scripts/run_check_distributed.job)
+        JOBID=$(qsub $DIR/scripts/run_check_distributed.job 2>&1)
       fi    
       
       while qstat $JOBID &> /dev/null; do
