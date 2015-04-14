@@ -333,14 +333,18 @@ if [ "$OP" == "run" ]; then
         sleep 10;
         RC=$(qstat | grep $JOBID 2>&1)
       done; 
+
+      echo "$(cat $DIR/build/regression_test.o*)"
+      sleep 10;
+      if grep 'Error' $DIR/build/regression_test.o*
+      then
+        exit 1
+      fi
     
       while [ ! -f $DIR/build/tests/unit/test-suite.log ]; do
         sleep 5;
       done;
       sleep 5;
-
-      echo "$(cat $DIR/build/regression_test.o*)"
-      sleep 10;
     fi
   
     # Check the output of the unit tests:
