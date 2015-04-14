@@ -67,6 +67,9 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
 int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_handler_t f,
                         unsigned int nargs, hpx_action_t *id, ...);
 
+/// Get the local function pointer that corresponds to the passed id.
+hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
+
 /// Wraps the hpx_register_action() function to make it slightly more convenient
 /// to use.
 ///
