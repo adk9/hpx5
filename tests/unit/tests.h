@@ -13,11 +13,21 @@
 #ifndef LIBHPX_TESTS_H_
 #define LIBHPX_TESTS_H_
 
-#include <string.h>
-#include <stdio.h>
 #include <assert.h>
 #include <getopt.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include <hpx/hpx.h>
+
+#define TIMEOUT 30
+
+static void timeout(int signal) {
+  fprintf(stderr, "test timed out after %d seconds\n", TIMEOUT);
+  hpx_shutdown(EXIT_FAILURE);
+}
 
 #define assert_msg(cond, msg) assert(cond && msg)
 
@@ -56,9 +66,12 @@
         return -1;                                      \
       }                                                 \
     }                                                   \
+    signal(SIGALRM, timeout);                           \
+    alarm(TIMEOUT);                                     \
     return hpx_run(&_main, NULL, 0);                    \
   }                                                     \
-  int main(int argc, char *argv[])                      \
+  int main(int argc, char *argv[])
+
 
 
 #endif /* LIBHPX_TESTS_H_ */
