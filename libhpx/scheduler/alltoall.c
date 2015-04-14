@@ -10,7 +10,9 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 /// AlltoAll is an extention of allgather to the case where each process sends
 /// distinct data to each of the receivers. The jth block sent from process i
@@ -62,10 +64,6 @@
 ///         4 #  A4  #  B4  #  C4  #  D4  #  E4  #
 ///           #      #      #      #      #      #
 ///           ####################################
-
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
 
 /// @file libhpx/scheduler/allgather.c
 /// @brief Defines the allgather LCO.
@@ -357,21 +355,21 @@ static hpx_status_t _alltoall_get(lco_t *lco, int size, void *out) {
   return HPX_SUCCESS;
 }
 
-static void _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
-  static const lco_class_t vtable = {
-    .on_fini     = _alltoall_fini,
-    .on_error    = _alltoall_error,
-    .on_set      = _alltoall_set,
-    .on_get      = _alltoall_get,
-    .on_getref   = NULL,
-    .on_release  = NULL,
-    .on_wait     = _alltoall_wait,
-    .on_attach   = _alltoall_attach,
-    .on_reset    = _alltoall_reset,
-    .on_size     = _alltoall_size
-  };
+static const lco_class_t _alltoall_vtable = {
+  .on_fini     = _alltoall_fini,
+  .on_error    = _alltoall_error,
+  .on_set      = _alltoall_set,
+  .on_get      = _alltoall_get,
+  .on_getref   = NULL,
+  .on_release  = NULL,
+  .on_wait     = _alltoall_wait,
+  .on_attach   = _alltoall_attach,
+  .on_reset    = _alltoall_reset,
+  .on_size     = _alltoall_size
+};
 
-  lco_init(&g->lco, &vtable);
+static int _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
+  lco_init(&g->lco, &_alltoall_vtable);
   cvar_reset(&g->wait);
   g->participants = participants;
   g->count = participants;
@@ -384,7 +382,11 @@ static void _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
     g->value = malloc(size * participants);
     assert(g->value);
   }
+
+  return HPX_SUCCESS;
 }
+static HPX_ACTION_DEF(PINNED, _alltoall_init, _alltoall_init_async, HPX_SIZE_T,
+                      HPX_SIZE_T);
 
 /// Allocate a new alltoall LCO. It scatters elements from each process in order
 /// of their rank and sends the result to all the processes
@@ -396,10 +398,19 @@ static void _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
 /// @param participants The static number of participants in the gathering.
 /// @param size         The size of the data being gathered.
 hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) {
-  _alltoall_t *g = global_malloc(sizeof(*g));
-  assert(g);
-  _alltoall_init(g, inputs, size);
-  return lva_to_gva(g);
+  _alltoall_t *g = NULL;
+  hpx_addr_t gva = hpx_gas_alloc_local(sizeof(*g), 0);
+  LCO_LOG_NEW(gva);
+
+  if (!hpx_gas_try_pin(gva, (void**)&g)) {
+    int e = hpx_call_sync(gva, _alltoall_init_async, NULL, 0, &inputs, &size);
+    dbg_check(e, "could not initialize an allreduce at %lu\n", gva);
+  }
+  else {
+    _alltoall_init(g, inputs, size);
+    hpx_gas_unpin(gva);
+  }
+  return gva;
 }
 
 /// Initialize a block of array of lco.

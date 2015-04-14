@@ -33,20 +33,6 @@
 static void _smp_delete(gas_t *gas) {
 }
 
-/// Check to see if an address is a global address.
-static bool _smp_is_global(gas_t *gas, void *addr) {
-  // All of the SMP addresses can be considered global given that they're all in
-  // the normal virtual address space and thus globally visible. The only thing
-  // that is not global is NULL.
-  return (addr != NULL);
-}
-
-/// Find out which locality the address is owned by.
-static uint32_t _smp_locality_of(hpx_addr_t addr) {
-  // SMP global addresses are all owned by the single, rank 0 locality.
-  return 0;
-}
-
 /// Figure out how far apart two addresses are.
 static int64_t _smp_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   dbg_assert(lhs != HPX_NULL);
@@ -65,16 +51,11 @@ static hpx_addr_t _smp_lva_to_gva(const void *lva) {
   return (hpx_addr_t)lva;
 }
 
-/// Compute the local address for a global address.
-static void *_smp_gva_to_lva(hpx_addr_t addr) {
-  return (void*)addr;
-}
-
 /// Perform address translation and pin the global address.
 static bool _smp_try_pin(const hpx_addr_t addr, void **local) {
   if (local) {
     // Return the local address, if the user wants it.
-    *local = _smp_gva_to_lva(addr);
+    *local = (void*)addr;
   }
   // All addresses are local, so we return true.
   return true;
@@ -136,7 +117,7 @@ static hpx_addr_t _smp_gas_calloc_local(size_t nmemb, size_t size,
 
 /// Free an allocation.
 static void _smp_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
-  void *p = _smp_gva_to_lva(addr);
+  void *p = (void*)addr;
   free(p);
 
   // Notify the caller that we're done.
@@ -150,8 +131,8 @@ static int _smp_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size,
     dbg_assert(to != HPX_NULL);
     dbg_assert(from != HPX_NULL);
 
-    void *lto = _smp_gva_to_lva(to);
-    const void *lfrom = _smp_gva_to_lva(from);
+    void *lto = (void*)to;
+    const void *lfrom = (void*)from;
     memcpy(lto, lfrom, size);
   }
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
@@ -165,7 +146,7 @@ static int _smp_memput(hpx_addr_t to, const void *from, size_t size,
     dbg_assert(to != HPX_NULL);
     dbg_assert(from != NULL);
 
-    void *lto = _smp_gva_to_lva(to);
+    void *lto = (void*)to;
     memcpy(lto, from, size);
   }
   hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
@@ -180,7 +161,7 @@ static int _smp_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync)
     dbg_assert(to != NULL);
     dbg_assert(from != HPX_NULL);
 
-    const void *lfrom = _smp_gva_to_lva(from);
+    const void *lfrom = (void*)from;
     memcpy(to, lfrom, size);
   }
   hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
@@ -207,14 +188,11 @@ static void *_smp_local_base(gas_t *gas) {
 static gas_t _smp_vtable = {
   .type           = HPX_GAS_SMP,
   .delete         = _smp_delete,
-  .is_global      = _smp_is_global,
   .local_size     = _smp_local_size,
   .local_base     = _smp_local_base,
-  .locality_of    = _smp_locality_of,
   .sub            = _smp_sub,
   .add            = _smp_add,
   .lva_to_gva     = _smp_lva_to_gva,
-  .gva_to_lva     = _smp_gva_to_lva,
   .there          = _smp_there,
   .try_pin        = _smp_try_pin,
   .unpin          = _smp_unpin,

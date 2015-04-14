@@ -29,8 +29,8 @@
 #include <hpx/hpx.h>
 #include <hwloc.h>
 
-#include "libhpx/debug.h"
-#include "libhpx/gas.h"
+#include <libhpx/debug.h>
+#include <libhpx/gas.h>
 
 /// Forward declarations.
 /// @{
@@ -84,29 +84,5 @@ HPX_INTERNAL extern hpx_action_t locality_call_continuation;
 
 /// The global locality is exposed through this "here" pointer.
 extern locality_t *here;
-
-/// A set of inline convenience functions.
-/// @{
-
-/// Check to see if a local virtual address is aliasing the global address
-/// space.
-inline static bool lva_is_global(void *addr) {
-  dbg_assert(here && here->gas && here->gas->is_global);
-  return here->gas->is_global(here->gas, addr);
-}
-
-/// Translate a local address to a global address. This only works for some
-/// local addresses, so we need to use it carefully.
-inline static hpx_addr_t lva_to_gva(const void *lva) {
-  dbg_assert(here && here->gas && here->gas->lva_to_gva);
-  return here->gas->lva_to_gva(lva);
-}
-
-/// Translate a global address to a local address.
-inline static void *gva_to_lva(hpx_addr_t gva) {
-  dbg_assert(here && here->gas && here->gas->gva_to_lva);
-  return here->gas->gva_to_lva(gva);
-}
-
 
 #endif // LIBHPX_LOCALITY_H
