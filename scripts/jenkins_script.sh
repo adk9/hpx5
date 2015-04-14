@@ -58,6 +58,7 @@ case "$SYSTEM" in
     export CRAYPE_LINK_TYPE=dynamic
     ;;
   HPX5_C-SWARM)
+    . /opt/sge/crc/common/settings.sh
     module load java
     module load gcc/4.9.2
     module load ompi/1.8.1-intel
