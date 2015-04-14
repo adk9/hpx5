@@ -39,8 +39,6 @@ typedef struct gas {
   int64_t (*sub)(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize);
   hpx_addr_t (*add)(hpx_addr_t gva, int64_t bytes, uint32_t bsize);
 
-  hpx_addr_t (*lva_to_gva)(const void *lva);
-
   // implement hpx/gas.h
   __typeof(HPX_THERE) *there;
   __typeof(hpx_gas_try_pin) *try_pin;
