@@ -324,6 +324,9 @@ if [ "$OP" == "run" ]; then
       else
         JOBID=$(qsub $DIR/scripts/run_check_distributed.job 2>&1)
       fi    
+
+      # The job id is actually the first numbers in the string (slurm support)
+      JOBID=`echo $JOBID | awk 'match($0,/[0-9]+/){print substr($0, RSTART, RLENGTH)}'`
       
       while qstat $JOBID &> /dev/null; do
         sleep 5;
