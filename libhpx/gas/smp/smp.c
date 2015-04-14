@@ -192,7 +192,6 @@ static gas_t _smp_vtable = {
   .local_base     = _smp_local_base,
   .sub            = _smp_sub,
   .add            = _smp_add,
-  .lva_to_gva     = _smp_lva_to_gva,
   .there          = _smp_there,
   .try_pin        = _smp_try_pin,
   .unpin          = _smp_unpin,
