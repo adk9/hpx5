@@ -16,6 +16,7 @@
 
 #include <libhpx/debug.h>
 #include "../../thread.h"
+#include "asm.h"
 
 static void HPX_CONSTRUCTOR _init_thread(void) {
   //thread_set_stack_size(0);
@@ -28,14 +29,16 @@ static void HPX_CONSTRUCTOR _init_thread(void) {
 ///
 /// This should be managed in an asm-specific manner.
 typedef struct {
-  void          *r0;                            // passes initial parcel
+  void     *alignment; // keep b-byte aligned stack
 #ifdef __VFP_FP__
   void *vfp_alignment;
-  void       *fpscr;
-  void *vfpregs[16];
+  void         *fpscr;
+  void   *vfpregs[16];
 #endif
-  void     *regs[8];
-  thread_entry_t lr;                            // 1 return address
+  void       *regs[6]; // r6-r11
+  void            *r5; // we use this to hold the parcel that is passed to f()
+  thread_entry_t   r4; // used to hold f(), called by align_stack_trampoline
+  void    (*lr)(void); // return address - set to align_stack_trampoline
 } HPX_PACKED _frame_t;
 
 static _frame_t *_get_top_frame(ustack_t *thread, size_t size) {
@@ -47,14 +50,16 @@ void thread_init(ustack_t *thread, hpx_parcel_t *parcel, thread_entry_t f,
                  size_t size) {
   // set up the initial stack frame
   _frame_t *frame = _get_top_frame(thread, size);
-  frame->r0      = parcel;
-  frame->lr      = (thread_entry_t)f;
+  frame->r4      = (thread_entry_t)f;
+  frame->r5      = parcel;
+  frame->lr      = align_stack_trampoline;
+  frame->regs[1] = parcel;
 
   // set the stack stuff
-  thread->sp            = frame;
-  thread->next          = NULL;
-  thread->parcel        = parcel;
+  thread->sp        = frame;
+  thread->next      = NULL;
+  thread->parcel    = parcel;
   thread->lco_depth = 0;
-  thread->tls_id        = -1;
-  thread->affinity      = -1;
+  thread->tls_id    = -1;
+  thread->affinity  = -1;
 }
