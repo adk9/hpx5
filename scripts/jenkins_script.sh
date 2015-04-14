@@ -328,10 +328,16 @@ if [ "$OP" == "run" ]; then
       # The job id is actually the first numbers in the string (slurm support)
       JOBID=`echo $JOBID | awk 'match($0,/[0-9]+/){print substr($0, RSTART, RLENGTH)}'`
       
-      while qstat $JOBID &> /dev/null; do
+      while [ qstat $JOBID &> /dev/null ]; do
         sleep 5;
       done 
+      sleep 5;
     fi
+  
+    while [ ! -f $DIR/build/tests/unit/test-suite.log ]; do
+      sleep 1;
+    done;
+    sleep 1;
 
     # Check the output of the unit tests:
     if grep '^# FAIL: *0$' $DIR/build/tests/unit/test-suite.log
