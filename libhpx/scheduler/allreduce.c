@@ -198,8 +198,8 @@ static const lco_class_t vtable = {
   .on_size     = _allreduce_size
 };
 
-static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
-                            size_t size, hpx_action_t id, hpx_action_t op) {
+static int _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
+                           size_t size, hpx_action_t id, hpx_action_t op) {
   assert(id);
   assert(op);
 
@@ -221,16 +221,31 @@ static void _allreduce_init(_allreduce_t *r, size_t writers, size_t readers,
   hpx_action_handler_t f = action_table_get_handler(here->actions, r->id);
   hpx_monoid_id_t lid = (hpx_monoid_id_t)f;
   lid(r->value, size);
-}
 
+  return HPX_SUCCESS;
+}
+static HPX_ACTION_DEF(PINNED, _allreduce_init, _allreduce_init_async,
+                      HPX_SIZE_T, HPX_SIZE_T, HPX_SIZE_T, HPX_ACTION_T,
+                      HPX_ACTION_T);
 /// @}
 
 hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
                                  hpx_action_t id, hpx_action_t op) {
-  _allreduce_t *r = global_malloc(sizeof(*r));
-  assert(r);
-  _allreduce_init(r, inputs, outputs, size, id, op);
-  return lva_to_gva(r);
+  _allreduce_t *r = NULL;
+  hpx_addr_t gva = hpx_gas_alloc_local(sizeof(*r), 0);
+  LCO_LOG_NEW(gva);
+
+  if (!hpx_gas_try_pin(gva, (void**)&r)) {
+    int e = hpx_call_sync(gva, _allreduce_init_async, NULL, 0, &inputs,
+                          &outputs, &size, &id, &op);
+    dbg_check(e, "could not initialize an allreduce at %lu\n", gva);
+  }
+  else {
+    _allreduce_init(r, inputs, outputs, size, id, op);
+    hpx_gas_unpin(gva);
+  }
+
+  return gva;
 }
 
 
