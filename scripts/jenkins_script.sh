@@ -328,10 +328,10 @@ if [ "$OP" == "run" ]; then
       # The job id is actually the first numbers in the string (slurm support)
       JOBID=`echo $JOBID | awk 'match($0,/[0-9]+/){print substr($0, RSTART, RLENGTH)}'`
   
-      RC=$(qstat -j $JOBID 2>&1)  
+      RC=$(qstat | grep $JOBID 2>&1)  
       while [ ! -z "$RC" ]; do
-        sleep 5;
-        RC=$(qstat -j $JOBID 2>&1)
+        sleep 10;
+        RC=$(qstat | grep $JOBID 2>&1)
       done; 
     
       while [ ! -f $DIR/build/tests/unit/test-suite.log ]; do
@@ -339,7 +339,7 @@ if [ "$OP" == "run" ]; then
       done;
       sleep 5;
 
-      cat $DIR/build/regression_test.o*
+      echo "$(cat $DIR/build/regression_test.o*)"
       sleep 120;
     fi
   
