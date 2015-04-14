@@ -10,11 +10,12 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttypes.h>
 #include <unistd.h>
-#include "hpx/hpx.h"
+#include <hpx/hpx.h>
+#include "timeout.h"
 
 #define BENCHMARK "HPX COST OF LCO AND"
 
@@ -118,6 +119,8 @@ int main(int argc, char *argv[]) {
   HPX_REGISTER_ACTION(_lco_set_action, &_lco_set);
   HPX_REGISTER_ACTION(_main_action, &_main);
   HPX_REGISTER_ACTION(_empty_action, &_empty);
+
+  set_timeout(300);
 
   // run the main action
   return hpx_run(&_main, NULL, 0);
