@@ -20,6 +20,8 @@ static HPX_ACTION(_main, void *UNUSED) {
 }
 
 int main(int argc, char *argv[]) {
+  signal(SIGALRM, timeout);
+  alarm(TIMEOUT);
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "failed to initialize HPX.\n");
     return 1;
