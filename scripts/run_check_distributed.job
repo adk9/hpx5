@@ -1,4 +1,4 @@
-#!/bin/csh
+#!/bin/bash
 #$ -pe mpi-16 32
 #$ -q *@@cswarm
 #$ -N regression_test
