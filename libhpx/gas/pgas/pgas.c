@@ -294,7 +294,6 @@ static gas_t _pgas_vtable = {
   .local_base     = _pgas_local_base,
   .sub            = _pgas_sub,
   .add            = _pgas_add,
-  .lva_to_gva     = pgas_lva_to_gpa,
   .there          = _pgas_there,
   .try_pin        = _pgas_try_pin,
   .unpin          = _pgas_unpin,
