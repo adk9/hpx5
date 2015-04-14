@@ -126,7 +126,7 @@ case "$SYSTEM" in
     export HPX_PHOTON_CARGS="--with-ugni"
     CFGFLAGS+=" --with-pmi --with-hugetlbfs"
     ;;
-  HPX5_STAMPEDE)
+  HPX5_STAMPEDE | HPX5_C-SWARM)
     export HPX_PHOTON_IBDEV=mlx4_0
     export HPX_PHOTON_BACKEND=verbs
     ;;
