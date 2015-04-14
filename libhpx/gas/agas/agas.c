@@ -31,10 +31,6 @@ static hpx_addr_t _agas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
   return HPX_NULL;
 }
 
-static hpx_addr_t _agas_lva_to_gva(const void *lva) {
-  return HPX_NULL;
-}
-
 static gas_t _agas_vtable = {
   .type           = HPX_GAS_AGAS,
   .delete         = _agas_delete,
@@ -42,7 +38,6 @@ static gas_t _agas_vtable = {
   .local_base     = NULL,
   .sub            = _agas_sub,
   .add            = _agas_add,
-  .lva_to_gva     = _agas_lva_to_gva,
   .there          = NULL,
   .try_pin        = NULL,
   .unpin          = NULL,
