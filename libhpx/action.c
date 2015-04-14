@@ -392,3 +392,7 @@ int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_hand
   }
   return _push_back(_get_actions(), id, key, f, type, cif);
 }
+
+hpx_action_handler_t hpx_action_get_handler(hpx_action_t id) {
+  return action_table_get_handler(here->actions, id);
+}
