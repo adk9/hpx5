@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+#include <inttypes.h>
 #include <stdlib.h>
 #include "hpx/hpx.h"
 #include "tests.h"
@@ -22,7 +23,7 @@ static hpx_addr_t _remote = 0;
 
 static void HPX_NORETURN _fail(int i, uint64_t expected, uint64_t actual) {
   fprintf(stderr, "failed to set element %d correctly, "
-          "expected %lu, got %lu\n", i, expected, actual);
+          "expected %" PRIu64 ", got %" PRIu64 "\n", i, expected, actual);
   exit(EXIT_FAILURE);
 }
 
