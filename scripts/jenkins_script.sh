@@ -81,6 +81,16 @@ case "$BUILD_AXIS" in
 esac
 }
 
+case"JEMALLOC_AXIS" in
+  enable)
+    CFGFLAGS+=" --enable-jemalloc"
+    ;;
+  *)
+    CFGFLAGS+=" --disable-jemalloc"
+    ;;
+esac
+}
+
 function add_mpi() {
 case "$SYSTEM" in
   CREST_cutter)
@@ -151,13 +161,15 @@ function do_build() {
         rm -rf ./install/
     fi
     mkdir install
-    
-    echo "Configuring HPX."
-    eval "$CFG_CMD --prefix=${DIR}/build/install/ ${HPXDEBUG} ${CFGFLAGS} CFLAGS=\"-O3 -g\" --enable-testsuite --enable-parallel-config"  
+
+    if [!("$SYSTEM" == "HPX5_C-SWARM" && "$HPXMODE_AXIS" == photon)]; then    
+      echo "Configuring HPX."
+      eval "$CFG_CMD --prefix=${DIR}/build/install/ ${HPXDEBUG} ${CFGFLAGS} CFLAGS=\"-O3 -g\" --enable-testsuite --enable-parallel-config"  
   
-    echo "Building HPX."
-    make -j 8
-    make install
+      echo "Building HPX."
+      make -j 8
+      make install
+   fi
 }
 
 add_init
@@ -321,8 +333,16 @@ if [ "$OP" == "run" ]; then
     else
       if [ "$HPXMODE_AXIS" == smp ] ; then
         JOBID=$(qsub $DIR/scripts/run_check_smp.job 2>&1)
-      else
-        JOBID=$(qsub $DIR/scripts/run_check_distributed.job 2>&1)
+      else if [ "$HPXMODE_AXIS" == mpi ] ; then
+        JOBID=$(qsub $DIR/scripts/run_check_mpi.job 2>&1)
+      else if [ "$HPXMODE_AXIS" == photon && "BUILD_AXIS" == dynamic && "JEMALLOC_AXIS" == enable] ; then
+        JOBID=$(qsub $DIR/scripts/run_check_photon_ejed.job 2>&1)
+      else if [ "$HPXMODE_AXIS" == photon && "BUILD_AXIS" == dynamic && "JEMALLOC_AXIS" == disable] ; then
+        JOBID=$(qsub $DIR/scripts/run_check_photon_djed.job 2>&1)
+      else if [ "$HPXMODE_AXIS" == photon && "BUILD_AXIS" == static && "JEMALLOC_AXIS" == enable] ; then
+        JOBID=$(qsub $DIR/scripts/run_check_photon_ejes.job 2>&1)
+      else if [ "$HPXMODE_AXIS" == photon && "BUILD_AXIS" == static && "JEMALLOC_AXIS" == disable] ; then
+        JOBID=$(qsub $DIR/scripts/run_check_photon_djes.job 2>&1)
       fi    
 
       # The job id is actually the first numbers in the string (slurm support)
