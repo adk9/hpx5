@@ -96,7 +96,7 @@ static HPX_PINNED(_proc_return_credit, _process_t *p, uint64_t *args) {
   uint64_t debt = cr_bitmap_add_and_test(p->debt, *args);
   for (;;) {
     uint64_t credit = sync_load(&p->credit, SYNC_ACQUIRE);
-    if ((credit != 0) && ~(debt | ((1UL << (64-credit)) - 1)) == 0) {
+    if ((credit != 0) && ~(debt | ((UINT64_C(1) << (64-credit)) - 1)) == 0) {
       // log("detected quiescence...\n");
       if (!sync_cas(&p->credit, credit, -credit, SYNC_RELEASE, SYNC_RELAXED)) {
         continue;
