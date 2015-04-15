@@ -18,6 +18,7 @@
 /// @brief Implementation of the scheduler worker thread.
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -135,7 +136,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
     _continue_parcel(p, HPX_SUCCESS, 0, NULL);
     return;
    case HPX_RESEND:
-    log_sched("resending interrupt to %lu\n", p->target);
+    log_sched("resending interrupt to %"PRIu64"\n", p->target);
     if (HPX_SUCCESS != parcel_launch(p)) {
       dbg_error("failed to resend parcel\n");
     }
@@ -158,7 +159,7 @@ static void _execute_thread(hpx_parcel_t *p) {
      dbg_error("thread produced error.\n");
      return;
     case HPX_RESEND:
-     log_sched("resending interrupt to %lu\n", p->target);
+     log_sched("resending interrupt to %"PRIu64"\n", p->target);
      if (HPX_SUCCESS != parcel_launch(p)) {
        dbg_error("failed to resend parcel\n");
      }

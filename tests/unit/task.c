@@ -80,11 +80,11 @@ static HPX_ACTION(_test_action, void *UNUSED) {
       // We're on the same stack---for this to be safe, the _test_task MUST have
       // already run, which implies that the value for n must be 1.
       int v = sync_load(&n, SYNC_ACQUIRE);
-      printf("stack difference is %ld, value is %d\n", d, v);
+      printf("stack difference is %td, value is %d\n", d, v);
       assert(v == 1 && "work-first task test failed\n");
     }
     else {
-      printf("test indeterminate, task spawned with new stack, d=%ld\n", d);
+      printf("test indeterminate, task spawned with new stack, d=%td\n", d);
     }
 
     printf("work-first task test success\n");

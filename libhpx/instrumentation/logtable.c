@@ -61,7 +61,7 @@ static void *_create_mmap(size_t size, int file) {
     return NULL;
   }
   else {
-    log("mapped %lu byte trace file at %p.\n", size * sizeof(record_t), base);
+    log("mapped %zu byte trace file at %p.\n", size * sizeof(record_t), base);
   }
 
   if ((uintptr_t)base % HPX_CACHELINE_SIZE) {
