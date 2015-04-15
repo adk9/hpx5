@@ -81,7 +81,7 @@ case "$BUILD_AXIS" in
 esac
 }
 
-case"JEMALLOC_AXIS" in
+case "JEMALLOC_AXIS" in
   enable)
     CFGFLAGS+=" --enable-jemalloc"
     ;;
