@@ -79,7 +79,6 @@ case "$BUILD_AXIS" in
     CFGFLAGS+=" --disable-static --enable-shared"
     ;;
 esac
-}
 
 case "JEMALLOC_AXIS" in
   enable)
