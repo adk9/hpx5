@@ -52,8 +52,8 @@ static HPX_ACTION(lco_reduce, void *UNUSED) {
     // Get the gathered value, and print the debugging string.
     double ans;
     hpx_lco_get(newdt, sizeof(ans), &ans);
-    if (fabs(nDoms * data - ans) > 1) {
-      fprintf(stderr, "expected %f, got %f\n", nDoms * data, ans);
+    if (fabs(nDoms * data - ans)/(fabs(nDoms * data) + fabs(ans)) > 0.001) {
+      fprintf(stderr, "expected %f, got %f (delta = %f)\n", nDoms * data, ans, fabs(nDoms * data - ans));
       exit(EXIT_FAILURE);
     }
     hpx_lco_reset_sync(newdt);
