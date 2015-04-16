@@ -150,18 +150,18 @@ function do_build() {
     git clean -xdf
     ./bootstrap
     
-    if [ -d "./build" ]; then
-        rm -rf ./build/
-    fi
-    mkdir build
-    cd build
-    
-    if [ -d "./install" ]; then
-        rm -rf ./install/
-    fi
-    mkdir install
-
     if [[ "$SYSTEM" != "HPX5_C-SWARM" ]] || [[ "$HPXMODE_AXIS" != "photon" ]]; then    
+      if [ -d "./build" ]; then
+        rm -rf ./build/
+      fi
+      mkdir build
+      cd build
+
+      if [ -d "./install" ]; then
+        rm -rf ./install/
+      fi
+      mkdir install
+
       echo "Configuring HPX."
       eval "$CFG_CMD --prefix=${DIR}/build/install/ ${HPXDEBUG} ${CFGFLAGS} CFLAGS=\"-O3 -g\" --enable-testsuite --enable-parallel-config"  
   
@@ -314,8 +314,10 @@ fi
 
 if [ "$OP" == "run" ]; then
     echo "Running the regression test"
-    BUILD_DIR="$DIR/build"
-    cd "$DIR/build"
+    if [[ "$SYSTEM" != "HPX5_C-SWARM" ]] || [[ "$HPXMODE_AXIS" != "photon" ]]; then
+      BUILD_DIR="$DIR/build"
+      cd "$DIR/build"
+    fi
    
     case "$SYSTEM" in	 
       HPX5_STAMPEDE)
@@ -340,6 +342,7 @@ if [ "$OP" == "run" ]; then
           ;;
         photon)
           BUILD_DIR="$DIR"
+          cd "$DIR"
           if [[ "$BUILD_AXIS" == "dynamic" ]] && [[ "$JEMALLOC_AXIS" == "enable" ]]; then
             JOBID=$(qsub $DIR/scripts/run_check_photon_ejed.job 2>&1)
           elif [[ "$BUILD_AXIS" == "dynamic" ]] && [[ "JEMALLOC_AXIS" == "disable" ]]; then
