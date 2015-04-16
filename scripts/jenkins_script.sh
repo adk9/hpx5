@@ -345,11 +345,11 @@ if [ "$OP" == "run" ]; then
           cd "$DIR"
           if [[ "$BUILD_AXIS" == "dynamic" ]] && [[ "$JEMALLOC_AXIS" == "enable" ]]; then
             JOBID=$(qsub $DIR/scripts/run_check_photon_ejed.job 2>&1)
-          elif [[ "$BUILD_AXIS" == "dynamic" ]] && [[ "JEMALLOC_AXIS" == "disable" ]]; then
+          elif [[ "$BUILD_AXIS" == "dynamic" ]] && [[ "$JEMALLOC_AXIS" == "disable" ]]; then
             JOBID=$(qsub $DIR/scripts/run_check_photon_djed.job 2>&1)
-          elif [[ "BUILD_AXIS" == "static" ]] && [[ "JEMALLOC_AXIS" == "enable" ]]; then
+          elif [[ "$BUILD_AXIS" == "static" ]] && [[ "$JEMALLOC_AXIS" == "enable" ]]; then
             JOBID=$(qsub $DIR/scripts/run_check_photon_ejes.job 2>&1)
-          elif [[ "BUILD_AXIS" == "static" ]] && [[ "JEMALLOC_AXIS" == "disable" ]]; then
+          elif [[ "$BUILD_AXIS" == "static" ]] && [[ "$JEMALLOC_AXIS" == "disable" ]]; then
             JOBID=$(qsub $DIR/scripts/run_check_photon_djes.job 2>&1)
           fi    
           ;;
