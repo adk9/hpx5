@@ -161,7 +161,7 @@ function do_build() {
     fi
     mkdir install
 
-    if [[ ! ”$SYSTEM" == "HPX5_C-SWARM" && "$HPXMODE_AXIS" == photon ]]; then    
+    if [[ "$SYSTEM" != "HPX5_C-SWARM" ]] || [[ "$HPXMODE_AXIS" != "photon" ]]; then    
       echo "Configuring HPX."
       eval "$CFG_CMD --prefix=${DIR}/build/install/ ${HPXDEBUG} ${CFGFLAGS} CFLAGS=\"-O3 -g\" --enable-testsuite --enable-parallel-config"  
   
@@ -338,16 +338,14 @@ if [ "$OP" == "run" ]; then
           JOBID=$(qsub $DIR/scripts/run_check_mpi.job 2>&1)
           ;;
         photon)
-          if [[ "BUILD_AXIS" == dynamic && "JEMALLOC_AXIS" == enable ]] then
+          if [[ "$BUILD_AXIS" == "dynamic" ]] && [[ "$JEMALLOC_AXIS" == "enable" ]]; then
             JOBID=$(qsub $DIR/scripts/run_check_photon_ejed.job 2>&1)
-          elif [[ "BUILD_AXIS" == dynamic  &&  "JEMALLOC_AXIS" == disable ]] ; then
+          elif [[ "$BUILD_AXIS" == "dynamic" ]] && [[ "JEMALLOC_AXIS" == "disable" ]]; then
             JOBID=$(qsub $DIR/scripts/run_check_photon_djed.job 2>&1)
-          elif [[ "BUILD_AXIS" == static  &&  "JEMALLOC_AXIS" == enable ]] ; then
+          elif [[ "BUILD_AXIS" == "static" ]] && [[ "JEMALLOC_AXIS" == "enable" ]]; then
             JOBID=$(qsub $DIR/scripts/run_check_photon_ejes.job 2>&1)
-          else
-            if [[ "BUILD_AXIS" == static  &&  "JEMALLOC_AXIS" == disable ]] ; then
+          elif [[ "BUILD_AXIS" == "static" ]] && [[ "JEMALLOC_AXIS" == "disable" ]]; then
               JOBID=$(qsub $DIR/scripts/run_check_photon_djes.job 2>&1)
-            fi
           fi    
           ;;
       esac
