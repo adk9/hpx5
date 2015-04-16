@@ -314,6 +314,7 @@ fi
 
 if [ "$OP" == "run" ]; then
     echo "Running the regression test"
+    BUILD_DIR="$DIR/build"
     cd "$DIR/build"
    
     case "$SYSTEM" in	 
@@ -338,6 +339,7 @@ if [ "$OP" == "run" ]; then
           JOBID=$(qsub $DIR/scripts/run_check_mpi.job 2>&1)
           ;;
         photon)
+          BUILD_DIR="$DIR"
           if [[ "$BUILD_AXIS" == "dynamic" ]] && [[ "$JEMALLOC_AXIS" == "enable" ]]; then
             JOBID=$(qsub $DIR/scripts/run_check_photon_ejed.job 2>&1)
           elif [[ "$BUILD_AXIS" == "dynamic" ]] && [[ "JEMALLOC_AXIS" == "disable" ]]; then
@@ -345,7 +347,7 @@ if [ "$OP" == "run" ]; then
           elif [[ "BUILD_AXIS" == "static" ]] && [[ "JEMALLOC_AXIS" == "enable" ]]; then
             JOBID=$(qsub $DIR/scripts/run_check_photon_ejes.job 2>&1)
           elif [[ "BUILD_AXIS" == "static" ]] && [[ "JEMALLOC_AXIS" == "disable" ]]; then
-              JOBID=$(qsub $DIR/scripts/run_check_photon_djes.job 2>&1)
+            JOBID=$(qsub $DIR/scripts/run_check_photon_djes.job 2>&1)
           fi    
           ;;
       esac
@@ -359,31 +361,31 @@ if [ "$OP" == "run" ]; then
         RC=$(qstat | grep $JOBID 2>&1)
       done; 
 
-      echo "$(cat $DIR/build/regression_test.o*)"
+      echo "$(cat $BUILD_DIR/regression_test.o*)"
       sleep 10;
-      if grep 'Error' $DIR/build/regression_test.o*
+      if grep 'Error' $BUILD_DIR/regression_test.o*
       then
         exit 1
       fi
     
-      while [ ! -f $DIR/build/tests/unit/test-suite.log ]; do
+      while [ ! -f $BUILD_DIR/tests/unit/test-suite.log ]; do
         sleep 5;
       done;
       sleep 5;
     fi
   
     # Check the output of the unit tests:
-    if grep '^# FAIL: *0$' $DIR/build/tests/unit/test-suite.log
+    if grep '^# FAIL: *0$' $BUILD_DIR/tests/unit/test-suite.log
      then
        echo "FAIL: 0"
      else
-       cat $DIR/build/tests/unit/test-suite.log
+       cat $BUILD_DIR/tests/unit/test-suite.log
        exit 1
     fi
 
-    if egrep -q "(ERROR:)\s+[1-9][0-9]*" $DIR/build/tests/unit/test-suite.log
+    if egrep -q "(ERROR:)\s+[1-9][0-9]*" $BUILD_DIR/tests/unit/test-suite.log
       then
-        cat $DIR/build/tests/unit/test-suite.log
+        cat $BUILD_DIR/tests/unit/test-suite.log
         exit 1
     fi
 fi
