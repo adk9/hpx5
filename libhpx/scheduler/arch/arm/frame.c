@@ -50,6 +50,7 @@ void thread_init(ustack_t *thread, hpx_parcel_t *parcel, thread_entry_t f,
                  size_t size) {
   // set up the initial stack frame
   _frame_t *frame = _get_top_frame(thread, size);
+  assert((uintptr_t)frame % 8 == 0);
   frame->r4      = (thread_entry_t)f;
   frame->r5      = parcel;
   frame->lr      = align_stack_trampoline;
