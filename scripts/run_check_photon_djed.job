@@ -12,7 +12,7 @@ echo "Building HPX in $DIR"
 cd "$DIR"
 
 echo "Configuring HPX."
-CFG_CMD="../configure"
+CFG_CMD="./configure"
 eval "$CFG_CMD --prefix=${DIR}/build/install/ --with-mpi=/opt/crc/openmpi/1.8.1/intel-14.0/lib/pkgconfig/ompi.pc --enable-photon --disable-static --enable-shared --disable-jemalloc CFLAGS=\"-O3 -g\" --enable-testsuite --enable-parallel-config --with-tests-cmd=\"mpiexec -np 2 --map-by node:PE=16\" CC=gcc"
 
 echo "Building HPX."
