@@ -194,7 +194,7 @@ static int _gas_calloc_at_handler(size_t nmemb, size_t size, uint32_t boundary) 
   HPX_THREAD_CONTINUE(addr);
 }
 HPX_ACTION_DEF(DEFAULT, _gas_calloc_at_handler, hpx_gas_calloc_local_at_action,
-               HPX_UINT64, HPX_UINT64, HPX_UINT32);
+               HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32);
 
 hpx_addr_t hpx_gas_calloc_local_at_sync(size_t nmemb, size_t size, uint32_t boundary,
                                         hpx_addr_t loc) {

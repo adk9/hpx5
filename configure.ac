@@ -202,6 +202,7 @@ AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
 AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
 
 AC_CHECK_SIZEOF([void*])
+AC_CHECK_SIZEOF([size_t])
 
 # -----------------------------------------------------------------------------
 # Set automake conditionals for use in Makefile.am settings.
