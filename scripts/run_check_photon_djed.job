@@ -17,9 +17,6 @@ eval "$CFG_CMD --prefix=${DIR}/build/install/ --with-mpi=/opt/crc/openmpi/1.8.1/
 
 echo "Building HPX."
 make -j 8
-make install
 
 echo "Running the regression test"
-cd "$DIR/build"
-
 make check -C tests
