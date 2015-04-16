@@ -332,16 +332,18 @@ if [ "$OP" == "run" ]; then
     else
       if [ "$HPXMODE_AXIS" == smp ] ; then
         JOBID=$(qsub $DIR/scripts/run_check_smp.job 2>&1)
-      else if [ "$HPXMODE_AXIS" == mpi ] ; then
+      elif [ "$HPXMODE_AXIS" == mpi ] ; then
         JOBID=$(qsub $DIR/scripts/run_check_mpi.job 2>&1)
-      else if [ "$HPXMODE_AXIS" == photon ] && [ "BUILD_AXIS" == dynamic ] && [ "JEMALLOC_AXIS" == enable ] ; then
+      elif [ "$HPXMODE_AXIS" == photon ] && [ "BUILD_AXIS" == dynamic ] && [ "JEMALLOC_AXIS" == enable ] ; then
         JOBID=$(qsub $DIR/scripts/run_check_photon_ejed.job 2>&1)
-      else if [ "$HPXMODE_AXIS" == photon ] && [ "BUILD_AXIS" == dynamic ] && [ "JEMALLOC_AXIS" == disable ] ; then
+      elif [ "$HPXMODE_AXIS" == photon ] && [ "BUILD_AXIS" == dynamic ] && [ "JEMALLOC_AXIS" == disable ] ; then
         JOBID=$(qsub $DIR/scripts/run_check_photon_djed.job 2>&1)
-      else if [ "$HPXMODE_AXIS" == photon ] && [ "BUILD_AXIS" == static ] && [ "JEMALLOC_AXIS" == enable ] ; then
+      elif [ "$HPXMODE_AXIS" == photon ] && [ "BUILD_AXIS" == static ] && [ "JEMALLOC_AXIS" == enable ] ; then
         JOBID=$(qsub $DIR/scripts/run_check_photon_ejes.job 2>&1)
-      else if [ "$HPXMODE_AXIS" == photon ] && [ "BUILD_AXIS" == static ] && [ "JEMALLOC_AXIS" == disable ] ; then
+      elif [ "$HPXMODE_AXIS" == photon ] && [ "BUILD_AXIS" == static ] && [ "JEMALLOC_AXIS" == disable ] ; then
         JOBID=$(qsub $DIR/scripts/run_check_photon_djes.job 2>&1)
+      else
+        echo "combination not supported."
       fi    
 
       # The job id is actually the first numbers in the string (slurm support)
