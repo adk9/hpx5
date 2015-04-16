@@ -161,7 +161,7 @@ function do_build() {
     fi
     mkdir install
 
-    if [[ ! ”$SYSTEM" == "HPX5_C-SWARM" && "$HPXMODE_AXIS" == photon ]] then    
+    if [[ ! ”$SYSTEM" == "HPX5_C-SWARM" && "$HPXMODE_AXIS" == photon ]]; then    
       echo "Configuring HPX."
       eval "$CFG_CMD --prefix=${DIR}/build/install/ ${HPXDEBUG} ${CFGFLAGS} CFLAGS=\"-O3 -g\" --enable-testsuite --enable-parallel-config"  
   
