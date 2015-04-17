@@ -143,7 +143,7 @@ static void* _mmap_heap(heap_t *const heap) {
   int hp_fd = -1;
 #endif
 
-  for (unsigned int i = GPA_MAX_LG_BSIZE; i >= chunk_lg_align; ++i) {
+  for (unsigned int i = GPA_MAX_LG_BSIZE; i >= chunk_lg_align; --i) {
     void *addr = (void*)(1ul << i);
     void *ret  = mmap(addr, heap->nbytes, prot, flags, hp_fd, 0);
     if (ret != addr) {
