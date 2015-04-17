@@ -43,7 +43,7 @@ static HPX_ACTION(lco_reduce, void *UNUSED) {
   for (int i = 0, e = cycles; i < e; ++i) {
     printf("reducing iteration %d \n", i);
     hpx_addr_t and = hpx_lco_and_new(nDoms);
-    for (int j = 0, e = nDoms; j < e; ++j) {
+    for (int j = 0, k = nDoms; j < k; ++j) {
       hpx_addr_t block = hpx_addr_add(domain, sizeof(int) * j, sizeof(int));
       hpx_call_async(block, _reduce, and, newdt, &data);
     }
@@ -79,7 +79,7 @@ static HPX_ACTION(lco_reduce_getRef, void *UNUSED) {
   for (int i = 0, e = cycles; i < e; ++i) {
     printf("reducing iteration %d \n", i);
     hpx_addr_t and = hpx_lco_and_new(nDoms);
-    for (int j = 0, e = nDoms; j < e; ++j) {
+    for (int j = 0, k = nDoms; j < k; ++j) {
       hpx_addr_t block = hpx_addr_add(domain, sizeof(int) * j, sizeof(int));
       tmp = j*data;
       hpx_call_async(block, _reduce, and, newdt, &tmp);
