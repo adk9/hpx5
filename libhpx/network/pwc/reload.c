@@ -75,7 +75,13 @@ static void _buffer_init(buffer_t *b, size_t n, pwc_xport_t *xport) {
 }
 
 static int _recv_parcel_handler(int src, command_t command) {
+#ifdef HPX_BITNESS_64
   hpx_parcel_t *p = (hpx_parcel_t*)command_get_arg(command);
+#else
+  arg_t arg = command_get_arg(command);
+  dbg_assert((arg & 0xffffffff) == arg);
+  hpx_parcel_t *p = (hpx_parcel_t*)(uint32_t)arg;
+#endif
   p->src = src;
   parcel_set_state(p, PARCEL_SERIALIZED | PARCEL_BLOCK_ALLOCATED);
   scheduler_spawn(p);
