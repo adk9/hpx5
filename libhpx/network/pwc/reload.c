@@ -63,7 +63,7 @@ static void _buffer_fini(buffer_t *b) {
 }
 
 static void _buffer_reload(buffer_t *b, pwc_xport_t *xport) {
-  dbg_assert(1ul << ceil_log2_64(b->n) == b->n);
+  dbg_assert(1ul << ceil_log2_size_t(b->n) == b->n);
   b->block = parcel_block_new(b->n, b->n, &b->i);
   int e = xport->key_find(xport, b->block, b->n, &b->key);
   dbg_check(e, "no key for parcel block at (%p, %zu)\n", (void*)b->block, b->n);
