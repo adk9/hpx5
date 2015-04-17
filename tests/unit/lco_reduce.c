@@ -66,6 +66,46 @@ static HPX_ACTION(lco_reduce, void *UNUSED) {
   return HPX_SUCCESS;
 }
 
+static HPX_ACTION(lco_reduce_getRef, void *UNUSED) {
+  static const double data = 3141592.65358979;
+  static const int nDoms = 91;
+  static const int cycles = 10;
+  double tmp;
+
+  hpx_addr_t domain = hpx_gas_calloc_cyclic(nDoms, sizeof(int), 0);
+  hpx_addr_t newdt = hpx_lco_reduce_new(nDoms, sizeof(double), _initDouble,
+                                        _addDouble);
+
+  for (int i = 0, e = cycles; i < e; ++i) {
+    printf("reducing iteration %d \n", i);
+    hpx_addr_t and = hpx_lco_and_new(nDoms);
+    for (int j = 0, e = nDoms; j < e; ++j) {
+      hpx_addr_t block = hpx_addr_add(domain, sizeof(int) * j, sizeof(int));
+      tmp = j*data;
+      hpx_call_async(block, _reduce, and, newdt, &tmp);
+    }
+    hpx_lco_wait(and);
+    hpx_lco_delete(and, HPX_NULL);
+
+    // Get the gathered value, and print the debugging string.
+    double *ans = (double*)malloc(sizeof(double));
+    hpx_lco_getref(newdt, sizeof(*ans), (void **)&ans);
+    if (fabs(nDoms * ((nDoms-1)/2) * data - (*ans)) > 1) {
+      fprintf(stderr, "expected %f, got %f\n", nDoms * ((nDoms-1)/2) * data, *ans);
+      exit(EXIT_FAILURE);
+    }
+    hpx_lco_release(newdt, ans);
+    hpx_lco_reset_sync(newdt);
+    free(ans);
+  }
+
+  hpx_lco_delete(newdt, HPX_NULL);
+  hpx_gas_free(domain, HPX_NULL);
+
+  return HPX_SUCCESS;
+}
+
 TEST_MAIN({
   ADD_TEST(lco_reduce);
+  ADD_TEST(lco_reduce_getRef);
 });
