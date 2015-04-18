@@ -119,8 +119,10 @@ static size_t _alignment(void) {
   }
 
 #if defined(__ARMEL__)
+  // 32-bit ARM (at least ARMv7) expect 8 byte stack alignment
   return 8;
 #else
+  // gcc expects 16-byte alignment even for 32-bit x86
   return 16;
 #endif
 }

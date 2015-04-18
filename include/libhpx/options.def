@@ -99,7 +99,7 @@ LIBHPX_OPT_SCALAR(, threads, 0, int)
 LIBHPX_OPT_SCALAR(, stacksize, 32768, unsigned)
 #ifndef __ARMEL__
 LIBHPX_OPT_SCALAR(, heapsize, 1lu << 30, size_t)
-#else
+#else // smaller default heap for ARM
 LIBHPX_OPT_SCALAR(, heapsize, 1lu << 29, size_t)
 #endif
 LIBHPX_OPT_SCALAR(, wfthreshold, UINT32_MAX, uint32_t)
