@@ -19,7 +19,6 @@
 /// @brief This file contains an implementation of the GAS interface for use
 ///        when no network is available, or when we are running on a single
 ///        locality. It simply forwards all requests to the system allocator.
-#include <libhpx/arch.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>

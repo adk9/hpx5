@@ -203,6 +203,10 @@ AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
 
 AC_CHECK_SIZEOF([void*])
 AC_CHECK_SIZEOF([size_t])
+AS_IF([test "x$ac_cv_sizeof_size_t" == x4],
+  [AC_DEFINE([HPX_BITNESS_32], [1], [Detected 32-bit platform.])],
+  [AC_DEFINE([HPX_BITNESS_64], [1], [Detected 64-bit platform.])])
+
 
 # -----------------------------------------------------------------------------
 # Set automake conditionals for use in Makefile.am settings.
