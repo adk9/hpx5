@@ -46,7 +46,7 @@ static HPX_ACTION(gas_alloc, void *UNUSED) {
 static HPX_ACTION(gas_memalign, void *UNUSED) {
   printf("Starting GAS memalign\n");
   for (int i = 4, e = 24; i < e; ++i) {
-    unsigned long alignment = (1UL << i);
+    unsigned long alignment = (UINT64_C(1) << i);
     printf("checking alignment %lu\n", alignment);
     hpx_addr_t local = hpx_gas_alloc_local(N, alignment);
     if (!local) {

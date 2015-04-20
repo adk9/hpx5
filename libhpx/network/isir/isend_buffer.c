@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 #include <hpx/builtins.h>
@@ -238,7 +239,7 @@ static void _compact(isend_buffer_t *buffer, int n) {
   uint32_t size = buffer->size;
   uint64_t m = buffer->active - buffer->min;
   if (n == m) {
-    log_net("bulk compaction of %d/%lu sends in buffer (%u)\n", n, m,
+    log_net("bulk compaction of %d/%"PRIu64" sends in buffer (%u)\n", n, m,
                 size);
     buffer->min += n;
     return;
@@ -260,7 +261,7 @@ static void _compact(isend_buffer_t *buffer, int n) {
     buffer->records[j] = buffer->records[k];
   }
 
-  log_net("incremental compaction of %d/%lu sends in buffer (%u)\n", n, m,
+  log_net("incremental compaction of %d/%"PRIu64" sends in buffer (%u)\n", n, m,
               size);
 }
 

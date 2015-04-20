@@ -91,7 +91,7 @@ void cr_bitmap_delete(bitmap_t *b) {
 
 void _bitmap_add_at(bitmap_t *b, uint32_t page, uint32_t word, uint32_t offset) {
   _bitmap_bounds_check(b, page, word);
-  uint64_t mask = (1UL << offset);
+  uint64_t mask = (UINT64_C(1) << offset);
 
   _bitmap_word_t old = sync_fadd(&(b[page].page[word]), mask, SYNC_ACQ_REL);
   // if there was an overflow, add to the previous word

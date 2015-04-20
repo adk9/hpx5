@@ -18,6 +18,7 @@
 /// Defines the AND LCO.
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
@@ -93,7 +94,7 @@ static void _and_set(lco_t *lco, int size, const void *from) {
   _and_t *and = (_and_t *)lco;
   int num = (size && from) ? *(int*)from : 1;
   intptr_t value = sync_addf(&and->value, -num, SYNC_ACQ_REL);
-  log_lco("reduced count to %ld lco %p\n", value, (void*)&and->lco);
+  log_lco("reduced count to %" PRIdPTR " lco %p\n", value, (void*)&and->lco);
 
   if (value == 0) {
     lco_lock(&and->lco);
@@ -148,7 +149,7 @@ static int _and_init(_and_t *and, int64_t value) {
   lco_init(&and->lco, &_and_vtable);
   cvar_reset(&and->barrier);
   sync_store(&and->value, value, SYNC_RELEASE);
-  log_lco("initialized with %ld inputs lco %p\n", and->value, (void*)and);
+  log_lco("initialized with %" PRId64 " inputs lco %p\n", (int64_t)and->value, (void*)and);
   return HPX_SUCCESS;
 }
 static HPX_ACTION_DEF(PINNED, _and_init, _and_init_async, HPX_SINT64);
