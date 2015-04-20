@@ -59,7 +59,7 @@ static hpx_addr_t _smp_lva_to_gva(const void *lva) {
 static bool _smp_try_pin(const hpx_addr_t addr, void **local) {
   if (local) {
     // Return the local address, if the user wants it.
-    *local = (void*)addr;
+    *local = (void*)(size_t)addr;
   }
   // All addresses are local, so we return true.
   return true;
@@ -121,7 +121,7 @@ static hpx_addr_t _smp_gas_calloc_local(size_t nmemb, size_t size,
 
 /// Free an allocation.
 static void _smp_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
-  void *p = (void*)addr;
+  void *p = (void*)(size_t)addr;
   free(p);
 
   // Notify the caller that we're done.
@@ -135,8 +135,8 @@ static int _smp_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size,
     dbg_assert(to != HPX_NULL);
     dbg_assert(from != HPX_NULL);
 
-    void *lto = (void*)to;
-    const void *lfrom = (void*)from;
+    void *lto = (void*)(size_t)to;
+    const void *lfrom = (void*)(size_t)from;
     memcpy(lto, lfrom, size);
   }
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
@@ -150,7 +150,7 @@ static int _smp_memput(hpx_addr_t to, const void *from, size_t size,
     dbg_assert(to != HPX_NULL);
     dbg_assert(from != NULL);
 
-    void *lto = (void*)to;
+    void *lto = (void*)(size_t)to;
     memcpy(lto, from, size);
   }
   hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
@@ -165,7 +165,7 @@ static int _smp_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync)
     dbg_assert(to != NULL);
     dbg_assert(from != HPX_NULL);
 
-    const void *lfrom = (void*)from;
+    const void *lfrom = (void*)(size_t)from;
     memcpy(to, lfrom, size);
   }
   hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
