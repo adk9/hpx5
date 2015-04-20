@@ -84,7 +84,7 @@ struct hpx_parcel {
   #ifdef ENABLE_INSTRUMENTATION
       _HPX_ASSERT(sizeof(hpx_parcel_t) == 64, parcel_size);
   #else
-      _HPX_ASSERT(sizeof(hpx_parcel_t) == 56, parcel_size;
+      _HPX_ASSERT(sizeof(hpx_parcel_t) == 56, parcel_size);
   #endif
 #else
   #ifdef ENABLE_INSTRUMENTATION
