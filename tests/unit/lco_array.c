@@ -123,7 +123,7 @@ static HPX_ACTION(lco_reduce_array, void *UNUSED) {
     hpx_lco_get(other, sizeof(double), &ans);
     printf("Reduce LCO Value got = %g\n", ans);
     double comp_value = 3.14*(ARRAY_SIZE);
-    assert(fabs(ans - comp_value)/(fabs(ans) + fabs(comp_value)) < 0.001);
+    assert(fabs((ans - comp_value)/comp_value) < 0.001);
   }
   hpx_lco_delete(newdt, HPX_NULL);
   hpx_gas_free(domain, HPX_NULL);
