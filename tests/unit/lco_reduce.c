@@ -90,7 +90,8 @@ static HPX_ACTION(lco_reduce_getRef, void *UNUSED) {
     // Get the gathered value, and print the debugging string.
     double *ans = (double*)malloc(sizeof(double));
     hpx_lco_getref(newdt, sizeof(*ans), (void **)&ans);
-    if (fabs(nDoms * ((nDoms-1)/2) * data - (*ans)) > 1) {
+    double compval = nDoms * ((nDoms-1)/2) * data;
+    if (fabs(compval - *ans)/(fabs(compval) - fabs(*ans)) > 0.001) {
       fprintf(stderr, "expected %f, got %f\n", nDoms * ((nDoms-1)/2) * data, *ans);
       exit(EXIT_FAILURE);
     }
