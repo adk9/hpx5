@@ -54,7 +54,8 @@ static HPX_ACTION(lco_reduce, void *UNUSED) {
     double ans;
     hpx_lco_get(newdt, sizeof(ans), &ans);
     if (fabs(nDoms * data - ans)/(fabs(nDoms * data) + fabs(ans)) > 0.001) {
-      fprintf(stderr, "expected %f, got %f (delta = %f)\n", nDoms * data, ans, fabs(nDoms * data - ans));
+      fprintf(stderr, "expected %f, got %f (delta = %f)\n", nDoms * data, ans,
+	      fabs(nDoms * data - ans));
       exit(EXIT_FAILURE);
     }
     hpx_lco_reset_sync(newdt);
@@ -92,7 +93,8 @@ static HPX_ACTION(lco_reduce_getRef, void *UNUSED) {
     hpx_lco_getref(newdt, sizeof(*ans), (void **)&ans);
     double compval = nDoms * ((nDoms-1)/2) * data;
     if (fabs(compval - *ans)/(fabs(compval) - fabs(*ans)) > 0.001) {
-      fprintf(stderr, "expected %f, got %f\n", nDoms * ((nDoms-1)/2) * data, *ans);
+      fprintf(stderr, "expected %f, got %f\n", nDoms * ((nDoms-1)/2) * data,
+	      *ans);
       exit(EXIT_FAILURE);
     }
     hpx_lco_release(newdt, ans);

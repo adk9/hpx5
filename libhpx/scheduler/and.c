@@ -149,7 +149,8 @@ static int _and_init(_and_t *and, int64_t value) {
   lco_init(&and->lco, &_and_vtable);
   cvar_reset(&and->barrier);
   sync_store(&and->value, value, SYNC_RELEASE);
-  log_lco("initialized with %" PRId64 " inputs lco %p\n", (int64_t)and->value, (void*)and);
+  log_lco("initialized with %" PRId64 " inputs lco %p\n", (int64_t)and->value,
+	  (void*)and);
   return HPX_SUCCESS;
 }
 static HPX_ACTION_DEF(PINNED, _and_init, _and_init_async, HPX_SINT64);
