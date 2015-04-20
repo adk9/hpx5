@@ -48,7 +48,11 @@ static hpx_addr_t _smp_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
 
 /// Compute the global address for a local address.
 static hpx_addr_t _smp_lva_to_gva(const void *lva) {
+#ifdef HPX_BITNESS_64
   return (hpx_addr_t)lva;
+#else
+  return (hpx_addr_t)(uint32_t)lva;
+#endif
 }
 
 /// Perform address translation and pin the global address.

@@ -12,6 +12,7 @@
 // =============================================================================
 
 #include <inttypes.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -121,7 +122,8 @@ static HPX_ACTION(lco_reduce_array, void *UNUSED) {
     hpx_addr_t other = hpx_lco_array_at(newdt, i, sizeof(double));
     hpx_lco_get(other, sizeof(double), &ans);
     printf("Reduce LCO Value got = %g\n", ans);
-    assert(ans == 3.14*(ARRAY_SIZE));
+    double comp_value = 3.14*(ARRAY_SIZE);
+    assert(fabs(ans - comp_value)/(fabs(ans) + fabs(comp_value)) < 0.001);
   }
   hpx_lco_delete(newdt, HPX_NULL);
   hpx_gas_free(domain, HPX_NULL);

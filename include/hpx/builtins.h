@@ -63,6 +63,14 @@ static inline uint32_t ceil_log2_64(uint64_t val) {
   return ((sizeof(val) * 8 - 1) - clzl(val)) + (!!(val & (val - 1)));
 }
 
+#if SIZE_MAX > (UINT64_C(1)<<32)
+#define ceil_log2_size_t ceil_log2_64
+#define ceil_log2_uintptr_t ceil_log2_64
+#else
+#define ceil_log2_size_t ceil_log2_32
+#define ceil_log2_uintptr_t ceil_log2_32
+#endif
+
 static inline uint32_t ceil_div_32(uint32_t num, uint32_t denom) {
   return (num / denom) + ((num % denom) ? 1 : 0);
 }

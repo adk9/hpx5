@@ -39,7 +39,12 @@ HPX_PINNED(isir_emulate_pwc, void *to, const void *buffer) {
 static HPX_TASK(_gwc_reply, const void *data) {
   static const uint64_t mask = UINT64_MAX >> 16;
   hpx_addr_t target = hpx_thread_current_target();
+#ifdef HPX_BITNESS_64
   void *to = (void*)(mask & target);
+#else
+  dbg_assert((mask | (0xffffffff & target)) == (mask | target));
+  void *to = (void*)(uint32_t)(0xffffffff & target);
+#endif
   size_t n = hpx_thread_current_args_size();
   memcpy(to, data, n);
   return HPX_SUCCESS;

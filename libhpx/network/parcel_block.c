@@ -71,7 +71,7 @@ void parcel_block_deduct(parcel_block_t *block, size_t bytes) {
 
 void parcel_block_delete_parcel(hpx_parcel_t *p) {
     uintptr_t block_size = here->config->pwc_parcelbuffersize;
-    dbg_assert(1lu << ceil_log2_64(block_size) == block_size);
+    dbg_assert(1lu << ceil_log2_uintptr_t(block_size) == block_size);
     uintptr_t block_mask = ~(block_size - 1);
     parcel_block_t *block = (void*)((uintptr_t)p & block_mask);
     size_t n = parcel_size(p);

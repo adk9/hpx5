@@ -63,7 +63,7 @@ static void _buffer_fini(buffer_t *b) {
 }
 
 static void _buffer_reload(buffer_t *b, pwc_xport_t *xport) {
-  dbg_assert(1ul << ceil_log2_64(b->n) == b->n);
+  dbg_assert(1ul << ceil_log2_size_t(b->n) == b->n);
   b->block = parcel_block_new(b->n, b->n, &b->i);
   int e = xport->key_find(xport, b->block, b->n, &b->key);
   dbg_check(e, "no key for parcel block at (%p, %zu)\n", (void*)b->block, b->n);
@@ -75,7 +75,13 @@ static void _buffer_init(buffer_t *b, size_t n, pwc_xport_t *xport) {
 }
 
 static int _recv_parcel_handler(int src, command_t command) {
+#ifdef HPX_BITNESS_64
   hpx_parcel_t *p = (hpx_parcel_t*)command_get_arg(command);
+#else
+  arg_t arg = command_get_arg(command);
+  dbg_assert((arg & 0xffffffff) == arg);
+  hpx_parcel_t *p = (hpx_parcel_t*)(uint32_t)arg;
+#endif
   p->src = src;
   parcel_set_state(p, PARCEL_SERIALIZED | PARCEL_BLOCK_ALLOCATED);
   scheduler_spawn(p);

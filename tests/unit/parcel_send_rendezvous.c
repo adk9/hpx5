@@ -41,7 +41,7 @@ static HPX_ACTION(parcel_send_rendezvous, void *UNUSED) {
     }
 
     int peer = (HPX_LOCALITY_ID + rand_r(&seed)) % HPX_LOCALITIES;
-    printf("sending %lu integers (%lu-bytes) to %d\n", scale, size, peer);
+    printf("sending %zu integers (%zu-bytes) to %d\n", scale, size, peer);
     hpx_call_sync(HPX_THERE(peer), _echo, recv, size, send, size);
 
     for (size_t i = 0, e = scale; i < e; ++i) {
