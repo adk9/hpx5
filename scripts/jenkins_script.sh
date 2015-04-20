@@ -43,7 +43,7 @@ case "$SYSTEM" in
     source /etc/profile.d/modules.sh
     module unload darshan
     module load atp
-    module load git/2.0.0
+    module load git/2.3.1
     module load craype-hugepages8M
     module swap PrgEnv-pgi PrgEnv-gnu
     export CRAYPE_LINK_TYPE=dynamic
@@ -123,15 +123,8 @@ case "$SYSTEM" in
     export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
     export LIBRARY_PATH=/usr/lib64:$LIBRARY_PATH
     ;;
-  HPX5_BIGRED2 | MARCINS_SWAN | HPX5_EDISON)
+  HPX5_BIGRED2 | MARCINS_SWAN | HPX5_EDISON | HPX5_HOPPER)
     export HPX_PHOTON_BACKEND=ugni
-    export HPX_PHOTON_CARGS="--with-ugni"
-    CFGFLAGS+=" --with-pmi --with-hugetlbfs"
-    ;;
-  HPX5_HOPPER)
-    export HPX_PHOTON_BACKEND=ugni
-    export PKG_CONFIG_PATH=/opt/cray/craype/2.2.1/pkg-config:${PKG_CONFIG_PATH}
-    export PE_PKGCONFIG_LIBS=craype-hugepages:${PE_PKGCONFIG_LIBS}
     export HPX_PHOTON_CARGS="--with-ugni"
     CFGFLAGS+=" --with-pmi --with-hugetlbfs"
     ;;
