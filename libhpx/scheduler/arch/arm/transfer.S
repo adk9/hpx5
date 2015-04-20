@@ -40,7 +40,7 @@
 	vstmdb sp!, {s16-s31}
         sub sp, sp, #8      // could be 4 but we want to keep stack 8 byte aligned
         vmrs r5, fpscr
-        str r5, [sp, #8]        
+        str r5, [sp, #8]
 #endif
         mov r4, r1                                  // cont          r4 = r1
         ldr r1, [r0]                                // p->ustack     r1 = (r0)
