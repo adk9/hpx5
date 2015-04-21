@@ -12,27 +12,14 @@
 
 #include "test_cfg.h"
 
-#define PHOTON_BUF_SIZE (1024*64) // 64k
-#define PHOTON_TAG UINT32_MAX
-#define SQ_SIZE 30
+#define PHOTON_BUF_SIZE (1024*1024*4) // 4M
+#define PHOTON_TAG       UINT32_MAX
 
-static int ITERS = 1000;
+static int LARGE_LIMIT = 8192;
+static int LARGE_ITERS = 100;
+static int ITERS       = 1000;
 
-static int sizes[] = {
-  0,
-  1,
-  8,
-  64,
-  128,
-  192,
-  256,
-  2048,
-  4096,
-  8192,
-  12288,
-  16384
-};
-
+int iters;
 int send_comp = 0;
 int recv_comp = 0;
 int myrank;
@@ -75,51 +62,20 @@ int wait_done() {
   return 0;
 }
 
-int handle_ack_loop(int wait) {
-  photon_rid request;
-  int flag, rc, remaining;
-
-  while (wait) {
-    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &request, PHOTON_PROBE_ANY);
-    if (rc != PHOTON_OK)
-      continue;
-    if (flag) {
-      if (request == 0xdeadbeef) {
-        wait--;
-      }
-      else if (request == PHOTON_TAG)
-        send_comp--;
-      else {
-        int ret = request>>32;
-        photon_put_with_completion(ret, 0, NULL, NULL, PHOTON_TAG, request, 0);
-        send_comp++;
-      }
-    }
-  }
-  
-  wait_local(NULL);
-  
-  return 0;
-}
-
 int main(int argc, char *argv[]) {
   int i, j, k, ns;
   int rank, nproc;
-  int ASYNC_ITERS;
-
-  if (argc > 1)
-    ITERS = atoi(argv[1]);
-
-  if (ITERS > SQ_SIZE)
-    ASYNC_ITERS = SQ_SIZE;
-  else
-    ASYNC_ITERS = ITERS;
 
   int rdata;
   int ur = open("/dev/urandom", O_RDONLY);
   int rc = read(ur, &rdata, sizeof rdata);
   srand(rdata);
   close(ur);
+
+  if (argc > 1) {
+    ITERS = atoi(argv[1]);
+    printf("ITERS: %d\n", ITERS);
+  }
 
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -162,18 +118,25 @@ int main(int argc, char *argv[]) {
 
   // now we can proceed with our benchmark
   if (rank == 0)
-    printf("%-7s%-9s%-7s%-11s%-12s%-12s%-12s\n", "Ranks", "Senders", "Bytes", "Sync (us)", "Sync GET", "Async (us)", "RTT (us)");
+    printf("%-7s%-9s%-12s%-11s%-12s%-12s%-12s\n", "Ranks", "Senders", "Bytes", "Sync (us)", "Sync GET");
 
   struct timespec time_s, time_e;
   
-  for (ns = 0; ns < nproc; ns++) {
-    for (i=0; i<sizeof(sizes)/sizeof(sizes[0]); i++) {
+  for (ns = 0; ns < 1; ns++) {
+    
+    if (rank > ns) {
+      wait_done();
+    }
+
+    for (i=1; i<=PHOTON_BUF_SIZE; i+=i) {
       if (rank == 0) {
         printf("%-7d", nproc);
         printf("%-9u", ns + 1);
-        printf("%-7u", sizes[i]);
+        printf("%-12u", i);
         fflush(stdout);
       }
+
+      iters = (i > LARGE_LIMIT) ? LARGE_ITERS : ITERS;
       
       // send to random rank, including self
       j = rand() % nproc;
@@ -186,149 +149,65 @@ int main(int argc, char *argv[]) {
       // PUT
       if (rank <= ns) {
         clock_gettime(CLOCK_MONOTONIC, &time_s);
-        for (k=0; k<ITERS; k++) {
+        for (k=0; k<iters; k++) {
 	  lbuf.addr = (uintptr_t)send;
-	  lbuf.size = sizes[i];
+	  lbuf.size = i;
 	  lbuf.priv = (struct photon_buffer_priv_t){0,0};
-          photon_put_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0xcafebabe, PHOTON_REQ_NIL);
-          send_comp++;
+          photon_put_with_completion(j, i, &lbuf, &rbuf[j], PHOTON_TAG, 0xcafebabe, 0);
+	  send_comp++;
           wait_local(NULL);
         }
         clock_gettime(CLOCK_MONOTONIC, &time_e);
-        wait_local(NULL);
       }
 
-      MPI_Barrier(MPI_COMM_WORLD);
+      //MPI_Barrier(MPI_COMM_WORLD);
       
       if (rank == 0) {
         double time_ns = (double)(((time_e.tv_sec - time_s.tv_sec) * 1e9) + (time_e.tv_nsec - time_s.tv_nsec));
         double time_us = time_ns/1e3;
-        double latency = time_us/ITERS;
-        printf("%1.4f     ", latency);
+        double latency = time_us/iters;
+        printf("%1.2f     ", latency);
         fflush(stdout);
       }
 
-      assert(send_comp == 0 && recv_comp == 0);
-
       // GET
       if (rank <= ns) {
-        if (i && !(sizes[i] % 8)) {
-          clock_gettime(CLOCK_MONOTONIC, &time_s);
-          for (k=0; k<ITERS; k++) {
-	    lbuf.addr = (uintptr_t)send;
-	    lbuf.size = sizes[i];
-	    lbuf.priv = (struct photon_buffer_priv_t){0,0};
-            photon_get_with_completion(j, sizes[i], &lbuf, &rbuf[i], PHOTON_TAG, 0xfacefeed, 0);
-            send_comp++;
-            wait_local(NULL);
-          }
-          clock_gettime(CLOCK_MONOTONIC, &time_e);
-        }
+	// alignment chck
+        //if (i && !(sizes[i] % 8)) {
+	clock_gettime(CLOCK_MONOTONIC, &time_s);
+	for (k=0; k<iters; k++) {
+	  lbuf.addr = (uintptr_t)send;
+	  lbuf.size = i;
+	  lbuf.priv = (struct photon_buffer_priv_t){0,0};
+	  photon_get_with_completion(j, i, &lbuf, &rbuf[j], PHOTON_TAG, 0xfacefeed, 0);
+	  send_comp++;
+	  wait_local(NULL);
+	}
+	clock_gettime(CLOCK_MONOTONIC, &time_e);
+	//}
       }
       
-      MPI_Barrier(MPI_COMM_WORLD);
+      //MPI_Barrier(MPI_COMM_WORLD);
       
-      if (rank == 0 && i && !(sizes[i] % 8)) {
+      //if (rank == 0 && i && !(sizes[i] % 8)) {
+      if (rank == 0) {
         double time_ns = (double)(((time_e.tv_sec - time_s.tv_sec) * 1e9) + (time_e.tv_nsec - time_s.tv_nsec));
         double time_us = time_ns/1e3;
-        double latency = time_us/ITERS;
-        printf("%1.4f     ", latency);
+        double latency = time_us/iters;
+        printf("%1.2f\n", latency);
         fflush(stdout);
       }
       else if (rank == 0) {
         printf("N/A       ");
         fflush(stdout);
       }
-
-      assert(send_comp == 0 && recv_comp == 0);
-
-      // Async PUT
-      if (rank <= ns) {
-        clock_gettime(CLOCK_MONOTONIC, &time_s);
-        for (k=0; k<ASYNC_ITERS; k++) {
-	  lbuf.addr = (uintptr_t)send;
-	  lbuf.size = sizes[i];
-	  lbuf.priv = (struct photon_buffer_priv_t){0,0};
-          if (photon_put_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0xcafebabe, PHOTON_REQ_NIL)) {
-            fprintf(stderr, "error: exceeded max outstanding work events (k=%d)\n", k);
-            exit(1);
-          }
-          send_comp++;
-        }
-        clock_gettime(CLOCK_MONOTONIC, &time_e);
-        wait_local(NULL);
-      }
-
-      MPI_Barrier(MPI_COMM_WORLD);
-      
-      if (rank == 0) {
-        double time_ns = (double)(((time_e.tv_sec - time_s.tv_sec) * 1e9) + (time_e.tv_nsec - time_s.tv_nsec));
-        double time_us = time_ns/1e3;
-        double overhead = time_us/ASYNC_ITERS;
-        printf("%1.4f\n", overhead);
-        fflush(stdout);
-      }
-
-      assert(send_comp == 0 && recv_comp == 0);
-
-      /*
-      if (rank <= ns) {
-        clock_gettime(CLOCK_MONOTONIC, &time_s);
-        photon_rid request, cookie;
-        int flag, rc;
-        for (k=0; k<ITERS; k++) {
-          cookie = ( (uint64_t)rank<<32) | k;
-	  lbuf.addr = (uintptr_t)send;
-	  lbuf.size = sizes[i];
-	  lbuf.priv = (struct photon_buffer_priv_t){0,0};
-          photon_put_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, cookie, 0);
-          send_comp++;
-          recv_comp++;
-          
-          while (send_comp | recv_comp) {
-            rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request);
-            if (rc != PHOTON_OK)
-              continue;  // no events
-            if (flag) {
-              //printf("%d: i=%d got tag: 0x%016lx\n", rank, i, request);
-              if (request == PHOTON_TAG) {
-                send_comp--;
-              }
-              else if (request == cookie) {
-                recv_comp--;
-              }
-              else { // send back an ACK
-                int ret = request>>32
-                photon_put_with_completion(ret, 0, NULL, NULL, PHOTON_TAG, request, 0);
-                send_comp++;
-              }
-            }
-          }
-        }
-        clock_gettime(CLOCK_MONOTONIC, &time_e);
-        send_done(nproc, rank);
-        // keep handling acks for other ranks
-        handle_ack_loop(ns);
-      }
-      else { // all other ranks simply probe and ack until told to stop
-        handle_ack_loop(ns+1);
-      }
-
-      MPI_Barrier(MPI_COMM_WORLD);
-
-      if (rank == 0) {
-        double time_ns = (double)(((time_e.tv_sec - time_s.tv_sec) * 1e9) + (time_e.tv_nsec - time_s.tv_nsec));
-        double time_us = time_ns/1e3;
-        double latency = time_us/ITERS;
-        printf("%1.4f\n", latency);
-        fflush(stdout);
-      }
-      */
-
-      assert(send_comp == 0 && recv_comp == 0);
+    }
+    
+    if (rank <= ns) {
+      send_done(nproc, rank);
     }
   }
-  
+
   MPI_Barrier(MPI_COMM_WORLD);
 
   photon_unregister_buffer(send, PHOTON_BUF_SIZE);
