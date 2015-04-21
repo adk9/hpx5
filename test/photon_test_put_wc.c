@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
 
   // now we can proceed with our benchmark
   if (rank == 0)
-    printf("%-7s%-9s%-12s%-11s%-12s%-12s%-12s\n", "Ranks", "Senders", "Bytes", "Sync (us)", "Sync GET");
+    printf("%-7s%-9s%-12s%-11s%-12s%-12s%-12s\n", "Ranks", "Senders", "Bytes", "Sync (us)", " Sync GET");
 
   struct timespec time_s, time_e;
   
@@ -166,7 +166,7 @@ int main(int argc, char *argv[]) {
         double time_ns = (double)(((time_e.tv_sec - time_s.tv_sec) * 1e9) + (time_e.tv_nsec - time_s.tv_nsec));
         double time_us = time_ns/1e3;
         double latency = time_us/iters;
-        printf("%1.2f     ", latency);
+        printf("%1.2f\t", latency);
         fflush(stdout);
       }
 
