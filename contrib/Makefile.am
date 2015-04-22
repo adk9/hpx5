@@ -31,5 +31,10 @@ SUBDIRS      += jemalloc_build_registered
 DIST_SUBDIRS += jemalloc_build_registered
 endif
 
+if BUILD_FARMHASH
+SUBDIRS      += farmhash
+DIST_SUBDIRS += farmhash
+endif
+
 check-recursive: all-recursive
 	echo "HPX ignore above warnings, we do not check contrib projects"
