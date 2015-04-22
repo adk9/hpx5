@@ -50,7 +50,7 @@ function do_build() {
     make install
 
     if [ "$HPXMODE_AXIS" == "mpi" ]; then   
-      cpush ${DIR} ${DIR}
+      cpush /home/jayaajay/jenkins /home/jayaajay/
     fi
 }
 
