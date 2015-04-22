@@ -29,6 +29,7 @@ HPX_PE_ENV
 
 # Checks for programs.
 AC_PROG_CC_C99
+AC_PROG_CXX
 AC_PROG_INSTALL
 AM_PROG_AS
 
@@ -49,6 +50,7 @@ AC_ARG_ENABLE([parallel-config],
                   [Enable parallel configuration of contribs @<:@default=no@:>@])],
   [trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM], [enable_parallel_config=no])
 
+  
 # Initialize contribs
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
 HPX_CONTRIB_LIBFFI([contrib/libffi], [hpx_])
@@ -175,6 +177,16 @@ AS_IF([test "x$DOXYGEN" != x],
  [enable_docs=yes],
  [AC_MSG_WARN([Doxygen not found, disabling source documentation build.])
   enable_docs=no])
+
+# Treat AGAS seperately as it wants to pull in C++
+AC_ARG_ENABLE([agas],
+  [AS_HELP_STRING([--enable-agas],
+                  [Enable AGAS (requires C++11) @<:@default=no@:>@])],
+  [], [enable_agas=no])
+
+AS_IF([test "x$enable_agas" != xno],
+  [AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])],
+  [])
 
 # ---------------------------------------------------------------------------
 # Perform host-specific work here.
