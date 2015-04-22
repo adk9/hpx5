@@ -48,8 +48,10 @@ function do_build() {
     echo "Building HPX."
     make -j 8
     make install
-   
-    cpush ${DIR} ${DIR}
+
+    if [ "$HPXMODE_AXIS" == "mpi" ]; then   
+      cpush ${DIR} ${DIR}
+    fi
 }
 
 case "$HPXDEBUG_CHOICE" in
