@@ -108,8 +108,14 @@ int system_get_affinity_group_size(pthread_t thread, int *ncores) {
 	}
       }
     }
-  } else { // not associated with a L2 cache
-    *ncores = 1;
+  } else { // not associated with a L2 cache - return all cores 
+    size_t cores;
+    if (!sysctlbyname("machdep.cpu.core_count", NULL, &cores, NULL, 0)) {
+      //printf("Number of cores %u \n", cores);
+      *ncores = cores;
+    } else {
+      return HPX_ERROR;
+    }
   }
   
   return HPX_SUCCESS;
