@@ -13,6 +13,6 @@ libsystem_la_LIBADD   += -lrt
 endif
 
 if OS_DARWIN
-libsystem_la_SOURCES  += darwin/time.c darwin/cpu.c darwin/pthread_darwin.c
+libsystem_la_SOURCES  += darwin/time.c darwin/cpu.c darwin/pthread_darwin.c darwin/mmap.c
 endif
 
