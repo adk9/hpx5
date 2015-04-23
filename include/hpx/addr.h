@@ -20,7 +20,7 @@
 typedef uint64_t hpx_addr_t;
 
 /// The equivalent of NULL for global memory
-static const hpx_addr_t HPX_NULL = 0;
+#define HPX_NULL ((hpx_addr_t)0)
 
 /// An address representing this locality in general, that is suitable for use
 /// as a parcel target.
