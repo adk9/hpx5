@@ -45,9 +45,9 @@ void photontest_core_teardown(void) {
 
 void photontest_clear_evq(void) {
   photon_rid req;
-  int flag, remaining;
+  int flag, remaining, src;
   do {
-    photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &req, PHOTON_PROBE_EVQ);
+    photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &req, &src, PHOTON_PROBE_EVQ);
     usleep(100);
   } while (remaining);
 }

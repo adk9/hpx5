@@ -79,10 +79,10 @@ void *test_thread() {
 // Have one thread poll local completion only, PROTON_PROBE_EVQ
 void *wait_local_completion_thread() {
   photon_rid request;
-  int flag, rc;
+  int flag, rc, src;
 
   do {
-    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, NULL, &request, PHOTON_PROBE_EVQ);
+    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, NULL, &request, &src, PHOTON_PROBE_EVQ);
     if (rc < 0) {
       exit(1);
     }
@@ -100,11 +100,11 @@ void *wait_local_completion_thread() {
 void *wait_ledger_completions_thread(void *arg) {
   photon_rid request;
   long inputrank = (long)arg;
-  int flag;
+  int flag, src;
   
   do {
     //photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
-    photon_probe_completion(inputrank, &flag, NULL, &request, PHOTON_PROBE_LEDGER);
+    photon_probe_completion(inputrank, &flag, NULL, &request, &src, PHOTON_PROBE_LEDGER);
     if (flag && request == 0xcafebabe)
       recvCompT[inputrank]++;
     if (flag && request == 0xfacefeed)

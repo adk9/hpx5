@@ -24,6 +24,6 @@ PHOTON_INTERNAL int _photon_get_with_completion(int proc, uint64_t size,
 						photon_rid local, photon_rid remote,
 						int flags);
 PHOTON_INTERNAL int _photon_probe_completion(int proc, int *flag, int *remaining,
-					     photon_rid *request, int flags);
+					     photon_rid *request, int *src, int flags);
 
 #endif

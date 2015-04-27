@@ -184,7 +184,8 @@ int photon_get_with_completion(int proc, uint64_t size, photonBuffer lbuf, photo
 // Can probe ANY_SOURCE but given @p proc will only poll the CQ (if available) and completion
 // ledger associated with that rank
 // @p remaining returns the number of requests still pending
-int photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *request, int flags);
+// @p src returns the source of a ledger probe
+int photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *request, int *src, int flags);
 
 // Atomics
 int photon_post_atomic(int proc, void *ptr, uint64_t val, int type, int flags, photon_rid *request);

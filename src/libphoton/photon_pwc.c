@@ -419,7 +419,8 @@ int _photon_get_with_completion(int proc, uint64_t size,
   return PHOTON_ERROR;
 }
 
-int _photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *request, int flags) {
+int _photon_probe_completion(int proc, int *flag, int *remaining,
+			     photon_rid *request, int *src, int flags) {
   photonLedger ledger;
   photonLedgerEntry entry_iter;
   photonRequest req;
@@ -429,6 +430,7 @@ int _photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *re
   int i, rc, start, end;
   
   *flag = 0;
+  *src = proc;
   
   if (proc == PHOTON_ANY_SOURCE) {
     start = 0;
@@ -508,6 +510,7 @@ int _photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *re
 	      ;
 	    memcpy((void*)addr, (void*)((uintptr_t)hdr + sizeof(*hdr)), size);
 	    *request = req;
+	    *src = i;
 	    *flag = 1;
 	    dbg_trace("Copied message of size %u into 0x%016lx for request 0x%016lx",
 		      size, addr, req);
@@ -526,6 +529,7 @@ int _photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *re
       if (entry_iter->request != (photon_rid) UINT64_MAX &&
 	  sync_cas(&ledger->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED)) {
 	*request = entry_iter->request;
+	*src = i;
 	entry_iter->request = UINT64_MAX;
 	*flag = 1;
 	sync_fadd(&ledger->prog, 1, SYNC_RELAXED);

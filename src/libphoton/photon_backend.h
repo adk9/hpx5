@@ -136,7 +136,7 @@ struct photon_backend_t {
                              photon_rid local, photon_rid remote, int flags);
   int (*get_with_completion)(int proc, uint64_t size, photonBuffer lbuf, photonBuffer rbuf,
                              photon_rid local, photon_rid remote, int flags);
-  int (*probe_completion)(int proc, int *flag, int *remaining, photon_rid *request, int flags);
+  int (*probe_completion)(int proc, int *flag, int *remaining, photon_rid *request, int *src, int flags);
   int (*io_init)(char *file, int amode, void *view, int niter);
   int (*io_finalize)();
   /* data movement -- needs to be split out */

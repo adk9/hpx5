@@ -18,7 +18,7 @@ struct photon_config_t cfg = {
   },
   .cap = {
     .small_msg_size = -1,
-    .small_pwc_size =  1024,
+    .small_pwc_size =  0,
     .eager_buf_size = -1,
     .ledger_entries = -1,
     .max_rd         = -1,

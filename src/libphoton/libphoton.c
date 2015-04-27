@@ -569,13 +569,14 @@ int photon_get_with_completion(int proc, uint64_t size, photonBuffer lbuf, photo
   return __photon_default->get_with_completion(proc, size, lbuf, rbuf, local, remote, flags);
 }
 
-int photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *request, int flags) {
+int photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *request,
+			    int *src, int flags) {
   //if(__photon_default->initialized() != PHOTON_OK) {
   //  init_err();
   //  return PHOTON_ERROR_NOINIT;
   //}
   
-  return __photon_default->probe_completion(proc, flag, remaining, request, flags);
+  return __photon_default->probe_completion(proc, flag, remaining, request, src, flags);
 }
 /* end with completion */
 
