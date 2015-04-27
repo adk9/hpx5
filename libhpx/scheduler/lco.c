@@ -118,7 +118,7 @@ HPX_ACTION(hpx_lco_delete_action, void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    hpx_call_cc(target, hpx_lco_delete_action, NULL, 0, NULL, 0);
+    hpx_call_cc(target, hpx_lco_delete_action, NULL, NULL, 0, NULL);
   }
   log_lco("deleting lco %p\n", (void*)lco);
   _fini(lco);

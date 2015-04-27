@@ -205,8 +205,8 @@ void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
   _hpx_call_when_cc(gate, addr, action, cleanup, env,           \
                     __HPX_NARGS(__VA_ARGS__),##__VA_ARGS__)
 
-#define hpx_call_cc(addr, action, cleanup, env, ...)                 \
-  _hpx_call_when_cc(HPX_NULL, addr, action, cleanup, env,            \
+#define hpx_call_cc(addr, action, cleanup, env, ...)            \
+  _hpx_call_when_cc(HPX_NULL, addr, action, cleanup, env,       \
                     __HPX_NARGS(__VA_ARGS__),##__VA_ARGS__)
 
 
