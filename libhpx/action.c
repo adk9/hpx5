@@ -355,20 +355,22 @@ bool action_is_interrupt(const struct action_table *table, hpx_action_t id) {
   return (action_table_get_type(table, id) == HPX_ACTION_INTERRUPT);
 }
 
-int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_handler_t f,
-                        unsigned int nargs, hpx_action_t *id, ...) {
+int hpx_register_packed_action(hpx_action_type_t type, const char *key,
+                               hpx_action_handler_t f, hpx_action_t *id) {
+  return _push_back(_get_actions(), id, key, f, type, NULL);
+}
+
+int hpx_register_typed_action(hpx_action_type_t type, const char *key,
+                              hpx_action_handler_t f, hpx_action_t *id,
+                              unsigned int nargs, ...) {
   dbg_assert(id);
 
   *id = HPX_ACTION_INVALID;
-  if (!nargs) {
-    return _push_back(_get_actions(), id, key, f, type, NULL);
-  }
-
   ffi_cif *cif = calloc(1, sizeof(*cif));
   dbg_assert(cif);
 
   va_list vargs;
-  va_start(vargs, id);
+  va_start(vargs, nargs);
 
   int start = 0;
   if (type == HPX_ACTION_PINNED) {

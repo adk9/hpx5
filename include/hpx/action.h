@@ -64,23 +64,31 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
 /// @param nargs the variadic number of arguments that this action accepts
 /// @param  type the type of the action to be registered
 /// @returns     error code
-int hpx_register_action(hpx_action_type_t type, const char *key, hpx_action_handler_t f,
-                        unsigned int nargs, hpx_action_t *id, ...);
+int hpx_register_packed_action(hpx_action_type_t type, const char *key,
+                               hpx_action_handler_t f, hpx_action_t *id);
+
+int hpx_register_typed_action(hpx_action_type_t type, const char *key,
+                              hpx_action_handler_t f, hpx_action_t *id,
+                              unsigned int nargs, ...);
 
 /// Get the local function pointer that corresponds to the passed id.
 hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
 
-/// Wraps the hpx_register_action() function to make it slightly more convenient
-/// to use.
+/// Wraps the hpx_register_packed_action() function to make it
+/// slightly more convenient to use.
 ///
 /// @param         type The type of the action (DEFAULT, PINNED, etc...)
 /// @param      handler The action handler (the function).
 /// @param (car __VA_ARGS__) The action id (the hpx_action_t address)
 /// @param (cdr __VA_ARGS__) The parameter types (HPX_INT, ...)
-#define _HPX_REGISTER_ACTION(type, handler, ...)                    \
-  hpx_register_action(HPX_ACTION_##type, __FILE__":"_HPX_XSTR(handler), \
-                      (hpx_action_handler_t)handler,                \
-                      __HPX_NARGS(__VA_ARGS__) - 1, __VA_ARGS__)
+#define HPX_REGISTER_PACKED_ACTION(type, handler, id)                         \
+  hpx_register_packed_action(HPX_ACTION_##type, __FILE__":"_HPX_XSTR(handler),\
+                             (hpx_action_handler_t)handler, &id)
+
+#define HPX_REGISTER_TYPED_ACTION(type, handler, id, ...)                     \
+  hpx_register_typed_action(HPX_ACTION_##type, __FILE__":"_HPX_XSTR(handler), \
+                            (hpx_action_handler_t)handler, &id,               \
+                            __HPX_NARGS(__VA_ARGS__),##__VA_ARGS__)
 
 /// Declare an action.
 ///
@@ -97,45 +105,43 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
 /// @param      handler The handler.
 /// @param           id The action id.
 /// @param  __VA_ARGS__ The action type.
-#define HPX_ACTION_DEF(type, handler, id, ...)                      \
-  HPX_ACTION_DECL(id) = -1;                                         \
-  static HPX_CONSTRUCTOR void _register##_##handler(void) {         \
-    _HPX_REGISTER_ACTION(type, handler, &id,##__VA_ARGS__);         \
-  }                                                                 \
+#define HPX_ACTION_DEF(type, handler, id, ...)                  \
+  HPX_ACTION_DECL(id) = -1;                                     \
+  static HPX_CONSTRUCTOR void _register##_##handler(void) {     \
+    HPX_REGISTER_TYPED_ACTION(type, handler, id,##__VA_ARGS__); \
+  }                                                             \
   static HPX_CONSTRUCTOR void _register##_##handler(void)
 
-/// Define an HPX.
+/// Define an HPX user-packed action.
 ///
-/// This will define an action.
+/// This will define a user-packed action.
 ///
 /// @param         type The type of the action (DEFAULT, PINNED, etc).
 /// @param           id The id that you pass to hpx_call to call the action.
 /// @param         args The C argument type (must be a pointer type).
-#define HPX_ACTION_DEF_USER(type, id, ...)                      \
+#define HPX_ACTION_DEF_PACKED(type, id, ...)                    \
   HPX_ACTION_DECL(id) = -1;                                     \
   static int id##_##type(__VA_ARGS__);                          \
   static HPX_CONSTRUCTOR void _register_##id##_##type(void) {   \
-    _HPX_REGISTER_ACTION(type, id##_##type , &id);              \
+    HPX_REGISTER_PACKED_ACTION(type, id##_##type, id);          \
   }                                                             \
   static int id##_##type(__VA_ARGS__)
 
-#define HPX_ACTION(id, ...)    HPX_ACTION_DEF_USER(DEFAULT, id, __VA_ARGS__)
-#define HPX_PINNED(id, ...)    HPX_ACTION_DEF_USER(PINNED, id, __VA_ARGS__)
-#define HPX_TASK(id, ...)      HPX_ACTION_DEF_USER(TASK, id, __VA_ARGS__)
-#define HPX_INTERRUPT(id, ...) HPX_ACTION_DEF_USER(INTERRUPT, id, __VA_ARGS__)
+#define HPX_ACTION(id, ...)    HPX_ACTION_DEF_PACKED(DEFAULT, id, __VA_ARGS__)
+#define HPX_PINNED(id, ...)    HPX_ACTION_DEF_PACKED(PINNED, id, __VA_ARGS__)
+#define HPX_TASK(id, ...)      HPX_ACTION_DEF_PACKED(TASK, id, __VA_ARGS__)
+#define HPX_INTERRUPT(id, ...) HPX_ACTION_DEF_PACKED(INTERRUPT, id, __VA_ARGS__)
 
-#define HPX_REGISTER_ACTION(handler, id)                        \
-  _HPX_REGISTER_ACTION(DEFAULT, handler, id)
+#define HPX_REGISTER_ACTION(handler, id)                                       \
+  hpx_register_packed_action(HPX_ACTION_DEFAULT, __FILE__":"_HPX_XSTR(handler),\
+                             (hpx_action_handler_t)handler, id)
 
-#define HPX_REGISTER_TYPED_ACTION(type, handler, id, ...)       \
-  _HPX_REGISTER_ACTION(type, handler, id, __VA_ARGS__)
-
-#define HPX_FUNCTION_DEF(handler, id)                                   \
-  HPX_ACTION_DECL(id) = -1;                                             \
-  static HPX_CONSTRUCTOR void _register##_##handler(void) {             \
-    hpx_register_action(HPX_FUNCTION, __FILE__":"_HPX_XSTR(handler),    \
-                        (hpx_action_handler_t)handler, 0, &id);         \
-  }                                                                     \
+#define HPX_FUNCTION_DEF(handler, id)                                       \
+  HPX_ACTION_DECL(id) = -1;                                                 \
+  static HPX_CONSTRUCTOR void _register##_##handler(void) {                 \
+    hpx_register_packed_action(HPX_FUNCTION, __FILE__":"_HPX_XSTR(handler), \
+                               (hpx_action_handler_t)handler, &id);         \
+  }                                                                         \
   static HPX_CONSTRUCTOR void _register##_##handler(void)
 
 #endif
