@@ -41,7 +41,12 @@ AC_DEFUN([HPX_PE_ENV],
                   hpx_pe_env_cflags_wall="-Wall"
                   hpx_pe_env="INTEL"],
          [GNU*], [AS_IF([test -z "$CC"], [AC_SUBST([CC],["gcc"])])
-                  hpx_pe_env_cflags_pedantic="-pedantic"
+# When -pedantic is enabled in gcc, it expects that 1 or more
+# parameters are passed to the variadic argument. This is
+# self-defeating with use of the ,## GCC extension, so we have
+# temporarily disabled -pedantic for gcc.
+#                 hpx_pe_env_cflags_pedantic="-pedantic"
+                  hpx_pe_env_cflags_pedantic=""
                   hpx_pe_env_cflags_wall="-Wall"
                   hpx_pe_env_libs="$PE_ENV_LIBS"
                   hpx_pe_env="GNU"],
