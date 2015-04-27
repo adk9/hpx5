@@ -116,10 +116,11 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   srand48(getpid() * time(NULL));
 
   dbg_trace("(nproc %d, rank %d)",_photon_nproc, _photon_myrank);
-  dbg_trace("num ledgers: %d", _LEDGER_SIZE);
-  dbg_trace("eager buf size: %d", _photon_ebsize);
-  dbg_trace("small msg size: %d", _photon_smsize);
-  dbg_trace("num requests per rank: %d", cfg->cap.default_rd);
+  one_debug("num ledgers:\t\t%d", _LEDGER_SIZE);
+  one_debug("eager buf size:\t%d", _photon_ebsize);
+  one_debug("small msg size:\t%d", _photon_smsize);
+  one_debug("small pwc size:\t%d", _photon_spsize);
+  one_debug("init req per rank:\t%d", cfg->cap.default_rd);
 
   if (buffertable_init(193)) {
     log_err("Failed to allocate buffer table");
@@ -198,7 +199,8 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
     log_err("Couldn't allocate ledgers");
     goto error_exit_crb;
   }
-  dbg_trace("Bufsize: %d", bufsize);
+  
+  one_debug("shared buffer size:\t%d", bufsize);
 
   if (photon_setup_ri_ledger(photon_processes, PHOTON_LRI_PTR(buf), _LEDGER_SIZE) != 0) {
     log_err("couldn't setup snd/rcv info ledgers");

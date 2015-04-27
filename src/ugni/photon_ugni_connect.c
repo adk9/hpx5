@@ -197,7 +197,7 @@ int __ugni_connect_endpoints(ugni_cnct_ctx *ctx, ugni_cnct_info *local_info, ugn
       goto error_exit;
     }
     dbg_trace("GNI_EpCreate remote rank: %4i NIC: %p, CQ: %p, EP: %p", i, ctx->nic_handle,
-	      ctx->local_cq_handle, ctx->ep_handles[i]);
+	      ctx->local_cq_handles[cqind], ctx->ep_handles[i]);
     
     bind_id = (_photon_myrank * BIND_ID_MULTIPLIER) + BIND_ID_MULTIPLIER + i;
     

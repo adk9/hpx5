@@ -384,7 +384,6 @@ static int ugni_get_event(int proc, int max, photon_rid *ids, int *n) {
     if (rc == 0) {
       rc = GNI_GetCompleted(ugni_ctx.local_cq_handles[i], current_event, &event_post_desc_ptr);
       cookie = event_post_desc_ptr->post_id;
-      sync_tatas_release(&cq_lock);
       if (rc != GNI_RC_SUCCESS) {
 	dbg_err("GNI_GetCompleted data ERROR status: %s (%d)", gni_err_str[rc], rc);
       }
@@ -394,7 +393,6 @@ static int ugni_get_event(int proc, int max, photon_rid *ids, int *n) {
       continue;
     }
     else {
-      sync_tatas_release(&cq_lock);
       // rc == 2 is an overrun
       dbg_err("Error getting CQ event: %d", rc);
       goto error_exit;
@@ -404,16 +402,17 @@ static int ugni_get_event(int proc, int max, photon_rid *ids, int *n) {
     ids[comp] = cookie;
     comp++;
   }
-  
+  sync_tatas_release(&cq_lock);  
+
   *n = comp;
   
   if (comp == 0) {
-    sync_tatas_release(&cq_lock);
     return PHOTON_EVENT_NONE;
   }
   
   return PHOTON_EVENT_OK;
   
  error_exit:
+  sync_tatas_release(&cq_lock);
   return PHOTON_EVENT_ERROR;
 }
