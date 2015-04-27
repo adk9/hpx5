@@ -18,6 +18,7 @@
 #include <libhpx/boot.h>
 #include <libhpx/gas.h>
 #include "agas.h"
+#include "btt.h"
 
 static void _agas_delete(gas_t *gas) {
   free(gas);
