@@ -40,7 +40,7 @@ static int _my_typed_null_action(void) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION_DEF(DEFAULT, _my_typed_null_action, null_typed, HPX_VOID);
+static HPX_ACTION_DEF(DEFAULT, _my_typed_null_action, null_typed);
 
 static int _my_typed_action(int i, float f, char c) {
   printf("Hi, I am a typed action with args: %d %f %c!\n", i, f, c);
