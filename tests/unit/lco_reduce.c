@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 #include "tests.h"
 
 /// Initialize a double zero.
@@ -108,7 +109,56 @@ static HPX_ACTION(lco_reduce_getRef, void *UNUSED) {
   return HPX_SUCCESS;
 }
 
+struct _par_reduce_args {
+  hpx_addr_t rlco;
+  double *nums;
+};
+
+static int _par_reduce(const int i, const void *args) {
+  struct _par_reduce_args *a = (struct _par_reduce_args*)args;
+  hpx_lco_set(a->rlco, sizeof(double), &a->nums[i], HPX_NULL, HPX_NULL);
+  return 0;
+}
+
+static HPX_ACTION(lco_par_reduce, void *UNUSED) {
+  static const int iters = 42;
+  double nums[iters];
+
+  srand((unsigned)time(NULL));
+  for (int i = 0, e = iters; i < e; ++i) {
+    nums[i] = ((double)rand()/(double)RAND_MAX);
+  }
+
+  double val = 0.0;
+  for (int i = 0, e = iters; i < e; ++i) {
+    val += nums[i];
+  }
+
+  hpx_addr_t rlco = hpx_lco_reduce_new(iters, sizeof(double), _initDouble,
+                                       _addDouble);
+  struct _par_reduce_args args = {
+    .rlco = rlco,
+    .nums = nums
+  };
+
+  // perform parallel reduction
+  hpx_par_for_sync(_par_reduce, 0, iters, &args);
+
+  // get the gathered value
+  double ans;
+  hpx_lco_get(rlco, sizeof(ans), &ans);
+  printf("expected %f, got %f (delta = %f)\n", val, ans, fabs(val - ans));
+  // works if not near zero
+  if (fabs((val - ans)/val) > 0.001) {
+    exit(EXIT_FAILURE);
+  }
+
+  hpx_lco_delete(rlco, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
 TEST_MAIN({
   ADD_TEST(lco_reduce);
   ADD_TEST(lco_reduce_getRef);
+  ADD_TEST(lco_par_reduce);
 });
