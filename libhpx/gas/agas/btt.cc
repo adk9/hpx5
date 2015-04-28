@@ -16,3 +16,17 @@
 
 #include <farmhash.h>
 #include "btt.h"
+
+
+
+
+void *btt_new(size_t size) {
+  return NULL;
+}
+
+void btt_delete(void *btt) {
+}
+
+entry_t *btt_find(void *btt, hpx_addr_t addr) {
+  return NULL;
+}
