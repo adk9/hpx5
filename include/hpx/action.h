@@ -88,7 +88,7 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
 #define HPX_REGISTER_TYPED_ACTION(type, handler, id, ...)                     \
   hpx_register_typed_action(HPX_ACTION_##type, __FILE__":"_HPX_XSTR(handler), \
                             (hpx_action_handler_t)handler, &id,               \
-                            __HPX_NARGS(__VA_ARGS__),##__VA_ARGS__)
+                            __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 /// Declare an action.
 ///
@@ -105,11 +105,11 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
 /// @param      handler The handler.
 /// @param           id The action id.
 /// @param  __VA_ARGS__ The action type.
-#define HPX_ACTION_DEF(type, handler, id, ...)                  \
-  HPX_ACTION_DECL(id) = -1;                                     \
-  static HPX_CONSTRUCTOR void _register##_##handler(void) {     \
-    HPX_REGISTER_TYPED_ACTION(type, handler, id,##__VA_ARGS__); \
-  }                                                             \
+#define HPX_ACTION_DEF(type, handler, id, ...)                    \
+  HPX_ACTION_DECL(id) = -1;                                       \
+  static HPX_CONSTRUCTOR void _register##_##handler(void) {       \
+    HPX_REGISTER_TYPED_ACTION(type, handler, id , ##__VA_ARGS__); \
+  }                                                               \
   static HPX_CONSTRUCTOR void _register##_##handler(void)
 
 /// Define an HPX user-packed action.
@@ -127,10 +127,11 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
   }                                                             \
   static int id##_##type(__VA_ARGS__)
 
-#define HPX_ACTION(id, ...)    HPX_ACTION_DEF_PACKED(DEFAULT, id, __VA_ARGS__)
-#define HPX_PINNED(id, ...)    HPX_ACTION_DEF_PACKED(PINNED, id, __VA_ARGS__)
-#define HPX_TASK(id, ...)      HPX_ACTION_DEF_PACKED(TASK, id, __VA_ARGS__)
-#define HPX_INTERRUPT(id, ...) HPX_ACTION_DEF_PACKED(INTERRUPT, id, __VA_ARGS__)
+#define HPX_ACTION(id, ...)  HPX_ACTION_DEF_PACKED(DEFAULT, id , ##__VA_ARGS__)
+#define HPX_PINNED(id, ...)  HPX_ACTION_DEF_PACKED(PINNED, id , ##__VA_ARGS__)
+#define HPX_TASK(id, ...)    HPX_ACTION_DEF_PACKED(TASK, id , ##__VA_ARGS__)
+#define HPX_INTERRUPT(id, ...) HPX_ACTION_DEF_PACKED(INTERRUPT, id ,    \
+                                                     ##__VA_ARGS__)
 
 #define HPX_REGISTER_ACTION(handler, id)                                       \
   hpx_register_packed_action(HPX_ACTION_DEFAULT, __FILE__":"_HPX_XSTR(handler),\
