@@ -20,16 +20,42 @@
 #include "agas.h"
 #include "btt.h"
 
-static void _agas_delete(gas_t *gas) {
-  free(gas);
+typedef struct {
+  gas_t vtable;
+  void *btt;
+} agas_t;
+
+static void
+_agas_delete(void *gas) {
+  agas_t *agas = gas;
+  if (agas->btt) {
+    btt_delete(agas->btt);
+  }
+  free(agas);
 }
 
-static int64_t _agas_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
+static int64_t
+_agas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   return INT64_MAX;;
 }
 
-static hpx_addr_t _agas_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
+static hpx_addr_t
+_agas_add(const void *gas, hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
   return HPX_NULL;
+}
+
+static hpx_addr_t
+_agas_there(void *gas, uint32_t i) {
+  return HPX_NULL;
+}
+
+static bool
+_agas_try_pin(void *gas, hpx_addr_t gpa, void **local) {
+  return false;
+}
+
+static void
+_agas_unpin(void *gas, hpx_addr_t addr) {
 }
 
 static gas_t _agas_vtable = {
@@ -39,9 +65,9 @@ static gas_t _agas_vtable = {
   .local_base     = NULL,
   .sub            = _agas_sub,
   .add            = _agas_add,
-  .there          = NULL,
-  .try_pin        = NULL,
-  .unpin          = NULL,
+  .there          = _agas_there,
+  .try_pin        = _agas_try_pin,
+  .unpin          = _agas_unpin,
   .alloc_cyclic   = NULL,
   .calloc_cyclic  = NULL,
   .alloc_blocked  = NULL,
@@ -59,7 +85,8 @@ static gas_t _agas_vtable = {
 };
 
 gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
-  gas_t *gas = malloc(sizeof(*gas));
-  *gas = _agas_vtable;
-  return gas;
+  agas_t *agas = malloc(sizeof(*agas));
+  agas->vtable = _agas_vtable;
+  agas->btt = btt_new(0);
+  return &agas->vtable;
 }
