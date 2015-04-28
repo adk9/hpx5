@@ -77,9 +77,9 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
 /// @param      handler The action handler (the function).
 /// @param (car __VA_ARGS__) The action id (the hpx_action_t address)
 /// @param (cdr __VA_ARGS__) The parameter types (HPX_INT, ...)
-#define _HPX_REGISTER_ACTION(type, handler, ...)                    \
-  hpx_register_action(HPX_ACTION_##type, __FILE__":"_HPX_XSTR(handler), \
-                      (hpx_action_handler_t)handler,                \
+#define _HPX_REGISTER_ACTION(type, handler, ...)                        \
+  hpx_register_action(HPX_ACTION_##type, __FILE__ ":" _HPX_XSTR(handler), \
+                      (hpx_action_handler_t)handler,                    \
                       __HPX_NARGS(__VA_ARGS__) - 1, __VA_ARGS__)
 
 /// Declare an action.
@@ -133,7 +133,7 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
 #define HPX_FUNCTION_DEF(handler, id)                                   \
   HPX_ACTION_DECL(id) = -1;                                             \
   static HPX_CONSTRUCTOR void _register##_##handler(void) {             \
-    hpx_register_action(HPX_FUNCTION, __FILE__":"_HPX_XSTR(handler),    \
+    hpx_register_action(HPX_FUNCTION, __FILE__ ": "_HPX_XSTR(handler),  \
                         (hpx_action_handler_t)handler, 0, &id);         \
   }                                                                     \
   static HPX_CONSTRUCTOR void _register##_##handler(void)
