@@ -91,7 +91,8 @@ AC_ARG_ENABLE([jemalloc],
   [], [enable_jemalloc=no])
 AS_IF([test "x$enable_jemalloc" != xno],
   [HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [], [_local])
-   AC_DEFINE([HAVE_JEMALLOC], [1], [We have jemalloc support for malloc/free/etc])]) 
+   AC_DEFINE([HAVE_JEMALLOC], [1], [We have jemalloc support for malloc/free/etc])]
+   AC_SUBST(HPX_JEMALLOC_LOCAL_LIBS, "$hpx_jemalloc_libs"))
   
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug],
