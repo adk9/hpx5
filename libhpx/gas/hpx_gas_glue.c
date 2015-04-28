@@ -75,27 +75,27 @@ hpx_addr_t hpx_gas_calloc(size_t n, uint32_t bsize, uint32_t boundary,
 
 hpx_addr_t HPX_THERE(uint32_t i) {
   dbg_assert(here && here->gas && here->gas->there);
-  return here->gas->there(i);
+  return here->gas->there(here->gas, i);
 }
 
 hpx_addr_t hpx_addr_add(hpx_addr_t addr, int64_t bytes, uint32_t bsize) {
   dbg_assert(here && here->gas && here->gas->add);
-  return here->gas->add(addr, bytes, bsize);
+  return here->gas->add(here->gas, addr, bytes, bsize);
 }
 
 int64_t hpx_addr_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   dbg_assert(here && here->gas && here->gas->sub);
-  return here->gas->sub(lhs, rhs, bsize);
+  return here->gas->sub(here->gas, lhs, rhs, bsize);
 }
 
 bool hpx_gas_try_pin(const hpx_addr_t addr, void **local) {
-  dbg_assert(here && here->gas);
-  return here->gas->try_pin(addr, local);
+  dbg_assert(here && here->gas && here->gas->try_pin);
+  return here->gas->try_pin(here->gas, addr, local);
 }
 
 void hpx_gas_unpin(const hpx_addr_t addr) {
-  dbg_assert(here && here->gas);
-  here->gas->unpin(addr);
+  dbg_assert(here && here->gas && here->gas->unpin);
+  here->gas->unpin(here->gas, addr);
 }
 
 hpx_addr_t hpx_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {

@@ -102,7 +102,7 @@ int parcel_launch(hpx_parcel_t *p) {
 
   // do a local send through loopback, bypassing the network, otherwise dump the
   // parcel out to the network
-  if (here->gas->try_pin(p->target, NULL)) {
+  if (hpx_gas_try_pin(p->target, NULL)) {
     scheduler_spawn(p);
     return HPX_SUCCESS;
   }
