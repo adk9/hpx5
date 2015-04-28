@@ -1,7 +1,7 @@
 /// @file libhpx/platform/darwin/cpu.c
 /// @brief Implements pthread_barrier for Darwin (Mac OS X). Credit : http://blog.albertarmea.com/post/47089939939/using-pthread-barrier-on-mac-os-x
 
-#include <libhpx/pthread.h>
+#include <libhpx/system_pthread.h>
 
 int pthread_barrier_init(pthread_barrier_t *barrier, const pthread_barrierattr_t *attr, unsigned int count) {
   
