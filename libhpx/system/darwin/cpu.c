@@ -70,7 +70,6 @@ void system_get_stack(pthread_t thread, void **base, size_t *size) {
 }
 
 int system_get_affinity_group_size(pthread_t thread, int *ncores) {
-  //printf("coming here \n");
   // First get affinity tag and check whether it is null (THREAD_AFFINITY_TAG_NULL)
   // if it is not THREAD_AFFINITY_TAG_NULL then thread is associated with a L2 cache.
   // Then find the logical processors associated with L2 cache.
@@ -98,24 +97,14 @@ int system_get_affinity_group_size(pthread_t thread, int *ncores) {
       uint64_t cacheconfig[n];
 
       if ((!sysctlbyname("hw.cacheconfig", cacheconfig, &size, NULL, 0))) {
-	//printf("Number of cache levels %u \n", n-1);
-	if (n >= 2) {
-	  //printf("Number of logical processors for L2 cache %" PRId64 "\n", cacheconfig[2]);
+	if (n >= 2)
 	  *ncores = (int)cacheconfig[2];
-	} else {
-	  //printf("L2 cache not found\n");
+	else
 	  return HPX_ERROR;
-	}
       }
     }
-  } else { // not associated with a L2 cache - return all cores 
-    size_t cores;
-    if (!sysctlbyname("machdep.cpu.core_count", NULL, &cores, NULL, 0)) {
-      //printf("Number of cores %u \n", cores);
-      *ncores = cores;
-    } else {
-      return HPX_ERROR;
-    }
+  } else {  
+    *ncores = 1;
   }
   
   return HPX_SUCCESS;

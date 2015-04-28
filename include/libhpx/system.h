@@ -13,7 +13,7 @@
 #ifndef LIBHPX_SYSTEM_H
 #define LIBHPX_SYSTEM_H
 
-#include "pthread.h"
+#include "system_pthread.h"
 #include <hpx/attributes.h>
 
 int system_get_cores(void)
