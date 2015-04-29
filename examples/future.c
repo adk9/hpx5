@@ -81,7 +81,7 @@ int main(int argc, char * argv[argc]) {
      break;
   }
 
-  HPX_REGISTER_ACTION(_send_action, &send);
-  HPX_REGISTER_ACTION(_increment_action, &increment);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, send, _send_action);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, increment, _increment_action);
   return hpx_run(&send, &n, sizeof(n));
 }

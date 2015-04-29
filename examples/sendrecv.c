@@ -153,7 +153,7 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(_receiver_action, &_receiver);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _main, _main_action);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _receiver, _receiver_action);
   return hpx_run(&_main, args, sizeof(args));
 }
