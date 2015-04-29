@@ -53,8 +53,8 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
 };
 
 /// Action attributes.
-#define HPX_ATTR_PACKED 0x1
-#define HPX_ATTR_PINNED 0x2
+#define HPX_MARSHALLED 0x1
+#define HPX_PINNED     0x2
 
 /// Register an HPX action of a given @p type.
 ///
