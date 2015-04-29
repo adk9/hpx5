@@ -40,6 +40,7 @@ namespace {
     BlockTranslationTable(size_t);
     bool trypin(hpx_addr_t gva, void** lva);
     void unpin(hpx_addr_t gva);
+    uint32_t getOwner(hpx_addr_t gva) const;
   };
 }
 
@@ -53,6 +54,11 @@ BlockTranslationTable::trypin(hpx_addr_t gva, void** lva) {
 
 void
 BlockTranslationTable::unpin(hpx_addr_t gva) {
+}
+
+uint32_t
+BlockTranslationTable::getOwner(hpx_addr_t gva) const {
+  return 0;
 }
 
 void *
@@ -76,4 +82,11 @@ void
 btt_unpin(void* obj, hpx_addr_t gva) {
   BlockTranslationTable *btt = static_cast<BlockTranslationTable*>(obj);
   btt->unpin(gva);
+}
+
+uint32_t
+btt_owner_of(const void* obj, hpx_addr_t gva) {
+  const BlockTranslationTable *btt =
+  static_cast<const BlockTranslationTable*>(obj);
+  btt->getOwner(gva);
 }
