@@ -77,28 +77,39 @@ void system_munmap_huge_pages(void *obj, void *addr, size_t size)
 
 typedef void (*system_munmap_t)(void *, void *, size_t);
 
-#ifdef __APPLE__
-/// pthread barrier is not available in Mac.
-/// adding structure definitions
-typedef int pthread_barrierattr_t;
+
+/// Cross-platform pthread barrier interface
+
+#if defined(__linux)
+#define system_barrierattr_t    pthread_barrierattr_t
+#define system_barrier_t        pthread_barrier_t
+
+#define system_barrier_init     pthread_barrier_init
+#define system_barrier_destroy  pthread_barrier_destroy
+#define system_barrier_wait     pthread_barrier_wait
+
+#elif defined(__APPLE__)
+typedef int system_barrierattr_t;
 typedef struct {
   pthread_mutex_t mutex;
   pthread_cond_t cond;
   int count;
-  int tripCount;
-} pthread_barrier_t;
-#endif
+  int trip_count;
+} system_barrier_t;
 
 /// System specific thread barrier init function
-int system_barrier_init(pthread_barrier_t *barrier, const pthread_barrierattr_t *attr, unsigned int count)
+int system_barrier_init(system_barrier_t *barrier,
+                        const system_barrierattr_t *attr, unsigned int count)
   HPX_INTERNAL;
 
 /// System specific thread barrier destroy function
-int system_barrier_destroy(pthread_barrier_t *barrier)
+int system_barrier_destroy(system_barrier_t *barrier)
   HPX_INTERNAL;
 
 /// System specific thread barrier wait function
-int system_barrier_wait(pthread_barrier_t *barrier)
+int system_barrier_wait(system_barrier_t *barrier)
   HPX_INTERNAL;
+
+#endif
 
 #endif // LIBHPX_SYSTEM_H
