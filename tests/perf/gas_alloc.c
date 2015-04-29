@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
   fprintf(stdout, "Starting the cost of GAS Allocation benchmark\n");
 
   // Register the main action
-  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _main, _main_action);
 
   set_timeout(30);
 

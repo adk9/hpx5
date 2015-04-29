@@ -365,11 +365,11 @@ int main(int argc, char *argv[])
   };
 
   // register the actions
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(_init_table_action, &_init_table);
-  HPX_REGISTER_ACTION(_bitwiseor_action, &_bitwiseor);
-  HPX_REGISTER_ACTION(_update_table_action, &_update_table);
-  HPX_REGISTER_ACTION(_mover_action, &_mover);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _main, _main_action);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _init_table, _init_table_action);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _bitwiseor, _bitwiseor_action);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _update_table, _update_table_action);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _mover, _mover_action);
 
   // run the update_table action
   return hpx_run(&_main, &guppie_cfg, sizeof(guppie_cfg));

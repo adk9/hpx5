@@ -48,8 +48,8 @@ int main(int argc, char *argv[]) {
     return e;
   }
    
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(_lcoSetGet_action, &_lcoSetGet);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _main, _main_action);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _lcoSetGet, _lcoSetGet_action);
 
   return hpx_run(&_main, NULL, 0);
 }

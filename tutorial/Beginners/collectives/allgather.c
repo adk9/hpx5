@@ -146,9 +146,9 @@ int main(int argc, char *argv[]) {
     return e;
   }
 
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(_init_action, &_init);
-  HPX_REGISTER_ACTION(_check_sum_action, &_check_sum);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _main, _main_action);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _init, _init_action);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _check_sum, _check_sum_action);
 
   return hpx_run(&_main, NULL, 0);
 }
