@@ -15,7 +15,7 @@ int system_barrier_destroy(pthread_barrier_t *barrier) {
 
 int system_barrier_wait(pthread_barrier_t *barrier) {
   
-  reuturn pthread_barrier_wait(barrier);
+  return pthread_barrier_wait(barrier);
 }
 
 
