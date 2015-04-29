@@ -22,4 +22,5 @@ libhpx_la_LIBADD   = boot/libboot.la \
                      $(HPX_LIBFFI_LIBS) \
                      $(HPX_HWLOC_LIBS) \
                      $(HPX_PHOTON_LIBS) \
+                     $(HPX_FARMHASH_LIBS) \
                      $(HPX_JEMALLOC_LIBS)

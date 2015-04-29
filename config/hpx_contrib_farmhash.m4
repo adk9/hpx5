@@ -11,4 +11,5 @@ AC_DEFUN([HPX_CONTRIB_FARMHASH],
    ACX_CONFIGURE_DIR([$1], [$1], [$$2farmhash_cargs])
 
    $2farmhash_cppflags="-I\$(top_srcdir)/$1/src"
-   AC_SUBST(FARMHASH_CPPFLAGS, [$$2farmhash_cppflags])])
+   AC_SUBST(FARMHASH_CPPFLAGS, [$$2farmhash_cppflags])
+   AC_SUBST(HPX_FARMHASH_LIBS, ["\$(abs_top_builddir)/$1/src/libfarmhash.la"])])
