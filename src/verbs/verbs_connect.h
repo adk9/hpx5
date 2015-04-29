@@ -47,6 +47,9 @@ typedef struct verbs_cnct_ctx_t {
 
   verbs_cnct_info          **local_ci;
   verbs_cnct_info          **remote_ci;
+  
+  int                        rdma_get_align;
+  int                        rdma_put_align;
 } verbs_cnct_ctx;
 
 PHOTON_INTERNAL int __verbs_init_context(verbs_cnct_ctx *ctx);

@@ -19,7 +19,9 @@
 #include "htable.h"
 #include "logging.h"
 
-#define MAX_RETRIES 1
+#define PHOTON_VERBS_PUT_ALIGN 1
+#define PHOTON_VERBS_GET_ALIGN 1
+#define MAX_RETRIES            1
 
 struct rdma_args_t {
   int proc;
@@ -88,7 +90,9 @@ static verbs_cnct_ctx verbs_ctx = {
   .atomic_depth = 16,
   .max_sge = 16,
   .max_inline = -1,
-  .num_cq = DEF_NUM_CQ
+  .num_cq = DEF_NUM_CQ,
+  .rdma_put_align = PHOTON_VERBS_PUT_ALIGN,
+  .rdma_get_align = PHOTON_VERBS_GET_ALIGN,
 };
 
 /* we are now a Photon backend */
@@ -253,6 +257,18 @@ static int verbs_get_info(ProcessInfo *pi, int proc, void **ret_info, int *ret_s
   struct photon_buffer_t *info;
 
   switch (type) {
+  case PHOTON_GET_ALIGN:
+    {
+      *ret_info = &verbs_ctx.rdma_get_align;
+      *ret_size = sizeof(verbs_ctx.rdma_get_align);
+    }
+    break;
+  case PHOTON_PUT_ALIGN:
+    {
+      *ret_info = &verbs_ctx.rdma_put_align;
+      *ret_size = sizeof(verbs_ctx.rdma_put_align);
+    }
+    break;
   case PHOTON_MTU:
     {
       *ret_info = &verbs_ctx.ib_mtu;
@@ -299,6 +315,7 @@ static int verbs_get_info(ProcessInfo *pi, int proc, void **ret_info, int *ret_s
   case PHOTON_FI:
     info->addr = (uintptr_t)pi->local_fin_ledger->entries;
   default:
+    goto error_exit;
     break;
   }
 

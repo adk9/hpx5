@@ -17,8 +17,10 @@
 #include "utility_functions.h"
 #include "libsync/locks.h"
 
-#define MAX_RETRIES 1
-#define DEF_UGNI_BTE_THRESH (1<<16)
+#define PHOTON_UGNI_PUT_ALIGN  1
+#define PHOTON_UGNI_GET_ALIGN  4
+#define MAX_RETRIES            1
+#define DEF_UGNI_BTE_THRESH    (1<<16)
 
 struct rdma_args_t {
   int proc;
@@ -42,6 +44,8 @@ static int __initialized = 0;
 static int ugni_initialized(void);
 static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss);
 static int ugni_finalize(void);
+static int ugni_get_info(ProcessInfo *pi, int proc, void **info, int *size, photon_info_t type);
+static int ugni_set_info(ProcessInfo *pi, int proc, void *info, int size, photon_info_t type);
 static int ugni_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
                          photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags);
 static int ugni_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
@@ -65,6 +69,9 @@ struct photon_backend_t photon_ugni_backend = {
   .init = ugni_init,
   .cancel = NULL,
   .finalize = ugni_finalize,
+  .connect = NULL,
+  .get_info = ugni_get_info,
+  .set_info = ugni_set_info,
   /* API */
   .get_dev_addr = NULL,
   .register_addr = NULL,
@@ -126,6 +133,8 @@ static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI s
   }
 
   ugni_ctx.num_cq = cfg->cap.num_cq;
+  ugni_ctx.rdma_put_align = PHOTON_UGNI_PUT_ALIGN;
+  ugni_ctx.rdma_get_align = PHOTON_UGNI_GET_ALIGN;
 
   if ((2 * _LEDGER_SIZE * _photon_nproc / ugni_ctx.num_cq) > MAX_CQ_ENTRIES) {
     dbg_warn("Possible CQ overrun with current config (nproc=%d, nledger=%d, ncq=%d)",
@@ -175,6 +184,36 @@ static int ugni_finalize() {
     free(descriptors[i].entries);
   }
   free(descriptors);
+  return PHOTON_OK;
+}
+
+static int ugni_get_info(ProcessInfo *pi, int proc, void **ret_info, int *ret_size, photon_info_t type) {
+  switch(type) {
+  case PHOTON_GET_ALIGN:
+    {
+      *ret_info = &ugni_ctx.rdma_get_align;
+      *ret_size = sizeof(ugni_ctx.rdma_get_align);
+    }
+    break;
+  case PHOTON_PUT_ALIGN:
+    {
+      *ret_info = &ugni_ctx.rdma_put_align;
+      *ret_size = sizeof(ugni_ctx.rdma_put_align);
+    }
+    break;
+  default:
+    goto error_exit;
+    break;
+  }
+  
+  return PHOTON_OK;
+
+ error_exit:
+  return PHOTON_ERROR;
+}
+
+static int ugni_set_info(ProcessInfo *pi, int proc, void *info, int size, photon_info_t type) {
+
   return PHOTON_OK;
 }
 

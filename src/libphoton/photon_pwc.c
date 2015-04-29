@@ -36,6 +36,26 @@ photonRequest photon_pwc_pop_req() {
   return sync_ms_queue_dequeue(pwc_q);
 }
 
+static int photon_pwc_check_gwc_align(photonBuffer lbuf, photonBuffer rbuf, uint64_t size) {
+  int *align;
+  int asize;
+  int rc;
+
+  rc =  __photon_backend->get_info(NULL, 0, (void**)&align, &asize, PHOTON_GET_ALIGN);
+  if (rc != PHOTON_OK) {
+    dbg_warn("Could not get alignment info from backend");
+    *align = 0;
+  }
+  
+  if (!TEST_ALIGN(lbuf->addr, *align) ||
+      !TEST_ALIGN(rbuf->addr, *align) ||
+      !TEST_ALIGN(size, *align)) {
+    return PHOTON_ERROR;
+  }
+  
+  return PHOTON_OK;
+}
+
 static int photon_pwc_handle_comp_req(photonRequest req, int *flag, photon_rid *request) {
   int rc;
 
@@ -371,6 +391,12 @@ int _photon_get_with_completion(int proc, uint64_t size,
 
   if (size && !rbuf->priv.key0 && !rbuf->priv.key1) {
     dbg_warn("No remote buffer keys specified!");
+  }
+
+  rc = photon_pwc_check_gwc_align(lbuf, rbuf, size);
+  if (rc != PHOTON_OK) {
+    dbg_err("One or more parameters to GWC have unsupported alignment");
+    goto error_exit;
   }
 
   req = photon_setup_request_direct(lbuf, rbuf, size, proc, 1);
