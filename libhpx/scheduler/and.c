@@ -169,7 +169,7 @@ hpx_addr_t hpx_lco_and_new(int64_t limit) {
     dbg_check(e, "could not initialize an and gate at %lu\n", gva);
   }
   else {
-    _and_init(and, limit);
+    _and_init_handler(and, limit);
     hpx_gas_unpin(gva);
   }
   return gva;
@@ -192,10 +192,12 @@ void hpx_lco_and_set_num(hpx_addr_t and, int sum, hpx_addr_t rsync) {
 static int _block_local_init_handler(void *lco, uint32_t n, uint32_t arg) {
   for (int i = 0; i < n; i++) {
     void *addr = (void *)((uintptr_t)lco + i * sizeof(_and_t));
-    _and_init(addr, (intptr_t)arg);
+    _and_init_handler(addr, (intptr_t)arg);
   }
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
+                  _block_local_init_handler, HPX_UINT32, HPX_UINT32);
 
 /// Allocate an array of and LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate

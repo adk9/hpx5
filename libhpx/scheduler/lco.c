@@ -135,7 +135,7 @@ int hpx_lco_set_action_handler(lco_t *lco, size_t n, void *data) {
 HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, hpx_lco_set_action,
            hpx_lco_set_action_handler, HPX_SIZE_T, HPX_POINTER);
 
-static int _lco_error_handler(lco_t *lco, size_t, void *args) {
+static int _lco_error_handler(lco_t *lco, size_t n, void *args) {
   hpx_status_t *code = args;
   return _error(lco, *code);
 }
@@ -154,7 +154,6 @@ static int _lco_size_handler(lco_t *lco, void *UNUSED) {
 HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_size, _lco_size_handler);
 
 static int _lco_get_handler(lco_t *lco, int n) {
-  dbg_assert(args);
   // convert to wait if there's no buffer
   if (n == 0) {
     return _wait(lco);

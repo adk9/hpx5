@@ -242,7 +242,7 @@ hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
     dbg_check(e, "could not initialize an allreduce at %lu\n", gva);
   }
   else {
-    _allreduce_init(r, inputs, outputs, size, id, op);
+    _allreduce_init_handler(r, inputs, outputs, size, id, op);
     hpx_gas_unpin(gva);
   }
 
@@ -256,7 +256,7 @@ _block_local_init_handler(void *lco, int n, size_t participants, size_t readers,
                           size_t size, hpx_action_t id, hpx_action_t op) {
   for (int i = 0; i < n; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_allreduce_t) + size));
-    _allreduce_init(addr, participants, readers, size, id, op);
+    _allreduce_init_handler(addr, participants, readers, size, id, op);
   }
   return HPX_SUCCESS;
 }
