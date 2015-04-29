@@ -53,7 +53,9 @@ static int DONE = 0;
 static int *recvCompT;
 static int *gwcCompT;
 static int myrank;
+static int nranks;
 static sem_t sem;
+static int rthreads = 1;
 
 #ifdef HAVE_SETAFFINITY
 static int ncores = 1;                 /* number of CPU cores */
@@ -101,14 +103,14 @@ void *wait_ledger_completions_thread(void *arg) {
   photon_rid request;
   long inputrank = (long)arg;
   int flag, src;
+  int proc = (nranks > rthreads) ? PHOTON_ANY_SOURCE : inputrank;
   
   do {
-    //photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
-    photon_probe_completion(inputrank, &flag, NULL, &request, &src, PHOTON_PROBE_LEDGER);
+    photon_probe_completion(proc, &flag, NULL, &request, &src, PHOTON_PROBE_LEDGER);
     if (flag && request == 0xcafebabe)
-      recvCompT[inputrank]++;
+      recvCompT[src]++;
     if (flag && request == 0xfacefeed)
-      gwcCompT[inputrank]++;
+      gwcCompT[src]++;
   } while (!DONE);
   
   pthread_exit(NULL);
@@ -125,7 +127,11 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
   myrank = rank;
-
+  nranks = nproc;
+  
+  if (rthreads == 0)
+    rthreads = nproc;
+  
   cfg.nproc = nproc;
   cfg.address = rank;
   
@@ -144,7 +150,7 @@ int main(int argc, char **argv) {
   struct photon_buffer_t rbuf[nproc];
   photon_rid recvReq[nproc], sendReq[nproc];
   char *send, *recv[nproc];
-  pthread_t th, recv_threads[nproc];
+  pthread_t th, recv_threads[rthreads];
   //pthread_t th2;
 
   recvCompT = calloc(nproc, sizeof(int));
@@ -185,8 +191,7 @@ int main(int argc, char **argv) {
   // Create a thread that simultaneously tests for a rendezvous completion
   //pthread_create(&th2, NULL, test_thread, NULL);
   
-  // Create receive threads one per rank
-  for (t=0; t<nproc; t++) {
+  for (t=0; t<rthreads; t++) {
     pthread_create(&recv_threads[t], NULL, wait_ledger_completions_thread, (void*)t);
   }
   
@@ -222,7 +227,7 @@ int main(int argc, char **argv) {
       pthread_setaffinity_np(recv_threads[i], sizeof(cpu_set_t), &cpu_set);
   }
   else {
-    for (i=0; i<nproc; i++)
+    for (i=0; i<rthreads; i++)
       pthread_setaffinity_np(recv_threads[i], sizeof(cpu_set_t), &def_set);
   }
 
