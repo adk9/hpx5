@@ -26,15 +26,15 @@
 #include "hpx/hpx.h"
 
 
-static int _par_for_async_action(hpx_for_action_t f, void *args, int min, int max) {
+static int _par_for_async_handler(hpx_for_action_t f, void *args, int min, int max) {
   for (int i = min, e = max; i < e; ++i) {
     f(i, args);
   }
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION_DEF(DEFAULT, _par_for_async_action, _par_for_async,
-                      HPX_POINTER, HPX_POINTER, HPX_INT, HPX_INT);
+static HPX_ACTION(HPX_DEFAULT, 0, _par_for_async, _par_for_async_handler,
+                  HPX_POINTER, HPX_POINTER, HPX_INT, HPX_INT);
 
 int hpx_par_for(hpx_for_action_t f, const int min, const int max,
                 const void *args, hpx_addr_t sync) {

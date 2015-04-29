@@ -57,7 +57,8 @@ static int _init_array_handler(char *local, size_t n) {
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION_DEF(PINNED, _init_array_handler, _init_array, HPX_SIZE_T);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _init_array,
+                  _init_array_handler, HPX_SIZE_T);
 
 static int _main_handler(void) {
   double t_start = 0.0, t_end = 0.0;

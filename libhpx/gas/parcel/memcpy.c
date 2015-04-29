@@ -36,8 +36,8 @@ static int _memcpy_request_handler(char *local, size_t size, hpx_addr_t to) {
   hpx_call_cc(to, _memcpy_reply, NULL, NULL, local, size);
 }
 
-static HPX_ACTION_DEF(PINNED, _memcpy_request_handler, _memcpy_request,
-                      HPX_SIZE_T, HPX_ADDR);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _memcpy_request, _memcpy_request_handler,
+                  HPX_SIZE_T, HPX_ADDR);
 
 int parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync) {
   int e = hpx_call(from, _memcpy_request, sync, &size, &to);

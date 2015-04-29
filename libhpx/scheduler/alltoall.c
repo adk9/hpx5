@@ -370,7 +370,7 @@ static const lco_class_t _alltoall_vtable = {
   .on_size     = _alltoall_size
 };
 
-static int _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
+static int _alltoall_init_handler(_alltoall_t *g, size_t participants, size_t size) {
   lco_init(&g->lco, &_alltoall_vtable);
   cvar_reset(&g->wait);
   g->participants = participants;
@@ -387,8 +387,8 @@ static int _alltoall_init(_alltoall_t *g, size_t participants, size_t size) {
 
   return HPX_SUCCESS;
 }
-static HPX_ACTION_DEF(PINNED, _alltoall_init, _alltoall_init_async, HPX_SIZE_T,
-                      HPX_SIZE_T);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _alltoall_init_async,
+                  _alltoall_init_handler, HPX_SIZE_T, HPX_SIZE_T);
 
 /// Allocate a new alltoall LCO. It scatters elements from each process in order
 /// of their rank and sends the result to all the processes

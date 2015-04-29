@@ -50,8 +50,8 @@ static int _initDomain_handler(Domain *domain, hpx_addr_t newdt,
   domain->cycle = 0;
   return HPX_SUCCESS;
 }
-static HPX_ACTION_DEF(PINNED, _initDomain_handler, _initDomain,
-                      HPX_ADDR, HPX_ADDR, HPX_INT, HPX_INT);
+static HPX_ACTION(HPX_EDFAULT, HPX_PINNED, _initDomain, _initDomain_handler,
+                  HPX_ADDR, HPX_ADDR, HPX_INT, HPX_INT);
 
 static HPX_PINNED(_advanceDomain_allreduce, Domain *domain, const unsigned long *epoch) {
   if (domain->maxCycles <= domain->cycle) {
