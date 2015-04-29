@@ -13,7 +13,7 @@
 #ifndef LIBHPX_SYSTEM_H
 #define LIBHPX_SYSTEM_H
 
-#include "system_pthread.h"
+#include <pthread.h>
 #include <hpx/attributes.h>
 
 int system_get_cores(void)
@@ -76,5 +76,29 @@ void system_munmap_huge_pages(void *obj, void *addr, size_t size)
   HPX_INTERNAL;
 
 typedef void (*system_munmap_t)(void *, void *, size_t);
+
+#ifdef __APPLE__
+/// pthread barrier is not available in Mac.
+/// adding structure definitions
+typedef int pthread_barrierattr_t;
+typedef struct {
+  pthread_mutex_t mutex;
+  pthread_cond_t cond;
+  int count;
+  int tripCount;
+} pthread_barrier_t;
+#endif
+
+/// System specific thread barrier init function
+int system_barrier_init(pthread_barrier_t *barrier, const pthread_barrierattr_t *attr, unsigned int count)
+  HPX_INTERNAL;
+
+/// System specific thread barrier destroy function
+int system_barrier_destroy(pthread_barrier_t *barrier)
+  HPX_INTERNAL;
+
+/// System specific thread barrier wait function
+int system_barrier_wait(pthread_barrier_t *barrier)
+  HPX_INTERNAL;
 
 #endif // LIBHPX_SYSTEM_H

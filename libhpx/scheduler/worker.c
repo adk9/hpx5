@@ -577,7 +577,7 @@ int worker_start(void) {
   dbg_assert(here && here->config && here->network);
 
   // wait for local threads to start up
-  pthread_barrier_wait(&self->sched->barrier);
+  system_barrier_wait(&self->sched->barrier);
 
   // get a parcel to start the scheduler loop with
   hpx_parcel_t *p = _schedule(true, NULL);
