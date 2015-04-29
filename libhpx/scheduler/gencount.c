@@ -152,7 +152,7 @@ static const lco_class_t gencount_vtable = {
   .on_size     = _gencount_size
 };
 
-static int _gencount_init(_gencount_t *gencnt, unsigned long ninplace) {
+static int _gencount_init_handler(_gencount_t *gencnt, unsigned long ninplace) {
   lco_init(&gencnt->lco, &gencount_vtable);
   cvar_reset(&gencnt->oflow);
   gencnt->gen = 0;
@@ -162,7 +162,8 @@ static int _gencount_init(_gencount_t *gencnt, unsigned long ninplace) {
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION_DEF(PINNED, _gencount_init, _gencount_init_async, HPX_ULONG);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _gencount_init_async,
+                  _gencount_init_handler, HPX_ULONG);
 
 static int _gencount_wait_gen_proxy_handler(unsigned long gen) {
   hpx_addr_t target = hpx_thread_current_target();

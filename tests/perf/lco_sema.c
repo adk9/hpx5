@@ -49,8 +49,8 @@ static int _thread1_handler(uint32_t iter, hpx_addr_t sem1, hpx_addr_t sem2) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION_DEF(DEFAULT, _thread1_handler, _thread1, HPX_UINT32, HPX_ADDR,
-                      HPX_ADDR);
+static HPX_ACTION(HPX_DEFAULT, 0, _thread1, _thread1_handler, HPX_UINT32, HPX_ADDR,
+                  HPX_ADDR);
 
 static int _thread2_handler(uint32_t iter, hpx_addr_t sem1, hpx_addr_t sem2) {
   assert(sem1 != sem2);
@@ -69,8 +69,8 @@ static int _thread2_handler(uint32_t iter, hpx_addr_t sem1, hpx_addr_t sem2) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION_DEF(DEFAULT, _thread2_handler, _thread2, HPX_UINT32, HPX_ADDR,
-                      HPX_ADDR);
+static HPX_ACTION(HPX_DEFAULT, 0, _thread2, _thread2_handler, HPX_UINT32, HPX_ADDR,
+                  HPX_ADDR);
 
 static int _main_handler(void) {
   printf(HEADER);

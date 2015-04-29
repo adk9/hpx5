@@ -301,7 +301,7 @@ static const lco_class_t _allgather_vtable = {
   .on_size     = _allgather_size
 };
 
-static int _allgather_init(_allgather_t *g, size_t participants, size_t size) {
+static int _allgather_init_handler(_allgather_t *g, size_t participants, size_t size) {
   lco_init(&g->lco, &_allgather_vtable);
   cvar_reset(&g->wait);
   g->participants = participants;
@@ -318,8 +318,8 @@ static int _allgather_init(_allgather_t *g, size_t participants, size_t size) {
 
   return HPX_SUCCESS;
 }
-static HPX_ACTION_DEF(PINNED, _allgather_init, _allgather_init_async,
-                      HPX_SIZE_T, HPX_SIZE_T);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _allgather_init_async,
+                  _allgather_init_handler, HPX_SIZE_T, HPX_SIZE_T);
 
 /// Allocate a new gather LCO. It gathers elements from each process in order
 /// of their rank and sends the result to all the processes

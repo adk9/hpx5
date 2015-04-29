@@ -31,7 +31,7 @@ static HPX_ACTION(HPX_FUNCTION, 0, _addDouble, _addDouble_handler);
 static int _reduce_handler(double data) {
   HPX_THREAD_CONTINUE(data);
 }
-static HPX_ACTION_DEF(DEFAULT, _reduce_handler, _reduce, HPX_DOUBLE);
+static HPX_ACTION(HPX_DEFAULT, 0, _reduce, _reduce_handler, HPX_DOUBLE);
 
 static int lco_reduce_handler(void) {
   static const double data = 3141592653.58979;

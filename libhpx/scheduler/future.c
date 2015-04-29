@@ -207,7 +207,7 @@ static const lco_class_t _future_vtable = {
 };
 
 /// initialize the future
-static int _future_init(_future_t *f, int size) {
+static int _future_init_handler(_future_t *f, int size) {
   lco_init(&f->lco, &_future_vtable);
   cvar_reset(&f->full);
   if (size) {
@@ -215,7 +215,8 @@ static int _future_init(_future_t *f, int size) {
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION_DEF(PINNED, _future_init, _future_init_async, HPX_INT);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _future_init_async,
+                  _future_init_handler, HPX_INT);
 
 /// Initialize a block of futures.
 static HPX_PINNED(_block_init, char *base, uint32_t *args) {

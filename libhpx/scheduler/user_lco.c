@@ -189,8 +189,9 @@ static const lco_class_t _user_lco_vtable = {
   .on_size     = _user_lco_size
 };
 
-static int _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
-                          hpx_action_t op, hpx_action_t predicate) {
+static int
+_user_lco_init_handler(_user_lco_t *u, size_t size, hpx_action_t id,
+                       hpx_action_t op, hpx_action_t predicate) {
   assert(id);
   assert(op);
   assert(predicate);
@@ -216,8 +217,9 @@ static int _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
 
   return HPX_SUCCESS;
 }
-static HPX_ACTION_DEF(PINNED, _user_lco_init, _user_lco_init_async, HPX_SIZE_T,
-                      HPX_ACTION_T, HPX_ACTION_T, HPX_ACTION_T);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _user_lco_init_async,
+                  _user_lco_init_handler, HPX_SIZE_T, HPX_ACTION_T,
+                  HPX_ACTION_T, HPX_ACTION_T);
 /// @}
 
 hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
@@ -240,8 +242,9 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
 }
 
 /// Initialize a block of array of lco.
-static int _block_local_init_handler(void *lco, int n, size_t size, hpx_action_t id,
-                                     hpx_action_t op, hpx_action_t predicate) {
+static int
+_block_local_init_handler(void *lco, int n, size_t size, hpx_action_t id,
+                          hpx_action_t op, hpx_action_t predicate) {
   for (int i = 0; i < n; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_user_lco_t) + size));
     _user_lco_init(addr, size, id, op, predicate);
@@ -249,8 +252,9 @@ static int _block_local_init_handler(void *lco, int n, size_t size, hpx_action_t
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION_DEF(PINNED, _block_local_init_handler, _block_local_init,
-                      HPX_INT, HPX_SIZE_T, HPX_POINTER, HPX_POINTER, HPX_POINTER);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
+                  _block_local_init_handler, HPX_INT, HPX_SIZE_T, HPX_POINTER,
+                  HPX_POINTER, HPX_POINTER);
 
 /// Allocate an array of user LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate
