@@ -61,6 +61,12 @@ _agas_unpin(void *gas, hpx_addr_t gva) {
   return btt_unpin(agas->btt, gva);
 }
 
+static uint32_t
+_agas_owner_of(const void *gas, hpx_addr_t gva) {
+  agas_t *agas = gas;
+  return btt_owner_of(agas->btt, gva);
+}
+
 static gas_t _agas_vtable = {
   .type           = HPX_GAS_AGAS,
   .delete         = _agas_delete,
@@ -82,7 +88,7 @@ static gas_t _agas_vtable = {
   .memget         = NULL,
   .memput         = NULL,
   .memcpy         = NULL,
-  .owner_of       = NULL,
+  .owner_of       = _agas_owner_of,
   .mmap           = NULL,
   .munmap         = NULL
 };
