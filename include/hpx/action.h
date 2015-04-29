@@ -39,9 +39,9 @@ typedef int (*hpx_pinned_action_handler_t)(void *, void*);
 
 /// Action types.
 typedef enum {
-  HPX_ACTION_DEFAULT = 0,
-  HPX_ACTION_TASK,
-  HPX_ACTION_INTERRUPT,
+  HPX_DEFAULT = 0,
+  HPX_TASK,
+  HPX_INTERRUPT,
   HPX_FUNCTION,
 } hpx_action_type_t;
 
@@ -53,17 +53,8 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
 };
 
 /// Action attributes.
-typedef enum {
-  HPX_ATTR_DEFAULT = 0,
-  HPX_ATTR_PACKED  = 1,
-  HPX_ATTR_PINNED  = 2,
-} hpx_action_attr_t;
-
-static const char* const HPX_ACTION_ATTR_TO_STRING[] = {
-  "DEFAULT",
-  "PACKED",
-  "PINNED"
-};
+#define HPX_ATTR_PACKED 0x1
+#define HPX_ATTR_PINNED 0x2
 
 /// Register an HPX action of a given @p type.
 ///
@@ -75,7 +66,7 @@ static const char* const HPX_ACTION_ATTR_TO_STRING[] = {
 /// @param nargs The variadic number of parameters that the action accepts.
 /// @param   ... The HPX types of the action parameters (HPX_INT, ...).
 /// @returns     Error code
-int hpx_register_action(hpx_action_type_t type, hpx_action_attr_t attr,
+int hpx_register_action(hpx_action_type_t type, uint32_t attr,
                         const char *key, hpx_action_handler_t f,
                         hpx_action_t *id, unsigned int nargs, ...);
 
