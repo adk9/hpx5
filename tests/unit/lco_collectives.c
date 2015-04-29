@@ -53,7 +53,7 @@ static int _initDomain_handler(Domain *domain, hpx_addr_t newdt,
 static HPX_ACTION(HPX_EDFAULT, HPX_PINNED, _initDomain, _initDomain_handler,
                   HPX_ADDR, HPX_ADDR, HPX_INT, HPX_INT);
 
-static HPX_PINNED(_advanceDomain_allreduce, Domain *domain, const unsigned long *epoch) {
+static int _advanceDomain_allreduce_handler(Domain *domain, const unsigned long epoch) {
   if (domain->maxCycles <= domain->cycle) {
     hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
     return HPX_SUCCESS;
@@ -68,10 +68,12 @@ static HPX_PINNED(_advanceDomain_allreduce, Domain *domain, const unsigned long 
   hpx_lco_get(domain->newdt, sizeof(double), &newdt);
 
   ++domain->cycle;
-  unsigned long next = *epoch + 1;
+  unsigned long next = epoch + 1;
   hpx_addr_t local = hpx_thread_current_target();
-  return hpx_call(local, _advanceDomain_allreduce, HPX_NULL, &next, sizeof(next));
+  return hpx_call(local, _advanceDomain_allreduce, HPX_NULL, &next);
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _advanceDomain_allreduce,
+                  _advanceDomain_allreduce_handler, HPX_ULONG);
 
 static int lco_allreduce_handler(void) {
   int nDoms = 8;
@@ -96,7 +98,7 @@ static int lco_allreduce_handler(void) {
 
   for (int i = 0, e = nDoms; i < e; ++i) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
-    hpx_call(block, _advanceDomain_allreduce, HPX_NULL, &epoch, sizeof(epoch));
+    hpx_call(block, _advanceDomain_allreduce, HPX_NULL, &epoch);
   }
 
   hpx_lco_wait(complete);
@@ -109,8 +111,8 @@ static int lco_allreduce_handler(void) {
 }
 static HPX_ACTION(HPX_DEFAULT, 0, lco_allreduce, lco_allreduce_handler);
 
-static HPX_PINNED(_advanceDomain_allgather, Domain *domain,
-                  unsigned long *epoch) {
+static int _advanceDomain_allgather_handler(Domain *domain,
+                                            unsigned long epoch) {
   if (domain->maxCycles <= domain->cycle) {
     hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
     return HPX_SUCCESS;
@@ -126,10 +128,12 @@ static HPX_PINNED(_advanceDomain_allgather, Domain *domain,
   hpx_lco_get(domain->newdt, sizeof(newdt), &newdt);
 
   ++domain->cycle;
-  unsigned long next = *epoch + 1;
+  unsigned long next = epoch + 1;
   hpx_addr_t local = hpx_thread_current_target();
-  return hpx_call(local, _advanceDomain_allgather, HPX_NULL, &next, sizeof(next));
+  return hpx_call(local, _advanceDomain_allgather, HPX_NULL, &next);
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _advanceDomain_allgather,
+                  _advanceDomain_allgather_handler, HPX_ULONG);
 
 static int lco_allgather_handler(void) {
   int nDoms = 8;
@@ -152,7 +156,7 @@ static int lco_allgather_handler(void) {
   const unsigned long epoch = 0;
   for (int i = 0, e = nDoms; i < e; ++i) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
-    hpx_call(block, _advanceDomain_allgather, HPX_NULL, &epoch, sizeof(epoch));
+    hpx_call(block, _advanceDomain_allgather, HPX_NULL, &epoch);
   }
 
   hpx_lco_wait(complete);
@@ -163,7 +167,7 @@ static int lco_allgather_handler(void) {
 }
 static HPX_ACTION(HPX_DEFAULT, 0, lco_allgather, lco_allgather_handler);
 
-static HPX_PINNED(_advanceDomain_alltoall, Domain *domain, unsigned long *epoch) {
+static int _advanceDomain_alltoall_handler(Domain *domain, unsigned long epoch) {
   if (domain->maxCycles <= domain->cycle) {
     hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
     return HPX_SUCCESS;
@@ -184,10 +188,12 @@ static HPX_PINNED(_advanceDomain_alltoall, Domain *domain, unsigned long *epoch)
   hpx_lco_alltoall_getid(domain->newdt, domain->rank, sizeof(newdt), &newdt);
 
   ++domain->cycle;
-  unsigned long next = *epoch + 1;
+  unsigned long next = epoch + 1;
   hpx_addr_t local = hpx_thread_current_target();
-  return hpx_call(local, _advanceDomain_alltoall, HPX_NULL, &next, sizeof(next));
+  return hpx_call(local, _advanceDomain_alltoall, HPX_NULL, &next);
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _advanceDomain_alltoall,
+                  _advanceDomain_alltoall_handler, HPX_ULONG);
 
 static int lco_alltoall_handler(void) {
   int nDoms = 8;
@@ -210,7 +216,7 @@ static int lco_alltoall_handler(void) {
   const unsigned long epoch = 0;
   for (int i = 0, e = nDoms; i < e; ++i) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
-    hpx_call(block, _advanceDomain_alltoall, HPX_NULL, &epoch, sizeof(epoch));
+    hpx_call(block, _advanceDomain_alltoall, HPX_NULL, &epoch);
   }
 
   hpx_lco_wait(complete);

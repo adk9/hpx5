@@ -88,14 +88,15 @@ static int _proc_call_handler(size_t n, hpx_parcel_t *arg) {
 HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _proc_call,
            _proc_call_handler, HPX_SIZE_T, HPX_POINTER);
 
-static HPX_PINNED(_proc_delete, _process_t *p, void *args) {
+static int _proc_delete_handler(_process_t *p) {
   _free(p);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _proc_delete, _proc_delete_handler);
 
-static HPX_PINNED(_proc_return_credit, _process_t *p, uint64_t *args) {
+static int _proc_return_credit_handler(_process_t *p, uint64_t args) {
   // add credit to the credit-accounting bitmap
-  uint64_t debt = cr_bitmap_add_and_test(p->debt, *args);
+  uint64_t debt = cr_bitmap_add_and_test(p->debt, args);
   for (;;) {
     uint64_t credit = sync_load(&p->credit, SYNC_ACQUIRE);
     if ((credit != 0) && ~(debt | ((UINT64_C(1) << (64-credit)) - 1)) == 0) {
@@ -110,6 +111,8 @@ static HPX_PINNED(_proc_return_credit, _process_t *p, uint64_t *args) {
   }
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _proc_return_credit,
+                  _proc_return_credit_handler, HPX_UINT64);
 
 int process_recover_credit(hpx_parcel_t *p) {
   hpx_addr_t process = p->pid;
@@ -122,7 +125,7 @@ int process_recover_credit(hpx_parcel_t *p) {
   }
 
   hpx_parcel_t *pp = parcel_new(process, _proc_return_credit, 0, 0, 0,
-                                &p->credit, sizeof(p->credit));
+                                &p->credit);
   if (!pp) {
     dbg_error("parcel_recover_credit failed.\n");
   }
@@ -182,7 +185,7 @@ void hpx_process_delete(hpx_addr_t process, hpx_addr_t sync) {
     return;
   }
 
-  hpx_call_sync(process, _proc_delete, NULL, 0, NULL, 0);
+  hpx_call_sync(process, _proc_delete, NULL, 0);
   hpx_gas_free(process, sync);
 }
 

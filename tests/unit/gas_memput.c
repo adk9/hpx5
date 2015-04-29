@@ -27,14 +27,15 @@ static void HPX_NORETURN fail(int i, uint64_t expected, uint64_t actual) {
   exit(EXIT_FAILURE);
 }
 
-static HPX_PINNED(_set, uint64_t *local, uint64_t *value) {
+static int _set_handler(uint64_t *local, uint64_t value) {
   for (int i = 0, e = ELEMENTS; i < e; ++i) {
-    local[i] = *value;
+    local[i] = value;
   }
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _set, _set_handler, HPX_UINT64);
 
-static HPX_PINNED(_verify, uint64_t *local, uint64_t *args) {
+static int _verify_handler(uint64_t *local, size_t n, uint64_t *args) {
   for (int i = 0, e = ELEMENTS; i < e; ++i) {
     if (local[i] != args[i]) {
       fail(i, args[i], local[i]);
@@ -42,6 +43,8 @@ static HPX_PINNED(_verify, uint64_t *local, uint64_t *args) {
   }
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _verify,
+                  _verify_handler, HPX_SIZE_T, HPX_POINTER);
 
 static int _init_globals_handler(void) {
   size_t n = ELEMENTS * sizeof(uint64_t);
@@ -65,7 +68,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _fini_globals, _fini_globals_handler);
 static int _test_memput(uint64_t *local) {
   // clear the remote block
   uint64_t zero = 0;
-  hpx_call_sync(_remote, _set, NULL, 0, &zero, sizeof(zero));
+  hpx_call_sync(_remote, _set, NULL, 0, &zero);
 
   // set up the local block
   for (int i = 0, e = ELEMENTS; i < e; ++i) {

@@ -189,10 +189,10 @@ void hpx_lco_and_set_num(hpx_addr_t and, int sum, hpx_addr_t rsync) {
 }
 
 /// Initialize a block of array of and lco.
-static HPX_PINNED(_block_local_init, void *lco, uint32_t *args) {
-  for (int i = 0; i < args[0]; i++) {
+static int _block_local_init_handler(void *lco, uint32_t n, uint32_t arg) {
+  for (int i = 0; i < n; i++) {
     void *addr = (void *)((uintptr_t)lco + i * sizeof(_and_t));
-    _and_init(addr, (intptr_t)args[1]);
+    _and_init(addr, (intptr_t)arg);
   }
   return HPX_SUCCESS;
 }
@@ -209,8 +209,7 @@ hpx_addr_t hpx_lco_and_local_array_new(int n, int arg) {
   uint32_t  block_bytes = n * lco_bytes;
   hpx_addr_t base = hpx_gas_alloc_local(block_bytes, 0);
 
-  uint32_t args[] = {n, arg};
-  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &args, sizeof(args));
+  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &n, &arg);
   dbg_check(e, "call of _block_init_action failed\n");
 
   // return the base address of the allocation
