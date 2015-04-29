@@ -123,25 +123,25 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
 /// and attributes.
 
 #define HPX_ACTION(handler, id, ...)                              \
-  HPX_ACTION(HPX_ACTION_DEFAULT, HPX_ATTR_DEFAULT, handler, id ,  \
-             ##__VA_ARGS__)
+  HPX_ACTION_DEF(HPX_ACTION_DEFAULT, HPX_ATTR_DEFAULT, handler,   \
+                 id , ##__VA_ARGS__)
 
 #define HPX_TASK(handler, id, ...)                                \
-  HPX_ACTION(HPX_ACTION_TASK, HPX_ATTR_DEFAULT, handler, id ,     \
-             ##__VA_ARGS__)
+  HPX_ACTION_DEF(HPX_ACTION_TASK, HPX_ATTR_DEFAULT, handler, id , \
+                 ##__VA_ARGS__)
 
 #define HPX_INTERRUPT(handler, id, ...)                           \
-  HPX_ACTION(HPX_ACTION_INTERRUPT, HPX_ATTR_DEFAULT, handler,     \
-             id , ##__VA_ARGS__)
+  HPX_ACTION_DEF(HPX_ACTION_INTERRUPT, HPX_ATTR_DEFAULT, handler, \
+                 id , ##__VA_ARGS__)
 
 #define HPX_PACKED(handler, id)                                   \
-  HPX_ACTION(HPX_ACTION_DEFAULT, HPX_ATTR_PACKED, handler, id)
+  HPX_ACTION_DEF(HPX_ACTION_DEFAULT, HPX_ATTR_PACKED, handler, id)
 
 #define HPX_PINNED(handler, id, ...)                              \
-  HPX_ACTION(HPX_ACTION_DEFAULT, HPX_ATTR_PINNED, handler, id ,   \
-             ##__VA_ARGS__)
+  HPX_ACTION_DEF(HPX_ACTION_DEFAULT, HPX_ATTR_PINNED, handler,    \
+                 id , ##__VA_ARGS__)
 
 #define HPX_FUNCTION(handler, id) \
-  HPX_ACTION(HPX_FUNCTION, handler, id)
+  HPX_ACTION_DEF(HPX_FUNCTION, handler, id)
 
 #endif
