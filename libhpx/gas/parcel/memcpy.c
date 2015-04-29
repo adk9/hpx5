@@ -31,7 +31,7 @@ static int _memcpy_reply_handler(char *local, size_t bytes, void *data) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _memcpy_reply,
-                  _memcpy_reply_handler, HPX_SIZE_T, HPX_ADDR);
+                  _memcpy_reply_handler, HPX_SIZE_T, HPX_POINTER);
 
 static int _memcpy_request_handler(char *local, size_t size, hpx_addr_t to) {
   hpx_call_cc(to, _memcpy_reply, NULL, NULL, local, size);
