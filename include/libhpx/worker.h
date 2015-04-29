@@ -13,7 +13,7 @@
 #ifndef LIBHPX_WORKER_H
 #define LIBHPX_WORKER_H
 
-#include "system_pthread.h"
+#include "system.h"
 #include <hpx/hpx.h>
 #include <hpx/attributes.h>
 #include <libsync/deques.h>

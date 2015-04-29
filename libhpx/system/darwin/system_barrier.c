@@ -1,9 +1,10 @@
-/// @file libhpx/platform/darwin/cpu.c
+/// @file libhpx/platform/darwin/system_barrier.c
 /// @brief Implements pthread_barrier for Darwin (Mac OS X). Credit : http://blog.albertarmea.com/post/47089939939/using-pthread-barrier-on-mac-os-x
 
-#include <libhpx/system_pthread.h>
+#include <libhpx/system.h>
+#include <errno.h>
 
-int pthread_barrier_init(pthread_barrier_t *barrier, const pthread_barrierattr_t *attr, unsigned int count) {
+int system_barrier_init(pthread_barrier_t *barrier, const pthread_barrierattr_t *attr, unsigned int count) {
   
   if(count == 0) {
     errno = EINVAL;
@@ -23,14 +24,14 @@ int pthread_barrier_init(pthread_barrier_t *barrier, const pthread_barrierattr_t
   return 0;
 }
 
-int pthread_barrier_destroy(pthread_barrier_t *barrier) {
+int system_barrier_destroy(pthread_barrier_t *barrier) {
   
   pthread_cond_destroy(&barrier->cond);
   pthread_mutex_destroy(&barrier->mutex);
   return 0;
 }
 
-int pthread_barrier_wait(pthread_barrier_t *barrier) {
+int system_barrier_wait(pthread_barrier_t *barrier) {
 
   pthread_mutex_lock(&barrier->mutex);
   ++(barrier->count);
