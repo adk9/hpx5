@@ -7,7 +7,7 @@ fi
 
 PREFIX=$1
 
-DLDIR=$(mktemp)
+DLDIR=$(mktemp -d hpx.XXXXXXX)
 SAVEDIR=$PWD
 SAVEPATH=$PATH
 PATH=${PREFIX}/bin:$SAVEPATH
