@@ -87,7 +87,7 @@ static int _recv_parcel_handler(int src, command_t command) {
   scheduler_spawn(p);
   return HPX_SUCCESS;
 }
-COMMAND_DEF(INTERRUPT, _recv_parcel_handler, _recv_parcel);
+COMMAND_DEF(HPX_INTERRUPT, _recv_parcel, _recv_parcel_handler);
 
 static int _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
   int i = send->i;
@@ -242,7 +242,7 @@ static int _reload_reply_handler(int src, command_t cmd) {
   send_buffer_t *sends = &pwc->send_buffers[src];
   return send_buffer_progress(sends);
 }
-static COMMAND_DEF(DEFAULT, _reload_reply_handler, _reload_reply);
+static COMMAND_DEF(HPX_DEFAULT, _reload_reply, _reload_reply_handler);
 
 static int _reload_request_handler(int src, command_t cmd) {
   pwc_network_t *pwc = (pwc_network_t*)here->network;
@@ -268,5 +268,5 @@ static int _reload_request_handler(int src, command_t cmd) {
 
   return xport->pwc(&op);
 }
-static COMMAND_DEF(INTERRUPT, _reload_request_handler, _reload_request);
+static COMMAND_DEF(HPX_INTERRUPT, _reload_request, _reload_request_handler);
 

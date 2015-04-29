@@ -67,8 +67,8 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
 /// @param   ... The HPX types of the action parameters (HPX_INT, ...).
 /// @returns     Error code
 int hpx_register_action(hpx_action_type_t type, uint32_t attr,
-                        const char *key, hpx_action_handler_t f,
-                        hpx_action_t *id, unsigned int nargs, ...);
+                        const char *key, hpx_action_t *id,
+                        hpx_action_handler_t f, unsigned int nargs, ...);
 
 /// Wraps the hpx_register_typed_action() function to make it slightly
 /// more convenient to use.
@@ -78,9 +78,9 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr,
 /// @param     handler The action handler (the function).
 /// @param          id The action id (the hpx_action_t address).
 /// @param __VA_ARGS__ The parameter types (HPX_INT, ...).
-#define HPX_REGISTER_ACTION(type, attr, handler, id, ...)        \
+#define HPX_REGISTER_ACTION(type, attr, id, handler, ...)        \
   hpx_register_action(type, attr, __FILE__":"_HPX_XSTR(handler), \
-                      (hpx_action_handler_t)handler, &id,        \
+                      &id, (hpx_action_handler_t)handler,        \
                       __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 /// Get the handler associated with a given action id.
@@ -103,10 +103,10 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
 /// @param           id The action id.
 /// @param  __VA_ARGS__ The HPX types of the action paramters
 ///                     (HPX_INT, ...).
-#define HPX_ACTION(type, attr, handler, id, ...)                  \
+#define HPX_ACTION(type, attr, id, handler, ...)                  \
   HPX_ACTION_DECL(id) = HPX_ACTION_INVALID;                       \
   static HPX_CONSTRUCTOR void _register##_##handler(void) {       \
-    HPX_REGISTER_ACTION(type, attr, handler, id , ##__VA_ARGS__); \
+    HPX_REGISTER_ACTION(type, attr, id, handler , ##__VA_ARGS__); \
   }                                                               \
   static HPX_CONSTRUCTOR void _register##_##handler(void)
 
