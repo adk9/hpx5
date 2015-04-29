@@ -411,7 +411,7 @@ hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) {
     dbg_check(e, "could not initialize an allreduce at %lu\n", gva);
   }
   else {
-    _alltoall_init(g, inputs, size);
+    _alltoall_init_handler(g, inputs, size);
     hpx_gas_unpin(gva);
   }
   return gva;
@@ -422,12 +422,12 @@ static int _block_local_init_handler(void *lco, uint32_t n, uint32_t inputs,
                                      uint32_t size) {
   for (int i = 0; i < n; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_alltoall_t) + size));
-    _alltoall_init(addr, inputs, size);
+    _alltoall_init_handler(addr, inputs, size);
   }
   return HPX_SUCCESS;
 }
-HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
-           _block_local_init_handler, HPX_UINT32, HPX_UINT32, HPX_UINT32);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
+                  _block_local_init_handler, HPX_UINT32, HPX_UINT32, HPX_UINT32);
 
 /// Allocate an array of alltoall LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate

@@ -183,7 +183,7 @@ hpx_addr_t hpx_lco_gencount_new(unsigned long ninplace) {
     dbg_check(e, "could not initialize a generation counter at %lu\n", gva);
   }
   else {
-    _gencount_init(cnt, ninplace);
+    _gencount_init_handler(cnt, ninplace);
     hpx_gas_unpin(gva);
   }
   return gva;

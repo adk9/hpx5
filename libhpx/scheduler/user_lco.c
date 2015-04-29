@@ -40,8 +40,8 @@ typedef struct {
 
 
 // Forward declaration---used during reset as well.
-static int _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
-                          hpx_action_t op, hpx_action_t predicate);
+static int _user_lco_init_handler(_user_lco_t *u, size_t size, hpx_action_t id,
+                                  hpx_action_t op, hpx_action_t predicate);
 
 static bool _trigger(_user_lco_t *u) {
   if (lco_get_triggered(&u->lco)) {
@@ -86,7 +86,7 @@ static void _user_lco_reset(lco_t *lco) {
   dbg_assert_str(cvar_empty(&u->cvar),
                  "Reset on an LCO that has waiting threads.\n");
   lco_reset_triggered(&u->lco);
-  _user_lco_init(u, u->size, u->id, u->op, u->predicate);
+  _user_lco_init_handler(u, u->size, u->id, u->op, u->predicate);
   lco_unlock(lco);
 }
 
@@ -234,7 +234,7 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
     dbg_check(e, "could not initialize an allreduce at %lu\n", gva);
   }
   else {
-    _user_lco_init(u, size, id, op, predicate);
+    _user_lco_init_handler(u, size, id, op, predicate);
     hpx_gas_unpin(gva);
   }
 
@@ -247,7 +247,7 @@ _block_local_init_handler(void *lco, int n, size_t size, hpx_action_t id,
                           hpx_action_t op, hpx_action_t predicate) {
   for (int i = 0; i < n; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_user_lco_t) + size));
-    _user_lco_init(addr, size, id, op, predicate);
+    _user_lco_init_handler(addr, size, id, op, predicate);
   }
   return HPX_SUCCESS;
 }

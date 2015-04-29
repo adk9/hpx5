@@ -85,8 +85,8 @@ static int _proc_call_handler(size_t n, hpx_parcel_t *arg) {
   hpx_parcel_send_sync(parcel);
   return HPX_SUCCESS;
 }
-HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _proc_call,
-           _proc_call_handler, HPX_SIZE_T, HPX_POINTER);
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _proc_call,
+                  _proc_call_handler, HPX_SIZE_T, HPX_POINTER);
 
 static int _proc_delete_handler(_process_t *p) {
   _free(p);
@@ -125,7 +125,7 @@ int process_recover_credit(hpx_parcel_t *p) {
   }
 
   hpx_parcel_t *pp = parcel_new(process, _proc_return_credit, 0, 0, 0,
-                                &p->credit);
+                                &p->credit, sizeof(p->credit));
   if (!pp) {
     dbg_error("parcel_recover_credit failed.\n");
   }

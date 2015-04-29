@@ -265,7 +265,7 @@ hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_action_t id,
     dbg_check(e, "could not initialize an allreduce at %lu\n", gva);
   }
   else {
-    _reduce_init(r, inputs, size, id, op);
+    _reduce_init_handler(r, inputs, size, id, op);
     hpx_gas_unpin(gva);
   }
 
@@ -277,7 +277,7 @@ static int _block_local_init_handler(void *lco, int n, int inputs, size_t size,
                                      hpx_action_t id, hpx_action_t op) {
   for (int i = 0; i < n; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_reduce_t) + size));
-    _reduce_init(addr, inputs, size, id, op);
+    _reduce_init_handler(addr, inputs, size, id, op);
   }
 
   return HPX_SUCCESS;

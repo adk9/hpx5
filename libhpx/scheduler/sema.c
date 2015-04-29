@@ -82,7 +82,7 @@ hpx_addr_t hpx_lco_sema_new(unsigned count) {
     dbg_check(e, "could not initialize a future at %lu\n", gva);
   }
   else {
-    _sema_init(sema, count);
+    _sema_init_handler(sema, count);
     hpx_gas_unpin(gva);
   }
 

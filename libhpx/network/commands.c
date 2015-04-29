@@ -25,7 +25,7 @@ static int _lco_set_handler(int src, uint64_t command) {
   hpx_lco_set(lco, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
-COMMAND_DEF(HPX_INTERRUPT, _lco_set, lco_set_handler);
+COMMAND_DEF(HPX_INTERRUPT, _lco_set, _lco_set_handler);
 
 static int _release_parcel_handler(int src, command_t command) {
   uintptr_t arg = command_get_arg(command);
@@ -34,4 +34,4 @@ static int _release_parcel_handler(int src, command_t command) {
   hpx_parcel_release(p);
   return HPX_SUCCESS;
 }
-COMMAND_DEF(HPX_INTERRUPT, _release_parcel, release_parcel_handler);
+COMMAND_DEF(HPX_INTERRUPT, _release_parcel, _release_parcel_handler);
