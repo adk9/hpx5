@@ -23,12 +23,13 @@
 
 // This testcase tests the hpx_lco_array_new API function which
 // allocates a global array of LCOs.
-static HPX_PINNED(_set_future_value, void *UNUSED, void *args) {
-  int size = hpx_thread_current_args_size();
+static int _set_future_value_handler(void *UNUSED, size_t size, void *args) {
   hpx_addr_t addr = hpx_thread_current_target();
   hpx_lco_set(addr, size, args, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _set_future_value,
+                  _set_future_value_handler, HPX_SIZE_T, HPX_POINTER);
 
 static int lco_future_array_handler(void) {
   printf("Starting the array of futures test\n");

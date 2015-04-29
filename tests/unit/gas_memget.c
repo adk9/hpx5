@@ -36,12 +36,13 @@ static int _verify(uint64_t *local) {
   return HPX_SUCCESS;
 }
 
-static HPX_PINNED(_init, uint64_t *local, void* args) {
+static int _init_handler(uint64_t *local) {
   for (int i = 0; i < ELEMENTS; ++i) {
     local[i] = i;
   }
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _init, _init_handler);
 
 static int _init_globals_handler(void) {
   size_t n = ELEMENTS * sizeof(uint64_t);
