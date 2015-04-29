@@ -16,23 +16,20 @@
 
 #include <farmhash.h>
 #include <libcuckoo/cuckoohash_map.hh>
+#include <libhpx/gpa.h>
 #include "btt.h"
 
 namespace {
-  class Entry {
-   public:
-    int64_t key;
-    int32_t rank;
-    int32_t count;
-  };
+  typedef uint64_t Key;
 
   class Hasher {
    public:
-    size_t operator()(const hpx_addr_t addr) const {
-      return util::Hash64(reinterpret_cast<const char*>(&addr), sizeof(addr));
+    size_t operator()(const Key key) const {
+      return util::Hash64(reinterpret_cast<const char*>(&key), sizeof(key));
     }
   };
 
+  typedef std::tuple<int32_t, int32_t, void*> Entry;
   typedef cuckoohash_map<hpx_addr_t, Entry, Hasher> Map;
 
   class BlockTranslationTable : Map {
@@ -42,6 +39,14 @@ namespace {
     void unpin(hpx_addr_t gva);
     uint32_t getOwner(hpx_addr_t gva) const;
   };
+
+  Key KeyFromAddr(hpx_addr_t gva) {
+    return gva;
+  }
+
+  uint32_t GetHome(hpx_addr_t gva) {
+    return gpa_to_rank(gva);
+  }
 }
 
 BlockTranslationTable::BlockTranslationTable(size_t size) : Map(size) {
@@ -49,16 +54,35 @@ BlockTranslationTable::BlockTranslationTable(size_t size) : Map(size) {
 
 bool
 BlockTranslationTable::trypin(hpx_addr_t gva, void** lva) {
-  return false;
+  Key key = KeyFromAddr(gva);
+  return update_fn(key, [lva](Entry& entry) {
+      std::get<1>(entry)++;
+      if (lva) {
+        *lva = std::get<2>(entry);
+      }
+    });
 }
 
 void
 BlockTranslationTable::unpin(hpx_addr_t gva) {
+  Key key = KeyFromAddr(gva);
+  bool found = update_fn(gva, [](Entry& entry) {
+      std::get<1>(entry)--;
+    });
+  assert(found);
 }
 
 uint32_t
 BlockTranslationTable::getOwner(hpx_addr_t gva) const {
-  return 0;
+  Entry entry;
+  Key key = KeyFromAddr(gva);
+  bool found = find(key, entry);
+  if (found) {
+    return std::get<0>(entry);
+  }
+  else {
+    return GetHome(gva);
+  }
 }
 
 void *
