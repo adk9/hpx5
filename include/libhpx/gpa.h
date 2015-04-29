@@ -10,8 +10,8 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_GAS_GPA_H
-#define LIBHPX_GAS_GPA_H
+#ifndef LIBHPX_GPA_H
+#define LIBHPX_GPA_H
 
 /// @file libhpx/gas/pgas/addr.h
 /// @brief Declaration of the PGAS-specific global physical address.
@@ -115,4 +115,4 @@ hpx_addr_t gpa_add_cyclic(hpx_addr_t gpa, int64_t bytes, uint32_t bsize)
   HPX_INTERNAL;
 
 
-#endif // LIBHPX_GAS_GPA_H
+#endif // LIBHPX_GPA_H
