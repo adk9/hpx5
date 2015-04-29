@@ -92,7 +92,7 @@ static verbs_cnct_ctx verbs_ctx = {
   .max_inline = -1,
   .num_cq = DEF_NUM_CQ,
   .rdma_put_align = PHOTON_VERBS_PUT_ALIGN,
-  .rdma_get_align = PHOTON_VERBS_GET_ALIGN,
+  .rdma_get_align = PHOTON_VERBS_GET_ALIGN
 };
 
 /* we are now a Photon backend */
@@ -301,7 +301,6 @@ static int verbs_get_info(ProcessInfo *pi, int proc, void **ret_info, int *ret_s
   }
   break;
   default:
-    goto error_exit;
     break;
   }
 
@@ -315,7 +314,6 @@ static int verbs_get_info(ProcessInfo *pi, int proc, void **ret_info, int *ret_s
   case PHOTON_FI:
     info->addr = (uintptr_t)pi->local_fin_ledger->entries;
   default:
-    goto error_exit;
     break;
   }
 
