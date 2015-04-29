@@ -43,7 +43,7 @@ static HPX_PINNED(_verify, uint64_t *local, uint64_t *args) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(_init_globals, void *UNUSED) {
+static int _init_globals_handler(void) {
   size_t n = ELEMENTS * sizeof(uint64_t);
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
@@ -54,11 +54,13 @@ static HPX_ACTION(_init_globals, void *UNUSED) {
   assert(_remote);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _init_globals, _init_globals_handler);
 
-static HPX_ACTION(_fini_globals, void *UNUSED) {
+static int _fini_globals_handler(void) {
   hpx_gas_free(_data, HPX_NULL);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _fini_globals, _fini_globals_handler);
 
 static int _test_memput(uint64_t *local) {
   // clear the remote block
@@ -88,13 +90,14 @@ static int _test_memput(uint64_t *local) {
   return hpx_call_sync(_remote, _verify, NULL, 0, local, n);
 }
 
-static HPX_ACTION(gas_memput_stack, void *UNUSED) {
+static int gas_memput_stack_handler(void) {
   printf("Testing memput from a stack address\n");
   uint64_t local[ELEMENTS];
   return _test_memput(local);
 }
+static HPX_ACTION(HPX_DEFAULT, 0, gas_memput_stack, gas_memput_stack_handler);
 
-static HPX_ACTION(gas_memput_registered, void *UNUSED) {
+static int gas_memput_registered_handler(void) {
   printf("Testing memput from a registered address\n");
   uint64_t *local = hpx_malloc_registered(ELEMENTS * sizeof(*local));
   assert(local);
@@ -102,8 +105,10 @@ static HPX_ACTION(gas_memput_registered, void *UNUSED) {
   hpx_free_registered(local);
   return e;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, gas_memput_registered,
+                  gas_memput_registered_handler);
 
-static HPX_ACTION(gas_memput_malloc, void *UNUSED) {
+static int gas_memput_malloc_handler(void) {
   printf("Testing memput from a malloced address\n");
   uint64_t *local = calloc(ELEMENTS, sizeof(*local));
   assert(local);
@@ -111,12 +116,14 @@ static HPX_ACTION(gas_memput_malloc, void *UNUSED) {
   free(local);
   return e;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, gas_memput_malloc, gas_memput_malloc_handler);
 
-static HPX_ACTION(gas_memput_global, void *UNUSED) {
+static int gas_memput_global_handler(void) {
   printf("Testing memput from a global address\n");
   static uint64_t local[ELEMENTS];
   return _test_memput(local);
 }
+static HPX_ACTION(HPX_DEFAULT, 0, gas_memput_global, gas_memput_global_handler);
 
 TEST_MAIN({
     ADD_TEST(_init_globals);

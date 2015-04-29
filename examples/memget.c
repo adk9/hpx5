@@ -59,7 +59,7 @@ static int _init_array_handler(char *local, size_t n) {
 }
 static HPX_ACTION_DEF(PINNED, _init_array_handler, _init_array, HPX_SIZE_T);
 
-static HPX_ACTION(_main, void *args) {
+static int _main_handler(void) {
   double t_start = 0.0, t_end = 0.0;
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
@@ -112,6 +112,7 @@ static HPX_ACTION(_main, void *args) {
   }
   hpx_shutdown(HPX_SUCCESS);
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_handler);
 
 static void usage(FILE *f) {
   fprintf(f, "Usage: memget [options]\n"
@@ -146,5 +147,5 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  return hpx_run(&_main, NULL, 0);
+  return hpx_run(&_main);
 }

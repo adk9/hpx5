@@ -21,11 +21,13 @@
 #include <libhpx/locality.h>
 #include "tests.h"
 
-static HPX_ACTION(_echo, int *args) {
-  hpx_thread_continue(hpx_thread_current_args_size(), args);
+static int _echo_handler(size_t n, int *args) {
+  hpx_thread_continue(n, args);
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _echo,
+                  _echo_handler, HPX_SIZE_T, HPX_POINTER);
 
-static HPX_ACTION(parcel_send_rendezvous, void *UNUSED) {
+static int parcel_send_rendezvous_handler(void) {
   printf("Testing the hpx parcel send function for large parcels\n");
   unsigned seed = 0;
   size_t eagerlimit = here->config->pwc_parceleagerlimit;
@@ -61,6 +63,8 @@ static HPX_ACTION(parcel_send_rendezvous, void *UNUSED) {
   }
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, parcel_send_rendezvous,
+                  parcel_send_rendezvous_handler);
 
 TEST_MAIN({
   ADD_TEST(parcel_send_rendezvous);

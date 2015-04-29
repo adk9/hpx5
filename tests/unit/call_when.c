@@ -83,7 +83,7 @@ hpx_addr_t _cascade(hpx_addr_t done, hpx_addr_t val, const int n) {
 
 
 /// Test the hpx_call_when functionality.
-static HPX_ACTION(call_when, void *UNUSED) {
+static int call_when_handler(void) {
   const int n = 2 * HPX_LOCALITIES;
 
   printf("Testing call when LCO is set\n");
@@ -146,6 +146,7 @@ static HPX_ACTION(call_when, void *UNUSED) {
   fflush(stdout);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, call_when, call_when_handler);
 
 TEST_MAIN({
   ADD_TEST(call_when);

@@ -139,7 +139,7 @@ static HPX_ACTION_DEF(INTERRUPT, _calloc_init_handler, _calloc_init, HPX_UINT64,
                       HPX_UINT32, HPX_UINT32);
 
 
-HPX_ACTION(pgas_free, void) {
+int pgas_free_handler(void) {
   hpx_addr_t gpa = hpx_thread_current_target();
   if (here->rank != gpa_to_rank(gpa)) {
     dbg_error("PGAS free operation for rank %u arrived at rank %u instead.\n",
@@ -150,7 +150,7 @@ HPX_ACTION(pgas_free, void) {
   libhpx_global_free(lva);
   return HPX_SUCCESS;
 }
-
+static HPX_ACTION(HPX_DEFAULT, 0, pgas_free, pgas_free_handler);
 
 static int _set_csbrk_handler(size_t offset) {
   int e = heap_set_csbrk(global_heap, offset);
