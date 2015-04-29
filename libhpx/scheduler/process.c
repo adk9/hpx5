@@ -67,7 +67,7 @@ static void _init(_process_t *p, hpx_addr_t termination) {
   p->termination = termination;
 }
 
-static HPX_ACTION(_proc_call, hpx_parcel_t *arg) {
+static int _proc_call_handler(size_t n, hpx_parcel_t *arg) {
   hpx_addr_t process = hpx_thread_current_target();
   _process_t *p = NULL;
   if (!hpx_gas_try_pin(process, (void**)&p)) {
@@ -85,6 +85,8 @@ static HPX_ACTION(_proc_call, hpx_parcel_t *arg) {
   hpx_parcel_send_sync(parcel);
   return HPX_SUCCESS;
 }
+HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _proc_call,
+           _proc_call_handler, HPX_SIZE_T, HPX_POINTER);
 
 static HPX_PINNED(_proc_delete, _process_t *p, void *args) {
   _free(p);

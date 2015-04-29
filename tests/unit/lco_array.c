@@ -30,7 +30,7 @@ static HPX_PINNED(_set_future_value, void *UNUSED, void *args) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(lco_future_array, void *UNUSED) {
+static int lco_future_array_handler(void) {
   printf("Starting the array of futures test\n");
   uint64_t value = 0;
   srand(time(NULL));
@@ -60,12 +60,14 @@ static HPX_ACTION(lco_future_array, void *UNUSED) {
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, lco_future_array, lco_future_array_handler);
 
-static HPX_ACTION(_set, void *args) {
+static int _set_handler(void) {
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _set, _set_handler);
 
-static HPX_ACTION(lco_and_array, void *UNUSED) {
+static int lco_and_array_handler(void) {
   printf("Starting the array of lco test\n");
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
@@ -74,7 +76,7 @@ static HPX_ACTION(lco_and_array, void *UNUSED) {
   for (int i = 0; i < ARRAY_SIZE; i++) {
     hpx_addr_t done = hpx_lco_future_new(0);
     hpx_addr_t other = hpx_lco_array_at(lcos, i, 0);
-    hpx_call(other, _set, done, NULL, 0);
+    hpx_call(other, _set, done);
     hpx_lco_wait(done);
     hpx_lco_delete(done, HPX_NULL);
   }
@@ -82,20 +84,21 @@ static HPX_ACTION(lco_and_array, void *UNUSED) {
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, lco_and_array, lco_and_array_handler);
 
 /// Initialize a double zero.
 static void _initDouble_handler(double *input, const size_t bytes) {
   *input = 0;
 }
-static HPX_FUNCTION_DEF(_initDouble_handler, _initDouble);
+static HPX_ACTION(HPX_FUNCTION, 0, _initDouble, _initDouble_handler);
 
 /// Update *lhs with with the max(lhs, rhs);
 static void _maxDouble_handler(double *lhs, const double *rhs, const size_t bytes) {
   *lhs = (*lhs > *rhs) ? *lhs : *rhs;
 }
-static HPX_FUNCTION_DEF(_maxDouble_handler, _maxDouble);
+static HPX_ACTION(HPX_FUNCTION, 0, _maxDouble, _maxDouble_handler);
 
-static HPX_ACTION(lco_reduce_array, void *UNUSED) {
+static int lco_reduce_array_handler(void) {
   printf("Starting the array of reduce test\n");
   // allocate and start a timer
   hpx_time_t t1 = hpx_time_now();
@@ -103,8 +106,7 @@ static HPX_ACTION(lco_reduce_array, void *UNUSED) {
   hpx_addr_t domain = hpx_gas_alloc_cyclic(ARRAY_SIZE, sizeof(double), sizeof(double));
   hpx_addr_t newdt = hpx_lco_reduce_local_array_new(ARRAY_SIZE,
                                                     ARRAY_SIZE, sizeof(double),
-                                                    _initDouble,
-                                                    _maxDouble);
+                                                    _initDouble, _maxDouble);
 
   for (int i = 0; i < ARRAY_SIZE; i++) {
     hpx_addr_t other = hpx_lco_array_at(newdt, i, sizeof(double));
@@ -131,6 +133,7 @@ static HPX_ACTION(lco_reduce_array, void *UNUSED) {
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, lco_reduce_array, lco_reduce_array_hreduceler);
 
 TEST_MAIN({
  ADD_TEST(lco_future_array);

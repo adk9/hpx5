@@ -45,26 +45,26 @@ void usage(FILE *f) {
 static void initDouble_handler(double *input, size_t UNUSED) {
   *input = 0;
 }
-HPX_FUNCTION_DEF(initDouble_handler, initDouble);
+HPX_ACTION(HPX_FUNCTION, 0, initDouble, initDouble_handler);
 
 /// Update *lhs with with the max(lhs, rhs);
 static void maxDouble_handler(double *lhs, const double *rhs, size_t UNUSED) {
   *lhs = (*lhs > *rhs) ? *lhs : *rhs;
 }
-HPX_FUNCTION_DEF(maxDouble_handler, maxDouble);
+HPX_ACTION(HPX_FUNCTION, 0, maxDouble, maxDouble_handler);
 
 /// Update *lhs with with the min(lhs, rhs);
 static void minDouble_handler(double *lhs, const double *rhs, size_t UNUSED) {
   *lhs = (*lhs < *rhs) ? *lhs : *rhs;
 }
-HPX_FUNCTION_DEF(minDouble_handler, minDouble);
+HPX_ACTION(HPX_FUNCTION, 0, minDouble, minDouble_handler);
 
 static void sumDouble_handler(double *output,const double *input, const size_t size) {
   assert(sizeof(double) == size);
   *output += *input;
   return;
 }
-HPX_FUNCTION_DEF(sumDouble_handler, sumDouble);
+HPX_ACTION(HPX_FUNCTION, 0, sumDouble, sumDouble_handler);
 
 void print_header(char *header, int rank, int full)
 {

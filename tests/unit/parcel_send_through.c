@@ -117,7 +117,7 @@ hpx_addr_t _cascade(hpx_addr_t done, hpx_addr_t val, const int n) {
 /// until their condition triggers. This permits a style of thread-less
 /// synchronization that can aid in dataflow programming.
 ///
-static HPX_ACTION(parcel_send_through, void *UNUSED) {
+static int parcel_send_through_handler(void) {
   const int n = 2 * HPX_LOCALITIES;
 
   printf("Testing parcel sends through LCOs\n");
@@ -180,6 +180,7 @@ static HPX_ACTION(parcel_send_through, void *UNUSED) {
   fflush(stdout);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, parcel_send_through, parcel_send_through_handler);
 
 TEST_MAIN({
   ADD_TEST(parcel_send_through);

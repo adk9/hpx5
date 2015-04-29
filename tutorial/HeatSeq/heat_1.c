@@ -70,13 +70,13 @@ static void _register_actions(void);
 static void initDouble_handler(double *input, size_t UNUSED) {
   *input = 0;
 }
-static HPX_FUNCTION_DEF(initDouble_handler, initDouble);
+static HPX_ACTION(HPX_FUNCTION, 0, initDouble, initDouble_handler);
 
 /// Update *lhs with with the max(lhs, rhs);
 static void maxDouble_handler(double *lhs, const double *rhs, size_t UNUSED) {
   *lhs = (*lhs > *rhs) ? *lhs : *rhs;
 }
-static HPX_FUNCTION_DEF(maxDouble_handler, maxDouble);
+static HPX_ACTION(HPX_FUNCTION, 0, maxDouble, maxDouble_handler);
 
 static int _write_double_action(double *d) {
   hpx_addr_t target = hpx_thread_current_target();

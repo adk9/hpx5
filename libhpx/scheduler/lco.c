@@ -114,7 +114,7 @@ static hpx_status_t _attach(lco_t *lco, hpx_parcel_t *p) {
 /// resent.
 ///
 /// @{
-HPX_ACTION(hpx_lco_delete_action, void *args) {
+int hpx_lco_delete_action_handler(size_t n, void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
@@ -126,6 +126,8 @@ HPX_ACTION(hpx_lco_delete_action, void *args) {
   hpx_gas_free(target, HPX_NULL);
   return HPX_SUCCESS;
 }
+HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, hpx_lco_delete_action,
+           hpx_lco_delete_action_handler, HPX_SIZE_T, HPX_POINTER);
 
 HPX_PINNED(hpx_lco_set_action, lco_t *lco, void *data) {
   return _set(lco, hpx_thread_current_args_size(), data);

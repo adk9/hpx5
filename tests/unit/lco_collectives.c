@@ -32,13 +32,13 @@ typedef struct Domain {
 static void _initDouble_handler(double *input, const size_t bytes) {
   *input = 0;
 }
-static HPX_FUNCTION_DEF(_initDouble_handler, _initDouble);
+static HPX_ACTION(HPX_FUNCTION, 0, _initDouble, _initDouble_handler);
 
 /// Update *lhs with with the max(lhs, rhs);
 static void _maxDouble_handler(double *lhs, const double *rhs, size_t UNUSED) {
   *lhs = (*lhs > *rhs) ? *lhs : *rhs;
 }
-static HPX_FUNCTION_DEF(_maxDouble_handler, _maxDouble);
+static HPX_ACTION(HPX_FUNCTION, 0, _maxDouble, _maxDouble_handler);
 
 static int _initDomain_handler(Domain *domain, hpx_addr_t newdt,
                                hpx_addr_t complete, int nDoms, int maxCycles) {
@@ -73,7 +73,7 @@ static HPX_PINNED(_advanceDomain_allreduce, Domain *domain, const unsigned long 
   return hpx_call(local, _advanceDomain_allreduce, HPX_NULL, &next, sizeof(next));
 }
 
-static HPX_ACTION(lco_allreduce, void *UNUSED) {
+static int lco_allreduce_handler(void) {
   int nDoms = 8;
   int maxCycles = 100;
 
@@ -107,6 +107,7 @@ static HPX_ACTION(lco_allreduce, void *UNUSED) {
 
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, lco_allreduce, lco_allreduce_handler);
 
 static HPX_PINNED(_advanceDomain_allgather, Domain *domain,
                   unsigned long *epoch) {
@@ -130,7 +131,7 @@ static HPX_PINNED(_advanceDomain_allgather, Domain *domain,
   return hpx_call(local, _advanceDomain_allgather, HPX_NULL, &next, sizeof(next));
 }
 
-static HPX_ACTION(lco_allgather, void *UNUSED) {
+static int lco_allgather_handler(void) {
   int nDoms = 8;
   int maxCycles = 100;
 
@@ -160,6 +161,7 @@ static HPX_ACTION(lco_allgather, void *UNUSED) {
   hpx_gas_free(domain, HPX_NULL);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, lco_allgather, lco_allgather_handler);
 
 static HPX_PINNED(_advanceDomain_alltoall, Domain *domain, unsigned long *epoch) {
   if (domain->maxCycles <= domain->cycle) {
@@ -187,7 +189,7 @@ static HPX_PINNED(_advanceDomain_alltoall, Domain *domain, unsigned long *epoch)
   return hpx_call(local, _advanceDomain_alltoall, HPX_NULL, &next, sizeof(next));
 }
 
-static HPX_ACTION(lco_alltoall, void *UNUSED) {
+static int lco_alltoall_handler(void) {
   int nDoms = 8;
   int maxCycles = 100;
 
@@ -217,6 +219,7 @@ static HPX_ACTION(lco_alltoall, void *UNUSED) {
   hpx_gas_free(domain, HPX_NULL);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, lco_alltoall, lco_alltoall_handler);
 
 TEST_MAIN({
   ADD_TEST(lco_allreduce);

@@ -52,13 +52,13 @@ static void initdouble_handler(double *input, const size_t size) {
   assert(sizeof(double) == size);
   *input = 0.0;
 }
-static HPX_FUNCTION_DEF(initdouble_handler, initdouble);
+static HPX_ACTION(HPX_FUNCTION, 0, initdouble, initdouble_handler);
 
 static void sumdouble_handler(double *lhs, const double *rhs, size_t size) {
   assert(sizeof(double) == size);
   *lhs += *rhs;
 }
-static HPX_FUNCTION_DEF(sumdouble_handler, sumdouble);
+static HPX_ACTION(HPX_FUNCTION, 0, sumdouble, sumdouble_handler);
 
 static int _init_action(const InitArgs *args) {
   hpx_addr_t local = hpx_thread_current_target();

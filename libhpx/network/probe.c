@@ -25,9 +25,7 @@
 #include "libhpx/scheduler.h"
 
 
-static HPX_ACTION(_probe, void *o) {
-  network_t *network = *(network_t **)o;
-
+static int _probe_handler(network_t *network) {
   while (true) {
     network_progress(network);
     hpx_parcel_t *stack = NULL;
@@ -42,6 +40,7 @@ static HPX_ACTION(_probe, void *o) {
 
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _probe, _probe_handler, HPX_POINTER);
 
 int probe_start(network_t *network) {
   // NB: we should encapsulate this probe infrastructure inside of the networks
@@ -50,7 +49,7 @@ int probe_start(network_t *network) {
     return HPX_SUCCESS;
   }
   
-  int e = hpx_call(HPX_HERE, _probe, HPX_NULL, &network, sizeof(network));
+  int e = hpx_call(HPX_HERE, _probe, HPX_NULL, &network);
   dbg_check(e, "failed to start network probe\n");
   log_net("started probing the network\n");
   return LIBHPX_OK;

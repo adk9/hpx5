@@ -14,22 +14,6 @@
 # include "config.h"
 #endif
 
-// Goal of this testcase is to test the Parcels
-// 1.  hpx_parcel_aquire()
-// 2.  hpx_parcel_set_target()
-// 3.  hpx_parcel_set_action()
-// 4.  hpx_parcel_set_data()
-// 5.  hpx_parcel_send_sync()
-// 6.  hpx_parcel_release()
-// 7.  hpx_parcel_send()
-// 8.  hpx_parcel_get_action()
-// 9.  hpx_parcel_get_target()
-// 10. hpx_parcel_get_cont_action()
-// 11. hpx_parcel_get_cont_target()
-// 12. hpx_parcel_get_data()
-// 13. hpx_parcel_set_cont_action()
-// 14. hpx_parcel_set_cont_target()
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -52,7 +36,7 @@ static hpx_addr_t rand_rank(void) {
   return HPX_THERE(r % n);
 }
 
-static HPX_ACTION(_send, int *args) {
+static int _send_handler(size_t size, int *args) {
   int n = *args;
   //printf( "locality: %d, thread: %d, count: %d\n", hpx_get_my_rank(),
   //       hpx_get_my_thread_id(), n);
@@ -72,9 +56,11 @@ static HPX_ACTION(_send, int *args) {
   hpx_parcel_send_sync(p);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _send,
+                  _send_handler, HPX_SIZE_T, HPX_POINTER);
 
 // Test code -- Parcels
-static HPX_ACTION(parcel_create, void *UNUSED) {
+static int parcel_create_handler(void) {
   int n = 0;
   printf("Starting the parcel create test\n");
   // Start the timer
@@ -88,6 +74,7 @@ static HPX_ACTION(parcel_create, void *UNUSED) {
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, parcel_create, parcel_create_handler);
 
 // Test code for parcel creation with arguments and parcel set and get action
 hpx_addr_t _partner(void) {
@@ -96,13 +83,15 @@ hpx_addr_t _partner(void) {
   return HPX_THERE((rank) ? 0 : ranks - 1);
 }
 
-static HPX_ACTION(_send_data, const initBuffer_t *args) {
+static int _send_data_handler(size_t n, const initBuffer_t *args) {
   //printf("Received message = '%s', %d from (%d, %d)\n", args->message,
   //       args->index, hpx_get_my_rank(), hpx_get_my_thread_id());
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _send_data,
+                  _send_data_handler, HPX_SIZE_T, HPX_POINTER);
 
-static HPX_ACTION(parcel_get_action, void *UNUSED) {
+static int parcel_get_action_handler(void) {
   printf("Testing the parcel create with arguments\n");
   initBuffer_t args = {
     .index = hpx_get_my_rank(),
@@ -123,11 +112,12 @@ static HPX_ACTION(parcel_get_action, void *UNUSED) {
   hpx_parcel_send_sync(p);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, parcel_get_action, parcel_get_action_handler);
 
 // Test code to test parcel get data functions - The hpx_parcel_get_data gets
 // the data buffer for a parcel. The data for a parcel can be written to
 // directly, which in some cases may allow one to avoid an extra copy.
-static HPX_ACTION(parcel_get_data, void *UNUSED) {
+static int parcel_get_data_handler(void) {
   printf("Testing the parcel get data function\n");
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(initBuffer_t));
   hpx_parcel_set_target(p, HPX_HERE);
@@ -138,11 +128,12 @@ static HPX_ACTION(parcel_get_data, void *UNUSED) {
   hpx_parcel_send_sync(p);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, parcel_get_data, parcel_get_data_handler);
 
 // Testcase to test hpx_parcel_release function which explicitly releases a
 // a parcel. The input argument must correspond to a parcel pointer returned
 // from hpx_parcel_acquire
-static HPX_ACTION(parcel_release, void *UNUSED) {
+static int parcel_release_handler(void) {
   printf("Testing the parcel release function\n");
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(initBuffer_t));
   hpx_parcel_set_target(p, HPX_HERE);
@@ -153,6 +144,7 @@ static HPX_ACTION(parcel_release, void *UNUSED) {
   hpx_parcel_release(p);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, parcel_release, parcel_release_handler);
 
 TEST_MAIN({
   ADD_TEST(parcel_create);

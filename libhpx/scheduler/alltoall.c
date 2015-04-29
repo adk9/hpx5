@@ -223,7 +223,7 @@ hpx_status_t hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
   return status;
 }
 
-static HPX_ACTION(_alltoall_getid_proxy, _alltoall_get_offset_t *args) {
+static int _alltoall_getid_proxy_handler(size_t n, _alltoall_get_offset_t *args) {
   // try and pin the alltoall LCO, if we fail, we need to resend the underlying
   // parcel to "catch up" to the moving LCO
   hpx_addr_t target = hpx_thread_current_target();
@@ -244,6 +244,8 @@ static HPX_ACTION(_alltoall_getid_proxy, _alltoall_get_offset_t *args) {
   else
     hpx_thread_exit(status);
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _alltoall_getid_proxy,
+                  _alltoall_getid_proxy_handler, HPX_SIZE_T, HPX_POINTER);
 
 
 // Wait for the gathering, loses the value of the gathering for this round.

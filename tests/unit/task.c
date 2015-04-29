@@ -21,7 +21,7 @@ static barrier_t *barrier = NULL;
 static volatile int n = 0;
 static char * volatile task_sp = NULL;
 
-static int _test_task_handler(int size, void *UNUSED) {
+static int _test_task_handler(void) {
   char local;
 
   printf("thread %d running the subtask on stack %p\n", HPX_THREAD_ID, &local);
@@ -46,10 +46,9 @@ static int _test_task_handler(int size, void *UNUSED) {
   // At this point my parent was stolen.
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_TASK, HPX_MARSHALLED, _test_task,
-                  _test_task_handler, HPX_INT, HPX_POINTER);
+static HPX_ACTION(HPX_TASK, 0, _test_task, _test_task_handler);
 
-static int _test_action_handler(int size, void *UNUSED) {
+static int _test_action_handler(void) {
   char local;
 
   // Everyone joins the barrier once.
@@ -99,10 +98,9 @@ static int _test_action_handler(int size, void *UNUSED) {
   printf("finishing %d\n", HPX_THREAD_ID);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _test_action,
-                  _test_action_handler, HPX_INT, HPX_POINTER);
+static HPX_ACTION(HPX_DEFAULT, _test_action, _test_action_handler);
 
-static int _test_try_task_handler(int size, void *UNUSED) {
+static int _test_try_task_handler(void) {
   barrier = sr_barrier_new(HPX_THREADS);
   assert(barrier);
   hpx_addr_t and = hpx_lco_and_new(HPX_THREADS + 1);
@@ -116,10 +114,9 @@ static int _test_try_task_handler(int size, void *UNUSED) {
   sync_barrier_delete(barrier);
   return HPX_SUCCESS;
 }
-stataic HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _test_try_task,
-                   _test_try_task_handler, HPX_INT, HPX_POINTER);
+stataic HPX_ACTION(HPX_DEFAULT, 0, _test_try_task, _test_try_task_handler);
 
-static int _test_recursion_handler(int n, hpx_addr_t and) {
+static int _test_recursion_handler(size_t n, hpx_addr_t and) {
   if (!--n) {
     return HPX_SUCCESS;
   }
@@ -129,9 +126,9 @@ static int _test_recursion_handler(int n, hpx_addr_t and) {
   }
 }
 static HPX_ACTION(HPX_TASK, 0, _test_recursion,
-                  _test_recursion_handler, HPX_INT, HPX_ADDR);
+                  _test_recursion_handler, HPX_SIZE_T, HPX_ADDR);
 
-static int _test_recursion_top_handler(int size, void *UNUNSED) {
+static int _test_recursion_top_handler(void) {
   static int DEPTH = 500;
   hpx_addr_t and = hpx_lco_and_new(DEPTH);
   int e = hpx_xcall(HPX_HERE, _test_recursion, and, DEPTH, and);
@@ -141,8 +138,7 @@ static int _test_recursion_top_handler(int size, void *UNUNSED) {
   hpx_lco_delete(and, HPX_NULL);
   return e;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _test_recursion_top,
-                  _test_recursion_top_handler, HPX_INT, HPX_POINTER);
+static HPX_ACTION(HPX_DEFAULT, 0, _test_recursion_top, _test_recursion_top_handler);
 
 TEST_MAIN({
     ADD_TEST(_test_recursion_top);
