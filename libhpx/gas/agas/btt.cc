@@ -33,22 +33,47 @@ namespace {
     }
   };
 
-  typedef cuckoohash_map<hpx_addr_t, Entry, Hasher> BlockHashMap;
+  typedef cuckoohash_map<hpx_addr_t, Entry, Hasher> Map;
 
-  class BlockTranslationTable : BlockHashMap {
+  class BlockTranslationTable : Map {
    public:
     BlockTranslationTable(size_t);
+    bool trypin(hpx_addr_t gva, void** lva);
+    void unpin(hpx_addr_t gva);
   };
 }
 
-void *btt_new(size_t size) {
+BlockTranslationTable::BlockTranslationTable(size_t size) : Map(size) {
+}
+
+bool
+BlockTranslationTable::trypin(hpx_addr_t gva, void** lva) {
+  return false;
+}
+
+void
+BlockTranslationTable::unpin(hpx_addr_t gva) {
+}
+
+void *
+btt_new(size_t size) {
   return new BlockTranslationTable(size);
 }
 
-void btt_delete(void *obj) {
+void
+btt_delete(void* obj) {
   BlockTranslationTable *btt = static_cast<BlockTranslationTable*>(obj);
   delete btt;
 }
 
-BlockTranslationTable::BlockTranslationTable(size_t size) : BlockHashMap(size) {
+bool
+btt_try_pin(void* obj, hpx_addr_t gva, void** lva) {
+  BlockTranslationTable *btt = static_cast<BlockTranslationTable*>(obj);
+  return btt->trypin(gva, lva);
+}
+
+void
+btt_unpin(void* obj, hpx_addr_t gva) {
+  BlockTranslationTable *btt = static_cast<BlockTranslationTable*>(obj);
+  btt->unpin(gva);
 }

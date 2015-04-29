@@ -50,12 +50,15 @@ _agas_there(void *gas, uint32_t i) {
 }
 
 static bool
-_agas_try_pin(void *gas, hpx_addr_t gpa, void **local) {
-  return false;
+_agas_try_pin(void *gas, hpx_addr_t gva, void **lva) {
+  agas_t *agas = gas;
+  return btt_try_pin(agas->btt, gva, lva);
 }
 
 static void
-_agas_unpin(void *gas, hpx_addr_t addr) {
+_agas_unpin(void *gas, hpx_addr_t gva) {
+  agas_t *agas = gas;
+  return btt_unpin(agas->btt, gva);
 }
 
 static gas_t _agas_vtable = {
