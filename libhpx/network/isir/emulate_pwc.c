@@ -28,8 +28,8 @@ int isir_emulate_pwc_handler(void *to, size_t n, const void *buffer) {
   memcpy(to, buffer, n);
   return HPX_SUCCESS;
 }
-HPX_ACTION(HPX_DEFAULT, HPX_PINNED, isir_emulate_pwc,
-           _isir_emulate_pwc_handler, HPX_SIZE_T, HPX_ADDR);
+HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, isir_emulate_pwc,
+           _isir_emulate_pwc_handler, HPX_SIZE_T, HPX_POINTER);
 
 /// The reply half of a get-with-completion.
 ///
@@ -61,5 +61,5 @@ static HPX_ACTION(HPX_TASK, HPX_MARSHALLED, _gwc_reply,
 static int _gwc_request_handler(void *from, size_t n, hpx_addr_t to) {
   hpx_call_cc(to, _gwc_reply, NULL, NULL, from, n);
 }
-HPX_ACTION(HPX_DEFAULT, HPX_PINNED, isir_emulate_gwc,
-           _gwc_request_handler, HPX_SIZE_T, HPX_ADDR);
+HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, isir_emulate_gwc,
+           _gwc_request_handler, HPX_SIZE_T, HPX_POINTER);
