@@ -187,7 +187,9 @@ AC_ARG_ENABLE([agas],
 AS_IF([test "x$enable_agas" != xno],
   [AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
    HPX_CONTRIB_FARMHASH([contrib/farmhash], [hpx_])
-   AC_DEFINE([HAVE_AGAS], [1], [We have agas])], [])
+   HPX_CONTRIB_LIBCUCKOO([contrib/libcuckoo], [hpx_])
+   AC_DEFINE([HAVE_AGAS], [1], [We have agas])],
+  [])
 AM_CONDITIONAL([ENABLE_AGAS], [test "x$enable_agas" != xno])
 AM_CONDITIONAL([BUILD_FARMHASH], [test "x$enable_agas" != xno])
 
