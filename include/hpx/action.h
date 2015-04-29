@@ -112,36 +112,11 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
 /// @param           id The action id.
 /// @param  __VA_ARGS__ The HPX types of the action paramters
 ///                     (HPX_INT, ...).
-#define HPX_ACTION_DEF(type, attr, handler, id, ...)              \
+#define HPX_ACTION(type, attr, handler, id, ...)                  \
   HPX_ACTION_DECL(id) = HPX_ACTION_INVALID;                       \
   static HPX_CONSTRUCTOR void _register##_##handler(void) {       \
     HPX_REGISTER_ACTION(type, attr, handler, id , ##__VA_ARGS__); \
   }                                                               \
   static HPX_CONSTRUCTOR void _register##_##handler(void)
-
-/// Convenience macros for registering actions of different types
-/// and attributes.
-
-#define HPX_ACTION(handler, id, ...)                              \
-  HPX_ACTION_DEF(HPX_ACTION_DEFAULT, HPX_ATTR_DEFAULT, handler,   \
-                 id , ##__VA_ARGS__)
-
-#define HPX_TASK(handler, id, ...)                                \
-  HPX_ACTION_DEF(HPX_ACTION_TASK, HPX_ATTR_DEFAULT, handler, id , \
-                 ##__VA_ARGS__)
-
-#define HPX_INTERRUPT(handler, id, ...)                           \
-  HPX_ACTION_DEF(HPX_ACTION_INTERRUPT, HPX_ATTR_DEFAULT, handler, \
-                 id , ##__VA_ARGS__)
-
-#define HPX_PACKED(handler, id)                                   \
-  HPX_ACTION_DEF(HPX_ACTION_DEFAULT, HPX_ATTR_PACKED, handler, id)
-
-#define HPX_PINNED(handler, id, ...)                              \
-  HPX_ACTION_DEF(HPX_ACTION_DEFAULT, HPX_ATTR_PINNED, handler,    \
-                 id , ##__VA_ARGS__)
-
-#define HPX_FUNCTION(handler, id) \
-  HPX_ACTION_DEF(HPX_FUNCTION, handler, id)
 
 #endif
