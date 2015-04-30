@@ -376,6 +376,10 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
   va_start(vargs, nargs);
 
   if (attr & HPX_MARSHALLED) {
+    if (attr & HPX_PINNED) {
+      hpx_type_t translated = va_arg(vargs, hpx_type_t);
+      dbg_assert(translated == HPX_POINTER);
+    }
     hpx_type_t size = va_arg(vargs, hpx_type_t);
     hpx_type_t addr = va_arg(vargs, hpx_type_t);
 
@@ -384,25 +388,15 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
     va_end(vargs);
     return _push_back(_get_actions(), id, key, f, type, attr, NULL);
   }
-  
+
   ffi_cif *cif = calloc(1, sizeof(*cif));
   dbg_assert(cif);
 
-  int start = 0;
-  if (attr & HPX_PINNED) {
-    nargs++;
-    start = 1;
-  }
-
   hpx_type_t *args = calloc(nargs, sizeof(args[0]));
-  for (int i = start; i < nargs; ++i) {
+  for (int i = 0; i < nargs; ++i) {
     args[i] = va_arg(vargs, hpx_type_t);
   }
   va_end(vargs);
-
-  if (attr & HPX_PINNED) {
-    args[0] = HPX_POINTER;
-  }
 
   ffi_status s = ffi_prep_cif(cif, FFI_DEFAULT_ABI, nargs, HPX_INT, args);
   if (s != FFI_OK) {

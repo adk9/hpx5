@@ -51,7 +51,7 @@ static int _initDomain_handler(Domain *domain, hpx_addr_t newdt,
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _initDomain, _initDomain_handler,
-                  HPX_ADDR, HPX_ADDR, HPX_INT, HPX_INT);
+                  HPX_POINTER, HPX_ADDR, HPX_ADDR, HPX_INT, HPX_INT);
 
 static HPX_ACTION_DECL(_advanceDomain_allreduce);
 static int _advanceDomain_allreduce_handler(Domain *domain, const unsigned long epoch) {
@@ -74,7 +74,7 @@ static int _advanceDomain_allreduce_handler(Domain *domain, const unsigned long 
   return hpx_call(local, _advanceDomain_allreduce, HPX_NULL, &next);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _advanceDomain_allreduce,
-                  _advanceDomain_allreduce_handler, HPX_ULONG);
+                  _advanceDomain_allreduce_handler, HPX_POINTER, HPX_ULONG);
 
 static int lco_allreduce_handler(void) {
   int nDoms = 8;
@@ -135,7 +135,7 @@ static int _advanceDomain_allgather_handler(Domain *domain,
   return hpx_call(local, _advanceDomain_allgather, HPX_NULL, &next);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _advanceDomain_allgather,
-                  _advanceDomain_allgather_handler, HPX_ULONG);
+                  _advanceDomain_allgather_handler, HPX_POINTER, HPX_ULONG);
 
 static int lco_allgather_handler(void) {
   int nDoms = 8;
@@ -196,7 +196,7 @@ static int _advanceDomain_alltoall_handler(Domain *domain, unsigned long epoch) 
   return hpx_call(local, _advanceDomain_alltoall, HPX_NULL, &next);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _advanceDomain_alltoall,
-                  _advanceDomain_alltoall_handler, HPX_ULONG);
+                  _advanceDomain_alltoall_handler, HPX_POINTER, HPX_ULONG);
 
 static int lco_alltoall_handler(void) {
   int nDoms = 8;

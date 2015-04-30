@@ -226,8 +226,8 @@ _allreduce_init_handler(_allreduce_t *r, size_t writers, size_t readers,
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _allreduce_init_async,
-                  _allreduce_init_handler, HPX_SIZE_T, HPX_SIZE_T, HPX_SIZE_T,
-                  HPX_ACTION_T, HPX_ACTION_T);
+                  _allreduce_init_handler, HPX_POINTER, HPX_SIZE_T, HPX_SIZE_T,
+                  HPX_SIZE_T, HPX_ACTION_T, HPX_ACTION_T);
 /// @}
 
 hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
@@ -262,8 +262,8 @@ _block_local_init_handler(void *lco, int n, size_t participants, size_t readers,
 }
 
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
-                  _block_local_init_handler, HPX_INT, HPX_SIZE_T, HPX_SIZE_T,
-                  HPX_SIZE_T, HPX_POINTER, HPX_POINTER);
+                  _block_local_init_handler, HPX_POINTER, HPX_INT, HPX_SIZE_T,
+                  HPX_SIZE_T, HPX_SIZE_T, HPX_POINTER, HPX_POINTER);
 
 /// Allocate an array of allreduce LCO local to the calling locality.
 /// @param            n The (total) number of lcos to allocate

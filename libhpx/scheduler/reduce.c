@@ -249,8 +249,9 @@ static int _reduce_init_handler(_reduce_t *r, int inputs, size_t size,
   log_lco("initialized with %d inputs lco %p\n", r->inputs, (void*)r);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _reduce_init_async, _reduce_init_handler,
-                  HPX_INT, HPX_SIZE_T, HPX_ACTION_T, HPX_ACTION_T);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _reduce_init_async,
+                  _reduce_init_handler,
+                  HPX_POINTER, HPX_INT, HPX_SIZE_T, HPX_ACTION_T, HPX_ACTION_T);
 /// @}
 
 hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_action_t id,
@@ -284,7 +285,8 @@ static int _block_local_init_handler(void *lco, int n, int inputs, size_t size,
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
                   _block_local_init_handler,
-                  HPX_INT, HPX_INT, HPX_SIZE_T, HPX_POINTER, HPX_POINTER);
+                  HPX_POINTER, HPX_INT, HPX_INT, HPX_SIZE_T,
+                  HPX_POINTER, HPX_POINTER);
 
 /// Allocate an array of reduce LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate

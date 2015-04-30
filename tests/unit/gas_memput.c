@@ -33,7 +33,8 @@ static int _set_handler(uint64_t *local, uint64_t value) {
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _set, _set_handler, HPX_UINT64);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _set, _set_handler,
+                  HPX_POINTER, HPX_UINT64);
 
 static int _verify_handler(uint64_t *local, size_t n, uint64_t *args) {
   for (int i = 0, e = ELEMENTS; i < e; ++i) {
@@ -44,7 +45,7 @@ static int _verify_handler(uint64_t *local, size_t n, uint64_t *args) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _verify,
-                  _verify_handler, HPX_SIZE_T, HPX_POINTER);
+                  _verify_handler, HPX_POINTER, HPX_SIZE_T, HPX_POINTER);
 
 static int _init_globals_handler(void) {
   size_t n = ELEMENTS * sizeof(uint64_t);

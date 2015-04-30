@@ -31,7 +31,7 @@ static int _initDomain_handler(Domain *ld, int rank, int max, int n) {
   return HPX_SUCCESS;
 }
 HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _initDomain,
-           _initDomain_handler, HPX_INT, HPX_INT, HPX_INT);
+           _initDomain_handler, HPX_POINTER, HPX_INT, HPX_INT, HPX_INT);
 
 // Test code -- for global memory allocation
 static int gas_global_alloc_handler(void) {
