@@ -40,13 +40,14 @@ static int _store_int_handler(int *addr, int val) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _store_int,
-                  _store_int_handler, HPX_INT);
+                  _store_int_handler, HPX_POINTER, HPX_INT);
 
 /// Load a value from an integer in memory.
 static int _load_int_handler(int *addr) {
   HPX_THREAD_CONTINUE(*addr);
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _load_int, _load_int_handler);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _load_int,
+                  _load_int_handler, HPX_POINTER);
 
 /// Increment an integer in memory.
 ///
@@ -60,7 +61,7 @@ static int _parcelsendthrough_increment_handler(int *val, int arg) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _parcelsendthrough_increment,
-                  _parcelsendthrough_increment_handler, HPX_INT);
+                  _parcelsendthrough_increment_handler, HPX_POINTER, HPX_INT);
 
 /// This test sets up a simple cascade of parcels in a cyclic array of
 /// futures. Each parcel waits for the future at i, then executes the

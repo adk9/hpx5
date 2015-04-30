@@ -29,7 +29,8 @@ static int _set_future_value_handler(void *UNUSED, size_t size, void *args) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _set_future_value,
-                  _set_future_value_handler, HPX_SIZE_T, HPX_POINTER);
+                  _set_future_value_handler,
+                  HPX_POINTER, HPX_SIZE_T, HPX_POINTER);
 
 static int lco_future_array_handler(void) {
   printf("Starting the array of futures test\n");

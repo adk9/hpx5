@@ -163,7 +163,7 @@ static int _gencount_init_handler(_gencount_t *gencnt, unsigned long ninplace) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _gencount_init_async,
-                  _gencount_init_handler, HPX_ULONG);
+                  _gencount_init_handler, HPX_POINTER, HPX_ULONG);
 
 static int _gencount_wait_gen_proxy_handler(unsigned long gen) {
   hpx_addr_t target = hpx_thread_current_target();

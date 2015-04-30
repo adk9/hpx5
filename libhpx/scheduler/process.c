@@ -93,7 +93,8 @@ static int _proc_delete_handler(size_t size, _process_t *p) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _proc_delete,
-                  _proc_delete_handler, HPX_SIZE_T, HPX_POINTER);
+                  _proc_delete_handler,
+                  HPX_POINTER, HPX_SIZE_T, HPX_POINTER);
 
 static int _proc_return_credit_handler(_process_t *p, size_t size, uint64_t *args) {
   // add credit to the credit-accounting bitmap
@@ -113,7 +114,8 @@ static int _proc_return_credit_handler(_process_t *p, size_t size, uint64_t *arg
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _proc_return_credit,
-                  _proc_return_credit_handler, HPX_SIZE_T, HPX_POINTER);
+                  _proc_return_credit_handler,
+                  HPX_POINTER, HPX_SIZE_T, HPX_POINTER);
 
 int process_recover_credit(hpx_parcel_t *p) {
   hpx_addr_t process = p->pid;

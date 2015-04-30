@@ -133,25 +133,25 @@ int hpx_lco_set_action_handler(lco_t *lco, size_t n, void *data) {
   return _set(lco, n, data);
 }
 HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, hpx_lco_set_action,
-           hpx_lco_set_action_handler, HPX_SIZE_T, HPX_POINTER);
+           hpx_lco_set_action_handler, HPX_POINTER, HPX_SIZE_T, HPX_POINTER);
 
 static int _lco_error_handler(lco_t *lco, size_t n, void *args) {
   hpx_status_t *code = args;
   return _error(lco, *code);
 }
 HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _lco_error,
-           _lco_error_handler, HPX_SIZE_T, HPX_POINTER);
+           _lco_error_handler, HPX_POINTER, HPX_SIZE_T, HPX_POINTER);
 
 int hpx_lco_reset_action_handler(lco_t *lco) {
   return _reset(lco);
 }
 HPX_ACTION(HPX_DEFAULT, HPX_PINNED, hpx_lco_reset_action,
-           hpx_lco_reset_action_handler);
+           hpx_lco_reset_action_handler, HPX_POINTER);
 
 static int _lco_size_handler(lco_t *lco, void *UNUSED) {
   return _size(lco);
 }
-HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_size, _lco_size_handler);
+HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_size, _lco_size_handler, HPX_POINTER);
 
 static int _lco_get_handler(lco_t *lco, int n) {
   // convert to wait if there's no buffer
@@ -170,7 +170,7 @@ static int _lco_get_handler(lco_t *lco, int n) {
     return status;
   }
 }
-HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_get, _lco_get_handler, HPX_INT);
+HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_get, _lco_get_handler, HPX_POINTER, HPX_INT);
 
 static int _lco_getref_handler(lco_t *lco, int n) {
   // convert to wait if there's no buffer
@@ -188,7 +188,7 @@ static int _lco_getref_handler(lco_t *lco, int n) {
     return status;
   }
 }
-HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_getref, _lco_getref_handler, HPX_INT);
+HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_getref, _lco_getref_handler, HPX_POINTER, HPX_INT);
 
 static int _lco_getref_reply_handler(void **local, size_t bytes, void *data) {
   dbg_assert(bytes);
@@ -196,12 +196,12 @@ static int _lco_getref_reply_handler(void **local, size_t bytes, void *data) {
   return HPX_SUCCESS;
 }
 HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _lco_getref_reply,
-           _lco_getref_reply_handler, HPX_SIZE_T, HPX_POINTER);
+           _lco_getref_reply_handler, HPX_POINTER, HPX_SIZE_T, HPX_POINTER);
 
 static int _lco_wait_handler(lco_t *lco) {
   return _wait(lco);
 }
-HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_wait, _lco_wait_handler);
+HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_wait, _lco_wait_handler, HPX_POINTER);
 
 int attach_handler(lco_t *lco, size_t size, hpx_parcel_t *p) {
   hpx_parcel_t *parent = scheduler_current_parcel();
@@ -221,7 +221,7 @@ int attach_handler(lco_t *lco, size_t size, hpx_parcel_t *p) {
   return _attach(lco, p);
 }
 HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, attach,
-           attach_handler, HPX_SIZE_T, HPX_POINTER);
+           attach_handler, HPX_POINTER, HPX_SIZE_T, HPX_POINTER);
 
 /// @}
 
