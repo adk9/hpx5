@@ -20,12 +20,12 @@
 #include <jemalloc/jemalloc_global.h>
 #include <libsync/sync.h>
 #include <hpx/builtins.h>
+#include <libhpx/bitmap.h>
 #include <libhpx/debug.h>
 #include <libhpx/gpa.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include "../mallctl.h"
-#include "bitmap.h"
 #include "heap.h"
 #include "pgas.h"
 
