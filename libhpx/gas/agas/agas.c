@@ -58,12 +58,12 @@ _agas_try_pin(void *gas, hpx_addr_t gva, void **lva) {
 static void
 _agas_unpin(void *gas, hpx_addr_t gva) {
   agas_t *agas = gas;
-  return btt_unpin(agas->btt, gva);
+  btt_unpin(agas->btt, gva);
 }
 
 static uint32_t
 _agas_owner_of(const void *gas, hpx_addr_t gva) {
-  agas_t *agas = gas;
+  const agas_t *agas = gas;
   return btt_owner_of(agas->btt, gva);
 }
 
