@@ -23,6 +23,6 @@ int main(int argc, char *argv[argc]) {
   if (hpx_init(&argc, &argv) != 0)
     return -1;
   hpx_action_t hello;
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, hello, _hello_action);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, hello, _hello_action, HPX_SIZE_T, HPX_POINTER);
   return hpx_run(&hello, NULL, 0);
 }

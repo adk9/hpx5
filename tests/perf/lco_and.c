@@ -116,9 +116,9 @@ int main(int argc, char *argv[]) {
   }
 
   // register the actions
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _lco_set, _lco_set_action);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _main, _main_action);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _empty, _empty_action);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _lco_set, _lco_set_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _empty, _empty_action, HPX_SIZE_T, HPX_POINTER);
 
   set_timeout(300);
 
