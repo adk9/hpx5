@@ -21,19 +21,19 @@
 static void _initDouble_handler(double *input, const size_t bytes) {
   *input = 0.0;
 }
-static HPX_FUNCTION_DEF(_initDouble_handler, _initDouble);
+static HPX_ACTION(HPX_FUNCTION, 0, _initDouble, _initDouble_handler);
 
 static void _addDouble_handler(double *lhs, const double *rhs, size_t UNUSED) {
   *lhs += *rhs;
 }
-static HPX_FUNCTION_DEF(_addDouble_handler, _addDouble);
+static HPX_ACTION(HPX_FUNCTION, 0, _addDouble, _addDouble_handler);
 
 static int _reduce_handler(double data) {
   HPX_THREAD_CONTINUE(data);
 }
-static HPX_ACTION_DEF(DEFAULT, _reduce_handler, _reduce, HPX_DOUBLE);
+static HPX_ACTION(HPX_DEFAULT, 0, _reduce, _reduce_handler, HPX_DOUBLE);
 
-static HPX_ACTION(lco_reduce, void *UNUSED) {
+static int lco_reduce_handler(void) {
   static const double data = 3141592653.58979;
   static const int nDoms = 91;
   static const int cycles = 10;
@@ -68,8 +68,9 @@ static HPX_ACTION(lco_reduce, void *UNUSED) {
 
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, lco_reduce, lco_reduce_handler);
 
-static HPX_ACTION(lco_reduce_getRef, void *UNUSED) {
+static int lco_reduce_getRef_handler(void) {
   static const double data = 3141592.65358979;
   static const int nDoms = 91;
   static const int cycles = 10;
@@ -108,6 +109,7 @@ static HPX_ACTION(lco_reduce_getRef, void *UNUSED) {
   hpx_gas_free(domain, HPX_NULL);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, lco_reduce_getRef, lco_reduce_getRef_handler);
 
 struct _par_reduce_args {
   hpx_addr_t rlco;
@@ -120,7 +122,7 @@ static int _par_reduce(const int i, const void *args) {
   return 0;
 }
 
-static HPX_ACTION(lco_par_reduce, void *UNUSED) {
+static int lco_par_reduce_handler(void) {
   static const int iters = 42;
   double nums[iters];
 
@@ -156,6 +158,7 @@ static HPX_ACTION(lco_par_reduce, void *UNUSED) {
   hpx_lco_delete(rlco, HPX_NULL);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, lco_par_reduce, lco_par_reduce_handler);
 
 TEST_MAIN({
   ADD_TEST(lco_reduce);

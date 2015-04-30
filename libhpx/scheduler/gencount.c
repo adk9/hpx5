@@ -152,7 +152,7 @@ static const lco_class_t gencount_vtable = {
   .on_size     = _gencount_size
 };
 
-static int _gencount_init(_gencount_t *gencnt, unsigned long ninplace) {
+static int _gencount_init_handler(_gencount_t *gencnt, unsigned long ninplace) {
   lco_init(&gencnt->lco, &gencount_vtable);
   cvar_reset(&gencnt->oflow);
   gencnt->gen = 0;
@@ -162,12 +162,15 @@ static int _gencount_init(_gencount_t *gencnt, unsigned long ninplace) {
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION_DEF(PINNED, _gencount_init, _gencount_init_async, HPX_ULONG);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _gencount_init_async,
+                  _gencount_init_handler, HPX_ULONG);
 
-static HPX_ACTION(_gencount_wait_gen_proxy, unsigned long *gen) {
+static int _gencount_wait_gen_proxy_handler(unsigned long gen) {
   hpx_addr_t target = hpx_thread_current_target();
-  return hpx_lco_gencount_wait(target, *gen);
+  return hpx_lco_gencount_wait(target, gen);
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _gencount_wait_gen_proxy,
+                  _gencount_wait_gen_proxy_handler, HPX_ULONG);
 
 hpx_addr_t hpx_lco_gencount_new(unsigned long ninplace) {
   _gencount_t *cnt = NULL;
@@ -180,7 +183,7 @@ hpx_addr_t hpx_lco_gencount_new(unsigned long ninplace) {
     dbg_check(e, "could not initialize a generation counter at %lu\n", gva);
   }
   else {
-    _gencount_init(cnt, ninplace);
+    _gencount_init_handler(cnt, ninplace);
     hpx_gas_unpin(gva);
   }
   return gva;
@@ -194,7 +197,7 @@ void hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync) {
 hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen) {
   _gencount_t *local;
   if (!hpx_gas_try_pin(gencnt, (void**)&local)) {
-    return hpx_call_sync(gencnt, _gencount_wait_gen_proxy, NULL, 0, &gen, gen);
+    return hpx_call_sync(gencnt, _gencount_wait_gen_proxy, NULL, 0, &gen);
   }
 
   hpx_status_t status = _gencount_wait_gen(local, gen);

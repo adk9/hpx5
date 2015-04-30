@@ -22,16 +22,20 @@ static uint64_t value;
 // in LCOs that represent values returned from async computation. Futures
 // are always allocated in the global address space, because their addresses
 // are used as the targets of parcels.
-static HPX_ACTION(_get_value, void *args) {
+static int _get_value_handler(void) {
   HPX_THREAD_CONTINUE(value);
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _get_value, _get_value_handler);
 
-static HPX_ACTION(_set_value, uint64_t *args) {
-  value = *args;
+
+static int _set_value_handler(uint64_t args) {
+  value = args;
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _set_value, _set_value_handler, HPX_UINT64);
 
-static HPX_ACTION(lco_future_new, void *UNUSED) {
+
+static int lco_future_new_handler(void) {
   printf("Starting the Future LCO test\n");
 
   int count = HPX_LOCALITIES;
@@ -47,7 +51,7 @@ static HPX_ACTION(lco_future_new, void *UNUSED) {
     addresses[i] = &values[i];
     sizes[i] = sizeof(uint64_t);
     futures[i] = hpx_lco_future_new(sizeof(uint64_t));
-    hpx_call(HPX_THERE(i), _get_value, futures[i], NULL, 0);
+    hpx_call(HPX_THERE(i), _get_value, futures[i]);
   }
 
   hpx_lco_get_all(count, futures, sizes, addresses, NULL);
@@ -57,7 +61,7 @@ static HPX_ACTION(lco_future_new, void *UNUSED) {
   for (int i = 0; i < count; i++) {
     hpx_lco_delete(futures[i], HPX_NULL);
     futures[i] = hpx_lco_future_new(0);
-    hpx_call(HPX_THERE(i), _set_value, futures[i], &value, sizeof(value));
+    hpx_call(HPX_THERE(i), _set_value, futures[i], &value);
   }
 
   hpx_lco_get_all(count, futures, sizes, addresses, NULL);
@@ -69,16 +73,18 @@ static HPX_ACTION(lco_future_new, void *UNUSED) {
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, lco_future_new, lco_future_new_handler);
 
 // This testcase tests the hpx_lco_future_array_new API function which
 // allocates a global array of futures and hpx_lco_future_array_at which gets
 // an address of a future in a future array
-static HPX_ACTION(_get_future_value, void *args) {
+static int _get_future_value_handler(void) {
   uint64_t data = SET_VALUE;
   HPX_THREAD_CONTINUE(data);
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _get_future_value, _get_future_value_handler);
 
-static HPX_ACTION(lco_future_array, void *UNUSED) {
+static int lco_future_array_handler(void) {
   printf("Starting the array of futures test\n");
   uint64_t value = 0;
   // allocate and start a timer
@@ -89,12 +95,13 @@ static HPX_ACTION(lco_future_array, void *UNUSED) {
   hpx_addr_t base = hpx_lco_future_array_new(2, sizeof(uint64_t), 1);
   hpx_addr_t other = hpx_lco_future_array_at(base, 1, sizeof(uint64_t), 1);
 
-  hpx_call_sync(other, _get_future_value, &value, sizeof(value), NULL, 0);
+  hpx_call_sync(other, _get_future_value, &value, sizeof(value));
   printf("value = %"PRIu64"\n", value);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, lco_future_array, lco_future_array_handler);
 
 TEST_MAIN({
  ADD_TEST(lco_future_new);

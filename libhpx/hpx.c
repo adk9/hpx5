@@ -38,11 +38,12 @@
 #include <libhpx/system.h>
 #include "network/probe.h"
 
-static hpx_addr_t _hpx_143 = 0;
-static HPX_ACTION(_hpx_143_fix, void *UNUSED) {
+static hpx_addr_t _hpx_143;
+static int _hpx_143_fix_handler(void) {
   _hpx_143 = hpx_gas_alloc_cyclic(sizeof(void*), HPX_LOCALITIES, 0);
   return LIBHPX_OK;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _hpx_143_fix, _hpx_143_fix_handler);
 
 /// Cleanup utility function.
 ///
@@ -242,7 +243,7 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
     }
 
     // Fix for https://uisapp2.iu.edu/jira-prd/browse/HPX-143
-    status = hpx_call(HPX_HERE, _hpx_143_fix, HPX_NULL, NULL, 0);
+    status = hpx_call(HPX_HERE, _hpx_143_fix, HPX_NULL);
     if (status != LIBHPX_OK) {
       log_error("failed to spawn the initial cyclic allocation");
       goto unwind2;

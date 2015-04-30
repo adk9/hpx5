@@ -120,9 +120,9 @@ static int _rendezvous_launch_handler(int src, command_t cmd) {
   scheduler_spawn(p);
   return HPX_SUCCESS;
 }
-COMMAND_DEF(INTERRUPT, _rendezvous_launch_handler, _rendezvous_launch);
+COMMAND_DEF(HPX_INTERRUPT, _rendezvous_launch, _rendezvous_launch_handler);
 
-static HPX_INTERRUPT(_rendezvous_get, _rendezvous_get_args_t *args) {
+static int _rendezvous_get_handler(size_t size, _rendezvous_get_args_t *args) {
   pwc_network_t *pwc = (pwc_network_t*)here->network;
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, args->n - sizeof(*p));
   dbg_assert(p);
@@ -140,6 +140,8 @@ static HPX_INTERRUPT(_rendezvous_get, _rendezvous_get_args_t *args) {
   dbg_check(e, "could not issue get during rendezvous parcel\n");
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_INTERRUPT, HPX_MARSHALLED, _rendezvous_get,
+                  _rendezvous_get_handler, HPX_SIZE_T, HPX_POINTER);
 
 static int _pwc_rendezvous_send(pwc_network_t *pwc, hpx_parcel_t *p, int rank) {
   size_t n = parcel_size(p);

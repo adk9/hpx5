@@ -35,28 +35,32 @@ static int _is_null(void *addr) {
 }
 
 /// Store a value to an integer in memory.
-static HPX_PINNED(_store_int, int *addr, int *val) {
-  *addr = *val;
+static int _store_int_handler(int *addr, int val) {
+  *addr = val;
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _store_int,
+                  _store_int_handler, HPX_INT);
 
 /// Load a value from an integer in memory.
-static HPX_PINNED(_load_int, int *addr, void *UNUSED) {
+static int _load_int_handler(int *addr) {
   HPX_THREAD_CONTINUE(*addr);
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _load_int, _load_int_handler);
 
 /// Increment an integer in memory.
 ///
 /// This is slightly more complicated than an increment. We send along the value
 /// that we expect to see, to make sure our cascade is running in the correct
 /// order.
-static HPX_PINNED(_parcelsendthrough_increment, int *val, void *arg) {
+static int _parcelsendthrough_increment_handler(int *val, int arg) {
   // don't need synchronization since this is done in a sequential cascade
   int i = val[0]++;
-  int j = *(int*)arg;
-  printf("expected %d, got %d\n", i, j);
+  printf("expected %d, got %d\n", i, arg);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _parcelsendthrough_increment,
+                  _parcelsendthrough_increment_handler, HPX_INT);
 
 /// This test sets up a simple cascade of parcels in a cyclic array of
 /// futures. Each parcel waits for the future at i, then executes the
@@ -117,7 +121,7 @@ hpx_addr_t _cascade(hpx_addr_t done, hpx_addr_t val, const int n) {
 /// until their condition triggers. This permits a style of thread-less
 /// synchronization that can aid in dataflow programming.
 ///
-static HPX_ACTION(parcel_send_through, void *UNUSED) {
+static int parcel_send_through_handler(void) {
   const int n = 2 * HPX_LOCALITIES;
 
   printf("Testing parcel sends through LCOs\n");
@@ -138,7 +142,7 @@ static HPX_ACTION(parcel_send_through, void *UNUSED) {
   }
 
   const int zero = 0;
-  if (_is_error(hpx_call_sync(val, _store_int, NULL, 0, &zero, sizeof(zero)))) {
+  if (_is_error(hpx_call_sync(val, _store_int, NULL, 0, &zero))) {
     goto unwind2;
   }
 
@@ -160,7 +164,7 @@ static HPX_ACTION(parcel_send_through, void *UNUSED) {
 
   // check the final value to make sure everything actually worked
   int fin;
-  if (_is_error(hpx_call_sync(val, _load_int, &fin, sizeof(fin), NULL, 0))) {
+  if (_is_error(hpx_call_sync(val, _load_int, &fin, sizeof(fin)))) {
     goto unwind3;
   }
 
@@ -180,6 +184,7 @@ static HPX_ACTION(parcel_send_through, void *UNUSED) {
   fflush(stdout);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, parcel_send_through, parcel_send_through_handler);
 
 TEST_MAIN({
   ADD_TEST(parcel_send_through);

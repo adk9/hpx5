@@ -23,7 +23,7 @@ static uint64_t src[SIZE];
 static hpx_action_t _main = 0;
 static hpx_action_t _verify = 0;
 
-int _verify_action(void *args) {
+int _verify_action(size_t size, void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   uint64_t *local;
   if (!hpx_gas_try_pin(target, (void**)&local))
@@ -37,7 +37,7 @@ int _verify_action(void *args) {
   HPX_THREAD_CONTINUE(result);
 }
 
-static int _main_action(void *args) {
+static int _main_action(size_t n, void *args) {
   int size = HPX_LOCALITIES;
 
   for (int i = 0; i < SIZE; i++)
@@ -65,7 +65,9 @@ int main(int argc, char *argv[argc]) {
     return 1;
   }
 
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(_verify_action, &_verify);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action,
+                      HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _verify, _verify_action,
+                      HPX_SIZE_T, HPX_POINTER);
   return hpx_run(&_main, NULL, 0);
 }

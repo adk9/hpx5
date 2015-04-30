@@ -36,7 +36,7 @@ hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p) {
 
 // Register a thread entry point to do an asynchronous send. It's important that
 // this is a DEFAULT action so that we don't try to work-first it.
-static HPX_ACTION_DEF(DEFAULT, hpx_parcel_send_sync, _send_async, HPX_POINTER);
+static HPX_ACTION(HPX_DEFAULT, 0, _send_async, hpx_parcel_send_sync, HPX_POINTER);
 
 hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
   parcel_state_t state = parcel_get_state(p);
@@ -60,8 +60,8 @@ hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t gate) {
 // Register a thread entry point to do an asynchronous send-through. It's
 // important that this is a DEFAULT action so that we don't try to work-first
 // it.
-static HPX_ACTION_DEF(DEFAULT, hpx_parcel_send_through_sync,
-                      _send_through_async, HPX_POINTER, HPX_ADDR);
+static HPX_ACTION(HPX_DEFAULT, 0, _send_through_async,
+                  hpx_parcel_send_through_sync, HPX_POINTER, HPX_ADDR);
 
 hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
                                      hpx_addr_t lsync) {

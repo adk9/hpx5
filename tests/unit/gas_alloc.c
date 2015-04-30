@@ -23,7 +23,7 @@
 
 static const int N = 10;
 
-static HPX_ACTION(gas_alloc, void *UNUSED) {
+static int gas_alloc_handler(void) {
   printf("Starting the GAS local memory allocation test\n");
   hpx_addr_t local = hpx_gas_alloc_local(N, 0);
 
@@ -42,8 +42,9 @@ static HPX_ACTION(gas_alloc, void *UNUSED) {
   hpx_gas_free(local, HPX_NULL);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, gas_alloc, gas_alloc_handler);
 
-static HPX_ACTION(gas_memalign, void *UNUSED) {
+static int gas_memalign_handler(void) {
   printf("Starting GAS memalign\n");
   for (int i = 4, e = 24; i < e; ++i) {
     unsigned long alignment = (UINT64_C(1) << i);
@@ -67,8 +68,9 @@ static HPX_ACTION(gas_memalign, void *UNUSED) {
 
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, gas_memalign, gas_memalign_handler);
 
-static HPX_ACTION(gas_calloc, void *UNUSED) {
+static int gas_calloc_handler(void) {
   printf("Starting GAS calloc\n");
   hpx_addr_t local = hpx_gas_calloc_local(N, sizeof(int), 0);
 
@@ -97,8 +99,9 @@ static HPX_ACTION(gas_calloc, void *UNUSED) {
   hpx_gas_free(local, HPX_NULL);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, gas_calloc, gas_calloc_handler);
 
-static int _verify_at(hpx_addr_t addr, int zero) {
+static int verify_at_handler(hpx_addr_t addr, int zero) {
   int *buffer = NULL;
   if (!hpx_gas_try_pin(addr, (void**)&buffer)) {
     fprintf(stderr, "address not located at correct locality\n");
@@ -116,9 +119,9 @@ static int _verify_at(hpx_addr_t addr, int zero) {
   hpx_gas_unpin(addr);
   return HPX_SUCCESS;
 }
-static HPX_ACTION_DEF(INTERRUPT, _verify_at, verify_at, HPX_ADDR, HPX_INT);
+static HPX_ACTION(HPX_INTERRUPT, 0, verify_at, verify_at_handler, HPX_ADDR, HPX_INT);
 
-static HPX_ACTION(gas_alloc_at, void *UNUSED){
+static int gas_alloc_at_handler(void) {
   printf("Starting the GAS remote memory allocation test\n");
   int peer = (HPX_LOCALITY_ID + 1) % HPX_LOCALITIES;
   hpx_addr_t addr = hpx_gas_alloc_local_at_sync(N * sizeof(int), 0, HPX_THERE(peer));
@@ -136,8 +139,9 @@ static HPX_ACTION(gas_alloc_at, void *UNUSED){
   hpx_lco_delete(wait, HPX_NULL);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, gas_alloc_at, gas_alloc_at_handler);
 
-static HPX_ACTION(gas_calloc_at, void *UNUSED){
+static int gas_calloc_at_handler(void) {
   printf("Starting the GAS initialized remote memory allocation test\n");
   int peer = (HPX_LOCALITY_ID + 1) % HPX_LOCALITIES;
   hpx_addr_t addr = hpx_gas_calloc_local_at_sync(N, sizeof(int), 0, HPX_THERE(peer));
@@ -155,6 +159,7 @@ static HPX_ACTION(gas_calloc_at, void *UNUSED){
   hpx_lco_delete(wait, HPX_NULL);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, gas_calloc_at, gas_calloc_at_handler);
 
 TEST_MAIN({
   ADD_TEST(gas_alloc);

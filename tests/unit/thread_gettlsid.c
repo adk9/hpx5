@@ -31,7 +31,7 @@ const int SET_CONT_VALUE = 1234;
 // The first time this is called in a leightweight thread, it assigns
 // the next available ID. Each time it's called after that it returns
 // the same ID.
-static HPX_ACTION(_assignID, void *args) {
+static int _assignID_handler(void) {
   hpx_thread_get_tls_id();
   hpx_thread_get_tls_id();
  // int tid = hpx_thread_get_tls_id();
@@ -40,8 +40,9 @@ static HPX_ACTION(_assignID, void *args) {
   //                                     consecutiveID);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _assignID, _assignID_handler);
 
-static HPX_ACTION(thread_gettlsid, void *UNUSED) {
+static int thread_gettlsid_handler(void) {
   printf("Starting the Threads ID generation test\n");
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
@@ -71,6 +72,7 @@ static HPX_ACTION(thread_gettlsid, void *UNUSED) {
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, thread_gettlsid, thread_gettlsid_handler);
 
 TEST_MAIN({
   ADD_TEST(thread_gettlsid);

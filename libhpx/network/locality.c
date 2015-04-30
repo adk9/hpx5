@@ -36,17 +36,19 @@ static int _locality_shutdown_handler(int src, uint64_t code) {
   scheduler_shutdown(here->sched, (uint32_t)code);
   return HPX_SUCCESS;
 }
-HPX_ACTION_DEF(INTERRUPT, _locality_shutdown_handler, locality_shutdown,
-               HPX_INT, HPX_UINT64);
+HPX_ACTION(HPX_INTERRUPT, 0, locality_shutdown, _locality_shutdown_handler,
+           HPX_INT, HPX_UINT64);
 
-HPX_ACTION(locality_call_continuation, locality_cont_args_t *args) {
+int locality_call_continuation_handler(size_t n, locality_cont_args_t *args) {
   // just doing address translation, not pinning
   hpx_addr_t target = hpx_thread_current_target();
   if (!hpx_gas_try_pin(target, NULL)) {
     return HPX_RESEND;
   }
 
-  uint32_t size = hpx_thread_current_args_size() - sizeof(args->status) - sizeof(args->action);
+  uint32_t size = n - sizeof(args->status) - sizeof(args->action);
   // handle status here: args->status;
   return hpx_call(target, args->action, HPX_NULL, args->data, size);
 }
+HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, locality_call_continuation,
+           locality_call_continuation_handler, HPX_SIZE_T, HPX_POINTER);

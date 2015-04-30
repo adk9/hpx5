@@ -58,13 +58,14 @@ static const lco_class_t _sema_vtable = {
   .on_size     = _sema_size
 };
 
-static int _sema_init(_sema_t *sema, unsigned count) {
+static int _sema_init_handler(_sema_t *sema, unsigned count) {
   lco_init(&sema->lco, &_sema_vtable);
   cvar_reset(&sema->avail);
   sema->count = count;
   return HPX_SUCCESS;
 }
-static HPX_ACTION_DEF(PINNED, _sema_init, _sema_init_async, HPX_UINT);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _sema_init_async,
+                  _sema_init_handler, HPX_UINT);
 
 /// Allocate a semaphore LCO.
 ///
@@ -81,7 +82,7 @@ hpx_addr_t hpx_lco_sema_new(unsigned count) {
     dbg_check(e, "could not initialize a future at %lu\n", gva);
   }
   else {
-    _sema_init(sema, count);
+    _sema_init_handler(sema, count);
     hpx_gas_unpin(gva);
   }
 

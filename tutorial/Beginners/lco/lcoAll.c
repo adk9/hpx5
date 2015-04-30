@@ -21,13 +21,13 @@ static  hpx_action_t _setValue  = 0;
 
 static const int NUM_FUTURES = 5;
 
-static int _setValue_action(void *args) {
+static int _setValue_action(size_t size, void *args) {
   // Generate the random value
   uint64_t  value = (rand() / (float)RAND_MAX) * 100;
   hpx_thread_continue(sizeof(uint64_t), &value);
 }
 
-static int _main_action(void *args) {
+static int _main_action(size_t size, void *args) {
   uint64_t values[NUM_FUTURES];
   void *addrs[NUM_FUTURES];
   int sizes[NUM_FUTURES];
@@ -62,8 +62,8 @@ int main(int argc, char *argv[]) {
     return e;
   }
 
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(_setValue_action, &_setValue);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _setValue, _setValue_action, HPX_SIZE_T, HPX_POINTER);
 
   return hpx_run(&_main, NULL, 0);
 }
