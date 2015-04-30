@@ -13,6 +13,9 @@
 #ifndef HPX_THREAD_H
 #define HPX_THREAD_H
 
+/// @addtogroup actions
+/// @{
+
 /// @file
 /// @brief HPX thread interface
 ///
@@ -132,5 +135,6 @@ void hpx_thread_continue_cleanup(size_t size, const void *value,
 void hpx_thread_exit(int status)
   HPX_NORETURN;
 
+/// @}
 
 #endif

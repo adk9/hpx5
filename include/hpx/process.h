@@ -13,6 +13,10 @@
 #ifndef HPX_PROCESS_H
 #define HPX_PROCESS_H
 
+/// @defgroup processes Processes
+/// @brief Functions and definitions for using HPX processes
+/// @{
+
 typedef hpx_addr_t hpx_pid_t;
 
 /// HPX Process creation.
@@ -40,5 +44,7 @@ int    _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t actio
 void hpx_process_delete(hpx_addr_t process, hpx_addr_t sync);
 
 hpx_pid_t hpx_process_getpid(hpx_addr_t process);
+
+/// @}
 
 #endif

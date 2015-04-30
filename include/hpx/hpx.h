@@ -13,6 +13,11 @@
 #ifndef HPX_H
 #define HPX_H
 
+/// @file include/hpx/hpx.h
+/// @brief The Main HPX header file.
+/// To use the HPX API only this header is needed; all the other HPX
+/// headers are included through it.
+
 #ifdef __cplusplus
 extern "C" {
 #endif

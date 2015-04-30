@@ -15,6 +15,9 @@
 
 #include "hpx/builtins.h"
 
+/// @addtogroup actions
+/// @{
+
 /// @file
 /// @brief HPX remote procedure call interface
 
@@ -274,5 +277,7 @@ int    _hpx_bcast_lsync(hpx_action_t action, hpx_addr_t rsync, int nargs, ...);
 int    _hpx_bcast_rsync(hpx_action_t action, int nargs, ...);
 #define hpx_bcast_rsync(action, ...)                                    \
   _hpx_bcast_rsync(action, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+
+/// @}
 
 #endif
