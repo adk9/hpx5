@@ -382,6 +382,7 @@ if [ "$OP" == "run" ]; then
       fi
     
       if [ ! -f $BUILD_DIR/tests/unit/test-suite.log ]; then
+        cat $BUILD_DIR/regression_test.o*
         echo "test-suite.log file not found!"
         exit 1
       else
