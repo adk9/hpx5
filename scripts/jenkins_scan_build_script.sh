@@ -29,7 +29,7 @@ SCAN_BUILD_TMPDIR=$( mktemp -d /tmp/scan-build.XXXXXX )
 # directory to use for archiving the scan-build report
 SCAN_BUILD_ARCHIVE="${WORKSPACE}/scan-build-archive"
 
-eval "/u/crest-team/LLVM/llvm-3.6.0.src/tools/clang/tools/scan-build/scan-build --use-analyzer=/opt/llvm/3.6.0/bin/clang $CFG_CMD CC=clang CFLAGS=\"-std=gnu99 -O0\" --enable-debug --enable-instrumentation --enable-logging"  
+eval "/u/crest-team/LLVM/llvm-3.6.0.src/tools/clang/tools/scan-build/scan-build --use-analyzer=/opt/llvm/3.6.0/bin/clang $CFG_CMD CC=clang CFLAGS=\"-std=gnu99 -O0\" --disable-pedantic --enable-debug --enable-instrumentation --enable-logging"  
 
 echo "Building HPX."
 
