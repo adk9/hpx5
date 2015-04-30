@@ -18,7 +18,6 @@
 #include "heap.h"
 
 void *
-heap_lva_to_chunk(void *heap, void *lva) {
+heap_lva_to_chunk(void *obj, void *lva) {
   return NULL;
 }
-
