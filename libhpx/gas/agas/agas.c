@@ -21,7 +21,9 @@
 #include <libhpx/memory.h>
 #include "agas.h"
 #include "btt.h"
+#include "chunk_table.h"
 #include "gva.h"
+#include "heap.h"
 
 static const unsigned AGAS_MAX_RANKS = (1u << GVA_RANK_BITS);
 static const uint64_t AGAS_THERE_OFFSET = UINT64_MAX;
@@ -39,7 +41,9 @@ static uint64_t size_classes[8] = {
 
 typedef struct {
   gas_t vtable;
+  void *chunk_table;
   void *btt;
+  void *heap;
 } agas_t;
 
 static void
@@ -100,10 +104,12 @@ _agas_owner_of(const void *gas, hpx_addr_t gva) {
 }
 
 static hpx_addr_t
-_register(void *btt, void *lva) {
+_register(agas_t *gas, void *lva) {
   // we need to reverse map this address to an offset into the local portion of
   // the global address space
-  uint64_t offset = lva_to_gva_offset(lva);
+  void *chunk = heap_lva_to_chunk(gas->heap, lva);
+  uint64_t base = chunk_table_lookup(gas->chunk_table, chunk);
+  uint64_t offset = base + ((char*)lva - (char*)chunk);
 
   // and construct a gva for this
   gva_t gva = {
@@ -116,7 +122,7 @@ _register(void *btt, void *lva) {
   };
 
   // and insert an entry into our block translation table
-  btt_insert(btt, gva.addr, here->rank, lva);
+  btt_insert(gas->btt, gva.addr, here->rank, lva);
 
   // and return the address
   return gva.addr;
@@ -134,8 +140,7 @@ _agas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
     lva = global_malloc(bytes);
   }
 
-  agas_t *agas = gas;
-  return _register(agas->btt, lva);
+  return _register(gas, lva);
 }
 
 static hpx_addr_t
@@ -149,8 +154,7 @@ _agas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
     lva = global_calloc(nmemb, size);
   }
 
-  agas_t *agas = gas;
-  return _register(agas->btt, lva);
+  return _register(gas, lva);
 }
 
 static gas_t _agas_vtable = {
@@ -182,7 +186,9 @@ static gas_t _agas_vtable = {
 gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   agas_t *agas = malloc(sizeof(*agas));
   agas->vtable = _agas_vtable;
+  agas->chunk_table = chunk_table_new(0);
   agas->btt = btt_new(0);
+  agas->heap = NULL;
   btt_insert(agas->btt, _agas_there(agas, here->rank), here->rank, here);
   return &agas->vtable;
 }
