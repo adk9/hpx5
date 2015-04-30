@@ -36,13 +36,13 @@ static  hpx_action_t _init_array = 0;
 static uint64_t masterCopy[SIZE];
 uint64_t localCopy[LOCALCOPY][SIZE];
 
-static int _init_array_action(void *args) {
+static int _init_array_action(size_t size, void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   uint64_t *local = NULL;
   if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
 
-  memcpy(local, args, hpx_thread_current_args_size());
+  memcpy(local, args, size);
 
   hpx_gas_unpin(target);
   return HPX_SUCCESS;
