@@ -50,9 +50,10 @@ static int _initDomain_handler(Domain *domain, hpx_addr_t newdt,
   domain->cycle = 0;
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_EDFAULT, HPX_PINNED, _initDomain, _initDomain_handler,
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _initDomain, _initDomain_handler,
                   HPX_ADDR, HPX_ADDR, HPX_INT, HPX_INT);
 
+static HPX_ACTION_DECL(_advanceDomain_allreduce);
 static int _advanceDomain_allreduce_handler(Domain *domain, const unsigned long epoch) {
   if (domain->maxCycles <= domain->cycle) {
     hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);
@@ -111,6 +112,7 @@ static int lco_allreduce_handler(void) {
 }
 static HPX_ACTION(HPX_DEFAULT, 0, lco_allreduce, lco_allreduce_handler);
 
+static HPX_ACTION_DECL(_advanceDomain_allgather);
 static int _advanceDomain_allgather_handler(Domain *domain,
                                             unsigned long epoch) {
   if (domain->maxCycles <= domain->cycle) {
@@ -167,6 +169,7 @@ static int lco_allgather_handler(void) {
 }
 static HPX_ACTION(HPX_DEFAULT, 0, lco_allgather, lco_allgather_handler);
 
+static HPX_ACTION_DECL(_advanceDomain_alltoall);
 static int _advanceDomain_alltoall_handler(Domain *domain, unsigned long epoch) {
   if (domain->maxCycles <= domain->cycle) {
     hpx_lco_set(domain->complete, 0, NULL, HPX_NULL, HPX_NULL);

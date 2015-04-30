@@ -381,7 +381,7 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
     hpx_type_t addr = va_arg(vargs, hpx_type_t);
 
     dbg_assert(size == HPX_INT || size == HPX_UINT || size == HPX_SIZE_T);
-    dbg_assert(size == HPX_POINTER);
+    dbg_assert(addr == HPX_POINTER);
     va_end(vargs);
     return _push_back(_get_actions(), id, key, f, type, attr, NULL);
   }

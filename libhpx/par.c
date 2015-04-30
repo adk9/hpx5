@@ -117,7 +117,7 @@ static int _par_call_async_handler(size_t n, par_call_async_args_t *args) {
                               &args->env, args->sync);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _par_call_async,
-                  _par_call_async, HPX_SIZE_T, HPX_POINTER);
+                  _par_call_async_handler, HPX_SIZE_T, HPX_POINTER);
 
 static int
 _hpx_par_call_helper(hpx_action_t action, const int min,

@@ -101,7 +101,7 @@ static int gas_calloc_handler(void) {
 }
 static HPX_ACTION(HPX_DEFAULT, 0, gas_calloc, gas_calloc_handler);
 
-static int _verify_at_handler(hpx_addr_t addr, int zero) {
+static int verify_at_handler(hpx_addr_t addr, int zero) {
   int *buffer = NULL;
   if (!hpx_gas_try_pin(addr, (void**)&buffer)) {
     fprintf(stderr, "address not located at correct locality\n");
@@ -119,7 +119,7 @@ static int _verify_at_handler(hpx_addr_t addr, int zero) {
   hpx_gas_unpin(addr);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_INTERRUPT, _verify_at, verify_at_handler, HPX_ADDR, HPX_INT);
+static HPX_ACTION(HPX_INTERRUPT, 0, verify_at, verify_at_handler, HPX_ADDR, HPX_INT);
 
 static int gas_alloc_at_handler(void) {
   printf("Starting the GAS remote memory allocation test\n");

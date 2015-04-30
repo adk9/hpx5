@@ -36,6 +36,7 @@ static hpx_addr_t rand_rank(void) {
   return HPX_THERE(r % n);
 }
 
+static HPX_ACTION_DECL(_send);
 static int _send_handler(size_t size, int *args) {
   int n = *args;
   //printf( "locality: %d, thread: %d, count: %d\n", hpx_get_my_rank(),
