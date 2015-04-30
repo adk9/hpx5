@@ -13,7 +13,7 @@ cd "$DIR"
 
 echo "Configuring HPX."
 CFG_CMD="./configure"
-eval "$CFG_CMD --prefix=${DIR}/build/install/ --with-mpi=/opt/crc/openmpi/1.8.1/intel-14.0/lib/pkgconfig/ompi.pc --enable-photon --enable-static --disable-shared --disable-jemalloc CFLAGS=\"-O3 -g\" --enable-testsuite --enable-parallel-config --with-tests-cmd=\"mpiexec -np 2 --map-by node:PE=16\ --mca btl ^openib" CC=gcc"
+eval "$CFG_CMD --prefix=${DIR}/build/install/ --with-mpi=/opt/crc/openmpi/1.8.1/intel-14.0/lib/pkgconfig/ompi.pc --enable-photon --enable-static --disable-shared --disable-jemalloc CFLAGS=\"-O3 -g\" --enable-testsuite --enable-parallel-config --with-tests-cmd=\"mpiexec -np 2 --map-by node:PE=16 --mca btl ^openib\" CC=gcc"
 
 echo "Building HPX."
 make -j 8
