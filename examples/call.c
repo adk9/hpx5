@@ -22,14 +22,14 @@ static HPX_ACTION(HPX_INTERRUPT, 0, _my_interrupt, _my_interrupt_handler);
 
 static int _my_task_handler(void) {
   printf("Hi, I am a task!\n");
-  hpx_call_cc(HPX_HERE, _my_interrupt, NULL, NULL, 0, NULL);
+  hpx_call_cc(HPX_HERE, _my_interrupt, NULL, NULL);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_TASK, 0, _my_task, _my_task_handler);
 
 static int _my_action_handler(void) {
   printf("Hi, I am an action!\n");
-  hpx_call_cc(HPX_HERE, _my_task, NULL, NULL, 0, NULL);
+  hpx_call_cc(HPX_HERE, _my_task, NULL, NULL);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _my_action, _my_action_handler);
@@ -54,5 +54,5 @@ static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_handler);
 
 int main(int argc, char *argv[]) {
   hpx_init(&argc, &argv);
-  return hpx_run(&_main, NULL, 0);
+  return hpx_run(&_main);
 }

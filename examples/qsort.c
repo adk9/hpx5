@@ -49,7 +49,7 @@ static hpx_action_t _main = 0;
 static hpx_action_t _parallelQuicksortHelper = 0;
 //for parallel implementation
 int parallelQuicksort(double lyst[], int size, int tlevel);
-static int _parallelQuicksortHelper_action(void *threadarg);
+static int _parallelQuicksortHelper_action(size_t size, void *threadarg);
 struct thread_data{
     double *lyst;
     int low;
@@ -156,9 +156,10 @@ int main (int argc, char *argv[])
   }
 
   // Register the main action
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action,
+                      HPX_SIZE_T, HPX_POINTER);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _parallelQuicksortHelper,
-                      _parallelQuicksortHelper_action);
+                      _parallelQuicksortHelper_action, HPX_SIZE_T, HPX_POINTER);
   // Run the main action
   return hpx_run(&_main, &NUM, sizeof(NUM));
 }
@@ -228,7 +229,7 @@ parallelQuicksortHelper
 parallelQuicksortHelper threads to solve the left and
 right-hand sides, then quit. Otherwise, call sequential.
 */
-static int _parallelQuicksortHelper_action(void *threadarg)
+static int _parallelQuicksortHelper_action(size_t size, void *threadarg)
 {
   int mid, t;
 

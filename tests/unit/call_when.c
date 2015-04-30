@@ -73,9 +73,9 @@ hpx_addr_t _cascade(hpx_addr_t done, hpx_addr_t val, const int n) {
     // done)
     if (i < n - 1) {
       hpx_addr_t next = hpx_lco_future_array_at(gates, i + 1, 0, 1);
-      hpx_call_when(gate, val, _call_when_increment, next, &i, sizeof(int));
+      hpx_call_when(gate, val, _call_when_increment, next, &i);
     } else {
-      hpx_call_when(gate, val, _call_when_increment, done, &i, sizeof(int));
+      hpx_call_when(gate, val, _call_when_increment, done, &i);
     }
   }
 

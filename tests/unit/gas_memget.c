@@ -53,7 +53,7 @@ static int _init_globals_handler(void) {
   assert(_data);
   _remote = hpx_addr_add(_data, peer * n, n);
   assert(_remote);
-  return hpx_call_sync(_remote, _init, NULL, 0, NULL, 0);
+  return hpx_call_sync(_remote, _init, NULL, 0);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _init_globals, _init_globals_handler);
 

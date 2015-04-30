@@ -101,7 +101,7 @@ static int thread_continue_cleanup_handler(void) {
   uint64_t *block = malloc(DATA_SIZE);
   assert(block);
 
-  hpx_call_sync(src, _thread_cont_cleanup, block, DATA_SIZE, &rank, sizeof(rank));
+  hpx_call_sync(src, _thread_cont_cleanup, block, DATA_SIZE);
   printf("value in block is %"PRIu64"\n", *block);
 
   free(block);
