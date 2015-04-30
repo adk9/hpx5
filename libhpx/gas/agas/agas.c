@@ -16,9 +16,25 @@
 
 #include <stdlib.h>
 #include <libhpx/boot.h>
+#include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include "agas.h"
 #include "btt.h"
+#include "gva.h"
+
+static const unsigned AGAS_MAX_RANKS = (1u << GVA_RANK_BITS);
+static const uint64_t AGAS_THERE_OFFSET = UINT64_MAX;
+
+static uint64_t size_classes[8] = {
+  0,
+  8,
+  64,
+  128,
+  1024,
+  16384,
+  65536,
+  1048576
+};
 
 typedef struct {
   gas_t vtable;
@@ -46,7 +62,21 @@ _agas_add(const void *gas, hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
 
 static hpx_addr_t
 _agas_there(void *gas, uint32_t i) {
-  return HPX_NULL;
+  // We reserve a small range of addresses in the "large" allocation space that
+  // will represent locality addresses.
+  dbg_assert_str(i < AGAS_MAX_RANKS, "rank %u too large (max %u)\n",
+                 i, AGAS_MAX_RANKS);
+  dbg_assert_str(i < here->ranks, "rank %u does not exist (max %u)\n", i,
+                 here->ranks);
+  gva_t gva = {
+    .bits = {
+      .offset = AGAS_THERE_OFFSET,
+      .home = i,
+      .large = 0,
+      .size_class = 1
+    }
+  };
+  return gva.addr;
 }
 
 static bool
