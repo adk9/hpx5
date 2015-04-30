@@ -18,6 +18,7 @@
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
+#include <libhpx/memory.h>
 #include "agas.h"
 #include "btt.h"
 #include "gva.h"
@@ -98,6 +99,45 @@ _agas_owner_of(const void *gas, hpx_addr_t gva) {
   return btt_owner_of(agas->btt, gva);
 }
 
+static hpx_addr_t
+_agas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
+  // use the local allocator to get some memory that is part of the global
+  // address space
+  void *lva = NULL;
+  if (boundary) {
+    lva = global_memalign(boundary, bytes);
+  }
+  else {
+    lva = global_malloc(bytes);
+  }
+
+  // now we need to reverse map this address to an offset into the local portion
+  // of the global address space
+  uint64_t offset = lva_to_gva_offset(lva);
+
+  // and construct a gva for this
+  gva_t gva = {
+    .bits = {
+      .offset = offset,
+      .home = here->rank,
+      .large = 0,
+      .size_class = 0
+    }
+  };
+
+  // and insert an entry into our block translation table
+  agas_t *agas = gas;
+  btt_insert(agas->btt, gva.addr, here->rank, lva);
+
+  // and return the address
+  return gva.addr;
+}
+
+static hpx_addr_t
+_agas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
+  return HPX_NULL;
+}
+
 static gas_t _agas_vtable = {
   .type           = HPX_GAS_AGAS,
   .delete         = _agas_delete,
@@ -112,8 +152,8 @@ static gas_t _agas_vtable = {
   .calloc_cyclic  = NULL,
   .alloc_blocked  = NULL,
   .calloc_blocked = NULL,
-  .alloc_local    = NULL,
-  .calloc_local   = NULL,
+  .alloc_local    = _agas_alloc_local,
+  .calloc_local   = _agas_calloc_local,
   .free           = NULL,
   .move           = NULL,
   .memget         = NULL,

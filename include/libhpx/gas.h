@@ -26,28 +26,32 @@ struct boot;
 typedef struct gas {
   hpx_gas_t type;
 
-  void   (*delete)(void *gas);
+  void (*delete)(void *gas);
   size_t (*local_size)(void *gas);
-  void  *(*local_base)(void *gas);
+  void *(*local_base)(void *gas);
 
-  int64_t    (*sub)(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize);
-  hpx_addr_t (*add)(const void *gas, hpx_addr_t gva, int64_t bytes, uint32_t bsize);
+  int64_t (*sub)(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs,
+                 uint32_t bsize);
+  hpx_addr_t (*add)(const void *gas, hpx_addr_t gva, int64_t bytes,
+                    uint32_t bsize);
 
   hpx_addr_t (*there)(void *gas, uint32_t i);
-  uint32_t   (*owner_of)(const void *gas, hpx_addr_t gpa);
-  bool       (*try_pin)(void *gas, hpx_addr_t addr, void **local);
-  void       (*unpin)(void *gas, hpx_addr_t addr);
+  uint32_t (*owner_of)(const void *gas, hpx_addr_t gpa);
+  bool (*try_pin)(void *gas, hpx_addr_t addr, void **local);
+  void (*unpin)(void *gas, hpx_addr_t addr);
 
   system_mmap_t mmap;
   system_munmap_t munmap;
+
+  hpx_addr_t (*alloc_local)(void *gas, uint32_t bytes, uint32_t boundary);
+  hpx_addr_t (*calloc_local)(void *gas, size_t nmemb, size_t size,
+                             uint32_t boundary);
 
   // implement hpx/gas.h
   __typeof(hpx_gas_alloc_cyclic) *alloc_cyclic;
   __typeof(hpx_gas_calloc_cyclic) *calloc_cyclic;
   __typeof(hpx_gas_alloc_blocked) *alloc_blocked;
   __typeof(hpx_gas_calloc_blocked) *calloc_blocked;
-  __typeof(hpx_gas_alloc_local) *alloc_local;
-  __typeof(hpx_gas_calloc_local) *calloc_local;
   __typeof(hpx_gas_free) *free;
   __typeof(hpx_gas_move) *move;
   __typeof(hpx_gas_memget) *memget;
