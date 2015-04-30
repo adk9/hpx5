@@ -56,10 +56,6 @@ static inline uint64_t gva_to_key(hpx_addr_t gva) {
   return gva;
 }
 
-static inline uint64_t lva_to_gva_offset(void *lva) {
-  return 0;
-}
-
 #ifdef __cplusplus
 }
 #endif

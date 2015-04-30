@@ -35,7 +35,7 @@ namespace {
     }
   };
 
-  typedef cuckoohash_map<hpx_addr_t, Entry, Hasher> Map;
+  typedef cuckoohash_map<uint64_t, Entry, Hasher> Map;
 
   class BTT : public Map {
    public:
