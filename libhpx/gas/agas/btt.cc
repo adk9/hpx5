@@ -27,10 +27,17 @@ namespace {
     }
   };
 
-  typedef std::tuple<int32_t, int32_t, void*> Entry;
+  struct Entry : public std::tuple<int32_t, int32_t, void*> {
+    Entry() : std::tuple<int32_t, int32_t, void*>(0, 0, NULL) {
+    }
+    Entry(int32_t owner, void *lva) :
+      std::tuple<int32_t, int32_t, void*>(0, owner, lva) {
+    }
+  };
+
   typedef cuckoohash_map<hpx_addr_t, Entry, Hasher> Map;
 
-  class BTT : Map {
+  class BTT : public Map {
    public:
     BTT(size_t);
     bool trypin(hpx_addr_t gva, void** lva);
@@ -87,11 +94,21 @@ btt_delete(void* obj) {
 }
 
 void
-btt_insert(void *obj, hpx_addr_t gva, void *lva) {
+btt_insert(void *obj, hpx_addr_t gva, int32_t owner, void *lva) {
+  BTT *btt = static_cast<BTT*>(obj);
+  uint64_t key = gva_to_key(gva);
+  bool inserted = btt->insert(key, Entry(owner, lva));
+  assert(inserted);
+  (void)inserted;
 }
 
 void
 btt_remove(void *obj, hpx_addr_t gva) {
+  BTT *btt = static_cast<BTT*>(obj);
+  uint64_t key = gva_to_key(gva);
+  bool erased = btt->erase(key);
+  assert(erased);
+  (void)erased;
 }
 
 bool
