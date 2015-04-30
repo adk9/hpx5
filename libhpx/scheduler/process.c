@@ -67,7 +67,7 @@ static void _init(_process_t *p, hpx_addr_t termination) {
   p->termination = termination;
 }
 
-static int _proc_call_handler(size_t n, hpx_parcel_t *arg) {
+static int _proc_call_handler(hpx_parcel_t *arg, size_t n) {
   hpx_addr_t process = hpx_thread_current_target();
   _process_t *p = NULL;
   if (!hpx_gas_try_pin(process, (void**)&p)) {
@@ -86,17 +86,17 @@ static int _proc_call_handler(size_t n, hpx_parcel_t *arg) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _proc_call,
-                  _proc_call_handler, HPX_SIZE_T, HPX_POINTER);
+                  _proc_call_handler, HPX_POINTER, HPX_SIZE_T);
 
-static int _proc_delete_handler(size_t size, _process_t *p) {
+static int _proc_delete_handler(_process_t *p, size_t size) {
   _free(p);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _proc_delete,
                   _proc_delete_handler,
-                  HPX_POINTER, HPX_SIZE_T, HPX_POINTER);
+                  HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
-static int _proc_return_credit_handler(_process_t *p, size_t size, uint64_t *args) {
+static int _proc_return_credit_handler(_process_t *p, uint64_t *args, size_t size) {
   // add credit to the credit-accounting bitmap
   uint64_t debt = cr_bitmap_add_and_test(p->debt, *args);
   for (;;) {
@@ -115,7 +115,7 @@ static int _proc_return_credit_handler(_process_t *p, size_t size, uint64_t *arg
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _proc_return_credit,
                   _proc_return_credit_handler,
-                  HPX_POINTER, HPX_SIZE_T, HPX_POINTER);
+                  HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 int process_recover_credit(hpx_parcel_t *p) {
   hpx_addr_t process = p->pid;

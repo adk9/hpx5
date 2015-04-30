@@ -21,11 +21,11 @@
 #include <libhpx/locality.h>
 #include "tests.h"
 
-static int _echo_handler(size_t n, int *args) {
+static int _echo_handler(int *args, size_t n) {
   hpx_thread_continue(n, args);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _echo,
-                  _echo_handler, HPX_SIZE_T, HPX_POINTER);
+                  _echo_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int parcel_send_rendezvous_handler(void) {
   printf("Testing the hpx parcel send function for large parcels\n");

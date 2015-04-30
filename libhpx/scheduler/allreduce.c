@@ -263,7 +263,7 @@ _block_local_init_handler(void *lco, int n, size_t participants, size_t readers,
 
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
                   _block_local_init_handler, HPX_POINTER, HPX_INT, HPX_SIZE_T,
-                  HPX_SIZE_T, HPX_SIZE_T, HPX_POINTER, HPX_POINTER);
+                  HPX_SIZE_T, HPX_POINTER, HPX_SIZE_T, HPX_POINTER);
 
 /// Allocate an array of allreduce LCO local to the calling locality.
 /// @param            n The (total) number of lcos to allocate

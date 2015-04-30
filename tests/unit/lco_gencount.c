@@ -21,7 +21,7 @@
 #include "tests.h"
 
 // Testcase for gencount LCO.
-static int _increment_handler(size_t n, hpx_addr_t *args) {
+static int _increment_handler(hpx_addr_t *args, size_t n) {
   hpx_addr_t addr = *args;
 
   // Increment the generation counter.
@@ -32,7 +32,7 @@ static int _increment_handler(size_t n, hpx_addr_t *args) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _increment,
-                  _increment_handler, HPX_SIZE_T, HPX_POINTER);
+                  _increment_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int lco_gencount_handler(void) {
   printf("Starting the HPX gencount lco test\n");

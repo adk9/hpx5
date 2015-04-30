@@ -19,7 +19,7 @@
 #include "libsync/sync.h"
 
 // Testcase to test the parcel continuation
-static int _get_cont_value_handler(size_t n, uint64_t *args) {
+static int _get_cont_value_handler(uint64_t *args, size_t n) {
   hpx_addr_t local = hpx_thread_current_target();
   uint64_t *value;
   if (!hpx_gas_try_pin(local, (void**)&value))
@@ -32,7 +32,7 @@ static int _get_cont_value_handler(size_t n, uint64_t *args) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _get_cont_value,
-                  _get_cont_value_handler, HPX_SIZE_T, HPX_POINTER);
+                  _get_cont_value_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int parcel_get_continuation_handler(void) {
   printf("Testing parcel contination target and action\n");
