@@ -36,7 +36,7 @@ typedef struct Domain {
   hpx_addr_t newdt;
 } Domain;
 
-static int _init_action(const InitArgs *args) {
+static int _init_action(size_t size, const InitArgs *args) {
   hpx_addr_t local = hpx_thread_current_target();
   Domain *ld = NULL;
   if (!hpx_gas_try_pin(local, (void**)&ld))
@@ -51,7 +51,7 @@ static int _init_action(const InitArgs *args) {
   return HPX_SUCCESS;
 }
 
-static int _check_sum_action(int *args) {
+static int _check_sum_action(size_t size, int *args) {
   hpx_addr_t target = hpx_thread_current_target();
   Domain *ld = NULL;
   if (!hpx_gas_try_pin(target, (void**)&ld))
@@ -81,7 +81,7 @@ static int _check_sum_action(int *args) {
   return HPX_SUCCESS;
 }
 
-static int _main_action(void *args) {
+static int _main_action(size_t size, void *args) {
   hpx_addr_t domain   = hpx_gas_alloc_cyclic(nDoms, sizeof(Domain), 0);
   hpx_addr_t done     = hpx_lco_and_new(nDoms);
   hpx_addr_t complete = hpx_lco_and_new(nDoms);

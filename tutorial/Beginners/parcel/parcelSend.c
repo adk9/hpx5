@@ -31,7 +31,7 @@ typedef struct {
 #define NDOMS 8
 
 /// Initialize a domain.
-static int _initDomain_action(const InitArgs *args)
+static int _initDomain_action(size_t size, const InitArgs *args)
 {
   // Get the address this parcel was sent to, and map it to a local address---if
   // this fails then the message arrived at the wrong place due to AGAS
@@ -53,7 +53,7 @@ static int _initDomain_action(const InitArgs *args)
   return HPX_SUCCESS;
 }
 
-static int _main_action(void *args) {
+static int _main_action(size_t size, void *args) {
   // Allocate the domain array
   hpx_addr_t domain = hpx_gas_alloc_cyclic(NDOMS, sizeof(Domain), 0);
 

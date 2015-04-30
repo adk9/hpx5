@@ -25,7 +25,7 @@ static uint64_t block[] = {
   22, 23, 24, 25, 26, 27, 28, 29, 30, 31
 };
 
-static int _verify_action(void *args) {
+static int _verify_action(size_t size, void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   uint64_t *local;
   if (!hpx_gas_try_pin(target, (void**)&local))
@@ -40,7 +40,7 @@ static int _verify_action(void *args) {
   HPX_THREAD_CONTINUE(result);
 }
 
-static int _main_action(void *args) {
+static int _main_action(size_t n, void *args) {
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
   int peerid = (rank + 1) % size;

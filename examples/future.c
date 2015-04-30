@@ -27,13 +27,13 @@ static hpx_addr_t rand_rank(void) {
 static hpx_action_t send = 0;
 static hpx_action_t increment = 0;
 
-static int _increment_action(int *args) {
+static int _increment_action(size_t size, int *args) {
   int n = *args + 1;
   HPX_THREAD_CONTINUE(n);
 }
 
 
-static int _send_action(int *args) {
+static int _send_action(size_t size, int *args) {
   int n = *args;
   int i = 0;
   while (i < n) {

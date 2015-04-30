@@ -57,7 +57,7 @@ static double myreduce(int count, double values[count]) {
   return total;
 }
 
-static double _getVal_action(void *args) {
+static double _getVal_action(size_t size, void *args) {
   int THREADS = HPX_LOCALITIES;
   int MYTHREAD = HPX_LOCALITY_ID;
 
@@ -72,12 +72,12 @@ static double _getVal_action(void *args) {
   HPX_THREAD_CONTINUE(value);
 }
 
-static int _setVal_action(void *args) {
+static int _setVal_action(size_t size, void *args) {
   reduce_result = *(double*)args;
   return HPX_SUCCESS;
 }
 
-static int _main_action(int *args) {
+static int _main_action(size_t size, int *args) {
   double realpi=3.141592653589793238462643;  
   int THREADS = HPX_LOCALITIES;
   int MYTHREAD = HPX_LOCALITY_ID;

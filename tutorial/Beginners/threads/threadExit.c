@@ -34,14 +34,14 @@
 static hpx_action_t _main       = 0;
 static hpx_action_t _exitSuccess = 0;
 
-static int _exitSuccess_action(int *args) {
+static int _exitSuccess_action(size_t size, int *args) {
   hpx_thread_exit(HPX_SUCCESS);
 }
 
 //****************************************************************************
 // @Action which spawns the threads
 //****************************************************************************
-static int _main_action(int *args) {
+static int _main_action(size_t size, int *args) {
   int value;
 
   hpx_addr_t done = hpx_lco_future_new(sizeof(int));

@@ -18,7 +18,7 @@
 static  hpx_action_t _main = 0;
 static  hpx_action_t _lcoSetGet  = 0;
 
-static int _lcoSetGet_action(void *args) {
+static int _lcoSetGet_action(size_t size, void *args) {
   uint64_t val = 1234, setVal;
   hpx_addr_t future = hpx_lco_future_new(sizeof(uint64_t));
   hpx_lco_set(future, sizeof(uint64_t), &val, HPX_NULL, HPX_NULL);
@@ -27,7 +27,7 @@ static int _lcoSetGet_action(void *args) {
   hpx_thread_continue(sizeof(uint64_t), &setVal);
 }
 
-static int _main_action(void *args) {
+static int _main_action(size_t size, void *args) {
   hpx_addr_t lco;
   uint64_t result;
   hpx_addr_t done = hpx_lco_future_new(sizeof(uint64_t));

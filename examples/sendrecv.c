@@ -49,13 +49,13 @@ static hpx_action_t _main     = 0;
 static hpx_action_t _receiver = 0;
 
 
-static int _receiver_action(double *args) {
+static int _receiver_action(size_t size, double *args) {
   hpx_thread_set_affinity(1);
   return HPX_SUCCESS;
 }
 
 
-static int _main_action(int *args) {
+static int _main_action(size_t size, int *args) {
   int avg = 10000;
 
   hpx_thread_set_affinity(0);

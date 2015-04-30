@@ -67,20 +67,20 @@ void send_pong(echo_args_t *args) {
   hpx_parcel_send(p, HPX_NULL);
 }
 
-int echo_pong_action(echo_args_t *args) {
+int echo_pong_action(size_t size, echo_args_t *args) {
   if (args->dst != hpx_get_my_rank())
     hpx_shutdown(-1);
   send_pong(args);
   return HPX_SUCCESS;
 }
 
-int echo_finish_action(echo_args_t *args) {
+int echo_finish_action(size_t size, echo_args_t *args) {
   //hpx_lco_gencount_inc(args->lco, HPX_NULL);
   hpx_lco_and_set(args->lco, HPX_NULL);
   return HPX_SUCCESS;
 }
 
-int hpx_main_action(void *args) {
+int hpx_main_action(size_t size, void *args) {
   if (hpx_get_num_ranks() < 2) {
     printf("Too few ranks, need at least two.\n");
     return HPX_ERROR;

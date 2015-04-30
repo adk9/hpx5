@@ -36,7 +36,7 @@ static int _init_array_action(size_t block_size, void *args) {
   return HPX_SUCCESS;
 }
 
-static int _main_action(void *args) {
+static int _main_action(size_t n, void *args) {
   uint64_t *local;
   int size = HPX_LOCALITIES;
 

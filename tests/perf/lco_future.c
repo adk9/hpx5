@@ -48,16 +48,16 @@ static int num_readers[]  ={
  192
 };
 
-static int action_get_value(void *args) {
+static int action_get_value(size_t size, void *args) {
   HPX_THREAD_CONTINUE(value);
 }
 
-static int action_set_value(void *args) {
+static int action_set_value(size_t size, void *args) {
   value = *(T*)args;
   return HPX_SUCCESS;
 }
 
-static int _main_action(int *args) {
+static int _main_action(size_t size, int *args) {
   hpx_time_t t;
   int count;
 

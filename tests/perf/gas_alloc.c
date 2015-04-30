@@ -39,7 +39,7 @@ static void usage(FILE *stream) {
 
 static hpx_action_t _main    = 0;
 
-static int _main_action(void *args) {
+static int _main_action(size_t n, void *args) {
   hpx_addr_t local, global, calloc_global;
   hpx_time_t t;
   int size = HPX_LOCALITIES;

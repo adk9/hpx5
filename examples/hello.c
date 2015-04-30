@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <hpx/hpx.h>
 
-static int _hello_action(void *args) {
+static int _hello_action(size_t size, void *args) {
   printf("Hello World from %u.\n", hpx_get_my_rank());
   hpx_shutdown(HPX_SUCCESS);
 }

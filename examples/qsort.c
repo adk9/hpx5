@@ -69,7 +69,7 @@ Main action:
 -time parallel quicksort
 -time standard qsort
 */
-static int _main_action(uint64_t *args) {
+static int _main_action(size_t size, uint64_t *args) {
   hpx_time_t start;
   srand(time(NULL)); //seed random
   uint64_t NUM = *args;
