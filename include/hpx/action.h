@@ -15,6 +15,11 @@
 
 #include "hpx/builtins.h"
 
+/// @defgroup actions Actions and threads
+/// @brief Functions and definitions for registering, calling, and controlling
+///        actions and threads
+/// @{
+
 /// @file
 /// @brief Types and functions for registering HPX actions.
 
@@ -109,5 +114,7 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
     HPX_REGISTER_ACTION(type, attr, id, handler , ##__VA_ARGS__); \
   }                                                               \
   static HPX_CONSTRUCTOR void _register##_##handler(void)
+
+/// @}
 
 #endif

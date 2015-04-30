@@ -13,6 +13,9 @@
 #ifndef HPX_ADDR_H
 #define HPX_ADDR_H
 
+/// @addtogroup agas
+/// @{
+
 /// @file include/hpx/addr.h
 /// @brief Types and functions specific to dealing with global addresses.
 
@@ -67,5 +70,7 @@ hpx_addr_t hpx_addr_add(hpx_addr_t addr, int64_t bytes, uint32_t bsize);
 ///          - 0 if @p lhs == @p rhs
 ///          - negative if @p lhs < @p rhs
 int64_t hpx_addr_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize);
+
+/// @}
 
 #endif
