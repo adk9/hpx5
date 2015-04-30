@@ -15,6 +15,8 @@
 
 #ifdef __cplusplus
 extern "C" {
+#else
+# include <stdbool.h>
 #endif
 
 #include <hpx/attributes.h>
@@ -22,7 +24,6 @@ extern "C" {
 /// The heap manages the local heap allocation.
 
 HPX_INTERNAL void *heap_lva_to_chunk(void *heap, void *lva);
-
 
 #ifdef __cplusplus
 }

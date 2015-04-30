@@ -43,12 +43,14 @@ typedef struct {
   gas_t vtable;
   void *chunk_table;
   void *btt;
-  void *heap;
 } agas_t;
 
 static void
 _agas_delete(void *gas) {
   agas_t *agas = gas;
+  if (agas->chunk_table) {
+    chunk_table_delete(agas->chunk_table);
+  }
   if (agas->btt) {
     btt_delete(agas->btt);
   }
@@ -107,7 +109,7 @@ static hpx_addr_t
 _register(agas_t *gas, void *lva) {
   // we need to reverse map this address to an offset into the local portion of
   // the global address space
-  void *chunk = heap_lva_to_chunk(gas->heap, lva);
+  void *chunk = heap_lva_to_chunk(NULL, lva);
   uint64_t base = chunk_table_lookup(gas->chunk_table, chunk);
   uint64_t offset = base + ((char*)lva - (char*)chunk);
 
@@ -157,6 +159,15 @@ _agas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
   return _register(gas, lva);
 }
 
+static void *
+_agas_mmap(void *gas, void *addr, size_t n, size_t align) {
+  return NULL;
+}
+
+static void
+_agas_munmap(void *gas, void *addr, size_t n) {
+}
+
 static gas_t _agas_vtable = {
   .type           = HPX_GAS_AGAS,
   .delete         = _agas_delete,
@@ -179,8 +190,8 @@ static gas_t _agas_vtable = {
   .memput         = NULL,
   .memcpy         = NULL,
   .owner_of       = _agas_owner_of,
-  .mmap           = NULL,
-  .munmap         = NULL
+  .mmap           = _agas_mmap,
+  .munmap         = _agas_munmap
 };
 
 gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
@@ -188,7 +199,6 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   agas->vtable = _agas_vtable;
   agas->chunk_table = chunk_table_new(0);
   agas->btt = btt_new(0);
-  agas->heap = NULL;
   btt_insert(agas->btt, _agas_there(agas, here->rank), here->rank, here);
   return &agas->vtable;
 }
