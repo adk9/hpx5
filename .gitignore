@@ -119,6 +119,7 @@ tests/unit/lco_gencount
 tests/unit/parcel_continuation
 tests/unit/thread_cont_action
 tests/unit/bcast
+tests/unit/lco_reduce
 tests/unit/lco_sema
 tests/unit/lco_setget
 tests/unit/thread_gettlsid

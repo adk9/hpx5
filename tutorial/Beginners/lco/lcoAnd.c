@@ -17,12 +17,12 @@
 static  hpx_action_t _main = 0;
 static  hpx_action_t _set  = 0;
 
-static int _set_action(void *args) {
+static int _set_action(size_t size, void *args) {
   hpx_lco_and_set(*(hpx_addr_t*)args, HPX_NULL);
   return HPX_SUCCESS;
 }
 
-static int _main_action(void *args) {
+static int _main_action(size_t size, void *args) {
   hpx_addr_t lco = hpx_lco_and_new(1);
   hpx_addr_t done = hpx_lco_future_new(0);
 
@@ -46,8 +46,8 @@ int main(int argc, char *argv[]) {
     return e;
   }
    
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(_set_action, &_set);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _set, _set_action, HPX_SIZE_T, HPX_POINTER);
 
   return hpx_run(&_main, NULL, 0);
 }

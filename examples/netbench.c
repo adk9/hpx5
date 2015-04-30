@@ -67,23 +67,23 @@ void send_pong(echo_args_t *args) {
   hpx_parcel_send(p, HPX_NULL);
 }
 
-int echo_pong_action(echo_args_t *args) {
+int echo_pong_action(size_t size, echo_args_t *args) {
   if (args->dst != hpx_get_my_rank())
     hpx_shutdown(-1);
   send_pong(args);
   return HPX_SUCCESS;
 }
 
-int echo_finish_action(echo_args_t *args) {
+int echo_finish_action(size_t size, echo_args_t *args) {
   //hpx_lco_gencount_inc(args->lco, HPX_NULL);
   hpx_lco_and_set(args->lco, HPX_NULL);
   return HPX_SUCCESS;
 }
 
-int hpx_main_action(void *args) {
+int hpx_main_action(size_t size, void *args) {
   if (hpx_get_num_ranks() < 2) {
     printf("Too few ranks, need at least two.\n");
-    return HPX_ERROR;
+    hpx_shutdown(HPX_SUCCESS);
   }
     
   size_t sizes[] = {1, 128, 1024, 4096, 8192, 64*1024, 256*1024, 1024*1024, 4*1024*1024};
@@ -159,10 +159,10 @@ int main(int argc, char *argv[]) {
     printf("read ITERATIONS as 0, setting them to default of %lu.\n", iterations);
   }
 
-  HPX_REGISTER_ACTION(echo_pong_action, &echo_pong);
-  HPX_REGISTER_ACTION(echo_finish_action, &echo_finish);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, echo_pong, echo_pong_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, echo_finish, echo_finish_action, HPX_SIZE_T, HPX_POINTER);
   hpx_action_t hpx_main;
-  HPX_REGISTER_ACTION(hpx_main_action, &hpx_main);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, hpx_main, hpx_main_action, HPX_SIZE_T, HPX_POINTER);
 
   int e = hpx_run(&hpx_main, NULL, 0);
   return e;

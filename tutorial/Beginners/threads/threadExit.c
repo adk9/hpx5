@@ -34,14 +34,14 @@
 static hpx_action_t _main       = 0;
 static hpx_action_t _exitSuccess = 0;
 
-static int _exitSuccess_action(int *args) {
+static int _exitSuccess_action(size_t size, int *args) {
   hpx_thread_exit(HPX_SUCCESS);
 }
 
 //****************************************************************************
 // @Action which spawns the threads
 //****************************************************************************
-static int _main_action(int *args) {
+static int _main_action(size_t size, int *args) {
   int value;
 
   hpx_addr_t done = hpx_lco_future_new(sizeof(int));
@@ -65,8 +65,8 @@ int main(int argc, char *argv[]) {
     return e;
   }
    
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(_exitSuccess_action, &_exitSuccess);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _exitSuccess, _exitSuccess_action, HPX_SIZE_T, HPX_POINTER);
 
   return hpx_run(&_main, NULL, 0);
 }

@@ -895,10 +895,6 @@ hpx_action_t hpx_thread_current_cont_action(void) {
   return (self && self->current) ? self->current->c_action : HPX_ACTION_NULL;
 }
 
-uint32_t hpx_thread_current_args_size(void) {
-  return (self && self->current) ? self->current->size : 0;
-}
-
 hpx_pid_t hpx_thread_current_pid(void) {
   return (self && self->current) ? self->current->pid : HPX_NULL;
 }

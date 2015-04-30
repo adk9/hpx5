@@ -27,13 +27,13 @@ static hpx_addr_t rand_rank(void) {
 static hpx_action_t send = 0;
 static hpx_action_t increment = 0;
 
-static int _increment_action(int *args) {
+static int _increment_action(size_t size, int *args) {
   int n = *args + 1;
   HPX_THREAD_CONTINUE(n);
 }
 
 
-static int _send_action(int *args) {
+static int _send_action(size_t size, int *args) {
   int n = *args;
   int i = 0;
   while (i < n) {
@@ -81,7 +81,7 @@ int main(int argc, char * argv[argc]) {
      break;
   }
 
-  HPX_REGISTER_ACTION(_send_action, &send);
-  HPX_REGISTER_ACTION(_increment_action, &increment);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, send, _send_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, increment, _increment_action, HPX_SIZE_T, HPX_POINTER);
   return hpx_run(&send, &n, sizeof(n));
 }

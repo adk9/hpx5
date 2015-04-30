@@ -30,12 +30,13 @@ const int SET_CONT_VALUE = 1234;
 // Finish the current thread's execution, sending value to the thread's
 // continuation address (size is the size of the value and value is the value
 // to be sent to the thread's continuation address.
-static HPX_ACTION(_set_cont, void *args) {
+static int _set_cont_handler(void) {
   uint64_t value = SET_CONT_VALUE;
   hpx_thread_continue(DATA_SIZE, &value);
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _set_cont, _set_cont_handler);
 
-static HPX_ACTION(thread_continue, void *UNUSED) {
+static int thread_continue_handler(void) {
   printf("Starting the Thread continue test\n");
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
@@ -67,13 +68,14 @@ static HPX_ACTION(thread_continue, void *UNUSED) {
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, thread_continue, thread_continue_handler);
 
 // Finish the current thread's execution, sending value to the thread's
 // continuation address (size is the size of the value and value is the value
 // to be sent to the thread's continuation address. This version gives the
 // application a chance to cleanup for instance, to free the value. After
 // dealing with the continued data, it will run cleanup(env).
-static HPX_ACTION(_thread_cont_cleanup, void *args) {
+static int _thread_cont_cleanup_handler(void) {
   hpx_addr_t addr = hpx_thread_current_target();
   uint64_t local;
   if (!hpx_gas_try_pin(addr, (void**)&local))
@@ -86,8 +88,9 @@ static HPX_ACTION(_thread_cont_cleanup, void *args) {
   hpx_gas_unpin(addr);
   hpx_thread_continue_cleanup(DATA_SIZE, value, free, value);
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _thread_cont_cleanup, _thread_cont_cleanup_handler);
 
-static HPX_ACTION(thread_continue_cleanup, void *UNUSED) {
+static int thread_continue_cleanup_handler(void) {
   printf("Starting the Thread continue cleanup test\n");
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
@@ -98,7 +101,7 @@ static HPX_ACTION(thread_continue_cleanup, void *UNUSED) {
   uint64_t *block = malloc(DATA_SIZE);
   assert(block);
 
-  hpx_call_sync(src, _thread_cont_cleanup, block, DATA_SIZE, &rank, sizeof(rank));
+  hpx_call_sync(src, _thread_cont_cleanup, block, DATA_SIZE);
   printf("value in block is %"PRIu64"\n", *block);
 
   free(block);
@@ -107,6 +110,8 @@ static HPX_ACTION(thread_continue_cleanup, void *UNUSED) {
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, thread_continue_cleanup,
+                  thread_continue_cleanup_handler);
 
 TEST_MAIN({
   ADD_TEST(thread_continue);

@@ -24,20 +24,19 @@ static  hpx_action_t _init_array = 0;
 #define BLOCK_COUNT 1000
 #define BLOCK_SIZE BLOCK_COUNT * sizeof(uint64_t)
 
-static int _init_array_action(void *args) {
+static int _init_array_action(size_t block_size, void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   uint64_t *local = NULL;
   if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
 
-  unsigned block_size = hpx_thread_current_args_size();
   memcpy(local, args, block_size);
 
   hpx_gas_unpin(target);
   return HPX_SUCCESS;
 }
 
-static int _main_action(void *args) {
+static int _main_action(size_t n, void *args) {
   uint64_t *local;
   int size = HPX_LOCALITIES;
 
@@ -99,8 +98,8 @@ int main(int argc, char *argv[]) {
     return e;
   }
    
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(_init_array_action, &_init_array);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_array, _init_array_action, HPX_SIZE_T, HPX_POINTER);
 
   return hpx_run(&_main, NULL, 0);
 }

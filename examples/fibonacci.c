@@ -37,7 +37,7 @@ static void _usage(FILE *f, int error) {
 static hpx_action_t _fib      = 0;
 static hpx_action_t _fib_main = 0;
 
-static int _fib_action(int *args) {
+static int _fib_action(size_t size, int *args) {
   int n = *args;
 
   if (n < 2)
@@ -84,7 +84,7 @@ static int _fib_action(int *args) {
   return HPX_SUCCESS;
 }
 
-static int _fib_main_action(int *args) {
+static int _fib_main_action(size_t size, int *args) {
   int n = *args;
   int fn = 0;                                   // fib result
   printf("fib(%d)=", n); fflush(stdout);
@@ -134,8 +134,10 @@ int main(int argc, char *argv[]) {
   }
 
   // register the fib action
-  HPX_REGISTER_ACTION(_fib_action, &_fib);
-  HPX_REGISTER_ACTION(_fib_main_action, &_fib_main);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _fib, _fib_action,
+                      HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _fib_main, _fib_main_action,
+                      HPX_SIZE_T, HPX_POINTER);
 
   // run the main action
   return hpx_run(&_fib_main, &n, sizeof(n));

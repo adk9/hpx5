@@ -23,7 +23,7 @@
 static  hpx_action_t _main           = 0;
 static  hpx_action_t _doSomething    = 0;
 
-static int _doSomething_action(int *args) {
+static int _doSomething_action(size_t size, int *args) {
   int ret1, ret2;
   int tid = *args;
 
@@ -46,7 +46,7 @@ static int _doSomething_action(int *args) {
 //****************************************************************************
 // @Action which spawns the threads
 //****************************************************************************
-static int _main_action(void *args) {
+static int _main_action(size_t size, void *args) {
   int value[] = {0, 0};
   void *addrs[] = {&value[0], &value[1]};
   int sizes[] = {sizeof(int), sizeof(int)};
@@ -76,8 +76,8 @@ int main(int argc, char *argv[]) {
     return e;
   }
 
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(_doSomething_action, &_doSomething);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _doSomething, _doSomething_action, HPX_SIZE_T, HPX_POINTER);
 
   return hpx_run(&_main, NULL, 0);
 }

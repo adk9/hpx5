@@ -36,19 +36,19 @@ static  hpx_action_t _init_array = 0;
 static uint64_t masterCopy[SIZE];
 uint64_t localCopy[LOCALCOPY][SIZE];
 
-static int _init_array_action(void *args) {
+static int _init_array_action(size_t size, void *args) {
   hpx_addr_t target = hpx_thread_current_target();
   uint64_t *local = NULL;
   if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
 
-  memcpy(local, args, hpx_thread_current_args_size());
+  memcpy(local, args, size);
 
   hpx_gas_unpin(target);
   return HPX_SUCCESS;
 }
 
-static int _main_action(void *args) {
+static int _main_action(size_t n, void *args) {
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
   int peerid = (rank + 1) % size;
@@ -109,8 +109,8 @@ int main(int argc, char *argv[]) {
     return e;
   }
    
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(_init_array_action, &_init_array);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_array, _init_array_action, HPX_SIZE_T, HPX_POINTER);
 
   return hpx_run(&_main, NULL, 0);
 }
