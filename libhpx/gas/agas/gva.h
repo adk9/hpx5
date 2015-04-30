@@ -19,19 +19,30 @@ extern "C" {
 
 #include <hpx/hpx.h>
 
+/// Set up some limitations for the AGAS implementation for now.
+#define   GVA_RANK_BITS 12
+#define GVA_ACTION_BITS 12
+#define  GVA_CLASS_BITS 3
+#define GVA_OFFSET_BITS (48 - GVA_RANK_BITS)
+
 typedef union {
   hpx_addr_t addr;
   struct {
-    uint64_t offset:48;
-    uint64_t large:1;
-    uint64_t size_class:3;
-    uint64_t :12;
+    uint64_t     offset :GVA_OFFSET_BITS;
+    uint64_t       home :GVA_RANK_BITS;
+    uint64_t      large :1;
+    uint64_t size_class :GVA_CLASS_BITS;
+    uint64_t            :GVA_ACTION_BITS;
   } bits;
 } gva_t;
 
+_HPX_ASSERT(sizeof(gva_t) == sizeof(hpx_addr_t), gva_bitfield_packing_failed);
 
 static inline uint32_t gva_home(hpx_addr_t gva) {
-  return 0;
+  gva_t addr = {
+    .addr = gva
+  };
+  return addr.bits.home;
 }
 
 static inline int gva_to_size_class(hpx_addr_t gva) {
