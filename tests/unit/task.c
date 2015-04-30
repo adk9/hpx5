@@ -67,7 +67,7 @@ static int _test_action_handler(void) {
     //
     // We send our continuation along so that the test doesn't terminate early.
     hpx_addr_t and = hpx_thread_current_cont_target();
-    int e = hpx_call(HPX_HERE, _test_task, and, NULL, 0);
+    int e = hpx_call(HPX_HERE, _test_task, and);
     assert(e == HPX_SUCCESS);
     hpx_thread_yield();
     printf("action stolen by %d\n", HPX_THREAD_ID);
@@ -106,7 +106,7 @@ static int _test_try_task_handler(void) {
   hpx_addr_t and = hpx_lco_and_new(HPX_THREADS + 1);
   assert(and);
   for (int i = 0; i < HPX_THREADS; ++i) {
-    int e = hpx_call(HPX_HERE, _test_action, and, NULL, 0);
+    int e = hpx_call(HPX_HERE, _test_action, and);
     assert(e == HPX_SUCCESS);
   }
   hpx_lco_wait(and);

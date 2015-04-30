@@ -34,19 +34,19 @@ sum(T count, T values[count]) {
 }
 
 static int
-action_get_value(void *args) {
+action_get_value(size_t size, void *args) {
   HPX_THREAD_CONTINUE(value);
 }
 
 static int
-action_set_value(void *args) {
+action_set_value(size_t size, void *args) {
   value = *(T*)args;
   printf("At rank %d received value %lld\n", hpx_get_my_rank(), (long long)value);
   return HPX_SUCCESS;
 }
 
 static int
-action_allreduce(void *unused) {
+action_allreduce(size_t size, void *unused) {
   int num_ranks = HPX_LOCALITIES;
   int my_rank = HPX_LOCALITY_ID;
   assert(my_rank == 0);
@@ -90,9 +90,12 @@ int main(int argc, char** argv) {
   }
 
   // register action for parcel
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, set_value, action_set_value, HPX_SIZE_T, HPX_POINTER);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, get_value, action_get_value, HPX_SIZE_T, HPX_POINTER);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, allreduce, action_allreduce, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, set_value,
+                      action_set_value, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, get_value,
+                      action_get_value, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, allreduce,
+                      action_allreduce, HPX_SIZE_T, HPX_POINTER);
 
   // Initialize the values that we want to reduce
   value = HPX_LOCALITY_ID;

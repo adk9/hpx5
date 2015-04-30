@@ -211,7 +211,7 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs) {
   const _table_t *actions = _get_actions();
   const ffi_cif      *cif = action_table_get_cif(actions, p->action);
   const char         *key = action_table_get_key(actions, p->action);
-  hpx_action_type_t  type = action_table_get_type(actions, p->action);
+  uint32_t           attr = action_table_get_attr(actions, p->action);
 
   if (cif == NULL && n != 2) {
     dbg_error("%s requires 2 arguments (%d given).\n", key, n);
@@ -222,7 +222,7 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs) {
     return p;
   }
 
-  if (type & HPX_PINNED) {
+  if (attr & HPX_PINNED) {
     n++;
   }
 
@@ -237,9 +237,8 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs) {
   dbg_assert(ffi_raw_size((void*)cif) > 0);
 
   void *argps[n];
-
   int i = 0;
-  if (type & HPX_PINNED) {
+  if (attr & HPX_PINNED) {
     argps[i++] = &argps[0];
   }
 
@@ -319,14 +318,14 @@ int action_execute(hpx_parcel_t *p) {
 
   bool pinned = action_is_pinned(table, id);
   if (!cif && !pinned) {
-    *ret = handler(args);
+    *ret = handler(p->size, args);
   } else if (!cif && pinned) {
     void *target;
     if (!hpx_gas_try_pin(p->target, &target)) {
       log_action("pinned action resend.\n");
       return HPX_RESEND;
     }
-    *ret = ((hpx_pinned_action_handler_t)handler)(target, args);
+    *ret = ((hpx_pinned_action_handler_t)handler)(target, p->size, args);
     hpx_gas_unpin(p->target);
   } else if (cif && !pinned) {
     ffi_raw_call(cif, FFI_FN(handler), ret, args);
@@ -376,7 +375,7 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
   va_list vargs;
   va_start(vargs, nargs);
 
-  if (type & HPX_MARSHALLED) {
+  if (attr & HPX_MARSHALLED) {
     hpx_type_t size = va_arg(vargs, hpx_type_t);
     hpx_type_t addr = va_arg(vargs, hpx_type_t);
 
@@ -390,7 +389,7 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
   dbg_assert(cif);
 
   int start = 0;
-  if (type & HPX_PINNED) {
+  if (attr & HPX_PINNED) {
     nargs++;
     start = 1;
   }
@@ -401,7 +400,7 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
   }
   va_end(vargs);
 
-  if (type & HPX_PINNED) {
+  if (attr & HPX_PINNED) {
     args[0] = HPX_POINTER;
   }
 

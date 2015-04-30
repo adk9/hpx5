@@ -83,7 +83,7 @@ int echo_finish_action(size_t size, echo_args_t *args) {
 int hpx_main_action(size_t size, void *args) {
   if (hpx_get_num_ranks() < 2) {
     printf("Too few ranks, need at least two.\n");
-    return HPX_ERROR;
+    hpx_shutdown(HPX_SUCCESS);
   }
     
   size_t sizes[] = {1, 128, 1024, 4096, 8192, 64*1024, 256*1024, 1024*1024, 4*1024*1024};

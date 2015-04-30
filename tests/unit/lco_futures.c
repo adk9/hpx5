@@ -78,7 +78,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, lco_future_new, lco_future_new_handler);
 // This testcase tests the hpx_lco_future_array_new API function which
 // allocates a global array of futures and hpx_lco_future_array_at which gets
 // an address of a future in a future array
-static int _get_future_value_handler(size_t n, void *args) {
+static int _get_future_value_handler(void) {
   uint64_t data = SET_VALUE;
   HPX_THREAD_CONTINUE(data);
 }
@@ -95,7 +95,7 @@ static int lco_future_array_handler(void) {
   hpx_addr_t base = hpx_lco_future_array_new(2, sizeof(uint64_t), 1);
   hpx_addr_t other = hpx_lco_future_array_at(base, 1, sizeof(uint64_t), 1);
 
-  hpx_call_sync(other, _get_future_value, &value, sizeof(value), NULL, 0);
+  hpx_call_sync(other, _get_future_value, &value, sizeof(value));
   printf("value = %"PRIu64"\n", value);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));

@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "failed to initialize HPX.\n");
     return 1;
   }
-  int e = hpx_run(&_main, NULL, 0);
+  int e = hpx_run(&_main);
   printf("1 hpx_run returned %d.\n", e);
 
   return 77;
