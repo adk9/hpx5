@@ -37,7 +37,7 @@ hpx_addr_t mutex;
 static  hpx_action_t _main       = 0;
 static  hpx_action_t _dotprod    = 0;
 
-void _dotprod_action(long *arg) {
+void _dotprod_action(size_t size, long *arg) {
   int i, start, end, len;
   long offset = *arg;
   double mysum, *x, *y;
@@ -71,7 +71,7 @@ void _dotprod_action(long *arg) {
 //****************************************************************************
 // @Action which spawns the threads
 //****************************************************************************
-static int _main_action(int *args) {
+static int _main_action(size_t size, int *args) {
   long i;
   double *a, *b;
 

@@ -28,7 +28,7 @@ struct thread_data {
   char *message;
 };
 
-static int _runMe_action(void *threadarg) {
+static int _runMe_action(size_t size, void *threadarg) {
   struct thread_data *my_data = (struct thread_data *)threadarg;
   char *message = my_data->message;
 
@@ -39,7 +39,7 @@ static int _runMe_action(void *threadarg) {
   hpx_thread_exit(HPX_SUCCESS);
 }
 
-static int _main_action(void *args) {
+static int _main_action(size_t size, void *args) {
   int count = 100;
   printf("Starting the thread yield test\n");
 

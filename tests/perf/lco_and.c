@@ -43,16 +43,16 @@ static hpx_action_t _main = 0;
 static hpx_action_t _empty = 0;
 
 
-static int _lco_set_action(hpx_addr_t *args) {
+static int _lco_set_action(size_t size, hpx_addr_t *args) {
   hpx_lco_and_set(*args, HPX_NULL);
   return HPX_SUCCESS;
 }
 
-static int _empty_action(hpx_addr_t *args) {
+static int _empty_action(size_t size, hpx_addr_t *args) {
   return HPX_SUCCESS;
 }
 
-static int _main_action(int *args) {
+static int _main_action(size_t size, int *args) {
   printf(HEADER);
   printf("# Latency in (ms)\n");
   printf("%s%*s%*s%*s\n", "# Iters " , FIELD_WIDTH, "Init time ",

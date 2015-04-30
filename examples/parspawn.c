@@ -37,11 +37,11 @@ static hpx_action_t _main    = 0;
 
 
 /// The empty action
-static int _nop_action(void *args) {
+static int _nop_action(size_t size, void *args) {
   hpx_thread_exit(HPX_SUCCESS);
 }
 
-static int _main_action(int *args) {
+static int _main_action(size_t size, int *args) {
   int n = *args;
   printf("parspawn(%d)\n", n); fflush(stdout);
 

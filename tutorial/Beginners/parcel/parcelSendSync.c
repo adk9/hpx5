@@ -31,14 +31,14 @@ hpx_addr_t _partner(void) {
   return HPX_THERE((rank) ? 0 : ranks - 1);
 }
  
-static int _sendData_action(const parcel_data_t *args)
+static int _sendData_action(size_t size, const parcel_data_t *args)
 {
   printf("Received #%d: Message = %s\n", args->index, args->message);
   hpx_lco_set(args->done, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
 
-static int _main_action(void *args) {
+static int _main_action(size_t size, void *args) {
   hpx_addr_t done = hpx_lco_future_new(0);
   parcel_data_t parcelData = {
     .index = hpx_get_my_rank(),

@@ -38,7 +38,7 @@ static int _init_array_action(size_t size, void *args) {
   return HPX_SUCCESS;
 }
 
-static int _main_action(void *args) {
+static int _main_action(size_t n, void *args) {
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
   int peerid = (rank + 1) % size;

@@ -77,7 +77,7 @@ void table_set(hpx_addr_t table, long i, uint64_t val,
 }
 
 
-static int _bitwiseor_action(uint64_t *args) {
+static int _bitwiseor_action(size_t size, uint64_t *args) {
   uint64_t value = *args;
   hpx_addr_t target = hpx_thread_current_target();
   uint64_t *local;
@@ -91,7 +91,7 @@ static int _bitwiseor_action(uint64_t *args) {
 }
 
 
-static int _init_table_action(guppie_config_t *cfg) {
+static int _init_table_action(size_t size, guppie_config_t *cfg) {
   hpx_addr_t target = hpx_thread_current_target();
   uint64_t *local;
   if (!hpx_gas_try_pin(target, (void**)&local))
@@ -170,7 +170,7 @@ void Block(int mype, int npes, long totalsize, long *start,
   }
 }
 
-static int _mover_action(guppie_config_t *cfg) {
+static int _mover_action(size_t n, guppie_config_t *cfg) {
   uint64_t src;
   int dst;
   hpx_addr_t lco;
@@ -194,7 +194,7 @@ static int _mover_action(guppie_config_t *cfg) {
   // gets killed at shutdown
 }
 
-static int _update_table_action(guppie_config_t *cfg) {
+static int _update_table_action(size_t n, guppie_config_t *cfg) {
 #define VLEN 32
   uint64_t ran[VLEN];              /* Current random numbers */
   uint64_t t1[VLEN];
@@ -229,7 +229,7 @@ static int _update_table_action(guppie_config_t *cfg) {
   return HPX_SUCCESS;
 }
 
-void _main_action(guppie_config_t *cfg)
+void _main_action(size_t size, guppie_config_t *cfg)
 {
 
   double icputime;               // CPU time to init table

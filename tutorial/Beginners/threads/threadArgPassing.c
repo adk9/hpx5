@@ -48,7 +48,7 @@ static int _printHello_action(size_t size, void *threadarg) {
 //****************************************************************************
 // @Action which spawns the threads
 //****************************************************************************
-static int _main_action(void *args) {
+static int _main_action(size_t size, void *args) {
   messages[0] = "English: Hello World!";
   messages[1] = "French:  Bonjour, le monde!";
   messages[2] = "German:  Guten Tag, Welt!"; 

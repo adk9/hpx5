@@ -18,7 +18,7 @@
 static  hpx_action_t _main       = 0;
 #define MAX_BYTES      1024*1024*100
 
-static int _main_action(void *args) {
+static int _main_action(size_t n, void *args) {
   uint64_t size = MAX_BYTES;
   int blocks = HPX_LOCALITIES;
 

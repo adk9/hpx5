@@ -17,13 +17,13 @@
 static  hpx_action_t _main = 0;
 static  hpx_action_t _set  = 0;
 
-static int _set_action(void *args) {
+static int _set_action(size_t size, void *args) {
   hpx_addr_t addr = *(hpx_addr_t*)args;
   hpx_lco_error(addr, HPX_LCO_ERROR, HPX_NULL);
   return HPX_SUCCESS;
 }
 
-static int _main_action(void *args) {
+static int _main_action(size_t size, void *args) {
   hpx_addr_t lco = hpx_lco_and_new(1);
   hpx_addr_t done = hpx_lco_future_new(0);
   hpx_call(HPX_HERE, _set, done, &lco, sizeof(lco));

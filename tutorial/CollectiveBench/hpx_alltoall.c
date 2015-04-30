@@ -37,7 +37,7 @@ static hpx_action_t _main = 0;
 static hpx_action_t _init = 0;
 static hpx_action_t _gather = 0;
 
-static int _gather_action(const InitArgs *args) {
+static int _gather_action(size_t n, const InitArgs *args) {
   int size, skip, full = 1;
   double latency;
   double max_time, min_time, avg_time;
@@ -104,7 +104,7 @@ static int _gather_action(const InitArgs *args) {
   return HPX_SUCCESS;
 }
 
-static int _init_action(const InitArgs *args) {
+static int _init_action(size_t size, const InitArgs *args) {
   hpx_addr_t local = hpx_thread_current_target();
   Domain *ld = NULL;
   if (!hpx_gas_try_pin(local, (void**)&ld))
@@ -124,7 +124,7 @@ static int _init_action(const InitArgs *args) {
   return HPX_SUCCESS;
 }
 
-static int _main_action(int *args) {
+static int _main_action(size_t size, int *args) {
   int i = 0, full=1;
   int max_msg_size = *args;
   int THREADS = HPX_LOCALITIES;

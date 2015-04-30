@@ -35,11 +35,11 @@ static hpx_action_t _nop  = 0;
 static hpx_action_t _main = 0;
 
 /// The empty action
-static int _nop_action(hpx_addr_t *args) {
+static int _nop_action(size_t size, hpx_addr_t *args) {
   hpx_thread_continue(0, NULL);
 }
 
-static int _main_action(int *args) {
+static int _main_action(size_t size, int *args) {
   int n = *args;
   printf("seqspawn(%d)\n", n); fflush(stdout);
 

@@ -30,12 +30,12 @@
 static hpx_action_t root = 0;
 static hpx_action_t get_rank = 0;
 
-static int get_rank_action(void *args) {
+static int get_rank_action(size_t size, void *args) {
   int rank = HPX_LOCALITY_ID;
   HPX_THREAD_CONTINUE(rank);
 }
 
-static int root_action(void *args) {
+static int root_action(size_t size, void *args) {
   printf("root locality: %d, thread: %d.\n", HPX_LOCALITY_ID, HPX_THREAD_ID);
   hpx_addr_t base = hpx_lco_future_array_new(2, sizeof(int), 1);
   hpx_addr_t other = hpx_lco_future_array_at(base, 1, sizeof(int), 1);

@@ -42,7 +42,7 @@ static int num[] = {
   50000
 };
 
-static int _address_translation_action(void* args) {
+static int _address_translation_action(size_t size, void* args) {
   hpx_addr_t local = hpx_thread_current_target();
 
   // The pinned local address
@@ -59,7 +59,7 @@ static int _address_translation_action(void* args) {
   hpx_thread_continue(0, NULL);
 }
 
-static int _main_action(void *args) {
+static int _main_action(size_t n, void *args) {
   hpx_time_t now;
   double elapsed;
   int size = HPX_LOCALITIES;
