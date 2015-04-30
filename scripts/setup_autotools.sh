@@ -17,12 +17,25 @@ AM=automake-1.15
 AC=autoconf-2.69
 LT=libtool-2.4.6
 
+
+if [-nz `which wget`]
+then
 echo -n "Downloading packages..."
 wget -q -P $DLDIR http://ftp.gnu.org/gnu/m4/${M4}.tar.gz 
 wget -q -P $DLDIR http://ftp.gnu.org/gnu/automake/${AM}.tar.gz
 wget -q -P $DLDIR http://ftp.gnu.org/gnu/autoconf/${AC}.tar.gz
 wget -q -P $DLDIR http://mirrors.axint.net/repos/gnu.org/libtool/${LT}.tar.gz
 echo "done"
+else
+echo -n "Downloading packages..."
+pushd .
+cd $DLDIR
+curl -s "http://ftp.gnu.org/gnu/m4/${M4}.tar.gz" > ${M4}.tar.gz
+curl -s "http://ftp.gnu.org/gnu/automake/${AM}.tar.gz" > ${AM}.tar.gz
+curl -s "http://ftp.gnu.org/gnu/autoconf/${AC}.tar.gz" > ${AC}.tar.gz
+curl -s "http://mirrors.axint.net/repos/gnu.org/libtool/${LT}.tar.gz" > ${LT}.tar.gz
+popd
+fi
 
 cd $DLDIR
 
