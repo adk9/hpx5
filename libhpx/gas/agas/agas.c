@@ -100,19 +100,9 @@ _agas_owner_of(const void *gas, hpx_addr_t gva) {
 }
 
 static hpx_addr_t
-_agas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
-  // use the local allocator to get some memory that is part of the global
-  // address space
-  void *lva = NULL;
-  if (boundary) {
-    lva = global_memalign(boundary, bytes);
-  }
-  else {
-    lva = global_malloc(bytes);
-  }
-
-  // now we need to reverse map this address to an offset into the local portion
-  // of the global address space
+_register(void *btt, void *lva) {
+  // we need to reverse map this address to an offset into the local portion of
+  // the global address space
   uint64_t offset = lva_to_gva_offset(lva);
 
   // and construct a gva for this
@@ -126,16 +116,41 @@ _agas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
   };
 
   // and insert an entry into our block translation table
-  agas_t *agas = gas;
-  btt_insert(agas->btt, gva.addr, here->rank, lva);
+  btt_insert(btt, gva.addr, here->rank, lva);
 
   // and return the address
   return gva.addr;
 }
 
 static hpx_addr_t
+_agas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
+  // use the local allocator to get some memory that is part of the global
+  // address space
+  void *lva = NULL;
+  if (boundary) {
+    lva = global_memalign(boundary, bytes);
+  }
+  else {
+    lva = global_malloc(bytes);
+  }
+
+  agas_t *agas = gas;
+  return _register(agas->btt, lva);
+}
+
+static hpx_addr_t
 _agas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
-  return HPX_NULL;
+  size_t bytes = nmemb * size;
+  void *lva;
+  if (boundary) {
+    lva = global_memalign(boundary, bytes);
+    lva = memset(lva, 0, bytes);
+  } else {
+    lva = global_calloc(nmemb, size);
+  }
+
+  agas_t *agas = gas;
+  return _register(agas->btt, lva);
 }
 
 static gas_t _agas_vtable = {
