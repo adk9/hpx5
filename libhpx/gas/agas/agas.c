@@ -64,16 +64,17 @@ static hpx_addr_t
 _agas_there(void *gas, uint32_t i) {
   // We reserve a small range of addresses in the "large" allocation space that
   // will represent locality addresses.
-  dbg_assert_str(i < AGAS_MAX_RANKS, "rank %u too large (max %u)\n",
-                 i, AGAS_MAX_RANKS);
-  dbg_assert_str(i < here->ranks, "rank %u does not exist (max %u)\n", i,
-                 here->ranks);
+  dbg_assert(i < AGAS_MAX_RANKS);
+  dbg_assert(i < here->ranks);
+
+  static const int class = 1;
+  uint64_t mask = ~(size_classes[class] - 1);
   gva_t gva = {
     .bits = {
-      .offset = AGAS_THERE_OFFSET,
+      .offset = AGAS_THERE_OFFSET & mask,
       .home = i,
       .large = 0,
-      .size_class = 1
+      .size_class = class
     }
   };
   return gva.addr;
