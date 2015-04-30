@@ -15,6 +15,7 @@
 #endif
 
 #include <stdlib.h>
+#include <libhpx/bitmap.h>
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
@@ -24,6 +25,7 @@
 #include "chunk_table.h"
 #include "gva.h"
 #include "heap.h"
+#include "../mallctl.h"
 
 static const unsigned AGAS_MAX_RANKS = (1u << GVA_RANK_BITS);
 static const uint64_t AGAS_THERE_OFFSET = UINT64_MAX;
@@ -41,8 +43,10 @@ static uint64_t size_classes[8] = {
 
 typedef struct {
   gas_t vtable;
+  size_t chunk_size;
   void *chunk_table;
   void *btt;
+  void *bitmap;
 } agas_t;
 
 static void
@@ -53,6 +57,9 @@ _agas_delete(void *gas) {
   }
   if (agas->btt) {
     btt_delete(agas->btt);
+  }
+  if (agas->bitmap) {
+    bitmap_delete(agas->bitmap);
   }
   free(agas);
 }
@@ -199,6 +206,14 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   agas->vtable = _agas_vtable;
   agas->chunk_table = chunk_table_new(0);
   agas->btt = btt_new(0);
+
+  agas->chunk_size = mallctl_get_chunk_size();
+  size_t heap_size = 1lu << GVA_OFFSET_BITS;
+  size_t nchunks = ceil_div_64(heap_size, agas->chunk_size);
+  uint32_t min_align = ceil_log2_64(agas->chunk_size);
+  uint32_t base_align;
+
+  // agas->bitmap = bitmap_new();
   btt_insert(agas->btt, _agas_there(agas, here->rank), here->rank, here);
   return &agas->vtable;
 }
