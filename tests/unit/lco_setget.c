@@ -200,6 +200,7 @@ static int lco_waitall_handler(void) {
 }
 static HPX_ACTION(HPX_DEFAULT, 0, lco_waitall, lco_waitall_handler);
 
+static HPX_ACTION_DECL(_getAll);
 // Testcase to test hpx_lco_get_all function
 static int _getAll_handler(size_t size, uint32_t *args) {
   uint32_t n = *args;

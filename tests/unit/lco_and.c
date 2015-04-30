@@ -17,6 +17,7 @@
 static int _and_set_handler(void) {
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _and_set, _and_set_handler);
 
 static int lco_and_handler(void) {
   printf("Test hpx_lco_and\n");

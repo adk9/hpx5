@@ -81,7 +81,7 @@ static int gas_global_alloc_block_handler(void) {
   hpx_gas_free(data, HPX_NULL);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, 0, gas_global_block_alloc,
+static HPX_ACTION(HPX_DEFAULT, 0, gas_global_alloc_block,
                   gas_global_alloc_block_handler);
 
 static int gas_global_calloc_block_handler(void) {

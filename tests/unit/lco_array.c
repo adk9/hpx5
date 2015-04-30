@@ -134,7 +134,7 @@ static int lco_reduce_array_handler(void) {
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, 0, lco_reduce_array, lco_reduce_array_hreduceler);
+static HPX_ACTION(HPX_DEFAULT, 0, lco_reduce_array, lco_reduce_array_handler);
 
 TEST_MAIN({
  ADD_TEST(lco_future_array);

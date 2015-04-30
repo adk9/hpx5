@@ -15,6 +15,7 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
+static HPX_ACTION_DECL(_spawn1);
 static int _spawn1_handler(hpx_addr_t sync) {
   if (sync) {
     hpx_lco_wait(sync);
@@ -31,6 +32,7 @@ static int _spawn1_handler(hpx_addr_t sync) {
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _spawn1, _spawn1_handler, HPX_ADDR);
 
+static HPX_ACTION_DECL(_spawn2);
 static int _spawn2_handler(hpx_addr_t sync) {
   int spawns = rand()%2;
   if (spawns) {
