@@ -34,7 +34,7 @@ struct _yield_args {
   double time_limit;
 };
 
-static int _yield_worker_handler(size_t n, struct _yield_args *args) {
+static int _yield_worker_handler(struct _yield_args *args, size_t n) {
   // int num =
   sync_addf(args->counter, 1, SYNC_SEQ_CST);
 
@@ -53,7 +53,7 @@ static int _yield_worker_handler(size_t n, struct _yield_args *args) {
   hpx_thread_continue(sizeof(uint64_t), &timeout);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _yield_worker,
-                  _yield_worker_handler, HPX_SIZE_T, HPX_POINTER);
+                  _yield_worker_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int thread_yield_handler(void) {
   int num_threads = hpx_get_num_threads();

@@ -21,7 +21,7 @@
 hpx_addr_t mutex;
 int counter; /* shared variable */
 
-static int _sema_handler(size_t n, uint32_t *args) {
+static int _sema_handler(uint32_t *args, size_t n) {
   uint32_t x = *args;
   printf("Thread %d: Waiting to enter critical region...\n", x);
 
@@ -47,7 +47,7 @@ static int _sema_handler(size_t n, uint32_t *args) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _sema,
-                  _sema_handler, HPX_SIZE_T, HPX_POINTER);
+                  _sema_handler, HPX_POINTER, HPX_SIZE_T);
 
 // Test code -- for HPX LCO Semaphores
 static int lco_sema_handler(void) {

@@ -32,7 +32,7 @@ typedef struct initBuffer {
   char message[BUFFER_SIZE];
 } initBuffer_t;
 
-static int _initData_handler(size_t n, const initBuffer_t *args) {
+static int _initData_handler(const initBuffer_t *args, size_t n) {
  // Get the target of the current thread. The target of the thread is the
  // destination that a parcel was sent to to spawn the current thread.
  // hpx_thread_current_target() returns the address of the thread's target
@@ -50,7 +50,7 @@ static int _initData_handler(size_t n, const initBuffer_t *args) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initData,
-                  _initData_handler, HPX_SIZE_T, HPX_POINTER);
+                  _initData_handler, HPX_POINTER, HPX_SIZE_T);
 
 // Test code -- ThreadCreate
 static int thread_create_handler(void) {

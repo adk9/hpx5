@@ -272,7 +272,7 @@ hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id,
 }
 
 
-static int _allgather_setid_proxy_handler(_allgather_t *g, size_t n, void *args) {
+static int _allgather_setid_proxy_handler(_allgather_t *g, void *args, size_t n) {
   // otherwise we pinned the LCO, extract the arguments from @p args and use the
   // local setid routine
   _allgather_set_offset_t *a = args;
@@ -281,7 +281,7 @@ static int _allgather_setid_proxy_handler(_allgather_t *g, size_t n, void *args)
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _allgather_setid_proxy,
                   _allgather_setid_proxy_handler, HPX_POINTER,
-                  HPX_SIZE_T, HPX_POINTER);
+                  HPX_POINTER, HPX_SIZE_T);
 
 /// Update the gathering, will wait if the phase is reading.
 static void _allgather_set(lco_t *lco, int size, const void *from) {

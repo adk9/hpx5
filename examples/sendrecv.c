@@ -49,13 +49,13 @@ static hpx_action_t _main     = 0;
 static hpx_action_t _receiver = 0;
 
 
-static int _receiver_action(size_t size, double *args) {
+static int _receiver_action(double *args, size_t size) {
   hpx_thread_set_affinity(1);
   return HPX_SUCCESS;
 }
 
 
-static int _main_action(size_t size, int *args) {
+static int _main_action(int *args, size_t size) {
   int avg = 10000;
 
   hpx_thread_set_affinity(0);
@@ -153,7 +153,7 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _receiver, _receiver_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _receiver, _receiver_action, HPX_POINTER, HPX_SIZE_T);
   return hpx_run(&_main, args, sizeof(args));
 }

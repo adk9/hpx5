@@ -25,13 +25,13 @@
 #include "libhpx/parcel.h"
 #include "emulation.h"
 
-static int _memcpy_reply_handler(char *local, size_t bytes, void *data) {
+static int _memcpy_reply_handler(char *local, void *data, size_t bytes) {
   dbg_assert(bytes);
   memcpy(local, data, bytes);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _memcpy_reply,
-                  _memcpy_reply_handler, HPX_POINTER, HPX_SIZE_T, HPX_POINTER);
+                  _memcpy_reply_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 static int _memcpy_request_handler(char *local, size_t size, hpx_addr_t to) {
   hpx_call_cc(to, _memcpy_reply, NULL, NULL, local, size);

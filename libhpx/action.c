@@ -318,14 +318,14 @@ int action_execute(hpx_parcel_t *p) {
 
   bool pinned = action_is_pinned(table, id);
   if (!cif && !pinned) {
-    *ret = handler(p->size, args);
+    *ret = handler(args, p->size);
   } else if (!cif && pinned) {
     void *target;
     if (!hpx_gas_try_pin(p->target, &target)) {
       log_action("pinned action resend.\n");
       return HPX_RESEND;
     }
-    *ret = ((hpx_pinned_action_handler_t)handler)(target, p->size, args);
+    *ret = ((hpx_pinned_action_handler_t)handler)(target, args, p->size);
     hpx_gas_unpin(p->target);
   } else if (cif && !pinned) {
     ffi_raw_call(cif, FFI_FN(handler), ret, args);
@@ -380,11 +380,11 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
       hpx_type_t translated = va_arg(vargs, hpx_type_t);
       dbg_assert(translated == HPX_POINTER);
     }
-    hpx_type_t size = va_arg(vargs, hpx_type_t);
     hpx_type_t addr = va_arg(vargs, hpx_type_t);
+    hpx_type_t size = va_arg(vargs, hpx_type_t);
 
-    dbg_assert(size == HPX_INT || size == HPX_UINT || size == HPX_SIZE_T);
     dbg_assert(addr == HPX_POINTER);
+    dbg_assert(size == HPX_INT || size == HPX_UINT || size == HPX_SIZE_T);
     va_end(vargs);
     return _push_back(_get_actions(), id, key, f, type, attr, NULL);
   }
