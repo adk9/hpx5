@@ -128,5 +128,6 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   agas_t *agas = malloc(sizeof(*agas));
   agas->vtable = _agas_vtable;
   agas->btt = btt_new(0);
+  btt_insert(agas->btt, _agas_there(agas, here->rank), here->rank, here);
   return &agas->vtable;
 }
