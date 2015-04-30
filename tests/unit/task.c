@@ -117,7 +117,7 @@ static int _test_try_task_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, _test_try_task, _test_try_task_handler);
 
 static HPX_ACTION_DECL(_test_recursion);
-static int _test_recursion_handler(size_t n, hpx_addr_t and) {
+static int _test_recursion_handler(int n, hpx_addr_t and) {
   if (!--n) {
     return HPX_SUCCESS;
   }
@@ -127,7 +127,7 @@ static int _test_recursion_handler(size_t n, hpx_addr_t and) {
   }
 }
 static HPX_ACTION(HPX_TASK, 0, _test_recursion,
-                  _test_recursion_handler, HPX_SIZE_T, HPX_ADDR);
+                  _test_recursion_handler, HPX_INT, HPX_ADDR);
 
 static int _test_recursion_top_handler(void) {
   static int DEPTH = 500;
