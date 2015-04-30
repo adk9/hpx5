@@ -22,9 +22,9 @@
 #include <string.h>
 #include <hpx/builtins.h>
 #include <libsync/sync.h>
-#include "libhpx/debug.h"
-#include "libhpx/libhpx.h"
-#include "bitmap.h"
+#include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/bitmap.h>
 
 /// We manage bitmaps in the granularity of chunks. In C++ this would be a
 /// template parameter, here, we use a typedef to set up our block size.

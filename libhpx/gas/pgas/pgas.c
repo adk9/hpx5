@@ -26,7 +26,7 @@
 #include <libhpx/memory.h>
 #include <libhpx/locality.h>
 #include <libhpx/network.h>
-#include "bitmap.h"
+#include <libhpx/bitmap.h>
 #include "heap.h"
 #include "pgas.h"
 #include "../parcel/emulation.h"
