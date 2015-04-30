@@ -378,15 +378,15 @@ static int _main_action(int *input)
  */
 void _register_actions(void) {
   /* register action for parcel (must be done by all ranks) */
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _main, _main_action);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _initGlobals, _initGlobals_action);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _initDomain, _initDomain_action);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _initGrid, _initGrid_action);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _updateGrid, _updateGrid_action);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _write_double, _write_double_action);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _read_double, _read_double_action);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _stencil, _stencil_action);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _spawn_stencil, _spawn_stencil_action);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initGlobals, _initGlobals_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initDomain, _initDomain_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initGrid, _initGrid_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _updateGrid, _updateGrid_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _write_double, _write_double_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _read_double, _read_double_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _stencil, _stencil_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _spawn_stencil, _spawn_stencil_action, HPX_SIZE_T, HPX_POINTER);
 }
 
 // Main routine

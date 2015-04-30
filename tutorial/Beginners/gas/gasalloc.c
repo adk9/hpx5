@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
     return e;
   }
    
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _main, _main_action);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
 
   return hpx_run(&_main, NULL, 0);
 }

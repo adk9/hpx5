@@ -90,8 +90,8 @@ int main(int argc, char *argv[]) {
   }
 
   // register the actions
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _nop, _nop_action);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _main, _main_action);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _nop, _nop_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
 
   // run the main action
   return hpx_run(&_main, &n, sizeof(n));

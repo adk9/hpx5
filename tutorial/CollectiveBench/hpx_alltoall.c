@@ -213,9 +213,9 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _main, _main_action);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _init, _init_action);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _gather, _gather_action);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init, _init_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _gather, _gather_action, HPX_SIZE_T, HPX_POINTER);
 
   return hpx_run(&_main, &max_msg_size, sizeof(max_msg_size));
 }
