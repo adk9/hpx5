@@ -104,14 +104,14 @@ _smp_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
 
 /// Allocate a bunch of global memory
 static hpx_addr_t
-_smp_gas_alloc_local(uint32_t bytes, uint32_t boundary) {
+_smp_gas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
   void *p = boundary ? local_memalign(boundary, bytes) : local_malloc(bytes);
   return _smp_lva_to_gva(p);
 }
 
 /// Allocate a bunch of initialized global memory
 static hpx_addr_t
-_smp_gas_calloc_local(size_t nmemb, size_t size, uint32_t boundary) {
+_smp_gas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
   size_t bytes = nmemb * size;
   void *p;
   if (boundary) {

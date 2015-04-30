@@ -45,13 +45,13 @@ hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bsize, uint32_t boundary,
   int type = (int)gas_get_dist_type(dist);
   switch (type) {
    case (HPX_DIST_TYPE_LOCAL):
-     return hpx_gas_alloc_local(n*bsize, boundary);
+    return hpx_gas_alloc_local(n*bsize, boundary);
    case (HPX_DIST_TYPE_CYCLIC):
-     return hpx_gas_alloc_cyclic(n, bsize, boundary);
+    return hpx_gas_alloc_cyclic(n, bsize, boundary);
    case (HPX_DIST_TYPE_BLOCKED):
-     return hpx_gas_alloc_blocked(n, bsize, boundary);
+    return hpx_gas_alloc_blocked(n, bsize, boundary);
    case (HPX_DIST_TYPE_USER):
-     return hpx_gas_alloc_user(n, bsize, boundary, dist);
+    return hpx_gas_alloc_user(n, bsize, boundary, dist);
    default: dbg_error("Unknown gas distribution type %d.\n", type);
   }
 }
@@ -62,13 +62,13 @@ hpx_addr_t hpx_gas_calloc(size_t n, uint32_t bsize, uint32_t boundary,
   int type = (int)gas_get_dist_type(dist);
   switch (type) {
    case (HPX_DIST_TYPE_LOCAL):
-     return hpx_gas_calloc_local(n, bsize, boundary);
+    return hpx_gas_calloc_local(n, bsize, boundary);
    case (HPX_DIST_TYPE_CYCLIC):
-     return hpx_gas_calloc_cyclic(n, bsize, boundary);
+    return hpx_gas_calloc_cyclic(n, bsize, boundary);
    case (HPX_DIST_TYPE_BLOCKED):
-     return hpx_gas_calloc_blocked(n, bsize, boundary);
+    return hpx_gas_calloc_blocked(n, bsize, boundary);
    case (HPX_DIST_TYPE_USER):
-     return hpx_gas_calloc_user(n, bsize, boundary, dist);
+    return hpx_gas_calloc_user(n, bsize, boundary, dist);
    default: dbg_error("Unknown gas distribution type %d.\n", type);
   }
 }
@@ -120,12 +120,12 @@ hpx_addr_t hpx_gas_calloc_blocked(size_t n, uint32_t bsize, uint32_t boundary) {
 
 hpx_addr_t hpx_gas_alloc_local(uint32_t bsize, uint32_t boundary) {
   dbg_assert(here && here->gas && here->gas->alloc_local);
-  return here->gas->alloc_local(bsize, boundary);
+  return here->gas->alloc_local(here->gas, bsize, boundary);
 }
 
 hpx_addr_t hpx_gas_calloc_local(size_t nmemb, size_t size, uint32_t boundary) {
   dbg_assert(here && here->gas && here->gas->calloc_local);
-  return here->gas->calloc_local(nmemb, size, boundary);
+  return here->gas->calloc_local(here->gas, nmemb, size, boundary);
 }
 
 void hpx_gas_free(hpx_addr_t addr, hpx_addr_t sync) {

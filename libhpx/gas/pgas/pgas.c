@@ -163,7 +163,7 @@ _pgas_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
 /// Allocate a single global block from the global heap, and return it as an
 /// hpx_addr_t.
 static hpx_addr_t
-_pgas_gas_alloc_local(uint32_t bytes, uint32_t boundary) {
+_pgas_gas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
   void *lva = boundary ? global_memalign(boundary, bytes) : global_malloc(bytes);
   dbg_assert(heap_contains_lva(global_heap, lva));
   return pgas_lva_to_gpa(lva);
@@ -172,7 +172,8 @@ _pgas_gas_alloc_local(uint32_t bytes, uint32_t boundary) {
 /// Allocate a single global block, filled with 0, from the global heap, and
 /// return it as an hpx_addr_t.
 static hpx_addr_t
-_pgas_gas_calloc_local(size_t nmemb, size_t size, uint32_t boundary) {
+_pgas_gas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary)
+{
   size_t bytes = nmemb * size;
   void *lva;
   if (boundary) {
