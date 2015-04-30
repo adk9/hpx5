@@ -30,7 +30,7 @@ static hpx_action_t _main       = 0;
 static hpx_action_t _initArray   = 0;
 
 /// Initialize a array.
-static int _initArray_action(void *args)
+static int _initArray_action(size_t size, void *args)
 {
   // Get the address this parcel was sent to, and map it to a local 
   // address---if this fails then the message arrived at the wrong 
@@ -40,7 +40,7 @@ static int _initArray_action(void *args)
   if (!hpx_gas_try_pin(target, (void**)&local))
     return HPX_RESEND;
 
-  memcpy(local, args, hpx_thread_current_args_size());
+  memcpy(local, args, size);
 
   // make sure to unpin the target
   hpx_gas_unpin(target);

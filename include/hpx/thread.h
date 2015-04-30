@@ -41,10 +41,6 @@ hpx_addr_t hpx_thread_current_cont_target(void);
 /// @returns the continuation action for the current thread
 hpx_action_t hpx_thread_current_cont_action(void);
 
-/// Get the size of the arguments passed to the current thread
-/// @returns the size of the current thread's argument
-uint32_t hpx_thread_current_args_size(void);
-
 /// Get the process identifier of the current thread
 /// @returns the PID for the current thread
 hpx_pid_t hpx_thread_current_pid(void);

@@ -44,12 +44,9 @@ static int _initData_handler(size_t n, const initBuffer_t *args) {
   ld->index = args->index;
   strcpy(ld->message, args->message);
 
-  //Get the size of the arguments passed to the current thread
-  //uint32_t size = hpx_thread_current_args_size();
-
   hpx_gas_unpin(local);
   //printf("Initialized buffer with index: %u, with message: %s, size
-  //of arguments = %d\n", ld->index, ld->message, size);
+  //of arguments = %d\n", ld->index, ld->message, n);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initData,
