@@ -305,6 +305,23 @@ if [ "$OP" == "build" ]; then
    do_build
 fi
 
+function check_output() {
+    # Check the output of the unit tests:
+    if grep '^# FAIL: *0$' $BUILD_DIR/tests/unit/test-suite.log
+     then
+       echo "FAIL: 0"
+     else
+       cat $BUILD_DIR/tests/unit/test-suite.log
+       exit 1
+    fi
+
+    if egrep -q "(ERROR:)\s+[1-9][0-9]*" $BUILD_DIR/tests/unit/test-suite.log
+      then
+        cat $BUILD_DIR/tests/unit/test-suite.log
+        exit 1
+    fi
+}
+
 if [ "$OP" == "run" ]; then
     echo "Running the regression test"
     if [[ "$SYSTEM" != "HPX5_C-SWARM" ]] || [[ "$HPXMODE_AXIS" != "photon" ]]; then
@@ -364,26 +381,16 @@ if [ "$OP" == "run" ]; then
         exit 1
       fi
     
-      while [ ! -f $BUILD_DIR/tests/unit/test-suite.log ]; do
-        sleep 5;
-      done;
-      sleep 5;
-    fi
-  
-    # Check the output of the unit tests:
-    if grep '^# FAIL: *0$' $BUILD_DIR/tests/unit/test-suite.log
-     then
-       echo "FAIL: 0"
-     else
-       cat $BUILD_DIR/tests/unit/test-suite.log
-       exit 1
-    fi
-
-    if egrep -q "(ERROR:)\s+[1-9][0-9]*" $BUILD_DIR/tests/unit/test-suite.log
-      then
-        cat $BUILD_DIR/tests/unit/test-suite.log
+      if [ ! -f $BUILD_DIR/tests/unit/test-suite.log ]; then
+        cat $BUILD_DIR/regression_test.o*
+        echo "test-suite.log file not found!"
         exit 1
+      else
+        check_output
+        exit 0
+      fi
     fi
+    check_output
 fi
 
 exit 0
