@@ -27,20 +27,20 @@ There are several pre-requisites to successfully configure and run HPX–5.
 * hwloc              (embedded with HPX–5)
 * libffi             (embedded with HPX–5)
 * Uthash             (embedded with HPX–5)
-* Valgrind           (embedded with HPX–5)
+* Valgrind           (optional)
 
 HPX–5 can build and run successfully without any network backend, but at
- present, MPI or Photon is required for networking by HPX–5. Photon can take 
-advantage of RDMA over IB resulting in better performance.
+ present, MPI or Photon is required for networking by HPX–5. 
 
-The latest autotools can be installed by using:
+The latest autotools can be installed by running a script provided in the 
+distribution:
  
 ```
-$ ./setup_autotools.sh $PATH
+$ ./scripts/setup_autotools.sh $PATH
 ``` 
-in scripts folder. The script takes an path to install autotools to. After installing 
-autotools, be sure to update your PATH variable. Only after installing the
- latest autotools should the user run ./bootstrap.
+The script takes an path to install autotools to. After 
+installing autotools, be sure to update your PATH variable. Only after 
+installing the latest autotools should the user run ./bootstrap.
 
 ### Bootstrapping
 
@@ -56,17 +56,23 @@ $ ./bootstrap
 Bootstrap is a bash script that generate the initialization required to create 
 a configure script when using GNU autotools. This calls the autoreconf.
 
-Building without MPI enables the SMP bootstrapper. This allows you to run HPX–5
- on a single node. However, if you launch HPX–5 with –np > 1 then either MPI or
- Photon transport should be enabled which is detailed in next section.
-
 ### Configuration
 
-The number of HPX–5 configuration supports to use ‘pkg-config’ to look for 
-installed packages. In particular, if your compilation environment requires 
-explicit paths to MPI, you should compile --with-mpi=ompi, mcapich2, etc
+Documentation of configuration otpions can be accessed by running 
+‘./configure --help’ from the top-level directory.
 
-See ‘./configure --help’ for further details.
+The external software packages are supported through pkg-config files.  For
+example, to enable MPI, one has to provide `--with-mpi=PKG`, where `PKG` is the
+name of the pkg-file to use. Note that pkg-files must be available through
+pkg-config (see `man pkg-config` for details). The "with" options usually have
+defaults, and the `--with-mpi` option will load `ompi` pkg-file by default.
+If pkg-config file is not found, a warning will be printed, and the build system
+will depend on environment variables to configure the requested software. This 
+is particularly useful on Cray systems where the Cray compiler wrapper
+automatically supports many software packages through Cray environment. So,
+on Cray one could run `./configure ... --with-mpi ... CC=cc`, and since the 
+default `ompi` module is not found, MPI will be picked up from the `cc` compiler 
+wrapper.
 
 #### HPX–5 Network Transports
 
@@ -121,6 +127,9 @@ $ module load PrgEnv-gnu
 $ setenv CRAYPE_LINK_TYPE dynamic
 $ ./configure --prefix=/path/to/install/ CC=cc
 ```
+
+The above example switches to GNU environment, but HPX should build with 
+intel module as well.
 
 ###### Configuring with MPI on cray
 
