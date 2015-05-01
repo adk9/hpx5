@@ -141,8 +141,8 @@ static int _photon_unpin(void *obj, const void *base, size_t n) {
 }
 
 // async entry point for unpin
-static HPX_ACTION_DEF(INTERRUPT, _photon_unpin, unpin, HPX_POINTER, HPX_POINTER,
-                      HPX_SIZE_T);
+static HPX_ACTION(HPX_INTERRUPT, 0, unpin, _photon_unpin, HPX_POINTER, HPX_POINTER,
+                  HPX_SIZE_T);
 
 static command_t _chain_unpin(const void *addr, size_t n, command_t op) {
   const void *const null = NULL;

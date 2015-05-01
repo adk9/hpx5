@@ -21,27 +21,33 @@
 
 // This tests waiting on lcos.  Best run with many cores. Eg., on cutter:
 // mpirun -n 2 -map-by node:PE=16 --tag-output ~/repos/hpx-marcin/tests/unit/hpxtest --hpx-cores=16 --hpx-heapsize=$((1024*1024*1024 * 2)) --hpx-transport=mpi
-static HPX_ACTION(_set, const hpx_addr_t * const future) {
+static int _set_handler(const hpx_addr_t * const future, size_t n) {
   // printf("Setting %zu on %d\n", *future, HPX_LOCALITY_ID);
   hpx_lco_set(*future, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _set,
+                  _set_handler, HPX_POINTER, HPX_SIZE_T);
 
-static HPX_ACTION(_wait, const hpx_addr_t * const future) {
+static int _wait_handler(const hpx_addr_t * const future, size_t n) {
   // printf("Waiting on %zu on %d\n", lcos[0], HPX_LOCALITY_ID);
   hpx_lco_wait(*future);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _wait,
+                  _wait_handler, HPX_POINTER, HPX_SIZE_T);
 
-static HPX_ACTION(_delete, const hpx_addr_t * const lcos) {
+static int _delete_handler(const hpx_addr_t * const lcos, size_t n) {
   hpx_lco_wait(lcos[2]);
   hpx_lco_delete(lcos[2], HPX_NULL);
   hpx_lco_delete(lcos[0], HPX_NULL);
   hpx_lco_set(lcos[1], 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _delete,
+                  _delete_handler, HPX_POINTER, HPX_SIZE_T);
 
-static HPX_ACTION(_spawn, const hpx_addr_t * const termination_lco) {
+static int _spawn_handler(const hpx_addr_t * const termination_lco, size_t n) {
   int e;
   for (size_t i = 0; i < LCOS_PER_LOCALITY; ++i) {
     // test futures
@@ -89,8 +95,10 @@ static HPX_ACTION(_spawn, const hpx_addr_t * const termination_lco) {
   }
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _spawn,
+                  _spawn_handler, HPX_POINTER, HPX_SIZE_T);
 
-static HPX_ACTION(lco_wait, void *UNUSED) {
+static int lco_wait_handler(void) {
   printf("Starting the LCO wait test.\n");
 
   // allocate and start a timer
@@ -104,6 +112,7 @@ static HPX_ACTION(lco_wait, void *UNUSED) {
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, lco_wait, lco_wait_handler);
 
 TEST_MAIN({
   ADD_TEST(lco_wait);

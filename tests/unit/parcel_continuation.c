@@ -19,20 +19,22 @@
 #include "libsync/sync.h"
 
 // Testcase to test the parcel continuation
-static HPX_ACTION(_get_cont_value, uint64_t *args) {
+static int _get_cont_value_handler(uint64_t *args, size_t n) {
   hpx_addr_t local = hpx_thread_current_target();
   uint64_t *value;
   if (!hpx_gas_try_pin(local, (void**)&value))
     return HPX_RESEND;
 
-  memcpy(value, args, hpx_thread_current_args_size());
+  memcpy(value, args, n);
   //printf("Value =  %"PRIu64"\n", *value);
 
   hpx_gas_unpin(local);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _get_cont_value,
+                  _get_cont_value_handler, HPX_POINTER, HPX_SIZE_T);
 
-static HPX_ACTION(parcel_get_continuation, void *UNUSED) {
+static int parcel_get_continuation_handler(void) {
   printf("Testing parcel contination target and action\n");
 
   hpx_time_t t1 = hpx_time_now();
@@ -70,6 +72,8 @@ static HPX_ACTION(parcel_get_continuation, void *UNUSED) {
   printf("Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, parcel_get_continuation,
+                  parcel_get_continuation_handler);
 
 TEST_MAIN({
   ADD_TEST(parcel_get_continuation);

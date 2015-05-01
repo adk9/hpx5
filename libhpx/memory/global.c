@@ -62,7 +62,7 @@ static void _global_join(void *common) {
   HPX_PUSH_IGNORE(-Wpedantic);
   void* alloc = (void*)&_global_chunk_alloc;
   void* dalloc = (void*)&_global_chunk_dalloc;
-  HPX_POP_IGNORE
+  HPX_POP_IGNORE;
   common_join(common, &_primordial_arena, alloc, dalloc);
 }
 

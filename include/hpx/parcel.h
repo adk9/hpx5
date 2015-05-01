@@ -13,6 +13,10 @@
 #ifndef HPX_PARCEL_H
 #define HPX_PARCEL_H
 
+/// @defgroup parcels Parcels
+/// @brief Functions and definitions for using parcels (as distinct from actions)
+/// @{
+
 #include <stdarg.h>
 #include <hpx/action.h>
 #include <hpx/addr.h>
@@ -265,5 +269,7 @@ void   _hpx_parcel_set_args(hpx_parcel_t *p, int nargs, ...)
 ///                     parcel.
 void hpx_parcel_set_pid(hpx_parcel_t *p, const hpx_pid_t pid)
   HPX_NON_NULL(1);
+
+/// @}
 
 #endif

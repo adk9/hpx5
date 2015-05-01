@@ -8,7 +8,7 @@
 # Research in Extreme Scale Technologies (CREST).
 
 AC_PREREQ([2.63])
-AC_INIT([hpx], [5.0.0a1], [hpx@indiana.edu])
+AC_INIT([hpx-5], [1.0.0], [hpx@indiana.edu])
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
 
@@ -93,7 +93,8 @@ AC_ARG_ENABLE([jemalloc],
   [], [enable_jemalloc=no])
 AS_IF([test "x$enable_jemalloc" != xno],
   [HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [], [_local])
-   AC_DEFINE([HAVE_JEMALLOC], [1], [We have jemalloc support for malloc/free/etc])]) 
+   AC_DEFINE([HAVE_JEMALLOC], [1], [We have jemalloc support for malloc/free/etc])]
+   AC_SUBST(HPX_JEMALLOC_LOCAL_LIBS, "$hpx_jemalloc_libs"))
   
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug],
@@ -217,6 +218,13 @@ AS_CASE([$host_os],
 
 AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
 AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
+
+AC_CHECK_SIZEOF([void*])
+AC_CHECK_SIZEOF([size_t])
+AS_IF([test "x$ac_cv_sizeof_size_t" == x4],
+  [AC_DEFINE([HPX_BITNESS_32], [1], [Detected 32-bit platform.])],
+  [AC_DEFINE([HPX_BITNESS_64], [1], [Detected 64-bit platform.])])
+
 
 # -----------------------------------------------------------------------------
 # Set automake conditionals for use in Makefile.am settings.

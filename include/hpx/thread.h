@@ -13,6 +13,9 @@
 #ifndef HPX_THREAD_H
 #define HPX_THREAD_H
 
+/// @addtogroup actions
+/// @{
+
 /// @file
 /// @brief HPX thread interface
 ///
@@ -40,10 +43,6 @@ hpx_addr_t hpx_thread_current_cont_target(void);
 /// Get the continuation action for the current thread
 /// @returns the continuation action for the current thread
 hpx_action_t hpx_thread_current_cont_action(void);
-
-/// Get the size of the arguments passed to the current thread
-/// @returns the size of the current thread's argument
-uint32_t hpx_thread_current_args_size(void);
 
 /// Get the process identifier of the current thread
 /// @returns the PID for the current thread
@@ -136,5 +135,6 @@ void hpx_thread_continue_cleanup(size_t size, const void *value,
 void hpx_thread_exit(int status)
   HPX_NORETURN;
 
+/// @}
 
 #endif

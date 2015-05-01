@@ -29,14 +29,16 @@ const int SET_CONT_VALUE = 1234;
 
 // hpx_thread_current_cont_action gets the continuation action for the current
 // thread
-static HPX_ACTION(_thread_current_cont_target, void *args) {
+static int _thread_current_cont_target_handler(void) {
   hpx_action_t c_action = hpx_thread_current_cont_action();
   hpx_addr_t c_target = hpx_thread_current_cont_target();
   hpx_call(c_target, c_action, HPX_NULL, NULL, 0);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _thread_current_cont_target,
+                  _thread_current_cont_target_handler);
 
-static HPX_ACTION(thread_cont_action, void *UNUSED) {
+static int thread_cont_action_handler(void) {
   printf("Starting the Thread continue target and action test\n");
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
@@ -65,6 +67,7 @@ static HPX_ACTION(thread_cont_action, void *UNUSED) {
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, thread_cont_action, thread_cont_action_handler);
 
 TEST_MAIN({
   ADD_TEST(thread_cont_action);

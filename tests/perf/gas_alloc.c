@@ -39,7 +39,7 @@ static void usage(FILE *stream) {
 
 static hpx_action_t _main    = 0;
 
-static int _main_action(void *args) {
+static int _main_action(void *args, size_t n) {
   hpx_addr_t local, global, calloc_global;
   hpx_time_t t;
   int size = HPX_LOCALITIES;
@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
   fprintf(stdout, "Starting the cost of GAS Allocation benchmark\n");
 
   // Register the main action
-  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
 
   set_timeout(30);
 

@@ -26,7 +26,7 @@ static hpx_addr_t rand_rank(void) {
 
 static hpx_action_t send = 0;
 
-static int _send_action(void *args) {
+static int _send_action(void *args, size_t size) {
   int n = *(int*)args;
   printf("locality: %d, thread: %d, count: %d\n", hpx_get_my_rank(),
          hpx_get_my_thread_id(), n);
@@ -82,6 +82,6 @@ int main(int argc, char * argv[argc]) {
      break;
   }
 
-  HPX_REGISTER_ACTION(_send_action, &send);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, send, _send_action, HPX_POINTER, HPX_SIZE_T);
   return hpx_run(&send, &n, sizeof(n));
 }

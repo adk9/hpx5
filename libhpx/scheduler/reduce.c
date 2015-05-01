@@ -223,8 +223,8 @@ static const lco_class_t _reduce_vtable = {
   .on_size     = _reduce_size
 };
 
-static int _reduce_init(_reduce_t *r, int inputs, size_t size, hpx_action_t id,
-                         hpx_action_t op) {
+static int _reduce_init_handler(_reduce_t *r, int inputs, size_t size,
+                                hpx_action_t id, hpx_action_t op) {
   assert(id);
   assert(op);
 
@@ -249,8 +249,9 @@ static int _reduce_init(_reduce_t *r, int inputs, size_t size, hpx_action_t id,
   log_lco("initialized with %d inputs lco %p\n", r->inputs, (void*)r);
   return HPX_SUCCESS;
 }
-static HPX_ACTION_DEF(PINNED, _reduce_init, _reduce_init_async, HPX_INT,
-                      HPX_SIZE_T, HPX_ACTION_T, HPX_ACTION_T);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _reduce_init_async,
+                  _reduce_init_handler,
+                  HPX_POINTER, HPX_INT, HPX_SIZE_T, HPX_ACTION_T, HPX_ACTION_T);
 /// @}
 
 hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_action_t id,
@@ -265,7 +266,7 @@ hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_action_t id,
     dbg_check(e, "could not initialize an allreduce at %lu\n", gva);
   }
   else {
-    _reduce_init(r, inputs, size, id, op);
+    _reduce_init_handler(r, inputs, size, id, op);
     hpx_gas_unpin(gva);
   }
 
@@ -277,14 +278,15 @@ static int _block_local_init_handler(void *lco, int n, int inputs, size_t size,
                                      hpx_action_t id, hpx_action_t op) {
   for (int i = 0; i < n; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_reduce_t) + size));
-    _reduce_init(addr, inputs, size, id, op);
+    _reduce_init_handler(addr, inputs, size, id, op);
   }
 
   return HPX_SUCCESS;
 }
-
-static HPX_ACTION_DEF(PINNED, _block_local_init_handler, _block_local_init,
-                      HPX_INT, HPX_INT, HPX_SIZE_T, HPX_POINTER, HPX_POINTER);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
+                  _block_local_init_handler,
+                  HPX_POINTER, HPX_INT, HPX_INT, HPX_SIZE_T,
+                  HPX_POINTER, HPX_POINTER);
 
 /// Allocate an array of reduce LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate

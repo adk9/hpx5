@@ -63,7 +63,7 @@ static void _buffer_fini(buffer_t *b) {
 }
 
 static void _buffer_reload(buffer_t *b, pwc_xport_t *xport) {
-  dbg_assert(1ul << ceil_log2_64(b->n) == b->n);
+  dbg_assert(1ul << ceil_log2_size_t(b->n) == b->n);
   b->block = parcel_block_new(b->n, b->n, &b->i);
   int e = xport->key_find(xport, b->block, b->n, &b->key);
   dbg_check(e, "no key for parcel block at (%p, %zu)\n", (void*)b->block, b->n);
@@ -75,13 +75,19 @@ static void _buffer_init(buffer_t *b, size_t n, pwc_xport_t *xport) {
 }
 
 static int _recv_parcel_handler(int src, command_t command) {
+#ifdef HPX_BITNESS_64
   hpx_parcel_t *p = (hpx_parcel_t*)command_get_arg(command);
+#else
+  arg_t arg = command_get_arg(command);
+  dbg_assert((arg & 0xffffffff) == arg);
+  hpx_parcel_t *p = (hpx_parcel_t*)(uint32_t)arg;
+#endif
   p->src = src;
   parcel_set_state(p, PARCEL_SERIALIZED | PARCEL_BLOCK_ALLOCATED);
   scheduler_spawn(p);
   return HPX_SUCCESS;
 }
-COMMAND_DEF(INTERRUPT, _recv_parcel_handler, _recv_parcel);
+COMMAND_DEF(HPX_INTERRUPT, _recv_parcel, _recv_parcel_handler);
 
 static int _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
   int i = send->i;
@@ -236,7 +242,7 @@ static int _reload_reply_handler(int src, command_t cmd) {
   send_buffer_t *sends = &pwc->send_buffers[src];
   return send_buffer_progress(sends);
 }
-static COMMAND_DEF(DEFAULT, _reload_reply_handler, _reload_reply);
+static COMMAND_DEF(HPX_DEFAULT, _reload_reply, _reload_reply_handler);
 
 static int _reload_request_handler(int src, command_t cmd) {
   pwc_network_t *pwc = (pwc_network_t*)here->network;
@@ -262,5 +268,5 @@ static int _reload_request_handler(int src, command_t cmd) {
 
   return xport->pwc(&op);
 }
-static COMMAND_DEF(INTERRUPT, _reload_request_handler, _reload_request);
+static COMMAND_DEF(HPX_INTERRUPT, _reload_request, _reload_request_handler);
 

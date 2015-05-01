@@ -22,7 +22,7 @@ static  hpx_action_t _add  = 0;
 int count = 0;
 hpx_addr_t sem;
 
-static int _add_action(int *args) {
+static int _add_action(int *args, size_t size) {
   int i, tmp;
   for (i = 0; i < NITER; ++i) {
     hpx_lco_sema_p(sem);
@@ -34,7 +34,7 @@ static int _add_action(int *args) {
   return HPX_SUCCESS;
 }
 
-static int _main_action(void *args) {
+static int _main_action(void *args, size_t size) {
   sem = hpx_lco_sema_new(1);
   hpx_addr_t and = hpx_lco_and_new(NUM_THREADS);
   for (int i = 0; i < NUM_THREADS; i++)
@@ -59,8 +59,8 @@ int main(int argc, char *argv[]) {
     return e;
   }
 
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(_add_action, &_add);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _add, _add_action, HPX_POINTER, HPX_SIZE_T);
 
   return hpx_run(&_main, NULL, 0);
 }

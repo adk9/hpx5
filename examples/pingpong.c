@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
 /**
  * Send a ping message.
  */
-static HPX_ACTION(_ping, args_t *args) {
+static int _ping_handler(args_t *args, size_t n) {
   RANK_PRINTF("received '%s'\n", args->msg);
 
   // Reuse the message space for the next ping message.
@@ -147,12 +147,13 @@ static HPX_ACTION(_ping, args_t *args) {
   hpx_parcel_send_sync(p);
   return HPX_SUCCESS;
 }
-
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _ping,
+                  _ping_handler, HPX_POINTER, HPX_SIZE_T);
 
 /**
  * Handle a pong action.
  */
-static HPX_ACTION(_pong, args_t *args) {
+static int _pong_handler(args_t *args, size_t n) {
   RANK_PRINTF("received '%s'\n", args->msg);
 
   // reuse args
@@ -174,6 +175,9 @@ static HPX_ACTION(_pong, args_t *args) {
   hpx_parcel_send_sync(p);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _pong,
+                  _pong_handler, HPX_POINTER, HPX_SIZE_T);
+
 
 hpx_addr_t _partner(void) {
   int rank = hpx_get_my_rank();

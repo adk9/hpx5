@@ -10,14 +10,13 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_EXAMPLES_DEBUG_H
-#define LIBHPX_EXAMPLES_DEBUG_H
+#ifndef LIBHPX_ASM_H
+#define LIBHPX_ASM_H
 
-#include <limits.h>
+#include <stdint.h>
+#include "hpx/attributes.h"
 
-#define ALL_RANKS INT_MAX
-#define NO_RANKS -1
+void align_stack_trampoline(void)
+  HPX_INTERNAL;
 
-void wait_for_debugger(int rank);
-
-#endif // LIBHPX_EXAMPLES_DEBUG_H
+#endif // LIBHPX_ASM_H

@@ -17,6 +17,10 @@
 #include "hpx/builtins.h"
 #include "hpx/action.h"
 
+/// @defgroup system System
+/// @brief Functions that control the overall runtime
+/// @{
+
 /// @file
 /// @brief HPX system interface.
 /// hpx_init() initializes the scheduler, network, and locality
@@ -67,7 +71,7 @@ int hpx_init(int *argc, char ***argv);
 /// @returns     the status code passed to hpx_shutdown() upon
 ///              termination.
 int    _hpx_run(hpx_action_t *entry, int nargs, ...);
-#define hpx_run(entry, ...) _hpx_run(entry, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
+#define hpx_run(entry, ...) _hpx_run(entry, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 
 /// Shutdown the HPX runtime.
@@ -103,5 +107,7 @@ void hpx_abort(void)
 /// options supported by the HPX runtime.
 ///
 void hpx_print_help(void);
+
+/// @}
 
 #endif
