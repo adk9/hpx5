@@ -13,13 +13,14 @@
 #ifndef LIBHPX_LCO_H
 #define LIBHPX_LCO_H
 
+#include <inttypes.h>
 #include <hpx/attributes.h>
 #include <libsync/lockable_ptr.h>
 #include "cvar.h"
 
 #define LCO_LOG_NEW(gva) do {                                   \
     dbg_assert_str(gva, "Could not malloc global memory\n");    \
-    log_lco("allocated lco %lu\n", gva);                        \
+    log_lco("allocated lco %"PRIu64"\n", gva);                  \
   } while (0)
 
 /// This constant is used to determine when a set should be performed
