@@ -31,9 +31,9 @@ SUBDIRS      += jemalloc_build_registered
 DIST_SUBDIRS += jemalloc_build_registered
 endif
 
-if BUILD_FARMHASH
-SUBDIRS      += farmhash
-DIST_SUBDIRS += farmhash
+if BUILD_LIBCUCKOO
+SUBDIRS      += libcuckoo
+DIST_SUBDIRS += libcuckoo
 endif
 
 check-recursive: all-recursive
