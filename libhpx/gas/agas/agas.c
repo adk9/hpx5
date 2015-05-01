@@ -54,6 +54,9 @@ typedef struct {
 
 static agas_t *global_agas;
 
+HPX_ACTION_DECL(agas_alloc_cyclic);
+HPX_ACTION_DECL(agas_calloc_cyclic);
+
 static void
 _agas_delete(void *gas) {
   agas_t *agas = gas;
@@ -217,6 +220,49 @@ static bool _chunk_dalloc_cyclic(void *chunk, size_t size, unsigned UNUSED) {
   return true;
 }
 
+hpx_addr_t agas_alloc_cyclic_sync(size_t n, uint32_t bsize) {
+  agas_t *agas = global_agas;
+  dbg_assert(agas->cyclic_arena < UINT32_MAX);
+  dbg_assert(here->rank == 0);
+
+  // Figure out how many blocks per node we need.
+  uint64_t blocks = ceil_div_64(n, here->ranks);
+  uint32_t  align = ceil_log2_32(bsize);
+  dbg_assert(align < 32);
+  uint32_t padded = 1u << align;
+  int flags = MALLOCX_LG_ALIGN(align) | MALLOCX_ARENA(agas->cyclic_arena);
+  void *lva = libhpx_global_mallocx(blocks * padded, flags);
+  if (!lva) {
+    dbg_error("failed cyclic allocation\n");
+  }
+
+  void *chunk = _lva_to_chunk(agas, lva);
+  uint64_t base = chunk_table_lookup(agas->chunk_table, chunk);
+  uint64_t offset = base + ((char*)lva - (char*)chunk);
+
+  gva_t gva = {
+    .bits = {
+      .offset = offset,
+      .home = here->rank,
+      .large = 1,
+      .size_class = 0
+    }
+  };
+
+  // and insert an entry into our block translation table
+  btt_insert(agas->btt, gva.addr, here->rank, lva);
+
+  // and return the address
+  return gva.addr;
+}
+
+static int _alloc_cyclic_handler(size_t n, size_t bsize) {
+  hpx_addr_t addr = agas_alloc_cyclic_sync(n, bsize);
+  HPX_THREAD_CONTINUE(addr);
+}
+HPX_ACTION(HPX_DEFAULT, 0, agas_alloc_cyclic, _alloc_cyclic_handler, HPX_SIZE_T,
+           HPX_SIZE_T);
+
 static hpx_addr_t
 _agas_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
   hpx_addr_t addr;
@@ -231,6 +277,18 @@ _agas_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
   dbg_assert_str(addr != HPX_NULL, "HPX_NULL is not a valid allocation\n");
   return addr;
 }
+
+hpx_addr_t agas_calloc_cyclic_sync(size_t n, uint32_t bsize) {
+  assert(here->rank == 0);
+  return HPX_NULL;
+}
+
+static int _calloc_cyclic_handler(size_t n, size_t bsize) {
+  hpx_addr_t addr = agas_calloc_cyclic_sync(n, bsize);
+  HPX_THREAD_CONTINUE(addr);
+}
+HPX_ACTION(HPX_DEFAULT, 0, agas_calloc_cyclic, _calloc_cyclic_handler, HPX_SIZE_T,
+           HPX_SIZE_T);
 
 static hpx_addr_t
 _agas_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
