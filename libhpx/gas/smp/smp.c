@@ -129,7 +129,7 @@ _smp_gas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
 
 /// Free an allocation.
 static void
-_smp_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
+_smp_gas_free(void *gas, hpx_addr_t addr, hpx_addr_t sync) {
   void *p = (void*)(size_t)addr;
   free(p);
 

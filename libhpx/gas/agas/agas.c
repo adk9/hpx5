@@ -173,6 +173,50 @@ _agas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
   return _register(gas, lva);
 }
 
+static int
+_agas_free_local_async_handler(hpx_addr_t rsync) {
+  hpx_addr_t gva = hpx_thread_current_target();
+  hpx_gas_free(gva, rsync);
+  return HPX_SUCCESS;
+}
+HPX_ACTION(HPX_DEFAULT, 0, _agas_free_local_async,
+           _agas_free_local_async_handler, HPX_ADDR);
+
+static void
+_agas_free(void *gas, hpx_addr_t addr, hpx_addr_t rsync) {
+  if (addr == HPX_NULL) {
+    return;
+  }
+
+  gva_t gva = {
+    .addr = addr
+  };
+
+  if (gva.bits.large) {
+    dbg_error("Cyclic allocation free is unhandled\n");
+  }
+
+  agas_t *agas = gas;
+
+  void *lva;
+  bool local = btt_try_pin(agas->btt, addr, &lva);
+  if (local) {
+    // 1) remove this mapping
+    btt_remove(agas->btt, addr);
+
+    // 2) free the backing memory
+    global_free(lva);
+
+    // 3) set the lsync
+    hpx_lco_error(rsync, HPX_SUCCESS, HPX_NULL);
+    return;
+  }
+
+  int e = hpx_xcall(addr, _agas_free_local_async, HPX_NULL, rsync);
+  dbg_check(e, "failed to forward AGAS free operation\n");
+  (void)e;
+}
+
 static void *
 _agas_mmap(void *gas, void *addr, size_t n, size_t align) {
   int e;
@@ -237,7 +281,7 @@ static gas_t _agas_vtable = {
   .calloc_blocked = NULL,
   .alloc_local    = _agas_alloc_local,
   .calloc_local   = _agas_calloc_local,
-  .free           = NULL,
+  .free           = _agas_free,
   .move           = NULL,
   .memget         = NULL,
   .memput         = NULL,
