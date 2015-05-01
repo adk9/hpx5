@@ -154,7 +154,7 @@ static int _and_init_handler(_and_t *and, int64_t value) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _and_init_async,
-                  _and_init_handler, HPX_SINT64);
+                  _and_init_handler, HPX_POINTER, HPX_SINT64);
 
 /// @}
 
@@ -197,7 +197,8 @@ static int _block_local_init_handler(void *lco, uint32_t n, uint32_t arg) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
-                  _block_local_init_handler, HPX_UINT32, HPX_UINT32);
+                  _block_local_init_handler,
+                  HPX_POINTER, HPX_UINT32, HPX_UINT32);
 
 /// Allocate an array of and LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate

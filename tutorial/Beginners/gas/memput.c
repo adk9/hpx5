@@ -25,7 +25,7 @@ static uint64_t block[] = {
   22, 23, 24, 25, 26, 27, 28, 29, 30, 31
 };
 
-static int _verify_action(size_t size, void *args) {
+static int _verify_action(void *args, size_t size) {
   hpx_addr_t target = hpx_thread_current_target();
   uint64_t *local;
   if (!hpx_gas_try_pin(target, (void**)&local))
@@ -40,7 +40,7 @@ static int _verify_action(size_t size, void *args) {
   HPX_THREAD_CONTINUE(result);
 }
 
-static int _main_action(size_t n, void *args) {
+static int _main_action(void *args, size_t n) {
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
   int peerid = (rank + 1) % size;
@@ -70,8 +70,8 @@ int main(int argc, char *argv[]) {
     return e;
   }
    
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _verify, _verify_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _verify, _verify_action, HPX_POINTER, HPX_SIZE_T);
 
   return hpx_run(&_main, NULL, 0);
 }

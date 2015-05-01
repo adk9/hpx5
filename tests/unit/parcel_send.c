@@ -27,7 +27,7 @@ static volatile int counter HPX_USED = 0;
 // asynchronout local completion symantics, hpx_parcel_set_cont_action - set
 // the continuous action, hpx_pargel_set_cont_target - set the continuous
 // address for a parcel.
-static int _recv_handler(size_t n, double *args) {
+static int _recv_handler(double *args, size_t n) {
   //printf("recv %d\n", sync_fadd(&counter, 1, SYNC_ACQ_REL));
   sync_fadd(&counter, 1, SYNC_ACQ_REL);
   return HPX_SUCCESS;

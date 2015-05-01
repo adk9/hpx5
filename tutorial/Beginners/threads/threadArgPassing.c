@@ -32,7 +32,7 @@ struct thread_data {
 
 struct thread_data thread_data_array[NUM_THREADS];
 
-static int _printHello_action(size_t size, void *threadarg) {
+static int _printHello_action(void *threadarg, size_t size) {
   int tid;
   char *hello_msg;
   struct thread_data *my_data;
@@ -48,7 +48,7 @@ static int _printHello_action(size_t size, void *threadarg) {
 //****************************************************************************
 // @Action which spawns the threads
 //****************************************************************************
-static int _main_action(size_t size, void *args) {
+static int _main_action(void *args, size_t size) {
   messages[0] = "English: Hello World!";
   messages[1] = "French:  Bonjour, le monde!";
   messages[2] = "German:  Guten Tag, Welt!"; 
@@ -75,8 +75,8 @@ int main(int argc, char *argv[]) {
     return e;
   }
    
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _printHello, _printHello_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _printHello, _printHello_action, HPX_POINTER, HPX_SIZE_T);
 
   return hpx_run(&_main, NULL, 0);
 }

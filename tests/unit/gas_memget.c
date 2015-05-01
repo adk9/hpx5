@@ -42,7 +42,7 @@ static int _init_handler(uint64_t *local) {
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _init, _init_handler);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _init, _init_handler, HPX_POINTER);
 
 static int _init_globals_handler(void) {
   size_t n = ELEMENTS * sizeof(uint64_t);

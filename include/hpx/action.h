@@ -15,6 +15,11 @@
 
 #include "hpx/builtins.h"
 
+/// @defgroup actions Actions and threads
+/// @brief Functions and definitions for registering, calling, and controlling
+///        actions and threads
+/// @{
+
 /// @file
 /// @brief Types and functions for registering HPX actions.
 
@@ -26,10 +31,10 @@
 typedef uint16_t hpx_action_t;
 
 /// The type of functions that can be registered with hpx_register_action().
-typedef int (*hpx_action_handler_t)(size_t, void*);
+typedef int (*hpx_action_handler_t)(void*, size_t);
 
 /// The type of functions that can be registed with pinned actions.
-typedef int (*hpx_pinned_action_handler_t)(void *, size_t, void*);
+typedef int (*hpx_pinned_action_handler_t)(void *, void*, size_t);
 
 /// The equivalent of NULL for HPX actions.
 #define HPX_ACTION_NULL ((hpx_action_t)0u)
@@ -109,5 +114,7 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
     HPX_REGISTER_ACTION(type, attr, id, handler , ##__VA_ARGS__); \
   }                                                               \
   static HPX_CONSTRUCTOR void _register##_##handler(void)
+
+/// @}
 
 #endif
