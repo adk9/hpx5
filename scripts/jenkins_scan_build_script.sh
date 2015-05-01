@@ -29,12 +29,12 @@ SCAN_BUILD_TMPDIR=$( mktemp -d /tmp/scan-build.XXXXXX )
 # directory to use for archiving the scan-build report
 SCAN_BUILD_ARCHIVE="${WORKSPACE}/scan-build-archive"
 
-eval "/u/crest-team/LLVM/llvm-3.6.0.src/tools/clang/tools/scan-build/scan-build --use-analyzer=/opt/llvm/3.6.0/bin/clang $CFG_CMD CC=clang CFLAGS=\"-std=gnu99 -O0\" --disable-pedantic --enable-debug --enable-instrumentation --enable-logging"  
+eval "/u/crest-team/LLVM/llvm-3.6.0.src/tools/clang/tools/scan-build/scan-build --use-analyzer=/opt/llvm/3.6.0/bin/clang $CFG_CMD CC=clang CFLAGS=\"-std=gnu99 -O0\" --disable-pedantic --enable-debug --enable-instrumentation --enable-logging --enable-parallel-config"
 
 echo "Building HPX."
 
 # generate the scan-build report
-eval "/u/crest-team/LLVM/llvm-3.6.0.src/tools/clang/tools/scan-build/scan-build --use-analyzer=/opt/llvm/3.6.0/bin/clang  -k -o  ${SCAN_BUILD_TMPDIR} make" 
+eval "/u/crest-team/LLVM/llvm-3.6.0.src/tools/clang/tools/scan-build/scan-build --use-analyzer=/opt/llvm/3.6.0/bin/clang  -k -o  ${SCAN_BUILD_TMPDIR} make -j 16" 
 
 # get the directory name of the report created by scan-build
 SCAN_BUILD_REPORT=$( find ${SCAN_BUILD_TMPDIR} -maxdepth 1 -not -empty -not -name `basename ${SCAN_BUILD_TMPDIR}` )
