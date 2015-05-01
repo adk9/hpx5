@@ -45,9 +45,8 @@ gas_t *gas_new(const config_t *cfg, struct boot *boot) {
     break;
 
    case HPX_GAS_AGAS:
-#ifdef HAVE_AGAS
+#if defined(HAVE_AGAS) && defined(HAVE_NETWORK)
     gas = gas_agas_new(cfg, boot);
-#else
 #endif
     break;
 
