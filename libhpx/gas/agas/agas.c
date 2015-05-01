@@ -28,19 +28,7 @@
 #include "gva.h"
 #include "../mallctl.h"
 
-static const unsigned AGAS_MAX_RANKS = (1u << GVA_RANK_BITS);
 static const uint64_t AGAS_THERE_OFFSET = UINT64_MAX;
-
-static uint64_t size_classes[8] = {
-  0,
-  8,
-  64,
-  128,
-  1024,
-  16384,
-  65536,
-  1048576
-};
 
 typedef struct {
   gas_t vtable;
@@ -89,37 +77,36 @@ static hpx_addr_t
 _agas_there(void *gas, uint32_t i) {
   // We reserve a small range of addresses in the "large" allocation space that
   // will represent locality addresses.
-  dbg_assert(i < AGAS_MAX_RANKS);
   dbg_assert(i < here->ranks);
-
-  static const int class = 1;
-  uint64_t mask = ~(size_classes[class] - 1);
   gva_t gva = {
     .bits = {
-      .offset = AGAS_THERE_OFFSET & mask,
-      .home = i,
-      .large = 0,
-      .size_class = class
+      .offset = AGAS_THERE_OFFSET,
+      .size   = 0,
+      .large  = 0,
+      .home   = (uint16_t)i,
     }
   };
   return gva.addr;
 }
 
 static bool
-_agas_try_pin(void *gas, hpx_addr_t gva, void **lva) {
+_agas_try_pin(void *gas, hpx_addr_t addr, void **lva) {
   agas_t *agas = gas;
+  gva_t gva = { .addr = addr };
   return btt_try_pin(agas->btt, gva, lva);
 }
 
 static void
-_agas_unpin(void *gas, hpx_addr_t gva) {
+_agas_unpin(void *gas, hpx_addr_t addr) {
   agas_t *agas = gas;
+  gva_t gva = { .addr = addr };
   btt_unpin(agas->btt, gva);
 }
 
 static uint32_t
-_agas_owner_of(const void *gas, hpx_addr_t gva) {
+_agas_owner_of(const void *gas, hpx_addr_t addr) {
   const agas_t *agas = gas;
+  gva_t gva = { .addr = addr };
   return btt_owner_of(agas->btt, gva);
 }
 
@@ -127,31 +114,6 @@ static void*
 _lva_to_chunk(agas_t *gas, void *lva) {
   uintptr_t mask = ~(gas->chunk_size - 1);
   return (void*)((uintptr_t)lva & mask);
-}
-
-static hpx_addr_t
-_register(agas_t *gas, void *lva) {
-  // we need to reverse map this address to an offset into the local portion of
-  // the global address space
-  void *chunk = _lva_to_chunk(gas, lva);
-  uint64_t base = chunk_table_lookup(gas->chunk_table, chunk);
-  uint64_t offset = base + ((char*)lva - (char*)chunk);
-
-  // and construct a gva for this
-  gva_t gva = {
-    .bits = {
-      .offset = offset,
-      .home = here->rank,
-      .large = 0,
-      .size_class = 0
-    }
-  };
-
-  // and insert an entry into our block translation table
-  btt_insert(gas->btt, gva.addr, here->rank, lva);
-
-  // and return the address
-  return gva.addr;
 }
 
 static void *
@@ -243,14 +205,14 @@ hpx_addr_t agas_alloc_cyclic_sync(size_t n, uint32_t bsize) {
   gva_t gva = {
     .bits = {
       .offset = offset,
-      .home = here->rank,
       .large = 1,
-      .size_class = 0
+      .size = 0,
+      .home = here->rank
     }
   };
 
   // and insert an entry into our block translation table
-  btt_insert(agas->btt, gva.addr, here->rank, lva);
+  btt_insert(agas->btt, gva, here->rank, lva);
 
   // and return the address
   return gva.addr;
@@ -306,6 +268,31 @@ _agas_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
 }
 
 static hpx_addr_t
+_register_local(agas_t *gas, void *lva, uint32_t bsize) {
+  // we need to reverse map this address to an offset into the local portion of
+  // the global address space
+  void *chunk = _lva_to_chunk(gas, lva);
+  uint64_t base = chunk_table_lookup(gas->chunk_table, chunk);
+  uint64_t offset = base + ((char*)lva - (char*)chunk);
+
+  // and construct a gva for this
+  gva_t gva = {
+    .bits = {
+      .offset = offset,
+      .size   = ceil_log2_32(bsize),
+      .large  = 0,
+      .home   = here->rank,
+    }
+  };
+
+  // and insert an entry into our block translation table
+  btt_insert(gas->btt, gva, here->rank, lva);
+
+  // and return the address
+  return gva.addr;
+}
+
+static hpx_addr_t
 _agas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
   // use the local allocator to get some memory that is part of the global
   // address space
@@ -317,11 +304,13 @@ _agas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
     lva = global_malloc(bytes);
   }
 
-  return _register(gas, lva);
+  return _register_local(gas, lva, bytes);
 }
 
 static hpx_addr_t
 _agas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
+  dbg_assert(size < UINT32_MAX);
+
   size_t bytes = nmemb * size;
   void *lva;
   if (boundary) {
@@ -331,7 +320,7 @@ _agas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
     lva = global_calloc(nmemb, size);
   }
 
-  return _register(gas, lva);
+  return _register_local(gas, lva, size);
 }
 
 static int
@@ -349,9 +338,7 @@ _agas_free(void *gas, hpx_addr_t addr, hpx_addr_t rsync) {
     return;
   }
 
-  gva_t gva = {
-    .addr = addr
-  };
+  gva_t gva = { .addr = addr };
 
   if (gva.bits.large) {
     dbg_error("Cyclic allocation free is unhandled\n");
@@ -360,10 +347,10 @@ _agas_free(void *gas, hpx_addr_t addr, hpx_addr_t rsync) {
   agas_t *agas = gas;
 
   void *lva;
-  bool local = btt_try_pin(agas->btt, addr, &lva);
+  bool local = btt_try_pin(agas->btt, gva, &lva);
   if (local) {
     // 1) remove this mapping
-    btt_remove(agas->btt, addr);
+    btt_remove(agas->btt, gva);
 
     // 2) free the backing memory
     global_free(lva);
@@ -439,7 +426,9 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
                                               _chunk_dalloc_cyclic);
     log_gas("allocated the arena to manage cyclic allocations.\n");
   }
-  btt_insert(agas->btt, _agas_there(agas, here->rank), here->rank, here);
+
+  gva_t there = { .addr = _agas_there(agas, here->rank) };
+  btt_insert(agas->btt, there, here->rank, here);
   global_agas = agas;
   return &agas->vtable;
 }

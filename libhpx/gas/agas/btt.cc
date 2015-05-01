@@ -17,7 +17,6 @@
 #include <libcuckoo/cuckoohash_map.hh>
 #include <libcuckoo/city_hasher.hh>
 #include "btt.h"
-#include "gva.h"
 
 namespace {
   struct Entry {
@@ -35,9 +34,9 @@ namespace {
   class BTT : public Map {
    public:
     BTT(size_t);
-    bool trypin(hpx_addr_t gva, void** lva);
-    void unpin(hpx_addr_t gva);
-    uint32_t getOwner(hpx_addr_t gva) const;
+    bool trypin(gva_t gva, void** lva);
+    void unpin(gva_t gva);
+    uint32_t getOwner(gva_t gva) const;
   };
 }
 
@@ -45,7 +44,7 @@ BTT::BTT(size_t size) : Map(size) {
 }
 
 bool
-BTT::trypin(hpx_addr_t gva, void** lva) {
+BTT::trypin(gva_t gva, void** lva) {
   uint64_t key = gva_to_key(gva);
   return update_fn(key, [lva](Entry& entry) {
       entry.count++;
@@ -56,16 +55,16 @@ BTT::trypin(hpx_addr_t gva, void** lva) {
 }
 
 void
-BTT::unpin(hpx_addr_t gva) {
+BTT::unpin(gva_t gva) {
   uint64_t key = gva_to_key(gva);
-  bool found = update_fn(gva, [](Entry& entry) {
+  bool found = update_fn(key, [](Entry& entry) {
       entry.count--;
     });
   assert(found);
 }
 
 uint32_t
-BTT::getOwner(hpx_addr_t gva) const {
+BTT::getOwner(gva_t gva) const {
   Entry entry;
   uint64_t key = gva_to_key(gva);
   bool found = find(key, entry);
@@ -73,7 +72,7 @@ BTT::getOwner(hpx_addr_t gva) const {
     return entry.owner;
   }
   else {
-    return gva_home(gva);
+    return gva.bits.home;
   }
 }
 
@@ -89,7 +88,7 @@ btt_delete(void* obj) {
 }
 
 void
-btt_insert(void *obj, hpx_addr_t gva, int32_t owner, void *lva) {
+btt_insert(void *obj, gva_t gva, int32_t owner, void *lva) {
   BTT *btt = static_cast<BTT*>(obj);
   uint64_t key = gva_to_key(gva);
   bool inserted = btt->insert(key, Entry(owner, lva));
@@ -98,7 +97,7 @@ btt_insert(void *obj, hpx_addr_t gva, int32_t owner, void *lva) {
 }
 
 void
-btt_remove(void *obj, hpx_addr_t gva) {
+btt_remove(void *obj, gva_t gva) {
   BTT *btt = static_cast<BTT*>(obj);
   uint64_t key = gva_to_key(gva);
   bool erased = btt->erase(key);
@@ -107,19 +106,19 @@ btt_remove(void *obj, hpx_addr_t gva) {
 }
 
 bool
-btt_try_pin(void* obj, hpx_addr_t gva, void** lva) {
+btt_try_pin(void* obj, gva_t gva, void** lva) {
   BTT *btt = static_cast<BTT*>(obj);
   return btt->trypin(gva, lva);
 }
 
 void
-btt_unpin(void* obj, hpx_addr_t gva) {
+btt_unpin(void* obj, gva_t gva) {
   BTT *btt = static_cast<BTT*>(obj);
   btt->unpin(gva);
 }
 
 uint32_t
-btt_owner_of(const void* obj, hpx_addr_t gva) {
+btt_owner_of(const void* obj, gva_t gva) {
   const BTT *btt = static_cast<const BTT*>(obj);
   return btt->getOwner(gva);
 }
