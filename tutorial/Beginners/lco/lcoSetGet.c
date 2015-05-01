@@ -18,7 +18,7 @@
 static  hpx_action_t _main = 0;
 static  hpx_action_t _lcoSetGet  = 0;
 
-static int _lcoSetGet_action(size_t size, void *args) {
+static int _lcoSetGet_action(void *args, size_t size) {
   uint64_t val = 1234, setVal;
   hpx_addr_t future = hpx_lco_future_new(sizeof(uint64_t));
   hpx_lco_set(future, sizeof(uint64_t), &val, HPX_NULL, HPX_NULL);
@@ -27,7 +27,7 @@ static int _lcoSetGet_action(size_t size, void *args) {
   hpx_thread_continue(sizeof(uint64_t), &setVal);
 }
 
-static int _main_action(size_t size, void *args) {
+static int _main_action(void *args, size_t size) {
   hpx_addr_t lco;
   uint64_t result;
   hpx_addr_t done = hpx_lco_future_new(sizeof(uint64_t));
@@ -48,8 +48,8 @@ int main(int argc, char *argv[]) {
     return e;
   }
    
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _lcoSetGet, _lcoSetGet_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _lcoSetGet, _lcoSetGet_action, HPX_POINTER, HPX_SIZE_T);
 
   return hpx_run(&_main, NULL, 0);
 }

@@ -110,14 +110,14 @@ _hpx_par_call_helper(hpx_action_t action, const int min,
                      const size_t env_size, const void *env,
                      hpx_addr_t sync);
 
-static int _par_call_async_handler(size_t n, par_call_async_args_t *args) {
+static int _par_call_async_handler(par_call_async_args_t *args, size_t n) {
   const size_t env_size = n - sizeof(*args);
   return _hpx_par_call_helper(args->action, args->min, args->max, args->branching_factor,
                               args->cutoff, args->arg_size, args->arg_init, env_size,
                               &args->env, args->sync);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _par_call_async,
-                  _par_call_async_handler, HPX_SIZE_T, HPX_POINTER);
+                  _par_call_async_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int
 _hpx_par_call_helper(hpx_action_t action, const int min,
@@ -235,7 +235,7 @@ typedef struct {
 } hpx_count_range_call_args_t;
 
 static int
-_hpx_count_range_call_handler(size_t n, const hpx_count_range_call_args_t *const args) {
+_hpx_count_range_call_handler(const hpx_count_range_call_args_t *const args, size_t n) {
   int status;
   for (size_t i = 0; i < args->count; ++i) {
     const hpx_addr_t target =
@@ -249,7 +249,7 @@ _hpx_count_range_call_handler(size_t n, const hpx_count_range_call_args_t *const
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _hpx_count_range_call,
-                  _hpx_count_range_call_handler, HPX_SIZE_T, HPX_POINTER);
+                  _hpx_count_range_call_handler, HPX_POINTER, HPX_SIZE_T);
 
 int hpx_count_range_call(hpx_action_t action,
                          const hpx_addr_t addr,

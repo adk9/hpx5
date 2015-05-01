@@ -26,7 +26,7 @@ static  hpx_action_t _init_array = 0;
 #define SIZE 1000
 static uint64_t src[SIZE];
 
-static int _init_array_action(size_t size, void *args) {
+static int _init_array_action(void *args, size_t size) {
   hpx_addr_t target = hpx_thread_current_target();
   uint64_t *local = NULL;
   if (!hpx_gas_try_pin(target, (void**)&local))
@@ -38,7 +38,7 @@ static int _init_array_action(size_t size, void *args) {
   return HPX_SUCCESS;
 }
 
-static int _main_action(size_t n, void *args) {
+static int _main_action(void *args, size_t n) {
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
   int peerid = (rank + 1) % size;
@@ -78,8 +78,8 @@ int main(int argc, char *argv[]) {
     return e;
   }
    
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_array, _init_array_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_array, _init_array_action, HPX_POINTER, HPX_SIZE_T);
 
   return hpx_run(&_main, NULL, 0);
 }

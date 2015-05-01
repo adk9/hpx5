@@ -30,7 +30,7 @@ static hpx_action_t _main       = 0;
 static hpx_action_t _initArray   = 0;
 
 /// Initialize a array.
-static int _initArray_action(size_t size, void *args)
+static int _initArray_action(void *args, size_t size)
 {
   // Get the address this parcel was sent to, and map it to a local 
   // address---if this fails then the message arrived at the wrong 
@@ -55,7 +55,7 @@ static int _initArray_action(size_t size, void *args)
   return HPX_SUCCESS;
 }
 
-static int _main_action(size_t n, void *args) {
+static int _main_action(void *args, size_t n) {
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
   int peerid = (rank+1)%size;
@@ -83,8 +83,8 @@ int main(int argc, char *argv[]) {
     return e;
   }
    
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initArray, _initArray_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initArray, _initArray_action, HPX_POINTER, HPX_SIZE_T);
 
   return hpx_run(&_main, NULL, 0);
 }

@@ -272,7 +272,7 @@ hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id,
 }
 
 
-static int _allgather_setid_proxy_handler(_allgather_t *g, size_t n, void *args) {
+static int _allgather_setid_proxy_handler(_allgather_t *g, void *args, size_t n) {
   // otherwise we pinned the LCO, extract the arguments from @p args and use the
   // local setid routine
   _allgather_set_offset_t *a = args;
@@ -280,7 +280,8 @@ static int _allgather_setid_proxy_handler(_allgather_t *g, size_t n, void *args)
   return _allgather_setid(g, a->offset, size, &a->buffer);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _allgather_setid_proxy,
-                  _allgather_setid_proxy_handler, HPX_SIZE_T, HPX_POINTER);
+                  _allgather_setid_proxy_handler, HPX_POINTER,
+                  HPX_POINTER, HPX_SIZE_T);
 
 /// Update the gathering, will wait if the phase is reading.
 static void _allgather_set(lco_t *lco, int size, const void *from) {
@@ -319,7 +320,7 @@ static int _allgather_init_handler(_allgather_t *g, size_t participants, size_t 
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _allgather_init_async,
-                  _allgather_init_handler, HPX_SIZE_T, HPX_SIZE_T);
+                  _allgather_init_handler, HPX_POINTER, HPX_SIZE_T, HPX_SIZE_T);
 
 /// Allocate a new gather LCO. It gathers elements from each process in order
 /// of their rank and sends the result to all the processes
@@ -355,7 +356,8 @@ static int _block_local_init_handler(void *lco, uint32_t n, uint32_t inputs,
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
-                  _block_local_init_handler, HPX_UINT32, HPX_UINT32, HPX_UINT32);
+                  _block_local_init_handler, HPX_POINTER, HPX_UINT32,
+                  HPX_UINT32, HPX_UINT32);
 
 /// Allocate an array of allgather LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate

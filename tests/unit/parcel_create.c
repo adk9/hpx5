@@ -37,7 +37,7 @@ static hpx_addr_t rand_rank(void) {
 }
 
 static HPX_ACTION_DECL(_send);
-static int _send_handler(size_t size, int *args) {
+static int _send_handler(int *args, size_t size) {
   int n = *args;
   //printf( "locality: %d, thread: %d, count: %d\n", hpx_get_my_rank(),
   //       hpx_get_my_thread_id(), n);
@@ -58,7 +58,7 @@ static int _send_handler(size_t size, int *args) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _send,
-                  _send_handler, HPX_SIZE_T, HPX_POINTER);
+                  _send_handler, HPX_POINTER, HPX_SIZE_T);
 
 // Test code -- Parcels
 static int parcel_create_handler(void) {
@@ -84,13 +84,13 @@ hpx_addr_t _partner(void) {
   return HPX_THERE((rank) ? 0 : ranks - 1);
 }
 
-static int _send_data_handler(size_t n, const initBuffer_t *args) {
+static int _send_data_handler(const initBuffer_t *args, size_t n) {
   //printf("Received message = '%s', %d from (%d, %d)\n", args->message,
   //       args->index, hpx_get_my_rank(), hpx_get_my_thread_id());
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _send_data,
-                  _send_data_handler, HPX_SIZE_T, HPX_POINTER);
+                  _send_data_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int parcel_get_action_handler(void) {
   printf("Testing the parcel create with arguments\n");

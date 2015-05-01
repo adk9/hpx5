@@ -17,7 +17,7 @@
 static  hpx_action_t _main       = 0;
 static  hpx_action_t _pin        = 0;
 
-static int _pin_action(size_t size, void *args) {
+static int _pin_action(void *args, size_t size) {
   printf("Populating the data\n");
 
   hpx_addr_t local = hpx_thread_current_target();
@@ -34,7 +34,7 @@ static int _pin_action(size_t size, void *args) {
   return HPX_SUCCESS;
 }
 
-static int _main_action(size_t size, void *args) {
+static int _main_action(void *args, size_t size) {
 
   // malloc(0) returns "either" a null pointer or a unique pointer that can be 
   // successfully passed to free()"."
@@ -54,8 +54,8 @@ int main(int argc, char *argv[]) {
     return e;
   }
    
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _pin, _pin_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _pin, _pin_action, HPX_POINTER, HPX_SIZE_T);
 
   return hpx_run(&_main, NULL, 0);
 }

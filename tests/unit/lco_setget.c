@@ -18,7 +18,7 @@
 #define BUFFER_SIZE 128
 
 // Testcase to test LCO wait and delete functions
-static int _init_array_handler(size_t size, size_t *args) {
+static int _init_array_handler(size_t *args, size_t size) {
   size_t n = *args;
   hpx_addr_t target = hpx_thread_current_target();
   char *local;
@@ -31,7 +31,7 @@ static int _init_array_handler(size_t size, size_t *args) {
   HPX_THREAD_CONTINUE(local);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_array,
-                  _init_array_handler, HPX_SIZE_T, HPX_POINTER);
+                  _init_array_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int lco_function_handler(void) {
   int size = HPX_LOCALITIES;
@@ -71,7 +71,7 @@ static int lco_function_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, lco_function, lco_function_handler);
 
 // Testcase to test hpx_lco_set and hpx_lco_get functions.
-static int _lco_setget_handler(size_t n, uint64_t *args) {
+static int _lco_setget_handler(uint64_t *args, size_t n) {
   hpx_addr_t future = hpx_lco_future_new(sizeof(uint64_t));
 
   uint64_t val = 1234;
@@ -89,7 +89,7 @@ static int _lco_setget_handler(size_t n, uint64_t *args) {
   hpx_thread_continue(sizeof(uint64_t), &setVal);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _lco_setget,
-                  _lco_setget_handler, HPX_SIZE_T, HPX_POINTER);
+                  _lco_setget_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int lco_setget_handler(void) {
   int size = HPX_LOCALITIES;
@@ -114,7 +114,7 @@ static int lco_setget_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, lco_setget, lco_setget_handler);
 
 // Testcase to test hpx_lco_wait_all function.
-static int _init_block_handler(size_t n, uint32_t *args) {
+static int _init_block_handler(uint32_t *args, size_t n) {
   hpx_addr_t target = hpx_thread_current_target();
   uint32_t *buffer = NULL;
   if (!hpx_gas_try_pin(target, (void**)&buffer))
@@ -131,9 +131,9 @@ static int _init_block_handler(size_t n, uint32_t *args) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_block,
-                  _init_block_handler, HPX_SIZE_T, HPX_POINTER);
+                  _init_block_handler, HPX_POINTER, HPX_SIZE_T);
 
-static int _init_memory_handler(size_t n, uint32_t *args) {
+static int _init_memory_handler(uint32_t *args, size_t n) {
   hpx_addr_t local = hpx_thread_current_target();
   uint32_t block_size = args[0];
   uint32_t block_bytes = block_size * sizeof(uint32_t);
@@ -149,7 +149,7 @@ static int _init_memory_handler(size_t n, uint32_t *args) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_memory,
-                  _init_memory_handler, HPX_SIZE_T, HPX_POINTER);
+                  _init_memory_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int lco_waitall_handler(void) {
   int size = HPX_LOCALITIES;
@@ -202,7 +202,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, lco_waitall, lco_waitall_handler);
 
 static HPX_ACTION_DECL(_getAll);
 // Testcase to test hpx_lco_get_all function
-static int _getAll_handler(size_t size, uint32_t *args) {
+static int _getAll_handler(uint32_t *args, size_t size) {
   uint32_t n = *args;
   if (n < 2)
     HPX_THREAD_CONTINUE(n);
@@ -256,7 +256,7 @@ static int _getAll_handler(size_t size, uint32_t *args) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _getAll,
-                  _getAll_handler, HPX_SIZE_T, HPX_POINTER);
+                  _getAll_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int lco_getall_handler(void) {
   uint32_t n, ssn;
@@ -276,14 +276,14 @@ static int lco_getall_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, lco_getall, lco_getall_handler);
 
 // Testcase to test hpx_lco_error function
-static int _errorset_handler(size_t n, void *args) {
+static int _errorset_handler(void *args, size_t n) {
   hpx_addr_t addr = *(hpx_addr_t*)args;
   // Propagate an error to an LCO
   hpx_lco_error(addr, HPX_ERROR, HPX_NULL);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _errorset,
-                  _errorset_handler, HPX_SIZE_T, HPX_POINTER);
+                  _errorset_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int lco_error_handler(void) {
   printf("Starting the HPX LCO get all test\n");

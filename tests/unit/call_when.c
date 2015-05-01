@@ -37,13 +37,14 @@ static int _store_int_handler(int *addr, int val) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _store_int,
-                  _store_int_handler, HPX_INT);
+                  _store_int_handler, HPX_POINTER, HPX_INT);
 
 /// Load a value from an integer in memory.
 static int _load_int_handler(int *addr) {
   HPX_THREAD_CONTINUE(*addr);
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _load_int, _load_int_handler);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _load_int,
+                  _load_int_handler, HPX_POINTER);
 
 /// Increment an integer in memory.
 ///
@@ -57,7 +58,7 @@ static int _call_when_increment_handler(int *val, int arg) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _call_when_increment,
-                  _call_when_increment_handler, HPX_INT);
+                  _call_when_increment_handler, HPX_POINTER, HPX_INT);
 
 hpx_addr_t _cascade(hpx_addr_t done, hpx_addr_t val, const int n) {
   // allocate the cascade array

@@ -218,8 +218,8 @@ _user_lco_init_handler(_user_lco_t *u, size_t size, hpx_action_t id,
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _user_lco_init_async,
-                  _user_lco_init_handler, HPX_SIZE_T, HPX_ACTION_T,
-                  HPX_ACTION_T, HPX_ACTION_T);
+                  _user_lco_init_handler, HPX_POINTER, HPX_SIZE_T,
+                  HPX_ACTION_T, HPX_ACTION_T, HPX_ACTION_T);
 /// @}
 
 hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
@@ -253,8 +253,8 @@ _block_local_init_handler(void *lco, int n, size_t size, hpx_action_t id,
 }
 
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
-                  _block_local_init_handler, HPX_INT, HPX_SIZE_T, HPX_POINTER,
-                  HPX_POINTER, HPX_POINTER);
+                  _block_local_init_handler, HPX_POINTER, HPX_INT, HPX_SIZE_T,
+                  HPX_POINTER, HPX_POINTER, HPX_POINTER);
 
 /// Allocate an array of user LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate

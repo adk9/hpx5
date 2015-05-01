@@ -37,7 +37,7 @@ static hpx_action_t _main = 0;
 static hpx_action_t _init = 0;
 static hpx_action_t _gather = 0;
 
-static int _gather_action(size_t n, const InitArgs *args) {
+static int _gather_action(const InitArgs *args, size_t n) {
   int size, skip, full = 1;
   double latency;
   double *maxVal, max_time, min_time, avg_time;
@@ -100,7 +100,7 @@ static int _gather_action(size_t n, const InitArgs *args) {
   return HPX_SUCCESS;
 }
 
-static int _init_action(size_t size, const InitArgs *args) {
+static int _init_action(const InitArgs *args, size_t size) {
   hpx_addr_t local = hpx_thread_current_target();
   Domain *ld = NULL;
   if (!hpx_gas_try_pin(local, (void**)&ld))
@@ -120,7 +120,7 @@ static int _init_action(size_t size, const InitArgs *args) {
   return HPX_SUCCESS;
 }
 
-static int _main_action(size_t size, int *args) {
+static int _main_action(int *args, size_t size) {
   int i = 0, full=1;
   int max_msg_size = *args;
   int THREADS = HPX_LOCALITIES;
@@ -209,9 +209,9 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_SIZE_T, HPX_POINTER);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init, _init_action, HPX_SIZE_T, HPX_POINTER);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _gather, _gather_action, HPX_SIZE_T, HPX_POINTER);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init, _init_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _gather, _gather_action, HPX_POINTER, HPX_SIZE_T);
 
   return hpx_run(&_main, &max_msg_size, sizeof(max_msg_size));
 }
