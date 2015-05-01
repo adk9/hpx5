@@ -267,8 +267,8 @@ _agas_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
   return addr;
 }
 
-static hpx_addr_t
-_register_local(agas_t *gas, void *lva, uint32_t bsize) {
+static gva_t
+_lva_to_gva(agas_t *gas, void *lva, uint32_t bsize) {
   // we need to reverse map this address to an offset into the local portion of
   // the global address space
   void *chunk = _lva_to_chunk(gas, lva);
@@ -285,11 +285,8 @@ _register_local(agas_t *gas, void *lva, uint32_t bsize) {
     }
   };
 
-  // and insert an entry into our block translation table
-  btt_insert(gas->btt, gva, here->rank, lva);
-
   // and return the address
-  return gva.addr;
+  return gva;
 }
 
 static hpx_addr_t
@@ -304,7 +301,10 @@ _agas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
     lva = global_malloc(bytes);
   }
 
-  return _register_local(gas, lva, bytes);
+  agas_t *agas = gas;
+  gva_t gva = _lva_to_gva(gas, lva, bytes);
+  btt_insert(agas->btt, gva, here->rank, lva);
+  return gva.addr;
 }
 
 static hpx_addr_t
@@ -320,7 +320,15 @@ _agas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
     lva = global_calloc(nmemb, size);
   }
 
-  return _register_local(gas, lva, size);
+  agas_t *agas = gas;
+  gva_t base = _lva_to_gva(gas, lva, size);
+  uint32_t bsize = 1lu << base.bits.size;
+  for (int i = 0; i < nmemb; i++) {
+    gva_t gva = { .addr = base.addr + i * bsize };
+    void *block = lva + i * bsize;
+    btt_insert(agas->btt, gva, here->rank, block);
+  }
+  return base.addr;
 }
 
 static int
