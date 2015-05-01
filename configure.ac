@@ -191,7 +191,7 @@ AS_IF([test "x$enable_agas" != xno],
    HPX_CONTRIB_LIBCUCKOO([contrib/libcuckoo], [hpx_])
    AC_DEFINE([HAVE_AGAS], [1], [We have agas])],
   [])
-AM_CONDITIONAL([ENABLE_AGAS], [test "x$enable_agas" != xno])
+AM_CONDITIONAL([BUILD_AGAS], [test "x$enable_agas" != xno -a "x$enable_network" != xno])
 AM_CONDITIONAL([BUILD_FARMHASH], [test "x$enable_agas" != xno])
 
 # ---------------------------------------------------------------------------
