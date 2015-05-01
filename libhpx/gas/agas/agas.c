@@ -48,6 +48,7 @@ typedef struct {
   void *chunk_table;
   void *btt;
   void *bitmap;
+  void *cyclic_bitmap;
 } agas_t;
 
 static void
@@ -61,6 +62,9 @@ _agas_delete(void *gas) {
   }
   if (agas->bitmap) {
     bitmap_delete(agas->bitmap);
+  }
+  if (agas->cyclic_bitmap) {
+    bitmap_delete(agas->cyclic_bitmap);
   }
   free(agas);
 }
@@ -334,6 +338,13 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   uint32_t min_align = ceil_log2_64(agas->chunk_size);
   uint32_t base_align = ceil_log2_64(heap_size);
   agas->bitmap = bitmap_new(nchunks, min_align, base_align);
+
+  if (here->rank == 0) {
+    size_t nchunks = ceil_div_64(here->ranks * heap_size, agas->chunk_size);
+    uint32_t min_align = ceil_log2_64(agas->chunk_size);
+    uint32_t base_align = ceil_log2_64(heap_size);
+    agas->cyclic_bitmap = bitmap_new(nchunks, min_align, base_align);
+  }
   btt_insert(agas->btt, _agas_there(agas, here->rank), here->rank, here);
   return &agas->vtable;
 }
