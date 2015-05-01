@@ -1,14 +1,14 @@
-# HPX-5
+# HPX–5
 
-Welcome to the HPX-5 runtime system library! In order to get started with 
-HPX-5, you first need to know some basic information and how to go about using 
-it. This document discusses how to get up and running quickly with the HPX-5 
+Welcome to the HPX–5 runtime system library! In order to get started with 
+HPX~5, you first need to know some basic information and how to go about using 
+it. This document discusses how to get up and running quickly with the HPX–5 
 Runtime System. Everything from unpacking and compilation of the distribution to
  execution of some tools.
 
-## Building and Running a network-capable HPX-5
+## Building and Running a network-capable HPX–5
 
-There are several pre-requisites to successfully configure and run HPX-5.
+There are several pre-requisites to successfully configure and run HPX–5.
 
 ### Requirements
 
@@ -22,19 +22,23 @@ There are several pre-requisites to successfully configure and run HPX-5.
 * MPI                (optional - Tested with 1.6.3, 1.6.5, 1.8.1, 1.8.4 
                                  MPICH 3.0.4, mvapich2/2.0b (Stampede))
 * doxygen            (optional)
-* Photon             (embedded with HPX-5)
-* jemalloc           (embedded with HPX-5)
-* hwloc              (embedded with HPX-5)
-* libffi             (embedded with HPX-5)
-* Uthash             (embedded with HPX-5)
-* Valgrind           (embedded with HPX-5)
+* Photon             (embedded with HPX–5)
+* jemalloc           (embedded with HPX–5)
+* hwloc              (embedded with HPX–5)
+* libffi             (embedded with HPX–5)
+* Uthash             (embedded with HPX–5)
+* Valgrind           (embedded with HPX–5)
 
-HPX-5 can build and run successfully without any network backend, but at
- present, MPI or Photon is required for networking by HPX-5. Photon can take 
+HPX–5 can build and run successfully without any network backend, but at
+ present, MPI or Photon is required for networking by HPX–5. Photon can take 
 advantage of RDMA over IB resulting in better performance.
 
-The latest autotools can be installed by using setup_autotools.sh in scripts 
-folder. The script takes an path to install autotools to. After installing 
+The latest autotools can be installed by using:
+ 
+```
+$ ./setup_autotools.sh $PATH
+``` 
+in scripts folder. The script takes an path to install autotools to. After installing 
 autotools, be sure to update your PATH variable. Only after installing the
  latest autotools should the user run ./bootstrap.
 
@@ -42,7 +46,7 @@ autotools, be sure to update your PATH variable. Only after installing the
 
 Note: ./bootstrap should not be used with release tarballs.
  
-HPX-5 provides a bootstrap script in its build. In the HPX-5 directory run the 
+HPX–5 provides a bootstrap script in its build. In the HPX–5 directory run the 
 bootstrap script using
 
 ```
@@ -52,33 +56,33 @@ $ ./bootstrap
 Bootstrap is a bash script that generate the initialization required to create 
 a configure script when using GNU autotools. This calls the autoreconf.
 
-Building without MPI enables the SMP bootstrapper. This allows you to run HPX-5
- on a single node. However, if you launch HPX-5 with –np > 1 then either MPI or
+Building without MPI enables the SMP bootstrapper. This allows you to run HPX–5
+ on a single node. However, if you launch HPX–5 with –np > 1 then either MPI or
  Photon transport should be enabled which is detailed in next section.
 
 ### Configuration
 
-The number of HPX-5 configuration supports to use ‘pkg-config’ to look for 
+The number of HPX–5 configuration supports to use ‘pkg-config’ to look for 
 installed packages. In particular, if your compilation environment requires 
 explicit paths to MPI, you should compile --with-mpi=ompi, mcapich2, etc
 
 See ‘./configure --help’ for further details.
 
-#### HPX-5 Network Transports
+#### HPX–5 Network Transports
 
-HPX-5 can build and run successfully without any network backend, but at 
-present, MPI or Photon is required for networking by HPX-5.
+HPX–5 can build and run successfully without any network backend, but at 
+present, MPI or Photon is required for networking by HPX–5.
 
-HPX-5 can be built with one, both, or none of the network transports depending
+HPX–5 can be built with one, both, or none of the network transports depending
  on application needs. Each transport is runtime configurable. MPI and PMI are
- currently used as job launchers and bootstrap mechanism for HPX-5.
+ currently used as job launchers and bootstrap mechanism for HPX–5.
 
 Note that if you are building with Photon, the libraries for the given network 
 interconnect you are targeting need to be present on the build system. The two
  supported interconnects are InfiniBand (libibverbs and librdmacm) and Cray's 
 GEMINI and ARIES via uGNI (libugni). You may build with IBV and/or uGNI support
  on a workstation where the development packages are installed, but launching an
- HPX-5 application with Photon requires that the actual network devices be 
+ HPX–5 application with Photon requires that the actual network devices be 
 present so the library can initialize.
 
 If you build with Photon and/or MPI on a system without networking, you may 
@@ -101,8 +105,8 @@ $ LDFLAGS=-L/opt/ofed/lib64 CPPFLAGS=-I/opt/ofed/include ./configure --with-mpi
 
 ##### Configuring with Photon
 
-The Photon transport is included in HPX-5 within the contrib directory. To 
-configure HPX-5 with Photon use option --enable-photon
+The Photon transport is included in HPX–5 within the contrib directory. To 
+configure HPX–5 with Photon use option --enable-photon
 
 ```
 $ ./configure --prefix=/path/to/install/ --with-mpi=ompi --enable-photon
@@ -190,11 +194,11 @@ The list of supported sizes can be obtained as follows:
 $ module avail craype-hugepages
 ```
 
-HPX-5 provides runtime options that can be specified on the command line or in
- the environment. The list of options can be obtained from any HPX-5 program by 
+HPX–5 provides runtime options that can be specified on the command line or in
+ the environment. The list of options can be obtained from any HPX–5 program by 
 adding --hpx-help option.
 
-HPX-5 programs can be run using any of the MPI or PMI launchers such as mpirun 
+HPX–5 programs can be run using any of the MPI or PMI launchers such as mpirun 
 or mpiexec.
 E.g. to run the pingpong example,
 
@@ -202,5 +206,5 @@ E.g. to run the pingpong example,
 $ mpirun -np 2 examples/pingpong 10 -m -v
 ```
 
-Detailed build instructions can be found at Getting started with HPX-5 Runtime 
+Detailed build instructions can be found at Getting started with HPX–5 Runtime 
 Systems in docs folder.
