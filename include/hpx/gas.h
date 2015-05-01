@@ -203,7 +203,10 @@ bool hpx_gas_try_pin(hpx_addr_t addr, void **local);
 /// @param         addr The address of global memory to unpin.
 void hpx_gas_unpin(hpx_addr_t addr);
 
-/// Allocate local memory for use in the memget/memput functions.
+/// Allocate local memory for use in the memget/memput functions. Any memory can
+/// be used in these functions, however only thread stacks and buffers allocated
+/// with hpx_malloc_registered() are considered to be fast sources or targets
+/// for these operations.
 ///
 /// @param        bytes The number of bytes to allocate.
 ///
