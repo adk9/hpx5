@@ -145,6 +145,36 @@ _register(agas_t *gas, void *lva) {
 }
 
 static hpx_addr_t
+_agas_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
+  hpx_addr_t addr;
+  if (here->rank == 0) {
+    addr = agas_alloc_cyclic_sync(n, bsize);
+  }
+  else {
+    int e = hpx_call_sync(HPX_THERE(0), agas_alloc_cyclic, &addr, sizeof(addr),
+                          &n, &bsize);
+    dbg_check(e, "Failed to call agas_alloc_cyclic_handler.\n");
+  }
+  dbg_assert_str(addr != HPX_NULL, "HPX_NULL is not a valid allocation\n");
+  return addr;
+}
+
+static hpx_addr_t
+_agas_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
+  hpx_addr_t addr;
+  if (here->rank == 0) {
+    addr = agas_calloc_cyclic_sync(n, bsize);
+  }
+  else {
+    int e = hpx_call_sync(HPX_THERE(0), agas_calloc_cyclic, &addr, sizeof(addr),
+                          &n, &bsize);
+    dbg_check(e, "Failed to call agas_calloc_cyclic_handler.\n");
+  }
+  dbg_assert_str(addr != HPX_NULL, "HPX_NULL is not a valid allocation\n");
+  return addr;
+}
+
+static hpx_addr_t
 _agas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
   // use the local allocator to get some memory that is part of the global
   // address space
@@ -276,8 +306,8 @@ static gas_t _agas_vtable = {
   .there          = _agas_there,
   .try_pin        = _agas_try_pin,
   .unpin          = _agas_unpin,
-  .alloc_cyclic   = NULL,
-  .calloc_cyclic  = NULL,
+  .alloc_cyclic   = _agas_gas_alloc_cyclic,
+  .calloc_cyclic  = _agas_gas_calloc_cyclic,
   .alloc_blocked  = NULL,
   .calloc_blocked = NULL,
   .alloc_local    = _agas_alloc_local,
