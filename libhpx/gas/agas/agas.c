@@ -224,8 +224,9 @@ _agas_mmap(void *gas, void *addr, size_t n, size_t align) {
 
   // 1) get gva placement for this allocation
   uint32_t nbits = ceil_div_64(n, agas->chunk_size);
+  uint32_t log2_align = ceil_log2_size_t(align);
   uint32_t bit;
-  e = bitmap_reserve(agas->bitmap, nbits, align, &bit);
+  e = bitmap_reserve(agas->bitmap, nbits, log2_align, &bit);
   dbg_check(e, "Could not reserve gva for %lu bytes\n", n);
   uint64_t offset = bit * agas->chunk_size;
 
