@@ -45,7 +45,7 @@ hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bsize, uint32_t boundary,
   int type = (int)gas_get_dist_type(dist);
   switch (type) {
    case (HPX_DIST_TYPE_LOCAL):
-    return hpx_gas_alloc_local(n*bsize, boundary);
+    return hpx_gas_calloc_local(n, bsize, boundary);
    case (HPX_DIST_TYPE_CYCLIC):
     return hpx_gas_alloc_cyclic(n, bsize, boundary);
    case (HPX_DIST_TYPE_BLOCKED):
