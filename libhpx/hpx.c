@@ -243,11 +243,12 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
     }
 
     // Fix for https://uisapp2.iu.edu/jira-prd/browse/HPX-143
-    status = hpx_call(HPX_HERE, _hpx_143_fix, HPX_NULL);
-    if (status != LIBHPX_OK) {
-      log_error("failed to spawn the initial cyclic allocation");
-      goto unwind2;
-    }
+#warning  HPX-143 is commented out
+    // status = hpx_call(HPX_HERE, _hpx_143_fix, HPX_NULL);
+    // if (status != LIBHPX_OK) {
+    //   log_error("failed to spawn the initial cyclic allocation");
+    //   goto unwind2;
+    // }
   }
 
   // start the scheduler, this will return after scheduler_shutdown()
