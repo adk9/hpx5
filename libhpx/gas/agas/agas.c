@@ -49,7 +49,10 @@ typedef struct {
   void *btt;
   void *bitmap;
   void *cyclic_bitmap;
+  unsigned cyclic_arena;
 } agas_t;
+
+static agas_t *global_agas;
 
 static void
 _agas_delete(void *gas) {
@@ -146,6 +149,72 @@ _register(agas_t *gas, void *lva) {
 
   // and return the address
   return gva.addr;
+}
+
+static void *
+_chunk_alloc(void *gas, void *bitmap, void *addr, size_t n, size_t align) {
+  agas_t *agas = gas;
+
+  // 1) get gva placement for this allocation
+  uint32_t nbits = ceil_div_64(n, agas->chunk_size);
+  uint32_t log2_align = ceil_log2_size_t(align);
+  uint32_t bit;
+  int e = bitmap_reserve(bitmap, nbits, log2_align, &bit);
+  dbg_check(e, "Could not reserve gva for %lu bytes\n", n);
+  uint64_t offset = bit * agas->chunk_size;
+
+  // 2) get backing memory
+  void *base = system_mmap(NULL, addr, n, align);
+  dbg_assert(base);
+  dbg_assert(((uintptr_t)base & (align - 1)) == 0);
+
+  // 3) insert the inverse mappings
+  char* chunk = base;
+  for (int i = 0; i < nbits; i++) {
+    chunk_table_insert(agas->chunk_table, chunk, offset);
+    offset += agas->chunk_size;
+    chunk += agas->chunk_size;
+  }
+  return base;
+}
+
+static void
+_chunk_dalloc(void *gas, void *bitmap, void *addr, size_t n) {
+  agas_t *agas = gas;
+
+  // 1) release the bits
+  uint64_t offset = chunk_table_lookup(agas->chunk_table, addr);
+  uint32_t nbits = ceil_div_64(n, agas->chunk_size);
+  bitmap_release(bitmap, offset, nbits);
+
+  // 2) unmap the backing memory
+  system_munmap(NULL, addr, n);
+
+  // 3) remove the inverse mappings
+  char *chunk = addr;
+  for (int i = 0; i < nbits; ++i) {
+    chunk_table_remove(agas->chunk_table, chunk);
+    chunk += agas->chunk_size;
+  }
+}
+
+static void *_chunk_alloc_cyclic(void *addr, size_t size, size_t align,
+                                 bool *zero, unsigned UNUSED) {
+  agas_t *agas = global_agas;
+  assert(size % agas->chunk_size == 0);
+  assert(size / agas->chunk_size < UINT32_MAX);
+  void *chunk = _chunk_alloc(agas, agas->cyclic_bitmap, addr, size,
+                             align);
+
+  if (zero && *zero)
+    memset(chunk, 0, size);
+  return chunk;
+}
+
+static bool _chunk_dalloc_cyclic(void *chunk, size_t size, unsigned UNUSED) {
+  agas_t *agas = global_agas;
+  _chunk_dalloc(agas, agas->cyclic_bitmap, chunk, size);
+  return true;
 }
 
 static hpx_addr_t
@@ -253,51 +322,14 @@ _agas_free(void *gas, hpx_addr_t addr, hpx_addr_t rsync) {
 
 static void *
 _agas_mmap(void *gas, void *addr, size_t n, size_t align) {
-  int e;
   agas_t *agas = gas;
-
-  // 1) get gva placement for this allocation
-  uint32_t nbits = ceil_div_64(n, agas->chunk_size);
-  uint32_t log2_align = ceil_log2_size_t(align);
-  uint32_t bit;
-  e = bitmap_reserve(agas->bitmap, nbits, log2_align, &bit);
-  dbg_check(e, "Could not reserve gva for %lu bytes\n", n);
-  uint64_t offset = bit * agas->chunk_size;
-
-  // 2) get backing memory
-  void *base = system_mmap(NULL, addr, n, align);
-  dbg_assert(base);
-  dbg_assert(((uintptr_t)base & (align - 1)) == 0);
-
-  // 3) insert the inverse mappings
-  char* chunk = base;
-  for (int i = 0; i < nbits; i++) {
-    chunk_table_insert(agas->chunk_table, chunk, offset);
-    offset += agas->chunk_size;
-    chunk += agas->chunk_size;
-  }
-
-  return base;
+  return _chunk_alloc(agas, agas->bitmap, addr, n, align);
 }
 
 static void
 _agas_munmap(void *gas, void *addr, size_t n) {
   agas_t *agas = gas;
-
-  // 1) release the bits
-  uint64_t offset = chunk_table_lookup(agas->chunk_table, addr);
-  uint32_t nbits = ceil_div_64(n, agas->chunk_size);
-  bitmap_release(agas->bitmap, offset, nbits);
-
-  // 2) unmap the backing memory
-  system_munmap(NULL, addr, n);
-
-  // 3) remove the inverse mappings
-  char *chunk = addr;
-  for (int i = 0; i < nbits; ++i) {
-    chunk_table_remove(agas->chunk_table, chunk);
-    chunk += agas->chunk_size;
-  }
+  _chunk_dalloc(gas, agas->bitmap, addr, n);
 }
 
 static gas_t _agas_vtable = {
@@ -344,7 +376,12 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
     uint32_t min_align = ceil_log2_64(agas->chunk_size);
     uint32_t base_align = ceil_log2_64(heap_size);
     agas->cyclic_bitmap = bitmap_new(nchunks, min_align, base_align);
+
+    agas->cyclic_arena = mallctl_create_arena(_chunk_alloc_cyclic,
+                                              _chunk_dalloc_cyclic);
+    log_gas("allocated the arena to manage cyclic allocations.\n");
   }
   btt_insert(agas->btt, _agas_there(agas, here->rank), here->rank, here);
+  global_agas = agas;
   return &agas->vtable;
 }
