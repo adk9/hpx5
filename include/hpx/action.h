@@ -46,11 +46,14 @@ typedef int (*hpx_pinned_action_handler_t)(void *, void*, size_t);
 typedef enum {
   /// Standard action that is scheduled and has its own stack.
   HPX_DEFAULT = 0,
-  /// Taks executes as a function call on an exsisting stack.
+  /// Tasks are threads that do not block.
   HPX_TASK,
-  /// Interrupt executes immediatelly, without scheduling.
+  /// Interrupts are simple actions that have function call semantics.
   HPX_INTERRUPT,
-  /// This action registers a function that can be called on every locality.
+  /// Functions are simple functions that have uniform ids across localities,
+  /// but can not be called with the set of hpx_call operations or as the action
+  /// or continuation in a parcel. Functions can only be called by using the
+  /// returned value from hpx_action_get_handler().
   HPX_FUNCTION,
 } hpx_action_type_t;
 
@@ -62,7 +65,7 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
 };
 
 /// @name Action attributes.
-/// These attributes control aspects of actions.  Attributes can be combined 
+/// These attributes control aspects of actions.  Attributes can be combined
 /// using bitwise or.
 //@{
 // Null attribute.
@@ -79,10 +82,12 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
 /// @param  attr The attribute of the action (PINNED, PACKED, ...).
 /// @param   key A unique string key for the action.
 /// @param     f The local function pointer to associate with the action.
-/// @param    id The action id for this action to be returned after registration.
+/// @param    id The action id for this action to be returned after
+///                registration.
 /// @param nargs The variadic number of parameters that the action accepts.
 /// @param   ... The HPX types of the action parameters (HPX_INT, ...).
-/// @returns     Error code
+///
+/// @returns     HPX_SUCCESS or an error code
 int hpx_register_action(hpx_action_type_t type, uint32_t attr,
                         const char *key, hpx_action_t *id,
                         hpx_action_handler_t f, unsigned int nargs, ...);
@@ -115,7 +120,7 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
 /// Create an action id for a function, so that it can be called asynchronously.
 ///
 /// This macro handles all steps of creating a usable action. It declares the
-/// identifier and registers an action in a static constructor.  The static 
+/// identifier and registers an action in a static constructor.  The static
 /// automates action registration, eliminating the need for explicit action
 /// registration.
 ///
