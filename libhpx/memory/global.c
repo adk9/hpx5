@@ -66,6 +66,14 @@ static void _global_join(void *common) {
   common_join(common, &_primordial_arena, alloc, dalloc);
 }
 
+static void *_emul_memalign(size_t boundary, size_t size) {
+  void *addr = NULL;
+  int e = libhpx_global_posix_memalign(&addr, boundary, size);
+  dbg_check(e, "Failed memalign\n");
+  dbg_assert(addr);
+  return addr;
+}
+
 address_space_t *
 address_space_new_jemalloc_global(const struct config *UNUSED,
                                   void *xport,
@@ -87,7 +95,7 @@ address_space_new_jemalloc_global(const struct config *UNUSED,
   allocator->vtable.free = libhpx_global_free;
   allocator->vtable.malloc = libhpx_global_malloc;
   allocator->vtable.calloc = libhpx_global_calloc;
-  allocator->vtable.memalign = libhpx_global_memalign;
+  allocator->vtable.memalign = _emul_memalign;
 
   allocator->xport = xport;
   allocator->pin = pin;
