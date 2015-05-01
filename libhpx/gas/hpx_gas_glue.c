@@ -130,7 +130,7 @@ hpx_addr_t hpx_gas_calloc_local(size_t nmemb, size_t size, uint32_t boundary) {
 
 void hpx_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
   dbg_assert(here && here->gas);
-  here->gas->free(addr, sync);
+  here->gas->free(here->gas, addr, sync);
 }
 
 void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {

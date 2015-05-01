@@ -192,7 +192,7 @@ _pgas_gas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary)
 /// block allocated by _pgas_gas_alloc_local. At this time, we do not attempt to deal
 /// with the cyclic allocations, as they are using a simple csbrk allocator.
 static void
-_pgas_gas_free(hpx_addr_t gpa, hpx_addr_t sync) {
+_pgas_gas_free(void *gas, hpx_addr_t gpa, hpx_addr_t sync) {
   if (gpa == HPX_NULL) {
     return;
   }
