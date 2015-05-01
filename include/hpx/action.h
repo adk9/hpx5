@@ -25,9 +25,9 @@
 
 /// The handle type for HPX actions.  This handle is obtained via
 /// hpx_register_action(). It is safe to use this handle only after a
-/// call to hpx_finalize_action() or after hpx_run(). It is used as a
-/// parameter type for any HPX function that needs an action (e.g.
-/// hpx_run(), hpx_call(), hpx_parcel_set_action()).
+/// call to hpx_run(). It is used as a parameter type for any HPX
+/// function that needs an action (e.g.  hpx_run(), hpx_call(),
+/// hpx_parcel_set_action()).
 typedef uint16_t hpx_action_t;
 
 /// The type of functions that can be registered with hpx_register_action().
@@ -44,9 +44,13 @@ typedef int (*hpx_pinned_action_handler_t)(void *, void*, size_t);
 
 /// Action types.
 typedef enum {
+  /// Standard action that is scheduled and has its own stack.
   HPX_DEFAULT = 0,
+  /// Taks executes as a function call on an exsisting stack.
   HPX_TASK,
+  /// Interrupt executes immediatelly, without scheduling.
   HPX_INTERRUPT,
+  /// This action registers a function that can be called on every locality.
   HPX_FUNCTION,
 } hpx_action_type_t;
 
@@ -57,9 +61,17 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
   "FUNCTION",
 };
 
-/// Action attributes.
+/// @name Action attributes.
+/// These attributes control aspects of actions.  Attributes can be combined 
+/// using bitwise or.
+//@{
+// Null attribute.
+#define HPX_ATTR_NONE  0x0
+// Action takes a pointer to marshalled arguments and their size.
 #define HPX_MARSHALLED 0x1
+// Action automatically pins memory.
 #define HPX_PINNED     0x2
+//@}
 
 /// Register an HPX action of a given @p type.
 ///
@@ -101,6 +113,14 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
 #define HPX_ACTION_DECL(symbol) hpx_action_t symbol
 
 /// Create an action id for a function, so that it can be called asynchronously.
+///
+/// This macro handles all steps of creating a usable action. It declares the
+/// identifier and registers an action in a static constructor.  The static 
+/// automates action registration, eliminating the need for explicit action
+/// registration.
+///
+/// Note that the macro can be preceded by the \c static keyword if the action
+/// should only be visible in the current file.
 ///
 /// @param         type The action type.
 /// @param         attr The action attributes.
