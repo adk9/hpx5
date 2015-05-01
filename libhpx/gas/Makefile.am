@@ -1,4 +1,4 @@
-if ENABLE_AGAS
+if BUILD_AGAS
 SUBDIRS            = agas
 endif
 
@@ -26,6 +26,6 @@ libgas_la_CFLAGS   = $(HUGETLBFS_CFLAGS)
 libgas_la_LIBADD  += $(HUGETLBFS_LIBS)
 endif
 
-if ENABLE_AGAS
+if BUILD_AGAS
 libgas_la_LIBADD  += agas/libagas.la
 endif

@@ -24,7 +24,6 @@
 #include "btt.h"
 #include "chunk_table.h"
 #include "gva.h"
-#include "heap.h"
 #include "../mallctl.h"
 
 static const unsigned AGAS_MAX_RANKS = (1u << GVA_RANK_BITS);
@@ -112,11 +111,17 @@ _agas_owner_of(const void *gas, hpx_addr_t gva) {
   return btt_owner_of(agas->btt, gva);
 }
 
+static void*
+_lva_to_chunk(agas_t *gas, void *lva) {
+  uintptr_t mask = ~(gas->chunk_size - 1);
+  return (void*)((uintptr_t)lva & mask);
+}
+
 static hpx_addr_t
 _register(agas_t *gas, void *lva) {
   // we need to reverse map this address to an offset into the local portion of
   // the global address space
-  void *chunk = heap_lva_to_chunk(NULL, lva);
+  void *chunk = _lva_to_chunk(gas, lva);
   uint64_t base = chunk_table_lookup(gas->chunk_table, chunk);
   uint64_t offset = base + ((char*)lva - (char*)chunk);
 
