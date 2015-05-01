@@ -1,16 +1,25 @@
-Installation Instructions
-*************************
+# Installation Instructions
 
-Bootstrapping
-=====================
-HPX provides a bootstrap script in its build. In the HPX directory run the bootstrap script using
+## Bootstrapping
 
+HPX-5 provides a bootstrap script in its build. There is no need to bootstrap 
+with the release tarball. In the HPX-5 directory run the bootstrap script using
+
+```
 $ ./bootstrap
-Bootstrap is a bash script that generate the initialization required to create a configure script when using GNU autotools. This calls the autoreconf. Run ./bootstrap in the HPX source directory
+```
 
-Building without MPI enables the SMP bootstrapper. This allows you to run HPX on a single node. However, if you launch HPX with –np > 1 then either MPI / Photon transport should be enabled which is detailed in next section.
+Bootstrap is a bash script that generate the initialization required to create 
+a configure script when using GNU autotools. This calls the autoreconf. Run 
+./bootstrap in the HPX-5 source directory
 
-To bootstrap you would need the latest version of autotools. There is a script to install the latest tools in scripts folder.
+Building without MPI enables the SMP bootstrapper. This allows you to run HPX-5
+ on a single node. However, if you launch HPX-5 with –np > 1 then either MPI or
+ Photon transport should be enabled which is detailed in next section.
+
+To bootstrap you would need the latest version of autotools. There is a script 
+to install the latest tools in scripts folder.
+
 GNU Make	3.81+	Makefile/build processor
 GNU Autoconf	2.6.9	Configuration script builder 
 GNU Automake	1.15	Aclocal macro generator 
@@ -18,47 +27,65 @@ GNU M4	        1.4.17	Macro processor for configuration
 Libtool	        2.4.6	Shared library manager 
 Pkg-config	0.26+   Returns information about installed libraries	
 
-Environment dependencies
-===========================
-The number of HPX configuration supports to use ‘pkg-config’ to look for installed packages. In particular, if your compilation environment requires explicit paths to MPI, you should compile --with-mpi=ompi, mcapich2, etc
+## Environment dependencies
+
+The number of HPX-5 configuration supports to use ‘pkg-config’ to look for 
+installed packages. In particular, if your compilation environment requires 
+explicit paths to MPI, you should compile --with-mpi=ompi, mcapich2, etc
 
 See ‘./configure --help’ for further details.
 
-HPX can build and run successfully without any network backend, but at present, MPI or Photon is required for networking by HPX.
+HPX-5 can build and run successfully without any network backend, but at 
+present, MPI or Photon is required for networking by HPX-5.
 
-IBV
-============
-Configuring with MPI
-------------------------
+## IBV
+
+### Configuring with MPI
+
+```
 $ ./configure --prefix=/path/to/install --with-mpi=ompi
+```
 
 On stampede use
+```
 $ module load intel/14.0.1.106
-$ LDFLAGS=-L/opt/ofed/lib64 CPPFLAGS=-I/opt/ofed/include ./configure --with-mpi CC=mpicc
+$ LDFLAGS=-L/opt/ofed/lib64 CPPFLAGS=-I/opt/ofed/include ./configure --with-mpi
+ CC=mpicc
+```
 
-Configuring with Photon
--------------------------
-The Photon transport is included in HPX within the contrib directory. To configure HPX with Photon use option --enable-photon
+### Configuring with Photon
+
+The Photon transport is included in HPX-5 within the contrib directory. To 
+configure HPX-5 with Photon use option --enable-photon
+
+```
 ./configure --prefix=/path/to/install/ --with-mpi=ompi --enable-photon
+```
 
-CRAY
-============
+### CRAY
+
+```
 $ module unload PrgEnv-cray
 $ module unload PrgEnv-intel/5.2.40
 $ module load PrgEnv-gnu
 $ setenv CRAYPE_LINK_TYPE dynamic
 $ ./configure --prefix=/path/to/install/ CC=cc
+```
 
-Configuring with MPI
-------------------------
-If you have MPICH installed, you need to specify: ‘$ ./configure --prefix=/path/to/install --with-mpi=mpich CC=cc’ will instruct ‘configure’ to look for ‘mpich.pc’.
+#### Configuring with MPI
 
-Configuring with Photon
-------------------------
-$ ./configure --prefix=/path/to/install/ CC=cc --enable-photon --with-pmi --with-mpi HPX_PHOTON_CARGS="--with-ugni"
+If you have MPICH installed, you need to specify: 
+‘$ ./configure --prefix=/path/to/install --with-mpi=mpich CC=cc’ will instruct
+ ‘configure’ to look for ‘mpich.pc’.
 
-To complete the build and install use:
-=======================================
+#### Configuring with Photon
+
+```
+$ ./configure --prefix=/path/to/install/ CC=cc --enable-photon --with-pmi 
+--with-mpi HPX_PHOTON_CARGS="--with-ugni"
+```
+
+## To complete the build and install use:
 make
 make install
 

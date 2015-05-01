@@ -52,7 +52,7 @@ logtable_header_t LOGTABLE_HEADER = _LOGTABLE_HEADER;
   static size_t _write_event_metadata_ ## name(void* base,              \
                                   inst_event_metadata_t const *event_md \
                                                ) {                      \
-    int md_data_size = event_md->num_cols * ((_length) + 1);            \
+    int md_data_size = event_md->num_cols * ((_length) + 1) + 1;        \
     int md_size = sizeof(struct cols_metadata) + md_data_size;          \
     struct cols_metadata *md = malloc(md_size);                         \
     md->kind = (md_kind);                                               \

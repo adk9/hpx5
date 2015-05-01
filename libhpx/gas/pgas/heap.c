@@ -142,23 +142,25 @@ static void* _mmap_heap(heap_t *const heap) {
   int hp_fd = -1;
 #endif
 
-  for (unsigned int i = GPA_MAX_LG_BSIZE; i >= chunk_lg_align; --i) {
-    void *addr = (void*)(1ul << i);
-    void *ret  = mmap(addr, heap->nbytes, prot, flags, hp_fd, 0);
-    if (ret != addr) {
-      if (ret == (void*)(-1))
-        dbg_error("Error mmaping %d (%s)\n", errno, strerror(errno));
-      int e = munmap(ret, heap->nbytes);
-      if (e < 0) {
-        dbg_error("munmap failed: %s.\n", strerror(e));
-      }
-      continue;
-    }
-    heap->max_block_lg_size = i;
-    log_gas("Allocated heap at %p with %u bits for blocks\n", ret, i);
-    return ret;
-  }
+  for (unsigned int x = 1; x < 1000; ++x) {
+    for (unsigned int i = GPA_MAX_LG_BSIZE; i >= chunk_lg_align; --i) {
+      void *addr = (void*)(x  * (1ul << i));
+      void *ret  = mmap(addr, heap->nbytes, prot, flags, hp_fd, 0);
+      if (ret != addr) {
+	if (ret == (void*)(-1))
+	  dbg_error("Error mmaping %d (%s)\n", errno, strerror(errno));
 
+	int e = munmap(ret, heap->nbytes);
+	if (e < 0) {
+	  dbg_error("munmap failed: %s.\n", strerror(e));
+	}
+	continue;
+      }
+      heap->max_block_lg_size = i;
+      log_gas("Allocated heap at %p with %u bits for blocks\n", ret, i);
+      return ret;
+    }
+  }
   dbg_error("Could not allocate heap with minimum alignment of %zu.\n",
             heap->bytes_per_chunk);
 }

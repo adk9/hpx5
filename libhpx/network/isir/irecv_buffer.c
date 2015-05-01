@@ -125,6 +125,23 @@ int _resize(irecv_buffer_t *buffer, uint32_t size, hpx_parcel_t **out) {
     return LIBHPX_OK;
   }
 
+#if defined(__APPLE__)
+  // apple realloc is different
+  if (!size) {
+    free(buffer->requests);
+    free(buffer->statuses);
+    free(buffer->out);
+    free(buffer->records);
+
+    buffer->requests = NULL;
+    buffer->statuses = NULL;
+    buffer->out = NULL;
+    buffer->records = NULL;
+
+    return LIBHPX_OK;
+  }
+#endif
+  
   buffer->requests = realloc(buffer->requests, size * buffer->xport->sizeof_request());
   buffer->statuses = realloc(buffer->statuses, size * buffer->xport->sizeof_status());
   buffer->out = realloc(buffer->out, size * sizeof(int));
@@ -254,10 +271,10 @@ void irecv_buffer_fini(irecv_buffer_t *buffer) {
     hpx_parcel_release(p);
   }
 
-  assert(!buffer->records);
-  assert(!buffer->out);
-  assert(!buffer->statuses);
-  assert(!buffer->requests);
+  dbg_assert(!buffer->records);
+  dbg_assert(!buffer->out);
+  dbg_assert(!buffer->statuses);
+  dbg_assert(!buffer->requests);
 }
 
 hpx_parcel_t *irecv_buffer_progress(irecv_buffer_t *buffer) {
