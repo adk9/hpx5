@@ -21,7 +21,7 @@
 hpx_addr_t mutex;
 int counter; /* shared variable */
 
-static HPX_ACTION(_handler, uint32_t *args) {
+static int _sema_handler(uint32_t *args, size_t n) {
   uint32_t x = *args;
   printf("Thread %d: Waiting to enter critical region...\n", x);
 
@@ -46,10 +46,11 @@ static HPX_ACTION(_handler, uint32_t *args) {
 
   return HPX_SUCCESS;
 }
-
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _sema,
+                  _sema_handler, HPX_POINTER, HPX_SIZE_T);
 
 // Test code -- for HPX LCO Semaphores
-static HPX_ACTION(lco_sema, void *UNUSED) {
+static int lco_sema_handler(void) {
   hpx_addr_t peers[] = {HPX_HERE, HPX_HERE};
   uint32_t i[] = {0, 1};
   int sizes[] = {sizeof(uint32_t), sizeof(uint32_t)};
@@ -69,8 +70,8 @@ static HPX_ACTION(lco_sema, void *UNUSED) {
   // initial value this semaphore would be created with
   mutex = hpx_lco_sema_new(1);
 
-  hpx_call(peers[0], _handler, futures[0], &i[0], sizeof(uint32_t));
-  hpx_call(peers[1], _handler, futures[1], &i[1], sizeof(uint32_t));
+  hpx_call(peers[0], _sema, futures[0], &i[0], sizeof(uint32_t));
+  hpx_call(peers[1], _sema, futures[1], &i[1], sizeof(uint32_t));
 
   hpx_lco_get_all(2, futures, sizes, addrs, NULL);
 
@@ -80,6 +81,7 @@ static HPX_ACTION(lco_sema, void *UNUSED) {
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, lco_sema, lco_sema_handler);
 
 TEST_MAIN({
   ADD_TEST(lco_sema);

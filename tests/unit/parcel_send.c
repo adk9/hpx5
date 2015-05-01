@@ -27,13 +27,14 @@ static volatile int counter HPX_USED = 0;
 // asynchronout local completion symantics, hpx_parcel_set_cont_action - set
 // the continuous action, hpx_pargel_set_cont_target - set the continuous
 // address for a parcel.
-static HPX_ACTION(_recv, double *args) {
+static int _recv_handler(double *args, size_t n) {
   //printf("recv %d\n", sync_fadd(&counter, 1, SYNC_ACQ_REL));
   sync_fadd(&counter, 1, SYNC_ACQ_REL);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _recv, _recv_handler);
 
-static HPX_ACTION(parcel_send, void *UNUSED) {
+static int parcel_send_handler(void) {
   printf("Testing the hpx parcel send function\n");
   int buffer[4] = {1, 100, 1000, 10000};
   int avg = 1000;
@@ -81,6 +82,7 @@ static HPX_ACTION(parcel_send, void *UNUSED) {
   }
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, parcel_send, parcel_send_handler);
 
 TEST_MAIN({
   ADD_TEST(parcel_send);

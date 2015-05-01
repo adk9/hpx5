@@ -32,7 +32,7 @@ typedef struct initBuffer {
   char message[BUFFER_SIZE];
 } initBuffer_t;
 
-static HPX_ACTION(_initData, const initBuffer_t *args) {
+static int _initData_handler(const initBuffer_t *args, size_t n) {
  // Get the target of the current thread. The target of the thread is the
  // destination that a parcel was sent to to spawn the current thread.
  // hpx_thread_current_target() returns the address of the thread's target
@@ -44,16 +44,16 @@ static HPX_ACTION(_initData, const initBuffer_t *args) {
   ld->index = args->index;
   strcpy(ld->message, args->message);
 
-  //Get the size of the arguments passed to the current thread
-  //uint32_t size = hpx_thread_current_args_size();
-
   hpx_gas_unpin(local);
-  //printf("Initialized buffer with index: %u, with message: %s, size of arguments = %d\n", ld->index, ld->message, size);
+  //printf("Initialized buffer with index: %u, with message: %s, size
+  //of arguments = %d\n", ld->index, ld->message, n);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initData,
+                  _initData_handler, HPX_POINTER, HPX_SIZE_T);
 
 // Test code -- ThreadCreate
-static HPX_ACTION(thread_create, void *UNUSED) {
+static int thread_create_handler(void) {
   printf("Starting the Threads test\n");
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
@@ -91,28 +91,26 @@ static HPX_ACTION(thread_create, void *UNUSED) {
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, thread_create, thread_create_handler);
 
 // Finish the current thread's execution. The behavior of this call depends
 // on the status parameter, and is equivalent to returning status from
 // the action.
 // HPX_SUCCESS: Normal termination, send a parcel with 0-sized data to the
 // the thread's continuation address.
-static HPX_ACTION(_worker, uint64_t *args) {
-  //uint64_t n;
-  //n = *(uint64_t*)args;
-
-  //printf("Value of n =  %"PRIu64" \n", n);
+static int _worker_handler(void) {
   hpx_thread_exit(HPX_LCO_ERROR);
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _worker, _worker_handler);
 
-static HPX_ACTION(thread_exit, void *UNUSED) {
+static int thread_exit_handler(void) {
   printf("Starting the Thread Exit test\n");
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
   hpx_addr_t done = hpx_lco_future_new(sizeof(uint64_t));
   uint64_t value = SET_CONT_VALUE;
-  hpx_status_t status = hpx_call(HPX_HERE, _worker, done, &value, sizeof(value));
+  hpx_status_t status = hpx_call(HPX_HERE, _worker, done);
   assert_msg(status == HPX_SUCCESS, "Could not normally terminate the thread");
   hpx_lco_wait(done);
 
@@ -124,6 +122,7 @@ static HPX_ACTION(thread_exit, void *UNUSED) {
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, thread_exit, thread_exit_handler);
 
 TEST_MAIN({
   ADD_TEST(thread_create);

@@ -56,7 +56,7 @@ struct scheduler *scheduler_new(const config_t *cfg) {
     }
   }
 
-  e = pthread_barrier_init(&s->barrier, NULL, workers);
+  e = system_barrier_init(&s->barrier, NULL, workers);
   if (e) {
     dbg_error("failed to allocate the scheduler barrier.\n");
     scheduler_delete(s);
@@ -86,7 +86,7 @@ void scheduler_delete(struct scheduler *sched) {
     return;
   }
 
-  pthread_barrier_destroy(&sched->barrier);
+  system_barrier_destroy(&sched->barrier);
 
   if (sched->workers) {
     for (int i = 0, e = sched->n_workers; i < e; ++i) {
@@ -190,6 +190,7 @@ scheduler_stats_t *scheduler_get_stats(struct scheduler *sched) {
   }
 }
 
-HPX_INTERRUPT(scheduler_nop, void) {
+int scheduler_nop_handler(void) {
   return HPX_SUCCESS;
 }
+HPX_ACTION(HPX_INTERRUPT, 0, scheduler_nop, scheduler_nop_handler);

@@ -43,7 +43,7 @@ case "$SYSTEM" in
     source /etc/profile.d/modules.sh
     module unload darshan
     module load atp
-    module load git/2.0.0
+    module load git/2.3.1
     module load craype-hugepages8M
     module swap PrgEnv-pgi PrgEnv-gnu
     export CRAYPE_LINK_TYPE=dynamic
@@ -123,15 +123,8 @@ case "$SYSTEM" in
     export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
     export LIBRARY_PATH=/usr/lib64:$LIBRARY_PATH
     ;;
-  HPX5_BIGRED2 | MARCINS_SWAN | HPX5_EDISON)
+  HPX5_BIGRED2 | MARCINS_SWAN | HPX5_EDISON | HPX5_HOPPER)
     export HPX_PHOTON_BACKEND=ugni
-    export HPX_PHOTON_CARGS="--with-ugni"
-    CFGFLAGS+=" --with-pmi --with-hugetlbfs"
-    ;;
-  HPX5_HOPPER)
-    export HPX_PHOTON_BACKEND=ugni
-    export PKG_CONFIG_PATH=/opt/cray/craype/2.2.1/pkg-config:${PKG_CONFIG_PATH}
-    export PE_PKGCONFIG_LIBS=craype-hugepages:${PE_PKGCONFIG_LIBS}
     export HPX_PHOTON_CARGS="--with-ugni"
     CFGFLAGS+=" --with-pmi --with-hugetlbfs"
     ;;
@@ -312,6 +305,23 @@ if [ "$OP" == "build" ]; then
    do_build
 fi
 
+function check_output() {
+    # Check the output of the unit tests:
+    if grep '^# FAIL: *0$' $BUILD_DIR/tests/unit/test-suite.log
+     then
+       echo "FAIL: 0"
+     else
+       cat $BUILD_DIR/tests/unit/test-suite.log
+       exit 1
+    fi
+
+    if egrep -q "(ERROR:)\s+[1-9][0-9]*" $BUILD_DIR/tests/unit/test-suite.log
+      then
+        cat $BUILD_DIR/tests/unit/test-suite.log
+        exit 1
+    fi
+}
+
 if [ "$OP" == "run" ]; then
     echo "Running the regression test"
     if [[ "$SYSTEM" != "HPX5_C-SWARM" ]] || [[ "$HPXMODE_AXIS" != "photon" ]]; then
@@ -371,26 +381,16 @@ if [ "$OP" == "run" ]; then
         exit 1
       fi
     
-      while [ ! -f $BUILD_DIR/tests/unit/test-suite.log ]; do
-        sleep 5;
-      done;
-      sleep 5;
-    fi
-  
-    # Check the output of the unit tests:
-    if grep '^# FAIL: *0$' $BUILD_DIR/tests/unit/test-suite.log
-     then
-       echo "FAIL: 0"
-     else
-       cat $BUILD_DIR/tests/unit/test-suite.log
-       exit 1
-    fi
-
-    if egrep -q "(ERROR:)\s+[1-9][0-9]*" $BUILD_DIR/tests/unit/test-suite.log
-      then
-        cat $BUILD_DIR/tests/unit/test-suite.log
+      if [ ! -f $BUILD_DIR/tests/unit/test-suite.log ]; then
+        cat $BUILD_DIR/regression_test.o*
+        echo "test-suite.log file not found!"
         exit 1
+      else
+        check_output
+        exit 0
+      fi
     fi
+    check_output
 fi
 
 exit 0

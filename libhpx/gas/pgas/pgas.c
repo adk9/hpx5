@@ -210,7 +210,7 @@ _pgas_gas_free(hpx_addr_t gpa, hpx_addr_t sync) {
     global_free(pgas_gpa_to_lva(offset));
   }
   else {
-    int e = hpx_call(gpa, pgas_free, sync, NULL, 0);
+    int e = hpx_call(gpa, pgas_free, sync);
     dbg_check(e, "failed to call pgas_free on %"PRIu64"", gpa);
     return;
   }

@@ -18,12 +18,12 @@
 static  hpx_action_t _main = 0;
 static  hpx_action_t _get  = 0;
 
-static int _get_action(void *args) {
+static int _get_action(void *args, size_t size) {
   uint64_t data = 1234;
   HPX_THREAD_CONTINUE(data);
 }
 
-static int _main_action(void *args) {
+static int _main_action(void *args, size_t size) {
   uint64_t value = 0;
 
   // allocate 2 futures with size of each future's value and the
@@ -44,8 +44,8 @@ int main(int argc, char *argv[]) {
     return e;
   }
    
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(_get_action, &_get);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _get, _get_action, HPX_POINTER, HPX_SIZE_T);
 
   return hpx_run(&_main, NULL, 0);
 }

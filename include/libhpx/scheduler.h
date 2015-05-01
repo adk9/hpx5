@@ -27,6 +27,7 @@
 #include <libsync/lockable_ptr.h>
 #include <libsync/queues.h>
 #include <libhpx/stats.h>
+#include <libhpx/system.h>
 #include <libhpx/worker.h>
 
 /// Preprocessor define that tells us if the scheduler is cooperative or
@@ -68,7 +69,7 @@ struct scheduler {
   int               n_workers;
   uint32_t       wf_threshold;
   // struct barrier     *barrier;
-  pthread_barrier_t   barrier;
+  system_barrier_t    barrier;
   struct worker      *workers;
   scheduler_stats_t     stats;
 };

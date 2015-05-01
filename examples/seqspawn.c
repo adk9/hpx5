@@ -35,11 +35,11 @@ static hpx_action_t _nop  = 0;
 static hpx_action_t _main = 0;
 
 /// The empty action
-static int _nop_action(hpx_addr_t *args) {
+static int _nop_action(hpx_addr_t *args, size_t size) {
   hpx_thread_continue(0, NULL);
 }
 
-static int _main_action(int *args) {
+static int _main_action(int *args, size_t size) {
   int n = *args;
   printf("seqspawn(%d)\n", n); fflush(stdout);
 
@@ -92,8 +92,8 @@ int main(int argc, char *argv[]) {
   }
 
   // register the actions
-  HPX_REGISTER_ACTION(_nop_action, &_nop);
-  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _nop, _nop_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
 
   // run the main action
   return hpx_run(&_main, &n, sizeof(n));

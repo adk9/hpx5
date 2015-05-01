@@ -13,6 +13,10 @@
 #ifndef HPX_GAS_H
 #define HPX_GAS_H
 
+/// @defgroup agas Global Address Space
+/// @brief Functions and definitions for using the global address space
+/// @{
+
 /// @file  include/hpx/gas.h
 /// @brief Functions for allocating and using memory in the HPX global address
 ///        space.
@@ -291,5 +295,7 @@ int hpx_gas_memput(hpx_addr_t to, const void *from, size_t size,
 ///
 /// @returns  HPX_SUCCESS
 int hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync);
+
+/// @}
 
 #endif

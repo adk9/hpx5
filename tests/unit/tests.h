@@ -31,18 +31,20 @@ static void timeout(int signal) {
 
 #define assert_msg(cond, msg) assert(cond && msg)
 
-#define ADD_TEST(test) do {                                  \
-    int e = hpx_call_sync(HPX_HERE, test, NULL, 0, NULL, 0); \
-    assert (e == HPX_SUCCESS);                               \
+#define ADD_TEST(test) do {                             \
+    int e = hpx_call_sync(HPX_HERE, test, NULL, 0);     \
+    assert (e == HPX_SUCCESS);                          \
   } while (0)
 
 // A helper macro to generate a main function template for the test.
 #define TEST_MAIN(tests)                                \
-  static HPX_ACTION(_main, void *UNUSED) {              \
+  static int _main_handler(void) {                      \
     tests                                               \
     hpx_shutdown(HPX_SUCCESS);                          \
     return HPX_SUCCESS;                                 \
   }                                                     \
+  static HPX_ACTION(HPX_DEFAULT, 0, _main,              \
+                    _main_handler);                     \
   static void usage(char *prog, FILE *f) {              \
     fprintf(f, "Usage: %s [options]\n"                  \
             "\t-h, show help\n", prog);                 \
@@ -68,7 +70,7 @@ static void timeout(int signal) {
     }                                                   \
     signal(SIGALRM, timeout);                           \
     alarm(TIMEOUT);                                     \
-    return hpx_run(&_main, NULL, 0);                    \
+    return hpx_run(&_main);                             \
   }                                                     \
   int main(int argc, char *argv[])
 

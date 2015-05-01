@@ -14,29 +14,29 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
-static HPX_ACTION(_bcast_untyped, void *UNUSED) {
+static int _bcast_untyped_handler(void) {
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _bcast_untyped, _bcast_untyped_handler);
 
 static hpx_action_t _bcast_typed;
-static int _bcast_typed_action(int i, float f, char c) {
+static int _bcast_typed_handler(int i, float f, char c) {
   printf("Typed action: %d %f %c!\n", i, f, c);
   return HPX_SUCCESS;
 }
-static HPX_ACTION_DEF(DEFAULT, _bcast_typed_action, _bcast_typed,
-                      HPX_INT, HPX_FLOAT, HPX_CHAR);
+static HPX_ACTION(HPX_DEFAULT, 0, _bcast_typed, _bcast_typed_handler,
+                  HPX_INT, HPX_FLOAT, HPX_CHAR);
 
-
-static HPX_ACTION(bcast, void *UNUSED) {
+static int bcast_handler(void) {
   printf("Test hpx_bcast (untyped)\n");
   hpx_addr_t lco = hpx_lco_future_new(0);
-  int e = hpx_bcast(_bcast_untyped, lco, HPX_NULL, NULL, 0);
+  int e = hpx_bcast(_bcast_untyped, lco, HPX_NULL);
   assert(e == HPX_SUCCESS);
   hpx_lco_wait(lco);
   hpx_lco_delete(lco, HPX_NULL);
 
   printf("Test hpx_bcast_lsync (untyped)\n");
-  e = hpx_bcast_lsync(_bcast_untyped, HPX_NULL, NULL, 0);
+  e = hpx_bcast_lsync(_bcast_untyped, HPX_NULL);
   assert(e == HPX_SUCCESS);
 
   int i = 42;
@@ -56,6 +56,7 @@ static HPX_ACTION(bcast, void *UNUSED) {
   assert(e == HPX_SUCCESS);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, bcast, bcast_handler);
 
 TEST_MAIN({
  ADD_TEST(bcast);

@@ -48,7 +48,7 @@ float *create_rand_nums(int num_elements) {
   return rand_nums;
 }
 
-static int _init_action(const InitArgs *args) {
+static int _init_action(const InitArgs *args, size_t size) {
   hpx_addr_t local = hpx_thread_current_target();
   Domain *ld = NULL;
   if (!hpx_gas_try_pin(local, (void**)&ld))
@@ -64,7 +64,7 @@ static int _init_action(const InitArgs *args) {
   return HPX_SUCCESS;
 }
 
-static int _check_sum_action(int *args) {
+static int _check_sum_action(int *args, size_t size) {
   double sum = 0.0;
   int ranks = HPX_LOCALITIES;
 
@@ -106,7 +106,7 @@ static int _check_sum_action(int *args) {
   return HPX_SUCCESS;
 }
 
-static int _main_action(void *args) {
+static int _main_action(void *args, size_t size) {
   hpx_addr_t domain   = hpx_gas_alloc_cyclic(nDoms, sizeof(Domain), 0);
   hpx_addr_t done     = hpx_lco_and_new(nDoms);
   hpx_addr_t complete = hpx_lco_and_new(nDoms);
@@ -146,9 +146,9 @@ int main(int argc, char *argv[]) {
     return e;
   }
 
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(_init_action, &_init);
-  HPX_REGISTER_ACTION(_check_sum_action, &_check_sum);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init, _init_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _check_sum, _check_sum_action, HPX_POINTER, HPX_SIZE_T);
 
   return hpx_run(&_main, NULL, 0);
 }

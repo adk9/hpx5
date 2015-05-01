@@ -13,12 +13,18 @@
 #ifndef HPX_LCO_H
 #define HPX_LCO_H
 
+/// @defgroup lcos LCOs
+/// @brief Functions and definitions for using LCOs
+/// @{
+
 /// @file include/hpx/lco.h
 /// @brief The HPX LCO interface.
 
 #include <hpx/addr.h>
 #include <hpx/attributes.h>
 #include <hpx/types.h>
+
+
 
 /// Forward declarations.
 /// @{
@@ -253,7 +259,7 @@ hpx_status_t hpx_lco_sema_p(hpx_addr_t sema);
 /// @param inputs the number of inputs to the and (must be >= 0)
 ///
 /// @returns The global address of the new and gate.
-hpx_addr_t hpx_lco_and_new(intptr_t inputs);
+hpx_addr_t hpx_lco_and_new(int64_t inputs);
 
 /// Join an "and" LCO, triggering it (i.e. setting it) if appropriate.
 ///
@@ -526,4 +532,5 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
                             hpx_action_t predicate);
 /// @}
 
+/// @}
 #endif

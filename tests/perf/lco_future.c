@@ -48,16 +48,16 @@ static int num_readers[]  ={
  192
 };
 
-static int action_get_value(void *args) {
+static int action_get_value(void *args, size_t size) {
   HPX_THREAD_CONTINUE(value);
 }
 
-static int action_set_value(void *args) {
+static int action_set_value(void *args, size_t size) {
   value = *(T*)args;
   return HPX_SUCCESS;
 }
 
-static int _main_action(int *args) {
+static int _main_action(int *args, size_t size) {
   hpx_time_t t;
   int count;
 
@@ -140,9 +140,9 @@ int main(int argc, char *argv[]) {
   }
 
   // register the actions
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(action_set_value, &_set_value);
-  HPX_REGISTER_ACTION(action_get_value, &_get_value);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _set_value, action_set_value, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _get_value, action_get_value, HPX_POINTER, HPX_SIZE_T);
 
   set_timeout(30);
 
