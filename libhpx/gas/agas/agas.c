@@ -21,6 +21,7 @@
 #include <libhpx/gas.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
+#include <libhpx/system.h>
 #include "agas.h"
 #include "btt.h"
 #include "chunk_table.h"
@@ -174,11 +175,50 @@ _agas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
 
 static void *
 _agas_mmap(void *gas, void *addr, size_t n, size_t align) {
-  return NULL;
+  int e;
+  agas_t *agas = gas;
+
+  // 1) get gva placement for this allocation
+  uint32_t nbits = ceil_div_64(n, agas->chunk_size);
+  uint32_t bit;
+  e = bitmap_reserve(agas->bitmap, nbits, align, &bit);
+  dbg_check(e, "Could not reserve gva for %lu bytes\n", n);
+  uint64_t offset = bit * agas->chunk_size;
+
+  // 2) get backing memory
+  void *base = system_mmap(NULL, addr, n, align);
+  dbg_assert(base);
+  dbg_assert(((uintptr_t)base & (align - 1)) == 0);
+
+  // 3) insert the inverse mappings
+  char* chunk = base;
+  for (int i = 0; i < nbits; i++) {
+    chunk_table_insert(agas->chunk_table, chunk, offset);
+    offset += agas->chunk_size;
+    chunk += agas->chunk_size;
+  }
+
+  return base;
 }
 
 static void
 _agas_munmap(void *gas, void *addr, size_t n) {
+  agas_t *agas = gas;
+
+  // 1) release the bits
+  uint64_t offset = chunk_table_lookup(agas->chunk_table, addr);
+  uint32_t nbits = ceil_div_64(n, agas->chunk_size);
+  bitmap_release(agas->bitmap, offset, nbits);
+
+  // 2) unmap the backing memory
+  system_munmap(NULL, addr, n);
+
+  // 3) remove the inverse mappings
+  char *chunk = addr;
+  for (int i = 0; i < nbits; ++i) {
+    chunk_table_remove(agas->chunk_table, chunk);
+    chunk += agas->chunk_size;
+  }
 }
 
 static gas_t _agas_vtable = {
@@ -217,9 +257,8 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   size_t heap_size = 1lu << GVA_OFFSET_BITS;
   size_t nchunks = ceil_div_64(heap_size, agas->chunk_size);
   uint32_t min_align = ceil_log2_64(agas->chunk_size);
-  uint32_t base_align;
-
-  // agas->bitmap = bitmap_new();
+  uint32_t base_align = ceil_log2_64(heap_size);
+  agas->bitmap = bitmap_new(nchunks, min_align, base_align);
   btt_insert(agas->btt, _agas_there(agas, here->rank), here->rank, here);
   return &agas->vtable;
 }
