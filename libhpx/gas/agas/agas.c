@@ -19,6 +19,7 @@
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
+#include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include "agas.h"
 #include "btt.h"
