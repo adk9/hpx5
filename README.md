@@ -216,4 +216,5 @@ $ mpirun -np 2 examples/pingpong 10 -m -v
 ```
 
 Detailed build instructions can be found at Getting started with HPX–5 Runtime 
-Systems in docs folder.
+Systems in https://hpx.crest.iu.edu/documentation and FAQs in 
+(https://hpx.crest.iu.edu/faqs_and_tutorials).
