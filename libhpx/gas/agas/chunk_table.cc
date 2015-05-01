@@ -26,19 +26,12 @@
 # include "config.h"
 #endif
 
-#include <farmhash.h>
 #include <libcuckoo/cuckoohash_map.hh>
+#include <libcuckoo/city_hasher.hh>
 #include "chunk_table.h"
 
 namespace {
-  class Hasher {
-   public:
-    size_t operator()(const void* key) const {
-      return util::Hash64(reinterpret_cast<const char*>(&key), sizeof(key));
-    }
-  };
-
-  typedef cuckoohash_map<const void*, uint64_t, Hasher> ChunkTable;
+  typedef cuckoohash_map<const void*, uint64_t, CityHasher<const void*> > ChunkTable;
 }
 
 void *

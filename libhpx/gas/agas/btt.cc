@@ -14,28 +14,23 @@
 # include "config.h"
 #endif
 
-#include <farmhash.h>
 #include <libcuckoo/cuckoohash_map.hh>
+#include <libcuckoo/city_hasher.hh>
 #include "btt.h"
 #include "gva.h"
 
 namespace {
-  class Hasher {
-   public:
-    size_t operator()(const uint64_t key) const {
-      return util::Hash64(reinterpret_cast<const char*>(&key), sizeof(key));
+  struct Entry {
+    int32_t count;
+    int32_t owner;
+    void *lva;
+    Entry() : count(0), owner(0), lva(NULL) {
+    }
+    Entry(int32_t o, void *l) : count(0), owner(o), lva(l) {
     }
   };
 
-  struct Entry : public std::tuple<int32_t, int32_t, void*> {
-    Entry() : std::tuple<int32_t, int32_t, void*>(0, 0, NULL) {
-    }
-    Entry(int32_t owner, void *lva) :
-      std::tuple<int32_t, int32_t, void*>(0, owner, lva) {
-    }
-  };
-
-  typedef cuckoohash_map<uint64_t, Entry, Hasher> Map;
+  typedef cuckoohash_map<uint64_t, Entry, CityHasher<uint64_t> > Map;
 
   class BTT : public Map {
    public:
@@ -53,9 +48,9 @@ bool
 BTT::trypin(hpx_addr_t gva, void** lva) {
   uint64_t key = gva_to_key(gva);
   return update_fn(key, [lva](Entry& entry) {
-      std::get<1>(entry)++;
+      entry.count++;
       if (lva) {
-        *lva = std::get<2>(entry);
+        *lva = entry.lva;
       }
     });
 }
@@ -64,7 +59,7 @@ void
 BTT::unpin(hpx_addr_t gva) {
   uint64_t key = gva_to_key(gva);
   bool found = update_fn(gva, [](Entry& entry) {
-      std::get<1>(entry)--;
+      entry.count--;
     });
   assert(found);
 }
@@ -75,7 +70,7 @@ BTT::getOwner(hpx_addr_t gva) const {
   uint64_t key = gva_to_key(gva);
   bool found = find(key, entry);
   if (found) {
-    return std::get<0>(entry);
+    return entry.owner;
   }
   else {
     return gva_home(gva);

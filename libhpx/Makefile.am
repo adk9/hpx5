@@ -13,7 +13,6 @@ libhpx_la_LDFLAGS  = $(HPX_JEMALLOC_LDFLAGS)
 libhpx_la_LIBADD   = $(HPX_HWLOC_LIBS) \
                      $(HPX_LIBFFI_LIBS) \
                      $(HPX_JEMALLOC_LIBS) \
-                     $(HPX_FARMHASH_LIBS) \
                      boot/libboot.la \
                      memory/libmemory.la \
                      gas/libgas.la \
