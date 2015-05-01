@@ -20,16 +20,16 @@ extern "C" {
 #include <hpx/hpx.h>
 
 /// Set up some limitations for the AGAS implementation for now.
-#define  GVA_SIZE_BITS 5
 #define   GVA_RANK_BITS 16
-#define GVA_OFFSET_BITS (48 - GVA_RANK_BITS)
+#define   GVA_SIZE_BITS 5
+#define GVA_OFFSET_BITS 42
 
 typedef union {
   hpx_addr_t addr;
   struct {
     uint64_t offset : GVA_OFFSET_BITS;
-    uint64_t  large : 1;
     uint64_t   size : GVA_SIZE_BITS;
+    uint64_t cyclic : 1;
     uint64_t   home : GVA_RANK_BITS;
   } bits;
 } gva_t;

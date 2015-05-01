@@ -82,7 +82,7 @@ _agas_there(void *gas, uint32_t i) {
     .bits = {
       .offset = AGAS_THERE_OFFSET,
       .size   = 0,
-      .large  = 0,
+      .cyclic  = 0,
       .home   = (uint16_t)i,
     }
   };
@@ -205,7 +205,7 @@ hpx_addr_t agas_alloc_cyclic_sync(size_t n, uint32_t bsize) {
   gva_t gva = {
     .bits = {
       .offset = offset,
-      .large = 1,
+      .cyclic = 1,
       .size = 0,
       .home = here->rank
     }
@@ -280,7 +280,7 @@ _register_local(agas_t *gas, void *lva, uint32_t bsize) {
     .bits = {
       .offset = offset,
       .size   = ceil_log2_32(bsize),
-      .large  = 0,
+      .cyclic  = 0,
       .home   = here->rank,
     }
   };
@@ -340,7 +340,7 @@ _agas_free(void *gas, hpx_addr_t addr, hpx_addr_t rsync) {
 
   gva_t gva = { .addr = addr };
 
-  if (gva.bits.large) {
+  if (gva.bits.cyclic) {
     dbg_error("Cyclic allocation free is unhandled\n");
   }
 
