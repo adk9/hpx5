@@ -222,9 +222,6 @@ void hpx_free_registered(void *p);
 /// requirement may not be checked. Copying data across a block boundary, or
 /// from unallocated memory, will result in undefined behavior.
 ///
-/// The local address must be a stack location, or a buffer allocated with
-/// hpx_malloc_registered().
-///
 /// This operation is not atomic. memgets with concurrent memputs to overlapping
 /// addresses ranges will result in a data race with undefined behavior. Users
 /// should synchronize with some out-of-band mechanism.
@@ -248,9 +245,6 @@ int hpx_gas_memget_sync(void *to, hpx_addr_t from, size_t size);
 /// allocated using one of the family of GAS allocation routines. This
 /// requirement is not checked. Copying data across a block boundary, or to
 /// unallocated memory, will result in undefined behavior.
-///
-/// The local address must be a stack location, or a buffer allocated with
-/// hpx_malloc_registered().
 ///
 /// This operation is not atomic. Concurrent memputs to overlapping addresses
 /// ranges will result in a data race with undefined behavior. Users should
