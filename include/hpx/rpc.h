@@ -15,6 +15,9 @@
 
 #include "hpx/builtins.h"
 
+/// @addtogroup actions
+/// @{
+
 /// @file
 /// @brief HPX remote procedure call interface
 
@@ -36,8 +39,9 @@
 ///          could not be handled remotely.
 int     _hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out, size_t olen,
                        int nargs, ...);
-#define hpx_call_sync(addr, action, out, olen, ...) \
-  _hpx_call_sync(addr, action, out, olen, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
+#define hpx_call_sync(addr, action, out, olen, ...)                   \
+  _hpx_call_sync(addr, action, out, olen, __HPX_NARGS(__VA_ARGS__) ,  \
+                 ##__VA_ARGS__)
 
 
 /// Locally synchronous call interface.
@@ -58,7 +62,7 @@ int     _hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out, size_t o
 int    _hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result,
                  int nargs, ...);
 #define hpx_call(addr, action, result, ...) \
-  _hpx_call(addr, action, result, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
+  _hpx_call(addr, action, result, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 
 /// An experimental version of call that takes parameter symbols directly.
@@ -84,8 +88,9 @@ int    _hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result,
 ///          the hpx_call invocation.
 int    _hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
                       hpx_addr_t result, int nargs, ...);
-#define hpx_call_when(gate, addr, action, result, ...) \
-  _hpx_call_when(gate, addr, action, result, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
+#define hpx_call_when(gate, addr, action, result, ...)                  \
+  _hpx_call_when(gate, addr, action, result, __HPX_NARGS(__VA_ARGS__) , \
+                 ##__VA_ARGS__)
 
 /// Locally synchronous call_when with continuation interface.
 ///
@@ -102,9 +107,11 @@ int    _hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 int    _hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr,
                                         hpx_action_t action, hpx_addr_t c_target,
                                         hpx_action_t c_action, int nargs, ...);
-#define hpx_call_when_with_continuation(gate, addr, action, c_target, c_action, ...) \
-  _hpx_call_when_with_continuation(gate, addr, action, c_target, c_action,           \
-                                   __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
+#define hpx_call_when_with_continuation(gate, addr, action, c_target,   \
+                                        c_action, ...)                  \
+  _hpx_call_when_with_continuation(gate, addr, action, c_target,        \
+                                   c_action, __HPX_NARGS(__VA_ARGS__) , \
+                                   ##__VA_ARGS__)
 
 /// Fully synchronous call interface which implements hpx_parcel_send_through()
 /// when LCO is set
@@ -128,7 +135,7 @@ int    _hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action
                            void *out, size_t olen, int nargs, ...);
 #define hpx_call_when_sync(gate, addr, action, out, olen, ...)          \
   _hpx_call_when_sync(gate, addr, action, out, olen,                    \
-                      __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
+                      __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 /// Locally synchronous call with continuation interface.
 ///
@@ -150,7 +157,7 @@ int    _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
                                    int nargs, ...);
 #define hpx_call_with_continuation(addr, action, c_target, c_action, ...) \
   _hpx_call_with_continuation(addr, action, c_target, c_action,           \
-                              __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
+                              __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 
 /// Fully asynchronous call interface.
@@ -175,9 +182,9 @@ int    _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
 ///          the hpx_call_async invocation.
 int    _hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t lsync,
                        hpx_addr_t result, int nargs, ...);
-#define hpx_call_async(addr, action, lsync, result, ...)                \
-  _hpx_call_async(addr, action, lsync, result, __HPX_NARGS(__VA_ARGS__),\
-                  __VA_ARGS__)
+#define hpx_call_async(addr, action, lsync, result, ...)                  \
+  _hpx_call_async(addr, action, lsync, result, __HPX_NARGS(__VA_ARGS__) , \
+                  ##__VA_ARGS__)
 
 
 /// Call with current continuation.
@@ -203,11 +210,11 @@ void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 
 #define hpx_call_when_cc(gate, addr, action, cleanup, env, ...) \
   _hpx_call_when_cc(gate, addr, action, cleanup, env,           \
-                    __HPX_NARGS(__VA_ARGS__),##__VA_ARGS__)
+                    __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
-#define hpx_call_cc(addr, action, cleanup, env, ...)                 \
-  _hpx_call_when_cc(HPX_NULL, addr, action, cleanup, env,            \
-                    __HPX_NARGS(__VA_ARGS__),##__VA_ARGS__)
+#define hpx_call_cc(addr, action, cleanup, env, ...)            \
+  _hpx_call_when_cc(HPX_NULL, addr, action, cleanup, env,       \
+                    __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 
 /// HPX collective operations.
@@ -215,29 +222,62 @@ void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 /// This is a parallel call interface that performs an @p action on @p args at
 /// all available localities. The output values are not returned, but the
 /// completion of the broadcast operation can be tracked through the @p lco LCO.
-/// @param action the action to perform
-/// @param    lco the address of an LCO to trigger when the broadcast operation
-///               is completed
-/// @param   args the argument data for @p action
-/// @param    len the length of @p args
+///
+/// @param       action The action to perform.
+/// @param        lsync The address of an LCO to trigger when the broadcast
+///                       operation is complete locally, and the buffer can be
+///                       reused or released.
+/// @param        rsync The address of an LCO to trigger when the broadcast
+///                       operation is complete globally, i.e., when all of the
+///                       broadcast handlers have run.
+/// @param         args The argument data for @p action.
+/// @param          len The length of @p args.
 ///
 /// @returns      HPX_SUCCESS if no errors were encountered.
-int    _hpx_bcast(hpx_action_t action, hpx_addr_t lco, int nargs, ...);
-#define hpx_bcast(action, lco, ...) \
-  _hpx_bcast(action, lco, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
+int    _hpx_bcast(hpx_action_t action, hpx_addr_t lsync, hpx_addr_t rsync, int
+                  nargs, ...);
+#define hpx_bcast(action, lsync, rsync, ...)                            \
+  _hpx_bcast(action, lsync, rsync, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 /// HPX collective operations.
 ///
 /// This is a parallel call interface that performs an @p action on @p args at
 /// all available localities. The output values are not returned.
 ///
-/// @param action the action to perform
-/// @param   args the argument data for @p action
-/// @param    len the length of @p args
+/// This variant of bcast is locally synchronous. It will not return to the
+/// caller until it is safe to reuse or delete the @p args buffer.
+///
+/// @param       action The action to perform.
+/// @param        rsync The address of an LCO to trigger when the broadcast
+///                       operation is complete globally, i.e., when all of the
+///                       broadcast handlers have run.
+/// @param         args The argument data for @p action.
+/// @param          len The length of @p args.
 ///
 /// @returns      HPX_SUCCESS if no errors were encountered.
-int    _hpx_bcast_sync(hpx_action_t action, int nargs, ...);
-#define hpx_bcast_sync(action, ...) \
-  _hpx_bcast_sync(action, __HPX_NARGS(__VA_ARGS__), __VA_ARGS__)
+int    _hpx_bcast_lsync(hpx_action_t action, hpx_addr_t rsync, int nargs, ...);
+#define hpx_bcast_lsync(action, rsync, ...)                          \
+  _hpx_bcast_lsync(action, rsync, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+
+
+/// HPX collective operations.
+///
+/// This is a parallel call interface that performs an @p action on @p args at
+/// all available localities. The output values are not returned.
+///
+/// This variant of bcast is synchronous. It will not return to the caller until
+/// specified action has run at every locality (this implies local completion as
+/// well).
+///
+/// @param       action The action to perform.
+/// @param         args The argument data for @p action.
+/// @param          len The length of @p args.
+///
+/// @returns      HPX_SUCCESS if no errors were encountered.
+int    _hpx_bcast_rsync(hpx_action_t action, int nargs, ...);
+#define hpx_bcast_rsync(action, ...)                                    \
+  _hpx_bcast_rsync(action, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+
+/// @}
 
 #endif

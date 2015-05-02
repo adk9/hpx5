@@ -13,6 +13,9 @@
 #ifndef HPX_PAR_H
 #define HPX_PAR_H
 
+/// @addtogroup actions
+/// @{
+
 /// @file
 /// @brief HPX parallel loop interface
 
@@ -80,5 +83,7 @@ int hpx_count_range_call(hpx_action_t action,
 			 const uint32_t bsize,
 			 const size_t arg_size,
 			 void *const arg);
+
+/// @}
 
 #endif // HPX_PAR_H

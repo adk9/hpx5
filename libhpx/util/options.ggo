@@ -95,7 +95,7 @@ typestr="dir"
 string optional
 
 option "hpx-trace-filesize" - "set the size of each trace file"
-typestr="# of events"
+typestr="bytes"
 long optional
 
 option "hpx-trace-at" - "set the localities to trace at"

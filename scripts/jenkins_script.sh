@@ -39,6 +39,32 @@ case "$SYSTEM" in
     export CRAYPE_LINK_TYPE=dynamic
     export PATH=/global/homes/j/jayaajay/autotools/bin:$PATH
     ;;
+  HPX5_HOPPER)
+    source /etc/profile.d/modules.sh
+    module unload darshan
+    module load atp
+    module load git/2.3.1
+    module load craype-hugepages8M
+    module swap PrgEnv-pgi PrgEnv-gnu
+    export CRAYPE_LINK_TYPE=dynamic
+    export PATH=/global/homes/j/jayaajay/autotools/bin:$PATH
+    ;;
+  MARCINS_SWAN)
+    module load java
+    module unload PrgEnv-cray
+    module load PrgEnv-gnu
+    module load craype-hugepages8M
+    export PATH=/home/users/p02087/tools/bin:$PATH
+    export CRAYPE_LINK_TYPE=dynamic
+    ;;
+  HPX5_C-SWARM)
+    . /opt/sge/crc/common/settings.sh
+    module load java
+    module load gcc/4.9.2
+    module load ompi/1.8.1-intel
+    module load emacs
+    export PATH=/afs/crc.nd.edu/user/j/jajaycan/Projects/autotools/bin:$PATH
+    ;;
   *)
     echo "Unknown system $SYSTEM."
     exit 1
@@ -53,6 +79,15 @@ case "$BUILD_AXIS" in
     CFGFLAGS+=" --disable-static --enable-shared"
     ;;
 esac
+
+case "JEMALLOC_AXIS" in
+  enable)
+    CFGFLAGS+=" --enable-jemalloc"
+    ;;
+  *)
+    CFGFLAGS+=" --disable-jemalloc"
+    ;;
+esac
 }
 
 function add_mpi() {
@@ -61,12 +96,18 @@ case "$SYSTEM" in
     module load openmpi/1.8.4_thread
     CFGFLAGS+=" --with-mpi=ompi"
     ;;
-  HPX5_BIGRED2 | HPX5_EDISON)
+  HPX5_BIGRED2 | MARCINS_SWAN | HPX5_EDISON | HPX5_HOPPER)
     CFGFLAGS+=" --with-mpi"
     ;;
+  HPX5_C-SWARM)
+    CFGFLAGS+=" --with-mpi=/opt/crc/openmpi/1.8.1/intel-14.0/lib/pkgconfig/ompi.pc"
+    ;;
   HPX5_STAMPEDE)
-    module load intel/13.1.1.163
-    module load  impi/4.1.3.049
+    module unload intel
+    module unload impi
+    module unload mvapich2
+    module load intel/14.0.1.106
+    module load impi/4.1.3.049
     CFGFLAGS+=" --with-mpi"
     ;;
 esac
@@ -82,7 +123,7 @@ case "$SYSTEM" in
     export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
     export LIBRARY_PATH=/usr/lib64:$LIBRARY_PATH
     ;;
-  HPX5_BIGRED2 | HPX5_EDISON)
+  HPX5_BIGRED2 | MARCINS_SWAN | HPX5_EDISON | HPX5_HOPPER)
     export HPX_PHOTON_BACKEND=ugni
     export HPX_PHOTON_CARGS="--with-ugni"
     CFGFLAGS+=" --with-pmi --with-hugetlbfs"
@@ -102,23 +143,25 @@ function do_build() {
     git clean -xdf
     ./bootstrap
     
-    if [ -d "./build" ]; then
+    if [[ "$SYSTEM" != "HPX5_C-SWARM" ]] || [[ "$HPXMODE_AXIS" != "photon" ]]; then    
+      if [ -d "./build" ]; then
         rm -rf ./build/
-    fi
-    mkdir build
-    cd build
-    
-    if [ -d "./install" ]; then
+      fi
+      mkdir build
+      cd build
+
+      if [ -d "./install" ]; then
         rm -rf ./install/
-    fi
-    mkdir install
-    
-    echo "Configuring HPX."
-    eval "$CFG_CMD --prefix=${DIR}/build/install/ ${HPXDEBUG} ${CFGFLAGS} CFLAGS=\"-O3 -g\" --enable-testsuite --enable-parallel-config"  
+      fi
+      mkdir install
+
+      echo "Configuring HPX."
+      eval "$CFG_CMD --prefix=${DIR}/build/install/ ${HPXDEBUG} ${CFGFLAGS} CFLAGS=\"-O3 -g\" --enable-testsuite --enable-parallel-config"  
   
-    echo "Building HPX."
-    make -j 8
-    make install
+      echo "Building HPX."
+      make -j 8
+      make install
+   fi
 }
 
 add_init
@@ -172,6 +215,27 @@ case "$SYSTEM" in
       CFGFLAGS+=" --with-tests-cmd=\"aprun -n 2 -N 2\""
     fi
     ;;
+  HPX5_HOPPER)
+    if [ "$HPXMODE_AXIS" == smp ] ; then
+      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 1 -N 1 -d 24\""
+    else
+      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 2 -N 1 -d 24\""
+    fi
+    ;;
+  MARCINS_SWAN)
+    if [ "$HPXMODE_AXIS" == smp ] ; then
+      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 1 -N 1 -b -d 32\""
+    else
+      CFGFLAGS+=" --with-tests-cmd=\"aprun -n 2 -N 1 -b -d 32\""
+    fi
+    ;;
+  HPX5_C-SWARM)
+    if [ "$HPXMODE_AXIS" == smp ] ; then
+      CFGFLAGS+=" --with-tests-cmd=\"mpiexec -np 1 --map-by node:PE=16\""
+    else
+      CFGFLAGS+=" --with-tests-cmd=\"mpiexec -np 2 --map-by node:PE=16\""
+    fi
+   ;;
   *)
     exit 1
     ;;
@@ -199,11 +263,18 @@ case "$SYSTEM" in
           ;;
     esac  
     ;; 
-  HPX5_BIGRED2 | HPX5_EDISON)
+  HPX5_BIGRED2 | MARCINS_SWAN | HPX5_EDISON | HPX5_HOPPER)
     CFGFLAGS+=" CC=cc"
     ;;
   HPX5_STAMPEDE)
-    CFGFLAGS+=" CC=icc"
+    if [ "$HPXMODE_AXIS" == smp ] ; then
+      CFGFLAGS+=" CC=icc"
+    else
+      CFGFLAGS+=" CC=mpicc"
+    fi
+    ;;
+  HPX5_C-SWARM)
+    CFGFLAGS+=" CC=gcc"
     ;;
   *)
     exit 1
@@ -221,10 +292,7 @@ esac
 
 if [ "$OP" == "build" ]; then
     case "$SYSTEM" in
-      CREST_cutter)
-        CFG_CMD="../configure"
-        ;;
-      HPX5_BIGRED2 | HPX5_EDISON)
+      CREST_cutter | HPX5_BIGRED2 | MARCINS_SWAN | HPX5_EDISON | HPX5_HOPPER | HPX5_C-SWARM)
         CFG_CMD="../configure"
         ;;
       HPX5_STAMPEDE)
@@ -237,34 +305,92 @@ if [ "$OP" == "build" ]; then
    do_build
 fi
 
+function check_output() {
+    # Check the output of the unit tests:
+    if grep '^# FAIL: *0$' $BUILD_DIR/tests/unit/test-suite.log
+     then
+       echo "FAIL: 0"
+     else
+       cat $BUILD_DIR/tests/unit/test-suite.log
+       exit 1
+    fi
+
+    if egrep -q "(ERROR:)\s+[1-9][0-9]*" $BUILD_DIR/tests/unit/test-suite.log
+      then
+        cat $BUILD_DIR/tests/unit/test-suite.log
+        exit 1
+    fi
+}
+
 if [ "$OP" == "run" ]; then
     echo "Running the regression test"
-    cd "$DIR/build"
+    if [[ "$SYSTEM" != "HPX5_C-SWARM" ]] || [[ "$HPXMODE_AXIS" != "photon" ]]; then
+      BUILD_DIR="$DIR/build"
+      cd "$DIR/build"
+    fi
    
     case "$SYSTEM" in	 
       HPX5_STAMPEDE)
-        module load intel/13.1.1.163
-        module load  impi/4.1.3.049
+      module unload intel
+      module unload impi
+      module unload mvapich2
+      module load intel/14.0.1.106
+      module load impi/4.1.3.049
       ;;
     esac
 
     # Run all the unit tests:
-    make check -C tests
+    if [ "$SYSTEM" != "HPX5_C-SWARM" ]; then
+      make check -C tests
+    else
+      case "$HPXMODE_AXIS" in
+        smp)
+          JOBID=$(qsub $DIR/scripts/run_check_smp.job 2>&1)
+          ;;
+        mpi)
+          JOBID=$(qsub $DIR/scripts/run_check_mpi.job 2>&1)
+          ;;
+        photon)
+          BUILD_DIR="$DIR"
+          cd "$DIR"
+          if [[ "$BUILD_AXIS" == "dynamic" ]] && [[ "$JEMALLOC_AXIS" == "enable" ]]; then
+            JOBID=$(qsub $DIR/scripts/run_check_photon_ejed.job 2>&1)
+          elif [[ "$BUILD_AXIS" == "dynamic" ]] && [[ "$JEMALLOC_AXIS" == "disable" ]]; then
+            JOBID=$(qsub $DIR/scripts/run_check_photon_djed.job 2>&1)
+          elif [[ "$BUILD_AXIS" == "static" ]] && [[ "$JEMALLOC_AXIS" == "enable" ]]; then
+            JOBID=$(qsub $DIR/scripts/run_check_photon_ejes.job 2>&1)
+          elif [[ "$BUILD_AXIS" == "static" ]] && [[ "$JEMALLOC_AXIS" == "disable" ]]; then
+            JOBID=$(qsub $DIR/scripts/run_check_photon_djes.job 2>&1)
+          fi    
+          ;;
+      esac
 
-    # Check the output of the unit tests:
-    if grep '^# FAIL: *0$' $DIR/build/tests/unit/test-suite.log
-     then
-       echo "FAIL: 0"
-     else
-       cat $DIR/build/tests/unit/test-suite.log
-       exit 1
-    fi
+      # The job id is actually the first numbers in the string (slurm support)
+      JOBID=`echo $JOBID | awk 'match($0,/[0-9]+/){print substr($0, RSTART, RLENGTH)}'`
+  
+      RC=$(qstat | grep $JOBID 2>&1)  
+      while [ ! -z "$RC" ]; do
+        sleep 10;
+        RC=$(qstat | grep $JOBID 2>&1)
+      done; 
 
-    if egrep -q "(ERROR:)\s+[1-9][0-9]*" $DIR/build/tests/unit/test-suite.log
+      echo "$(cat $BUILD_DIR/regression_test.o*)"
+      sleep 10;
+      if grep 'Error' $BUILD_DIR/regression_test.o*
       then
-        cat $DIR/build/tests/unit/test-suite.log
         exit 1
+      fi
+    
+      if [ ! -f $BUILD_DIR/tests/unit/test-suite.log ]; then
+        cat $BUILD_DIR/regression_test.o*
+        echo "test-suite.log file not found!"
+        exit 1
+      else
+        check_output
+        exit 0
+      fi
     fi
+    check_output
 fi
 
 exit 0

@@ -19,10 +19,10 @@ TESTS = bcast                   \
         lco_and                 \
         lco_and_set_fail        \
         lco_array               \
-        lco_channels            \
         lco_collectives         \
         lco_futures             \
         lco_gencount            \
+        lco_reduce              \
         lco_sema                \
         lco_setget              \
         lco_user                \
@@ -56,7 +56,6 @@ gas_memput_SOURCES                  =  gas_memput.c
 lco_and_SOURCES                     =  lco_and.c
 lco_and_set_fail_SOURCES            =  lco_and_set_fail.c
 lco_array_SOURCES                   =  lco_array.c
-lco_channels_SOURCES                =  lco_channels.c
 lco_collectives_SOURCES             =  lco_collectives.c
 lco_futures_SOURCES                 =  lco_futures.c
 lco_gencount_SOURCES                =  lco_gencount.c
@@ -87,7 +86,6 @@ gas_memput_DEPENDENCIES             = $(HPX_DEPS)
 lco_and_DEPENDENCIES                = $(HPX_DEPS)
 lco_and_set_fail_DEPENDENCIES       = $(HPX_DEPS)
 lco_array_DEPENDENCIES              = $(HPX_DEPS)
-lco_channels_DEPENDENCIES           = $(HPX_DEPS)
 lco_collectives_DEPENDENCIES        = $(HPX_DEPS)
 lco_futures_DEPENDENCIES            = $(HPX_DEPS)
 lco_gencount_DEPENDENCIES           = $(HPX_DEPS)

@@ -13,6 +13,10 @@
 #ifndef HPX_TOPOLOGY_H
 #define HPX_TOPOLOGY_H
 
+/// @defgroup other Other
+/// @brief Miscellaneous support functions and definitions
+/// @{
+
 /// @file include/hpx/topology.h
 /// @brief HPX topology interface
 
@@ -49,5 +53,7 @@ int hpx_get_my_thread_id(void);
 
 /// @copydoc hpx_get_my_thread_id()
 #define HPX_THREAD_ID hpx_get_my_thread_id()
+
+/// @}
 
 #endif

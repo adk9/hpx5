@@ -10,7 +10,9 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 /// Given a set of elements distributed across all processes, Allgather will
 /// gather all of the elements to all the processes. It gathers and broadcasts
@@ -62,11 +64,6 @@
 ///           #      #      #      #      #      #
 ///           ####################################
 
-
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 /// @file libhpx/scheduler/allgather.c
 /// @brief Defines the allgather LCO.
 #include <assert.h>
@@ -74,7 +71,6 @@
 
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
-#include <libhpx/memory.h>
 #include <libhpx/scheduler.h>
 #include "cvar.h"
 #include "lco.h"
@@ -114,7 +110,6 @@ static void _allgather_fini(lco_t *lco) {
     free(g->value);
   }
   lco_fini(lco);
-  global_free(lco);
 }
 
 /// Handle an error condition.
@@ -139,7 +134,7 @@ static hpx_status_t _allgather_attach(lco_t *lco, hpx_parcel_t *p) {
   lco_lock(lco);
   _allgather_t *g = (_allgather_t *)lco;
 
-  // Pick attach to mean "set" for allgather. We have to wait for gathering to 
+  // Pick attach to mean "set" for allgather. We have to wait for gathering to
   // complete before sending the parcel.
   if (g->phase != _gathering) {
     status = cvar_attach(&g->wait, p);
@@ -277,38 +272,38 @@ hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id,
 }
 
 
-static HPX_PINNED(_allgather_setid_proxy, _allgather_t *g, void *args) {
+static int _allgather_setid_proxy_handler(_allgather_t *g, void *args, size_t n) {
   // otherwise we pinned the LCO, extract the arguments from @p args and use the
   // local setid routine
   _allgather_set_offset_t *a = args;
-  size_t size = hpx_thread_current_args_size() - sizeof(_allgather_set_offset_t);
+  size_t size = n - sizeof(_allgather_set_offset_t);
   return _allgather_setid(g, a->offset, size, &a->buffer);
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _allgather_setid_proxy,
+                  _allgather_setid_proxy_handler, HPX_POINTER,
+                  HPX_POINTER, HPX_SIZE_T);
 
 /// Update the gathering, will wait if the phase is reading.
-static void
-_allgather_set(lco_t *lco, int size, const void *from)
-{
+static void _allgather_set(lco_t *lco, int size, const void *from) {
   // can't call set on an allgather
   hpx_abort();
 }
 
-static void _allgather_init(_allgather_t *g, size_t participants, size_t size) {
-  // vtable
-  static const lco_class_t vtable = {
-    .on_fini     = _allgather_fini,
-    .on_error    = _allgather_error,
-    .on_set      = _allgather_set,
-    .on_attach   = _allgather_attach,
-    .on_get      = _allgather_get,
-    .on_getref   = NULL,
-    .on_release  = NULL,
-    .on_wait     = _allgather_wait,
-    .on_reset    = _allgather_reset,
-    .on_size     = _allgather_size
-  };
+static const lco_class_t _allgather_vtable = {
+  .on_fini     = _allgather_fini,
+  .on_error    = _allgather_error,
+  .on_set      = _allgather_set,
+  .on_attach   = _allgather_attach,
+  .on_get      = _allgather_get,
+  .on_getref   = NULL,
+  .on_release  = NULL,
+  .on_wait     = _allgather_wait,
+  .on_reset    = _allgather_reset,
+  .on_size     = _allgather_size
+};
 
-  lco_init(&g->lco, &vtable);
+static int _allgather_init_handler(_allgather_t *g, size_t participants, size_t size) {
+  lco_init(&g->lco, &_allgather_vtable);
   cvar_reset(&g->wait);
   g->participants = participants;
   g->count = participants;
@@ -321,7 +316,11 @@ static void _allgather_init(_allgather_t *g, size_t participants, size_t size) {
     g->value = malloc(size * participants);
     assert(g->value);
   }
+
+  return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _allgather_init_async,
+                  _allgather_init_handler, HPX_POINTER, HPX_SIZE_T, HPX_SIZE_T);
 
 /// Allocate a new gather LCO. It gathers elements from each process in order
 /// of their rank and sends the result to all the processes
@@ -333,20 +332,32 @@ static void _allgather_init(_allgather_t *g, size_t participants, size_t size) {
 /// @param participants The static number of participants in the gathering.
 /// @param size         The size of the data being gathered.
 hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size) {
-  _allgather_t *g = global_malloc(sizeof(*g));
-  assert(g);
-  _allgather_init(g, inputs, size);
-  return lva_to_gva(g);
+  _allgather_t *g = NULL;
+  hpx_addr_t gva = hpx_gas_alloc_local(sizeof(*g), 0);
+  dbg_assert_str(gva, "Could not malloc global memory\n");
+  if (!hpx_gas_try_pin(gva, (void**)&g)) {
+    int e = hpx_call_sync(gva, _allgather_init_async, NULL, 0, &inputs, &size);
+    dbg_check(e, "couldn't initialize allgather at %lu\n", gva);
+  }
+  else {
+    _allgather_init_handler(g, inputs, size);
+    hpx_gas_unpin(gva);
+  }
+  return gva;
 }
 
 /// Initialize a block of array of lco.
-static HPX_PINNED(_block_local_init, void *lco, uint32_t *args) {
-  for (int i = 0; i < args[0]; i++) {
-    void *addr = (void *)((uintptr_t)lco + i * (sizeof(_allgather_t) + args[2]));
-    _allgather_init(addr, args[1], args[2]);
+static int _block_local_init_handler(void *lco, uint32_t n, uint32_t inputs,
+                                     uint32_t size) {
+  for (int i = 0; i < n; i++) {
+    void *addr = (void *)((uintptr_t)lco + i * (sizeof(_allgather_t) + size));
+    _allgather_init_handler(addr, inputs, size);
   }
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
+                  _block_local_init_handler, HPX_POINTER, HPX_UINT32,
+                  HPX_UINT32, HPX_UINT32);
 
 /// Allocate an array of allgather LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate
@@ -360,12 +371,11 @@ hpx_addr_t hpx_lco_allgather_local_array_new(int n, size_t inputs, size_t size) 
   uint32_t block_bytes = n * lco_bytes;
   hpx_addr_t base = hpx_gas_alloc_local(block_bytes, 0);
 
-  uint32_t args[] = {n, inputs, size};
-  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &args, sizeof(args));
+  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &n, &inputs, &size);
   dbg_check(e, "call of _block_init_action failed\n");
 
   // return the base address of the allocation
   return base;
 }
- 
+
 

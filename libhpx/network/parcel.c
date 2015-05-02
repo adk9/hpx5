@@ -38,13 +38,9 @@
 #include <libhpx/parcel.h>
 #include <libhpx/parcel_block.h>
 #include <libhpx/scheduler.h>
+#include <libhpx/topo.h>
 
 #ifdef ENABLE_INSTRUMENTATION
-#define ID_RANK_OFFSET 46 // 18 bits for 16k ranks
-#define ID_WORKER_OFFSET 38 // ID_RANK_OFFSET - 8, for 256 cores
-#define ID_RANK_MASK 0x3ffffUL
-#define ID_WORKER_MASK 0x7fUL
-#define ID_COUNT_MASK 0x7fffffffffUL
 __thread uint64_t parcel_count = 0;
 #endif
 
@@ -58,8 +54,8 @@ static int _delete_launch_through_parcel_handler(hpx_parcel_t *p) {
   parcel_delete(p);
   return HPX_SUCCESS;
 }
-static HPX_ACTION_DEF(DEFAULT, _delete_launch_through_parcel_handler,
-                      _delete_launch_through_parcel, HPX_POINTER);
+static HPX_ACTION(HPX_DEFAULT, 0, _delete_launch_through_parcel,
+                  _delete_launch_through_parcel_handler, HPX_POINTER);
 
 static void _prepare(hpx_parcel_t *p) {
   parcel_state_t state = parcel_get_state(p);
@@ -94,19 +90,23 @@ int parcel_launch(hpx_parcel_t *p) {
 
   _prepare(p);
 
-  log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64") => %s@(%"PRIu64")\n",
-             p->pid,
-             p->credit,
-             action_table_get_key(here->actions, p->action),
-             hpx_parcel_get_data(p),
-             p->size,
-             p->target,
-             action_table_get_key(here->actions, p->c_action),
-             p->c_target);
+#ifdef ENABLE_LOGGING
+  if (p->action != scheduler_nop) {
+    log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64") => %s@(%"PRIu64")\n",
+               p->pid,
+               p->credit,
+               action_table_get_key(here->actions, p->action),
+               hpx_parcel_get_data(p),
+               p->size,
+               p->target,
+               action_table_get_key(here->actions, p->c_action),
+               p->c_target);
+  }
+#endif
 
   // do a local send through loopback, bypassing the network, otherwise dump the
   // parcel out to the network
-  if (gas_owner_of(here->gas, p->target) == here->rank) {
+  if (hpx_gas_try_pin(p->target, NULL)) {
     scheduler_spawn(p);
     return HPX_SUCCESS;
   }
@@ -146,9 +146,8 @@ void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
 #ifdef ENABLE_INSTRUMENTATION
   if (inst_trace_class(HPX_INST_CLASS_PARCEL)) {
     parcel_count++;
-    p->id = ((uint64_t)(hpx_get_my_rank() & ID_RANK_MASK) << ID_RANK_OFFSET) | 
-      ((uint64_t)(hpx_get_my_thread_id() & ID_WORKER_MASK) << ID_WORKER_OFFSET) |
-      (parcel_count & ID_COUNT_MASK);
+    p->id = topo_offset_to_value(hpx_get_my_rank(), hpx_get_my_thread_id(),
+                                 parcel_count);
   }
 #endif
 

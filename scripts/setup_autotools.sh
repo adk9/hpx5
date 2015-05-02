@@ -7,7 +7,7 @@ fi
 
 PREFIX=$1
 
-DLDIR=$(mktemp)
+DLDIR=$(mktemp -d hpx.XXXXXXX --tmpdir=/tmp)
 SAVEDIR=$PWD
 SAVEPATH=$PATH
 PATH=${PREFIX}/bin:$SAVEPATH
@@ -17,11 +17,16 @@ AM=automake-1.15
 AC=autoconf-2.69
 LT=libtool-2.4.6
 
-echo -n "Downloading packages..."
-wget -q -P $DLDIR http://ftp.gnu.org/gnu/m4/${M4}.tar.gz 
-wget -q -P $DLDIR http://ftp.gnu.org/gnu/automake/${AM}.tar.gz
-wget -q -P $DLDIR http://ftp.gnu.org/gnu/autoconf/${AC}.tar.gz
-wget -q -P $DLDIR http://mirrors.axint.net/repos/gnu.org/libtool/${LT}.tar.gz
+CMD="wget -O"
+if ! type "wgeta" > /dev/null; then
+  CMD="curl -o"
+fi
+
+echo -n "Downloading packages to ${DLDIR}..."
+${CMD} ${DLDIR}/${M4}.tar.gz http://ftp.gnu.org/gnu/m4/${M4}.tar.gz 
+${CMD} ${DLDIR}/${AM}.tar.gz http://ftp.gnu.org/gnu/automake/${AM}.tar.gz
+${CMD} ${DLDIR}/${AC}.tar.gz http://ftp.gnu.org/gnu/autoconf/${AC}.tar.gz
+${CMD} ${DLDIR}/${LT}.tar.gz http://mirrors.axint.net/repos/gnu.org/libtool/${LT}.tar.gz
 echo "done"
 
 cd $DLDIR

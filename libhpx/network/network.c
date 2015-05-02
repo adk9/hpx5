@@ -23,44 +23,52 @@
 #include "pwc/pwc.h"
 #include "smp.h"
 
-static network_t *_default(const config_t *cfg, struct boot *boot,
-                           struct gas *gas) {
+static const int LEVEL = HPX_LOG_CONFIG | HPX_LOG_NET | HPX_LOG_DEFAULT;
+
+network_t *network_new(const config_t *cfg, boot_t *boot, struct gas *gas) {
+  libhpx_network_t type = cfg->network;
+  int ranks = boot_n_ranks(boot);
   network_t *network = NULL;
-  if (boot_n_ranks(boot) == 1) {
-    network = network_smp_new(cfg, boot);
-    if (network) {
-      return network;
+
+  // default to HPX_NETWORK_SMP for SMP execution
+  if (ranks == 1) {
+    if (type != HPX_NETWORK_SMP && type != HPX_NETWORK_DEFAULT) {
+      log_level(LEVEL, "%s overriden to SMP.\n", HPX_NETWORK_TO_STRING[type]);
     }
+    type = HPX_NETWORK_SMP;
   }
 
+  if (ranks > 1) {
+#ifndef HAVE_NETWORK
+    dbg_error("Launched on %d ranks but no network available\n", ranks);
+#endif
+  }
+
+  if (ranks > 1 && type == HPX_NETWORK_SMP) {
+    dbg_error("SMP network selection fails for %d ranks\n", ranks);
+  }
+
+  if (type == HPX_NETWORK_PWC) {
+#ifndef HAVE_PHOTON
+    dbg_error("PWC network selection fails (photon disabled in config)\n");
+#endif
+  }
+
+  // handle default
+  if (type == HPX_NETWORK_DEFAULT) {
 #ifdef HAVE_PHOTON
-  network = network_pwc_funneled_new(cfg, boot, gas);
-  if (network) {
-    return network;
-  }
+    type = HPX_NETWORK_PWC;
+#else
+    type = HPX_NETWORK_ISIR;
 #endif
-
-#ifdef HAVE_MPI
-  network =  network_isir_funneled_new(cfg, boot, gas);
-  if (network) {
-    return network;
   }
-#endif
 
-  network = network_smp_new(cfg, boot);
-  return network;
-}
-
-network_t *network_new(const config_t *cfg, struct boot *boot, struct gas *gas)
-{
-  network_t *network = NULL;
-
-  switch (cfg->network) {
+  switch (type) {
    case HPX_NETWORK_PWC:
 #ifdef HAVE_NETWORK
     network = network_pwc_funneled_new(cfg, boot, gas);
 #else
-    log_cfg("network support not enabled\n");
+    log_level(LEVEL, "PWC network unavailable (no network configured)\n");
 #endif
     break;
 
@@ -68,7 +76,7 @@ network_t *network_new(const config_t *cfg, struct boot *boot, struct gas *gas)
 #ifdef HAVE_NETWORK
     network = network_isir_funneled_new(cfg, boot, gas);
 #else
-    log_cfg("network support not enabled\n");
+    log_level(LEVEL, "ISIR network unavailable (no network configured)\n");
 #endif
     break;
 
@@ -77,19 +85,15 @@ network_t *network_new(const config_t *cfg, struct boot *boot, struct gas *gas)
     break;
 
    default:
-    network = _default(cfg, boot, gas);
+    log_level(LEVEL, "unknown network type\n");
     break;
   }
 
-  if (!network && (cfg->network == HPX_NETWORK_DEFAULT)) {
-    network = _default(cfg, boot, gas);
-  }
-
   if (!network) {
-    dbg_error("failed to initialize the network\n");
+    dbg_error("%s did not initialize\n", HPX_NETWORK_TO_STRING[cfg->network]);
   }
   else {
-    log("network initialized using %s\n", HPX_NETWORK_TO_STRING[network->type]);
+    log_level(LEVEL, "%s network initialized\n", HPX_NETWORK_TO_STRING[type]);
   }
 
   return network;

@@ -10,13 +10,14 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+#include <assert.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttypes.h>
 #include <unistd.h>
-#include "hpx/hpx.h"
 #include <pthread.h>
-#include "libhpx/debug.h"
+#include <hpx/hpx.h>
+#include "timeout.h"
 
 #define BENCHMARK "HPX COST OF LCO SEMAPHORES"
 
@@ -33,9 +34,9 @@ static int num[] = {
 };
 
 static int _thread1_handler(uint32_t iter, hpx_addr_t sem1, hpx_addr_t sem2) {
-  dbg_assert(sem1 != sem2);
-  dbg_assert(sem1 != hpx_thread_current_cont_target());
-  dbg_assert(sem2 != hpx_thread_current_cont_target());
+  assert(sem1 != sem2);
+  assert(sem1 != hpx_thread_current_cont_target());
+  assert(sem2 != hpx_thread_current_cont_target());
   hpx_time_t t = hpx_time_now();
   hpx_addr_t and = hpx_lco_and_new(iter);
   for (int j = 0; j < iter; j++) {
@@ -48,13 +49,13 @@ static int _thread1_handler(uint32_t iter, hpx_addr_t sem1, hpx_addr_t sem2) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION_DEF(DEFAULT, _thread1_handler, _thread1, HPX_UINT32, HPX_ADDR,
-                      HPX_ADDR);
+static HPX_ACTION(HPX_DEFAULT, 0, _thread1, _thread1_handler, HPX_UINT32, HPX_ADDR,
+                  HPX_ADDR);
 
 static int _thread2_handler(uint32_t iter, hpx_addr_t sem1, hpx_addr_t sem2) {
-  dbg_assert(sem1 != sem2);
-  dbg_assert(sem1 != hpx_thread_current_cont_target());
-  dbg_assert(sem2 != hpx_thread_current_cont_target());
+  assert(sem1 != sem2);
+  assert(sem1 != hpx_thread_current_cont_target());
+  assert(sem2 != hpx_thread_current_cont_target());
 
   hpx_time_t t = hpx_time_now();
   hpx_addr_t and = hpx_lco_and_new(iter);
@@ -68,10 +69,10 @@ static int _thread2_handler(uint32_t iter, hpx_addr_t sem1, hpx_addr_t sem2) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION_DEF(DEFAULT, _thread2_handler, _thread2, HPX_UINT32, HPX_ADDR,
-                      HPX_ADDR);
+static HPX_ACTION(HPX_DEFAULT, 0, _thread2, _thread2_handler, HPX_UINT32, HPX_ADDR,
+                  HPX_ADDR);
 
-static HPX_ACTION(_main, void) {
+static int _main_handler(void) {
   printf(HEADER);
   printf("Semaphore non contention performance\n");
   printf("%s%*s%*s\n", "# Iters " , FIELD_WIDTH, "Init time ", FIELD_WIDTH,
@@ -117,6 +118,7 @@ static HPX_ACTION(_main, void) {
 
   hpx_shutdown(HPX_SUCCESS);
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_handler);
 
 int main(int argc, char *argv[]) {
   if (hpx_init(&argc, &argv)) {
@@ -124,7 +126,9 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  set_timeout(30);
+
   // run the main action
-  return hpx_run(&_main, NULL, 0);
+  return hpx_run(&_main);
 }
 

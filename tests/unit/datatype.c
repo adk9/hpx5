@@ -68,7 +68,7 @@ static int _test_nxyz(struct point point) {
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(test_datatype, void *UNUSED) {
+static int test_datatype_handler(void) {
   printf("Test hpx array types\n");
   struct num n = fib;
   hpx_call_sync(HPX_HERE, _test_array, NULL, 0, &n);
@@ -84,6 +84,7 @@ static HPX_ACTION(test_datatype, void *UNUSED) {
   hpx_shutdown(HPX_SUCCESS);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, test_datatype, test_datatype_handler);
 
 int main(int argc, char *argv[]) {
   if (hpx_init(&argc, &argv)) {
@@ -108,7 +109,7 @@ int main(int argc, char *argv[]) {
   assert(point_struct_type);
   HPX_REGISTER_TYPED_ACTION(DEFAULT, _test_nxyz, &_test_point, point_struct_type);
 
-  int e = hpx_run(&test_datatype, NULL, 0);
+  int e = hpx_run(&test_datatype);
 
   hpx_type_destroy(point_struct_type);
   hpx_type_destroy(struct_type);

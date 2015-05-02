@@ -10,11 +10,12 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttypes.h>
 #include <unistd.h>
-#include "hpx/hpx.h"
+#include <hpx/hpx.h>
+#include "timeout.h"
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: time_gas_addr_trans [options]\n"
@@ -41,7 +42,7 @@ static int num[] = {
   50000
 };
 
-static int _address_translation_action(void* args) {
+static int _address_translation_action(void* args, size_t size) {
   hpx_addr_t local = hpx_thread_current_target();
 
   // The pinned local address
@@ -58,7 +59,7 @@ static int _address_translation_action(void* args) {
   hpx_thread_continue(0, NULL);
 }
 
-static int _main_action(void *args) {
+static int _main_action(void *args, size_t n) {
   hpx_time_t now;
   double elapsed;
   int size = HPX_LOCALITIES;
@@ -134,8 +135,10 @@ main(int argc, char *argv[]) {
   }
 
   // register the actions
-  HPX_REGISTER_ACTION(_address_translation_action, &_address_translation);
-  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _address_translation, _address_translation_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+
+  set_timeout(30);
 
   // run the main action
   return hpx_run(&_main, NULL, 0);

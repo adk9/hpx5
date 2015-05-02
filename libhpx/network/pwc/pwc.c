@@ -21,6 +21,7 @@
 #include <libhpx/boot.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
+#include <libhpx/gpa.h>
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
@@ -119,9 +120,9 @@ static int _rendezvous_launch_handler(int src, command_t cmd) {
   scheduler_spawn(p);
   return HPX_SUCCESS;
 }
-COMMAND_DEF(INTERRUPT, _rendezvous_launch_handler, _rendezvous_launch);
+COMMAND_DEF(HPX_INTERRUPT, _rendezvous_launch, _rendezvous_launch_handler);
 
-static HPX_INTERRUPT(_rendezvous_get, _rendezvous_get_args_t *args) {
+static int _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size) {
   pwc_network_t *pwc = (pwc_network_t*)here->network;
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, args->n - sizeof(*p));
   dbg_assert(p);
@@ -139,6 +140,8 @@ static HPX_INTERRUPT(_rendezvous_get, _rendezvous_get_args_t *args) {
   dbg_check(e, "could not issue get during rendezvous parcel\n");
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_INTERRUPT, HPX_MARSHALLED, _rendezvous_get,
+                  _rendezvous_get_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int _pwc_rendezvous_send(pwc_network_t *pwc, hpx_parcel_t *p, int rank) {
   size_t n = parcel_size(p);
@@ -190,7 +193,7 @@ static int _pwc_pwc(void *network,
                     hpx_action_t rop, hpx_addr_t raddr) {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(here->gas, to);
-  uint64_t offset = gas_offset_of(here->gas, to);
+  uint64_t offset = gpa_to_offset(to);
 
   xport_op_t op = {
     .rank = rank,
@@ -217,7 +220,8 @@ static int _pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
                     hpx_action_t lop, hpx_addr_t laddr) {
   pwc_network_t *pwc = network;
   int rank = gas_owner_of(here->gas, from);
-  uint64_t offset = gas_offset_of(here->gas, from);
+  uint64_t offset = gpa_to_offset(from);
+
   xport_op_t op = {
     .rank = rank,
     .n = n,
@@ -273,8 +277,8 @@ network_t *network_pwc_funneled_new(const config_t *cfg, boot_t *boot,
 
   // Validate configuration.
   if (cfg->pwc_parceleagerlimit > cfg->pwc_parcelbuffersize) {
-    dbg_error(" --hpx-pwc-parceleagerlimit (%lu) must be less than "
-              "--hpx-pwc-parcelbuffersize (%lu)\n",
+    dbg_error(" --hpx-pwc-parceleagerlimit (%zu) must be less than "
+              "--hpx-pwc-parcelbuffersize (%zu)\n",
               cfg->pwc_parceleagerlimit, cfg->pwc_parcelbuffersize);
   }
 

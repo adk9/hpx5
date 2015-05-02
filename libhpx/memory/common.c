@@ -39,7 +39,7 @@ void *common_chunk_alloc(void *obj, void *addr, size_t size, size_t align,
   if (zero && *zero) {
     memset(chunk, 0, size);
   }
-  else {
+  else if (zero) {
     *zero = false;
   }
   return chunk;

@@ -45,13 +45,13 @@ hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bsize, uint32_t boundary,
   int type = (int)gas_get_dist_type(dist);
   switch (type) {
    case (HPX_DIST_TYPE_LOCAL):
-     return hpx_gas_alloc_local(n*bsize, boundary);
+    return hpx_gas_calloc_local(n, bsize, boundary);
    case (HPX_DIST_TYPE_CYCLIC):
-     return hpx_gas_alloc_cyclic(n, bsize, boundary);
+    return hpx_gas_alloc_cyclic(n, bsize, boundary);
    case (HPX_DIST_TYPE_BLOCKED):
-     return hpx_gas_alloc_blocked(n, bsize, boundary);
+    return hpx_gas_alloc_blocked(n, bsize, boundary);
    case (HPX_DIST_TYPE_USER):
-     return hpx_gas_alloc_user(n, bsize, boundary, dist);
+    return hpx_gas_alloc_user(n, bsize, boundary, dist);
    default: dbg_error("Unknown gas distribution type %d.\n", type);
   }
 }
@@ -62,40 +62,40 @@ hpx_addr_t hpx_gas_calloc(size_t n, uint32_t bsize, uint32_t boundary,
   int type = (int)gas_get_dist_type(dist);
   switch (type) {
    case (HPX_DIST_TYPE_LOCAL):
-     return hpx_gas_calloc_local(n, bsize, boundary);
+    return hpx_gas_calloc_local(n, bsize, boundary);
    case (HPX_DIST_TYPE_CYCLIC):
-     return hpx_gas_calloc_cyclic(n, bsize, boundary);
+    return hpx_gas_calloc_cyclic(n, bsize, boundary);
    case (HPX_DIST_TYPE_BLOCKED):
-     return hpx_gas_calloc_blocked(n, bsize, boundary);
+    return hpx_gas_calloc_blocked(n, bsize, boundary);
    case (HPX_DIST_TYPE_USER):
-     return hpx_gas_calloc_user(n, bsize, boundary, dist);
+    return hpx_gas_calloc_user(n, bsize, boundary, dist);
    default: dbg_error("Unknown gas distribution type %d.\n", type);
   }
 }
 
 hpx_addr_t HPX_THERE(uint32_t i) {
   dbg_assert(here && here->gas && here->gas->there);
-  return here->gas->there(i);
+  return here->gas->there(here->gas, i);
 }
 
 hpx_addr_t hpx_addr_add(hpx_addr_t addr, int64_t bytes, uint32_t bsize) {
   dbg_assert(here && here->gas && here->gas->add);
-  return here->gas->add(addr, bytes, bsize);
+  return here->gas->add(here->gas, addr, bytes, bsize);
 }
 
 int64_t hpx_addr_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   dbg_assert(here && here->gas && here->gas->sub);
-  return here->gas->sub(lhs, rhs, bsize);
+  return here->gas->sub(here->gas, lhs, rhs, bsize);
 }
 
 bool hpx_gas_try_pin(const hpx_addr_t addr, void **local) {
-  dbg_assert(here && here->gas);
-  return here->gas->try_pin(addr, local);
+  dbg_assert(here && here->gas && here->gas->try_pin);
+  return here->gas->try_pin(here->gas, addr, local);
 }
 
 void hpx_gas_unpin(const hpx_addr_t addr) {
-  dbg_assert(here && here->gas);
-  here->gas->unpin(addr);
+  dbg_assert(here && here->gas && here->gas->unpin);
+  here->gas->unpin(here->gas, addr);
 }
 
 hpx_addr_t hpx_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
@@ -120,27 +120,27 @@ hpx_addr_t hpx_gas_calloc_blocked(size_t n, uint32_t bsize, uint32_t boundary) {
 
 hpx_addr_t hpx_gas_alloc_local(uint32_t bsize, uint32_t boundary) {
   dbg_assert(here && here->gas && here->gas->alloc_local);
-  return here->gas->alloc_local(bsize, boundary);
+  return here->gas->alloc_local(here->gas, bsize, boundary);
 }
 
 hpx_addr_t hpx_gas_calloc_local(size_t nmemb, size_t size, uint32_t boundary) {
   dbg_assert(here && here->gas && here->gas->calloc_local);
-  return here->gas->calloc_local(nmemb, size, boundary);
+  return here->gas->calloc_local(here->gas, nmemb, size, boundary);
 }
 
 void hpx_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
   dbg_assert(here && here->gas);
-  here->gas->free(addr, sync);
+  here->gas->free(here->gas, addr, sync);
 }
 
 void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
   dbg_assert(here && here->gas && here->gas->move);
-  here->gas->move(src, dst, lco);
+  here->gas->move(here->gas, src, dst, lco);
 }
 
 int hpx_gas_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync) {
   dbg_assert(here && here->gas && here->gas->memget);
-  return here->gas->memget(to, from, size, lsync);
+  return here->gas->memget(here->gas, to, from, size, lsync);
 }
 
 int hpx_gas_memget_sync(void *to, hpx_addr_t from, size_t size) {
@@ -156,13 +156,13 @@ int hpx_gas_memget_sync(void *to, hpx_addr_t from, size_t size) {
 int hpx_gas_memput(hpx_addr_t to, const void *from, size_t size,
                    hpx_addr_t lsync, hpx_addr_t rsync) {
   dbg_assert(here && here->gas && here->gas->memput);
-  return here->gas->memput(to, from, size, lsync, rsync);
+  return here->gas->memput(here->gas, to, from, size, lsync, rsync);
 }
 
 int hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
 {
   dbg_assert(here && here->gas && here->gas->memcpy);
-  return (*here->gas->memcpy)(to, from, size, sync);
+  return (*here->gas->memcpy)(here->gas, to, from, size, sync);
 }
 
 static int hpx_gas_alloc_local_at_handler(uint32_t bytes, uint32_t boundary) {
@@ -170,8 +170,8 @@ static int hpx_gas_alloc_local_at_handler(uint32_t bytes, uint32_t boundary) {
   dbg_assert(addr);
   HPX_THREAD_CONTINUE(addr);
 }
-HPX_ACTION_DEF(DEFAULT, hpx_gas_alloc_local_at_handler, hpx_gas_alloc_local_at_action,
-               HPX_UINT32, HPX_UINT32);
+HPX_ACTION(HPX_DEFAULT, 0, hpx_gas_alloc_local_at_action, hpx_gas_alloc_local_at_handler,
+           HPX_UINT32, HPX_UINT32);
 
 hpx_addr_t hpx_gas_alloc_local_at_sync(uint32_t bytes, uint32_t boundary, hpx_addr_t loc) {
   hpx_addr_t addr = 0;
@@ -193,8 +193,8 @@ static int _gas_calloc_at_handler(size_t nmemb, size_t size, uint32_t boundary) 
   dbg_assert(addr);
   HPX_THREAD_CONTINUE(addr);
 }
-HPX_ACTION_DEF(DEFAULT, _gas_calloc_at_handler, hpx_gas_calloc_local_at_action,
-               HPX_UINT64, HPX_UINT64, HPX_UINT32);
+HPX_ACTION(HPX_DEFAULT, 0, hpx_gas_calloc_local_at_action, _gas_calloc_at_handler,
+           HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32);
 
 hpx_addr_t hpx_gas_calloc_local_at_sync(size_t nmemb, size_t size, uint32_t boundary,
                                         hpx_addr_t loc) {

@@ -155,8 +155,7 @@ static int _funneled_get(void *network,
   }
 
   // Concoct a global address that points to @p to @ here, and send it over.
-  hpx_addr_t addr = ((uint64_t)here->rank << 48) + (uint64_t)to;
-  return hpx_call(from, isir_emulate_gwc, lsync, &n, &addr);
+  return hpx_call(from, isir_emulate_gwc, lsync, &n, &HPX_HERE, &to);
 }
 
 static hpx_parcel_t *_funneled_probe(void *network, int nrx) {

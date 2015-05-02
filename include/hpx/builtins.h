@@ -63,6 +63,14 @@ static inline uint32_t ceil_log2_64(uint64_t val) {
   return ((sizeof(val) * 8 - 1) - clzl(val)) + (!!(val & (val - 1)));
 }
 
+#if SIZE_MAX > (UINT64_C(1)<<32)
+#define ceil_log2_size_t ceil_log2_64
+#define ceil_log2_uintptr_t ceil_log2_64
+#else
+#define ceil_log2_size_t ceil_log2_32
+#define ceil_log2_uintptr_t ceil_log2_32
+#endif
+
 static inline uint32_t ceil_div_32(uint32_t num, uint32_t denom) {
   return (num / denom) + ((num % denom) ? 1 : 0);
 }
@@ -97,7 +105,7 @@ static inline int32_t max_i32(int32_t lhs, int32_t rhs) {
 /// Macro to count the number of variadic arguments
 /// Source: https://groups.google.com/forum/#!topic/comp.std.c/d-6Mj5Lko_s
 #define __HPX_NARGS(...) __VA_NARG__(__VA_ARGS__)
-#define __VA_NARG__(...) __VA_NARG_(_0, ## __VA_ARGS__, __RSEQ_N())
+#define __VA_NARG__(...) __VA_NARG_(_0, ##__VA_ARGS__, __RSEQ_N())
 #define __VA_NARG_(...) __VA_ARG_N(__VA_ARGS__)
 #define __VA_ARG_N(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, \
                    _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, \

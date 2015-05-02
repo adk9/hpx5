@@ -8,7 +8,7 @@
 # Research in Extreme Scale Technologies (CREST).
 
 AC_PREREQ([2.63])
-AC_INIT([hpx], [5.0.0a1], [hpx@indiana.edu])
+AC_INIT([hpx-5], [1.0.0], [hpx@indiana.edu])
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
 
@@ -29,6 +29,7 @@ HPX_PE_ENV
 
 # Checks for programs.
 AC_PROG_CC_C99
+AC_PROG_CXX
 AC_PROG_INSTALL
 AM_PROG_AS
 
@@ -49,6 +50,7 @@ AC_ARG_ENABLE([parallel-config],
                   [Enable parallel configuration of contribs @<:@default=no@:>@])],
   [trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM], [enable_parallel_config=no])
 
+  
 # Initialize contribs
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
 HPX_CONTRIB_LIBFFI([contrib/libffi], [hpx_])
@@ -91,7 +93,8 @@ AC_ARG_ENABLE([jemalloc],
   [], [enable_jemalloc=no])
 AS_IF([test "x$enable_jemalloc" != xno],
   [HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [], [_local])
-   AC_DEFINE([HAVE_JEMALLOC], [1], [We have jemalloc support for malloc/free/etc])]) 
+   AC_DEFINE([HAVE_JEMALLOC], [1], [We have jemalloc support for malloc/free/etc])]
+   AC_SUBST(HPX_JEMALLOC_LOCAL_LIBS, "$hpx_jemalloc_libs"))
   
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug],
@@ -176,6 +179,20 @@ AS_IF([test "x$DOXYGEN" != x],
  [AC_MSG_WARN([Doxygen not found, disabling source documentation build.])
   enable_docs=no])
 
+# Treat AGAS seperately as it wants to pull in C++
+AC_ARG_ENABLE([agas],
+  [AS_HELP_STRING([--enable-agas],
+                  [Enable AGAS (requires C++11) @<:@default=no@:>@])],
+  [], [enable_agas=no])
+
+AS_IF([test "x$enable_agas" != xno],
+  [AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
+   HPX_CONTRIB_LIBCUCKOO([contrib/libcuckoo], [hpx_])
+   AC_DEFINE([HAVE_AGAS], [1], [We have agas])],
+  [])
+AM_CONDITIONAL([BUILD_AGAS], [test "x$enable_agas" != xno -a "x$enable_network" != xno])
+AM_CONDITIONAL([BUILD_LIBCUCKOO], [test "x$enable_agas" != xno])
+
 # ---------------------------------------------------------------------------
 # Perform host-specific work here.
 # ---------------------------------------------------------------------------
@@ -200,6 +217,13 @@ AS_CASE([$host_os],
 
 AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
 AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
+
+AC_CHECK_SIZEOF([void*])
+AC_CHECK_SIZEOF([size_t])
+AS_IF([test "x$ac_cv_sizeof_size_t" == x4],
+  [AC_DEFINE([HPX_BITNESS_32], [1], [Detected 32-bit platform.])],
+  [AC_DEFINE([HPX_BITNESS_64], [1], [Detected 64-bit platform.])])
+
 
 # -----------------------------------------------------------------------------
 # Set automake conditionals for use in Makefile.am settings.
@@ -263,6 +287,7 @@ AC_CONFIG_FILES([
   libhpx/Makefile
   libhpx/boot/Makefile
   libhpx/gas/Makefile
+  libhpx/gas/agas/Makefile
   libhpx/memory/Makefile
   libhpx/network/Makefile
   libhpx/network/isir/Makefile

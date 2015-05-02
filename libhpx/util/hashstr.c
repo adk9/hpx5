@@ -130,7 +130,7 @@ spooky_hash(const void *str, size_t len)
 
 // Hash a string.
 //
-const uint32_t
-hpx_hash_string(const char *str, size_t len) {
+uint32_t
+hash_string(const char *str, size_t len) {
   return (uint32_t)spooky_hash(str, len);
 }

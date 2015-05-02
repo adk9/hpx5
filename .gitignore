@@ -8,6 +8,7 @@
 *.swp
 *.log
 *.trs
+*.btr
 *Makefile.in
 
 # /
@@ -40,7 +41,6 @@
 /examples/fibonacci
 /examples/pingpong
 /examples/allreduce
-/examples/allreduce-chan
 /examples/countdown
 /examples/seqspawn
 /examples/parspawn
@@ -50,10 +50,7 @@
 /examples/memget
 /examples/guppie
 /examples/sendrecv
-/examples/sendrecv-chan
-/examples/pingpong-chan
 /examples/hello
-/examples/netfutures
 /examples/qsort
 /examples/call
 /examples/netbench
@@ -78,6 +75,7 @@ contrib/jemalloc_hpx/
 contrib/photon/
 contrib/jemalloc_build_global/
 contrib/jemalloc_build_registered/
+contrib/libcuckoo/
 
 # /libhpx/
 /libhpx/Makefile
@@ -112,7 +110,6 @@ tests/unit/process
 tests/unit/lco_collectives
 tests/unit/lco_array
 tests/unit/lco_futures
-tests/unit/lco_channels
 tests/unit/parcel_create
 tests/unit/lco_user
 tests/unit/gas_memget
@@ -124,6 +121,7 @@ tests/unit/lco_gencount
 tests/unit/parcel_continuation
 tests/unit/thread_cont_action
 tests/unit/bcast
+tests/unit/lco_reduce
 tests/unit/lco_sema
 tests/unit/lco_setget
 tests/unit/thread_gettlsid
@@ -135,10 +133,7 @@ tests/unit/parcel_send_rendezvous
 tests/perf/gas_alloc
 tests/perf/gas_addr_trans
 tests/perf/lco_sema
-tests/perf/lco_chan
-tests/perf/lco_netfutures_msgSize
 tests/perf/lco_future
-tests/perf/lco_netfutures
 
 # /docs
 /docs/doxyfile.stamp
@@ -164,15 +159,11 @@ tutorial/Beginners/gas/memget1
 tutorial/Beginners/gas/memput
 tutorial/Beginners/gas/memput1
 tutorial/Beginners/lco/Makefile
-tutorial/Beginners/lco/chan
-tutorial/Beginners/lco/chanSendInorder
-tutorial/Beginners/lco/chanarray
 tutorial/Beginners/lco/lcoAll
 tutorial/Beginners/lco/lcoAnd
 tutorial/Beginners/lco/lcoError
 tutorial/Beginners/lco/lcoFutureArray
 tutorial/Beginners/lco/lcoSetGet
-tutorial/Beginners/lco/probe
 tutorial/Beginners/lco/sema
 tutorial/Beginners/parcel/Makefile
 tutorial/Beginners/parcel/parcelSend

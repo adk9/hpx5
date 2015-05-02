@@ -24,11 +24,12 @@
 
 static int alltoall_handler(boot_t *boot) {
   printf("Entering alltoall_handler at %d\n", HPX_LOCALITY_ID);
-  int src[HPX_LOCALITIES][2];
-  int dst[HPX_LOCALITIES][2];
+  const int NLOC = HPX_LOCALITIES;
+  int src[NLOC][2];
+  int dst[NLOC][2];
 
   int base = here->rank * here->ranks;
-  for (int i = 0, e = HPX_LOCALITIES; i < e; ++i) {
+  for (int i = 0; i < NLOC; ++i) {
     src[i][0] = base + i;
     src[i][1] = here->rank;
     dst[i][0] = here->rank;
@@ -40,7 +41,7 @@ static int alltoall_handler(boot_t *boot) {
   sync_tatas_acquire(&lock);
   {
     printf("src@%d { ", here->rank);
-    for (int i = 0, e = HPX_LOCALITIES; i < e; ++i) {
+    for (int i = 0; i < NLOC; ++i) {
       printf("{%d,%d} ", src[i][0], src[i][1]);
     }
     printf("}\n");
@@ -57,7 +58,7 @@ static int alltoall_handler(boot_t *boot) {
   sync_tatas_acquire(&lock);
   {
     printf("dst@%d { ", here->rank);
-    for (int i = 0, e = HPX_LOCALITIES; i < e; ++i) {
+    for (int i = 0; i < NLOC; ++i) {
       printf("{%d,%d} ", dst[i][0], dst[i][1]);
     }
     printf("}\n");
@@ -66,9 +67,9 @@ static int alltoall_handler(boot_t *boot) {
   sync_tatas_release(&lock);
   boot_barrier(boot);
 
-  for (int i = 0, e = HPX_LOCALITIES; i < e; ++i) {
-    if (dst[i][0] != i * HPX_LOCALITIES + here->rank) {
-      FAIL(dst, "%d:dst[%d][0]=%d, expected %d\n", here->rank, i, dst[i][0], i * HPX_LOCALITIES + here->rank);
+  for (int i = 0; i < NLOC; ++i) {
+    if (dst[i][0] != i * NLOC + here->rank) {
+      FAIL(dst, "%d:dst[%d][0]=%d, expected %d\n", here->rank, i, dst[i][0], i * NLOC + here->rank);
     }
     if (dst[i][1] != here->rank) {
       FAIL(dst, "%d:dst[%d][1]=%d, expected %d\n", here->rank, i, dst[i][1], here->rank);
@@ -79,6 +80,9 @@ static int alltoall_handler(boot_t *boot) {
 }
 
 int main(int argc, char *argv[]) {
+  signal(SIGALRM, timeout);
+  alarm(tests_timeout);
+
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "failed to initialize HPX.\n");
     return 1;
