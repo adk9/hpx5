@@ -18,7 +18,7 @@ AC=autoconf-2.69
 LT=libtool-2.4.6
 
 
-if [-nz `which wget`]
+if [ -nz `which wget` ]
 then
 echo -n "Downloading packages..."
 wget -q -P $DLDIR http://ftp.gnu.org/gnu/m4/${M4}.tar.gz 
