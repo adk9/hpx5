@@ -52,12 +52,41 @@ _agas_delete(void *gas) {
 
 static int64_t
 _agas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
-  return INT64_MAX;;
+  gva_t l = { .addr = lhs };
+  gva_t r = { .addr = rhs };
+
+  uint32_t size = ceil_log2_32(bsize);
+  if (l.bits.size != size || r.bits.size != size) {
+    dbg_error("block size does not match\n");
+  }
+
+  if (l.bits.cyclic && r.bits.cyclic) {
+    dbg_error("unimplemented\n");
+  }
+
+  if (!l.bits.cyclic && !r.bits.cyclic) {
+    if (l.bits.home == r.bits.home) {
+      dbg_error("unimplemented\n");
+    }
+  }
+
+  dbg_error("could not compare pointers between allocations\n");
 }
 
 static hpx_addr_t
-_agas_add(const void *gas, hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
-  return HPX_NULL;
+_agas_add(const void *gas, hpx_addr_t addr, int64_t bytes, uint32_t bsize) {
+  gva_t gva = { .addr = addr };
+  uint32_t size = ceil_log2_32(bsize);
+  if (gva.bits.size != size) {
+    dbg_error("block size does not match\n");
+  }
+
+  if (gva.bits.cyclic) {
+    dbg_error("unimplemented\n");
+  }
+  else {
+    dbg_error("unimplemented\n");
+  }
 }
 
 static hpx_addr_t
