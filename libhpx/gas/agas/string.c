@@ -14,6 +14,8 @@
 # include "config.h"
 #endif
 
+#include <string.h>
+#include <libhpx/locality.h>
 #include <libhpx/network.h>
 #include "agas.h"
 #include "btt.h"
@@ -46,6 +48,7 @@ agas_memget(void *gas, void *to, hpx_addr_t from, size_t n, hpx_addr_t lsync) {
   else {
     return network_get(here->network, to, from, n, lco_set, lsync);
   }
+  return HPX_SUCCESS;
 }
 
 int
