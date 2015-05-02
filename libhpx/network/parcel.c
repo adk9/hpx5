@@ -90,15 +90,19 @@ int parcel_launch(hpx_parcel_t *p) {
 
   _prepare(p);
 
-  log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64") => %s@(%"PRIu64")\n",
-             p->pid,
-             p->credit,
-             action_table_get_key(here->actions, p->action),
-             hpx_parcel_get_data(p),
-             p->size,
-             p->target,
-             action_table_get_key(here->actions, p->c_action),
-             p->c_target);
+#ifdef ENABLE_LOGGING
+  if (p->action != scheduler_nop) {
+    log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64") => %s@(%"PRIu64")\n",
+               p->pid,
+               p->credit,
+               action_table_get_key(here->actions, p->action),
+               hpx_parcel_get_data(p),
+               p->size,
+               p->target,
+               action_table_get_key(here->actions, p->c_action),
+               p->c_target);
+  }
+#endif
 
   // do a local send through loopback, bypassing the network, otherwise dump the
   // parcel out to the network
