@@ -355,15 +355,16 @@ _agas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
   // use the local allocator to get some memory that is part of the global
   // address space
   void *lva = NULL;
+  uint64_t padded = 1 << ceil_log2_32(bytes);
   if (boundary) {
-    lva = global_memalign(boundary, bytes);
+    lva = global_memalign(boundary, padded);
   }
   else {
-    lva = global_malloc(bytes);
+    lva = global_malloc(padded);
   }
 
   agas_t *agas = gas;
-  gva_t gva = _lva_to_gva(gas, lva, bytes);
+  gva_t gva = _lva_to_gva(gas, lva, padded);
   btt_insert(agas->btt, gva, here->rank, lva, 1);
   return gva.addr;
 }
@@ -404,13 +405,12 @@ _agas_free_cyclic_async_handler(hpx_addr_t base) {
   }
 
   // remove all btt entries
-  uint64_t offset = gva.bits.offset;
   size_t blocks = btt_get_blocks(agas->btt, gva);
   size_t bsize = 1 << gva.bits.size;
+  gva.bits.home = here->rank;
   for (int i = 0; i < blocks; i++) {
-    gva.bits.offset = offset + (i * bsize);
-    gva.bits.home = here->rank;
     btt_remove(agas->btt, gva);
+    gva.bits.offset += bsize;
   }
 
   // and free the backing memory
