@@ -30,62 +30,54 @@
 ///
 /// The SMP GAS instance is global and immutable. We do not need to do anything
 /// with it.
-static void _smp_delete(gas_t *gas) {
-}
-
-/// Check to see if an address is a global address.
-static bool _smp_is_global(gas_t *gas, void *addr) {
-  // All of the SMP addresses can be considered global given that they're all in
-  // the normal virtual address space and thus globally visible. The only thing
-  // that is not global is NULL.
-  return (addr != NULL);
-}
-
-/// Find out which locality the address is owned by.
-static uint32_t _smp_locality_of(hpx_addr_t addr) {
-  // SMP global addresses are all owned by the single, rank 0 locality.
-  return 0;
+static void
+_smp_delete(void *gas) {
 }
 
 /// Figure out how far apart two addresses are.
-static int64_t _smp_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
+static int64_t
+_smp_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   dbg_assert(lhs != HPX_NULL);
   dbg_assert(rhs != HPX_NULL);
   return (lhs - rhs);
 }
 
 /// Adjust an address by an offset.
-static hpx_addr_t _smp_add(hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
+static hpx_addr_t
+_smp_add(const void *gas, hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
   dbg_assert(gva != HPX_NULL);
   return gva + bytes;
 }
 
 /// Compute the global address for a local address.
-static hpx_addr_t _smp_lva_to_gva(const void *lva) {
+static hpx_addr_t
+_smp_lva_to_gva(const void *lva) {
+#ifdef HPX_BITNESS_64
   return (hpx_addr_t)lva;
-}
-
-/// Compute the local address for a global address.
-static void *_smp_gva_to_lva(hpx_addr_t addr) {
-  return (void*)addr;
+#else
+  return (hpx_addr_t)(uint32_t)lva;
+#endif
 }
 
 /// Perform address translation and pin the global address.
-static bool _smp_try_pin(const hpx_addr_t addr, void **local) {
+static bool
+_smp_try_pin(void *gas, hpx_addr_t addr, void **local) {
   if (local) {
     // Return the local address, if the user wants it.
-    *local = _smp_gva_to_lva(addr);
+    *local = (void*)(size_t)addr;
   }
   // All addresses are local, so we return true.
   return true;
 }
 
 /// Release an address translation.
-static void _smp_unpin(const hpx_addr_t addr) {
+static void
+_smp_unpin(void *gas, hpx_addr_t addr) {
 }
 
 /// Compute the locality address.
-static hpx_addr_t _smp_there(uint32_t i) {
+static hpx_addr_t
+_smp_there(void *gas, uint32_t i) {
   dbg_assert_str(i == 0, "Rank %d does not exist in the SMP GAS\n", i);
 
   // We use the address of the global "here" locality to represent HPX_HERE.
@@ -93,16 +85,16 @@ static hpx_addr_t _smp_there(uint32_t i) {
 }
 
 /// Allocate a global array.
-static hpx_addr_t _smp_gas_alloc_cyclic(size_t n, uint32_t bsize,
-                                        uint32_t boundary) {
+static hpx_addr_t
+_smp_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
   void *p = boundary ?
       local_memalign(boundary, n * bsize) : local_malloc(n * bsize);
   return _smp_lva_to_gva(p);
 }
 
 /// Allocate a 0-filled global array.
-static hpx_addr_t _smp_gas_calloc_cyclic(size_t n, uint32_t bsize,
-                                         uint32_t boundary) {
+static hpx_addr_t
+_smp_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
   size_t bytes = n * bsize;
   void *p;
   if (boundary) {
@@ -115,14 +107,15 @@ static hpx_addr_t _smp_gas_calloc_cyclic(size_t n, uint32_t bsize,
 }
 
 /// Allocate a bunch of global memory
-static hpx_addr_t _smp_gas_alloc_local(uint32_t bytes, uint32_t boundary) {
+static hpx_addr_t
+_smp_gas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
   void *p = boundary ? local_memalign(boundary, bytes) : local_malloc(bytes);
   return _smp_lva_to_gva(p);
 }
 
 /// Allocate a bunch of initialized global memory
-static hpx_addr_t _smp_gas_calloc_local(size_t nmemb, size_t size,
-                                        uint32_t boundary) {
+static hpx_addr_t
+_smp_gas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
   size_t bytes = nmemb * size;
   void *p;
   if (boundary) {
@@ -135,8 +128,9 @@ static hpx_addr_t _smp_gas_calloc_local(size_t nmemb, size_t size,
 }
 
 /// Free an allocation.
-static void _smp_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
-  void *p = _smp_gva_to_lva(addr);
+static void
+_smp_gas_free(void *gas, hpx_addr_t addr, hpx_addr_t sync) {
+  void *p = (void*)(size_t)addr;
   free(p);
 
   // Notify the caller that we're done.
@@ -144,14 +138,15 @@ static void _smp_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
 }
 
 /// Perform a memcpy between two global addresses.
-static int _smp_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size,
-                       hpx_addr_t sync) {
+static int
+_smp_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
+            hpx_addr_t sync) {
   if (size) {
     dbg_assert(to != HPX_NULL);
     dbg_assert(from != HPX_NULL);
 
-    void *lto = _smp_gva_to_lva(to);
-    const void *lfrom = _smp_gva_to_lva(from);
+    void *lto = (void*)(size_t)to;
+    const void *lfrom = (void*)(size_t)from;
     memcpy(lto, lfrom, size);
   }
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
@@ -159,13 +154,14 @@ static int _smp_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size,
 }
 
 /// Copy memory from a local address to a global address.
-static int _smp_memput(hpx_addr_t to, const void *from, size_t size,
-                       hpx_addr_t lsync, hpx_addr_t rsync) {
+static int
+_smp_memput(void *gas, hpx_addr_t to, const void *from, size_t size,
+            hpx_addr_t lsync, hpx_addr_t rsync) {
   if (size) {
     dbg_assert(to != HPX_NULL);
     dbg_assert(from != NULL);
 
-    void *lto = _smp_gva_to_lva(to);
+    void *lto = (void*)(size_t)to;
     memcpy(lto, from, size);
   }
   hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
@@ -174,13 +170,14 @@ static int _smp_memput(hpx_addr_t to, const void *from, size_t size,
 }
 
 /// Copy memory from a global address to a local address.
-static int _smp_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync)
-{
+static int
+_smp_memget(void *gas, void *to, hpx_addr_t from, size_t size,
+            hpx_addr_t lsync) {
   if (size) {
     dbg_assert(to != NULL);
     dbg_assert(from != HPX_NULL);
 
-    const void *lfrom = _smp_gva_to_lva(from);
+    const void *lfrom = (void*)(size_t)from;
     memcpy(to, lfrom, size);
   }
   hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
@@ -188,39 +185,32 @@ static int _smp_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync)
 }
 
 /// Move memory from one locality to another.
-static void _smp_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
+static void
+_smp_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
   dbg_assert(src == HPX_HERE);
   dbg_assert(dst == HPX_HERE);
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
-/// Figure out who owns a global address.
-static uint32_t _smp_owner_of(hpx_addr_t addr) {
-  dbg_assert(addr != HPX_NULL);
-  return 0;
-}
-
 /// Return the size of the global heap stored locally.
-static size_t _smp_local_size(gas_t *gas) {
+static size_t
+_smp_local_size(void *gas) {
   dbg_error("SMP execution should not call this function\n");
 }
 
 
-static void *_smp_local_base(gas_t *gas) {
+static void *
+_smp_local_base(void *gas) {
   dbg_error("SMP execution should not call this function\n");
 }
 
 static gas_t _smp_vtable = {
   .type           = HPX_GAS_SMP,
   .delete         = _smp_delete,
-  .is_global      = _smp_is_global,
   .local_size     = _smp_local_size,
   .local_base     = _smp_local_base,
-  .locality_of    = _smp_locality_of,
   .sub            = _smp_sub,
   .add            = _smp_add,
-  .lva_to_gva     = _smp_lva_to_gva,
-  .gva_to_lva     = _smp_gva_to_lva,
   .there          = _smp_there,
   .try_pin        = _smp_try_pin,
   .unpin          = _smp_unpin,
@@ -235,7 +225,6 @@ static gas_t _smp_vtable = {
   .memget         = _smp_memget,
   .memput         = _smp_memput,
   .memcpy         = _smp_memcpy,
-  .owner_of       = _smp_owner_of,
   .mmap           = system_mmap,
   .munmap         = system_munmap
 };

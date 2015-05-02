@@ -17,15 +17,14 @@
 #include <inttypes.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <jemalloc/jemalloc_global.h>
 #include <libsync/sync.h>
 #include <hpx/builtins.h>
+#include <libhpx/bitmap.h>
 #include <libhpx/debug.h>
+#include <libhpx/gpa.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include "../mallctl.h"
-#include "bitmap.h"
-#include "gpa.h"
 #include "heap.h"
 #include "pgas.h"
 
@@ -37,7 +36,7 @@ static void *_heap_chunk_alloc_cyclic(heap_t *heap, void *addr, size_t bytes,
   assert(bytes % heap->bytes_per_chunk == 0);
   assert(bytes / heap->bytes_per_chunk < UINT32_MAX);
   uint32_t bits = bytes / heap->bytes_per_chunk;
-  uint32_t log2_align = ceil_log2_64(align);
+  uint32_t log2_align = ceil_log2_size_t(align);
 
   uint32_t bit = 0;
   if (bitmap_reserve(heap->chunks, bits, log2_align, &bit)) {
@@ -112,7 +111,7 @@ static bool _chunk_dalloc_cyclic(void *chunk, size_t size, unsigned UNUSED) {
 static bitmap_t *_new_bitmap(const heap_t *heap) {
   size_t nchunks = heap->nchunks;
   assert(nchunks <= UINT32_MAX);
-  uint32_t min_align = ceil_log2_64(heap->bytes_per_chunk);
+  uint32_t min_align = ceil_log2_size_t(heap->bytes_per_chunk);
   uint32_t base_align = ctzl((uintptr_t)heap->base);
   bitmap_t *bitmap = bitmap_new((uint32_t)nchunks, min_align, base_align);
   if (!bitmap) {
@@ -131,7 +130,7 @@ static void* _mmap_heap(heap_t *const heap) {
   static const int flags = MAP_ANONYMOUS | MAP_PRIVATE;
 #endif
 
-  const uint32_t chunk_lg_align = ceil_log2_64(heap->bytes_per_chunk);
+  const uint32_t chunk_lg_align = ceil_log2_size_t(heap->bytes_per_chunk);
 
 #if defined(HAVE_HUGETLBFS)
   log_gas("Using huge pages.\n");
@@ -143,21 +142,25 @@ static void* _mmap_heap(heap_t *const heap) {
   int hp_fd = -1;
 #endif
 
-  for (unsigned int i = GPA_MAX_LG_BSIZE; i >= chunk_lg_align; ++i) {
-    void *addr = (void*)(1ul << i);
-    void *ret  = mmap(addr, heap->nbytes, prot, flags, hp_fd, 0);
-    if (ret != addr) {
-      int e = munmap(ret, heap->nbytes);
-      if (e < 0) {
-        dbg_error("munmap failed: %s.\n", strerror(e));
-      }
-      continue;
-    }
-    heap->max_block_lg_size = i;
-    log_gas("Allocated heap at %p with %u bits for blocks\n", ret, i);
-    return ret;
-  }
+  for (unsigned int x = 1; x < 1000; ++x) {
+    for (unsigned int i = GPA_MAX_LG_BSIZE; i >= chunk_lg_align; --i) {
+      void *addr = (void*)(x  * (1ul << i));
+      void *ret  = mmap(addr, heap->nbytes, prot, flags, hp_fd, 0);
+      if (ret != addr) {
+	if (ret == (void*)(-1))
+	  dbg_error("Error mmaping %d (%s)\n", errno, strerror(errno));
 
+	int e = munmap(ret, heap->nbytes);
+	if (e < 0) {
+	  dbg_error("munmap failed: %s.\n", strerror(e));
+	}
+	continue;
+      }
+      heap->max_block_lg_size = i;
+      log_gas("Allocated heap at %p with %u bits for blocks\n", ret, i);
+      return ret;
+    }
+  }
   dbg_error("Could not allocate heap with minimum alignment of %zu.\n",
             heap->bytes_per_chunk);
 }
@@ -221,7 +224,7 @@ void *heap_chunk_alloc(heap_t *heap, void *addr, size_t bytes, size_t align) {
   assert(bytes % heap->bytes_per_chunk == 0);
   assert(bytes / heap->bytes_per_chunk < UINT32_MAX);
   uint32_t bits = bytes / heap->bytes_per_chunk;
-  uint32_t log2_align = ceil_log2_64(align);
+  uint32_t log2_align = ceil_log2_size_t(align);
 
   uint32_t bit = 0;
   if (bitmap_rreserve(heap->chunks, bits, log2_align, &bit)) {

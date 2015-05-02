@@ -3,6 +3,9 @@
 
 #include "verbs.h"
 
+#define MAX_CQ_ENTRIES      16384
+#define MAX_SRQ_ENTRIES     8192
+
 typedef struct verbs_cnct_info_t {
   unsigned lid;
   unsigned qpn;

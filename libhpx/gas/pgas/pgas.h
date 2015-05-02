@@ -17,12 +17,13 @@
 #include <hpx/attributes.h>
 #include <libhpx/network.h>
 
+struct config;
 struct gas;
 
 extern struct heap *global_heap;
 
-struct gas *gas_pgas_new(const config_t *cfg, struct boot *boot)
-  HPX_INTERNAL HPX_NON_NULL(1,2);
+struct gas *gas_pgas_new(const struct config *cfg, struct boot *boot)
+  HPX_INTERNAL;
 
 /// Called by each OS thread (pthread) to initialize and setup the thread local
 /// structures required for it to use PGAS.

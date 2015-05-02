@@ -14,17 +14,20 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
-static HPX_ACTION(_main, void *UNUSED) {
+static int _main_handler(void) {
   hpx_shutdown(HPX_SUCCESS);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_handler);
 
 int main(int argc, char *argv[]) {
+  signal(SIGALRM, timeout);
+  alarm(tests_timeout);
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "failed to initialize HPX.\n");
     return 1;
   }
-  int e = hpx_run(&_main, NULL, 0);
+  int e = hpx_run(&_main);
   printf("1 hpx_run returned %d.\n", e);
 
   return 77;
@@ -33,7 +36,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "failed to initialize HPX.\n");
     return 1;
   }
-  e = hpx_run(&_main, NULL, 0);
+  e = hpx_run(&_main);
   printf("2 hpx_run returned %d.\n", e);
   return e;
 }

@@ -28,7 +28,7 @@ static  hpx_action_t _cleanup    = 0;
 const int DATA_SIZE              = sizeof(uint64_t);
 const int SET_CONT_VALUE         = 1234;
 
-static int _cleanup_action(void *args) {
+static int _cleanup_action(void *args, size_t size) {
   uint64_t *value = (uint64_t*) malloc(sizeof(uint64_t));
   *value = SET_CONT_VALUE;
   hpx_thread_continue_cleanup(DATA_SIZE, value, free, value);
@@ -37,7 +37,7 @@ static int _cleanup_action(void *args) {
 //****************************************************************************
 // @Action which spawns the thread
 //****************************************************************************
-static int _main_action(int *args) {
+static int _main_action(int *args, size_t size) {
   int rank = hpx_get_my_rank();
   uint64_t *block = malloc(DATA_SIZE);
 
@@ -54,8 +54,8 @@ int main(int argc, char *argv[]) {
     return e;
   }
    
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(_cleanup_action, &_cleanup);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _cleanup, _cleanup_action, HPX_POINTER, HPX_SIZE_T);
 
   return hpx_run(&_main, NULL, 0);
 }

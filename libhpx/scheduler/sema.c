@@ -58,18 +58,35 @@ static const lco_class_t _sema_vtable = {
   .on_size     = _sema_size
 };
 
+static int _sema_init_handler(_sema_t *sema, unsigned count) {
+  lco_init(&sema->lco, &_sema_vtable);
+  cvar_reset(&sema->avail);
+  sema->count = count;
+  return HPX_SUCCESS;
+}
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _sema_init_async,
+                  _sema_init_handler, HPX_POINTER, HPX_UINT);
+
 /// Allocate a semaphore LCO.
 ///
 /// @param count The initial count for the semaphore.
 ///
 /// @returns The global address of the new semaphore.
 hpx_addr_t hpx_lco_sema_new(unsigned count) {
-  _sema_t *local = global_malloc(sizeof(*local));;
-  dbg_assert(local);
-  lco_init(&local->lco, &_sema_vtable);
-  cvar_reset(&local->avail);
-  local->count = count;
-  return lva_to_gva(local);
+  _sema_t *sema = NULL;
+  hpx_addr_t gva = hpx_gas_alloc_local(sizeof(*sema), 0);
+  LCO_LOG_NEW(gva);
+
+  if (!hpx_gas_try_pin(gva, (void**)&sema)) {
+    int e = hpx_call_sync(gva, _sema_init_async, NULL, 0, &count);
+    dbg_check(e, "could not initialize a future at %lu\n", gva);
+  }
+  else {
+    _sema_init_handler(sema, count);
+    hpx_gas_unpin(gva);
+  }
+
+  return gva;
 }
 
 /// Decrement a semaphore.
@@ -115,7 +132,6 @@ void _sema_fini(lco_t *lco) {
 
   lco_lock(lco);
   lco_fini(lco);
-  global_free(lco);
 }
 
 void _sema_error(lco_t *lco, hpx_status_t code) {

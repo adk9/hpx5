@@ -29,7 +29,6 @@
 #include <libhpx/scheduler.h>
 #include "lco.h"
 #include "cvar.h"
-#include "future.h"
 
 /// Local future interface.
 /// @{
@@ -66,7 +65,6 @@ static void _future_fini(lco_t *lco) {
 
   lco_lock(lco);
   lco_fini(lco);
-  global_free(lco);
 }
 
 /// Copies @p from into the appropriate location.
@@ -194,46 +192,58 @@ static hpx_status_t _future_wait(lco_t *lco) {
   return status;
 }
 
-/// initialize the future
-static void _future_init(_future_t *f, int size) {
-  // the future vtable
-  static const lco_class_t vtable = {
-    .on_fini     = _future_fini,
-    .on_error    = _future_error,
-    .on_set      = _future_set,
-    .on_get      = _future_get,
-    .on_getref   = _future_getref,
-    .on_release  = _future_release,
-    .on_wait     = _future_wait,
-    .on_attach   = _future_attach,
-    .on_reset    = _future_reset,
-    .on_size     = _future_size
-  };
+// the future vtable
+static const lco_class_t _future_vtable = {
+  .on_fini     = _future_fini,
+  .on_error    = _future_error,
+  .on_set      = _future_set,
+  .on_get      = _future_get,
+  .on_getref   = _future_getref,
+  .on_release  = _future_release,
+  .on_wait     = _future_wait,
+  .on_attach   = _future_attach,
+  .on_reset    = _future_reset,
+  .on_size     = _future_size
+};
 
-  lco_init(&f->lco, &vtable);
+/// initialize the future
+static int _future_init_handler(_future_t *f, int size) {
+  lco_init(&f->lco, &_future_vtable);
   cvar_reset(&f->full);
   if (size) {
     memset(&f->value, 0, size);
   }
+  return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _future_init_async,
+                  _future_init_handler, HPX_POINTER, HPX_INT);
 
 /// Initialize a block of futures.
-static HPX_PINNED(_block_init, char *base, uint32_t *args) {
-  const uint32_t size = args[0];
-  const uint32_t nfutures = args[1];
-
+static int _block_init_handler(char *base, const uint32_t size,
+                               const uint32_t nfutures) {
   // sequentially initialize each future
   for (uint32_t i = 0; i < nfutures; ++i) {
-    _future_init((_future_t*)(base + i * size), size);
+    _future_init_handler((_future_t*)(base + i * size), size);
   }
   return HPX_SUCCESS;
 }
+HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_init,
+           _block_init_handler, HPX_POINTER, HPX_UINT32, HPX_UINT32);
 
 hpx_addr_t hpx_lco_future_new(int size) {
-  _future_t *local = global_malloc(sizeof(*local) + size);
-  dbg_assert(local);
-  _future_init(local, size);
-  return lva_to_gva(local);
+  _future_t *future = NULL;
+  hpx_addr_t gva = hpx_gas_alloc_local(sizeof(*future) + size, 0);
+  LCO_LOG_NEW(gva);
+
+  if (!hpx_gas_try_pin(gva, (void**)&future)) {
+    int e = hpx_call_sync(gva, _future_init_async, NULL, 0, &size);
+    dbg_check(e, "could not initialize a future at %lu\n", gva);
+  }
+  else {
+    _future_init_handler(future, size);
+    hpx_gas_unpin(gva);
+  }
+  return gva;
 }
 
 // Allocate a global array of futures.
@@ -245,12 +255,10 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {
   hpx_addr_t       base = hpx_gas_alloc_cyclic(blocks, block_bytes, 0);
 
   // for each block, initialize the future
-  uint32_t args[] = { size, futures_per_block };
-
   hpx_addr_t and = hpx_lco_and_new(blocks);
   for (int i = 0; i < blocks; ++i) {
     hpx_addr_t there = hpx_addr_add(base, i * block_bytes, block_bytes);
-    int e = hpx_call(there, _block_init, and, args, sizeof(args));
+    int e = hpx_call(there, _block_init, and, &size, &futures_per_block);
     dbg_check(e, "call of _block_init_action failed\n");
   }
   hpx_lco_wait(and);
@@ -271,17 +279,19 @@ hpx_addr_t hpx_lco_future_array_at(hpx_addr_t array, int i, int size, int bsize)
 }
 
 /// Initialize a block of array of lco.
-static HPX_PINNED(_block_local_init, void *lco, uint32_t *args) {
-  for (int i = 0; i < args[0]; i++) {
-    void *addr = (void *)((uintptr_t)lco + i * (sizeof(_future_t) + args[1]));
-    _future_init(addr, args[1]);
+static int _block_local_init_handler(void *lco, uint32_t n, uint32_t size) {
+  for (int i = 0; i < n; i++) {
+    void *addr = (void *)((uintptr_t)lco + i * (sizeof(_future_t) + size));
+    _future_init_handler(addr, size);
   }
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
+                  _block_local_init_handler, HPX_POINTER, HPX_UINT32, HPX_UINT32);
 
 /// Allocate an array of future local to the calling locality.
 /// @param          n The (total) number of futures to allocate
-/// @param       size The size of each future's value 
+/// @param       size The size of each future's value
 ///
 /// @returns the global address of the allocated array lco.
 hpx_addr_t hpx_lco_future_local_array_new(int n, int size) {
@@ -291,9 +301,8 @@ hpx_addr_t hpx_lco_future_local_array_new(int n, int size) {
   hpx_addr_t base = hpx_gas_alloc_local(block_bytes, 0);
 
   // for each block, initialize the future.
-  uint32_t args[] = {n, size};
-  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &args, sizeof(args));
+  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &n, &size);
   dbg_check(e, "call of _block_init_action failed\n");
 
-  return base;  
+  return base;
 }

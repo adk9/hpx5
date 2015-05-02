@@ -29,6 +29,7 @@ typedef short hpx_status_t;
 #define  HPX_LCO_CHAN_EMPTY  ((hpx_status_t)3)
 #define  HPX_LCO_TIMEOUT     ((hpx_status_t)4)
 #define  HPX_LCO_RESET       ((hpx_status_t)5)
+#define  HPX_ENOMEM          ((hpx_status_t)6)
 #define  HPX_USER            ((hpx_status_t)127)
 
 const char *hpx_strerror(hpx_status_t);
@@ -40,16 +41,16 @@ typedef ffi_type* hpx_type_t;
 
 /// HPX basic datatypes
 /// @{
-#define HPX_CHAR               &ffi_type_uchar
+#define HPX_CHAR               &ffi_type_schar
 #define HPX_UCHAR              &ffi_type_uchar
 #define HPX_SCHAR              &ffi_type_schar
-#define HPX_SHORT              &ffi_type_ushort
+#define HPX_SHORT              &ffi_type_sshort
 #define HPX_USHORT             &ffi_type_ushort
 #define HPX_SSHORT             &ffi_type_sshort
-#define HPX_INT                &ffi_type_uint
+#define HPX_INT                &ffi_type_sint
 #define HPX_UINT               &ffi_type_uint
 #define HPX_SINT               &ffi_type_sint
-#define HPX_LONG               &ffi_type_ulong
+#define HPX_LONG               &ffi_type_slong
 #define HPX_ULONG              &ffi_type_ulong
 #define HPX_SLONG              &ffi_type_slong
 #define HPX_VOID               &ffi_type_void
@@ -69,7 +70,12 @@ typedef ffi_type* hpx_type_t;
 #define HPX_COMPLEX_DOUBLE     &ffi_type_complex_double
 #define HPX_COMPLEX_LONGDOUBLE &ffi_type_complex_longdouble
 
-#define HPX_SIZE_T             HPX_ULONG
+#if SIZE_MAX > (UINT64_C(1)<<32)
+#define HPX_SIZE_T             HPX_UINT64
+#else
+#define HPX_SIZE_T             HPX_UINT32
+#endif
+
 #define HPX_ADDR               HPX_UINT64
 #define HPX_ACTION_T           HPX_UINT16
 /// @}

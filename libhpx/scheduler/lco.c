@@ -114,77 +114,96 @@ static hpx_status_t _attach(lco_t *lco, hpx_parcel_t *p) {
 /// resent.
 ///
 /// @{
-HPX_PINNED(hpx_lco_delete_action, lco_t *lco, void *args) {
-  return _fini(lco);
+int hpx_lco_delete_action_handler(void *args, size_t n) {
+  hpx_addr_t target = hpx_thread_current_target();
+  lco_t *lco = NULL;
+  if (!hpx_gas_try_pin(target, (void**)&lco)) {
+    hpx_call_cc(target, hpx_lco_delete_action, NULL, NULL, 0, NULL);
+  }
+  log_lco("deleting lco %p\n", (void*)lco);
+  _fini(lco);
+  hpx_gas_unpin(target);
+  hpx_gas_free(target, HPX_NULL);
+  return HPX_SUCCESS;
 }
+HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, hpx_lco_delete_action,
+           hpx_lco_delete_action_handler, HPX_POINTER, HPX_SIZE_T);
 
-HPX_PINNED(hpx_lco_set_action, lco_t *lco, void *data) {
-  return _set(lco, hpx_thread_current_args_size(), data);
+int hpx_lco_set_action_handler(lco_t *lco, void *data, size_t n) {
+  return _set(lco, n, data);
 }
+HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, hpx_lco_set_action,
+           hpx_lco_set_action_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
-static HPX_PINNED(_lco_error, lco_t *lco, void *args) {
+static int _lco_error_handler(lco_t *lco, void *args, size_t n) {
   hpx_status_t *code = args;
   return _error(lco, *code);
 }
+HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _lco_error,
+           _lco_error_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
-HPX_PINNED(hpx_lco_reset_action, lco_t *lco, void *UNUSED) {
+int hpx_lco_reset_action_handler(lco_t *lco) {
   return _reset(lco);
 }
+HPX_ACTION(HPX_DEFAULT, HPX_PINNED, hpx_lco_reset_action,
+           hpx_lco_reset_action_handler, HPX_POINTER);
 
-static HPX_PINNED(_lco_size, lco_t *lco, void *UNUSED) {
+static int _lco_size_handler(lco_t *lco, void *UNUSED) {
   return _size(lco);
 }
+HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_size, _lco_size_handler, HPX_POINTER);
 
-static HPX_PINNED(_lco_get, lco_t *lco, void *args) {
-  dbg_assert(args);
-  int *n = args;
+static int _lco_get_handler(lco_t *lco, int n) {
   // convert to wait if there's no buffer
-  if (*n == 0) {
+  if (n == 0) {
     return _wait(lco);
   }
 
   // otherwise do the get to a stack location and continue it---can
   // get rid of this with a lco_getref()
-  char buffer[*n];
-  hpx_status_t status = _get(lco, *n, buffer);
+  char buffer[n];
+  hpx_status_t status = _get(lco, n, buffer);
   if (status == HPX_SUCCESS) {
-    hpx_thread_continue(*n, buffer);
+    hpx_thread_continue(n, buffer);
   }
   else {
     return status;
   }
 }
+HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_get, _lco_get_handler, HPX_POINTER, HPX_INT);
 
-static HPX_PINNED(_lco_getref, lco_t *lco, int *n) {
-  dbg_assert(n);
+static int _lco_getref_handler(lco_t *lco, int n) {
   // convert to wait if there's no buffer
-  if (*n == 0) {
+  if (n == 0) {
     return _wait(lco);
   }
 
   // otherwise continue the LCO buffer
   void *buffer;
-  hpx_status_t status = _getref(lco, *n, &buffer);
+  hpx_status_t status = _getref(lco, n, &buffer);
   if (status == HPX_SUCCESS) {
-    hpx_thread_continue(*n, buffer);
+    hpx_thread_continue(n, buffer);
   }
   else {
     return status;
   }
 }
+HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_getref, _lco_getref_handler, HPX_POINTER, HPX_INT);
 
-static HPX_PINNED(_lco_getref_reply, void **local, void *data) {
-  size_t bytes = hpx_thread_current_args_size();
+static int _lco_getref_reply_handler(void **local, void *data, size_t bytes) {
   dbg_assert(bytes);
   memcpy(*local, data, bytes);
   return HPX_SUCCESS;
 }
+HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _lco_getref_reply,
+           _lco_getref_reply_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
-static HPX_PINNED(_lco_wait, lco_t *lco, void *args) {
+static int _lco_wait_handler(lco_t *lco) {
   return _wait(lco);
 }
+HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_wait, _lco_wait_handler, HPX_POINTER);
 
-HPX_PINNED(attach, lco_t *lco, hpx_parcel_t *p) {
+int attach_handler(lco_t *lco, hpx_parcel_t *p, size_t size) {
   hpx_parcel_t *parent = scheduler_current_parcel();
   dbg_assert(hpx_parcel_get_data(parent) == p);
   log_lco("retaining %p, nesting %p\n", (void*)parent, (void*)p);
@@ -201,6 +220,9 @@ HPX_PINNED(attach, lco_t *lco, hpx_parcel_t *p) {
 
   return _attach(lco, p);
 }
+HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, attach,
+           attach_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
+
 /// @}
 
 /// LCO bit packing and manipulation
@@ -263,16 +285,17 @@ uintptr_t lco_get_triggered(const lco_t *lco) {
 
 void hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync) {
   lco_t *lco = NULL;
-  if (hpx_gas_try_pin(target, (void**)&lco)) {
-    log_lco("deleting lco %p\n", (void*)lco);
-    _fini(lco);
-    hpx_gas_unpin(target);
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
-    return;
+  if (!hpx_gas_try_pin(target, (void**)&lco)) {
+    int e = hpx_call(target, hpx_lco_delete_action, rsync, NULL, 0);
+    dbg_check(e, "Could not forward lco_delete\n");
   }
-
-  int e = hpx_call_async(target, hpx_lco_delete_action, HPX_NULL, rsync, NULL, 0);
-  dbg_check(e, "Could not forward lco_delete\n");
+  else {
+    log_lco("deleting lco %p\n", (void*)lco);
+    int e = _fini(lco);
+    hpx_gas_unpin(target);
+    hpx_gas_free(target, HPX_NULL);
+    hpx_lco_error(rsync, e, HPX_NULL);
+  }
 }
 
 void hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync) {
@@ -356,7 +379,7 @@ hpx_status_t hpx_lco_wait(hpx_addr_t target) {
     return status;
   }
 
-  return hpx_call_sync(target, _lco_wait, NULL, 0, NULL, 0);
+  return hpx_call_sync(target, _lco_wait, NULL, 0);
 }
 
 size_t hpx_lco_size(hpx_addr_t target) {
@@ -380,7 +403,7 @@ hpx_status_t hpx_lco_get(hpx_addr_t target, int size, void *value) {
     hpx_gas_unpin(target);
     return status;
   }
-  return hpx_call_sync(target, _lco_get, value, size, &size, sizeof(size));
+  return hpx_call_sync(target, _lco_get, value, size, &size);
 }
 
 hpx_status_t hpx_lco_getref(hpx_addr_t target, int size, void **out) {
@@ -401,7 +424,7 @@ hpx_status_t hpx_lco_getref(hpx_addr_t target, int size, void **out) {
 
   hpx_lco_set(result, sizeof(buffer), &buffer, HPX_NULL, HPX_NULL);
   int e = hpx_call_with_continuation(target, _lco_getref, result, _lco_getref_reply,
-                                     &size, sizeof(size));
+                                     &size);
   if (e == HPX_SUCCESS) {
     e = hpx_lco_wait(result);
     *out = buffer;

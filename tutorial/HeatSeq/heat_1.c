@@ -67,32 +67,34 @@ static void _usage(FILE *f, int error) {
 static void _register_actions(void);
 
 /// Initialize a double zero
-static void initDouble(double *input) {
+static void initDouble_handler(double *input, size_t UNUSED) {
   *input = 0;
 }
+static HPX_ACTION(HPX_FUNCTION, 0, initDouble, initDouble_handler);
 
 /// Update *lhs with with the max(lhs, rhs);
-static void maxDouble(double *lhs, const double *rhs) {
+static void maxDouble_handler(double *lhs, const double *rhs, size_t UNUSED) {
   *lhs = (*lhs > *rhs) ? *lhs : *rhs;
 }
+static HPX_ACTION(HPX_FUNCTION, 0, maxDouble, maxDouble_handler);
 
-static int _write_double_action(double *d) {
+static int _write_double_action(double *d, size_t size) {
   hpx_addr_t target = hpx_thread_current_target();
   double *addr = NULL;
-  if (!hpx_gas_try_pin(target, (void**)&addr)) 
+  if (!hpx_gas_try_pin(target, (void**)&addr))
     return HPX_RESEND;
-  
+
   *addr = d[0];
   hpx_gas_unpin(target);
   hpx_thread_continue(sizeof(double), &d[1]);
 }
 
-static int _read_double_action(void *unused) {
+static int _read_double_action(void *unused, size_t size) {
   hpx_addr_t target = hpx_thread_current_target();
   double *addr = NULL;
   if (!hpx_gas_try_pin(target, (void**)&addr))
     return HPX_RESEND;
-  
+
   double d = *addr;
 
   hpx_gas_unpin(target);
@@ -109,13 +111,13 @@ struct spawn_stencil_args {
   hpx_addr_t max;
 };
 
-static int _stencil_action(struct spawn_stencil_args *args) {
+static int _stencil_action(struct spawn_stencil_args *args, size_t size) {
   // read the value in this cell
   hpx_addr_t target = hpx_thread_current_target();
   double *addr = NULL;
-  if (!hpx_gas_try_pin(target, (void**)&addr)) 
+  if (!hpx_gas_try_pin(target, (void**)&addr))
     return HPX_RESEND;
-  
+
   double v = *addr;
   hpx_gas_unpin(target);
 
@@ -188,7 +190,7 @@ static void spawn_stencil_args_init(void *out, const int i, const void *env) {
   args->max = *(hpx_addr_t*)env;
 }
 
-static int _spawn_stencil_action(struct spawn_stencil_args *args) {
+static int _spawn_stencil_action(struct spawn_stencil_args *args, size_t size) {
   int i = args->i;
   int j = args->j;
 
@@ -196,7 +198,7 @@ static int _spawn_stencil_action(struct spawn_stencil_args *args) {
   return hpx_call(cell, _stencil, args->max, args, sizeof(*args));
 }
 
-static int _updateGrid_action(void *args) {
+static int _updateGrid_action(void *args, size_t size) {
   struct timeval ts_st, ts_end;
   double time, max_time;
   double dTmax, epsilon, dTmax_global;
@@ -218,9 +220,9 @@ static int _updateGrid_action(void *args) {
   do {
     dTmax = 0.0;
 
-    hpx_addr_t max = hpx_lco_allreduce_new(N * N, 1, sizeof(dTmax), 
-                                          (hpx_monoid_id_t)initDouble,
-                                          (hpx_monoid_op_t)maxDouble);
+    hpx_addr_t max = hpx_lco_allreduce_new(N * N, 1, sizeof(dTmax),
+                                          initDouble,
+                                          maxDouble);
     //for (int i = 1; i < N + 1; i++) {
     //  for (int j = 1; j < N + 1; j++) {
     //    int args[2] = { i, j };
@@ -228,18 +230,18 @@ static int _updateGrid_action(void *args) {
     //     hpx_call(cell, _stencil, max, args, sizeof(args));
     //   }
     // }
-    hpx_par_call(_spawn_stencil, 1, N*N+1 , HPX_THREADS, (N*N)/HPX_THREADS, 
+    hpx_par_call(_spawn_stencil, 1, N*N+1 , HPX_THREADS, (N*N)/HPX_THREADS,
                  sizeof(struct spawn_stencil_args), spawn_stencil_args_init, sizeof(max),
                  &max, HPX_NULL);
-   
+
     hpx_lco_get(max, sizeof(dTmax), &dTmax);
 
     // printf("%g\n", dTmax);
 
-    // reduce to get the max of dTmax 
+    // reduce to get the max of dTmax
     hpx_lco_set(domain->dTmax, sizeof(double), &dTmax, HPX_NULL, HPX_NULL);
     hpx_lco_get(domain->dTmax, sizeof(double), &dTmax_global);
-   
+
     dTmax = dTmax_global;
 
     if (dTmax < epsilon ) // is the precision reached good enough ?
@@ -258,33 +260,31 @@ static int _updateGrid_action(void *args) {
   time = ts_end.tv_sec + (ts_end.tv_usec / 1000000.0);
   time -= ts_st.tv_sec + (ts_st.tv_usec / 1000000.0);
 
-  printf("Rank = #%d: %d iteration in %.3lf sec\n", domain->rank, nr_iter, 
-          time); 
+  printf("Rank = #%d: %d iteration in %.3lf sec\n", domain->rank, nr_iter,
+          time);
 
   hpx_lco_set(domain->runtimes, sizeof(double), &time, HPX_NULL, HPX_NULL);
   hpx_lco_get(domain->runtimes, sizeof(double), &max_time);
 
   if (domain->rank == 0) {
-    printf("Max Execution time =  %.3lf sec\n", max_time); 
+    printf("Max Execution time =  %.3lf sec\n", max_time);
   }
   return HPX_SUCCESS;
 }
 
-static int _initGlobals_action(global_args_t *args) {
+static int _initGlobals_action(global_args_t *args, size_t size) {
   grid = args->grid;
   new_grid = args->new_grid;
   return HPX_SUCCESS;
 }
 
 void init_globals(hpx_addr_t grid, hpx_addr_t new_grid) {
-  hpx_addr_t init_lco = hpx_lco_future_new(0);
   const global_args_t init_args = { .grid = grid, .new_grid = new_grid };
-  hpx_bcast(_initGlobals, init_lco, &init_args, sizeof(init_args));
-  hpx_lco_wait(init_lco);
-  hpx_lco_delete(init_lco, HPX_NULL);
+  int e = hpx_bcast_rsync(_initGlobals, &init_args, sizeof(init_args));
+  assert(e == HPX_SUCCESS);
 }
 
-static int _initDomain_action(const InitArgs *args)
+static int _initDomain_action(const InitArgs *args, size_t size)
 {
   hpx_addr_t local = hpx_thread_current_target();
   Domain *ld = NULL;
@@ -300,7 +300,7 @@ static int _initDomain_action(const InitArgs *args)
   return HPX_SUCCESS;
 }
 
-static int _initGrid_action(void *args) {
+static int _initGrid_action(void *args, size_t size) {
   hpx_addr_t local = hpx_thread_current_target();
   double *ld = NULL;
   if (!hpx_gas_try_pin(local, (void**)&ld))
@@ -315,13 +315,13 @@ static int _initGrid_action(void *args) {
   return HPX_SUCCESS;
 }
 
-static int _main_action(int *input)
+static int _main_action(int *input, size_t size)
 {
   grid = hpx_gas_calloc_cyclic(HPX_LOCALITIES, (N+2)*(N+2)*sizeof(double), 0);
   new_grid = hpx_gas_calloc_cyclic(HPX_LOCALITIES, (N+2)*(N+2)*sizeof(double), 0);
 
   hpx_addr_t domain = hpx_gas_alloc_cyclic(HPX_LOCALITIES, sizeof(Domain), 0);
-  hpx_addr_t done = hpx_lco_and_new(HPX_LOCALITIES);  
+  hpx_addr_t done = hpx_lco_and_new(HPX_LOCALITIES);
   hpx_addr_t complete = hpx_lco_and_new(HPX_LOCALITIES);
 
   hpx_addr_t gDone   = hpx_lco_future_new(0);
@@ -336,15 +336,15 @@ static int _main_action(int *input)
 
   init_globals(grid, new_grid);
 
-  hpx_addr_t runtimes = hpx_lco_allreduce_new(HPX_LOCALITIES, HPX_LOCALITIES, 
+  hpx_addr_t runtimes = hpx_lco_allreduce_new(HPX_LOCALITIES, HPX_LOCALITIES,
                                               sizeof(double),
-                                              (hpx_monoid_id_t)initDouble, 
-                                              (hpx_monoid_op_t)maxDouble);
+                                              initDouble,
+                                              maxDouble);
 
-  hpx_addr_t dTmax = hpx_lco_allreduce_new(HPX_LOCALITIES, HPX_LOCALITIES, 
+  hpx_addr_t dTmax = hpx_lco_allreduce_new(HPX_LOCALITIES, HPX_LOCALITIES,
                                            sizeof(double),
-                                           (hpx_monoid_id_t)initDouble, 
-                                           (hpx_monoid_op_t)maxDouble); 
+                                           initDouble,
+                                           maxDouble);
 
   for (int i = 0, e = HPX_LOCALITIES; i < e; ++i) {
     InitArgs init = {
@@ -352,7 +352,7 @@ static int _main_action(int *input)
       .runtimes = runtimes,
       .dTmax = dTmax
     };
-    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, 
+    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i,
                                     sizeof(Domain));
     hpx_call(block, _initDomain, done, &init, sizeof(init));
   }
@@ -360,11 +360,11 @@ static int _main_action(int *input)
   hpx_lco_delete(done, HPX_NULL);
 
   for (int i = 0; i < HPX_LOCALITIES; i++) {
-    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain)*i, sizeof(Domain)); 
+    hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain)*i, sizeof(Domain));
     hpx_call(block, _updateGrid, complete, NULL, 0);
   }
   hpx_lco_wait(complete);
-  hpx_lco_delete(complete, HPX_NULL); 
+  hpx_lco_delete(complete, HPX_NULL);
 
   hpx_gas_free(grid, HPX_NULL);
   hpx_gas_free(new_grid, HPX_NULL);
@@ -378,15 +378,15 @@ static int _main_action(int *input)
  */
 void _register_actions(void) {
   /* register action for parcel (must be done by all ranks) */
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(_initGlobals_action, &_initGlobals);
-  HPX_REGISTER_ACTION(_initDomain_action, &_initDomain);
-  HPX_REGISTER_ACTION(_initGrid_action, &_initGrid);
-  HPX_REGISTER_ACTION(_updateGrid_action, &_updateGrid);
-  HPX_REGISTER_ACTION(_write_double_action, &_write_double);
-  HPX_REGISTER_ACTION(_read_double_action, &_read_double);
-  HPX_REGISTER_ACTION(_stencil_action, &_stencil);
-  HPX_REGISTER_ACTION(_spawn_stencil_action, &_spawn_stencil);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initGlobals, _initGlobals_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initDomain, _initDomain_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initGrid, _initGrid_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _updateGrid, _updateGrid_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _write_double, _write_double_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _read_double, _read_double_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _stencil, _stencil_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _spawn_stencil, _spawn_stencil_action, HPX_POINTER, HPX_SIZE_T);
 }
 
 // Main routine

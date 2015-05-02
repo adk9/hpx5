@@ -21,7 +21,7 @@
 static  hpx_action_t _main       = 0;
 static  hpx_action_t _printHello = 0;
 
-static int _printHello_action(int *args) {
+static int _printHello_action(int *args, size_t size) {
   int tid = *args;
   printf("Hello World! It's me, thread #%d!\n", tid);
   return HPX_SUCCESS;
@@ -30,7 +30,7 @@ static int _printHello_action(int *args) {
 //****************************************************************************
 // @Action which spawns the threads
 //****************************************************************************
-static int _main_action(void *args) {
+static int _main_action(void *args, size_t size) {
   hpx_addr_t and = hpx_lco_and_new(NUM_THREADS);
 
   for (int i = 0; i < NUM_THREADS; i++) {
@@ -61,8 +61,8 @@ int main(int argc, char *argv[]) {
     return e;
   }
    
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(_printHello_action, &_printHello);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _printHello, _printHello_action, HPX_POINTER, HPX_SIZE_T);
 
   return hpx_run(&_main, NULL, 0);
 }

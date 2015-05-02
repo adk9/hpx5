@@ -19,8 +19,8 @@
 #include <hpx/builtins.h>
 #include <libhpx/locality.h>
 #include <libhpx/action.h>
+#include <libhpx/gpa.h>
 
-#include "gpa.h"
 #include "heap.h"
 #include "pgas.h"
 
@@ -29,12 +29,6 @@ static HPX_ACTION_DECL(_set_csbrk);
 
 /// Internal utility actions for dealing with calloc.
 /// @{
-typedef struct {
-  uint64_t offset;
-  uint32_t  bytes;
-  uint32_t  bsize;
-} _calloc_init_args_t;
-
 
 /// Allocate from the cyclic space.
 ///
@@ -51,12 +45,10 @@ hpx_addr_t pgas_alloc_cyclic_sync(size_t n, uint32_t bsize) {
   assert(offset != 0);
 
   uint64_t csbrk = heap_get_csbrk(global_heap);
-  hpx_addr_t sync = hpx_lco_future_new(0);
-  hpx_bcast(_set_csbrk, sync, &csbrk, sizeof(csbrk));
-  hpx_lco_wait(sync);
-  hpx_lco_delete(sync, HPX_NULL);
+  int e = hpx_bcast_rsync(_set_csbrk, &csbrk);
+  dbg_check(e, "\n");
 
-  hpx_addr_t addr = pgas_offset_to_gpa(here->rank, offset);
+  hpx_addr_t addr = offset_to_gpa(here->rank, offset);
   DEBUG_IF(addr == HPX_NULL) {
     dbg_error("should not get HPX_NULL during allocation\n");
   }
@@ -67,8 +59,8 @@ static int _alloc_cyclic_handler(size_t n, size_t bsize) {
   hpx_addr_t addr = pgas_alloc_cyclic_sync(n, bsize);
   HPX_THREAD_CONTINUE(addr);
 }
-HPX_ACTION_DEF(DEFAULT, _alloc_cyclic_handler, pgas_alloc_cyclic, HPX_SIZE_T,
-               HPX_SIZE_T);
+HPX_ACTION(HPX_DEFAULT, 0, pgas_alloc_cyclic, _alloc_cyclic_handler, HPX_SIZE_T,
+           HPX_SIZE_T);
 
 /// Allocate zeroed memory from the cyclic space.
 ///
@@ -91,24 +83,14 @@ hpx_addr_t pgas_calloc_cyclic_sync(size_t n, uint32_t bsize) {
   // We broadcast the csbrk to the system to make sure that people can do
   // effective heap_is_cyclic tests.
   uint64_t csbrk = heap_get_csbrk(global_heap);
-  hpx_addr_t sync = hpx_lco_future_new(0);
-  hpx_bcast(_set_csbrk, sync, &csbrk, sizeof(csbrk));
-  hpx_lco_wait(sync);
-  hpx_lco_delete(sync, HPX_NULL);
+  int e = hpx_bcast_rsync(_set_csbrk, &csbrk);
+  dbg_check(e, "\n");
 
   // Broadcast the calloc so that each locality can zero the correct memory.
-  _calloc_init_args_t args = {
-    .offset = offset,
-    .bytes  = n,
-    .bsize  = bsize
-  };
+  e = hpx_bcast_rsync(_calloc_init, &offset, &n, &bsize);
+  dbg_check(e, "\n");
 
-  sync = hpx_lco_future_new(0);
-  hpx_bcast(_calloc_init, sync, &args, sizeof(args));
-  hpx_lco_wait(sync);
-  hpx_lco_delete(sync, HPX_NULL);
-
-  hpx_addr_t addr = pgas_offset_to_gpa(here->rank, offset);
+  hpx_addr_t addr = offset_to_gpa(here->rank, offset);
   DEBUG_IF(addr == HPX_NULL) {
     dbg_error("should not get HPX_NULL during allocation\n");
   }
@@ -119,8 +101,8 @@ static int _calloc_cyclic_handler(size_t n, size_t bsize) {
   hpx_addr_t addr = pgas_calloc_cyclic_sync(n, bsize);
   HPX_THREAD_CONTINUE(addr);
 }
-HPX_ACTION_DEF(DEFAULT, _calloc_cyclic_handler, pgas_calloc_cyclic, HPX_SIZE_T,
-               HPX_SIZE_T);
+HPX_ACTION(HPX_DEFAULT, 0, pgas_calloc_cyclic, _calloc_cyclic_handler, HPX_SIZE_T,
+           HPX_SIZE_T);
 
 
 /// This is the hpx_call_* target for doing a calloc initialization.
@@ -129,12 +111,13 @@ HPX_ACTION_DEF(DEFAULT, _calloc_cyclic_handler, pgas_calloc_cyclic, HPX_SIZE_T,
 /// with the offset, and memsets them to 0. We can't just do one large memset
 /// because we have alignment issues and may have internal padding.
 ///
-/// @param         args The arguments to the initializer include the base offset
-///                     of the allocation (i.e., the base block id), as well as
-///                     the number of blocks and the size of each block.
+/// @param         base The base offset of the allocation.
+/// @param        bytes The total number of bytes to allocate.
+/// @param        bsize The block size.
 ///
 /// @returns HPX_SUCCESS
-static HPX_ACTION(_calloc_init, _calloc_init_args_t *args) {
+static int _calloc_init_handler(uint64_t offset, uint32_t bytes, uint32_t bsize)
+{
   // Create a global physical address from the offset so that we can perform
   // cyclic address arithmetic on it. This avoids any issues with internal
   // padding, since the addr_add already needs to be able to deal with that
@@ -142,41 +125,43 @@ static HPX_ACTION(_calloc_init, _calloc_init_args_t *args) {
   //
   // Then compute the gpa for each local block, convert it to an lva, and then
   // memset it.
-  uint32_t blocks = ceil_div_64(args->bytes, here->ranks);
-  hpx_addr_t gpa = pgas_offset_to_gpa(here->rank, args->offset);
+  uint32_t blocks = ceil_div_64(bytes, here->ranks);
+  hpx_addr_t gpa = offset_to_gpa(here->rank, offset);
   for (int i = 0, e = blocks; i < e; ++i) {
     void *lva = pgas_gpa_to_lva(gpa);
-    memset(lva, 0, args->bsize);
+    memset(lva, 0, bsize);
     // increment the global address by one cycle
-    gpa = hpx_addr_add(gpa, args->bsize * here->ranks, args->bsize);
+    gpa = hpx_addr_add(gpa, bsize * here->ranks, bsize);
   }
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_INTERRUPT, 0, _calloc_init, _calloc_init_handler,
+                  HPX_UINT64, HPX_UINT32, HPX_UINT32);
 
-
-HPX_ACTION(pgas_free, void) {
+int pgas_free_handler(void) {
   hpx_addr_t gpa = hpx_thread_current_target();
-  if (here->rank != pgas_gpa_to_rank(gpa)) {
+  if (here->rank != gpa_to_rank(gpa)) {
     dbg_error("PGAS free operation for rank %u arrived at rank %u instead.\n",
-              pgas_gpa_to_rank(gpa), here->rank);
+              gpa_to_rank(gpa), here->rank);
     return HPX_ERROR;
   }
   void *lva = pgas_gpa_to_lva(gpa);
   libhpx_global_free(lva);
   return HPX_SUCCESS;
 }
+HPX_ACTION(HPX_DEFAULT, 0, pgas_free, pgas_free_handler);
 
-
-static HPX_ACTION(_set_csbrk, size_t *offset) {
-  int e = heap_set_csbrk(global_heap, *offset);
+static int _set_csbrk_handler(size_t offset) {
+  int e = heap_set_csbrk(global_heap, offset);
   dbg_check(e, "cyclic allocation ran out of memory at rank %u", here->rank);
   return e;
 }
+static HPX_ACTION(HPX_INTERRUPT, 0, _set_csbrk, _set_csbrk_handler, HPX_SIZE_T);
 
 static int _memput_rsync_handler(int src, uint64_t command) {
-  hpx_addr_t rsync = pgas_offset_to_gpa(src, command);
+  hpx_addr_t rsync = offset_to_gpa(src, command);
   hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
-HPX_ACTION_DEF(DEFAULT, _memput_rsync_handler, memput_rsync, HPX_INT,
-               HPX_UINT64);
+HPX_ACTION(HPX_DEFAULT, 0, memput_rsync, _memput_rsync_handler, HPX_INT,
+           HPX_UINT64);

@@ -26,54 +26,44 @@ struct boot;
 typedef struct gas {
   hpx_gas_t type;
 
-  // Initialization
-  void (*delete)(struct gas *gas)
-    HPX_NON_NULL(1);
+  void (*delete)(void *gas);
+  size_t (*local_size)(void *gas);
+  void *(*local_base)(void *gas);
 
-  bool (*is_global)(struct gas *gas, void *addr)
-    HPX_NON_NULL(1);
+  int64_t (*sub)(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs,
+                 uint32_t bsize);
+  hpx_addr_t (*add)(const void *gas, hpx_addr_t gva, int64_t bytes,
+                    uint32_t bsize);
 
-  size_t (*local_size)(struct gas *gas)
-    HPX_NON_NULL(1);
+  hpx_addr_t (*there)(void *gas, uint32_t i);
+  uint32_t (*owner_of)(const void *gas, hpx_addr_t gpa);
+  bool (*try_pin)(void *gas, hpx_addr_t addr, void **local);
+  void (*unpin)(void *gas, hpx_addr_t addr);
 
-  void *(*local_base)(struct gas *gas)
-    HPX_NON_NULL(1);
+  system_mmap_t mmap;
+  system_munmap_t munmap;
 
-  // Dealing with global addresses
-  uint32_t (*locality_of)(hpx_addr_t gva);
+  hpx_addr_t (*alloc_local)(void *gas, uint32_t bytes, uint32_t boundary);
+  hpx_addr_t (*calloc_local)(void *gas, size_t nmemb, size_t size,
+                             uint32_t boundary);
+  void (*free)(void *gas, hpx_addr_t addr, hpx_addr_t rsync);
 
-  int64_t (*sub)(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize);
-  hpx_addr_t (*add)(hpx_addr_t gva, int64_t bytes, uint32_t bsize);
+  void (*move)(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
 
-  hpx_addr_t (*lva_to_gva)(const void *lva);
-  void *(*gva_to_lva)(hpx_addr_t gva);
+  int (*memget)(void *gas, void *to, hpx_addr_t from, size_t size,
+                hpx_addr_t lsync);
 
-  hpx_addr_t (*embed)(hpx_addr_t addr, hpx_action_t action);
-  hpx_action_t (*extract)(hpx_addr_t addr, uint32_t locality);
+  int (*memput)(void *gas, hpx_addr_t to, const void *from, size_t size,
+                hpx_addr_t lsync, hpx_addr_t rsync);
+
+  int (*memcpy)(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
+                hpx_addr_t sync);
 
   // implement hpx/gas.h
-  __typeof(HPX_THERE) *there;
-  __typeof(hpx_gas_try_pin) *try_pin;
-  __typeof(hpx_gas_unpin) *unpin;
   __typeof(hpx_gas_alloc_cyclic) *alloc_cyclic;
   __typeof(hpx_gas_calloc_cyclic) *calloc_cyclic;
   __typeof(hpx_gas_alloc_blocked) *alloc_blocked;
   __typeof(hpx_gas_calloc_blocked) *calloc_blocked;
-  __typeof(hpx_gas_alloc_local) *alloc_local;
-  __typeof(hpx_gas_calloc_local) *calloc_local;
-  __typeof(hpx_gas_free) *free;
-  __typeof(hpx_gas_move) *move;
-  __typeof(hpx_gas_memget) *memget;
-  __typeof(hpx_gas_memput) *memput;
-  __typeof(hpx_gas_memcpy) *memcpy;
-
-  // network operation
-  uint32_t (*owner_of)(hpx_addr_t gpa);
-  uint64_t (*offset_of)(hpx_addr_t gpa);
-
-  // quick hack for the global allocator
-  system_mmap_t mmap;
-  system_munmap_t munmap;
 } gas_t;
 
 gas_t *gas_new(const config_t *cfg, struct boot *boot)
@@ -86,12 +76,7 @@ inline static void gas_delete(gas_t *gas) {
 
 inline static uint32_t gas_owner_of(gas_t *gas, hpx_addr_t addr) {
   assert(gas && gas->owner_of);
-  return gas->owner_of(addr);
-}
-
-inline static uint64_t gas_offset_of(gas_t *gas, hpx_addr_t gpa) {
-  assert(gas && gas->offset_of);
-  return gas->offset_of(gpa);
+  return gas->owner_of(gas, addr);
 }
 
 static inline size_t gas_local_size(gas_t *gas) {
@@ -104,16 +89,6 @@ inline static void *gas_local_base(gas_t *gas) {
   return gas->local_base(gas);
 }
 
-inline static hpx_addr_t gas_embed(gas_t *gas, hpx_addr_t addr, hpx_action_t action) {
-  assert(gas && gas->embed);
-  return gas->embed(addr, action);
-}
-
-inline static hpx_action_t gas_extract(gas_t *gas, hpx_addr_t addr, uint32_t locality) {
-  assert(gas && gas->extract);
-  return gas->extract(addr, locality);
-}
-
 static inline void *gas_mmap(void *obj, void *addr, size_t bytes, size_t align) {
   gas_t *gas = obj;
   return gas->mmap(obj, addr, bytes, align);
@@ -124,4 +99,4 @@ static inline void gas_munmap(void *obj, void *addr, size_t size) {
   gas->munmap(obj, addr, size);
 }
 
-#endif// LIBHPX_GAS_H
+#endif // LIBHPX_GAS_H

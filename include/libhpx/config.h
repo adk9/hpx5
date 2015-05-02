@@ -70,7 +70,7 @@ typedef enum {
 
 static const char * const HPX_NETWORK_TO_STRING[] = {
   "DEFAULT",
-  "NONE",
+  "SMP",
   "PWC",
   "ISIR",
   "INVALID_ID"

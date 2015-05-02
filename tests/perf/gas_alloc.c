@@ -10,11 +10,12 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttypes.h>
 #include <unistd.h>
-#include "hpx/hpx.h"
+#include <hpx/hpx.h>
+#include "timeout.h"
 
 #define MAX_BYTES        1024*1024*1
 #define SKIP_LARGE       10
@@ -38,7 +39,7 @@ static void usage(FILE *stream) {
 
 static hpx_action_t _main    = 0;
 
-static int _main_action(void *args) {
+static int _main_action(void *args, size_t n) {
   hpx_addr_t local, global, calloc_global;
   hpx_time_t t;
   int size = HPX_LOCALITIES;
@@ -105,7 +106,9 @@ int main(int argc, char *argv[]) {
   fprintf(stdout, "Starting the cost of GAS Allocation benchmark\n");
 
   // Register the main action
-  HPX_REGISTER_ACTION(_main_action, &_main);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+
+  set_timeout(30);
 
   // run the main action
   return hpx_run(&_main, NULL, 0);

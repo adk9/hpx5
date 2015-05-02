@@ -26,11 +26,13 @@ const char *action_table_get_key(const struct action_table *, hpx_action_t)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Get the action type.
-hpx_action_type_t action_table_get_type(const struct action_table *, hpx_action_t)
+hpx_action_type_t action_table_get_type(const struct action_table *,
+                                        hpx_action_t)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Get the key for an action.
-hpx_action_handler_t action_table_get_handler(const struct action_table *, hpx_action_t)
+hpx_action_handler_t action_table_get_handler(const struct action_table *,
+                                              hpx_action_t)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Run the handler associated with an action.
@@ -63,14 +65,20 @@ int libhpx_call_action(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
 bool action_is_pinned(const struct action_table *, hpx_action_t)
   HPX_INTERNAL HPX_NON_NULL(1);
 
+/// Is the action a marshalled action?
+bool action_is_marshalled(const struct action_table *, hpx_action_t)
+  HPX_INTERNAL HPX_NON_NULL(1);
 
 /// Is the action a task?
 bool action_is_task(const struct action_table *, hpx_action_t)
   HPX_INTERNAL HPX_NON_NULL(1);
 
-
 /// Is the action an interrupt?
 bool action_is_interrupt(const struct action_table *, hpx_action_t)
+  HPX_INTERNAL HPX_NON_NULL(1);
+
+/// Is the action a function?
+bool action_is_function(const struct action_table *, hpx_action_t)
   HPX_INTERNAL HPX_NON_NULL(1);
 
 

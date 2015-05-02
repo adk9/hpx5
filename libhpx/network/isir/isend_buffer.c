@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 #include <hpx/builtins.h>
@@ -238,7 +239,7 @@ static void _compact(isend_buffer_t *buffer, int n) {
   uint32_t size = buffer->size;
   uint64_t m = buffer->active - buffer->min;
   if (n == m) {
-    log_net("bulk compaction of %d/%lu sends in buffer (%u)\n", n, m,
+    log_net("bulk compaction of %d/%"PRIu64" sends in buffer (%u)\n", n, m,
                 size);
     buffer->min += n;
     return;
@@ -256,11 +257,11 @@ static void _compact(isend_buffer_t *buffer, int n) {
     int k = _index_of(min, size);
     void *to = _request_at(buffer, j);
     const void *from = _request_at(buffer, k);
-    memcpy(to, from, buffer->xport->sizeof_request());
+    memmove(to, from, buffer->xport->sizeof_request());
     buffer->records[j] = buffer->records[k];
   }
 
-  log_net("incremental compaction of %d/%lu sends in buffer (%u)\n", n, m,
+  log_net("incremental compaction of %d/%"PRIu64" sends in buffer (%u)\n", n, m,
               size);
 }
 
@@ -302,7 +303,7 @@ static int _test_all(isend_buffer_t *buffer) {
     buffer->twin -= ISIR_TWIN_INC;
     log_net("decreased test window to %d\n", buffer->twin);
   }
-  
+
   log_net("tested %u sends, completed %d\n", n+m, total);
   return total;
 }

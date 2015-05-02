@@ -34,7 +34,7 @@ struct _yield_args {
   double time_limit;
 };
 
-static HPX_ACTION(_yield_worker, struct _yield_args *args) {
+static int _yield_worker_handler(struct _yield_args *args, size_t n) {
   // int num =
   sync_addf(args->counter, 1, SYNC_SEQ_CST);
 
@@ -52,8 +52,10 @@ static HPX_ACTION(_yield_worker, struct _yield_args *args) {
   // printf("Thread %d done after %f ms.\n", num, hpx_time_elapsed_ms(start_time));
   hpx_thread_continue(sizeof(uint64_t), &timeout);
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _yield_worker,
+                  _yield_worker_handler, HPX_POINTER, HPX_SIZE_T);
 
-static HPX_ACTION(thread_yield, void *UNUSED) {
+static int thread_yield_handler(void) {
   int num_threads = hpx_get_num_threads();
   size_t counter = 0;
 
@@ -90,7 +92,7 @@ static HPX_ACTION(thread_yield, void *UNUSED) {
   free(done);
   return HPX_SUCCESS;
 }
-
+static HPX_ACTION(HPX_DEFAULT, 0, thread_yield, thread_yield_handler);
 
 TEST_MAIN({
   ADD_TEST(thread_yield);

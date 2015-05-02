@@ -127,6 +127,11 @@ static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI s
 
   ugni_ctx.num_cq = cfg->cap.num_cq;
 
+  if ((2 * _LEDGER_SIZE * _photon_nproc / ugni_ctx.num_cq) > MAX_CQ_ENTRIES) {
+    dbg_warn("Possible CQ overrun with current config (nproc=%d, nledger=%d, ncq=%d)",
+	     _photon_nproc, _LEDGER_SIZE, ugni_ctx.num_cq);
+  }
+
   if(__ugni_init_context(&ugni_ctx)) {
     log_err("Could not initialize ugni context");
     goto error_exit;
@@ -150,7 +155,6 @@ static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI s
   // initialize the available descriptors
   descriptors = (photon_gni_descriptor*)calloc(_photon_nproc, sizeof(photon_gni_descriptor));
   for (i=0; i<_photon_nproc; i++) {
-    sync_tatas_init(&descriptors[i].lock);
     descriptors[i].entries = (gni_post_descriptor_t*)calloc(MAX_CQ_ENTRIES, sizeof(gni_post_descriptor_t));
   }
 
@@ -177,7 +181,9 @@ static int ugni_finalize() {
 static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
   gni_post_descriptor_t *fma_desc;
   int err, curr, curr_ind, cqind;
-  
+  const int max_trials = 1000;
+  int trials = 0;
+
   cqind = PHOTON_GET_CQ_IND(ugni_ctx.num_cq, args->proc);
   curr = sync_fadd(&descriptors[args->proc].curr, 1, SYNC_RELAXED);
   curr_ind = curr & (MAX_CQ_ENTRIES - 1);
@@ -203,17 +209,27 @@ static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
   fma_desc->post_id = args->id;
   fma_desc->rdma_mode = 0;
 
-  //sync_tatas_acquire(&descriptors[args->proc].lock);
   sync_tatas_acquire(&cq_lock);
   {
-    err = GNI_PostRdma(ugni_ctx.ep_handles[args->proc], fma_desc);
-    if (err != GNI_RC_SUCCESS) {
-      log_err("GNI_PostRdma data ERROR status: %s (%d)\n", gni_err_str[err], err);
+    do {
+      err = GNI_PostRdma(ugni_ctx.ep_handles[args->proc], fma_desc);
+      if (err == GNI_RC_SUCCESS) {
+	dbg_trace("GNI_PostRdma data transfer successful: %"PRIx64, args->id);
+	break;
+      }
+      if (err != GNI_RC_ERROR_RESOURCE) {
+	log_err("GNI_PostRdma data ERROR status: %s (%d)\n", gni_err_str[err], err);
+	sync_tatas_release(&cq_lock);
+	goto error_exit;
+      }
+      sched_yield();
+    } while (++trials < max_trials);
+    
+    if (err == GNI_RC_ERROR_RESOURCE) {
+      log_err("GNI_PostFma retries exceeded: %s (%d)", gni_err_str[err], err);
       goto error_exit;
     }
-    dbg_trace("GNI_PostRdma data transfer successful: %"PRIx64, args->id);
   }
-  //sync_tatas_release(&descriptors[args->proc].lock);
   sync_tatas_release(&cq_lock);
 
   return PHOTON_OK;
@@ -225,6 +241,8 @@ error_exit:
 static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags) {
   gni_post_descriptor_t *fma_desc;
   int err, curr, curr_ind, cqind;
+  const int max_trials = 1000;
+  int trials = 0;
 
   cqind = PHOTON_GET_CQ_IND(ugni_ctx.num_cq, args->proc);  
   curr = sync_fadd(&descriptors[args->proc].curr, 1, SYNC_RELAXED);
@@ -251,22 +269,32 @@ static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags) {
   fma_desc->post_id = args->id;
   fma_desc->rdma_mode = 0;
 
-  //sync_tatas_acquire(&descriptors[args->proc].lock);
   sync_tatas_acquire(&cq_lock);
   {
-    err = GNI_PostFma(ugni_ctx.ep_handles[args->proc], fma_desc);
-    if (err != GNI_RC_SUCCESS) {
-      log_err("GNI_PostFma data ERROR status: %s (%d)", gni_err_str[err], err);
+    do {
+      err = GNI_PostFma(ugni_ctx.ep_handles[args->proc], fma_desc);
+      if (err == GNI_RC_SUCCESS) {
+	dbg_trace("GNI_PostFma data transfer successful: %"PRIx64, args->id);
+	break;
+      }
+      if (err != GNI_RC_ERROR_RESOURCE) {
+	log_err("GNI_PostFma data ERROR status: %s (%d)", gni_err_str[err], err);
+	goto error_exit;
+      }
+      sched_yield();
+    } while (++trials < max_trials);
+    
+    if (err == GNI_RC_ERROR_RESOURCE) {
+      log_err("GNI_PostFma retries exceeded: %s (%d)", gni_err_str[err], err);
       goto error_exit;
     }
-    dbg_trace("GNI_PostFma data transfer successful: %"PRIx64, args->id);
   }
-  //sync_tatas_release(&descriptors[args->proc].lock);
   sync_tatas_release(&cq_lock);
 
   return PHOTON_OK;
 
 error_exit:
+  sync_tatas_release(&cq_lock);
   return PHOTON_ERROR;
 }
 

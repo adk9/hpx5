@@ -30,11 +30,11 @@ static int _initDomain_handler(Domain *ld, int rank, int max, int n) {
   ld->nDoms = n;
   return HPX_SUCCESS;
 }
-
-HPX_ACTION_DEF(PINNED, _initDomain_handler, _initDomain, HPX_INT, HPX_INT, HPX_INT);
+HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _initDomain,
+           _initDomain_handler, HPX_POINTER, HPX_INT, HPX_INT, HPX_INT);
 
 // Test code -- for global memory allocation
-static HPX_ACTION(gas_global_alloc, void *UNUSED) {
+static int gas_global_alloc_handler(void) {
   // allocate the default argument structure on the stack
 
   int nDoms = 8;
@@ -74,20 +74,25 @@ static HPX_ACTION(gas_global_alloc, void *UNUSED) {
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, gas_global_alloc, gas_global_alloc_handler);
 
-static HPX_ACTION(gas_global_alloc_block, void *UNUSED) {
+static int gas_global_alloc_block_handler(void) {
   hpx_addr_t data = hpx_gas_alloc_cyclic(1, 1024 * sizeof(char), 0);
   hpx_gas_free(data, HPX_NULL);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, gas_global_alloc_block,
+                  gas_global_alloc_block_handler);
 
-static HPX_ACTION(gas_global_calloc_block, void *UNUSED) {
+static int gas_global_calloc_block_handler(void) {
   hpx_addr_t global = hpx_gas_calloc_cyclic(1, 1024 *sizeof(char), 0);
   hpx_gas_free(global, HPX_NULL);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, gas_global_calloc_block,
+                  gas_global_calloc_block_handler);
 
-static HPX_ACTION(gas_global_mem_alloc, void *UNUSED) {
+static int gas_global_mem_alloc_handler(void) {
   uint64_t size = 1024*1024*100;
   int blocks = HPX_LOCALITIES;
 
@@ -102,6 +107,8 @@ static HPX_ACTION(gas_global_mem_alloc, void *UNUSED) {
   
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, gas_global_mem_alloc,
+                  gas_global_mem_alloc_handler);
 
 TEST_MAIN({
  ADD_TEST(gas_global_alloc);

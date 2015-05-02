@@ -17,55 +17,57 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
-// Goal of this testcase is to use the user-defined LCO to achieve 
+// Goal of this testcase is to use the user-defined LCO to achieve
 // the “OR” gate
 
-static void _lco_init (bool *val, const size_t size) {
+static void _lco_init_handler(bool *val, const size_t size) {
   *val = 0;
 }
+static HPX_ACTION(HPX_FUNCTION, 0, _lco_init, _lco_init_handler);
 
 // Update *lhs with the or gate value
-static void _lco_op (bool *val, const bool *new, const size_t size) {
+static void _lco_op_handler(bool *val, const bool *new, const size_t size) {
   *val ^= *new;
 }
+static HPX_ACTION(HPX_FUNCTION, 0, _lco_op, _lco_op_handler);
 
 // A predicate that "guards" the LCO.
-// This has to return true as soon as soon as first one gets set to 
+// This has to return true as soon as soon as first one gets set to
 // true.
-static bool _lco_predicate(bool *val, const size_t size) {
+static bool _lco_predicate_handler(bool *val, const size_t size) {
   assert(val);
   return (*val);
 }
+static HPX_ACTION(HPX_FUNCTION, 0, _lco_predicate, _lco_predicate_handler);
 
-static HPX_ACTION(_lco_get, void *UNUSED) {
+static int _lco_get_handler(void) {
   hpx_addr_t addr = hpx_thread_current_target();
   hpx_lco_wait(addr);
   hpx_lco_reset_sync(addr);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _lco_get, _lco_get_handler);
 
-static HPX_ACTION(_lco_set, int *i) {
+static int _lco_set_handler(int i) {
   hpx_addr_t addr = hpx_thread_current_target();
-  int val = (*i == 15) ? 1 : (0 == (rand() % 5));
+  int val = (i == 15) ? 1 : (0 == (rand() % 5));
   hpx_lco_set(addr, sizeof(val), &val, HPX_NULL, HPX_NULL);
   if (val == 0) {
     hpx_lco_error_sync(addr, HPX_LCO_ERROR);
   }
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, _lco_set, _lco_set_handler, HPX_INT);
 
-static HPX_ACTION(lco_user, void *UNUSED) {
+static int lco_user_handler(void) {
   printf("Test user lco.\n");
   srand(time(NULL));
   hpx_addr_t lco;
-  lco = hpx_lco_user_new(sizeof(bool),
-                         (hpx_monoid_id_t)_lco_init,
-                         (hpx_monoid_op_t)_lco_op,
-                         (hpx_predicate_t)_lco_predicate);
+  lco = hpx_lco_user_new(sizeof(bool), _lco_init, _lco_op, _lco_predicate);
   for (int i = 0; i < 16; ++i) {
     hpx_addr_t and = hpx_lco_and_new(2);
-    hpx_call(lco, _lco_set, and, &i, sizeof(i));
-    hpx_call(lco, _lco_get, and, NULL, 0);
+    hpx_call(lco, _lco_set, and, &i);
+    hpx_call(lco, _lco_get, and);
     hpx_lco_wait(and);
     hpx_lco_delete(and, HPX_NULL);
     hpx_lco_reset_sync(lco);
@@ -73,6 +75,7 @@ static HPX_ACTION(lco_user, void *UNUSED) {
   hpx_lco_delete(lco, HPX_NULL);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, 0, lco_user, lco_user_handler);
 
 TEST_MAIN({
  ADD_TEST(lco_user);

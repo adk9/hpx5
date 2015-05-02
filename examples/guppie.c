@@ -77,7 +77,7 @@ void table_set(hpx_addr_t table, long i, uint64_t val,
 }
 
 
-static int _bitwiseor_action(uint64_t *args) {
+static int _bitwiseor_action(uint64_t *args, size_t size) {
   uint64_t value = *args;
   hpx_addr_t target = hpx_thread_current_target();
   uint64_t *local;
@@ -91,7 +91,7 @@ static int _bitwiseor_action(uint64_t *args) {
 }
 
 
-static int _init_table_action(guppie_config_t *cfg) {
+static int _init_table_action(guppie_config_t *cfg, size_t size) {
   hpx_addr_t target = hpx_thread_current_target();
   uint64_t *local;
   if (!hpx_gas_try_pin(target, (void**)&local))
@@ -170,7 +170,7 @@ void Block(int mype, int npes, long totalsize, long *start,
   }
 }
 
-static int _mover_action(guppie_config_t *cfg) {
+static int _mover_action(guppie_config_t *cfg, size_t n) {
   uint64_t src;
   int dst;
   hpx_addr_t lco;
@@ -194,7 +194,7 @@ static int _mover_action(guppie_config_t *cfg) {
   // gets killed at shutdown
 }
 
-static int _update_table_action(guppie_config_t *cfg) {
+static int _update_table_action(guppie_config_t *cfg, size_t n) {
 #define VLEN 32
   uint64_t ran[VLEN];              /* Current random numbers */
   uint64_t t1[VLEN];
@@ -229,7 +229,7 @@ static int _update_table_action(guppie_config_t *cfg) {
   return HPX_SUCCESS;
 }
 
-void _main_action(guppie_config_t *cfg)
+void _main_action(guppie_config_t *cfg, size_t size)
 {
 
   double icputime;               // CPU time to init table
@@ -255,10 +255,8 @@ void _main_action(guppie_config_t *cfg)
   is = -WSEC();
 
   // Initialize main table
-  lco = hpx_lco_future_new(0);
-  hpx_bcast(_init_table, lco, cfg, sizeof(*cfg));
-  hpx_lco_wait(lco);
-  hpx_lco_delete(lco, HPX_NULL);
+  int e = hpx_bcast_rsync(_init_table, cfg, sizeof(*cfg));
+  assert(e == HPX_SUCCESS);
 
   printf("Initialization complete.\n");
   fflush(stdout);
@@ -276,10 +274,8 @@ void _main_action(guppie_config_t *cfg)
   s = -WSEC();
 
   // Update the table
-  lco = hpx_lco_future_new(0);
-  hpx_bcast(_update_table, lco, cfg, sizeof(*cfg));
-  hpx_lco_wait(lco);
-  hpx_lco_delete(lco, HPX_NULL);
+  e = hpx_bcast_rsync(_update_table, cfg, sizeof(*cfg));
+  assert(e == HPX_SUCCESS);
 
   printf("Completed updates.\n");
   fflush(stdout);
@@ -369,11 +365,11 @@ int main(int argc, char *argv[])
   };
 
   // register the actions
-  HPX_REGISTER_ACTION(_main_action, &_main);
-  HPX_REGISTER_ACTION(_init_table_action, &_init_table);
-  HPX_REGISTER_ACTION(_bitwiseor_action, &_bitwiseor);
-  HPX_REGISTER_ACTION(_update_table_action, &_update_table);
-  HPX_REGISTER_ACTION(_mover_action, &_mover);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_table, _init_table_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _bitwiseor, _bitwiseor_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _update_table, _update_table_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _mover, _mover_action, HPX_POINTER, HPX_SIZE_T);
 
   // run the update_table action
   return hpx_run(&_main, &guppie_cfg, sizeof(guppie_cfg));

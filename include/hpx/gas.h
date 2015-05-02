@@ -13,6 +13,10 @@
 #ifndef HPX_GAS_H
 #define HPX_GAS_H
 
+/// @defgroup agas Global Address Space
+/// @brief Functions and definitions for using the global address space
+/// @{
+
 /// @file  include/hpx/gas.h
 /// @brief Functions for allocating and using memory in the HPX global address
 ///        space.
@@ -199,7 +203,10 @@ bool hpx_gas_try_pin(hpx_addr_t addr, void **local);
 /// @param         addr The address of global memory to unpin.
 void hpx_gas_unpin(hpx_addr_t addr);
 
-/// Allocate local memory for use in the memget/memput functions.
+/// Allocate local memory for use in the memget/memput functions. Any memory can
+/// be used in these functions, however only thread stacks and buffers allocated
+/// with hpx_malloc_registered() are considered to be fast sources or targets
+/// for these operations.
 ///
 /// @param        bytes The number of bytes to allocate.
 ///
@@ -217,9 +224,6 @@ void hpx_free_registered(void *p);
 /// allocated using one of the family of GAS allocation routines. This
 /// requirement may not be checked. Copying data across a block boundary, or
 /// from unallocated memory, will result in undefined behavior.
-///
-/// The local address must be a stack location, or a buffer allocated with
-/// hpx_malloc_registered().
 ///
 /// This operation is not atomic. memgets with concurrent memputs to overlapping
 /// addresses ranges will result in a data race with undefined behavior. Users
@@ -244,9 +248,6 @@ int hpx_gas_memget_sync(void *to, hpx_addr_t from, size_t size);
 /// allocated using one of the family of GAS allocation routines. This
 /// requirement is not checked. Copying data across a block boundary, or to
 /// unallocated memory, will result in undefined behavior.
-///
-/// The local address must be a stack location, or a buffer allocated with
-/// hpx_malloc_registered().
 ///
 /// This operation is not atomic. Concurrent memputs to overlapping addresses
 /// ranges will result in a data race with undefined behavior. Users should
@@ -291,5 +292,7 @@ int hpx_gas_memput(hpx_addr_t to, const void *from, size_t size,
 ///
 /// @returns  HPX_SUCCESS
 int hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync);
+
+/// @}
 
 #endif

@@ -13,6 +13,8 @@
 #ifndef HPX_TIME_H
 #define HPX_TIME_H
 
+/// @addtogroup other
+/// @{
 
 /// @file
 /// @brief HPX high-resolution timer interface
@@ -93,4 +95,7 @@ hpx_time_t hpx_time_construct(unsigned long s, unsigned long ns);
 /// @returns        A pointer to an object of type hpx_time_t that represents
 ///                 a point in time, based on the start time and duration
 hpx_time_t hpx_time_point(hpx_time_t time, hpx_time_t duration);
+
+/// @}
+
 #endif

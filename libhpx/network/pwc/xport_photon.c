@@ -23,6 +23,7 @@
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
+#include <libhpx/gpa.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
@@ -32,7 +33,6 @@
 #include "xport.h"
 
 #include "../commands.h"
-#include "../../gas/pgas/gpa.h"
 
 // check to make sure we can fit a photon key in the key size
 _HPX_ASSERT(XPORT_KEY_SIZE == sizeof(struct photon_buffer_priv_t),
@@ -141,8 +141,8 @@ static int _photon_unpin(void *obj, const void *base, size_t n) {
 }
 
 // async entry point for unpin
-static HPX_ACTION_DEF(INTERRUPT, _photon_unpin, unpin, HPX_POINTER, HPX_POINTER,
-                      HPX_SIZE_T);
+static HPX_ACTION(HPX_INTERRUPT, 0, unpin, _photon_unpin, HPX_POINTER, HPX_POINTER,
+                  HPX_SIZE_T);
 
 static command_t _chain_unpin(const void *addr, size_t n, command_t op) {
   const void *const null = NULL;
@@ -152,7 +152,7 @@ static command_t _chain_unpin(const void *addr, size_t n, command_t op) {
   if (op) {
     int rank = here->rank;
     hpx_action_t lop = command_get_op(op);
-    hpx_addr_t laddr = pgas_offset_to_gpa(rank, command_get_arg(op));
+    hpx_addr_t laddr = offset_to_gpa(rank, command_get_arg(op));
     hpx_call_when_with_continuation(lsync, laddr, lop, 0, 0, &rank, &laddr);
   }
 
