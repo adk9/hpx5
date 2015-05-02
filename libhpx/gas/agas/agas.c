@@ -394,6 +394,7 @@ static int
 _agas_free_cyclic_async_handler(hpx_addr_t base) {
   gva_t gva = (gva_t)base;
   agas_t *agas = (agas_t*)here->gas;
+  gva.bits.home = here->rank;
   void *lva = btt_lookup(agas->btt, gva);
   if (!lva) {
     return HPX_SUCCESS;
