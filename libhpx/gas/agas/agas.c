@@ -311,6 +311,15 @@ _agas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
   return addr;
 }
 
+void agas_free_cyclic_sync(void *lva) {
+  agas_t *agas = (agas_t*)here->gas;
+  dbg_assert(agas->cyclic_arena < UINT32_MAX);
+  dbg_assert(here->rank == 0);
+
+  int flags = MALLOCX_ARENA(agas->cyclic_arena);
+  libhpx_global_dallocx(lva, flags);
+}
+
 hpx_addr_t agas_calloc_cyclic_sync(size_t n, uint32_t bsize) {
   assert(here->rank == 0);
   return _agas_alloc_cyclic_sync(n, bsize, 1);
@@ -382,6 +391,24 @@ _agas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
 }
 
 static int
+_agas_free_cyclic_async_handler(hpx_addr_t gva) {
+  agas_t *agas = (agas_t*)here->gas;
+  void *lva = btt_lookup(agas->btt, (gva_t)gva);
+  if (!lva) {
+    return HPX_SUCCESS;
+  }
+
+  if (here->rank == 0) {
+    agas_free_cyclic_sync(lva);
+  } else {
+    free(lva);
+  }
+  return HPX_SUCCESS;
+}
+HPX_ACTION(HPX_DEFAULT, 0, _agas_free_cyclic_async,
+           _agas_free_cyclic_async_handler, HPX_ADDR);
+
+static int
 _agas_free_local_async_handler(hpx_addr_t rsync) {
   hpx_addr_t gva = hpx_thread_current_target();
   hpx_gas_free(gva, rsync);
@@ -399,15 +426,14 @@ _agas_free(void *gas, hpx_addr_t addr, hpx_addr_t rsync) {
   gva_t gva = { .addr = addr };
 
   if (gva.bits.cyclic) {
-    log_error("Cyclic allocation free is unhandled\n");
+    int e = hpx_bcast_lsync(_agas_free_cyclic_async, rsync, &addr);
+    dbg_check(e, "failed to broadcast AGAS cyclic free operation\n");
     return;
   }
 
   agas_t *agas = gas;
-
-  void *lva;
-  bool local = btt_try_pin(agas->btt, gva, &lva);
-  if (local) {
+  void *lva = btt_lookup(agas->btt, gva);
+  if (lva) {
     // 1) remove this mapping
     btt_remove(agas->btt, gva);
 
