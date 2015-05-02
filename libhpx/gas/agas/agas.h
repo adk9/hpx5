@@ -16,6 +16,7 @@
 #include <hpx/hpx.h>
 #include <hpx/attributes.h>
 #include <libhpx/gas.h>
+#include "gva.h"
 
 struct boot;
 struct config;
@@ -46,6 +47,9 @@ int agas_memget(void *gas, void *to, hpx_addr_t from, size_t n,
 
 int agas_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
                 hpx_addr_t sync)
+  HPX_INTERNAL;
+
+void agas_local_free(agas_t *gas, gva_t addr, void *lva, hpx_addr_t rsync)
   HPX_INTERNAL;
 
 #endif
