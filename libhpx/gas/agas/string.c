@@ -19,15 +19,47 @@
 #include <libhpx/network.h>
 #include "agas.h"
 #include "btt.h"
+#include "../parcel/emulation.h"
 
 void
 agas_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
 }
 
+static int _memput_rsync_handler(int src, uint64_t command) {
+  hpx_addr_t rsync = command;
+  hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
+}
+// could be an interrupt?
+static HPX_ACTION(HPX_DEFAULT, 0, _memput_rsync, _memput_rsync_handler,
+                  HPX_INT, HPX_UINT64);
+
 int
 agas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
             hpx_addr_t lsync, hpx_addr_t rsync) {
-  return HPX_ERROR;
+  if (!n) {
+    return HPX_SUCCESS;
+  }
+
+  agas_t *agas = gas;
+  gva_t gva = { .addr = to };
+  void *lto = NULL;
+  if (btt_try_pin(agas->btt, gva, &lto)) {
+    memcpy(lto, from, n);
+    btt_unpin(agas->btt, gva);
+    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    return HPX_SUCCESS;
+  }
+
+  hpx_action_t lop = lsync ? lco_set : HPX_ACTION_NULL;
+  if (rsync) {
+    return network_pwc(here->network, to, from, n, lop, lsync,
+                       _memput_rsync, rsync);
+  }
+  else {
+    return network_put(here->network, to, from, n, lop, lsync);
+  }
 }
 
 int
