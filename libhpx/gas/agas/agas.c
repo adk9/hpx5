@@ -191,25 +191,25 @@ static bool _chunk_dalloc_cyclic(void *chunk, size_t size, unsigned UNUSED) {
 }
 
 static int
-_locality_alloc_cyclic_handler(uint64_t offset, uint64_t blocks, uint32_t align,
-                               gva_t base, void *lva) {
+_locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align,
+                               uint64_t offset, void *lva) {
   agas_t *agas = (agas_t*)here->gas;
   uint32_t bsize = 1u << align;
   if (here->rank != 0) {
-    lva = global_malloc(blocks * bsize);
+    lva = global_memalign(align, blocks * bsize);
   }
 
   // and insert entries into our block translation table
   for (int i = 0; i < blocks; i++) {
     gva_t gva = {
       .bits = {
-        .offset = base.bits.offset + (i * here->ranks),
+        .offset = offset + (i * bsize),
         .cyclic = 1,
         .size = align,
         .home = here->rank
       }
     };
-    void *block = lva + (i * here->ranks * bsize);
+    void *block = lva + (i * bsize);
     btt_insert(agas->btt, gva, here->rank, block);
   }
 
@@ -217,7 +217,7 @@ _locality_alloc_cyclic_handler(uint64_t offset, uint64_t blocks, uint32_t align,
 }
 HPX_ACTION(HPX_DEFAULT, 0, _locality_alloc_cyclic,
            _locality_alloc_cyclic_handler, HPX_UINT64,
-           HPX_UINT32, HPX_ADDR, HPX_POINTER);
+           HPX_UINT32, HPX_UINT64, HPX_POINTER);
 
 hpx_addr_t agas_alloc_cyclic_sync(size_t n, uint32_t bsize) {
   agas_t *agas = (agas_t*)here->gas;
@@ -236,7 +236,8 @@ hpx_addr_t agas_alloc_cyclic_sync(size_t n, uint32_t bsize) {
   }
 
   gva_t gva = _lva_to_gva(agas, lva, bsize);
-  int e = hpx_bcast_rsync(_locality_alloc_cyclic, &blocks, &align, &gva, &lva);
+  uint64_t offset = gva.bits.offset;
+  int e = hpx_bcast_rsync(_locality_alloc_cyclic, &blocks, &align, &offset, &lva);
   dbg_check(e, "failed to insert btt entries.\n");
 
   // and return the address
