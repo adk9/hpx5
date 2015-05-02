@@ -37,7 +37,6 @@ void agas_local_free(agas_t *agas, gva_t gva, void *lva, hpx_addr_t rsync) {
   hpx_lco_error(rsync, HPX_SUCCESS, HPX_NULL);
 }
 
-
 int64_t
 agas_local_sub(const agas_t *agas, gva_t lhs, gva_t rhs, uint32_t bsize) {
   uint64_t bits = lhs.bits.size;
