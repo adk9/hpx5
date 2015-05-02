@@ -135,9 +135,8 @@ static int _calloc_init_handler(uint64_t offset, uint32_t bytes, uint32_t bsize)
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_INTERRUPT, 0, _calloc_init, _calloc_init_handler, HPX_UINT64,
-                  HPX_UINT32, HPX_UINT32);
-
+static HPX_ACTION(HPX_INTERRUPT, 0, _calloc_init, _calloc_init_handler,
+                  HPX_UINT64, HPX_UINT32, HPX_UINT32);
 
 int pgas_free_handler(void) {
   hpx_addr_t gpa = hpx_thread_current_target();
