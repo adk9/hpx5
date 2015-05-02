@@ -311,6 +311,16 @@ _agas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
   return addr;
 }
 
+void agas_free_cyclic_sync(gva_t offset) {
+  agas_t *agas = (agas_t*)here->gas;
+  dbg_assert(agas->cyclic_arena < UINT32_MAX);
+  dbg_assert(here->rank == 0);
+
+  int flags = MALLOCX_ARENA(agas->cyclic_arena);
+  void *lva = btt_lookup(agas->btt, offset);
+  libhpx_global_dallocx(lva, flags);
+}
+
 hpx_addr_t agas_calloc_cyclic_sync(size_t n, uint32_t bsize) {
   assert(here->rank == 0);
   return _agas_alloc_cyclic_sync(n, bsize, 1);
