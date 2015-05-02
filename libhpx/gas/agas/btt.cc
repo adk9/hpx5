@@ -36,6 +36,7 @@ namespace {
     BTT(size_t);
     bool trypin(gva_t gva, void** lva);
     void unpin(gva_t gva);
+    void *lookup(gva_t gva) const;
     uint32_t getOwner(gva_t gva) const;
   };
 }
@@ -61,6 +62,19 @@ BTT::unpin(gva_t gva) {
       entry.count--;
     });
   assert(found);
+}
+
+void *
+BTT::lookup(gva_t gva) const {
+  Entry entry;
+  uint64_t key = gva_to_key(gva);
+  bool found = find(key, entry);
+  if (found) {
+    return entry.lva;
+  }
+  else {
+    return NULL;
+  }
 }
 
 uint32_t
@@ -115,6 +129,12 @@ void
 btt_unpin(void* obj, gva_t gva) {
   BTT *btt = static_cast<BTT*>(obj);
   btt->unpin(gva);
+}
+
+void *
+btt_lookup(const void* obj, gva_t gva) {
+  const BTT *btt = static_cast<const BTT*>(obj);
+  return btt->lookup(gva);
 }
 
 uint32_t
