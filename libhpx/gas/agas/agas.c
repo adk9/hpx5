@@ -446,14 +446,7 @@ _agas_free(void *gas, hpx_addr_t addr, hpx_addr_t rsync) {
   agas_t *agas = gas;
   void *lva = btt_lookup(agas->btt, gva);
   if (lva) {
-    // 1) remove this mapping
-    btt_remove(agas->btt, gva);
-
-    // 2) free the backing memory
-    global_free(lva);
-
-    // 3) set the lsync
-    hpx_lco_error(rsync, HPX_SUCCESS, HPX_NULL);
+    agas_local_free(agas, gva, lva, rsync);
     return;
   }
 
