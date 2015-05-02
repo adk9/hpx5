@@ -31,22 +31,15 @@ int isir_emulate_pwc_handler(void *to, const void *buffer, size_t n) {
 HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, isir_emulate_pwc,
            isir_emulate_pwc_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
+typedef struct {
+  void *lva;
+  char bytes[];
+} _gwc_reply_args_t;
+
 /// The reply half of a get-with-completion.
 ///
-/// This abuses the knowledge that local pointers only use 48 bits and have the
-/// top 16 bits set to 0. It would be great if this could be an interrupt, but
-/// we need to know how much data was sent which requires out-of-band
-/// communication.
-static int _gwc_reply_handler(const void *data, size_t n) {
-  static const uint64_t mask = UINT64_MAX >> 16;
-  hpx_addr_t target = hpx_thread_current_target();
-#ifdef HPX_BITNESS_64
-  void *to = (void*)(mask & target);
-#else
-  dbg_assert((mask | (0xffffffff & target)) == (mask | target));
-  void *to = (void*)(uint32_t)(0xffffffff & target);
-#endif
-  memcpy(to, data, n);
+static int _gwc_reply_handler(const _gwc_reply_args_t *args, size_t n) {
+  memcpy(args->lva, args->bytes, n - sizeof(*args));
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_TASK, HPX_MARSHALLED, _gwc_reply,
@@ -58,8 +51,25 @@ static HPX_ACTION(HPX_TASK, HPX_MARSHALLED, _gwc_reply,
 /// and then signaling whatever the lsync should be over there.
 ///
 /// NB: once the PINNED changes get incorporated, this can be an interrupt.
-static int _gwc_request_handler(void *from, size_t n, hpx_addr_t to) {
-  hpx_call_cc(to, _gwc_reply, NULL, NULL, from, n);
+static int _gwc_request_handler(void *from, size_t n, hpx_addr_t to, void *lva)
+{
+  _gwc_reply_args_t *args = NULL;
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(*args) + n);
+  p->target = to;
+  p->action = _gwc_reply;
+
+  // *take* the current continuation
+  hpx_parcel_t *this = scheduler_current_parcel();
+  p->c_target = this->c_target;
+  p->c_action = this->c_action;
+  this->c_target = HPX_NULL;
+  this->c_action = HPX_ACTION_NULL;
+
+  args = hpx_parcel_get_data(p);
+  args->lva = lva;
+  memcpy(args->bytes, from, n);
+  hpx_parcel_send(p, HPX_NULL);
+  return HPX_SUCCESS;
 }
-HPX_ACTION(HPX_DEFAULT, HPX_PINNED, isir_emulate_gwc,
-           _gwc_request_handler, HPX_POINTER, HPX_SIZE_T, HPX_ADDR);
+HPX_ACTION(HPX_DEFAULT, HPX_PINNED, isir_emulate_gwc, _gwc_request_handler,
+           HPX_POINTER, HPX_SIZE_T, HPX_ADDR, HPX_POINTER);
