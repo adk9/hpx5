@@ -8,6 +8,7 @@
 *.swp
 *.log
 *.trs
+*.btr
 *Makefile.in
 
 # /
