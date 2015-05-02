@@ -196,7 +196,7 @@ _locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align,
   agas_t *agas = (agas_t*)here->gas;
   uint32_t bsize = 1u << align;
   if (here->rank != 0) {
-    posix_memalign(&lva, align, blocks * bsize);
+    posix_memalign(&lva, bsize, blocks * bsize);
   }
 
   // and insert entries into our block translation table
