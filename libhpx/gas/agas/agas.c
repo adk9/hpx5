@@ -84,7 +84,6 @@ _agas_add(const void *gas, hpx_addr_t addr, int64_t bytes, uint32_t bsize) {
   }
 
   if (gva.bits.cyclic) {
-    uint16_t home = gva.bits.home;
     gva.addr = gpa_add_cyclic(addr, bytes, bsize);
     gva.bits.size = size;
     gva.bits.cyclic = 1;
@@ -399,7 +398,8 @@ _agas_free(void *gas, hpx_addr_t addr, hpx_addr_t rsync) {
   gva_t gva = { .addr = addr };
 
   if (gva.bits.cyclic) {
-    dbg_error("Cyclic allocation free is unhandled\n");
+    log_error("Cyclic allocation free is unhandled\n");
+    return;
   }
 
   agas_t *agas = gas;
