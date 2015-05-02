@@ -391,13 +391,25 @@ _agas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
 }
 
 static int
-_agas_free_cyclic_async_handler(hpx_addr_t gva) {
+_agas_free_cyclic_async_handler(hpx_addr_t base) {
+  gva_t gva = (gva_t)base;
   agas_t *agas = (agas_t*)here->gas;
-  void *lva = btt_lookup(agas->btt, (gva_t)gva);
+  void *lva = btt_lookup(agas->btt, gva);
   if (!lva) {
     return HPX_SUCCESS;
   }
 
+  // remove all btt entries
+  uint64_t offset = gva.bits.offset;
+  size_t blocks = btt_get_blocks(agas->btt, gva);
+  size_t bsize = 1 << gva.bits.size;
+  for (int i = 0; i < blocks; i++) {
+    gva.bits.offset = offset + (i * bsize);
+    gva.bits.home = here->rank;
+    btt_remove(agas->btt, gva);
+  }
+
+  // and free the backing memory
   if (here->rank == 0) {
     agas_free_cyclic_sync(lva);
   } else {
