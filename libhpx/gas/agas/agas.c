@@ -18,6 +18,7 @@
 #include <libhpx/bitmap.h>
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
+#include <libhpx/gpa.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/system.h>
@@ -61,11 +62,12 @@ _agas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   }
 
   if (l.bits.cyclic && r.bits.cyclic) {
-    dbg_error("unimplemented\n");
+    return gpa_sub_cyclic(lhs, rhs, bsize);
   }
 
   if (!l.bits.cyclic && !r.bits.cyclic) {
     if (l.bits.home == r.bits.home) {
+
       dbg_error("unimplemented\n");
     }
   }
@@ -82,7 +84,11 @@ _agas_add(const void *gas, hpx_addr_t addr, int64_t bytes, uint32_t bsize) {
   }
 
   if (gva.bits.cyclic) {
-    dbg_error("unimplemented\n");
+    uint16_t home = gva.bits.home;
+    gva.addr = gpa_add_cyclic(addr, bytes, bsize);
+    gva.bits.size = size;
+    gva.bits.cyclic = 1;
+    return gva.addr;
   }
   else {
     dbg_error("unimplemented\n");
@@ -225,7 +231,7 @@ _locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align,
   agas_t *agas = (agas_t*)here->gas;
   uint32_t bsize = 1u << align;
   if (here->rank != 0) {
-    posix_memalign(&lva, bsize, blocks * bsize);    
+    posix_memalign(&lva, bsize, blocks * bsize);
   }
 
   if (zero) {
