@@ -62,6 +62,13 @@ agas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
   }
 }
 
+static int _agas_lco_set_handler(int src, uint64_t command) {
+  hpx_addr_t lco = command;
+  hpx_lco_set(lco, 0, NULL, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
+}
+static COMMAND_DEF(HPX_INTERRUPT, _agas_lco_set, _agas_lco_set_handler);
+
 int
 agas_memget(void *gas, void *to, hpx_addr_t from, size_t n, hpx_addr_t lsync) {
   if (!n) {
@@ -78,7 +85,7 @@ agas_memget(void *gas, void *to, hpx_addr_t from, size_t n, hpx_addr_t lsync) {
     return HPX_SUCCESS;
   }
   else {
-    return network_get(here->network, to, from, n, lco_set, lsync);
+    return network_get(here->network, to, from, n, _agas_lco_set, lsync);
   }
   return HPX_SUCCESS;
 }
