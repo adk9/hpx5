@@ -79,7 +79,7 @@ _agas_add(const void *gas, hpx_addr_t addr, int64_t bytes, uint32_t bsize) {
   gva_t gva = { .addr = addr };
   uint32_t size = ceil_log2_32(bsize);
   if (gva.bits.size != size) {
-    dbg_error("block size does not match\n");
+    log_error("block size does not match\n");
   }
 
   if (gva.bits.cyclic) {
@@ -113,7 +113,12 @@ static bool
 _agas_try_pin(void *gas, hpx_addr_t addr, void **lva) {
   agas_t *agas = gas;
   gva_t gva = { .addr = addr };
-  return btt_try_pin(agas->btt, gva, lva);
+  uint64_t offset = gva_to_offset(gva);
+  bool ret = btt_try_pin(agas->btt, gva, lva);
+  if (lva) {
+    *lva = (char*)(*lva) + offset;
+  }
+  return ret;
 }
 
 static void
