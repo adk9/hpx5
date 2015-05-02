@@ -15,10 +15,20 @@
 
 #include <hpx/hpx.h>
 #include <hpx/attributes.h>
+#include <libhpx/gas.h>
 
 struct boot;
 struct config;
-struct gas;
+
+typedef struct {
+  gas_t vtable;
+  size_t chunk_size;
+  void *chunk_table;
+  void *btt;
+  void *bitmap;
+  void *cyclic_bitmap;
+  unsigned cyclic_arena;
+} agas_t;
 
 struct gas *gas_agas_new(const struct config *config, struct boot *boot)
   HPX_INTERNAL;
