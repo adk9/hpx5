@@ -230,7 +230,11 @@ _locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align,
   agas_t *agas = (agas_t*)here->gas;
   uint32_t bsize = 1u << align;
   if (here->rank != 0) {
-    posix_memalign(&lva, bsize, blocks * bsize);
+    uint32_t boundary = (bsize < 8) ? 8 : bsize;
+    lva = NULL;
+    int e = posix_memalign(&lva, boundary, blocks * bsize);
+    dbg_check(e, "Failed memalign\n");
+    (void)e;
   }
 
   if (zero) {
