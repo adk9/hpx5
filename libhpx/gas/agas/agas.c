@@ -193,7 +193,8 @@ _chunk_dalloc(void *bitmap, void *addr, size_t n) {
   // 1) release the bits
   uint64_t offset = chunk_table_lookup(agas->chunk_table, addr);
   uint32_t nbits = ceil_div_64(n, agas->chunk_size);
-  bitmap_release(bitmap, offset, nbits);
+  uint32_t bit = offset / agas->chunk_size;
+  bitmap_release(bitmap, bit, nbits);
 
   // 2) unmap the backing memory
   system_munmap(NULL, addr, n);
