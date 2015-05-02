@@ -25,14 +25,12 @@ void
 agas_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
 }
 
-static int _memput_rsync_handler(int src, uint64_t command) {
-  hpx_addr_t rsync = command;
-  hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+static int _agas_lco_set_handler(int src, uint64_t command) {
+  hpx_addr_t lco = command;
+  hpx_lco_set(lco, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
-// could be an interrupt?
-static HPX_ACTION(HPX_DEFAULT, 0, _memput_rsync, _memput_rsync_handler,
-                  HPX_INT, HPX_UINT64);
+static COMMAND_DEF(HPX_INTERRUPT, _agas_lco_set, _agas_lco_set_handler);
 
 int
 agas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
@@ -52,22 +50,15 @@ agas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
     return HPX_SUCCESS;
   }
 
-  hpx_action_t lop = lsync ? lco_set : HPX_ACTION_NULL;
+  hpx_action_t lop = lsync ? _agas_lco_set : HPX_ACTION_NULL;
   if (rsync) {
     return network_pwc(here->network, to, from, n, lop, lsync,
-                       _memput_rsync, rsync);
+                       _agas_lco_set, rsync);
   }
   else {
     return network_put(here->network, to, from, n, lop, lsync);
   }
 }
-
-static int _agas_lco_set_handler(int src, uint64_t command) {
-  hpx_addr_t lco = command;
-  hpx_lco_set(lco, 0, NULL, HPX_NULL, HPX_NULL);
-  return HPX_SUCCESS;
-}
-static COMMAND_DEF(HPX_INTERRUPT, _agas_lco_set, _agas_lco_set_handler);
 
 int
 agas_memget(void *gas, void *to, hpx_addr_t from, size_t n, hpx_addr_t lsync) {
