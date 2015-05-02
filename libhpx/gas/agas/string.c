@@ -84,5 +84,24 @@ agas_memget(void *gas, void *to, hpx_addr_t from, size_t n, hpx_addr_t lsync) {
 int
 agas_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
             hpx_addr_t sync) {
-  return HPX_ERROR;
+  if (!size) {
+    return HPX_SUCCESS;
+  }
+
+  void *lto;
+  void *lfrom;
+
+  if (!hpx_gas_try_pin(to, &lto)) {
+    return parcel_memcpy(to, from, size, sync);
+  }
+  else if (!hpx_gas_try_pin(from, &lfrom)) {
+    hpx_gas_unpin(to);
+    return parcel_memcpy(to, from, size, sync);
+  }
+
+  memcpy(lto, lfrom, size);
+  hpx_gas_unpin(to);
+  hpx_gas_unpin(from);
+  hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
 }
