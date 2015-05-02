@@ -67,8 +67,7 @@ _agas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
 
   if (!l.bits.cyclic && !r.bits.cyclic) {
     if (l.bits.home == r.bits.home) {
-
-      dbg_error("unimplemented\n");
+      return agas_local_sub(gas, l, r, bsize);
     }
   }
 
@@ -90,7 +89,7 @@ _agas_add(const void *gas, hpx_addr_t addr, int64_t bytes, uint32_t bsize) {
     return gva.addr;
   }
   else {
-    dbg_error("unimplemented\n");
+    return agas_local_add(gas, gva, bytes, bsize);
   }
 }
 

@@ -49,6 +49,13 @@ int agas_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
                 hpx_addr_t sync)
   HPX_INTERNAL;
 
+int64_t agas_local_sub(const agas_t *agas, gva_t lhs, gva_t rhs, uint32_t bsize)
+  HPX_INTERNAL;
+
+hpx_addr_t agas_local_add(const agas_t *agas, gva_t gva, int64_t bytes,
+                          uint32_t bsize)
+  HPX_INTERNAL;
+
 void agas_local_free(agas_t *gas, gva_t addr, void *lva, hpx_addr_t rsync)
   HPX_INTERNAL;
 
