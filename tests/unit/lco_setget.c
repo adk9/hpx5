@@ -140,10 +140,8 @@ static int _init_memory_handler(uint32_t *args, size_t n) {
   uint32_t blocks = args[1];
 
   hpx_addr_t completed = hpx_lco_and_new(blocks);
-  for (int i = 0; i < blocks; i++) {
-    hpx_addr_t block = hpx_addr_add(local, i * HPX_LOCALITY_ID * block_bytes, block_bytes);
-    hpx_call(block, _init_block, completed, args, 2 * sizeof(*args));
-  }
+  hpx_addr_t block = hpx_addr_add(local, HPX_LOCALITY_ID * block_bytes, block_bytes);
+  hpx_call(block, _init_block, completed, args, sizeof(*args));
   hpx_lco_wait(completed);
   hpx_lco_delete(completed, HPX_NULL);
   return HPX_SUCCESS;
@@ -187,7 +185,7 @@ static int lco_waitall_handler(void) {
 
   for (int i = 0; i < rem; i++) {
     hpx_addr_t block = hpx_addr_add(addr, args[1] * ranks + i * block_bytes, block_bytes);
-    hpx_call(block, _init_memory, done[1], args, sizeof(args[0]));
+    hpx_call(block, _init_memory, done[1], args, sizeof(args));
   }
 
   // Blocks the thread until all of the LCO's have been set.
