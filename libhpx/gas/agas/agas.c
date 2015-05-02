@@ -229,7 +229,7 @@ _locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align,
   }
 
   if (zero) {
-    memset(lva, 0, blocks * bsize);
+    lva = memset(lva, 0, blocks * bsize);
   }
 
   // and insert entries into our block translation table
@@ -269,6 +269,7 @@ hpx_addr_t _agas_alloc_cyclic_sync(size_t n, uint32_t bsize, int zero) {
   }
 
   gva_t gva = _lva_to_gva(agas, lva, bsize);
+  gva.bits.cyclic = 1;
   uint64_t offset = gva.bits.offset;
   int e = hpx_bcast_rsync(_locality_alloc_cyclic, &blocks, &align, &offset, &lva, &zero);
   dbg_check(e, "failed to insert btt entries.\n");
