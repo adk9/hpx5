@@ -23,9 +23,11 @@ namespace {
     int32_t count;
     int32_t owner;
     void *lva;
-    Entry() : count(0), owner(0), lva(NULL) {
+    size_t blocks;
+    Entry() : count(0), owner(0), lva(NULL), blocks(1) {
     }
-    Entry(int32_t o, void *l) : count(0), owner(o), lva(l) {
+    Entry(int32_t o, void *l, size_t b) : count(0), owner(o), lva(l), blocks(b)
+    {
     }
   };
 
@@ -102,10 +104,10 @@ btt_delete(void* obj) {
 }
 
 void
-btt_insert(void *obj, gva_t gva, int32_t owner, void *lva) {
+btt_insert(void *obj, gva_t gva, int32_t owner, void *lva, size_t blocks) {
   BTT *btt = static_cast<BTT*>(obj);
   uint64_t key = gva_to_key(gva);
-  bool inserted = btt->insert(key, Entry(owner, lva));
+  bool inserted = btt->insert(key, Entry(owner, lva, blocks));
   assert(inserted);
   (void)inserted;
 }

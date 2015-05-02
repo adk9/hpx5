@@ -249,7 +249,7 @@ _locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align,
       }
     };
     void *block = lva + (i * bsize);
-    btt_insert(agas->btt, gva, here->rank, block);
+    btt_insert(agas->btt, gva, here->rank, block, blocks);
   }
 
   return HPX_SUCCESS;
@@ -361,7 +361,7 @@ _agas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
 
   agas_t *agas = gas;
   gva_t gva = _lva_to_gva(gas, lva, bytes);
-  btt_insert(agas->btt, gva, here->rank, lva);
+  btt_insert(agas->btt, gva, here->rank, lva, 1);
   return gva.addr;
 }
 
@@ -383,7 +383,7 @@ _agas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
   hpx_addr_t base = gva.addr;
   uint32_t bsize = 1lu << gva.bits.size;
   for (int i = 0; i < nmemb; i++) {
-    btt_insert(agas->btt, gva, here->rank, lva);
+    btt_insert(agas->btt, gva, here->rank, lva, nmemb);
     lva += bsize;
     gva.bits.offset += bsize;
   }
@@ -513,6 +513,6 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   }
 
   gva_t there = { .addr = _agas_there(agas, here->rank) };
-  btt_insert(agas->btt, there, here->rank, here);
+  btt_insert(agas->btt, there, here->rank, here, 1);
   return &agas->vtable;
 }
