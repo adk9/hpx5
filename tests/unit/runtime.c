@@ -22,7 +22,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_handler);
 
 int main(int argc, char *argv[]) {
   signal(SIGALRM, timeout);
-  alarm(TIMEOUT);
+  alarm(tests_timeout);
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "failed to initialize HPX.\n");
     return 1;
