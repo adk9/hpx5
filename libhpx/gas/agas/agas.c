@@ -103,9 +103,31 @@ _lva_to_chunk(agas_t *gas, void *lva) {
   return (void*)((uintptr_t)lva & mask);
 }
 
+static gva_t
+_lva_to_gva(agas_t *gas, void *lva, uint32_t bsize) {
+  // we need to reverse map this address to an offset into the local portion of
+  // the global address space
+  void *chunk = _lva_to_chunk(gas, lva);
+  uint64_t base = chunk_table_lookup(gas->chunk_table, chunk);
+  uint64_t offset = base + ((char*)lva - (char*)chunk);
+
+  // and construct a gva for this
+  gva_t gva = {
+    .bits = {
+      .offset = offset,
+      .size   = ceil_log2_32(bsize),
+      .cyclic  = 0,
+      .home   = here->rank,
+    }
+  };
+
+  // and return the address
+  return gva;
+}
+
 static void *
 _chunk_alloc(void *bitmap, void *addr, size_t n, size_t align) {
-  agas_t *agas = here->gas;
+  agas_t *agas = (agas_t*)here->gas;
 
   // 1) get gva placement for this allocation
   uint32_t nbits = ceil_div_64(n, agas->chunk_size);
@@ -132,7 +154,7 @@ _chunk_alloc(void *bitmap, void *addr, size_t n, size_t align) {
 
 static void
 _chunk_dalloc(void *bitmap, void *addr, size_t n) {
-  agas_t *agas = here->gas;
+  agas_t *agas = (agas_t*)here->gas;
 
   // 1) release the bits
   uint64_t offset = chunk_table_lookup(agas->chunk_table, addr);
@@ -152,6 +174,7 @@ _chunk_dalloc(void *bitmap, void *addr, size_t n) {
 
 static void *_chunk_alloc_cyclic(void *addr, size_t size, size_t align,
                                  bool *zero, unsigned UNUSED) {
+  agas_t *agas = (agas_t*)here->gas;  
   assert(size % agas->chunk_size == 0);
   assert(size / agas->chunk_size < UINT32_MAX);
   void *chunk = _chunk_alloc(agas->cyclic_bitmap, addr, size, align);
@@ -162,6 +185,7 @@ static void *_chunk_alloc_cyclic(void *addr, size_t size, size_t align,
 }
 
 static bool _chunk_dalloc_cyclic(void *chunk, size_t size, unsigned UNUSED) {
+  agas_t *agas = (agas_t*)here->gas;
   _chunk_dalloc(agas->cyclic_bitmap, chunk, size);
   return true;
 }
@@ -169,6 +193,7 @@ static bool _chunk_dalloc_cyclic(void *chunk, size_t size, unsigned UNUSED) {
 static int
 _locality_alloc_cyclic_handler(uint64_t offset, uint64_t blocks, uint32_t align,
                                gva_t base, void *lva) {
+  agas_t *agas = (agas_t*)here->gas;
   uint32_t bsize = 1u << align;
   if (here->rank != 0) {
     lva = global_malloc(blocks * bsize);
@@ -178,7 +203,7 @@ _locality_alloc_cyclic_handler(uint64_t offset, uint64_t blocks, uint32_t align,
   for (int i = 0; i < blocks; i++) {
     gva_t gva = {
       .bits = {
-        .offset = base.bits.offset + (i * here->ranks);
+        .offset = base.bits.offset + (i * here->ranks),
         .cyclic = 1,
         .size = align,
         .home = here->rank
@@ -195,7 +220,7 @@ HPX_ACTION(HPX_DEFAULT, 0, _locality_alloc_cyclic,
            HPX_UINT32, HPX_ADDR, HPX_POINTER);
 
 hpx_addr_t agas_alloc_cyclic_sync(size_t n, uint32_t bsize) {
-  agas_t *agas = here->gas;
+  agas_t *agas = (agas_t*)here->gas;
   dbg_assert(agas->cyclic_arena < UINT32_MAX);
   dbg_assert(here->rank == 0);
 
@@ -265,28 +290,6 @@ _agas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
   }
   dbg_assert_str(addr != HPX_NULL, "HPX_NULL is not a valid allocation\n");
   return addr;
-}
-
-static gva_t
-_lva_to_gva(agas_t *gas, void *lva, uint32_t bsize) {
-  // we need to reverse map this address to an offset into the local portion of
-  // the global address space
-  void *chunk = _lva_to_chunk(gas, lva);
-  uint64_t base = chunk_table_lookup(gas->chunk_table, chunk);
-  uint64_t offset = base + ((char*)lva - (char*)chunk);
-
-  // and construct a gva for this
-  gva_t gva = {
-    .bits = {
-      .offset = offset,
-      .size   = ceil_log2_32(bsize),
-      .cyclic  = 0,
-      .home   = here->rank,
-    }
-  };
-
-  // and return the address
-  return gva;
 }
 
 static hpx_addr_t
