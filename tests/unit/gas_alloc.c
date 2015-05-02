@@ -88,6 +88,22 @@ static int gas_calloc_handler(void) {
   }
 
   for (int i = 0; i < N; ++i) {
+    int *chunk;
+    hpx_addr_t addr = hpx_addr_add(local, i * sizeof(int), sizeof(int));
+    if (!hpx_gas_try_pin(addr, (void**)&chunk)) {
+      fflush(stdout);
+      fprintf(stderr, "gas calloc could not pin internal chunk\n");
+      exit(EXIT_FAILURE);
+    }
+
+    if (chunk != buffer + i) {
+      fflush(stdout);
+      fprintf(stderr, "pinned chunk address does not match\n");
+      exit(EXIT_FAILURE);
+    }
+
+    hpx_gas_unpin(addr);
+
     if (buffer[i] != 0) {
       fflush(stdout);
       fprintf(stderr, "gas calloc returned uninitialized memory\n");
