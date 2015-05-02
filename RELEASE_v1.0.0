@@ -5,59 +5,88 @@ Distributed under the Indiana University License. (See accompanying file LICENSE
 
 Product brief
 --------------
-HPX-5 (High Performance ParalleX) provides a unified programming model for parallel and distributed applications. It is freely available, open source, feature complete, and performance-oriented implementation of the ParalleX execution model. HPX-5 is a general-purpose C runtime system for applications, targeted at conventional, widely available architectures. We use HPX-5 for a broad range of scientific applications, helping scientists and developers to write code that shows better performance on irregular applications and at scale when compared to more conventional programming models such as MPI. HPX-5 supports such applications with implementation of features like Active Global Address Space (AGAS), ParalleX Processes, Complexes (ParalleX Threads and Thread Management), Parcel Transport and Parcel Management, Local Control Objects (LCOs) and Localities.
+HPX-5 (High Performance ParalleX) provides a unified programming model for
+parallel and distributed applications. It is freely available, open source,
+feature complete, and performance-oriented implementation of the ParalleX
+execution model. HPX-5 is a general-purpose C runtime system for applications,
+targeted at conventional, widely available architectures. We use HPX-5 for a
+broad range of scientific applications, helping scientists and developers to
+write code that shows better performance on irregular applications and at scale
+when compared to more conventional programming models such as MPI. HPX-5
+supports such applications with implementation of features like Active Global
+Address Space (AGAS), ParalleX Processes, Complexes (ParalleX Threads and Thread
+Management), Parcel Transport and Parcel Management, Local Control Objects
+(LCOs) and Localities. 
 
 General Information
 --------------------
 The HPX-5 distribution contains two top-level directories.
 
-1. The `hpx` directory contains the HPX-5 interface and runtime library implementation, along with examples, the test suite, HPX developer tutorials, and third-party dependencies required for the build. The primary installed products from this project are the HPX-5 headers and the `libhpx` runtime library, along with some library dependencies and a `pkg-config` file for external projects.
+1. The `hpx` directory contains the HPX-5 interface and runtime library
+   implementation, along with examples, the test suite, HPX developer tutorials,
+   and third-party dependencies required for the build. The primary installed
+   products from this project are the HPX-5 headers and the `libhpx` runtime
+   library, along with some library dependencies and a `pkg-config` file for
+   external projects.
 
-2. The `hpx-apps` folder contains example applications designed to depend on an externally installed instance of HPX-5, and should serve as a usage model. In particular, it includes a full application writing tutorial as well as the Lulesh and SSSP applications.
+2. The `hpx-apps` folder contains example applications designed to depend on an
+   externally installed instance of HPX-5, and should serve as a usage model. In
+   particular, it includes a full application writing tutorial as well as the
+   Lulesh and SSSP applications.
 
 More information about HPX-5 can be found at http://hpx.crest.iu.edu/.
-The documentation for the latest release of HPX-5 (Currently v1.0.0) can be found in https://hpx.crest.iu.edu/documentation.
 
-If you plan to use HPX-5, we suggest to start with the latest released version (currently HPX-5 v1.0.0) which can be downloaded from https://hpx.crest.iu.edu/download.
+The documentation for the latest release of HPX-5 (Currently v1.0.0) can be
+found in https://hpx.crest.iu.edu/documentation. 
 
-If you would like to work with the cutting edge version of HPX-5, we suggest following the current health status of the develop branch at https://gitlab.crest.iu.edu/extreme/hpx.
+If you plan to use HPX-5, we suggest to start with the latest released version
+(currently HPX-5 v1.0.0) which can be downloaded from
+https://hpx.crest.iu.edu/download. 
 
-While we try to keep the develop branch stable and usable, sometimes new bugs trick their way into the code base - be aware!
+If you would like to work with the cutting edge version of HPX-5, we suggest
+following the current health status of the develop branch at
+https://gitlab.crest.iu.edu/extreme/hpx. 
 
-In any case, if you happen to run into problems we very much encourage and appreciate issue reports through the issue tracker for this Gitlab project (https://gitlab.crest.iu.edu/extreme/hpx/issues). 
+While we try to keep the develop branch stable and usable, sometimes new bugs
+trick their way into the code base - be aware! 
 
-The FAQ's for HPX-5 can be found at https://hpx.crest.iu.edu/faqs_and_tutorials.
+In any case, if you happen to run into problems we very much encourage and
+appreciate issue reports through the issue tracker for this Gitlab project
+(https://gitlab.crest.iu.edu/extreme/hpx/issues).  
+
+The FAQ's for HPX-5 can be found at
+https://hpx.crest.iu.edu/faqs_and_tutorials. 
 
 Features
 -----------
 1  System
-	* Runtime configuration, system abstraction, instrumentation
+   * Runtime configuration, system abstraction, instrumentation
 2. Local Control Objects (LCOs)
-	* Futures, AND gates, semaphores, etc
+   * Futures, AND gates, semaphores, etc
 3. Global Address Space (GAS)
-	* Addressing, memory management, memput/memget
+   * Addressing, memory management, memput/memget
 4. Parcels & Lightweight Threading
-	* Uniform action invocation through parcels
- 5. Networking
-	* Parcel transport
-	* {Put/get}-with-command RDMA primitives (Photon)
+   * Uniform action invocation through parcels
+5. Networking
+   * Parcel transport
+   * {Put/get}-with-command RDMA primitives (Photon)
 6. Remote Procedure Calls
-	* Codesign driven interface to task parallelism
+   * Codesign driven interface to task parallelism
 
 HPX-5 v1.0 ships with its primary dependencies
 -----------------------------------------------
 1  hwloc
-	* On-node topology
-2.  jemalloc
-	* Scalable GAS allocation
-3.  libffi
-	* Dynamic function call
+   * On-node topology
+2. jemalloc
+   * Scalable GAS allocation
+3. libffi
+   * Dynamic function call
 4. photon (co-developed with HPX-5)
-	* RDMA network operations
-	* Put-with-command (RDMA with remote completion)
-	* Atomic ops
+   * RDMA network operations
+   * Put-with-command (RDMA with remote completion)
+   * Atomic ops
 5. libsync (co-developed with HPX-5)
-	* Concurrent data structure library
+   * Concurrent data structure library
 
 Applications
 --------------
@@ -65,44 +94,101 @@ The following are the apps currently released with HPX-5.
 
 LULESH
 ---------
-Proxy applications representing kernels of scientific computation toolkits have been created and implemented in multiple programming models by the Department of Energy's co-design centers, in part, to directly compare performance characteristics and to explore and quantify their benefits. One of these proxy applications is LULESH (Livermore Unstructured Lagrangian Explicit Shock Hydrodynamics) [1], which has already played a key role in comparing and contrasting programmability and performance among key programming models. In Karlin et al.[2], a comparison of LULESH among OpenMP, MPI, MPI+OpenMP, CUDA, Chapel, Charm++, Liszt, and Loci was presented with a focus on programmer productivity, performance, and ease of optimizations. HPX-5 has also implemented LULESH help further comparisons between these programming models.
+Proxy applications representing kernels of scientific computation toolkits have
+been created and implemented in multiple programming models by the Department of
+Energy's co-design centers, in part, to directly compare performance
+characteristics and to explore and quantify their benefits. One of these proxy
+applications is LULESH (Livermore Unstructured Lagrangian Explicit Shock
+Hydrodynamics) [1], which has already played a key role in comparing and
+contrasting programmability and performance among key programming models. In
+Karlin et al.[2], a comparison of LULESH among OpenMP, MPI, MPI+OpenMP, CUDA,
+Chapel, Charm++, Liszt, and Loci was presented with a focus on programmer
+productivity, performance, and ease of optimizations. HPX-5 has also implemented
+LULESH help further comparisons between these programming models. 
 
-The HPX-5 version of LULESH comes in two flavors. The first, known as the parcels implementation, does not take advantage of parallel for loop opportunities and is more directly comparable to the MPI only implementation of LULESH. The other flavor, known as the omp_parcels version, does take advantage of parallel for loops and is more comparable to the MPI-OpenMP implementation of LULESH.
+The HPX-5 version of LULESH comes in two flavors. The first, known as the
+parcels implementation, does not take advantage of parallel for loop
+opportunities and is more directly comparable to the MPI only implementation of
+LULESH. The other flavor, known as the omp_parcels version, does take advantage
+of parallel for loops and is more comparable to the MPI-OpenMP implementation of
+LULESH. 
 
 LibPXGL
 --------
-LibPXGL is the beginning of an endeavour to develop a next-generation graph library based on HPX-5. Our first effort is invested in implementing graph algorithms for solving the Single Source Shortest Path(SSSP) problem as SSSP is a good representative of a class of irregular graph problems. The libPXGL SSSP algorithms come in four flavors: chaotic algorithm, Delta-stepping algorithm, Distributed Control,  k-level asynchronous algorithm.
+LibPXGL is the beginning of an endeavour to develop a next-generation graph
+library based on HPX-5. Our first effort is invested in implementing graph
+algorithms for solving the Single Source Shortest Path(SSSP) problem as SSSP is
+a good representative of a class of irregular graph problems. The libPXGL SSSP
+algorithms come in four flavors: chaotic algorithm, Delta-stepping algorithm,
+Distributed Control,  k-level asynchronous algorithm. 
 
-More details about applications can be found in https://hpx.crest.iu.edu/applications
+More details about applications can be found in
+https://hpx.crest.iu.edu/applications.
 
 Build Instructions
 -------------------
-The detailed build instructions can be found at https://hpx.crest.iu.edu/faqs_and_tutorials or https://hpx.crest.iu.edu//Users_Guide.
+The detailed build instructions can be found at
+https://hpx.crest.iu.edu/faqs_and_tutorials or
+https://hpx.crest.iu.edu//Users_Guide. 
 
 Known bugs & limitations
 -------------------------
-1. Clang versions prior to 3.6 (.e., 3.5.1 and earlier) contain regressions that trigger runtime failures in HPX.
-2. Cray support is experimental (use aprun -n [nodes] -N 1 -d [ppn] ./app). The -d option (or equivalent) is necessary to correctly distribute worker threads.
+1. Clang versions prior to 3.6 (.e., 3.5.1 and earlier) contain regressions that
+   trigger runtime failures in HPX. 
+2. Cray support is experimental (use aprun -n [nodes] -N 1 -d [ppn] ./app
+   --hpx-threads=[ppn]). The -d option (or equivalent) is necessary to correctly
+   distribute worker threads, and the --hpx-threads option must be specified
+   explicitly. 
 3. Generation counters fail for ninplace > 0.
 4. Unaligned memgets on ugni will generate an alignment error.
-5. Building with PMI and MPI on Edison makes cray-mpich terminate poorly (ISIR).
+5. Building with PMI and MPI on Edison makes cray-mpich terminate poorly
+   (ISIR). 
 6. There are intermittent failure in LCO Collectives test on Hopper.
 7. HPX-5 fails to compile some examples when using Cray Compilers.
-8. Delta-stepping and KLA algorithms crashing with photon for large scale with jemalloc and without jemalloc.
+8. Delta-stepping and KLA algorithms crashing with photon for large scale with
+   jemalloc and without jemalloc. 
 
 Acknowledgements
 -----------------
-We would like to acknowledge the DoD, DoE, NSF, PSAAP, XPRESS, XSEDE who fund and support our work. 
-HPX-5 is currently funded by:
+We would like to acknowledge the DoD, DoE, NSF, PSAAP, XPRESS, XSEDE who fund
+and support our work. HPX-5 is currently funded by:
 
 1. Advanced Development of the DoD Extreme-scale Execution Framework
-Special Project BY11-034SP: Advanced Development of the DoD Extreme-scale Execution Framework. Acknowledgment: no specific clause is needed; subcontractor must indicate “PO #190, Task Order #002, Project #BY11-034SP” on all invoices and other communications for work performed under the terms of this subcontract.
+   Special Project BY11-034SP: Advanced Development of the DoD Extreme-scale
+   Execution Framework. Acknowledgment: no specific clause is needed;
+   subcontractor must indicate “PO #190, Task Order #002, Project #BY11-034SP”
+   on all invoices and other communications for work performed under the terms
+   of this subcontract. 
 DASHMM
-2. Award Abstract #1440396 SI2-SSE: Dynamic Adaptive Runtime Systems for Advanced Multipole Method-based Science Achievement.
+2. Award Abstract #1440396 SI2-SSE: Dynamic Adaptive Runtime Systems for
+   Advanced Multipole Method-based Science Achievement. 
 3. Photon: Photon is funded from National Science Foundation, OCI-1238379.
-4. PSAAP: “This material is based upon work supported by the Department of Energy, National Nuclear Security Administration, under Award Number(s) DE-NA0002377.” The Centers involved include: Center for Research in Extreme Scale Technologies (CREST), Indiana University Center for Shock-Wave Processing of Advanced Reactive Materials, University of Notre Dame PXGL: “This material is based upon work supported by the National Science Foundation under Grant No. 1111888.”
-5. PXGL: “This material is based upon work supported by the National Science Foundation under Grant No. 1111888.”
+4. PSAAP: “This material is based upon work supported by the Department of
+   Energy, National Nuclear Security Administration, under Award Number(s)
+   DE-NA0002377.” The Centers involved include: Center for Research in Extreme
+   Scale Technologies (CREST), Indiana University Center for Shock-Wave
+   Processing of Advanced Reactive Materials, University of Notre Dame PXGL:
+   “This material is based upon work supported by the National Science
+   Foundation under Grant No. 1111888.” 
+5. PXGL: “This material is based upon work supported by the National Science
+   Foundation under Grant No. 1111888.” 
 6. XPRESS: eXascale Programming Environment and System Software
-XPRESS Title: eXascale PRogramming Environment and System Software (XPRESS) Acknowledgment: “This material is based upon work supported by the Department of Energy under Award Number(s) DE-SC0008809.” Disclaimer: “This report was prepared as an account of work sponsored by an agency of the United States Government. Neither the United States Government nor any agency thereof, nor any of their employees, makes any warranty, express or implied, or assumes any legal liability or responsibility for the accuracy, completeness, or usefulness of any information, apparatus, product, or process disclosed, or represents that its use would not infringe privately owned rights. Reference herein to any specific commercial product, process, or service by trade name, trademark, manufacturer, or otherwise does not necessarily constitute or imply its endorsement, recommendation, or favoring by the United States Government or any agency thereof. The views and opinions of authors expressed herein do not necessarily state or reflect those of the United States Government or any agency thereof.”
-7. XSEDE computer time grant TG-CCR140035 “Dynamic Introspective Runtime to Enable Extreme Scaling for Irregular Time-varying Problems”. This work used the Extreme Science and Engineering Discovery Environment (XSEDE), which is supported by National Science Foundation grant number #ACI-1053575.
-
+   XPRESS Title: eXascale PRogramming Environment and System Software (XPRESS)
+   Acknowledgment: “This material is based upon work supported by the Department
+   of Energy under Award Number(s) DE-SC0008809.” Disclaimer: “This report was
+   prepared as an account of work sponsored by an agency of the United States
+   Government. Neither the United States Government nor any agency thereof, nor
+   any of their employees, makes any warranty, express or implied, or assumes
+   any legal liability or responsibility for the accuracy, completeness, or
+   usefulness of any information, apparatus, product, or process disclosed, or
+   represents that its use would not infringe privately owned rights. Reference
+   herein to any specific commercial product, process, or service by trade name,
+   trademark, manufacturer, or otherwise does not necessarily constitute or
+   imply its endorsement, recommendation, or favoring by the United States
+   Government or any agency thereof. The views and opinions of authors expressed
+   herein do not necessarily state or reflect those of the United States
+   Government or any agency thereof.” 
+7. XSEDE computer time grant TG-CCR140035 “Dynamic Introspective Runtime to
+   Enable Extreme Scaling for Irregular Time-varying Problems”. This work used
+   the Extreme Science and Engineering Discovery Environment (XSEDE), which is
+   supported by National Science Foundation grant number #ACI-1053575.
