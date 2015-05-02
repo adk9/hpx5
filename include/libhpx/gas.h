@@ -48,15 +48,22 @@ typedef struct gas {
                              uint32_t boundary);
   void (*free)(void *gas, hpx_addr_t addr, hpx_addr_t rsync);
 
+  void (*move)(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
+
+  int (*memget)(void *gas, void *to, hpx_addr_t from, size_t size,
+                hpx_addr_t lsync);
+
+  int (*memput)(void *gas, hpx_addr_t to, const void *from, size_t size,
+                hpx_addr_t lsync, hpx_addr_t rsync);
+
+  int (*memcpy)(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
+                hpx_addr_t sync);
+
   // implement hpx/gas.h
   __typeof(hpx_gas_alloc_cyclic) *alloc_cyclic;
   __typeof(hpx_gas_calloc_cyclic) *calloc_cyclic;
   __typeof(hpx_gas_alloc_blocked) *alloc_blocked;
   __typeof(hpx_gas_calloc_blocked) *calloc_blocked;
-  __typeof(hpx_gas_move) *move;
-  __typeof(hpx_gas_memget) *memget;
-  __typeof(hpx_gas_memput) *memput;
-  __typeof(hpx_gas_memcpy) *memcpy;
 } gas_t;
 
 gas_t *gas_new(const config_t *cfg, struct boot *boot)

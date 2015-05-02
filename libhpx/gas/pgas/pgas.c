@@ -219,7 +219,7 @@ _pgas_gas_free(void *gas, hpx_addr_t gpa, hpx_addr_t sync) {
 }
 
 static int
-_pgas_parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size,
+_pgas_parcel_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
                     hpx_addr_t sync) {
   if (!size) {
     return HPX_SUCCESS;
@@ -240,8 +240,8 @@ _pgas_parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size,
 }
 
 static int
-_pgas_memput(hpx_addr_t to, const void *from, size_t n, hpx_addr_t lsync,
-             hpx_addr_t rsync) {
+_pgas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
+             hpx_addr_t lsync, hpx_addr_t rsync) {
   if (!n) {
     return HPX_SUCCESS;
   }
@@ -264,7 +264,7 @@ _pgas_memput(hpx_addr_t to, const void *from, size_t n, hpx_addr_t lsync,
 }
 
 static int
-_pgas_memget(void *to, hpx_addr_t from, size_t n, hpx_addr_t lsync) {
+_pgas_memget(void *gas, void *to, hpx_addr_t from, size_t n, hpx_addr_t lsync) {
   if (!n) {
     return HPX_SUCCESS;
   }
@@ -281,7 +281,7 @@ _pgas_memget(void *to, hpx_addr_t from, size_t n, hpx_addr_t lsync) {
 }
 
 static void
-_pgas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
+_pgas_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 

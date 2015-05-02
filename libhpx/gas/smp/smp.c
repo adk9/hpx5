@@ -139,7 +139,8 @@ _smp_gas_free(void *gas, hpx_addr_t addr, hpx_addr_t sync) {
 
 /// Perform a memcpy between two global addresses.
 static int
-_smp_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync) {
+_smp_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
+            hpx_addr_t sync) {
   if (size) {
     dbg_assert(to != HPX_NULL);
     dbg_assert(from != HPX_NULL);
@@ -154,8 +155,8 @@ _smp_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync) {
 
 /// Copy memory from a local address to a global address.
 static int
-_smp_memput(hpx_addr_t to, const void *from, size_t size, hpx_addr_t lsync,
-            hpx_addr_t rsync) {
+_smp_memput(void *gas, hpx_addr_t to, const void *from, size_t size,
+            hpx_addr_t lsync, hpx_addr_t rsync) {
   if (size) {
     dbg_assert(to != HPX_NULL);
     dbg_assert(from != NULL);
@@ -170,7 +171,8 @@ _smp_memput(hpx_addr_t to, const void *from, size_t size, hpx_addr_t lsync,
 
 /// Copy memory from a global address to a local address.
 static int
-_smp_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync) {
+_smp_memget(void *gas, void *to, hpx_addr_t from, size_t size,
+            hpx_addr_t lsync) {
   if (size) {
     dbg_assert(to != NULL);
     dbg_assert(from != HPX_NULL);
@@ -184,7 +186,7 @@ _smp_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync) {
 
 /// Move memory from one locality to another.
 static void
-_smp_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
+_smp_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
   dbg_assert(src == HPX_HERE);
   dbg_assert(dst == HPX_HERE);
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
