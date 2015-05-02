@@ -221,11 +221,15 @@ static bool _chunk_dalloc_cyclic(void *chunk, size_t size, unsigned UNUSED) {
 
 static int
 _locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align,
-                               uint64_t offset, void *lva) {
+                               uint64_t offset, void *lva, int zero) {
   agas_t *agas = (agas_t*)here->gas;
   uint32_t bsize = 1u << align;
   if (here->rank != 0) {
-    posix_memalign(&lva, bsize, blocks * bsize);
+    posix_memalign(&lva, bsize, blocks * bsize);    
+  }
+
+  if (zero) {
+    memset(lva, 0, blocks * bsize);
   }
 
   // and insert entries into our block translation table
@@ -246,9 +250,9 @@ _locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align,
 }
 HPX_ACTION(HPX_DEFAULT, 0, _locality_alloc_cyclic,
            _locality_alloc_cyclic_handler, HPX_UINT64,
-           HPX_UINT32, HPX_UINT64, HPX_POINTER);
+           HPX_UINT32, HPX_UINT64, HPX_POINTER, HPX_INT);
 
-hpx_addr_t agas_alloc_cyclic_sync(size_t n, uint32_t bsize) {
+hpx_addr_t _agas_alloc_cyclic_sync(size_t n, uint32_t bsize, int zero) {
   agas_t *agas = (agas_t*)here->gas;
   dbg_assert(agas->cyclic_arena < UINT32_MAX);
   dbg_assert(here->rank == 0);
@@ -266,11 +270,16 @@ hpx_addr_t agas_alloc_cyclic_sync(size_t n, uint32_t bsize) {
 
   gva_t gva = _lva_to_gva(agas, lva, bsize);
   uint64_t offset = gva.bits.offset;
-  int e = hpx_bcast_rsync(_locality_alloc_cyclic, &blocks, &align, &offset, &lva);
+  int e = hpx_bcast_rsync(_locality_alloc_cyclic, &blocks, &align, &offset, &lva, &zero);
   dbg_check(e, "failed to insert btt entries.\n");
 
   // and return the address
   return gva.addr;
+}
+
+hpx_addr_t agas_alloc_cyclic_sync(size_t n, uint32_t bsize) {
+  dbg_assert(here->rank == 0);
+  return _agas_alloc_cyclic_sync(n, bsize, 0);
 }
 
 static int _alloc_cyclic_handler(size_t n, size_t bsize) {
@@ -297,7 +306,7 @@ _agas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
 
 hpx_addr_t agas_calloc_cyclic_sync(size_t n, uint32_t bsize) {
   assert(here->rank == 0);
-  return HPX_NULL;
+  return _agas_alloc_cyclic_sync(n, bsize, 1);
 }
 
 static int _calloc_cyclic_handler(size_t n, size_t bsize) {
