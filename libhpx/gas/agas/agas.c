@@ -174,7 +174,7 @@ _chunk_dalloc(void *bitmap, void *addr, size_t n) {
 
 static void *_chunk_alloc_cyclic(void *addr, size_t size, size_t align,
                                  bool *zero, unsigned UNUSED) {
-  agas_t *agas = (agas_t*)here->gas;  
+  agas_t *agas = (agas_t*)here->gas;
   assert(size % agas->chunk_size == 0);
   assert(size / agas->chunk_size < UINT32_MAX);
   void *chunk = _chunk_alloc(agas->cyclic_bitmap, addr, size, align);
@@ -315,7 +315,7 @@ _agas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
   dbg_assert(size < UINT32_MAX);
 
   size_t bytes = nmemb * size;
-  void *lva;
+  char *lva;
   if (boundary) {
     lva = global_memalign(boundary, bytes);
     lva = memset(lva, 0, bytes);
@@ -324,14 +324,15 @@ _agas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
   }
 
   agas_t *agas = gas;
-  gva_t base = _lva_to_gva(gas, lva, size);
-  uint32_t bsize = 1lu << base.bits.size;
+  gva_t gva = _lva_to_gva(gas, lva, size);
+  hpx_addr_t base = gva.addr;
+  uint32_t bsize = 1lu << gva.bits.size;
   for (int i = 0; i < nmemb; i++) {
-    gva_t gva = { .addr = base.addr + i * bsize };
-    void *block = lva + i * bsize;
-    btt_insert(agas->btt, gva, here->rank, block);
+    btt_insert(agas->btt, gva, here->rank, lva);
+    lva += bsize;
+    gva.bits.offset += bsize;
   }
-  return base.addr;
+  return base;
 }
 
 static int
