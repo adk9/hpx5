@@ -135,12 +135,12 @@ void hpx_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
 
 void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
   dbg_assert(here && here->gas && here->gas->move);
-  here->gas->move(src, dst, lco);
+  here->gas->move(here->gas, src, dst, lco);
 }
 
 int hpx_gas_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync) {
   dbg_assert(here && here->gas && here->gas->memget);
-  return here->gas->memget(to, from, size, lsync);
+  return here->gas->memget(here->gas, to, from, size, lsync);
 }
 
 int hpx_gas_memget_sync(void *to, hpx_addr_t from, size_t size) {
@@ -156,13 +156,13 @@ int hpx_gas_memget_sync(void *to, hpx_addr_t from, size_t size) {
 int hpx_gas_memput(hpx_addr_t to, const void *from, size_t size,
                    hpx_addr_t lsync, hpx_addr_t rsync) {
   dbg_assert(here && here->gas && here->gas->memput);
-  return here->gas->memput(to, from, size, lsync, rsync);
+  return here->gas->memput(here->gas, to, from, size, lsync, rsync);
 }
 
 int hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
 {
   dbg_assert(here && here->gas && here->gas->memcpy);
-  return (*here->gas->memcpy)(to, from, size, sync);
+  return (*here->gas->memcpy)(here->gas, to, from, size, sync);
 }
 
 static int hpx_gas_alloc_local_at_handler(uint32_t bytes, uint32_t boundary) {
