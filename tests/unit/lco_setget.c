@@ -117,6 +117,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, lco_setget, lco_setget_handler);
 static int _init_block_handler(uint32_t *args, size_t n) {
   hpx_addr_t target = hpx_thread_current_target();
   uint32_t *buffer = NULL;
+  printf("Called at %d.\n", HPX_LOCALITY_ID);
   if (!hpx_gas_try_pin(target, (void**)&buffer))
     return HPX_RESEND;
 
@@ -124,8 +125,8 @@ static int _init_block_handler(uint32_t *args, size_t n) {
   for (int i = 0; i < block_size; i++){
     // Initialixe the buffer
     buffer[i] = 1234;
-    //printf("Initializing the buffer for locality ID %d: %d\n",
-    //       HPX_LOCALITY_ID, buffer[i]);
+    printf("Initializing the buffer for locality ID %d: %d\n",
+           HPX_LOCALITY_ID, buffer[i]);
   }
   hpx_gas_unpin(target);
   return HPX_SUCCESS;
@@ -139,11 +140,7 @@ static int _init_memory_handler(uint32_t *args, size_t n) {
   uint32_t block_bytes = block_size * sizeof(uint32_t);
   uint32_t blocks = args[1];
 
-  hpx_addr_t completed = hpx_lco_and_new(blocks);
-  hpx_addr_t block = hpx_addr_add(local, HPX_LOCALITY_ID * block_bytes, block_bytes);
-  hpx_call(block, _init_block, completed, args, sizeof(*args));
-  hpx_lco_wait(completed);
-  hpx_lco_delete(completed, HPX_NULL);
+  hpx_call_sync(local, _init_block, NULL, 0, args, sizeof(*args));
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_memory,
@@ -165,7 +162,7 @@ static int lco_waitall_handler(void) {
 
   printf("Number of blocks and bytes per block = %d, %d\n", blocks, block_bytes);
   printf("Ranks and blocks per rank = %d, %d\n", ranks, blocks / ranks);
-  hpx_addr_t addr = hpx_gas_alloc_cyclic(blocks, block_bytes, 0);
+  hpx_addr_t addr = hpx_gas_alloc_cyclic(blocks, sizeof(uint32_t), 0);
 
   uint32_t args[2] = {
     block_size,
@@ -179,7 +176,7 @@ static int lco_waitall_handler(void) {
   };
 
   for (int i = 0; i < ranks; i++) {
-    hpx_addr_t there = hpx_addr_add(addr, i * block_bytes, block_bytes);
+    hpx_addr_t there = hpx_addr_add(addr, i * block_bytes, sizeof(uint32_t));
     hpx_call(there, _init_memory, done[0], args, sizeof(args));
   }
 
