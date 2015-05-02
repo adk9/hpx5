@@ -18,7 +18,6 @@
 #include <libhpx/bitmap.h>
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
-#include <libhpx/gas.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/system.h>
@@ -29,16 +28,6 @@
 #include "../mallctl.h"
 
 static const uint64_t AGAS_THERE_OFFSET = UINT64_MAX;
-
-typedef struct {
-  gas_t vtable;
-  size_t chunk_size;
-  void *chunk_table;
-  void *btt;
-  void *bitmap;
-  void *cyclic_bitmap;
-  unsigned cyclic_arena;
-} agas_t;
 
 static agas_t *global_agas;
 
