@@ -1,7 +1,8 @@
 HPX-5 Release notes, Version 1.0.0
 ----------------------------------
 Release Date: 05/04/2015
-Distributed under the Indiana University License. (See accompanying file COPYING.txt)
+Distributed under the Indiana University License. (See accompanying file
+COPYING.txt) 
 
 Product brief
 --------------
@@ -20,35 +21,19 @@ Management), Parcel Transport and Parcel Management, Local Control Objects
 
 General Information
 --------------------
-The HPX-5 distribution contains two top-level directories.
-
-1. The `hpx` directory contains the HPX-5 interface and runtime library
-   implementation, along with examples, the test suite, HPX developer tutorials,
-   and third-party dependencies required for the build. The primary installed
-   products from this project are the HPX-5 headers and the `libhpx` runtime
-   library, along with some library dependencies and a `pkg-config` file for
-   external projects.
-
-2. The `hpx-apps` folder contains example applications designed to depend on an
-   externally installed instance of HPX-5, and should serve as a usage model. In
-   particular, it includes a full application writing tutorial as well as the
-   Lulesh and SSSP applications.
-
-More information about HPX-5 can be found at http://hpx.crest.iu.edu/.
 
 The documentation for the latest release of HPX-5 (Currently v1.0.0) can be
-found in https://hpx.crest.iu.edu/documentation. 
+found in https://hpx.crest.iu.edu/documentation.
 
 If you plan to use HPX-5, we suggest to start with the latest released version
 (currently HPX-5 v1.0.0) which can be downloaded from
-https://hpx.crest.iu.edu/download. 
+https://hpx.crest.iu.edu/download.
 
 If you would like to work with the cutting edge version of HPX-5, we suggest
 following the current health status of the develop branch at
-https://gitlab.crest.iu.edu/extreme/hpx. 
-
-While we try to keep the develop branch stable and usable, sometimes new bugs
-trick their way into the code base - be aware! 
+https://gitlab.crest.iu.edu/extreme/hpx. While we try to keep the develop branch
+stable and usable, sometimes new bugs trick their way into the code base - be
+aware!
 
 In any case, if you happen to run into problems we very much encourage and
 appreciate issue reports through the issue tracker for this Gitlab project
@@ -57,21 +42,111 @@ appreciate issue reports through the issue tracker for this Gitlab project
 The FAQ's for HPX-5 can be found at
 https://hpx.crest.iu.edu/faqs_and_tutorials. 
 
+Contents
+-----------
+The HPX-5 distribution contains two top-level directories.
+
+* `/hpx`
+
+This contains the HPX-5 interface and runtime library implementation, along with
+examples, the test suite, HPX developer tutorials, and third-party dependencies
+required for the build. The primary installed products from this project are the
+HPX-5 headers and the `libhpx` runtime library, along with some library
+dependencies and a `pkg-config` file for external projects.
+
+* `/hpx-apps`
+
+This contains example applications designed to depend on an externally installed
+instance of HPX-5, and should serve as a usage model. In particular, it includes
+a full application writing tutorial as well as the Lulesh and SSSP applications.
+
 Features
 -----------
-1  System
-   * Runtime configuration, system abstraction, instrumentation
-2. Local Control Objects (LCOs)
-   * Futures, AND gates, semaphores, etc
-3. Global Address Space (GAS)
-   * Addressing, memory management, memput/memget
-4. Parcels & Lightweight Threading
-   * Uniform action invocation through parcels
-5. Networking
-   * Parcel transport
-   * {Put/get}-with-command RDMA primitives (Photon)
-6. Remote Procedure Calls
-   * Codesign driven interface to task parallelism
+
+The HPX-5 programming interface is designed around a cooperative lightweight
+thread scheduler and unified access to a global address space. Event driven
+programs invoke remote actions on global addresses using HPX-5's parcel
+active-message plus continuation abstraction, or read or write global data
+directly through one-sided network operations. Globally adressable lightweight
+control objects (LCOs) provide control and data synchronization, allowing thread
+execution or parcel instantiation to wait for events without execution resource
+consumption. Finally, HPX-5's implementation of ParalleX processes provide
+programmers the powerful abstraction of termination groups for parcel and thread
+execution.
+
+In addition to this core programming model HPX-5 provides a number of higher
+level abstractions including asynchronous remote-procedure-call options, data
+parallel loop constructs, global memory allocation, and system abstractions like
+timers.
+
+The HPX-5 C library implementation, libhpx, provides a high-performance,
+portable implementation of the API that runs on both SMP and distributed
+systems.
+
+* Global Address Space
+
+HPX-5 ships with two versions of the global address space. A traditional,
+high-performance PGAS address space implements low-level one-sided and two-sided
+(active message) access, while an experimental Active GAS implements two-sided
+access while allowing the binding of global to physical addresses to vary
+dynamically.
+
+Memory management within the global address space is supported using the
+high-performance jemalloc allocator.
+
+* Lightweight Thread Scheduling
+
+The HPX-5 lightweight threading system strives to minimize the cost of thread
+creation and context switching to enable scalable massively threaded
+computation. HPX-5 threads have unrestricted behavior and can block waiting for
+asynchronous events by using lightweight control objects. Thread scheduling is
+performed via local workstealing. Overall thread performance rivals other modern
+packages with compatible semantics. The lightweight threading package is
+currently compatible with x86_64 and ARM architectures.
+
+* Parcels
+
+HPX-5 parcels encode event-driven execution by specifying a traditional active
+message and a continuation, allowing complex chains of computation to be
+described. Parcels are sent to operate on addresses within the global address
+space and model two-sided network programming. Parcel instantiation is
+isomorphic with thread creation, in fact the parcel structure and thread control
+block are the same structure.
+
+* Lightweight Control Objects (LCOs)
+
+LCOs represent control state in memory. Both threads and parcels interact with
+LCOs, threads may block until an LCO is ready and/or its data is available,
+while parcel send operations may wait until an LCO is ready. HPX-5 is
+distributed with a number of built-in LCOs, including futures, and gates,
+generation counters, parameterizable commutative-associative reductions,
+semaphores, etc., and supports customizable user-defined LCOs as well.
+
+* Processes
+
+HPX-5 groups parcels and threads into processes, which may optionally have
+termination detection enabled. Termination detection triggers an event when the
+processed has reached quiescence. This powerful mechanism can be useful in
+algorithms that do not have an easily described "join" point.
+
+* Networking
+
+In addition to active message parcel operations, HPX-5 provides direct access to
+the global address space through standard one-sided operations. This support is
+built on a novel interface to its networking layer,
+put-with-remote-notification. HPX-5 provides two distinct implementation of this
+abstraction, the PWC network layer on top of the Photon networking library which
+implements put-with-remote-completion directly using rDMA, and the Isend/Irecv
+networking later which emulates put-with-remote-completion using a traditional
+MPI point-to-point implementation.
+
+* Convenience Features
+
+Development of HPX-5 was guided by codesign with computational scientists. This
+resulted in a number of convenience features that encapsulate lower level
+behavior in more convenient an familiar forms. These include a suite of
+remote-procedure style calls, data parallel loops for local and distributed
+data, and numerous smaller features.
 
 HPX-5 v1.0 ships with its primary dependencies
 -----------------------------------------------
