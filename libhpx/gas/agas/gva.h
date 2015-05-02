@@ -41,6 +41,11 @@ static inline uint64_t gva_to_key(gva_t gva) {
   return gva.addr & mask;
 }
 
+static inline uint64_t gva_to_offset(gva_t gva) {
+  uint64_t mask = ((1lu << gva.bits.size) - 1);
+  return gva.addr & mask;
+}
+
 #ifdef __cplusplus
 }
 #endif
