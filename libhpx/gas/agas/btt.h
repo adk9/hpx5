@@ -32,6 +32,7 @@ HPX_INTERNAL bool btt_try_pin(void *btt, gva_t gva, void **lva);
 HPX_INTERNAL void btt_unpin(void *btt, gva_t gva);
 HPX_INTERNAL void *btt_lookup(const void* obj, gva_t gva);
 HPX_INTERNAL uint32_t btt_owner_of(const void *btt, gva_t gva);
+HPX_INTERNAL size_t btt_get_blocks(const void *btt, gva_t gva);
 
 #ifdef __cplusplus
 }
