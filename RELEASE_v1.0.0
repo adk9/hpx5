@@ -1,10 +1,12 @@
 HPX-5 Release notes, Version 1.0.0
 ----------------------------------
 Release Date: 05/04/2015
-Distributed under the Indiana University License. (See accompanying file COPYING.txt)
+Distributed under the Indiana University License. (See accompanying file
+COPYING.txt) 
 
 Product brief
 --------------
+
 HPX-5 (High Performance ParalleX) provides a unified programming model for
 parallel and distributed applications. It is freely available, open source,
 feature complete, and performance-oriented implementation of the ParalleX
@@ -20,35 +22,19 @@ Management), Parcel Transport and Parcel Management, Local Control Objects
 
 General Information
 --------------------
-The HPX-5 distribution contains two top-level directories.
-
-1. The `hpx` directory contains the HPX-5 interface and runtime library
-   implementation, along with examples, the test suite, HPX developer tutorials,
-   and third-party dependencies required for the build. The primary installed
-   products from this project are the HPX-5 headers and the `libhpx` runtime
-   library, along with some library dependencies and a `pkg-config` file for
-   external projects.
-
-2. The `hpx-apps` folder contains example applications designed to depend on an
-   externally installed instance of HPX-5, and should serve as a usage model. In
-   particular, it includes a full application writing tutorial as well as the
-   Lulesh and SSSP applications.
-
-More information about HPX-5 can be found at http://hpx.crest.iu.edu/.
 
 The documentation for the latest release of HPX-5 (Currently v1.0.0) can be
-found in https://hpx.crest.iu.edu/documentation. 
+found at https://hpx.crest.iu.edu/documentation.
 
 If you plan to use HPX-5, we suggest to start with the latest released version
 (currently HPX-5 v1.0.0) which can be downloaded from
-https://hpx.crest.iu.edu/download. 
+https://hpx.crest.iu.edu/download.
 
 If you would like to work with the cutting edge version of HPX-5, we suggest
 following the current health status of the develop branch at
-https://gitlab.crest.iu.edu/extreme/hpx. 
-
-While we try to keep the develop branch stable and usable, sometimes new bugs
-trick their way into the code base - be aware! 
+https://gitlab.crest.iu.edu/extreme/hpx. While we try to keep the develop branch
+stable and usable, sometimes new bugs trick their way into the code base - be
+aware!
 
 In any case, if you happen to run into problems we very much encourage and
 appreciate issue reports through the issue tracker for this Gitlab project
@@ -57,43 +43,166 @@ appreciate issue reports through the issue tracker for this Gitlab project
 The FAQ's for HPX-5 can be found at
 https://hpx.crest.iu.edu/faqs_and_tutorials. 
 
+Contents
+-----------
+
+The HPX-5 distribution contains two top-level directories.
+
+* `/hpx`
+
+This contains the HPX-5 interface and runtime library implementation, along with
+examples, the test suite, HPX developer tutorials, and third-party dependencies
+required for the build. The primary installed products from this project are the
+HPX-5 headers and the `libhpx` runtime library, along with some library
+dependencies and a `pkg-config` file for external projects.
+
+* `/hpx-apps`
+
+This contains example applications designed to depend on an externally installed
+instance of HPX-5, and should serve as a usage model. In particular, it includes
+a full application writing tutorial as well as the Lulesh and SSSP applications.
+
 Features
 -----------
-1  System
-   * Runtime configuration, system abstraction, instrumentation
-2. Local Control Objects (LCOs)
-   * Futures, AND gates, semaphores, etc
-3. Global Address Space (GAS)
-   * Addressing, memory management, memput/memget
-4. Parcels & Lightweight Threading
-   * Uniform action invocation through parcels
-5. Networking
-   * Parcel transport
-   * {Put/get}-with-command RDMA primitives (Photon)
-6. Remote Procedure Calls
-   * Codesign driven interface to task parallelism
 
-HPX-5 v1.0 ships with its primary dependencies
------------------------------------------------
-1  hwloc
-   * On-node topology
-2. jemalloc
-   * Scalable GAS allocation
-3. libffi
-   * Dynamic function call
-4. photon (co-developed with HPX-5)
-   * RDMA network operations
-   * Put-with-command (RDMA with remote completion)
-   * Atomic ops
-5. libsync (co-developed with HPX-5)
-   * Concurrent data structure library
+The HPX-5 programming interface is designed around a cooperative lightweight
+thread scheduler and unified access to a global address space. Event driven
+programs invoke remote actions on global addresses using HPX-5's parcel
+active-message plus continuation abstraction, or read or write global data
+directly through one-sided network operations. Globally adressable lightweight
+control objects (LCOs) provide control and data synchronization, allowing thread
+execution or parcel instantiation to wait for events without execution resource
+consumption. Finally, HPX-5's implementation of ParalleX processes provide
+programmers the powerful abstraction of termination groups for parcel and thread
+execution.
+
+In addition to this core programming model HPX-5 provides a number of higher
+level abstractions including asynchronous remote-procedure-call options, data
+parallel loop constructs, global memory allocation, and system abstractions like
+timers.
+
+The HPX-5 C library implementation, libhpx, provides a high-performance,
+portable implementation of the API that runs on both SMP and distributed
+systems.
+
+* Global Address Space
+
+HPX-5 ships with two versions of the global address space. A traditional,
+high-performance PGAS address space implements low-level one-sided and two-sided
+(active message) access, while an experimental Active GAS implements two-sided
+access while allowing the binding of global to physical addresses to vary
+dynamically.
+
+Memory management within the global address space is supported using the
+high-performance jemalloc allocator.
+
+* Lightweight Thread Scheduling
+
+The HPX-5 lightweight threading system strives to minimize the cost of thread
+creation and context switching to enable scalable massively threaded
+computation. HPX-5 threads have unrestricted behavior and can block waiting for
+asynchronous events by using lightweight control objects. Thread scheduling is
+performed via local workstealing. Overall thread performance rivals other modern
+packages with compatible semantics. The lightweight threading package is
+currently compatible with x86_64 and ARM architectures.
+
+* Parcels
+
+HPX-5 parcels encode event-driven execution by specifying a traditional active
+message and a continuation, allowing complex chains of computation to be
+described. Parcels are sent to operate on addresses within the global address
+space and model two-sided network programming. Parcel instantiation is
+isomorphic with thread creation, in fact the parcel structure and thread control
+block are the same structure.
+
+* Lightweight Control Objects (LCOs)
+
+LCOs represent control state in memory. Both threads and parcels interact with
+LCOs, threads may block until an LCO is ready and/or its data is available,
+while parcel send operations may wait until an LCO is ready. HPX-5 is
+distributed with a number of built-in LCOs, including futures, and gates,
+generation counters, parameterizable commutative-associative reductions,
+semaphores, etc., and supports customizable user-defined LCOs as well.
+
+* Processes
+
+HPX-5 groups parcels and threads into processes, which may optionally have
+termination detection enabled. Termination detection triggers an event when the
+processed has reached quiescence. This powerful mechanism can be useful in
+algorithms that do not have an easily described "join" point.
+
+* Networking
+
+In addition to active message parcel operations, HPX-5 provides direct access to
+the global address space through standard one-sided operations. This support is
+built on a novel interface to its networking layer,
+put-with-remote-notification. HPX-5 provides two distinct implementation of this
+abstraction, the PWC network layer on top of the Photon networking library which
+implements put-with-remote-completion directly using rDMA, and the Isend/Irecv
+networking later which emulates put-with-remote-completion using a traditional
+MPI point-to-point implementation.
+
+* Convenience Features
+
+Development of HPX-5 was guided by codesign with computational scientists. This
+resulted in a number of convenience features that encapsulate lower level
+behavior in more convenient an familiar forms. These include a suite of
+remote-procedure style calls, data parallel loops for local and distributed
+data, and numerous smaller features.
+
+3rd Party Dependencies Distributed With HPX-5 0.1
+---------------------------------------------------
+
+These packages are used in HPX-5 and included in its distribution.
+
+* hwloc [http://www.open-mpi.org/projects/hwloc]
+
+OpenMPI's hwloc infrastructure allows us to inspect the local node topology. 
+
+* jemalloc [https://github.com/jemalloc/jemalloc]
+
+The jemalloc scalable allocator provides a fast concurrent malloc
+implementation, as well as an extended interface. HPX-5 relies on this extended
+interface to manage its global address space, as well as registered memory where
+appropriate.
+
+* libffi [https://sourceware.org/libffi]
+
+HPX-5 is a C library interface that was codesigned with computational
+scientists. The libffi foreign function interface allows HPX-5 application
+programmers to perform local and remote procedure calls using a dynamically
+typed interface. This allows enables the remote-procedure-call interface, as
+well as providing some type safety for calling otherwise untyped functions.
+
+* photon
+
+Photon is a low-level networking library that is co-developed with HPX-5. It
+focuses on low overhead, high bandwidth, scalable operation and is implemented
+directly on top of a number of different RDMA network platforms.
+
+Photon provides a wide set of primitives, but provides HPX-5 with two primary
+novel operations, put-with-command and get-with-command which extend traditional
+RDMA with remote completion. In addition, photon provides an Atomic ops
+interface, traditional RDMA, and two-sided point-to-point Isend/Irecv emulation.
+
+* libsync (co-developed with HPX-5)
+
+libsync is a small concurrent data structure library used by HPX-5 to support
+threaded localities.
+
+* libcuckoo [https://github.com/efficient/libcuckoo]
+* CityHash [https://code.google.com/p/cityhash]
+
+The experimental HPX-5 AGAS implementation relies on this concurrent allocator
+to provide for global to physical translation and other block mapping needs.
 
 Applications
 --------------
+
 The following are the apps currently released with HPX-5.
 
-LULESH
----------
+* LULESH
+
 Proxy applications representing kernels of scientific computation toolkits have
 been created and implemented in multiple programming models by the Department of
 Energy's co-design centers, in part, to directly compare performance
@@ -113,8 +222,8 @@ LULESH. The other flavor, known as the omp_parcels version, does take advantage
 of parallel for loops and is more comparable to the MPI-OpenMP implementation of
 LULESH. 
 
-LibPXGL
---------
+* LibPXGL
+
 LibPXGL is the beginning of an endeavour to develop a next-generation graph
 library based on HPX-5. Our first effort is invested in implementing graph
 algorithms for solving the Single Source Shortest Path(SSSP) problem as SSSP is
@@ -127,26 +236,45 @@ https://hpx.crest.iu.edu/applications.
 
 Build Instructions
 -------------------
-The detailed build instructions can be found at
-https://hpx.crest.iu.edu/faqs_and_tutorials or
-https://hpx.crest.iu.edu//Users_Guide. 
 
-Known bugs & limitations
+The detailed build instructions can be found at
+[https://hpx.crest.iu.edu/faqs_and_tutorials] or
+[https://hpx.crest.iu.edu//Users_Guide]. 
+
+Known Bugs & Limitations
 -------------------------
-1. Clang versions prior to 3.6 (.e., 3.5.1 and earlier) contain regressions that
-   trigger runtime failures in HPX. 
-2. Cray support is experimental (use aprun -n [nodes] -N 1 -d [ppn] ./app
-   --hpx-threads=[ppn]). The -d option (or equivalent) is necessary to correctly
-   distribute worker threads, and the --hpx-threads option must be specified
-   explicitly. 
-3. Generation counters fail for ninplace > 0.
-4. Unaligned memgets on ugni will generate an alignment error.
-5. Building with PMI and MPI on Edison makes cray-mpich terminate poorly
-   (ISIR). 
-6. There are intermittent failure in LCO Collectives test on Hopper.
-7. HPX-5 fails to compile some examples when using Cray Compilers.
-8. Delta-stepping and KLA algorithms crashing with photon for large scale with
-   jemalloc and without jemalloc. 
+
+ 1. The AGAS implementation requires a C++11 compiler, and is still considered
+    experimental.
+   
+ 2. The AGAS implementation only works with the Isend/Irecv network.
+
+ 3. Clang versions prior to 3.6 (.e., 3.5.1 and earlier) contain regressions that
+    trigger runtime failures in HPX.
+   
+ 4. Cray support is experimental (use aprun -n [nodes] -N 1 -d [ppn] ./app
+    --hpx-threads=[ppn]). The -d option (or equivalent) is necessary to
+    correctly distribute worker threads, and the --hpx-threads option must be
+    specified  explicitly.
+   
+ 5. Generation counters fail for ninplace > 0.
+ 
+ 6. Unaligned memgets on ugni will generate an alignment error.
+
+ 7. Building with PMI and MPI on Edison makes cray-mpich terminate poorly
+   (Isend/Irecv).
+   
+ 8. There are intermittent failure in LCO Collectives test on Hopper.
+ 
+ 9. HPX-5 fails to compile some examples when using Cray Compilers (CrayCC).
+ 
+10. Delta-stepping and KLA algorithms crashing with photon for large scale with
+    jemalloc and without jemalloc.
+
+11. Configuring with --enable-agas results in the apparently benign `libtool: warning:
+    '/opt/gcc/4.9.2/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.9.2/../../../../lib64/libstdc++.la'
+    seems to be moved` at link time.
+
 
 Acknowledgements
 -----------------
@@ -158,20 +286,24 @@ and support our work. HPX-5 is currently funded by:
    Execution Framework. Acknowledgment: no specific clause is needed;
    subcontractor must indicate “PO #190, Task Order #002, Project #BY11-034SP”
    on all invoices and other communications for work performed under the terms
-   of this subcontract. 
-DASHMM
-2. Award Abstract #1440396 SI2-SSE: Dynamic Adaptive Runtime Systems for
-   Advanced Multipole Method-based Science Achievement. 
+   of this subcontract.
+   
+2. DASHMM: Award Abstract #1440396 SI2-SSE: Dynamic Adaptive Runtime Systems for
+   Advanced Multipole Method-based Science Achievement.
+   
 3. Photon: Photon is funded from National Science Foundation, OCI-1238379.
+
 4. PSAAP: “This material is based upon work supported by the Department of
    Energy, National Nuclear Security Administration, under Award Number(s)
    DE-NA0002377.” The Centers involved include: Center for Research in Extreme
    Scale Technologies (CREST), Indiana University Center for Shock-Wave
    Processing of Advanced Reactive Materials, University of Notre Dame PXGL:
    “This material is based upon work supported by the National Science
-   Foundation under Grant No. 1111888.” 
+   Foundation under Grant No. 1111888.”
+   
 5. PXGL: “This material is based upon work supported by the National Science
-   Foundation under Grant No. 1111888.” 
+   Foundation under Grant No. 1111888.”
+   
 6. XPRESS: eXascale Programming Environment and System Software
    XPRESS Title: eXascale PRogramming Environment and System Software (XPRESS)
    Acknowledgment: “This material is based upon work supported by the Department
@@ -187,7 +319,8 @@ DASHMM
    imply its endorsement, recommendation, or favoring by the United States
    Government or any agency thereof. The views and opinions of authors expressed
    herein do not necessarily state or reflect those of the United States
-   Government or any agency thereof.” 
+   Government or any agency thereof.”
+   
 7. XSEDE computer time grant TG-CCR140035 “Dynamic Introspective Runtime to
    Enable Extreme Scaling for Irregular Time-varying Problems”. This work used
    the Extreme Science and Engineering Discovery Environment (XSEDE), which is
