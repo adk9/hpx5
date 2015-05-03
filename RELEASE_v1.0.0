@@ -24,7 +24,7 @@ General Information
 --------------------
 
 The documentation for the latest release of HPX-5 (Currently v1.0.0) can be
-found in https://hpx.crest.iu.edu/documentation.
+found at https://hpx.crest.iu.edu/documentation.
 
 If you plan to use HPX-5, we suggest to start with the latest released version
 (currently HPX-5 v1.0.0) which can be downloaded from
@@ -272,10 +272,10 @@ Known Bugs & Limitations
     jemalloc and without jemalloc.
 
 11. Configuring with --enable-agas results in the apparently benign `libtool: warning:
-'/opt/gcc/4.9.2/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.9.2/../../../../lib64/libstdc++.la'`
-   at link time.
+    '/opt/gcc/4.9.2/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.9.2/../../../../lib64/libstdc++.la'
+    seems to be moved` at link time.
 
-seems to be moved
+
 Acknowledgements
 -----------------
 We would like to acknowledge the DoD, DoE, NSF, PSAAP, XPRESS, XSEDE who fund
