@@ -14,7 +14,6 @@ libnetwork_la_SOURCES  = locality.c \
                          parcel.c \
                          parcel_block.c \
                          hpx_parcel_glue.c \
-                         progress.c \
                          probe.c \
                          smp.c \
                          commands.c
