@@ -6,6 +6,7 @@ COPYING.txt)
 
 Product brief
 --------------
+
 HPX-5 (High Performance ParalleX) provides a unified programming model for
 parallel and distributed applications. It is freely available, open source,
 feature complete, and performance-oriented implementation of the ParalleX
@@ -44,6 +45,7 @@ https://hpx.crest.iu.edu/faqs_and_tutorials.
 
 Contents
 -----------
+
 The HPX-5 distribution contains two top-level directories.
 
 * `/hpx`
@@ -148,27 +150,59 @@ behavior in more convenient an familiar forms. These include a suite of
 remote-procedure style calls, data parallel loops for local and distributed
 data, and numerous smaller features.
 
-HPX-5 v1.0 ships with its primary dependencies
------------------------------------------------
-1  hwloc
-   * On-node topology
-2. jemalloc
-   * Scalable GAS allocation
-3. libffi
-   * Dynamic function call
-4. photon (co-developed with HPX-5)
-   * RDMA network operations
-   * Put-with-command (RDMA with remote completion)
-   * Atomic ops
-5. libsync (co-developed with HPX-5)
-   * Concurrent data structure library
+3rd Party Dependencies Distributed With HPX-5 0.1
+---------------------------------------------------
+
+These packages are used in HPX-5 and included in its distribution.
+
+* hwloc [http://www.open-mpi.org/projects/hwloc]
+
+OpenMPI's hwloc infrastructure allows us to inspect the local node topology. 
+
+* jemalloc [https://github.com/jemalloc/jemalloc]
+
+The jemalloc scalable allocator provides a fast concurrent malloc
+implementation, as well as an extended interface. HPX-5 relies on this extended
+interface to manage its global address space, as well as registered memory where
+appropriate.
+
+* libffi [https://sourceware.org/libffi]
+
+HPX-5 is a C library interface that was codesigned with computational
+scientists. The libffi foreign function interface allows HPX-5 application
+programmers to perform local and remote procedure calls using a dynamically
+typed interface. This allows enables the remote-procedure-call interface, as
+well as providing some type safety for calling otherwise untyped functions.
+
+* photon
+
+Photon is a low-level networking library that is co-developed with HPX-5. It
+focuses on low overhead, high bandwidth, scalable operation and is implemented
+directly on top of a number of different RDMA network platforms.
+
+Photon provides a wide set of primitives, but provides HPX-5 with two primary
+novel operations, put-with-command and get-with-command which extend traditional
+RDMA with remote completion. In addition, photon provides an Atomic ops
+interface, traditional RDMA, and two-sided point-to-point Isend/Irecv emulation.
+
+* libsync (co-developed with HPX-5)
+
+libsync is a small concurrent data structure library used by HPX-5 to support
+threaded localities.
+
+* libcuckoo [https://github.com/efficient/libcuckoo]
+* CityHash [https://code.google.com/p/cityhash]
+
+The experimental HPX-5 AGAS implementation relies on this concurrent allocator
+to provide for global to physical translation and other block mapping needs.
 
 Applications
 --------------
+
 The following are the apps currently released with HPX-5.
 
-LULESH
----------
+* LULESH
+
 Proxy applications representing kernels of scientific computation toolkits have
 been created and implemented in multiple programming models by the Department of
 Energy's co-design centers, in part, to directly compare performance
@@ -188,8 +222,8 @@ LULESH. The other flavor, known as the omp_parcels version, does take advantage
 of parallel for loops and is more comparable to the MPI-OpenMP implementation of
 LULESH. 
 
-LibPXGL
---------
+* LibPXGL
+
 LibPXGL is the beginning of an endeavour to develop a next-generation graph
 library based on HPX-5. Our first effort is invested in implementing graph
 algorithms for solving the Single Source Shortest Path(SSSP) problem as SSSP is
@@ -202,12 +236,14 @@ https://hpx.crest.iu.edu/applications.
 
 Build Instructions
 -------------------
+
 The detailed build instructions can be found at
 https://hpx.crest.iu.edu/faqs_and_tutorials or
 https://hpx.crest.iu.edu//Users_Guide. 
 
-Known bugs & limitations
+Known Bugs & Limitations
 -------------------------
+
 1. Clang versions prior to 3.6 (.e., 3.5.1 and earlier) contain regressions that
    trigger runtime failures in HPX. 
 2. Cray support is experimental (use aprun -n [nodes] -N 1 -d [ppn] ./app
