@@ -271,8 +271,13 @@ network_t *network_pwc_funneled_new(const config_t *cfg, boot_t *boot,
                                     gas_t *gas) {
   // Validate parameters.
   if (boot->type == HPX_BOOT_SMP) {
-    log_net("will not instantiate photon for the SMP boot network\n");
+    log_net("will not instantiate PWC for the SMP boot network\n");
     return NULL;
+  }
+
+  if (cfg->gas == HPX_GAS_AGAS) {
+    dbg_error("PWC is incompatible with AGAS, please run with --hpx-gas=pgas "
+              "or with --hpx-network=isir\n");
   }
 
   // Validate configuration.
