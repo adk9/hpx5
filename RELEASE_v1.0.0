@@ -238,27 +238,44 @@ Build Instructions
 -------------------
 
 The detailed build instructions can be found at
-https://hpx.crest.iu.edu/faqs_and_tutorials or
-https://hpx.crest.iu.edu//Users_Guide. 
+[https://hpx.crest.iu.edu/faqs_and_tutorials] or
+[https://hpx.crest.iu.edu//Users_Guide]. 
 
 Known Bugs & Limitations
 -------------------------
 
-1. Clang versions prior to 3.6 (.e., 3.5.1 and earlier) contain regressions that
-   trigger runtime failures in HPX. 
-2. Cray support is experimental (use aprun -n [nodes] -N 1 -d [ppn] ./app
-   --hpx-threads=[ppn]). The -d option (or equivalent) is necessary to correctly
-   distribute worker threads, and the --hpx-threads option must be specified
-   explicitly. 
-3. Generation counters fail for ninplace > 0.
-4. Unaligned memgets on ugni will generate an alignment error.
-5. Building with PMI and MPI on Edison makes cray-mpich terminate poorly
-   (ISIR). 
-6. There are intermittent failure in LCO Collectives test on Hopper.
-7. HPX-5 fails to compile some examples when using Cray Compilers.
-8. Delta-stepping and KLA algorithms crashing with photon for large scale with
-   jemalloc and without jemalloc. 
+ 1. The AGAS implementation requires a C++11 compiler, and is still considered
+    experimental.
+   
+ 2. The AGAS implementation only works with the Isend/Irecv network.
 
+ 3. Clang versions prior to 3.6 (.e., 3.5.1 and earlier) contain regressions that
+    trigger runtime failures in HPX.
+   
+ 4. Cray support is experimental (use aprun -n [nodes] -N 1 -d [ppn] ./app
+    --hpx-threads=[ppn]). The -d option (or equivalent) is necessary to
+    correctly distribute worker threads, and the --hpx-threads option must be
+    specified  explicitly.
+   
+ 5. Generation counters fail for ninplace > 0.
+ 
+ 6. Unaligned memgets on ugni will generate an alignment error.
+
+ 7. Building with PMI and MPI on Edison makes cray-mpich terminate poorly
+   (Isend/Irecv).
+   
+ 8. There are intermittent failure in LCO Collectives test on Hopper.
+ 
+ 9. HPX-5 fails to compile some examples when using Cray Compilers (CrayCC).
+ 
+10. Delta-stepping and KLA algorithms crashing with photon for large scale with
+    jemalloc and without jemalloc.
+
+11. Configuring with --enable-agas results in the apparently benign `libtool: warning:
+'/opt/gcc/4.9.2/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.9.2/../../../../lib64/libstdc++.la'`
+   at link time.
+
+seems to be moved
 Acknowledgements
 -----------------
 We would like to acknowledge the DoD, DoE, NSF, PSAAP, XPRESS, XSEDE who fund
@@ -269,19 +286,24 @@ and support our work. HPX-5 is currently funded by:
    Execution Framework. Acknowledgment: no specific clause is needed;
    subcontractor must indicate “PO #190, Task Order #002, Project #BY11-034SP”
    on all invoices and other communications for work performed under the terms
-   of this subcontract. 
+   of this subcontract.
+   
 2. DASHMM: Award Abstract #1440396 SI2-SSE: Dynamic Adaptive Runtime Systems for
-   Advanced Multipole Method-based Science Achievement. 
+   Advanced Multipole Method-based Science Achievement.
+   
 3. Photon: Photon is funded from National Science Foundation, OCI-1238379.
+
 4. PSAAP: “This material is based upon work supported by the Department of
    Energy, National Nuclear Security Administration, under Award Number(s)
    DE-NA0002377.” The Centers involved include: Center for Research in Extreme
    Scale Technologies (CREST), Indiana University Center for Shock-Wave
    Processing of Advanced Reactive Materials, University of Notre Dame PXGL:
    “This material is based upon work supported by the National Science
-   Foundation under Grant No. 1111888.” 
+   Foundation under Grant No. 1111888.”
+   
 5. PXGL: “This material is based upon work supported by the National Science
-   Foundation under Grant No. 1111888.” 
+   Foundation under Grant No. 1111888.”
+   
 6. XPRESS: eXascale Programming Environment and System Software
    XPRESS Title: eXascale PRogramming Environment and System Software (XPRESS)
    Acknowledgment: “This material is based upon work supported by the Department
@@ -297,7 +319,8 @@ and support our work. HPX-5 is currently funded by:
    imply its endorsement, recommendation, or favoring by the United States
    Government or any agency thereof. The views and opinions of authors expressed
    herein do not necessarily state or reflect those of the United States
-   Government or any agency thereof.” 
+   Government or any agency thereof.”
+   
 7. XSEDE computer time grant TG-CCR140035 “Dynamic Introspective Runtime to
    Enable Extreme Scaling for Irregular Time-varying Problems”. This work used
    the Extreme Science and Engineering Discovery Environment (XSEDE), which is
