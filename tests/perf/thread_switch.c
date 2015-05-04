@@ -30,39 +30,41 @@ static hpx_action_t _setter       = 0;
 static hpx_action_t _getter       = 0;
 static hpx_action_t _cswitch_main = 0;
 
-static int _setter_action(int n, hpx_addr_t *future) {
+static int _setter_action(int n, hpx_addr_t f1, hpx_addr_t f2) {
   for (int i = 0; i < n; ++i) {
     // printf("Setting LCO %d.\n", i);
-    hpx_lco_set(future[i], 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_lco_set(f1, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_lco_wait(f2);
+    hpx_lco_reset_sync(f2);
   }
   return HPX_SUCCESS;
 }
 
-static int _getter_action(int n, hpx_addr_t *future) {
+static int _getter_action(int n, hpx_addr_t f1, hpx_addr_t f2) {
   for (int i = 0; i < n; ++i) {
-    hpx_lco_wait(future[i]);
     // printf("Getting LCO %d.\n", i);
+    hpx_lco_wait(f1);
+    hpx_lco_reset_sync(f1);
+    hpx_lco_set(f2, 0, NULL, HPX_NULL, HPX_NULL);
   }
   return HPX_SUCCESS;
 }
 
 static int _cswitch_main_action(int *args, size_t size) {
   int n = *args;
-  printf("cswitch(%d)=", n); fflush(stdout);
+  printf("cswitch(%d)\n", n); fflush(stdout);
   hpx_addr_t and = hpx_lco_and_new(2);
-  hpx_addr_t *future = malloc(sizeof(hpx_addr_t) * n);
-  for (int i = 0; i < n; ++i) {
-    future[i] = hpx_lco_future_new(0);
-  }
+  hpx_addr_t f1 = hpx_lco_future_new(0);
+  hpx_addr_t f2 = hpx_lco_future_new(0);
+
   hpx_time_t now = hpx_time_now();
-  hpx_call(HPX_HERE, _setter, and, &n, &future);
-  hpx_call(HPX_HERE, _getter, and, &n, &future);
+  hpx_call(HPX_HERE, _setter, and, &n, &f1, &f2);
+  hpx_call(HPX_HERE, _getter, and, &n, &f1, &f2);
   hpx_lco_wait(and);
   double elapsed = hpx_time_elapsed_ms(now)/1e3;
   hpx_lco_delete(and, HPX_NULL);
-  for (int i = 0; i < n; ++i) {
-    hpx_lco_delete(future[i], HPX_NULL);
-  }
+  hpx_lco_delete(f1, HPX_NULL);
+  hpx_lco_delete(f2, HPX_NULL);
 
   printf("seconds: %.7f\n", elapsed);
   printf("localities: %d\n", HPX_LOCALITIES);
@@ -95,7 +97,7 @@ int main(int argc, char *argv[]) {
   argc -= optind;
   argv += optind;
 
-  int n = 10000;
+  int n = 100000;
   switch (argc) {
    case 0:
      break;
@@ -108,9 +110,9 @@ int main(int argc, char *argv[]) {
 
   // register the cswitch action
   HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _setter, _setter_action,
-                      HPX_INT, HPX_POINTER);
+                      HPX_INT, HPX_ADDR, HPX_ADDR);
   HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _getter, _getter_action,
-                      HPX_INT, HPX_POINTER);
+                      HPX_INT, HPX_ADDR, HPX_ADDR);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _cswitch_main, _cswitch_main_action,
                       HPX_POINTER, HPX_SIZE_T);
 
