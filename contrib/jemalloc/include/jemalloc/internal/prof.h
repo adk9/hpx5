@@ -101,6 +101,21 @@ struct prof_tctx_s {
 	/* Associated global context. */
 	prof_gctx_t		*gctx;
 
+	/*
+	 * UID that distinguishes multiple tctx's created by the same thread,
+	 * but coexisting in gctx->tctxs.  There are two ways that such
+	 * coexistence can occur:
+	 * - A dumper thread can cause a tctx to be retained in the purgatory
+	 *   state.
+	 * - Although a single "producer" thread must create all tctx's which
+	 *   share the same thr_uid, multiple "consumers" can each concurrently
+	 *   execute portions of prof_tctx_destroy().  prof_tctx_destroy() only
+	 *   gets called once each time cnts.cur{objs,bytes} drop to 0, but this
+	 *   threshold can be hit again before the first consumer finishes
+	 *   executing prof_tctx_destroy().
+	 */
+	uint64_t		tctx_uid;
+
 	/* Linkage into gctx's tctxs. */
 	rb_node(prof_tctx_t)	tctx_link;
 
@@ -176,6 +191,13 @@ struct prof_tdata_s {
 	bool			expired;
 
 	rb_node(prof_tdata_t)	tdata_link;
+
+	/*
+	 * Counter used to initialize prof_tctx_t's tctx_uid.  No locking is
+	 * necessary when incrementing this field, because only one thread ever
+	 * does so.
+	 */
+	uint64_t		tctx_uid_next;
 
 	/*
 	 * Hash of (prof_bt_t *)-->(prof_tctx_t *).  Each thread tracks
@@ -372,34 +394,21 @@ prof_tdata_get(tsd_t *tsd, bool create)
 JEMALLOC_ALWAYS_INLINE prof_tctx_t *
 prof_tctx_get(const void *ptr)
 {
-	prof_tctx_t *ret;
-	arena_chunk_t *chunk;
 
 	cassert(config_prof);
 	assert(ptr != NULL);
 
-	chunk = (arena_chunk_t *)CHUNK_ADDR2BASE(ptr);
-	if (likely(chunk != ptr))
-		ret = arena_prof_tctx_get(ptr);
-	else
-		ret = huge_prof_tctx_get(ptr);
-
-	return (ret);
+	return (arena_prof_tctx_get(ptr));
 }
 
 JEMALLOC_ALWAYS_INLINE void
 prof_tctx_set(const void *ptr, prof_tctx_t *tctx)
 {
-	arena_chunk_t *chunk;
 
 	cassert(config_prof);
 	assert(ptr != NULL);
 
-	chunk = (arena_chunk_t *)CHUNK_ADDR2BASE(ptr);
-	if (likely(chunk != ptr))
-		arena_prof_tctx_set(ptr, tctx);
-	else
-		huge_prof_tctx_set(ptr, tctx);
+	arena_prof_tctx_set(ptr, tctx);
 }
 
 JEMALLOC_ALWAYS_INLINE bool
