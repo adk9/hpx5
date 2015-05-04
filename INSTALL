@@ -107,14 +107,14 @@ any of the following arguments (not a definitive list) to 'configure':
     there are interactions between the various coverage targets, so it is
     usually advisable to run 'make clean' between repeated code coverage runs.
 
---enable-ivsalloc
-    Enable validation code, which verifies that pointers reside within
-    jemalloc-owned chunks before dereferencing them.  This incurs a substantial
-    performance hit.
-
 --disable-stats
     Disable statistics gathering functionality.  See the "opt.stats_print"
     option documentation for usage details.
+
+--enable-ivsalloc
+    Enable validation code, which verifies that pointers reside within
+    jemalloc-owned chunks before dereferencing them.  This incurs a minor
+    performance hit.
 
 --enable-prof
     Enable heap profiling and leak detection functionality.  See the "opt.prof"
