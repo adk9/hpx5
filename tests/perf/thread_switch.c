@@ -73,14 +73,11 @@ static int _cswitch_main_action(int *args, size_t size) {
 }
 
 int main(int argc, char *argv[]) {
-  setenv("HPX_THREADS", "1", 1);
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-
-  assert(HPX_THREADS == 1);
 
   // parse the command line
   int opt = 0;
