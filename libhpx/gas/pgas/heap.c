@@ -147,14 +147,14 @@ static void* _mmap_heap(heap_t *const heap) {
       void *addr = (void*)(x  * (1ul << i));
       void *ret  = mmap(addr, heap->nbytes, prot, flags, hp_fd, 0);
       if (ret != addr) {
-	if (ret == (void*)(-1))
-	  dbg_error("Error mmaping %d (%s)\n", errno, strerror(errno));
+    if (ret == (void*)(-1))
+      dbg_error("Error mmaping %d (%s)\n", errno, strerror(errno));
 
-	int e = munmap(ret, heap->nbytes);
-	if (e < 0) {
-	  dbg_error("munmap failed: %s.\n", strerror(e));
-	}
-	continue;
+    int e = munmap(ret, heap->nbytes);
+    if (e < 0) {
+      dbg_error("munmap failed: %s.\n", strerror(e));
+    }
+    continue;
       }
       heap->max_block_lg_size = i;
       log_gas("Allocated heap at %p with %u bits for blocks\n", ret, i);
@@ -290,7 +290,8 @@ uint64_t heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize) {
   uint32_t  align = ceil_log2_32(bsize);
   dbg_assert(align < 32);
   uint32_t padded = 1u << align;
-  int flags = MALLOCX_LG_ALIGN(align) | MALLOCX_ARENA(heap->cyclic_arena);
+  int flags = MALLOCX_LG_ALIGN(align) | MALLOCX_ARENA(heap->cyclic_arena) |
+              MALLOCX_TCACHE_NONE;
   void *base = libhpx_global_mallocx(blocks * padded, flags);
   if (!base) {
     dbg_error("failed cyclic allocation\n");
