@@ -16,8 +16,8 @@ AC_DEFUN([HPX_CONTRIB_JEMALLOC],
 
    AS_IF([test "x$enable_debug" != xno],
      [$2jemalloc$3_cargs="$$2jemalloc$3_cargs CPPFLAGS=\"$CPPFLAGS -Dalways_inline=\""])
-
-   $2jemalloc$3_cargs="$$2jemalloc$3_cargs --with-jemalloc-prefix=$2 --with-install-suffix=$3 --with-private-namespace=$2"
+   
+   $2jemalloc$3_cargs="$$2jemalloc$3_cargs --with-jemalloc-prefix=$2 --with-install-suffix=$3 --with-private-namespace=$2 EXTRA_CFLAGS=$ac_cv_prog_cc_c99"
 
    ACX_CONFIGURE_DIR([$1], [$1_build$3], [$$2jemalloc$3_cargs])
 
