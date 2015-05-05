@@ -12,57 +12,126 @@
 // =============================================================================
 
 // Goal of this testcase is to test the HPX LCO Generation counter
-//  1. hpx_lco_gencount_new -- Allocate a new generation counter
-//  2. hpx_lco_gencount_inc -- Increment the generation counter.
-//  3. hpx_lco_gencount_wait -- Wait for the generation counter 
-//  to reach a certain value. 
+//
+// The generation counter is simply a counter where threads can wait on specific
+// values of the counter. In order to test this functionality we will
+// concurrently spawn 100 generations worth of waiting threads from around the
+// system, while at the same time setting the counter.
+//
+// At the
 
-#include "hpx/hpx.h"
+#include <hpx/hpx.h>
 #include "tests.h"
 
-// Testcase for gencount LCO.
-static int _increment_handler(hpx_addr_t *args, size_t n) {
-  hpx_addr_t addr = *args;
+static const int DEPTH = 100;
+static const int NINPLACE = 9;
 
-  // Increment the generation counter.
-  // Counter to increment and the global address of an LCO signal remote
-  // completion.
-  printf("Incrementing the generation counter\n");
-  hpx_lco_gencount_inc(addr, HPX_NULL);
+// A call_cc cleanup handler to print out a message.
+static void _done(void* message) {
+  printf("done %s\n", (char*)message);
+}
+
+// Testcase for gencount LCO.
+static int _increment_handler(void) {
+  hpx_addr_t counter = hpx_thread_current_target();
+  hpx_lco_gencount_inc(counter, HPX_NULL);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _increment,
-                  _increment_handler, HPX_POINTER, HPX_SIZE_T);
+static HPX_ACTION(HPX_DEFAULT, 0, _increment, _increment_handler);
 
-static int lco_gencount_handler(void) {
-  printf("Starting the HPX gencount lco test\n");
-  //int ninplace = 4;
-  // allocate and start a timer
-  hpx_time_t t1 = hpx_time_now();
-  // Allocate a new generation counter. A generation counter allows an 
-  // application programmer to efficiently wait for a counter. The input 
-  // indicates a bound on the typical number of generations that are 
-  // explicitly active
-  // hpx_addr_t lco = hpx_lco_gencount_new(4);
+static int _wait_handler(int i) {
+  hpx_addr_t counter = hpx_thread_current_target();
+  return hpx_lco_gencount_wait(counter, i);
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _wait, _wait_handler, HPX_INT);
 
-  hpx_addr_t lco = hpx_lco_gencount_new(0);
-  hpx_addr_t done = hpx_lco_future_new(0);
-  //for (int i = 0; i < ninplace; i++)  
-    hpx_call(HPX_HERE, _increment, done, &lco, sizeof(lco));
+static int _seed_handler(int n, hpx_addr_t counter, hpx_addr_t done) {
+  for (int i = 0; i < n; ++i) {
+    hpx_xcall(counter, _wait, done, i);
+  }
+  return HPX_SUCCESS;
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _seed, _seed_handler, HPX_INT, HPX_ADDR,
+                  HPX_ADDR);
 
-  // Wait for the generation counter to reach a certain value.
-  //hpx_lco_gencount_wait(lco, ninplace);
-  hpx_lco_gencount_wait(lco, 0);
+static int _set_handler(int n, hpx_addr_t counter) {
+  assert(HPX_LOCALITIES*(n/HPX_LOCALITIES)==n);
+
+  for (int i = 0, e = n / HPX_LOCALITIES; i < e; ++i) {
+    if (i & 1) {
+      hpx_call(counter, _increment, HPX_NULL);
+    }
+    else {
+      hpx_call(counter, hpx_lco_set_action, HPX_NULL, NULL, 0);
+    }
+  }
+  return HPX_SUCCESS;
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _set, _set_handler, HPX_INT, HPX_ADDR);
+
+static int _single_wait(int inplace) {
+  hpx_addr_t counter = hpx_lco_gencount_new(inplace);
+  hpx_addr_t and = hpx_lco_and_new(1);
+  int end = DEPTH - 1;
+  hpx_xcall(counter, _wait, and, end);
+  hpx_bcast(_set, HPX_NULL, HPX_NULL, &DEPTH, &counter);
+  hpx_lco_wait(and);
+
+  hpx_addr_t cleanup = hpx_lco_and_new(2);
+  hpx_lco_delete(and, cleanup);
+  hpx_lco_delete(counter, cleanup);
+  hpx_call_cc(cleanup, hpx_lco_delete_action, _done, "");
+}
+
+static int _multi_wait(int inplace) {
+  // allocate the counter
+  hpx_addr_t counter = hpx_lco_gencount_new(inplace);
+
+  // we will seed the counter with DEPTH * LOCALITIES waiting threads
+  hpx_addr_t done = hpx_lco_and_new(DEPTH * HPX_LOCALITIES);
+
+  // broadcast the seed---lots of asynchronous stuff here
+  hpx_bcast(_seed, HPX_NULL, HPX_NULL, &DEPTH, &counter, &done);
+
+  // broadcast the sets---lots of asynchronous stuff here too
+  hpx_bcast(_set, HPX_NULL, HPX_NULL, &DEPTH, &counter);
+
+  // all of the seeds should wake up and signal done
   hpx_lco_wait(done);
 
-  hpx_lco_delete(done, HPX_NULL);
-  // hpx_lco_delete(lco, HPX_NULL); 
- 
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
-  return HPX_SUCCESS;
+  hpx_addr_t cleanup = hpx_lco_and_new(2);
+  hpx_lco_delete(done, cleanup);
+  hpx_lco_delete(counter, cleanup);
+  hpx_call_cc(cleanup, hpx_lco_delete_action, _done, "");
 }
-static HPX_ACTION(HPX_DEFAULT, 0, lco_gencount, lco_gencount_handler);
+
+static int _single_wait_0_handler(void) {
+  printf("Starting _single_wait_0\n");
+  return _single_wait(0);
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _single_wait_0, _single_wait_0_handler);
+
+static int _single_wait_N_handler(void) {
+  printf("Starting _single_wait_N\n");
+  return _single_wait(NINPLACE);
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _single_wait_N, _single_wait_N_handler);
+
+static int _multi_wait_0_handler(void) {
+  printf("Starting _multi_wait_0\n");
+  return _multi_wait(0);
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _multi_wait_0, _multi_wait_0_handler);
+
+static int _multi_wait_N_handler(void) {
+  printf("Starting _multi_wait_N\n");
+  return _multi_wait(NINPLACE);
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _multi_wait_N, _multi_wait_N_handler);
 
 TEST_MAIN({
- ADD_TEST(lco_gencount);
+    ADD_TEST(_single_wait_0);
+    ADD_TEST(_single_wait_N);
+    ADD_TEST(_multi_wait_0);
+    ADD_TEST(_multi_wait_N);
 });
