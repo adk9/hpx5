@@ -276,7 +276,8 @@ hpx_addr_t _agas_alloc_cyclic_sync(size_t n, uint32_t bsize, int zero) {
   uint32_t  align = ceil_log2_32(bsize);
   dbg_assert(align < 32);
   uint32_t padded = 1u << align;
-  int flags = MALLOCX_LG_ALIGN(align) | MALLOCX_ARENA(agas->cyclic_arena);
+  int flags = MALLOCX_LG_ALIGN(align) | MALLOCX_ARENA(agas->cyclic_arena) |
+              MALLOCX_TCACHE_NONE;
   void *lva = libhpx_global_mallocx(blocks * padded, flags);
   if (!lva) {
     dbg_error("failed cyclic allocation\n");
