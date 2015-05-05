@@ -287,6 +287,12 @@ case "${host}" in
 	CFLAGS="$CFLAGS"
 	abi="elf"
 	AC_DEFINE([JEMALLOC_PURGE_MADVISE_FREE], [ ])
+	force_tls="0"
+	;;
+  *-*-bitrig*)
+	CFLAGS="$CFLAGS"
+	abi="elf"
+	AC_DEFINE([JEMALLOC_PURGE_MADVISE_FREE], [ ])
 	;;
   *-*-linux*)
 	CFLAGS="$CFLAGS"
@@ -625,7 +631,8 @@ fi
 
 dnl Do not compile with debugging by default.
 AC_ARG_ENABLE([debug],
-  [AS_HELP_STRING([--enable-debug], [Build debugging code (implies --enable-ivsalloc)])],
+  [AS_HELP_STRING([--enable-debug],
+                  [Build debugging code (implies --enable-ivsalloc)])],
 [if test "x$enable_debug" = "xno" ; then
   enable_debug="0"
 else
@@ -636,13 +643,17 @@ fi
 )
 if test "x$enable_debug" = "x1" ; then
   AC_DEFINE([JEMALLOC_DEBUG], [ ])
+fi
+if test "x$enable_debug" = "x1" ; then
+  AC_DEFINE([JEMALLOC_DEBUG], [ ])
   enable_ivsalloc="1"
 fi
 AC_SUBST([enable_debug])
 
 dnl Do not validate pointers by default.
 AC_ARG_ENABLE([ivsalloc],
-  [AS_HELP_STRING([--enable-ivsalloc], [Validate pointers passed through the public API])],
+  [AS_HELP_STRING([--enable-ivsalloc],
+                  [Validate pointers passed through the public API])],
 [if test "x$enable_ivsalloc" = "xno" ; then
   enable_ivsalloc="0"
 else
@@ -1065,32 +1076,36 @@ dnl jemalloc configuration.
 dnl 
 
 dnl Set VERSION if source directory is inside a git repository.
-if test "x`git rev-parse --is-inside-work-tree 2>/dev/null`" = "xtrue" ; then
+if test "x`test ! \"${srcroot}\" && cd \"${srcroot}\"; git rev-parse --is-inside-work-tree 2>/dev/null`" = "xtrue" ; then
   dnl Pattern globs aren't powerful enough to match both single- and
   dnl double-digit version numbers, so iterate over patterns to support up to
   dnl version 99.99.99 without any accidental matches.
-  rm -f "${srcroot}VERSION"
+  rm -f "${objroot}VERSION"
   for pattern in ['[0-9].[0-9].[0-9]' '[0-9].[0-9].[0-9][0-9]' \
                  '[0-9].[0-9][0-9].[0-9]' '[0-9].[0-9][0-9].[0-9][0-9]' \
                  '[0-9][0-9].[0-9].[0-9]' '[0-9][0-9].[0-9].[0-9][0-9]' \
                  '[0-9][0-9].[0-9][0-9].[0-9]' \
                  '[0-9][0-9].[0-9][0-9].[0-9][0-9]']; do
-    if test ! -e "${srcroot}VERSION" ; then
-      git describe --long --abbrev=40 --match="${pattern}" > "${srcroot}VERSION.tmp" 2>/dev/null
+    if test ! -e "${objroot}VERSION" ; then
+      (test ! "${srcroot}" && cd "${srcroot}"; git describe --long --abbrev=40 --match="${pattern}") > "${objroot}VERSION.tmp" 2>/dev/null
       if test $? -eq 0 ; then
-        mv "${srcroot}VERSION.tmp" "${srcroot}VERSION"
+        mv "${objroot}VERSION.tmp" "${objroot}VERSION"
         break
       fi
     fi
   done
 fi
-rm -f "${srcroot}VERSION.tmp"
-if test ! -e "${srcroot}VERSION" ; then
-  AC_MSG_RESULT(
-    [Missing VERSION file, and unable to generate it; creating bogus VERSION])
-  echo "0.0.0-0-g0000000000000000000000000000000000000000" > "${srcroot}VERSION"
+rm -f "${objroot}VERSION.tmp"
+if test ! -e "${objroot}VERSION" ; then
+  if test ! -e "${srcroot}VERSION" ; then
+    AC_MSG_RESULT(
+      [Missing VERSION file, and unable to generate it; creating bogus VERSION])
+    echo "0.0.0-0-g0000000000000000000000000000000000000000" > "${objroot}VERSION"
+  else
+    cp ${srcroot}VERSION ${objroot}VERSION
+  fi
 fi
-jemalloc_version=`cat "${srcroot}VERSION"`
+jemalloc_version=`cat "${objroot}VERSION"`
 jemalloc_version_major=`echo ${jemalloc_version} | tr ".g-" " " | awk '{print [$]1}'`
 jemalloc_version_minor=`echo ${jemalloc_version} | tr ".g-" " " | awk '{print [$]2}'`
 jemalloc_version_bugfix=`echo ${jemalloc_version} | tr ".g-" " " | awk '{print [$]3}'`
@@ -1401,7 +1416,6 @@ if test "x${enable_zone_allocator}" = "x1" ; then
   if test "x${abi}" != "xmacho"; then
     AC_MSG_ERROR([--enable-zone-allocator is only supported on Darwin])
   fi
-  AC_DEFINE([JEMALLOC_IVSALLOC], [ ])
   AC_DEFINE([JEMALLOC_ZONE], [ ])
 
   dnl The szone version jumped from 3 to 6 between the OS X 10.5.x and 10.6
@@ -1593,7 +1607,7 @@ AC_CONFIG_HEADERS([$cfghdrs_tup])
 dnl ============================================================================
 dnl Generate outputs.
 
-AC_CONFIG_FILES([$cfgoutputs_tup config.stamp bin/jemalloc-config bin/jemalloc.sh])
+AC_CONFIG_FILES([$cfgoutputs_tup config.stamp bin/jemalloc-config bin/jemalloc.sh bin/jeprof])
 AC_SUBST([cfgoutputs_in])
 AC_SUBST([cfgoutputs_out])
 AC_OUTPUT

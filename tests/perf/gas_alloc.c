@@ -108,7 +108,12 @@ int main(int argc, char *argv[]) {
   // Register the main action
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
 
-  set_timeout(30);
+  int timeout = 30;
+  char *str = getenv("HPX_TESTS_TIMEOUT");
+  if (str != NULL) {
+    timeout = atoi(str);
+  }
+  set_timeout(timeout);
 
   // run the main action
   return hpx_run(&_main, NULL, 0);

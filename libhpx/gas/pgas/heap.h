@@ -53,7 +53,6 @@
 
 /// Forward declarations.
 /// @{
-struct transport;
 struct bitmap;
 /// @}
 
@@ -64,7 +63,6 @@ typedef struct heap {
   struct bitmap       *chunks;
   size_t               nbytes;
   char                  *base;
-  struct transport *transport;
   unsigned       cyclic_arena;
   uint32_t  max_block_lg_size;
 } heap_t;
