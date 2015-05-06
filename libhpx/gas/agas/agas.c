@@ -417,9 +417,7 @@ static gas_t _agas_vtable = {
   .memget         = agas_memget,
   .memput         = agas_memput,
   .memcpy         = agas_memcpy,
-  .owner_of       = _agas_owner_of,
-  .mmap           = NULL,
-  .munmap         = NULL
+  .owner_of       = _agas_owner_of
 };
 
 gas_t *gas_agas_new(const config_t *config, boot_t *boot) {

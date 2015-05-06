@@ -236,9 +236,7 @@ static gas_t _smp_vtable = {
   .move           = _smp_move,
   .memget         = _smp_memget,
   .memput         = _smp_memput,
-  .memcpy         = _smp_memcpy,
-  .mmap           = system_mmap,
-  .munmap         = system_munmap
+  .memcpy         = _smp_memcpy
 };
 
 gas_t *gas_smp_new(void) {
