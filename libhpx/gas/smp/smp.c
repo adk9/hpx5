@@ -87,8 +87,13 @@ _smp_there(void *gas, uint32_t i) {
 /// Allocate a global array.
 static hpx_addr_t
 _smp_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
-  void *p = boundary ?
-      local_memalign(boundary, n * bsize) : local_malloc(n * bsize);
+  void *p = NULL;
+  if (boundary) {
+    posix_memalign(&p, boundary, n * bsize);
+  }
+  else {
+    p = malloc(n * bsize);
+  }
   return _smp_lva_to_gva(p);
 }
 
@@ -96,12 +101,13 @@ _smp_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
 static hpx_addr_t
 _smp_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
   size_t bytes = n * bsize;
-  void *p;
+  void *p = NULL;
   if (boundary) {
-    p = local_memalign(boundary, bytes);
+    posix_memalign(&p, boundary, bytes);
     p = memset(p, 0, bytes);
-  } else {
-    p = local_calloc(n, bsize);
+  }
+  else {
+    p = calloc(n, bsize);
   }
   return _smp_lva_to_gva(p);
 }
@@ -109,7 +115,13 @@ _smp_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
 /// Allocate a bunch of global memory
 static hpx_addr_t
 _smp_gas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
-  void *p = boundary ? local_memalign(boundary, bytes) : local_malloc(bytes);
+  void *p = NULL;
+  if (boundary) {
+    posix_memalign(&p, boundary, bytes);
+  }
+  else {
+    p = malloc(bytes);
+  }
   return _smp_lva_to_gva(p);
 }
 
@@ -117,12 +129,12 @@ _smp_gas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
 static hpx_addr_t
 _smp_gas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
   size_t bytes = nmemb * size;
-  void *p;
+  void *p = NULL;
   if (boundary) {
-    p = local_memalign(boundary, bytes);
+    posix_memalign(&p, boundary, bytes);
     p = memset(p, 0, bytes);
   } else {
-    p = local_calloc(nmemb, size);
+    p = calloc(nmemb, size);
   }
   return _smp_lva_to_gva(p);
 }

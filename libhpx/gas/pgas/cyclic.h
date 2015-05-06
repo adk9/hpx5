@@ -10,21 +10,9 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
+#ifndef LIBHPX_GAS_PGAS_CYCLIC_H
+#define LIBHPX_GAS_PGAS_CYLIC_H
 
-/// @file  libhpx/memory/glue.c
-///
-/// @brief This file just bind hpx_malloc_registered() and hpx_free_registered()
-///        to their counterparts in the memory.h header.
-#include <hpx/hpx.h>
-#include <libhpx/memory.h>
+void cyclic_allocator_init(void);
 
-void *hpx_malloc_registered(size_t bytes) {
-  return as_malloc(AS_REGISTERED, bytes);
-}
-
-void hpx_free_registered(void *p) {
-  as_free(AS_REGISTERED, p);
-}
+#endif // LIBHPX_GAS_PGAS_CYCLIC_H

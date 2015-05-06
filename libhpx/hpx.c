@@ -185,16 +185,6 @@ int hpx_init(int *argc, char ***argv) {
     status = log_error("failed to create network.\n");
     goto unwind1;
   }
-  if (!local || !registered || !global) {
-    status = log_error("expected network to initialize address spaces\n");
-    goto unwind1;
-  }
-
-  // Join the various address spaces.
-  // NB: is there a cleaner way to deal with this?
-  local->join(local);
-  registered->join(registered);
-  global->join(global);
 
   // thread scheduler
   here->sched = scheduler_new(here->config);

@@ -27,6 +27,8 @@
 #include <libhpx/locality.h>
 #include <libhpx/network.h>
 #include <libhpx/bitmap.h>
+#include "cyclic.h"
+#include "global.h"
 #include "heap.h"
 #include "pgas.h"
 #include "../parcel/emulation.h"
@@ -164,7 +166,8 @@ _pgas_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
 /// hpx_addr_t.
 static hpx_addr_t
 _pgas_gas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
-  void *lva = boundary ? global_memalign(boundary, bytes) : global_malloc(bytes);
+  void *lva = boundary ? global_memalign(boundary, bytes) :
+                         global_malloc(bytes);
   dbg_assert(heap_contains_lva(global_heap, lva));
   return pgas_lva_to_gpa(lva);
 }
@@ -295,18 +298,6 @@ _pgas_local_base(void *gas) {
   return global_heap->base;
 }
 
-static void *
-_pgas_mmap(void *gas, void *addr, size_t n, size_t align) {
-  dbg_assert(global_heap);
-  return heap_chunk_alloc(global_heap, addr, n, align);
-}
-
-static void
-_pgas_munmap(void *gas, void *addr, size_t n) {
-  dbg_assert(global_heap);
-  heap_chunk_dalloc(global_heap, addr, n);
-}
-
 static uint32_t
 _pgas_owner_of(const void *pgas, hpx_addr_t addr) {
   return gpa_to_rank(addr);
@@ -334,11 +325,12 @@ static gas_t _pgas_vtable = {
   .memput         = _pgas_memput,
   .memcpy         = _pgas_parcel_memcpy,
   .owner_of       = _pgas_owner_of,
-  .mmap           = _pgas_mmap,
-  .munmap         = _pgas_munmap
+  .mmap           = NULL,
+  .munmap         = NULL
 };
 
-gas_t *gas_pgas_new(const config_t *cfg, boot_t *boot) {
+gas_t *
+gas_pgas_new(const config_t *cfg, boot_t *boot) {
   size_t heap_size = cfg->heapsize;
 
   if (here->ranks == 1) {
@@ -356,10 +348,15 @@ gas_t *gas_pgas_new(const config_t *cfg, boot_t *boot) {
     goto unwind0;
   }
 
-  int e = heap_init(global_heap, heap_size, (here->rank == 0));
+  int e = heap_init(global_heap, heap_size);
   if (e != LIBHPX_OK) {
     dbg_error("failed to allocate global heap\n");
     goto unwind1;
+  }
+
+  global_allocator_init();
+  if (here->rank == 0) {
+    cyclic_allocator_init();
   }
 
   return &_pgas_vtable;

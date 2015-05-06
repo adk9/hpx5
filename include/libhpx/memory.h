@@ -13,177 +13,196 @@
 #ifndef LIBHPX_MEMORY_H
 #define LIBHPX_MEMORY_H
 
-/// @file  libhpx/memory.h
+/// @file include/libhpx/hpx.h
+/// @brief Address spaces.
 ///
-/// @brief This file contains declarations for allocation from the various
-///        memory spaces that HPX uses for its local allocations.
-///
-///        Registered memory is memory that can be used in RDMA operations, but
-///        that doesn't need a global address mapping. While any memory can be
-///        registered using the network_register() operation, the registered
-///        memory pool should be used for object classes that stay registered,
-///        like parcels, stacks, etc.
-///
-///        Global memory is memory that has a corresponding GAS address. It is
-///        also registered with the network.
-#include <stddef.h>
+/// This header defines the interface to the various kinds of memory that we
+/// allocate. In addition to standard local memory, we can allocate network
+/// registered memory, global memory, and global cyclic memory.
+
+enum {
+  AS_REGISTERED = 0,
+  AS_GLOBAL,
+  AS_CYCLIC,
+  AS_COUNT
+};
+
+#ifndef HAVE_NETWORK
+
+/// If we don't have a network configured, then we don't do anything interesting
+/// with memory. Our interface just forwards inline to the stdlib
+/// allocators. This works fine, even if the user has configured
+/// --enable-jemalloc, since jemalloc is handling the stdlib allocation in that
+/// context.
+
+# include <stdlib.h>
+
+static inline void as_join(int id) {
+}
+
+static inline void as_leave(void) {
+}
+
+static inline void as_thread_init(void) {
+}
+
+static inline void *as_malloc(int id, size_t bytes) {
+  return malloc(bytes);
+}
+
+static inline void *as_calloc(int id, size_t nmemb, size_t bytes) {
+  return calloc(nmemb, bytes);
+}
+
+static inline void *as_memalign(int id, size_t boundary, size_t size) {
+  void *ptr = NULL;
+  posix_memalign(&ptr, boundary, size);
+  return ptr;
+}
+
+static inline void as_free(int id, void *ptr) {
+  free(ptr);
+}
+
+#else
+
+/// When a network has been configured then we actually need to do something
+/// about these allocations. In this context we are guaranteed that the jemalloc
+/// header is available, so we can use its types here.
+#include <jemalloc/jemalloc.h>
 #include <hpx/attributes.h>
-#include <libhpx/debug.h>
 #include <libhpx/system.h>
 
-/// Forward declarations.
+/// A chunk allocator.
+///
+/// The chunk allocator parameterizes an address space, and provides jemalloc
+/// with the callbacks necessary to get more memory to manage. The default
+/// jemalloc allocator uses mmap (decorated to provide aligned allocations),
+/// munmap, and madvise for it's allocator.
+///
+/// In HPX, we want to do things like register the chunks or get them from a
+/// specific address range, or fragment up huge TLB pages, or all three. At
+/// initialization time the system will set an allocator for each address space
+/// that needs custom handling. *This must be done before system threads join
+/// the address space with as_join().*
+///
 /// @{
-struct config;
-/// }@
+typedef struct {
+  chunk_alloc_t *challoc;
+  chunk_dalloc_t *chfree;
+  chunk_purge_t *chpurge;
+} chunk_allocator_t;
+/// @}
 
-/// This abstract class defines the external interface to an address space.
-typedef struct address_space {
-  void  (*delete)(void *space);
-  void  (*join)(void *space);
-  void  (*leave)(void *space);
-  void  (*free)(void *addr);
-  void *(*malloc)(size_t bytes);
-  void *(*calloc)(size_t n, size_t bytes);
-  void *(*memalign)(size_t boundary, size_t size);
-} address_space_t;
+/// Each thread "joins" the custom address space world by figuring out what
+/// flags to pass to jemalloc for each address space, and storing them in this
+/// array.
+/// @{
+extern __thread int as_flags[AS_COUNT];
+/// @}
 
-/// These function types are used to parameterize the implementation of some of
-/// the address spaces.
-typedef int (*memory_register_t)(void *obj, const void *base, size_t n,
-                                 void *key);
-typedef int (*memory_release_t)(void *obj, const void *base, size_t n);
-
-address_space_t *address_space_new_default(const struct config *cfg)
+/// Set the allocator for an address space.
+///
+/// The address space does *not* take ownership of the allocator, and does not
+/// try to free it at termination.
+///
+/// The default allocator is the local allocator, if no custom allocator is set
+/// for an address space then it will use the local address space to satisfy
+/// allocations, e.g., without a custom allocator as_malloc(ID, n) forwards to
+/// malloc(n).
+///
+/// @param              id The address space id to update.
+/// @param       allocator An allocator implementation.
+void as_set_allocator(int id, chunk_allocator_t *allocator)
   HPX_INTERNAL;
 
-address_space_t *address_space_new_jemalloc_registered(const struct config *cfg,
-                                                       void *xport,
-                                                       memory_register_t pin,
-                                                       memory_release_t unpin,
-                                                       void *mmap_obj,
-                                                       system_mmap_t mmap,
-                                                       system_munmap_t munmap)
+/// Call by each thread to join the memory system.
+///
+/// After calling as_join(), threads can use the as_* allocation interface. This
+/// must be called *after* any custom allocator has been installed.
+void as_join(int id)
   HPX_INTERNAL;
 
-address_space_t *address_space_new_jemalloc_global(const struct config *cfg,
-                                                   void *xport,
-                                                   memory_register_t pin,
-                                                   memory_release_t unpin,
-                                                   void *mmap_obj,
-                                                   system_mmap_t mmap,
-                                                   system_munmap_t munmap)
+/// Called by each thread to leave the memory system.
+///
+/// This will flush any caches that have been set. It does not to anything to
+/// the backing arenas since we don't know where that memory is being
+/// used. Jemalloc may purge those arenas to reclaim the backing memory, and
+/// they will be cleaned up at shutdown.
+///
+/// The main consequence of not freeing the arenas is that global address
+/// regions can not be returned to the global bitmap for use
+/// elsewhere. Essentially the arena will hold onto its chunks until the end of
+/// time.
+void as_leave(void)
   HPX_INTERNAL;
 
-extern address_space_t *local;
-extern address_space_t *registered;
-extern address_space_t *global;
-
-static inline void local_join(void) {
-  dbg_assert(local && local->join);
-  local->join(local);
+static inline void *as_malloc(int id, size_t bytes) {
+  return mallocx(bytes, as_flags[id]);
 }
 
-static inline void local_leave(void) {
-  dbg_assert(local && local->leave);
-  local->leave(local);
+static inline void *as_calloc(int id, size_t nmemb, size_t bytes) {
+  int flags = as_flags[id] | MALLOCX_ZERO;
+  return mallocx(nmemb * bytes, flags);
 }
 
-static inline void local_free(void *p) {
-  dbg_assert(local && local->free);
-  local->free(p);
+static inline void *as_memalign(int id, size_t boundary, size_t size) {
+  int flags = as_flags[id] | MALLOCX_ALIGN(boundary);
+  return mallocx(size, flags);
 }
 
-static inline void *local_malloc(size_t bytes) {
-  dbg_assert(local && local->malloc);
-  void *p = local->malloc(bytes);
-  dbg_assert(p);
-  return p;
+static inline void as_free(int id, void *ptr)  {
+  dallocx(ptr, as_flags[id]);
 }
 
-static inline void *local_calloc(size_t n, size_t bytes) {
-  dbg_assert(local && local->calloc);
-  void *p = local->calloc(n, bytes);
-  dbg_assert(p);
-  return p;
-}
-
-static inline void *local_memalign(size_t boundary, size_t size) {
-  dbg_assert(local && local->memalign);
-  void *p = local->memalign(boundary, size);
-  dbg_assert(p);
-  return p;
-}
-
-static inline void registered_join(void) {
-  dbg_assert(registered && registered->join);
-  registered->join(registered);
-}
-
-static inline void registered_leave(void) {
-  dbg_assert(registered && registered->leave);
-  registered->leave(local);
-}
-
-static inline void registered_free(void *p) {
-  dbg_assert(registered && registered->free);
-  registered->free(p);
-}
+#endif
 
 static inline void *registered_malloc(size_t bytes) {
-  dbg_assert(registered && registered->malloc);
-  void *p = registered->malloc(bytes);
-  dbg_assert(p);
-  return p;
+  return as_malloc(AS_REGISTERED, bytes);
 }
 
-static inline void *registered_calloc(size_t n, size_t bytes) {
-  dbg_assert(registered && registered->calloc);
-  void *p = registered->calloc(n, bytes);
-  dbg_assert(p);
-  return p;
+static inline void *registered_calloc(size_t nmemb, size_t bytes) {
+  return as_calloc(AS_REGISTERED, nmemb, bytes);
 }
 
 static inline void *registered_memalign(size_t boundary, size_t size) {
-  dbg_assert(registered && registered->memalign);
-  void *p = registered->memalign(boundary, size);
-  dbg_assert(p);
-  return p;
+  return as_memalign(AS_REGISTERED, boundary, size);
 }
 
-static inline void global_join(void) {
-  dbg_assert(global && global->join);
-  global->join(global);
-}
-
-static inline void global_leave(void) {
-  dbg_assert(global && global->leave);
-  global->leave(global);
-}
-
-static inline void global_free(void *p) {
-  dbg_assert(global && global->free);
-  global->free(p);
+static inline void registered_free(void *ptr)  {
+  as_free(AS_REGISTERED, ptr);
 }
 
 static inline void *global_malloc(size_t bytes) {
-  dbg_assert(global && global->malloc);
-  void *p = global->malloc(bytes);
-  dbg_assert(p);
-  return p;
+  return as_malloc(AS_GLOBAL, bytes);
 }
 
-static inline void *global_calloc(size_t n, size_t bytes) {
-  dbg_assert(global && global->calloc);
-  void *p = global->calloc(n, bytes);
-  dbg_assert(p);
-  return p;
+static inline void *global_calloc(size_t nmemb, size_t bytes) {
+  return as_calloc(AS_GLOBAL, nmemb, bytes);
 }
 
 static inline void *global_memalign(size_t boundary, size_t size) {
-  dbg_assert(global && global->memalign);
-  void *p = global->memalign(boundary, size);
-  dbg_assert(p);
-  return p;
+  return as_memalign(AS_GLOBAL, boundary, size);
+}
+
+static inline void global_free(void *ptr)  {
+  as_free(AS_GLOBAL, ptr);
+}
+
+static inline void *cyclic_malloc(size_t bytes) {
+  return as_malloc(AS_CYCLIC, bytes);
+}
+
+static inline void *cyclic_calloc(size_t nmemb, size_t bytes) {
+  return as_calloc(AS_CYCLIC, nmemb, bytes);
+}
+
+static inline void *cyclic_memalign(size_t boundary, size_t size) {
+  return as_memalign(AS_CYCLIC, boundary, size);
+}
+
+static inline void cyclic_free(void *ptr)  {
+  as_free(AS_CYCLIC, ptr);
 }
 
 #endif // LIBHPX_MEMORY_H

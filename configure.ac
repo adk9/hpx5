@@ -91,10 +91,6 @@ AC_ARG_ENABLE([jemalloc],
   [AS_HELP_STRING([--enable-jemalloc],
                   [Enable using of jemalloc as the default allocator @<:@default=no@:>@])],
   [], [enable_jemalloc=no])
-AS_IF([test "x$enable_jemalloc" != xno],
-  [HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [], [_local])
-   AC_DEFINE([HAVE_JEMALLOC], [1], [We have jemalloc support for malloc/free/etc])]
-   AC_SUBST(HPX_JEMALLOC_LOCAL_LIBS, "$hpx_jemalloc_libs"))
   
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug],
@@ -151,7 +147,6 @@ AC_ARG_ENABLE([photon],
 
 AS_IF([test "x$enable_photon" != xno],
  [HPX_CONTRIB_PHOTON([contrib/photon], [hpx_])
-  HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [libhpx_registered_], [_registered])
   AC_DEFINE([HAVE_JEMALLOC_REGISTERED], [1], [We have a registered memory manager])],
  [hpx_have_photon=no])
 
@@ -159,10 +154,16 @@ AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" 
  [enable_network=yes
   AC_DEFINE([HAVE_NETWORK], [1], [We have a network])
   AC_DEFINE([HAVE_JEMALLOC_GLOBAL], [1], [We have global allocation])
-  HPX_CONTRIB_JEMALLOC([contrib/jemalloc], [libhpx_global_], [_global])
   TESTS_CMD='mpirun -np 2'],
  [enable_network=no
   TESTS_CMD=''])
+
+# If we have a network, or if we want to use jemalloc locally then contrib it.
+AS_IF([test "x$enable_jemalloc" != xno -o "x$enable_network" != xno],
+ [HPX_CONTRIB_JEMALLOC([contrib/jemalloc])
+  AC_DEFINE([HAVE_JEMALLOC], [1], [We have jemalloc support for malloc/free/etc])
+  AC_SUBST(HPX_JEMALLOC_LOCAL_LIBS, "$hpx_jemalloc_libs")])
+AM_CONDITIONAL([BUILD_JEMALLOC], [test "x$enable_jemalloc" != xno -o "x$enable_network" != xno])
 
 AC_ARG_WITH([tests-cmd],
  [AS_HELP_STRING([--with-tests-cmd], [Use this command for running the test harness @<:@default=mpirun -np 2@:>@])],
@@ -235,12 +236,9 @@ AM_CONDITIONAL([CPU_ARM], [test "x$host_cpu" = xarmv7l])
 
 AM_CONDITIONAL([HAVE_PHOTON], [test "x$hpx_have_photon" != xno])
 AM_CONDITIONAL([HAVE_NETWORK], [test "x$enable_network" != xno])
-AM_CONDITIONAL([BUILD_JEMALLOC_GLOBAL], [test "x$enable_network" != xno])
-AM_CONDITIONAL([BUILD_JEMALLOC_REGISTERED], [test "x$enable_photon" != xno])
 AM_CONDITIONAL([BUILD_PHOTON], [test "x$enable_external_photon" == xno])
 AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
 AM_CONDITIONAL([ENABLE_TUTORIAL], [test "x$enable_tutorial" != xno])
-AM_CONDITIONAL([ENABLE_JEMALLOC], [test "x$enable_jemalloc" != xno])
 AM_CONDITIONAL([ENABLE_PHOTON], [test "x$enable_photon" != xno])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
 
@@ -287,6 +285,7 @@ AC_CONFIG_FILES([
   libhpx/Makefile
   libhpx/boot/Makefile
   libhpx/gas/Makefile
+  libhpx/gas/pgas/Makefile
   libhpx/gas/agas/Makefile
   libhpx/memory/Makefile
   libhpx/network/Makefile

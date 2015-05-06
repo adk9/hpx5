@@ -20,8 +20,6 @@
 struct config;
 struct gas;
 
-extern struct heap *global_heap;
-
 struct gas *gas_pgas_new(const struct config *cfg, struct boot *boot)
   HPX_INTERNAL;
 

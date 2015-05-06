@@ -20,7 +20,6 @@
 /// network's primary responsibility is to accept send requests from the
 /// scheduler, and send them out via the configured transport.
 #include <hpx/hpx.h>
-#include <libhpx/memory.h>
 
 /// Forward declarations.
 /// @{
@@ -74,8 +73,8 @@ typedef struct network {
 
   void (*set_flush)(void*);
 
-  memory_register_t register_dma;
-  memory_release_t release_dma;
+  void (*register_dma)(void *, const void *base, size_t bytes, void *key);
+  void (*release_dma)(void *, const void *base, size_t bytes);
 } network_t;
 
 /// Create a new network.
