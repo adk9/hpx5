@@ -39,29 +39,23 @@ typedef struct pwc_xport {
   hpx_transport_t type;
 
   void (*delete)(void *xport);
-  const void *(*key_find_ref)(const void *xport, const void *addr, size_t n);
-  int (*key_find)(const void *xport, const void *addr, size_t n, void *key);
-  int (*key_copy)(void *restrict dest, const void *restrict src);
-  int (*key_clear)(void *key);
+  const void *(*key_find_ref)(void *xport, const void *addr, size_t n);
+  void (*key_find)(void *xport, const void *addr, size_t n, void *key);
+  void (*key_copy)(void *restrict dest, const void *restrict src);
+  void (*key_clear)(void *key);
   int (*command)(const xport_op_t *op);
   int (*pwc)(xport_op_t *op);
   int (*gwc)(xport_op_t *op);
   int (*test)(uint64_t *op, int *remaining);
   int (*probe)(uint64_t *op, int *remaining, int rank);
-  memory_register_t  pin;
-  memory_release_t unpin;
+  void (*pin)(const void *base, size_t bytes, void *key);
+  void (*unpin)(const void *base, size_t bytes);
 } pwc_xport_t;
 
 pwc_xport_t *pwc_xport_new_photon(const config_t *config, struct boot *boot,
-                                  struct gas *gas)
-  HPX_INTERNAL;
+                                  struct gas *gas);
 
 pwc_xport_t *pwc_xport_new(const config_t *config, struct boot *boot,
-                           struct gas *gas)
-  HPX_INTERNAL;
-
-static inline void pwc_xport_delete(pwc_xport_t *xport) {
-  xport->delete(xport);
-}
+                           struct gas *gas);
 
 #endif // LIBHPX_NETWORK_PWC_XPORT_H

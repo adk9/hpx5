@@ -15,11 +15,12 @@
 #endif
 
 #include <string.h>
-#include <jemalloc/jemalloc_global.h>
 #include <hpx/builtins.h>
-#include <libhpx/locality.h>
 #include <libhpx/action.h>
 #include <libhpx/gpa.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+
 
 #include "heap.h"
 #include "pgas.h"
@@ -146,7 +147,7 @@ int pgas_free_handler(void) {
     return HPX_ERROR;
   }
   void *lva = pgas_gpa_to_lva(gpa);
-  libhpx_global_free(lva);
+  global_free(lva);
   return HPX_SUCCESS;
 }
 HPX_ACTION(HPX_DEFAULT, 0, pgas_free, pgas_free_handler);

@@ -171,7 +171,7 @@ hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action,
     size += _max(sizeof(void*), len);
   }
 
-  hpx_parcel_t *p = registered_memalign(HPX_CACHELINE_SIZE, size);
+  hpx_parcel_t *p = as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, size);
   dbg_assert_str(p, "parcel: failed to allocate %zu registered bytes.\n", size);
   parcel_init(target, action, c_target, c_action, pid, data, len, p);
   INST_EVENT_PARCEL_CREATE(p);
@@ -181,7 +181,7 @@ hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action,
 hpx_parcel_t *parcel_clone(const hpx_parcel_t *p) {
   dbg_assert(parcel_serialized(parcel_get_state(p)) || p->size == 0);
   size_t n = parcel_size(p);
-  hpx_parcel_t *clone = registered_memalign(HPX_CACHELINE_SIZE, n);
+  hpx_parcel_t *clone = as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, n);
   memcpy(clone, p, n);
   clone->ustack = NULL;
   clone->next = NULL;
@@ -222,7 +222,7 @@ void parcel_delete(hpx_parcel_t *p) {
     return;
   }
 
-  registered_free(p);
+  as_free(AS_REGISTERED, p);
 }
 
 struct ustack* parcel_set_stack(hpx_parcel_t *p, struct ustack *next) {

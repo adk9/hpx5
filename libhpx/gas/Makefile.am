@@ -1,6 +1,4 @@
-if BUILD_AGAS
-SUBDIRS            = agas
-endif
+SUBDIRS =
 
 # LT Utility libraries
 noinst_LTLIBRARIES = libgas.la
@@ -14,18 +12,17 @@ libgas_la_SOURCES  = hpx_gas_glue.c \
                      parcel/memcpy.c
 libgas_la_LIBADD   = 
 
-if HAVE_NETWORK
-libgas_la_SOURCES += mallctl.c \
-                     pgas/actions.c \
-                     pgas/pgas.c \
-                     pgas/heap.c
-endif
-
 if HAVE_HUGETLBFS
 libgas_la_CFLAGS   = $(HUGETLBFS_CFLAGS)
 libgas_la_LIBADD  += $(HUGETLBFS_LIBS)
 endif
 
+if HAVE_NETWORK
+SUBDIRS           += pgas
+libgas_la_LIBADD  += pgas/libpgas.la
+endif
+
 if BUILD_AGAS
+SUBDIRS           += agas
 libgas_la_LIBADD  += agas/libagas.la
 endif

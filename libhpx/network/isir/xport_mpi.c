@@ -23,7 +23,8 @@
 #include "parcel_utils.h"
 #include "xport.h"
 
-static void _mpi_check_tag(int tag) {
+static void
+_mpi_check_tag(int tag) {
   int *tag_ub;
   int flag = 0;
   int e = MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &tag_ub, &flag);
@@ -32,15 +33,18 @@ static void _mpi_check_tag(int tag) {
                  *tag_ub);
 }
 
-static size_t _mpi_sizeof_request(void) {
+static size_t
+_mpi_sizeof_request(void) {
   return sizeof(MPI_Request);
 }
 
-static size_t _mpi_sizeof_status(void) {
+static size_t
+_mpi_sizeof_status(void) {
   return sizeof(MPI_Status);
 }
 
-static int _mpi_isend(int to, const void *from, unsigned n, int tag, void *r) {
+static int
+_mpi_isend(int to, const void *from, unsigned n, int tag, void *r) {
   int e = MPI_Isend(from, n, MPI_BYTE, to, tag, MPI_COMM_WORLD, r);
   if (MPI_SUCCESS != e) {
     return log_error("failed MPI_Isend: %u bytes to %d\n", n, to);
@@ -50,7 +54,8 @@ static int _mpi_isend(int to, const void *from, unsigned n, int tag, void *r) {
   return LIBHPX_OK;
 }
 
-static int _mpi_irecv(void *to, size_t n, int tag, void *request) {
+static int
+_mpi_irecv(void *to, size_t n, int tag, void *request) {
   const int src = MPI_ANY_SOURCE;
   const MPI_Comm com = MPI_COMM_WORLD;
   if (MPI_SUCCESS != MPI_Irecv(to, n, MPI_BYTE, src, tag, com, request)) {
@@ -59,7 +64,8 @@ static int _mpi_irecv(void *to, size_t n, int tag, void *request) {
   return LIBHPX_OK;
 }
 
-static int _mpi_iprobe(int *tag) {
+static int
+_mpi_iprobe(int *tag) {
   int flag;
   MPI_Status stat;
   int e = MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &stat);
@@ -77,8 +83,8 @@ static int _mpi_iprobe(int *tag) {
   return LIBHPX_OK;
 }
 
-static void _mpi_testsome(int n, void *requests, int *nout, int *out,
-                          void *stats) {
+static void
+_mpi_testsome(int n, void *requests, int *nout, int *out, void *stats) {
   if (!stats) {
     stats = MPI_STATUS_IGNORE;
   }
@@ -88,12 +94,14 @@ static void _mpi_testsome(int n, void *requests, int *nout, int *out,
   dbg_assert_str(*nout != MPI_UNDEFINED, "silent MPI_Testsome() error.\n");
 }
 
-static void _mpi_clear(void *request) {
+static void
+_mpi_clear(void *request) {
   MPI_Request *r = request;
   *r = MPI_REQUEST_NULL;
 }
 
-static int _mpi_cancel(void *request, int *cancelled) {
+static int
+_mpi_cancel(void *request, int *cancelled) {
   if (MPI_SUCCESS != MPI_Cancel(request)) {
     return log_error("could not cancel MPI request\n");
   }
@@ -111,7 +119,8 @@ static int _mpi_cancel(void *request, int *cancelled) {
   return LIBHPX_OK;
 }
 
-static void _mpi_finish(void *status, int *src, int *bytes) {
+static void
+_mpi_finish(void *status, int *src, int *bytes) {
   MPI_Status *s = status;
   if (MPI_SUCCESS != MPI_Get_count(s, MPI_BYTE, bytes)) {
     dbg_error("could not extract the size of an irecv\n");
@@ -121,19 +130,21 @@ static void _mpi_finish(void *status, int *src, int *bytes) {
   *src = s->MPI_SOURCE;
 }
 
-static void _mpi_delete(void *mpi) {
+static void
+_mpi_delete(void *mpi) {
   free(mpi);
 }
 
-static int _mpi_pin(void *xport, const void *base, size_t bytes, void *key) {
-  return LIBHPX_OK;
+static void
+_mpi_pin(const void *base, size_t bytes, void *key) {
 }
 
-static int _mpi_unpin(void *xport, const void *base, size_t bytes) {
-  return LIBHPX_OK;
+static void
+_mpi_unpin(const void *base, size_t bytes) {
 }
 
-static void _init_mpi(void) {
+static void
+_init_mpi(void) {
   int init = 0;
   MPI_Initialized(&init);
   if (!init) {
@@ -153,7 +164,8 @@ static void _init_mpi(void) {
   }
 }
 
-isir_xport_t *isir_xport_new_mpi(const config_t *cfg, gas_t *gas) {
+isir_xport_t *
+isir_xport_new_mpi(const config_t *cfg, gas_t *gas) {
   isir_xport_t *xport = malloc(sizeof(*xport));
   dbg_assert(xport);
   _init_mpi();
@@ -173,10 +185,10 @@ isir_xport_t *isir_xport_new_mpi(const config_t *cfg, gas_t *gas) {
   xport->pin            = _mpi_pin;
   xport->unpin          = _mpi_unpin;
 
-  local = address_space_new_default(cfg);
-  registered = address_space_new_default(cfg);
-  global = address_space_new_jemalloc_global(cfg, xport, _mpi_pin, _mpi_unpin,
-                                             gas, gas_mmap, gas_munmap);
+  // local = address_space_new_default(cfg);
+  // registered = address_space_new_default(cfg);
+  // global = address_space_new_jemalloc_global(cfg, xport, _mpi_pin, _mpi_unpin,
+  //                                            gas, gas_mmap, gas_munmap);
 
   return xport;
 }

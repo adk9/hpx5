@@ -9,7 +9,7 @@ lib_LTLIBRARIES	   = libhpx.la
 libhpx_la_SOURCES  = hpx.c call.c bcast.c par.c action.c debug.c
 
 libhpx_la_CPPFLAGS = -I$(top_srcdir)/include
-libhpx_la_CFLAGS   = -fvisibility=hidden
+#libhpx_la_CFLAGS   = -fvisibility=hidden
 libhpx_la_LDFLAGS  = $(HPX_JEMALLOC_LDFLAGS)
 libhpx_la_LIBADD   = $(HPX_HWLOC_LIBS) \
                      $(HPX_LIBFFI_LIBS) \

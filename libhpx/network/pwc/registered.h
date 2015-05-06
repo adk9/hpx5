@@ -10,21 +10,16 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
+#ifndef LIBHPX_NETWORK_PWC_REGISTERED_H
+#define LIBHPX_NETWORK_PWC_REGISTERED_H
 
-/// @file  libhpx/memory/glue.c
-///
-/// @brief This file just bind hpx_malloc_registered() and hpx_free_registered()
-///        to their counterparts in the memory.h header.
-#include <hpx/hpx.h>
-#include <libhpx/memory.h>
+/// @file  libhpx/network/pwc/registered.h
 
-void *hpx_malloc_registered(size_t bytes) {
-  return as_malloc(AS_REGISTERED, bytes);
-}
+/// Forward declarations
+/// @{
+struct pwc_xport;
+/// @}
 
-void hpx_free_registered(void *p) {
-  as_free(AS_REGISTERED, p);
-}
+void registered_allocator_init(struct pwc_xport *xport);
+
+#endif // LIBHPX_NETWORK_PWC_REGISTERED_H

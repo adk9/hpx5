@@ -55,9 +55,9 @@ static void *_run(void *worker) {
   worker_bind_self(worker);
 
   // Ensure that all of the threads have joined the address spaces.
-  local->join(local);
-  registered->join(registered);
-  global->join(global);
+  as_join(AS_REGISTERED);
+  as_join(AS_GLOBAL);
+  as_join(AS_CYCLIC);
 
   if (worker_start()) {
     dbg_error("failed to start processing lightweight threads.\n");
@@ -65,9 +65,7 @@ static void *_run(void *worker) {
   }
 
   // leave the global address space
-  global->join(global);
-  registered->join(registered);
-  local->join(local);
+  as_leave();
 
   return NULL;
 }
