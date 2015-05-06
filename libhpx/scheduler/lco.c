@@ -118,7 +118,7 @@ static int _lco_delete_action_handler(void) {
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    hpx_call_cc(target, hpx_lco_delete_action, NULL, NULL, 0, NULL);
+    hpx_call_cc(target, hpx_lco_delete_action, NULL, NULL);
   }
   log_lco("deleting lco %p\n", (void*)lco);
   _fini(lco);
@@ -585,7 +585,7 @@ int hpx_lco_delete_all(int n, hpx_addr_t *lcos, hpx_addr_t rsync) {
   if (rsync) {
     and = hpx_lco_and_new(n);
     int e;
-    e = hpx_call_when_with_continuation(and, rsync, hpx_lco_set_action, and, hpx_lco_delete_action);
+    e = hpx_call_when_with_continuation(and, rsync, hpx_lco_set_action, and, hpx_lco_delete_action, NULL, 0);
     dbg_check(e, "failed to enqueue delete action\n");
   }
 
