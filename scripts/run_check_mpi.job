@@ -2,6 +2,7 @@
 #$ -pe mpi-16 32
 #$ -q *@@cswarm
 #$ -N regression_test
+#$ -l h_rt=01:00:00
 
 module load gcc/4.9.2
 module load ompi/1.8.1-intel
