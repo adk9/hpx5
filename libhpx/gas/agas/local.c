@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <libhpx/debug.h>
 #include <libhpx/memory.h>
 #include "agas.h"
 #include "btt.h"
