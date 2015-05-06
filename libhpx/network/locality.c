@@ -15,17 +15,10 @@
 #endif
 
 /// Implement the locality actions.
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <string.h>
-#include "libhpx/action.h"
-#include "libhpx/debug.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/network.h"
-#include "libhpx/scheduler.h"
-#include "libhpx/system.h"
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/parcel.h>
+#include <libhpx/scheduler.h>
 
 locality_t *here = NULL;
 
@@ -39,7 +32,7 @@ static int _locality_shutdown_handler(int src, uint64_t code) {
 HPX_ACTION(HPX_INTERRUPT, 0, locality_shutdown, _locality_shutdown_handler,
            HPX_INT, HPX_UINT64);
 
-int locality_call_continuation_handler(locality_cont_args_t *args, size_t n) {
+static int _call_continuation_handler(locality_cont_args_t *args, size_t n) {
   // just doing address translation, not pinning
   hpx_addr_t target = hpx_thread_current_target();
   if (!hpx_gas_try_pin(target, NULL)) {
@@ -47,8 +40,11 @@ int locality_call_continuation_handler(locality_cont_args_t *args, size_t n) {
   }
 
   uint32_t size = n - sizeof(args->status) - sizeof(args->action);
+  hpx_parcel_t *p = parcel_new(target, args->action, HPX_NULL, HPX_ACTION_NULL,
+                               hpx_thread_current_pid(), args->data, size);
+  return parcel_launch(p);
   // handle status here: args->status;
-  return hpx_call(target, args->action, HPX_NULL, args->data, size);
+  // return hpx_call(target, args->action, HPX_NULL,
 }
 HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, locality_call_continuation,
-           locality_call_continuation_handler, HPX_POINTER, HPX_SIZE_T);
+           _call_continuation_handler, HPX_POINTER, HPX_SIZE_T);
