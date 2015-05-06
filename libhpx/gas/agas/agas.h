@@ -31,32 +31,31 @@ typedef struct {
   unsigned cyclic_arena;
 } agas_t;
 
-struct gas *gas_agas_new(const struct config *config, struct boot *boot)
-  HPX_INTERNAL;
+struct gas *gas_agas_new(const struct config *config, struct boot *boot);
 
-void agas_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync)
-  HPX_INTERNAL;
+void agas_global_allocator_init(void);
+void agas_cyclic_allocator_init(void);
+
+void *agas_chunk_alloc(agas_t *agas, void *bitmap, void *addr, size_t n,
+                       size_t align);
+void agas_chunk_dalloc(agas_t *agas, void *bitmap, void *addr, size_t n);
+
+void agas_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync);
 
 int agas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
-                hpx_addr_t lsync, hpx_addr_t rsync)
-  HPX_INTERNAL;
+                hpx_addr_t lsync, hpx_addr_t rsync);
 
 int agas_memget(void *gas, void *to, hpx_addr_t from, size_t n,
-                hpx_addr_t lsync)
-  HPX_INTERNAL;
+                hpx_addr_t lsync);
 
 int agas_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
-                hpx_addr_t sync)
-  HPX_INTERNAL;
+                hpx_addr_t sync);
 
-int64_t agas_local_sub(const agas_t *agas, gva_t lhs, gva_t rhs, uint32_t bsize)
-  HPX_INTERNAL;
+int64_t agas_local_sub(const agas_t *agas, gva_t lhs, gva_t rhs, uint32_t bsize);
 
 hpx_addr_t agas_local_add(const agas_t *agas, gva_t gva, int64_t bytes,
-                          uint32_t bsize)
-  HPX_INTERNAL;
+                          uint32_t bsize);
 
-void agas_local_free(agas_t *gas, gva_t addr, void *lva, hpx_addr_t rsync)
-  HPX_INTERNAL;
+void agas_local_free(agas_t *gas, gva_t addr, void *lva, hpx_addr_t rsync);
 
 #endif
