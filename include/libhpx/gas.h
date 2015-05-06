@@ -40,9 +40,6 @@ typedef struct gas {
   bool (*try_pin)(void *gas, hpx_addr_t addr, void **local);
   void (*unpin)(void *gas, hpx_addr_t addr);
 
-  system_mmap_t mmap;
-  system_munmap_t munmap;
-
   hpx_addr_t (*alloc_local)(void *gas, uint32_t bytes, uint32_t boundary);
   hpx_addr_t (*calloc_local)(void *gas, size_t nmemb, size_t size,
                              uint32_t boundary);
@@ -87,16 +84,6 @@ static inline size_t gas_local_size(gas_t *gas) {
 inline static void *gas_local_base(gas_t *gas) {
   assert(gas && gas->local_base);
   return gas->local_base(gas);
-}
-
-static inline void *gas_mmap(void *obj, void *addr, size_t bytes, size_t align) {
-  gas_t *gas = obj;
-  return gas->mmap(obj, addr, bytes, align);
-}
-
-static inline void gas_munmap(void *obj, void *addr, size_t size) {
-  gas_t *gas = obj;
-  gas->munmap(obj, addr, size);
 }
 
 #endif // LIBHPX_GAS_H

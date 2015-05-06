@@ -324,9 +324,7 @@ static gas_t _pgas_vtable = {
   .memget         = _pgas_memget,
   .memput         = _pgas_memput,
   .memcpy         = _pgas_parcel_memcpy,
-  .owner_of       = _pgas_owner_of,
-  .mmap           = NULL,
-  .munmap         = NULL
+  .owner_of       = _pgas_owner_of
 };
 
 gas_t *
