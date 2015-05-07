@@ -127,18 +127,32 @@ static size_t _alignment(void) {
 #endif
 }
 
+static __thread ustack_t *_stacks = NULL;
+
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
+  ustack_t *thread = _stacks;
+  if (thread) {
+    _stacks = thread->next;
+    thread->next = NULL;
+    thread_init(thread, parcel, f, _thread_size);
+    return thread;
+  }
+
   void *base = as_memalign(AS_REGISTERED, _alignment(), _buffer_size);
   dbg_assert(base);
   assert((uintptr_t)base % _alignment() == 0);
 
-  ustack_t *thread = _protect(base);
+  thread = _protect(base);
   thread->stack_id = _register(thread);
   thread_init(thread, parcel, f, _thread_size);
   return thread;
 }
 
 void thread_delete(ustack_t *thread) {
+  if (!_stacks) {
+    _stacks = thread;
+    return;
+  }
   _deregister(thread);
   void *base = _unprotect(thread);
   as_free(AS_REGISTERED, base);
