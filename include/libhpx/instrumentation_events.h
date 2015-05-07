@@ -20,17 +20,13 @@
 // ==================== Event data =============================================
 
 typedef struct record {
-  int class;
-  int id;
-  int rank;
   int worker;
-  uint64_t s;
   uint64_t ns;
   uint64_t user[4];
 } record_t;
 
 /// The number of columns for a recorded event; some may be unused
-#define INST_EVENT_NUM_COLS 10
+#define INST_EVENT_NUM_COLS 6
 
 #define INST_EVENT_COL_OFFSET_CLASS  offsetof(record_t, class)
 #define INST_EVENT_COL_OFFSET_ID     offsetof(record_t, id)
@@ -44,34 +40,67 @@ typedef struct record {
 #define INST_EVENT_COL_OFFSET_USER3  offsetof(record_t, user) + 24
 
 // ==================== Event metadata =========================================
-
 // Header file format (for Abstract Rendering):
 //
-// Magic file identifier bytes
+// Magic file identifier bytes = 
+//   {'h', 'p', 'x', ' ', 'l', 'o', 'g', '\0', 0xFF, 0x00, 0xAA, 0x55}
 // table offset
 //  [metadata-id, length, data]*
 //
-// * "table offset" if 4 bytes "metadata-id" is 4 bytes 
+//
+//
+// * "table offset" is 4 bytes 
+// Then,
+// * "metadata-id" is 4 bytes 
 // * "length" is 4 bytes, indicates how many bytes to read for the data 
 //   portion of this header entry
 // * the data is a set of bytes, interpreted in a context-specific manner
 // 
 // Metadata-id numbers:
+// -1 -- Named value
 // 0 -- types
 // 1 -- offsets (a list of ints)
 // 2 -- names (pipe separated list of characters)
 // 3 -- printf codes (pipe separated list)
 // 4 -- min values per column
 // 5 -- max values per column
-// 
+//
+// The 'data' portion of a named value is [type, value, label].  The 'length' of
+// the entry indicates how long this triple is.  Type is a char, value is as
+// long as indicated by the type. Label is an string of chars.
+//
 // Type details:
 // i: int -- 4 bytes
 // l: long -- 8 bytes
 // s: short -- 2 bytes
 // d: double -- 8 bytes
 // f: float -- 4 bytes
-// b: byte -- 1 byte
+// b: byte -- 1 bytes
 // c: char -- 2 bytes
+
+#define METADATA_TYPE_NAMED_VALUE -1
+#define METADATA_TYPE_DATA_TYPES 0
+#define METADATA_TYPE_OFFSETS 1
+#define METADATA_TYPE_NAMES 2
+#define METADATA_TYPE_PRINTF_CODES 3
+#define METADATA_TYPE_MINS 4
+#define METADATA_TYPE_MAXS 5
+
+// The signed types are also used for unsigned; there is not distinct unsigned
+// type for these headers.
+#define METADATA_TYPE_BYTE 'b'
+#define METADATA_TYPE_CHAR 'c'
+#define METADATA_TYPE_INT32 'i'
+#define METADATA_TYPE_INT64 'l'
+#define METADATA_TYPE_INT16 's'
+#define METADATA_TYPE_DOUBLE 'd'
+#define METADATA_TYPE_FLOAT 'f'
+
+typedef struct inst_named_value {
+  const char type;
+  const uint32_t value;
+  const char name[8];
+} inst_named_value_t;
 
 typedef struct inst_event_col_metadata {
   const char mask; // this should an OR of all the following values:
@@ -92,63 +121,21 @@ typedef struct inst_event_metadata {
 
 extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
 
-/// The following constants are needed for setting the offset value in
-/// intances of inst_event_col_metadata_t
-// typeof(INST_EVENT_COL_METADATA_CLASS) == inst_event_col_metadata_t
-#define INST_EVENT_COL_METADATA_CLASS           \
-  { .mask = 0x3f,                               \
-      .data_type = 'i',                         \
-      .offset = INST_EVENT_COL_OFFSET_CLASS,    \
-      .min = 0,                                 \
-      .max = HPX_INST_NUM_CLASSES - 1,          \
-      .printf_code = "d",                       \
-      .name = "class"}
-
-// typeof(INST_EVENT_COL_METADATA_ID) == inst_event_col_metadata_t
-#define INST_EVENT_COL_METADATA_ID              \
-{ .mask = 0x3f,                                 \
-    .data_type = 'i',                           \
-    .offset = INST_EVENT_COL_OFFSET_ID,         \
-    .min = 0,                                   \
-    .max = HPX_INST_NUM_EVENTS,                 \
-    .printf_code = "d",                         \
-    .name = "event"}
-
-// typeof(INST_EVENT_COL_METADATA_RANK) == inst_event_col_metadata_t
-#define INST_EVENT_COL_METADATA_RANK            \
-  { .mask = 0x3f,                               \
-      .data_type = 'i',                         \
-      .offset = INST_EVENT_COL_OFFSET_RANK,     \
-      .min = 0,                                 \
-      .max = INT_MAX,                           \
-      .printf_code = "d",                       \
-      .name = "rank"}
-
 // typeof(INST_EVENT_COL_METADATA_WORKER) == inst_event_col_metadata_t
 #define INST_EVENT_COL_METADATA_WORKER          \
   { .mask = 0x3f,                               \
-      .data_type = 'i',                         \
-      .offset = INST_EVENT_COL_OFFSET_WORKER,   \
-      .min = 0,                                 \
-      .max = INT_MAX,                           \
-      .printf_code = "d",                       \
-      .name = "worker"}
-
-// typeof(INST_EVENT_COL_METADATA_S) == inst_event_col_metadata_t
-#define INST_EVENT_COL_METADATA_S               \
-  { .mask = 0x3f,                               \
-      .data_type = 'l',                         \
-      .offset = INST_EVENT_COL_OFFSET_S,        \
-      .min = 0,                                 \
-      .max = UINT64_MAX,                        \
-      .printf_code = "zu",                      \
-      .name = "seconds"}
+    .data_type = METADATA_TYPE_INT32,           \
+    .offset = INST_EVENT_COL_OFFSET_WORKER,     \
+    .min = 0,                                   \
+    .max = INT_MAX,                             \
+    .printf_code = "d",                         \
+    .name = "worker"}
 
 // typeof(INST_EVENT_COL_METADATA_S) == inst_event_col_metadata_t
 // inst_event_col_metadata_t INST_EVENT_COL_METADATA_NS
 #define INST_EVENT_COL_METADATA_NS              \
   { .mask = 0x3f,                               \
-      .data_type = 'l',                         \
+      .data_type = METADATA_TYPE_INT64,         \
       .offset = INST_EVENT_COL_OFFSET_NS,       \
       .min = 0,                                 \
       .max = 1e9-1,                             \
@@ -158,7 +145,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
 // typeof(INST_EVENT_COL_METADATA_EMPTY0) == inst_event_col_metadata_t
 #define INST_EVENT_COL_METADATA_EMPTY0          \
   { .mask = 0x3,                                \
-      .data_type = 'l',                         \
+      .data_type = METADATA_TYPE_INT64,         \
       .offset = INST_EVENT_COL_OFFSET_USER0,    \
       .min = 0,                                 \
       .max = UINT64_MAX,                        \
@@ -169,7 +156,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
 // typeof(INST_EVENT_COL_METADATA_EMPTY1) == inst_event_col_metadata_t
 #define INST_EVENT_COL_METADATA_EMPTY1          \
   { .mask = 0x3,                                \
-      .data_type = 'l',                         \
+      .data_type = METADATA_TYPE_INT64,         \
       .offset = INST_EVENT_COL_OFFSET_USER1,    \
       .min = 0,                                 \
       .max = UINT64_MAX,                        \
@@ -180,7 +167,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
 // typeof(INST_EVENT_COL_METADATA_EMPTY2) == inst_event_col_metadata_t
 #define INST_EVENT_COL_METADATA_EMPTY2          \
   { .mask = 0x3,                                \
-      .data_type = 'l',                         \
+      .data_type = METADATA_TYPE_INT64,         \
       .offset = INST_EVENT_COL_OFFSET_USER2,    \
       .min = 0,                                 \
       .max = UINT64_MAX,                        \
@@ -191,7 +178,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
 // typeof(INST_EVENT_COL_METADATA_EMPTY3) == inst_event_col_metadata_t
 #define INST_EVENT_COL_METADATA_EMPTY3          \
   { .mask = 0x3,                                \
-      .data_type = 'l',                         \
+      .data_type = METADATA_TYPE_INT64,         \
       .offset = INST_EVENT_COL_OFFSET_USER3,    \
       .min = 0,                                 \
       .max = UINT64_MAX,                        \
@@ -202,7 +189,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
 // typeof(INST_EVENT_COL_METADATA_PARCEL_ID) == inst_event_col_metadata_t
 #define METADATA_PARCEL_ID                      \
   { .mask = 0x3f,                               \
-      .data_type = 'l',                         \
+      .data_type = METADATA_TYPE_INT64,         \
       .offset = INST_EVENT_COL_OFFSET_USER0,    \
       .min = 0,                                 \
       .max = UINT64_MAX,                        \
@@ -212,7 +199,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
 // typeof(INST_EVENT_COL_METADATA_PARCEL_ACTION) == inst_event_col_metadata_t
 #define METADATA_PARCEL_ACTION                  \
   { .mask = 0x3f,                               \
-    .data_type = 'l',                           \
+    .data_type = METADATA_TYPE_INT64,           \
     .offset = INST_EVENT_COL_OFFSET_USER1,      \
     .min = 0,                                   \
     .max = UINT16_MAX,                          \
@@ -222,7 +209,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
 // typeof(INST_EVENT_COL_METADATA_PARCEL_SIZE) == inst_event_col_metadata_t
 #define METADATA_PARCEL_SIZE                    \
   { .mask = 0x3f,                               \
-    .data_type = 'l',                           \
+    .data_type = METADATA_TYPE_INT64,           \
     .offset = INST_EVENT_COL_OFFSET_USER2,      \
     .min = 0,                                   \
     .max = UINT32_MAX,                          \
@@ -232,7 +219,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
 // typeof(INST_EVENT_COL_METADATA_PARCEL_TARGET) == inst_event_col_metadata_t
 #define METADATA_PARCEL_TARGET                  \
   { .mask = 0x3f,                               \
-    .data_type = 'l',                           \
+    .data_type = METADATA_TYPE_INT64,           \
     .offset = INST_EVENT_COL_OFFSET_USER3,      \
     .min = 0,                                   \
     .max = UINT64_MAX,                          \
@@ -242,7 +229,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
 // typeof(INST_EVENT_COL_METADATA_PARCEL_SOURCE) == inst_event_col_metadata_t
 #define METADATA_PARCEL_SOURCE                  \
   { .mask = 0x3f,                               \
-    .data_type = 'l',                           \
+    .data_type = METADATA_TYPE_INT64,           \
     .offset = INST_EVENT_COL_OFFSET_USER3,      \
     .min = 0,                                   \
     .max = UINT32_MAX,                          \
@@ -252,7 +239,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
 // typeof(METADATA_SCHEDUER_WQ_SIZE) == inst_event_col_metadata_t
 #define METADATA_SCHEDULER_WQSIZE               \
   { .mask = 0x3f,                               \
-      .data_type = 'l',                         \
+      .data_type = METADATA_TYPE_INT64,         \
       .offset = INST_EVENT_COL_OFFSET_USER0,    \
       .min = 0,                                 \
       .max = UINT64_MAX,                        \
@@ -260,110 +247,79 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
       .name = "work_queue_size"}
 
 // typeof(PARCEL_CREATE_METADATA) == inst_event_metadata_t 
-#define PARCEL_CREATE_METADATA                  \
-  {                                             \
-    .num_cols = 10,                             \
-    .col_metadata = {                           \
-      INST_EVENT_COL_METADATA_CLASS,            \
-      INST_EVENT_COL_METADATA_ID,               \
-      INST_EVENT_COL_METADATA_RANK,             \
-      INST_EVENT_COL_METADATA_WORKER,           \
-      INST_EVENT_COL_METADATA_S,                \
-      INST_EVENT_COL_METADATA_NS,               \
-      METADATA_PARCEL_ID,                       \
-      METADATA_PARCEL_ACTION,                   \
-      METADATA_PARCEL_SIZE,                     \
-      INST_EVENT_COL_METADATA_EMPTY3            \
-    }                                           \
+#define PARCEL_CREATE_METADATA {                                   \
+    .num_cols = 6,                                                 \
+    .col_metadata = {                                              \
+      INST_EVENT_COL_METADATA_WORKER,                              \
+      INST_EVENT_COL_METADATA_NS,                                  \
+      METADATA_PARCEL_ID,                                          \
+      METADATA_PARCEL_ACTION,                                      \
+      METADATA_PARCEL_SIZE,                                        \
+      INST_EVENT_COL_METADATA_EMPTY3                               \
+    }                                                              \
 }
 
 // typeof(PARCEL_SEND_METADATA) == inst_event_metadata_t 
-#define PARCEL_SEND_METADATA                    \
-  {                                             \
-    .num_cols = 10,                             \
-    .col_metadata = {                           \
-      INST_EVENT_COL_METADATA_CLASS,            \
-      INST_EVENT_COL_METADATA_ID,               \
-      INST_EVENT_COL_METADATA_RANK,             \
-      INST_EVENT_COL_METADATA_WORKER,           \
-      INST_EVENT_COL_METADATA_S,                \
-      INST_EVENT_COL_METADATA_NS,               \
-      METADATA_PARCEL_ID,                       \
-      METADATA_PARCEL_ACTION,                   \
-      METADATA_PARCEL_SIZE,                     \
-      METADATA_PARCEL_TARGET                    \
-    }                                           \
+#define PARCEL_SEND_METADATA {                                     \
+    .num_cols = 6,                                                 \
+    .col_metadata = {                                              \
+      INST_EVENT_COL_METADATA_NS,                                  \
+      METADATA_PARCEL_ID,                                          \
+      METADATA_PARCEL_ACTION,                                      \
+      METADATA_PARCEL_SIZE,                                        \
+      METADATA_PARCEL_TARGET                                       \
+    }                                                              \
 }
 
 // typeof(PARCEL_RECV_METADATA) == inst_event_metadata_t 
-#define PARCEL_RECV_METADATA                    \
-  {                                             \
-    .num_cols = 10,                             \
-    .col_metadata = {                           \
-      INST_EVENT_COL_METADATA_CLASS,            \
-      INST_EVENT_COL_METADATA_ID,               \
-      INST_EVENT_COL_METADATA_RANK,             \
-      INST_EVENT_COL_METADATA_WORKER,           \
-      INST_EVENT_COL_METADATA_S,                \
-      INST_EVENT_COL_METADATA_NS,               \
-      METADATA_PARCEL_ID,                       \
-      METADATA_PARCEL_ACTION,                   \
-      METADATA_PARCEL_SIZE,                     \
-      METADATA_PARCEL_SOURCE                    \
-    }                                           \
+#define PARCEL_RECV_METADATA {                                     \
+    .num_cols = 6,                                                 \
+    .col_metadata = {                                              \
+      INST_EVENT_COL_METADATA_WORKER,                              \
+      INST_EVENT_COL_METADATA_NS,                                  \
+      METADATA_PARCEL_ID,                                          \
+      METADATA_PARCEL_ACTION,                                      \
+      METADATA_PARCEL_SIZE,                                        \
+      METADATA_PARCEL_SOURCE                                       \
+    }                                                              \
 }
 
 // typeof(PARCEL_RUN_METADATA) == inst_event_metadata_t 
-#define PARCEL_RUN_METADATA                     \
-  {                                             \
-  .num_cols = 10,                               \
-    .col_metadata = {                           \
-      INST_EVENT_COL_METADATA_CLASS,            \
-      INST_EVENT_COL_METADATA_ID,               \
-      INST_EVENT_COL_METADATA_RANK,             \
-      INST_EVENT_COL_METADATA_WORKER,           \
-      INST_EVENT_COL_METADATA_S,                \
-      INST_EVENT_COL_METADATA_NS,               \
-      METADATA_PARCEL_ID,                       \
-      METADATA_PARCEL_ACTION,                   \
-      METADATA_PARCEL_SIZE,                     \
-      INST_EVENT_COL_METADATA_EMPTY3            \
-    }                                           \
+#define PARCEL_RUN_METADATA {                                      \
+    .num_cols = 6,                                                 \
+    .col_metadata = {                                              \
+      INST_EVENT_COL_METADATA_WORKER,                              \
+      INST_EVENT_COL_METADATA_NS,                                  \
+      METADATA_PARCEL_ID,                                          \
+      METADATA_PARCEL_ACTION,                                      \
+      METADATA_PARCEL_SIZE,                                        \
+      INST_EVENT_COL_METADATA_EMPTY3                               \
+    }                                                              \
 }
 
 // typeof(PARCEL_END_METADATA) == inst_event_metadata_t 
-#define PARCEL_END_METADATA                     \
-  {                                             \
-  .num_cols = 10,                               \
-    .col_metadata = {                           \
-      INST_EVENT_COL_METADATA_CLASS,            \
-      INST_EVENT_COL_METADATA_ID,               \
-      INST_EVENT_COL_METADATA_RANK,             \
-      INST_EVENT_COL_METADATA_WORKER,           \
-      INST_EVENT_COL_METADATA_S,                \
-      INST_EVENT_COL_METADATA_NS,               \
-      METADATA_PARCEL_ID,                       \
-      METADATA_PARCEL_ACTION,                   \
-      INST_EVENT_COL_METADATA_EMPTY2,           \
-      INST_EVENT_COL_METADATA_EMPTY3            \
-    }                                           \
+#define PARCEL_END_METADATA {                                      \
+    .num_cols = 6,                                                 \
+    .col_metadata = {                                              \
+      INST_EVENT_COL_METADATA_WORKER,                              \
+      INST_EVENT_COL_METADATA_NS,                                  \
+      METADATA_PARCEL_ID,                                          \
+      METADATA_PARCEL_ACTION,                                      \
+      INST_EVENT_COL_METADATA_EMPTY2,                              \
+      INST_EVENT_COL_METADATA_EMPTY3                               \
+    }                                                              \
 }
 
-// typeof(PARCEL_END_METADATA) == inst_event_metadata_t 
-#define SCHEDULER_WQSIZE_METADATA               \
-  {                                             \
-  .num_cols = 10,                               \
-    .col_metadata = {                           \
-      INST_EVENT_COL_METADATA_CLASS,            \
-      INST_EVENT_COL_METADATA_ID,               \
-      INST_EVENT_COL_METADATA_RANK,             \
-      INST_EVENT_COL_METADATA_WORKER,           \
-      INST_EVENT_COL_METADATA_S,                \
-      INST_EVENT_COL_METADATA_NS,               \
-      METADATA_SCHEDULER_WQSIZE,                \
-      INST_EVENT_COL_METADATA_EMPTY1,           \
-      INST_EVENT_COL_METADATA_EMPTY2,           \
-      INST_EVENT_COL_METADATA_EMPTY3            \
-    }                                           \
+// typeof(SCHEDULER_WQSIZE_METADATA) == inst_event_metadata_t 
+#define SCHEDULER_WQSIZE_METADATA {                              \
+  .num_cols = 6,                                                 \
+  .col_metadata = {                                              \
+    INST_EVENT_COL_METADATA_WORKER,                              \
+    INST_EVENT_COL_METADATA_NS,                                  \
+    METADATA_SCHEDULER_WQSIZE,                                   \
+    INST_EVENT_COL_METADATA_EMPTY1,                              \
+    INST_EVENT_COL_METADATA_EMPTY2,                              \
+    INST_EVENT_COL_METADATA_EMPTY3                               \
+  }                                                              \
 }
 #endif
