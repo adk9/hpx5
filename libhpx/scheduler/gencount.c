@@ -82,7 +82,7 @@ void _gencount_reset(lco_t *lco) {
 static void _gencount_set(lco_t *lco, int size, const void *from) {
   lco_lock(lco);
   _gencount_t *gencnt = (_gencount_t *)lco;
-  unsigned long gen = gencnt->gen++;
+  unsigned long gen = ++gencnt->gen;
   scheduler_signal_all(&gencnt->oflow);
 
   if (gencnt->ninplace > 0) {
