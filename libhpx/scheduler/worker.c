@@ -294,7 +294,8 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   if (stack) {
     thread_delete(stack);
   }
-  INST_EVENT_PARCEL_END(prev);
+  if (prev->action != HPX_ACTION_NULL)
+    INST_EVENT_PARCEL_END(prev);
   hpx_parcel_release(prev);
   int status = (intptr_t)env;
   return status;
