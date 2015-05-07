@@ -18,7 +18,7 @@
 
 #define HPX_ATTRIBUTE(S)     __attribute__(S)
 #define HPX_ALIGNED(...)     HPX_ATTRIBUTE((aligned(__VA_ARGS__)))
-#define HPX_INTERNAL         HPX_ATTRIBUTE((visibility("internal")))
+#define HPX_INTERNAL
 #define HPX_RETURNS_TWICE    HPX_ATTRIBUTE((returns_twice))
 #define HPX_NORETURN         HPX_ATTRIBUTE((noreturn))
 #define HPX_NOINLINE         HPX_ATTRIBUTE((noinline))
