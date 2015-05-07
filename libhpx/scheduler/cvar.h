@@ -26,12 +26,12 @@ typedef struct cvar {
 
 /// Reset a condition variable.
 void cvar_reset(cvar_t *cvar)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Check if a condition variable is empty---there are not waiting
 /// threads associated with the condition variable.
 bool cvar_empty(cvar_t *cvar)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Set the condition with an error code.
 ///
@@ -44,7 +44,7 @@ bool cvar_empty(cvar_t *cvar)
 ///
 /// @returns            The previous list of waiting parcels.
 hpx_parcel_t *cvar_set_error(cvar_t *cvar, hpx_status_t code)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Retrieve an error code from the condition variable.
 ///
@@ -55,7 +55,7 @@ hpx_parcel_t *cvar_set_error(cvar_t *cvar, hpx_status_t code)
 ///
 /// @returns            The error state for the condition variable.
 hpx_status_t cvar_get_error(const cvar_t *cvar)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Clear an error condition.
 ///
@@ -64,7 +64,7 @@ hpx_status_t cvar_get_error(const cvar_t *cvar)
 ///
 /// @param         cvar The condition variable to update.
 void cvar_clear_error(cvar_t *cvar)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Push an executing thread onto a condition variable.
 ///
@@ -77,7 +77,7 @@ void cvar_clear_error(cvar_t *cvar)
 ///
 /// @returns            HPX_SUCCESS or an error code
 hpx_status_t cvar_push_thread(cvar_t *cvar, struct ustack *thread)
-  HPX_INTERNAL HPX_NON_NULL(1, 2);
+  HPX_NON_NULL(1, 2);
 
 /// Push a parcel onto a condition variable directly.
 ///
@@ -90,7 +90,7 @@ hpx_status_t cvar_push_thread(cvar_t *cvar, struct ustack *thread)
 ///
 /// @returns            HPX_SUCCESS or an error code
 hpx_status_t cvar_attach(cvar_t *cvar, struct hpx_parcel *parcel)
-  HPX_INTERNAL HPX_NON_NULL(1, 2);
+  HPX_NON_NULL(1, 2);
 
 /// Pop the top parcel from a condition variable.
 ///
@@ -99,7 +99,7 @@ hpx_status_t cvar_attach(cvar_t *cvar, struct hpx_parcel *parcel)
 /// @return             The top parcel, or NULL if the condition is empty or has
 ///                       an error.
 hpx_parcel_t *cvar_pop(cvar_t *cvar)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Pop the parcel list from a condition variable.
 ///
@@ -108,6 +108,6 @@ hpx_parcel_t *cvar_pop(cvar_t *cvar)
 /// @return             The list of continuation parcels (NULL if there are
 ///                       none).
 hpx_parcel_t *cvar_pop_all(cvar_t *cvar)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 #endif // LIBHPX_SCHEDULER_CVAR_H
