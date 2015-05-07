@@ -20,8 +20,7 @@
 struct config;
 struct gas;
 
-struct gas *gas_pgas_new(const struct config *cfg, struct boot *boot)
-  HPX_INTERNAL;
+struct gas *gas_pgas_new(const struct config *cfg, struct boot *boot);
 
 /// Called by each OS thread (pthread) to initialize and setup the thread local
 /// structures required for it to use PGAS.
@@ -32,15 +31,13 @@ struct gas *gas_pgas_new(const struct config *cfg, struct boot *boot)
 /// @note Implemented in malloc.c.
 ///
 /// @returns LIBHPX_OK, or LIBHPX_ERROR if there is an error.
-int pgas_join(void)
-  HPX_INTERNAL;
+int pgas_join(void);
 
 /// Called by each OS thread (pthread) to clean up any thread local structures
 /// that were initialized during pgas_join().
 ///
 /// @note Implemented in malloc.c.
-void pgas_leave(void)
-  HPX_INTERNAL;
+void pgas_leave(void);
 
 /// Implementation of the distributed functionality that supports cyclic malloc
 /// and calloc.
@@ -48,18 +45,18 @@ void pgas_leave(void)
 
 /// Asynchronous entry point for alloc.
 /// type hpx_addr_t (size_t bytes, size_t align)
-HPX_INTERNAL extern HPX_ACTION_DECL(pgas_alloc_cyclic);
+extern HPX_ACTION_DECL(pgas_alloc_cyclic);
 
 /// Asynchronous entry point for calloc.
 /// type hpx_addr_t (size_t bytes, size_t align)
-HPX_INTERNAL extern HPX_ACTION_DECL(pgas_calloc_cyclic);
+extern HPX_ACTION_DECL(pgas_calloc_cyclic);
 
 /// Asynchronous entry point for free.
-HPX_INTERNAL extern HPX_ACTION_DECL(pgas_free);
+extern HPX_ACTION_DECL(pgas_free);
 
 /// Asynchronous entry point for the rsync handler for memput
 /// void (int src, uint64_t command)
-HPX_INTERNAL extern COMMAND_DECL(memput_rsync);
+extern COMMAND_DECL(memput_rsync);
 
 /// Synchronous entry point for alloc.
 ///
@@ -68,8 +65,7 @@ HPX_INTERNAL extern COMMAND_DECL(memput_rsync);
 ///
 /// @returns            A global address representing the base of the
 ///                     allocation, or HPX_NULL if there is an error.
-hpx_addr_t pgas_alloc_cyclic_sync(size_t n, uint32_t bsize)
-  HPX_INTERNAL;
+hpx_addr_t pgas_alloc_cyclic_sync(size_t n, uint32_t bsize);
 
 /// Synchronous entry point for calloc.
 ///
@@ -78,8 +74,7 @@ hpx_addr_t pgas_alloc_cyclic_sync(size_t n, uint32_t bsize)
 ///
 /// @returns            A global address representing the base of the
 ///                     allocation, or HPX_NULL if there is an error.
-hpx_addr_t pgas_calloc_cyclic_sync(size_t n, uint32_t bsize)
-  HPX_INTERNAL;
+hpx_addr_t pgas_calloc_cyclic_sync(size_t n, uint32_t bsize);
 
 /// @}
 
@@ -88,8 +83,7 @@ hpx_addr_t pgas_calloc_cyclic_sync(size_t n, uint32_t bsize)
 /// @param          gpa The global physical address.
 ///
 /// @returns            The corresponding local virtual address.
-void *pgas_gpa_to_lva(hpx_addr_t gpa)
-  HPX_INTERNAL;
+void *pgas_gpa_to_lva(hpx_addr_t gpa);
 
 /// Convert a heap offset into a local virtual address.
 ///
@@ -97,19 +91,16 @@ void *pgas_gpa_to_lva(hpx_addr_t gpa)
 ///
 /// @returns            The corresponding local virtual address, or NULL if the
 ///                     offset is outside the bounds of the heap.
-void *pgas_offset_to_lva(uint64_t offset)
-  HPX_INTERNAL;
+void *pgas_offset_to_lva(uint64_t offset);
 
 /// Convert a local address into a global physical address.
 ///
 /// @param          lva The local virtual address.
 ///
 /// @returns            The corresponding local virtual address.
-hpx_addr_t pgas_lva_to_gpa(const void *lva)
-  HPX_INTERNAL;
+hpx_addr_t pgas_lva_to_gpa(const void *lva);
 
 /// Get the current maximum heap offset.
-uint64_t pgas_max_offset(void)
-  HPX_INTERNAL;
+uint64_t pgas_max_offset(void);
 
 #endif // LIBHPX_GAS_PGAS_H
