@@ -13,20 +13,10 @@
 #ifndef HPX_LIBSYNC_NOP_H_
 #define HPX_LIBSYNC_NOP_H_
 
-/* This file defines an interface to nop. */
-#include "hpx/attributes.h"
-#include "libsync/sync.h"
-
-/// ----------------------------------------------------------------------------
 /// Your basic no-op.
-/// ----------------------------------------------------------------------------
-SYNC_INTERNAL void sync_nop(void);
+void sync_nop(void);
 
-
-/// ----------------------------------------------------------------------------
 /// Like a nop, but with fancier semantics.
-/// ----------------------------------------------------------------------------
-SYNC_INTERNAL void sync_pause(void);
-
+void sync_pause(void);
 
 #endif /* HPX_LIBSYNC_NOP_H_ */

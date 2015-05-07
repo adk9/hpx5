@@ -15,7 +15,6 @@
 
 struct gas;
 
-struct gas *gas_smp_new(void)
-  HPX_INTERNAL;
+struct gas *gas_smp_new(void);
 
 #endif

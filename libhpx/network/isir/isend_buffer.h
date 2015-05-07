@@ -43,13 +43,13 @@ typedef struct {
 /// @returns            LIBHPX_OK or an error code.
 int isend_buffer_init(isend_buffer_t *buffer, struct isir_xport *xport,
                       uint32_t size, uint32_t limit, uint32_t twin)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Finalize a send buffer.
 ///
 /// @param       buffer The buffer to initialize.
 void isend_buffer_fini(isend_buffer_t *buffer)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Append a send to the buffer.
 ///
@@ -62,7 +62,7 @@ void isend_buffer_fini(isend_buffer_t *buffer)
 /// @returns  LIBHPX_OK The message was appended successfully.
 ///        LIBHXP_ERROR There was an error in this operation.
 int isend_buffer_append(isend_buffer_t *buffer, hpx_parcel_t *p, hpx_addr_t h)
-  HPX_INTERNAL HPX_NON_NULL(1,2);
+  HPX_NON_NULL(1,2);
 
 /// Progress the sends in the buffer.
 ///
@@ -70,7 +70,7 @@ int isend_buffer_append(isend_buffer_t *buffer, hpx_parcel_t *p, hpx_addr_t h)
 ///
 /// @returns            The number of completed requests.
 int isend_buffer_progress(isend_buffer_t *buffer)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Flush all outstanding sends.
 ///
@@ -81,6 +81,6 @@ int isend_buffer_progress(isend_buffer_t *buffer)
 ///
 /// @returns            The number of completed requests during the flush.
 int isend_buffer_flush(isend_buffer_t *buffer)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 #endif // LIBHPX_NETWORK_ISIR_ISEND_BUFFER_H

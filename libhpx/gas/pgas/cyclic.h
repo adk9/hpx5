@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifndef LIBHPX_GAS_PGAS_CYCLIC_H
-#define LIBHPX_GAS_PGAS_CYLIC_H
+#define LIBHPX_GAS_PGAS_CYCLIC_H
 
 void cyclic_allocator_init(void);
 

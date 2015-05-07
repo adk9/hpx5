@@ -71,7 +71,7 @@ typedef struct locality {
 /// @{
 
 /// Used to cause a locality to shutdown.
-HPX_INTERNAL extern HPX_ACTION_DECL(locality_shutdown);
+extern HPX_ACTION_DECL(locality_shutdown);
 
 typedef struct {
   hpx_action_t action;
@@ -79,7 +79,7 @@ typedef struct {
   char data[];
 } locality_cont_args_t;
 
-HPX_INTERNAL extern hpx_action_t locality_call_continuation;
+extern hpx_action_t locality_call_continuation;
 /// @}
 
 /// The global locality is exposed through this "here" pointer.

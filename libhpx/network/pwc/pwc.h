@@ -37,7 +37,6 @@ typedef struct {
 
 network_t *network_pwc_funneled_new(const struct config *cfg, struct boot *boot,
                                     struct gas *gas)
-  HPX_MALLOC HPX_INTERNAL;
-
+  HPX_MALLOC;
 
 #endif

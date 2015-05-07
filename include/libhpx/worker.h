@@ -58,7 +58,7 @@ struct worker {
   scheduler_stats_t   stats;                    // scheduler statistics
 } HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
-HPX_INTERNAL extern __thread struct worker *self;
+extern __thread struct worker *self;
 
 /// Initialize a worker structure.
 ///
@@ -72,21 +72,20 @@ HPX_INTERNAL extern __thread struct worker *self;
 /// @returns  LIBHPX_OK or an error code
 int worker_init(struct worker *w, struct scheduler *sched, int id, int core,
                 unsigned seed, unsigned work_size)
-  HPX_INTERNAL HPX_NON_NULL(1, 2);
+  HPX_NON_NULL(1, 2);
 
 /// Finalize a worker structure.
 void worker_fini(struct worker *w)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Bind a worker structure to the current pthread.
 ///
 /// @param       worker The worker structure for the pthread.
 void worker_bind_self(struct worker *worker)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Start processing lightweight threads.
-int worker_start(void)
-  HPX_INTERNAL;
+int worker_start(void);
 
 /// Creates a worker thread associated with a scheduler.
 ///
@@ -99,7 +98,7 @@ int worker_start(void)
 /// @returns            LIBHPX_OK or an error code if the worker failed to
 ///                     start.
 int worker_create(struct worker *worker, const struct config *cfg)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Joins a worker after scheduler_shutdown().
 ///
@@ -109,7 +108,7 @@ int worker_create(struct worker *worker, const struct config *cfg)
 ///
 /// @param       worker The worker to join.
 void worker_join(struct worker *worker)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Preemptively shutdown a worker.
 ///
@@ -119,6 +118,6 @@ void worker_join(struct worker *worker)
 ///
 /// @param       worker The worker to cancel.
 void worker_cancel(struct worker *worker)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 #endif // LIBHPX_WORKER_H

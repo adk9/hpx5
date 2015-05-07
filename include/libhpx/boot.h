@@ -33,10 +33,10 @@ typedef struct boot {
   void (*abort)(const struct boot*);
 } boot_t;
 
-boot_t *boot_new_mpi(void) HPX_INTERNAL;
-boot_t *boot_new_pmi(void) HPX_INTERNAL;
-boot_t *boot_new_smp(void) HPX_INTERNAL;
-boot_t *boot_new(hpx_boot_t type) HPX_INTERNAL;
+boot_t *boot_new_mpi(void);
+boot_t *boot_new_pmi(void);
+boot_t *boot_new_smp(void);
+boot_t *boot_new(hpx_boot_t type);
 
 static inline void boot_delete(boot_t *boot) {
   boot->delete(boot);

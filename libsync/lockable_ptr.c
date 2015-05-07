@@ -14,9 +14,9 @@
 #include "config.h"
 #endif
 
-#include "libsync/backoff.h"
-#include "libsync/lockable_ptr.h"
-#include "libsync/sync.h"
+#include <libsync/backoff.h>
+#include <libsync/lockable_ptr.h>
+#include <libsync/sync.h>
 
 static const unsigned int _BACKOFF_BASE = 16;
 static const uintptr_t       _LOCK_MASK = 0x1;

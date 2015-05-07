@@ -80,7 +80,7 @@ _funneled_delete(void *network) {
   sync_two_lock_queue_fini(&isir->sends);
   sync_two_lock_queue_fini(&isir->recvs);
 
-  isir_xport_delete(isir->xport);
+  isir->xport->delete(isir->xport);
   free(isir);
 }
 

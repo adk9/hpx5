@@ -70,8 +70,6 @@ static inline void as_free(int id, void *ptr) {
 /// about these allocations. In this context we are guaranteed that the jemalloc
 /// header is available, so we can use its types here.
 #include <jemalloc/jemalloc.h>
-#include <hpx/attributes.h>
-#include <libhpx/system.h>
 
 /// A chunk allocator.
 ///
@@ -113,15 +111,13 @@ extern __thread int as_flags[AS_COUNT];
 ///
 /// @param              id The address space id to update.
 /// @param       allocator An allocator implementation.
-void as_set_allocator(int id, chunk_allocator_t *allocator)
-  HPX_INTERNAL;
+void as_set_allocator(int id, chunk_allocator_t *allocator);
 
 /// Call by each thread to join the memory system.
 ///
 /// After calling as_join(), threads can use the as_* allocation interface. This
 /// must be called *after* any custom allocator has been installed.
-void as_join(int id)
-  HPX_INTERNAL;
+void as_join(int id);
 
 /// Called by each thread to leave the memory system.
 ///
@@ -134,8 +130,7 @@ void as_join(int id)
 /// regions can not be returned to the global bitmap for use
 /// elsewhere. Essentially the arena will hold onto its chunks until the end of
 /// time.
-void as_leave(void)
-  HPX_INTERNAL;
+void as_leave(void);
 
 static inline void *as_malloc(int id, size_t bytes) {
   return mallocx(bytes, as_flags[id]);
