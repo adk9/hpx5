@@ -93,7 +93,13 @@ static void dbg_wait_on_segv(int signum) {
 
 int dbg_init(config_t *config) {
   if (DEBUG && config->dbg_waitonsegv) {
-    if (SIG_ERR == signal(SIGSEGV, dbg_wait_on_segv)) {
+    struct sigaction segv = {
+      .sa_handler = dbg_wait_on_segv,
+      .sa_flags = 0
+    };
+    sigemptyset (&segv.sa_mask);
+
+    if (-1 == sigaction(SIGSEGV, &segv, NULL)) {
       log_error("could not register dbg_wait_on_segv for SIGSEGV\n");
       return LIBHPX_ERROR;
     }
