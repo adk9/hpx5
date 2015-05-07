@@ -320,6 +320,8 @@ AS_IF([test "x$enable_tests" != xno],
   [AC_CONFIG_FILES([tests/Makefile
   tests/unit/Makefile
   tests/perf/Makefile])])
+
+AC_CONFIG_FILES([libhpx/libhpx.export])
   
 AC_OUTPUT
 
