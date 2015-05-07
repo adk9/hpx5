@@ -54,38 +54,45 @@ static int _seed_handler(int n, hpx_addr_t counter, hpx_addr_t done) {
 static HPX_ACTION(HPX_DEFAULT, 0, _seed, _seed_handler, HPX_INT, HPX_ADDR,
                   HPX_ADDR);
 
-static int _set_handler(int n, hpx_addr_t counter) {
+static int _set_handler(int n, hpx_addr_t counter, hpx_addr_t done) {
   assert(HPX_LOCALITIES*(n/HPX_LOCALITIES)==n);
 
   for (int i = 0, e = n / HPX_LOCALITIES; i < e; ++i) {
     if (i & 1) {
-      hpx_call(counter, _increment, HPX_NULL);
+      hpx_call(counter, _increment, done);
     }
     else {
-      hpx_call(counter, hpx_lco_set_action, HPX_NULL, NULL, 0);
+      hpx_call(counter, hpx_lco_set_action, done, NULL, 0);
     }
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, 0, _set, _set_handler, HPX_INT, HPX_ADDR);
+static HPX_ACTION(HPX_DEFAULT, 0, _set, _set_handler, HPX_INT, HPX_ADDR,
+                  HPX_ADDR);
 
 static int _single_wait(int inplace) {
   hpx_addr_t counter = hpx_lco_gencount_new(inplace);
   hpx_addr_t and = hpx_lco_and_new(1);
+  hpx_addr_t done = hpx_lco_and_new(DEPTH);
   int end = DEPTH - 1;
   hpx_xcall(counter, _wait, and, end);
-  hpx_bcast(_set, HPX_NULL, HPX_NULL, &DEPTH, &counter);
+  hpx_bcast(_set, HPX_NULL, HPX_NULL, &DEPTH, &counter, &done);
   hpx_lco_wait(and);
+  hpx_lco_wait(done);
 
-  hpx_addr_t cleanup = hpx_lco_and_new(2);
+  hpx_addr_t cleanup = hpx_lco_and_new(3);
   hpx_lco_delete(and, cleanup);
   hpx_lco_delete(counter, cleanup);
+  hpx_lco_delete(done, cleanup);
   hpx_call_cc(cleanup, hpx_lco_delete_action, _done, "");
 }
 
 static int _multi_wait(int inplace) {
   // allocate the counter
   hpx_addr_t counter = hpx_lco_gencount_new(inplace);
+
+  // make sure we don't delete anything until all of the sets are done
+  hpx_addr_t sets = hpx_lco_and_new(DEPTH);
 
   // we will seed the counter with DEPTH * LOCALITIES waiting threads
   hpx_addr_t done = hpx_lco_and_new(DEPTH * HPX_LOCALITIES);
@@ -94,14 +101,16 @@ static int _multi_wait(int inplace) {
   hpx_bcast(_seed, HPX_NULL, HPX_NULL, &DEPTH, &counter, &done);
 
   // broadcast the sets---lots of asynchronous stuff here too
-  hpx_bcast(_set, HPX_NULL, HPX_NULL, &DEPTH, &counter);
+  hpx_bcast(_set, HPX_NULL, HPX_NULL, &DEPTH, &counter, &sets);
 
   // all of the seeds should wake up and signal done
   hpx_lco_wait(done);
+  hpx_lco_wait(sets);
 
-  hpx_addr_t cleanup = hpx_lco_and_new(2);
+  hpx_addr_t cleanup = hpx_lco_and_new(3);
   hpx_lco_delete(done, cleanup);
   hpx_lco_delete(counter, cleanup);
+  hpx_lco_delete(sets, cleanup);
   hpx_call_cc(cleanup, hpx_lco_delete_action, _done, "");
 }
 
