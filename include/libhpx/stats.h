@@ -50,7 +50,6 @@ typedef struct scheduler_stats {
   double           backoff;
 } scheduler_stats_t;
 
-
 #define SCHEDULER_STATS_INIT {   \
     .spins      = 0,             \
     .spawns     = 0,             \
@@ -65,11 +64,9 @@ typedef struct scheduler_stats {
     .backoff  = 0.0              \
   }
 
-
 /// Initialize a scheduler statistics structure.
 void scheduler_stats_init(struct scheduler_stats *stats)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
+  HPX_NON_NULL(1);
 
 /// Accumulate scheduler statistics.
 ///
@@ -81,22 +78,16 @@ void scheduler_stats_init(struct scheduler_stats *stats)
 /// @returns            lhs
 struct scheduler_stats *scheduler_stats_accum(struct scheduler_stats *lhs,
                                               const struct scheduler_stats *rhs)
-  HPX_INTERNAL HPX_NON_NULL(1, 2);
-
+  HPX_NON_NULL(1, 2);
 
 /// Print scheduler stats.
 void scheduler_stats_print(const char *id, const struct scheduler_stats *stats)
-  HPX_INTERNAL HPX_NON_NULL(2);
-
+  HPX_NON_NULL(2);
 
 /// Get scheduler statistics.
-struct scheduler_stats *scheduler_get_stats(struct scheduler *sched)
-  HPX_INTERNAL;
-
+struct scheduler_stats *scheduler_get_stats(struct scheduler *sched);
 
 /// Get schedulers statistics for the current thread.
-struct scheduler_stats *thread_get_stats(void)
-  HPX_INTERNAL;
-
+struct scheduler_stats *thread_get_stats(void);
 
 #endif // LIBHPX_STATS_H

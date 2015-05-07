@@ -64,7 +64,7 @@ typedef struct gas {
 } gas_t;
 
 gas_t *gas_new(const config_t *cfg, struct boot *boot)
-  HPX_INTERNAL HPX_NON_NULL(1,2);
+  HPX_MALLOC HPX_NON_NULL(1,2);
 
 inline static void gas_delete(gas_t *gas) {
   assert(gas && gas->delete);

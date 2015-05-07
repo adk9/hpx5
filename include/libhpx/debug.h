@@ -26,19 +26,17 @@
 
 /// Initialize any configurable debug data.
 int dbg_init(config_t *config)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Finalize any debug data.
-void dbg_fini(void)
-  HPX_INTERNAL;
+void dbg_fini(void);
 
 /// Wait for the debugger.
-void dbg_wait(void)
-  HPX_INTERNAL;
+void dbg_wait(void);
 
 void dbg_error_internal(unsigned line, const char *filename, const char *func,
                         const char *fmt, ...)
-  HPX_INTERNAL HPX_PRINTF(4, 5) HPX_NORETURN;
+  HPX_PRINTF(4, 5) HPX_NORETURN;
 
 #define dbg_error(...)                                             \
   do {                                                             \
@@ -68,7 +66,7 @@ void dbg_error_internal(unsigned line, const char *filename, const char *func,
 
 void log_internal(unsigned line, const char *filename, const char *func,
                   const char *fmt, ...)
-  HPX_INTERNAL HPX_PRINTF(4, 5);
+  HPX_PRINTF(4, 5);
 
 #ifdef ENABLE_LOGGING
 # include "libhpx/locality.h"
@@ -97,7 +95,7 @@ void log_internal(unsigned line, const char *filename, const char *func,
 
 int log_error_internal(unsigned line, const char *filename, const char *func,
                        const char *fmt, ...)
-  HPX_INTERNAL HPX_PRINTF(4, 5);
+  HPX_PRINTF(4, 5);
 
 #define log_error(...)                                                  \
   log_error_internal(__LINE__, __FILE__, __func__, __VA_ARGS__)

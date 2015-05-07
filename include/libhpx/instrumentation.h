@@ -21,18 +21,16 @@
 struct config;
 
 int inst_init(struct config *cfg)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
-void inst_fini(void)
-  HPX_INTERNAL;
+void inst_fini(void);
 
 /// Record an event to the log
 /// @param        class Class this event is part of (see hpx_inst_class_type_t)
 /// @param           id The event id (see hpx_inst_event_type_t)
 /// @param            n The number of user arguments to log, < 5.
 /// @param      va_args The user arguments.
-void inst_vtrace(int class, int n, int id, ...)
-  HPX_INTERNAL;
+void inst_vtrace(int class, int n, int id, ...);
 
 #ifdef ENABLE_INSTRUMENTATION
 # define inst_trace(class, ...)                                 \

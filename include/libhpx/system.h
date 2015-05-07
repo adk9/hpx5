@@ -16,26 +16,21 @@
 #include <pthread.h>
 #include <hpx/attributes.h>
 
-int system_get_cores(void)
-  HPX_INTERNAL;
+int system_get_cores(void);
 
-int system_set_affinity(pthread_t thread, int core_id)
-  HPX_INTERNAL;
+int system_set_affinity(pthread_t thread, int core_id);
 
-int system_set_affinity_group(pthread_t thread, int ncores)
-  HPX_INTERNAL;
+int system_set_affinity_group(pthread_t thread, int ncores);
 
 /// Find out how many cores are in the thread's affinity group.
-int system_get_affinity_group_size(pthread_t thread, int *ncores)
-  HPX_INTERNAL;
+int system_get_affinity_group_size(pthread_t thread, int *ncores);
 
 /// Get the pthread's stack extent.
 ///
 /// @param       thread The thread id to query.
 /// @param[out]    base The bottom (lowest address) of the stack.
 /// @param[out]    size The size of the stack.
-void system_get_stack(pthread_t thread, void **base, size_t *size)
-  HPX_INTERNAL;
+void system_get_stack(pthread_t thread, void **base, size_t *size);
 
 /// An abstract interface to mmap-like operations.
 ///
@@ -48,8 +43,7 @@ void system_get_stack(pthread_t thread, void **base, size_t *size)
 /// @param        align The alignment in bytes of the allocation (must be 2^n).
 ///
 /// @returns The allocated region.
-void *system_mmap(void *obj, void *addr, size_t bytes, size_t align)
-  HPX_INTERNAL;
+void *system_mmap(void *obj, void *addr, size_t bytes, size_t align);
 
 typedef void *(*system_mmap_t)(void *, void *, size_t, size_t);
 
@@ -64,16 +58,13 @@ typedef void *(*system_mmap_t)(void *, void *, size_t, size_t);
 /// @param        align The alignment in bytes of the allocation (must be 2^n).
 ///
 /// @returns The allocated region.
-void *system_mmap_huge_pages(void *obj, void *addr, size_t bytes, size_t align)
-  HPX_INTERNAL;
+void *system_mmap_huge_pages(void *obj, void *addr, size_t bytes, size_t align);
 
 /// Unmap memory.
-void system_munmap(void *obj, void *addr, size_t size)
-  HPX_INTERNAL;
+void system_munmap(void *obj, void *addr, size_t size);
 
 /// Unmap memory from a huge page allocation.
-void system_munmap_huge_pages(void *obj, void *addr, size_t size)
-  HPX_INTERNAL;
+void system_munmap_huge_pages(void *obj, void *addr, size_t size);
 
 typedef void (*system_munmap_t)(void *, void *, size_t);
 
@@ -99,16 +90,13 @@ typedef struct {
 
 /// System specific thread barrier init function
 int system_barrier_init(system_barrier_t *barrier,
-                        const system_barrierattr_t *attr, unsigned int count)
-  HPX_INTERNAL;
+                        const system_barrierattr_t *attr, unsigned int count);
 
 /// System specific thread barrier destroy function
-int system_barrier_destroy(system_barrier_t *barrier)
-  HPX_INTERNAL;
+int system_barrier_destroy(system_barrier_t *barrier);
 
 /// System specific thread barrier wait function
-int system_barrier_wait(system_barrier_t *barrier)
-  HPX_INTERNAL;
+int system_barrier_wait(system_barrier_t *barrier);
 
 #endif
 

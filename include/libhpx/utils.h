@@ -13,8 +13,6 @@
 #ifndef LIBHPX_UTILS_H
 #define LIBHPX_UTILS_H
 
-#include "hpx/attributes.h"
-
-HPX_INTERNAL uint32_t hash_string(const char *str, size_t len);
+uint32_t hash_string(const char *str, size_t len);
 
 #endif // LIBHPX_UTILS_H
