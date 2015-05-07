@@ -18,15 +18,10 @@
 struct hpx_parcel;
 typedef struct parcel_block parcel_block_t;
 
-parcel_block_t *parcel_block_new(size_t align, size_t n, size_t *offset)
-  HPX_INTERNAL;
-void parcel_block_delete(parcel_block_t *block)
-  HPX_INTERNAL;
-void *parcel_block_at(parcel_block_t *block, size_t offset)
-  HPX_INTERNAL;
-void parcel_block_deduct(parcel_block_t *block, size_t bytes)
-  HPX_INTERNAL;
-void parcel_block_delete_parcel(struct hpx_parcel *p)
-  HPX_INTERNAL;
+parcel_block_t *parcel_block_new(size_t align, size_t n, size_t *offset);
+void parcel_block_delete(parcel_block_t *block);
+void *parcel_block_at(parcel_block_t *block, size_t offset);
+void parcel_block_deduct(parcel_block_t *block, size_t bytes);
+void parcel_block_delete_parcel(struct hpx_parcel *p);
 
 #endif // LIBHPX_PARCEL_BLOCK_H

@@ -38,14 +38,8 @@ typedef struct isir_xport {
   void   (*unpin)(const void *base, size_t bytes);
 } isir_xport_t;
 
-isir_xport_t *isir_xport_new_mpi(const config_t *cfg, struct gas *gas)
-  HPX_INTERNAL;
+isir_xport_t *isir_xport_new_mpi(const config_t *cfg, struct gas *gas);
 
-isir_xport_t *isir_xport_new(const config_t *cfg, struct gas *gas)
-  HPX_INTERNAL;
-
-static inline void isir_xport_delete(isir_xport_t *xport) {
-  xport->delete(xport);
-}
+isir_xport_t *isir_xport_new(const config_t *cfg, struct gas *gas);
 
 #endif // LIBHPX_NETWORK_ISIR_XPORT_H

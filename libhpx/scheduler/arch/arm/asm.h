@@ -14,9 +14,7 @@
 #define LIBHPX_ASM_H
 
 #include <stdint.h>
-#include "hpx/attributes.h"
 
-void align_stack_trampoline(void)
-  HPX_INTERNAL;
+void align_stack_trampoline(void);
 
 #endif // LIBHPX_ASM_H

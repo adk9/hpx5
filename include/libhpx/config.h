@@ -125,10 +125,9 @@ typedef struct config {
 } config_t;
 
 config_t *config_new(int *argc, char ***argv)
-  HPX_INTERNAL HPX_MALLOC;
+  HPX_MALLOC;
 
-void config_delete(config_t *cfg)
-  HPX_INTERNAL;
+void config_delete(config_t *cfg);
 
 /// Add declarations to query each of the set options.
 ///
@@ -136,7 +135,7 @@ void config_delete(config_t *cfg)
 /// @param        value The value to check for.
 #define LIBHPX_OPT_INTSET(group, id, UNUSED2, UNUSED3, UNUSED4)     \
   int config_##group##id##_isset(const config_t *cfg, int value)    \
-    HPX_INTERNAL HPX_NON_NULL(1);
+    HPX_NON_NULL(1);
 
 #define LIBHPX_OPT_BITSET(group, id, UNUSED2)                       \
   static inline uint64_t                                            \

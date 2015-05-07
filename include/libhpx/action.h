@@ -23,64 +23,60 @@ struct hpx_parcel;
 
 /// Get the key for an action.
 const char *action_table_get_key(const struct action_table *, hpx_action_t)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Get the action type.
 hpx_action_type_t action_table_get_type(const struct action_table *,
                                         hpx_action_t)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Get the key for an action.
 hpx_action_handler_t action_table_get_handler(const struct action_table *,
                                               hpx_action_t)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Run the handler associated with an action.
 int action_execute(struct hpx_parcel *)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Get the FFI type information associated with an action.
 ffi_cif *action_table_get_cif(const struct action_table *, hpx_action_t)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Serialize the vargs into the parcel.
-hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs)
-  HPX_INTERNAL;
+hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs);
 
 /// Returns a parcel that encodes the target address, an action and
 /// its argument, and the continuation. The parcel is ready to be sent
 /// to effect a call operation.
 hpx_parcel_t *action_parcel_create(hpx_addr_t addr, hpx_action_t action,
                                    hpx_addr_t c_addr, hpx_action_t c_action,
-                                   int nargs, va_list *args)
-  HPX_INTERNAL;
+                                   int nargs, va_list *args);
 
 /// Call an action by sending a parcel given a list of variable args.
 int libhpx_call_action(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
                        hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
-                       int nargs, va_list *args)
-  HPX_INTERNAL;
+                       int nargs, va_list *args);
 
 /// Is the action a pinned action?
 bool action_is_pinned(const struct action_table *, hpx_action_t)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Is the action a marshalled action?
 bool action_is_marshalled(const struct action_table *, hpx_action_t)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Is the action a task?
 bool action_is_task(const struct action_table *, hpx_action_t)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Is the action an interrupt?
 bool action_is_interrupt(const struct action_table *, hpx_action_t)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Is the action a function?
 bool action_is_function(const struct action_table *, hpx_action_t)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
+  HPX_NON_NULL(1);
 
 /// Build an action table.
 ///
@@ -90,13 +86,10 @@ bool action_is_function(const struct action_table *, hpx_action_t)
 ///
 /// @return             An action table that can be indexed by the keys
 ///                     originally registered.
-const struct action_table *action_table_finalize(void)
-  HPX_INTERNAL;
-
+const struct action_table *action_table_finalize(void);
 
 /// Free an action table.
 void action_table_free(const struct action_table *action)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
+  HPX_NON_NULL(1);
 
 #endif // LIBHPX_ACTION_H
