@@ -321,7 +321,7 @@ AS_IF([test "x$enable_tests" != xno],
   tests/unit/Makefile
   tests/perf/Makefile])])
 
-AC_CONFIG_FILES([libhpx/libhpx.export])
+AC_CONFIG_FILES([libsync/libsync.export libhpx/libhpx.export])
   
 AC_OUTPUT
 

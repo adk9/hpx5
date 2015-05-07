@@ -24,8 +24,8 @@ typedef struct tatas_lock tatas_lock_t;
 
 #define SYNC_TATAS_LOCK_INIT {0}
 
-void sync_tatas_init(tatas_lock_t *l) HPX_NON_NULL(1) SYNC_INTERNAL;
-void sync_tatas_acquire_slow(tatas_lock_t *l) HPX_NON_NULL(1) SYNC_INTERNAL;
+void sync_tatas_init(tatas_lock_t *l) HPX_NON_NULL(1);
+void sync_tatas_acquire_slow(tatas_lock_t *l) HPX_NON_NULL(1);
 static inline void sync_tatas_acquire(tatas_lock_t *l) HPX_NON_NULL(1);
 static inline void sync_tatas_release(tatas_lock_t *l) HPX_NON_NULL(1);
 
@@ -48,13 +48,13 @@ struct clh_node {
   }
 
 struct clh_node * sync_clh_node_new(void)
-  HPX_MALLOC SYNC_INTERNAL;
+  HPX_MALLOC;
 
 void sync_clh_node_delete(struct clh_node *node)
-  HPX_NON_NULL(1) SYNC_INTERNAL;
+  HPX_NON_NULL(1);
 
 uintptr_t sync_clh_node_must_wait(struct clh_node *node)
-  HPX_NON_NULL(1) SYNC_INTERNAL;
+  HPX_NON_NULL(1);
 
 struct clh_lock {
   struct clh_node *tail;
@@ -65,10 +65,10 @@ struct clh_lock {
     }
 
 void sync_clh_lock_init(struct clh_lock *lock)
-  HPX_NON_NULL(1) SYNC_INTERNAL;
+  HPX_NON_NULL(1);
 
 void sync_clh_lock_fini(struct clh_lock *lock)
-  HPX_NON_NULL(1) SYNC_INTERNAL;
+  HPX_NON_NULL(1);
 
 /// Perform the first half of a CLH acquire operation.
 ///
@@ -85,7 +85,7 @@ void sync_clh_lock_fini(struct clh_lock *lock)
 ///                     order to acquire the lock.
 struct clh_node *sync_clh_lock_start_acquire(struct clh_lock *lock,
                                              struct clh_node *n)
-  HPX_NON_NULL(1, 2) SYNC_INTERNAL;
+  HPX_NON_NULL(1, 2);
 
 
 /// Perform a blocking acquire operation for a CLH lock.
@@ -95,7 +95,7 @@ struct clh_node *sync_clh_lock_start_acquire(struct clh_lock *lock,
 ///                       node that should be passed into
 ///                       sync_clh_lock_release().
 void sync_clh_lock_acquire(struct clh_lock *lock, struct clh_node *n)
-  HPX_NON_NULL(1, 2) SYNC_INTERNAL;
+  HPX_NON_NULL(1, 2);
 
 
 /// Release a CLH lock.
@@ -111,7 +111,7 @@ void sync_clh_lock_acquire(struct clh_lock *lock, struct clh_node *n)
 ///                       sync_clh_lock_start_acquire() or
 ///                       sync_clh_lock_acquire().
 struct clh_node *sync_clh_lock_release(struct clh_lock *lock, struct clh_node *n)
-  HPX_NON_NULL(1, 2) SYNC_INTERNAL;
+  HPX_NON_NULL(1, 2);
 
 
 struct mcs_node {
@@ -125,7 +125,7 @@ struct mcs_node {
     }
 
 uint64_t sync_mcs_node_test(struct mcs_node *)
-  HPX_NON_NULL(1) SYNC_INTERNAL;
+  HPX_NON_NULL(1);
 
 struct mcs_lock {
   struct mcs_node *tail;
@@ -136,18 +136,18 @@ struct mcs_lock {
     }
 
 void sync_mcs_lock_init(struct mcs_lock *mcs)
-  HPX_NON_NULL(1) SYNC_INTERNAL;
+  HPX_NON_NULL(1);
 
 void sync_mcs_lock_fini(struct mcs_lock *mcs)
-  HPX_NON_NULL(1) SYNC_INTERNAL;
+  HPX_NON_NULL(1);
 
 void sync_mcs_lock_enter(struct mcs_lock *mcs, struct mcs_node *node)
-  HPX_NON_NULL(1, 2) SYNC_INTERNAL;
+  HPX_NON_NULL(1, 2);
 
 void sync_mcs_lock_acquire(struct mcs_lock *mcs, struct mcs_node *node)
-  HPX_NON_NULL(1, 2) SYNC_INTERNAL;
+  HPX_NON_NULL(1, 2);
 
 void sync_mcs_lock_release(struct mcs_lock *mcs, struct mcs_node *node)
-  HPX_NON_NULL(1, 2) SYNC_INTERNAL;
+  HPX_NON_NULL(1, 2);
 
 #endif /* HPX_SYNC_LOCKS_H_ */
