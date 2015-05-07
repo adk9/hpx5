@@ -20,7 +20,7 @@
 ///
 /// In practice this is trivial. We just use these to bind the heap_chunk
 /// allocation routines to the cyclic bitmap instance.
-
+#include <string.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
