@@ -14,8 +14,6 @@
 #ifndef HPX_SYNC_SYNC_H_
 #define HPX_SYNC_SYNC_H_
 
-#define SYNC_INTERNAL __attribute__((visibility("default")))
-
 /*
   ====================================================================
   This file defines a basic, low-level interface to the

@@ -14,14 +14,11 @@
 #define LIBSYNC_BACKOFF_H
 
 #include "hpx/attributes.h"
-#include "sync.h"
 
-SYNC_INTERNAL void sync_backoff(unsigned int i)
-  HPX_NOINLINE;
+void sync_backoff(unsigned int i);
 
-
-SYNC_INTERNAL void sync_backoff_exp_r(unsigned int *prev)
-  HPX_NOINLINE HPX_NON_NULL(1);
+void sync_backoff_exp_r(unsigned int *prev)
+  HPX_NON_NULL(1);
 
 
 #endif // LIBSYNC_BACKOFF_H
