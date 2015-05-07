@@ -42,10 +42,10 @@ struct transport;
 /// @}
 
 /// The release_parcel command will release a parcel.
-HPX_INTERNAL extern COMMAND_DECL(release_parcel);
+extern COMMAND_DECL(release_parcel);
 
 /// The lco_set command will set an lco.
-HPX_INTERNAL extern COMMAND_DECL(lco_set);
+extern COMMAND_DECL(lco_set);
 
 /// All network objects implement the network interface.
 typedef struct network {
@@ -89,7 +89,7 @@ typedef struct network {
 /// @returns            The network object, or NULL if there was an issue.
 network_t *network_new(const struct config *cfg, struct boot *boot,
                        struct gas *gas)
-  HPX_MALLOC HPX_INTERNAL;
+  HPX_MALLOC;
 
 /// Delete a network object.
 ///
