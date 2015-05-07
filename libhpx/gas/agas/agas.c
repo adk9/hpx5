@@ -27,7 +27,7 @@
 #include "chunk_table.h"
 #include "gva.h"
 
-static const uint64_t AGAS_THERE_OFFSET = UINT64_MAX;
+static const uint64_t AGAS_THERE_OFFSET = 4398046511103lu;
 
 HPX_ACTION_DECL(agas_alloc_cyclic);
 HPX_ACTION_DECL(agas_calloc_cyclic);
@@ -189,7 +189,7 @@ _locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align,
         .home = here->rank
       }
     };
-    void *block = lva + (i * bsize);
+    void *block = (char*)lva + (i * bsize);
     btt_insert(agas->btt, gva, here->rank, block, blocks);
   }
 
@@ -333,7 +333,7 @@ _agas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
 
 static int
 _agas_free_cyclic_async_handler(hpx_addr_t base) {
-  gva_t gva = (gva_t)base;
+  gva_t gva = { .addr = base };
   agas_t *agas = (agas_t*)here->gas;
   gva.bits.home = here->rank;
   void *lva = btt_lookup(agas->btt, gva);
