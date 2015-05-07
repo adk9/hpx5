@@ -35,11 +35,11 @@ typedef struct {
 ///       LIBHPX_ENOMEM There was not enough memory for @p cap elements.
 ///        LIBHPX_ERROR There was an unexpected error.
 int circular_buffer_init(circular_buffer_t *b, uint32_t esize, uint32_t cap)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Finalize a circular buffer.
 void circular_buffer_fini(circular_buffer_t *b)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Append an element to the circular buffer.
 ///
@@ -49,11 +49,11 @@ void circular_buffer_fini(circular_buffer_t *b)
 ///            NON-NULL The address of the start of the next record in the
 ///                       buffer.
 void *circular_buffer_append(circular_buffer_t *b)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Compute the number of elements in the buffer.
 uint32_t circular_buffer_size(circular_buffer_t *b)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Apply the callback closure to each element in the buffer, in a FIFO order.
 ///
@@ -62,7 +62,6 @@ uint32_t circular_buffer_size(circular_buffer_t *b)
 int circular_buffer_progress(circular_buffer_t *b,
                              int (*progress_callback)(void *env, void *record),
                              void *progress_env)
-  HPX_INTERNAL HPX_NON_NULL(1, 2);
-
+  HPX_NON_NULL(1, 2);
 
 #endif // LIBHPX_NETWORK_PWC_CIRCULAR_BUFFER_H
