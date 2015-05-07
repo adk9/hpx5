@@ -36,75 +36,77 @@
 
 /// return the class pointer, masking out the state.
 static const lco_class_t *_class(lco_t *lco) {
-  const lco_class_t *class = sync_lockable_ptr_read(&lco->lock);
-  uintptr_t bits = (uintptr_t)class;
+  dbg_assert(lco);
+  uintptr_t bits = (uintptr_t)(sync_lockable_ptr_read(&lco->lock));
   bits = bits & ~_STATE_MASK;
-  return (lco_class_t*)bits;
+  const lco_class_t *class = (lco_class_t*)bits;
+  dbg_assert_str(class, "LCO vtable pointer is null, "
+                 "this is often an LCO use-after-free\n");
+  return class;
 }
 
 static hpx_status_t _fini(lco_t *lco) {
-  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
   dbg_assert_str(_class(lco)->on_fini, "LCO implementation incomplete\n");
   _class(lco)->on_fini(lco);
   return HPX_SUCCESS;
 }
 
 static hpx_status_t _set(lco_t *lco, size_t size, const void *data) {
-  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
-  dbg_assert_str(_class(lco)->on_set, "LCO implementation incomplete\n");
-  _class(lco)->on_set(lco, size, data);
+  const lco_class_t *class = _class(lco);
+  dbg_assert_str(class->on_set, "LCO has no on_set handler\n");
+  class->on_set(lco, size, data);
   return HPX_SUCCESS;
 }
 
 static size_t _size(lco_t *lco) {
-  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
-  dbg_assert_str(_class(lco)->on_size, "LCO implementation incomplete\n");
-  return _class(lco)->on_size(lco);
+  const lco_class_t *class = _class(lco);
+  dbg_assert_str(class->on_size, "LCO has no on_size handler\n");
+  return class->on_size(lco);
 }
 
 static hpx_status_t _error(lco_t *lco, hpx_status_t code) {
-  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
-  dbg_assert_str(_class(lco)->on_error, "LCO implementation incomplete\n");
-  _class(lco)->on_error(lco, code);
+  const lco_class_t *class = _class(lco);
+  dbg_assert_str(class->on_error, "LCO has no on_error handler\n");
+  class->on_error(lco, code);
   return HPX_SUCCESS;
 }
 
 static hpx_status_t _reset(lco_t *lco) {
-  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
-  dbg_assert_str(_class(lco)->on_reset, "LCO implementation incomplete\n");
-  _class(lco)->on_reset(lco);
+  const lco_class_t *class = _class(lco);
+  dbg_assert_str(class->on_reset, "LCO has no on_reset handler\n");
+  class->on_reset(lco);
   return HPX_SUCCESS;
 }
 
 static hpx_status_t _get(lco_t *lco, size_t bytes, void *out) {
-  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
-  dbg_assert_str(_class(lco)->on_get, "LCO implementation incomplete\n");
-  return _class(lco)->on_get(lco, bytes, out);
+  const lco_class_t *class = _class(lco);
+  dbg_assert_str(class->on_get, "LCO has no on_get handler\n");
+  return class->on_get(lco, bytes, out);
 }
 
 static hpx_status_t _getref(lco_t *lco, size_t bytes, void **out) {
-  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
-  dbg_assert_str(_class(lco)->on_getref, "LCO implementation incomplete\n");
-  return _class(lco)->on_getref(lco, bytes, out);
+  const lco_class_t *class = _class(lco);
+  dbg_assert_str(class->on_getref, "LCO has no on_getref handler\n");
+  return class->on_getref(lco, bytes, out);
 }
 
 static hpx_status_t _release(lco_t *lco, void *out) {
-  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
-  dbg_assert_str(_class(lco)->on_release, "LCO implementation incomplete\n");
-  _class(lco)->on_release(lco, out);
+  const lco_class_t *class = _class(lco);
+  dbg_assert_str(class->on_release, "LCO has no on_release handler\n");
+  class->on_release(lco, out);
   return HPX_SUCCESS;
 }
 
 static hpx_status_t _wait(lco_t *lco) {
-  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
-  dbg_assert_str(_class(lco)->on_wait, "LCO implementation incomplete\n");
-  return _class(lco)->on_wait(lco);
+  const lco_class_t *class = _class(lco);
+  dbg_assert_str(class->on_wait, "LCO has no on_wait handler\n");
+  return class->on_wait(lco);
 }
 
 static hpx_status_t _attach(lco_t *lco, hpx_parcel_t *p) {
-  dbg_assert_str(_class(lco), "LCO vtable pointer is null\n");
-  dbg_assert_str(_class(lco)->on_attach, "LCO implementation incomplete\n");
-  return _class(lco)->on_attach(lco, p);
+  const lco_class_t *class = _class(lco);
+  dbg_assert_str(class->on_attach, "LCO has no on_attach handler\n");
+  return class->on_attach(lco, p);
 }
 
 /// Action LCO event handler wrappers.
