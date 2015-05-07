@@ -14,9 +14,9 @@
 # include "config.h"
 #endif
 
+#include <stdio.h>
 #include <libhpx/debug.h>
 #include <libhpx/memory.h>
-
 
 /// Backing declaration for the flags.
 __thread int as_flags[AS_COUNT] = {0};

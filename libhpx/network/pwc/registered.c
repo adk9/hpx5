@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <string.h>
 #include <libhpx/debug.h>
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
