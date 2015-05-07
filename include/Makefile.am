@@ -21,7 +21,6 @@ nobase_include_HEADERS = hpx/action.h \
                          libsync/cptr.h \
                          libsync/deques.h \
                          libsync/generic.h \
-                         libsync/hashtables.h \
                          libsync/locks.h \
                          libsync/queues.h \
                          libsync/sync.h \
