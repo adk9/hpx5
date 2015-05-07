@@ -20,14 +20,11 @@ extern "C" {
 /// The chunk table provides inverse mapping from an lva chunk to its base
 /// offset in the virtual address space.
 
-#include <hpx/attributes.h>
-
-HPX_INTERNAL void *chunk_table_new(size_t size);
-HPX_INTERNAL void chunk_table_delete(void *table);
-
-HPX_INTERNAL uint64_t chunk_table_lookup(void *table, void *chunk);
-HPX_INTERNAL void chunk_table_insert(void *table, void *chunk, uint64_t base);
-HPX_INTERNAL void chunk_table_remove(void *table, void *chunk);
+void *chunk_table_new(size_t size);
+void chunk_table_delete(void *table);
+uint64_t chunk_table_lookup(void *table, void *chunk);
+void chunk_table_insert(void *table, void *chunk, uint64_t base);
+void chunk_table_remove(void *table, void *chunk);
 
 #ifdef __cplusplus
 }

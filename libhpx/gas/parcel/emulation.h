@@ -13,9 +13,8 @@
 #ifndef LIBHPX_GAS_PARCELS_EMULATION_H
 #define LIBHPX_GAS_PARCELS_EMULATION_H
 
-#include <hpx/attributes.h>
+#include <hpx/hpx.h>
 
-int parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
-  HPX_INTERNAL;
+int parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync);
 
 #endif // LIBHPX_GAS_PARCELS_EMULATION_H
