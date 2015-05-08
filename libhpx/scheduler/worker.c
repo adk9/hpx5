@@ -511,7 +511,7 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
 }
 
 
-int worker_init(struct worker *w, struct scheduler *sched, int id, int core,
+int worker_init(struct worker *w, struct scheduler *sched, int id,
                 unsigned seed, unsigned work_size)
 {
   dbg_assert(w);
@@ -525,9 +525,8 @@ int worker_init(struct worker *w, struct scheduler *sched, int id, int core,
   w->sched      = sched;
   w->thread     = 0;
   w->id         = id;
-  w->core       = core;
+  w->UNUSED     = -1;
   w->seed       = seed;
-  w->UNUSED     = 0;
   w->sp         = NULL;
   w->current    = NULL;
   w->work_first = 0;
