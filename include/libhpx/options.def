@@ -93,22 +93,25 @@
 /// Top-level options
 /// @{
 LIBHPX_OPT_FLAG(, statistics, 1)
-
-LIBHPX_OPT_SCALAR(, cores, 0, int)
-LIBHPX_OPT_SCALAR(, threads, 0, int)
-LIBHPX_OPT_SCALAR(, stacksize, 32768, unsigned)
 #ifndef __ARMEL__
 LIBHPX_OPT_SCALAR(, heapsize, 1lu << 30, size_t)
 #else // smaller default heap for ARM
 LIBHPX_OPT_SCALAR(, heapsize, 1lu << 29, size_t)
 #endif
-LIBHPX_OPT_SCALAR(, wfthreshold, UINT32_MAX, uint32_t)
 LIBHPX_OPT_SCALAR(, gas, HPX_GAS_PGAS, hpx_gas_t)
 LIBHPX_OPT_SCALAR(, boot, HPX_BOOT_DEFAULT, hpx_boot_t)
 LIBHPX_OPT_SCALAR(, transport, HPX_TRANSPORT_DEFAULT, hpx_transport_t)
 LIBHPX_OPT_SCALAR(, network, HPX_NETWORK_DEFAULT, libhpx_network_t)
 /// @}
 
+/// Scheduler options
+/// @{
+LIBHPX_OPT_SCALAR(, cores, 0, int)
+LIBHPX_OPT_SCALAR(, threads, 0, int)
+LIBHPX_OPT_SCALAR(, stacksize, 32768, unsigned)
+LIBHPX_OPT_SCALAR(, wfthreshold, UINT32_MAX, uint32_t)
+LIBHPX_OPT_SCALAR(sched_, stackcachelimit, 32, int32_t)
+/// @}
 
 /// Log options
 /// @{
