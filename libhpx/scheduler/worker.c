@@ -121,8 +121,11 @@ static int _continue_parcel(hpx_parcel_t *p, hpx_status_t status, size_t size,
 
 /// Execute a parcel.
 static hpx_parcel_t *_get_nop_parcel(void) {
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, 0);
-  p->action = scheduler_nop;
+  hpx_addr_t target = HPX_HERE;
+  hpx_pid_t pid = hpx_thread_current_pid();
+  // use parcel_new instead of hpx_parcel_acquire so that we can filter out
+  // scheduler_nop actions in instrumentation
+  hpx_parcel_t *p = parcel_new(target, scheduler_nop, 0, 0, pid, NULL, 0);
   return p;
 }
 
@@ -294,7 +297,7 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   if (stack) {
     thread_delete(stack);
   }
-  if (prev->action != HPX_ACTION_NULL)
+  if (prev->action != scheduler_nop)
     INST_EVENT_PARCEL_END(prev);
   hpx_parcel_release(prev);
   int status = (intptr_t)env;
