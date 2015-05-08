@@ -42,14 +42,16 @@ struct worker {
   int                    id;                    // this worker's id
   unsigned             seed;                    // my random seed
   int            work_first;                    // this worker's mode
-  int                UNUSED;                    //
+  int               nstacks;                    // count of freelisted stacks
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
+  struct ustack     *stacks;                    // freelisted stacks
   PAD_TO_CACHELINE(sizeof(struct scheduler*) +
                    sizeof(pthread_t) +
                    sizeof(int) * 4 +
                    sizeof(void *) +
-                   sizeof(hpx_parcel_t*));
+                   sizeof(hpx_parcel_t*) +
+                   sizeof(struct ustack*));
   chase_lev_ws_deque_t work;                    // my work
   PAD_TO_CACHELINE(sizeof(chase_lev_ws_deque_t));
   two_lock_queue_t    inbox;                    // mail sent to me
