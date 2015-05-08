@@ -31,6 +31,6 @@ typedef struct {
 
 extern logtable_header_t LOGTABLE_HEADER; // == _LOGTABLE_HEADER
 
-size_t write_trace_header(void* base, int id);
+size_t write_trace_header(void* base, int class, int id);
 
 #endif // LIBHPX_INSTRUMENTATION_LOGTABLE_H
