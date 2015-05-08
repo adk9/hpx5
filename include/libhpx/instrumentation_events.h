@@ -259,6 +259,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
 #define PARCEL_SEND_METADATA {                                     \
     .num_cols = 6,                                                 \
     .col_metadata = {                                              \
+      INST_EVENT_COL_METADATA_WORKER,                              \
       INST_EVENT_COL_METADATA_NS,                                  \
       METADATA_PARCEL_ID,                                          \
       METADATA_PARCEL_ACTION,                                      \
