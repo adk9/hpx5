@@ -17,6 +17,7 @@
 #include <hpx/attributes.h>
 #include <libsync/deques.h>
 #include <libsync/queues.h>
+#include <libhpx/padding.h>
 #include <libhpx/stats.h>
 
 /// Forward declarations.
@@ -45,15 +46,13 @@ struct worker {
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
   int            work_first;
-  const char _pada[HPX_CACHELINE_SIZE - ((sizeof(struct scheduler*) +
-                                          sizeof(pthread_t) +
-                                          sizeof(int) * 5 +
-                                          sizeof(void *) +
-                                          sizeof(hpx_parcel_t*)) %
-                                         HPX_CACHELINE_SIZE)];
+  PAD_TO_CACHELINE(sizeof(struct scheduler*) +
+                   sizeof(pthread_t) +
+                   sizeof(int) * 5 +
+                   sizeof(void *) +
+                   sizeof(hpx_parcel_t*));
   chase_lev_ws_deque_t work;                    // my work
-  const char _padb[HPX_CACHELINE_SIZE - (sizeof(chase_lev_ws_deque_t) %
-                                         HPX_CACHELINE_SIZE)];
+  PAD_TO_CACHELINE(sizeof(chase_lev_ws_deque_t));
   two_lock_queue_t    inbox;                    // mail sent to me
   scheduler_stats_t   stats;                    // scheduler statistics
 } HPX_ALIGNED(HPX_CACHELINE_SIZE);
