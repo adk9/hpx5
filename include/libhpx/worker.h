@@ -40,15 +40,14 @@ struct worker {
   struct scheduler   *sched;                    // the scheduler instance
   pthread_t          thread;                    // this worker's native thread
   int                    id;                    // this worker's id
-  int                  core;                    //
   unsigned             seed;                    // my random seed
-  int                UNUSED;                    // padding
+  int            work_first;                    // this worker's mode
+  int                UNUSED;                    //
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
-  int            work_first;
   PAD_TO_CACHELINE(sizeof(struct scheduler*) +
                    sizeof(pthread_t) +
-                   sizeof(int) * 5 +
+                   sizeof(int) * 4 +
                    sizeof(void *) +
                    sizeof(hpx_parcel_t*));
   chase_lev_ws_deque_t work;                    // my work
@@ -64,12 +63,11 @@ extern __thread struct worker *self;
 /// @param            w The worker structure to initialize.
 /// @param        sched The scheduler instance.
 /// @param           id The worker's id.
-/// @param         core The core affinity for this worker.
 /// @param         seed The random seed for this worker.
 /// @param    work_size The initial size of the work queue.
 ///
 /// @returns  LIBHPX_OK or an error code
-int worker_init(struct worker *w, struct scheduler *sched, int id, int core,
+int worker_init(struct worker *w, struct scheduler *sched, int id,
                 unsigned seed, unsigned work_size)
   HPX_NON_NULL(1, 2);
 
