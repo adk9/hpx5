@@ -187,6 +187,26 @@ static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
   return HPX_SUCCESS;
 }
 
+/// Freelist a stack.
+static void
+_put_stack(struct worker *w, ustack_t *stack) {
+  stack->next = w->stacks;
+  w->stacks = stack;
+  w->nstacks++;
+}
+
+/// Try and get a stack from the freelist for the parcel.
+static ustack_t*
+_try_get_stack(struct worker *w, hpx_parcel_t *p) {
+  ustack_t *stack = w->stacks;
+  if (stack) {
+    w->stacks = stack->next;
+    thread_init(stack, p, _execute_thread, stack->size);
+    self->nstacks--;
+  }
+  return stack;
+}
+
 /// Create a new lightweight thread based on the parcel.
 ///
 /// The newly created thread is runnable, and can be thread_transfer()ed to in
@@ -197,12 +217,17 @@ static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
 /// @returns          The parcel @p, but with a valid stack.
 static hpx_parcel_t *_try_bind(hpx_parcel_t *p) {
   dbg_assert(p);
-  if (!parcel_get_stack(p)) {
-    ustack_t *stack = thread_new(p, _execute_thread);
-    ustack_t *old = parcel_set_stack(p, stack);
-    dbg_assert_str(!old, "replaced stack %p with %p in %p\n", (void*)old, (void*)stack,
-                   (void*)p);
+  if (parcel_get_stack(p))
+    return p;
+
+  ustack_t *stack = _try_get_stack(self, p);
+  if (!stack) {
+    stack = thread_new(p, _execute_thread);
   }
+  ustack_t *old = parcel_set_stack(p, stack);
+  dbg_assert_str(!old, "replaced stack %p with %p in %p\n", (void*)old,
+                 (void*)stack,
+                 (void*)p);
   return p;
 }
 
@@ -216,9 +241,6 @@ static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
 
   uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
   self->work_first = (size >= here->sched->wf_threshold);
-  // if (self->work_first) {
-  //   log("work first %lu, %u\n", size, size >= here->sched->wf_threshold);
-  // }
 }
 
 /// Process the next available parcel from our work queue in a lifo order.
@@ -290,7 +312,7 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   ustack_t *stack = parcel_get_stack(prev);
   parcel_set_stack(prev, NULL);
   if (stack) {
-    thread_delete(stack);
+    _put_stack(self, stack);
   }
   INST_EVENT_PARCEL_END(prev);
   hpx_parcel_release(prev);
@@ -313,7 +335,7 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
   ustack_t *stack = parcel_get_stack(prev);
   parcel_set_stack(prev, NULL);
   if (stack) {
-    thread_delete(stack);
+    _put_stack(self, stack);
   }
   hpx_parcel_send(prev, HPX_NULL);
   return HPX_SUCCESS;
@@ -525,11 +547,12 @@ int worker_init(struct worker *w, struct scheduler *sched, int id,
   w->sched      = sched;
   w->thread     = 0;
   w->id         = id;
-  w->UNUSED     = -1;
   w->seed       = seed;
+  w->work_first = 0;
+  w->nstacks    = 0;
   w->sp         = NULL;
   w->current    = NULL;
-  w->work_first = 0;
+  w->stacks     = NULL;
 
   sync_chase_lev_ws_deque_init(&w->work, work_size);
   sync_two_lock_queue_init(&w->inbox, NULL);
@@ -550,6 +573,13 @@ void worker_fini(struct worker *w) {
     hpx_parcel_release(p);
   }
   sync_chase_lev_ws_deque_fini(&w->work);
+
+  // and delete any cached stacks
+  ustack_t *stack = NULL;
+  while ((stack = w->stacks)) {
+    w->stacks = stack->next;
+    thread_delete(stack);
+  }
 }
 
 void worker_bind_self(struct worker *worker) {
