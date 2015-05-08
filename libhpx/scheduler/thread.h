@@ -16,7 +16,7 @@
 /// @file thread.h
 /// @brief Defines the lightweight thread stack structure and interface for user
 ///        level threads.
-#include "hpx/hpx.h"
+#include <hpx/hpx.h>
 
 /// Forward declarations
 /// @{
@@ -30,6 +30,7 @@ typedef struct ustack {
   int        lco_depth;                         // how many lco locks we hold
   int           tls_id;
   int         stack_id;
+  int             size;
   short       affinity;                         // set by user
   char           stack[];
 } ustack_t;

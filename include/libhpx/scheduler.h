@@ -65,10 +65,8 @@ struct scheduler {
   yield_queue_t       yielded;
   volatile int       shutdown;
   volatile int    next_tls_id;
-  int                   cores;
   int               n_workers;
   uint32_t       wf_threshold;
-  // struct barrier     *barrier;
   system_barrier_t    barrier;
   struct worker      *workers;
   scheduler_stats_t     stats;

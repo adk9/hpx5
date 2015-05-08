@@ -10,24 +10,8 @@ to the flag suffix given below."
 option "hpx-help" - "print HPX help"
 flag off
 
-option "hpx-cores" - "number of cores to run on"
-typestr="cores"
-int optional
-
-option "hpx-threads" - "number of scheduler threads"
-typestr="threads"
-int optional
-
-option "hpx-stacksize" - "set HPX stack size"
-typestr="bytes"
-long optional
-
 option "hpx-heapsize" - "set HPX per-PE global heap size"
 typestr="bytes"
-long optional
-
-option "hpx-wfthreshold" - "bound on help-first tasks before work-first scheduling"
-typestr="tasks"
 long optional
 
 option "hpx-gas" - "type of Global Address Space (GAS)"
@@ -56,6 +40,28 @@ flag off
 option "hpx-configfile" - "HPX runtime configuration file"
 typestr="file"
 string optional
+
+section "Scheduler Options"
+
+option "hpx-cores" - "number of scheduler cores (deprecated)"
+typestr="cores"
+int optional
+
+option "hpx-threads" - "number of scheduler threads"
+typestr="threads"
+int optional
+
+option "hpx-stacksize" - "set HPX stack size"
+typestr="bytes"
+long optional
+
+option "hpx-wfthreshold" - "bound on help-first tasks before work-first scheduling"
+typestr="tasks"
+long optional
+
+option "hpx-sched-stackcachelimit" - "bound on the number of stacks to cache"
+typestr="stacks"
+int optional
 
 section "Log options"
 
