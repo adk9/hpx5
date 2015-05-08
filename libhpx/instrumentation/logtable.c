@@ -96,7 +96,7 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
     goto unwind;
   }
 
-  size_t header_size = write_trace_header(log->header, id);
+  size_t header_size = write_trace_header(log->header, class, id);
   assert(((uintptr_t)log->header + header_size) % 8 == 0);
   log->records = (void*)((uintptr_t)log->header + header_size);
 
@@ -142,12 +142,8 @@ void logtable_append(logtable_t *log, uint64_t u1, uint64_t u2, uint64_t u3,
   sync_fadd(&log->last, 1, SYNC_ACQ_REL); // update size
  
   record_t *r = &log->records[i];
-  r->class = log->class;
-  r->id = log->id;
-  r->rank = hpx_get_my_rank();
   r->worker = hpx_get_my_thread_id();
   double us = hpx_time_elapsed_us(log->start);
-  r->s = us / 1e6;
   r->ns = us * 1e3;
   r->user[0] = u1;
   r->user[1] = u2;
