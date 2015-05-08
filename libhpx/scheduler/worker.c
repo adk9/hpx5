@@ -190,9 +190,22 @@ static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
 /// Freelist a stack.
 static void
 _put_stack(struct worker *w, ustack_t *stack) {
-  stack->next = w->stacks;
-  w->stacks = stack;
-  w->nstacks++;
+  int32_t limit = here->config->sched_stackcachelimit;
+  int32_t count = ++w->nstacks;
+  if (limit < 0 || count < limit) {
+    stack->next = w->stacks;
+    w->stacks = stack;
+    return;
+  }
+
+  int32_t half = limit / 2;
+  log_sched("flushing stack freelist\n");
+  do {
+    thread_delete(stack);
+    stack = w->stacks;
+    w->stacks = stack->next;
+    count = --w->nstacks;
+  } while (count > half);
 }
 
 /// Try and get a stack from the freelist for the parcel.
