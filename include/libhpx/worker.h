@@ -17,6 +17,7 @@
 #include <hpx/attributes.h>
 #include <libsync/deques.h>
 #include <libsync/queues.h>
+#include <libhpx/padding.h>
 #include <libhpx/stats.h>
 
 /// Forward declarations.
@@ -39,21 +40,20 @@ struct worker {
   struct scheduler   *sched;                    // the scheduler instance
   pthread_t          thread;                    // this worker's native thread
   int                    id;                    // this worker's id
-  int                  core;                    //
   unsigned             seed;                    // my random seed
-  int                UNUSED;                    // padding
+  int            work_first;                    // this worker's mode
+  int               nstacks;                    // count of freelisted stacks
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
-  int            work_first;
-  const char _pada[HPX_CACHELINE_SIZE - ((sizeof(struct scheduler*) +
-                                          sizeof(pthread_t) +
-                                          sizeof(int) * 5 +
-                                          sizeof(void *) +
-                                          sizeof(hpx_parcel_t*)) %
-                                         HPX_CACHELINE_SIZE)];
+  struct ustack     *stacks;                    // freelisted stacks
+  PAD_TO_CACHELINE(sizeof(struct scheduler*) +
+                   sizeof(pthread_t) +
+                   sizeof(int) * 4 +
+                   sizeof(void *) +
+                   sizeof(hpx_parcel_t*) +
+                   sizeof(struct ustack*));
   chase_lev_ws_deque_t work;                    // my work
-  const char _padb[HPX_CACHELINE_SIZE - (sizeof(chase_lev_ws_deque_t) %
-                                         HPX_CACHELINE_SIZE)];
+  PAD_TO_CACHELINE(sizeof(chase_lev_ws_deque_t));
   two_lock_queue_t    inbox;                    // mail sent to me
   scheduler_stats_t   stats;                    // scheduler statistics
 } HPX_ALIGNED(HPX_CACHELINE_SIZE);
@@ -65,12 +65,11 @@ extern __thread struct worker *self;
 /// @param            w The worker structure to initialize.
 /// @param        sched The scheduler instance.
 /// @param           id The worker's id.
-/// @param         core The core affinity for this worker.
 /// @param         seed The random seed for this worker.
 /// @param    work_size The initial size of the work queue.
 ///
 /// @returns  LIBHPX_OK or an error code
-int worker_init(struct worker *w, struct scheduler *sched, int id, int core,
+int worker_init(struct worker *w, struct scheduler *sched, int id,
                 unsigned seed, unsigned work_size)
   HPX_NON_NULL(1, 2);
 
