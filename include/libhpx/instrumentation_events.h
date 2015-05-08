@@ -28,11 +28,7 @@ typedef struct record {
 /// The number of columns for a recorded event; some may be unused
 #define INST_EVENT_NUM_COLS 6
 
-#define INST_EVENT_COL_OFFSET_CLASS  offsetof(record_t, class)
-#define INST_EVENT_COL_OFFSET_ID     offsetof(record_t, id)
-#define INST_EVENT_COL_OFFSET_RANK   offsetof(record_t, rank)
 #define INST_EVENT_COL_OFFSET_WORKER offsetof(record_t, worker)
-#define INST_EVENT_COL_OFFSET_S      offsetof(record_t, s)
 #define INST_EVENT_COL_OFFSET_NS     offsetof(record_t, ns)
 #define INST_EVENT_COL_OFFSET_USER0  offsetof(record_t, user)
 #define INST_EVENT_COL_OFFSET_USER1  offsetof(record_t, user) + 8

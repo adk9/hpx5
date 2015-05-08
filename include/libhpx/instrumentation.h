@@ -45,13 +45,9 @@ void inst_vtrace(int class, int n, int id, ...)
   } while (0)
 #endif
 
-#define _INST_CLASS_PARCEL 0
-#define _INST_CLASS_NETWORK_PWC 1
-#define _INST_SCHED 2
-
 // This matches the order in config.h trace_t.
 typedef enum {
-  HPX_INST_CLASS_PARCEL = _INST_CLASS_PARCEL,
+  HPX_INST_CLASS_PARCEL = 0,
   HPX_INST_CLASS_NETWORK_PWC,
   INST_SCHED,
 
@@ -64,17 +60,8 @@ static const char * const INST_CLASS_TO_STRING[] = {
   "CLASS_SCHED"
 };
 
-#define _INST_EVENT_PARCEL_CREATE 0
-#define _INST_EVENT_PARCEL_SEND 1
-#define _INST_EVENT_PARCEL_RECV 2
-#define _INST_EVENT_PARCEL_RUN 3
-#define _INST_EVENT_PARCEL_END 4
-#define _INST_EVENT_NETWORK_PWC_SEND 5
-#define _INST_EVENT_NETWORK_PWC_RECV 6
-#define _INST_SCHED_WQSIZE 7
-
 typedef enum {
-  HPX_INST_EVENT_PARCEL_CREATE = _INST_EVENT_PARCEL_CREATE,
+  HPX_INST_EVENT_PARCEL_CREATE = 0,
   HPX_INST_EVENT_PARCEL_SEND,
   HPX_INST_EVENT_PARCEL_RECV,
   HPX_INST_EVENT_PARCEL_RUN,
