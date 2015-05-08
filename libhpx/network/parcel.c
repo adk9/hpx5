@@ -174,7 +174,7 @@ hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action,
   hpx_parcel_t *p = registered_memalign(HPX_CACHELINE_SIZE, size);
   dbg_assert_str(p, "parcel: failed to allocate %zu registered bytes.\n", size);
   parcel_init(target, action, c_target, c_action, pid, data, len, p);
-  if (p->action != HPX_ACTION_NULL)
+  if (p->action != scheduler_nop)
     INST_EVENT_PARCEL_CREATE(p);
   return p;
 }
