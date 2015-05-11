@@ -330,8 +330,9 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   if (stack) {
     _put_stack(self, stack);
   }
-  if (prev->action != scheduler_nop)
+  if (prev->action != scheduler_nop) {
     INST_EVENT_PARCEL_END(prev);
+  }
   hpx_parcel_release(prev);
   int status = (intptr_t)env;
   return status;
