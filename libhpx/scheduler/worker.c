@@ -814,6 +814,8 @@ static int _unlock(hpx_parcel_t *to, void *sp, void *env) {
 }
 
 hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
+  INST_EVENT_PARCEL_SUSPEND(self->current);
+
   // push the current thread onto the condition variable---no lost-update
   // problem here because we're holing the @p lock
   ustack_t *thread = parcel_get_stack(self->current);
@@ -839,6 +841,7 @@ static inline void _resume(hpx_parcel_t *parcels) {
       _send_mail(stack->affinity, p);
     }
     else {
+      INST_EVENT_PARCEL_RESUME(p);
       parcel_launch(p);
     }
   }
