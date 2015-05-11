@@ -27,7 +27,10 @@
 /// wrap common functionality that needs access to the global here object.
 
 #include <hpx/hpx.h>
-#include <hwloc.h>
+
+#ifdef HAVE_HWLOC
+  #include <hwloc.h>
+#endif 
 
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
@@ -64,7 +67,9 @@ typedef struct locality {
   struct scheduler            *sched;
   struct config              *config;
   const struct action_table *actions;
+#ifdef HAVE_HWLOC
   hwloc_topology_t          topology;
+#endif
 } locality_t;
 
 /// Inter-locality action interface.
