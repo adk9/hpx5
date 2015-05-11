@@ -96,7 +96,7 @@ typedef struct inst_named_value {
   const char type;
   const uint32_t value;
   const char name[8];
-} inst_named_value_t;
+} HPX_PACKED inst_named_value_t;
 
 typedef struct inst_event_col_metadata {
   const char mask; // this should an OR of all the following values:
