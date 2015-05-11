@@ -8,6 +8,59 @@
 static int __photon_cleanup_request(photonRequest req);
 static int __photon_request_grow_table(photonRequestTable rt);
 
+int photon_request_init(photonConfig cfg) {
+  int i;
+  // Setup request tables
+  for (i = 0; i < (_photon_nproc + _photon_nforw); i++) {
+    photon_processes[i].request_table = malloc(sizeof(struct photon_req_table_t));
+    if (!photon_processes[i].request_table) {
+      log_err("Could not allocate request table for proc %d", i);
+      goto error_exit;
+    }
+    photonRequestTable rt = photon_processes[i].request_table;
+    rt->count           = 0;
+    rt->level           = 0;
+    rt->next            = 0;
+    rt->size            = cfg->cap.default_rd;
+    rt->free            = (uint32_t*)malloc(DEF_NR_LEVELS * sizeof(uint32_t));
+    rt->free[rt->level] = cfg->cap.default_rd;
+    rt->reqs = (photonRequest*)malloc(DEF_NR_LEVELS * sizeof(struct photon_req_t));
+    if (!rt->reqs) {
+      log_err("Could not allocate request array for proc %d", i);
+      goto error_exit;
+    }
+    rt->reqs[rt->level] = (photonRequest)calloc(cfg->cap.default_rd, sizeof(struct photon_req_t));
+    if (!rt->reqs[rt->level]) {
+      log_err("Could not allocate request descriptors for proc %d", i);
+      goto error_exit;
+    }
+    rt->pwc_q = sync_two_lock_queue_new();
+    if (!rt->pwc_q) {
+      log_err("Could not allocate pwc request queue for proc %d", i);
+      goto error_exit;
+    }
+    rt->gwc_q = sync_two_lock_queue_new();
+    if (!rt->gwc_q) {
+      log_err("Could not allocate gwc request queue for proc %d", i);
+      goto error_exit;
+    }
+    rt->comp_q = sync_two_lock_queue_new();
+    if (!rt->comp_q) {
+      log_err("Could not allocate PWC completion queue for proc %d", i);
+      goto error_exit;
+    }
+    rt->pcount = 0;
+    rt->gcount = 0;
+    sync_tatas_init(&rt->tloc);
+  }
+  
+  return PHOTON_OK;
+
+ error_exit:
+  return PHOTON_ERROR;
+}
+
+
 photonRequest photon_get_request(int proc) {
   photonRequestTable rt;
   photonRequest      req, reqs;
@@ -359,7 +412,7 @@ static int __photon_request_grow_table(photonRequestTable rt) {
   rt->free[rt->level] = nsize;
   rt->next            = 0;
   
-  dbg_info("Resized request table: %lu (next: %lu)", nsize, rt->next);
+  dbg_trace("Resized request table: %lu (next: %lu)", nsize, rt->next);
 
   return PHOTON_OK;
 }

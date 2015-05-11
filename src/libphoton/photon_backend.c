@@ -139,47 +139,13 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
 
   dbg_trace("Allocated and cleared process info");
 
-  // Setup request tables
-  for (i = 0; i < (_photon_nproc + _photon_nforw); i++) {
-    photon_processes[i].request_table = malloc(sizeof(struct photon_req_table_t));
-    if (!photon_processes[i].request_table) {
-      log_err("Could not allocate request table for proc %d", i);
-      goto error_exit_bt;
-    }
-    photonRequestTable rt = photon_processes[i].request_table;
-    rt->count           = 0;
-    rt->level           = 0;
-    rt->next            = 0;
-    rt->size            = cfg->cap.default_rd;
-    rt->free            = (uint32_t*)malloc(DEF_NR_LEVELS * sizeof(uint32_t));
-    rt->free[rt->level] = cfg->cap.default_rd;
-    rt->reqs = (photonRequest*)malloc(DEF_NR_LEVELS * sizeof(struct photon_req_t));
-    if (!rt->reqs) {
-      log_err("Could not allocate request array for proc %d", i);
-      goto error_exit_bt;
-    }
-    rt->reqs[rt->level] = (photonRequest)calloc(cfg->cap.default_rd, sizeof(struct photon_req_t));
-    if (!rt->reqs[rt->level]) {
-      log_err("Could not allocate request descriptors for proc %d", i);
-      goto error_exit_bt;
-    }
-    rt->pwc_q = sync_ms_queue_new();
-    if (!rt->pwc_q) {
-      log_err("Could not allocate pwc request queue for proc %d", i);
-      goto error_exit_bt;
-    }
-    rt->gwc_q = sync_ms_queue_new();
-    if (!rt->gwc_q) {
-      log_err("Could not allocate gwc request queue for proc %d", i);
-      goto error_exit_bt;
-    }
-    rt->pcount = 0;
-    rt->gcount = 0;
-    sync_tatas_init(&rt->tloc);
+  // initialize the request tables
+  if (photon_request_init(cfg) != PHOTON_OK) {
+    goto error_exit_bt;
   }
 
-  // initialize the pwc request table
-  if (photon_pwc_init() != PHOTON_OK) {
+  // initialize PWC
+  if (photon_pwc_init(cfg) != PHOTON_OK) {
     goto error_exit_bt;
   }
 

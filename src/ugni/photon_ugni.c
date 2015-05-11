@@ -137,7 +137,7 @@ static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI s
   ugni_ctx.rdma_get_align = PHOTON_UGNI_GET_ALIGN;
 
   if ((2 * _LEDGER_SIZE * _photon_nproc / ugni_ctx.num_cq) > MAX_CQ_ENTRIES) {
-    dbg_warn("Possible CQ overrun with current config (nproc=%d, nledger=%d, ncq=%d)",
+    one_warn("Possible CQ overrun with current config (nproc=%d, nledger=%d, ncq=%d)",
 	     _photon_nproc, _LEDGER_SIZE, ugni_ctx.num_cq);
   }
 
