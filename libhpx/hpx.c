@@ -74,9 +74,11 @@ static void _cleanup(locality_t *l) {
     l->boot = NULL;
   }
 
+#ifdef HAVE_HWLOC
   if (l->topology) {
     hpx_hwloc_topology_destroy(l->topology);
   }
+#endif
 
   if (l->actions) {
     action_table_free(l->actions);
@@ -116,6 +118,7 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // topology
+#ifdef HAVE_HWLOC
   int e = hpx_hwloc_topology_init(&here->topology);
   if (e) {
     status = log_error("failed to initialize a topology.\n");
@@ -126,6 +129,7 @@ int hpx_init(int *argc, char ***argv) {
     status = log_error("failed to load the topology.\n");
     goto unwind1;
   }
+#endif
 
   // bootstrap
   here->boot = boot_new(here->config->boot);
