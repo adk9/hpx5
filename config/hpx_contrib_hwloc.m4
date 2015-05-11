@@ -37,7 +37,7 @@ AC_DEFUN([HPX_CONTRIB_HWLOC],
                AC_SUBST(HPX_HWLOC_CFLAGS, "$HWLOC_EMBEDDED_CFLAGS")
                AC_SUBST(HPX_HWLOC_LIBS, "$HWLOC_EMBEDDED_LDADD")
                AC_SUBST(HPX_HWLOC_DEPS, "$HWLOC_EMBEDDED_LDADD")])
-        enable_hwloc=yes], [])]
+        enable_external_hwloc=no], [])]
         HWLOC_DO_AM_CONDITIONALS
         AM_CONDITIONAL([BUILD_HWLOC], [test "x$enable_hwloc" == xyes])
         AS_IF([test "x$enable_hwloc" == xyes], [AC_DEFINE([HAVE_HWLOC], [1], [We have HWLOC])], []))

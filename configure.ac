@@ -77,11 +77,6 @@ AC_ARG_ENABLE([wall],
                   [Enable all warnings @<:@default=yes@:>@])],
   [], [enable_wall=yes])
 
-AC_ARG_ENABLE([apps],
-  [AS_HELP_STRING([--enable-apps],
-                  [Enable mini-apps @<:@default=no@:>@])],
-  [], [enable_apps=no])
-
 AC_ARG_ENABLE([tutorial],
   [AS_HELP_STRING([--enable-tutorial],
                   [Enable building of code samples from the HPX tutorial @<:@default=no@:>@])],
