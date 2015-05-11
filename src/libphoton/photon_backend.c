@@ -163,12 +163,18 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
       log_err("Could not allocate request descriptors for proc %d", i);
       goto error_exit_bt;
     }
-    rt->req_q = sync_ms_queue_new();
-    if (!rt->req_q) {
-      log_err("Could not allocate request queue for proc %d", i);
+    rt->pwc_q = sync_ms_queue_new();
+    if (!rt->pwc_q) {
+      log_err("Could not allocate pwc request queue for proc %d", i);
       goto error_exit_bt;
     }
-    rt->qcount = 0;
+    rt->gwc_q = sync_ms_queue_new();
+    if (!rt->gwc_q) {
+      log_err("Could not allocate gwc request queue for proc %d", i);
+      goto error_exit_bt;
+    }
+    rt->pcount = 0;
+    rt->gcount = 0;
     sync_tatas_init(&rt->tloc);
   }
 

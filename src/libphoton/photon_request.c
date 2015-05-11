@@ -30,6 +30,8 @@ photonRequest photon_get_request(int proc) {
     reqs = rt->reqs[rt->level];
     
     // find the next free slot
+    rt->next++;
+    rt->next = (rt->next & (rt->size - 1));
     while (reqs[rt->next].id) {
       rt->next++;
       rt->next = (rt->next & (rt->size - 1));
@@ -110,6 +112,7 @@ int photon_count_request(int proc) {
 int photon_free_request(photonRequest req) {
   photonRequestTable rt;
   uint16_t level = (uint16_t)(req->id<<32>>56);
+  dbg_trace("Clearing request 0x%016lx", req->id);
   __photon_cleanup_request(req);
   rt = photon_processes[req->proc].request_table;
   sync_tatas_acquire(&rt->tloc);
@@ -119,7 +122,6 @@ int photon_free_request(photonRequest req) {
     rt->free[level]++;
   }
   sync_tatas_release(&rt->tloc);
-  dbg_trace("Cleared request 0x%016lx", req->id);
   return PHOTON_OK;
 }
 
@@ -357,7 +359,7 @@ static int __photon_request_grow_table(photonRequestTable rt) {
   rt->free[rt->level] = nsize;
   rt->next            = 0;
   
-  dbg_trace("Resized request table: %lu (next: %lu)", nsize, rt->next);
+  dbg_info("Resized request table: %lu (next: %lu)", nsize, rt->next);
 
   return PHOTON_OK;
 }
