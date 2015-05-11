@@ -11,7 +11,9 @@ AC_DEFUN([HPX_CONTRIB_HWLOC],
         HPX_HWLOC_CPPFLAGS="$HWLOC_CPPFLAGS"
         HPX_HWLOC_CFLAGS="$HWLOC_CFLAGS"
         HPX_HWLOC_LIBS="$HWLOC_LIBS"
-        enable_external_hwloc=yes],
+        enable_external_hwloc=yes], [])]
+   [AC_ARG_ENABLE([hwloc], [AS_HELP_STRING([--enable-hwloc], [Enable HWLOC Support]) @<:@default=no@:>@], [], [enable_hwloc="no"])]
+   [AS_IF([test "$enable_hwloc" = "yes"],
       [HWLOC_SET_SYMBOL_PREFIX([$2])
         # Disable features that are not required for our embedded build
         enable_libxml2=no
@@ -35,6 +37,7 @@ AC_DEFUN([HPX_CONTRIB_HWLOC],
                AC_SUBST(HPX_HWLOC_CFLAGS, "$HWLOC_EMBEDDED_CFLAGS")
                AC_SUBST(HPX_HWLOC_LIBS, "$HWLOC_EMBEDDED_LDADD")
                AC_SUBST(HPX_HWLOC_DEPS, "$HWLOC_EMBEDDED_LDADD")])
-        enable_external_hwloc=no])
-   HWLOC_DO_AM_CONDITIONALS
-   AM_CONDITIONAL([BUILD_HWLOC], [test "x$enable_external_hwloc" == xno])])
+        enable_hwloc=yes], [])]
+        HWLOC_DO_AM_CONDITIONALS
+        AM_CONDITIONAL([BUILD_HWLOC], [test "x$enable_hwloc" == xyes])
+        AS_IF([test "x$enable_hwloc" == xyes], [AC_DEFINE([HAVE_HWLOC], [1], [We have HWLOC])], []))
