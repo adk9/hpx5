@@ -119,7 +119,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   one_debug("num ledgers:\t\t%d", _LEDGER_SIZE);
   one_debug("eager buf size:\t%d", _photon_ebsize);
   one_debug("small msg size:\t%d", _photon_smsize);
-  one_debug("small pwc size:\t%d", _photon_spsize);
+  one_debug("small pwc size:\t%d", _photon_upsize);
   one_debug("init req per rank:\t%d", cfg->cap.default_rd);
 
   if (buffertable_init(193)) {

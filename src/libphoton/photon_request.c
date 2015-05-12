@@ -4,6 +4,8 @@
 
 #include "photon_backend.h"
 #include "photon_request.h"
+#include "photon_pwc.h"
+#include "util.h"
 
 static int __photon_cleanup_request(photonRequest req);
 static int __photon_request_grow_table(photonRequestTable rt);
@@ -370,9 +372,10 @@ static int __photon_cleanup_request(photonRequest req) {
     break;
   case REQUEST_OP_PWC:
     if (req->flags & REQUEST_FLAG_1PWC) {
-      MARK_DONE(photon_processes[req->proc].remote_pwc_buf, req->size);
+      MARK_DONE(photon_processes[req->proc].remote_pwc_buf,
+		ALIGN(EB_MSG_SIZE(req->size), PWC_ALIGN));
     }
-    else if (req->flags & REQUEST_FLAG_2PWC) {
+    if (req->flags & REQUEST_FLAG_2PWC) {
       MARK_DONE(photon_processes[req->proc].remote_pwc_ledger, 1);
     }
     break;

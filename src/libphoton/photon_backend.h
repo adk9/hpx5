@@ -24,6 +24,7 @@
 #define DEF_EAGER_BUF_SIZE   (1024*256) // 256K bytes of space per rank
 #define DEF_SMALL_MSG_SIZE   (4096)
 #define DEF_LEDGER_SIZE      (64)       // This should not exceed MCA max_qp_wr (typically 16K)
+#define DEF_SP_SIZE          (128)
 #define DEF_NUM_CQ           1
 
 #define UD_MASK_SIZE         1<<6

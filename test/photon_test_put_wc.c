@@ -12,6 +12,16 @@
 
 #include "test_cfg.h"
 
+static void __attribute__((used)) dbg_wait(void) {
+  int i = 0;
+  char hostname[256];
+  gethostname(hostname, sizeof(hostname));
+  printf("PID %d on %s ready for attach\n", getpid(), hostname);
+  fflush(stdout);
+  while (0 == i)
+    sleep(12);
+}
+
 #define PHOTON_BUF_SIZE (1024*1024*4) // 4M
 #define PHOTON_TAG       UINT32_MAX
 
@@ -30,7 +40,7 @@ void *wait_local(void *arg) {
   int flag, rc, remaining, src;
 
   while (send_comp) {
-    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &request, &src, PHOTON_PROBE_EVQ);
+    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &request, &src, PHOTON_PROBE_ANY);
     if (rc != PHOTON_OK)
       continue;  // no events
     if (flag) {
@@ -85,6 +95,11 @@ int main(int argc, char *argv[]) {
   cfg.address = rank;
 
   myrank = rank;
+
+  if (myrank == 1) {
+    //dbg_wait();
+  }
+
   photon_init(&cfg);
 
   struct photon_buffer_t lbuf;
@@ -179,7 +194,7 @@ int main(int argc, char *argv[]) {
 	  lbuf.addr = (uintptr_t)send;
 	  lbuf.size = i;
 	  lbuf.priv = (struct photon_buffer_priv_t){0,0};
-	  photon_get_with_completion(j, i, &lbuf, &rbuf[j], PHOTON_TAG, 0xfacefeed, 0);
+	  photon_get_with_completion(j, i, &lbuf, &rbuf[j], PHOTON_TAG, 0xfacefeed, PHOTON_REQ_PWC_NO_RCE);
 	  send_comp++;
 	  wait_local(NULL);
 	}

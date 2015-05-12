@@ -16,6 +16,16 @@
 #include <assert.h>
 #include <err.h>
 
+static void __attribute__((used)) dbg_wait(void) {
+  int i = 0;
+  char hostname[256];
+  gethostname(hostname, sizeof(hostname));
+  printf("PID %d on %s ready for attach\n", getpid(), hostname);
+  fflush(stdout);
+  while (0 == i)
+    sleep(12);
+}
+
 #if defined(linux)
 #define HAVE_SETAFFINITY
 #include <sched.h>
@@ -134,6 +144,10 @@ int main(int argc, char **argv) {
   
   cfg.nproc = nproc;
   cfg.address = rank;
+
+  //if (myrank == 0) {
+  //  dbg_wait();
+  //}
   
   if (photon_init(&cfg))
     exit(1);
@@ -289,14 +303,14 @@ int main(int argc, char **argv) {
       }
       
       if (rank <= ns) {
-        if (i && !(sizes[i] % 8)) {
+        if (i && !(sizes[i] == 0)) {
           clock_gettime(CLOCK_MONOTONIC, &time_s);
           for (k=0; k<ITERS; k++) {
 	    if (sem_wait(&sem) == 0) {
 	      lbuf.addr = (uintptr_t)send;
 	      lbuf.size = sizes[i];
 	      lbuf.priv = (struct photon_buffer_priv_t){0,0};
-	      if (photon_get_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0xfacefeed, 0)) {
+	      if (photon_get_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0xfacefeed, PHOTON_REQ_PWC_NO_RCE)) {
 		fprintf(stderr, "Error doing GWC\n");
 		exit(1);
 	      }
@@ -314,7 +328,7 @@ int main(int argc, char **argv) {
 
       MPI_Barrier(MPI_COMM_WORLD);
       
-      if (rank == 0 && i && !(sizes[i] % 8)) {
+      if (rank == 0 && i && !(sizes[i] == 0)) {
         double time_ns = (double)(((time_e.tv_sec - time_s.tv_sec) * 1e9) + (time_e.tv_nsec - time_s.tv_nsec));
         double time_us = time_ns/1e3;
         double latency = time_us/ITERS;

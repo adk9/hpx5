@@ -8,8 +8,9 @@
 #define PWC_BUFFER     0x01
 #define PWC_LEDGER     0x02
 
-#define PWC_COMMAND_MASK   ((uint64_t)0xff<<56)
-#define PWC_COMMAND_PWC    ((uint64_t)0x01<<56)
+#define PWC_COMMAND_MASK     ((uint64_t)0xff<<56)
+#define PWC_COMMAND_PWC_REQ  ((uint64_t)0x01<<56)
+#define PWC_COMMAND_PWC_REP  ((uint64_t)0x02<<56)
 
 // interface to deal with pwc used along with post/put/get/test
 PHOTON_INTERNAL int photon_pwc_init(photonConfig cfg);

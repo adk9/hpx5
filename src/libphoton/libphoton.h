@@ -24,6 +24,7 @@ extern int _photon_fproc;
 extern int _photon_ebsize;
 extern int _photon_smsize;
 extern int _photon_spsize;
+extern int _photon_upsize;
 extern int _forwarder;
 
 #ifdef ENABLE_DEBUG
