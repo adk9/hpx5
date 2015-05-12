@@ -67,6 +67,7 @@
 /// @file libhpx/scheduler/allgather.c
 /// @brief Defines the allgather LCO.
 #include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <libhpx/debug.h>

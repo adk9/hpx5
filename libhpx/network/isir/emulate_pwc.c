@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <string.h>
 #include "libhpx/gas.h"
 #include "libhpx/locality.h"
 #include "libhpx/parcel.h"

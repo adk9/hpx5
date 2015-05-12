@@ -17,6 +17,7 @@
 /// @file libhpx/scheduler/user_lco.c
 /// @brief A user-defined LCO.
 #include <assert.h>
+#include <string.h>
 
 #include <libhpx/action.h>
 #include <libhpx/debug.h>

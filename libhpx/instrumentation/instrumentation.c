@@ -16,7 +16,9 @@
 
 #include <errno.h>
 #include <stdarg.h>
+#include <stdio.h> // for snprintf
 #include <sys/stat.h>
+#include <unistd.h> // for chdir
 
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
