@@ -468,10 +468,10 @@ static hpx_parcel_t *_schedule_in_lco(hpx_parcel_t *final) {
   p = _get_nop_parcel();
  exit:
   if (parcel_get_stack(p)) {
-    INST_EVENT_PARCEL_RUN(p);
+    INST_EVENT_PARCEL_RESUME(p);
   }
   else {
-    INST_EVENT_PARCEL_RESUME(p);
+    INST_EVENT_PARCEL_RUN(p);
   }
   dbg_assert(p);
   return _try_bind(p);
@@ -551,10 +551,10 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
   }
 
   if (parcel_get_stack(p)) {
-    INST_EVENT_PARCEL_RUN(p);
+    INST_EVENT_PARCEL_RESUME(p);
   }
   else {
-    INST_EVENT_PARCEL_RESUME(p);
+    INST_EVENT_PARCEL_RUN(p);
   }
   return _try_bind(p);
 }
