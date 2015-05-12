@@ -17,6 +17,7 @@
 /// @file libhpx/scheduler/lco.c
 #include <assert.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <libsync/sync.h>
