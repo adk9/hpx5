@@ -210,6 +210,7 @@ static int photon_pwc_handle_comp_req(photonRequest req, int *flag, photon_rid *
     int offset;
     req->size = 0;
     req->flags |= REQUEST_FLAG_NO_LCE;
+    req->flags &= ~(REQUEST_FLAG_ROP);
     rc = photon_pwc_test_ledger(req->proc, &offset);
     if (rc == PHOTON_OK) {
       rc = photon_pwc_try_ledger(req, offset);
