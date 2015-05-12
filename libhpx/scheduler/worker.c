@@ -852,7 +852,6 @@ static inline void _resume(hpx_parcel_t *parcels) {
       _send_mail(stack->affinity, p);
     }
     else {
-      INST_EVENT_PARCEL_RESUME(p);
       parcel_launch(p);
     }
   }
