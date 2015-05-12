@@ -5,7 +5,7 @@
 #include "math.h"
 #include "stdio.h"
 #include "hpx/hpx.h"
-#include "apex_global.h"
+#include "apex.h"
 
 extern apex_profile value;
 extern apex_profile reduced_value;

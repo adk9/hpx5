@@ -275,13 +275,13 @@ int action_table_run_handler(const struct action_table *table,
     apex_profiler_handle profiler = 0L;
     //if (id != HPX_ACTION_NULL && id != HPX_LCO_SET && id != HPX_PAR_FOR_ASYNC) {
     if (id != HPX_ACTION_NULL && !action_is_interrupt(table, id) && handler != hpx_lco_set_action) {
-        profiler = apex_start_address((apex_function_address)handler);
+        profiler = apex_start(APEX_FUNCTION_ADDRESS, (void*)handler);
     }
 #endif
     *ret = handler(args);
 #ifdef HAVE_APEX
     if (profiler != 0L) {
-        apex_stop_profiler(profiler);
+        apex_stop(profiler);
     }
 #endif
   } else {
