@@ -797,11 +797,10 @@ void scheduler_yield(void) {
     return;
   }
 
+  INST_EVENT_PARCEL_SUSPEND(from);
   hpx_parcel_t *to = _schedule(false, from);
   if (from == to)
     return;
-
-  INST_EVENT_PARCEL_SUSPEND(from);
 
   dbg_assert(to);
   dbg_assert(parcel_get_stack(to));
