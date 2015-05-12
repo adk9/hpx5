@@ -44,7 +44,7 @@
 
 #ifdef HAVE_APEX
 #include "apex.h"
-#include "apex_throttling.h"
+#include "apex_policies.h"
 #endif
 
 __thread struct worker *self = NULL;
