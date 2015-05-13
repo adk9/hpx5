@@ -41,7 +41,6 @@ photonRequest photon_pwc_pop_req(int proc) {
     start = proc;
     end = proc+1;
     assert(IS_VALID_PROC(start));
-    assert(IS_VALID_PROC(end));
   }
 
   for (i=start; i<end; i++) {
@@ -661,7 +660,6 @@ int _photon_probe_completion(int proc, int *flag, int *remaining,
     start = proc;
     end = proc+1;
     assert(IS_VALID_PROC(start));
-    assert(IS_VALID_PROC(end));
   }
   
   if (flags & PHOTON_PROBE_EVQ) {
