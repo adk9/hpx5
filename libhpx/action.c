@@ -218,7 +218,6 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs) {
   }
 
   if (cif == NULL) {
-    log_parcel("%s is user-packed\n", key);
     return p;
   }
 
