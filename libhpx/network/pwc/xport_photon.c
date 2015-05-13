@@ -261,7 +261,8 @@ _photon_gwc(xport_op_t *op) {
 static int
 _poll(uint64_t *op, int *remaining, int src, int type) {
   int flag = 0;
-  int e = photon_probe_completion(src, &flag, remaining, op, type);
+  int s;
+  int e = photon_probe_completion(src, &flag, remaining, op, &s, type);
   if (PHOTON_OK != e) {
     dbg_error("photon probe error\n");
   }
