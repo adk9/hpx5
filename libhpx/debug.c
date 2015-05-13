@@ -87,27 +87,43 @@ int log_error_internal(unsigned line, const char *filename, const char *func,
 
 /// This is unsafe because we can't use gethostname or printf in a signal
 /// handler, particularly a SEGV handler.
-static void dbg_wait_on_segv(int signum) {
+static void _dbg_wait_on_sig(int signum) {
   dbg_wait();
 }
 
-int dbg_init(config_t *config) {
-  if (DEBUG && config->dbg_waitonsegv) {
-    struct sigaction segv = {
-      .sa_handler = dbg_wait_on_segv,
-      .sa_flags = 0
-    };
-    sigemptyset (&segv.sa_mask);
+static int _register_wait_on_sig(int signum) {
+  struct sigaction segv = {
+    .sa_handler = _dbg_wait_on_sig,
+    .sa_flags = 0
+  };
+  sigemptyset (&segv.sa_mask);
 
-    if (-1 == sigaction(SIGSEGV, &segv, NULL)) {
-      log_error("could not register dbg_wait_on_segv for SIGSEGV\n");
-      return LIBHPX_ERROR;
-    }
-    else {
-      log("registered dbg_wait_on_segv for SIGSEGV\n");
-    }
+  if (-1 == sigaction(signum, &segv, NULL)) {
+    log_error("could not register _dbg_wait_on_sig for signal(%d)\n", signum);
+    return LIBHPX_ERROR;
+  }
+  else {
+    log("registered _dbg_wait_on_sig for signal(%d)\n", signum);
   }
   return LIBHPX_OK;
+}
+
+int
+dbg_init(config_t *config) {
+  int e = LIBHPX_OK;
+  if (DEBUG && config->dbg_waitonsegv) {
+    e = _register_wait_on_sig(SIGSEGV);
+    if (e != LIBHPX_OK) {
+      return e;
+    }
+  }
+  if (DEBUG && config->dbg_waitonabort) {
+    e = _register_wait_on_sig(SIGABRT);
+    if (e != LIBHPX_OK) {
+      return e;
+    }
+  }
+  return e;
 }
 
 void dbg_fini(void) {
