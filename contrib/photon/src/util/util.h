@@ -6,6 +6,7 @@
 #include "config.h"
 
 #define ALIGN(s, b) (((s) + ((b) - 1)) & ~((b) - 1))
+#define TEST_ALIGN(t, a) (((uintptr_t)t % a) == 0)
 
 typedef struct photon_dev_list_t {
   struct photon_dev_list_t *next;
