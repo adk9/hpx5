@@ -18,7 +18,7 @@
 START_TEST(test_rdma_with_completion) 
 {
   int rank, size, i, next, prev;
-  int flag, rc, remaining;
+  int flag, rc, remaining, src;
   int send_comp = 0;
   int recv_comp = 0;
   fprintf(detailed_log, "Starting RDMA with completion test\n");
@@ -65,7 +65,7 @@ START_TEST(test_rdma_with_completion)
   send_comp++;
   recv_comp++;
   while (send_comp || recv_comp) {
-    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &req, PHOTON_PROBE_ANY);
+    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &req, &src, PHOTON_PROBE_ANY);
     if (rc != PHOTON_OK)
       continue;  // no events
     if (flag) {
@@ -87,7 +87,7 @@ START_TEST(test_rdma_with_completion)
                              &rbuf, PHOTON_TAG, 0xfacefeed, PHOTON_REQ_PWC_NO_RCE);
   send_comp++;
   while (send_comp) {
-    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &req, PHOTON_PROBE_ANY);
+    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &req, &src, PHOTON_PROBE_ANY);
     if (rc != PHOTON_OK)
       continue;  // no events
     if (flag) {

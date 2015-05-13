@@ -110,9 +110,9 @@ START_TEST (test_photon_test_put_wc_bw_bench)
       }
       else {
         while (1) {
-          int flag, remaining;
+          int flag, remaining, src;
           int rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining,
-                                           &req, PHOTON_PROBE_EVQ);   
+                                           &req, &src, PHOTON_PROBE_EVQ);   
           if (rc != PHOTON_OK)
             continue;
           if (flag) {
@@ -126,9 +126,9 @@ START_TEST (test_photon_test_put_wc_bw_bench)
     }
     // clear all remaining put requests
     do {
-      int flag, remaining;
+      int flag, remaining, src;
       int rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining,
-                                       &req, PHOTON_PROBE_EVQ);
+                                       &req, &src, PHOTON_PROBE_EVQ);
       if (rc != PHOTON_OK)
         continue;
       if (flag) {

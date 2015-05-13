@@ -11,6 +11,7 @@ int __photon_handle_cq_special(photon_rid cookie) {
     return PHOTON_EVENT_OK;
 
   switch (prefix) {
+  case REQUEST_COOK_GPWC:
   case REQUEST_COOK_EAGER:
     break;
   case REQUEST_COOK_EBUF:

@@ -99,9 +99,9 @@ int send_pingpong(int dst, int ping_id, int pong_id, int pp_type) {
     lbuf.priv = (struct photon_buffer_priv_t){0,0};
     photon_put_with_completion(dst, msize, &lbuf, &rbuf, PHOTON_TAG, 0xcafebabe, 0);
     photon_rid request;
-    int flag;
+    int flag, src;
     do {
-      photon_probe_completion(PHOTON_ANY_SOURCE, &flag, NULL, &request, PHOTON_PROBE_EVQ);
+      photon_probe_completion(PHOTON_ANY_SOURCE, &flag, NULL, &request, &src, PHOTON_PROBE_EVQ);
     } while (!flag || request != PHOTON_TAG);
   }
 
@@ -173,9 +173,9 @@ void *receiver(void *args) {
     }
     else if (pp_test == PWC_TEST) {
       photon_rid request;
-      int flag;
+      int flag, src;
       do {
-        photon_probe_completion(other_rank, &flag, NULL, &request, PHOTON_PROBE_LEDGER);
+        photon_probe_completion(other_rank, &flag, NULL, &request, &src, PHOTON_PROBE_LEDGER);
       } while (!flag || request != 0xcafebabe);
     }
 

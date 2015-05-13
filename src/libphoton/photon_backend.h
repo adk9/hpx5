@@ -24,6 +24,7 @@
 #define DEF_EAGER_BUF_SIZE   (1024*256) // 256K bytes of space per rank
 #define DEF_SMALL_MSG_SIZE   (4096)
 #define DEF_LEDGER_SIZE      (64)       // This should not exceed MCA max_qp_wr (typically 16K)
+#define DEF_SP_SIZE          (128)
 #define DEF_NUM_CQ           1
 
 #define UD_MASK_SIZE         1<<6
@@ -136,7 +137,7 @@ struct photon_backend_t {
                              photon_rid local, photon_rid remote, int flags);
   int (*get_with_completion)(int proc, uint64_t size, photonBuffer lbuf, photonBuffer rbuf,
                              photon_rid local, photon_rid remote, int flags);
-  int (*probe_completion)(int proc, int *flag, int *remaining, photon_rid *request, int flags);
+  int (*probe_completion)(int proc, int *flag, int *remaining, photon_rid *request, int *src, int flags);
   int (*io_init)(char *file, int amode, void *view, int niter);
   int (*io_finalize)();
   /* data movement -- needs to be split out */
