@@ -100,7 +100,7 @@ static int photon_pwc_gwc_put(photonRequest req) {
   req->size          = ssize;
   req->flags        |= REQUEST_FLAG_1PWC;
   req->rattr.events  = 1;
-  req->rattr.cookie  = ( (uint64_t)REQUEST_COOK_GPWC<<32) | req->proc;  
+  req->rattr.cookie  = ( (uint64_t)REQUEST_COOK_GPWC<<32) | req->proc;
   
   // make sure the request size is encoded in the local/remote bufs
   req->local_info.buf.size = req->size;
@@ -133,6 +133,8 @@ static int photon_pwc_gwc_put(photonRequest req) {
     dbg_err("RDMA PUT (GWC-PUT) failed for 0x%016lx", req->rattr.cookie);
     goto error_exit;
   }  
+
+  dbg_trace("Posted GWC-PUT Request: 0x%016lx", req->id);
   
   return PHOTON_OK;
   
@@ -208,9 +210,9 @@ static int photon_pwc_handle_comp_req(photonRequest req, int *flag, photon_rid *
     // this GWC request now becomes a PWC
     // and we reap the put completion internally
     int offset;
-    req->size = 0;
-    req->flags |= REQUEST_FLAG_NO_LCE;
+    req->flags |= (REQUEST_FLAG_NO_LCE | REQUEST_FLAG_CMD);
     req->flags &= ~(REQUEST_FLAG_ROP);
+    req->rattr.cookie = req->id;
     rc = photon_pwc_test_ledger(req->proc, &offset);
     if (rc == PHOTON_OK) {
       rc = photon_pwc_try_ledger(req, offset);
@@ -227,8 +229,8 @@ static int photon_pwc_handle_comp_req(photonRequest req, int *flag, photon_rid *
     }
     goto no_free;
   }
-  
-  dbg_trace("Completed and removing PWC/GWC request: 0x%016lx (ind=0x%016lx)",
+
+  dbg_trace("Completed and removing PWC/GWC request: 0x%016lx (lid=0x%016lx)",
 	    req->id, req->local_info.id);
   photon_free_request(req);
   
@@ -418,11 +420,11 @@ static int photon_pwc_try_ledger(photonRequest req, int curr) {
   photonLedgerEntry entry;
   uintptr_t rmt_addr;
   int rc;
-
+  
   req->flags |= REQUEST_FLAG_2PWC;
   req->rattr.events = 1;
-
-  if (req->size > 0) {
+  
+  if ((req->size > 0) && !(req->flags & REQUEST_FLAG_CMD)) {
     if (!req->local_info.buf.priv.key0 && !req->local_info.buf.priv.key1) {
       if (buffertable_find_containing( (void *)req->local_info.buf.addr,
 				       req->size, &db) != 0) {
@@ -469,10 +471,11 @@ static int photon_pwc_try_ledger(photonRequest req, int curr) {
     }
   }
   
-  dbg_trace("Posted PWC Request: %d/0x%016lx/0x%016lx", req->proc,
+  dbg_trace("Posted PWC Request: %d/0x%016lx/0x%016lx/0x%016lx", req->proc,
+	    req->rattr.cookie
 	    req->local_info.id,
 	    req->remote_info.id);
-
+  
   return PHOTON_OK;
 
  error_exit:

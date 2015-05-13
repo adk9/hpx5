@@ -237,7 +237,7 @@ int main(int argc, char **argv) {
     //printf("Setting LEDGER probe thread affinity to core %d\n", aff_ledg);
     CPU_ZERO(&cpu_set);
     CPU_SET(aff_ledg, &cpu_set);
-    for (i=0; i<nproc; i++)
+    for (i=0; i<rthreads; i++)
       pthread_setaffinity_np(recv_threads[i], sizeof(cpu_set_t), &cpu_set);
   }
   else {
@@ -310,7 +310,7 @@ int main(int argc, char **argv) {
 	      lbuf.addr = (uintptr_t)send;
 	      lbuf.size = sizes[i];
 	      lbuf.priv = (struct photon_buffer_priv_t){0,0};
-	      if (photon_get_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0xfacefeed, PHOTON_REQ_PWC_NO_RCE)) {
+	      if (photon_get_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0xfacefeed, 0)) {
 		fprintf(stderr, "Error doing GWC\n");
 		exit(1);
 	      }

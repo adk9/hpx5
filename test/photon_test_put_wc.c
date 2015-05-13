@@ -194,7 +194,7 @@ int main(int argc, char *argv[]) {
 	  lbuf.addr = (uintptr_t)send;
 	  lbuf.size = i;
 	  lbuf.priv = (struct photon_buffer_priv_t){0,0};
-	  photon_get_with_completion(j, i, &lbuf, &rbuf[j], PHOTON_TAG, 0xfacefeed, PHOTON_REQ_PWC_NO_RCE);
+	  photon_get_with_completion(j, i, &lbuf, &rbuf[j], PHOTON_TAG, 0xfacefeed, 0);
 	  send_comp++;
 	  wait_local(NULL);
 	}
