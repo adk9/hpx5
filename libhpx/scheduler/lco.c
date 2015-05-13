@@ -343,7 +343,7 @@ void hpx_lco_reset(hpx_addr_t addr, hpx_addr_t rsync) {
     return;
   }
 
-  int e = hpx_call(addr, hpx_lco_reset_action, rsync, NULL, 0);
+  int e = hpx_call(addr, hpx_lco_reset_action, rsync);
   dbg_check(e, "Could not forward lco_reset\n");
 }
 
