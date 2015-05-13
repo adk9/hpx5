@@ -63,10 +63,10 @@ static sem_t sem;
 // Have one thread poll local completion only, PROTON_PROBE_EVQ
 void *wait_local_completion_thread() {
   photon_rid request;
-  int flag, rc, remaining;
+  int flag, rc, remaining, src;
 
   do {
-    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &request, PHOTON_PROBE_EVQ);
+    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &request, &src, PHOTON_PROBE_EVQ);
     if (rc < 0) {
       exit(1);
     }
@@ -84,11 +84,11 @@ void *wait_local_completion_thread() {
 void *wait_ledger_completions_thread(void *arg) {
   photon_rid request;
   long inputrank = (long)arg;
-  int flag, remaining;
+  int flag, remaining, src;
 
   do {
-    //photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
-    photon_probe_completion(inputrank, &flag, &remaining, &request, PHOTON_PROBE_LEDGER);
+    //photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, &src, PHOTON_PROBE_LEDGER);
+    photon_probe_completion(inputrank, &flag, &remaining, &request, &src, PHOTON_PROBE_LEDGER);
     if (flag && request == 0xcafebabe)
       recvCompT[inputrank]++;
   } while (!DONE);

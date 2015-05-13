@@ -16,6 +16,16 @@
 #include <assert.h>
 #include <err.h>
 
+static void __attribute__((used)) dbg_wait(void) {
+  int i = 0;
+  char hostname[256];
+  gethostname(hostname, sizeof(hostname));
+  printf("PID %d on %s ready for attach\n", getpid(), hostname);
+  fflush(stdout);
+  while (0 == i)
+    sleep(12);
+}
+
 #if defined(linux)
 #define HAVE_SETAFFINITY
 #include <sched.h>
@@ -53,7 +63,9 @@ static int DONE = 0;
 static int *recvCompT;
 static int *gwcCompT;
 static int myrank;
+static int nranks;
 static sem_t sem;
+static int rthreads = 1;
 
 #ifdef HAVE_SETAFFINITY
 static int ncores = 1;                 /* number of CPU cores */
@@ -79,10 +91,10 @@ void *test_thread() {
 // Have one thread poll local completion only, PROTON_PROBE_EVQ
 void *wait_local_completion_thread() {
   photon_rid request;
-  int flag, rc;
+  int flag, rc, src;
 
   do {
-    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, NULL, &request, PHOTON_PROBE_EVQ);
+    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, NULL, &request, &src, PHOTON_PROBE_EVQ);
     if (rc < 0) {
       exit(1);
     }
@@ -100,15 +112,15 @@ void *wait_local_completion_thread() {
 void *wait_ledger_completions_thread(void *arg) {
   photon_rid request;
   long inputrank = (long)arg;
-  int flag;
+  int flag, src;
+  int proc = (nranks > rthreads) ? PHOTON_ANY_SOURCE : inputrank;
   
   do {
-    //photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &request, PHOTON_PROBE_LEDGER);
-    photon_probe_completion(inputrank, &flag, NULL, &request, PHOTON_PROBE_LEDGER);
+    photon_probe_completion(proc, &flag, NULL, &request, &src, PHOTON_PROBE_LEDGER);
     if (flag && request == 0xcafebabe)
-      recvCompT[inputrank]++;
+      recvCompT[src]++;
     if (flag && request == 0xfacefeed)
-      gwcCompT[inputrank]++;
+      gwcCompT[src]++;
   } while (!DONE);
   
   pthread_exit(NULL);
@@ -125,9 +137,17 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nproc);
   myrank = rank;
-
+  nranks = nproc;
+  
+  if (rthreads == 0)
+    rthreads = nproc;
+  
   cfg.nproc = nproc;
   cfg.address = rank;
+
+  //if (myrank == 0) {
+  //  dbg_wait();
+  //}
   
   if (photon_init(&cfg))
     exit(1);
@@ -144,7 +164,7 @@ int main(int argc, char **argv) {
   struct photon_buffer_t rbuf[nproc];
   photon_rid recvReq[nproc], sendReq[nproc];
   char *send, *recv[nproc];
-  pthread_t th, recv_threads[nproc];
+  pthread_t th, recv_threads[rthreads];
   //pthread_t th2;
 
   recvCompT = calloc(nproc, sizeof(int));
@@ -185,8 +205,7 @@ int main(int argc, char **argv) {
   // Create a thread that simultaneously tests for a rendezvous completion
   //pthread_create(&th2, NULL, test_thread, NULL);
   
-  // Create receive threads one per rank
-  for (t=0; t<nproc; t++) {
+  for (t=0; t<rthreads; t++) {
     pthread_create(&recv_threads[t], NULL, wait_ledger_completions_thread, (void*)t);
   }
   
@@ -218,11 +237,11 @@ int main(int argc, char **argv) {
     //printf("Setting LEDGER probe thread affinity to core %d\n", aff_ledg);
     CPU_ZERO(&cpu_set);
     CPU_SET(aff_ledg, &cpu_set);
-    for (i=0; i<nproc; i++)
+    for (i=0; i<rthreads; i++)
       pthread_setaffinity_np(recv_threads[i], sizeof(cpu_set_t), &cpu_set);
   }
   else {
-    for (i=0; i<nproc; i++)
+    for (i=0; i<rthreads; i++)
       pthread_setaffinity_np(recv_threads[i], sizeof(cpu_set_t), &def_set);
   }
 
@@ -284,7 +303,7 @@ int main(int argc, char **argv) {
       }
       
       if (rank <= ns) {
-        if (i && !(sizes[i] % 8)) {
+        if (i && !(sizes[i] == 0)) {
           clock_gettime(CLOCK_MONOTONIC, &time_s);
           for (k=0; k<ITERS; k++) {
 	    if (sem_wait(&sem) == 0) {
@@ -309,7 +328,7 @@ int main(int argc, char **argv) {
 
       MPI_Barrier(MPI_COMM_WORLD);
       
-      if (rank == 0 && i && !(sizes[i] % 8)) {
+      if (rank == 0 && i && !(sizes[i] == 0)) {
         double time_ns = (double)(((time_e.tv_sec - time_s.tv_sec) * 1e9) + (time_e.tv_nsec - time_s.tv_nsec));
         double time_us = time_ns/1e3;
         double latency = time_us/ITERS;

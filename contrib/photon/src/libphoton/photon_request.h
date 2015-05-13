@@ -25,7 +25,6 @@
 #define REQUEST_COOK_SEND    0xff100000
 #define REQUEST_COOK_RECV    0xff200000
 #define REQUEST_COOK_EAGER   0xff300000
-
 #define REQUEST_COOK_ELEDG   0xff400000
 #define REQUEST_COOK_PLEDG   0xff500000
 #define REQUEST_COOK_EBUF    0xff600000
@@ -33,6 +32,7 @@
 #define REQUEST_COOK_FIN     0xff800000
 #define REQUEST_COOK_SINFO   0xff900000
 #define REQUEST_COOK_RINFO   0xffa00000
+#define REQUEST_COOK_GPWC    0xffb00000
 
 #define REQUEST_OP_DEFAULT   0x0000
 #define REQUEST_OP_SENDBUF   (1<<1)
@@ -51,6 +51,7 @@
 #define REQUEST_FLAG_ROP     (1<<7)
 #define REQUEST_FLAG_1PWC    (1<<8)
 #define REQUEST_FLAG_2PWC    (1<<9)
+#define REQUEST_FLAG_CMD     (1<<10)
 
 #define MARK_DONE(e,s)         (sync_fadd(&e->tail, s, SYNC_RELAXED))
 #define EB_MSG_SIZE(s)         (sizeof(struct photon_eb_hdr_t) + s + sizeof(uint8_t))
@@ -90,14 +91,18 @@ typedef struct photon_req_table_t {
   uint32_t  size;
   uint16_t  level;
   struct photon_req_t **reqs;
-  ms_queue_t           *req_q;
-  volatile uint32_t     qcount;
+  two_lock_queue_t     *pwc_q;
+  two_lock_queue_t     *gwc_q;
+  two_lock_queue_t     *comp_q;
+  volatile uint32_t     pcount;
+  volatile uint32_t     gcount;
   tatas_lock_t          tloc;
 } photon_req_table;
 
 typedef struct photon_req_t       * photonRequest;
 typedef struct photon_req_table_t * photonRequestTable;
 
+PHOTON_INTERNAL int photon_request_init(photonConfig cfg);
 PHOTON_INTERNAL photonRequest photon_get_request(int proc);
 PHOTON_INTERNAL photonRequest photon_lookup_request(photon_rid rid);
 PHOTON_INTERNAL int photon_free_request(photonRequest req);
