@@ -8,7 +8,7 @@ AM_LDFLAGS       = $(HPX_JEMALLOC_RPATH) -no-install
 # Turn off some warnings for the tests
 AM_CFLAGS        = -Wno-unused
 
-LIBS = $(HPX_LIBS)
+LIBS = $(HPX_LIBS) $(HPX_LIBFFI_LIBS)
 
 if HAVE_APEX
 AM_CFLAGS           += @APEX_CFLAGS@

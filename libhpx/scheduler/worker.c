@@ -527,7 +527,9 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
   // that does not represent a task.
   while (p == NULL) {
     if (scheduler_is_shutdown(self->sched)) {
+#if defined(HAVE_APEX)
       pthread_cond_broadcast(&release);
+#endif
       _worker_shutdown(self);
     }
 
@@ -852,7 +854,9 @@ static int _checkpoint_yield(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = env;
   parcel_get_stack(prev)->sp = sp;
   sync_two_lock_queue_enqueue(&here->sched->yielded, prev);
+#if defined(HAVE_APEX)
   yielded = false;
+#endif
   return HPX_SUCCESS;
 }
 
@@ -876,7 +880,9 @@ void scheduler_yield(void) {
 }
 
 void hpx_thread_yield(void) {
+#if defined(HAVE_APEX)
   yielded = true;
+#endif
   ++self->stats.yields;
   scheduler_yield();
 }
@@ -962,12 +968,20 @@ static void _unpin_current_target(void) {
 
 void hpx_thread_continue(size_t size, const void *value) {
   _unpin_current_target();
+#ifdef HAVE_APEX
+    apex_profiler_handle dummy = NULL;
+  apex_stop(dummy);
+#endif
   _continue(HPX_SUCCESS, size, value, NULL, NULL);
 }
 
 void hpx_thread_continue_cleanup(size_t size, const void *value,
                                  void (*cleanup)(void*), void *env) {
   _unpin_current_target();
+#ifdef HAVE_APEX
+    apex_profiler_handle dummy = NULL;
+  apex_stop(dummy);
+#endif
   _continue(HPX_SUCCESS, size, value, cleanup, env);
 }
 
