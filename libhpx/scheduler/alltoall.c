@@ -228,8 +228,9 @@ static int _alltoall_getid_proxy_handler(_alltoall_get_offset_t *args, size_t n)
   // parcel to "catch up" to the moving LCO
   hpx_addr_t target = hpx_thread_current_target();
   _alltoall_t *g;
-  if(!hpx_gas_try_pin(target, (void **)&g))
+  if (!hpx_gas_try_pin(target, (void **)&g)) {
      return HPX_RESEND;
+  }
 
   // otherwise we pinned the LCO, extract the arguments from @p args and use the
   // local getid routine
