@@ -875,12 +875,21 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size, const void 
   unreachable();
 }
 
+static void _unpin_current_target(void) {
+  hpx_parcel_t *parcel = self->current;
+  if (action_is_pinned(here->actions, parcel->action)) {
+    hpx_gas_unpin(parcel->target);
+  }
+}
+
 void hpx_thread_continue(size_t size, const void *value) {
+  _unpin_current_target();
   _continue(HPX_SUCCESS, size, value, NULL, NULL);
 }
 
 void hpx_thread_continue_cleanup(size_t size, const void *value,
                                  void (*cleanup)(void*), void *env) {
+  _unpin_current_target();
   _continue(HPX_SUCCESS, size, value, cleanup, env);
 }
 
