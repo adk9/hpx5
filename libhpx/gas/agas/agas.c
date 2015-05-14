@@ -15,6 +15,7 @@
 #endif
 
 #include <stdlib.h>
+#include <string.h>
 #include <libhpx/bitmap.h>
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>

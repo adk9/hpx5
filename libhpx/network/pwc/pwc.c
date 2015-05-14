@@ -15,6 +15,7 @@
 #endif
 
 #include <stdlib.h>
+#include <string.h>
 #include <hpx/builtins.h>
 
 #include <libhpx/action.h>
