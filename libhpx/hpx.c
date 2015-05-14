@@ -302,6 +302,11 @@ int hpx_get_num_threads(void) {
 
 /// Called by the application to terminate the scheduler and network.
 void hpx_shutdown(int code) {
+#ifdef HAVE_APEX
+  // stop the main timer
+  apex_profiler_handle dummy = NULL;
+  apex_stop(dummy);
+#endif
   dbg_assert_str(here->ranks,
                  "hpx_shutdown can only be called when the system is running.\n");
 
