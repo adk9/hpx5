@@ -18,20 +18,15 @@
 #define BUFFER_SIZE 128
 
 // Testcase to test LCO wait and delete functions
-static int _init_array_handler(size_t *args, size_t size) {
+static int _init_array_handler(char *local, size_t *args, size_t size) {
   size_t n = *args;
-  hpx_addr_t target = hpx_thread_current_target();
-  char *local;
-  if (!hpx_gas_try_pin(target, (void**)&local))
-    return HPX_RESEND;
-
   for(int i = 0; i < n; i++)
     local[i] = (HPX_LOCALITY_ID == 0) ? 'a' : 'b';
 
   HPX_THREAD_CONTINUE(local);
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_array,
-                  _init_array_handler, HPX_POINTER, HPX_SIZE_T);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _init_array,
+                  _init_array_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 static int lco_function_handler(void) {
   int size = HPX_LOCALITIES;
