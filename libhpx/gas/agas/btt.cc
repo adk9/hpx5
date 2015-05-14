@@ -51,8 +51,8 @@ bool
 BTT::trypin(gva_t gva, void** lva) {
   uint64_t key = gva_to_key(gva);
   return update_fn(key, [lva](Entry& entry) {
-      entry.count++;
       if (lva) {
+        entry.count++;
         *lva = entry.lva;
       }
     });
