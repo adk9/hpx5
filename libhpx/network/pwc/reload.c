@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <string.h>
 #include <libhpx/config.h>
 #include <libhpx/boot.h>
 #include <libhpx/libhpx.h>
