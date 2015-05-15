@@ -29,16 +29,20 @@ static void HPX_CONSTRUCTOR _init_thread(void) {
 ///
 /// This should be managed in an asm-specific manner.
 typedef struct {
-  void     *alignment; // keep b-byte aligned stack
+  void      *alignment; // keep 8-byte aligned stack
 #ifdef __VFP_FP__
-  void *vfp_alignment;
-  void         *fpscr;
-  void   *vfpregs[16];
+  void  *vfp_alignment;
+  void          *fpscr;
+  void    *vfpregs[16];
 #endif
-  void       *regs[6]; // r6-r11
-  void            *r5; // we use this to hold the parcel that is passed to f()
-  thread_entry_t   r4; // used to hold f(), called by align_stack_trampoline
-  void    (*lr)(void); // return address - set to align_stack_trampoline
+  void        *regs[6]; // r6-r11
+  void             *r5; // we use this to hold the parcel that is passed to f()
+  thread_entry_t    r4; // used to hold f(), called by align_stack_trampoline
+  void     (*lr)(void); // return address - set to align_stack_trampoline
+#ifdef ENABLE_DEBUG
+  void         *top_r4;
+  void (*top_lr)(void);
+#endif
 } HPX_PACKED _frame_t;
 
 static _frame_t *_get_top_frame(ustack_t *thread, size_t size) {
@@ -51,10 +55,15 @@ void thread_init(ustack_t *thread, hpx_parcel_t *parcel, thread_entry_t f,
   // set up the initial stack frame
   _frame_t *frame = _get_top_frame(thread, size);
   assert((uintptr_t)frame % 8 == 0);
-  frame->r4      = (thread_entry_t)f;
+  frame->r4      = (thread_entry_t)f; // register must be the same as the one
+                                      // in align_stack_trampoline
   frame->r5      = parcel;
   frame->lr      = align_stack_trampoline;
-  frame->regs[1] = parcel;
+
+#ifdef ENABLE_DEBUG
+  frame->top_r4 = NULL;
+  frame->top_lr = NULL;
+#endif
 
   // set the stack stuff
   thread->sp        = frame;
