@@ -78,6 +78,12 @@ bool action_is_interrupt(const struct action_table *, hpx_action_t)
 bool action_is_function(const struct action_table *, hpx_action_t)
   HPX_NON_NULL(1);
 
+/// Is the action a priority action?                                                        
+bool action_is_priority(const struct action_table *const,
+                        const hpx_action_t)
+  HPX_NON_NULL(1);
+
+
 /// Build an action table.
 ///
 /// This will process all of the registered actions, sorting them by key and

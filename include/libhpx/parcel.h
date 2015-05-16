@@ -187,6 +187,11 @@ static inline void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *p) {
   *stack = p;
 }
 
+/// Check if a parcel stack is empty.
+bool parcel_stack_empty(hpx_parcel_t **stack)
+  HPX_NON_NULL(1);
+
+
 static inline uint32_t parcel_size(const hpx_parcel_t *p) {
   return sizeof(*p) + p->size;
 }

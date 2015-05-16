@@ -74,6 +74,8 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
 #define HPX_MARSHALLED 0x1
 // Action automatically pins memory.
 #define HPX_PINNED     0x2
+//Action treated as priority 
+#define HPX_PLUG_PRIORITY 0x4 
 //@}
 
 /// Register an HPX action of a given @p type.

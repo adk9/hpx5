@@ -248,16 +248,21 @@ static hpx_parcel_t *_try_bind(hpx_parcel_t *p) {
 }
 
 /// Add a parcel to the top of the worker's work queue.
-static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
+static void _spawn(struct worker *w, hpx_parcel_t *p) {
   dbg_assert(p->target != HPX_NULL);
   dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
   DEBUG_IF(action_is_task(here->actions, p->action)) {
     dbg_assert(!parcel_get_stack(p));
   }
 
-  uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
-  self->work_first = (size >= here->sched->wf_threshold);
+  if (action_is_priority(here->actions, hpx_parcel_get_action(p)) && self->sched->p_sched.on) {
+    w->sched->p_sched.work_consume(p);
+  } else {
+    uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
+    self->work_first = (size >= here->sched->wf_threshold);
+  }
 }
+
 
 /// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *_schedule_lifo(struct worker *w) {
@@ -311,7 +316,7 @@ static void _handle_mail(struct worker *w) {
   while ((parcels = sync_two_lock_queue_dequeue(&w->inbox))) {
     while ((p = parcel_stack_pop(&parcels))) {
       profile_ctr(++self->stats.mail);
-      _spawn_lifo(w, p);
+      _spawn(w, p);
     }
   }
 }
@@ -385,7 +390,7 @@ static int _run_task(hpx_parcel_t *to, void *sp, void *env) {
   }
   else {
     parcel_get_stack(from)->sp = sp;
-    _spawn_lifo(self, from);
+    _spawn(self, from);
   }
 
   self->current = env;
@@ -519,12 +524,31 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
       continue;
     }
 
+    // if there is priority work, process it
+    if (self->sched->p_sched.on) p = self->sched->p_sched.work_produce();
+    if (p) {
+      p = _try_task(p);
+      continue;
+    }
+
+    // try to fetch work from the network   
+    if (network_probe(here->network, here->rank)) continue;
+
+
     // we prioritize yielded threads over stealing
     p = _schedule_yielded(self);
     if (p) {
       p = _try_task(p);
       continue;
     }
+
+    // try to steal priority work
+    if (self->sched->p_sched.on) p = self->sched->p_sched.work_steal();
+    if (p) {
+      p = _try_task(p);
+      continue;
+    }
+
 
     // try to steal some work
     p = _schedule_steal(self);
@@ -698,7 +722,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   // before hpx_run() without worrying about weird work-first or interrupt
   // effects.
   if (!self->sp) {
-    _spawn_lifo(self, p);
+    _spawn(self, p);
     return;
   }
 
@@ -712,7 +736,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   // buffer this parcel. It will get pulled from the buffer later for
   // processing.
   if (!self->work_first || scheduler_is_shutdown(self->sched)) {
-    _spawn_lifo(self, p);
+    _spawn(self, p);
     return;
   }
 
@@ -731,20 +755,20 @@ void scheduler_spawn(hpx_parcel_t *p) {
   //        make sense to hoist the _try_task() farther up this decision tree.
   hpx_parcel_t *current = self->current;
   if (action_is_task(here->actions, current->action)) {
-    _spawn_lifo(self, p);
+    _spawn(self, p);
     return;
   }
 
   // 2) We can't work-first if we are holding an LCO lock.
   ustack_t *thread = parcel_get_stack(current);
   if (thread->lco_depth) {
-    _spawn_lifo(self, p);
+    _spawn(self, p);
     return;
   }
 
   // 3) We can't work-first from an interrupt.
   if (action_is_interrupt(here->actions, current->action)) {
-    _spawn_lifo(self, p);
+    _spawn(self, p);
     return;
   }
 

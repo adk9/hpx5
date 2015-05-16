@@ -48,6 +48,13 @@ struct cvar;
 typedef two_lock_queue_t yield_queue_t;
 /// @}
 
+typedef struct priority_plugin {
+  hpx_parcel_t* (*work_produce)();
+  void (*work_consume)(hpx_parcel_t *const);
+  hpx_parcel_t* (*work_steal)();
+  bool on;
+} priority_plugin_t;
+
 /// The scheduler class.
 ///
 /// The scheduler class represents the shared-memory state of the entire
@@ -70,6 +77,7 @@ struct scheduler {
   system_barrier_t    barrier;
   struct worker      *workers;
   scheduler_stats_t     stats;
+  priority_plugin_t   p_sched;
 };
 
 /// Allocate and initialize a new scheduler.

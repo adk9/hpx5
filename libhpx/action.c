@@ -365,6 +365,21 @@ bool action_is_function(const struct action_table *table, hpx_action_t id) {
   return (action_table_get_type(table, id) == HPX_FUNCTION);
 }
 
+bool action_is_priority(const struct action_table *const table,
+                        const hpx_action_t id) {
+  if (id == HPX_ACTION_INVALID) {
+    //dbg_log("action registration is not complete");                                      
+    return id;
+  }
+
+  if (id < table->n) {
+    return (table->entries[id].attr & HPX_PLUG_PRIORITY);
+  }
+  
+  dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n);
+  return HPX_ACTION_INVALID;
+}
+
 int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
                         hpx_action_t *id, hpx_action_handler_t f,
                         unsigned int nargs, ...) {

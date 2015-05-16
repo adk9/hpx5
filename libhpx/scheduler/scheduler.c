@@ -27,6 +27,13 @@
 #include <libhpx/scheduler.h>
 #include "thread.h"
 
+static void _priority_plugin_init(priority_plugin_t *p_sched) {
+  p_sched->work_produce = NULL;
+  p_sched->work_consume = NULL;
+  p_sched->work_steal   = NULL;
+  p_sched->on           = false;
+}
+
 struct scheduler *scheduler_new(const config_t *cfg) {
   const int workers = cfg->threads;
 
@@ -69,6 +76,8 @@ struct scheduler *scheduler_new(const config_t *cfg) {
   s->n_workers    = workers;
   s->wf_threshold = cfg->wfthreshold;
   scheduler_stats_init(&s->stats);
+
+  _priority_plugin_init(&s->p_sched);
 
   thread_set_stack_size(cfg->stacksize);
   log_sched("initialized a new scheduler.\n");

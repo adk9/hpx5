@@ -103,6 +103,10 @@ void hpx_abort(void)
   HPX_NORETURN;
 
 
+void hpx_set_priority_scheduler(hpx_parcel_t* (*work_produce)(),
+				void (*work_consume)(hpx_parcel_t*),
+				hpx_parcel_t* (*work_steal)());
+
 /// Print the help string associated with the runtime configuration
 /// options supported by the HPX runtime.
 ///

@@ -324,3 +324,13 @@ const char *hpx_strerror(hpx_status_t s) {
    default: return "HPX undefined error value";
   }
 }
+
+void hpx_set_priority_scheduler(hpx_parcel_t* (*work_produce)(),
+                                void (*work_consume)(hpx_parcel_t*),
+                                hpx_parcel_t* (*work_steal)()) {
+  here->sched->p_sched.work_produce = work_produce;
+  here->sched->p_sched.work_consume = work_consume;
+  here->sched->p_sched.work_steal   = work_steal;
+  here->sched->p_sched.on           = true;
+}
+
