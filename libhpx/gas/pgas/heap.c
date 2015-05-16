@@ -107,7 +107,7 @@ heap_init(heap_t *heap, size_t size) {
 
   size_t log2_bytes_per_chunk = 0;
   size_t sz = sizeof(log2_bytes_per_chunk);
-  mallctl("opt.lg_chunk", &log2_bytes_per_chunk, &sz, NULL, 0);
+  je_mallctl("opt.lg_chunk", &log2_bytes_per_chunk, &sz, NULL, 0);
   heap->bytes_per_chunk = 1lu << log2_bytes_per_chunk;
   log_gas("heap bytes per chunk is %zu\n", heap->bytes_per_chunk);
 
