@@ -67,6 +67,7 @@
 /// @file libhpx/scheduler/allgather.c
 /// @brief Defines the allgather LCO.
 #include <assert.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -339,7 +340,7 @@ hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size) {
   dbg_assert_str(gva, "Could not malloc global memory\n");
   if (!hpx_gas_try_pin(gva, (void**)&g)) {
     int e = hpx_call_sync(gva, _allgather_init_async, NULL, 0, &inputs, &size);
-    dbg_check(e, "couldn't initialize allgather at %lu\n", gva);
+    dbg_check(e, "couldn't initialize allgather at %"PRIu64"\n", gva);
   }
   else {
     _allgather_init_handler(g, inputs, size);

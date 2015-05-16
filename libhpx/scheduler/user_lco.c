@@ -17,6 +17,7 @@
 /// @file libhpx/scheduler/user_lco.c
 /// @brief A user-defined LCO.
 #include <assert.h>
+#include <inttypes.h>
 #include <string.h>
 
 #include <libhpx/action.h>
@@ -232,7 +233,7 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
   if (!hpx_gas_try_pin(gva, (void**)&u)) {
     int e = hpx_call_sync(gva, _user_lco_init_async, NULL, 0, &size, &id, &op,
                           &predicate);
-    dbg_check(e, "could not initialize an allreduce at %lu\n", gva);
+    dbg_check(e, "could not initialize an allreduce at %"PRIu64"\n", gva);
   }
   else {
     _user_lco_init_handler(u, size, id, op, predicate);
