@@ -102,7 +102,8 @@ static void _and_set(lco_t *lco, int size, const void *from) {
     lco_unlock(&and->lco);
   }
   else {
-    dbg_assert_str(value > 0, "too many threads joined (%ld).\n", value);
+    dbg_assert_str(value > 0, "too many threads joined (%"PRIdPTR").\n",
+                   value);
   }
 }
 
@@ -166,7 +167,7 @@ hpx_addr_t hpx_lco_and_new(int64_t limit) {
 
   if (!hpx_gas_try_pin(gva, (void**)&and)) {
     int e = hpx_call_sync(gva, _and_init_async, NULL, 0, &limit);
-    dbg_check(e, "could not initialize an and gate at %lu\n", gva);
+    dbg_check(e, "could not initialize an and gate at %"PRIu64"\n", gva);
   }
   else {
     _and_init_handler(and, limit);

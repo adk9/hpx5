@@ -18,6 +18,7 @@
 /// Defines the future structure.
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -237,7 +238,7 @@ hpx_addr_t hpx_lco_future_new(int size) {
 
   if (!hpx_gas_try_pin(gva, (void**)&future)) {
     int e = hpx_call_sync(gva, _future_init_async, NULL, 0, &size);
-    dbg_check(e, "could not initialize a future at %lu\n", gva);
+    dbg_check(e, "could not initialize a future at %"PRIu64"\n", gva);
   }
   else {
     _future_init_handler(future, size);
