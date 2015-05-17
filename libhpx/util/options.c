@@ -56,7 +56,7 @@ static const char *_getenv_upper(const char * const var) {
   const char *c = NULL;
   const size_t len = strlen(var);
   char *uvar = malloc(len + 1);
-  dbg_assert_str(uvar, "Could not malloc %lu bytes during option parsing", len);
+  dbg_assert_str(uvar, "Could not malloc %zu bytes during option parsing", len);
   for (int i = 0; i < len; ++i) {
     uvar[i] = toupper(var[i]);
   }

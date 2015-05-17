@@ -17,6 +17,7 @@
 /// @file libhpx/scheduler/sema.c
 /// @brief Implements the semaphore LCO.
 #include <assert.h>
+#include <inttypes.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
@@ -79,7 +80,7 @@ hpx_addr_t hpx_lco_sema_new(unsigned count) {
 
   if (!hpx_gas_try_pin(gva, (void**)&sema)) {
     int e = hpx_call_sync(gva, _sema_init_async, NULL, 0, &count);
-    dbg_check(e, "could not initialize a future at %lu\n", gva);
+    dbg_check(e, "could not initialize a future at %"PRIu64"\n", gva);
   }
   else {
     _sema_init_handler(sema, count);

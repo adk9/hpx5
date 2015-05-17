@@ -430,7 +430,7 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   // get the chunk size from jemalloc
   size_t log2_bytes_per_chunk = 0;
   size_t sz = sizeof(log2_bytes_per_chunk);
-  mallctl("opt.lg_chunk", &log2_bytes_per_chunk, &sz, NULL, 0);
+  je_mallctl("opt.lg_chunk", &log2_bytes_per_chunk, &sz, NULL, 0);
   agas->chunk_size = 1lu << log2_bytes_per_chunk;
 
   size_t heap_size = 1lu << GVA_OFFSET_BITS;
