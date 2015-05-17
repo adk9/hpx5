@@ -131,10 +131,6 @@ static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_block,
 
 static int _init_memory_handler(uint32_t *args, size_t n) {
   hpx_addr_t local = hpx_thread_current_target();
-  uint32_t block_size = args[0];
-  uint32_t block_bytes = block_size * sizeof(uint32_t);
-  uint32_t blocks = args[1];
-
   hpx_call_sync(local, _init_block, NULL, 0, args, sizeof(*args));
   return HPX_SUCCESS;
 }
