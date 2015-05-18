@@ -16,19 +16,35 @@ static int photon_pwc_try_packed(photonRequest req);
 static int photon_pwc_try_gwc(photonRequest req);
 static int photon_pwc_handle_comp_req(photonRequest req, int *flag, photon_rid *r);
 
+two_lock_queue_t *comp_q;
+
 int photon_pwc_init(photonConfig cfg) {
+  comp_q = sync_two_lock_queue_new();
+  if (!comp_q) {
+    log_err("Could not allocate PWC completion queue");
+    goto error_exit;
+  }
   return PHOTON_OK;
+
+ error_exit:
+  return PHOTON_ERROR;
 }
 
 int photon_pwc_add_req(photonRequest req) {
-  photonRequestTable rt;
-  rt = photon_processes[req->proc].request_table;
-  sync_two_lock_queue_enqueue(rt->comp_q, req);
+
+  //photonRequestTable rt;
+  //rt = photon_processes[req->proc].request_table;
+  //sync_two_lock_queue_enqueue(rt->comp_q, req);
+
+  sync_two_lock_queue_enqueue(comp_q, req);
   dbg_trace("Enqueing completed request: 0x%016lx", req->id);
   return PHOTON_OK;
 }
 
 photonRequest photon_pwc_pop_req(int proc) {
+  return sync_two_lock_queue_dequeue(comp_q);
+
+  /*
   photonRequest req;
   photonRequestTable rt;
   int i, start, end;
@@ -52,6 +68,7 @@ photonRequest photon_pwc_pop_req(int proc) {
   }
 
   return NULL;
+  */
 }
 
 static int photon_pwc_check_gwc_align(photonBuffer lbuf, photonBuffer rbuf, uint64_t size) {
@@ -82,6 +99,8 @@ static int photon_pwc_gwc_put(photonRequest req) {
   uintptr_t eager_addr;
   uint8_t *tail;
   int rc, offset, moffset;
+
+  dbg_info("Performing GWC-PUT");
 
   // the payload is the local and remote GWC buffers
   ssize = sizeof(req->local_info.buf) + sizeof(req->remote_info.buf);
