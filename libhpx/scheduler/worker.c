@@ -254,8 +254,9 @@ static void _spawn(struct worker *w, hpx_parcel_t *p) {
   DEBUG_IF(action_is_task(here->actions, p->action)) {
     dbg_assert(!parcel_get_stack(p));
   }
-
-  if (action_is_priority(here->actions, hpx_parcel_get_action(p)) && self->sched->p_sched.on) {
+  // && self->sched->p_sched.on) {
+  if (action_is_priority(here->actions, hpx_parcel_get_action(p) )) {
+    //printf("calling priority scheduler function\n");
     w->sched->p_sched.work_consume(p);
   } else {
     uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
