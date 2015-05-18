@@ -100,7 +100,7 @@ static int photon_pwc_gwc_put(photonRequest req) {
   uint8_t *tail;
   int rc, offset, moffset;
 
-  dbg_info("Performing GWC-PUT");
+  dbg_trace("Performing GWC-PUT for req: 0x%016lx", req->id);
 
   // the payload is the local and remote GWC buffers
   ssize = sizeof(req->local_info.buf) + sizeof(req->remote_info.buf);
