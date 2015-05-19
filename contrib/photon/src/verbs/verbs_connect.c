@@ -191,6 +191,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
       }
       if (found) {
 	photon_free_devlist(dlist);
+	ibv_free_device_list(dev_list);
 	break;
       }
       else {
@@ -342,7 +343,7 @@ int __verbs_create_connect_info(verbs_cnct_ctx *ctx) {
 
   for(iproc=0; iproc < (_photon_nproc + _photon_nforw); ++iproc) {
 
-    ctx->local_ci[iproc] = (verbs_cnct_info *)malloc( MAX_QP*sizeof(verbs_cnct_info) );
+    ctx->local_ci[iproc] = (verbs_cnct_info *)calloc(MAX_QP, sizeof(verbs_cnct_info));
     if( !ctx->local_ci[iproc] ) {
       goto error_exit;
     }
@@ -385,6 +386,8 @@ int __verbs_create_connect_info(verbs_cnct_ctx *ctx) {
       goto error_exit;
     }
   }
+
+  freeifaddrs(ifaddr);
   return PHOTON_OK;
 
 error_exit:
