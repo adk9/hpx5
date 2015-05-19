@@ -119,7 +119,7 @@
    ...
    fun:verbs_init
    fun:_photon_init
-   fun:main
+   ...
 }
 {
    <insert_a_suppression_name_here>
@@ -127,5 +127,5 @@
    ...
    fun:verbs_init
    fun:_photon_init
-   fun:main
+   ...
 }
