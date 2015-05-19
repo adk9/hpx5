@@ -411,6 +411,7 @@ static hpx_parcel_t *_try_task(hpx_parcel_t *p) {
   dbg_assert(!parcel_get_stack(p));
 
   void **sp = &self->sp;
+  INST_EVENT_PARCEL_RUN((hpx_parcel_t*)&sp);
   int e = thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
   dbg_check(e, "Error post _try_task: %s\n", hpx_strerror(e));
   return NULL;
