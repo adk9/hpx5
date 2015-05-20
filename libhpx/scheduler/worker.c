@@ -507,6 +507,7 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
   }
 
   hpx_parcel_t *p = NULL;
+  int execute_lifo = 1;
 
   // We spin in the scheduler processing tasks, until we find a parcel to run
   // that does not represent a task.
@@ -519,15 +520,21 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
     _handle_mail(self);
 
     // if there is any LIFO work, process it
+    if(!execute_lifo) goto run_priority;
     p = _schedule_lifo(self);
     if (p) {
+      //printf("LIfo called\n");
+      execute_lifo = 0;
       p = _try_task(p);
       continue;
     }
 
     // if there is priority work, process it
+  run_priority:
     if (self->sched->p_sched.on) p = self->sched->p_sched.work_produce();
     if (p) {
+      execute_lifo = 1;
+      //printf("calling work produce from scheduler\n");
       p = _try_task(p);
       continue;
     }
@@ -539,6 +546,7 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
     // we prioritize yielded threads over stealing
     p = _schedule_yielded(self);
     if (p) {
+      //printf("thread yield called\n");
       p = _try_task(p);
       continue;
     }
@@ -546,14 +554,16 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
     // try to steal priority work
     if (self->sched->p_sched.on) p = self->sched->p_sched.work_steal();
     if (p) {
+      //printf("calling priority steal function\n");
       p = _try_task(p);
       continue;
     }
-
+    
 
     // try to steal some work
     p = _schedule_steal(self);
     if (p) {
+      //printf("Calling normal stealing\n");
       p = _try_task(p);
       continue;
     }
