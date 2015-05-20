@@ -16,9 +16,9 @@
 #include <hpx/hpx.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/instrumentation_events.h>
+#include <libhpx/scheduler.h> // for scheduler_nop
 
 struct ustack;
-
 
 typedef uint16_t parcel_state_t;
 
@@ -97,6 +97,9 @@ struct hpx_parcel {
 /// Parcel tracing events.
 /// @{
 static inline void INST_EVENT_PARCEL_CREATE(hpx_parcel_t *p) {
+  if (p->action == scheduler_nop) {
+    return;
+  }
   static const int class = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_CREATE;
   inst_trace(class, id, p->id, p->action, p->size);
@@ -115,14 +118,35 @@ static inline void INST_EVENT_PARCEL_RECV(hpx_parcel_t *p) {
 }
 
 static inline void INST_EVENT_PARCEL_RUN(hpx_parcel_t *p) {
+  if (NULL == p || p->action == scheduler_nop) {
+    return;
+  }
   static const int class = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_RUN;
   inst_trace(class, id, p->id, p->action, p->size);
 }
 
 static inline void INST_EVENT_PARCEL_END(hpx_parcel_t *p) {
+  if (p->action == scheduler_nop) {
+    return;
+  }
   static const int class = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_END;
+  inst_trace(class, id, p->id, p->action);
+}
+
+static inline void INST_EVENT_PARCEL_SUSPEND(hpx_parcel_t *p) {
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_SUSPEND;
+  inst_trace(class, id, p->id, p->action);
+}
+
+static inline void INST_EVENT_PARCEL_RESUME(hpx_parcel_t *p) {
+  if (p->action == scheduler_nop) {
+    return;
+  }
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_RESUME;
   inst_trace(class, id, p->id, p->action);
 }
 /// @}
