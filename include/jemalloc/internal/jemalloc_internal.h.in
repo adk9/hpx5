@@ -126,6 +126,13 @@ static const bool config_ivsalloc =
     false
 #endif
     ;
+static const bool config_cache_oblivious =
+#ifdef JEMALLOC_CACHE_OBLIVIOUS
+    true
+#else
+    false
+#endif
+    ;
 
 #ifdef JEMALLOC_C11ATOMICS
 #include <stdatomic.h>
@@ -941,7 +948,7 @@ ivsalloc(const void *ptr, bool demote)
 	extent_node_t *node;
 
 	/* Return 0 if ptr is not within a chunk managed by jemalloc. */
-	node = chunk_lookup(CHUNK_ADDR2BASE(ptr));
+	node = chunk_lookup(ptr, false);
 	if (node == NULL)
 		return (0);
 	/* Only arena chunks should be looked up via interior pointers. */
