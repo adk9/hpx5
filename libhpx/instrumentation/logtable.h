@@ -32,7 +32,7 @@ typedef struct {
 } logtable_t;
 
 #define LOGTABLE_INIT {                         \
-    .start = {0},                               \
+    .start = HPX_TIME_INIT,                     \
     .fd = -1,                                   \
     .class = -1,                                \
     .id = -1,                                   \
