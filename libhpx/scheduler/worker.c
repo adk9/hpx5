@@ -263,9 +263,6 @@ static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
 static hpx_parcel_t *_schedule_lifo(struct worker *w) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&w->work);
   inst_trace(INST_SCHED, INST_SCHED_WQSIZE, sync_chase_lev_ws_deque_size(&w->work));
-  if (p != NULL) {
-    INST_EVENT_PARCEL_RUN(p);
-  }
   return p;
 }
 
@@ -414,6 +411,7 @@ static hpx_parcel_t *_try_task(hpx_parcel_t *p) {
   dbg_assert(!parcel_get_stack(p));
 
   void **sp = &self->sp;
+  INST_EVENT_PARCEL_RUN((hpx_parcel_t*)&sp);
   int e = thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
   dbg_check(e, "Error post _try_task: %s\n", hpx_strerror(e));
   return NULL;
@@ -470,6 +468,12 @@ static hpx_parcel_t *_schedule_in_lco(hpx_parcel_t *final) {
 
   p = _get_nop_parcel();
  exit:
+  if (parcel_get_stack(p)) {
+    INST_EVENT_PARCEL_RESUME(p);
+  }
+  else {
+    INST_EVENT_PARCEL_RUN(p);
+  }
   dbg_assert(p);
   return _try_bind(p);
 }
@@ -547,6 +551,12 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
     p = _get_nop_parcel();
   }
 
+  if (parcel_get_stack(p)) {
+    INST_EVENT_PARCEL_RESUME(p);
+  }
+  else {
+    INST_EVENT_PARCEL_RUN(p);
+  }
   return _try_bind(p);
 }
 
@@ -788,6 +798,7 @@ void scheduler_yield(void) {
     return;
   }
 
+  INST_EVENT_PARCEL_SUSPEND(from);
   hpx_parcel_t *to = _schedule(false, from);
   if (from == to)
     return;
@@ -814,6 +825,8 @@ static int _unlock(hpx_parcel_t *to, void *sp, void *env) {
 }
 
 hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
+  INST_EVENT_PARCEL_SUSPEND(self->current);
+
   // push the current thread onto the condition variable---no lost-update
   // problem here because we're holing the @p lock
   ustack_t *thread = parcel_get_stack(self->current);

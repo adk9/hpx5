@@ -96,7 +96,7 @@ typedef struct inst_named_value {
   const char type;
   const uint32_t value;
   const char name[8];
-} inst_named_value_t;
+} HPX_PACKED inst_named_value_t;
 
 typedef struct inst_event_col_metadata {
   const char mask; // this should an OR of all the following values:
@@ -296,6 +296,32 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
 
 // typeof(PARCEL_END_METADATA) == inst_event_metadata_t 
 #define PARCEL_END_METADATA {                                      \
+    .num_cols = 6,                                                 \
+    .col_metadata = {                                              \
+      INST_EVENT_COL_METADATA_WORKER,                              \
+      INST_EVENT_COL_METADATA_NS,                                  \
+      METADATA_PARCEL_ID,                                          \
+      METADATA_PARCEL_ACTION,                                      \
+      INST_EVENT_COL_METADATA_EMPTY2,                              \
+      INST_EVENT_COL_METADATA_EMPTY3                               \
+    }                                                              \
+}
+
+// typeof(PARCEL_SUSPEND_METADATA) == inst_event_metadata_t 
+#define PARCEL_SUSPEND_METADATA {                                  \
+    .num_cols = 6,                                                 \
+    .col_metadata = {                                              \
+      INST_EVENT_COL_METADATA_WORKER,                              \
+      INST_EVENT_COL_METADATA_NS,                                  \
+      METADATA_PARCEL_ID,                                          \
+      METADATA_PARCEL_ACTION,                                      \
+      INST_EVENT_COL_METADATA_EMPTY2,                              \
+      INST_EVENT_COL_METADATA_EMPTY3                               \
+    }                                                              \
+}
+
+// typeof(PARCEL_RESUME_METADATA) == inst_event_metadata_t 
+#define PARCEL_RESUME_METADATA {                                   \
     .num_cols = 6,                                                 \
     .col_metadata = {                                              \
       INST_EVENT_COL_METADATA_WORKER,                              \
