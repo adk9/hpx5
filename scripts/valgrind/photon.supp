@@ -115,6 +115,28 @@
 }
 {
    <insert_a_suppression_name_here>
+   Memcheck:Param
+   write(buf)
+   ...
+   fun:ibv_*
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:network_new
+   ...
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   ...
+   fun:photon_put_with_completion
+   ...
+}
+{
+   <insert_a_suppression_name_here>
    Memcheck:Value8
    ...
    fun:verbs_init
