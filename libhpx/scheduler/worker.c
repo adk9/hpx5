@@ -184,8 +184,13 @@ static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
   // Tasks are unusual because we run them from the _run_task continuation,
   // which always runs "below" sp on the stack. This gets released in
   // _worker_shutdown.
+  // 
+  // If we're in a debug build, don't register to avoid an issue
+  // registering the VG stack.
+#ifndef ENABLE_DEBUG
   void *base = (char*)sp - here->config->stacksize;
   network_register_dma(here->network, base, here->config->stacksize, NULL);
+#endif
 
   return HPX_SUCCESS;
 }
@@ -361,8 +366,10 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
 /// This will transfer back to the original system stack, returning the shutdown
 /// code. We release our registration of the pthread stack here as well.
 static void _worker_shutdown(struct worker *w) {
+#ifndef ENABLE_DEBUG
   void *base = (char*)w->sp - here->config->stacksize;
   network_release_dma(here->network, base, here->config->stacksize);
+#endif
 
   void **sp = &w->sp;
   intptr_t shutdown = sync_load(&w->sched->shutdown, SYNC_ACQUIRE);
