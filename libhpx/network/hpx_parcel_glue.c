@@ -30,7 +30,6 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
 }
 
 hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p) {
-  INST_EVENT_PARCEL_SEND(p);
   return parcel_launch(p);
 }
 
