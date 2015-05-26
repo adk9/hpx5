@@ -130,7 +130,13 @@ static hpx_parcel_t *_get_nop_parcel(void) {
 /// The entry function for all interrupts.
 ///
 static void _execute_interrupt(hpx_parcel_t *p) {
+  if (p->action != scheduler_nop) {
+    INST_EVENT_PARCEL_RUN(p);
+  }
   int e = action_execute(p);
+  if (p->action != scheduler_nop) {
+    INST_EVENT_PARCEL_END(p);
+  }
   switch (e) {
    case HPX_SUCCESS:
     log_sched("completed interrupt\n");
@@ -151,6 +157,9 @@ static void _execute_interrupt(hpx_parcel_t *p) {
 ///
 /// @param       parcel The parcel that describes the thread to run.
 static void _execute_thread(hpx_parcel_t *p) {
+  if (p->action != scheduler_nop) {
+    INST_EVENT_PARCEL_RUN(p);
+  }
   int e = action_execute(p);
   switch (e) {
     default:
@@ -332,9 +341,6 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   if (stack) {
     _put_stack(self, stack);
   }
-  if (prev->action != scheduler_nop) {
-    INST_EVENT_PARCEL_END(prev);
-  }
   hpx_parcel_release(prev);
   int status = (intptr_t)env;
   return status;
@@ -373,6 +379,9 @@ static void _worker_shutdown(struct worker *w) {
 
   void **sp = &w->sp;
   intptr_t shutdown = sync_load(&w->sched->shutdown, SYNC_ACQUIRE);
+  if (self->current->action != scheduler_nop) {
+    INST_EVENT_PARCEL_END(self->current);
+  }
   thread_transfer((hpx_parcel_t*)&sp, _free_parcel, (void*)shutdown);
   unreachable();
 }
@@ -418,7 +427,9 @@ static hpx_parcel_t *_try_task(hpx_parcel_t *p) {
   dbg_assert(!parcel_get_stack(p));
 
   void **sp = &self->sp;
-  INST_EVENT_PARCEL_RUN((hpx_parcel_t*)&sp);
+
+  // No instrumentation for suspend here since thread is already recorded as 
+  // suspended (we mark the suspend before the call to _schedule).
   int e = thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
   dbg_check(e, "Error post _try_task: %s\n", hpx_strerror(e));
   return NULL;
@@ -475,12 +486,6 @@ static hpx_parcel_t *_schedule_in_lco(hpx_parcel_t *final) {
 
   p = _get_nop_parcel();
  exit:
-  if (parcel_get_stack(p)) {
-    INST_EVENT_PARCEL_RESUME(p);
-  }
-  else {
-    INST_EVENT_PARCEL_RUN(p);
-  }
   dbg_assert(p);
   return _try_bind(p);
 }
@@ -558,12 +563,6 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
     p = _get_nop_parcel();
   }
 
-  if (parcel_get_stack(p)) {
-    INST_EVENT_PARCEL_RESUME(p);
-  }
-  else {
-    INST_EVENT_PARCEL_RUN(p);
-  }
   return _try_bind(p);
 }
 
@@ -770,7 +769,9 @@ void scheduler_spawn(hpx_parcel_t *p) {
   // we're supposed to transition out of work-first scheduling.
   uint64_t size = sync_chase_lev_ws_deque_size(&self->work);
   self->work_first = (size >= self->sched->wf_threshold);
+  INST_EVENT_PARCEL_SUSPEND(current);
   int e = thread_transfer(_try_bind(p), _work_first, NULL);
+  INST_EVENT_PARCEL_RESUME(current);
   dbg_check(e, "Detected a work-first scheduling error: %s\n", hpx_strerror(e));
 }
 
@@ -805,7 +806,6 @@ void scheduler_yield(void) {
     return;
   }
 
-  INST_EVENT_PARCEL_SUSPEND(from);
   hpx_parcel_t *to = _schedule(false, from);
   if (from == to)
     return;
@@ -815,6 +815,7 @@ void scheduler_yield(void) {
   dbg_assert(parcel_get_stack(to)->sp);
   // transfer to the new thread
   thread_transfer(to, _checkpoint_yield, from);
+  // note that we don't instrument yields because they overwhelm tracing
 }
 
 void hpx_thread_yield(void) {
@@ -832,8 +833,6 @@ static int _unlock(hpx_parcel_t *to, void *sp, void *env) {
 }
 
 hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
-  INST_EVENT_PARCEL_SUSPEND(self->current);
-
   // push the current thread onto the condition variable---no lost-update
   // problem here because we're holing the @p lock
   ustack_t *thread = parcel_get_stack(self->current);
@@ -842,8 +841,10 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
 
   // if we successfully pushed, then do a transfer away from this thread
   if (status == HPX_SUCCESS) {
+    INST_EVENT_PARCEL_SUSPEND(self->current);
     hpx_parcel_t *to = _schedule(true, NULL);
     thread_transfer(to, _unlock, (void*)lock);
+    INST_EVENT_PARCEL_RESUME(self->current);
     sync_lockable_ptr_lock(lock);
     status = cvar_get_error(condition);
   }
@@ -891,6 +892,9 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size, const void 
   dbg_assert(to);
   dbg_assert(parcel_get_stack(to));
   dbg_assert(parcel_get_stack(to)->sp);
+  if (parcel->action != scheduler_nop) {
+    INST_EVENT_PARCEL_END(parcel);
+  }
   thread_transfer(to, _free_parcel, (void*)(intptr_t)status);
   unreachable();
 }
@@ -922,6 +926,8 @@ void hpx_thread_exit(int status) {
     //      task inside of schedule() which would cause the current task to be
     //      freed.
     hpx_parcel_t *to = _schedule(true, NULL);
+    INST_EVENT_PARCEL_END(parcel); // assuming action != scheduler_nop
+    INST_EVENT_PARCEL_RESEND(parcel);
     thread_transfer(to, _resend_parcel, parcel);
     unreachable();
   }
@@ -1019,8 +1025,10 @@ void hpx_thread_set_affinity(int affinity) {
     return;
   }
 
+  INST_EVENT_PARCEL_SUSPEND(self->current);
   hpx_parcel_t *to = _schedule(false, NULL);
   thread_transfer(to, _move_to, (void*)(intptr_t)affinity);
+  INST_EVENT_PARCEL_RESUME(self->current);
 }
 
 /// This transfer handler is the right place to put all debug, logging, and
