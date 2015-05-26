@@ -111,6 +111,12 @@ static inline void INST_EVENT_PARCEL_SEND(hpx_parcel_t *p) {
   inst_trace(class, id, p->id, p->action, p->size, p->target);
 }
 
+static inline void INST_EVENT_PARCEL_RESEND(hpx_parcel_t *p) {
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_RESEND;
+  inst_trace(class, id, p->id, p->action, p->size, p->target);
+}
+
 static inline void INST_EVENT_PARCEL_RECV(hpx_parcel_t *p) {
   static const int class = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_RECV;
