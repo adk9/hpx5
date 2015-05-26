@@ -161,9 +161,6 @@ static void _execute_thread(hpx_parcel_t *p) {
     INST_EVENT_PARCEL_RUN(p);
   }
   int e = action_execute(p);
-  //  if (p->action != scheduler_nop) {
-  //    INST_EVENT_PARCEL_END(p);
-  //  }
   switch (e) {
     default:
      dbg_error("thread produced unhandled error %s.\n", hpx_strerror(e));
