@@ -424,6 +424,8 @@ static hpx_parcel_t *_try_task(hpx_parcel_t *p) {
 
   void **sp = &self->sp;
 
+  // No instrumentation for suspend here since thread is already recorded as 
+  // suspended (we mark the suspend before the call to _schedule).
   int e = thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
   dbg_check(e, "Error post _try_task: %s\n", hpx_strerror(e));
   return NULL;
