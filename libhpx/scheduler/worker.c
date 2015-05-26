@@ -765,7 +765,9 @@ void scheduler_spawn(hpx_parcel_t *p) {
   // we're supposed to transition out of work-first scheduling.
   uint64_t size = sync_chase_lev_ws_deque_size(&self->work);
   self->work_first = (size >= self->sched->wf_threshold);
+  INST_EVENT_PARCEL_SUSPEND(current);
   int e = thread_transfer(_try_bind(p), _work_first, NULL);
+  INST_EVENT_PARCEL_RESUME(current);
   dbg_check(e, "Detected a work-first scheduling error: %s\n", hpx_strerror(e));
 }
 
