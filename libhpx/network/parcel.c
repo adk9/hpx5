@@ -104,9 +104,12 @@ int parcel_launch(hpx_parcel_t *p) {
   }
 #endif
 
+  INST_EVENT_PARCEL_SEND(p);
+
   // do a local send through loopback, bypassing the network, otherwise dump the
   // parcel out to the network
   if (hpx_gas_try_pin(p->target, NULL)) {
+    INST_EVENT_PARCEL_RECV(p); // instrument local "receives"
     scheduler_spawn(p);
     return HPX_SUCCESS;
   }
