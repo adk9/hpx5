@@ -137,6 +137,9 @@ int inst_init(config_t *cfg) {
 /// restrictions in the future.
 /// Right now the only thing inst_start() does is write the action table.
 int inst_start() {
+#ifndef ENABLE_INSTRUMENTATION
+  return LIBHPX_OK;
+#endif
   // write action table for tracing
   if (inst_trace_class(HPX_INST_CLASS_PARCEL)) {
     _dump_actions();
