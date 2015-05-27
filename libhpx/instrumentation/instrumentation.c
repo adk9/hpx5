@@ -16,12 +16,13 @@
 
 #include <errno.h>
 #include <stdarg.h>
-#include <stdio.h> // for snprintf
+#include <stdio.h> // for snprintf and file methods
 #include <sys/stat.h>
 #include <unistd.h> // for chdir
 
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
+#include <libhpx/action.h> // for action_table functions
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/instrumentation.h>
@@ -32,6 +33,31 @@
 
 /// We're keeping one log per event per locality. Here are their headers.
 static logtable_t _logs[HPX_INST_NUM_EVENTS] = {LOGTABLE_INIT};
+
+/// This will output a list of action ids and names as a two-column csv file
+/// This is so that traced parcels can be interpreted more easily.
+static void _dump_actions() {
+  char filename[256];
+  snprintf(filename, 256, "actions.%d.csv", hpx_get_my_rank());
+
+  FILE *file = fopen(filename, "w");
+  if (file == NULL) {
+    log_error("failed to open action id file %s\n", filename);
+  }
+
+  const struct action_table *table = here->actions;
+  int num_actions = action_table_size(table);
+  for (int i = 0; i < num_actions; i++) {
+    const char *name = action_table_get_key(table, (hpx_action_t)i);
+    fprintf(file, "%d,%s\n", i, name);
+  }
+
+  int e = fclose(file);
+  if (e != 0) {
+    log_error("failed to write actions\n");
+  }
+
+}
 
 static void _log_create(int class, int id, size_t size, hpx_time_t now) {
   char filename[256];
@@ -104,6 +130,18 @@ int inst_init(config_t *cfg) {
   }
 
   return LIBHPX_OK;
+}
+
+/// This is for things that can only happen once hpx_run has started.
+/// Specifically, actions must have been finalized. There may be additional
+/// restrictions in the future.
+/// Right now the only thing inst_start() does is write the action table.
+int inst_start() {
+  // write action table for tracing
+  if (inst_trace_class(HPX_INST_CLASS_PARCEL)) {
+    _dump_actions();
+  }
+  return 0;
 }
 
 void inst_fini(void) {

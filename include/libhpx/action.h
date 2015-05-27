@@ -35,6 +35,9 @@ hpx_action_handler_t action_table_get_handler(const struct action_table *,
                                               hpx_action_t)
   HPX_NON_NULL(1);
 
+/// Report the number of actions registerd in the table
+int action_table_size(const struct action_table *table);
+
 /// Run the handler associated with an action.
 int action_execute(struct hpx_parcel *)
   HPX_NON_NULL(1);

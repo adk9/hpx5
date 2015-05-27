@@ -218,6 +218,8 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
     goto unwind0;
   }
 
+  inst_start();
+
   if (probe_start(here->network) != LIBHPX_OK) {
     status = log_error("could not start network probe\n");
     goto unwind1;

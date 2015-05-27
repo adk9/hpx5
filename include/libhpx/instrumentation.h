@@ -20,8 +20,15 @@
 
 struct config;
 
+/// Initialize instrumentation. This is usually called in hpx_init().
 int inst_init(struct config *cfg)
   HPX_NON_NULL(1);
+
+/// "Start" instrumentation. This is usually called in hpx_run(). This takes
+/// care of some things that must be done after initialization is complete,
+/// specifically action registration.
+int inst_start() HPX_NON_NULL(1);
+
 
 void inst_fini(void);
 

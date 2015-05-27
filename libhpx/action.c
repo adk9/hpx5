@@ -200,6 +200,10 @@ _ACTION_TABLE_GET(uint32_t, attr, 0);
 _ACTION_TABLE_GET(hpx_action_handler_t, handler, NULL);
 _ACTION_TABLE_GET(ffi_cif *, cif, NULL);
 
+int action_table_size(const struct action_table *table) {
+  return table->n;
+}
+
 hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs) {
   dbg_assert(p);
   dbg_assert(!n || vargs);
