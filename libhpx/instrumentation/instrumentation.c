@@ -17,6 +17,8 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h> // for snprintf and file methods
+#include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <unistd.h> // for chdir
 
@@ -31,18 +33,33 @@
 #include <libhpx/parcel.h>
 #include "logtable.h"
 
+/// complete path to the directory to which log files, etc. will be written
+static char *_log_path;
+
 /// We're keeping one log per event per locality. Here are their headers.
 static logtable_t _logs[HPX_INST_NUM_EVENTS] = {LOGTABLE_INIT};
+
+/// Concatenate two paths. Callee must free returned char*.
+char *_get_complete_path(const char *path, const char *filename) {
+  int len_path = strlen(path);
+  int len_filename = strlen(filename);
+  int len_complete_path = len_path + len_filename + 2;
+  // length is +1 for '/' and +1 for \00
+  char *complete_path = malloc(len_complete_path + 1);
+  snprintf(complete_path, len_complete_path, "%s/%s", path, filename);
+  return complete_path;
+}
 
 /// This will output a list of action ids and names as a two-column csv file
 /// This is so that traced parcels can be interpreted more easily.
 static void _dump_actions() {
   char filename[256];
   snprintf(filename, 256, "actions.%d.csv", hpx_get_my_rank());
+  char *file_path = _get_complete_path(_log_path, filename);
 
-  FILE *file = fopen(filename, "w");
+  FILE *file = fopen(file_path, "w");
   if (file == NULL) {
-    log_error("failed to open action id file %s\n", filename);
+    log_error("failed to open action id file %s\n", file_path);
   }
 
   const struct action_table *table = here->actions;
@@ -66,13 +83,17 @@ static void _log_create(int class, int id, size_t size, hpx_time_t now) {
            INST_CLASS_TO_STRING[class],
            INST_EVENT_TO_STRING[id]);
 
-  int e = logtable_init(&_logs[id], filename, size, class, id, now);
+  char *file_path = _get_complete_path(_log_path, filename);
+
+  int e = logtable_init(&_logs[id], file_path, size, class, id, now);
   if (e) {
-    log_error("failed to initialize log file %s\n", filename);
+    log_error("failed to initialize log file %s\n", file_path);
   }
+
+  free(file_path);
 }
 
-static int _chdir(const char *dir) {
+static char *_mkdir(const char *dir) {
   // change to user-specified root directory
   if (0 != chdir(dir)) {
     log_error("Specified root directory for instrumentation not found.");
@@ -87,20 +108,19 @@ static int _chdir(const char *dir) {
   snprintf(dirname, 256, "hpx.%.4d%.2d%.2d.%.2d%.2d",
            lt.tm_year + 1900, lt.tm_mon + 1, lt.tm_mday, lt.tm_hour, lt.tm_min);
 
+  char *log_path = _get_complete_path(dir, dirname);
+
   // try and create the directory---we don't care if it's already there
-  int e = mkdir(dirname, 0777);
+  int e = mkdir(log_path, 0777);
   if (e) {
     if (errno != EEXIST) {
-      return log_error("Could not create %s for instrumentation\n", dirname);
+      log_error("Could not create %s for instrumentation\n", log_path);
+      return NULL;
     }
   }
-  e = chdir(dirname);
-  if (e) {
-    return log_error("could not change directories to %s\n", dirname);
-  }
 
-  log("initialized %s/%s for tracing\n", dir, dirname);
-  return LIBHPX_OK;
+  log("initialized %s for tracing\n", log_path);
+  return log_path;
 }
 
 int inst_init(config_t *cfg) {
@@ -115,7 +135,8 @@ int inst_init(config_t *cfg) {
     return LIBHPX_OK;
   }
 
-  if (_chdir(cfg->trace_dir)) {
+  _log_path = _mkdir(cfg->trace_dir);
+  if (_log_path == NULL) {
     return LIBHPX_OK;
   }
 
@@ -151,6 +172,7 @@ void inst_fini(void) {
   for (int i = 0, e = HPX_INST_NUM_EVENTS; i < e; ++i) {
     logtable_fini(&_logs[i]);
   }
+  free(_log_path);
 }
 
 void inst_vtrace(int UNUNSED, int n, int id, ...) {
