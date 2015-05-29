@@ -20,8 +20,15 @@
 
 struct config;
 
+/// Initialize instrumentation. This is usually called in hpx_init().
 int inst_init(struct config *cfg)
   HPX_NON_NULL(1);
+
+/// "Start" instrumentation. This is usually called in hpx_run(). This takes
+/// care of some things that must be done after initialization is complete,
+/// specifically action registration.
+int inst_start();
+
 
 void inst_fini(void);
 
@@ -68,6 +75,7 @@ typedef enum {
   HPX_INST_EVENT_PARCEL_END,
   HPX_INST_EVENT_PARCEL_SUSPEND,
   HPX_INST_EVENT_PARCEL_RESUME,
+  HPX_INST_EVENT_PARCEL_RESEND,
 
   HPX_INST_EVENT_NETWORK_PWC_SEND,
   HPX_INST_EVENT_NETWORK_PWC_RECV,
@@ -91,6 +99,7 @@ static const char * const INST_EVENT_TO_STRING[] = {
   "EVENT_PARCEL_END",
   "EVENT_PARCEL_SUSPEND",
   "EVENT_PARCEL_RESUME",
+  "EVENT_PARCEL_RESEND",
 
   "EVENT_NETWORK_PWC_SEND",
   "EVENT_NETWORK_PWC_RECV",
