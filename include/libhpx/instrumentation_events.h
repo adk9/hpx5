@@ -242,6 +242,36 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
       .printf_code = "zu",                      \
       .name = "work_queue_size"}
 
+// typeof(INST_EVENT_COL_METADATA_LCO_ADDRESS) == inst_event_col_metadata_t
+#define METADATA_LCO_ADDRESS                    \
+  { .mask = 0x3f,                               \
+      .data_type = METADATA_TYPE_INT64,         \
+      .offset = INST_EVENT_COL_OFFSET_USER0,    \
+      .min = 0,                                 \
+      .max = UINT64_MAX,                        \
+      .printf_code = "zu",                      \
+      .name = "lco address"}
+
+// typeof(INST_EVENT_COL_METADATA_LCO_THREAD) == inst_event_col_metadata_t
+#define METADATA_LCO_CURRENT_THREAD             \
+  { .mask = 0x3f,                               \
+      .data_type = METADATA_TYPE_INT64,         \
+      .offset = INST_EVENT_COL_OFFSET_USER1,    \
+      .min = 0,                                 \
+      .max = UINT64_MAX,                        \
+      .printf_code = "zu",                      \
+      .name = "lco current thread"}
+
+// typeof(INST_EVENT_COL_METADATA_LCO_THREAD) == inst_event_col_metadata_t
+#define METADATA_LCO_STATE                      \
+  { .mask = 0x3f,                               \
+      .data_type = METADATA_TYPE_INT64,         \
+      .offset = INST_EVENT_COL_OFFSET_USER2,    \
+      .min = 0,                                 \
+      .max = UINT64_MAX,                        \
+      .printf_code = "zu",                      \
+      .name = "lco state"}
+
 // typeof(PARCEL_CREATE_METADATA) == inst_event_metadata_t 
 #define PARCEL_CREATE_METADATA {                                   \
     .num_cols = 6,                                                 \
@@ -345,4 +375,70 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
     INST_EVENT_COL_METADATA_EMPTY3                               \
   }                                                              \
 }
+
+// typeof(LCO_INIT_METADATA) == inst_event_metadata_t 
+#define LCO_INIT_METADATA {                                      \
+  .num_cols = 6,                                                 \
+  .col_metadata = {                                              \
+    INST_EVENT_COL_METADATA_WORKER,                              \
+    INST_EVENT_COL_METADATA_NS,                                  \
+    METADATA_LCO_ADDRESS,                                        \
+    METADATA_LCO_CURRENT_THREAD,                                 \
+    METADATA_LCO_STATE,                                          \
+    INST_EVENT_COL_METADATA_EMPTY3                               \
+  }                                                              \
+}
+
+// typeof(LCO_DELETE_METADATA) == inst_event_metadata_t 
+#define LCO_DELETE_METADATA {                                    \
+  .num_cols = 6,                                                 \
+  .col_metadata = {                                              \
+    INST_EVENT_COL_METADATA_WORKER,                              \
+    INST_EVENT_COL_METADATA_NS,                                  \
+    METADATA_LCO_ADDRESS,                                        \
+    METADATA_LCO_CURRENT_THREAD,                                 \
+    METADATA_LCO_STATE,                                          \
+    INST_EVENT_COL_METADATA_EMPTY3                               \
+  }                                                              \
+}
+
+// typeof(LCO_RESET_METADATA) == inst_event_metadata_t 
+#define LCO_RESET_METADATA {                                     \
+  .num_cols = 6,                                                 \
+  .col_metadata = {                                              \
+    INST_EVENT_COL_METADATA_WORKER,                              \
+    INST_EVENT_COL_METADATA_NS,                                  \
+    METADATA_LCO_ADDRESS,                                        \
+    METADATA_LCO_CURRENT_THREAD,                                 \
+    METADATA_LCO_STATE,                                          \
+    INST_EVENT_COL_METADATA_EMPTY3                               \
+  }                                                              \
+}
+
+// typeof(LCO_WAIT_METADATA) == inst_event_metadata_t 
+#define LCO_WAIT_METADATA {                                      \
+  .num_cols = 6,                                                 \
+  .col_metadata = {                                              \
+    INST_EVENT_COL_METADATA_WORKER,                              \
+    INST_EVENT_COL_METADATA_NS,                                  \
+    METADATA_LCO_ADDRESS,                                        \
+    METADATA_LCO_CURRENT_THREAD,                                 \
+    METADATA_LCO_STATE,                                          \
+    INST_EVENT_COL_METADATA_EMPTY3                               \
+  }                                                              \
+}
+
+// typeof(LCO_TRIGGER_METADATA) == inst_event_metadata_t 
+#define LCO_TRIGGER_METADATA {                                   \
+  .num_cols = 6,                                                 \
+  .col_metadata = {                                              \
+    INST_EVENT_COL_METADATA_WORKER,                              \
+    INST_EVENT_COL_METADATA_NS,                                  \
+    METADATA_LCO_ADDRESS,                                        \
+    METADATA_LCO_CURRENT_THREAD,                                 \
+    METADATA_LCO_STATE,                                          \
+    INST_EVENT_COL_METADATA_EMPTY3                               \
+  }                                                              \
+}
+
 #endif
