@@ -48,6 +48,7 @@ typedef enum {
   HPX_INST_CLASS_PARCEL = 0,
   HPX_INST_CLASS_NETWORK_PWC,
   INST_SCHED,
+  HPX_INST_CLASS_LCO,
 
   HPX_INST_NUM_CLASSES
 } hpx_inst_class_type_t;
@@ -55,7 +56,8 @@ typedef enum {
 static const char * const INST_CLASS_TO_STRING[] = {
   "CLASS_PARCEL",
   "CLASS_NETWORK_PWC",
-  "CLASS_SCHED"
+  "CLASS_SCHED",
+  "CLASS_LCO"
 };
 
 typedef enum {
@@ -72,6 +74,12 @@ typedef enum {
 
   INST_SCHED_WQSIZE,
 
+  HPX_INST_EVENT_LCO_INIT,
+  HPX_INST_EVENT_LCO_DELETE,
+  HPX_INST_EVENT_LCO_RESET,
+  HPX_INST_EVENT_LCO_WAIT,
+  HPX_INST_EVENT_LCO_TRIGGER,
+
   HPX_INST_NUM_EVENTS
 } hpx_inst_event_type_t;
 
@@ -86,7 +94,13 @@ static const char * const INST_EVENT_TO_STRING[] = {
 
   "EVENT_NETWORK_PWC_SEND",
   "EVENT_NETWORK_PWC_RECV",
-  "WQSIZE"
+  "WQSIZE",
+
+  "EVENT_LCO_INIT",
+  "EVENT_LCO_DELETE",
+  "EVENT_LCO_RESET",
+  "EVENT_LCO_WAIT",
+  "EVENT_LCO_TRIGGER"
 };
 
 static const int INST_OFFSETS[] = {
