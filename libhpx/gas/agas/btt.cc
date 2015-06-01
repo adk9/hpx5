@@ -52,45 +52,51 @@ BTT::BTT(size_t size) : Map(size) {
 hpx_parcel_t *
 BTT::trydelete(gva_t gva, hpx_parcel_t *p) {
   uint64_t key = gva_to_key(gva);
-  bool del = false;
+  bool ret = false;
   bool found = update_fn(key, [&](Entry& entry) {
       if (entry.count > 0) {
         assert(entry.onunpin == NULL);
         entry.onunpin = p;
       } else {
-        del = true;
+        ret = true;
       }
     });
   assert(found);
-  return (del ? p : NULL);
+  return (ret ? p : NULL);
 }
 
 bool
 BTT::trypin(gva_t gva, void** lva) {
   uint64_t key = gva_to_key(gva);
-  return update_fn(key, [lva](Entry& entry) {
+  bool ret = true;
+  bool found = update_fn(key, [&](Entry& entry) {
       if (lva) {
-        entry.count++;
-        *lva = entry.lva;
+        if (entry.onunpin == NULL) {
+          entry.count++;
+          *lva = entry.lva;
+        } else {
+          ret = false;
+        }
       }
     });
+  return found && ret;
 }
 
 hpx_parcel_t *
 BTT::unpin(gva_t gva) {
   uint64_t key = gva_to_key(gva);
-  bool del = false;
+  bool ret = false;
   hpx_parcel_t *p;
   bool found = update_fn(key, [&](Entry& entry) {
       entry.count--;
       if (entry.count == 0 && entry.onunpin) {
         p = entry.onunpin;
         entry.onunpin = NULL;
-        del = true;
+        ret = true;
       }
     });
   assert(found);
-  return (del ? p : NULL);
+  return (ret ? p : NULL);
 }
 
 void *
