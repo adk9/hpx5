@@ -24,9 +24,10 @@ namespace {
     int32_t owner;
     void *lva;
     size_t blocks;
-    Entry() : count(0), owner(0), lva(NULL), blocks(1) {
+    hpx_parcel_t *onunpin;
+    Entry() : count(0), owner(0), lva(NULL), blocks(1), onunpin(NULL) {
     }
-    Entry(int32_t o, void *l, size_t b) : count(0), owner(o), lva(l), blocks(b)
+    Entry(int32_t o, void *l, size_t b, hpx_parcel_t *p) : count(0), owner(o), lva(l), blocks(b), onunpin(p)
     {
     }
   };
@@ -36,8 +37,9 @@ namespace {
   class BTT : public Map {
    public:
     BTT(size_t);
+    hpx_parcel_t *trydelete(gva_t gva, hpx_parcel_t *p);
     bool trypin(gva_t gva, void** lva);
-    void unpin(gva_t gva);
+    hpx_parcel_t *unpin(gva_t gva);
     void *lookup(gva_t gva) const;
     uint32_t getOwner(gva_t gva) const;
     size_t getBlocks(gva_t gva) const;
@@ -45,6 +47,22 @@ namespace {
 }
 
 BTT::BTT(size_t size) : Map(size) {
+}
+
+hpx_parcel_t *
+BTT::trydelete(gva_t gva, hpx_parcel_t *p) {
+  uint64_t key = gva_to_key(gva);
+  bool del = false;
+  bool found = update_fn(key, [&](Entry& entry) {
+      if (entry.count > 0) {
+        assert(entry.onunpin == NULL);
+        entry.onunpin = p;
+      } else {
+        del = true;
+      }
+    });
+  assert(found);
+  return (del ? p : NULL);
 }
 
 bool
@@ -58,13 +76,21 @@ BTT::trypin(gva_t gva, void** lva) {
     });
 }
 
-void
+hpx_parcel_t *
 BTT::unpin(gva_t gva) {
   uint64_t key = gva_to_key(gva);
-  bool found = update_fn(key, [](Entry& entry) {
+  bool del = false;
+  hpx_parcel_t *p;
+  bool found = update_fn(key, [&](Entry& entry) {
       entry.count--;
+      if (entry.count == 0 && entry.onunpin) {
+        p = entry.onunpin;
+        entry.onunpin = NULL;
+        del = true;
+      }
     });
   assert(found);
+  return (del ? p : NULL);
 }
 
 void *
@@ -121,7 +147,7 @@ void
 btt_insert(void *obj, gva_t gva, int32_t owner, void *lva, size_t blocks) {
   BTT *btt = static_cast<BTT*>(obj);
   uint64_t key = gva_to_key(gva);
-  bool inserted = btt->insert(key, Entry(owner, lva, blocks));
+  bool inserted = btt->insert(key, Entry(owner, lva, blocks, NULL));
   assert(inserted);
   (void)inserted;
 }
@@ -135,6 +161,15 @@ btt_remove(void *obj, gva_t gva) {
   (void)erased;
 }
 
+void
+btt_try_delete(void *obj, gva_t gva, hpx_parcel_t *p) {
+  BTT *btt = static_cast<BTT*>(obj);
+  p = btt->trydelete(gva, p);
+  if (p) {
+    hpx_parcel_send_sync(p);
+  }
+}
+
 bool
 btt_try_pin(void* obj, gva_t gva, void** lva) {
   BTT *btt = static_cast<BTT*>(obj);
@@ -144,7 +179,10 @@ btt_try_pin(void* obj, gva_t gva, void** lva) {
 void
 btt_unpin(void* obj, gva_t gva) {
   BTT *btt = static_cast<BTT*>(obj);
-  btt->unpin(gva);
+  hpx_parcel_t *p = btt->unpin(gva);
+  if (p) {
+    hpx_parcel_send_sync(p);
+  }
 }
 
 void *
