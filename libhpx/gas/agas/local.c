@@ -14,28 +14,66 @@
 # include "config.h"
 #endif
 
+#include <stdio.h>
+#include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/memory.h>
 #include "agas.h"
 #include "btt.h"
 #include "gva.h"
 
+// The latter half of the free operation.
+//
+// This handler is called once for each block in the allocation when
+// the pinned count reaches 0. Since we want the continuation of the
+// delete operation to be invoked only once, we check if the block
+// address that it is called for is equal to the base address of the
+// allocation.
+static int
+_agas_local_free_async_handler(hpx_addr_t base, hpx_addr_t addr,
+                               hpx_addr_t rsync) {
+  gva_t gva = { .addr = addr };
+  agas_t *agas = (agas_t*)here->gas;
+
+  void *lva = btt_lookup(agas->btt, gva);
+
+  // 1) remove this mapping
+  btt_remove(agas->btt, gva);
+
+  if (addr == base) {
+    if (lva) {
+      global_free(lva);
+    }
+
+    hpx_lco_error(rsync, HPX_SUCCESS, HPX_NULL);
+  }
+  return HPX_SUCCESS;
+}
+HPX_ACTION(HPX_DEFAULT, 0, _agas_local_free_async,
+           _agas_local_free_async_handler, HPX_ADDR, HPX_ADDR, HPX_ADDR);
+
+hpx_parcel_t *_new_parcel(hpx_addr_t addr, hpx_action_t action, int n, ...) {
+  va_list args;
+  va_start(args, n);
+  hpx_parcel_t *p = action_parcel_create(addr, action, HPX_NULL,
+                                         HPX_ACTION_NULL, n, &args);
+  va_end(args);
+  return p;
+}
+
 void agas_local_free(agas_t *agas, gva_t gva, void *lva, hpx_addr_t rsync) {
+
   // how many blocks are involved in this mapping?
   size_t blocks = btt_get_blocks(agas->btt, gva);
   uint32_t bsize = 1 << gva.bits.size;
+  hpx_addr_t base = gva.addr;
 
-  // 1) remove this mapping
   for (int i = 0; i < blocks; ++i) {
-    btt_remove(agas->btt, gva);
+    hpx_parcel_t *p = _new_parcel(gva.addr, _agas_local_free_async, 3,
+                                  &base, &gva.addr, &rsync);
+    btt_try_delete(agas->btt, gva, p);
     gva.bits.offset += bsize;
   }
-
-  // 2) free the backing memory---it didn't move because that isn't supported
-  global_free(lva);
-
-  // 3) set the lsync
-  hpx_lco_error(rsync, HPX_SUCCESS, HPX_NULL);
 }
 
 int64_t
