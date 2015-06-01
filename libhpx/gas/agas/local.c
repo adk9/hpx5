@@ -52,15 +52,6 @@ _agas_local_free_async_handler(hpx_addr_t base, hpx_addr_t addr,
 HPX_ACTION(HPX_DEFAULT, 0, _agas_local_free_async,
            _agas_local_free_async_handler, HPX_ADDR, HPX_ADDR, HPX_ADDR);
 
-hpx_parcel_t *_new_parcel(hpx_addr_t addr, hpx_action_t action, int n, ...) {
-  va_list args;
-  va_start(args, n);
-  hpx_parcel_t *p = action_parcel_create(addr, action, HPX_NULL,
-                                         HPX_ACTION_NULL, n, &args);
-  va_end(args);
-  return p;
-}
-
 void agas_local_free(agas_t *agas, gva_t gva, void *lva, hpx_addr_t rsync) {
 
   // how many blocks are involved in this mapping?
@@ -69,8 +60,9 @@ void agas_local_free(agas_t *agas, gva_t gva, void *lva, hpx_addr_t rsync) {
   hpx_addr_t base = gva.addr;
 
   for (int i = 0; i < blocks; ++i) {
-    hpx_parcel_t *p = _new_parcel(gva.addr, _agas_local_free_async, 3,
-                                  &base, &gva.addr, &rsync);
+    hpx_parcel_t *p = parcel_create(gva.addr, _agas_local_free_async,
+                                    HPX_NULL, HPX_ACTION_NULL, 3,
+                                    &base, &gva.addr, &rsync);
     btt_try_delete(agas->btt, gva, p);
     gva.bits.offset += bsize;
   }

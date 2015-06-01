@@ -269,9 +269,9 @@ static hpx_parcel_t *_action_parcel_acquire(hpx_action_t action, va_list *args)
   }
 }
 
-hpx_parcel_t *action_parcel_create(hpx_addr_t addr, hpx_action_t action,
-                                   hpx_addr_t c_addr, hpx_action_t c_action,
-                                   int n, va_list *args) {
+hpx_parcel_t *parcel_create_va(hpx_addr_t addr, hpx_action_t action,
+                               hpx_addr_t c_addr, hpx_action_t c_action,
+                               int n, va_list *args) {
   dbg_assert(addr);
   dbg_assert(action);
   hpx_parcel_t *p = _action_parcel_acquire(action, args);
@@ -282,11 +282,23 @@ hpx_parcel_t *action_parcel_create(hpx_addr_t addr, hpx_action_t action,
   return action_pack_args(p, n, args);
 }
 
+hpx_parcel_t *parcel_create(hpx_addr_t addr, hpx_action_t action,
+                            hpx_addr_t c_addr, hpx_action_t c_action,
+                            int nargs, ...) {
+  va_list args;
+  va_start(args, nargs);
+  hpx_parcel_t *p = parcel_create_va(addr, action, c_addr,
+                                     c_action, nargs, &args);
+  va_end(args);
+  return p;
+}
+
+
 int libhpx_call_action(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
                        hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
                        int nargs, va_list *args) {
-  hpx_parcel_t *p = action_parcel_create(addr, action, c_addr, c_action, nargs,
-                                         args);
+  hpx_parcel_t *p = parcel_create_va(addr, action, c_addr, c_action, nargs,
+                                     args);
 
   if (likely(!gate && !lsync)) {
     return hpx_parcel_send_sync(p);
