@@ -58,6 +58,7 @@ struct worker {
   scheduler_stats_t   stats;                    // scheduler statistics
 #if HAVE_APEX
   bool               active;  // used by APEX scheduler throttling : akp
+  apex_profiler_handle profiler;
 #endif
 } HPX_ALIGNED(HPX_CACHELINE_SIZE);
 

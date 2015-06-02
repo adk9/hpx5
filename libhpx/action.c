@@ -318,6 +318,19 @@ int action_execute(hpx_parcel_t *p) {
   hpx_action_handler_t handler = table->entries[id].handler;
   ffi_cif *cif = table->entries[id].cif;
 
+#if 0
+#ifdef HAVE_APEX
+    // if this is not a null or lightweight action, 
+    // send a "start" event to APEX
+    apex_profiler_handle profiler = 0L;
+    //if (id != HPX_ACTION_NULL && id != HPX_LCO_SET && id != HPX_PAR_FOR_ASYNC) {
+    //if (id != HPX_ACTION_NULL && !action_is_interrupt(table, id) && handler != hpx_lco_set_action) {
+    if (id != HPX_ACTION_NULL && !action_is_interrupt(table, id)) {
+        profiler = apex_start(APEX_FUNCTION_ADDRESS, (void*)handler);
+    }
+#endif
+#endif
+
   bool pinned = action_is_pinned(table, id);
   if (!cif && !pinned) {
     *ret = handler(args, p->size);
@@ -330,22 +343,6 @@ int action_execute(hpx_parcel_t *p) {
     *ret = ((hpx_pinned_action_handler_t)handler)(target, args, p->size);
     hpx_gas_unpin(p->target);
   } else if (cif && !pinned) {
-#ifdef HAVE_APEX
-    // if this is not a null or lightweight action, 
-    // send a "start" event to APEX
-    apex_profiler_handle profiler = 0L;
-    //if (id != HPX_ACTION_NULL && id != HPX_LCO_SET && id != HPX_PAR_FOR_ASYNC) {
-    if (id != HPX_ACTION_NULL && !action_is_interrupt(table, id) && handler != hpx_lco_set_action) {
-        profiler = apex_start(APEX_FUNCTION_ADDRESS, (void*)handler);
-    }
-#endif
-    *ret = handler(args);
-#ifdef HAVE_APEX
-    if (profiler != 0L) {
-        apex_stop(profiler);
-    }
-#endif
-  } else {
     ffi_raw_call(cif, FFI_FN(handler), ret, args);
   } else {
     void *target;
@@ -361,10 +358,12 @@ int action_execute(hpx_parcel_t *p) {
     hpx_gas_unpin(p->target);
   }
 
+#if 0
 #ifdef HAVE_APEX
-  //if (profiler != 0L) {
-    //apex_stop_profiler(profiler);
-  //}
+    if (profiler != 0L) {
+        apex_stop(profiler);
+    }
+#endif
 #endif
   return *ret;
 }

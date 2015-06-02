@@ -17,9 +17,10 @@ libnetwork_la_SOURCES  = locality.c \
                          probe.c \
                          smp.c \
                          commands.c
+libnetwork_la_LIBADD   = 
 
 if HAVE_NETWORK
-libnetwork_la_LIBADD   = isir/libisir.la \
+libnetwork_la_LIBADD   += isir/libisir.la \
                          pwc/libpwc.la
 endif
 

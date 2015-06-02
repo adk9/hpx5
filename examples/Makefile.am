@@ -27,8 +27,8 @@ AM_CFLAGS            =
 AM_LDFLAGS           = $(HPX_JEMALLOC_RPATH) -no-install
 
 if HAVE_APEX
-AM_CFLAGS           += @APEX_CFLAGS@
-all_LIBS            += @APEX_LIBS@
+AM_CFLAGS           += @APEX_CFLAGS@ 
+all_LIBS            += @APEX_LIBS@ $(top_srcdir)/libapex/libapex_hpx.la
 endif
 
 fibonacci_LDADD       = $(all_LIBS)

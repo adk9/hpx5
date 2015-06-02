@@ -28,3 +28,7 @@ nobase_include_HEADERS = hpx/action.h \
                          libsync/gcc/sync.h \
                          libsync/gcc/atomic.h \
                          libsync/craycc/sync.h
+
+if HAVE_APEX
+nobase_include_HEADERS += libapex/apex_global_hpx.h
+endif

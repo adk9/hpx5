@@ -161,7 +161,21 @@ static void _execute_interrupt(hpx_parcel_t *p) {
 ///
 /// @param       parcel The parcel that describes the thread to run.
 static void _execute_thread(hpx_parcel_t *p) {
+#ifdef HAVE_APEX
+    // if this is NOT a null or lightweight action, 
+    // send a "start" event to APEX
+    hpx_action_t id = hpx_parcel_get_action(p);
+    if (id != HPX_ACTION_NULL && id != scheduler_nop && id != hpx_lco_set_action) {
+        self->profiler = apex_start(APEX_FUNCTION_ADDRESS, (void*)hpx_action_get_handler(id));
+    }
+#endif
   int e = action_execute(p);
+#ifdef HAVE_APEX
+    if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
+        apex_stop(self->profiler); 
+        self->profiler = APEX_NULL_PROFILER_HANDLE; 
+    }
+#endif
   switch (e) {
     default:
      dbg_error("thread produced unhandled error %s.\n", hpx_strerror(e));
@@ -491,7 +505,7 @@ static pthread_cond_t release = PTHREAD_COND_INITIALIZER;
 // to save the shared state, but we don't need it for our use.
 static pthread_mutex_t release_mutex = PTHREAD_MUTEX_INITIALIZER;
 // Flag to indicate whether this thread is processing a yield.
-// If so, it can't be throttled, because it holds a lock that
+// If so, it can't be throttled, because it could hold a lock that
 // will be requested by the thread trying to take the yielded work.
 __thread bool yielded = false;
 #endif
@@ -529,6 +543,7 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
     if (scheduler_is_shutdown(self->sched)) {
 #if defined(HAVE_APEX)
       pthread_cond_broadcast(&release);
+      apex_exit_thread();
 #endif
       _worker_shutdown(self);
     }
@@ -969,8 +984,10 @@ static void _unpin_current_target(void) {
 void hpx_thread_continue(size_t size, const void *value) {
   _unpin_current_target();
 #ifdef HAVE_APEX
-    apex_profiler_handle dummy = NULL;
-  apex_stop(dummy);
+  if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
+      apex_stop(self->profiler); 
+      self->profiler = APEX_NULL_PROFILER_HANDLE; 
+  }
 #endif
   _continue(HPX_SUCCESS, size, value, NULL, NULL);
 }
@@ -979,8 +996,10 @@ void hpx_thread_continue_cleanup(size_t size, const void *value,
                                  void (*cleanup)(void*), void *env) {
   _unpin_current_target();
 #ifdef HAVE_APEX
-    apex_profiler_handle dummy = NULL;
-  apex_stop(dummy);
+  if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
+      apex_stop(self->profiler); 
+      self->profiler = APEX_NULL_PROFILER_HANDLE; 
+  }
 #endif
   _continue(HPX_SUCCESS, size, value, cleanup, env);
 }

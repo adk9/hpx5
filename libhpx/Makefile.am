@@ -26,5 +26,5 @@ libhpx_la_LIBADD   = $(HPX_HWLOC_LIBS) \
 
 if HAVE_APEX
 libhpx_la_CPPFLAGS  += @APEX_CFLAGS@
-libhpx_la_LIBADD  += @APEX_LIBS@
+libhpx_la_LIBADD  += @APEX_LIBS@ ../libapex/libapex_hpx.la
 endif
