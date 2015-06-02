@@ -122,7 +122,7 @@ void scheduler_save_apex_stats(const scheduler_stats_t *counts)
 ///
 /// @param    counts The scheduler stats.
 void scheduler_save_apex_stats(const scheduler_stats_t *counts)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 #endif
 
 /// Starts the scheduler.
