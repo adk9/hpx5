@@ -71,7 +71,8 @@ static void *_run(void *worker) {
 }
 
 static int _call_continuation(hpx_addr_t target, hpx_action_t action,
-                              const void *args, size_t len, hpx_status_t status) {
+                              const void *args, size_t len, hpx_status_t status)
+{
   dbg_assert(!args || len);
   dbg_assert(!len || args);
 
@@ -188,15 +189,16 @@ static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
   self->sp = sp;
   self->current = to;
 
+#ifndef ENABLE_DEBUG
   // Register the native stack for use as the "task" stack.
   //
   // Tasks are unusual because we run them from the _run_task continuation,
   // which always runs "below" sp on the stack. This gets released in
   // _worker_shutdown.
-  // 
+  //
   // If we're in a debug build, don't register to avoid an issue
   // registering the VG stack.
-#ifndef ENABLE_DEBUG
+
   void *base = (char*)sp - here->config->stacksize;
   network_register_dma(here->network, base, here->config->stacksize, NULL);
 #endif
@@ -428,7 +430,7 @@ static hpx_parcel_t *_try_task(hpx_parcel_t *p) {
 
   void **sp = &self->sp;
 
-  // No instrumentation for suspend here since thread is already recorded as 
+  // No instrumentation for suspend here since thread is already recorded as
   // suspended (we mark the suspend before the call to _schedule).
   int e = thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
   dbg_check(e, "Error post _try_task: %s\n", hpx_strerror(e));
@@ -695,6 +697,7 @@ static int _work_first(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = self->current;
   parcel_get_stack(prev)->sp = sp;
   self->current = to;
+  _spawn_lifo(self, prev);
   return HPX_SUCCESS;
 }
 
@@ -765,10 +768,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   }
 
   // We can process the parcel work-first, but we need to use a thread to do it
-  // so that our continuation can be stolen. We first make a check to see if
-  // we're supposed to transition out of work-first scheduling.
-  uint64_t size = sync_chase_lev_ws_deque_size(&self->work);
-  self->work_first = (size >= self->sched->wf_threshold);
+  // so that our continuation can be stolen.
   INST_EVENT_PARCEL_SUSPEND(current);
   int e = thread_transfer(_try_bind(p), _work_first, NULL);
   INST_EVENT_PARCEL_RESUME(current);
