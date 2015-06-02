@@ -24,6 +24,10 @@
 #include "apex.h"
 #endif
 
+#if HAVE_APEX
+#include "apex.h"
+#endif
+
 static HPX_RETURNS_NON_NULL const char *_id(void) {
   return "MPI";
 }

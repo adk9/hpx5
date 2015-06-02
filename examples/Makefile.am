@@ -31,6 +31,11 @@ AM_CFLAGS           += @APEX_CFLAGS@
 all_LIBS            += @APEX_LIBS@ $(top_srcdir)/libapex/libapex_hpx.la
 endif
 
+if HAVE_APEX
+AM_CFLAGS           += @APEX_CFLAGS@
+all_LIBS            += @APEX_LIBS@
+endif
+
 fibonacci_LDADD       = $(all_LIBS)
 pingpong_LDADD        = $(all_LIBS)
 allreduce_LDADD       = $(all_LIBS)

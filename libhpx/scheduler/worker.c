@@ -69,6 +69,11 @@ static void *_run(void *worker) {
   apex_register_thread("HPX WORKER THREAD");
 #endif
 
+#ifdef HAVE_APEX
+  // let APEX know there is a new thread
+  apex_register_thread("HPX WORKER THREAD");
+#endif
+
   if (worker_start()) {
     dbg_error("failed to start processing lightweight threads.\n");
     return NULL;
