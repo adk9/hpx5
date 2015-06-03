@@ -16,7 +16,6 @@
 
 #include <inttypes.h>
 #include <string.h>
-#include <sys/mman.h>
 #include <libsync/sync.h>
 #include <hpx/builtins.h>
 #include <libhpx/bitmap.h>
@@ -51,53 +50,6 @@ _chunks_are_used(const heap_t *heap, uint64_t offset, size_t n) {
   return bitmap_is_set(heap->chunks, from, to - from);
 }
 
-static void*
-_mmap_heap(heap_t *const heap) {
-  static const int prot  = PROT_READ | PROT_WRITE;
-#if defined(HAVE_HUGETLBFS)
-  static const int flags = MAP_PRIVATE;
-#elif defined(__APPLE__)
-  static const int flags = MAP_ANON | MAP_PRIVATE;
-# else
-  static const int flags = MAP_ANONYMOUS | MAP_PRIVATE;
-#endif
-
-  const uint32_t chunk_lg_align = ceil_log2_size_t(heap->bytes_per_chunk);
-
-#if defined(HAVE_HUGETLBFS)
-  log_gas("Using huge pages.\n");
-  int hp_fd = hugetlbfs_unlinked_fd();
-  if (hp_fd < 1) {
-    dbg_error("Failed to open huge pages file descriptor.");
-  }
-#else
-  int hp_fd = -1;
-#endif
-
-  for (unsigned int x = 1; x < 1000; ++x) {
-    for (unsigned int i = GPA_MAX_LG_BSIZE; i >= chunk_lg_align; --i) {
-      void *addr = (void*)(x  * (1ul << i));
-      void *ret  = mmap(addr, heap->nbytes, prot, flags, hp_fd, 0);
-      if (ret != addr) {
-        if (ret == (void*)(-1)) {
-          dbg_error("Error mmaping %d (%s)\n", errno, strerror(errno));
-        }
-
-        int e = munmap(ret, heap->nbytes);
-        if (e < 0) {
-          dbg_error("munmap failed: %s.\n", strerror(e));
-        }
-        continue;
-      }
-      heap->max_block_lg_size = i;
-      log_gas("Allocated heap at %p with %u bits for blocks\n", ret, i);
-      return ret;
-    }
-  }
-  dbg_error("Could not allocate heap with minimum alignment of %zu.\n",
-            heap->bytes_per_chunk);
-}
-
 int
 heap_init(heap_t *heap, size_t size) {
   assert(heap);
@@ -121,8 +73,10 @@ heap_init(heap_t *heap, size_t size) {
   heap->nchunks = ceil_div_64(heap->nbytes, heap->bytes_per_chunk);
   log_gas("heap nchunks is %zu\n", heap->nchunks);
 
-  // use one extra chunk to deal with alignment
-  heap->base  = _mmap_heap(heap);
+  // allocate a properly aligned heap
+  heap->max_block_lg_size = GPA_MAX_LG_BSIZE;
+  size_t align = (1lu << heap->max_block_lg_size);
+  heap->base = system_mmap_huge_pages(NULL, NULL, heap->nbytes, align);
   if (!heap->base) {
     log_error("could not allocate %zu bytes for the global heap\n",
               heap->nbytes);
@@ -145,7 +99,7 @@ heap_fini(heap_t *heap) {
     bitmap_delete(heap->chunks);
 
   if (heap->base) {
-    munmap(heap->base, heap->nbytes);
+    system_munmap_huge_pages(NULL, heap->base, heap->nbytes);
   }
 }
 
