@@ -8,7 +8,10 @@ AC_DEFUN([HPX_CONTRIB_JEMALLOC],
 
    AS_IF([test "x$enable_debug" != xno],
      [hpx_jemalloc_cargs="$hpx_jemalloc_cargs CPPFLAGS=\"$CPPFLAGS -Dalways_inline=\""])
-   
+
+   AS_IF([test "x$enable_jemalloc" = xno],
+     [hpx_jemalloc_cargs="$hpx_jemalloc_cargs --with-jemalloc-prefix=libhpx_"])
+     
    hpx_jemalloc_cargs="$hpx_jemalloc_cargs EXTRA_CFLAGS=$ac_cv_prog_cc_c99"
    
    ACX_CONFIGURE_DIR([$1], [$1], [$hpx_jemalloc_cargs])

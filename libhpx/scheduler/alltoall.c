@@ -68,6 +68,7 @@
 /// @file libhpx/scheduler/allgather.c
 /// @brief Defines the allgather LCO.
 #include <assert.h>
+#include <inttypes.h>
 #include <string.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
@@ -411,7 +412,7 @@ hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) {
 
   if (!hpx_gas_try_pin(gva, (void**)&g)) {
     int e = hpx_call_sync(gva, _alltoall_init_async, NULL, 0, &inputs, &size);
-    dbg_check(e, "could not initialize an allreduce at %lu\n", gva);
+    dbg_check(e, "could not initialize an allreduce at %"PRIu64"\n", gva);
   }
   else {
     _alltoall_init_handler(g, inputs, size);

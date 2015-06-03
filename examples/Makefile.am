@@ -20,37 +20,15 @@ hello_SOURCES           = hello.c
 call_SOURCES            = call.c
 netbench_SOURCES        = netbench.c
 
-all_LIBS = $(HPX_LIBS) $(HPX_LIBFFI_LIBS)
-
 AM_CPPFLAGS          = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS            =
 AM_LDFLAGS           = $(HPX_JEMALLOC_RPATH) -no-install
+LDADD                = $(HPX_LIBS)
 
 if HAVE_APEX
 AM_CFLAGS           += @APEX_CFLAGS@ 
-all_LIBS            += @APEX_LIBS@ $(top_srcdir)/libapex/libapex_hpx.la
+LDADD               += @APEX_LIBS@ $(top_srcdir)/libapex/libapex_hpx.la
 endif
-
-if HAVE_APEX
-AM_CFLAGS           += @APEX_CFLAGS@
-all_LIBS            += @APEX_LIBS@
-endif
-
-fibonacci_LDADD       = $(all_LIBS)
-pingpong_LDADD        = $(all_LIBS)
-allreduce_LDADD       = $(all_LIBS)
-countdown_LDADD       = $(all_LIBS)
-seqspawn_LDADD        = $(all_LIBS)
-parspawn_LDADD        = $(all_LIBS)
-future_LDADD          = $(all_LIBS)
-memput_LDADD          = $(all_LIBS)
-memget_LDADD          = $(all_LIBS)
-guppie_LDADD          = $(all_LIBS)
-sendrecv_LDADD        = $(all_LIBS)
-qsort_LDADD           = $(all_LIBS)
-hello_LDADD           = $(all_LIBS)
-call_LDADD            = $(all_LIBS)
-netbench_LDADD        = $(all_LIBS)
 
 fibonacci_DEPENDENCIES       = $(HPX_DEPS)
 pingpong_DEPENDENCIES        = $(HPX_DEPS)

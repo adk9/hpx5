@@ -634,6 +634,7 @@ jemalloc_version_bugfix
 jemalloc_version_minor
 jemalloc_version_major
 jemalloc_version
+enable_cache_oblivious
 enable_xmalloc
 enable_valgrind
 enable_utrace
@@ -772,6 +773,7 @@ enable_fill
 enable_utrace
 enable_valgrind
 enable_xmalloc
+enable_cache_oblivious
 with_lg_tiny_min
 with_lg_quantum
 with_lg_page
@@ -1418,6 +1420,9 @@ Optional Features:
   --enable-utrace         Enable utrace(2)-based tracing
   --disable-valgrind      Disable support for Valgrind
   --enable-xmalloc        Support xmalloc option
+  --disable-cache-oblivious
+                          Disable support for cache-oblivious allocation
+                          alignment
   --enable-lazy-lock      Enable lazy locking (only lock when multi-threaded)
   --disable-tls           Disable thread-local storage (__thread keyword)
   --disable-zone-allocator
@@ -6497,6 +6502,25 @@ if test "x$enable_xmalloc" = "x1" ; then
 fi
 
 
+# Check whether --enable-cache-oblivious was given.
+if test "${enable_cache_oblivious+set}" = set; then :
+  enableval=$enable_cache_oblivious; if test "x$enable_cache_oblivious" = "xno" ; then
+  enable_cache_oblivious="0"
+else
+  enable_cache_oblivious="1"
+fi
+
+else
+  enable_cache_oblivious="1"
+
+fi
+
+if test "x$enable_cache_oblivious" = "x1" ; then
+  $as_echo "#define JEMALLOC_CACHE_OBLIVIOUS  " >>confdefs.h
+
+fi
+
+
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether a program using __builtin_ffsl is compilable" >&5
 $as_echo_n "checking whether a program using __builtin_ffsl is compilable... " >&6; }
@@ -9391,5 +9415,7 @@ $as_echo "munmap             : ${enable_munmap}" >&6; }
 $as_echo "lazy_lock          : ${enable_lazy_lock}" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: tls                : ${enable_tls}" >&5
 $as_echo "tls                : ${enable_tls}" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: cache-oblivious    : ${enable_cache_oblivious}" >&5
+$as_echo "cache-oblivious    : ${enable_cache_oblivious}" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: ===============================================================================" >&5
 $as_echo "===============================================================================" >&6; }

@@ -104,9 +104,12 @@ int parcel_launch(hpx_parcel_t *p) {
   }
 #endif
 
+  INST_EVENT_PARCEL_SEND(p);
+
   // do a local send through loopback, bypassing the network, otherwise dump the
   // parcel out to the network
   if (hpx_gas_try_pin(p->target, NULL)) {
+    INST_EVENT_PARCEL_RECV(p); // instrument local "receives"
     scheduler_spawn(p);
     return HPX_SUCCESS;
   }
@@ -174,8 +177,7 @@ hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action,
   hpx_parcel_t *p = as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, size);
   dbg_assert_str(p, "parcel: failed to allocate %zu registered bytes.\n", size);
   parcel_init(target, action, c_target, c_action, pid, data, len, p);
-  if (p->action != scheduler_nop)
-    INST_EVENT_PARCEL_CREATE(p);
+  INST_EVENT_PARCEL_CREATE(p);
   return p;
 }
 

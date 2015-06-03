@@ -35,6 +35,9 @@ hpx_action_handler_t action_table_get_handler(const struct action_table *,
                                               hpx_action_t)
   HPX_NON_NULL(1);
 
+/// Report the number of actions registerd in the table
+int action_table_size(const struct action_table *table);
+
 /// Run the handler associated with an action.
 int action_execute(struct hpx_parcel *)
   HPX_NON_NULL(1);
@@ -49,9 +52,15 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs);
 /// Returns a parcel that encodes the target address, an action and
 /// its argument, and the continuation. The parcel is ready to be sent
 /// to effect a call operation.
-hpx_parcel_t *action_parcel_create(hpx_addr_t addr, hpx_action_t action,
-                                   hpx_addr_t c_addr, hpx_action_t c_action,
-                                   int nargs, va_list *args);
+hpx_parcel_t *parcel_create_va(hpx_addr_t addr, hpx_action_t action,
+                               hpx_addr_t c_addr, hpx_action_t c_action,
+                               int nargs, va_list *args);
+
+/// Same as above, with the exception that the input arguments are
+/// variadic instead of a va_list.
+hpx_parcel_t *parcel_create(hpx_addr_t addr, hpx_action_t action,
+                            hpx_addr_t c_addr, hpx_action_t c_action,
+                            int nargs, ...);
 
 /// Call an action by sending a parcel given a list of variable args.
 int libhpx_call_action(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,

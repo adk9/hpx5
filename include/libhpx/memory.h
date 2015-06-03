@@ -69,6 +69,14 @@ static inline void as_free(int id, void *ptr) {
 /// When a network has been configured then we actually need to do something
 /// about these allocations. In this context we are guaranteed that the jemalloc
 /// header is available, so we can use its types here.
+///
+/// The JEMALLOC_NO_DEMANGLE flag exposes jemalloc's je_-prefixed symbols so
+/// that we can use them here. These are necessary because we prefix the
+/// jemalloc symbols with --disable-jemalloc, so we don't inadvertently use
+/// jemalloc's malloc/free functions if the user hasn't asked us to. The je_
+/// prefixes deal with this, and will always "point" to the symbols that
+/// jemalloc is actually exposing.
+#define JEMALLOC_NO_DEMANGLE
 #include <jemalloc/jemalloc.h>
 
 /// A chunk allocator.
@@ -133,23 +141,24 @@ void as_join(int id);
 void as_leave(void);
 
 static inline void *as_malloc(int id, size_t bytes) {
-  return mallocx(bytes, as_flags[id]);
+  return je_mallocx(bytes, as_flags[id]);
 }
 
 static inline void *as_calloc(int id, size_t nmemb, size_t bytes) {
   int flags = as_flags[id] | MALLOCX_ZERO;
-  return mallocx(nmemb * bytes, flags);
+  return je_mallocx(nmemb * bytes, flags);
 }
 
 static inline void *as_memalign(int id, size_t boundary, size_t size) {
   int flags = as_flags[id] | MALLOCX_ALIGN(boundary);
-  return mallocx(size, flags);
+  return je_mallocx(size, flags);
 }
 
 static inline void as_free(int id, void *ptr)  {
-  dallocx(ptr, as_flags[id]);
+  je_dallocx(ptr, as_flags[id]);
 }
 
+#undef JEMALLOC_NO_DEMANGLE
 #endif
 
 static inline void *registered_malloc(size_t bytes) {

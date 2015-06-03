@@ -228,6 +228,8 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
     goto unwind0;
   }
 
+  inst_start();
+
   if (probe_start(here->network) != LIBHPX_OK) {
     status = log_error("could not start network probe\n");
     goto unwind1;
@@ -237,7 +239,7 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   if (here->rank == 0) {
     va_list vargs;
     va_start(vargs, n);
-    hpx_parcel_t *p = action_parcel_create(HPX_HERE, *act, 0, 0, n, &vargs);
+    hpx_parcel_t *p = parcel_create_va(HPX_HERE, *act, 0, 0, n, &vargs);
     int status = hpx_parcel_send(p, HPX_NULL);
     va_end(vargs);
 

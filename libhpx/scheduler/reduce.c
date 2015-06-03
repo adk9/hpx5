@@ -18,6 +18,7 @@
 /// @brief Defines the reduction LCO.
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -263,7 +264,7 @@ hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_action_t id,
   if (!hpx_gas_try_pin(gva, (void**)&r)) {
     int e = hpx_call_sync(gva, _reduce_init_async, NULL, 0, &inputs, &size, &id,
                           &op);
-    dbg_check(e, "could not initialize an allreduce at %lu\n", gva);
+    dbg_check(e, "could not initialize an allreduce at %"PRIu64"\n", gva);
   }
   else {
     _reduce_init_handler(r, inputs, size, id, op);

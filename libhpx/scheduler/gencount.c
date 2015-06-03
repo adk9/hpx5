@@ -19,6 +19,7 @@
 /// @brief Implements the semaphore LCO.
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -180,7 +181,7 @@ hpx_addr_t hpx_lco_gencount_new(unsigned long ninplace) {
 
   if (!hpx_gas_try_pin(gva, (void**)&cnt)) {
     int e = hpx_call_sync(gva, _gencount_init_async, NULL, 0, &ninplace);
-    dbg_check(e, "could not initialize a generation counter at %lu\n", gva);
+    dbg_check(e, "could not initialize a generation counter at %"PRIu64"\n", gva);
   }
   else {
     _gencount_init_handler(cnt, ninplace);

@@ -506,7 +506,7 @@ tcache_boot(void)
 	else
 		tcache_maxclass = (1U << opt_lg_tcache_max);
 
-	nhbins = NBINS + (tcache_maxclass >> LG_PAGE);
+	nhbins = size2index(tcache_maxclass) + 1;
 
 	/* Initialize tcache_bin_info. */
 	tcache_bin_info = (tcache_bin_info_t *)base_alloc(nhbins *
@@ -515,7 +515,11 @@ tcache_boot(void)
 		return (true);
 	stack_nelms = 0;
 	for (i = 0; i < NBINS; i++) {
-		if ((arena_bin_info[i].nregs << 1) <= TCACHE_NSLOTS_SMALL_MAX) {
+		if ((arena_bin_info[i].nregs << 1) <= TCACHE_NSLOTS_SMALL_MIN) {
+			tcache_bin_info[i].ncached_max =
+			    TCACHE_NSLOTS_SMALL_MIN;
+		} else if ((arena_bin_info[i].nregs << 1) <=
+		    TCACHE_NSLOTS_SMALL_MAX) {
 			tcache_bin_info[i].ncached_max =
 			    (arena_bin_info[i].nregs << 1);
 		} else {

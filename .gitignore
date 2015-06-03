@@ -155,7 +155,6 @@ tutorial/Beginners/collectives/allgather
 tutorial/Beginners/collectives/allreduce
 tutorial/Beginners/collectives/alltoall
 tutorial/Beginners/gas/Makefile
-tutorial/Beginners/gas/allocZeroBytes
 tutorial/Beginners/gas/gasalloc
 tutorial/Beginners/gas/memTryPin
 tutorial/Beginners/gas/memcpy

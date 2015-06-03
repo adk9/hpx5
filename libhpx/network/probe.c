@@ -32,6 +32,7 @@ static int _probe_handler(network_t *network) {
     while ((stack = network_probe(network, hpx_get_my_thread_id()))) {
       hpx_parcel_t *p = NULL;
       while ((p = parcel_stack_pop(&stack))) {
+        INST_EVENT_PARCEL_RECV(p);
         parcel_launch(p);
       }
     }

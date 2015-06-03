@@ -36,6 +36,7 @@ typedef void (rtree_node_dalloc_t)(rtree_node_elm_t *);
 
 struct rtree_node_elm_s {
 	union {
+		void			*pun;
 		rtree_node_elm_t	*child;
 		extent_node_t		*val;
 	};
@@ -64,7 +65,10 @@ struct rtree_level_s {
 	 * lower 47 bits of virtual address space in userland, thus leaving
 	 * subtrees[0] unused and avoiding a level of tree traversal.
 	 */
-	rtree_node_elm_t	*subtree;
+	union {
+		void			*subtree_pun;
+		rtree_node_elm_t	*subtree;
+	};
 	/* Number of key bits distinguished by this level. */
 	unsigned		bits;
 	/*
@@ -110,13 +114,14 @@ bool	rtree_node_valid(rtree_node_elm_t *node);
 rtree_node_elm_t	*rtree_child_tryread(rtree_node_elm_t *elm);
 rtree_node_elm_t	*rtree_child_read(rtree_t *rtree, rtree_node_elm_t *elm,
     unsigned level);
-extent_node_t	*rtree_val_read(rtree_t *rtree, rtree_node_elm_t *elm);
+extent_node_t	*rtree_val_read(rtree_t *rtree, rtree_node_elm_t *elm,
+    bool dependent);
 void	rtree_val_write(rtree_t *rtree, rtree_node_elm_t *elm,
     const extent_node_t *val);
 rtree_node_elm_t	*rtree_subtree_tryread(rtree_t *rtree, unsigned level);
 rtree_node_elm_t	*rtree_subtree_read(rtree_t *rtree, unsigned level);
 
-extent_node_t	*rtree_get(rtree_t *rtree, uintptr_t key);
+extent_node_t	*rtree_get(rtree_t *rtree, uintptr_t key, bool dependent);
 bool	rtree_set(rtree_t *rtree, uintptr_t key, const extent_node_t *val);
 #endif
 
@@ -159,7 +164,7 @@ rtree_child_tryread(rtree_node_elm_t *elm)
 	/* Double-checked read (first read may be stale. */
 	child = elm->child;
 	if (!rtree_node_valid(child))
-		child = atomic_read_p((void **)&elm->child);
+		child = atomic_read_p(&elm->pun);
 	return (child);
 }
 
@@ -175,17 +180,32 @@ rtree_child_read(rtree_t *rtree, rtree_node_elm_t *elm, unsigned level)
 }
 
 JEMALLOC_INLINE extent_node_t *
-rtree_val_read(rtree_t *rtree, rtree_node_elm_t *elm)
+rtree_val_read(rtree_t *rtree, rtree_node_elm_t *elm, bool dependent)
 {
 
-	return (atomic_read_p((void **)&elm->val));
+	if (dependent) {
+		/*
+		 * Reading a val on behalf of a pointer to a valid allocation is
+		 * guaranteed to be a clean read even without synchronization,
+		 * because the rtree update became visible in memory before the
+		 * pointer came into existence.
+		 */
+		return (elm->val);
+	} else {
+		/*
+		 * An arbitrary read, e.g. on behalf of ivsalloc(), may not be
+		 * dependent on a previous rtree write, which means a stale read
+		 * could result if synchronization were omitted here.
+		 */
+		return (atomic_read_p(&elm->pun));
+	}
 }
 
 JEMALLOC_INLINE void
 rtree_val_write(rtree_t *rtree, rtree_node_elm_t *elm, const extent_node_t *val)
 {
 
-	atomic_write_p((void **)&elm->val, val);
+	atomic_write_p(&elm->pun, val);
 }
 
 JEMALLOC_INLINE rtree_node_elm_t *
@@ -196,7 +216,7 @@ rtree_subtree_tryread(rtree_t *rtree, unsigned level)
 	/* Double-checked read (first read may be stale. */
 	subtree = rtree->levels[level].subtree;
 	if (!rtree_node_valid(subtree))
-		subtree = atomic_read_p((void **)&rtree->levels[level].subtree);
+		subtree = atomic_read_p(&rtree->levels[level].subtree_pun);
 	return (subtree);
 }
 
@@ -212,7 +232,7 @@ rtree_subtree_read(rtree_t *rtree, unsigned level)
 }
 
 JEMALLOC_INLINE extent_node_t *
-rtree_get(rtree_t *rtree, uintptr_t key)
+rtree_get(rtree_t *rtree, uintptr_t key, bool dependent)
 {
 	uintptr_t subkey;
 	unsigned i, start_level;
@@ -222,7 +242,7 @@ rtree_get(rtree_t *rtree, uintptr_t key)
 
 	for (i = start_level, node = rtree_subtree_tryread(rtree, start_level);
 	    /**/; i++, node = child) {
-		if (unlikely(!rtree_node_valid(node)))
+		if (!dependent && unlikely(!rtree_node_valid(node)))
 			return (NULL);
 		subkey = rtree_subkey(rtree, key, i);
 		if (i == rtree->height - 1) {
@@ -230,7 +250,8 @@ rtree_get(rtree_t *rtree, uintptr_t key)
 			 * node is a leaf, so it contains values rather than
 			 * child pointers.
 			 */
-			return (rtree_val_read(rtree, &node[subkey]));
+			return (rtree_val_read(rtree, &node[subkey],
+			    dependent));
 		}
 		assert(i < rtree->height - 1);
 		child = rtree_child_tryread(&node[subkey]);

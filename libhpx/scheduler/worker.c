@@ -145,7 +145,13 @@ static hpx_parcel_t *_get_nop_parcel(void) {
 /// The entry function for all interrupts.
 ///
 static void _execute_interrupt(hpx_parcel_t *p) {
+  if (p->action != scheduler_nop) {
+    INST_EVENT_PARCEL_RUN(p);
+  }
   int e = action_execute(p);
+  if (p->action != scheduler_nop) {
+    INST_EVENT_PARCEL_END(p);
+  }
   switch (e) {
    case HPX_SUCCESS:
     log_sched("completed interrupt\n");
@@ -174,6 +180,9 @@ static void _execute_thread(hpx_parcel_t *p) {
         self->profiler = apex_start(APEX_FUNCTION_ADDRESS, (void*)hpx_action_get_handler(id));
     }
 #endif
+  if (p->action != scheduler_nop) {
+    INST_EVENT_PARCEL_RUN(p);
+  }
   int e = action_execute(p);
 #ifdef HAVE_APEX
     if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
@@ -213,8 +222,13 @@ static int _on_startup(hpx_parcel_t *to, void *sp, void *env) {
   // Tasks are unusual because we run them from the _run_task continuation,
   // which always runs "below" sp on the stack. This gets released in
   // _worker_shutdown.
+  // 
+  // If we're in a debug build, don't register to avoid an issue
+  // registering the VG stack.
+#ifndef ENABLE_DEBUG
   void *base = (char*)sp - here->config->stacksize;
   network_register_dma(here->network, base, here->config->stacksize, NULL);
+#endif
 
   return HPX_SUCCESS;
 }
@@ -292,9 +306,6 @@ static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
 static hpx_parcel_t *_schedule_lifo(struct worker *w) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&w->work);
   inst_trace(INST_SCHED, INST_SCHED_WQSIZE, sync_chase_lev_ws_deque_size(&w->work));
-  if (p != NULL) {
-    INST_EVENT_PARCEL_RUN(p);
-  }
   return p;
 }
 
@@ -359,9 +370,6 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   if (stack) {
     _put_stack(self, stack);
   }
-  if (prev->action != scheduler_nop) {
-    INST_EVENT_PARCEL_END(prev);
-  }
   hpx_parcel_release(prev);
   int status = (intptr_t)env;
   return status;
@@ -393,11 +401,16 @@ static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
 /// This will transfer back to the original system stack, returning the shutdown
 /// code. We release our registration of the pthread stack here as well.
 static void _worker_shutdown(struct worker *w) {
+#ifndef ENABLE_DEBUG
   void *base = (char*)w->sp - here->config->stacksize;
   network_release_dma(here->network, base, here->config->stacksize);
+#endif
 
   void **sp = &w->sp;
   intptr_t shutdown = sync_load(&w->sched->shutdown, SYNC_ACQUIRE);
+  if (self->current->action != scheduler_nop) {
+    INST_EVENT_PARCEL_END(self->current);
+  }
   thread_transfer((hpx_parcel_t*)&sp, _free_parcel, (void*)shutdown);
   unreachable();
 }
@@ -443,6 +456,9 @@ static hpx_parcel_t *_try_task(hpx_parcel_t *p) {
   dbg_assert(!parcel_get_stack(p));
 
   void **sp = &self->sp;
+
+  // No instrumentation for suspend here since thread is already recorded as 
+  // suspended (we mark the suspend before the call to _schedule).
   int e = thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
   dbg_check(e, "Error post _try_task: %s\n", hpx_strerror(e));
   return NULL;
@@ -850,7 +866,9 @@ void scheduler_spawn(hpx_parcel_t *p) {
   // we're supposed to transition out of work-first scheduling.
   uint64_t size = sync_chase_lev_ws_deque_size(&self->work);
   self->work_first = (size >= self->sched->wf_threshold);
+  INST_EVENT_PARCEL_SUSPEND(current);
   int e = thread_transfer(_try_bind(p), _work_first, NULL);
+  INST_EVENT_PARCEL_RESUME(current);
   dbg_check(e, "Detected a work-first scheduling error: %s\n", hpx_strerror(e));
 }
 
@@ -897,6 +915,7 @@ void scheduler_yield(void) {
   dbg_assert(parcel_get_stack(to)->sp);
   // transfer to the new thread
   thread_transfer(to, _checkpoint_yield, from);
+  // note that we don't instrument yields because they overwhelm tracing
 }
 
 void hpx_thread_yield(void) {
@@ -926,8 +945,20 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
 
   // if we successfully pushed, then do a transfer away from this thread
   if (status == HPX_SUCCESS) {
+    INST_EVENT_PARCEL_SUSPEND(self->current);
     hpx_parcel_t *to = _schedule(true, NULL);
+#ifdef HAVE_APEX
+  if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
+      apex_yield(self->profiler); 
+      self->profiler = APEX_NULL_PROFILER_HANDLE; 
+  }
+#endif
     thread_transfer(to, _unlock, (void*)lock);
+#ifdef HAVE_APEX
+    hpx_action_t id = hpx_parcel_get_action(self->current);
+    self->profiler = apex_resume(APEX_FUNCTION_ADDRESS, (void*)hpx_action_get_handler(id));
+#endif
+    INST_EVENT_PARCEL_RESUME(self->current);
     sync_lockable_ptr_lock(lock);
     status = cvar_get_error(condition);
   }
@@ -975,6 +1006,9 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size, const void 
   dbg_assert(to);
   dbg_assert(parcel_get_stack(to));
   dbg_assert(parcel_get_stack(to)->sp);
+  if (parcel->action != scheduler_nop) {
+    INST_EVENT_PARCEL_END(parcel);
+  }
   thread_transfer(to, _free_parcel, (void*)(intptr_t)status);
   unreachable();
 }
@@ -1018,6 +1052,8 @@ void hpx_thread_exit(int status) {
     //      task inside of schedule() which would cause the current task to be
     //      freed.
     hpx_parcel_t *to = _schedule(true, NULL);
+    INST_EVENT_PARCEL_END(parcel); // assuming action != scheduler_nop
+    INST_EVENT_PARCEL_RESEND(parcel);
     thread_transfer(to, _resend_parcel, parcel);
     unreachable();
   }
@@ -1115,8 +1151,10 @@ void hpx_thread_set_affinity(int affinity) {
     return;
   }
 
+  INST_EVENT_PARCEL_SUSPEND(self->current);
   hpx_parcel_t *to = _schedule(false, NULL);
   thread_transfer(to, _move_to, (void*)(intptr_t)affinity);
+  INST_EVENT_PARCEL_RESUME(self->current);
 }
 
 /// This transfer handler is the right place to put all debug, logging, and

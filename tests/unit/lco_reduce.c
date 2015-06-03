@@ -57,7 +57,7 @@ static int lco_reduce_handler(void) {
     double compval = nDoms * data;
     if (fabs((compval - ans)/compval) > 0.001) { // works if not near zero
       fprintf(stderr, "expected %f, got %f (delta = %f)\n", nDoms * data, ans,
-	      fabs(nDoms * data - ans));
+          fabs(nDoms * data - ans));
       exit(EXIT_FAILURE);
     }
     hpx_lco_reset_sync(newdt);
@@ -96,7 +96,7 @@ static int lco_reduce_getRef_handler(void) {
     hpx_lco_getref(newdt, sizeof(*ans), (void **)&ans);
     double compval = nDoms * ((nDoms-1)/2) * data;
     if (fabs((compval - *ans)/compval) > 0.001) { // works if not near zero
-      fprintf(stderr, "expected %f, got %f (delta = %f)\n", 
+      fprintf(stderr, "expected %f, got %f (delta = %f)\n",
               nDoms * ((nDoms-1)/2) * data, *ans,
               nDoms * ((nDoms-1)/2) * data - *ans);
       exit(EXIT_FAILURE);
@@ -123,20 +123,20 @@ static int _par_reduce(const int i, const void *args) {
 }
 
 static int lco_par_reduce_handler(void) {
-  static const int iters = 42;
-  double nums[iters];
+  #define ITERS 42
+  double nums[ITERS];
 
   srand((unsigned)time(NULL));
-  for (int i = 0, e = iters; i < e; ++i) {
+  for (int i = 0, e = ITERS; i < e; ++i) {
     nums[i] = ((double)rand()/(double)RAND_MAX);
   }
 
   double val = 0.0;
-  for (int i = 0, e = iters; i < e; ++i) {
+  for (int i = 0, e = ITERS; i < e; ++i) {
     val += nums[i];
   }
 
-  hpx_addr_t rlco = hpx_lco_reduce_new(iters, sizeof(double), _initDouble,
+  hpx_addr_t rlco = hpx_lco_reduce_new(ITERS, sizeof(double), _initDouble,
                                        _addDouble);
   struct _par_reduce_args args = {
     .rlco = rlco,
@@ -144,7 +144,7 @@ static int lco_par_reduce_handler(void) {
   };
 
   // perform parallel reduction
-  hpx_par_for_sync(_par_reduce, 0, iters, &args);
+  hpx_par_for_sync(_par_reduce, 0, ITERS, &args);
 
   // get the gathered value
   double ans;

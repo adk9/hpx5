@@ -56,23 +56,23 @@ as_join(int id) {
   // Create an arena that uses the right allocators.
   unsigned arena;
   size_t sz = sizeof(arena);
-  mallctl("arenas.extend", &arena, &sz, NULL, 0);
+  je_mallctl("arenas.extend", &arena, &sz, NULL, 0);
 
 
   char path[128];
   snprintf(path, 128, "arena.%u.chunk.alloc", arena);
-  mallctl(path, NULL, NULL, (void*)&allocator->challoc, sizeof(void*));
+  je_mallctl(path, NULL, NULL, (void*)&allocator->challoc, sizeof(void*));
 
   snprintf(path, 128, "arena.%u.chunk.dalloc", arena);
-  mallctl(path, NULL, NULL, (void*)&allocator->chfree, sizeof(void*));
+  je_mallctl(path, NULL, NULL, (void*)&allocator->chfree, sizeof(void*));
 
   snprintf(path, 128, "arena.%u.chunk.purge", arena);
-  mallctl(path, NULL, NULL, (void*)&allocator->chpurge, sizeof(void*));
+  je_mallctl(path, NULL, NULL, (void*)&allocator->chpurge, sizeof(void*));
 
   // Create a cache.
   unsigned cache;
   sz = sizeof(cache);
-  mallctl("tcache.create", &cache, &sz, NULL, 0);
+  je_mallctl("tcache.create", &cache, &sz, NULL, 0);
 
   // And set the flags.
   as_flags[id] = MALLOCX_ARENA(arena) | MALLOCX_TCACHE(cache);
