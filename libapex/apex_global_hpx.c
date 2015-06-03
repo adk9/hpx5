@@ -1,7 +1,8 @@
 #include "libapex/apex_global_hpx.h"
 #include <math.h>
 
-#define APEX_LOCALITY ((HPX_LOCALITIES)-1)
+//#define APEX_LOCALITY ((HPX_LOCALITIES)-1) // doesn't seem to work...
+#define APEX_LOCALITY 0
 apex_profile value;
 apex_profile reduced_value;
 
@@ -32,43 +33,46 @@ int apex_get_value_action(void *args) {
     value.maximum = p->maximum; 
   }
   HPX_THREAD_CONTINUE(value);
-}
-
-void apex_trigger_reduction(void) {
-    /*
-  hpx_addr_t future = hpx_lco_future_new(sizeof(int));
-  int dummy = 0;
-  hpx_call(HPX_HERE, apex_allreduce, future, &dummy, sizeof(int));
-  apex_allreduce_action(NULL);
-  */
+  return HPX_SUCCESS;
 }
 
 int apex_allreduce_action(void *unused) {
   int num_ranks = HPX_LOCALITIES;
   int my_rank = HPX_LOCALITY_ID;
-  // The APEX sink is the last locality
-  /*
+  // The APEX sink is the only one to make the requests
   if (my_rank != APEX_LOCALITY) {
-      printf("%d not me!\n", my_rank);
       return HPX_SUCCESS;
   }
-  */
 
   apex_profile values[num_ranks];
   void         *addrs[num_ranks];
   int          sizes[num_ranks];
   hpx_addr_t   futures[num_ranks];
-  //hpx_addr_t   result;
 
   for (int i = 0; i < num_ranks; ++i) {
     addrs[i] = &values[i];
     sizes[i] = sizeof(apex_profile);
     futures[i] = hpx_lco_future_new(sizeof(apex_profile));
-    hpx_call(HPX_THERE(i), apex_get_value, (hpx_addr_t)(NULL), 0, futures[i]);
+    hpx_call(HPX_THERE(i), apex_get_value, futures[i], NULL, 0);
   }
   hpx_lco_get_all(num_ranks, futures, sizes, addrs, NULL);
   apex_sum(num_ranks, values);
+  for (int i = 0; i < num_ranks; ++i) {
+    hpx_lco_delete(futures[i], HPX_NULL);
+  }
   return HPX_SUCCESS;
+}
+
+void apex_trigger_reduction(void) {
+  int my_rank = HPX_LOCALITY_ID;
+  if (my_rank == APEX_LOCALITY) {
+    hpx_addr_t future = hpx_lco_future_new(sizeof(int));
+    // fire and forget...
+    hpx_call(HPX_HERE, apex_allreduce, future, NULL, 0);
+    //hpx_call(APEX_LOCALITY, apex_allreduce, future, NULL, 0);
+    //apex_allreduce_action(NULL);
+  }
+  return;
 }
 
 int apex_periodic_output(apex_context const context) {

@@ -26,3 +26,8 @@ if BUILD_AGAS
 SUBDIRS           += agas
 libgas_la_LIBADD  += agas/libagas.la
 endif
+
+if HAVE_APEX
+libgas_la_CPPFLAGS  += @APEX_CFLAGS@
+libgas_la_LIBADD     += @APEX_LIBS@
+endif
