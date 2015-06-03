@@ -1,30 +1,54 @@
 #include "libapex/apex_global_hpx.h"
 #include <math.h>
+#include <string.h>
 
 //#define APEX_LOCALITY ((HPX_LOCALITIES)-1) // doesn't seem to work...
 #define APEX_LOCALITY 0
 apex_profile value;
 apex_profile reduced_value;
+int min_rank = 0;
+int max_rank = 0;
 
 hpx_action_t apex_get_value = 0;
 hpx_action_t apex_allreduce = 0;
 apex_function_address profiled_action = 0L;
+char profiled_action_name[256];
+apex_profiler_type profiler_type;
 
 FILE *graph_output;
 
 void apex_sum(int count, apex_profile values[count]) {
-  for (int i = 0; i < count; ++i) { 
+  reduced_value.calls = values[0].calls; 
+  reduced_value.accumulated = values[0].accumulated; 
+  reduced_value.sum_squares = values[0].sum_squares; 
+  reduced_value.minimum = values[0].minimum; 
+  reduced_value.maximum = values[0].maximum; 
+  min_rank = max_rank = 0;
+  for (int i = 1; i < count; ++i) { 
 	  reduced_value.calls += values[i].calls; 
 	  reduced_value.accumulated += values[i].accumulated; 
 	  reduced_value.sum_squares += values[i].sum_squares; 
-	  reduced_value.minimum = fmin(reduced_value.minimum,values[i].minimum); 
-	  reduced_value.maximum = fmax(reduced_value.maximum,values[i].maximum); 
+	  //reduced_value.minimum = fmin(reduced_value.minimum,values[i].minimum); 
+      if (values[i].minimum < reduced_value.minimum) {
+	    reduced_value.minimum = values[i].minimum; 
+        min_rank = i;
+      }
+	  //reduced_value.maximum = fmax(reduced_value.maximum,values[i].maximum); 
+	  if (values[i].maximum > reduced_value.maximum) {
+	    reduced_value.maximum = values[i].maximum; 
+        max_rank = i;
+      }
   }
   return ;
 }
 
 int apex_get_value_action(void *args) {
-  apex_profile * p = apex_get_profile(APEX_FUNCTION_ADDRESS, (void*)profiled_action);
+  apex_profile * p;
+  if (profiler_type == APEX_FUNCTION_ADDRESS) {
+    p = apex_get_profile(APEX_FUNCTION_ADDRESS, (void*)profiled_action);
+  } else { 
+    p = apex_get_profile(APEX_NAME_STRING, (void*)profiled_action_name);
+  }
   if (p != NULL) {
     value.calls = p->calls; 
     value.accumulated = p->accumulated; 
@@ -80,19 +104,24 @@ int apex_periodic_output(apex_context const context) {
   if (my_rank != APEX_LOCALITY) return APEX_NOERROR;
   double avg = 0.0;
   double stddev = 0.0;
-  if (value.calls > 0.0) {
-    avg = value.accumulated / value.calls;
-    stddev = sqrt((value.sum_squares / value.calls) - (avg*avg));
+  if (reduced_value.calls > 0.0) {
+    avg = reduced_value.accumulated / reduced_value.calls;
+    stddev = sqrt((reduced_value.sum_squares / reduced_value.calls) - (avg*avg));
   }
-  printf("global action: calls=%lu mean=%f +/- %f\r", (unsigned long)value.calls, avg, stddev);
+  printf("Iterations: calls=%lu mean=%f +/- %f, min=%f (%d), max=%f (%d)\r", (unsigned long)reduced_value.calls, avg, stddev, reduced_value.minimum, min_rank, reduced_value.maximum, max_rank);
   fflush(stdout);
   fprintf(graph_output,"%f %f\n",avg, stddev);
   fflush(graph_output);
   return APEX_NOERROR;
 }
 
-void apex_global_setup(apex_function_address in_action) {
-  profiled_action = in_action;
+void apex_global_setup(apex_profiler_type type, void* in_action) {
+  profiler_type = type;
+  if (type == APEX_FUNCTION_ADDRESS) {
+    profiled_action = (apex_function_address)in_action;
+  } else {
+    strcpy(profiled_action_name, in_action);
+  }
   apex_register_periodic_policy(1000000, apex_periodic_output);
   apex_set_use_policy(true);
   //set_value      = HPX_REGISTER_ACTION(action_apex_set_value);
