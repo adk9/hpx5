@@ -76,7 +76,8 @@ heap_init(heap_t *heap, size_t size) {
   // mmap a properly aligned heap. The heap tends to be larger with large
   // alignment requirements, so we try and help out by suggesting a "good"
   // starting address.
-  heap->max_block_lg_size = GPA_MAX_LG_BSIZE;
+
+  heap->max_block_lg_size = min_int(GPA_MAX_LG_BSIZE, ceil_log2_64(heap->nbytes));
   size_t align = (1lu << heap->max_block_lg_size);
   void *addr = (void*)align;
   heap->base = system_mmap_huge_pages(NULL, addr, heap->nbytes, align);
