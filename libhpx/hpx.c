@@ -140,6 +140,13 @@ int hpx_init(int *argc, char ***argv) {
   here->rank = boot_rank(here->boot);
   here->ranks = boot_n_ranks(here->boot);
 
+  // see if we're supposed to output the configuration, only do this at rank 0
+  if (config_log_level_isset(here->config, HPX_LOG_CONFIG)) {
+    if (here->rank == 0) {
+      config_print(here->config, stdout);
+    }
+  }
+
   // initialize the debugging system
   // @todo We would like to do this earlier but MPI_init() for the bootstrap
   //       network overwrites our segv handler.
