@@ -154,19 +154,20 @@ _locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align,
   }
 
   // and insert entries into our block translation table
-  for (int i = 0; i < blocks; i++) {
-    gva_t gva = {
-      .bits = {
-        .offset = offset + (i * bsize),
-        .cyclic = 1,
-        .size = align,
-        .home = here->rank
-      }
-    };
-    void *block = (char*)lva + (i * bsize);
-    btt_insert(agas->btt, gva, here->rank, block, blocks);
-  }
+  gva_t gva = {
+    .bits = {
+      .offset = offset,
+      .cyclic = 1,
+      .size = align,
+      .home = here->rank
+    }
+  };
 
+  for (int i = 0; i < blocks; i++) {
+    btt_insert(agas->btt, gva, here->rank, lva, blocks);
+    lva += bsize;
+    gva.bits.offset += bsize;
+  }
   return HPX_SUCCESS;
 }
 HPX_ACTION(HPX_DEFAULT, 0, _locality_alloc_cyclic,
@@ -190,7 +191,7 @@ hpx_addr_t _agas_alloc_cyclic_sync(size_t n, uint32_t bsize, int zero) {
     dbg_error("failed cyclic allocation\n");
   }
 
-  gva_t gva = agas_lva_to_gva(agas, lva, bsize);
+  gva_t gva = agas_lva_to_gva(agas, lva, padded);
   gva.bits.cyclic = 1;
   uint64_t offset = gva.bits.offset;
   int e = hpx_bcast_rsync(_locality_alloc_cyclic, &blocks, &align, &offset, &lva, &zero);
