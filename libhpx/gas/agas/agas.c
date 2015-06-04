@@ -385,14 +385,14 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   agas->chunk_size = 1lu << log2_bytes_per_chunk;
 
   size_t heap_size = 1lu << GVA_OFFSET_BITS;
-  size_t nchunks = ceil_div_64(heap_size, agas->chunk_size);
+  size_t nchunks = ceil_div_size_t(heap_size, agas->chunk_size);
   uint32_t min_align = ceil_log2_64(agas->chunk_size);
   uint32_t base_align = ceil_log2_64(heap_size);
   agas->bitmap = bitmap_new(nchunks, min_align, base_align);
   agas_global_allocator_init();
 
   if (here->rank == 0) {
-    size_t nchunks = ceil_div_64(here->ranks * heap_size, agas->chunk_size);
+    size_t nchunks = ceil_div_size_t(here->ranks * heap_size, agas->chunk_size);
     uint32_t min_align = ceil_log2_64(agas->chunk_size);
     uint32_t base_align = ceil_log2_64(heap_size);
     agas->cyclic_bitmap = bitmap_new(nchunks, min_align, base_align);
