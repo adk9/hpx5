@@ -10,23 +10,17 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_LIBHPX_H
-#define LIBHPX_LIBHPX_H
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
-#include <errno.h>
-#include <libhpx/config.h>
+#include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
 
-enum {
-  LIBHPX_ENOMEM = -(ENOMEM),
-  LIBHPX_EINVAL = -(EINVAL),
-  LIBHPX_ERROR = -2,
-  LIBHPX_EUNIMPLEMENTED = -1,
-  LIBHPX_OK = 0,
-  LIBHPX_RETRY
-};
 
-struct config;
-typedef struct config libhpx_config_t;
-libhpx_config_t *libhpx_get_config(void);
-
-#endif  // LIBHPX_LIBHPX_H
+libhpx_config_t *libhpx_get_config(void) {
+  dbg_assert_str(here, "libhpx not initialized\n");
+  dbg_assert_str(here->config, "libhpx config not available yet\n");
+  return here->config;
+}
