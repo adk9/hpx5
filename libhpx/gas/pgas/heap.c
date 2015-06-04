@@ -73,10 +73,13 @@ heap_init(heap_t *heap, size_t size) {
   heap->nchunks = ceil_div_64(heap->nbytes, heap->bytes_per_chunk);
   log_gas("heap nchunks is %zu\n", heap->nchunks);
 
-  // allocate a properly aligned heap
+  // mmap a properly aligned heap. The heap tends to be larger with large
+  // alignment requirements, so we try and help out by suggesting a "good"
+  // starting address.
   heap->max_block_lg_size = GPA_MAX_LG_BSIZE;
   size_t align = (1lu << heap->max_block_lg_size);
-  heap->base = system_mmap_huge_pages(NULL, NULL, heap->nbytes, align);
+  void *addr = (void*)align;
+  heap->base = system_mmap_huge_pages(NULL, addr, heap->nbytes, align);
   if (!heap->base) {
     log_error("could not allocate %zu bytes for the global heap\n",
               heap->nbytes);
