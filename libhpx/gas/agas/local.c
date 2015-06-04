@@ -45,25 +45,25 @@ agas_local_alloc(void *gas, uint32_t bytes, uint32_t boundary) {
 
 hpx_addr_t
 agas_local_calloc(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
-  dbg_assert(size < UINT32_MAX);
+  uint64_t align = ceil_log2_32(size);
+  dbg_assert(align < 32);
+  uint32_t padded = 1u << align;
 
-  size_t bytes = nmemb * size;
   char *lva;
   if (boundary) {
-    lva = global_memalign(boundary, bytes);
-    lva = memset(lva, 0, bytes);
+    lva = global_memalign(boundary, nmemb * padded);
+    lva = memset(lva, 0, nmemb * padded);
   } else {
-    lva = global_calloc(nmemb, size);
+    lva = global_calloc(nmemb, padded);
   }
 
   agas_t *agas = gas;
-  gva_t gva = agas_lva_to_gva(gas, lva, size);
+  gva_t gva = agas_lva_to_gva(gas, lva, padded);
   hpx_addr_t base = gva.addr;
-  uint32_t bsize = 1lu << gva.bits.size;
   for (int i = 0; i < nmemb; i++) {
     btt_insert(agas->btt, gva, here->rank, lva, nmemb);
-    lva += bsize;
-    gva.bits.offset += bsize;
+    lva += padded;
+    gva.bits.offset += padded;
   }
   return base;
 }
