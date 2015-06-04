@@ -15,6 +15,7 @@
 #endif
 
 #include <stdio.h>
+#include <string.h>
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
@@ -22,6 +23,50 @@
 #include "agas.h"
 #include "btt.h"
 #include "gva.h"
+
+hpx_addr_t
+agas_local_alloc(void *gas, uint32_t bytes, uint32_t boundary) {
+  // use the local allocator to get some memory that is part of the global
+  // address space
+  void *lva = NULL;
+  uint64_t padded = 1 << ceil_log2_32(bytes);
+  if (boundary) {
+    lva = global_memalign(boundary, padded);
+  }
+  else {
+    lva = global_malloc(padded);
+  }
+
+  agas_t *agas = gas;
+  gva_t gva = agas_lva_to_gva(gas, lva, padded);
+  btt_insert(agas->btt, gva, here->rank, lva, 1);
+  return gva.addr;
+}
+
+hpx_addr_t
+agas_local_calloc(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
+  dbg_assert(size < UINT32_MAX);
+
+  size_t bytes = nmemb * size;
+  char *lva;
+  if (boundary) {
+    lva = global_memalign(boundary, bytes);
+    lva = memset(lva, 0, bytes);
+  } else {
+    lva = global_calloc(nmemb, size);
+  }
+
+  agas_t *agas = gas;
+  gva_t gva = agas_lva_to_gva(gas, lva, size);
+  hpx_addr_t base = gva.addr;
+  uint32_t bsize = 1lu << gva.bits.size;
+  for (int i = 0; i < nmemb; i++) {
+    btt_insert(agas->btt, gva, here->rank, lva, nmemb);
+    lva += bsize;
+    gva.bits.offset += bsize;
+  }
+  return base;
+}
 
 // The latter half of the free operation.
 //
