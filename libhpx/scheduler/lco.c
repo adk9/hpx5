@@ -156,21 +156,40 @@ static int _lco_size_handler(lco_t *lco, void *UNUSED) {
 }
 HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_size, _lco_size_handler, HPX_POINTER);
 
+typedef struct {
+  lco_t *lco;
+  void *buffer;
+} _cleanup_release_args_t;
+
+static void _cleanup_release(void *args) {
+  _cleanup_release_args_t *a = args;
+  _release(a->lco, a->buffer);
+}
+
 static int _lco_get_handler(lco_t *lco, int n) {
   // convert to wait if there's no buffer
   if (n == 0) {
     return _wait(lco);
   }
 
-  // otherwise do the get to a stack location and continue it---can
-  // get rid of this with a lco_getref()
-  char buffer[n];
-  hpx_status_t status = _get(lco, n, buffer);
-  if (status == HPX_SUCCESS) {
-    hpx_thread_continue(n, buffer);
+  // if there is a getref handler, then we should use it
+  const lco_class_t *class = _class(lco);
+  if (class->on_getref) {
+    void *buffer;
+    hpx_status_t status = _getref(lco, n, &buffer);
+    if (status != HPX_SUCCESS) {
+      return status;
+    }
+    _cleanup_release_args_t args = { lco, buffer };
+    hpx_thread_continue_cleanup(&_cleanup_release, &args, n, buffer);
   }
   else {
-    return status;
+    char buffer[n];
+    hpx_status_t status = _get(lco, n, buffer);
+    if (status != HPX_SUCCESS) {
+      return status;
+    }
+    hpx_thread_continue(n, buffer);
   }
 }
 HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_get, _lco_get_handler, HPX_POINTER, HPX_INT);
@@ -255,7 +274,7 @@ void lco_unlock(lco_t *lco) {
 
 void lco_init(lco_t *lco, const lco_class_t *class) {
 #ifdef ENABLE_INSTRUMENTATION
-    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_INIT, lco, 
+    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_INIT, lco,
                hpx_get_my_thread_id(), lco->bits);
 #endif
   lco->vtable = class;
@@ -278,7 +297,7 @@ uintptr_t lco_get_deleted(const lco_t *lco) {
 
 void lco_set_triggered(lco_t *lco) {
 #ifdef ENABLE_INSTRUMENTATION
-    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_TRIGGER, lco, 
+    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_TRIGGER, lco,
                hpx_get_my_thread_id(), lco->bits);
 #endif
   lco->bits |= _TRIGGERED_MASK;
@@ -302,7 +321,7 @@ void hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync) {
   }
   else {
 #ifdef ENABLE_INSTRUMENTATION
-    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_DELETE, lco, 
+    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_DELETE, lco,
                hpx_get_my_thread_id(), lco->bits);
 #endif
     log_lco("deleting lco %p\n", (void*)lco);
@@ -351,7 +370,7 @@ void hpx_lco_reset(hpx_addr_t addr, hpx_addr_t rsync) {
   lco_t *lco = NULL;
   if (hpx_gas_try_pin(addr, (void**)&lco)) {
 #ifdef ENABLE_INSTRUMENTATION
-    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_RESET, lco, 
+    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_RESET, lco,
                hpx_get_my_thread_id(), lco->bits);
 #endif
     _reset(lco);
@@ -394,7 +413,7 @@ hpx_status_t hpx_lco_wait(hpx_addr_t target) {
   lco_t *lco;
   if (hpx_gas_try_pin(target, (void**)&lco)) {
 #ifdef ENABLE_INSTRUMENTATION
-    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_WAIT, target, 
+    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_WAIT, target,
                hpx_get_my_thread_id(), lco->bits);
 #endif
     hpx_status_t status = _wait(lco);
