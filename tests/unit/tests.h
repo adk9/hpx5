@@ -22,13 +22,6 @@
 #include <unistd.h>
 #include <hpx/hpx.h>
 
-int tests_timeout = 30;
-
-static void timeout(int signal) {
-  fprintf(stderr, "test timed out after %d seconds\n", tests_timeout);
-  hpx_shutdown(EXIT_FAILURE);
-}
-
 #define assert_msg(cond, msg) assert(cond && msg)
 
 #define ADD_TEST(test) do {                             \
@@ -68,12 +61,6 @@ static void timeout(int signal) {
         return -1;                                      \
       }                                                 \
     }                                                   \
-    char *str = getenv("HPX_TESTS_TIMEOUT");            \
-    if (str != NULL) {                                  \
-      tests_timeout = atoi(str);                        \
-    }                                                   \
-    signal(SIGALRM, timeout);                           \
-    alarm(tests_timeout);                               \
     return hpx_run(&_main);                             \
   }                                                     \
   int main(int argc, char *argv[])
