@@ -25,7 +25,12 @@
 
 static const int LEVEL = HPX_LOG_CONFIG | HPX_LOG_NET | HPX_LOG_DEFAULT;
 
-network_t *network_new(const config_t *cfg, boot_t *boot, struct gas *gas) {
+network_t *network_new(config_t *cfg, boot_t *boot, struct gas *gas) {
+#ifndef HAVE_NETWORK
+  // if we didn't build a network we need to default to SMP
+  cfg->network = HPX_NETWORK_SMP;
+#endif
+
   libhpx_network_t type = cfg->network;
   int ranks = boot_n_ranks(boot);
   network_t *network = NULL;

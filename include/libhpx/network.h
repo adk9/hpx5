@@ -87,7 +87,7 @@ typedef struct network {
 /// @param          gas The global address space.
 ///
 /// @returns            The network object, or NULL if there was an issue.
-network_t *network_new(const struct config *cfg, struct boot *boot,
+network_t *network_new(struct config *cfg, struct boot *boot,
                        struct gas *gas)
   HPX_MALLOC;
 
