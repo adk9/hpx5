@@ -186,7 +186,7 @@ static hpx_status_t _allreduce_wait(lco_t *lco) {
 }
 
 // vtable
-static const lco_class_t vtable = {
+static const lco_class_t _allreduce_vtable = {
   .on_fini     = _allreduce_fini,
   .on_error    = _allreduce_error,
   .on_set      = _allreduce_set,
@@ -205,7 +205,7 @@ _allreduce_init_handler(_allreduce_t *r, size_t writers, size_t readers,
   assert(id);
   assert(op);
 
-  lco_init(&r->lco, &vtable);
+  lco_init(&r->lco, &_allreduce_vtable);
   cvar_reset(&r->wait);
   r->readers = readers;
   r->op = op;
