@@ -177,3 +177,9 @@ int optional
 option "hpx-photon-numcq" - "set number of completion queues to use (cyclic assignment to ranks)"
 typestr="integer"
 int optional
+
+section "Optimization"
+
+option "hpx-opt-smp" - "optimize for SMP execution"
+typestr="0 off"
+int optional argoptional

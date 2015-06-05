@@ -161,6 +161,9 @@ struct hpx_options_t
   int hpx_photon_numcq_arg;	/**< @brief set number of completion queues to use (cyclic assignment to ranks).  */
   char * hpx_photon_numcq_orig;	/**< @brief set number of completion queues to use (cyclic assignment to ranks) original value given at command line.  */
   const char *hpx_photon_numcq_help; /**< @brief set number of completion queues to use (cyclic assignment to ranks) help description.  */
+  int hpx_opt_smp_arg;	/**< @brief optimize for SMP execution.  */
+  char * hpx_opt_smp_orig;	/**< @brief optimize for SMP execution original value given at command line.  */
+  const char *hpx_opt_smp_help; /**< @brief optimize for SMP execution help description.  */
   
   unsigned int hpx_help_given ;	/**< @brief Whether hpx-help was given.  */
   unsigned int hpx_heapsize_given ;	/**< @brief Whether hpx-heapsize was given.  */
@@ -201,6 +204,7 @@ struct hpx_options_t
   unsigned int hpx_photon_maxrd_given ;	/**< @brief Whether hpx-photon-maxrd was given.  */
   unsigned int hpx_photon_defaultrd_given ;	/**< @brief Whether hpx-photon-defaultrd was given.  */
   unsigned int hpx_photon_numcq_given ;	/**< @brief Whether hpx-photon-numcq was given.  */
+  unsigned int hpx_opt_smp_given ;	/**< @brief Whether hpx-opt-smp was given.  */
 
 } ;
 
