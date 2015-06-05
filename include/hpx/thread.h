@@ -107,8 +107,8 @@ void hpx_thread_continue(size_t size, const void *value)
 /// @param   value the value to be sent to the thread's continuation address
 /// @param cleanup a handler function to be run after the thread ends
 /// @param     env an environment to pass to @p cleanup
-void hpx_thread_continue_cleanup(size_t size, const void *value,
-                                 void (*cleanup)(void*), void *env)
+void hpx_thread_continue_cleanup(void (*cleanup)(void*), void *env,
+                                 size_t size, const void *value)
   HPX_NORETURN;
 
 
