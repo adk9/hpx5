@@ -95,6 +95,11 @@ static void _cleanup(locality_t *l) {
   }
 
   free(l);
+
+#ifdef HAVE_APEX 
+  // finalize APEX
+  apex_finalize();
+#endif
 }
 
 int hpx_init(int *argc, char ***argv) {
@@ -302,11 +307,6 @@ int hpx_get_num_threads(void) {
 
 /// Called by the application to terminate the scheduler and network.
 void hpx_shutdown(int code) {
-#ifdef HAVE_APEX
-  // stop the main timer
-  apex_profiler_handle dummy = NULL;
-  apex_stop(dummy);
-#endif
   dbg_assert_str(here->ranks,
                  "hpx_shutdown can only be called when the system is running.\n");
 
@@ -318,10 +318,6 @@ void hpx_shutdown(int code) {
     dbg_assert(e == LIBHPX_OK);
   }
   hpx_thread_exit(HPX_SUCCESS);
-#ifdef HAVE_APEX 
-  // finalize APEX
-  apex_finalize();
-#endif
 }
 
 /// Called by the application to shutdown the scheduler and network. May be

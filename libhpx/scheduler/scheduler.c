@@ -67,9 +67,7 @@ struct scheduler *scheduler_new(const config_t *cfg) {
   sync_store(&s->shutdown, INT_MAX, SYNC_RELEASE);
   sync_store(&s->next_tls_id, 0, SYNC_RELEASE);
   s->n_workers    = workers;
-#if defined(HAVE_APEX)
   s->n_active_workers   = workers; // akp
-#endif
   s->wf_threshold = cfg->wfthreshold;
   scheduler_stats_init(&s->stats);
 

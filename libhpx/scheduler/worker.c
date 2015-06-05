@@ -45,6 +45,24 @@
 #ifdef HAVE_APEX
 #include "apex.h"
 #include "apex_policies.h"
+
+inline void APEX_START(parcel p) {
+    // if this is NOT a null or lightweight action, 
+    // send a "start" event to APEX
+    hpx_action_t id = hpx_parcel_get_action(p);
+    if (id != HPX_ACTION_NULL && id != scheduler_nop && id != hpx_lco_set_action) {
+        self->profiler = apex_start(APEX_FUNCTION_ADDRESS, (void*)hpx_action_get_handler(id));
+    }
+}
+inline void APEX_STOP(void) {
+    if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
+        apex_stop(self->profiler); 
+        self->profiler = APEX_NULL_PROFILER_HANDLE; 
+    }
+}
+#else
+#define APEX_START(_P)
+#define APEX_STOP()
 #endif
 
 __thread struct worker *self = NULL;
@@ -63,11 +81,6 @@ static void *_run(void *worker) {
   as_join(AS_REGISTERED);
   as_join(AS_GLOBAL);
   as_join(AS_CYCLIC);
-
-#ifdef HAVE_APEX
-  // let APEX know there is a new thread
-  apex_register_thread("HPX WORKER THREAD");
-#endif
 
 #ifdef HAVE_APEX
   // let APEX know there is a new thread
@@ -411,6 +424,10 @@ static void _worker_shutdown(struct worker *w) {
   if (self->current->action != scheduler_nop) {
     INST_EVENT_PARCEL_END(self->current);
   }
+  if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
+      apex_stop(self->profiler); 
+      self->profiler = APEX_NULL_PROFILER_HANDLE; 
+  }
   thread_transfer((hpx_parcel_t*)&sp, _free_parcel, (void*)shutdown);
   unreachable();
 }
@@ -529,6 +546,63 @@ static pthread_mutex_t release_mutex = PTHREAD_MUTEX_INITIALIZER;
 // If so, it can't be throttled, because it could hold a lock that
 // will be requested by the thread trying to take the yielded work.
 __thread bool yielded = false;
+
+/* This function will check whether the current thread in the scheduling
+   loop should be throttled. */
+inline static int _apex_check_throttling(void) {
+    /*akp: throttling code -- if the throttling flag is set don't use some threads
+       NB: There is a possible race condition here. It's possible that mail needs
+           to be checked again just before throttling. */
+    if (apex_checkThrottling) {
+      // am I inactive?
+      if (self->active == false) {
+/* because we can't change the power level, sleep instead. */
+        pthread_mutex_lock(&release_mutex);
+        pthread_cond_wait(&release, &release_mutex);
+        pthread_mutex_unlock(&release_mutex);
+        // We've been signaled, see if we are the first to re-activate
+        if (__sync_fetch_and_add(&(self->sched->n_active_workers),1) <= apex_get_thread_cap()) { 
+          // yes, we are good to go
+          self->active = true;
+          apex_set_state(APEX_BUSY);
+        } else {
+          //no, another thread beat us to it.  This thread should stay idle. 
+          __sync_fetch_and_sub(&(self->sched->n_active_workers),1);
+          return 1; // restart the scheduler loop
+        }
+      } else {
+        if (apex_throttleOn && !yielded) {
+          // randomly de-activate a thread?
+          if (self->sched->n_active_workers > apex_get_thread_cap()) {
+            // try to decrement the active worker counter
+            if (__sync_fetch_and_sub(&(self->sched->n_active_workers),1) > apex_get_thread_cap()) { 
+              // success? then we are now inactive. go back to the top of the loop.
+              self->active = false;
+              apex_set_state(APEX_THROTTLED);
+              return 1; // restart the loop
+            }
+            //no, this thread should keep working. 
+            __sync_fetch_and_add(&(self->sched->n_active_workers),1);
+          // has the thread cap increased?
+          } else if (self->sched->n_active_workers < apex_get_thread_cap()) {
+            // release a worker
+            pthread_cond_signal(&release);
+          }
+        }
+      }
+    }
+    return 0;
+}
+
+/* release idle threads, stop any running timers, and exit the thread from APEX */
+inline static void _apex_worker_shutdown(void) {
+    pthread_cond_broadcast(&release);
+    if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
+        apex_stop(self->profiler); 
+        self->profiler = APEX_NULL_PROFILER_HANDLE; 
+    }
+    apex_exit_thread();
+}
 #endif
 
 /// The main scheduling "loop."
@@ -563,8 +637,7 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
   while (p == NULL) {
     if (scheduler_is_shutdown(self->sched)) {
 #if defined(HAVE_APEX)
-      pthread_cond_broadcast(&release);
-      apex_exit_thread();
+      _apex_worker_shutdown();
 #endif
       _worker_shutdown(self);
     }
@@ -573,46 +646,8 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
     _handle_mail(self);
 
 #if defined(HAVE_APEX)
-    //akp: throttling code -- if the throttling flag is set don't use some threads
-    // NB: There is a possible race condition here. It's possible that mail needs
-    //     to be checked again just before throttling.
-    if (apex_checkThrottling) {
-      // am I inactive?
-      if (self->active == false) {
-/* because we can't change the power level, sleep instead. */
-        pthread_mutex_lock(&release_mutex);
-        pthread_cond_wait(&release, &release_mutex);
-        pthread_mutex_unlock(&release_mutex);
-        // We've been signaled, see if we are the first to re-activate
-        if (__sync_fetch_and_add(&(self->sched->n_active_workers),1) <= apex_get_thread_cap()) { 
-          // yes, we are good to go
-          self->active = true;
-          apex_set_state(APEX_BUSY);
-        } else {
-          //no, another thread beat us to it.  This thread should stay idle. 
-          __sync_fetch_and_sub(&(self->sched->n_active_workers),1);
-          continue; // restart the scheduler loop
-        }
-      } else {
-        if (apex_throttleOn && !yielded) {
-          // randomly de-activate a thread?
-          if (self->sched->n_active_workers > apex_get_thread_cap()) {
-            // try to decrement the active worker counter
-            if (__sync_fetch_and_sub(&(self->sched->n_active_workers),1) > apex_get_thread_cap()) { 
-              // success? then we are now inactive. go back to the top of the loop.
-              self->active = false;
-              apex_set_state(APEX_THROTTLED);
-              continue; // restart the loop
-            }
-            //no, this thread should keep working. 
-            __sync_fetch_and_add(&(self->sched->n_active_workers),1);
-          // has the thread cap increased?
-          } else if (self->sched->n_active_workers < apex_get_thread_cap()) {
-            // release a worker
-            pthread_cond_signal(&release);
-          }
-        }
-      }
+    if (_apex_check_throttling() != 0) {
+      continue;
     }
 #endif
 
@@ -675,9 +710,7 @@ int worker_init(struct worker *w, struct scheduler *sched, int id,
   w->sp         = NULL;
   w->current    = NULL;
   w->stacks     = NULL;
-#ifdef HAVE_APEX
   w->active     = true;
-#endif
 
   sync_chase_lev_ws_deque_init(&w->work, work_size);
   sync_two_lock_queue_init(&w->inbox, NULL);
@@ -697,12 +730,6 @@ void worker_fini(struct worker *w) {
   while ((p = _schedule_lifo(w))) {
     hpx_parcel_release(p);
   }
-#ifdef HAVE_APEX
-  // stop throttling
-  apex_shutdown_throttling();
-  // shutdown APEX.
-  apex_finalize();
-#endif
   sync_chase_lev_ws_deque_fini(&w->work);
 
   // and delete any cached stacks
@@ -948,15 +975,21 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
     INST_EVENT_PARCEL_SUSPEND(self->current);
     hpx_parcel_t *to = _schedule(true, NULL);
 #ifdef HAVE_APEX
+    int had_profiler = 0;
   if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
-      apex_yield(self->profiler); 
+      // "yield" will not increment the number of calls.
+      apex_stop(self->profiler); 
       self->profiler = APEX_NULL_PROFILER_HANDLE; 
+      had_profiler = 1;
   }
 #endif
     thread_transfer(to, _unlock, (void*)lock);
 #ifdef HAVE_APEX
-    hpx_action_t id = hpx_parcel_get_action(self->current);
-    self->profiler = apex_resume(APEX_FUNCTION_ADDRESS, (void*)hpx_action_get_handler(id));
+    if (had_profiler) {
+      hpx_action_t id = hpx_parcel_get_action(self->current);
+      // "resume" will not increment the number of calls.
+      self->profiler = apex_resume(APEX_FUNCTION_ADDRESS, (void*)hpx_action_get_handler(id));
+    }
 #endif
     INST_EVENT_PARCEL_RESUME(self->current);
     sync_lockable_ptr_lock(lock);
@@ -1009,6 +1042,12 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size, const void 
   if (parcel->action != scheduler_nop) {
     INST_EVENT_PARCEL_END(parcel);
   }
+#ifdef HAVE_APEX
+  if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
+      apex_stop(self->profiler); 
+      self->profiler = APEX_NULL_PROFILER_HANDLE; 
+  }
+#endif
   thread_transfer(to, _free_parcel, (void*)(intptr_t)status);
   unreachable();
 }
@@ -1022,11 +1061,13 @@ static void _unpin_current_target(void) {
 
 void hpx_thread_continue(size_t size, const void *value) {
   _unpin_current_target();
+  #if 0
 #ifdef HAVE_APEX
   if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
       apex_stop(self->profiler); 
       self->profiler = APEX_NULL_PROFILER_HANDLE; 
   }
+#endif
 #endif
   _continue(HPX_SUCCESS, size, value, NULL, NULL);
 }
@@ -1034,11 +1075,13 @@ void hpx_thread_continue(size_t size, const void *value) {
 void hpx_thread_continue_cleanup(size_t size, const void *value,
                                  void (*cleanup)(void*), void *env) {
   _unpin_current_target();
+  #if 0
 #ifdef HAVE_APEX
   if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
       apex_stop(self->profiler); 
       self->profiler = APEX_NULL_PROFILER_HANDLE; 
   }
+#endif
 #endif
   _continue(HPX_SUCCESS, size, value, cleanup, env);
 }

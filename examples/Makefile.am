@@ -23,7 +23,7 @@ netbench_SOURCES        = netbench.c
 AM_CPPFLAGS          = -D_GNU_SOURCE -I$(top_srcdir)/include
 AM_CFLAGS            =
 AM_LDFLAGS           = $(HPX_JEMALLOC_RPATH) -no-install
-LDADD                = $(HPX_LIBS) -lffi
+LDADD                = $(HPX_LIBS)
 
 if HAVE_APEX
 AM_CFLAGS           += @APEX_CFLAGS@ 

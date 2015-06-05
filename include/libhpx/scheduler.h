@@ -70,9 +70,7 @@ struct scheduler {
   system_barrier_t    barrier;
   struct worker      *workers;
   scheduler_stats_t     stats;
-#if HAVE_APEX
   int        n_active_workers;  // used by APEX scheduler throttling : akp
-#endif
 };
 
 /// Allocate and initialize a new scheduler.
@@ -104,16 +102,6 @@ extern hpx_action_t scheduler_nop;
 /// @param    scheduler The scheduler.
 void scheduler_dump_stats(struct scheduler *scheduler)
   HPX_NON_NULL(1);
-
-#ifdef HAVE_APEX
-/// Save collected statistics to APEX.
-///
-/// The scheduler should not be running during this call.
-///
-/// @param    counts The scheduler stats.
-void scheduler_save_apex_stats(const scheduler_stats_t *counts)
-  HPX_NON_NULL(1);
-#endif
 
 #ifdef HAVE_APEX
 /// Save collected statistics to APEX.
