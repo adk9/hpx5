@@ -46,7 +46,7 @@
 #include "apex.h"
 #include "apex_policies.h"
 
-inline void APEX_START(parcel p) {
+inline void APEX_START(hpx_parcel_t *p) {
     // if this is NOT a null or lightweight action, 
     // send a "start" event to APEX
     hpx_action_t id = hpx_parcel_get_action(p);
@@ -54,15 +54,25 @@ inline void APEX_START(parcel p) {
         self->profiler = apex_start(APEX_FUNCTION_ADDRESS, (void*)hpx_action_get_handler(id));
     }
 }
-inline void APEX_STOP(void) {
+inline int APEX_STOP(void) {
     if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
         apex_stop(self->profiler); 
         self->profiler = APEX_NULL_PROFILER_HANDLE; 
+        return 1;
+    }
+    return 0;
+}
+inline void APEX_RESUME(int had_profiler) {
+    if (had_profiler) {
+      hpx_action_t id = hpx_parcel_get_action(self->current);
+      // "resume" will not increment the number of calls.
+      self->profiler = apex_resume(APEX_FUNCTION_ADDRESS, (void*)hpx_action_get_handler(id));
     }
 }
 #else
-#define APEX_START(_P)
-#define APEX_STOP()
+#define APEX_START(_p) {}
+#define APEX_STOP() 0
+#define APEX_RESUME(_b) {}
 #endif
 
 __thread struct worker *self = NULL;
@@ -185,24 +195,12 @@ static void _execute_interrupt(hpx_parcel_t *p) {
 ///
 /// @param       parcel The parcel that describes the thread to run.
 static void _execute_thread(hpx_parcel_t *p) {
-#ifdef HAVE_APEX
-    // if this is NOT a null or lightweight action, 
-    // send a "start" event to APEX
-    hpx_action_t id = hpx_parcel_get_action(p);
-    if (id != HPX_ACTION_NULL && id != scheduler_nop && id != hpx_lco_set_action) {
-        self->profiler = apex_start(APEX_FUNCTION_ADDRESS, (void*)hpx_action_get_handler(id));
-    }
-#endif
   if (p->action != scheduler_nop) {
     INST_EVENT_PARCEL_RUN(p);
   }
+  APEX_START(p);
   int e = action_execute(p);
-#ifdef HAVE_APEX
-    if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
-        apex_stop(self->profiler); 
-        self->profiler = APEX_NULL_PROFILER_HANDLE; 
-    }
-#endif
+  APEX_STOP();
   switch (e) {
     default:
      dbg_error("thread produced unhandled error %s.\n", hpx_strerror(e));
@@ -424,10 +422,7 @@ static void _worker_shutdown(struct worker *w) {
   if (self->current->action != scheduler_nop) {
     INST_EVENT_PARCEL_END(self->current);
   }
-  if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
-      apex_stop(self->profiler); 
-      self->profiler = APEX_NULL_PROFILER_HANDLE; 
-  }
+  APEX_STOP();
   thread_transfer((hpx_parcel_t*)&sp, _free_parcel, (void*)shutdown);
   unreachable();
 }
@@ -597,10 +592,7 @@ inline static int _apex_check_throttling(void) {
 /* release idle threads, stop any running timers, and exit the thread from APEX */
 inline static void _apex_worker_shutdown(void) {
     pthread_cond_broadcast(&release);
-    if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
-        apex_stop(self->profiler); 
-        self->profiler = APEX_NULL_PROFILER_HANDLE; 
-    }
+    APEX_STOP();
     apex_exit_thread();
 }
 #endif
@@ -974,23 +966,9 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   if (status == HPX_SUCCESS) {
     INST_EVENT_PARCEL_SUSPEND(self->current);
     hpx_parcel_t *to = _schedule(true, NULL);
-#ifdef HAVE_APEX
-    int had_profiler = 0;
-  if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
-      // "yield" will not increment the number of calls.
-      apex_stop(self->profiler); 
-      self->profiler = APEX_NULL_PROFILER_HANDLE; 
-      had_profiler = 1;
-  }
-#endif
+    int had_profiler = APEX_STOP();
     thread_transfer(to, _unlock, (void*)lock);
-#ifdef HAVE_APEX
-    if (had_profiler) {
-      hpx_action_t id = hpx_parcel_get_action(self->current);
-      // "resume" will not increment the number of calls.
-      self->profiler = apex_resume(APEX_FUNCTION_ADDRESS, (void*)hpx_action_get_handler(id));
-    }
-#endif
+    APEX_RESUME(had_profiler);
     INST_EVENT_PARCEL_RESUME(self->current);
     sync_lockable_ptr_lock(lock);
     status = cvar_get_error(condition);
@@ -1042,12 +1020,6 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size, const void 
   if (parcel->action != scheduler_nop) {
     INST_EVENT_PARCEL_END(parcel);
   }
-#ifdef HAVE_APEX
-  if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
-      apex_stop(self->profiler); 
-      self->profiler = APEX_NULL_PROFILER_HANDLE; 
-  }
-#endif
   thread_transfer(to, _free_parcel, (void*)(intptr_t)status);
   unreachable();
 }
@@ -1061,28 +1033,14 @@ static void _unpin_current_target(void) {
 
 void hpx_thread_continue(size_t size, const void *value) {
   _unpin_current_target();
-  #if 0
-#ifdef HAVE_APEX
-  if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
-      apex_stop(self->profiler); 
-      self->profiler = APEX_NULL_PROFILER_HANDLE; 
-  }
-#endif
-#endif
+  APEX_STOP();
   _continue(HPX_SUCCESS, size, value, NULL, NULL);
 }
 
 void hpx_thread_continue_cleanup(size_t size, const void *value,
                                  void (*cleanup)(void*), void *env) {
   _unpin_current_target();
-  #if 0
-#ifdef HAVE_APEX
-  if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
-      apex_stop(self->profiler); 
-      self->profiler = APEX_NULL_PROFILER_HANDLE; 
-  }
-#endif
-#endif
+  APEX_STOP();
   _continue(HPX_SUCCESS, size, value, cleanup, env);
 }
 
