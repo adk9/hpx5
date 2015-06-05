@@ -63,7 +63,7 @@ typedef struct gas {
   __typeof(hpx_gas_calloc_blocked) *calloc_blocked;
 } gas_t;
 
-gas_t *gas_new(const config_t *cfg, struct boot *boot)
+gas_t *gas_new(config_t *cfg, struct boot *boot)
   HPX_MALLOC HPX_NON_NULL(1,2);
 
 inline static void gas_delete(gas_t *gas) {

@@ -23,15 +23,15 @@
 
 static const int LEVEL = HPX_LOG_CONFIG | HPX_LOG_GAS;
 
-gas_t *gas_new(const config_t *cfg, struct boot *boot) {
-  hpx_gas_t type = cfg->gas;
-  int ranks = boot_n_ranks(boot);
-  gas_t *gas = NULL;
-
+gas_t *gas_new(config_t *cfg, struct boot *boot) {
 #ifndef HAVE_NETWORK
   // if we didn't build a network we need to default to SMP
   cfg->gas = HPX_GAS_SMP;
 #endif
+
+  int ranks = boot_n_ranks(boot);
+  gas_t *gas = NULL;
+  hpx_gas_t type = cfg->gas;
 
   // if we built a network, we might want to optimize for SMP
   if (ranks == 1 && cfg->opt_smp) {
