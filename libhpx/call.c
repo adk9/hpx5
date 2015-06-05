@@ -125,7 +125,7 @@ void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
   if (e == HPX_SUCCESS) {
     p->c_target = HPX_NULL;
     p->c_action = HPX_NULL;
-    hpx_thread_continue_cleanup(0, NULL, cleanup, env);
+    hpx_thread_continue_cleanup(cleanup, env, 0, NULL);
   }
 
   hpx_thread_exit(e);

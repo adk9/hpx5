@@ -911,8 +911,8 @@ void hpx_thread_continue(size_t size, const void *value) {
   _continue(HPX_SUCCESS, size, value, NULL, NULL);
 }
 
-void hpx_thread_continue_cleanup(size_t size, const void *value,
-                                 void (*cleanup)(void*), void *env) {
+void hpx_thread_continue_cleanup(void (*cleanup)(void*), void *env,
+                                 size_t size, const void *value) {
   _unpin_current_target();
   _continue(HPX_SUCCESS, size, value, cleanup, env);
 }

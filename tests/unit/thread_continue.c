@@ -86,7 +86,7 @@ static int _thread_cont_cleanup_handler(void) {
   *value = local;
 
   hpx_gas_unpin(addr);
-  hpx_thread_continue_cleanup(DATA_SIZE, value, free, value);
+  hpx_thread_continue_cleanup(free, value, DATA_SIZE, value);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _thread_cont_cleanup, _thread_cont_cleanup_handler);
 
