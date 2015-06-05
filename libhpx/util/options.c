@@ -483,6 +483,8 @@ config_print(config_t *cfg, FILE *f) {
   fprintf(f, "  ethdev\t\t\"%s\"\n", cfg->photon_ethdev);
   fprintf(f, "  ibdev\t\t\t\"%s\"\n", cfg->photon_ibdev);
 #endif
+  fprintf(f, "\nOptimization\n");
+  fprintf(f, "  smp\t\t\t%d\n", cfg->opt_smp);
 
   fprintf(f, "------------------------\n"
              "------------------------\n");

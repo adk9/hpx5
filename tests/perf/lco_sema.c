@@ -17,7 +17,6 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <hpx/hpx.h>
-#include "timeout.h"
 
 #define BENCHMARK "HPX COST OF LCO SEMAPHORES"
 
@@ -125,8 +124,6 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return 1;
   }
-
-  set_timeout(30);
 
   // run the main action
   return hpx_run(&_main);
