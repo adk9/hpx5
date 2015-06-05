@@ -28,6 +28,12 @@ gas_t *gas_new(const config_t *cfg, struct boot *boot) {
   int ranks = boot_n_ranks(boot);
   gas_t *gas = NULL;
 
+#ifndef HAVE_NETWORK
+  // if we didn't build a network we need to default to SMP
+  cfg->gas = HPX_GAS_SMP;
+#endif
+
+  // if we built a network, we might want to optimize for SMP
   if (ranks == 1 && cfg->opt_smp) {
     if (type != HPX_GAS_SMP && type != HPX_GAS_DEFAULT) {
       log_level(LEVEL, "GAS %s overriden to SMP.\n", HPX_GAS_TO_STRING[type]);
