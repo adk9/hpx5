@@ -232,6 +232,16 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
       .printf_code = "zu",                      \
       .name = "source rank"}
 
+// typeof(INST_EVENT_COL_METADATA_PARCEL_PARENT_ID) == inst_event_col_metadata_t
+#define METADATA_PARCEL_PARENT_ID               \
+  { .mask = 0x3f,                               \
+      .data_type = METADATA_TYPE_INT64,         \
+      .offset = INST_EVENT_COL_OFFSET_USER3,    \
+      .min = 0,                                 \
+      .max = UINT64_MAX,                        \
+      .printf_code = "zu",                      \
+      .name = "parent id"}
+
 // typeof(METADATA_SCHEDUER_WQ_SIZE) == inst_event_col_metadata_t
 #define METADATA_SCHEDULER_WQSIZE               \
   { .mask = 0x3f,                               \
@@ -281,7 +291,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
       METADATA_PARCEL_ID,                                          \
       METADATA_PARCEL_ACTION,                                      \
       METADATA_PARCEL_SIZE,                                        \
-      INST_EVENT_COL_METADATA_EMPTY3                               \
+      METADATA_PARCEL_PARENT_ID                                    \
     }                                                              \
 }
 

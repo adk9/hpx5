@@ -136,34 +136,6 @@ _agas_owner_of(const void *gas, hpx_addr_t addr) {
   return btt_owner_of(agas->btt, gva);
 }
 
-static void*
-_lva_to_chunk(agas_t *gas, void *lva) {
-  uintptr_t mask = ~(gas->chunk_size - 1);
-  return (void*)((uintptr_t)lva & mask);
-}
-
-static gva_t
-_lva_to_gva(agas_t *gas, void *lva, uint32_t bsize) {
-  // we need to reverse map this address to an offset into the local portion of
-  // the global address space
-  void *chunk = _lva_to_chunk(gas, lva);
-  uint64_t base = chunk_table_lookup(gas->chunk_table, chunk);
-  uint64_t offset = base + ((char*)lva - (char*)chunk);
-
-  // and construct a gva for this
-  gva_t gva = {
-    .bits = {
-      .offset = offset,
-      .size   = ceil_log2_32(bsize),
-      .cyclic  = 0,
-      .home   = here->rank,
-    }
-  };
-
-  // and return the address
-  return gva;
-}
-
 static int
 _locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align,
                                uint64_t offset, void *lva, int zero) {
@@ -182,19 +154,20 @@ _locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align,
   }
 
   // and insert entries into our block translation table
-  for (int i = 0; i < blocks; i++) {
-    gva_t gva = {
-      .bits = {
-        .offset = offset + (i * bsize),
-        .cyclic = 1,
-        .size = align,
-        .home = here->rank
-      }
-    };
-    void *block = (char*)lva + (i * bsize);
-    btt_insert(agas->btt, gva, here->rank, block, blocks);
-  }
+  gva_t gva = {
+    .bits = {
+      .offset = offset,
+      .cyclic = 1,
+      .size = align,
+      .home = here->rank
+    }
+  };
 
+  for (int i = 0; i < blocks; i++) {
+    btt_insert(agas->btt, gva, here->rank, lva, blocks);
+    lva += bsize;
+    gva.bits.offset += bsize;
+  }
   return HPX_SUCCESS;
 }
 HPX_ACTION(HPX_DEFAULT, 0, _locality_alloc_cyclic,
@@ -218,7 +191,7 @@ hpx_addr_t _agas_alloc_cyclic_sync(size_t n, uint32_t bsize, int zero) {
     dbg_error("failed cyclic allocation\n");
   }
 
-  gva_t gva = _lva_to_gva(agas, lva, bsize);
+  gva_t gva = agas_lva_to_gva(agas, lva, padded);
   gva.bits.cyclic = 1;
   uint64_t offset = gva.bits.offset;
   int e = hpx_bcast_rsync(_locality_alloc_cyclic, &blocks, &align, &offset, &lva, &zero);
@@ -289,75 +262,35 @@ _agas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
   return addr;
 }
 
-static hpx_addr_t
-_agas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
-  // use the local allocator to get some memory that is part of the global
-  // address space
-  void *lva = NULL;
-  uint64_t padded = 1 << ceil_log2_32(bytes);
-  if (boundary) {
-    lva = global_memalign(boundary, padded);
-  }
-  else {
-    lva = global_malloc(padded);
-  }
-
-  agas_t *agas = gas;
-  gva_t gva = _lva_to_gva(gas, lva, padded);
-  btt_insert(agas->btt, gva, here->rank, lva, 1);
-  return gva.addr;
-}
-
-static hpx_addr_t
-_agas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
-  dbg_assert(size < UINT32_MAX);
-
-  size_t bytes = nmemb * size;
-  char *lva;
-  if (boundary) {
-    lva = global_memalign(boundary, bytes);
-    lva = memset(lva, 0, bytes);
-  } else {
-    lva = global_calloc(nmemb, size);
-  }
-
-  agas_t *agas = gas;
-  gva_t gva = _lva_to_gva(gas, lva, size);
-  hpx_addr_t base = gva.addr;
-  uint32_t bsize = 1lu << gva.bits.size;
-  for (int i = 0; i < nmemb; i++) {
-    btt_insert(agas->btt, gva, here->rank, lva, nmemb);
-    lva += bsize;
-    gva.bits.offset += bsize;
-  }
-  return base;
-}
-
-static int
-_agas_free_cyclic_async_handler(hpx_addr_t base, hpx_addr_t addr,
-                                hpx_addr_t rsync) {
+int
+agas_btt_remove_handler(hpx_addr_t rsync, void *lva, int cont) {
+  hpx_addr_t addr = hpx_thread_current_target();
   gva_t gva = { .addr = addr };
   agas_t *agas = (agas_t*)here->gas;
 
-  void *lva = btt_lookup(agas->btt, gva);
-
   btt_remove(agas->btt, gva);
-
-  // and free the backing memory
-  if (addr == base) {
-    if (lva) {
-      if (here->rank == 0) {
-        agas_free_cyclic_sync(lva);
-      } else {
-        free(lva);
-      }
-    }
-    hpx_lco_error(rsync, HPX_SUCCESS, HPX_NULL);
+  if (cont) {
+    struct agas_btt_remove_args args = { .lva = lva, .rsync = rsync };
+    HPX_THREAD_CONTINUE(args);
+  } else {
+    return HPX_SUCCESS;
   }
+}
+HPX_ACTION(HPX_DEFAULT, 0, agas_btt_remove, agas_btt_remove_handler,
+           HPX_ADDR, HPX_POINTER, HPX_INT);
+
+static int
+_agas_free_cyclic_async_handler(struct agas_btt_remove_args *args, size_t UNUSED) {
+  if (here->rank == 0) {
+    agas_free_cyclic_sync(args->lva);
+  } else {
+    free(args->lva);
+  }
+  hpx_lco_error(args->rsync, HPX_SUCCESS, HPX_NULL);
   return HPX_SUCCESS;
 }
-HPX_ACTION(HPX_DEFAULT, 0, _agas_free_cyclic_async,
-           _agas_free_cyclic_async_handler, HPX_ADDR, HPX_ADDR, HPX_ADDR);
+HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _agas_free_cyclic_async,
+           _agas_free_cyclic_async_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int
 _agas_free_cyclic_handler(hpx_addr_t base, hpx_addr_t rsync) {
@@ -373,10 +306,26 @@ _agas_free_cyclic_handler(hpx_addr_t base, hpx_addr_t rsync) {
   size_t blocks = btt_get_blocks(agas->btt, gva);
   size_t bsize = 1 << gva.bits.size;
   gva.bits.home = here->rank;
-  for (int i = 0; i < blocks; i++) {
-    hpx_parcel_t *p = parcel_create(gva.addr, _agas_free_cyclic_async,
-                                    HPX_NULL, HPX_ACTION_NULL, 3,
-                                    &base, &gva.addr, &rsync);
+
+  int cont = (blocks == 1);
+  if (cont) {
+    hpx_parcel_t *p = parcel_create(gva.addr, agas_btt_remove,
+                                    HPX_THERE(gva.bits.home),
+                                    _agas_free_cyclic_async,
+                                    3, &rsync, &lva, &cont);
+    btt_try_delete(agas->btt, gva, p);
+    return HPX_SUCCESS;
+  }
+
+  struct agas_btt_remove_args args = { .lva = lva, .rsync = rsync };
+  hpx_addr_t and = hpx_lco_and_new(blocks);
+  hpx_call_when_with_continuation(and, HPX_THERE(gva.bits.home),
+                                  _agas_free_cyclic_async,
+                                  and, hpx_lco_delete_action, &args, sizeof(args));
+  for (int i = 0; i < blocks; ++i) {
+    hpx_parcel_t *p = parcel_create(gva.addr, agas_btt_remove,
+                                    and, hpx_lco_set_action,
+                                    3, &rsync, &lva, &cont);
     btt_try_delete(agas->btt, gva, p);
     gva.bits.offset += bsize;
   }
@@ -386,13 +335,13 @@ HPX_ACTION(HPX_DEFAULT, 0, _agas_free_cyclic,
            _agas_free_cyclic_handler, HPX_ADDR, HPX_ADDR);
 
 static int
-_agas_free_local_async_handler(hpx_addr_t rsync) {
+_agas_free_async_handler(hpx_addr_t rsync) {
   hpx_addr_t gva = hpx_thread_current_target();
   hpx_gas_free(gva, rsync);
   return HPX_SUCCESS;
 }
-HPX_ACTION(HPX_DEFAULT, 0, _agas_free_local_async,
-           _agas_free_local_async_handler, HPX_ADDR);
+HPX_ACTION(HPX_DEFAULT, 0, _agas_free_async,
+           _agas_free_async_handler, HPX_ADDR);
 
 static void
 _agas_free(void *gas, hpx_addr_t addr, hpx_addr_t rsync) {
@@ -415,7 +364,7 @@ _agas_free(void *gas, hpx_addr_t addr, hpx_addr_t rsync) {
     return;
   }
 
-  int e = hpx_xcall(addr, _agas_free_local_async, HPX_NULL, rsync);
+  int e = hpx_xcall(addr, _agas_free_async, HPX_NULL, rsync);
   dbg_check(e, "failed to forward AGAS free operation\n");
   (void)e;
 }
@@ -434,8 +383,8 @@ static gas_t _agas_vtable = {
   .calloc_cyclic  = _agas_calloc_cyclic,
   .alloc_blocked  = NULL,
   .calloc_blocked = NULL,
-  .alloc_local    = _agas_alloc_local,
-  .calloc_local   = _agas_calloc_local,
+  .alloc_local    = agas_local_alloc,
+  .calloc_local   = agas_local_calloc,
   .free           = _agas_free,
   .move           = agas_move,
   .memget         = agas_memget,
@@ -457,14 +406,14 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   agas->chunk_size = 1lu << log2_bytes_per_chunk;
 
   size_t heap_size = 1lu << GVA_OFFSET_BITS;
-  size_t nchunks = ceil_div_64(heap_size, agas->chunk_size);
+  size_t nchunks = ceil_div_size_t(heap_size, agas->chunk_size);
   uint32_t min_align = ceil_log2_64(agas->chunk_size);
   uint32_t base_align = ceil_log2_64(heap_size);
   agas->bitmap = bitmap_new(nchunks, min_align, base_align);
   agas_global_allocator_init();
 
   if (here->rank == 0) {
-    size_t nchunks = ceil_div_64(here->ranks * heap_size, agas->chunk_size);
+    size_t nchunks = ceil_div_size_t(here->ranks * heap_size, agas->chunk_size);
     uint32_t min_align = ceil_log2_64(agas->chunk_size);
     uint32_t base_align = ceil_log2_64(heap_size);
     agas->cyclic_bitmap = bitmap_new(nchunks, min_align, base_align);

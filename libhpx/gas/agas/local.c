@@ -15,6 +15,7 @@
 #endif
 
 #include <stdio.h>
+#include <string.h>
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
@@ -23,47 +24,85 @@
 #include "btt.h"
 #include "gva.h"
 
-// The latter half of the free operation.
-//
-// This handler is called once for each block in the allocation when
-// the pinned count reaches 0. Since we want the continuation of the
-// delete operation to be invoked only once, we check if the block
-// address that it is called for is equal to the base address of the
-// allocation.
-static int
-_agas_local_free_async_handler(hpx_addr_t base, hpx_addr_t addr,
-                               hpx_addr_t rsync) {
-  gva_t gva = { .addr = addr };
-  agas_t *agas = (agas_t*)here->gas;
-
-  void *lva = btt_lookup(agas->btt, gva);
-
-  // 1) remove this mapping
-  btt_remove(agas->btt, gva);
-
-  if (addr == base) {
-    if (lva) {
-      global_free(lva);
-    }
-
-    hpx_lco_error(rsync, HPX_SUCCESS, HPX_NULL);
+hpx_addr_t
+agas_local_alloc(void *gas, uint32_t bytes, uint32_t boundary) {
+  // use the local allocator to get some memory that is part of the global
+  // address space
+  void *lva = NULL;
+  uint64_t padded = 1 << ceil_log2_32(bytes);
+  if (boundary) {
+    lva = global_memalign(boundary, padded);
   }
+  else {
+    lva = global_malloc(padded);
+  }
+
+  agas_t *agas = gas;
+  gva_t gva = agas_lva_to_gva(gas, lva, padded);
+  btt_insert(agas->btt, gva, here->rank, lva, 1);
+  return gva.addr;
+}
+
+hpx_addr_t
+agas_local_calloc(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
+  uint64_t align = ceil_log2_32(size);
+  dbg_assert(align < 32);
+  uint32_t padded = 1u << align;
+
+  char *lva;
+  if (boundary) {
+    lva = global_memalign(boundary, nmemb * padded);
+    lva = memset(lva, 0, nmemb * padded);
+  } else {
+    lva = global_calloc(nmemb, padded);
+  }
+
+  agas_t *agas = gas;
+  gva_t gva = agas_lva_to_gva(gas, lva, padded);
+  hpx_addr_t base = gva.addr;
+  for (int i = 0; i < nmemb; i++) {
+    btt_insert(agas->btt, gva, here->rank, lva, nmemb);
+    lva += padded;
+    gva.bits.offset += padded;
+  }
+  return base;
+}
+
+static int
+_agas_local_free_async_handler(struct agas_btt_remove_args *args, size_t UNUSED) {
+  global_free(args->lva);
+
+  hpx_lco_error(args->rsync, HPX_SUCCESS, HPX_NULL);
   return HPX_SUCCESS;
 }
-HPX_ACTION(HPX_DEFAULT, 0, _agas_local_free_async,
-           _agas_local_free_async_handler, HPX_ADDR, HPX_ADDR, HPX_ADDR);
+HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _agas_local_free_async,
+           _agas_local_free_async_handler, HPX_POINTER, HPX_SIZE_T);
 
 void agas_local_free(agas_t *agas, gva_t gva, void *lva, hpx_addr_t rsync) {
 
   // how many blocks are involved in this mapping?
   size_t blocks = btt_get_blocks(agas->btt, gva);
   uint32_t bsize = 1 << gva.bits.size;
-  hpx_addr_t base = gva.addr;
 
+  int cont = (blocks == 1);
+  if (cont) {
+    hpx_parcel_t *p = parcel_create(gva.addr, agas_btt_remove,
+                                    HPX_THERE(gva.bits.home),
+                                    _agas_local_free_async,
+                                    3, &rsync, &lva, &cont);
+    btt_try_delete(agas->btt, gva, p);
+    return;
+  }
+
+  struct agas_btt_remove_args args = { .lva = lva, .rsync = rsync };
+  hpx_addr_t and = hpx_lco_and_new(blocks);
+  hpx_call_when_with_continuation(and, HPX_THERE(gva.bits.home),
+                                  _agas_local_free_async,
+                                  and, hpx_lco_delete_action, &args, sizeof(args));
   for (int i = 0; i < blocks; ++i) {
-    hpx_parcel_t *p = parcel_create(gva.addr, _agas_local_free_async,
-                                    HPX_NULL, HPX_ACTION_NULL, 3,
-                                    &base, &gva.addr, &rsync);
+    hpx_parcel_t *p = parcel_create(gva.addr, agas_btt_remove,
+                                    and, hpx_lco_set_action,
+                                    3, &rsync, &lva, &cont);
     btt_try_delete(agas->btt, gva, p);
     gva.bits.offset += bsize;
   }
