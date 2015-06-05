@@ -133,6 +133,13 @@ void hpx_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
   here->gas->free(here->gas, addr, sync);
 }
 
+void hpx_gas_free_sync(hpx_addr_t addr) {
+  hpx_addr_t sync = hpx_lco_future_new(0);
+  hpx_gas_free(addr, sync);
+  hpx_lco_wait(sync);
+  hpx_lco_delete(sync, HPX_NULL);
+}
+
 void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
   dbg_assert(here && here->gas && here->gas->move);
   here->gas->move(here->gas, src, dst, lco);
