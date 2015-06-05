@@ -97,6 +97,7 @@ struct hpx_parcel {
 /// Parcel tracing events.
 /// @{
 static inline void INST_EVENT_PARCEL_CREATE(hpx_parcel_t *p) {
+#ifdef ENABLE_INSTRUMENTATION
   if (p->action == scheduler_nop) {
     return;
   }
@@ -109,6 +110,7 @@ static inline void INST_EVENT_PARCEL_CREATE(hpx_parcel_t *p) {
     parent_id = parent->id;
 
   inst_trace(class, id, p->id, p->action, p->size, parent_id);
+#endif
 }
 
 static inline void INST_EVENT_PARCEL_SEND(hpx_parcel_t *p) {
