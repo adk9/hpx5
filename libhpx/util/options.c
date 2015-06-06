@@ -31,6 +31,7 @@
 #include <libhpx/config.h>
 #include <libhpx/gas.h>
 #include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>
@@ -266,8 +267,15 @@ static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
 #undef LIBHPX_OPT_FLAG
 
   if (opts->hpx_help_given) {
+    hpx_print_version();
+    libhpx_print_version();
     hpx_print_help();
     exit(EXIT_SUCCESS);
+  }
+
+  if (opts->hpx_version_given) {
+    hpx_print_version();
+    libhpx_print_version();
   }
 
   // Special case handling for the config file option, the
