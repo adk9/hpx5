@@ -206,7 +206,9 @@ int action_table_size(const struct action_table *table) {
 
 hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs) {
   dbg_assert(p);
-  dbg_assert(!n || vargs);
+  if (n == 0 || vargs == NULL) {
+    return p;
+  }
 
   if (p->action == HPX_ACTION_NULL) {
     dbg_error("parcel must have an action to serialize arguments.\n");
@@ -256,6 +258,10 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs) {
 
 static hpx_parcel_t *_action_parcel_acquire(hpx_action_t action, va_list *args)
 {
+  if (!args) {
+    return hpx_parcel_acquire(NULL, 0);
+  }
+
   const _table_t *actions = _get_actions();
   const ffi_cif *cif = action_table_get_cif(actions, action);
   if (cif) {
