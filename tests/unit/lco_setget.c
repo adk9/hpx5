@@ -81,7 +81,7 @@ static int _lco_setget_handler(uint64_t *args, size_t n) {
   hpx_lco_delete(future, HPX_NULL);
 
   //printf("Value set is = %"PRIu64"\n", setVal);
-  hpx_thread_continue(sizeof(uint64_t), &setVal);
+  HPX_THREAD_CONTINUE(setVal);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _lco_setget,
                   _lco_setget_handler, HPX_POINTER, HPX_SIZE_T);

@@ -181,7 +181,7 @@ static int _lco_get_handler(lco_t *lco, int n) {
       return status;
     }
     _cleanup_release_args_t args = { lco, buffer };
-    hpx_thread_continue_cleanup(&_cleanup_release, &args, n, buffer);
+    hpx_thread_continue_cleanup(&_cleanup_release, &args, buffer, n);
   }
   else {
     char buffer[n];
@@ -189,7 +189,7 @@ static int _lco_get_handler(lco_t *lco, int n) {
     if (status != HPX_SUCCESS) {
       return status;
     }
-    hpx_thread_continue(n, buffer);
+    hpx_thread_continue(buffer, n);
   }
 }
 HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_get, _lco_get_handler, HPX_POINTER, HPX_INT);
@@ -204,7 +204,7 @@ static int _lco_getref_handler(lco_t *lco, int n) {
   void *buffer;
   hpx_status_t status = _getref(lco, n, &buffer);
   if (status == HPX_SUCCESS) {
-    hpx_thread_continue(n, buffer);
+    hpx_thread_continue(buffer, n);
   }
   else {
     return status;

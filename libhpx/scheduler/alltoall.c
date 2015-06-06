@@ -242,7 +242,7 @@ static int _alltoall_getid_proxy_handler(_alltoall_get_offset_t *args, size_t n)
   // if success, finish the current thread's execution, sending buffer value to
   // the thread's continuation address else finish the current thread's execution.
   if(status == HPX_SUCCESS)
-    hpx_thread_continue(args->size, buffer);
+    hpx_thread_continue(buffer, args->size);
   else
     hpx_thread_exit(status);
 }

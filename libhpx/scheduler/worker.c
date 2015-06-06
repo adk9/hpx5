@@ -70,33 +70,10 @@ static void *_run(void *worker) {
   return NULL;
 }
 
-static int _call_continuation(hpx_addr_t target, hpx_action_t action,
-                              const void *args, size_t len, hpx_status_t status)
-{
-  dbg_assert(!args || len);
-  dbg_assert(!len || args);
-
-  // get a parcel we can use to call locality_call_continuation().
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(locality_cont_args_t) + len);
-  dbg_assert(p);
-  hpx_parcel_set_target(p, target);
-  hpx_parcel_set_action(p, locality_call_continuation);
-
-  locality_cont_args_t *cargs = hpx_parcel_get_data(p);
-  cargs->action = action;
-  cargs->status = status;
-
-  // perform the single serialization, if necessary
-  if (args) {
-    memcpy(&cargs->data, args, len);
-  }
-
-  return hpx_parcel_send(p, HPX_NULL);
-}
-
 /// continue a parcel by invoking its parcel continuation
-static int _continue_parcel(hpx_parcel_t *p, hpx_status_t status, size_t size,
-                            const void *value) {
+static
+int _continue_parcel(hpx_parcel_t *p, hpx_status_t status,
+                     int nargs, va_list *args) {
   int e = HPX_SUCCESS;
   hpx_action_t c_act = hpx_parcel_get_cont_action(p);
   hpx_addr_t c_target = hpx_parcel_get_cont_target(p);
@@ -107,13 +84,8 @@ static int _continue_parcel(hpx_parcel_t *p, hpx_status_t status, size_t size,
       --p->credit;
     }
 
-    if (c_act == hpx_lco_set_action) {
-      e = hpx_call_with_continuation(c_target, c_act, HPX_NULL, HPX_ACTION_NULL,
-                                     value, size);
-    }
-    else {
-      e = _call_continuation(c_target, c_act, value, size, status);
-    }
+    e = libhpx_call_action(c_target, c_act, HPX_NULL, HPX_ACTION_NULL,
+                           HPX_NULL, HPX_NULL, nargs, args);
   }
   return e;
 }
@@ -878,10 +850,10 @@ void scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
 }
 
 /// unified continuation handler
-static void HPX_NORETURN _continue(hpx_status_t status, size_t size, const void *value,
-                                   void (*cleanup)(void*), void *env) {
+static void HPX_NORETURN _continue(hpx_status_t status, void (*cleanup)(void*),
+                                   void *env, int nargs, va_list *args) {
   hpx_parcel_t *parcel = self->current;
-  _continue_parcel(parcel, status, size, value);
+  _continue_parcel(parcel, status, nargs, args);
 
   // run the cleanup handler
   if (cleanup != NULL) {
@@ -906,15 +878,21 @@ static void _unpin_current_target(void) {
   }
 }
 
-void hpx_thread_continue(size_t size, const void *value) {
+void _hpx_thread_continue(int nargs, ...) {
+  va_list vargs;
+  va_start(vargs, nargs);
   _unpin_current_target();
-  _continue(HPX_SUCCESS, size, value, NULL, NULL);
+  _continue(HPX_SUCCESS, NULL, NULL, nargs, &vargs);
+  va_end(vargs);
 }
 
-void hpx_thread_continue_cleanup(void (*cleanup)(void*), void *env,
-                                 size_t size, const void *value) {
+void _hpx_thread_continue_cleanup(void (*cleanup)(void*), void *env,
+                                  int nargs, ...) {
+  va_list vargs;
+  va_start(vargs, nargs);
   _unpin_current_target();
-  _continue(HPX_SUCCESS, size, value, cleanup, env);
+  _continue(HPX_SUCCESS, cleanup, env, nargs, &vargs);
+  va_end(vargs);
 }
 
 void hpx_thread_exit(int status) {
@@ -934,7 +912,7 @@ void hpx_thread_exit(int status) {
 
   if (status == HPX_SUCCESS || status == HPX_LCO_ERROR || status == HPX_ERROR) {
     process_recover_credit(parcel);
-    _continue(status, 0, NULL, NULL, NULL);
+    _continue(status, NULL, NULL, 0, NULL);
     unreachable();
   }
 
