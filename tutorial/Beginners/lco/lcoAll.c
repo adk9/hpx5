@@ -24,7 +24,7 @@ static const int NUM_FUTURES = 5;
 static int _setValue_action(void *args, size_t size) {
   // Generate the random value
   uint64_t  value = (rand() / (float)RAND_MAX) * 100;
-  hpx_thread_continue(sizeof(uint64_t), &value);
+  HPX_THREAD_CONTINUE(value);
 }
 
 static int _main_action(void *args, size_t size) {

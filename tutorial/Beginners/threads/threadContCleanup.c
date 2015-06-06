@@ -31,7 +31,7 @@ const int SET_CONT_VALUE         = 1234;
 static int _cleanup_action(void *args, size_t size) {
   uint64_t *value = (uint64_t*) malloc(sizeof(uint64_t));
   *value = SET_CONT_VALUE;
-  hpx_thread_continue_cleanup(free, value, DATA_SIZE, value);
+  hpx_thread_continue_cleanup(free, value, value, DATA_SIZE);
 }
 
 //****************************************************************************
