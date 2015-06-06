@@ -8,9 +8,13 @@
 # Research in Extreme Scale Technologies (CREST).
 
 AC_PREREQ([2.63])
-AC_INIT([hpx-5], [1.0.0], [hpx@indiana.edu])
+AC_INIT([hpx-5], [1.1.0], [hpx@indiana.edu])
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
+
+# HACK for now
+AC_DEFINE([HPX_VERSION], ["v1.1.0-git"], [The HPX interface version])
+AC_DEFINE([LIBHPX_VERSION], ["v1.1.0-git"], [The libhpx library version])
 
 # ---------------------------------------------------------------------------
   # Detect the programming environment.
