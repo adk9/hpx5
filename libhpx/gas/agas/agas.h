@@ -65,11 +65,7 @@ hpx_addr_t agas_local_add(const agas_t *agas, gva_t gva, int64_t bytes,
 
 void agas_local_free(agas_t *gas, gva_t addr, void *lva, hpx_addr_t rsync);
 
-struct agas_btt_remove_args {
-  void        *lva;
-  hpx_addr_t rsync;
-};
-
-extern hpx_action_t agas_btt_remove;
+void agas_free_helper(hpx_action_t free_action,
+                      hpx_addr_t addr, hpx_addr_t rsync);
 
 #endif

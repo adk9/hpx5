@@ -262,44 +262,31 @@ _agas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
   return addr;
 }
 
-int
-agas_btt_remove_handler(hpx_addr_t rsync, void *lva, int cont) {
+static int
+_btt_remove_handler(hpx_addr_t rsync, void *lva, int cont) {
   hpx_addr_t addr = hpx_thread_current_target();
   gva_t gva = { .addr = addr };
   agas_t *agas = (agas_t*)here->gas;
 
   btt_remove(agas->btt, gva);
   if (cont) {
-    struct agas_btt_remove_args args = { .lva = lva, .rsync = rsync };
-    HPX_THREAD_CONTINUE(args);
+    hpx_thread_continue(&rsync, &lva);
   } else {
     return HPX_SUCCESS;
   }
 }
-HPX_ACTION(HPX_DEFAULT, 0, agas_btt_remove, agas_btt_remove_handler,
+HPX_ACTION(HPX_DEFAULT, 0, _btt_remove, _btt_remove_handler,
            HPX_ADDR, HPX_POINTER, HPX_INT);
 
-static int
-_agas_free_cyclic_async_handler(struct agas_btt_remove_args *args, size_t UNUSED) {
-  if (here->rank == 0) {
-    agas_free_cyclic_sync(args->lva);
-  } else {
-    free(args->lva);
-  }
-  hpx_lco_error(args->rsync, HPX_SUCCESS, HPX_NULL);
-  return HPX_SUCCESS;
-}
-HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _agas_free_cyclic_async,
-           _agas_free_cyclic_async_handler, HPX_POINTER, HPX_SIZE_T);
-
-static int
-_agas_free_cyclic_handler(hpx_addr_t base, hpx_addr_t rsync) {
-  gva_t gva = { .addr = base };
+void
+agas_free_helper(hpx_action_t free_action,
+                 hpx_addr_t addr, hpx_addr_t rsync) {
+  gva_t gva = { .addr = addr };
   agas_t *agas = (agas_t*)here->gas;
   gva.bits.home = here->rank;
   void *lva = btt_lookup(agas->btt, gva);
   if (!lva) {
-    return HPX_SUCCESS;
+    return;
   }
 
   // remove all btt entries
@@ -309,26 +296,44 @@ _agas_free_cyclic_handler(hpx_addr_t base, hpx_addr_t rsync) {
 
   int cont = (blocks == 1);
   if (cont) {
-    hpx_parcel_t *p = parcel_create(gva.addr, agas_btt_remove,
+    hpx_parcel_t *p = parcel_create(gva.addr, _btt_remove,
                                     HPX_THERE(gva.bits.home),
-                                    _agas_free_cyclic_async,
+                                    free_action,
                                     3, &rsync, &lva, &cont);
     btt_try_delete(agas->btt, gva, p);
-    return HPX_SUCCESS;
+    return;
   }
 
-  struct agas_btt_remove_args args = { .lva = lva, .rsync = rsync };
   hpx_addr_t and = hpx_lco_and_new(blocks);
   hpx_call_when_with_continuation(and, HPX_THERE(gva.bits.home),
-                                  _agas_free_cyclic_async,
-                                  and, hpx_lco_delete_action, &args, sizeof(args));
+                                  free_action,
+                                  and, hpx_lco_delete_action, &rsync, &lva);
   for (int i = 0; i < blocks; ++i) {
-    hpx_parcel_t *p = parcel_create(gva.addr, agas_btt_remove,
+    hpx_parcel_t *p = parcel_create(gva.addr, _btt_remove,
                                     and, hpx_lco_set_action,
                                     3, &rsync, &lva, &cont);
     btt_try_delete(agas->btt, gva, p);
     gva.bits.offset += bsize;
   }
+  return;
+}
+
+static int
+_agas_free_cyclic_async_handler(hpx_addr_t rsync, void *lva) {
+  if (here->rank == 0) {
+    agas_free_cyclic_sync(lva);
+  } else {
+    free(lva);
+  }
+  hpx_lco_error(rsync, HPX_SUCCESS, HPX_NULL);
+  return HPX_SUCCESS;
+}
+HPX_ACTION(HPX_DEFAULT, 0, _agas_free_cyclic_async,
+           _agas_free_cyclic_async_handler, HPX_ADDR, HPX_POINTER);
+
+static int
+_agas_free_cyclic_handler(hpx_addr_t addr, hpx_addr_t rsync) {
+  agas_free_helper(_agas_free_cyclic_async, addr, rsync);
   return HPX_SUCCESS;
 }
 HPX_ACTION(HPX_DEFAULT, 0, _agas_free_cyclic,
