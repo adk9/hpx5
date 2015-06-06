@@ -69,43 +69,19 @@ agas_local_calloc(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
 }
 
 static int
-_agas_local_free_async_handler(struct agas_btt_remove_args *args, size_t UNUSED) {
-  global_free(args->lva);
+_agas_local_free_async_handler(hpx_addr_t rsync, void *lva) {
+  global_free(lva);
 
-  hpx_lco_error(args->rsync, HPX_SUCCESS, HPX_NULL);
+  hpx_lco_error(rsync, HPX_SUCCESS, HPX_NULL);
   return HPX_SUCCESS;
 }
-HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _agas_local_free_async,
-           _agas_local_free_async_handler, HPX_POINTER, HPX_SIZE_T);
+HPX_ACTION(HPX_DEFAULT, 0, _agas_local_free_async,
+           _agas_local_free_async_handler, HPX_ADDR, HPX_POINTER);
 
-void agas_local_free(agas_t *agas, gva_t gva, void *lva, hpx_addr_t rsync) {
-
-  // how many blocks are involved in this mapping?
-  size_t blocks = btt_get_blocks(agas->btt, gva);
-  uint32_t bsize = 1 << gva.bits.size;
-
-  int cont = (blocks == 1);
-  if (cont) {
-    hpx_parcel_t *p = parcel_create(gva.addr, agas_btt_remove,
-                                    HPX_THERE(gva.bits.home),
-                                    _agas_local_free_async,
-                                    3, &rsync, &lva, &cont);
-    btt_try_delete(agas->btt, gva, p);
-    return;
-  }
-
-  struct agas_btt_remove_args args = { .lva = lva, .rsync = rsync };
-  hpx_addr_t and = hpx_lco_and_new(blocks);
-  hpx_call_when_with_continuation(and, HPX_THERE(gva.bits.home),
-                                  _agas_local_free_async,
-                                  and, hpx_lco_delete_action, &args, sizeof(args));
-  for (int i = 0; i < blocks; ++i) {
-    hpx_parcel_t *p = parcel_create(gva.addr, agas_btt_remove,
-                                    and, hpx_lco_set_action,
-                                    3, &rsync, &lva, &cont);
-    btt_try_delete(agas->btt, gva, p);
-    gva.bits.offset += bsize;
-  }
+void
+agas_local_free(agas_t *agas, gva_t gva, void *lva, hpx_addr_t rsync) {
+  agas_free_helper(_agas_local_free_async, gva.addr, rsync);
+  return HPX_SUCCESS;
 }
 
 int64_t
