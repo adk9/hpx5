@@ -31,6 +31,7 @@ const char *hpx_options_t_help[] = {
   "HPX Runtime Options:",
   "All of the following options can either be set through the\ncommand-line using the flags given below, or through environment\nvariables of the form HPX_OPTION=value, where the option corresponds\nto the flag suffix given below.",
   "      --hpx-help                print HPX help  (default=off)",
+  "      --hpx-version             print HPX version  (default=off)",
   "      --hpx-heapsize=bytes      set HPX per-PE global heap size",
   "      --hpx-gas=type            type of Global Address Space (GAS)  (possible \n                                  values=\"default\", \"smp\", \"pgas\", \n                                  \"agas\")",
   "      --hpx-boot=type           HPX bootstrap method to use  (possible \n                                  values=\"default\", \"smp\", \"mpi\", \n                                  \"pmi\")",
@@ -140,6 +141,7 @@ static
 void clear_given (struct hpx_options_t *args_info)
 {
   args_info->hpx_help_given = 0 ;
+  args_info->hpx_version_given = 0 ;
   args_info->hpx_heapsize_given = 0 ;
   args_info->hpx_gas_given = 0 ;
   args_info->hpx_boot_given = 0 ;
@@ -185,6 +187,7 @@ static
 void clear_args (struct hpx_options_t *args_info)
 {
   args_info->hpx_help_flag = 0;
+  args_info->hpx_version_flag = 0;
   args_info->hpx_heapsize_orig = NULL;
   args_info->hpx_gas_arg = -1;
   args_info->hpx_gas_orig = NULL;
@@ -247,55 +250,56 @@ void init_args_info(struct hpx_options_t *args_info)
 
 
   args_info->hpx_help_help = hpx_options_t_help[2] ;
-  args_info->hpx_heapsize_help = hpx_options_t_help[3] ;
-  args_info->hpx_gas_help = hpx_options_t_help[4] ;
-  args_info->hpx_boot_help = hpx_options_t_help[5] ;
-  args_info->hpx_transport_help = hpx_options_t_help[6] ;
-  args_info->hpx_network_help = hpx_options_t_help[7] ;
-  args_info->hpx_statistics_help = hpx_options_t_help[8] ;
-  args_info->hpx_configfile_help = hpx_options_t_help[9] ;
-  args_info->hpx_cores_help = hpx_options_t_help[11] ;
-  args_info->hpx_threads_help = hpx_options_t_help[12] ;
-  args_info->hpx_stacksize_help = hpx_options_t_help[13] ;
-  args_info->hpx_wfthreshold_help = hpx_options_t_help[14] ;
-  args_info->hpx_sched_stackcachelimit_help = hpx_options_t_help[15] ;
-  args_info->hpx_log_at_help = hpx_options_t_help[17] ;
+  args_info->hpx_version_help = hpx_options_t_help[3] ;
+  args_info->hpx_heapsize_help = hpx_options_t_help[4] ;
+  args_info->hpx_gas_help = hpx_options_t_help[5] ;
+  args_info->hpx_boot_help = hpx_options_t_help[6] ;
+  args_info->hpx_transport_help = hpx_options_t_help[7] ;
+  args_info->hpx_network_help = hpx_options_t_help[8] ;
+  args_info->hpx_statistics_help = hpx_options_t_help[9] ;
+  args_info->hpx_configfile_help = hpx_options_t_help[10] ;
+  args_info->hpx_cores_help = hpx_options_t_help[12] ;
+  args_info->hpx_threads_help = hpx_options_t_help[13] ;
+  args_info->hpx_stacksize_help = hpx_options_t_help[14] ;
+  args_info->hpx_wfthreshold_help = hpx_options_t_help[15] ;
+  args_info->hpx_sched_stackcachelimit_help = hpx_options_t_help[16] ;
+  args_info->hpx_log_at_help = hpx_options_t_help[18] ;
   args_info->hpx_log_at_min = -1;
   args_info->hpx_log_at_max = -1;
-  args_info->hpx_log_level_help = hpx_options_t_help[18] ;
+  args_info->hpx_log_level_help = hpx_options_t_help[19] ;
   args_info->hpx_log_level_min = -1;
   args_info->hpx_log_level_max = -1;
-  args_info->hpx_dbg_waitat_help = hpx_options_t_help[20] ;
+  args_info->hpx_dbg_waitat_help = hpx_options_t_help[21] ;
   args_info->hpx_dbg_waitat_min = -1;
   args_info->hpx_dbg_waitat_max = -1;
-  args_info->hpx_dbg_waitonabort_help = hpx_options_t_help[21] ;
-  args_info->hpx_dbg_waitonsegv_help = hpx_options_t_help[22] ;
-  args_info->hpx_dbg_mprotectstacks_help = hpx_options_t_help[23] ;
-  args_info->hpx_trace_classes_help = hpx_options_t_help[25] ;
+  args_info->hpx_dbg_waitonabort_help = hpx_options_t_help[22] ;
+  args_info->hpx_dbg_waitonsegv_help = hpx_options_t_help[23] ;
+  args_info->hpx_dbg_mprotectstacks_help = hpx_options_t_help[24] ;
+  args_info->hpx_trace_classes_help = hpx_options_t_help[26] ;
   args_info->hpx_trace_classes_min = -1;
   args_info->hpx_trace_classes_max = -1;
-  args_info->hpx_trace_dir_help = hpx_options_t_help[26] ;
-  args_info->hpx_trace_filesize_help = hpx_options_t_help[27] ;
-  args_info->hpx_trace_at_help = hpx_options_t_help[28] ;
+  args_info->hpx_trace_dir_help = hpx_options_t_help[27] ;
+  args_info->hpx_trace_filesize_help = hpx_options_t_help[28] ;
+  args_info->hpx_trace_at_help = hpx_options_t_help[29] ;
   args_info->hpx_trace_at_min = -1;
   args_info->hpx_trace_at_max = -1;
-  args_info->hpx_isir_testwindow_help = hpx_options_t_help[30] ;
-  args_info->hpx_isir_sendlimit_help = hpx_options_t_help[31] ;
-  args_info->hpx_isir_recvlimit_help = hpx_options_t_help[32] ;
-  args_info->hpx_pwc_parcelbuffersize_help = hpx_options_t_help[34] ;
-  args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[35] ;
-  args_info->hpx_photon_backend_help = hpx_options_t_help[37] ;
-  args_info->hpx_photon_ibdev_help = hpx_options_t_help[38] ;
-  args_info->hpx_photon_ethdev_help = hpx_options_t_help[39] ;
-  args_info->hpx_photon_ibport_help = hpx_options_t_help[40] ;
-  args_info->hpx_photon_usecma_help = hpx_options_t_help[41] ;
-  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[42] ;
-  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[43] ;
-  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[44] ;
-  args_info->hpx_photon_maxrd_help = hpx_options_t_help[45] ;
-  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[46] ;
-  args_info->hpx_photon_numcq_help = hpx_options_t_help[47] ;
-  args_info->hpx_opt_smp_help = hpx_options_t_help[49] ;
+  args_info->hpx_isir_testwindow_help = hpx_options_t_help[31] ;
+  args_info->hpx_isir_sendlimit_help = hpx_options_t_help[32] ;
+  args_info->hpx_isir_recvlimit_help = hpx_options_t_help[33] ;
+  args_info->hpx_pwc_parcelbuffersize_help = hpx_options_t_help[35] ;
+  args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[36] ;
+  args_info->hpx_photon_backend_help = hpx_options_t_help[38] ;
+  args_info->hpx_photon_ibdev_help = hpx_options_t_help[39] ;
+  args_info->hpx_photon_ethdev_help = hpx_options_t_help[40] ;
+  args_info->hpx_photon_ibport_help = hpx_options_t_help[41] ;
+  args_info->hpx_photon_usecma_help = hpx_options_t_help[42] ;
+  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[43] ;
+  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[44] ;
+  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[45] ;
+  args_info->hpx_photon_maxrd_help = hpx_options_t_help[46] ;
+  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[47] ;
+  args_info->hpx_photon_numcq_help = hpx_options_t_help[48] ;
+  args_info->hpx_opt_smp_help = hpx_options_t_help[50] ;
   
 }
 
@@ -536,6 +540,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
 
   if (args_info->hpx_help_given)
     write_into_file(outfile, "hpx-help", 0, 0 );
+  if (args_info->hpx_version_given)
+    write_into_file(outfile, "hpx-version", 0, 0 );
   if (args_info->hpx_heapsize_given)
     write_into_file(outfile, "hpx-heapsize", args_info->hpx_heapsize_orig, 0);
   if (args_info->hpx_gas_given)
@@ -1197,6 +1203,7 @@ hpx_option_parser_internal (int argc, char * const *argv, struct hpx_options_t *
 
       static struct option long_options[] = {
         { "hpx-help",	0, NULL, 0 },
+        { "hpx-version",	0, NULL, 0 },
         { "hpx-heapsize",	1, NULL, 0 },
         { "hpx-gas",	1, NULL, 0 },
         { "hpx-boot",	1, NULL, 0 },
@@ -1255,6 +1262,18 @@ hpx_option_parser_internal (int argc, char * const *argv, struct hpx_options_t *
             if (update_arg((void *)&(args_info->hpx_help_flag), 0, &(args_info->hpx_help_given),
                 &(local_args_info.hpx_help_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "hpx-help", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* print HPX version.  */
+          else if (strcmp (long_options[option_index].name, "hpx-version") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->hpx_version_flag), 0, &(args_info->hpx_version_given),
+                &(local_args_info.hpx_version_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "hpx-version", '-',
                 additional_error))
               goto failure;
           

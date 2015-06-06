@@ -10,26 +10,18 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_LIBHPX_H
-#define LIBHPX_LIBHPX_H
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
-#include <errno.h>
-#include <libhpx/config.h>
+#include <stdio.h>
+#include <hpx/hpx.h>
+#include <libhpx/libhpx.h>
 
-enum {
-  LIBHPX_ENOMEM = -(ENOMEM),
-  LIBHPX_EINVAL = -(EINVAL),
-  LIBHPX_ERROR = -2,
-  LIBHPX_EUNIMPLEMENTED = -1,
-  LIBHPX_OK = 0,
-  LIBHPX_RETRY
-};
+void hpx_print_version(void) {
+  printf("HPX version %s\n", HPX_VERSION);
+}
 
-struct config;
-typedef struct config libhpx_config_t;
-libhpx_config_t *libhpx_get_config(void);
-
-/// Print the version of libhpx.
-void libhpx_print_version(void);
-
-#endif  // LIBHPX_LIBHPX_H
+void libhpx_print_version(void) {
+  printf("libhpx version %s\n", LIBHPX_VERSION);
+}

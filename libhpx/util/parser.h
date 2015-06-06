@@ -42,6 +42,8 @@ struct hpx_options_t
 {
   int hpx_help_flag;	/**< @brief print HPX help (default=off).  */
   const char *hpx_help_help; /**< @brief print HPX help help description.  */
+  int hpx_version_flag;	/**< @brief print HPX version (default=off).  */
+  const char *hpx_version_help; /**< @brief print HPX version help description.  */
   long hpx_heapsize_arg;	/**< @brief set HPX per-PE global heap size.  */
   char * hpx_heapsize_orig;	/**< @brief set HPX per-PE global heap size original value given at command line.  */
   const char *hpx_heapsize_help; /**< @brief set HPX per-PE global heap size help description.  */
@@ -166,6 +168,7 @@ struct hpx_options_t
   const char *hpx_opt_smp_help; /**< @brief optimize for SMP execution help description.  */
   
   unsigned int hpx_help_given ;	/**< @brief Whether hpx-help was given.  */
+  unsigned int hpx_version_given ;	/**< @brief Whether hpx-version was given.  */
   unsigned int hpx_heapsize_given ;	/**< @brief Whether hpx-heapsize was given.  */
   unsigned int hpx_gas_given ;	/**< @brief Whether hpx-gas was given.  */
   unsigned int hpx_boot_given ;	/**< @brief Whether hpx-boot was given.  */

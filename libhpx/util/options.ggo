@@ -10,6 +10,9 @@ to the flag suffix given below."
 option "hpx-help" - "print HPX help"
 flag off
 
+option "hpx-version" - "print HPX version"
+flag off
+
 option "hpx-heapsize" - "set HPX per-PE global heap size"
 typestr="bytes"
 long optional
