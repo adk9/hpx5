@@ -267,6 +267,8 @@ static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
 #undef LIBHPX_OPT_FLAG
 
   if (opts->hpx_help_given) {
+    hpx_print_version();
+    libhpx_print_version();
     hpx_print_help();
     exit(EXIT_SUCCESS);
   }
