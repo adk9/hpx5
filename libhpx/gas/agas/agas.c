@@ -46,8 +46,11 @@ _agas_delete(void *gas) {
   if (agas->bitmap) {
     bitmap_delete(agas->bitmap);
   }
-  if (agas->cyclic_bitmap) {
-    bitmap_delete(agas->cyclic_bitmap);
+
+  if (here->rank == 0) {
+    if (agas->cyclic_bitmap) {
+      bitmap_delete(agas->cyclic_bitmap);
+    }
   }
   free(agas);
 }
