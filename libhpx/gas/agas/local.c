@@ -81,7 +81,6 @@ HPX_ACTION(HPX_DEFAULT, 0, _agas_local_free_async,
 void
 agas_local_free(agas_t *agas, gva_t gva, void *lva, hpx_addr_t rsync) {
   agas_free_helper(_agas_local_free_async, gva.addr, rsync);
-  return HPX_SUCCESS;
 }
 
 int64_t
