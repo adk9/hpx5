@@ -44,6 +44,9 @@ struct transport;
 /// The release_parcel command will release a parcel.
 extern COMMAND_DECL(release_parcel);
 
+/// The resume_parcel operation will perform parcel_launch() on a parcel.
+extern COMMAND_DECL(resume_parcel);
+
 /// The lco_set command will set an lco.
 extern COMMAND_DECL(lco_set);
 
