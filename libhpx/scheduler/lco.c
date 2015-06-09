@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 /// @file libhpx/scheduler/lco.c
@@ -23,11 +23,12 @@
 #include <libsync/sync.h>
 #include <libhpx/action.h>
 #include <libhpx/attach.h>
+#include <libhpx/instrumentation.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
+#include <libhpx/network.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/parcel.h>
-#include <libhpx/instrumentation.h>
 #include "lco.h"
 #include "thread.h"
 
@@ -403,7 +404,8 @@ size_t hpx_lco_size(hpx_addr_t target) {
   return hpx_call_sync(target, _lco_size, &size, size, NULL, 0);
 }
 
-/// If the LCO is local, then we use the local get functionality.
+/// If the LCO is local, then we use the local get functionality. If the LCO
+/// isn't local, then we use the network's get functionality.
 hpx_status_t hpx_lco_get(hpx_addr_t target, int size, void *value) {
   if (size == 0) {
     return hpx_lco_wait(target);
@@ -412,7 +414,7 @@ hpx_status_t hpx_lco_get(hpx_addr_t target, int size, void *value) {
   dbg_assert(value);
   lco_t *lco;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return hpx_call_sync(target, _lco_get, value, size, &size);
+    return network_lco_get(here->network, target, size, value);
   }
 
   hpx_status_t status = _get(lco, size, value);
