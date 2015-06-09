@@ -321,6 +321,7 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   pwc->vtable.set_flush = _pwc_set_flush;
   pwc->vtable.register_dma = _pwc_register_dma;
   pwc->vtable.release_dma = _pwc_release_dma;
+  pwc->vtable.lco_get = pwc_lco_get;
 
   // Initialize transports.
   pwc->cfg = cfg;
