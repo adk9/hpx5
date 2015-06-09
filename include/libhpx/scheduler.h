@@ -164,6 +164,21 @@ void scheduler_spawn(hpx_parcel_t *p)
 /// the locality.
 void scheduler_yield(void);
 
+/// Wait for an asynchronous operation, encoded by @p p.
+///
+/// This triggers a scheduling event to select a new thread to run, checkpoints
+/// the current thread, and then transfers away from the current thread and
+/// launches @p p through @p lco.
+///
+/// The expectation here is that @p p, or the continuation of @p p, will resume
+/// the current thread, using the resume_parcel command in network.h.
+///
+/// @param            p The parcel to launch.
+/// @param          lco The lco to launch through (may be HPX_NULL).
+///
+/// @return HPX_SUCCESS or an error if there was a transfer problem.
+hpx_status_t scheduler_wait_launch_through(hpx_parcel_t *p, hpx_addr_t lco);
+
 /// Wait for an condition.
 ///
 /// This suspends execution of the current user level thread until the condition
