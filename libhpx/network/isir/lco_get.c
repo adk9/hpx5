@@ -70,5 +70,5 @@ isir_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out) {
   hpx_parcel_t *current = scheduler_current_parcel();
   hpx_parcel_t *p = parcel_create(lco, _isir_lco_get, HPX_HERE,
                                   _isir_lco_get_reply, 3, &current, &n, &out);
-  return scheduler_wait_launch_through(p, lco);
+  return scheduler_wait_launch_through(p, HPX_NULL);
 }
