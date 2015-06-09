@@ -242,7 +242,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
       .printf_code = "zu",                      \
       .name = "parent id"}
 
-// typeof(METADATA_SCHEDUER_WQ_SIZE) == inst_event_col_metadata_t
+// typeof(METADATA_SCHEDULER_WQ_SIZE) == inst_event_col_metadata_t
 #define METADATA_SCHEDULER_WQSIZE               \
   { .mask = 0x3f,                               \
       .data_type = METADATA_TYPE_INT64,         \
@@ -281,6 +281,26 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
       .max = UINT64_MAX,                        \
       .printf_code = "zu",                      \
       .name = "lco state"}
+
+// typeof(INST_EVENT_COL_METADATA_PROCESS_ADDRESS) == inst_event_col_metadata_t
+#define METADATA_PROCESS_ADDRESS                \
+  { .mask = 0x3f,                               \
+      .data_type = METADATA_TYPE_INT64,         \
+      .offset = INST_EVENT_COL_OFFSET_USER2,    \
+      .min = 0,                                 \
+      .max = UINT64_MAX,                        \
+      .printf_code = "zu",                      \
+      .name = "process address"}
+
+// typeof(INST_EVENT_COL_METADATA_PROCESS_TERMINATION_LCO) == inst_event_col_metadata_t
+#define METADATA_PROCESS_TERMINATION_LCO        \
+  { .mask = 0x3f,                               \
+      .data_type = METADATA_TYPE_INT64,         \
+      .offset = INST_EVENT_COL_OFFSET_USER2,    \
+      .min = 0,                                 \
+      .max = UINT64_MAX,                        \
+      .printf_code = "zu",                      \
+      .name = "process termination lco"}
 
 // typeof(PARCEL_CREATE_METADATA) == inst_event_metadata_t 
 #define PARCEL_CREATE_METADATA {                                   \
@@ -460,6 +480,45 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
     METADATA_LCO_ADDRESS,                                        \
     METADATA_LCO_CURRENT_THREAD,                                 \
     METADATA_LCO_STATE,                                          \
+    INST_EVENT_COL_METADATA_EMPTY3                               \
+  }                                                              \
+}
+
+// typeof(PROCESS_NEW_METADATA) == inst_event_metadata_t 
+#define PROCESS_NEW_METADATA {                                   \
+  .num_cols = 6,                                                 \
+  .col_metadata = {                                              \
+    INST_EVENT_COL_METADATA_WORKER,                              \
+    INST_EVENT_COL_METADATA_NS,                                  \
+    METADATA_PROCESS_ADDRESS,                                    \
+    METADATA_PROCESS_TERMINATION_LCO,                            \
+    INST_EVENT_COL_METADATA_EMPTY2,                              \
+    INST_EVENT_COL_METADATA_EMPTY3                               \
+  }                                                              \
+}
+
+// typeof(PROCESS_CALL_METADATA) == inst_event_metadata_t 
+#define PROCESS_CALL_METADATA {                                  \
+  .num_cols = 6,                                                 \
+  .col_metadata = {                                              \
+    INST_EVENT_COL_METADATA_WORKER,                              \
+    INST_EVENT_COL_METADATA_NS,                                  \
+    METADATA_PROCESS_ADDRESS,                                    \
+    METADATA_PARCEL_ID,                                          \
+    INST_EVENT_COL_METADATA_EMPTY2,                               \
+    INST_EVENT_COL_METADATA_EMPTY3                               \
+  }                                                              \
+}
+
+// typeof(PROCESS_DELETE_METADATA) == inst_event_metadata_t 
+#define PROCESS_DELETE_METADATA {                                \
+  .num_cols = 6,                                                 \
+  .col_metadata = {                                              \
+    INST_EVENT_COL_METADATA_WORKER,                              \
+    INST_EVENT_COL_METADATA_NS,                                  \
+    METADATA_PROCESS_ADDRESS,                                    \
+    INST_EVENT_COL_METADATA_EMPTY1,                               \
+    INST_EVENT_COL_METADATA_EMPTY2,                              \
     INST_EVENT_COL_METADATA_EMPTY3                               \
   }                                                              \
 }

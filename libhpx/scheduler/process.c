@@ -150,6 +150,11 @@ hpx_addr_t hpx_process_new(hpx_addr_t termination) {
   }
   _init(p, termination);
   hpx_gas_unpin(process);
+
+#ifdef ENABLE_INSTRUMENTATION
+    inst_trace(HPX_INST_CLASS_PROCESS, HPX_INST_EVENT_PROCESS_NEW,
+               process, termination);
+#endif
   return process;
 }
 
@@ -174,6 +179,10 @@ int _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
   hpx_parcel_set_data(p, parcel, parcel_size(parcel));
   p->pid = 0;
   p->credit = 0;
+#ifdef ENABLE_INSTRUMENTATION
+    inst_trace(HPX_INST_CLASS_PROCESS, HPX_INST_EVENT_PROCESS_CALL, 
+               process, p->pid);
+#endif
   hpx_parcel_send_sync(p);
 
   hpx_parcel_release(parcel);
@@ -190,5 +199,8 @@ void hpx_process_delete(hpx_addr_t process, hpx_addr_t sync) {
 
   hpx_call_sync(process, _proc_delete, NULL, 0, NULL, 0);
   hpx_gas_free(process, sync);
+#ifdef ENABLE_INSTRUMENTATION
+    inst_trace(HPX_INST_CLASS_PROCESS, HPX_INST_EVENT_PROCESS_DELETE, process);
+#endif
 }
 
