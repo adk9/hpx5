@@ -121,6 +121,10 @@ int parcel_launch(hpx_parcel_t *p) {
 }
 
 int parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate) {
+  if (!gate) {
+    return parcel_launch(p);
+  }
+
   dbg_assert(p->action);
   _prepare(p);
 
