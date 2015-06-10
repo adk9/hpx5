@@ -41,6 +41,8 @@ static HPX_ACTION(HPX_INTERRUPT, HPX_MARSHALLED, _isir_lco_get_reply,
 
 static int
 _isir_lco_get_request_handler(hpx_parcel_t *p, size_t n, void *out) {
+  dbg_assert(n > 0);
+
   hpx_addr_t lco = hpx_thread_current_target();
 
   dbg_assert_str(n < here->config->stacksize,
@@ -50,16 +52,8 @@ _isir_lco_get_request_handler(hpx_parcel_t *p, size_t n, void *out) {
   args->p = p;
   args->out = out;
 
-  int e;
-  // convert to wait if there's no buffer
-  if (n == 0) {
-    e = hpx_lco_wait(lco);
-  }
-  else {
-    e = hpx_lco_get(lco, n, args->data);
-  }
+  int e = hpx_lco_get(lco, n, args->data);
   dbg_check(e, "Failure in remote get operation\n");
-
   hpx_thread_continue(args, sizeof(*args) + n);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _isir_lco_get_request,
