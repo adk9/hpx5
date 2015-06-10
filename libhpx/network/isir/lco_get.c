@@ -40,7 +40,7 @@ static HPX_ACTION(HPX_INTERRUPT, HPX_MARSHALLED, _isir_lco_get_reply,
                   _isir_lco_get_reply_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int
-_isir_lco_get_handler(hpx_parcel_t *p, size_t n, void *out) {
+_isir_lco_get_request_handler(hpx_parcel_t *p, size_t n, void *out) {
   hpx_addr_t lco = hpx_thread_current_target();
 
   dbg_assert_str(n < here->config->stacksize,
@@ -62,13 +62,14 @@ _isir_lco_get_handler(hpx_parcel_t *p, size_t n, void *out) {
 
   hpx_thread_continue(args, sizeof(*args) + n);
 }
-static HPX_ACTION(HPX_DEFAULT, 0, _isir_lco_get, _isir_lco_get_handler,
-                  HPX_POINTER, HPX_SIZE_T, HPX_POINTER);
+static HPX_ACTION(HPX_DEFAULT, 0, _isir_lco_get_request,
+                  _isir_lco_get_request_handler, HPX_POINTER, HPX_SIZE_T,
+                  HPX_POINTER);
 
 int
 isir_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out) {
   hpx_parcel_t *current = scheduler_current_parcel();
-  hpx_parcel_t *p = parcel_create(lco, _isir_lco_get, HPX_HERE,
+  hpx_parcel_t *p = parcel_create(lco, _isir_lco_get_request, HPX_HERE,
                                   _isir_lco_get_reply, 3, &current, &n, &out);
   return scheduler_wait_launch_through(p, HPX_NULL);
 }
