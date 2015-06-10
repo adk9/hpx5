@@ -460,23 +460,11 @@ hpx_status_t hpx_lco_getref(hpx_addr_t target, int size, void **out) {
 
   void *buffer = malloc(size);
   assert(buffer);
-  hpx_addr_t result = hpx_lco_future_new(sizeof(buffer));
 
-  void *rbuf;
-  if (!hpx_gas_try_pin(result, &rbuf)) {
-    dbg_assert("failed to pin the proxy future in lco-getref.\n");
-  }
-
-  hpx_lco_set(result, sizeof(buffer), &buffer, HPX_NULL, HPX_NULL);
-  int e = hpx_call_with_continuation(target, _lco_getref, result, _lco_getref_reply,
-                                     &size);
+  int e = hpx_gas_memget_sync(buffer, target, size);
   if (e == HPX_SUCCESS) {
-    e = hpx_lco_wait(result);
     *out = buffer;
   }
-
-  hpx_gas_unpin(result);
-  hpx_lco_delete(result, HPX_NULL);
   return e;
 }
 
