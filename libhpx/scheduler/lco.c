@@ -167,10 +167,7 @@ static void _cleanup_release(void *args) {
 }
 
 static int _lco_get_handler(lco_t *lco, int n) {
-  // convert to wait if there's no buffer
-  if (n == 0) {
-    return _wait(lco);
-  }
+  dbg_assert(n > 0);
 
   // if there is a getref handler, then we should use it
   const lco_class_t *class = _class(lco);
@@ -411,25 +408,30 @@ size_t hpx_lco_size(hpx_addr_t target) {
 
 /// If the LCO is local, then we use the local get functionality.
 hpx_status_t hpx_lco_get(hpx_addr_t target, int size, void *value) {
-  lco_t *lco;
-  if (hpx_gas_try_pin(target, (void**)&lco)) {
-    dbg_assert(!size || value);
-    dbg_assert(!value || size);
-    hpx_status_t status = (size) ? _get(lco, size, value) : _wait(lco);
-    hpx_gas_unpin(target);
-    return status;
+  if (size == 0) {
+    return hpx_lco_wait(target);
   }
-  return hpx_call_sync(target, _lco_get, value, size, &size);
+
+  dbg_assert(value);
+  lco_t *lco;
+  if (!hpx_gas_try_pin(target, (void**)&lco)) {
+    return hpx_call_sync(target, _lco_get, value, size, &size);
+  }
+
+  hpx_status_t status = _get(lco, size, value);
+  hpx_gas_unpin(target);
+  return status;
 }
 
 hpx_status_t hpx_lco_getref(hpx_addr_t target, int size, void **out) {
+  if (size == 0) {
+    return hpx_lco_wait(target);
+  }
+
   dbg_assert(out);
   lco_t *lco;
   if (hpx_gas_try_pin(target, (void**)&lco)) {
-    dbg_assert(!size || out);
-    dbg_assert(!out || size);
-    hpx_status_t status = (size) ? _getref(lco, size, out) : _wait(lco);
-    return status;
+    return _getref(lco, size, out);
   }
 
   // If the LCO isn't local, then we just fall back to the get functionality,
