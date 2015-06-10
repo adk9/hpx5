@@ -194,32 +194,6 @@ static int _lco_get_handler(lco_t *lco, int n) {
 }
 HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_get, _lco_get_handler, HPX_POINTER, HPX_INT);
 
-static int _lco_getref_handler(lco_t *lco, int n) {
-  // convert to wait if there's no buffer
-  if (n == 0) {
-    return _wait(lco);
-  }
-
-  // otherwise continue the LCO buffer
-  void *buffer;
-  hpx_status_t status = _getref(lco, n, &buffer);
-  if (status == HPX_SUCCESS) {
-    hpx_thread_continue(buffer, n);
-  }
-  else {
-    return status;
-  }
-}
-HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_getref, _lco_getref_handler, HPX_POINTER, HPX_INT);
-
-static int _lco_getref_reply_handler(void **local, void *data, size_t bytes) {
-  dbg_assert(bytes);
-  memcpy(*local, data, bytes);
-  return HPX_SUCCESS;
-}
-HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _lco_getref_reply,
-           _lco_getref_reply_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
-
 static int _lco_wait_handler(lco_t *lco) {
   return _wait(lco);
 }
