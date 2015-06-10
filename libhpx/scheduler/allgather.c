@@ -73,6 +73,7 @@
 
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
+#include <libhpx/memory.h>
 #include <libhpx/scheduler.h>
 #include "cvar.h"
 #include "lco.h"
@@ -199,6 +200,20 @@ static hpx_status_t _allgather_wait(lco_t *lco) {
   return _allgather_get(lco, 0, NULL);
 }
 
+// We universally clone the buffer here, because the all* family of LCOs will
+// reset themselves so we can't retain a pointer to their buffer.
+static hpx_status_t _allgather_getref(lco_t *lco, int size, void **out) {
+  *out = registered_malloc(size);
+  return _allgather_get(lco, size, *out);
+}
+
+// We know that allreduce buffers were always copies, so we can just free them
+// here.
+static bool _allgather_release(lco_t *lco, void *out) {
+  registered_free(out);
+  return true;
+}
+
 // Local set id function.
 static hpx_status_t _allgather_setid(_allgather_t *g, unsigned offset, int size,
                                      const void* buffer) {
@@ -298,8 +313,8 @@ static const lco_class_t _allgather_vtable = {
   .on_set      = _allgather_set,
   .on_attach   = _allgather_attach,
   .on_get      = _allgather_get,
-  .on_getref   = NULL,
-  .on_release  = NULL,
+  .on_getref   = _allgather_getref,
+  .on_release  = _allgather_release,
   .on_wait     = _allgather_wait,
   .on_reset    = _allgather_reset,
   .on_size     = _allgather_size
