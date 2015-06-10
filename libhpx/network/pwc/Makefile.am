@@ -8,7 +8,8 @@ libpwc_la_SOURCES  = pwc.c \
                      send_buffer.c \
                      circular_buffer.c \
                      registered.c \
-                     lco_get.c
+                     lco_get.c \
+                     commands.c
 
 if HAVE_PHOTON
 libpwc_la_SOURCES += xport_photon.c

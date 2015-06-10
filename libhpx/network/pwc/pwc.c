@@ -29,12 +29,11 @@
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
 
+#include "commands.h"
 #include "parcel_emulation.h"
 #include "pwc.h"
 #include "send_buffer.h"
 #include "xport.h"
-
-#include "../commands.h"
 
 typedef struct heap_segment {
   size_t        n;
