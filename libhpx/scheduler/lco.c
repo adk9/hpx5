@@ -458,14 +458,11 @@ hpx_status_t hpx_lco_getref(hpx_addr_t target, int size, void **out) {
     return status;
   }
 
-  void *buffer = malloc(size);
-  assert(buffer);
-
-  int e = hpx_gas_memget_sync(buffer, target, size);
-  if (e == HPX_SUCCESS) {
-    *out = buffer;
-  }
-  return e;
+  // If the LCO isn't local, then we just fall back to the get functionality,
+  // using a temporary buffer that will be freed at release.
+  *out = malloc(size);
+  assert(*out);
+  return hpx_lco_get(target, size, *out);
 }
 
 void hpx_lco_release(hpx_addr_t target, void *out) {
