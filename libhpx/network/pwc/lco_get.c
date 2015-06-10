@@ -14,60 +14,107 @@
 # include "config.h"
 #endif
 
+#include <libhpx/action.h>
+#include <libhpx/debug.h>
 #include <libhpx/scheduler.h>
+#include "commands.h"
 #include "pwc.h"
 #include "xport.h"
 
 typedef struct {
-  int rank;
+  hpx_addr_t lco;
+  void *ref;
+} _release_lco_args_t;
+
+static int
+_release_lco_handler(int src, command_t command) {
+  uintptr_t arg = command_get_arg(command);
+  _release_lco_args_t *args = (void*)arg;
+  hpx_lco_release(args->lco, args->ref);
+  free(args);
+  return HPX_SUCCESS;
+}
+static COMMAND_DEF(HPX_INTERRUPT, _release_lco, _release_lco_handler);
+
+typedef struct {
   hpx_parcel_t *p;
   size_t n;
-  void *rva;
+  void *out;
   xport_key_t key;
-} _pwc_lco_get_args_t;
+  int rank;
+} _pwc_lco_get_request_args_t;
 
-// /// Perform a remote get operation on an LCO.
-// static int
-// _pwc_lco_get_handler(_pwc_lco_get_args_t *args, size_t n) {
-//   hpx_addr_t lco = hpx_thread_current_target();
+static int
+_pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args, size_t n) {
+  dbg_assert(n > 0);
 
+  pwc_network_t *pwc = (pwc_network_t*)here->network;
+  hpx_addr_t lco = hpx_thread_current_target();
+  void *ref;
+  int e = hpx_lco_getref(lco, args->n, &ref);
+  dbg_check(e, "Failed getref during remote lco get request.\n");
 
+  // We need to release the LCO's buffer reference once we finish the pwc. The
+  // lifetime of the pwc operation is longer than the lifetime of this thread
+  // though, so we need to dynamically allocate the environment for the
+  // _release_lco command.
+  _release_lco_args_t *release_args = malloc(sizeof(*release_args));
+  release_args->lco = lco;
+  release_args->ref = ref;
 
-//   pwc_network_t *pwc = (pwc_network_t*)here->network;
-//   // use the transport to perform the put-with-completion
-//   xport_op_t op = {
-//     .rank = args->rank,
-//     .n = args->n,
-//     .dest = args->rva,
-//     .dest_key = args->key,
-//     .src = buffer,
-//     .src_key = pwc->xport->key_find_ref(pwc->xport, p, args->n),
-//     .lop = command_pack(_rendezvous_launch, (uintptr_t)p),
-//     .rop = command_pack(release_parcel, (uintptr_t)args->p)
-//   };
-//   int e = pwc->xport->pwc(&op);
-//   dbg_check(e, "could not issue get during rendezvous parcel\n");
-//   return HPX_SUCCESS;
-// }
-// HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _pwc_lco_get, _pwc_lco_get_handler,
-//            HPX_POINTER, HPX_SIZE_T);
+  // Create the transport operation to perform the rdma put operation, along
+  // with the remote command to restart the waiting thread and the local
+  // completion command to release the LCO's reference.
+  xport_op_t op = {
+    .rank = args->rank,
+    .n = args->n,
+    .dest = args->out,
+    .dest_key = args->key,
+    .src = ref,
+    .src_key = pwc->xport->key_find_ref(pwc->xport, ref, args->n),
+    .lop = command_pack(_release_lco, (uintptr_t)release_args),
+    .rop = command_pack(resume_parcel, (uintptr_t)args->p)
+  };
+  dbg_assert_str(op.src_key, "LCO reference must point to registered memory\n");
 
-// /// Create a parcel to perform a remote LCO get.
-// static hpx_parcel_t *
-// _pwc_create_lco_get(hpx_addr_t lco, size_t n, void *out) {
-//   _pwc_lco_get_args_t args = {
-//     .rank = here->rank,
-//     .p = scheduler_current_parcel(),
-//     .n = n,
-//     .rva = out
-//   };
+  e = pwc->xport->pwc(&op);
+  dbg_check(e, "Failed to start rendezvous put during remote get operation\n");
+  return HPX_SUCCESS;
+}
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _pwc_lco_get_request,
+                  _pwc_lco_get_request_handler, HPX_POINTER, HPX_SIZE_T);
 
-//   hpx_parcel_t *p = parcel_create(lco, _pwc_lco_get, HPX_NULL, HPX_ACTION_NULL,
-//                                   2, &args, &n);
-//   return p;
-// }
 
 int
 pwc_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out) {
-  return scheduler_wait_launch_through(NULL, HPX_NULL);
+  pwc_network_t *pwc = (pwc_network_t*)here->network;
+
+  _pwc_lco_get_request_args_t args = {
+    .p = scheduler_current_parcel(),
+    .n = n,
+    .out = out,
+    .rank = here->rank,
+    .key = {0}
+  };
+
+  // If the output buffer is already registered, then we just need to copy the
+  // key into the args structure, otherwise we need to register the region.
+  const void *key = pwc->xport->key_find_ref(pwc->xport, out, n);
+  if (key) {
+    pwc->xport->key_copy(&args.key, key);
+  }
+  else {
+    pwc->xport->pin(out, n, &args.key);
+  }
+
+  hpx_parcel_t *p = parcel_create(lco, _pwc_lco_get_request, HPX_NULL,
+                                  HPX_ACTION_NULL, 2, &args, sizeof(args));
+  int e = scheduler_wait_launch_through(p, HPX_NULL);
+
+  // If we registered the output buffer dynamically, then we need to de-register
+  // it now.
+  if (!key) {
+    pwc->xport->unpin(out, n);
+  }
+  return e;
 }
