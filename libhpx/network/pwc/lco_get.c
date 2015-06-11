@@ -22,20 +22,13 @@
 #include "pwc.h"
 #include "xport.h"
 
-typedef struct {
-  hpx_addr_t lco;
-  void *ref;
-} _release_lco_args_t;
-
+/// This acts as a parcel_suspend transfer to allow _pwc_lco_get_request_handler
+/// to wait for its pwc to complete.
 static int
-_release_lco_handler(int src, command_t command) {
-  uintptr_t arg = command_get_arg(command);
-  _release_lco_args_t *args = (void*)arg;
-  hpx_lco_release(args->lco, args->ref);
-  free(args);
-  return HPX_SUCCESS;
+_pwc(void *op) {
+  pwc_network_t *pwc = (pwc_network_t*)here->network;
+  return pwc->xport->pwc(op);
 }
-static COMMAND_DEF(HPX_INTERRUPT, _release_lco, _release_lco_handler);
 
 typedef struct {
   hpx_parcel_t *p;
@@ -55,17 +48,9 @@ _pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args, size_t n) {
   int e = hpx_lco_getref(lco, args->n, &ref);
   dbg_check(e, "Failed getref during remote lco get request.\n");
 
-  // We need to release the LCO's buffer reference once we finish the pwc. The
-  // lifetime of the pwc operation is longer than the lifetime of this thread
-  // though, so we need to dynamically allocate the environment for the
-  // _release_lco command.
-  _release_lco_args_t *release_args = malloc(sizeof(*release_args));
-  release_args->lco = lco;
-  release_args->ref = ref;
-
   // Create the transport operation to perform the rdma put operation, along
   // with the remote command to restart the waiting thread and the local
-  // completion command to release the LCO's reference.
+  // completion command to resume the current thread.
   xport_op_t op = {
     .rank = args->rank,
     .n = args->n,
@@ -73,12 +58,16 @@ _pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args, size_t n) {
     .dest_key = args->key,
     .src = ref,
     .src_key = pwc->xport->key_find_ref(pwc->xport, ref, args->n),
-    .lop = command_pack(_release_lco, (uintptr_t)release_args),
+    .lop = command_pack(resume_parcel, (uintptr_t)self->current),
     .rop = command_pack(resume_parcel, (uintptr_t)args->p)
   };
   dbg_assert_str(op.src_key, "LCO reference must point to registered memory\n");
 
-  e = pwc->xport->pwc(&op);
+  // Issue the pwc and wait for synchronous local completion so that the ref
+  // buffer doesn't move during the underlying rdma, if there is any
+  e = scheduler_suspend(_pwc, &op);
+
+  hpx_lco_release(lco, ref);
   dbg_check(e, "Failed to start rendezvous put during remote get operation\n");
   return HPX_SUCCESS;
 }
