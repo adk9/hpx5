@@ -132,7 +132,9 @@ static const char *const HPX_LOG_LEVEL_TO_STRING[] = {
 static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
   "parcels",
   "pwc",
-  "sched"
+  "sched",
+  "lco",
+  "process"
 };
 
 /// The HPX configuration type.
