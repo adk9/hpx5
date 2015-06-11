@@ -46,33 +46,38 @@
 #include "apex.h"
 #include "apex_policies.h"
 
-inline void APEX_START(hpx_parcel_t *p) {
+hpx_parcel_t* APEX_STOP(void) {
+    hpx_parcel_t* previous = self->profiler;
+    if (self->profiler != NULL) { 
+        apex_stop((apex_profiler_handle)(self->profiler)); 
+        self->profiler = NULL; 
+    }
+    return previous;
+}
+void APEX_START(hpx_parcel_t *p) {
     // if this is NOT a null or lightweight action, 
     // send a "start" event to APEX
     hpx_action_t id = hpx_parcel_get_action(p);
     if (id != HPX_ACTION_NULL && id != scheduler_nop && id != hpx_lco_set_action) {
-        self->profiler = apex_start(APEX_FUNCTION_ADDRESS, (void*)hpx_action_get_handler(id));
+        void* handler = (void*)hpx_action_get_handler(id);
+        self->profiler = (void*)(apex_start(APEX_FUNCTION_ADDRESS, handler));
     }
+    return;
 }
-inline int APEX_STOP(void) {
-    if (self->profiler != APEX_NULL_PROFILER_HANDLE) { 
-        apex_stop(self->profiler); 
-        self->profiler = APEX_NULL_PROFILER_HANDLE; 
-        return 1;
-    }
-    return 0;
-}
-inline void APEX_RESUME(int had_profiler) {
-    if (had_profiler) {
-      hpx_action_t id = hpx_parcel_get_action(self->current);
+void APEX_RESUME(hpx_parcel_t *p) {
+    if (p != NULL) {
+      hpx_action_t id = hpx_parcel_get_action(p);
       // "resume" will not increment the number of calls.
-      self->profiler = apex_resume(APEX_FUNCTION_ADDRESS, (void*)hpx_action_get_handler(id));
+      if (id != HPX_ACTION_NULL && id != scheduler_nop && id != hpx_lco_set_action) {
+        void* handler = (void*)hpx_action_get_handler(id);
+        self->profiler = (void*)(apex_resume(APEX_FUNCTION_ADDRESS, handler));
+      }
     }
 }
 #else
-#define APEX_START(_p) {}
-#define APEX_STOP() 0
-#define APEX_RESUME(_b) {}
+#define APEX_START(_p) 
+#define APEX_STOP() {NULL}
+#define APEX_RESUME(_p,_b) {}
 #endif
 
 __thread struct worker *self = NULL;
@@ -171,7 +176,10 @@ static void _execute_interrupt(hpx_parcel_t *p) {
   if (p->action != scheduler_nop) {
     INST_EVENT_PARCEL_RUN(p);
   }
+  //hpx_parcel_t* previous = APEX_START(p);
   int e = action_execute(p);
+  //APEX_STOP();
+  //APEX_RESUME(previous,(previous != NULL));
   if (p->action != scheduler_nop) {
     INST_EVENT_PARCEL_END(p);
   }
@@ -424,6 +432,7 @@ static void _worker_shutdown(struct worker *w) {
   }
   APEX_STOP();
   thread_transfer((hpx_parcel_t*)&sp, _free_parcel, (void*)shutdown);
+  // no need to resume APEX timer
   unreachable();
 }
 
@@ -471,7 +480,9 @@ static hpx_parcel_t *_try_task(hpx_parcel_t *p) {
 
   // No instrumentation for suspend here since thread is already recorded as 
   // suspended (we mark the suspend before the call to _schedule).
+  hpx_parcel_t* previous = APEX_STOP();
   int e = thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
+  APEX_RESUME(previous);
   dbg_check(e, "Error post _try_task: %s\n", hpx_strerror(e));
   return NULL;
 }
@@ -703,6 +714,7 @@ int worker_init(struct worker *w, struct scheduler *sched, int id,
   w->current    = NULL;
   w->stacks     = NULL;
   w->active     = true;
+  w->profiler   = NULL;
 
   sync_chase_lev_ws_deque_init(&w->work, work_size);
   sync_two_lock_queue_init(&w->inbox, NULL);
@@ -762,6 +774,7 @@ int worker_start(void) {
     dbg_error("failed to acquire an initial parcel.\n");
   }
 
+  //APEX_STOP(); // stop timing whatever might be there
   int e = thread_transfer(p, _on_startup, NULL);
   if (e) {
     if (here->rank == 0) {
@@ -886,7 +899,10 @@ void scheduler_spawn(hpx_parcel_t *p) {
   uint64_t size = sync_chase_lev_ws_deque_size(&self->work);
   self->work_first = (size >= self->sched->wf_threshold);
   INST_EVENT_PARCEL_SUSPEND(current);
+  //bool has_profiler = APEX_STOP(); // KAH EXPERIMENT
+  hpx_parcel_t* previous = APEX_STOP();
   int e = thread_transfer(_try_bind(p), _work_first, NULL);
+  APEX_RESUME(self->current); // KAH EXPERIMENT
   INST_EVENT_PARCEL_RESUME(current);
   dbg_check(e, "Detected a work-first scheduling error: %s\n", hpx_strerror(e));
 }
@@ -932,9 +948,11 @@ void scheduler_yield(void) {
   dbg_assert(to);
   dbg_assert(parcel_get_stack(to));
   dbg_assert(parcel_get_stack(to)->sp);
+  //hpx_parcel_t *previous = APEX_STOP();
   // transfer to the new thread
   thread_transfer(to, _checkpoint_yield, from);
   // note that we don't instrument yields because they overwhelm tracing
+  //APEX_RESUME(previous);
 }
 
 void hpx_thread_yield(void) {
@@ -965,10 +983,11 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   // if we successfully pushed, then do a transfer away from this thread
   if (status == HPX_SUCCESS) {
     INST_EVENT_PARCEL_SUSPEND(self->current);
+    //bool had_profiler = APEX_STOP(); // KAH EXPERIMENT
+    hpx_parcel_t* previous = APEX_STOP();
     hpx_parcel_t *to = _schedule(true, NULL);
-    int had_profiler = APEX_STOP();
     thread_transfer(to, _unlock, (void*)lock);
-    APEX_RESUME(had_profiler);
+    APEX_RESUME(self->current); // KAH EXPERIMENT
     INST_EVENT_PARCEL_RESUME(self->current);
     sync_lockable_ptr_lock(lock);
     status = cvar_get_error(condition);
@@ -1020,8 +1039,10 @@ static void HPX_NORETURN _continue(hpx_status_t status, size_t size, const void 
   if (parcel->action != scheduler_nop) {
     INST_EVENT_PARCEL_END(parcel);
   }
+  APEX_STOP(); // KAH EXPERIMENT
   thread_transfer(to, _free_parcel, (void*)(intptr_t)status);
   unreachable();
+  // no need to resume timer
 }
 
 static void _unpin_current_target(void) {
@@ -1033,14 +1054,12 @@ static void _unpin_current_target(void) {
 
 void hpx_thread_continue(size_t size, const void *value) {
   _unpin_current_target();
-  APEX_STOP();
   _continue(HPX_SUCCESS, size, value, NULL, NULL);
 }
 
 void hpx_thread_continue_cleanup(size_t size, const void *value,
                                  void (*cleanup)(void*), void *env) {
   _unpin_current_target();
-  APEX_STOP();
   _continue(HPX_SUCCESS, size, value, cleanup, env);
 }
 
@@ -1054,6 +1073,7 @@ void hpx_thread_exit(int status) {
     //      freed.
     hpx_parcel_t *to = _schedule(true, NULL);
     INST_EVENT_PARCEL_END(parcel); // assuming action != scheduler_nop
+    APEX_STOP(); // KAH EXPERIMENT
     INST_EVENT_PARCEL_RESEND(parcel);
     thread_transfer(to, _resend_parcel, parcel);
     unreachable();
@@ -1153,8 +1173,11 @@ void hpx_thread_set_affinity(int affinity) {
   }
 
   INST_EVENT_PARCEL_SUSPEND(self->current);
+  //bool has_profiler = APEX_STOP(); // KAH EXPERIMENT
+  hpx_parcel_t* previous = APEX_STOP();
   hpx_parcel_t *to = _schedule(false, NULL);
   thread_transfer(to, _move_to, (void*)(intptr_t)affinity);
+  APEX_RESUME(self->current); // KAH EXPERIMENT
   INST_EVENT_PARCEL_RESUME(self->current);
 }
 
