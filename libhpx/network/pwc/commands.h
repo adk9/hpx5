@@ -13,7 +13,6 @@
 #ifndef LIBHPX_NETWORK_PWC_COMMANDS_H
 #define LIBHPX_NETWORK_PWC_COMMANDS_H
 
-#include <hpx/hpx.h>
 #include <libhpx/network.h>
 
 typedef uint16_t op_t;
