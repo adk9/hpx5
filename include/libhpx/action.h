@@ -75,6 +75,10 @@ bool action_is_pinned(const struct action_table *, hpx_action_t)
 bool action_is_marshalled(const struct action_table *, hpx_action_t)
   HPX_NON_NULL(1);
 
+/// Is the action a default action?
+bool action_is_default(const struct action_table *, hpx_action_t)
+  HPX_NON_NULL(1);
+
 /// Is the action a task?
 bool action_is_task(const struct action_table *, hpx_action_t)
   HPX_NON_NULL(1);

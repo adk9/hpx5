@@ -375,6 +375,10 @@ bool action_is_marshalled(const struct action_table *table, hpx_action_t id) {
   return (action_table_get_attr(table, id) & HPX_MARSHALLED);
 }
 
+bool action_is_default(const struct action_table *table, hpx_action_t id) {
+  return (action_table_get_type(table, id) == HPX_DEFAULT);
+}
+
 bool action_is_task(const struct action_table *table, hpx_action_t id) {
   return (action_table_get_type(table, id) == HPX_TASK);
 }
