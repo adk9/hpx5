@@ -137,7 +137,8 @@ static void _reduce_set(lco_t *lco, int size, const void *from) {
 }
 
 /// Get the value of the reduction.
-static hpx_status_t _reduce_get(lco_t *lco, int size, void *out) {
+static hpx_status_t
+_reduce_get(lco_t *lco, int size, void *out) {
   _reduce_t *r = (_reduce_t *)lco;
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
@@ -158,59 +159,48 @@ static hpx_status_t _reduce_get(lco_t *lco, int size, void *out) {
   if (size && out) {
     memcpy(out, r->value, size);
   }
-
-  lco_unlock(lco);
-  return status;
-}
-
-/// Joins the reduction and returns with a reference to the reduced value.
-static hpx_status_t _reduce_getref(lco_t *lco, int size, void **out) {
-  _reduce_t *r = (_reduce_t *)lco;
-  hpx_status_t status = HPX_SUCCESS;
-  lco_lock(lco);
-
-  int remaining = r->remaining;
-  while (remaining > 0 && status == HPX_SUCCESS) {
-    status = scheduler_wait(&lco->lock, &r->barrier);
-    remaining = r->remaining;
-  }
-
-  // if there was an error signal, unlock and return it
-  if (status != HPX_SUCCESS) {
-    lco_unlock(lco);
-    return status;
-  }
-
-  // copy out the value if the caller wants it
-  if (out) {
-    *out = (size) ? r->value : NULL;
+  else {
+    dbg_assert(!size && !out);
   }
 
   lco_unlock(lco);
   return status;
 }
 
-/// Free the reference to the reduced value. If the buffer was
-/// _moved_ to our locality after a getref, check if the reference to
-/// be released matches the reference to the future's value.
-static bool _reduce_release(lco_t *lco, void *out) {
-  bool ret = false;
-  _reduce_t *r = (_reduce_t *)lco;
-  lco_lock(&r->lco);
-  if (out && out != r->value) {
-    free(out);
-    ret = true;
-  }
-  lco_unlock(&r->lco);
-  return ret;
-}
-
-// Wait for the reduction.
-static hpx_status_t _reduce_wait(lco_t *lco) {
+static hpx_status_t
+_reduce_wait(lco_t *lco) {
   return _reduce_get(lco, 0, NULL);
 }
 
-  // vtable
+static hpx_status_t
+_reduce_getref(lco_t *lco, int size, void **out, int *unpin) {
+  dbg_assert(size && out);
+
+  hpx_status_t status = _reduce_wait(lco);
+  if (status != HPX_SUCCESS) {
+    return status;
+  }
+
+  // no need for a lock here, synchronization happened in _wait(), and the LCO
+  // is pinned externally
+  _reduce_t *r = (_reduce_t *)lco;
+  *out = r->value;
+  *unpin = 0;
+  return HPX_SUCCESS;
+}
+
+// Release a reference to the buffer. There is no such thing as a "release
+// remote reference", the caller knows that if the LCO is not local then it has
+// a temporary buffer---that code path doesn't make it here. Just return '1' to
+// indicate that the caller should unpin the LCO.
+static int
+_reduce_release(lco_t *lco, void *out) {
+  _reduce_t *r = (_reduce_t *)lco;
+  dbg_assert(lco && out && out == r->value);
+  return 1;
+}
+
+// vtable
 static const lco_class_t _reduce_vtable = {
   .on_fini     = _reduce_fini,
   .on_error    = _reduce_error,

@@ -24,6 +24,7 @@
 #include <libhpx/action.h>
 #include <libhpx/attach.h>
 #include <libhpx/locality.h>
+#include <libhpx/memory.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/parcel.h>
 #include <libhpx/instrumentation.h>
@@ -86,10 +87,10 @@ static hpx_status_t _get(lco_t *lco, size_t bytes, void *out) {
   return class->on_get(lco, bytes, out);
 }
 
-static hpx_status_t _getref(lco_t *lco, size_t bytes, void **out) {
+static hpx_status_t _getref(lco_t *lco, size_t bytes, void **out, int *unpin) {
   const lco_class_t *class = _class(lco);
   dbg_assert_str(class->on_getref, "LCO has no on_getref handler\n");
-  return class->on_getref(lco, bytes, out);
+  return class->on_getref(lco, bytes, out, unpin);
 }
 
 static hpx_status_t _release(lco_t *lco, void *out) {
@@ -166,32 +167,28 @@ static void _cleanup_release(void *args) {
   _release(a->lco, a->buffer);
 }
 
-static int _lco_get_handler(lco_t *lco, int n) {
+static int
+_lco_get_handler(lco_t *lco, int n) {
   dbg_assert(n > 0);
 
-  // if there is a getref handler, then we should use it
-  const lco_class_t *class = _class(lco);
-  if (class->on_getref) {
-    void *buffer;
-    hpx_status_t status = _getref(lco, n, &buffer);
-    if (status != HPX_SUCCESS) {
-      return status;
-    }
-    _cleanup_release_args_t args = { lco, buffer };
-    hpx_thread_continue_cleanup(&_cleanup_release, &args, buffer, n);
+  // Use the getref handler, no need to worry about pinning here because we
+  // _release() in the continuation.
+  void *buffer;
+  int ignore_unpin;
+  hpx_status_t status = _getref(lco, n, &buffer, &ignore_unpin);
+  if (status != HPX_SUCCESS) {
+    return status;
   }
-  else {
-    char buffer[n];
-    hpx_status_t status = _get(lco, n, buffer);
-    if (status != HPX_SUCCESS) {
-      return status;
-    }
-    hpx_thread_continue(buffer, n);
-  }
+  _cleanup_release_args_t args = {
+    lco,
+    buffer
+  };
+  hpx_thread_continue_cleanup(&_cleanup_release, &args, buffer, n);
 }
 HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_get, _lco_get_handler, HPX_POINTER, HPX_INT);
 
-static int _lco_wait_handler(lco_t *lco) {
+static int
+_lco_wait_handler(lco_t *lco) {
   return _wait(lco);
 }
 HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_wait, _lco_wait_handler, HPX_POINTER);
@@ -423,6 +420,9 @@ hpx_status_t hpx_lco_get(hpx_addr_t target, int size, void *value) {
   return status;
 }
 
+
+// If the LCO isn't local, then we just fall back to the get functionality,
+// using a temporary buffer that will be freed at release.
 hpx_status_t hpx_lco_getref(hpx_addr_t target, int size, void **out) {
   if (size == 0) {
     return hpx_lco_wait(target);
@@ -430,32 +430,36 @@ hpx_status_t hpx_lco_getref(hpx_addr_t target, int size, void **out) {
 
   dbg_assert(out);
   lco_t *lco;
-  if (hpx_gas_try_pin(target, (void**)&lco)) {
-    return _getref(lco, size, out);
+  if (!hpx_gas_try_pin(target, (void**)&lco)) {
+    *out = registered_malloc(size);
+    dbg_assert(*out);
+    return hpx_lco_get(target, size, *out);
   }
 
-  // If the LCO isn't local, then we just fall back to the get functionality,
-  // using a temporary buffer that will be freed at release.
-  *out = malloc(size);
-  assert(*out);
-  return hpx_lco_get(target, size, *out);
+  int unpin;
+  hpx_status_t e = _getref(lco, size, out, &unpin);
+  if (unpin) {
+    hpx_gas_unpin(target);
+  }
+  return e;
 }
 
 void hpx_lco_release(hpx_addr_t target, void *out) {
+  dbg_assert(out);
   lco_t *lco;
-  if (hpx_gas_try_pin(target, (void**)&lco)) {
-    if (!_release(lco, out)) {
-      // unpin the LCO only if it was the original local LCO that we
-      // pinned previously.
-      hpx_gas_unpin(target);
-    }
-    hpx_gas_unpin(target);
-  } else {
-    // if the LCO is not local, delete the copied buffer.
-    if (out) {
-      free(out);
-    }
+  if (!hpx_gas_try_pin(target, (void**)&lco)) {
+    // guaranteed to be a registered temporary buffer if the LCO was non-local
+    registered_free(out);
   }
+
+  // release tells us if we left the LCO pinned in getref
+  int unpin = _release(lco, out);
+  if (unpin) {
+      hpx_gas_unpin(target);
+  }
+
+  // matching unpin for the local pin above
+  hpx_gas_unpin(target);
 }
 
 int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {

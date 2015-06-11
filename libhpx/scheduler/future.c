@@ -45,10 +45,13 @@ static size_t _future_size(lco_t *lco) {
 }
 
 static hpx_status_t _wait(_future_t *f) {
-  if (!lco_get_triggered(&f->lco))
-    return scheduler_wait(&f->lco.lock, &f->full);
-
-  return cvar_get_error(&f->full);
+  lco_t *lco = &f->lco;
+  if (lco_get_triggered(lco)) {
+    return cvar_get_error(&f->full);
+  }
+  else {
+    return scheduler_wait(&lco->lock, &f->full);
+  }
 }
 
 static bool _trigger(_future_t *f) {
@@ -59,7 +62,8 @@ static bool _trigger(_future_t *f) {
 }
 
 // Nothing extra allocated in the future
-static void _future_fini(lco_t *lco) {
+static void
+_future_fini(lco_t *lco) {
   if (!lco) {
     return;
   }
@@ -69,7 +73,8 @@ static void _future_fini(lco_t *lco) {
 }
 
 /// Copies @p from into the appropriate location.
-static void _future_set(lco_t *lco, int size, const void *from) {
+static void
+_future_set(lco_t *lco, int size, const void *from) {
   lco_lock(lco);
   _future_t *f = (_future_t *)lco;
   // futures are write-once
@@ -100,7 +105,8 @@ static void _future_error(lco_t *lco, hpx_status_t code) {
   lco_unlock(lco);
 }
 
-static void _future_reset(lco_t *lco) {
+static void
+_future_reset(lco_t *lco) {
   _future_t *f = (_future_t *)lco;
   lco_lock(&f->lco);
   dbg_assert_str(cvar_empty(&f->full),
@@ -110,7 +116,8 @@ static void _future_reset(lco_t *lco) {
   lco_unlock(&f->lco);
 }
 
-static hpx_status_t _future_attach(lco_t *lco, hpx_parcel_t *p) {
+static hpx_status_t
+_future_attach(lco_t *lco, hpx_parcel_t *p) {
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
   _future_t *f = (_future_t *)lco;
@@ -140,57 +147,61 @@ static hpx_status_t _future_attach(lco_t *lco, hpx_parcel_t *p) {
 }
 
 /// Copies the appropriate value into @p out, waiting if the lco isn't set yet.
-static hpx_status_t _future_get(lco_t *lco, int size, void *out) {
-  hpx_status_t status = HPX_SUCCESS;
+static hpx_status_t
+_future_get(lco_t *lco, int size, void *out) {
   lco_lock(lco);
 
   _future_t *f = (_future_t *)lco;
-  status = _wait(f);
-  if ((status == HPX_SUCCESS) && out) {
+  hpx_status_t status = _wait(f);
+  if (status != HPX_SUCCESS) {
+    lco_unlock(lco);
+    return status;
+  }
+
+  if (size && out) {
     memcpy(out, &f->value, size);
   }
-
-  lco_unlock(lco);
-  return status;
-}
-
-/// Returns the reference to the future's value in @p out, waiting if
-/// the lco isn't set yet.
-static hpx_status_t _future_getref(lco_t *lco, int size, void **out) {
-  _future_t *f = (_future_t *)lco;
-  lco_lock(&f->lco);
-  hpx_status_t status = _wait(f);
-
-  if ((status == HPX_SUCCESS) && out) {
-    *out = &f->value;
+  else {
+    dbg_assert(!size && !out);
   }
 
-  lco_unlock(&f->lco);
-  return status;
-}
-
-/// Free the reference to the future's value. If the future was
-/// _moved_ to our locality after a getref, check if the reference to
-/// be released matches the reference to the future's value.
-static bool _future_release(lco_t *lco, void *out) {
-  bool ret = false;
-  _future_t *f = (_future_t *)lco;
-  lco_lock(&f->lco);
-  if (out && out != f->value) {
-    free(out);
-    ret = true;
-  }
-  lco_unlock(&f->lco);
-  return ret;
-}
-
-static hpx_status_t _future_wait(lco_t *lco) {
-  hpx_status_t status = HPX_SUCCESS;
-  lco_lock(lco);
-  _future_t *f = (_future_t *)lco;
-  status = _wait(f);
   lco_unlock(lco);
-  return status;
+  return HPX_SUCCESS;
+}
+
+static hpx_status_t
+_future_wait(lco_t *lco) {
+  return _future_get(lco, 0, NULL);
+}
+
+/// Returns the reference to the future's value in @p out, waiting if the lco
+/// isn't set yet.
+static hpx_status_t
+_future_getref(lco_t *lco, int size, void **out, int *unpin) {
+  dbg_assert(size && out);
+
+  hpx_status_t status = _future_wait(lco);
+  if (status != HPX_SUCCESS) {
+    return status;
+  }
+
+  // no need for a lock here, synchronization happened in _wait(), and the LCO
+  // is pinned externally
+  _future_t *f = (_future_t *)lco;
+  *out = f->value;
+  *unpin = 0;
+  return HPX_SUCCESS;
+}
+
+// Release a reference to the buffer. There is no such thing as a "release
+// remote reference", the caller knows that if the LCO is not local then it has
+// a temporary buffer---that code path doesn't make it here. Just return '1' to
+// indicate that the caller should unpin the LCO.
+static int
+_future_release(lco_t *lco, void *out) {
+  _future_t *f = (_future_t *)lco;
+  dbg_assert(lco && out && out == f->value);
+  return 1;
 }
 
 // the future vtable

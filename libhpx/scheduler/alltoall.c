@@ -365,18 +365,20 @@ static hpx_status_t _alltoall_get(lco_t *lco, int size, void *out) {
 
 // We universally clone the buffer here, because the all* family of LCOs will
 // reset themselves so we can't retain a pointer to their buffer.
-static hpx_status_t _alltoall_getref(lco_t *lco, int size, void **out) {
+static hpx_status_t
+_alltoall_getref(lco_t *lco, int size, void **out, int *unpin) {
   *out = registered_malloc(size);
+  *unpin = 1;
   return _alltoall_get(lco, size, *out);
 }
 
 // We know that allreduce buffers were always copies, so we can just free them
 // here.
-static bool _alltoall_release(lco_t *lco, void *out) {
+static int
+_alltoall_release(lco_t *lco, void *out) {
   registered_free(out);
-  return true;
+  return 0;
 }
-
 
 static const lco_class_t _alltoall_vtable = {
   .on_fini     = _alltoall_fini,
