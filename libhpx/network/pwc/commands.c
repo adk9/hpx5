@@ -17,6 +17,7 @@
 #include <libhpx/gpa.h>
 #include <libhpx/locality.h>
 #include <libhpx/network.h>
+#include <libhpx/parcel.h>
 
 #include "commands.h"
 
@@ -35,3 +36,12 @@ static int _release_parcel_handler(int src, command_t command) {
   return HPX_SUCCESS;
 }
 COMMAND_DEF(HPX_INTERRUPT, release_parcel, _release_parcel_handler);
+
+static int _resume_parcel_handler(int src, command_t command) {
+  uintptr_t arg = command_get_arg(command);
+  hpx_parcel_t *p = (hpx_parcel_t *)arg;
+  log_net("resuming suspended parcel %p\n", (void*)p);
+  parcel_launch(p);
+  return HPX_SUCCESS;
+}
+COMMAND_DEF(HPX_INTERRUPT, resume_parcel, _resume_parcel_handler);

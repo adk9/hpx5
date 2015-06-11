@@ -24,12 +24,11 @@
 #include <libhpx/parcel_block.h>
 #include <libhpx/scheduler.h>
 
+#include "commands.h"
 #include "parcel_emulation.h"
 #include "pwc.h"
 #include "send_buffer.h"
 #include "xport.h"
-
-#include "../commands.h"
 
 typedef struct {
   size_t              n;

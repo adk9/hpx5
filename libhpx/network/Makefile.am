@@ -15,8 +15,7 @@ libnetwork_la_SOURCES  = locality.c \
                          parcel_block.c \
                          hpx_parcel_glue.c \
                          probe.c \
-                         smp.c \
-                         commands.c
+                         smp.c 
 
 if HAVE_NETWORK
 libnetwork_la_LIBADD   = isir/libisir.la \

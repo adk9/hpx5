@@ -164,6 +164,28 @@ void scheduler_spawn(hpx_parcel_t *p)
 /// the locality.
 void scheduler_yield(void);
 
+/// Suspend the execution of the current thread.
+///
+/// This suspends the execution of the current lightweight thread. It must be
+/// explicitly resumed in the future. The continuation @p f(@p env) is run
+/// synchronously after the thread has been suspended but before a new thread is
+/// run. This allows the lightweight thread to perform "safe" synchronization
+/// where @p f will trigger a resume operation on the current thread, and we
+/// don't want to miss that signal or possibly have our thread stolen before it
+/// is checkpointed.
+///
+/// This will find a new thread to execute, and will effect a context switch. It
+/// is not possible to immediately switch back to the current thread, even if @p
+/// f makes it runnable, because thread selection is performed prior to the
+/// execution of @p f, and the current thread is not a valid option at that
+/// point.
+///
+/// The continuation @p f, and the environment @p env, can be on the stack.
+///
+/// @param            f A continuation to run after the context switch.
+/// @param          env The environment to pass to the continuation @p f.
+hpx_status_t scheduler_suspend(int (*f)(void*), void *env);
+
 /// Wait for an condition.
 ///
 /// This suspends execution of the current user level thread until the condition
