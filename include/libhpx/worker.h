@@ -20,10 +20,6 @@
 #include <libhpx/padding.h>
 #include <libhpx/stats.h>
 
-#if HAVE_APEX
-#include <apex.h>
-#endif
-
 /// Forward declarations.
 /// @{
 struct config;
@@ -61,9 +57,7 @@ struct worker {
   two_lock_queue_t    inbox;                    // mail sent to me
   scheduler_stats_t   stats;                    // scheduler statistics
   int                active;  // used by APEX scheduler throttling : akp
-#if HAVE_APEX // apex_profiler_handle is undefined, otherwise
-  apex_profiler_handle profiler; // worker maintains a reference to its profiler
-#endif
+  void*            profiler; // worker maintains a reference to its profiler
 } HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
 extern __thread struct worker *self;
