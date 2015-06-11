@@ -21,21 +21,24 @@ void apex_sum(int count, apex_profile values[count]) {
   reduced_value.calls = values[0].calls; 
   reduced_value.accumulated = values[0].accumulated; 
   reduced_value.sum_squares = values[0].sum_squares; 
-  reduced_value.minimum = values[0].minimum; 
-  reduced_value.maximum = values[0].maximum; 
+  //reduced_value.minimum = values[0].minimum; 
+  //reduced_value.maximum = values[0].maximum; 
+  reduced_value.minimum = values[0].accumulated / values[0].calls; 
+  reduced_value.maximum = values[0].accumulated / values[0].calls; 
   min_rank = max_rank = 0;
   for (int i = 1; i < count; ++i) { 
 	  reduced_value.calls += values[i].calls; 
 	  reduced_value.accumulated += values[i].accumulated; 
 	  reduced_value.sum_squares += values[i].sum_squares; 
 	  //reduced_value.minimum = fmin(reduced_value.minimum,values[i].minimum); 
-      if (values[i].minimum < reduced_value.minimum) {
-	    reduced_value.minimum = values[i].minimum; 
+      double mean = values[i].accumulated / values[i].calls;
+      if (mean < reduced_value.minimum) {
+	    reduced_value.minimum = mean; 
         min_rank = i;
       }
 	  //reduced_value.maximum = fmax(reduced_value.maximum,values[i].maximum); 
-	  if (values[i].maximum > reduced_value.maximum) {
-	    reduced_value.maximum = values[i].maximum; 
+	  if (mean > reduced_value.maximum) {
+	    reduced_value.maximum = mean; 
         max_rank = i;
       }
   }
@@ -110,7 +113,7 @@ int apex_periodic_output(apex_context const context) {
   }
   printf("Iterations: calls=%lu mean=%f +/- %f, min=%f (%d), max=%f (%d)\r", (unsigned long)reduced_value.calls, avg, stddev, reduced_value.minimum, min_rank, reduced_value.maximum, max_rank);
   fflush(stdout);
-  fprintf(graph_output,"%f %f\n",avg, stddev);
+  fprintf(graph_output,"%lu\t%f\t%f\t%f\t%d\t%f\t%d\n",(unsigned long)reduced_value.calls, avg, stddev, reduced_value.minimum, min_rank, reduced_value.maximum, max_rank);
   fflush(graph_output);
   return APEX_NOERROR;
 }
@@ -123,7 +126,7 @@ void apex_global_setup(apex_profiler_type type, void* in_action) {
     strcpy(profiled_action_name, in_action);
   }
   apex_register_periodic_policy(1000000, apex_periodic_output);
-  apex_set_use_policy(true);
+  //apex_set_use_policy(true);
   //set_value      = HPX_REGISTER_ACTION(action_apex_set_value);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, 
           apex_get_value, apex_get_value_action, 
@@ -132,5 +135,7 @@ void apex_global_setup(apex_profiler_type type, void* in_action) {
           apex_allreduce, apex_allreduce_action, 
           HPX_POINTER, HPX_SIZE_T );
   graph_output = fopen("./profile_data.txt", "w");
+  fprintf(graph_output,"\"calls\"\t\"mean\"\t\"stddev\"\t\"min\"\t\"min_rank\"\t\"max\"\t\"max_rank\"\n");
+  fflush(graph_output);
 }
 
