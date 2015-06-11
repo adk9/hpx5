@@ -16,6 +16,7 @@
 
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
+#include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
 #include "commands.h"
 #include "pwc.h"
@@ -109,7 +110,7 @@ pwc_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out) {
 
   hpx_parcel_t *p = parcel_create(lco, _pwc_lco_get_request, HPX_NULL,
                                   HPX_ACTION_NULL, 2, &args, sizeof(args));
-  int e = scheduler_wait_launch_through(p, HPX_NULL);
+  int e = scheduler_suspend((int (*)(void*))parcel_launch, p);
 
   // If we registered the output buffer dynamically, then we need to de-register
   // it now.

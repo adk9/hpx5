@@ -1051,43 +1051,43 @@ debug_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
 
 /// The environment for the _checkpoint_launch_through continuation.
 typedef struct {
-  hpx_parcel_t *p;
-  hpx_addr_t lco;
-} _checkpoint_launch_through_env_t;
+  int (*f)(void *);
+  void *env;
+} _checkpoint_suspend_env_t;
 
 /// This continuation updates the `self->current` pointer to record that we are
 /// now running @p to, checkpoints the previous stack pointer in the previous
-/// stack, and then launches the parcel described in @p env.
+/// stack, and then runs the continuation described in @p env.
 ///
 /// This continuation *does not* record the previous parcel in any scheduler
 /// structures, it is completely invisible to the runtime. The expectation is
-/// that the parcel stored in @p env will use the `resume_parcel` command (see
-/// libhpx/network.h) to restart execution of the suspended parcel.
+/// that the continuation in @p env will ultimately cause the parcel to resume.
 ///
 /// @param           to The parcel we transferred to.
 /// @param           sp The stack pointer we transferred from.
-/// @param          env A _checkpoint_launch_env_t that describes the launch.
+/// @param          env A _checkpoint_suspend_env_t that describes the closure.
 ///
-/// @return             The status from the launch_through operation.
+/// @return             The status from the closure continuation.
 static int
-_checkpoint_launch_through(hpx_parcel_t *to, void *sp, void *env) {
+_checkpoint_suspend(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = self->current;
   self->current = to;
   parcel_get_stack(prev)->sp = sp;
-  _checkpoint_launch_through_env_t *e = env;
-  return parcel_launch_through(e->p, e->lco);
+  _checkpoint_suspend_env_t *c = env;
+  return c->f(c->env);
 }
 
 hpx_status_t
-scheduler_wait_launch_through(hpx_parcel_t *p, hpx_addr_t lco) {
-  _checkpoint_launch_through_env_t env = {
-    .p = p,
-    .lco = lco
+scheduler_suspend(int (*f)(void*), void *env) {
+  // create the closure environment for the _checkpoint_suspend continuation
+  _checkpoint_suspend_env_t suspend_env = {
+    .f = f,
+    .env = env
   };
 
   INST_EVENT_PARCEL_SUSPEND(self->current);
   hpx_parcel_t *to = _schedule(false, NULL);
-  int e = thread_transfer(to, _checkpoint_launch_through, &env);
+  int e = thread_transfer(to, _checkpoint_suspend, &suspend_env);
   INST_EVENT_PARCEL_RESUME(self->current);
   return e;
 }
