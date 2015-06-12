@@ -35,8 +35,8 @@ struct transport;
 
 /// Command actions should be declared and defined using the following macros.
 /// @{
-#define COMMAND_DEF(type, symbol, handler)                              \
-    HPX_ACTION(type, 0, symbol, handler, HPX_INT, HPX_UINT64)
+#define COMMAND_DEF(symbol, handler)                                    \
+    HPX_ACTION(HPX_INTERRUPT, 0, symbol, handler, HPX_INT, HPX_UINT64)
 
 #define COMMAND_DECL(symbol) HPX_ACTION_DECL(symbol)
 /// @}
