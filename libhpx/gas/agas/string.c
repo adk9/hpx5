@@ -30,7 +30,7 @@ static int _agas_lco_set_handler(int src, uint64_t command) {
   hpx_lco_set(lco, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
-static COMMAND_DEF(HPX_INTERRUPT, _agas_lco_set, _agas_lco_set_handler);
+static COMMAND_DEF(_agas_lco_set, _agas_lco_set_handler);
 
 int
 agas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
