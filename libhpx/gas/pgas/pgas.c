@@ -19,15 +19,16 @@
 #include <string.h>
 #include <stdlib.h>
 #include <hpx/hpx.h>
+#include <libhpx/bitmap.h>
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/gpa.h>
 #include <libhpx/libhpx.h>
-#include <libhpx/memory.h>
 #include <libhpx/locality.h>
+#include <libhpx/memory.h>
 #include <libhpx/network.h>
-#include <libhpx/bitmap.h>
+#include <libhpx/scheduler.h>
 #include "cyclic.h"
 #include "global.h"
 #include "heap.h"
@@ -281,9 +282,43 @@ _pgas_memget(void *gas, void *to, hpx_addr_t from, size_t n, hpx_addr_t lsync) {
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
     return HPX_SUCCESS;
   }
-  else {
-    return network_get(here->network, to, from, n, lco_set, lsync);
+
+  return network_get(here->network, to, from, n, lco_set, lsync);
+}
+
+typedef struct {
+  hpx_parcel_t *p;
+  void *to;
+  hpx_addr_t from;
+  size_t n;
+} _pgas_memget_sync_continutation_env_t;
+
+static int
+_pgas_memget_sync_continutation(void *env) {
+  _pgas_memget_sync_continutation_env_t *e = env;
+  return network_get(here->network, e->to, e->from, e->n, resume_parcel, (uintptr_t)e->p);
+}
+
+static int
+_pgas_memget_sync(void *gas, void *to, hpx_addr_t from, size_t n) {
+  if (!n) {
+    return HPX_SUCCESS;
   }
+
+  if (gpa_to_rank(from) == here->rank) {
+    const void *lfrom = pgas_gpa_to_lva(from);
+    memcpy(to, lfrom, n);
+    return HPX_SUCCESS;
+  }
+
+  _pgas_memget_sync_continutation_env_t env = {
+    .p = scheduler_current_parcel(),
+    .to = to,
+    .from = from,
+    .n = n
+  };
+
+  return scheduler_suspend(_pgas_memget_sync_continutation, &env);
 }
 
 static void
@@ -325,7 +360,10 @@ static gas_t _pgas_vtable = {
   .free           = _pgas_gas_free,
   .move           = _pgas_move,
   .memget         = _pgas_memget,
+  .memget_sync    = _pgas_memget_sync,
   .memput         = _pgas_memput,
+  .memput_lsync   = NULL,
+  .memput_rsync   = NULL,
   .memcpy         = _pgas_parcel_memcpy,
   .owner_of       = _pgas_owner_of
 };
