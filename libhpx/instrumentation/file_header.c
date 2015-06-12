@@ -70,6 +70,9 @@ static size_t _write_event_metadata_named_value(void* base,
   static size_t _write_event_metadata_ ## name(void* base,              \
                                   inst_event_metadata_t const *event_md \
                                                ) {                      \
+    if(event_md->num_cols == 0) {                                       \
+        return 0;                                                       \
+    }                                                                   \
     int md_data_size = event_md->num_cols * ((_length) + 1) + 1;        \
     int md_size = sizeof(struct cols_metadata) + md_data_size;          \
     struct cols_metadata *md = malloc(md_size);                         \
