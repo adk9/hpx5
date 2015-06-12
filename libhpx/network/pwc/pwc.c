@@ -50,24 +50,30 @@ _straction(hpx_action_t id) {
 static void
 _probe_local(pwc_network_t *pwc) {
   int rank = here->rank;
+  const struct action_table *actions = here->actions;
 
   // Each time through the loop, we deal with local completions.
   command_t command;
   while (pwc->xport->test(&command, NULL)) {
     hpx_addr_t op = command_get_op(command);
     log_net("processing local command: %s\n", _straction(op));
-    int e = hpx_xcall(HPX_HERE, op, HPX_NULL, rank, command);
+    hpx_action_handler_t handler = action_table_get_handler(actions, op);
+    command_handler_t f = (command_handler_t)(handler);
+    int e = f(rank, command);
     dbg_assert_str(HPX_SUCCESS == e, "failed to process local command\n");
   }
 }
 
 static hpx_parcel_t *
 _probe(pwc_network_t *pwc, int rank) {
+  const struct action_table *actions = here->actions;
   command_t command;
   while (pwc->xport->probe(&command, NULL, rank)) {
     hpx_addr_t op = command_get_op(command);
     log_net("processing command %s from rank %d\n", _straction(op), rank);
-    int e = hpx_xcall(HPX_HERE, op, HPX_NULL, rank, command);
+    hpx_action_handler_t handler = action_table_get_handler(actions, op);
+    command_handler_t f = (command_handler_t)(handler);
+    int e = f(rank, command);
     dbg_assert_str(HPX_SUCCESS == e, "failed to process command\n");
   }
   return NULL;
@@ -124,7 +130,7 @@ _rendezvous_launch_handler(int src, command_t cmd) {
   scheduler_spawn(p);
   return HPX_SUCCESS;
 }
-COMMAND_DEF(HPX_INTERRUPT, _rendezvous_launch, _rendezvous_launch_handler);
+COMMAND_DEF(_rendezvous_launch, _rendezvous_launch_handler);
 
 static int
 _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size) {
