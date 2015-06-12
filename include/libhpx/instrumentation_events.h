@@ -505,7 +505,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
     INST_EVENT_COL_METADATA_NS,                                  \
     METADATA_PROCESS_ADDRESS,                                    \
     METADATA_PARCEL_ID,                                          \
-    INST_EVENT_COL_METADATA_EMPTY2,                               \
+    INST_EVENT_COL_METADATA_EMPTY2,                              \
     INST_EVENT_COL_METADATA_EMPTY3                               \
   }                                                              \
 }
@@ -517,7 +517,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
     INST_EVENT_COL_METADATA_WORKER,                              \
     INST_EVENT_COL_METADATA_NS,                                  \
     METADATA_PROCESS_ADDRESS,                                    \
-    INST_EVENT_COL_METADATA_EMPTY1,                               \
+    INST_EVENT_COL_METADATA_EMPTY1,                              \
     INST_EVENT_COL_METADATA_EMPTY2,                              \
     INST_EVENT_COL_METADATA_EMPTY3                               \
   }                                                              \

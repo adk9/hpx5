@@ -65,7 +65,8 @@ static const char * const INST_CLASS_TO_STRING[] = {
   "CLASS_PARCEL",
   "CLASS_NETWORK_PWC",
   "CLASS_SCHED",
-  "CLASS_LCO"
+  "CLASS_LCO",
+  "CLASS_PROCESS"
 };
 
 typedef enum {
