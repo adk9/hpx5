@@ -136,7 +136,8 @@ static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
   "pwc",
   "sched",
   "lco",
-  "process"
+  "process",
+  "all"
 };
 
 /// The HPX configuration type.
