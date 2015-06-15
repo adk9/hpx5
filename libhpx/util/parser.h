@@ -43,7 +43,7 @@ enum enum_hpx_boot { hpx_boot__NULL = -1, hpx_boot_arg_default = 0, hpx_boot_arg
 enum enum_hpx_transport { hpx_transport__NULL = -1, hpx_transport_arg_default = 0, hpx_transport_arg_mpi, hpx_transport_arg_portals, hpx_transport_arg_photon };
 enum enum_hpx_network { hpx_network__NULL = -1, hpx_network_arg_default = 0, hpx_network_arg_smp, hpx_network_arg_pwc, hpx_network_arg_isir };
 enum enum_hpx_log_level { hpx_log_level__NULL = -1, hpx_log_level_arg_default = 0, hpx_log_level_arg_boot, hpx_log_level_arg_sched, hpx_log_level_arg_gas, hpx_log_level_arg_lco, hpx_log_level_arg_net, hpx_log_level_arg_trans, hpx_log_level_arg_parcel, hpx_log_level_arg_action, hpx_log_level_arg_config, hpx_log_level_arg_memory, hpx_log_level_arg_all };
-enum enum_hpx_trace_classes { hpx_trace_classes__NULL = -1, hpx_trace_classes_arg_parcel = 0, hpx_trace_classes_arg_pwc, hpx_trace_classes_arg_sched, hpx_trace_classes_arg_all };
+enum enum_hpx_trace_classes { hpx_trace_classes__NULL = -1, hpx_trace_classes_arg_parcel = 0, hpx_trace_classes_arg_pwc, hpx_trace_classes_arg_sched, hpx_trace_classes_arg_lco, hpx_trace_classes_arg_process, hpx_trace_classes_arg_all };
 enum enum_hpx_photon_backend { hpx_photon_backend__NULL = -1, hpx_photon_backend_arg_default = 0, hpx_photon_backend_arg_verbs, hpx_photon_backend_arg_ugni };
 
 /** @brief Where the command line options are stored */
