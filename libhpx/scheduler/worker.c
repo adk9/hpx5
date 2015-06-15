@@ -76,8 +76,8 @@ void APEX_RESUME(hpx_parcel_t *p) {
 }
 #else
 #define APEX_START(_p) 
-#define APEX_STOP() {NULL}
-#define APEX_RESUME(_p,_b) {}
+#define APEX_STOP() NULL
+#define APEX_RESUME(_p)
 #endif
 
 __thread struct worker *self = NULL;
@@ -176,10 +176,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
   if (p->action != scheduler_nop) {
     INST_EVENT_PARCEL_RUN(p);
   }
-  //hpx_parcel_t* previous = APEX_START(p);
   int e = action_execute(p);
-  //APEX_STOP();
-  //APEX_RESUME(previous,(previous != NULL));
   if (p->action != scheduler_nop) {
     INST_EVENT_PARCEL_END(p);
   }
@@ -482,7 +479,7 @@ static hpx_parcel_t *_try_task(hpx_parcel_t *p) {
   // suspended (we mark the suspend before the call to _schedule).
   hpx_parcel_t* previous = APEX_STOP();
   int e = thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
-  APEX_RESUME(previous);
+  APEX_RESUME(self->current);
   dbg_check(e, "Error post _try_task: %s\n", hpx_strerror(e));
   return NULL;
 }
@@ -559,7 +556,7 @@ inline static int _apex_check_throttling(void) {
     /*akp: throttling code -- if the throttling flag is set don't use some threads
        NB: There is a possible race condition here. It's possible that mail needs
            to be checked again just before throttling. */
-    if (apex_checkThrottling) {
+    if (apex_get_throttle_concurrency()) {
       // am I inactive?
       if (self->active == false) {
 /* because we can't change the power level, sleep instead. */
