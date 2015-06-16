@@ -367,6 +367,10 @@ void hpx_lco_set(hpx_addr_t target, int size, const void *value,
 
   lco_t *lco = NULL;
   if ((size < HPX_LCO_SET_ASYNC) && hpx_gas_try_pin(target, (void**)&lco)) {
+#ifdef ENABLE_INSTRUMENTATION
+    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_SET, lco,
+               hpx_get_my_thread_id(), lco->bits);
+#endif
     _set(lco, size, value);
     hpx_gas_unpin(target);
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
