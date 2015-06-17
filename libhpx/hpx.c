@@ -56,6 +56,11 @@ static void _cleanup(locality_t *l) {
   if (!l)
     return;
 
+#ifdef HAVE_APEX 
+  // finalize APEX
+  apex_finalize();
+#endif
+
   if (l->sched) {
     scheduler_delete(l->sched);
     l->sched = NULL;
@@ -96,10 +101,6 @@ static void _cleanup(locality_t *l) {
 
   free(l);
 
-#ifdef HAVE_APEX 
-  // finalize APEX
-  apex_finalize();
-#endif
 }
 
 int hpx_init(int *argc, char ***argv) {
