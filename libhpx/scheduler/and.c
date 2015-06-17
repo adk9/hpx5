@@ -244,7 +244,7 @@ static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
 hpx_addr_t
 hpx_lco_and_local_array_new(int n, int arg) {
   uint32_t lco_bytes = sizeof(_and_t);
-  dbg_assert(lco_bytes < (1lu << GPA_MAX_LG_BSIZE) / n);
+  dbg_assert(lco_bytes < (UINT64_C(1) << GPA_MAX_LG_BSIZE) / n);
   uint32_t  block_bytes = n * lco_bytes;
   hpx_addr_t base = hpx_gas_alloc_local(block_bytes, 0);
   int e = hpx_call_sync(base, _block_local_init, NULL, 0, &n, &arg);
