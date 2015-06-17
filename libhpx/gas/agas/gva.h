@@ -17,6 +17,7 @@
 extern "C" {
 #endif
 
+#include <stdint.h>
 #include <hpx/hpx.h>
 
 /// Set up some limitations for the AGAS implementation for now.
@@ -37,12 +38,12 @@ typedef union {
 _HPX_ASSERT(sizeof(gva_t) == sizeof(hpx_addr_t), gva_bitfield_packing_failed);
 
 static inline uint64_t gva_to_key(gva_t gva) {
-  uint64_t mask = ~((1lu << gva.bits.size) - 1);
+  uint64_t mask = ~((UINT64_C(1) << gva.bits.size) - 1);
   return gva.addr & mask;
 }
 
 static inline uint64_t gva_to_offset(gva_t gva) {
-  uint64_t mask = ((1lu << gva.bits.size) - 1);
+  uint64_t mask = ((UINT64_C(1) << gva.bits.size) - 1);
   return gva.addr & mask;
 }
 

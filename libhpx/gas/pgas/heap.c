@@ -15,6 +15,7 @@
 #endif
 
 #include <inttypes.h>
+#include <stdint.h>
 #include <string.h>
 #include <libsync/sync.h>
 #include <hpx/builtins.h>
@@ -27,7 +28,7 @@
 #include "heap.h"
 #include "pgas.h"
 
-const uint64_t MAX_HEAP_BYTES = (uint64_t)1lu << GPA_OFFSET_BITS;
+const uint64_t MAX_HEAP_BYTES = UINT64_C(1) << GPA_OFFSET_BITS;
 
 ///
 static bitmap_t *
