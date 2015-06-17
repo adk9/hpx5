@@ -208,7 +208,13 @@ int attach_handler(lco_t *lco, hpx_parcel_t *p, size_t size) {
   state = parcel_get_state(p);
   dbg_assert(!parcel_nested(state));
   state |= PARCEL_NESTED;
+
   parcel_set_state(p, state);
+
+#ifdef ENABLE_INSTRUMENTATION
+    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_ATTACH_PARCEL, lco,
+               hpx_get_my_thread_id(), lco->bits);
+#endif
 
   return _attach(lco, p);
 }
