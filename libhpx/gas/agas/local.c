@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <libhpx/action.h>
@@ -86,7 +87,7 @@ agas_local_free(agas_t *agas, gva_t gva, void *lva, hpx_addr_t rsync) {
 int64_t
 agas_local_sub(const agas_t *agas, gva_t lhs, gva_t rhs, uint32_t bsize) {
   uint64_t bits = lhs.bits.size;
-  uint64_t mask = (1lu << bits) - 1;
+  uint64_t mask = (UINT64_C(1) << bits) - 1;
   uint64_t plhs = lhs.bits.offset & mask;
   uint64_t prhs = rhs.bits.offset & mask;
   uint64_t blhs = lhs.bits.offset >> bits;
@@ -98,7 +99,7 @@ hpx_addr_t
 agas_local_add(const agas_t *agas, gva_t gva, int64_t n, uint32_t bsize) {
   int64_t blocks = n / bsize;
   int64_t bytes = n % bsize;
-  uint64_t block_size = (1lu << gva.bits.size);
+  uint64_t block_size = (UINT64_C(1) << gva.bits.size);
   uint64_t addr = gva.addr + blocks * block_size + bytes;
   dbg_assert((addr & (block_size - 1)) < bsize);
   return addr;
