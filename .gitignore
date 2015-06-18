@@ -108,7 +108,6 @@ tests/unit/thread_create
 tests/unit/call_when
 tests/unit/gas_alloc
 tests/unit/parcel_send_through
-tests/unit/lco_and_set_fail
 tests/unit/gas_global_alloc
 tests/unit/process
 tests/unit/lco_collectives
