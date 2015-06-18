@@ -18,6 +18,8 @@
 #include <libhpx/debug.h>
 #include <libhpx/memory.h>
 
+const char *je_malloc_conf = "lg_dirty_mult:-1,lg_chunk:22";
+
 /// Backing declaration for the flags.
 __thread int as_flags[AS_COUNT] = {0};
 

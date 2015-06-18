@@ -1,4 +1,6 @@
+libhpx_malloc_conf
+malloc_conf
+here
 hpx_*
 _hpx_*
 HPX_*
-here
