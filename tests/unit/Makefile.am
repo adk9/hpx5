@@ -18,7 +18,6 @@ TESTS = bcast                   \
         gas_memput              \
         lco_get_remote          \
         lco_and                 \
-        lco_and_set_fail        \
         lco_array               \
         lco_collectives         \
         lco_futures             \
@@ -42,8 +41,6 @@ TESTS = bcast                   \
         thread_gettlsid         \
         thread_yield
 
-XFAIL_TESTS = lco_and_set_fail
-
 if ENABLE_LENGTHY_TESTS
 TESTS           += lco_wait
 endif
@@ -54,9 +51,8 @@ gas_alloc_SOURCES                   =  gas_alloc.c
 gas_global_alloc_SOURCES            =  gas_global_alloc.c
 gas_memget_SOURCES                  =  gas_memget.c
 gas_memput_SOURCES                  =  gas_memput.c
-lco_get_remote_SOURCES				=  lco_get_remote.c
+lco_get_remote_SOURCES              =  lco_get_remote.c
 lco_and_SOURCES                     =  lco_and.c
-lco_and_set_fail_SOURCES            =  lco_and_set_fail.c
 lco_array_SOURCES                   =  lco_array.c
 lco_collectives_SOURCES             =  lco_collectives.c
 lco_futures_SOURCES                 =  lco_futures.c
@@ -86,7 +82,6 @@ gas_global_alloc_DEPENDENCIES       = $(HPX_DEPS)
 gas_memget_DEPENDENCIES             = $(HPX_DEPS)
 gas_memput_DEPENDENCIES             = $(HPX_DEPS)
 lco_and_DEPENDENCIES                = $(HPX_DEPS)
-lco_and_set_fail_DEPENDENCIES       = $(HPX_DEPS)
 lco_array_DEPENDENCIES              = $(HPX_DEPS)
 lco_collectives_DEPENDENCIES        = $(HPX_DEPS)
 lco_futures_DEPENDENCIES            = $(HPX_DEPS)
@@ -96,11 +91,11 @@ lco_setget_DEPENDENCIES             = $(HPX_DEPS)
 lco_user_DEPENDENCIES               = $(HPX_DEPS)
 lco_wait_DEPENDENCIES               = $(HPX_DEPS)
 libhpx_boot_DEPENDENCIES            = $(HPX_DEPS)
-parcel_continuation_DEPENDENCIE     = $(HPX_DEPS)
+parcel_continuation_DEPENDENCIES    = $(HPX_DEPS)
 parcel_create_DEPENDENCIES          = $(HPX_DEPS)
 parcel_send_DEPENDENCIES            = $(HPX_DEPS)
 parcel_send_rendezvous_DEPENDENCIES = $(HPX_DEPS)
-parcel_send_through_DEPENDENCIE     = $(HPX_DEPS)
+parcel_send_through_DEPENDENCIES    = $(HPX_DEPS)
 process_DEPENDENCIES                = $(HPX_DEPS)
 runtime_DEPENDENCIES                = $(HPX_DEPS)
 task_DEPENDENCIES                   = $(HPX_DEPS)
