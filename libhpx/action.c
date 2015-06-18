@@ -347,7 +347,6 @@ int action_execute(hpx_parcel_t *p) {
       return HPX_RESEND;
     }
     *ret = ((hpx_pinned_action_handler_t)handler)(target, args, p->size);
-    hpx_gas_unpin(p->target);
   } else if (cif && !pinned) {
     ffi_raw_call(cif, FFI_FN(handler), ret, args);
   } else {
@@ -361,7 +360,6 @@ int action_execute(hpx_parcel_t *p) {
     avalue[0] = &target;
 
     ffi_call(cif, FFI_FN(handler), ret, avalue);
-    hpx_gas_unpin(p->target);
   }
 
   return *ret;
