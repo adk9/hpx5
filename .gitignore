@@ -114,6 +114,7 @@ tests/unit/process
 tests/unit/lco_collectives
 tests/unit/lco_array
 tests/unit/lco_futures
+tests/unit/lco_get_remote
 tests/unit/parcel_create
 tests/unit/lco_user
 tests/unit/gas_memget
