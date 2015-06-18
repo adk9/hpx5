@@ -36,7 +36,7 @@ static hpx_action_t _main = 0;
 
 /// The empty action
 static int _nop_action(hpx_addr_t *args, size_t size) {
-  hpx_thread_continue(0, NULL);
+  hpx_thread_continue(NULL, 0);
 }
 
 static int _main_action(int *args, size_t size) {

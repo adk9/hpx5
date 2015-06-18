@@ -24,7 +24,7 @@ static int _lcoSetGet_action(void *args, size_t size) {
   hpx_lco_set(future, sizeof(uint64_t), &val, HPX_NULL, HPX_NULL);
   hpx_lco_get(future, sizeof(setVal), &setVal);
   hpx_lco_delete(future, HPX_NULL);
-  hpx_thread_continue(sizeof(uint64_t), &setVal);
+  HPX_THREAD_CONTINUE(setVal);
 }
 
 static int _main_action(void *args, size_t size) {

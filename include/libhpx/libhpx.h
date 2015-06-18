@@ -14,6 +14,7 @@
 #define LIBHPX_LIBHPX_H
 
 #include <errno.h>
+#include <libhpx/config.h>
 
 enum {
   LIBHPX_ENOMEM = -(ENOMEM),
@@ -23,5 +24,12 @@ enum {
   LIBHPX_OK = 0,
   LIBHPX_RETRY
 };
+
+struct config;
+typedef struct config libhpx_config_t;
+libhpx_config_t *libhpx_get_config(void);
+
+/// Print the version of libhpx.
+void libhpx_print_version(void);
 
 #endif  // LIBHPX_LIBHPX_H

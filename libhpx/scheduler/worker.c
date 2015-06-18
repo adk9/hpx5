@@ -116,56 +116,33 @@ static void *_run(void *worker) {
   return NULL;
 }
 
-static int _call_continuation(hpx_addr_t target, hpx_action_t action,
-                              const void *args, size_t len, hpx_status_t status)
+/// Continue a parcel by invoking its parcel continuation.
+///
+/// @param            p The parent parcel (usually self->current).
+/// @param       status ?
+/// @param        nargs The number of arguments to continue.
+/// @param         args The arguments we are continuing.
+///
+/// @returns HPX_SUCCESS or an error if parcel_launch fails.
+static int
+_continue_parcel(hpx_parcel_t *p, hpx_status_t status, int nargs, va_list *args)
 {
-  dbg_assert(!args || len);
-  dbg_assert(!len || args);
-
-  // get a parcel we can use to call locality_call_continuation().
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(locality_cont_args_t) + len);
-  dbg_assert(p);
-  hpx_parcel_set_target(p, target);
-  hpx_parcel_set_action(p, locality_call_continuation);
-
-  locality_cont_args_t *cargs = hpx_parcel_get_data(p);
-  cargs->action = action;
-  cargs->status = status;
-
-  // perform the single serialization, if necessary
-  if (args) {
-    memcpy(&cargs->data, args, len);
+  if (p->c_target == HPX_NULL || p->c_action == HPX_ACTION_NULL) {
+    return HPX_SUCCESS;
   }
 
-  return hpx_parcel_send(p, HPX_NULL);
+  // create the parcel to continue and transfer whatever credit we have
+  hpx_parcel_t *c = parcel_create_va(p->c_target, p->c_action, HPX_NULL,
+                                     HPX_ACTION_NULL, nargs, args);
+  dbg_assert(c);
+  c->credit = p->credit;
+  p->credit = 0;
+  return parcel_launch(c);
 }
 
-/// continue a parcel by invoking its parcel continuation
-static int _continue_parcel(hpx_parcel_t *p, hpx_status_t status, size_t size,
-                            const void *value) {
-  int e = HPX_SUCCESS;
-  hpx_action_t c_act = hpx_parcel_get_cont_action(p);
-  hpx_addr_t c_target = hpx_parcel_get_cont_target(p);
-  if ((c_target != HPX_NULL) && c_act != HPX_ACTION_NULL) {
-    // Double the credit so that we can pass it on to the continuation
-    // without splitting it up.
-    if (p->pid != HPX_NULL) {
-      --p->credit;
-    }
-
-    if (c_act == hpx_lco_set_action) {
-      e = hpx_call_with_continuation(c_target, c_act, HPX_NULL, HPX_ACTION_NULL,
-                                     value, size);
-    }
-    else {
-      e = _call_continuation(c_target, c_act, value, size, status);
-    }
-  }
-  return e;
-}
-
-/// Execute a parcel.
-static hpx_parcel_t *_get_nop_parcel(void) {
+/// Get the nop parcel.
+static hpx_parcel_t *
+_get_nop_parcel(void) {
   hpx_addr_t target = HPX_HERE;
   hpx_pid_t pid = hpx_thread_current_pid();
   // use parcel_new instead of hpx_parcel_acquire so that we can filter out
@@ -176,14 +153,19 @@ static hpx_parcel_t *_get_nop_parcel(void) {
 
 /// The entry function for all interrupts.
 ///
-static void _execute_interrupt(hpx_parcel_t *p) {
-  if (p->action != scheduler_nop) {
-    INST_EVENT_PARCEL_RUN(p);
-  }
+/// This is the function that will run when we transfer to an interrupt. It
+/// uses action_execute() to execute the interrupt on the current stack, sends
+/// the parcel continuation if necessary, and then returns. Interrupts are
+/// required not to call hpx_thread_continue(), so all execution will return
+/// here.
+///
+/// @param            p The parcel that describes the interrupt.
+static void
+_execute_interrupt(hpx_parcel_t *p) {
+  INST_EVENT_PARCEL_RUN(p);
   int e = action_execute(p);
-  if (p->action != scheduler_nop) {
-    INST_EVENT_PARCEL_END(p);
-  }
+  INST_EVENT_PARCEL_END(p);
+
   switch (e) {
    case HPX_SUCCESS:
     log_sched("completed interrupt\n");
@@ -198,15 +180,14 @@ static void _execute_interrupt(hpx_parcel_t *p) {
    default:
     dbg_error("interrupt produced unexpected error %s.\n", hpx_strerror(e));
   }
+  unreachable();
 }
 
 /// The entry function for all of the lightweight threads.
 ///
 /// @param       parcel The parcel that describes the thread to run.
 static void _execute_thread(hpx_parcel_t *p) {
-  if (p->action != scheduler_nop) {
-    INST_EVENT_PARCEL_RUN(p);
-  }
+  INST_EVENT_PARCEL_RUN(p);
   APEX_START(p);
   int e = action_execute(p);
   APEX_STOP();
@@ -429,10 +410,8 @@ static void _worker_shutdown(struct worker *w) {
 
   void **sp = &w->sp;
   intptr_t shutdown = sync_load(&w->sched->shutdown, SYNC_ACQUIRE);
-  if (self->current->action != scheduler_nop) {
-    INST_EVENT_PARCEL_END(self->current);
-  }
   APEX_STOP();
+  INST_EVENT_PARCEL_END(self->current);
   thread_transfer((hpx_parcel_t*)&sp, _free_parcel, (void*)shutdown);
   unreachable();
 }
@@ -920,7 +899,8 @@ void scheduler_spawn(hpx_parcel_t *p) {
 /// 5) We'd like to use a global queue for yielded threads so that they can be
 ///    processed in FIFO order by threads that don't have anything else to do.
 ///
-static int _checkpoint_yield(hpx_parcel_t *to, void *sp, void *env) {
+static int
+_checkpoint_yield(hpx_parcel_t *to, void *sp, void *env) {
   self->current = to;
   hpx_parcel_t *prev = env;
   parcel_get_stack(prev)->sp = sp;
@@ -931,36 +911,40 @@ static int _checkpoint_yield(hpx_parcel_t *to, void *sp, void *env) {
   return HPX_SUCCESS;
 }
 
-void scheduler_yield(void) {
-  // if there's nothing else to do, we can be rescheduled
+void
+scheduler_yield(void) {
   hpx_parcel_t *from = self->current;
-  // parcel represents a task or an interrupt
-  if (!parcel_get_stack(from)) {
+  if (!action_is_default(here->actions, from->action)) {
+    // task or interrupt can't yield
     return;
   }
 
+  // if there's nothing else to do, we can be rescheduled
   hpx_parcel_t *to = _schedule(false, from);
-  if (from == to)
+  if (from == to) {
     return;
+  }
 
   dbg_assert(to);
   dbg_assert(parcel_get_stack(to));
   dbg_assert(parcel_get_stack(to)->sp);
-  // transfer to the new thread
-  thread_transfer(to, _checkpoint_yield, from);
+
   // note that we don't instrument yields because they overwhelm tracing
+  thread_transfer(to, _checkpoint_yield, from);
 }
 
-void hpx_thread_yield(void) {
+void
+hpx_thread_yield(void) {
 #if defined(HAVE_APEX)
   _apex_yielded = true;
-#endif
   ++self->stats.yields;
+#endif
   scheduler_yield();
 }
 
 /// A transfer continuation that unlocks a lock.
-static int _unlock(hpx_parcel_t *to, void *sp, void *env) {
+static int
+_unlock(hpx_parcel_t *to, void *sp, void *env) {
   lockable_ptr_t *lock = env;
   hpx_parcel_t *prev = self->current;
   self->current = to;
@@ -969,29 +953,41 @@ static int _unlock(hpx_parcel_t *to, void *sp, void *env) {
   return HPX_SUCCESS;
 }
 
-hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
+hpx_status_t
+scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   // push the current thread onto the condition variable---no lost-update
   // problem here because we're holing the @p lock
   ustack_t *thread = parcel_get_stack(self->current);
   dbg_assert(thread->lco_depth == 1);
   hpx_status_t status = cvar_push_thread(condition, thread);
 
-  // if we successfully pushed, then do a transfer away from this thread
-  if (status == HPX_SUCCESS) {
-    INST_EVENT_PARCEL_SUSPEND(self->current);
-    APEX_STOP();
-    hpx_parcel_t *to = _schedule(true, NULL);
-    thread_transfer(to, _unlock, (void*)lock);
-    APEX_RESUME(self->current);
-    INST_EVENT_PARCEL_RESUME(self->current);
-    sync_lockable_ptr_lock(lock);
-    status = cvar_get_error(condition);
+  if (status != HPX_SUCCESS) {
+    return status;
   }
-  return status;
+
+  INST_EVENT_PARCEL_SUSPEND(self->current);
+  APEX_STOP();
+  hpx_parcel_t *to = _schedule(true, NULL);
+  thread_transfer(to, _unlock, (void*)lock);
+  APEX_RESUME(self->current);
+  INST_EVENT_PARCEL_RESUME(self->current);
+
+  // reacquire the lco lock before returning
+  sync_lockable_ptr_lock(lock);
+  return cvar_get_error(condition);
 }
 
-/// Resume a thread.
-static inline void _resume(hpx_parcel_t *parcels) {
+/// Resume list of parcels.
+///
+/// This scans through the passed list of parcels, and tests to see if it
+/// corresponds to a thread (i.e., has a stack) or not. If its a thread, we
+/// check to see if it has soft affinity and ship it to its home through a
+/// mailbox of necessary. If its just a parcel, we use the launch infrastructure
+/// to send it off.
+///
+/// @param      parcels A stack of parcels to resume.
+static void
+_resume(hpx_parcel_t *parcels) {
   hpx_parcel_t *p;
   while ((p = parcel_stack_pop(&parcels))){
     ustack_t *stack = parcel_get_stack(p);
@@ -1004,61 +1000,73 @@ static inline void _resume(hpx_parcel_t *parcels) {
   }
 }
 
-void scheduler_signal(cvar_t *cvar) {
+void
+scheduler_signal(cvar_t *cvar) {
   _resume(cvar_pop(cvar));
 }
 
-void scheduler_signal_all(struct cvar *cvar) {
+void
+scheduler_signal_all(struct cvar *cvar) {
   _resume(cvar_pop_all(cvar));
 }
 
-void scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
+void
+scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
   _resume(cvar_set_error(cvar, code));
 }
 
-/// unified continuation handler
-static void HPX_NORETURN _continue(hpx_status_t status, size_t size, const void *value,
-                                   void (*cleanup)(void*), void *env) {
+static void HPX_NORETURN
+_continue(hpx_status_t status, void (*cleanup)(void*), void *env, int nargs,
+          va_list *args)
+{
   hpx_parcel_t *parcel = self->current;
-  _continue_parcel(parcel, status, size, value);
+
+  // send the parcel continuation---this takes my credit if I have any
+  _continue_parcel(parcel, status, nargs, args);
 
   // run the cleanup handler
   if (cleanup != NULL) {
     cleanup(env);
   }
 
+  // unpin the current target
+  if (action_is_pinned(here->actions, parcel->action)) {
+    hpx_gas_unpin(parcel->target);
+  }
+
+  // return any remaining credit
+  process_recover_credit(parcel);
+
   hpx_parcel_t *to = _schedule(false, NULL);
   dbg_assert(to);
   dbg_assert(parcel_get_stack(to));
   dbg_assert(parcel_get_stack(to)->sp);
-  if (parcel->action != scheduler_nop) {
-    INST_EVENT_PARCEL_END(parcel);
-  }
+  INST_EVENT_PARCEL_END(parcel);
   APEX_STOP();
   thread_transfer(to, _free_parcel, (void*)(intptr_t)status);
   unreachable();
   // no need to resume timer
 }
 
-static void _unpin_current_target(void) {
-  hpx_parcel_t *parcel = self->current;
-  if (action_is_pinned(here->actions, parcel->action)) {
-    hpx_gas_unpin(parcel->target);
-  }
+void
+_hpx_thread_continue(int nargs, ...) {
+  va_list vargs;
+  va_start(vargs, nargs);
+  _continue(HPX_SUCCESS, NULL, NULL, nargs, &vargs);
+  va_end(vargs);
 }
 
-void hpx_thread_continue(size_t size, const void *value) {
-  _unpin_current_target();
-  _continue(HPX_SUCCESS, size, value, NULL, NULL);
+void
+_hpx_thread_continue_cleanup(void (*cleanup)(void*), void *env, int nargs, ...)
+{
+  va_list vargs;
+  va_start(vargs, nargs);
+  _continue(HPX_SUCCESS, cleanup, env, nargs, &vargs);
+  va_end(vargs);
 }
 
-void hpx_thread_continue_cleanup(size_t size, const void *value,
-                                 void (*cleanup)(void*), void *env) {
-  _unpin_current_target();
-  _continue(HPX_SUCCESS, size, value, cleanup, env);
-}
-
-void hpx_thread_exit(int status) {
+void
+hpx_thread_exit(int status) {
   hpx_parcel_t *parcel = self->current;
 
   if (status == HPX_RESEND) {
@@ -1067,7 +1075,7 @@ void hpx_thread_exit(int status) {
     //      task inside of schedule() which would cause the current task to be
     //      freed.
     hpx_parcel_t *to = _schedule(true, NULL);
-    INST_EVENT_PARCEL_END(parcel); // assuming action != scheduler_nop
+    INST_EVENT_PARCEL_END(parcel);
     APEX_STOP();
     INST_EVENT_PARCEL_RESEND(parcel);
     thread_transfer(to, _resend_parcel, parcel);
@@ -1075,8 +1083,7 @@ void hpx_thread_exit(int status) {
   }
 
   if (status == HPX_SUCCESS || status == HPX_LCO_ERROR || status == HPX_ERROR) {
-    process_recover_credit(parcel);
-    _continue(status, 0, NULL, NULL, NULL);
+    _continue(status, NULL, NULL, 0, NULL);
     unreachable();
   }
 
@@ -1084,48 +1091,53 @@ void hpx_thread_exit(int status) {
   hpx_abort();
 }
 
-scheduler_stats_t *thread_get_stats(void) {
-  if (self) {
-    return &self->stats;
-  }
-  else {
-    return NULL;
-  }
+scheduler_stats_t *
+thread_get_stats(void) {
+  return (self) ? &self->stats : NULL;
 }
 
-hpx_parcel_t *scheduler_current_parcel(void) {
+hpx_parcel_t *
+scheduler_current_parcel(void) {
   return self->current;
 }
 
-int hpx_get_my_thread_id(void) {
+int
+hpx_get_my_thread_id(void) {
   return (self) ? self->id : -1;
 }
 
-hpx_addr_t hpx_thread_current_target(void) {
+hpx_addr_t
+hpx_thread_current_target(void) {
   return (self && self->current) ? self->current->target : HPX_NULL;
 }
 
-hpx_addr_t hpx_thread_current_cont_target(void) {
+hpx_addr_t
+hpx_thread_current_cont_target(void) {
   return (self && self->current) ? self->current->c_target : HPX_NULL;
 }
 
-hpx_action_t hpx_thread_current_action(void) {
+hpx_action_t
+hpx_thread_current_action(void) {
   return (self && self->current) ? self->current->action : HPX_ACTION_NULL;
 }
 
-hpx_action_t hpx_thread_current_cont_action(void) {
+hpx_action_t
+hpx_thread_current_cont_action(void) {
   return (self && self->current) ? self->current->c_action : HPX_ACTION_NULL;
 }
 
-hpx_pid_t hpx_thread_current_pid(void) {
+hpx_pid_t
+hpx_thread_current_pid(void) {
   return (self && self->current) ? self->current->pid : HPX_NULL;
 }
 
-uint32_t hpx_thread_current_credit(void) {
+uint32_t
+hpx_thread_current_credit(void) {
   return (self && self->current) ? self->current->credit : 0;
 }
 
-int hpx_thread_get_tls_id(void) {
+int
+hpx_thread_get_tls_id(void) {
   ustack_t *stack = parcel_get_stack(self->current);
   if (stack->tls_id < 0) {
     stack->tls_id = sync_fadd(&here->sched->next_tls_id, 1, SYNC_ACQ_REL);
@@ -1133,7 +1145,6 @@ int hpx_thread_get_tls_id(void) {
 
   return stack->tls_id;
 }
-
 
 /// A thread_transfer() continuation that runs when a thread changes its
 /// affinity. This puts the current thread into the mailbox specified in env.
@@ -1153,8 +1164,8 @@ static int _move_to(hpx_parcel_t *to, void *sp, void *env) {
   return HPX_SUCCESS;
 }
 
-
-void hpx_thread_set_affinity(int affinity) {
+void
+hpx_thread_set_affinity(int affinity) {
   dbg_assert(affinity >= -1);
   dbg_assert(self->current);
   dbg_assert(parcel_get_stack(self->current));
@@ -1177,7 +1188,51 @@ void hpx_thread_set_affinity(int affinity) {
 
 /// This transfer handler is the right place to put all debug, logging, and
 /// instrumentation code for lightweight-thread transfers.
-int debug_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
+int
+debug_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
 #undef thread_transfer
   return thread_transfer(p, cont, env);
+}
+
+/// The environment for the _checkpoint_launch_through continuation.
+typedef struct {
+  int (*f)(void *);
+  void *env;
+} _checkpoint_suspend_env_t;
+
+/// This continuation updates the `self->current` pointer to record that we are
+/// now running @p to, checkpoints the previous stack pointer in the previous
+/// stack, and then runs the continuation described in @p env.
+///
+/// This continuation *does not* record the previous parcel in any scheduler
+/// structures, it is completely invisible to the runtime. The expectation is
+/// that the continuation in @p env will ultimately cause the parcel to resume.
+///
+/// @param           to The parcel we transferred to.
+/// @param           sp The stack pointer we transferred from.
+/// @param          env A _checkpoint_suspend_env_t that describes the closure.
+///
+/// @return             The status from the closure continuation.
+static int
+_checkpoint_suspend(hpx_parcel_t *to, void *sp, void *env) {
+  hpx_parcel_t *prev = self->current;
+  self->current = to;
+  parcel_get_stack(prev)->sp = sp;
+  _checkpoint_suspend_env_t *c = env;
+  return c->f(c->env);
+}
+
+hpx_status_t
+scheduler_suspend(int (*f)(void*), void *env) {
+  // create the closure environment for the _checkpoint_suspend continuation
+  _checkpoint_suspend_env_t suspend_env = {
+    .f = f,
+    .env = env
+  };
+
+  INST_EVENT_PARCEL_SUSPEND(self->current);
+  hpx_parcel_t *to = _schedule(false, NULL);
+  int e = thread_transfer(to, _checkpoint_suspend, &suspend_env);
+  INST_EVENT_PARCEL_RESUME(self->current);
+  return e;
 }

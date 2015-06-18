@@ -185,15 +185,32 @@ static hpx_status_t _allreduce_wait(lco_t *lco) {
   return _allreduce_get(lco, 0, NULL);
 }
 
+// We universally clone the buffer here, because the all* family of LCOs will
+// reset themselves so we can't retain a pointer to their buffer.
+static hpx_status_t
+_allreduce_getref(lco_t *lco, int size, void **out, int *unpin) {
+  *out = registered_malloc(size);
+  *unpin = 1;
+  return _allreduce_get(lco, size, *out);
+}
+
+// We know that allreduce buffers were always copies, so we can just free them
+// here.
+static int
+_allreduce_release(lco_t *lco, void *out) {
+  registered_free(out);
+  return 0;
+}
+
 // vtable
-static const lco_class_t vtable = {
+static const lco_class_t _allreduce_vtable = {
   .on_fini     = _allreduce_fini,
   .on_error    = _allreduce_error,
   .on_set      = _allreduce_set,
   .on_attach   = _allreduce_attach,
   .on_get      = _allreduce_get,
-  .on_getref   = NULL,
-  .on_release  = NULL,
+  .on_getref   = _allreduce_getref,
+  .on_release  = _allreduce_release,
   .on_wait     = _allreduce_wait,
   .on_reset    = _allreduce_reset,
   .on_size     = _allreduce_size
@@ -205,7 +222,7 @@ _allreduce_init_handler(_allreduce_t *r, size_t writers, size_t readers,
   assert(id);
   assert(op);
 
-  lco_init(&r->lco, &vtable);
+  lco_init(&r->lco, &_allreduce_vtable);
   cvar_reset(&r->wait);
   r->readers = readers;
   r->op = op;

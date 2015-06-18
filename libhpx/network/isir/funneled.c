@@ -245,6 +245,7 @@ network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
   network->vtable.set_flush = _funneled_set_flush;
   network->vtable.register_dma = _funneled_register_dma;
   network->vtable.release_dma = _funneled_release_dma;
+  network->vtable.lco_get = isir_lco_get;
   network->gas = gas;
 
   sync_store(&network->flush, 0, SYNC_RELEASE);

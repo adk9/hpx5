@@ -31,19 +31,19 @@ hpx_addr_t new_grid;
 typedef struct {
   hpx_addr_t grid;
   hpx_addr_t new_grid;
-}global_args_t;
+} global_args_t;
 
 typedef struct {
   int rank;
   hpx_addr_t runtimes;
   hpx_addr_t dTmax;
-}Domain;
+} Domain;
 
 typedef struct {
   int index;
   hpx_addr_t runtimes;
   hpx_addr_t dTmax;
-}InitArgs;
+} InitArgs;
 
 #define BLOCKSIZE sizeof(double)
 
@@ -86,7 +86,7 @@ static int _write_double_action(double *d, size_t size) {
 
   *addr = d[0];
   hpx_gas_unpin(target);
-  hpx_thread_continue(sizeof(double), &d[1]);
+  HPX_THREAD_CONTINUE(d[1]);
 }
 
 static int _read_double_action(void *unused, size_t size) {

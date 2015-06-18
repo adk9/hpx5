@@ -42,7 +42,7 @@ static int _printHello_action(void *threadarg, size_t size) {
   hello_msg = my_data->message;
 
   printf("Thread #%d: size of args = %lu, Message = %s\n", tid, size, hello_msg);
-  hpx_thread_continue(0, NULL);
+  hpx_thread_continue(NULL, 0);
 }
 
 //****************************************************************************

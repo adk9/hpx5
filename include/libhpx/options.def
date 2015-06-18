@@ -165,6 +165,11 @@ LIBHPX_OPT_STRING(photon_, ibdev, "qib0+mlx4_0")
 /// @}
 #endif
 
+/// Optimization options
+/// @{
+LIBHPX_OPT_SCALAR(opt_, smp, 1, int)
+/// @}
+
 #ifdef _LIBHPX_OPT_INTSET_UNDEF
 # undef _LIBHPX_OPT_INTSET_UNDEF
 # undef LIBHPX_OPT_INTSET

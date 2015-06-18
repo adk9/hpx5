@@ -101,7 +101,7 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr,
 /// @param          id The action id (the hpx_action_t address).
 /// @param __VA_ARGS__ The parameter types (HPX_INT, ...).
 #define HPX_REGISTER_ACTION(type, attr, id, handler, ...)          \
-  hpx_register_action(type, attr, __FILE__ ":" _HPX_XSTR(handler), \
+  hpx_register_action(type, attr, __FILE__ ":" _HPX_XSTR(id),      \
                       &id, (hpx_action_handler_t)handler,          \
                       __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
@@ -135,10 +135,10 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
 ///                     (HPX_INT, ...).
 #define HPX_ACTION(type, attr, id, handler, ...)                  \
   HPX_ACTION_DECL(id) = HPX_ACTION_INVALID;                       \
-  static HPX_CONSTRUCTOR void _register##_##handler(void) {       \
+  static HPX_CONSTRUCTOR void _register##_##id(void) {            \
     HPX_REGISTER_ACTION(type, attr, id, handler , ##__VA_ARGS__); \
   }                                                               \
-  static HPX_CONSTRUCTOR void _register##_##handler(void)
+  static HPX_CONSTRUCTOR void _register##_##id(void)
 
 /// @}
 

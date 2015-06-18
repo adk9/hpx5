@@ -72,6 +72,7 @@ BTT::trypin(gva_t gva, void** lva) {
   bool found = update_fn(key, [&](Entry& entry) {
       if (lva) {
         if (entry.onunpin == NULL) {
+          assert(entry.count >= 0);
           entry.count++;
           *lva = entry.lva;
         } else {
@@ -88,6 +89,7 @@ BTT::unpin(gva_t gva) {
   bool ret = false;
   hpx_parcel_t *p;
   bool found = update_fn(key, [&](Entry& entry) {
+      assert(entry.count > 0);
       entry.count--;
       if (entry.count == 0 && entry.onunpin) {
         p = entry.onunpin;

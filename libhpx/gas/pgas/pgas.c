@@ -331,11 +331,6 @@ gas_t *
 gas_pgas_new(const config_t *cfg, boot_t *boot) {
   size_t heap_size = cfg->heapsize;
 
-  if (here->ranks == 1) {
-    log_gas("PGAS requires at least two ranks\n");
-    return NULL;
-  }
-
   if (global_heap) {
     return &_pgas_vtable;
   }

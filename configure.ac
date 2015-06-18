@@ -8,12 +8,31 @@
 # Research in Extreme Scale Technologies (CREST).
 
 AC_PREREQ([2.63])
-AC_INIT([hpx-5], [1.0.0], [hpx@indiana.edu])
+AC_INIT([hpx-5], [1.1.0], [hpx@indiana.edu])
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
 
 # ---------------------------------------------------------------------------
-  # Detect the programming environment.
+# Define the version we're building
+#
+# Currently, we use the `git describe` functionality to embed the git version,
+# where it is available. If someone has a release tarball without the .git
+# directory, we use the package version.
+#
+# We define HPX_VERSION and LIBHPX_VERSION independently, as we expect that
+# there will be a time in the future where the HPX interface "version" is stable
+# and the libhpx library version continues to evolve. At that point it won't
+# make sense anymore to use the git description as the version.
+# ---------------------------------------------------------------------------
+AS_IF([test -e "$ac_confdir/.git" ],
+  [git_version=$(git --git-dir=$ac_confdir/.git describe --abbrev=7 --dirty --always --tags)
+   AC_DEFINE_UNQUOTED([HPX_VERSION], ["$git_version"], [The HPX interface version])
+   AC_DEFINE_UNQUOTED([LIBHPX_VERSION], ["$git_version"], [The libhpx library version])],
+  [AC_DEFINE([HPX_VERSION], [PACKAGE_VERSION], [The HPX interface version])
+   AC_DEFINE([LIBHPX_VERSION], [PACKAGE_VERSION], [The libhpx library version])])
+
+# ---------------------------------------------------------------------------
+# Detect the programming environment.
 # ---------------------------------------------------------------------------
 AC_LANG([C])
 

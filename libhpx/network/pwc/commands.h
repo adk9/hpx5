@@ -13,12 +13,12 @@
 #ifndef LIBHPX_NETWORK_PWC_COMMANDS_H
 #define LIBHPX_NETWORK_PWC_COMMANDS_H
 
-#include <hpx/hpx.h>
 #include <libhpx/network.h>
 
 typedef uint16_t op_t;
 typedef uint64_t arg_t;
 typedef uint64_t command_t;
+typedef int (*command_handler_t)(int, command_t);
 
 #define ARG_BITS (8 * (sizeof(command_t) - sizeof(op_t)))
 #define ARG_MASK (UINT64_MAX >> (8 * sizeof(op_t)))

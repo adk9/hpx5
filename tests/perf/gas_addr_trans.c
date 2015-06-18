@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <hpx/hpx.h>
-#include "timeout.h"
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: time_gas_addr_trans [options]\n"
@@ -56,7 +55,7 @@ static int _address_translation_action(void* args, size_t size) {
 
   // make sure to unpin the address
   hpx_gas_unpin(local);
-  hpx_thread_continue(0, NULL);
+  hpx_thread_continue(NULL, 0);
 }
 
 static int _main_action(void *args, size_t n) {
@@ -137,8 +136,6 @@ main(int argc, char *argv[]) {
   // register the actions
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _address_translation, _address_translation_action, HPX_POINTER, HPX_SIZE_T);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
-
-  set_timeout(30);
 
   // run the main action
   return hpx_run(&_main, NULL, 0);

@@ -17,6 +17,7 @@
 /// @brief Types and constants needed for configuring HPX at run-time.
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <hpx/attributes.h>
 
 #ifdef HAVE_PHOTON
@@ -110,9 +111,34 @@ static const char* const HPX_BOOT_TO_STRING[] = {
 #define HPX_LOG_CONFIG  512             //!< Log configuration.
 #define HPX_LOG_MEMORY  1024            //!< Log memory (coarse grained)
 
-#define HPX_TRACE_PARCELS 1
-#define HPX_TRACE_PWC     2
-#define HPX_TRACE_SCHED   3
+static const char *const HPX_LOG_LEVEL_TO_STRING[] = {
+  "default",
+  "boot",
+  "sched",
+  "gas",
+  "lco",
+  "net",
+  "trans",
+  "parcel",
+  "action",
+  "config",
+  "memory"
+};
+
+#define HPX_TRACE_PARCELS   1
+#define HPX_TRACE_PWC       2
+#define HPX_TRACE_SCHED     4
+#define HPX_TRACE_LCO       8
+#define HPX_TRACE_PROCESS   16
+
+static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
+  "parcels",
+  "pwc",
+  "sched",
+  "lco",
+  "process",
+  "all"
+};
 
 /// The HPX configuration type.
 ///
@@ -128,6 +154,8 @@ config_t *config_new(int *argc, char ***argv)
   HPX_MALLOC;
 
 void config_delete(config_t *cfg);
+
+void config_print(config_t *cfg, FILE *file);
 
 /// Add declarations to query each of the set options.
 ///

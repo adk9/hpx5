@@ -163,6 +163,7 @@ extern HPX_ACTION_DECL(hpx_gas_calloc_local_at_action);
 /// @param         addr The global address of the memory to free.
 /// @param        rsync An LCO we can use to detect that the free has occurred.
 void hpx_gas_free(hpx_addr_t addr, hpx_addr_t rsync);
+void hpx_gas_free_sync(hpx_addr_t addr);
 
 /// Change the locality-affinity of a global distributed memory address.
 ///

@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <hpx/hpx.h>
-#include "timeout.h"
 
 #define MAX_BYTES        1024*1024*1
 #define SKIP_LARGE       10
@@ -107,13 +106,6 @@ int main(int argc, char *argv[]) {
 
   // Register the main action
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
-
-  int timeout = 30;
-  char *str = getenv("HPX_TESTS_TIMEOUT");
-  if (str != NULL) {
-    timeout = atoi(str);
-  }
-  set_timeout(timeout);
 
   // run the main action
   return hpx_run(&_main, NULL, 0);

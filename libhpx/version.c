@@ -10,25 +10,18 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_TESTS_PERF_TIMEOUT_H
-#define LIBHPX_TESTS_PERF_TIMEOUT_H
-
-#include <signal.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <hpx/hpx.h>
-
-static int TIMEOUT = 30;
-
-static void timeout(int signal) {
-  fprintf(stderr, "test timed out after %d seconds\n", TIMEOUT);
-  hpx_shutdown(EXIT_FAILURE);
-}
-
-static void set_timeout(int seconds) {
-  TIMEOUT = seconds;
-  signal(SIGALRM, timeout);
-  alarm(TIMEOUT);
-}
-
+#ifdef HAVE_CONFIG_H
+# include "config.h"
 #endif
+
+#include <stdio.h>
+#include <hpx/hpx.h>
+#include <libhpx/libhpx.h>
+
+void hpx_print_version(void) {
+  printf("HPX version %s\n", HPX_VERSION);
+}
+
+void libhpx_print_version(void) {
+  printf("libhpx version %s\n", LIBHPX_VERSION);
+}

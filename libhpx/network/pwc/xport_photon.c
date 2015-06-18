@@ -29,9 +29,9 @@
 #include <libhpx/memory.h>
 #include <libhpx/padding.h>
 #include <libhpx/system.h>
+#include "commands.h"
 #include "registered.h"
 #include "xport.h"
-#include "../commands.h"
 
 // check to make sure we can fit a photon key in the key size
 _HPX_ASSERT(XPORT_KEY_SIZE == sizeof(struct photon_buffer_priv_t),

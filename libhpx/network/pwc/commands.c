@@ -17,6 +17,7 @@
 #include <libhpx/gpa.h>
 #include <libhpx/locality.h>
 #include <libhpx/network.h>
+#include <libhpx/parcel.h>
 
 #include "commands.h"
 
@@ -25,7 +26,7 @@ static int _lco_set_handler(int src, uint64_t command) {
   hpx_lco_set(lco, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
-COMMAND_DEF(HPX_INTERRUPT, lco_set, _lco_set_handler);
+COMMAND_DEF(lco_set, _lco_set_handler);
 
 static int _release_parcel_handler(int src, command_t command) {
   uintptr_t arg = command_get_arg(command);
@@ -34,4 +35,13 @@ static int _release_parcel_handler(int src, command_t command) {
   hpx_parcel_release(p);
   return HPX_SUCCESS;
 }
-COMMAND_DEF(HPX_INTERRUPT, release_parcel, _release_parcel_handler);
+COMMAND_DEF(release_parcel, _release_parcel_handler);
+
+static int _resume_parcel_handler(int src, command_t command) {
+  uintptr_t arg = command_get_arg(command);
+  hpx_parcel_t *p = (hpx_parcel_t *)arg;
+  log_net("resuming suspended parcel %p\n", (void*)p);
+  parcel_launch(p);
+  return HPX_SUCCESS;
+}
+COMMAND_DEF(resume_parcel, _resume_parcel_handler);
