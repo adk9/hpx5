@@ -1,3 +1,22 @@
+--------------------------------------------------------------------------------
+General Instructions for building HPX-5 with APEX measurement/adaptation support
+--------------------------------------------------------------------------------
+
+To include APEX support in HPX-5, add the APEX pkgconfig path to the 
+PKG_CONFIG_PATH environment variable before running ./configure. 
+For example:
+
+export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/path/to/apex/installation/lib/pkgconfig
+
+Then, add the "--with-apex=yes" option to the configure. For example:
+
+./configure --enable-photon --enable-apps --with-mpi --with-apex=yes
+
+For instructions on downloading and building APEX, please see:
+https://github.com/khuck/xpress-apex
+
+
+
 To build HPX-5 with APEX on Edison, do the following:
 
 -----------------------------------------------------
@@ -48,7 +67,7 @@ export PATH=/global/homes/k/khuck/install/hpx-autotools/bin:$PATH
 # bootstrap to make the configure script with APEX options
 ./bootstrap
 # run configure
-./configure --prefix=/global/homes/k/khuck/src/hpx-iu/hpx-master-photon-apex --with-mpi CC=cc --enable-pedantic --enable-wall --enable-logging HPX_PHOTON_CARGS=--with-ugni --enable-photon --with-apex --enable-debug
+./configure --prefix=/global/homes/k/khuck/src/hpx-iu/hpx-master-photon-apex --with-mpi CC=cc --enable-pedantic --enable-wall --enable-logging HPX_PHOTON_CARGS=--with-ugni --enable-photon --with-apex=yes --enable-debug
 make && make install
 
 -----------------------------------------------------
