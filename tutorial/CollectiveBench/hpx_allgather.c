@@ -40,7 +40,7 @@ static hpx_action_t _gather = 0;
 static int _gather_action(const InitArgs *args, size_t n) {
   int size, skip, full = 1;
   double latency;
-  double *maxVal, max_time, min_time, avg_time;
+  double maxVal, max_time, min_time, avg_time;
   int64_t t_start = 0, t_stop = 0, timer = 0;
 
   int THREADS = HPX_LOCALITIES;
