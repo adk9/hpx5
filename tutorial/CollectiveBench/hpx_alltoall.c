@@ -71,7 +71,7 @@ static int _gather_action(const InitArgs *args, size_t n) {
       hpx_lco_alltoall_setid(ld->collVal, ld->index, THREADS*sizeof(double),
                              &size, HPX_NULL, HPX_NULL);
       hpx_lco_alltoall_getid(ld->collVal, ld->index, sizeof(maxVal),
-                             &maxVal);
+                             &maxVal[0]);
 
       t_stop = TIME();
 
