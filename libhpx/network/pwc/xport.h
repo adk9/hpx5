@@ -16,6 +16,11 @@
 #include <libhpx/config.h>
 #include <libhpx/memory.h>
 
+#ifdef __cplusplus
+extern "C" {
+#define restrict
+#endif
+
 struct boot;
 struct gas;
 
@@ -38,7 +43,7 @@ typedef struct xport_op {
 typedef struct pwc_xport {
   hpx_transport_t type;
 
-  void (*delete)(void *xport);
+  void (*dealloc)(void *xport);
   const void *(*key_find_ref)(void *xport, const void *addr, size_t n);
   void (*key_find)(void *xport, const void *addr, size_t n, void *key);
   void (*key_copy)(void *restrict dest, const void *restrict src);
@@ -57,5 +62,9 @@ pwc_xport_t *pwc_xport_new_photon(const config_t *config, struct boot *boot,
 
 pwc_xport_t *pwc_xport_new(const config_t *config, struct boot *boot,
                            struct gas *gas);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_NETWORK_PWC_XPORT_H

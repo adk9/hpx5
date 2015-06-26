@@ -13,6 +13,10 @@
 #ifndef LIBHPX_NETWORK_PWC_REGISTERED_H
 #define LIBHPX_NETWORK_PWC_REGISTERED_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @file  libhpx/network/pwc/registered.h
 
 /// Forward declarations
@@ -21,5 +25,9 @@ struct pwc_xport;
 /// @}
 
 void registered_allocator_init(struct pwc_xport *xport);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_NETWORK_PWC_REGISTERED_H

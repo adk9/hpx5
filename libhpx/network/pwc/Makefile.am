@@ -17,3 +17,7 @@ endif
 if BUILD_JEMALLOC
 libpwc_la_SOURCES += jemalloc_registered.c
 endif
+
+if BUILD_TBBMALLOC
+libpwc_la_SOURCES += tbbmalloc_registered.cc
+endif
