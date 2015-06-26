@@ -9,3 +9,7 @@ libpgas_la_SOURCES  = actions.c \
 if BUILD_JEMALLOC
 libpgas_la_SOURCES += jemalloc_global.c jemalloc_cyclic.c
 endif
+
+if BUILD_TBBMALLOC
+libpgas_la_SOURCES += tbbmalloc_global.cc tbbmalloc_cyclic.cc
+endif

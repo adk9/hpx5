@@ -163,7 +163,16 @@ static inline void as_free(int id, void *ptr)  {
 }
 
 #undef JEMALLOC_NO_DEMANGLE
-#else
+
+#elif defined(HAVE_TBBMALLOC)
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <stddef.h>
+
+extern void* pools[AS_COUNT];
 
 void as_join(int id);
 void as_leave(void);
@@ -174,10 +183,12 @@ void *as_calloc(int id, size_t nmemb, size_t bytes);
 void *as_memalign(int id, size_t boundary, size_t size);
 void as_free(int id, void *ptr);
 
-//#elif defined(HAVE_TBBMALLOC)
-// #else
-// # error No gas allocator configured
+#ifdef __cplusplus
+}
+#endif
 
+#else
+# error No gas allocator configured
 #endif
 
 static inline void *registered_malloc(size_t bytes) {
