@@ -15,36 +15,40 @@
 #endif
 
 #include <cassert>
-#include <iostream>
 #include <tbb/scalable_allocator.h>
 #include <libhpx/memory.h>
-#include "global.h"
-#include "heap.h"
+#include "agas.h"
 
 using namespace rml;
 
+static agas_t *_agas = NULL;
+
 static void *
-_global_chunk_alloc(intptr_t pool_id, size_t &bytes) {
-  assert(pool_id == AS_GLOBAL);
-  void *chunk =heap_chunk_alloc(global_heap, NULL, bytes,
-                          global_heap->bytes_per_chunk);
-  std::cout << "(" << chunk << ", " << bytes << ")\n";
+_cyclic_chunk_alloc(intptr_t pool_id, size_t &bytes) {
+  assert(pool_id == AS_CYCLIC);
+  void *chunk = agas_chunk_alloc(_agas, _agas->cyclic_bitmap, NULL, bytes,
+                                 _agas->chunk_size);
+  assert(chunk);
   return chunk;
 }
 
 static int
-_global_chunk_free(intptr_t pool_id, void* raw_ptr, size_t raw_bytes) {
-  assert(pool_id == AS_GLOBAL);
-  heap_chunk_dalloc(global_heap, raw_ptr, raw_bytes);
+_cyclic_chunk_free(intptr_t pool_id, void* raw_ptr, size_t raw_bytes) {
+  assert(pool_id == AS_CYCLIC);
+  agas_chunk_dalloc(_agas, _agas->cyclic_bitmap, raw_ptr, raw_bytes);
   return 0;
 }
 
 void
-global_allocator_init(void) {
-  int id = AS_GLOBAL;
+agas_cyclic_allocator_init(agas_t *agas) {
+  assert(agas);
+  _agas = agas;
+
+  int id = AS_CYCLIC;
   size_t granularity = as_bytes_per_chunk();
-  const MemPoolPolicy policy(_global_chunk_alloc, _global_chunk_free,
+  const MemPoolPolicy policy(_cyclic_chunk_alloc, _cyclic_chunk_free,
                              granularity);
+
   MemoryPool* pool = NULL;
   pool_create_v1(id, &policy, &pool);
   pools[id] = pool;

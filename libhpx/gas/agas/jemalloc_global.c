@@ -61,6 +61,6 @@ static chunk_allocator_t _agas_global_allocator = {
 };
 
 void
-agas_global_allocator_init(void) {
+agas_global_allocator_init(agas_t *agas) {
   as_set_allocator(AS_GLOBAL, &_agas_global_allocator);
 }

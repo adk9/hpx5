@@ -18,16 +18,21 @@
 #include <iostream>
 #include <tbb/scalable_allocator.h>
 #include <libhpx/memory.h>
-#include "global.h"
-#include "heap.h"
+#include "agas.h"
 
 using namespace rml;
+
+static agas_t *_agas = NULL;
 
 static void *
 _global_chunk_alloc(intptr_t pool_id, size_t &bytes) {
   assert(pool_id == AS_GLOBAL);
-  void *chunk =heap_chunk_alloc(global_heap, NULL, bytes,
-                          global_heap->bytes_per_chunk);
+  assert(_agas->bitmap);
+  assert(_agas->chunk_size);
+  void *chunk = agas_chunk_alloc(_agas,
+                                 _agas->bitmap, NULL, bytes,
+                                 _agas->chunk_size);
+  assert(chunk);
   std::cout << "(" << chunk << ", " << bytes << ")\n";
   return chunk;
 }
@@ -35,12 +40,15 @@ _global_chunk_alloc(intptr_t pool_id, size_t &bytes) {
 static int
 _global_chunk_free(intptr_t pool_id, void* raw_ptr, size_t raw_bytes) {
   assert(pool_id == AS_GLOBAL);
-  heap_chunk_dalloc(global_heap, raw_ptr, raw_bytes);
+  agas_chunk_dalloc(_agas, _agas->bitmap, raw_ptr, raw_bytes);
   return 0;
 }
 
 void
-global_allocator_init(void) {
+agas_global_allocator_init(agas_t *agas) {
+  assert(agas);
+  _agas = agas;
+
   int id = AS_GLOBAL;
   size_t granularity = as_bytes_per_chunk();
   const MemPoolPolicy policy(_global_chunk_alloc, _global_chunk_free,

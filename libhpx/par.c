@@ -20,10 +20,11 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "libhpx/action.h"
-#include "libhpx/locality.h"
-#include "libhpx/scheduler.h"
-#include "hpx/hpx.h"
+#include <hpx/hpx.h>
+#include <libhpx/action.h>
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/scheduler.h>
 
 
 static int _par_for_async_handler(hpx_for_action_t f, void *args, int min, int max) {
@@ -126,7 +127,7 @@ _hpx_par_call_helper(hpx_action_t action, const int min,
                      const size_t arg_size,
                      void (*arg_init)(void*, const int, const void*),
                      const size_t env_size, const void *env,
-                     hpx_addr_t sync) {  
+                     hpx_addr_t sync) {
   dbg_assert(max - min > 0);
   dbg_assert(branching_factor > 0);
   dbg_assert(cutoff > 0);
