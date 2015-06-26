@@ -105,6 +105,11 @@ AC_ARG_ENABLE([jemalloc],
   [AS_HELP_STRING([--enable-jemalloc],
                   [Enable using of jemalloc as the default allocator @<:@default=no@:>@])],
   [], [enable_jemalloc=no])
+
+AC_ARG_ENABLE([tbbmalloc],
+  [AS_HELP_STRING([--enable-tbbmalloc],
+                  [Enable TBBMalloc to manage gas allocation]) @<:@default=no@:>@],
+  [], [enable_tbbmalloc=no])
   
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug],
@@ -164,6 +169,13 @@ AS_IF([test "x$enable_photon" != xno],
   AC_DEFINE([HAVE_AS_REGISTERED], [1], [We have a registered memory manager])],
  [hpx_have_photon=no])
 
+ # TBBMalloc support
+AC_ARG_WITH(tbb, AS_HELP_STRING([--with-tbb=DIR],[location of TBB]),
+  [CPPFLAGS="$CPPFLAGS -I${withval}/include"
+   LDFLAGS="$LDFLAGS -L${withval}/lib"
+   have_tbb=yes],
+  [])
+ 
 AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno],
  [enable_network=yes
   AC_DEFINE([HAVE_NETWORK], [1], [We have a network])
@@ -178,6 +190,14 @@ AS_IF([test "x$enable_jemalloc" != xno],
   AC_DEFINE([HAVE_JEMALLOC], [1], [We have jemalloc support for malloc/free/etc])
   AC_SUBST(HPX_JEMALLOC_LOCAL_LIBS, "$hpx_jemalloc_libs")])
 AM_CONDITIONAL([BUILD_JEMALLOC], [test "x$enable_jemalloc" != xno])
+
+AS_IF([test "x$enable_tbbmalloc" != xno],
+  [AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
+   AC_CHECK_LIB([tbbmalloc_proxy], [malloc],
+     [have_tbbmalloc="TBB malloc library was found"])
+   LIBS="$LIBS -ltbbmalloc -ltbbmalloc_proxy"
+   AC_DEFINE([HAVE_TBBMALLOC], [1], [We have TBB malloc support for malloc/free])])
+AM_CONDITIONAL([BUILD_TBBMALLOC], [test "x$enable_tbbmalloc" != xno])
 
 AC_ARG_WITH([tests-cmd],
  [AS_HELP_STRING([--with-tests-cmd], [Use this command for running the test harness @<:@default=mpirun -np 2@:>@])],
@@ -365,6 +385,7 @@ echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
 echo "               Networks : $networks"
 echo "               jemalloc : $enable_jemalloc"
+echo "              tbbmalloc : $enable_tbbmalloc"
 echo "              Profiling : $enable_profiling"
 echo "         hugetlbfs heap : $with_hugetlbfs"
 echo "     Topology Awareness : $with_hwloc"
