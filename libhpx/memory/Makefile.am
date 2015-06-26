@@ -9,3 +9,6 @@ if BUILD_JEMALLOC
 libmemory_la_SOURCES += jemalloc.c
 endif
 
+if BUILD_TBBMALLOC
+libmemory_la_SOURCES += tbbmalloc.cc
+endif
