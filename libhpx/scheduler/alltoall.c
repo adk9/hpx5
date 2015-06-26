@@ -70,6 +70,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <string.h>
+#include <stdlib.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>

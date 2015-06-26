@@ -17,6 +17,7 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <string.h>
+#include <stdlib.h>
 #include <hpx/hpx.h>
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>

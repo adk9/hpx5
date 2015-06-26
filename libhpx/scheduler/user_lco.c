@@ -19,6 +19,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
