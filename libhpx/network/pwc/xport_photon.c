@@ -280,7 +280,7 @@ _photon_probe(uint64_t *op, int *remaining, int src) {
 }
 
 static void
-_photon_delete(void *photon) {
+_photon_dealloc(void *photon) {
   free(photon);
 }
 
@@ -291,7 +291,7 @@ pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas) {
   _init_photon(cfg, boot);
 
   photon->vtable.type = HPX_TRANSPORT_PHOTON;
-  photon->vtable.delete = _photon_delete;
+  photon->vtable.dealloc = _photon_dealloc;
   photon->vtable.key_find_ref = _photon_key_find_ref;
   photon->vtable.key_find = _photon_key_find;
   photon->vtable.key_clear = _photon_key_clear;

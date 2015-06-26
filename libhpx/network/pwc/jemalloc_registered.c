@@ -17,7 +17,6 @@
 #include <string.h>
 #include <libhpx/debug.h>
 #include <libhpx/memory.h>
-#include <libhpx/network.h>
 #include <libhpx/system.h>
 #include "registered.h"
 #include "xport.h"
