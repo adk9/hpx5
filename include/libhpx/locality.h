@@ -29,11 +29,14 @@
 #include <hpx/hpx.h>
 
 #ifdef HAVE_HWLOC
-  #include <hwloc.h>
-#endif 
+# include <hwloc.h>
+#endif
 
-#include <libhpx/debug.h>
 #include <libhpx/gas.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /// Forward declarations.
 /// @{
@@ -81,5 +84,9 @@ extern HPX_ACTION_DECL(locality_shutdown);
 
 /// The global locality is exposed through this "here" pointer.
 extern locality_t *here;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_LOCALITY_H

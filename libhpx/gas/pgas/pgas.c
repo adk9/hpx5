@@ -49,7 +49,7 @@
 heap_t *global_heap = NULL;
 
 static void
-_pgas_delete(void *gas) {
+_pgas_dealloc(void *gas) {
   if (global_heap) {
     heap_fini(global_heap);
     free(global_heap);
@@ -306,7 +306,7 @@ _pgas_owner_of(const void *pgas, hpx_addr_t addr) {
 
 static gas_t _pgas_vtable = {
   .type           = HPX_GAS_PGAS,
-  .delete         = _pgas_delete,
+  .dealloc        = _pgas_dealloc,
   .local_size     = _pgas_local_size,
   .local_base     = _pgas_local_base,
   .sub            = _pgas_sub,

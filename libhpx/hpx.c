@@ -63,7 +63,7 @@ static void _cleanup(locality_t *l) {
   }
 
   if (l->gas) {
-    gas_delete(l->gas);
+    gas_dealloc(l->gas);
     l->gas = NULL;
   }
 
