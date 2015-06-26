@@ -26,9 +26,9 @@ using namespace rml;
 static void *
 _global_chunk_alloc(intptr_t pool_id, size_t &bytes) {
   assert(pool_id == AS_GLOBAL);
-  void *chunk =heap_chunk_alloc(global_heap, NULL, bytes,
+  void *chunk = heap_chunk_alloc(global_heap, NULL, bytes,
                           global_heap->bytes_per_chunk);
-  std::cout << "(" << chunk << ", " << bytes << ")\n";
+  // std::cout << "(" << chunk << ", " << bytes << ")\n";
   return chunk;
 }
 
