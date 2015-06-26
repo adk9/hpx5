@@ -50,9 +50,8 @@ agas_global_allocator_init(agas_t *agas) {
   _agas = agas;
 
   int id = AS_GLOBAL;
-  size_t granularity = as_bytes_per_chunk();
   const MemPoolPolicy policy(_global_chunk_alloc, _global_chunk_free,
-                             granularity);
+                             _agas->chunk_size);
   MemoryPool* pool = NULL;
   pool_create_v1(id, &policy, &pool);
   pools[id] = pool;
