@@ -13,10 +13,13 @@
 #ifndef LIBHPX_GAS_AGAS_H
 #define LIBHPX_GAS_AGAS_H
 
-#include <hpx/hpx.h>
 #include <hpx/attributes.h>
 #include <libhpx/gas.h>
 #include "gva.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct boot;
 struct config;
@@ -33,8 +36,8 @@ typedef struct {
 
 struct gas *gas_agas_new(const struct config *config, struct boot *boot);
 
-void agas_global_allocator_init(void);
-void agas_cyclic_allocator_init(void);
+void agas_global_allocator_init(agas_t *agas);
+void agas_cyclic_allocator_init(agas_t *agas);
 
 void *agas_chunk_alloc(agas_t *agas, void *bitmap, void *addr, size_t n,
                        size_t align);
@@ -67,5 +70,9 @@ void agas_local_free(agas_t *gas, gva_t addr, void *lva, hpx_addr_t rsync);
 
 void agas_free_helper(hpx_action_t free_action,
                       hpx_addr_t addr, hpx_addr_t rsync);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

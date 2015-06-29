@@ -61,6 +61,6 @@ static chunk_allocator_t _agas_cyclic_allocator = {
 };
 
 void
-agas_cyclic_allocator_init(void) {
+agas_cyclic_allocator_init(agas_t *agas) {
   as_set_allocator(AS_CYCLIC, &_agas_cyclic_allocator);
 }

@@ -13,6 +13,10 @@
 #ifndef LIBHPX_GAS_PGAS_HEAP_H
 #define LIBHPX_GAS_PGAS_HEAP_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @file libhpx/gas/pgas_heap.h
 /// @brief Implementation of the global address space with a PGAS model.
 ///
@@ -220,5 +224,9 @@ int heap_set_csbrk(heap_t *heap, uint64_t offset);
 ///
 /// @returns The number of bits that can be used for block size.
 uint32_t heap_max_block_lg_size(const heap_t *heap);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

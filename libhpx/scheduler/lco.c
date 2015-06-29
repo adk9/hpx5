@@ -23,6 +23,7 @@
 #include <libsync/sync.h>
 #include <libhpx/action.h>
 #include <libhpx/attach.h>
+#include <libhpx/debug.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>

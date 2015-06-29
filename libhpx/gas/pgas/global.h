@@ -13,6 +13,14 @@
 #ifndef LIBHPX_GAS_PGAS_GLOBAL_H
 #define LIBHPX_GAS_PGAS_GLOBAL_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void global_allocator_init(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_GAS_PGAS_GLOBAL_H

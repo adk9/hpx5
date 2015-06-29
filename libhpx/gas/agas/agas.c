@@ -35,7 +35,7 @@ HPX_ACTION_DECL(agas_alloc_cyclic);
 HPX_ACTION_DECL(agas_calloc_cyclic);
 
 static void
-_agas_delete(void *gas) {
+_agas_dealloc(void *gas) {
   agas_t *agas = gas;
   if (agas->chunk_table) {
     chunk_table_delete(agas->chunk_table);
@@ -374,7 +374,7 @@ _agas_free(void *gas, hpx_addr_t addr, hpx_addr_t rsync) {
 
 static gas_t _agas_vtable = {
   .type           = HPX_GAS_AGAS,
-  .delete         = _agas_delete,
+  .dealloc        = _agas_dealloc,
   .local_size     = NULL,
   .local_base     = NULL,
   .sub            = _agas_sub,
@@ -398,22 +398,21 @@ static gas_t _agas_vtable = {
 
 gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   agas_t *agas = malloc(sizeof(*agas));
+  dbg_assert(agas);
+
   agas->vtable = _agas_vtable;
   agas->chunk_table = chunk_table_new(0);
   agas->btt = btt_new(0);
 
   // get the chunk size from jemalloc
-  size_t log2_bytes_per_chunk = 0;
-  size_t sz = sizeof(log2_bytes_per_chunk);
-  je_mallctl("opt.lg_chunk", &log2_bytes_per_chunk, &sz, NULL, 0);
-  agas->chunk_size = 1lu << log2_bytes_per_chunk;
+  agas->chunk_size = as_bytes_per_chunk();
 
   size_t heap_size = 1lu << GVA_OFFSET_BITS;
   size_t nchunks = ceil_div_size_t(heap_size, agas->chunk_size);
   uint32_t min_align = ceil_log2_64(agas->chunk_size);
   uint32_t base_align = ceil_log2_64(heap_size);
   agas->bitmap = bitmap_new(nchunks, min_align, base_align);
-  agas_global_allocator_init();
+  agas_global_allocator_init(agas);
 
   if (here->rank == 0) {
     size_t nchunks = ceil_div_size_t(here->ranks * heap_size, agas->chunk_size);
@@ -421,7 +420,7 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
     uint32_t base_align = ceil_log2_64(heap_size);
     agas->cyclic_bitmap = bitmap_new(nchunks, min_align, base_align);
     log_gas("allocated the arena to manage cyclic allocations.\n");
-    agas_cyclic_allocator_init();
+    agas_cyclic_allocator_init(agas);
   }
 
   gva_t there = { .addr = _agas_there(agas, here->rank) };

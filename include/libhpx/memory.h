@@ -64,7 +64,7 @@ static inline void as_free(int id, void *ptr) {
   free(ptr);
 }
 
-#else
+#elif defined(HAVE_JEMALLOC)
 
 /// When a network has been configured then we actually need to do something
 /// about these allocations. In this context we are guaranteed that the jemalloc
@@ -140,6 +140,10 @@ void as_join(int id);
 /// time.
 void as_leave(void);
 
+/// Get the number of bytes associated with a "chunk" of memory, in an
+/// allocator-independent way.
+size_t as_bytes_per_chunk(void);
+
 static inline void *as_malloc(int id, size_t bytes) {
   return je_mallocx(bytes, as_flags[id]);
 }
@@ -159,6 +163,32 @@ static inline void as_free(int id, void *ptr)  {
 }
 
 #undef JEMALLOC_NO_DEMANGLE
+
+#elif defined(HAVE_TBBMALLOC)
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <stddef.h>
+
+extern void* pools[AS_COUNT];
+
+void as_join(int id);
+void as_leave(void);
+size_t as_bytes_per_chunk(void);
+
+void *as_malloc(int id, size_t bytes);
+void *as_calloc(int id, size_t nmemb, size_t bytes);
+void *as_memalign(int id, size_t boundary, size_t size);
+void as_free(int id, void *ptr);
+
+#ifdef __cplusplus
+}
+#endif
+
+#else
+# error No gas allocator configured
 #endif
 
 static inline void *registered_malloc(size_t bytes) {
