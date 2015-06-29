@@ -70,15 +70,18 @@ BTT::trypin(gva_t gva, void** lva) {
   uint64_t key = gva_to_key(gva);
   bool ret = true;
   bool found = update_fn(key, [&](Entry& entry) {
-      if (lva) {
-        if (entry.onunpin == NULL) {
-          assert(entry.count >= 0);
-          entry.count++;
-          *lva = entry.lva;
-        } else {
-          ret = false;
-        }
+      if (!lva) {
+        return;
       }
+
+      if (entry.onunpin != NULL) {
+        ret = false;
+        return;
+      }
+
+      assert(entry.count >= 0);
+      entry.count++;
+      *lva = (char*)(entry.lva) + gva_to_block_offset(gva);
     });
   return found && ret;
 }
