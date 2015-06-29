@@ -193,9 +193,9 @@ AM_CONDITIONAL([BUILD_JEMALLOC], [test "x$enable_jemalloc" != xno])
 
 AS_IF([test "x$enable_tbbmalloc" != xno],
   [AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
-   AC_CHECK_LIB([tbbmalloc_proxy], [malloc],
+   AC_CHECK_LIB([tbbmalloc], [malloc],
      [have_tbbmalloc="TBB malloc library was found"])
-   LIBS="$LIBS -ltbbmalloc -ltbbmalloc_proxy"
+   LIBS="$LIBS -ltbbmalloc"
    AC_DEFINE([HAVE_TBBMALLOC], [1], [We have TBB malloc support for malloc/free])])
 AM_CONDITIONAL([BUILD_TBBMALLOC], [test "x$enable_tbbmalloc" != xno])
 
