@@ -377,6 +377,22 @@ AS_IF([test "x$with_portals" != xno],
   [networks="Portals $networks"],
   [])
 
+# ---------------------------------------------------------------------------
+# Output a summary of memory allocator
+# ---------------------------------------------------------------------------
+AS_IF([test "x$enable_jemalloc" != xno],
+  [allocator="jemalloc"],
+  [])
+AS_IF([test "x$enable_tbbmalloc" != xno],
+  [allocator="tbbmalloc"],
+  [])
+AS_IF([test "x$enable_jemalloc" != xno -a "x$enable_tbbmalloc" != xno],
+  [allocator="Both jemalloc, tbbmalloc enabled: Defaulting to jemalloc"],
+  [])
+AS_IF([test "x$enable_jemalloc" != xyes -a "x$enable_tbbmalloc" != xyes],
+  [allocator="jemalloc"],
+  [])
+
 echo ""
 echo "================================================"
 echo " HPX Build Configuration"
@@ -384,8 +400,7 @@ echo "================================================"
 echo "               Host CPU : $host_cpu"
 echo "                Host OS : $host_os"
 echo "               Networks : $networks"
-echo "               jemalloc : $enable_jemalloc"
-echo "              tbbmalloc : $enable_tbbmalloc"
+echo "              Allocator : $allocator"
 echo "              Profiling : $enable_profiling"
 echo "         hugetlbfs heap : $with_hugetlbfs"
 echo "     Topology Awareness : $with_hwloc"
