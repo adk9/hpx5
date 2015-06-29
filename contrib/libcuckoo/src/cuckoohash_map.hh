@@ -8,6 +8,7 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <functional>
@@ -23,24 +24,31 @@
 #include <utility>
 #include <vector>
 
-#include "cuckoohash_config.h"
-#include "cuckoohash_util.h"
+#include "cuckoohash_config.hh"
+#include "cuckoohash_util.hh"
 
 //! cuckoohash_map is the hash table class.
-template <class Key, class T, class Hash = std::hash<Key>,
-          class Pred = std::equal_to<Key> >
+template < class Key,
+           class T,
+           class Hash = std::hash<Key>,
+           class Pred = std::equal_to<Key>,
+           class Alloc = std::allocator<std::pair<const Key, T>>,
+           size_t SLOT_PER_BUCKET = DEFAULT_SLOT_PER_BUCKET
+           >
 class cuckoohash_map {
 public:
     //! key_type is the type of keys.
-    typedef Key               key_type;
+    typedef Key                     key_type;
     //! value_type is the type of key-value pairs.
-    typedef std::pair<Key, T> value_type;
+    typedef std::pair<const Key, T> value_type;
     //! mapped_type is the type of values.
-    typedef T                 mapped_type;
+    typedef T                       mapped_type;
     //! hasher is the type of the hash function.
-    typedef Hash              hasher;
+    typedef Hash                    hasher;
     //! key_equal is the type of the equality predicate.
-    typedef Pred              key_equal;
+    typedef Pred                    key_equal;
+    //! allocator_type is the type of the allocator
+    typedef Alloc                   allocator_type;
 
     //! Class returned by operator[] which wraps an entry in the hash table.
     //! Note that this reference type behave somewhat differently from an STL
@@ -92,19 +100,20 @@ public:
 
     private:
         // private constructor which initializes the owner and key
-        reference(cuckoohash_map& owner, const key_type& key)
-            : owner_(owner), key_(key) {}
+        reference(
+            cuckoohash_map<Key, T, Hash, Pred, Alloc, SLOT_PER_BUCKET>& owner,
+            const key_type& key) : owner_(owner), key_(key) {}
 
         // reference to the hash map instance
-        cuckoohash_map& owner_;
+        cuckoohash_map<Key, T, Hash, Pred, Alloc, SLOT_PER_BUCKET>& owner_;
         // the referenced key
         const key_type& key_;
 
         // cuckoohash_map needs to call the private constructor
-        friend class cuckoohash_map;
+        friend class cuckoohash_map<Key, T, Hash, Pred, Alloc, SLOT_PER_BUCKET>;
     };
 
-    typedef mapped_type const_reference;
+    typedef const mapped_type const_reference;
 
 private:
     // Constants used internally
@@ -127,14 +136,7 @@ private:
         return cores;
     }
 
-    // The maximum number of cuckoo operations per insert. This must be less
-    // than or equal to SLOT_PER_BUCKET^(MAX_BFS_DEPTH+1)
-    static const size_t MAX_CUCKOO_COUNT = 500;
-
-    // The maximum depth of a BFS path
-    static const size_t MAX_BFS_DEPTH = 4;
-
-    // Structs and functions used internally
+    // A fast, lightweight spinlock
     class spinlock {
         std::atomic_flag lock_;
     public:
@@ -205,18 +207,19 @@ private:
                                            RealPartialContainer>::type {
     private:
         std::array<typename std::aligned_storage<
-                       sizeof(key_type), alignof(key_type)>::type,
-                   SLOT_PER_BUCKET> keys_;
-        std::array<typename std::aligned_storage<
-                       sizeof(mapped_type), alignof(mapped_type)>::type,
-                   SLOT_PER_BUCKET> vals_;
+                       sizeof(value_type), alignof(value_type)>::type,
+                   SLOT_PER_BUCKET> kvpairs_;
         std::bitset<SLOT_PER_BUCKET> occupied_;
 
-        // key_allocator is the allocator used to construct keys
-        static std::allocator<key_type> key_allocator;
+        const value_type& kvpair(int ind) const {
+            return *static_cast<const value_type*>(
+                static_cast<const void*>(&kvpairs_[ind]));
+        }
 
-        // value_allocator is the allocator to construct values
-        static std::allocator<mapped_type> value_allocator;
+        value_type& kvpair_noconst(int ind) {
+            return *static_cast<value_type*>(
+                static_cast<void*>(&kvpairs_[ind]));
+        }
 
     public:
         bool occupied(int ind) const {
@@ -224,34 +227,27 @@ private:
         }
 
         const key_type& key(int ind) const {
-            return *static_cast<const key_type*>(
-                static_cast<const void*>(&keys_[ind]));
-        }
-
-        key_type& key(int ind) {
-            return *static_cast<key_type*>(static_cast<void*>(&keys_[ind]));
+            return kvpair(ind).first;
         }
 
         const mapped_type& val(int ind) const {
-            return *static_cast<const mapped_type*>(
-                static_cast<const void*>(&vals_[ind]));
+            return kvpair(ind).second;
         }
 
         mapped_type& val(int ind) {
-            return *static_cast<mapped_type*>(static_cast<void*>(&vals_[ind]));
+            return kvpair_noconst(ind).second;
         }
 
-        template <class V>
-        void setKV(size_t ind, const key_type& k, V v) {
+        template <class... Args>
+        void setKV(size_t ind, Args&&... args) {
             occupied_.set(ind);
-            key_allocator.construct(&key(ind), k);
-            value_allocator.construct(&val(ind), std::forward<V>(v));
+            new ((void*)&kvpair_noconst(ind)) value_type(
+                std::forward<Args>(args)...);
         }
 
         void eraseKV(size_t ind) {
             occupied_.reset(ind);
-            key_allocator.destroy(&key(ind));
-            value_allocator.destroy(&val(ind));
+            (&kvpair_noconst(ind))->~value_type();
         }
 
         Bucket() {
@@ -272,36 +268,51 @@ private:
         std::atomic<size_t> num;
         cacheint(): num(0) {}
         cacheint(size_t x): num(x) {}
+        cacheint(const cacheint& x): num(x.num.load()) {}
         cacheint(cacheint&& x): num(x.num.load()) {}
     } __attribute__((aligned(64)));
 
     // An alias for the type of lock we are using
     typedef spinlock locktype;
 
+    typedef typename allocator_type::template rebind<
+        Bucket>::other bucket_allocator;
+
+    typedef typename allocator_type::template rebind<
+        cacheint>::other cacheint_allocator;
+
     // TableInfo contains the entire state of the hashtable. We allocate one
     // TableInfo pointer per hash table and store all of the table memory in it,
     // so that all the data can be atomically swapped during expansion.
     struct TableInfo {
         // 2**hashpower is the number of buckets
-        size_t hashpower_;
+        const size_t hashpower_;
 
         // vector of buckets
-        std::vector<Bucket> buckets_;
+        std::vector<Bucket, bucket_allocator> buckets_;
 
         // array of locks
         std::array<locktype, kNumLocks> locks_;
 
         // per-core counters for the number of inserts and deletes
-        std::vector<cacheint> num_inserts, num_deletes;
+        std::vector<cacheint, cacheint_allocator> num_inserts, num_deletes;
 
         // The constructor allocates the memory for the table. It allocates one
         // cacheint for each core in num_inserts and num_deletes.
         TableInfo(const size_t hashpower)
             : hashpower_(hashpower), buckets_(hashsize(hashpower_)),
-              num_inserts(kNumCores()), num_deletes(kNumCores()) {}
+              num_inserts(kNumCores(), 0), num_deletes(kNumCores(), 0) {}
 
         ~TableInfo() {}
     };
+
+    typedef typename allocator_type::template rebind<
+        TableInfo>::other tableinfo_allocator;
+
+    static tableinfo_allocator get_tableinfo_allocator() {
+        static tableinfo_allocator alloc;
+        return alloc;
+    }
 
     // This is a hazard pointer, used to indicate which version of the TableInfo
     // is currently being used in the thread. Since cuckoohash_map operations
@@ -390,18 +401,39 @@ private:
         return new_hashpower;
     }
 
+    // hashfn returns an instance of the hash function
+    static hasher hashfn() {
+        static hasher hash;
+        return hash;
+    }
+
+    // eqfn returns an instance of the equality predicate
+    static key_equal eqfn() {
+        static key_equal eq;
+        return eq;
+    }
+
 public:
     //! The constructor creates a new hash table with enough space for \p n
     //! elements. If the constructor fails, it will throw an exception.
     explicit cuckoohash_map(size_t n = DEFAULT_SIZE) {
-        cuckoo_init(reserve_calc(n));
+        const size_t hashpower = reserve_calc(n);
+        TableInfo* ptr = get_tableinfo_allocator().allocate(1);
+        try {
+            get_tableinfo_allocator().construct(ptr, hashpower);
+            table_info.store(ptr);
+        } catch (...) {
+            get_tableinfo_allocator().deallocate(ptr, 1);
+            throw;
+        }
     }
 
     //! The destructor explicitly deletes the current table info.
     ~cuckoohash_map() {
         TableInfo* ti = table_info.load();
         if (ti != nullptr) {
-            delete ti;
+            get_tableinfo_allocator().destroy(ti);
+            get_tableinfo_allocator().deallocate(ti, 1);
         }
     }
 
@@ -615,50 +647,47 @@ public:
     //! number of buckets in the table will be 2<SUP>\p n</SUP> after expansion,
     //! so the table will have 2<SUP>\p n</SUP> &times; \ref SLOT_PER_BUCKET
     //! slots to store items in. If \p n is not larger than the current
-    //! hashpower, then the function does nothing. It returns true if the table
-    //! expansion succeeded, and false otherwise. rehash can throw an exception
-    //! if the expansion fails to allocate enough memory for the larger table.
+    //! hashpower, then it decreases the hashpower to either \p n or the
+    //! smallest power that can hold all the elements currently in the table. It
+    //! returns true if the table expansion succeeded, and false otherwise.
+    //! rehash can throw an exception if the expansion fails to allocate enough
+    //! memory for the larger table.
     bool rehash(size_t n) {
         check_hazard_pointer();
         TableInfo* ti = snapshot_table_nolock();
         HazardPointerUnsetter hpu;
-        if (n <= ti->hashpower_) {
+        if (n == ti->hashpower_) {
             return false;
         }
-        const cuckoo_status st = cuckoo_expand_simple(n);
+        const cuckoo_status st = cuckoo_expand_simple(
+            n, n > ti->hashpower_);
         return (st == ok);
     }
 
     //! reserve will size the table to have enough slots for at least \p n
     //! elements. If the table can already hold that many elements, the function
-    //! has no effect. Otherwise, the function will expand the table to a
-    //! hashpower sufficient to hold \p n elements. It will return true if there
-    //! was an expansion, and false otherwise. reserve can throw an exception if
-    //! the expansion fails to allocate enough memory for the larger table.
+    //! will shrink the table to the smallest hashpower that can hold the
+    //! maximum of \p n and the current table size. Otherwise, the function will
+    //! expand the table to a hashpower sufficient to hold \p n elements. It
+    //! will return true if there was an expansion, and false otherwise. reserve
+    //! can throw an exception if the expansion fails to allocate enough memory
+    //! for the larger table.
     bool reserve(size_t n) {
         check_hazard_pointer();
         TableInfo* ti = snapshot_table_nolock();
         HazardPointerUnsetter hpu;
-        if (n <= hashsize(ti->hashpower_) * SLOT_PER_BUCKET) {
+        size_t new_hashpower = reserve_calc(n);
+        if (new_hashpower == ti->hashpower_) {
             return false;
         }
-        const cuckoo_status st = cuckoo_expand_simple(reserve_calc(n));
+        const cuckoo_status st = cuckoo_expand_simple(
+            new_hashpower, new_hashpower > ti->hashpower_);
         return (st == ok);
-    }
-
-    static hasher hashfn() {
-        static hasher hash;
-        return hash;
     }
 
     //! hash_function returns the hash function object used by the table.
     hasher hash_function() const {
         return hashfn();
-    }
-
-    static key_equal eqfn() {
-        static key_equal eq;
-        return eq;
     }
 
     //! key_eq returns the equality predicate object used by the table.
@@ -923,13 +952,21 @@ private:
     // the key type is POD and small, we don't use partial keys, so we just
     // return 0.
     ENABLE_IF(static inline, is_simple, partial_t)
-        partial_key(const size_t hv) {
+    partial_key(const size_t hv) {
         return (partial_t)(hv >> ((sizeof(size_t)-sizeof(partial_t)) * 8));
     }
 
     ENABLE_IF(static inline, !is_simple, partial_t) partial_key(const size_t&) {
         return 0;
     }
+
+    // A constexpr version of pow that we can use for static_asserts
+    static constexpr size_t const_pow(size_t a, size_t b) {
+        return (b == 0) ? 1 : a * const_pow(a, b - 1);
+    }
+
+    // The maximum number of items in a BFS path.
+    static const uint8_t MAX_BFS_PATH_LEN = 5;
 
     // CuckooRecord holds one position in a cuckoo path.
     typedef struct  {
@@ -943,45 +980,77 @@ private:
         // The bucket of the last item in the path
         size_t bucket;
         // a compressed representation of the slots for each of the buckets in
-        // the path.
+        // the path. pathcode is sort of like a base-SLOT_PER_BUCKET number, and
+        // we need to hold at most MAX_BFS_PATH_LEN slots. Thus we need the
+        // maximum pathcode to be at least SLOT_PER_BUCKET^(MAX_BFS_PATH_LEN)
         size_t pathcode;
-        // static_assert(pow(SLOT_PER_BUCKET, MAX_BFS_DEPTH+1) <
-        //               std::numeric_limits<decltype(pathcode)>::max(),
-        //               "pathcode may not be large enough to encode a cuckoo
-        //               path"); The 0-indexed position in the cuckoo path this
-        //               slot occupies
-        int depth;
+        static_assert(const_pow(SLOT_PER_BUCKET, MAX_BFS_PATH_LEN) <
+                      std::numeric_limits<decltype(pathcode)>::max(),
+                      "pathcode may not be large enough to encode a cuckoo"
+                      " path");
+        // The 0-indexed position in the cuckoo path this slot occupies. It must
+        // be less than MAX_BFS_PATH_LEN, and also able to hold negative values.
+        int_fast8_t depth;
+        static_assert(MAX_BFS_PATH_LEN - 1 <=
+                      std::numeric_limits<decltype(depth)>::max(),
+                      "The depth type must able to hold a value of"
+                      " MAX_BFS_PATH_LEN - 1");
+        static_assert(-1 >= std::numeric_limits<decltype(depth)>::min(),
+                      "The depth type must be able to hold a value of -1");
         b_slot() {}
-        b_slot(const size_t b, const size_t p, const int d)
-            : bucket(b), pathcode(p), depth(d) {}
+        b_slot(const size_t b, const size_t p, const decltype(depth) d)
+            : bucket(b), pathcode(p), depth(d) {
+            assert(d < MAX_BFS_PATH_LEN);
+        }
     } __attribute__((__packed__));
 
     // b_queue is the queue used to store b_slots for BFS cuckoo hashing.
     class b_queue {
-        b_slot slots[MAX_CUCKOO_COUNT+1];
+        // The maximum size of the BFS queue. Unless it's less than
+        // SLOT_PER_BUCKET^MAX_BFS_PATH_LEN, it won't really mean anything. If
+        // it's a power of 2, then we can quickly wrap around to the beginning
+        // of the array, so we do that.
+        static const size_t MAX_CUCKOO_COUNT = 512;
+        static_assert(const_pow(SLOT_PER_BUCKET, MAX_BFS_PATH_LEN) >=
+                      MAX_CUCKOO_COUNT, "MAX_CUCKOO_COUNT value is too large"
+                      " to be useful");
+        static_assert((MAX_CUCKOO_COUNT & (MAX_CUCKOO_COUNT - 1)) == 0,
+                      "MAX_CUCKOO_COUNT should be a power of 2");
+        // A circular array of b_slots
+        b_slot slots[MAX_CUCKOO_COUNT];
+        // The index of the head of the queue in the array
         size_t first;
+        // One past the index of the last item of the queue in the array.
         size_t last;
+
+        // returns the index in the queue after ind, wrapping around if
+        // necessary.
+        size_t increment(size_t ind) {
+            return (ind + 1) & (MAX_CUCKOO_COUNT - 1);
+        }
 
     public:
         b_queue() : first(0), last(0) {}
 
-
         void enqueue(b_slot x) {
+            assert(!full());
             slots[last] = x;
-            last = (last == MAX_CUCKOO_COUNT) ? 0 : last+1;
-            assert(last != first);
+            last = increment(last);
         }
 
         b_slot dequeue() {
-            assert(first != last);
+            assert(!empty());
             b_slot& x = slots[first];
-            first = (first == MAX_CUCKOO_COUNT) ? 0 : first+1;
+            first = increment(first);
             return x;
         }
 
-        bool not_full() {
-            const size_t next = (last == MAX_CUCKOO_COUNT) ? 0 : last+1;
-            return next != first;
+        bool empty() {
+            return first == last;
+        }
+
+        bool full() {
+            return increment(last) == first;
         }
     } __attribute__((__packed__));
 
@@ -995,11 +1064,13 @@ private:
         // starts on
         q.enqueue(b_slot(i1, 0, 0));
         q.enqueue(b_slot(i2, 1, 0));
-        while (q.not_full()) {
+        while (!q.full() && !q.empty()) {
             b_slot x = q.dequeue();
-            // Picks a random slot to start from
-            for (size_t slot = 0; slot < SLOT_PER_BUCKET && q.not_full();
-                 ++slot) {
+            // Picks a (sort-of) random slot to start from
+            size_t starting_slot = x.pathcode % SLOT_PER_BUCKET;
+            for (size_t i = 0; i < SLOT_PER_BUCKET && !q.full();
+                 ++i) {
+                size_t slot = (starting_slot + i) % SLOT_PER_BUCKET;
                 lock(ti, x.bucket);
                 if (!ti->buckets_[x.bucket].occupied(slot)) {
                     // We can terminate the search here
@@ -1007,28 +1078,16 @@ private:
                     unlock(ti, x.bucket);
                     return x;
                 }
-                // Create a new b_slot item, that represents the bucket we would
-                // look at after searching x.bucket for empty slots.
-                const size_t hv = hashed_key(ti->buckets_[x.bucket].key(slot));
-                unlock(ti, x.bucket);
-                b_slot y(alt_index(ti, hv, x.bucket),
-                         x.pathcode * SLOT_PER_BUCKET + slot, x.depth+1);
 
-                // Check if any of the slots in the prospective bucket are
-                // empty, and, if so, return that b_slot. We lock the bucket so
-                // that no changes occur while iterating.
-                lock(ti, y.bucket);
-                for (size_t j = 0; j < SLOT_PER_BUCKET; ++j) {
-                    if (!ti->buckets_[y.bucket].occupied(j)) {
-                        y.pathcode = y.pathcode * SLOT_PER_BUCKET + j;
-                        unlock(ti, y.bucket);
-                        return y;
-                    }
-                }
-                unlock(ti, y.bucket);
-
-                // No empty slots were found, so we push this onto the queue
-                if (y.depth != static_cast<int>(MAX_BFS_DEPTH)) {
+                // If x has less than the maximum number of path components,
+                // create a new b_slot item, that represents the bucket we would
+                // have come from if we kicked out the item at this slot.
+                if (x.depth < MAX_BFS_PATH_LEN - 1) {
+                    const size_t hv = hashed_key(
+                        ti->buckets_[x.bucket].key(slot));
+                    unlock(ti, x.bucket);
+                    b_slot y(alt_index(ti, hv, x.bucket),
+                             x.pathcode * SLOT_PER_BUCKET + slot, x.depth+1);
                     q.enqueue(y);
                 }
             }
@@ -1200,7 +1259,7 @@ private:
     cuckoo_status run_cuckoo(TableInfo* ti, const size_t i1, const size_t i2,
                              size_t &insert_bucket, size_t &insert_slot) {
 
-        CuckooRecord cuckoo_path[MAX_BFS_DEPTH+1];
+        CuckooRecord cuckoo_path[MAX_BFS_PATH_LEN];
 
         // We must unlock i1 and i2 here, so that cuckoopath_search and
         // cuckoopath_move can lock buckets as desired without deadlock.
@@ -1399,9 +1458,9 @@ private:
     // value in the val if it finds the key. It expects the locks to be taken
     // and released outside the function.
     ENABLE_IF(static, value_copy_assignable, cuckoo_status)
-        cuckoo_find(const key_type& key, mapped_type& val,
-                    const size_t hv, const TableInfo* ti,
-                    const size_t i1, const size_t i2) {
+    cuckoo_find(const key_type& key, mapped_type& val,
+                const size_t hv, const TableInfo* ti,
+                const size_t i1, const size_t i2) {
         const partial_t partial = partial_key(hv);
         if (try_read_from_bucket(ti, partial, key, val, i1)) {
             return ok;
@@ -1513,7 +1572,7 @@ private:
             // failure_table_full, we have to expand the table before trying
             // again.
             if (st == failure_table_full) {
-                if (cuckoo_expand_simple(ti->hashpower_+1) ==
+                if (cuckoo_expand_simple(ti->hashpower_ + 1, true) ==
                     failure_under_expansion) {
                     LIBCUCKOO_DBG("expansion is on-going\n");
                 }
@@ -1545,8 +1604,8 @@ private:
     // function.
     ENABLE_IF(, value_copy_assignable, cuckoo_status)
     cuckoo_update(const key_type &key, const mapped_type &val,
-                                const size_t hv, TableInfo* ti,
-                                const size_t i1, const size_t i2) {
+                  const size_t hv, TableInfo* ti,
+                  const size_t i1, const size_t i2) {
         const partial_t partial = partial_key(hv);
         if (try_update_bucket(ti, partial, key, val, i1)) {
             return ok;
@@ -1573,14 +1632,6 @@ private:
             return ok;
         }
         return failure_key_not_found;
-    }
-
-    // cuckoo_init initializes the hashtable, given an initial hashpower as the
-    // argument.
-    cuckoo_status cuckoo_init(const size_t hashpower) {
-        table_info.store(new TableInfo(hashpower));
-        cuckoo_clear(table_info.load());
-        return ok;
     }
 
     // cuckoo_clear empties the table, calling the destructors of all the
@@ -1617,8 +1668,8 @@ private:
     // insert_into_table is a helper function used by cuckoo_expand_simple to
     // fill up the new table.
     static void insert_into_table(
-        cuckoohash_map<Key, T, Hash>& new_map, const TableInfo* old_ti,
-        size_t i, size_t end) {
+        cuckoohash_map<Key, T, Hash, Pred, Alloc, SLOT_PER_BUCKET>& new_map,
+        const TableInfo* old_ti, size_t i, size_t end) {
         for (;i < end; ++i) {
             for (size_t j = 0; j < SLOT_PER_BUCKET; ++j) {
                 if (old_ti->buckets_[i].occupied(j)) {
@@ -1630,25 +1681,31 @@ private:
         }
     }
 
-    // cuckoo_expand_simple is a simpler version of expansion than
-    // cuckoo_expand, which will double the size of the existing hash table. It
-    // needs to take all the bucket locks, since no other operations can change
-    // the table during expansion. If some other thread is holding the expansion
-    // thread at the time, then it will return failure_under_expansion.
-    cuckoo_status cuckoo_expand_simple(size_t n) {
+    // cuckoo_expand_simple will resize the table to at least the given
+    // new_hashpower. If is_expansion is true, new_hashpower must be greater
+    // than the current size of the table. If it's false, then new_hashpower
+    // must be less. When we're shrinking the table, if the current table
+    // contains more elements than can be held by new_hashpower, the resulting
+    // hashpower will be greater than new_hashpower. It needs to take all the
+    // bucket locks, since no other operations can change the table during
+    // expansion.
+    cuckoo_status cuckoo_expand_simple(size_t new_hashpower,
+                                       bool is_expansion) {
         TableInfo* ti = snapshot_and_lock_all();
         assert(ti == table_info.load());
         AllUnlocker au(ti);
         HazardPointerUnsetter hpu;
-        if (n <= ti->hashpower_) {
+        if ((is_expansion && new_hashpower <= ti->hashpower_) ||
+            (!is_expansion && new_hashpower >= ti->hashpower_)) {
             // Most likely another expansion ran before this one could grab the
             // locks
             return failure_under_expansion;
         }
 
-        // Creates a new hash table with hashpower n and adds all the
-        // elements from the old buckets
-        cuckoohash_map<Key, T, Hash> new_map(hashsize(n) * SLOT_PER_BUCKET);
+        // Creates a new hash table with hashpower new_hashpower and adds all
+        // the elements from the old buckets
+        cuckoohash_map<Key, T, Hash, Pred, Alloc, SLOT_PER_BUCKET> new_map(
+            hashsize(new_hashpower) * SLOT_PER_BUCKET);
         const size_t threadnum = kNumCores();
         const size_t buckets_per_thread =
             hashsize(ti->hashpower_) / threadnum;
@@ -1704,9 +1761,11 @@ public:
         // table, based on the boolean argument. We keep this constructor
         // private (but expose it to the cuckoohash_map class), since we don't
         // want users calling it.
-        const_iterator(const cuckoohash_map<Key, T, Hash, Pred>& hm,
-                       bool is_end) : hm_(hm) {
-            cuckoohash_map<Key, T, Hash, Pred>::check_hazard_pointer();
+        const_iterator(
+            const cuckoohash_map<Key, T, Hash, Pred, Alloc,
+            SLOT_PER_BUCKET>& hm, bool is_end) : hm_(hm) {
+            cuckoohash_map<Key, T, Hash, Pred, Alloc,
+                           SLOT_PER_BUCKET>::check_hazard_pointer();
             ti_ = hm_.snapshot_and_lock_all();
             assert(ti_ == hm_.table_info.load());
 
@@ -1725,7 +1784,7 @@ public:
             }
         }
 
-        friend class cuckoohash_map<Key, T, Hash, Pred>;
+        friend class cuckoohash_map<Key, T, Hash, Pred, Alloc, SLOT_PER_BUCKET>;
 
     public:
         //! This is an rvalue-reference constructor that takes the lock from \p
@@ -1757,7 +1816,8 @@ public:
         void release() {
             if (has_table_lock) {
                 AllUnlocker au(ti_);
-                cuckoohash_map<Key, T, Hash, Pred>::HazardPointerUnsetter hpu;
+                cuckoohash_map<Key, T, Hash, Pred, Alloc,
+                               SLOT_PER_BUCKET>::HazardPointerUnsetter hpu;
                 has_table_lock = false;
             }
         }
@@ -1870,10 +1930,11 @@ public:
 
     protected:
         // A pointer to the associated hashmap
-        const cuckoohash_map<Key, T, Hash, Pred>& hm_;
+        const cuckoohash_map<Key, T, Hash, Pred, Alloc, SLOT_PER_BUCKET>& hm_;
 
         // The hashmap's table info
-        typename cuckoohash_map<Key, T, Hash, Pred>::TableInfo* ti_;
+        typename cuckoohash_map<Key, T, Hash, Pred, Alloc,
+                                SLOT_PER_BUCKET>::TableInfo* ti_;
 
         // Indicates whether the iterator has the table lock
         bool has_table_lock;
@@ -2007,10 +2068,11 @@ public:
     class iterator : public const_iterator {
         // This constructor does the same thing as the private const_iterator
         // one.
-        iterator(cuckoohash_map<Key, T, Hash, Pred>& hm, bool is_end)
+        iterator(cuckoohash_map<Key, T, Hash, Pred, Alloc, SLOT_PER_BUCKET>& hm,
+                 bool is_end)
             : const_iterator(hm, is_end) {}
 
-        friend class cuckoohash_map<Key, T, Hash, Pred>;
+        friend class cuckoohash_map<Key, T, Hash, Pred, Alloc, SLOT_PER_BUCKET>;
 
     public:
         //! This constructor is identical to the rvalue-reference constructor of
@@ -2081,39 +2143,38 @@ public:
         }
         return items;
     }
+
+    // This class is a friend for unit testing
+    friend class UnitTestInternalAccess;
 };
 
 // Initializing the static members
-template <class Key, class T, class Hash, class Pred>
-    __thread typename cuckoohash_map<Key, T, Hash, Pred>::TableInfo**
-    cuckoohash_map<Key, T, Hash, Pred>::hazard_pointer = nullptr;
+template <class Key, class T, class Hash, class Pred, class Alloc, size_t SPB>
+    __thread typename cuckoohash_map<Key, T, Hash, Pred, Alloc,
+                                     SPB>::TableInfo**
+    cuckoohash_map<Key, T, Hash, Pred, Alloc, SPB>::hazard_pointer = nullptr;
 
-template <class Key, class T, class Hash, class Pred>
-    __thread int cuckoohash_map<Key, T, Hash, Pred>::counterid = -1;
+template <class Key, class T, class Hash, class Pred, class Alloc, size_t SPB>
+    __thread int cuckoohash_map<Key, T, Hash, Pred, Alloc, SPB>::counterid = -1;
 
-template <class Key, class T, class Hash, class Pred>
-    typename cuckoohash_map<Key, T, Hash, Pred>::GlobalHazardPointerList
-    cuckoohash_map<Key, T, Hash, Pred>::global_hazard_pointers;
+template <class Key, class T, class Hash, class Pred, class Alloc, size_t SPB>
+    typename cuckoohash_map<Key, T, Hash, Pred, Alloc,
+                            SPB>::GlobalHazardPointerList
+    cuckoohash_map<Key, T, Hash, Pred, Alloc, SPB>::global_hazard_pointers;
 
-template <class Key, class T, class Hash, class Pred>
-    const std::out_of_range
-    cuckoohash_map<Key, T, Hash, Pred>::const_iterator::end_dereference(
+template <class Key, class T, class Hash, class Pred, class Alloc, size_t SPB>
+const std::out_of_range cuckoohash_map<
+    Key, T, Hash, Pred, Alloc, SPB>::const_iterator::end_dereference(
         "Cannot dereference: iterator points past the end of the table");
 
-template <class Key, class T, class Hash, class Pred>
-    const std::out_of_range
-    cuckoohash_map<Key, T, Hash, Pred>::const_iterator::end_increment(
+template <class Key, class T, class Hash, class Pred, class Alloc, size_t SPB>
+    const std::out_of_range cuckoohash_map<
+    Key, T, Hash, Pred, Alloc, SPB>::const_iterator::end_increment(
         "Cannot increment: iterator points past the end of the table");
 
-template <class Key, class T, class Hash, class Pred>
-    const std::out_of_range
-    cuckoohash_map<Key, T, Hash, Pred>::const_iterator::begin_decrement(
+template <class Key, class T, class Hash, class Pred, class Alloc, size_t SPB>
+    const std::out_of_range cuckoohash_map<
+    Key, T, Hash, Pred, Alloc, SPB>::const_iterator::begin_decrement(
         "Cannot decrement: iterator points to the beginning of the table");
 
-template <class Key, class T, class Hash, class Pred>
-std::allocator<Key> cuckoohash_map<Key, T, Hash, Pred>::Bucket::key_allocator;
-
-template <class Key, class T, class Hash, class Pred>
-std::allocator<T> cuckoohash_map<Key, T, Hash, Pred>::Bucket::value_allocator;
-
-#endif
+#endif // _CUCKOOHASH_MAP_HH
