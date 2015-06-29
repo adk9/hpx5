@@ -185,19 +185,19 @@ AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" 
   TESTS_CMD=''])
 
 # If we want to use jemalloc then configure it.
-AS_IF([test "x$enable_jemalloc" != xno],
+AS_IF([test "x$enable_jemalloc" != xno -o "x$enable_network" != xno -a "x$enable_tbbmalloc" != xyes],
  [HPX_CONTRIB_JEMALLOC([contrib/jemalloc])
   AC_DEFINE([HAVE_JEMALLOC], [1], [We have jemalloc support for malloc/free/etc])
   AC_SUBST(HPX_JEMALLOC_LOCAL_LIBS, "$hpx_jemalloc_libs")])
-AM_CONDITIONAL([BUILD_JEMALLOC], [test "x$enable_jemalloc" != xno])
+AM_CONDITIONAL([BUILD_JEMALLOC], [test "x$enable_jemalloc" != xno -o "x$enable_network" != xno -a "x$enable_tbbmalloc" != xyes])
 
-AS_IF([test "x$enable_tbbmalloc" != xno],
+AS_IF([test "x$enable_tbbmalloc" != xno -a "x$enable_jemalloc" != xyes],
   [AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
    AC_CHECK_LIB([tbbmalloc], [malloc],
      [have_tbbmalloc="TBB malloc library was found"])
    LIBS="$LIBS -ltbbmalloc_proxy"
    AC_DEFINE([HAVE_TBBMALLOC], [1], [We have TBB malloc support for malloc/free])])
-AM_CONDITIONAL([BUILD_TBBMALLOC], [test "x$enable_tbbmalloc" != xno])
+AM_CONDITIONAL([BUILD_TBBMALLOC], [test "x$enable_tbbmalloc" != xno -a "x$enable_jemalloc" != xyes])
 
 AC_ARG_WITH([tests-cmd],
  [AS_HELP_STRING([--with-tests-cmd], [Use this command for running the test harness @<:@default=mpirun -np 2@:>@])],
