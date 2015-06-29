@@ -1,14 +1,14 @@
-#ifndef _TEST_UTIL_CC
-#define _TEST_UTIL_CC
+#ifndef _TEST_UTIL_HH
+#define _TEST_UTIL_HH
 
-// Utilities for running tests
+// Utilities for running stress tests and benchmarks
 #include <array>
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <mutex>
-#include <libcuckoo/cuckoohash_map.hh>
+#include "../src/cuckoohash_map.hh"
 
 std::mutex print_lock;
 int main_return_value = EXIT_SUCCESS;
@@ -175,35 +175,32 @@ public:
     }
 };
 
-// cacheint is a cache-aligned integer type.
-struct cacheint {
-    size_t num;
-    cacheint() {
-        num = 0;
-    }
-} __attribute__((aligned(64)));
-
 // An overloaded class that does the reads for different table types. It
 // repeatedly searches for the keys in the given range until the time is up. All
-// the keys in the given range should either be in the table or not in the
-// table.
+// the keys we're searching for should either be in the table or not in the
+// table, so we assert that.
 template <class Table>
 class read_thread {
 public:
     typedef typename std::vector<typename Table::key_type>::iterator it_t;
-    static void func(Table& table, it_t begin, it_t end, cacheint& reads,
-                     bool in_table, std::atomic<bool>& finished) {
+    static void func(Table& table, it_t begin, it_t end,
+                     std::atomic<size_t>& counter, bool in_table,
+                     std::atomic<bool>& finished) {
         typename Table::mapped_type v;
+        // We keep track of our own local counter for reads, to avoid
+        // over-burdening the shared atomic counter
+        size_t reads = 0;
         while (!finished.load(std::memory_order_acquire)) {
             for (auto it = begin; it != end; it++) {
                 if (finished.load(std::memory_order_acquire)) {
+                    counter.fetch_add(reads);
                     return;
                 }
-                ASSERT_EQ(table.find(*it, v), in_table);
-                reads.num++;
+                ASSERT_EQ(in_table, table.find(*it, v));
+                reads++;
             }
         }
     }
 };
 
-#endif
+#endif // _TEST_UTIL_HH
