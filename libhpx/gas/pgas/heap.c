@@ -58,13 +58,10 @@ heap_init(heap_t *heap, size_t size) {
 
   sync_store(&heap->csbrk, 0, SYNC_RELEASE);
 
-  size_t log2_bytes_per_chunk = 0;
-  size_t sz = sizeof(log2_bytes_per_chunk);
-  je_mallctl("opt.lg_chunk", &log2_bytes_per_chunk, &sz, NULL, 0);
-  heap->bytes_per_chunk = 1lu << log2_bytes_per_chunk;
+  // align size to bytes-per-chunk boundary
+  heap->bytes_per_chunk = as_bytes_per_chunk();
   log_gas("heap bytes per chunk is %zu\n", heap->bytes_per_chunk);
 
-  // align size to bytes-per-chunk boundary
   heap->nbytes = size - (size % heap->bytes_per_chunk);
   log_gas("heap nbytes is aligned as %zu\n", heap->nbytes);
   if (heap->nbytes > MAX_HEAP_BYTES) {

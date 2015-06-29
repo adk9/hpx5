@@ -284,7 +284,7 @@ _pwc_delete(void *network) {
   free(pwc->heap_segments);
   free(pwc->send_buffers);
   parcel_emulator_delete(pwc->parcels);
-  pwc->xport->delete(pwc->xport);
+  pwc->xport->dealloc(pwc->xport);
   free(pwc);
 }
 

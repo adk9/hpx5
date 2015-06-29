@@ -16,6 +16,10 @@
 #include <pthread.h>
 #include <hpx/attributes.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int system_get_cores(void);
 
 int system_set_affinity(pthread_t thread, int core_id);
@@ -98,6 +102,10 @@ int system_barrier_destroy(system_barrier_t *barrier);
 /// System specific thread barrier wait function
 int system_barrier_wait(system_barrier_t *barrier);
 
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif // LIBHPX_SYSTEM_H

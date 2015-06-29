@@ -20,6 +20,7 @@
 ///        when no network is available, or when we are running on a single
 ///        locality. It simply forwards all requests to the system allocator.
 #include <string.h>
+#include <stdlib.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
@@ -32,7 +33,7 @@
 /// The SMP GAS instance is global and immutable. We do not need to do anything
 /// with it.
 static void
-_smp_delete(void *gas) {
+_smp_dealloc(void *gas) {
 }
 
 /// Figure out how far apart two addresses are.
@@ -219,7 +220,7 @@ _smp_local_base(void *gas) {
 
 static gas_t _smp_vtable = {
   .type           = HPX_GAS_SMP,
-  .delete         = _smp_delete,
+  .dealloc        = _smp_dealloc,
   .local_size     = _smp_local_size,
   .local_base     = _smp_local_base,
   .sub            = _smp_sub,

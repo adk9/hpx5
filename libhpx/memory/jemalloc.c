@@ -81,5 +81,13 @@ as_join(int id) {
 }
 
 void
-as_leave() {
+as_leave(void) {
+}
+
+size_t
+as_bytes_per_chunk(void) {
+  size_t log2_bytes_per_chunk = 0;
+  size_t sz = sizeof(log2_bytes_per_chunk);
+  je_mallctl("opt.lg_chunk", &log2_bytes_per_chunk, &sz, NULL, 0);
+  return (1lu << log2_bytes_per_chunk);
 }

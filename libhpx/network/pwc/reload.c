@@ -15,8 +15,10 @@
 #endif
 
 #include <string.h>
-#include <libhpx/config.h>
+#include <stdlib.h>
 #include <libhpx/boot.h>
+#include <libhpx/config.h>
+#include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>

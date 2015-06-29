@@ -17,6 +17,10 @@
 #include <libhpx/config.h>
 #include <libhpx/system.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// Forward declarations.
 /// @{
 struct boot;
@@ -26,7 +30,7 @@ struct boot;
 typedef struct gas {
   hpx_gas_t type;
 
-  void (*delete)(void *gas);
+  void (*dealloc)(void *gas);
   size_t (*local_size)(void *gas);
   void *(*local_base)(void *gas);
 
@@ -66,9 +70,9 @@ typedef struct gas {
 gas_t *gas_new(config_t *cfg, struct boot *boot)
   HPX_MALLOC HPX_NON_NULL(1,2);
 
-inline static void gas_delete(gas_t *gas) {
-  assert(gas && gas->delete);
-  gas->delete(gas);
+inline static void gas_dealloc(gas_t *gas) {
+  assert(gas && gas->dealloc);
+  gas->dealloc(gas);
 }
 
 inline static uint32_t gas_owner_of(gas_t *gas, hpx_addr_t addr) {
@@ -85,5 +89,9 @@ inline static void *gas_local_base(gas_t *gas) {
   assert(gas && gas->local_base);
   return gas->local_base(gas);
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_GAS_H

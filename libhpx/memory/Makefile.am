@@ -5,6 +5,10 @@ noinst_LTLIBRARIES	  = libmemory.la
 libmemory_la_CPPFLAGS = -I$(top_srcdir)/include
 libmemory_la_SOURCES  = glue.c
 
-if HAVE_NETWORK
+if BUILD_JEMALLOC
 libmemory_la_SOURCES += jemalloc.c
+endif
+
+if BUILD_TBBMALLOC
+libmemory_la_SOURCES += tbbmalloc.cc
 endif
