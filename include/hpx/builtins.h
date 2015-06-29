@@ -87,6 +87,10 @@ static inline int32_t max_i32(int32_t lhs, int32_t rhs) {
   return (lhs < rhs) ? rhs : lhs;
 }
 
+static inline uint32_t max_u32(uint32_t lhs, uint32_t rhs) {
+  return (lhs < rhs) ? rhs : lhs;
+}
+
 #define _HPX_CAT(l,r) l##r
 #define _HPX_CAT1(l,r) _HPX_CAT(l,r)
 #define _HPX_CAT2(l,r) _HPX_CAT1(l,r)

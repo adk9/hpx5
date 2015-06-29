@@ -117,12 +117,7 @@ static bool
 _agas_try_pin(void *gas, hpx_addr_t addr, void **lva) {
   agas_t *agas = gas;
   gva_t gva = { .addr = addr };
-  uint64_t offset = gva_to_offset(gva);
-  bool ret = btt_try_pin(agas->btt, gva, lva);
-  if (lva) {
-    *lva = (char*)(*lva) + offset;
-  }
-  return ret;
+  return btt_try_pin(agas->btt, gva, lva);
 }
 
 static void

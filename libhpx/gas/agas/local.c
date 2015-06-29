@@ -29,14 +29,11 @@ hpx_addr_t
 agas_local_alloc(void *gas, uint32_t bytes, uint32_t boundary) {
   // use the local allocator to get some memory that is part of the global
   // address space
-  void *lva = NULL;
-  uint64_t padded = 1 << ceil_log2_32(bytes);
-  if (boundary) {
-    lva = global_memalign(boundary, padded);
-  }
-  else {
-    lva = global_malloc(padded);
-  }
+  uint32_t align = ceil_log2_32(bytes);
+  dbg_assert(align < 32);
+  uint32_t padded = UINT32_C(1) << align;
+  uint32_t aligned = max_u32(boundary, padded);
+  void *lva = global_memalign(aligned, padded);
 
   agas_t *agas = gas;
   gva_t gva = agas_lva_to_gva(gas, lva, padded);
@@ -46,17 +43,13 @@ agas_local_alloc(void *gas, uint32_t bytes, uint32_t boundary) {
 
 hpx_addr_t
 agas_local_calloc(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
-  uint64_t align = ceil_log2_32(size);
+  uint32_t align = ceil_log2_32(size);
   dbg_assert(align < 32);
-  uint32_t padded = 1u << align;
+  uint32_t padded = UINT32_C(1) << align;
+  uint32_t aligned = max_u32(boundary, padded);
 
-  char *lva;
-  if (boundary) {
-    lva = global_memalign(boundary, nmemb * padded);
-    lva = memset(lva, 0, nmemb * padded);
-  } else {
-    lva = global_calloc(nmemb, padded);
-  }
+  char *lva = global_memalign(aligned, nmemb * padded);
+  memset(lva, 0, nmemb * padded);
 
   agas_t *agas = gas;
   gva_t gva = agas_lva_to_gva(gas, lva, padded);
