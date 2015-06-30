@@ -5,4 +5,4 @@ AM_CFLAGS = @CFLAGS@                         \
 	    -I@PHOTON_SRCDIR@/src/contrib/libsync/include
 
 noinst_LTLIBRARIES = libutil.la
-libutil_la_SOURCES = logging.c htable.c util.c 
+libutil_la_SOURCES = logging.c htable.c util.c avl.c

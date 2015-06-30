@@ -106,7 +106,7 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 libutil_la_LIBADD =
-am_libutil_la_OBJECTS = logging.lo htable.lo util.lo
+am_libutil_la_OBJECTS = logging.lo htable.lo util.lo avl.lo
 libutil_la_OBJECTS = $(am_libutil_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -326,7 +326,7 @@ AM_CFLAGS = @CFLAGS@                         \
 	    -I@PHOTON_SRCDIR@/src/contrib/libsync/include
 
 noinst_LTLIBRARIES = libutil.la
-libutil_la_SOURCES = logging.c htable.c util.c 
+libutil_la_SOURCES = logging.c htable.c util.c avl.c
 all: all-am
 
 .SUFFIXES:
@@ -381,6 +381,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/avl.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/htable.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/logging.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Plo@am__quote@
