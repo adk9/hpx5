@@ -1,56 +1,51 @@
 #include "photon_buffertable.h"
 #include "libsync/locks.h"
+#include "avl.h"
 
-static photonBI* registered_buffers=NULL;
-static int buffertable_size;
-static int num_registered_buffers;
+static struct avl_table *btable = NULL;
+static int nbufs;
 static tatas_lock_t bt_lock;
 
-static int buffertable_resize(int new_buffertable_size) {
-  int newsize = sizeof(struct photon_buffer_internal_t *) * new_buffertable_size;
-  photonBI* new_registered_buffer = realloc(registered_buffers, newsize);
-  if (!new_registered_buffer)
-    return PHOTON_ERROR;
-  registered_buffers = new_registered_buffer;
-  buffertable_size = new_buffertable_size;
-  return PHOTON_OK;
+// returns 0 if a and b equal
+//         1 if a > b
+//        -1 if a < b
+static int bcmp(const void *a, const void *b, void *p) {
+  photonBI tst = (photonBI)a;
+  photonBI res = (photonBI)b;
+
+  // below this region
+  if (tst->buf.addr < res->buf.addr) {
+    return -1;
+  }
+  // above this region
+  else if (tst->buf.addr > (res->buf.addr + res->buf.size)) {
+    return 1;
+  }
+  // fits in the region
+  else if ((tst->buf.addr + tst->buf.size) <= (res->buf.addr + res->buf.size)) {
+    return 0;
+  }
+  // overlap but doesn't fit
+  else {
+    return 1;
+  }
 }
 
-int buffertable_init(int num_buffers) {
-  if (!registered_buffers || buffertable_size < num_buffers)
-    if (buffertable_resize(num_buffers))
-      return PHOTON_ERROR;
+int buffertable_init(int size) {
+  btable = avl_create(bcmp, NULL, NULL);
+  if (!btable) {
+    return PHOTON_ERROR;
+  }
   sync_tatas_init(&bt_lock);
   return PHOTON_OK;
 }
 
 void buffertable_finalize() {
-  free(registered_buffers);
-  registered_buffers = NULL;
-  num_registered_buffers = 0;
-  buffertable_size = 0;
+  avl_destroy(btable, NULL);
 }
 
 int buffertable_find_containing(void* start, uint64_t size, photonBI* result) {
-  int i, cond;
-
-  sync_tatas_acquire(&bt_lock);
-  {
-    for(i=0; i<num_registered_buffers; i++) {
-      photonBI tmpbuf = registered_buffers[i];
-      cond =  ((void *)(tmpbuf->buf.addr) <= start);
-      cond &= ((char *)(tmpbuf->buf.addr+tmpbuf->buf.size) >= (char *)start+size);
-      if ( cond ) {
-	if( result )
-	  *result = tmpbuf;
-	sync_tatas_release(&bt_lock);
-	return PHOTON_OK;
-      }
-    }
-  }
-  sync_tatas_release(&bt_lock);
-
-  return PHOTON_ERROR;
+  return buffertable_find_exact(start, size, result);
 }
 
 int buffertable_find_exact(void* start, uint64_t size, photonBI* result) {
@@ -58,35 +53,35 @@ int buffertable_find_exact(void* start, uint64_t size, photonBI* result) {
 
   sync_tatas_acquire(&bt_lock);
   {
-    for(i=0; i<num_registered_buffers; i++) {
-      photonBI tmpbuf = registered_buffers[i];
-      cond =  ((void *)(tmpbuf->buf.addr) == start);
-      cond &= (tmpbuf->buf.size == size);
-      if ( cond ) {
-	if( result )
-	  *result = tmpbuf;
-	sync_tatas_release(&bt_lock);
-	return PHOTON_OK;
-      }
+    photon_buffer_internal tst;
+    tst.buf.addr = (uintptr_t)start;
+    tst.buf.size = size;
+    void *res = avl_find(btable, &tst);
+    if (res) {
+      *result = (photonBI)res;
+      sync_tatas_release(&bt_lock);
+      return PHOTON_OK;
     }
   }
   sync_tatas_release(&bt_lock);
+
   return PHOTON_ERROR;
 }
 
 int buffertable_insert(photonBI buffer) {
-  if (!registered_buffers) {
-    log_err("buffertable_insert(): Buffertable not initialized. Call buffertable_init() first.");
+  if (!btable) {
+    log_err("buffertable not initialized. Call buffertable_init() first.");
     return PHOTON_ERROR;
   }
 
   sync_tatas_acquire(&bt_lock);
   {
-    if (num_registered_buffers >= buffertable_size) {
-      if (buffertable_resize(buffertable_size*2) != PHOTON_OK)
-	return PHOTON_ERROR_RESOURCE;
+    void *res = avl_insert(btable, (void*)buffer);
+    if (res) {
+      log_err("Tried to insert duplicate or overlapping buffer entry");
+      sync_tatas_release(&bt_lock);
+      return PHOTON_ERROR;
     }
-    registered_buffers[num_registered_buffers++]=buffer;
   }
   sync_tatas_release(&bt_lock);
 
@@ -97,24 +92,22 @@ int buffertable_insert(photonBI buffer) {
 int buffertable_remove(photonBI buffer) {
   int i;
 
-  if (!registered_buffers) {
-    log_err("buffertable_insert(): Buffertable not initialized. Call buffertable_init() first.");
+  if (!btable) {
+    log_err("buffertable not initialized. Call buffertable_init() first.");
     return PHOTON_ERROR;
   }
 
   sync_tatas_acquire(&bt_lock);
   {
-    for(i=0; i<num_registered_buffers; i++) {
-      photonBI tmpbuf = registered_buffers[i];
-      if ( tmpbuf == buffer ) {
-	registered_buffers[i] = registered_buffers[--num_registered_buffers];
-	sync_tatas_release(&bt_lock);
-	return PHOTON_OK;
-      }
+    void *res = avl_delete(btable, (void*)buffer);
+    if (!res) {
+      dbg_warn("Tried to delete buffer entry that doesn't exist");
+      sync_tatas_release(&bt_lock);
+      return PHOTON_ERROR;
     }
   }
   sync_tatas_release(&bt_lock);
 
-  return PHOTON_ERROR;
+  return PHOTON_OK;
 }
 
