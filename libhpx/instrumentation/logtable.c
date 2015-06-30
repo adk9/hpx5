@@ -136,7 +136,7 @@ void logtable_fini(logtable_t *log) {
 void logtable_append(logtable_t *log, uint64_t u1, uint64_t u2, uint64_t u3,
                      uint64_t u4) {
   size_t i = sync_fadd(&log->next, 1, SYNC_ACQ_REL);
-  if (_header_size(log) + i * sizeof(record_t) > log->max_size) {
+  if (_header_size(log) + (i + 1) * sizeof(record_t) > log->max_size) {
     return;
   }
   sync_fadd(&log->last, 1, SYNC_ACQ_REL); // update size
