@@ -1,5 +1,5 @@
 AC_PREREQ([2.63])
-AC_INIT([photon], [0.1a], [photon@stout.incntre.iu.edu])
+AC_INIT([photon], [0.1a], [photon@crest.iu.edu])
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
 
@@ -122,6 +122,14 @@ if test "$enable_verbs" != "no" ; then
 fi
 AM_CONDITIONAL(HAVE_VERBS, test x$have_vr == xyes)
 
+AC_ARG_ENABLE([libfabric],
+ [AS_HELP_STRING([--enable-libfabric], [build with libfabric support @<:@default=no@:>@])], [],
+ [enable_libfabric=no])
+
+AS_IF([test "x$enable_libfabric" != xno],
+ [PHOTON_CONTRIB_LIBFABRIC([src/contrib/libfabric], [photon_])],
+ [photon_have_libfabric=no])
+
 PHOTON_WITH_PKG([ugni],[cray-ugni],[Build with UGNI],[no],[UGNI])
 PHOTON_WITH_PKG([pmi],[cray-pmi],[Build with PMI],[no],[PMI])
 PHOTON_WITH_PKG([mpi],[mpi],[Build with MPI],[no],[MPI])
@@ -235,8 +243,8 @@ AS_IF([test "x$enable_testsuite" != xno && test "x$with_check" != xno],
   [enable_tests=yes],
   [enable_tests=no])
 AM_CONDITIONAL([PHOTON_ENABLE_TESTS], [test "x$enable_tests" != xno])
-
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
+AM_CONDITIONAL([BUILD_LIBFABRIC], [test "x$enable_external_libfabric" == xno])
 
 # Set source and build directories
 AC_SUBST(PHOTON_SRCDIR, "\${top_srcdir}")
