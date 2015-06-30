@@ -14,8 +14,8 @@
 # include "config.h"
 #endif
 
-#include <libcuckoo/cuckoohash_map.hh>
-#include <libcuckoo/city_hasher.hh>
+#include <cuckoohash_map.hh>
+#include <city_hasher.hh>
 #include "btt.h"
 
 namespace {
