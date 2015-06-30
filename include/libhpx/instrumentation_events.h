@@ -446,7 +446,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
 }
 
 // typeof(LCO_SET_METADATA) == inst_event_metadata_t 
-#define LCO_SET_METADATA {                                     \
+#define LCO_SET_METADATA {                                       \
   .num_cols = 6,                                                 \
   .col_metadata = {                                              \
     INST_EVENT_COL_METADATA_WORKER,                              \
@@ -468,6 +468,19 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
     METADATA_LCO_CURRENT_THREAD,                                 \
     METADATA_LCO_STATE,                                          \
     INST_EVENT_COL_METADATA_EMPTY3                               \
+  }                                                              \
+}
+
+// typeof(LCO_ASSIGN_PARCEL_METADATA) == inst_event_metadata_t 
+#define LCO_ATTACH_PARCEL_METADATA {                             \
+  .num_cols = 6,                                                 \
+  .col_metadata = {                                              \
+    INST_EVENT_COL_METADATA_WORKER,                              \
+    INST_EVENT_COL_METADATA_NS,                                  \
+    METADATA_LCO_ADDRESS,                                        \
+    METADATA_LCO_CURRENT_THREAD,                                 \
+    METADATA_LCO_STATE,                                          \
+    METADATA_PARCEL_ID                                           \
   }                                                              \
 }
 
