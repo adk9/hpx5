@@ -17,6 +17,7 @@
 #include <string.h>
 #include <tbb/scalable_allocator.h>
 #include <libhpx/memory.h>
+#include <cstdlib>
 
 using namespace rml;
 
