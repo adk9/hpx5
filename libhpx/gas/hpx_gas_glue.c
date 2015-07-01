@@ -184,7 +184,21 @@ hpx_gas_memput(hpx_addr_t to, const void *from, size_t size,
   return here->gas->memput(here->gas, to, from, size, lsync, rsync);
 }
 
-int hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
+int
+hpx_gas_memput_lsync(hpx_addr_t to, const void *from, size_t size,
+                     hpx_addr_t rsync) {
+  dbg_assert(here && here->gas && here->gas->memput_lsync);
+  return here->gas->memput_lsync(here->gas, to, from, size, rsync);
+}
+
+int
+hpx_gas_memput_rsync(hpx_addr_t to, const void *from, size_t size) {
+  dbg_assert(here && here->gas && here->gas->memput_rsync);
+  return here->gas->memput_rsync(here->gas, to, from, size);
+}
+
+int
+hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
 {
   dbg_assert(here && here->gas && here->gas->memcpy);
   return (*here->gas->memcpy)(here->gas, to, from, size, sync);

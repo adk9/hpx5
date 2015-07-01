@@ -166,5 +166,5 @@ static int _memput_rsync_handler(int src, uint64_t command) {
   hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
-LIBHPX_ACTION(HPX_DEFAULT, 0, memput_rsync, _memput_rsync_handler,
-              HPX_INT, HPX_UINT64);
+static LIBHPX_ACTION(HPX_DEFAULT, 0, memput_rsync, _memput_rsync_handler,
+                     HPX_INT, HPX_UINT64);
