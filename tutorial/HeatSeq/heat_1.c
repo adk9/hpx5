@@ -45,7 +45,7 @@ typedef struct {
   hpx_addr_t dTmax;
 } InitArgs;
 
-#define BLOCKSIZE sizeof(double)
+#define BLOCKSIZE (N+2)*(N+2)*sizeof(double)
 
 static hpx_action_t _main          = 0;
 static hpx_action_t _initGlobals   = 0;
@@ -317,10 +317,10 @@ static int _initGrid_action(void *args, size_t size) {
 
 static int _main_action(int *input, size_t size)
 {
-  grid = hpx_gas_calloc_cyclic(HPX_LOCALITIES, (N+2)*(N+2)*sizeof(double), 0);
-  new_grid = hpx_gas_calloc_cyclic(HPX_LOCALITIES, (N+2)*(N+2)*sizeof(double), 0);
+  grid = hpx_gas_calloc_cyclic(HPX_LOCALITIES, (N+2)*(N+2)*sizeof(double), (N+2)*(N+2)*sizeof(double));
+  new_grid = hpx_gas_calloc_cyclic(HPX_LOCALITIES, (N+2)*(N+2)*sizeof(double), (N+2)*(N+2)*sizeof(double));
 
-  hpx_addr_t domain = hpx_gas_alloc_cyclic(HPX_LOCALITIES, sizeof(Domain), 0);
+  hpx_addr_t domain = hpx_gas_alloc_cyclic(HPX_LOCALITIES, sizeof(Domain), sizeof(Domain));
   hpx_addr_t done = hpx_lco_and_new(HPX_LOCALITIES);
   hpx_addr_t complete = hpx_lco_and_new(HPX_LOCALITIES);
 
