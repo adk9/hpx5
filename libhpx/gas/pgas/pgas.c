@@ -246,6 +246,11 @@ _pgas_parcel_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
   return HPX_SUCCESS;
 }
 
+static int _lco_rsync_handler(int src, uint64_t command) {
+  return network_command(here->network, src, lco_set, command);
+}
+static COMMAND_DEF(_lco_rsync, _lco_rsync_handler);
+
 static int
 _pgas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
              hpx_addr_t lsync, hpx_addr_t rsync) {
@@ -263,11 +268,94 @@ _pgas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
   }
   else if (rsync) {
     return network_pwc(here->network, to, from, n, lop, lsync,
-                       memput_rsync, rsync);
+                       _lco_rsync, rsync);
   }
   else {
     return network_put(here->network, to, from, n, lop, lsync);
   }
+}
+
+typedef struct {
+  hpx_parcel_t *p;
+  hpx_addr_t to;
+  const void *from;
+  size_t n;
+  hpx_addr_t rsync;
+} _pgas_memput_lsync_continuation_env_t;
+
+static int
+_pgas_memput_lsync_continuation(void *env) {
+  _pgas_memput_lsync_continuation_env_t *e = env;
+  if (e->rsync) {
+    return network_pwc(here->network, e->to, e->from, e->n, resume_parcel,
+                       (uintptr_t)e->p, _lco_rsync, e->rsync);
+  }
+  else {
+    return network_put(here->network, e->to, e->from, e->n, resume_parcel,
+                       (uintptr_t)e->p);
+  }
+}
+
+static int
+_pgas_memput_lsync(void *gas, hpx_addr_t to, const void *from, size_t n,
+                   hpx_addr_t rsync) {
+  if (!n) {
+    return HPX_SUCCESS;
+  }
+
+  if (gpa_to_rank(to) == here->rank) {
+    void *lto = pgas_gpa_to_lva(to);
+    memcpy(lto, from, n);
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    return HPX_SUCCESS;
+  }
+
+  _pgas_memput_lsync_continuation_env_t env = {
+    .p = scheduler_current_parcel(),
+    .to = to,
+    .from = from,
+    .n = n,
+    .rsync = rsync
+  };
+
+  return scheduler_suspend(_pgas_memput_lsync_continuation, &env);
+}
+
+
+typedef struct {
+  hpx_parcel_t *p;
+  hpx_addr_t to;
+  const void *from;
+  size_t n;
+} _pgas_memput_rsync_continuation_env_t;
+
+static int
+_pgas_memput_rsync_continuation(void *env) {
+  _pgas_memput_rsync_continuation_env_t *e = env;
+  return network_pwc(here->network, e->to, e->from, e->n, 0, 0,
+                     resume_parcel_remote, (uintptr_t)e->p);
+}
+
+static int
+_pgas_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t n) {
+  if (!n) {
+    return HPX_SUCCESS;
+  }
+
+  if (gpa_to_rank(to) == here->rank) {
+    void *lto = pgas_gpa_to_lva(to);
+    memcpy(lto, from, n);
+    return HPX_SUCCESS;
+  }
+
+  _pgas_memput_rsync_continuation_env_t env = {
+    .p = scheduler_current_parcel(),
+    .to = to,
+    .from = from,
+    .n = n
+  };
+
+  return scheduler_suspend(_pgas_memput_rsync_continuation, &env);
 }
 
 static int
@@ -362,8 +450,8 @@ static gas_t _pgas_vtable = {
   .memget         = _pgas_memget,
   .memget_sync    = _pgas_memget_sync,
   .memput         = _pgas_memput,
-  .memput_lsync   = NULL,
-  .memput_rsync   = NULL,
+  .memput_lsync   = _pgas_memput_lsync,
+  .memput_rsync   = _pgas_memput_rsync,
   .memcpy         = _pgas_parcel_memcpy,
   .owner_of       = _pgas_owner_of
 };
