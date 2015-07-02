@@ -69,10 +69,10 @@ AC_ARG_ENABLE([parallel-config],
                   [Enable parallel configuration of contribs @<:@default=no@:>@])],
   [trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM], [enable_parallel_config=no])
 
-  
+
 # Initialize contribs
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
-HPX_CONTRIB_LIBFFI([contrib/libffi], [hpx_])
+HPX_CONTRIB_LIBFFI([contrib/libffi])
 HPX_CONTRIB_VALGRIND([contrib/valgrind], [hpx_])
 HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [hpx_])
 
@@ -283,8 +283,8 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # -----------------------------------------------------------------------------
 # Finalize flags
 # -----------------------------------------------------------------------------
-hpx_extra_cppflags="$hpx_pe_env_cppflags $hpx_jemalloc_cppflags $HPX_PHOTON_CPPFLAGS $HPX_LIBFFI_CPPFLAGS $HPX_HWLOC_CPPFLAGS $hpx_valgrind_cppflags $hpx_uthash_cppflags"
-hpx_extra_cflags="$hpx_pe_env_cflags $HPX_LIBFFI_CFLAGS $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS $hpx_valgrind_cflags $hpx_uthash_cflags"
+hpx_extra_cppflags="$hpx_pe_env_cppflags $hpx_jemalloc_cppflags $HPX_PHOTON_CPPFLAGS $HPX_HWLOC_CPPFLAGS $hpx_valgrind_cppflags $hpx_uthash_cppflags"
+hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS $hpx_valgrind_cflags $hpx_uthash_cflags"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
 hpx_extra_libs="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la $PTHREAD_LIBS $hpx_pe_env_libs"
 AS_IF([test "x$enable_pedantic" != xno],
@@ -297,7 +297,7 @@ CPPFLAGS="$hpx_extra_cppflags $CPPFLAGS"
 CFLAGS="$hpx_extra_cflags $CFLAGS"
 CCASFLAGS="$hpx_extra_ccasflags $CCASFLAGS"
 HPX_LIBS="$hpx_extra_libs"
-HPX_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la $HPX_HWLOC_DEPS $HPX_PHOTON_DEPS $HPX_JEMALLOC_DEPS $HPX_LIBFFI_DEPS"
+HPX_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la $HPX_HWLOC_DEPS $HPX_PHOTON_DEPS $HPX_JEMALLOC_DEPS"
 HPX_PRIVATE_PKGS=""
 if test "x$enable_photon" != xno; then
   HPX_PRIVATE_PKGS="$HPX_PRIVATE_PKGS photon"
@@ -305,7 +305,11 @@ fi
 
 AC_SUBST(HPX_LIBS)
 AC_SUBST(HPX_DEPS)
+
+# hpx.pc substitutions
+AC_SUBST(HPX_PUBLIC_LIBS)
 AC_SUBST(HPX_PRIVATE_PKGS)
+AC_SUBST(HPX_REQUIRES_PKGS)
 
 # -----------------------------------------------------------------------------
 # Use autoconf to configure all of the Makefiles that need to be processed.
