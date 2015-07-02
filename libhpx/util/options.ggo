@@ -29,7 +29,7 @@ enum optional
 
 option "hpx-transport" - "type of transport to use"
 typestr="type"
-values="default","mpi","portals","photon"
+values="default","mpi","photon"
 enum optional
 
 option "hpx-network" - "type of network to use"
