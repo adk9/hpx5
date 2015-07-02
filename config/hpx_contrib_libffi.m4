@@ -22,7 +22,7 @@ AC_DEFUN([HPX_CONTRIB_LIBFFI],
   AS_CASE($with_libffi,
    # contrib means just go ahead and build the contrib version
    [contrib],
-    [ACX_CONFIGURE_DIR([$1], [$1], [])
+    [ACX_CONFIGURE_DIR([$1], [$1], [" "])
      CFLAGS="$CFLAGS -I\$(top_builddir)/$1/include"
      LIBS="$LIBS \$(top_builddir)/$1/libffi.la"
      HPX_DEPS="$HPX_DEPS \$(top_builddir)/$1/libffi.la"
@@ -55,9 +55,10 @@ AC_DEFUN([HPX_CONTRIB_LIBFFI],
        [CFLAGS="$CFLAGS $LIBFFI_CFLAGS"
         LIBS="$LIBS $LIBFFI_LIBS"
         HPX_REQUIRES_PKGS="$HPX_REQUIRES_PKGS libffi"
-        have_libffi=yes])])
+        have_libffi=yes],
+       [have_libffi=no])])
      AS_IF([test "x$have_libffi" != xyes],
-      [ACX_CONFIGURE_DIR([$1], [$1], [])
+      [ACX_CONFIGURE_DIR([$1], [$1], [" "])
        CFLAGS="$CFLAGS -I\$(top_builddir)/$1/include"
        LIBS="$LIBS \$(top_builddir)/$1/libffi.la"
        HPX_DEPS="$HPX_DEPS \$(top_builddir)/$1/libffi.la"
