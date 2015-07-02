@@ -131,7 +131,7 @@ static int _main_action(int *args, size_t size) {
 
   print_header(HEADER, HPX_LOCALITY_ID, full);
 
-  hpx_addr_t src = hpx_gas_alloc_cyclic(THREADS, max_msg_size*sizeof(char), 0);
+  hpx_addr_t src = hpx_gas_alloc_cyclic(THREADS, sizeof(Domain), 0);
   hpx_addr_t complete = hpx_lco_and_new(THREADS);
   hpx_addr_t done = hpx_lco_and_new(THREADS);
   hpx_addr_t collVal = hpx_lco_alltoall_new(THREADS, THREADS*sizeof(double));
