@@ -791,7 +791,7 @@ CFLAGS
 LT_SYS_LIBRARY_PATH
 CPP
 CXXCPP'
-ac_subdirs_all='cityhash-1.1.1 tests'
+ac_subdirs_all='cityhash-1.1.1'
 
 # Initialize some variables set by options.
 ac_init_help=
@@ -2877,7 +2877,7 @@ ac_config_files="$ac_config_files Makefile src/Makefile examples/Makefile"
 
 
 
-subdirs="$subdirs cityhash-1.1.1 tests"
+subdirs="$subdirs cityhash-1.1.1"
 
 
 
