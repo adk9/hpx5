@@ -129,6 +129,7 @@ AC_ARG_ENABLE([libfabric],
 AS_IF([test "x$enable_libfabric" != xno],
  [PHOTON_CONTRIB_LIBFABRIC([src/contrib/libfabric], [photon_])],
  [photon_have_libfabric=no])
+AM_CONDITIONAL(HAVE_LIBFABRIC, test x$photon_have_libfabric == xyes)
 
 PHOTON_WITH_PKG([ugni],[cray-ugni],[Build with UGNI],[no],[UGNI])
 PHOTON_WITH_PKG([pmi],[cray-pmi],[Build with PMI],[no],[PMI])
