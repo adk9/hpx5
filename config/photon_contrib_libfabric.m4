@@ -29,5 +29,6 @@ AC_DEFUN([PHOTON_CONTRIB_LIBFABRIC],
       	AC_SUBST(PHOTON_LIBFABRIC_CPPFLAGS, " -I\$(top_srcdir)/$1/include")
 	AC_SUBST(PHOTON_LIBFABRIC_DEPS, "\$(top_builddir)/$1/src/libfabirc.la")
         AC_SUBST(PHOTON_LIBFABRIC_LIBS, "\$(top_builddir)/$1/src/libfabric.la")
-	enable_external_libfabric=no])]
+	enable_external_libfabric=no
+	photon_have_libfabric=yes])]
   AC_DEFINE([HAVE_LIBFABRIC], [1], [libfabric support enabled]))
