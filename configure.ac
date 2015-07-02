@@ -158,7 +158,6 @@ HPX_WITH_PKG([pmi],[cray-pmi],[build with support for PMI],[no],[PMI])
 AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray PMI extensions]))
 HPX_WITH_PKG([hugetlbfs],[hugetlbfs],[build with hugepages for heap],[no],[HUGETLBFS])
 HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[no],[MPI])
-HPX_WITH_PKG([portals],[portals],[build with Portals networking],[no],[PORTALS])
 
 AC_ARG_ENABLE([photon],
  [AS_HELP_STRING([--enable-photon], [build with Photon networking @<:@default=no@:>@])], [],
