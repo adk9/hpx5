@@ -372,9 +372,6 @@ AS_IF([test "x$with_mpi" != xno],
 AS_IF([test "x$enable_photon" != xno],
   [networks="Photon $networks"],
   [])
-AS_IF([test "x$with_portals" != xno],
-  [networks="Portals $networks"],
-  [])
 
 # ---------------------------------------------------------------------------
 # Output a summary of memory allocator
