@@ -175,7 +175,7 @@ AC_ARG_WITH(tbb, AS_HELP_STRING([--with-tbb=DIR],[location of TBB]),
    have_tbb=yes],
   [])
  
-AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno -o "x$with_portals" != xno],
+AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno],
  [enable_network=yes
   AC_DEFINE([HAVE_NETWORK], [1], [We have a network])
   AC_DEFINE([HAVE_AS_GLOBAL], [1], [We have global allocation])

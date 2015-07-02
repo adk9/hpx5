@@ -48,7 +48,6 @@ static const char* const HPX_GAS_TO_STRING[] = {
 typedef enum {
   HPX_TRANSPORT_DEFAULT = 0, //!< Let HPX choose what transport to use.
   HPX_TRANSPORT_MPI,         //!< Use MPI for network transport.
-  HPX_TRANSPORT_PORTALS,     //!< Use Portals for network transport.
   HPX_TRANSPORT_PHOTON,      //!< Use Photon for network transport.
   HPX_TRANSPORT_MAX
 } hpx_transport_t;
@@ -56,7 +55,6 @@ typedef enum {
 static const char* const HPX_TRANSPORT_TO_STRING[] = {
   "DEFAULT",
   "MPI",
-  "PORTALS",
   "PHOTON",
   "INVALID_ID"
 };
