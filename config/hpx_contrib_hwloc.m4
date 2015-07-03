@@ -47,8 +47,8 @@ AC_DEFUN([HPX_CONTRIB_HWLOC],
 [# allow the user to override the way we try and find hwloc, and if we use it
  # at all
  AC_ARG_WITH(hwloc,
-   [AS_HELP_STRING([--with-hwloc={no,yes,system,contrib,PKG}],
-                   [How we find hwloc @<:@default=no@:>@])],
+   [AS_HELP_STRING([--with-hwloc{=system,contrib,PKG}],
+                   [How we find hwloc (optional) @<:@default=no@:>@])],
    [], [with_hwloc=yes])
 
  AS_CASE($with_hwloc,
