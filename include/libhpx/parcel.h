@@ -80,7 +80,7 @@ struct hpx_parcel {
 };
 
 // Verify an assumption about how big the parcel structure is.
-#if defined(HPX_BITNESS_32)
+#ifndef __LP64__
   #ifdef ENABLE_INSTRUMENTATION
       _HPX_ASSERT(sizeof(hpx_parcel_t) == 64, parcel_size);
   #else
