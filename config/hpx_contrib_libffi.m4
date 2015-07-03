@@ -15,7 +15,7 @@ AC_DEFUN([_HPX_CONFIGURE_LIBFFI],
 [# configure the contributed libffi package
  ACX_CONFIGURE_DIR([$1], [$1], [" "])
  CPPFLAGS="$CPPFLAGS -I\$(top_builddir)/$1/include"
- LIBS="$LIBS \$(top_builddir)/$1/libffi.la"
+ HPX_LIBADD="$HPX_LIBADD \$(top_builddir)/$1/libffi.la"
  HPX_DEPS="$HPX_DEPS \$(top_builddir)/$1/libffi.la"
  HPX_REQUIRES_PKGS="$HPX_REQUIRES_PKGS libffi"
  build_libffi=yes
