@@ -103,7 +103,7 @@ AS_IF([test "x$enable_parallel_config" != xno],
 # -----------------------------------------------------------------------------
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b])
 HPX_CONTRIB_LIBFFI([contrib/libffi])
-HPX_CONTRIB_VALGRIND([contrib/valgrind], [hpx_])
+HPX_CONTRIB_VALGRIND([contrib/valgrind])
 HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [hpx_])
 
 # Check if the assembler supports CFI directives
@@ -313,8 +313,8 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # -----------------------------------------------------------------------------
 # Finalize flags
 # -----------------------------------------------------------------------------
-hpx_extra_cppflags="$hpx_pe_env_cppflags $hpx_jemalloc_cppflags $HPX_PHOTON_CPPFLAGS $HPX_HWLOC_CPPFLAGS $hpx_valgrind_cppflags"
-hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS $hpx_valgrind_cflags"
+hpx_extra_cppflags="$hpx_pe_env_cppflags $hpx_jemalloc_cppflags $HPX_PHOTON_CPPFLAGS $HPX_HWLOC_CPPFLAGS"
+hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
 hpx_extra_libs="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la $PTHREAD_LIBS $hpx_pe_env_libs"
 AS_IF([test "x$enable_pedantic" != xno],
