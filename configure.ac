@@ -104,7 +104,7 @@ AS_IF([test "x$enable_parallel_config" != xno],
 HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b])
 HPX_CONTRIB_LIBFFI([contrib/libffi])
 HPX_CONTRIB_VALGRIND([contrib/valgrind])
-HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [hpx_])
+HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0])
 
 # Check if the assembler supports CFI directives
 AX_CFI_DIRECTIVES
@@ -288,7 +288,6 @@ AS_IF([test "x$ac_cv_sizeof_size_t" == x4],
   [AC_DEFINE([HPX_BITNESS_32], [1], [Detected 32-bit platform.])],
   [AC_DEFINE([HPX_BITNESS_64], [1], [Detected 64-bit platform.])])
 
-
 # -----------------------------------------------------------------------------
 # Set automake conditionals for use in Makefile.am settings.
 # -----------------------------------------------------------------------------
@@ -313,7 +312,7 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # -----------------------------------------------------------------------------
 # Finalize flags
 # -----------------------------------------------------------------------------
-hpx_extra_cppflags="$hpx_pe_env_cppflags $hpx_jemalloc_cppflags $HPX_PHOTON_CPPFLAGS $HPX_HWLOC_CPPFLAGS"
+hpx_extra_cppflags="$hpx_pe_env_cppflags $hpx_jemalloc_cppflags $HPX_PHOTON_CPPFLAGS"
 hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
 hpx_extra_libs="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la $PTHREAD_LIBS $hpx_pe_env_libs"
@@ -327,13 +326,16 @@ CPPFLAGS="$hpx_extra_cppflags $CPPFLAGS"
 CFLAGS="$hpx_extra_cflags $CFLAGS"
 CCASFLAGS="$hpx_extra_ccasflags $CCASFLAGS"
 HPX_LIBS="$hpx_extra_libs"
-HPX_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la $HPX_HWLOC_DEPS $HPX_PHOTON_DEPS $HPX_JEMALLOC_DEPS"
+HPX_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la $HPX_DEPS $HPX_PHOTON_DEPS $HPX_JEMALLOC_DEPS"
 HPX_PRIVATE_PKGS=""
 if test "x$enable_photon" != xno; then
   HPX_PRIVATE_PKGS="$HPX_PRIVATE_PKGS photon"
 fi
 
+#AC_MSG_ERROR($HPX_LIBADD)
+ 
 AC_SUBST(HPX_LIBS)
+AC_SUBST(HPX_LIBADD)
 AC_SUBST(HPX_DEPS)
 
 # hpx.pc substitutions
