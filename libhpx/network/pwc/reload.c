@@ -78,7 +78,7 @@ _buffer_init(buffer_t *b, size_t n, pwc_xport_t *xport) {
 }
 
 static int _recv_parcel_handler(int src, command_t command) {
-#ifdef HPX_BITNESS_64
+#ifdef __LP64__
   hpx_parcel_t *p = (hpx_parcel_t*)command_get_arg(command);
 #else
   arg_t arg = command_get_arg(command);
