@@ -43,10 +43,12 @@ AC_DEFUN([_HPX_LIB_LIBFFI],
 AC_DEFUN([HPX_CONTRIB_LIBFFI],
 [# allow the user to override the way we try and find libffi
  AC_ARG_WITH(libffi,
-   [AS_HELP_STRING([--with-libffi={auto,system,contrib,PKG}],
+   [AS_HELP_STRING([--with-libffi{=auto,system,contrib,PKG}],
                    [How we find libffi @<:@default=auto@:>@])],
    [], [with_libffi=auto])
 
+ AS_IF([test "x$with_libffi" == xyes], [with_libffi=auto])
+   
  AS_CASE($with_libffi,
 
    # contrib means just go ahead and configure and build the contributed version
