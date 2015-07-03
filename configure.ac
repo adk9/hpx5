@@ -12,7 +12,7 @@ AC_INIT([hpx-5], [1.1.0], [hpx@indiana.edu])
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Define the version we're building
 #
 # Currently, we use the `git describe` functionality to embed the git version,
@@ -23,55 +23,85 @@ AC_SUBST(CLEANFILES)
 # there will be a time in the future where the HPX interface "version" is stable
 # and the libhpx library version continues to evolve. At that point it won't
 # make sense anymore to use the git description as the version.
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 AS_IF([test -e "$ac_confdir/.git" ],
-  [git_version=$(git --git-dir=$ac_confdir/.git describe --abbrev=7 --dirty --always --tags)
-   AC_DEFINE_UNQUOTED([HPX_VERSION], ["$git_version"], [The HPX interface version])
-   AC_DEFINE_UNQUOTED([LIBHPX_VERSION], ["$git_version"], [The libhpx library version])],
-  [AC_DEFINE([HPX_VERSION], [PACKAGE_VERSION], [The HPX interface version])
-   AC_DEFINE([LIBHPX_VERSION], [PACKAGE_VERSION], [The libhpx library version])])
+ [git_version=$(git --git-dir=$ac_confdir/.git describe --abbrev=7 --dirty --always --tags)
+  AC_DEFINE_UNQUOTED([HPX_VERSION], ["$git_version"], [The HPX interface version])
+  AC_DEFINE_UNQUOTED([LIBHPX_VERSION], ["$git_version"], [The libhpx library version])],
+ [AC_DEFINE([HPX_VERSION], [PACKAGE_VERSION], [The HPX interface version])
+  AC_DEFINE([LIBHPX_VERSION], [PACKAGE_VERSION], [The libhpx library version])])
 
-# ---------------------------------------------------------------------------
-# Detect the programming environment.
-# ---------------------------------------------------------------------------
 AC_LANG([C])
 
+# -----------------------------------------------------------------------------
+# Standard preliminary autotools stuff.
+# -----------------------------------------------------------------------------
 AC_CONFIG_SRCDIR([include/config.h.in])
 AC_CONFIG_HEADERS([include/config.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
+
+# -----------------------------------------------------------------------------
+# Detect the system and programming environment.
+# -----------------------------------------------------------------------------
 AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 AX_COMPILER_VENDOR
 HPX_PE_ENV
 
-# Checks for programs.
+# -----------------------------------------------------------------------------
+# Checks for programs that we depend on. Our use of CXX is conditional, however
+# we have autotools errors if we don't include the AC_PROG_CXX
+# unconditionally. This is annoying, but doesn't take very long so we just
+# leave it in. Where we need C++, we need C++11, so we use
+# AX_CXX_COMPILE_STDCXX_11 conditionally.
+#
+# @todo: Figure out if it is possible to avoid the AC_PROG_CXX check on the
+#        common path.
+# -----------------------------------------------------------------------------
 AC_PROG_CC_C99
 AC_PROG_CXX
 AC_PROG_INSTALL
 AM_PROG_AS
 
+# -----------------------------------------------------------------------------
 # Initialize automake and libtool
-AM_INIT_AUTOMAKE([1.11 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror parallel-tests color-tests])
+# -----------------------------------------------------------------------------
+AM_INIT_AUTOMAKE([1.11 dist-bzip2 subdir-objects foreign tar-ustar -Wall
+                  -Werror parallel-tests color-tests])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.4.6])
-LT_INIT()
-#LT_INIT([disable-shared]) # we don't support dynamic linking correctly 
+LT_INIT
 
-# Initialize pthreads
+# -----------------------------------------------------------------------------
+# Check for pthreads. This will set CFLAGS and LIBS as necessary in a
+# platform-specific way.
+# -----------------------------------------------------------------------------
 AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
 
-# Check for parallel configuration
+# -----------------------------------------------------------------------------
+# Allow parallel configuration. We do this early so that it shows up before the
+# rest of the 'enable' options. 
+# -----------------------------------------------------------------------------
 AC_ARG_ENABLE([parallel-config],
-  [AS_HELP_STRING([--enable-parallel-config],
-                  [Enable parallel configuration of contribs @<:@default=no@:>@])],
-  [trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM], [enable_parallel_config=no])
+ [AS_HELP_STRING([--enable-parallel-config],
+                 [Enable parallel configuration @<:@default=no@:>@])],
+ [], [enable_parallel_config=no])
 
+# -----------------------------------------------------------------------------
+# If we are doing parallel config we want to make sure that ^c works and kills
+# any parallel configs that are running.
+# -----------------------------------------------------------------------------
+AS_IF([test "x$enable_parallel_config" != xno],
+ [trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM])
 
-# Initialize contribs
-HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b], [hpx_])
+# -----------------------------------------------------------------------------
+# Initialize the packages that we provide in the contrib directory. These are
+# mostly packages that are required for HPX.
+# -----------------------------------------------------------------------------
+HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b])
 HPX_CONTRIB_LIBFFI([contrib/libffi])
 HPX_CONTRIB_VALGRIND([contrib/valgrind], [hpx_])
 HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0], [hpx_])
@@ -283,8 +313,8 @@ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
 # -----------------------------------------------------------------------------
 # Finalize flags
 # -----------------------------------------------------------------------------
-hpx_extra_cppflags="$hpx_pe_env_cppflags $hpx_jemalloc_cppflags $HPX_PHOTON_CPPFLAGS $HPX_HWLOC_CPPFLAGS $hpx_valgrind_cppflags $hpx_uthash_cppflags"
-hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS $hpx_valgrind_cflags $hpx_uthash_cflags"
+hpx_extra_cppflags="$hpx_pe_env_cppflags $hpx_jemalloc_cppflags $HPX_PHOTON_CPPFLAGS $HPX_HWLOC_CPPFLAGS $hpx_valgrind_cppflags"
+hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS $hpx_valgrind_cflags"
 hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
 hpx_extra_libs="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la $PTHREAD_LIBS $hpx_pe_env_libs"
 AS_IF([test "x$enable_pedantic" != xno],
