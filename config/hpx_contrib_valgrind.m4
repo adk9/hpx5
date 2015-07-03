@@ -1,4 +1,5 @@
 # -*- autoconf -*---------------------------------------------------------------
-# HPX_CONTRIB_VALGRIND([path],[prefix])
+# HPX_CONTRIB_VALGRIND([path])
 # ------------------------------------------------------------------------------
-AC_DEFUN([HPX_CONTRIB_VALGRIND], [$2valgrind_cppflags="-I\$(top_srcdir)/$1/include"])
+AC_DEFUN([HPX_CONTRIB_VALGRIND],
+ [CPPFLAGS="$CPPFLAGS -I\$(top_srcdir)/$1/include"])
