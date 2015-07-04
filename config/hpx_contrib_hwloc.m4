@@ -49,7 +49,7 @@ AC_DEFUN([HPX_CONTRIB_HWLOC],
  AC_ARG_WITH(hwloc,
    [AS_HELP_STRING([--with-hwloc{=system,contrib,PKG}],
                    [How we find hwloc (optional) @<:@default=no@:>@])],
-   [], [with_hwloc=yes])
+   [], [with_hwloc=no])
 
  AS_CASE($with_hwloc,
 
