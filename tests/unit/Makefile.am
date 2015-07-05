@@ -2,13 +2,9 @@ noinst_HEADERS   = tests.h
 
 noinst_PROGRAMS  = $(TESTS)
 
-AM_CPPFLAGS      = -I$(top_srcdir)/include 
-AM_LDFLAGS       = $(HPX_JEMALLOC_RPATH) -no-install
-
-# Turn off some warnings for the tests
-AM_CFLAGS        = -Wno-unused
-
-LIBS = $(HPX_LIBS)
+AM_CPPFLAGS      = -I$(top_srcdir)/include -Wno-unused
+AM_LDFLAGS       = $(LIBHPX_LDFLAGS) -no-install
+LDADD            = $(LIBHPX_LDADD)
 
 TESTS = bcast                   \
         call_when               \
@@ -75,35 +71,35 @@ thread_create_SOURCES               =  thread_create.c
 thread_gettlsid_SOURCES             =  thread_gettlsid.c
 thread_yield_SOURCES                =  thread_yield.c
 
-bcast_DEPENDENCIES                  = $(HPX_DEPS)
-call_when_DEPENDENCIES              = $(HPX_DEPS)
-gas_alloc_DEPENDENCIES              = $(HPX_DEPS)
-gas_global_alloc_DEPENDENCIES       = $(HPX_DEPS)
-gas_memget_DEPENDENCIES             = $(HPX_DEPS)
-gas_memput_DEPENDENCIES             = $(HPX_DEPS)
-lco_and_DEPENDENCIES                = $(HPX_DEPS)
-lco_array_DEPENDENCIES              = $(HPX_DEPS)
-lco_collectives_DEPENDENCIES        = $(HPX_DEPS)
-lco_futures_DEPENDENCIES            = $(HPX_DEPS)
-lco_gencount_DEPENDENCIES           = $(HPX_DEPS)
-lco_sema_DEPENDENCIES               = $(HPX_DEPS)
-lco_setget_DEPENDENCIES             = $(HPX_DEPS)
-lco_user_DEPENDENCIES               = $(HPX_DEPS)
-lco_wait_DEPENDENCIES               = $(HPX_DEPS)
-libhpx_boot_DEPENDENCIES            = $(HPX_DEPS)
-parcel_continuation_DEPENDENCIES    = $(HPX_DEPS)
-parcel_create_DEPENDENCIES          = $(HPX_DEPS)
-parcel_send_DEPENDENCIES            = $(HPX_DEPS)
-parcel_send_rendezvous_DEPENDENCIES = $(HPX_DEPS)
-parcel_send_through_DEPENDENCIES    = $(HPX_DEPS)
-process_DEPENDENCIES                = $(HPX_DEPS)
-runtime_DEPENDENCIES                = $(HPX_DEPS)
-task_DEPENDENCIES                   = $(HPX_DEPS)
-thread_cont_action_DEPENDENCIES     = $(HPX_DEPS)
-thread_continue_DEPENDENCIES        = $(HPX_DEPS)
-thread_create_DEPENDENCIES          = $(HPX_DEPS)
-thread_gettlsid_DEPENDENCIES        = $(HPX_DEPS)
-thread_yield_DEPENDENCIES           = $(HPX_DEPS)
+bcast_DEPENDENCIES                  = $(LIBHPX_DEPS)
+call_when_DEPENDENCIES              = $(LIBHPX_DEPS)
+gas_alloc_DEPENDENCIES              = $(LIBHPX_DEPS)
+gas_global_alloc_DEPENDENCIES       = $(LIBHPX_DEPS)
+gas_memget_DEPENDENCIES             = $(LIBHPX_DEPS)
+gas_memput_DEPENDENCIES             = $(LIBHPX_DEPS)
+lco_and_DEPENDENCIES                = $(LIBHPX_DEPS)
+lco_array_DEPENDENCIES              = $(LIBHPX_DEPS)
+lco_collectives_DEPENDENCIES        = $(LIBHPX_DEPS)
+lco_futures_DEPENDENCIES            = $(LIBHPX_DEPS)
+lco_gencount_DEPENDENCIES           = $(LIBHPX_DEPS)
+lco_sema_DEPENDENCIES               = $(LIBHPX_DEPS)
+lco_setget_DEPENDENCIES             = $(LIBHPX_DEPS)
+lco_user_DEPENDENCIES               = $(LIBHPX_DEPS)
+lco_wait_DEPENDENCIES               = $(LIBHPX_DEPS)
+libhpx_boot_DEPENDENCIES            = $(LIBHPX_DEPS)
+parcel_continuation_DEPENDENCIES    = $(LIBHPX_DEPS)
+parcel_create_DEPENDENCIES          = $(LIBHPX_DEPS)
+parcel_send_DEPENDENCIES            = $(LIBHPX_DEPS)
+parcel_send_rendezvous_DEPENDENCIES = $(LIBHPX_DEPS)
+parcel_send_through_DEPENDENCIES    = $(LIBHPX_DEPS)
+process_DEPENDENCIES                = $(LIBHPX_DEPS)
+runtime_DEPENDENCIES                = $(LIBHPX_DEPS)
+task_DEPENDENCIES                   = $(LIBHPX_DEPS)
+thread_cont_action_DEPENDENCIES     = $(LIBHPX_DEPS)
+thread_continue_DEPENDENCIES        = $(LIBHPX_DEPS)
+thread_create_DEPENDENCIES          = $(LIBHPX_DEPS)
+thread_gettlsid_DEPENDENCIES        = $(LIBHPX_DEPS)
+thread_yield_DEPENDENCIES           = $(LIBHPX_DEPS)
 
 
 if ENABLE_LENGTHY_TESTS

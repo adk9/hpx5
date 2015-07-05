@@ -1,15 +1,20 @@
 # The PGAS library
 noinst_LTLIBRARIES  = libpgas.la
 
-libpgas_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBCUCKOO_CPPFLAGS)
+libpgas_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
+libpgas_la_CFLAGS   = $(LIBHPX_CFLAGS)
 libpgas_la_SOURCES  = actions.c \
                       pgas.c \
                       heap.c
 
-if BUILD_JEMALLOC
+if HAVE_JEMALLOC
 libpgas_la_SOURCES += jemalloc_global.c jemalloc_cyclic.c
 endif
 
-if BUILD_TBBMALLOC
-libpgas_la_SOURCES += tbbmalloc_global.cc tbbmalloc_cyclic.cc
+if HAVE_TBBMALLOC
+noinst_LTLIBRARIES		   += libtbbmalloc.la
+libtbbmalloc_la_CPPFLAGS	= -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
+libtbbmalloc_la_CXXFLAGS 	= $(LIBHPX_CXXFLAGS)
+libtbbmalloc_la_SOURCES  	= tbbmalloc_cyclic.cc tbbmalloc_global.cc
+libpgas_la_LIBADD           = libtbbmalloc.la
 endif
