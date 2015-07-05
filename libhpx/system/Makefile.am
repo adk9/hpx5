@@ -2,7 +2,8 @@
 noinst_LTLIBRARIES	   = libsystem.la
 
 # libsystem files and flags
-libsystem_la_CPPFLAGS  = -I$(top_srcdir)/include
+libsystem_la_CPPFLAGS  = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
+libsystem_la_CFLAGS    = $(LIBHPX_CFLAGS)
 libsystem_la_SOURCES   = 
 libsystem_la_LIBADD    =
 

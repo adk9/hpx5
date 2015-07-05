@@ -7,8 +7,8 @@ DIST_SUBDIRS += libffi
 endif
 
 if BUILD_HWLOC
-SUBDIRS      += hwloc-1.10.0
-DIST_SUBDIRS += hwloc-1.10.0
+SUBDIRS      += hwloc-1.11.0
+DIST_SUBDIRS += hwloc-1.11.0
 endif
 
 if BUILD_PHOTON

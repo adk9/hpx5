@@ -9,8 +9,8 @@
 #   $hpx_pe_env_cppflags
 #   $hpx_pe_env_ccasflags
 # ------------------------------------------------------------------------------
-AC_DEFUN([HPX_PE_ENV],
-  [AS_IF([test -z "$PE_ENV"],
+AC_DEFUN([HPX_PE_ENV], [
+  AS_IF([test -z "$PE_ENV"],
     # Determine programming environment based on the compiler.
     [AS_CASE([$ax_cv_c_compiler_vendor],
         [cray*], [AC_SUBST([PE_ENV],["CRAY"])],
@@ -25,6 +25,8 @@ AC_DEFUN([HPX_PE_ENV],
     [darwin*], [PE_ENV_LIBS=""],
                [PE_ENV_LIBS="-lrt"])
 
+   hpx_pe_env_libs="$PE_ENV_LIBS"
+   
    AC_MSG_CHECKING([for programming environment])
    AS_CASE([$PE_ENV],
         [CRAY*], [AS_IF([test -z "$CC"], [AC_SUBST([CC],["cc"])])
@@ -48,17 +50,14 @@ AC_DEFUN([HPX_PE_ENV],
 #                 hpx_pe_env_cflags_pedantic="-pedantic"
                   hpx_pe_env_cflags_pedantic=""
                   hpx_pe_env_cflags_wall="-Wall"
-                  hpx_pe_env_libs="$PE_ENV_LIBS"
                   hpx_pe_env="GNU"],
        [CLANG*], [AS_IF([test -z "$CC"], [AC_SUBST([CC],["clang"])])
                   hpx_pe_env_cflags="-Wno-gnu-zero-variadic-macro-arguments"
                   hpx_pe_env_cflags_pedantic="-pedantic"
                   hpx_pe_env_cflags_wall="-Wall"
-                  hpx_pe_env_libs="$PE_ENV_LIBS"
                   hpx_pe_env="CLANG"],
                  [hpx_pe_env_cflags_pedantic="-pedantic"
                   hpx_pe_env_cflags_wall="-Wall"
-                  hpx_pe_env_libs="$PE_ENV_LIBS"
                   hpx_pe_env="GNU"])
    AC_MSG_RESULT([$hpx_pe_env])
-   AC_SUBST([PE_ENV_LIBS])])
+])

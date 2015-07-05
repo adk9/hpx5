@@ -12,45 +12,25 @@ AC_INIT([hpx-5], [1.1.0], [hpx@indiana.edu])
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
 
-# -----------------------------------------------------------------------------
-# Define the version we're building
-#
-# Currently, we use the `git describe` functionality to embed the git version,
-# where it is available. If someone has a release tarball without the .git
-# directory, we use the package version.
-#
-# We define HPX_VERSION and LIBHPX_VERSION independently, as we expect that
-# there will be a time in the future where the HPX interface "version" is stable
-# and the libhpx library version continues to evolve. At that point it won't
-# make sense anymore to use the git description as the version.
-# -----------------------------------------------------------------------------
-AS_IF([test -e "$ac_confdir/.git" ],
- [git_version=$(git --git-dir=$ac_confdir/.git describe --abbrev=7 --dirty --always --tags)
-  AC_DEFINE_UNQUOTED([HPX_VERSION], ["$git_version"], [The HPX interface version])
-  AC_DEFINE_UNQUOTED([LIBHPX_VERSION], ["$git_version"], [The libhpx library version])],
- [AC_DEFINE([HPX_VERSION], [PACKAGE_VERSION], [The HPX interface version])
-  AC_DEFINE([LIBHPX_VERSION], [PACKAGE_VERSION], [The libhpx library version])])
+# Figure out what the version of HPX is.
+HPX_CONFIG_VERSION
 
 AC_LANG([C])
 
-# -----------------------------------------------------------------------------
 # Standard preliminary autotools stuff.
-# -----------------------------------------------------------------------------
 AC_CONFIG_SRCDIR([include/config.h.in])
 AC_CONFIG_HEADERS([include/config.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 
-# -----------------------------------------------------------------------------
 # Detect the system and programming environment.
-# -----------------------------------------------------------------------------
 AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
+HPX_CONFIG_HOST
 AC_CANONICAL_TARGET
 AX_COMPILER_VENDOR
 HPX_PE_ENV
 
-# -----------------------------------------------------------------------------
 # Checks for programs that we depend on. Our use of CXX is conditional, however
 # we have autotools errors if we don't include the AC_PROG_CXX
 # unconditionally. This is annoying, but doesn't take very long so we just
@@ -59,15 +39,14 @@ HPX_PE_ENV
 #
 # @todo: Figure out if it is possible to avoid the AC_PROG_CXX check on the
 #        common path.
-# -----------------------------------------------------------------------------
 AC_PROG_CC_C99
 AC_PROG_CXX
 AC_PROG_INSTALL
 AM_PROG_AS
+AX_CFI_DIRECTIVES
 
-# -----------------------------------------------------------------------------
+
 # Initialize automake and libtool
-# -----------------------------------------------------------------------------
 AM_INIT_AUTOMAKE([1.11 dist-bzip2 subdir-objects foreign tar-ustar -Wall
                   -Werror parallel-tests color-tests])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
@@ -75,317 +54,133 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.4.6])
 LT_INIT
 
-# -----------------------------------------------------------------------------
 # Check for pthreads. This will set CFLAGS and LIBS as necessary in a
 # platform-specific way.
-# -----------------------------------------------------------------------------
-AX_PTHREAD([], [AC_MSG_ERROR([Could not find pthread implementation])])
+AX_PTHREAD(
+  [LIBHPX_CFLAGS="$LIBHPX_CFLAGS $PTHREAD_CFLAGS"
+   LIBHPX_LIBS="$LIBHPX_LIBS $PTHREAD_LIBS"
+   HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS $PTHREAD_LIBS"],
+  [AC_MSG_ERROR([Could not find pthread implementation])])
 
-# -----------------------------------------------------------------------------
 # Allow parallel configuration. We do this early so that it shows up before the
 # rest of the 'enable' options. 
-# -----------------------------------------------------------------------------
 AC_ARG_ENABLE([parallel-config],
  [AS_HELP_STRING([--enable-parallel-config],
                  [Enable parallel configuration @<:@default=no@:>@])],
  [], [enable_parallel_config=no])
-
-# -----------------------------------------------------------------------------
+ 
 # If we are doing parallel config we want to make sure that ^c works and kills
 # any parallel configs that are running.
-# -----------------------------------------------------------------------------
 AS_IF([test "x$enable_parallel_config" != xno],
  [trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM])
-
-# -----------------------------------------------------------------------------
-# Initialize the packages that we provide in the contrib directory. These are
-# mostly packages that are required for HPX.
-# -----------------------------------------------------------------------------
-HPX_CONTRIB_UTHASH([contrib/uthash-fe01a6ad1b])
-HPX_CONTRIB_LIBFFI([contrib/libffi])
-HPX_CONTRIB_VALGRIND([contrib/valgrind])
-HPX_CONTRIB_HWLOC([contrib/hwloc-1.10.0])
-
-# Check if the assembler supports CFI directives
-AX_CFI_DIRECTIVES
-
-# NB: Don't check for anything that we're not actually prepared to deal with
-#     in our source code---this just clutters the configure and gives users a
-#     false sense of security.
-
-# ---------------------------------------------------------------------------
-# --enable options
-# ---------------------------------------------------------------------------
-AC_ARG_ENABLE([pedantic],
-  [AS_HELP_STRING([--enable-pedantic],
-                  [Enable pedantic C99 @<:@default=yes@:>@])],
-  [], [enable_pedantic=yes])
-
-AC_ARG_ENABLE([wall],
-  [AS_HELP_STRING([--enable-wall],
-                  [Enable all warnings @<:@default=yes@:>@])],
-  [], [enable_wall=yes])
-
-AC_ARG_ENABLE([tutorial],
-  [AS_HELP_STRING([--enable-tutorial],
-                  [Enable building of code samples from the HPX tutorial @<:@default=no@:>@])],
-  [], [enable_tutorial=no])
-
-AC_ARG_ENABLE([jemalloc],
-  [AS_HELP_STRING([--enable-jemalloc],
-                  [Enable using of jemalloc as the default allocator @<:@default=no@:>@])],
-  [], [enable_jemalloc=no])
-
-AC_ARG_ENABLE([tbbmalloc],
-  [AS_HELP_STRING([--enable-tbbmalloc],
-                  [Enable TBBMalloc to manage gas allocation]) @<:@default=no@:>@],
-  [], [enable_tbbmalloc=no])
-  
-AC_ARG_ENABLE([debug],
-  [AS_HELP_STRING([--enable-debug],
-                  [Enable debug code @<:@default=no@:>@])],
-  [], [enable_debug=no])
-AS_IF([test "x$enable_debug" != xno],
-  [AC_DEFINE([ENABLE_DEBUG], [1], [Enable debugging stuff])])
-
-AC_ARG_ENABLE([instrumentation],
-  [AS_HELP_STRING([--enable-instrumentation],
-                  [Enable instrumentation code @<:@default=no@:>@])],
-  [], [enable_instrumentation=no])
-AS_IF([test "x$enable_instrumentation" != xno],
-  [AC_DEFINE([ENABLE_INSTRUMENTATION], [1], [Enable instrumentation for performance])])
-AM_CONDITIONAL([ENABLE_INSTRUMENTATION], [test "x$enable_instrumentation" != xno])
-
-AC_ARG_ENABLE([logging],
-  [AS_HELP_STRING([--enable-logging],
-                  [Enable logging code @<:@default=no@:>@])],
-  [], [enable_logging=no])
-AS_IF([test "x$enable_logging" != xno],
-  [AC_DEFINE([ENABLE_LOGGING], [1], [Enable loggging stuff])])
-
-AC_ARG_ENABLE([profiling],
-  [AS_HELP_STRING([--enable-profiling],
-                  [Enable profiling support @<:@default=no@:>@])],
-  [], [enable_profiling=no])
-AS_IF([test "x$enable_profiling" != xno],
-  [AC_DEFINE([ENABLE_PROFILING], [1], [Enable profiling support])])
-
-AC_ARG_ENABLE([lengthy-tests],
-    [AC_HELP_STRING([--enable-lengthy-tests],
-                    [Enable long running tests in the test suite (default: disabled)])])
-AM_CONDITIONAL([ENABLE_LENGTHY_TESTS], [test "$enable_lengthy_tests" = "yes"])
-
-AC_ARG_ENABLE([testsuite],
-  [AS_HELP_STRING([--enable-testsuite],
-                  [Enable test suite @<:@default=yes@:>@])],
-  [], [enable_tests=yes])
-
-# ---------------------------------------------------------------------------
-# --with-options, see config/hpx_with_pkg.m4 for details
-# ---------------------------------------------------------------------------
-HPX_WITH_PKG([pmi],[cray-pmi],[build with support for PMI],[no],[PMI])
-
-AC_CHECK_HEADER(pmi_cray_ext.h, AC_DEFINE([HAVE_PMI_CRAY_EXT], [1], [Enable Cray PMI extensions]))
-HPX_WITH_PKG([hugetlbfs],[hugetlbfs],[build with hugepages for heap],[no],[HUGETLBFS])
-HPX_WITH_PKG([mpi],[ompi],[build with MPI bootstrap],[no],[MPI])
-
-AC_ARG_ENABLE([photon],
- [AS_HELP_STRING([--enable-photon], [build with Photon networking @<:@default=no@:>@])], [],
- [enable_photon=no])
-
-AS_IF([test "x$enable_photon" != xno],
- [HPX_CONTRIB_PHOTON([contrib/photon], [hpx_])
-  AC_DEFINE([HAVE_AS_REGISTERED], [1], [We have a registered memory manager])],
- [hpx_have_photon=no])
-
- # TBBMalloc support
-AC_ARG_WITH(tbb, AS_HELP_STRING([--with-tbb=DIR],[location of TBB]),
-  [CPPFLAGS="$CPPFLAGS -I${withval}/include"
-   LDFLAGS="$LDFLAGS -L${withval}/lib"
-   have_tbb=yes],
-  [])
  
-AS_IF([test "x$with_mpi" != xno -o "x$enable_photon" != xno],
- [enable_network=yes
-  AC_DEFINE([HAVE_NETWORK], [1], [We have a network])
-  AC_DEFINE([HAVE_AS_GLOBAL], [1], [We have global allocation])
-  TESTS_CMD='mpirun -np 2'],
- [enable_network=no
-  TESTS_CMD=''])
+# We need to enable and configure a number of packages for HPX, most of which we
+# can find in the system path somewhere. We distribute a number of these
+# packages with HPX in the contrib directory for cases where a system version is
+# either not available or not appropriate.
+#
+# Required packages will have a --with-pkg{=...} option that allows the user to
+# override our standard search routine. Optional packages will have an
+# additional --enable-pkg option to control if we search for the package at
+# all. Some more complicated packages may require more complicated options.
+#
+# Each package may ultimately set a number of variables, define a number of
+# #defines, set some automake conditionals, and append to a number of
+# substituted variables.
+#
+# Variables
+#   with_pkg
+#   have_pkg
+#   build_pkg
+#   enable_pkg (optional pkgs only)
+#
+# Defines
+#   HAVE_PKG
+#
+# Substituted
+#   LIBHPX_CPPFLAGS: CPPFLAGS required to build libhpx.la
+#   LIBHPX_CFLAGS: CFLAGS required to build libhpx.la
+#   LIBHPX_CXXFLAGS: CXXFLAGS required to build libhpx.la
+#   LIBHPX_LIBADD: .la dependencies required to build libhpx.la
+#   LIBHPX_LDFLAGS: -L and -Wl flags needed to link libhpx.la
+#   LIBHPX_LIBS: -l dependencies required to link libhpx.la
+#
+#   HPX_PC_PUBLIC_LIBS: -L and -l flags required to link to installed libhpx.so
+#   HPX_PC_REQUIRES_PKGS: packages required to link to installed libhpx.so
+#   HPX_PC_PRIVATE_LIBS: -L and -l flags required to link to installed libhpx.a
+#   HPX_PC_PRIVATE_PKGS: packages required to link to installed libhpx.a
+#
+# The substituted variables are straightforward. The LIBHPX_ prefixed variables
+# are variables required to build an link libhpx itself. The HPX_PC variables
+# are replaced in the hpx.pc file to allow external tools to link with libhpx.
 
-# If we want to use jemalloc then configure it.
-AS_IF([test "x$enable_jemalloc" != xno -o "x$enable_network" != xno -a "x$enable_tbbmalloc" != xyes],
- [HPX_CONTRIB_JEMALLOC([contrib/jemalloc])
-  AC_DEFINE([HAVE_JEMALLOC], [1], [We have jemalloc support for malloc/free/etc])
-  AC_SUBST(HPX_JEMALLOC_LOCAL_LIBS, "$hpx_jemalloc_libs")])
-AM_CONDITIONAL([BUILD_JEMALLOC], [test "x$enable_jemalloc" != xno -o "x$enable_network" != xno -a "x$enable_tbbmalloc" != xyes])
+HPX_CONFIG_PHOTON([contrib/photon], [photon])
+HPX_CONFIG_MPI([ompi])
+HPX_CONFIG_PMI([cray-pmi])
+HPX_CONFIG_JEMALLOC([contrib/jemalloc], ["jemalloc >= 4.0"]) 
+HPX_CONFIG_TBBMALLOC
+#HPX_CONFIG_HWLOC([contrib/hwloc-1.11.0], [hwloc])
+HPX_CONFIG_HUGETLBFS([hugetlbfs])
+HPX_CONFIG_UTHASH([contrib/uthash-fe01a6ad1b])
+HPX_CONFIG_VALGRIND([contrib/valgrind])
+HPX_CONFIG_LIBFFI([contrib/libffi], [libffi])
+HPX_CONFIG_AGAS
+HPX_CONFIG_LIBCUCKOO([contrib/libcuckoo], [$have_agas])
+HPX_CONFIG_DOCS
+HPX_CONFIG_DEBUG
+HPX_CONFIG_INSTRUMENTATION
+HPX_CONFIG_TESTS
+HPX_CONFIG_TUTORIAL
 
-AS_IF([test "x$enable_tbbmalloc" != xno -a "x$enable_jemalloc" != xyes],
-  [AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
-   AC_CHECK_LIB([tbbmalloc], [malloc],
-     [have_tbbmalloc="TBB malloc library was found"])
-   LIBS="$LIBS -ltbbmalloc -ltbbmalloc_proxy"
-   AC_DEFINE([HAVE_TBBMALLOC], [1], [We have TBB malloc support for malloc/free])])
-AM_CONDITIONAL([BUILD_TBBMALLOC], [test "x$enable_tbbmalloc" != xno -a "x$enable_jemalloc" != xyes])
+# Set and check some composite conditions to make sure the configuration makes
+# sense. 
+AS_IF([test "x$have_photon" == xyes -o "x$have_mpi" == xyes],
+  [AC_DEFINE([HAVE_NETWORK], [1], [We have a high speed network available])
+   have_network=yes])
 
-AC_ARG_WITH([tests-cmd],
- [AS_HELP_STRING([--with-tests-cmd], [Use this command for running the test harness @<:@default=mpirun -np 2@:>@])],
- [TESTS_CMD="$with_tests_cmd"], [])
-AC_SUBST(TESTS_CMD)
+AS_IF([test "x$have_jemalloc" == xyes -o "x$have_tbbmalloc" == xyes],
+  [AC_DEFINE([HAVE_ALLOCATOR], [1], [We have a GAS allocator available])
+   have_allocator=yes])
 
-AC_ARG_WITH([doxygen],
- [AS_HELP_STRING([--with-doxygen], [build documentation @<:@default=no@:>@])],
- [with_doxygen=yes], [with_doxygen=no])
-AS_IF([test "x$with_doxygen" != xno],
- [AC_CHECK_PROGS([DOXYGEN], [doxygen])])
-AS_IF([test "x$DOXYGEN" != x],
- [enable_docs=yes],
- [AC_MSG_WARN([Doxygen not found, disabling source documentation build.])
-  enable_docs=no])
+AS_IF([test "x$have_jemalloc" == xyes -a "x$have_tbbmalloc" == xyes],
+  [AC_MSG_ERROR(jemalloc and tbbmalloc are mutually exclusive)])
 
-# Treat AGAS seperately as it wants to pull in C++
-AC_ARG_ENABLE([agas],
-  [AS_HELP_STRING([--enable-agas],
-                  [Enable AGAS (requires C++11) @<:@default=no@:>@])],
-  [], [enable_agas=no])
+AS_IF([test "x$have_network" == xyes -a "x$have_allocator" != xyes],
+  [AC_MSG_ERROR(HPX requires jemalloc or tbbmalloc for network operation)])
 
-AS_IF([test "x$enable_agas" != xno],
-  [AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
-   HPX_CONTRIB_LIBCUCKOO([contrib/libcuckoo], [hpx_])
-   AC_DEFINE([HAVE_AGAS], [1], [We have agas])],
-  [])
-AM_CONDITIONAL([BUILD_AGAS], [test "x$enable_agas" != xno -a "x$enable_network" != xno])
-AM_CONDITIONAL([BUILD_LIBCUCKOO], [test "x$enable_agas" != xno])
+# Configure all of the automake conditionals that our build requires.
+HPX_DO_AM_CONDITIONALS
 
-# ---------------------------------------------------------------------------
-# Perform host-specific work here.
-# ---------------------------------------------------------------------------
+# do any remaining substitutions and configure files
+LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS $hpx_pe_env_cppflags"
+LIBHPX_CFLAGS="$LIBHPX_CFLAGS $hpx_pe_env_cflags"
+LIBHPX_CCASFLAGS="$LIBHPX_CCASFLAGS $hpx_pe_env_ccasflags"
+LIBHPX_LIBS="$LIBHPX_LIBS $hpx_pe_env_libs"
 
-AS_CASE([$host_os],
-     [linux*], [AS_CASE([$host_cpu],
-         [arm*], [AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
-             l1d_linesize=32
-             pagesize=`getconf PAGESIZE`],
-         [AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
-             dnl l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`
-             l1d_linesize=`cat /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size`
-             pagesize=`getconf PAGESIZE`])],
-     [darwin*], [l1d_linesize=`sysctl -n hw.cachelinesize`
-                 pagesize=`getconf PAGESIZE`],
-    [solaris*], [l1d_linesize=`prtpicl -v -c cpu | \
-                               grep l1-dcache-line-size | uniq | \
-                               awk '{print $2}'`]
-                [AC_MSG_WARN([Unexpected Host OS $host_os, using defaults])
-                 l1d_linesize=128
-                 pagesize=4096])
+AC_SUBST(LIBHPX_CPPFLAGS)
+AC_SUBST(LIBHPX_CFLAGS)
+AC_SUBST(LIBHPX_CXXFLAGS)
+AC_SUBST(LIBHPX_CCASFLAGS)
+AC_SUBST(LIBHPX_LDFLAGS)
+AC_SUBST(LIBHPX_LIBADD)
+AC_SUBST(LIBHPX_LIBS)
 
-AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
-AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
+HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS $hpx_pe_env_libs"
 
-# -----------------------------------------------------------------------------
-# Set automake conditionals for use in Makefile.am settings.
-# -----------------------------------------------------------------------------
-AM_CONDITIONAL([OS_LINUX], [[[[ "x$host_os" = xlinux* ]]]])
-AM_CONDITIONAL([OS_DARWIN], [[[[ "x$host_os" = xdarwin* ]]]])
-AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
-AM_CONDITIONAL([CPU_ARM], [test "x$host_cpu" = xarmv7l])
+AC_SUBST(HPX_PC_PUBLIC_LIBS)
+AC_SUBST(HPX_PC_PRIVATE_LIBS)
+AC_SUBST(HPX_PC_REQUIRES_PKGS)
+AC_SUBST(HPX_PC_PRIVATE_PKGS)
 
-AM_CONDITIONAL([HAVE_PHOTON], [test "x$hpx_have_photon" != xno])
-AM_CONDITIONAL([HAVE_NETWORK], [test "x$enable_network" != xno])
-AM_CONDITIONAL([BUILD_PHOTON], [test "x$enable_external_photon" == xno])
-AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" != xno])
-AM_CONDITIONAL([ENABLE_TUTORIAL], [test "x$enable_tutorial" != xno])
-AM_CONDITIONAL([ENABLE_PHOTON], [test "x$enable_photon" != xno])
-AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" != xno])
+# do substitution for the test and example makefiles
+LIBHPX_LDADD="\$(top_builddir)/libhpx/libhpx.la $HPX_PC_PUBLIC_LIBS"
+LIBHPX_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la"
 
-AM_CONDITIONAL([GNU_PE_ENV], [test "x$hpx_pe_env" = xGNU])
-AM_CONDITIONAL([CRAY_PE_ENV], [test "x$hpx_pe_env" = xCRAY])
-AM_CONDITIONAL([PGI_PE_ENV], [test "x$hpx_pe_env" = xPGI])
-AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
+AC_SUBST(LIBHPX_LDADD)
+AC_SUBST(LIBHPX_DEPS)
 
-# -----------------------------------------------------------------------------
-# Finalize flags
-# -----------------------------------------------------------------------------
-hpx_extra_cppflags="$hpx_pe_env_cppflags $hpx_jemalloc_cppflags $HPX_PHOTON_CPPFLAGS"
-hpx_extra_cflags="$hpx_pe_env_cflags $PTHREAD_CFLAGS $HPX_PHOTON_CFLAGS"
-hpx_extra_ccasflags="$hpx_pe_env_ccasflags"
-hpx_extra_libs="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la $PTHREAD_LIBS $hpx_pe_env_libs"
-AS_IF([test "x$enable_pedantic" != xno],
-  [hpx_extra_cflags="$hpx_pe_env_cflags_pedantic $hpx_extra_cflags"])
+HPX_DO_AC_CONFIG_FILES
 
-AS_IF([test "x$enable_wall" != xno],
-  [hpx_extra_cflags="$hpx_pe_env_cflags_wall $hpx_extra_cflags"])
-
-CPPFLAGS="$hpx_extra_cppflags $CPPFLAGS"
-CFLAGS="$hpx_extra_cflags $CFLAGS"
-CCASFLAGS="$hpx_extra_ccasflags $CCASFLAGS"
-HPX_LIBS="$hpx_extra_libs"
-HPX_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la $HPX_DEPS $HPX_PHOTON_DEPS $HPX_JEMALLOC_DEPS"
-HPX_PRIVATE_PKGS=""
-if test "x$enable_photon" != xno; then
-  HPX_PRIVATE_PKGS="$HPX_PRIVATE_PKGS photon"
-fi
-
-#AC_MSG_ERROR($HPX_LIBADD)
- 
-AC_SUBST(HPX_LIBS)
-AC_SUBST(HPX_LIBADD)
-AC_SUBST(HPX_DEPS)
-
-# hpx.pc substitutions
-AC_SUBST(HPX_PUBLIC_LIBS)
-AC_SUBST(HPX_PRIVATE_PKGS)
-AC_SUBST(HPX_REQUIRES_PKGS)
-
-# -----------------------------------------------------------------------------
-# Use autoconf to configure all of the Makefiles that need to be processed.
-# -----------------------------------------------------------------------------
-AC_CONFIG_FILES([
-  Makefile
-  contrib/Makefile
-  libsync/Makefile
-  libsync/arch/Makefile
-  libhpx/Makefile
-  libhpx/boot/Makefile
-  libhpx/gas/Makefile
-  libhpx/gas/pgas/Makefile
-  libhpx/gas/agas/Makefile
-  libhpx/memory/Makefile
-  libhpx/network/Makefile
-  libhpx/network/isir/Makefile
-  libhpx/network/pwc/Makefile
-  libhpx/system/Makefile
-  libhpx/util/Makefile
-  libhpx/scheduler/Makefile
-  libhpx/scheduler/arch/Makefile
-  libhpx/instrumentation/Makefile
-  include/Makefile
-  include/libhpx/Makefile
-  examples/Makefile
-  hpx.pc])
-
-AS_IF([test "x$enable_tutorial" != xno],
-  [AC_CONFIG_FILES([tutorial/Makefile
-  tutorial/Beginners/Makefile
-  tutorial/Beginners/threads/Makefile
-  tutorial/Beginners/gas/Makefile
-  tutorial/Beginners/collectives/Makefile
-  tutorial/Beginners/lco/Makefile
-  tutorial/Beginners/parcel/Makefile
-  tutorial/HeatSeq/Makefile
-  tutorial/CollectiveBench/Makefile
-  tutorial/cpi/Makefile])])
-  
-AS_IF([test "x$enable_docs" != xno],
-  [AC_CONFIG_FILES([docs/Doxyfile docs/Makefile])])
-  
-AS_IF([test "x$enable_tests" != xno],
-  [AC_CONFIG_FILES([tests/Makefile
-  tests/unit/Makefile
-  tests/perf/Makefile])])
-
-AC_CONFIG_FILES([libsync/libsync.export libhpx/libhpx.export])
-  
 AC_OUTPUT
 
 if test "x$enable_parallel_config" != xno; then
@@ -393,48 +188,4 @@ if test "x$enable_parallel_config" != xno; then
    wait
 fi
 
-# ---------------------------------------------------------------------------
-# Output a summary of the results.
-# ---------------------------------------------------------------------------
-AS_IF([test "x$with_mpi" != xno],
-  [networks="MPI"],
-  [])
-AS_IF([test "x$enable_photon" != xno],
-  [networks="Photon $networks"],
-  [])
-
-# ---------------------------------------------------------------------------
-# Output a summary of memory allocator
-# ---------------------------------------------------------------------------
-AS_IF([test "x$enable_jemalloc" != xno],
-  [allocator="jemalloc"],
-  [])
-AS_IF([test "x$enable_tbbmalloc" != xno],
-  [allocator="tbbmalloc"],
-  [])
-AS_IF([test "x$enable_jemalloc" != xno -a "x$enable_tbbmalloc" != xno],
-  [allocator="Both jemalloc, tbbmalloc enabled: Defaulting to jemalloc"],
-  [])
-AS_IF([test "x$enable_jemalloc" != xyes -a "x$enable_tbbmalloc" != xyes],
-  [allocator="jemalloc"],
-  [])
-
-echo ""
-echo "================================================"
-echo " HPX Build Configuration"
-echo "================================================"
-echo "               Host CPU : $host_cpu"
-echo "                Host OS : $host_os"
-echo "               Networks : $networks"
-echo "              Allocator : $allocator"
-echo "              Profiling : $enable_profiling"
-echo "         hugetlbfs heap : $with_hugetlbfs"
-echo "     Topology Awareness : $with_hwloc"
-echo "          Documentation : $enable_docs"
-echo "               Tutorial : $enable_tutorial"
-echo "             Test Suite : $enable_tests"
-echo "         Extra CPPFLAGS : $hpx_extra_cppflags"
-echo "           Extra CFLAGS : $hpx_extra_cflags"
-echo "        Extra CCASFLAGS : $hpx_extra_ccasflags"
-echo "       Install location : $prefix"
-echo "================================================"
+HPX_DO_SUMMARY
