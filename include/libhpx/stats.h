@@ -18,7 +18,7 @@
 /// @file libhpx/scheduler/stats.h
 /// @brief The libhpx stats definitions.
 
-#ifdef ENABLE_PROFILING
+#if defined(ENABLE_PROFILING) || defined(HAVE_APEX)
 #define COUNTER_SAMPLE(e) e
 #else
 #define COUNTER_SAMPLE(e)

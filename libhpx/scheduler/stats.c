@@ -13,6 +13,9 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+#ifdef HAVE_APEX
+#include "apex.h"
+#endif
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -80,3 +83,19 @@ void libhpx_stats_print(void) {
 
   _print_stats("<totals>", &global_stats);
 }
+
+#ifdef HAVE_APEX
+void scheduler_save_apex_stats(const scheduler_stats_t *counts) {
+  apex_sample_value("spins", (double)counts->spins);
+  apex_sample_value("yields", (double)counts->yields);
+  apex_sample_value("spawns", (double)counts->spawns);
+  apex_sample_value("steals", (double)counts->steals);
+  apex_sample_value("stacks", (double)counts->stacks);
+  apex_sample_value("mail", (double)counts->mail);
+  apex_sample_value("started", (double)counts->started);
+  apex_sample_value("finished", (double)counts->finished);
+  apex_sample_value("progress", (double)counts->progress);
+  apex_sample_value("backoffs", (double)counts->backoffs);
+  apex_sample_value("backoff (ms)", (double)counts->backoff);
+}
+#endif
