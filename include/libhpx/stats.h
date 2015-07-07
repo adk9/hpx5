@@ -47,6 +47,7 @@ typedef struct scheduler_stats {
   unsigned long   backoffs;
   unsigned long max_stacks;
   unsigned long     stacks;
+  unsigned long     yields;
   double           backoff;
 } scheduler_stats_t;
 
@@ -61,6 +62,7 @@ typedef struct scheduler_stats {
     .backoffs   = 0,             \
     .max_stacks = 0,             \
     .stacks     = 0,             \
+    .yields     = 0,             \
     .backoff  = 0.0              \
   }
 

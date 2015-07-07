@@ -39,6 +39,7 @@ void scheduler_stats_init(struct scheduler_stats *stats) {
   stats->backoffs   = 0;
   stats->max_stacks = 0;
   stats->stacks     = 0;
+  stats->yields     = 0;
   stats->backoff  = 0.0;
 }
 
@@ -54,6 +55,7 @@ struct scheduler_stats *scheduler_stats_accum(struct scheduler_stats *lhs,
   lhs->finished += rhs->finished;
   lhs->progress += rhs->progress;
   lhs->backoffs += rhs->backoffs;
+  lhs->yields   += rhs->yields;
   lhs->backoff  += rhs->backoff;
 
   return lhs;
@@ -68,6 +70,7 @@ void scheduler_stats_print(const char *id, const struct scheduler_stats *counts)
 
   printf("node %d, ", here->rank);
   printf("thread %s, ", id);
+  printf("yields: %lu, ", counts->yields);
   printf("spins: %lu, ", counts->spins);
   printf("spawns: %lu, ", counts->spawns);
   printf("steals: %lu, ", counts->steals);

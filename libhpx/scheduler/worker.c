@@ -802,6 +802,7 @@ scheduler_yield(void) {
 
 void
 hpx_thread_yield(void) {
+  profile_ctr(++self->stats.yields);
   scheduler_yield();
 }
 
