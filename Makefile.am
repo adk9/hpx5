@@ -8,13 +8,14 @@ EXTRA_DIST = \
         docs
 
 AUTOMAKE_OPTIONS = foreign
-ACLOCAL_AMFLAGS = -I config -I contrib/hwloc-1.10.0/config
+ACLOCAL_AMFLAGS = -I config -I contrib/hwloc-1.11.0/config
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = hpx.pc
 
 SUBDIRS       = contrib libsync libhpx include examples
 DIST_SUBDIRS  = contrib libsync libhpx include examples
+
 if ENABLE_DOCS
 SUBDIRS      += docs
 DIST_SUBDIRS += docs

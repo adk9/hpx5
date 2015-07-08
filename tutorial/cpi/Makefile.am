@@ -1,18 +1,9 @@
 cpidir                          = $(datarootdir)/doc/@PACKAGE@
 cpi_PROGRAMS                    = cpi
 
+AM_CPPFLAGS					= -D_GNU_SOURCE -I$(top_srcdir)/include
+AM_LDFLAGS                  = $(LIBHPX_LDFLAGS) -no-install
+LDADD						= $(LIBHPX_LDADD)
+
 cpi_SOURCES                     = cpi.c 
-
-all_LIBS                    = $(HPX_LIBS)
-
-AM_CPPFLAGS                 = -D_GNU_SOURCE -I$(top_srcdir)/include
-AM_CFLAGS                   =
-AM_LDFLAGS                  = $(HPX_JEMALLOC_RPATH) -no-install
-
-if HAVE_MPI
-AM_CFLAGS                       += @MPI_CFLAGS@
-endif
-
-cpi_LDADD                        = $(all_LIBS)
-
-cpi_DEPENDENCIES                = $(HPX_DEPS)
+cpi_DEPENDENCIES                = $(LIBHPX_DEPS)
