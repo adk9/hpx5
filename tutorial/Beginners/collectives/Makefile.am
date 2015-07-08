@@ -1,9 +1,9 @@
 collectivesdir                = $(datarootdir)/doc/@PACKAGE@
 collectives_PROGRAMS          = allreduce allgather alltoall 
 
-AM_CPPFLAGS                 = -D_GNU_SOURCE -I$(top_srcdir)/include
-AM_LDFLAGS                  = $(LIBHPX_LDFLAGS) -no-install
-LDADD						= $(LIBHPX_LDADD)
+AM_CPPFLAGS			= -D_GNU_SOURCE $(LIBFFI_CFLAGS) -I$(top_srcdir)/include
+AM_LDFLAGS			= $(LIBHPX_LDFLAGS) -no-install
+LDADD				= $(LIBHPX_LDADD)
 
 allreduce_SOURCES             = allreduce.c 
 allgather_SOURCES             = allgather.c

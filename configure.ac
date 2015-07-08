@@ -176,6 +176,8 @@ AC_SUBST(HPX_PC_PRIVATE_PKGS)
 LIBHPX_LDADD="\$(top_builddir)/libhpx/libhpx.la $HPX_PC_PUBLIC_LIBS"
 LIBHPX_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la"
 
+# LIBFFI_CFLAGS is a special-case for the in-tree binaries
+AC_SUBST(LIBFFI_CFLAGS)
 AC_SUBST(LIBHPX_LDADD)
 AC_SUBST(LIBHPX_DEPS)
 

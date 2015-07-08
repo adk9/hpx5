@@ -35,6 +35,7 @@ AC_DEFUN([_HPX_CONTRIB_LIBFFI], [
  # directly to libffi, not transitively through libhpx.
  ACX_CONFIGURE_DIR([$contrib], [$contrib], [" "])
  _HAVE_LIBFFI
+ LIBFFI_CFLAGS="-I\$(top_builddir)/$contrib/include"
  LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -I\$(top_builddir)/$contrib/include"
  LIBHPX_LIBADD="$LIBHPX_LIBADD \$(top_builddir)/$contrib/libffi.la"
  HPX_PC_REQUIRES_PKGS="$HPX_PC_REQUIRES_PKGS libffi"
@@ -51,7 +52,7 @@ AC_DEFUN([_HPX_PKG_LIBFFI], [
    [_HAVE_LIBFFI
     LIBHPX_CFLAGS="$LIBHPX_CFLAGS $LIBFFI_CFLAGS"
     LIBHPX_LIBS="$LIBHPX_LIBS $LIBFFI_LIBS"
-    HPX_PC_REQUIRES_PKGS="$HPX_PC_REQUIRES_PKGS $pkg"])
+    HPX_PC_REQUIRES_PKGS="$HPX_PC_REQUIRES_PKGS $pkg"], [have_libffi=no])
 ])
 
 AC_DEFUN([_HPX_LIB_LIBFFI], [

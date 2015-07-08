@@ -2,7 +2,7 @@ noinst_HEADERS   = tests.h
 
 noinst_PROGRAMS  = $(TESTS)
 
-AM_CPPFLAGS      = -I$(top_srcdir)/include -Wno-unused
+AM_CPPFLAGS      = $(LIBFFI_CFLAGS) -I$(top_srcdir)/include -Wno-unused
 AM_LDFLAGS       = $(LIBHPX_LDFLAGS) -no-install
 LDADD            = $(LIBHPX_LDADD)
 
