@@ -1,9 +1,9 @@
 CollectiveBenchdir              = $(datarootdir)/doc/@PACKAGE@
 CollectiveBench_PROGRAMS        = hpx_allreduce hpx_allgather hpx_alltoall
 
-AM_CPPFLAGS					= -D_GNU_SOURCE -I$(top_srcdir)/include
-AM_LDFLAGS                  = $(LIBHPX_LDFLAGS) -no-install
-LDADD						= $(LIBHPX_LDADD)
+AM_CPPFLAGS			= -D_GNU_SOURCE $(LIBFFI_CFLAGS) -I$(top_srcdir)/include
+AM_LDFLAGS			= $(LIBHPX_LDFLAGS) -no-install
+LDADD				= $(LIBHPX_LDADD)
 
 hpx_allreduce_SOURCES           = hpx_allreduce.c common.c
 hpx_allgather_SOURCES           = hpx_allgather.c common.c

@@ -20,7 +20,7 @@ hello_SOURCES           = hello.c
 call_SOURCES            = call.c
 netbench_SOURCES        = netbench.c
 
-AM_CPPFLAGS          = -D_GNU_SOURCE -I$(top_srcdir)/include
+AM_CPPFLAGS          = -D_GNU_SOURCE $(LIBFFI_CFLAGS) -I$(top_srcdir)/include
 AM_LDFLAGS           = $(LIBHPX_LDFLAGS) -no-install
 LDADD                = $(LIBHPX_LDADD)
 
