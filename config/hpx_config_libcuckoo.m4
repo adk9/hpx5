@@ -20,7 +20,7 @@ AC_DEFUN([HPX_CONFIG_LIBCUCKOO], [
    [AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
     ACX_CONFIGURE_DIR([$contrib], [$contrib], [" "])
     LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -I\$(top_srcdir)/$contrib/src/"
-    #LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -I\$(top_srcdir)/$contrib/cityhash-1.1.1/src/"
+    LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -I\$(top_srcdir)/$contrib/cityhash-1.1.1/src/"
     LIBHPX_LIBADD="$LIBHPX_LIBADD \$(top_builddir)/$contrib/cityhash-1.1.1/src/libcityhash.la"
     AC_DEFINE([HAVE_LIBCUCKOO], [1], [We have the libcuckoo hash table])
     have_libcuckoo=yes
