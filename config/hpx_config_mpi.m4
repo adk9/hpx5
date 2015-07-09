@@ -27,12 +27,16 @@ AC_DEFUN([_HAVE_MPI], [
 AC_DEFUN([_HPX_CC_MPI], [
  # see if our CC just "knows" how to compile MPI without extra work (i.e., no
  # extra CFLAGS or -lmpi
+ AC_MSG_CHECKING([for direct CC support for MPI])
  AC_LANG_PUSH([C])
  AC_LINK_IFELSE(
-   [AC_LANG_PROGRAM([[#include <mpi.h>
+   [AC_LANG_PROGRAM([[#include <stddef.h>
+                      #include <mpi.h>
                     ]],
                     [[return MPI_Init(NULL, NULL);]])],
-   [_HAVE_MPI])
+   [AC_MSG_RESULT([yes])
+    _HAVE_MPI],
+   [AC_MSG_RESULT([no])])
  AC_LANG_POP([C])
 ])
 
