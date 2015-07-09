@@ -62,21 +62,6 @@ agas_local_calloc(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
   return base;
 }
 
-static int
-_agas_local_free_async_handler(hpx_addr_t rsync, void *lva) {
-  global_free(lva);
-
-  hpx_lco_error(rsync, HPX_SUCCESS, HPX_NULL);
-  return HPX_SUCCESS;
-}
-HPX_ACTION(HPX_DEFAULT, 0, _agas_local_free_async,
-           _agas_local_free_async_handler, HPX_ADDR, HPX_POINTER);
-
-void
-agas_local_free(agas_t *agas, gva_t gva, void *lva, hpx_addr_t rsync) {
-  agas_free_helper(_agas_local_free_async, gva.addr, rsync);
-}
-
 int64_t
 agas_local_sub(const agas_t *agas, gva_t lhs, gva_t rhs, uint32_t bsize) {
   uint64_t bits = lhs.bits.size;
