@@ -15,9 +15,11 @@
 #endif
 
 #include <libhpx/action.h>
+#include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
+#include <libhpx/worker.h>
 #include "commands.h"
 #include "pwc.h"
 #include "xport.h"
@@ -39,18 +41,9 @@ typedef struct {
 } _pwc_lco_get_request_args_t;
 
 static int
-_pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args, size_t n) {
-  dbg_assert(n > 0);
-
-  pwc_network_t *pwc = (pwc_network_t*)here->network;
-  hpx_addr_t lco = hpx_thread_current_target();
-  void *ref;
-  int e = hpx_lco_getref(lco, args->n, &ref);
-  dbg_check(e, "Failed getref during remote lco get request.\n");
-
-  // Create the transport operation to perform the rdma put operation, along
-  // with the remote command to restart the waiting thread and the local
-  // completion command to resume the current thread.
+_get_request_handler_put(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
+                         const void *ref, command_t remote) {
+  // Create the transport operation to perform the rdma put operation
   xport_op_t op = {
     .rank = args->rank,
     .n = args->n,
@@ -59,17 +52,95 @@ _pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args, size_t n) {
     .src = ref,
     .src_key = pwc->xport->key_find_ref(pwc->xport, ref, args->n),
     .lop = command_pack(resume_parcel, (uintptr_t)self->current),
-    .rop = command_pack(resume_parcel, (uintptr_t)args->p)
+    .rop = remote
   };
   dbg_assert_str(op.src_key, "LCO reference must point to registered memory\n");
 
   // Issue the pwc and wait for synchronous local completion so that the ref
   // buffer doesn't move during the underlying rdma, if there is any
-  e = scheduler_suspend(_pwc, &op);
+  return scheduler_suspend(_pwc, &op);
+}
 
-  hpx_lco_release(lco, ref);
-  dbg_check(e, "Failed to start rendezvous put during remote get operation\n");
-  return HPX_SUCCESS;
+static int
+_get_request_handler_stack(_pwc_lco_get_request_args_t *args,
+                           pwc_network_t *pwc, hpx_addr_t lco) {
+  char ref[args->n];
+  int e = hpx_lco_get(lco, args->n, ref);
+  dbg_check(e, "Failed get during remote lco get request.\n");
+  command_t resume = command_pack(resume_parcel, (uintptr_t)args->p);
+  return _get_request_handler_put(args, pwc, ref, resume);
+}
+
+static int
+_get_request_handler_malloc(_pwc_lco_get_request_args_t *args,
+                            pwc_network_t *pwc, hpx_addr_t lco) {
+  void *ref = registered_malloc(args->n);
+  dbg_assert(ref);
+  int e = hpx_lco_get(lco, args->n, ref);
+  dbg_check(e, "Failed get during remote lco get request.\n");
+  command_t resume = command_pack(resume_parcel, (uintptr_t)args->p);
+  e = _get_request_handler_put(args, pwc, ref, resume);
+  registered_free(ref);
+  return e;
+}
+
+// static int
+// _get_request_handler_getref(_pwc_lco_get_request_args_t *args,
+//                             pwc_network_t *pwc, hpx_addr_t lco) {
+
+//   // Get a reference to the LCO data
+//   void *ref;
+//   int e = hpx_lco_getref(lco, args->n, &ref);
+//   dbg_check(e, "Failed getref during remote lco get request.\n");
+
+//   // Send back the LCO data. This doesn't resume the remote thread because there
+//   // is a race where a delete can trigger a use-after-free during our subsequent
+//   // release.
+//   e = _get_request_handler_put(args, pwc, ref, 0);
+//   dbg_check(e, "Failed rendezvous put during remote lco get request.\n");
+
+//   // Release the reference.
+//   hpx_lco_release(lco, ref);
+
+//   // Wake the remote getter up.
+//   e = network_command(pwc, HPX_THERE(args->rank), resume_parcel,
+//                       (uintptr_t)args->p);
+//   dbg_check(e, "Failed to start resume command during remote lco get.\n");
+//   return e;
+// }
+
+static int
+_pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args, size_t n) {
+  dbg_assert(n > 0);
+
+  pwc_network_t *pwc = (pwc_network_t*)here->network;
+  hpx_addr_t lco = hpx_thread_current_target();
+
+  // We would like to rdma directly from the LCO's buffer, when
+  // possible. Unfortunately, this induces a race where the returned put
+  // operation completes at the get location before the rdma is detected as
+  // completing here. This allows the user to correctly delete the LCO while the
+  // local thread still has a reference to the buffer which leads to
+  // use-after-free. At this point we can only do the getref() version using two
+  // put operations, one to put back to the waiting buffer, and one to resume
+  // the waiting thread after we drop our local reference.
+  //
+  // The getref() code isn't currently working because the network_command
+  // operation isn't being received to resume the remote thread.
+  //
+  // if (args->n > LIBHPX_SMALL_THRESHOLD) {
+  //   return _get_request_handler_getref(args, pwc, lco);
+  // }
+  // else
+
+  // If there is enough space to stack allocate a buffer to copy, use the stack
+  // version, otherwise malloc a buffer to copy to.
+  if (worker_can_alloca(args->n) > 128) {
+    return _get_request_handler_stack(args, pwc, lco);
+  }
+  else {
+    return _get_request_handler_malloc(args, pwc, lco);
+  }
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _pwc_lco_get_request,
                   _pwc_lco_get_request_handler, HPX_POINTER, HPX_SIZE_T);
