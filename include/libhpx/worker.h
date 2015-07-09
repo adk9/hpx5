@@ -119,4 +119,12 @@ void worker_join(struct worker *worker)
 void worker_cancel(struct worker *worker)
   HPX_NON_NULL(1);
 
+/// Check to see if the current worker has enough space for an alloca.
+///
+/// @param        bytes The number of bytes to allocate.
+///
+/// @returns            The number of bytes remaining on the stack after the
+///                     alloca.
+intptr_t worker_can_alloca(size_t bytes);
+
 #endif // LIBHPX_WORKER_H

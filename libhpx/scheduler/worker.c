@@ -1092,3 +1092,9 @@ scheduler_suspend(int (*f)(void*), void *env) {
   INST_EVENT_PARCEL_RESUME(self->current);
   return e;
 }
+
+intptr_t
+worker_can_alloca(size_t bytes) {
+  ustack_t *current = parcel_get_stack(self->current);
+  return ((uintptr_t)&current - (uintptr_t)current->stack < bytes);
+}
