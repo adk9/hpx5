@@ -226,13 +226,6 @@ _agas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
   return addr;
 }
 
-void agas_free_cyclic_sync(void *lva) {
-  agas_t *agas = (agas_t*)here->gas;
-  dbg_assert(agas->cyclic_arena < UINT32_MAX);
-  dbg_assert(here->rank == 0);
-  cyclic_free(lva);
-}
-
 hpx_addr_t agas_calloc_cyclic_sync(size_t n, uint32_t bsize) {
   assert(here->rank == 0);
   return _agas_alloc_cyclic_sync(n, bsize, 1);
@@ -261,81 +254,68 @@ _agas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
 }
 
 static int
-_btt_remove_handler(hpx_addr_t rsync, void *lva, int cont) {
+_agas_free_block_handler(void *lva) {
   hpx_addr_t addr = hpx_thread_current_target();
   gva_t gva = { .addr = addr };
   agas_t *agas = (agas_t*)here->gas;
 
-  btt_remove(agas->btt, gva);
-  if (cont) {
-    hpx_thread_continue(&rsync, &lva);
+  if (gva.bits.cyclic) {
+    if (gva.bits.home == 0 && here->rank == 0) {
+      cyclic_free(lva);
+    } else {
+      free(lva);
+    }
   } else {
-    return HPX_SUCCESS;
+    global_free(lva);
   }
-}
-HPX_ACTION(HPX_DEFAULT, 0, _btt_remove, _btt_remove_handler,
-           HPX_ADDR, HPX_POINTER, HPX_INT);
 
-void
-agas_free_helper(hpx_action_t free_action,
-                 hpx_addr_t addr, hpx_addr_t rsync) {
+  btt_remove(agas->btt, gva);
+  return HPX_SUCCESS;
+}
+HPX_ACTION(HPX_DEFAULT, 0, _agas_free_block,
+           _agas_free_block_handler, HPX_POINTER);
+
+static int
+_agas_try_free_block_handler(hpx_addr_t sync) {
+  hpx_addr_t addr = hpx_thread_current_target();
   gva_t gva = { .addr = addr };
   agas_t *agas = (agas_t*)here->gas;
-  gva.bits.home = here->rank;
+
   void *lva = btt_lookup(agas->btt, gva);
   if (!lva) {
-    return;
+    return HPX_RESEND;
   }
 
-  // remove all btt entries
-  size_t blocks = btt_get_blocks(agas->btt, gva);
+  hpx_parcel_t *p = parcel_create(addr, _agas_free_block,
+                                  sync, hpx_lco_set_action,
+                                  1, &lva);
+  btt_try_delete(agas->btt, gva, p);
+  return HPX_SUCCESS;
+}
+HPX_ACTION(HPX_DEFAULT, 0, _agas_try_free_block,
+           _agas_try_free_block_handler, HPX_ADDR);
+
+static int
+_agas_free_at_zero_handler(hpx_addr_t addr, hpx_addr_t rsync, size_t blocks) {
+  
+  hpx_addr_t done = hpx_lco_and_new(blocks);
+  hpx_call_when_with_continuation(done, done, hpx_lco_delete_action,
+                                  rsync, hpx_lco_set_action);
+
+  gva_t gva = { .addr = addr };
+  gva.bits.home = 0;
   size_t bsize = 1 << gva.bits.size;
-  gva.bits.home = here->rank;
 
-  int cont = (blocks == 1);
-  if (cont) {
-    hpx_parcel_t *p = parcel_create(gva.addr, _btt_remove,
-                                    HPX_THERE(gva.bits.home),
-                                    free_action,
-                                    3, &rsync, &lva, &cont);
-    btt_try_delete(agas->btt, gva, p);
-    return;
-  }
-
-  hpx_addr_t and = hpx_lco_and_new(blocks);
-  hpx_call_when_with_continuation(and, HPX_THERE(gva.bits.home),
-                                  free_action,
-                                  and, hpx_lco_delete_action, &rsync, &lva);
   for (int i = 0; i < blocks; ++i) {
-    hpx_parcel_t *p = parcel_create(gva.addr, _btt_remove,
-                                    and, hpx_lco_set_action,
-                                    3, &rsync, &lva, &cont);
-    btt_try_delete(agas->btt, gva, p);
+    int e = hpx_xcall(gva.addr, _agas_try_free_block, HPX_NULL, done);
+    dbg_check(e, "failed to forward AGAS block free operation\n");
     gva.bits.offset += bsize;
   }
-  return;
-}
-
-static int
-_agas_free_cyclic_async_handler(hpx_addr_t rsync, void *lva) {
-  if (here->rank == 0) {
-    agas_free_cyclic_sync(lva);
-  } else {
-    free(lva);
-  }
-  hpx_lco_error(rsync, HPX_SUCCESS, HPX_NULL);
+  
   return HPX_SUCCESS;
 }
-HPX_ACTION(HPX_DEFAULT, 0, _agas_free_cyclic_async,
-           _agas_free_cyclic_async_handler, HPX_ADDR, HPX_POINTER);
-
-static int
-_agas_free_cyclic_handler(hpx_addr_t addr, hpx_addr_t rsync) {
-  agas_free_helper(_agas_free_cyclic_async, addr, rsync);
-  return HPX_SUCCESS;
-}
-HPX_ACTION(HPX_DEFAULT, 0, _agas_free_cyclic,
-           _agas_free_cyclic_handler, HPX_ADDR, HPX_ADDR);
+HPX_ACTION(HPX_DEFAULT, 0, _agas_free_at_zero,
+           _agas_free_at_zero_handler, HPX_ADDR, HPX_ADDR, HPX_SIZE_T);
 
 static int
 _agas_free_async_handler(hpx_addr_t rsync) {
@@ -352,24 +332,60 @@ _agas_free(void *gas, hpx_addr_t addr, hpx_addr_t rsync) {
     return;
   }
 
-  gva_t gva = { .addr = addr };
-
-  if (gva.bits.cyclic) {
-    int e = hpx_bcast_lsync(_agas_free_cyclic, HPX_NULL, &addr, &rsync);
-    dbg_check(e, "failed to broadcast AGAS cyclic free operation\n");
-    return;
-  }
-
   agas_t *agas = gas;
+  gva_t gva = { .addr = addr };
   void *lva = btt_lookup(agas->btt, gva);
-  if (lva) {
-    agas_local_free(agas, gva, lva, rsync);
+  if (!lva) {
+    int e = hpx_xcall(addr, _agas_free_async, HPX_NULL, rsync);
+    dbg_check(e, "failed to forward AGAS free operation\n");
     return;
   }
 
-  int e = hpx_xcall(addr, _agas_free_async, HPX_NULL, rsync);
-  dbg_check(e, "failed to forward AGAS free operation\n");
-  (void)e;
+  size_t blocks = btt_get_blocks(agas->btt, gva);
+  assert(blocks > 0);
+  if (blocks == 1) {
+    hpx_parcel_t *p = parcel_create(addr, _agas_free_block,
+                                    rsync, hpx_lco_set_action,
+                                    1, &lva);
+    btt_try_delete(agas->btt, gva, p);
+    return;
+  }
+  else {
+    if (!gva.bits.cyclic) {
+      hpx_addr_t and = hpx_lco_and_new(blocks);
+      hpx_call_when_with_continuation(and, and, hpx_lco_delete_action,
+                                      rsync, hpx_lco_set_action);
+
+      size_t bsize = 1 << gva.bits.size;
+      for (int i = 0; i < blocks; ++i) {
+        int e = hpx_xcall(gva.addr, _agas_try_free_block, HPX_NULL, and);
+        dbg_check(e, "failed to forward AGAS block free operation\n");
+        gva.addr = hpx_addr_add(gva.addr, bsize, bsize);
+      }
+      return;
+    } else {
+      hpx_addr_t and = hpx_lco_and_new(blocks * (here->ranks-1));
+      hpx_addr_t free_at_zero = hpx_lco_future_new(0);
+      hpx_call_when_with_continuation(and, and, hpx_lco_delete_action,
+                                      free_at_zero, hpx_lco_set_action);
+
+      size_t bsize = 1 << gva.bits.size;
+      for (int i = 0; i < (blocks * here->ranks); ++i) {
+        if (gva.bits.home == 0) {
+          continue;
+        }
+        int e = hpx_xcall(gva.addr, _agas_try_free_block, HPX_NULL, and);
+        dbg_check(e, "failed to forward AGAS block free operation\n");
+        addr = hpx_addr_add(gva.addr, bsize, bsize);
+      }
+
+      hpx_call_when_with_continuation(free_at_zero,
+                                      HPX_THERE(0), _agas_free_at_zero,
+                                      free_at_zero, hpx_lco_delete_action,
+                                      &addr, &rsync, &blocks);
+      return;
+    }
+  }
 }
 
 static gas_t _agas_vtable = {
