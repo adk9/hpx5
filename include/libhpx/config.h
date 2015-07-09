@@ -26,6 +26,7 @@
 
 #define LIBHPX_OPT_BITSET_ALL UINT64_MAX
 #define LIBHPX_OPT_BITSET_NONE 0
+#define LIBHPX_SMALL_THRESHOLD HPX_PAGE_SIZE
 
 //! Configuration options for which global memory model to use.
 typedef enum {

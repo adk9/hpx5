@@ -17,11 +17,10 @@
 #include <string.h>
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
+#include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/parcel.h>
-
-static const size_t HPX_SMALL_THRESHOLD = HPX_PAGE_SIZE;
 
 hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
   hpx_addr_t target = HPX_HERE;
@@ -39,7 +38,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _send_async, hpx_parcel_send_sync, HPX_POINTER
 
 hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
   parcel_state_t state = parcel_get_state(p);
-  if (p->size < HPX_SMALL_THRESHOLD || parcel_serialized(state)) {
+  if (p->size < LIBHPX_SMALL_THRESHOLD || parcel_serialized(state)) {
     hpx_status_t status = parcel_launch(p);
     hpx_lco_error(lsync, status, HPX_NULL);
     return status;
@@ -67,7 +66,7 @@ hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
   // If the parcel is small, regardless of if its been serialized already, we
   // want to do the send through eagerly, otherwise we want to spawn a thread to
   // do it.
-  if (parcel_size(p) < HPX_SMALL_THRESHOLD) {
+  if (parcel_size(p) < LIBHPX_SMALL_THRESHOLD) {
     hpx_status_t status = parcel_launch_through(p, gate);
     parcel_delete(p);
     hpx_lco_error(lsync, status, HPX_NULL);
