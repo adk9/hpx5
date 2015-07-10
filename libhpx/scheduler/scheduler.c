@@ -191,4 +191,4 @@ scheduler_stats_t *scheduler_get_stats(struct scheduler *sched) {
 int scheduler_nop_handler(void) {
   return HPX_SUCCESS;
 }
-HPX_ACTION(HPX_INTERRUPT, 0, scheduler_nop, scheduler_nop_handler);
+LIBHPX_ACTION(HPX_INTERRUPT, 0, scheduler_nop, scheduler_nop_handler);

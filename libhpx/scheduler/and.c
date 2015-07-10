@@ -192,7 +192,7 @@ _and_init_handler(_and_t *and, int64_t value) {
           (void*)and);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _and_init, _and_init_handler,
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _and_init, _and_init_handler,
                   HPX_POINTER, HPX_SINT64);
 
 /// @}
@@ -237,7 +237,7 @@ _block_local_init_handler(_and_t *ands, uint32_t n, int64_t limit) {
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
                   _block_local_init_handler,
                   HPX_POINTER, HPX_UINT32, HPX_SINT64);
 

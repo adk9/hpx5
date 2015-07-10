@@ -37,7 +37,7 @@ _isir_lco_get_reply_handler(_isir_lco_get_reply_args_t *args, size_t n) {
   scheduler_spawn(args->p);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_INTERRUPT, HPX_MARSHALLED, _isir_lco_get_reply,
+static LIBHPX_ACTION(HPX_INTERRUPT, HPX_MARSHALLED, _isir_lco_get_reply,
                   _isir_lco_get_reply_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int
@@ -57,7 +57,7 @@ _isir_lco_get_request_handler(hpx_parcel_t *p, size_t n, void *out) {
   dbg_check(e, "Failure in remote get operation\n");
   hpx_thread_continue(args, sizeof(*args) + n);
 }
-static HPX_ACTION(HPX_DEFAULT, 0, _isir_lco_get_request,
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _isir_lco_get_request,
                   _isir_lco_get_request_handler, HPX_POINTER, HPX_SIZE_T,
                   HPX_POINTER);
 

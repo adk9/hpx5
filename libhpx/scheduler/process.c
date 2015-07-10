@@ -85,14 +85,14 @@ static int _proc_call_handler(hpx_parcel_t *arg, size_t n) {
   hpx_parcel_send_sync(parcel);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _proc_call,
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _proc_call,
                   _proc_call_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int _proc_delete_handler(_process_t *p, size_t size) {
   _free(p);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _proc_delete,
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _proc_delete,
                   _proc_delete_handler,
                   HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
@@ -113,7 +113,7 @@ static int _proc_return_credit_handler(_process_t *p, uint64_t *args, size_t siz
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _proc_return_credit,
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _proc_return_credit,
                   _proc_return_credit_handler,
                   HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 

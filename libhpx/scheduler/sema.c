@@ -65,7 +65,7 @@ static int _sema_init_handler(_sema_t *sema, unsigned count) {
   sema->count = count;
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _sema_init_async,
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _sema_init_async,
                   _sema_init_handler, HPX_POINTER, HPX_UINT);
 
 /// Allocate a semaphore LCO.

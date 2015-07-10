@@ -178,7 +178,7 @@ static int hpx_gas_alloc_local_at_handler(uint32_t bytes, uint32_t boundary) {
   dbg_assert(addr);
   HPX_THREAD_CONTINUE(addr);
 }
-HPX_ACTION(HPX_DEFAULT, 0, hpx_gas_alloc_local_at_action, hpx_gas_alloc_local_at_handler,
+LIBHPX_ACTION(HPX_DEFAULT, 0, hpx_gas_alloc_local_at_action, hpx_gas_alloc_local_at_handler,
            HPX_UINT32, HPX_UINT32);
 
 hpx_addr_t hpx_gas_alloc_local_at_sync(uint32_t bytes, uint32_t boundary, hpx_addr_t loc) {
@@ -201,7 +201,7 @@ static int _gas_calloc_at_handler(size_t nmemb, size_t size, uint32_t boundary) 
   dbg_assert(addr);
   HPX_THREAD_CONTINUE(addr);
 }
-HPX_ACTION(HPX_DEFAULT, 0, hpx_gas_calloc_local_at_action, _gas_calloc_at_handler,
+LIBHPX_ACTION(HPX_DEFAULT, 0, hpx_gas_calloc_local_at_action, _gas_calloc_at_handler,
            HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32);
 
 hpx_addr_t hpx_gas_calloc_local_at_sync(size_t nmemb, size_t size, uint32_t boundary,

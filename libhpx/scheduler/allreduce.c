@@ -243,7 +243,7 @@ _allreduce_init_handler(_allreduce_t *r, size_t writers, size_t readers,
 
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _allreduce_init_async,
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _allreduce_init_async,
                   _allreduce_init_handler, HPX_POINTER, HPX_SIZE_T, HPX_SIZE_T,
                   HPX_SIZE_T, HPX_ACTION_T, HPX_ACTION_T);
 /// @}
@@ -279,7 +279,7 @@ _block_local_init_handler(void *lco, int n, size_t participants, size_t readers,
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
                   _block_local_init_handler, HPX_POINTER, HPX_INT, HPX_SIZE_T,
                   HPX_SIZE_T, HPX_POINTER, HPX_SIZE_T, HPX_POINTER);
 

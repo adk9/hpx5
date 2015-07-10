@@ -54,7 +54,7 @@ static int _delete_launch_through_parcel_handler(hpx_parcel_t *p) {
   parcel_delete(p);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, 0, _delete_launch_through_parcel,
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _delete_launch_through_parcel,
                   _delete_launch_through_parcel_handler, HPX_POINTER);
 
 static void _prepare(hpx_parcel_t *p) {

@@ -148,7 +148,7 @@ _photon_unpin_async(const void *base, size_t n) {
   _photon_unpin(base, n);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_INTERRUPT, 0, _unpin_async, _photon_unpin_async,
+static LIBHPX_ACTION(HPX_INTERRUPT, 0, _unpin_async, _photon_unpin_async,
                   HPX_POINTER, HPX_SIZE_T);
 
 static command_t

@@ -247,7 +247,7 @@ static int _alltoall_getid_proxy_handler(_alltoall_get_offset_t *args, size_t n)
   else
     hpx_thread_exit(status);
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _alltoall_getid_proxy,
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _alltoall_getid_proxy,
                   _alltoall_getid_proxy_handler, HPX_POINTER, HPX_SIZE_T);
 
 
@@ -350,7 +350,7 @@ static int _alltoall_setid_proxy_handler(_alltoall_t *g, void *args, size_t n) {
   size_t size = n - sizeof(_alltoall_set_offset_t);
   return _alltoall_setid(g, a->offset, size, &a->buffer);
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _alltoall_setid_proxy,
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _alltoall_setid_proxy,
                   _alltoall_setid_proxy_handler,
                   HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
@@ -411,7 +411,7 @@ static int _alltoall_init_handler(_alltoall_t *g, size_t participants, size_t si
 
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _alltoall_init_async,
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _alltoall_init_async,
                   _alltoall_init_handler, HPX_POINTER, HPX_SIZE_T, HPX_SIZE_T);
 
 /// Allocate a new alltoall LCO. It scatters elements from each process in order
@@ -448,7 +448,7 @@ static int _block_local_init_handler(void *lco, uint32_t n, uint32_t inputs,
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
                   _block_local_init_handler,
                   HPX_POINTER, HPX_UINT32, HPX_UINT32, HPX_UINT32);
 
