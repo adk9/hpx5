@@ -20,6 +20,26 @@
 struct action_table;
 struct hpx_parcel;
 
+/// Register an HPX action of a given @p type. This is similar to the
+/// hpx_register_action routine, except that it gives us the chance to "tag"
+/// LIBHPX actions in their own way. This can be useful for instrumentation or
+/// optimization later.
+///
+/// @param  type The type of the action to be registered.
+/// @param  attr The attribute of the action (PINNED, PACKED, ...).
+/// @param   key A unique string key for the action.
+/// @param     f The local function pointer to associate with the action.
+/// @param    id The action id for this action to be returned after
+///                registration.
+/// @param nargs The variadic number of parameters that the action accepts.
+/// @param   ... The HPX types of the action parameters (HPX_INT, ...).
+///
+/// @returns     HPX_SUCCESS or an error code
+
+int libhpx_register_action(hpx_action_type_t type, uint32_t attr,
+                           const char *key, hpx_action_t *id,
+                           hpx_action_handler_t f, unsigned int nargs, ...);
+
 
 /// Get the key for an action.
 const char *action_table_get_key(const struct action_table *, hpx_action_t)
