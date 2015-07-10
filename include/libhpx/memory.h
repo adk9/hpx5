@@ -191,51 +191,119 @@ void as_free(int id, void *ptr);
 # error No gas allocator configured
 #endif
 
+#ifdef ENBALE_INSTRUMENTATION
+static inline void TRACE_REGISTERED_MALLOC(void *ptr, size_t n, size_t align) {
+  static const int class = HPX_INST_CLASS_MEMORY;
+  static const int id = HPX_INST_EVENT_MEMORY_REGISTERED_ALLOC;
+  inst_trace(class, id, ptr, n, align);
+}
+
+static inline void TRACE_REGISTERED_FREE(void *ptr) {
+  static const int class = HPX_INST_CLASS_MEMORY;
+  static const int id = HPX_INST_EVENT_MEMORY_REGISTERED_FREE;
+  inst_trace(class, id, ptr);
+}
+
+static inline void TRACE_GLOBAL_MALLOC(void *ptr, size_t n, size_t align) {
+  static const int class = HPX_INST_CLASS_MEMORY;
+  static const int id = HPX_INST_EVENT_MEMORY_GLOBAL_ALLOC;
+  inst_trace(class, id, ptr, n, align);
+}
+
+static inline void TRACE_GLOBAL_FREE(void *ptr) {
+  static const int class = HPX_INST_CLASS_MEMORY;
+  static const int id = HPX_INST_EVENT_MEMORY_GLOBAL_FREE;
+  inst_trace(class, id, ptr);
+}
+
+static inline void TRACE_CYCLIC_MALLOC(void *ptr, size_t n, size_t align) {
+  static const int class = HPX_INST_CLASS_MEMORY;
+  static const int id = HPX_INST_EVENT_MEMORY_CYCLIC_ALLOC;
+  inst_trace(class, id, ptr, n, align);
+}
+
+static inline void TRACE_CYCLIC_FREE(void *ptr) {
+  static const int class = HPX_INST_CLASS_MEMORY;
+  static const int id = HPX_INST_EVENT_MEMORY_CYCLIC_FREE;
+  inst_trace(class, id, ptr);
+}
+#else
+# define TRACE_MALLOC(ptr, n, align)
+# define TRACE_FREE(ptr)
+# define TRACE_REGISTERED_MALLOC(ptr, n, align)
+# define TRACE_REGISTERED_FREE(ptr)
+# define TRACE_GLOBAL_MALLOC(ptr, n, align)
+# define TRACE_GLOBAL_FREE(ptr)
+# define TRACE_CYCLIC_MALLOC(ptr, n, align)
+# define TRACE_CYCLIC_FREE(ptr)
+#endif
+
 static inline void *registered_malloc(size_t bytes) {
-  return as_malloc(AS_REGISTERED, bytes);
+  void *ptr = as_malloc(AS_REGISTERED, bytes);
+  TRACE_REGISTERED_MALLOC(ptr, bytes, 0);
+  return ptr;
 }
 
 static inline void *registered_calloc(size_t nmemb, size_t bytes) {
-  return as_calloc(AS_REGISTERED, nmemb, bytes);
+  void *ptr = as_calloc(AS_REGISTERED, nmemb, bytes);
+  TRACE_REGISTERED_MALLOC(ptr, nmemb * bytes, 0);
+  return ptr;
 }
 
 static inline void *registered_memalign(size_t boundary, size_t size) {
-  return as_memalign(AS_REGISTERED, boundary, size);
+  void *ptr = as_memalign(AS_REGISTERED, boundary, size);
+  TRACE_REGISTERED_MALLOC(ptr, size, boundary);
+  return ptr;
 }
 
 static inline void registered_free(void *ptr)  {
+  TRACE_REGISTERED_FREE(ptr);
   as_free(AS_REGISTERED, ptr);
 }
 
 static inline void *global_malloc(size_t bytes) {
-  return as_malloc(AS_GLOBAL, bytes);
+  void *ptr = as_malloc(AS_GLOBAL, bytes);
+  TRACE_GLOBAL_MALLOC(ptr, bytes, 0);
+  return ptr;
 }
 
 static inline void *global_calloc(size_t nmemb, size_t bytes) {
-  return as_calloc(AS_GLOBAL, nmemb, bytes);
+  void *ptr = as_calloc(AS_GLOBAL, nmemb, bytes);
+  TRACE_GLOBAL_MALLOC(ptr, nmemb * bytes, 0);
+  return ptr;
 }
 
 static inline void *global_memalign(size_t boundary, size_t size) {
-  return as_memalign(AS_GLOBAL, boundary, size);
+  void *ptr = as_memalign(AS_GLOBAL, boundary, size);
+  TRACE_GLOBAL_MALLOC(ptr, size, boundary);
+  return ptr;
 }
 
 static inline void global_free(void *ptr)  {
+  TRACE_GLOBAL_FREE(ptr);
   as_free(AS_GLOBAL, ptr);
 }
 
 static inline void *cyclic_malloc(size_t bytes) {
-  return as_malloc(AS_CYCLIC, bytes);
+  void *ptr = as_malloc(AS_CYCLIC, bytes);
+  TRACE_CYCLIC_MALLOC(ptr, bytes, 0);
+  return ptr;
 }
 
 static inline void *cyclic_calloc(size_t nmemb, size_t bytes) {
-  return as_calloc(AS_CYCLIC, nmemb, bytes);
+  void *ptr = as_calloc(AS_CYCLIC, nmemb, bytes);
+  TRACE_CYCLIC_MALLOC(ptr, nmemb * bytes, 0);
+  return ptr;
 }
 
 static inline void *cyclic_memalign(size_t boundary, size_t size) {
-  return as_memalign(AS_CYCLIC, boundary, size);
+  void *ptr = as_memalign(AS_CYCLIC, boundary, size);
+  TRACE_CYCLIC_MALLOC(ptr, size, boundary);
+  return ptr;
 }
 
 static inline void cyclic_free(void *ptr)  {
+  TRACE_CYCLIC_FREE(ptr);
   as_free(AS_CYCLIC, ptr);
 }
 
