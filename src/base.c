@@ -121,7 +121,7 @@ base_alloc(size_t size)
 		base_resident += PAGE_CEILING((uintptr_t)ret + csize) -
 		    PAGE_CEILING((uintptr_t)ret);
 	}
-	JEMALLOC_VALGRIND_MAKE_MEM_UNDEFINED(ret, csize);
+	JEMALLOC_VALGRIND_MAKE_MEM_DEFINED(ret, csize);
 label_return:
 	malloc_mutex_unlock(&base_mtx);
 	return (ret);
@@ -132,6 +132,8 @@ base_stats_get(size_t *allocated, size_t *resident, size_t *mapped)
 {
 
 	malloc_mutex_lock(&base_mtx);
+	assert(base_allocated <= base_resident);
+	assert(base_resident <= base_mapped);
 	*allocated = base_allocated;
 	*resident = base_resident;
 	*mapped = base_mapped;

@@ -5,7 +5,7 @@
 /* Data. */
 
 const char	*opt_dss = DSS_DEFAULT;
-size_t		opt_lg_chunk = LG_CHUNK_DEFAULT;
+size_t		opt_lg_chunk = 0;
 
 /* Used exclusively for gdump triggering. */
 static size_t	curchunks;
@@ -277,15 +277,21 @@ void *
 chunk_alloc_cache(arena_t *arena, void *new_addr, size_t size, size_t alignment,
     bool *zero, bool dalloc_node)
 {
+	void *ret;
 
 	assert(size != 0);
 	assert((size & chunksize_mask) == 0);
 	assert(alignment != 0);
 	assert((alignment & chunksize_mask) == 0);
 
-	return (chunk_recycle(arena, &arena->chunks_szad_cache,
+	ret = chunk_recycle(arena, &arena->chunks_szad_cache,
 	    &arena->chunks_ad_cache, true, new_addr, size, alignment, zero,
-	    dalloc_node));
+	    dalloc_node);
+	if (ret == NULL)
+		return (NULL);
+	if (config_valgrind)
+		JEMALLOC_VALGRIND_MAKE_MEM_UNDEFINED(ret, size);
+	return (ret);
 }
 
 static arena_t *
@@ -529,6 +535,29 @@ chunks_rtree_node_alloc(size_t nelms)
 bool
 chunk_boot(void)
 {
+#ifdef _WIN32
+	SYSTEM_INFO info;
+	GetSystemInfo(&info);
+
+	/*
+	 * Verify actual page size is equal to or an integral multiple of
+	 * configured page size.
+	 */
+	if (info.dwPageSize & ((1U << LG_PAGE) - 1))
+		return (true);
+
+	/*
+	 * Configure chunksize (if not set) to match granularity (usually 64K),
+	 * so pages_map will always take fast path.
+	 */
+	if (!opt_lg_chunk) {
+		opt_lg_chunk = jemalloc_ffs((int)info.dwAllocationGranularity)
+		    - 1;
+	}
+#else
+	if (!opt_lg_chunk)
+		opt_lg_chunk = LG_CHUNK_DEFAULT;
+#endif
 
 	/* Set variables according to the value of opt_lg_chunk. */
 	chunksize = (ZU(1) << opt_lg_chunk);
