@@ -396,12 +396,12 @@ bool action_is_function(const struct action_table *table, hpx_action_t id) {
 static int
 _register_action_va(hpx_action_type_t type, uint32_t attr,
                     const char *key, hpx_action_t *id, hpx_action_handler_t f,
-                    unsigned int nargs, va_list vargs, int system) {
+                    int system, unsigned int nargs, va_list vargs) {
   dbg_assert(id);
   *id = HPX_ACTION_INVALID;
 
   if (system) {
-    attr &= HPX_INTERNAL;
+    attr |= HPX_INTERNAL;
   }
 
   if (attr & HPX_MARSHALLED) {
@@ -439,7 +439,7 @@ libhpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
                        unsigned int nargs, ...) {
   va_list vargs;
   va_start(vargs, nargs);
-  int e = _register_action_va(type, attr, key, id, f, nargs, vargs, 1);
+  int e = _register_action_va(type, attr, key, id, f, 1, nargs, vargs);
   va_end(vargs);
   return e;
 }
@@ -450,7 +450,7 @@ hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
                     unsigned int nargs, ...) {
   va_list vargs;
   va_start(vargs, nargs);
-  int e = _register_action_va(type, attr, key, id, f, nargs, vargs, 0);
+  int e = _register_action_va(type, attr, key, id, f, 0, nargs, vargs);
   va_end(vargs);
   return e;
 }
