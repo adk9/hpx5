@@ -150,7 +150,7 @@ _photon_unpin_async(const void *base, size_t n) {
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_INTERRUPT, 0, _unpin_async, _photon_unpin_async,
-                  HPX_POINTER, HPX_SIZE_T);
+                     HPX_POINTER, HPX_SIZE_T);
 
 static command_t
 _chain_unpin(const void *addr, size_t n, command_t op) {

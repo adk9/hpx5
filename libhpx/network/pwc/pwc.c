@@ -152,7 +152,7 @@ _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size) {
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_INTERRUPT, HPX_MARSHALLED, _rendezvous_get,
-                  _rendezvous_get_handler, HPX_POINTER, HPX_SIZE_T);
+                     _rendezvous_get_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int
 _pwc_rendezvous_send(pwc_network_t *pwc, hpx_parcel_t *p, int rank) {

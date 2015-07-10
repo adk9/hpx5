@@ -31,7 +31,7 @@ int isir_emulate_pwc_handler(void *to, const void *buffer, size_t n) {
   return HPX_SUCCESS;
 }
 LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, isir_emulate_pwc,
-           isir_emulate_pwc_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
+              isir_emulate_pwc_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 typedef struct {
   void *lva;
@@ -45,7 +45,7 @@ static int _gwc_reply_handler(const _gwc_reply_args_t *args, size_t n) {
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_TASK, HPX_MARSHALLED, _gwc_reply,
-                  _gwc_reply_handler, HPX_POINTER, HPX_SIZE_T);
+                     _gwc_reply_handler, HPX_POINTER, HPX_SIZE_T);
 
 /// Emulate the remote side of a get-with-completion.
 ///
@@ -74,4 +74,4 @@ static int _gwc_request_handler(void *from, size_t n, hpx_addr_t to, void *lva)
   return HPX_SUCCESS;
 }
 LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, isir_emulate_gwc, _gwc_request_handler,
-           HPX_POINTER, HPX_SIZE_T, HPX_ADDR, HPX_POINTER);
+              HPX_POINTER, HPX_SIZE_T, HPX_ADDR, HPX_POINTER);

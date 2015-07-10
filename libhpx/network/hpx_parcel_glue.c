@@ -59,7 +59,7 @@ hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t gate) {
 // important that this is a DEFAULT action so that we don't try to work-first
 // it.
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _send_through_async,
-                  hpx_parcel_send_through_sync, HPX_POINTER, HPX_ADDR);
+                     hpx_parcel_send_through_sync, HPX_POINTER, HPX_ADDR);
 
 hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
                                      hpx_addr_t lsync) {

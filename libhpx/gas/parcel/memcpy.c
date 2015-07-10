@@ -31,13 +31,15 @@ static int _memcpy_reply_handler(char *local, void *data, size_t bytes) {
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _memcpy_reply,
-                  _memcpy_reply_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
+                     _memcpy_reply_handler, HPX_POINTER, HPX_POINTER,
+                     HPX_SIZE_T);
 
 static int _memcpy_request_handler(char *local, size_t size, hpx_addr_t to) {
   hpx_call_cc(to, _memcpy_reply, NULL, NULL, local, size);
 }
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _memcpy_request, _memcpy_request_handler,
-                  HPX_POINTER, HPX_SIZE_T, HPX_ADDR);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _memcpy_request,
+                     _memcpy_request_handler,
+                     HPX_POINTER, HPX_SIZE_T, HPX_ADDR);
 
 int parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync) {
   int e = hpx_call(from, _memcpy_request, sync, &size, &to);

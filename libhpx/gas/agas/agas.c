@@ -168,9 +168,9 @@ _locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align,
   }
   return HPX_SUCCESS;
 }
-LIBHPX_ACTION(HPX_DEFAULT, 0, _locality_alloc_cyclic,
-           _locality_alloc_cyclic_handler, HPX_UINT64,
-           HPX_UINT32, HPX_UINT64, HPX_POINTER, HPX_INT);
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _locality_alloc_cyclic,
+                     _locality_alloc_cyclic_handler, HPX_UINT64,
+                     HPX_UINT32, HPX_UINT64, HPX_POINTER, HPX_INT);
 
 hpx_addr_t _agas_alloc_cyclic_sync(size_t n, uint32_t bsize, int zero) {
   agas_t *agas = (agas_t*)here->gas;
@@ -208,8 +208,8 @@ static int _alloc_cyclic_handler(size_t n, size_t bsize) {
   hpx_addr_t addr = agas_alloc_cyclic_sync(n, bsize);
   HPX_THREAD_CONTINUE(addr);
 }
-LIBHPX_ACTION(HPX_DEFAULT, 0, agas_alloc_cyclic, _alloc_cyclic_handler, HPX_SIZE_T,
-           HPX_SIZE_T);
+LIBHPX_ACTION(HPX_DEFAULT, 0, agas_alloc_cyclic, _alloc_cyclic_handler,
+              HPX_SIZE_T, HPX_SIZE_T);
 
 static hpx_addr_t
 _agas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
@@ -235,8 +235,8 @@ static int _calloc_cyclic_handler(size_t n, size_t bsize) {
   hpx_addr_t addr = agas_calloc_cyclic_sync(n, bsize);
   HPX_THREAD_CONTINUE(addr);
 }
-LIBHPX_ACTION(HPX_DEFAULT, 0, agas_calloc_cyclic, _calloc_cyclic_handler, HPX_SIZE_T,
-           HPX_SIZE_T);
+LIBHPX_ACTION(HPX_DEFAULT, 0, agas_calloc_cyclic, _calloc_cyclic_handler,
+              HPX_SIZE_T, HPX_SIZE_T);
 
 static hpx_addr_t
 _agas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
@@ -272,8 +272,8 @@ _agas_free_block_handler(void *lva) {
 
   return HPX_SUCCESS;
 }
-LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_free_block,
-           _agas_free_block_handler, HPX_POINTER);
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_free_block,
+                     _agas_free_block_handler, HPX_POINTER);
 
 static int
 _agas_try_free_block_handler(hpx_addr_t sync) {
@@ -292,8 +292,8 @@ _agas_try_free_block_handler(hpx_addr_t sync) {
   btt_try_delete(agas->btt, gva, p);
   return HPX_SUCCESS;
 }
-LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_try_free_block,
-           _agas_try_free_block_handler, HPX_ADDR);
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_try_free_block,
+                     _agas_try_free_block_handler, HPX_ADDR);
 
 static int
 _agas_free_at_zero_handler(hpx_addr_t addr, hpx_addr_t rsync, size_t blocks) {
@@ -314,8 +314,9 @@ _agas_free_at_zero_handler(hpx_addr_t addr, hpx_addr_t rsync, size_t blocks) {
   
   return HPX_SUCCESS;
 }
-LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_free_at_zero,
-           _agas_free_at_zero_handler, HPX_ADDR, HPX_ADDR, HPX_SIZE_T);
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_free_at_zero,
+                     _agas_free_at_zero_handler, HPX_ADDR, HPX_ADDR,
+                     HPX_SIZE_T);
 
 static int
 _agas_free_async_handler(hpx_addr_t rsync) {
@@ -323,8 +324,8 @@ _agas_free_async_handler(hpx_addr_t rsync) {
   hpx_gas_free(gva, rsync);
   return HPX_SUCCESS;
 }
-LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_free_async,
-           _agas_free_async_handler, HPX_ADDR);
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_free_async,
+                     _agas_free_async_handler, HPX_ADDR);
 
 static void
 _agas_free(void *gas, hpx_addr_t addr, hpx_addr_t rsync) {

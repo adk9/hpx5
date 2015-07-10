@@ -143,7 +143,7 @@ _pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args, size_t n) {
   }
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _pwc_lco_get_request,
-                  _pwc_lco_get_request_handler, HPX_POINTER, HPX_SIZE_T);
+                     _pwc_lco_get_request_handler, HPX_POINTER, HPX_SIZE_T);
 
 
 int
