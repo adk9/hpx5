@@ -151,7 +151,7 @@ _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size) {
   dbg_check(e, "could not issue get during rendezvous parcel\n");
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_INTERRUPT, HPX_MARSHALLED, _rendezvous_get,
+static LIBHPX_ACTION(HPX_INTERRUPT, HPX_MARSHALLED, _rendezvous_get,
                   _rendezvous_get_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int

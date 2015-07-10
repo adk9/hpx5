@@ -41,7 +41,7 @@ static int _probe_handler(network_t *network) {
 
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, 0, _probe, _probe_handler, HPX_POINTER);
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _probe, _probe_handler, HPX_POINTER);
 
 int probe_start(network_t *network) {
   // NB: we should encapsulate this probe infrastructure inside of the networks

@@ -43,7 +43,7 @@ static int _hpx_143_fix_handler(void) {
   _hpx_143 = hpx_gas_alloc_cyclic(sizeof(void*), HPX_LOCALITIES, 0);
   return LIBHPX_OK;
 }
-static HPX_ACTION(HPX_DEFAULT, 0, _hpx_143_fix, _hpx_143_fix_handler);
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _hpx_143_fix, _hpx_143_fix_handler);
 
 /// Cleanup utility function.
 ///

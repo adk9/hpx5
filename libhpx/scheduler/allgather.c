@@ -300,7 +300,7 @@ static int _allgather_setid_proxy_handler(_allgather_t *g, void *args, size_t n)
   size_t size = n - sizeof(_allgather_set_offset_t);
   return _allgather_setid(g, a->offset, size, &a->buffer);
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _allgather_setid_proxy,
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _allgather_setid_proxy,
                   _allgather_setid_proxy_handler, HPX_POINTER,
                   HPX_POINTER, HPX_SIZE_T);
 
@@ -340,7 +340,7 @@ static int _allgather_init_handler(_allgather_t *g, size_t participants, size_t 
 
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _allgather_init_async,
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _allgather_init_async,
                   _allgather_init_handler, HPX_POINTER, HPX_SIZE_T, HPX_SIZE_T);
 
 /// Allocate a new gather LCO. It gathers elements from each process in order
@@ -376,7 +376,7 @@ static int _block_local_init_handler(void *lco, uint32_t n, uint32_t inputs,
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
                   _block_local_init_handler, HPX_POINTER, HPX_UINT32,
                   HPX_UINT32, HPX_UINT32);
 

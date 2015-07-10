@@ -227,7 +227,7 @@ static int _future_init_handler(_future_t *f, int size) {
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _future_init_async,
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _future_init_async,
                   _future_init_handler, HPX_POINTER, HPX_INT);
 
 /// Initialize a block of futures.
@@ -239,7 +239,7 @@ static int _block_init_handler(char *base, const uint32_t size,
   }
   return HPX_SUCCESS;
 }
-HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_init,
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_init,
            _block_init_handler, HPX_POINTER, HPX_UINT32, HPX_UINT32);
 
 hpx_addr_t hpx_lco_future_new(int size) {
@@ -298,7 +298,7 @@ static int _block_local_init_handler(void *lco, uint32_t n, uint32_t size) {
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
                   _block_local_init_handler, HPX_POINTER, HPX_UINT32, HPX_UINT32);
 
 /// Allocate an array of future local to the calling locality.
