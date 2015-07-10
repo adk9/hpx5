@@ -124,11 +124,12 @@ static const char *const HPX_LOG_LEVEL_TO_STRING[] = {
   "memory"
 };
 
-#define HPX_TRACE_PARCELS   1
-#define HPX_TRACE_PWC       2
-#define HPX_TRACE_SCHED     4
-#define HPX_TRACE_LCO       8
-#define HPX_TRACE_PROCESS   16
+#define HPX_TRACE_PARCELS   (UINT64_C(1) << 0)
+#define HPX_TRACE_PWC       (UINT64_C(1) << 1)
+#define HPX_TRACE_SCHED     (UINT64_C(1) << 2)
+#define HPX_TRACE_LCO       (UINT64_C(1) << 3)
+#define HPX_TRACE_PROCESS   (UINT64_C(1) << 4)
+#define HPX_TRACE_MEMORY    (UINT64_C(1) << 5)
 
 static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
   "parcels",
@@ -136,6 +137,7 @@ static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
   "sched",
   "lco",
   "process",
+  "memory",
   "all"
 };
 

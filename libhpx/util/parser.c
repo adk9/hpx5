@@ -54,7 +54,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-dbg-waitonsegv      call hpx_wait() for SIGSEGV for debugging \n                                  (unreliable)  (default=off)",
   "      --hpx-dbg-mprotectstacks  use mprotect() to bracket stacks to look for \n                                  stack overflows  (default=off)",
   "\nTracing:",
-  "      --hpx-trace-classes=class set the event classes to trace  (possible \n                                  values=\"parcel\", \"pwc\", \"sched\", \n                                  \"lco\", \"process\", \"all\")",
+  "      --hpx-trace-classes=class set the event classes to trace  (possible \n                                  values=\"parcel\", \"pwc\", \"sched\", \n                                  \"lco\", \"process\", \"memory\", \"all\")",
   "      --hpx-trace-dir=dir       directory to output trace files",
   "      --hpx-trace-filesize=bytes\n                                set the size of each trace file",
   "      --hpx-trace-at=[localities]\n                                set the localities to trace at",
@@ -131,7 +131,7 @@ char *hpx_option_parser_hpx_boot_values[] = {"default", "smp", "mpi", "pmi", 0} 
 char *hpx_option_parser_hpx_transport_values[] = {"default", "mpi", "photon", 0} ;	/* Possible values for hpx-transport.  */
 char *hpx_option_parser_hpx_network_values[] = {"default", "smp", "pwc", "isir", 0} ;	/* Possible values for hpx-network.  */
 char *hpx_option_parser_hpx_log_level_values[] = {"default", "boot", "sched", "gas", "lco", "net", "trans", "parcel", "action", "config", "memory", "all", 0} ;	/* Possible values for hpx-log-level.  */
-char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "pwc", "sched", "lco", "process", "all", 0} ;	/* Possible values for hpx-trace-classes.  */
+char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "pwc", "sched", "lco", "process", "memory", "all", 0} ;	/* Possible values for hpx-trace-classes.  */
 char *hpx_option_parser_hpx_photon_backend_values[] = {"default", "verbs", "ugni", 0} ;	/* Possible values for hpx-photon-backend.  */
 
 static char *
