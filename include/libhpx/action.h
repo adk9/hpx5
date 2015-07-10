@@ -139,8 +139,8 @@ void action_table_free(const struct action_table *action)
 /// @param __VA_ARGS__ The parameter types (HPX_INT, ...).
 #define LIBHPX_REGISTER_ACTION(type, attr, id, handler, ...)          \
   libhpx_register_action(type, attr, __FILE__ ":" _HPX_XSTR(id),      \
-                      &id, (hpx_action_handler_t)handler,             \
-                      __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+                         &id, (hpx_action_handler_t)handler,          \
+                         __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 /// Create an action id for a function, so that it can be called asynchronously.
 ///
