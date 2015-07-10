@@ -16,6 +16,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <libhpx/action.h>
 #include <libhpx/boot.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>

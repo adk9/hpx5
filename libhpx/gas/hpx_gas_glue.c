@@ -16,6 +16,7 @@
 
 
 #include <hpx/hpx.h>
+#include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/locality.h>

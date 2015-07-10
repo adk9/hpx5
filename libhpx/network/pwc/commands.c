@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/gpa.h>
 #include <libhpx/locality.h>
