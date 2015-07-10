@@ -75,6 +75,10 @@ static inline void TRACE_STEAL_LIFO(hpx_parcel_t *p,
   inst_trace(class, id, p, victim->id);
 }
 #else
+# define TRACE_WQSIZE(w)
+# define TRACE_PUSH_LIFO(p)
+# define TRACE_POP_LIFO(p)
+# define TRACE_STEAL_LIFO(p, v)
 #endif
 
 __thread struct worker *self = NULL;
