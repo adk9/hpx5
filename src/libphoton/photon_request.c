@@ -375,7 +375,8 @@ static int __photon_cleanup_request(photonRequest req) {
       MARK_DONE(photon_processes[req->proc].remote_pwc_buf,
 		ALIGN(EB_MSG_SIZE(req->size), PWC_ALIGN));
     }
-    if (req->flags & REQUEST_FLAG_2PWC) {
+    if ((req->flags & REQUEST_FLAG_2PWC) &&
+	!(req->flags & REQUEST_FLAG_NO_RCE)) {
       MARK_DONE(photon_processes[req->proc].remote_pwc_ledger, 1);
     }
     break;
