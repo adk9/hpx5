@@ -508,9 +508,9 @@ int _photon_put_with_completion(int proc, uint64_t size,
   photonRequest req;
   photonRequestTable rt;
   int rc;
-  
-  dbg_trace("(%d, size: %lu, lid: 0x%016lx, rid: 0x%016lx)", proc,
-	    size, local, remote);
+
+  dbg_trace("(%d, size: %lu, lid: 0x%016lx, rid: 0x%016lx, flags: %d)", proc,
+	    size, local, remote, flags);  
 
   if (size && !lbuf) {
     log_err("Trying to put size %lu and NULL lbuf", size);
@@ -594,9 +594,9 @@ int _photon_get_with_completion(int proc, uint64_t size,
   photonRequest req;
   photonRequestTable rt;
   int rc;
-
-  dbg_trace("(%d, size: %lu, lid: 0x%016lx, rid: 0x%016lx)", proc,
-	    size, local, remote);
+  
+  dbg_trace("(%d, size: %lu, lid: 0x%016lx, rid: 0x%016lx, flags: %d)", proc,
+	    size, local, remote, flags);
 
   if (size && !rbuf) {
     log_err("Tring to get size %lu and NULL rbuf", size);
