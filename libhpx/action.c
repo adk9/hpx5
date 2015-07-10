@@ -389,14 +389,12 @@ bool action_is_function(const struct action_table *table, hpx_action_t id) {
   return (action_table_get_type(table, id) == HPX_FUNCTION);
 }
 
-int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
-                        hpx_action_t *id, hpx_action_handler_t f,
-                        unsigned int nargs, ...) {
+static int
+_register_action_va(hpx_action_type_t type, uint32_t attr,
+                    const char *key, hpx_action_t *id, hpx_action_handler_t f,
+                    unsigned int nargs, va_list vargs, int system) {
   dbg_assert(id);
   *id = HPX_ACTION_INVALID;
-
-  va_list vargs;
-  va_start(vargs, nargs);
 
   if (attr & HPX_MARSHALLED) {
     if (attr & HPX_PINNED) {
@@ -419,13 +417,34 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
   for (int i = 0; i < nargs; ++i) {
     args[i] = va_arg(vargs, hpx_type_t);
   }
-  va_end(vargs);
 
   ffi_status s = ffi_prep_cif(cif, FFI_DEFAULT_ABI, nargs, HPX_INT, args);
   if (s != FFI_OK) {
     dbg_error("failed to process type information for action id %d.\n", *id);
   }
   return _push_back(_get_actions(), id, key, f, type, attr, cif);
+}
+
+int
+libhpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
+                       hpx_action_t *id, hpx_action_handler_t f,
+                       unsigned int nargs, ...) {
+  va_list vargs;
+  va_start(vargs, nargs);
+  int e = _register_action_va(type, attr, key, id, f, nargs, vargs, 1);
+  va_end(vargs);
+  return e;
+}
+
+int
+hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
+                    hpx_action_t *id, hpx_action_handler_t f,
+                    unsigned int nargs, ...) {
+  va_list vargs;
+  va_start(vargs, nargs);
+  int e = _register_action_va(type, attr, key, id, f, nargs, vargs, 0);
+  va_end(vargs);
+  return e;
 }
 
 hpx_action_handler_t hpx_action_get_handler(hpx_action_t id) {
