@@ -109,20 +109,25 @@ host_triplet = @host@
 #ugni_test_CFLAGS = ${AM_CFLAGS} @UGNI_CFLAGS@ @MPI_FLAGS@
 #ugni_test_LDFLAGS = @UGNI_LIBS@ @MPI_LIBS@
 #ugni_test_SOURCES = ugni/utility_functions.c
-@HAVE_MPI_TRUE@am__append_7 = @MPI_CFLAGS@
-@HAVE_MPI_TRUE@am__append_8 = @MPI_LIBS@
-@HAVE_PMI_TRUE@am__append_9 = @PMI_CFLAGS@
-@HAVE_PMI_TRUE@am__append_10 = @PMI_LIBS@
-@HAVE_XSP_TRUE@am__append_11 = @XSP_CFLAGS@
-@HAVE_XSP_TRUE@am__append_12 = @XSP_LIBS@
-@HAVE_XSP_TRUE@am__append_13 = forwarder/photon_xsp_forwarder.c
+@HAVE_LIBFABRIC_TRUE@am__append_7 = -I@PHOTON_SRCDIR@/src/fi @PHOTON_LIBFABRIC_CPPFLAGS@
+@HAVE_LIBFABRIC_TRUE@am__append_8 = fi/photon_fi.c
+@HAVE_LIBFABRIC_TRUE@am__append_9 = @PHOTON_BUILDDIR@/src/contrib/libfabric/src/libfabric.la
+@HAVE_MPI_TRUE@am__append_10 = @MPI_CFLAGS@
+@HAVE_MPI_TRUE@am__append_11 = @MPI_LIBS@
+@HAVE_PMI_TRUE@am__append_12 = @PMI_CFLAGS@
+@HAVE_PMI_TRUE@am__append_13 = @PMI_LIBS@
+@HAVE_XSP_TRUE@am__append_14 = @XSP_CFLAGS@
+@HAVE_XSP_TRUE@am__append_15 = @XSP_LIBS@
+@HAVE_XSP_TRUE@am__append_16 = forwarder/photon_xsp_forwarder.c
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/config/libtool.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/config/acx_configure_dir.m4 \
+	$(top_srcdir)/config/libtool.m4 \
 	$(top_srcdir)/config/ltoptions.m4 \
 	$(top_srcdir)/config/ltsugar.m4 \
 	$(top_srcdir)/config/ltversion.m4 \
 	$(top_srcdir)/config/lt~obsolete.m4 \
+	$(top_srcdir)/config/photon_contrib_libfabric.m4 \
 	$(top_srcdir)/config/photon_with_pkg.m4 \
 	$(top_srcdir)/config/pkg.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -163,7 +168,8 @@ am__installdirs = "$(DESTDIR)$(libdir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libphoton_la_DEPENDENCIES = @PHOTON_BUILDDIR@/src/util/libutil.la \
 	@PHOTON_BUILDDIR@/src/contrib/bit_array/libbit_array.la \
-	@PHOTON_BUILDDIR@/src/contrib/libsync/libsync.la
+	@PHOTON_BUILDDIR@/src/contrib/libsync/libsync.la \
+	$(am__append_9)
 am__libphoton_la_SOURCES_DIST = libphoton/libphoton.c \
 	libphoton/photon_request.c libphoton/photon_event.c \
 	libphoton/photon_pwc.c libphoton/photon_backend.c \
@@ -175,7 +181,7 @@ am__libphoton_la_SOURCES_DIST = libphoton/libphoton.c \
 	verbs/verbs_util.c verbs/verbs_connect.c verbs/verbs_buffer.c \
 	verbs/verbs_ud.c ugni/photon_ugni.c ugni/photon_ugni_connect.c \
 	ugni/photon_ugni_buffer.c ugni/utility_functions.c \
-	forwarder/photon_xsp_forwarder.c
+	fi/photon_fi.c forwarder/photon_xsp_forwarder.c
 am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_VERBS_TRUE@am__objects_1 = verbs/verbs.lo verbs/verbs_util.lo \
 @HAVE_VERBS_TRUE@	verbs/verbs_connect.lo verbs/verbs_buffer.lo \
@@ -184,7 +190,8 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_UGNI_TRUE@	ugni/photon_ugni_connect.lo \
 @HAVE_UGNI_TRUE@	ugni/photon_ugni_buffer.lo \
 @HAVE_UGNI_TRUE@	ugni/utility_functions.lo
-@HAVE_XSP_TRUE@am__objects_3 = forwarder/photon_xsp_forwarder.lo
+@HAVE_LIBFABRIC_TRUE@am__objects_3 = fi/photon_fi.lo
+@HAVE_XSP_TRUE@am__objects_4 = forwarder/photon_xsp_forwarder.lo
 am_libphoton_la_OBJECTS = libphoton/libphoton.lo \
 	libphoton/photon_request.lo libphoton/photon_event.lo \
 	libphoton/photon_pwc.lo libphoton/photon_backend.lo \
@@ -193,7 +200,7 @@ am_libphoton_la_OBJECTS = libphoton/libphoton.lo \
 	libphoton/photon_rdma_ledger.lo \
 	libphoton/photon_rdma_INFO_ledger.lo \
 	libphoton/photon_rdma_EAGER_buf.lo $(am__objects_1) \
-	$(am__objects_2) $(am__objects_3)
+	$(am__objects_2) $(am__objects_3) $(am__objects_4)
 libphoton_la_OBJECTS = $(am_libphoton_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -349,6 +356,8 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LIBFABRIC_CFLAGS = @LIBFABRIC_CFLAGS@
+LIBFABRIC_LIBS = @LIBFABRIC_LIBS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
@@ -377,6 +386,11 @@ PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PHOTON_BUILDDIR = @PHOTON_BUILDDIR@
+PHOTON_LIBFABRIC_CARGS = @PHOTON_LIBFABRIC_CARGS@
+PHOTON_LIBFABRIC_CFLAGS = @PHOTON_LIBFABRIC_CFLAGS@
+PHOTON_LIBFABRIC_CPPFLAGS = @PHOTON_LIBFABRIC_CPPFLAGS@
+PHOTON_LIBFABRIC_DEPS = @PHOTON_LIBFABRIC_DEPS@
+PHOTON_LIBFABRIC_LIBS = @PHOTON_LIBFABRIC_LIBS@
 PHOTON_SRCDIR = @PHOTON_SRCDIR@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
@@ -454,8 +468,8 @@ AM_CFLAGS = @CFLAGS@ -I@PHOTON_SRCDIR@/include \
 	-I@PHOTON_SRCDIR@/src/util -I@PHOTON_SRCDIR@/src/libphoton \
 	-I@PHOTON_SRCDIR@/src/forwarder -I@PHOTON_SRCDIR@/src/contrib \
 	-I@PHOTON_SRCDIR@/src/contrib/libsync/include $(am__append_1) \
-	$(am__append_4) $(am__append_7) $(am__append_9) \
-	$(am__append_11)
+	$(am__append_4) $(am__append_7) $(am__append_10) \
+	$(am__append_12) $(am__append_14)
 #-DPHOTON_MULTITHREADED
 SUBDIRS = util contrib
 DIST_SUBDIRS = util contrib
@@ -468,14 +482,14 @@ libphoton_la_SOURCES = libphoton/libphoton.c \
 	libphoton/photon_rdma_ledger.c \
 	libphoton/photon_rdma_INFO_ledger.c \
 	libphoton/photon_rdma_EAGER_buf.c $(am__append_3) \
-	$(am__append_6) $(am__append_13)
+	$(am__append_6) $(am__append_8) $(am__append_16)
 libphoton_ladir = @PHOTON_SRCDIR@/src/libphoton
 libphoton_la_LDFLAGS = @THREAD_LIBS@ $(am__append_2) $(am__append_5) \
-	$(am__append_8) $(am__append_10) $(am__append_12)
-libphoton_la_LIBADD = @PHOTON_BUILDDIR@/src/util/libutil.la    \
- @PHOTON_BUILDDIR@/src/contrib/bit_array/libbit_array.la       \
- @PHOTON_BUILDDIR@/src/contrib/libsync/libsync.la
-
+	$(am__append_11) $(am__append_13) $(am__append_15)
+libphoton_la_LIBADD = @PHOTON_BUILDDIR@/src/util/libutil.la \
+	@PHOTON_BUILDDIR@/src/contrib/bit_array/libbit_array.la \
+	@PHOTON_BUILDDIR@/src/contrib/libsync/libsync.la \
+	$(am__append_9)
 all: all-recursive
 
 .SUFFIXES:
@@ -603,6 +617,13 @@ ugni/photon_ugni_buffer.lo: ugni/$(am__dirstamp) \
 	ugni/$(DEPDIR)/$(am__dirstamp)
 ugni/utility_functions.lo: ugni/$(am__dirstamp) \
 	ugni/$(DEPDIR)/$(am__dirstamp)
+fi/$(am__dirstamp):
+	@$(MKDIR_P) fi
+	@: > fi/$(am__dirstamp)
+fi/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) fi/$(DEPDIR)
+	@: > fi/$(DEPDIR)/$(am__dirstamp)
+fi/photon_fi.lo: fi/$(am__dirstamp) fi/$(DEPDIR)/$(am__dirstamp)
 forwarder/$(am__dirstamp):
 	@$(MKDIR_P) forwarder
 	@: > forwarder/$(am__dirstamp)
@@ -617,6 +638,8 @@ libphoton.la: $(libphoton_la_OBJECTS) $(libphoton_la_DEPENDENCIES) $(EXTRA_libph
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f fi/*.$(OBJEXT)
+	-rm -f fi/*.lo
 	-rm -f forwarder/*.$(OBJEXT)
 	-rm -f forwarder/*.lo
 	-rm -f libphoton/*.$(OBJEXT)
@@ -629,6 +652,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@fi/$(DEPDIR)/photon_fi.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@forwarder/$(DEPDIR)/photon_xsp_forwarder.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/libphoton.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/photon_backend.Plo@am__quote@
@@ -681,6 +705,7 @@ mostlyclean-libtool:
 
 clean-libtool:
 	-rm -rf .libs _libs
+	-rm -rf fi/.libs fi/_libs
 	-rm -rf forwarder/.libs forwarder/_libs
 	-rm -rf libphoton/.libs libphoton/_libs
 	-rm -rf ugni/.libs ugni/_libs
@@ -875,6 +900,8 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-rm -f fi/$(DEPDIR)/$(am__dirstamp)
+	-rm -f fi/$(am__dirstamp)
 	-rm -f forwarder/$(DEPDIR)/$(am__dirstamp)
 	-rm -f forwarder/$(am__dirstamp)
 	-rm -f libphoton/$(DEPDIR)/$(am__dirstamp)
@@ -893,7 +920,7 @@ clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
 	mostlyclean-am
 
 distclean: distclean-recursive
-	-rm -rf forwarder/$(DEPDIR) libphoton/$(DEPDIR) ugni/$(DEPDIR) verbs/$(DEPDIR)
+	-rm -rf fi/$(DEPDIR) forwarder/$(DEPDIR) libphoton/$(DEPDIR) ugni/$(DEPDIR) verbs/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -939,7 +966,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-recursive
-	-rm -rf forwarder/$(DEPDIR) libphoton/$(DEPDIR) ugni/$(DEPDIR) verbs/$(DEPDIR)
+	-rm -rf fi/$(DEPDIR) forwarder/$(DEPDIR) libphoton/$(DEPDIR) ugni/$(DEPDIR) verbs/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
