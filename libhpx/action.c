@@ -373,6 +373,10 @@ bool action_is_marshalled(const struct action_table *table, hpx_action_t id) {
   return (action_table_get_attr(table, id) & HPX_MARSHALLED);
 }
 
+bool action_is_internal(const struct action_table *table, hpx_action_t id) {
+  return (action_table_get_attr(table, id) & HPX_INTERNAL);
+}
+
 bool action_is_default(const struct action_table *table, hpx_action_t id) {
   return (action_table_get_type(table, id) == HPX_DEFAULT);
 }
@@ -396,6 +400,9 @@ _register_action_va(hpx_action_type_t type, uint32_t attr,
   dbg_assert(id);
   *id = HPX_ACTION_INVALID;
 
+  if (system){
+      attr += HPX_INTERNAL;
+  }
   if (attr & HPX_MARSHALLED) {
     if (attr & HPX_PINNED) {
       hpx_type_t translated = va_arg(vargs, hpx_type_t);
