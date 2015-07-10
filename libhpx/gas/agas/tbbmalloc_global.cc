@@ -33,7 +33,6 @@ _global_chunk_alloc(intptr_t pool_id, size_t &bytes) {
                                  _agas->bitmap, NULL, bytes,
                                  _agas->chunk_size);
   assert(chunk);
-  std::cout << "(" << chunk << ", " << bytes << ")\n";
   return chunk;
 }
 
