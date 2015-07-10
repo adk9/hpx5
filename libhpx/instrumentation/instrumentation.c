@@ -35,7 +35,7 @@
 #include "logtable.h"
 
 /// complete path to the directory to which log files, etc. will be written
-static char *_log_path;
+static const char *_log_path = NULL;
 
 /// We're keeping one log per event per locality. Here are their headers.
 static logtable_t _logs[HPX_INST_NUM_EVENTS] = {LOGTABLE_INIT};
@@ -99,13 +99,21 @@ static void _log_create(int class, int id, size_t size, hpx_time_t now) {
   free(file_path);
 }
 
-static char *_mkdir(const char *dir) {
-  // change to user-specified root directory
-  if (0 != chdir(dir)) {
-    log_error("Specified root directory for instrumentation not found.");
-    return HPX_SUCCESS;
+static const char *_mkdir(const char *dir) {
+  // try and create the directory---we don't care if it's already there
+  int e = mkdir(dir, 0777);
+  if (e) {
+    if (errno != EEXIST) {
+      log_error("Could not create %s for instrumentation\n", dir);
+    }
+    else {
+      log_error("Unexpected error from mkdir(%s)->%s\n", dir, strerror(e));
+    }
   }
+  return dir;
+}
 
+static const char *_mktmp(void) {
   // create directory name
   time_t t = time(NULL);
   struct tm lt;
@@ -116,20 +124,29 @@ static char *_mkdir(const char *dir) {
   snprintf(dirname, 256, "%s.%.4d%.2d%.2d.%.2d%.2d", username,
            lt.tm_year + 1900, lt.tm_mon + 1, lt.tm_mday, lt.tm_hour, lt.tm_min);
 
-  char *log_path = _get_complete_path(dir, dirname);
+  return _mkdir(_get_complete_path("/tmp", dirname));
+}
 
-  // try and create the directory---we don't care if it's already there
-  int e = mkdir(log_path, 0777);
-  if (e) {
-    if (errno != EEXIST) {
-      log_error("Could not create %s for instrumentation\n", log_path);
-      return NULL;
-    }
+static const char *_get_log_path(const char *dir) {
+  if (!dir) {
+    return _mktmp();
   }
-  else{
-    printf("initialized %s for tracing\n", log_path);
+
+  struct stat sb;
+
+  // if the path doesn't exist, then we make it
+  if (stat(dir, &sb) != 0) {
+    return _mkdir(dir);
   }
-  return log_path;
+
+  // if the path is a directory, we just return it
+  if (S_ISDIR(sb.st_mode)) {
+    return strndup(dir, 256);
+  }
+
+  // path exists but isn't a directory.
+  log_error("--with-trace-file=%s does not point to a directory\n", dir);
+  return NULL;
 }
 
 int inst_init(config_t *cfg) {
@@ -144,10 +161,11 @@ int inst_init(config_t *cfg) {
     return LIBHPX_OK;
   }
 
-  _log_path = _mkdir(cfg->trace_dir);
+  _log_path = _get_log_path(cfg->trace_dir);
   if (_log_path == NULL) {
     return LIBHPX_OK;
   }
+  printf("initialized %s for tracing\n", _log_path);
 
   // create log files
   hpx_time_t start = hpx_time_now();
@@ -181,7 +199,7 @@ void inst_fini(void) {
   for (int i = 0, e = HPX_INST_NUM_EVENTS; i < e; ++i) {
     logtable_fini(&_logs[i]);
   }
-  free(_log_path);
+  free((void*)_log_path);
 }
 
 void inst_vtrace(int UNUNSED, int n, int id, ...) {
