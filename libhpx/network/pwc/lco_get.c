@@ -124,19 +124,14 @@ _pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args, size_t n) {
   // use-after-free. At this point we can only do the getref() version using two
   // put operations, one to put back to the waiting buffer, and one to resume
   // the waiting thread after we drop our local reference.
-  //
-  // The getref() code isn't currently working because the network_command
-  // operation isn't being received to resume the remote thread.
-  //
-  // if (args->n > LIBHPX_SMALL_THRESHOLD) {
-  //   return _get_request_handler_getref(args, pwc, lco);
-  // }
-  // else
+  if (args->n > LIBHPX_SMALL_THRESHOLD) {
+    return _get_request_handler_getref(args, pwc, lco);
+  }
 
   // If there is enough space to stack allocate a buffer to copy, use the stack
   // version, otherwise malloc a buffer to copy to.
   // if (worker_can_alloca(args->n) > 128) {
-    return _get_request_handler_stack(args, pwc, lco);
+  return _get_request_handler_stack(args, pwc, lco);
   // }
   // else {
   //   return _get_request_handler_malloc(args, pwc, lco);
