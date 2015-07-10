@@ -61,7 +61,7 @@ _get_request_handler_put(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
   return scheduler_suspend(_pwc, &op);
 }
 
-static int
+static int HPX_USED
 _get_request_handler_stack(_pwc_lco_get_request_args_t *args,
                            pwc_network_t *pwc, hpx_addr_t lco) {
   char ref[args->n];
@@ -71,7 +71,7 @@ _get_request_handler_stack(_pwc_lco_get_request_args_t *args,
   return _get_request_handler_put(args, pwc, ref, resume);
 }
 
-static int
+static int HPX_USED
 _get_request_handler_malloc(_pwc_lco_get_request_args_t *args,
                             pwc_network_t *pwc, hpx_addr_t lco) {
   void *ref = registered_malloc(args->n);
@@ -84,30 +84,30 @@ _get_request_handler_malloc(_pwc_lco_get_request_args_t *args,
   return e;
 }
 
-// static int
-// _get_request_handler_getref(_pwc_lco_get_request_args_t *args,
-//                             pwc_network_t *pwc, hpx_addr_t lco) {
+static int HPX_USED
+_get_request_handler_getref(_pwc_lco_get_request_args_t *args,
+                            pwc_network_t *pwc, hpx_addr_t lco) {
 
-//   // Get a reference to the LCO data
-//   void *ref;
-//   int e = hpx_lco_getref(lco, args->n, &ref);
-//   dbg_check(e, "Failed getref during remote lco get request.\n");
+  // Get a reference to the LCO data
+  void *ref;
+  int e = hpx_lco_getref(lco, args->n, &ref);
+  dbg_check(e, "Failed getref during remote lco get request.\n");
 
-//   // Send back the LCO data. This doesn't resume the remote thread because there
-//   // is a race where a delete can trigger a use-after-free during our subsequent
-//   // release.
-//   e = _get_request_handler_put(args, pwc, ref, 0);
-//   dbg_check(e, "Failed rendezvous put during remote lco get request.\n");
+  // Send back the LCO data. This doesn't resume the remote thread because there
+  // is a race where a delete can trigger a use-after-free during our subsequent
+  // release.
+  e = _get_request_handler_put(args, pwc, ref, 0);
+  dbg_check(e, "Failed rendezvous put during remote lco get request.\n");
 
-//   // Release the reference.
-//   hpx_lco_release(lco, ref);
+  // Release the reference.
+  hpx_lco_release(lco, ref);
 
-//   // Wake the remote getter up.
-//   e = network_command(pwc, HPX_THERE(args->rank), resume_parcel,
-//                       (uintptr_t)args->p);
-//   dbg_check(e, "Failed to start resume command during remote lco get.\n");
-//   return e;
-// }
+  // Wake the remote getter up.
+  e = network_command(pwc, HPX_THERE(args->rank), resume_parcel,
+                      (uintptr_t)args->p);
+  dbg_check(e, "Failed to start resume command during remote lco get.\n");
+  return e;
+}
 
 static int
 _pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args, size_t n) {
@@ -135,12 +135,12 @@ _pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args, size_t n) {
 
   // If there is enough space to stack allocate a buffer to copy, use the stack
   // version, otherwise malloc a buffer to copy to.
-  if (worker_can_alloca(args->n) > 128) {
+  // if (worker_can_alloca(args->n) > 128) {
     return _get_request_handler_stack(args, pwc, lco);
-  }
-  else {
-    return _get_request_handler_malloc(args, pwc, lco);
-  }
+  // }
+  // else {
+  //   return _get_request_handler_malloc(args, pwc, lco);
+  // }
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _pwc_lco_get_request,
                      _pwc_lco_get_request_handler, HPX_POINTER, HPX_SIZE_T);
