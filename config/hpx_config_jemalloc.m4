@@ -19,6 +19,8 @@
 #   HAVE_AS_GLOBAL
 #   HAVE_AS_REGISTERED
 # ------------------------------------------------------------------------------
+AC_ARG_VAR([JEMALLOC_CARGS], [Extra configuration arguments for jemlloc contrib])
+
 AC_DEFUN([_HAVE_JEMALLOC], [
  AC_DEFINE([HAVE_JEMALLOC], [1], [We have the jemalloc allocator])
  have_jemalloc=yes
@@ -28,12 +30,13 @@ AC_DEFUN([_HPX_CONTRIB_JEMALLOC], [
  contrib=$1
  
  # set up the configuration options
- jemalloc_options="--disable-valgrind --disable-fill --disable-stats"
- jemalloc_c99_flags="EXTRA_CFLAGS=$ac_cv_prog_cc_c99"
- jemalloc_debug_flags="CPPFLAGS=\"$CPPFLAGS -Dalways_inline=\""
- jemalloc_cargs="$jemalloc_options $jemalloc_c99_flags"
+ jemalloc_cargs_opt="--disable-valgrind --disable-fill --disable-stats"
+ jemalloc_cargs_debug="--enable-valgrind --enable-fill --enable-debug CPPFLAGS=\"$CPPFLAGS -Dalways_inline=\""
+ jemalloc_cargs_c99="EXTRA_CFLAGS=\"$ac_cv_prog_cc_c99\""
+ jemalloc_cargs="$jemalloc_cargs_c99 $JEMALLOC_CARGS"
  AS_IF([test "x$enable_debug" == xyes],
-   [jemalloc_cargs="$jemalloc_cargs $jemalloc_debug_flags"])
+   [jemalloc_cargs="$jemalloc_cargs_debug $jemalloc_cargs"],
+   [jemalloc_cargs="$jemalloc_cargs_opt $jemalloc_cargs"],)
 
  # perform the configuration, installing the docs so that 'make install' works 
  ACX_CONFIGURE_DIR([$contrib], [$contrib], ["$jemalloc_cargs"])
