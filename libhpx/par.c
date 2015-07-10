@@ -35,7 +35,7 @@ static int _par_for_async_handler(hpx_for_action_t f, void *args, int min, int m
 }
 
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _par_for_async, _par_for_async_handler,
-                  HPX_POINTER, HPX_POINTER, HPX_INT, HPX_INT);
+                     HPX_POINTER, HPX_POINTER, HPX_INT, HPX_INT);
 
 int hpx_par_for(hpx_for_action_t f, const int min, const int max,
                 const void *args, hpx_addr_t sync) {
@@ -118,7 +118,7 @@ static int _par_call_async_handler(par_call_async_args_t *args, size_t n) {
                               &args->env, args->sync);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _par_call_async,
-                  _par_call_async_handler, HPX_POINTER, HPX_SIZE_T);
+                     _par_call_async_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int
 _hpx_par_call_helper(hpx_action_t action, const int min,
@@ -250,7 +250,7 @@ _hpx_count_range_call_handler(const hpx_count_range_call_args_t *const args, siz
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _hpx_count_range_call,
-                  _hpx_count_range_call_handler, HPX_POINTER, HPX_SIZE_T);
+                     _hpx_count_range_call_handler, HPX_POINTER, HPX_SIZE_T);
 
 int hpx_count_range_call(hpx_action_t action,
                          const hpx_addr_t addr,

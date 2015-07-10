@@ -38,7 +38,7 @@ _isir_lco_get_reply_handler(_isir_lco_get_reply_args_t *args, size_t n) {
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_INTERRUPT, HPX_MARSHALLED, _isir_lco_get_reply,
-                  _isir_lco_get_reply_handler, HPX_POINTER, HPX_SIZE_T);
+                     _isir_lco_get_reply_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int
 _isir_lco_get_request_handler(hpx_parcel_t *p, size_t n, void *out) {
@@ -58,8 +58,8 @@ _isir_lco_get_request_handler(hpx_parcel_t *p, size_t n, void *out) {
   hpx_thread_continue(args, sizeof(*args) + n);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _isir_lco_get_request,
-                  _isir_lco_get_request_handler, HPX_POINTER, HPX_SIZE_T,
-                  HPX_POINTER);
+                     _isir_lco_get_request_handler, HPX_POINTER, HPX_SIZE_T,
+                     HPX_POINTER);
 
 int
 isir_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out) {

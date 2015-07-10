@@ -139,25 +139,28 @@ int hpx_lco_set_action_handler(lco_t *lco, void *data, size_t n) {
   return _set(lco, n, data);
 }
 LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, hpx_lco_set_action,
-           hpx_lco_set_action_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
+              hpx_lco_set_action_handler, HPX_POINTER, HPX_POINTER,
+              HPX_SIZE_T);
 
 static int _lco_error_handler(lco_t *lco, void *args, size_t n) {
   hpx_status_t *code = args;
   return _error(lco, *code);
 }
-LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _lco_error,
-           _lco_error_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _lco_error,
+                     _lco_error_handler, HPX_POINTER, HPX_POINTER,
+                     HPX_SIZE_T);
 
 int hpx_lco_reset_action_handler(lco_t *lco) {
   return _reset(lco);
 }
 LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, hpx_lco_reset_action,
-           hpx_lco_reset_action_handler, HPX_POINTER);
+              hpx_lco_reset_action_handler, HPX_POINTER);
 
 static int _lco_size_handler(lco_t *lco, void *UNUSED) {
   return _size(lco);
 }
-LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_size, _lco_size_handler, HPX_POINTER);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_size,
+                     _lco_size_handler, HPX_POINTER);
 
 typedef struct {
   lco_t *lco;
@@ -187,13 +190,15 @@ _lco_get_handler(lco_t *lco, int n) {
   };
   hpx_thread_continue_cleanup(&_cleanup_release, &args, buffer, n);
 }
-LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_get, _lco_get_handler, HPX_POINTER, HPX_INT);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_get,
+                     _lco_get_handler, HPX_POINTER, HPX_INT);
 
 static int
 _lco_wait_handler(lco_t *lco) {
   return _wait(lco);
 }
-LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_wait, _lco_wait_handler, HPX_POINTER);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_wait, _lco_wait_handler,
+                     HPX_POINTER);
 
 int attach_handler(lco_t *lco, hpx_parcel_t *p, size_t size) {
   hpx_parcel_t *parent = scheduler_current_parcel();
@@ -219,7 +224,7 @@ int attach_handler(lco_t *lco, hpx_parcel_t *p, size_t size) {
   return _attach(lco, p);
 }
 LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, attach,
-           attach_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
+              attach_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 /// @}
 
