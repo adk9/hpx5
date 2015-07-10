@@ -92,7 +92,7 @@
 
 /// Top-level options
 /// @{
-LIBHPX_OPT_FLAG(, statistics, 1)
+LIBHPX_OPT_FLAG(, statistics, 0)
 #ifndef __ARMEL__
 LIBHPX_OPT_SCALAR(, heapsize, 1lu << 30, size_t)
 #else // smaller default heap for ARM
