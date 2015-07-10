@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <hpx/builtins.h>
+#include <libhpx/action.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>

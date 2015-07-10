@@ -10,9 +10,6 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
 
 /// AlltoAll is an extention of allgather to the case where each process sends
 /// distinct data to each of the receivers. The jth block sent from process i
@@ -65,12 +62,15 @@
 ///           #      #      #      #      #      #
 ///           ####################################
 
-/// @file libhpx/scheduler/allgather.c
-/// @brief Defines the allgather LCO.
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <assert.h>
 #include <inttypes.h>
 #include <string.h>
 #include <stdlib.h>
+#include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>

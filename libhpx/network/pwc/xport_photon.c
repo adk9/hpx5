@@ -20,6 +20,7 @@
 
 #include <libsync/locks.h>
 
+#include <libhpx/action.h>
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>

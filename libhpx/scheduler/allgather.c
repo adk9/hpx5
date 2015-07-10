@@ -10,9 +10,6 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
 
 /// Given a set of elements distributed across all processes, Allgather will
 /// gather all of the elements to all the processes. It gathers and broadcasts
@@ -64,13 +61,15 @@
 ///           #      #      #      #      #      #
 ///           ####################################
 
-/// @file libhpx/scheduler/allgather.c
-/// @brief Defines the allgather LCO.
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <assert.h>
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
