@@ -589,10 +589,8 @@ static hpx_parcel_t *_schedule(bool in_lco, hpx_parcel_t *final) {
       continue;
     }
 
-    // couldn't find any work to do, we're not going to go into an infinite loop
-    // here because the caller might be trying to yield() and we need to
-    // guarantee some sort of progress in the system in that case.
-    p = _get_nop_parcel();
+    // couldn't find any work to do, we sleep for a while before looking again
+    system_usleep(1);
   }
 
   return _try_bind(p);

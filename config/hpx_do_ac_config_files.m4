@@ -22,6 +22,8 @@ AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
    libhpx/network/isir/Makefile
    libhpx/network/pwc/Makefile
    libhpx/system/Makefile
+   libhpx/system/linux/Makefile
+   libhpx/system/darwin/Makefile
    libhpx/util/Makefile
    libhpx/scheduler/Makefile
    libhpx/scheduler/arch/Makefile
