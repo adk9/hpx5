@@ -647,6 +647,7 @@ enable_debug
 je_
 install_suffix
 private_namespace
+JEMALLOC_CPREFIX
 enable_code_coverage
 AUTOCONF
 LD
@@ -5669,6 +5670,7 @@ _ACEOF
 _ACEOF
 
 fi
+
 
 
 # Check whether --with-export was given.
