@@ -1094,7 +1094,9 @@ scheduler_suspend(int (*f)(void*), void *env) {
   };
 
   INST_EVENT_PARCEL_SUSPEND(self->current);
-  hpx_parcel_t *to = _schedule(false, NULL);
+  // Don't block during the schedule call, we still have something to do (call
+  // the continuation) that may impact global progress.
+  hpx_parcel_t *to = _schedule(true, NULL);
   int e = _transfer(to, _checkpoint_suspend, &suspend_env);
   INST_EVENT_PARCEL_RESUME(self->current);
   return e;
