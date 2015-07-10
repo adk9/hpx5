@@ -67,10 +67,10 @@ static void _dump_actions() {
   int num_actions = action_table_size(table);
   for (int i = 0; i < num_actions; i++) {
     const char *name = action_table_get_key(table, (hpx_action_t)i);
-    if(action_is_internal(table, (hpx_action_t)i)){
+    if (action_is_internal(table, (hpx_action_t)i)) {
       fprintf(file, "%d,%s,INTERNAL\n", i, name);
     }
-    else{
+    else {
       fprintf(file, "%d,%s,USER\n", i, name);
     }
   }
