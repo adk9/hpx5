@@ -107,19 +107,6 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr,
                       &id, (hpx_action_handler_t)handler,          \
                       __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
-/// Wraps the libhpx_register_action() function to make it slightly
-/// more convenient to use.
-///
-/// @param        type The type of the action (THREAD, TASK, INTERRUPT, ...).
-/// @param        attr The attribute of the action (PINNED, PACKED, ...).
-/// @param     handler The action handler (the function).
-/// @param          id The action id (the hpx_action_t address).
-/// @param __VA_ARGS__ The parameter types (HPX_INT, ...).
-#define LIBHPX_REGISTER_ACTION(type, attr, id, handler, ...)          \
-  libhpx_register_action(type, attr, __FILE__ ":" _HPX_XSTR(id),      \
-                      &id, (hpx_action_handler_t)handler,             \
-                      __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
-
 /// Get the handler associated with a given action id.
 hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
 
@@ -156,29 +143,5 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
   static HPX_CONSTRUCTOR void _register##_##id(void)
 
 /// @}
-
-/// Create an action id for a function, so that it can be called asynchronously.
-///
-/// This macro handles all steps of creating a usable action. It declares the
-/// identifier and registers an action in a static constructor.  The static
-/// automates action registration, eliminating the need for explicit action
-/// registration.
-///
-/// Note that the macro can be preceded by the \c static keyword if the action
-/// should only be visible in the current file.  This macro is intended to be
-/// used only for actions that are part of libhpx.
-///
-/// @param         type The action type.
-/// @param         attr The action attributes.
-/// @param      handler The handler.
-/// @param           id The action id.
-/// @param  __VA_ARGS__ The HPX types of the action paramters
-///                     (HPX_INT, ...).
-#define LIBHPX_ACTION(type, attr, id, handler, ...)                  \
-  HPX_ACTION_DECL(id) = HPX_ACTION_INVALID;                          \
-  static HPX_CONSTRUCTOR void _register##_##id(void) {               \
-    LIBHPX_REGISTER_ACTION(type, attr, id, handler , ##__VA_ARGS__); \
-  }                                                                  \
-  static HPX_CONSTRUCTOR void _register##_##id(void)
 
 #endif

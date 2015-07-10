@@ -15,6 +15,7 @@
 #endif
 
 /// Implement the locality actions.
+#include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>

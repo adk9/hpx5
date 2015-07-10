@@ -15,6 +15,7 @@
 #endif
 
 #include <string.h>
+#include <libhpx/action.h>
 #include <libhpx/locality.h>
 #include <libhpx/network.h>
 #include "agas.h"
