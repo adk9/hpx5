@@ -21,6 +21,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h> // for chdir
+#include <pwd.h>    //for username
 
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
@@ -105,7 +106,9 @@ static char *_mkdir(const char *dir) {
   struct tm lt;
   localtime_r(&t, &lt);
   char dirname[256];
-  snprintf(dirname, 256, "hpx.%.4d%.2d%.2d.%.2d%.2d",
+  struct passwd *pwd = getpwuid(getuid());
+  const char *username = pwd->pw_name;
+  snprintf(dirname, 256, "%s.%.4d%.2d%.2d.%.2d%.2d", username,
            lt.tm_year + 1900, lt.tm_mon + 1, lt.tm_mday, lt.tm_hour, lt.tm_min);
 
   char *log_path = _get_complete_path(dir, dirname);
@@ -118,8 +121,9 @@ static char *_mkdir(const char *dir) {
       return NULL;
     }
   }
-
-  log("initialized %s for tracing\n", log_path);
+  else{
+    printf("initialized %s for tracing\n", log_path);
+  }
   return log_path;
 }
 
