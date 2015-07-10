@@ -42,7 +42,22 @@
 #include "thread.h"
 #include "termination.h"
 
+#if defined(ENABLE_INSTRUMENTATION) || defined(ENABLE_DEBUG)
+# define _transfer _debug_transfer
+#else
+# define _transfer thread_transfer
+#endif
+
 __thread struct worker *self = NULL;
+
+/// This transfer wrapper is used for logging, debugging, and instrumentation.
+///
+/// Internally, it will perform it's pre-transfer operations, call
+/// thread_transfer(), and then perform post-transfer operations on the return.
+static int HPX_USED
+_debug_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
+  return thread_transfer(p, cont, env);
+}
 
 /// The pthread entry function for dedicated worker threads.
 ///
@@ -363,7 +378,7 @@ static void _worker_shutdown(struct worker *w) {
   void **sp = &w->sp;
   intptr_t shutdown = sync_load(&w->sched->shutdown, SYNC_ACQUIRE);
   INST_EVENT_PARCEL_END(self->current);
-  thread_transfer((hpx_parcel_t*)&sp, _free_parcel, (void*)shutdown);
+  _transfer((hpx_parcel_t*)&sp, _free_parcel, (void*)shutdown);
   unreachable();
 }
 
@@ -411,7 +426,7 @@ static hpx_parcel_t *_try_task(hpx_parcel_t *p) {
 
   // No instrumentation for suspend here since thread is already recorded as
   // suspended (we mark the suspend before the call to _schedule).
-  int e = thread_transfer((hpx_parcel_t*)&sp, _run_task, p);
+  int e = _transfer((hpx_parcel_t*)&sp, _run_task, p);
   dbg_check(e, "Error post _try_task: %s\n", hpx_strerror(e));
   return NULL;
 }
@@ -627,7 +642,7 @@ int worker_start(void) {
     dbg_error("failed to acquire an initial parcel.\n");
   }
 
-  int e = thread_transfer(p, _on_startup, NULL);
+  int e = _transfer(p, _on_startup, NULL);
   if (e) {
     if (here->rank == 0) {
       log_error("application exited with a non-zero exit code: %d.\n", e);
@@ -749,7 +764,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   // We can process the parcel work-first, but we need to use a thread to do it
   // so that our continuation can be stolen.
   INST_EVENT_PARCEL_SUSPEND(current);
-  int e = thread_transfer(_try_bind(p), _work_first, NULL);
+  int e = _transfer(_try_bind(p), _work_first, NULL);
   INST_EVENT_PARCEL_RESUME(current);
   dbg_check(e, "Detected a work-first scheduling error: %s\n", hpx_strerror(e));
 }
@@ -797,7 +812,7 @@ scheduler_yield(void) {
   dbg_assert(parcel_get_stack(to)->sp);
 
   // note that we don't instrument yields because they overwhelm tracing
-  thread_transfer(to, _checkpoint_yield, from);
+  _transfer(to, _checkpoint_yield, from);
 }
 
 void
@@ -830,7 +845,7 @@ scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
 
   INST_EVENT_PARCEL_SUSPEND(self->current);
   hpx_parcel_t *to = _schedule(true, NULL);
-  thread_transfer(to, _unlock, (void*)lock);
+  _transfer(to, _unlock, (void*)lock);
   INST_EVENT_PARCEL_RESUME(self->current);
 
   // reacquire the lco lock before returning
@@ -903,7 +918,7 @@ _continue(hpx_status_t status, void (*cleanup)(void*), void *env, int nargs,
   dbg_assert(parcel_get_stack(to));
   dbg_assert(parcel_get_stack(to)->sp);
   INST_EVENT_PARCEL_END(parcel);
-  thread_transfer(to, _free_parcel, (void*)(intptr_t)status);
+  _transfer(to, _free_parcel, (void*)(intptr_t)status);
   unreachable();
 }
 
@@ -936,7 +951,7 @@ hpx_thread_exit(int status) {
     hpx_parcel_t *to = _schedule(true, NULL);
     INST_EVENT_PARCEL_END(parcel);
     INST_EVENT_PARCEL_RESEND(parcel);
-    thread_transfer(to, _resend_parcel, parcel);
+    _transfer(to, _resend_parcel, parcel);
     unreachable();
   }
 
@@ -1038,16 +1053,8 @@ hpx_thread_set_affinity(int affinity) {
 
   INST_EVENT_PARCEL_SUSPEND(self->current);
   hpx_parcel_t *to = _schedule(false, NULL);
-  thread_transfer(to, _move_to, (void*)(intptr_t)affinity);
+  _transfer(to, _move_to, (void*)(intptr_t)affinity);
   INST_EVENT_PARCEL_RESUME(self->current);
-}
-
-/// This transfer handler is the right place to put all debug, logging, and
-/// instrumentation code for lightweight-thread transfers.
-int
-debug_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
-#undef thread_transfer
-  return thread_transfer(p, cont, env);
 }
 
 /// The environment for the _checkpoint_launch_through continuation.
@@ -1088,7 +1095,7 @@ scheduler_suspend(int (*f)(void*), void *env) {
 
   INST_EVENT_PARCEL_SUSPEND(self->current);
   hpx_parcel_t *to = _schedule(false, NULL);
-  int e = thread_transfer(to, _checkpoint_suspend, &suspend_env);
+  int e = _transfer(to, _checkpoint_suspend, &suspend_env);
   INST_EVENT_PARCEL_RESUME(self->current);
   return e;
 }
