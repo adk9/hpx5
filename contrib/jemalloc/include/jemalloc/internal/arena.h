@@ -316,6 +316,9 @@ struct arena_s {
 	/* Minimum ratio (log base 2) of nactive:ndirty. */
 	ssize_t			lg_dirty_mult;
 
+	/* True if a thread is currently executing arena_purge(). */
+	bool			purging;
+
 	/* Number of pages in active runs and huge regions. */
 	size_t			nactive;
 
@@ -1210,7 +1213,6 @@ arena_sdalloc(tsd_t *tsd, void *ptr, size_t size, tcache_t *tcache)
 				 * Make sure to use promoted size, not request
 				 * size.
 				 */
-				assert(((uintptr_t)ptr & PAGE_MASK) == 0);
 				size = arena_mapbits_large_size_get(chunk,
 				    pageind) - large_pad;
 			}
