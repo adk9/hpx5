@@ -490,7 +490,7 @@ static int photon_pwc_try_ledger(photonRequest req, int curr) {
   }
   
   dbg_trace("Posted PWC Request: %d/0x%016lx/0x%016lx/0x%016lx", req->proc,
-	    req->rattr.cookie
+	    req->rattr.cookie,
 	    req->local_info.id,
 	    req->remote_info.id);
   
@@ -509,8 +509,8 @@ int _photon_put_with_completion(int proc, uint64_t size,
   photonRequestTable rt;
   int rc;
   
-  dbg_trace("(%d, %lu, %p, %p, 0x%016lx, 0x%016lx)", proc, size,
-	    (void*)lbuf->addr, (void*)rbuf->addr, local, remote);
+  dbg_trace("(%d, size: %lu, lid: 0x%016lx, rid: 0x%016lx)", proc,
+	    size, local, remote);
 
   if (size && !lbuf) {
     log_err("Trying to put size %lu and NULL lbuf", size);
@@ -594,10 +594,10 @@ int _photon_get_with_completion(int proc, uint64_t size,
   photonRequest req;
   photonRequestTable rt;
   int rc;
-  
-  dbg_trace("(%d, %lu, %p, %p, 0x%016lx)", proc, size,
-	    (void*)lbuf->addr, (void*)rbuf->addr, local);
-  
+
+  dbg_trace("(%d, size: %lu, lid: 0x%016lx, rid: 0x%016lx)", proc,
+	    size, local, remote);
+
   if (size && !rbuf) {
     log_err("Tring to get size %lu and NULL rbuf", size);
     goto error_exit;
