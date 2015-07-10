@@ -259,6 +259,7 @@ _agas_free_block_handler(void *lva) {
   gva_t gva = { .addr = addr };
   agas_t *agas = (agas_t*)here->gas;
 
+  btt_remove(agas->btt, gva);
   if (gva.bits.cyclic) {
     if (gva.bits.home == 0 && here->rank == 0) {
       cyclic_free(lva);
@@ -269,7 +270,6 @@ _agas_free_block_handler(void *lva) {
     global_free(lva);
   }
 
-  btt_remove(agas->btt, gva);
   return HPX_SUCCESS;
 }
 HPX_ACTION(HPX_DEFAULT, 0, _agas_free_block,

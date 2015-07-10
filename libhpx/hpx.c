@@ -267,7 +267,9 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   }
 
 #ifdef ENABLE_PROFILING
-  scheduler_dump_stats(here->sched);
+  if (here->config->statistics) {
+    scheduler_dump_stats(here->sched);
+  }
 #endif
 
  unwind2:
