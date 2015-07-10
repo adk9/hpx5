@@ -42,10 +42,39 @@
 #include "thread.h"
 #include "termination.h"
 
-#if defined(ENABLE_INSTRUMENTATION) || defined(ENABLE_DEBUG)
+#ifdef ENABLE_DEBUG
 # define _transfer _debug_transfer
 #else
 # define _transfer thread_transfer
+#endif
+
+#ifdef ENABLE_INSTRUMENTATION
+static inline void TRACE_WQSIZE(struct worker *w) {
+  static const int class = INST_SCHED;
+  static const int id = HPX_INST_EVENT_SCHED_WQSIZE;
+  size_t size = sync_chase_lev_ws_deque_size(&w->work);
+  inst_trace(class, id, size);
+}
+
+static inline void TRACE_PUSH_LIFO(hpx_parcel_t *p) {
+  static const int class = INST_SCHED;
+  static const int id = HPX_INST_EVENT_SCHED_PUSH_LIFO;
+  inst_trace(class, id, p);
+}
+
+static inline void TRACE_POP_LIFO(hpx_parcel_t *p) {
+  static const int class = INST_SCHED;
+  static const int id = HPX_INST_EVENT_SCHED_POP_LIFO;
+  inst_trace(class, id, p);
+}
+
+static inline void TRACE_STEAL_LIFO(hpx_parcel_t *p,
+                                    const struct worker *victim) {
+  static const int class = INST_SCHED;
+  static const int id = HPX_INST_EVENT_SCHED_STEAL_LIFO;
+  inst_trace(class, id, p, victim->id);
+}
+#else
 #endif
 
 __thread struct worker *self = NULL;
@@ -267,6 +296,7 @@ static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
     dbg_assert(!parcel_get_stack(p));
   }
 
+  TRACE_PUSH_LIFO(p);
   uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
   self->work_first = (size >= here->sched->wf_threshold);
 }
@@ -274,7 +304,8 @@ static void _spawn_lifo(struct worker *w, hpx_parcel_t *p) {
 /// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *_schedule_lifo(struct worker *w) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&w->work);
-  inst_trace(INST_SCHED, INST_SCHED_WQSIZE, sync_chase_lev_ws_deque_size(&w->work));
+  TRACE_POP_LIFO(p);
+  TRACE_WQSIZE(w);
   return p;
 }
 
@@ -300,6 +331,7 @@ static hpx_parcel_t *_schedule_steal(struct worker *w) {
 
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
   if (p) {
+    TRACE_STEAL_LIFO(p, victim);
     profile_ctr(++w->stats.steals);
   }
 
