@@ -72,6 +72,8 @@ void system_munmap_huge_pages(void *obj, void *addr, size_t size);
 
 typedef void (*system_munmap_t)(void *, void *, size_t);
 
+/// Sleep for microseconds.
+void system_usleep(size_t useconds);
 
 /// Cross-platform pthread barrier interface
 
