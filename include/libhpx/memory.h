@@ -191,41 +191,42 @@ void as_free(int id, void *ptr);
 # error No gas allocator configured
 #endif
 
-#ifdef ENBALE_INSTRUMENTATION
+#ifdef ENABLE_INSTRUMENTATION
+#include <libhpx/instrumentation.h>
 static inline void TRACE_REGISTERED_MALLOC(void *ptr, size_t n, size_t align) {
-  static const int class = HPX_INST_CLASS_MEMORY;
+  static const int type = HPX_INST_CLASS_MEMORY;
   static const int id = HPX_INST_EVENT_MEMORY_REGISTERED_ALLOC;
-  inst_trace(class, id, ptr, n, align);
+  inst_trace(type, id, ptr, n, align);
 }
 
 static inline void TRACE_REGISTERED_FREE(void *ptr) {
-  static const int class = HPX_INST_CLASS_MEMORY;
+  static const int type = HPX_INST_CLASS_MEMORY;
   static const int id = HPX_INST_EVENT_MEMORY_REGISTERED_FREE;
-  inst_trace(class, id, ptr);
+  inst_trace(type, id, ptr);
 }
 
 static inline void TRACE_GLOBAL_MALLOC(void *ptr, size_t n, size_t align) {
-  static const int class = HPX_INST_CLASS_MEMORY;
+  static const int type = HPX_INST_CLASS_MEMORY;
   static const int id = HPX_INST_EVENT_MEMORY_GLOBAL_ALLOC;
-  inst_trace(class, id, ptr, n, align);
+  inst_trace(type, id, ptr, n, align);
 }
 
 static inline void TRACE_GLOBAL_FREE(void *ptr) {
-  static const int class = HPX_INST_CLASS_MEMORY;
+  static const int type = HPX_INST_CLASS_MEMORY;
   static const int id = HPX_INST_EVENT_MEMORY_GLOBAL_FREE;
-  inst_trace(class, id, ptr);
+  inst_trace(type, id, ptr);
 }
 
 static inline void TRACE_CYCLIC_MALLOC(void *ptr, size_t n, size_t align) {
-  static const int class = HPX_INST_CLASS_MEMORY;
+  static const int type = HPX_INST_CLASS_MEMORY;
   static const int id = HPX_INST_EVENT_MEMORY_CYCLIC_ALLOC;
-  inst_trace(class, id, ptr, n, align);
+  inst_trace(type, id, ptr, n, align);
 }
 
 static inline void TRACE_CYCLIC_FREE(void *ptr) {
-  static const int class = HPX_INST_CLASS_MEMORY;
+  static const int type = HPX_INST_CLASS_MEMORY;
   static const int id = HPX_INST_EVENT_MEMORY_CYCLIC_FREE;
-  inst_trace(class, id, ptr);
+  inst_trace(type, id, ptr);
 }
 #else
 # define TRACE_MALLOC(ptr, n, align)
