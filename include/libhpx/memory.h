@@ -144,23 +144,10 @@ void as_leave(void);
 /// allocator-independent way.
 size_t as_bytes_per_chunk(void);
 
-static inline void *as_malloc(int id, size_t bytes) {
-  return je_mallocx(bytes, as_flags[id]);
-}
-
-static inline void *as_calloc(int id, size_t nmemb, size_t bytes) {
-  int flags = as_flags[id] | MALLOCX_ZERO;
-  return je_mallocx(nmemb * bytes, flags);
-}
-
-static inline void *as_memalign(int id, size_t boundary, size_t size) {
-  int flags = as_flags[id] | MALLOCX_ALIGN(boundary);
-  return je_mallocx(size, flags);
-}
-
-static inline void as_free(int id, void *ptr)  {
-  je_dallocx(ptr, as_flags[id]);
-}
+void *as_malloc(int id, size_t bytes);
+void *as_calloc(int id, size_t nmemb, size_t bytes);
+void *as_memalign(int id, size_t boundary, size_t size);
+void as_free(int id, void *ptr);
 
 #undef JEMALLOC_NO_DEMANGLE
 

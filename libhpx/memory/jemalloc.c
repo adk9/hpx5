@@ -91,3 +91,26 @@ as_bytes_per_chunk(void) {
   je_mallctl("opt.lg_chunk", &log2_bytes_per_chunk, &sz, NULL, 0);
   return (1lu << log2_bytes_per_chunk);
 }
+
+
+void *
+as_malloc(int id, size_t bytes) {
+  return je_mallocx(bytes, as_flags[id]);
+}
+
+void *
+as_calloc(int id, size_t nmemb, size_t bytes) {
+  int flags = as_flags[id] | MALLOCX_ZERO;
+  return je_mallocx(nmemb * bytes, flags);
+}
+
+void *
+as_memalign(int id, size_t boundary, size_t size) {
+  int flags = as_flags[id] | MALLOCX_ALIGN(boundary);
+  return je_mallocx(size, flags);
+}
+
+void
+as_free(int id, void *ptr)  {
+  je_dallocx(ptr, as_flags[id]);
+}
