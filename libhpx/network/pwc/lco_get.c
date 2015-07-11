@@ -130,12 +130,20 @@ _pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args, size_t n) {
 
   // If there is enough space to stack allocate a buffer to copy, use the stack
   // version, otherwise malloc a buffer to copy to.
-  // if (worker_can_alloca(args->n) > 128) {
-  return _get_request_handler_stack(args, pwc, lco);
-  // }
-  // else {
-  //   return _get_request_handler_malloc(args, pwc, lco);
-  // }
+  else if (worker_can_alloca(args->n) >= HPX_PAGE_SIZE) {
+    return _get_request_handler_stack(args, pwc, lco);
+  }
+
+  // Otherwise we get to a registered buffer and then do the put. The theory
+  // here is that a single small-ish (< LIBHPX_SMALL_THRESHOLD) malloc, memcpy,
+  // and free, is more efficient than doing two pwc() operations.
+  //
+  // NB: We need to verify that this heuristic is actually true, and that the
+  //     LIBHPX_SMALL_THRESHOLD is appropriate. Honestly, given enough work to
+  //     do, the latency of two puts might not be a big deal.
+  else {
+    return _get_request_handler_malloc(args, pwc, lco);
+  }
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _pwc_lco_get_request,
                      _pwc_lco_get_request_handler, HPX_POINTER, HPX_SIZE_T);
