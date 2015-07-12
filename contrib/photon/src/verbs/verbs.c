@@ -254,7 +254,7 @@ static int verbs_connect_single(void *local_ci, void *remote_ci, int pindex, voi
 
 static int verbs_get_info(ProcessInfo *pi, int proc, void **ret_info, int *ret_size, photon_info_t type) {
   int i;
-  struct photon_buffer_t *info;
+  struct photon_buffer_t *info = NULL;
 
   switch (type) {
   case PHOTON_GET_ALIGN:
@@ -578,7 +578,7 @@ static int verbs_get_event(int proc, int max, photon_rid *ids, int *n) {
     }
     while ((ne < 1) && --retries);
     
-    for (j=0; j<ne; j++) {
+    for (j=0; j<ne && j<MAX_CQ_POLL; j++) {
       if (wc[j].status != IBV_WC_SUCCESS) {
 	log_err("(status==%d) != IBV_WC_SUCCESS: %s",
 		wc[j].status, ibv_wc_status_str(wc[j].status));
