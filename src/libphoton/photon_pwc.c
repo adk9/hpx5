@@ -176,7 +176,6 @@ static int photon_pwc_process_command(int proc, photon_rid cmd, uintptr_t id,
     {
       int rc;
       photon_rid rid;
-      photonRequest req;
       struct photon_buffer_t lbuf, rbuf;
       // switch the sent lbuf/rbuf
       memcpy(&rbuf, ptr, sizeof(rbuf));

@@ -3,7 +3,6 @@
 #include "avl.h"
 
 static struct avl_table *btable = NULL;
-static int nbufs;
 static tatas_lock_t bt_lock;
 
 // returns 0 if a and b equal
@@ -49,8 +48,6 @@ int buffertable_find_containing(void* start, uint64_t size, photonBI* result) {
 }
 
 int buffertable_find_exact(void* start, uint64_t size, photonBI* result) {
-  int i, cond;
-
   sync_tatas_acquire(&bt_lock);
   {
     photon_buffer_internal tst;
@@ -90,8 +87,6 @@ int buffertable_insert(photonBI buffer) {
 
 
 int buffertable_remove(photonBI buffer) {
-  int i;
-
   if (!btable) {
     log_err("buffertable not initialized. Call buffertable_init() first.");
     return PHOTON_ERROR;
