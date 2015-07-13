@@ -23,9 +23,12 @@
 /// @todo Deal with this during configuration.
 // ----------------------------------------------------------------------------
 
+#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 \
+                     + __GNUC_PATCHLEVEL__)
+
 #define likely(S) (__builtin_expect(S, 1))
 #define unlikely(S) (__builtin_expect(S, 0))
-#if (__GNUC_MINOR__ > 5) || defined(__INTEL_COMPILER) || defined(__clang__)
+#if (GCC_VERSION > 30500) || defined(__INTEL_COMPILER) || defined(__clang__)
 #define unreachable() __builtin_unreachable()
 #else
 #define unreachable()
@@ -36,7 +39,7 @@
 
 #define popcountl(N) __builtin_popcountl(N)
 
-#if (__GNUC__ > 3) && (__GNUC_MINOR__ > 5)
+#if (GCC_VERSION > 30500)
 #define _HELPER0(x) #x
 #define _HELPER1(x) _HELPER0(GCC diagnostic ignored x)
 #define _HELPER2(y) _HELPER1(#y)
