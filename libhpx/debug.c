@@ -111,13 +111,13 @@ static int _register_wait_on_sig(int signum) {
 int
 dbg_init(config_t *config) {
   int e = LIBHPX_OK;
-  if (DEBUG && config->dbg_waitonsegv) {
+  if (config->dbg_waitonsegv) {
     e = _register_wait_on_sig(SIGSEGV);
     if (e != LIBHPX_OK) {
       return e;
     }
   }
-  if (DEBUG && config->dbg_waitonabort) {
+  if (config->dbg_waitonabort) {
     e = _register_wait_on_sig(SIGABRT);
     if (e != LIBHPX_OK) {
       return e;
