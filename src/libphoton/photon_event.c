@@ -89,11 +89,39 @@ int __photon_get_nevents(int proc, int max, photon_rid **ids, int *n) {
   int rc;
   rc = __photon_backend->get_event(proc, max, *ids, n);
   if (rc == PHOTON_EVENT_ERROR) {
-    dbg_err("Error getting event");
+    dbg_err("Error getting events");
   }
 
   if (rc == PHOTON_EVENT_OK) {
     dbg_trace("got %d events", *n);
+  }
+  
+  return rc;
+}
+
+int __photon_get_revent(int proc, photon_rid *id, uint64_t *imm) {
+  int rc, nevents;
+  rc = __photon_backend->get_revent(proc, 1, id, imm, &nevents);
+  if (rc == PHOTON_EVENT_ERROR) {
+    dbg_err("Error getting revent");
+  }
+  
+  if (rc == PHOTON_EVENT_OK) {
+    dbg_trace("got revent: 0x%016lx (imm=0x016lx)", *id, *imm);
+  }
+  
+  return rc;
+}
+
+int __photon_get_revents(int proc, int max, photon_rid **ids, uint64_t **imms, int *n) {
+  int rc;
+  rc = __photon_backend->get_revent(proc, max, *ids, *imms, n);
+  if (rc == PHOTON_EVENT_ERROR) {
+    dbg_err("Error getting revents");
+  }
+  
+  if (rc == PHOTON_EVENT_OK) {
+    dbg_trace("got %d revents", *n);
   }
   
   return rc;

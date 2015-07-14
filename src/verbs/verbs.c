@@ -30,6 +30,7 @@ struct rdma_args_t {
   int num_sge;
   uintptr_t raddr;
   uint32_t rkey;
+  uint32_t imm_data;
 };
 
 struct sr_args_t {
@@ -40,6 +41,7 @@ struct sr_args_t {
   struct ibv_ah *ah;
   uint32_t qpn;
   uint32_t qkey;
+  uint32_t imm_data;
 };
 
 static int __initialized = 0;
@@ -52,21 +54,22 @@ static int verbs_connect_single(void *local_ci, void *remote_ci, int pindex, voi
 static int verbs_get_info(ProcessInfo *pi, int proc, void **info, int *size, photon_info_t type);
 static int verbs_set_info(ProcessInfo *pi, int proc, void *info, int size, photon_info_t type);
 static int verbs_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                          photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags);
+                          photonBuffer lbuf, photonBuffer rbuf, uint64_t id, uint64_t imm, int flags);
 static int verbs_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
                           photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags);
 static int verbs_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
-                           photonBuffer lbuf, uint64_t id, int flags);
+                           photonBuffer lbuf, uint64_t id, uint64_t imm, int flags);
 static int verbs_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
                            photonBuffer lbuf, uint64_t id, int flags);
 static int verbs_get_event(int proc, int max, photon_rid *ids, int *n);
+static int verbs_get_revent(int proc, int max, photon_rid *ids, uint64_t *imms, int *n);
 static int verbs_get_dev_addr(int af, photonAddr addr);
 static int verbs_register_addr(photonAddr addr, int af);
 static int verbs_unregister_addr(photonAddr addr, int af);
 static int verbs_get_dev_name(char **ib_dev);
 
 static int __verbs_do_rdma(struct rdma_args_t *args, int opcode, int flags);
-static int __verbs_do_send(struct sr_args_t *args, int flags);
+static int __verbs_do_send(struct sr_args_t *args, int opcode, int flags);
 static int __verbs_do_recv(struct sr_args_t *args, int flags);
 
 static verbs_cnct_ctx verbs_ctx = {
@@ -95,7 +98,7 @@ static verbs_cnct_ctx verbs_ctx = {
   .rdma_get_align = PHOTON_VERBS_GET_ALIGN
 };
 
-/* we are now a Photon backend */
+// we are now a Photon backend
 struct photon_backend_t photon_verbs_backend = {
   .context = &verbs_ctx,
   .initialized = verbs_initialized,
@@ -105,7 +108,7 @@ struct photon_backend_t photon_verbs_backend = {
   .connect = verbs_connect_single,
   .get_info = verbs_get_info,
   .set_info = verbs_set_info,
-  /* API */
+  // API
   .get_dev_addr = verbs_get_dev_addr,
   .register_addr = verbs_register_addr,
   .unregister_addr = verbs_unregister_addr,
@@ -132,12 +135,13 @@ struct photon_backend_t photon_verbs_backend = {
   .wait_any_ledger = NULL,
   .io_init = NULL,
   .io_finalize = NULL,
-  /* data movement */
+  // data movement
   .rdma_put = verbs_rdma_put,
   .rdma_get = verbs_rdma_get,
   .rdma_send = verbs_rdma_send,
   .rdma_recv = verbs_rdma_recv,
-  .get_event = verbs_get_event
+  .get_event = verbs_get_event,
+  .get_revent = verbs_get_revent
 };
 
 static int verbs_initialized() {
@@ -148,18 +152,13 @@ static int verbs_initialized() {
 }
 
 static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss) {
-
-  /* __initialized: 0 - not; -1 - initializing; 1 - initialized */
+  // __initialized: 0 - not; -1 - initializing; 1 - initialized 
   __initialized = -1;
 
   verbs_ctx.tx_depth = _LEDGER_SIZE;
   verbs_ctx.rx_depth = _LEDGER_SIZE;
   verbs_ctx.num_cq   = cfg->cap.num_cq;
-
-  if ((2 * _LEDGER_SIZE * _photon_nproc / verbs_ctx.num_cq) > MAX_CQ_ENTRIES) {
-    one_warn("Possible CQ overrun with current config (nproc=%d, nledger=%d, ncq=%d)",
-	     _photon_nproc, _LEDGER_SIZE, verbs_ctx.num_cq);
-  }
+  verbs_ctx.num_srq  = cfg->cap.num_srq;
   
   if (cfg->ibv.use_cma && !cfg->ibv.eth_dev) {
     log_err("CMA specified but Ethernet dev missing");
@@ -182,7 +181,7 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
     goto error_exit;
   }
 
-  /* a forwarder connects to itself so we get a protection domain */
+  // a forwarder connects to itself so we get a protection domain
   if (_forwarder) {
     __verbs_connect_single(&verbs_ctx, verbs_ctx.local_ci[_photon_myrank],
                            verbs_ctx.local_ci[_photon_myrank], _photon_myrank,
@@ -195,7 +194,7 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
       goto error_exit;
     }
 
-    /* setup forwarder if requested */
+    // setup forwarder if requested
     if (cfg->forwarder.use_forwarder && __photon_forwarder) {
       if (__photon_forwarder->init(cfg, photon_processes)) {
         log_err("Could not initialize forwarder(s)");
@@ -209,17 +208,30 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
     }
   }
 
-  /* this shared buffer needs to be registered before any exchanges
-     since we share a common rkey across ledgers
-     and to register, we need a protection domain, hence at least one
-     connect must be made first (CMA case) */
+  // Check if queues could be overrun
+  // TODO: automatically adjust if requested
+  if ((2 * _LEDGER_SIZE * _photon_nproc / verbs_ctx.num_cq) > verbs_ctx.max_qp_wr) {
+    one_warn("Possible CQ overrun with current config (nproc=%d, nledger=%d, ncq=%d)",
+	     _photon_nproc, _LEDGER_SIZE, verbs_ctx.num_cq);
+  }
+
+  if (verbs_ctx.num_srq > 0) {
+    if ((_LEDGER_SIZE * _photon_nproc / verbs_ctx.num_srq) > verbs_ctx.max_srq_wr) {
+      one_warn("Possible SRQ overrun with current config (nproc=%d, nledger=%d, nsrq=%d)",
+	       _photon_nproc, _LEDGER_SIZE, verbs_ctx.num_srq);
+    }
+  }
+
+  // This shared buffer needs to be registered before any exchanges
+  // since we share a common rkey across ledgers
+  // and to register, we need a protection domain, hence at least one
+  // connect must be made first (CMA case)
   if (photon_buffer_register(ss, &verbs_ctx) != 0) {
     log_err("couldn't register local buffer for the ledger entries");
     goto error_exit;
   }
 
   if (!_forwarder) {
-    /* TODO: pull out exchange and generalize in libphoton */
     if (cfg->forwarder.use_forwarder && __photon_forwarder) {
       if (__photon_forwarder->exchange(photon_processes)) {
         log_err("Could not perform ledger exchange with forwarder(s)");
@@ -231,6 +243,12 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
       log_err("couldn't exchange ledgers");
       goto error_exit;
     }
+  }
+
+  // prime the recv queue pump...
+  if (__verbs_post_srq_recv(&verbs_ctx, 0, -1) != PHOTON_OK) {
+    log_err("Could not initialize recv work requests");
+    goto error_exit;
   }
   
   __initialized = 1;
@@ -244,7 +262,7 @@ error_exit:
 }
 
 static int verbs_finalize() {
-  /* should clean up allocated buffers */
+  // should clean up allocated buffers
   return PHOTON_OK;
 }
 
@@ -367,6 +385,7 @@ static int __verbs_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
     .num_sge             = args->num_sge,
     .opcode              = opcode,
     .send_flags          = flags,
+    .imm_data            = args->imm_data,
     .wr.rdma.remote_addr = args->raddr,
     .wr.rdma.rkey        = args->rkey
   };
@@ -386,7 +405,7 @@ static int __verbs_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
 }
 
 // send/recv use UD service_qp by default at the moment
-static int __verbs_do_send(struct sr_args_t *args, int flags) {
+static int __verbs_do_send(struct sr_args_t *args, int opcode, int flags) {
   int err, retries;
   struct ibv_send_wr *bad_wr;
 
@@ -394,7 +413,7 @@ static int __verbs_do_send(struct sr_args_t *args, int flags) {
     .wr_id               = args->id,
     .sg_list             = args->sg_list,
     .num_sge             = args->num_sge,
-    .opcode              = IBV_WR_SEND,
+    .opcode              = opcode,
     .send_flags          = IBV_SEND_SIGNALED,
     .wr = {
       .ud = {
@@ -424,12 +443,12 @@ static int __verbs_do_recv(struct sr_args_t *args, int flags) {
   struct ibv_recv_wr *bad_wr;
 
   struct ibv_recv_wr wr = {
-    .wr_id               = args->id,
-    .sg_list             = args->sg_list,
-    .num_sge             = args->num_sge,
-    .next                = NULL
+    .wr_id   = args->id,
+    .sg_list = args->sg_list,
+    .num_sge = args->num_sge,
+    .next    = NULL
   };
-
+  
   retries = MAX_RETRIES;
   do {
     err = ibv_post_recv(verbs_ctx.ud_qp, &wr, &bad_wr);
@@ -445,8 +464,11 @@ static int __verbs_do_recv(struct sr_args_t *args, int flags) {
 }
 
 static int verbs_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                          photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags) {
+                          photonBuffer lbuf, photonBuffer rbuf, uint64_t id,
+			  uint64_t imm, int flags) {
   int ibv_flags = IBV_SEND_SIGNALED;
+  int op = (flags & RDMA_FLAG_WITH_IMM) && (verbs_ctx.num_srq > 0) ? 
+    IBV_WR_RDMA_WRITE_WITH_IMM : IBV_WR_RDMA_WRITE;
   struct rdma_args_t args;
   struct ibv_sge list = {
     .addr   = laddr,
@@ -467,7 +489,8 @@ static int verbs_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t s
   args.num_sge = 1;
   args.raddr = raddr;
   args.rkey = rbuf->priv.key1;
-  return __verbs_do_rdma(&args, IBV_WR_RDMA_WRITE, ibv_flags);
+  args.imm_data = (uint32_t)imm;
+  return __verbs_do_rdma(&args, op, ibv_flags);
 }
 
 static int verbs_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
@@ -489,8 +512,10 @@ static int verbs_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t s
 }
 
 static int verbs_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
-                           photonBuffer lbuf, uint64_t id, int flags) {
+                           photonBuffer lbuf, uint64_t id, uint64_t imm, int flags) {
   void *rc;
+  int op = (flags & RDMA_FLAG_WITH_IMM) && (verbs_ctx.num_srq > 0) 
+    ? IBV_WR_SEND_WITH_IMM : IBV_WR_SEND;
   struct sr_args_t args;
   struct ibv_sge list = {
     .addr = laddr,
@@ -515,7 +540,8 @@ static int verbs_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
   args.num_sge = 1;
   args.qpn = 0xffffff;
   args.qkey = 0x11111111;
-  return __verbs_do_send(&args, flags);
+  args.imm_data = (uint32_t)imm;
+  return __verbs_do_send(&args, op, flags);
 }
 
 static int verbs_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
@@ -582,6 +608,9 @@ static int verbs_get_event(int proc, int max, photon_rid *ids, int *n) {
       if (wc[j].status != IBV_WC_SUCCESS) {
 	log_err("(status==%d) != IBV_WC_SUCCESS: %s",
 		wc[j].status, ibv_wc_status_str(wc[j].status));
+	if (wc[j].status == IBV_WC_WR_FLUSH_ERR) {
+	  goto error_exit;
+	}
       }
       ids[j+comp] = wc[j].wr_id;
     }
@@ -598,6 +627,80 @@ static int verbs_get_event(int proc, int max, photon_rid *ids, int *n) {
   return PHOTON_EVENT_OK;
   
 error_exit:
+  return PHOTON_EVENT_ERROR;
+}
+
+static int verbs_get_revent(int proc, int max, photon_rid *ids, uint64_t *imms, int *n) {
+  int i, j, ne, comp;
+  int start, end;
+  int retries;
+  struct ibv_wc wc[MAX_CQ_POLL];
+
+  *n = 0;
+  comp = 0;
+
+  if (!ids) {
+    log_err("NULL return id pointer");
+    goto error_exit;
+  }
+
+  if (!imms) {
+    log_err("NULL return imms pointer");
+    goto error_exit;
+  }
+  
+  if (max > MAX_CQ_POLL) {
+    log_err("Exceeding max poll count: %d > %d", max, MAX_CQ_POLL);
+    goto error_exit;
+  }
+  
+  if (verbs_ctx.num_srq == 1) {
+    start = 0;
+    end = 1;
+  }
+  else if (proc == PHOTON_ANY_SOURCE) {
+    start = 0;
+    end = verbs_ctx.num_srq;
+  }
+  else {
+    start = PHOTON_GET_CQ_IND(verbs_ctx.num_srq, proc);
+    end = start+1;
+  }
+  
+  for (i=start; i<end && comp<max; i++) {
+    retries = MAX_RETRIES;
+    do {
+      ne = ibv_poll_cq(verbs_ctx.ib_rq[i], max, wc);
+      if (ne < 0) {
+	log_err("ibv_poll_cq() failed");
+	goto error_exit;
+      }
+    }
+    while ((ne < 1) && --retries);
+    
+    for (j=0; j<ne && j<MAX_CQ_POLL; j++) {
+      if (wc[j].status != IBV_WC_SUCCESS) {
+	log_err("(status==%d) != IBV_WC_SUCCESS: %s",
+		wc[j].status, ibv_wc_status_str(wc[j].status));
+      }
+      ids[j+comp] = wc[j].wr_id;
+      imms[j+comp] = wc[j].imm_data;
+      // re-arm the recv
+      if (__verbs_post_srq_recv(&verbs_ctx, wc[j].wr_id, 1));
+    }
+    comp += ne;
+  }
+
+  *n = comp;
+  
+  // CQs are empty
+  if (comp == 0) {
+    return PHOTON_EVENT_NONE;
+  }	
+  
+  return PHOTON_EVENT_OK;
+  
+ error_exit:
   return PHOTON_EVENT_ERROR;
 }
 

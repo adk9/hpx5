@@ -100,7 +100,9 @@ int main(int argc, char *argv[]) {
     //dbg_wait();
   }
 
-  photon_init(&cfg);
+  if (photon_init(&cfg) != PHOTON_OK) {
+    exit(1);
+  }
 
   struct photon_buffer_t lbuf;
   struct photon_buffer_t rbuf[nproc];

@@ -54,7 +54,7 @@ static int ugni_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
                           photonBuffer lbuf, uint64_t id, int flags);
 static int ugni_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
                           photonBuffer lbuf, uint64_t id, int flags);
-static int ugni_get_event(int proc, int max, photon_rid *ids, int *n);
+static int ugni_get_event(int proc, int max, photon_rid *ids, int *n, int flags);
 
 static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags);
 static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags);
@@ -385,7 +385,7 @@ static int ugni_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
   return PHOTON_OK;
 }
 
-static int ugni_get_event(int proc, int max, photon_rid *ids, int *n) {
+static int ugni_get_event(int proc, int max, photon_rid *ids, int *n, int flags) {
   gni_post_descriptor_t *event_post_desc_ptr;
   gni_cq_entry_t current_event;
   uint64_t cookie = NULL_REQUEST;

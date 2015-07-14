@@ -9,7 +9,7 @@ struct photon_config_t cfg = {
   },
   .ibv = {
     .use_cma = 0,
-    .use_ud = 1,
+    .use_ud = 0,
     .eth_dev = "roce0",
     .ib_dev = "mlx4_0+qib0",
     .ud_gid_prefix = "ff0e::ffff:0000:0000",  // mcast
@@ -25,7 +25,8 @@ struct photon_config_t cfg = {
     .ledger_entries = -1,
     .max_rd         = -1,
     .default_rd     = -1,
-    .num_cq         =  2
+    .num_cq         =  1,
+    .num_srq        =  0
   },
   .exch = {
     .allgather = NULL,
