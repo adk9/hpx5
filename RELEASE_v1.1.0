@@ -1,6 +1,6 @@
-HPX-5 Release notes, Version 1.0.0
+HPX-5 Release notes, Version 1.1.0
 ----------------------------------
-Release Date: 05/04/2015
+Release Date: 07/14/2015
 Distributed under the Indiana University License. (See accompanying file
 COPYING.txt) 
 
@@ -23,25 +23,26 @@ Management), Parcel Transport and Parcel Management, Local Control Objects
 General Information
 --------------------
 
-The documentation for the latest release of HPX-5 (Currently v1.0.0) can be
-found at https://hpx.crest.iu.edu/documentation.
-
-If you plan to use HPX-5, we suggest to start with the latest released version
-(currently HPX-5 v1.0.0) which can be downloaded from
+This document contains the release notes for the HPX–5 runtime system for 
+exascale computing, release 1.1.0. Here we describe the status of HPX–5, 
+including major improvements from the previous release, bug fixes and known 
+limitations. All HPX–5 releases may be downloaded from the HPX–5 releases
+web site. If you plan to use HPX–5, we suggest to start with the latest 
+released version (currently HPX–5 v1.1.0) which can be downloaded from 
 https://hpx.crest.iu.edu/download.
 
-If you would like to work with the cutting edge version of HPX-5, we suggest
-following the current health status of the develop branch at
-https://gitlab.crest.iu.edu/extreme/hpx. While we try to keep the develop branch
-stable and usable, sometimes new bugs trick their way into the code base - be
-aware!
+The documentation for the latest release of HPX–5 (currently v1.1.0) can
+be found at https://hpx.crest.iu.edu/documentation. You can access versions 
+of these documents specific to this release by going into the documentation
+to the 1.1.0 release.
 
-In any case, if you happen to run into problems we very much encourage and
-appreciate issue reports through the issue tracker for this Gitlab project
-(https://gitlab.crest.iu.edu/extreme/hpx/issues).  
+If you would like to work with the cutting edge version of HPX–5, we suggest
+following the current health status of the develop branch at 
+https://gitlab.crest.iu.edu/extreme/hpx. While we try to keep the develop 
+branch stable and usable, sometimes new bugs trick their way into the code 
+base - be aware!
 
-The FAQ's for HPX-5 can be found at
-https://hpx.crest.iu.edu/faqs_and_tutorials. 
+The FAQ's for HPX–5 can be found at https://hpx.crest.iu.edu/faqs_and_tutorials.
 
 Contents
 -----------
@@ -94,7 +95,7 @@ access while allowing the binding of global to physical addresses to vary
 dynamically.
 
 Memory management within the global address space is supported using the
-high-performance jemalloc allocator.
+high-performance jemalloc and tbbmalloc allocator.
 
 * Lightweight Thread Scheduling
 
@@ -150,7 +151,7 @@ behavior in more convenient an familiar forms. These include a suite of
 remote-procedure style calls, data parallel loops for local and distributed
 data, and numerous smaller features.
 
-3rd Party Dependencies Distributed With HPX-5 0.1
+3rd Party Dependencies Distributed With HPX-5 1.1.0
 ---------------------------------------------------
 
 These packages are used in HPX-5 and included in its distribution.
@@ -241,40 +242,107 @@ The detailed build instructions can be found at
 [https://hpx.crest.iu.edu/faqs_and_tutorials] or
 [https://hpx.crest.iu.edu//Users_Guide]. 
 
+What's new in HPX–5 v1.1.0?
+----------------------------
+List and brief how these changes will affect the user.
+
+1. We have updated the configuration infrastructure. All optional functionality
+is now enabled through --enable-opt options, while dependencies are specified 
+through --with-dep options. Some functionality is directly mapped to a 
+dependency (e.g., --enable-mpi and --with-mpi). Dependency specification has 
+been extended, see configure --help for details.
+
+2. We have updated to a more recent version of jemalloc. This has two benefits, 
+the first is a reduction in configuration and build time because we only need 
+one instance of the library, rather than up-to 3. The second is that we will 
+be able to use an installed jemalloc 4.0 once it becomes available.
+
+3. We have implemented support for GAS allocation using TBBMalloc. To use 
+TBBMalloc add --disable-jemalloc --enable-tbbmalloc in the configure option and 
+add intel module. TBBMalloc support requires a C++11 compiler.
+
+4. We have implemented stack caching. HPX–5 applications malloc and free stacks
+with high frequency. We previously relied on jemalloc memory caching in order 
+to do this efficiently, however changes to jmealloc have reduced its performance
+for larger object sizes. Now, each worker thread keeps a freelist of stacks 
+and uses that. This has improved performance of fibonacci dramatically. By 
+default we cache up to 32 stacks—this parameter can be set at runtime using the
+--hpx-sched-stackcachelimit option; -1 for unbounded, 0 for no caching, and n 
+for n stacks. We have noticed no downsides to caching and recommend it for all 
+users.
+
+5. Users can now print full configuration using --hpx-log-level=config.
+
+6. Users can now control SMP optimization with --hpx-opt-smp.
+
+7. Users can print the version information at runtime with --hpx-version.
+
+8. Various changes and improvements have been made to the instrumentation 
+system: The amount of data recorded when tracing has been reduced considerably. 
+New events and event classes have been added, including a new class of events 
+for LCO events and new class of events for HPX–5 process events. Events were 
+added for threads being suspended and resumed. Some improvements were made to
+the data recorded for some existing events. Finally, tracing now causes a table 
+mapping action ids to action names, to make parcel events easier to use.
+
+API Changes: Improvements/Enhancements
+----------------------------------------
+In this release we have made several significant changes:
+
+In this release, we resolved the inconsistency between the interface to pass 
+data to continuations (hpx_thread_continue), and the interface to pass data to 
+an RPC invocation (hpx_call). We made hpx_thread_continue variadic such that it 
+supports the same convention: For example, it is possible to now use 
+hpx_thread_continue(&arg1, &arg2, ..., &argN) to continue data to a default 
+action, and use hpx_thread_continue(&arg, sizeof(arg)) to continue data to a 
+marshalled action. This API change will silently break existing apps unless 
+the order of the arguments to hpx_thread_continue() are swapped. For more 
+information, see 
+http://www.crest.iu.edu/mailman/private.cgi/hpx-devel/2015/06/0192.php.
+
+Users may programmatically query the libhpx configuration by including 
+libhpx/libhpx.h and using the libhpx_get_config() function and libhpx_config_t 
+interface.
+
+Bug Fixes
+-------------
+1. Generation counters fail for ninplace > 0.
+
+2. The command line arguments enabling tracing were fixed so that the 
+"all" argument is respected.
+
+3. Enabling tracing no longer causes the working directory to be changed.
+
+4. Unaligned memgets on ugni will generate an alignment error.
+
+5. Memory corruption with photon/jemalloc.
+
 Known Bugs & Limitations
 -------------------------
 
- 1. The AGAS implementation requires a C++11 compiler, and is still considered
-    experimental.
-   
- 2. The AGAS implementation only works with the Isend/Irecv network.
+1. AGAS and TBBMalloc require a C++11 compiler.
 
- 3. Clang versions prior to 3.6 (.e., 3.5.1 and earlier) contain regressions that
-    trigger runtime failures in HPX.
-   
- 4. Cray support is experimental (use aprun -n [nodes] -N 1 -d [ppn] ./app
-    --hpx-threads=[ppn]). The -d option (or equivalent) is necessary to
-    correctly distribute worker threads, and the --hpx-threads option must be
-    specified  explicitly.
-   
- 5. Generation counters fail for ninplace > 0.
- 
- 6. Unaligned memgets on ugni will generate an alignment error.
+2. The AGAS implementation only works with the Isend/Irecv network, and is 
+still considered experimental.
 
- 7. Building with PMI and MPI on Edison makes cray-mpich terminate poorly
-   (Isend/Irecv).
-   
- 8. There are intermittent failure in LCO Collectives test on Hopper.
- 
- 9. HPX-5 fails to compile some examples when using Cray Compilers (CrayCC).
- 
-10. Delta-stepping and KLA algorithms crashing with photon for large scale with
-    jemalloc and without jemalloc.
+3. Clang versions prior to 3.6 (.e., 3.5.1 and earlier) contain regressions 
+that trigger runtime failures in HPX.
 
-11. Configuring with --enable-agas results in the apparently benign `libtool: warning:
-    '/opt/gcc/4.9.2/bin/../lib/gcc/x86_64-unknown-linux-gnu/4.9.2/../../../../lib64/libstdc++.la'
-    seems to be moved` at link time.
+4. Cray support is experimental (use aprun -n [nodes] -N 1 -d [ppn] ./app 
+--hpx-threads=[ppn]). The -d option (or equivalent) is necessary to correctly 
+distribute worker threads, and the --hpx-threads option must be specified explicitly.
 
+5. Building with both --enable-mpi and --enable-pmi on Edison makes cray-mpich 
+terminate poorly (Isend/Irecv).
+
+6. HPX–5 fails to compile some examples when using Cray Compilers (CrayCC).
+
+7. Delta-stepping and KLA algorithms crashing with photon for large scale with
+jemalloc and without jemalloc.
+
+8. HPX–5 only runs with 1 thread by default on Jetson boards.
+
+9. NORETURN lightweight thread termination does not run C++ destructors.
 
 Acknowledgements
 -----------------
