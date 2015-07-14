@@ -9,7 +9,7 @@ libsystem_la_LIBADD	= linux/liblinux.la
 endif
 
 if OS_DARWIN
-SUBDIRS = linux
-libsystem_la_LIBADD	= linux/libdarwin.la
+SUBDIRS = darwin
+libsystem_la_LIBADD	= darwin/libdarwin.la
 endif
 
