@@ -22,6 +22,7 @@ struct photon_config_t {
     char *ib_dev;           // IB device filter, e.g.: 'qib0:1+mlx4_0:2'
     int use_cma;            // Use connection manager to establish RDMA context
     int use_ud;             // EXPERIMENTAL: unreliable datagram mode (uses multicast)
+    int num_srq;            // Number of shared receive queues for remote completions (default 0)
     char *ud_gid_prefix;    // EXPERIMENTAL: GID prefix to use for UD multicast
   } ibv;
   
@@ -43,7 +44,7 @@ struct photon_config_t {
     int max_rd;             // Max number of request descriptors, power of 2 (default 1M, set 0 for unbounded)
     int default_rd;         // Initial number of request descriptors allocated per peer (default 1024)
     int num_cq;             // Number of completion queues to assign peers (default 1)
-    int num_srq;            // Use shared receive queue(s) for remote completions (default 0)
+    int use_rcq;            // Use remote completions when possible (default 0, disabled)
   } cap;
 
   struct {

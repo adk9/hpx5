@@ -200,17 +200,12 @@ int photon_init(photonConfig cfg) {
     lcfg->cap.default_rd = DEF_NUM_REQUESTS;
   if (lcfg->cap.num_cq <= 0)
     lcfg->cap.num_cq = DEF_NUM_CQ;
-  if (lcfg->cap.num_srq <= 0)
-    lcfg->cap.num_srq = DEF_NUM_SRQ;
+  if (lcfg->cap.use_rcq < 0)
+    lcfg->cap.use_rcq = DEF_USE_RCQ;
   
   if (lcfg->cap.num_cq > _photon_nproc) {
     lcfg->cap.num_cq = _photon_nproc;
     one_warn("Requesting (num_cq > nproc), setting num_cq to nproc");
-  }
-
-  if (lcfg->cap.num_srq > _photon_nproc) {
-    lcfg->cap.num_srq = _photon_nproc;
-    one_warn("Requesting (num_srq > nproc), setting num_srq to nproc");
   }
   
   assert(is_power_of_2(_LEDGER_SIZE));
