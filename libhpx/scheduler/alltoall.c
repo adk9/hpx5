@@ -10,9 +10,6 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
 
 /// AlltoAll is an extention of allgather to the case where each process sends
 /// distinct data to each of the receivers. The jth block sent from process i
@@ -65,10 +62,15 @@
 ///           #      #      #      #      #      #
 ///           ####################################
 
-/// @file libhpx/scheduler/allgather.c
-/// @brief Defines the allgather LCO.
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <assert.h>
+#include <inttypes.h>
 #include <string.h>
+#include <stdlib.h>
+#include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
@@ -228,8 +230,9 @@ static int _alltoall_getid_proxy_handler(_alltoall_get_offset_t *args, size_t n)
   // parcel to "catch up" to the moving LCO
   hpx_addr_t target = hpx_thread_current_target();
   _alltoall_t *g;
-  if(!hpx_gas_try_pin(target, (void **)&g))
+  if (!hpx_gas_try_pin(target, (void **)&g)) {
      return HPX_RESEND;
+  }
 
   // otherwise we pinned the LCO, extract the arguments from @p args and use the
   // local getid routine
@@ -240,12 +243,12 @@ static int _alltoall_getid_proxy_handler(_alltoall_get_offset_t *args, size_t n)
   // if success, finish the current thread's execution, sending buffer value to
   // the thread's continuation address else finish the current thread's execution.
   if(status == HPX_SUCCESS)
-    hpx_thread_continue(args->size, buffer);
+    hpx_thread_continue(buffer, args->size);
   else
     hpx_thread_exit(status);
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _alltoall_getid_proxy,
-                  _alltoall_getid_proxy_handler, HPX_POINTER, HPX_SIZE_T);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _alltoall_getid_proxy,
+                     _alltoall_getid_proxy_handler, HPX_POINTER, HPX_SIZE_T);
 
 
 // Wait for the gathering, loses the value of the gathering for this round.
@@ -329,6 +332,7 @@ hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id, int size,
   }
   else {
     status = _alltoall_setid(local, id, size, value);
+    hpx_gas_unpin(alltoall);
     if (lsync)
       hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
     if (rsync)
@@ -346,9 +350,9 @@ static int _alltoall_setid_proxy_handler(_alltoall_t *g, void *args, size_t n) {
   size_t size = n - sizeof(_alltoall_set_offset_t);
   return _alltoall_setid(g, a->offset, size, &a->buffer);
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _alltoall_setid_proxy,
-                  _alltoall_setid_proxy_handler,
-                  HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _alltoall_setid_proxy,
+                     _alltoall_setid_proxy_handler,
+                     HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 
 static void _alltoall_set(lco_t *lco, int size, const void *from) {
@@ -360,13 +364,30 @@ static hpx_status_t _alltoall_get(lco_t *lco, int size, void *out) {
   return HPX_SUCCESS;
 }
 
+// We universally clone the buffer here, because the all* family of LCOs will
+// reset themselves so we can't retain a pointer to their buffer.
+static hpx_status_t
+_alltoall_getref(lco_t *lco, int size, void **out, int *unpin) {
+  *out = registered_malloc(size);
+  *unpin = 1;
+  return _alltoall_get(lco, size, *out);
+}
+
+// We know that allreduce buffers were always copies, so we can just free them
+// here.
+static int
+_alltoall_release(lco_t *lco, void *out) {
+  registered_free(out);
+  return 0;
+}
+
 static const lco_class_t _alltoall_vtable = {
   .on_fini     = _alltoall_fini,
   .on_error    = _alltoall_error,
   .on_set      = _alltoall_set,
   .on_get      = _alltoall_get,
-  .on_getref   = NULL,
-  .on_release  = NULL,
+  .on_getref   = _alltoall_getref,
+  .on_release  = _alltoall_release,
   .on_wait     = _alltoall_wait,
   .on_attach   = _alltoall_attach,
   .on_reset    = _alltoall_reset,
@@ -390,8 +411,8 @@ static int _alltoall_init_handler(_alltoall_t *g, size_t participants, size_t si
 
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _alltoall_init_async,
-                  _alltoall_init_handler, HPX_POINTER, HPX_SIZE_T, HPX_SIZE_T);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _alltoall_init_async,
+                     _alltoall_init_handler, HPX_POINTER, HPX_SIZE_T, HPX_SIZE_T);
 
 /// Allocate a new alltoall LCO. It scatters elements from each process in order
 /// of their rank and sends the result to all the processes
@@ -409,7 +430,7 @@ hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) {
 
   if (!hpx_gas_try_pin(gva, (void**)&g)) {
     int e = hpx_call_sync(gva, _alltoall_init_async, NULL, 0, &inputs, &size);
-    dbg_check(e, "could not initialize an allreduce at %lu\n", gva);
+    dbg_check(e, "could not initialize an allreduce at %"PRIu64"\n", gva);
   }
   else {
     _alltoall_init_handler(g, inputs, size);
@@ -427,9 +448,9 @@ static int _block_local_init_handler(void *lco, uint32_t n, uint32_t inputs,
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
-                  _block_local_init_handler,
-                  HPX_POINTER, HPX_UINT32, HPX_UINT32, HPX_UINT32);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
+                     _block_local_init_handler,
+                     HPX_POINTER, HPX_UINT32, HPX_UINT32, HPX_UINT32);
 
 /// Allocate an array of alltoall LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate

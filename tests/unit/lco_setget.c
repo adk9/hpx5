@@ -18,20 +18,15 @@
 #define BUFFER_SIZE 128
 
 // Testcase to test LCO wait and delete functions
-static int _init_array_handler(size_t *args, size_t size) {
+static int _init_array_handler(char *local, size_t *args, size_t size) {
   size_t n = *args;
-  hpx_addr_t target = hpx_thread_current_target();
-  char *local;
-  if (!hpx_gas_try_pin(target, (void**)&local))
-    return HPX_RESEND;
-
   for(int i = 0; i < n; i++)
     local[i] = (HPX_LOCALITY_ID == 0) ? 'a' : 'b';
 
   HPX_THREAD_CONTINUE(local);
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_array,
-                  _init_array_handler, HPX_POINTER, HPX_SIZE_T);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _init_array,
+                  _init_array_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 static int lco_function_handler(void) {
   int size = HPX_LOCALITIES;
@@ -86,7 +81,7 @@ static int _lco_setget_handler(uint64_t *args, size_t n) {
   hpx_lco_delete(future, HPX_NULL);
 
   //printf("Value set is = %"PRIu64"\n", setVal);
-  hpx_thread_continue(sizeof(uint64_t), &setVal);
+  HPX_THREAD_CONTINUE(setVal);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _lco_setget,
                   _lco_setget_handler, HPX_POINTER, HPX_SIZE_T);
@@ -136,10 +131,6 @@ static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_block,
 
 static int _init_memory_handler(uint32_t *args, size_t n) {
   hpx_addr_t local = hpx_thread_current_target();
-  uint32_t block_size = args[0];
-  uint32_t block_bytes = block_size * sizeof(uint32_t);
-  uint32_t blocks = args[1];
-
   hpx_call_sync(local, _init_block, NULL, 0, args, sizeof(*args));
   return HPX_SUCCESS;
 }

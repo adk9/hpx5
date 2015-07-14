@@ -16,6 +16,8 @@
 
 
 #include <hpx/hpx.h>
+#include <libhpx/action.h>
+#include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/locality.h>
 
@@ -133,6 +135,13 @@ void hpx_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
   here->gas->free(here->gas, addr, sync);
 }
 
+void hpx_gas_free_sync(hpx_addr_t addr) {
+  hpx_addr_t sync = hpx_lco_future_new(0);
+  hpx_gas_free(addr, sync);
+  hpx_lco_wait(sync);
+  hpx_lco_delete(sync, HPX_NULL);
+}
+
 void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
   dbg_assert(here && here->gas && here->gas->move);
   here->gas->move(here->gas, src, dst, lco);
@@ -170,8 +179,8 @@ static int hpx_gas_alloc_local_at_handler(uint32_t bytes, uint32_t boundary) {
   dbg_assert(addr);
   HPX_THREAD_CONTINUE(addr);
 }
-HPX_ACTION(HPX_DEFAULT, 0, hpx_gas_alloc_local_at_action, hpx_gas_alloc_local_at_handler,
-           HPX_UINT32, HPX_UINT32);
+LIBHPX_ACTION(HPX_DEFAULT, 0, hpx_gas_alloc_local_at_action,
+              hpx_gas_alloc_local_at_handler, HPX_UINT32, HPX_UINT32);
 
 hpx_addr_t hpx_gas_alloc_local_at_sync(uint32_t bytes, uint32_t boundary, hpx_addr_t loc) {
   hpx_addr_t addr = 0;
@@ -193,8 +202,8 @@ static int _gas_calloc_at_handler(size_t nmemb, size_t size, uint32_t boundary) 
   dbg_assert(addr);
   HPX_THREAD_CONTINUE(addr);
 }
-HPX_ACTION(HPX_DEFAULT, 0, hpx_gas_calloc_local_at_action, _gas_calloc_at_handler,
-           HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32);
+LIBHPX_ACTION(HPX_DEFAULT, 0, hpx_gas_calloc_local_at_action,
+              _gas_calloc_at_handler, HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32);
 
 hpx_addr_t hpx_gas_calloc_local_at_sync(size_t nmemb, size_t size, uint32_t boundary,
                                         hpx_addr_t loc) {

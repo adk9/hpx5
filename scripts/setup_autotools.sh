@@ -18,7 +18,7 @@ AC=autoconf-2.69
 LT=libtool-2.4.6
 
 CMD="wget -O"
-if ! type "wgeta" > /dev/null; then
+if ! type "wget" > /dev/null; then
   CMD="curl -o"
 fi
 

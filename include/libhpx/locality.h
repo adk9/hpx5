@@ -27,10 +27,16 @@
 /// wrap common functionality that needs access to the global here object.
 
 #include <hpx/hpx.h>
-#include <hwloc.h>
 
-#include <libhpx/debug.h>
+#ifdef HAVE_HWLOC
+# include <hwloc.h>
+#endif
+
 #include <libhpx/gas.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /// Forward declarations.
 /// @{
@@ -64,25 +70,23 @@ typedef struct locality {
   struct scheduler            *sched;
   struct config              *config;
   const struct action_table *actions;
+#ifdef HAVE_HWLOC
   hwloc_topology_t          topology;
+#endif
 } locality_t;
 
 /// Inter-locality action interface.
 /// @{
 
 /// Used to cause a locality to shutdown.
-HPX_INTERNAL extern HPX_ACTION_DECL(locality_shutdown);
-
-typedef struct {
-  hpx_action_t action;
-  hpx_status_t status;
-  char data[];
-} locality_cont_args_t;
-
-HPX_INTERNAL extern hpx_action_t locality_call_continuation;
+extern HPX_ACTION_DECL(locality_shutdown);
 /// @}
 
 /// The global locality is exposed through this "here" pointer.
 extern locality_t *here;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_LOCALITY_H

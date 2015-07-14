@@ -1,6 +1,18 @@
 # The AGAS library
 noinst_LTLIBRARIES  = libagas.la
 
-libagas_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBCUCKOO_CPPFLAGS)
-libagas_la_SOURCES  = agas.c btt.cc chunk_table.cc string.c local.c
-libagas_la_LIBADD   = $(HPX_LIBCUCKOO_LIBS)
+libagas_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
+libagas_la_CFLAGS   = $(LIBHPX_CFLAGS)
+libagas_la_SOURCES  = agas.c btt.cc chunk_table.cc string.c local.c lva.c
+
+if HAVE_JEMALLOC
+libagas_la_SOURCES += jemalloc_cyclic.c jemalloc_global.c
+endif
+
+if HAVE_TBBMALLOC
+noinst_LTLIBRARIES		   += libtbbmalloc.la
+libtbbmalloc_la_CPPFLAGS	= -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
+libtbbmalloc_la_CXXFLAGS 	= $(LIBHPX_CXXFLAGS)
+libtbbmalloc_la_SOURCES  	= tbbmalloc_cyclic.cc tbbmalloc_global.cc
+libagas_la_LIBADD           = libtbbmalloc.la
+endif

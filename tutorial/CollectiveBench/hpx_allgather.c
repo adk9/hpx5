@@ -40,7 +40,7 @@ static hpx_action_t _gather = 0;
 static int _gather_action(const InitArgs *args, size_t n) {
   int size, skip, full = 1;
   double latency;
-  double *maxVal, max_time, min_time, avg_time;
+  double maxVal, max_time, min_time, avg_time;
   int64_t t_start = 0, t_stop = 0, timer = 0;
 
   int THREADS = HPX_LOCALITIES;
@@ -127,7 +127,7 @@ static int _main_action(int *args, size_t size) {
 
   print_header(HEADER, HPX_LOCALITY_ID, full);
 
-  hpx_addr_t src = hpx_gas_alloc_cyclic(THREADS, max_msg_size*sizeof(char), 0);
+  hpx_addr_t src = hpx_gas_alloc_cyclic(THREADS, sizeof(Domain), 0);
   hpx_addr_t complete = hpx_lco_and_new(THREADS);
   hpx_addr_t done = hpx_lco_and_new(THREADS);
   hpx_addr_t collVal = hpx_lco_allgather_new(THREADS, sizeof(double));

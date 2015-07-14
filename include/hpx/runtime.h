@@ -88,7 +88,6 @@ int    _hpx_run(hpx_action_t *entry, int nargs, ...);
 void hpx_shutdown(int code)
   HPX_NORETURN;
 
-
 /// Abort the HPX runtime.
 ///
 /// This causes the main native thread to return the @p code from hpx_run(). The
@@ -102,11 +101,14 @@ void hpx_shutdown(int code)
 void hpx_abort(void)
   HPX_NORETURN;
 
-
 /// Print the help string associated with the runtime configuration
 /// options supported by the HPX runtime.
 ///
 void hpx_print_help(void);
+
+/// Print the version string associated with the HPX interface implemented by
+/// the runtime.
+void hpx_print_version(void);
 
 /// @}
 

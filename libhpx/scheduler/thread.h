@@ -16,7 +16,7 @@
 /// @file thread.h
 /// @brief Defines the lightweight thread stack structure and interface for user
 ///        level threads.
-#include "hpx/hpx.h"
+#include <hpx/hpx.h>
 
 /// Forward declarations
 /// @{
@@ -30,6 +30,7 @@ typedef struct ustack {
   int        lco_depth;                         // how many lco locks we hold
   int           tls_id;
   int         stack_id;
+  int             size;
   short       affinity;                         // set by user
   char           stack[];
 } ustack_t;
@@ -40,8 +41,7 @@ typedef void (*thread_entry_t)(hpx_parcel_t *);
 /// Sets the size of a stack.
 ///
 /// All of the stacks in the system need to have the same size.
-void thread_set_stack_size(int stack_bytes)
-  HPX_INTERNAL;
+void thread_set_stack_size(int stack_bytes);
 
 /// Initializes a thread.
 ///
@@ -53,7 +53,8 @@ void thread_set_stack_size(int stack_bytes)
 /// @param       parcel The parcel that is generating this thread.
 /// @param            f The entry function for the thread.
 void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f,
-                 size_t size) HPX_INTERNAL HPX_NON_NULL(1, 2);
+                 size_t size)
+  HPX_NON_NULL(1, 2);
 
 /// Allocates and initializes a new thread.
 ///
@@ -65,17 +66,17 @@ void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f,
 ///
 /// @returns A new thread that can be transferred to.
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f)
-  HPX_INTERNAL HPX_NON_NULL(1) HPX_MALLOC;
+  HPX_NON_NULL(1) HPX_MALLOC;
 
 /// Deletes the thread.
 ///
 /// @param thread - The thread pointer.
 void thread_delete(ustack_t *stack)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Exit the current user-level thread, possibly with a return value.
 void thread_exit(int status, const void *value, size_t size)
-  HPX_INTERNAL HPX_NORETURN;
+  HPX_NORETURN;
 
 /// The transfer continuation function type.
 typedef int (*thread_transfer_cont_t)(hpx_parcel_t *p, void *sp, void *env);
@@ -94,21 +95,6 @@ typedef int (*thread_transfer_cont_t)(hpx_parcel_t *p, void *sp, void *env);
 ///
 /// @returns HPX_SUCCESS or an error code
 int thread_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env)
-  HPX_INTERNAL HPX_NON_NULL(1, 2);
-
-/// This transfer wrapper is used for logging, debugging, and instrumentation.
-///
-/// Internally, it will perform it's pre-transfer operations, call
-/// thread_transfer(), and then perform post-transfer operations on the return.
-int debug_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env)
-  HPX_INTERNAL HPX_NON_NULL(1, 2);
-
-#if defined(ENABLE_INSTRUMENTATION) || \
-  defined(ENABLE_DEBUG) ||             \
-  defined(ENABLE_LOGGING)
-# define thread_transfer debug_transfer
-#else
-# define thread_transfer thread_transfer
-#endif
+  HPX_NON_NULL(1, 2);
 
 #endif  // LIBHPX_THREAD_H

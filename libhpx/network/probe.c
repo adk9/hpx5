@@ -32,6 +32,7 @@ static int _probe_handler(network_t *network) {
     while ((stack = network_probe(network, hpx_get_my_thread_id()))) {
       hpx_parcel_t *p = NULL;
       while ((p = parcel_stack_pop(&stack))) {
+        INST_EVENT_PARCEL_RECV(p);
         parcel_launch(p);
       }
     }
@@ -40,7 +41,7 @@ static int _probe_handler(network_t *network) {
 
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, 0, _probe, _probe_handler, HPX_POINTER);
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _probe, _probe_handler, HPX_POINTER);
 
 int probe_start(network_t *network) {
   // NB: we should encapsulate this probe infrastructure inside of the networks

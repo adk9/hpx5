@@ -32,12 +32,10 @@ typedef struct send_buffer {
 /// Initialize a send buffer.
 int send_buffer_init(send_buffer_t *sends, int rank,
                      struct parcel_emulator *emul, struct pwc_xport *xport,
-                     uint32_t size)
-  HPX_INTERNAL;
+                     uint32_t size);
 
 /// Finalize a send buffer.
-void send_buffer_fini(send_buffer_t *sends)
-  HPX_INTERNAL;
+void send_buffer_fini(send_buffer_t *sends);
 
 /// Perform a parcel send operation.
 ///
@@ -64,10 +62,8 @@ void send_buffer_fini(send_buffer_t *sends)
 ///                       to be buffered but the system was out of memory.
 ///        LIBHPX_ERROR An unexpected error occurred.
 int send_buffer_send(send_buffer_t *sends, hpx_addr_t lsync,
-                     const hpx_parcel_t *p)
-  HPX_INTERNAL;
+                     const hpx_parcel_t *p);
 
-int send_buffer_progress(send_buffer_t *sends)
-  HPX_INTERNAL;
+int send_buffer_progress(send_buffer_t *sends);
 
 #endif // LIBHPX_NETWORK_PWC_EAGER_BUFFER_H

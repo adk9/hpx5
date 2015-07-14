@@ -88,13 +88,16 @@ void hpx_thread_set_affinity(int thread_id);
 ///
 /// @param size the size of @p value
 /// @param value the value to be sent to the thread's continuation address
-void hpx_thread_continue(size_t size, const void *value)
+void _hpx_thread_continue(int nargs, ...)
   HPX_NORETURN;
+
+#define hpx_thread_continue(...)                                        \
+  _hpx_thread_continue(__HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 /// Finish the current thread's execution, sending @p v to the thread's
 /// continuation address
 /// @param v the value to be sent to the thread's continuation
-#define HPX_THREAD_CONTINUE(v) hpx_thread_continue(sizeof(v), &v)
+#define HPX_THREAD_CONTINUE(v) hpx_thread_continue(&v, sizeof(v))
 
 
 /// Finishes the current thread's execution, sending @p value to the thread's
@@ -103,13 +106,16 @@ void hpx_thread_continue(size_t size, const void *value)
 /// This version gives the application a chance to cleanup for instance, to free
 /// the value. After dealing with the continued data, it will run `cleanup(env)`.
 ///
-/// @param    size the size of @p value
-/// @param   value the value to be sent to the thread's continuation address
 /// @param cleanup a handler function to be run after the thread ends
 /// @param     env an environment to pass to @p cleanup
-void hpx_thread_continue_cleanup(size_t size, const void *value,
-                                 void (*cleanup)(void*), void *env)
+/// @param    size the size of @p value
+/// @param   value the value to be sent to the thread's continuation address
+void _hpx_thread_continue_cleanup(void (*cleanup)(void*), void *env,
+                                  int nargs, ...)
   HPX_NORETURN;
+
+#define hpx_thread_continue_cleanup(cleanup, env, ...)                  \
+  _hpx_thread_continue_cleanup(cleanup, env, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 
 /// Finish the current thread's execution.

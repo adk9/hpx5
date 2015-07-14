@@ -10,24 +10,11 @@ to the flag suffix given below."
 option "hpx-help" - "print HPX help"
 flag off
 
-option "hpx-cores" - "number of cores to run on"
-typestr="cores"
-int optional
-
-option "hpx-threads" - "number of scheduler threads"
-typestr="threads"
-int optional
-
-option "hpx-stacksize" - "set HPX stack size"
-typestr="bytes"
-long optional
+option "hpx-version" - "print HPX version"
+flag off
 
 option "hpx-heapsize" - "set HPX per-PE global heap size"
 typestr="bytes"
-long optional
-
-option "hpx-wfthreshold" - "bound on help-first tasks before work-first scheduling"
-typestr="tasks"
 long optional
 
 option "hpx-gas" - "type of Global Address Space (GAS)"
@@ -42,7 +29,7 @@ enum optional
 
 option "hpx-transport" - "type of transport to use"
 typestr="type"
-values="default","mpi","portals","photon"
+values="default","mpi","photon"
 enum optional
 
 option "hpx-network" - "type of network to use"
@@ -56,6 +43,28 @@ flag off
 option "hpx-configfile" - "HPX runtime configuration file"
 typestr="file"
 string optional
+
+section "Scheduler Options"
+
+option "hpx-cores" - "number of scheduler cores (deprecated)"
+typestr="cores"
+int optional
+
+option "hpx-threads" - "number of scheduler threads"
+typestr="threads"
+int optional
+
+option "hpx-stacksize" - "set HPX stack size"
+typestr="bytes"
+long optional
+
+option "hpx-wfthreshold" - "bound on help-first tasks before work-first scheduling"
+typestr="tasks"
+long optional
+
+option "hpx-sched-stackcachelimit" - "bound on the number of stacks to cache"
+typestr="stacks"
+int optional
 
 section "Log options"
 
@@ -87,7 +96,7 @@ section "Tracing"
 
 option "hpx-trace-classes" - "set the event classes to trace"
 typestr="class"
-values="parcel","pwc","sched","all"
+values="parcel","pwc","sched","lco","process","memory","all"
 enum optional multiple
 
 option "hpx-trace-dir" - "directory to output trace files"
@@ -171,3 +180,9 @@ int optional
 option "hpx-photon-numcq" - "set number of completion queues to use (cyclic assignment to ranks)"
 typestr="integer"
 int optional
+
+section "Optimization"
+
+option "hpx-opt-smp" - "optimize for SMP execution"
+typestr="0 off"
+int optional argoptional

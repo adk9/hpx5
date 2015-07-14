@@ -128,7 +128,7 @@ static size_t _alignment(void) {
 }
 
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
-  void *base = registered_memalign(_alignment(), _buffer_size);
+  void *base = as_memalign(AS_REGISTERED, _alignment(), _buffer_size);
   dbg_assert(base);
   assert((uintptr_t)base % _alignment() == 0);
 
@@ -141,5 +141,5 @@ ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
 void thread_delete(ustack_t *thread) {
   _deregister(thread);
   void *base = _unprotect(thread);
-  registered_free(base);
+  as_free(AS_REGISTERED, base);
 }

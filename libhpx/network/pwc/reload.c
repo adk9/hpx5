@@ -14,8 +14,12 @@
 # include "config.h"
 #endif
 
-#include <libhpx/config.h>
+#include <string.h>
+#include <stdlib.h>
+#include <libhpx/action.h>
 #include <libhpx/boot.h>
+#include <libhpx/config.h>
+#include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
@@ -23,12 +27,11 @@
 #include <libhpx/parcel_block.h>
 #include <libhpx/scheduler.h>
 
+#include "commands.h"
 #include "parcel_emulation.h"
 #include "pwc.h"
 #include "send_buffer.h"
 #include "xport.h"
-
-#include "../commands.h"
 
 typedef struct {
   size_t              n;
@@ -62,20 +65,21 @@ static void _buffer_fini(buffer_t *b) {
   }
 }
 
-static void _buffer_reload(buffer_t *b, pwc_xport_t *xport) {
+static void
+_buffer_reload(buffer_t *b, pwc_xport_t *xport) {
   dbg_assert(1ul << ceil_log2_size_t(b->n) == b->n);
   b->block = parcel_block_new(b->n, b->n, &b->i);
-  int e = xport->key_find(xport, b->block, b->n, &b->key);
-  dbg_check(e, "no key for parcel block at (%p, %zu)\n", (void*)b->block, b->n);
+  xport->key_find(xport, b->block, b->n, &b->key);
 }
 
-static void _buffer_init(buffer_t *b, size_t n, pwc_xport_t *xport) {
+static void
+_buffer_init(buffer_t *b, size_t n, pwc_xport_t *xport) {
   b->n = n;
   _buffer_reload(b, xport);
 }
 
 static int _recv_parcel_handler(int src, command_t command) {
-#ifdef HPX_BITNESS_64
+#ifdef __LP64__
   hpx_parcel_t *p = (hpx_parcel_t*)command_get_arg(command);
 #else
   arg_t arg = command_get_arg(command);
@@ -84,12 +88,14 @@ static int _recv_parcel_handler(int src, command_t command) {
 #endif
   p->src = src;
   parcel_set_state(p, PARCEL_SERIALIZED | PARCEL_BLOCK_ALLOCATED);
+  INST_EVENT_PARCEL_RECV(p);
   scheduler_spawn(p);
   return HPX_SUCCESS;
 }
-COMMAND_DEF(HPX_INTERRUPT, _recv_parcel, _recv_parcel_handler);
+static COMMAND_DEF(_recv_parcel, _recv_parcel_handler);
 
-static int _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
+static int
+_buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
   int i = send->i;
   dbg_assert(!(i & 7));
   size_t r = send->n - i;
@@ -118,8 +124,8 @@ static int _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
   dbg_error("could not complete send operation\n");
 }
 
-static int _reload_send(void *obj, pwc_xport_t *xport, int rank,
-                        const hpx_parcel_t *p) {
+static int
+_reload_send(void *obj, pwc_xport_t *xport, int rank, const hpx_parcel_t *p) {
   size_t n = parcel_size(p);
   xport_op_t op = {
     .rank = rank,
@@ -141,7 +147,8 @@ static int _reload_send(void *obj, pwc_xport_t *xport, int rank,
   return _buffer_send(send, xport, &op);
 }
 
-static hpx_parcel_t *_buffer_recv(buffer_t *recv) {
+static hpx_parcel_t *
+_buffer_recv(buffer_t *recv) {
   const hpx_parcel_t *p = parcel_block_at(recv->block, recv->i);
   recv->i += parcel_size(p);
   if (recv->i >= recv->n) {
@@ -150,13 +157,15 @@ static hpx_parcel_t *_buffer_recv(buffer_t *recv) {
   return parcel_clone(p);
 }
 
-static hpx_parcel_t *_reload_recv(void *obj, int rank) {
+static hpx_parcel_t *
+_reload_recv(void *obj, int rank) {
   reload_t *reload = obj;
   buffer_t *recv = &reload->recv[rank];
   return _buffer_recv(recv);
 }
 
-static void _reload_delete(void *obj) {
+static void
+_reload_delete(void *obj) {
   if (obj) {
     reload_t *reload = obj;
     for (int i = 0, e = reload->ranks; i < e; ++i) {
@@ -164,19 +173,19 @@ static void _reload_delete(void *obj) {
     }
     registered_free(reload->recv);
     registered_free(reload->send);
-    local_free(reload->remotes);
+    free(reload->remotes);
     free(reload);
   }
 }
 
-void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
-                                 pwc_xport_t *xport) {
-  int e;
+void *
+parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
+                           pwc_xport_t *xport) {
   int rank = boot_rank(boot);
   int ranks = boot_n_ranks(boot);
 
   // Allocate the buffer.
-  reload_t *reload = local_calloc(1, sizeof(*reload));
+  reload_t *reload = calloc(1, sizeof(*reload));
   reload->vtable.delete = _reload_delete;
   reload->vtable.send = _reload_send;
   reload->vtable.recv = _reload_recv;
@@ -188,13 +197,11 @@ void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
   size_t remote_table_size = ranks * sizeof(remote_t);
   reload->recv = registered_malloc(buffer_row_size);
   reload->send = registered_malloc(buffer_row_size);
-  reload->remotes = local_malloc(remote_table_size);
+  reload->remotes = malloc(remote_table_size);
 
   // Grab the keys for the recv and send rows
-  e = xport->key_find(xport, reload->send, buffer_row_size, &reload->send_key);
-  dbg_check(e, "no rdma key for send row (%p)\n", (void*)reload->send);
-  e = xport->key_find(xport, reload->recv, buffer_row_size, &reload->recv_key);
-  dbg_check(e, "no rdma key for recv row (%p)\n", (void*)reload->recv);
+  xport->key_find(xport, reload->send, buffer_row_size, &reload->send_key);
+  xport->key_find(xport, reload->recv, buffer_row_size, &reload->recv_key);
 
   // Initialize the recv buffers for this rank.
   for (int i = 0, e = ranks; i < e; ++i) {
@@ -203,7 +210,7 @@ void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
   }
 
   // Initialize a temporary array of remote pointers for this rank's sends.
-  remote_t *remotes = local_malloc(remote_table_size);
+  remote_t *remotes = malloc(remote_table_size);
   for (int i = 0, e = ranks; i < e; ++i) {
     remotes[i].addr = &reload->send[i];
     xport->key_copy(&remotes[i].key, &reload->send_key);
@@ -216,7 +223,7 @@ void *parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
   boot_alltoall(boot, reload->remotes, remotes, remote_size, remote_size);
 
   // free the temporary array of remote pointers
-  local_free(remotes);
+  free(remotes);
 
   // just do a sanity check to make sure the alltoalls worked
   if (DEBUG) {
@@ -242,7 +249,7 @@ static int _reload_reply_handler(int src, command_t cmd) {
   send_buffer_t *sends = &pwc->send_buffers[src];
   return send_buffer_progress(sends);
 }
-static COMMAND_DEF(HPX_DEFAULT, _reload_reply, _reload_reply_handler);
+static COMMAND_DEF(_reload_reply, _reload_reply_handler);
 
 static int _reload_request_handler(int src, command_t cmd) {
   pwc_network_t *pwc = (pwc_network_t*)here->network;
@@ -268,5 +275,5 @@ static int _reload_request_handler(int src, command_t cmd) {
 
   return xport->pwc(&op);
 }
-static COMMAND_DEF(HPX_INTERRUPT, _reload_request, _reload_request_handler);
+static COMMAND_DEF(_reload_request, _reload_request_handler);
 

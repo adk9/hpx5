@@ -13,17 +13,12 @@
 #ifndef LIBHPX_NETWORK_PROBE_H
 #define LIBHPX_NETWORK_PROBE_H
 
-#include <hpx/attributes.h>
-
 /// Forward declarations.
 /// @{
 struct network;
 /// @}
 
-int probe_start(struct network *network)
-  HPX_INTERNAL;
-
-void probe_stop(void)
-  HPX_INTERNAL;
+int probe_start(struct network *network);
+void probe_stop(void);
 
 #endif // LIBHPX_NETWORK_PROBE_H

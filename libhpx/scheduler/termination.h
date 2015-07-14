@@ -55,8 +55,8 @@ typedef struct {
 
 ///
 
-HPX_INTERNAL bitmap_t *cr_bitmap_new(void) HPX_MALLOC;
-HPX_INTERNAL void cr_bitmap_delete(bitmap_t *b) HPX_NON_NULL(1);
-HPX_INTERNAL uint64_t cr_bitmap_add_and_test(bitmap_t *b, int64_t i) HPX_NON_NULL(1);
+bitmap_t *cr_bitmap_new(void) HPX_MALLOC;
+void cr_bitmap_delete(bitmap_t *b) HPX_NON_NULL(1);
+uint64_t cr_bitmap_add_and_test(bitmap_t *b, int64_t i) HPX_NON_NULL(1);
 
 #endif // LIBHPX_TERMINATION_H

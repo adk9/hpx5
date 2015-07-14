@@ -31,6 +31,7 @@
 #include <libhpx/config.h>
 #include <libhpx/gas.h>
 #include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>
@@ -56,7 +57,7 @@ static const char *_getenv_upper(const char * const var) {
   const char *c = NULL;
   const size_t len = strlen(var);
   char *uvar = malloc(len + 1);
-  dbg_assert_str(uvar, "Could not malloc %lu bytes during option parsing", len);
+  dbg_assert_str(uvar, "Could not malloc %zu bytes during option parsing", len);
   for (int i = 0; i < len; ++i) {
     uvar[i] = toupper(var[i]);
   }
@@ -266,8 +267,15 @@ static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
 #undef LIBHPX_OPT_FLAG
 
   if (opts->hpx_help_given) {
+    hpx_print_version();
+    libhpx_print_version();
     hpx_print_help();
     exit(EXIT_SUCCESS);
+  }
+
+  if (opts->hpx_version_given) {
+    hpx_print_version();
+    libhpx_print_version();
   }
 
   // Special case handling for the config file option, the
@@ -282,7 +290,7 @@ static void _merge_opts(config_t *cfg, const hpx_options_t *opts) {
 }
 
 /// Print the help associated with the HPX runtime options
-void hpx_print_help(void) { 
+void hpx_print_help(void) {
   hpx_option_parser_print_help();
 }
 
@@ -354,7 +362,140 @@ config_t *config_new(int *argc, char ***argv) {
 #else
   optind = 1;
 #endif
+
   return cfg;
+}
+
+void
+config_print(config_t *cfg, FILE *f) {
+  fprintf(f, "------------------------\n"
+             "HPX PARSED CONFIGURATION\n"
+             "------------------------\n");
+  fprintf(f, "General\n");
+  fprintf(f, "  statistics\t\t%d\n", cfg->statistics);
+  fprintf(f, "  heapsize\t\t%lu\n", cfg->heapsize);
+  fprintf(f, "  gas\t\t\t\"%s\"\n", HPX_GAS_TO_STRING[cfg->gas]);
+  fprintf(f, "  boot\t\t\t\"%s\"\n", HPX_BOOT_TO_STRING[cfg->boot]);
+  fprintf(f, "  transport\t\t\"%s\"\n", HPX_TRANSPORT_TO_STRING[cfg->transport]);
+  fprintf(f, "  network\t\t\"%s\"\n", HPX_NETWORK_TO_STRING[cfg->network]);
+
+  fprintf(f, "\nScheduler\n");
+  fprintf(f, "  cores\t\t\t%d\n", cfg->cores);
+  fprintf(f, "  threads\t\t%d\n", cfg->threads);
+  fprintf(f, "  stacksize\t\t%u\n", cfg->stacksize);
+  fprintf(f, "  wfthreshold\t\t%u\n", cfg->wfthreshold);
+  fprintf(f, "  stackcachelimit\t%u\n", cfg->sched_stackcachelimit);
+
+  fprintf(f, "\nLogging\n");
+  fprintf(f, "  level\t\t\t");
+  for (int i = 0, e = sizeof(HPX_LOG_LEVEL_TO_STRING) /
+               sizeof(HPX_LOG_LEVEL_TO_STRING[0]); i < e; ++i) {
+    uint64_t level = 1lu << i;
+    if (cfg->log_level & level) {
+      fprintf(f, "\"%s\", ", HPX_LOG_LEVEL_TO_STRING[i]);
+    }
+  }
+  fprintf(f, "\n");
+  fprintf(f, "  at\t\t\t");
+  if (!cfg->log_at) {
+    fprintf(f, "all");
+  }
+  else {
+    for (int i = 0; cfg->log_at[i] != HPX_LOCALITY_NONE; ++i) {
+      if (cfg->log_at[i] == HPX_LOCALITY_ALL) {
+        fprintf(f, "all\n");
+        break;
+      }
+      else {
+        fprintf(f, "%d, ", cfg->log_at[i]);
+      }
+    }
+  }
+  fprintf(f, "\n");
+
+  fprintf(f, "\nDebugging\n");
+  fprintf(f, "  mprotectstacks\t%d\n", cfg->dbg_mprotectstacks);
+  fprintf(f, "  waitonabort\t\t%d\n", cfg->dbg_waitonabort);
+  fprintf(f, "  waitonsegv\t\t%d\n", cfg->dbg_waitonsegv);
+  fprintf(f, "  waitat\t\t");
+  if (!cfg->dbg_waitat) {
+    fprintf(f, "all");
+  }
+  else {
+    for (int i = 0; cfg->dbg_waitat[i] != HPX_LOCALITY_NONE; ++i) {
+      if (cfg->dbg_waitat[i] == HPX_LOCALITY_ALL) {
+        fprintf(f, "all\n");
+        break;
+      }
+      else {
+        fprintf(f, "%d, ", cfg->dbg_waitat[i]);
+      }
+    }
+  }
+  fprintf(f, "\n");
+
+  fprintf(f, "\nTracing\n");
+  fprintf(f, "  dir\t\t\t\"%s\"\n", cfg->trace_dir);
+  fprintf(f, "  filesize\t\t%lu\n", cfg->trace_filesize);
+  fprintf(f, "  classes\t\t");
+  for (int i = 0, e = sizeof(HPX_TRACE_CLASS_TO_STRING) /
+               sizeof(HPX_TRACE_CLASS_TO_STRING[0]); i < e; ++i) {
+    uint64_t class = (1lu << i);
+    if (cfg->trace_classes & class) {
+      fprintf(f, "\"%s\", ", HPX_TRACE_CLASS_TO_STRING[i]);
+    }
+  }
+  fprintf(f, "\n");
+  fprintf(f, "  at\t\t\t");
+  if (!cfg->trace_at) {
+    fprintf(f, "all");
+  }
+  else {
+    for (int i = 0; cfg->trace_at[i] != HPX_LOCALITY_NONE; ++i) {
+      if (cfg->trace_at[i] == HPX_LOCALITY_ALL) {
+        fprintf(f, "all\n");
+        break;
+      }
+      else {
+        fprintf(f, "%d, ", cfg->trace_at[i]);
+      }
+    }
+  }
+  fprintf(f, "\n");
+
+#ifdef HAVE_PHOTON
+  fprintf(f, "\nPWC\n");
+  fprintf(f, "  parcelbuffersize\t%lu\n", cfg->pwc_parcelbuffersize);
+  fprintf(f, "  parceleagerlimit\t%lu\n", cfg->pwc_parceleagerlimit);
+#endif
+
+#ifdef HAVE_MPI
+  fprintf(f, "\nIsend/Irecv\n");
+  fprintf(f, "  testwindow\t\t%u\n", cfg->isir_testwindow);
+  fprintf(f, "  sendlimit\t\t%u\n", cfg->isir_sendlimit);
+  fprintf(f, "  recvlimit\t\t%u\n", cfg->isir_recvlimit);
+#endif
+
+#ifdef HAVE_PHOTON
+  fprintf(f, "\nPhoton\n");
+  fprintf(f, "  backend\t\t%s\n",
+             HPX_PHOTON_BACKEND_TO_STRING[cfg->photon_backend]);
+  fprintf(f, "  ibport\t\t%d\n", cfg->photon_ibport);
+  fprintf(f, "  ledgersize\t\t%d\n", cfg->photon_ledgersize);
+  fprintf(f, "  eagerbufsize\t\t%d\n", cfg->photon_eagerbufsize);
+  fprintf(f, "  smallpwcsize\t\t%d\n", cfg->photon_smallpwcsize);
+  fprintf(f, "  maxrd\t\t\t%d\n", cfg->photon_maxrd);
+  fprintf(f, "  defaultrd\t\t%d\n", cfg->photon_defaultrd);
+  fprintf(f, "  numcq\t\t\t%d\n", cfg->photon_numcq);
+  fprintf(f, "  usecma\t\t%d\n", cfg->photon_usecma);
+  fprintf(f, "  ethdev\t\t\"%s\"\n", cfg->photon_ethdev);
+  fprintf(f, "  ibdev\t\t\t\"%s\"\n", cfg->photon_ibdev);
+#endif
+  fprintf(f, "\nOptimization\n");
+  fprintf(f, "  smp\t\t\t%d\n", cfg->opt_smp);
+
+  fprintf(f, "------------------------\n"
+             "------------------------\n");
 }
 
 void config_delete(config_t *cfg) {

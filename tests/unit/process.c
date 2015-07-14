@@ -62,7 +62,7 @@ static int process_handler(void) {
   hpx_lco_delete(psync, HPX_NULL);
   hpx_lco_delete(sync, HPX_NULL);
   hpx_process_delete(proc, HPX_NULL);
-  hpx_shutdown(HPX_SUCCESS);
+  return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, process, process_handler);
 

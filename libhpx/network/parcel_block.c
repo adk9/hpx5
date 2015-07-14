@@ -38,7 +38,7 @@ parcel_block_t *parcel_block_new(size_t align, size_t n, size_t *offset) {
                  here->config->pwc_parcelbuffersize, align);
   size_t bytes = n - sizeof(parcel_block_t);
   dbg_assert(bytes < n);
-  parcel_block_t *block = registered_memalign(align, n);
+  parcel_block_t *block = as_memalign(AS_REGISTERED, align, n);
   block->remaining = bytes;
   *offset = offsetof(parcel_block_t, bytes);
   log_parcel("allocated parcel block at %p\n", (void*)block);
@@ -50,7 +50,7 @@ void parcel_block_delete(parcel_block_t *block) {
     log_parcel("block freed with %zu bytes remaining\n", block->remaining);
   }
   log_parcel("deleting parcel block at %p\n", (void*)block);
-  registered_free(block);
+  as_free(AS_REGISTERED, block);
 }
 
 void *parcel_block_at(parcel_block_t *block, size_t offset) {

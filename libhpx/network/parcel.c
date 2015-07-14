@@ -54,8 +54,8 @@ static int _delete_launch_through_parcel_handler(hpx_parcel_t *p) {
   parcel_delete(p);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, 0, _delete_launch_through_parcel,
-                  _delete_launch_through_parcel_handler, HPX_POINTER);
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _delete_launch_through_parcel,
+                     _delete_launch_through_parcel_handler, HPX_POINTER);
 
 static void _prepare(hpx_parcel_t *p) {
   parcel_state_t state = parcel_get_state(p);
@@ -104,9 +104,12 @@ int parcel_launch(hpx_parcel_t *p) {
   }
 #endif
 
+  INST_EVENT_PARCEL_SEND(p);
+
   // do a local send through loopback, bypassing the network, otherwise dump the
   // parcel out to the network
   if (hpx_gas_try_pin(p->target, NULL)) {
+    INST_EVENT_PARCEL_RECV(p); // instrument local "receives"
     scheduler_spawn(p);
     return HPX_SUCCESS;
   }
@@ -118,6 +121,10 @@ int parcel_launch(hpx_parcel_t *p) {
 }
 
 int parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate) {
+  if (!gate) {
+    return parcel_launch(p);
+  }
+
   dbg_assert(p->action);
   _prepare(p);
 
@@ -171,7 +178,7 @@ hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action,
     size += _max(sizeof(void*), len);
   }
 
-  hpx_parcel_t *p = registered_memalign(HPX_CACHELINE_SIZE, size);
+  hpx_parcel_t *p = as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, size);
   dbg_assert_str(p, "parcel: failed to allocate %zu registered bytes.\n", size);
   parcel_init(target, action, c_target, c_action, pid, data, len, p);
   INST_EVENT_PARCEL_CREATE(p);
@@ -181,7 +188,7 @@ hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action,
 hpx_parcel_t *parcel_clone(const hpx_parcel_t *p) {
   dbg_assert(parcel_serialized(parcel_get_state(p)) || p->size == 0);
   size_t n = parcel_size(p);
-  hpx_parcel_t *clone = registered_memalign(HPX_CACHELINE_SIZE, n);
+  hpx_parcel_t *clone = as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, n);
   memcpy(clone, p, n);
   clone->ustack = NULL;
   clone->next = NULL;
@@ -222,7 +229,7 @@ void parcel_delete(hpx_parcel_t *p) {
     return;
   }
 
-  registered_free(p);
+  as_free(AS_REGISTERED, p);
 }
 
 struct ustack* parcel_set_stack(hpx_parcel_t *p, struct ustack *next) {

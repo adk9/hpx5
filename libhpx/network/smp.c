@@ -59,20 +59,21 @@ static int _smp_get(void *network, void *to, hpx_addr_t from, size_t n,
   return LIBHPX_EUNIMPLEMENTED;
 }
 
-static hpx_parcel_t *_smp_probe(void *network, int nrx) {
+static hpx_parcel_t *
+_smp_probe(void *network, int nrx) {
   return NULL;
 }
 
-static void _smp_set_flush(void *network) {
+static void
+_smp_set_flush(void *network) {
 }
 
-static int _smp_register_dma(void *obj, const void *addr, size_t n, void *key)
-{
-  return LIBHPX_OK;
+static void
+_smp_register_dma(void *obj, const void *addr, size_t n, void *key) {
 }
 
-static int _smp_release_dma(void *obj, const void *addr, size_t n) {
-  return LIBHPX_OK;
+static void
+_smp_release_dma(void *obj, const void *addr, size_t n) {
 }
 
 static network_t _smp = {
@@ -95,10 +96,6 @@ network_t *network_smp_new(const struct config *cfg, boot_t *boot) {
     dbg_error("SMP network does not support multiple ranks.\n");
     return NULL;
   }
-
-  local = address_space_new_default(cfg);
-  global = address_space_new_default(cfg);
-  registered = address_space_new_default(cfg);
 
   return &_smp;
 }

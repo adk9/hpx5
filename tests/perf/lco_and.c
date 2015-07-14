@@ -15,7 +15,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <hpx/hpx.h>
-#include "timeout.h"
 
 #define BENCHMARK "HPX COST OF LCO AND"
 
@@ -119,8 +118,6 @@ int main(int argc, char *argv[]) {
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _lco_set, _lco_set_action, HPX_POINTER, HPX_SIZE_T);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _empty, _empty_action, HPX_POINTER, HPX_SIZE_T);
-
-  set_timeout(300);
 
   // run the main action
   return hpx_run(&_main, NULL, 0);

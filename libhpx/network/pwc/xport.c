@@ -23,9 +23,6 @@ pwc_xport_t *pwc_xport_new(const config_t *cfg, struct boot *boot,
    case (HPX_TRANSPORT_MPI):
     dbg_error("MPI support for the PWC network is not yet available.\n");
 
-   case (HPX_TRANSPORT_PORTALS):
-    dbg_error("Portals support for the PWC network is not yet available.\n");
-
    case (HPX_TRANSPORT_PHOTON):
 #ifdef HAVE_PHOTON
     return pwc_xport_new_photon(cfg, boot, gas);

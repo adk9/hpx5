@@ -55,6 +55,12 @@ libphoton_la_SOURCES += ugni/photon_ugni.c                     \
 #ugni_test_SOURCES = ugni/utility_functions.c
 endif
 
+if HAVE_LIBFABRIC
+AM_CFLAGS += -I@PHOTON_SRCDIR@/src/fi @PHOTON_LIBFABRIC_CPPFLAGS@
+libphoton_la_SOURCES += fi/photon_fi.c
+libphoton_la_LIBADD += @PHOTON_BUILDDIR@/src/contrib/libfabric/src/libfabric.la
+endif
+
 if HAVE_MPI
 AM_CFLAGS += @MPI_CFLAGS@
 libphoton_la_LDFLAGS += @MPI_LIBS@

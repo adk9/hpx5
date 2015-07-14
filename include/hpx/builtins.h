@@ -23,9 +23,12 @@
 /// @todo Deal with this during configuration.
 // ----------------------------------------------------------------------------
 
+#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 \
+                     + __GNUC_PATCHLEVEL__)
+
 #define likely(S) (__builtin_expect(S, 1))
 #define unlikely(S) (__builtin_expect(S, 0))
-#if (__GNUC_MINOR__ > 5) || defined(__INTEL_COMPILER) || defined(__clang__)
+#if (GCC_VERSION > 30500) || defined(__INTEL_COMPILER) || defined(__clang__)
 #define unreachable() __builtin_unreachable()
 #else
 #define unreachable()
@@ -36,7 +39,7 @@
 
 #define popcountl(N) __builtin_popcountl(N)
 
-#if (__GNUC__ > 3) && (__GNUC_MINOR__ > 5)
+#if (GCC_VERSION > 30500)
 #define _HELPER0(x) #x
 #define _HELPER1(x) _HELPER0(GCC diagnostic ignored x)
 #define _HELPER2(y) _HELPER1(#y)
@@ -63,14 +66,6 @@ static inline uint32_t ceil_log2_64(uint64_t val) {
   return ((sizeof(val) * 8 - 1) - clzl(val)) + (!!(val & (val - 1)));
 }
 
-#if SIZE_MAX > (UINT64_C(1)<<32)
-#define ceil_log2_size_t ceil_log2_64
-#define ceil_log2_uintptr_t ceil_log2_64
-#else
-#define ceil_log2_size_t ceil_log2_32
-#define ceil_log2_uintptr_t ceil_log2_32
-#endif
-
 static inline uint32_t ceil_div_32(uint32_t num, uint32_t denom) {
   return (num / denom) + ((num % denom) ? 1 : 0);
 }
@@ -83,6 +78,10 @@ static inline int min_int(int lhs, int rhs) {
   return (lhs < rhs) ? lhs : rhs;
 }
 
+static inline uint32_t min_u32(uint32_t lhs, uint32_t rhs) {
+  return (lhs < rhs) ? lhs : rhs;
+}
+
 static inline uint64_t min_u64(uint64_t lhs, uint64_t rhs) {
   return (lhs < rhs) ? lhs : rhs;
 }
@@ -90,6 +89,29 @@ static inline uint64_t min_u64(uint64_t lhs, uint64_t rhs) {
 static inline int32_t max_i32(int32_t lhs, int32_t rhs) {
   return (lhs < rhs) ? rhs : lhs;
 }
+
+static inline uint32_t max_u32(uint32_t lhs, uint32_t rhs) {
+  return (lhs < rhs) ? rhs : lhs;
+}
+
+#define _HPX_CAT(l,r) l##r
+#define _HPX_CAT1(l,r) _HPX_CAT(l,r)
+#define _HPX_CAT2(l,r) _HPX_CAT1(l,r)
+
+#ifdef __LP64__
+# define _HPX_BITS 64
+#else
+# define _HPX_BITS 32
+#endif
+
+#define ceil_log2_uintptr_t _HPX_CAT1(ceil_log2_, _HPX_BITS)
+#define ceil_div_uintptr_t  _HPX_CAT1(ceil_div_, _HPX_BITS)
+#define ceil_min_uintptr_t  _HPX_CAT1(min_u, _HPX_BITS)
+
+#define ceil_log2_size_t    _HPX_CAT1(ceil_log2_, _HPX_BITS)
+#define ceil_div_size_t     _HPX_CAT1(ceil_div_, _HPX_BITS)
+#define ceil_min_size_t     _HPX_CAT1(min_u, _HPX_BITS)
+
 
 /// Miscellaneous utility macros.
 
@@ -118,10 +140,6 @@ static inline int32_t max_i32(int32_t lhs, int32_t rhs) {
     48, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 31, 30, \
     29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, \
     10, 9,  8,  7,  6,  5,  4,  3,  2,  1,  0
-
-#define _HPX_CAT(l,r) l##r
-#define _HPX_CAT1(l,r) _HPX_CAT(l,r)
-#define _HPX_CAT2(l,r) _HPX_CAT1(l,r)
 
 #define _HPX_FOREACH_0(F)
 #define _HPX_FOREACH_1(F, car) F(car)

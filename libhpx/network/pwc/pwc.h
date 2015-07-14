@@ -13,7 +13,7 @@
 #ifndef LIBHPX_NETWORK_PWC_PWC_H
 #define LIBHPX_NETWORK_PWC_PWC_H
 
-#include <hpx/attributes.h>
+#include <hpx/hpx.h>
 #include <libhpx/network.h>
 
 /// Forward declarations.
@@ -35,9 +35,13 @@ typedef struct {
   struct heap_segment *heap_segments;
 } pwc_network_t;
 
+/// Allocate and initialize a PWC network instance.
 network_t *network_pwc_funneled_new(const struct config *cfg, struct boot *boot,
                                     struct gas *gas)
-  HPX_MALLOC HPX_INTERNAL;
+  HPX_MALLOC;
 
+/// Perform an LCO get operation through the PWC network.
+///
+int pwc_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out);
 
 #endif

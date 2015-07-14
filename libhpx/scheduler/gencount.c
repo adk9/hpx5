@@ -19,10 +19,12 @@
 /// @brief Implements the semaphore LCO.
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <libhpx/action.h>
+#include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/scheduler.h>
@@ -82,7 +84,7 @@ void _gencount_reset(lco_t *lco) {
 static void _gencount_set(lco_t *lco, int size, const void *from) {
   lco_lock(lco);
   _gencount_t *gencnt = (_gencount_t *)lco;
-  unsigned long gen = gencnt->gen++;
+  unsigned long gen = ++gencnt->gen;
   scheduler_signal_all(&gencnt->oflow);
 
   if (gencnt->ninplace > 0) {
@@ -162,15 +164,15 @@ static int _gencount_init_handler(_gencount_t *gencnt, unsigned long ninplace) {
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _gencount_init_async,
-                  _gencount_init_handler, HPX_POINTER, HPX_ULONG);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _gencount_init_async,
+                     _gencount_init_handler, HPX_POINTER, HPX_ULONG);
 
 static int _gencount_wait_gen_proxy_handler(unsigned long gen) {
   hpx_addr_t target = hpx_thread_current_target();
   return hpx_lco_gencount_wait(target, gen);
 }
-static HPX_ACTION(HPX_DEFAULT, 0, _gencount_wait_gen_proxy,
-                  _gencount_wait_gen_proxy_handler, HPX_ULONG);
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _gencount_wait_gen_proxy,
+                     _gencount_wait_gen_proxy_handler, HPX_ULONG);
 
 hpx_addr_t hpx_lco_gencount_new(unsigned long ninplace) {
   _gencount_t *cnt = NULL;
@@ -180,7 +182,7 @@ hpx_addr_t hpx_lco_gencount_new(unsigned long ninplace) {
 
   if (!hpx_gas_try_pin(gva, (void**)&cnt)) {
     int e = hpx_call_sync(gva, _gencount_init_async, NULL, 0, &ninplace);
-    dbg_check(e, "could not initialize a generation counter at %lu\n", gva);
+    dbg_check(e, "could not initialize a generation counter at %"PRIu64"\n", gva);
   }
   else {
     _gencount_init_handler(cnt, ninplace);

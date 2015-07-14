@@ -1,21 +1,12 @@
 parceldir                     = $(datarootdir)/doc/@PACKAGE@
 parcel_PROGRAMS               = parcelSend parcelSendSync
 
+AM_CPPFLAGS			= -D_GNU_SOURCE $(LIBFFI_CFLAGS) -I$(top_srcdir)/include
+AM_LDFLAGS			= $(LIBHPX_LDFLAGS) -no-install
+LDADD				= $(LIBHPX_LDADD)
+
 parcelSend_SOURCES            = parcelSend.c 
 parcelSendSync_SOURCES        = parcelSendSync.c
 
-all_LIBS                    = $(HPX_LIBS)
-
-AM_CPPFLAGS                 = -D_GNU_SOURCE -I$(top_srcdir)/include
-AM_CFLAGS                   =
-AM_LDFLAGS                  = $(HPX_JEMALLOC_RPATH) -no-install
-
-if HAVE_MPI
-AM_CFLAGS                    += @MPI_CFLAGS@
-endif
-
-parcelSend_LDADD              = $(all_LIBS)
-parcelSendSync_LDADD          = $(all_LIBS)
-
-parcelSend_DEPENDENCIES       = $(HPX_DEPS)
-parcelSendSync_DEPENDENCIES   = $(HPX_DEPS)
+parcelSend_DEPENDENCIES       = $(LIBHPX_DEPS)
+parcelSendSync_DEPENDENCIES   = $(LIBHPX_DEPS)

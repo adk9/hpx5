@@ -32,6 +32,7 @@ int _photon_nforw;
 int _photon_fproc;
 int _photon_ebsize;
 int _photon_smsize;
+int _photon_upsize;
 int _photon_spsize;
 int _forwarder;
 
@@ -78,8 +79,6 @@ int photon_init(photonConfig cfg) {
     log_warn("Photon backend is still initializing");
     return PHOTON_OK;
   }
-  
-  dbg_info("Photon initializing");
 
   /* copy the configuration */
   lcfg = calloc(1, sizeof(struct photon_config_t));
@@ -100,6 +99,18 @@ int photon_init(photonConfig cfg) {
 
   /* track the config with a global */
   __photon_config = lcfg;
+
+  /* set globals */
+  _photon_myrank = (int)lcfg->address;
+  _photon_nproc = lcfg->nproc;
+  _photon_nforw = lcfg->forwarder.use_forwarder;
+  _photon_ebsize = lcfg->cap.eager_buf_size;
+  _photon_smsize = lcfg->cap.small_msg_size;
+  _photon_upsize = lcfg->cap.small_pwc_size;
+  _photon_spsize = (_photon_upsize < DEF_SP_SIZE) ? DEF_SP_SIZE : _photon_upsize;
+  _LEDGER_SIZE = lcfg->cap.ledger_entries;
+  
+  one_debug("Photon initializing");
 
   /* we can override the default with the tech-specific backends,
      but we just use their RDMA methods for now */
@@ -126,11 +137,11 @@ int photon_init(photonConfig cfg) {
 #ifdef HAVE_UGNI
       __photon_backend = be = &photon_ugni_backend;
       photon_buffer_init(&ugni_buffer_interface);
-      dbg_info("Using uGNI backend");
+      one_debug("Using uGNI backend");
 #elif HAVE_VERBS
       __photon_backend = be = &photon_verbs_backend;
       photon_buffer_init(&verbs_buffer_interface);
-      dbg_info("Using Verbs backend");
+      one_debug("Using Verbs backend");
 #else
       errmsg = "network backend";
       goto error_exit;
@@ -175,15 +186,6 @@ int photon_init(photonConfig cfg) {
     goto error_exit;
     break;
   }
-  
-  /* set globals */
-  _photon_myrank = (int)lcfg->address;
-  _photon_nproc = lcfg->nproc;
-  _photon_nforw = lcfg->forwarder.use_forwarder;
-  _photon_ebsize = lcfg->cap.eager_buf_size;
-  _photon_smsize = lcfg->cap.small_msg_size;
-  _photon_spsize = lcfg->cap.small_pwc_size;
-  _LEDGER_SIZE = lcfg->cap.ledger_entries;
   
   /* update defaults */
   if (_photon_ebsize < 0)
@@ -569,13 +571,14 @@ int photon_get_with_completion(int proc, uint64_t size, photonBuffer lbuf, photo
   return __photon_default->get_with_completion(proc, size, lbuf, rbuf, local, remote, flags);
 }
 
-int photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *request, int flags) {
+int photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *request,
+			    int *src, int flags) {
   //if(__photon_default->initialized() != PHOTON_OK) {
   //  init_err();
   //  return PHOTON_ERROR_NOINIT;
   //}
   
-  return __photon_default->probe_completion(proc, flag, remaining, request, flags);
+  return __photon_default->probe_completion(proc, flag, remaining, request, src, flags);
 }
 /* end with completion */
 

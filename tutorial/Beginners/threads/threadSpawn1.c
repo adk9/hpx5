@@ -24,7 +24,7 @@ static  hpx_action_t _printHello = 0;
 static int _printHello_action(int *args, size_t size) {
   int tid = *args;
   printf("Hello World! It's me, thread #%d!\n", tid);
-  hpx_thread_continue(0, NULL);
+  hpx_thread_continue(NULL, 0);
 }
 
 //****************************************************************************

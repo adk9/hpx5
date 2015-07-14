@@ -65,10 +65,8 @@ struct scheduler {
   yield_queue_t       yielded;
   volatile int       shutdown;
   volatile int    next_tls_id;
-  int                   cores;
   int               n_workers;
   uint32_t       wf_threshold;
-  // struct barrier     *barrier;
   system_barrier_t    barrier;
   struct worker      *workers;
   scheduler_stats_t     stats;
@@ -80,7 +78,7 @@ struct scheduler {
 ///
 /// @returns            The scheduler object, or NULL if there was an error.
 struct scheduler *scheduler_new(const struct config *config)
-  HPX_INTERNAL HPX_MALLOC;
+  HPX_MALLOC;
 
 /// Finalize and free the scheduler object.
 ///
@@ -89,13 +87,12 @@ struct scheduler *scheduler_new(const struct config *config)
 /// aborted with scheduler_abort(), results in undefined behavior.
 ///
 /// @param    scheduler The scheduler to free.
-void scheduler_delete(struct scheduler *scheduler)
-  HPX_INTERNAL;
+void scheduler_delete(struct scheduler *scheduler);
 
 /// A NOP action for the scheduler.
 ///
 /// This action does nothing (i.e. it is a nop).
-HPX_INTERNAL extern hpx_action_t scheduler_nop;
+extern hpx_action_t scheduler_nop;
 
 /// Print collected statistics.
 ///
@@ -103,7 +100,7 @@ HPX_INTERNAL extern hpx_action_t scheduler_nop;
 ///
 /// @param    scheduler The scheduler.
 void scheduler_dump_stats(struct scheduler *scheduler)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Starts the scheduler.
 ///
@@ -116,7 +113,7 @@ void scheduler_dump_stats(struct scheduler *scheduler)
 ///
 /// @returns            LIBHPX_OK or an error code.
 int scheduler_startup(struct scheduler *scheduler, const struct config *cfg)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Stops the scheduler cooperatively.
 ///
@@ -126,7 +123,7 @@ int scheduler_startup(struct scheduler *scheduler, const struct config *cfg)
 /// @param    scheduler The scheduler to shutdown.
 /// @param         code The code to return from scheduler_startup().
 void scheduler_shutdown(struct scheduler *scheduler, int code)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Check to see if the scheduler was shutdown.
 ///
@@ -134,7 +131,7 @@ void scheduler_shutdown(struct scheduler *scheduler, int code)
 ///
 /// @returns            True if the scheduler was shutdown..
 int scheduler_is_shutdown(struct scheduler *scheduler)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Join the scheduler at shutdown.
 ///
@@ -142,7 +139,7 @@ int scheduler_is_shutdown(struct scheduler *scheduler)
 ///
 /// @param    scheduler The scheduler to join.
 void scheduler_join(struct scheduler *scheduler)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Stops the scheduler asynchronously.
 ///
@@ -151,13 +148,13 @@ void scheduler_join(struct scheduler *scheduler)
 ///
 /// @param    scheduler The scheduler to abort.
 void scheduler_abort(struct scheduler *scheduler)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Spawn a new user-level thread for the parcel.
 ///
 /// @param    parcel The parcel to spawn.
 void scheduler_spawn(hpx_parcel_t *p)
-  HPX_NON_NULL(1) HPX_INTERNAL;
+  HPX_NON_NULL(1);
 
 /// Yield a user-level thread.
 ///
@@ -165,8 +162,29 @@ void scheduler_spawn(hpx_parcel_t *p)
 /// thread to run. If a new thread is selected, this moves the thread into the
 /// next local epoch, and also makes the thread available to be stolen within
 /// the locality.
-void scheduler_yield(void)
-  HPX_INTERNAL;
+void scheduler_yield(void);
+
+/// Suspend the execution of the current thread.
+///
+/// This suspends the execution of the current lightweight thread. It must be
+/// explicitly resumed in the future. The continuation @p f(@p env) is run
+/// synchronously after the thread has been suspended but before a new thread is
+/// run. This allows the lightweight thread to perform "safe" synchronization
+/// where @p f will trigger a resume operation on the current thread, and we
+/// don't want to miss that signal or possibly have our thread stolen before it
+/// is checkpointed.
+///
+/// This will find a new thread to execute, and will effect a context switch. It
+/// is not possible to immediately switch back to the current thread, even if @p
+/// f makes it runnable, because thread selection is performed prior to the
+/// execution of @p f, and the current thread is not a valid option at that
+/// point.
+///
+/// The continuation @p f, and the environment @p env, can be on the stack.
+///
+/// @param            f A continuation to run after the context switch.
+/// @param          env The environment to pass to the continuation @p f.
+hpx_status_t scheduler_suspend(int (*f)(void*), void *env);
 
 /// Wait for an condition.
 ///
@@ -182,7 +200,7 @@ void scheduler_yield(void)
 ///
 /// @returns            LIBHPX_OK or an error
 hpx_status_t scheduler_wait(lockable_ptr_t *lock, struct cvar *con)
-  HPX_NON_NULL(1, 2) HPX_INTERNAL;
+  HPX_NON_NULL(1, 2);
 
 /// Signal a condition.
 ///
@@ -191,7 +209,7 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, struct cvar *con)
 ///
 /// @param         cvar The condition we'd like to signal.
 void scheduler_signal(struct cvar *cond)
-  HPX_NON_NULL(1) HPX_INTERNAL;
+  HPX_NON_NULL(1);
 
 /// Signal a condition.
 ///
@@ -200,7 +218,7 @@ void scheduler_signal(struct cvar *cond)
 ///
 /// @param         cvar The condition we'd like to signal.
 void scheduler_signal_all(struct cvar *cvar)
-  HPX_NON_NULL(1) HPX_INTERNAL;
+  HPX_NON_NULL(1);
 
 /// Signal an error condition.
 ///
@@ -212,14 +230,13 @@ void scheduler_signal_all(struct cvar *cvar)
 /// @param         cvar The condition we'd like to signal an error on.
 /// @param         code The error code to set in the condition.
 void scheduler_signal_error(struct cvar *cvar, hpx_status_t code)
-  HPX_NON_NULL(1) HPX_INTERNAL;
+  HPX_NON_NULL(1);
 
 /// Get the parcel bound to the current executing thread.
-hpx_parcel_t *scheduler_current_parcel(void)
-  HPX_INTERNAL;
+hpx_parcel_t *scheduler_current_parcel(void);
 
 /// Get a worker by id.
 struct worker *scheduler_get_worker(struct scheduler *sched, int id)
-  HPX_NON_NULL(1) HPX_INTERNAL;
+  HPX_NON_NULL(1);
 
 #endif // LIBHPX_SCHEDULER_H

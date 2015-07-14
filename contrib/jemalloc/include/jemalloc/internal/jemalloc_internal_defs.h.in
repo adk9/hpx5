@@ -193,6 +193,12 @@
 #undef JEMALLOC_IVSALLOC
 
 /*
+ * If defined, explicitly attempt to more uniformly distribute large allocation
+ * pointer alignments across all cache indices.
+ */
+#undef JEMALLOC_CACHE_OBLIVIOUS
+
+/*
  * Darwin (OS X) uses zones to work around Mach-O symbol override shortcomings.
  */
 #undef JEMALLOC_ZONE
@@ -237,5 +243,11 @@
 
 /* Adaptive mutex support in pthreads. */
 #undef JEMALLOC_HAVE_PTHREAD_MUTEX_ADAPTIVE_NP
+
+/*
+ * If defined, jemalloc symbols are not exported (doesn't work when
+ * JEMALLOC_PREFIX is not defined).
+ */
+#undef JEMALLOC_EXPORT
 
 #endif /* JEMALLOC_INTERNAL_DEFS_H_ */

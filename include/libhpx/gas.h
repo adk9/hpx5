@@ -17,6 +17,10 @@
 #include <libhpx/config.h>
 #include <libhpx/system.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// Forward declarations.
 /// @{
 struct boot;
@@ -26,7 +30,7 @@ struct boot;
 typedef struct gas {
   hpx_gas_t type;
 
-  void (*delete)(void *gas);
+  void (*dealloc)(void *gas);
   size_t (*local_size)(void *gas);
   void *(*local_base)(void *gas);
 
@@ -39,9 +43,6 @@ typedef struct gas {
   uint32_t (*owner_of)(const void *gas, hpx_addr_t gpa);
   bool (*try_pin)(void *gas, hpx_addr_t addr, void **local);
   void (*unpin)(void *gas, hpx_addr_t addr);
-
-  system_mmap_t mmap;
-  system_munmap_t munmap;
 
   hpx_addr_t (*alloc_local)(void *gas, uint32_t bytes, uint32_t boundary);
   hpx_addr_t (*calloc_local)(void *gas, size_t nmemb, size_t size,
@@ -66,12 +67,12 @@ typedef struct gas {
   __typeof(hpx_gas_calloc_blocked) *calloc_blocked;
 } gas_t;
 
-gas_t *gas_new(const config_t *cfg, struct boot *boot)
-  HPX_INTERNAL HPX_NON_NULL(1,2);
+gas_t *gas_new(config_t *cfg, struct boot *boot)
+  HPX_MALLOC HPX_NON_NULL(1,2);
 
-inline static void gas_delete(gas_t *gas) {
-  assert(gas && gas->delete);
-  gas->delete(gas);
+inline static void gas_dealloc(gas_t *gas) {
+  assert(gas && gas->dealloc);
+  gas->dealloc(gas);
 }
 
 inline static uint32_t gas_owner_of(gas_t *gas, hpx_addr_t addr) {
@@ -89,14 +90,8 @@ inline static void *gas_local_base(gas_t *gas) {
   return gas->local_base(gas);
 }
 
-static inline void *gas_mmap(void *obj, void *addr, size_t bytes, size_t align) {
-  gas_t *gas = obj;
-  return gas->mmap(obj, addr, bytes, align);
+#ifdef __cplusplus
 }
-
-static inline void gas_munmap(void *obj, void *addr, size_t size) {
-  gas_t *gas = obj;
-  gas->munmap(obj, addr, size);
-}
+#endif
 
 #endif // LIBHPX_GAS_H

@@ -15,11 +15,13 @@
 #endif
 
 #include <string.h>
-#include <jemalloc/jemalloc_global.h>
 #include <hpx/builtins.h>
-#include <libhpx/locality.h>
 #include <libhpx/action.h>
+#include <libhpx/debug.h>
 #include <libhpx/gpa.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+
 
 #include "heap.h"
 #include "pgas.h"
@@ -59,8 +61,8 @@ static int _alloc_cyclic_handler(size_t n, size_t bsize) {
   hpx_addr_t addr = pgas_alloc_cyclic_sync(n, bsize);
   HPX_THREAD_CONTINUE(addr);
 }
-HPX_ACTION(HPX_DEFAULT, 0, pgas_alloc_cyclic, _alloc_cyclic_handler, HPX_SIZE_T,
-           HPX_SIZE_T);
+LIBHPX_ACTION(HPX_DEFAULT, 0, pgas_alloc_cyclic, _alloc_cyclic_handler,
+              HPX_SIZE_T, HPX_SIZE_T);
 
 /// Allocate zeroed memory from the cyclic space.
 ///
@@ -101,8 +103,8 @@ static int _calloc_cyclic_handler(size_t n, size_t bsize) {
   hpx_addr_t addr = pgas_calloc_cyclic_sync(n, bsize);
   HPX_THREAD_CONTINUE(addr);
 }
-HPX_ACTION(HPX_DEFAULT, 0, pgas_calloc_cyclic, _calloc_cyclic_handler, HPX_SIZE_T,
-           HPX_SIZE_T);
+LIBHPX_ACTION(HPX_DEFAULT, 0, pgas_calloc_cyclic, _calloc_cyclic_handler,
+              HPX_SIZE_T, HPX_SIZE_T);
 
 
 /// This is the hpx_call_* target for doing a calloc initialization.
@@ -135,8 +137,8 @@ static int _calloc_init_handler(uint64_t offset, uint32_t bytes, uint32_t bsize)
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_INTERRUPT, 0, _calloc_init, _calloc_init_handler,
-                  HPX_UINT64, HPX_UINT32, HPX_UINT32);
+static LIBHPX_ACTION(HPX_INTERRUPT, 0, _calloc_init, _calloc_init_handler,
+                     HPX_UINT64, HPX_UINT32, HPX_UINT32);
 
 int pgas_free_handler(void) {
   hpx_addr_t gpa = hpx_thread_current_target();
@@ -146,22 +148,23 @@ int pgas_free_handler(void) {
     return HPX_ERROR;
   }
   void *lva = pgas_gpa_to_lva(gpa);
-  libhpx_global_free(lva);
+  global_free(lva);
   return HPX_SUCCESS;
 }
-HPX_ACTION(HPX_DEFAULT, 0, pgas_free, pgas_free_handler);
+LIBHPX_ACTION(HPX_DEFAULT, 0, pgas_free, pgas_free_handler);
 
 static int _set_csbrk_handler(size_t offset) {
   int e = heap_set_csbrk(global_heap, offset);
   dbg_check(e, "cyclic allocation ran out of memory at rank %u", here->rank);
   return e;
 }
-static HPX_ACTION(HPX_INTERRUPT, 0, _set_csbrk, _set_csbrk_handler, HPX_SIZE_T);
+static LIBHPX_ACTION(HPX_INTERRUPT, 0, _set_csbrk, _set_csbrk_handler,
+                     HPX_SIZE_T);
 
 static int _memput_rsync_handler(int src, uint64_t command) {
   hpx_addr_t rsync = offset_to_gpa(src, command);
   hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
-HPX_ACTION(HPX_DEFAULT, 0, memput_rsync, _memput_rsync_handler, HPX_INT,
-           HPX_UINT64);
+LIBHPX_ACTION(HPX_DEFAULT, 0, memput_rsync, _memput_rsync_handler,
+              HPX_INT, HPX_UINT64);

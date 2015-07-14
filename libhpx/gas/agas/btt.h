@@ -18,21 +18,19 @@ extern "C" {
 #endif
 
 #include <hpx/hpx.h>
-#include <hpx/attributes.h>
 #include "gva.h"
 
-HPX_INTERNAL void *btt_new(size_t size);
-HPX_INTERNAL void btt_delete(void *btt);
+void *btt_new(size_t size);
+void btt_delete(void *btt);
 
-HPX_INTERNAL void btt_insert(void *btt, gva_t gva, int32_t owner,
-                             void *lva, size_t blocks);
-HPX_INTERNAL void btt_remove(void *btt, gva_t gva);
-
-HPX_INTERNAL bool btt_try_pin(void *btt, gva_t gva, void **lva);
-HPX_INTERNAL void btt_unpin(void *btt, gva_t gva);
-HPX_INTERNAL void *btt_lookup(const void* obj, gva_t gva);
-HPX_INTERNAL uint32_t btt_owner_of(const void *btt, gva_t gva);
-HPX_INTERNAL size_t btt_get_blocks(const void *btt, gva_t gva);
+void btt_insert(void *btt, gva_t gva, int32_t owner, void *lva, size_t blocks);
+void btt_remove(void *btt, gva_t gva);
+void btt_try_delete(void *btt, gva_t gva, hpx_parcel_t *p);
+bool btt_try_pin(void *btt, gva_t gva, void **lva);
+void btt_unpin(void *btt, gva_t gva);
+void *btt_lookup(const void* obj, gva_t gva);
+uint32_t btt_owner_of(const void *btt, gva_t gva);
+size_t btt_get_blocks(const void *btt, gva_t gva);
 
 #ifdef __cplusplus
 }

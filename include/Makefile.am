@@ -21,11 +21,14 @@ nobase_include_HEADERS = hpx/action.h \
                          libsync/cptr.h \
                          libsync/deques.h \
                          libsync/generic.h \
-                         libsync/hashtables.h \
                          libsync/locks.h \
                          libsync/queues.h \
                          libsync/sync.h \
                          libsync/types.def \
                          libsync/gcc/sync.h \
                          libsync/gcc/atomic.h \
-                         libsync/craycc/sync.h
+                         libsync/craycc/sync.h \
+                         libhpx/libhpx.h \
+                         libhpx/config.h \
+                         libhpx/config_photon.h \
+                         libhpx/options.def

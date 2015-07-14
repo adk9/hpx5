@@ -20,10 +20,11 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "libhpx/action.h"
-#include "libhpx/locality.h"
-#include "libhpx/scheduler.h"
-#include "hpx/hpx.h"
+#include <hpx/hpx.h>
+#include <libhpx/action.h>
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/scheduler.h>
 
 
 static int _par_for_async_handler(hpx_for_action_t f, void *args, int min, int max) {
@@ -33,8 +34,8 @@ static int _par_for_async_handler(hpx_for_action_t f, void *args, int min, int m
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(HPX_DEFAULT, 0, _par_for_async, _par_for_async_handler,
-                  HPX_POINTER, HPX_POINTER, HPX_INT, HPX_INT);
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _par_for_async, _par_for_async_handler,
+                     HPX_POINTER, HPX_POINTER, HPX_INT, HPX_INT);
 
 int hpx_par_for(hpx_for_action_t f, const int min, const int max,
                 const void *args, hpx_addr_t sync) {
@@ -116,8 +117,8 @@ static int _par_call_async_handler(par_call_async_args_t *args, size_t n) {
                               args->cutoff, args->arg_size, args->arg_init, env_size,
                               &args->env, args->sync);
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _par_call_async,
-                  _par_call_async_handler, HPX_POINTER, HPX_SIZE_T);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _par_call_async,
+                     _par_call_async_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int
 _hpx_par_call_helper(hpx_action_t action, const int min,
@@ -126,7 +127,7 @@ _hpx_par_call_helper(hpx_action_t action, const int min,
                      const size_t arg_size,
                      void (*arg_init)(void*, const int, const void*),
                      const size_t env_size, const void *env,
-                     hpx_addr_t sync) {  
+                     hpx_addr_t sync) {
   dbg_assert(max - min > 0);
   dbg_assert(branching_factor > 0);
   dbg_assert(cutoff > 0);
@@ -248,8 +249,8 @@ _hpx_count_range_call_handler(const hpx_count_range_call_args_t *const args, siz
 
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _hpx_count_range_call,
-                  _hpx_count_range_call_handler, HPX_POINTER, HPX_SIZE_T);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _hpx_count_range_call,
+                     _hpx_count_range_call_handler, HPX_POINTER, HPX_SIZE_T);
 
 int hpx_count_range_call(hpx_action_t action,
                          const hpx_addr_t addr,
