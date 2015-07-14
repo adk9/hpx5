@@ -680,7 +680,7 @@ static int verbs_get_revent(int proc, int max, photon_rid *ids, uint64_t *imms, 
       ids[j+comp] = wc[j].wr_id;
       imms[j+comp] = wc[j].imm_data;
       // re-arm the recv, we encode the source in the immediate data
-      int src = (int)wc[j].imm_data;
+      int src = (int)DECODE_RCQ_32_PROC(wc[j].imm_data);
       if (verbs_ctx.num_srq)
 	__verbs_post_srq_recv(&verbs_ctx, wc[j].wr_id, src, 1);
       else
