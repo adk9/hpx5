@@ -18,12 +18,13 @@ struct photon_config_t cfg = {
   },
   .cap = {
     .small_msg_size = -1,
-    .small_pwc_size =  0,
+    .small_pwc_size =  1024,
     .eager_buf_size = -1,
     .ledger_entries = -1,
     .max_rd         = -1,
     .default_rd     = -1,
-    .num_cq         = 1
+    .num_cq         =  1,
+    .num_srq        =  0
   },
   .exch = {
     .allgather = NULL,

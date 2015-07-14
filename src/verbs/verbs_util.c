@@ -8,6 +8,32 @@
 #include "verbs_util.h"
 #include "verbs_buffer.h"
 
+int __verbs_post_srq_recv(verbs_cnct_ctx *ctx, uint64_t id, int num) {
+  int i, j;
+  int nposts = (num < 0) ? ctx->max_srq_wr : num;
+
+  for (i = 0; i < ctx->num_srq; i++) {
+    struct ibv_sge sg;
+    struct ibv_recv_wr wr;
+    struct ibv_recv_wr *bad_wr;
+ 
+    memset(&sg, 0, sizeof(sg));
+    memset(&wr, 0, sizeof(wr));
+
+    wr.sg_list = &sg;
+    wr.num_sge = 0;
+    
+    for (j = 0; j < nposts; j++) {
+      wr.wr_id = (num < 0) ? j : id;
+      if (ibv_post_srq_recv(ctx->ib_srq[i], &wr, &bad_wr)) {
+	log_err("Could not post %d of %d SRQ recvs", j, nposts);
+	return PHOTON_ERROR;
+      }
+    }
+  }
+  return PHOTON_OK;
+}
+
 int __verbs_find_max_inline(verbs_cnct_ctx *ctx, int *ret_mi) {
   // find out what our max inline data size is
   // this is not defined in the spec and is vendor specific
