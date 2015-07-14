@@ -37,10 +37,10 @@ int myrank;
 // could be a thread
 void *wait_local(void *arg) {
   photon_rid request;
-  int flag, rc, remaining, src;
+  int flag, rc, src;
 
   while (send_comp) {
-    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &request, &src, PHOTON_PROBE_ANY);
+    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, NULL, &request, &src, PHOTON_PROBE_ANY);
     if (rc != PHOTON_OK)
       continue;  // no events
     if (flag) {
@@ -64,9 +64,9 @@ int send_done(int n, int r) {
 
 int wait_done() {
   photon_rid request;
-  int flag, remaining, src;
+  int flag, src;
   do {
-    photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &request, &src, PHOTON_PROBE_ANY);
+    photon_probe_completion(PHOTON_ANY_SOURCE, &flag, NULL, &request, &src, PHOTON_PROBE_ANY);
   } while (request != 0xdeadbeef);
   
   return 0;
