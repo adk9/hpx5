@@ -32,7 +32,7 @@ typedef struct {
 } logtable_t;
 
 #define LOGTABLE_INIT {                         \
-    .start = {0},                               \
+    .start = HPX_TIME_INIT,                     \
     .fd = -1,                                   \
     .class = -1,                                \
     .id = -1,                                   \
@@ -48,15 +48,12 @@ typedef struct {
 ///
 /// If filename is NULL or size == 0 this will not generate a file.
 int logtable_init(logtable_t *lt, const char* filename, size_t size,
-                  int class, int event, hpx_time_t start)
-    HPX_INTERNAL HPX_NON_NULL(1);
+                  int class, int event, hpx_time_t start);
 
-void logtable_fini(logtable_t *lt)
-    HPX_INTERNAL HPX_NON_NULL(1);
+void logtable_fini(logtable_t *lt);
 
 /// Append a record to a log table.
 void logtable_append(logtable_t *log, uint64_t u1, uint64_t u2, uint64_t u3,
-                     uint64_t u4)
-  HPX_INTERNAL HPX_NON_NULL(1);
+                     uint64_t u4);
 
 #endif // LIBHPX_INSTRUMENTATION_LOGTABLE_H

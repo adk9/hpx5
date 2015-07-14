@@ -17,6 +17,7 @@
 #include <hpx/attributes.h>
 #include <libsync/deques.h>
 #include <libsync/queues.h>
+#include <libhpx/padding.h>
 #include <libhpx/stats.h>
 
 /// Forward declarations.
@@ -39,54 +40,51 @@ struct worker {
   struct scheduler   *sched;                    // the scheduler instance
   pthread_t          thread;                    // this worker's native thread
   int                    id;                    // this worker's id
-  int                  core;                    //
   unsigned             seed;                    // my random seed
-  int                UNUSED;                    // padding
+  int            work_first;                    // this worker's mode
+  int               nstacks;                    // count of freelisted stacks
   void                  *sp;                    // this worker's native stack
   hpx_parcel_t     *current;                    // current thread
-  int            work_first;
-  const char _pada[HPX_CACHELINE_SIZE - ((sizeof(struct scheduler*) +
-                                          sizeof(pthread_t) +
-                                          sizeof(int) * 5 +
-                                          sizeof(void *) +
-                                          sizeof(hpx_parcel_t*)) %
-                                         HPX_CACHELINE_SIZE)];
+  struct ustack     *stacks;                    // freelisted stacks
+  PAD_TO_CACHELINE(sizeof(struct scheduler*) +
+                   sizeof(pthread_t) +
+                   sizeof(int) * 4 +
+                   sizeof(void *) +
+                   sizeof(hpx_parcel_t*) +
+                   sizeof(struct ustack*));
   chase_lev_ws_deque_t work;                    // my work
-  const char _padb[HPX_CACHELINE_SIZE - (sizeof(chase_lev_ws_deque_t) %
-                                         HPX_CACHELINE_SIZE)];
+  PAD_TO_CACHELINE(sizeof(chase_lev_ws_deque_t));
   two_lock_queue_t    inbox;                    // mail sent to me
   scheduler_stats_t   stats;                    // scheduler statistics
 } HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
-HPX_INTERNAL extern __thread struct worker *self;
+extern __thread struct worker *self;
 
 /// Initialize a worker structure.
 ///
 /// @param            w The worker structure to initialize.
 /// @param        sched The scheduler instance.
 /// @param           id The worker's id.
-/// @param         core The core affinity for this worker.
 /// @param         seed The random seed for this worker.
 /// @param    work_size The initial size of the work queue.
 ///
 /// @returns  LIBHPX_OK or an error code
-int worker_init(struct worker *w, struct scheduler *sched, int id, int core,
+int worker_init(struct worker *w, struct scheduler *sched, int id,
                 unsigned seed, unsigned work_size)
-  HPX_INTERNAL HPX_NON_NULL(1, 2);
+  HPX_NON_NULL(1, 2);
 
 /// Finalize a worker structure.
 void worker_fini(struct worker *w)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Bind a worker structure to the current pthread.
 ///
 /// @param       worker The worker structure for the pthread.
 void worker_bind_self(struct worker *worker)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Start processing lightweight threads.
-int worker_start(void)
-  HPX_INTERNAL;
+int worker_start(void);
 
 /// Creates a worker thread associated with a scheduler.
 ///
@@ -99,7 +97,7 @@ int worker_start(void)
 /// @returns            LIBHPX_OK or an error code if the worker failed to
 ///                     start.
 int worker_create(struct worker *worker, const struct config *cfg)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Joins a worker after scheduler_shutdown().
 ///
@@ -109,7 +107,7 @@ int worker_create(struct worker *worker, const struct config *cfg)
 ///
 /// @param       worker The worker to join.
 void worker_join(struct worker *worker)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Preemptively shutdown a worker.
 ///
@@ -119,6 +117,14 @@ void worker_join(struct worker *worker)
 ///
 /// @param       worker The worker to cancel.
 void worker_cancel(struct worker *worker)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
+
+/// Check to see if the current worker has enough space for an alloca.
+///
+/// @param        bytes The number of bytes to allocate.
+///
+/// @returns            The number of bytes remaining on the stack after the
+///                     alloca.
+intptr_t worker_can_alloca(size_t bytes);
 
 #endif // LIBHPX_WORKER_H

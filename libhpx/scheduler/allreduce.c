@@ -18,6 +18,7 @@
 /// @brief Defines the all-reduction LCO.
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -184,15 +185,32 @@ static hpx_status_t _allreduce_wait(lco_t *lco) {
   return _allreduce_get(lco, 0, NULL);
 }
 
+// We universally clone the buffer here, because the all* family of LCOs will
+// reset themselves so we can't retain a pointer to their buffer.
+static hpx_status_t
+_allreduce_getref(lco_t *lco, int size, void **out, int *unpin) {
+  *out = registered_malloc(size);
+  *unpin = 1;
+  return _allreduce_get(lco, size, *out);
+}
+
+// We know that allreduce buffers were always copies, so we can just free them
+// here.
+static int
+_allreduce_release(lco_t *lco, void *out) {
+  registered_free(out);
+  return 0;
+}
+
 // vtable
-static const lco_class_t vtable = {
+static const lco_class_t _allreduce_vtable = {
   .on_fini     = _allreduce_fini,
   .on_error    = _allreduce_error,
   .on_set      = _allreduce_set,
   .on_attach   = _allreduce_attach,
   .on_get      = _allreduce_get,
-  .on_getref   = NULL,
-  .on_release  = NULL,
+  .on_getref   = _allreduce_getref,
+  .on_release  = _allreduce_release,
   .on_wait     = _allreduce_wait,
   .on_reset    = _allreduce_reset,
   .on_size     = _allreduce_size
@@ -204,7 +222,7 @@ _allreduce_init_handler(_allreduce_t *r, size_t writers, size_t readers,
   assert(id);
   assert(op);
 
-  lco_init(&r->lco, &vtable);
+  lco_init(&r->lco, &_allreduce_vtable);
   cvar_reset(&r->wait);
   r->readers = readers;
   r->op = op;
@@ -225,9 +243,9 @@ _allreduce_init_handler(_allreduce_t *r, size_t writers, size_t readers,
 
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _allreduce_init_async,
-                  _allreduce_init_handler, HPX_POINTER, HPX_SIZE_T, HPX_SIZE_T,
-                  HPX_SIZE_T, HPX_ACTION_T, HPX_ACTION_T);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _allreduce_init_async,
+                     _allreduce_init_handler, HPX_POINTER, HPX_SIZE_T,
+                     HPX_SIZE_T, HPX_SIZE_T, HPX_ACTION_T, HPX_ACTION_T);
 /// @}
 
 hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
@@ -239,7 +257,7 @@ hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
   if (!hpx_gas_try_pin(gva, (void**)&r)) {
     int e = hpx_call_sync(gva, _allreduce_init_async, NULL, 0, &inputs,
                           &outputs, &size, &id, &op);
-    dbg_check(e, "could not initialize an allreduce at %lu\n", gva);
+    dbg_check(e, "could not initialize an allreduce at %"PRIu64"\n", gva);
   }
   else {
     _allreduce_init_handler(r, inputs, outputs, size, id, op);
@@ -261,9 +279,10 @@ _block_local_init_handler(void *lco, int n, size_t participants, size_t readers,
   return HPX_SUCCESS;
 }
 
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
-                  _block_local_init_handler, HPX_POINTER, HPX_INT, HPX_SIZE_T,
-                  HPX_SIZE_T, HPX_POINTER, HPX_SIZE_T, HPX_POINTER);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
+                     _block_local_init_handler, HPX_POINTER, HPX_INT,
+                     HPX_SIZE_T, HPX_SIZE_T, HPX_POINTER, HPX_SIZE_T,
+                     HPX_POINTER);
 
 /// Allocate an array of allreduce LCO local to the calling locality.
 /// @param            n The (total) number of lcos to allocate

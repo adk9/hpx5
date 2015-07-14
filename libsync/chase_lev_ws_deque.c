@@ -20,11 +20,13 @@
 /// "Dynamic Circular Work-Stealing Deque" by David Chase and Yossi Lev
 /// @url http://dl.acm.org/citation.cfm?id=1073974.
 #include <assert.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <hpx/builtins.h>
-#include "libsync/deques.h"
+#include <libsync/deques.h>
+#include <libsync/sync.h>
 
 /// A Chase-Lev WS Deque buffer.
 ///

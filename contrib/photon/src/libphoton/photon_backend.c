@@ -116,10 +116,11 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   srand48(getpid() * time(NULL));
 
   dbg_trace("(nproc %d, rank %d)",_photon_nproc, _photon_myrank);
-  dbg_trace("num ledgers: %d", _LEDGER_SIZE);
-  dbg_trace("eager buf size: %d", _photon_ebsize);
-  dbg_trace("small msg size: %d", _photon_smsize);
-  dbg_trace("num requests per rank: %d", cfg->cap.default_rd);
+  one_debug("num ledgers:\t\t%d", _LEDGER_SIZE);
+  one_debug("eager buf size:\t%d", _photon_ebsize);
+  one_debug("small msg size:\t%d", _photon_smsize);
+  one_debug("small pwc size:\t%d", _photon_upsize);
+  one_debug("init req per rank:\t%d", cfg->cap.default_rd);
 
   if (buffertable_init(193)) {
     log_err("Failed to allocate buffer table");
@@ -138,41 +139,13 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
 
   dbg_trace("Allocated and cleared process info");
 
-  // Setup request tables
-  for (i = 0; i < (_photon_nproc + _photon_nforw); i++) {
-    photon_processes[i].request_table = malloc(sizeof(struct photon_req_table_t));
-    if (!photon_processes[i].request_table) {
-      log_err("Could not allocate request table for proc %d", i);
-      goto error_exit_bt;
-    }
-    photonRequestTable rt = photon_processes[i].request_table;
-    rt->count           = 0;
-    rt->level           = 0;
-    rt->next            = 0;
-    rt->size            = cfg->cap.default_rd;
-    rt->free            = (uint32_t*)malloc(DEF_NR_LEVELS * sizeof(uint32_t));
-    rt->free[rt->level] = cfg->cap.default_rd;
-    rt->reqs = (photonRequest*)malloc(DEF_NR_LEVELS * sizeof(struct photon_req_t));
-    if (!rt->reqs) {
-      log_err("Could not allocate request array for proc %d", i);
-      goto error_exit_bt;
-    }
-    rt->reqs[rt->level] = (photonRequest)calloc(cfg->cap.default_rd, sizeof(struct photon_req_t));
-    if (!rt->reqs[rt->level]) {
-      log_err("Could not allocate request descriptors for proc %d", i);
-      goto error_exit_bt;
-    }
-    rt->req_q = sync_ms_queue_new();
-    if (!rt->req_q) {
-      log_err("Could not allocate request queue for proc %d", i);
-      goto error_exit_bt;
-    }
-    rt->qcount = 0;
-    sync_tatas_init(&rt->tloc);
+  // initialize the request tables
+  if (photon_request_init(cfg) != PHOTON_OK) {
+    goto error_exit_bt;
   }
 
-  // initialize the pwc request table
-  if (photon_pwc_init() != PHOTON_OK) {
+  // initialize PWC
+  if (photon_pwc_init(cfg) != PHOTON_OK) {
     goto error_exit_bt;
   }
 
@@ -198,7 +171,8 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
     log_err("Couldn't allocate ledgers");
     goto error_exit_crb;
   }
-  dbg_trace("Bufsize: %d", bufsize);
+  
+  one_debug("shared buffer size:\t%d", bufsize);
 
   if (photon_setup_ri_ledger(photon_processes, PHOTON_LRI_PTR(buf), _LEDGER_SIZE) != 0) {
     log_err("couldn't setup snd/rcv info ledgers");

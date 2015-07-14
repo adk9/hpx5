@@ -14,20 +14,103 @@
 # include "config.h"
 #endif
 
-#ifndef HAVE_JEMALLOC
-# error jemalloc support should not be compiled without --enable-jemalloc
-#endif
+#include <stdio.h>
+#include <libhpx/debug.h>
+#include <libhpx/memory.h>
 
-/// @file  libhpx/memory/jemalloc.c
-///
-/// @brief This file deals with setting up jemalloc when we use it for the
-///        system malloc.
-#include <jemalloc/jemalloc_local.h>
+const char *je_malloc_conf = "lg_dirty_mult:-1,lg_chunk:22";
 
-/// The only thing we currently do is disable jemalloc's ability to madvise() on
-/// pages that it thinks that it is no longer using. This prevents jemalloc from
-/// dropping translations for pages that we malloc()ed and registered in
-/// Photon. This isn't necessary for transports or networks that don't register
-/// memory, but we can't set this flag at runtime so we need to conservatively
-/// do it here.
-const char *malloc_conf = "lg_dirty_mult:-1";
+/// Backing declaration for the flags.
+__thread int as_flags[AS_COUNT] = {0};
+
+/// Each address space can have a custom allocator configured. This array stores
+/// the allocator pointer for each address space.
+/// @{
+static chunk_allocator_t *_allocators[AS_COUNT] = {NULL};
+/// @}
+
+void
+as_set_allocator(int id, chunk_allocator_t *allocator) {
+  dbg_assert(0 <= id && id < AS_COUNT);
+  dbg_assert(allocator);
+  dbg_assert(!_allocators[id]);
+  _allocators[id] = allocator;
+  as_join(id);
+}
+
+void
+as_join(int id) {
+  if (as_flags[id] != 0) {
+    log_gas("address space %d already joined\n", id);
+    return;
+  }
+
+  chunk_allocator_t *allocator = _allocators[id];
+
+  // If there isn't any custom allocator set for this space, then the basic
+  // local allocator is fine, which means that we don't need any special
+  // flags for this address space.
+  if (!allocator) {
+    log_gas("no custom allocator for %d, using local\n", id);
+    return;
+  }
+
+  // Create an arena that uses the right allocators.
+  unsigned arena;
+  size_t sz = sizeof(arena);
+  je_mallctl("arenas.extend", &arena, &sz, NULL, 0);
+
+
+  char path[128];
+  snprintf(path, 128, "arena.%u.chunk.alloc", arena);
+  je_mallctl(path, NULL, NULL, (void*)&allocator->challoc, sizeof(void*));
+
+  snprintf(path, 128, "arena.%u.chunk.dalloc", arena);
+  je_mallctl(path, NULL, NULL, (void*)&allocator->chfree, sizeof(void*));
+
+  snprintf(path, 128, "arena.%u.chunk.purge", arena);
+  je_mallctl(path, NULL, NULL, (void*)&allocator->chpurge, sizeof(void*));
+
+  // Create a cache.
+  unsigned cache;
+  sz = sizeof(cache);
+  je_mallctl("tcache.create", &cache, &sz, NULL, 0);
+
+  // And set the flags.
+  as_flags[id] = MALLOCX_ARENA(arena) | MALLOCX_TCACHE(cache);
+}
+
+void
+as_leave(void) {
+}
+
+size_t
+as_bytes_per_chunk(void) {
+  size_t log2_bytes_per_chunk = 0;
+  size_t sz = sizeof(log2_bytes_per_chunk);
+  je_mallctl("opt.lg_chunk", &log2_bytes_per_chunk, &sz, NULL, 0);
+  return (1lu << log2_bytes_per_chunk);
+}
+
+
+void *
+as_malloc(int id, size_t bytes) {
+  return je_mallocx(bytes, as_flags[id]);
+}
+
+void *
+as_calloc(int id, size_t nmemb, size_t bytes) {
+  int flags = as_flags[id] | MALLOCX_ZERO;
+  return je_mallocx(nmemb * bytes, flags);
+}
+
+void *
+as_memalign(int id, size_t boundary, size_t size) {
+  int flags = as_flags[id] | MALLOCX_ALIGN(boundary);
+  return je_mallocx(size, flags);
+}
+
+void
+as_free(int id, void *ptr)  {
+  je_dallocx(ptr, as_flags[id]);
+}

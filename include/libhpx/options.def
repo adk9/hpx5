@@ -92,23 +92,26 @@
 
 /// Top-level options
 /// @{
-LIBHPX_OPT_FLAG(, statistics, 1)
-
-LIBHPX_OPT_SCALAR(, cores, 0, int)
-LIBHPX_OPT_SCALAR(, threads, 0, int)
-LIBHPX_OPT_SCALAR(, stacksize, 32768, unsigned)
+LIBHPX_OPT_FLAG(, statistics, 0)
 #ifndef __ARMEL__
 LIBHPX_OPT_SCALAR(, heapsize, 1lu << 30, size_t)
 #else // smaller default heap for ARM
 LIBHPX_OPT_SCALAR(, heapsize, 1lu << 29, size_t)
 #endif
-LIBHPX_OPT_SCALAR(, wfthreshold, UINT32_MAX, uint32_t)
 LIBHPX_OPT_SCALAR(, gas, HPX_GAS_PGAS, hpx_gas_t)
 LIBHPX_OPT_SCALAR(, boot, HPX_BOOT_DEFAULT, hpx_boot_t)
 LIBHPX_OPT_SCALAR(, transport, HPX_TRANSPORT_DEFAULT, hpx_transport_t)
 LIBHPX_OPT_SCALAR(, network, HPX_NETWORK_DEFAULT, libhpx_network_t)
 /// @}
 
+/// Scheduler options
+/// @{
+LIBHPX_OPT_SCALAR(, cores, 0, int)
+LIBHPX_OPT_SCALAR(, threads, 0, int)
+LIBHPX_OPT_SCALAR(, stacksize, 32768, unsigned)
+LIBHPX_OPT_SCALAR(, wfthreshold, 256, uint32_t)
+LIBHPX_OPT_SCALAR(sched_, stackcachelimit, 32, int32_t)
+/// @}
 
 /// Log options
 /// @{
@@ -126,7 +129,7 @@ LIBHPX_OPT_INTSET(dbg_, waitat, HPX_LOCALITY_NONE, HPX_LOCALITY_NONE, HPX_LOCALI
 
 /// Trace options
 /// @{
-LIBHPX_OPT_STRING(trace_, dir, "/tmp")
+LIBHPX_OPT_STRING(trace_, dir, NULL)
 LIBHPX_OPT_SCALAR(trace_, filesize, 1lu << 24, size_t)
 LIBHPX_OPT_BITSET(trace_, classes, LIBHPX_OPT_BITSET_NONE)
 LIBHPX_OPT_INTSET(trace_, at, HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
@@ -161,6 +164,11 @@ LIBHPX_OPT_STRING(photon_, ethdev, "roce0")
 LIBHPX_OPT_STRING(photon_, ibdev, "qib0+mlx4_0")
 /// @}
 #endif
+
+/// Optimization options
+/// @{
+LIBHPX_OPT_SCALAR(opt_, smp, 1, int)
+/// @}
 
 #ifdef _LIBHPX_OPT_INTSET_UNDEF
 # undef _LIBHPX_OPT_INTSET_UNDEF

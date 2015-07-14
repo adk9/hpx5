@@ -200,9 +200,15 @@ _ACTION_TABLE_GET(uint32_t, attr, 0);
 _ACTION_TABLE_GET(hpx_action_handler_t, handler, NULL);
 _ACTION_TABLE_GET(ffi_cif *, cif, NULL);
 
+int action_table_size(const struct action_table *table) {
+  return table->n;
+}
+
 hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs) {
   dbg_assert(p);
-  dbg_assert(!n || vargs);
+  if (n == 0 || vargs == NULL) {
+    return p;
+  }
 
   if (p->action == HPX_ACTION_NULL) {
     dbg_error("parcel must have an action to serialize arguments.\n");
@@ -218,7 +224,6 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs) {
   }
 
   if (cif == NULL) {
-    log_parcel("%s is user-packed\n", key);
     return p;
   }
 
@@ -253,6 +258,10 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs) {
 
 static hpx_parcel_t *_action_parcel_acquire(hpx_action_t action, va_list *args)
 {
+  if (!args) {
+    return hpx_parcel_acquire(NULL, 0);
+  }
+
   const _table_t *actions = _get_actions();
   const ffi_cif *cif = action_table_get_cif(actions, action);
   if (cif) {
@@ -266,9 +275,9 @@ static hpx_parcel_t *_action_parcel_acquire(hpx_action_t action, va_list *args)
   }
 }
 
-hpx_parcel_t *action_parcel_create(hpx_addr_t addr, hpx_action_t action,
-                                   hpx_addr_t c_addr, hpx_action_t c_action,
-                                   int n, va_list *args) {
+hpx_parcel_t *parcel_create_va(hpx_addr_t addr, hpx_action_t action,
+                               hpx_addr_t c_addr, hpx_action_t c_action,
+                               int n, va_list *args) {
   dbg_assert(addr);
   dbg_assert(action);
   hpx_parcel_t *p = _action_parcel_acquire(action, args);
@@ -279,11 +288,23 @@ hpx_parcel_t *action_parcel_create(hpx_addr_t addr, hpx_action_t action,
   return action_pack_args(p, n, args);
 }
 
+hpx_parcel_t *parcel_create(hpx_addr_t addr, hpx_action_t action,
+                            hpx_addr_t c_addr, hpx_action_t c_action,
+                            int nargs, ...) {
+  va_list args;
+  va_start(args, nargs);
+  hpx_parcel_t *p = parcel_create_va(addr, action, c_addr,
+                                     c_action, nargs, &args);
+  va_end(args);
+  return p;
+}
+
+
 int libhpx_call_action(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
                        hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
                        int nargs, va_list *args) {
-  hpx_parcel_t *p = action_parcel_create(addr, action, c_addr, c_action, nargs,
-                                         args);
+  hpx_parcel_t *p = parcel_create_va(addr, action, c_addr, c_action, nargs,
+                                     args);
 
   if (likely(!gate && !lsync)) {
     return hpx_parcel_send_sync(p);
@@ -326,7 +347,6 @@ int action_execute(hpx_parcel_t *p) {
       return HPX_RESEND;
     }
     *ret = ((hpx_pinned_action_handler_t)handler)(target, args, p->size);
-    hpx_gas_unpin(p->target);
   } else if (cif && !pinned) {
     ffi_raw_call(cif, FFI_FN(handler), ret, args);
   } else {
@@ -340,7 +360,6 @@ int action_execute(hpx_parcel_t *p) {
     avalue[0] = &target;
 
     ffi_call(cif, FFI_FN(handler), ret, avalue);
-    hpx_gas_unpin(p->target);
   }
 
   return *ret;
@@ -352,6 +371,14 @@ bool action_is_pinned(const struct action_table *table, hpx_action_t id) {
 
 bool action_is_marshalled(const struct action_table *table, hpx_action_t id) {
   return (action_table_get_attr(table, id) & HPX_MARSHALLED);
+}
+
+bool action_is_internal(const struct action_table *table, hpx_action_t id) {
+  return (action_table_get_attr(table, id) & HPX_INTERNAL);
+}
+
+bool action_is_default(const struct action_table *table, hpx_action_t id) {
+  return (action_table_get_type(table, id) == HPX_DEFAULT);
 }
 
 bool action_is_task(const struct action_table *table, hpx_action_t id) {
@@ -366,14 +393,16 @@ bool action_is_function(const struct action_table *table, hpx_action_t id) {
   return (action_table_get_type(table, id) == HPX_FUNCTION);
 }
 
-int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
-                        hpx_action_t *id, hpx_action_handler_t f,
-                        unsigned int nargs, ...) {
+static int
+_register_action_va(hpx_action_type_t type, uint32_t attr,
+                    const char *key, hpx_action_t *id, hpx_action_handler_t f,
+                    int system, unsigned int nargs, va_list vargs) {
   dbg_assert(id);
   *id = HPX_ACTION_INVALID;
 
-  va_list vargs;
-  va_start(vargs, nargs);
+  if (system) {
+    attr |= HPX_INTERNAL;
+  }
 
   if (attr & HPX_MARSHALLED) {
     if (attr & HPX_PINNED) {
@@ -396,13 +425,34 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
   for (int i = 0; i < nargs; ++i) {
     args[i] = va_arg(vargs, hpx_type_t);
   }
-  va_end(vargs);
 
   ffi_status s = ffi_prep_cif(cif, FFI_DEFAULT_ABI, nargs, HPX_INT, args);
   if (s != FFI_OK) {
     dbg_error("failed to process type information for action id %d.\n", *id);
   }
   return _push_back(_get_actions(), id, key, f, type, attr, cif);
+}
+
+int
+libhpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
+                       hpx_action_t *id, hpx_action_handler_t f,
+                       unsigned int nargs, ...) {
+  va_list vargs;
+  va_start(vargs, nargs);
+  int e = _register_action_va(type, attr, key, id, f, 1, nargs, vargs);
+  va_end(vargs);
+  return e;
+}
+
+int
+hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
+                    hpx_action_t *id, hpx_action_handler_t f,
+                    unsigned int nargs, ...) {
+  va_list vargs;
+  va_start(vargs, nargs);
+  int e = _register_action_va(type, attr, key, id, f, 0, nargs, vargs);
+  va_end(vargs);
+  return e;
 }
 
 hpx_action_handler_t hpx_action_get_handler(hpx_action_t id) {

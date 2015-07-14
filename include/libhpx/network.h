@@ -20,7 +20,6 @@
 /// network's primary responsibility is to accept send requests from the
 /// scheduler, and send them out via the configured transport.
 #include <hpx/hpx.h>
-#include <libhpx/memory.h>
 
 /// Forward declarations.
 /// @{
@@ -36,17 +35,20 @@ struct transport;
 
 /// Command actions should be declared and defined using the following macros.
 /// @{
-#define COMMAND_DEF(type, symbol, handler)                              \
-    HPX_ACTION(type, 0, symbol, handler, HPX_INT, HPX_UINT64)
+#define COMMAND_DEF(symbol, handler)                                    \
+    LIBHPX_ACTION(HPX_INTERRUPT, 0, symbol, handler, HPX_INT, HPX_UINT64)
 
 #define COMMAND_DECL(symbol) HPX_ACTION_DECL(symbol)
 /// @}
 
 /// The release_parcel command will release a parcel.
-HPX_INTERNAL extern COMMAND_DECL(release_parcel);
+extern COMMAND_DECL(release_parcel);
+
+/// The resume_parcel operation will perform parcel_launch() on a parcel.
+extern COMMAND_DECL(resume_parcel);
 
 /// The lco_set command will set an lco.
-HPX_INTERNAL extern COMMAND_DECL(lco_set);
+extern COMMAND_DECL(lco_set);
 
 /// All network objects implement the network interface.
 typedef struct network {
@@ -70,12 +72,14 @@ typedef struct network {
   int (*get)(void*, void *to, hpx_addr_t from, size_t n,
              hpx_action_t lop, hpx_addr_t laddr);
 
+  int (*lco_get)(void *, hpx_addr_t lco, size_t n, void *to);
+
   hpx_parcel_t *(*probe)(void*, int nrx);
 
   void (*set_flush)(void*);
 
-  memory_register_t register_dma;
-  memory_release_t release_dma;
+  void (*register_dma)(void *, const void *base, size_t bytes, void *key);
+  void (*release_dma)(void *, const void *base, size_t bytes);
 } network_t;
 
 /// Create a new network.
@@ -88,9 +92,9 @@ typedef struct network {
 /// @param          gas The global address space.
 ///
 /// @returns            The network object, or NULL if there was an issue.
-network_t *network_new(const struct config *cfg, struct boot *boot,
-                       struct gas *gas)
-  HPX_MALLOC HPX_INTERNAL;
+network_t *
+network_new(struct config *cfg, struct boot *boot, struct gas *gas)
+  HPX_MALLOC;
 
 /// Delete a network object.
 ///
@@ -98,7 +102,9 @@ network_t *network_new(const struct config *cfg, struct boot *boot,
 /// threads may be operating on the network before making this call.
 ///
 /// @param      network The network to delete.
-static inline void network_delete(network_t *network) {
+static inline void
+network_delete(void *obj) {
+  network_t *network = obj;
   network->delete(network);
 }
 
@@ -110,7 +116,9 @@ static inline void network_delete(network_t *network) {
 /// @param      network The network to start.
 ///
 /// @returns  LIBHPX_OK The network was progressed without error.
-static inline int network_progress(network_t *network) {
+static inline int
+network_progress(void *obj) {
+  network_t *network = obj;
   assert(network);
   return network->progress(network);
 }
@@ -134,7 +142,9 @@ static inline int network_progress(network_t *network) {
 /// @param            p The parcel to send.
 ///
 /// @returns  LIBHPX_OK The send was buffered successfully
-static inline int network_send(network_t *network, hpx_parcel_t *p) {
+static inline int
+network_send(void *obj, hpx_parcel_t *p) {
+  network_t *network = obj;
   return network->send(network, p);
 }
 
@@ -148,8 +158,9 @@ static inline int network_send(network_t *network, hpx_parcel_t *p) {
 /// @param         rank The target rank.
 /// @param           op The operation for the command.
 /// @param         args The arguments for the command (40 bits packed with op).
-static inline int network_command(network_t *network, hpx_addr_t rank,
-                                  hpx_action_t op, uint64_t args) {
+static inline int
+network_command(void *obj, hpx_addr_t rank, hpx_action_t op, uint64_t args) {
+  network_t *network = obj;
   return network->command(network, rank, op, args);
 }
 
@@ -177,10 +188,11 @@ static inline int network_command(network_t *network, hpx_addr_t rank,
 /// @param        op_to The remote continuation address.
 ///
 /// @returns            LIBHPX_OK
-static inline int network_pwc(network_t *network,
-                              hpx_addr_t to, const void *from, size_t n,
-                              hpx_action_t lop, hpx_addr_t lsync,
-                              hpx_action_t rop, hpx_addr_t rsync) {
+static inline int
+network_pwc(void *obj, hpx_addr_t to, const void *from, size_t n,
+            hpx_action_t lop, hpx_addr_t lsync,
+            hpx_action_t rop, hpx_addr_t rsync) {
+  network_t *network = obj;
   return network->pwc(network, to, from, n, lop, lsync, rop, rsync);
 }
 
@@ -198,9 +210,10 @@ static inline int network_pwc(network_t *network,
 /// @param        laddr A local local continuation address.
 ///
 /// @returns            LIBHPX_OK
-static inline int network_put(network_t *network,
-                              hpx_addr_t to, const void *from, size_t n,
-                              hpx_action_t lop, hpx_addr_t laddr) {
+static inline int
+network_put(void *obj, hpx_addr_t to, const void *from, size_t n,
+            hpx_action_t lop, hpx_addr_t laddr) {
+  network_t *network = obj;
   return network->put(network, to, from, n, lop, laddr);
 }
 
@@ -217,14 +230,17 @@ static inline int network_put(network_t *network,
 /// @param        laddr A local local continuation address.
 ///
 /// @returns            LIBHPX_OK
-static inline int network_get(network_t *network,
-                              void *to, hpx_addr_t from, size_t n,
-                              hpx_action_t lop, hpx_addr_t laddr) {
+static inline int
+network_get(void *obj, void *to, hpx_addr_t from, size_t n,
+            hpx_action_t lop, hpx_addr_t laddr) {
+  network_t *network = obj;
   return network->get(network, to, from, n, lop, laddr);
 }
 
 /// Probe for received parcels.
-static inline hpx_parcel_t *network_probe(network_t *network, int rank) {
+static inline hpx_parcel_t *
+network_probe(void *obj, int rank) {
+  network_t *network = obj;
   return network->probe(network, rank);
 }
 
@@ -237,7 +253,9 @@ static inline hpx_parcel_t *network_probe(network_t *network, int rank) {
 /// progressing.
 ///
 /// @param      network The network to modify.
-static inline void network_flush_on_shutdown(network_t *network) {
+static inline void
+network_flush_on_shutdown(void *obj) {
+  network_t *network = obj;
   network->set_flush(network);
 }
 
@@ -250,8 +268,9 @@ static inline void network_flush_on_shutdown(network_t *network) {
 /// @param      network The network object.
 /// @param      segment The beginning of the region to register.
 /// @param        bytes The number of bytes to register.
-static inline void network_register_dma(network_t *network, const void *base,
-                                        size_t bytes, void *key) {
+static inline void
+network_register_dma(void *obj, const void *base, size_t bytes, void *key) {
+  network_t *network = obj;
   network->register_dma(network, base, bytes, key);
 }
 
@@ -263,9 +282,17 @@ static inline void network_register_dma(network_t *network, const void *base,
 /// @param      network The network object.
 /// @param      segment The beginning of the region to release.
 /// @param        bytes The number of bytes to release.
-static inline void network_release_dma(network_t *network, const void *base,
-                                       size_t bytes) {
+static inline void
+network_release_dma(void *obj, const void *base, size_t bytes) {
+  network_t *network = obj;
   network->release_dma(network, base, bytes);
+}
+
+/// Perform an LCO get operation through the network.
+static inline int
+network_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out) {
+  network_t *network = obj;
+  return network->lco_get(network, lco, n, out);
 }
 
 #endif // LIBHPX_NETWORK_H

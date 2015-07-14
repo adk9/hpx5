@@ -10,9 +10,6 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
 
 /// Given a set of elements distributed across all processes, Allgather will
 /// gather all of the elements to all the processes. It gathers and broadcasts
@@ -64,13 +61,18 @@
 ///           #      #      #      #      #      #
 ///           ####################################
 
-/// @file libhpx/scheduler/allgather.c
-/// @brief Defines the allgather LCO.
-#include <assert.h>
-#include <string.h>
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
+#include <assert.h>
+#include <inttypes.h>
+#include <stdlib.h>
+#include <string.h>
+#include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
+#include <libhpx/memory.h>
 #include <libhpx/scheduler.h>
 #include "cvar.h"
 #include "lco.h"
@@ -197,6 +199,23 @@ static hpx_status_t _allgather_wait(lco_t *lco) {
   return _allgather_get(lco, 0, NULL);
 }
 
+// We universally clone the buffer here, because the all* family of LCOs will
+// reset themselves so we can't retain a pointer to their buffer.
+static hpx_status_t
+_allgather_getref(lco_t *lco, int size, void **out, int *unpin) {
+  *out = registered_malloc(size);
+  *unpin = 1;
+  return _allgather_get(lco, size, *out);
+}
+
+// We know that allreduce buffers were always copies, so we can just free them
+// here.
+static int
+_allgather_release(lco_t *lco, void *out) {
+  registered_free(out);
+  return 0;
+}
+
 // Local set id function.
 static hpx_status_t _allgather_setid(_allgather_t *g, unsigned offset, int size,
                                      const void* buffer) {
@@ -262,6 +281,7 @@ hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id,
   }
   else {
     status = _allgather_setid(local, id, size, value);
+    hpx_gas_unpin(allgather);
     if (lsync)
       hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
     if (rsync)
@@ -279,9 +299,9 @@ static int _allgather_setid_proxy_handler(_allgather_t *g, void *args, size_t n)
   size_t size = n - sizeof(_allgather_set_offset_t);
   return _allgather_setid(g, a->offset, size, &a->buffer);
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _allgather_setid_proxy,
-                  _allgather_setid_proxy_handler, HPX_POINTER,
-                  HPX_POINTER, HPX_SIZE_T);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _allgather_setid_proxy,
+                     _allgather_setid_proxy_handler, HPX_POINTER,
+                     HPX_POINTER, HPX_SIZE_T);
 
 /// Update the gathering, will wait if the phase is reading.
 static void _allgather_set(lco_t *lco, int size, const void *from) {
@@ -295,8 +315,8 @@ static const lco_class_t _allgather_vtable = {
   .on_set      = _allgather_set,
   .on_attach   = _allgather_attach,
   .on_get      = _allgather_get,
-  .on_getref   = NULL,
-  .on_release  = NULL,
+  .on_getref   = _allgather_getref,
+  .on_release  = _allgather_release,
   .on_wait     = _allgather_wait,
   .on_reset    = _allgather_reset,
   .on_size     = _allgather_size
@@ -319,8 +339,8 @@ static int _allgather_init_handler(_allgather_t *g, size_t participants, size_t 
 
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _allgather_init_async,
-                  _allgather_init_handler, HPX_POINTER, HPX_SIZE_T, HPX_SIZE_T);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _allgather_init_async,
+                     _allgather_init_handler, HPX_POINTER, HPX_SIZE_T, HPX_SIZE_T);
 
 /// Allocate a new gather LCO. It gathers elements from each process in order
 /// of their rank and sends the result to all the processes
@@ -337,7 +357,7 @@ hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size) {
   dbg_assert_str(gva, "Could not malloc global memory\n");
   if (!hpx_gas_try_pin(gva, (void**)&g)) {
     int e = hpx_call_sync(gva, _allgather_init_async, NULL, 0, &inputs, &size);
-    dbg_check(e, "couldn't initialize allgather at %lu\n", gva);
+    dbg_check(e, "couldn't initialize allgather at %"PRIu64"\n", gva);
   }
   else {
     _allgather_init_handler(g, inputs, size);
@@ -355,9 +375,9 @@ static int _block_local_init_handler(void *lco, uint32_t n, uint32_t inputs,
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
-                  _block_local_init_handler, HPX_POINTER, HPX_UINT32,
-                  HPX_UINT32, HPX_UINT32);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
+                     _block_local_init_handler, HPX_POINTER, HPX_UINT32,
+                     HPX_UINT32, HPX_UINT32);
 
 /// Allocate an array of allgather LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate

@@ -26,6 +26,11 @@ struct gas;
 /// Allocate a new Isend/Irecv funneled network.
 network_t *network_isir_funneled_new(const struct config *cfg,
                                      struct boot *boot, struct gas *gas)
-  HPX_MALLOC HPX_INTERNAL;
+  HPX_MALLOC;
+
+
+/// Perform an LCO get operation through the Isend/Irecv network.
+///
+int isir_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out);
 
 #endif

@@ -13,6 +13,29 @@
 #ifndef LIBHPX_ASM_MACROS_H
 #define LIBHPX_ASM_MACROS_H
 
+#if defined(HAVE_CFI_DIRECTIVES)
+# define STARTPROC .cfi_startproc
+# define ENDPROC .cfi_endproc
+# define CFA_DEF_OFFSET(N) .cfi_def_cfa_offset N
+# define CFA_ADJ_OFFSET(N) .cfi_adjust_cfa_offset N
+# define CFA_REGISTER(R) .cfi_def_cfa_register R
+# define CFA_DEF(R,N) .cfi_def_cfa R,N
+# define CFI_RESTORE(R) .cfi_restore R
+# define CFI_OFFSET(R,N) .cfi_offset R,N
+# define CFI_REL_OFFSET(R,N) .cfi_rel_offset R,N
+#else
+# define STARTPROC
+# define ENDPROC
+# define CFA_DEF_OFFSET(N)
+# define CFA_ADJ_OFFSET(N)
+# define CFA_REGISTER(R)
+# define CFA_DEF(R,N)
+# define CFI_RESTORE(R)
+# define CFI_OFFSET(R,N)
+# define CFI_REL_OFFSET(R,N)
+#endif
+
+
 #if defined(__APPLE__)
 #define GLOBAL(S) .globl _##S
 #define LABEL(S) _##S:

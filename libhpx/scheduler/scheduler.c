@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <hpx/builtins.h>
+#include <libhpx/action.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
@@ -28,7 +29,6 @@
 #include "thread.h"
 
 struct scheduler *scheduler_new(const config_t *cfg) {
-  const int cores = cfg->cores;
   const int workers = cfg->threads;
 
   struct scheduler *s = malloc(sizeof(*s));
@@ -48,7 +48,7 @@ struct scheduler *scheduler_new(const config_t *cfg) {
   }
 
   for (int i = 0; i < workers; ++i) {
-    e = worker_init(&s->workers[i], s, i, i % cores, i, 64);
+    e = worker_init(&s->workers[i], s, i, i, 64);
     if (e) {
       dbg_error("failed to initialize a worker.\n");
       scheduler_delete(s);
@@ -67,7 +67,6 @@ struct scheduler *scheduler_new(const config_t *cfg) {
 
   sync_store(&s->shutdown, INT_MAX, SYNC_RELEASE);
   sync_store(&s->next_tls_id, 0, SYNC_RELEASE);
-  s->cores        = cores;
   s->n_workers    = workers;
   s->wf_threshold = cfg->wfthreshold;
   scheduler_stats_init(&s->stats);
@@ -193,4 +192,4 @@ scheduler_stats_t *scheduler_get_stats(struct scheduler *sched) {
 int scheduler_nop_handler(void) {
   return HPX_SUCCESS;
 }
-HPX_ACTION(HPX_INTERRUPT, 0, scheduler_nop, scheduler_nop_handler);
+LIBHPX_ACTION(HPX_INTERRUPT, 0, scheduler_nop, scheduler_nop_handler);

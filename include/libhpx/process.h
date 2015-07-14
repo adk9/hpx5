@@ -15,11 +15,8 @@
 
 #include <hpx/hpx.h>
 
-
 /// Recover any credit associated with a parcel.
 int process_recover_credit(hpx_parcel_t *p)
-  HPX_INTERNAL HPX_NON_NULL(1);
-
-
+  HPX_NON_NULL(1);
 
 #endif // LIBHPX_PROCESS_H

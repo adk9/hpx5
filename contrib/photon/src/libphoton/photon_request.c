@@ -4,9 +4,64 @@
 
 #include "photon_backend.h"
 #include "photon_request.h"
+#include "photon_pwc.h"
+#include "util.h"
 
 static int __photon_cleanup_request(photonRequest req);
 static int __photon_request_grow_table(photonRequestTable rt);
+
+int photon_request_init(photonConfig cfg) {
+  int i;
+  // Setup request tables
+  for (i = 0; i < (_photon_nproc + _photon_nforw); i++) {
+    photon_processes[i].request_table = malloc(sizeof(struct photon_req_table_t));
+    if (!photon_processes[i].request_table) {
+      log_err("Could not allocate request table for proc %d", i);
+      goto error_exit;
+    }
+    photonRequestTable rt = photon_processes[i].request_table;
+    rt->count           = 0;
+    rt->level           = 0;
+    rt->next            = 0;
+    rt->size            = cfg->cap.default_rd;
+    rt->free            = (uint32_t*)malloc(DEF_NR_LEVELS * sizeof(uint32_t));
+    rt->free[rt->level] = cfg->cap.default_rd;
+    rt->reqs = (photonRequest*)malloc(DEF_NR_LEVELS * sizeof(struct photon_req_t));
+    if (!rt->reqs) {
+      log_err("Could not allocate request array for proc %d", i);
+      goto error_exit;
+    }
+    rt->reqs[rt->level] = (photonRequest)calloc(cfg->cap.default_rd, sizeof(struct photon_req_t));
+    if (!rt->reqs[rt->level]) {
+      log_err("Could not allocate request descriptors for proc %d", i);
+      goto error_exit;
+    }
+    rt->pwc_q = sync_two_lock_queue_new();
+    if (!rt->pwc_q) {
+      log_err("Could not allocate pwc request queue for proc %d", i);
+      goto error_exit;
+    }
+    rt->gwc_q = sync_two_lock_queue_new();
+    if (!rt->gwc_q) {
+      log_err("Could not allocate gwc request queue for proc %d", i);
+      goto error_exit;
+    }
+    rt->comp_q = sync_two_lock_queue_new();
+    if (!rt->comp_q) {
+      log_err("Could not allocate PWC completion queue for proc %d", i);
+      goto error_exit;
+    }
+    rt->pcount = 0;
+    rt->gcount = 0;
+    sync_tatas_init(&rt->tloc);
+  }
+  
+  return PHOTON_OK;
+
+ error_exit:
+  return PHOTON_ERROR;
+}
+
 
 photonRequest photon_get_request(int proc) {
   photonRequestTable rt;
@@ -30,6 +85,8 @@ photonRequest photon_get_request(int proc) {
     reqs = rt->reqs[rt->level];
     
     // find the next free slot
+    rt->next++;
+    rt->next = (rt->next & (rt->size - 1));
     while (reqs[rt->next].id) {
       rt->next++;
       rt->next = (rt->next & (rt->size - 1));
@@ -110,6 +167,7 @@ int photon_count_request(int proc) {
 int photon_free_request(photonRequest req) {
   photonRequestTable rt;
   uint16_t level = (uint16_t)(req->id<<32>>56);
+  dbg_trace("Clearing request 0x%016lx", req->id);
   __photon_cleanup_request(req);
   rt = photon_processes[req->proc].request_table;
   sync_tatas_acquire(&rt->tloc);
@@ -119,7 +177,6 @@ int photon_free_request(photonRequest req) {
     rt->free[level]++;
   }
   sync_tatas_release(&rt->tloc);
-  dbg_trace("Cleared request 0x%016lx", req->id);
   return PHOTON_OK;
 }
 
@@ -315,9 +372,11 @@ static int __photon_cleanup_request(photonRequest req) {
     break;
   case REQUEST_OP_PWC:
     if (req->flags & REQUEST_FLAG_1PWC) {
-      MARK_DONE(photon_processes[req->proc].remote_pwc_buf, req->size);
+      MARK_DONE(photon_processes[req->proc].remote_pwc_buf,
+		ALIGN(EB_MSG_SIZE(req->size), PWC_ALIGN));
     }
-    else if (req->flags & REQUEST_FLAG_2PWC) {
+    if ((req->flags & REQUEST_FLAG_2PWC) &&
+	!(req->flags & REQUEST_FLAG_NO_RCE)) {
       MARK_DONE(photon_processes[req->proc].remote_pwc_ledger, 1);
     }
     break;

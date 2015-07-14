@@ -32,7 +32,7 @@ const int SET_CONT_VALUE = 1234;
 // to be sent to the thread's continuation address.
 static int _set_cont_handler(void) {
   uint64_t value = SET_CONT_VALUE;
-  hpx_thread_continue(DATA_SIZE, &value);
+  hpx_thread_continue(&value, DATA_SIZE);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _set_cont, _set_cont_handler);
 
@@ -86,7 +86,7 @@ static int _thread_cont_cleanup_handler(void) {
   *value = local;
 
   hpx_gas_unpin(addr);
-  hpx_thread_continue_cleanup(DATA_SIZE, value, free, value);
+  hpx_thread_continue_cleanup(free, value, value, DATA_SIZE);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _thread_cont_cleanup, _thread_cont_cleanup_handler);
 

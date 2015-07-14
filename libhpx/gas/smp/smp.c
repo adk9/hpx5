@@ -19,6 +19,8 @@
 /// @brief This file contains an implementation of the GAS interface for use
 ///        when no network is available, or when we are running on a single
 ///        locality. It simply forwards all requests to the system allocator.
+#include <string.h>
+#include <stdlib.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
@@ -31,7 +33,7 @@
 /// The SMP GAS instance is global and immutable. We do not need to do anything
 /// with it.
 static void
-_smp_delete(void *gas) {
+_smp_dealloc(void *gas) {
 }
 
 /// Figure out how far apart two addresses are.
@@ -52,7 +54,7 @@ _smp_add(const void *gas, hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
 /// Compute the global address for a local address.
 static hpx_addr_t
 _smp_lva_to_gva(const void *lva) {
-#ifdef HPX_BITNESS_64
+#ifdef __LP64__
   return (hpx_addr_t)lva;
 #else
   return (hpx_addr_t)(uint32_t)lva;
@@ -87,8 +89,13 @@ _smp_there(void *gas, uint32_t i) {
 /// Allocate a global array.
 static hpx_addr_t
 _smp_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
-  void *p = boundary ?
-      local_memalign(boundary, n * bsize) : local_malloc(n * bsize);
+  void *p = NULL;
+  if (boundary) {
+    posix_memalign(&p, boundary, n * bsize);
+  }
+  else {
+    p = malloc(n * bsize);
+  }
   return _smp_lva_to_gva(p);
 }
 
@@ -96,12 +103,13 @@ _smp_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
 static hpx_addr_t
 _smp_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
   size_t bytes = n * bsize;
-  void *p;
+  void *p = NULL;
   if (boundary) {
-    p = local_memalign(boundary, bytes);
+    posix_memalign(&p, boundary, bytes);
     p = memset(p, 0, bytes);
-  } else {
-    p = local_calloc(n, bsize);
+  }
+  else {
+    p = calloc(n, bsize);
   }
   return _smp_lva_to_gva(p);
 }
@@ -109,7 +117,13 @@ _smp_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
 /// Allocate a bunch of global memory
 static hpx_addr_t
 _smp_gas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
-  void *p = boundary ? local_memalign(boundary, bytes) : local_malloc(bytes);
+  void *p = NULL;
+  if (boundary) {
+    posix_memalign(&p, boundary, bytes);
+  }
+  else {
+    p = malloc(bytes);
+  }
   return _smp_lva_to_gva(p);
 }
 
@@ -117,12 +131,12 @@ _smp_gas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
 static hpx_addr_t
 _smp_gas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
   size_t bytes = nmemb * size;
-  void *p;
+  void *p = NULL;
   if (boundary) {
-    p = local_memalign(boundary, bytes);
+    posix_memalign(&p, boundary, bytes);
     p = memset(p, 0, bytes);
   } else {
-    p = local_calloc(nmemb, size);
+    p = calloc(nmemb, size);
   }
   return _smp_lva_to_gva(p);
 }
@@ -206,7 +220,7 @@ _smp_local_base(void *gas) {
 
 static gas_t _smp_vtable = {
   .type           = HPX_GAS_SMP,
-  .delete         = _smp_delete,
+  .dealloc        = _smp_dealloc,
   .local_size     = _smp_local_size,
   .local_base     = _smp_local_base,
   .sub            = _smp_sub,
@@ -224,9 +238,7 @@ static gas_t _smp_vtable = {
   .move           = _smp_move,
   .memget         = _smp_memget,
   .memput         = _smp_memput,
-  .memcpy         = _smp_memcpy,
-  .mmap           = system_mmap,
-  .munmap         = system_munmap
+  .memcpy         = _smp_memcpy
 };
 
 gas_t *gas_smp_new(void) {

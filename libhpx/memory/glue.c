@@ -21,10 +21,12 @@
 #include <hpx/hpx.h>
 #include <libhpx/memory.h>
 
-void *hpx_malloc_registered(size_t bytes) {
-  return registered_malloc(bytes);
+void *
+hpx_malloc_registered(size_t bytes) {
+  return as_malloc(AS_REGISTERED, bytes);
 }
 
-void hpx_free_registered(void *p) {
-  registered_free(p);
+void
+hpx_free_registered(void *p) {
+  as_free(AS_REGISTERED, p);
 }

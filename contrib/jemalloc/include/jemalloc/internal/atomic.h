@@ -52,7 +52,7 @@ void	atomic_write_uint32(uint32_t *p, uint32_t x);
 void	*atomic_add_p(void **p, void *x);
 void	*atomic_sub_p(void **p, void *x);
 bool	atomic_cas_p(void **p, void *c, void *s);
-void	atomic_write_p(void **p, void *x);
+void	atomic_write_p(void **p, const void *x);
 size_t	atomic_add_z(size_t *p, size_t x);
 size_t	atomic_sub_z(size_t *p, size_t x);
 bool	atomic_cas_z(size_t *p, size_t c, size_t s);
@@ -119,7 +119,7 @@ atomic_write_uint64(uint64_t *p, uint64_t x)
 {
 
 	asm volatile (
-	    "lock; xchgq %1, %0;"
+	    "xchgq %1, %0;" /* Lock is implied by xchgq. */
 	    : "=m" (*p), "+r" (x) /* Outputs. */
 	    : "m" (*p) /* Inputs. */
 	    : "memory" /* Clobbers. */
@@ -143,15 +143,15 @@ atomic_sub_uint64(uint64_t *p, uint64_t x)
 JEMALLOC_INLINE bool
 atomic_cas_uint64(uint64_t *p, uint64_t c, uint64_t s)
 {
-
-	return (!atomic_compare_exchange_strong(p, &c, s));
+	volatile atomic_uint_least64_t *a = (volatile atomic_uint_least64_t *)p;
+	return (!atomic_compare_exchange_strong(a, &c, s));
 }
 
 JEMALLOC_INLINE void
 atomic_write_uint64(uint64_t *p, uint64_t x)
 {
-
-	atomic_store(p, x);
+	volatile atomic_uint_least64_t *a = (volatile atomic_uint_least64_t *)p;
+	atomic_store(a, x);
 }
 #  elif (defined(JEMALLOC_ATOMIC9))
 JEMALLOC_INLINE uint64_t
@@ -343,7 +343,7 @@ atomic_write_uint32(uint32_t *p, uint32_t x)
 {
 
 	asm volatile (
-	    "lock; xchgl %1, %0;"
+	    "xchgl %1, %0;" /* Lock is implied by xchgl. */
 	    : "=m" (*p), "+r" (x) /* Outputs. */
 	    : "m" (*p) /* Inputs. */
 	    : "memory" /* Clobbers. */
@@ -367,15 +367,15 @@ atomic_sub_uint32(uint32_t *p, uint32_t x)
 JEMALLOC_INLINE bool
 atomic_cas_uint32(uint32_t *p, uint32_t c, uint32_t s)
 {
-
-	return (!atomic_compare_exchange_strong(p, &c, s));
+	volatile atomic_uint_least32_t *a = (volatile atomic_uint_least32_t *)p;
+	return (!atomic_compare_exchange_strong(a, &c, s));
 }
 
 JEMALLOC_INLINE void
 atomic_write_uint32(uint32_t *p, uint32_t x)
 {
-
-	atomic_store(p, x);
+	volatile atomic_uint_least32_t *a = (volatile atomic_uint_least32_t *)p;
+	atomic_store(a, x);
 }
 #elif (defined(JEMALLOC_ATOMIC9))
 JEMALLOC_INLINE uint32_t
@@ -457,7 +457,7 @@ atomic_cas_uint32(uint32_t *p, uint32_t c, uint32_t s)
 {
 	uint32_t o;
 
-	o = InterlockedCompareExchange32(p, s, c);
+	o = InterlockedCompareExchange(p, s, c);
 	return (o != c);
 }
 
@@ -538,7 +538,7 @@ atomic_cas_p(void **p, void *c, void *s)
 }
 
 JEMALLOC_INLINE void
-atomic_write_p(void **p, void *x)
+atomic_write_p(void **p, const void *x)
 {
 
 #if (LG_SIZEOF_PTR == 3)

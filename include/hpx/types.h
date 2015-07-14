@@ -70,7 +70,7 @@ typedef ffi_type* hpx_type_t;
 #define HPX_COMPLEX_DOUBLE     &ffi_type_complex_double
 #define HPX_COMPLEX_LONGDOUBLE &ffi_type_complex_longdouble
 
-#if SIZE_MAX > (UINT64_C(1)<<32)
+#ifdef __LP64__
 #define HPX_SIZE_T             HPX_UINT64
 #else
 #define HPX_SIZE_T             HPX_UINT32

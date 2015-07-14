@@ -43,7 +43,7 @@ static int _hpx_143_fix_handler(void) {
   _hpx_143 = hpx_gas_alloc_cyclic(sizeof(void*), HPX_LOCALITIES, 0);
   return LIBHPX_OK;
 }
-static HPX_ACTION(HPX_DEFAULT, 0, _hpx_143_fix, _hpx_143_fix_handler);
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _hpx_143_fix, _hpx_143_fix_handler);
 
 /// Cleanup utility function.
 ///
@@ -63,7 +63,7 @@ static void _cleanup(locality_t *l) {
   }
 
   if (l->gas) {
-    gas_delete(l->gas);
+    gas_dealloc(l->gas);
     l->gas = NULL;
   }
 
@@ -74,9 +74,11 @@ static void _cleanup(locality_t *l) {
     l->boot = NULL;
   }
 
+#ifdef HAVE_HWLOC
   if (l->topology) {
-    hpx_hwloc_topology_destroy(l->topology);
+    hwloc_topology_destroy(l->topology);
   }
+#endif
 
   if (l->actions) {
     action_table_free(l->actions);
@@ -116,16 +118,18 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // topology
-  int e = hpx_hwloc_topology_init(&here->topology);
+#ifdef HAVE_HWLOC
+  int e = hwloc_topology_init(&here->topology);
   if (e) {
     status = log_error("failed to initialize a topology.\n");
     goto unwind1;
   }
-  e = hpx_hwloc_topology_load(here->topology);
+  e = hwloc_topology_load(here->topology);
   if (e) {
     status = log_error("failed to load the topology.\n");
     goto unwind1;
   }
+#endif
 
   // bootstrap
   here->boot = boot_new(here->config->boot);
@@ -135,6 +139,13 @@ int hpx_init(int *argc, char ***argv) {
   }
   here->rank = boot_rank(here->boot);
   here->ranks = boot_n_ranks(here->boot);
+
+  // see if we're supposed to output the configuration, only do this at rank 0
+  if (config_log_level_isset(here->config, HPX_LOG_CONFIG)) {
+    if (here->rank == 0) {
+      config_print(here->config, stdout);
+    }
+  }
 
   // initialize the debugging system
   // @todo We would like to do this earlier but MPI_init() for the bootstrap
@@ -185,16 +196,6 @@ int hpx_init(int *argc, char ***argv) {
     status = log_error("failed to create network.\n");
     goto unwind1;
   }
-  if (!local || !registered || !global) {
-    status = log_error("expected network to initialize address spaces\n");
-    goto unwind1;
-  }
-
-  // Join the various address spaces.
-  // NB: is there a cleaner way to deal with this?
-  local->join(local);
-  registered->join(registered);
-  global->join(global);
 
   // thread scheduler
   here->sched = scheduler_new(here->config);
@@ -224,6 +225,8 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
     goto unwind0;
   }
 
+  inst_start();
+
   if (probe_start(here->network) != LIBHPX_OK) {
     status = log_error("could not start network probe\n");
     goto unwind1;
@@ -233,7 +236,7 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   if (here->rank == 0) {
     va_list vargs;
     va_start(vargs, n);
-    hpx_parcel_t *p = action_parcel_create(HPX_HERE, *act, 0, 0, n, &vargs);
+    hpx_parcel_t *p = parcel_create_va(HPX_HERE, *act, 0, 0, n, &vargs);
     int status = hpx_parcel_send(p, HPX_NULL);
     va_end(vargs);
 
@@ -264,7 +267,9 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   }
 
 #ifdef ENABLE_PROFILING
-  scheduler_dump_stats(here->sched);
+  if (here->config->statistics) {
+    scheduler_dump_stats(here->sched);
+  }
 #endif
 
  unwind2:

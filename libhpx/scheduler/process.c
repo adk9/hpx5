@@ -21,8 +21,8 @@
 #include <string.h>
 
 #include "libsync/sync.h"
-#include "libhpx/debug.h"
 #include "libhpx/action.h"
+#include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/parcel.h"
 #include "libhpx/process.h"
@@ -85,16 +85,16 @@ static int _proc_call_handler(hpx_parcel_t *arg, size_t n) {
   hpx_parcel_send_sync(parcel);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _proc_call,
-                  _proc_call_handler, HPX_POINTER, HPX_SIZE_T);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _proc_call,
+                     _proc_call_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int _proc_delete_handler(_process_t *p, size_t size) {
   _free(p);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _proc_delete,
-                  _proc_delete_handler,
-                  HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _proc_delete,
+                     _proc_delete_handler,
+                     HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 static int _proc_return_credit_handler(_process_t *p, uint64_t *args, size_t size) {
   // add credit to the credit-accounting bitmap
@@ -113,9 +113,9 @@ static int _proc_return_credit_handler(_process_t *p, uint64_t *args, size_t siz
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _proc_return_credit,
-                  _proc_return_credit_handler,
-                  HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _proc_return_credit,
+                     _proc_return_credit_handler,
+                     HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 int process_recover_credit(hpx_parcel_t *p) {
   hpx_addr_t process = p->pid;
@@ -150,6 +150,11 @@ hpx_addr_t hpx_process_new(hpx_addr_t termination) {
   }
   _init(p, termination);
   hpx_gas_unpin(process);
+
+#ifdef ENABLE_INSTRUMENTATION
+    inst_trace(HPX_INST_CLASS_PROCESS, HPX_INST_EVENT_PROCESS_NEW,
+               process, termination);
+#endif
   return process;
 }
 
@@ -161,8 +166,8 @@ int _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
                       hpx_addr_t result, int n, ...) {
   va_list vargs;
   va_start(vargs, n);
-  hpx_parcel_t *parcel = action_parcel_create(addr, action, result,
-                                              hpx_lco_set_action, n, &vargs);
+  hpx_parcel_t *parcel = parcel_create_va(addr, action, result,
+                                          hpx_lco_set_action, n, &vargs);
   va_end(vargs);
 
   hpx_addr_t sync = hpx_lco_future_new(0);
@@ -174,6 +179,10 @@ int _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
   hpx_parcel_set_data(p, parcel, parcel_size(parcel));
   p->pid = 0;
   p->credit = 0;
+#ifdef ENABLE_INSTRUMENTATION
+    inst_trace(HPX_INST_CLASS_PROCESS, HPX_INST_EVENT_PROCESS_CALL, 
+               process, p->pid);
+#endif
   hpx_parcel_send_sync(p);
 
   hpx_parcel_release(parcel);
@@ -190,5 +199,8 @@ void hpx_process_delete(hpx_addr_t process, hpx_addr_t sync) {
 
   hpx_call_sync(process, _proc_delete, NULL, 0, NULL, 0);
   hpx_gas_free(process, sync);
+#ifdef ENABLE_INSTRUMENTATION
+    inst_trace(HPX_INST_CLASS_PROCESS, HPX_INST_EVENT_PROCESS_DELETE, process);
+#endif
 }
 

@@ -63,6 +63,7 @@ static int gas_memalign_handler(void) {
       fflush(stdout);
       fprintf(stderr, "hpx_gas_alloc_local failed to return aligned address\n");
     }
+    hpx_gas_unpin(local);
     hpx_gas_free(local, HPX_NULL);
   }
 

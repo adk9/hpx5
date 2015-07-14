@@ -7,9 +7,8 @@ Name: @PACKAGE_NAME@
 Description: The HPX-5 runtime system.
 URL: https://gitlab.crest.iu.edu/extreme/hpx
 Version: @PACKAGE_VERSION@
-Requires: libffi
+Requires: @HPX_PC_REQUIRES_PKGS@
 Cflags: -I${includedir}
-Libs: -L${libdir} -lhpx @HPX_JEMALLOC_LOCAL_LIBS@
-Libs.private: @PMI_LIBS@ @HUGETLBFS_LIBS@ @MPI_LIBS@ @PORTALS_LIBS@ @PTHREAD_LIBS@ @PE_ENV_LIBS@ @PTHREAD_CFLAGS@ -lsync @HPX_JEMALLOC_LIBS@
-Requires.private: @HPX_PRIVATE_PKGS@
-
+Libs: -L${libdir} -lhpx @HPX_PC_PUBLIC_LIBS@
+Libs.private: @HPX_PC_PRIVATE_LIBS@ -lsync
+Requires.private: @HPX_PC_PRIVATE_PKGS@

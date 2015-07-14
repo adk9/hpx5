@@ -22,9 +22,6 @@ isir_xport_t *isir_xport_new(const config_t *cfg, struct gas *gas) {
    case (HPX_TRANSPORT_PHOTON):
     dbg_error("Photon support for the ISIR network is not yet available.\n");
 
-   case (HPX_TRANSPORT_PORTALS):
-    dbg_error("Portals support for the ISIR network is not yet available.\n");
-
    case (HPX_TRANSPORT_MPI):
 #ifdef HAVE_MPI
     return isir_xport_new_mpi(cfg, gas);

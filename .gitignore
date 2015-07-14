@@ -79,8 +79,11 @@ contrib/libcuckoo/
 
 # /libhpx/
 /libhpx/Makefile
+/libhpx/libhpx.export
 /libhpx/boot/Makefile
 /libhpx/gas/Makefile
+/libhpx/gas/agas/Makefile
+/libhpx/gas/pgas/Makefile
 /libhpx/instrumentation/Makefile
 /libhpx/network/Makefile
 /libhpx/network/isir/Makefile
@@ -89,9 +92,12 @@ contrib/libcuckoo/
 /libhpx/scheduler/Makefile
 /libhpx/scheduler/arch/Makefile
 /libhpx/system/Makefile
+/libhpx/system/linux/Makefile
+/libhpx/system/darwin/Makefile
 /libhpx/transport/Makefile
 /libhpx/util/Makefile
 /libsync/Makefile
+/libsync/libsync.export
 /libsync/arch/Makefile
 
 # /tests/
@@ -104,12 +110,12 @@ tests/unit/thread_create
 tests/unit/call_when
 tests/unit/gas_alloc
 tests/unit/parcel_send_through
-tests/unit/lco_and_set_fail
 tests/unit/gas_global_alloc
 tests/unit/process
 tests/unit/lco_collectives
 tests/unit/lco_array
 tests/unit/lco_futures
+tests/unit/lco_get_remote
 tests/unit/parcel_create
 tests/unit/lco_user
 tests/unit/gas_memget
@@ -134,6 +140,7 @@ tests/perf/gas_alloc
 tests/perf/gas_addr_trans
 tests/perf/lco_sema
 tests/perf/lco_future
+tests/perf/thread_switch
 
 # /docs
 /docs/doxyfile.stamp
@@ -150,7 +157,6 @@ tutorial/Beginners/collectives/allgather
 tutorial/Beginners/collectives/allreduce
 tutorial/Beginners/collectives/alltoall
 tutorial/Beginners/gas/Makefile
-tutorial/Beginners/gas/allocZeroBytes
 tutorial/Beginners/gas/gasalloc
 tutorial/Beginners/gas/memTryPin
 tutorial/Beginners/gas/memcpy

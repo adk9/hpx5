@@ -41,7 +41,7 @@ typedef struct {
 /// @returns            LIBHPX_OK or an error code.
 int irecv_buffer_init(irecv_buffer_t *buffer, struct isir_xport *xport,
                       uint32_t size, uint32_t limit)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1, 2);
 
 /// Finalize an irecv buffer.
 ///
@@ -50,7 +50,7 @@ int irecv_buffer_init(irecv_buffer_t *buffer, struct isir_xport *xport,
 ///
 /// @param       buffer The buffer to finalize.
 void irecv_buffer_fini(irecv_buffer_t *buffer)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 /// Progress an irecv buffer.
 ///
@@ -63,6 +63,6 @@ void irecv_buffer_fini(irecv_buffer_t *buffer)
 /// @returns            This will return a parcel chain that consists of all of
 ///                     the parcels that were received in this epoch.
 hpx_parcel_t *irecv_buffer_progress(irecv_buffer_t *buffer)
-  HPX_INTERNAL HPX_NON_NULL(1);
+  HPX_NON_NULL(1);
 
 #endif // LIBHPX_NETWORK_ISIR_IRECV_BUFFER_H

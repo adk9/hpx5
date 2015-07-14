@@ -33,11 +33,11 @@ static int _doSomething_action(int *args, size_t size) {
   if (tid == 0) {
     printf("First thread processing done\n");
     ret1 = 100;
-    hpx_thread_continue(sizeof(ret1), &ret1);
+    HPX_THREAD_CONTINUE(ret1);
   } else {
     printf("Second thread processing done\n");
     ret2 = 200;
-    hpx_thread_continue(sizeof(ret2), &ret2);
+    HPX_THREAD_CONTINUE(ret2);
   }
 
   return HPX_SUCCESS;

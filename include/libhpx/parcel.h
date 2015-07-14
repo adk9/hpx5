@@ -16,9 +16,9 @@
 #include <hpx/hpx.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/instrumentation_events.h>
+#include <libhpx/scheduler.h> // for scheduler_nop
 
 struct ustack;
-
 
 typedef uint16_t parcel_state_t;
 
@@ -80,7 +80,7 @@ struct hpx_parcel {
 };
 
 // Verify an assumption about how big the parcel structure is.
-#if defined(HPX_BITNESS_32)
+#ifndef __LP64__
   #ifdef ENABLE_INSTRUMENTATION
       _HPX_ASSERT(sizeof(hpx_parcel_t) == 64, parcel_size);
   #else
@@ -97,14 +97,31 @@ struct hpx_parcel {
 /// Parcel tracing events.
 /// @{
 static inline void INST_EVENT_PARCEL_CREATE(hpx_parcel_t *p) {
+#ifdef ENABLE_INSTRUMENTATION
+  if (p->action == scheduler_nop) {
+    return;
+  }
   static const int class = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_CREATE;
-  inst_trace(class, id, p->id, p->action, p->size);
+
+  hpx_parcel_t *parent = scheduler_current_parcel();
+  uint64_t parent_id = 0;
+  if (parent != NULL)
+    parent_id = parent->id;
+
+  inst_trace(class, id, p->id, p->action, p->size, parent_id);
+#endif
 }
 
 static inline void INST_EVENT_PARCEL_SEND(hpx_parcel_t *p) {
   static const int class = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_SEND;
+  inst_trace(class, id, p->id, p->action, p->size, p->target);
+}
+
+static inline void INST_EVENT_PARCEL_RESEND(hpx_parcel_t *p) {
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_RESEND;
   inst_trace(class, id, p->id, p->action, p->size, p->target);
 }
 
@@ -115,59 +132,73 @@ static inline void INST_EVENT_PARCEL_RECV(hpx_parcel_t *p) {
 }
 
 static inline void INST_EVENT_PARCEL_RUN(hpx_parcel_t *p) {
+  if (NULL == p || p->action == scheduler_nop) {
+    return;
+  }
   static const int class = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_RUN;
   inst_trace(class, id, p->id, p->action, p->size);
 }
 
 static inline void INST_EVENT_PARCEL_END(hpx_parcel_t *p) {
+  if (p->action == scheduler_nop) {
+    return;
+  }
   static const int class = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_END;
+  inst_trace(class, id, p->id, p->action);
+}
+
+static inline void INST_EVENT_PARCEL_SUSPEND(hpx_parcel_t *p) {
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_SUSPEND;
+  inst_trace(class, id, p->id, p->action);
+}
+
+static inline void INST_EVENT_PARCEL_RESUME(hpx_parcel_t *p) {
+  if (p->action == scheduler_nop) {
+    return;
+  }
+  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_RESUME;
   inst_trace(class, id, p->id, p->action);
 }
 /// @}
 
 void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
                  hpx_action_t c_action, hpx_pid_t pid, const void *data,
-                 size_t len, hpx_parcel_t *p)
-  HPX_INTERNAL;
+                 size_t len, hpx_parcel_t *p);
 
 hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
                          hpx_action_t c_action, hpx_pid_t pid, const void *data,
                          size_t len)
-  HPX_INTERNAL;
+  HPX_MALLOC;
 
 hpx_parcel_t *parcel_clone(const hpx_parcel_t *p)
-  HPX_INTERNAL;
+  HPX_MALLOC;
 
-void parcel_delete(hpx_parcel_t *p)
-  HPX_INTERNAL;
+void parcel_delete(hpx_parcel_t *p);
 
 struct ustack *parcel_set_stack(hpx_parcel_t *p, struct ustack *stack)
-  HPX_NON_NULL(1) HPX_INTERNAL;
+  HPX_NON_NULL(1);
 
 struct ustack *parcel_get_stack(const hpx_parcel_t *p)
-  HPX_NON_NULL(1) HPX_INTERNAL;
+  HPX_NON_NULL(1);
 
 /// The core send operation.
 ///
 /// This sends the parcel synchronously. This will eagerly serialize the parcel,
 /// and will assign it credit from the currently executing process if it has a
 /// pid set.
-int parcel_launch(hpx_parcel_t *p)
-  HPX_INTERNAL;
+int parcel_launch(hpx_parcel_t *p);
 
-int parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate)
-  HPX_INTERNAL;
+int parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate);
 
-void parcel_set_state(hpx_parcel_t *p, parcel_state_t state)
-  HPX_INTERNAL;
+void parcel_set_state(hpx_parcel_t *p, parcel_state_t state);
 
-parcel_state_t parcel_get_state(const hpx_parcel_t *p)
-  HPX_INTERNAL;
+parcel_state_t parcel_get_state(const hpx_parcel_t *p);
 
-parcel_state_t parcel_exchange_state(hpx_parcel_t *p, parcel_state_t state)
-  HPX_INTERNAL;
+parcel_state_t parcel_exchange_state(hpx_parcel_t *p, parcel_state_t state);
 
 /// Treat a parcel as a stack of parcels, and pop the top.
 ///

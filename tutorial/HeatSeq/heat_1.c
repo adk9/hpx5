@@ -31,21 +31,21 @@ hpx_addr_t new_grid;
 typedef struct {
   hpx_addr_t grid;
   hpx_addr_t new_grid;
-}global_args_t;
+} global_args_t;
 
 typedef struct {
   int rank;
   hpx_addr_t runtimes;
   hpx_addr_t dTmax;
-}Domain;
+} Domain;
 
 typedef struct {
   int index;
   hpx_addr_t runtimes;
   hpx_addr_t dTmax;
-}InitArgs;
+} InitArgs;
 
-#define BLOCKSIZE sizeof(double)
+#define BLOCKSIZE (N+2)*(N+2)*sizeof(double)
 
 static hpx_action_t _main          = 0;
 static hpx_action_t _initGlobals   = 0;
@@ -86,7 +86,7 @@ static int _write_double_action(double *d, size_t size) {
 
   *addr = d[0];
   hpx_gas_unpin(target);
-  hpx_thread_continue(sizeof(double), &d[1]);
+  HPX_THREAD_CONTINUE(d[1]);
 }
 
 static int _read_double_action(void *unused, size_t size) {
@@ -317,8 +317,8 @@ static int _initGrid_action(void *args, size_t size) {
 
 static int _main_action(int *input, size_t size)
 {
-  grid = hpx_gas_calloc_cyclic(HPX_LOCALITIES, (N+2)*(N+2)*sizeof(double), 0);
-  new_grid = hpx_gas_calloc_cyclic(HPX_LOCALITIES, (N+2)*(N+2)*sizeof(double), 0);
+  grid = hpx_gas_calloc_cyclic(HPX_LOCALITIES, (N+2)*(N+2)*sizeof(double), (N+2)*(N+2)*sizeof(double));
+  new_grid = hpx_gas_calloc_cyclic(HPX_LOCALITIES, (N+2)*(N+2)*sizeof(double), (N+2)*(N+2)*sizeof(double));
 
   hpx_addr_t domain = hpx_gas_alloc_cyclic(HPX_LOCALITIES, sizeof(Domain), 0);
   hpx_addr_t done = hpx_lco_and_new(HPX_LOCALITIES);

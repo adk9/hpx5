@@ -39,8 +39,22 @@ static int _my_typed_handler(int i, float f, char c) {
   hpx_call_cc(HPX_HERE, _my_action, NULL, NULL);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, 0, _my_typed, _my_typed_handler, HPX_INT, HPX_FLOAT,
-                  HPX_CHAR);
+static HPX_ACTION(HPX_DEFAULT, 0, _my_typed, _my_typed_handler, HPX_INT,
+                  HPX_FLOAT, HPX_CHAR);
+
+
+static int _cont_fut_handler(hpx_addr_t future) {
+  printf("Continuing an LCO to a typed continuation action.\n");
+  hpx_thread_continue(&future);
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _cont_fut, _cont_fut_handler, HPX_ADDR);
+
+static int _typed_cont_handler(hpx_addr_t future) {
+  printf("Hi, I am a typed continuation action.\n");
+  hpx_lco_set(future, 0, NULL, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _typed_cont, _typed_cont_handler, HPX_ADDR);
 
 static int _main_handler(void) {
   int i = 42;
@@ -48,6 +62,10 @@ static int _main_handler(void) {
   char c = 'a';
 
   hpx_call_sync(HPX_HERE, _my_typed, NULL, 0, &i, &f, &c);
+  hpx_addr_t done = hpx_lco_future_new(0);
+  hpx_call_with_continuation(HPX_HERE, _cont_fut, HPX_HERE, _typed_cont, &done);
+  hpx_lco_wait(done);
+  hpx_lco_delete(done, HPX_NULL);
   hpx_shutdown(HPX_SUCCESS);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_handler);

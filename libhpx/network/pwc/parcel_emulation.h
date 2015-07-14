@@ -25,8 +25,7 @@ typedef struct parcel_emulator {
 } parcel_emulator_t;
 
 void *parcel_emulator_new_reload(const struct config *cfg, struct boot *boot,
-                                 struct pwc_xport *xport)
-  HPX_INTERNAL;
+                                 struct pwc_xport *xport);
 
 static inline void parcel_emulator_delete(void *obj) {
   parcel_emulator_t *emulator = obj;

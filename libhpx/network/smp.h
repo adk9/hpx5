@@ -13,8 +13,6 @@
 #ifndef LIBHPX_NETWORK_SMP_H
 #define LIBHPX_NETWORK_SMP_H
 
-#include <hpx/attributes.h>
-
 /// Forward declarations.
 /// @{
 struct boot;
@@ -22,9 +20,6 @@ struct config;
 struct network;
 /// @}
 
-
-struct network *network_smp_new(const struct config *cfg, struct boot *boot)
-  HPX_INTERNAL;
-
+struct network *network_smp_new(const struct config *cfg, struct boot *boot);
 
 #endif

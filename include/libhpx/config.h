@@ -17,6 +17,7 @@
 /// @brief Types and constants needed for configuring HPX at run-time.
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <hpx/attributes.h>
 
 #ifdef HAVE_PHOTON
@@ -25,6 +26,7 @@
 
 #define LIBHPX_OPT_BITSET_ALL UINT64_MAX
 #define LIBHPX_OPT_BITSET_NONE 0
+#define LIBHPX_SMALL_THRESHOLD HPX_PAGE_SIZE
 
 //! Configuration options for which global memory model to use.
 typedef enum {
@@ -47,7 +49,6 @@ static const char* const HPX_GAS_TO_STRING[] = {
 typedef enum {
   HPX_TRANSPORT_DEFAULT = 0, //!< Let HPX choose what transport to use.
   HPX_TRANSPORT_MPI,         //!< Use MPI for network transport.
-  HPX_TRANSPORT_PORTALS,     //!< Use Portals for network transport.
   HPX_TRANSPORT_PHOTON,      //!< Use Photon for network transport.
   HPX_TRANSPORT_MAX
 } hpx_transport_t;
@@ -55,7 +56,6 @@ typedef enum {
 static const char* const HPX_TRANSPORT_TO_STRING[] = {
   "DEFAULT",
   "MPI",
-  "PORTALS",
   "PHOTON",
   "INVALID_ID"
 };
@@ -110,9 +110,36 @@ static const char* const HPX_BOOT_TO_STRING[] = {
 #define HPX_LOG_CONFIG  512             //!< Log configuration.
 #define HPX_LOG_MEMORY  1024            //!< Log memory (coarse grained)
 
-#define HPX_TRACE_PARCELS 1
-#define HPX_TRACE_PWC     2
-#define HPX_TRACE_SCHED   3
+static const char *const HPX_LOG_LEVEL_TO_STRING[] = {
+  "default",
+  "boot",
+  "sched",
+  "gas",
+  "lco",
+  "net",
+  "trans",
+  "parcel",
+  "action",
+  "config",
+  "memory"
+};
+
+#define HPX_TRACE_PARCELS   (UINT64_C(1) << 0)
+#define HPX_TRACE_PWC       (UINT64_C(1) << 1)
+#define HPX_TRACE_SCHED     (UINT64_C(1) << 2)
+#define HPX_TRACE_LCO       (UINT64_C(1) << 3)
+#define HPX_TRACE_PROCESS   (UINT64_C(1) << 4)
+#define HPX_TRACE_MEMORY    (UINT64_C(1) << 5)
+
+static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
+  "parcels",
+  "pwc",
+  "sched",
+  "lco",
+  "process",
+  "memory",
+  "all"
+};
 
 /// The HPX configuration type.
 ///
@@ -125,10 +152,11 @@ typedef struct config {
 } config_t;
 
 config_t *config_new(int *argc, char ***argv)
-  HPX_INTERNAL HPX_MALLOC;
+  HPX_MALLOC;
 
-void config_delete(config_t *cfg)
-  HPX_INTERNAL;
+void config_delete(config_t *cfg);
+
+void config_print(config_t *cfg, FILE *file);
 
 /// Add declarations to query each of the set options.
 ///
@@ -136,7 +164,7 @@ void config_delete(config_t *cfg)
 /// @param        value The value to check for.
 #define LIBHPX_OPT_INTSET(group, id, UNUSED2, UNUSED3, UNUSED4)     \
   int config_##group##id##_isset(const config_t *cfg, int value)    \
-    HPX_INTERNAL HPX_NON_NULL(1);
+    HPX_NON_NULL(1);
 
 #define LIBHPX_OPT_BITSET(group, id, UNUSED2)                       \
   static inline uint64_t                                            \

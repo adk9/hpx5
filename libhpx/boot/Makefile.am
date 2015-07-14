@@ -2,8 +2,8 @@
 noinst_LTLIBRARIES	  = libboot.la
 
 # libboot files and flags
-libboot_la_CPPFLAGS = -I$(top_srcdir)/include
-libboot_la_CFLAGS   =
+libboot_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
+libboot_la_CFLAGS   = $(LIBHPX_CFLAGS)
 libboot_la_SOURCES  = boot.c smp.c 
 libboot_la_LIBADD   =
 

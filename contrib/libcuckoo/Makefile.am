@@ -1,5 +1,4 @@
-DIST_SUBDIRS = libcuckoo tests examples
-SUBDIRS = libcuckoo
+SUBDIRS = cityhash-1.1.1 src #tests examples
 CLEANFILES = core *.core *~
 DISTCLEANFILES = autom4te*.cache config.status config.log
 MAINTAINERCLEANFILES = aclocal.m4 install-sh mkinstalldirs \
