@@ -31,7 +31,8 @@ Pkg-config	0.26+   Returns information about installed libraries
 
 The number of HPX-5 configuration supports to use ‘pkg-config’ to look for 
 installed packages. In particular, if your compilation environment requires 
-explicit paths to MPI, you should compile --with-mpi=ompi, mcapich2, etc
+explicit paths to MPI, you should compile --enable-mpi 
+--with-mpi=ompi, mcapich2, etc
 
 See ‘./configure --help’ for further details.
 
@@ -43,23 +44,23 @@ present, MPI or Photon is required for networking by HPX-5.
 ### Configuring with MPI
 
 ```
-$ ./configure --prefix=/path/to/install --with-mpi=ompi
+$ ./configure --prefix=/path/to/install --enable-mpi
 ```
-
-On stampede use
-```
-$ module load intel/14.0.1.106
-$ LDFLAGS=-L/opt/ofed/lib64 CPPFLAGS=-I/opt/ofed/include ./configure --with-mpi
- CC=mpicc
-```
-
 ### Configuring with Photon
 
 The Photon transport is included in HPX-5 within the contrib directory. To 
 configure HPX-5 with Photon use option --enable-photon
 
 ```
-./configure --prefix=/path/to/install/ --with-mpi=ompi --enable-photon
+$ ./configure --prefix=/path/to/install/ --enable-mpi --enable-photon
+```
+
+On Stampede
+On stampede pass PHOTON_CARGS to ofed path:
+
+```
+$ ./configure --enable-mpi CC=mpicc --enable-photon 
+  PHOTON_CARGS="LDFLAGS=-L/opt/ofed/lib64 CPPFLAGS=-I/opt/ofed/include"
 ```
 
 ### CRAY
@@ -75,14 +76,15 @@ $ ./configure --prefix=/path/to/install/ CC=cc
 #### Configuring with MPI
 
 If you have MPICH installed, you need to specify: 
-‘$ ./configure --prefix=/path/to/install --with-mpi=mpich CC=cc’ will instruct
+‘$ ./configure --prefix=/path/to/install --enable-mpi --with-mpi=mpich 
+   CC=cc’ will instruct
  ‘configure’ to look for ‘mpich.pc’.
 
 #### Configuring with Photon
 
 ```
-$ ./configure --prefix=/path/to/install/ CC=cc --enable-photon --with-pmi 
---with-mpi HPX_PHOTON_CARGS="--with-ugni"
+$ ./configure --prefix=/path/to/install/ CC=cc --enable-photon 
+--enable-pmi --enable-mpi PHOTON_CARGS="--with-ugni"
 ```
 
 ## To complete the build and install use:
