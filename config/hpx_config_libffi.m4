@@ -33,7 +33,8 @@ AC_DEFUN([_HPX_CONTRIB_LIBFFI], [
  # for libffi and expose it as a public dependency of HPX, because libffi
  # symbols will appear directly in the application bindary and must be linked
  # directly to libffi, not transitively through libhpx.
- ACX_CONFIGURE_DIR([$contrib], [$contrib], [" "])
+ HPX_MERGE_STATIC_SHARED([LIBFFI_CARGS])
+ ACX_CONFIGURE_DIR([$contrib], [$contrib], ["$LIBFFI_CARGS"])
  _HAVE_LIBFFI
  LIBFFI_CFLAGS="-I\$(top_builddir)/$contrib/include"
  LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -I\$(top_builddir)/$contrib/include"
