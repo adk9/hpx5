@@ -338,8 +338,8 @@ Known Bugs & Limitations
 2. The AGAS implementation only works with the Isend/Irecv network,
 and is still considered experimental.
 
-3. Clang versions prior to 3.6 (.e., 3.5.1 and earlier) contain
-regressions that trigger runtime failures in HPX.
+3. Clang versions prior to 3.6 (3.5.1 and earlier) contain regressions
+that trigger runtime failures in HPX.
 
 4. Cray support is experimental (use aprun -n [nodes] -N 1 -d [ppn]
 ./app --hpx-threads=[ppn]). The -d option (or equivalent) is necessary
