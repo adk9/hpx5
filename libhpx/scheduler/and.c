@@ -43,8 +43,8 @@ _wait(_and_t *and) {
     return status;
   }
 
-  intptr_t value = sync_load(&and->value, SYNC_ACQUIRE);
-  if (value == 0) {
+  // if the lco has been triggered, then we can just return
+  if (lco_get_triggered(&and->lco)) {
     return status;
   }
 
@@ -59,8 +59,7 @@ static hpx_status_t _attach(_and_t *and, hpx_parcel_t *p) {
     return status;
   }
 
-  intptr_t value = sync_load(&and->value, SYNC_ACQUIRE);
-  if (value == 0) {
+  if (lco_get_triggered(&and->lco)) {
     return hpx_parcel_send(p, HPX_NULL);
   }
 
@@ -86,11 +85,13 @@ void _and_reset(lco_t *lco) {
   lco_lock(&and->lco);
   dbg_assert_str(cvar_empty(&and->barrier),
                  "Reset on AND LCO that has waiting threads.\n");
+  lco_reset_triggered(&and->lco);
   cvar_reset(&and->barrier);
   lco_unlock(&and->lco);
 }
 
-/// Fast set decrements the value, and signals when it gets to 0.
+/// Fast set decrements the value, and sets triggered and signals when it gets
+/// to 0.
 static void
 _and_set(lco_t *lco, int size, const void *from) {
   dbg_assert(lco);
@@ -101,17 +102,18 @@ _and_set(lco_t *lco, int size, const void *from) {
   }
 
   _and_t *and = (_and_t *)lco;
+
   intptr_t value = sync_addf(&and->value, -num, SYNC_ACQ_REL);
   log_lco("reduced count to %" PRIdPTR " lco %p\n", value, (void*)lco);
   dbg_assert_str(value >= 0, "too many threads joined (%"PRIdPTR").\n", value);
-  if (value != 0) {
-    return;
-  }
 
-  // signal waiting threads
-  lco_lock(lco);
-  scheduler_signal_all(&and->barrier);
-  lco_unlock(lco);
+  if (value == 0) {
+    lco_lock(lco);
+    dbg_assert(!lco_get_triggered(lco));
+    lco_set_triggered(lco);
+    scheduler_signal_all(&and->barrier);
+    lco_unlock(lco);
+  }
 }
 
 static size_t
@@ -191,6 +193,10 @@ _and_init_handler(_and_t *and, int64_t value) {
   sync_store(&and->value, value, SYNC_RELEASE);
   log_lco("initialized with %" PRId64 " inputs lco %p\n", (int64_t)and->value,
           (void*)and);
+
+  if (!value) {
+    lco_set_triggered(&and->lco);
+  }
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _and_init, _and_init_handler,
