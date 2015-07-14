@@ -2,8 +2,8 @@
 
 ## Bootstrapping
 
-HPX-5 provides a bootstrap script in its build. There is no need to bootstrap 
-with the release tarball. In the HPX-5 directory run the bootstrap script using
+HPX-5 provides a bootstrap script in its build. *There is no need to bootstrap 
+with the release tarball.* In the HPX-5 directory run the bootstrap script using
 
 ```
 $ ./bootstrap
@@ -31,8 +31,8 @@ Pkg-config	0.26+   Returns information about installed libraries
 
 The number of HPX-5 configuration supports to use ‘pkg-config’ to look for 
 installed packages. In particular, if your compilation environment requires 
-explicit paths to MPI, you should compile --enable-mpi 
---with-mpi=ompi, mcapich2, etc
+explicit paths to MPI, you should compile with --enable-mpi 
+--with-mpi=ompi, mvapich2, etc
 
 See ‘./configure --help’ for further details.
 
