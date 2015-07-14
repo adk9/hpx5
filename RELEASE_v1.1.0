@@ -282,7 +282,7 @@ system: The amount of data recorded when tracing has been reduced considerably.
 New events and event classes have been added, including a new class of events 
 for LCO events and new class of events for HPX–5 process events. Events were 
 added for threads being suspended and resumed. Some improvements were made to
-the data recorded for some existing events. Finally, tracing now causes a table 
+the data recorded for some existing events. Finally, tracing now generates a table 
 mapping action ids to action names, to make parcel events easier to use.
 
 API Changes: Improvements/Enhancements
@@ -296,9 +296,7 @@ supports the same convention: For example, it is possible to now use
 hpx_thread_continue(&arg1, &arg2, ..., &argN) to continue data to a default 
 action, and use hpx_thread_continue(&arg, sizeof(arg)) to continue data to a 
 marshalled action. This API change will silently break existing apps unless 
-the order of the arguments to hpx_thread_continue() are swapped. For more 
-information, see 
-http://www.crest.iu.edu/mailman/private.cgi/hpx-devel/2015/06/0192.php.
+the order of the arguments to hpx_thread_continue() are swapped.
 
 Users may programmatically query the libhpx configuration by including 
 libhpx/libhpx.h and using the libhpx_get_config() function and libhpx_config_t 
