@@ -73,29 +73,33 @@ int __verbs_alloc_ctx(verbs_cnct_ctx *ctx) {
     return PHOTON_ERROR;
   }
 
-  ctx->ib_rq = (struct ibv_cq **)malloc(ctx->num_cq * sizeof(struct ibv_cq *));
-  if (!ctx->ib_rq) {
-    log_err("Could not create recv CQ pointer array of size %d", ctx->num_cq);
-    return PHOTON_ERROR;
-  }
-  
+  if (ctx->use_rcq) {
+    ctx->ib_rq = (struct ibv_cq **)malloc(ctx->num_cq * sizeof(struct ibv_cq *));
+    if (!ctx->ib_rq) {
+      log_err("Could not create recv CQ pointer array of size %d", ctx->num_cq);
+      return PHOTON_ERROR;
+    }
+  }    
+
   for (i = 0; i < ctx->num_cq; i++) {
     ctx->ib_cq[i] = ibv_create_cq(ctx->ib_context, ctx->max_qp_wr, ctx, NULL,  0);
     if (!ctx->ib_cq[i]) {
       dbg_err("Could not create send completion queue %d of %d", i, ctx->num_cq);
       return PHOTON_ERROR;
     }
-    ctx->ib_rq[i] = ibv_create_cq(ctx->ib_context, ctx->max_qp_wr, ctx, NULL,  0);
-    if (!ctx->ib_rq[i]) {
-      dbg_err("Could not create recv completion queue %d of %d", i, ctx->num_cq);
-      return PHOTON_ERROR;
+    if (ctx->use_rcq) {
+      ctx->ib_rq[i] = ibv_create_cq(ctx->ib_context, ctx->max_qp_wr, ctx, NULL,  0);
+      if (!ctx->ib_rq[i]) {
+	dbg_err("Could not create recv completion queue %d of %d", i, ctx->num_cq);
+	return PHOTON_ERROR;
+      }
     }
   }
   
   dbg_trace("created %d CQs", ctx->num_cq);
   
   // create shared receive queues if requested
-  if (ctx->num_srq > 0) {
+  if (ctx->use_rcq && (ctx->num_srq > 0)) {
     struct ibv_srq_init_attr attr = {
       .attr = {
 	.max_wr  = ctx->max_srq_wr,
@@ -296,7 +300,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
       struct ibv_qp_init_attr attr = {
         .qp_context     = ctx,
         .send_cq        = ctx->ib_cq[cqind],
-        .recv_cq        = ctx->ib_rq[cqind],
+        .recv_cq        = (ctx->use_rcq) ? ctx->ib_rq[cqind] : ctx->ib_cq[cqind],
         .cap            = {
           .max_send_wr	   = ctx->tx_depth,
           .max_recv_wr     = ctx->rx_depth,
@@ -307,7 +311,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
         .qp_type        = IBV_QPT_RC
       };
 
-      if (ctx->num_srq > 0) {
+      if (ctx->use_rcq && (ctx->num_srq > 0)) {
 	srqind = PHOTON_GET_CQ_IND(ctx->num_srq, iproc);
 	dbg_trace("srqind for rank %d: %d", iproc, srqind);
 	attr.srq = ctx->ib_srq[srqind];
@@ -579,7 +583,7 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
   struct ibv_qp_init_attr attr = {
     .qp_context = ctx,
     .send_cq = ctx->ib_cq[cqind],
-    .recv_cq = ctx->ib_rq[cqind], // ignored with SRQ
+    .recv_cq = (ctx->use_rcq) ? ctx->ib_rq[cqind] : ctx->ib_cq[cqind],
     .cap     = {
       .max_send_wr  = ctx->tx_depth,
       .max_recv_wr  = ctx->rx_depth,
@@ -590,7 +594,7 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
     .qp_type = IBV_QPT_RC,
   };
 
-  if (ctx->num_srq > 0) {
+  if (ctx->use_rcq && (ctx->num_srq > 0)) {
     int srqind = PHOTON_GET_CQ_IND(ctx->num_srq, pindex);
     dbg_trace("srqind for rank %d: %d", iproc, srqind);
     attr.srq = ctx->ib_srq[srqind];

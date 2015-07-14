@@ -118,7 +118,6 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   dbg_trace("(nproc %d, rank %d)",_photon_nproc, _photon_myrank);
   one_debug("num ledgers:\t\t%d", _LEDGER_SIZE);
   one_debug("num CQs:\t\t%d", cfg->cap.num_cq);
-  one_debug("num SRQs:\t\t%d", cfg->cap.num_srq);
   one_debug("eager buf size:\t%d", _photon_ebsize);
   one_debug("small msg size:\t%d", _photon_smsize);
   one_debug("small pwc size:\t%d", _photon_upsize);

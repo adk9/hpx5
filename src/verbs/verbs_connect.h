@@ -44,6 +44,7 @@ typedef struct verbs_cnct_ctx_t {
   int                        max_srq_wr;
   int                        num_cq;
   int                        num_srq;
+  int                        use_rcq;
 
   verbs_cnct_info          **local_ci;
   verbs_cnct_info          **remote_ci;

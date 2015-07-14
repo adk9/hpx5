@@ -19,9 +19,7 @@
 #include "htable.h"
 #include "logging.h"
 
-#define PHOTON_VERBS_PUT_ALIGN 1
-#define PHOTON_VERBS_GET_ALIGN 1
-#define MAX_RETRIES            1
+#define MAX_RETRIES    1
 
 struct rdma_args_t {
   int proc;
@@ -94,6 +92,7 @@ static verbs_cnct_ctx verbs_ctx = {
   .max_sge = 16,
   .max_inline = -1,
   .num_cq = DEF_NUM_CQ,
+  .num_srq = VERBS_DEF_NUM_SRQ,
   .rdma_put_align = PHOTON_VERBS_PUT_ALIGN,
   .rdma_get_align = PHOTON_VERBS_GET_ALIGN
 };
@@ -157,8 +156,14 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
 
   verbs_ctx.tx_depth = _LEDGER_SIZE;
   verbs_ctx.rx_depth = _LEDGER_SIZE;
+  verbs_ctx.num_srq  = (cfg->ibv.num_srq < 0) ? VERBS_DEF_NUM_SRQ : cfg->ibv.num_srq;
   verbs_ctx.num_cq   = cfg->cap.num_cq;
-  verbs_ctx.num_srq  = cfg->cap.num_srq;
+  verbs_ctx.use_rcq  = cfg->cap.use_rcq;
+  
+  if (verbs_ctx.num_srq > _photon_nproc) {
+    verbs_ctx.num_srq = _photon_nproc;
+    one_warn("Requesting (num_srq > nproc), setting num_srq to nproc");
+  }
   
   if (cfg->ibv.use_cma && !cfg->ibv.eth_dev) {
     log_err("CMA specified but Ethernet dev missing");
@@ -245,12 +250,22 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
     }
   }
 
-  // prime the recv queue pump...
-  if (__verbs_post_srq_recv(&verbs_ctx, 0, -1) != PHOTON_OK) {
-    log_err("Could not initialize recv work requests");
-    goto error_exit;
+  // prime the recv queue pump if enabled
+  if (verbs_ctx.use_rcq) {
+    if (verbs_ctx.num_srq > 0) {
+      if (__verbs_post_srq_recv(&verbs_ctx, 0, PHOTON_ANY_SOURCE, -1) != PHOTON_OK) {
+	log_err("Could not initialize recv work requests");
+	goto error_exit;
+      }
+    }
+    else {
+      if (__verbs_post_rq_recv(&verbs_ctx, 0, PHOTON_ANY_SOURCE, -1) != PHOTON_OK) {
+	log_err("Could not initialize recv work requests");
+	goto error_exit;
+      }
+    }
   }
-  
+
   __initialized = 1;
 
   dbg_trace("ended successfully =============");
@@ -467,7 +482,7 @@ static int verbs_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t s
                           photonBuffer lbuf, photonBuffer rbuf, uint64_t id,
 			  uint64_t imm, int flags) {
   int ibv_flags = IBV_SEND_SIGNALED;
-  int op = (flags & RDMA_FLAG_WITH_IMM) && (verbs_ctx.num_srq > 0) ? 
+  int op = (flags & RDMA_FLAG_WITH_IMM) && (verbs_ctx.use_rcq) ?
     IBV_WR_RDMA_WRITE_WITH_IMM : IBV_WR_RDMA_WRITE;
   struct rdma_args_t args;
   struct ibv_sge list = {
@@ -514,8 +529,8 @@ static int verbs_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t s
 static int verbs_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
                            photonBuffer lbuf, uint64_t id, uint64_t imm, int flags) {
   void *rc;
-  int op = (flags & RDMA_FLAG_WITH_IMM) && (verbs_ctx.num_srq > 0) 
-    ? IBV_WR_SEND_WITH_IMM : IBV_WR_SEND;
+  int op = (flags & RDMA_FLAG_WITH_IMM) && (verbs_ctx.use_rcq) ? 
+    IBV_WR_SEND_WITH_IMM : IBV_WR_SEND;
   struct sr_args_t args;
   struct ibv_sge list = {
     .addr = laddr,
@@ -569,16 +584,6 @@ static int verbs_get_event(int proc, int max, photon_rid *ids, int *n) {
   
   *n = 0;
   comp = 0;
-
-  if (!ids) {
-    log_err("NULL return id pointer");
-    goto error_exit;
-  }
-
-  if (max > MAX_CQ_POLL) {
-    log_err("Exceeding max poll count: %d > %d", max, MAX_CQ_POLL);
-    goto error_exit;
-  }
 
   if (verbs_ctx.num_cq == 1) {
     start = 0;
@@ -639,31 +644,20 @@ static int verbs_get_revent(int proc, int max, photon_rid *ids, uint64_t *imms, 
   *n = 0;
   comp = 0;
 
-  if (!ids) {
-    log_err("NULL return id pointer");
-    goto error_exit;
+  if (!verbs_ctx.use_rcq) {
+    return PHOTON_EVENT_NOTIMPL;
   }
 
-  if (!imms) {
-    log_err("NULL return imms pointer");
-    goto error_exit;
-  }
-  
-  if (max > MAX_CQ_POLL) {
-    log_err("Exceeding max poll count: %d > %d", max, MAX_CQ_POLL);
-    goto error_exit;
-  }
-  
-  if (verbs_ctx.num_srq == 1) {
+  if (verbs_ctx.num_cq == 1) {
     start = 0;
     end = 1;
   }
   else if (proc == PHOTON_ANY_SOURCE) {
     start = 0;
-    end = verbs_ctx.num_srq;
+    end = verbs_ctx.num_cq;
   }
   else {
-    start = PHOTON_GET_CQ_IND(verbs_ctx.num_srq, proc);
+    start = PHOTON_GET_CQ_IND(verbs_ctx.num_cq, proc);
     end = start+1;
   }
   
@@ -685,8 +679,12 @@ static int verbs_get_revent(int proc, int max, photon_rid *ids, uint64_t *imms, 
       }
       ids[j+comp] = wc[j].wr_id;
       imms[j+comp] = wc[j].imm_data;
-      // re-arm the recv
-      if (__verbs_post_srq_recv(&verbs_ctx, wc[j].wr_id, 1));
+      // re-arm the recv, we encode the source in the immediate data
+      int src = (int)wc[j].imm_data;
+      if (verbs_ctx.num_srq)
+	__verbs_post_srq_recv(&verbs_ctx, wc[j].wr_id, src, 1);
+      else
+	__verbs_post_rq_recv(&verbs_ctx, wc[j].wr_id, src, 1);
     }
     comp += ne;
   }

@@ -26,7 +26,7 @@
 #define DEF_LEDGER_SIZE      (64)       // This should not exceed MCA max_qp_wr (typically 16K)
 #define DEF_SP_SIZE          (128)
 #define DEF_NUM_CQ           1
-#define DEF_NUM_SRQ          0
+#define DEF_USE_RCQ          0
 
 #define UD_MASK_SIZE         1<<6
 

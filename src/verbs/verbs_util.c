@@ -8,11 +8,20 @@
 #include "verbs_util.h"
 #include "verbs_buffer.h"
 
-int __verbs_post_srq_recv(verbs_cnct_ctx *ctx, uint64_t id, int num) {
-  int i, j;
+int __verbs_post_srq_recv(verbs_cnct_ctx *ctx, uint64_t id, int proc, int num) {
+  int i, j, start, end;
   int nposts = (num < 0) ? ctx->max_srq_wr : num;
 
-  for (i = 0; i < ctx->num_srq; i++) {
+  if (proc < 0) {
+    start = 0;
+    end = _photon_nproc;
+  }
+  else {
+    start = PHOTON_GET_CQ_IND(ctx->num_srq, proc);
+    end = start+1;
+  }
+
+  for (i = start; i < end; i++) {
     struct ibv_sge sg;
     struct ibv_recv_wr wr;
     struct ibv_recv_wr *bad_wr;
@@ -26,7 +35,42 @@ int __verbs_post_srq_recv(verbs_cnct_ctx *ctx, uint64_t id, int num) {
     for (j = 0; j < nposts; j++) {
       wr.wr_id = (num < 0) ? j : id;
       if (ibv_post_srq_recv(ctx->ib_srq[i], &wr, &bad_wr)) {
-	log_err("Could not post %d of %d SRQ recvs", j, nposts);
+	log_err("Could not post %d of %d SRQ RRs", j, nposts);
+	return PHOTON_ERROR;
+      }
+    }
+  }
+  return PHOTON_OK;
+}
+
+int __verbs_post_rq_recv(verbs_cnct_ctx *ctx, uint64_t id, int proc, int num) {
+  int i, j, start, end;
+  int nposts = (num < 0) ? ctx->rx_depth : num;
+
+  if (proc < 0) {
+    start = 0;
+    end = _photon_nproc;
+  }
+  else {
+    start = proc;
+    end = proc+1;
+  }
+
+  for (i = start; i < end; i++) {
+    struct ibv_sge sg;
+    struct ibv_recv_wr wr;
+    struct ibv_recv_wr *bad_wr;
+ 
+    memset(&sg, 0, sizeof(sg));
+    memset(&wr, 0, sizeof(wr));
+
+    wr.sg_list = &sg;
+    wr.num_sge = 0;
+    
+    for (j = 0; j < nposts; j++) {
+      wr.wr_id = (num < 0) ? j : id;
+      if (ibv_post_recv(ctx->qp[i], &wr, &bad_wr)) {
+	log_err("Could not post %d of %d QP RRs", j, nposts);
 	return PHOTON_ERROR;
       }
     }
