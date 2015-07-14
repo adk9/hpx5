@@ -8,6 +8,8 @@ AM_CONFIG_HEADER([include/config.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_USE_SYSTEM_EXTENSIONS
+AC_CANONICAL_HOST
+AC_CANONICAL_TARGET
 
 # Initialize automake and libtool
 AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror])
