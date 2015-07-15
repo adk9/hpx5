@@ -20,6 +20,7 @@
 /// network's primary responsibility is to accept send requests from the
 /// scheduler, and send them out via the configured transport.
 #include <hpx/hpx.h>
+#include <libhpx/action.h>
 
 /// Forward declarations.
 /// @{
