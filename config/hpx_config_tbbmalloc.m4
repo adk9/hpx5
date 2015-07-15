@@ -64,6 +64,11 @@ AC_DEFUN([_HPX_DO_CONFIG_TBBMALLOC], [
     AS_UNSET([ac_cv_lib_tbbmalloc_scalable_malloc])
     _HPX_LIB_TBBMALLOC($tbbinclude, "$tbbarch/gcc4.1")])
 
+ AS_IF([test "x$have_tbbmalloc" != xyes],
+   [AS_UNSET([ac_cv_header_tbb_scalable_allocator_h])
+    AS_UNSET([ac_cv_lib_tbbmalloc_scalable_malloc])
+    _HPX_LIB_TBBMALLOC($tbbinclude, "$tbbarch")])
+
  AS_IF([test "x$have_tbbmalloc" != xyes], [
    AC_MSG_ERROR([Could not find Intel's TBB malloc library. Try loading the
                   Intel module file and/or setting --with-tbbroot and
