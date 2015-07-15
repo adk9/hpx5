@@ -60,7 +60,6 @@ AC_DEFUN([_HPX_LIB_LIBFFI], [
 # path for ffi.h---presumably this is a possible result elsewhere.
 AC_DEFUN([_HPX_VERIFY_PKG_LIBFFI], [
  pkg=$1
- success=$2
  
  AC_MSG_NOTICE([Verifying the libffi package $pkg]) 
  old_CPPFLAGS="$CPPFLAGS"
