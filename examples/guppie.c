@@ -192,6 +192,7 @@ static int _mover_action(guppie_config_t *cfg, size_t n) {
     hpx_lco_delete(lco, HPX_NULL);
   }
   // gets killed at shutdown
+  return HPX_SUCCESS;
 }
 
 static int _update_table_action(guppie_config_t *cfg, size_t n) {
@@ -257,6 +258,7 @@ void _main_action(guppie_config_t *cfg, size_t size)
   // Initialize main table
   int e = hpx_bcast_rsync(_init_table, cfg, sizeof(*cfg));
   assert(e == HPX_SUCCESS);
+  (void)e;
 
   printf("Initialization complete.\n");
   fflush(stdout);
