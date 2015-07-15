@@ -28,6 +28,7 @@ AC_DEFUN([_HAVE_LIBFFI], [
 
 AC_DEFUN([_HPX_CONTRIB_LIBFFI], [
  contrib=$1
+
  
  # Configure the contributed libffi package. We install the pkg-config .pc file
  # for libffi and expose it as a public dependency of HPX, because libffi
@@ -106,6 +107,11 @@ AC_DEFUN([HPX_CONFIG_LIBFFI], [
                    [Control which libffi we use @<:@default=system@:>@])],
    [], [with_libffi=yes])
 
+ AC_ARG_WITH(libffi-contrib,
+   [AS_HELP_STRING([--with-libffi-contrib={dir}],
+                   [Control which contrib-ed libffi we build @<:@default=$1@:>@])],
+   [], [with_libffi_contrib=$contrib])
+   
  AS_IF([test "x$with_libffi" == xno],
    [AC_MSG_WARN([libffi is required, defaulting --with-libffi=yes])
     with_libffi=yes])
@@ -128,7 +134,8 @@ AC_DEFUN([HPX_CONFIG_LIBFFI], [
    # any other string is interpreted as a custom pkg-config package name to use
    [_HPX_PKG_LIBFFI($with_libffi)])
 
- AS_IF([test "x$build_libffi" == xyes], [_HPX_CONTRIB_LIBFFI($contrib)])
+ AS_IF([test "x$build_libffi" == xyes],
+   [_HPX_CONTRIB_LIBFFI($with_libffi_contrib)]) 
 
  AS_IF([test "x$have_libffi" != xyes],
    [AC_MSG_ERROR([Failed to find libffi for --with-libffi=$with_libffi])])
