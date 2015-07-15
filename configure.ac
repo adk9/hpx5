@@ -136,7 +136,7 @@ HPX_CONFIG_TBBMALLOC
 HPX_CONFIG_HUGETLBFS([hugetlbfs])
 HPX_CONFIG_UTHASH([contrib/uthash-fe01a6ad1b])
 HPX_CONFIG_VALGRIND([contrib/valgrind])
-HPX_CONFIG_LIBFFI([libffi], [libffi])
+HPX_CONFIG_LIBFFI([contrib/$libffi_contrib_dir], [libffi])
 HPX_CONFIG_AGAS
 HPX_CONFIG_LIBCUCKOO([contrib/libcuckoo], [$have_agas])
 HPX_CONFIG_DOCS

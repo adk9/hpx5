@@ -110,13 +110,6 @@ AC_DEFUN([HPX_CONFIG_LIBFFI], [
   AS_IF([test "x$with_libffi" == xno],
    [AC_MSG_WARN([libffi is required, defaulting --with-libffi=yes])
     with_libffi=yes])
-
- AC_ARG_WITH(libffi-contrib,
-   [AS_HELP_STRING([--with-libffi-contrib={dir}],
-                   [Path for the contrib-ed libffi we want to build @<:@default=$1@:>@])],
-   [], [with_libffi_contrib=$contrib])
-
- AC_SUBST([LIBFFI_CONTRIB_DIR], [$with_libffi_contrib])
    
  AS_CASE($with_libffi,
    [contrib], [build_libffi=yes],
@@ -136,8 +129,7 @@ AC_DEFUN([HPX_CONFIG_LIBFFI], [
    # any other string is interpreted as a custom pkg-config package name to use
    [_HPX_PKG_LIBFFI($with_libffi)])
 
- AS_IF([test "x$build_libffi" == xyes],
-   [_HPX_CONTRIB_LIBFFI(contrib/$with_libffi_contrib)]) 
+ AS_IF([test "x$build_libffi" == xyes], [_HPX_CONTRIB_LIBFFI($contrib)]) 
 
  AS_IF([test "x$have_libffi" != xyes],
    [AC_MSG_ERROR([Failed to find libffi for --with-libffi=$with_libffi])])

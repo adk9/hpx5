@@ -2,6 +2,22 @@
 # HPX_CONFIG_HOST
 #
 # Perform host-specific work here.
+#
+# Variables
+#   l1d_linesize
+#   pagesize
+#   libffi_contrib_dir
+#
+# Substitutes
+#   LIBFFI_CONTRIB_DIR
+#
+# Defines
+#   HPX_CACHELINE_SIZE
+#   HPX_PAGE_SIZE
+#
+# Appends
+#   LIBHPX_LIBS
+#   HPX_PC_PRIVATE_LIBS
 # ------------------------------------------------------------------------------
 AC_DEFUN([_HPX_DO_LINUX], [        
 # l1d_linesize=`cat /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size`
@@ -26,6 +42,11 @@ AC_DEFUN([HPX_CONFIG_HOST], [
    [darwin*], [_HPX_DO_DARWIN],
               [AC_MSG_ERROR([Unsupported Host OS $host_os])])
 
+ AS_CASE([$host_vendor],
+      [k1om], [libffi_contrib_dir=libffi-mic],
+              [libffi_contrib_dir=libffi])
+
+ AC_SUBST([LIBFFI_CONTRIB_DIR], [$libffi_contrib_dir])
  AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
  AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
 ])
