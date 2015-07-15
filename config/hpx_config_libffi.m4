@@ -70,6 +70,7 @@ AC_DEFUN([_HPX_VERIFY_PKG_LIBFFI], [
 
  # If we already ran a check for ffi.h we want to clear those results
  AS_UNSET([ac_cv_header_ffi_h])
+ AS_UNSET([ac_cv_lib_ffi_ffi_raw_size])
  AC_CHECK_HEADER([ffi.h], [AC_CHECK_LIB([ffi], [ffi_raw_size], [_HAVE_LIBFFI])])
  
  CPPFLAGS="$old_CPPFLAGS"

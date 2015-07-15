@@ -56,10 +56,12 @@ AC_DEFUN([_HPX_DO_CONFIG_TBBMALLOC], [
  tbbarch="$with_tbbroot/lib/$with_tbbarch"
  AS_IF([test "x$have_tbbmalloc" != xyes],
    [AS_UNSET([ac_cv_header_tbb_scalable_allocator_h])
+    AS_UNSET([ac_cv_lib_tbbmalloc_scalable_malloc])
     _HPX_LIB_TBBMALLOC($tbbinclude, "$tbbarch/gcc4.4")])
 
  AS_IF([test "x$have_tbbmalloc" != xyes],
    [AS_UNSET([ac_cv_header_tbb_scalable_allocator_h])
+    AS_UNSET([ac_cv_lib_tbbmalloc_scalable_malloc])
     _HPX_LIB_TBBMALLOC($tbbinclude, "$tbbarch/gcc4.1")])
 
  AS_IF([test "x$have_tbbmalloc" != xyes], [
