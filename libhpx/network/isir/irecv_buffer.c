@@ -23,7 +23,10 @@
 #include "parcel_utils.h"
 #include "xport.h"
 
-#define ACTIVE_RANGE_CHECK(irecvs, i, R)                \
+#ifdef NDEBUG
+# define ACTIVE_RANGE_CHECK(irecvs, i, R)
+#else
+# define ACTIVE_RANGE_CHECK(irecvs, i, R)               \
   do {                                                  \
     irecv_buffer_t *_irecvs = (irecvs);                 \
     int _i = (i);                                       \
@@ -31,6 +34,7 @@
                    "index %i out of range [0, %u)\n",   \
                    _i, _irecvs->n);                     \
   } while (0)
+#endif
 
 static void *_request_at(irecv_buffer_t *buffer, int i) {
   dbg_assert(i >= 0);
@@ -141,7 +145,7 @@ int _resize(irecv_buffer_t *buffer, uint32_t size, hpx_parcel_t **out) {
     return LIBHPX_OK;
   }
 #endif
-  
+
   buffer->requests = realloc(buffer->requests, size * buffer->xport->sizeof_request());
   buffer->statuses = realloc(buffer->statuses, size * buffer->xport->sizeof_status());
   buffer->out = realloc(buffer->out, size * sizeof(int));

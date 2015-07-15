@@ -202,6 +202,7 @@ _future_release(lco_t *lco, void *out) {
   _future_t *f = (_future_t *)lco;
   dbg_assert(lco && out && out == f->value);
   return 1;
+  (void)f;
 }
 
 // the future vtable

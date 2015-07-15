@@ -120,6 +120,7 @@ static hpx_addr_t _add_cyclic(hpx_addr_t gpa, int64_t n, uint32_t bsize,
   dbg_assert_str(diff == n, "Address %"PRIu64"+%"PRId64" computed as %"PRIu64"."
                  " Expected %"PRId64".\n", gpa, n, addr, diff);
   return addr;
+  (void)diff;
 }
 
 int64_t gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {

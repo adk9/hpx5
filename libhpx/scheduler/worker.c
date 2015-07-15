@@ -290,6 +290,7 @@ static hpx_parcel_t *_try_bind(hpx_parcel_t *p) {
                  (void*)stack,
                  (void*)p);
   return p;
+  (void)old;
 }
 
 /// Add a parcel to the top of the worker's work queue.

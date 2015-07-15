@@ -42,7 +42,7 @@ static HPX_ACTION_DECL(_proc_call);
 static HPX_ACTION_DECL(_proc_delete);
 static HPX_ACTION_DECL(_proc_return_credit);
 
-static bool _is_tracked(_process_t *p) {
+static bool HPX_USED _is_tracked(_process_t *p) {
   return (p->termination != HPX_NULL);
 }
 
@@ -180,7 +180,7 @@ int _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
   p->pid = 0;
   p->credit = 0;
 #ifdef ENABLE_INSTRUMENTATION
-    inst_trace(HPX_INST_CLASS_PROCESS, HPX_INST_EVENT_PROCESS_CALL, 
+    inst_trace(HPX_INST_CLASS_PROCESS, HPX_INST_EVENT_PROCESS_CALL,
                process, p->pid);
 #endif
   hpx_parcel_send_sync(p);

@@ -55,14 +55,17 @@ void dbg_error_internal(unsigned line, const char *filename, const char *func,
     }                                                   \
   } while (0)
 
-
 # define dbg_assert(e) dbg_assert_str(e, "\n")
 #else
 # define dbg_assert_str(e, ...) assert(e)
 # define dbg_assert(e) assert(e)
 #endif
 
-#define dbg_check(e, ...) dbg_assert_str((e) == HPX_SUCCESS, __VA_ARGS__)
+#ifdef NDEBUG
+# define dbg_check(e, ...) (void)e
+#else
+# define dbg_check(e, ...) dbg_assert_str((e) == HPX_SUCCESS, __VA_ARGS__)
+#endif
 
 void log_internal(unsigned line, const char *filename, const char *func,
                   const char *fmt, ...)

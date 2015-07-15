@@ -408,6 +408,7 @@ _register_action_va(hpx_action_type_t type, uint32_t attr,
     if (attr & HPX_PINNED) {
       hpx_type_t translated = va_arg(vargs, hpx_type_t);
       dbg_assert(translated == HPX_POINTER);
+      (void)translated;
     }
     hpx_type_t addr = va_arg(vargs, hpx_type_t);
     hpx_type_t size = va_arg(vargs, hpx_type_t);
@@ -416,6 +417,8 @@ _register_action_va(hpx_action_type_t type, uint32_t attr,
     dbg_assert(size == HPX_INT || size == HPX_UINT || size == HPX_SIZE_T);
     va_end(vargs);
     return _push_back(_get_actions(), id, key, f, type, attr, NULL);
+    (void)size;
+    (void)addr;
   }
 
   ffi_cif *cif = calloc(1, sizeof(*cif));

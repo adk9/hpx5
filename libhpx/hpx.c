@@ -302,7 +302,7 @@ void hpx_shutdown(int code) {
   for (int i = 0, e = here->ranks; i < e; ++i) {
     int e = network_command(here->network, HPX_THERE(i), locality_shutdown,
                             (uint64_t)code);
-    dbg_assert(e == LIBHPX_OK);
+    dbg_check(e);
   }
   hpx_thread_exit(HPX_SUCCESS);
 }

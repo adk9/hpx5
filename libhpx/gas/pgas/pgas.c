@@ -103,6 +103,7 @@ _pgas_there(void *gas, uint32_t i) {
     uint64_t offset = gpa_to_offset(there);
     dbg_assert_str(!heap_contains_offset(global_heap, offset),
                    "HPX_THERE() out of expected range\n");
+    (void)offset;
   }
   return there;
 }
@@ -206,6 +207,7 @@ _pgas_gas_free(void *gas, hpx_addr_t gpa, hpx_addr_t sync) {
   const void *lva = heap_offset_to_lva(global_heap, offset);
   dbg_assert_str(heap_contains_lva(global_heap, lva),
                  "attempt to free out of bounds offset %"PRIu64"", offset);
+  (void)lva;
 
   if (heap_offset_is_cyclic(global_heap, offset)) {
     heap_free_cyclic(global_heap, offset);
