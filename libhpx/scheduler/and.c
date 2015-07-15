@@ -167,8 +167,7 @@ _and_getref(lco_t *lco, int size, void **out, int *unpin) {
 // indicate that the caller should unpin the LCO.
 static int
 _and_release(lco_t *lco, void *out) {
-  _and_t *and = (_and_t *)lco;
-  dbg_assert(lco && out && out == &and->value);
+  dbg_assert(lco && out && out == &(_and_t *)lco->value);
   return 1;
 }
 

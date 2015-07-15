@@ -233,6 +233,8 @@ parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
     dbg_assert(send->i == recv->i);
     dbg_assert(send->block == recv->block);
     dbg_assert(!strncmp(send->key, recv->key, XPORT_KEY_SIZE));
+    (void)send;
+    (void)recv;
   }
 
   // Now reload contains:

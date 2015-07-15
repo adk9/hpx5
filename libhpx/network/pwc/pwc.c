@@ -61,6 +61,7 @@ _probe_local(pwc_network_t *pwc) {
     command_handler_t f = (command_handler_t)(handler);
     int e = f(rank, command);
     dbg_assert_str(HPX_SUCCESS == e, "failed to process local command\n");
+    (void)e;
   }
 }
 
@@ -75,6 +76,7 @@ _probe(pwc_network_t *pwc, int rank) {
     command_handler_t f = (command_handler_t)(handler);
     int e = f(rank, command);
     dbg_assert_str(HPX_SUCCESS == e, "failed to process command\n");
+    (void)e;
   }
   return NULL;
 }
@@ -351,6 +353,7 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
     dbg_assert(heap.n == segment->n);
     dbg_assert(heap.base == segment->base);
     dbg_assert(!strncmp(heap.key, segment->key, XPORT_KEY_SIZE));
+    (void)segment;
   }
 
   // Initialize the send buffers.

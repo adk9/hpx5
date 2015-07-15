@@ -92,6 +92,7 @@ _mpi_testsome(int n, void *requests, int *nout, int *out, void *stats) {
   int e = MPI_Testsome(n, requests, nout, out, stats);
   dbg_assert_str(e == MPI_SUCCESS, "MPI_Testsome error is fatal.\n");
   dbg_assert_str(*nout != MPI_UNDEFINED, "silent MPI_Testsome() error.\n");
+  (void)e;
 }
 
 static void

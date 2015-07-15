@@ -250,6 +250,7 @@ void lco_unlock(lco_t *lco) {
   int depth = stack->lco_depth--;
   dbg_assert_str(depth > 0, "mismatched lco acquire release (lco %p)\n",
                  (void*)lco);
+  (void)depth;
   sync_lockable_ptr_unlock(&lco->lock);
 }
 
