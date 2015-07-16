@@ -20,10 +20,9 @@
 #   HPX_PC_PRIVATE_LIBS
 # ------------------------------------------------------------------------------
 AC_DEFUN([_HPX_DO_LINUX], [        
-# l1d_linesize=`cat /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size`
  AS_CASE([$host_cpu],
    [x86_64], [HPX_CHECK_CMPXCHG16B
-              l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`],
+              l1d_linesize=`cat /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size`],
      [arm*], [l1d_linesize=32],
              [l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`])
  pagesize=`getconf PAGESIZE`
