@@ -231,7 +231,7 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
   // since we share a common rkey across ledgers
   // and to register, we need a protection domain, hence at least one
   // connect must be made first (CMA case)
-  if (photon_buffer_register(ss, &verbs_ctx) != 0) {
+  if (photon_buffer_register(ss, &verbs_ctx, BUFFER_FLAG_NOTIFY) != 0) {
     log_err("couldn't register local buffer for the ledger entries");
     goto error_exit;
   }
