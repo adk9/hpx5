@@ -66,7 +66,8 @@ static int _gather_action(const InitArgs *args, size_t n) {
     for (int i = 0; i < iterations + skip ; i++) {
       t_start = TIME();
 
-      hpx_lco_allgather_setid(ld->collVal, ld->index, sizeof(double), &size, HPX_NULL, HPX_NULL);
+      double dsize = size; // we need a double, not an int
+      hpx_lco_allgather_setid(ld->collVal, ld->index, sizeof(double), &dsize, HPX_NULL, HPX_NULL);
       hpx_lco_get(ld->collVal, sizeof(double), &maxVal);
 
       t_stop = TIME();
