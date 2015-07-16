@@ -22,6 +22,7 @@ AC_DEFUN([HPX_DO_AM_CONDITIONALS], [
  AM_CONDITIONAL([BUILD_LIBFFI], [test "x$build_libffi" == xyes])   
  AM_CONDITIONAL([BUILD_LIBCUCKOO], [test "x$build_libcuckoo" == xyes])
 
+ AM_CONDITIONAL([HAVE_CMPXCHG16B], [test "x$have_cmpxchg16b" == xyes])
  AM_CONDITIONAL([HAVE_PHOTON], [test "x$have_photon" == xyes])
  AM_CONDITIONAL([HAVE_MPI], [test "x$have_mpi" == xyes])
  AM_CONDITIONAL([HAVE_NETWORK], [test "x$have_network" == xyes])
