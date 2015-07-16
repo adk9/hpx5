@@ -247,14 +247,14 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
       dbg_err("could not create send message buffer");
       goto error_exit_ss;
     }
-    photon_buffer_register(sendbuf->db, __photon_backend->context);
+    photon_buffer_register(sendbuf->db, __photon_backend->context, BUFFER_FLAG_NIL);
     
     recvbuf = photon_msgbuffer_new(msgbuf_size, p_size, p_offset, p_hsize);
     if (!recvbuf) {
       dbg_err("could not create recv message buffer");
       goto error_exit_sb;
     }
-    photon_buffer_register(recvbuf->db, __photon_backend->context);
+    photon_buffer_register(recvbuf->db, __photon_backend->context, BUFFER_FLAG_NIL);
     
     // pre-post the receive buffers when UD service is requested
     for (i = 0; i < recvbuf->p_count; i++) {
@@ -359,8 +359,9 @@ static int _photon_register_buffer(void *buffer, uint64_t size) {
   }
 
   dbg_trace("created buffer: %p", db);
-
-  if (photon_buffer_register(db, __photon_backend->context) != 0) {
+  
+  if (photon_buffer_register(db, __photon_backend->context,
+			     BUFFER_FLAG_NIL) != 0) {
     log_err("Couldn't register buffer");
     goto error_exit_db;
   }

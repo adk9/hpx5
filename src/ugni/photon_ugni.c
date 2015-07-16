@@ -17,10 +17,7 @@
 #include "utility_functions.h"
 #include "libsync/locks.h"
 
-#define PHOTON_UGNI_PUT_ALIGN  1
-#define PHOTON_UGNI_GET_ALIGN  4
-#define MAX_RETRIES            1
-#define DEF_UGNI_BTE_THRESH    (1<<16)
+#define MAX_RETRIES    1
 
 struct rdma_args_t {
   int proc;
@@ -30,6 +27,7 @@ struct rdma_args_t {
   uint64_t size;
   gni_mem_handle_t lmdh;
   gni_mem_handle_t rmdh;
+  uint32_t imm_data;
 };
 
 typedef struct photon_gni_descriptor_t {
@@ -47,14 +45,15 @@ static int ugni_finalize(void);
 static int ugni_get_info(ProcessInfo *pi, int proc, void **info, int *size, photon_info_t type);
 static int ugni_set_info(ProcessInfo *pi, int proc, void *info, int size, photon_info_t type);
 static int ugni_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags);
+                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id, uint64_t imm, int flags);
 static int ugni_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
                          photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags);
 static int ugni_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
-                          photonBuffer lbuf, uint64_t id, int flags);
+                          photonBuffer lbuf, uint64_t id, uint64_t imm, int flags);
 static int ugni_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
                           photonBuffer lbuf, uint64_t id, int flags);
-static int ugni_get_event(int proc, int max, photon_rid *ids, int *n, int flags);
+static int ugni_get_event(int proc, int max, photon_rid *ids, int *n);
+static int ugni_get_revent(int proc, int max, photon_rid *ids, uint64_t *imms, int *n);
 
 static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags);
 static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags);
@@ -62,7 +61,7 @@ static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags);
 static ugni_cnct_ctx ugni_ctx;
 static photon_gni_descriptor *descriptors;
 
-/* we are now a Photon backend */
+// we are now a Photon backend
 struct photon_backend_t photon_ugni_backend = {
   .context = &ugni_ctx,
   .initialized = ugni_initialized,
@@ -72,7 +71,7 @@ struct photon_backend_t photon_ugni_backend = {
   .connect = NULL,
   .get_info = ugni_get_info,
   .set_info = ugni_set_info,
-  /* API */
+  // API
   .get_dev_addr = NULL,
   .register_addr = NULL,
   .unregister_addr = NULL,
@@ -98,12 +97,13 @@ struct photon_backend_t photon_ugni_backend = {
   .wait_any_ledger = NULL,
   .io_init = NULL,
   .io_finalize = NULL,
-  /* data movement */
+  // data movement
   .rdma_put = ugni_rdma_put,
   .rdma_get = ugni_rdma_get,
   .rdma_send = ugni_rdma_send,
   .rdma_recv = ugni_rdma_recv,
-  .get_event = ugni_get_event
+  .get_event = ugni_get_event,
+  .get_revent = ugni_get_revent
 };
 
 static int ugni_initialized() {
@@ -133,6 +133,7 @@ static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI s
   }
 
   ugni_ctx.num_cq = cfg->cap.num_cq;
+  ugni_ctx.use_rcq = cfg->cap.use_rcq;
   ugni_ctx.rdma_put_align = PHOTON_UGNI_PUT_ALIGN;
   ugni_ctx.rdma_get_align = PHOTON_UGNI_GET_ALIGN;
 
@@ -151,7 +152,7 @@ static int ugni_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI s
     goto error_exit;
   }
 
-  if (photon_buffer_register(ss, &ugni_ctx) != 0) {
+  if (photon_buffer_register(ss, &ugni_ctx, BUFFER_FLAG_NOTIFY) != 0) {
     log_err("couldn't register local buffer for the ledger entries");
     goto error_exit;
   }
@@ -179,7 +180,7 @@ error_exit:
 
 static int ugni_finalize() {
   int i;
-  /* should clean up allocated buffers */
+  // should clean up allocated buffers
   for (i=0; i<_photon_nproc; i++) {
     free(descriptors[i].entries);
   }
@@ -250,6 +251,18 @@ static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
 
   sync_tatas_acquire(&cq_lock);
   {
+
+    if (ugni_ctx.use_rcq && (flags & RDMA_FLAG_WITH_IMM)) {
+      err = GNI_EpSetEventData(ugni_ctx.ep_handles[args->proc],
+       			       (uint32_t)0x0,
+       			       (uint32_t)args->imm_data);
+      if (err != GNI_RC_SUCCESS) {
+       	log_err("Could not set immediate RCQ event data");
+       	goto error_exit;
+      }
+      fma_desc->cq_mode |= GNI_CQMODE_REMOTE_EVENT;
+    }
+
     do {
       err = GNI_PostRdma(ugni_ctx.ep_handles[args->proc], fma_desc);
       if (err == GNI_RC_SUCCESS) {
@@ -310,6 +323,17 @@ static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags) {
 
   sync_tatas_acquire(&cq_lock);
   {
+    if (ugni_ctx.use_rcq && (flags & RDMA_FLAG_WITH_IMM)) {
+      err = GNI_EpSetEventData(ugni_ctx.ep_handles[args->proc],
+       			       (uint32_t)0x0,
+			       (uint32_t)args->imm_data);
+      if (err != GNI_RC_SUCCESS) {
+       	log_err("Could not set immediate RCQ event data");
+	goto error_exit;
+      }
+      fma_desc->cq_mode |= GNI_CQMODE_REMOTE_EVENT;
+    }
+
     do {
       err = GNI_PostFma(ugni_ctx.ep_handles[args->proc], fma_desc);
       if (err == GNI_RC_SUCCESS) {
@@ -338,7 +362,8 @@ error_exit:
 }
 
 static int ugni_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags) {
+                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id,
+			 uint64_t imm, int flags) {
   struct rdma_args_t args;
   args.proc = proc;
   args.id = id;
@@ -349,6 +374,7 @@ static int ugni_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t si
   args.lmdh.qword2 = lbuf->priv.key1;
   args.rmdh.qword1 = rbuf->priv.key0;
   args.rmdh.qword2 = rbuf->priv.key1;
+  args.imm_data = (uint32_t)imm;
 
   if (size < __photon_config->ugni.bte_thresh)
     return __ugni_do_fma(&args, GNI_POST_FMA_PUT, flags);
@@ -368,7 +394,7 @@ static int ugni_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t si
   args.lmdh.qword2 = lbuf->priv.key1;
   args.rmdh.qword1 = rbuf->priv.key0;
   args.rmdh.qword2 = rbuf->priv.key1;
-
+  
   if (size < __photon_config->ugni.bte_thresh)
     return __ugni_do_fma(&args, GNI_POST_FMA_GET, flags);
   else
@@ -376,7 +402,7 @@ static int ugni_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t si
 }
 
 static int ugni_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
-                          photonBuffer lbuf, uint64_t id, int flags) {
+                          photonBuffer lbuf, uint64_t id, uint64_t imm, int flags) {
   return PHOTON_OK;
 }
 
@@ -385,7 +411,7 @@ static int ugni_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
   return PHOTON_OK;
 }
 
-static int ugni_get_event(int proc, int max, photon_rid *ids, int *n, int flags) {
+static int ugni_get_event(int proc, int max, photon_rid *ids, int *n) {
   gni_post_descriptor_t *event_post_desc_ptr;
   gni_cq_entry_t current_event;
   uint64_t cookie = NULL_REQUEST;
@@ -393,16 +419,6 @@ static int ugni_get_event(int proc, int max, photon_rid *ids, int *n, int flags)
 
   *n = 0;
   comp = 0;
-
-  if (!ids) {
-    log_err("NULL return id pointer");
-    goto error_exit;
-  }
-
-  if (max > MAX_CQ_POLL) {
-    log_err("Exceeding max poll count: %d > %d", max, MAX_CQ_POLL);
-    goto error_exit;
-  }
 
   if (ugni_ctx.num_cq == 1) {
     start = 0;
@@ -455,3 +471,51 @@ static int ugni_get_event(int proc, int max, photon_rid *ids, int *n, int flags)
   sync_tatas_release(&cq_lock);
   return PHOTON_EVENT_ERROR;
 }
+
+static int ugni_get_revent(int proc, int max, photon_rid *ids, uint64_t *imms, int *n) {
+  gni_cq_entry_t current_event;
+  uint64_t cookie = NULL_REQUEST;
+  uint64_t imm_data;
+  int rc, comp;
+
+  if (!ugni_ctx.use_rcq) {
+    return PHOTON_EVENT_NOTIMPL;
+  }
+  
+  *n = 0;
+  comp = 0;
+
+  sync_tatas_acquire(&cq_lock);
+  do {
+    rc = get_cq_event(ugni_ctx.remote_cq_handles[0], 1, 0, &current_event);
+    if (rc == 0) {
+      imm_data = GNI_CQ_GET_REM_INST_ID(current_event);
+      ids[comp] = cookie;
+      imms[comp] = imm_data;
+      comp++;
+    }
+    else if (rc == 3) {
+      // nothing available
+      break;
+    }
+    else {
+      // rc == 2 is an overrun
+      dbg_err("Error getting CQ event: %d", rc);
+      goto error_exit;
+    }
+  } while (comp < max);
+  sync_tatas_release(&cq_lock);  
+  
+  *n = comp;
+  
+  if (comp == 0) {
+    return PHOTON_EVENT_NONE;
+  }
+  
+  return PHOTON_EVENT_OK;
+  
+ error_exit:
+  sync_tatas_release(&cq_lock);
+  return PHOTON_EVENT_ERROR;
+}
+

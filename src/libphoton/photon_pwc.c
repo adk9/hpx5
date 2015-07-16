@@ -106,7 +106,7 @@ static int photon_pwc_gwc_put(photonRequest req) {
   ssize = sizeof(req->local_info.buf) + sizeof(req->remote_info.buf);
   // keep offsets aligned
   asize = ALIGN(EB_MSG_SIZE(ssize), PWC_ALIGN);
-  
+
   eb = photon_processes[req->proc].remote_pwc_buf;
   offset = photon_rdma_eager_buf_get_offset(req->proc, eb, asize,
 			ALIGN(EB_MSG_SIZE(_photon_spsize), PWC_ALIGN));
@@ -171,7 +171,7 @@ static int photon_pwc_gwc_put(photonRequest req) {
 
 static int photon_pwc_process_command(int proc, photon_rid cmd, uintptr_t id,
 				      uint16_t size, void *ptr) {
-  
+
   photon_rid pwc_cmd = cmd>>56<<56;
   switch (pwc_cmd) {
   case PWC_COMMAND_PWC_REQ:
@@ -714,7 +714,8 @@ static int photon_pwc_probe_ledger(int proc, int *flag, photon_rid *request, int
   photon_eb_hdr *hdr;
   photon_rid cookie = NULL_REQUEST;
   uint64_t imm;
-  int i, rc, start, end, rflags = 0, scan_packed = 1;
+  int i, rc, start, end;
+  int rflags = 0, scan_packed = 1, rcq = 0;;
 
   if (proc == PHOTON_ANY_SOURCE) {
     rc = __photon_get_revent(proc, &cookie, &imm);
@@ -724,6 +725,7 @@ static int photon_pwc_probe_ledger(int proc, int *flag, photon_rid *request, int
       end = start+1;
       assert(IS_VALID_PROC(start));
       scan_packed = 0;
+      rcq = 1;
     }
     // If we don't have remote completion support, must scan entire ledger
     else if (rc == PHOTON_EVENT_NOTIMPL) {
@@ -746,6 +748,7 @@ static int photon_pwc_probe_ledger(int proc, int *flag, photon_rid *request, int
   
   uint64_t offset, curr, new, left;
   for (i=start; i<end; i++) {
+  start_tests:
     // first we check the packed buffer space if necessary
     if (scan_packed || (rflags & REQUEST_FLAG_1PWC)) {
       eb = photon_processes[i].local_pwc_buf;
@@ -811,6 +814,11 @@ static int photon_pwc_probe_ledger(int proc, int *flag, photon_rid *request, int
       dbg_trace("Popped ledger event with id: 0x%016lx (%lu)", *request, *request);
       goto exit;
     }
+    
+    // if we rely on RCQ then we may have to wait for value to arrive
+    if (rcq) {
+      goto start_tests;
+    }
   }
 
   return PHOTON_EVENT_NONE;
@@ -847,15 +855,14 @@ int _photon_probe_completion(int proc, int *flag, int *remaining,
       goto error_exit;
     }
   }
-  
-  // fall back to working on any queued PWC/GWC requests, for any peer
+    
   if (rc == PHOTON_EVENT_NONE) {
     for (i=0; i<_photon_nproc; i++) {
       photon_pwc_process_queued_gwc(i, photon_processes[i].request_table);
       photon_pwc_process_queued_pwc(i, photon_processes[i].request_table);
     }
   }
-  
+
  exit:
   if (remaining) {
     *remaining = photon_count_request(proc);

@@ -25,7 +25,7 @@ struct photon_config_t cfg = {
     .max_rd         = -1,
     .default_rd     = -1,
     .num_cq         = -1,
-    .use_rcq        =  0
+    .use_rcq        =  1
   },
   .exch = {
     .allgather = NULL,

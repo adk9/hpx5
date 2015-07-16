@@ -596,7 +596,7 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
 
   if (ctx->use_rcq && (ctx->num_srq > 0)) {
     int srqind = PHOTON_GET_CQ_IND(ctx->num_srq, pindex);
-    dbg_trace("srqind for rank %d: %d", iproc, srqind);
+    dbg_trace("srqind for rank %d: %d", pindex, srqind);
     attr.srq = ctx->ib_srq[srqind];
   } 
   else {

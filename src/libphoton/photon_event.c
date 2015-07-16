@@ -107,7 +107,7 @@ int __photon_get_revent(int proc, photon_rid *id, uint64_t *imm) {
   }
   
   if (rc == PHOTON_EVENT_OK) {
-    dbg_trace("got revent: 0x%016lx (imm=0x016lx)", *id, *imm);
+    dbg_trace("got revent: 0x%016lx (imm=0x%016lx)", *id, *imm);
   }
   
   return rc;
