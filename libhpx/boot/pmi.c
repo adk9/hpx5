@@ -219,6 +219,8 @@ error:
 
 static int _allgather(const boot_t *boot, const void *restrict cin,
                       void *restrict out, int n) {
+  int rank = here->rank;
+  int nranks = here->ranks;
   void *in = (void*)cin;
 
 #if HAVE_PMI_CRAY_EXT
@@ -226,26 +228,26 @@ static int _allgather(const boot_t *boot, const void *restrict cin,
   // order. Here, we assume that the ordering is, at least,
   // deterministic for all allgather invocations.
 
-  int *nranks = malloc(sizeof(*nranks) * here->ranks);
-  if ((PMI_Allgather(&here->rank, nranks, sizeof(here->ranks))) != PMI_SUCCESS) {
-    free(nranks);
+  int *ranks = malloc(sizeof(rank) * nranks);
+  if ((PMI_Allgather(&rank, ranks, sizeof(rank))) != PMI_SUCCESS) {
+    free(ranks);
     return log_error("pmi: failed in PMI_Allgather.\n");
   }
-
-  void *buf = malloc(sizeof(char) * n * here->ranks);
+  
+  void *buf = malloc(sizeof(char) * n * nranks);
   assert(buf != NULL);
   if ((PMI_Allgather(in, buf, n)) != PMI_SUCCESS) {
     free(buf);
-    free(nranks);
+    free(ranks);
     return log_error("pmi: failed in PMI_Allgather.\n");
   }
 
-  for (int i = 0; i < here->ranks; i++) {
-    memcpy((char*)out+(nranks[i]*n), (char*)buf+(i*n), n);
+  for (int i = 0; i < nranks; i++) {
+    memcpy((char*)out+(ranks[i]*n), (char*)buf+(i*n), n);
   }
 
   free(buf);
-  free(nranks);
+  free(ranks);
 #else
   int length;
 
@@ -261,9 +263,9 @@ static int _allgather(const boot_t *boot, const void *restrict cin,
     return log_error("pmi: failed to get kvs name.\n");
   }
 
-  _put_buffer(name, here->rank, (void*)in, n);
+  _put_buffer(name, nranks, (void*)in, n);
 
-  for (int r = 0; r < here->ranks; r++)
+  for (int r = 0; r < nranks; r++)
     _get_buffer(name, r, (char*)out+(r*n), n);
 
 #endif
@@ -293,7 +295,7 @@ static int _pmi_alltoall(const void *boot, void *restrict dest,
   // Copy out the data
   const char *from = gather;
   char *to = dest;
-  for (int i = 0, e = pmi->n_ranks(pmi); i < e; ++i) {
+  for (int i = 0, e = nranks; i < e; ++i) {
     int offset = (i * nranks * stride) + (rank * stride);
     memcpy(to + (i * stride), from + offset, n);
   }
