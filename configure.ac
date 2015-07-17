@@ -249,7 +249,7 @@ AC_DEFUN([PHOTON_CHECK_CMPXCHG16B], [
 AS_CASE([$host_os],
      [linux*], [AS_CASE([$host_cpu],
          [x86_64], [PHOTON_CHECK_CMPXCHG16B
-              l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`],
+              l1d_linesize=`cat /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size`],
          [arm*], [AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
              l1d_linesize=32
              pagesize=`getconf PAGESIZE`],
