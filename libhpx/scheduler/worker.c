@@ -115,6 +115,9 @@ static void *_run(void *worker) {
   // leave the global address space
   as_leave();
 
+  // unbind self
+  self = NULL;
+
   return NULL;
 }
 

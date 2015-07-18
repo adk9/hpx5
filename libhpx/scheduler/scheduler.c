@@ -85,6 +85,9 @@ void scheduler_delete(struct scheduler *sched) {
     return;
   }
 
+  // unbind this thread's worker
+  self = NULL;
+
   system_barrier_destroy(&sched->barrier);
 
   if (sched->workers) {
