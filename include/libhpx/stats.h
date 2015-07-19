@@ -37,33 +37,19 @@ struct scheduler;
 /// separately. Global (per-scheduler) statistics are accumulated
 /// after each worker shuts down.
 typedef struct scheduler_stats {
-  unsigned long      spins;
   unsigned long     spawns;
   unsigned long     steals;
   unsigned long       mail;
-  unsigned long    started;
-  unsigned long   finished;
-  unsigned long   progress;
-  unsigned long   backoffs;
-  unsigned long max_stacks;
   unsigned long     stacks;
   unsigned long     yields;
-  double           backoff;
 } scheduler_stats_t;
 
 #define SCHEDULER_STATS_INIT {   \
-    .spins      = 0,             \
     .spawns     = 0,             \
     .steals     = 0,             \
     .mail       = 0,             \
-    .started    = 0,             \
-    .finished   = 0,             \
-    .progress   = 0,             \
-    .backoffs   = 0,             \
-    .max_stacks = 0,             \
     .stacks     = 0,             \
     .yields     = 0,             \
-    .backoff  = 0.0              \
   }
 
 /// Initialize a scheduler statistics structure.
