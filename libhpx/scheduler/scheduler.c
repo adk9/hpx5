@@ -162,15 +162,6 @@ void scheduler_abort(struct scheduler *sched) {
   }
 }
 
-scheduler_stats_t *scheduler_get_stats(struct scheduler *sched) {
-  if (sched) {
-    return &sched->stats;
-  }
-  else {
-    return NULL;
-  }
-}
-
 int scheduler_nop_handler(void) {
   return HPX_SUCCESS;
 }

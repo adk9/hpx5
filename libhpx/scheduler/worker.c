@@ -1017,12 +1017,6 @@ hpx_thread_exit(int status) {
   hpx_abort();
 }
 
-scheduler_stats_t *
-thread_get_stats(void) {
-  worker_t *w = self;
-  return (w) ? &w->stats : NULL;
-}
-
 hpx_parcel_t *
 scheduler_current_parcel(void) {
   worker_t *w = self;
