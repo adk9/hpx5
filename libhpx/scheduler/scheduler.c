@@ -14,7 +14,6 @@
 # include "config.h"
 #endif
 
-/// @file libhpx/scheduler/schedule.c
 #include <assert.h>
 #include <errno.h>
 #include <limits.h>
@@ -69,7 +68,6 @@ struct scheduler *scheduler_new(const config_t *cfg) {
   sync_store(&s->next_tls_id, 0, SYNC_RELEASE);
   s->n_workers    = workers;
   s->wf_threshold = cfg->wfthreshold;
-  scheduler_stats_init(&s->stats);
 
   thread_set_stack_size(cfg->stacksize);
   log_sched("initialized a new scheduler.\n");
@@ -99,30 +97,14 @@ void scheduler_delete(struct scheduler *sched) {
   }
 
   sync_two_lock_queue_fini(&sched->yielded);
-
   free(sched);
 }
-
-
-void scheduler_dump_stats(struct scheduler *sched) {
-  char id[16] = {0};
-  for (int i = 0, e = sched->n_workers; i < e; ++i) {
-    worker_t *w = scheduler_get_worker(sched, i);
-    snprintf(id, 16, "%d", w->id);
-    scheduler_stats_print(id, &w->stats);
-    scheduler_stats_accum(&sched->stats, &w->stats);
-  }
-
-  scheduler_stats_print("<totals>", &sched->stats);
-}
-
 
 worker_t *scheduler_get_worker(struct scheduler *sched, int id) {
   assert(id >= 0);
   assert(id < sched->n_workers);
   return &sched->workers[id];
 }
-
 
 int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
   worker_t *worker = NULL;
@@ -163,17 +145,14 @@ int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
   return status;
 }
 
-
 void scheduler_shutdown(struct scheduler *sched, int code) {
   sync_store(&sched->shutdown, code, SYNC_RELEASE);
 }
-
 
 int scheduler_is_shutdown(struct scheduler *sched) {
   int shutdown = sync_load(&sched->shutdown, SYNC_ACQUIRE);
   return (shutdown != INT_MAX);
 }
-
 
 void scheduler_abort(struct scheduler *sched) {
   worker_t *worker = NULL;
