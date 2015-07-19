@@ -24,7 +24,7 @@
 #include "libhpx/locality.h"
 #include "libhpx/stats.h"
 
-void scheduler_stats_init(struct scheduler_stats *stats) {
+void libhpx_stats_init(struct libhpx_stats *stats) {
   stats->spawns     = 0;
   stats->steals     = 0;
   stats->mail       = 0;
@@ -32,8 +32,8 @@ void scheduler_stats_init(struct scheduler_stats *stats) {
   stats->yields     = 0;
 }
 
-struct scheduler_stats *scheduler_stats_accum(struct scheduler_stats *lhs,
-                                              const struct scheduler_stats *rhs)
+struct libhpx_stats *libhpx_stats_accum(struct libhpx_stats *lhs,
+                                        const struct libhpx_stats *rhs)
 {
   lhs->spawns   += rhs->spawns;
   lhs->steals   += rhs->steals;
@@ -45,14 +45,14 @@ struct scheduler_stats *scheduler_stats_accum(struct scheduler_stats *lhs,
 }
 
 
-void scheduler_stats_print(const char *id, const struct scheduler_stats *counts)
+void _print_stats(const char *id, const struct libhpx_stats *counts)
 {
 #ifdef ENABLE_PROFILING
   if (!here || !counts)
     return;
 
   printf("node %d, ", here->rank);
-  printf("thread %s, ", id);
+  printf("worker %s, ", id);
   printf("yields: %lu, ", counts->yields);
   printf("spawns: %lu, ", counts->spawns);
   printf("steals: %lu, ", counts->steals);
@@ -63,3 +63,19 @@ void scheduler_stats_print(const char *id, const struct scheduler_stats *counts)
 #endif
 }
 
+void libhpx_stats_print(void) {
+  if (!here->config->statistics) {
+    return;
+  }
+
+  libhpx_stats_t global_stats = LIBHPX_STATS_INIT;
+  char id[16] = {0};
+  for (int i = 0, e = here->sched->n_workers; i < e; ++i) {
+    struct worker *w = scheduler_get_worker(here->sched, i);
+    snprintf(id, 16, "%d", w->id);
+    _print_stats(id, &w->stats);
+    libhpx_stats_accum(&global_stats, &w->stats);
+  }
+
+  _print_stats("<totals>", &global_stats);
+}
