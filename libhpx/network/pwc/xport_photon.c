@@ -54,6 +54,7 @@ _init_photon_config(const config_t *cfg, boot_t *boot,
   pcfg->ibv.eth_dev             = cfg->photon_ethdev;
   pcfg->ibv.ib_dev              = cfg->photon_ibdev;
   pcfg->ugni.eth_dev            = cfg->photon_ethdev;
+  pcfg->ugni.bte_thresh         = cfg->photon_btethresh;
   pcfg->cap.eager_buf_size      = cfg->photon_eagerbufsize;
   pcfg->cap.small_pwc_size      = cfg->photon_smallpwcsize;
   pcfg->cap.ledger_entries      = cfg->photon_ledgersize;
