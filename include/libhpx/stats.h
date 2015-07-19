@@ -66,10 +66,4 @@ struct libhpx_stats *libhpx_stats_accum(struct libhpx_stats *lhs,
 /// Print libhpx statistics.
 void libhpx_stats_print(void);
 
-/// Get scheduler statistics.
-struct scheduler_stats *scheduler_get_stats(struct scheduler *sched);
-
-/// Get schedulers statistics for the current thread.
-struct scheduler_stats *thread_get_stats(void);
-
 #endif // LIBHPX_STATS_H
