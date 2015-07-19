@@ -142,20 +142,24 @@ typestr="type"
 values="default","verbs","ugni"
 enum optional
 
-option "hpx-photon-ibdev" - "set a particular IB device (also a filter for device and port discovery, e.g. qib0:1+mlx4_0:2)"
+option "hpx-photon-ibdev" - "[verbs] set a particular IB device (also a filter for device and port discovery, e.g. qib0:1+mlx4_0:2)"
 typestr="device"
 string optional
 
-option "hpx-photon-ethdev" - "set a particular ETH device (for CMA mode only)"
+option "hpx-photon-ethdev" - "[verbs] set a particular ETH device (for CMA mode only)"
 typestr="device"
 string optional
 
-option "hpx-photon-ibport" - "set a particular IB port"
+option "hpx-photon-ibport" - "[verbs] set a particular IB port"
 typestr="integer"
 int optional
 
-option "hpx-photon-usecma" - "enable CMA connection mode"
+option "hpx-photon-usecma" - "[verbs] enable CMA connection mode"
 flag off
+
+option "hpx-photon-btethresh" - "[ugni] set size in bytes for when BTE is used over FMA"
+typestr="integer"
+int optional
 
 option "hpx-photon-ledgersize" - "set number of ledger entries"
 typestr="integer"
