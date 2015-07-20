@@ -247,7 +247,7 @@ int main(int argc, char **argv) {
 
   //pthread_setaffinity_np(th2, sizeof(cpu_set_t), &def_set);
 #endif
-  
+
   // now we can proceed with our benchmark
   if (rank == 0)
     printf("%-7s%-9s%-7s%-11s%-12s\n", "Ranks", "Senders", "Bytes", "Sync PUT", "Sync GET");
@@ -301,7 +301,7 @@ int main(int argc, char **argv) {
         printf("%1.4f     ", latency);
         fflush(stdout);
       }
-      
+
       if (rank <= ns) {
         if (i && !(sizes[i] == 0)) {
           clock_gettime(CLOCK_MONOTONIC, &time_s);
@@ -318,7 +318,7 @@ int main(int argc, char **argv) {
           }
         }
       }
-      
+
       // clear remaining local completions
       do {
 	if (sem_getvalue(&sem, &val)) continue;

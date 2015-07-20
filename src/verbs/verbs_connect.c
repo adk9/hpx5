@@ -57,10 +57,85 @@ struct rdma_cma_thread_args {
   int num_listeners;
 };
 
+int __verbs_alloc_ctx(verbs_cnct_ctx *ctx) {
+  int i;
+
+  ctx->ib_pd = ibv_alloc_pd(ctx->ib_context);
+  if (!ctx->ib_pd) {
+    dbg_err("Could not create protection domain");
+    return PHOTON_ERROR;
+  }
+
+  // create completion queues
+  ctx->ib_cq = (struct ibv_cq **)malloc(ctx->num_cq * sizeof(struct ibv_cq *));
+  if (!ctx->ib_cq) {
+    log_err("Could not create send CQ pointer array of size %d", ctx->num_cq);
+    return PHOTON_ERROR;
+  }
+
+  if (ctx->use_rcq) {
+    ctx->ib_rq = (struct ibv_cq **)malloc(ctx->num_cq * sizeof(struct ibv_cq *));
+    if (!ctx->ib_rq) {
+      log_err("Could not create recv CQ pointer array of size %d", ctx->num_cq);
+      return PHOTON_ERROR;
+    }
+  }    
+
+  for (i = 0; i < ctx->num_cq; i++) {
+    ctx->ib_cq[i] = ibv_create_cq(ctx->ib_context, ctx->max_qp_wr, ctx, NULL,  0);
+    if (!ctx->ib_cq[i]) {
+      dbg_err("Could not create send completion queue %d of %d", i, ctx->num_cq);
+      return PHOTON_ERROR;
+    }
+    if (ctx->use_rcq) {
+      ctx->ib_rq[i] = ibv_create_cq(ctx->ib_context, ctx->max_qp_wr, ctx, NULL,  0);
+      if (!ctx->ib_rq[i]) {
+	dbg_err("Could not create recv completion queue %d of %d", i, ctx->num_cq);
+	return PHOTON_ERROR;
+      }
+    }
+  }
+  
+  dbg_trace("created %d CQs", ctx->num_cq);
+  
+  // create shared receive queues if requested
+  if (ctx->use_rcq && (ctx->num_srq > 0)) {
+    struct ibv_srq_init_attr attr = {
+      .attr = {
+	.max_wr  = ctx->max_srq_wr,
+	.max_sge = 1
+      }
+    };
+    
+    ctx->ib_srq = (struct ibv_srq **)malloc(ctx->num_srq * sizeof(struct ibv_srq *));
+    if (!ctx->ib_srq) {
+      log_err("Could not create SRQ pointer array of size %d", ctx->num_srq);
+      return PHOTON_ERROR;
+    }
+    
+    for (i = 0; i < ctx->num_srq; i++) {
+      ctx->ib_srq[i] = ibv_create_srq(ctx->ib_pd, &attr);
+      if (!ctx->ib_srq[i]) {
+	dbg_err("Could not create SRQ");
+	return PHOTON_ERROR;
+      }
+    }
+  }
+  
+  dbg_trace("created %d SRQs", ctx->num_srq);
+
+  if (__verbs_find_max_inline(ctx, &ctx->max_inline)) {
+    log_err("Could not determine max inline data size");
+    return PHOTON_ERROR;
+  }
+  
+  return PHOTON_OK;
+}
+
 int __verbs_init_context(verbs_cnct_ctx *ctx) {
   struct ibv_device **dev_list;
   struct ibv_context **ctx_list;
-  int i, iproc, num_devs, cqind;
+  int i, iproc, num_devs, cqind, srqind;
   int rc, found = 0;
   
   // initialize the QP array
@@ -178,6 +253,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
 	  ctx->ib_lid = attr.lid;
 	  ctx->ib_mtu = 1 << (attr.active_mtu + 7);
 	  ctx->ib_mtu_attr = attr.active_mtu;
+	  ctx->max_qp_wr = dattr.max_qp_wr;
 	  ctx->max_srq_wr = dattr.max_srq_wr;
 	  ctx->tx_depth = dattr.max_qp_wr - DEF_SUB_WR;
 	  ctx->rx_depth = dattr.max_qp_wr - DEF_SUB_WR;
@@ -204,47 +280,8 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
       return PHOTON_ERROR;
     }
     
-    ctx->ib_pd = ibv_alloc_pd(ctx->ib_context);
-    if (!ctx->ib_pd) {
-      dbg_err("Could not create protection domain");
-      return PHOTON_ERROR;
-    }
-
-    // create completion queues
-    ctx->ib_cq = (struct ibv_cq **)malloc(ctx->num_cq * sizeof(struct ibv_cq *));
-    if (!ctx->ib_cq) {
-      log_err("Could not create CQ pointer array of size %d", ctx->num_cq);
-      return PHOTON_ERROR;
-    }
-    
-    for (i = 0; i < ctx->num_cq; i++) {
-      ctx->ib_cq[i] = ibv_create_cq(ctx->ib_context, MAX_CQ_ENTRIES, ctx, NULL,  0);
-      if (!ctx->ib_cq[i]) {
-	dbg_err("Could not create completion queue %d of %d", i, ctx->num_cq);
-	return PHOTON_ERROR;
-      }
-    }
-
-    dbg_trace("created %d CQs", ctx->num_cq);
-    
-    {
-      // create shared receive queue
-      struct ibv_srq_init_attr attr = {
-        .attr = {
-          .max_wr  = ctx->max_srq_wr,
-          .max_sge = 1
-        }
-      };
-
-      ctx->ib_srq = ibv_create_srq(ctx->ib_pd, &attr);
-      if (!ctx->ib_srq) {
-        dbg_err("Could not create SRQ");
-        return PHOTON_ERROR;
-      }
-    }
-
-    if (__verbs_find_max_inline(ctx, &ctx->max_inline)) {
-      log_err("Could not determine max inline data size");
+    if (__verbs_alloc_ctx(ctx) != PHOTON_OK) {
+      dbg_err("Could not allocate verbs context");
       return PHOTON_ERROR;
     }
 
@@ -252,30 +289,37 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
     // RDMA CMA does this transition for us when we connect
     for (iproc = 0; iproc < (_photon_nproc + _photon_nforw); ++iproc) {
       
-      // only one QP supported
+      // only one QP per endpoint supported
       ctx->qp[iproc] = (struct ibv_qp*)malloc(sizeof(struct ibv_qp));
       if (!ctx->qp[iproc]) {
         log_err("Could not allocated space for new QP");
         return PHOTON_ERROR;
       }
-
+      
       cqind = PHOTON_GET_CQ_IND(ctx->num_cq, iproc);
-      dbg_trace("cqind for rank %d: %d", iproc, cqind);
       struct ibv_qp_init_attr attr = {
         .qp_context     = ctx,
         .send_cq        = ctx->ib_cq[cqind],
-        .recv_cq        = ctx->ib_cq[cqind],
-        .srq            = ctx->ib_srq,
+        .recv_cq        = (ctx->use_rcq) ? ctx->ib_rq[cqind] : ctx->ib_cq[cqind],
         .cap            = {
           .max_send_wr	   = ctx->tx_depth,
           .max_recv_wr     = ctx->rx_depth,
-          .max_send_sge    = ctx->max_sge, // scatter gather element
+          .max_send_sge    = ctx->max_sge,
           .max_recv_sge    = ctx->max_sge,
           .max_inline_data = ctx->max_inline
         },
         .qp_type        = IBV_QPT_RC
       };
 
+      if (ctx->use_rcq && (ctx->num_srq > 0)) {
+	srqind = PHOTON_GET_CQ_IND(ctx->num_srq, iproc);
+	dbg_trace("srqind for rank %d: %d", iproc, srqind);
+	attr.srq = ctx->ib_srq[srqind];
+      } 
+      else {
+	attr.srq = NULL;
+      }
+      
       ctx->qp[iproc] = ibv_create_qp(ctx->ib_pd, &attr);
       if (!(ctx->qp[iproc])) {
         dbg_err("Could not create QP for task:%d", iproc);
@@ -483,7 +527,6 @@ error_exit:
 }
 
 static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_id, int pindex) {
-  int i, cqind;
   // assign the verbs context if this is the first connection
   if (!ctx->ib_context) {
     ctx->ib_context = cm_id->verbs;
@@ -499,21 +542,6 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
       goto error_exit;
     }
     
-    // create completion queues
-    ctx->ib_cq = (struct ibv_cq **)malloc(ctx->num_cq * sizeof(struct ibv_cq *));
-    if (!ctx->ib_cq) {
-      log_err("Could not create CQ pointer array of size %d", ctx->num_cq);
-      return PHOTON_ERROR;
-    }
-    
-    for (i = 0; i < ctx->num_cq; i++) {
-      ctx->ib_cq[i] = ibv_create_cq(ctx->ib_context, MAX_CQ_ENTRIES, ctx, NULL,  0);
-      if (!ctx->ib_cq[i]) {
-	dbg_err("Could not create completion queue %d of %d", i, ctx->num_cq);
-	return PHOTON_ERROR;
-      }
-    }
-
     struct ibv_port_attr port_attr;
     if (ibv_query_port(cm_id->verbs, cm_id->port_num, &port_attr)) {
       dbg_err("could not query port");
@@ -531,28 +559,14 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
 
     ctx->tx_depth = dattr.max_qp_wr - DEF_SUB_WR;
     ctx->rx_depth = dattr.max_qp_wr - DEF_SUB_WR;
+    ctx->max_qp_wr = dattr.max_qp_wr;
+    ctx->max_srq_wr = dattr.max_srq_wr;
 
-    {
-      // create shared receive queue
-      struct ibv_srq_init_attr attr = {
-        .attr = {
-          .max_wr  = dattr.max_srq_wr,
-          .max_sge = 1
-        }
-      };
-
-      ctx->ib_srq = ibv_create_srq(ctx->ib_pd, &attr);
-      if (!ctx->ib_srq) {
-        dbg_err("Could not create SRQ");
-        return PHOTON_ERROR;
-      }
-    }
-    
-    if (__verbs_find_max_inline(ctx, &ctx->max_inline)) {
-      log_err("Could not determine max inline data size");
+    if (__verbs_alloc_ctx(ctx) != PHOTON_OK) {
+      dbg_err("Could not allocate verbs context");
       return PHOTON_ERROR;
     }
-
+    
     // create a UD QP as well if requested
     if (ctx->use_ud) {
       __verbs_ud_create_qp(ctx);
@@ -565,11 +579,11 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
     }
   }
 
-  cqind = PHOTON_GET_CQ_IND(ctx->num_cq, pindex); 
+  int cqind = PHOTON_GET_CQ_IND(ctx->num_cq, pindex); 
   struct ibv_qp_init_attr attr = {
     .qp_context = ctx,
     .send_cq = ctx->ib_cq[cqind],
-    .recv_cq = ctx->ib_cq[cqind],
+    .recv_cq = (ctx->use_rcq) ? ctx->ib_rq[cqind] : ctx->ib_cq[cqind],
     .cap     = {
       .max_send_wr  = ctx->tx_depth,
       .max_recv_wr  = ctx->rx_depth,
@@ -578,9 +592,17 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
       .max_inline_data = ctx->max_inline
     },
     .qp_type = IBV_QPT_RC,
-    .srq = NULL
   };
 
+  if (ctx->use_rcq && (ctx->num_srq > 0)) {
+    int srqind = PHOTON_GET_CQ_IND(ctx->num_srq, pindex);
+    dbg_trace("srqind for rank %d: %d", pindex, srqind);
+    attr.srq = ctx->ib_srq[srqind];
+  } 
+  else {
+    attr.srq = NULL;
+  }
+  
   // create a new QP for each connection
   if (rdma_create_qp(cm_id, ctx->ib_pd, &attr)) {
     dbg_err("could not create QP");
