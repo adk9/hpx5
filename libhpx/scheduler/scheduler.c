@@ -48,7 +48,7 @@ struct scheduler *scheduler_new(const config_t *cfg) {
   }
 
   for (int i = 0; i < workers; ++i) {
-    e = worker_init(&s->workers[i], s, i, i, 64);
+    e = worker_init(&s->workers[i], i, i, 64);
     if (e) {
       dbg_error("failed to initialize a worker.\n");
       scheduler_delete(s);
@@ -92,7 +92,7 @@ void scheduler_delete(struct scheduler *sched) {
 
   if (sched->workers) {
     for (int i = 0, e = sched->n_workers; i < e; ++i) {
-      struct worker *worker = scheduler_get_worker(sched, i);
+      worker_t *worker = scheduler_get_worker(sched, i);
       worker_fini(worker);
     }
     free(sched->workers);
@@ -107,7 +107,7 @@ void scheduler_delete(struct scheduler *sched) {
 void scheduler_dump_stats(struct scheduler *sched) {
   char id[16] = {0};
   for (int i = 0, e = sched->n_workers; i < e; ++i) {
-    struct worker *w = scheduler_get_worker(sched, i);
+    worker_t *w = scheduler_get_worker(sched, i);
     snprintf(id, 16, "%d", w->id);
     scheduler_stats_print(id, &w->stats);
     scheduler_stats_accum(&sched->stats, &w->stats);
@@ -117,7 +117,7 @@ void scheduler_dump_stats(struct scheduler *sched) {
 }
 
 
-struct worker *scheduler_get_worker(struct scheduler *sched, int id) {
+worker_t *scheduler_get_worker(struct scheduler *sched, int id) {
   assert(id >= 0);
   assert(id < sched->n_workers);
   return &sched->workers[id];
@@ -125,7 +125,7 @@ struct worker *scheduler_get_worker(struct scheduler *sched, int id) {
 
 
 int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
-  struct worker *worker = NULL;
+  worker_t *worker = NULL;
   int status = LIBHPX_OK;
 
   // start all of the other worker threads
@@ -150,7 +150,7 @@ int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
     }
   }
 
-  status = worker_start();
+  status = worker_start(self);
   if (status != LIBHPX_OK) {
     scheduler_abort(sched);
   }
@@ -176,7 +176,7 @@ int scheduler_is_shutdown(struct scheduler *sched) {
 
 
 void scheduler_abort(struct scheduler *sched) {
-  struct worker *worker = NULL;
+  worker_t *worker = NULL;
   for (int i = 0, e = sched->n_workers; i < e; ++i) {
     worker = scheduler_get_worker(sched, i);
     worker_cancel(worker);
