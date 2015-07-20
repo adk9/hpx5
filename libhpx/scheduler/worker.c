@@ -359,7 +359,7 @@ static void _handle_mail(struct worker *w) {
   hpx_parcel_t *p = NULL;
   while ((parcels = sync_two_lock_queue_dequeue(&w->inbox))) {
     while ((p = parcel_stack_pop(&parcels))) {
-      profile_ctr(++self->stats.mail);
+      profile_ctr(++w->stats.mail);
       _spawn_lifo(w, p);
     }
   }
