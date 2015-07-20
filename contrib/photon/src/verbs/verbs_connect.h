@@ -3,9 +3,6 @@
 
 #include "verbs.h"
 
-#define MAX_CQ_ENTRIES      16384
-#define MAX_SRQ_ENTRIES     8192
-
 typedef struct verbs_cnct_info_t {
   unsigned lid;
   unsigned qpn;
@@ -21,8 +18,9 @@ typedef struct verbs_cnct_ctx_t {
   struct ibv_context        *ib_context;
   struct ibv_pd             *ib_pd;
   struct ibv_cq            **ib_cq;
-  struct ibv_cp             *ib_ud_cq;
-  struct ibv_srq            *ib_srq;
+  struct ibv_cq            **ib_rq;
+  struct ibv_cq             *ib_ud_cq;
+  struct ibv_srq           **ib_srq;
   struct ibv_comp_channel   *ib_cc;
   int                        ib_lid;
   int                        ib_mtu;
@@ -42,8 +40,11 @@ typedef struct verbs_cnct_ctx_t {
   int                        atomic_depth;
   int                        max_sge;
   int                        max_inline;
+  int                        max_qp_wr;
   int                        max_srq_wr;
   int                        num_cq;
+  int                        num_srq;
+  int                        use_rcq;
 
   verbs_cnct_info          **local_ci;
   verbs_cnct_info          **remote_ci;

@@ -154,6 +154,9 @@ struct hpx_options_t
   const char *hpx_photon_ibport_help; /**< @brief [verbs] set a particular IB port help description.  */
   int hpx_photon_usecma_flag;	/**< @brief [verbs] enable CMA connection mode (default=off).  */
   const char *hpx_photon_usecma_help; /**< @brief [verbs] enable CMA connection mode help description.  */
+  int hpx_photon_ibsrq_arg;	/**< @brief [verbs] number of shared receive queues (default 0, disabled).  */
+  char * hpx_photon_ibsrq_orig;	/**< @brief [verbs] number of shared receive queues (default 0, disabled) original value given at command line.  */
+  const char *hpx_photon_ibsrq_help; /**< @brief [verbs] number of shared receive queues (default 0, disabled) help description.  */
   int hpx_photon_btethresh_arg;	/**< @brief [ugni] set size in bytes for when BTE is used over FMA.  */
   char * hpx_photon_btethresh_orig;	/**< @brief [ugni] set size in bytes for when BTE is used over FMA original value given at command line.  */
   const char *hpx_photon_btethresh_help; /**< @brief [ugni] set size in bytes for when BTE is used over FMA help description.  */
@@ -175,6 +178,9 @@ struct hpx_options_t
   int hpx_photon_numcq_arg;	/**< @brief set number of completion queues to use (cyclic assignment to ranks).  */
   char * hpx_photon_numcq_orig;	/**< @brief set number of completion queues to use (cyclic assignment to ranks) original value given at command line.  */
   const char *hpx_photon_numcq_help; /**< @brief set number of completion queues to use (cyclic assignment to ranks) help description.  */
+  int hpx_photon_usercq_arg;	/**< @brief enable remote completion support (default 0, disabled).  */
+  char * hpx_photon_usercq_orig;	/**< @brief enable remote completion support (default 0, disabled) original value given at command line.  */
+  const char *hpx_photon_usercq_help; /**< @brief enable remote completion support (default 0, disabled) help description.  */
   int hpx_opt_smp_arg;	/**< @brief optimize for SMP execution.  */
   char * hpx_opt_smp_orig;	/**< @brief optimize for SMP execution original value given at command line.  */
   const char *hpx_opt_smp_help; /**< @brief optimize for SMP execution help description.  */
@@ -213,6 +219,7 @@ struct hpx_options_t
   unsigned int hpx_photon_ethdev_given ;	/**< @brief Whether hpx-photon-ethdev was given.  */
   unsigned int hpx_photon_ibport_given ;	/**< @brief Whether hpx-photon-ibport was given.  */
   unsigned int hpx_photon_usecma_given ;	/**< @brief Whether hpx-photon-usecma was given.  */
+  unsigned int hpx_photon_ibsrq_given ;	/**< @brief Whether hpx-photon-ibsrq was given.  */
   unsigned int hpx_photon_btethresh_given ;	/**< @brief Whether hpx-photon-btethresh was given.  */
   unsigned int hpx_photon_ledgersize_given ;	/**< @brief Whether hpx-photon-ledgersize was given.  */
   unsigned int hpx_photon_eagerbufsize_given ;	/**< @brief Whether hpx-photon-eagerbufsize was given.  */
@@ -220,6 +227,7 @@ struct hpx_options_t
   unsigned int hpx_photon_maxrd_given ;	/**< @brief Whether hpx-photon-maxrd was given.  */
   unsigned int hpx_photon_defaultrd_given ;	/**< @brief Whether hpx-photon-defaultrd was given.  */
   unsigned int hpx_photon_numcq_given ;	/**< @brief Whether hpx-photon-numcq was given.  */
+  unsigned int hpx_photon_usercq_given ;	/**< @brief Whether hpx-photon-usercq was given.  */
   unsigned int hpx_opt_smp_given ;	/**< @brief Whether hpx-opt-smp was given.  */
 
 } ;
