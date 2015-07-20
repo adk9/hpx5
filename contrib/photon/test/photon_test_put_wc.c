@@ -37,10 +37,10 @@ int myrank;
 // could be a thread
 void *wait_local(void *arg) {
   photon_rid request;
-  int flag, rc, remaining, src;
+  int flag, rc, src;
 
   while (send_comp) {
-    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &request, &src, PHOTON_PROBE_ANY);
+    rc = photon_probe_completion(PHOTON_ANY_SOURCE, &flag, NULL, &request, &src, PHOTON_PROBE_ANY);
     if (rc != PHOTON_OK)
       continue;  // no events
     if (flag) {
@@ -64,9 +64,9 @@ int send_done(int n, int r) {
 
 int wait_done() {
   photon_rid request;
-  int flag, remaining, src;
+  int flag, src;
   do {
-    photon_probe_completion(PHOTON_ANY_SOURCE, &flag, &remaining, &request, &src, PHOTON_PROBE_ANY);
+    photon_probe_completion(PHOTON_ANY_SOURCE, &flag, NULL, &request, &src, PHOTON_PROBE_ANY);
   } while (request != 0xdeadbeef);
   
   return 0;
@@ -100,7 +100,9 @@ int main(int argc, char *argv[]) {
     //dbg_wait();
   }
 
-  photon_init(&cfg);
+  if (photon_init(&cfg) != PHOTON_OK) {
+    exit(1);
+  }
 
   struct photon_buffer_t lbuf;
   struct photon_buffer_t rbuf[nproc];
@@ -194,7 +196,7 @@ int main(int argc, char *argv[]) {
 	  lbuf.addr = (uintptr_t)send;
 	  lbuf.size = i;
 	  lbuf.priv = (struct photon_buffer_priv_t){0,0};
-	  photon_get_with_completion(j, i, &lbuf, &rbuf[j], PHOTON_TAG, 0xfacefeed, 0);
+	  photon_get_with_completion(j, i, &lbuf, &rbuf[j], PHOTON_TAG, 0xfacefeed, PHOTON_REQ_PWC_NO_RCE);
 	  send_comp++;
 	  wait_local(NULL);
 	}

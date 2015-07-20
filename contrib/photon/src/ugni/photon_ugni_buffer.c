@@ -5,7 +5,7 @@
 #include "photon_ugni_connect.h"
 #include "logging.h"
 
-static int __ugni_buffer_register(photonBI dbuffer, void *ctx);
+static int __ugni_buffer_register(photonBI dbuffer, void *ctx, int flags);
 static int __ugni_buffer_unregister(photonBI dbuffer, void *ctx);
 
 struct photon_buffer_interface_t ugni_buffer_interface = {
@@ -15,22 +15,29 @@ struct photon_buffer_interface_t ugni_buffer_interface = {
   .buffer_unregister = __ugni_buffer_unregister,
 };
 
-static int __ugni_buffer_register(photonBI dbuffer, void *ctx) {
+static int __ugni_buffer_register(photonBI dbuffer, void *ctx, int flags) {
   int status;
+  ugni_cnct_ctx *uctx = (ugni_cnct_ctx*)ctx;
   gni_mem_handle_t mdh, *smdh;
+  gni_cq_handle_t rcq_handle = NULL;
 
   if (dbuffer->is_registered)
     return PHOTON_OK;
 
-  status = GNI_MemRegister(((ugni_cnct_ctx*)ctx)->nic_handle, (uint64_t)dbuffer->buf.addr,
-			   dbuffer->buf.size, NULL, GNI_MEM_READWRITE, -1, &mdh);
+  // enable requested completion queue notifications
+  if (uctx->use_rcq && (flags & BUFFER_FLAG_NOTIFY)) {
+    rcq_handle = uctx->remote_cq_handles[0];
+  }
+  
+  status = GNI_MemRegister(uctx->nic_handle, (uint64_t)dbuffer->buf.addr,
+			   dbuffer->buf.size, rcq_handle, GNI_MEM_READWRITE, -1, &mdh);
   if (status != GNI_RC_SUCCESS) {
     dbg_err("GNI_MemRegister ERROR status: %s (%d)", gni_err_str[status], status);
     goto error_exit;
   }
-
+  
   dbg_trace("GNI_MemRegister size: %lu address: %p", dbuffer->buf.size, dbuffer->buf.addr);
-
+  
   smdh = malloc(sizeof(mdh));
   *smdh = mdh;
 

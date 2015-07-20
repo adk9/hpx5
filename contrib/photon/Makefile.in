@@ -93,6 +93,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+target_triplet = @target@
 @HAVE_MPI_TRUE@@PHOTON_ENABLE_TESTS_TRUE@am__append_1 = test
 @HAVE_MPI_TRUE@@PHOTON_ENABLE_TESTS_TRUE@am__append_2 = test
 @PHOTON_ENABLE_TESTS_TRUE@am__append_3 = tests
@@ -402,12 +403,18 @@ sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
 sysconfdir = @sysconfdir@
+target = @target@
 target_alias = @target_alias@
+target_cpu = @target_cpu@
+target_os = @target_os@
+target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 instdir = $(prefix)/include
 inst_HEADERS = include/photon.h                 \
+	     include/photon_config.h          \
+	     include/photon_api.h             \
 	     include/photon_io.h              \
 	     include/photon_xsp_forwarder.h   \
 	     include/photon_attributes.h

@@ -54,7 +54,8 @@ _probe_local(pwc_network_t *pwc) {
 
   // Each time through the loop, we deal with local completions.
   command_t command;
-  while (pwc->xport->test(&command, NULL)) {
+  int src;
+  while (pwc->xport->test(&command, NULL, &src)) {
     hpx_addr_t op = command_get_op(command);
     log_net("processing local command: %s\n", _straction(op));
     hpx_action_handler_t handler = action_table_get_handler(actions, op);
@@ -69,12 +70,13 @@ static hpx_parcel_t *
 _probe(pwc_network_t *pwc, int rank) {
   const struct action_table *actions = here->actions;
   command_t command;
-  while (pwc->xport->probe(&command, NULL, rank)) {
+  int src;
+  while (pwc->xport->probe(&command, NULL, rank, &src)) {
     hpx_addr_t op = command_get_op(command);
-    log_net("processing command %s from rank %d\n", _straction(op), rank);
+    log_net("processing command %s from rank %d\n", _straction(op), src);
     hpx_action_handler_t handler = action_table_get_handler(actions, op);
     command_handler_t f = (command_handler_t)(handler);
-    int e = f(rank, command);
+    int e = f(src, command);
     dbg_assert_str(HPX_SUCCESS == e, "failed to process command\n");
     (void)e;
   }
@@ -85,9 +87,7 @@ static int
 _pwc_progress(void *network) {
   pwc_network_t *pwc = network;
   _probe_local(pwc);
-  for (int i = 0, e = here->ranks; i < e; ++i) {
-    _probe(pwc, i);
-  }
+  _probe(pwc, XPORT_ANY_SOURCE);
   return 0;
 }
 
@@ -263,10 +263,10 @@ _pwc_set_flush(void *network) {
 
 static void
 _pwc_flush(pwc_network_t *pwc) {
-  int remaining;
+  int remaining, src;
   command_t command;
   do {
-    pwc->xport->test(&command, &remaining);
+    pwc->xport->test(&command, &remaining, &src);
   } while (remaining > 0);
   boot_barrier(here->boot);
 }

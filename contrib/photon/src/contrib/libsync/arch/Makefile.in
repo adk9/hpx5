@@ -88,6 +88,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+target_triplet = @target@
+@CPU_X86_64_TRUE@@HAVE_CMPXCHG16B_TRUE@am__append_1 = x86_64/cptr.S
 subdir = src/contrib/libsync/arch
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/acx_configure_dir.m4 \
@@ -110,8 +112,9 @@ LTLIBRARIES = $(noinst_LTLIBRARIES)
 libarch_la_LIBADD =
 am__libarch_la_SOURCES_DIST = x86_64/nop.S x86_64/cptr.S
 am__dirstamp = $(am__leading_dot)dirstamp
+@CPU_X86_64_TRUE@@HAVE_CMPXCHG16B_TRUE@am__objects_1 = x86_64/libarch_la-cptr.lo
 @CPU_X86_64_TRUE@am_libarch_la_OBJECTS = x86_64/libarch_la-nop.lo \
-@CPU_X86_64_TRUE@	x86_64/libarch_la-cptr.lo
+@CPU_X86_64_TRUE@	$(am__objects_1)
 libarch_la_OBJECTS = $(am_libarch_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -337,13 +340,17 @@ sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
 sysconfdir = @sysconfdir@
+target = @target@
 target_alias = @target_alias@
+target_cpu = @target_cpu@
+target_os = @target_os@
+target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 noinst_LTLIBRARIES = libarch.la
 libarch_la_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/libsync
-@CPU_X86_64_TRUE@libarch_la_SOURCES = x86_64/nop.S x86_64/cptr.S
+@CPU_X86_64_TRUE@libarch_la_SOURCES = x86_64/nop.S $(am__append_1)
 all: all-am
 
 .SUFFIXES:

@@ -75,6 +75,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-photon-ethdev=device\n                                [verbs] set a particular ETH device (for CMA \n                                  mode only)",
   "      --hpx-photon-ibport=integer\n                                [verbs] set a particular IB port",
   "      --hpx-photon-usecma       [verbs] enable CMA connection mode  \n                                  (default=off)",
+  "      --hpx-photon-ibsrq=integer\n                                [verbs] number of shared receive queues \n                                  (default 0, disabled)",
   "      --hpx-photon-btethresh=integer\n                                [ugni] set size in bytes for when BTE is used \n                                  over FMA",
   "      --hpx-photon-ledgersize=integer\n                                set number of ledger entries",
   "      --hpx-photon-eagerbufsize=bytes\n                                set size of eager buffers",
@@ -82,6 +83,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-photon-maxrd=integer\n                                set max number of request descriptors",
   "      --hpx-photon-defaultrd=integer\n                                set default number of allocated descriptors",
   "      --hpx-photon-numcq=integer\n                                set number of completion queues to use (cyclic \n                                  assignment to ranks)",
+  "      --hpx-photon-usercq=integer\n                                enable remote completion support (default 0, \n                                  disabled)",
   "\nOptimization:",
   "      --hpx-opt-smp[=0 off]     optimize for SMP execution",
     0
@@ -179,6 +181,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_photon_ethdev_given = 0 ;
   args_info->hpx_photon_ibport_given = 0 ;
   args_info->hpx_photon_usecma_given = 0 ;
+  args_info->hpx_photon_ibsrq_given = 0 ;
   args_info->hpx_photon_btethresh_given = 0 ;
   args_info->hpx_photon_ledgersize_given = 0 ;
   args_info->hpx_photon_eagerbufsize_given = 0 ;
@@ -186,6 +189,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_photon_maxrd_given = 0 ;
   args_info->hpx_photon_defaultrd_given = 0 ;
   args_info->hpx_photon_numcq_given = 0 ;
+  args_info->hpx_photon_usercq_given = 0 ;
   args_info->hpx_opt_smp_given = 0 ;
 }
 
@@ -241,6 +245,7 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_photon_ethdev_orig = NULL;
   args_info->hpx_photon_ibport_orig = NULL;
   args_info->hpx_photon_usecma_flag = 0;
+  args_info->hpx_photon_ibsrq_orig = NULL;
   args_info->hpx_photon_btethresh_orig = NULL;
   args_info->hpx_photon_ledgersize_orig = NULL;
   args_info->hpx_photon_eagerbufsize_orig = NULL;
@@ -248,6 +253,7 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_photon_maxrd_orig = NULL;
   args_info->hpx_photon_defaultrd_orig = NULL;
   args_info->hpx_photon_numcq_orig = NULL;
+  args_info->hpx_photon_usercq_orig = NULL;
   args_info->hpx_opt_smp_orig = NULL;
   
 }
@@ -301,14 +307,16 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_photon_ethdev_help = hpx_options_t_help[40] ;
   args_info->hpx_photon_ibport_help = hpx_options_t_help[41] ;
   args_info->hpx_photon_usecma_help = hpx_options_t_help[42] ;
-  args_info->hpx_photon_btethresh_help = hpx_options_t_help[43] ;
-  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[44] ;
-  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[45] ;
-  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[46] ;
-  args_info->hpx_photon_maxrd_help = hpx_options_t_help[47] ;
-  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[48] ;
-  args_info->hpx_photon_numcq_help = hpx_options_t_help[49] ;
-  args_info->hpx_opt_smp_help = hpx_options_t_help[51] ;
+  args_info->hpx_photon_ibsrq_help = hpx_options_t_help[43] ;
+  args_info->hpx_photon_btethresh_help = hpx_options_t_help[44] ;
+  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[45] ;
+  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[46] ;
+  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[47] ;
+  args_info->hpx_photon_maxrd_help = hpx_options_t_help[48] ;
+  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[49] ;
+  args_info->hpx_photon_numcq_help = hpx_options_t_help[50] ;
+  args_info->hpx_photon_usercq_help = hpx_options_t_help[51] ;
+  args_info->hpx_opt_smp_help = hpx_options_t_help[53] ;
   
 }
 
@@ -471,6 +479,7 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_photon_ethdev_arg));
   free_string_field (&(args_info->hpx_photon_ethdev_orig));
   free_string_field (&(args_info->hpx_photon_ibport_orig));
+  free_string_field (&(args_info->hpx_photon_ibsrq_orig));
   free_string_field (&(args_info->hpx_photon_btethresh_orig));
   free_string_field (&(args_info->hpx_photon_ledgersize_orig));
   free_string_field (&(args_info->hpx_photon_eagerbufsize_orig));
@@ -478,6 +487,7 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_photon_maxrd_orig));
   free_string_field (&(args_info->hpx_photon_defaultrd_orig));
   free_string_field (&(args_info->hpx_photon_numcq_orig));
+  free_string_field (&(args_info->hpx_photon_usercq_orig));
   free_string_field (&(args_info->hpx_opt_smp_orig));
   
   
@@ -621,6 +631,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-photon-ibport", args_info->hpx_photon_ibport_orig, 0);
   if (args_info->hpx_photon_usecma_given)
     write_into_file(outfile, "hpx-photon-usecma", 0, 0 );
+  if (args_info->hpx_photon_ibsrq_given)
+    write_into_file(outfile, "hpx-photon-ibsrq", args_info->hpx_photon_ibsrq_orig, 0);
   if (args_info->hpx_photon_btethresh_given)
     write_into_file(outfile, "hpx-photon-btethresh", args_info->hpx_photon_btethresh_orig, 0);
   if (args_info->hpx_photon_ledgersize_given)
@@ -635,6 +647,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-photon-defaultrd", args_info->hpx_photon_defaultrd_orig, 0);
   if (args_info->hpx_photon_numcq_given)
     write_into_file(outfile, "hpx-photon-numcq", args_info->hpx_photon_numcq_orig, 0);
+  if (args_info->hpx_photon_usercq_given)
+    write_into_file(outfile, "hpx-photon-usercq", args_info->hpx_photon_usercq_orig, 0);
   if (args_info->hpx_opt_smp_given)
     write_into_file(outfile, "hpx-opt-smp", args_info->hpx_opt_smp_orig, 0);
   
@@ -1265,6 +1279,7 @@ hpx_option_parser_internal (
         { "hpx-photon-ethdev",	1, NULL, 0 },
         { "hpx-photon-ibport",	1, NULL, 0 },
         { "hpx-photon-usecma",	0, NULL, 0 },
+        { "hpx-photon-ibsrq",	1, NULL, 0 },
         { "hpx-photon-btethresh",	1, NULL, 0 },
         { "hpx-photon-ledgersize",	1, NULL, 0 },
         { "hpx-photon-eagerbufsize",	1, NULL, 0 },
@@ -1272,6 +1287,7 @@ hpx_option_parser_internal (
         { "hpx-photon-maxrd",	1, NULL, 0 },
         { "hpx-photon-defaultrd",	1, NULL, 0 },
         { "hpx-photon-numcq",	1, NULL, 0 },
+        { "hpx-photon-usercq",	1, NULL, 0 },
         { "hpx-opt-smp",	2, NULL, 0 },
         { 0,  0, 0, 0 }
       };
@@ -1731,6 +1747,20 @@ hpx_option_parser_internal (
               goto failure;
           
           }
+          /* [verbs] number of shared receive queues (default 0, disabled).  */
+          else if (strcmp (long_options[option_index].name, "hpx-photon-ibsrq") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_photon_ibsrq_arg), 
+                 &(args_info->hpx_photon_ibsrq_orig), &(args_info->hpx_photon_ibsrq_given),
+                &(local_args_info.hpx_photon_ibsrq_given), optarg, 0, 0, ARG_INT,
+                check_ambiguity, override, 0, 0,
+                "hpx-photon-ibsrq", '-',
+                additional_error))
+              goto failure;
+          
+          }
           /* [ugni] set size in bytes for when BTE is used over FMA.  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-btethresh") == 0)
           {
@@ -1825,6 +1855,20 @@ hpx_option_parser_internal (
                 &(local_args_info.hpx_photon_numcq_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "hpx-photon-numcq", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* enable remote completion support (default 0, disabled).  */
+          else if (strcmp (long_options[option_index].name, "hpx-photon-usercq") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_photon_usercq_arg), 
+                 &(args_info->hpx_photon_usercq_orig), &(args_info->hpx_photon_usercq_given),
+                &(local_args_info.hpx_photon_usercq_given), optarg, 0, 0, ARG_INT,
+                check_ambiguity, override, 0, 0,
+                "hpx-photon-usercq", '-',
                 additional_error))
               goto failure;
           

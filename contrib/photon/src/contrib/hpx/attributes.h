@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -16,23 +16,29 @@
 /// @file
 /// @brief Attribute definitions for HPX functions.
 
-#define HPX_ALIGNED(N)       __attribute__((aligned(N)))
-#define HPX_INTERNAL         __attribute__((visibility("internal")))
-#define HPX_RETURNS_TWICE    __attribute__((returns_twice))
-#define HPX_NORETURN         __attribute__((noreturn))
-#define HPX_NOINLINE         __attribute__((noinline))
-#define HPX_AWAYS_INLINE     __attribute__((always_inline))
-#define HPX_OPTIMIZE(S)      __attribute__((optimize(S)))
-#define HPX_MALLOC           __attribute__((malloc))
-#define HPX_USED             __attribute__((used))
-#define HPX_UNUSED           __attribute__((unused))
+#define HPX_ATTRIBUTE(S)     __attribute__(S)
+#define HPX_ALIGNED(...)     HPX_ATTRIBUTE((aligned(__VA_ARGS__)))
+#define HPX_RETURNS_TWICE    HPX_ATTRIBUTE((returns_twice))
+#define HPX_NORETURN         HPX_ATTRIBUTE((noreturn))
+#define HPX_NOINLINE         HPX_ATTRIBUTE((noinline))
+#define HPX_ALWAYS_INLINE    HPX_ATTRIBUTE((always_inline))
+#define HPX_OPTIMIZE(S)      HPX_ATTRIBUTE((optimize(S)))
+#define HPX_MALLOC           HPX_ATTRIBUTE((malloc))
+#define HPX_USED             HPX_ATTRIBUTE((used))
+#define HPX_UNUSED           HPX_ATTRIBUTE((unused))
 #define HPX_ASM(S)           __asm__(#S)
-#define HPX_PACKED           __attribute__((packed))
-#define HPX_NON_NULL(...)    __attribute__((nonnull(__VA_ARGS__)))
-#define HPX_WEAK             __attribute__((weak))
-#define HPX_CONSTRUCTOR      __attribute__((constructor))
-#define HPX_DESTRUCTOR       __attribute__((destructor))
-#define HPX_PRINTF(f, s)     __attribute__((format (printf, f, s)))
-#define HPX_RETURNS_NON_NULL /*__attribute__((returns_nonnull))*/
+#define HPX_PACKED           HPX_ATTRIBUTE((packed))
+#define HPX_NON_NULL(...)    HPX_ATTRIBUTE((nonnull(__VA_ARGS__)))
+#define HPX_WEAK             HPX_ATTRIBUTE((weak))
+#define HPX_CONSTRUCTOR      HPX_ATTRIBUTE((constructor))
+#define HPX_DESTRUCTOR       HPX_ATTRIBUTE((destructor))
+#define HPX_PRINTF(f, s)     HPX_ATTRIBUTE((format (printf, f, s)))
+#define HPX_RETURNS_NON_NULL HPX_ATTRIBUTE((returns_nonnull))
+
+#ifdef __clang__
+# define HPX_NO_OPTIMIZE HPX_ATTRIBUTE((optnone))
+#else
+# define HPX_NO_OPTIMIZE HPX_OPTIMIZE("O0")
+#endif
 
 #endif // HPX_ATTRIBUTES_H
