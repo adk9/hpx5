@@ -263,10 +263,10 @@ _photon_gwc(xport_op_t *op) {
 }
 
 static int
-_poll(uint64_t *op, int *remaining, int src, int type) {
+_poll(uint64_t *op, int *remaining, int rank, int *src, int type) {
   int flag = 0;
-  int s;
-  int e = photon_probe_completion(src, &flag, remaining, op, &s, type);
+  int prank = (rank == XPORT_ANY_SOURCE) ? PHOTON_ANY_SOURCE : rank;
+  int e = photon_probe_completion(prank, &flag, remaining, op, src, type);
   if (PHOTON_OK != e) {
     dbg_error("photon probe error\n");
   }
@@ -274,13 +274,13 @@ _poll(uint64_t *op, int *remaining, int src, int type) {
 }
 
 static int
-_photon_test(uint64_t *op, int *remaining) {
-  return _poll(op, remaining, PHOTON_ANY_SOURCE, PHOTON_PROBE_EVQ);
+_photon_test(uint64_t *op, int *remaining, int *src) {
+  return _poll(op, remaining, PHOTON_ANY_SOURCE, src, PHOTON_PROBE_EVQ);
 }
 
 static int
-_photon_probe(uint64_t *op, int *remaining, int src) {
-  return _poll(op, remaining, src, PHOTON_PROBE_LEDGER);
+_photon_probe(uint64_t *op, int *remaining, int rank, int *src) {
+  return _poll(op, remaining, rank, src, PHOTON_PROBE_LEDGER);
 }
 
 static void
