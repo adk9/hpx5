@@ -351,7 +351,7 @@ _schedule_steal(worker_t *worker) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
   if (p) {
     TRACE_STEAL_LIFO(p, victim);
-    profile_ctr(++worker->stats.steals);
+    COUNTER_SAMPLE(++worker->stats.steals);
   }
 
   return p;
@@ -371,7 +371,7 @@ _handle_mail(worker_t *worker) {
   hpx_parcel_t *parcels = NULL, *p = NULL;
   while ((parcels = sync_two_lock_queue_dequeue(&worker->inbox))) {
     while ((p = parcel_stack_pop(&parcels))) {
-      profile_ctr(++worker->stats.mail);
+      COUNTER_SAMPLE(++worker->stats.mail);
       _spawn_lifo(worker, p);
     }
   }
@@ -629,7 +629,7 @@ worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
 
   sync_chase_lev_ws_deque_init(&w->work, work_size);
   sync_two_lock_queue_init(&w->inbox, NULL);
-  scheduler_stats_init(&w->stats);
+  libhpx_stats_init(&w->stats);
 
   return LIBHPX_OK;
 }
@@ -755,7 +755,7 @@ scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(p);
   dbg_assert(hpx_gas_try_pin(p->target, NULL)); // just performs translation
   dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
-  profile_ctr(worker->stats.spawns++);
+  COUNTER_SAMPLE(worker->stats.spawns++);
 
   // Don't run anything until we have started up. This lets us use parcel_send()
   // before hpx_run() without worrying about weird work-first or interrupt
@@ -868,7 +868,7 @@ scheduler_yield(void) {
 
 void
 hpx_thread_yield(void) {
-  profile_ctr(++self->stats.yields);
+  COUNTER_SAMPLE(++self->stats.yields);
   scheduler_yield();
 }
 
@@ -1015,12 +1015,6 @@ hpx_thread_exit(int status) {
 
   dbg_error("unexpected exit status %d.\n", status);
   hpx_abort();
-}
-
-scheduler_stats_t *
-thread_get_stats(void) {
-  worker_t *w = self;
-  return (w) ? &w->stats : NULL;
 }
 
 hpx_parcel_t *

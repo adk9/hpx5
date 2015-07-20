@@ -69,7 +69,6 @@ struct scheduler {
   uint32_t       wf_threshold;
   system_barrier_t    barrier;
   struct worker      *workers;
-  scheduler_stats_t     stats;
 };
 
 /// Allocate and initialize a new scheduler.
@@ -93,14 +92,6 @@ void scheduler_delete(struct scheduler *scheduler);
 ///
 /// This action does nothing (i.e. it is a nop).
 extern hpx_action_t scheduler_nop;
-
-/// Print collected statistics.
-///
-/// The scheduler should not be running during this call.
-///
-/// @param    scheduler The scheduler.
-void scheduler_dump_stats(struct scheduler *scheduler)
-  HPX_NON_NULL(1);
 
 /// Starts the scheduler.
 ///
