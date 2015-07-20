@@ -8,6 +8,8 @@ AM_CONFIG_HEADER([include/config.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_USE_SYSTEM_EXTENSIONS
+AC_CANONICAL_HOST
+AC_CANONICAL_TARGET
 
 # Initialize automake and libtool
 AM_INIT_AUTOMAKE([1.9 dist-bzip2 subdir-objects foreign tar-ustar -Wall -Werror])
@@ -61,7 +63,7 @@ AC_TYPE_PID_T
 
 # Checks for library functions.
 AC_FUNC_FORK
-AC_FUNC_MALLOC
+#AC_FUNC_MALLOC
 AC_FUNC_MEMCMP
 AC_FUNC_REALLOC
 AC_FUNC_SELECT_ARGTYPES
@@ -212,9 +214,42 @@ AM_CONDITIONAL(HAVE_XSP, test x$have_xsp = xyes)
 # ---------------------------------------------------------------------------
 # Perform host-specific work here.
 # ---------------------------------------------------------------------------
+AC_LANG_DEFINE([_CASM], [casm], [_CASM], [CCAS], [C], [
+ ac_ext=S
+ ac_cpp='$CPP $CPPFLAGS'
+ ac_compile='$CCAS -c $CCASFLAGS $CPPFLAGS conftest.$ac_ext >&AS_MESSAGE_LOG_FD'
+ ac_link='$CCAS -o conftest$ac_exeext $CCASFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext
+ $LIBS >&AS_MESSAGE_LOG_FD'
+ ac_compiler_gnu=$ac_cv_ccas_compiler_gnu
+])
+
+AC_DEFUN([AC_LANG_PREPROC(_CASM)],
+[AC_REQUIRE([AC_PROG_CPP])])
+
+AC_DEFUN([AC_LANG_COMPILER(_CASM)],
+[AC_REQUIRE([AC_PROG_CC])])
+
+m4_define([AC_LANG_CONFTEST(_CASM)],
+[cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$1
+_ACEOF])
+
+AC_DEFUN([PHOTON_CHECK_CMPXCHG16B], [
+ AC_MSG_CHECKING([for support of CMPXCHG16B instruction])
+ AC_LANG_PUSH([_CASM])
+ AC_COMPILE_IFELSE([AC_LANG_SOURCE([[ cmpxchg16b (%rdi) ]])],
+   [AC_MSG_RESULT([yes])
+    AC_DEFINE([HAVE_CMPXCHG16B], [1], [Have 16-byte compare and swap])
+    have_cmpxchg16b=yes],
+   [AC_MSG_RESULT([no])])
+ AC_LANG_POP
+])
 
 AS_CASE([$host_os],
      [linux*], [AS_CASE([$host_cpu],
+         [x86_64], [PHOTON_CHECK_CMPXCHG16B
+              l1d_linesize=`cat /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size`],
          [arm*], [AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
              l1d_linesize=32
              pagesize=`getconf PAGESIZE`],
@@ -246,6 +281,7 @@ AS_IF([test "x$enable_testsuite" != xno && test "x$with_check" != xno],
 AM_CONDITIONAL([PHOTON_ENABLE_TESTS], [test "x$enable_tests" != xno])
 AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
 AM_CONDITIONAL([BUILD_LIBFABRIC], [test "x$enable_external_libfabric" == xno])
+AM_CONDITIONAL([HAVE_CMPXCHG16B], [test "x$have_cmpxchg16b" == xyes])
 
 # Set source and build directories
 AC_SUBST(PHOTON_SRCDIR, "\${top_srcdir}")
