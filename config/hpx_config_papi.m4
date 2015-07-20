@@ -34,6 +34,8 @@ AC_DEFUN([_HPX_PKG_PAPI], [pkg=$1
  # check if we need to use a papi package to access the functionality
  PKG_CHECK_MODULES([PAPI], [$pkg],
    [_HAVE_PAPI
+    LIBHPX_CFLAGS="$LIBHPX_CFLAGS $PAPI_CFLAGS"
+    LIBHPX_LIBS="$LIBHPX_LIBS $PAPI_LIBS"
     HPX_PC_PRIVATE_PKGS="$HPX_PC_PRIVATE_PKGS $pkg"])
 ])
 

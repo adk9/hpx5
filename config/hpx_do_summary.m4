@@ -24,6 +24,7 @@ AC_DEFUN([HPX_DO_SUMMARY], [
  echo "               Networks : $networks"
  echo "              Allocator : $allocator"
  echo "              Profiling : $enable_profiling"
+ echo "                   PAPI : $have_papi"     
  echo "         hugetlbfs heap : $have_hugetlbfs"
  echo "     Topology Awareness : $have_hwloc"
  echo "          Documentation : $enable_docs"
