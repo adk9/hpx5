@@ -53,6 +53,7 @@ _init_photon_config(const config_t *cfg, boot_t *boot,
   pcfg->ibv.use_cma             = cfg->photon_usecma;
   pcfg->ibv.eth_dev             = cfg->photon_ethdev;
   pcfg->ibv.ib_dev              = cfg->photon_ibdev;
+  pcfg->ibv.num_srq             = cfg->photon_ibsrq;
   pcfg->ugni.eth_dev            = cfg->photon_ethdev;
   pcfg->ugni.bte_thresh         = cfg->photon_btethresh;
   pcfg->cap.eager_buf_size      = cfg->photon_eagerbufsize;
@@ -61,6 +62,7 @@ _init_photon_config(const config_t *cfg, boot_t *boot,
   pcfg->cap.max_rd              = cfg->photon_maxrd;
   pcfg->cap.default_rd          = cfg->photon_defaultrd;
   pcfg->cap.num_cq              = cfg->photon_numcq;
+  pcfg->cap.use_rcq             = cfg->photon_usercq;
   // static config not relevant for current HPX usage
   pcfg->forwarder.use_forwarder =  0;
   pcfg->cap.small_msg_size      = -1;  // default 4096 - not used for PWC
