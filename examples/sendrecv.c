@@ -45,17 +45,16 @@ static int counts[24] = {
   4000000
 };
 
-static hpx_action_t _main     = 0;
-static hpx_action_t _receiver = 0;
-
-
-static int _receiver_action(double *args, size_t size) {
+static int
+_receiver_action(double *args, size_t size) {
   hpx_thread_set_affinity(1);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _receiver, _receiver_action,
+                  HPX_POINTER, HPX_SIZE_T);
 
-
-static int _main_action(int *args, size_t size) {
+static int
+_main_action(int *args, size_t size) {
   int avg = 10000;
 
   hpx_thread_set_affinity(0);
@@ -65,8 +64,9 @@ static int _main_action(int *args, size_t size) {
 
   for (int i = 0, e = args[0]; i < e; ++i) {
     double *buf = malloc(sizeof(double)*counts[i]);
-    for (int j=0;j<counts[i];++j)
+    for (int j=0;j<counts[i];++j) {
       buf[j] = j*rand();
+    }
 
     printf("%d, %d: ", i, counts[i]);
     hpx_time_t t1 = hpx_time_now();
@@ -94,9 +94,11 @@ static int _main_action(int *args, size_t size) {
 
   hpx_shutdown(0);
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action,
+                  HPX_POINTER, HPX_SIZE_T);
 
-
-static void usage(FILE *f) {
+static void
+_usage(FILE *f) {
   fprintf(f, "Usage: sendrecv [options] [LEVELS < 24]\n"
           "\t-w, amount of work\n"
           "\t-h, show help\n");
@@ -104,11 +106,10 @@ static void usage(FILE *f) {
   fflush(f);
 }
 
-
 int main(int argc, char *argv[argc]) {
 
   int args[2] = {24, 10000};
-  
+
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "HPX failed to initialize.\n");
     return -1;
@@ -120,11 +121,11 @@ int main(int argc, char *argv[argc]) {
      case 'w':
       args[1] = atoi(optarg);
      case 'h':
-      usage(stdout);
-      return 0;
      case '?':
+      _usage(stdout);
+      return 0;
      default:
-      usage(stderr);
+      _usage(stderr);
       return -1;
     }
   }
@@ -139,12 +140,12 @@ int main(int argc, char *argv[argc]) {
    case 0:
      break;
    default:
-    usage(stderr);
+    _usage(stderr);
     return -1;
   }
 
   if (args[0] > 24) {
-    usage(stderr);
+    _usage(stderr);
     return -1;
   }
 
@@ -153,7 +154,5 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _receiver, _receiver_action, HPX_POINTER, HPX_SIZE_T);
   return hpx_run(&_main, args, sizeof(args));
 }
