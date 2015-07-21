@@ -56,7 +56,7 @@ extern HPX_ACTION_DECL(pgas_free);
 
 /// Asynchronous entry point for the rsync handler for memput
 /// void (int src, uint64_t command)
-extern COMMAND_DECL(memput_rsync);
+// extern COMMAND_DECL(memput_rsync);
 
 /// Synchronous entry point for alloc.
 ///

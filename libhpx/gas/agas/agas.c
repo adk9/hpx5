@@ -415,7 +415,10 @@ static gas_t _agas_vtable = {
   .free           = _agas_free,
   .move           = agas_move,
   .memget         = agas_memget,
+  .memget_sync    = NULL,
   .memput         = agas_memput,
+  .memput_lsync   = NULL,
+  .memput_rsync   = NULL,
   .memcpy         = agas_memcpy,
   .owner_of       = _agas_owner_of
 };

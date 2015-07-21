@@ -183,6 +183,17 @@ _smp_memput(void *gas, hpx_addr_t to, const void *from, size_t size,
   return HPX_SUCCESS;
 }
 
+static int
+_smp_memput_lsync(void *gas, hpx_addr_t to, const void *from, size_t size,
+                  hpx_addr_t rsync) {
+  return _smp_memput(gas, to, from, size, HPX_NULL, rsync);
+}
+
+static int
+_smp_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t size) {
+  return _smp_memput(gas, to, from, size, HPX_NULL, HPX_NULL);
+}
+
 /// Copy memory from a global address to a local address.
 static int
 _smp_memget(void *gas, void *to, hpx_addr_t from, size_t size,
@@ -196,6 +207,11 @@ _smp_memget(void *gas, void *to, hpx_addr_t from, size_t size,
   }
   hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
+}
+
+static int
+_smp_memget_sync(void *gas, void *to, hpx_addr_t from, size_t size) {
+  return _smp_memget(gas, to, from, size, HPX_NULL);
 }
 
 /// Move memory from one locality to another.
@@ -237,7 +253,10 @@ static gas_t _smp_vtable = {
   .free           = _smp_gas_free,
   .move           = _smp_move,
   .memget         = _smp_memget,
+  .memget_sync    = _smp_memget_sync,
   .memput         = _smp_memput,
+  .memput_lsync   = _smp_memput_lsync,
+  .memput_rsync   = _smp_memput_rsync,
   .memcpy         = _smp_memcpy
 };
 
