@@ -41,44 +41,26 @@ typedef struct heap_segment {
   xport_key_t key;
 } heap_segment_t;
 
-static HPX_USED const char *
-_straction(hpx_action_t id) {
-  dbg_assert(here && here->actions);
-  return action_table_get_key(here->actions, id);
-}
-
 static void
 _probe_local(pwc_network_t *pwc) {
   int rank = here->rank;
-  const struct action_table *actions = here->actions;
 
   // Each time through the loop, we deal with local completions.
   command_t command;
   int src;
   while (pwc->xport->test(&command, NULL, &src)) {
-    hpx_addr_t op = command_get_op(command);
-    log_net("processing local command: %s\n", _straction(op));
-    hpx_action_handler_t handler = action_table_get_handler(actions, op);
-    command_handler_t f = (command_handler_t)(handler);
-    int e = f(rank, command);
-    dbg_assert_str(HPX_SUCCESS == e, "failed to process local command\n");
-    (void)e;
+    int e = command_run(rank, command);
+    dbg_check(e, "failed to process local command\n");
   }
 }
 
 static hpx_parcel_t *
 _probe(pwc_network_t *pwc, int rank) {
-  const struct action_table *actions = here->actions;
   command_t command;
   int src;
   while (pwc->xport->probe(&command, NULL, rank, &src)) {
-    hpx_addr_t op = command_get_op(command);
-    log_net("processing command %s from rank %d\n", _straction(op), src);
-    hpx_action_handler_t handler = action_table_get_handler(actions, op);
-    command_handler_t f = (command_handler_t)(handler);
-    int e = f(src, command);
-    dbg_assert_str(HPX_SUCCESS == e, "failed to process command\n");
-    (void)e;
+    int e = command_run(src, command);
+    dbg_check(e, "failed to process command from %d\n", src);
   }
   return NULL;
 }
