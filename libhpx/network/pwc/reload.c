@@ -114,7 +114,7 @@ _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
   op->n = 0;
   op->src = NULL;
   op->src_key = NULL;
-  op->lop = 0;
+  op->lop = (command_t){0};
   op->rop = command_pack(_reload_request, r);
   int e = xport->command(op);
   if (LIBHPX_OK == e) {
@@ -135,7 +135,7 @@ _reload_send(void *obj, pwc_xport_t *xport, int rank, const hpx_parcel_t *p) {
     .src = p,
     .src_key = xport->key_find_ref(xport, p, n),
     .lop = command_pack(release_parcel, (uintptr_t)p),
-    .rop = 0
+    .rop = {0}
   };
 
   if (!op.src_key) {
@@ -271,7 +271,7 @@ static int _reload_request_handler(int src, command_t cmd) {
     .dest_key = reload->remotes[src].key,
     .src = recv,
     .src_key = reload->recv_key,
-    .lop = 0,
+    .lop = {0},
     .rop = command_pack(_reload_reply, 0)
   };
 
