@@ -108,7 +108,7 @@ _run(void *worker) {
   as_join(AS_GLOBAL);
   as_join(AS_CYCLIC);
 
-  if (worker_start(self)) {
+  if (worker_start()) {
     dbg_error("failed to start processing lightweight threads.\n");
     return NULL;
   }
@@ -283,13 +283,12 @@ _try_get_stack(worker_t *w, hpx_parcel_t *p) {
 ///
 /// @returns          The parcel @p, but with a valid stack.
 static hpx_parcel_t *
-_try_bind(worker_t *worker, hpx_parcel_t *p) {
+_try_bind(worker_t *w, hpx_parcel_t *p) {
   dbg_assert(p);
-  if (parcel_get_stack(p)) {
+  if (parcel_get_stack(p))
     return p;
-  }
 
-  ustack_t *stack = _try_get_stack(worker, p);
+  ustack_t *stack = _try_get_stack(w, p);
   if (!stack) {
     stack = thread_new(p, _execute_thread);
   }
@@ -303,7 +302,7 @@ _try_bind(worker_t *worker, hpx_parcel_t *p) {
 
 /// Add a parcel to the top of the worker's work queue.
 static void
-_spawn_lifo(worker_t *worker, hpx_parcel_t *p) {
+_spawn_lifo(worker_t *w, hpx_parcel_t *p) {
   dbg_assert(p->target != HPX_NULL);
   dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
   DEBUG_IF(action_is_task(here->actions, p->action)) {
@@ -311,22 +310,22 @@ _spawn_lifo(worker_t *worker, hpx_parcel_t *p) {
   }
 
   TRACE_PUSH_LIFO(p);
-  uint64_t size = sync_chase_lev_ws_deque_push(&worker->work, p);
-  worker->work_first = (here->sched->wf_threshold < size);
+  uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
+  w->work_first = (here->sched->wf_threshold < size);
 }
 
 /// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *
-_schedule_lifo(worker_t *worker) {
-  hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&worker->work);
+_schedule_lifo(worker_t *w) {
+  hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&w->work);
   TRACE_POP_LIFO(p);
-  TRACE_WQSIZE(worker);
+  TRACE_WQSIZE(w);
   return p;
 }
 
 /// Process the next available yielded thread.
 static hpx_parcel_t *
-_schedule_yielded(worker_t *worker) {
+_schedule_yielded(worker_t *w) {
   return sync_two_lock_queue_dequeue(&here->sched->yielded);
 }
 
@@ -336,7 +335,7 @@ _schedule_yielded(worker_t *worker) {
 /// steal. Ultimately though, we're building a distributed runtime so SMP work
 /// stealing isn't that big a deal.
 static hpx_parcel_t *
-_schedule_steal(worker_t *worker) {
+_schedule_steal(worker_t *w) {
   int n = here->sched->n_workers;
   if (n == 1) {
     return NULL;
@@ -344,14 +343,14 @@ _schedule_steal(worker_t *worker) {
 
   worker_t *victim = NULL;
   do {
-    int id = rand_r(&worker->seed) % n;
+    int id = rand_r(&w->seed) % n;
     victim = scheduler_get_worker(here->sched, id);
-  } while (victim == worker);
+  } while (victim == w);
 
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
   if (p) {
     TRACE_STEAL_LIFO(p, victim);
-    COUNTER_SAMPLE(++worker->stats.steals);
+    COUNTER_SAMPLE(++w->stats.steals);
   }
 
   return p;
@@ -361,18 +360,19 @@ _schedule_steal(worker_t *worker) {
 static void
 _send_mail(int id, hpx_parcel_t *p) {
   dbg_assert(id >= 0);
-  worker_t *worker = scheduler_get_worker(here->sched, id);
-  sync_two_lock_queue_enqueue(&worker->inbox, p);
+  worker_t *w = scheduler_get_worker(here->sched, id);
+  sync_two_lock_queue_enqueue(&w->inbox, p);
 }
 
 /// Process my mail queue.
 static void
-_handle_mail(worker_t *worker) {
-  hpx_parcel_t *parcels = NULL, *p = NULL;
-  while ((parcels = sync_two_lock_queue_dequeue(&worker->inbox))) {
+_handle_mail(worker_t *w) {
+  hpx_parcel_t *parcels = NULL;
+  hpx_parcel_t *p = NULL;
+  while ((parcels = sync_two_lock_queue_dequeue(&w->inbox))) {
     while ((p = parcel_stack_pop(&parcels))) {
-      COUNTER_SAMPLE(++worker->stats.mail);
-      _spawn_lifo(worker, p);
+      COUNTER_SAMPLE(++w->stats.mail);
+      _spawn_lifo(w, p);
     }
   }
 }
@@ -385,13 +385,13 @@ _handle_mail(worker_t *worker) {
 /// continuation performs that operation.
 static int
 _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
-  worker_t *worker = self;
-  hpx_parcel_t *prev = worker->current;
-  worker->current = to;
+  worker_t *w = self;
+  hpx_parcel_t *prev = w->current;
+  w->current = to;
   ustack_t *stack = parcel_get_stack(prev);
   parcel_set_stack(prev, NULL);
   if (stack) {
-    _put_stack(worker, stack);
+    _put_stack(w, stack);
   }
   hpx_parcel_release(prev);
   int status = (intptr_t)env;
@@ -409,13 +409,13 @@ _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
 /// running on.
 static int
 _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
-  worker_t *worker = self;
-  worker->current = to;
+  worker_t *w = self;
+  w->current = to;
   hpx_parcel_t *prev = env;
   ustack_t *stack = parcel_get_stack(prev);
   parcel_set_stack(prev, NULL);
   if (stack) {
-    _put_stack(worker, stack);
+    _put_stack(w, stack);
   }
   hpx_parcel_send(prev, HPX_NULL);
   return HPX_SUCCESS;
@@ -426,23 +426,25 @@ _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
 /// This will transfer back to the original system stack, returning the shutdown
 /// code. We release our registration of the pthread stack here as well.
 static void
-_worker_shutdown(worker_t *worker) {
+_worker_shutdown(worker_t *w) {
+  dbg_assert(w == self);
+
 #ifndef ENABLE_DEBUG
-  void *base = (char*)worker->sp - here->config->stacksize;
+  void *base = (char*)w->sp - here->config->stacksize;
   network_release_dma(here->network, base, here->config->stacksize);
 #endif
 
-  void **sp = &worker->sp;
+  void **sp = &w->sp;
   intptr_t shutdown = sync_load(&here->sched->shutdown, SYNC_ACQUIRE);
-  INST_EVENT_PARCEL_END(self->current);
+  INST_EVENT_PARCEL_END(w->current);
   _transfer((hpx_parcel_t*)&sp, _free_parcel, (void*)shutdown);
   unreachable();
 }
 
 static int
 _run_task(hpx_parcel_t *to, void *sp, void *env) {
-  worker_t *worker = self;
-  hpx_parcel_t *from = worker->current;
+  worker_t *w = self;
+  hpx_parcel_t *from = w->current;
 
   // If we're transferring from a task, then we want to delete the current
   // task's parcel. Otherwise we are transferring from a thread and we want to
@@ -453,11 +455,11 @@ _run_task(hpx_parcel_t *to, void *sp, void *env) {
   }
   else {
     parcel_get_stack(from)->sp = sp;
-    _spawn_lifo(worker, from);
+    _spawn_lifo(w, from);
   }
 
-  self->current = env;
-  dbg_assert(parcel_get_stack(worker->current) == NULL);
+  w->current = env;
+  dbg_assert(parcel_get_stack(w->current) == NULL);
   _execute_thread(env);
   unreachable();
   return HPX_SUCCESS;
@@ -470,7 +472,7 @@ _run_task(hpx_parcel_t *to, void *sp, void *env) {
 /// @returns       NULL The parcel was processed as a task.
 ///                  @p The parcel was not a task.
 static hpx_parcel_t *
-_try_task(worker_t *worker, hpx_parcel_t *p) {
+_try_task(worker_t *w, hpx_parcel_t *p) {
   if (scheduler_is_shutdown(here->sched)) {
     return p;
   }
@@ -481,7 +483,7 @@ _try_task(worker_t *worker, hpx_parcel_t *p) {
 
   dbg_assert(!parcel_get_stack(p));
 
-  void **sp = &worker->sp;
+  void **sp = &w->sp;
 
   // No instrumentation for suspend here since thread is already recorded as
   // suspended (we mark the suspend before the call to _schedule).
@@ -541,6 +543,7 @@ _schedule_in_lco(hpx_parcel_t *final) {
 
   return _get_nop_parcel();
 }
+
 
 /// The main scheduling "loop."
 ///
@@ -616,6 +619,7 @@ _schedule(bool in_lco, hpx_parcel_t *final) {
   return _try_bind(self, p);
 }
 
+
 int
 worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   w->thread     = 0;
@@ -633,6 +637,7 @@ worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
 
   return LIBHPX_OK;
 }
+
 
 void
 worker_fini(worker_t *w) {
@@ -667,14 +672,16 @@ worker_bind_self(worker_t *worker) {
 }
 
 int
-worker_start(worker_t *w) {
-  // make sure the system is initialized
-  dbg_assert(here && here->config && here->network);
+worker_start(void) {
+  dbg_assert(self);
 
   // double-check this
-  dbg_assert(((uintptr_t)w & (HPX_CACHELINE_SIZE - 1)) == 0);
-  dbg_assert(((uintptr_t)&w->work & (HPX_CACHELINE_SIZE - 1)) == 0);
-  dbg_assert(((uintptr_t)&w->inbox & (HPX_CACHELINE_SIZE - 1))== 0);
+  dbg_assert(((uintptr_t)self & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&self->work & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&self->inbox & (HPX_CACHELINE_SIZE - 1))== 0);
+
+  // make sure the system is initialized
+  dbg_assert(here && here->config && here->network);
 
   // wait for local threads to start up
   system_barrier_wait(&here->sched->barrier);
@@ -693,7 +700,6 @@ worker_start(worker_t *w) {
     return e;
   }
 
-  // reset the current parcel
   self->current = NULL;
 
   return LIBHPX_OK;
@@ -736,10 +742,11 @@ worker_cancel(worker_t *worker) {
 
 static int
 _work_first(hpx_parcel_t *to, void *sp, void *env) {
-  hpx_parcel_t *prev = self->current;
+  worker_t *w = self;
+  hpx_parcel_t *prev = w->current;
+  w->current = to;
   parcel_get_stack(prev)->sp = sp;
-  self->current = to;
-  _spawn_lifo(self, prev);
+  _spawn_lifo(w, prev);
   return HPX_SUCCESS;
 }
 
@@ -749,19 +756,19 @@ _work_first(hpx_parcel_t *to, void *sp, void *env) {
 /// method of computation for the parcel.
 void
 scheduler_spawn(hpx_parcel_t *p) {
-  worker_t *worker = self;
-  dbg_assert(worker);
-  dbg_assert(worker->id >= 0);
+  worker_t *w = self;
+  dbg_assert(w);
+  dbg_assert(w->id >= 0);
   dbg_assert(p);
   dbg_assert(hpx_gas_try_pin(p->target, NULL)); // just performs translation
   dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
-  COUNTER_SAMPLE(worker->stats.spawns++);
+  COUNTER_SAMPLE(w->stats.spawns++);
 
   // Don't run anything until we have started up. This lets us use parcel_send()
   // before hpx_run() without worrying about weird work-first or interrupt
   // effects.
-  if (!worker->sp) {
-    _spawn_lifo(worker, p);
+  if (!w->sp) {
+    _spawn_lifo(w, p);
     return;
   }
 
@@ -774,8 +781,8 @@ scheduler_spawn(hpx_parcel_t *p) {
   // If we're in help-first mode, or we're supposed to shutdown, we go ahead and
   // buffer this parcel. It will get pulled from the buffer later for
   // processing.
-  if (!worker->work_first || scheduler_is_shutdown(here->sched)) {
-    _spawn_lifo(worker, p);
+  if (!w->work_first || scheduler_is_shutdown(here->sched)) {
+    _spawn_lifo(w, p);
     return;
   }
 
@@ -792,29 +799,29 @@ scheduler_spawn(hpx_parcel_t *p) {
   //        parcel releases that we don't want when we do that. We could
   //        restructure _try_task() to deal with that, in which case it would
   //        make sense to hoist the _try_task() farther up this decision tree.
-  hpx_parcel_t *current = worker->current;
+  hpx_parcel_t *current = w->current;
   if (action_is_task(here->actions, current->action)) {
-    _spawn_lifo(worker, p);
+    _spawn_lifo(w, p);
     return;
   }
 
   // 2) We can't work-first if we are holding an LCO lock.
   ustack_t *thread = parcel_get_stack(current);
   if (thread->lco_depth) {
-    _spawn_lifo(worker, p);
+    _spawn_lifo(w, p);
     return;
   }
 
   // 3) We can't work-first from an interrupt.
   if (action_is_interrupt(here->actions, current->action)) {
-    _spawn_lifo(worker, p);
+    _spawn_lifo(w, p);
     return;
   }
 
   // We can process the parcel work-first, but we need to use a thread to do it
   // so that our continuation can be stolen.
   INST_EVENT_PARCEL_SUSPEND(current);
-  p = _try_bind(worker, p);
+  p = _try_bind(w, p);
   int e = _transfer(p, _work_first, NULL);
   INST_EVENT_PARCEL_RESUME(current);
   dbg_check(e, "Detected a work-first scheduling error: %s\n", hpx_strerror(e));
@@ -876,9 +883,9 @@ hpx_thread_yield(void) {
 static int
 _unlock(hpx_parcel_t *to, void *sp, void *env) {
   lockable_ptr_t *lock = env;
-  worker_t *worker = self;
-  hpx_parcel_t *prev = worker->current;
-  worker->current = to;
+  worker_t *w = self;
+  hpx_parcel_t *prev = w->current;
+  w->current = to;
   parcel_get_stack(prev)->sp = sp;
   sync_lockable_ptr_unlock(lock);
   return HPX_SUCCESS;
@@ -1066,7 +1073,8 @@ hpx_thread_current_credit(void) {
 
 int
 hpx_thread_get_tls_id(void) {
-  ustack_t *stack = parcel_get_stack(self->current);
+  worker_t *w = self;
+  ustack_t *stack = parcel_get_stack(w->current);
   if (stack->tls_id < 0) {
     stack->tls_id = sync_fadd(&here->sched->next_tls_id, 1, SYNC_ACQ_REL);
   }
@@ -1101,18 +1109,19 @@ hpx_thread_set_affinity(int affinity) {
   dbg_assert(self->current);
   dbg_assert(parcel_get_stack(self->current));
 
-  worker_t     *w = self;
-  hpx_parcel_t *p = w->current;
-  ustack_t *stack = parcel_get_stack(p);
-  stack->affinity = affinity;
-
-  // move the parcel if it is at the wrong place
-  if (affinity != w->id) {
-    INST_EVENT_PARCEL_SUSPEND(p);
-    hpx_parcel_t *to = _schedule(false, NULL);
-    _transfer(to, _move_to, (void*)(intptr_t)affinity);
-    INST_EVENT_PARCEL_RESUME(p);
+  // make sure affinity is in bounds
+  worker_t *worker = self;
+  hpx_parcel_t  *p = worker->current;
+  ustack_t *thread = parcel_get_stack(p);
+  thread->affinity = affinity;
+  if (affinity < 0 || affinity == self->id) {
+    return;
   }
+
+  INST_EVENT_PARCEL_SUSPEND(p);
+  hpx_parcel_t *to = _schedule(false, NULL);
+  _transfer(to, _move_to, (void*)(intptr_t)affinity);
+  INST_EVENT_PARCEL_RESUME(p);
 }
 
 /// The environment for the _checkpoint_launch_through continuation.
@@ -1136,9 +1145,9 @@ typedef struct {
 /// @return             The status from the closure continuation.
 static int
 _checkpoint_suspend(hpx_parcel_t *to, void *sp, void *env) {
-  worker_t *worker = self;
-  hpx_parcel_t *prev = worker->current;
-  worker->current = to;
+  worker_t *w = self;
+  hpx_parcel_t *prev = w->current;
+  w->current = to;
   parcel_get_stack(prev)->sp = sp;
   _checkpoint_suspend_env_t *c = env;
   return c->f(c->env);
@@ -1152,17 +1161,18 @@ scheduler_suspend(int (*f)(void*), void *env) {
     .env = env
   };
 
-  INST_EVENT_PARCEL_SUSPEND(self->current);
+  hpx_parcel_t *p = self->current;
+  INST_EVENT_PARCEL_SUSPEND(p);
   // Don't block during the schedule call, we still have something to do (call
   // the continuation) that may impact global progress.
   hpx_parcel_t *to = _schedule(true, NULL);
   int e = _transfer(to, _checkpoint_suspend, &suspend_env);
-  INST_EVENT_PARCEL_RESUME(self->current);
+  INST_EVENT_PARCEL_RESUME(p);
   return e;
 }
 
 intptr_t
-worker_can_alloca(const worker_t *w, size_t bytes) {
-  ustack_t *current = parcel_get_stack(w->current);
+worker_can_alloca(size_t bytes) {
+  ustack_t *current = parcel_get_stack(self->current);
   return ((uintptr_t)&current - (uintptr_t)current->stack < bytes);
 }
