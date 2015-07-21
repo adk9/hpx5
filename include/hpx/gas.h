@@ -271,6 +271,41 @@ int hpx_gas_memget_sync(void *to, hpx_addr_t from, size_t size);
 int hpx_gas_memput(hpx_addr_t to, const void *from, size_t size,
                    hpx_addr_t lsync, hpx_addr_t rsync);
 
+/// This copies data from a local buffer to a global address with locally
+/// synchronous semantics.
+///
+/// This shares the same functionality as hpx_gas_memput(), but will not return
+/// until the local @p from buffer can be reused. This exposes the potential for
+/// a more efficient mechanism for synchronous operation, and should be
+/// preferred where locally-synchronous semantics are desired.
+///
+/// @param           to The global address to copy to.
+/// @param         from The local address to copy from, must be a stack location
+///                       or an address allocated with hpx_malloc_registered().
+/// @param         size The size, in bytes, of the buffer to copy
+/// @param        rsync The address of a zero-sized future that can be used to
+///                       wait for remote completion of the memput. Once this is
+///                       signaled the put has become globally visible.
+///
+/// @returns  HPX_SUCCESS
+int hpx_gas_memput_lsync(hpx_addr_t to, const void *from, size_t size,
+                         hpx_addr_t rsync);
+
+/// This copies data synchronously from a local buffer to a global address.
+///
+/// This shares the same functionality as hpx_gas_memput(), but will not return
+/// until the write has completed remotely. This exposes the potential for
+/// a more efficient mechanism for synchronous operation, and shoudl be
+/// preferred where fully synchronous semantics are necessary.
+///
+/// @param           to The global address to copy to.
+/// @param         from The local address to copy from, must be a stack location
+///                       or an address allocated with hpx_malloc_registered().
+/// @param         size The size, in bytes, of the buffer to copy
+///
+/// @returns  HPX_SUCCESS
+int hpx_gas_memput_rsync(hpx_addr_t to, const void *from, size_t size);
+
 /// This copies data from a global address to a global address, asynchronously.
 ///
 /// The global address range [from, from + size) and [to, to + size) must be

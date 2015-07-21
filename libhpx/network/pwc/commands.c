@@ -16,6 +16,7 @@
 
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
+#include <libhpx/action.h>
 #include <libhpx/gpa.h>
 #include <libhpx/locality.h>
 #include <libhpx/network.h>
@@ -39,10 +40,18 @@ static int _release_parcel_handler(int src, command_t command) {
 }
 COMMAND_DEF(release_parcel, _release_parcel_handler);
 
+static int _resume_parcel_remote_handler(int src, command_t command) {
+  // bounce the command back to the src, because that is where the parcel to be
+  // resumed is
+  return network_command(here->network, src, resume_parcel, command);
+}
+COMMAND_DEF(resume_parcel_remote, _resume_parcel_remote_handler);
+
 static int _resume_parcel_handler(int src, command_t command) {
   uintptr_t arg = command_get_arg(command);
   hpx_parcel_t *p = (hpx_parcel_t *)arg;
-  log_net("resuming suspended parcel %p\n", (void*)p);
+  log_net("resuming %s, (%p)\n", action_table_get_key(here->actions, p->action),
+          (void*)p);
   parcel_launch(p);
   return HPX_SUCCESS;
 }
