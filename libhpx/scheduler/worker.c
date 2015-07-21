@@ -1019,7 +1019,6 @@ hpx_thread_exit(int status) {
 
 hpx_parcel_t *
 scheduler_current_parcel(void) {
-  worker_t *w = self;
   return self->current;
 }
 
