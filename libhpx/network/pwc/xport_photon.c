@@ -149,12 +149,12 @@ _photon_unpin(const void *base, size_t n) {
 
 // async entry point for unpin
 static int
-_photon_unpin_async(const void *base, size_t n) {
+_photon_unpin_async(const void *base, size_t n, int src, uint64_t op) {
   _photon_unpin(base, n);
-  return HPX_SUCCESS;
+  return command_run(src, (command_t){op});
 }
 static LIBHPX_ACTION(HPX_INTERRUPT, 0, _unpin_async, _photon_unpin_async,
-                     HPX_POINTER, HPX_SIZE_T);
+                     HPX_POINTER, HPX_SIZE_T, HPX_INT, HPX_UINT64);
 
 /// Interpose a command to unpin a region before performing @p op.
 ///
@@ -176,24 +176,21 @@ static LIBHPX_ACTION(HPX_INTERRUPT, 0, _unpin_async, _photon_unpin_async,
 ///                     (pwc/gwc instance).
 static command_t
 _chain_unpin(const void *addr, size_t n, command_t op) {
-  // op_t lop = (op) ? command_get_op(op) : 0;
-  // arg_t arg = (op) ? command_get_arg(op) : 0;
-  // hpx_addr_t laddr = (op) ? ;
-  // if (op) {
-  // }
-  // hpx_parcel_t *p = parcel_new(HPX_HERE, _unpin_async,
+  // we assume that this parcel doesn't need credit to run---technically it
+  // not easy to account for this parcel because of the fact that pwc() can be
+  // run as a scheduler_suspend() operation
+  hpx_parcel_t *p = parcel_create(HPX_HERE,     // target
+                                  _unpin_async, // action
+                                  0,            // continuation target
+                                  0,            // continuation action
+                                  4,            // nargs
+                                  &addr,        // buffer to unpin
+                                  &n,           // length to unpin
+                                  &here->rank,  // src for command
+                                  &op.packed);  // command
+  dbg_assert(p);
 
-  hpx_addr_t lsync = hpx_lco_future_new(0);
-  hpx_call_when_with_continuation(lsync, HPX_HERE, _unpin_async, lsync,
-                                  hpx_lco_delete_action, &addr, &n);
-  if (op.packed) {
-    int rank = here->rank;
-    hpx_action_t lop = command_get_op(op);
-    hpx_addr_t laddr = offset_to_gpa(rank, command_get_arg(op));
-    hpx_call_when_with_continuation(lsync, laddr, lop, 0, 0, &rank, &laddr);
-  }
-
-  return command_pack(lco_set, lsync);
+  return command_pack(resume_parcel, (uint64_t)(uintptr_t)p);
 }
 
 static int
