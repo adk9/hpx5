@@ -96,7 +96,7 @@ _get_request_handler_getref(_pwc_lco_get_request_args_t *args,
   // Send back the LCO data. This doesn't resume the remote thread because there
   // is a race where a delete can trigger a use-after-free during our subsequent
   // release.
-  e = _get_request_handler_put(args, pwc, ref, 0);
+  e = _get_request_handler_put(args, pwc, ref, (command_t){0});
   dbg_check(e, "Failed rendezvous put during remote lco get request.\n");
 
   // Release the reference.

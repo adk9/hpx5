@@ -194,7 +194,7 @@ _pwc_command(void *network, hpx_addr_t loc, hpx_action_t rop, uint64_t args) {
     .dest_key = NULL,
     .src = NULL,
     .src_key = NULL,
-    .lop = 0,
+    .lop = {0},
     .rop = command_pack(rop, args)
   };
 
@@ -250,7 +250,7 @@ _pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
     .src = pwc->heap_segments[rank].base + offset,
     .src_key = &pwc->heap_segments[rank].key,
     .lop = command_pack(lop, laddr),
-    .rop = 0
+    .rop = {0}
   };
 
   return pwc->xport->gwc(&op);

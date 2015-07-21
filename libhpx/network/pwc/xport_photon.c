@@ -28,6 +28,7 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
+#include <libhpx/network.h>
 #include <libhpx/padding.h>
 #include <libhpx/system.h>
 #include "commands.h"
@@ -155,12 +156,37 @@ _photon_unpin_async(const void *base, size_t n) {
 static LIBHPX_ACTION(HPX_INTERRUPT, 0, _unpin_async, _photon_unpin_async,
                      HPX_POINTER, HPX_SIZE_T);
 
+/// Interpose a command to unpin a region before performing @p op.
+///
+/// We do not require that the local address for pwc/gwc be registered with
+/// the network. When we get a region that is not yet registered we need to
+/// dynamically register it, and then de-register it once the operation has
+/// completed.
+///
+/// This operation attaches a parcel resume command to the local completion
+/// event that will unpin the region, and then continue with the user-supplied
+/// local command.
+///
+/// @param         addr The address we need to de-register.
+/// @param            n The number of bytes to de-register.
+/// @param           op The user's local completion operation.
+///
+/// @returns            The operation that should be used as the local
+///                     completion event handler for the current operation
+///                     (pwc/gwc instance).
 static command_t
 _chain_unpin(const void *addr, size_t n, command_t op) {
+  // op_t lop = (op) ? command_get_op(op) : 0;
+  // arg_t arg = (op) ? command_get_arg(op) : 0;
+  // hpx_addr_t laddr = (op) ? ;
+  // if (op) {
+  // }
+  // hpx_parcel_t *p = parcel_new(HPX_HERE, _unpin_async,
+
   hpx_addr_t lsync = hpx_lco_future_new(0);
   hpx_call_when_with_continuation(lsync, HPX_HERE, _unpin_async, lsync,
                                   hpx_lco_delete_action, &addr, &n);
-  if (op) {
+  if (op.packed) {
     int rank = here->rank;
     hpx_action_t lop = command_get_op(op);
     hpx_addr_t laddr = offset_to_gpa(rank, command_get_arg(op));
@@ -172,11 +198,11 @@ _chain_unpin(const void *addr, size_t n, command_t op) {
 
 static int
 _photon_command(const xport_op_t *op) {
-  int flags = ((op->lop) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
-              ((op->rop) ? 0 : PHOTON_REQ_PWC_NO_RCE);
+  int flags = ((op->lop.packed) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
+              ((op->rop.packed) ? 0 : PHOTON_REQ_PWC_NO_RCE);
 
-  int e = photon_put_with_completion(op->rank, 0, NULL, NULL, op->lop, op->rop,
-                                     flags);
+  int e = photon_put_with_completion(op->rank, 0, NULL, NULL,
+                                     op->lop.packed, op->rop.packed, flags);
   if (PHOTON_OK == e) {
     return LIBHPX_OK;
   }
@@ -191,8 +217,8 @@ _photon_command(const xport_op_t *op) {
 
 static int
 _photon_pwc(xport_op_t *op) {
-  int flags = ((op->lop) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
-              ((op->rop) ? 0 : PHOTON_REQ_PWC_NO_RCE);
+  int flags = ((op->lop.packed) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
+              ((op->rop.packed) ? 0 : PHOTON_REQ_PWC_NO_RCE);
 
   struct photon_buffer_t rbuf = {
     .addr = (uintptr_t)op->dest,
@@ -214,8 +240,8 @@ _photon_pwc(xport_op_t *op) {
     op->lop = _chain_unpin(op->src, op->n, op->lop);
   }
 
-  int e = photon_put_with_completion(op->rank, op->n, &lbuf, &rbuf, op->lop,
-                                     op->rop, flags);
+  int e = photon_put_with_completion(op->rank, op->n, &lbuf, &rbuf,
+                                     op->lop.packed, op->rop.packed, flags);
   if (PHOTON_OK == e) {
     return LIBHPX_OK;
   }
@@ -230,7 +256,7 @@ _photon_pwc(xport_op_t *op) {
 
 static int
 _photon_gwc(xport_op_t *op) {
-  int flags = (op->rop) ? 0 : PHOTON_REQ_PWC_NO_RCE;
+  int flags = (op->rop.packed) ? 0 : PHOTON_REQ_PWC_NO_RCE;
 
   struct photon_buffer_t lbuf = {
     .addr = (uintptr_t)op->dest,
@@ -253,8 +279,8 @@ _photon_gwc(xport_op_t *op) {
   dbg_assert(op->src_key);
   _photon_key_copy(&rbuf.priv, op->src_key);
 
-  int e = photon_get_with_completion(op->rank, op->n, &lbuf, &rbuf, op->lop,
-                                     op->rop, flags);
+  int e = photon_get_with_completion(op->rank, op->n, &lbuf, &rbuf,
+                                     op->lop.packed, op->rop.packed, flags);
   if (PHOTON_OK == e) {
     return LIBHPX_OK;
   }
@@ -263,10 +289,10 @@ _photon_gwc(xport_op_t *op) {
 }
 
 static int
-_poll(uint64_t *op, int *remaining, int rank, int *src, int type) {
+_poll(command_t *op, int *remaining, int rank, int *src, int type) {
   int flag = 0;
   int prank = (rank == XPORT_ANY_SOURCE) ? PHOTON_ANY_SOURCE : rank;
-  int e = photon_probe_completion(prank, &flag, remaining, op, src, type);
+  int e = photon_probe_completion(prank, &flag, remaining, &op->packed, src, type);
   if (PHOTON_OK != e) {
     dbg_error("photon probe error\n");
   }
@@ -274,12 +300,12 @@ _poll(uint64_t *op, int *remaining, int rank, int *src, int type) {
 }
 
 static int
-_photon_test(uint64_t *op, int *remaining, int *src) {
+_photon_test(command_t *op, int *remaining, int *src) {
   return _poll(op, remaining, PHOTON_ANY_SOURCE, src, PHOTON_PROBE_EVQ);
 }
 
 static int
-_photon_probe(uint64_t *op, int *remaining, int rank, int *src) {
+_photon_probe(command_t *op, int *remaining, int rank, int *src) {
   return _poll(op, remaining, rank, src, PHOTON_PROBE_LEDGER);
 }
 
