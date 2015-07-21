@@ -48,6 +48,9 @@ static inline command_t command_pack(op_t op, arg_t arg) {
   return command;
 }
 
+/// Handle a command.
+int command_run(int src, command_t cmd);
+
 #ifdef __cplusplus
 }
 #endif
