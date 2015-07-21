@@ -35,7 +35,7 @@ struct ustack;
 /// __thread local storage.
 ///
 /// @{
-typedef struct worker {
+typedef struct {
   pthread_t          thread;                    // this worker's native thread
   int                    id;                    // this worker's id
   unsigned             seed;                    // my random seed
@@ -60,7 +60,6 @@ extern __thread worker_t * volatile self;
 /// Initialize a worker structure.
 ///
 /// @param            w The worker structure to initialize.
-/// @param        sched The scheduler instance.
 /// @param           id The worker's id.
 /// @param         seed The random seed for this worker.
 /// @param    work_size The initial size of the work queue.
@@ -80,7 +79,7 @@ void worker_bind_self(worker_t *worker)
   HPX_NON_NULL(1);
 
 /// Start processing lightweight threads.
-int worker_start(worker_t *worker);
+int worker_start(void);
 
 /// Creates a worker thread associated with a scheduler.
 ///
@@ -121,6 +120,6 @@ void worker_cancel(worker_t *worker)
 ///
 /// @returns            The number of bytes remaining on the stack after the
 ///                     alloca.
-intptr_t worker_can_alloca(const worker_t *worker, size_t bytes);
+intptr_t worker_can_alloca(size_t bytes);
 
 #endif // LIBHPX_WORKER_H

@@ -71,7 +71,7 @@ void libhpx_stats_print(void) {
   libhpx_stats_t global_stats = LIBHPX_STATS_INIT;
   char id[16] = {0};
   for (int i = 0, e = here->sched->n_workers; i < e; ++i) {
-    struct worker *w = scheduler_get_worker(here->sched, i);
+    worker_t *w = scheduler_get_worker(here->sched, i);
     snprintf(id, 16, "%d", w->id);
     _print_stats(id, &w->stats);
     libhpx_stats_accum(&global_stats, &w->stats);

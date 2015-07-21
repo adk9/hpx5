@@ -68,7 +68,7 @@ struct scheduler {
   int               n_workers;
   uint32_t       wf_threshold;
   system_barrier_t    barrier;
-  struct worker      *workers;
+  worker_t      *workers;
 };
 
 /// Allocate and initialize a new scheduler.
@@ -227,7 +227,7 @@ void scheduler_signal_error(struct cvar *cvar, hpx_status_t code)
 hpx_parcel_t *scheduler_current_parcel(void);
 
 /// Get a worker by id.
-struct worker *scheduler_get_worker(struct scheduler *sched, int id)
+worker_t *scheduler_get_worker(struct scheduler *sched, int id)
   HPX_NON_NULL(1);
 
 #endif // LIBHPX_SCHEDULER_H
