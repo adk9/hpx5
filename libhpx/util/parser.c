@@ -62,6 +62,8 @@ const char *hpx_options_t_help[] = {
   "      --hpx-trace-dir=dir       directory to output trace files",
   "      --hpx-trace-filesize=bytes\n                                set the size of each trace file",
   "      --hpx-trace-at=[localities]\n                                set the localities to trace at",
+  "\nProfiling:",
+  "      --hpx-prof-counters=counters\n                                set the PAPI counters for profiling",
   "\nISIR Network Options:",
   "      --hpx-isir-testwindow=requests\n                                number of ISIR requests to test in progress \n                                  loop",
   "      --hpx-isir-sendlimit=requests\n                                ISIR network send limit",
