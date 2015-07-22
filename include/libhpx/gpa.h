@@ -17,24 +17,25 @@
 /// @brief Declaration of the PGAS-specific global physical address.
 #include <stdint.h>
 #include <hpx/hpx.h>
+#include <libhpx/debug.h>
 
-// the number of bits for each part of the address
-#define     GPA_PE_BITS (16)
-#define   GPA_CORE_BITS (8)
-#define GPA_OFFSET_BITS (8 * sizeof(hpx_addr_t) - GPA_PE_BITS - GPA_CORE_BITS)
+#define   GPA_RANK_BITS 16
+#define GPA_OFFSET_BITS 48
 
-// shift values for the three parts of the gpa
-#define     GPA_PE_SHIFT (GPA_CORE_BITS + GPA_OFFSET_BITS)
-#define GPA_OFFSET_SHIFT (0)
+typedef union {
+  hpx_addr_t addr;
+  struct {
+    uint64_t offset : GPA_OFFSET_BITS;
+    uint64_t   home : GPA_RANK_BITS;
+  } bits;
+} gpa_t;
 
-// masks to clobber bits of the address (use with &)
-#define      GPA_PE_MASK (UINT64_MAX << GPA_OFFSET_BITS)
-#define  GPA_OFFSET_MASK (~(GPA_PE_MASK))
 #define GPA_MAX_LG_BSIZE (sizeof(uint32_t)*8)
 
 /// Extract the locality from a gpa.
-static inline uint32_t gpa_to_rank(hpx_addr_t gpa) {
-  return (gpa & GPA_PE_MASK) >> GPA_PE_SHIFT;
+static inline uint32_t gpa_to_rank(hpx_addr_t addr) {
+  gpa_t gpa = { .addr = addr };
+  return gpa.bits.home;
 }
 
 /// Extract the heap offset of a gpa, given the number of ranks.
@@ -47,8 +48,9 @@ static inline uint32_t gpa_to_rank(hpx_addr_t gpa) {
 ///
 /// @returns            The offset within the global heap that corresponds to
 ///                     the address.
-static inline uint64_t gpa_to_offset(hpx_addr_t gpa) {
-  return (gpa & GPA_OFFSET_MASK) >> GPA_OFFSET_SHIFT;
+static inline uint64_t gpa_to_offset(hpx_addr_t addr) {
+  gpa_t gpa = { .addr = addr };
+  return gpa.bits.offset;
 }
 
 /// Create a global physical address from a locality and heap offset pair.
@@ -60,9 +62,14 @@ static inline uint64_t gpa_to_offset(hpx_addr_t gpa) {
 ///                     locality.
 static inline hpx_addr_t offset_to_gpa(uint32_t locality, uint64_t offset)
 {
-  uint64_t pe = (((uint64_t)locality) << GPA_PE_SHIFT) & GPA_PE_MASK;
-  uint64_t off = (offset << GPA_OFFSET_SHIFT) & GPA_OFFSET_MASK;
-  return pe + off;
+  dbg_assert(locality < UINT16_MAX);
+  gpa_t gpa = {
+    .bits = {
+      .offset = offset,
+      .home = locality
+    }
+  };
+  return gpa.addr;
 }
 
 /// Compute the (signed) distance, in bytes, between two global addresses.

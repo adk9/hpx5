@@ -19,58 +19,39 @@
 /// @brief The libhpx stats definitions.
 
 #ifdef ENABLE_PROFILING
-#define profile_ctr(e) e
+#define COUNTER_SAMPLE(e) e
 #else
-#define profile_ctr(e)
+#define COUNTER_SAMPLE(e)
 #endif
 
-/// Forward declarations
-/// @{
-struct scheduler;
-/// @}
-
-/// HPX scheduler statistics.
+/// libhpx statistics.
 ///
 /// These are statistics mostly related to the scheduler that are
 /// updated during program execution. Local (per-worker) statistics
 /// are stored in each worker's TLS and updated by each worker
 /// separately. Global (per-scheduler) statistics are accumulated
 /// after each worker shuts down.
-typedef struct scheduler_stats {
-  unsigned long      spins;
+typedef struct libhpx_stats {
   unsigned long     spawns;
   unsigned long     steals;
   unsigned long       mail;
-  unsigned long    started;
-  unsigned long   finished;
-  unsigned long   progress;
-  unsigned long   backoffs;
-  unsigned long max_stacks;
   unsigned long     stacks;
   unsigned long     yields;
-  double           backoff;
-} scheduler_stats_t;
+} libhpx_stats_t;
 
-#define SCHEDULER_STATS_INIT {   \
-    .spins      = 0,             \
-    .spawns     = 0,             \
-    .steals     = 0,             \
-    .mail       = 0,             \
-    .started    = 0,             \
-    .finished   = 0,             \
-    .progress   = 0,             \
-    .backoffs   = 0,             \
-    .max_stacks = 0,             \
-    .stacks     = 0,             \
-    .yields     = 0,             \
-    .backoff  = 0.0              \
+#define LIBHPX_STATS_INIT { \
+    .spawns     = 0,        \
+    .steals     = 0,        \
+    .mail       = 0,        \
+    .stacks     = 0,        \
+    .yields     = 0,        \
   }
 
-/// Initialize a scheduler statistics structure.
-void scheduler_stats_init(struct scheduler_stats *stats)
+/// Initialize the libhpx statistics structure.
+void libhpx_stats_init(struct libhpx_stats *stats)
   HPX_NON_NULL(1);
 
-/// Accumulate scheduler statistics.
+/// Accumulate per-worker libhpx statistics.
 ///
 /// This is not synchronized.
 ///
@@ -78,18 +59,11 @@ void scheduler_stats_init(struct scheduler_stats *stats)
 /// @param          rhs The counts we're trying to add to.
 ///
 /// @returns            lhs
-struct scheduler_stats *scheduler_stats_accum(struct scheduler_stats *lhs,
-                                              const struct scheduler_stats *rhs)
+struct libhpx_stats *libhpx_stats_accum(struct libhpx_stats *lhs,
+                                        const struct libhpx_stats *rhs)
   HPX_NON_NULL(1, 2);
 
-/// Print scheduler stats.
-void scheduler_stats_print(const char *id, const struct scheduler_stats *stats)
-  HPX_NON_NULL(2);
-
-/// Get scheduler statistics.
-struct scheduler_stats *scheduler_get_stats(struct scheduler *sched);
-
-/// Get schedulers statistics for the current thread.
-struct scheduler_stats *thread_get_stats(void);
+/// Print libhpx statistics.
+void libhpx_stats_print(void);
 
 #endif // LIBHPX_STATS_H

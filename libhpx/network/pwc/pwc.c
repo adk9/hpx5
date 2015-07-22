@@ -41,42 +41,26 @@ typedef struct heap_segment {
   xport_key_t key;
 } heap_segment_t;
 
-static HPX_USED const char *
-_straction(hpx_action_t id) {
-  dbg_assert(here && here->actions);
-  return action_table_get_key(here->actions, id);
-}
-
 static void
 _probe_local(pwc_network_t *pwc) {
   int rank = here->rank;
-  const struct action_table *actions = here->actions;
 
   // Each time through the loop, we deal with local completions.
   command_t command;
-  while (pwc->xport->test(&command, NULL)) {
-    hpx_addr_t op = command_get_op(command);
-    log_net("processing local command: %s\n", _straction(op));
-    hpx_action_handler_t handler = action_table_get_handler(actions, op);
-    command_handler_t f = (command_handler_t)(handler);
-    int e = f(rank, command);
-    dbg_assert_str(HPX_SUCCESS == e, "failed to process local command\n");
-    (void)e;
+  int src;
+  while (pwc->xport->test(&command, NULL, &src)) {
+    int e = command_run(rank, command);
+    dbg_check(e, "failed to process local command\n");
   }
 }
 
 static hpx_parcel_t *
 _probe(pwc_network_t *pwc, int rank) {
-  const struct action_table *actions = here->actions;
   command_t command;
-  while (pwc->xport->probe(&command, NULL, rank)) {
-    hpx_addr_t op = command_get_op(command);
-    log_net("processing command %s from rank %d\n", _straction(op), rank);
-    hpx_action_handler_t handler = action_table_get_handler(actions, op);
-    command_handler_t f = (command_handler_t)(handler);
-    int e = f(rank, command);
-    dbg_assert_str(HPX_SUCCESS == e, "failed to process command\n");
-    (void)e;
+  int src;
+  while (pwc->xport->probe(&command, NULL, rank, &src)) {
+    int e = command_run(src, command);
+    dbg_check(e, "failed to process command from %d\n", src);
   }
   return NULL;
 }
@@ -85,18 +69,13 @@ static int
 _pwc_progress(void *network) {
   pwc_network_t *pwc = network;
   _probe_local(pwc);
-  for (int i = 0, e = here->ranks; i < e; ++i) {
-    _probe(pwc, i);
-  }
   return 0;
 }
 
-/// Probe is used in the generic progress loop to retrieve completed parcels.
-///
-/// The pwc network currently does all of its parcel processing inline during
-/// progress(), so this is a no-op.
 static hpx_parcel_t *
 _pwc_probe(void *network, int rank) {
+  pwc_network_t *pwc = network;
+  _probe(pwc, XPORT_ANY_SOURCE);
   return NULL;
 }
 
@@ -194,7 +173,7 @@ _pwc_command(void *network, hpx_addr_t loc, hpx_action_t rop, uint64_t args) {
     .dest_key = NULL,
     .src = NULL,
     .src_key = NULL,
-    .lop = 0,
+    .lop = {0},
     .rop = command_pack(rop, args)
   };
 
@@ -250,7 +229,7 @@ _pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
     .src = pwc->heap_segments[rank].base + offset,
     .src_key = &pwc->heap_segments[rank].key,
     .lop = command_pack(lop, laddr),
-    .rop = 0
+    .rop = {0}
   };
 
   return pwc->xport->gwc(&op);
@@ -263,10 +242,10 @@ _pwc_set_flush(void *network) {
 
 static void
 _pwc_flush(pwc_network_t *pwc) {
-  int remaining;
+  int remaining, src;
   command_t command;
   do {
-    pwc->xport->test(&command, &remaining);
+    pwc->xport->test(&command, &remaining, &src);
   } while (remaining > 0);
   boot_barrier(here->boot);
 }

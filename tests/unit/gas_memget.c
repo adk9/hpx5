@@ -63,16 +63,18 @@ static int _fini_globals_handler(void) {
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _fini_globals, _fini_globals_handler);
 
-static int gas_memget_stack_handler(void) {
-  printf("Testing memget to a stack address\n");
+static int gas_memget_sync_stack_handler(void) {
+  printf("Testing memget_sync to a stack address\n");
   uint64_t local[ELEMENTS];
   hpx_gas_memget_sync(local, _remote, sizeof(local));
   return _verify(local);
 }
-static HPX_ACTION(HPX_DEFAULT, 0, gas_memget_stack, gas_memget_stack_handler);
+static HPX_ACTION(HPX_DEFAULT, 0, gas_memget_sync_stack,
+                  gas_memget_sync_stack_handler);
 
-static int gas_memget_registered_handler(void) {
-  printf("Testing memget to a registered address\n");
+
+static int gas_memget_sync_registered_handler(void) {
+  printf("Testing memget_sync to a registered address\n");
   size_t n = ELEMENTS * sizeof(uint64_t);
   uint64_t *local = hpx_malloc_registered(n);
   hpx_gas_memget_sync(local, _remote, n);
@@ -80,19 +82,20 @@ static int gas_memget_registered_handler(void) {
   hpx_free_registered(local);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, 0, gas_memget_registered,
-                  gas_memget_registered_handler);
+static HPX_ACTION(HPX_DEFAULT, 0, gas_memget_sync_registered,
+                  gas_memget_sync_registered_handler);
 
-static int gas_memget_global_handler(void) {
-  printf("Testing memget to a global address\n");
+static int gas_memget_sync_global_handler(void) {
+  printf("Testing memget_sync to a global address\n");
   static uint64_t local[ELEMENTS];
   hpx_gas_memget_sync(local, _remote, sizeof(local));
   return _verify(local);
 }
-static HPX_ACTION(HPX_DEFAULT, 0, gas_memget_global, gas_memget_global_handler);
+static HPX_ACTION(HPX_DEFAULT, 0, gas_memget_sync_global,
+                  gas_memget_sync_global_handler);
 
-static int gas_memget_malloc_handler(void) {
-  printf("Testing memget to a malloced address\n");
+static int gas_memget_sync_malloc_handler(void) {
+  printf("Testing memget_sync to a malloced address\n");
   size_t n = ELEMENTS * sizeof(uint64_t);
   uint64_t *local = malloc(n);
   hpx_gas_memget_sync(local, _remote, n);
@@ -100,13 +103,72 @@ static int gas_memget_malloc_handler(void) {
   free(local);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, 0, gas_memget_malloc, gas_memget_malloc_handler);
+static HPX_ACTION(HPX_DEFAULT, 0, gas_memget_sync_malloc,
+                  gas_memget_sync_malloc_handler);
+
+static int gas_memget_stack_handler(void) {
+  printf("Testing memget to a stack address\n");
+  uint64_t local[ELEMENTS];
+  hpx_addr_t done = hpx_lco_future_new(0);
+  hpx_gas_memget(local, _remote, sizeof(local), done);
+  hpx_lco_wait(done);
+  _verify(local);
+  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL);
+}
+static HPX_ACTION(HPX_DEFAULT, 0, gas_memget_stack,
+                  gas_memget_stack_handler);
+
+
+static int gas_memget_registered_handler(void) {
+  printf("Testing memget to a registered address\n");
+  size_t n = ELEMENTS * sizeof(uint64_t);
+  uint64_t *local = hpx_malloc_registered(n);
+  hpx_addr_t done = hpx_lco_future_new(0);
+  hpx_gas_memget(local, _remote, n, done);
+  hpx_lco_wait(done);
+  _verify(local);
+  hpx_free_registered(local);
+  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL);
+}
+static HPX_ACTION(HPX_DEFAULT, 0, gas_memget_registered,
+                  gas_memget_registered_handler);
+
+static int gas_memget_global_handler(void) {
+  printf("Testing memget to a global address\n");
+  static uint64_t local[ELEMENTS];
+  hpx_addr_t done = hpx_lco_future_new(0);
+  hpx_gas_memget(local, _remote, sizeof(local), done);
+  hpx_lco_wait(done);
+  _verify(local);
+  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL);
+}
+static HPX_ACTION(HPX_DEFAULT, 0, gas_memget_global,
+                  gas_memget_global_handler);
+
+static int gas_memget_malloc_handler(void) {
+  printf("Testing memget to a malloced address\n");
+  size_t n = ELEMENTS * sizeof(uint64_t);
+  uint64_t *local = malloc(n);
+
+  hpx_addr_t done = hpx_lco_future_new(0);
+  hpx_gas_memget(local, _remote, n, done);
+  hpx_lco_wait(done);
+  _verify(local);
+  free(local);
+  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL);
+}
+static HPX_ACTION(HPX_DEFAULT, 0, gas_memget_malloc,
+                  gas_memget_malloc_handler);
 
 TEST_MAIN({
     ADD_TEST(_init_globals);
     ADD_TEST(gas_memget_stack);
+    ADD_TEST(gas_memget_sync_stack);
     ADD_TEST(gas_memget_registered);
+    ADD_TEST(gas_memget_sync_registered);
     ADD_TEST(gas_memget_global);
+    ADD_TEST(gas_memget_sync_global);
     ADD_TEST(gas_memget_malloc);
+    ADD_TEST(gas_memget_sync_malloc);
     ADD_TEST(_fini_globals);
   });

@@ -15,6 +15,7 @@
 
 #include <libhpx/config.h>
 #include <libhpx/memory.h>
+#include "commands.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,7 +25,8 @@ extern "C" {
 struct boot;
 struct gas;
 
-#define XPORT_KEY_SIZE 16
+#define XPORT_ANY_SOURCE -1
+#define XPORT_KEY_SIZE   16
 
 typedef char xport_key_t[XPORT_KEY_SIZE];
 
@@ -36,8 +38,8 @@ typedef struct xport_op {
   const void *dest_key;
   const void      *src;
   const void  *src_key;
-  uint64_t         lop;
-  uint64_t         rop;
+  command_t        lop;
+  command_t        rop;
 } xport_op_t HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
 typedef struct pwc_xport {
@@ -51,8 +53,8 @@ typedef struct pwc_xport {
   int (*command)(const xport_op_t *op);
   int (*pwc)(xport_op_t *op);
   int (*gwc)(xport_op_t *op);
-  int (*test)(uint64_t *op, int *remaining);
-  int (*probe)(uint64_t *op, int *remaining, int rank);
+  int (*test)(command_t *op, int *remaining, int *src);
+  int (*probe)(command_t *op, int *remaining, int rank, int *src);
   void (*pin)(const void *base, size_t bytes, void *key);
   void (*unpin)(const void *base, size_t bytes);
 } pwc_xport_t;

@@ -275,9 +275,7 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   }
 
 #ifdef ENABLE_PROFILING
-  if (here->config->statistics) {
-    scheduler_dump_stats(here->sched);
-  }
+  libhpx_stats_print();
 #endif
 
  unwind2:

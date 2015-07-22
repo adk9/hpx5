@@ -68,8 +68,7 @@ struct scheduler {
   int               n_workers;
   uint32_t       wf_threshold;
   system_barrier_t    barrier;
-  struct worker      *workers;
-  scheduler_stats_t     stats;
+  worker_t      *workers;
 };
 
 /// Allocate and initialize a new scheduler.
@@ -93,14 +92,6 @@ void scheduler_delete(struct scheduler *scheduler);
 ///
 /// This action does nothing (i.e. it is a nop).
 extern hpx_action_t scheduler_nop;
-
-/// Print collected statistics.
-///
-/// The scheduler should not be running during this call.
-///
-/// @param    scheduler The scheduler.
-void scheduler_dump_stats(struct scheduler *scheduler)
-  HPX_NON_NULL(1);
 
 /// Starts the scheduler.
 ///
@@ -236,7 +227,7 @@ void scheduler_signal_error(struct cvar *cvar, hpx_status_t code)
 hpx_parcel_t *scheduler_current_parcel(void);
 
 /// Get a worker by id.
-struct worker *scheduler_get_worker(struct scheduler *sched, int id)
+worker_t *scheduler_get_worker(struct scheduler *sched, int id)
   HPX_NON_NULL(1);
 
 #endif // LIBHPX_SCHEDULER_H
