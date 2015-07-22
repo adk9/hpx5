@@ -69,16 +69,13 @@ static int
 _pwc_progress(void *network) {
   pwc_network_t *pwc = network;
   _probe_local(pwc);
-  _probe(pwc, XPORT_ANY_SOURCE);
   return 0;
 }
 
-/// Probe is used in the generic progress loop to retrieve completed parcels.
-///
-/// The pwc network currently does all of its parcel processing inline during
-/// progress(), so this is a no-op.
 static hpx_parcel_t *
 _pwc_probe(void *network, int rank) {
+  pwc_network_t *pwc = network;
+  _probe(pwc, XPORT_ANY_SOURCE);
   return NULL;
 }
 
