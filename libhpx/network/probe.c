@@ -27,7 +27,6 @@
 
 static int _probe_handler(network_t *network) {
   while (true) {
-    network_progress(network);
     hpx_parcel_t *stack = NULL;
     while ((stack = network_probe(network, hpx_get_my_thread_id()))) {
       hpx_parcel_t *p = NULL;
@@ -41,7 +40,18 @@ static int _probe_handler(network_t *network) {
 
   return HPX_SUCCESS;
 }
+
+static int _progress_handler(network_t *network) {
+  while (true) {
+    network_progress(network);
+    hpx_thread_yield();
+  }
+
+  return HPX_SUCCESS;
+}
+
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _probe, _probe_handler, HPX_POINTER);
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _progress, _progress_handler, HPX_POINTER);
 
 int probe_start(network_t *network) {
   // NB: we should encapsulate this probe infrastructure inside of the networks
@@ -53,6 +63,11 @@ int probe_start(network_t *network) {
   int e = hpx_call(HPX_HERE, _probe, HPX_NULL, &network);
   dbg_check(e, "failed to start network probe\n");
   log_net("started probing the network\n");
+
+  e = hpx_call(HPX_HERE, _progress, HPX_NULL, &network);
+  dbg_check(e, "failed to start network progress\n");
+  log_net("starting progressing the network\n");
+  
   return LIBHPX_OK;
 }
 
