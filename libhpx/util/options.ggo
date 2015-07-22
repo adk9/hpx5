@@ -162,6 +162,10 @@ int optional
 option "hpx-photon-usecma" - "[verbs] enable CMA connection mode"
 flag off
 
+option "hpx-photon-ibsrq" - "[verbs] number of shared receive queues (default 0, disabled)"
+typestr="integer"
+int optional
+
 option "hpx-photon-btethresh" - "[ugni] set size in bytes for when BTE is used over FMA"
 typestr="integer"
 int optional
@@ -187,6 +191,10 @@ typestr="integer"
 int optional
 
 option "hpx-photon-numcq" - "set number of completion queues to use (cyclic assignment to ranks)"
+typestr="integer"
+int optional
+
+option "hpx-photon-usercq" - "enable remote completion support (default 0, disabled)"
 typestr="integer"
 int optional
 

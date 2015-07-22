@@ -35,13 +35,13 @@ void photon_buffer_free(photonBI buf) {
   bi->buffer_free(buf);
 }
 
-int photon_buffer_register(photonBI buf, void *ctx) {
+int photon_buffer_register(photonBI buf, void *ctx, int flags) {
   if (!bi) {
     log_err("Buffer interface not set!");
     return PHOTON_ERROR;
   }
 
-  return bi->buffer_register(buf, ctx);
+  return bi->buffer_register(buf, ctx, flags);
 }
 
 int photon_buffer_unregister(photonBI buf, void *ctx) {
@@ -93,13 +93,13 @@ void _photon_buffer_free(photonBI buf) {
   free(buf);
 }
 
-int _photon_buffer_register(photonBI buf, void *ctx) {
+int _photon_buffer_register(photonBI buf, void *ctx, int flags) {
   if (!bi) {
     log_err("Buffer interface not set!");
     return PHOTON_ERROR;
   }
 
-  return bi->buffer_register(buf, ctx);
+  return bi->buffer_register(buf, ctx, flags);
 }
 
 int _photon_buffer_unregister(photonBI buf, void *ctx) {

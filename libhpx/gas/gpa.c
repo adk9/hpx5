@@ -30,10 +30,10 @@ static uint32_t _phase_of(hpx_addr_t gpa, uint32_t bsize) {
 }
 
 /// Compute the block ID for a global address.
-static uint64_t _block_of(hpx_addr_t gpa, uint32_t bsize) {
+static uint64_t _block_of(hpx_addr_t addr, uint32_t bsize) {
+  gpa_t       gpa = { .addr = addr };
   uint32_t rshift = ceil_log2_32(bsize);
-  uint64_t offset = gpa & GPA_OFFSET_MASK;
-  uint64_t block = offset >> rshift;
+  uint64_t  block = gpa.bits.offset >> rshift;
   return block;
 }
 

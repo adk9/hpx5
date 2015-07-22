@@ -13,26 +13,46 @@
 #ifndef LIBHPX_NETWORK_PWC_COMMANDS_H
 #define LIBHPX_NETWORK_PWC_COMMANDS_H
 
-#include <libhpx/network.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef uint16_t op_t;
 typedef uint64_t arg_t;
-typedef uint64_t command_t;
+
+typedef union {
+  uint64_t packed;
+  struct {
+    uint64_t arg : 48;
+    uint64_t  op : 16;
+  } bits;
+} command_t;
+
 typedef int (*command_handler_t)(int, command_t);
 
-#define ARG_BITS (8 * (sizeof(command_t) - sizeof(op_t)))
-#define ARG_MASK (UINT64_MAX >> (8 * sizeof(op_t)))
-
 static inline op_t command_get_op(command_t command) {
-  return (command >> ARG_BITS);
+  return command.bits.op;
 }
 
 static inline arg_t command_get_arg(command_t command) {
-  return (command & ARG_MASK);
+  return command.bits.arg;
 }
 
 static inline command_t command_pack(op_t op, arg_t arg) {
-  return ((uint64_t)op << ARG_BITS) + (arg & ARG_MASK);
+  command_t command = {
+    .bits = {
+      .arg = arg,
+      .op = op
+    }
+  };
+  return command;
 }
+
+/// Handle a command.
+int command_run(int src, command_t cmd);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_NETWORK_PWC_COMMANDS_H

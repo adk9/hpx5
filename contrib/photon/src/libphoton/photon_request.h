@@ -55,7 +55,7 @@
 
 #define MARK_DONE(e,s)         (sync_fadd(&e->tail, s, SYNC_RELAXED))
 #define EB_MSG_SIZE(s)         (sizeof(struct photon_eb_hdr_t) + s + sizeof(uint8_t))
-#define PROC_REQUEST_ID(p, id) (((uint64_t)p<<32) | id)
+#define PROC_REQUEST_ID(p,id)  (((uint64_t)p<<32) | id)
 #define IS_VALID_PROC(p)       ((p >= 0) && (p < _photon_nproc))
 
 typedef struct photon_req_t {
