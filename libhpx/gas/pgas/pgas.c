@@ -247,7 +247,7 @@ _pgas_parcel_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
 }
 
 static int _lco_rsync_handler(int src, uint64_t command) {
-  return network_command(here->network, src, lco_set, command);
+  return network_command(here->network, HPX_THERE(src), lco_set, command);
 }
 static COMMAND_DEF(_lco_rsync, _lco_rsync_handler);
 
