@@ -45,8 +45,9 @@ COMMAND_DEF(release_parcel, _release_parcel_handler);
 static int
 _resume_parcel_remote_handler(int src, command_t command) {
   // bounce the command back to the src, because that is where the parcel to be
-  // resumed is
-  return network_command(here->network, src, resume_parcel, command.packed);
+  // resumed is waiting
+  return network_command(here->network, HPX_THERE(src), resume_parcel,
+                         command.packed);
 }
 COMMAND_DEF(resume_parcel_remote, _resume_parcel_remote_handler);
 
