@@ -319,7 +319,7 @@ _agas_free_at_zero_handler(hpx_addr_t addr, hpx_addr_t rsync, size_t blocks) {
     dbg_check(e, "failed to forward AGAS block free operation\n");
     gva.bits.offset += bsize;
   }
-  
+
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_free_at_zero,
@@ -415,10 +415,10 @@ static gas_t _agas_vtable = {
   .free           = _agas_free,
   .move           = agas_move,
   .memget         = agas_memget,
-  .memget_sync    = NULL,
+  .memget_sync    = agas_memget_lsync,
   .memput         = agas_memput,
-  .memput_lsync   = NULL,
-  .memput_rsync   = NULL,
+  .memput_lsync   = agas_memput_lsync,
+  .memput_rsync   = agas_memput_rsync,
   .memcpy         = agas_memcpy,
   .owner_of       = _agas_owner_of
 };
