@@ -568,6 +568,9 @@ _schedule_in_lco(hpx_parcel_t *final) {
 static hpx_parcel_t *
 _schedule(bool in_lco, hpx_parcel_t *final) {
   hpx_parcel_t *p = NULL;
+  hpx_parcel_t *(*yield_steal_0)(worker_t *);
+  hpx_parcel_t *(*yield_steal_1)(worker_t *);
+  int r;
 
   if (in_lco) {
     p = _schedule_in_lco(final);
@@ -590,20 +593,31 @@ _schedule(bool in_lco, hpx_parcel_t *final) {
       continue;
     }
 
-    // we prioritize yielded threads over stealing
-    p = _schedule_yielded(self);
+    // randomly determine if we yield or steal first
+    r = rand_r(&self->seed);
+    if (r < RAND_MAX/2) {
+      // we prioritize yielded threads over stealing
+      yield_steal_0 = _schedule_yielded;
+      yield_steal_1 = _schedule_steal;
+    }
+    else {
+      // try to steal some work first
+      yield_steal_0 = _schedule_steal;
+      yield_steal_1 = _schedule_yielded;
+    }
+    
+    p = yield_steal_0(self);
     if (p) {
       p = _try_task(self, p);
       continue;
     }
-
-    // try to steal some work
-    p = _schedule_steal(self);
+    
+    p = yield_steal_1(self);
     if (p) {
       p = _try_task(self, p);
       continue;
     }
-
+    
     // try to run the final, but only the first time around
     p = final;
     if (p) {
@@ -611,11 +625,11 @@ _schedule(bool in_lco, hpx_parcel_t *final) {
       final = NULL;
       continue;
     }
-
+    
     // couldn't find any work to do, we sleep for a while before looking again
     system_usleep(1);
   }
-
+  
   return _try_bind(self, p);
 }
 
