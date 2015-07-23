@@ -81,7 +81,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _fini_globals, _fini_globals_handler);
 
 static int
 _memget_local_handler(void) {
-  printf("Testing gas_memget from a local block\n");
+  printf("Testing gas_memget from a local block (from %lu)\n", _local);
   static uint64_t local[ELEMENTS] = {0};
   hpx_addr_t done = hpx_lco_future_new(0);
   CHECK( hpx_gas_memget(local, _local, sizeof(local), done) );
@@ -93,7 +93,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_local, _memget_local_handler);
 
 static int
 _memget_sync_local_handler(void) {
-  printf("Testing gas_memget_sync from a local block\n");
+  printf("Testing gas_memget_sync from a local block (from %lu)\n", _local);
   static uint64_t local[ELEMENTS] = {0};
   CHECK( hpx_gas_memget_sync(local, _local, sizeof(local)) );
   return _verify(local);
@@ -103,7 +103,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_sync_local,
 
 static int
 _memget_sync_stack_handler(void) {
-  printf("Testing gas_memget_sync to a stack address\n");
+  printf("Testing gas_memget_sync to a stack address (from %lu)\n", _remote);
   uint64_t local[ELEMENTS];
   CHECK( hpx_gas_memget_sync(local, _remote, sizeof(local)) );
   return _verify(local);
@@ -112,7 +112,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_sync_stack,
                   _memget_sync_stack_handler);
 
 static int _memget_sync_registered_handler(void) {
-  printf("Testing gas_memget_sync to a registered address\n");
+  printf("Testing gas_memget_sync to a registered address (from %lu)\n", _remote);
   size_t n = ELEMENTS * sizeof(uint64_t);
   uint64_t *local = hpx_malloc_registered(n);
   test_assert(local);
@@ -125,7 +125,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_sync_registered,
                   _memget_sync_registered_handler);
 
 static int _memget_sync_global_handler(void) {
-  printf("Testing gas_memget_sync to a global address\n");
+  printf("Testing gas_memget_sync to a global address (from %lu)\n", _remote);
   static uint64_t local[ELEMENTS] = {0};
   CHECK( hpx_gas_memget_sync(local, _remote, sizeof(local)) );
   return _verify(local);
@@ -134,7 +134,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_sync_global,
                   _memget_sync_global_handler);
 
 static int _memget_sync_malloc_handler(void) {
-  printf("Testing gas_memget_sync to a malloced address\n");
+  printf("Testing gas_memget_sync to a malloced address (from %lu)\n", _remote);
   size_t n = ELEMENTS * sizeof(uint64_t);
   uint64_t *local = calloc(1, n);
   test_assert(local);
@@ -162,7 +162,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_stack,
 
 
 static int _memget_registered_handler(void) {
-  printf("Testing gas_memget to a registered address\n");
+  printf("Testing gas_memget to a registered address (from %lu)\n", _remote);
   size_t n = ELEMENTS * sizeof(uint64_t);
   uint64_t *local = hpx_malloc_registered(n);
   test_assert(local != NULL);
@@ -180,7 +180,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_registered,
                   _memget_registered_handler);
 
 static int _memget_global_handler(void) {
-  printf("Testing gas_memget to a global address\n");
+  printf("Testing gas_memget to a global address (from %lu)\n", _remote);
   static uint64_t local[ELEMENTS] = {0};
   hpx_addr_t done = hpx_lco_future_new(0);
   test_assert(done != HPX_NULL);
@@ -194,7 +194,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_global,
                   _memget_global_handler);
 
 static int _memget_malloc_handler(void) {
-  printf("Testing gas_memget to a malloced address\n");
+  printf("Testing gas_memget to a malloced address (from %lu)\n", _remote);
   size_t n = ELEMENTS * sizeof(uint64_t);
   uint64_t *local = calloc(1, n);
   test_assert(local != NULL);
@@ -214,14 +214,24 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_malloc,
 TEST_MAIN({
     ADD_TEST(_init_globals, 0);
     ADD_TEST(_memget_local, 0);
+    ADD_TEST(_memget_local, 1 % HPX_LOCALITIES);
     ADD_TEST(_memget_sync_local, 0);
+    ADD_TEST(_memget_sync_local, 1 % HPX_LOCALITIES);
     ADD_TEST(_memget_stack, 0);
+    ADD_TEST(_memget_stack, 1 % HPX_LOCALITIES);
     ADD_TEST(_memget_sync_stack, 0);
+    ADD_TEST(_memget_sync_stack, 1 % HPX_LOCALITIES);
     ADD_TEST(_memget_registered, 0);
+    ADD_TEST(_memget_registered, 1 % HPX_LOCALITIES);
     ADD_TEST(_memget_sync_registered, 0);
+    ADD_TEST(_memget_sync_registered, 1 % HPX_LOCALITIES);
     ADD_TEST(_memget_global, 0);
+    ADD_TEST(_memget_global, 1 % HPX_LOCALITIES);
     ADD_TEST(_memget_sync_global, 0);
+    ADD_TEST(_memget_sync_global, 1 % HPX_LOCALITIES);
     ADD_TEST(_memget_malloc, 0);
+    ADD_TEST(_memget_malloc, 1 % HPX_LOCALITIES);
     ADD_TEST(_memget_sync_malloc, 0);
+    ADD_TEST(_memget_sync_malloc, 1 % HPX_LOCALITIES);
     ADD_TEST(_fini_globals, 0);
   });
