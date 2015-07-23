@@ -288,11 +288,12 @@ _pgas_memput_lsync_continuation(void *env) {
   _pgas_memput_lsync_continuation_env_t *e = env;
   if (e->rsync) {
     return network_pwc(here->network, e->to, e->from, e->n, resume_parcel,
-                       (uintptr_t)e->p, _lco_rsync, e->rsync);
+                       offset_to_gpa(here->rank, (uint64_t)(uintptr_t)e->p),
+                       _lco_rsync, e->rsync);
   }
   else {
     return network_put(here->network, e->to, e->from, e->n, resume_parcel,
-                       (uintptr_t)e->p);
+                       offset_to_gpa(here->rank, (uint64_t)(uintptr_t)e->p));
   }
 }
 
@@ -333,7 +334,8 @@ static int
 _pgas_memput_rsync_continuation(void *env) {
   _pgas_memput_rsync_continuation_env_t *e = env;
   return network_pwc(here->network, e->to, e->from, e->n, 0, 0,
-                     resume_parcel_remote, (uintptr_t)e->p);
+                     resume_parcel_remote,
+                     offset_to_gpa(here->rank, (uint64_t)(uintptr_t)e->p));
 }
 
 static int
@@ -384,7 +386,8 @@ typedef struct {
 static int
 _pgas_memget_sync_continutation(void *env) {
   _pgas_memget_sync_continutation_env_t *e = env;
-  return network_get(here->network, e->to, e->from, e->n, resume_parcel, (uintptr_t)e->p);
+  return network_get(here->network, e->to, e->from, e->n, resume_parcel,
+                     offset_to_gpa(here->rank, (uint64_t)(uintptr_t)e->p));
 }
 
 static int
