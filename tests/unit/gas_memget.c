@@ -39,31 +39,35 @@ _verify(uint64_t *local) {
   return HPX_SUCCESS;
 }
 
+/// Initialize the global data for a rank.
 static int
-_init_handler(uint64_t *local) {
+_init_handler(hpx_addr_t data) {
+  size_t n = ELEMENTS * sizeof(uint64_t);
+  int rank = HPX_LOCALITY_ID;
+  int peer = (rank + 1) % HPX_LOCALITIES;
+
+  _data = data;
+  _local = hpx_addr_add(data, rank * n, n);
+  _remote = hpx_addr_add(data, peer * n, n);
+
+  uint64_t *local;
+  test_assert( hpx_gas_try_pin(_local, (void**)&local) );
+  printf("initializing %lu (%p at %d)\n", _local, (void*)local, rank);
   for (int i = 0; i < ELEMENTS; ++i) {
     local[i] = i;
   }
+  hpx_gas_unpin(_local);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _init, _init_handler, HPX_POINTER);
+static HPX_ACTION(HPX_DEFAULT, 0, _init, _init_handler, HPX_ADDR);
 
 static int
 _init_globals_handler(void) {
   size_t n = ELEMENTS * sizeof(uint64_t);
-  int rank = HPX_LOCALITY_ID;
-  int size = HPX_LOCALITIES;
-  int peer = (rank + 1) % size;
-  _data = hpx_gas_alloc_cyclic(HPX_LOCALITIES, n, 0);
-  test_assert_msg(_data != HPX_NULL, "failed to allocate data\n");
+  hpx_addr_t data = hpx_gas_alloc_cyclic(HPX_LOCALITIES, n, 0);
+  test_assert_msg(data != HPX_NULL, "failed to allocate data\n");
 
-  // Initialize the local block.
-  _local = _data;
-  CHECK( hpx_call_sync(_local, _init, NULL, 0) );
-
-  // Initialize the global block.
-  _remote = hpx_addr_add(_data, peer * n, n);
-  CHECK( hpx_call_sync(_remote, _init, NULL, 0) );
+  CHECK( hpx_bcast_rsync(_init, &data) );
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _init_globals, _init_globals_handler);
@@ -143,7 +147,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_sync_malloc,
                   _memget_sync_malloc_handler);
 
 static int _memget_stack_handler(void) {
-  printf("Testing gas_memget to a stack address\n");
+  printf("Testing gas_memget to a stack address (from %lu)\n", _remote);
   uint64_t local[ELEMENTS] = {0};
   hpx_addr_t done = hpx_lco_future_new(0);
   test_assert(done != HPX_NULL);
@@ -208,16 +212,16 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_malloc,
                   _memget_malloc_handler);
 
 TEST_MAIN({
-    ADD_TEST(_init_globals);
-    ADD_TEST(_memget_local);
-    ADD_TEST(_memget_sync_local);
-    ADD_TEST(_memget_stack);
-    ADD_TEST(_memget_sync_stack);
-    ADD_TEST(_memget_registered);
-    ADD_TEST(_memget_sync_registered);
-    ADD_TEST(_memget_global);
-    ADD_TEST(_memget_sync_global);
-    ADD_TEST(_memget_malloc);
-    ADD_TEST(_memget_sync_malloc);
-    ADD_TEST(_fini_globals);
+    ADD_TEST(_init_globals, 0);
+    ADD_TEST(_memget_local, 0);
+    ADD_TEST(_memget_sync_local, 0);
+    ADD_TEST(_memget_stack, 0);
+    ADD_TEST(_memget_sync_stack, 0);
+    ADD_TEST(_memget_registered, 0);
+    ADD_TEST(_memget_sync_registered, 0);
+    ADD_TEST(_memget_global, 0);
+    ADD_TEST(_memget_sync_global, 0);
+    ADD_TEST(_memget_malloc, 0);
+    ADD_TEST(_memget_sync_malloc, 0);
+    ADD_TEST(_fini_globals, 0);
   });

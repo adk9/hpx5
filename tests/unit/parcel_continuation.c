@@ -76,5 +76,5 @@ static HPX_ACTION(HPX_DEFAULT, 0, parcel_get_continuation,
                   parcel_get_continuation_handler);
 
 TEST_MAIN({
-  ADD_TEST(parcel_get_continuation);
+  ADD_TEST(parcel_get_continuation, 0);
 });

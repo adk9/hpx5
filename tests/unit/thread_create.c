@@ -125,6 +125,6 @@ static int thread_exit_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, thread_exit, thread_exit_handler);
 
 TEST_MAIN({
-  ADD_TEST(thread_create);
-  ADD_TEST(thread_exit);
+  ADD_TEST(thread_create, 0);
+  ADD_TEST(thread_exit, 0);
 });

@@ -179,9 +179,9 @@ static int gas_calloc_at_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, gas_calloc_at, gas_calloc_at_handler);
 
 TEST_MAIN({
-  ADD_TEST(gas_alloc);
-  ADD_TEST(gas_alloc_at);
-  ADD_TEST(gas_calloc);
-  ADD_TEST(gas_calloc_at);
-  ADD_TEST(gas_memalign);
+    ADD_TEST(gas_alloc, 0);
+    ADD_TEST(gas_alloc_at, 0);
+    ADD_TEST(gas_calloc, 0);
+    ADD_TEST(gas_calloc_at, 0);
+    ADD_TEST(gas_memalign, 0);
   });

@@ -291,9 +291,9 @@ static int lco_error_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, lco_error, lco_error_handler);
 
 TEST_MAIN({
-  ADD_TEST(lco_function);
-  ADD_TEST(lco_setget);
-  ADD_TEST(lco_waitall);
-  ADD_TEST(lco_getall);
-  ADD_TEST(lco_error);
+  ADD_TEST(lco_function, 0);
+  ADD_TEST(lco_setget, 0);
+  ADD_TEST(lco_waitall, 0);
+  ADD_TEST(lco_getall, 0);
+  ADD_TEST(lco_error, 0);
 });
