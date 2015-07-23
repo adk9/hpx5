@@ -32,3 +32,7 @@ nobase_include_HEADERS = hpx/action.h \
                          libhpx/config.h \
                          libhpx/config_photon.h \
                          libhpx/options.def
+
+if HAVE_APEX
+nobase_include_HEADERS += libapex/apex_global_hpx.h
+endif
