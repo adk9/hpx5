@@ -231,7 +231,7 @@ static int lco_alltoall_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, lco_alltoall, lco_alltoall_handler);
 
 TEST_MAIN({
-  ADD_TEST(lco_allreduce);
-  ADD_TEST(lco_allgather);
-  ADD_TEST(lco_alltoall);
+  ADD_TEST(lco_allreduce, 0);
+  ADD_TEST(lco_allgather, 0);
+  ADD_TEST(lco_alltoall, 0);
 });

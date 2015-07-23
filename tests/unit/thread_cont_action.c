@@ -70,5 +70,5 @@ static int thread_cont_action_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, thread_cont_action, thread_cont_action_handler);
 
 TEST_MAIN({
-  ADD_TEST(thread_cont_action);
+  ADD_TEST(thread_cont_action, 0);
 });

@@ -43,5 +43,5 @@ _lco_get_remote_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, _lco_get_remote, _lco_get_remote_handler);
 
 TEST_MAIN({
-    ADD_TEST(_lco_get_remote);
+    ADD_TEST(_lco_get_remote, 0);
   });

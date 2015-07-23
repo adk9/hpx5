@@ -84,5 +84,5 @@ static int lco_sema_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, lco_sema, lco_sema_handler);
 
 TEST_MAIN({
-  ADD_TEST(lco_sema);
+  ADD_TEST(lco_sema, 0);
 });

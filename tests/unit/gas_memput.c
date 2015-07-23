@@ -325,21 +325,21 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memput_rsync_global,
                   _memput_rsync_global_handler);
 
 TEST_MAIN({
-    ADD_TEST(_init_globals);
-    ADD_TEST(_memput_local);
-    ADD_TEST(_memput_lsync_local);
-    ADD_TEST(_memput_rsync_local);
-    ADD_TEST(_memput_stack);
-    ADD_TEST(_memput_lsync_stack);
-    ADD_TEST(_memput_rsync_stack);
-    ADD_TEST(_memput_registered);
-    ADD_TEST(_memput_lsync_registered);
-    ADD_TEST(_memput_rsync_registered);
-    ADD_TEST(_memput_malloc);
-    ADD_TEST(_memput_lsync_malloc);
-    ADD_TEST(_memput_rsync_malloc);
-    ADD_TEST(_memput_global);
-    ADD_TEST(_memput_lsync_global);
-    ADD_TEST(_memput_rsync_global);
-    ADD_TEST(_fini_globals);
+    ADD_TEST(_init_globals, 0);
+    ADD_TEST(_memput_local, 0);
+    ADD_TEST(_memput_lsync_local, 0);
+    ADD_TEST(_memput_rsync_local, 0);
+    ADD_TEST(_memput_stack, 0);
+    ADD_TEST(_memput_lsync_stack, 0);
+    ADD_TEST(_memput_rsync_stack, 0);
+    ADD_TEST(_memput_registered, 0);
+    ADD_TEST(_memput_lsync_registered, 0);
+    ADD_TEST(_memput_rsync_registered, 0);
+    ADD_TEST(_memput_malloc, 0);
+    ADD_TEST(_memput_lsync_malloc, 0);
+    ADD_TEST(_memput_rsync_malloc, 0);
+    ADD_TEST(_memput_global, 0);
+    ADD_TEST(_memput_lsync_global, 0);
+    ADD_TEST(_memput_rsync_global, 0);
+    ADD_TEST(_fini_globals, 0);
   });
