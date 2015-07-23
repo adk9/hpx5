@@ -22,7 +22,20 @@
 #include <unistd.h>
 #include <hpx/hpx.h>
 
-#define assert_msg(cond, msg) assert(cond && msg)
+#ifdef NDEBUG
+# define test_assert(e) do {                        \
+    if (!(e)) {                                     \
+      frintf(stderr, "assert failed '%s'\n", #e);   \
+      exit(EXIT_FAILURE);                           \
+    }                                               \
+  } while (0)
+#else
+# define test_assert(e) assert(e)
+#endif
+
+#define assert_msg(cond, msg) test_assert(cond && msg)
+#define test_assert_msg(cond, msg) test_assert(cond && msg)
+#define CHECK(e) test_assert(e == HPX_SUCCESS)
 
 #define ADD_TEST(test) do {                             \
     printf("====== TEST %s ======\n", #test);           \
