@@ -10,11 +10,11 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifdef HAVE_PAPI
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
 
+#ifdef HAVE_PAPI
 #include <errno.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -39,6 +39,9 @@ int prof_init(struct config *cfg){
 
   PAPI_library_init(PAPI_VER_CURRENT);
   int max_counters = PAPI_num_counters();
+  size_t counters = cfg->prof_counters;
+
+  fprintf(stdout, "USING %u counters\n", counters);
   return LIBHPX_OK;
 }
 
