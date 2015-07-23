@@ -13,8 +13,13 @@ ACLOCAL_AMFLAGS = -I config -I contrib/hwloc-1.11.0/config
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = hpx.pc
 
+if HAVE_APEX
+SUBDIRS       = contrib libsync libapex libhpx include examples
+DIST_SUBDIRS  = contrib libsync libapex libhpx include examples
+else
 SUBDIRS       = contrib libsync libhpx include examples
 DIST_SUBDIRS  = contrib libsync libhpx include examples
+endif
 
 if ENABLE_DOCS
 SUBDIRS      += docs
