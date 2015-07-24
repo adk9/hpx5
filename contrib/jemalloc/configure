@@ -4932,6 +4932,8 @@ case "${host}" in
 
 	$as_echo "#define JEMALLOC_THREADED_INIT  " >>confdefs.h
 
+	$as_echo "#define JEMALLOC_USE_CXX_THROW  " >>confdefs.h
+
 	default_munmap="0"
 	;;
   *-*-netbsd*)
@@ -4984,6 +4986,7 @@ $as_echo "$abi" >&6; }
   *-*-mingw* | *-*-cygwin*)
 	abi="pecoff"
 	force_tls="0"
+	force_lazy_lock="1"
 	RPATH=""
 	so="dll"
 	if test "x$je_cv_msvc" = "xyes" ; then
@@ -5222,6 +5225,216 @@ if test "x${je_cv_tls_model}" = "xyes" ; then
 
 else
   $as_echo "#define JEMALLOC_TLS_MODEL  " >>confdefs.h
+
+fi
+SAVED_CFLAGS="${CFLAGS}"
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether compiler supports -Werror" >&5
+$as_echo_n "checking whether compiler supports -Werror... " >&6; }
+TCFLAGS="${CFLAGS}"
+if test "x${CFLAGS}" = "x" ; then
+  CFLAGS="-Werror"
+else
+  CFLAGS="${CFLAGS} -Werror"
+fi
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+int
+main ()
+{
+
+    return 0;
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  je_cv_cflags_appended=-Werror
+              { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  je_cv_cflags_appended=
+              { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+              CFLAGS="${TCFLAGS}"
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether alloc_size attribute is compilable" >&5
+$as_echo_n "checking whether alloc_size attribute is compilable... " >&6; }
+if ${je_cv_alloc_size+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdlib.h>
+int
+main ()
+{
+void *foo(size_t size) __attribute__((alloc_size(1)));
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  je_cv_alloc_size=yes
+else
+  je_cv_alloc_size=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $je_cv_alloc_size" >&5
+$as_echo "$je_cv_alloc_size" >&6; }
+
+CFLAGS="${SAVED_CFLAGS}"
+if test "x${je_cv_alloc_size}" = "xyes" ; then
+  $as_echo "#define JEMALLOC_HAVE_ATTR_ALLOC_SIZE  " >>confdefs.h
+
+fi
+SAVED_CFLAGS="${CFLAGS}"
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether compiler supports -Werror" >&5
+$as_echo_n "checking whether compiler supports -Werror... " >&6; }
+TCFLAGS="${CFLAGS}"
+if test "x${CFLAGS}" = "x" ; then
+  CFLAGS="-Werror"
+else
+  CFLAGS="${CFLAGS} -Werror"
+fi
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+int
+main ()
+{
+
+    return 0;
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  je_cv_cflags_appended=-Werror
+              { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  je_cv_cflags_appended=
+              { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+              CFLAGS="${TCFLAGS}"
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether format(gnu_printf, ...) attribute is compilable" >&5
+$as_echo_n "checking whether format(gnu_printf, ...) attribute is compilable... " >&6; }
+if ${je_cv_format_gnu_printf+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdlib.h>
+int
+main ()
+{
+void *foo(const char *format, ...) __attribute__((format(gnu_printf, 1, 2)));
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  je_cv_format_gnu_printf=yes
+else
+  je_cv_format_gnu_printf=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $je_cv_format_gnu_printf" >&5
+$as_echo "$je_cv_format_gnu_printf" >&6; }
+
+CFLAGS="${SAVED_CFLAGS}"
+if test "x${je_cv_format_gnu_printf}" = "xyes" ; then
+  $as_echo "#define JEMALLOC_HAVE_ATTR_FORMAT_GNU_PRINTF  " >>confdefs.h
+
+fi
+SAVED_CFLAGS="${CFLAGS}"
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether compiler supports -Werror" >&5
+$as_echo_n "checking whether compiler supports -Werror... " >&6; }
+TCFLAGS="${CFLAGS}"
+if test "x${CFLAGS}" = "x" ; then
+  CFLAGS="-Werror"
+else
+  CFLAGS="${CFLAGS} -Werror"
+fi
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+int
+main ()
+{
+
+    return 0;
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  je_cv_cflags_appended=-Werror
+              { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  je_cv_cflags_appended=
+              { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+              CFLAGS="${TCFLAGS}"
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether format(printf, ...) attribute is compilable" >&5
+$as_echo_n "checking whether format(printf, ...) attribute is compilable... " >&6; }
+if ${je_cv_format_printf+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdlib.h>
+int
+main ()
+{
+void *foo(const char *format, ...) __attribute__((format(printf, 1, 2)));
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  je_cv_format_printf=yes
+else
+  je_cv_format_printf=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $je_cv_format_printf" >&5
+$as_echo "$je_cv_format_printf" >&6; }
+
+CFLAGS="${SAVED_CFLAGS}"
+if test "x${je_cv_format_printf}" = "xyes" ; then
+  $as_echo "#define JEMALLOC_HAVE_ATTR_FORMAT_PRINTF  " >>confdefs.h
 
 fi
 

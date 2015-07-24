@@ -1,6 +1,36 @@
 /******************************************************************************/
 #ifdef JEMALLOC_H_TYPES
 
+#ifdef _WIN32
+#  ifdef _WIN64
+#    define FMT64_PREFIX "ll"
+#    define FMTPTR_PREFIX "ll"
+#  else
+#    define FMT64_PREFIX "ll"
+#    define FMTPTR_PREFIX ""
+#  endif
+#  define FMTd32 "d"
+#  define FMTu32 "u"
+#  define FMTx32 "x"
+#  define FMTd64 FMT64_PREFIX "d"
+#  define FMTu64 FMT64_PREFIX "u"
+#  define FMTx64 FMT64_PREFIX "x"
+#  define FMTdPTR FMTPTR_PREFIX "d"
+#  define FMTuPTR FMTPTR_PREFIX "u"
+#  define FMTxPTR FMTPTR_PREFIX "x"
+#else
+#  include <inttypes.h>
+#  define FMTd32 PRId32
+#  define FMTu32 PRIu32
+#  define FMTx32 PRIx32
+#  define FMTd64 PRId64
+#  define FMTu64 PRIu64
+#  define FMTx64 PRIx64
+#  define FMTdPTR PRIdPTR
+#  define FMTuPTR PRIuPTR
+#  define FMTxPTR PRIxPTR
+#endif
+
 /* Size of stack-allocated buffer passed to buferror(). */
 #define	BUFERROR_BUF		64
 
@@ -104,13 +134,12 @@ void	malloc_write(const char *s);
 int	malloc_vsnprintf(char *str, size_t size, const char *format,
     va_list ap);
 int	malloc_snprintf(char *str, size_t size, const char *format, ...)
-    JEMALLOC_ATTR(format(printf, 3, 4));
+    JEMALLOC_FORMAT_PRINTF(3, 4);
 void	malloc_vcprintf(void (*write_cb)(void *, const char *), void *cbopaque,
     const char *format, va_list ap);
 void malloc_cprintf(void (*write)(void *, const char *), void *cbopaque,
-    const char *format, ...) JEMALLOC_ATTR(format(printf, 3, 4));
-void	malloc_printf(const char *format, ...)
-    JEMALLOC_ATTR(format(printf, 1, 2));
+    const char *format, ...) JEMALLOC_FORMAT_PRINTF(3, 4);
+void	malloc_printf(const char *format, ...) JEMALLOC_FORMAT_PRINTF(1, 2);
 
 #endif /* JEMALLOC_H_EXTERNS */
 /******************************************************************************/
