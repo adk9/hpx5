@@ -148,8 +148,8 @@ static int parcel_release_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, parcel_release, parcel_release_handler);
 
 TEST_MAIN({
-  ADD_TEST(parcel_create);
-  ADD_TEST(parcel_get_action);
-  ADD_TEST(parcel_get_data);
-  ADD_TEST(parcel_release);
+  ADD_TEST(parcel_create, 0);
+  ADD_TEST(parcel_get_action, 0);
+  ADD_TEST(parcel_get_data, 0);
+  ADD_TEST(parcel_release, 0);
 });

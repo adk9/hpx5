@@ -142,6 +142,6 @@ static int _test_recursion_top_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, _test_recursion_top, _test_recursion_top_handler);
 
 TEST_MAIN({
-    ADD_TEST(_test_recursion_top);
-    ADD_TEST(_test_try_task);
+    ADD_TEST(_test_recursion_top, 0);
+    ADD_TEST(_test_try_task, 0);
 });

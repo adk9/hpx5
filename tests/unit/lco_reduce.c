@@ -161,7 +161,7 @@ static int lco_par_reduce_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, lco_par_reduce, lco_par_reduce_handler);
 
 TEST_MAIN({
-  ADD_TEST(lco_reduce);
-  ADD_TEST(lco_reduce_getRef);
-  ADD_TEST(lco_par_reduce);
+  ADD_TEST(lco_reduce, 0);
+  ADD_TEST(lco_reduce_getRef, 0);
+  ADD_TEST(lco_par_reduce, 0);
 });

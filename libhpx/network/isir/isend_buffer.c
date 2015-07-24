@@ -304,7 +304,9 @@ static int _test_all(isend_buffer_t *buffer) {
     log_net("decreased test window to %d\n", buffer->twin);
   }
 
-  log_net("tested %u sends, completed %d\n", n+m, total);
+  DEBUG_IF (total) {
+    log_net("tested %u sends, completed %d\n", n+m, total);
+  }
   return total;
 }
 

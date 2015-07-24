@@ -67,5 +67,5 @@ static HPX_ACTION(HPX_DEFAULT, 0, parcel_send_rendezvous,
                   parcel_send_rendezvous_handler);
 
 TEST_MAIN({
-  ADD_TEST(parcel_send_rendezvous);
+  ADD_TEST(parcel_send_rendezvous, 0);
 });
