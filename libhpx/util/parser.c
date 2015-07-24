@@ -64,7 +64,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-trace-dir=dir       directory to output trace files",
   "      --hpx-trace-filesize=bytes\n                                set the size of each trace file",
   "      --hpx-trace-at=[localities]\n                                set the localities to trace at",
-  "      --hpx-prof-counters[=counters]\n                                set which PAPI counters to use for profiling\n                                  (possible values=\"HPX_L1_TCM\",\n                                  \"HPX_L2_TCM\", \"HPX_L3_TCM\",\n                                  \"HPX_TLB_TL\", \"HPX_TOT_INS\",\n                                  \"HPX_INT_INS\", \"HPX_FP_INS\",\n                                  \"HPX_LD_INS\", \"HPX_SR_INS\",\n                                  \"HPX_BR_INS\", \"HPX_FLOPS\",\n                                  \"HPX_TOT_CYC\", \"all\")",
+  "      --hpx-prof-counters[=counters]\n                                set which PAPI counters to use for profiling\n                                  (possible values=\"HPX_L1_TCM\",\n                                  \"HPX_L2_TCM\", \"HPX_L3_TCM\",\n                                  \"HPX_TLB_TL\", \"HPX_TOT_INS\",\n                                  \"HPX_INT_INS\", \"HPX_FP_INS\",\n                                  \"HPX_LD_INS\", \"HPX_SR_INS\",\n                                  \"HPX_BR_INS\", \"HPX_TOT_CYC\", \"all\")",
   "\nISIR Network Options:",
   "      --hpx-isir-testwindow=requests\n                                number of ISIR requests to test in progress\n                                  loop",
   "      --hpx-isir-sendlimit=requests\n                                ISIR network send limit",
@@ -142,7 +142,7 @@ const char *hpx_option_parser_hpx_transport_values[] = {"default", "mpi", "photo
 const char *hpx_option_parser_hpx_network_values[] = {"default", "smp", "pwc", "isir", 0}; /*< Possible values for hpx-network. */
 const char *hpx_option_parser_hpx_log_level_values[] = {"default", "boot", "sched", "gas", "lco", "net", "trans", "parcel", "action", "config", "memory", "all", 0}; /*< Possible values for hpx-log-level. */
 const char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "pwc", "sched", "lco", "process", "memory", "all", 0}; /*< Possible values for hpx-trace-classes. */
-const char *hpx_option_parser_hpx_prof_counters_values[] = {"HPX_L1_TCM", "HPX_L2_TCM", "HPX_L3_TCM", "HPX_TLB_TL", "HPX_TOT_INS", "HPX_INT_INS", "HPX_FP_INS", "HPX_LD_INS", "HPX_SR_INS", "HPX_BR_INS", "HPX_FLOPS", "HPX_TOT_CYC", "all", 0}; /*< Possible values for hpx-prof-counters. */
+const char *hpx_option_parser_hpx_prof_counters_values[] = {"HPX_L1_TCM", "HPX_L2_TCM", "HPX_L3_TCM", "HPX_TLB_TL", "HPX_TOT_INS", "HPX_INT_INS", "HPX_FP_INS", "HPX_LD_INS", "HPX_SR_INS", "HPX_BR_INS", "HPX_TOT_CYC", "all", 0}; /*< Possible values for hpx-prof-counters. */
 const char *hpx_option_parser_hpx_photon_backend_values[] = {"default", "verbs", "ugni", 0}; /*< Possible values for hpx-photon-backend. */
 
 static char *
