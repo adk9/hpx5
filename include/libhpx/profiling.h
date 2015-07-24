@@ -22,61 +22,94 @@
 struct config;
 
 typedef struct {
-  hpx_time_t         start_time;            // start time of first session
-  size_t          session_count;            // number of recording sessions
-  size_t        *counter_totals;            // totals for the counters
+  hpx_time_t         start_time;            // start time of recording session
+  hpx_time_t           end_time;            // end time of recording session
+  size_t                  tally;            // number of events
+  long long     *counter_totals;            // totals for the counters
+  int                 *counters;            // the counters used
   int              num_counters;            // number of counters
+  bool             papi_running;            // true if PAPI is recording
 } profile_t;
 
 #define PROFILE_INIT {                      \
     .start_time = HPX_TIME_INIT,            \
-    .session_count = 0,                     \
+    .end_time = HPX_TIME_INIT,              \
+    .tally = 0,                             \
     .counter_totals = NULL,                 \
-    .num_counters = 0                       \
+    .counters = NULL,                       \
+    .num_counters = 0,                      \
+    .papi_running = false                   \
     }
 
 /// Initialize profiling. This is usually called in hpx_init().
 int prof_init(struct config *cfg)
   HPX_NON_NULL(1);
 
-/// Mark the beginning of profiling a particular event
-int prof_begin();
+/// Mark the beginning of profiling a type of event.
+/// The event may occur several times between prof_begin() and prof_end(),
+/// and profiling of the event occurrences should be done using 
+/// papi_start_counters() and papi_stop_counters(), or prof_tally_mark() if
+/// details of the events performance are not required.
+void prof_begin();
+
+/// Mark the end of profiling a type of event.  This will also stop any running
+/// PAPI counters.
+/// Note: Stopping PAPI counters here will NOT add the counter values to the
+/// running totals.
+int prof_end();
+
+/// Mark the occurrence of an event
+void prof_tally_mark();
 
 /// Obtain the average values of the counters across all profiled sessions
 /// @param      values A pointer to an array where the averages will be stored
 /// @param  num_values The size of the array
-int prof_get_averages(size_t *values, int num_values);
+int prof_get_averages(long long *values, int num_values);
+
+/// Return the accumulated totals of the counters
+/// @param      values A pointer to an array where the totals will be stored
+/// @param  num_values The size of the array
+int prof_get_totals(long long *values, int num_values);
+
+/// Return the tally of event occurrences
+size_t prof_get_tally();
+
+/// Return the number of counters being used
+int prof_get_num_counters();
+
+/// Return the time since the recording session began, or if the session has
+/// ended, the duration of the recording session
+hpx_time_t prof_get_duration();
 
 /// Reset the profiling information and stop PAPI counters if they are running
-int prof_reset_counters();
+int prof_reset();
 
 /// Cleanup
 int prof_fini();
 
 
-// The following functions are wrappers to PAPI functionality, some of which
-// perform additional management operations:
+/// Begin profiling. This begins recording performance information of an event.
+int prof_start_papi_counters();
 
-/// Begin profiling. This marks the start of an event being profiled.
-/// @param      events An array of event types to be counted by PAPI
-/// @param  num_events The size of the array
-int papi_start_counters(int *events, int num_events);
-
-/// Stop profiling.  This marks the end of an event being profiled.
+/// Stop profiling.  This ends recording performance information of an event.
+/// Additionally, the counter values are added to the running total counts.
 /// @param      values A pointer to an array for storing counter values
 /// @param  num_values The size of the array
-int papi_stop_counters(size_t *values, int num_values);
+int prof_stop_papi_counters(long long *values, int num_values);
 
-/// Collect the current values of the profiled statistics.
+/// Collect the current values of the profiled statistics.  This will reset the
+/// counters but leave them running. Additionally, the counter values are added 
+/// to the running total counts.
 /// @param      values A pointer to an array for storing counter values
 /// @param  num_values The size of the array
-int papi_read_counters(size_t *values, int num_values);
+int prof_read_papi_counters(long long *values, int num_values);
 
-/// Add the counts of the previous event to the total.
+/// Add the counts of the previous event to the passed in array.  This will 
+/// reset the counters but leave them running. Additionally, the counter values 
+/// are added to the running total counts.
 /// @param      values A pointer to an array for accumulating counter values
 /// @param  num_values The size of the array
-int papi_accum_counters(size_t *values, int num_values);
+int prof_accum_papi_counters(long long *values, int num_values);
 
-// TODO: set up the some mechanism for users to specify which counters to use
 #endif
 #endif
