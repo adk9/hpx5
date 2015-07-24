@@ -151,8 +151,7 @@ static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
 #define HPX_LD_INS    (UINT64_C(1) << 7)
 #define HPX_SR_INS    (UINT64_C(1) << 8)
 #define HPX_BR_INS    (UINT64_C(1) << 9)
-#define HPX_FLOPS     (UINT64_C(1) << 10)
-#define HPX_TOT_CYC   (UINT64_C(1) << 11)
+#define HPX_TOT_CYC   (UINT64_C(1) << 10)
 
 static const char *const HPX_PROF_COUNTER_TO_STRING[] = {
   "HPX_L1_TCM",
@@ -165,7 +164,6 @@ static const char *const HPX_PROF_COUNTER_TO_STRING[] = {
   "HPX_LD_INS",
   "HPX_SR_INS",
   "HPX_BR_INS",
-  "HPX_FLOPS",
   "HPX_TOT_CYC",
   "all"
 };
