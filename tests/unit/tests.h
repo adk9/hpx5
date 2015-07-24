@@ -25,7 +25,7 @@
 #ifdef NDEBUG
 # define test_assert(e) do {                        \
     if (!(e)) {                                     \
-      frintf(stderr, "assert failed '%s'\n", #e);   \
+      fprintf(stderr, "assert failed '%s'\n", #e);  \
       exit(EXIT_FAILURE);                           \
     }                                               \
   } while (0)
