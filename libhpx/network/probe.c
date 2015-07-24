@@ -26,10 +26,11 @@
 
 
 static int _probe_handler(network_t *network) {
-  while (true) {
-    hpx_parcel_t *stack = NULL;
+  hpx_parcel_t *stack = NULL,
+                   *p = NULL;
+
+  while (!scheduler_is_shutdown(here->sched)) {
     while ((stack = network_probe(network, hpx_get_my_thread_id()))) {
-      hpx_parcel_t *p = NULL;
       while ((p = parcel_stack_pop(&stack))) {
         INST_EVENT_PARCEL_RECV(p);
         parcel_launch(p);
@@ -42,7 +43,7 @@ static int _probe_handler(network_t *network) {
 }
 
 static int _progress_handler(network_t *network) {
-  while (true) {
+  while (!scheduler_is_shutdown(here->sched)) {
     network_progress(network);
     hpx_thread_yield();
   }
@@ -59,7 +60,7 @@ int probe_start(network_t *network) {
   if (network->type == HPX_NETWORK_SMP) {
     return HPX_SUCCESS;
   }
-  
+
   int e = hpx_call(HPX_HERE, _probe, HPX_NULL, &network);
   dbg_check(e, "failed to start network probe\n");
   log_net("started probing the network\n");
@@ -67,7 +68,7 @@ int probe_start(network_t *network) {
   e = hpx_call(HPX_HERE, _progress, HPX_NULL, &network);
   dbg_check(e, "failed to start network progress\n");
   log_net("starting progressing the network\n");
-  
+
   return LIBHPX_OK;
 }
 

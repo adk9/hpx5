@@ -51,6 +51,6 @@ static int lco_and_num_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, lco_and_num, lco_and_num_handler);
 
 TEST_MAIN({
- ADD_TEST(lco_and);
- ADD_TEST(lco_and_num);
+ ADD_TEST(lco_and, 0);
+ ADD_TEST(lco_and_num, 0);
 });

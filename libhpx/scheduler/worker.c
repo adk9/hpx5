@@ -606,19 +606,19 @@ _schedule(bool in_lco, hpx_parcel_t *final) {
       yield_steal_0 = _schedule_steal;
       yield_steal_1 = _schedule_yielded;
     }
-    
+
     p = yield_steal_0(self);
     if (p) {
       p = _try_task(self, p);
       continue;
     }
-    
+
     p = yield_steal_1(self);
     if (p) {
       p = _try_task(self, p);
       continue;
     }
-    
+
     // try to run the final, but only the first time around
     p = final;
     if (p) {
@@ -626,11 +626,11 @@ _schedule(bool in_lco, hpx_parcel_t *final) {
       final = NULL;
       continue;
     }
-    
+
     // couldn't find any work to do, we sleep for a while before looking again
     system_usleep(1);
   }
-  
+
   return _try_bind(self, p);
 }
 
@@ -1178,10 +1178,14 @@ scheduler_suspend(int (*f)(void*), void *env) {
 
   hpx_parcel_t *p = self->current;
   INST_EVENT_PARCEL_SUSPEND(p);
+  log_sched("suspending %p in %s\n", (void*)p,
+            action_table_get_key(here->actions, p->action));
   // Don't block during the schedule call, we still have something to do (call
   // the continuation) that may impact global progress.
   hpx_parcel_t *to = _schedule(true, NULL);
   int e = _transfer(to, _checkpoint_suspend, &suspend_env);
+  log_sched("resuming %p\n in %s", (void*)p,
+            action_table_get_key(here->actions, p->action));
   INST_EVENT_PARCEL_RESUME(p);
   return e;
 }

@@ -85,5 +85,5 @@ static int parcel_send_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, parcel_send, parcel_send_handler);
 
 TEST_MAIN({
-  ADD_TEST(parcel_send);
+  ADD_TEST(parcel_send, 0);
 });
