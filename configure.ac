@@ -301,6 +301,7 @@ case "${host}" in
 	AC_DEFINE([JEMALLOC_HAS_ALLOCA_H])
 	AC_DEFINE([JEMALLOC_PURGE_MADVISE_DONTNEED], [ ])
 	AC_DEFINE([JEMALLOC_THREADED_INIT], [ ])
+	AC_DEFINE([JEMALLOC_USE_CXX_THROW], [ ])
 	default_munmap="0"
 	;;
   *-*-netbsd*)
@@ -339,6 +340,7 @@ case "${host}" in
   *-*-mingw* | *-*-cygwin*)
 	abi="pecoff"
 	force_tls="0"
+	force_lazy_lock="1"
 	RPATH=""
 	so="dll"
 	if test "x$je_cv_msvc" = "xyes" ; then
@@ -426,6 +428,36 @@ if test "x${je_cv_tls_model}" = "xyes" ; then
             [__attribute__((tls_model("initial-exec")))])
 else
   AC_DEFINE([JEMALLOC_TLS_MODEL], [ ])
+fi
+dnl Check for alloc_size attribute support.
+SAVED_CFLAGS="${CFLAGS}"
+JE_CFLAGS_APPEND([-Werror])
+JE_COMPILABLE([alloc_size attribute], [#include <stdlib.h>],
+              [void *foo(size_t size) __attribute__((alloc_size(1)));],
+              [je_cv_alloc_size])
+CFLAGS="${SAVED_CFLAGS}"
+if test "x${je_cv_alloc_size}" = "xyes" ; then
+  AC_DEFINE([JEMALLOC_HAVE_ATTR_ALLOC_SIZE], [ ])
+fi
+dnl Check for format(gnu_printf, ...) attribute support.
+SAVED_CFLAGS="${CFLAGS}"
+JE_CFLAGS_APPEND([-Werror])
+JE_COMPILABLE([format(gnu_printf, ...) attribute], [#include <stdlib.h>],
+              [void *foo(const char *format, ...) __attribute__((format(gnu_printf, 1, 2)));],
+              [je_cv_format_gnu_printf])
+CFLAGS="${SAVED_CFLAGS}"
+if test "x${je_cv_format_gnu_printf}" = "xyes" ; then
+  AC_DEFINE([JEMALLOC_HAVE_ATTR_FORMAT_GNU_PRINTF], [ ])
+fi
+dnl Check for format(printf, ...) attribute support.
+SAVED_CFLAGS="${CFLAGS}"
+JE_CFLAGS_APPEND([-Werror])
+JE_COMPILABLE([format(printf, ...) attribute], [#include <stdlib.h>],
+              [void *foo(const char *format, ...) __attribute__((format(printf, 1, 2)));],
+              [je_cv_format_printf])
+CFLAGS="${SAVED_CFLAGS}"
+if test "x${je_cv_format_printf}" = "xyes" ; then
+  AC_DEFINE([JEMALLOC_HAVE_ATTR_FORMAT_PRINTF], [ ])
 fi
 
 dnl Support optional additions to rpath.
