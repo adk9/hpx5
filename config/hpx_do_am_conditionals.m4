@@ -29,6 +29,7 @@ AC_DEFUN([HPX_DO_AM_CONDITIONALS], [
  AM_CONDITIONAL([HAVE_PMI], [test "x$have_pmi" == xyes])
  AM_CONDITIONAL([HAVE_JEMALLOC], [test "x$have_jemalloc" == xyes])
  AM_CONDITIONAL([HAVE_TBBMALLOC], [test "x$have_tbbmalloc" == xyes])
+ AM_CONDITIONAL([HAVE_DLMALLOC], [test "x$have_dlmalloc" == xyes])
  AM_CONDITIONAL([HAVE_HUGETLBFS], [test "x$have_hugetlbfs" == xyes])
  AM_CONDITIONAL([HAVE_AGAS], [test "x$have_agas" == xyes])
  AM_CONDITIONAL([HAVE_LIBCUCKOO], [test "x$have_libcuckoo" == xyes])
