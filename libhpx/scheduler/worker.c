@@ -176,6 +176,12 @@ _execute_interrupt(hpx_parcel_t *p) {
    case HPX_SUCCESS:
     log_sched("completed interrupt\n");
     _continue_parcel(p, HPX_SUCCESS, 0, NULL);
+
+    if (action_is_pinned(here->actions, p->action)) {
+      hpx_gas_unpin(p->target);
+    }
+
+    process_recover_credit(p);
     return;
    case HPX_RESEND:
     log_sched("resending interrupt to %"PRIu64"\n", p->target);
