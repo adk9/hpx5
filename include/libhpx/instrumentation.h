@@ -16,7 +16,8 @@
 #include <stdint.h>
 #include <hpx/attributes.h>
 #include <hpx/builtins.h>
-#include <libhpx/locality.h> // for here object
+#include <libhpx/config.h>
+#include <libhpx/locality.h> // for here object inlined in inst_trace_class
 
 struct config;
 
