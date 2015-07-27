@@ -21,6 +21,9 @@
 /// designed to work as part of a distributed set of schedulers to support a
 /// large-scale, lightweight thread-based application.
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
@@ -229,5 +232,10 @@ hpx_parcel_t *scheduler_current_parcel(void);
 /// Get a worker by id.
 worker_t *scheduler_get_worker(struct scheduler *sched, int id)
   HPX_NON_NULL(1);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_SCHEDULER_H
