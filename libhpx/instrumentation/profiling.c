@@ -254,6 +254,7 @@ int prof_reset(){
     _profile_log.papi_running = false;
     long long *dummy = malloc(sizeof(long long) * _profile_log.num_counters);
     retval = PAPI_stop_counters(dummy, _profile_log.num_counters);
+    free(dummy);
   }
   return retval;
 }
