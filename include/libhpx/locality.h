@@ -32,8 +32,6 @@
 # include <hwloc.h>
 #endif
 
-#include <libhpx/gas.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -65,7 +63,7 @@ typedef struct locality {
   uint32_t                      rank;
   uint32_t                     ranks;
   struct boot                  *boot;
-  struct gas                    *gas;
+  void                          *gas;
   struct network            *network;
   struct scheduler            *sched;
   struct config              *config;

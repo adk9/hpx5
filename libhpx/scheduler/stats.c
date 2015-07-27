@@ -17,12 +17,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "hpx/hpx.h"
-#include "libsync/sync.h"
-#include "libsync/locks.h"
-#include "libhpx/scheduler.h"
-#include "libhpx/locality.h"
-#include "libhpx/stats.h"
+#include <hpx/hpx.h>
+#include <libsync/sync.h>
+#include <libsync/locks.h>
+#include <libhpx/config.h>
+#include <libhpx/scheduler.h>
+#include <libhpx/locality.h>
+#include <libhpx/stats.h>
 
 void libhpx_stats_init(struct libhpx_stats *stats) {
   stats->spawns     = 0;

@@ -92,6 +92,9 @@ flag off
 option "hpx-dbg-mprotectstacks" - "use mprotect() to bracket stacks to look for stack overflows"
 flag off
 
+option "hpx-dbg-syncfree" - "use synchronous GAS free operations"
+flag off
+
 section "Tracing"
 
 option "hpx-trace-classes" - "set the event classes to trace"

@@ -30,3 +30,6 @@ if ENABLE_TUTORIAL
 SUBDIRS      += tutorial
 DIST_SUBDIRS += tutorial
 endif
+
+install-exec-hook:
+	cd $(DESTDIR)$(libdir); find $(DESTDIR)$(libdir) -type f -name \*.la -delete
