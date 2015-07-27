@@ -81,74 +81,98 @@ hpx_gas_calloc(size_t n, uint32_t bsize, uint32_t boundary, hpx_gas_dist_t dist)
 
 hpx_addr_t
 HPX_THERE(uint32_t i) {
-  dbg_assert(here && here->gas && here->gas->there);
-  return here->gas->there(here->gas, i);
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->there);
+  return gas->there(here->gas, i);
 }
 
 hpx_addr_t
 hpx_addr_add(hpx_addr_t addr, int64_t bytes, uint32_t bsize) {
-  dbg_assert(here && here->gas && here->gas->add);
-  return here->gas->add(here->gas, addr, bytes, bsize);
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->add);
+  return gas->add(here->gas, addr, bytes, bsize);
 }
 
 int64_t
 hpx_addr_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
-  dbg_assert(here && here->gas && here->gas->sub);
-  return here->gas->sub(here->gas, lhs, rhs, bsize);
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->sub);
+  return gas->sub(here->gas, lhs, rhs, bsize);
 }
 
 bool
 hpx_gas_try_pin(const hpx_addr_t addr, void **local) {
-  dbg_assert(here && here->gas && here->gas->try_pin);
-  return here->gas->try_pin(here->gas, addr, local);
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->try_pin);
+  return gas->try_pin(here->gas, addr, local);
 }
 
 void
 hpx_gas_unpin(const hpx_addr_t addr) {
-  dbg_assert(here && here->gas && here->gas->unpin);
-  here->gas->unpin(here->gas, addr);
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->unpin);
+  gas->unpin(here->gas, addr);
 }
 
 hpx_addr_t
 hpx_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
-  dbg_assert(here && here->gas && here->gas->alloc_cyclic);
-  return here->gas->alloc_cyclic(n, bsize, boundary);
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->alloc_cyclic);
+  return gas->alloc_cyclic(n, bsize, boundary);
 }
 
 hpx_addr_t
 hpx_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
-  dbg_assert(here && here->gas && here->gas->calloc_cyclic);
-  return here->gas->calloc_cyclic(n, bsize, boundary);
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->calloc_cyclic);
+  return gas->calloc_cyclic(n, bsize, boundary);
 }
 
 hpx_addr_t
 hpx_gas_alloc_blocked(size_t n, uint32_t bsize, uint32_t boundary) {
-  dbg_assert(here && here->gas && here->gas->alloc_blocked);
-  return here->gas->alloc_blocked(n, bsize, boundary);
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->alloc_blocked);
+  return gas->alloc_blocked(n, bsize, boundary);
 }
 
 hpx_addr_t
 hpx_gas_calloc_blocked(size_t n, uint32_t bsize, uint32_t boundary) {
-  dbg_assert(here && here->gas && here->gas->calloc_blocked);
-  return here->gas->calloc_blocked(n, bsize, boundary);
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->calloc_blocked);
+  return gas->calloc_blocked(n, bsize, boundary);
 }
 
 hpx_addr_t
 hpx_gas_alloc_local(uint32_t bsize, uint32_t boundary) {
-  dbg_assert(here && here->gas && here->gas->alloc_local);
-  return here->gas->alloc_local(here->gas, bsize, boundary);
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->alloc_local);
+  return gas->alloc_local(here->gas, bsize, boundary);
 }
 
 hpx_addr_t
 hpx_gas_calloc_local(size_t nmemb, size_t size, uint32_t boundary) {
-  dbg_assert(here && here->gas && here->gas->calloc_local);
-  return here->gas->calloc_local(here->gas, nmemb, size, boundary);
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->calloc_local);
+  return gas->calloc_local(here->gas, nmemb, size, boundary);
 }
 
 void
 hpx_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
   dbg_assert(here && here->gas);
-  here->gas->free(here->gas, addr, sync);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->free);
+  gas->free(here->gas, addr, sync);
 }
 
 void
@@ -161,47 +185,62 @@ hpx_gas_free_sync(hpx_addr_t addr) {
 
 void
 hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
-  dbg_assert(here && here->gas && here->gas->move);
-  here->gas->move(here->gas, src, dst, lco);
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->move);
+  gas->move(here->gas, src, dst, lco);
 }
 
 int
 hpx_gas_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync) {
-  dbg_assert(here && here->gas && here->gas->memget);
-  return here->gas->memget(here->gas, to, from, size, lsync);
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->memget);
+  return gas->memget(here->gas, to, from, size, lsync);
 }
 
 int
 hpx_gas_memget_sync(void *to, hpx_addr_t from, size_t size) {
-  dbg_assert(here && here->gas && here->gas->memget_sync);
-  return here->gas->memget_sync(here->gas, to, from, size);
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->memget_sync);
+  return gas->memget_sync(here->gas, to, from, size);
 }
 
 int
 hpx_gas_memput(hpx_addr_t to, const void *from, size_t size,
                hpx_addr_t lsync, hpx_addr_t rsync) {
-  dbg_assert(here && here->gas && here->gas->memput);
-  return here->gas->memput(here->gas, to, from, size, lsync, rsync);
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->memput);
+  return gas->memput(here->gas, to, from, size, lsync, rsync);
 }
 
 int
 hpx_gas_memput_lsync(hpx_addr_t to, const void *from, size_t size,
                      hpx_addr_t rsync) {
-  dbg_assert(here && here->gas && here->gas->memput_lsync);
-  return here->gas->memput_lsync(here->gas, to, from, size, rsync);
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->memput_lsync);
+  return gas->memput_lsync(here->gas, to, from, size, rsync);
 }
 
 int
 hpx_gas_memput_rsync(hpx_addr_t to, const void *from, size_t size) {
-  dbg_assert(here && here->gas && here->gas->memput_rsync);
-  return here->gas->memput_rsync(here->gas, to, from, size);
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->memput_rsync);
+  return gas->memput_rsync(here->gas, to, from, size);
 }
 
 int
 hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
 {
-  dbg_assert(here && here->gas && here->gas->memcpy);
-  return (*here->gas->memcpy)(here->gas, to, from, size, sync);
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->memcpy);
+  // NB: weird call syntax prevents clang error when memcpy is builtin
+  return (*gas->memcpy)(here->gas, to, from, size, sync);
 }
 
 static int

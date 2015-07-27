@@ -87,6 +87,15 @@ int libhpx_call_action(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
                        hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
                        int nargs, va_list *args);
 
+/// Call an action by sending a parcel given a list of variable args.
+///
+/// This form of call will block internally until the result becomes
+/// available. It can be more efficient than allocating a future to call the
+/// non-blocking form as it requires neither the  global allocation nor the
+/// related temporary buffer.
+int action_call_rsync(hpx_action_t action, hpx_addr_t at, void *out, int nargs,
+                      va_list *args);
+
 /// Is the action a pinned action?
 bool action_is_pinned(const struct action_table *, hpx_action_t)
   HPX_NON_NULL(1);
