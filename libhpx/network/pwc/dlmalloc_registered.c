@@ -25,7 +25,7 @@
 void
 registered_allocator_init(pwc_xport_t *xport) {
   size_t bytes = 256 * 1024 * 1024; // arbitrary, for now.
-  void *base = system_mmap_huge_pages(NULL, NULL, bytes, 0);
+  void *base = system_mmap_huge_pages(NULL, NULL, bytes, sizeof(bytes));
   if (!base) {
     dbg_error("failed to mmap %zu bytes anywhere in memory\n", bytes);
   }
