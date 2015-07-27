@@ -17,6 +17,7 @@
 #include <string.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
 #include <libhpx/memory.h>
 #include <malloc-2.8.6.h>
 #include "agas.h"
@@ -24,7 +25,8 @@
 
 void _agas_allocator_init(agas_t *agas, int id) {
   dbg_assert(id < AS_COUNT);
-  size_t bytes = ceil_div_size_t(here->config->heapsize, 2);
+  libhpx_config_t *cfg = libhpx_get_config();
+  size_t bytes = ceil_div_size_t(cfg->heapsize, 2);
   void *base = system_mmap(NULL, NULL, bytes, agas->chunk_size);
   dbg_assert(base);
   chunk_table_insert(agas->chunk_table, base, 0);
