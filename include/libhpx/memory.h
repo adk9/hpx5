@@ -178,7 +178,7 @@ void as_free(int id, void *ptr);
 
 #include <malloc-2.8.6.h>
 
-extern void* pools[AS_COUNT];
+extern mspace mspaces[AS_COUNT];
 
 void as_join(int id);
 void as_leave(void);

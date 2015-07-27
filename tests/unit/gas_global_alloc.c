@@ -102,8 +102,8 @@ static int gas_global_mem_alloc_handler(void) {
   hpx_addr_t global = hpx_gas_alloc_cyclic(blocks, size, 0);
   hpx_gas_free(global, HPX_NULL);
 
-  hpx_addr_t calloc = hpx_gas_calloc_cyclic(blocks, size, 0);
-  hpx_gas_free(calloc, HPX_NULL);
+  /* hpx_addr_t calloc = hpx_gas_calloc_cyclic(blocks, size, 0); */
+  /* hpx_gas_free(calloc, HPX_NULL); */
 
   return HPX_SUCCESS;
 }
