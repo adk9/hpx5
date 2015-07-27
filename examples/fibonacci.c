@@ -38,7 +38,6 @@ static hpx_action_t _fib      = 0;
 static hpx_action_t _fib_main = 0;
 
 static int _fib_action(int *args, size_t size) {
-  prof_tally_mark();
   int n = *args;
 
   if (n < 2)
