@@ -25,12 +25,17 @@ void btt_delete(void *btt);
 
 void btt_insert(void *btt, gva_t gva, int32_t owner, void *lva, size_t blocks);
 void btt_remove(void *btt, gva_t gva);
-void btt_try_delete(void *btt, gva_t gva, hpx_parcel_t *p);
 bool btt_try_pin(void *btt, gva_t gva, void **lva);
 void btt_unpin(void *btt, gva_t gva);
 void *btt_lookup(const void* obj, gva_t gva);
 uint32_t btt_owner_of(const void *btt, gva_t gva);
 size_t btt_get_blocks(const void *btt, gva_t gva);
+int btt_get_all(const void *btt, gva_t gva, void **lva, size_t *blocks, int32_t *count);
+
+/// During hpx_gas_free (and hpx_lco_delete) we want to remove the btt entry for
+/// a block, but only once its reference count hits zero. This function will
+/// block the calling thread until that condition is true.
+int btt_remove_when_count_zero(void *btt, gva_t gva, void** lva);
 
 #ifdef __cplusplus
 }
