@@ -101,7 +101,6 @@ static int _fib_main_action(int *args, size_t size) {
 }
 
 int main(int argc, char *argv[]) {
-
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");

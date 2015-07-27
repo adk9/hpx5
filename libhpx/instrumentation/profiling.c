@@ -167,13 +167,19 @@ void prof_begin(){
   }
 }
 
-int prof_end(){
-  _profile_log.end_time = hpx_time_now();
+int prof_end(long long *values, int num_values){
   int retval = PAPI_OK;
-  if(_profile_log.papi_running){
-    retval = PAPI_stop_counters(NULL, 0);
-    _profile_log.papi_running = false;
+  if(_profile_log.papi_running && num_values != _profile_log.num_counters){
+    return PAPI_EINVAL;
   }
+  else if(_profile_log.papi_running){
+    retval = PAPI_stop_counters(values, num_values);
+    _profile_log.papi_running = false;
+    for(int i = 0; i < num_values; i++){
+      _profile_log.counter_totals[i] += values[i];
+    }
+  }
+  _profile_log.end_time = hpx_time_now();
   return retval;
 }
 
@@ -183,10 +189,7 @@ void prof_tally_mark(){
 
 int prof_get_averages(long long *values, int num_values){
   if(num_values != _profile_log.num_counters){
-    for(int i = 0; i < num_values; i++){
-      values[i] = -1;
-    }
-    return -1;
+    return PAPI_EINVAL;
   }
   double divisor = _profile_log.tally;
 
@@ -203,10 +206,7 @@ int prof_get_averages(long long *values, int num_values){
 
 int prof_get_totals(long long *values, int num_values){
   if(num_values != _profile_log.num_counters){
-    for(int i = 0; i < num_values; i++){
-      values[i] = -1;
-    }
-    return -1;
+    return PAPI_EINVAL;
   }
 
   for(int i = 0; i < num_values; i++){
@@ -246,16 +246,22 @@ int prof_reset(){
   _profile_log.end_time = _profile_log.start_time;
   _profile_log.tally = 0;
 
+  //I don't like doing this but the alternative is to set PAPI up from the 
+  //beginning in a different way, using event sets instead of groups of
+  //individual events.  Only event sets have a PAPI_reset() function for some
+  //reason, and all PAPI_stop_counter() functions require a valid array.
   if(_profile_log.papi_running){
     _profile_log.papi_running = false;
-    retval = PAPI_stop_counters(NULL, 0);
+    long long *dummy = malloc(sizeof(long long) * _profile_log.num_counters);
+    retval = PAPI_stop_counters(dummy, _profile_log.num_counters);
   }
   return retval;
 }
 
-// TODO: everything here
 int prof_fini(){
-  return 0;
+  free(_profile_log.counter_totals);
+  free(_profile_log.counters);
+  return LIBHPX_OK;
 }
 
 int prof_start_papi_counters(){
@@ -268,13 +274,13 @@ int prof_start_papi_counters(){
 
 int prof_stop_papi_counters(long long *values, int num_values){
   if(num_values != _profile_log.num_counters){
-    return -1;
+    return PAPI_EINVAL;
   }
   if(!_profile_log.papi_running){
     for(int i = 0; i < num_values; i++){
       values[i] = 0;
     }
-    return -2;
+    return PAPI_ENOTRUN;
   }
 
   int retval = PAPI_stop_counters(values, num_values);
@@ -292,13 +298,13 @@ int prof_stop_papi_counters(long long *values, int num_values){
 
 int prof_read_papi_counters(long long *values, int num_values){
   if(num_values != _profile_log.num_counters){
-    return -1;
+    return PAPI_EINVAL;
   }
   if(!_profile_log.papi_running){
     for(int i = 0; i < num_values; i++){
       values[i] = 0;
     }
-    return -2;
+    return PAPI_ENOTRUN;
   }
   int retval = PAPI_read_counters(values, num_values);
   if(retval != PAPI_OK){
@@ -314,13 +320,13 @@ int prof_read_papi_counters(long long *values, int num_values){
 
 int prof_accum_papi_counters(long long *values, int num_values){
   if(num_values != _profile_log.num_counters){
-    return -1;
+    return PAPI_EINVAL;
   }
   if(!_profile_log.papi_running){
     for(int i = 0; i < num_values; i++){
       values[i] = 0;
     }
-    return -2;
+    return PAPI_ENOTRUN;
   }
   long long *temp = malloc(sizeof(long long)*num_values);
   int retval = PAPI_read_counters(temp, num_values);

@@ -53,16 +53,17 @@ int prof_init(struct config *cfg)
 void prof_begin();
 
 /// Mark the end of profiling a type of event.  This will also stop any running
-/// PAPI counters.
-/// Note: Stopping PAPI counters here will NOT add the counter values to the
-/// running totals.
-int prof_end();
+/// PAPI counters.  Note that if PAPI counters are not currently running any 
+/// arguments passed in will be ignored and the end time will just be recorded.
+/// @param      values A pointer to an array where the values will be stored
+/// @param  num_values The size of the array
+int prof_end(long long *values, int num_values);
 
 /// Mark the occurrence of an event
 void prof_tally_mark();
 
 /// Obtain the average values of the counters across all profiled sessions
-/// @param      values A pointer to an array where the averages will be stored
+/// @param      values A pointer to an array for storing counter values
 /// @param  num_values The size of the array
 int prof_get_averages(long long *values, int num_values);
 
