@@ -122,6 +122,7 @@ LIBHPX_OPT_INTSET(log_, at,  HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_A
 /// Debug options
 /// @{
 LIBHPX_OPT_FLAG(dbg_, mprotectstacks, 0)
+LIBHPX_OPT_FLAG(dbg_, syncfree, 0)
 LIBHPX_OPT_FLAG(dbg_, waitonabort, 0)
 LIBHPX_OPT_FLAG(dbg_, waitonsegv, 0)
 LIBHPX_OPT_INTSET(dbg_, waitat, HPX_LOCALITY_NONE, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)

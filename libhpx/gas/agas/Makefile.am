@@ -3,7 +3,7 @@ noinst_LTLIBRARIES  = libagas.la
 
 libagas_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
 libagas_la_CFLAGS   = $(LIBHPX_CFLAGS)
-libagas_la_SOURCES  = agas.c btt.cc chunk_table.cc string.c local.c lva.c
+libagas_la_SOURCES  = agas.c btt.cc chunk_table.cc string.c local.c lva.c free.c
 
 if HAVE_JEMALLOC
 libagas_la_SOURCES += jemalloc_cyclic.c jemalloc_global.c

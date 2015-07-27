@@ -110,6 +110,8 @@ struct hpx_options_t
   const char *hpx_dbg_waitonsegv_help; /**< @brief call hpx_wait() for SIGSEGV for debugging (unreliable) help description.  */
   int hpx_dbg_mprotectstacks_flag;	/**< @brief use mprotect() to bracket stacks to look for stack overflows (default=off).  */
   const char *hpx_dbg_mprotectstacks_help; /**< @brief use mprotect() to bracket stacks to look for stack overflows help description.  */
+  int hpx_dbg_syncfree_flag;	/**< @brief use synchronous GAS free operations (default=off).  */
+  const char *hpx_dbg_syncfree_help; /**< @brief use synchronous GAS free operations help description.  */
   enum enum_hpx_trace_classes *hpx_trace_classes_arg;	/**< @brief set the event classes to trace.  */
   char ** hpx_trace_classes_orig;	/**< @brief set the event classes to trace original value given at command line.  */
   unsigned int hpx_trace_classes_min; /**< @brief set the event classes to trace's minimum occurreces */
@@ -211,6 +213,7 @@ struct hpx_options_t
   unsigned int hpx_dbg_waitonabort_given ;	/**< @brief Whether hpx-dbg-waitonabort was given.  */
   unsigned int hpx_dbg_waitonsegv_given ;	/**< @brief Whether hpx-dbg-waitonsegv was given.  */
   unsigned int hpx_dbg_mprotectstacks_given ;	/**< @brief Whether hpx-dbg-mprotectstacks was given.  */
+  unsigned int hpx_dbg_syncfree_given ;	/**< @brief Whether hpx-dbg-syncfree was given.  */
   unsigned int hpx_trace_classes_given ;	/**< @brief Whether hpx-trace-classes was given.  */
   unsigned int hpx_trace_dir_given ;	/**< @brief Whether hpx-trace-dir was given.  */
   unsigned int hpx_trace_filesize_given ;	/**< @brief Whether hpx-trace-filesize was given.  */

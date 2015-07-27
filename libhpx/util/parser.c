@@ -59,6 +59,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-dbg-waitonabort     call hpx_wait() inside of hpx_abort() for\n                                  debugging  (default=off)",
   "      --hpx-dbg-waitonsegv      call hpx_wait() for SIGSEGV for debugging\n                                  (unreliable)  (default=off)",
   "      --hpx-dbg-mprotectstacks  use mprotect() to bracket stacks to look for\n                                  stack overflows  (default=off)",
+  "      --hpx-dbg-syncfree        use synchronous GAS free operations\n                                  (default=off)",
   "\nTracing:",
   "      --hpx-trace-classes=class set the event classes to trace  (possible\n                                  values=\"parcel\", \"pwc\", \"sched\",\n                                  \"lco\", \"process\", \"memory\", \"all\")",
   "      --hpx-trace-dir=dir       directory to output trace files",
@@ -171,6 +172,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_dbg_waitonabort_given = 0 ;
   args_info->hpx_dbg_waitonsegv_given = 0 ;
   args_info->hpx_dbg_mprotectstacks_given = 0 ;
+  args_info->hpx_dbg_syncfree_given = 0 ;
   args_info->hpx_trace_classes_given = 0 ;
   args_info->hpx_trace_dir_given = 0 ;
   args_info->hpx_trace_filesize_given = 0 ;
@@ -230,6 +232,7 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_dbg_waitonabort_flag = 0;
   args_info->hpx_dbg_waitonsegv_flag = 0;
   args_info->hpx_dbg_mprotectstacks_flag = 0;
+  args_info->hpx_dbg_syncfree_flag = 0;
   args_info->hpx_trace_classes_arg = NULL;
   args_info->hpx_trace_classes_orig = NULL;
   args_info->hpx_trace_dir_arg = NULL;
@@ -296,37 +299,38 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_dbg_waitonabort_help = hpx_options_t_help[22] ;
   args_info->hpx_dbg_waitonsegv_help = hpx_options_t_help[23] ;
   args_info->hpx_dbg_mprotectstacks_help = hpx_options_t_help[24] ;
-  args_info->hpx_trace_classes_help = hpx_options_t_help[26] ;
+  args_info->hpx_dbg_syncfree_help = hpx_options_t_help[25] ;
+  args_info->hpx_trace_classes_help = hpx_options_t_help[27] ;
   args_info->hpx_trace_classes_min = 0;
   args_info->hpx_trace_classes_max = 0;
-  args_info->hpx_trace_dir_help = hpx_options_t_help[27] ;
-  args_info->hpx_trace_filesize_help = hpx_options_t_help[28] ;
-  args_info->hpx_trace_at_help = hpx_options_t_help[29] ;
+  args_info->hpx_trace_dir_help = hpx_options_t_help[28] ;
+  args_info->hpx_trace_filesize_help = hpx_options_t_help[29] ;
+  args_info->hpx_trace_at_help = hpx_options_t_help[30] ;
   args_info->hpx_trace_at_min = 0;
   args_info->hpx_trace_at_max = 0;
-  args_info->hpx_prof_counters_help = hpx_options_t_help[30] ;
+  args_info->hpx_prof_counters_help = hpx_options_t_help[31] ;
   args_info->hpx_prof_counters_min = 0;
   args_info->hpx_prof_counters_max = 0;
-  args_info->hpx_isir_testwindow_help = hpx_options_t_help[32] ;
-  args_info->hpx_isir_sendlimit_help = hpx_options_t_help[33] ;
-  args_info->hpx_isir_recvlimit_help = hpx_options_t_help[34] ;
-  args_info->hpx_pwc_parcelbuffersize_help = hpx_options_t_help[36] ;
-  args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[37] ;
-  args_info->hpx_photon_backend_help = hpx_options_t_help[39] ;
-  args_info->hpx_photon_ibdev_help = hpx_options_t_help[40] ;
-  args_info->hpx_photon_ethdev_help = hpx_options_t_help[41] ;
-  args_info->hpx_photon_ibport_help = hpx_options_t_help[42] ;
-  args_info->hpx_photon_usecma_help = hpx_options_t_help[43] ;
-  args_info->hpx_photon_ibsrq_help = hpx_options_t_help[44] ;
-  args_info->hpx_photon_btethresh_help = hpx_options_t_help[45] ;
-  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[46] ;
-  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[47] ;
-  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[48] ;
-  args_info->hpx_photon_maxrd_help = hpx_options_t_help[49] ;
-  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[50] ;
-  args_info->hpx_photon_numcq_help = hpx_options_t_help[51] ;
-  args_info->hpx_photon_usercq_help = hpx_options_t_help[52] ;
-  args_info->hpx_opt_smp_help = hpx_options_t_help[54] ;
+  args_info->hpx_isir_testwindow_help = hpx_options_t_help[33] ;
+  args_info->hpx_isir_sendlimit_help = hpx_options_t_help[34] ;
+  args_info->hpx_isir_recvlimit_help = hpx_options_t_help[35] ;
+  args_info->hpx_pwc_parcelbuffersize_help = hpx_options_t_help[37] ;
+  args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[38] ;
+  args_info->hpx_photon_backend_help = hpx_options_t_help[40] ;
+  args_info->hpx_photon_ibdev_help = hpx_options_t_help[41] ;
+  args_info->hpx_photon_ethdev_help = hpx_options_t_help[42] ;
+  args_info->hpx_photon_ibport_help = hpx_options_t_help[43] ;
+  args_info->hpx_photon_usecma_help = hpx_options_t_help[44] ;
+  args_info->hpx_photon_ibsrq_help = hpx_options_t_help[45] ;
+  args_info->hpx_photon_btethresh_help = hpx_options_t_help[46] ;
+  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[47] ;
+  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[48] ;
+  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[49] ;
+  args_info->hpx_photon_maxrd_help = hpx_options_t_help[50] ;
+  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[51] ;
+  args_info->hpx_photon_numcq_help = hpx_options_t_help[52] ;
+  args_info->hpx_photon_usercq_help = hpx_options_t_help[53] ;
+  args_info->hpx_opt_smp_help = hpx_options_t_help[55] ;
   
 }
 
@@ -620,6 +624,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-dbg-waitonsegv", 0, 0 );
   if (args_info->hpx_dbg_mprotectstacks_given)
     write_into_file(outfile, "hpx-dbg-mprotectstacks", 0, 0 );
+  if (args_info->hpx_dbg_syncfree_given)
+    write_into_file(outfile, "hpx-dbg-syncfree", 0, 0 );
   write_multiple_into_file(outfile, args_info->hpx_trace_classes_given, "hpx-trace-classes", args_info->hpx_trace_classes_orig, hpx_option_parser_hpx_trace_classes_values);
   if (args_info->hpx_trace_dir_given)
     write_into_file(outfile, "hpx-trace-dir", args_info->hpx_trace_dir_orig, 0);
@@ -1285,6 +1291,7 @@ hpx_option_parser_internal (
         { "hpx-dbg-waitonabort",	0, NULL, 0 },
         { "hpx-dbg-waitonsegv",	0, NULL, 0 },
         { "hpx-dbg-mprotectstacks",	0, NULL, 0 },
+        { "hpx-dbg-syncfree",	0, NULL, 0 },
         { "hpx-trace-classes",	1, NULL, 0 },
         { "hpx-trace-dir",	1, NULL, 0 },
         { "hpx-trace-filesize",	1, NULL, 0 },
@@ -1576,6 +1583,18 @@ hpx_option_parser_internal (
             if (update_arg((void *)&(args_info->hpx_dbg_mprotectstacks_flag), 0, &(args_info->hpx_dbg_mprotectstacks_given),
                 &(local_args_info.hpx_dbg_mprotectstacks_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "hpx-dbg-mprotectstacks", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* use synchronous GAS free operations.  */
+          else if (strcmp (long_options[option_index].name, "hpx-dbg-syncfree") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->hpx_dbg_syncfree_flag), 0, &(args_info->hpx_dbg_syncfree_given),
+                &(local_args_info.hpx_dbg_syncfree_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "hpx-dbg-syncfree", '-',
                 additional_error))
               goto failure;
           
