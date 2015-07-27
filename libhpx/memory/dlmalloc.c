@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/memory.h>
 #include <malloc-2.8.6.h>
@@ -32,7 +33,7 @@ as_leave(void) {
 
 size_t
 as_bytes_per_chunk(void) {
-  return 0;
+  return ceil_div_size_t(here->config->heapsize, 2);
 }
 
 void *

@@ -82,6 +82,12 @@ as_join(int id) {
 
 void
 as_leave(void) {
+  for (int i = 0; i < AS_COUNT; ++i) {
+    if (as_flags[id] != 0) {
+      unsigned cache;
+      je_mallctl("tcache.create", NULL, NULL, &cache, sizeof(unsigned));
+    }
+  }
 }
 
 size_t

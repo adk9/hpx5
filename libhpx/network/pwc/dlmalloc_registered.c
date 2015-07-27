@@ -24,13 +24,14 @@
 
 void
 registered_allocator_init(pwc_xport_t *xport) {
+  size_t bytes = 256 * 1024 * 1024; // arbitrary, for now.
   void *base = system_mmap_huge_pages(NULL, NULL, bytes, 0);
   if (!base) {
     dbg_error("failed to mmap %zu bytes anywhere in memory\n", bytes);
   }
 
   memset(base, 0, bytes);
-  _xport->pin(base, bytes, NULL);
+  xport->pin(base, bytes, NULL);
 
   mspaces[AS_REGISTERED] = create_mspace_with_base(base, bytes, 0);
 }

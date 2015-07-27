@@ -68,6 +68,7 @@
 
 # /contrib/
 contrib/Makefile
+contrib/dlmalloc/Makefile
 contrib/hwloc-1.10.0/
 contrib/libffi/
 contrib/libffi-mic/
