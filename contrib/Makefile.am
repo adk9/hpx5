@@ -26,5 +26,10 @@ SUBDIRS      += libcuckoo
 DIST_SUBDIRS += libcuckoo
 endif
 
+if HAVE_DLMALLOC
+SUBDIRS      += dlmalloc
+DIST_SUBDIRS += dlmalloc
+endif
+
 check-recursive: all-recursive
 	echo "HPX ignore above warnings, we do not check contrib projects"
