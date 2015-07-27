@@ -139,6 +139,7 @@ int prof_init(struct config *cfg){
 
   _profile_log.counters = malloc(num_counters * sizeof(int));
   _profile_log.counter_totals = malloc(num_counters * sizeof(long long));
+  _profile_log.num_counters = num_counters;
 
   max_counters = num_counters;
   num_counters = 0;
@@ -177,9 +178,7 @@ int prof_end(){
 }
 
 void prof_tally_mark(){
-  if(_profile_log.papi_running){
-    _profile_log.tally++;
-  }
+  _profile_log.tally++;
 }
 
 int prof_get_averages(long long *values, int num_values){
@@ -269,11 +268,15 @@ int prof_start_papi_counters(){
 
 int prof_stop_papi_counters(long long *values, int num_values){
   if(num_values != _profile_log.num_counters){
-    for(int i = 0; i < num_values; i++){
-      values[i] = -1;
-    }
     return -1;
   }
+  if(!_profile_log.papi_running){
+    for(int i = 0; i < num_values; i++){
+      values[i] = 0;
+    }
+    return -2;
+  }
+
   int retval = PAPI_stop_counters(values, num_values);
   if(retval != PAPI_OK){
     return retval;
@@ -289,10 +292,13 @@ int prof_stop_papi_counters(long long *values, int num_values){
 
 int prof_read_papi_counters(long long *values, int num_values){
   if(num_values != _profile_log.num_counters){
-    for(int i = 0; i < num_values; i++){
-      values[i] = -1;
-    }
     return -1;
+  }
+  if(!_profile_log.papi_running){
+    for(int i = 0; i < num_values; i++){
+      values[i] = 0;
+    }
+    return -2;
   }
   int retval = PAPI_read_counters(values, num_values);
   if(retval != PAPI_OK){
@@ -308,10 +314,13 @@ int prof_read_papi_counters(long long *values, int num_values){
 
 int prof_accum_papi_counters(long long *values, int num_values){
   if(num_values != _profile_log.num_counters){
-    for(int i = 0; i < num_values; i++){
-      values[i] = -1;
-    }
     return -1;
+  }
+  if(!_profile_log.papi_running){
+    for(int i = 0; i < num_values; i++){
+      values[i] = 0;
+    }
+    return -2;
   }
   long long *temp = malloc(sizeof(long long)*num_values);
   int retval = PAPI_read_counters(temp, num_values);
