@@ -30,8 +30,6 @@ registered_allocator_init(pwc_xport_t *xport) {
     dbg_error("failed to mmap %zu bytes anywhere in memory\n", bytes);
   }
 
-  memset(base, 0, bytes);
   xport->pin(base, bytes, NULL);
-
   mspaces[AS_REGISTERED] = create_mspace_with_base(base, bytes, 0);
 }
