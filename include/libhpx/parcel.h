@@ -13,6 +13,10 @@
 #ifndef LIBHPX_PARCEL_H
 #define LIBHPX_PARCEL_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <hpx/hpx.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/instrumentation_events.h>
@@ -101,7 +105,7 @@ static inline void INST_EVENT_PARCEL_CREATE(hpx_parcel_t *p) {
   if (p->action == scheduler_nop) {
     return;
   }
-  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_CREATE;
 
   hpx_parcel_t *parent = scheduler_current_parcel();
@@ -109,59 +113,59 @@ static inline void INST_EVENT_PARCEL_CREATE(hpx_parcel_t *p) {
   if (parent != NULL)
     parent_id = parent->id;
 
-  inst_trace(class, id, p->id, p->action, p->size, parent_id);
+  inst_trace(type, id, p->id, p->action, p->size, parent_id);
 #endif
 }
 
 static inline void INST_EVENT_PARCEL_SEND(hpx_parcel_t *p) {
-  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_SEND;
-  inst_trace(class, id, p->id, p->action, p->size, p->target);
+  inst_trace(type, id, p->id, p->action, p->size, p->target);
 }
 
 static inline void INST_EVENT_PARCEL_RESEND(hpx_parcel_t *p) {
-  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_RESEND;
-  inst_trace(class, id, p->id, p->action, p->size, p->target);
+  inst_trace(type, id, p->id, p->action, p->size, p->target);
 }
 
 static inline void INST_EVENT_PARCEL_RECV(hpx_parcel_t *p) {
-  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_RECV;
-  inst_trace(class, id, p->id, p->action, p->size, p->src);
+  inst_trace(type, id, p->id, p->action, p->size, p->src);
 }
 
 static inline void INST_EVENT_PARCEL_RUN(hpx_parcel_t *p) {
   if (NULL == p || p->action == scheduler_nop) {
     return;
   }
-  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_RUN;
-  inst_trace(class, id, p->id, p->action, p->size);
+  inst_trace(type, id, p->id, p->action, p->size);
 }
 
 static inline void INST_EVENT_PARCEL_END(hpx_parcel_t *p) {
   if (p->action == scheduler_nop) {
     return;
   }
-  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_END;
-  inst_trace(class, id, p->id, p->action);
+  inst_trace(type, id, p->id, p->action);
 }
 
 static inline void INST_EVENT_PARCEL_SUSPEND(hpx_parcel_t *p) {
-  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_SUSPEND;
-  inst_trace(class, id, p->id, p->action);
+  inst_trace(type, id, p->id, p->action);
 }
 
 static inline void INST_EVENT_PARCEL_RESUME(hpx_parcel_t *p) {
   if (p->action == scheduler_nop) {
     return;
   }
-  static const int class = HPX_INST_CLASS_PARCEL;
+  static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_RESUME;
-  inst_trace(class, id, p->id, p->action);
+  inst_trace(type, id, p->id, p->action);
 }
 /// @}
 
@@ -232,5 +236,9 @@ static inline uint32_t parcel_size(const hpx_parcel_t *p) {
 static inline uint32_t parcel_payload_size(const hpx_parcel_t *p) {
   return p->size;
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_PARCEL_H

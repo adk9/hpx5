@@ -174,6 +174,21 @@ void as_free(int id, void *ptr);
 }
 #endif
 
+#elif defined(HAVE_DLMALLOC)
+
+#include <malloc-2.8.6.h>
+
+extern mspace mspaces[AS_COUNT];
+
+void as_join(int id);
+void as_leave(void);
+size_t as_bytes_per_chunk(void);
+
+void *as_malloc(int id, size_t bytes);
+void *as_calloc(int id, size_t nmemb, size_t bytes);
+void *as_memalign(int id, size_t boundary, size_t size);
+void as_free(int id, void *ptr);
+
 #else
 # error No gas allocator configured
 #endif
