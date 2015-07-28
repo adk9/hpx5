@@ -104,6 +104,9 @@ int system_barrier_destroy(system_barrier_t *barrier);
 /// System specific thread barrier wait function
 int system_barrier_wait(system_barrier_t *barrier);
 
+/// Print a stack trace.
+void system_print_trace(void *fd);
+
 #endif
 
 #ifdef __cplusplus
