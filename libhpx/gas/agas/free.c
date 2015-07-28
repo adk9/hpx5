@@ -140,19 +140,17 @@ static int _agas_free_async_handler(hpx_addr_t base) {
   // optimize here for single-block allocations by skipping the segment code.
   if (gva.bits.cyclic) {
     dbg_check( hpx_bcast_rsync(_agas_free_segment, &base) );
+    cyclic_free(lva);
   }
   else if (btt_get_blocks(gas->btt, gva) == 1) {
     dbg_check( hpx_call_sync(base, _agas_free_block, NULL, 0, &base) );
+    global_free(lva);
   }
   else {
     dbg_check( hpx_call_sync(HPX_HERE, _agas_free_segment, NULL, 0, &base) );
+    global_free(lva);
   }
 
-  // At this point, all relocated blocks have been removed and there are no btt
-  // entries that claim ownership of the gva---there could still be cached
-  // entries if we are using caching, but these are cleaned lazily. We need to
-  // return this memory back to the allocator.
-  global_free(lva);
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_free_async, _agas_free_async_handler, HPX_ADDR);
