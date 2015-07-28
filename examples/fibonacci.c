@@ -24,7 +24,6 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include "hpx/hpx.h"
-#include <libhpx/profiling.h>
 
 static void _usage(FILE *f, int error) {
   fprintf(f, "Usage: fibonacci [options] NUMBER\n"
