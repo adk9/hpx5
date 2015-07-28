@@ -68,11 +68,12 @@ HPX_CONFIG_HOST
 HPX_PE_ENV
 
 # Check for pthreads. This will set CFLAGS and LIBS as necessary in a
-# platform-specific way.
+# platform-specific way. According to ax_pthread.m4 PTHREAD_CFLAGS are meant to
+# be on the link line too, so add them for pkg-config static linking.
 AX_PTHREAD(
  [LIBHPX_CFLAGS="$LIBHPX_CFLAGS $PTHREAD_CFLAGS"
   LIBHPX_LIBS="$LIBHPX_LIBS $PTHREAD_LIBS"
-  HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS $PTHREAD_LIBS"],
+  HPX_PC_PRIVATE_LIBS="$PTHREAD_CFLAGS $HPX_PC_PRIVATE_LIBS $PTHREAD_LIBS"],
  [AC_MSG_ERROR([Could not find pthread implementation])])
 
 # Allow parallel configuration. We do this early so that it shows up before the
@@ -132,6 +133,7 @@ HPX_CONFIG_MPI([ompi])
 HPX_CONFIG_PMI([cray-pmi])
 HPX_CONFIG_JEMALLOC([contrib/jemalloc], ["jemalloc >= 4.0"]) 
 HPX_CONFIG_TBBMALLOC
+HPX_CONFIG_DLMALLOC([contrib/dlmalloc])
 #HPX_CONFIG_HWLOC([contrib/hwloc-1.11.0], [hwloc])
 HPX_CONFIG_HUGETLBFS([hugetlbfs])
 HPX_CONFIG_PAPI([papi])
@@ -152,15 +154,26 @@ AS_IF([test "x$have_photon" == xyes -o "x$have_mpi" == xyes],
   [AC_DEFINE([HAVE_NETWORK], [1], [We have a high speed network available])
    have_network=yes])
 
-AS_IF([test "x$have_jemalloc" == xyes -o "x$have_tbbmalloc" == xyes],
+AS_IF([test "x$have_jemalloc" == xyes -o "x$have_tbbmalloc" == xyes -o "x$have_dlmalloc" == xyes],
   [AC_DEFINE([HAVE_ALLOCATOR], [1], [We have a GAS allocator available])
    have_allocator=yes])
 
 AS_IF([test "x$have_jemalloc" == xyes -a "x$have_tbbmalloc" == xyes],
   [AC_MSG_ERROR(jemalloc and tbbmalloc are mutually exclusive)])
 
+AS_IF([test "x$have_jemalloc" == xyes -a "x$have_dlmalloc" == xyes],
+  [AC_MSG_ERROR(jemalloc and dlmalloc are mutually exclusive)])
+
+AS_IF([test "x$have_dlmalloc" == xyes -a "x$have_tbbmalloc" == xyes],
+  [AC_MSG_ERROR(dlmalloc and tbbmalloc are mutually exclusive)])
+
 AS_IF([test "x$have_network" == xyes -a "x$have_allocator" != xyes],
-  [AC_MSG_ERROR(HPX requires jemalloc or tbbmalloc for network operation)])
+  [AC_MSG_ERROR(HPX requires jemalloc, tbbmalloc or dlmalloc for network operation)])
+
+# Make sure that static linking libhpx.a with $(CC) works when we have a C++
+# dependency.
+AS_IF([test "x$have_tbbmalloc" == xyes -o "x$have_libcuckoo" == xyes],
+  [HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lstdc++"])
 
 # Configure all of the automake conditionals that our build requires.
 HPX_DO_AM_CONDITIONALS
