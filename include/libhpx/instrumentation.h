@@ -17,7 +17,7 @@
 #include <hpx/attributes.h>
 #include <hpx/builtins.h>
 #include <libhpx/config.h>
-#include <libhpx/locality.h> // for here object inlined in inst_trace_class
+#include <libhpx/locality.h> // for here object inlined in inst_trace_type
 
 struct config;
 
@@ -34,19 +34,19 @@ int inst_start();
 void inst_fini(void);
 
 /// Record an event to the log
-/// @param        class Class this event is part of (see hpx_inst_class_type_t)
+/// @param        type Type this event is part of (see hpx_inst_class_type_t)
 /// @param           id The event id (see hpx_inst_event_type_t)
 /// @param            n The number of user arguments to log, < 5.
 /// @param      va_args The user arguments.
-void inst_vtrace(int class, int n, int id, ...);
+void inst_vtrace(int type, int n, int id, ...);
 
 #ifdef ENABLE_INSTRUMENTATION
-# define inst_trace(class, ...)                                 \
-  inst_vtrace(class, __HPX_NARGS(__VA_ARGS__) - 1, __VA_ARGS__)
+# define inst_trace(type, ...)                                 \
+  inst_vtrace(type, __HPX_NARGS(__VA_ARGS__) - 1, __VA_ARGS__)
 #else
-# define inst_trace(class, id, ...)             \
+# define inst_trace(type, id, ...)             \
   do {                                          \
-    (void)class;                                \
+    (void)type;                                \
     (void)id;                                   \
   } while (0)
 #endif
@@ -156,8 +156,8 @@ static const int INST_OFFSETS[] = {
   HPX_INST_NUM_EVENTS
 };
 
-static inline bool inst_trace_class(int class) {
-  return config_trace_classes_isset(here->config, 1 << class);
+static inline bool inst_trace_class(int type) {
+  return config_trace_classes_isset(here->config, 1 << type);
 }
 
 #endif
