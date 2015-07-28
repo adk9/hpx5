@@ -68,11 +68,12 @@ HPX_CONFIG_HOST
 HPX_PE_ENV
 
 # Check for pthreads. This will set CFLAGS and LIBS as necessary in a
-# platform-specific way.
+# platform-specific way. According to ax_pthread.m4 PTHREAD_CFLAGS are meant to
+# be on the link line too, so add them for pkg-config static linking.
 AX_PTHREAD(
  [LIBHPX_CFLAGS="$LIBHPX_CFLAGS $PTHREAD_CFLAGS"
   LIBHPX_LIBS="$LIBHPX_LIBS $PTHREAD_LIBS"
-  HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS $PTHREAD_LIBS"],
+  HPX_PC_PRIVATE_LIBS="$PTHREAD_CFLAGS $HPX_PC_PRIVATE_LIBS $PTHREAD_LIBS"],
  [AC_MSG_ERROR([Could not find pthread implementation])])
 
 # Allow parallel configuration. We do this early so that it shows up before the
