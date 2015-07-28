@@ -31,7 +31,6 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/instrumentation.h>
-#include <libhpx/profiling.h>
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>                      // used as thread-control block
