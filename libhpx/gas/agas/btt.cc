@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
 #include <cuckoohash_map.hh>
 #include <city_hasher.hh>
@@ -175,15 +176,6 @@ btt_remove(void *obj, gva_t gva) {
   (void)erased;
 }
 
-static void
-_btt_try_delete(void *obj, gva_t gva, hpx_parcel_t *p) {
-  BTT *btt = static_cast<BTT*>(obj);
-  p = btt->trydelete(gva, p);
-  if (p) {
-    hpx_parcel_send_sync(p);
-  }
-}
-
 bool
 btt_try_pin(void* obj, gva_t gva, void** lva) {
   BTT *btt = static_cast<BTT*>(obj);
@@ -245,7 +237,12 @@ typedef struct {
 
 static int _btt_try_delete_continuation(void *e) {
   _btt_try_delete_env_t *env = static_cast<_btt_try_delete_env_t*>(e);
-  _btt_try_delete(env->btt, env->gva, env->p);
+  BTT *btt = env->btt;
+  hpx_parcel_t *p = env->p;
+  gva_t gva = env->gva;
+  if ((p = btt->trydelete(gva, p))) {
+    return parcel_launch(p);
+  }
   return HPX_SUCCESS;
 }
 
@@ -262,18 +259,18 @@ int btt_remove_when_count_zero(void *o, gva_t gva, void **lva) {
   }
 
   // Wait until the reference count hits zero.
-  if (!entry.count) {
-    bool erased = btt->erase(key);
-    assert(erased);
-    return HPX_SUCCESS;
-    (void)erased;
+  if (entry.count) {
+    _btt_try_delete_env_t env = {
+      .btt = btt,
+      .p = scheduler_current_parcel(),
+      .gva = gva
+    };
+
+    scheduler_suspend(_btt_try_delete_continuation, &env);
   }
 
-  _btt_try_delete_env_t env = {
-    .btt = btt,
-    .p = scheduler_current_parcel(),
-    .gva = gva
-  };
-
-  return scheduler_suspend(_btt_try_delete_continuation, &env);
+  bool erased = btt->erase(key);
+  assert(erased);
+  return HPX_SUCCESS;
+  (void)erased;
 }
