@@ -34,6 +34,7 @@
 #include <libhpx/instrumentation.h>
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
+#include <libhpx/profiling.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/system.h>
 #include "network/probe.h"
@@ -166,6 +167,13 @@ int hpx_init(int *argc, char ***argv) {
   if (inst_init(here->config)) {
     log("error detected while initializing instrumentation\n");
   }
+
+  //Initialize PAPI profiling, if applicable
+#ifdef HAVE_PAPI
+  if(prof_init(here->config)){
+    log("error detected while initializing PAPI profiling\n");
+  }
+#endif
 
   // Allocate the global heap.
   here->gas = gas_new(here->config, here->boot);

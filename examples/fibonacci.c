@@ -25,7 +25,6 @@
 #include <inttypes.h>
 #include "hpx/hpx.h"
 
-
 static void _usage(FILE *f, int error) {
   fprintf(f, "Usage: fibonacci [options] NUMBER\n"
           "\t-h, show help\n");
@@ -89,6 +88,7 @@ static int _fib_main_action(int *args, size_t size) {
   int fn = 0;                                   // fib result
   printf("fib(%d)=", n); fflush(stdout);
   hpx_time_t now = hpx_time_now();
+
   hpx_call_sync(HPX_HERE, _fib, &fn, sizeof(fn), &n, sizeof(n));
   double elapsed = hpx_time_elapsed_ms(now)/1e3;
 
@@ -100,7 +100,6 @@ static int _fib_main_action(int *args, size_t size) {
 }
 
 int main(int argc, char *argv[]) {
-
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
