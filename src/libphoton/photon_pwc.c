@@ -149,7 +149,7 @@ static int photon_pwc_gwc_put(photonRequest req) {
     tail = (uint8_t*)((uintptr_t)hdr + asize - 1);
     *tail = UINT8_MAX;
     
-    imm_data = ENCODE_RCQ_32(imm_data, _photon_myrank, REQUEST_FLAG_1PWC);
+    imm_data = ENCODE_RCQ_32(PHOTON_ETYPE_ONE, REQUEST_FLAG_1PWC, _photon_myrank);
     
     rc = __photon_backend->rdma_put(req->proc, (uintptr_t)hdr, (uintptr_t)eager_addr, asize,
 				    &(shared_storage->buf), &eb->remote, req->rattr.cookie,
@@ -409,7 +409,7 @@ static int photon_pwc_try_packed(photonRequest req) {
       tail = (uint8_t*)((uintptr_t)hdr + asize - 1);
       *tail = UINT8_MAX;
       
-      imm_data = ENCODE_RCQ_32(imm_data, _photon_myrank, REQUEST_FLAG_1PWC);
+      imm_data = ENCODE_RCQ_32(PHOTON_ETYPE_ONE, REQUEST_FLAG_1PWC, _photon_myrank);
       
       rc = __photon_backend->rdma_put(req->proc, (uintptr_t)hdr, (uintptr_t)eager_addr, asize,
 				      &(shared_storage->buf), &eb->remote, req->rattr.cookie,
@@ -491,6 +491,8 @@ static int photon_pwc_try_ledger(photonRequest req, int curr) {
     if (! (req->flags & REQUEST_FLAG_NO_RCE))
       req->rattr.events = 2;
     
+    imm_data = ENCODE_RCQ_32(PHOTON_ETYPE_TWO, 0, _photon_myrank);
+
     rc = __photon_backend->rdma_put(req->proc,
 				    req->local_info.buf.addr,
 				    req->remote_info.buf.addr,
@@ -498,8 +500,8 @@ static int photon_pwc_try_ledger(photonRequest req, int curr) {
 				    &req->local_info.buf,
 				    &req->remote_info.buf,
 				    req->rattr.cookie,
-				    0, // no imm data
-				    RDMA_FLAG_NIL);
+				    imm_data,
+				    RDMA_FLAG_WITH_IMM);
     if (rc != PHOTON_OK) {
       dbg_err("RDMA PUT (PWC data) failed for 0x%016lx", req->rattr.cookie);
       goto error_exit;
@@ -515,7 +517,7 @@ static int photon_pwc_try_ledger(photonRequest req, int curr) {
     rmt_addr = (uintptr_t)l->remote.addr + (sizeof(*entry) * curr);
     dbg_trace("putting into remote ledger addr: 0x%016lx", rmt_addr);
     
-    imm_data = ENCODE_RCQ_32(imm_data, _photon_myrank, REQUEST_FLAG_2PWC);
+    imm_data = ENCODE_RCQ_32(PHOTON_ETYPE_ONE, REQUEST_FLAG_2PWC, _photon_myrank);
 
     rc = __photon_backend->rdma_put(req->proc, (uintptr_t)entry, rmt_addr,
 				    sizeof(*entry), &(shared_storage->buf),
@@ -733,6 +735,11 @@ static int photon_pwc_probe_local(int proc, int *flag, photon_rid *request) {
   return PHOTON_EVENT_ERROR;
 }
 
+static int photon_pwc_handle_ooo(uint64_t imm, int *flag, photon_rid *request, int *src) {
+  
+  return PHOTON_OK;
+}
+
 static int photon_pwc_probe_ledger(int proc, int *flag, photon_rid *request, int *src) {
   photonLedger ledger;
   photonLedgerEntry entry_iter;
@@ -740,20 +747,28 @@ static int photon_pwc_probe_ledger(int proc, int *flag, photon_rid *request, int
   photon_eb_hdr *hdr;
   photon_rid cookie = NULL_REQUEST;
   uint64_t imm;
-  int i, rc, start, end, rflags;
+  int i, rc, start, end, rflags, etype;
   int scan_packed = 1, scan_ledger = 1;
   int rcq = 0;
   
   if (proc == PHOTON_ANY_SOURCE) {
     rc = __photon_get_revent(proc, &cookie, &imm);
     if (rc == PHOTON_EVENT_OK) {
-      rflags = DECODE_RCQ_32_FLAG(imm);
+
+      etype = DECODE_RCQ_32_TYPE(imm);
+      // Check for completion of first part of a 2PWC request
+      if (etype == PHOTON_ETYPE_TWO)
+	return photon_pwc_handle_ooo(imm, flag, request, src);
+      
       start = DECODE_RCQ_32_PROC(imm);
       end = start+1;
       assert(IS_VALID_PROC(start));
+
+      rflags = DECODE_RCQ_32_FLAG(imm);
       scan_packed = (rflags & REQUEST_FLAG_1PWC) ? 1 : 0;
       scan_ledger = (rflags & REQUEST_FLAG_2PWC) ? 1 : 0;
       assert(scan_packed || scan_ledger);
+      
       rcq = 1;
     }
     // If we don't have remote completion support, must scan entire ledger

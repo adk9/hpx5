@@ -14,9 +14,13 @@
 #define PHOTON_EFLAG_LOCAL     0x01
 #define PHOTON_EFLAG_REMOTE    0x02
 
-#define ENCODE_RCQ_32(v,p,f)   (((v|(uint16_t)f)<<16)|(uint16_t)p)
+#define PHOTON_ETYPE_ONE       0x00
+#define PHOTON_ETYPE_TWO       0x01
+
+#define ENCODE_RCQ_32(t,f,p)   ((((((uint32_t)t)<<15)|(uint16_t)f)<<16)|(uint16_t)p)
 #define DECODE_RCQ_32_PROC(v)  ((uint32_t)v<<16>>16)
-#define DECODE_RCQ_32_FLAG(v)  ((uint32_t)v>>16)
+#define DECODE_RCQ_32_FLAG(v)  ((uint32_t)v<<1>>17)
+#define DECODE_RCQ_32_TYPE(v)  ((uint32_t)v>>31)
 
 PHOTON_INTERNAL int __photon_get_event(int proc, photon_rid *id);
 PHOTON_INTERNAL int __photon_get_nevents(int proc, int max, photon_rid **id, int *n);

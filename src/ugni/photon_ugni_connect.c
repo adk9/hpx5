@@ -65,7 +65,7 @@ int __ugni_init_context(ugni_cnct_ctx *ctx) {
       dbg_err("Could not allocate remote CQ handles");
       goto error_exit;
     }
-  }  
+  } 
 
   for (i = 0; i < ctx->num_cq; i++) {
     // setup completion queue for local events
