@@ -76,9 +76,9 @@ static int _main_action(int levels, int work) {
       hpx_call_async(HPX_HERE, _recv, done, HPX_NULL, buf, bytes);
 
       // do the useless work
-      double volatile d = 0.0d;
+      double volatile d = 0.0;
       for (int k = 0, e = work; k < e; ++k) {
-        d += 1.0d / (2.0d * k + 1.0d);
+        d += 1.0 / (2.0 * k + 1.0);
       }
     }
 
