@@ -141,6 +141,33 @@ static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
   "all"
 };
 
+#define HPX_L1_TCM    (UINT64_C(1) << 0)
+#define HPX_L2_TCM    (UINT64_C(1) << 1)
+#define HPX_L3_TCM    (UINT64_C(1) << 2)
+#define HPX_TLB_TL    (UINT64_C(1) << 3)
+#define HPX_TOT_INS   (UINT64_C(1) << 4)
+#define HPX_INT_INS   (UINT64_C(1) << 5)
+#define HPX_FP_INS    (UINT64_C(1) << 6)
+#define HPX_LD_INS    (UINT64_C(1) << 7)
+#define HPX_SR_INS    (UINT64_C(1) << 8)
+#define HPX_BR_INS    (UINT64_C(1) << 9)
+#define HPX_TOT_CYC   (UINT64_C(1) << 10)
+
+static const char *const HPX_PROF_COUNTER_TO_STRING[] = {
+  "HPX_L1_TCM",
+  "HPX_L2_TCM",
+  "HPX_L3_TCM",
+  "HPX_TLB_TL",
+  "HPX_TOT_INS",
+  "HPX_INT_INS",
+  "HPX_FP_INS",
+  "HPX_LD_INS",
+  "HPX_SR_INS",
+  "HPX_BR_INS",
+  "HPX_TOT_CYC",
+  "all"
+};
+
 /// The HPX configuration type.
 ///
 /// This configuration is used to control some of the runtime
