@@ -45,16 +45,13 @@ static int counts[24] = {
   4000000
 };
 
-static int
-_receiver_action(double *args, size_t size) {
-  hpx_thread_set_affinity(1);
+static int _recv_handler(double *args, size_t size) {
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _receiver, _receiver_action,
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _recv, _recv_handler,
                   HPX_POINTER, HPX_SIZE_T);
 
-static int
-_main_action(int *args, size_t size) {
+static int _main_action(int levels, int work) {
   int avg = 10000;
 
   hpx_thread_set_affinity(0);
@@ -62,10 +59,11 @@ _main_action(int *args, size_t size) {
   hpx_time_t tick = hpx_time_now();
   printf(" Tick: %g\n", hpx_time_us(tick));
 
-  for (int i = 0, e = args[0]; i < e; ++i) {
-    double *buf = malloc(sizeof(double)*counts[i]);
-    for (int j=0;j<counts[i];++j) {
-      buf[j] = j*rand();
+  for (int i = 0, e = levels; i < e; ++i) {
+    size_t bytes = sizeof(double) * counts[i];
+    double *buf = malloc(bytes);
+    for (int j = 0, e = counts[i]; j < e; ++j) {
+      buf[j] = j * rand();
     }
 
     printf("%d, %d: ", i, counts[i]);
@@ -74,14 +72,14 @@ _main_action(int *args, size_t size) {
     // for completing the entire loop
     hpx_addr_t done = hpx_lco_and_new(avg);
 
-    for (int k=0; k<avg; ++k) {
-      hpx_call_async(HPX_HERE, _receiver, done, HPX_NULL, buf,
-                     sizeof(double) * counts[i]);
+    for (int j = 0, e = avg; j < e; ++j) {
+      hpx_call_async(HPX_HERE, _recv, done, HPX_NULL, buf, bytes);
 
       // do the useless work
-      double volatile d = 0.;
-      for (int i = 0, e = args[1]; i < e; ++i)
-        d += 1./(2.*i+1.);
+      double volatile d = 0.0d;
+      for (int k = 0, e = work; k < e; ++k) {
+        d += 1.0d / (2.0d * k + 1.0d);
+      }
     }
 
     hpx_lco_wait(done);
@@ -94,8 +92,7 @@ _main_action(int *args, size_t size) {
 
   hpx_shutdown(0);
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action,
-                  HPX_POINTER, HPX_SIZE_T);
+static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_action, HPX_INT, HPX_INT);
 
 static void
 _usage(FILE *f) {
@@ -108,18 +105,20 @@ _usage(FILE *f) {
 
 int main(int argc, char *argv[argc]) {
 
-  int args[2] = {24, 10000};
-
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "HPX failed to initialize.\n");
     return -1;
   }
 
+  int levels = 24;
+  int work = 10000;
+
   int opt = 0;
   while ((opt = getopt(argc, argv, "w:h?")) != -1) {
     switch (opt) {
      case 'w':
-      args[1] = atoi(optarg);
+      work = atoi(optarg);
+      break;
      case 'h':
      case '?':
       _usage(stdout);
@@ -135,7 +134,7 @@ int main(int argc, char *argv[argc]) {
 
   switch (argc) {
    case 1:
-     args[0] = atoi(argv[0]);
+     levels = atoi(argv[0]);
      break;
    case 0:
      break;
@@ -144,15 +143,10 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  if (args[0] > 24) {
+  if (levels > 24) {
     _usage(stderr);
     return -1;
   }
 
-  if (HPX_LOCALITIES != 1 || HPX_THREADS < 2) {
-    fprintf(stderr, "This test only runs on 1 locality with at least 2 threads!\n");
-    return -1;
-  }
-
-  return hpx_run(&_main, args, sizeof(args));
+  return hpx_run(&_main, &levels, &work);
 }
