@@ -1146,7 +1146,7 @@ hpx_thread_set_affinity(int affinity) {
 
 /// The environment for the _checkpoint_launch_through continuation.
 typedef struct {
-  int (*f)(void *);
+  int (*f)(hpx_parcel_t *, void *);
   void *env;
 } _checkpoint_suspend_env_t;
 
@@ -1170,11 +1170,11 @@ _checkpoint_suspend(hpx_parcel_t *to, void *sp, void *env) {
   w->current = to;
   parcel_get_stack(prev)->sp = sp;
   _checkpoint_suspend_env_t *c = env;
-  return c->f(c->env);
+  return c->f(prev, c->env);
 }
 
 hpx_status_t
-scheduler_suspend(int (*f)(void*), void *env) {
+scheduler_suspend(int (*f)(hpx_parcel_t *p, void*), void *env) {
   // create the closure environment for the _checkpoint_suspend continuation
   _checkpoint_suspend_env_t suspend_env = {
     .f = f,

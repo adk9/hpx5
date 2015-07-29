@@ -161,12 +161,13 @@ void scheduler_yield(void);
 /// Suspend the execution of the current thread.
 ///
 /// This suspends the execution of the current lightweight thread. It must be
-/// explicitly resumed in the future. The continuation @p f(@p env) is run
+/// explicitly resumed in the future. The continuation @p f(p, @p env) is run
 /// synchronously after the thread has been suspended but before a new thread is
 /// run. This allows the lightweight thread to perform "safe" synchronization
 /// where @p f will trigger a resume operation on the current thread, and we
 /// don't want to miss that signal or possibly have our thread stolen before it
-/// is checkpointed.
+/// is checkpointed. The runtime passes the parcel we transferred away from to
+/// @p as the first parameter.
 ///
 /// This will find a new thread to execute, and will effect a context switch. It
 /// is not possible to immediately switch back to the current thread, even if @p
@@ -178,7 +179,7 @@ void scheduler_yield(void);
 ///
 /// @param            f A continuation to run after the context switch.
 /// @param          env The environment to pass to the continuation @p f.
-hpx_status_t scheduler_suspend(int (*f)(void*), void *env);
+hpx_status_t scheduler_suspend(int (*f)(hpx_parcel_t *, void*), void *env);
 
 /// Wait for an condition.
 ///
