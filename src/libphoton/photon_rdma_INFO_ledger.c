@@ -55,7 +55,7 @@ int photon_ri_ledger_get_next(int proc, photonRILedger l) {
     }
   } while (!sync_cas(&l->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED));
   
-  if ((curr - l->acct.rcur) >= (l->num_entries * 0.8)) {
+  if ((curr - l->acct.rcur) == (l->num_entries * 0.8)) {
     // do a pro-active fetch of the remote ledger progress
     _get_remote_progress(proc, l);
   }
