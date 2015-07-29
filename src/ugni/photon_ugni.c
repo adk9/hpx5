@@ -234,8 +234,6 @@ static int __ugni_set_desc(struct rdma_args_t *args, int opcode, int flags,
   }
 
   desc->type = opcode;
-  //desc->dlvr_mode = GNI_DLVMODE_PERFORMANCE;
-  desc->dlvr_mode = GNI_DLVMODE_IN_ORDER;
   desc->local_addr = args->laddr;
   desc->local_mem_hndl = args->lmdh;
   desc->remote_addr = args->raddr;
@@ -271,7 +269,8 @@ static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
   sync_tatas_acquire(&cq_lock);
   {
     __ugni_set_desc(args, opcode, flags, desc);
-  
+    desc->dlvr_mode = GNI_DLVMODE_PERFORMANCE;
+
     do {
       err = GNI_PostRdma(ugni_ctx.ep_handles[args->proc], desc);
       if (err == GNI_RC_SUCCESS) {
@@ -312,6 +311,7 @@ static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags) {
   sync_tatas_acquire(&cq_lock);
   {
     __ugni_set_desc(args, opcode, flags, desc);
+    desc->dlvr_mode = GNI_DLVMODE_IN_ORDER;
 
     do {
       err = GNI_PostFma(ugni_ctx.ep_handles[args->proc], desc);
