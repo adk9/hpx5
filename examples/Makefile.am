@@ -1,8 +1,8 @@
 examplesdir          = $(datarootdir)/doc/@PACKAGE@
 
 noinst_PROGRAMS         = fibonacci pingpong allreduce countdown seqspawn \
-                          parspawn future memput memget guppie sendrecv \
-                          hello qsort call netbench 
+                          parspawn future memput memget guppie hello \
+                          qsort call netbench 
 
 fibonacci_SOURCES       = fibonacci.c
 pingpong_SOURCES        = pingpong.c
@@ -14,7 +14,6 @@ future_SOURCES          = future.c
 memput_SOURCES          = memput.c
 memget_SOURCES          = memget.c
 guppie_SOURCES          = guppie.c
-sendrecv_SOURCES        = sendrecv.c
 qsort_SOURCES           = qsort.c
 hello_SOURCES           = hello.c
 call_SOURCES            = call.c
@@ -34,7 +33,6 @@ future_DEPENDENCIES          = $(LIBHPX_DEPS)
 memput_DEPENDENCIES          = $(LIBHPX_DEPS)
 memget_DEPENDENCIES          = $(LIBHPX_DEPS)
 guppie_DEPENDENCIES          = $(LIBHPX_DEPS)
-sendrecv_DEPENDENCIES        = $(LIBHPX_DEPS)
 qsort_DEPENDENCIES           = $(LIBHPX_DEPS)
 hello_DEPENDENCIES           = $(LIBHPX_DEPS)
 call_DEPENDENCIES            = $(LIBHPX_DEPS)
