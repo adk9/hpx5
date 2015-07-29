@@ -284,13 +284,11 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
     hpx_gas_free(_hpx_143, HPX_NULL);
   }
 
-#if defined(ENABLE_PROFILING) || defined (HAVE_APEX)
+#if defined(ENABLE_PROFILING) || defined(HAVE_APEX)
   libhpx_stats_print();
-#endif
 
-#ifdef HAVE_APEX
   // this will add the stats to the APEX data set
-  scheduler_save_apex_stats(&(here->sched->stats));
+  libhpx_save_apex_stats();
 #endif
 
  unwind2:
