@@ -24,7 +24,7 @@ AC_DEFUN([_HAVE_PAPI], [
 AC_DEFUN([_HPX_CC_PAPI], [
   # check and see if papi is "just available" without any work
   AC_CHECK_HEADER([papi.h],
-    [AC_CHECK_LIB([papi], [papi_unlinked_fd],
+    [AC_CHECK_LIB([papi], [PAPI_library_init],
       [_HAVE_PAPI
        LIBHPX_LIBS="$LIBHPX_LIBS -lpapi"
        HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lpapi"])])
