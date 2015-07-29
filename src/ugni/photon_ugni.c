@@ -218,6 +218,27 @@ static int ugni_set_info(ProcessInfo *pi, int proc, void *info, int size, photon
   return PHOTON_OK;
 }
 
+static int __ugni_set_epdata(struct rdma_args_t *args, int flags) {
+  int err;
+
+  if (ugni_ctx.use_rcq && (flags & RDMA_FLAG_WITH_IMM)) {
+    err = GNI_EpSetEventData(ugni_ctx.ep_handles[args->proc],
+			     (uint32_t)0x0,
+			     (uint32_t)args->imm_data);
+  }
+  // need to clear or the previous state is used
+  err = GNI_EpSetEventData(ugni_ctx.ep_handles[args->proc],
+			   (uint32_t)0x0,
+			   (uint32_t)0x0);
+  
+  if (err != GNI_RC_SUCCESS) {
+    log_err("Could not set immediate RCQ event data");
+    return PHOTON_ERROR;
+  }
+  
+  return PHOTON_OK;
+}
+
 static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
   gni_post_descriptor_t *fma_desc;
   int err, curr, curr_ind, cqind;
@@ -251,18 +272,6 @@ static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
 
   sync_tatas_acquire(&cq_lock);
   {
-
-    if (ugni_ctx.use_rcq && (flags & RDMA_FLAG_WITH_IMM)) {
-      err = GNI_EpSetEventData(ugni_ctx.ep_handles[args->proc],
-       			       (uint32_t)0x0,
-       			       (uint32_t)args->imm_data);
-      if (err != GNI_RC_SUCCESS) {
-       	log_err("Could not set immediate RCQ event data");
-       	goto error_exit;
-      }
-      fma_desc->cq_mode |= GNI_CQMODE_REMOTE_EVENT;
-    }
-
     do {
       err = GNI_PostRdma(ugni_ctx.ep_handles[args->proc], fma_desc);
       if (err == GNI_RC_SUCCESS) {
@@ -306,6 +315,7 @@ static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags) {
     fma_desc->src_cq_hndl = NULL;
   }
   else {
+    // this means REMOTE_EVENT as well
     fma_desc->cq_mode = GNI_CQMODE_GLOBAL_EVENT;
     fma_desc->src_cq_hndl = ugni_ctx.local_cq_handles[cqind];
   }
@@ -323,13 +333,14 @@ static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags) {
 
   sync_tatas_acquire(&cq_lock);
   {
+
     if (ugni_ctx.use_rcq && (flags & RDMA_FLAG_WITH_IMM)) {
       err = GNI_EpSetEventData(ugni_ctx.ep_handles[args->proc],
-       			       (uint32_t)0x0,
+			       (uint32_t)0x0,
 			       (uint32_t)args->imm_data);
       if (err != GNI_RC_SUCCESS) {
-       	log_err("Could not set immediate RCQ event data");
-	goto error_exit;
+	log_err("Could not set immediate RCQ event data");
+	return PHOTON_ERROR;
       }
       fma_desc->cq_mode |= GNI_CQMODE_REMOTE_EVENT;
     }
@@ -394,7 +405,7 @@ static int ugni_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t si
   args.lmdh.qword2 = lbuf->priv.key1;
   args.rmdh.qword1 = rbuf->priv.key0;
   args.rmdh.qword2 = rbuf->priv.key1;
-  
+
   if (size < __photon_config->ugni.bte_thresh)
     return __ugni_do_fma(&args, GNI_POST_FMA_GET, flags);
   else
