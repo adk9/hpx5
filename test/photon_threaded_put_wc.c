@@ -38,23 +38,21 @@ static void __attribute__((used)) dbg_wait(void) {
 #include "photon.h"
 #include "test_cfg.h"
 
-#define PHOTON_BUF_SIZE (1024*1024*64) // 64k
+#define PHOTON_BUF_SIZE (1024*1024*256) // 256M
 #define PHOTON_TAG UINT32_MAX
-#define SQ_SIZE 2048
+#define SQ_SIZE 3000
 
 static int ITERS = 10000;
 static char *send, **recv;
 
-#define SIZE 128
+#define RVAL 3
 
 static int sizes[] = {
-  /*  0,
+  0,
   1,
   8,
   64,
-  */
-  SIZE,
-  /*
+  128,
   192,
   256,
   2048,
@@ -62,7 +60,6 @@ static int sizes[] = {
   8192,
   12288,
   16384
-  */
 };
 
 static int DONE = 0;
@@ -118,23 +115,31 @@ void *wait_local_completion_thread(void *arg) {
 void *wait_ledger_completions_thread(void *arg) {
   photon_rid request;
   long inputrank = (long)arg;
-  int flag, src;
+  int flag, src, cind;
+  unsigned tcount = 0;
+  int recvInd[nranks];
   int proc = (nranks > rthreads) ? PHOTON_ANY_SOURCE : inputrank;
   
+  for (int i=0; i<nranks; i++)
+    recvInd[i] = 0;
+
   do {
     photon_probe_completion(proc, &flag, NULL, &request, &src, PHOTON_PROBE_LEDGER);
     uint32_t prefix = request>>48;
     uint32_t iter = request<<32>>32;
     if (flag && prefix == 0x00ff) {
-      recvCompT[src]++;
       // check recv buffer
-      for (int i=0; i<SIZE; i++) {
-	if (recv[src][iter*SIZE+i] != 3) {
+      cind = recvInd[src];
+      for (int i=0; i<sizes[cind]; i++) {
+	if (recv[src][iter*sizes[cind]+i] != RVAL) {
 	  printf("\n\ninvalid entry from src: %d at iter: %d position: %i, value found: %d\n\n",
-		 src, iter, i, recv[src][iter*SIZE+i]);
+		 src, iter, i, recv[src][iter*sizes[cind]+i]);
 	  exit(1);
 	}
       }
+      recvCompT[src]++;
+      if (++tcount == ITERS)
+	recvInd[src]++;
     }
     if (flag && request == 0xfacefeed)
       gwcCompT[src]++;
@@ -189,7 +194,7 @@ int main(int argc, char **argv) {
   // only need one send buffer
   //posix_memalign((void **) &send, 8, PHOTON_BUF_SIZE*sizeof(uint8_t));
   send = malloc(PHOTON_BUF_SIZE);
-  memset(send, 3, PHOTON_BUF_SIZE);
+  memset(send, RVAL, PHOTON_BUF_SIZE);
   photon_register_buffer(send, PHOTON_BUF_SIZE);
 
   recv = malloc(nproc*sizeof(char*));
@@ -270,7 +275,7 @@ int main(int argc, char **argv) {
     printf("%-7s%-9s%-7s%-11s%-12s\n", "Ranks", "Senders", "Bytes", "Sync PUT", "Sync GET");
 
   struct timespec time_s, time_e;
-  for (ns = 0; ns < 1; ns++) {
+  for (ns = 0; ns < nranks; ns++) {
     for (i=0; i<sizeof(sizes)/sizeof(sizes[0]); i++) {
       if (rank == 0) {
         printf("%-7d", nproc);

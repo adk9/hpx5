@@ -218,62 +218,62 @@ static int ugni_set_info(ProcessInfo *pi, int proc, void *info, int size, photon
   return PHOTON_OK;
 }
 
-static int __ugni_set_epdata(struct rdma_args_t *args, int flags) {
-  int err;
+static int __ugni_set_desc(struct rdma_args_t *args, int opcode, int flags,
+			   gni_post_descriptor_t *desc) {
+  int err, cqind;
+
+  cqind = PHOTON_GET_CQ_IND(ugni_ctx.num_cq, args->proc);
+
+  if (flags & RDMA_FLAG_NO_CQE) {
+    desc->cq_mode = GNI_CQMODE_SILENT;
+    desc->src_cq_hndl = NULL;
+  }
+  else {
+    desc->cq_mode = GNI_CQMODE_GLOBAL_EVENT;
+    desc->src_cq_hndl = ugni_ctx.local_cq_handles[cqind];
+  }
+
+  desc->type = opcode;
+  //desc->dlvr_mode = GNI_DLVMODE_PERFORMANCE;
+  desc->dlvr_mode = GNI_DLVMODE_IN_ORDER;
+  desc->local_addr = args->laddr;
+  desc->local_mem_hndl = args->lmdh;
+  desc->remote_addr = args->raddr;
+  desc->remote_mem_hndl = args->rmdh;
+  desc->length = args->size;
+  desc->post_id = args->id;
+  desc->rdma_mode = 0;
 
   if (ugni_ctx.use_rcq && (flags & RDMA_FLAG_WITH_IMM)) {
     err = GNI_EpSetEventData(ugni_ctx.ep_handles[args->proc],
 			     (uint32_t)0x0,
 			     (uint32_t)args->imm_data);
+    if (err != GNI_RC_SUCCESS) {
+      log_err("Could not set immediate RCQ event data");
+      return PHOTON_ERROR;
+    }
+    desc->cq_mode |= GNI_CQMODE_REMOTE_EVENT;
   }
-  // need to clear or the previous state is used
-  err = GNI_EpSetEventData(ugni_ctx.ep_handles[args->proc],
-			   (uint32_t)0x0,
-			   (uint32_t)0x0);
-  
-  if (err != GNI_RC_SUCCESS) {
-    log_err("Could not set immediate RCQ event data");
-    return PHOTON_ERROR;
-  }
-  
+
   return PHOTON_OK;
 }
 
 static int __ugni_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
-  gni_post_descriptor_t *fma_desc;
-  int err, curr, curr_ind, cqind;
+  gni_post_descriptor_t *desc;
+  int err, curr, curr_ind;
   const int max_trials = 1000;
   int trials = 0;
 
-  cqind = PHOTON_GET_CQ_IND(ugni_ctx.num_cq, args->proc);
   curr = sync_fadd(&descriptors[args->proc].curr, 1, SYNC_RELAXED);
   curr_ind = curr & (MAX_CQ_ENTRIES - 1);
-  fma_desc = &(descriptors[args->proc].entries[curr_ind]);
-
-  if (flags & RDMA_FLAG_NO_CQE) {
-    fma_desc->cq_mode = GNI_CQMODE_SILENT;
-    fma_desc->src_cq_hndl = NULL;
-  }
-  else {
-    fma_desc->cq_mode = GNI_CQMODE_LOCAL_EVENT;
-    fma_desc->src_cq_hndl = ugni_ctx.local_cq_handles[cqind];
-  }
-
-  fma_desc->type = opcode;
-  //fma_desc->dlvr_mode = GNI_DLVMODE_PERFORMANCE;
-  fma_desc->dlvr_mode = GNI_DLVMODE_IN_ORDER;
-  fma_desc->local_addr = args->laddr;
-  fma_desc->local_mem_hndl = args->lmdh;
-  fma_desc->remote_addr = args->raddr;
-  fma_desc->remote_mem_hndl = args->rmdh;
-  fma_desc->length = args->size;
-  fma_desc->post_id = args->id;
-  fma_desc->rdma_mode = 0;
+  desc = &(descriptors[args->proc].entries[curr_ind]);
 
   sync_tatas_acquire(&cq_lock);
   {
+    __ugni_set_desc(args, opcode, flags, desc);
+  
     do {
-      err = GNI_PostRdma(ugni_ctx.ep_handles[args->proc], fma_desc);
+      err = GNI_PostRdma(ugni_ctx.ep_handles[args->proc], desc);
       if (err == GNI_RC_SUCCESS) {
 	dbg_trace("GNI_PostRdma data transfer successful: %"PRIx64, args->id);
 	break;
@@ -300,53 +300,21 @@ error_exit:
 }
 
 static int __ugni_do_fma(struct rdma_args_t *args, int opcode, int flags) {
-  gni_post_descriptor_t *fma_desc;
-  int err, curr, curr_ind, cqind;
+  gni_post_descriptor_t *desc;
+  int err, curr, curr_ind;
   const int max_trials = 1000;
   int trials = 0;
 
-  cqind = PHOTON_GET_CQ_IND(ugni_ctx.num_cq, args->proc);  
   curr = sync_fadd(&descriptors[args->proc].curr, 1, SYNC_RELAXED);
   curr_ind = curr & (MAX_CQ_ENTRIES - 1);
-  fma_desc = &(descriptors[args->proc].entries[curr_ind]);
-
-  if (flags & RDMA_FLAG_NO_CQE) {
-    fma_desc->cq_mode = GNI_CQMODE_SILENT;
-    fma_desc->src_cq_hndl = NULL;
-  }
-  else {
-    // this means REMOTE_EVENT as well
-    fma_desc->cq_mode = GNI_CQMODE_GLOBAL_EVENT;
-    fma_desc->src_cq_hndl = ugni_ctx.local_cq_handles[cqind];
-  }
-
-  fma_desc->type = opcode;
-  //fma_desc->dlvr_mode = GNI_DLVMODE_PERFORMANCE;
-  fma_desc->dlvr_mode = GNI_DLVMODE_IN_ORDER;
-  fma_desc->local_addr = args->laddr;
-  fma_desc->local_mem_hndl = args->lmdh;
-  fma_desc->remote_addr = args->raddr;
-  fma_desc->remote_mem_hndl = args->rmdh;
-  fma_desc->length = args->size;
-  fma_desc->post_id = args->id;
-  fma_desc->rdma_mode = 0;
+  desc = &(descriptors[args->proc].entries[curr_ind]);
 
   sync_tatas_acquire(&cq_lock);
   {
-
-    if (ugni_ctx.use_rcq && (flags & RDMA_FLAG_WITH_IMM)) {
-      err = GNI_EpSetEventData(ugni_ctx.ep_handles[args->proc],
-			       (uint32_t)0x0,
-			       (uint32_t)args->imm_data);
-      if (err != GNI_RC_SUCCESS) {
-	log_err("Could not set immediate RCQ event data");
-	return PHOTON_ERROR;
-      }
-      fma_desc->cq_mode |= GNI_CQMODE_REMOTE_EVENT;
-    }
+    __ugni_set_desc(args, opcode, flags, desc);
 
     do {
-      err = GNI_PostFma(ugni_ctx.ep_handles[args->proc], fma_desc);
+      err = GNI_PostFma(ugni_ctx.ep_handles[args->proc], desc);
       if (err == GNI_RC_SUCCESS) {
 	dbg_trace("GNI_PostFma data transfer successful: %"PRIx64, args->id);
 	break;

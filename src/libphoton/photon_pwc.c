@@ -10,6 +10,7 @@
 #include "photon_pwc.h"
 #include "util.h"
 
+static int photon_pwc_safe_ledger(photonRequest req);
 static int photon_pwc_test_ledger(int proc, int *ret_offset);
 static int photon_pwc_try_ledger(photonRequest req, int curr);
 static int photon_pwc_try_packed(photonRequest req);
@@ -107,59 +108,65 @@ static int photon_pwc_gwc_put(photonRequest req) {
   // keep offsets aligned
   asize = ALIGN(EB_MSG_SIZE(ssize), PWC_ALIGN);
 
-  eb = photon_processes[req->proc].remote_pwc_buf;
-  offset = photon_rdma_eager_buf_get_offset(req->proc, eb, asize,
-			ALIGN(EB_MSG_SIZE(_photon_spsize), PWC_ALIGN));
-  if (offset < 0) {
-    goto queued_exit;
+  rt = photon_processes[req->proc].request_table;
+  sync_tatas_acquire(&rt->pack_loc);
+  {
+    eb = photon_processes[req->proc].remote_pwc_buf;
+    offset = photon_rdma_eager_buf_get_offset(req->proc, eb, asize,
+		     ALIGN(EB_MSG_SIZE(_photon_spsize), PWC_ALIGN));
+    if (offset < 0) {
+      sync_tatas_release(&rt->pack_loc);
+      goto queued_exit;
+    }
+    
+    // override the request size for GWC-PUT
+    req->size          = ssize;
+    req->flags        |= REQUEST_FLAG_1PWC;
+    req->rattr.events  = 1;
+    req->rattr.cookie  = ( (uint64_t)REQUEST_COOK_GPWC<<32) | req->proc;
+    
+    // make sure the request size is encoded in the local/remote bufs
+    req->local_info.buf.size = req->size;
+    req->remote_info.buf.size = req->size;
+    
+    eager_addr = (uintptr_t)eb->remote.addr + offset;
+    hdr = (photon_eb_hdr *)&(eb->data[offset]);
+    hdr->header  = UINT8_MAX;
+    hdr->request = PWC_COMMAND_PWC_REQ;
+    hdr->addr    = req->id;
+    hdr->length  = ssize;
+    hdr->footer  = UINT8_MAX;
+    
+    moffset = sizeof(*hdr);
+    // copy the local buffer
+    memcpy((void*)((uintptr_t)hdr + moffset), (void*)&req->local_info.buf,
+	   sizeof(req->local_info.buf));
+    moffset += sizeof(req->local_info.buf);
+    // copy the remote buffer
+    memcpy((void*)((uintptr_t)hdr + moffset), (void*)&req->remote_info.buf,
+	   sizeof(req->remote_info.buf));
+    // set a tail flag, the last byte in aligned buffer
+    tail = (uint8_t*)((uintptr_t)hdr + asize - 1);
+    *tail = UINT8_MAX;
+    
+    imm_data = ENCODE_RCQ_32(imm_data, _photon_myrank, REQUEST_FLAG_1PWC);
+    
+    rc = __photon_backend->rdma_put(req->proc, (uintptr_t)hdr, (uintptr_t)eager_addr, asize,
+				    &(shared_storage->buf), &eb->remote, req->rattr.cookie,
+				    imm_data, RDMA_FLAG_WITH_IMM);
+    if (rc != PHOTON_OK) {
+      dbg_err("RDMA PUT (GWC-PUT) failed for 0x%016lx", req->rattr.cookie);
+      sync_tatas_release(&rt->pack_loc);
+      goto error_exit;
+    }  
   }
-
-  // override the request size for GWC-PUT
-  req->size          = ssize;
-  req->flags        |= REQUEST_FLAG_1PWC;
-  req->rattr.events  = 1;
-  req->rattr.cookie  = ( (uint64_t)REQUEST_COOK_GPWC<<32) | req->proc;
-  
-  // make sure the request size is encoded in the local/remote bufs
-  req->local_info.buf.size = req->size;
-  req->remote_info.buf.size = req->size;
-
-  eager_addr = (uintptr_t)eb->remote.addr + offset;
-  hdr = (photon_eb_hdr *)&(eb->data[offset]);
-  hdr->header  = UINT8_MAX;
-  hdr->request = PWC_COMMAND_PWC_REQ;
-  hdr->addr    = req->id;
-  hdr->length  = ssize;
-  hdr->footer  = UINT8_MAX;
-  
-  moffset = sizeof(*hdr);
-  // copy the local buffer
-  memcpy((void*)((uintptr_t)hdr + moffset), (void*)&req->local_info.buf,
-	 sizeof(req->local_info.buf));
-  moffset += sizeof(req->local_info.buf);
-  // copy the remote buffer
-  memcpy((void*)((uintptr_t)hdr + moffset), (void*)&req->remote_info.buf,
-	 sizeof(req->remote_info.buf));
-  // set a tail flag, the last byte in aligned buffer
-  tail = (uint8_t*)((uintptr_t)hdr + asize - 1);
-  *tail = UINT8_MAX;
-
-  imm_data = ENCODE_RCQ_32(imm_data, _photon_myrank, req->flags);
-
-  rc = __photon_backend->rdma_put(req->proc, (uintptr_t)hdr, (uintptr_t)eager_addr, asize,
-				  &(shared_storage->buf), &eb->remote, req->rattr.cookie,
-				  imm_data, RDMA_FLAG_NIL|RDMA_FLAG_WITH_IMM);
-  if (rc != PHOTON_OK) {
-    dbg_err("RDMA PUT (GWC-PUT) failed for 0x%016lx", req->rattr.cookie);
-    goto error_exit;
-  }  
+  sync_tatas_release(&rt->pack_loc);
 
   dbg_trace("Posted GWC-PUT Request: 0x%016lx", req->id);
   
   return PHOTON_OK;
   
  queued_exit:
-  rt = photon_processes[req->proc].request_table;
   sync_two_lock_queue_enqueue(rt->gwc_q, req);
   sync_fadd(&rt->gcount, 1, SYNC_RELAXED);
   dbg_trace("Enqueued GWC-PUT req: 0x%016lx", req->id);
@@ -228,18 +235,11 @@ static int photon_pwc_handle_comp_req(photonRequest req, int *flag, photon_rid *
     // sends a remote completion after the GWC
     // this GWC request now becomes a PWC
     // and we reap the put completion internally
-    int offset;
     req->flags |= (REQUEST_FLAG_NO_LCE | REQUEST_FLAG_CMD);
     req->flags &= ~(REQUEST_FLAG_ROP);
     req->rattr.cookie = req->id;
-    rc = photon_pwc_test_ledger(req->proc, &offset);
-    if (rc == PHOTON_OK) {
-      rc = photon_pwc_try_ledger(req, offset);
-      if (rc != PHOTON_OK) {
-	return PHOTON_ERROR;
-      }
-    }
-    else {
+    rc = photon_pwc_safe_ledger(req);
+    if (rc != PHOTON_OK) {
       photonRequestTable rt;
       rt = photon_processes[req->proc].request_table;
       sync_two_lock_queue_enqueue(rt->pwc_q, req);
@@ -300,21 +300,25 @@ static int photon_pwc_process_queued_pwc(int proc, photonRequestTable rt) {
     return PHOTON_ERROR;
   }
   
-  // only dequeue a request if there is one and we can send it
-  rc = photon_pwc_test_ledger(proc, &offset);
-  if (rc == PHOTON_OK) {
-    req = sync_two_lock_queue_dequeue(rt->pwc_q);
-    assert(req);
-    rc = photon_pwc_try_ledger(req, offset);
-    if (rc != PHOTON_OK) {
-      dbg_err("Could not send queued PWC request");
+  sync_tatas_acquire(&rt->ledg_loc);
+  {
+    // only dequeue a request if there is one and we can send it
+    rc = photon_pwc_test_ledger(proc, &offset);
+    if (rc == PHOTON_OK) {
+      req = sync_two_lock_queue_dequeue(rt->pwc_q);
+      assert(req);
+      rc = photon_pwc_try_ledger(req, offset);
+      if (rc != PHOTON_OK) {
+	dbg_err("Could not send queued PWC request");
+      }
+    }
+    else {
+      // if we could not send, indicate that the request is still in the queue
+      sync_fadd(&rt->pcount, 1, SYNC_RELAXED);
     }
   }
-  else {
-    // if we could not send, indicate that the request is still in the queue
-    sync_fadd(&rt->pcount, 1, SYNC_RELAXED);
-  }
-
+  sync_tatas_release(&rt->ledg_loc);
+  
   return PHOTON_OK;
 }
 
@@ -367,48 +371,56 @@ static int photon_pwc_try_packed(photonRequest req) {
   if ((req->size > 0) &&
       (req->size <= _photon_upsize) &&
       (req->size <= _photon_ebsize)) {
+    photonRequestTable rt;
     photonEagerBuf eb;
     photon_eb_hdr *hdr;
     uint64_t asize, imm_data = 0;
     uintptr_t eager_addr;
     uint8_t *tail;
     int rc, offset;
-
+    
     // keep offsets aligned
     asize = ALIGN(EB_MSG_SIZE(req->size), PWC_ALIGN);
-
-    eb = photon_processes[req->proc].remote_pwc_buf;
-    offset = photon_rdma_eager_buf_get_offset(req->proc, eb, asize,
-                          ALIGN(EB_MSG_SIZE(_photon_spsize), PWC_ALIGN));
-    if (offset < 0) {
-      return PHOTON_ERROR_RESOURCE;
-    }
-
-    req->flags        |= REQUEST_FLAG_1PWC;
-    req->rattr.events  = 1;
-
-    eager_addr = (uintptr_t)eb->remote.addr + offset;
-    hdr = (photon_eb_hdr *)&(eb->data[offset]);
-    hdr->header  = UINT8_MAX;
-    hdr->request = req->remote_info.id;
-    hdr->addr    = req->remote_info.buf.addr;
-    hdr->length  = req->size;
-    hdr->footer  = UINT8_MAX;
-
-    memcpy((void*)((uintptr_t)hdr + sizeof(*hdr)), (void*)req->local_info.buf.addr, req->size);
-    // set a tail flag, the last byte in aligned buffer
-    tail = (uint8_t*)((uintptr_t)hdr + asize - 1);
-    *tail = UINT8_MAX;
     
-    imm_data = ENCODE_RCQ_32(imm_data, _photon_myrank, req->flags);
-
-    rc = __photon_backend->rdma_put(req->proc, (uintptr_t)hdr, (uintptr_t)eager_addr, asize,
-                                    &(shared_storage->buf), &eb->remote, req->rattr.cookie,
-				    imm_data, RDMA_FLAG_WITH_IMM);
-    if (rc != PHOTON_OK) {
-      dbg_err("RDMA PUT (PWC EAGER) failed for 0x%016lx", req->rattr.cookie);
-      goto error_exit;
+    rt = photon_processes[req->proc].request_table;
+    sync_tatas_acquire(&rt->pack_loc);
+    {
+      eb = photon_processes[req->proc].remote_pwc_buf;
+      offset = photon_rdma_eager_buf_get_offset(req->proc, eb, asize,
+		       ALIGN(EB_MSG_SIZE(_photon_spsize), PWC_ALIGN));
+      if (offset < 0) {
+	sync_tatas_release(&rt->pack_loc);
+	return PHOTON_ERROR_RESOURCE;
+      }
+      
+      req->flags        |= REQUEST_FLAG_1PWC;
+      req->rattr.events  = 1;
+      
+      eager_addr = (uintptr_t)eb->remote.addr + offset;
+      hdr = (photon_eb_hdr *)&(eb->data[offset]);
+      hdr->header  = UINT8_MAX;
+      hdr->request = req->remote_info.id;
+      hdr->addr    = req->remote_info.buf.addr;
+      hdr->length  = req->size;
+      hdr->footer  = UINT8_MAX;
+      
+      memcpy((void*)((uintptr_t)hdr + sizeof(*hdr)), (void*)req->local_info.buf.addr, req->size);
+      // set a tail flag, the last byte in aligned buffer
+      tail = (uint8_t*)((uintptr_t)hdr + asize - 1);
+      *tail = UINT8_MAX;
+      
+      imm_data = ENCODE_RCQ_32(imm_data, _photon_myrank, REQUEST_FLAG_1PWC);
+      
+      rc = __photon_backend->rdma_put(req->proc, (uintptr_t)hdr, (uintptr_t)eager_addr, asize,
+				      &(shared_storage->buf), &eb->remote, req->rattr.cookie,
+				      imm_data, RDMA_FLAG_WITH_IMM);
+      if (rc != PHOTON_OK) {
+	dbg_err("RDMA PUT (PWC EAGER) failed for 0x%016lx", req->rattr.cookie);
+	sync_tatas_release(&rt->pack_loc);
+	goto error_exit;
+      }
     }
+    sync_tatas_release(&rt->pack_loc);
   }
   else {
     // size is too large, try something else
@@ -423,6 +435,25 @@ static int photon_pwc_try_packed(photonRequest req) {
 
  error_exit:
   return PHOTON_ERROR;
+}
+
+static int photon_pwc_safe_ledger(photonRequest req) {
+  photonRequestTable rt;
+  int rc, proc, offset;
+
+  proc = req->proc;
+  rt = photon_processes[proc].request_table;
+
+  sync_tatas_acquire(&rt->ledg_loc);
+  {
+    rc = photon_pwc_test_ledger(req->proc, &offset);
+    if (rc == PHOTON_OK) {
+      rc = photon_pwc_try_ledger(req, offset);
+    }
+  }
+  sync_tatas_release(&rt->ledg_loc);
+  
+  return rc;
 }
 
 static int photon_pwc_test_ledger(int proc, int *ret_offset) {
@@ -484,7 +515,7 @@ static int photon_pwc_try_ledger(photonRequest req, int curr) {
     rmt_addr = (uintptr_t)l->remote.addr + (sizeof(*entry) * curr);
     dbg_trace("putting into remote ledger addr: 0x%016lx", rmt_addr);
     
-    imm_data = ENCODE_RCQ_32(imm_data, _photon_myrank, req->flags);
+    imm_data = ENCODE_RCQ_32(imm_data, _photon_myrank, REQUEST_FLAG_2PWC);
 
     rc = __photon_backend->rdma_put(req->proc, (uintptr_t)entry, rmt_addr,
 				    sizeof(*entry), &(shared_storage->buf),
@@ -561,30 +592,22 @@ int _photon_put_with_completion(int proc, uint64_t size,
   }
 
   rt = photon_processes[proc].request_table;
-
+  
   // process any queued requests for this peer first
   rc = photon_pwc_process_queued_pwc(proc, rt);
   if (rc == PHOTON_OK) {
     goto queue_exit;
   }
 
-  /*
   // otherwise try to send the current request
   rc = photon_pwc_try_packed(req);
   if (rc == PHOTON_ERROR_RESOURCE) {
-    int offset;
-    rc = photon_pwc_test_ledger(proc, &offset);
-    if (rc == PHOTON_OK) {
-      return photon_pwc_try_ledger(req, offset);
-    }
-    else {
-      goto queue_exit;
-    }
+    rc = photon_pwc_safe_ledger(req);
   }
-  else {
-    return PHOTON_OK;
+  
+  if ((rc == PHOTON_ERROR) || (rc == PHOTON_OK)) {
+    return rc;
   }
-  */
 
  queue_exit:
   sync_two_lock_queue_enqueue(rt->pwc_q, req);

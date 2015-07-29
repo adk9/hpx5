@@ -97,6 +97,8 @@ typedef struct photon_req_table_t {
   volatile uint32_t     pcount;
   volatile uint32_t     gcount;
   tatas_lock_t          tloc;
+  tatas_lock_t          ledg_loc;
+  tatas_lock_t          pack_loc;
 } photon_req_table;
 
 typedef struct photon_req_t       * photonRequest;

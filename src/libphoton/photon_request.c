@@ -54,6 +54,8 @@ int photon_request_init(photonConfig cfg) {
     rt->pcount = 0;
     rt->gcount = 0;
     sync_tatas_init(&rt->tloc);
+    sync_tatas_init(&rt->ledg_loc);
+    sync_tatas_init(&rt->pack_loc);
   }
   
   return PHOTON_OK;
