@@ -231,14 +231,12 @@ btt_get_all(const void *o, gva_t gva, void **lva, size_t *blocks, int32_t *cnt) 
 
 typedef struct {
   BTT        *btt;
-  hpx_parcel_t *p;
   gva_t       gva;
 } _btt_try_delete_env_t;
 
-static int _btt_try_delete_continuation(void *e) {
+static int _btt_try_delete_continuation(hpx_parcel_t *p, void *e) {
   _btt_try_delete_env_t *env = static_cast<_btt_try_delete_env_t*>(e);
   BTT *btt = env->btt;
-  hpx_parcel_t *p = env->p;
   gva_t gva = env->gva;
   if ((p = btt->trydelete(gva, p))) {
     return parcel_launch(p);
@@ -262,7 +260,6 @@ int btt_remove_when_count_zero(void *o, gva_t gva, void **lva) {
   if (entry.count) {
     _btt_try_delete_env_t env = {
       .btt = btt,
-      .p = scheduler_current_parcel(),
       .gva = gva
     };
 

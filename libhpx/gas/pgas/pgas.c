@@ -276,7 +276,6 @@ _pgas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
 }
 
 typedef struct {
-  hpx_parcel_t *p;
   hpx_addr_t to;
   const void *from;
   size_t n;
@@ -284,16 +283,16 @@ typedef struct {
 } _pgas_memput_lsync_continuation_env_t;
 
 static int
-_pgas_memput_lsync_continuation(void *env) {
+_pgas_memput_lsync_continuation(hpx_parcel_t *p, void *env) {
   _pgas_memput_lsync_continuation_env_t *e = env;
   if (e->rsync) {
     return network_pwc(here->network, e->to, e->from, e->n, resume_parcel,
-                       offset_to_gpa(here->rank, (uint64_t)(uintptr_t)e->p),
+                       offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p),
                        _lco_rsync, e->rsync);
   }
   else {
     return network_put(here->network, e->to, e->from, e->n, resume_parcel,
-                       offset_to_gpa(here->rank, (uint64_t)(uintptr_t)e->p));
+                       offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p));
   }
 }
 
@@ -312,7 +311,6 @@ _pgas_memput_lsync(void *gas, hpx_addr_t to, const void *from, size_t n,
   }
 
   _pgas_memput_lsync_continuation_env_t env = {
-    .p = scheduler_current_parcel(),
     .to = to,
     .from = from,
     .n = n,
@@ -324,18 +322,17 @@ _pgas_memput_lsync(void *gas, hpx_addr_t to, const void *from, size_t n,
 
 
 typedef struct {
-  hpx_parcel_t *p;
   hpx_addr_t to;
   const void *from;
   size_t n;
 } _pgas_memput_rsync_continuation_env_t;
 
 static int
-_pgas_memput_rsync_continuation(void *env) {
+_pgas_memput_rsync_continuation(hpx_parcel_t *p, void *env) {
   _pgas_memput_rsync_continuation_env_t *e = env;
   return network_pwc(here->network, e->to, e->from, e->n, 0, 0,
                      resume_parcel_remote,
-                     offset_to_gpa(here->rank, (uint64_t)(uintptr_t)e->p));
+                     offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p));
 }
 
 static int
@@ -351,7 +348,6 @@ _pgas_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t n) {
   }
 
   _pgas_memput_rsync_continuation_env_t env = {
-    .p = scheduler_current_parcel(),
     .to = to,
     .from = from,
     .n = n
@@ -377,17 +373,16 @@ _pgas_memget(void *gas, void *to, hpx_addr_t from, size_t n, hpx_addr_t lsync) {
 }
 
 typedef struct {
-  hpx_parcel_t *p;
   void *to;
   hpx_addr_t from;
   size_t n;
 } _pgas_memget_sync_continutation_env_t;
 
 static int
-_pgas_memget_sync_continutation(void *env) {
+_pgas_memget_sync_continutation(hpx_parcel_t *p, void *env) {
   _pgas_memget_sync_continutation_env_t *e = env;
   return network_get(here->network, e->to, e->from, e->n, resume_parcel,
-                     offset_to_gpa(here->rank, (uint64_t)(uintptr_t)e->p));
+                     offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p));
 }
 
 static int
@@ -403,7 +398,6 @@ _pgas_memget_sync(void *gas, void *to, hpx_addr_t from, size_t n) {
   }
 
   _pgas_memget_sync_continutation_env_t env = {
-    .p = scheduler_current_parcel(),
     .to = to,
     .from = from,
     .n = n
