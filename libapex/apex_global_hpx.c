@@ -1,6 +1,7 @@
-#include "libapex/apex_global_hpx.h"
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
+#include "libapex/apex_global_hpx.h"
 
 //#define APEX_LOCALITY ((HPX_LOCALITIES)-1) // doesn't seem to work...
 #define APEX_LOCALITY 0
@@ -22,6 +23,8 @@ apex_function_address profiled_action = 0L;
 char profiled_action_name[256];
 apex_profiler_type profiler_type;
 bool good_values = false;
+
+#define APEX_WARMUP_ITERS 10
 
 FILE *graph_output;
 
@@ -58,12 +61,11 @@ bool apex_set_new_thread_caps(int count, apex_profile values[count]) {
 }
 
 bool apex_set_new_thread_caps_hysteresis(int count, apex_profile values[count]) {
-  static const int warmup = 10;
-  static int countdown = warmup; // wait for the application to warm up
+  static int countdown = APEX_WARMUP_ITERS; // wait for the application to warm up
   if (countdown > 0) {
     countdown = countdown - 1;
     for (int i = 0; i < count; ++i) { 
-      moving_average[i] = current_values[i] / (warmup - countdown);
+      moving_average[i] = current_values[i] / (APEX_WARMUP_ITERS - countdown);
     }
     return false;
   }
