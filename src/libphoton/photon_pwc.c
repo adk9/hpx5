@@ -833,6 +833,7 @@ static int photon_pwc_probe_ledger(int proc, int *flag, photon_rid *request, int
       left = eb->size - offset;
       if (left < ALIGN(EB_MSG_SIZE(_photon_spsize), PWC_ALIGN)) {
 	new = left + curr;
+	offset = 0;
       }
       else {
 	new = curr;

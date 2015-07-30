@@ -36,7 +36,7 @@ void photon_rdma_eager_buf_free(photonEagerBuf buf) {
 }
 
 int photon_rdma_eager_buf_get_offset(int proc, photonEagerBuf buf, int size, int lim) {
-  uint64_t curr, new, left, tail, rcur;
+  uint64_t curr, new, left, tail, rcur, wrap;
   int offset;
 
   do {
@@ -48,20 +48,24 @@ int photon_rdma_eager_buf_get_offset(int proc, photonEagerBuf buf, int size, int
       return -1;
     }
     
-    if (((curr - rcur) + size) >= buf->size) {
-      // receiver not ready, request an updated rcur
-      _get_remote_progress(proc, buf);
-      dbg_trace("No new offset until receiver catches up...");
-      return -2;
-    }
-
     offset = curr & (buf->size - 1);
     left = buf->size - offset;
     if (left < lim) {
       new = curr + left + size;
+      offset = 0;
+      // if we wrap, then make sure remote has progressed by same amount
+      wrap = left + size;
     }
     else {
       new = curr + size;
+      wrap = 0;
+    }
+
+    if (((curr - rcur) + size + wrap) >= buf->size) {
+      // receiver not ready, request an updated rcur
+      _get_remote_progress(proc, buf);
+      dbg_trace("No new offset until receiver catches up...");
+      return -2;
     }
   } while (!sync_cas(&buf->curr, curr, new, SYNC_RELAXED, SYNC_RELAXED));
 
