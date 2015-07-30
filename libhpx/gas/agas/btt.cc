@@ -263,7 +263,7 @@ int btt_remove_when_count_zero(void *o, gva_t gva, void **lva) {
       .gva = gva
     };
 
-    scheduler_suspend(_btt_try_delete_continuation, &env);
+    scheduler_suspend(_btt_try_delete_continuation, &env, 0);
   }
 
   bool erased = btt->erase(key);

@@ -317,7 +317,7 @@ _pgas_memput_lsync(void *gas, hpx_addr_t to, const void *from, size_t n,
     .rsync = rsync
   };
 
-  return scheduler_suspend(_pgas_memput_lsync_continuation, &env);
+  return scheduler_suspend(_pgas_memput_lsync_continuation, &env, 0);
 }
 
 
@@ -353,7 +353,7 @@ _pgas_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t n) {
     .n = n
   };
 
-  return scheduler_suspend(_pgas_memput_rsync_continuation, &env);
+  return scheduler_suspend(_pgas_memput_rsync_continuation, &env, 0);
 }
 
 static int
@@ -403,7 +403,7 @@ _pgas_memget_sync(void *gas, void *to, hpx_addr_t from, size_t n) {
     .n = n
   };
 
-  return scheduler_suspend(_pgas_memget_sync_continutation, &env);
+  return scheduler_suspend(_pgas_memget_sync_continutation, &env, 0);
 }
 
 static void

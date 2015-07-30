@@ -67,7 +67,7 @@ static int _get_reply(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
 
   // Issue the pwc and wait for synchronous local completion so that the ref
   // buffer doesn't move during the underlying rdma, if there is any
-  return scheduler_suspend(_get_reply_continuation, &op);
+  return scheduler_suspend(_get_reply_continuation, &op, 0);
 }
 
 /// This function (*not* an action) performs a get request to a temporary stack
@@ -209,7 +209,7 @@ int pwc_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out) {
   }
 
   // Perform the get operation synchronously.
-  int e = scheduler_suspend(_pwc_lco_get_continuation, &env);
+  int e = scheduler_suspend(_pwc_lco_get_continuation, &env, 0);
 
   // If we registered the output buffer dynamically, then we need to de-register
   // it now.

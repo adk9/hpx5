@@ -83,5 +83,5 @@ isir_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out) {
     .out = out
   };
 
-  return scheduler_suspend(_lco_get_continuation, &env);
+  return scheduler_suspend(_lco_get_continuation, &env, 0);
 }
