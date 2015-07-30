@@ -29,13 +29,13 @@ int photon_pwc_init(photonConfig cfg) {
     goto error_exit;
   }
 
-  pledgers = (pwc_recv_ledger**)malloc(sizeof(pwc_recv_ledger*));
+  pledgers = (pwc_recv_ledger**)malloc(_photon_nproc*sizeof(pwc_recv_ledger*));
   if (!pledgers) {
     log_err("Could not allocate PWC recv ledgers");
     goto error_exit;
   }
   for (int i = 0; i < _photon_nproc; i++) {
-    pledgers[i] = (pwc_recv_ledger*)calloc(1, sizeof(pwc_recv_ledger));
+    pledgers[i] = (pwc_recv_ledger*)calloc(_LEDGER_SIZE, sizeof(pwc_recv_ledger));
   }
   
   return PHOTON_OK;
@@ -778,29 +778,34 @@ static int photon_pwc_handle_ooo(uint64_t imm, int *flag, photon_rid *request, i
   int proc = DECODE_RCQ_32_PROC(imm);
 
   pwc_recv_ledger *l = pledgers[proc];  
-  int count = sync_addf(&l->cnt, 1, SYNC_RELAXED);
 
   switch (type) {
   case PHOTON_ETYPE_TWO:
     {
+      int loc = DECODE_RCQ_32_FLAG(imm);
+      int count = sync_addf(&l[loc].cnt, 1, SYNC_RELAXED);
       if (count == 2) {
 	*flag = 1;
 	*src = proc;
-	*request = l->rid;
-	return PHOTON_OK;
+	*request = l[loc].rid;
+	l[loc].cnt = 0;
+	goto exit_ok;
       }
       break;
     }
   case PHOTON_ETYPE_ONE:
     {
+      // src contains the offset here
       // request is already set in call
+      int loc = *src;
+      int count = sync_addf(&l[loc].cnt, 1, SYNC_RELAXED);
       if (count == 2) {
-	*src = proc;
 	*flag = 1;
-	return PHOTON_OK;
+	l[loc].cnt = 0;
+	goto exit_ok;
       }
       else {
-	l->rid = *request;
+	l[loc].rid = *request;
       }
     }
     break;
@@ -809,6 +814,9 @@ static int photon_pwc_handle_ooo(uint64_t imm, int *flag, photon_rid *request, i
   }
   
   return PHOTON_EVENT_NONE;
+
+ exit_ok:
+  return PHOTON_OK;
 }
 
 static int photon_pwc_probe_ledger(int proc, int *flag, photon_rid *request, int *src) {
@@ -921,12 +929,12 @@ static int photon_pwc_probe_ledger(int proc, int *flag, photon_rid *request, int
 	}
 	else {
 	  *request = entry_iter->request;
+	  *src = i;
 	  if (rcq && (rflags & PHOTON_EFLAG_2ND)) {
 	    // we might have to wait for 1st PUT to complete
-	    photon_pwc_handle_ooo(imm, flag, request, src);
+	    photon_pwc_handle_ooo(imm, flag, request, (int*)&offset);
 	  }
 	  else {
-	    *src = i;
 	    *flag = 1;
 	  }
 	}
