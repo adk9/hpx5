@@ -11,8 +11,12 @@
 #define PHOTON_EVENT_NOTIMPL   0x06
 
 #define PHOTON_EFLAG_NIL       0x00
-#define PHOTON_EFLAG_LOCAL     0x01
-#define PHOTON_EFLAG_REMOTE    0x02
+#define PHOTON_EFLAG_LOCAL     (1<<1)
+#define PHOTON_EFLAG_REMOTE    (1<<2)
+#define PHOTON_EFLAG_LEDG      (1<<3)
+#define PHOTON_EFLAG_PACK      (1<<4)
+#define PHOTON_EFLAG_1ST       (1<<5)
+#define PHOTON_EFLAG_2ND       (1<<6)
 
 #define PHOTON_ETYPE_ONE       0x00
 #define PHOTON_ETYPE_TWO       0x01
