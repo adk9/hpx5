@@ -20,18 +20,18 @@ void prof_begin(){
 }
 
 int prof_end(long long *values, int num_values){
-  return LIBHPX_OK;
+  return 0;
 }
 
 void prof_tally_mark(){
 }
 
 int prof_get_averages(long long *values, int num_values){
-  return LIBHPX_OK;
+  return 0;
 }
 
 int prof_get_totals(long long *values, int num_values){
-  return LIBHPX_OK;
+  return 0;
 }
 
 size_t prof_get_tally(){
@@ -50,26 +50,26 @@ hpx_time_t prof_get_duration(){
 }
 
 int prof_reset(){
-  return LIBHPX_OK;
+  return 0;
 }
 
 int prof_fini(){
-  return LIBHPX_OK;
+  return 0;
 }
 
 int prof_start_papi_counters(){
-  return LIBHPX_OK;
+  return 0;
 }
 
 int prof_stop_papi_counters(long long *values, int num_values){
-  return LIBHPX_OK;
+  return 0;
 }
 
 int prof_read_papi_counters(long long *values, int num_values){
-  return LIBHPX_OK;
+  return 0;
 }
 
 int prof_accum_papi_counters(long long *values, int num_values){
-  return LIBHPX_OK;
+  return 0;
 }
 

@@ -3,7 +3,6 @@
 # ------------------------------------------------------------------------------
 #
 # Variables
-#   enable_papi
 #   with_papi
 #   have_papi
 #
@@ -40,9 +39,7 @@ AC_DEFUN([_HPX_PKG_PAPI], [pkg=$1
 ])
 
 AC_DEFUN([_HPX_WITH_PAPI], [pkg=$1
- #
  AS_CASE($with_papi,
-   [no], [AC_MSG_ERROR([--enable-papi=$enable_papi excludes --without-papi])],
    [system], [_HPX_CC_PAPI
               AS_IF([test "x$have_papi" != xyes], [_HPX_PKG_PAPI($pkg)])],
    [yes], [_HPX_CC_PAPI
@@ -50,17 +47,16 @@ AC_DEFUN([_HPX_WITH_PAPI], [pkg=$1
    [_HPX_PKG_PAPI($with_papi)])
 ])
 
-AC_DEFUN([HPX_CONFIG_PAPI], [pkg=$1
+AC_DEFUN([HPX_CONFIG_PAPI], [
+ have_papi=no
+ pkg=$1
+ required=$2
+
  # allow the programmer to select to use papi support in the gas allocation
- AC_ARG_ENABLE([papi],
-   [AS_HELP_STRING([--enable-papi],
-                   [Enable papi support @<:@default=no@:>@])],
-   [], [enable_papi=no])
-
- AC_ARG_WITH(papi,
-   [AS_HELP_STRING([--with-papi{=system,PKG}],
-                   [How we find PAPI @<:@default=system,$pkg@:>@])],
-   [], [with_papi=system])
-
- AS_IF([test "x$enable_papi" != xno], [_HPX_WITH_PAPI($pkg)])
+ AS_IF([test "x$required" == xyes],
+   AC_ARG_WITH(papi,
+     [AS_HELP_STRING([--with-papi{=system,PKG}],
+                     [How we find PAPI @<:@default=system,$pkg@:>@])],
+     [], [with_papi=system])
+   _HPX_WITH_PAPI(pkg))
 ])
