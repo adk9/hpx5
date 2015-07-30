@@ -16,6 +16,11 @@ pkgconfig_DATA = hpx.pc
 SUBDIRS       = contrib libsync libhpx include examples
 DIST_SUBDIRS  = contrib libsync libhpx include examples
 
+if HAVE_APEX
+SUBDIRS      += libapex
+DIST_SUBDIRS += libapex
+endif
+
 if ENABLE_DOCS
 SUBDIRS      += docs
 DIST_SUBDIRS += docs
