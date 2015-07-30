@@ -35,7 +35,8 @@ AC_DEFUN([_HPX_PKG_PAPI], [pkg=$1
    [_HAVE_PAPI
     LIBHPX_CFLAGS="$LIBHPX_CFLAGS $PAPI_CFLAGS"
     LIBHPX_LIBS="$LIBHPX_LIBS $PAPI_LIBS"
-    HPX_PC_PRIVATE_PKGS="$HPX_PC_PRIVATE_PKGS $pkg"])
+    HPX_PC_PRIVATE_PKGS="$HPX_PC_PRIVATE_PKGS $pkg"],
+    have_papi=no)
 ])
 
 AC_DEFUN([_HPX_WITH_PAPI], [pkg=$1
@@ -48,12 +49,11 @@ AC_DEFUN([_HPX_WITH_PAPI], [pkg=$1
 ])
 
 AC_DEFUN([HPX_CONFIG_PAPI], [
- have_papi=no
  pkg=$1
- required=$2
+ wanted=$2
 
  # allow the programmer to select to use papi support in the gas allocation
- AS_IF([test "x$required" == xyes],
+ AS_IF([test "x$wanted" == xyes],
    AC_ARG_WITH(papi,
      [AS_HELP_STRING([--with-papi{=system,PKG}],
                      [How we find PAPI @<:@default=system,$pkg@:>@])],
