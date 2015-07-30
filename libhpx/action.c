@@ -333,7 +333,8 @@ int action_execute(hpx_parcel_t *p) {
   bool pinned = action_is_pinned(table, id);
 
   // allocate 8 bytes to avoid https://github.com/atgreen/libffi/issues/35
-  char ret[8];
+  char ffiret[8];
+  int *ret = (int*)&ffiret[0];
 
   if (!pinned) {
     if (!cif) {
@@ -341,7 +342,7 @@ int action_execute(hpx_parcel_t *p) {
     }
     else {
       ffi_raw_call(cif, FFI_FN(handler), ret, args);
-      return *(int*)ret;
+      return *ret;
     }
   }
 
@@ -359,7 +360,7 @@ int action_execute(hpx_parcel_t *p) {
     ffi_raw_to_ptrarray(cif, args, avalue);
     avalue[0] = &target;
     ffi_call(cif, FFI_FN(handler), ret, avalue);
-    return *(int*)ret;
+    return *ret;
   }
 }
 
