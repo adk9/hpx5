@@ -13,7 +13,7 @@
 #define PWC_COMMAND_PWC_REP  ((uint64_t)0x02<<56)
 
 typedef struct pwc_recv_ledger_t {
-  uint64_t   flag;
+  uint64_t   cnt;
   photon_rid rid;
 } pwc_recv_ledger;
 
