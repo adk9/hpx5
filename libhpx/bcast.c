@@ -41,8 +41,9 @@ static int _vabcast(hpx_action_t action, hpx_addr_t lsync, hpx_addr_t rsync,
   for (int i = 0, e = here->ranks; i < e; ++i) {
     va_list temp;
     va_copy(temp, *vargs);
-    int e = libhpx_call_action(HPX_THERE(i), action, remote, hpx_lco_set_action,
-                               local, HPX_NULL, nargs, &temp);
+    hpx_addr_t loc = HPX_THERE(i);
+    int e = action_call_va(loc, action, remote, hpx_lco_set_action, local,
+                           HPX_NULL, nargs, &temp);
     dbg_check(e, "error generating parcel for bcast.\n");
     va_end(temp);
   }

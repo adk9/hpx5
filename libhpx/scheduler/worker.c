@@ -138,8 +138,8 @@ _continue_parcel(hpx_parcel_t *p, hpx_status_t status, int nargs, va_list *args)
   }
 
   // create the parcel to continue and transfer whatever credit we have
-  hpx_parcel_t *c = parcel_create_va(p->c_target, p->c_action, HPX_NULL,
-                                     HPX_ACTION_NULL, nargs, args);
+  hpx_parcel_t *c = action_create_parcel_va(p->c_target, p->c_action, HPX_NULL,
+                                            HPX_ACTION_NULL, nargs, args);
   dbg_assert(c);
   c->credit = p->credit;
   p->credit = 0;
