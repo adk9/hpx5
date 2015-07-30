@@ -86,12 +86,12 @@ void libhpx_stats_print(void) {
   _print_stats("<totals>", &_global_stats);
 }
 
-#ifdef HAVE_APEX
 void libhpx_save_apex_stats(void) {
-  apex_sample_value("yields", (double)_global_stats->yields);
-  apex_sample_value("spawns", (double)_global_stats->spawns);
-  apex_sample_value("steals", (double)_global_stats->steals);
-  apex_sample_value("stacks", (double)_global_stats->stacks);
-  apex_sample_value("mail", (double)_global_stats->mail);
-}
+#ifdef HAVE_APEX
+  apex_sample_value("yields", (double)_global_stats.yields);
+  apex_sample_value("spawns", (double)_global_stats.spawns);
+  apex_sample_value("steals", (double)_global_stats.steals);
+  apex_sample_value("stacks", (double)_global_stats.stacks);
+  apex_sample_value("mail", (double)_global_stats.mail);
 #endif
+}
