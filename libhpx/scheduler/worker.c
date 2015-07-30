@@ -99,15 +99,15 @@ _debug_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
 
 #ifdef HAVE_APEX
 void APEX_STOP(void) {
-  if (self->profiler != NULL) { 
-    apex_stop((apex_profiler_handle)(self->profiler)); 
-    self->profiler = NULL; 
+  if (self->profiler != NULL) {
+    apex_stop((apex_profiler_handle)(self->profiler));
+    self->profiler = NULL;
   }
   return;
 }
 
 void APEX_START(hpx_parcel_t *p) {
-  // if this is NOT a null or lightweight action, 
+  // if this is NOT a null or lightweight action,
   // send a "start" event to APEX
   hpx_action_t id = hpx_parcel_get_action(p);
   if (id != HPX_ACTION_NULL && id != scheduler_nop &&
@@ -132,7 +132,7 @@ void APEX_RESUME(hpx_parcel_t *p) {
 }
 
 #else
-#define APEX_START(_p) 
+#define APEX_START(_p)
 #define APEX_STOP()
 #define APEX_RESUME(_p)
 #endif
@@ -562,7 +562,7 @@ inline static int _apex_check_throttling(void) {
       } else {
         if (apex_throttleOn && !_apex_yielded) {
           // randomly de-activate a thread?
-          if (self->sched->n_active_workers > apex_get_thread_cap()) {
+          if (here->sched->n_active_workers > apex_get_thread_cap()) {
             // try to decrement the active worker counter
             if (__sync_fetch_and_sub(&(here->sched->n_active_workers),1) >
                 apex_get_thread_cap()) {
@@ -572,10 +572,10 @@ inline static int _apex_check_throttling(void) {
               apex_set_state(APEX_THROTTLED);
               return 1; // restart the loop
             }
-            // no, this thread should keep working. 
-            __sync_fetch_and_add(&(self->sched->n_active_workers),1);
+            // no, this thread should keep working.
+            __sync_fetch_and_add(&(here->sched->n_active_workers),1);
           // has the thread cap increased?
-          } else if (self->sched->n_active_workers < apex_get_thread_cap()) {
+          } else if (here->sched->n_active_workers < apex_get_thread_cap()) {
             // release a worker
             pthread_cond_signal(&release);
           }
