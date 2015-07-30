@@ -24,9 +24,9 @@ static int __ugni_buffer_register(photonBI dbuffer, void *ctx, int flags) {
   if (dbuffer->is_registered)
     return PHOTON_OK;
 
-  //if (uctx->use_rcq && (flags & BUFFER_FLAG_NOTIFY)) {
-  rcq_handle = uctx->remote_cq_handles[0];
-  //}
+  if (uctx->use_rcq) {
+    rcq_handle = uctx->remote_cq_handles[0];
+  }
   
   status = GNI_MemRegister(uctx->nic_handle, (uint64_t)dbuffer->buf.addr,
 			   dbuffer->buf.size, rcq_handle, GNI_MEM_READWRITE, -1, &mdh);
