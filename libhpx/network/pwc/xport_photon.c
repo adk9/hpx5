@@ -179,16 +179,15 @@ _chain_unpin(const void *addr, size_t n, command_t op) {
   // we assume that this parcel doesn't need credit to run---technically it
   // not easy to account for this parcel because of the fact that pwc() can be
   // run as a scheduler_suspend() operation
-  hpx_parcel_t *p = parcel_create(HPX_HERE,     // target
-                                  _unpin_async, // action
-                                  0,            // continuation target
-                                  0,            // continuation action
-                                  4,            // nargs
-                                  &addr,        // buffer to unpin
-                                  &n,           // length to unpin
-                                  &here->rank,  // src for command
-                                  &op.packed);  // command
-  dbg_assert(p);
+  hpx_parcel_t *p = action_create_parcel(HPX_HERE,     // target
+                                         _unpin_async, // action
+                                         0,            // continuation target
+                                         0,            // continuation action
+                                         4,            // nargs
+                                         &addr,        // buffer to unpin
+                                         &n,           // length to unpin
+                                         &here->rank,  // src for command
+                                         &op.packed);  // command
 
   return command_pack(resume_parcel, (uint64_t)(uintptr_t)p);
 }

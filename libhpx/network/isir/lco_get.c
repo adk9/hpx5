@@ -69,8 +69,9 @@ typedef struct {
 
 static int _lco_get_continuation(hpx_parcel_t *p, void *env) {
   _lco_get_env_t *e = env;
-  hpx_parcel_t *l = parcel_create(e->lco, _isir_lco_get_request, HPX_HERE,
-                                  _isir_lco_get_reply, 3, &p, &e->n, &e->out);
+  hpx_parcel_t *l = action_create_parcel(e->lco, _isir_lco_get_request,
+                                         HPX_HERE, _isir_lco_get_reply,
+                                         3, &p, &e->n, &e->out);
   return parcel_launch(l);
 }
 

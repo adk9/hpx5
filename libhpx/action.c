@@ -97,12 +97,8 @@ static _table_t *_actions = NULL;
 /// are running in single-threaded mode, so we should be safe.
 static _table_t *_get_actions(void) {
   if (!_actions) {
-    static const int capacity = LIBHPX_ACTION_TABLE_SIZE;
-    _actions = malloc(sizeof(*_actions) + capacity * sizeof(_entry_t));
-    memset(&_actions->entries, 0, capacity * sizeof(_entry_t));
-
-    // reserve the first entry as hpx_action_id = 0 implies
-    // that it's an invalid action (HPX_ACTION_NULL)
+    int bytes = sizeof(_table_t) + LIBHPX_ACTION_TABLE_SIZE * sizeof(_entry_t);
+    _actions = calloc(1, bytes);
     _actions->n = 1;
   }
 
@@ -133,12 +129,10 @@ static void _assign_ids(_table_t *table) {
 static int _push_back(_table_t *table, hpx_action_t *id, const char *key,
                       hpx_action_handler_t f, hpx_action_type_t type,
                       uint32_t attr, ffi_cif* cif) {
-  static const int capacity = LIBHPX_ACTION_TABLE_SIZE;
   int i = table->n++;
-  if (i >= capacity) {
-    return log_error("exceeded maximum number of actions (%d)\n", capacity);
+  if (LIBHPX_ACTION_TABLE_SIZE < i) {
+    dbg_error("action table overflow\n");
   }
-
   _entry_t *back = &table->entries[i];
   back->handler = f;
   back->id = id;
@@ -164,8 +158,7 @@ const _table_t *action_table_finalize(void) {
 
   // this is a sanity check to ensure that the reserved "null" action
   // is still at index 0.
-  dbg_assert_str(table->entries[0].id == NULL,
-                 "could not reserve space for HPX_ACTION_NULL in the action table.");
+  dbg_assert(table->entries[0].id == NULL);
   return table;
 }
 
@@ -184,7 +177,7 @@ void action_table_free(const _table_t *table) {
   type action_table_get_##name(const struct action_table *table,        \
                                hpx_action_t id) {                       \
     if (id == HPX_ACTION_INVALID) {                                     \
-      log("action registration is not complete");                   \
+      log("action registration is not complete");                       \
       return (type)init;                                                \
     } else if (id >= table->n) {                                        \
       dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n); \
@@ -206,7 +199,8 @@ int action_table_size(const struct action_table *table) {
 
 hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs) {
   dbg_assert(p);
-  if (n == 0 || vargs == NULL) {
+
+  if (!n) {
     return p;
   }
 
@@ -223,10 +217,12 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs) {
     dbg_error("%s requires 2 arguments (%d given).\n", key, n);
   }
 
+  // marshalled, don't pack
   if (cif == NULL) {
     return p;
   }
 
+  // pinned actions have an implicit pointer, so update the caller's value
   if (attr & HPX_PINNED) {
     n++;
   }
@@ -235,22 +231,23 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs) {
     dbg_error("%s requires %d arguments (%d given).\n", key, cif->nargs, n);
   }
 
-  if (!n) {
-    return p;
-  }
-
   dbg_assert(ffi_raw_size((void*)cif) > 0);
 
+  // copy the vaargs (pointers) to my stack array, which is what ffi wants
   void *argps[n];
   int i = 0;
+
+  // special case pinned actions
   if (attr & HPX_PINNED) {
     argps[i++] = &argps[0];
   }
 
+  // copy the individual vaargs
   while (i < n) {
     argps[i++] = va_arg(*vargs, void*);
   }
 
+  // use ffi to copy them to the buffer
   ffi_raw *to = hpx_parcel_get_data(p);
   ffi_ptrarray_to_raw((void*)cif, argps, to);
   return p;
@@ -275,9 +272,9 @@ static hpx_parcel_t *_action_parcel_acquire(hpx_action_t action, va_list *args)
   }
 }
 
-hpx_parcel_t *parcel_create_va(hpx_addr_t addr, hpx_action_t action,
-                               hpx_addr_t c_addr, hpx_action_t c_action,
-                               int n, va_list *args) {
+hpx_parcel_t *action_create_parcel_va(hpx_addr_t addr, hpx_action_t action,
+                                      hpx_addr_t c_addr, hpx_action_t c_action,
+                                      int n, va_list *args) {
   dbg_assert(addr);
   dbg_assert(action);
   hpx_parcel_t *p = _action_parcel_acquire(action, args);
@@ -288,26 +285,26 @@ hpx_parcel_t *parcel_create_va(hpx_addr_t addr, hpx_action_t action,
   return action_pack_args(p, n, args);
 }
 
-hpx_parcel_t *parcel_create(hpx_addr_t addr, hpx_action_t action,
-                            hpx_addr_t c_addr, hpx_action_t c_action,
-                            int nargs, ...) {
+hpx_parcel_t *action_create_parcel(hpx_addr_t addr, hpx_action_t action,
+                                   hpx_addr_t c_addr, hpx_action_t c_action,
+                                   int nargs, ...) {
   va_list args;
   va_start(args, nargs);
-  hpx_parcel_t *p = parcel_create_va(addr, action, c_addr,
-                                     c_action, nargs, &args);
+  hpx_parcel_t *p = action_create_parcel_va(addr, action, c_addr, c_action,
+                                            nargs, &args);
   va_end(args);
   return p;
 }
 
 
-int libhpx_call_action(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
-                       hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
-                       int nargs, va_list *args) {
-  hpx_parcel_t *p = parcel_create_va(addr, action, c_addr, c_action, nargs,
-                                     args);
+int action_call_va(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
+                   hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
+                   int nargs, va_list *args) {
+  hpx_parcel_t *p = action_create_parcel_va(addr, action, c_addr, c_action,
+                                            nargs, args);
 
   if (likely(!gate && !lsync)) {
-    return hpx_parcel_send_sync(p);
+    return parcel_launch(p);
   }
   if (!gate && lsync) {
     return hpx_parcel_send(p, lsync);
@@ -331,38 +328,39 @@ int action_execute(hpx_parcel_t *p) {
   dbg_assert_str(id < table->n, "action id, %d, out of bounds [0,%u)\n", id,
                  table->n);
 
-  // allocate 8 bytes to avoid https://github.com/atgreen/libffi/issues/35
-  char retbuffer[8];
-  int *ret = (int*)retbuffer;
   hpx_action_handler_t handler = table->entries[id].handler;
   ffi_cif *cif = table->entries[id].cif;
-
   bool pinned = action_is_pinned(table, id);
-  if (!cif && !pinned) {
-    *ret = handler(args, p->size);
-  } else if (!cif && pinned) {
-    void *target;
-    if (!hpx_gas_try_pin(p->target, &target)) {
-      log_action("pinned action resend.\n");
-      return HPX_RESEND;
+
+  // allocate 8 bytes to avoid https://github.com/atgreen/libffi/issues/35
+  char ret[8];
+
+  if (!pinned) {
+    if (!cif) {
+      return handler(args, p->size);
     }
-    *ret = ((hpx_pinned_action_handler_t)handler)(target, args, p->size);
-  } else if (cif && !pinned) {
-    ffi_raw_call(cif, FFI_FN(handler), ret, args);
-  } else {
-    void *target;
-    if (!hpx_gas_try_pin(p->target, &target)) {
-      log_action("pinned action resend.\n");
-      return HPX_RESEND;
+    else {
+      ffi_raw_call(cif, FFI_FN(handler), ret, args);
+      return *(int*)ret;
     }
+  }
+
+  void *target;
+  if (!hpx_gas_try_pin(p->target, &target)) {
+    log_action("pinned action resend.\n");
+    return HPX_RESEND;
+  }
+
+  if (!cif) {
+    return ((hpx_pinned_action_handler_t)handler)(target, args, p->size);
+  }
+  else {
     void *avalue[cif->nargs];
     ffi_raw_to_ptrarray(cif, args, avalue);
     avalue[0] = &target;
-
     ffi_call(cif, FFI_FN(handler), ret, avalue);
+    return *(int*)ret;
   }
-
-  return *ret;
 }
 
 bool action_is_pinned(const struct action_table *table, hpx_action_t id) {

@@ -172,10 +172,9 @@ static int _pwc_lco_get_continuation(hpx_parcel_t *p, void *env) {
   _pwc_lco_get_continuation_env_t *e = env;
   e->request.p = p;
 
-  hpx_parcel_t *t = parcel_create(e->lco, _pwc_lco_get_request, HPX_NULL,
-                                  HPX_ACTION_NULL, 2, &e->request,
-                                  sizeof(e->request));
-  dbg_assert(t);
+  hpx_parcel_t *t = action_create_parcel(e->lco, _pwc_lco_get_request,
+                                         HPX_NULL, HPX_ACTION_NULL,
+                                         2, &e->request, sizeof(e->request));
   return parcel_launch(t);
 }
 
