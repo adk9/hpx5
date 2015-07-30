@@ -36,27 +36,29 @@ void photon_rdma_eager_buf_free(photonEagerBuf buf) {
 }
 
 int photon_rdma_eager_buf_get_offset(int proc, photonEagerBuf buf, int size, int lim) {
-  uint64_t curr, new, left, tail;
+  uint64_t curr, new, left, tail, rcur;
   int offset;
 
   do {
+    rcur = sync_load(&buf->acct.rcur, SYNC_RELAXED);
     curr = sync_load(&buf->curr, SYNC_RELAXED);
     tail = sync_load(&buf->tail, SYNC_RELAXED);
     if ((curr - tail) >= buf->size) {
       //log_err("Exceeded number of outstanding eager buf entries - increase size or wait for completion");
       return -1;
     }
-    if (((curr - buf->acct.rcur) + size) >= buf->size) {
+    
+    if (((curr - rcur) + size) >= buf->size) {
       // receiver not ready, request an updated rcur
       _get_remote_progress(proc, buf);
       dbg_trace("No new offset until receiver catches up...");
       return -2;
     }
+
     offset = curr & (buf->size - 1);
     left = buf->size - offset;
     if (left < lim) {
       new = curr + left + size;
-      offset = 0;
     }
     else {
       new = curr + size;
@@ -66,7 +68,7 @@ int photon_rdma_eager_buf_get_offset(int proc, photonEagerBuf buf, int size, int
   if (left < lim)
     sync_fadd(&buf->tail, left, SYNC_RELAXED);
 
-  if ((curr - buf->acct.rcur) == (buf->size * 0.8)) {
+  if ((curr - rcur) == (buf->size * 0.8)) {
     // pro-actively request remote progress at the halfway point
     _get_remote_progress(proc, buf);
   }

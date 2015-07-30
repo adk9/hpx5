@@ -312,7 +312,7 @@ int main(int argc, char **argv) {
 	  }
 	}
       }
-      
+
       // clear remaining local completions
       do {
 	if (sem_getvalue(&sem, &val)) continue;
