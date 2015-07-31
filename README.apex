@@ -8,9 +8,9 @@ For example:
 
 export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/path/to/apex/installation/lib/pkgconfig
 
-Then, add the "--with-apex=yes" option to the configure. For example:
+Then, add the "--with-apex" option to the configure. For example:
 
-./configure --enable-photon --enable-apps --with-mpi --with-apex=yes
+./configure --enable-photon --enable-apps --with-mpi --with-apex
 
 For instructions on downloading and building APEX, please see:
 https://github.com/khuck/xpress-apex
@@ -46,8 +46,8 @@ cd xpress-apex
 3) Build HPX
 -----------------------------------------------------
 
-# (get HPX from gitlab)
-git checkout -b remote apex_refactor
+# get HPX from gitlab
+git checkout git@gitlab.crest.iu.edu:extreme/hpx.git
 
 # set environment variables for HPX for photon support
 export CRAYPE_LINK_TYPE=dynamic
@@ -67,7 +67,7 @@ export PATH=/global/homes/k/khuck/install/hpx-autotools/bin:$PATH
 # bootstrap to make the configure script with APEX options
 ./bootstrap
 # run configure
-./configure --prefix=/global/homes/k/khuck/src/hpx-iu/hpx-master-photon-apex --with-mpi CC=cc --enable-pedantic --enable-wall --enable-logging HPX_PHOTON_CARGS=--with-ugni --enable-photon --with-apex=yes --enable-debug
+./configure --prefix=/global/homes/k/khuck/src/hpx-iu/hpx-master-photon-apex --enable-mpi CC=cc HPX_PHOTON_CARGS=--with-ugni --enable-photon --with-apex --enable-debug
 make && make install
 
 -----------------------------------------------------
