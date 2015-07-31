@@ -411,11 +411,6 @@ static void
 _worker_shutdown(worker_t *w) {
   dbg_assert(w == self);
 
-#ifndef ENABLE_DEBUG
-  void *base = (char*)w->sp - here->config->stacksize;
-  network_release_dma(here->network, base, here->config->stacksize);
-#endif
-
   void **sp = &w->sp;
   intptr_t shutdown = sync_load(&here->sched->shutdown, SYNC_ACQUIRE);
   INST_EVENT_PARCEL_END(w->current);
