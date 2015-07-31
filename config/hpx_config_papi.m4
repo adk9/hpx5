@@ -3,7 +3,6 @@
 # ------------------------------------------------------------------------------
 #
 # Variables
-#   enable_papi
 #   with_papi
 #   have_papi
 #
@@ -24,7 +23,7 @@ AC_DEFUN([_HAVE_PAPI], [
 AC_DEFUN([_HPX_CC_PAPI], [
   # check and see if papi is "just available" without any work
   AC_CHECK_HEADER([papi.h],
-    [AC_CHECK_LIB([papi], [papi_unlinked_fd],
+    [AC_CHECK_LIB([papi], [PAPI_library_init],
       [_HAVE_PAPI
        LIBHPX_LIBS="$LIBHPX_LIBS -lpapi"
        HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lpapi"])])
@@ -36,13 +35,12 @@ AC_DEFUN([_HPX_PKG_PAPI], [pkg=$1
    [_HAVE_PAPI
     LIBHPX_CFLAGS="$LIBHPX_CFLAGS $PAPI_CFLAGS"
     LIBHPX_LIBS="$LIBHPX_LIBS $PAPI_LIBS"
-    HPX_PC_PRIVATE_PKGS="$HPX_PC_PRIVATE_PKGS $pkg"])
+    HPX_PC_PRIVATE_PKGS="$HPX_PC_PRIVATE_PKGS $pkg"],
+    have_papi=no)
 ])
 
 AC_DEFUN([_HPX_WITH_PAPI], [pkg=$1
- #
  AS_CASE($with_papi,
-   [no], [AC_MSG_ERROR([--enable-papi=$enable_papi excludes --without-papi])],
    [system], [_HPX_CC_PAPI
               AS_IF([test "x$have_papi" != xyes], [_HPX_PKG_PAPI($pkg)])],
    [yes], [_HPX_CC_PAPI
@@ -50,17 +48,15 @@ AC_DEFUN([_HPX_WITH_PAPI], [pkg=$1
    [_HPX_PKG_PAPI($with_papi)])
 ])
 
-AC_DEFUN([HPX_CONFIG_PAPI], [pkg=$1
- # allow the programmer to select to use papi support in the gas allocation
- AC_ARG_ENABLE([papi],
-   [AS_HELP_STRING([--enable-papi],
-                   [Enable papi support @<:@default=no@:>@])],
-   [], [enable_papi=no])
+AC_DEFUN([HPX_CONFIG_PAPI], [
+ pkg=$1
+ wanted=$2
 
+ # allow the programmer to select to use papi support in the gas allocation
  AC_ARG_WITH(papi,
    [AS_HELP_STRING([--with-papi{=system,PKG}],
-                   [How we find PAPI @<:@default=system,$pkg@:>@])],
+                     [How we find PAPI @<:@default=system,$pkg@:>@])],
    [], [with_papi=system])
-
- AS_IF([test "x$enable_papi" != xno], [_HPX_WITH_PAPI($pkg)])
+ AS_IF([test "x$wanted" == xyes],
+   _HPX_WITH_PAPI(pkg))
 ])
