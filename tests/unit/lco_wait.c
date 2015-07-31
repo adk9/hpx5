@@ -15,7 +15,7 @@
 #include "tests.h"
 #include <stdlib.h>
 
-#define LCOS_PER_LOCALITY 20000
+#define LCOS_PER_LOCALITY 10000
 #define WAITERS 4
 #define PARTICIPANTS 4
 
