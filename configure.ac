@@ -60,6 +60,7 @@ LT_INIT([disable-shared])
 # LIBHPX_LDFLAGS: -L and -Wl flags needed to link libhpx.la
 # LIBHPX_LIBS: -l dependencies required to link libhpx.la
 #
+# HPX_PC_CFLAGS: C and CPP flags (typically just -D) for installed libhps.so
 # HPX_PC_PUBLIC_LIBS: -L and -l flags required to link to installed libhpx.so
 # HPX_PC_REQUIRES_PKGS: packages required to link to installed libhpx.so
 # HPX_PC_PRIVATE_LIBS: -L and -l flags required to link to installed libhpx.a
@@ -136,7 +137,6 @@ HPX_CONFIG_TBBMALLOC
 HPX_CONFIG_DLMALLOC([contrib/dlmalloc])
 #HPX_CONFIG_HWLOC([contrib/hwloc-1.11.0], [hwloc])
 HPX_CONFIG_HUGETLBFS([hugetlbfs])
-HPX_CONFIG_PAPI([papi])
 HPX_CONFIG_UTHASH([contrib/uthash-fe01a6ad1b])
 HPX_CONFIG_VALGRIND([contrib/valgrind])
 HPX_CONFIG_LIBFFI([contrib/$libffi_contrib_dir], [libffi])
@@ -145,6 +145,8 @@ HPX_CONFIG_LIBCUCKOO([contrib/libcuckoo], [$have_agas])
 HPX_CONFIG_DOCS
 HPX_CONFIG_DEBUG
 HPX_CONFIG_INSTRUMENTATION
+HPX_CONFIG_PAPI([papi], [$have_instrumentation])
+HPX_CONFIG_APEX([apex])
 HPX_CONFIG_TESTS
 HPX_CONFIG_TUTORIAL
 
@@ -187,6 +189,7 @@ AC_SUBST(LIBHPX_LDFLAGS)
 AC_SUBST(LIBHPX_LIBADD)
 AC_SUBST(LIBHPX_LIBS)
 
+AC_SUBST(HPX_PC_CFLAGS)
 AC_SUBST(HPX_PC_PUBLIC_LIBS)
 AC_SUBST(HPX_PC_PRIVATE_LIBS)
 AC_SUBST(HPX_PC_REQUIRES_PKGS)

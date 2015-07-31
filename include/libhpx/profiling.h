@@ -10,12 +10,10 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifdef HAVE_PAPI
 #ifndef PROFILING_H
 #define PROFILING_H
 
 #include <stdint.h>
-#include <papi.h>
 #include <hpx/attributes.h>
 #include <hpx/builtins.h>
 
@@ -42,7 +40,7 @@ typedef struct {
     }
 
 /// Initialize profiling. This is usually called in hpx_init().
-int prof_init(struct config *cfg)
+void prof_init(struct config *cfg)
   HPX_NON_NULL(1);
 
 /// Mark the beginning of profiling a type of event.
@@ -88,7 +86,6 @@ int prof_reset();
 /// Cleanup
 int prof_fini();
 
-
 /// Begin profiling. This begins recording performance information of an event.
 int prof_start_papi_counters();
 
@@ -112,5 +109,4 @@ int prof_read_papi_counters(long long *values, int num_values);
 /// @param  num_values The size of the array
 int prof_accum_papi_counters(long long *values, int num_values);
 
-#endif
 #endif

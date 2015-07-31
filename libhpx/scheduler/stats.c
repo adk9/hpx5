@@ -13,6 +13,9 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+#ifdef HAVE_APEX
+#include "apex.h"
+#endif
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -24,6 +27,8 @@
 #include <libhpx/scheduler.h>
 #include <libhpx/locality.h>
 #include <libhpx/stats.h>
+
+static libhpx_stats_t _global_stats = LIBHPX_STATS_INIT;
 
 void libhpx_stats_init(struct libhpx_stats *stats) {
   stats->spawns     = 0;
@@ -69,14 +74,24 @@ void libhpx_stats_print(void) {
     return;
   }
 
-  libhpx_stats_t global_stats = LIBHPX_STATS_INIT;
+
   char id[16] = {0};
   for (int i = 0, e = here->sched->n_workers; i < e; ++i) {
     worker_t *w = scheduler_get_worker(here->sched, i);
     snprintf(id, 16, "%d", w->id);
     _print_stats(id, &w->stats);
-    libhpx_stats_accum(&global_stats, &w->stats);
+    libhpx_stats_accum(&_global_stats, &w->stats);
   }
 
-  _print_stats("<totals>", &global_stats);
+  _print_stats("<totals>", &_global_stats);
+}
+
+void libhpx_save_apex_stats(void) {
+#ifdef HAVE_APEX
+  apex_sample_value("yields", (double)_global_stats.yields);
+  apex_sample_value("spawns", (double)_global_stats.spawns);
+  apex_sample_value("steals", (double)_global_stats.steals);
+  apex_sample_value("stacks", (double)_global_stats.stacks);
+  apex_sample_value("mail", (double)_global_stats.mail);
+#endif
 }
