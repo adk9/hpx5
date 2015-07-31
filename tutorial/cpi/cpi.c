@@ -112,7 +112,7 @@ static int _main_action(int *args, size_t size) {
     hpx_lco_delete(futures[i], HPX_NULL);
 
   if(MYTHREAD == 0) {
-    printf("Approx: %20.17f Error: %23.17f\n", reduce_result,
+    printf("Approx: %20.17f fabs(reduce_result - realpi): %23.17f\n", reduce_result,
                    fabs(reduce_result - realpi));
   }
 

@@ -2,6 +2,7 @@
 #define LOGGING_H
 
 #include <stdio.h>
+#include <assert.h>
 #include "config.h"
 
 extern int _photon_nproc, _photon_myrank;

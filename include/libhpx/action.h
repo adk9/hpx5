@@ -72,29 +72,20 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs);
 /// Returns a parcel that encodes the target address, an action and
 /// its argument, and the continuation. The parcel is ready to be sent
 /// to effect a call operation.
-hpx_parcel_t *parcel_create_va(hpx_addr_t addr, hpx_action_t action,
-                               hpx_addr_t c_addr, hpx_action_t c_action,
-                               int nargs, va_list *args);
+hpx_parcel_t *action_create_parcel_va(hpx_addr_t addr, hpx_action_t action,
+                                      hpx_addr_t c_addr, hpx_action_t c_action,
+                                      int nargs, va_list *args);
 
 /// Same as above, with the exception that the input arguments are
 /// variadic instead of a va_list.
-hpx_parcel_t *parcel_create(hpx_addr_t addr, hpx_action_t action,
-                            hpx_addr_t c_addr, hpx_action_t c_action,
-                            int nargs, ...);
+hpx_parcel_t *action_create_parcel(hpx_addr_t addr, hpx_action_t action,
+                                   hpx_addr_t c_addr, hpx_action_t c_action,
+                                   int nargs, ...);
 
 /// Call an action by sending a parcel given a list of variable args.
-int libhpx_call_action(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
-                       hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
-                       int nargs, va_list *args);
-
-/// Call an action by sending a parcel given a list of variable args.
-///
-/// This form of call will block internally until the result becomes
-/// available. It can be more efficient than allocating a future to call the
-/// non-blocking form as it requires neither the  global allocation nor the
-/// related temporary buffer.
-int action_call_rsync(hpx_action_t action, hpx_addr_t at, void *out, int nargs,
-                      va_list *args);
+int action_call_va(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
+                   hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
+                   int nargs, va_list *args);
 
 /// Is the action a pinned action?
 bool action_is_pinned(const struct action_table *, hpx_action_t)

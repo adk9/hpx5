@@ -15,14 +15,14 @@
 #include "tests.h"
 #include <stdlib.h>
 
-#define LCOS_PER_LOCALITY 100000
+#define LCOS_PER_LOCALITY 20000
 #define WAITERS 4
 #define PARTICIPANTS 4
 
 // This tests waiting on lcos.  Best run with many cores. Eg., on cutter:
 // mpirun -n 2 -map-by node:PE=16 --tag-output ~/repos/hpx-marcin/tests/unit/hpxtest --hpx-cores=16 --hpx-heapsize=$((1024*1024*1024 * 2)) --hpx-transport=mpi
 static int _set_handler(const hpx_addr_t * const future, size_t n) {
-  // printf("Setting %zu on %d\n", *future, HPX_LOCALITY_ID);
+  //printf("Setting %zu on %d\n", *future, HPX_LOCALITY_ID);
   hpx_lco_set(*future, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
@@ -30,7 +30,7 @@ static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _set,
                   _set_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int _wait_handler(const hpx_addr_t * const future, size_t n) {
-  // printf("Waiting on %zu on %d\n", lcos[0], HPX_LOCALITY_ID);
+  //printf("Waiting on %zu on %d\n", *future, HPX_LOCALITY_ID);
   hpx_lco_wait(*future);
   return HPX_SUCCESS;
 }

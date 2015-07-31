@@ -138,23 +138,12 @@ _continue_parcel(hpx_parcel_t *p, hpx_status_t status, int nargs, va_list *args)
   }
 
   // create the parcel to continue and transfer whatever credit we have
-  hpx_parcel_t *c = parcel_create_va(p->c_target, p->c_action, HPX_NULL,
-                                     HPX_ACTION_NULL, nargs, args);
+  hpx_parcel_t *c = action_create_parcel_va(p->c_target, p->c_action, HPX_NULL,
+                                            HPX_ACTION_NULL, nargs, args);
   dbg_assert(c);
   c->credit = p->credit;
   p->credit = 0;
   return parcel_launch(c);
-}
-
-/// Get the nop parcel.
-static hpx_parcel_t *
-_get_nop_parcel(void) {
-  hpx_addr_t target = HPX_HERE;
-  hpx_pid_t pid = hpx_thread_current_pid();
-  // use parcel_new instead of hpx_parcel_acquire so that we can filter out
-  // scheduler_nop actions in instrumentation
-  hpx_parcel_t *p = parcel_new(target, scheduler_nop, 0, 0, pid, NULL, 0);
-  return p;
 }
 
 /// The entry function for all interrupts.
@@ -229,21 +218,6 @@ _on_startup(hpx_parcel_t *to, void *sp, void *env) {
   // checkpoint my native stack pointer
   self->sp = sp;
   self->current = to;
-
-#ifndef ENABLE_DEBUG
-  // Register the native stack for use as the "task" stack.
-  //
-  // Tasks are unusual because we run them from the _run_task continuation,
-  // which always runs "below" sp on the stack. This gets released in
-  // _worker_shutdown.
-  //
-  // If we're in a debug build, don't register to avoid an issue
-  // registering the VG stack.
-
-  void *base = (char*)sp - here->config->stacksize;
-  network_register_dma(here->network, base, here->config->stacksize, NULL);
-#endif
-
   return HPX_SUCCESS;
 }
 
@@ -311,10 +285,6 @@ static void
 _spawn_lifo(worker_t *w, hpx_parcel_t *p) {
   dbg_assert(p->target != HPX_NULL);
   dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
-  DEBUG_IF(action_is_task(here->actions, p->action)) {
-    dbg_assert(!parcel_get_stack(p));
-  }
-
   TRACE_PUSH_LIFO(p);
   uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
   w->work_first = (here->sched->wf_threshold < size);
@@ -392,15 +362,21 @@ _handle_mail(worker_t *w) {
 static int
 _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   worker_t *w = self;
+  int status = (intptr_t)env;
   hpx_parcel_t *prev = w->current;
   w->current = to;
+
+  // Don't free the nop parcel, if we happen to get here from there.
+  if (prev == w->nop) {
+    return status;
+  }
+
   ustack_t *stack = parcel_get_stack(prev);
   parcel_set_stack(prev, NULL);
   if (stack) {
     _put_stack(w, stack);
   }
-  hpx_parcel_release(prev);
-  int status = (intptr_t)env;
+  parcel_delete(prev);
   return status;
 }
 
@@ -447,63 +423,12 @@ _worker_shutdown(worker_t *w) {
   unreachable();
 }
 
-static int
-_run_task(hpx_parcel_t *to, void *sp, void *env) {
-  worker_t *w = self;
-  hpx_parcel_t *from = w->current;
-
-  // If we're transferring from a task, then we want to delete the current
-  // task's parcel. Otherwise we are transferring from a thread and we want to
-  // checkpoint the current thread so that we can return to it and then push it
-  // so we can find it later (or have it stolen later).
-  if (action_is_task(here->actions, from->action)) {
-    hpx_parcel_release(from);
-  }
-  else {
-    parcel_get_stack(from)->sp = sp;
-    _spawn_lifo(w, from);
-  }
-
-  w->current = env;
-  dbg_assert(parcel_get_stack(w->current) == NULL);
-  _execute_thread(env);
-  unreachable();
-  return HPX_SUCCESS;
-}
-
-/// Try to execute a parcel as a task.
-///
-/// @param            p The parcel to test.
-///
-/// @returns       NULL The parcel was processed as a task.
-///                  @p The parcel was not a task.
-static hpx_parcel_t *
-_try_task(worker_t *w, hpx_parcel_t *p) {
-  if (scheduler_is_shutdown(here->sched)) {
-    return p;
-  }
-
-  if (!action_is_task(here->actions, p->action)) {
-    return p;
-  }
-
-  dbg_assert(!parcel_get_stack(p));
-
-  void **sp = &w->sp;
-
-  // No instrumentation for suspend here since thread is already recorded as
-  // suspended (we mark the suspend before the call to _schedule).
-  int e = _transfer((hpx_parcel_t*)&sp, _run_task, p);
-  dbg_check(e, "Error post _try_task: %s\n", hpx_strerror(e));
-  return NULL;
-}
-
 /// Try to execute a parcel as an interrupt.
 ///
 /// @param            p The parcel to test.
 ///
-/// @returns       NULL The parcel was processed as a task.
-///                  @p The parcel was not a task.
+/// @returns       NULL The parcel was processed as an interrupt.
+///                  @p The parcel was not an interrupt.
 static hpx_parcel_t *
 _try_interrupt(hpx_parcel_t *p) {
   if (scheduler_is_shutdown(here->sched)) {
@@ -524,20 +449,16 @@ _try_interrupt(hpx_parcel_t *p) {
 /// This routine does not try very hard to find work, and is used inside of an
 /// LCO when the caller is holding the LCO lock and wants to release it.
 ///
-/// This routine will not process any tasks.
-///
 /// @param        final A thread to transfer to if we can't find any other
 ///                       work.
 ///
 /// @returns            A parcel to transfer to.
 static hpx_parcel_t *
 _schedule_in_lco(hpx_parcel_t *final) {
-  // return so we can release the lock
   if (scheduler_is_shutdown(here->sched)) {
-    return _get_nop_parcel();
+    return self->nop;
   }
 
-  // if there is any LIFO work, process it
   hpx_parcel_t *p = _schedule_lifo(self);
   if (p) {
     return p;
@@ -547,9 +468,8 @@ _schedule_in_lco(hpx_parcel_t *final) {
     return final;
   }
 
-  return _get_nop_parcel();
+  return self->nop;
 }
-
 
 /// The main scheduling "loop."
 ///
@@ -582,8 +502,7 @@ _schedule(bool in_lco, hpx_parcel_t *final) {
     p = _schedule_in_lco(final);
   }
 
-  // We spin in the scheduler processing tasks, until we find a parcel to run
-  // that does not represent a task.
+  // We spin in the scheduler until we can find some work to do.
   while (p == NULL) {
     if (scheduler_is_shutdown(here->sched)) {
       _worker_shutdown(self);
@@ -595,7 +514,6 @@ _schedule(bool in_lco, hpx_parcel_t *final) {
     // if there is any LIFO work, process it
     p = _schedule_lifo(self);
     if (p) {
-      p = _try_task(self, p);
       continue;
     }
 
@@ -614,20 +532,17 @@ _schedule(bool in_lco, hpx_parcel_t *final) {
 
     p = yield_steal_0(self);
     if (p) {
-      p = _try_task(self, p);
       continue;
     }
 
     p = yield_steal_1(self);
     if (p) {
-      p = _try_task(self, p);
       continue;
     }
 
     // try to run the final, but only the first time around
     p = final;
     if (p) {
-      p = _try_task(self, p);
       final = NULL;
       continue;
     }
@@ -649,6 +564,7 @@ worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   w->nstacks    = 0;
   w->sp         = NULL;
   w->current    = NULL;
+  w->nop        = NULL;
   w->stacks     = NULL;
 
   sync_chase_lev_ws_deque_init(&w->work, work_size);
@@ -671,6 +587,8 @@ worker_fini(worker_t *w) {
     hpx_parcel_release(p);
   }
   sync_chase_lev_ws_deque_fini(&w->work);
+
+  dbg_assert(!w->nop);
 
   // and delete any cached stacks
   ustack_t *stack = NULL;
@@ -706,6 +624,9 @@ worker_start(void) {
   // wait for local threads to start up
   system_barrier_wait(&here->sched->barrier);
 
+  dbg_assert(!self->nop);
+  self->nop = parcel_new(HPX_HERE, scheduler_nop, 0, 0, 0, NULL, 0);
+
   // get a parcel to start the scheduler loop with
   hpx_parcel_t *p = _schedule(true, NULL);
   if (!p) {
@@ -720,6 +641,12 @@ worker_start(void) {
     return e;
   }
 
+  dbg_assert(self->nop);
+  if (self->nop->ustack) {
+    thread_delete(self->nop->ustack);
+  }
+  parcel_delete(self->nop);
+  self->nop = NULL;
   self->current = NULL;
 
   return LIBHPX_OK;
@@ -809,30 +736,16 @@ scheduler_spawn(hpx_parcel_t *p) {
   // Otherwise we're in work-first mode, which means we should do our best to go
   // ahead and run the parcel ourselves. There are some things that inhibit
   // work-first scheduling.
-
-  // 1) We can't work-first anything if we're running a task, because blocking
-  //    the task will also block its parent.
-  //
-  //    NB: We probably can actually run tasks from tasks, since they're
-  //        guaranteed not to block (note we already do this for interrupts),
-  //        the issue is that we can't use _try_task() to do this because we get
-  //        parcel releases that we don't want when we do that. We could
-  //        restructure _try_task() to deal with that, in which case it would
-  //        make sense to hoist the _try_task() farther up this decision tree.
   hpx_parcel_t *current = w->current;
-  if (action_is_task(here->actions, current->action)) {
-    _spawn_lifo(w, p);
-    return;
-  }
-
-  // 2) We can't work-first if we are holding an LCO lock.
   ustack_t *thread = parcel_get_stack(current);
+
+  // 1) We can't work-first if we are holding an LCO lock.
   if (thread->lco_depth) {
     _spawn_lifo(w, p);
     return;
   }
 
-  // 3) We can't work-first from an interrupt.
+  // 2) We can't work-first from an interrupt.
   if (action_is_interrupt(here->actions, current->action)) {
     _spawn_lifo(w, p);
     return;
@@ -1024,10 +937,6 @@ hpx_thread_exit(int status) {
   hpx_parcel_t *parcel = worker->current;
 
   if (status == HPX_RESEND) {
-    // Get a parcel to transfer to, and transfer using the resend continuation.
-    // NB: "fast" argument to schedule is "true" so that we don't try to run a
-    //      task inside of schedule() which would cause the current task to be
-    //      freed.
     hpx_parcel_t *to = _schedule(true, NULL);
     INST_EVENT_PARCEL_END(parcel);
     INST_EVENT_PARCEL_RESEND(parcel);
@@ -1174,7 +1083,7 @@ _checkpoint_suspend(hpx_parcel_t *to, void *sp, void *env) {
 }
 
 hpx_status_t
-scheduler_suspend(int (*f)(hpx_parcel_t *p, void*), void *env) {
+scheduler_suspend(int (*f)(hpx_parcel_t *p, void*), void *env, int block) {
   // create the closure environment for the _checkpoint_suspend continuation
   _checkpoint_suspend_env_t suspend_env = {
     .f = f,
@@ -1185,9 +1094,7 @@ scheduler_suspend(int (*f)(hpx_parcel_t *p, void*), void *env) {
   INST_EVENT_PARCEL_SUSPEND(p);
   log_sched("suspending %p in %s\n", (void*)p,
             action_table_get_key(here->actions, p->action));
-  // Don't block during the schedule call, we still have something to do (call
-  // the continuation) that may impact global progress.
-  hpx_parcel_t *to = _schedule(true, NULL);
+  hpx_parcel_t *to = _schedule(!block, NULL);
   int e = _transfer(to, _checkpoint_suspend, &suspend_env);
   log_sched("resuming %p\n in %s", (void*)p,
             action_table_get_key(here->actions, p->action));

@@ -31,17 +31,16 @@ static int fi_finalize(void);
 static int fi_get_info(ProcessInfo *pi, int proc, void **info, int *size, photon_info_t type);
 static int fi_set_info(ProcessInfo *pi, int proc, void *info, int size, photon_info_t type);
 static int fi_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags);
+		       photonBuffer lbuf, photonBuffer rbuf, uint64_t id, uint64_t imm_data,
+		       int flags);
 static int fi_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags);
+		       photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags);
 static int fi_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
-                          photonBuffer lbuf, uint64_t id, int flags);
+			photonBuffer lbuf, uint64_t id, uint64_t imm_data, int flags);
 static int fi_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
-                          photonBuffer lbuf, uint64_t id, int flags);
+			photonBuffer lbuf, uint64_t id, int flags);
 static int fi_get_event(int proc, int max, photon_rid *ids, int *n);
-
-static int __fi_do_rdma(struct rdma_args_t *args, int opcode, int flags);
-static int __fi_do_fma(struct rdma_args_t *args, int opcode, int flags);
+static int fi_get_revent(int proc, int max, photon_rid *ids, uint64_t imms, int *n);
 
 /* we are now a Photon backend */
 struct photon_backend_t photon_fi_backend = {
@@ -84,7 +83,8 @@ struct photon_backend_t photon_fi_backend = {
   .rdma_get = fi_rdma_get,
   .rdma_send = fi_rdma_send,
   .rdma_recv = fi_rdma_recv,
-  .get_event = fi_get_event
+  .get_event = fi_get_event,
+  .get_revent = fi_get_revent
 };
 
 static int fi_initialized() {
@@ -95,7 +95,7 @@ static int fi_initialized() {
 }
 
 static int fi_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss) {
-  int i;
+
   // __initialized: 0 - not; -1 - initializing; 1 - initialized
   __initialized = -1;
 
@@ -117,34 +117,31 @@ static int fi_set_info(ProcessInfo *pi, int proc, void *info, int size, photon_i
   return PHOTON_OK;
 }
 
-static int __fi_do_rdma(struct rdma_args_t *args, int opcode, int flags) {
-  return PHOTON_OK;
-}
-
-static int __fi_do_fma(struct rdma_args_t *args, int opcode, int flags) {
-  return PHOTON_OK;
-}
-
 static int fi_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags) {
+		       photonBuffer lbuf, photonBuffer rbuf, uint64_t id,
+		       uint64_t imm_data, int flags) {
   return PHOTON_OK;
 }
 
 static int fi_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                         photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags) {
+		       photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags) {
   return PHOTON_OK;
 }
 
 static int fi_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
-                          photonBuffer lbuf, uint64_t id, int flags) {
+			photonBuffer lbuf, uint64_t id, uint64_t imm_data, int flags) {
   return PHOTON_OK;
 }
 
 static int fi_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
-                          photonBuffer lbuf, uint64_t id, int flags) {
+			photonBuffer lbuf, uint64_t id, int flags) {
   return PHOTON_OK;
 }
 
 static int fi_get_event(int proc, int max, photon_rid *ids, int *n) {
+  return PHOTON_EVENT_OK;
+}
+
+static int fi_get_revent(int proc, int max, photon_rid *ids, uint64_t imms, int *n) {
   return PHOTON_EVENT_OK;
 }
