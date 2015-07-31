@@ -72,7 +72,7 @@ int photon_rdma_eager_buf_get_offset(int proc, photonEagerBuf buf, int size, int
   if (left < lim)
     sync_fadd(&buf->tail, left, SYNC_RELAXED);
 
-  if ((curr - rcur) == (buf->size * 0.8)) {
+  if ((curr - rcur) == (int)(buf->size * 0.8)) {
     // pro-actively request remote progress at the halfway point
     _get_remote_progress(proc, buf);
   }
