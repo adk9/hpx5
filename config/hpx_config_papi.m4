@@ -53,10 +53,10 @@ AC_DEFUN([HPX_CONFIG_PAPI], [
  wanted=$2
 
  # allow the programmer to select to use papi support in the gas allocation
- AS_IF([test "x$wanted" == xyes],
-   AC_ARG_WITH(papi,
-     [AS_HELP_STRING([--with-papi{=system,PKG}],
+ AC_ARG_WITH(papi,
+   [AS_HELP_STRING([--with-papi{=system,PKG}],
                      [How we find PAPI @<:@default=system,$pkg@:>@])],
-     [], [with_papi=system])
+   [], [with_papi=system])
+ AS_IF([test "x$wanted" == xyes],
    _HPX_WITH_PAPI(pkg))
 ])
