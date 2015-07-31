@@ -23,7 +23,7 @@ AC_DEFUN([HPX_DO_SUMMARY], [
  echo "                Host OS : $host_os"
  echo "               Networks : $networks"
  echo "              Allocator : $allocator"
- echo "              Profiling : $enable_profiling"
+ echo "        Instrumentation : $have_instrumentation"
  echo "                   PAPI : $have_papi"     
  echo "         hugetlbfs heap : $have_hugetlbfs"
  echo "     Topology Awareness : $have_hwloc"

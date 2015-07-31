@@ -136,7 +136,6 @@ HPX_CONFIG_TBBMALLOC
 HPX_CONFIG_DLMALLOC([contrib/dlmalloc])
 #HPX_CONFIG_HWLOC([contrib/hwloc-1.11.0], [hwloc])
 HPX_CONFIG_HUGETLBFS([hugetlbfs])
-HPX_CONFIG_PAPI([papi])
 HPX_CONFIG_UTHASH([contrib/uthash-fe01a6ad1b])
 HPX_CONFIG_VALGRIND([contrib/valgrind])
 HPX_CONFIG_LIBFFI([contrib/$libffi_contrib_dir], [libffi])
@@ -145,6 +144,7 @@ HPX_CONFIG_LIBCUCKOO([contrib/libcuckoo], [$have_agas])
 HPX_CONFIG_DOCS
 HPX_CONFIG_DEBUG
 HPX_CONFIG_INSTRUMENTATION
+HPX_CONFIG_PAPI([papi], [$have_instrumentation])
 HPX_CONFIG_TESTS
 HPX_CONFIG_TUTORIAL
 
