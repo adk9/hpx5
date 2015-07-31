@@ -74,7 +74,8 @@ struct scheduler {
   int               n_workers;
   uint32_t       wf_threshold;
   system_barrier_t    barrier;
-  worker_t      *workers;
+  worker_t           *workers;
+  int        n_active_workers;  // used by APEX scheduler throttling : akp
 };
 
 /// Allocate and initialize a new scheduler.

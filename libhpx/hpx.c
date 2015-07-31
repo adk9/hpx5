@@ -39,6 +39,10 @@
 #include <libhpx/system.h>
 #include "network/probe.h"
 
+#ifdef HAVE_APEX
+#include "apex.h"
+#endif
+
 static hpx_addr_t _hpx_143;
 static int _hpx_143_fix_handler(void) {
   _hpx_143 = hpx_gas_alloc_cyclic(sizeof(void*), HPX_LOCALITIES, 0);
@@ -52,6 +56,11 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _hpx_143_fix, _hpx_143_fix_handler);
 static void _cleanup(locality_t *l) {
   if (!l)
     return;
+
+#ifdef HAVE_APEX 
+  // finalize APEX
+  apex_finalize();
+#endif
 
   if (l->sched) {
     scheduler_delete(l->sched);
@@ -207,6 +216,12 @@ int hpx_init(int *argc, char ***argv) {
     goto unwind1;
   }
 
+#ifdef HAVE_APEX 
+  // initialize APEX, give this main thread a name
+  apex_init("HPX WORKER THREAD");
+  apex_set_node_id(here->rank);
+#endif
+
   return status;
  unwind1:
   _cleanup(here);
@@ -269,8 +284,11 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
     hpx_gas_free(_hpx_143, HPX_NULL);
   }
 
-#ifdef ENABLE_PROFILING
+#if defined(ENABLE_PROFILING) || defined(HAVE_APEX)
   libhpx_stats_print();
+
+  // this will add the stats to the APEX data set
+  libhpx_save_apex_stats();
 #endif
 
  unwind2:

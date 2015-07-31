@@ -18,7 +18,7 @@
 /// @file libhpx/scheduler/stats.h
 /// @brief The libhpx stats definitions.
 
-#ifdef ENABLE_PROFILING
+#if defined(ENABLE_PROFILING) || defined(HAVE_APEX)
 #define COUNTER_SAMPLE(e) e
 #else
 #define COUNTER_SAMPLE(e)
@@ -65,5 +65,10 @@ struct libhpx_stats *libhpx_stats_accum(struct libhpx_stats *lhs,
 
 /// Print libhpx statistics.
 void libhpx_stats_print(void);
+
+/// Save collected statistics to APEX.
+///
+/// @param    counts The libhpx stats.
+void libhpx_save_apex_stats(void);
 
 #endif // LIBHPX_STATS_H
