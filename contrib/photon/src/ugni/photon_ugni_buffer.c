@@ -24,8 +24,7 @@ static int __ugni_buffer_register(photonBI dbuffer, void *ctx, int flags) {
   if (dbuffer->is_registered)
     return PHOTON_OK;
 
-  // enable requested completion queue notifications
-  if (uctx->use_rcq && (flags & BUFFER_FLAG_NOTIFY)) {
+  if (uctx->use_rcq) {
     rcq_handle = uctx->remote_cq_handles[0];
   }
   
