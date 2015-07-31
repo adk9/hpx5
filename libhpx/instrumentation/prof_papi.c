@@ -14,25 +14,25 @@
 # include "config.h"
 #endif
 
-#ifdef HAVE_PAPI
 #include <errno.h>
+#include <papi.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 
 #include <hpx/hpx.h>
-#include <libsync/sync.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/profiling.h>
+#include <libsync/sync.h>
 
 /// Each locality maintains a single profile log
 static profile_t _profile_log = PROFILE_INIT;
 
-void set_event(size_t papi_event, size_t bit, size_t bitset, 
+static void _set_event(size_t papi_event, size_t bit, size_t bitset, 
                int max_counters, int *num_counters){
   if(!(bit | bitset) || (PAPI_query_event(papi_event) != PAPI_OK)
                      || (*num_counters >= max_counters)){
@@ -44,96 +44,90 @@ void set_event(size_t papi_event, size_t bit, size_t bitset,
   *num_counters+=1;
 }
 
-void print_warning(size_t papi_event){
-  fprintf(stderr, "Warning: ");
+static void _print_warning(size_t papi_event){
+  log_error("Warning: ");
   switch(papi_event){
-    case PAPI_L1_TCM:  fprintf(stderr, "PAPI_L1_TCM");
+    case PAPI_L1_TCM:  log_error("PAPI_L1_TCM");
                        break;
-    case PAPI_L2_TCM:  fprintf(stderr, "PAPI_L2_TCM");
+    case PAPI_L2_TCM:  log_error("PAPI_L2_TCM");
                        break;
-    case PAPI_L3_TCM:  fprintf(stderr, "PAPI_L3_TCM");
+    case PAPI_L3_TCM:  log_error("PAPI_L3_TCM");
                        break;
-    case PAPI_TLB_TL:  fprintf(stderr, "PAPI_TLB_TL");
+    case PAPI_TLB_TL:  log_error("PAPI_TLB_TL");
                        break;
-    case PAPI_TOT_INS: fprintf(stderr, "PAPI_TOT_INS");
+    case PAPI_TOT_INS: log_error("PAPI_TOT_INS");
                        break;
-    case PAPI_INT_INS: fprintf(stderr, "PAPI_INT_INS");
+    case PAPI_INT_INS: log_error("PAPI_INT_INS");
                        break;
-    case PAPI_FP_INS:  fprintf(stderr, "PAPI_FP_INS");
+    case PAPI_FP_INS:  log_error("PAPI_FP_INS");
                        break;
-    case PAPI_LD_INS:  fprintf(stderr, "PAPI_LD_INS");
+    case PAPI_LD_INS:  log_error("PAPI_LD_INS");
                        break;
-    case PAPI_SR_INS:  fprintf(stderr, "PAPI_SR_INS");
+    case PAPI_SR_INS:  log_error("PAPI_SR_INS");
                        break;
-    case PAPI_BR_INS:  fprintf(stderr, "PAPI_BR_INS");
+    case PAPI_BR_INS:  log_error("PAPI_BR_INS");
                        break;
-    case PAPI_TOT_CYC: fprintf(stderr, "PAPI_TOT_CYC");
+    case PAPI_TOT_CYC: log_error("PAPI_TOT_CYC");
                        break;
-    default:           fprintf(stderr, "PAPI counter");
+    default:           log_error("PAPI counter");
                        break;
   }
 }
 
-void test_event(size_t papi_event, size_t bit, size_t bitset, int max_counters,
+static void _test_event(size_t papi_event, size_t bit, size_t bitset, int max_counters,
                 int *num_counters){
   if(!(bit & bitset)){
     return;
   }
 
   if(PAPI_query_event(papi_event) != PAPI_OK){
-    print_warning(papi_event);
-    fprintf(stderr, " is not available on this system\n");
+    _print_warning(papi_event);
+    log_error(" is not available on this system\n");
     return;
   }
 
   *num_counters+=1;
   if(*num_counters > max_counters){
-    print_warning(papi_event);
-    printf(" could not be included in profiling due to limited resources\n");
+    _print_warning(papi_event);
+    log_error(" could not be included in profiling due to limited resources\n");
   }
 }
 
-int prof_init(struct config *cfg){
-#ifndef ENABLE_INSTRUMENTATION
-  return LIBHPX_OK;
-#endif
-
+void prof_init(struct config *cfg){
   int max_counters = PAPI_num_counters();
   int num_counters = 0;
   size_t counters = cfg->prof_counters;
 
   if(counters == 0){
-    return LIBHPX_OK;
+    return;
   }
   
   int eventset = PAPI_NULL;
   int retval = PAPI_library_init(PAPI_VER_CURRENT);
   if(retval != PAPI_VER_CURRENT){
-    fprintf(stderr, "unable to initialize PAPI\n");
-    return retval;
+    log_error("unable to initialize PAPI with error code %d\n", retval);
   }
   retval = PAPI_create_eventset(&eventset);
   if(retval != PAPI_OK){
-    fprintf(stderr, "unable to create eventset\n");
-    return retval;
+    log_error("unable to create eventset with error code %d\n", retval);
   }
 
   //test events first to generate warnings and determine which counters
   //can have space allocated for them
-  test_event(PAPI_L1_TCM, HPX_L1_TCM, counters, max_counters, &num_counters);
-  test_event(PAPI_L2_TCM, HPX_L2_TCM, counters, max_counters, &num_counters);
-  test_event(PAPI_L3_TCM, HPX_L3_TCM, counters, max_counters, &num_counters);
-  test_event(PAPI_TLB_TL, HPX_TLB_TL, counters, max_counters, &num_counters);
-  test_event(PAPI_TOT_INS, HPX_TOT_INS, counters, max_counters, &num_counters);
-  test_event(PAPI_INT_INS, HPX_INT_INS, counters, max_counters, &num_counters);
-  test_event(PAPI_FP_INS, HPX_FP_INS, counters, max_counters, &num_counters);
-  test_event(PAPI_LD_INS, HPX_LD_INS, counters, max_counters, &num_counters);
-  test_event(PAPI_SR_INS, HPX_SR_INS, counters, max_counters, &num_counters);
-  test_event(PAPI_BR_INS, HPX_BR_INS, counters, max_counters, &num_counters);
-  test_event(PAPI_TOT_CYC, HPX_TOT_CYC, counters, max_counters, &num_counters);
+  _test_event(PAPI_L1_TCM, HPX_PAPI_L1_TCM, counters, max_counters, &num_counters);
+  _test_event(PAPI_L2_TCM, HPX_PAPI_L2_TCM, counters, max_counters, &num_counters);
+  _test_event(PAPI_L3_TCM, HPX_PAPI_L3_TCM, counters, max_counters, &num_counters);
+  _test_event(PAPI_TLB_TL, HPX_PAPI_TLB_TL, counters, max_counters, &num_counters);
+  _test_event(PAPI_TOT_INS, HPX_PAPI_TOT_INS, counters, max_counters, &num_counters);
+  _test_event(PAPI_INT_INS, HPX_PAPI_INT_INS, counters, max_counters, &num_counters);
+  _test_event(PAPI_FP_INS, HPX_PAPI_FP_INS, counters, max_counters, &num_counters);
+  _test_event(PAPI_LD_INS, HPX_PAPI_LD_INS, counters, max_counters, &num_counters);
+  _test_event(PAPI_SR_INS, HPX_PAPI_SR_INS, counters, max_counters, &num_counters);
+  _test_event(PAPI_BR_INS, HPX_PAPI_BR_INS, counters, max_counters, &num_counters);
+  _test_event(PAPI_TOT_CYC, HPX_PAPI_TOT_CYC, counters, max_counters, &num_counters);
 
   if(num_counters > max_counters){
-    fprintf(stderr, "Note: maximum available counters is %d\n", max_counters);
+    log_error("Note: maximum available counters is %d\n", max_counters);
     num_counters = max_counters;
   }
 
@@ -144,19 +138,17 @@ int prof_init(struct config *cfg){
   max_counters = num_counters;
   num_counters = 0;
   //actually set the events
-  set_event(PAPI_L1_TCM, HPX_L1_TCM, counters, max_counters, &num_counters);  
-  set_event(PAPI_L2_TCM, HPX_L2_TCM, counters, max_counters, &num_counters);  
-  set_event(PAPI_L3_TCM, HPX_L3_TCM, counters, max_counters, &num_counters);  
-  set_event(PAPI_TLB_TL, HPX_TLB_TL, counters, max_counters, &num_counters);  
-  set_event(PAPI_TOT_INS, HPX_TOT_INS, counters, max_counters, &num_counters);
-  set_event(PAPI_INT_INS, HPX_INT_INS, counters, max_counters, &num_counters);
-  set_event(PAPI_FP_INS, HPX_FP_INS, counters, max_counters, &num_counters);  
-  set_event(PAPI_LD_INS, HPX_LD_INS, counters, max_counters, &num_counters);  
-  set_event(PAPI_SR_INS, HPX_SR_INS, counters, max_counters, &num_counters);  
-  set_event(PAPI_BR_INS, HPX_BR_INS, counters, max_counters, &num_counters);  
-  set_event(PAPI_TOT_CYC, HPX_TOT_CYC, counters, max_counters, &num_counters);
-
-  return LIBHPX_OK;
+  _set_event(PAPI_L1_TCM, HPX_PAPI_L1_TCM, counters, max_counters, &num_counters);  
+  _set_event(PAPI_L2_TCM, HPX_PAPI_L2_TCM, counters, max_counters, &num_counters);  
+  _set_event(PAPI_L3_TCM, HPX_PAPI_L3_TCM, counters, max_counters, &num_counters);  
+  _set_event(PAPI_TLB_TL, HPX_PAPI_TLB_TL, counters, max_counters, &num_counters);  
+  _set_event(PAPI_TOT_INS, HPX_PAPI_TOT_INS, counters, max_counters, &num_counters);
+  _set_event(PAPI_INT_INS, HPX_PAPI_INT_INS, counters, max_counters, &num_counters);
+  _set_event(PAPI_FP_INS, HPX_PAPI_FP_INS, counters, max_counters, &num_counters);  
+  _set_event(PAPI_LD_INS, HPX_PAPI_LD_INS, counters, max_counters, &num_counters);  
+  _set_event(PAPI_SR_INS, HPX_PAPI_SR_INS, counters, max_counters, &num_counters);  
+  _set_event(PAPI_BR_INS, HPX_PAPI_BR_INS, counters, max_counters, &num_counters);  
+  _set_event(PAPI_TOT_CYC, HPX_PAPI_TOT_CYC, counters, max_counters, &num_counters);
 }
 
 void prof_begin(){
@@ -172,7 +164,7 @@ int prof_end(long long *values, int num_values){
   if(_profile_log.papi_running && num_values != _profile_log.num_counters){
     return PAPI_EINVAL;
   }
-  else if(_profile_log.papi_running){
+  if(_profile_log.papi_running){
     retval = PAPI_stop_counters(values, num_values);
     _profile_log.papi_running = false;
     for(int i = 0; i < num_values; i++){
@@ -344,4 +336,3 @@ int prof_accum_papi_counters(long long *values, int num_values){
   return PAPI_OK;
 }
 
-#endif

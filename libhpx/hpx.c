@@ -168,12 +168,7 @@ int hpx_init(int *argc, char ***argv) {
     log("error detected while initializing instrumentation\n");
   }
 
-  //Initialize PAPI profiling, if applicable
-#ifdef HAVE_PAPI
-  if(prof_init(here->config)){
-    log("error detected while initializing PAPI profiling\n");
-  }
-#endif
+  prof_init(here->config);
 
   // Allocate the global heap.
   here->gas = gas_new(here->config, here->boot);
