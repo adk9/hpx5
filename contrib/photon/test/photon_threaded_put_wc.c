@@ -38,11 +38,14 @@ static void __attribute__((used)) dbg_wait(void) {
 #include "photon.h"
 #include "test_cfg.h"
 
-#define PHOTON_BUF_SIZE (1024*64) // 64k
+#define PHOTON_BUF_SIZE (1024*1024*256) // 256M
 #define PHOTON_TAG UINT32_MAX
 #define SQ_SIZE 3000
 
 static int ITERS = 10000;
+static char *send, **recv;
+
+#define RVAL 3
 
 static int sizes[] = {
   0,
@@ -89,7 +92,7 @@ void *test_thread() {
 }
 
 // Have one thread poll local completion only, PROTON_PROBE_EVQ
-void *wait_local_completion_thread() {
+void *wait_local_completion_thread(void *arg) {
   photon_rid request;
   int flag, rc, src;
 
@@ -112,13 +115,32 @@ void *wait_local_completion_thread() {
 void *wait_ledger_completions_thread(void *arg) {
   photon_rid request;
   long inputrank = (long)arg;
-  int flag, src;
+  int flag, src, cind;
+  unsigned tcount = 0;
+  int recvInd[nranks];
   int proc = (nranks > rthreads) ? PHOTON_ANY_SOURCE : inputrank;
   
+  for (int i=0; i<nranks; i++)
+    recvInd[i] = 0;
+
   do {
     photon_probe_completion(proc, &flag, NULL, &request, &src, PHOTON_PROBE_LEDGER);
-    if (flag && request == 0xcafebabe)
+    uint32_t prefix = request>>48;
+    uint32_t iter = request<<32>>32;
+    if (flag && prefix == 0x00ff) {
+      // check recv buffer
+      cind = recvInd[src];
+      for (int i=0; i<sizes[cind]; i++) {
+	if (recv[src][iter*sizes[cind]+i] != RVAL) {
+	  printf("\n\ninvalid entry from src: %d at iter: %d position: %i, value found: %d\n\n",
+		 src, iter, i, recv[src][iter*sizes[cind]+i]);
+	  exit(1);
+	}
+      }
       recvCompT[src]++;
+      if (++tcount == ITERS)
+	recvInd[src]++;
+    }
     if (flag && request == 0xfacefeed)
       gwcCompT[src]++;
   } while (!DONE);
@@ -163,7 +185,6 @@ int main(int argc, char **argv) {
   struct photon_buffer_t lbuf;
   struct photon_buffer_t rbuf[nproc];
   photon_rid recvReq[nproc], sendReq[nproc];
-  char *send, *recv[nproc];
   pthread_t th, recv_threads[rthreads];
   //pthread_t th2;
 
@@ -173,13 +194,14 @@ int main(int argc, char **argv) {
   // only need one send buffer
   //posix_memalign((void **) &send, 8, PHOTON_BUF_SIZE*sizeof(uint8_t));
   send = malloc(PHOTON_BUF_SIZE);
-  memset(send, 1, PHOTON_BUF_SIZE);
+  memset(send, RVAL, PHOTON_BUF_SIZE);
   photon_register_buffer(send, PHOTON_BUF_SIZE);
 
+  recv = malloc(nproc*sizeof(char*));
   // ... but recv buffers for each potential sender
   for (i=0; i<nproc; i++) {
     //posix_memalign((void **) &recv[i], 8, PHOTON_BUF_SIZE*sizeof(uint8_t));
-    recv[i] = malloc(PHOTON_BUF_SIZE);
+    recv[i] = calloc(1, PHOTON_BUF_SIZE);
     photon_register_buffer(recv[i], PHOTON_BUF_SIZE);
   }
 
@@ -253,7 +275,7 @@ int main(int argc, char **argv) {
     printf("%-7s%-9s%-7s%-11s%-12s\n", "Ranks", "Senders", "Bytes", "Sync PUT", "Sync GET");
 
   struct timespec time_s, time_e;
-  for (ns = 0; ns < nproc; ns++) {
+  for (ns = 0; ns < nranks; ns++) {
     for (i=0; i<sizeof(sizes)/sizeof(sizes[0]); i++) {
       if (rank == 0) {
         printf("%-7d", nproc);
@@ -273,10 +295,16 @@ int main(int argc, char **argv) {
         for (k=0; k<ITERS; k++) {
 	  if (sem_wait(&sem) == 0) {
 	    int rc;
+	    struct photon_buffer_t tbuf;
+	    tbuf.addr = rbuf[j].addr + sizes[i]*k;
+	    tbuf.priv = rbuf[j].priv; 
+	    
 	    lbuf.addr = (uintptr_t)send;
 	    lbuf.size = sizes[i];
 	    lbuf.priv = (struct photon_buffer_priv_t){0,0};
-	    rc = photon_put_with_completion(j, sizes[i], &lbuf, &rbuf[j], PHOTON_TAG, 0xcafebabe, 0);
+	    
+	    uint64_t rid = (uint64_t)0x00ff<<48 | k;
+	    rc = photon_put_with_completion(j, sizes[i], &lbuf, &tbuf, PHOTON_TAG, rid, 0);
 	    if (rc == PHOTON_ERROR) {
 	      fprintf(stderr, "Error doing PWC\n");
 	      exit(1);
@@ -284,7 +312,7 @@ int main(int argc, char **argv) {
 	  }
 	}
       }
-      
+
       // clear remaining local completions
       do {
 	if (sem_getvalue(&sem, &val)) continue;
@@ -344,9 +372,15 @@ int main(int argc, char **argv) {
   
   MPI_Barrier(MPI_COMM_WORLD);
 
+  // give recv probing some extra time
+  sleep(1);
+
   DONE = 1;
   // Wait for all threads to complete
   pthread_join(th, NULL);
+  for (t=0; t<rthreads; t++) {
+    pthread_join(recv_threads[t], NULL);
+  }
 
   for (i=0; i<nproc; i++) {
     printf("%d received from %d: pwc_comp: %d, gwc_comp: %d\n", rank, i, recvCompT[i], gwcCompT[i]);

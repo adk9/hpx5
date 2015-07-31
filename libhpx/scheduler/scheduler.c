@@ -162,7 +162,22 @@ void scheduler_abort(struct scheduler *sched) {
   }
 }
 
-int scheduler_nop_handler(void) {
+static int _scheduler_nop_continue(hpx_parcel_t *p, void *env) {
+  dbg_assert(self->nop == p);
   return HPX_SUCCESS;
 }
-LIBHPX_ACTION(HPX_INTERRUPT, 0, scheduler_nop, scheduler_nop_handler);
+
+/// The nop action.
+///
+/// There is only one nop thread for each worker. This thread just keeps
+/// suspending itself. Unlike yielded threads, it does not need to put itself in
+/// the yield queue, it is always accessible through self->nop.
+///
+/// The scheduler_suspend() call will call _schedule() on this stack.
+static int _scheduler_nop_handler(void) {
+  while (true) {
+    dbg_check( scheduler_suspend(_scheduler_nop_continue, NULL, 1) );
+  }
+  unreachable();
+}
+LIBHPX_ACTION(HPX_DEFAULT, 0, scheduler_nop, _scheduler_nop_handler);

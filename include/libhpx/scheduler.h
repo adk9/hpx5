@@ -51,6 +51,9 @@ struct cvar;
 typedef two_lock_queue_t yield_queue_t;
 /// @}
 
+/// The nop action.
+extern HPX_ACTION_DECL(scheduler_nop);
+
 /// The scheduler class.
 ///
 /// The scheduler class represents the shared-memory state of the entire
@@ -90,11 +93,6 @@ struct scheduler *scheduler_new(const struct config *config)
 ///
 /// @param    scheduler The scheduler to free.
 void scheduler_delete(struct scheduler *scheduler);
-
-/// A NOP action for the scheduler.
-///
-/// This action does nothing (i.e. it is a nop).
-extern hpx_action_t scheduler_nop;
 
 /// Starts the scheduler.
 ///
@@ -179,7 +177,10 @@ void scheduler_yield(void);
 ///
 /// @param            f A continuation to run after the context switch.
 /// @param          env The environment to pass to the continuation @p f.
-hpx_status_t scheduler_suspend(int (*f)(hpx_parcel_t *, void*), void *env);
+/// @param        block A flag indicating if it is okay to block before running
+///                     @p f.
+hpx_status_t scheduler_suspend(int (*f)(hpx_parcel_t *, void*), void *env,
+                               int block);
 
 /// Wait for an condition.
 ///
