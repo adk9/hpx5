@@ -12,6 +12,11 @@
 #define PWC_COMMAND_PWC_REQ  ((uint64_t)0x01<<56)
 #define PWC_COMMAND_PWC_REP  ((uint64_t)0x02<<56)
 
+typedef struct pwc_recv_ledger_t {
+  uint64_t   cnt;
+  photon_rid rid;
+} pwc_recv_ledger;
+
 // interface to deal with pwc used along with post/put/get/test
 PHOTON_INTERNAL int photon_pwc_init(photonConfig cfg);
 PHOTON_INTERNAL int photon_pwc_add_req(photonRequest req);
