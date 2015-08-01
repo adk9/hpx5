@@ -455,22 +455,6 @@ _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
   return HPX_SUCCESS;
 }
 
-/// Called by the worker from the scheduler loop to shut itself down.
-///
-/// This will transfer back to the original system stack, returning the shutdown
-/// code. We release our registration of the pthread stack here as well.
-static void
-_worker_shutdown(worker_t *w) {
-  dbg_assert(w == self);
-
-  void **sp = &w->sp;
-  intptr_t shutdown = sync_load(&here->sched->shutdown, SYNC_ACQUIRE);
-  APEX_STOP();
-  INST_EVENT_PARCEL_END(w->current);
-  _transfer((hpx_parcel_t*)&sp, _free_parcel, (void*)shutdown);
-  unreachable();
-}
-
 /// Try to execute a parcel as an interrupt.
 ///
 /// @param            p The parcel to test.
@@ -603,11 +587,6 @@ _worker_shutdown(worker_t *w) {
 
 #ifdef HAVE_APEX
   _apex_worker_shutdown();
-#endif
-
-#ifndef ENABLE_DEBUG
-  void *base = (char*)w->sp - here->config->stacksize;
-  network_release_dma(here->network, base, here->config->stacksize);
 #endif
 
   void **sp = &w->sp;
