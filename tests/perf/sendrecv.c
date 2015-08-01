@@ -10,7 +10,6 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
@@ -54,7 +53,7 @@ static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _recv, _recv_handler,
 static int _main_action(int levels, int work) {
   int avg = 10000;
 
-  hpx_thread_set_affinity(0);
+  printf("Running sendrecv on %d levels with %d work\n", levels, work);
 
   hpx_time_t tick = hpx_time_now();
   printf(" Tick: %g\n", hpx_time_us(tick));
