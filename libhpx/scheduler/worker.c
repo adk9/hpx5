@@ -263,12 +263,14 @@ _execute_thread(hpx_parcel_t *p) {
   unreachable();
 }
 
-/// A thread_transfer() continuation that runs after a worker first starts its
-/// scheduling loop, but before any user defined lightweight threads run.
+/// A thread_transfer() continuation that the native pthread stack uses to
+/// transfer to work. This transfer is special because it understands that there
+/// is no parcel in self->current.
 static int
-_on_startup(hpx_parcel_t *to, void *sp, void *env) {
-  // checkpoint my native stack pointer
-  self->sp = sp;
+_transfer_from_native_thread(hpx_parcel_t *to, void *sp, void *env) {
+  // checkpoint my native parcel
+  dbg_assert(self->current == self->system);
+  parcel_get_stack(self->system)->sp = sp;
   self->current = to;
   return HPX_SUCCESS;
 }
@@ -418,11 +420,6 @@ _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = w->current;
   w->current = to;
 
-  // Don't free the nop parcel, if we happen to get here from there.
-  if (prev == w->nop) {
-    return status;
-  }
-
   ustack_t *stack = parcel_get_stack(prev);
   parcel_set_stack(prev, NULL);
   if (stack) {
@@ -476,19 +473,23 @@ _try_interrupt(hpx_parcel_t *p) {
   return NULL;
 }
 
-/// Schedule something quickly.
+/// Schedule something without blocking.
 ///
-/// This routine does not try very hard to find work, and is used inside of an
-/// LCO when the caller is holding the LCO lock and wants to release it.
+/// Typically this routine is used when the thread we are transferring away from
+/// is going to do something in its continuation that includes
+/// synchronization. If we block in _schedule() trying to find work to transfer
+/// to, then we are blocking that continuation and could create performance
+/// issues or deadlock.
 ///
 /// @param        final A thread to transfer to if we can't find any other
 ///                       work.
 ///
 /// @returns            A parcel to transfer to.
 static hpx_parcel_t *
-_schedule_in_lco(hpx_parcel_t *final) {
+_schedule_nonblock(void) {
+  // the scheduler has shutdown
   if (scheduler_is_shutdown(here->sched)) {
-    return self->nop;
+    return self->system;
   }
 
   hpx_parcel_t *p = _schedule_lifo(self);
@@ -496,11 +497,7 @@ _schedule_in_lco(hpx_parcel_t *final) {
     return p;
   }
 
-  if (final) {
-    return final;
-  }
-
-  return self->nop;
+  return self->system;
 }
 
 /// This chunk of code is used in the scheduler for throttling concurrency.
@@ -577,26 +574,6 @@ inline static void _apex_worker_shutdown(void) {
 }
 #endif
 
-/// Called by the worker from the scheduler loop to shut itself down.
-///
-/// This will transfer back to the original system stack, returning the shutdown
-/// code. We release our registration of the pthread stack here as well.
-static void
-_worker_shutdown(worker_t *w) {
-  dbg_assert(w == self);
-
-#ifdef HAVE_APEX
-  _apex_worker_shutdown();
-#endif
-
-  void **sp = &w->sp;
-  intptr_t shutdown = sync_load(&here->sched->shutdown, SYNC_ACQUIRE);
-  APEX_STOP();
-  INST_EVENT_PARCEL_END(w->current);
-  _transfer((hpx_parcel_t*)&sp, _free_parcel, (void*)shutdown);
-  unreachable();
-}
-
 
 /// The main scheduling "loop."
 ///
@@ -614,25 +591,25 @@ _worker_shutdown(worker_t *w) {
 /// but it is NULL, then the scheduler will return a new thread running the
 /// HPX_ACTION_NULL action.
 ///
-/// @param    in_lco Schedule quickly so caller can release lco.
+/// @param  nonblock Schedule without blocking.
 /// @param     final A final option if the scheduler wants to give up.
 ///
 /// @returns A thread to transfer to.
 static hpx_parcel_t *
-_schedule(bool in_lco, hpx_parcel_t *final) {
+_schedule(bool nonblock, hpx_parcel_t *final) {
   hpx_parcel_t *p = NULL;
   hpx_parcel_t *(*yield_steal_0)(worker_t *);
   hpx_parcel_t *(*yield_steal_1)(worker_t *);
   int r;
 
-  if (in_lco) {
-    p = _schedule_in_lco(final);
+  if (nonblock) {
+    p = _schedule_nonblock();
   }
 
   // We spin in the scheduler until we can find some work to do.
   while (p == NULL) {
     if (scheduler_is_shutdown(here->sched)) {
-      _worker_shutdown(self);
+      return self->system;
     }
 
     // prioritize our mailbox
@@ -695,9 +672,8 @@ worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   w->seed       = seed;
   w->work_first = 0;
   w->nstacks    = 0;
-  w->sp         = NULL;
+  w->system     = NULL;
   w->current    = NULL;
-  w->nop        = NULL;
   w->stacks     = NULL;
   w->active     = true;
   w->profiler   = NULL;
@@ -722,8 +698,6 @@ worker_fini(worker_t *w) {
     hpx_parcel_release(p);
   }
   sync_chase_lev_ws_deque_fini(&w->work);
-
-  dbg_assert(!w->nop);
 
   // and delete any cached stacks
   ustack_t *stack = NULL;
@@ -757,32 +731,49 @@ worker_start(void) {
   dbg_assert(here && here->config && here->network);
 
   // wait for local threads to start up
-  system_barrier_wait(&here->sched->barrier);
+  struct scheduler *sched = here->sched;
+  system_barrier_wait(&sched->barrier);
 
-  dbg_assert(!self->nop);
-  self->nop = parcel_new(HPX_HERE, scheduler_nop, 0, 0, 0, NULL, 0);
+  // allocate a parcel and a stack header for the system stack
+  hpx_parcel_t p;
+  parcel_init(0, 0, 0, 0, 0, NULL, 0, &p);
+  ustack_t stack = {
+    .sp = NULL,
+    .parcel = &p,
+    .next = NULL,
+    .lco_depth = 0,
+    .tls_id = -1,
+    .stack_id = -1,
+    .size = 0,
+    .affinity = -1
+  };
+  p.ustack = &stack;
 
-  // get a parcel to start the scheduler loop with
-  hpx_parcel_t *p = _schedule(true, NULL);
-  if (!p) {
-    dbg_error("failed to acquire an initial parcel.\n");
-  }
+  self->system = &p;
+  self->current = self->system;
 
-  int e = _transfer(p, _on_startup, NULL);
-  if (e) {
-    if (here->rank == 0) {
-      log_error("application exited with a non-zero exit code: %d.\n", e);
+  // the system thread will loop to find work until the scheduler has shutdown
+  while (!scheduler_is_shutdown(sched)) {
+    hpx_parcel_t *p = _schedule(0, NULL);
+    if (self->system == p) {
+      continue;
     }
-    return e;
+    if (_transfer(p, _transfer_from_native_thread, NULL)) {
+      break;
+    }
   }
 
-  dbg_assert(self->nop);
-  if (self->nop->ustack) {
-    thread_delete(self->nop->ustack);
+#ifdef HAVE_APEX
+  _apex_worker_shutdown();
+#endif
+
+  if (sched->shutdown != HPX_SUCCESS) {
+    if (here->rank == 0) {
+      log_error("application exited with a non-zero exit code: %d.\n",
+                sched->shutdown);
+    }
+    return sched->shutdown;
   }
-  parcel_delete(self->nop);
-  self->nop = NULL;
-  self->current = NULL;
 
   return LIBHPX_OK;
 }
@@ -849,7 +840,7 @@ scheduler_spawn(hpx_parcel_t *p) {
   // Don't run anything until we have started up. This lets us use parcel_send()
   // before hpx_run() without worrying about weird work-first or interrupt
   // effects.
-  if (!w->sp) {
+  if (!w->system) {
     _spawn_lifo(w, p);
     return;
   }

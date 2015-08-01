@@ -51,9 +51,6 @@ struct cvar;
 typedef two_lock_queue_t yield_queue_t;
 /// @}
 
-/// The nop action.
-extern HPX_ACTION_DECL(scheduler_nop);
-
 /// The scheduler class.
 ///
 /// The scheduler class represents the shared-memory state of the entire
