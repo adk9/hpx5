@@ -387,11 +387,15 @@ _schedule_steal(worker_t *w) {
 }
 
 /// Send a mail message to another worker.
-static void
-_send_mail(int id, hpx_parcel_t *p) {
-  dbg_assert(id >= 0);
-  worker_t *w = scheduler_get_worker(here->sched, id);
+///
+/// This interface matches the scheduler_transfer continuation interface so that
+/// it can be used in set_affinity.
+static int
+_send_mail(hpx_parcel_t *p, void *worker) {
+  worker_t *w = worker;
+  log_sched("sending %p to worker %d\n", (void*)p, w->id);
   sync_two_lock_queue_enqueue(&w->inbox, p);
+  return LIBHPX_OK;
 }
 
 /// Process my mail queue.
@@ -997,7 +1001,8 @@ _resume(hpx_parcel_t *parcels) {
   while ((p = parcel_stack_pop(&parcels))){
     ustack_t *stack = parcel_get_stack(p);
     if (stack && stack->affinity >= 0) {
-      _send_mail(stack->affinity, p);
+      worker_t *w = scheduler_get_worker(here->sched, stack->affinity);
+      _send_mail(p, w);
     }
     else {
       parcel_launch(p);
@@ -1150,46 +1155,37 @@ hpx_thread_get_tls_id(void) {
   return stack->tls_id;
 }
 
-/// A thread_transfer() continuation that runs when a thread changes its
-/// affinity. This puts the current thread into the mailbox specified in env.
-///
-/// @param     to The thread to transfer to.
-/// @param     sp The stack pointer that we're transferring away from.
-/// @param    env The environment passed in from the transferring thread.
-///
-/// @returns HPX_SUCCESS
-static int
-_move_to(hpx_parcel_t *to, void *sp, void *env) {
-  worker_t *w = self;
-  hpx_parcel_t *prev = w->current;
-  w->current = to;
-  parcel_get_stack(prev)->sp = sp;
-
-  // just send the previous parcel to the targeted worker
-  _send_mail((int)(intptr_t)env, prev);
-  return HPX_SUCCESS;
-}
-
 void
 hpx_thread_set_affinity(int affinity) {
+  // make sure affinity is in bounds
   dbg_assert(affinity >= -1);
   dbg_assert(affinity < here->sched->n_workers);
-  dbg_assert(self->current);
-  dbg_assert(parcel_get_stack(self->current));
 
-  // make sure affinity is in bounds
   worker_t *worker = self;
+  dbg_assert(worker->current);
+  dbg_assert(worker->current->ustack);
+  dbg_assert(worker->current != worker->system);
+
+  // set the soft affinity
   hpx_parcel_t  *p = worker->current;
-  ustack_t *thread = parcel_get_stack(p);
+  ustack_t *thread = p->ustack;
   thread->affinity = affinity;
-  if (affinity < 0 || affinity == self->id) {
+
+  // if this is clearing the affinity return
+  if (affinity < 0) {
     return;
   }
 
+  // if this is already running on the correct worker return
+  if (affinity == worker->id) {
+    return;
+  }
+
+  // move this thread to the proper worker through the mailbox
   INST_EVENT_PARCEL_SUSPEND(p);
   APEX_STOP();
-  hpx_parcel_t *to = _schedule(false, NULL);
-  _transfer(to, _move_to, (void*)(intptr_t)affinity);
+  worker_t *w = scheduler_get_worker(here->sched, affinity);
+  scheduler_suspend(_send_mail, w, 0);
   APEX_RESUME(p);
   INST_EVENT_PARCEL_RESUME(p);
 }
