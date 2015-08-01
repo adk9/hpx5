@@ -41,14 +41,12 @@ typedef struct {
   unsigned             seed;                    // my random seed
   int            work_first;                    // this worker's mode
   int               nstacks;                    // count of freelisted stacks
-  void                  *sp;                    // this worker's native stack
+  hpx_parcel_t      *system;                    // this worker's native parcel
   hpx_parcel_t     *current;                    // current thread
-  hpx_parcel_t         *nop;                    // the nop thread
   struct ustack     *stacks;                    // freelisted stacks
   PAD_TO_CACHELINE(sizeof(pthread_t) +
                    sizeof(int) * 4 +
                    sizeof(void *) +
-                   sizeof(hpx_parcel_t*) +
                    sizeof(hpx_parcel_t*) +
                    sizeof(struct ustack*));
   chase_lev_ws_deque_t work;                    // my work
