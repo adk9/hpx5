@@ -261,18 +261,25 @@ static void _execute_thread(hpx_parcel_t *p) {
   unreachable();
 }
 
+/// Swap the current parcel for a worker.
+static hpx_parcel_t *_swap_current(hpx_parcel_t *p, void *sp, worker_t *w) {
+  hpx_parcel_t *q = w->current;
+  w->current = p;
+  q->ustack->sp = sp;
+  return q;
+}
+
 /// A thread_transfer() continuation that the native pthread stack uses to
 /// transfer to work.
 ///
 /// This transfer is special because it understands that there is no parcel in
 /// self->current.
 static int _transfer_from_native_thread(hpx_parcel_t *to, void *sp, void *env) {
-  dbg_assert(self->current == self->system);
   // checkpoint my native parcel
-  worker_t *w = self;
-  w->system->ustack->sp = sp;
-  w->current = to;
+  hpx_parcel_t *prev = _swap_current(to, sp, self);
+  dbg_assert(prev == self->system);
   return HPX_SUCCESS;
+  (void*)prev;                                 // avoid unused variable warnings
 }
 
 /// Freelist a stack.
@@ -296,8 +303,7 @@ static void _put_stack(worker_t *w, ustack_t *stack) {
 }
 
 /// Try and get a stack from the freelist for the parcel.
-static ustack_t*
-_try_get_stack(worker_t *w, hpx_parcel_t *p) {
+static ustack_t *_try_get_stack(worker_t *w, hpx_parcel_t *p) {
   ustack_t *stack = w->stacks;
   if (stack) {
     w->stacks = stack->next;
@@ -908,11 +914,8 @@ scheduler_spawn(hpx_parcel_t *p) {
 /// 5) We'd like to use a global queue for yielded threads so that they can be
 ///    processed in FIFO order by threads that don't have anything else to do.
 ///
-static int
-_checkpoint_yield(hpx_parcel_t *to, void *sp, void *env) {
-  self->current = to;
-  hpx_parcel_t *prev = env;
-  prev->ustack->sp = sp;
+static int _checkpoint_yield(hpx_parcel_t *to, void *sp, void *env) {
+  hpx_parcel_t *prev = _swap_current(to, sp, self);
   sync_two_lock_queue_enqueue(&here->sched->yielded, prev);
 #ifdef HAVE_APEX
   _apex_yielded = false;
@@ -920,8 +923,7 @@ _checkpoint_yield(hpx_parcel_t *to, void *sp, void *env) {
   return HPX_SUCCESS;
 }
 
-void
-scheduler_yield(void) {
+void scheduler_yield(void) {
   hpx_parcel_t *from = self->current;
   if (!action_is_default(here->actions, from->action)) {
     // task or interrupt can't yield
@@ -939,7 +941,7 @@ scheduler_yield(void) {
   dbg_assert(to->ustack->sp);
 
   // note that we don't instrument yields because they overwhelm tracing
-  _transfer(to, _checkpoint_yield, from);
+  _transfer(to, _checkpoint_yield, NULL);
 }
 
 void
@@ -952,19 +954,20 @@ hpx_thread_yield(void) {
 }
 
 /// A transfer continuation that unlocks a lock.
-static int
-_unlock(hpx_parcel_t *to, void *sp, void *env) {
-  lockable_ptr_t *lock = env;
-  worker_t *w = self;
-  hpx_parcel_t *prev = w->current;
-  w->current = to;
-  prev->ustack->sp = sp;
+///
+/// We don't need to do anything with the previous parcel at this point because
+/// we know that it has already been enqueued on whatever LCO we need it to be.
+///
+/// @param           to The parcel we are transferring to.
+/// @param           sp The stack pointer we are transferring from.
+/// @param         lock A lockable_ptr_t to unlock.
+static int _unlock(hpx_parcel_t *to, void *sp, void *lock) {
+  _swap_current(to, sp, self);
   sync_lockable_ptr_unlock(lock);
   return HPX_SUCCESS;
 }
 
-hpx_status_t
-scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
+hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   // push the current thread onto the condition variable---no lost-update
   // problem here because we're holing the @p lock
   hpx_parcel_t *p = self->current;
@@ -1209,12 +1212,8 @@ typedef struct {
 /// @param          env A _checkpoint_suspend_env_t that describes the closure.
 ///
 /// @return             The status from the closure continuation.
-static int
-_checkpoint_suspend(hpx_parcel_t *to, void *sp, void *env) {
-  worker_t *w = self;
-  hpx_parcel_t *prev = w->current;
-  w->current = to;
-  prev->ustack->sp = sp;
+static int _checkpoint_suspend(hpx_parcel_t *to, void *sp, void *env) {
+  hpx_parcel_t *prev = _swap_current(to, sp, self);
   _checkpoint_suspend_env_t *c = env;
   return c->f(prev, c->env);
 }
