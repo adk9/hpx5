@@ -247,7 +247,8 @@ void lco_unlock(lco_t *lco) {
 
 #ifdef ENABLE_DEBUG
   ustack_t *stack = self->current->ustack;
-  if (stack->lco_depth-- > 0) {
+  int depth = --stack->lco_depth;
+  if (depth != 0) {
     dbg_error("mismatched lco acquire release (lco %p)\n", (void*)lco);
   }
 #endif
