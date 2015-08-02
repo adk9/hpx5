@@ -955,7 +955,10 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   // problem here because we're holing the @p lock
   hpx_parcel_t *p = self->current;
   ustack_t *thread = p->ustack;
-  dbg_assert(thread->lco_depth == 1);
+  DEBUG_IF(thread->lco_depth != 1) {
+    dbg_error("lco acquire/release count %d, should see 1\n", thread->lco_depth);
+  }
+
   hpx_status_t status = cvar_push_thread(condition, thread);
   if (status != HPX_SUCCESS) {
     return status;
