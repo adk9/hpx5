@@ -183,8 +183,11 @@ hpx_parcel_t *parcel_clone(const hpx_parcel_t *p)
 
 void parcel_delete(hpx_parcel_t *p);
 
-struct ustack *parcel_set_stack(hpx_parcel_t *p, struct ustack *stack)
-  HPX_NON_NULL(1);
+/// Swap the stack for a parcel.
+///
+/// For debugging purposes, this operation is done using an atomic exchange when
+/// ENABLE_DEBUG is set.
+struct ustack *parcel_swap_stack(hpx_parcel_t *p, struct ustack *stack);
 
 /// The core send operation.
 ///
