@@ -233,24 +233,25 @@ LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, attach,
 void lco_lock(lco_t *lco) {
   dbg_assert(lco);
   sync_lockable_ptr_lock(&lco->lock);
-  dbg_assert(self && self->current);
-  struct ustack *stack = parcel_get_stack(self->current);
-  dbg_assert(stack);
+  log_lco("%p acquired lco %p\n", (void*)self->current, (void*)lco);
+
+#ifdef ENABLE_DEBUG
+  ustack_t *stack = self->current->ustack;
   stack->lco_depth++;
-  log_lco("%p acquired lco %p (in lco class %p)\n", (void*)self->current, (void*)lco,
-          (void*)_class(lco));
+#endif
 }
 
 void lco_unlock(lco_t *lco) {
   dbg_assert(lco);
-  dbg_assert(self && self->current);
-  struct ustack *stack = parcel_get_stack(self->current);
   log_lco("%p released lco %p\n", (void*)self->current, (void*)lco);
-  dbg_assert(stack);
-  int depth = stack->lco_depth--;
-  dbg_assert_str(depth > 0, "mismatched lco acquire release (lco %p)\n",
-                 (void*)lco);
-  (void)depth;
+
+#ifdef ENABLE_DEBUG
+  ustack_t *stack = self->current->ustack;
+  if (stack->lco_depth-- > 0) {
+    dbg_error("mismatched lco acquire release (lco %p)\n", (void*)lco);
+  }
+#endif
+
   sync_lockable_ptr_unlock(&lco->lock);
 }
 

@@ -186,9 +186,6 @@ void parcel_delete(hpx_parcel_t *p);
 struct ustack *parcel_set_stack(hpx_parcel_t *p, struct ustack *stack)
   HPX_NON_NULL(1);
 
-struct ustack *parcel_get_stack(const hpx_parcel_t *p)
-  HPX_NON_NULL(1);
-
 /// The core send operation.
 ///
 /// This sends the parcel synchronously. This will eagerly serialize the parcel,
