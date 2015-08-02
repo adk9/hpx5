@@ -15,14 +15,37 @@
 #endif
 
 #include <errno.h>
-#include <inttypes.h>
-#include <string.h>
 #ifdef HAVE_HUGETLBFS
+# include <stddef.h>
 # include <hugetlbfs.h>
 #endif
+#include <inttypes.h>
+#include <string.h>
+#include <unistd.h>
 #include <sys/mman.h>
 #include <libhpx/debug.h>
 #include <libhpx/system.h>
+
+/// We use the hugetlbfs interface. In order to avoid locking around the huge
+/// page fd, we simply open the file once at startup.
+#ifdef HAVE_HUGETLBFS
+static int _hugepage_fd = -1;
+static long _hugepage_size = 0;
+static long _hugepage_mask = 0;
+
+static void HPX_CONSTRUCTOR _system_init(void) {
+  _hugepage_fd = hugetlbfs_unlinked_fd();
+  _hugepage_size = gethugepagesize();
+  _hugepage_mask = _hugepage_size - 1;
+  dbg_assert_str(_hugepage_fd > 0, "could not get huge tlb file descriptor.");
+}
+
+static void HPX_DESTRUCTOR _system_fini(void) {
+  if (_hugepage_fd >= 0 && close(_hugepage_fd)) {
+    dbg_error("failed to close the hugetlbfs file descriptor\n");
+  }
+}
+#endif
 
 /// A simple mmap wrapper that guarantees alignment.
 ///
@@ -108,22 +131,19 @@ void *system_mmap_huge_pages(void *UNUSED, void *addr, size_t n, size_t align) {
 #else
   static const int  prot = PROT_READ | PROT_WRITE;
   static const int flags = MAP_PRIVATE;
-  long hugepagesize = gethugepagesize();
-  long hugepagemask = hugepagesize - 1;
-  if (align & hugepagemask) {
+  if (align & _hugepage_mask) {
     log_mem("increasing alignment from %zu to %ld in huge page allocation\n",
-            align, hugepagesize);
-    align = hugepagesize;
+            align, _hugepage_size);
+    align = _hugepage_size;
   }
-  if (n & hugepagemask) {
-    long r = n & hugepagemask;
-    long padding = hugepagesize - r;
+  if (n & _hugepage_mask) {
+    long r = n & _hugepage_mask;
+    long padding = _hugepage_size - r;
     log_mem("adding %ld bytes to huge page allocation request\n", padding);
     n += padding;
   }
-  int fd = hugetlbfs_unlinked_fd();
-  dbg_assert_str(fd > 0, "could not get huge tlb file descriptor.");
-  return _mmap_lucky(addr, n, prot, flags, fd, 0, align);
+  log_mem("mmaping %lu bytes from huge pages\n", n);
+  return _mmap_lucky(addr, n, prot, flags, _hugepage_fd, 0, align);
 #endif
 }
 
@@ -137,13 +157,12 @@ void system_munmap(void *UNUSED, void *addr, size_t size) {
 
 void system_munmap_huge_pages(void *UNUSED, void *addr, size_t size) {
 #ifdef HAVE_HUGETLBFS
-  long hugepagesize = gethugepagesize();
-  long hugepagemask = hugepagesize - 1;
-  if (size & hugepagemask) {
-    long r = size & hugepagemask;
-    long padding = hugepagesize - r;
+  if (size & _hugepage_mask) {
+    long r = size & _hugepage_mask;
+    long padding = _hugepage_size - r;
     size += padding;
   }
+  log_mem("munmapping %lu huge page bytes\n", size);
 #endif
   system_munmap(UNUSED, addr, size);
 }
