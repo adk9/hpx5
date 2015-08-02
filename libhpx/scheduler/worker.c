@@ -279,7 +279,7 @@ static int _transfer_from_native_thread(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = _swap_current(to, sp, self);
   dbg_assert(prev == self->system);
   return HPX_SUCCESS;
-  (void*)prev;                                 // avoid unused variable warnings
+  (void)prev;                                  // avoid unused variable warnings
 }
 
 /// Freelist a stack.
@@ -629,14 +629,13 @@ _schedule(bool nonblock, hpx_parcel_t *final) {
 
 #ifdef HAVE_APEX
     if (_apex_check_throttling() != 0) {
-      continue;
+      break;
     }
 #endif
 
     // if there is any LIFO work, process it
-    p = _schedule_lifo(self);
-    if (p) {
-      continue;
+    if ((p = _schedule_lifo(self))) {
+      break;
     }
 
     // randomly determine if we yield or steal first
@@ -652,21 +651,17 @@ _schedule(bool nonblock, hpx_parcel_t *final) {
       yield_steal_1 = _schedule_yielded;
     }
 
-    p = yield_steal_0(self);
-    if (p) {
-      continue;
+    if ((p = yield_steal_0(self))) {
+      break;
     }
 
-    p = yield_steal_1(self);
-    if (p) {
-      continue;
+    if ((p = yield_steal_1(self))) {
+      break;
     }
 
-    // try to run the final, but only the first time around
-    p = final;
-    if (p) {
-      final = NULL;
-      continue;
+    // try to run the final
+    if ((p = final)) {
+      break;
     }
 
     // couldn't find any work to do, we sleep for a while before looking again
