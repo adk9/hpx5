@@ -242,7 +242,3 @@ struct ustack* parcel_set_stack(hpx_parcel_t *p, struct ustack *next) {
     return NULL;
   }
 }
-
-struct ustack *parcel_get_stack(const hpx_parcel_t *p) {
-  return p->ustack;
-}
