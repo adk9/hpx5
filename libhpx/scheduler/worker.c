@@ -282,8 +282,10 @@ static int _transfer_from_native_thread(hpx_parcel_t *to, void *sp, void *env) {
   (void)prev;                                  // avoid unused variable warnings
 }
 
-/// Freelist a stack.
-static void _put_stack(worker_t *w, ustack_t *stack) {
+/// Freelist a parcel's stack.
+static void _put_stack(hpx_parcel_t *p, worker_t *w) {
+  ustack_t *stack = parcel_swap_stack(p, NULL);
+  dbg_assert(stack);
   stack->next = w->stacks;
   w->stacks = stack;
   int32_t count = ++w->nstacks;
@@ -423,25 +425,19 @@ static void _handle_mail(worker_t *w) {
   }
 }
 
-/// A transfer continuation that frees the current parcel.
+/// A parcel_suspend continuation that frees the current parcel.
 ///
 /// During normal thread termination, the current thread and parcel need to be
 /// freed. This can only be done safely once we've transferred away from that
 /// thread (otherwise we've freed a stack that we're currently running on). This
 /// continuation performs that operation.
-static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
-  worker_t *w = self;
-  int status = (intptr_t)env;
-  hpx_parcel_t *prev = _swap_current(to, sp, w);
-  ustack_t *stack = parcel_swap_stack(prev, NULL);
-  if (stack) {
-    _put_stack(w, stack);
-  }
-  parcel_delete(prev);
-  return status;
+static int _free_parcel(hpx_parcel_t *p, void *env) {
+  _put_stack(p, self);
+  parcel_delete(p);
+  return (intptr_t)env;
 }
 
-/// A transfer continuation that resends the current parcel.
+/// A parcel_suspend continuation that resends the current parcel.
 ///
 /// If a parcel has arrived at the wrong locality because its target address has
 /// been moved, then the application user will want to resend the parcel and
@@ -450,14 +446,9 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
 ///
 /// The current thread is terminating however, so we release the stack we were
 /// running on.
-static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
-  worker_t *w = self;
-  hpx_parcel_t *prev = _swap_current(to, sp, w);
-  ustack_t *stack = parcel_swap_stack(prev, NULL);
-  if (stack) {
-    _put_stack(w, stack);
-  }
-  hpx_parcel_send(prev, HPX_NULL);
+static int _resend_parcel(hpx_parcel_t *p, void *env) {
+  _put_stack(p, self);
+  hpx_parcel_send(p, HPX_NULL);
   return HPX_SUCCESS;
 }
 
@@ -1042,15 +1033,10 @@ _continue(worker_t *worker, hpx_status_t status, void (*cleanup)(void*),
   // return any remaining credit
   process_recover_credit(parcel);
 
-  hpx_parcel_t *to = _schedule(false, NULL);
-  dbg_assert(to);
-  dbg_assert(to->ustack);
-  dbg_assert(to->ustack->sp);
   INST_EVENT_PARCEL_END(parcel);
   APEX_STOP();
-  _transfer(to, _free_parcel, (void*)(intptr_t)status);
+  scheduler_suspend(_free_parcel, (void*)(intptr_t)status, 1);
   unreachable();
-  // no need to resume timer
 }
 
 void
@@ -1075,11 +1061,10 @@ void hpx_thread_exit(int status) {
   hpx_parcel_t *parcel = worker->current;
 
   if (status == HPX_RESEND) {
-    hpx_parcel_t *to = _schedule(true, NULL);
     INST_EVENT_PARCEL_END(parcel);
     APEX_STOP();
     INST_EVENT_PARCEL_RESEND(parcel);
-    _transfer(to, _resend_parcel, NULL);
+    scheduler_suspend(_resend_parcel, NULL, 0);
     unreachable();
   }
 
