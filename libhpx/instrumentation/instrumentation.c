@@ -63,6 +63,8 @@ static void _dump_actions() {
     log_error("failed to open action id file %s\n", file_path);
   }
 
+  free(file_path);
+
   const struct action_table *table = here->actions;
   int num_actions = action_table_size(table);
   for (int i = 0; i < num_actions; i++) {
