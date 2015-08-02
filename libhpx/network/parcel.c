@@ -237,7 +237,7 @@ struct ustack* parcel_swap_stack(hpx_parcel_t *p, struct ustack *next) {
 #ifdef ENABLE_DEBUG
     return sync_swap(&p->ustack, next, SYNC_ACQ_REL);
 #else
-    ustack_t *old = p->ustack;
+    struct ustack *old = p->ustack;
     p->ustack = next;
     return old;
 #endif
