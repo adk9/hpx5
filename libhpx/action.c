@@ -316,34 +316,26 @@ int action_call_va(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
 }
 
 int action_execute(hpx_parcel_t *p) {
-  const _table_t *table = _get_actions();
-
   dbg_assert(p->target != HPX_NULL);
-  hpx_action_t id = hpx_parcel_get_action(p);
-  void *args = hpx_parcel_get_data(p);
+  dbg_assert_str(p->action != HPX_ACTION_INVALID, "registration error\n");
+  dbg_assert_str(p->action < _get_actions()->n, "action, %d, out of bounds [0,%u)\n", p->action, _get_actions()->n);
 
-  dbg_assert_str(id != HPX_ACTION_INVALID,
-                 "action registration is not complete\n");
-
-  dbg_assert_str(id < table->n, "action id, %d, out of bounds [0,%u)\n", id,
-                 table->n);
-
+  hpx_action_t              id = p->action;
+  const _table_t        *table = _get_actions();
   hpx_action_handler_t handler = table->entries[id].handler;
-  ffi_cif *cif = table->entries[id].cif;
-  bool pinned = action_is_pinned(table, id);
+  ffi_cif                 *cif = table->entries[id].cif;
+  bool                  pinned = action_is_pinned(table, id);
+  void                   *args = hpx_parcel_get_data(p);
 
-  // allocate 8 bytes to avoid https://github.com/atgreen/libffi/issues/35
-  char ffiret[8];
-  int *ret = (int*)&ffiret[0];
+  if (!pinned && !cif) {
+    return handler(args, p->size);
+  }
 
   if (!pinned) {
-    if (!cif) {
-      return handler(args, p->size);
-    }
-    else {
-      ffi_raw_call(cif, FFI_FN(handler), ret, args);
-      return *ret;
-    }
+    char ffiret[8];               // https://github.com/atgreen/libffi/issues/35
+    int *ret = (int*)&ffiret[0];
+    ffi_raw_call(cif, FFI_FN(handler), ret, args);
+    return *ret;
   }
 
   void *target;
@@ -355,13 +347,14 @@ int action_execute(hpx_parcel_t *p) {
   if (!cif) {
     return ((hpx_pinned_action_handler_t)handler)(target, args, p->size);
   }
-  else {
-    void *avalue[cif->nargs];
-    ffi_raw_to_ptrarray(cif, args, avalue);
-    avalue[0] = &target;
-    ffi_call(cif, FFI_FN(handler), ret, avalue);
-    return *ret;
-  }
+
+  void *avalue[cif->nargs];
+  ffi_raw_to_ptrarray(cif, args, avalue);
+  avalue[0] = &target;
+  char ffiret[8];               // https://github.com/atgreen/libffi/issues/35
+  int *ret = (int*)&ffiret[0];
+  ffi_call(cif, FFI_FN(handler), ret, avalue);
+  return *ret;
 }
 
 bool action_is_pinned(const struct action_table *table, hpx_action_t id) {
