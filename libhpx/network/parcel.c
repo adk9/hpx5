@@ -230,15 +230,15 @@ void parcel_delete(hpx_parcel_t *p) {
   as_free(AS_REGISTERED, p);
 }
 
-struct ustack* parcel_set_stack(hpx_parcel_t *p, struct ustack *next) {
+struct ustack* parcel_swap_stack(hpx_parcel_t *p, struct ustack *next) {
   assert((uintptr_t)next % sizeof(void*) == 0);
   // This can detect races in the scheduler when two threads try and process the
   // same parcel.
-  if (DEBUG) {
+#ifdef ENABLE_DEBUG
     return sync_swap(&p->ustack, next, SYNC_ACQ_REL);
-  }
-  else {
+#else
+    ustack_t *old = p->ustack;
     p->ustack = next;
-    return NULL;
-  }
+    return old;
+#endif
 }

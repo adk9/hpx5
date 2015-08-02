@@ -325,12 +325,15 @@ static hpx_parcel_t *_try_bind(worker_t *w, hpx_parcel_t *p) {
   if (!stack) {
     stack = thread_new(p, _execute_thread);
   }
-  ustack_t *old = parcel_set_stack(p, stack);
-  dbg_assert_str(!old, "replaced stack %p with %p in %p\n", (void*)old,
-                 (void*)stack,
-                 (void*)p);
+
+  ustack_t *old = parcel_swap_stack(p, stack);
+  DEBUG_IF(old != NULL) {
+    dbg_error("Replaced stack %p with %p in %p: this usually means two workers "
+              "are trying to start a lightweight thread at the same time.\n",
+              (void*)old, (void*)stack, (void*)p);
+  }
   return p;
-  (void)old;
+  (void)old;                                    // avoid unused variable warning
 }
 
 /// Add a parcel to the top of the worker's work queue.
@@ -426,8 +429,7 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = w->current;
   w->current = to;
 
-  ustack_t *stack = prev->ustack;
-  parcel_set_stack(prev, NULL);
+  ustack_t *stack = parcel_swap_stack(prev, NULL);
   if (stack) {
     _put_stack(w, stack);
   }
@@ -444,13 +446,11 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
 ///
 /// The current thread is terminating however, so we release the stack we were
 /// running on.
-static int
-_resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
+static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
   worker_t *w = self;
   w->current = to;
   hpx_parcel_t *prev = env;
-  ustack_t *stack = prev->ustack;
-  parcel_set_stack(prev, NULL);
+  ustack_t *stack = parcel_swap_stack(prev, NULL);
   if (stack) {
     _put_stack(w, stack);
   }
@@ -1075,8 +1075,7 @@ _hpx_thread_continue_cleanup(void (*cleanup)(void*), void *env, int nargs, ...)
   va_end(vargs);
 }
 
-void
-hpx_thread_exit(int status) {
+void hpx_thread_exit(int status) {
   worker_t *worker = self;
   hpx_parcel_t *parcel = worker->current;
 
