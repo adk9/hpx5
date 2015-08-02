@@ -35,9 +35,11 @@ static long _hugepage_mask = 0;
 
 static void HPX_CONSTRUCTOR _system_init(void) {
   _hugepage_fd = hugetlbfs_unlinked_fd();
+  if (_hugepage_fd < 0) {
+    log_error("could not get huge tlb file descriptor.\n");
+  }
   _hugepage_size = gethugepagesize();
   _hugepage_mask = _hugepage_size - 1;
-  dbg_assert_str(_hugepage_fd > 0, "could not get huge tlb file descriptor.");
 }
 
 static void HPX_DESTRUCTOR _system_fini(void) {
@@ -143,7 +145,12 @@ void *system_mmap_huge_pages(void *UNUSED, void *addr, size_t n, size_t align) {
     n += padding;
   }
   log_mem("mmaping %lu bytes from huge pages\n", n);
-  return _mmap_lucky(addr, n, prot, flags, _hugepage_fd, 0, align);
+  if (_hugepage_fd >= 0) {
+    return _mmap_lucky(addr, n, prot, flags, _hugepage_fd, 0, align);
+  }
+  else {
+    return system_mmap(UNUSED, addr, n, align);
+  }
 #endif
 }
 
