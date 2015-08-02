@@ -432,9 +432,7 @@ static void _handle_mail(worker_t *w) {
 static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
   worker_t *w = self;
   int status = (intptr_t)env;
-  hpx_parcel_t *prev = w->current;
-  w->current = to;
-
+  hpx_parcel_t *prev = _swap_current(to, sp, w);
   ustack_t *stack = parcel_swap_stack(prev, NULL);
   if (stack) {
     _put_stack(w, stack);
@@ -454,8 +452,7 @@ static int _free_parcel(hpx_parcel_t *to, void *sp, void *env) {
 /// running on.
 static int _resend_parcel(hpx_parcel_t *to, void *sp, void *env) {
   worker_t *w = self;
-  w->current = to;
-  hpx_parcel_t *prev = env;
+  hpx_parcel_t *prev = _swap_current(to, sp, w);
   ustack_t *stack = parcel_swap_stack(prev, NULL);
   if (stack) {
     _put_stack(w, stack);
@@ -1082,7 +1079,7 @@ void hpx_thread_exit(int status) {
     INST_EVENT_PARCEL_END(parcel);
     APEX_STOP();
     INST_EVENT_PARCEL_RESEND(parcel);
-    _transfer(to, _resend_parcel, parcel);
+    _transfer(to, _resend_parcel, NULL);
     unreachable();
   }
 
