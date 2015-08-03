@@ -133,6 +133,11 @@ _mpi_finish(void *status, int *src, int *bytes) {
 
 static void
 _mpi_delete(void *mpi) {
+  int finalized;
+  MPI_Finalized(&finalized);
+  if (!finalized) {
+    MPI_Finalize();
+  }
   free(mpi);
 }
 
