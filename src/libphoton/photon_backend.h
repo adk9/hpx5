@@ -21,9 +21,9 @@
 
 #define PHOTON_GET_CQ_IND(n, i) ((n > 1) ? (i % n) : 0)
 
-#define DEF_EAGER_BUF_SIZE   (1024*256) // 256K bytes of space per rank
-#define DEF_SMALL_MSG_SIZE   (4096)
-#define DEF_LEDGER_SIZE      (64)       // This should not exceed MCA max_qp_wr (typically 16K)
+#define DEF_EAGER_BUF_SIZE   (1024*64) // 64K bytes of space per rank
+#define DEF_SMALL_MSG_SIZE   (1024)
+#define DEF_LEDGER_SIZE      (64)      // This should not exceed MCA max_qp_wr (typically 16K)
 #define DEF_SP_SIZE          (128)
 #define DEF_NUM_CQ           1
 #define DEF_USE_RCQ          0

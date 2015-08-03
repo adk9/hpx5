@@ -220,7 +220,7 @@ static int _photon_init(photonConfig cfg, ProcessInfo *info, photonBI ss) {
   // allocate buffers for UD send/recv operations (after backend initializes)
   uint64_t msgbuf_size, p_size;
   int p_offset, p_hsize;
-  if (!strcmp(cfg->backend, "verbs") && cfg->ibv.use_ud) {
+  if ((cfg->backend == PHOTON_BACKEND_VERBS) && cfg->ibv.use_ud) {
     // we need to ask the backend about the max msg size it can support for UD
     int *mtu, size;
     if (__photon_backend->get_info(photon_processes, PHOTON_ANY_SOURCE, (void**)&mtu, &size, PHOTON_MTU)) {
