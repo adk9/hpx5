@@ -456,21 +456,19 @@ static int _resend_parcel(hpx_parcel_t *p, void *env) {
 ///
 /// @param            p The parcel to test.
 ///
-/// @returns       NULL The parcel was processed as an interrupt.
-///                  @p The parcel was not an interrupt.
-static hpx_parcel_t *
-_try_interrupt(hpx_parcel_t *p) {
+/// @returns          1 The parcel was processed as an interrupt.
+static int _try_interrupt(hpx_parcel_t *p) {
   if (scheduler_is_shutdown(here->sched)) {
-    return p;
+    return 0;
   }
 
   if (!action_is_interrupt(here->actions, p->action)) {
-    return p;
+    return 0;
   }
 
   _execute_interrupt(p);
   hpx_parcel_release(p);
-  return NULL;
+  return 1;
 }
 
 /// Schedule something without blocking.
@@ -839,9 +837,11 @@ scheduler_spawn(hpx_parcel_t *p) {
     return;
   }
 
-  // We always try and run interrupts eagerly. This should always be safe.
-  p = _try_interrupt(p);
-  if (!p) {
+  hpx_parcel_t *current = w->current;
+  ustack_t *thread = current->ustack;
+
+  // If we're not holding locks, then we can try and run interrupts.
+  if (!thread->lco_depth && _try_interrupt(p)) {
     return;
   }
 
@@ -856,9 +856,7 @@ scheduler_spawn(hpx_parcel_t *p) {
   // Otherwise we're in work-first mode, which means we should do our best to go
   // ahead and run the parcel ourselves. There are some things that inhibit
   // work-first scheduling.
-  hpx_parcel_t *current = w->current;
-  ustack_t *thread = current->ustack;
-
+  //
   // 1) We can't work-first if we are holding an LCO lock.
   if (thread->lco_depth) {
     _push_lifo(p, w);
@@ -955,9 +953,9 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   // problem here because we're holing the @p lock
   hpx_parcel_t *p = self->current;
   ustack_t *thread = p->ustack;
-  DEBUG_IF(thread->lco_depth != 1) {
-    dbg_error("lco acquire/release count %d, should see 1\n", thread->lco_depth);
-  }
+
+  // we had better be holding a lock here
+  dbg_assert(thread->lco_depth > 0);
 
   hpx_status_t status = cvar_push_thread(condition, thread);
   if (status != HPX_SUCCESS) {

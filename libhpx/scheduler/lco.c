@@ -234,25 +234,18 @@ void lco_lock(lco_t *lco) {
   dbg_assert(lco);
   sync_lockable_ptr_lock(&lco->lock);
   log_lco("%p acquired lco %p\n", (void*)self->current, (void*)lco);
-
-#ifdef ENABLE_DEBUG
   ustack_t *stack = self->current->ustack;
   stack->lco_depth++;
-#endif
 }
 
 void lco_unlock(lco_t *lco) {
   dbg_assert(lco);
   log_lco("%p released lco %p\n", (void*)self->current, (void*)lco);
-
-#ifdef ENABLE_DEBUG
   ustack_t *stack = self->current->ustack;
   int depth = --stack->lco_depth;
-  if (depth != 0) {
+  DEBUG_IF(depth != 0) {
     dbg_error("mismatched lco acquire release (lco %p)\n", (void*)lco);
   }
-#endif
-
   sync_lockable_ptr_unlock(&lco->lock);
 }
 
