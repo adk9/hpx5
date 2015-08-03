@@ -71,7 +71,7 @@ struct photon_config_t {
   
   void *comm;               // Optional communicator to use for exchange
   int meta_exch;            // See PHOTON_EXCH types below (default MPI)
-  enum photon_cfg_backend_t backend; // select a backend for photon to use
+  photon_cfg_backend_t backend; // select a backend for photon to use
 };
 
 typedef struct photon_config_t * photonConfig;
