@@ -665,6 +665,8 @@ worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   w->seed       = seed;
   w->work_first = 0;
   w->nstacks    = 0;
+  w->in_lco     = 0;
+  w->UNUSED     = 0;
   w->system     = NULL;
   w->current    = NULL;
   w->stacks     = NULL;
@@ -734,7 +736,6 @@ worker_start(void) {
     .sp = NULL,
     .parcel = &p,
     .next = NULL,
-    .lco_depth = 0,
     .tls_id = -1,
     .stack_id = -1,
     .size = 0,
@@ -838,7 +839,7 @@ scheduler_spawn(hpx_parcel_t *p) {
 
   // If we're holding a lock then we have to push the spawn for later
   // processing, or we could end up causing a deadlock.
-  if (current->ustack->lco_depth) {
+  if (w->in_lco) {
     _push_lifo(p, w);
     return;
   }
@@ -942,6 +943,8 @@ hpx_thread_yield(void) {
 /// @param         lock A lockable_ptr_t to unlock.
 static int _unlock(hpx_parcel_t *to, void *sp, void *lock) {
   _swap_current(to, sp, self);
+  dbg_assert(self->in_lco == 1);
+  self->in_lco = 0;
   sync_lockable_ptr_unlock(lock);
   return HPX_SUCCESS;
 }
@@ -953,7 +956,7 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   ustack_t *thread = p->ustack;
 
   // we had better be holding a lock here
-  dbg_assert(thread->lco_depth > 0);
+  dbg_assert(self->in_lco > 0);
 
   hpx_status_t status = cvar_push_thread(condition, thread);
   if (status != HPX_SUCCESS) {
@@ -969,6 +972,8 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
 
   // reacquire the lco lock before returning
   sync_lockable_ptr_lock(lock);
+  dbg_assert(self->in_lco == 0);
+  self->in_lco = 1;
   return cvar_get_error(condition);
 }
 

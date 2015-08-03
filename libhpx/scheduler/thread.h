@@ -27,7 +27,6 @@ typedef struct ustack {
   void             *sp;                         // checkpointed stack pointer
   hpx_parcel_t *parcel;                         // the progenitor parcel
   struct ustack  *next;                         // freelists and condition vars
-  int        lco_depth;                         // how many lco locks we hold
   int           tls_id;
   int         stack_id;
   int             size;
