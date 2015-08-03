@@ -829,55 +829,53 @@ scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
   COUNTER_SAMPLE(w->stats.spawns++);
 
-  // Don't run anything until we have started up. This lets us use parcel_send()
-  // before hpx_run() without worrying about weird work-first or interrupt
-  // effects.
-  if (!w->system) {
-    _push_lifo(p, w);
-    return;
-  }
-
+  // Don't run anything until we have started up.
   hpx_parcel_t *current = w->current;
-  ustack_t *thread = current->ustack;
-
-  // If we're not holding locks, then we can try and run interrupts.
-  if (!thread->lco_depth && _try_interrupt(p)) {
-    return;
-  }
-
-  // If we're in help-first mode, or we're supposed to shutdown, we go ahead and
-  // buffer this parcel. It will get pulled from the buffer later for
-  // processing.
-  if (!w->work_first || scheduler_is_shutdown(here->sched)) {
+  if (!current) {
     _push_lifo(p, w);
     return;
   }
 
-  // Otherwise we're in work-first mode, which means we should do our best to go
-  // ahead and run the parcel ourselves. There are some things that inhibit
-  // work-first scheduling.
-  //
-  // 1) We can't work-first if we are holding an LCO lock.
-  if (thread->lco_depth) {
+  // If we're holding a lock then we have to push the spawn for later
+  // processing, or we could end up causing a deadlock.
+  if (current->ustack->lco_depth) {
     _push_lifo(p, w);
     return;
   }
 
-  // 2) We can't work-first from an interrupt.
+  // We always try and run interrupts eagerly.
+  if (_try_interrupt(p)) {
+    return;
+  }
+
+  // If we're not in work-first mode, then push the spawn for later.
+  if (!w->work_first) {
+    _push_lifo(p, w);
+    return;
+  }
+
+  // If we are running an interrupt, then we can't work-first since we don't
+  // have our own stack to suspend.
   if (action_is_interrupt(here->actions, current->action)) {
     _push_lifo(p, w);
     return;
   }
 
-  // We can process the parcel work-first, but we need to use a thread to do it
-  // so that our continuation can be stolen.
+  // If we're shutting down then push the parcel and return. This prevents an
+  // infinite spawn from inhibiting termination.
+  if (scheduler_is_shutdown(here->sched)) {
+    _push_lifo(p, w);
+    return;
+  }
+
+  // Transfer to the parcel, checkpointing the current thread.
   INST_EVENT_PARCEL_SUSPEND(current);
   APEX_STOP();
   p = _try_bind(w, p);
   int e = _transfer(p, _work_first, NULL);
+  dbg_check(e, "Detected a work-first scheduling error: %s\n", hpx_strerror(e));
   APEX_RESUME(current);
   INST_EVENT_PARCEL_RESUME(current);
-  dbg_check(e, "Detected a work-first scheduling error: %s\n", hpx_strerror(e));
 }
 
 /// This is the continuation that we use to yield a thread.
