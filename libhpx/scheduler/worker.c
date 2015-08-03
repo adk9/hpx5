@@ -206,9 +206,18 @@ _continue_parcel(hpx_parcel_t *p, hpx_status_t status, int nargs, va_list *args)
 ///
 /// @param            p The parcel that describes the interrupt.
 static void _execute_interrupt(hpx_parcel_t *p) {
+
+  // Exchange the current thread pointer for the duration of the call. This
+  // allows the application code to access thread data, e.g., the current
+  // target.
+  hpx_parcel_t *q = self->current;
+  self->current = p;
   INST_EVENT_PARCEL_RUN(p);
   int e = action_execute(p);
   INST_EVENT_PARCEL_END(p);
+
+  // Restore the current thread pointer.
+  self->current = q;
 
   switch (e) {
    case HPX_SUCCESS:
