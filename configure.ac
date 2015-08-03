@@ -180,7 +180,7 @@ AS_IF([test "x$have_tbbmalloc" == xyes -o "x$have_libcuckoo" == xyes],
 # Configure all of the automake conditionals that our build requires.
 HPX_DO_AM_CONDITIONALS
 
-# do any remaining substitutions and configure files
+# Substitute the variables required for libtool linking of libhpx internally.
 AC_SUBST(LIBHPX_CPPFLAGS)
 AC_SUBST(LIBHPX_CFLAGS)
 AC_SUBST(LIBHPX_CXXFLAGS)
@@ -188,6 +188,13 @@ AC_SUBST(LIBHPX_CCASFLAGS)
 AC_SUBST(LIBHPX_LDFLAGS)
 AC_SUBST(LIBHPX_LIBADD)
 AC_SUBST(LIBHPX_LIBS)
+
+# Substitute the variables required for pkg-config linking of libhpx
+# externally. Note if we're only building libhpx.a then the --libs output must
+# contain all private dependencies as well.
+AS_IF([test "x$enable_shared" != xyes],
+  [HPX_PC_PUBLIC_LIBS="$HPX_PC_PUBLIC_LIBS $HPX_PC_PRIVATE_LIBS"
+   HPX_PC_REQUIRES_PKGS="$HPX_PC_REQUIRES_PKGS $HPX_PC_PRIVATE_PKGS"])
 
 AC_SUBST(HPX_PC_CFLAGS)
 AC_SUBST(HPX_PC_PUBLIC_LIBS)
