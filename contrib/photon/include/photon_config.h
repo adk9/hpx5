@@ -13,6 +13,23 @@
 #ifndef PHOTON_CONFIG_H
 #define PHOTON_CONFIG_H
 
+//! Defining the network backends Photon can use
+typedef enum {
+  PHOTON_BACKEND_DEFAULT = 0, //!< Set a default (verbs).
+  PHOTON_BACKEND_VERBS,       //!< Use Verbs photon backend.
+  PHOTON_BACKEND_UGNI,        //!< Use uGNI photon backend.
+  PHOTON_BACKEND_FI,          //!< Use libfabric backend.
+  PHOTON_BACKEND_MAX
+} photon_cfg_backend_t;
+
+static const char* const PHOTON_BACKEND_TO_STRING[] = {
+  "default",
+  "verbs",
+  "ugni",
+  "fi",
+  "INVALID_BACKEND"
+};
+
 struct photon_config_t {
   uint64_t address;         // i.e. process rank
   int nproc;                // Total number of processes
@@ -37,9 +54,9 @@ struct photon_config_t {
   } forwarder;
 
   struct {                  // Various buffer and message sizes (-1 for defaults)
-    int eager_buf_size;     // Size of eager buffer per rank in bytes (default 128K, set 0 to disable)
-    int small_msg_size;     // Messages <= bytes will use eager buffers (default 8192, set 0 to disable)
-    int small_pwc_size;     // Messages <= bytes will be coalesced in PWC (default 8192, set 0 to disable)
+    int eager_buf_size;     // Size of eager buffer per rank in bytes (default 64K, set 0 to disable)
+    int small_msg_size;     // Messages <= bytes will use eager buffers (default 1024, set 0 to disable)
+    int small_pwc_size;     // Messages <= bytes will be coalesced in PWC (default 1024, set 0 to disable)
     int ledger_entries;     // The number of ledger entries (default 64)
     int max_rd;             // Max number of request descriptors, power of 2 (default 1M, set 0 for unbounded)
     int default_rd;         // Initial number of request descriptors allocated per peer (default 1024)
@@ -54,7 +71,7 @@ struct photon_config_t {
   
   void *comm;               // Optional communicator to use for exchange
   int meta_exch;            // See PHOTON_EXCH types below (default MPI)
-  char *backend;            // "verbs" or "ugni"
+  photon_cfg_backend_t backend; // select a backend for photon to use
 };
 
 typedef struct photon_config_t * photonConfig;
