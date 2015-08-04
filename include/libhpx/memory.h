@@ -36,7 +36,7 @@ enum {
 /// context.
 
 # include <stdlib.h>
-
+#include <libhpx/debug.h>
 static inline void as_join(int id) {
 }
 
@@ -55,9 +55,8 @@ static inline void *as_calloc(int id, size_t nmemb, size_t bytes) {
 }
 
 static inline void *as_memalign(int id, size_t boundary, size_t size) {
-  void *ptr;
-  if (posix_memalign(&ptr, boundary, size) != 0)
-    ptr = NULL;
+  void *ptr = NULL;
+  dbg_check(posix_memalign(&ptr, boundary, size));
   return ptr;
 }
 

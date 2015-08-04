@@ -55,9 +55,9 @@ static int _barrier(const boot_t *boot) {
   return LIBHPX_OK;
 }
 
-static int _allgather(const boot_t *boot, void *restrict src,
+static int _allgather(const boot_t *boot, const void *restrict src,
                       void *restrict dest, int n) {
-  int e = MPI_Allgather(src, n, MPI_BYTE, dest, n, MPI_BYTE, MPI_COMM_WORLD);
+  int e = MPI_Allgather((void *)src, n, MPI_BYTE, dest, n, MPI_BYTE, MPI_COMM_WORLD);
   if (MPI_SUCCESS != e) {
     dbg_error("failed MPI_Allgather %d.\n", e);
   }
@@ -65,7 +65,7 @@ static int _allgather(const boot_t *boot, void *restrict src,
 }
 
 static int _mpi_alltoall(const void *boot, void *restrict dest,
-                         void *restrict src, int n, int stride) {
+                         const void *restrict src, int n, int stride) {
   const boot_t *mpi = boot;
   int ranks = mpi->n_ranks(mpi);
   int *counts = calloc(ranks, sizeof(*counts));
@@ -76,7 +76,7 @@ static int _mpi_alltoall(const void *boot, void *restrict dest,
     counts[i] = n;
     offsets[i] = i * stride;
   }
-  if (MPI_SUCCESS != MPI_Alltoallv(src, counts, offsets, MPI_BYTE,
+  if (MPI_SUCCESS != MPI_Alltoallv((void *)src, counts, offsets, MPI_BYTE,
                                    dest, counts, offsets, MPI_BYTE,
                                    MPI_COMM_WORLD)) {
     dbg_error("MPI_Alltoallv failed at bootstrap\n");
