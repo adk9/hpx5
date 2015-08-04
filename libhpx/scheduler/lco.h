@@ -34,7 +34,11 @@ typedef union {
   uintptr_t            bits;
 } lco_t HPX_ALIGNED(16);
 
-// The LCO abstract class interface.
+
+/// The action used to propagate an LCO error.
+extern HPX_ACTION_DECL(lco_error);
+
+/// The LCO abstract class interface.
 ///
 /// All LCOs will implement this interface, which is accessible through the
 /// hpx_lco set of generic actions. Concrete classes may implement extended

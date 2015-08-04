@@ -146,9 +146,8 @@ static int _lco_error_handler(lco_t *lco, void *args, size_t n) {
   hpx_status_t *code = args;
   return _error(lco, *code);
 }
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _lco_error,
-                     _lco_error_handler, HPX_POINTER, HPX_POINTER,
-                     HPX_SIZE_T);
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, lco_error,
+              _lco_error_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 int hpx_lco_reset_action_handler(lco_t *lco) {
   return _reset(lco);
@@ -325,7 +324,7 @@ void hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync) {
   }
 
   size_t size = sizeof(code);
-  int e = hpx_call_async(target, _lco_error, HPX_NULL, rsync, &code, size);
+  int e = hpx_call_async(target, lco_error, HPX_NULL, rsync, &code, size);
   dbg_check(e, "Could not forward lco_error\n");
 }
 

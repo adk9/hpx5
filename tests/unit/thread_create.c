@@ -112,11 +112,8 @@ static int thread_exit_handler(void) {
   uint64_t value = SET_CONT_VALUE;
   hpx_status_t status = hpx_call(HPX_HERE, _worker, done);
   assert_msg(status == HPX_SUCCESS, "Could not normally terminate the thread");
-  hpx_lco_wait(done);
-
-  hpx_lco_get(done, sizeof(uint64_t), &value);
-  assert(value == HPX_SUCCESS);
-
+  status = hpx_lco_wait(done);
+  assert(status == HPX_LCO_ERROR);
   hpx_lco_delete(done, HPX_NULL);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
