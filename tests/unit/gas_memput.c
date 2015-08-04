@@ -145,7 +145,7 @@ _test_memput_rsync(uint64_t *local, hpx_addr_t block) {
 
 static int
 _memput_local_handler(void) {
-  printf("Testing gas_memput to a local block (from %lu)\n", _local);
+  printf("Testing gas_memput to a local block (from %"PRIu64")\n", _local);
   uint64_t local[ELEMENTS];
   hpx_addr_t done = hpx_lco_future_new(0);
   test_assert(done != HPX_NULL);
@@ -157,7 +157,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memput_local, _memput_local_handler);
 
 static int
 _memput_stack_handler(void) {
-  printf("Testing gas_memput from a stack address (from %lu)\n", _remote);
+  printf("Testing gas_memput from a stack address (from %"PRIu64")\n", _remote);
   uint64_t local[ELEMENTS];
   hpx_addr_t done = hpx_lco_future_new(0);
   test_assert(done != HPX_NULL);
@@ -169,7 +169,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memput_stack, _memput_stack_handler);
 
 static int
 _memput_registered_handler(void) {
-  printf("Testing gas_memput from a registered address (from %lu)\n", _remote);
+  printf("Testing gas_memput from a registered address (from %"PRIu64")\n", _remote);
   uint64_t *local = hpx_malloc_registered(ELEMENTS * sizeof(*local));
   test_assert(local != NULL);
   hpx_addr_t done = hpx_lco_future_new(0);
@@ -185,7 +185,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memput_registered,
 
 static int
 _memput_malloc_handler(void) {
-  printf("Testing gas_memput from a malloced address (from %lu)\n", _remote);
+  printf("Testing gas_memput from a malloced address (from %"PRIu64")\n", _remote);
   uint64_t *local = calloc(ELEMENTS, sizeof(*local));
   test_assert(local);
   hpx_addr_t done = hpx_lco_future_new(0);
@@ -199,7 +199,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memput_malloc, _memput_malloc_handler);
 
 static
 int _memput_global_handler(void) {
-  printf("Testing gas_memput from a global address (from %lu)\n", _remote);
+  printf("Testing gas_memput from a global address (from %"PRIu64")\n", _remote);
   static uint64_t local[ELEMENTS];
   hpx_addr_t done = hpx_lco_future_new(0);
   test_assert(done != HPX_NULL);
@@ -211,7 +211,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memput_global, _memput_global_handler);
 
 static int
 _memput_lsync_local_handler(void) {
-  printf("Testing gas_memput_lsync to a local block (from %lu)\n", _local);
+  printf("Testing gas_memput_lsync to a local block (from %"PRIu64")\n", _local);
   uint64_t local[ELEMENTS];
   hpx_addr_t done = hpx_lco_future_new(0);
   test_assert(done != HPX_NULL);
@@ -224,7 +224,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memput_lsync_local,
 
 static int
 _memput_lsync_stack_handler(void) {
-  printf("Testing gas_memput_lsync from a stack address (from %lu)\n", _remote);
+  printf("Testing gas_memput_lsync from a stack address (from %"PRIu64")\n", _remote);
   uint64_t local[ELEMENTS];
   hpx_addr_t done = hpx_lco_future_new(0);
   test_assert(done != HPX_NULL);
@@ -237,7 +237,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memput_lsync_stack,
 
 static int
 _memput_lsync_registered_handler(void) {
-  printf("Testing gas_memput_lsync from a registered address (from %lu)\n", _remote);
+  printf("Testing gas_memput_lsync from a registered address (from %"PRIu64")\n", _remote);
   uint64_t *local = hpx_malloc_registered(ELEMENTS * sizeof(*local));
   test_assert(local != NULL);
   hpx_addr_t done = hpx_lco_future_new(0);
@@ -252,7 +252,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memput_lsync_registered,
 
 static int
 _memput_lsync_malloc_handler(void) {
-  printf("Testing gas_memput_lsync from a malloced address (from %lu)\n", _remote);
+  printf("Testing gas_memput_lsync from a malloced address (from %"PRIu64")\n", _remote);
   uint64_t *local = calloc(ELEMENTS, sizeof(*local));
   test_assert(local != NULL);
   hpx_addr_t done = hpx_lco_future_new(0);
@@ -267,7 +267,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memput_lsync_malloc,
 
 static int
 _memput_lsync_global_handler(void) {
-  printf("Testing gas_memput_lsync from a global address (from %lu)\n", _remote);
+  printf("Testing gas_memput_lsync from a global address (from %"PRIu64")\n", _remote);
   static uint64_t local[ELEMENTS];
   hpx_addr_t done = hpx_lco_future_new(0);
   test_assert(done != HPX_NULL);
@@ -280,7 +280,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memput_lsync_global,
 
 static int
 _memput_rsync_local_handler(void) {
-  printf("Testing gas_memput_rsync to a local block (from %lu)\n", _local);
+  printf("Testing gas_memput_rsync to a local block (from %"PRIu64")\n", _local);
   uint64_t local[ELEMENTS];
   return _test_memput_rsync(local, _local);
 }
@@ -289,7 +289,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memput_rsync_local,
 
 static int
 _memput_rsync_stack_handler(void) {
-  printf("Testing gas_memput_rsync from a stack address (from %lu)\n", _remote);
+  printf("Testing gas_memput_rsync from a stack address (from %"PRIu64")\n", _remote);
   uint64_t local[ELEMENTS];
   return _test_memput_rsync(local, _remote);
 }
@@ -298,7 +298,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memput_rsync_stack,
 
 static int
 _memput_rsync_registered_handler(void) {
-  printf("Testing gas_memput_rsync from a registered address (from %lu)\n", _remote);
+  printf("Testing gas_memput_rsync from a registered address (from %"PRIu64")\n", _remote);
   uint64_t *local = hpx_malloc_registered(ELEMENTS * sizeof(*local));
   test_assert(local != NULL);
   int e = _test_memput_rsync(local, _remote);
@@ -310,7 +310,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memput_rsync_registered,
 
 static int
 _memput_rsync_malloc_handler(void) {
-  printf("Testing gas_memput_rsync from a malloced address (from %lu)\n", _remote);
+  printf("Testing gas_memput_rsync from a malloced address (from %"PRIu64")\n", _remote);
   uint64_t *local = calloc(ELEMENTS, sizeof(*local));
   test_assert(local != NULL);
   int e = _test_memput_rsync(local, _remote);
@@ -322,7 +322,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memput_rsync_malloc,
 
 static int
 _memput_rsync_global_handler(void) {
-  printf("Testing gas_memput_rsync from a global address (from %lu)\n", _remote);
+  printf("Testing gas_memput_rsync from a global address (from %"PRIu64")\n", _remote);
   static uint64_t local[ELEMENTS];
   return _test_memput_rsync(local, _remote);
 }

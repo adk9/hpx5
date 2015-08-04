@@ -52,7 +52,7 @@ _init_handler(hpx_addr_t data) {
 
   uint64_t *local;
   test_assert( hpx_gas_try_pin(_local, (void**)&local) );
-  printf("initializing %lu (%p at %d)\n", _local, (void*)local, rank);
+  printf("initializing %"PRIu64" (%p at %d)\n", _local, (void*)local, rank);
   for (int i = 0; i < ELEMENTS; ++i) {
     local[i] = i;
   }
@@ -81,7 +81,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _fini_globals, _fini_globals_handler);
 
 static int
 _memget_local_handler(void) {
-  printf("Testing gas_memget from a local block (from %lu)\n", _local);
+  printf("Testing gas_memget from a local block (from %"PRIu64")\n", _local);
   static uint64_t local[ELEMENTS] = {0};
   hpx_addr_t done = hpx_lco_future_new(0);
   CHECK( hpx_gas_memget(local, _local, sizeof(local), done) );
@@ -93,7 +93,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_local, _memget_local_handler);
 
 static int
 _memget_sync_local_handler(void) {
-  printf("Testing gas_memget_sync from a local block (from %lu)\n", _local);
+  printf("Testing gas_memget_sync from a local block (from %"PRIu64")\n", _local);
   static uint64_t local[ELEMENTS] = {0};
   CHECK( hpx_gas_memget_sync(local, _local, sizeof(local)) );
   return _verify(local);
@@ -103,7 +103,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_sync_local,
 
 static int
 _memget_sync_stack_handler(void) {
-  printf("Testing gas_memget_sync to a stack address (from %lu)\n", _remote);
+  printf("Testing gas_memget_sync to a stack address (from %"PRIu64")\n", _remote);
   uint64_t local[ELEMENTS];
   CHECK( hpx_gas_memget_sync(local, _remote, sizeof(local)) );
   return _verify(local);
@@ -112,7 +112,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_sync_stack,
                   _memget_sync_stack_handler);
 
 static int _memget_sync_registered_handler(void) {
-  printf("Testing gas_memget_sync to a registered address (from %lu)\n", _remote);
+  printf("Testing gas_memget_sync to a registered address (from %"PRIu64")\n", _remote);
   size_t n = ELEMENTS * sizeof(uint64_t);
   uint64_t *local = hpx_malloc_registered(n);
   test_assert(local);
@@ -125,7 +125,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_sync_registered,
                   _memget_sync_registered_handler);
 
 static int _memget_sync_global_handler(void) {
-  printf("Testing gas_memget_sync to a global address (from %lu)\n", _remote);
+  printf("Testing gas_memget_sync to a global address (from %"PRIu64")\n", _remote);
   static uint64_t local[ELEMENTS] = {0};
   CHECK( hpx_gas_memget_sync(local, _remote, sizeof(local)) );
   return _verify(local);
@@ -134,7 +134,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_sync_global,
                   _memget_sync_global_handler);
 
 static int _memget_sync_malloc_handler(void) {
-  printf("Testing gas_memget_sync to a malloced address (from %lu)\n", _remote);
+  printf("Testing gas_memget_sync to a malloced address (from %"PRIu64")\n", _remote);
   size_t n = ELEMENTS * sizeof(uint64_t);
   uint64_t *local = calloc(1, n);
   test_assert(local);
@@ -147,7 +147,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_sync_malloc,
                   _memget_sync_malloc_handler);
 
 static int _memget_stack_handler(void) {
-  printf("Testing gas_memget to a stack address (from %lu)\n", _remote);
+  printf("Testing gas_memget to a stack address (from %"PRIu64")\n", _remote);
   uint64_t local[ELEMENTS] = {0};
   hpx_addr_t done = hpx_lco_future_new(0);
   test_assert(done != HPX_NULL);
@@ -162,7 +162,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_stack,
 
 
 static int _memget_registered_handler(void) {
-  printf("Testing gas_memget to a registered address (from %lu)\n", _remote);
+  printf("Testing gas_memget to a registered address (from %"PRIu64")\n", _remote);
   size_t n = ELEMENTS * sizeof(uint64_t);
   uint64_t *local = hpx_malloc_registered(n);
   test_assert(local != NULL);
@@ -180,7 +180,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_registered,
                   _memget_registered_handler);
 
 static int _memget_global_handler(void) {
-  printf("Testing gas_memget to a global address (from %lu)\n", _remote);
+  printf("Testing gas_memget to a global address (from %"PRIu64")\n", _remote);
   static uint64_t local[ELEMENTS] = {0};
   hpx_addr_t done = hpx_lco_future_new(0);
   test_assert(done != HPX_NULL);
@@ -194,7 +194,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _memget_global,
                   _memget_global_handler);
 
 static int _memget_malloc_handler(void) {
-  printf("Testing gas_memget to a malloced address (from %lu)\n", _remote);
+  printf("Testing gas_memget to a malloced address (from %"PRIu64")\n", _remote);
   size_t n = ELEMENTS * sizeof(uint64_t);
   uint64_t *local = calloc(1, n);
   test_assert(local != NULL);
