@@ -31,5 +31,4 @@ nobase_include_HEADERS = hpx/action.h \
                          libsync/craycc/sync.h \
                          libhpx/libhpx.h \
                          libhpx/config.h \
-                         libhpx/config_photon.h \
                          libhpx/options.def

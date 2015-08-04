@@ -71,7 +71,7 @@ _init_photon_config(const config_t *cfg, boot_t *boot,
   pcfg->ibv.ud_gid_prefix       = "ff0e::ffff:0000:0000";
   pcfg->exch.allgather      = (__typeof__(pcfg->exch.allgather))boot->allgather;
   pcfg->exch.barrier        = (__typeof__(pcfg->exch.barrier))boot->barrier;
-  pcfg->backend             = (char*)HPX_PHOTON_BACKEND_TO_STRING[cfg->photon_backend];
+  pcfg->backend             = cfg->photon_backend;
 }
 
 static void

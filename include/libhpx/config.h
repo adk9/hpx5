@@ -21,7 +21,7 @@
 #include <hpx/attributes.h>
 
 #ifdef HAVE_PHOTON
-# include "config_photon.h"
+# include "photon_config.h"
 #endif
 
 #define LIBHPX_OPT_BITSET_ALL UINT64_MAX
