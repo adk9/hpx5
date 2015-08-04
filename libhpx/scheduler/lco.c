@@ -232,18 +232,18 @@ LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, attach,
 /// @{
 void lco_lock(lco_t *lco) {
   dbg_assert(lco);
+  dbg_assert(self->current->ustack->lco_depth == 0);
+  self->current->ustack->lco_depth = 1;
   sync_lockable_ptr_lock(&lco->lock);
   log_lco("%p acquired lco %p\n", (void*)self->current, (void*)lco);
-  dbg_assert(self->in_lco == 0);
-  self->in_lco = 1;
 }
 
 void lco_unlock(lco_t *lco) {
   dbg_assert(lco);
-  dbg_assert(self->in_lco == 1);
-  self->in_lco = 0;
   log_lco("%p released lco %p\n", (void*)self->current, (void*)lco);
   sync_lockable_ptr_unlock(&lco->lock);
+  dbg_assert(self->current->ustack->lco_depth == 1);
+  self->current->ustack->lco_depth = 0;
 }
 
 void lco_init(lco_t *lco, const lco_class_t *class) {
