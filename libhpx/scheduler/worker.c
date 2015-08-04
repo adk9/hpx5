@@ -206,14 +206,15 @@ _continue_parcel(hpx_parcel_t *p, hpx_status_t status, int nargs, va_list *args)
 ///
 /// @param            p The parcel that describes the interrupt.
 static void _execute_interrupt(hpx_parcel_t *p) {
-
   // Exchange the current thread pointer for the duration of the call. This
   // allows the application code to access thread data, e.g., the current
-  // target.
+  // target. We also "borrow" the thread's stack, so that we can use its
+  // lco_depth field if necessary.
   worker_t *w = self;
   hpx_parcel_t *q = w->current;
   p->ustack = q->ustack;
   w->current = p;
+
   INST_EVENT_PARCEL_RUN(p);
   int e = action_execute(p);
   INST_EVENT_PARCEL_END(p);
@@ -225,24 +226,21 @@ static void _execute_interrupt(hpx_parcel_t *p) {
   switch (e) {
    case HPX_SUCCESS:
     log_sched("completed interrupt\n");
-    _continue_parcel(p, HPX_SUCCESS, 0, NULL);
+    dbg_check( _continue_parcel(p, HPX_SUCCESS, 0, NULL) );
 
     if (action_is_pinned(here->actions, p->action)) {
       hpx_gas_unpin(p->target);
     }
 
     process_recover_credit(p);
-    return;
+    break;
    case HPX_RESEND:
     log_sched("resending interrupt to %"PRIu64"\n", p->target);
-    if (HPX_SUCCESS != parcel_launch(p)) {
-      dbg_error("failed to resend parcel\n");
-    }
-    return;
+    dbg_check( parcel_launch(p) );
+    break;
    default:
     dbg_error("interrupt produced unexpected error %s.\n", hpx_strerror(e));
   }
-  unreachable();
 }
 
 /// The entry function for all of the lightweight threads.
