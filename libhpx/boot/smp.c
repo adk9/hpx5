@@ -41,14 +41,14 @@ static int _barrier(const boot_t *boot) {
   return 0;
 }
 
-static int _allgather(const boot_t *boot, void *restrict in,
+static int _allgather(const boot_t *boot, const void *restrict in,
                       void *restrict out, int n) {
   log_error("Use of SMP bootstrap allgather is potential error\n");
   return 0;
 }
 
 static int _smp_alltoall(const void *boot, void *restrict dest,
-                         void *restrict src, int n, int stride) {
+                         const void *restrict src, int n, int stride) {
   log_error("Use of SMP bootstrap alltoall is potential error\n");
   return LIBHPX_OK;
 }

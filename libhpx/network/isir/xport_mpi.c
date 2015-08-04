@@ -44,8 +44,8 @@ _mpi_sizeof_status(void) {
 }
 
 static int
-_mpi_isend(int to, void *from, unsigned n, int tag, void *r) {
-  int e = MPI_Isend(from, n, MPI_BYTE, to, tag, MPI_COMM_WORLD, r);
+_mpi_isend(int to, const void *from, unsigned n, int tag, void *r) {
+  int e = MPI_Isend((void *)from, n, MPI_BYTE, to, tag, MPI_COMM_WORLD, r);
   if (MPI_SUCCESS != e) {
     return log_error("failed MPI_Isend: %u bytes to %d\n", n, to);
   }
