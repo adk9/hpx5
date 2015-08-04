@@ -147,7 +147,7 @@ section "Photon Transport Options"
 
 option "hpx-photon-backend" - "set the underlying network API to use"
 typestr="type"
-values="default","verbs","ugni"
+values="default","verbs","ugni","fi"
 enum optional
 
 option "hpx-photon-ibdev" - "[verbs] set a particular IB device (also a filter for device and port discovery, e.g. qib0:1+mlx4_0:2)"

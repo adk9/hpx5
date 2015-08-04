@@ -157,13 +157,13 @@ LIBHPX_OPT_SCALAR(isir_, recvlimit, 1lu << 14, uint32_t)
 #ifdef HAVE_PHOTON
 /// Photon options
 /// @{
-LIBHPX_OPT_SCALAR(photon_, backend, HPX_PHOTON_BACKEND_DEFAULT, hpx_photon_backend_t)
+LIBHPX_OPT_SCALAR(photon_, backend, PHOTON_BACKEND_DEFAULT, photon_cfg_backend_t)
 LIBHPX_OPT_SCALAR(photon_, ibport, 1, int)
 LIBHPX_OPT_SCALAR(photon_, ibsrq, 0, int)
-LIBHPX_OPT_SCALAR(photon_, btethresh, 0, int)
+LIBHPX_OPT_SCALAR(photon_, btethresh, -1, int)
 LIBHPX_OPT_SCALAR(photon_, ledgersize, 512, int)
 LIBHPX_OPT_SCALAR(photon_, eagerbufsize, -1, int)
-LIBHPX_OPT_SCALAR(photon_, smallpwcsize, 0, int)
+LIBHPX_OPT_SCALAR(photon_, smallpwcsize, -1, int)
 LIBHPX_OPT_SCALAR(photon_, maxrd, -1, int)
 LIBHPX_OPT_SCALAR(photon_, defaultrd, -1, int)
 LIBHPX_OPT_SCALAR(photon_, numcq, 1, int)

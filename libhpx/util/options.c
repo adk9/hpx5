@@ -479,7 +479,7 @@ config_print(config_t *cfg, FILE *f) {
 #ifdef HAVE_PHOTON
   fprintf(f, "\nPhoton\n");
   fprintf(f, "  backend\t\t%s\n",
-             HPX_PHOTON_BACKEND_TO_STRING[cfg->photon_backend]);
+	  PHOTON_BACKEND_TO_STRING[cfg->photon_backend]);
   fprintf(f, "  ibport\t\t%d\n", cfg->photon_ibport);
   fprintf(f, "  ledgersize\t\t%d\n", cfg->photon_ledgersize);
   fprintf(f, "  eagerbufsize\t\t%d\n", cfg->photon_eagerbufsize);

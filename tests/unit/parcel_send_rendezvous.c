@@ -10,10 +10,6 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
