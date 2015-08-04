@@ -55,8 +55,9 @@ static inline void *as_calloc(int id, size_t nmemb, size_t bytes) {
 }
 
 static inline void *as_memalign(int id, size_t boundary, size_t size) {
-  void *ptr = NULL;
-  posix_memalign(&ptr, boundary, size);
+  void *ptr;
+  if (posix_memalign(&ptr, boundary, size) != 0)
+    ptr = NULL;
   return ptr;
 }
 

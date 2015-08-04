@@ -373,7 +373,7 @@ config_print(config_t *cfg, FILE *f) {
              "------------------------\n");
   fprintf(f, "General\n");
   fprintf(f, "  statistics\t\t%d\n", cfg->statistics);
-  fprintf(f, "  heapsize\t\t%lu\n", cfg->heapsize);
+  fprintf(f, "  heapsize\t\t%zu\n", cfg->heapsize);
   fprintf(f, "  gas\t\t\t\"%s\"\n", HPX_GAS_TO_STRING[cfg->gas]);
   fprintf(f, "  boot\t\t\t\"%s\"\n", HPX_BOOT_TO_STRING[cfg->boot]);
   fprintf(f, "  transport\t\t\"%s\"\n", HPX_TRANSPORT_TO_STRING[cfg->transport]);
@@ -436,7 +436,7 @@ config_print(config_t *cfg, FILE *f) {
 
   fprintf(f, "\nTracing\n");
   fprintf(f, "  dir\t\t\t\"%s\"\n", cfg->trace_dir);
-  fprintf(f, "  filesize\t\t%lu\n", cfg->trace_filesize);
+  fprintf(f, "  filesize\t\t%zu\n", cfg->trace_filesize);
   fprintf(f, "  classes\t\t");
   for (int i = 0, e = sizeof(HPX_TRACE_CLASS_TO_STRING) /
                sizeof(HPX_TRACE_CLASS_TO_STRING[0]); i < e; ++i) {

@@ -29,7 +29,7 @@ typedef struct isir_xport {
   void   (*clear)(void *request);
   int    (*cancel)(void *request, int *cancelled);
   int    (*wait)(void *request, void *status);
-  int    (*isend)(int to, const void *from, unsigned n, int tag, void *request);
+  int    (*isend)(int to, void *from, unsigned n, int tag, void *request);
   int    (*irecv)(void *to, size_t n, int tag, void *request);
   int    (*iprobe)(int *tag);
   void   (*finish)(void *request, int *src, int *bytes);
