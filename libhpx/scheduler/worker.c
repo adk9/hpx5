@@ -39,6 +39,7 @@
 #include <libhpx/system.h>
 #include <libhpx/worker.h>
 #include "cvar.h"
+#include "lco.h"
 #include "thread.h"
 #include "termination.h"
 
@@ -99,36 +100,121 @@ _debug_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
 
 #ifdef HAVE_APEX
 void APEX_STOP(void) {
-  if (self->profiler != NULL) {
-    apex_stop((apex_profiler_handle)(self->profiler));
-    self->profiler = NULL;
+  worker_t *w = self;
+  if (w->profiler != NULL) {
+    apex_stop((apex_profiler_handle)(w->profiler));
+    w->profiler = NULL;
   }
-  return;
 }
 
 void APEX_START(hpx_parcel_t *p) {
-  // if this is NOT a null or lightweight action,
-  // send a "start" event to APEX
-  hpx_action_t id = hpx_parcel_get_action(p);
-  if (id != HPX_ACTION_NULL && id != scheduler_nop &&
-      id != hpx_lco_set_action) {
-    void* handler = (void*)hpx_action_get_handler(id);
+  dbg_assert(p->action != HPX_ACTION_NULL);
+  // if this is NOT a null or lightweight action, send a "start" event to APEX
+  if (p->action != hpx_lco_set_action) {
+    void* handler = (void*)hpx_action_get_handler(p->action);
     self->profiler = (void*)(apex_start(APEX_FUNCTION_ADDRESS, handler));
   }
-  return;
 }
 
 void APEX_RESUME(hpx_parcel_t *p) {
-  if (p != NULL) {
-    hpx_action_t id = hpx_parcel_get_action(p);
-    // "resume" will not increment the number of calls.
-    if (id != HPX_ACTION_NULL && id != scheduler_nop &&
-        id != hpx_lco_set_action) {
-      void* handler = (void*)hpx_action_get_handler(id);
-      self->profiler = (void*)(apex_resume(APEX_FUNCTION_ADDRESS, handler));
-    }
+  dbg_assert(p);
+  dbg_assert(p->action != HPX_ACTION_NULL);
+  if (p->action != hpx_lco_set_action) {
+    void* handler = (void*)hpx_action_get_handler(p->action);
+    self->profiler = (void*)(apex_resume(APEX_FUNCTION_ADDRESS, handler));
   }
-  return;
+}
+
+/// This is the condition that "sleeping" threads will wait on
+static pthread_cond_t _release = PTHREAD_COND_INITIALIZER;
+
+/// Mutex for the pthread_cond_wait() call. Typically, it is used
+/// to save the shared state, but we don't need it for our use.
+static pthread_mutex_t _release_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static void _apex_wait(void) {
+  pthread_mutex_lock(&_release_mutex);
+  pthread_cond_wait(&_release, &_release_mutex);
+  pthread_mutex_unlock(&_release_mutex);
+}
+
+static void _apex_signal(void) {
+  pthread_cond_signal(&_release);
+}
+
+/// Try to deactivate a worker.
+///
+/// @returns          1 If the worker remains active, 0 if it was deactivated
+static int _apex_try_deactivate(worker_t *worker, int *n_active_workers) {
+  if (sync_fadd(n_active_workers, -1, SYNC_ACQ_REL) > apex_get_thread_cap()) {
+    worker->active = false;
+    apex_set_state(APEX_THROTTLED);
+    return 0;
+  }
+
+  sync_fadd(n_active_workers, 1, SYNC_ACQ_REL);
+  return 1;
+}
+
+/// Try to reactivate an inactive worker.
+///
+/// @returns          1 If the thread reactivated, 0 if it is still inactive.
+static int _apex_try_reactivate(worker_t *worker, int *n_active_workers) {
+  if (sync_fadd(n_active_workers, 1, SYNC_ACQ_REL) <= apex_get_thread_cap()) {
+    // I fit inside the cap!
+    worker->active = true;
+    apex_set_state(APEX_BUSY);
+    return 1;
+  }
+
+  sync_fadd(n_active_workers, -1, SYNC_ACQ_REL);
+  return 0;
+}
+
+/// This function will check whether the current thread in the
+/// scheduling loop should be throttled.
+///
+/// @returns          1 If the thread is active, 0 if it is inactive.
+static int _apex_check_active(void) {
+  // akp: throttling code -- if the throttling flag is set don't use
+  // some threads NB: There is a possible race condition here. It's
+  // possible that mail needs to be checked again just before
+  // throttling.
+  if (!apex_get_throttle_concurrency()) {
+    return 1;
+  }
+
+  worker_t      *worker = self;
+  int *n_active_workers = &(here->sched->n_active_workers);
+
+  if (!worker->active) {
+    // because I can't change the power level, sleep instead.
+    _apex_wait();
+    return _apex_try_reactivate(worker, n_active_workers);
+  }
+
+  if (!apex_throttleOn || worker->yielded) {
+    return 1;
+  }
+
+  // If there are too many threads running, then try and become inactive.
+  if (sync_load(n_active_workers, SYNC_ACQUIRE) > apex_get_thread_cap()) {
+    return _apex_try_deactivate(worker, n_active_workers);
+  }
+
+  // Go ahead and signal the condition variable if we need to
+  if (sync_load(n_active_workers, SYNC_ACQUIRE) < apex_get_thread_cap()) {
+    _apex_signal();
+  }
+
+  return 1;
+}
+
+/// release idle threads, stop any running timers, and exit the thread from APEX
+static void _apex_worker_shutdown(void) {
+  pthread_cond_broadcast(&_release);
+  APEX_STOP();
+  apex_exit_thread();
 }
 
 #else
@@ -140,8 +226,7 @@ void APEX_RESUME(hpx_parcel_t *p) {
 /// The pthread entry function for dedicated worker threads.
 ///
 /// This is used by worker_create().
-static void *
-_run(void *worker) {
+static void *_run(void *worker) {
   dbg_assert(here);
   dbg_assert(here->gas);
   dbg_assert(worker);
@@ -166,25 +251,20 @@ _run(void *worker) {
   // leave the global address space
   as_leave();
 
-  // unbind self
-  self = NULL;
-
-  return NULL;
+  // unbind self and return NULL
+  return (self = NULL);
 }
 
 /// Continue a parcel by invoking its parcel continuation.
 ///
 /// @param            p The parent parcel (usually self->current).
-/// @param       status ?
 /// @param        nargs The number of arguments to continue.
 /// @param         args The arguments we are continuing.
 ///
 /// @returns HPX_SUCCESS or an error if parcel_launch fails.
-static int
-_continue_parcel(hpx_parcel_t *p, hpx_status_t status, int nargs, va_list *args)
-{
+static int _continue_parcel(hpx_parcel_t *p, int nargs, va_list *args) {
   if (p->c_target == HPX_NULL || p->c_action == HPX_ACTION_NULL) {
-    return HPX_SUCCESS;
+    return process_recover_credit(p);
   }
 
   // create the parcel to continue and transfer whatever credit we have
@@ -196,48 +276,61 @@ _continue_parcel(hpx_parcel_t *p, hpx_status_t status, int nargs, va_list *args)
   return parcel_launch(c);
 }
 
+/// Swap the current parcel for a worker.
+static hpx_parcel_t *_swap_current(hpx_parcel_t *p, void *sp, worker_t *w) {
+  hpx_parcel_t *q = w->current;
+  w->current = p;
+  q->ustack->sp = sp;
+  return q;
+}
+
 /// The entry function for all interrupts.
 ///
 /// This is the function that will run when we transfer to an interrupt. It
 /// uses action_execute() to execute the interrupt on the current stack, sends
 /// the parcel continuation if necessary, and then returns. Interrupts are
-/// required not to call hpx_thread_continue(), so all execution will return
-/// here.
+/// required not to call hpx_thread_continue(), or hpx_thread_exit(), so all
+/// execution will return here.
 ///
 /// @param            p The parcel that describes the interrupt.
 static void _execute_interrupt(hpx_parcel_t *p) {
   // Exchange the current thread pointer for the duration of the call. This
   // allows the application code to access thread data, e.g., the current
-  // target. We also "borrow" the thread's stack, so that we can use its
-  // lco_depth field if necessary.
+  // target.
   worker_t *w = self;
-  hpx_parcel_t *q = w->current;
+  hpx_parcel_t *q = _swap_current(p, NULL, w);
+
+  // "Borrow" the current thread's stack, so that we can use its lco_depth field
+  // if necessary.
+  dbg_assert(!p->ustack);
   p->ustack = q->ustack;
-  w->current = p;
 
   INST_EVENT_PARCEL_RUN(p);
+  APEX_START(p);
   int e = action_execute(p);
+  APEX_STOP();
   INST_EVENT_PARCEL_END(p);
 
   // Restore the current thread pointer.
+  _swap_current(q, NULL, w);
   p->ustack = NULL;
-  w->current = q;
 
   switch (e) {
    case HPX_SUCCESS:
     log_sched("completed interrupt\n");
-    dbg_check( _continue_parcel(p, HPX_SUCCESS, 0, NULL) );
-
+    dbg_check( _continue_parcel(p, 0, NULL) );
     if (action_is_pinned(here->actions, p->action)) {
       hpx_gas_unpin(p->target);
     }
-
-    process_recover_credit(p);
     break;
    case HPX_RESEND:
     log_sched("resending interrupt to %"PRIu64"\n", p->target);
+    INST_EVENT_PARCEL_RESEND(p);
     dbg_check( parcel_launch(p) );
     break;
+   case HPX_LCO_ERROR:
+    dbg_error("interrupt returned LCO error %s.\n", hpx_strerror(e));
+   case HPX_ERROR:
    default:
     dbg_error("interrupt produced unexpected error %s.\n", hpx_strerror(e));
   }
@@ -250,33 +343,11 @@ static void _execute_thread(hpx_parcel_t *p) {
   INST_EVENT_PARCEL_RUN(p);
   APEX_START(p);
   int e = action_execute(p);
-  APEX_STOP();
-  switch (e) {
-    default:
-     dbg_error("thread produced unhandled error %s.\n", hpx_strerror(e));
-     return;
-    case HPX_ERROR:
-     dbg_error("thread produced error.\n");
-     return;
-    case HPX_RESEND:
-     log_sched("resending interrupt to %"PRIu64"\n", p->target);
-     if (HPX_SUCCESS != parcel_launch(p)) {
-       dbg_error("failed to resend parcel\n");
-     }
-     return;
-    case HPX_SUCCESS:
-    case HPX_LCO_ERROR:
-      hpx_thread_exit(e);
-  }
+  // NB: Threads can explicitly exit through hpx_thread_exit(), which longjmps
+  //     through scheduler_suspend(). Matching instrumentation events are
+  //     there.
+  hpx_thread_exit(e);
   unreachable();
-}
-
-/// Swap the current parcel for a worker.
-static hpx_parcel_t *_swap_current(hpx_parcel_t *p, void *sp, worker_t *w) {
-  hpx_parcel_t *q = w->current;
-  w->current = p;
-  q->ustack->sp = sp;
-  return q;
 }
 
 /// A thread_transfer() continuation that the native pthread stack uses to
@@ -457,9 +528,9 @@ static int _free_parcel(hpx_parcel_t *p, void *env) {
 /// The current thread is terminating however, so we release the stack we were
 /// running on.
 static int _resend_parcel(hpx_parcel_t *p, void *env) {
+  INST_EVENT_PARCEL_RESEND(p);
   _put_stack(p, self);
-  hpx_parcel_send(p, HPX_NULL);
-  return HPX_SUCCESS;
+  return parcel_launch(p);
 }
 
 /// Try to execute a parcel as an interrupt.
@@ -493,8 +564,7 @@ static int _try_interrupt(hpx_parcel_t *p) {
 ///                       work.
 ///
 /// @returns            A parcel to transfer to.
-static hpx_parcel_t *
-_schedule_nonblock(void) {
+static hpx_parcel_t *_schedule_nonblock(void) {
   // the scheduler has shutdown
   if (scheduler_is_shutdown(here->sched)) {
     return self->system;
@@ -507,81 +577,6 @@ _schedule_nonblock(void) {
 
   return self->system;
 }
-
-/// This chunk of code is used in the scheduler for throttling concurrency.
-#ifdef HAVE_APEX
-
-/// This is the condition that "sleeping" threads will wait on
-static pthread_cond_t release = PTHREAD_COND_INITIALIZER;
-
-/// Mutex for the pthread_cond_wait() call. Typically, it is used
-/// to save the shared state, but we don't need it for our use.
-static pthread_mutex_t release_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-/// Flag to indicate whether this thread is processing a yield. If so,
-/// it can't be throttled, because it could hold a lock that will be
-/// requested by the thread trying to take the yielded work.
-__thread bool _apex_yielded = false;
-
-/// This function will check whether the current thread in the
-/// scheduling loop should be throttled.
-inline static int _apex_check_throttling(void) {
-  // akp: throttling code -- if the throttling flag is set don't use
-  // some threads NB: There is a possible race condition here. It's
-  // possible that mail needs to be checked again just before
-  // throttling.
-    if (apex_get_throttle_concurrency()) {
-      // am I inactive?
-      if (self->active == false) {
-        // because we can't change the power level, sleep instead.
-        pthread_mutex_lock(&release_mutex);
-        pthread_cond_wait(&release, &release_mutex);
-        pthread_mutex_unlock(&release_mutex);
-        // We've been signaled, see if we are the first to re-activate
-        if (__sync_fetch_and_add(&(here->sched->n_active_workers),1) <=
-            apex_get_thread_cap()) {
-          // yes, we are good to go
-          self->active = true;
-          apex_set_state(APEX_BUSY);
-        } else {
-          // no, another thread beat us to it. This thread should stay idle.
-          __sync_fetch_and_sub(&(here->sched->n_active_workers),1);
-          return 1; // restart the scheduler loop
-        }
-      } else {
-        if (apex_throttleOn && !_apex_yielded) {
-          // randomly de-activate a thread?
-          if (here->sched->n_active_workers > apex_get_thread_cap()) {
-            // try to decrement the active worker counter
-            if (__sync_fetch_and_sub(&(here->sched->n_active_workers),1) >
-                apex_get_thread_cap()) {
-              // success? then we are now inactive. go back to the top
-              // of the loop.
-              self->active = false;
-              apex_set_state(APEX_THROTTLED);
-              return 1; // restart the loop
-            }
-            // no, this thread should keep working.
-            __sync_fetch_and_add(&(here->sched->n_active_workers),1);
-          // has the thread cap increased?
-          } else if (here->sched->n_active_workers < apex_get_thread_cap()) {
-            // release a worker
-            pthread_cond_signal(&release);
-          }
-        }
-      }
-    }
-    return 0;
-}
-
-/// release idle threads, stop any running timers, and exit the thread from APEX
-inline static void _apex_worker_shutdown(void) {
-    pthread_cond_broadcast(&release);
-    APEX_STOP();
-    apex_exit_thread();
-}
-#endif
-
 
 /// The main scheduling "loop."
 ///
@@ -603,8 +598,7 @@ inline static void _apex_worker_shutdown(void) {
 /// @param     final A final option if the scheduler wants to give up.
 ///
 /// @returns A thread to transfer to.
-static hpx_parcel_t *
-_schedule(bool nonblock, hpx_parcel_t *final) {
+static hpx_parcel_t *_schedule(bool nonblock, hpx_parcel_t *final) {
   hpx_parcel_t *p = NULL;
   hpx_parcel_t *(*yield_steal_0)(worker_t *);
   hpx_parcel_t *(*yield_steal_1)(worker_t *);
@@ -624,8 +618,9 @@ _schedule(bool nonblock, hpx_parcel_t *final) {
     _handle_mail(self);
 
 #ifdef HAVE_APEX
-    if (_apex_check_throttling() != 0) {
-      break;
+    // If we're not supposed to be active, then don't schedule anything.
+    if (_apex_check_active() == 0) {
+      continue;
     }
 #endif
 
@@ -668,13 +663,13 @@ _schedule(bool nonblock, hpx_parcel_t *final) {
 }
 
 
-int
-worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
+int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   w->thread     = 0;
   w->id         = id;
   w->seed       = seed;
   w->work_first = 0;
   w->nstacks    = 0;
+  w->yielded    = 0;
   w->system     = NULL;
   w->current    = NULL;
   w->stacks     = NULL;
@@ -689,8 +684,7 @@ worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
 }
 
 
-void
-worker_fini(worker_t *w) {
+void worker_fini(worker_t *w) {
   // clean up the mailbox
   _handle_mail(w);
   sync_two_lock_queue_fini(&w->inbox);
@@ -710,8 +704,7 @@ worker_fini(worker_t *w) {
   }
 }
 
-void
-worker_bind_self(worker_t *worker) {
+void worker_bind_self(worker_t *worker) {
   dbg_assert(worker);
 
   if (self && self != worker) {
@@ -721,8 +714,7 @@ worker_bind_self(worker_t *worker) {
   self->thread = pthread_self();
 }
 
-int
-worker_start(void) {
+int worker_start(void) {
   dbg_assert(self);
 
   // double-check this
@@ -781,8 +773,7 @@ worker_start(void) {
   return LIBHPX_OK;
 }
 
-int
-worker_create(worker_t *worker, const config_t *cfg) {
+int worker_create(worker_t *worker, const config_t *cfg) {
   pthread_t thread;
 
   int e = pthread_create(&thread, NULL, _run, worker);
@@ -793,8 +784,7 @@ worker_create(worker_t *worker, const config_t *cfg) {
   return LIBHPX_OK;
 }
 
-void
-worker_join(worker_t *worker) {
+void worker_join(worker_t *worker) {
   dbg_assert(worker);
 
   if (worker->thread == pthread_self()) {
@@ -807,15 +797,13 @@ worker_join(worker_t *worker) {
   }
 }
 
-void
-worker_cancel(worker_t *worker) {
+void worker_cancel(worker_t *worker) {
   dbg_assert(worker);
   dbg_assert(worker->thread != pthread_self());
   if (pthread_cancel(worker->thread)) {
     dbg_error("cannot cancel worker thread %d.\n", worker->id);
   }
 }
-
 
 static int _work_first(hpx_parcel_t *to, void *sp, void *env) {
   worker_t *w = self;
@@ -829,8 +817,7 @@ static int _work_first(hpx_parcel_t *to, void *sp, void *env) {
 ///
 /// This complicated function does a bunch of logic to figure out the proper
 /// method of computation for the parcel.
-void
-scheduler_spawn(hpx_parcel_t *p) {
+void scheduler_spawn(hpx_parcel_t *p) {
   worker_t *w = self;
   dbg_assert(w);
   dbg_assert(w->id >= 0);
@@ -906,9 +893,7 @@ scheduler_spawn(hpx_parcel_t *p) {
 static int _checkpoint_yield(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = _swap_current(to, sp, self);
   sync_two_lock_queue_enqueue(&here->sched->yielded, prev);
-#ifdef HAVE_APEX
-  _apex_yielded = false;
-#endif
+  self->yielded = 0;
   return HPX_SUCCESS;
 }
 
@@ -933,25 +918,20 @@ void scheduler_yield(void) {
   _transfer(to, _checkpoint_yield, NULL);
 }
 
-void
-hpx_thread_yield(void) {
+void hpx_thread_yield(void) {
   COUNTER_SAMPLE(++self->stats.yields);
-#ifdef HAVE_APEX
-  _apex_yielded = true;
-#endif
+  self->yielded = true;
   scheduler_yield();
 }
 
-/// A transfer continuation that unlocks a lock.
+/// A scheduler_suspend() continuation that unlocks a lock.
 ///
 /// We don't need to do anything with the previous parcel at this point because
 /// we know that it has already been enqueued on whatever LCO we need it to be.
 ///
 /// @param           to The parcel we are transferring to.
-/// @param           sp The stack pointer we are transferring from.
 /// @param         lock A lockable_ptr_t to unlock.
-static int _unlock(hpx_parcel_t *to, void *sp, void *lock) {
-  _swap_current(to, sp, self);
+static int _unlock(hpx_parcel_t *to, void *lock) {
   sync_lockable_ptr_unlock(lock);
   return HPX_SUCCESS;
 }
@@ -972,8 +952,7 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
 
   INST_EVENT_PARCEL_SUSPEND(p);
   APEX_STOP();
-  hpx_parcel_t *to = _schedule(true, NULL);
-  _transfer(to, _unlock, (void*)lock);
+  scheduler_suspend(_unlock, (void*)lock, 0);
   APEX_RESUME(p);
   INST_EVENT_PARCEL_RESUME(p);
 
@@ -991,34 +970,30 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
 /// to send it off.
 ///
 /// @param      parcels A stack of parcels to resume.
-static void
-_resume(hpx_parcel_t *parcels) {
+static void _resume_parcels(hpx_parcel_t *parcels) {
   hpx_parcel_t *p;
-  while ((p = parcel_stack_pop(&parcels))){
+  while ((p = parcel_stack_pop(&parcels))) {
     ustack_t *stack = p->ustack;
     if (stack && stack->affinity >= 0) {
       worker_t *w = scheduler_get_worker(here->sched, stack->affinity);
       _send_mail(p, w);
     }
     else {
-      parcel_launch(p);
+      dbg_check( parcel_launch(p) );
     }
   }
 }
 
-void
-scheduler_signal(cvar_t *cvar) {
-  _resume(cvar_pop(cvar));
+void scheduler_signal(cvar_t *cvar) {
+  _resume_parcels(cvar_pop(cvar));
 }
 
-void
-scheduler_signal_all(struct cvar *cvar) {
-  _resume(cvar_pop_all(cvar));
+void scheduler_signal_all(struct cvar *cvar) {
+  _resume_parcels(cvar_pop_all(cvar));
 }
 
-void
-scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
-  _resume(cvar_set_error(cvar, code));
+void scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
+  _resume_parcels(cvar_set_error(cvar, code));
 }
 
 static void HPX_NORETURN
@@ -1027,7 +1002,7 @@ _continue(worker_t *worker, hpx_status_t status, void (*cleanup)(void*),
   hpx_parcel_t *parcel = worker->current;
 
   // send the parcel continuation---this takes my credit if I have any
-  _continue_parcel(parcel, status, nargs, args);
+  dbg_check( _continue_parcel(parcel, nargs, args) );
 
   // run the cleanup handler
   if (cleanup != NULL) {
@@ -1039,17 +1014,13 @@ _continue(worker_t *worker, hpx_status_t status, void (*cleanup)(void*),
     hpx_gas_unpin(parcel->target);
   }
 
-  // return any remaining credit
-  process_recover_credit(parcel);
-
   INST_EVENT_PARCEL_END(parcel);
   APEX_STOP();
   scheduler_suspend(_free_parcel, (void*)(intptr_t)status, 1);
   unreachable();
 }
 
-void
-_hpx_thread_continue(int nargs, ...) {
+void _hpx_thread_continue(int nargs, ...) {
   va_list vargs;
   va_start(vargs, nargs);
   _continue(self, HPX_SUCCESS, NULL, NULL, nargs, &vargs);
@@ -1066,75 +1037,66 @@ _hpx_thread_continue_cleanup(void (*cleanup)(void*), void *env, int nargs, ...)
 }
 
 void hpx_thread_exit(int status) {
-  worker_t *worker = self;
-  hpx_parcel_t *parcel = worker->current;
-
-  if (status == HPX_RESEND) {
-    INST_EVENT_PARCEL_END(parcel);
+  switch (status) {
+   case HPX_RESEND:
+    INST_EVENT_PARCEL_END(self->current);
     APEX_STOP();
-    INST_EVENT_PARCEL_RESEND(parcel);
     scheduler_suspend(_resend_parcel, NULL, 0);
     unreachable();
-  }
-
-  if (status == HPX_SUCCESS || status == HPX_LCO_ERROR || status == HPX_ERROR) {
-    _continue(worker, status, NULL, NULL, 0, NULL);
+   case HPX_ERROR:
+   case HPX_SUCCESS:
+    _continue(self, status, NULL, NULL, 0, NULL);
     unreachable();
+   case HPX_LCO_ERROR:
+    // rewrite to lco_error
+    self->current->c_action = lco_error;
+    hpx_thread_continue(&status, sizeof(status));
+    unreachable();
+   default:
+    dbg_error("unexpected exit status %d.\n", status);
   }
-
-  dbg_error("unexpected exit status %d.\n", status);
-  hpx_abort();
 }
 
-hpx_parcel_t *
-scheduler_current_parcel(void) {
+hpx_parcel_t *scheduler_current_parcel(void) {
   return self->current;
 }
 
-int
-hpx_get_my_thread_id(void) {
+int hpx_get_my_thread_id(void) {
   worker_t *w = self;
   return (w) ? w->id : -1;
 }
 
-hpx_addr_t
-hpx_thread_current_target(void) {
+hpx_addr_t hpx_thread_current_target(void) {
   worker_t *w = self;
   return (w && w->current) ? w->current->target : HPX_NULL;
 }
 
-hpx_addr_t
-hpx_thread_current_cont_target(void) {
+hpx_addr_t hpx_thread_current_cont_target(void) {
   worker_t *w = self;
   return (w && w->current) ? w->current->c_target : HPX_NULL;
 }
 
-hpx_action_t
-hpx_thread_current_action(void) {
+hpx_action_t hpx_thread_current_action(void) {
   worker_t *w = self;
   return (w && w->current) ? w->current->action : HPX_ACTION_NULL;
 }
 
-hpx_action_t
-hpx_thread_current_cont_action(void) {
+hpx_action_t hpx_thread_current_cont_action(void) {
   worker_t *w = self;
   return (w && w->current) ? w->current->c_action : HPX_ACTION_NULL;
 }
 
-hpx_pid_t
-hpx_thread_current_pid(void) {
+hpx_pid_t hpx_thread_current_pid(void) {
   worker_t *w = self;
   return (w && w->current) ? w->current->pid : HPX_NULL;
 }
 
-uint32_t
-hpx_thread_current_credit(void) {
+uint32_t hpx_thread_current_credit(void) {
   worker_t *w = self;
   return (w && w->current) ? w->current->credit : 0;
 }
 
-int
-hpx_thread_get_tls_id(void) {
+int hpx_thread_get_tls_id(void) {
   worker_t *w = self;
   ustack_t *stack = w->current->ustack;
   if (stack->tls_id < 0) {
@@ -1144,8 +1106,7 @@ hpx_thread_get_tls_id(void) {
   return stack->tls_id;
 }
 
-void
-hpx_thread_set_affinity(int affinity) {
+void hpx_thread_set_affinity(int affinity) {
   // make sure affinity is in bounds
   dbg_assert(affinity >= -1);
   dbg_assert(affinity < here->sched->n_workers);
@@ -1204,8 +1165,7 @@ static int _checkpoint_suspend(hpx_parcel_t *to, void *sp, void *env) {
   return c->f(prev, c->env);
 }
 
-hpx_status_t
-scheduler_suspend(int (*f)(hpx_parcel_t *p, void*), void *env, int block) {
+int scheduler_suspend(int (*f)(hpx_parcel_t *p, void*), void *env, int block) {
   // create the closure environment for the _checkpoint_suspend continuation
   _checkpoint_suspend_env_t suspend_env = {
     .f = f,
@@ -1224,8 +1184,7 @@ scheduler_suspend(int (*f)(hpx_parcel_t *p, void*), void *env, int block) {
   return e;
 }
 
-intptr_t
-worker_can_alloca(size_t bytes) {
+intptr_t worker_can_alloca(size_t bytes) {
   ustack_t *current = self->current->ustack;
   return ((uintptr_t)&current - (uintptr_t)current->stack < bytes);
 }
