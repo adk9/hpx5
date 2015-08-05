@@ -1,5 +1,7 @@
-AM_CFLAGS = @CFLAGS@ -I@PHOTON_SRCDIR@/src/contrib \
-		     -I@PHOTON_SRCDIR@/src/contrib/libsync/include
+AM_CFLAGS  = @CFLAGS@ -I@PHOTON_SRCDIR@/src/contrib \
+		      -I@PHOTON_SRCDIR@/src/contrib/libsync/include
+
+AM_CFLAGS += -fvisibility=hidden
 
 SUBDIRS = arch
 
