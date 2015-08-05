@@ -59,7 +59,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-dbg-mprotectstacks  use mprotect() to bracket stacks to look for \n                                  stack overflows  (default=off)",
   "      --hpx-dbg-syncfree        use synchronous GAS free operations  \n                                  (default=off)",
   "\nTracing:",
-  "      --hpx-trace-classes=class set the event classes to trace  (possible \n                                  values=\"parcel\", \"pwc\", \"sched\", \n                                  \"lco\", \"process\", \"memory\", \"all\")",
+  "      --hpx-trace-classes=class set the event classes to trace  (possible \n                                  values=\"parcel\", \"pwc\", \"sched\", \n                                  \"lco\", \"process\", \"memory\", \n                                  \"schedtimes\", \"all\")",
   "      --hpx-trace-dir=dir       directory to output trace files",
   "      --hpx-trace-filesize=bytes\n                                set the size of each trace file",
   "      --hpx-trace-at=[localities]\n                                set the localities to trace at",
@@ -140,7 +140,7 @@ const char *hpx_option_parser_hpx_boot_values[] = {"default", "smp", "mpi", "pmi
 const char *hpx_option_parser_hpx_transport_values[] = {"default", "mpi", "photon", 0}; /*< Possible values for hpx-transport. */
 const char *hpx_option_parser_hpx_network_values[] = {"default", "smp", "pwc", "isir", 0}; /*< Possible values for hpx-network. */
 const char *hpx_option_parser_hpx_log_level_values[] = {"default", "boot", "sched", "gas", "lco", "net", "trans", "parcel", "action", "config", "memory", "all", 0}; /*< Possible values for hpx-log-level. */
-const char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "pwc", "sched", "lco", "process", "memory", "all", 0}; /*< Possible values for hpx-trace-classes. */
+const char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "pwc", "sched", "lco", "process", "memory", "schedtimes", "all", 0}; /*< Possible values for hpx-trace-classes. */
 const char *hpx_option_parser_hpx_prof_counters_values[] = {"HPX_L1_TCM", "HPX_L2_TCM", "HPX_L3_TCM", "HPX_TLB_TL", "HPX_TOT_INS", "HPX_INT_INS", "HPX_FP_INS", "HPX_LD_INS", "HPX_SR_INS", "HPX_BR_INS", "HPX_TOT_CYC", "all", 0}; /*< Possible values for hpx-prof-counters. */
 const char *hpx_option_parser_hpx_photon_backend_values[] = {"default", "verbs", "ugni", "fi", 0}; /*< Possible values for hpx-photon-backend. */
 

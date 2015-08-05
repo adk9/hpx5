@@ -177,6 +177,11 @@ AS_IF([test "x$have_network" == xyes -a "x$have_allocator" != xyes],
 AS_IF([test "x$have_tbbmalloc" == xyes -o "x$have_libcuckoo" == xyes],
   [HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lstdc++"])
 
+# Make sure that static linking libhpx.a with $(CC) works when we have a C++
+# dependency.
+AS_IF([test "x$have_tbbmalloc" == xyes -o "x$have_libcuckoo" == xyes],
+  [HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lstdc++"])
+
 # Configure all of the automake conditionals that our build requires.
 HPX_DO_AM_CONDITIONALS
 

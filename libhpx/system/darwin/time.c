@@ -24,6 +24,8 @@
 #include <mach/mach_time.h>
 #include "hpx/hpx.h"
 
+static hpx_time_t _beginning_of_time;
+
 hpx_time_t hpx_time_now(void) {
   return mach_absolute_time();
 }
@@ -43,6 +45,14 @@ double hpx_time_diff_us(hpx_time_t from, hpx_time_t to) {
 
 double hpx_time_diff_ms(hpx_time_t from, hpx_time_t to) {
   return _diff_ns(from, to)/1e6;
+}
+
+uint64_t hpx_time_diff_ns(hpx_time_t from, hpx_time_t to) {
+  _diff_ns(from, to);
+}
+
+uint64_t hpx_time_to_ns(hpx_time_t t) {
+  return hpx_time_elapsed_ns(_beginning_of_time, t);
 }
 
 void hpx_time_diff(hpx_time_t start, hpx_time_t end, hpx_time_t *diff) {
@@ -78,3 +88,6 @@ double hpx_time_ms(hpx_time_t time) {
   return _ns(time)/1e6;
 }
 
+void libhpx_time_start() {
+  _beginning_of_time = hpx_time_now();
+}

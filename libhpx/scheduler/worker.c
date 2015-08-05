@@ -55,7 +55,21 @@
 /// Storage for the thread-local worker pointer.
 __thread worker_t * volatile self = NULL;
 
+#define SOURCE_LIFO 0
+#define SOURCE_YIELD 1
+#define SOURCE_STEAL 2
+#define SOURCE_FINAL 3
+
 #ifdef ENABLE_INSTRUMENTATION
+#define INST(stmt) stmt;
+#define INST_COND(cond, on_cond, on_else)       \
+  if (cond) {                                   \
+    on_cond;                                    \
+  }                                             \
+  else {                                        \
+   on_else;                                     \
+  }
+
 static inline void TRACE_WQSIZE(worker_t *w) {
   static const int class = INST_SCHED;
   static const int id = HPX_INST_EVENT_SCHED_WQSIZE;
@@ -82,6 +96,8 @@ static inline void TRACE_STEAL_LIFO(hpx_parcel_t *p,
   inst_trace(class, id, p, victim->id);
 }
 #else
+# define INST(stmt)
+# define INST_COND(cond, on_cond, on_else)
 # define TRACE_WQSIZE(w)
 # define TRACE_PUSH_LIFO(p)
 # define TRACE_POP_LIFO(p)
@@ -488,10 +504,14 @@ static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
 ///
 /// @returns            The status from _transfer.
 static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
+  uint64_t start_time = hpx_time_to_ns(hpx_time_now());
+  int source = -1;
+  int spins = 0;
   hpx_parcel_t *p = NULL;
   while (!scheduler_is_shutdown(here->sched)) {
     if (!block) {
       p = _schedule_lifo(self);
+      INST_COND(p != NULL, source = SOURCE_LIFO, {});
       break;
     }
 
@@ -505,6 +525,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
 #endif
 
     if ((p = _schedule_lifo(self))) {
+      INST(source = SOURCE_LIFO);
       break;
     }
 
@@ -524,21 +545,29 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
     }
 
     if ((p = yield_steal_0(self))) {
+      INST_COND(yield_steal_0 == _schedule_yielded, source=SOURCE_YIELD, 
+                source=SOURCE_STEAL);
       break;
     }
 
     if ((p = yield_steal_1(self))) {
+      INST_COND(yield_steal_1 == _schedule_yielded, source=SOURCE_YIELD, 
+                source=SOURCE_STEAL);
       break;
     }
 
     // couldn't find any work to do, we sleep for a while before looking again
     system_usleep(1);
+    INST(spins++);
   }
 
   // This somewhat clunky expression just makes sure that, if we found a parcel
   // to transfer to then it has a stack, or if we didn't find anything to
   // transfer to then pick the system stack
   p = (p) ? _try_bind(self, p) : self->system;
+
+  inst_trace(HPX_INST_SCHEDTIMES, HPX_INST_SCHEDTIMES_SCHED,
+    start_time, source, spins);
 
   // don't transfer to the same parcel
   if (p != self->current) {

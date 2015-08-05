@@ -37,6 +37,7 @@
 #include <libhpx/profiling.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/system.h>
+#include <libhpx/time.h>
 #include "network/probe.h"
 
 #ifdef HAVE_APEX
@@ -171,6 +172,9 @@ int hpx_init(int *argc, char ***argv) {
       dbg_wait();
     }
   }
+
+  // Start the internal clock
+  libhpx_time_start();
 
   // Initialize our instrumentation.
   if (inst_init(here->config)) {
