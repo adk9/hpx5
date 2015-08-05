@@ -43,11 +43,6 @@
 #include "thread.h"
 #include "termination.h"
 
-#ifdef HAVE_APEX
-#include "apex.h"
-#include "apex_policies.h"
-#endif
-
 #ifdef ENABLE_DEBUG
 # define _transfer _debug_transfer
 #else
@@ -99,32 +94,6 @@ _debug_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
 }
 
 #ifdef HAVE_APEX
-void APEX_STOP(void) {
-  worker_t *w = self;
-  if (w->profiler != NULL) {
-    apex_stop((apex_profiler_handle)(w->profiler));
-    w->profiler = NULL;
-  }
-}
-
-void APEX_START(hpx_parcel_t *p) {
-  dbg_assert(p->action != HPX_ACTION_NULL);
-  // if this is NOT a null or lightweight action, send a "start" event to APEX
-  if (p->action != hpx_lco_set_action) {
-    void* handler = (void*)hpx_action_get_handler(p->action);
-    self->profiler = (void*)(apex_start(APEX_FUNCTION_ADDRESS, handler));
-  }
-}
-
-void APEX_RESUME(hpx_parcel_t *p) {
-  dbg_assert(p);
-  dbg_assert(p->action != HPX_ACTION_NULL);
-  if (p->action != hpx_lco_set_action) {
-    void* handler = (void*)hpx_action_get_handler(p->action);
-    self->profiler = (void*)(apex_resume(APEX_FUNCTION_ADDRESS, handler));
-  }
-}
-
 /// This is the condition that "sleeping" threads will wait on
 static pthread_cond_t _release = PTHREAD_COND_INITIALIZER;
 
@@ -213,14 +182,14 @@ static int _apex_check_active(void) {
 /// release idle threads, stop any running timers, and exit the thread from APEX
 static void _apex_worker_shutdown(void) {
   pthread_cond_broadcast(&_release);
-  APEX_STOP();
+  worker_t *w = self;                               
+  if (w->profiler != NULL) {                        
+    apex_stop((apex_profiler_handle)(w->profiler)); 
+    w->profiler = NULL;                             
+  }                                                 
   apex_exit_thread();
 }
 
-#else
-#define APEX_START(_p)
-#define APEX_STOP()
-#define APEX_RESUME(_p)
 #endif
 
 /// The pthread entry function for dedicated worker threads.
@@ -306,9 +275,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
   p->ustack = q->ustack;
 
   INST_EVENT_PARCEL_RUN(p);
-  APEX_START(p);
   int e = action_execute(p);
-  APEX_STOP();
   INST_EVENT_PARCEL_END(p);
 
   // Restore the current thread pointer.
@@ -341,7 +308,6 @@ static void _execute_interrupt(hpx_parcel_t *p) {
 /// @param       parcel The parcel that describes the thread to run.
 static void _execute_thread(hpx_parcel_t *p) {
   INST_EVENT_PARCEL_RUN(p);
-  APEX_START(p);
   int e = action_execute(p);
   // NB: Threads can explicitly exit through hpx_thread_exit(), which longjmps
   //     through scheduler_suspend(). Matching instrumentation events are
@@ -867,11 +833,9 @@ void scheduler_spawn(hpx_parcel_t *p) {
 
   // Transfer to the parcel, checkpointing the current thread.
   INST_EVENT_PARCEL_SUSPEND(current);
-  APEX_STOP();
   p = _try_bind(w, p);
   int e = _transfer(p, _work_first, NULL);
   dbg_check(e, "Detected a work-first scheduling error: %s\n", hpx_strerror(e));
-  APEX_RESUME(current);
   INST_EVENT_PARCEL_RESUME(current);
 }
 
@@ -951,9 +915,7 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   }
 
   INST_EVENT_PARCEL_SUSPEND(p);
-  APEX_STOP();
   scheduler_suspend(_unlock, (void*)lock, 0);
-  APEX_RESUME(p);
   INST_EVENT_PARCEL_RESUME(p);
 
   // reacquire the lco lock before returning
@@ -1015,7 +977,6 @@ _continue(worker_t *worker, hpx_status_t status, void (*cleanup)(void*),
   }
 
   INST_EVENT_PARCEL_END(parcel);
-  APEX_STOP();
   scheduler_suspend(_free_parcel, (void*)(intptr_t)status, 1);
   unreachable();
 }
@@ -1040,7 +1001,6 @@ void hpx_thread_exit(int status) {
   switch (status) {
    case HPX_RESEND:
     INST_EVENT_PARCEL_END(self->current);
-    APEX_STOP();
     scheduler_suspend(_resend_parcel, NULL, 0);
     unreachable();
    case HPX_ERROR:
@@ -1133,10 +1093,8 @@ void hpx_thread_set_affinity(int affinity) {
 
   // move this thread to the proper worker through the mailbox
   INST_EVENT_PARCEL_SUSPEND(p);
-  APEX_STOP();
   worker_t *w = scheduler_get_worker(here->sched, affinity);
   scheduler_suspend(_send_mail, w, 0);
-  APEX_RESUME(p);
   INST_EVENT_PARCEL_RESUME(p);
 }
 

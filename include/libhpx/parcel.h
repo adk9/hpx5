@@ -18,9 +18,16 @@ extern "C" {
 #endif
 
 #include <hpx/hpx.h>
+#include <libhpx/debug.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/instrumentation_events.h>
 #include <libhpx/scheduler.h>
+
+
+#ifdef HAVE_APEX
+#include "apex.h"
+#include "apex_policies.h"
+#endif
 
 struct ustack;
 
@@ -139,6 +146,14 @@ static inline void INST_EVENT_PARCEL_RUN(hpx_parcel_t *p) {
   // if (NULL == p || p->action == scheduler_nop) {
   //   return;
   // }
+#ifdef HAVE_APEX
+  dbg_assert(p->action != HPX_ACTION_NULL);
+  // if this is NOT a null or lightweight action, send a "start" event to APEX
+  if (p->action != hpx_lco_set_action) {
+    void* handler = (void*)hpx_action_get_handler(p->action);
+    self->profiler = (void*)(apex_start(APEX_FUNCTION_ADDRESS, handler));
+  }
+#endif
   static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_RUN;
   inst_trace(type, id, p->id, p->action, p->size);
@@ -148,12 +163,26 @@ static inline void INST_EVENT_PARCEL_END(hpx_parcel_t *p) {
   // if (p->action == scheduler_nop) {
   //   return;
   // }
+#ifdef HAVE_APEX
+  worker_t *w = self;                               
+  if (w->profiler != NULL) {                        
+    apex_stop((apex_profiler_handle)(w->profiler)); 
+    w->profiler = NULL;                             
+  }                                                 
+#endif
   static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_END;
   inst_trace(type, id, p->id, p->action);
 }
 
 static inline void INST_EVENT_PARCEL_SUSPEND(hpx_parcel_t *p) {
+#ifdef HAVE_APEX
+  worker_t *w = self;                               
+  if (w->profiler != NULL) {                        
+    apex_stop((apex_profiler_handle)(w->profiler)); 
+    w->profiler = NULL;                             
+  }                                                 
+#endif
   static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_SUSPEND;
   inst_trace(type, id, p->id, p->action);
@@ -163,6 +192,14 @@ static inline void INST_EVENT_PARCEL_RESUME(hpx_parcel_t *p) {
   // if (p->action == scheduler_nop) {
   //   return;
   // }
+#ifdef HAVE_APEX
+  dbg_assert(p);
+  dbg_assert(p->action != HPX_ACTION_NULL);
+  if (p->action != hpx_lco_set_action) {
+    void* handler = (void*)hpx_action_get_handler(p->action);
+    self->profiler = (void*)(apex_resume(APEX_FUNCTION_ADDRESS, handler));
+  }
+#endif
   static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_RESUME;
   inst_trace(type, id, p->id, p->action);
@@ -242,3 +279,4 @@ static inline uint32_t parcel_payload_size(const hpx_parcel_t *p) {
 #endif
 
 #endif // LIBHPX_PARCEL_H
+
