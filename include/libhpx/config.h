@@ -138,6 +138,7 @@ static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
   "lco",
   "process",
   "memory",
+  "schedtimes",
   "all"
 };
 
