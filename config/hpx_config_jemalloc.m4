@@ -59,6 +59,11 @@ AC_DEFUN([_HPX_CONTRIB_JEMALLOC], [
  # we install the jemalloc pkg-config script with hpx.pc so external
  # applications will get jemalloc as a private package
  HPX_PC_PRIVATE_PKGS="jemalloc $HPX_PC_PRIVATE_PKGS"
+
+ # when linking to the shared hpx, it contains the correct rpath for jemalloc,
+ # otherwise for static hpx we need to make sure that the rpath for
+ # libjemalloc.so is available.
+ HPX_PC_PRIVATE_LIBS="-Wl,-rpath,\${libdir} $HPX_PC_PRIVATE_LIBS"
 ])
 
 # search for a jemalloc pkg-config package
