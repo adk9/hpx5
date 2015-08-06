@@ -12,6 +12,8 @@
 #include "photon_event.h"
 
 #include "photon_fi.h"
+#include "photon_fi_connect.h"
+
 #include "logging.h"
 #include "libsync/locks.h"
 
@@ -40,7 +42,12 @@ static int fi_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
 static int fi_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
 			photonBuffer lbuf, uint64_t id, int flags);
 static int fi_get_event(int proc, int max, photon_rid *ids, int *n);
-static int fi_get_revent(int proc, int max, photon_rid *ids, uint64_t imms, int *n);
+static int fi_get_revent(int proc, int max, photon_rid *ids, uint64_t *imms, int *n);
+
+static fi_cnct_ctx fi_ctx = {
+  .rdma_put_align = PHOTON_FI_PUT_ALIGN,
+  .rdma_get_align = PHOTON_FI_GET_ALIGN
+};
 
 /* we are now a Photon backend */
 struct photon_backend_t photon_fi_backend = {
@@ -99,6 +106,11 @@ static int fi_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss)
   // __initialized: 0 - not; -1 - initializing; 1 - initialized
   __initialized = -1;
 
+  if(__fi_init_context(&fi_ctx)) {
+    log_err("Could not initialize libfabric context");
+    goto error_exit;
+  }
+
   return PHOTON_OK;
 
 error_exit:
@@ -142,6 +154,6 @@ static int fi_get_event(int proc, int max, photon_rid *ids, int *n) {
   return PHOTON_EVENT_OK;
 }
 
-static int fi_get_revent(int proc, int max, photon_rid *ids, uint64_t imms, int *n) {
+static int fi_get_revent(int proc, int max, photon_rid *ids, uint64_t *imms, int *n) {
   return PHOTON_EVENT_OK;
 }
