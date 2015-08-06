@@ -106,10 +106,41 @@ static int fi_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss)
   // __initialized: 0 - not; -1 - initializing; 1 - initialized
   __initialized = -1;
 
+  fi_ctx.hints = malloc(sizeof(*fi_ctx.hints));
+  if (!fi_ctx.hints) {
+    log_err("Could not allocate space for fi hints");
+    goto error_exit;
+  }
+
+  fi_ctx.hints->fabric_attr = malloc(sizeof(*fi_ctx.hints->domain_attr));
+  if (!fi_ctx.hints->fabric_attr) {
+    goto error_exit;
+  }
+  
+  fi_ctx.hints->domain_attr = malloc(sizeof(*fi_ctx.hints->domain_attr));
+  if (!fi_ctx.hints->domain_attr) {
+    goto error_exit;
+  }
+  
+  fi_ctx.hints->ep_attr = malloc(sizeof(*fi_ctx.hints->ep_attr));
+  if (!fi_ctx.hints->ep_attr) {
+    goto error_exit;
+  }
+
+  fi_ctx.hints->domain_attr->mr_mode = FI_MR_SCALABLE;
+  fi_ctx.hints->ep_attr->type = FI_EP_RDM;
+  fi_ctx.hints->caps = FI_MSG | FI_RMA | FI_RMA_EVENT;
+  fi_ctx.hints->mode = FI_CONTEXT | FI_LOCAL_MR;
+
   if(__fi_init_context(&fi_ctx)) {
     log_err("Could not initialize libfabric context");
     goto error_exit;
   }
+
+  free(fi_ctx.hints->ep_attr);
+  free(fi_ctx.hints->domain_attr);
+  free(fi_ctx.hints->fabric_attr);
+  free(fi_ctx.hints);
 
   return PHOTON_OK;
 
