@@ -357,7 +357,7 @@ static hpx_parcel_t *_try_bind(worker_t *w, hpx_parcel_t *p) {
 
 /// Add a parcel to the top of the worker's work queue.
 ///
-/// This interface is designed so that it can be used as a scheduler_suspend()
+/// This interface is designed so that it can be used as a schedule()
 /// continuation.
 ///
 /// @param            p The parcel that we're going to push.
@@ -495,7 +495,7 @@ typedef struct {
 ///
 /// @param           to The parcel we transferred to.
 /// @param           sp The stack pointer we transferred from.
-/// @param          env A _checkpoint_suspend_env_t that describes the closure.
+/// @param          env A _checkpoint_env_t that describes the closure.
 ///
 /// @return             The status from the closure continuation.
 static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
