@@ -21,7 +21,6 @@ extern "C" {
 #include <libhpx/debug.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/instrumentation_events.h>
-#include <libhpx/scheduler.h>
 
 
 #ifdef HAVE_APEX
@@ -107,21 +106,11 @@ struct hpx_parcel {
 
 /// Parcel tracing events.
 /// @{
-static inline void INST_EVENT_PARCEL_CREATE(hpx_parcel_t *p) {
-#ifdef ENABLE_INSTRUMENTATION
-  // if (p->action == scheduler_nop) {
-  //   return;
-  // }
+static inline void
+INST_EVENT_PARCEL_CREATE(hpx_parcel_t *p, hpx_parcel_t *parent) {
   static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_CREATE;
-
-  hpx_parcel_t *parent = scheduler_current_parcel();
-  uint64_t parent_id = 0;
-  if (parent != NULL)
-    parent_id = parent->id;
-
-  inst_trace(type, id, p->id, p->action, p->size, parent_id);
-#endif
+  inst_trace(type, id, p->id, p->action, p->size, ((parent) ? parent->id : 0));
 }
 
 static inline void INST_EVENT_PARCEL_SEND(hpx_parcel_t *p) {
@@ -143,6 +132,7 @@ static inline void INST_EVENT_PARCEL_RECV(hpx_parcel_t *p) {
 }
 
 static inline void INST_EVENT_PARCEL_RUN(hpx_parcel_t *p) {
+<<<<<<< HEAD
   // if (NULL == p || p->action == scheduler_nop) {
   //   return;
   // }
@@ -154,6 +144,8 @@ static inline void INST_EVENT_PARCEL_RUN(hpx_parcel_t *p) {
     self->profiler = (void*)(apex_start(APEX_FUNCTION_ADDRESS, handler));
   }
 #endif
+=======
+>>>>>>> 63b98a01b101273f3c83c306b927526a207477d4
   static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_RUN;
   inst_trace(type, id, p->id, p->action, p->size);

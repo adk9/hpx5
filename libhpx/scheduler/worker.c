@@ -322,7 +322,6 @@ static void _execute_thread(hpx_parcel_t *p) {
 /// This transfer is special because it understands that there is no parcel in
 /// self->current.
 static int _transfer_from_native_thread(hpx_parcel_t *to, void *sp, void *env) {
-  // checkpoint my native parcel
   hpx_parcel_t *prev = _swap_current(to, sp, self);
   dbg_assert(prev == self->system);
   return HPX_SUCCESS;
@@ -831,7 +830,6 @@ void scheduler_spawn(hpx_parcel_t *p) {
     return;
   }
 
-  // Transfer to the parcel, checkpointing the current thread.
   INST_EVENT_PARCEL_SUSPEND(current);
   p = _try_bind(w, p);
   int e = _transfer(p, _work_first, NULL);
@@ -839,7 +837,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   INST_EVENT_PARCEL_RESUME(current);
 }
 
-/// This is the continuation that we use to yield a thread.
+/// This is the scheduler_suspend() continuation that we use to yield a thread.
 ///
 /// 1) We can't put a yielding thread onto our workqueue with the normal push
 ///    operation, because two threads who are yielding will prevent progress
@@ -854,9 +852,8 @@ void scheduler_spawn(hpx_parcel_t *p) {
 /// 5) We'd like to use a global queue for yielded threads so that they can be
 ///    processed in FIFO order by threads that don't have anything else to do.
 ///
-static int _checkpoint_yield(hpx_parcel_t *to, void *sp, void *env) {
-  hpx_parcel_t *prev = _swap_current(to, sp, self);
-  sync_two_lock_queue_enqueue(&here->sched->yielded, prev);
+static int _yield(hpx_parcel_t *p, void *env) {
+  sync_two_lock_queue_enqueue(&here->sched->yielded, p);
   self->yielded = 0;
   return HPX_SUCCESS;
 }
@@ -868,18 +865,10 @@ void scheduler_yield(void) {
     return;
   }
 
-  // if there's nothing else to do, we can be rescheduled
-  hpx_parcel_t *to = _schedule(false, from);
-  if (from == to) {
-    return;
-  }
-
-  dbg_assert(to);
-  dbg_assert(to->ustack);
-  dbg_assert(to->ustack->sp);
-
+  // don't block looking for work because the yielder might be the last thing
+  // around.
   // note that we don't instrument yields because they overwhelm tracing
-  _transfer(to, _checkpoint_yield, NULL);
+  dbg_check( scheduler_suspend(_yield, NULL, 0) );
 }
 
 void hpx_thread_yield(void) {
@@ -1098,11 +1087,11 @@ void hpx_thread_set_affinity(int affinity) {
   INST_EVENT_PARCEL_RESUME(p);
 }
 
-/// The environment for the _checkpoint_launch_through continuation.
+/// The environment for the _suspend() _transfer() continuation.
 typedef struct {
   int (*f)(hpx_parcel_t *, void *);
   void *env;
-} _checkpoint_suspend_env_t;
+} _suspend_env_t;
 
 /// This continuation updates the `self->current` pointer to record that we are
 /// now running @p to, checkpoints the previous stack pointer in the previous
@@ -1117,28 +1106,26 @@ typedef struct {
 /// @param          env A _checkpoint_suspend_env_t that describes the closure.
 ///
 /// @return             The status from the closure continuation.
-static int _checkpoint_suspend(hpx_parcel_t *to, void *sp, void *env) {
+static int _suspend(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = _swap_current(to, sp, self);
-  _checkpoint_suspend_env_t *c = env;
+  _suspend_env_t *c = env;
   return c->f(prev, c->env);
 }
 
 int scheduler_suspend(int (*f)(hpx_parcel_t *p, void*), void *env, int block) {
+  log_sched("suspending %p in %s\n", (void*)self->current,
+            action_table_get_key(here->actions, self->current->action));
+
   // create the closure environment for the _checkpoint_suspend continuation
-  _checkpoint_suspend_env_t suspend_env = {
+  _suspend_env_t suspend_env = {
     .f = f,
     .env = env
   };
 
-  hpx_parcel_t *p = self->current;
-  INST_EVENT_PARCEL_SUSPEND(p);
-  log_sched("suspending %p in %s\n", (void*)p,
-            action_table_get_key(here->actions, p->action));
   hpx_parcel_t *to = _schedule(!block, NULL);
-  int e = _transfer(to, _checkpoint_suspend, &suspend_env);
-  log_sched("resuming %p\n in %s", (void*)p,
-            action_table_get_key(here->actions, p->action));
-  INST_EVENT_PARCEL_RESUME(p);
+  int e = _transfer(to, _suspend, &suspend_env);
+  log_sched("resuming %p\n in %s", (void*)self->current,
+            action_table_get_key(here->actions, self->current->action));
   return e;
 }
 
