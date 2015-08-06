@@ -21,7 +21,6 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 
 #include <hpx/builtins.h>
 
@@ -222,38 +221,6 @@ static void _apex_worker_shutdown(void) {
 #define APEX_STOP()
 #define APEX_RESUME(_p)
 #endif
-
-/// The pthread entry function for dedicated worker threads.
-///
-/// This is used by worker_create().
-static void *_run(void *worker) {
-  dbg_assert(here);
-  dbg_assert(here->gas);
-  dbg_assert(worker);
-
-  worker_bind_self(worker);
-
-  // Ensure that all of the threads have joined the address spaces.
-  as_join(AS_REGISTERED);
-  as_join(AS_GLOBAL);
-  as_join(AS_CYCLIC);
-
-#ifdef HAVE_APEX
-  // let APEX know there is a new thread
-  apex_register_thread("HPX WORKER THREAD");
-#endif
-
-  if (worker_start()) {
-    dbg_error("failed to start processing lightweight threads.\n");
-    return NULL;
-  }
-
-  // leave the global address space
-  as_leave();
-
-  // unbind self and return NULL
-  return (self = NULL);
-}
 
 /// Continue a parcel by invoking its parcel continuation.
 ///
@@ -676,16 +643,6 @@ void worker_fini(worker_t *w) {
   }
 }
 
-void worker_bind_self(worker_t *worker) {
-  dbg_assert(worker);
-
-  if (self && self != worker) {
-    dbg_error("HPX does not permit worker structure switching.\n");
-  }
-  self = worker;
-  self->thread = pthread_self();
-}
-
 int worker_start(void) {
   dbg_assert(self);
 
@@ -737,38 +694,6 @@ int worker_start(void) {
   }
 
   return LIBHPX_OK;
-}
-
-int worker_create(worker_t *worker, const config_t *cfg) {
-  pthread_t thread;
-
-  int e = pthread_create(&thread, NULL, _run, worker);
-  if (e) {
-    dbg_error("failed to start a scheduler worker pthread.\n");
-    return e;
-  }
-  return LIBHPX_OK;
-}
-
-void worker_join(worker_t *worker) {
-  dbg_assert(worker);
-
-  if (worker->thread == pthread_self()) {
-    return;
-  }
-
-  int e = pthread_join(worker->thread, NULL);
-  if (e) {
-    dbg_error("cannot join worker thread %d (%s).\n", worker->id, strerror(e));
-  }
-}
-
-void worker_cancel(worker_t *worker) {
-  dbg_assert(worker);
-  dbg_assert(worker->thread != pthread_self());
-  if (pthread_cancel(worker->thread)) {
-    dbg_error("cannot cancel worker thread %d.\n", worker->id);
-  }
 }
 
 static int _work_first(hpx_parcel_t *to, void *sp, void *env) {
