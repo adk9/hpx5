@@ -18,4 +18,10 @@
 /// but could be used to provide other functionality.
 void libhpx_time_start();
 
+/// Report what is considered the beginning of time
+/// This is the value of the clock when libhx_time_start() was called.
+/// This function is useful for making sure different parts of libhpx
+/// are counting time from the same start time.
+hpx_time_t libhpx_beginning_of_time();
+
 #endif // LIBHPX_UTILS_H

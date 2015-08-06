@@ -112,3 +112,7 @@ hpx_time_t hpx_time_point(hpx_time_t time, hpx_time_t duration) {
 void libhpx_time_start() {
   _beginning_of_time = hpx_time_now();
 }
+
+hpx_time_t libhpx_beginning_of_time() {
+  return _beginning_of_time;
+}

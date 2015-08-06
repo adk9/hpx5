@@ -72,8 +72,7 @@ static void *_create_mmap(size_t size, int file) {
 }
 
 int logtable_init(logtable_t *log, const char* filename, size_t size,
-                  int class, int id, hpx_time_t start) {
-  log->start = start;
+                  int class, int id) {
   log->fd = -1;
   log->class = class;
   log->id = id;
@@ -143,8 +142,7 @@ void logtable_append(logtable_t *log, uint64_t u1, uint64_t u2, uint64_t u3,
  
   record_t *r = &log->records[i];
   r->worker = hpx_get_my_thread_id();
-  double us = hpx_time_elapsed_us(log->start);
-  r->ns = us * 1e3;
+  r->ns = hpx_time_to_ns(hpx_time_now());
   r->user[0] = u1;
   r->user[1] = u2;
   r->user[2] = u3;
