@@ -288,14 +288,18 @@ static void _execute_interrupt(hpx_parcel_t *p) {
     if (action_is_pinned(here->actions, p->action)) {
       hpx_gas_unpin(p->target);
     }
+    parcel_delete(p);
     break;
+
    case HPX_RESEND:
     log_sched("resending interrupt to %"PRIu64"\n", p->target);
     INST_EVENT_PARCEL_RESEND(p);
     parcel_launch(p);
     break;
+
    case HPX_LCO_ERROR:
     dbg_error("interrupt returned LCO error %s.\n", hpx_strerror(e));
+
    case HPX_ERROR:
    default:
     dbg_error("interrupt produced unexpected error %s.\n", hpx_strerror(e));
@@ -306,11 +310,10 @@ static void _execute_interrupt(hpx_parcel_t *p) {
 ///
 /// @param       parcel The parcel that describes the thread to run.
 static void _execute_thread(hpx_parcel_t *p) {
+  // matching events are in hpx_thread_exit()
   INST_EVENT_PARCEL_RUN(p);
   APEX_START(p);
   int e = action_execute(p);
-  // NB: Threads can explicitly exit through hpx_thread_exit(), which longjmps
-  //     through _schedule(). Matching instrumentation events are there.
   hpx_thread_exit(e);
   unreachable();
 }
@@ -318,13 +321,15 @@ static void _execute_thread(hpx_parcel_t *p) {
 /// Create a new lightweight thread based on the parcel.
 ///
 /// The newly created thread is runnable, and can be thread_transfer()ed to in
-/// the same way as any other lightweight thread can be.
+/// the same way as any other lightweight thread can be. Calling _try_bind() on
+/// a parcel that already has a stack (i.e., a thread) is permissible and has no
+/// effect.
 ///
+/// @param          w The current worker (we will use its stack freelist)
 /// @param          p The parcel that is generating this thread.
 ///
 /// @returns          The parcel @p, but with a valid stack.
 static hpx_parcel_t *_try_bind(worker_t *w, hpx_parcel_t *p) {
-  dbg_assert(p);
   if (p->ustack) {
     return p;
   }
@@ -357,16 +362,13 @@ static hpx_parcel_t *_try_bind(worker_t *w, hpx_parcel_t *p) {
 ///
 /// @param            p The parcel that we're going to push.
 /// @param       worker The worker pointer.
-///
-/// @return HPX_SUCCESS matching the _schedule() continuation interface.
-static int _push_lifo(hpx_parcel_t *p, void *worker) {
+static void _push_lifo(hpx_parcel_t *p, void *worker) {
   dbg_assert(p->target != HPX_NULL);
   dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
   TRACE_PUSH_LIFO(p);
   worker_t *w = worker;
   uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
   w->work_first = (here->sched->wf_threshold < size);
-  return HPX_SUCCESS;
 }
 
 /// Process the next available parcel from our work queue in a lifo order.
@@ -409,9 +411,6 @@ static hpx_parcel_t *_schedule_steal(worker_t *w) {
 }
 
 /// Send a mail message to another worker.
-///
-/// This interface matches the scheduler_transfer continuation interface so that
-/// it can be used in set_affinity.
 static void _send_mail(hpx_parcel_t *p, void *worker) {
   worker_t *w = worker;
   log_sched("sending %p to worker %d\n", (void*)p, w->id);
@@ -433,6 +432,10 @@ static void _handle_mail(worker_t *w) {
 /// Freelist a parcel's stack.
 static void _free_stack(hpx_parcel_t *p, worker_t *w) {
   ustack_t *stack = parcel_swap_stack(p, NULL);
+  if (!stack) {
+    return;
+  }
+
   stack->next = w->stacks;
   w->stacks = stack;
   int32_t count = ++w->nstacks;
@@ -451,18 +454,18 @@ static void _free_stack(hpx_parcel_t *p, worker_t *w) {
   }
 }
 
-/// A parcel_suspend continuation that frees the current parcel.
+/// A _schedule() continuation that frees the current parcel.
 ///
 /// During normal thread termination, the current thread and parcel need to be
 /// freed. This can only be done safely once we've transferred away from that
 /// thread (otherwise we've freed a stack that we're currently running on). This
 /// continuation performs that operation.
-static void _free(hpx_parcel_t *p, void *env) {
+static void _free_parcel(hpx_parcel_t *p, void *env) {
   _free_stack(p, self);
   parcel_delete(p);
 }
 
-/// A parcel_suspend continuation that resends the current parcel.
+/// A _schedule() continuation that resends the current parcel.
 ///
 /// If a parcel has arrived at the wrong locality because its target address has
 /// been moved, then the application user will want to resend the parcel and
@@ -471,30 +474,10 @@ static void _free(hpx_parcel_t *p, void *env) {
 ///
 /// The current thread is terminating however, so we release the stack we were
 /// running on.
-static void _resend(hpx_parcel_t *p, void *env) {
+static void _resend_parcel(hpx_parcel_t *p, void *env) {
   _free_stack(p, self);
   parcel_launch(p);
 }
-
-/// Try to execute a parcel as an interrupt.
-///
-/// @param            p The parcel to test.
-///
-/// @returns          1 The parcel was processed as an interrupt.
-static int _try_interrupt(hpx_parcel_t *p) {
-  if (scheduler_is_shutdown(here->sched)) {
-    return 0;
-  }
-
-  if (!action_is_interrupt(here->actions, p->action)) {
-    return 0;
-  }
-
-  _execute_interrupt(p);
-  hpx_parcel_release(p);
-  return 1;
-}
-
 
 /// The environment for the _checkpoint() _transfer() continuation.
 typedef struct {
@@ -515,13 +498,10 @@ typedef struct {
 /// @param          env A _checkpoint_suspend_env_t that describes the closure.
 ///
 /// @return             The status from the closure continuation.
-static int _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
+static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = _swap_current(to, sp, self);
   _checkpoint_env_t *c = env;
-  if (c->f) {
-    c->f(prev, c->env);
-  }
-  return HPX_SUCCESS;
+  c->f(prev, c->env);
 }
 
 /// The main scheduling loop.
@@ -643,6 +623,9 @@ void worker_fini(worker_t *w) {
   }
 }
 
+static void _null(hpx_parcel_t *p, void *env) {
+}
+
 int worker_start(void) {
   dbg_assert(self);
 
@@ -678,7 +661,7 @@ int worker_start(void) {
 
   // the system thread will loop to find work until the scheduler has shutdown
   while (!scheduler_is_shutdown(sched)) {
-    _schedule(NULL, NULL, 1);
+    _schedule(_null, NULL, 1);
   }
 
 #ifdef HAVE_APEX
@@ -694,14 +677,6 @@ int worker_start(void) {
   }
 
   return LIBHPX_OK;
-}
-
-static int _work_first(hpx_parcel_t *to, void *sp, void *env) {
-  worker_t *w = self;
-  hpx_parcel_t *prev = w->current;
-  w->current = to;
-  prev->ustack->sp = sp;
-  return _push_lifo(prev, w);
 }
 
 /// Spawn a parcel.
@@ -724,20 +699,16 @@ void scheduler_spawn(hpx_parcel_t *p) {
     return;
   }
 
-  // If we're holding a lock then we have to push the spawn for later
-  // processing, or we could end up causing a deadlock.
-  if (current->ustack->lco_depth) {
+  // If we're shutting down then push the parcel and return. This prevents an
+  // infinite spawn from inhibiting termination.
+  if (scheduler_is_shutdown(here->sched)) {
     _push_lifo(p, w);
     return;
   }
 
-  // We always try and run interrupts eagerly.
-  if (_try_interrupt(p)) {
-    return;
-  }
-
-  // If we're not in work-first mode, then push the spawn for later.
-  if (!w->work_first) {
+  // If we're holding a lock then we have to push the spawn for later
+  // processing, or we could end up causing a deadlock.
+  if (current->ustack->lco_depth) {
     _push_lifo(p, w);
     return;
   }
@@ -749,16 +720,23 @@ void scheduler_spawn(hpx_parcel_t *p) {
     return;
   }
 
-  // If we're shutting down then push the parcel and return. This prevents an
-  // infinite spawn from inhibiting termination.
-  if (scheduler_is_shutdown(here->sched)) {
+  // At this point, if we are spawning an interrupt, just run it.
+  if (action_is_interrupt(here->actions, p->action)) {
+    _execute_interrupt(p);
+    return;
+  }
+
+  // If we're not in work-first mode, then push the parcel for later.
+  if (!w->work_first) {
     _push_lifo(p, w);
     return;
   }
 
+  // Process p work-first
   INST_EVENT_PARCEL_SUSPEND(current);
   APEX_STOP();
-  _transfer(_try_bind(w, p), _work_first, NULL);
+  p = _try_bind(w, p);
+  _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = _push_lifo, .env = w });
   APEX_RESUME(current);
   INST_EVENT_PARCEL_RESUME(current);
 }
@@ -784,22 +762,12 @@ static void _yield(hpx_parcel_t *p, void *env) {
 }
 
 void scheduler_yield(void) {
-  hpx_parcel_t *from = self->current;
-  if (!action_is_default(here->actions, from->action)) {
-    // task or interrupt can't yield
-    return;
+  if (action_is_default(here->actions, self->current->action)) {
+    COUNTER_SAMPLE(++self->stats.yields);
+    self->yielded = true;
+    // NB: no trace point, overwhelms infrastructure
+    _schedule(_yield, NULL, 0);
   }
-
-  // don't block looking for work because the yielder might be the last thing
-  // around.
-  // note that we don't instrument yields because they overwhelm tracing
-  _schedule(_yield, NULL, 0);
-}
-
-void hpx_thread_yield(void) {
-  COUNTER_SAMPLE(++self->stats.yields);
-  self->yielded = true;
-  scheduler_yield();
 }
 
 /// A _schedule() continuation that unlocks a lock.
@@ -893,7 +861,7 @@ _continue(worker_t *worker, void (*cleanup)(void*), void *env, int nargs,
 
   INST_EVENT_PARCEL_END(parcel);
   APEX_STOP();
-  _schedule(_free, NULL, 1);
+  _schedule(_free_parcel, NULL, 1);
   unreachable();
 }
 
@@ -919,7 +887,7 @@ void hpx_thread_exit(int status) {
     INST_EVENT_PARCEL_END(self->current);
     APEX_STOP();
     INST_EVENT_PARCEL_RESEND(self->current);
-    _schedule(_resend, NULL, 0);
+    _schedule(_resend_parcel, NULL, 0);
     unreachable();
    case HPX_ERROR:
    case HPX_SUCCESS:
@@ -937,6 +905,10 @@ void hpx_thread_exit(int status) {
 
 hpx_parcel_t *scheduler_current_parcel(void) {
   return self->current;
+}
+
+void hpx_thread_yield(void) {
+  scheduler_yield();
 }
 
 int hpx_get_my_thread_id(void) {
@@ -975,8 +947,7 @@ uint32_t hpx_thread_current_credit(void) {
 }
 
 int hpx_thread_get_tls_id(void) {
-  worker_t *w = self;
-  ustack_t *stack = w->current->ustack;
+  ustack_t *stack = self->current->ustack;
   if (stack->tls_id < 0) {
     stack->tls_id = sync_fadd(&here->sched->next_tls_id, 1, SYNC_ACQ_REL);
   }
