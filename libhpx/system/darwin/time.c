@@ -91,3 +91,8 @@ double hpx_time_ms(hpx_time_t time) {
 void libhpx_time_start() {
   _beginning_of_time = hpx_time_now();
 }
+
+
+hpx_time_t libhpx_beginning_of_time() {
+  return _beginning_of_time;
+}
