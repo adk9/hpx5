@@ -13,6 +13,8 @@ typedef struct fi_cnct_info_t {
 typedef struct fi_cnct_ctx_t {
   struct fi_info         *fi;
   struct fi_info         *hints;
+  struct fid_fabric      *fab;
+  struct fid_domain      *dom;
 
   fi_cnct_info          **local_ci;
   fi_cnct_info          **remote_ci;
