@@ -116,6 +116,11 @@ struct hpx_options_t
   char * hpx_inst_dir_arg;	/**< @brief directory to output instrumentation files.  */
   char * hpx_inst_dir_orig;	/**< @brief directory to output instrumentation files original value given at command line.  */
   const char *hpx_inst_dir_help; /**< @brief directory to output instrumentation files help description.  */
+  int* hpx_inst_at_arg;	/**< @brief set the localities to activate instrumentation at.  */
+  char ** hpx_inst_at_orig;	/**< @brief set the localities to activate instrumentation at original value given at command line.  */
+  unsigned int hpx_inst_at_min; /**< @brief set the localities to activate instrumentation at's minimum occurreces */
+  unsigned int hpx_inst_at_max; /**< @brief set the localities to activate instrumentation at's maximum occurreces */
+  const char *hpx_inst_at_help; /**< @brief set the localities to activate instrumentation at help description.  */
   enum enum_hpx_trace_classes *hpx_trace_classes_arg;	/**< @brief set the event classes to trace.  */
   char ** hpx_trace_classes_orig;	/**< @brief set the event classes to trace original value given at command line.  */
   unsigned int hpx_trace_classes_min; /**< @brief set the event classes to trace's minimum occurreces */
@@ -124,11 +129,6 @@ struct hpx_options_t
   long hpx_trace_filesize_arg;	/**< @brief set the size of each trace file.  */
   char * hpx_trace_filesize_orig;	/**< @brief set the size of each trace file original value given at command line.  */
   const char *hpx_trace_filesize_help; /**< @brief set the size of each trace file help description.  */
-  int* hpx_trace_at_arg;	/**< @brief set the localities to trace at.  */
-  char ** hpx_trace_at_orig;	/**< @brief set the localities to trace at original value given at command line.  */
-  unsigned int hpx_trace_at_min; /**< @brief set the localities to trace at's minimum occurreces */
-  unsigned int hpx_trace_at_max; /**< @brief set the localities to trace at's maximum occurreces */
-  const char *hpx_trace_at_help; /**< @brief set the localities to trace at help description.  */
   enum enum_hpx_prof_counters *hpx_prof_counters_arg;	/**< @brief set which PAPI counters to use for profiling.  */
   char ** hpx_prof_counters_orig;	/**< @brief set which PAPI counters to use for profiling original value given at command line.  */
   unsigned int hpx_prof_counters_min; /**< @brief set which PAPI counters to use for profiling's minimum occurreces */
@@ -219,9 +219,9 @@ struct hpx_options_t
   unsigned int hpx_dbg_mprotectstacks_given ;	/**< @brief Whether hpx-dbg-mprotectstacks was given.  */
   unsigned int hpx_dbg_syncfree_given ;	/**< @brief Whether hpx-dbg-syncfree was given.  */
   unsigned int hpx_inst_dir_given ;	/**< @brief Whether hpx-inst-dir was given.  */
+  unsigned int hpx_inst_at_given ;	/**< @brief Whether hpx-inst-at was given.  */
   unsigned int hpx_trace_classes_given ;	/**< @brief Whether hpx-trace-classes was given.  */
   unsigned int hpx_trace_filesize_given ;	/**< @brief Whether hpx-trace-filesize was given.  */
-  unsigned int hpx_trace_at_given ;	/**< @brief Whether hpx-trace-at was given.  */
   unsigned int hpx_prof_counters_given ;	/**< @brief Whether hpx-prof-counters was given.  */
   unsigned int hpx_prof_event_given ;	/**< @brief Whether hpx-prof-event was given.  */
   unsigned int hpx_isir_testwindow_given ;	/**< @brief Whether hpx-isir-testwindow was given.  */

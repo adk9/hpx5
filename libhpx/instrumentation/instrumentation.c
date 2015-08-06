@@ -160,7 +160,7 @@ int inst_init(config_t *cfg) {
     return LIBHPX_OK;
   }
 
-  if (!config_trace_at_isset(cfg, hpx_get_my_rank())) {
+  if (!config_inst_at_isset(cfg, hpx_get_my_rank())) {
     return LIBHPX_OK;
   }
 
