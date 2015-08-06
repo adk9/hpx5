@@ -434,10 +434,10 @@ config_print(config_t *cfg, FILE *f) {
   }
   fprintf(f, "\n");
 
-  fprintf(f, "\nTracing\n");
-  fprintf(f, "  dir\t\t\t\"%s\"\n", cfg->trace_dir);
-  fprintf(f, "  filesize\t\t%zu\n", cfg->trace_filesize);
-  fprintf(f, "  classes\t\t");
+  fprintf(f, "\nInstrumentation\n");
+  fprintf(f, "  dir\t\t\t\"%s\"\n", cfg->inst_dir);
+  fprintf(f, "  trace filesize\t\t%zu\n", cfg->trace_filesize);
+  fprintf(f, "  trace classes\t\t");
   for (int i = 0, e = sizeof(HPX_TRACE_CLASS_TO_STRING) /
                sizeof(HPX_TRACE_CLASS_TO_STRING[0]); i < e; ++i) {
     uint64_t class = (1lu << i);
