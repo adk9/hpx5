@@ -875,7 +875,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   INST_EVENT_PARCEL_RESUME(current);
 }
 
-/// This is the continuation that we use to yield a thread.
+/// This is the scheduler_suspend() continuation that we use to yield a thread.
 ///
 /// 1) We can't put a yielding thread onto our workqueue with the normal push
 ///    operation, because two threads who are yielding will prevent progress
@@ -890,9 +890,8 @@ void scheduler_spawn(hpx_parcel_t *p) {
 /// 5) We'd like to use a global queue for yielded threads so that they can be
 ///    processed in FIFO order by threads that don't have anything else to do.
 ///
-static int _checkpoint_yield(hpx_parcel_t *to, void *sp, void *env) {
-  hpx_parcel_t *prev = _swap_current(to, sp, self);
-  sync_two_lock_queue_enqueue(&here->sched->yielded, prev);
+static int _yield(hpx_parcel_t *p, void *env) {
+  sync_two_lock_queue_enqueue(&here->sched->yielded, p);
   self->yielded = 0;
   return HPX_SUCCESS;
 }
@@ -904,18 +903,10 @@ void scheduler_yield(void) {
     return;
   }
 
-  // if there's nothing else to do, we can be rescheduled
-  hpx_parcel_t *to = _schedule(false, from);
-  if (from == to) {
-    return;
-  }
-
-  dbg_assert(to);
-  dbg_assert(to->ustack);
-  dbg_assert(to->ustack->sp);
-
+  // don't block looking for work because the yielder might be the last thing
+  // around.
   // note that we don't instrument yields because they overwhelm tracing
-  _transfer(to, _checkpoint_yield, NULL);
+  dbg_check( scheduler_suspend(_yield, NULL, 0) );
 }
 
 void hpx_thread_yield(void) {
