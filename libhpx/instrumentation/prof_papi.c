@@ -44,52 +44,41 @@ static void _set_event(size_t papi_event, size_t bit, size_t bitset,
   *num_counters+=1;
 }
 
-static void _print_warning(size_t papi_event){
-  log_error("Warning: ");
+static const char* _get_counter_string(size_t papi_event){
   switch(papi_event){
-    case PAPI_L1_TCM:  log_error("PAPI_L1_TCM");
-                       break;
-    case PAPI_L2_TCM:  log_error("PAPI_L2_TCM");
-                       break;
-    case PAPI_L3_TCM:  log_error("PAPI_L3_TCM");
-                       break;
-    case PAPI_TLB_TL:  log_error("PAPI_TLB_TL");
-                       break;
-    case PAPI_TOT_INS: log_error("PAPI_TOT_INS");
-                       break;
-    case PAPI_INT_INS: log_error("PAPI_INT_INS");
-                       break;
-    case PAPI_FP_INS:  log_error("PAPI_FP_INS");
-                       break;
-    case PAPI_LD_INS:  log_error("PAPI_LD_INS");
-                       break;
-    case PAPI_SR_INS:  log_error("PAPI_SR_INS");
-                       break;
-    case PAPI_BR_INS:  log_error("PAPI_BR_INS");
-                       break;
-    case PAPI_TOT_CYC: log_error("PAPI_TOT_CYC");
-                       break;
-    default:           log_error("PAPI counter");
-                       break;
+    case PAPI_L1_TCM:  return "PAPI_L1_TCM";
+    case PAPI_L2_TCM:  return "PAPI_L2_TCM";
+    case PAPI_L3_TCM:  return "PAPI_L3_TCM";
+    case PAPI_TLB_TL:  return "PAPI_TLB_TL";
+    case PAPI_TOT_INS: return "PAPI_TOT_INS";
+    case PAPI_INT_INS: return "PAPI_INT_INS";
+    case PAPI_FP_INS:  return "PAPI_FP_INS";
+    case PAPI_LD_INS:  return "PAPI_LD_INS";
+    case PAPI_SR_INS:  return "PAPI_SR_INS";
+    case PAPI_BR_INS:  return "PAPI_BR_INS";
+    case PAPI_TOT_CYC: return "PAPI_TOT_CYC";
+    default:           return "PAPI counter";
   }
 }
 
-static void _test_event(size_t papi_event, size_t bit, size_t bitset, int max_counters,
-                int *num_counters){
+static void _test_event(size_t papi_event, size_t bit, size_t bitset,
+                        int max_counters, int *num_counters){
   if(!(bit & bitset)){
     return;
   }
 
   if(PAPI_query_event(papi_event) != PAPI_OK){
-    _print_warning(papi_event);
-    log_error(" is not available on this system\n");
+    const char *counter_name = _get_counter_string(papi_event);
+    
+    log_error("Warning: %s is not available on this system\n", counter_name);
     return;
   }
 
   *num_counters+=1;
   if(*num_counters > max_counters){
-    _print_warning(papi_event);
-    log_error(" could not be included in profiling due to limited resources\n");
+    const char *counter_name = _get_counter_string(papi_event);
+    log_error("Warning: %s could not be included in profiling due to limited "
+              "resources\n", counter_name);
   }
 }
 
@@ -252,8 +241,11 @@ int prof_reset(){
 }
 
 int prof_fini(){
-  free(_profile_log.counter_totals);
-  free(_profile_log.counters);
+  if(_profile_log.num_counters > 0){
+    
+    free(_profile_log.counter_totals);
+    free(_profile_log.counters);
+  }
   return LIBHPX_OK;
 }
 

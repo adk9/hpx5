@@ -95,16 +95,18 @@ flag off
 option "hpx-dbg-syncfree" - "use synchronous GAS free operations"
 flag off
 
+section "Instrumentation"
+
+option "hpx-inst-dir" - "directory to output instrumentation files"
+typestr="dir"
+string optional
+
 section "Tracing"
 
 option "hpx-trace-classes" - "set the event classes to trace"
 typestr="class"
 values="parcel","pwc","sched","lco","process","memory","all"
 enum optional multiple
-
-option "hpx-trace-dir" - "directory to output trace files"
-typestr="dir"
-string optional
 
 option "hpx-trace-filesize" - "set the size of each trace file"
 typestr="bytes"

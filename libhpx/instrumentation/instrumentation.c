@@ -163,7 +163,7 @@ int inst_init(config_t *cfg) {
     return LIBHPX_OK;
   }
 
-  _log_path = _get_log_path(cfg->trace_dir);
+  _log_path = _get_log_path(cfg->inst_dir);
   if (_log_path == NULL) {
     return LIBHPX_OK;
   }

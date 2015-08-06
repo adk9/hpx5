@@ -113,14 +113,14 @@ struct hpx_options_t
   const char *hpx_dbg_mprotectstacks_help; /**< @brief use mprotect() to bracket stacks to look for stack overflows help description.  */
   int hpx_dbg_syncfree_flag;	/**< @brief use synchronous GAS free operations (default=off).  */
   const char *hpx_dbg_syncfree_help; /**< @brief use synchronous GAS free operations help description.  */
+  char * hpx_inst_dir_arg;	/**< @brief directory to output instrumentation files.  */
+  char * hpx_inst_dir_orig;	/**< @brief directory to output instrumentation files original value given at command line.  */
+  const char *hpx_inst_dir_help; /**< @brief directory to output instrumentation files help description.  */
   enum enum_hpx_trace_classes *hpx_trace_classes_arg;	/**< @brief set the event classes to trace.  */
   char ** hpx_trace_classes_orig;	/**< @brief set the event classes to trace original value given at command line.  */
   unsigned int hpx_trace_classes_min; /**< @brief set the event classes to trace's minimum occurreces */
   unsigned int hpx_trace_classes_max; /**< @brief set the event classes to trace's maximum occurreces */
   const char *hpx_trace_classes_help; /**< @brief set the event classes to trace help description.  */
-  char * hpx_trace_dir_arg;	/**< @brief directory to output trace files.  */
-  char * hpx_trace_dir_orig;	/**< @brief directory to output trace files original value given at command line.  */
-  const char *hpx_trace_dir_help; /**< @brief directory to output trace files help description.  */
   long hpx_trace_filesize_arg;	/**< @brief set the size of each trace file.  */
   char * hpx_trace_filesize_orig;	/**< @brief set the size of each trace file original value given at command line.  */
   const char *hpx_trace_filesize_help; /**< @brief set the size of each trace file help description.  */
@@ -218,8 +218,8 @@ struct hpx_options_t
   unsigned int hpx_dbg_waitonsegv_given ;	/**< @brief Whether hpx-dbg-waitonsegv was given.  */
   unsigned int hpx_dbg_mprotectstacks_given ;	/**< @brief Whether hpx-dbg-mprotectstacks was given.  */
   unsigned int hpx_dbg_syncfree_given ;	/**< @brief Whether hpx-dbg-syncfree was given.  */
+  unsigned int hpx_inst_dir_given ;	/**< @brief Whether hpx-inst-dir was given.  */
   unsigned int hpx_trace_classes_given ;	/**< @brief Whether hpx-trace-classes was given.  */
-  unsigned int hpx_trace_dir_given ;	/**< @brief Whether hpx-trace-dir was given.  */
   unsigned int hpx_trace_filesize_given ;	/**< @brief Whether hpx-trace-filesize was given.  */
   unsigned int hpx_trace_at_given ;	/**< @brief Whether hpx-trace-at was given.  */
   unsigned int hpx_prof_counters_given ;	/**< @brief Whether hpx-prof-counters was given.  */
