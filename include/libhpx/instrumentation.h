@@ -18,8 +18,10 @@
 #include <hpx/builtins.h>
 #include <libhpx/config.h>
 #include <libhpx/locality.h> // for here object inlined in inst_trace_type
+#include <libhpx/profiling.h>
 
 struct config;
+struct profile_log_t;
 
 /// Initialize instrumentation. This is usually called in hpx_init().
 int inst_init(struct config *cfg)
@@ -32,6 +34,9 @@ int inst_start();
 
 
 void inst_fini(void);
+
+/// Dump all of the profiling information to file
+void inst_prof_dump(profile_log_t profile_log);
 
 /// Record an event to the log
 /// @param        type Type this event is part of (see hpx_inst_class_type_t)
