@@ -208,7 +208,6 @@ void inst_fini(void) {
 
 void inst_prof_dump(profile_log_t profile_log){
   if(_log_path == NULL){
-    printf("_log_path is NULL\n");
     return;
   }
 
