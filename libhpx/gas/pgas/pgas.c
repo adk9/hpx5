@@ -282,17 +282,17 @@ typedef struct {
   hpx_addr_t rsync;
 } _pgas_memput_lsync_continuation_env_t;
 
-static int
+static void
 _pgas_memput_lsync_continuation(hpx_parcel_t *p, void *env) {
   _pgas_memput_lsync_continuation_env_t *e = env;
+  hpx_addr_t pgpa = offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p);
   if (e->rsync) {
-    return network_pwc(here->network, e->to, e->from, e->n, resume_parcel,
-                       offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p),
-                       _lco_rsync, e->rsync);
+    dbg_check( network_pwc(here->network, e->to, e->from, e->n, resume_parcel,
+                           pgpa, _lco_rsync, e->rsync) );
   }
   else {
-    return network_put(here->network, e->to, e->from, e->n, resume_parcel,
-                       offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p));
+    dbg_check( network_put(here->network, e->to, e->from, e->n, resume_parcel,
+                           pgpa) );
   }
 }
 
@@ -317,7 +317,8 @@ _pgas_memput_lsync(void *gas, hpx_addr_t to, const void *from, size_t n,
     .rsync = rsync
   };
 
-  return scheduler_suspend(_pgas_memput_lsync_continuation, &env, 0);
+  scheduler_suspend(_pgas_memput_lsync_continuation, &env, 0);
+  return HPX_SUCCESS;
 }
 
 
@@ -327,12 +328,12 @@ typedef struct {
   size_t n;
 } _pgas_memput_rsync_continuation_env_t;
 
-static int
+static void
 _pgas_memput_rsync_continuation(hpx_parcel_t *p, void *env) {
   _pgas_memput_rsync_continuation_env_t *e = env;
-  return network_pwc(here->network, e->to, e->from, e->n, 0, 0,
-                     resume_parcel_remote,
-                     offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p));
+  hpx_addr_t pgpa = offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p);
+  dbg_check( network_pwc(here->network, e->to, e->from, e->n, 0, 0,
+                         resume_parcel_remote, pgpa) );
 }
 
 static int
@@ -353,7 +354,8 @@ _pgas_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t n) {
     .n = n
   };
 
-  return scheduler_suspend(_pgas_memput_rsync_continuation, &env, 0);
+  scheduler_suspend(_pgas_memput_rsync_continuation, &env, 0);
+  return HPX_SUCCESS;
 }
 
 static int
@@ -378,11 +380,11 @@ typedef struct {
   size_t n;
 } _pgas_memget_sync_continutation_env_t;
 
-static int
-_pgas_memget_sync_continutation(hpx_parcel_t *p, void *env) {
+static void _pgas_memget_sync_continutation(hpx_parcel_t *p, void *env) {
   _pgas_memget_sync_continutation_env_t *e = env;
-  return network_get(here->network, e->to, e->from, e->n, resume_parcel,
-                     offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p));
+  hpx_addr_t pgpa = offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p);
+  dbg_check( network_get(here->network, e->to, e->from, e->n, resume_parcel,
+                         pgpa) );
 }
 
 static int
@@ -403,7 +405,8 @@ _pgas_memget_sync(void *gas, void *to, hpx_addr_t from, size_t n) {
     .n = n
   };
 
-  return scheduler_suspend(_pgas_memget_sync_continutation, &env, 0);
+  scheduler_suspend(_pgas_memget_sync_continutation, &env, 0);
+  return HPX_SUCCESS;
 }
 
 static void
