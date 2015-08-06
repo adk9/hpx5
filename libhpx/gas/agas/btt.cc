@@ -240,9 +240,7 @@ static void _btt_try_delete_continuation(hpx_parcel_t *p, void *e) {
   BTT *btt = env->btt;
   gva_t gva = env->gva;
   if ((p = btt->trydelete(gva, p))) {
-    int e = parcel_launch(p);
-    assert(e == LIBHPX_OK);
-    (void)e;
+    parcel_launch(p);
   }
 }
 

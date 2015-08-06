@@ -176,7 +176,7 @@ static void _pwc_lco_get_continuation(hpx_parcel_t *p, void *env) {
   hpx_parcel_t *t = action_create_parcel(e->lco, _pwc_lco_get_request,
                                          HPX_NULL, HPX_ACTION_NULL,
                                          2, &e->request, sizeof(e->request));
-  dbg_check( parcel_launch(t) );
+  parcel_launch(t);
 }
 
 /// This is the top-level LCO get handler that is called for (possibly) remote

@@ -260,11 +260,10 @@ static void *_run(void *worker) {
 /// @param            p The parent parcel (usually self->current).
 /// @param        nargs The number of arguments to continue.
 /// @param         args The arguments we are continuing.
-///
-/// @returns HPX_SUCCESS or an error if parcel_launch fails.
-static int _continue_parcel(hpx_parcel_t *p, int nargs, va_list *args) {
+static void _continue_parcel(hpx_parcel_t *p, int nargs, va_list *args) {
   if (p->c_target == HPX_NULL || p->c_action == HPX_ACTION_NULL) {
-    return process_recover_credit(p);
+    process_recover_credit(p);
+    return;
   }
 
   // create the parcel to continue and transfer whatever credit we have
@@ -273,7 +272,7 @@ static int _continue_parcel(hpx_parcel_t *p, int nargs, va_list *args) {
   dbg_assert(c);
   c->credit = p->credit;
   p->credit = 0;
-  return parcel_launch(c);
+  parcel_launch(c);
 }
 
 /// Swap the current parcel for a worker.
@@ -318,7 +317,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
   switch (e) {
    case HPX_SUCCESS:
     log_sched("completed interrupt\n");
-    dbg_check( _continue_parcel(p, 0, NULL) );
+    _continue_parcel(p, 0, NULL);
     if (action_is_pinned(here->actions, p->action)) {
       hpx_gas_unpin(p->target);
     }
@@ -326,7 +325,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
    case HPX_RESEND:
     log_sched("resending interrupt to %"PRIu64"\n", p->target);
     INST_EVENT_PARCEL_RESEND(p);
-    dbg_check( parcel_launch(p) );
+    parcel_launch(p);
     break;
    case HPX_LCO_ERROR:
     dbg_error("interrupt returned LCO error %s.\n", hpx_strerror(e));
@@ -491,7 +490,7 @@ static void _free_stack(hpx_parcel_t *p, worker_t *w) {
 /// freed. This can only be done safely once we've transferred away from that
 /// thread (otherwise we've freed a stack that we're currently running on). This
 /// continuation performs that operation.
-static void _free_parcel(hpx_parcel_t *p, void *env) {
+static void _free(hpx_parcel_t *p, void *env) {
   _free_stack(p, self);
   parcel_delete(p);
 }
@@ -505,9 +504,9 @@ static void _free_parcel(hpx_parcel_t *p, void *env) {
 ///
 /// The current thread is terminating however, so we release the stack we were
 /// running on.
-static void _resend_parcel(hpx_parcel_t *p, void *env) {
+static void _resend(hpx_parcel_t *p, void *env) {
   _free_stack(p, self);
-  dbg_check( parcel_launch(p) );
+  parcel_launch(p);
 }
 
 /// Try to execute a parcel as an interrupt.
@@ -932,7 +931,7 @@ static void _resume_parcels(hpx_parcel_t *parcels) {
       _send_mail(p, w);
     }
     else {
-      dbg_check( parcel_launch(p) );
+      parcel_launch(p);
     }
   }
 }
@@ -955,7 +954,7 @@ _continue(worker_t *worker, void (*cleanup)(void*), void *env, int nargs,
   hpx_parcel_t *parcel = worker->current;
 
   // send the parcel continuation---this takes my credit if I have any
-  dbg_check( _continue_parcel(parcel, nargs, args) );
+  _continue_parcel(parcel, nargs, args);
 
   // run the cleanup handler
   if (cleanup != NULL) {
@@ -969,7 +968,7 @@ _continue(worker_t *worker, void (*cleanup)(void*), void *env, int nargs,
 
   INST_EVENT_PARCEL_END(parcel);
   APEX_STOP();
-  _schedule(_free_parcel, NULL, 1);
+  _schedule(_free, NULL, 1);
   unreachable();
 }
 
@@ -995,7 +994,7 @@ void hpx_thread_exit(int status) {
     INST_EVENT_PARCEL_END(self->current);
     APEX_STOP();
     INST_EVENT_PARCEL_RESEND(self->current);
-    _schedule(_resend_parcel, NULL, 0);
+    _schedule(_resend, NULL, 0);
     unreachable();
    case HPX_ERROR:
    case HPX_SUCCESS:

@@ -72,7 +72,7 @@ static void _lco_get_continuation(hpx_parcel_t *p, void *env) {
   hpx_parcel_t *l = action_create_parcel(e->lco, _isir_lco_get_request,
                                          HPX_HERE, _isir_lco_get_reply,
                                          3, &p, &e->n, &e->out);
-  dbg_check( parcel_launch(l) );
+  parcel_launch(l);
 }
 
 int isir_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out) {
