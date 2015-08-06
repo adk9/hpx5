@@ -455,25 +455,12 @@ static void _free_stack(hpx_parcel_t *p, worker_t *w) {
 }
 
 /// A _schedule() continuation that frees the current parcel.
-///
-/// During normal thread termination, the current thread and parcel need to be
-/// freed. This can only be done safely once we've transferred away from that
-/// thread (otherwise we've freed a stack that we're currently running on). This
-/// continuation performs that operation.
 static void _free_parcel(hpx_parcel_t *p, void *env) {
   _free_stack(p, self);
   parcel_delete(p);
 }
 
 /// A _schedule() continuation that resends the current parcel.
-///
-/// If a parcel has arrived at the wrong locality because its target address has
-/// been moved, then the application user will want to resend the parcel and
-/// terminate the running thread. This transfer continuation performs that
-/// operation.
-///
-/// The current thread is terminating however, so we release the stack we were
-/// running on.
 static void _resend_parcel(hpx_parcel_t *p, void *env) {
   _free_stack(p, self);
   parcel_launch(p);
@@ -713,16 +700,16 @@ void scheduler_spawn(hpx_parcel_t *p) {
     return;
   }
 
+  // At this point, if we are spawning an interrupt, just run it.
+  if (action_is_interrupt(here->actions, p->action)) {
+    _execute_interrupt(p);
+    return;
+  }
+
   // If we are running an interrupt, then we can't work-first since we don't
   // have our own stack to suspend.
   if (action_is_interrupt(here->actions, current->action)) {
     _push_lifo(p, w);
-    return;
-  }
-
-  // At this point, if we are spawning an interrupt, just run it.
-  if (action_is_interrupt(here->actions, p->action)) {
-    _execute_interrupt(p);
     return;
   }
 
