@@ -79,7 +79,7 @@ void thread_exit(int status, const void *value, size_t size)
   HPX_NORETURN;
 
 /// The transfer continuation function type.
-typedef int (*thread_transfer_cont_t)(hpx_parcel_t *p, void *sp, void *env);
+typedef void (*thread_transfer_cont_t)(hpx_parcel_t *p, void *sp, void *env);
 
 /// The actual routine to transfer between thread.
 ///
