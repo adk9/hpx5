@@ -48,6 +48,13 @@ struct photon_config_t {
     int bte_thresh;         // Messages >= bytes use BTE (default 8192, set 0 to disable BTE)
   } ugni;
 
+  struct {
+    char *domain;
+    char *node;
+    char *service;
+    char *provider;
+  } fi;
+
   struct {                  // EXPERIMENTAL: forwarder interface to XSPd
     int use_forwarder;
     char **forwarder_eids;
