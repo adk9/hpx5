@@ -20,6 +20,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifdef HAVE_APEX
+# include <apex.h>
+#endif
+
 #include <hpx/builtins.h>
 #include <libhpx/action.h>
 #include <libhpx/config.h>

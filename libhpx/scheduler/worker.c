@@ -22,6 +22,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#ifdef HAVE_APEX
+# include <apex.h>
+# include <apex_policies.h>
+#endif
+
 #include <hpx/builtins.h>
 
 #include <libhpx/action.h>
@@ -41,11 +46,6 @@
 #include "lco.h"
 #include "thread.h"
 #include "termination.h"
-
-#ifdef HAVE_APEX
-#include "apex.h"
-#include "apex_policies.h"
-#endif
 
 /// Storage for the thread-local worker pointer.
 __thread worker_t * volatile self = NULL;
