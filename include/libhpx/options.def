@@ -139,6 +139,7 @@ LIBHPX_OPT_INTSET(trace_, at, HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_
 /// Profiling options
 /// @{
 LIBHPX_OPT_BITSET(prof_, counters, LIBHPX_OPT_BITSET_NONE)
+LIBHPX_OPT_SCALAR(prof_, event, none, hpx_prof_event_t)
 /// @}
 
 /// PWC options
