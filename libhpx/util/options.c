@@ -447,17 +447,17 @@ config_print(config_t *cfg, FILE *f) {
   }
   fprintf(f, "\n");
   fprintf(f, "  at\t\t\t");
-  if (!cfg->trace_at) {
+  if (!cfg->inst_at) {
     fprintf(f, "all");
   }
   else {
-    for (int i = 0; cfg->trace_at[i] != HPX_LOCALITY_NONE; ++i) {
-      if (cfg->trace_at[i] == HPX_LOCALITY_ALL) {
+    for (int i = 0; cfg->inst_at[i] != HPX_LOCALITY_NONE; ++i) {
+      if (cfg->inst_at[i] == HPX_LOCALITY_ALL) {
         fprintf(f, "all\n");
         break;
       }
       else {
-        fprintf(f, "%d, ", cfg->trace_at[i]);
+        fprintf(f, "%d, ", cfg->inst_at[i]);
       }
     }
   }

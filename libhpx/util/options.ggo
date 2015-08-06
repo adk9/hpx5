@@ -101,6 +101,10 @@ option "hpx-inst-dir" - "directory to output instrumentation files"
 typestr="dir"
 string optional
 
+option "hpx-inst-at" - "set the localities to activate instrumentation at"
+typestr="[localities]"
+int optional multiple
+
 section "Tracing"
 
 option "hpx-trace-classes" - "set the event classes to trace"
@@ -111,10 +115,6 @@ enum optional multiple
 option "hpx-trace-filesize" - "set the size of each trace file"
 typestr="bytes"
 long optional
-
-option "hpx-trace-at" - "set the localities to trace at"
-typestr="[localities]"
-int optional multiple
 
 section "Profiling"
 
