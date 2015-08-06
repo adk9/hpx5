@@ -114,10 +114,17 @@ option "hpx-trace-at" - "set the localities to trace at"
 typestr="[localities]"
 int optional multiple
 
+section "Profiling"
+
 option "hpx-prof-counters" - "set which PAPI counters to use for profiling"
 typestr="counters"
 values="HPX_L1_TCM","HPX_L2_TCM","HPX_L3_TCM","HPX_TLB_TL","HPX_TOT_INS","HPX_INT_INS","HPX_FP_INS","HPX_LD_INS","HPX_SR_INS","HPX_BR_INS","HPX_TOT_CYC","all"
-enum optional argoptional multiple
+enum optional multiple
+
+option "hpx-prof-event" - "set which event to profile"
+typestr="event"
+values="none"
+enum optional
 
 section "ISIR Network Options"
 

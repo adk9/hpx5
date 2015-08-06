@@ -168,6 +168,16 @@ static const char *const HPX_PROF_COUNTER_TO_STRING[] = {
   "all"
 };
 
+typedef enum {
+  none = 0,
+  HPX_PROF_EVENT_MAX
+} hpx_prof_event_t;
+
+static const char* const HPX_PROF_EVENT_TO_STRING[] = {
+  "none",
+  "INVALID"
+};
+
 /// The HPX configuration type.
 ///
 /// This configuration is used to control some of the runtime
