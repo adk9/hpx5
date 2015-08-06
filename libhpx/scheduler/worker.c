@@ -48,11 +48,8 @@
 #include "apex_policies.h"
 #endif
 
-#ifdef ENABLE_DEBUG
-# define _transfer _debug_transfer
-#else
-# define _transfer thread_transfer
-#endif
+/// Storage for the thread-local worker pointer.
+__thread worker_t * volatile self = NULL;
 
 #ifdef ENABLE_INSTRUMENTATION
 static inline void TRACE_WQSIZE(worker_t *w) {
@@ -87,16 +84,19 @@ static inline void TRACE_STEAL_LIFO(hpx_parcel_t *p,
 # define TRACE_STEAL_LIFO(p, v)
 #endif
 
-__thread worker_t * volatile self = NULL;
-
+#ifdef ENABLE_DEBUG
 /// This transfer wrapper is used for logging, debugging, and instrumentation.
 ///
 /// Internally, it will perform it's pre-transfer operations, call
 /// thread_transfer(), and then perform post-transfer operations on the return.
-static void HPX_USED
-_debug_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env) {
-  thread_transfer(p, cont, env);
+static void _dbg_transfer(hpx_parcel_t *p, thread_transfer_cont_t c, void *e) {
+  thread_transfer(p, c, e);
 }
+
+# define _transfer _dbg_transfer
+#else
+# define _transfer thread_transfer
+#endif
 
 #ifdef HAVE_APEX
 void APEX_STOP(void) {
