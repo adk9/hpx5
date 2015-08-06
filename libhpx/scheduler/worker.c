@@ -349,39 +349,6 @@ static void _execute_thread(hpx_parcel_t *p) {
   unreachable();
 }
 
-/// Freelist a parcel's stack.
-static void _put_stack(hpx_parcel_t *p, worker_t *w) {
-  ustack_t *stack = parcel_swap_stack(p, NULL);
-  dbg_assert(stack);
-  stack->next = w->stacks;
-  w->stacks = stack;
-  int32_t count = ++w->nstacks;
-  int32_t limit = here->config->sched_stackcachelimit;
-  if (limit < 0 || count <= limit) {
-    return;
-  }
-
-  int32_t half = ceil_div_32(limit, 2);
-  log_sched("flushing half of the stack freelist (%d)\n", half);
-  while (count > half) {
-    stack = w->stacks;
-    w->stacks = stack->next;
-    count = --w->nstacks;
-    thread_delete(stack);
-  }
-}
-
-/// Try and get a stack from the freelist for the parcel.
-static ustack_t *_try_get_stack(worker_t *w, hpx_parcel_t *p) {
-  ustack_t *stack = w->stacks;
-  if (stack) {
-    w->stacks = stack->next;
-    --w->nstacks;
-    thread_init(stack, p, _execute_thread, stack->size);
-  }
-  return stack;
-}
-
 /// Create a new lightweight thread based on the parcel.
 ///
 /// The newly created thread is runnable, and can be thread_transfer()ed to in
@@ -396,8 +363,14 @@ static hpx_parcel_t *_try_bind(worker_t *w, hpx_parcel_t *p) {
     return p;
   }
 
-  ustack_t *stack = _try_get_stack(w, p);
-  if (!stack) {
+  // try and get a stack from the freelist, otherwise allocate a new one
+  ustack_t *stack = w->stacks;
+  if (stack) {
+    w->stacks = stack->next;
+    --w->nstacks;
+    thread_init(stack, p, _execute_thread, stack->size);
+  }
+  else {
     stack = thread_new(p, _execute_thread);
   }
 
@@ -491,6 +464,27 @@ static void _handle_mail(worker_t *w) {
   }
 }
 
+/// Freelist a parcel's stack.
+static void _free_stack(hpx_parcel_t *p, worker_t *w) {
+  ustack_t *stack = parcel_swap_stack(p, NULL);
+  stack->next = w->stacks;
+  w->stacks = stack;
+  int32_t count = ++w->nstacks;
+  int32_t limit = here->config->sched_stackcachelimit;
+  if (limit < 0 || count <= limit) {
+    return;
+  }
+
+  int32_t half = ceil_div_32(limit, 2);
+  log_sched("flushing half of the stack freelist (%d)\n", half);
+  while (count > half) {
+    stack = w->stacks;
+    w->stacks = stack->next;
+    count = --w->nstacks;
+    thread_delete(stack);
+  }
+}
+
 /// A parcel_suspend continuation that frees the current parcel.
 ///
 /// During normal thread termination, the current thread and parcel need to be
@@ -498,7 +492,7 @@ static void _handle_mail(worker_t *w) {
 /// thread (otherwise we've freed a stack that we're currently running on). This
 /// continuation performs that operation.
 static void _free_parcel(hpx_parcel_t *p, void *env) {
-  _put_stack(p, self);
+  _free_stack(p, self);
   parcel_delete(p);
 }
 
@@ -512,7 +506,7 @@ static void _free_parcel(hpx_parcel_t *p, void *env) {
 /// The current thread is terminating however, so we release the stack we were
 /// running on.
 static void _resend_parcel(hpx_parcel_t *p, void *env) {
-  _put_stack(p, self);
+  _free_stack(p, self);
   dbg_check( parcel_launch(p) );
 }
 
