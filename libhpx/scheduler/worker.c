@@ -145,9 +145,9 @@ static void _apex_signal(void) {
 /// Try to deactivate a worker.
 ///
 /// @returns          1 If the worker remains active, 0 if it was deactivated
-static int _apex_try_deactivate(worker_t *worker, int *n_active_workers) {
+static int _apex_try_deactivate(int *n_active_workers) {
   if (sync_fadd(n_active_workers, -1, SYNC_ACQ_REL) > apex_get_thread_cap()) {
-    worker->active = false;
+    self->active = false;
     apex_set_state(APEX_THROTTLED);
     return 0;
   }
@@ -159,10 +159,10 @@ static int _apex_try_deactivate(worker_t *worker, int *n_active_workers) {
 /// Try to reactivate an inactive worker.
 ///
 /// @returns          1 If the thread reactivated, 0 if it is still inactive.
-static int _apex_try_reactivate(worker_t *worker, int *n_active_workers) {
+static int _apex_try_reactivate(int *n_active_workers) {
   if (sync_fadd(n_active_workers, 1, SYNC_ACQ_REL) <= apex_get_thread_cap()) {
     // I fit inside the cap!
-    worker->active = true;
+    self->active = true;
     apex_set_state(APEX_BUSY);
     return 1;
   }
@@ -184,22 +184,22 @@ static int _apex_check_active(void) {
     return 1;
   }
 
-  worker_t      *worker = self;
+  // we use this address a bunch of times, so just remember it
   int *n_active_workers = &(here->sched->n_active_workers);
 
-  if (!worker->active) {
+  if (!self->active) {
     // because I can't change the power level, sleep instead.
     _apex_wait();
-    return _apex_try_reactivate(worker, n_active_workers);
+    return _apex_try_reactivate(n_active_workers);
   }
 
-  if (!apex_throttleOn || worker->yielded) {
+  if (!apex_throttleOn || self->yielded) {
     return 1;
   }
 
   // If there are too many threads running, then try and become inactive.
   if (sync_load(n_active_workers, SYNC_ACQUIRE) > apex_get_thread_cap()) {
-    return _apex_try_deactivate(worker, n_active_workers);
+    return _apex_try_deactivate(n_active_workers);
   }
 
   // Go ahead and signal the condition variable if we need to
