@@ -174,9 +174,9 @@ struct ustack *parcel_swap_stack(hpx_parcel_t *p, struct ustack *stack);
 /// This sends the parcel synchronously. This will eagerly serialize the parcel,
 /// and will assign it credit from the currently executing process if it has a
 /// pid set.
-int parcel_launch(hpx_parcel_t *p);
+void parcel_launch(hpx_parcel_t *p);
 
-int parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate);
+void parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate);
 
 void parcel_set_state(hpx_parcel_t *p, parcel_state_t state);
 

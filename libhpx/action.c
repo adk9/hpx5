@@ -304,7 +304,8 @@ int action_call_va(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
                                             nargs, args);
 
   if (likely(!gate && !lsync)) {
-    return parcel_launch(p);
+    parcel_launch(p);
+    return HPX_SUCCESS;
   }
   if (!gate && lsync) {
     return hpx_parcel_send(p, lsync);
