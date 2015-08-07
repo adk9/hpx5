@@ -26,13 +26,13 @@
 
 /// This acts as a parcel_suspend transfer to allow _pwc_lco_get_request_handler
 /// to wait for its pwc to complete.
-static int _get_reply_continuation(hpx_parcel_t *p, void *env) {
+static void _get_reply_continuation(hpx_parcel_t *p, void *env) {
   pwc_network_t *pwc = (pwc_network_t*)here->network;
   xport_op_t *op = env;
 
   // at this point we know which parcel to resume for local completion
   op->lop = command_pack(resume_parcel, (uint64_t)(uintptr_t)p);
-  return pwc->xport->pwc(op);
+  dbg_check( pwc->xport->pwc(op) );
 }
 
 typedef struct {
@@ -67,7 +67,8 @@ static int _get_reply(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
 
   // Issue the pwc and wait for synchronous local completion so that the ref
   // buffer doesn't move during the underlying rdma, if there is any
-  return scheduler_suspend(_get_reply_continuation, &op, 0);
+  scheduler_suspend(_get_reply_continuation, &op, 0);
+  return HPX_SUCCESS;
 }
 
 /// This function (*not* an action) performs a get request to a temporary stack
@@ -168,14 +169,14 @@ typedef struct {
 } _pwc_lco_get_continuation_env_t;
 
 /// Issue the get request parcel from a transfer continuation.
-static int _pwc_lco_get_continuation(hpx_parcel_t *p, void *env) {
+static void _pwc_lco_get_continuation(hpx_parcel_t *p, void *env) {
   _pwc_lco_get_continuation_env_t *e = env;
   e->request.p = p;
 
   hpx_parcel_t *t = action_create_parcel(e->lco, _pwc_lco_get_request,
                                          HPX_NULL, HPX_ACTION_NULL,
                                          2, &e->request, sizeof(e->request));
-  return parcel_launch(t);
+  parcel_launch(t);
 }
 
 /// This is the top-level LCO get handler that is called for (possibly) remote
@@ -209,12 +210,12 @@ int pwc_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out) {
   }
 
   // Perform the get operation synchronously.
-  int e = scheduler_suspend(_pwc_lco_get_continuation, &env, 0);
+  scheduler_suspend(_pwc_lco_get_continuation, &env, 0);
 
   // If we registered the output buffer dynamically, then we need to de-register
   // it now.
   if (!key) {
     pwc->xport->unpin(out, n);
   }
-  return e;
+  return HPX_SUCCESS;
 }

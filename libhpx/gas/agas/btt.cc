@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <libhpx/libhpx.h>
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
 #include <cuckoohash_map.hh>
@@ -234,14 +235,13 @@ typedef struct {
   gva_t       gva;
 } _btt_try_delete_env_t;
 
-static int _btt_try_delete_continuation(hpx_parcel_t *p, void *e) {
+static void _btt_try_delete_continuation(hpx_parcel_t *p, void *e) {
   _btt_try_delete_env_t *env = static_cast<_btt_try_delete_env_t*>(e);
   BTT *btt = env->btt;
   gva_t gva = env->gva;
   if ((p = btt->trydelete(gva, p))) {
-    return parcel_launch(p);
+    parcel_launch(p);
   }
-  return HPX_SUCCESS;
 }
 
 int btt_remove_when_count_zero(void *o, gva_t gva, void **lva) {
