@@ -21,6 +21,7 @@ extern "C" {
 #include <libhpx/debug.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/instrumentation_events.h>
+#include <libhpx/worker.h>
 
 
 #ifdef HAVE_APEX
@@ -131,8 +132,7 @@ static inline void INST_EVENT_PARCEL_RECV(hpx_parcel_t *p) {
   inst_trace(type, id, p->id, p->action, p->size, p->src);
 }
 
-static inline void INST_EVENT_PARCEL_RUN(hpx_parcel_t *p) {
-<<<<<<< HEAD
+static inline void INST_EVENT_PARCEL_RUN(hpx_parcel_t *p, worker_t *w) {
   // if (NULL == p || p->action == scheduler_nop) {
   //   return;
   // }
@@ -141,22 +141,19 @@ static inline void INST_EVENT_PARCEL_RUN(hpx_parcel_t *p) {
   // if this is NOT a null or lightweight action, send a "start" event to APEX
   if (p->action != hpx_lco_set_action) {
     void* handler = (void*)hpx_action_get_handler(p->action);
-    self->profiler = (void*)(apex_start(APEX_FUNCTION_ADDRESS, handler));
+    w->profiler = (void*)(apex_start(APEX_FUNCTION_ADDRESS, handler));
   }
 #endif
-=======
->>>>>>> 63b98a01b101273f3c83c306b927526a207477d4
   static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_RUN;
   inst_trace(type, id, p->id, p->action, p->size);
 }
 
-static inline void INST_EVENT_PARCEL_END(hpx_parcel_t *p) {
+static inline void INST_EVENT_PARCEL_END(hpx_parcel_t *p, worker_t *w) {
   // if (p->action == scheduler_nop) {
   //   return;
   // }
 #ifdef HAVE_APEX
-  worker_t *w = self;                               
   if (w->profiler != NULL) {                        
     apex_stop((apex_profiler_handle)(w->profiler)); 
     w->profiler = NULL;                             
@@ -167,9 +164,8 @@ static inline void INST_EVENT_PARCEL_END(hpx_parcel_t *p) {
   inst_trace(type, id, p->id, p->action);
 }
 
-static inline void INST_EVENT_PARCEL_SUSPEND(hpx_parcel_t *p) {
+static inline void INST_EVENT_PARCEL_SUSPEND(hpx_parcel_t *p, worker_t *w) {
 #ifdef HAVE_APEX
-  worker_t *w = self;                               
   if (w->profiler != NULL) {                        
     apex_stop((apex_profiler_handle)(w->profiler)); 
     w->profiler = NULL;                             
@@ -180,7 +176,7 @@ static inline void INST_EVENT_PARCEL_SUSPEND(hpx_parcel_t *p) {
   inst_trace(type, id, p->id, p->action);
 }
 
-static inline void INST_EVENT_PARCEL_RESUME(hpx_parcel_t *p) {
+static inline void INST_EVENT_PARCEL_RESUME(hpx_parcel_t *p, worker_t *w) {
   // if (p->action == scheduler_nop) {
   //   return;
   // }
@@ -189,7 +185,7 @@ static inline void INST_EVENT_PARCEL_RESUME(hpx_parcel_t *p) {
   dbg_assert(p->action != HPX_ACTION_NULL);
   if (p->action != hpx_lco_set_action) {
     void* handler = (void*)hpx_action_get_handler(p->action);
-    self->profiler = (void*)(apex_resume(APEX_FUNCTION_ADDRESS, handler));
+    w->profiler = (void*)(apex_resume(APEX_FUNCTION_ADDRESS, handler));
   }
 #endif
   static const int type = HPX_INST_CLASS_PARCEL;
@@ -223,9 +219,9 @@ struct ustack *parcel_swap_stack(hpx_parcel_t *p, struct ustack *stack);
 /// This sends the parcel synchronously. This will eagerly serialize the parcel,
 /// and will assign it credit from the currently executing process if it has a
 /// pid set.
-int parcel_launch(hpx_parcel_t *p);
+void parcel_launch(hpx_parcel_t *p);
 
-int parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate);
+void parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate);
 
 void parcel_set_state(hpx_parcel_t *p, parcel_state_t state);
 
