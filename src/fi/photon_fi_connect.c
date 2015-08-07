@@ -23,6 +23,7 @@
 #include "util.h"
 #include "logging.h"
 
+#ifdef ENABLE_DEBUG
 static int __print_short_info(struct fi_info *info)
 {
   for (struct fi_info *cur = info; cur; cur = cur->next) {
@@ -42,22 +43,22 @@ static int __print_long_info(struct fi_info *info) {
   }
   return PHOTON_OK;
 }
+#endif
 
 int __fi_init_context(fi_cnct_ctx *ctx) {
-  char *node, *service;
-  uint64_t flags = 0;
+  struct fi_info *f;
   int rc;
   
-  node = NULL;
-  service = NULL;
-  
-  rc = fi_getinfo(FT_FIVERSION, node, service, flags, ctx->hints, &ctx->fi);
+  rc = fi_getinfo(FT_FIVERSION, ctx->node, ctx->service, ctx->flags,
+		  ctx->hints, &ctx->fi);
   if (rc) {
-    log_err("Could not get fi_info: %s\n", fi_strerror(rc));
+    log_err("Could not get fi_info: %s", fi_strerror(rc));
     goto error_exit;
   }
 
-  __print_short_info(ctx->fi);
+#ifdef ENABLE_DEBUG
+  __print_long_info(ctx->fi);
+#endif
 
   rc = fi_fabric(ctx->fi->fabric_attr, &ctx->fab, NULL);
   if (rc) {
@@ -65,12 +66,27 @@ int __fi_init_context(fi_cnct_ctx *ctx) {
     goto error_exit;
   }
   
-  rc = fi_domain(ctx->fab, ctx->fi, &ctx->dom, NULL);
-  if (rc) {
-    log_err("Could init domain: %s", fi_strerror(rc));
-    goto err1;
+  for (f = ctx->fi; f; f = f->next) {
+    rc = fi_domain(ctx->fab, ctx->fi, &ctx->dom, NULL);
+    if (rc) {
+      dbg_info("Could not init domain using provider %s: %s",
+	       f->fabric_attr->prov_name,
+	       fi_strerror(rc));
+    }
+    else {
+      dbg_info("Created FI domain on %s : %s : %s",
+	       f->fabric_attr->prov_name,
+	       f->fabric_attr->name,
+	       fi_tostr(&f->ep_attr->type, FI_TYPE_EP_TYPE));
+      break;
+    }
   }
   
+  if (!f) {
+    log_err("Could not use any libfabric providers!");
+    goto err1;
+  }
+
   return PHOTON_OK;
   
  err2:
@@ -82,6 +98,6 @@ int __fi_init_context(fi_cnct_ctx *ctx) {
 }
 
 int __fi_connect_peers(fi_cnct_ctx *ctx) {
-
   return PHOTON_OK;
 }
+

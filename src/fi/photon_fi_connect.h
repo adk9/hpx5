@@ -6,18 +6,18 @@
 
 #include "photon_attributes.h"
 
-typedef struct fi_cnct_info_t {
-  int test;
-} fi_cnct_info;
-
 typedef struct fi_cnct_ctx_t {
   struct fi_info         *fi;
   struct fi_info         *hints;
   struct fid_fabric      *fab;
   struct fid_domain      *dom;
 
-  fi_cnct_info          **local_ci;
-  fi_cnct_info          **remote_ci;
+  uint64_t                flags;
+  char                   *node;
+  char                   *service;
+  char                   *domain;
+  char                   *provider;
+
   int                     rdma_get_align;
   int                     rdma_put_align;
 } fi_cnct_ctx;
