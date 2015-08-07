@@ -2,20 +2,17 @@
 #define PHOTON_FI_H
 
 #include <stdint.h>
-
-#include "rdma/fabric.h"
-#include "photon_fi_buffer.h"
+#include <rdma/fabric.h>
 
 #include "libphoton.h"
 #include "photon_backend.h"
-#include "photon_rdma_INFO_ledger.h"
-#include "photon_rdma_ledger.h"
+#include "photon_fi_buffer.h"
 
 #define PHOTON_FI_PUT_ALIGN 1
 #define PHOTON_FI_GET_ALIGN 1
 
 #ifndef FT_FIVERSION
-#define FT_FIVERSION FI_VERSION(1,1)
+#define FT_FIVERSION FI_VERSION(FI_MAJOR_VERSION,FI_MINOR_VERSION)
 #endif
 
 // for RMA ops we want to be able to select fi_writedata, but there is no

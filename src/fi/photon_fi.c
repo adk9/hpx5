@@ -45,6 +45,10 @@ static int fi_get_event(int proc, int max, photon_rid *ids, int *n);
 static int fi_get_revent(int proc, int max, photon_rid *ids, uint64_t *imms, int *n);
 
 static fi_cnct_ctx fi_ctx = {
+  .node = NULL,
+  .service = NULL,
+  .domain = NULL,
+  .provider = NULL,
   .rdma_put_align = PHOTON_FI_PUT_ALIGN,
   .rdma_get_align = PHOTON_FI_GET_ALIGN
 };
@@ -106,28 +110,29 @@ static int fi_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss)
   // __initialized: 0 - not; -1 - initializing; 1 - initialized
   __initialized = -1;
 
-  fi_ctx.hints = malloc(sizeof(*fi_ctx.hints));
+  fi_ctx.hints = calloc(1, sizeof(*fi_ctx.hints));
   if (!fi_ctx.hints) {
     log_err("Could not allocate space for fi hints");
     goto error_exit;
   }
 
-  fi_ctx.hints->fabric_attr = malloc(sizeof(*fi_ctx.hints->domain_attr));
+  fi_ctx.hints->fabric_attr = calloc(1, sizeof(*fi_ctx.hints->domain_attr));
   if (!fi_ctx.hints->fabric_attr) {
     goto error_exit;
   }
   
-  fi_ctx.hints->domain_attr = malloc(sizeof(*fi_ctx.hints->domain_attr));
+  fi_ctx.hints->domain_attr = calloc(1, sizeof(*fi_ctx.hints->domain_attr));
   if (!fi_ctx.hints->domain_attr) {
     goto error_exit;
   }
   
-  fi_ctx.hints->ep_attr = malloc(sizeof(*fi_ctx.hints->ep_attr));
+  fi_ctx.hints->ep_attr = calloc(1, sizeof(*fi_ctx.hints->ep_attr));
   if (!fi_ctx.hints->ep_attr) {
     goto error_exit;
   }
 
   fi_ctx.hints->domain_attr->mr_mode = FI_MR_SCALABLE;
+  fi_ctx.hints->domain_attr->threading = FI_THREAD_SAFE;
   fi_ctx.hints->ep_attr->type = FI_EP_RDM;
   fi_ctx.hints->caps = FI_MSG | FI_RMA | FI_RMA_EVENT;
   fi_ctx.hints->mode = FI_CONTEXT | FI_LOCAL_MR;
