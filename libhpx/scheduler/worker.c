@@ -191,11 +191,11 @@ static int _apex_check_active(void) {
 /// release idle threads, stop any running timers, and exit the thread from APEX
 static void _apex_worker_shutdown(void) {
   pthread_cond_broadcast(&_release);
-  worker_t *w = self;                               
-  if (w->profiler != NULL) {                        
-    apex_stop((apex_profiler_handle)(w->profiler)); 
-    w->profiler = NULL;                             
-  }                                                 
+  worker_t *w = self;
+  if (w->profiler != NULL) {
+    apex_stop((apex_profiler_handle)(w->profiler));
+    w->profiler = NULL;
+  }
   apex_exit_thread();
 }
 
@@ -632,15 +632,12 @@ int worker_start(void) {
   _apex_worker_shutdown();
 #endif
 
-  if (sched->shutdown != HPX_SUCCESS) {
-    if (here->rank == 0) {
-      log_error("application exited with a non-zero exit code: %d.\n",
-                sched->shutdown);
-    }
-    return sched->shutdown;
+  if (sched->shutdown != HPX_SUCCESS && here->rank == 0) {
+    log_error("application exited with a non-zero exit code: %d.\n",
+              sched->shutdown);
   }
 
-  return LIBHPX_OK;
+  return sched->shutdown;
 }
 
 /// Spawn a parcel.
