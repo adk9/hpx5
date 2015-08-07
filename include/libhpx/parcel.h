@@ -21,12 +21,11 @@ extern "C" {
 #include <libhpx/debug.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/instrumentation_events.h>
-#include <libhpx/worker.h>
-
 
 #ifdef HAVE_APEX
-#include "apex.h"
-#include "apex_policies.h"
+# include <apex.h>
+# include <apex_policies.h>
+# include <libhpx/worker.h>
 #endif
 
 struct ustack;
@@ -133,9 +132,6 @@ static inline void INST_EVENT_PARCEL_RECV(hpx_parcel_t *p) {
 }
 
 static inline void INST_EVENT_PARCEL_RUN(hpx_parcel_t *p, worker_t *w) {
-  // if (NULL == p || p->action == scheduler_nop) {
-  //   return;
-  // }
 #ifdef HAVE_APEX
   dbg_assert(p->action != HPX_ACTION_NULL);
   // if this is NOT a null or lightweight action, send a "start" event to APEX
@@ -150,14 +146,11 @@ static inline void INST_EVENT_PARCEL_RUN(hpx_parcel_t *p, worker_t *w) {
 }
 
 static inline void INST_EVENT_PARCEL_END(hpx_parcel_t *p, worker_t *w) {
-  // if (p->action == scheduler_nop) {
-  //   return;
-  // }
 #ifdef HAVE_APEX
-  if (w->profiler != NULL) {                        
-    apex_stop((apex_profiler_handle)(w->profiler)); 
-    w->profiler = NULL;                             
-  }                                                 
+  if (w->profiler != NULL) {
+    apex_stop((apex_profiler_handle)(w->profiler));
+    w->profiler = NULL;
+  }
 #endif
   static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_END;
@@ -166,10 +159,10 @@ static inline void INST_EVENT_PARCEL_END(hpx_parcel_t *p, worker_t *w) {
 
 static inline void INST_EVENT_PARCEL_SUSPEND(hpx_parcel_t *p, worker_t *w) {
 #ifdef HAVE_APEX
-  if (w->profiler != NULL) {                        
-    apex_stop((apex_profiler_handle)(w->profiler)); 
-    w->profiler = NULL;                             
-  }                                                 
+  if (w->profiler != NULL) {
+    apex_stop((apex_profiler_handle)(w->profiler));
+    w->profiler = NULL;
+  }
 #endif
   static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_SUSPEND;
@@ -177,9 +170,6 @@ static inline void INST_EVENT_PARCEL_SUSPEND(hpx_parcel_t *p, worker_t *w) {
 }
 
 static inline void INST_EVENT_PARCEL_RESUME(hpx_parcel_t *p, worker_t *w) {
-  // if (p->action == scheduler_nop) {
-  //   return;
-  // }
 #ifdef HAVE_APEX
   dbg_assert(p);
   dbg_assert(p->action != HPX_ACTION_NULL);
