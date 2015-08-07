@@ -13,6 +13,7 @@
 #ifndef LIBHPX_WORKER_H
 #define LIBHPX_WORKER_H
 
+#include <pthread.h>
 #include <hpx/hpx.h>
 #include <hpx/attributes.h>
 #include <libsync/deques.h>
@@ -22,7 +23,6 @@
 
 /// Forward declarations.
 /// @{
-struct config;
 struct ustack;
 /// @}
 
@@ -75,47 +75,8 @@ int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size)
 void worker_fini(worker_t *w)
   HPX_NON_NULL(1);
 
-/// Bind a worker structure to the current pthread.
-///
-/// @param       worker The worker structure for the pthread.
-void worker_bind_self(worker_t *worker)
-  HPX_NON_NULL(1);
-
 /// Start processing lightweight threads.
 int worker_start(void);
-
-/// Creates a worker thread associated with a scheduler.
-///
-/// The created thread will bind itself to the passed worker, and then start
-/// processing lightweight threads.
-///
-/// @param       worker The worker structure for this worker thread.
-/// @param          cfg The configuration object.
-///
-/// @returns            LIBHPX_OK or an error code if the worker failed to
-///                     start.
-int worker_create(worker_t *worker, const struct config *cfg)
-  HPX_NON_NULL(1);
-
-/// Joins a worker after scheduler_shutdown().
-///
-/// This is done separately to allow for cleanup to happen. Also improves
-/// shutdown performance because all of the workers can be shutting down and
-/// cleaning up in parallel. Workers don't generate values at this point.
-///
-/// @param       worker The worker to join.
-void worker_join(worker_t *worker)
-  HPX_NON_NULL(1);
-
-/// Preemptively shutdown a worker.
-///
-/// This will leave the (UNIX) process in an undefined state. Only async-safe
-/// functions can be used after this routine. This is non-blocking, canceled
-/// threads should be joined if you need to wait for them.
-///
-/// @param       worker The worker to cancel.
-void worker_cancel(worker_t *worker)
-  HPX_NON_NULL(1);
 
 /// Check to see if the current worker has enough space for an alloca.
 ///
