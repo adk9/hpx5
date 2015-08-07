@@ -47,11 +47,6 @@
 #include "thread.h"
 #include "termination.h"
 
-#ifdef ENABLE_DEBUG
-# define _transfer _debug_transfer
-#else
-# define _transfer thread_transfer
-#endif
 /// Storage for the thread-local worker pointer.
 __thread worker_t * volatile self = NULL;
 
@@ -198,7 +193,6 @@ static void _apex_worker_shutdown(void) {
   }
   apex_exit_thread();
 }
-
 #endif
 
 /// Continue a parcel by invoking its parcel continuation.
@@ -287,9 +281,8 @@ static void _execute_interrupt(hpx_parcel_t *p) {
 ///
 /// @param       parcel The parcel that describes the thread to run.
 static void _execute_thread(hpx_parcel_t *p) {
-  worker_t *w = self;
   // matching events are in hpx_thread_exit()
-  INST_EVENT_PARCEL_RUN(p, w);
+  INST_EVENT_PARCEL_RUN(p, self);
   int e = action_execute(p);
   hpx_thread_exit(e);
   unreachable();
@@ -697,7 +690,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   INST_EVENT_PARCEL_SUSPEND(current, w);
   p = _try_bind(w, p);
   _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = _push_lifo, .env = w });
-  INST_EVENT_PARCEL_RESUME(current, w);
+  INST_EVENT_PARCEL_RESUME(current, self);
 }
 
 /// This is the _schedule() continuation that we use to yield a thread.
@@ -741,10 +734,10 @@ static void _unlock(hpx_parcel_t *to, void *lock) {
 }
 
 hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
-  worker_t *w = self;
   // push the current thread onto the condition variable---no lost-update
   // problem here because we're holing the @p lock
-  hpx_parcel_t *p = self->current;
+  worker_t *w = self;
+  hpx_parcel_t *p = w->current;
   ustack_t *thread = p->ustack;
 
   // we had better be holding a lock here
@@ -757,7 +750,7 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
 
   INST_EVENT_PARCEL_SUSPEND(p, w);
   _schedule(_unlock, (void*)lock, 0);
-  INST_EVENT_PARCEL_RESUME(p, w);
+  INST_EVENT_PARCEL_RESUME(p, self);
 
   // reacquire the lco lock before returning
   sync_lockable_ptr_lock(lock);
@@ -802,7 +795,6 @@ void scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
 static void HPX_NORETURN
 _continue(worker_t *worker, void (*cleanup)(void*), void *env, int nargs,
           va_list *args) {
-  worker_t *w = self;
   hpx_parcel_t *parcel = worker->current;
 
   // send the parcel continuation---this takes my credit if I have any
@@ -818,7 +810,7 @@ _continue(worker_t *worker, void (*cleanup)(void*), void *env, int nargs,
     hpx_gas_unpin(parcel->target);
   }
 
-  INST_EVENT_PARCEL_END(parcel, w);
+  INST_EVENT_PARCEL_END(parcel, worker);
   _schedule(_free_parcel, NULL, 1);
   unreachable();
 }
@@ -840,10 +832,9 @@ _hpx_thread_continue_cleanup(void (*cleanup)(void*), void *env, int nargs, ...)
 }
 
 void hpx_thread_exit(int status) {
-  worker_t *w = self;
   switch (status) {
    case HPX_RESEND:
-    INST_EVENT_PARCEL_END(self->current, w);
+    INST_EVENT_PARCEL_END(self->current, self);
     INST_EVENT_PARCEL_RESEND(self->current);
     _schedule(_resend_parcel, NULL, 0);
     unreachable();
@@ -914,8 +905,6 @@ int hpx_thread_get_tls_id(void) {
 }
 
 void hpx_thread_set_affinity(int affinity) {
-  worker_t *w = self;
-
   // make sure affinity is in bounds
   dbg_assert(affinity >= -1);
   dbg_assert(affinity < here->sched->n_workers);
@@ -941,21 +930,23 @@ void hpx_thread_set_affinity(int affinity) {
   }
 
   // move this thread to the proper worker through the mailbox
-  INST_EVENT_PARCEL_SUSPEND(p, w);
-  w = scheduler_get_worker(here->sched, affinity);
-  _schedule(_send_mail, w, 0);
-  INST_EVENT_PARCEL_RESUME(p, w);
+  INST_EVENT_PARCEL_SUSPEND(p, worker);
+  worker = scheduler_get_worker(here->sched, affinity);
+  _schedule(_send_mail, worker, 0);
+  INST_EVENT_PARCEL_RESUME(p, self);
 }
 
 void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   worker_t *w = self;
-  INST_EVENT_PARCEL_SUSPEND(self->current, w);
-  log_sched("suspending %p in %s\n", (void*)self->current,
-            action_table_get_key(here->actions, self->current->action));
+  hpx_parcel_t *p = w->current;
+  log_sched("suspending %p in %s\n", (void*)p,
+            action_table_get_key(here->actions, p->action));
+  INST_EVENT_PARCEL_SUSPEND(p, w);
   _schedule(f, env, block);
-  log_sched("resuming %p\n in %s", (void*)self->current,
-            action_table_get_key(here->actions, self->current->action));
-  INST_EVENT_PARCEL_RESUME(self->current, w);
+  INST_EVENT_PARCEL_RESUME(p, self);
+  log_sched("resuming %p\n in %s", (void*)p,
+            action_table_get_key(here->actions, p->action));
+  (void)p;
 }
 
 intptr_t worker_can_alloca(size_t bytes) {
