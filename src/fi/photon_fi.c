@@ -49,6 +49,7 @@ static fi_cnct_ctx fi_ctx = {
   .service = NULL,
   .domain = NULL,
   .provider = NULL,
+  .num_cq = 1,
   .rdma_put_align = PHOTON_FI_PUT_ALIGN,
   .rdma_get_align = PHOTON_FI_GET_ALIGN
 };
@@ -109,28 +110,16 @@ static int fi_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss)
 
   // __initialized: 0 - not; -1 - initializing; 1 - initialized
   __initialized = -1;
+  
+  fi_ctx.num_cq = cfg->cap.num_cq;
 
-  fi_ctx.hints = calloc(1, sizeof(*fi_ctx.hints));
+  fi_ctx.hints = fi_allocinfo();
   if (!fi_ctx.hints) {
     log_err("Could not allocate space for fi hints");
     goto error_exit;
   }
 
-  fi_ctx.hints->fabric_attr = calloc(1, sizeof(*fi_ctx.hints->domain_attr));
-  if (!fi_ctx.hints->fabric_attr) {
-    goto error_exit;
-  }
-  
-  fi_ctx.hints->domain_attr = calloc(1, sizeof(*fi_ctx.hints->domain_attr));
-  if (!fi_ctx.hints->domain_attr) {
-    goto error_exit;
-  }
-  
-  fi_ctx.hints->ep_attr = calloc(1, sizeof(*fi_ctx.hints->ep_attr));
-  if (!fi_ctx.hints->ep_attr) {
-    goto error_exit;
-  }
-
+  //fi_ctx.hints->domain_attr->name = strdup("sockets");
   fi_ctx.hints->domain_attr->mr_mode = FI_MR_SCALABLE;
   fi_ctx.hints->domain_attr->threading = FI_THREAD_SAFE;
   fi_ctx.hints->ep_attr->type = FI_EP_RDM;
@@ -142,10 +131,9 @@ static int fi_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss)
     goto error_exit;
   }
 
-  free(fi_ctx.hints->ep_attr);
-  free(fi_ctx.hints->domain_attr);
-  free(fi_ctx.hints->fabric_attr);
-  free(fi_ctx.hints);
+  fi_freeinfo(fi_ctx.hints);
+
+  __initialized = 1;
 
   return PHOTON_OK;
 

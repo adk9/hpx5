@@ -215,11 +215,16 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
 
   // Check if queues could be overrun
   // TODO: automatically adjust if requested
-  if ((2 * _LEDGER_SIZE * _photon_nproc / verbs_ctx.num_cq) > verbs_ctx.max_qp_wr) {
+  if ((2 * _LEDGER_SIZE * _photon_nproc / verbs_ctx.num_cq) > verbs_ctx.max_cqe) {
     one_warn("Possible CQ overrun with current config (nproc=%d, nledger=%d, ncq=%d)",
 	     _photon_nproc, _LEDGER_SIZE, verbs_ctx.num_cq);
   }
-
+  
+  if ((2 * _LEDGER_SIZE) > verbs_ctx.max_qp_wr) {
+    one_warn("Possible QP WR overrun with current config (nproc=%d, nledger=%d, max_qp_wr=%d)",
+	     _photon_nproc, _LEDGER_SIZE, verbs_ctx.max_qp_wr);
+  }
+  
   if (verbs_ctx.num_srq > 0) {
     if ((_LEDGER_SIZE * _photon_nproc / verbs_ctx.num_srq) > verbs_ctx.max_srq_wr) {
       one_warn("Possible SRQ overrun with current config (nproc=%d, nledger=%d, nsrq=%d)",
