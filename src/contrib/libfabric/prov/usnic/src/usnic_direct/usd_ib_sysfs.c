@@ -190,7 +190,7 @@ usd_get_mac(
     int fd;
     int n;
 
-    idp = dev->ud_ib_dev;
+    idp = dev->ud_ctx->ucx_ib_dev;
     snprintf(name, sizeof(name), "%s/ports/1/gids/0", idp->id_class_path);
 
     fd = open(name, O_RDONLY);
@@ -237,7 +237,7 @@ usd_get_iface(
     int fd;
     int n;
 
-    idp = dev->ud_ib_dev;
+    idp = dev->ud_ctx->ucx_ib_dev;
     snprintf(name, sizeof(name), "%s/iface", idp->id_class_path);
 
     fd = open(name, O_RDONLY);
@@ -275,7 +275,7 @@ usd_ib_sysfs_get_int(
     int fd;
     int n;
 
-    idp = dev->ud_ib_dev;
+    idp = dev->ud_ctx->ucx_ib_dev;
     snprintf(name, sizeof(name), "%s/%s", idp->id_class_path, entry);
 
     fd = open(name, O_RDONLY);
@@ -320,6 +320,20 @@ usd_get_usnic_config(
         return ret;
     dev->ud_attrs.uda_cq_per_vf = v;
 
+    ret = usd_ib_sysfs_get_int(dev, "intr_per_vf", &v);
+    if (ret != 0) {
+        /* older kernels did not export this sysfs node */
+        if (ret == -ENOENT) {
+            dev->ud_attrs.uda_intr_per_vf = 0;
+            ret = 0;
+        }
+        else {
+            return ret;
+        }
+    } else {
+        dev->ud_attrs.uda_intr_per_vf = v;
+    }
+
     return ret;
 }
 
@@ -336,7 +350,7 @@ usd_get_firmware(
     int fd;
     int n;
 
-    idp = dev->ud_ib_dev;
+    idp = dev->ud_ctx->ucx_ib_dev;
     snprintf(name, sizeof(name), "%s/fw_ver", idp->id_class_path);
 
     fd = open(name, O_RDONLY);

@@ -48,6 +48,9 @@
 /* When given a NULL provider pointer, use core for logging and settings. */
 extern struct fi_provider core_prov;
 
+extern int init;
+extern void fi_ini();
+
 struct fi_param_entry {
 	const struct fi_provider *provider;
 	char *name;
@@ -88,6 +91,9 @@ int DEFAULT_SYMVER_PRE(fi_getparams)(struct fi_param **params, int *count)
 	struct dlist_entry *entry;
 	int cnt, i;
 	char *tmp;
+
+	if (!init)
+		fi_ini();
 
 	for (entry = param_list.next, cnt = 0; entry != &param_list;
 	     entry = entry->next)
@@ -142,6 +148,23 @@ static void fi_free_param(struct fi_param_entry *param)
 	free(param->help_string);
 	free(param->env_var_name);
 	free(param);
+}
+
+void fi_param_undefine(const struct fi_provider *provider)
+{
+	struct fi_param_entry *param;
+	struct dlist_entry *entry;
+	struct dlist_entry *next;
+
+	for (entry = param_list.next; entry != &param_list; entry = next) {
+		next = entry->next;
+		param = container_of(entry, struct fi_param_entry, entry);
+		if (param->provider == provider) {
+			FI_DBG(provider, FI_LOG_CORE, "Removing param: %s\n", param->name);
+			dlist_remove(entry);
+			fi_free_param(param);
+		}
+	}
 }
 
 __attribute__((visibility ("default")))

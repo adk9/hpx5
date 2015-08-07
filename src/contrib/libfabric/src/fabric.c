@@ -60,7 +60,7 @@ struct fi_prov {
 static struct fi_prov *fi_getprov(const char *prov_name);
 
 static struct fi_prov *prov_head, *prov_tail;
-static volatile int init = 0;
+int init = 0;
 static pthread_mutex_t ini_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static struct fi_filter prov_filter;
@@ -96,8 +96,12 @@ int fi_apply_filter(struct fi_filter *filter, const char *name)
 
 static void cleanup_provider(struct fi_provider *provider, void *dlhandle)
 {
-	if (provider && provider->cleanup)
-		provider->cleanup();
+	if (provider) {
+		fi_param_undefine(provider);
+
+		if (provider->cleanup)
+			provider->cleanup();
+	}
 
 #ifdef HAVE_LIBDL
 	if (dlhandle)
@@ -339,7 +343,7 @@ libdl_done:
 }
 #endif
 
-static void fi_ini(void)
+void fi_ini(void)
 {
 	char *param_val = NULL;
 
@@ -464,6 +468,12 @@ int DEFAULT_SYMVER_PRE(fi_getinfo)(uint32_t version, const char *node, const cha
 
 	if (!init)
 		fi_ini();
+
+	if (FI_VERSION_LT(fi_version(), version)) {
+		FI_WARN(&core_prov, FI_LOG_CORE,
+			"Requested version is newer than library\n");
+		return -FI_ENOSYS;
+	}
 
 	*info = tail = NULL;
 	for (prov = prov_head; prov; prov = prov->next) {
