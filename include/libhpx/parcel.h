@@ -17,16 +17,16 @@
 extern "C" {
 #endif
 
+#ifdef HAVE_APEX
+# include <apex.h>
+# include <apex_policies.h>
+#endif
+
 #include <hpx/hpx.h>
 #include <libhpx/debug.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/instrumentation_events.h>
-
-#ifdef HAVE_APEX
-# include <apex.h>
-# include <apex_policies.h>
-# include <libhpx/worker.h>
-#endif
+#include <libhpx/worker.h>
 
 struct ustack;
 
