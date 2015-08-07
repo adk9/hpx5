@@ -135,7 +135,11 @@ static ssize_t _sock_cq_write(struct sock_cq *cq, fi_addr_t addr,
 	rbcommit(&cq->addr_rb);
 
 	rbfdwrite(&cq->cq_rbfd, buf, len);
-	rbfdcommit(&cq->cq_rbfd);
+	if (cq->domain->progress_mode == FI_PROGRESS_MANUAL) {
+		rbcommit(&cq->cq_rbfd.rb);
+	} else {
+		rbfdcommit(&cq->cq_rbfd);
+	}
 	ret = len;
 
 	if (cq->signal) 
@@ -227,7 +231,11 @@ static inline void sock_cq_copy_overflow_list(struct sock_cq *cq, size_t count)
 		rbcommit(&cq->addr_rb);
 
 		rbfdwrite(&cq->cq_rbfd, &overflow_entry->cq_entry[0], overflow_entry->len);
-		rbfdcommit(&cq->cq_rbfd);
+		if (cq->domain->progress_mode == FI_PROGRESS_MANUAL) {
+			rbcommit(&cq->cq_rbfd.rb);
+		} else {
+			rbfdcommit(&cq->cq_rbfd);
+		}
 		dlist_remove(&overflow_entry->entry);
 		free(overflow_entry);
 	}
@@ -292,12 +300,15 @@ static ssize_t sock_cq_sreadfrom(struct fid_cq *cq, void *buf, size_t count,
 		}while (ret == 0);
 	} else {
 		ret = rbfdwait(&sock_cq->cq_rbfd, timeout);
-		fastlock_acquire(&sock_cq->lock);
-		if (ret != -FI_ETIMEDOUT && (avail = rbfdused(&sock_cq->cq_rbfd)))
-			ret = sock_cq_rbuf_read(sock_cq, buf, 
-						MIN(threshold, avail / cq_entry_len),
-						src_addr, cq_entry_len);
-		fastlock_release(&sock_cq->lock);
+		if (ret > 0) {
+			fastlock_acquire(&sock_cq->lock);
+			ret = 0;
+			if ((avail = rbfdused(&sock_cq->cq_rbfd)))
+				ret = sock_cq_rbuf_read(sock_cq, buf, 
+							MIN(threshold, avail / cq_entry_len),
+							src_addr, cq_entry_len);
+			fastlock_release(&sock_cq->lock);
+		}
 	}
 	return (ret == 0 || ret == -FI_ETIMEDOUT) ? -FI_EAGAIN : ret;
 }

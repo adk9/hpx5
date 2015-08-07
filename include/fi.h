@@ -89,8 +89,19 @@ static inline uint64_t ntohll(uint64_t x) { return x; }
 
 #define sizeof_field(type, field) sizeof(((type *)0)->field)
 
-#define MIN(a, b) ((a) < (b) ? a : b)
-#define MAX(a, b) ((a) > (b) ? a : b)
+#ifndef MIN
+#define MIN(a, b) \
+	({ typeof (a) _a = (a); \
+		typeof (b) _b = (b); \
+		_a < _b ? _a : _b; })
+#endif
+
+#ifndef MAX
+#define MAX(a, b) \
+	({ typeof (a) _a = (a); \
+		typeof (b) _b = (b); \
+		_a > _b ? _a : _b; })
+#endif
 
 /* Restrict to size of struct fi_context */
 struct fi_prov_context {
@@ -112,7 +123,7 @@ void fi_log_init(void);
 void fi_log_fini(void);
 void fi_param_init(void);
 void fi_param_fini(void);
-
+void fi_param_undefine(const struct fi_provider *provider);
 
 /* flsll is defined on BSD systems, but is different. */
 static inline int fi_flsll(long long int i)
