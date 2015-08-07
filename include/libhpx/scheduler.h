@@ -177,7 +177,7 @@ void scheduler_yield(void);
 /// @param          env The environment to pass to the continuation @p f.
 /// @param        block A flag indicating if it is okay to block before running
 ///                     @p f.
-int scheduler_suspend(int (*f)(hpx_parcel_t *, void*), void *env, int block);
+void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env, int block);
 
 /// Wait for an condition.
 ///

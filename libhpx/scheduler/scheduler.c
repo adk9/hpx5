@@ -19,13 +19,95 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+
+#ifdef HAVE_APEX
+# include <apex.h>
+#endif
+
 #include <hpx/builtins.h>
 #include <libhpx/action.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
 #include <libhpx/scheduler.h>
 #include "thread.h"
+
+static void _bind_self(worker_t *worker) {
+  dbg_assert(worker);
+
+  if (self && self != worker) {
+    dbg_error("HPX does not permit worker structure switching.\n");
+  }
+  self = worker;
+  self->thread = pthread_self();
+}
+
+/// The pthread entry function for dedicated worker threads.
+///
+/// This is used by _create().
+static void *_run(void *worker) {
+  dbg_assert(here);
+  dbg_assert(here->gas);
+  dbg_assert(worker);
+
+  _bind_self(worker);
+
+  // Ensure that all of the threads have joined the address spaces.
+  as_join(AS_REGISTERED);
+  as_join(AS_GLOBAL);
+  as_join(AS_CYCLIC);
+
+#ifdef HAVE_APEX
+  // let APEX know there is a new thread
+  apex_register_thread("HPX WORKER THREAD");
+#endif
+
+  if (worker_start()) {
+    dbg_error("failed to start processing lightweight threads.\n");
+    return NULL;
+  }
+
+  // leave the global address space
+  as_leave();
+
+  // unbind self and return NULL
+  return (self = NULL);
+}
+
+static int _create(worker_t *worker, const config_t *cfg) {
+  pthread_t thread;
+
+  int e = pthread_create(&thread, NULL, _run, worker);
+  if (e) {
+    dbg_error("failed to start a scheduler worker pthread.\n");
+    return e;
+  }
+  return LIBHPX_OK;
+}
+
+static void _join(worker_t *worker) {
+  dbg_assert(worker);
+
+  if (worker->thread == pthread_self()) {
+    return;
+  }
+
+  int e = pthread_join(worker->thread, NULL);
+  if (e) {
+    dbg_error("cannot join worker thread %d (%s).\n", worker->id, strerror(e));
+  }
+}
+
+static void _cancel(worker_t *worker) {
+  dbg_assert(worker);
+  dbg_assert(worker->thread != pthread_self());
+  if (pthread_cancel(worker->thread)) {
+    dbg_error("cannot cancel worker thread %d.\n", worker->id);
+  }
+}
 
 struct scheduler *scheduler_new(const config_t *cfg) {
   const int workers = cfg->threads;
@@ -74,7 +156,7 @@ struct scheduler *scheduler_new(const config_t *cfg) {
   log_sched("initialized a new scheduler.\n");
 
   // bind a worker for this thread so that we can spawn lightweight threads
-  worker_bind_self(&s->workers[0]);
+  _bind_self(&s->workers[0]);
   log_sched("worker 0 ready.\n");
   return s;
 }
@@ -114,19 +196,19 @@ int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
   // start all of the other worker threads
   for (int i = 1, e = sched->n_workers; i < e; ++i) {
     worker = scheduler_get_worker(sched, i);
-    status = worker_create(worker, cfg);
+    status = _create(worker, cfg);
 
     if (status != LIBHPX_OK) {
       dbg_error("could not start worker %d.\n", i);
 
       for (int j = 1; j < i; ++j) {
         worker = scheduler_get_worker(sched, j);
-        worker_cancel(worker);
+        _cancel(worker);
       }
 
       for (int j = 1; j < i; ++j) {
         worker = scheduler_get_worker(sched, j);
-        worker_join(worker);
+        _join(worker);
       }
 
       return status;
@@ -140,7 +222,7 @@ int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
 
   for (int i = 1; i < sched->n_workers; ++i) {
     worker = scheduler_get_worker(sched, i);
-    worker_join(worker);
+    _join(worker);
   }
 
   return status;
@@ -159,6 +241,6 @@ void scheduler_abort(struct scheduler *sched) {
   worker_t *worker = NULL;
   for (int i = 0, e = sched->n_workers; i < e; ++i) {
     worker = scheduler_get_worker(sched, i);
-    worker_cancel(worker);
+    _cancel(worker);
   }
 }

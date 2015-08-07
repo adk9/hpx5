@@ -59,7 +59,7 @@ AC_DEFUN([_HPX_CONTRIB_JEMALLOC], [
  # we install the jemalloc pkg-config script with hpx.pc so external
  # applications will get jemalloc, we make it public so that it resolves
  # application instances of malloc/free/etc
- HPX_PC_PUBLIC_PKGS="jemalloc $HPX_PC_PUBLIC_PKGS"
+ HPX_PC_REQUIRES_PKGS="$HPX_PC_REQUIRES_PKGS jemalloc"
 
  # when linking to the shared hpx, it contains the correct rpath for jemalloc,
  # otherwise for static hpx we need to make sure that the rpath for

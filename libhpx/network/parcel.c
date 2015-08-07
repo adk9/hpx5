@@ -85,7 +85,7 @@ parcel_state_t parcel_exchange_state(hpx_parcel_t *p, parcel_state_t state) {
   return sync_swap(&p->state, state, SYNC_ACQ_REL);
 }
 
-int parcel_launch(hpx_parcel_t *p) {
+void parcel_launch(hpx_parcel_t *p) {
   dbg_assert(p->action);
 
   _prepare(p);
@@ -109,27 +109,20 @@ int parcel_launch(hpx_parcel_t *p) {
   if (hpx_gas_try_pin(p->target, NULL)) {
     INST_EVENT_PARCEL_RECV(p); // instrument local "receives"
     scheduler_spawn(p);
-    return HPX_SUCCESS;
   }
   else {
     int e = network_send(here->network, p);
     dbg_check(e, "failed to perform a network send\n");
-    return e;
   }
 }
 
-int parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate) {
-  if (!gate) {
-    return parcel_launch(p);
+void parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate) {
+  if (gate) {
+    _prepare(p);
+    hpx_pid_t pid = self->current->pid;
+    p = parcel_new(gate, attach, 0, 0, pid, p, parcel_size(p));
   }
-
-  dbg_assert(p->action);
-  _prepare(p);
-
-  hpx_parcel_t *pattach = parcel_new(gate, attach, 0, 0,
-                                     hpx_thread_current_pid(), p,
-                                     parcel_size(p));
-  return parcel_launch(pattach);
+  parcel_launch(p);
 }
 
 void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
