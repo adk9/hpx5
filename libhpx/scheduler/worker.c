@@ -61,15 +61,6 @@ __thread worker_t * volatile self = NULL;
 #define SOURCE_FINAL 3
 
 #ifdef ENABLE_INSTRUMENTATION
-#define INST(stmt) stmt;
-#define INST_COND(cond, on_cond, on_else)       \
-  if (cond) {                                   \
-    on_cond;                                    \
-  }                                             \
-  else {                                        \
-   on_else;                                     \
-  }
-
 static inline void TRACE_WQSIZE(worker_t *w) {
   static const int class = INST_SCHED;
   static const int id = HPX_INST_EVENT_SCHED_WQSIZE;
@@ -96,8 +87,6 @@ static inline void TRACE_STEAL_LIFO(hpx_parcel_t *p,
   inst_trace(class, id, p, victim->id);
 }
 #else
-# define INST(stmt)
-# define INST_COND(cond, on_cond, on_else)
 # define TRACE_WQSIZE(w)
 # define TRACE_PUSH_LIFO(p)
 # define TRACE_POP_LIFO(p)
