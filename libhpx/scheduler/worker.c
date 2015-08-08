@@ -22,11 +22,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifdef HAVE_APEX
-# include <apex.h>
-# include <apex_policies.h>
-#endif
-
 #include <hpx/builtins.h>
 
 #include <libhpx/action.h>
@@ -136,104 +131,6 @@ static void _dbg_transfer(hpx_parcel_t *p, thread_transfer_cont_t c, void *e) {
 # define _transfer _dbg_transfer
 #else
 # define _transfer thread_transfer
-#endif
-
-#ifdef HAVE_APEX
-/// This is the condition that "sleeping" threads will wait on
-static pthread_cond_t _release = PTHREAD_COND_INITIALIZER;
-
-/// Mutex for the pthread_cond_wait() call. Typically, it is used
-/// to save the shared state, but we don't need it for our use.
-static pthread_mutex_t _release_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-static void _apex_wait(void) {
-  pthread_mutex_lock(&_release_mutex);
-  pthread_cond_wait(&_release, &_release_mutex);
-  pthread_mutex_unlock(&_release_mutex);
-}
-
-static void _apex_signal(void) {
-  pthread_cond_signal(&_release);
-}
-
-/// Try to deactivate a worker.
-///
-/// @returns          1 If the worker remains active, 0 if it was deactivated
-static int _apex_try_deactivate(volatile int *n_active_workers) {
-  if (sync_fadd(n_active_workers, -1, SYNC_ACQ_REL) > apex_get_thread_cap()) {
-    self->active = false;
-    apex_set_state(APEX_THROTTLED);
-    return 0;
-  }
-
-  sync_fadd(n_active_workers, 1, SYNC_ACQ_REL);
-  return 1;
-}
-
-/// Try to reactivate an inactive worker.
-///
-/// @returns          1 If the thread reactivated, 0 if it is still inactive.
-static int _apex_try_reactivate(volatile int *n_active_workers) {
-  if (sync_fadd(n_active_workers, 1, SYNC_ACQ_REL) <= apex_get_thread_cap()) {
-    // I fit inside the cap!
-    self->active = true;
-    apex_set_state(APEX_BUSY);
-    return 1;
-  }
-
-  sync_fadd(n_active_workers, -1, SYNC_ACQ_REL);
-  return 0;
-}
-
-/// This function will check whether the current thread in the
-/// scheduling loop should be throttled.
-///
-/// @returns          1 If the thread is active, 0 if it is inactive.
-static int _apex_check_active(void) {
-  // akp: throttling code -- if the throttling flag is set don't use
-  // some threads NB: There is a possible race condition here. It's
-  // possible that mail needs to be checked again just before
-  // throttling.
-  if (!apex_get_throttle_concurrency()) {
-    return 1;
-  }
-
-  // we use this address a bunch of times, so just remember it
-  volatile int * n_active_workers = &(here->sched->n_active_workers);
-
-  if (!self->active) {
-    // because I can't change the power level, sleep instead.
-    _apex_wait();
-    return _apex_try_reactivate(n_active_workers);
-  }
-
-  if (!apex_throttleOn || self->yielded) {
-    return 1;
-  }
-
-  // If there are too many threads running, then try and become inactive.
-  if (sync_load(n_active_workers, SYNC_ACQUIRE) > apex_get_thread_cap()) {
-    return _apex_try_deactivate(n_active_workers);
-  }
-
-  // Go ahead and signal the condition variable if we need to
-  if (sync_load(n_active_workers, SYNC_ACQUIRE) < apex_get_thread_cap()) {
-    _apex_signal();
-  }
-
-  return 1;
-}
-
-/// release idle threads, stop any running timers, and exit the thread from APEX
-static void _apex_worker_shutdown(void) {
-  pthread_cond_broadcast(&_release);
-  worker_t *w = self;
-  if (w->profiler != NULL) {
-    apex_stop((apex_profiler_handle)(w->profiler));
-    w->profiler = NULL;
-  }
-  apex_exit_thread();
-}
 #endif
 
 /// Continue a parcel by invoking its parcel continuation.
@@ -523,7 +420,7 @@ static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
 /// @returns            The status from _transfer.
 static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   hpx_parcel_t *p = NULL;
-  while (!scheduler_is_shutdown(here->sched)) {
+  while (!worker_is_shutdown()) {
     if (!block) {
       p = _schedule_lifo(self);
       break;
@@ -531,12 +428,10 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
 
     _handle_mail(self);
 
-#ifdef HAVE_APEX
     // If we're not supposed to be active, then don't schedule anything.
-    if (_apex_check_active() == 0) {
+    if (!worker_is_active()) {
       continue;
     }
-#endif
 
     if ((p = _schedule_lifo(self))) {
       break;
@@ -658,13 +553,9 @@ int worker_start(void) {
   self->current = self->system;
 
   // the system thread will loop to find work until the scheduler has shutdown
-  while (!scheduler_is_shutdown(sched)) {
+  while (!worker_is_shutdown()) {
     _schedule(_null, NULL, 1);
   }
-
-#ifdef HAVE_APEX
-  _apex_worker_shutdown();
-#endif
 
   if (sched->shutdown != HPX_SUCCESS && here->rank == 0) {
     log_error("application exited with a non-zero exit code: %d.\n",
@@ -696,7 +587,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
 
   // If we're shutting down then push the parcel and return. This prevents an
   // infinite spawn from inhibiting termination.
-  if (scheduler_is_shutdown(here->sched)) {
+  if (worker_is_shutdown()) {
     _push_lifo(p, w);
     return;
   }
