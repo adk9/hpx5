@@ -23,7 +23,6 @@ extern "C" {
 #endif
 
 #include <hpx/hpx.h>
-#include <libhpx/debug.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/instrumentation_events.h>
 #include <libhpx/worker.h>
@@ -133,7 +132,6 @@ static inline void INST_EVENT_PARCEL_RECV(hpx_parcel_t *p) {
 
 static inline void INST_EVENT_PARCEL_RUN(hpx_parcel_t *p, worker_t *w) {
 #ifdef HAVE_APEX
-  dbg_assert(p->action != HPX_ACTION_NULL);
   // if this is NOT a null or lightweight action, send a "start" event to APEX
   if (p->action != hpx_lco_set_action) {
     void* handler = (void*)hpx_action_get_handler(p->action);
@@ -171,8 +169,6 @@ static inline void INST_EVENT_PARCEL_SUSPEND(hpx_parcel_t *p, worker_t *w) {
 
 static inline void INST_EVENT_PARCEL_RESUME(hpx_parcel_t *p, worker_t *w) {
 #ifdef HAVE_APEX
-  dbg_assert(p);
-  dbg_assert(p->action != HPX_ACTION_NULL);
   if (p->action != hpx_lco_set_action) {
     void* handler = (void*)hpx_action_get_handler(p->action);
     w->profiler = (void*)(apex_resume(APEX_FUNCTION_ADDRESS, handler));
