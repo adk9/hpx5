@@ -107,7 +107,7 @@ _rendezvous_launch_handler(int src, command_t cmd) {
   uintptr_t arg = command_get_arg(cmd);
   hpx_parcel_t *p = (void*)arg;
   parcel_set_state(p, PARCEL_SERIALIZED);
-  INST_EVENT_PARCEL_RECV(p);
+  EVENT_PARCEL_RECV(p);
   scheduler_spawn(p);
   return HPX_SUCCESS;
 }
