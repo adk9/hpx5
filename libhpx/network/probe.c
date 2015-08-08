@@ -32,7 +32,7 @@ static int _probe_handler(network_t *network) {
   while (!scheduler_is_shutdown(here->sched)) {
     while ((stack = network_probe(network, hpx_get_my_thread_id()))) {
       while ((p = parcel_stack_pop(&stack))) {
-        INST_EVENT_PARCEL_RECV(p);
+        EVENT_PARCEL_RECV(p);
         parcel_launch(p);
       }
     }

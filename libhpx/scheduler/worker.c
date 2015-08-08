@@ -50,38 +50,79 @@
 /// Storage for the thread-local worker pointer.
 __thread worker_t * volatile self = NULL;
 
-#ifdef ENABLE_INSTRUMENTATION
-static inline void TRACE_WQSIZE(worker_t *w) {
+static void EVENT_WQSIZE(worker_t *w) {
   static const int class = INST_SCHED;
   static const int id = HPX_INST_EVENT_SCHED_WQSIZE;
   size_t size = sync_chase_lev_ws_deque_size(&w->work);
   inst_trace(class, id, size);
 }
 
-static inline void TRACE_PUSH_LIFO(hpx_parcel_t *p) {
+static void EVENT_PUSH_LIFO(hpx_parcel_t *p) {
   static const int class = INST_SCHED;
   static const int id = HPX_INST_EVENT_SCHED_PUSH_LIFO;
   inst_trace(class, id, p);
 }
 
-static inline void TRACE_POP_LIFO(hpx_parcel_t *p) {
+static void EVENT_POP_LIFO(hpx_parcel_t *p) {
   static const int class = INST_SCHED;
   static const int id = HPX_INST_EVENT_SCHED_POP_LIFO;
   inst_trace(class, id, p);
 }
 
-static inline void TRACE_STEAL_LIFO(hpx_parcel_t *p,
-                                    const worker_t *victim) {
+static void EVENT_STEAL_LIFO(hpx_parcel_t *p, const worker_t *victim) {
   static const int class = INST_SCHED;
   static const int id = HPX_INST_EVENT_SCHED_STEAL_LIFO;
   inst_trace(class, id, p, victim->id);
 }
-#else
-# define TRACE_WQSIZE(w)
-# define TRACE_PUSH_LIFO(p)
-# define TRACE_POP_LIFO(p)
-# define TRACE_STEAL_LIFO(p, v)
+
+static void EVENT_THREAD_RUN(hpx_parcel_t *p, worker_t *w) {
+#ifdef HAVE_APEX
+  // if this is NOT a null or lightweight action, send a "start" event to APEX
+  if (p->action != hpx_lco_set_action) {
+    void* handler = (void*)hpx_action_get_handler(p->action);
+    w->profiler = (void*)(apex_start(APEX_FUNCTION_ADDRESS, handler));
+  }
 #endif
+  static const int type = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_RUN;
+  inst_trace(type, id, p->id, p->action, p->size);
+}
+
+static void EVENT_THREAD_END(hpx_parcel_t *p, worker_t *w) {
+#ifdef HAVE_APEX
+  if (w->profiler != NULL) {
+    apex_stop((apex_profiler_handle)(w->profiler));
+    w->profiler = NULL;
+  }
+#endif
+  static const int type = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_END;
+  inst_trace(type, id, p->id, p->action);
+}
+
+static void EVENT_THREAD_SUSPEND(hpx_parcel_t *p, worker_t *w) {
+#ifdef HAVE_APEX
+  if (w->profiler != NULL) {
+    apex_stop((apex_profiler_handle)(w->profiler));
+    w->profiler = NULL;
+  }
+#endif
+  static const int type = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_SUSPEND;
+  inst_trace(type, id, p->id, p->action);
+}
+
+static void EVENT_THREAD_RESUME(hpx_parcel_t *p, worker_t *w) {
+#ifdef HAVE_APEX
+  if (p->action != hpx_lco_set_action) {
+    void* handler = (void*)hpx_action_get_handler(p->action);
+    w->profiler = (void*)(apex_resume(APEX_FUNCTION_ADDRESS, handler));
+  }
+#endif
+  static const int type = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_RESUME;
+  inst_trace(type, id, p->id, p->action);
+}
 
 #ifdef ENABLE_DEBUG
 /// This transfer wrapper is used for logging, debugging, and instrumentation.
@@ -244,9 +285,9 @@ static void _execute_interrupt(hpx_parcel_t *p) {
   dbg_assert(!p->ustack);
   p->ustack = q->ustack;
 
-  INST_EVENT_PARCEL_RUN(p, w);
+  EVENT_THREAD_RUN(p, w);
   int e = action_execute(p);
-  INST_EVENT_PARCEL_END(p, w);
+  EVENT_THREAD_END(p, w);
 
   // Restore the current thread pointer.
   _swap_current(q, NULL, w);
@@ -264,7 +305,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
 
    case HPX_RESEND:
     log_sched("resending interrupt to %"PRIu64"\n", p->target);
-    INST_EVENT_PARCEL_RESEND(p);
+    EVENT_PARCEL_RESEND(p);
     parcel_launch(p);
     break;
 
@@ -282,7 +323,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
 /// @param       parcel The parcel that describes the thread to run.
 static void _execute_thread(hpx_parcel_t *p) {
   // matching events are in hpx_thread_exit()
-  INST_EVENT_PARCEL_RUN(p, self);
+  EVENT_THREAD_RUN(p, self);
   int e = action_execute(p);
   hpx_thread_exit(e);
   unreachable();
@@ -335,7 +376,7 @@ static hpx_parcel_t *_try_bind(worker_t *w, hpx_parcel_t *p) {
 static void _push_lifo(hpx_parcel_t *p, void *worker) {
   dbg_assert(p->target != HPX_NULL);
   dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
-  TRACE_PUSH_LIFO(p);
+  EVENT_PUSH_LIFO(p);
   worker_t *w = worker;
   uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
   w->work_first = (here->sched->wf_threshold < size);
@@ -344,8 +385,8 @@ static void _push_lifo(hpx_parcel_t *p, void *worker) {
 /// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *_schedule_lifo(worker_t *w) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&w->work);
-  TRACE_POP_LIFO(p);
-  TRACE_WQSIZE(w);
+  EVENT_POP_LIFO(p);
+  EVENT_WQSIZE(w);
   return p;
 }
 
@@ -373,7 +414,7 @@ static hpx_parcel_t *_schedule_steal(worker_t *w) {
 
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
   if (p) {
-    TRACE_STEAL_LIFO(p, victim);
+    EVENT_STEAL_LIFO(p, victim);
     COUNTER_SAMPLE(++w->stats.steals);
   }
 
@@ -687,10 +728,10 @@ void scheduler_spawn(hpx_parcel_t *p) {
   }
 
   // Process p work-first
-  INST_EVENT_PARCEL_SUSPEND(current, w);
+  EVENT_THREAD_SUSPEND(current, w);
   p = _try_bind(w, p);
   _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = _push_lifo, .env = w });
-  INST_EVENT_PARCEL_RESUME(current, self);
+  EVENT_THREAD_RESUME(current, self);
 }
 
 /// This is the _schedule() continuation that we use to yield a thread.
@@ -748,9 +789,9 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
     return status;
   }
 
-  INST_EVENT_PARCEL_SUSPEND(p, w);
+  EVENT_THREAD_SUSPEND(p, w);
   _schedule(_unlock, (void*)lock, 0);
-  INST_EVENT_PARCEL_RESUME(p, self);
+  EVENT_THREAD_RESUME(p, self);
 
   // reacquire the lco lock before returning
   sync_lockable_ptr_lock(lock);
@@ -810,7 +851,7 @@ _continue(worker_t *worker, void (*cleanup)(void*), void *env, int nargs,
     hpx_gas_unpin(parcel->target);
   }
 
-  INST_EVENT_PARCEL_END(parcel, worker);
+  EVENT_THREAD_END(parcel, worker);
   _schedule(_free_parcel, NULL, 1);
   unreachable();
 }
@@ -834,8 +875,8 @@ _hpx_thread_continue_cleanup(void (*cleanup)(void*), void *env, int nargs, ...)
 void hpx_thread_exit(int status) {
   switch (status) {
    case HPX_RESEND:
-    INST_EVENT_PARCEL_END(self->current, self);
-    INST_EVENT_PARCEL_RESEND(self->current);
+    EVENT_THREAD_END(self->current, self);
+    EVENT_PARCEL_RESEND(self->current);
     _schedule(_resend_parcel, NULL, 0);
     unreachable();
    case HPX_ERROR:
@@ -930,10 +971,10 @@ void hpx_thread_set_affinity(int affinity) {
   }
 
   // move this thread to the proper worker through the mailbox
-  INST_EVENT_PARCEL_SUSPEND(p, worker);
-  worker = scheduler_get_worker(here->sched, affinity);
-  _schedule(_send_mail, worker, 0);
-  INST_EVENT_PARCEL_RESUME(p, self);
+  EVENT_THREAD_SUSPEND(p, worker);
+  worker_t *w = scheduler_get_worker(here->sched, affinity);
+  _schedule(_send_mail, w, 0);
+  EVENT_THREAD_RESUME(p, self);
 }
 
 void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
@@ -941,9 +982,9 @@ void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   hpx_parcel_t *p = w->current;
   log_sched("suspending %p in %s\n", (void*)p,
             action_table_get_key(here->actions, p->action));
-  INST_EVENT_PARCEL_SUSPEND(p, w);
+  EVENT_THREAD_SUSPEND(p, w);
   _schedule(f, env, block);
-  INST_EVENT_PARCEL_RESUME(p, self);
+  EVENT_THREAD_RESUME(p, self);
   log_sched("resuming %p\n in %s", (void*)p,
             action_table_get_key(here->actions, p->action));
   (void)p;
