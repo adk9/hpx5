@@ -21,7 +21,9 @@
 #include <libhpx/profiling.h>
 
 struct config;
-struct profile_log_t;
+
+//hostnames can only be 63 characters in length, so
+#define HOSTNAME_LENGTH 64
 
 /// Initialize instrumentation. This is usually called in hpx_init().
 int inst_init(struct config *cfg)
