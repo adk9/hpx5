@@ -2,7 +2,8 @@
 #define FI_CONNECT_H
 
 #include <rdma/fabric.h>
-#include <rdma/fi_endpoint.h>
+#include <rdma/fi_domain.h>
+#include <rdma/fi_errno.h>
 
 #include "photon_attributes.h"
 

@@ -352,6 +352,7 @@ static int verbs_get_info(ProcessInfo *pi, int proc, void **ret_info, int *ret_s
   case PHOTON_FI:
     info->addr = (uintptr_t)pi->local_fin_ledger->entries;
   default:
+    goto error_exit;
     break;
   }
 

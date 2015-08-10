@@ -13,9 +13,8 @@
 #include <errno.h>
 #include <netdb.h>
 
-#include <rdma/fi_rma.h>
 #include <rdma/fi_cm.h>
-#include <rdma/fi_errno.h>
+#include <rdma/fi_endpoint.h>
 
 #include "photon_fi.h"
 #include "photon_fi_connect.h"
@@ -199,7 +198,7 @@ int __fi_connect_peers(fi_cnct_ctx *ctx, struct fi_info *fi) {
   cqind = PHOTON_GET_CQ_IND(ctx->num_cq, _photon_myrank);
   
   // bind CQ
-  rc = fi_ep_bind(ep, &ctx->cqs[cqind]->fid, FI_WRITE);
+  rc = fi_ep_bind(ep, &ctx->cqs[cqind]->fid, FI_TRANSMIT|FI_WRITE);
   if (rc) {
     dbg_err("Could not bind CQ to self EP");
     goto error_exit;
