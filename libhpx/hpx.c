@@ -107,6 +107,9 @@ static void _cleanup(locality_t *l) {
 int hpx_init(int *argc, char ***argv) {
   int status = HPX_SUCCESS;
 
+  // Start the internal clock
+  libhpx_time_start();
+
   here = malloc(sizeof(*here));
   if (!here) {
     status = log_error("failed to allocate a locality.\n");
@@ -172,9 +175,6 @@ int hpx_init(int *argc, char ***argv) {
       dbg_wait();
     }
   }
-
-  // Start the internal clock
-  libhpx_time_start();
 
   // Initialize our instrumentation.
   if (inst_init(here->config)) {
