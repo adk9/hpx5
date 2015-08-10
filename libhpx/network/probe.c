@@ -61,12 +61,15 @@ int probe_start(network_t *network) {
     return HPX_SUCCESS;
   }
 
-  int e = hpx_call(HPX_HERE, _probe, HPX_NULL, &network);
-  dbg_check(e, "failed to start network probe\n");
+  hpx_parcel_t *p = NULL;
+  p = action_create_parcel(HPX_HERE, _probe, HPX_NULL, 0, 1, &network);
+  dbg_assert_str(p, "failed to acquire network probe parcel\n");
+  scheduler_spawn(p);
   log_net("started probing the network\n");
 
-  e = hpx_call(HPX_HERE, _progress, HPX_NULL, &network);
-  dbg_check(e, "failed to start network progress\n");
+  p = action_create_parcel(HPX_HERE, _progress, HPX_NULL, 0, 1, &network);
+  dbg_assert_str(p, "failed to acquire network progress parcel\n");
+  scheduler_spawn(p);
   log_net("starting progressing the network\n");
 
   return LIBHPX_OK;
