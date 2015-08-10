@@ -31,7 +31,7 @@ gas_t *gas_new(config_t *cfg, struct boot *boot) {
 
   int ranks = boot_n_ranks(boot);
   gas_t *gas = NULL;
-  hpx_gas_t type = cfg->gas;
+  libhpx_gas_t type = cfg->gas;
 
   // if we built a network, we might want to optimize for SMP
   if (ranks == 1 && cfg->opt_smp) {

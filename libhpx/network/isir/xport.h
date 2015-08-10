@@ -20,7 +20,7 @@ struct boot;
 struct gas;
 
 typedef struct isir_xport {
-  hpx_transport_t type;
+  libhpx_transport_t type;
   void   (*delete)(void *xport);
 
   void   (*check_tag)(int tag);
