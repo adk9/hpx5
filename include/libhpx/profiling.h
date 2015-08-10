@@ -25,9 +25,10 @@ typedef struct {
   size_t                  tally;            // number of events
   long long     *counter_totals;            // totals for the counters
   int                 *counters;            // the counters used
+  const char    **counter_names;            // the string names of the counters
   int              num_counters;            // number of counters
-  bool             papi_running;            // true if PAPI is recording
-} profile_t;
+  bool             prof_running;            // true if recording profile info
+} profile_log_t;
 
 #define PROFILE_INIT {                      \
     .start_time = HPX_TIME_INIT,            \
@@ -35,8 +36,9 @@ typedef struct {
     .tally = 0,                             \
     .counter_totals = NULL,                 \
     .counters = NULL,                       \
+    .counter_names = NULL,                  \
     .num_counters = 0,                      \
-    .papi_running = false                   \
+    .prof_running = false                   \
     }
 
 /// Initialize profiling. This is usually called in hpx_init().
