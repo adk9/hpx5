@@ -28,7 +28,7 @@ struct boot;
 
 /// Generic object oriented interface to the global address space.
 typedef struct gas {
-  hpx_gas_t type;
+  libhpx_gas_t type;
 
   void (*dealloc)(void *gas);
   size_t (*local_size)(void *gas);
