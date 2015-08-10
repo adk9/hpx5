@@ -88,7 +88,7 @@ static int _recv_parcel_handler(int src, command_t command) {
 #endif
   p->src = src;
   parcel_set_state(p, PARCEL_SERIALIZED | PARCEL_BLOCK_ALLOCATED);
-  INST_EVENT_PARCEL_RECV(p);
+  EVENT_PARCEL_RECV(p);
   scheduler_spawn(p);
   return HPX_SUCCESS;
 }
