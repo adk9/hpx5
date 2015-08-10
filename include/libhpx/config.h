@@ -35,7 +35,7 @@ typedef enum {
   HPX_GAS_PGAS,        //!< Use PGAS (i.e. global memory is fixed).
   HPX_GAS_AGAS,        //!< Use AGAS (i.e. global memory may move).
   HPX_GAS_MAX
-} hpx_gas_t;
+} libhpx_gas_t;
 
 static const char* const HPX_GAS_TO_STRING[] = {
   "DEFAULT",
@@ -51,7 +51,7 @@ typedef enum {
   HPX_TRANSPORT_MPI,         //!< Use MPI for network transport.
   HPX_TRANSPORT_PHOTON,      //!< Use Photon for network transport.
   HPX_TRANSPORT_MAX
-} hpx_transport_t;
+} libhpx_transport_t;
 
 static const char* const HPX_TRANSPORT_TO_STRING[] = {
   "DEFAULT",
@@ -83,7 +83,7 @@ typedef enum {
   HPX_BOOT_MPI,              //!< Use mpirun to bootstrap HPX.
   HPX_BOOT_PMI,              //!< Use the PMI bootstrapper.
   HPX_BOOT_MAX
-} hpx_boot_t;
+} libhpx_boot_t;
 
 static const char* const HPX_BOOT_TO_STRING[] = {
   "DEFAULT",
@@ -169,12 +169,12 @@ static const char *const HPX_PROF_COUNTER_TO_STRING[] = {
 };
 
 typedef enum {
-  none = 0,
+  HPX_PROF_EVENT_NONE = 0,
   HPX_PROF_EVENT_MAX
-} hpx_prof_event_t;
+} libhpx_prof_event_t;
 
 static const char* const HPX_PROF_EVENT_TO_STRING[] = {
-  "none",
+  "HPX_PROF_EVENT_NONE",
   "INVALID"
 };
 

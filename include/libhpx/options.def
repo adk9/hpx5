@@ -98,9 +98,9 @@ LIBHPX_OPT_SCALAR(, heapsize, 1lu << 30, size_t)
 #else // smaller default heap for ARM
 LIBHPX_OPT_SCALAR(, heapsize, 1lu << 29, size_t)
 #endif
-LIBHPX_OPT_SCALAR(, gas, HPX_GAS_PGAS, hpx_gas_t)
-LIBHPX_OPT_SCALAR(, boot, HPX_BOOT_DEFAULT, hpx_boot_t)
-LIBHPX_OPT_SCALAR(, transport, HPX_TRANSPORT_DEFAULT, hpx_transport_t)
+LIBHPX_OPT_SCALAR(, gas, HPX_GAS_PGAS, libhpx_gas_t)
+LIBHPX_OPT_SCALAR(, boot, HPX_BOOT_DEFAULT, libhpx_boot_t)
+LIBHPX_OPT_SCALAR(, transport, HPX_TRANSPORT_DEFAULT, libhpx_transport_t)
 LIBHPX_OPT_SCALAR(, network, HPX_NETWORK_DEFAULT, libhpx_network_t)
 /// @}
 
@@ -143,7 +143,7 @@ LIBHPX_OPT_BITSET(trace_, classes, LIBHPX_OPT_BITSET_NONE)
 /// Profiling options
 /// @{
 LIBHPX_OPT_BITSET(prof_, counters, LIBHPX_OPT_BITSET_NONE)
-LIBHPX_OPT_SCALAR(prof_, event, none, hpx_prof_event_t)
+LIBHPX_OPT_SCALAR(prof_, event, HPX_PROF_EVENT_NONE, libhpx_prof_event_t)
 /// @}
 
 /// PWC options

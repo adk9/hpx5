@@ -192,9 +192,10 @@ int inst_start() {
   return LIBHPX_OK;
 #endif
   // write action table for tracing
-  if (inst_trace_class(HPX_INST_CLASS_PARCEL)) {
+  if (inst_trace_class(HPX_INST_CLASS_PARCEL) && hpx_get_my_rank() == 0) {
     _dump_actions();
   }
+
   return 0;
 }
 
