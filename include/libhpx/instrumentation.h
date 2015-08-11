@@ -22,21 +22,15 @@
 struct config;
 
 #ifdef ENABLE_INSTRUMENTATION
+/// INSTRUMENTATION is true if and only if instrumentation is enabled
+# define INSTRUMENTATION 1
 /// INST will do @p stmt only if instrumentation is enabled
-#define INST(stmt) stmt;
-/// INST_COND will do nothing if instrumentation is disabled
-/// Otherwise, it will do @p on_cond if @p cond is true,
-/// or @p on else if @p on_cond is false
-#define INST_COND(cond, on_cond, on_else)       \
-  if (cond) {                                   \
-    on_cond;                                    \
-  }                                             \
-  else {                                        \
-   on_else;                                     \
-  }
+# define INST(stmt) stmt;
 #else
+/// INSTRUMENTATION is true if and only if instrumentation is enabled
+# define INSTRUMENTATION 0
+/// INST will do @p stmt only if instrumentation is enabled
 # define INST(stmt)
-# define INST_COND(cond, on_cond, on_else)
 #endif
 
 /// Initialize instrumentation. This is usually called in hpx_init().
