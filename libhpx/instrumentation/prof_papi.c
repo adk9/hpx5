@@ -52,7 +52,7 @@ static const char* _get_counter_string(size_t papi_event){
 
 static void _set_event(size_t papi_event, size_t bit, size_t bitset, 
                int max_counters, int *num_counters){
-  if(!(bit | bitset) || (PAPI_query_event(papi_event) != PAPI_OK)
+  if(!(bit & bitset) || (PAPI_query_event(papi_event) != PAPI_OK)
                      || (*num_counters >= max_counters)){
     return;
   }
