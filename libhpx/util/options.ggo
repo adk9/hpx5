@@ -109,7 +109,7 @@ section "Tracing"
 
 option "hpx-trace-classes" - "set the event classes to trace"
 typestr="class"
-values="parcel","pwc","sched","lco","process","memory","all"
+values="parcel","pwc","sched","lco","process","memory","schedtimes","all"
 enum optional multiple
 
 option "hpx-trace-filesize" - "set the size of each trace file"
