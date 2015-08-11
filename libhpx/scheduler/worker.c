@@ -500,7 +500,9 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   while (!scheduler_is_shutdown(here->sched)) {
     if (!block) {
       p = _schedule_lifo(self);
-      INST_COND(p != NULL, source = SOURCE_LIFO, {});
+      if (INSTRUMENTATION && p != NULL) {
+        source = SOURCE_LIFO;
+      }
       break;
     }
 
@@ -534,14 +536,22 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
     }
 
     if ((p = yield_steal_0(self))) {
-      INST_COND(yield_steal_0 == _schedule_yielded, source=SOURCE_YIELD, 
-                source=SOURCE_STEAL);
+      if (INSTRUMENTATION && yield_steal_0 == _schedule_yielded) {
+        source = SOURCE_YIELD;
+      }
+      else {
+        source = SOURCE_STEAL;
+      }
       break;
     }
 
     if ((p = yield_steal_1(self))) {
-      INST_COND(yield_steal_1 == _schedule_yielded, source=SOURCE_YIELD, 
-                source=SOURCE_STEAL);
+      if (INSTRUMENTATION && yield_steal_1 == _schedule_yielded) {
+        source = SOURCE_YIELD;
+      }
+      else {
+        source = SOURCE_STEAL;
+      }
       break;
     }
 
