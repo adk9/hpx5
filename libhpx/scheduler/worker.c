@@ -22,11 +22,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifdef HAVE_APEX
-# include <apex.h>
-# include <apex_policies.h>
-#endif
-
 #include <hpx/builtins.h>
 
 #include <libhpx/action.h>
@@ -47,46 +42,86 @@
 #include "thread.h"
 #include "termination.h"
 
-#ifdef ENABLE_DEBUG
-# define _transfer _debug_transfer
-#else
-# define _transfer thread_transfer
-#endif
 /// Storage for the thread-local worker pointer.
 __thread worker_t * volatile self = NULL;
 
-#ifdef ENABLE_INSTRUMENTATION
-static inline void TRACE_WQSIZE(worker_t *w) {
+#define SOURCE_LIFO 0
+#define SOURCE_YIELD 1
+#define SOURCE_STEAL 2
+#define SOURCE_FINAL 3
+
+static void EVENT_WQSIZE(worker_t *w) {
   static const int class = INST_SCHED;
   static const int id = HPX_INST_EVENT_SCHED_WQSIZE;
-  size_t size = sync_chase_lev_ws_deque_size(&w->work);
-  inst_trace(class, id, size);
+  inst_trace(class, id, sync_chase_lev_ws_deque_size(&w->work));
 }
 
-static inline void TRACE_PUSH_LIFO(hpx_parcel_t *p) {
+static void EVENT_PUSH_LIFO(hpx_parcel_t *p) {
   static const int class = INST_SCHED;
   static const int id = HPX_INST_EVENT_SCHED_PUSH_LIFO;
   inst_trace(class, id, p);
 }
 
-static inline void TRACE_POP_LIFO(hpx_parcel_t *p) {
+static void EVENT_POP_LIFO(hpx_parcel_t *p) {
   static const int class = INST_SCHED;
   static const int id = HPX_INST_EVENT_SCHED_POP_LIFO;
   inst_trace(class, id, p);
 }
 
-static inline void TRACE_STEAL_LIFO(hpx_parcel_t *p,
-                                    const worker_t *victim) {
+static void EVENT_STEAL_LIFO(hpx_parcel_t *p, const worker_t *victim) {
   static const int class = INST_SCHED;
   static const int id = HPX_INST_EVENT_SCHED_STEAL_LIFO;
   inst_trace(class, id, p, victim->id);
 }
-#else
-# define TRACE_WQSIZE(w)
-# define TRACE_PUSH_LIFO(p)
-# define TRACE_POP_LIFO(p)
-# define TRACE_STEAL_LIFO(p, v)
+
+static void EVENT_THREAD_RUN(hpx_parcel_t *p, worker_t *w) {
+#ifdef HAVE_APEX
+  // if this is NOT a null or lightweight action, send a "start" event to APEX
+  if (p->action != hpx_lco_set_action) {
+    void* handler = (void*)hpx_action_get_handler(p->action);
+    w->profiler = (void*)(apex_start(APEX_FUNCTION_ADDRESS, handler));
+  }
 #endif
+  static const int type = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_RUN;
+  inst_trace(type, id, p->id, p->action, p->size);
+}
+
+static void EVENT_THREAD_END(hpx_parcel_t *p, worker_t *w) {
+#ifdef HAVE_APEX
+  if (w->profiler != NULL) {
+    apex_stop((apex_profiler_handle)(w->profiler));
+    w->profiler = NULL;
+  }
+#endif
+  static const int type = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_END;
+  inst_trace(type, id, p->id, p->action);
+}
+
+static void EVENT_THREAD_SUSPEND(hpx_parcel_t *p, worker_t *w) {
+#ifdef HAVE_APEX
+  if (w->profiler != NULL) {
+    apex_stop((apex_profiler_handle)(w->profiler));
+    w->profiler = NULL;
+  }
+#endif
+  static const int type = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_SUSPEND;
+  inst_trace(type, id, p->id, p->action);
+}
+
+static void EVENT_THREAD_RESUME(hpx_parcel_t *p, worker_t *w) {
+#ifdef HAVE_APEX
+  if (p->action != hpx_lco_set_action) {
+    void* handler = (void*)hpx_action_get_handler(p->action);
+    w->profiler = (void*)(apex_resume(APEX_FUNCTION_ADDRESS, handler));
+  }
+#endif
+  static const int type = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_RESUME;
+  inst_trace(type, id, p->id, p->action);
+}
 
 #ifdef ENABLE_DEBUG
 /// This transfer wrapper is used for logging, debugging, and instrumentation.
@@ -100,105 +135,6 @@ static void _dbg_transfer(hpx_parcel_t *p, thread_transfer_cont_t c, void *e) {
 # define _transfer _dbg_transfer
 #else
 # define _transfer thread_transfer
-#endif
-
-#ifdef HAVE_APEX
-/// This is the condition that "sleeping" threads will wait on
-static pthread_cond_t _release = PTHREAD_COND_INITIALIZER;
-
-/// Mutex for the pthread_cond_wait() call. Typically, it is used
-/// to save the shared state, but we don't need it for our use.
-static pthread_mutex_t _release_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-static void _apex_wait(void) {
-  pthread_mutex_lock(&_release_mutex);
-  pthread_cond_wait(&_release, &_release_mutex);
-  pthread_mutex_unlock(&_release_mutex);
-}
-
-static void _apex_signal(void) {
-  pthread_cond_signal(&_release);
-}
-
-/// Try to deactivate a worker.
-///
-/// @returns          1 If the worker remains active, 0 if it was deactivated
-static int _apex_try_deactivate(volatile int *n_active_workers) {
-  if (sync_fadd(n_active_workers, -1, SYNC_ACQ_REL) > apex_get_thread_cap()) {
-    self->active = false;
-    apex_set_state(APEX_THROTTLED);
-    return 0;
-  }
-
-  sync_fadd(n_active_workers, 1, SYNC_ACQ_REL);
-  return 1;
-}
-
-/// Try to reactivate an inactive worker.
-///
-/// @returns          1 If the thread reactivated, 0 if it is still inactive.
-static int _apex_try_reactivate(volatile int *n_active_workers) {
-  if (sync_fadd(n_active_workers, 1, SYNC_ACQ_REL) <= apex_get_thread_cap()) {
-    // I fit inside the cap!
-    self->active = true;
-    apex_set_state(APEX_BUSY);
-    return 1;
-  }
-
-  sync_fadd(n_active_workers, -1, SYNC_ACQ_REL);
-  return 0;
-}
-
-/// This function will check whether the current thread in the
-/// scheduling loop should be throttled.
-///
-/// @returns          1 If the thread is active, 0 if it is inactive.
-static int _apex_check_active(void) {
-  // akp: throttling code -- if the throttling flag is set don't use
-  // some threads NB: There is a possible race condition here. It's
-  // possible that mail needs to be checked again just before
-  // throttling.
-  if (!apex_get_throttle_concurrency()) {
-    return 1;
-  }
-
-  // we use this address a bunch of times, so just remember it
-  volatile int * n_active_workers = &(here->sched->n_active_workers);
-
-  if (!self->active) {
-    // because I can't change the power level, sleep instead.
-    _apex_wait();
-    return _apex_try_reactivate(n_active_workers);
-  }
-
-  if (!apex_throttleOn || self->yielded) {
-    return 1;
-  }
-
-  // If there are too many threads running, then try and become inactive.
-  if (sync_load(n_active_workers, SYNC_ACQUIRE) > apex_get_thread_cap()) {
-    return _apex_try_deactivate(n_active_workers);
-  }
-
-  // Go ahead and signal the condition variable if we need to
-  if (sync_load(n_active_workers, SYNC_ACQUIRE) < apex_get_thread_cap()) {
-    _apex_signal();
-  }
-
-  return 1;
-}
-
-/// release idle threads, stop any running timers, and exit the thread from APEX
-static void _apex_worker_shutdown(void) {
-  pthread_cond_broadcast(&_release);
-  worker_t *w = self;                               
-  if (w->profiler != NULL) {                        
-    apex_stop((apex_profiler_handle)(w->profiler)); 
-    w->profiler = NULL;                             
-  }                                                 
-  apex_exit_thread();
-}
-
 #endif
 
 /// Continue a parcel by invoking its parcel continuation.
@@ -250,9 +186,9 @@ static void _execute_interrupt(hpx_parcel_t *p) {
   dbg_assert(!p->ustack);
   p->ustack = q->ustack;
 
-  INST_EVENT_PARCEL_RUN(p, w);
+  EVENT_THREAD_RUN(p, w);
   int e = action_execute(p);
-  INST_EVENT_PARCEL_END(p, w);
+  EVENT_THREAD_END(p, w);
 
   // Restore the current thread pointer.
   _swap_current(q, NULL, w);
@@ -270,7 +206,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
 
    case HPX_RESEND:
     log_sched("resending interrupt to %"PRIu64"\n", p->target);
-    INST_EVENT_PARCEL_RESEND(p);
+    EVENT_PARCEL_RESEND(p);
     parcel_launch(p);
     break;
 
@@ -287,9 +223,8 @@ static void _execute_interrupt(hpx_parcel_t *p) {
 ///
 /// @param       parcel The parcel that describes the thread to run.
 static void _execute_thread(hpx_parcel_t *p) {
-  worker_t *w = self;
   // matching events are in hpx_thread_exit()
-  INST_EVENT_PARCEL_RUN(p, w);
+  EVENT_THREAD_RUN(p, self);
   int e = action_execute(p);
   hpx_thread_exit(e);
   unreachable();
@@ -342,7 +277,7 @@ static hpx_parcel_t *_try_bind(worker_t *w, hpx_parcel_t *p) {
 static void _push_lifo(hpx_parcel_t *p, void *worker) {
   dbg_assert(p->target != HPX_NULL);
   dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
-  TRACE_PUSH_LIFO(p);
+  EVENT_PUSH_LIFO(p);
   worker_t *w = worker;
   uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
   w->work_first = (here->sched->wf_threshold < size);
@@ -351,8 +286,8 @@ static void _push_lifo(hpx_parcel_t *p, void *worker) {
 /// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *_schedule_lifo(worker_t *w) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&w->work);
-  TRACE_POP_LIFO(p);
-  TRACE_WQSIZE(w);
+  EVENT_POP_LIFO(p);
+  EVENT_WQSIZE(w);
   return p;
 }
 
@@ -380,7 +315,7 @@ static hpx_parcel_t *_schedule_steal(worker_t *w) {
 
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
   if (p) {
-    TRACE_STEAL_LIFO(p, victim);
+    EVENT_STEAL_LIFO(p, victim);
     COUNTER_SAMPLE(++w->stats.steals);
   }
 
@@ -488,23 +423,28 @@ static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
 ///
 /// @returns            The status from _transfer.
 static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
+  uint64_t start_time = hpx_time_to_ns(hpx_time_now());
+  int source = -1;
+  int spins = 0;
   hpx_parcel_t *p = NULL;
-  while (!scheduler_is_shutdown(here->sched)) {
+  while (!worker_is_shutdown()) {
     if (!block) {
       p = _schedule_lifo(self);
+      if (INSTRUMENTATION && p != NULL) {
+        source = SOURCE_LIFO;
+      }
       break;
     }
 
     _handle_mail(self);
 
-#ifdef HAVE_APEX
     // If we're not supposed to be active, then don't schedule anything.
-    if (_apex_check_active() == 0) {
+    if (!worker_is_active()) {
       continue;
     }
-#endif
 
     if ((p = _schedule_lifo(self))) {
+      INST(source = SOURCE_LIFO);
       break;
     }
 
@@ -524,21 +464,37 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
     }
 
     if ((p = yield_steal_0(self))) {
+      if (INSTRUMENTATION && yield_steal_0 == _schedule_yielded) {
+        source = SOURCE_YIELD;
+      }
+      else {
+        source = SOURCE_STEAL;
+      }
       break;
     }
 
     if ((p = yield_steal_1(self))) {
+      if (INSTRUMENTATION && yield_steal_1 == _schedule_yielded) {
+        source = SOURCE_YIELD;
+      }
+      else {
+        source = SOURCE_STEAL;
+      }
       break;
     }
 
     // couldn't find any work to do, we sleep for a while before looking again
     system_usleep(1);
+    INST(spins++);
   }
 
   // This somewhat clunky expression just makes sure that, if we found a parcel
   // to transfer to then it has a stack, or if we didn't find anything to
   // transfer to then pick the system stack
   p = (p) ? _try_bind(self, p) : self->system;
+
+  inst_trace(HPX_INST_SCHEDTIMES, HPX_INST_SCHEDTIMES_SCHED,
+    start_time, source, spins);
 
   // don't transfer to the same parcel
   if (p != self->current) {
@@ -624,23 +580,16 @@ int worker_start(void) {
   self->current = self->system;
 
   // the system thread will loop to find work until the scheduler has shutdown
-  while (!scheduler_is_shutdown(sched)) {
+  while (!worker_is_shutdown()) {
     _schedule(_null, NULL, 1);
   }
 
-#ifdef HAVE_APEX
-  _apex_worker_shutdown();
-#endif
-
-  if (sched->shutdown != HPX_SUCCESS) {
-    if (here->rank == 0) {
-      log_error("application exited with a non-zero exit code: %d.\n",
-                sched->shutdown);
-    }
-    return sched->shutdown;
+  if (sched->shutdown != HPX_SUCCESS && here->rank == 0) {
+    log_error("application exited with a non-zero exit code: %d.\n",
+              sched->shutdown);
   }
 
-  return LIBHPX_OK;
+  return sched->shutdown;
 }
 
 /// Spawn a parcel.
@@ -665,7 +614,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
 
   // If we're shutting down then push the parcel and return. This prevents an
   // infinite spawn from inhibiting termination.
-  if (scheduler_is_shutdown(here->sched)) {
+  if (worker_is_shutdown()) {
     _push_lifo(p, w);
     return;
   }
@@ -697,10 +646,10 @@ void scheduler_spawn(hpx_parcel_t *p) {
   }
 
   // Process p work-first
-  INST_EVENT_PARCEL_SUSPEND(current, w);
+  EVENT_THREAD_SUSPEND(current, w);
   p = _try_bind(w, p);
   _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = _push_lifo, .env = w });
-  INST_EVENT_PARCEL_RESUME(current, w);
+  EVENT_THREAD_RESUME(current, self);
 }
 
 /// This is the _schedule() continuation that we use to yield a thread.
@@ -744,10 +693,10 @@ static void _unlock(hpx_parcel_t *to, void *lock) {
 }
 
 hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
-  worker_t *w = self;
   // push the current thread onto the condition variable---no lost-update
   // problem here because we're holing the @p lock
-  hpx_parcel_t *p = self->current;
+  worker_t *w = self;
+  hpx_parcel_t *p = w->current;
   ustack_t *thread = p->ustack;
 
   // we had better be holding a lock here
@@ -758,9 +707,9 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
     return status;
   }
 
-  INST_EVENT_PARCEL_SUSPEND(p, w);
+  EVENT_THREAD_SUSPEND(p, w);
   _schedule(_unlock, (void*)lock, 0);
-  INST_EVENT_PARCEL_RESUME(p, w);
+  EVENT_THREAD_RESUME(p, self);
 
   // reacquire the lco lock before returning
   sync_lockable_ptr_lock(lock);
@@ -805,7 +754,6 @@ void scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
 static void HPX_NORETURN
 _continue(worker_t *worker, void (*cleanup)(void*), void *env, int nargs,
           va_list *args) {
-  worker_t *w = self;
   hpx_parcel_t *parcel = worker->current;
 
   // send the parcel continuation---this takes my credit if I have any
@@ -821,7 +769,7 @@ _continue(worker_t *worker, void (*cleanup)(void*), void *env, int nargs,
     hpx_gas_unpin(parcel->target);
   }
 
-  INST_EVENT_PARCEL_END(parcel, w);
+  EVENT_THREAD_END(parcel, worker);
   _schedule(_free_parcel, NULL, 1);
   unreachable();
 }
@@ -843,11 +791,10 @@ _hpx_thread_continue_cleanup(void (*cleanup)(void*), void *env, int nargs, ...)
 }
 
 void hpx_thread_exit(int status) {
-  worker_t *w = self;
   switch (status) {
    case HPX_RESEND:
-    INST_EVENT_PARCEL_END(self->current, w);
-    INST_EVENT_PARCEL_RESEND(self->current);
+    EVENT_THREAD_END(self->current, self);
+    EVENT_PARCEL_RESEND(self->current);
     _schedule(_resend_parcel, NULL, 0);
     unreachable();
    case HPX_ERROR:
@@ -917,8 +864,6 @@ int hpx_thread_get_tls_id(void) {
 }
 
 void hpx_thread_set_affinity(int affinity) {
-  worker_t *w = self;
-
   // make sure affinity is in bounds
   dbg_assert(affinity >= -1);
   dbg_assert(affinity < here->sched->n_workers);
@@ -944,21 +889,23 @@ void hpx_thread_set_affinity(int affinity) {
   }
 
   // move this thread to the proper worker through the mailbox
-  INST_EVENT_PARCEL_SUSPEND(p, w);
-  w = scheduler_get_worker(here->sched, affinity);
+  EVENT_THREAD_SUSPEND(p, worker);
+  worker_t *w = scheduler_get_worker(here->sched, affinity);
   _schedule(_send_mail, w, 0);
-  INST_EVENT_PARCEL_RESUME(p, w);
+  EVENT_THREAD_RESUME(p, self);
 }
 
 void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   worker_t *w = self;
-  INST_EVENT_PARCEL_SUSPEND(self->current, w);
-  log_sched("suspending %p in %s\n", (void*)self->current,
-            action_table_get_key(here->actions, self->current->action));
+  hpx_parcel_t *p = w->current;
+  log_sched("suspending %p in %s\n", (void*)p,
+            action_table_get_key(here->actions, p->action));
+  EVENT_THREAD_SUSPEND(p, w);
   _schedule(f, env, block);
-  log_sched("resuming %p\n in %s", (void*)self->current,
-            action_table_get_key(here->actions, self->current->action));
-  INST_EVENT_PARCEL_RESUME(self->current, w);
+  EVENT_THREAD_RESUME(p, self);
+  log_sched("resuming %p\n in %s", (void*)p,
+            action_table_get_key(here->actions, p->action));
+  (void)p;
 }
 
 intptr_t worker_can_alloca(size_t bytes) {
