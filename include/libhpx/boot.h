@@ -18,7 +18,7 @@
 #include "libhpx/config.h"
 
 typedef struct boot {
-  hpx_boot_t type;
+  libhpx_boot_t type;
 
   const char *(*id)(void);
 
@@ -36,13 +36,13 @@ typedef struct boot {
 boot_t *boot_new_mpi(void);
 boot_t *boot_new_pmi(void);
 boot_t *boot_new_smp(void);
-boot_t *boot_new(hpx_boot_t type);
+boot_t *boot_new(libhpx_boot_t type);
 
 static inline void boot_delete(boot_t *boot) {
   boot->delete(boot);
 }
 
-static inline hpx_boot_t boot_type(boot_t *boot) {
+static inline libhpx_boot_t boot_type(boot_t *boot) {
   return boot->type;
 }
 

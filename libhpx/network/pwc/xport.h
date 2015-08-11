@@ -43,7 +43,7 @@ typedef struct xport_op {
 } xport_op_t HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
 typedef struct pwc_xport {
-  hpx_transport_t type;
+  libhpx_transport_t type;
 
   void (*dealloc)(void *xport);
   const void *(*key_find_ref)(void *xport, const void *addr, size_t n);

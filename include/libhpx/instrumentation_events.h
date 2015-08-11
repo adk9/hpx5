@@ -302,6 +302,38 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
       .printf_code = "zu",                      \
       .name = "process termination lco"}
 
+
+#define METADATA_SCHEDTIMES_STARTTIME           \
+  { .mask = 0x3,                                \
+      .data_type = METADATA_TYPE_INT64,         \
+      .offset = INST_EVENT_COL_OFFSET_USER0,    \
+      .min = 0,                                 \
+      .max = UINT64_MAX,                        \
+      .printf_code = "zu",                      \
+      .name = "start_time"                      \
+      }
+
+#define METADATA_SCHEDTIMES_SCHED_SOURCE        \
+  { .mask = 0x3,                                \
+      .data_type = METADATA_TYPE_INT64,         \
+      .offset = INST_EVENT_COL_OFFSET_USER1,    \
+      .min = 0,                                 \
+      .max = UINT64_MAX,                        \
+      .printf_code = "zu",                      \
+      .name = "parcel_source"                   \
+      }
+
+
+#define METADATA_SCHEDTIMES_SCHED_SPINS         \
+  { .mask = 0x3,                                \
+      .data_type = METADATA_TYPE_INT64,         \
+      .offset = INST_EVENT_COL_OFFSET_USER2,    \
+      .min = 0,                                 \
+      .max = UINT64_MAX,                        \
+      .printf_code = "zu",                      \
+      .name = "spins"                           \
+      }
+
 // typeof(PARCEL_CREATE_METADATA) == inst_event_metadata_t 
 #define PARCEL_CREATE_METADATA {                                   \
     .num_cols = 6,                                                 \
@@ -547,6 +579,42 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
     INST_EVENT_COL_METADATA_EMPTY2,                              \
     INST_EVENT_COL_METADATA_EMPTY3                               \
   }                                                              \
+}
+
+#define SCHEDTIMES_SCHED_METADATA {                                \
+    .num_cols = 6,                                                 \
+    .col_metadata = {                                              \
+      INST_EVENT_COL_METADATA_WORKER,                              \
+      INST_EVENT_COL_METADATA_NS,                                  \
+      METADATA_SCHEDTIMES_STARTTIME,                               \
+      METADATA_SCHEDTIMES_SCHED_SOURCE,                            \
+      METADATA_SCHEDTIMES_SCHED_SPINS,                             \
+      INST_EVENT_COL_METADATA_EMPTY3                               \
+    }                                                              \
+}
+
+#define SCHEDTIMES_PROBE_METADATA {                                \
+    .num_cols = 6,                                                 \
+    .col_metadata = {                                              \
+      INST_EVENT_COL_METADATA_WORKER,                              \
+      INST_EVENT_COL_METADATA_NS,                                  \
+      METADATA_SCHEDTIMES_STARTTIME,                               \
+      INST_EVENT_COL_METADATA_EMPTY1,                              \
+      INST_EVENT_COL_METADATA_EMPTY2,                              \
+      INST_EVENT_COL_METADATA_EMPTY3                               \
+    }                                                              \
+}
+
+#define SCHEDTIMES_PROGRESS_METADATA {                             \
+    .num_cols = 6,                                                 \
+    .col_metadata = {                                              \
+      INST_EVENT_COL_METADATA_WORKER,                              \
+      INST_EVENT_COL_METADATA_NS,                                  \
+      METADATA_SCHEDTIMES_STARTTIME,                               \
+      INST_EVENT_COL_METADATA_EMPTY1,                              \
+      INST_EVENT_COL_METADATA_EMPTY2,                              \
+      INST_EVENT_COL_METADATA_EMPTY3                               \
+    }                                                              \
 }
 
 #endif

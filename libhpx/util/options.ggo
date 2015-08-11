@@ -95,29 +95,38 @@ flag off
 option "hpx-dbg-syncfree" - "use synchronous GAS free operations"
 flag off
 
+section "Instrumentation"
+
+option "hpx-inst-dir" - "directory to output instrumentation files"
+typestr="dir"
+string optional
+
+option "hpx-inst-at" - "set the localities to activate instrumentation at"
+typestr="[localities]"
+int optional multiple
+
 section "Tracing"
 
 option "hpx-trace-classes" - "set the event classes to trace"
 typestr="class"
-values="parcel","pwc","sched","lco","process","memory","all"
+values="parcel","pwc","sched","lco","process","memory","schedtimes","all"
 enum optional multiple
-
-option "hpx-trace-dir" - "directory to output trace files"
-typestr="dir"
-string optional
 
 option "hpx-trace-filesize" - "set the size of each trace file"
 typestr="bytes"
 long optional
 
-option "hpx-trace-at" - "set the localities to trace at"
-typestr="[localities]"
-int optional multiple
+section "Profiling"
 
 option "hpx-prof-counters" - "set which PAPI counters to use for profiling"
 typestr="counters"
 values="HPX_L1_TCM","HPX_L2_TCM","HPX_L3_TCM","HPX_TLB_TL","HPX_TOT_INS","HPX_INT_INS","HPX_FP_INS","HPX_LD_INS","HPX_SR_INS","HPX_BR_INS","HPX_TOT_CYC","all"
-enum optional argoptional multiple
+enum optional multiple
+
+option "hpx-prof-event" - "set which event to profile"
+typestr="event"
+values="none"
+enum optional
 
 section "ISIR Network Options"
 

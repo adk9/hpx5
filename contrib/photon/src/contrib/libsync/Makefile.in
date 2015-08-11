@@ -383,8 +383,8 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CFLAGS = @CFLAGS@ -I@PHOTON_SRCDIR@/src/contrib \
-		     -I@PHOTON_SRCDIR@/src/contrib/libsync/include
-
+	-I@PHOTON_SRCDIR@/src/contrib/libsync/include \
+	-fvisibility=hidden
 SUBDIRS = arch
 noinst_LTLIBRARIES = libsync.la
 libsync_la_SOURCES = locks.c sr_barrier.c two_lock_queue.c \

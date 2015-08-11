@@ -78,6 +78,12 @@ void worker_fini(worker_t *w)
 /// Start processing lightweight threads.
 int worker_start(void);
 
+/// Check to see if the current worker should be active.
+int worker_is_active(void);
+
+/// Check to see if the current worker should shut down completely.
+int worker_is_shutdown(void);
+
 /// Check to see if the current worker has enough space for an alloca.
 ///
 /// @param        bytes The number of bytes to allocate.
