@@ -1,4 +1,4 @@
-AC_PREREQ([2.63])
+3AC_PREREQ([2.63])
 AC_INIT([photon], [0.1a], [photon@crest.iu.edu])
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
@@ -287,6 +287,14 @@ AM_CONDITIONAL([HAVE_CMPXCHG16B], [test "x$have_cmpxchg16b" == xyes])
 AC_SUBST(PHOTON_SRCDIR, "\${top_srcdir}")
 AC_SUBST(PHOTON_BUILDDIR, "\${top_builddir}")
 
+
+PHOTON_PC_LIBS_PRIVATE="$VERBS_LIBS $UGNI_LIBS"
+AS_IF([test "x$enable_shared" != xyes],
+  [PHOTON_PC_LIBS="$PHOTON_PC_LIBS_PRIVATE"])
+
+AC_SUBST(PHOTON_PC_LIBS)
+AC_SUBST(PHOTON_PC_LIBS_PRIVATE)
+
 AC_CONFIG_FILES([
 	Makefile
 	src/contrib/Makefile
@@ -304,6 +312,7 @@ AS_IF([test "x$enable_tests" != xno],
      [AC_CONFIG_FILES([test/Makefile])])])
 
 AC_OUTPUT
+
 
 AC_SUBST(THREAD_LIBS)
 
