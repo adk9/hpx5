@@ -31,12 +31,12 @@ typedef struct {
   void         *regs[8]; // x21-x28
   void             *x20; // we use this to hold the parcel that is passed to f()
   thread_entry_t    x19; // used to hold f(), called by align_stack_trampoline
-  void      *regpadding;
+  void             *x29; // The frame pointer
   void     (*x30)(void); // return address - set to align_stack_trampoline
-//#ifdef ENABLE_DEBUG
-//  void         *top_x19;
-//  void (*top_x30)(void);
-//#endif
+#ifdef ENABLE_DEBUG
+  void         *top_x19;
+  void (*top_x30)(void);
+#endif
 } HPX_PACKED _frame_t;
 
 static _frame_t *_get_top_frame(ustack_t *thread, size_t size) {
@@ -54,10 +54,10 @@ void thread_init(ustack_t *thread, hpx_parcel_t *parcel, thread_entry_t f,
   frame->x20      = parcel;
   frame->x30      = align_stack_trampoline;
 
-//#ifdef ENABLE_DEBUG
-//  frame->top_x19 = NULL;
-//  frame->top_x30 = NULL;
-//#endif
+#ifdef ENABLE_DEBUG
+  frame->top_x19 = NULL;
+  frame->top_x30 = NULL;
+#endif
 
   // set the stack stuff
   thread->sp        = frame;

@@ -12,10 +12,10 @@
 // =============================================================================
 #include "asm_macros.h"
 
-        // @param r0 - a pointer to the stack pointer to transfer to
-        // @param r1 - the continuation to call after the sp exchange
-        // @param r2 - the environment for the continutation
-        // @returns r0  -  from the continuation call
+        // @param x0 - a pointer to the stack pointer to transfer to
+        // @param x1 - the continuation to call after the sp exchange
+        // @param x2 - the environment for the continutation
+        // @returns x0  -  from the continuation call
         .file "libhpx/scheduler/arch/aarch64/transfer.S"
         .text
         .type thread_transfer, STT_FUNC
@@ -27,6 +27,7 @@ LABEL(thread_transfer)
 
         sub sp, sp, #16
         str x30, [sp]
+        str x29, [sp, 8]
         sub sp, sp, #80
 #define REG_PAIR(REG1, REG2, OFFS)	stp REG1, REG2, [sp, OFFS]
 #define REG_ONE(REG1, OFFS)		str REG1, [sp, OFFS]
@@ -51,6 +52,7 @@ LABEL(thread_transfer)
 #undef REG_PAIR
 #undef REG_ONE
         add sp, sp, #80
+        ldr x29, [sp, 8]
         ldr x30, [sp]
         add sp, sp, #16
 
