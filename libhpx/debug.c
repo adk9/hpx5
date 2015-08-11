@@ -29,7 +29,7 @@
 #include "libhpx/locality.h"
 #include "libhpx/debug.h"
 
-static char* _fetchHostname(char *hostname, int size) {
+static char *_fetchHostname(char *hostname, int size) {
   gethostname(hostname, size);
   return hostname;
 }

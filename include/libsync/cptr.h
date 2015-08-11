@@ -29,7 +29,7 @@
 /// @field p - the actual pointer that we're protecting
 /// @field c - the count of the number of times this pointer has been CASed
 /// ----------------------------------------------------------------------------
-#ifdef __x86_64__
+#if defined (__x86_64__) || defined(__aarch64__)
 typedef struct {
   void *p;
   uint64_t c;
