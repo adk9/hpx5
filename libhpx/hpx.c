@@ -37,6 +37,7 @@
 #include <libhpx/profiling.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/system.h>
+#include <libhpx/time.h>
 #include "network/probe.h"
 
 #ifdef HAVE_APEX
@@ -105,6 +106,9 @@ static void _cleanup(locality_t *l) {
 
 int hpx_init(int *argc, char ***argv) {
   int status = HPX_SUCCESS;
+
+  // Start the internal clock
+  libhpx_time_start();
 
   here = malloc(sizeof(*here));
   if (!here) {

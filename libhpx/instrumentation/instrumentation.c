@@ -93,7 +93,7 @@ static void _log_create(int class, int id, size_t size, hpx_time_t now) {
 
   char *file_path = _get_complete_path(_log_path, filename);
 
-  int e = logtable_init(&_logs[id], file_path, size, class, id, now);
+  int e = logtable_init(&_logs[id], file_path, size, class, id);
   if (e) {
     log_error("failed to initialize log file %s\n", file_path);
   }

@@ -25,6 +25,18 @@ struct config;
 //hostnames can only be 63 characters in length, so
 #define HOSTNAME_LENGTH 64
 
+#ifdef ENABLE_INSTRUMENTATION
+/// INSTRUMENTATION is true if and only if instrumentation is enabled
+# define INSTRUMENTATION 1
+/// INST will do @p stmt only if instrumentation is enabled
+# define INST(stmt) stmt;
+#else
+/// INSTRUMENTATION is true if and only if instrumentation is enabled
+# define INSTRUMENTATION 0
+/// INST will do @p stmt only if instrumentation is enabled
+# define INST(stmt)
+#endif
+
 /// Initialize instrumentation. This is usually called in hpx_init().
 int inst_init(struct config *cfg)
   HPX_NON_NULL(1);
@@ -65,8 +77,8 @@ void inst_vtrace(int type, int n, int id, ...);
 #define         HPX_INST_CLASS_LCO INT32_C(3)
 #define     HPX_INST_CLASS_PROCESS INT32_C(4)
 #define      HPX_INST_CLASS_MEMORY INT32_C(5)
-
-#define       HPX_INST_NUM_CLASSES INT32_C(6)
+#define        HPX_INST_SCHEDTIMES INT32_C(6)
+#define       HPX_INST_NUM_CLASSES INT32_C(7)
 
 static const char * const INST_CLASS_TO_STRING[] = {
   "CLASS_PARCEL",
@@ -74,7 +86,8 @@ static const char * const INST_CLASS_TO_STRING[] = {
   "CLASS_SCHED",
   "CLASS_LCO",
   "CLASS_PROCESS",
-  "CLASS_MEMORY"
+  "CLASS_MEMORY",
+  "CLASS_SCHEDTIMES"
 };
 
 #define  HPX_INST_EVENT_PARCEL_CREATE INT32_C(0)
@@ -113,7 +126,11 @@ static const char * const INST_CLASS_TO_STRING[] = {
 #define     HPX_INST_EVENT_MEMORY_CYCLIC_ALLOC INT32_C(28)
 #define      HPX_INST_EVENT_MEMORY_CYCLIC_FREE INT32_C(29)
 
-#define HPX_INST_NUM_EVENTS INT32_C(30)
+#define              HPX_INST_SCHEDTIMES_SCHED INT32_C(30)
+#define              HPX_INST_SCHEDTIMES_PROBE INT32_C(31)
+#define           HPX_INST_SCHEDTIMES_PROGRESS INT32_C(32)
+
+#define                    HPX_INST_NUM_EVENTS INT32_C(33)
 
 static const char * const INST_EVENT_TO_STRING[] = {
   "EVENT_PARCEL_CREATE",
@@ -150,7 +167,11 @@ static const char * const INST_EVENT_TO_STRING[] = {
   "EVENT_MEMORY_GLOBAL_ALLOC",
   "EVENT_MEMORY_GLOBAL_FREE",
   "EVENT_MEMORY_CYCLIC_ALLOC",
-  "EVENT_MEMORY_CYCLIC_FREE"
+  "EVENT_MEMORY_CYCLIC_FREE",
+
+  "EVENT_SCHEDTIMES_SCHED",
+  "EVENT_SCHEDTIMES_PROBE",
+  "EVENT_SCHEDTIMES_PROGRESS"
 };
 
 static const int INST_OFFSETS[] = {
@@ -160,6 +181,7 @@ static const int INST_OFFSETS[] = {
   HPX_INST_EVENT_LCO_INIT,
   HPX_INST_EVENT_PROCESS_NEW,
   HPX_INST_EVENT_MEMORY_REGISTERED_ALLOC,
+  HPX_INST_SCHEDTIMES_SCHED,
   HPX_INST_NUM_EVENTS
 };
 
