@@ -55,6 +55,7 @@
 	REG_PAIR (x21, x22, 16);	\
 	REG_PAIR (x23, x24, 32);	\
 	REG_PAIR (x25, x26, 48);	\
-	REG_PAIR (x27, x28, 64);	
+	REG_PAIR (x27, x28, 64);	\
+	REG_PAIR (x29, x30, 80);
 
 #endif // LIBHPX_ASM_MACROS_H
