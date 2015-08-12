@@ -386,6 +386,21 @@ void hpx_lco_set(hpx_addr_t target, int size, const void *value,
   dbg_check(e, "Could not forward lco_set\n");
 }
 
+void hpx_lco_set_lsync(hpx_addr_t target, int size, const void *value,
+                       hpx_addr_t rsync) {
+  hpx_addr_t lsync = hpx_lco_future_new(0);
+  hpx_lco_set(target, size, value, lsync, rsync);
+  hpx_lco_wait(lsync);
+  hpx_lco_delete(lsync, HPX_NULL);
+}
+
+void hpx_lco_set_rsync(hpx_addr_t target, int size, const void *value) {
+  hpx_addr_t rsync = hpx_lco_future_new(0);
+  hpx_lco_set(target, size, value, HPX_NULL, rsync);
+  hpx_lco_wait(rsync);
+  hpx_lco_delete(rsync, HPX_NULL);
+}
+
 hpx_status_t hpx_lco_wait(hpx_addr_t target) {
   lco_t *lco;
   if (hpx_gas_try_pin(target, (void**)&lco)) {
