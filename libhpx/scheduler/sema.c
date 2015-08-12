@@ -120,11 +120,7 @@ void hpx_lco_sema_v(hpx_addr_t sema, hpx_addr_t rsync) {
 ///
 /// @param         sema The global address of the semaphore we're incrementing.
 void hpx_lco_sema_v_sync(hpx_addr_t sema) {
-  hpx_addr_t rsync = hpx_lco_future_new(0);
-  dbg_assert(rsync != HPX_NULL);
-  hpx_lco_set(sema, 0, NULL, HPX_NULL, rsync);
-  hpx_lco_wait(rsync);
-  hpx_lco_delete(rsync, HPX_NULL);
+  hpx_lco_set_rsync(sema, 0, NULL);
 }
 
 void _sema_fini(lco_t *lco) {
