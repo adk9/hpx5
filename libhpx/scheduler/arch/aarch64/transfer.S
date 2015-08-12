@@ -25,10 +25,7 @@
 LABEL(thread_transfer)
         STARTPROC
 
-        sub sp, sp, #16
-        str x30, [sp]
-        str x29, [sp, 8]
-        sub sp, sp, #80
+        sub sp, sp, #96
 #define REG_PAIR(REG1, REG2, OFFS)	stp REG1, REG2, [sp, OFFS]
 #define REG_ONE(REG1, OFFS)		str REG1, [sp, OFFS]
 	GPR_LAYOUT
@@ -51,10 +48,7 @@ LABEL(thread_transfer)
 	GPR_LAYOUT
 #undef REG_PAIR
 #undef REG_ONE
-        add sp, sp, #80
-        ldr x29, [sp, 8]
-        ldr x30, [sp]
-        add sp, sp, #16
+        add sp, sp, #96
 
         ret x30
         ENDPROC
