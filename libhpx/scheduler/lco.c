@@ -356,6 +356,8 @@ void hpx_lco_reset_sync(hpx_addr_t addr) {
 void hpx_lco_set(hpx_addr_t target, int size, const void *value,
                  hpx_addr_t lsync, hpx_addr_t rsync) {
   if (target == HPX_NULL) {
+    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
     return;
   }
 
@@ -376,6 +378,11 @@ void hpx_lco_set(hpx_addr_t target, int size, const void *value,
 
 void hpx_lco_set_lsync(hpx_addr_t target, int size, const void *value,
                        hpx_addr_t rsync) {
+  if (target == HPX_NULL) {
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    return;
+  }
+
   hpx_addr_t lsync = hpx_lco_future_new(0);
   hpx_lco_set(target, size, value, lsync, rsync);
   hpx_lco_wait(lsync);
@@ -383,6 +390,10 @@ void hpx_lco_set_lsync(hpx_addr_t target, int size, const void *value,
 }
 
 void hpx_lco_set_rsync(hpx_addr_t target, int size, const void *value) {
+  if (target == HPX_NULL) {
+    return;
+  }
+
   hpx_addr_t rsync = hpx_lco_future_new(0);
   hpx_lco_set(target, size, value, HPX_NULL, rsync);
   hpx_lco_wait(rsync);
