@@ -199,14 +199,13 @@ static void _dump_hostnames() {
     free(filepath);
     return;
   }
+  free(filepath);
 
   fprintf(f, "%s\n", hostname);
   int e = fclose(f);
   if(e != 0){
     log_error("failed to write hostname to %s\n", filepath);
   }
-
-  free(filepath);
 }
 
 /// This is for things that can only happen once hpx_run has started.
