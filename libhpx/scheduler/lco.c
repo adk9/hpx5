@@ -215,10 +215,8 @@ int attach_handler(lco_t *lco, hpx_parcel_t *p, size_t size) {
 
   parcel_set_state(p, state);
 
-#ifdef ENABLE_INSTRUMENTATION
-    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_ATTACH_PARCEL, lco,
-               hpx_get_my_thread_id(), lco->bits);
-#endif
+  inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_ATTACH_PARCEL, lco,
+             hpx_get_my_thread_id(), lco->bits);
 
   return _attach(lco, p);
 }
@@ -246,10 +244,8 @@ void lco_unlock(lco_t *lco) {
 }
 
 void lco_init(lco_t *lco, const lco_class_t *class) {
-#ifdef ENABLE_INSTRUMENTATION
-    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_INIT, lco,
-               hpx_get_my_thread_id(), lco->bits);
-#endif
+  inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_INIT, lco,
+             hpx_get_my_thread_id(), lco->bits);
   lco->vtable = class;
 }
 
@@ -269,10 +265,8 @@ uintptr_t lco_get_deleted(const lco_t *lco) {
 }
 
 void lco_set_triggered(lco_t *lco) {
-#ifdef ENABLE_INSTRUMENTATION
-    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_TRIGGER, lco,
-               hpx_get_my_thread_id(), lco->bits);
-#endif
+  inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_TRIGGER, lco,
+             hpx_get_my_thread_id(), lco->bits);
   lco->bits |= _TRIGGERED_MASK;
 }
 
@@ -293,10 +287,8 @@ void hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync) {
     dbg_check(e, "Could not forward lco_delete\n");
   }
   else {
-#ifdef ENABLE_INSTRUMENTATION
     inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_DELETE, lco,
                hpx_get_my_thread_id(), lco->bits);
-#endif
     log_lco("deleting lco %p\n", (void*)lco);
     int e = _fini(lco);
     hpx_gas_unpin(target);
@@ -342,10 +334,8 @@ void hpx_lco_reset(hpx_addr_t addr, hpx_addr_t rsync) {
 
   lco_t *lco = NULL;
   if (hpx_gas_try_pin(addr, (void**)&lco)) {
-#ifdef ENABLE_INSTRUMENTATION
     inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_RESET, lco,
                hpx_get_my_thread_id(), lco->bits);
-#endif
     _reset(lco);
     hpx_gas_unpin(addr);
     hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
@@ -371,10 +361,8 @@ void hpx_lco_set(hpx_addr_t target, int size, const void *value,
 
   lco_t *lco = NULL;
   if ((size < HPX_LCO_SET_ASYNC) && hpx_gas_try_pin(target, (void**)&lco)) {
-#ifdef ENABLE_INSTRUMENTATION
     inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_SET, lco,
                hpx_get_my_thread_id(), lco->bits);
-#endif
     _set(lco, size, value);
     hpx_gas_unpin(target);
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
@@ -404,10 +392,8 @@ void hpx_lco_set_rsync(hpx_addr_t target, int size, const void *value) {
 hpx_status_t hpx_lco_wait(hpx_addr_t target) {
   lco_t *lco;
   if (hpx_gas_try_pin(target, (void**)&lco)) {
-#ifdef ENABLE_INSTRUMENTATION
     inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_WAIT, target,
                hpx_get_my_thread_id(), lco->bits);
-#endif
     hpx_status_t status = _wait(lco);
     hpx_gas_unpin(target);
     return status;
