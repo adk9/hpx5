@@ -356,8 +356,12 @@ void hpx_lco_reset_sync(hpx_addr_t addr) {
 void hpx_lco_set(hpx_addr_t target, int size, const void *value,
                  hpx_addr_t lsync, hpx_addr_t rsync) {
   if (target == HPX_NULL) {
-    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    if (lsync) {
+      hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+    }
+    if (rsync) {
+      hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    }
     return;
   }
 
@@ -383,6 +387,21 @@ void hpx_lco_set_lsync(hpx_addr_t target, int size, const void *value,
     return;
   }
 
+  if (size >= HPX_LCO_SET_ASYNC) {
+    dbg_check( hpx_call(target, hpx_lco_set_action, rsync, value, size) );
+    return;
+  }
+
+  lco_t *lco = NULL;
+  if (hpx_gas_try_pin(target, (void**)&lco)) {
+    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_SET, lco,
+               hpx_get_my_thread_id(), lco->bits);
+    _set(lco, size, value);
+    hpx_gas_unpin(target);
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    return;
+  }
+
   hpx_addr_t lsync = hpx_lco_future_new(0);
   hpx_lco_set(target, size, value, lsync, rsync);
   hpx_lco_wait(lsync);
@@ -391,6 +410,20 @@ void hpx_lco_set_lsync(hpx_addr_t target, int size, const void *value,
 
 void hpx_lco_set_rsync(hpx_addr_t target, int size, const void *value) {
   if (target == HPX_NULL) {
+    return;
+  }
+
+  if (size >= HPX_LCO_SET_ASYNC) {
+    dbg_check( hpx_call_sync(target, hpx_lco_set_action, NULL, 0, value, size) );
+    return;
+  }
+
+  lco_t *lco = NULL;
+  if (hpx_gas_try_pin(target, (void**)&lco)) {
+    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_SET, lco,
+               hpx_get_my_thread_id(), lco->bits);
+    _set(lco, size, value);
+    hpx_gas_unpin(target);
     return;
   }
 
