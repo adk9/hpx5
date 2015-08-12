@@ -86,9 +86,12 @@ void _and_reset(lco_t *lco) {
   lco_lock(&and->lco);
   dbg_assert_str(cvar_empty(&and->barrier),
                  "Reset on AND LCO that has waiting threads.\n");
-  lco_reset_triggered(&and->lco);
-  cvar_reset(&and->barrier);
   sync_store(&and->count, and->value, SYNC_RELEASE);
+  cvar_reset(&and->barrier);
+  lco_reset_triggered(&and->lco);
+  if (!and->value) {
+    lco_set_triggered(&and->lco);
+  }
   lco_unlock(&and->lco);
 }
 
