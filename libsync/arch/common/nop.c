@@ -10,11 +10,16 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_ASM_H
-#define LIBHPX_ASM_H
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
-#include <stdint.h>
+#include "nop.h"
 
-void align_stack_trampoline(void);
+void sync_nop(void) {
+  __asm__ volatile ("nop");
+}
 
-#endif // LIBHPX_ASM_H
+void sync_pause(void) {
+  __asm__ volatile ("nop");
+}

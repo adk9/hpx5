@@ -10,17 +10,20 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifdef HAVE_CONFIG_H
-#include "config.h"
+#ifndef LIBHPX_ASM_H
+#define LIBHPX_ASM_H
+
+#include <stdint.h>
+
+/// This file is the header that declares all of our generic assembly
+/// functions. These are all implemented in an architecture-dependent way. These
+/// are suitable for gcc inline assembly, but are done as asm to support
+/// compilers that do not support inline asm.
+
+#if defined (__X86_64)
+void get_mxcsr(uint32_t *out);
+void get_fpucw(uint16_t *out);
 #endif
+void align_stack_trampoline(void);
 
-#include "nop.h"
-
-void sync_nop(void) {
-  __asm__ volatile ("nop");
-}
-
-void sync_pause(void) {
-  __asm__ volatile ("nop");
-}
-
+#endif // LIBHPX_ASM_H

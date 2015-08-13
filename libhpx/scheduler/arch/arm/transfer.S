@@ -10,7 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#include "asm_macros.h"
+#include "../common/asm_macros.h"
 
         // @param r0 - a pointer to the stack pointer to transfer to
         // @param r1 - the continuation to call after the sp exchange
