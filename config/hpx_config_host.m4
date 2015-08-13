@@ -23,6 +23,8 @@ AC_DEFUN([_HPX_DO_LINUX], [
  AS_CASE([$host_cpu],
    [x86_64], [HPX_CHECK_CMPXCHG16B
               l1d_linesize=`cat /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size`],
+  [aarch64], [HPX_AARCH64_GET_CACHELINESIZE
+              AS_ECHO(["checking cache line size for aarch64... $l1d_linesize"])],
      [arm*], [l1d_linesize=32],
              [l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`])
  pagesize=`getconf PAGESIZE`

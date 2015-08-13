@@ -37,15 +37,27 @@
 
 
 #if defined(__APPLE__)
-#define GLOBAL(S) .globl _##S
-#define LABEL(S) _##S:
-#define INTERNAL(S) .private_extern _##S
-#define SIZE(S)
+# define SYMBOL(S) _##S
+# define GLOBAL(S) .globl SYMBOL(S)
+# define LABEL(S) SYMBOL(S):
+# define INTERNAL(S) .private_extern SYMBOL(S)
+# define SIZE(S)
+# define TYPE(S, T)
+# define SECTION(S)
 #elif defined(__linux__)
-#define GLOBAL(S) .globl S
-#define LABEL(S) S:
-#define INTERNAL(S) .internal S
-#define SIZE(S) .size S, .-S
+# define SYMBOL(S) S
+#if defined(__x86_64__) || defined(__ARMEL__)
+# define GLOBAL(S) .globl SYMBOL(S)
+#elif defined(__aarch64__)
+# define GLOBAL(S) .global SYMBOL(S)
+#else
+#error GLOBAL(S) not defined for your processor
+#endif
+# define LABEL(S) SYMBOL(S):
+# define INTERNAL(S) .internal SYMBOL(S)
+# define SIZE(S) .size SYMBOL(S), .-SYMBOL(S)
+# define TYPE(S, T) .type SYMBOL(S), T
+# define SECTION(S) .section .S
 #else
 #error No ASM support for your platform.
 #endif

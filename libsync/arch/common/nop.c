@@ -10,21 +10,16 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifndef LIBHPX_ASM_MACROS_H
-#define LIBHPX_ASM_MACROS_H
-
-#if defined(__APPLE__)
-#define GLOBAL(S) .globl _##S
-#define LABEL(S) _##S:
-#define INTERNAL(S) .private_extern _##S
-#define SIZE(S)
-#elif defined(__linux__)
-#define GLOBAL(S) .globl S
-#define LABEL(S) S:
-#define INTERNAL(S) .internal S
-#define SIZE(S) .size S, .-S
-#else
-#error No ASM support for your platform.
+#ifdef HAVE_CONFIG_H
+#include "config.h"
 #endif
 
-#endif // LIBHPX_ASM_MACROS_H
+#include "nop.h"
+
+void sync_nop(void) {
+  __asm__ volatile ("nop");
+}
+
+void sync_pause(void) {
+  __asm__ volatile ("nop");
+}
