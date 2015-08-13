@@ -500,6 +500,10 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   if (p != self->current) {
     _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = f, .env = env });
   }
+
+  (void)start_time;
+  (void)source;
+  (void)spins;
 }
 
 int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
