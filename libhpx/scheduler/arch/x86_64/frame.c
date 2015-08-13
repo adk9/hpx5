@@ -16,7 +16,7 @@
 
 #include <libhpx/debug.h>
 #include "../../thread.h"
-#include "../common/asm.h"
+#include "asm.h"
 
 
 static uint32_t  _mxcsr = 0;
