@@ -28,14 +28,8 @@
 
 LABEL(align_stack_trampoline)
         STARTPROC
-    
-        sub sp, sp, #16
-        eor x0, x0, x0
-        str x0, [sp]
-        str x0, [sp, #8]
         mov x0, x20
         br x19
-
         ENDPROC
         SIZE(align_stack_trampoline)
 
