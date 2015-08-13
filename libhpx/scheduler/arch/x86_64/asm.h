@@ -19,6 +19,9 @@
 /// functions. These are all implemented in an architecture-dependent way. These
 /// are suitable for gcc inline assembly, but are done as asm to support
 /// compilers that do not support inline asm.
+
+void get_mxcsr(uint32_t *out);
+void get_fpucw(uint16_t *out);
 void align_stack_trampoline(void);
 
 #endif // LIBHPX_ASM_H
