@@ -2,13 +2,14 @@ noinst_HEADERS   = tests.h
 
 noinst_PROGRAMS  = $(TESTS)
 
-AM_CPPFLAGS      = $(LIBFFI_CFLAGS) -I$(top_srcdir)/include -Wno-unused
+AM_CPPFLAGS      = $(LIBFFI_CFLAGS) -I$(top_srcdir)/include -Wno-unused $(LIBHPX_CFLAGS)
 AM_LDFLAGS       = $(LIBHPX_LDFLAGS) -no-install
 LDADD            = $(LIBHPX_LDADD)
 
 LOG_COMPILER = $(TESTS_CMD)
 
-TESTS = bcast                   \
+TESTS = apex_test               \
+        bcast                   \
         call_when               \
         gas_alloc               \
         gas_global_alloc        \
