@@ -156,8 +156,12 @@ int main(int argc, char *argv[]) {
       printf("Number of calls Reported by APEX : %d, total time in action: %f seconds.\n", (int)profile->calls, profile->accumulated);
       if (function_count == profile->calls) {
           printf("Test passed.\n");
+          rc = 0;
+      } else {
+          rc = 1;
       }
   }
 #endif
+  return rc;
 }
 
