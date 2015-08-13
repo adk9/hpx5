@@ -38,7 +38,7 @@
 #define CHECK(e) test_assert(e == HPX_SUCCESS)
 
 #define ADD_TEST(test, at) do {                             \
-    printf("====== TEST %s ======\n", #test);               \
+    printf("====== TEST %s at %d ======\n", #test, HPX_LOCALITY_ID);    \
     int e = hpx_call_sync(HPX_THERE(at), test, NULL, 0);    \
     if (e == HPX_SUCCESS) {                                 \
       printf("======== PASSED ========\n");                 \
