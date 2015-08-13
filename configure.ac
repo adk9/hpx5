@@ -189,6 +189,9 @@ AC_SUBST(LIBHPX_LDFLAGS)
 AC_SUBST(LIBHPX_LIBADD)
 AC_SUBST(LIBHPX_LIBS)
 
+# Special handling for libsync. Maybe we should make a libsync.pc?
+HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lsync"
+
 # Substitute the variables required for pkg-config linking of libhpx
 # externally. Note if we're only building libhpx.a then the --libs output must
 # contain all private dependencies as well.
