@@ -29,12 +29,12 @@
 /// @field p - the actual pointer that we're protecting
 /// @field c - the count of the number of times this pointer has been CASed
 /// ----------------------------------------------------------------------------
-#if defined (__x86_64__) || defined(__aarch64__)
+#ifdef __LP64__
 typedef struct {
   void *p;
   uint64_t c;
 } cptr_t __attribute__((aligned(16)));
-#elif defined(__ARMEL__)
+#else
 typedef struct {
   void *p;
   uint32_t c;
