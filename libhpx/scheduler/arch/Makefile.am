@@ -12,3 +12,7 @@ endif
 if CPU_ARM
 libarch_la_SOURCES = arm/frame.c arm/asm.S arm/transfer.S
 endif
+
+if CPU_AARCH64
+libarch_la_SOURCES = aarch64/frame.c aarch64/asm.S aarch64/transfer.S
+endif

@@ -10,17 +10,21 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#ifndef LIBHPX_REG_MACROS_H
+#define LIBHPX_REG_MACROS_H
 
-#include "nop.h"
+#define GPR_LAYOUT			\
+	REG_PAIR (x19, x20,  0);	\
+	REG_PAIR (x21, x22, 16);	\
+	REG_PAIR (x23, x24, 32);	\
+	REG_PAIR (x25, x26, 48);	\
+	REG_PAIR (x27, x28, 64);	\
+	REG_PAIR (x29, x30, 80);
 
-void sync_nop(void) {
-  __asm__ volatile ("nop");
-}
+#define FPR_LAYOUT			\
+	REG_PAIR ( d8,  d9, 96);	\
+	REG_PAIR (d10, d11, 112);	\
+	REG_PAIR (d12, d13, 128);	\
+	REG_PAIR (d14, d15, 144);
 
-void sync_pause(void) {
-  __asm__ volatile ("nop");
-}
-
+#endif // LIBHPX_REG_MACROS_H

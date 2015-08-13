@@ -12,5 +12,9 @@ endif
 endif
 
 if CPU_ARM
-libarch_la_SOURCES = arm/nop.c arm/cptr.S
+libarch_la_SOURCES = common/nop.c arm/cptr.S
+endif
+
+if CPU_AARCH64
+libarch_la_SOURCES = common/nop.c
 endif

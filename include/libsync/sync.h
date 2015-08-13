@@ -46,6 +46,10 @@
 #include "craycc/sync.h"
 #else
 
+#if defined(__aarch64__)
+#error "sync.h is not supported for AARCH64"
+#endif
+
 #define SYNC_RELAXED 0
 #define SYNC_CONSUME 1
 #define SYNC_ACQUIRE 2
