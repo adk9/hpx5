@@ -20,7 +20,7 @@
 /// are suitable for gcc inline assembly, but are done as asm to support
 /// compilers that do not support inline asm.
 
-#if defined (__X86_64)
+#if defined (__X86_64__)
 void get_mxcsr(uint32_t *out);
 void get_fpucw(uint16_t *out);
 #endif
