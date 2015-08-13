@@ -150,10 +150,10 @@ int main(int argc, char *argv[]) {
 
 #ifdef HAVE_APEX
   // validate the APEX counts
-  printf("Function calls : %d\n", function_count);
+  printf("_fib_action Function calls : %d\n", function_count);
   apex_profile * profile = apex_get_profile(APEX_FUNCTION_ADDRESS, (void*)(&_fib_action));
   if (profile) {
-      printf("Value Reported : %d, total time in action: %f seconds.\n", (int)profile->calls, profile->accumulated);
+      printf("Number of calls Reported by APEX : %d, total time in action: %f seconds.\n", (int)profile->calls, profile->accumulated);
       if (function_count == profile->calls) {
           printf("Test passed.\n");
       }
