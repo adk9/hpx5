@@ -11,7 +11,7 @@
 #   
 # ------------------------------------------------------------------------------
 AC_DEFUN([HPX_AARCH64_GET_CACHELINESIZE], [
- AC_MSG_CHECKING([get the cachelinesize for aarch64])
+ AC_MSG_CHECKING([verifying cachlinesize=64 for aarch64])
  AC_LANG_PUSH([C])
  AC_RUN_IFELSE(
    [AC_LANG_PROGRAM([[#include <stdio.h>]],

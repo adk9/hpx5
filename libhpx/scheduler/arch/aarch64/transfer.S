@@ -10,7 +10,8 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#include "asm_macros.h"
+#include "reg_macros.h"
+#include "../common/asm_macros.h"
 
         // @param x0 - a pointer to the stack pointer to transfer to
         // @param x1 - the continuation to call after the sp exchange
@@ -28,7 +29,7 @@ LABEL(thread_transfer)
         sub sp, sp, #176
 #define REG_PAIR(REG1, REG2, OFFS)	stp REG1, REG2, [sp, OFFS]
 #define REG_ONE(REG1, OFFS)		str REG1, [sp, OFFS]
-	GPR_LAYOUT
+        GPR_LAYOUT
         FPR_LAYOUT
 #undef REG_PAIR
 #undef REG_ONE
@@ -39,8 +40,8 @@ LABEL(thread_transfer)
 #endif
 
         // We want to call cont(p, sp, env).
-        // p is already in r0 and env is already in r2,
-        // but we need to move the new sp to r1.
+        // p is already in x0 and env is already in x2,
+        // but we need to move the new sp to x1.
         mov x4, x1                              // cont          x4 = x1
         ldr x1, [x0]                            // p->ustack     x1 = (x0)
         ldr x1, [x1]                            // p->ustack->sp  x1 = (x1)
@@ -55,7 +56,7 @@ LABEL(thread_transfer)
 
 #define REG_PAIR(REG1, REG2, OFFS)	ldp REG1, REG2, [sp, OFFS]
 #define REG_ONE(REG1, OFFS)		ldr REG1, [sp, OFFS]
-	GPR_LAYOUT
+        GPR_LAYOUT
         FPR_LAYOUT
 #undef REG_PAIR
 #undef REG_ONE

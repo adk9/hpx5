@@ -10,7 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#include "asm_macros.h"
+#include "../common/asm_macros.h"
         
         /// The x86_64 transfer implementation.
         ///
