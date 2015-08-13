@@ -33,6 +33,7 @@
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
 #include "logtable.h"
+#include <time.h>
 
 /// complete path to the directory to which log files, etc. will be written
 static const char *_log_path = NULL;
