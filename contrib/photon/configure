@@ -636,6 +636,8 @@ ac_subst_vars='THREAD_LIBS
 am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
+PHOTON_PC_LIBS_PRIVATE
+PHOTON_PC_LIBS
 PHOTON_BUILDDIR
 PHOTON_SRCDIR
 HAVE_CMPXCHG16B_FALSE
@@ -19632,6 +19634,15 @@ PHOTON_SRCDIR="\${top_srcdir}"
 PHOTON_BUILDDIR="\${top_builddir}"
 
 
+
+PHOTON_PC_LIBS_PRIVATE="$VERBS_LIBS $UGNI_LIBS"
+if test "x$enable_shared" != xyes; then :
+  PHOTON_PC_LIBS="$PHOTON_PC_LIBS_PRIVATE"
+fi
+
+
+
+
 ac_config_files="$ac_config_files Makefile src/contrib/Makefile src/contrib/bit_array/Makefile src/contrib/libsync/Makefile src/contrib/libsync/arch/Makefile src/util/Makefile src/Makefile photon.pc"
 
 
@@ -22257,6 +22268,7 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: unrecognized options: $ac_unrecognized_opts" >&5
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
+
 
 
 
