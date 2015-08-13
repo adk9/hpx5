@@ -42,6 +42,8 @@
 # define LABEL(S) SYMBOL(S):
 # define INTERNAL(S) .private_extern SYMBOL(S)
 # define SIZE(S)
+# define TYPE(S, T)
+# define SECTION(S)
 #elif defined(__linux__)
 # define SYMBOL(S) S
 #if defined(__x86_64__) || defined(__ARMEL__)
