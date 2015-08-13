@@ -25,12 +25,18 @@
 LABEL(thread_transfer)
         STARTPROC
 
-        sub sp, sp, #96
+        sub sp, sp, #176
 #define REG_PAIR(REG1, REG2, OFFS)	stp REG1, REG2, [sp, OFFS]
 #define REG_ONE(REG1, OFFS)		str REG1, [sp, OFFS]
 	GPR_LAYOUT
+        FPR_LAYOUT
 #undef REG_PAIR
 #undef REG_ONE
+
+#if __VFP_FP__
+        vmrs x5, fpscr
+        str x5, [sp, #160]
+#endif
 
         // We want to call cont(p, sp, env).
         // p is already in r0 and env is already in r2,
@@ -43,12 +49,17 @@ LABEL(thread_transfer)
         mov x1, x5                              // ... cont.
         blr x4                                  // cont(p, sp, env)
 
+#ifdef __VFP_FP__
+        ldr r5, [sp, #160]
+#endif
+
 #define REG_PAIR(REG1, REG2, OFFS)	ldp REG1, REG2, [sp, OFFS]
 #define REG_ONE(REG1, OFFS)		ldr REG1, [sp, OFFS]
 	GPR_LAYOUT
+        FPR_LAYOUT
 #undef REG_PAIR
 #undef REG_ONE
-        add sp, sp, #96
+        add sp, sp, #176
 
         ret x30
         ENDPROC

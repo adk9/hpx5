@@ -58,4 +58,10 @@
 	REG_PAIR (x27, x28, 64);	\
 	REG_PAIR (x29, x30, 80);
 
+#define FPR_LAYOUT			\
+	REG_PAIR ( d8,  d9, 96);	\
+	REG_PAIR (d10, d11, 112);	\
+	REG_PAIR (d12, d13, 128);	\
+	REG_PAIR (d14, d15, 144);
+
 #endif // LIBHPX_ASM_MACROS_H
