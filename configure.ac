@@ -206,7 +206,7 @@ AC_SUBST(HPX_PC_REQUIRES_PKGS)
 AC_SUBST(HPX_PC_PRIVATE_PKGS)
 
 # do substitution for the test and example makefiles
-LIBHPX_LDADD="\$(top_builddir)/libhpx/libhpx.la $HPX_PC_PUBLIC_LIBS"
+LIBHPX_LDADD="\$(top_builddir)/libhpx/libhpx.la"
 LIBHPX_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la"
 
 # LIBFFI_CFLAGS is a special-case for the in-tree binaries
