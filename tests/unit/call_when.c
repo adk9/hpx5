@@ -154,5 +154,5 @@ static int call_when_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, call_when, call_when_handler);
 
 TEST_MAIN({
-  ADD_TEST(call_when);
+    ADD_TEST(call_when, 0);
 });

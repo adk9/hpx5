@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013, Trustees of Indiana University,
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -50,7 +50,7 @@ typedef struct {
   }
 
 two_lock_queue_t *sync_two_lock_queue_new(void) HPX_MALLOC;
-void sync_two_lock_queue_delete(two_lock_queue_t *q) HPX_NON_NULL(1);
+void sync_two_lock_queue_delete(two_lock_queue_t *q);
 
 void sync_two_lock_queue_init(two_lock_queue_t *q, two_lock_queue_node_t *init)
   HPX_NON_NULL(1);
@@ -87,7 +87,7 @@ typedef struct {
   }
 
 ms_queue_t *sync_ms_queue_new(void) HPX_MALLOC;
-void sync_ms_queue_delete(ms_queue_t *q) HPX_NON_NULL(1);
+void sync_ms_queue_delete(ms_queue_t *q);
 
 void  sync_ms_queue_init(ms_queue_t *q, void *val) HPX_NON_NULL(1);
 void  sync_ms_queue_fini(ms_queue_t *q) HPX_NON_NULL(1);

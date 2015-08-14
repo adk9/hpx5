@@ -10,13 +10,22 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef LIBHPX_PARCEL_H
 #define LIBHPX_PARCEL_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef HAVE_APEX
+# include <apex.h>
+# include <apex_policies.h>
+#endif
 
 #include <hpx/hpx.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/instrumentation_events.h>
-#include <libhpx/scheduler.h> // for scheduler_nop
 
 struct ustack;
 
@@ -94,74 +103,30 @@ struct hpx_parcel {
   #endif
 #endif
 
-/// Parcel tracing events.
+/// Parcel tracing events shared across files.
 /// @{
-static inline void INST_EVENT_PARCEL_CREATE(hpx_parcel_t *p) {
-#ifdef ENABLE_INSTRUMENTATION
-  if (p->action == scheduler_nop) {
-    return;
-  }
-  static const int class = HPX_INST_CLASS_PARCEL;
+static inline void EVENT_PARCEL_CREATE(hpx_parcel_t *p, hpx_parcel_t *parent) {
+  static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_CREATE;
-
-  hpx_parcel_t *parent = scheduler_current_parcel();
-  uint64_t parent_id = 0;
-  if (parent != NULL)
-    parent_id = parent->id;
-
-  inst_trace(class, id, p->id, p->action, p->size, parent_id);
-#endif
+  inst_trace(type, id, p->id, p->action, p->size, ((parent) ? parent->id : 0));
 }
 
-static inline void INST_EVENT_PARCEL_SEND(hpx_parcel_t *p) {
-  static const int class = HPX_INST_CLASS_PARCEL;
+static inline void EVENT_PARCEL_SEND(hpx_parcel_t *p) {
+  static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_SEND;
-  inst_trace(class, id, p->id, p->action, p->size, p->target);
+  inst_trace(type, id, p->id, p->action, p->size, p->target);
 }
 
-static inline void INST_EVENT_PARCEL_RESEND(hpx_parcel_t *p) {
-  static const int class = HPX_INST_CLASS_PARCEL;
-  static const int id = HPX_INST_EVENT_PARCEL_RESEND;
-  inst_trace(class, id, p->id, p->action, p->size, p->target);
-}
-
-static inline void INST_EVENT_PARCEL_RECV(hpx_parcel_t *p) {
-  static const int class = HPX_INST_CLASS_PARCEL;
+static inline void EVENT_PARCEL_RECV(hpx_parcel_t *p) {
+  static const int type = HPX_INST_CLASS_PARCEL;
   static const int id = HPX_INST_EVENT_PARCEL_RECV;
-  inst_trace(class, id, p->id, p->action, p->size, p->src);
+  inst_trace(type, id, p->id, p->action, p->size, p->src);
 }
 
-static inline void INST_EVENT_PARCEL_RUN(hpx_parcel_t *p) {
-  if (NULL == p || p->action == scheduler_nop) {
-    return;
-  }
-  static const int class = HPX_INST_CLASS_PARCEL;
-  static const int id = HPX_INST_EVENT_PARCEL_RUN;
-  inst_trace(class, id, p->id, p->action, p->size);
-}
-
-static inline void INST_EVENT_PARCEL_END(hpx_parcel_t *p) {
-  if (p->action == scheduler_nop) {
-    return;
-  }
-  static const int class = HPX_INST_CLASS_PARCEL;
-  static const int id = HPX_INST_EVENT_PARCEL_END;
-  inst_trace(class, id, p->id, p->action);
-}
-
-static inline void INST_EVENT_PARCEL_SUSPEND(hpx_parcel_t *p) {
-  static const int class = HPX_INST_CLASS_PARCEL;
-  static const int id = HPX_INST_EVENT_PARCEL_SUSPEND;
-  inst_trace(class, id, p->id, p->action);
-}
-
-static inline void INST_EVENT_PARCEL_RESUME(hpx_parcel_t *p) {
-  if (p->action == scheduler_nop) {
-    return;
-  }
-  static const int class = HPX_INST_CLASS_PARCEL;
-  static const int id = HPX_INST_EVENT_PARCEL_RESUME;
-  inst_trace(class, id, p->id, p->action);
+static inline void EVENT_PARCEL_RESEND(hpx_parcel_t *p) {
+  static const int type = HPX_INST_CLASS_PARCEL;
+  static const int id = HPX_INST_EVENT_PARCEL_RESEND;
+  inst_trace(type, id, p->id, p->action, p->size, p->target);
 }
 /// @}
 
@@ -179,20 +144,20 @@ hpx_parcel_t *parcel_clone(const hpx_parcel_t *p)
 
 void parcel_delete(hpx_parcel_t *p);
 
-struct ustack *parcel_set_stack(hpx_parcel_t *p, struct ustack *stack)
-  HPX_NON_NULL(1);
-
-struct ustack *parcel_get_stack(const hpx_parcel_t *p)
-  HPX_NON_NULL(1);
+/// Swap the stack for a parcel.
+///
+/// For debugging purposes, this operation is done using an atomic exchange when
+/// ENABLE_DEBUG is set.
+struct ustack *parcel_swap_stack(hpx_parcel_t *p, struct ustack *stack);
 
 /// The core send operation.
 ///
 /// This sends the parcel synchronously. This will eagerly serialize the parcel,
 /// and will assign it credit from the currently executing process if it has a
 /// pid set.
-int parcel_launch(hpx_parcel_t *p);
+void parcel_launch(hpx_parcel_t *p);
 
-int parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate);
+void parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate);
 
 void parcel_set_state(hpx_parcel_t *p, parcel_state_t state);
 
@@ -233,4 +198,9 @@ static inline uint32_t parcel_payload_size(const hpx_parcel_t *p) {
   return p->size;
 }
 
+#ifdef __cplusplus
+}
+#endif
+
 #endif // LIBHPX_PARCEL_H
+

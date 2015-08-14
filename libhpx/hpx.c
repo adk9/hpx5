@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -34,9 +35,15 @@
 #include <libhpx/instrumentation.h>
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
+#include <libhpx/profiling.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/system.h>
+#include <libhpx/time.h>
 #include "network/probe.h"
+
+#ifdef HAVE_APEX
+#include "apex.h"
+#endif
 
 static hpx_addr_t _hpx_143;
 static int _hpx_143_fix_handler(void) {
@@ -51,6 +58,11 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _hpx_143_fix, _hpx_143_fix_handler);
 static void _cleanup(locality_t *l) {
   if (!l)
     return;
+
+#ifdef HAVE_APEX 
+  // finalize APEX
+  apex_finalize();
+#endif
 
   if (l->sched) {
     scheduler_delete(l->sched);
@@ -95,6 +107,9 @@ static void _cleanup(locality_t *l) {
 
 int hpx_init(int *argc, char ***argv) {
   int status = HPX_SUCCESS;
+
+  // Start the internal clock
+  libhpx_time_start();
 
   here = malloc(sizeof(*here));
   if (!here) {
@@ -167,6 +182,8 @@ int hpx_init(int *argc, char ***argv) {
     log("error detected while initializing instrumentation\n");
   }
 
+  prof_init(here->config);
+
   // Allocate the global heap.
   here->gas = gas_new(here->config, here->boot);
   if (!here->gas) {
@@ -204,6 +221,12 @@ int hpx_init(int *argc, char ***argv) {
     goto unwind1;
   }
 
+#ifdef HAVE_APEX 
+  // initialize APEX, give this main thread a name
+  apex_init("HPX WORKER THREAD");
+  apex_set_node_id(here->rank);
+#endif
+
   return status;
  unwind1:
   _cleanup(here);
@@ -236,7 +259,7 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   if (here->rank == 0) {
     va_list vargs;
     va_start(vargs, n);
-    hpx_parcel_t *p = parcel_create_va(HPX_HERE, *act, 0, 0, n, &vargs);
+    hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, &vargs);
     int status = hpx_parcel_send(p, HPX_NULL);
     va_end(vargs);
 
@@ -266,10 +289,11 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
     hpx_gas_free(_hpx_143, HPX_NULL);
   }
 
-#ifdef ENABLE_PROFILING
-  if (here->config->statistics) {
-    scheduler_dump_stats(here->sched);
-  }
+#if defined(ENABLE_PROFILING) || defined(HAVE_APEX)
+  libhpx_stats_print();
+
+  // this will add the stats to the APEX data set
+  libhpx_save_apex_stats();
 #endif
 
  unwind2:
@@ -302,7 +326,7 @@ void hpx_shutdown(int code) {
   for (int i = 0, e = here->ranks; i < e; ++i) {
     int e = network_command(here->network, HPX_THERE(i), locality_shutdown,
                             (uint64_t)code);
-    dbg_assert(e == LIBHPX_OK);
+    dbg_check(e);
   }
   hpx_thread_exit(HPX_SUCCESS);
 }

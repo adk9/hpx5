@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef LIBHPX_INSTRUMENTATION_LOGTABLE_H
 #define LIBHPX_INSTRUMENTATION_LOGTABLE_H
 
@@ -19,7 +20,6 @@ struct record;
 
 /// All of the data needed to keep the state of an individual event log
 typedef struct {
-  hpx_time_t       start;                       // start time
   int                 fd;                       // file backing the log
   int              class;                       // the class we're logging
   int                 id;                       // the event we're logging
@@ -32,7 +32,6 @@ typedef struct {
 } logtable_t;
 
 #define LOGTABLE_INIT {                         \
-    .start = HPX_TIME_INIT,                     \
     .fd = -1,                                   \
     .class = -1,                                \
     .id = -1,                                   \
@@ -48,7 +47,7 @@ typedef struct {
 ///
 /// If filename is NULL or size == 0 this will not generate a file.
 int logtable_init(logtable_t *lt, const char* filename, size_t size,
-                  int class, int event, hpx_time_t start);
+                  int class, int event);
 
 void logtable_fini(logtable_t *lt);
 

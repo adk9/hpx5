@@ -10,15 +10,33 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef INSTRUMENTATION_H
 #define INSTRUMENTATION_H
 
 #include <stdint.h>
 #include <hpx/attributes.h>
 #include <hpx/builtins.h>
-#include <libhpx/locality.h> // for here object
+#include <libhpx/config.h>
+#include <libhpx/locality.h> // for here object inlined in inst_trace_type
+#include <libhpx/profiling.h>
 
 struct config;
+
+//hostnames can only be 63 characters in length, so
+#define HOSTNAME_LENGTH 64
+
+#ifdef ENABLE_INSTRUMENTATION
+/// INSTRUMENTATION is true if and only if instrumentation is enabled
+# define INSTRUMENTATION 1
+/// INST will do @p stmt only if instrumentation is enabled
+# define INST(stmt) stmt;
+#else
+/// INSTRUMENTATION is true if and only if instrumentation is enabled
+# define INSTRUMENTATION 0
+/// INST will do @p stmt only if instrumentation is enabled
+# define INST(stmt)
+#endif
 
 /// Initialize instrumentation. This is usually called in hpx_init().
 int inst_init(struct config *cfg)
@@ -32,20 +50,23 @@ int inst_start();
 
 void inst_fini(void);
 
+/// Dump all of the profiling information to file
+void inst_prof_dump(profile_log_t profile_log);
+
 /// Record an event to the log
-/// @param        class Class this event is part of (see hpx_inst_class_type_t)
+/// @param        type Type this event is part of (see hpx_inst_class_type_t)
 /// @param           id The event id (see hpx_inst_event_type_t)
 /// @param            n The number of user arguments to log, < 5.
 /// @param      va_args The user arguments.
-void inst_vtrace(int class, int n, int id, ...);
+void inst_vtrace(int type, int n, int id, ...);
 
 #ifdef ENABLE_INSTRUMENTATION
-# define inst_trace(class, ...)                                 \
-  inst_vtrace(class, __HPX_NARGS(__VA_ARGS__) - 1, __VA_ARGS__)
+# define inst_trace(type, ...)                                 \
+  inst_vtrace(type, __HPX_NARGS(__VA_ARGS__) - 1, __VA_ARGS__)
 #else
-# define inst_trace(class, id, ...)             \
+# define inst_trace(type, id, ...)             \
   do {                                          \
-    (void)class;                                \
+    (void)type;                                \
     (void)id;                                   \
   } while (0)
 #endif
@@ -57,8 +78,8 @@ void inst_vtrace(int class, int n, int id, ...);
 #define         HPX_INST_CLASS_LCO INT32_C(3)
 #define     HPX_INST_CLASS_PROCESS INT32_C(4)
 #define      HPX_INST_CLASS_MEMORY INT32_C(5)
-
-#define       HPX_INST_NUM_CLASSES INT32_C(6)
+#define        HPX_INST_SCHEDTIMES INT32_C(6)
+#define       HPX_INST_NUM_CLASSES INT32_C(7)
 
 static const char * const INST_CLASS_TO_STRING[] = {
   "CLASS_PARCEL",
@@ -66,7 +87,8 @@ static const char * const INST_CLASS_TO_STRING[] = {
   "CLASS_SCHED",
   "CLASS_LCO",
   "CLASS_PROCESS",
-  "CLASS_MEMORY"
+  "CLASS_MEMORY",
+  "CLASS_SCHEDTIMES"
 };
 
 #define  HPX_INST_EVENT_PARCEL_CREATE INT32_C(0)
@@ -105,7 +127,11 @@ static const char * const INST_CLASS_TO_STRING[] = {
 #define     HPX_INST_EVENT_MEMORY_CYCLIC_ALLOC INT32_C(28)
 #define      HPX_INST_EVENT_MEMORY_CYCLIC_FREE INT32_C(29)
 
-#define HPX_INST_NUM_EVENTS INT32_C(30)
+#define              HPX_INST_SCHEDTIMES_SCHED INT32_C(30)
+#define              HPX_INST_SCHEDTIMES_PROBE INT32_C(31)
+#define           HPX_INST_SCHEDTIMES_PROGRESS INT32_C(32)
+
+#define                    HPX_INST_NUM_EVENTS INT32_C(33)
 
 static const char * const INST_EVENT_TO_STRING[] = {
   "EVENT_PARCEL_CREATE",
@@ -142,7 +168,11 @@ static const char * const INST_EVENT_TO_STRING[] = {
   "EVENT_MEMORY_GLOBAL_ALLOC",
   "EVENT_MEMORY_GLOBAL_FREE",
   "EVENT_MEMORY_CYCLIC_ALLOC",
-  "EVENT_MEMORY_CYCLIC_FREE"
+  "EVENT_MEMORY_CYCLIC_FREE",
+
+  "EVENT_SCHEDTIMES_SCHED",
+  "EVENT_SCHEDTIMES_PROBE",
+  "EVENT_SCHEDTIMES_PROGRESS"
 };
 
 static const int INST_OFFSETS[] = {
@@ -152,11 +182,12 @@ static const int INST_OFFSETS[] = {
   HPX_INST_EVENT_LCO_INIT,
   HPX_INST_EVENT_PROCESS_NEW,
   HPX_INST_EVENT_MEMORY_REGISTERED_ALLOC,
+  HPX_INST_SCHEDTIMES_SCHED,
   HPX_INST_NUM_EVENTS
 };
 
-static inline bool inst_trace_class(int class) {
-  return config_trace_classes_isset(here->config, 1 << class);
+static inline bool inst_trace_class(int type) {
+  return config_trace_classes_isset(here->config, 1 << type);
 }
 
 #endif

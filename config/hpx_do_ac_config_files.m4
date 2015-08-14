@@ -49,10 +49,19 @@ AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
    AC_CONFIG_FILES([
      docs/Doxyfile
      docs/Makefile])])
-  
+
+ AS_IF([test "x$have_apex" != xno], [
+   AC_CONFIG_FILES([
+     libapex/Makefile])])
+   
  AS_IF([test "x$enable_tests" != xno -o "x$enable_lengthy_tests" != xno], [
    AC_CONFIG_FILES([
      tests/Makefile
      tests/unit/Makefile
      tests/perf/Makefile])])
+
+
+ AS_IF([test "x$have_dlmalloc" != xno], [
+   AC_CONFIG_FILES([
+     contrib/dlmalloc/Makefile])])
 ])

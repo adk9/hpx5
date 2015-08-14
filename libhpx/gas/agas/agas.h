@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef LIBHPX_GAS_AGAS_H
 #define LIBHPX_GAS_AGAS_H
 
@@ -48,8 +49,15 @@ void agas_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync);
 int agas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
                 hpx_addr_t lsync, hpx_addr_t rsync);
 
+int agas_memput_lsync(void *gas, hpx_addr_t to, const void *from, size_t n,
+                      hpx_addr_t rsync);
+
+int agas_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t n);
+
 int agas_memget(void *gas, void *to, hpx_addr_t from, size_t n,
                 hpx_addr_t lsync);
+
+int agas_memget_lsync(void *gas, void *to, hpx_addr_t from, size_t n);
 
 int agas_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
                 hpx_addr_t sync);
@@ -65,6 +73,9 @@ int64_t agas_local_sub(const agas_t *agas, gva_t lhs, gva_t rhs, uint32_t bsize)
 
 hpx_addr_t agas_local_add(const agas_t *agas, gva_t gva, int64_t bytes,
                           uint32_t bsize);
+
+void agas_free(void *gas, hpx_addr_t addr, hpx_addr_t rsync);
+
 
 #ifdef __cplusplus
 }

@@ -26,10 +26,8 @@ AC_CONFIG_MACRO_DIR([config])
 # Detect the system and programming environment.
 AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
-HPX_CONFIG_HOST
 AC_CANONICAL_TARGET
 AX_COMPILER_VENDOR
-HPX_PE_ENV
 
 # Checks for programs that we depend on. Our use of CXX is conditional, however
 # we have autotools errors if we don't include the AC_PROG_CXX
@@ -45,22 +43,39 @@ AC_PROG_INSTALL
 AM_PROG_AS
 AX_CFI_DIRECTIVES
 
-
 # Initialize automake and libtool
 AM_INIT_AUTOMAKE([1.11 dist-bzip2 subdir-objects foreign tar-ustar -Wall
                   -Werror parallel-tests color-tests])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 LT_PREREQ([2.4.6])
-LT_INIT
+LT_INIT([disable-shared])
+ 
+# Initialize our build flags based on the programming environemnt.
+#
+# LIBHPX_CPPFLAGS: CPPFLAGS required to build libhpx.la
+# LIBHPX_CFLAGS: CFLAGS required to build libhpx.la
+# LIBHPX_CXXFLAGS: CXXFLAGS required to build libhpx.la
+# LIBHPX_LIBADD: .la dependencies required to build libhpx.la
+# LIBHPX_LDFLAGS: -L and -Wl flags needed to link libhpx.la
+# LIBHPX_LIBS: -l dependencies required to link libhpx.la
+#
+# HPX_PC_CFLAGS: C and CPP flags (typically just -D) for installed libhps.so
+# HPX_PC_PUBLIC_LIBS: -L and -l flags required to link to installed libhpx.so
+# HPX_PC_REQUIRES_PKGS: packages required to link to installed libhpx.so
+# HPX_PC_PRIVATE_LIBS: -L and -l flags required to link to installed libhpx.a
+# HPX_PC_PRIVATE_PKGS: packages required to link to installed libhpx.a
+HPX_CONFIG_HOST
+HPX_PE_ENV
 
 # Check for pthreads. This will set CFLAGS and LIBS as necessary in a
-# platform-specific way.
+# platform-specific way. According to ax_pthread.m4 PTHREAD_CFLAGS are meant to
+# be on the link line too, so add them for pkg-config static linking.
 AX_PTHREAD(
-  [LIBHPX_CFLAGS="$LIBHPX_CFLAGS $PTHREAD_CFLAGS"
-   LIBHPX_LIBS="$LIBHPX_LIBS $PTHREAD_LIBS"
-   HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS $PTHREAD_LIBS"],
-  [AC_MSG_ERROR([Could not find pthread implementation])])
+ [LIBHPX_CFLAGS="$LIBHPX_CFLAGS $PTHREAD_CFLAGS"
+  LIBHPX_LIBS="$LIBHPX_LIBS $PTHREAD_LIBS"
+  HPX_PC_PRIVATE_LIBS="$PTHREAD_CFLAGS $HPX_PC_PRIVATE_LIBS $PTHREAD_LIBS"],
+ [AC_MSG_ERROR([Could not find pthread implementation])])
 
 # Allow parallel configuration. We do this early so that it shows up before the
 # rest of the 'enable' options. 
@@ -73,7 +88,7 @@ AC_ARG_ENABLE([parallel-config],
 # any parallel configs that are running.
 AS_IF([test "x$enable_parallel_config" != xno],
  [trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM])
- 
+
 # We need to enable and configure a number of packages for HPX, most of which we
 # can find in the system path somewhere. We distribute a number of these
 # packages with HPX in the contrib directory for cases where a system version is
@@ -97,18 +112,18 @@ AS_IF([test "x$enable_parallel_config" != xno],
 # Defines
 #   HAVE_PKG
 #
-# Substituted
-#   LIBHPX_CPPFLAGS: CPPFLAGS required to build libhpx.la
-#   LIBHPX_CFLAGS: CFLAGS required to build libhpx.la
-#   LIBHPX_CXXFLAGS: CXXFLAGS required to build libhpx.la
-#   LIBHPX_LIBADD: .la dependencies required to build libhpx.la
-#   LIBHPX_LDFLAGS: -L and -Wl flags needed to link libhpx.la
-#   LIBHPX_LIBS: -l dependencies required to link libhpx.la
+# Appends
+#   LIBHPX_CPPFLAGS
+#   LIBHPX_CFLAGS
+#   LIBHPX_CXXFLAGS
+#   LIBHPX_LIBADD
+#   LIBHPX_LDFLAGS
+#   LIBHPX_LIBS
 #
-#   HPX_PC_PUBLIC_LIBS: -L and -l flags required to link to installed libhpx.so
-#   HPX_PC_REQUIRES_PKGS: packages required to link to installed libhpx.so
-#   HPX_PC_PRIVATE_LIBS: -L and -l flags required to link to installed libhpx.a
-#   HPX_PC_PRIVATE_PKGS: packages required to link to installed libhpx.a
+#   HPX_PC_PUBLIC_LIBS
+#   HPX_PC_REQUIRES_PKGS
+#   HPX_PC_PRIVATE_LIBS
+#   HPX_PC_PRIVATE_PKGS
 #
 # The substituted variables are straightforward. The LIBHPX_ prefixed variables
 # are variables required to build an link libhpx itself. The HPX_PC variables
@@ -119,16 +134,19 @@ HPX_CONFIG_MPI([ompi])
 HPX_CONFIG_PMI([cray-pmi])
 HPX_CONFIG_JEMALLOC([contrib/jemalloc], ["jemalloc >= 4.0"]) 
 HPX_CONFIG_TBBMALLOC
+HPX_CONFIG_DLMALLOC([contrib/dlmalloc])
 #HPX_CONFIG_HWLOC([contrib/hwloc-1.11.0], [hwloc])
 HPX_CONFIG_HUGETLBFS([hugetlbfs])
 HPX_CONFIG_UTHASH([contrib/uthash-fe01a6ad1b])
 HPX_CONFIG_VALGRIND([contrib/valgrind])
-HPX_CONFIG_LIBFFI([contrib/libffi], [libffi])
+HPX_CONFIG_LIBFFI([contrib/$libffi_contrib_dir], [libffi])
 HPX_CONFIG_AGAS
 HPX_CONFIG_LIBCUCKOO([contrib/libcuckoo], [$have_agas])
 HPX_CONFIG_DOCS
 HPX_CONFIG_DEBUG
 HPX_CONFIG_INSTRUMENTATION
+HPX_CONFIG_PAPI([papi], [$have_instrumentation])
+HPX_CONFIG_APEX([apex])
 HPX_CONFIG_TESTS
 HPX_CONFIG_TUTORIAL
 
@@ -138,25 +156,31 @@ AS_IF([test "x$have_photon" == xyes -o "x$have_mpi" == xyes],
   [AC_DEFINE([HAVE_NETWORK], [1], [We have a high speed network available])
    have_network=yes])
 
-AS_IF([test "x$have_jemalloc" == xyes -o "x$have_tbbmalloc" == xyes],
+AS_IF([test "x$have_jemalloc" == xyes -o "x$have_tbbmalloc" == xyes -o "x$have_dlmalloc" == xyes],
   [AC_DEFINE([HAVE_ALLOCATOR], [1], [We have a GAS allocator available])
    have_allocator=yes])
 
 AS_IF([test "x$have_jemalloc" == xyes -a "x$have_tbbmalloc" == xyes],
   [AC_MSG_ERROR(jemalloc and tbbmalloc are mutually exclusive)])
 
+AS_IF([test "x$have_jemalloc" == xyes -a "x$have_dlmalloc" == xyes],
+  [AC_MSG_ERROR(jemalloc and dlmalloc are mutually exclusive)])
+
+AS_IF([test "x$have_dlmalloc" == xyes -a "x$have_tbbmalloc" == xyes],
+  [AC_MSG_ERROR(dlmalloc and tbbmalloc are mutually exclusive)])
+
 AS_IF([test "x$have_network" == xyes -a "x$have_allocator" != xyes],
-  [AC_MSG_ERROR(HPX requires jemalloc or tbbmalloc for network operation)])
+  [AC_MSG_ERROR(HPX requires jemalloc, tbbmalloc or dlmalloc for network operation)])
+
+# Make sure that static linking libhpx.a with $(CC) works when we have a C++
+# dependency.
+AS_IF([test "x$have_tbbmalloc" == xyes -o "x$have_libcuckoo" == xyes],
+  [HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lstdc++"])
 
 # Configure all of the automake conditionals that our build requires.
 HPX_DO_AM_CONDITIONALS
 
-# do any remaining substitutions and configure files
-LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS $hpx_pe_env_cppflags"
-LIBHPX_CFLAGS="$LIBHPX_CFLAGS $hpx_pe_env_cflags"
-LIBHPX_CCASFLAGS="$LIBHPX_CCASFLAGS $hpx_pe_env_ccasflags"
-LIBHPX_LIBS="$LIBHPX_LIBS $hpx_pe_env_libs"
-
+# Substitute the variables required for libtool linking of libhpx internally.
 AC_SUBST(LIBHPX_CPPFLAGS)
 AC_SUBST(LIBHPX_CFLAGS)
 AC_SUBST(LIBHPX_CXXFLAGS)
@@ -165,15 +189,24 @@ AC_SUBST(LIBHPX_LDFLAGS)
 AC_SUBST(LIBHPX_LIBADD)
 AC_SUBST(LIBHPX_LIBS)
 
-HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS $hpx_pe_env_libs"
+# Special handling for libsync. Maybe we should make a libsync.pc?
+HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lsync"
 
+# Substitute the variables required for pkg-config linking of libhpx
+# externally. Note if we're only building libhpx.a then the --libs output must
+# contain all private dependencies as well.
+AS_IF([test "x$enable_shared" != xyes],
+  [HPX_PC_PUBLIC_LIBS="$HPX_PC_PUBLIC_LIBS $HPX_PC_PRIVATE_LIBS"
+   HPX_PC_REQUIRES_PKGS="$HPX_PC_REQUIRES_PKGS $HPX_PC_PRIVATE_PKGS"])
+
+AC_SUBST(HPX_PC_CFLAGS)
 AC_SUBST(HPX_PC_PUBLIC_LIBS)
 AC_SUBST(HPX_PC_PRIVATE_LIBS)
 AC_SUBST(HPX_PC_REQUIRES_PKGS)
 AC_SUBST(HPX_PC_PRIVATE_PKGS)
 
 # do substitution for the test and example makefiles
-LIBHPX_LDADD="\$(top_builddir)/libhpx/libhpx.la $HPX_PC_PUBLIC_LIBS"
+LIBHPX_LDADD="\$(top_builddir)/libhpx/libhpx.la"
 LIBHPX_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la"
 
 # LIBFFI_CFLAGS is a special-case for the in-tree binaries

@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -33,7 +34,7 @@ static boot_t *_default(void) {
   return boot_new_smp();
 }
 
-boot_t *boot_new(hpx_boot_t type) {
+boot_t *boot_new(libhpx_boot_t type) {
   boot_t *boot = NULL;
 
   switch (type) {

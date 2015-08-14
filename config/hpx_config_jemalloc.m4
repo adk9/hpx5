@@ -31,7 +31,7 @@ AC_DEFUN([_HPX_CONTRIB_JEMALLOC], [
  
  # set up the configuration options
  jemalloc_cargs_opt="--disable-valgrind --disable-fill --disable-stats"
- jemalloc_cargs_debug="--enable-valgrind --enable-fill --enable-debug CPPFLAGS=\"$CPPFLAGS -Dalways_inline=\""
+ jemalloc_cargs_debug="--enable-valgrind --enable-fill CPPFLAGS=\"$CPPFLAGS -Dalways_inline=\""
  jemalloc_cargs_c99="EXTRA_CFLAGS=\"$ac_cv_prog_cc_c99\""
  jemalloc_cargs="$jemalloc_cargs_c99 $JEMALLOC_CARGS"
  AS_IF([test "x$enable_debug" == xyes],
@@ -54,11 +54,17 @@ AC_DEFUN([_HPX_CONTRIB_JEMALLOC], [
  # every case.
  LIBHPX_LDFLAGS="-L\$(abs_top_builddir)/$contrib/lib $LIBHPX_LDFLAGS"
  LIBHPX_LDFLAGS="-Wl,-rpath,\$(abs_top_builddir)/$contrib/lib $LIBHPX_LDFLAGS"
- LIBHPX_LIBS="-ljemalloc $LIBHPX_LIBS" 
+ LIBHPX_LIBS="$LIBHPX_LIBS -ljemalloc" 
 
  # we install the jemalloc pkg-config script with hpx.pc so external
- # applications will get jemalloc as a private package
- HPX_PC_PRIVATE_PKGS="jemalloc $HPX_PC_PRIVATE_PKGS"
+ # applications will get jemalloc, we make it public so that it resolves
+ # application instances of malloc/free/etc
+ HPX_PC_REQUIRES_PKGS="$HPX_PC_REQUIRES_PKGS jemalloc"
+
+ # when linking to the shared hpx, it contains the correct rpath for jemalloc,
+ # otherwise for static hpx we need to make sure that the rpath for
+ # libjemalloc.so is available.
+ HPX_PC_PRIVATE_LIBS="-Wl,-rpath,\${libdir} $HPX_PC_PRIVATE_LIBS"
 ])
 
 # search for a jemalloc pkg-config package

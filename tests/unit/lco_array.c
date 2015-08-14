@@ -139,7 +139,7 @@ static int lco_reduce_array_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, lco_reduce_array, lco_reduce_array_handler);
 
 TEST_MAIN({
- ADD_TEST(lco_future_array);
- ADD_TEST(lco_and_array);
- ADD_TEST(lco_reduce_array);
+ ADD_TEST(lco_future_array, 0);
+ ADD_TEST(lco_and_array, 0);
+ ADD_TEST(lco_reduce_array, 0);
 });

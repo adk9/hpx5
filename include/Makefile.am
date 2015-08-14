@@ -16,6 +16,7 @@ nobase_include_HEADERS = hpx/action.h \
                          hpx/time.h \
                          hpx/topology.h \
                          hpx/types.h \
+                         libapex/apex_global_hpx.h \
                          libsync/backoff.h \
                          libsync/barriers.h \
                          libsync/cptr.h \
@@ -30,5 +31,4 @@ nobase_include_HEADERS = hpx/action.h \
                          libsync/craycc/sync.h \
                          libhpx/libhpx.h \
                          libhpx/config.h \
-                         libhpx/config_photon.h \
                          libhpx/options.def

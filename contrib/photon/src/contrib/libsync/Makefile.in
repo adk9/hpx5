@@ -88,6 +88,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+target_triplet = @target@
+@HAVE_CMPXCHG16B_TRUE@am__append_1 = ms_queue.c
 subdir = src/contrib/libsync
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/acx_configure_dir.m4 \
@@ -108,8 +110,13 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 libsync_la_DEPENDENCIES = arch/libarch.la
-am_libsync_la_OBJECTS = locks.lo backoff.lo ms_queue.lo \
-	two_lock_queue.lo
+am__libsync_la_SOURCES_DIST = locks.c sr_barrier.c two_lock_queue.c \
+	chase_lev_ws_deque.c backoff.c lockable_ptr.c spscq.c \
+	clh_lock.c mcs_lock.c ms_queue.c
+@HAVE_CMPXCHG16B_TRUE@am__objects_1 = ms_queue.lo
+am_libsync_la_OBJECTS = locks.lo sr_barrier.lo two_lock_queue.lo \
+	chase_lev_ws_deque.lo backoff.lo lockable_ptr.lo spscq.lo \
+	clh_lock.lo mcs_lock.lo $(am__objects_1)
 libsync_la_OBJECTS = $(am_libsync_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -150,7 +157,7 @@ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(libsync_la_SOURCES)
-DIST_SOURCES = $(libsync_la_SOURCES)
+DIST_SOURCES = $(am__libsync_la_SOURCES_DIST)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -367,16 +374,22 @@ sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
 sysconfdir = @sysconfdir@
+target = @target@
 target_alias = @target_alias@
+target_cpu = @target_cpu@
+target_os = @target_os@
+target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CFLAGS = @CFLAGS@ -I@PHOTON_SRCDIR@/src/contrib \
-		     -I@PHOTON_SRCDIR@/src/contrib/libsync/include
-
+	-I@PHOTON_SRCDIR@/src/contrib/libsync/include \
+	-fvisibility=hidden
 SUBDIRS = arch
 noinst_LTLIBRARIES = libsync.la
-libsync_la_SOURCES = locks.c backoff.c ms_queue.c two_lock_queue.c
+libsync_la_SOURCES = locks.c sr_barrier.c two_lock_queue.c \
+	chase_lev_ws_deque.c backoff.c lockable_ptr.c spscq.c \
+	clh_lock.c mcs_lock.c $(am__append_1)
 libsync_la_LIBADD = arch/libarch.la
 all: all-recursive
 
@@ -433,8 +446,14 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/backoff.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/chase_lev_ws_deque.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/clh_lock.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lockable_ptr.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/locks.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mcs_lock.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ms_queue.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spscq.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sr_barrier.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/two_lock_queue.Plo@am__quote@
 
 .c.o:

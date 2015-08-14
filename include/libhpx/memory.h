@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef LIBHPX_MEMORY_H
 #define LIBHPX_MEMORY_H
 
@@ -36,7 +37,7 @@ enum {
 /// context.
 
 # include <stdlib.h>
-
+#include <libhpx/debug.h>
 static inline void as_join(int id) {
 }
 
@@ -56,7 +57,7 @@ static inline void *as_calloc(int id, size_t nmemb, size_t bytes) {
 
 static inline void *as_memalign(int id, size_t boundary, size_t size) {
   void *ptr = NULL;
-  posix_memalign(&ptr, boundary, size);
+  dbg_check(posix_memalign(&ptr, boundary, size));
   return ptr;
 }
 
@@ -173,6 +174,21 @@ void as_free(int id, void *ptr);
 #ifdef __cplusplus
 }
 #endif
+
+#elif defined(HAVE_DLMALLOC)
+
+#include <malloc-2.8.6.h>
+
+extern mspace mspaces[AS_COUNT];
+
+void as_join(int id);
+void as_leave(void);
+size_t as_bytes_per_chunk(void);
+
+void *as_malloc(int id, size_t bytes);
+void *as_calloc(int id, size_t nmemb, size_t bytes);
+void *as_memalign(int id, size_t boundary, size_t size);
+void as_free(int id, void *ptr);
 
 #else
 # error No gas allocator configured

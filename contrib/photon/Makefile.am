@@ -4,6 +4,8 @@
 
 instdir = $(prefix)/include
 inst_HEADERS=include/photon.h                 \
+	     include/photon_config.h          \
+	     include/photon_api.h             \
 	     include/photon_io.h              \
 	     include/photon_xsp_forwarder.h   \
 	     include/photon_attributes.h

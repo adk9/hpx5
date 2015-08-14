@@ -10,15 +10,12 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <hpx/hpx.h>
-#include <libhpx/locality.h>
+#include <libhpx/libhpx.h>
 #include "tests.h"
 
 static int _echo_handler(int *args, size_t n) {
@@ -30,7 +27,8 @@ static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _echo,
 static int parcel_send_rendezvous_handler(void) {
   printf("Testing the hpx parcel send function for large parcels\n");
   unsigned seed = 0;
-  size_t eagerlimit = here->config->pwc_parceleagerlimit;
+  libhpx_config_t *cfg = libhpx_get_config();
+  size_t eagerlimit = cfg->pwc_parceleagerlimit;
   size_t N = eagerlimit / sizeof(int) + 1;
   for (int i = 1, e = 10; i < e; ++i) {
     size_t scale = i * N;
@@ -67,5 +65,5 @@ static HPX_ACTION(HPX_DEFAULT, 0, parcel_send_rendezvous,
                   parcel_send_rendezvous_handler);
 
 TEST_MAIN({
-  ADD_TEST(parcel_send_rendezvous);
+  ADD_TEST(parcel_send_rendezvous, 0);
 });

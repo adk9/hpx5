@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -42,7 +43,7 @@ static HPX_ACTION_DECL(_proc_call);
 static HPX_ACTION_DECL(_proc_delete);
 static HPX_ACTION_DECL(_proc_return_credit);
 
-static bool _is_tracked(_process_t *p) {
+static bool HPX_USED _is_tracked(_process_t *p) {
   return (p->termination != HPX_NULL);
 }
 
@@ -166,8 +167,8 @@ int _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
                       hpx_addr_t result, int n, ...) {
   va_list vargs;
   va_start(vargs, n);
-  hpx_parcel_t *parcel = parcel_create_va(addr, action, result,
-                                          hpx_lco_set_action, n, &vargs);
+  hpx_parcel_t *parcel = action_create_parcel_va(addr, action, result,
+                                                 hpx_lco_set_action, n, &vargs);
   va_end(vargs);
 
   hpx_addr_t sync = hpx_lco_future_new(0);
@@ -180,7 +181,7 @@ int _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
   p->pid = 0;
   p->credit = 0;
 #ifdef ENABLE_INSTRUMENTATION
-    inst_trace(HPX_INST_CLASS_PROCESS, HPX_INST_EVENT_PROCESS_CALL, 
+    inst_trace(HPX_INST_CLASS_PROCESS, HPX_INST_EVENT_PROCESS_CALL,
                process, p->pid);
 #endif
   hpx_parcel_send_sync(p);

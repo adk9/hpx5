@@ -139,8 +139,8 @@ static int _multi_wait_N_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, _multi_wait_N, _multi_wait_N_handler);
 
 TEST_MAIN({
-    ADD_TEST(_single_wait_0);
-    ADD_TEST(_single_wait_N);
-    ADD_TEST(_multi_wait_0);
-    ADD_TEST(_multi_wait_N);
+    ADD_TEST(_single_wait_0, 0);
+    ADD_TEST(_single_wait_N, 0);
+    ADD_TEST(_multi_wait_0, 0);
+    ADD_TEST(_multi_wait_N, 0);
 });

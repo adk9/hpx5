@@ -59,5 +59,5 @@ static int bcast_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, bcast, bcast_handler);
 
 TEST_MAIN({
- ADD_TEST(bcast);
+    ADD_TEST(bcast, 0);
 });

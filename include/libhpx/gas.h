@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef LIBHPX_GAS_H
 #define LIBHPX_GAS_H
 
@@ -28,7 +29,7 @@ struct boot;
 
 /// Generic object oriented interface to the global address space.
 typedef struct gas {
-  hpx_gas_t type;
+  libhpx_gas_t type;
 
   void (*dealloc)(void *gas);
   size_t (*local_size)(void *gas);
@@ -54,8 +55,15 @@ typedef struct gas {
   int (*memget)(void *gas, void *to, hpx_addr_t from, size_t size,
                 hpx_addr_t lsync);
 
+  int (*memget_sync)(void *gas, void *to, hpx_addr_t from, size_t size);
+
   int (*memput)(void *gas, hpx_addr_t to, const void *from, size_t size,
                 hpx_addr_t lsync, hpx_addr_t rsync);
+
+  int (*memput_lsync)(void *gas, hpx_addr_t to, const void *from, size_t size,
+                      hpx_addr_t rsync);
+
+  int (*memput_rsync)(void *gas, hpx_addr_t to, const void *from, size_t size);
 
   int (*memcpy)(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
                 hpx_addr_t sync);

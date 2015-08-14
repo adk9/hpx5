@@ -10,10 +10,14 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
 
+#include <libhpx/libhpx.h>
+#include <libhpx/parcel.h>
+#include <libhpx/scheduler.h>
 #include <cuckoohash_map.hh>
 #include <city_hasher.hh>
 #include "btt.h"
@@ -81,6 +85,7 @@ BTT::trypin(gva_t gva, void** lva) {
 
       assert(entry.count >= 0);
       entry.count++;
+      // printf("%lu %d ++\n", key, entry.count);
       *lva = (char*)(entry.lva) + gva_to_block_offset(gva);
     });
   return found && ret;
@@ -94,6 +99,7 @@ BTT::unpin(gva_t gva) {
   bool found = update_fn(key, [&](Entry& entry) {
       assert(entry.count > 0);
       entry.count--;
+      // printf("%lu %d --\n", key, entry.count);
       if (entry.count == 0 && entry.onunpin) {
         p = entry.onunpin;
         entry.onunpin = NULL;
@@ -172,15 +178,6 @@ btt_remove(void *obj, gva_t gva) {
   (void)erased;
 }
 
-void
-btt_try_delete(void *obj, gva_t gva, hpx_parcel_t *p) {
-  BTT *btt = static_cast<BTT*>(obj);
-  p = btt->trydelete(gva, p);
-  if (p) {
-    hpx_parcel_send_sync(p);
-  }
-}
-
 bool
 btt_try_pin(void* obj, gva_t gva, void** lva) {
   BTT *btt = static_cast<BTT*>(obj);
@@ -212,4 +209,66 @@ size_t
 btt_get_blocks(const void* obj, gva_t gva) {
   const BTT *btt = static_cast<const BTT*>(obj);
   return btt->getBlocks(gva);
+}
+
+int
+btt_get_all(const void *o, gva_t gva, void **lva, size_t *blocks, int32_t *cnt) {
+  const BTT *btt = static_cast<const BTT*>(o);
+  Entry entry;
+  uint64_t key = gva_to_key(gva);
+  bool found = btt->find(key, entry);
+  if (found) {
+    if (lva) {
+      *lva = entry.lva;
+    }
+    if (blocks) {
+      *blocks = entry.blocks;
+    }
+    if (cnt) {
+      *cnt = entry.count;
+    }
+  }
+  return found;
+}
+
+typedef struct {
+  BTT        *btt;
+  gva_t       gva;
+} _btt_try_delete_env_t;
+
+static void _btt_try_delete_continuation(hpx_parcel_t *p, void *e) {
+  _btt_try_delete_env_t *env = static_cast<_btt_try_delete_env_t*>(e);
+  BTT *btt = env->btt;
+  gva_t gva = env->gva;
+  if ((p = btt->trydelete(gva, p))) {
+    parcel_launch(p);
+  }
+}
+
+int btt_remove_when_count_zero(void *o, gva_t gva, void **lva) {
+  BTT *btt = static_cast<BTT*>(o);
+  Entry entry;
+  uint64_t key = gva_to_key(gva);
+  if (!btt->find(key, entry)) {
+    return HPX_ERROR;
+  }
+
+  if (lva) {
+    *lva = entry.lva;
+  }
+
+  // Wait until the reference count hits zero.
+  if (entry.count) {
+    _btt_try_delete_env_t env = {
+      .btt = btt,
+      .gva = gva
+    };
+
+    scheduler_suspend(_btt_try_delete_continuation, &env, 0);
+  }
+
+  bool erased = btt->erase(key);
+  assert(erased);
+  return HPX_SUCCESS;
+  (void)erased;
 }

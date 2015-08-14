@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef LIBHPX_SCHEDULER_H
 #define LIBHPX_SCHEDULER_H
 
@@ -21,6 +22,9 @@
 /// designed to work as part of a distributed set of schedulers to support a
 /// large-scale, lightweight thread-based application.
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
@@ -68,8 +72,8 @@ struct scheduler {
   int               n_workers;
   uint32_t       wf_threshold;
   system_barrier_t    barrier;
-  struct worker      *workers;
-  scheduler_stats_t     stats;
+  worker_t           *workers;
+  int        n_active_workers;  // used by APEX scheduler throttling : akp
 };
 
 /// Allocate and initialize a new scheduler.
@@ -88,19 +92,6 @@ struct scheduler *scheduler_new(const struct config *config)
 ///
 /// @param    scheduler The scheduler to free.
 void scheduler_delete(struct scheduler *scheduler);
-
-/// A NOP action for the scheduler.
-///
-/// This action does nothing (i.e. it is a nop).
-extern hpx_action_t scheduler_nop;
-
-/// Print collected statistics.
-///
-/// The scheduler should not be running during this call.
-///
-/// @param    scheduler The scheduler.
-void scheduler_dump_stats(struct scheduler *scheduler)
-  HPX_NON_NULL(1);
 
 /// Starts the scheduler.
 ///
@@ -167,12 +158,13 @@ void scheduler_yield(void);
 /// Suspend the execution of the current thread.
 ///
 /// This suspends the execution of the current lightweight thread. It must be
-/// explicitly resumed in the future. The continuation @p f(@p env) is run
+/// explicitly resumed in the future. The continuation @p f(p, @p env) is run
 /// synchronously after the thread has been suspended but before a new thread is
 /// run. This allows the lightweight thread to perform "safe" synchronization
 /// where @p f will trigger a resume operation on the current thread, and we
 /// don't want to miss that signal or possibly have our thread stolen before it
-/// is checkpointed.
+/// is checkpointed. The runtime passes the parcel we transferred away from to
+/// @p as the first parameter.
 ///
 /// This will find a new thread to execute, and will effect a context switch. It
 /// is not possible to immediately switch back to the current thread, even if @p
@@ -184,7 +176,9 @@ void scheduler_yield(void);
 ///
 /// @param            f A continuation to run after the context switch.
 /// @param          env The environment to pass to the continuation @p f.
-hpx_status_t scheduler_suspend(int (*f)(void*), void *env);
+/// @param        block A flag indicating if it is okay to block before running
+///                     @p f.
+void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env, int block);
 
 /// Wait for an condition.
 ///
@@ -236,7 +230,12 @@ void scheduler_signal_error(struct cvar *cvar, hpx_status_t code)
 hpx_parcel_t *scheduler_current_parcel(void);
 
 /// Get a worker by id.
-struct worker *scheduler_get_worker(struct scheduler *sched, int id)
+worker_t *scheduler_get_worker(struct scheduler *sched, int id)
   HPX_NON_NULL(1);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_SCHEDULER_H

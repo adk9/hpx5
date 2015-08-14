@@ -36,7 +36,7 @@ AC_DEFUN([_HPX_CONFIG_PHOTON], [
  
  # configure and build the included photon library
  HPX_MERGE_STATIC_SHARED([PHOTON_CARGS])
- ACX_CONFIGURE_DIR([$contrib], [$contrib], ["$photon_cargs $PHOTON_CARGS"])
+ ACX_CONFIGURE_DIR([$contrib], [$contrib], ["$PHOTON_CARGS"])
  _HAVE_PHOTON
  LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -I\$(top_srcdir)/$1/include"
  LIBHPX_LIBADD="$LIBHPX_LIBADD \$(top_builddir)/$1/src/libphoton.la"

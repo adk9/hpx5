@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -36,6 +37,9 @@ const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS] =
   {0},
   {0},
   SCHEDULER_WQSIZE_METADATA,
+  {0},
+  {0},
+  {0},
   LCO_INIT_METADATA,
   LCO_DELETE_METADATA,
   LCO_SET_METADATA,
@@ -45,5 +49,14 @@ const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS] =
   LCO_TRIGGER_METADATA,
   PROCESS_NEW_METADATA,
   PROCESS_CALL_METADATA,
-  PROCESS_DELETE_METADATA
+  PROCESS_DELETE_METADATA,
+  {0},
+  {0},
+  {0},
+  {0},
+  {0},
+  {0},
+  SCHEDTIMES_SCHED_METADATA,
+  SCHEDTIMES_PROBE_METADATA,
+  SCHEDTIMES_PROGRESS_METADATA
 };

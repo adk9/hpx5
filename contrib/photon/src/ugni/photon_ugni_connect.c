@@ -59,12 +59,14 @@ int __ugni_init_context(ugni_cnct_ctx *ctx) {
     goto error_exit;
   }
 
-  ctx->remote_cq_handles = (gni_cq_handle_t *)calloc(ctx->num_cq, sizeof(gni_cq_handle_t));
-  if (!ctx->remote_cq_handles) {
-    dbg_err("Could not allocate remote CQ handles");
-    goto error_exit;
-  }
-  
+  if (ctx->use_rcq) {
+    ctx->remote_cq_handles = (gni_cq_handle_t *)calloc(ctx->num_cq, sizeof(gni_cq_handle_t));
+    if (!ctx->remote_cq_handles) {
+      dbg_err("Could not allocate remote CQ handles");
+      goto error_exit;
+    }
+  } 
+
   for (i = 0; i < ctx->num_cq; i++) {
     // setup completion queue for local events
     status = GNI_CqCreate(ctx->nic_handle, MAX_CQ_ENTRIES, 0, GNI_CQ_NOBLOCK, NULL, NULL, &(ctx->local_cq_handles[i]));
@@ -72,15 +74,17 @@ int __ugni_init_context(ugni_cnct_ctx *ctx) {
       dbg_err("GNI_CqCreate local_cq ERROR status: %s (%d)\n", gni_err_str[status], status);
       goto error_exit;
     }
-    
+   
     // setup completion queue for remote events
-    status = GNI_CqCreate(ctx->nic_handle, MAX_CQ_ENTRIES, 0, GNI_CQ_NOBLOCK, NULL, NULL, &(ctx->remote_cq_handles[i]));
-    if (status != GNI_RC_SUCCESS) {
-      dbg_err("GNI_CqCreate remote_cq ERROR status: %s (%d)\n", gni_err_str[status], status);
-      goto error_exit;
+    if (ctx->use_rcq) {
+      status = GNI_CqCreate(ctx->nic_handle, MAX_CQ_ENTRIES, 0, GNI_CQ_NOBLOCK, NULL, NULL, &(ctx->remote_cq_handles[i]));
+      if (status != GNI_RC_SUCCESS) {
+	dbg_err("GNI_CqCreate remote_cq ERROR status: %s (%d)\n", gni_err_str[status], status);
+	goto error_exit;
+      }
     }
   }
-  
+    
   ctx->ep_handles = (gni_ep_handle_t *)calloc(_photon_nproc, sizeof(gni_ep_handle_t));
   if (!ctx->ep_handles) {
     dbg_err("Could not allocate endpoint array");
@@ -200,14 +204,14 @@ int __ugni_connect_endpoints(ugni_cnct_ctx *ctx, ugni_cnct_info *local_info, ugn
 	      ctx->local_cq_handles[cqind], ctx->ep_handles[i]);
     
     bind_id = (_photon_myrank * BIND_ID_MULTIPLIER) + BIND_ID_MULTIPLIER + i;
-    
+       
     status = GNI_EpBind(ctx->ep_handles[i], remote_info[i].lid, bind_id);
     if (status != GNI_RC_SUCCESS) {
       dbg_err("GNI_EpBind ERROR status: %s (%d)", gni_err_str[status], status);
       goto error_exit;
     }
     dbg_trace("GNI_EpBind   remote rank: %4i EP:  %p remote_address: %u, remote_id: %u", i,
-             ctx->ep_handles[i], remote_info[i].lid, bind_id);
+	      ctx->ep_handles[i], remote_info[i].lid, bind_id);
   }
 
   return PHOTON_OK;

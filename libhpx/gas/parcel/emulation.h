@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef LIBHPX_GAS_PARCELS_EMULATION_H
 #define LIBHPX_GAS_PARCELS_EMULATION_H
 

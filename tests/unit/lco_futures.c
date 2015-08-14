@@ -104,6 +104,6 @@ static int lco_future_array_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, lco_future_array, lco_future_array_handler);
 
 TEST_MAIN({
- ADD_TEST(lco_future_new);
- ADD_TEST(lco_future_array);
+ ADD_TEST(lco_future_new, 0);
+ ADD_TEST(lco_future_array, 0);
 });

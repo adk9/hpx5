@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -61,10 +62,27 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _isir_lco_get_request,
                      _isir_lco_get_request_handler, HPX_POINTER, HPX_SIZE_T,
                      HPX_POINTER);
 
-int
-isir_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out) {
-  hpx_parcel_t *current = scheduler_current_parcel();
-  hpx_parcel_t *p = parcel_create(lco, _isir_lco_get_request, HPX_HERE,
-                                  _isir_lco_get_reply, 3, &current, &n, &out);
-  return scheduler_suspend((int (*)(void*))parcel_launch, p);
+typedef struct {
+  hpx_addr_t lco;
+  size_t n;
+  void *out;
+} _lco_get_env_t;
+
+static void _lco_get_continuation(hpx_parcel_t *p, void *env) {
+  _lco_get_env_t *e = env;
+  hpx_parcel_t *l = action_create_parcel(e->lco, _isir_lco_get_request,
+                                         HPX_HERE, _isir_lco_get_reply,
+                                         3, &p, &e->n, &e->out);
+  parcel_launch(l);
+}
+
+int isir_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out) {
+  _lco_get_env_t env = {
+    .lco = lco,
+    .n = n,
+    .out = out
+  };
+
+  scheduler_suspend(_lco_get_continuation, &env, 0);
+  return HPX_SUCCESS;
 }

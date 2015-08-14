@@ -2,8 +2,8 @@ SUBDIRS       =
 DIST_SUBDIRS  =
 
 if BUILD_LIBFFI
-SUBDIRS      += libffi
-DIST_SUBDIRS += libffi
+SUBDIRS      += $(LIBFFI_CONTRIB_DIR)
+DIST_SUBDIRS += $(LIBFFI_CONTRIB_DIR)
 endif
 
 if BUILD_HWLOC
@@ -24,6 +24,11 @@ endif
 if BUILD_LIBCUCKOO
 SUBDIRS      += libcuckoo
 DIST_SUBDIRS += libcuckoo
+endif
+
+if HAVE_DLMALLOC
+SUBDIRS      += dlmalloc
+DIST_SUBDIRS += dlmalloc
 endif
 
 check-recursive: all-recursive

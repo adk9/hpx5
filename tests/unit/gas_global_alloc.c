@@ -104,15 +104,15 @@ static int gas_global_mem_alloc_handler(void) {
 
   hpx_addr_t calloc = hpx_gas_calloc_cyclic(blocks, size, 0);
   hpx_gas_free(calloc, HPX_NULL);
-  
+
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, gas_global_mem_alloc,
                   gas_global_mem_alloc_handler);
 
 TEST_MAIN({
- ADD_TEST(gas_global_alloc);
- ADD_TEST(gas_global_alloc_block);
- ADD_TEST(gas_global_calloc_block);
- ADD_TEST(gas_global_mem_alloc);
+    ADD_TEST(gas_global_alloc, 0);
+    ADD_TEST(gas_global_alloc_block, 0);
+    ADD_TEST(gas_global_calloc_block, 0);
+    ADD_TEST(gas_global_mem_alloc, 0);
 });

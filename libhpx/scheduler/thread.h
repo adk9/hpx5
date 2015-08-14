@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef LIBHPX_THREAD_H
 #define LIBHPX_THREAD_H
 
@@ -79,7 +80,7 @@ void thread_exit(int status, const void *value, size_t size)
   HPX_NORETURN;
 
 /// The transfer continuation function type.
-typedef int (*thread_transfer_cont_t)(hpx_parcel_t *p, void *sp, void *env);
+typedef void (*thread_transfer_cont_t)(hpx_parcel_t *p, void *sp, void *env);
 
 /// The actual routine to transfer between thread.
 ///
@@ -92,9 +93,7 @@ typedef int (*thread_transfer_cont_t)(hpx_parcel_t *p, void *sp, void *env);
 /// @param          p The parcel to transfer to.
 /// @param       cont A continuation function to handle the old stack pointer.
 /// @param        env The environment for the continuation.
-///
-/// @returns HPX_SUCCESS or an error code
-int thread_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env)
+void thread_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env)
   HPX_NON_NULL(1, 2);
 
 #endif  // LIBHPX_THREAD_H

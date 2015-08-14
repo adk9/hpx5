@@ -10,18 +10,14 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
 
 #include <libhpx/debug.h>
 #include "../../thread.h"
-#include "asm.h"
-
-static void HPX_CONSTRUCTOR _init_thread(void) {
-  //thread_set_stack_size(0);
-}
-
+#include "../common/asm.h"
 
 /// A structure describing the initial frame on a stack.
 ///

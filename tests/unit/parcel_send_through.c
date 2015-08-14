@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -188,5 +189,5 @@ static int parcel_send_through_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, parcel_send_through, parcel_send_through_handler);
 
 TEST_MAIN({
-  ADD_TEST(parcel_send_through);
+  ADD_TEST(parcel_send_through, 0);
 });

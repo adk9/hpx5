@@ -25,8 +25,9 @@ AC_DEFUN([_HPX_CC_TBBMALLOC], [
  AC_CHECK_HEADER([tbb/scalable_allocator.h],
    [AC_CHECK_LIB([tbbmalloc], [scalable_malloc],
      [_HAVE_TBBMALLOC
-      LIBHPX_LIBS="-ltbbmalloc_proxy -ltbbmalloc $LIBHPX_LIBS"
-      HPX_PC_PRIVATE_LIBS="-ltbbmalloc_proxy -ltbbmalloc $HPX_PC_PRIVATE_LIBS"])])
+      LIBHPX_LIBS="$LIBHPX_LIBS -ltbbmalloc_proxy -ltbbmalloc"
+      HPX_PC_PUBLIC_LIBS="$HPX_PC_PUBLIC_LIBS -ltbbmalloc_proxy"
+      HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -ltbbmalloc"])])
 ])
 
 AC_DEFUN([_HPX_LIB_TBBMALLOC], [
@@ -56,11 +57,18 @@ AC_DEFUN([_HPX_DO_CONFIG_TBBMALLOC], [
  tbbarch="$with_tbbroot/lib/$with_tbbarch"
  AS_IF([test "x$have_tbbmalloc" != xyes],
    [AS_UNSET([ac_cv_header_tbb_scalable_allocator_h])
+    AS_UNSET([ac_cv_lib_tbbmalloc_scalable_malloc])
     _HPX_LIB_TBBMALLOC($tbbinclude, "$tbbarch/gcc4.4")])
 
  AS_IF([test "x$have_tbbmalloc" != xyes],
    [AS_UNSET([ac_cv_header_tbb_scalable_allocator_h])
+    AS_UNSET([ac_cv_lib_tbbmalloc_scalable_malloc])
     _HPX_LIB_TBBMALLOC($tbbinclude, "$tbbarch/gcc4.1")])
+
+ AS_IF([test "x$have_tbbmalloc" != xyes],
+   [AS_UNSET([ac_cv_header_tbb_scalable_allocator_h])
+    AS_UNSET([ac_cv_lib_tbbmalloc_scalable_malloc])
+    _HPX_LIB_TBBMALLOC($tbbinclude, "$tbbarch")])
 
  AS_IF([test "x$have_tbbmalloc" != xyes], [
    AC_MSG_ERROR([Could not find Intel's TBB malloc library. Try loading the
