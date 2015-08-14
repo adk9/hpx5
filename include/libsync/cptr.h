@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef HPX_SYNC_CPTR_H
 #define HPX_SYNC_CPTR_H
 

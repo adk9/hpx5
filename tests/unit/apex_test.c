@@ -1,5 +1,5 @@
 // =============================================================================
-//  High Performance ParalleX Library (libhpx)
+//  High Performance ParalleX Library (libapex)
 //
 //  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
