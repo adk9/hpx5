@@ -12,7 +12,7 @@ There are several pre-requisites to successfully configure and run HPX–5.
 
 ### Requirements
 
-* GCC 4.8.4 or newer (Tested with 4.8.4, 4.9.1, 4.9.2).
+* GCC 4.8.4 or newer (Tested with 4.8.4, 4.9.1, 4.9.2, 5.1.0, 5.2.0).
 * clang Tested with 3.6 (3.5 and earlier are known to be broken).
 * icc (Tested with 15.0.1).
 * GNU Make 3.81+    
@@ -24,13 +24,18 @@ There are several pre-requisites to successfully configure and run HPX–5.
 * MPI                (optional - Tested with 1.6.3, 1.6.5, 1.8.1, 1.8.4 
                                  MPICH 3.0.4, mvapich2/2.0b (Stampede))
 * doxygen            (optional; required to build the documentation)
+* dlmalloc           (embedded with HPX–5)
 * Photon             (embedded with HPX–5)
 * jemalloc           (embedded with HPX–5, If available, tbbmalloc may be used 
                       instead of jemalloc)
 * hwloc              (embedded with HPX–5)
+* libcuckoo          (embedded with HPX–5)
 * libffi             (embedded with HPX–5)
+* libffi-mic         (embedded with HPX–5, needed for Xeon-Phi)
 * Uthash             (embedded with HPX–5)
 * Valgrind           (optional)
+* APEX               (optional, required to build with APEX)
+* PAPI               (optional, required to build with PAPI)
 
 HPX–5 can build and run successfully without any network backend, but at
  present, MPI or Photon is required for networking by HPX–5. 

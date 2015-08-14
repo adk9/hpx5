@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef LIBHPX_NETWORK_ISIR_EMULATE_PWC_H
 #define LIBHPX_NETWORK_ISIR_EMULATE_PWC_H
 

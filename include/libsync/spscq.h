@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef SYNC_SPSCQ_H
 #define SYNC_SPSCQ_H
 
