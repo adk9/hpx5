@@ -66,7 +66,7 @@ export PATH=/path/to/install/bin:$PATH
 # bootstrap to make the configure script with APEX options
 ./bootstrap
 # run configure
-./configure --prefix=--prefix=/path/to/install --enable-mpi CC=cc HPX_PHOTON_CARGS=--with-ugni --enable-photon --with-apex --enable-debug
+./configure --prefix=/path/to/install --enable-mpi CC=cc HPX_PHOTON_CARGS=--with-ugni --enable-photon --with-apex --enable-debug
 make && make install
 
 -----------------------------------------------------
