@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef HPX_LIBSYNC_NOP_H_
 #define HPX_LIBSYNC_NOP_H_
 
