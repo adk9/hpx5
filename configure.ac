@@ -8,7 +8,7 @@
 # Research in Extreme Scale Technologies (CREST).
 
 AC_PREREQ([2.63])
-AC_INIT([hpx-5], [1.1.0], [hpx@indiana.edu])
+AC_INIT([hpx-5], [1.2.0], [hpx@indiana.edu])
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
 
