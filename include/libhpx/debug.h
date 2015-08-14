@@ -10,11 +10,12 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef LIBHPX_DEBUG_H
 #define LIBHPX_DEBUG_H
 
-#include "hpx/hpx.h"
-#include "libhpx/config.h"
+#include <hpx/hpx.h>
+#include <libhpx/config.h>
 
 #ifdef ENABLE_DEBUG
 # define DEBUG 1
@@ -55,14 +56,17 @@ void dbg_error_internal(unsigned line, const char *filename, const char *func,
     }                                                   \
   } while (0)
 
-
 # define dbg_assert(e) dbg_assert_str(e, "\n")
 #else
 # define dbg_assert_str(e, ...) assert(e)
 # define dbg_assert(e) assert(e)
 #endif
 
-#define dbg_check(e, ...) dbg_assert_str((e) == HPX_SUCCESS, __VA_ARGS__)
+#ifdef NDEBUG
+# define dbg_check(e, ...) (void)e
+#else
+# define dbg_check(e, ...) dbg_assert_str((e) == HPX_SUCCESS, __VA_ARGS__)
+#endif
 
 void log_internal(unsigned line, const char *filename, const char *func,
                   const char *fmt, ...)

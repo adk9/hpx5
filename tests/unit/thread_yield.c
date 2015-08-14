@@ -95,5 +95,5 @@ static int thread_yield_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, thread_yield, thread_yield_handler);
 
 TEST_MAIN({
-  ADD_TEST(thread_yield);
+  ADD_TEST(thread_yield, 0);
 });

@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -21,9 +22,9 @@
 #include <string.h>
 #include <stdarg.h>
 #include <hpx/hpx.h>
-#include "libhpx/action.h"
-#include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/action.h>
+#include <libhpx/parcel.h>
+#include <libhpx/scheduler.h>
 
 /// A RPC call with a user-specified continuation action.
 int _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
@@ -31,8 +32,8 @@ int _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
                                 int nargs, ...) {
   va_list vargs;
   va_start(vargs, nargs);
-  int e = libhpx_call_action(addr, action, c_target, c_action,
-                             HPX_NULL, HPX_NULL, nargs, &vargs);
+  int e = action_call_va(addr, action, c_target, c_action, HPX_NULL, HPX_NULL,
+                         nargs, &vargs);
   va_end(vargs);
   return e;
 }
@@ -42,8 +43,8 @@ int _hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result,
               int nargs, ...) {
   va_list vargs;
   va_start(vargs, nargs);
-  int e = libhpx_call_action(addr, action, result, hpx_lco_set_action,
-                             HPX_NULL, HPX_NULL, nargs, &vargs);
+  int e = action_call_va(addr, action, result, hpx_lco_set_action, HPX_NULL,
+                         HPX_NULL, nargs, &vargs);
   va_end(vargs);
   return e;
 }
@@ -53,8 +54,8 @@ int _hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out,
   hpx_addr_t result = hpx_lco_future_new(olen);
   va_list vargs;
   va_start(vargs, nargs);
-  int e = libhpx_call_action(addr, action, result, hpx_lco_set_action,
-                             HPX_NULL, HPX_NULL, nargs, &vargs);
+  int e = action_call_va(addr, action, result, hpx_lco_set_action, HPX_NULL,
+                         HPX_NULL, nargs, &vargs);
   va_end(vargs);
 
   if (e == HPX_SUCCESS) {
@@ -69,8 +70,8 @@ int _hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
                    hpx_addr_t result, int nargs, ...) {
   va_list vargs;
   va_start(vargs, nargs);
-  int e = libhpx_call_action(addr, action, result, hpx_lco_set_action,
-                             HPX_NULL, gate, nargs, &vargs);
+  int e = action_call_va(addr, action, result, hpx_lco_set_action, HPX_NULL,
+                         gate, nargs, &vargs);
   va_end(vargs);
   return e;
 }
@@ -80,8 +81,8 @@ int _hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
   hpx_addr_t result = hpx_lco_future_new(olen);
   va_list vargs;
   va_start(vargs, nargs);
-  int e = libhpx_call_action(addr, action, result, hpx_lco_set_action,
-                             HPX_NULL, gate, nargs, &vargs);
+  int e = action_call_va(addr, action, result, hpx_lco_set_action, HPX_NULL,
+                         gate, nargs, &vargs);
   va_end(vargs);
 
   if (e == HPX_SUCCESS) {
@@ -98,8 +99,8 @@ int _hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr,
                                      hpx_action_t c_action, int nargs, ...) {
   va_list vargs;
   va_start(vargs, nargs);
-  int e = libhpx_call_action(addr, action, c_target, c_action, HPX_NULL,
-                             gate, nargs, &vargs);
+  int e = action_call_va(addr, action, c_target, c_action, HPX_NULL, gate,
+                         nargs, &vargs);
   va_end(vargs);
   return e;
 }
@@ -108,8 +109,8 @@ int _hpx_call_async(hpx_addr_t addr, hpx_action_t action,
                     hpx_addr_t lsync, hpx_addr_t result, int nargs, ...) {
   va_list vargs;
   va_start(vargs, nargs);
-  int e = libhpx_call_action(addr, action, result, hpx_lco_set_action,
-                             lsync, HPX_NULL, nargs, &vargs);
+  int e = action_call_va(addr, action, result, hpx_lco_set_action, lsync,
+                         HPX_NULL, nargs, &vargs);
   va_end(vargs);
   return e;
 }
@@ -119,8 +120,8 @@ void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
   hpx_parcel_t *p = scheduler_current_parcel();
   va_list vargs;
   va_start(vargs, nargs);
-  int e = libhpx_call_action(addr, action, p->c_target, p->c_action,
-                             HPX_NULL, gate, nargs, &vargs);
+  int e = action_call_va(addr, action, p->c_target, p->c_action, HPX_NULL, gate,
+                         nargs, &vargs);
   va_end(vargs);
   if (e == HPX_SUCCESS) {
     p->c_target = HPX_NULL;

@@ -15,14 +15,14 @@
 #include "tests.h"
 #include <stdlib.h>
 
-#define LCOS_PER_LOCALITY 100000
+#define LCOS_PER_LOCALITY 10000
 #define WAITERS 4
 #define PARTICIPANTS 4
 
 // This tests waiting on lcos.  Best run with many cores. Eg., on cutter:
 // mpirun -n 2 -map-by node:PE=16 --tag-output ~/repos/hpx-marcin/tests/unit/hpxtest --hpx-cores=16 --hpx-heapsize=$((1024*1024*1024 * 2)) --hpx-transport=mpi
 static int _set_handler(const hpx_addr_t * const future, size_t n) {
-  // printf("Setting %zu on %d\n", *future, HPX_LOCALITY_ID);
+  //printf("Setting %zu on %d\n", *future, HPX_LOCALITY_ID);
   hpx_lco_set(*future, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
@@ -30,7 +30,7 @@ static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _set,
                   _set_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int _wait_handler(const hpx_addr_t * const future, size_t n) {
-  // printf("Waiting on %zu on %d\n", lcos[0], HPX_LOCALITY_ID);
+  //printf("Waiting on %zu on %d\n", *future, HPX_LOCALITY_ID);
   hpx_lco_wait(*future);
   return HPX_SUCCESS;
 }
@@ -47,13 +47,13 @@ static int _delete_handler(const hpx_addr_t * const lcos, size_t n) {
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _delete,
                   _delete_handler, HPX_POINTER, HPX_SIZE_T);
 
-static int _spawn_handler(const hpx_addr_t * const termination_lco, size_t n) {
+static int _spawn_handler(hpx_addr_t termination_lco) {
   int e;
   for (size_t i = 0; i < LCOS_PER_LOCALITY; ++i) {
     // test futures
     const hpx_addr_t test_futures[3] = {
       hpx_lco_future_new(0),
-      *termination_lco,
+      termination_lco,
       hpx_lco_and_new(WAITERS)
     };
 
@@ -73,7 +73,7 @@ static int _spawn_handler(const hpx_addr_t * const termination_lco, size_t n) {
     // test and lco
     const hpx_addr_t test_ands[3] = {
       hpx_lco_and_new(PARTICIPANTS),
-      *termination_lco,
+      termination_lco,
       hpx_lco_and_new(WAITERS)
     };
 
@@ -95,8 +95,7 @@ static int _spawn_handler(const hpx_addr_t * const termination_lco, size_t n) {
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _spawn,
-                  _spawn_handler, HPX_POINTER, HPX_SIZE_T);
+static HPX_ACTION(HPX_DEFAULT, 0, _spawn, _spawn_handler, HPX_ADDR);
 
 static int lco_wait_handler(void) {
   printf("Starting the LCO wait test.\n");
@@ -105,7 +104,7 @@ static int lco_wait_handler(void) {
   const hpx_time_t t1 = hpx_time_now();
 
   const hpx_addr_t termination_lco = hpx_lco_and_new(2 * LCOS_PER_LOCALITY * HPX_LOCALITIES);
-  hpx_bcast(_spawn, HPX_NULL, &termination_lco, sizeof(termination_lco));
+  hpx_bcast(_spawn, HPX_NULL, HPX_NULL, &termination_lco);
   hpx_lco_wait(termination_lco);
   hpx_lco_delete(termination_lco, HPX_NULL);
 
@@ -115,5 +114,5 @@ static int lco_wait_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, lco_wait, lco_wait_handler);
 
 TEST_MAIN({
-  ADD_TEST(lco_wait);
+    ADD_TEST(lco_wait, 0);
 });

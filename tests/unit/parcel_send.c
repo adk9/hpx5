@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -85,5 +86,5 @@ static int parcel_send_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, parcel_send, parcel_send_handler);
 
 TEST_MAIN({
-  ADD_TEST(parcel_send);
+  ADD_TEST(parcel_send, 0);
 });

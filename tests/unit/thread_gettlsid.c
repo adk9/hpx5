@@ -75,5 +75,5 @@ static int thread_gettlsid_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, thread_gettlsid, thread_gettlsid_handler);
 
 TEST_MAIN({
-  ADD_TEST(thread_gettlsid);
+  ADD_TEST(thread_gettlsid, 0);
 });

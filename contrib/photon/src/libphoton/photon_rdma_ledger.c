@@ -52,7 +52,7 @@ int photon_rdma_ledger_get_next(int proc, photonLedger l) {
       //log_err("Exceeded number of outstanding ledger entries - increase ledger size or wait for completion");
       return -1;
     }
-    if (((curr - rcur)) >= (l->num_entries)) {
+    if ((curr - rcur) >= (l->num_entries)) {
       // receiver not ready, request an updated rcur
       _get_remote_progress(proc, l);
       dbg_trace("No new ledger entry until receiver catches up...");
@@ -60,7 +60,7 @@ int photon_rdma_ledger_get_next(int proc, photonLedger l) {
     }
   } while (!sync_cas(&l->curr, curr, curr+1, SYNC_RELAXED, SYNC_RELAXED));
 
-  if ((curr - rcur) >= (l->num_entries * 0.8)) {
+  if ((curr - rcur) == (int)(l->num_entries * 0.8)) {
     // do a pro-active fetch of the remote ledger progress
     _get_remote_progress(proc, l);
   }

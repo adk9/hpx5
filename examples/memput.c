@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #define BENCHMARK "OSU HPX MEMPUT Test"
 
 #include <unistd.h>
@@ -94,13 +95,11 @@ static int _main_handler(void) {
     }
 
     for (i = 0; i < loop + skip; i++) {
-      if(i == skip)
+      if(i == skip) {
         wtime(&t_start);
+      }
 
-      hpx_addr_t done = hpx_lco_future_new(0);
-      hpx_gas_memput(remote, local, size, HPX_NULL, done);
-      hpx_lco_wait(done);
-      hpx_lco_delete(done, HPX_NULL);
+      hpx_gas_memput_rsync(remote, local, size);
     }
 
     wtime(&t_end);

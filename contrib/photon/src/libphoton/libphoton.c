@@ -16,11 +16,15 @@
 #include "photon_ugni.h"
 #endif
 
+#ifdef HAVE_LIBFABRIC
+#include "photon_fi.h"
+#endif
+
 #ifdef HAVE_XSP
 #include "photon_xsp_forwarder.h"
 #endif
 
-/* Globals */
+// Globals
 photonConfig __photon_config = NULL;
 photonBackend __photon_backend = NULL;
 photonForwarder __photon_forwarder = NULL;
@@ -43,12 +47,12 @@ int _photon_start_debugging = 1;
 #if defined(ENABLE_CALLTRACE)
 FILE *_phot_ofp;
 #endif
-/* END Globals */
+// END Globals
 
-/* this default beckend will do our ledger work */
+// this default beckend will do our ledger work
 static photonBackend __photon_default = &photon_default_backend;
 
-/* return 1==initialized, 0==not initialized */
+// return 1==initialized, 0==not initialized
 int photon_initialized() {
   int rc;
   if (!__photon_backend) {
@@ -80,7 +84,7 @@ int photon_init(photonConfig cfg) {
     return PHOTON_OK;
   }
 
-  /* copy the configuration */
+  // copy the configuration
   lcfg = calloc(1, sizeof(struct photon_config_t));
   if (!lcfg) {
     log_err("Could not allocate space for internal config!");
@@ -94,13 +98,11 @@ int photon_init(photonConfig cfg) {
     lcfg->ibv.ib_dev = strdup(cfg->ibv.ib_dev);
   if (cfg->ibv.ud_gid_prefix)
     lcfg->ibv.ud_gid_prefix = strdup(cfg->ibv.ud_gid_prefix);
-  if (cfg->backend)
-    lcfg->backend = strdup(cfg->backend);
 
-  /* track the config with a global */
+  // track the config with a global
   __photon_config = lcfg;
 
-  /* set globals */
+  // set globals
   _photon_myrank = (int)lcfg->address;
   _photon_nproc = lcfg->nproc;
   _photon_nforw = lcfg->forwarder.use_forwarder;
@@ -111,47 +113,66 @@ int photon_init(photonConfig cfg) {
   _LEDGER_SIZE = lcfg->cap.ledger_entries;
   
   one_debug("Photon initializing");
-
-  /* we can override the default with the tech-specific backends,
-     but we just use their RDMA methods for now */
-  if (lcfg->backend != NULL) {
-    if (!strncasecmp(lcfg->backend, "verbs", 10)) {
+  
+  switch (lcfg->backend) {
+  case PHOTON_BACKEND_VERBS:
+    {
 #ifdef HAVE_VERBS
       __photon_backend = be = &photon_verbs_backend;
       photon_buffer_init(&verbs_buffer_interface);
 #else
-      errmsg = "IB verbs backend";
+      errmsg = "IB Verbs backend";
       goto error_exit;
 #endif
     }
-    else if (!strncasecmp(lcfg->backend, "ugni", 10)) {
+    break;
+  case PHOTON_BACKEND_UGNI:
+    {
 #ifdef HAVE_UGNI
       __photon_backend = be = &photon_ugni_backend;
       photon_buffer_init(&ugni_buffer_interface);
 #else
-      errmsg = "UGNI backend";
+      errmsg = "uGNI backend";
       goto error_exit;
 #endif
     }
-    else {
+    break;
+  case PHOTON_BACKEND_FI:
+    {
+#ifdef HAVE_LIBFABRIC
+      __photon_backend = be = &photon_fi_backend;
+      photon_buffer_init(&fi_buffer_interface);
+#else
+      errmsg = "libfabric backend";
+      goto error_exit;
+#endif   
+    }
+    break;
+  default:
+    {
 #ifdef HAVE_UGNI
       __photon_backend = be = &photon_ugni_backend;
       photon_buffer_init(&ugni_buffer_interface);
+      lcfg->backend = PHOTON_BACKEND_UGNI;
       one_debug("Using uGNI backend");
 #elif HAVE_VERBS
       __photon_backend = be = &photon_verbs_backend;
       photon_buffer_init(&verbs_buffer_interface);
+      lcfg->backend = PHOTON_BACKEND_VERBS;
       one_debug("Using Verbs backend");
+#elif HAVE_LIBFABRIC
+      __photon_backend = be = &photon_fi_backend;
+      photon_buffer_init(&fi_buffer_interface);
+      lcfg->backend = PHOTON_BACKEND_FI;
+      one_debug("Using libfabric backend");
 #else
       errmsg = "network backend";
       goto error_exit;
 #endif
     }
+    break;
   }
-  else {
-    log_warn("photon_init(): backend not specified, using default test backend!");
-  }
-
+  
   switch (lcfg->meta_exch) {
   case PHOTON_EXCH_MPI:
 #ifndef HAVE_MPI
@@ -187,7 +208,7 @@ int photon_init(photonConfig cfg) {
     break;
   }
   
-  /* update defaults */
+  // update defaults
   if (_photon_ebsize < 0)
     _photon_ebsize = DEF_EAGER_BUF_SIZE;
   if (_photon_smsize < 0)
@@ -200,27 +221,35 @@ int photon_init(photonConfig cfg) {
     lcfg->cap.default_rd = DEF_NUM_REQUESTS;
   if (lcfg->cap.num_cq <= 0)
     lcfg->cap.num_cq = DEF_NUM_CQ;
+  if (lcfg->cap.use_rcq < 0)
+    lcfg->cap.use_rcq = DEF_USE_RCQ;
+
+  if ((lcfg->backend == PHOTON_BACKEND_UGNI) &&
+      (lcfg->cap.use_rcq <= 0)) {
+    lcfg->cap.use_rcq = 1;
+    one_debug("Enabling remote completion support for uGNI backend");
+  }
   
   if (lcfg->cap.num_cq > _photon_nproc) {
     lcfg->cap.num_cq = _photon_nproc;
-    log_warn("Requesting (num_cq > nproc), setting num_cq to nproc");
+    one_warn("Requesting (num_cq > nproc), setting num_cq to nproc");
   }
   
   assert(is_power_of_2(_LEDGER_SIZE));
   assert(is_power_of_2(_photon_ebsize));
   
-  /* figure out forwarder info */
+  // figure out forwarder info
   if (lcfg->forwarder.use_forwarder) {
-    /* if init is called with a rank greater than or equal to nproc, then we are a forwarder
-       TODO: fix this in the case of non-MPI */
+    // if init is called with a rank greater than or equal to nproc, then we are a forwarder
+    // TODO: fix this in the case of non-MPI
     if ((int)lcfg->address >= lcfg->nproc) {
       _photon_fproc = (int)lcfg->address;
       _forwarder = 1;
     }
-    /* otherwise we are a proc that wants to use a forwarder */
+    // otherwise we are a proc that wants to use a forwarder
     else {
-      /* do some magic to determing which forwarder to use for this rank
-         right now every rank gets the first forwarder */
+      // do some magic to determing which forwarder to use for this rank
+      // right now every rank gets the first forwarder */
       _photon_fproc = lcfg->nproc;
       _forwarder = 0;
     }
@@ -231,7 +260,7 @@ int photon_init(photonConfig cfg) {
 #endif
   }
 
-  /* check if the selected backend defines its own API methods and use those instead */
+  // check if the selected backend defines its own API methods and use those instead
   __photon_default->cancel = (be->cancel)?(be->cancel):__photon_default->cancel;
   __photon_default->finalize = (be->finalize)?(be->finalize):__photon_default->finalize;
   __photon_default->register_buffer = (be->register_buffer)?(be->register_buffer):__photon_default->register_buffer;
@@ -266,7 +295,7 @@ int photon_init(photonConfig cfg) {
   __photon_default->io_init = (be->io_finalize)?(be->io_finalize):__photon_default->io_finalize;
   __photon_default->get_dev_name = (be->get_dev_name)?(be->get_dev_name):__photon_default->get_dev_name;
 
-  /* the configured backend init gets called from within the default library init */
+  // the configured backend init gets called from within the default library init
   return __photon_default->init(lcfg, NULL, NULL);
 
 error_exit:
@@ -310,8 +339,6 @@ int photon_finalize() {
     free(__photon_config->ibv.ib_dev);
   if (__photon_config->ibv.ud_gid_prefix)
     free(__photon_config->ibv.ud_gid_prefix);
-  if (__photon_config->backend)
-    free(__photon_config->backend);
   free(__photon_config);
 
   return PHOTON_OK;
@@ -490,8 +517,8 @@ int photon_wait_any(int *ret_proc, photon_rid *ret_req) {
   }
 
 #ifdef PHOTON_MULTITHREADED
-  /* TODO: These can probably be implemented by having
-     a condition var for the unreaped lists */
+  // TODO: These can probably be implemented by having
+  // a condition var for the unreaped lists
   return PHOTON_ERROR;
 #else
   return __photon_default->wait_any(ret_proc, ret_req);
@@ -520,8 +547,7 @@ int photon_probe_ledger(int proc, int *flag, int type, photonStatus status) {
   return __photon_default->probe_ledger(proc, flag, type, status);
 }
 
-
-/* begin SR interface */
+// begin SR interface
 int photon_probe(photonAddr addr, int *flag, photonStatus status) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
@@ -548,9 +574,9 @@ int photon_recv(uint64_t request, void *ptr, uint64_t size, int flags) {
 
   return __photon_default->recv(request, ptr, size, flags);
 }
-/* end SR interface */
+// end SR interface
 
-/* begin with completion */
+// begin with completion
 int photon_put_with_completion(int proc, uint64_t size, photonBuffer lbuf, photonBuffer rbuf,
                                photon_rid local, photon_rid remote, int flags) {
   if(__photon_default->initialized() != PHOTON_OK) {
@@ -580,9 +606,9 @@ int photon_probe_completion(int proc, int *flag, int *remaining, photon_rid *req
   
   return __photon_default->probe_completion(proc, flag, remaining, request, src, flags);
 }
-/* end with completion */
+// end with completion
 
-/* begin I/O */
+// begin I/O
 int photon_io_init(char *file, int amode, void *view, int niter) {
   if(__photon_default->initialized() != PHOTON_OK) {
     init_err();
@@ -607,15 +633,15 @@ void photon_io_print_info(void *io) {
   }
 }
 
-/* end I/O */
+// end I/O
 
-/* utility API method to get backend-specific buffer info */
+// utility API method to get backend-specific buffer info
 int photon_get_buffer_private(void *buf, uint64_t size,
 			      const struct photon_buffer_priv_t **pptr) {
   return _photon_get_buffer_private(buf, size, pptr);
 }
 
-/* utility method to get the remote buffer info set after a wait buffer request */
+// utility method to get the remote buffer info set after a wait buffer request
 int photon_get_buffer_remote(photon_rid request, photonBuffer ret_buf) {
   return _photon_get_buffer_remote(request, ret_buf);
 }

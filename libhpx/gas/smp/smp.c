@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -91,7 +92,7 @@ static hpx_addr_t
 _smp_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
   void *p = NULL;
   if (boundary) {
-    posix_memalign(&p, boundary, n * bsize);
+    dbg_check(posix_memalign(&p, boundary, n * bsize));
   }
   else {
     p = malloc(n * bsize);
@@ -105,7 +106,7 @@ _smp_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
   size_t bytes = n * bsize;
   void *p = NULL;
   if (boundary) {
-    posix_memalign(&p, boundary, bytes);
+    dbg_check(posix_memalign(&p, boundary, bytes));
     p = memset(p, 0, bytes);
   }
   else {
@@ -119,7 +120,7 @@ static hpx_addr_t
 _smp_gas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
   void *p = NULL;
   if (boundary) {
-    posix_memalign(&p, boundary, bytes);
+    dbg_check(posix_memalign(&p, boundary, bytes));
   }
   else {
     p = malloc(bytes);
@@ -133,7 +134,7 @@ _smp_gas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
   size_t bytes = nmemb * size;
   void *p = NULL;
   if (boundary) {
-    posix_memalign(&p, boundary, bytes);
+    dbg_check(posix_memalign(&p, boundary, bytes));
     p = memset(p, 0, bytes);
   } else {
     p = calloc(nmemb, size);
@@ -183,6 +184,17 @@ _smp_memput(void *gas, hpx_addr_t to, const void *from, size_t size,
   return HPX_SUCCESS;
 }
 
+static int
+_smp_memput_lsync(void *gas, hpx_addr_t to, const void *from, size_t size,
+                  hpx_addr_t rsync) {
+  return _smp_memput(gas, to, from, size, HPX_NULL, rsync);
+}
+
+static int
+_smp_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t size) {
+  return _smp_memput(gas, to, from, size, HPX_NULL, HPX_NULL);
+}
+
 /// Copy memory from a global address to a local address.
 static int
 _smp_memget(void *gas, void *to, hpx_addr_t from, size_t size,
@@ -196,6 +208,11 @@ _smp_memget(void *gas, void *to, hpx_addr_t from, size_t size,
   }
   hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
+}
+
+static int
+_smp_memget_sync(void *gas, void *to, hpx_addr_t from, size_t size) {
+  return _smp_memget(gas, to, from, size, HPX_NULL);
 }
 
 /// Move memory from one locality to another.
@@ -237,7 +254,10 @@ static gas_t _smp_vtable = {
   .free           = _smp_gas_free,
   .move           = _smp_move,
   .memget         = _smp_memget,
+  .memget_sync    = _smp_memget_sync,
   .memput         = _smp_memput,
+  .memput_lsync   = _smp_memput_lsync,
+  .memput_rsync   = _smp_memput_rsync,
   .memcpy         = _smp_memcpy
 };
 

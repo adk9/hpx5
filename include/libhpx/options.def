@@ -98,9 +98,9 @@ LIBHPX_OPT_SCALAR(, heapsize, 1lu << 30, size_t)
 #else // smaller default heap for ARM
 LIBHPX_OPT_SCALAR(, heapsize, 1lu << 29, size_t)
 #endif
-LIBHPX_OPT_SCALAR(, gas, HPX_GAS_PGAS, hpx_gas_t)
-LIBHPX_OPT_SCALAR(, boot, HPX_BOOT_DEFAULT, hpx_boot_t)
-LIBHPX_OPT_SCALAR(, transport, HPX_TRANSPORT_DEFAULT, hpx_transport_t)
+LIBHPX_OPT_SCALAR(, gas, HPX_GAS_PGAS, libhpx_gas_t)
+LIBHPX_OPT_SCALAR(, boot, HPX_BOOT_DEFAULT, libhpx_boot_t)
+LIBHPX_OPT_SCALAR(, transport, HPX_TRANSPORT_DEFAULT, libhpx_transport_t)
 LIBHPX_OPT_SCALAR(, network, HPX_NETWORK_DEFAULT, libhpx_network_t)
 /// @}
 
@@ -122,17 +122,28 @@ LIBHPX_OPT_INTSET(log_, at,  HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_A
 /// Debug options
 /// @{
 LIBHPX_OPT_FLAG(dbg_, mprotectstacks, 0)
+LIBHPX_OPT_FLAG(dbg_, syncfree, 0)
 LIBHPX_OPT_FLAG(dbg_, waitonabort, 0)
 LIBHPX_OPT_FLAG(dbg_, waitonsegv, 0)
 LIBHPX_OPT_INTSET(dbg_, waitat, HPX_LOCALITY_NONE, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
 /// @}
 
+/// General intrumentation options
+/// @{
+LIBHPX_OPT_STRING(inst_, dir, NULL)
+LIBHPX_OPT_INTSET(inst_, at, HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
+/// @}
+
 /// Trace options
 /// @{
-LIBHPX_OPT_STRING(trace_, dir, NULL)
 LIBHPX_OPT_SCALAR(trace_, filesize, 1lu << 24, size_t)
 LIBHPX_OPT_BITSET(trace_, classes, LIBHPX_OPT_BITSET_NONE)
-LIBHPX_OPT_INTSET(trace_, at, HPX_LOCALITY_ALL, HPX_LOCALITY_NONE, HPX_LOCALITY_ALL)
+/// @}
+
+/// Profiling options
+/// @{
+LIBHPX_OPT_BITSET(prof_, counters, LIBHPX_OPT_BITSET_NONE)
+LIBHPX_OPT_SCALAR(prof_, event, HPX_PROF_EVENT_NONE, libhpx_prof_event_t)
 /// @}
 
 /// PWC options
@@ -151,14 +162,17 @@ LIBHPX_OPT_SCALAR(isir_, recvlimit, 1lu << 14, uint32_t)
 #ifdef HAVE_PHOTON
 /// Photon options
 /// @{
-LIBHPX_OPT_SCALAR(photon_, backend, HPX_PHOTON_BACKEND_DEFAULT, hpx_photon_backend_t)
+LIBHPX_OPT_SCALAR(photon_, backend, PHOTON_BACKEND_DEFAULT, photon_cfg_backend_t)
 LIBHPX_OPT_SCALAR(photon_, ibport, 1, int)
+LIBHPX_OPT_SCALAR(photon_, ibsrq, 0, int)
+LIBHPX_OPT_SCALAR(photon_, btethresh, -1, int)
 LIBHPX_OPT_SCALAR(photon_, ledgersize, 512, int)
 LIBHPX_OPT_SCALAR(photon_, eagerbufsize, -1, int)
-LIBHPX_OPT_SCALAR(photon_, smallpwcsize, 0, int)
+LIBHPX_OPT_SCALAR(photon_, smallpwcsize, -1, int)
 LIBHPX_OPT_SCALAR(photon_, maxrd, -1, int)
 LIBHPX_OPT_SCALAR(photon_, defaultrd, -1, int)
 LIBHPX_OPT_SCALAR(photon_, numcq, 1, int)
+LIBHPX_OPT_SCALAR(photon_, usercq, 0, int)
 LIBHPX_OPT_FLAG(photon_, usecma, 0)
 LIBHPX_OPT_STRING(photon_, ethdev, "roce0")
 LIBHPX_OPT_STRING(photon_, ibdev, "qib0+mlx4_0")

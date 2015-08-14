@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -19,15 +20,16 @@
 #include <string.h>
 #include <stdlib.h>
 #include <hpx/hpx.h>
+#include <libhpx/bitmap.h>
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/gpa.h>
 #include <libhpx/libhpx.h>
-#include <libhpx/memory.h>
 #include <libhpx/locality.h>
+#include <libhpx/memory.h>
 #include <libhpx/network.h>
-#include <libhpx/bitmap.h>
+#include <libhpx/scheduler.h>
 #include "cyclic.h"
 #include "global.h"
 #include "heap.h"
@@ -103,6 +105,7 @@ _pgas_there(void *gas, uint32_t i) {
     uint64_t offset = gpa_to_offset(there);
     dbg_assert_str(!heap_contains_offset(global_heap, offset),
                    "HPX_THERE() out of expected range\n");
+    (void)offset;
   }
   return there;
 }
@@ -206,6 +209,7 @@ _pgas_gas_free(void *gas, hpx_addr_t gpa, hpx_addr_t sync) {
   const void *lva = heap_offset_to_lva(global_heap, offset);
   dbg_assert_str(heap_contains_lva(global_heap, lva),
                  "attempt to free out of bounds offset %"PRIu64"", offset);
+  (void)lva;
 
   if (heap_offset_is_cyclic(global_heap, offset)) {
     heap_free_cyclic(global_heap, offset);
@@ -243,6 +247,11 @@ _pgas_parcel_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
   return HPX_SUCCESS;
 }
 
+static int _lco_rsync_handler(int src, uint64_t command) {
+  return network_command(here->network, HPX_THERE(src), lco_set, command);
+}
+static COMMAND_DEF(_lco_rsync, _lco_rsync_handler);
+
 static int
 _pgas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
              hpx_addr_t lsync, hpx_addr_t rsync) {
@@ -260,11 +269,94 @@ _pgas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
   }
   else if (rsync) {
     return network_pwc(here->network, to, from, n, lop, lsync,
-                       memput_rsync, rsync);
+                       _lco_rsync, rsync);
   }
   else {
     return network_put(here->network, to, from, n, lop, lsync);
   }
+}
+
+typedef struct {
+  hpx_addr_t to;
+  const void *from;
+  size_t n;
+  hpx_addr_t rsync;
+} _pgas_memput_lsync_continuation_env_t;
+
+static void
+_pgas_memput_lsync_continuation(hpx_parcel_t *p, void *env) {
+  _pgas_memput_lsync_continuation_env_t *e = env;
+  hpx_addr_t pgpa = offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p);
+  if (e->rsync) {
+    dbg_check( network_pwc(here->network, e->to, e->from, e->n, resume_parcel,
+                           pgpa, _lco_rsync, e->rsync) );
+  }
+  else {
+    dbg_check( network_put(here->network, e->to, e->from, e->n, resume_parcel,
+                           pgpa) );
+  }
+}
+
+static int
+_pgas_memput_lsync(void *gas, hpx_addr_t to, const void *from, size_t n,
+                   hpx_addr_t rsync) {
+  if (!n) {
+    return HPX_SUCCESS;
+  }
+
+  if (gpa_to_rank(to) == here->rank) {
+    void *lto = pgas_gpa_to_lva(to);
+    memcpy(lto, from, n);
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    return HPX_SUCCESS;
+  }
+
+  _pgas_memput_lsync_continuation_env_t env = {
+    .to = to,
+    .from = from,
+    .n = n,
+    .rsync = rsync
+  };
+
+  scheduler_suspend(_pgas_memput_lsync_continuation, &env, 0);
+  return HPX_SUCCESS;
+}
+
+
+typedef struct {
+  hpx_addr_t to;
+  const void *from;
+  size_t n;
+} _pgas_memput_rsync_continuation_env_t;
+
+static void
+_pgas_memput_rsync_continuation(hpx_parcel_t *p, void *env) {
+  _pgas_memput_rsync_continuation_env_t *e = env;
+  hpx_addr_t pgpa = offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p);
+  dbg_check( network_pwc(here->network, e->to, e->from, e->n, 0, 0,
+                         resume_parcel_remote, pgpa) );
+}
+
+static int
+_pgas_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t n) {
+  if (!n) {
+    return HPX_SUCCESS;
+  }
+
+  if (gpa_to_rank(to) == here->rank) {
+    void *lto = pgas_gpa_to_lva(to);
+    memcpy(lto, from, n);
+    return HPX_SUCCESS;
+  }
+
+  _pgas_memput_rsync_continuation_env_t env = {
+    .to = to,
+    .from = from,
+    .n = n
+  };
+
+  scheduler_suspend(_pgas_memput_rsync_continuation, &env, 0);
+  return HPX_SUCCESS;
 }
 
 static int
@@ -279,9 +371,43 @@ _pgas_memget(void *gas, void *to, hpx_addr_t from, size_t n, hpx_addr_t lsync) {
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
     return HPX_SUCCESS;
   }
-  else {
-    return network_get(here->network, to, from, n, lco_set, lsync);
+
+  return network_get(here->network, to, from, n, lco_set, lsync);
+}
+
+typedef struct {
+  void *to;
+  hpx_addr_t from;
+  size_t n;
+} _pgas_memget_sync_continutation_env_t;
+
+static void _pgas_memget_sync_continutation(hpx_parcel_t *p, void *env) {
+  _pgas_memget_sync_continutation_env_t *e = env;
+  hpx_addr_t pgpa = offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p);
+  dbg_check( network_get(here->network, e->to, e->from, e->n, resume_parcel,
+                         pgpa) );
+}
+
+static int
+_pgas_memget_sync(void *gas, void *to, hpx_addr_t from, size_t n) {
+  if (!n) {
+    return HPX_SUCCESS;
   }
+
+  if (gpa_to_rank(from) == here->rank) {
+    const void *lfrom = pgas_gpa_to_lva(from);
+    memcpy(to, lfrom, n);
+    return HPX_SUCCESS;
+  }
+
+  _pgas_memget_sync_continutation_env_t env = {
+    .to = to,
+    .from = from,
+    .n = n
+  };
+
+  scheduler_suspend(_pgas_memget_sync_continutation, &env, 0);
+  return HPX_SUCCESS;
 }
 
 static void
@@ -323,7 +449,10 @@ static gas_t _pgas_vtable = {
   .free           = _pgas_gas_free,
   .move           = _pgas_move,
   .memget         = _pgas_memget,
+  .memget_sync    = _pgas_memget_sync,
   .memput         = _pgas_memput,
+  .memput_lsync   = _pgas_memput_lsync,
+  .memput_rsync   = _pgas_memput_rsync,
   .memcpy         = _pgas_parcel_memcpy,
   .owner_of       = _pgas_owner_of
 };

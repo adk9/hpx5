@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -29,7 +30,8 @@ hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
 }
 
 hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p) {
-  return parcel_launch(p);
+  parcel_launch(p);
+  return HPX_SUCCESS;
 }
 
 // Register a thread entry point to do an asynchronous send. It's important that
@@ -39,9 +41,9 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _send_async, hpx_parcel_send_sync, HPX_POIN
 hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
   parcel_state_t state = parcel_get_state(p);
   if (p->size < LIBHPX_SMALL_THRESHOLD || parcel_serialized(state)) {
-    hpx_status_t status = parcel_launch(p);
-    hpx_lco_error(lsync, status, HPX_NULL);
-    return status;
+    parcel_launch(p);
+    hpx_lco_error(lsync, HPX_SUCCESS, HPX_NULL);
+    return HPX_SUCCESS;
   }
   else {
     return hpx_call(HPX_HERE, _send_async, lsync, &p);
@@ -50,9 +52,9 @@ hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
 
 hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t gate) {
   dbg_assert(p->target != HPX_NULL);
-  int e = parcel_launch_through(p, gate);
+  parcel_launch_through(p, gate);
   parcel_delete(p);
-  return e;
+  return HPX_SUCCESS;
 }
 
 // Register a thread entry point to do an asynchronous send-through. It's
@@ -67,10 +69,10 @@ hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
   // want to do the send through eagerly, otherwise we want to spawn a thread to
   // do it.
   if (parcel_size(p) < LIBHPX_SMALL_THRESHOLD) {
-    hpx_status_t status = parcel_launch_through(p, gate);
+    parcel_launch_through(p, gate);
     parcel_delete(p);
-    hpx_lco_error(lsync, status, HPX_NULL);
-    return status;
+    hpx_lco_error(lsync, HPX_SUCCESS, HPX_NULL);
+    return HPX_SUCCESS;
   }
   else {
     return hpx_call(HPX_HERE, _send_through_async, lsync, &p, &gate);

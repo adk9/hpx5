@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -33,6 +34,7 @@
 typedef struct {
   lco_t      lco;
   cvar_t barrier;
+  intptr_t count;
   intptr_t value;                               // the threshold
 } _and_t;
 
@@ -85,12 +87,16 @@ void _and_reset(lco_t *lco) {
   lco_lock(&and->lco);
   dbg_assert_str(cvar_empty(&and->barrier),
                  "Reset on AND LCO that has waiting threads.\n");
-  lco_reset_triggered(&and->lco);
+  sync_store(&and->count, and->value, SYNC_RELEASE);
   cvar_reset(&and->barrier);
+  lco_reset_triggered(&and->lco);
+  if (!and->value) {
+    lco_set_triggered(&and->lco);
+  }
   lco_unlock(&and->lco);
 }
 
-/// Fast set decrements the value, and sets triggered and signals when it gets
+/// Fast set decrements the count, and sets triggered and signals when it gets
 /// to 0.
 static void
 _and_set(lco_t *lco, int size, const void *from) {
@@ -103,11 +109,11 @@ _and_set(lco_t *lco, int size, const void *from) {
 
   _and_t *and = (_and_t *)lco;
 
-  intptr_t value = sync_addf(&and->value, -num, SYNC_ACQ_REL);
-  log_lco("reduced count to %" PRIdPTR " lco %p\n", value, (void*)lco);
-  dbg_assert_str(value >= 0, "too many threads joined (%"PRIdPTR").\n", value);
+  intptr_t count = sync_addf(&and->count, -num, SYNC_ACQ_REL);
+  log_lco("reduced count to %" PRIdPTR " lco %p\n", count, (void*)lco);
+  dbg_assert_str(count >= 0, "too many threads joined (%"PRIdPTR").\n", count);
 
-  if (value == 0) {
+  if (count == 0) {
     lco_lock(lco);
     dbg_assert(!lco_get_triggered(lco));
     lco_set_triggered(lco);
@@ -156,7 +162,7 @@ _and_getref(lco_t *lco, int size, void **out, int *unpin) {
   }
 
   _and_t *and = (void*)lco;
-  *out = &and->value;
+  *out = &and->count;
   *unpin = 0;
   return HPX_SUCCESS;
 }
@@ -167,8 +173,7 @@ _and_getref(lco_t *lco, int size, void **out, int *unpin) {
 // indicate that the caller should unpin the LCO.
 static int
 _and_release(lco_t *lco, void *out) {
-  _and_t *and = (_and_t *)lco;
-  dbg_assert(lco && out && out == &and->value);
+  dbg_assert(lco && out && out == &((_and_t *)lco)->count);
   return 1;
 }
 
@@ -186,15 +191,16 @@ static const lco_class_t _and_vtable = {
 };
 
 static int
-_and_init_handler(_and_t *and, int64_t value) {
-  dbg_assert(value >= 0);
+_and_init_handler(_and_t *and, int64_t count) {
+  dbg_assert(count >= 0);
   lco_init(&and->lco, &_and_vtable);
   cvar_reset(&and->barrier);
-  sync_store(&and->value, value, SYNC_RELEASE);
-  log_lco("initialized with %" PRId64 " inputs lco %p\n", (int64_t)and->value,
+  sync_store(&and->count, count, SYNC_RELEASE);
+  and->value = count;
+  log_lco("initialized with %" PRId64 " inputs lco %p\n", (int64_t)and->count,
           (void*)and);
 
-  if (!value) {
+  if (!count) {
     lco_set_triggered(&and->lco);
   }
   return HPX_SUCCESS;

@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef LIBHPX_NETWORK_H
 #define LIBHPX_NETWORK_H
 
@@ -20,6 +21,7 @@
 /// network's primary responsibility is to accept send requests from the
 /// scheduler, and send them out via the configured transport.
 #include <hpx/hpx.h>
+#include <libhpx/action.h>
 
 /// Forward declarations.
 /// @{
@@ -44,8 +46,13 @@ struct transport;
 /// The release_parcel command will release a parcel.
 extern COMMAND_DECL(release_parcel);
 
-/// The resume_parcel operation will perform parcel_launch() on a parcel.
+/// The resume_parcel operation will perform parcel_launch() on a parcel at the
+/// receiver's locality.
 extern COMMAND_DECL(resume_parcel);
+
+/// The resume_parcel operation will perform parcel_launch() on a parcel at the
+/// sender's locality.
+extern COMMAND_DECL(resume_parcel_remote);
 
 /// The lco_set command will set an lco.
 extern COMMAND_DECL(lco_set);

@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -358,7 +359,7 @@ int bitmap_reserve(bitmap_t *map, uint32_t nbits, uint32_t align, uint32_t *i) {
     }
 
     // make sure we didn't run out of memory
-    assert(bit + nbits < map->max);
+    assert(bit + nbits <= map->max);
 
     if (map->min == bit) {
       uint32_t min = bit + nbits;

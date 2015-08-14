@@ -2,11 +2,14 @@ noinst_HEADERS   = tests.h
 
 noinst_PROGRAMS  = $(TESTS)
 
-AM_CPPFLAGS      = $(LIBFFI_CFLAGS) -I$(top_srcdir)/include -Wno-unused
+AM_CPPFLAGS      = $(LIBFFI_CFLAGS) -I$(top_srcdir)/include -Wno-unused $(LIBHPX_CFLAGS)
 AM_LDFLAGS       = $(LIBHPX_LDFLAGS) -no-install
 LDADD            = $(LIBHPX_LDADD)
 
-TESTS = bcast                   \
+LOG_COMPILER = $(TESTS_CMD)
+
+TESTS = apex_test               \
+        bcast                   \
         call_when               \
         gas_alloc               \
         gas_global_alloc        \
@@ -30,6 +33,7 @@ TESTS = bcast                   \
         parcel_send_through     \
         process                 \
         runtime                 \
+        thread_set_affinity     \
         task                    \
         thread_cont_action      \
         thread_continue         \
@@ -56,6 +60,7 @@ lco_gencount_SOURCES                =  lco_gencount.c
 lco_sema_SOURCES                    =  lco_sema.c
 lco_setget_SOURCES                  =  lco_setget.c
 lco_user_SOURCES                    =  lco_user.c
+lco_wait_SOURCES                    =  lco_wait.c
 libhpx_boot_SOURCES                 =  libhpx_boot.c
 parcel_continuation_SOURCES         =  parcel_continuation.c
 parcel_create_SOURCES               =  parcel_create.c
@@ -69,6 +74,7 @@ thread_cont_action_SOURCES          =  thread_cont_action.c
 thread_continue_SOURCES             =  thread_continue.c
 thread_create_SOURCES               =  thread_create.c
 thread_gettlsid_SOURCES             =  thread_gettlsid.c
+thread_set_affinity_SOURCES         =  thread_set_affinity.c
 thread_yield_SOURCES                =  thread_yield.c
 
 bcast_DEPENDENCIES                  = $(LIBHPX_DEPS)
@@ -82,6 +88,8 @@ lco_array_DEPENDENCIES              = $(LIBHPX_DEPS)
 lco_collectives_DEPENDENCIES        = $(LIBHPX_DEPS)
 lco_futures_DEPENDENCIES            = $(LIBHPX_DEPS)
 lco_gencount_DEPENDENCIES           = $(LIBHPX_DEPS)
+lco_get_remote_DEPENDENCIES         = $(LIBHPX_DEPS)
+lco_reduce_DEPENDENCIES             = $(LIBHPX_DEPS)
 lco_sema_DEPENDENCIES               = $(LIBHPX_DEPS)
 lco_setget_DEPENDENCIES             = $(LIBHPX_DEPS)
 lco_user_DEPENDENCIES               = $(LIBHPX_DEPS)
@@ -99,11 +107,5 @@ thread_cont_action_DEPENDENCIES     = $(LIBHPX_DEPS)
 thread_continue_DEPENDENCIES        = $(LIBHPX_DEPS)
 thread_create_DEPENDENCIES          = $(LIBHPX_DEPS)
 thread_gettlsid_DEPENDENCIES        = $(LIBHPX_DEPS)
+thread_set_affinity_DEPENDENCIES    = $(LIBHPX_DEPS)
 thread_yield_DEPENDENCIES           = $(LIBHPX_DEPS)
-
-
-if ENABLE_LENGTHY_TESTS
-lco_wait_SOURCES                    = lco_wait.c
-endif
-
-LOG_COMPILER = $(TESTS_CMD)

@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -373,7 +374,7 @@ config_print(config_t *cfg, FILE *f) {
              "------------------------\n");
   fprintf(f, "General\n");
   fprintf(f, "  statistics\t\t%d\n", cfg->statistics);
-  fprintf(f, "  heapsize\t\t%lu\n", cfg->heapsize);
+  fprintf(f, "  heapsize\t\t%zu\n", cfg->heapsize);
   fprintf(f, "  gas\t\t\t\"%s\"\n", HPX_GAS_TO_STRING[cfg->gas]);
   fprintf(f, "  boot\t\t\t\"%s\"\n", HPX_BOOT_TO_STRING[cfg->boot]);
   fprintf(f, "  transport\t\t\"%s\"\n", HPX_TRANSPORT_TO_STRING[cfg->transport]);
@@ -434,10 +435,10 @@ config_print(config_t *cfg, FILE *f) {
   }
   fprintf(f, "\n");
 
-  fprintf(f, "\nTracing\n");
-  fprintf(f, "  dir\t\t\t\"%s\"\n", cfg->trace_dir);
-  fprintf(f, "  filesize\t\t%lu\n", cfg->trace_filesize);
-  fprintf(f, "  classes\t\t");
+  fprintf(f, "\nInstrumentation\n");
+  fprintf(f, "  dir\t\t\t\"%s\"\n", cfg->inst_dir);
+  fprintf(f, "  trace filesize\t\t%zu\n", cfg->trace_filesize);
+  fprintf(f, "  trace classes\t\t");
   for (int i = 0, e = sizeof(HPX_TRACE_CLASS_TO_STRING) /
                sizeof(HPX_TRACE_CLASS_TO_STRING[0]); i < e; ++i) {
     uint64_t class = (1lu << i);
@@ -447,17 +448,17 @@ config_print(config_t *cfg, FILE *f) {
   }
   fprintf(f, "\n");
   fprintf(f, "  at\t\t\t");
-  if (!cfg->trace_at) {
+  if (!cfg->inst_at) {
     fprintf(f, "all");
   }
   else {
-    for (int i = 0; cfg->trace_at[i] != HPX_LOCALITY_NONE; ++i) {
-      if (cfg->trace_at[i] == HPX_LOCALITY_ALL) {
+    for (int i = 0; cfg->inst_at[i] != HPX_LOCALITY_NONE; ++i) {
+      if (cfg->inst_at[i] == HPX_LOCALITY_ALL) {
         fprintf(f, "all\n");
         break;
       }
       else {
-        fprintf(f, "%d, ", cfg->trace_at[i]);
+        fprintf(f, "%d, ", cfg->inst_at[i]);
       }
     }
   }
@@ -479,7 +480,7 @@ config_print(config_t *cfg, FILE *f) {
 #ifdef HAVE_PHOTON
   fprintf(f, "\nPhoton\n");
   fprintf(f, "  backend\t\t%s\n",
-             HPX_PHOTON_BACKEND_TO_STRING[cfg->photon_backend]);
+	  PHOTON_BACKEND_TO_STRING[cfg->photon_backend]);
   fprintf(f, "  ibport\t\t%d\n", cfg->photon_ibport);
   fprintf(f, "  ledgersize\t\t%d\n", cfg->photon_ledgersize);
   fprintf(f, "  eagerbufsize\t\t%d\n", cfg->photon_eagerbufsize);

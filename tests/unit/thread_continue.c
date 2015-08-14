@@ -113,6 +113,6 @@ static HPX_ACTION(HPX_DEFAULT, 0, thread_continue_cleanup,
                   thread_continue_cleanup_handler);
 
 TEST_MAIN({
-  ADD_TEST(thread_continue);
-  ADD_TEST(thread_continue_cleanup);
+  ADD_TEST(thread_continue, 0);
+  ADD_TEST(thread_continue_cleanup, 0);
 });

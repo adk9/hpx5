@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -23,6 +24,7 @@
 #include <hpx/hpx.h>
 #include <libhpx/debug.h>
 
+static hpx_time_t _beginning_of_time;
 
 hpx_time_t hpx_time_now(void) {
   hpx_time_t time;
@@ -78,6 +80,14 @@ double hpx_time_ms(hpx_time_t time) {
   return _ns(time)/1e6;
 }
 
+uint64_t hpx_time_elapsed_ns(hpx_time_t from, hpx_time_t to) {
+  return (uint64_t)(((to.tv_sec - from.tv_sec) * 1e9) + (to.tv_nsec - from.tv_nsec));
+}
+
+uint64_t hpx_time_to_ns(hpx_time_t t) {
+  return hpx_time_elapsed_ns(_beginning_of_time, t);
+}
+
 hpx_time_t hpx_time_construct(unsigned long s, unsigned long ns) {
   hpx_time_t t;
   t.tv_sec = s;
@@ -98,4 +108,12 @@ hpx_time_t hpx_time_point(hpx_time_t time, hpx_time_t duration) {
   }
 
   return t;
+}
+
+void libhpx_time_start() {
+  _beginning_of_time = hpx_time_now();
+}
+
+hpx_time_t libhpx_beginning_of_time() {
+  return _beginning_of_time;
 }

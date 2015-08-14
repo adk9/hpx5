@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -202,6 +203,7 @@ _future_release(lco_t *lco, void *out) {
   _future_t *f = (_future_t *)lco;
   dbg_assert(lco && out && out == f->value);
   return 1;
+  (void)f;
 }
 
 // the future vtable

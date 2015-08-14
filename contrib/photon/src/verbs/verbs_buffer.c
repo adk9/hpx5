@@ -8,7 +8,7 @@
 #include "verbs_connect.h"
 #include "logging.h"
 
-static int __verbs_buffer_register(photonBI dbuffer, void *ctx);
+static int __verbs_buffer_register(photonBI dbuffer, void *ctx, int flags);
 static int __verbs_buffer_unregister(photonBI dbuffer, void *ctx);
 
 struct photon_buffer_interface_t verbs_buffer_interface = {
@@ -18,17 +18,18 @@ struct photon_buffer_interface_t verbs_buffer_interface = {
   .buffer_unregister = __verbs_buffer_unregister,
 };
 
-static int __verbs_buffer_register(photonBI dbuffer, void *ctx) {
-  enum ibv_access_flags flags;
+static int __verbs_buffer_register(photonBI dbuffer, void *ctx, int flags) {
+  enum ibv_access_flags ibv_flags;
   struct ibv_mr *mr;
 
   dbg_trace("buffer address: %p", dbuffer);
-
+  
   if (dbuffer->is_registered)
     return 0;
-
-  flags = IBV_ACCESS_LOCAL_WRITE|IBV_ACCESS_REMOTE_READ|IBV_ACCESS_REMOTE_WRITE;
-  mr = ibv_reg_mr(((verbs_cnct_ctx*)ctx)->ib_pd, (void *)dbuffer->buf.addr, dbuffer->buf.size, flags);
+  
+  ibv_flags = IBV_ACCESS_LOCAL_WRITE|IBV_ACCESS_REMOTE_READ|IBV_ACCESS_REMOTE_WRITE;
+  mr = ibv_reg_mr(((verbs_cnct_ctx*)ctx)->ib_pd, (void *)dbuffer->buf.addr,
+		  dbuffer->buf.size, ibv_flags);
   if (!mr) {
     log_err("Could not register MR at %p: %s", (void*)dbuffer->buf.addr, strerror(errno));
     goto error_exit;

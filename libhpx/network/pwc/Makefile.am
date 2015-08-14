@@ -26,3 +26,7 @@ libtbbmalloc_la_CXXFLAGS 	= $(LIBHPX_CXXFLAGS)
 libtbbmalloc_la_SOURCES  	= tbbmalloc_registered.cc
 libpwc_la_LIBADD			= libtbbmalloc.la
 endif
+
+if HAVE_DLMALLOC
+libpwc_la_SOURCES += dlmalloc_registered.c
+endif

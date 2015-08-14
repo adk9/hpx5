@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef HPX_LCO_H
 #define HPX_LCO_H
 
@@ -129,6 +130,29 @@ extern HPX_ACTION_DECL(hpx_lco_reset_action);
 /// @param rsync an LCO to signal remote completion (HPX_NULL == don't wait)
 void hpx_lco_set(hpx_addr_t lco, int size, const void *value, hpx_addr_t lsync,
                  hpx_addr_t rsync);
+
+/// Set an LCO, optionally with data.
+///
+/// This version of hpx_lco_set is locally synchronous, that is that it will not
+/// return until it is safe for the caller to modify the data pointed to by @p
+/// value.
+///
+/// @param          lco The LCO to set, can be HPX_NULL.
+/// @param         size The size of the data.
+/// @param        value The address of the value to set.
+/// @param        rsync an LCO to wait for completion (HPX_NULL == don't wait)
+void hpx_lco_set_lsync(hpx_addr_t lco, int size, const void *value,
+                       hpx_addr_t rsync);
+
+/// Set an LCO, optionally with data.
+///
+/// This version of hpx_lco_set is synchronous, that is that it will not return
+/// until the lco has been set.
+///
+/// @param          lco The LCO to set, can be HPX_NULL.
+/// @param         size The size of the data.
+/// @param        value The address of the value to set.
+void hpx_lco_set_rsync(hpx_addr_t lco, int size, const void *value);
 
 /// Perform a wait operation.
 ///

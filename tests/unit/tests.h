@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef LIBHPX_TESTS_H_
 #define LIBHPX_TESTS_H_
 
@@ -22,17 +23,30 @@
 #include <unistd.h>
 #include <hpx/hpx.h>
 
-#define assert_msg(cond, msg) assert(cond && msg)
+#ifdef NDEBUG
+# define test_assert(e) do {                        \
+    if (!(e)) {                                     \
+      fprintf(stderr, "assert failed '%s'\n", #e);  \
+      exit(EXIT_FAILURE);                           \
+    }                                               \
+  } while (0)
+#else
+# define test_assert(e) assert(e)
+#endif
 
-#define ADD_TEST(test) do {                             \
-    printf("====== TEST %s ======\n", #test);           \
-    int e = hpx_call_sync(HPX_HERE, test, NULL, 0);     \
-    if (e == HPX_SUCCESS) {                             \
-      printf("======== PASSED ========\n");             \
-    } else {                                            \
-      printf("======== FAILED ========\n");             \
-      exit(EXIT_FAILURE);                               \
-    }                                                   \
+#define assert_msg(cond, msg) test_assert(cond && msg)
+#define test_assert_msg(cond, msg) test_assert(cond && msg)
+#define CHECK(e) test_assert(e == HPX_SUCCESS)
+
+#define ADD_TEST(test, at) do {                             \
+    printf("====== TEST %s at %d ======\n", #test, HPX_LOCALITY_ID);    \
+    int e = hpx_call_sync(HPX_THERE(at), test, NULL, 0);    \
+    if (e == HPX_SUCCESS) {                                 \
+      printf("======== PASSED ========\n");                 \
+    } else {                                                \
+      printf("======== FAILED ========\n");                 \
+      exit(EXIT_FAILURE);                                   \
+    }                                                       \
   } while (0)
 
 // A helper macro to generate a main function template for the test.

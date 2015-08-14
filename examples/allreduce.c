@@ -79,6 +79,7 @@ action_allreduce(void *unused, size_t size) {
     hpx_lco_delete(futures[i], HPX_NULL);
 
   hpx_shutdown(HPX_SUCCESS);
+  (void)my_rank;
 }
 
 int main(int argc, char** argv) {

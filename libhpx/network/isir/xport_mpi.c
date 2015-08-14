@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -45,7 +46,7 @@ _mpi_sizeof_status(void) {
 
 static int
 _mpi_isend(int to, const void *from, unsigned n, int tag, void *r) {
-  int e = MPI_Isend(from, n, MPI_BYTE, to, tag, MPI_COMM_WORLD, r);
+  int e = MPI_Isend((void *)from, n, MPI_BYTE, to, tag, MPI_COMM_WORLD, r);
   if (MPI_SUCCESS != e) {
     return log_error("failed MPI_Isend: %u bytes to %d\n", n, to);
   }
@@ -92,6 +93,7 @@ _mpi_testsome(int n, void *requests, int *nout, int *out, void *stats) {
   int e = MPI_Testsome(n, requests, nout, out, stats);
   dbg_assert_str(e == MPI_SUCCESS, "MPI_Testsome error is fatal.\n");
   dbg_assert_str(*nout != MPI_UNDEFINED, "silent MPI_Testsome() error.\n");
+  (void)e;
 }
 
 static void
@@ -132,6 +134,11 @@ _mpi_finish(void *status, int *src, int *bytes) {
 
 static void
 _mpi_delete(void *mpi) {
+  int finalized;
+  MPI_Finalized(&finalized);
+  if (!finalized) {
+    MPI_Finalize();
+  }
   free(mpi);
 }
 

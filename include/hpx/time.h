@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef HPX_TIME_H
 #define HPX_TIME_H
 
@@ -35,6 +36,11 @@ typedef uint64_t hpx_time_t;
 /// @returns the current time at the highest resolution possible
 hpx_time_t hpx_time_now(void);
 
+/// Convert a time object to an integer counting nanoseconds since some start time
+/// "Start" is not specifically defined, but occurs sometime before the first call
+/// to hpx_time_now().
+uint64_t hpx_time_to_ns(hpx_time_t t);
+
 /// Get a double representing a time in microseconds
 /// @param from the time to convert
 /// @returns    the time as converted to a double, in microseconds
@@ -56,6 +62,12 @@ double hpx_time_diff_us(hpx_time_t from, hpx_time_t to);
 /// @param   to the end of the time span to convert
 /// @returns the time span as converted to a double, in milliseconds
 double hpx_time_diff_ms(hpx_time_t from, hpx_time_t to);
+
+/// Get an integer representing a time span in nanoseconds
+/// @param from the beginning of the time span
+/// @param   to the end of the time span to convert
+/// @returns the time span in nanoseconds
+uint64_t hpx_time_diff_ns(hpx_time_t from, hpx_time_t to);
 
 /// Get a time span in `hpx_time_t`
 /// @param start the beginning of the time span

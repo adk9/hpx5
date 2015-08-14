@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -39,6 +40,11 @@
 #define _DELETED_MASK      (0x4)
 #define _STATE_MASK        (0x7)
 
+static void _EVENT(const lco_t *lco, const int id) {
+  static const int class = HPX_INST_CLASS_LCO;
+  inst_trace(class, id, lco, hpx_get_my_thread_id(), lco->bits);
+}
+
 /// return the class pointer, masking out the state.
 static const lco_class_t *_class(lco_t *lco) {
   dbg_assert(lco);
@@ -51,12 +57,14 @@ static const lco_class_t *_class(lco_t *lco) {
 }
 
 static hpx_status_t _fini(lco_t *lco) {
+  _EVENT(lco, HPX_INST_EVENT_LCO_DELETE);
   dbg_assert_str(_class(lco)->on_fini, "LCO implementation incomplete\n");
   _class(lco)->on_fini(lco);
   return HPX_SUCCESS;
 }
 
 static hpx_status_t _set(lco_t *lco, size_t size, const void *data) {
+  _EVENT(lco, HPX_INST_EVENT_LCO_SET);
   const lco_class_t *class = _class(lco);
   dbg_assert_str(class->on_set, "LCO has no on_set handler\n");
   class->on_set(lco, size, data);
@@ -77,6 +85,7 @@ static hpx_status_t _error(lco_t *lco, hpx_status_t code) {
 }
 
 static hpx_status_t _reset(lco_t *lco) {
+  _EVENT(lco, HPX_INST_EVENT_LCO_RESET);
   const lco_class_t *class = _class(lco);
   dbg_assert_str(class->on_reset, "LCO has no on_reset handler\n");
   class->on_reset(lco);
@@ -103,12 +112,14 @@ static hpx_status_t _release(lco_t *lco, void *out) {
 }
 
 static hpx_status_t _wait(lco_t *lco) {
+  _EVENT(lco, HPX_INST_EVENT_LCO_WAIT);
   const lco_class_t *class = _class(lco);
   dbg_assert_str(class->on_wait, "LCO has no on_wait handler\n");
   return class->on_wait(lco);
 }
 
 static hpx_status_t _attach(lco_t *lco, hpx_parcel_t *p) {
+  _EVENT(lco, HPX_INST_EVENT_LCO_ATTACH_PARCEL);
   const lco_class_t *class = _class(lco);
   dbg_assert_str(class->on_attach, "LCO has no on_attach handler\n");
   return class->on_attach(lco, p);
@@ -146,9 +157,8 @@ static int _lco_error_handler(lco_t *lco, void *args, size_t n) {
   hpx_status_t *code = args;
   return _error(lco, *code);
 }
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _lco_error,
-                     _lco_error_handler, HPX_POINTER, HPX_POINTER,
-                     HPX_SIZE_T);
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, lco_error,
+              _lco_error_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 int hpx_lco_reset_action_handler(lco_t *lco) {
   return _reset(lco);
@@ -215,12 +225,6 @@ int attach_handler(lco_t *lco, hpx_parcel_t *p, size_t size) {
   state |= PARCEL_NESTED;
 
   parcel_set_state(p, state);
-
-#ifdef ENABLE_INSTRUMENTATION
-    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_ATTACH_PARCEL, lco,
-               hpx_get_my_thread_id(), lco->bits);
-#endif
-
   return _attach(lco, p);
 }
 LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, attach,
@@ -232,37 +236,27 @@ LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, attach,
 /// @{
 void lco_lock(lco_t *lco) {
   dbg_assert(lco);
+  dbg_assert(self->current->ustack->lco_depth == 0);
+  self->current->ustack->lco_depth = 1;
   sync_lockable_ptr_lock(&lco->lock);
-  dbg_assert(self && self->current);
-  struct ustack *stack = parcel_get_stack(self->current);
-  dbg_assert(stack);
-  stack->lco_depth++;
-  log_lco("%p acquired lco %p (in lco class %p)\n", (void*)self->current, (void*)lco,
-          (void*)_class(lco));
+  log_lco("%p acquired lco %p\n", (void*)self->current, (void*)lco);
 }
 
 void lco_unlock(lco_t *lco) {
   dbg_assert(lco);
-  dbg_assert(self && self->current);
-  struct ustack *stack = parcel_get_stack(self->current);
   log_lco("%p released lco %p\n", (void*)self->current, (void*)lco);
-  dbg_assert(stack);
-  int depth = stack->lco_depth--;
-  dbg_assert_str(depth > 0, "mismatched lco acquire release (lco %p)\n",
-                 (void*)lco);
   sync_lockable_ptr_unlock(&lco->lock);
+  dbg_assert(self->current->ustack->lco_depth == 1);
+  self->current->ustack->lco_depth = 0;
 }
 
 void lco_init(lco_t *lco, const lco_class_t *class) {
-#ifdef ENABLE_INSTRUMENTATION
-    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_INIT, lco,
-               hpx_get_my_thread_id(), lco->bits);
-#endif
+  _EVENT(lco, HPX_INST_EVENT_LCO_INIT);
   lco->vtable = class;
 }
 
 void lco_fini(lco_t *lco) {
-  DEBUG_IF(true) {
+  if (DEBUG) {
     lco->bits |= _DELETED_MASK;
   }
   lco_unlock(lco);
@@ -277,10 +271,7 @@ uintptr_t lco_get_deleted(const lco_t *lco) {
 }
 
 void lco_set_triggered(lco_t *lco) {
-#ifdef ENABLE_INSTRUMENTATION
-    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_TRIGGER, lco,
-               hpx_get_my_thread_id(), lco->bits);
-#endif
+  _EVENT(lco, HPX_INST_EVENT_LCO_TRIGGER);
   lco->bits |= _TRIGGERED_MASK;
 }
 
@@ -301,10 +292,6 @@ void hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync) {
     dbg_check(e, "Could not forward lco_delete\n");
   }
   else {
-#ifdef ENABLE_INSTRUMENTATION
-    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_DELETE, lco,
-               hpx_get_my_thread_id(), lco->bits);
-#endif
     log_lco("deleting lco %p\n", (void*)lco);
     int e = _fini(lco);
     hpx_gas_unpin(target);
@@ -332,7 +319,7 @@ void hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync) {
   }
 
   size_t size = sizeof(code);
-  int e = hpx_call_async(target, _lco_error, HPX_NULL, rsync, &code, size);
+  int e = hpx_call_async(target, lco_error, HPX_NULL, rsync, &code, size);
   dbg_check(e, "Could not forward lco_error\n");
 }
 
@@ -350,10 +337,6 @@ void hpx_lco_reset(hpx_addr_t addr, hpx_addr_t rsync) {
 
   lco_t *lco = NULL;
   if (hpx_gas_try_pin(addr, (void**)&lco)) {
-#ifdef ENABLE_INSTRUMENTATION
-    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_RESET, lco,
-               hpx_get_my_thread_id(), lco->bits);
-#endif
     _reset(lco);
     hpx_gas_unpin(addr);
     hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
@@ -374,15 +357,17 @@ void hpx_lco_reset_sync(hpx_addr_t addr) {
 void hpx_lco_set(hpx_addr_t target, int size, const void *value,
                  hpx_addr_t lsync, hpx_addr_t rsync) {
   if (target == HPX_NULL) {
+    if (lsync) {
+      hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+    }
+    if (rsync) {
+      hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    }
     return;
   }
 
   lco_t *lco = NULL;
   if ((size < HPX_LCO_SET_ASYNC) && hpx_gas_try_pin(target, (void**)&lco)) {
-#ifdef ENABLE_INSTRUMENTATION
-    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_SET, lco,
-               hpx_get_my_thread_id(), lco->bits);
-#endif
     _set(lco, size, value);
     hpx_gas_unpin(target);
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
@@ -394,13 +379,58 @@ void hpx_lco_set(hpx_addr_t target, int size, const void *value,
   dbg_check(e, "Could not forward lco_set\n");
 }
 
+void hpx_lco_set_lsync(hpx_addr_t target, int size, const void *value,
+                       hpx_addr_t rsync) {
+  if (target == HPX_NULL) {
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    return;
+  }
+
+  if (size >= HPX_LCO_SET_ASYNC) {
+    dbg_check( hpx_call(target, hpx_lco_set_action, rsync, value, size) );
+    return;
+  }
+
+  lco_t *lco = NULL;
+  if (hpx_gas_try_pin(target, (void**)&lco)) {
+    _set(lco, size, value);
+    hpx_gas_unpin(target);
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    return;
+  }
+
+  hpx_addr_t lsync = hpx_lco_future_new(0);
+  hpx_lco_set(target, size, value, lsync, rsync);
+  hpx_lco_wait(lsync);
+  hpx_lco_delete(lsync, HPX_NULL);
+}
+
+void hpx_lco_set_rsync(hpx_addr_t target, int size, const void *value) {
+  if (target == HPX_NULL) {
+    return;
+  }
+
+  if (size >= HPX_LCO_SET_ASYNC) {
+    dbg_check( hpx_call_sync(target, hpx_lco_set_action, NULL, 0, value, size) );
+    return;
+  }
+
+  lco_t *lco = NULL;
+  if (hpx_gas_try_pin(target, (void**)&lco)) {
+    _set(lco, size, value);
+    hpx_gas_unpin(target);
+    return;
+  }
+
+  hpx_addr_t rsync = hpx_lco_future_new(0);
+  hpx_lco_set(target, size, value, HPX_NULL, rsync);
+  hpx_lco_wait(rsync);
+  hpx_lco_delete(rsync, HPX_NULL);
+}
+
 hpx_status_t hpx_lco_wait(hpx_addr_t target) {
   lco_t *lco;
   if (hpx_gas_try_pin(target, (void**)&lco)) {
-#ifdef ENABLE_INSTRUMENTATION
-    inst_trace(HPX_INST_CLASS_LCO, HPX_INST_EVENT_LCO_WAIT, target,
-               hpx_get_my_thread_id(), lco->bits);
-#endif
     hpx_status_t status = _wait(lco);
     hpx_gas_unpin(target);
     return status;

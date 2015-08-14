@@ -67,5 +67,5 @@ static int process_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, process, process_handler);
 
 TEST_MAIN({
- ADD_TEST(process);
+ ADD_TEST(process, 0);
 });

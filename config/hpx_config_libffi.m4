@@ -28,6 +28,7 @@ AC_DEFUN([_HAVE_LIBFFI], [
 
 AC_DEFUN([_HPX_CONTRIB_LIBFFI], [
  contrib=$1
+
  
  # Configure the contributed libffi package. We install the pkg-config .pc file
  # for libffi and expose it as a public dependency of HPX, because libffi
@@ -42,32 +43,59 @@ AC_DEFUN([_HPX_CONTRIB_LIBFFI], [
  HPX_PC_REQUIRES_PKGS="$HPX_PC_REQUIRES_PKGS libffi"
 ])
 
-AC_DEFUN([_HPX_PKG_LIBFFI], [
- pkg=$1
- 
- # try and find a pkg-config package for libffi, the libffi package is *public*
- # in the installed package because ffi symbols will appear in application
- # binaries and must be linked directly to libffi, not simply transitively
- # through libhpx.
- PKG_CHECK_MODULES([LIBFFI], [$pkg],
-   [_HAVE_LIBFFI
-    LIBHPX_CFLAGS="$LIBHPX_CFLAGS $LIBFFI_CFLAGS"
-    LIBHPX_LIBS="$LIBHPX_LIBS $LIBFFI_LIBS"
-    HPX_PC_REQUIRES_PKGS="$HPX_PC_REQUIRES_PKGS $pkg"], [have_libffi=no])
-])
-
 AC_DEFUN([_HPX_LIB_LIBFFI], [
  # Search the current path for libffi, and make sure and expose libffi as a
  # public library dependency. This is necessary because application binaries
  # will contain libffi symbols and must be linked directly to libffi, rather
  # than transitively through libhpx.
  AC_CHECK_HEADER([ffi.h], [
-   AC_CHECK_LIB([ffi], [ffi_raw_size], [
-     _HAVE_LIBFFI
-     LIBHPX_LIBS="$LIBHPX_LIBS -lffi"
-     HPX_PC_PUBLIC_LIBS="$HPX_PC_PUBLIC_LIBS -lffi"
-   ])
- ])
+   AC_CHECK_LIB([ffi], [ffi_raw_size],
+     [_HAVE_LIBFFI
+      LIBHPX_LIBS="$LIBHPX_LIBS -lffi"
+      HPX_PC_PUBLIC_LIBS="$HPX_PC_PUBLIC_LIBS -lffi"])])
+])
+
+# This function checks to make sure that the libffi pkg-config module actually
+# provides the paths and libraries required to compile and link to libffi. We
+# see on cutter with the intel module and icc that it doesn't provide an include
+# path for ffi.h---presumably this is a possible result elsewhere.
+AC_DEFUN([_HPX_VERIFY_PKG_LIBFFI], [
+ pkg=$1
+ 
+ AC_MSG_NOTICE([Verifying the libffi package $pkg]) 
+ old_CPPFLAGS="$CPPFLAGS"
+ old_CFLAGS="$CFLAGS"
+ CPPFLAGS="$LIBFFI_CFLAGS"
+ CFLAGS="$LIBFFI_LIBS"
+
+ # If we already ran a check for ffi.h we want to clear those results
+ AS_UNSET([ac_cv_header_ffi_h])
+ AS_UNSET([ac_cv_lib_ffi_ffi_raw_size])
+ AC_CHECK_HEADER([ffi.h], [AC_CHECK_LIB([ffi], [ffi_raw_size], [_HAVE_LIBFFI])])
+ 
+ CPPFLAGS="$old_CPPFLAGS"
+ CFLAGS="$old_CFLAGS"
+])
+
+# This function checks to see if there is a libffi package that works.
+AC_DEFUN([_HPX_PKG_LIBFFI], [
+ pkg=$1
+ 
+ # Try and find a pkg-config package for libffi. We have found that we need some
+ # special-case handling even if we find the package, because it doesn't appear
+ # that the package is enough for all compilers.
+ PKG_CHECK_MODULES([LIBFFI], [$pkg],
+   [_HPX_VERIFY_PKG_LIBFFI([$pkg])],
+   [have_libffi=no])
+
+ # If we have verified the package, then append all the normal flags we
+ # need. The libffi package is *public* in the installed package because ffi
+ # symbols will appear in application binaries and must be linked directly to
+ # libffi, not simply transitively through libhpx.
+ AS_IF([test "x$have_libffi" == xyes],
+   [LIBHPX_CFLAGS="$LIBHPX_CFLAGS $LIBFFI_CFLAGS"
+    LIBHPX_LIBS="$LIBHPX_LIBS $LIBFFI_LIBS"
+    HPX_PC_REQUIRES_PKGS="$HPX_PC_REQUIRES_PKGS $pkg"])
 ])
 
 AC_DEFUN([HPX_CONFIG_LIBFFI], [
@@ -80,10 +108,10 @@ AC_DEFUN([HPX_CONFIG_LIBFFI], [
                    [Control which libffi we use @<:@default=system@:>@])],
    [], [with_libffi=yes])
 
- AS_IF([test "x$with_libffi" == xno],
+  AS_IF([test "x$with_libffi" == xno],
    [AC_MSG_WARN([libffi is required, defaulting --with-libffi=yes])
     with_libffi=yes])
-
+   
  AS_CASE($with_libffi,
    [contrib], [build_libffi=yes],
      
@@ -96,13 +124,13 @@ AC_DEFUN([HPX_CONFIG_LIBFFI], [
    # look for a default-named pkg-config package, and then finally resort to the 
    # contributed version of libffi
    [yes], [_HPX_LIB_LIBFFI
-            AS_IF([test "x$have_libffi" != xyes], [_HPX_PKG_LIBFFI($pkg)])
-            AS_IF([test "x$have_libffi" != xyes], [build_libffi=yes])],
+           AS_IF([test "x$have_libffi" != xyes], [_HPX_PKG_LIBFFI($pkg)])
+           AS_IF([test "x$have_libffi" != xyes], [build_libffi=yes])],
        
    # any other string is interpreted as a custom pkg-config package name to use
    [_HPX_PKG_LIBFFI($with_libffi)])
 
- AS_IF([test "x$build_libffi" == xyes], [_HPX_CONTRIB_LIBFFI($contrib)])
+ AS_IF([test "x$build_libffi" == xyes], [_HPX_CONTRIB_LIBFFI($contrib)]) 
 
  AS_IF([test "x$have_libffi" != xyes],
    [AC_MSG_ERROR([Failed to find libffi for --with-libffi=$with_libffi])])

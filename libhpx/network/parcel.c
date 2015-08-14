@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -85,53 +86,44 @@ parcel_state_t parcel_exchange_state(hpx_parcel_t *p, parcel_state_t state) {
   return sync_swap(&p->state, state, SYNC_ACQ_REL);
 }
 
-int parcel_launch(hpx_parcel_t *p) {
+void parcel_launch(hpx_parcel_t *p) {
   dbg_assert(p->action);
 
   _prepare(p);
 
-#ifdef ENABLE_LOGGING
-  if (p->action != scheduler_nop) {
-    log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64") => %s@(%"PRIu64")\n",
-               p->pid,
-               p->credit,
-               action_table_get_key(here->actions, p->action),
-               hpx_parcel_get_data(p),
-               p->size,
-               p->target,
-               action_table_get_key(here->actions, p->c_action),
-               p->c_target);
-  }
-#endif
+  // if (p->action != scheduler_nop) {
+  log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64") => %s@(%"PRIu64")\n",
+             p->pid,
+             p->credit,
+             action_table_get_key(here->actions, p->action),
+             hpx_parcel_get_data(p),
+             p->size,
+             p->target,
+             action_table_get_key(here->actions, p->c_action),
+             p->c_target);
+  // }
 
-  INST_EVENT_PARCEL_SEND(p);
+  EVENT_PARCEL_SEND(p);
 
   // do a local send through loopback, bypassing the network, otherwise dump the
   // parcel out to the network
   if (hpx_gas_try_pin(p->target, NULL)) {
-    INST_EVENT_PARCEL_RECV(p); // instrument local "receives"
+    EVENT_PARCEL_RECV(p); // instrument local "receives"
     scheduler_spawn(p);
-    return HPX_SUCCESS;
   }
   else {
     int e = network_send(here->network, p);
     dbg_check(e, "failed to perform a network send\n");
-    return e;
   }
 }
 
-int parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate) {
-  if (!gate) {
-    return parcel_launch(p);
+void parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate) {
+  if (gate) {
+    _prepare(p);
+    hpx_pid_t pid = self->current->pid;
+    p = parcel_new(gate, attach, 0, 0, pid, p, parcel_size(p));
   }
-
-  dbg_assert(p->action);
-  _prepare(p);
-
-  hpx_parcel_t *pattach = parcel_new(gate, attach, 0, 0,
-                                     hpx_thread_current_pid(), p,
-                                     parcel_size(p));
-  return parcel_launch(pattach);
+  parcel_launch(p);
 }
 
 void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
@@ -181,7 +173,7 @@ hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action,
   hpx_parcel_t *p = as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, size);
   dbg_assert_str(p, "parcel: failed to allocate %zu registered bytes.\n", size);
   parcel_init(target, action, c_target, c_action, pid, data, len, p);
-  INST_EVENT_PARCEL_CREATE(p);
+  EVENT_PARCEL_CREATE(p, self->current);
   return p;
 }
 
@@ -232,19 +224,15 @@ void parcel_delete(hpx_parcel_t *p) {
   as_free(AS_REGISTERED, p);
 }
 
-struct ustack* parcel_set_stack(hpx_parcel_t *p, struct ustack *next) {
+struct ustack* parcel_swap_stack(hpx_parcel_t *p, struct ustack *next) {
   assert((uintptr_t)next % sizeof(void*) == 0);
   // This can detect races in the scheduler when two threads try and process the
   // same parcel.
-  if (DEBUG) {
+#ifdef ENABLE_DEBUG
     return sync_swap(&p->ustack, next, SYNC_ACQ_REL);
-  }
-  else {
+#else
+    struct ustack *old = p->ustack;
     p->ustack = next;
-    return NULL;
-  }
-}
-
-struct ustack *parcel_get_stack(const hpx_parcel_t *p) {
-  return p->ustack;
+    return old;
+#endif
 }

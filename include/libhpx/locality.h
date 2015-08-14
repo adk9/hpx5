@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef LIBHPX_LOCALITY_H
 #define LIBHPX_LOCALITY_H
 
@@ -31,8 +32,6 @@
 #ifdef HAVE_HWLOC
 # include <hwloc.h>
 #endif
-
-#include <libhpx/gas.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -65,7 +64,7 @@ typedef struct locality {
   uint32_t                      rank;
   uint32_t                     ranks;
   struct boot                  *boot;
-  struct gas                    *gas;
+  void                          *gas;
   struct network            *network;
   struct scheduler            *sched;
   struct config              *config;

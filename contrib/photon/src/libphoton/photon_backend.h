@@ -21,11 +21,12 @@
 
 #define PHOTON_GET_CQ_IND(n, i) ((n > 1) ? (i % n) : 0)
 
-#define DEF_EAGER_BUF_SIZE   (1024*256) // 256K bytes of space per rank
-#define DEF_SMALL_MSG_SIZE   (4096)
-#define DEF_LEDGER_SIZE      (64)       // This should not exceed MCA max_qp_wr (typically 16K)
+#define DEF_EAGER_BUF_SIZE   (1024*64) // 64K bytes of space per rank
+#define DEF_SMALL_MSG_SIZE   (1024)
+#define DEF_LEDGER_SIZE      (64)      // This should not exceed MCA max_qp_wr (typically 16K)
 #define DEF_SP_SIZE          (128)
 #define DEF_NUM_CQ           1
+#define DEF_USE_RCQ          0
 
 #define UD_MASK_SIZE         1<<6
 
@@ -35,7 +36,8 @@
 #define SENDRECV             0x03
 
 #define RDMA_FLAG_NIL        0x00
-#define RDMA_FLAG_NO_CQE     0x01
+#define RDMA_FLAG_NO_CQE     1<<1
+#define RDMA_FLAG_WITH_IMM   1<<2
 
 #define LEDGER_ALL           0xff
 #define LEDGER_INFO          1<<1
@@ -142,14 +144,15 @@ struct photon_backend_t {
   int (*io_finalize)();
   /* data movement -- needs to be split out */
   int (*rdma_put)(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
-                  photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags);
+                  photonBuffer lbuf, photonBuffer rbuf, uint64_t id, uint64_t imm, int flags);
   int (*rdma_get)(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
                   photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags);
   int (*rdma_send)(photonAddr addr, uintptr_t laddr, uint64_t size,
-                   photonBuffer lbuf, uint64_t id, int flags);
+                   photonBuffer lbuf, uint64_t id, uint64_t imm, int flags);
   int (*rdma_recv)(photonAddr addr, uintptr_t laddr, uint64_t size,
                    photonBuffer lbuf, uint64_t id, int flags);
   int (*get_event)(int proc, int max, photon_rid *ids, int *n);
+  int (*get_revent)(int proc, int max, photon_rid *ids, uint64_t *imms, int *n);
 };
 
 extern struct photon_backend_t  photon_default_backend;

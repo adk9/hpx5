@@ -68,8 +68,9 @@ static int _gather_action(const InitArgs *args, size_t n) {
     for (int i = 0; i < iterations + skip ; i++) {
       t_start = TIME();
 
+      double dsize = size; // we need a double, not an int
       hpx_lco_alltoall_setid(ld->collVal, ld->index, THREADS*sizeof(double),
-                             &size, HPX_NULL, HPX_NULL);
+                             &dsize, HPX_NULL, HPX_NULL);
       hpx_lco_alltoall_getid(ld->collVal, ld->index, sizeof(maxVal),
                              &maxVal[0]);
 

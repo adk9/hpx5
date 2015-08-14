@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -33,6 +34,7 @@
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
 #include "logtable.h"
+#include <time.h>
 
 /// complete path to the directory to which log files, etc. will be written
 static const char *_log_path = NULL;
@@ -63,6 +65,8 @@ static void _dump_actions() {
     log_error("failed to open action id file %s\n", file_path);
   }
 
+  free(file_path);
+
   const struct action_table *table = here->actions;
   int num_actions = action_table_size(table);
   for (int i = 0; i < num_actions; i++) {
@@ -91,7 +95,7 @@ static void _log_create(int class, int id, size_t size, hpx_time_t now) {
 
   char *file_path = _get_complete_path(_log_path, filename);
 
-  int e = logtable_init(&_logs[id], file_path, size, class, id, now);
+  int e = logtable_init(&_logs[id], file_path, size, class, id);
   if (e) {
     log_error("failed to initialize log file %s\n", file_path);
   }
@@ -153,19 +157,20 @@ int inst_init(config_t *cfg) {
 #ifndef ENABLE_INSTRUMENTATION
   return LIBHPX_OK;
 #endif
-  if (!config_trace_classes_isset(cfg, LIBHPX_OPT_BITSET_ALL)) {
+  if (!config_trace_classes_isset(cfg, LIBHPX_OPT_BITSET_ALL)
+      && !config_prof_counters_isset(cfg, LIBHPX_OPT_BITSET_ALL)) {
     return LIBHPX_OK;
   }
 
-  if (!config_trace_at_isset(cfg, hpx_get_my_rank())) {
+  if (!config_inst_at_isset(cfg, hpx_get_my_rank())) {
     return LIBHPX_OK;
   }
 
-  _log_path = _get_log_path(cfg->trace_dir);
+  _log_path = _get_log_path(cfg->inst_dir);
   if (_log_path == NULL) {
     return LIBHPX_OK;
   }
-  printf("initialized %s for tracing\n", _log_path);
+  printf("initialized %s for instrumentation\n", _log_path);
 
   // create log files
   hpx_time_t start = hpx_time_now();
@@ -180,6 +185,32 @@ int inst_init(config_t *cfg) {
   return LIBHPX_OK;
 }
 
+static void _dump_hostnames() {
+  if(_log_path == NULL){
+    return;
+  }
+  char hostname[HOSTNAME_LENGTH];
+  gethostname(hostname, HOSTNAME_LENGTH);
+
+  char filename[256];
+  snprintf(filename, 256, "hostname.%d", hpx_get_my_rank());
+  char *filepath = _get_complete_path(_log_path, filename);
+  FILE *f = fopen(filepath, "w");
+  if(f == NULL){
+    log_error("failed to open hostname file %s\n", filepath);
+    free(filepath);
+    return;
+  }
+
+  fprintf(f, "%s\n", hostname);
+  int e = fclose(f);
+  if(e != 0){
+    log_error("failed to write hostname to %s\n", filepath);
+  }
+
+  free(filepath);
+}
+
 /// This is for things that can only happen once hpx_run has started.
 /// Specifically, actions must have been finalized. There may be additional
 /// restrictions in the future.
@@ -191,15 +222,60 @@ int inst_start() {
   // write action table for tracing
   if (inst_trace_class(HPX_INST_CLASS_PARCEL)) {
     _dump_actions();
+    _dump_hostnames();
   }
+
   return 0;
 }
 
 void inst_fini(void) {
+  prof_fini();
   for (int i = 0, e = HPX_INST_NUM_EVENTS; i < e; ++i) {
     logtable_fini(&_logs[i]);
   }
   free((void*)_log_path);
+}
+
+void inst_prof_dump(profile_log_t profile_log){
+  if(_log_path == NULL){
+    return;
+  }
+
+  char filename[256];
+  snprintf(filename, 256, "profile.%d.log", hpx_get_my_rank());
+  char *filepath = _get_complete_path(_log_path, filename);
+  FILE *f = fopen(filepath, "w");
+  if(f == NULL){
+    log_error("failed to open profile log file %s\n", filepath);
+    free(filepath);
+    return;
+  }
+  free(filepath);
+
+  int counters = profile_log.num_counters;
+  fprintf(f, "Event occurrences: %ld in %f ms\n\n", profile_log.tally,
+          hpx_time_diff_ms(profile_log.start_time, profile_log.end_time));
+  fprintf(f, "%-16s%-16s%-16s\n", "Counter Name", "Total", "Average");
+  
+  for(int i = 0; i < counters; i++){
+    if(profile_log.tally > 0){
+      fprintf(f, "%-16s%-16lld%-16lld\n", 
+              profile_log.counter_names[i],
+              profile_log.counter_totals[i], 
+              profile_log.counter_totals[i]/profile_log.tally);
+    }
+    else{
+      fprintf(f, "%-16s%-16lld%-16s\n", 
+              profile_log.counter_names[i],
+              profile_log.counter_totals[i], 
+              "unknown");
+    }
+  }
+  
+  int e = fclose(f);
+  if(e != 0){
+    log_error("failed to write profile info to %s\n", filepath);
+  }
 }
 
 void inst_vtrace(int UNUNSED, int n, int id, ...) {
@@ -221,3 +297,4 @@ void inst_vtrace(int UNUNSED, int n, int id, ...) {
   }
   logtable_append(log, args[0], args[1], args[2], args[3]);
 }
+

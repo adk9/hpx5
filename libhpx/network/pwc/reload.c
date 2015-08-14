@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -88,7 +89,7 @@ static int _recv_parcel_handler(int src, command_t command) {
 #endif
   p->src = src;
   parcel_set_state(p, PARCEL_SERIALIZED | PARCEL_BLOCK_ALLOCATED);
-  INST_EVENT_PARCEL_RECV(p);
+  EVENT_PARCEL_RECV(p);
   scheduler_spawn(p);
   return HPX_SUCCESS;
 }
@@ -114,7 +115,7 @@ _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
   op->n = 0;
   op->src = NULL;
   op->src_key = NULL;
-  op->lop = 0;
+  op->lop = (command_t){0};
   op->rop = command_pack(_reload_request, r);
   int e = xport->command(op);
   if (LIBHPX_OK == e) {
@@ -135,7 +136,7 @@ _reload_send(void *obj, pwc_xport_t *xport, int rank, const hpx_parcel_t *p) {
     .src = p,
     .src_key = xport->key_find_ref(xport, p, n),
     .lop = command_pack(release_parcel, (uintptr_t)p),
-    .rop = 0
+    .rop = {0}
   };
 
   if (!op.src_key) {
@@ -233,6 +234,8 @@ parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
     dbg_assert(send->i == recv->i);
     dbg_assert(send->block == recv->block);
     dbg_assert(!strncmp(send->key, recv->key, XPORT_KEY_SIZE));
+    (void)send;
+    (void)recv;
   }
 
   // Now reload contains:
@@ -269,7 +272,7 @@ static int _reload_request_handler(int src, command_t cmd) {
     .dest_key = reload->remotes[src].key,
     .src = recv,
     .src_key = reload->recv_key,
-    .lop = 0,
+    .lop = {0},
     .rop = command_pack(_reload_reply, 0)
   };
 

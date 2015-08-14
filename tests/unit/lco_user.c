@@ -79,5 +79,5 @@ static int lco_user_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, lco_user, lco_user_handler);
 
 TEST_MAIN({
- ADD_TEST(lco_user);
+ ADD_TEST(lco_user, 0);
 });

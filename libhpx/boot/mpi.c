@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -57,7 +58,7 @@ static int _barrier(const boot_t *boot) {
 
 static int _allgather(const boot_t *boot, const void *restrict src,
                       void *restrict dest, int n) {
-  int e = MPI_Allgather(src, n, MPI_BYTE, dest, n, MPI_BYTE, MPI_COMM_WORLD);
+  int e = MPI_Allgather((void *)src, n, MPI_BYTE, dest, n, MPI_BYTE, MPI_COMM_WORLD);
   if (MPI_SUCCESS != e) {
     dbg_error("failed MPI_Allgather %d.\n", e);
   }
@@ -76,7 +77,7 @@ static int _mpi_alltoall(const void *boot, void *restrict dest,
     counts[i] = n;
     offsets[i] = i * stride;
   }
-  if (MPI_SUCCESS != MPI_Alltoallv(src, counts, offsets, MPI_BYTE,
+  if (MPI_SUCCESS != MPI_Alltoallv((void *)src, counts, offsets, MPI_BYTE,
                                    dest, counts, offsets, MPI_BYTE,
                                    MPI_COMM_WORLD)) {
     dbg_error("MPI_Alltoallv failed at bootstrap\n");

@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef LIBHPX_NETWORK_ISIR_XPORT_H
 #define LIBHPX_NETWORK_ISIR_XPORT_H
 
@@ -20,7 +21,7 @@ struct boot;
 struct gas;
 
 typedef struct isir_xport {
-  hpx_transport_t type;
+  libhpx_transport_t type;
   void   (*delete)(void *xport);
 
   void   (*check_tag)(int tag);

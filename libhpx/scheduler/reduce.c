@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -195,8 +196,7 @@ _reduce_getref(lco_t *lco, int size, void **out, int *unpin) {
 // indicate that the caller should unpin the LCO.
 static int
 _reduce_release(lco_t *lco, void *out) {
-  _reduce_t *r = (_reduce_t *)lco;
-  dbg_assert(lco && out && out == r->value);
+  dbg_assert(lco && out && out == ((_reduce_t *)lco)->value);
   return 1;
 }
 

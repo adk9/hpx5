@@ -15,98 +15,191 @@
 #include <hpx/hpx.h>
 #include "tests.h"
 
-#define BUFFER_SIZE 128
+#define N UINT32_C(8192)
+static const int ONES[N] = {1};
+static const int ZEROS[N] = {0};
+static int _set[N];
+static int _get[N];
 
-// Testcase to test LCO wait and delete functions
-static int _init_array_handler(char *local, size_t *args, size_t size) {
-  size_t n = *args;
-  for(int i = 0; i < n; i++)
-    local[i] = (HPX_LOCALITY_ID == 0) ? 'a' : 'b';
-
-  HPX_THREAD_CONTINUE(local);
+static void _zero(int *buffer) {
+  memset(buffer, 0, sizeof(int) * N);
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _init_array,
-                  _init_array_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
-static int lco_function_handler(void) {
-  int size = HPX_LOCALITIES;
-  int peerID = (HPX_LOCALITY_ID + 1) % size;
-
-  printf("Starting the HPX LCO test\n");
-  // Start the timer
-  hpx_time_t t1 = hpx_time_now();
-
-  hpx_addr_t addr = hpx_gas_alloc_cyclic(size, BUFFER_SIZE*2, 0);
-  hpx_addr_t remote = hpx_addr_add(addr, BUFFER_SIZE*2 * peerID, BUFFER_SIZE*2);
-
-  hpx_addr_t done;
-
-  for (size_t i = 1; i <= BUFFER_SIZE; i*=2) {
-    char *local;
-    // Create a future. Futures are builtin LCO's that represent from async
-    // computation. Futures are allocated in the global address space.
-    done = hpx_lco_future_new(sizeof(void*));
-    hpx_call(remote, _init_array, done, &i, sizeof(i));
-    hpx_call_sync(addr, _init_array, &local, sizeof(local), &i, sizeof(i));
-
-    // Perform a wait operation. The LCO blocks the caller until an LCO set
-    // operation triggers the LCO.
-    hpx_status_t status = hpx_lco_wait(done);
-    assert(status == HPX_SUCCESS);
-
-    // Deletes an LCO. It takes address of the LCO and an rsync ot signal
-    // remote completion.
-    hpx_lco_delete(done, HPX_NULL);
+static int _cmp(const int *lhs, const int *rhs) {
+  for (int i = 0; i < N; ++i) {
+    if (lhs[i] != rhs[i]) {
+      return 0;
+    }
   }
+  return 1;
+}
 
-  hpx_gas_free(addr, HPX_NULL);
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+static void _verify_get(void) {
+  if (!_cmp(_get, ONES)) {
+    exit(-1);
+  }
+}
+
+static void _cpy(int *lhs, const int *rhs) {
+  memcpy(lhs, rhs, sizeof(int) * N);
+}
+
+static void _reset(int *set, int *get, hpx_addr_t sync, hpx_addr_t lco) {
+  if (set) {
+    _zero(set);
+  }
+  if (get) {
+    _zero(get);
+  }
+  if (sync) {
+    hpx_lco_reset_sync(sync);
+  }
+  if (lco) {
+    hpx_lco_reset_sync(lco);
+    hpx_lco_set_rsync(lco, sizeof(ZEROS), ZEROS);
+    hpx_lco_reset_sync(lco);
+  }
+}
+
+static int _new_future_at_handler(void) {
+  hpx_addr_t future = hpx_lco_future_new(sizeof(ONES));
+  HPX_THREAD_CONTINUE(future);
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _new_future_at, _new_future_at_handler);
+
+static int _test_set_handler(hpx_addr_t lco) {
+  hpx_addr_t sync = hpx_lco_future_new(0);
+
+  printf("\ttesting async ... ");
+  {
+    hpx_lco_set(lco, sizeof(ONES), ONES, HPX_NULL, HPX_NULL);
+    hpx_lco_get(lco, sizeof(_get), _get);
+    _verify_get();
+    _reset(NULL, _get, sync, lco);
+  }
+  printf("ok\n");
+
+  printf("\ttesting lsync ... ");
+  {
+    _cpy(_set, ONES);
+    hpx_lco_set(lco, sizeof(ONES), ONES, sync, HPX_NULL);
+    hpx_lco_wait(sync);
+    _cpy(_set, ZEROS);
+    hpx_lco_get(lco, sizeof(_get), &_get);
+    _verify_get();
+    _reset(_set, _get, sync, lco);
+  }
+  printf("ok\n");
+
+  printf("\ttesting rsync ... ");
+  {
+    _cpy(_set, ONES);
+    hpx_lco_set(lco, sizeof(ONES), ONES, HPX_NULL, sync);
+    hpx_lco_wait(sync);
+    _cpy(_set, ZEROS);
+    hpx_lco_get(lco, sizeof(_get), &_get);
+    _verify_get();
+    _reset(_set, _get, sync, lco);
+  }
+  printf("ok\n");
+
+  hpx_call_cc(sync, hpx_lco_delete_action, NULL, NULL);
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _test_set, _test_set_handler, HPX_ADDR);
+
+static int _test_set_lsync_handler(hpx_addr_t lco) {
+  hpx_addr_t rsync = hpx_lco_future_new(0);
+
+  printf("\ttesting ... ");
+  {
+    _cpy(_set, ONES);
+    hpx_lco_set_lsync(lco, sizeof(ONES), ONES, HPX_NULL);
+    _cpy(_set, ZEROS);
+    hpx_lco_get(lco, sizeof(_get), &_get);
+    _verify_get();
+    _reset(_set, _get, HPX_NULL, lco);
+  }
+  printf("ok\n");
+
+  printf("\ttesting rsync ... ");
+  {
+    _cpy(_set, ONES);
+    hpx_lco_set_lsync(lco, sizeof(ONES), ONES, rsync);
+    _cpy(_set, ZEROS);
+    hpx_lco_wait(rsync);
+    hpx_lco_get(lco, sizeof(_get), &_get);
+    _verify_get();
+    _reset(_set, _get, rsync, lco);
+  }
+  printf("ok\n");
+
+  hpx_call_cc(rsync, hpx_lco_delete_action, NULL, NULL);
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _test_set_lsync, _test_set_lsync_handler, HPX_ADDR);
+
+static int _test_set_rsync_handler(hpx_addr_t lco) {
+  printf("\ttesting ... ");
+  _cpy(_set, ONES);
+  hpx_lco_set_rsync(lco, sizeof(ONES), ONES);
+  _cpy(_set, ZEROS);
+  hpx_lco_get(lco, sizeof(_get), &_get);
+  _verify_get();
+  _reset(_set, _get, HPX_NULL, lco);
+  printf("ok\n");
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, 0, lco_function, lco_function_handler);
+static HPX_ACTION(HPX_DEFAULT, 0, _test_set_rsync, _test_set_rsync_handler, HPX_ADDR);
 
-// Testcase to test hpx_lco_set and hpx_lco_get functions.
-static int _lco_setget_handler(uint64_t *args, size_t n) {
-  hpx_addr_t future = hpx_lco_future_new(sizeof(uint64_t));
-
-  uint64_t val = 1234;
-  // Set an LCO, with data.
-  hpx_lco_set(future, sizeof(uint64_t), &val, HPX_NULL, HPX_NULL);
-
-  // Get the value and print for debugging purpose. An LCO blocks the caller
-  // until the future is set, and then copies its value to data into the
-  // provided output location.
-  uint64_t setVal;
-  hpx_lco_get(future, sizeof(setVal), &setVal);
-  hpx_lco_delete(future, HPX_NULL);
-
-  //printf("Value set is = %"PRIu64"\n", setVal);
-  HPX_THREAD_CONTINUE(setVal);
+static int _test_set_local_handler(void) {
+  hpx_addr_t lco;
+  hpx_call_sync(HPX_HERE, _new_future_at, &lco, sizeof(lco));
+  hpx_call_sync(HPX_HERE, _test_set, NULL, 0, &lco);
+  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _lco_setget,
-                  _lco_setget_handler, HPX_POINTER, HPX_SIZE_T);
+static HPX_ACTION(HPX_DEFAULT, 0, _test_set_local, _test_set_local_handler);
 
-static int lco_setget_handler(void) {
-  int size = HPX_LOCALITIES;
-  uint64_t n = 0;
-
-  printf("Starting the HPX LCO Set and Get test\n");
-  printf("localities: %d\n", size);
-  // Start the timer
-  hpx_time_t t1 = hpx_time_now();
-
-  hpx_addr_t done = hpx_lco_future_new(sizeof(uint64_t));
-  hpx_call(HPX_HERE, _lco_setget, done, &n, sizeof(n));
-
-  uint64_t result;
-  hpx_lco_get(done, sizeof(uint64_t), &result);
-  printf("Value returned = %"PRIu64"\n", result);
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
-
-  hpx_lco_delete(done, HPX_NULL);
-  return HPX_SUCCESS;
+static int _test_set_lsync_local_handler(void) {
+  hpx_addr_t lco;
+  hpx_call_sync(HPX_HERE, _new_future_at, &lco, sizeof(lco));
+  hpx_call_sync(HPX_HERE, _test_set_lsync, NULL, 0, &lco);
+  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
 }
-static HPX_ACTION(HPX_DEFAULT, 0, lco_setget, lco_setget_handler);
+static HPX_ACTION(HPX_DEFAULT, 0, _test_set_lsync_local, _test_set_lsync_local_handler);
+
+static int _test_set_rsync_local_handler(void) {
+  hpx_addr_t lco;
+  hpx_call_sync(HPX_HERE, _new_future_at, &lco, sizeof(lco));
+  hpx_call_sync(HPX_HERE, _test_set_rsync, NULL, 0, &lco);
+  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _test_set_rsync_local, _test_set_rsync_local_handler);
+
+static int _test_set_remote_handler(void) {
+  hpx_addr_t peer = HPX_THERE((HPX_LOCALITY_ID + 1) % HPX_LOCALITIES);
+  hpx_addr_t lco;
+  hpx_call_sync(peer, _new_future_at, &lco, sizeof(lco));
+  hpx_call_sync(peer, _test_set, NULL, 0, &lco);
+  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _test_set_remote, _test_set_remote_handler);
+
+static int _test_set_lsync_remote_handler(void) {
+  hpx_addr_t peer = HPX_THERE((HPX_LOCALITY_ID + 1) % HPX_LOCALITIES);
+  hpx_addr_t lco;
+  hpx_call_sync(peer, _new_future_at, &lco, sizeof(lco));
+  hpx_call_sync(peer, _test_set_lsync, NULL, 0, &lco);
+  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _test_set_lsync_remote, _test_set_lsync_remote_handler);
+
+static int _test_set_rsync_remote_handler(void) {
+  hpx_addr_t peer = HPX_THERE((HPX_LOCALITY_ID + 1) % HPX_LOCALITIES);
+  hpx_addr_t lco;
+  hpx_call_sync(peer, _new_future_at, &lco, sizeof(lco));
+  hpx_call_sync(peer, _test_set_rsync, NULL, 0, &lco);
+  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _test_set_rsync_remote, _test_set_rsync_remote_handler);
 
 // Testcase to test hpx_lco_wait_all function.
 static int _init_block_handler(uint32_t *args, size_t n) {
@@ -252,7 +345,7 @@ static int lco_getall_handler(void) {
     n = i + 1;
     hpx_time_t t1 = hpx_time_now();
     printf("Square series for (%d): ", n);
-    fflush(stdout);
+
     hpx_call_sync(HPX_HERE, _getAll, &ssn, sizeof(ssn), &n, sizeof(n));
     printf("%d", ssn);
     printf(" Elapsed: %.7f\n", hpx_time_elapsed_ms(t1)/1e3);
@@ -291,9 +384,20 @@ static int lco_error_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, lco_error, lco_error_handler);
 
 TEST_MAIN({
-  ADD_TEST(lco_function);
-  ADD_TEST(lco_setget);
-  ADD_TEST(lco_waitall);
-  ADD_TEST(lco_getall);
-  ADD_TEST(lco_error);
+    ADD_TEST(_test_set_local, 0);
+    ADD_TEST(_test_set_local, 1 % HPX_LOCALITIES);
+    ADD_TEST(_test_set_lsync_local, 0);
+    ADD_TEST(_test_set_lsync_local, 1 % HPX_LOCALITIES);
+    ADD_TEST(_test_set_rsync_local, 0);
+    ADD_TEST(_test_set_rsync_local, 1 % HPX_LOCALITIES);
+    ADD_TEST(_test_set_remote, 0);
+    ADD_TEST(_test_set_remote, 1 % HPX_LOCALITIES);
+    ADD_TEST(_test_set_lsync_remote, 0);
+    ADD_TEST(_test_set_lsync_remote, 1 % HPX_LOCALITIES);
+    ADD_TEST(_test_set_rsync_remote, 0);
+    ADD_TEST(_test_set_rsync_remote, 1 % HPX_LOCALITIES);
+
+    ADD_TEST(lco_waitall, 0);
+    ADD_TEST(lco_getall, 0);
+    ADD_TEST(lco_error, 0);
 });

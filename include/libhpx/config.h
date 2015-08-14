@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef LIBHPX_CONFIG_H
 #define LIBHPX_CONFIG_H
 
@@ -21,7 +22,7 @@
 #include <hpx/attributes.h>
 
 #ifdef HAVE_PHOTON
-# include "config_photon.h"
+# include "photon_config.h"
 #endif
 
 #define LIBHPX_OPT_BITSET_ALL UINT64_MAX
@@ -35,7 +36,7 @@ typedef enum {
   HPX_GAS_PGAS,        //!< Use PGAS (i.e. global memory is fixed).
   HPX_GAS_AGAS,        //!< Use AGAS (i.e. global memory may move).
   HPX_GAS_MAX
-} hpx_gas_t;
+} libhpx_gas_t;
 
 static const char* const HPX_GAS_TO_STRING[] = {
   "DEFAULT",
@@ -51,7 +52,7 @@ typedef enum {
   HPX_TRANSPORT_MPI,         //!< Use MPI for network transport.
   HPX_TRANSPORT_PHOTON,      //!< Use Photon for network transport.
   HPX_TRANSPORT_MAX
-} hpx_transport_t;
+} libhpx_transport_t;
 
 static const char* const HPX_TRANSPORT_TO_STRING[] = {
   "DEFAULT",
@@ -83,7 +84,7 @@ typedef enum {
   HPX_BOOT_MPI,              //!< Use mpirun to bootstrap HPX.
   HPX_BOOT_PMI,              //!< Use the PMI bootstrapper.
   HPX_BOOT_MAX
-} hpx_boot_t;
+} libhpx_boot_t;
 
 static const char* const HPX_BOOT_TO_STRING[] = {
   "DEFAULT",
@@ -138,7 +139,45 @@ static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
   "lco",
   "process",
   "memory",
+  "schedtimes",
   "all"
+};
+
+#define HPX_PAPI_L1_TCM    (UINT64_C(1) << 0)
+#define HPX_PAPI_L2_TCM    (UINT64_C(1) << 1)
+#define HPX_PAPI_L3_TCM    (UINT64_C(1) << 2)
+#define HPX_PAPI_TLB_TL    (UINT64_C(1) << 3)
+#define HPX_PAPI_TOT_INS   (UINT64_C(1) << 4)
+#define HPX_PAPI_INT_INS   (UINT64_C(1) << 5)
+#define HPX_PAPI_FP_INS    (UINT64_C(1) << 6)
+#define HPX_PAPI_LD_INS    (UINT64_C(1) << 7)
+#define HPX_PAPI_SR_INS    (UINT64_C(1) << 8)
+#define HPX_PAPI_BR_INS    (UINT64_C(1) << 9)
+#define HPX_PAPI_TOT_CYC   (UINT64_C(1) << 10)
+
+static const char *const HPX_PROF_COUNTER_TO_STRING[] = {
+  "HPX_PAPI_L1_TCM",
+  "HPX_PAPI_L2_TCM",
+  "HPX_PAPI_L3_TCM",
+  "HPX_PAPI_TLB_TL",
+  "HPX_PAPI_TOT_INS",
+  "HPX_PAPI_INT_INS",
+  "HPX_PAPI_FP_INS",
+  "HPX_PAPI_LD_INS",
+  "HPX_PAPI_SR_INS",
+  "HPX_PAPI_BR_INS",
+  "HPX_PAPI_TOT_CYC",
+  "all"
+};
+
+typedef enum {
+  HPX_PROF_EVENT_NONE = 0,
+  HPX_PROF_EVENT_MAX
+} libhpx_prof_event_t;
+
+static const char* const HPX_PROF_EVENT_TO_STRING[] = {
+  "HPX_PROF_EVENT_NONE",
+  "INVALID"
 };
 
 /// The HPX configuration type.

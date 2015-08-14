@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -29,13 +30,17 @@
 #include "libhpx/locality.h"
 #include "libhpx/debug.h"
 
+static char *_fetchHostname(char *hostname, int size) {
+  gethostname(hostname, size);
+  return hostname;
+}
 
 // Used for debugging. Causes a process to wait for a debugger to
 // attach, and set the value if i != 0.
 HPX_NO_OPTIMIZE void dbg_wait(void) {
   int i = 0;
-  char hostname[255];
-  gethostname(hostname, 255);
+  char hostname[256];
+  _fetchHostname(hostname, 255);
   printf("PID %d on %s ready for attach\n", getpid(), hostname);
   fflush(stdout);
   while (0 == i)

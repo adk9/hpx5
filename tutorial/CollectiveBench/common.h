@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef LIBHPX_TUTORIALS_COLLECTIVE_BENCH_COMMON_H
 #define LIBHPX_TUTORIALS_COLLECTIVE_BENCH_COMMON_H
 
