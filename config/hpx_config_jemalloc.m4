@@ -31,7 +31,7 @@ AC_DEFUN([_HPX_CONTRIB_JEMALLOC], [
  
  # set up the configuration options
  jemalloc_cargs_opt="--disable-valgrind --disable-fill --disable-stats"
- jemalloc_cargs_debug="--enable-valgrind --enable-fill --enable-debug CPPFLAGS=\"$CPPFLAGS -Dalways_inline=\""
+ jemalloc_cargs_debug="--enable-valgrind --enable-fill CPPFLAGS=\"$CPPFLAGS -Dalways_inline=\""
  jemalloc_cargs_c99="EXTRA_CFLAGS=\"$ac_cv_prog_cc_c99\""
  jemalloc_cargs="$jemalloc_cargs_c99 $JEMALLOC_CARGS"
  AS_IF([test "x$enable_debug" == xyes],

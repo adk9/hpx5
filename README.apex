@@ -10,12 +10,10 @@ export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/path/to/apex/installation/lib/pkgconfig
 
 Then, add the "--with-apex" option to the configure. For example:
 
-./configure --enable-photon --enable-apps --with-mpi --with-apex
+./configure --enable-photon --with-mpi --with-apex
 
 For instructions on downloading and building APEX, please see:
 https://github.com/khuck/xpress-apex
-
-
 
 To build HPX-5 with APEX on Edison, do the following:
 
@@ -63,11 +61,11 @@ else
 fi
 
 # set the path to hpx-autotools, wherever they are
-export PATH=/global/homes/k/khuck/install/hpx-autotools/bin:$PATH
+export PATH=/path/to/install/bin:$PATH
 # bootstrap to make the configure script with APEX options
 ./bootstrap
 # run configure
-./configure --prefix=/global/homes/k/khuck/src/hpx-iu/hpx-master-photon-apex --enable-mpi CC=cc HPX_PHOTON_CARGS=--with-ugni --enable-photon --with-apex --enable-debug
+./configure --prefix=--prefix=/path/to/install --enable-mpi CC=cc HPX_PHOTON_CARGS=--with-ugni --enable-photon --with-apex --enable-debug
 make && make install
 
 -----------------------------------------------------
