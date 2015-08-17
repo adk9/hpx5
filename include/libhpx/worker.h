@@ -49,8 +49,7 @@ typedef struct {
   struct ustack     *stacks;                    // freelisted stacks
   PAD_TO_CACHELINE(sizeof(pthread_t) +
                    sizeof(int) * 6 +
-                   sizeof(void *) +
-                   sizeof(hpx_parcel_t*) +
+                   sizeof(hpx_parcel_t*) * 2 +
                    sizeof(struct ustack*));
   chase_lev_ws_deque_t work;                    // my work
   PAD_TO_CACHELINE(sizeof(chase_lev_ws_deque_t));
