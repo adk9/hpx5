@@ -19,11 +19,12 @@
 /// @brief Implements the semaphore LCO.
 #include <assert.h>
 #include <inttypes.h>
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
-#include <libhpx/locality.h>
-#include <libhpx/memory.h>
-#include <libhpx/scheduler.h>
+
+#include "libhpx/action.h"
+#include "libhpx/debug.h"
+#include "libhpx/locality.h"
+#include "libhpx/memory.h"
+#include "libhpx/scheduler.h"
 #include "cvar.h"
 #include "lco.h"
 
@@ -39,8 +40,16 @@ static void _sema_fini(lco_t *lco);
 static void _sema_error(lco_t *lco, hpx_status_t code);
 static void _sema_reset(lco_t *lco);
 static void _sema_set(lco_t *lco, int size, const void *from);
-static hpx_status_t _sema_wait(lco_t *lco);
-static hpx_status_t _sema_get(lco_t *lco, int size, void *out);
+static hpx_status_t _sema_wait(lco_t *lco, int reset);
+static hpx_status_t _sema_get(lco_t *lco, int size, void *out, int reset);
+
+static void _reset(_sema_t *sema, int reset) {
+  if (reset) {
+    dbg_assert_str(cvar_empty(&sema->avail),
+                   "Reset on a sema that has waiting threads.\n");
+    cvar_reset(&sema->avail);
+  }
+}
 
 static size_t _sema_size(lco_t *lco) {
   _sema_t *sema = (_sema_t *)lco;
@@ -143,9 +152,7 @@ void _sema_error(lco_t *lco, hpx_status_t code) {
 void _sema_reset(lco_t *lco) {
   _sema_t *sema = (_sema_t *)lco;
   lco_lock(&sema->lco);
-  dbg_assert_str(cvar_empty(&sema->avail),
-                 "Reset on a sema that has waiting threads.\n");
-  cvar_reset(&sema->avail);
+  _reset(sema, 1);
   lco_unlock(&sema->lco);
 }
 
@@ -162,7 +169,7 @@ void _sema_set(lco_t *lco, int size, const void *from) {
   lco_unlock(lco);
 }
 
-hpx_status_t _sema_wait(lco_t *lco) {
+hpx_status_t _sema_wait(lco_t *lco, int reset) {
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
   _sema_t *sema = (_sema_t *)lco;
@@ -178,15 +185,16 @@ hpx_status_t _sema_wait(lco_t *lco) {
   // reduce the count, unless there was an error
   if (status == HPX_SUCCESS) {
     sema->count = count - 1;
+    _reset(sema, reset);
   }
 
   lco_unlock(lco);
   return status;
 }
 
-hpx_status_t _sema_get(lco_t *lco, int size, void *out) {
+hpx_status_t _sema_get(lco_t *lco, int size, void *out, int reset) {
   assert(size == 0);
-  return _sema_wait(lco);
+  return _sema_wait(lco, reset);
 }
 
 /// @}

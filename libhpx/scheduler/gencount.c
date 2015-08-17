@@ -24,11 +24,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
-#include <libhpx/locality.h>
-#include <libhpx/memory.h>
-#include <libhpx/scheduler.h>
+#include "libhpx/action.h"
+#include "libhpx/debug.h"
+#include "libhpx/locality.h"
+#include "libhpx/memory.h"
+#include "libhpx/scheduler.h"
 #include "cvar.h"
 #include "lco.h"
 
@@ -96,7 +96,7 @@ static void _gencount_set(lco_t *lco, int size, const void *from) {
 }
 
 /// Get returns the current generation, it does not block.
-static hpx_status_t _gencount_get(lco_t *lco, int size, void *out) {
+static hpx_status_t _gencount_get(lco_t *lco, int size, void *out, int reset) {
   lco_lock(lco);
   _gencount_t *gencnt = (_gencount_t *)lco;
   if (size && out) {
@@ -109,7 +109,7 @@ static hpx_status_t _gencount_get(lco_t *lco, int size, void *out) {
 // Wait means to wait for one generation, i.e., wait on the next generation. We
 // actually just wait on oflow since we signal that every time the generation
 // changes.
-static hpx_status_t _gencount_wait(lco_t *lco) {
+static hpx_status_t _gencount_wait(lco_t *lco, int reset) {
   lco_lock(lco);
   _gencount_t *gencnt = (_gencount_t *)lco;
   hpx_status_t status = scheduler_wait(&gencnt->lco.lock, &gencnt->oflow);

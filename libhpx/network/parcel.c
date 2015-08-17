@@ -10,7 +10,6 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -25,21 +24,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ffi.h>
-#include <hpx/hpx.h>
-#include <libsync/sync.h>
-#include <libhpx/action.h>
-#include <libhpx/attach.h>
-#include <libhpx/debug.h>
-#include <libhpx/gas.h>
-#include <libhpx/instrumentation.h>
-#include <libhpx/libhpx.h>
-#include <libhpx/locality.h>
-#include <libhpx/memory.h>
-#include <libhpx/network.h>
-#include <libhpx/parcel.h>
-#include <libhpx/parcel_block.h>
-#include <libhpx/scheduler.h>
-#include <libhpx/topo.h>
+#include "hpx/hpx.h"
+#include "libsync/sync.h"
+#include "libhpx/action.h"
+#include "libhpx/attach.h"
+#include "libhpx/debug.h"
+#include "libhpx/gas.h"
+#include "libhpx/instrumentation.h"
+#include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
+#include "libhpx/memory.h"
+#include "libhpx/network.h"
+#include "libhpx/parcel.h"
+#include "libhpx/parcel_block.h"
+#include "libhpx/scheduler.h"
+#include "libhpx/topo.h"
 
 #ifdef ENABLE_INSTRUMENTATION
 __thread uint64_t parcel_count = 0;
@@ -115,6 +114,13 @@ void parcel_launch(hpx_parcel_t *p) {
     int e = network_send(here->network, p);
     dbg_check(e, "failed to perform a network send\n");
   }
+}
+
+void parcel_launch_error(hpx_parcel_t *p, int error) {
+  if (error != HPX_SUCCESS) {
+    dbg_error("Launching en error is not yet implemented");
+  }
+  parcel_launch(p);
 }
 
 void parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate) {

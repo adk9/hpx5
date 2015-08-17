@@ -176,8 +176,7 @@ int    _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
 ///                   (i.e., R/W access to, or free of @p args is safe),
 ///                   HPX_NULL if we don't care.
 /// @param     result The global address of an LCO to signal with the result.
-/// @param       args The argument data buffer for @p action.
-/// @param        len The length of the @p args buffer.
+/// @param       args The arguments for @p action.
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call_async invocation.
