@@ -10,26 +10,25 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
 
 #include <stdlib.h>
 #include <string.h>
-#include <hpx/builtins.h>
 
-#include <libhpx/action.h>
-#include <libhpx/boot.h>
-#include <libhpx/config.h>
-#include <libhpx/debug.h>
-#include <libhpx/gpa.h>
-#include <libhpx/gas.h>
-#include <libhpx/libhpx.h>
-#include <libhpx/locality.h>
-#include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
+#include "hpx/builtins.h"
 
+#include "libhpx/action.h"
+#include "libhpx/boot.h"
+#include "libhpx/config.h"
+#include "libhpx/debug.h"
+#include "libhpx/gpa.h"
+#include "libhpx/gas.h"
+#include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
+#include "libhpx/parcel.h"
+#include "libhpx/scheduler.h"
 #include "commands.h"
 #include "parcel_emulation.h"
 #include "pwc.h"
@@ -42,8 +41,7 @@ typedef struct heap_segment {
   xport_key_t key;
 } heap_segment_t;
 
-static void
-_probe_local(pwc_network_t *pwc) {
+static void _probe_local(pwc_network_t *pwc) {
   int rank = here->rank;
 
   // Each time through the loop, we deal with local completions.
@@ -55,8 +53,7 @@ _probe_local(pwc_network_t *pwc) {
   }
 }
 
-static hpx_parcel_t *
-_probe(pwc_network_t *pwc, int rank) {
+static hpx_parcel_t *_probe(pwc_network_t *pwc, int rank) {
   command_t command;
   int src;
   while (pwc->xport->probe(&command, NULL, rank, &src)) {
@@ -66,15 +63,13 @@ _probe(pwc_network_t *pwc, int rank) {
   return NULL;
 }
 
-static int
-_pwc_progress(void *network) {
+static int _pwc_progress(void *network) {
   pwc_network_t *pwc = network;
   _probe_local(pwc);
   return 0;
 }
 
-static hpx_parcel_t *
-_pwc_probe(void *network, int rank) {
+static hpx_parcel_t *_pwc_probe(void *network, int rank) {
   pwc_network_t *pwc = network;
   _probe(pwc, XPORT_ANY_SOURCE);
   return NULL;
@@ -89,8 +84,7 @@ _pwc_register_dma(void *network, const void *base, size_t n, void *key) {
 }
 
 /// Release a network registration.
-static void
-_pwc_release_dma(void *network, const void* base, size_t n) {
+static void _pwc_release_dma(void *network, const void* base, size_t n) {
   pwc_network_t *pwc = network;
   dbg_assert(pwc && pwc->xport && pwc->xport->unpin);
   pwc->xport->unpin(base, n);
@@ -103,8 +97,7 @@ typedef struct {
   xport_key_t key;
 } _rendezvous_get_args_t;
 
-static int
-_rendezvous_launch_handler(int src, command_t cmd) {
+static int _rendezvous_launch_handler(int src, command_t cmd) {
   uintptr_t arg = command_get_arg(cmd);
   hpx_parcel_t *p = (void*)arg;
   parcel_set_state(p, PARCEL_SERIALIZED);
@@ -114,8 +107,7 @@ _rendezvous_launch_handler(int src, command_t cmd) {
 }
 COMMAND_DEF(_rendezvous_launch, _rendezvous_launch_handler);
 
-static int
-_rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size) {
+static int _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size) {
   pwc_network_t *pwc = (pwc_network_t*)here->network;
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, args->n - sizeof(*p));
   dbg_assert(p);
@@ -136,8 +128,7 @@ _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size) {
 static LIBHPX_ACTION(HPX_INTERRUPT, HPX_MARSHALLED, _rendezvous_get,
                      _rendezvous_get_handler, HPX_POINTER, HPX_SIZE_T);
 
-static int
-_pwc_rendezvous_send(pwc_network_t *pwc, hpx_parcel_t *p, int rank) {
+static int _pwc_rendezvous_send(pwc_network_t *pwc, hpx_parcel_t *p, int rank) {
   size_t n = parcel_size(p);
   _rendezvous_get_args_t args = {
     .rank = here->rank,
@@ -149,8 +140,7 @@ _pwc_rendezvous_send(pwc_network_t *pwc, hpx_parcel_t *p, int rank) {
   return hpx_call(there, _rendezvous_get, HPX_NULL, &args, sizeof(args));
 }
 
-static int
-_pwc_send(void *network, hpx_parcel_t *p) {
+static int _pwc_send(void *network, hpx_parcel_t *p) {
   pwc_network_t *pwc = network;
   int rank = gas_owner_of(here->gas, p->target);
   if (parcel_size(p) > pwc->cfg->pwc_parceleagerlimit) {
@@ -162,8 +152,8 @@ _pwc_send(void *network, hpx_parcel_t *p) {
   }
 }
 
-static int
-_pwc_command(void *network, hpx_addr_t loc, hpx_action_t rop, uint64_t args) {
+int pwc_command(void *network, hpx_addr_t loc, hpx_action_t rop, uint64_t args)
+{
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(here->gas, loc);
 
@@ -300,7 +290,7 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   pwc->vtable.delete = _pwc_delete;
   pwc->vtable.progress = _pwc_progress;
   pwc->vtable.send = _pwc_send;
-  pwc->vtable.command = _pwc_command;
+  pwc->vtable.command = pwc_command;
   pwc->vtable.pwc = _pwc_pwc;
   pwc->vtable.put = _pwc_put;
   pwc->vtable.get = _pwc_get;
@@ -309,6 +299,7 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   pwc->vtable.register_dma = _pwc_register_dma;
   pwc->vtable.release_dma = _pwc_release_dma;
   pwc->vtable.lco_get = pwc_lco_get;
+  pwc->vtable.lco_wait = pwc_lco_wait;
 
   // Initialize transports.
   pwc->cfg = cfg;

@@ -23,12 +23,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <hpx/builtins.h>
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
-#include <libhpx/locality.h>
-#include <libhpx/memory.h>
-#include <libhpx/scheduler.h>
+#include "hpx/builtins.h"
+#include "libhpx/action.h"
+#include "libhpx/debug.h"
+#include "libhpx/locality.h"
+#include "libhpx/memory.h"
+#include "libhpx/scheduler.h"
 #include "lco.h"
 #include "cvar.h"
 
@@ -39,6 +39,13 @@ typedef struct {
   cvar_t   full;
   char  value[];
 } _future_t;
+
+static void _reset(_future_t *f) {
+  dbg_assert_str(cvar_empty(&f->full),
+                 "Reset on a future that has waiting threads.\n");
+  lco_reset_triggered(&f->lco);
+  cvar_reset(&f->full);
+}
 
 static size_t _future_size(lco_t *lco) {
   _future_t *future = (_future_t *)lco;
@@ -63,8 +70,7 @@ static bool _trigger(_future_t *f) {
 }
 
 // Nothing extra allocated in the future
-static void
-_future_fini(lco_t *lco) {
+static void _future_fini(lco_t *lco) {
   if (!lco) {
     return;
   }
@@ -74,8 +80,7 @@ _future_fini(lco_t *lco) {
 }
 
 /// Copies @p from into the appropriate location.
-static void
-_future_set(lco_t *lco, int size, const void *from) {
+static void _future_set(lco_t *lco, int size, const void *from) {
   lco_lock(lco);
   _future_t *f = (_future_t *)lco;
   // futures are write-once
@@ -106,19 +111,14 @@ static void _future_error(lco_t *lco, hpx_status_t code) {
   lco_unlock(lco);
 }
 
-static void
-_future_reset(lco_t *lco) {
+static void _future_reset(lco_t *lco) {
   _future_t *f = (_future_t *)lco;
   lco_lock(&f->lco);
-  dbg_assert_str(cvar_empty(&f->full),
-                 "Reset on a future that has waiting threads.\n");
-  lco_reset_triggered(&f->lco);
-  cvar_reset(&f->full);
+  _reset(f);
   lco_unlock(&f->lco);
 }
 
-static hpx_status_t
-_future_attach(lco_t *lco, hpx_parcel_t *p) {
+static hpx_status_t _future_attach(lco_t *lco, hpx_parcel_t *p) {
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
   _future_t *f = (_future_t *)lco;
@@ -148,8 +148,7 @@ _future_attach(lco_t *lco, hpx_parcel_t *p) {
 }
 
 /// Copies the appropriate value into @p out, waiting if the lco isn't set yet.
-static hpx_status_t
-_future_get(lco_t *lco, int size, void *out) {
+static hpx_status_t _future_get(lco_t *lco, int size, void *out, int reset) {
   lco_lock(lco);
 
   _future_t *f = (_future_t *)lco;
@@ -166,22 +165,25 @@ _future_get(lco_t *lco, int size, void *out) {
     dbg_assert(!size && !out);
   }
 
+  if (reset) {
+    _reset(f);
+  }
+
   lco_unlock(lco);
   return HPX_SUCCESS;
 }
 
-static hpx_status_t
-_future_wait(lco_t *lco) {
-  return _future_get(lco, 0, NULL);
+static hpx_status_t _future_wait(lco_t *lco, int reset) {
+  return _future_get(lco, 0, NULL, reset);
 }
 
 /// Returns the reference to the future's value in @p out, waiting if the lco
 /// isn't set yet.
-static hpx_status_t
-_future_getref(lco_t *lco, int size, void **out, int *unpin) {
+static hpx_status_t _future_getref(lco_t *lco, int size, void **out, int *unpin)
+{
   dbg_assert(size && out);
 
-  hpx_status_t status = _future_wait(lco);
+  hpx_status_t status = _future_wait(lco, 0);
   if (status != HPX_SUCCESS) {
     return status;
   }
@@ -198,8 +200,7 @@ _future_getref(lco_t *lco, int size, void **out, int *unpin) {
 // remote reference", the caller knows that if the LCO is not local then it has
 // a temporary buffer---that code path doesn't make it here. Just return '1' to
 // indicate that the caller should unpin the LCO.
-static int
-_future_release(lco_t *lco, void *out) {
+static int _future_release(lco_t *lco, void *out) {
   _future_t *f = (_future_t *)lco;
   dbg_assert(lco && out && out == f->value);
   return 1;

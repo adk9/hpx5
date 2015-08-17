@@ -9,6 +9,7 @@ libpwc_la_SOURCES  = pwc.c \
                      send_buffer.c \
                      circular_buffer.c \
                      lco_get.c \
+                     lco_wait.c \
                      commands.c
 
 if HAVE_PHOTON

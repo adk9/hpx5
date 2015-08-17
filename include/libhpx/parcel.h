@@ -157,6 +157,8 @@ struct ustack *parcel_swap_stack(hpx_parcel_t *p, struct ustack *stack);
 /// pid set.
 void parcel_launch(hpx_parcel_t *p);
 
+void parcel_launch_error(hpx_parcel_t *p, int error);
+
 void parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate);
 
 void parcel_set_state(hpx_parcel_t *p, parcel_state_t state);

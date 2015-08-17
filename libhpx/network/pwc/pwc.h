@@ -14,8 +14,8 @@
 #ifndef LIBHPX_NETWORK_PWC_PWC_H
 #define LIBHPX_NETWORK_PWC_PWC_H
 
-#include <hpx/hpx.h>
-#include <libhpx/network.h>
+#include "hpx/hpx.h"
+#include "libhpx/network.h"
 
 /// Forward declarations.
 /// @{
@@ -41,8 +41,13 @@ network_t *network_pwc_funneled_new(const struct config *cfg, struct boot *boot,
                                     struct gas *gas)
   HPX_MALLOC;
 
+/// Perform a PWC network command.
+int pwc_command(void *obj, hpx_addr_t loc, hpx_action_t rop, uint64_t args);
+
+/// Perform an LCO wait operation through the PWC network.
+int pwc_lco_wait(void *obj, hpx_addr_t lco, int reset);
+
 /// Perform an LCO get operation through the PWC network.
-///
-int pwc_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out);
+int pwc_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset);
 
 #endif

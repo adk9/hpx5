@@ -10,17 +10,16 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
 
-#include <libhpx/action.h>
-#include <libhpx/config.h>
-#include <libhpx/debug.h>
-#include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
-#include <libhpx/worker.h>
+#include "libhpx/action.h"
+#include "libhpx/config.h"
+#include "libhpx/debug.h"
+#include "libhpx/parcel.h"
+#include "libhpx/scheduler.h"
+#include "libhpx/worker.h"
 #include "commands.h"
 #include "pwc.h"
 #include "xport.h"
@@ -40,6 +39,7 @@ typedef struct {
   hpx_parcel_t *p;
   size_t n;
   void *out;
+  int reset;
   xport_key_t key;
   int rank;
 } _pwc_lco_get_request_args_t;
@@ -77,8 +77,19 @@ static int _get_reply(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
 static int _get_reply_stack(_pwc_lco_get_request_args_t *args,
                             pwc_network_t *pwc, hpx_addr_t lco) {
   char ref[args->n];
-  int e = hpx_lco_get(lco, args->n, ref);
-  dbg_check(e, "Failed get during remote lco get request.\n");
+
+  int e = HPX_SUCCESS;
+  if (args->reset) {
+    e = hpx_lco_get_reset(lco, args->n, ref);
+  }
+  else {
+    e = hpx_lco_get(lco, args->n, ref);
+  }
+
+  if (e != HPX_SUCCESS) {
+    dbg_error("Cannot yet return an error from a remote get operation\n");
+  }
+
   command_t resume = command_pack(resume_parcel, (uintptr_t)args->p);
   return _get_reply(args, pwc, ref, resume);
 }
@@ -89,8 +100,19 @@ static int _get_reply_malloc(_pwc_lco_get_request_args_t *args,
                              pwc_network_t *pwc, hpx_addr_t lco) {
   void *ref = registered_malloc(args->n);
   dbg_assert(ref);
-  int e = hpx_lco_get(lco, args->n, ref);
-  dbg_check(e, "Failed get during remote lco get request.\n");
+
+  int e = HPX_SUCCESS;
+  if (args->reset) {
+    e = hpx_lco_get_reset(lco, args->n, ref);
+  }
+  else {
+    e = hpx_lco_get(lco, args->n, ref);
+  }
+
+  if (e != HPX_SUCCESS) {
+    dbg_error("Cannot yet return an error from a remote get operation\n");
+  }
+
   command_t resume = command_pack(resume_parcel, (uintptr_t)args->p);
   e = _get_reply(args, pwc, ref, resume);
   registered_free(ref);
@@ -101,11 +123,13 @@ static int _get_reply_malloc(_pwc_lco_get_request_args_t *args,
 /// temporary storage.
 static int _get_reply_getref(_pwc_lco_get_request_args_t *args,
                              pwc_network_t *pwc, hpx_addr_t lco) {
-
   // Get a reference to the LCO data
   void *ref;
   int e = hpx_lco_getref(lco, args->n, &ref);
-  dbg_check(e, "Failed getref during remote lco get request.\n");
+
+  if (e != HPX_SUCCESS) {
+    dbg_error("Cannot yet return an error from a remote get operation\n");
+  }
 
   // Send back the LCO data. This doesn't resume the remote thread because there
   // is a race where a delete can trigger a use-after-free during our subsequent
@@ -140,7 +164,7 @@ static int _pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args,
   // use-after-free. At this point we can only do the getref() version using two
   // put operations, one to put back to the waiting buffer, and one to resume
   // the waiting thread after we drop our local reference.
-  if (args->n > LIBHPX_SMALL_THRESHOLD) {
+  if (args->n > LIBHPX_SMALL_THRESHOLD && !args->reset) {
     return _get_reply_getref(args, pwc, lco);
   }
 
@@ -173,11 +197,11 @@ typedef struct {
 static void _pwc_lco_get_continuation(hpx_parcel_t *p, void *env) {
   _pwc_lco_get_continuation_env_t *e = env;
   e->request.p = p;
-
-  hpx_parcel_t *t = action_create_parcel(e->lco, _pwc_lco_get_request,
+  hpx_parcel_t *q = action_create_parcel(e->lco, _pwc_lco_get_request,
                                          HPX_NULL, HPX_ACTION_NULL,
                                          2, &e->request, sizeof(e->request));
-  parcel_launch(t);
+  dbg_assert(q);
+  parcel_launch(q);
 }
 
 /// This is the top-level LCO get handler that is called for (possibly) remote
@@ -186,7 +210,7 @@ static void _pwc_lco_get_continuation(hpx_parcel_t *p, void *env) {
 ///
 /// This operation is synchronous and will block until the operation has
 /// completed.
-int pwc_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out) {
+int pwc_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset) {
   pwc_network_t *pwc = (pwc_network_t*)here->network;
 
   _pwc_lco_get_continuation_env_t env = {
@@ -194,6 +218,7 @@ int pwc_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out) {
       .p = NULL,                             // set in _pwc_lco_get_continuation
       .n = n,
       .out = out,
+      .reset = reset,
       .rank = here->rank,
       .key = {0}
     },

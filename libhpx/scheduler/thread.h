@@ -10,7 +10,6 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
 #ifndef LIBHPX_THREAD_H
 #define LIBHPX_THREAD_H
 
@@ -29,9 +28,10 @@ typedef struct ustack {
   hpx_parcel_t *parcel;                         // the progenitor parcel
   struct ustack  *next;                         // freelists and condition vars
   int        lco_depth;                         // how many lco locks we hold
-  int           tls_id;
-  int         stack_id;
-  int             size;
+  int           tls_id;                         //
+  int         stack_id;                         //
+  int             size;                         //
+  int            error;                         // like errno for this thread
   short       affinity;                         // set by user
   char           stack[];
 } ustack_t;

@@ -79,7 +79,8 @@ typedef struct network {
   int (*get)(void*, void *to, hpx_addr_t from, size_t n,
              hpx_action_t lop, hpx_addr_t laddr);
 
-  int (*lco_get)(void *, hpx_addr_t lco, size_t n, void *to);
+  int (*lco_wait)(void *, hpx_addr_t lco, int reset);
+  int (*lco_get)(void *, hpx_addr_t lco, size_t n, void *to, int reset);
 
   hpx_parcel_t *(*probe)(void*, int nrx);
 
@@ -297,9 +298,16 @@ network_release_dma(void *obj, const void *base, size_t bytes) {
 
 /// Perform an LCO get operation through the network.
 static inline int
-network_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out) {
+network_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset) {
   network_t *network = obj;
-  return network->lco_get(network, lco, n, out);
+  return network->lco_get(network, lco, n, out, reset);
+}
+
+/// Perform an LCO wait operation through the network.
+static inline int
+network_lco_wait(void *obj, hpx_addr_t lco, int reset) {
+  network_t *network = obj;
+  return network->lco_wait(network, lco, reset);
 }
 
 #endif // LIBHPX_NETWORK_H

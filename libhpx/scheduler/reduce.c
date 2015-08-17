@@ -24,11 +24,11 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
-#include <libhpx/locality.h>
-#include <libhpx/memory.h>
-#include <libhpx/scheduler.h>
+#include "libhpx/action.h"
+#include "libhpx/debug.h"
+#include "libhpx/locality.h"
+#include "libhpx/memory.h"
+#include "libhpx/scheduler.h"
 #include "cvar.h"
 #include "lco.h"
 
@@ -44,6 +44,17 @@ typedef struct {
   volatile int remaining;
   void            *value;
 } _reduce_t;
+
+static void _reset(_reduce_t *r) {
+  dbg_assert_str(cvar_empty(&r->barrier),
+                 "Reset on allreduce LCO that has waiting threads.\n");
+  cvar_reset(&r->barrier);
+  r->remaining = r->inputs;
+
+  hpx_action_handler_t f = action_table_get_handler(here->actions, r->id);
+  hpx_monoid_id_t id = (hpx_monoid_id_t)f;
+  id(r->value, r->size);
+}
 
 static size_t _reduce_size(lco_t *lco) {
   _reduce_t *reduce = (_reduce_t *)lco;
@@ -103,14 +114,7 @@ static void _reduce_error(lco_t *lco, hpx_status_t code) {
 static void _reduce_reset(lco_t *lco) {
   _reduce_t *r = (_reduce_t *)lco;
   lco_lock(lco);
-  dbg_assert_str(cvar_empty(&r->barrier),
-                 "Reset on allreduce LCO that has waiting threads.\n");
-  cvar_reset(&r->barrier);
-  r->remaining = r->inputs;
-
-  hpx_action_handler_t f = action_table_get_handler(here->actions, r->id);
-  hpx_monoid_id_t id = (hpx_monoid_id_t)f;
-  id(r->value, r->size);
+  _reset(r);
   lco_unlock(lco);
 }
 
@@ -138,8 +142,7 @@ static void _reduce_set(lco_t *lco, int size, const void *from) {
 }
 
 /// Get the value of the reduction.
-static hpx_status_t
-_reduce_get(lco_t *lco, int size, void *out) {
+static hpx_status_t _reduce_get(lco_t *lco, int size, void *out, int reset) {
   _reduce_t *r = (_reduce_t *)lco;
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
@@ -164,20 +167,23 @@ _reduce_get(lco_t *lco, int size, void *out) {
     dbg_assert(!size && !out);
   }
 
+  if (reset) {
+    _reset(r);
+  }
+
   lco_unlock(lco);
   return status;
 }
 
-static hpx_status_t
-_reduce_wait(lco_t *lco) {
-  return _reduce_get(lco, 0, NULL);
+static hpx_status_t _reduce_wait(lco_t *lco, int reset) {
+  return _reduce_get(lco, 0, NULL, reset);
 }
 
-static hpx_status_t
-_reduce_getref(lco_t *lco, int size, void **out, int *unpin) {
+static hpx_status_t _reduce_getref(lco_t *lco, int size, void **out, int *unpin)
+{
   dbg_assert(size && out);
 
-  hpx_status_t status = _reduce_wait(lco);
+  hpx_status_t status = _reduce_wait(lco, 0);
   if (status != HPX_SUCCESS) {
     return status;
   }
@@ -194,8 +200,7 @@ _reduce_getref(lco_t *lco, int size, void **out, int *unpin) {
 // remote reference", the caller knows that if the LCO is not local then it has
 // a temporary buffer---that code path doesn't make it here. Just return '1' to
 // indicate that the caller should unpin the LCO.
-static int
-_reduce_release(lco_t *lco, void *out) {
+static int _reduce_release(lco_t *lco, void *out) {
   dbg_assert(lco && out && out == ((_reduce_t *)lco)->value);
   return 1;
 }

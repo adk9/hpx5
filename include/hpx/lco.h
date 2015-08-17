@@ -163,6 +163,9 @@ void hpx_lco_set_rsync(hpx_addr_t lco, int size, const void *value);
 /// @returns   HPX_SUCCESS or the code passed to hpx_lco_error()
 hpx_status_t hpx_lco_wait(hpx_addr_t lco);
 
+/// Performs a compound atomic wait-and-reset operation.
+hpx_status_t hpx_lco_wait_reset(hpx_addr_t lco);
+
 /// Perform a get operation.
 ///
 /// An LCO blocks the caller until it is set, and then copies its value
@@ -177,6 +180,22 @@ hpx_status_t hpx_lco_wait(hpx_addr_t lco);
 /// @param[out] out the output location (may be null)
 /// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
 hpx_status_t hpx_lco_get(hpx_addr_t lco, int size, void *value);
+
+/// Perform a get operation.
+///
+/// This version of get includes a compound atomic reset operation. An LCO
+/// blocks the caller until it is set, and then copies its value data into the
+/// provided buffer.
+///
+/// If the return status is not HPX_SUCCESS then the LCO was triggered by
+/// hpx_lco_error() rather than hpx_lco_set(), in such a case the memory pointed
+/// to by @p out will not be inspected.
+///
+/// @param      lco the LCO we're processing
+/// @param     size the size of the data
+/// @param[out] out the output location (may be null)
+/// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
+hpx_status_t hpx_lco_get_reset(hpx_addr_t lco, int size, void *value);
 
 /// Perform a "get" operation on an LCO but instead of copying the LCO
 /// buffer out, get a reference to the LCO's buffer.

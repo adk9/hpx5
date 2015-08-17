@@ -10,17 +10,16 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
 
 #include <alloca.h>
 #include <string.h>
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
-#include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
+#include "libhpx/action.h"
+#include "libhpx/debug.h"
+#include "libhpx/parcel.h"
+#include "libhpx/scheduler.h"
 #include "isir.h"
 
 typedef struct {
@@ -42,45 +41,62 @@ static LIBHPX_ACTION(HPX_INTERRUPT, HPX_MARSHALLED, _isir_lco_get_reply,
                      _isir_lco_get_reply_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int
-_isir_lco_get_request_handler(hpx_parcel_t *p, size_t n, void *out) {
+_isir_lco_get_request_handler(hpx_parcel_t *p, size_t n, void *out, int reset) {
   dbg_assert(n > 0);
 
-  hpx_addr_t lco = hpx_thread_current_target();
+  // eagerly create a continuation parcel so that we can serialize the data into
+  // it directly without an extra copy
+  size_t bytes = sizeof(_isir_lco_get_reply_args_t) + n;
+  hpx_parcel_t *curr = self->current;
+  hpx_parcel_t *cont = parcel_new(curr->c_target, curr->c_action, 0, 0,
+                                  curr->pid, NULL, bytes);
+  curr->c_target = 0;
+  curr->c_action = 0;
 
-  dbg_assert_str(n < here->config->stacksize,
-                 "remote lco get could overflow stack\n");
-  _isir_lco_get_reply_args_t *args = alloca(sizeof(*args) + n);
-  dbg_assert(args);
+  // forward the parcel and output buffer back to the sender
+  _isir_lco_get_reply_args_t *args = hpx_parcel_get_data(cont);
   args->p = p;
   args->out = out;
 
-  int e = hpx_lco_get(lco, n, args->data);
-  dbg_check(e, "Failure in remote get operation\n");
-  hpx_thread_continue(args, sizeof(*args) + n);
+  // perform the blocking get operation
+  int e = HPX_SUCCESS;
+  if (reset) {
+    e = hpx_lco_get_reset(curr->target, n, args->data);
+  }
+  else {
+    e = hpx_lco_get(curr->target, n, args->data);
+  }
+
+  // send the continuation
+  parcel_launch_error(cont, e);
+
+  return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _isir_lco_get_request,
                      _isir_lco_get_request_handler, HPX_POINTER, HPX_SIZE_T,
-                     HPX_POINTER);
+                     HPX_POINTER, HPX_INT);
 
 typedef struct {
   hpx_addr_t lco;
   size_t n;
   void *out;
+  int reset;
 } _lco_get_env_t;
 
 static void _lco_get_continuation(hpx_parcel_t *p, void *env) {
   _lco_get_env_t *e = env;
   hpx_parcel_t *l = action_create_parcel(e->lco, _isir_lco_get_request,
                                          HPX_HERE, _isir_lco_get_reply,
-                                         3, &p, &e->n, &e->out);
+                                         4, &p, &e->n, &e->out, &e->reset);
   parcel_launch(l);
 }
 
-int isir_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out) {
+int isir_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset) {
   _lco_get_env_t env = {
     .lco = lco,
     .n = n,
-    .out = out
+    .out = out,
+    .reset = reset
   };
 
   scheduler_suspend(_lco_get_continuation, &env, 0);

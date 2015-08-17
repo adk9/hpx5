@@ -10,7 +10,6 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -23,11 +22,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
-#include <libhpx/locality.h>
-#include <libhpx/memory.h>
-#include <libhpx/scheduler.h>
+#include "libhpx/action.h"
+#include "libhpx/debug.h"
+#include "libhpx/locality.h"
+#include "libhpx/memory.h"
+#include "libhpx/scheduler.h"
 #include "cvar.h"
 #include "lco.h"
 
@@ -45,8 +44,8 @@ typedef struct {
   void        *value;  // out-of-place for alignment reasons
 } _allreduce_t;
 
-static const int _reducing = 0;
-static const  int _reading = 1;
+static const int REDUCING = 0;
+static const int READING = 1;
 
 static size_t _allreduce_size(lco_t *lco) {
   _allreduce_t *allreduce = (_allreduce_t *)lco;
@@ -87,7 +86,7 @@ static void _allreduce_set(lco_t *lco, int size, const void *from) {
   _allreduce_t *r = (_allreduce_t *)lco;
 
   // wait until we're reducing, then perform the op() and join the reduction
-  while ((r->phase != _reducing) && (status == HPX_SUCCESS)) {
+  while ((r->phase != REDUCING) && (status == HPX_SUCCESS)) {
     status = scheduler_wait(&lco->lock, &r->wait);
   }
 
@@ -103,7 +102,7 @@ static void _allreduce_set(lco_t *lco, int size, const void *from) {
 
   // if we're the last one to arrive, switch the phase and signal readers.
   if (--r->count == 0) {
-    r->phase = _reading;
+    r->phase = READING;
     scheduler_signal_all(&r->wait);
   }
 
@@ -118,7 +117,7 @@ static hpx_status_t _allreduce_attach(lco_t *lco, hpx_parcel_t *p) {
 
   // Pick attach to mean "set" for allreduce. We have to wait for reducing to
   // complete before sending the parcel.
-  if (r->phase != _reducing) {
+  if (r->phase != REDUCING) {
     status = cvar_attach(&r->wait, p);
     goto unlock;
   }
@@ -140,13 +139,13 @@ static hpx_status_t _allreduce_attach(lco_t *lco, hpx_parcel_t *p) {
 
 
 /// Get the value of the reduction, will wait if the phase is reducing.
-static hpx_status_t _allreduce_get(lco_t *lco, int size, void *out) {
+static hpx_status_t _allreduce_get(lco_t *lco, int size, void *out, int reset) {
   _allreduce_t *r = (_allreduce_t *)lco;
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
 
   // wait until we're reading
-  while ((r->phase != _reading) && (status == HPX_SUCCESS)) {
+  while ((r->phase != READING) && (status == HPX_SUCCESS)) {
     status = scheduler_wait(&lco->lock, &r->wait);
   }
 
@@ -156,34 +155,36 @@ static hpx_status_t _allreduce_get(lco_t *lco, int size, void *out) {
   }
 
   // copy out the value if the caller wants it
-  if (size && out)
+  if (size && out) {
     memcpy(out, r->value, size);
+  }
 
   // update the count, if I'm the last reader to arrive, switch the mode and
   // release all of the other readers, otherwise wait for the phase to change
   // back to reducing---this blocking behavior prevents gets from one "epoch"
-  // to satisfy earlier _reading epochs
+  // to satisfy earlier READING epochs
   if (++r->count == r->readers) {
     r->count = r->writers;
-    r->phase = _reducing;
+    r->phase = REDUCING;
     hpx_action_handler_t f = action_table_get_handler(here->actions, r->id);
     hpx_monoid_id_t id = (hpx_monoid_id_t)f;
     id(r->value, size);
     scheduler_signal_all(&r->wait);
-  }
-  else {
-    while ((r->phase == _reading) && (status == HPX_SUCCESS))
-      status = scheduler_wait(&r->lco.lock, &r->wait);
+    goto unlock;
   }
 
-  unlock:
-   lco_unlock(lco);
-   return status;
+  while ((r->phase == READING) && (status == HPX_SUCCESS)) {
+    status = scheduler_wait(&r->lco.lock, &r->wait);
+  }
+
+ unlock:
+  lco_unlock(lco);
+  return status;
 }
 
 // Wait for the reduction, loses the value of the reduction for this round.
-static hpx_status_t _allreduce_wait(lco_t *lco) {
-  return _allreduce_get(lco, 0, NULL);
+static hpx_status_t _allreduce_wait(lco_t *lco, int reset) {
+  return _allreduce_get(lco, 0, NULL, reset);
 }
 
 // We universally clone the buffer here, because the all* family of LCOs will
@@ -192,13 +193,12 @@ static hpx_status_t
 _allreduce_getref(lco_t *lco, int size, void **out, int *unpin) {
   *out = registered_malloc(size);
   *unpin = 1;
-  return _allreduce_get(lco, size, *out);
+  return _allreduce_get(lco, size, *out, 0);
 }
 
 // We know that allreduce buffers were always copies, so we can just free them
 // here.
-static int
-_allreduce_release(lco_t *lco, void *out) {
+static int _allreduce_release(lco_t *lco, void *out) {
   registered_free(out);
   return 0;
 }
@@ -230,7 +230,7 @@ _allreduce_init_handler(_allreduce_t *r, size_t writers, size_t readers,
   r->id = id;
   r->count = writers;
   r->writers = writers;
-  r->phase = _reducing;
+  r->phase = REDUCING;
   r->value = NULL;
 
   if (size) {

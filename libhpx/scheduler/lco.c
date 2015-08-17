@@ -21,16 +21,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <libsync/sync.h>
-#include <libhpx/action.h>
-#include <libhpx/attach.h>
-#include <libhpx/debug.h>
-#include <libhpx/instrumentation.h>
-#include <libhpx/locality.h>
-#include <libhpx/memory.h>
-#include <libhpx/network.h>
-#include <libhpx/scheduler.h>
-#include <libhpx/parcel.h>
+#include "libsync/sync.h"
+#include "libhpx/action.h"
+#include "libhpx/attach.h"
+#include "libhpx/debug.h"
+#include "libhpx/instrumentation.h"
+#include "libhpx/locality.h"
+#include "libhpx/memory.h"
+#include "libhpx/network.h"
+#include "libhpx/scheduler.h"
+#include "libhpx/parcel.h"
 #include "lco.h"
 #include "thread.h"
 
@@ -92,10 +92,10 @@ static hpx_status_t _reset(lco_t *lco) {
   return HPX_SUCCESS;
 }
 
-static hpx_status_t _get(lco_t *lco, size_t bytes, void *out) {
+static hpx_status_t _get(lco_t *lco, size_t bytes, void *out, int reset) {
   const lco_class_t *class = _class(lco);
   dbg_assert_str(class->on_get, "LCO has no on_get handler\n");
-  return class->on_get(lco, bytes, out);
+  return class->on_get(lco, bytes, out, reset);
 }
 
 static hpx_status_t _getref(lco_t *lco, size_t bytes, void **out, int *unpin) {
@@ -111,11 +111,11 @@ static hpx_status_t _release(lco_t *lco, void *out) {
   return HPX_SUCCESS;
 }
 
-static hpx_status_t _wait(lco_t *lco) {
+static hpx_status_t _wait(lco_t *lco, int reset) {
   _EVENT(lco, HPX_INST_EVENT_LCO_WAIT);
   const lco_class_t *class = _class(lco);
   dbg_assert_str(class->on_wait, "LCO has no on_wait handler\n");
-  return class->on_wait(lco);
+  return class->on_wait(lco, reset);
 }
 
 static hpx_status_t _attach(lco_t *lco, hpx_parcel_t *p) {
@@ -203,12 +203,11 @@ _lco_get_handler(lco_t *lco, int n) {
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_get,
                      _lco_get_handler, HPX_POINTER, HPX_INT);
 
-static int
-_lco_wait_handler(lco_t *lco) {
-  return _wait(lco);
+static int _lco_wait_handler(lco_t *lco, int reset) {
+  return _wait(lco, reset);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_wait, _lco_wait_handler,
-                     HPX_POINTER);
+                     HPX_POINTER, HPX_INT);
 
 int attach_handler(lco_t *lco, hpx_parcel_t *p, size_t size) {
   hpx_parcel_t *parent = scheduler_current_parcel();
@@ -431,12 +430,25 @@ void hpx_lco_set_rsync(hpx_addr_t target, int size, const void *value) {
 hpx_status_t hpx_lco_wait(hpx_addr_t target) {
   lco_t *lco;
   if (hpx_gas_try_pin(target, (void**)&lco)) {
-    hpx_status_t status = _wait(lco);
+    hpx_status_t status = _wait(lco, 0);
     hpx_gas_unpin(target);
     return status;
   }
 
-  return hpx_call_sync(target, _lco_wait, NULL, 0);
+  int zero = 0;
+  return hpx_call_sync(target, _lco_wait, NULL, 0, &zero);
+}
+
+hpx_status_t hpx_lco_wait_reset(hpx_addr_t target) {
+  lco_t *lco;
+  if (hpx_gas_try_pin(target, (void**)&lco)) {
+    hpx_status_t status = _wait(lco, 1);
+    hpx_gas_unpin(target);
+    return status;
+  }
+
+  int one = 0;
+  return hpx_call_sync(target, _lco_wait, NULL, 0, &one);
 }
 
 size_t hpx_lco_size(hpx_addr_t target) {
@@ -450,8 +462,6 @@ size_t hpx_lco_size(hpx_addr_t target) {
   return hpx_call_sync(target, _lco_size, &size, size, NULL, 0);
 }
 
-/// If the LCO is local, then we use the local get functionality. If the LCO
-/// isn't local, then we use the network's get functionality.
 hpx_status_t hpx_lco_get(hpx_addr_t target, int size, void *value) {
   if (size == 0) {
     return hpx_lco_wait(target);
@@ -460,17 +470,30 @@ hpx_status_t hpx_lco_get(hpx_addr_t target, int size, void *value) {
   dbg_assert(value);
   lco_t *lco;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return network_lco_get(here->network, target, size, value);
+    return network_lco_get(here->network, target, size, value, 0);
   }
 
-  hpx_status_t status = _get(lco, size, value);
+  hpx_status_t status = _get(lco, size, value, 0);
   hpx_gas_unpin(target);
   return status;
 }
 
+hpx_status_t hpx_lco_get_reset(hpx_addr_t target, int size, void *value) {
+  if (size == 0) {
+    return hpx_lco_wait_reset(target);
+  }
 
-// If the LCO isn't local, then we just fall back to the get functionality,
-// using a temporary buffer that will be freed at release.
+  dbg_assert(value);
+  lco_t *lco;
+  if (!hpx_gas_try_pin(target, (void**)&lco)) {
+    return network_lco_get(here->network, target, size, value, 1);
+  }
+
+  hpx_status_t status = _get(lco, size, value, 1);
+  hpx_gas_unpin(target);
+  return status;
+}
+
 hpx_status_t hpx_lco_getref(hpx_addr_t target, int size, void **out) {
   if (size == 0) {
     return hpx_lco_wait(target);
@@ -522,6 +545,8 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
   hpx_addr_t *remotes = calloc(n, sizeof(*remotes));
   dbg_assert_str(remotes, "failed to allocate array for %d elements", n);
 
+  int zero = 0;
+
   // Try and translate (and pin) all of the lcos, for any of the lcos that
   // aren't local, allocate a proxy future and initiate the remote wait. This
   // two-phase approach achieves some parallelism.
@@ -539,7 +564,7 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
     else {
       locals[i] = NULL;
       remotes[i] = hpx_lco_future_new(0);
-      hpx_call_async(lcos[i], _lco_wait, HPX_NULL, remotes[i], NULL, 0);
+      hpx_call_async(lcos[i], _lco_wait, HPX_NULL, remotes[i], &zero);
     }
   }
 
@@ -550,7 +575,7 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
   for (int i = 0; i < n; ++i) {
     hpx_status_t status = HPX_SUCCESS;
     if (locals[i] != NULL) {
-      status = _wait(locals[i]);
+      status = _wait(locals[i], 0);
       hpx_gas_unpin(lcos[i]);
     }
     else if (remotes[i] != HPX_NULL) {
@@ -614,7 +639,7 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
   for (int i = 0; i < n; ++i) {
     hpx_status_t status = HPX_SUCCESS;
     if (locals[i] != NULL) {
-      status = _get(locals[i], sizes[i], values[i]);
+      status = _get(locals[i], sizes[i], values[i], 0);
       hpx_gas_unpin(lcos[i]);
     }
     else if (remotes[i] != HPX_NULL) {
