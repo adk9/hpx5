@@ -55,6 +55,7 @@ typedef struct {
   PAD_TO_CACHELINE(sizeof(chase_lev_ws_deque_t));
   two_lock_queue_t    inbox;                    // mail sent to me
   libhpx_stats_t      stats;                    // per-worker statistics
+  int           last_victim;                    // last successful victim
   void            *profiler;                    // worker maintains a reference to its profiler
 } worker_t HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
