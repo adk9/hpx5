@@ -316,6 +316,8 @@ static hpx_parcel_t *_schedule_steal(worker_t *w) {
   if (p) {
     EVENT_STEAL_LIFO(p, victim);
     COUNTER_SAMPLE(++w->stats.steals);
+  } else {
+    COUNTER_SAMPLE(++w->stats.failed_steals);
   }
 
   return p;
