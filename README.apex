@@ -35,8 +35,9 @@ module load papi
 2) build APEX
 -----------------------------------------------------
 
-git clone https://Kevin.Huck@code.google.com/p/xpress-apex/ 
-cd xpress-apex
+wget https://github.com/khuck/xpress-apex/archive/v0.1-beta.tar.gz
+tar -xvzf v0.1-beta.tar.gz
+cd xpress-apex-v0.1-beta
 # run the bootstrap script
 ./bootstrap-configs/bootstrap-edison.sh -c -j
 
@@ -65,7 +66,7 @@ export PATH=/path/to/install/bin:$PATH
 # bootstrap to make the configure script with APEX options
 ./bootstrap
 # run configure
-./configure --prefix=--prefix=/path/to/install --enable-mpi CC=cc HPX_PHOTON_CARGS=--with-ugni --enable-photon --with-apex --enable-debug
+./configure --prefix=/path/to/install --enable-mpi CC=cc HPX_PHOTON_CARGS=--with-ugni --enable-photon --with-apex --enable-debug
 make && make install
 
 -----------------------------------------------------
@@ -145,4 +146,3 @@ aprun -n 16 -N 1 -j2 -d 48 ./luleshparcels -n 343 -x 48 -i 100 --hpx-threads=48
 
 module load gnuplot
 gnuplot -persist concurrency.*.gnuplot
-
