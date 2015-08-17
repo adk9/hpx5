@@ -80,6 +80,9 @@ contrib/jemalloc_build_global/
 contrib/jemalloc_build_registered/
 contrib/libcuckoo/
 
+# /libapex/
+/libapex/Makefile
+
 # /libhpx/
 /libhpx/Makefile
 /libhpx/libhpx.export
@@ -109,7 +112,7 @@ contrib/libcuckoo/
 /tests/Makefile.in
 /tests/unit/Makefile
 /tests/perf/Makefile
-tests/unit/thread_create
+tests/unit/apex_test
 tests/unit/call_when
 tests/unit/gas_alloc
 tests/unit/parcel_send_through
@@ -133,7 +136,9 @@ tests/unit/bcast
 tests/unit/lco_reduce
 tests/unit/lco_sema
 tests/unit/lco_setget
+tests/unit/thread_create
 tests/unit/thread_gettlsid
+tests/unit/thread_set_affinity
 tests/unit/task
 tests/unit/lco_and
 tests/unit/runtime
@@ -143,6 +148,7 @@ tests/perf/gas_alloc
 tests/perf/gas_addr_trans
 tests/perf/lco_sema
 tests/perf/lco_future
+tests/perf/parbench
 tests/perf/thread_switch
 
 # /docs
