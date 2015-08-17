@@ -87,14 +87,15 @@ static void _usage(FILE *f, int error) {
 static HPX_ACTION_DECL(_main);
 static int _main_action(int iters, int work, int ntasks) {
   printf("parbench(iters=%d, work=%d, ntasks=%d)\n", iters, work, ntasks);
+  printf("time resolution: milliseconds\n", iters, work, ntasks);
   fflush(stdout);
 
   hpx_time_t start = hpx_time_now();
   for (int i = 0; i < ntasks; ++i) {
     fwq(work);
   }
-  double elapsed = hpx_time_elapsed_ms(start)/1e3;
-  printf("seq-for: %.7f\n", elapsed);
+  double elapsed = hpx_time_elapsed_ms(start);
+  printf("seq-for: %.7f\n", elapsed/ntasks);
 
   start = hpx_time_now();
   for (int i = 0; i < iters; ++i) {
@@ -105,23 +106,23 @@ static int _main_action(int iters, int work, int ntasks) {
     hpx_lco_wait(done);
     hpx_lco_delete(done, HPX_NULL);
   }
-  elapsed = hpx_time_elapsed_ms(start)/1e3;
-  printf("for+hpx_call_async: %.7f\n", elapsed);
+  elapsed = hpx_time_elapsed_ms(start);
+  printf("for+hpx_call_async: %.7f\n", elapsed/iters);
 
   start = hpx_time_now();
   for (int i = 0; i < iters; ++i) {
     hpx_par_for_sync(_fwq_parfor, 0, ntasks, &work);
   }
-  elapsed = hpx_time_elapsed_ms(start)/1e3;
-  printf("hpx_par_for_sync: %.7f\n", elapsed);
+  elapsed = hpx_time_elapsed_ms(start);
+  printf("hpx_par_for_sync: %.7f\n", elapsed/iters);
 
   start = hpx_time_now();
   for (int i = 0; i < iters; ++i) {
     hpx_par_call_sync(_fwq, 0, ntasks, ntasks, 1, sizeof(work),
                       env_to_args, sizeof(work), &work);
   }
-  elapsed = hpx_time_elapsed_ms(start)/1e3;
-  printf("hpx_par_call_sync: %.7f\n", elapsed);
+  elapsed = hpx_time_elapsed_ms(start);
+  printf("hpx_par_call_sync: %.7f\n", elapsed/iters);
 
   hpx_shutdown(HPX_SUCCESS);
 }
