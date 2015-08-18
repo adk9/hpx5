@@ -95,10 +95,13 @@ static void _allreduce_set(lco_t *lco, int size, const void *from) {
   }
 
   //perform the op()
-  assert(size && from);
-  hpx_action_handler_t f = action_table_get_handler(here->actions, r->op);
-  hpx_monoid_op_t op = (hpx_monoid_op_t)f;
-  op(r->value, from, size);
+  assert(!size || from);
+  assert(!size || r->op);
+  if (size) {
+    hpx_action_handler_t f = action_table_get_handler(here->actions, r->op);
+    hpx_monoid_op_t op = (hpx_monoid_op_t)f;
+    op(r->value, from, size);
+  }
 
   // if we're the last one to arrive, switch the phase and signal readers.
   if (--r->count == 0) {
@@ -106,8 +109,8 @@ static void _allreduce_set(lco_t *lco, int size, const void *from) {
     scheduler_signal_all(&r->wait);
   }
 
-  unlock:
-   lco_unlock(lco);
+ unlock:
+  lco_unlock(lco);
 }
 
 static hpx_status_t _allreduce_attach(lco_t *lco, hpx_parcel_t *p) {
@@ -132,11 +135,10 @@ static hpx_status_t _allreduce_attach(lco_t *lco, hpx_parcel_t *p) {
   // Go ahead and send this parcel eagerly.
   hpx_parcel_send(p, HPX_NULL);
 
-  unlock:
-    lco_unlock(lco);
-    return status;
+ unlock:
+  lco_unlock(lco);
+  return status;
 }
-
 
 /// Get the value of the reduction, will wait if the phase is reducing.
 static hpx_status_t _allreduce_get(lco_t *lco, int size, void *out, int reset) {
@@ -166,9 +168,11 @@ static hpx_status_t _allreduce_get(lco_t *lco, int size, void *out, int reset) {
   if (++r->count == r->readers) {
     r->count = r->writers;
     r->phase = REDUCING;
-    hpx_action_handler_t f = action_table_get_handler(here->actions, r->id);
-    hpx_monoid_id_t id = (hpx_monoid_id_t)f;
-    id(r->value, size);
+    if (r->id) {
+      hpx_action_handler_t f = action_table_get_handler(here->actions, r->id);
+      hpx_monoid_id_t id = (hpx_monoid_id_t)f;
+      id(r->value, size);
+    }
     scheduler_signal_all(&r->wait);
     goto unlock;
   }
@@ -220,8 +224,10 @@ static const lco_class_t _allreduce_vtable = {
 static int
 _allreduce_init_handler(_allreduce_t *r, size_t writers, size_t readers,
                         size_t size, hpx_action_t id, hpx_action_t op) {
-  assert(id);
-  assert(op);
+  if (size) {
+    assert(id);
+    assert(op);
+  }
 
   lco_init(&r->lco, &_allreduce_vtable);
   cvar_reset(&r->wait);
@@ -236,11 +242,11 @@ _allreduce_init_handler(_allreduce_t *r, size_t writers, size_t readers,
   if (size) {
     r->value = malloc(size);
     assert(r->value);
-  }
 
-  hpx_action_handler_t f = action_table_get_handler(here->actions, r->id);
-  hpx_monoid_id_t lid = (hpx_monoid_id_t)f;
-  lid(r->value, size);
+    hpx_action_handler_t f = action_table_get_handler(here->actions, r->id);
+    hpx_monoid_id_t lid = (hpx_monoid_id_t)f;
+    lid(r->value, size);
+  }
 
   return HPX_SUCCESS;
 }
