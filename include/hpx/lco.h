@@ -502,7 +502,7 @@ hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_action_t id,
 ///
 /// The preferred mode of operation with the allreduce, however, is through the
 /// hpx_lco_allreduce_join(), hpx_lco_allreduce_join_async(),
-/// hpx_lco_allreduce_join_lsync(). In these contexts, the join operation is
+/// hpx_lco_allreduce_join_sync(). In these contexts, the join operation is
 /// considered both a write and a read operation.
 ///
 /// @param participants The static number of participants in the reduction.
