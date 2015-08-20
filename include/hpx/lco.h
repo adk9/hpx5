@@ -497,16 +497,92 @@ hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_action_t id,
 /// Allocate a new all-reduction LCO.
 ///
 /// The reduction is allocated in reduce-mode, i.e., it expects @p participants
-/// to call the hpx_lco_set() operation as the first phase of operation.
+/// to call the hpx_lco_set() operation as the first phase of operation, and @p
+/// readers to "get" the value of the allreduce.
+///
+/// The preferred mode of operation with the allreduce, however, is through the
+/// hpx_lco_allreduce_join(), hpx_lco_allreduce_join_async(),
+/// hpx_lco_allreduce_join_lsync(). In these contexts, the join operation is
+/// considered both a write and a read operation.
 ///
 /// @param participants The static number of participants in the reduction.
-/// @param readers      The static number of the readers of the result of the reduction.
-/// @param size         The size of the data being reduced.
-/// @param id           A function that is used to initialize the data
+/// @param      readers The static number of the readers of the result of the
+///                     reduction.
+/// @param         size The size of the data being reduced.
+/// @param           id A function that is used to initialize the data
 ///                     in every epoch.
-/// @param op           The commutative-associative operation we're performing.
+/// @param           op The commutative-associative operation we're performing.
+///
+/// @returns            The newly allocated LCO, or HPX_NULL on error.
 hpx_addr_t hpx_lco_allreduce_new(size_t participants, size_t readers, size_t size,
                                  hpx_action_t id, hpx_action_t op);
+
+/// Join an all-reduction LCO.
+///
+/// This version of the join operation allows an arbitrary continuation for the
+/// reduced data. This counts as both a set and a get operation, even if the
+/// continuation is null.
+///
+/// @param    allreduce The allreduce LCO to join.
+/// @param           id The id of this input.
+/// @param        bytes The number of bytes to send.
+/// @param        value The value to send.
+/// @param         cont A continuation action for the reduced value.
+/// @param           at A continuation target for the reduced value.
+///
+/// @return             The status of the LCO.
+hpx_status_t hpx_lco_allreduce_join(hpx_addr_t allreduce, int id, size_t bytes,
+                                    const void *value, hpx_action_t cont,
+                                    hpx_addr_t at);
+
+/// Join an all-reduction LCO.
+///
+/// This version of the join operation returns the reduced value asynchronously
+/// to the caller. This counts as both a set and a get operation.
+///
+/// @param    allreduce The allreduce LCO to join.
+/// @param           id The id of this input.
+/// @param        bytes The number of bytes to send.
+/// @param        value The value to send.
+/// @param          out The location to output the reduced value, must be at
+///                     least @p size bytes.
+/// @param         done An LCO that will be set when the operation completes.
+///
+/// @return             The status of the LCO.
+hpx_status_t hpx_lco_allreduce_join_async(hpx_addr_t allreduce, int id,
+                                          size_t bytes, const void *value,
+                                          void *out, hpx_addr_t done);
+
+/// Join an all-reduction LCO.
+///
+/// This version of the join operation returns the reduced value synchronously
+/// to the caller. This counts as both a set and a get operation.
+///
+/// @param    allreduce The allreduce LCO to join.
+/// @param           id The id of this input.
+/// @param        bytes The number of bytes to send.
+/// @param        value The value to send.
+/// @param          out The location to output the reduced value, must be at
+///                     least @p size bytes.
+///
+/// @return             The status of the LCO.
+hpx_status_t hpx_lco_allreduce_join_sync(hpx_addr_t allreduce, int id,
+                                         size_t bytes, const void *value,
+                                         void *out);
+
+/// Join an all-reduction LCO.
+///
+/// @param    allreduce The allreduce LCO to join.
+/// @param           id The id of this input.
+/// @param        bytes The number of bytes to send.
+/// @param        value The value to send.
+/// @param[out]     out The location to output the reduced value, must be at
+///                     least @p size bytes.
+///
+/// @return             The status of the LCO.
+hpx_status_t hpx_lco_allreduce_join_sync(hpx_addr_t allreduce, int id,
+                                         size_t bytes, const void *value,
+                                         void *out);
 
 /// Set an allgather.
 ///
