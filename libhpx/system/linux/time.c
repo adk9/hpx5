@@ -80,12 +80,17 @@ double hpx_time_ms(hpx_time_t time) {
   return _ns(time)/1e6;
 }
 
-uint64_t hpx_time_elapsed_ns(hpx_time_t from, hpx_time_t to) {
-  return (uint64_t)(((to.tv_sec - from.tv_sec) * 1e9) + (to.tv_nsec - from.tv_nsec));
+int64_t hpx_time_diff_ns(hpx_time_t from, hpx_time_t to) {
+  return (int64_t)(((to.tv_sec - from.tv_sec) * 1e9) + (to.tv_nsec - from.tv_nsec));
 }
 
+uint64_t hpx_time_elapsed_ns(hpx_time_t from) {
+  return (uint64_t)hpx_time_diff_ns(from, hpx_time_now());
+}
+
+
 uint64_t hpx_time_to_ns(hpx_time_t t) {
-  return hpx_time_elapsed_ns(_beginning_of_time, t);
+  return (uint64_t)hpx_time_diff_ns(_beginning_of_time, t);
 }
 
 hpx_time_t hpx_time_construct(unsigned long s, unsigned long ns) {

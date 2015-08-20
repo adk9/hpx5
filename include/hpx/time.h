@@ -67,7 +67,7 @@ double hpx_time_diff_ms(hpx_time_t from, hpx_time_t to);
 /// @param from the beginning of the time span
 /// @param   to the end of the time span to convert
 /// @returns the time span in nanoseconds
-uint64_t hpx_time_diff_ns(hpx_time_t from, hpx_time_t to);
+int64_t hpx_time_diff_ns(hpx_time_t from, hpx_time_t to);
 
 /// Get a time span in `hpx_time_t`
 /// @param start the beginning of the time span
@@ -86,6 +86,12 @@ double hpx_time_elapsed_us(hpx_time_t from);
 /// @returns    the difference between @from and now,
 ///             in milliseconds
 double hpx_time_elapsed_ms(hpx_time_t from);
+
+/// Get the time elapsed since @p from, in nanoseconds
+/// @param from the start time to measure from
+/// @returns    the difference between @from and now,
+///             in nanoseconds
+uint64_t hpx_time_elapsed_ns(hpx_time_t from);
 
 /// Get the time elapsed since @p from, in hpx_time_t.
 /// @param start the start time to measure from
