@@ -47,7 +47,6 @@ int fwq(int work) {
   register long long count;
   register long long wl = -(1 << work);
 
-  count = wl;
   for (count=wl; count<0;) {
     register int k;
     for (k=0;k<32;k++)
@@ -66,7 +65,8 @@ static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _fwq, _fwq_action,
                   HPX_POINTER, HPX_SIZE_T);
 
 static void env_to_args(void *out, const int i, const void *env) {
-  out = (void*)env;
+  int *args = out;
+  *args = *(int*)env;
 }
 
 int _fwq_parfor(const int idx, const void *work) {
