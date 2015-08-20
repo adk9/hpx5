@@ -352,14 +352,14 @@ hpx_lco_allreduce_join(hpx_addr_t lco, int id, size_t n, const void *value,
 
   _allreduce_t *allreduce = NULL;
   if (!hpx_gas_try_pin(lco, (void**)&allreduce)) {
-    return hpx_call_with_continuation(lco, _join, at, cont, value, &n);
+    return hpx_call_with_continuation(lco, _join, at, cont, value, n);
   }
 
   // Local allreduce, we need to get the reduced data to the continuation. We
   // know that the continuation is going to be processed by sending a parcel, so
   // as in the _join handler we can allocate one here early and use its buffer
   // for the reduced value directly.
-  hpx_parcel_t *p = parcel_new(cont, at, 0, 0, self->current->pid, NULL, n);
+  hpx_parcel_t *p = parcel_new(at, cont, 0, 0, self->current->pid, NULL, n);
   int rc = _join_sync(allreduce, n, value, hpx_parcel_get_data(p));
   parcel_launch_error(p, rc);
   hpx_gas_unpin(lco);
@@ -374,7 +374,7 @@ hpx_lco_allreduce_join_sync(hpx_addr_t lco, int id, size_t n,
                             const void *value, void *out) {
   _allreduce_t *allreduce = NULL;
   if (!hpx_gas_try_pin(lco, (void**)&allreduce)) {
-    return hpx_call_sync(lco, _join, out, n, value, &n);
+    return hpx_call_sync(lco, _join, out, n, value, n);
   }
 
   int rc = _join_sync(allreduce, n, value, out);
