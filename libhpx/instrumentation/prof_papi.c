@@ -119,7 +119,6 @@ void _create_new_list(profile_list_t *list, profile_list_t new_list,
   list[index].simple = simple;
 }
 
-// TODO: make the list expand if num_entries reaches max_entries
 void _create_new_entry(struct profile_entry *entries, 
                        struct profile_entry new_entry,
                        int event, bool simple){
@@ -135,7 +134,6 @@ void _create_new_entry(struct profile_entry *entries,
     free(entries);
     entries = new_list;
     _profile_log.entries[event].entries = entries;
-    return;
   }
   int index = _profile_log.entries[event].num_entries;
   _profile_log.entries[event].tally++;
@@ -166,11 +164,6 @@ void prof_init(struct config *cfg){
   int num_counters = 0;
   size_t counters = cfg->prof_counters;
 
-  if(counters == 0 || (cfg->prof_event == HPX_PROF_EVENT_NONE
-                       && cfg->prof_action == NULL)){
-    return;
-  }
-  
   int eventset = PAPI_NULL;
   int retval = PAPI_library_init(PAPI_VER_CURRENT);
   if(retval != PAPI_VER_CURRENT){
@@ -209,10 +202,6 @@ void prof_init(struct config *cfg){
   if(num_counters > max_counters){
     log_error("Note: maximum available counters is %d\n", max_counters);
     num_counters = max_counters;
-  }
-
-  if(num_counters == 0){
-    return;
   }
 
   _profile_log.counters = malloc(num_counters * sizeof(int));
@@ -349,7 +338,7 @@ void prof_get_total_time(char *key, hpx_time_t *tot){
     return;
   }
 
-  unsigned long seconds, ns, total = 0;
+  int64_t seconds, ns, total = 0;
   for(int i = 0; i < _profile_log.entries[event].num_entries; i++){
     total += hpx_time_diff_ns(_profile_log.entries[event].entries[i].start_time,
                               _profile_log.entries[event].entries[i].end_time);
