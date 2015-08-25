@@ -67,7 +67,6 @@ void _create_new_list(profile_list_t *list, profile_list_t new_list,
   list[index].simple = simple;
 }
 
-// TODO: make the list expand if num_entries reaches max_entries
 void _create_new_entry(struct profile_entry *entries, 
                        struct profile_entry new_entry,
                        int event, bool simple){
@@ -83,7 +82,6 @@ void _create_new_entry(struct profile_entry *entries,
     free(entries);
     entries = new_list;
     _profile_log.entries[event].entries = entries;
-    return;
   }
   int index = _profile_log.entries[event].num_entries;
   _profile_log.entries[event].tally++;
