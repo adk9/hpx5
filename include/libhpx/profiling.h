@@ -74,7 +74,7 @@ typedef struct {
     .end_time = HPX_TIME_INIT,              \
     .num_counters = 0,                      \
     .num_entries = 0,                     \
-    .max_entries = 256,                     \
+    .max_entries = 2,                     \
     .counters = NULL,                       \
     .counter_names = NULL,                  \
     .entries = NULL,                        \
