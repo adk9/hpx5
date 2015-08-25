@@ -152,9 +152,10 @@ void prof_get_average_time(char *key, hpx_time_t *avg){
 
   unsigned long seconds, ns, average = 0;
   for(int i = 0; i < _profile_log.entries[event].num_entries; i++){
-    average += 
-             hpx_time_diff_ns(_profile_log.entries[event].entries[i].start_time,
-                              _profile_log.entries[event].entries[i].end_time);
+    if(_profile_log.entries[event].entries[i].marked){
+      average += hpx_time_diff_ns(_profile_log.entries[event].entries[i].start_time,
+                                _profile_log.entries[event].entries[i].end_time);
+    }
   }
   average /= _profile_log.entries[event].num_entries;
   seconds = average / 1e9;
@@ -171,8 +172,10 @@ void prof_get_total_time(char *key, hpx_time_t *tot){
 
   unsigned long seconds, ns, total = 0;
   for(int i = 0; i < _profile_log.entries[event].num_entries; i++){
-    total += hpx_time_diff_ns(_profile_log.entries[event].entries[i].start_time,
-                              _profile_log.entries[event].entries[i].end_time);
+    if(_profile_log.entries[event].entries[i].marked){
+      total += hpx_time_diff_ns(_profile_log.entries[event].entries[i].start_time,
+                                _profile_log.entries[event].entries[i].end_time);
+    }
   }
   seconds = total / 1e9;
   ns = total % (long)1e9;
