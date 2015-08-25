@@ -330,7 +330,8 @@ int action_execute(hpx_parcel_t *p) {
   void                   *args = hpx_parcel_get_data(p);
 
   if (!pinned && !cif) {
-    return handler(args, p->size);
+    int ret = handler(args, p->size);
+    return ret;
   }
 
   if (!pinned) {
@@ -347,7 +348,8 @@ int action_execute(hpx_parcel_t *p) {
   }
 
   if (!cif) {
-    return ((hpx_pinned_action_handler_t)handler)(target, args, p->size);
+    int ret = ((hpx_pinned_action_handler_t)handler)(target, args, p->size);
+    return ret;
   }
 
   void *avalue[cif->nargs];
@@ -447,6 +449,7 @@ hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
                     unsigned int nargs, ...) {
   va_list vargs;
   va_start(vargs, nargs);
+  printf("%s\n", key);
   int e = _register_action_va(type, attr, key, id, f, 0, nargs, vargs);
   va_end(vargs);
   return e;

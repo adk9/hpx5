@@ -237,6 +237,7 @@ void inst_fini(void) {
 }
 
 void inst_prof_dump(profile_log_t profile_log){
+/*
   if(_log_path == NULL){
     return;
   }
@@ -253,8 +254,12 @@ void inst_prof_dump(profile_log_t profile_log){
   free(filepath);
 
   int counters = profile_log.num_counters;
+  if(profile_log.key != NULL){
+    fprintf(f, "Action name: %s\n", profile_log.key);
+  }
   fprintf(f, "Event occurrences: %ld in %f ms\n\n", profile_log.tally,
           hpx_time_diff_ms(profile_log.start_time, profile_log.end_time));
+
   fprintf(f, "%-16s%-16s%-16s\n", "Counter Name", "Total", "Average");
   
   for(int i = 0; i < counters; i++){
@@ -276,6 +281,7 @@ void inst_prof_dump(profile_log_t profile_log){
   if(e != 0){
     log_error("failed to write profile info to %s\n", filepath);
   }
+  */
 }
 
 void inst_vtrace(int UNUNSED, int n, int id, ...) {
