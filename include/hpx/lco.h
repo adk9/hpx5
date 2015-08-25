@@ -523,6 +523,9 @@ hpx_addr_t hpx_lco_allreduce_new(size_t participants, size_t readers, size_t siz
 /// reduced data. This counts as both a set and a get operation, even if the
 /// continuation is null.
 ///
+/// This interface is locally synchronous---it is safe to reuse or free @p value
+/// when it returns.
+///
 /// @param    allreduce The allreduce LCO to join.
 /// @param           id The id of this input.
 /// @param        bytes The number of bytes to send.
@@ -539,6 +542,9 @@ hpx_status_t hpx_lco_allreduce_join(hpx_addr_t allreduce, int id, size_t bytes,
 ///
 /// This version of the join operation returns the reduced value asynchronously
 /// to the caller. This counts as both a set and a get operation.
+///
+/// This interface is locally synchronous---it is safe to reuse or free @p value
+/// when it returns.
 ///
 /// @param    allreduce The allreduce LCO to join.
 /// @param           id The id of this input.
