@@ -342,28 +342,18 @@ static int _join_handler(_allreduce_t *lco, const void *data, size_t n) {
   parcel_launch_error(c, rc);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_PINNED, _join,
-                  _join_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_PINNED, _join,
+                     _join_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 hpx_status_t
 hpx_lco_allreduce_join(hpx_addr_t lco, int id, size_t n, const void *value,
                        hpx_action_t cont, hpx_addr_t at) {
   dbg_assert(cont && at);
 
-  _allreduce_t *allreduce = NULL;
-  if (!hpx_gas_try_pin(lco, (void**)&allreduce)) {
-    return hpx_call_with_continuation(lco, _join, at, cont, value, n);
-  }
-
-  // Local allreduce, we need to get the reduced data to the continuation. We
-  // know that the continuation is going to be processed by sending a parcel, so
-  // as in the _join handler we can allocate one here early and use its buffer
-  // for the reduced value directly.
-  hpx_parcel_t *p = parcel_new(at, cont, 0, 0, self->current->pid, NULL, n);
-  int rc = _join_sync(allreduce, n, value, hpx_parcel_get_data(p));
-  parcel_launch_error(p, rc);
-  hpx_gas_unpin(lco);
-  return HPX_SUCCESS;
+  // This interface is *asynchronous* so we can just blast out a
+  // call-with-continuation using the arguments, even if the allreduce is
+  // local.
+  return hpx_call_with_continuation(lco, _join, at, cont, value, n);
 }
 /// @}
 
@@ -410,9 +400,9 @@ _join_async_request_handler(_allreduce_t *lco, _join_async_args_t *args,
   }
   hpx_thread_continue(args, n);
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_PINNED, _join_async_request,
-                  _join_async_request_handler, HPX_POINTER, HPX_POINTER,
-                  HPX_SIZE_T);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_PINNED,
+                     _join_async_request, _join_async_request_handler,
+                     HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 /// The join reply handler copies the data as specified in the arguments, and
 /// then signals the done LCO explicitly.
@@ -424,8 +414,8 @@ static int _join_async_reply_handler(_join_async_args_t *args, size_t n) {
   hpx_lco_error(args->done, HPX_SUCCESS, HPX_NULL);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _join_async_reply,
-                  _join_async_reply_handler, HPX_POINTER, HPX_SIZE_T);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _join_async_reply,
+                     _join_async_reply_handler, HPX_POINTER, HPX_SIZE_T);
 
 hpx_status_t
 hpx_lco_allreduce_join_async(hpx_addr_t lco, int id, size_t n,
