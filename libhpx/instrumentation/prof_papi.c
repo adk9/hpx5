@@ -280,7 +280,9 @@ int prof_get_averages(long long *values, int num_values, char *key){
   for(int i = 0; i < num_values; i++){
     values[i] = 0;
     for(int j = 0; j < _profile_log.entries[event].num_entries; j++){
-      values[i] += _profile_log.entries[event].entries[j].counter_totals[i];
+      if(_profile_log.entries[event].entries[i].marked){
+        values[i] += _profile_log.entries[event].entries[j].counter_totals[i];
+      }
     }
     values[i] /= divisor;
   }
@@ -299,7 +301,9 @@ int prof_get_totals(long long *values, int num_values, char *key){
   for(int i = 0; i < num_values; i++){
     values[i] = 0;
     for(int j = 0; j < _profile_log.entries[event].num_entries; j++){
-      values[i] += _profile_log.entries[event].entries[j].counter_totals[i];
+      if(_profile_log.entries[event].entries[i].marked){
+        values[i] += _profile_log.entries[event].entries[j].counter_totals[i];
+      }
     }
   }
   return PAPI_OK;
@@ -321,9 +325,10 @@ void prof_get_average_time(char *key, hpx_time_t *avg){
 
   unsigned long seconds, ns, average = 0;
   for(int i = 0; i < _profile_log.entries[event].num_entries; i++){
-    average += 
-             hpx_time_diff_ns(_profile_log.entries[event].entries[i].start_time,
-                              _profile_log.entries[event].entries[i].end_time);
+    if(_profile_log.entries[event].entries[i].marked){
+      average += hpx_time_diff_ns(_profile_log.entries[event].entries[i].start_time,
+                                _profile_log.entries[event].entries[i].end_time);
+    }
   }
   average /= _profile_log.entries[event].num_entries;
   seconds = average / 1e9;
@@ -340,8 +345,10 @@ void prof_get_total_time(char *key, hpx_time_t *tot){
 
   int64_t seconds, ns, total = 0;
   for(int i = 0; i < _profile_log.entries[event].num_entries; i++){
-    total += hpx_time_diff_ns(_profile_log.entries[event].entries[i].start_time,
-                              _profile_log.entries[event].entries[i].end_time);
+    if(_profile_log.entries[event].entries[i].marked){
+      total += hpx_time_diff_ns(_profile_log.entries[event].entries[i].start_time,
+                                _profile_log.entries[event].entries[i].end_time);
+    }
   }
   seconds = total / 1e9;
   ns = total % (long)1e9;
