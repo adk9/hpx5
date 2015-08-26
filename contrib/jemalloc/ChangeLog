@@ -4,8 +4,7 @@ brevity.  Much more detail can be found in the git revision history:
 
     https://github.com/jemalloc/jemalloc
 
-* 4.0.0 (XXX) See https://github.com/jemalloc/jemalloc/milestones/4.0.0 for
-              remaining work.
+* 4.0.0 (August 17, 2015)
 
   This version contains many speed and space optimizations, both minor and
   major.  The major themes are generalization, unification, and simplification.
@@ -37,8 +36,7 @@ brevity.  Much more detail can be found in the git revision history:
     "opt.prof_thread_active_init", "prof.thread_active_init", and
     "thread.prof.active" mallctls.
   - Add support for per arena application-specified chunk allocators, configured
-    via the "arena<i>.chunk.alloc", "arena<i>.chunk.dalloc", and
-    "arena.<i>.chunk.purge" mallctls.
+    via the "arena.<i>.chunk_hooks" mallctl.
   - Refactor huge allocation to be managed by arenas, so that arenas now
     function as general purpose independent allocators.  This is important in
     the context of user-specified chunk allocators, aside from the scalability
@@ -84,10 +82,6 @@ brevity.  Much more detail can be found in the git revision history:
     + OpenRISC/or1k
 
   Optimizations:
-  - Switch run and chunk allocation from first-best-fit (among best-fit
-    candidates, choose the lowest in memory) to first-fit (among all candidates,
-    choose the lowest in memory).  This tends to reduce chunk and virtual memory
-    fragmentation, respectively.
   - Maintain dirty runs in per arena LRUs rather than in per arena trees of
     dirty-run-containing chunks.  In practice this change significantly reduces
     dirty page purging volume.
