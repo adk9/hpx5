@@ -10,6 +10,6 @@ libinstrumentation_la_SOURCES  = file_header.c instrumentation.c \
 else
 libinstrumentation_la_SOURCES  = file_header.c instrumentation.c \
                                  instrumentation_events.c logtable.c \
-                                 prof_empty.c
+                                 prof_basic.c
 endif
 
