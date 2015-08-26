@@ -34,11 +34,11 @@
 /// Each locality maintains a single profile log
 static profile_log_t _profile_log = PROFILE_INIT;
 
-void _prof_begin(){
+static void _prof_begin(){
   _profile_log.start_time = hpx_time_now();
 }
 
-void _prof_end(){
+static void _prof_end(){
   _profile_log.end_time = hpx_time_now();
 }
 
@@ -94,8 +94,8 @@ static void _test_event(size_t papi_event, size_t bit, size_t bitset,
   }
 }
 
-void _create_new_list(profile_list_t *list, profile_list_t new_list, 
-                      char *key, bool simple){
+static void _create_new_list(profile_list_t *list, profile_list_t new_list, 
+                             char *key, bool simple){
   if(_profile_log.num_entries == _profile_log.max_entries){
     _profile_log.max_entries *= 2;
     profile_list_t *new_list_list = malloc(_profile_log.max_entries *
@@ -119,9 +119,9 @@ void _create_new_list(profile_list_t *list, profile_list_t new_list,
   list[index].simple = simple;
 }
 
-void _create_new_entry(struct profile_entry *entries, 
-                       struct profile_entry new_entry,
-                       int event, bool simple){
+static void _create_new_entry(struct profile_entry *entries, 
+                              struct profile_entry new_entry,
+                              int event, bool simple){
   if(_profile_log.entries[event].num_entries == 
      _profile_log.entries[event].max_entries){
     _profile_log.entries[event].max_entries *= 2;
@@ -150,7 +150,7 @@ void _create_new_entry(struct profile_entry *entries,
 }
 
 //returns index of matching key/creates new entry if index doesn't exist
-int _get_event_num(char *key){
+static int _get_event_num(char *key){
   for(int i = 0; i < _profile_log.num_entries; i++){
     if(strcmp(key, _profile_log.entries[i].key) == 0){
       return i;
