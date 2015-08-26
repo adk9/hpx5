@@ -69,11 +69,6 @@ static void _stop(locality_t *l) {
     network_delete(l->network);
     l->network = NULL;
   }
-
-  if (l->gas) {
-    gas_dealloc(l->gas);
-    l->gas = NULL;
-  }
 }
 
 /// Cleanup utility function.
@@ -87,6 +82,11 @@ static void _cleanup(locality_t *l) {
   // finalize APEX
   apex_finalize();
 #endif
+
+  if (l->gas) {
+    gas_dealloc(l->gas);
+    l->gas = NULL;
+  }
 
   dbg_fini();
 
@@ -215,6 +215,22 @@ int hpx_init(int *argc, char ***argv) {
   log("HPX running %d worker threads on %d cores\n", here->config->threads,
       here->config->cores);
 
+  return status;
+ unwind1:
+  _stop(here);
+  _cleanup(here);
+ unwind0:
+  return status;
+}
+
+/// Called to run HPX.
+int _hpx_run(hpx_action_t *act, int n, ...) {
+  int status = HPX_SUCCESS;
+  if (!here) {
+    status = log_error("hpx_init() must be called before hpx_run()\n");
+    goto unwind0;
+  }
+
   // Initialize the network. This will initialize a transport and, as a side
   // effect initialize our allocators.
   here->network = network_new(here->config, here->boot, here->gas);
@@ -227,7 +243,7 @@ int hpx_init(int *argc, char ***argv) {
   here->sched = scheduler_new(here->config);
   if (!here->sched) {
     status = log_error("failed to create scheduler.\n");
-    goto unwind1;
+    goto unwind0;
   }
 
 #ifdef HAVE_APEX 
@@ -235,21 +251,6 @@ int hpx_init(int *argc, char ***argv) {
   apex_init("HPX WORKER THREAD");
   apex_set_node_id(here->rank);
 #endif
-
-  return status;
- unwind1:
-  _stop(here);
- unwind0:
-  return status;
-}
-
-/// Called to run HPX.
-int _hpx_run(hpx_action_t *act, int n, ...) {
-  int status = HPX_SUCCESS;
-  if (!here || !here->sched) {
-    status = log_error("hpx_init() must be called before hpx_run()\n");
-    goto unwind0;
-  }
 
   here->actions = action_table_finalize();
   if (!here->actions) {
@@ -308,7 +309,7 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
  unwind2:
   probe_stop();
  unwind1:
-  _cleanup(here);
+  _stop(here);
  unwind0:
   return status;
 }
