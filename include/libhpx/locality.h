@@ -60,6 +60,12 @@ struct scheduler;
 ///                  infrastructure required to create lightweight threads, and
 ///                  to deal with inter-thread data and control dependencies
 ///                  using LCOs.
+/// @field    config The libhpx configuration object. This stores the
+///                  per-locality configuration parameters based on
+///                  the user-specified runtime configuration values
+///                  and/or the defaults.
+/// @field   actions The symmetric "action table" which stores the
+///                  details of all of the actions registered at this locality.
 typedef struct locality {
   uint32_t                      rank;
   uint32_t                     ranks;
