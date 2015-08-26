@@ -52,17 +52,13 @@ static int _hpx_143_fix_handler(void) {
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _hpx_143_fix, _hpx_143_fix_handler);
 
-/// Cleanup utility function.
+/// Stop HPX
 ///
-/// This will delete the global objects, if they've been allocated.
-static void _cleanup(locality_t *l) {
+/// This will stop HPX by stopping the network and scheduler, and cleaning up
+/// anything that should not persist between hpx_run() calls.
+static void _stop(locality_t *l) {
   if (!l)
-    return;
-
-#ifdef HAVE_APEX 
-  // finalize APEX
-  apex_finalize();
-#endif
+    return;  
 
   if (l->sched) {
     scheduler_delete(l->sched);
@@ -78,6 +74,19 @@ static void _cleanup(locality_t *l) {
     gas_dealloc(l->gas);
     l->gas = NULL;
   }
+}
+
+/// Cleanup utility function.
+///
+/// This will delete the global objects, if they've been allocated.
+static void _cleanup(locality_t *l) {
+  if (!l)
+    return;
+
+#ifdef HAVE_APEX 
+  // finalize APEX
+  apex_finalize();
+#endif
 
   dbg_fini();
 
@@ -229,7 +238,7 @@ int hpx_init(int *argc, char ***argv) {
 
   return status;
  unwind1:
-  _cleanup(here);
+  _stop(here);
  unwind0:
   return status;
 }
@@ -358,4 +367,8 @@ const char *hpx_strerror(hpx_status_t s) {
    case (HPX_USER): return "HPX_USER";
    default: return "HPX undefined error value";
   }
+}
+
+void hpx_finalize() {
+  _cleanup(here);
 }

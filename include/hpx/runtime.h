@@ -47,6 +47,12 @@
 /// @returns      HPX_SUCCESS on success
 int hpx_init(int *argc, char ***argv);
 
+/// Finalize/cleanup from the HPX runtime.
+///
+/// This function will remove almost all data structures and allocations, and
+/// will finalize the underlying network implementation. Note that hpx_run() 
+/// must never be called after hpx_finalize().
+void hpx_finalize();
 
 /// Start the HPX runtime, and run a given action.
 ///
@@ -84,6 +90,8 @@ int    _hpx_run(hpx_action_t *entry, int nargs, ...);
 ///
 /// This call is cooperative and synchronous, so it may not return if there are
 /// misbehaving HPX lightweight threads.
+///
+/// It is safe to call hpx_run() again after hpx_shudown().
 ///
 /// @param code a status code to be returned by hpx_run()
 void hpx_shutdown(int code)
