@@ -568,10 +568,15 @@ for (i = 0; i < nbins; i++) {
     up to the same size class.  No other API guarantees are made regarding
     in-place resizing, but the current implementation also tries to resize large
     and huge allocations in place, as long as the pre-size and post-size are
-    both large or both huge.  In such cases shrinkage always succeeds, but
-    growth only succeeds if the trailing memory is currently available.</para>
+    both large or both huge.  In such cases shrinkage always succeeds for large
+    size classes, but for huge size classes the chunk allocator must support
+    splitting (see <link
+    linkend="arena.i.chunk_hooks"><mallctl>arena.&lt;i&gt;.chunk_hooks</mallctl></link>).
+    Growth only succeeds if the trailing memory is currently available, and
+    additionally for huge size classes the chunk allocator must support
+    merging.</para>
 
-    <para>Assuming 256 KiB chunks, 4 KiB pages, and a 16-byte quantum on a
+    <para>Assuming 2 MiB chunks, 4 KiB pages, and a 16-byte quantum on a
     64-bit system, the size classes in each category are as shown in <xref
     linkend="size_classes" xrefstyle="template:Table %n"/>.</para>
 
@@ -627,7 +632,7 @@ for (i = 0; i < nbins; i++) {
           <entry>[10 KiB, 12 KiB, 14 KiB]</entry>
         </row>
         <row>
-          <entry morerows="4">Large</entry>
+          <entry morerows="7">Large</entry>
           <entry>2 KiB</entry>
           <entry>[16 KiB]</entry>
         </row>
@@ -645,12 +650,7 @@ for (i = 0; i < nbins; i++) {
         </row>
         <row>
           <entry>32 KiB</entry>
-          <entry>[160 KiB, 192 KiB, 224 KiB]</entry>
-        </row>
-        <row>
-          <entry morerows="9">Huge</entry>
-          <entry>32 KiB</entry>
-          <entry>[256 KiB]</entry>
+          <entry>[160 KiB, 192 KiB, 224 KiB, 256 KiB]</entry>
         </row>
         <row>
           <entry>64 KiB</entry>
@@ -662,7 +662,12 @@ for (i = 0; i < nbins; i++) {
         </row>
         <row>
           <entry>256 KiB</entry>
-          <entry>[1280 KiB, 1536 KiB, 1792 KiB, 2 MiB]</entry>
+          <entry>[1280 KiB, 1536 KiB, 1792 KiB]</entry>
+        </row>
+        <row>
+          <entry morerows="6">Huge</entry>
+          <entry>256 KiB</entry>
+          <entry>[2 MiB]</entry>
         </row>
         <row>
           <entry>512 KiB</entry>
@@ -1518,115 +1523,203 @@ malloc_conf = "xmalloc:true";]]></programlisting>
         for additional information.</para></listitem>
       </varlistentry>
 
-      <varlistentry id="arena.i.chunk.alloc">
+      <varlistentry id="arena.i.chunk_hooks">
         <term>
-          <mallctl>arena.&lt;i&gt;.chunk.alloc</mallctl>
-          (<type>chunk_alloc_t *</type>)
+          <mallctl>arena.&lt;i&gt;.chunk_hooks</mallctl>
+          (<type>chunk_hooks_t</type>)
           <literal>rw</literal>
         </term>
-        <listitem><para>Get or set the chunk allocation function for arena
-        &lt;i&gt;.  If setting, the chunk deallocation function should
-        also be set via <link linkend="arena.i.chunk.dalloc">
-        <mallctl>arena.&lt;i&gt;.chunk.dalloc</mallctl></link> to a companion
-        function that knows how to deallocate the chunks.
+        <listitem><para>Get or set the chunk management hook functions for arena
+        &lt;i&gt;.  The functions must be capable of operating on all extant
+        chunks associated with arena &lt;i&gt;, usually by passing unknown
+        chunks to the replaced functions.  In practice, it is feasible to
+        control allocation for arenas created via <link
+        linkend="arenas.extend"><mallctl>arenas.extend</mallctl></link> such
+        that all chunks originate from an application-supplied chunk allocator
+        (by setting custom chunk hook functions just after arena creation), but
+        the automatically created arenas may have already created chunks prior
+        to the application having an opportunity to take over chunk
+        allocation.</para>
+
+        <programlisting language="C"><![CDATA[
+typedef struct {
+	chunk_alloc_t		*alloc;
+	chunk_dalloc_t		*dalloc;
+	chunk_commit_t		*commit;
+	chunk_decommit_t	*decommit;
+	chunk_purge_t		*purge;
+	chunk_split_t		*split;
+	chunk_merge_t		*merge;
+} chunk_hooks_t;]]></programlisting>
+        <para>The <type>chunk_hooks_t</type> structure comprises function
+        pointers which are described individually below.  jemalloc uses these
+        functions to manage chunk lifetime, which starts off with allocation of
+        mapped committed memory, in the simplest case followed by deallocation.
+        However, there are performance and platform reasons to retain chunks for
+        later reuse.  Cleanup attempts cascade from deallocation to decommit to
+        purging, which gives the chunk management functions opportunities to
+        reject the most permanent cleanup operations in favor of less permanent
+        (and often less costly) operations.  The chunk splitting and merging
+        operations can also be opted out of, but this is mainly intended to
+        support platforms on which virtual memory mappings provided by the
+        operating system kernel do not automatically coalesce and split, e.g.
+        Windows.</para>
+
         <funcsynopsis><funcprototype>
           <funcdef>typedef void *<function>(chunk_alloc_t)</function></funcdef>
           <paramdef>void *<parameter>chunk</parameter></paramdef>
           <paramdef>size_t <parameter>size</parameter></paramdef>
           <paramdef>size_t <parameter>alignment</parameter></paramdef>
           <paramdef>bool *<parameter>zero</parameter></paramdef>
+          <paramdef>bool *<parameter>commit</parameter></paramdef>
           <paramdef>unsigned <parameter>arena_ind</parameter></paramdef>
         </funcprototype></funcsynopsis>
-        A chunk allocation function conforms to the <type>chunk_alloc_t</type>
-        type and upon success returns a pointer to <parameter>size</parameter>
-        bytes of memory on behalf of arena <parameter>arena_ind</parameter> such
-        that the chunk's base address is a multiple of
-        <parameter>alignment</parameter>, as well as setting
-        <parameter>*zero</parameter> to indicate whether the chunk is zeroed.
-        Upon error the function returns <constant>NULL</constant> and leaves
-        <parameter>*zero</parameter> unmodified.  The
+        <literallayout></literallayout>
+        <para>A chunk allocation function conforms to the
+        <type>chunk_alloc_t</type> type and upon success returns a pointer to
+        <parameter>size</parameter> bytes of mapped memory on behalf of arena
+        <parameter>arena_ind</parameter> such that the chunk's base address is a
+        multiple of <parameter>alignment</parameter>, as well as setting
+        <parameter>*zero</parameter> to indicate whether the chunk is zeroed and
+        <parameter>*commit</parameter> to indicate whether the chunk is
+        committed.  Upon error the function returns <constant>NULL</constant>
+        and leaves <parameter>*zero</parameter> and
+        <parameter>*commit</parameter> unmodified.  The
         <parameter>size</parameter> parameter is always a multiple of the chunk
         size.  The <parameter>alignment</parameter> parameter is always a power
         of two at least as large as the chunk size.  Zeroing is mandatory if
-        <parameter>*zero</parameter> is true upon function entry.  If
-        <parameter>chunk</parameter> is not <constant>NULL</constant>, the
-        returned pointer must be <parameter>chunk</parameter> or
-        <constant>NULL</constant> if it could not be allocated.</para>
-
-        <para>Note that replacing the default chunk allocation function makes
-        the arena's <link
+        <parameter>*zero</parameter> is true upon function entry.  Committing is
+        mandatory if <parameter>*commit</parameter> is true upon function entry.
+        If <parameter>chunk</parameter> is not <constant>NULL</constant>, the
+        returned pointer must be <parameter>chunk</parameter> on success or
+        <constant>NULL</constant> on error.  Committed memory may be committed
+        in absolute terms as on a system that does not overcommit, or in
+        implicit terms as on a system that overcommits and satisfies physical
+        memory needs on demand via soft page faults.  Note that replacing the
+        default chunk allocation function makes the arena's <link
         linkend="arena.i.dss"><mallctl>arena.&lt;i&gt;.dss</mallctl></link>
-        setting irrelevant.</para></listitem>
-      </varlistentry>
+        setting irrelevant.</para>
 
-      <varlistentry id="arena.i.chunk.dalloc">
-        <term>
-          <mallctl>arena.&lt;i&gt;.chunk.dalloc</mallctl>
-          (<type>chunk_dalloc_t *</type>)
-          <literal>rw</literal>
-        </term>
-        <listitem><para>Get or set the chunk deallocation function for arena
-        &lt;i&gt;.  If setting, the chunk deallocation function must
-        be capable of deallocating all extant chunks associated with arena
-        &lt;i&gt;, usually by passing unknown chunks to the deallocation
-        function that was replaced.  In practice, it is feasible to control
-        allocation for arenas created via <link
-        linkend="arenas.extend"><mallctl>arenas.extend</mallctl></link> such
-        that all chunks originate from an application-supplied chunk allocator
-        (by setting custom chunk allocation/deallocation/purge functions just
-        after arena creation), but the automatically created arenas may have
-        already created chunks prior to the application having an opportunity to
-        take over chunk allocation.
         <funcsynopsis><funcprototype>
           <funcdef>typedef bool <function>(chunk_dalloc_t)</function></funcdef>
           <paramdef>void *<parameter>chunk</parameter></paramdef>
           <paramdef>size_t <parameter>size</parameter></paramdef>
+          <paramdef>bool <parameter>committed</parameter></paramdef>
           <paramdef>unsigned <parameter>arena_ind</parameter></paramdef>
         </funcprototype></funcsynopsis>
+        <literallayout></literallayout>
+        <para>
         A chunk deallocation function conforms to the
         <type>chunk_dalloc_t</type> type and deallocates a
-        <parameter>chunk</parameter> of given <parameter>size</parameter> on
+        <parameter>chunk</parameter> of given <parameter>size</parameter> with
+        <parameter>committed</parameter>/decommited memory as indicated, on
         behalf of arena <parameter>arena_ind</parameter>, returning false upon
-        success.</para></listitem>
-      </varlistentry>
+        success.  If the function returns true, this indicates opt-out from
+        deallocation; the virtual memory mapping associated with the chunk
+        remains mapped, in the same commit state, and available for future use,
+        in which case it will be automatically retained for later reuse.</para>
 
-      <varlistentry id="arena.i.chunk.purge">
-        <term>
-          <mallctl>arena.&lt;i&gt;.chunk.purge</mallctl>
-          (<type>chunk_purge_t *</type>)
-          <literal>rw</literal>
-        </term>
-        <listitem><para>Get or set the chunk purge function for arena &lt;i&gt;.
-        A chunk purge function optionally discards physical pages associated
-        with pages in the chunk's virtual memory range but leaves the virtual
-        memory mapping intact, and indicates via its return value whether pages
-        in the virtual memory range will be zero-filled the next time they are
-        accessed.  If setting, the chunk purge function must be capable of
-        purging all extant chunks associated with arena &lt;i&gt;, usually by
-        passing unknown chunks to the purge function that was replaced.  In
-        practice, it is feasible to control allocation for arenas created via
-        <link linkend="arenas.extend"><mallctl>arenas.extend</mallctl></link>
-        such that all chunks originate from an application-supplied chunk
-        allocator (by setting custom chunk allocation/deallocation/purge
-        functions just after arena creation), but the automatically created
-        arenas may have already created chunks prior to the application having
-        an opportunity to take over chunk allocation.
         <funcsynopsis><funcprototype>
-          <funcdef>typedef bool <function>(chunk_purge_t)</function></funcdef>
+          <funcdef>typedef bool <function>(chunk_commit_t)</function></funcdef>
           <paramdef>void *<parameter>chunk</parameter></paramdef>
+          <paramdef>size_t <parameter>size</parameter></paramdef>
           <paramdef>size_t <parameter>offset</parameter></paramdef>
           <paramdef>size_t <parameter>length</parameter></paramdef>
           <paramdef>unsigned <parameter>arena_ind</parameter></paramdef>
         </funcprototype></funcsynopsis>
-        A chunk purge function conforms to the <type>chunk_purge_t</type> type
-        and purges pages within <parameter>chunk</parameter> at
-        <parameter>offset</parameter> bytes, extending for
-        <parameter>length</parameter> on behalf of arena
+        <literallayout></literallayout>
+        <para>A chunk commit function conforms to the
+        <type>chunk_commit_t</type> type and commits zeroed physical memory to
+        back pages within a <parameter>chunk</parameter> of given
+        <parameter>size</parameter> at <parameter>offset</parameter> bytes,
+        extending for <parameter>length</parameter> on behalf of arena
+        <parameter>arena_ind</parameter>, returning false upon success.
+        Committed memory may be committed in absolute terms as on a system that
+        does not overcommit, or in implicit terms as on a system that
+        overcommits and satisfies physical memory needs on demand via soft page
+        faults. If the function returns true, this indicates insufficient
+        physical memory to satisfy the request.</para>
+
+        <funcsynopsis><funcprototype>
+          <funcdef>typedef bool <function>(chunk_decommit_t)</function></funcdef>
+          <paramdef>void *<parameter>chunk</parameter></paramdef>
+          <paramdef>size_t <parameter>size</parameter></paramdef>
+          <paramdef>size_t <parameter>offset</parameter></paramdef>
+          <paramdef>size_t <parameter>length</parameter></paramdef>
+          <paramdef>unsigned <parameter>arena_ind</parameter></paramdef>
+        </funcprototype></funcsynopsis>
+        <literallayout></literallayout>
+        <para>A chunk decommit function conforms to the
+        <type>chunk_decommit_t</type> type and decommits any physical memory
+        that is backing pages within a <parameter>chunk</parameter> of given
+        <parameter>size</parameter> at <parameter>offset</parameter> bytes,
+        extending for <parameter>length</parameter> on behalf of arena
+        <parameter>arena_ind</parameter>, returning false upon success, in which
+        case the pages will be committed via the chunk commit function before
+        being reused.  If the function returns true, this indicates opt-out from
+        decommit; the memory remains committed and available for future use, in
+        which case it will be automatically retained for later reuse.</para>
+
+        <funcsynopsis><funcprototype>
+          <funcdef>typedef bool <function>(chunk_purge_t)</function></funcdef>
+          <paramdef>void *<parameter>chunk</parameter></paramdef>
+          <paramdef>size_t<parameter>size</parameter></paramdef>
+          <paramdef>size_t <parameter>offset</parameter></paramdef>
+          <paramdef>size_t <parameter>length</parameter></paramdef>
+          <paramdef>unsigned <parameter>arena_ind</parameter></paramdef>
+        </funcprototype></funcsynopsis>
+        <literallayout></literallayout>
+        <para>A chunk purge function conforms to the <type>chunk_purge_t</type>
+        type and optionally discards physical pages within the virtual memory
+        mapping associated with <parameter>chunk</parameter> of given
+        <parameter>size</parameter> at <parameter>offset</parameter> bytes,
+        extending for <parameter>length</parameter> on behalf of arena
         <parameter>arena_ind</parameter>, returning false if pages within the
         purged virtual memory range will be zero-filled the next time they are
-        accessed.  Note that the memory range being purged may span multiple
-        contiguous chunks, e.g. when purging memory that backed a huge
-        allocation.</para></listitem>
+        accessed.</para>
+
+        <funcsynopsis><funcprototype>
+          <funcdef>typedef bool <function>(chunk_split_t)</function></funcdef>
+          <paramdef>void *<parameter>chunk</parameter></paramdef>
+          <paramdef>size_t <parameter>size</parameter></paramdef>
+          <paramdef>size_t <parameter>size_a</parameter></paramdef>
+          <paramdef>size_t <parameter>size_b</parameter></paramdef>
+          <paramdef>bool <parameter>committed</parameter></paramdef>
+          <paramdef>unsigned <parameter>arena_ind</parameter></paramdef>
+        </funcprototype></funcsynopsis>
+        <literallayout></literallayout>
+        <para>A chunk split function conforms to the <type>chunk_split_t</type>
+        type and optionally splits <parameter>chunk</parameter> of given
+        <parameter>size</parameter> into two adjacent chunks, the first of
+        <parameter>size_a</parameter> bytes, and the second of
+        <parameter>size_b</parameter> bytes, operating on
+        <parameter>committed</parameter>/decommitted memory as indicated, on
+        behalf of arena <parameter>arena_ind</parameter>, returning false upon
+        success.  If the function returns true, this indicates that the chunk
+        remains unsplit and therefore should continue to be operated on as a
+        whole.</para>
+
+        <funcsynopsis><funcprototype>
+          <funcdef>typedef bool <function>(chunk_merge_t)</function></funcdef>
+          <paramdef>void *<parameter>chunk_a</parameter></paramdef>
+          <paramdef>size_t <parameter>size_a</parameter></paramdef>
+          <paramdef>void *<parameter>chunk_b</parameter></paramdef>
+          <paramdef>size_t <parameter>size_b</parameter></paramdef>
+          <paramdef>bool <parameter>committed</parameter></paramdef>
+          <paramdef>unsigned <parameter>arena_ind</parameter></paramdef>
+        </funcprototype></funcsynopsis>
+        <literallayout></literallayout>
+        <para>A chunk merge function conforms to the <type>chunk_merge_t</type>
+        type and optionally merges adjacent chunks,
+        <parameter>chunk_a</parameter> of given <parameter>size_a</parameter>
+        and <parameter>chunk_b</parameter> of given
+        <parameter>size_b</parameter> into one contiguous chunk, operating on
+        <parameter>committed</parameter>/decommitted memory as indicated, on
+        behalf of arena <parameter>arena_ind</parameter>, returning false upon
+        success.  If the function returns true, this indicates that the chunks
+        remain distinct mappings and therefore should continue to be operated on
+        independently.</para>
+        </listitem>
       </varlistentry>
 
       <varlistentry id="arenas.narenas">
