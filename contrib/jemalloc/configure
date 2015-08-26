@@ -4881,6 +4881,7 @@ fi
 
 
 default_munmap="1"
+maps_coalesce="1"
 case "${host}" in
   *-*-darwin* | *-*-ios*)
 	CFLAGS="$CFLAGS"
@@ -4987,6 +4988,7 @@ $as_echo "$abi" >&6; }
 	abi="pecoff"
 	force_tls="0"
 	force_lazy_lock="1"
+	maps_coalesce="0"
 	RPATH=""
 	so="dll"
 	if test "x$je_cv_msvc" = "xyes" ; then
@@ -6520,6 +6522,11 @@ if test "x$enable_tcache" = "x1" ; then
 fi
 
 
+if test "x${maps_coalesce}" = "x1" ; then
+  $as_echo "#define JEMALLOC_MAPS_COALESCE  " >>confdefs.h
+
+fi
+
 # Check whether --enable-munmap was given.
 if test "${enable_munmap+set}" = set; then :
   enableval=$enable_munmap; if test "x$enable_munmap" = "xno" ; then
@@ -7178,11 +7185,11 @@ else
 fi
 
 else
-  enable_lazy_lock="0"
+  enable_lazy_lock=""
 
 fi
 
-if test "x$enable_lazy_lock" = "x0" -a "x${force_lazy_lock}" = "x1" ; then
+if test "x$enable_lazy_lock" = "x" -a "x${force_lazy_lock}" = "x1" ; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: Forcing lazy-lock to avoid allocator/threading bootstrap issues" >&5
 $as_echo "Forcing lazy-lock to avoid allocator/threading bootstrap issues" >&6; }
   enable_lazy_lock="1"
@@ -7255,6 +7262,8 @@ fi
   fi
   $as_echo "#define JEMALLOC_LAZY_LOCK  " >>confdefs.h
 
+else
+  enable_lazy_lock="0"
 fi
 
 
@@ -7267,16 +7276,16 @@ else
 fi
 
 else
-  enable_tls="1"
+  enable_tls=""
 
 fi
 
-if test "x${enable_tls}" = "x0" -a "x${force_tls}" = "x1" ; then
+if test "x${enable_tls}" = "x" -a "x${force_tls}" = "x1" ; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: Forcing TLS to avoid allocator/threading bootstrap issues" >&5
 $as_echo "Forcing TLS to avoid allocator/threading bootstrap issues" >&6; }
   enable_tls="1"
 fi
-if test "x${enable_tls}" = "x1" -a "x${force_tls}" = "x0" ; then
+if test "x${enable_tls}" = "x" -a "x${force_tls}" = "x0" ; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: Forcing no TLS to avoid allocator/threading bootstrap issues" >&5
 $as_echo "Forcing no TLS to avoid allocator/threading bootstrap issues" >&6; }
   enable_tls="0"
@@ -7310,6 +7319,8 @@ $as_echo "no" >&6; }
               enable_tls="0"
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+else
+  enable_tls="0"
 fi
 
 if test "x${enable_tls}" = "x1" ; then
