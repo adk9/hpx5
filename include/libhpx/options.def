@@ -144,6 +144,7 @@ LIBHPX_OPT_BITSET(trace_, classes, LIBHPX_OPT_BITSET_NONE)
 /// @{
 LIBHPX_OPT_BITSET(prof_, counters, LIBHPX_OPT_BITSET_NONE)
 LIBHPX_OPT_SCALAR(prof_, event, HPX_PROF_EVENT_NONE, libhpx_prof_event_t)
+LIBHPX_OPT_STRING(prof_, action, NULL)
 /// @}
 
 /// PWC options

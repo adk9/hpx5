@@ -20,61 +20,96 @@
 
 struct config;
 
+/// The data structure representing profiling entries
+/// @field        start_time Time of initialization
+/// @field          end_time Time of closing
+/// @field   *counter_totals Counter totals
+/// @field            marked True if values have been recorded
+struct profile_entry {
+  hpx_time_t         start_time;
+  hpx_time_t           end_time;
+  long long     *counter_totals;
+  bool                   marked;
+};
+
+/// The data structure representing a profiled code event
+/// @field       max_entries Maximum length of the list
+/// @field       num_entries Number of entries in the list
+/// @field             tally Number of occurrences of the event
+/// @field              *key The name of the profiled event
+/// @field          *entries The actual entries
+/// @field            simple True if hardware counters don't apply
 typedef struct {
-  hpx_time_t         start_time;            // start time of recording session
-  hpx_time_t           end_time;            // end time of recording session
-  size_t                  tally;            // number of events
-  long long     *counter_totals;            // totals for the counters
-  int                 *counters;            // the counters used
-  const char    **counter_names;            // the string names of the counters
-  int              num_counters;            // number of counters
-  bool             prof_running;            // true if recording profile info
+  size_t            max_entries;
+  size_t            num_entries;
+  size_t                  tally;
+  const char               *key;
+  struct profile_entry *entries;
+  bool                   simple;
+} profile_list_t;
+
+/// The data structure for storing profiling entries
+/// @field        start_time Time of initialization
+/// @field          end_time Time of closing
+/// @field         cur_depth Current relative stack frame to other entries
+/// @field      num_counters Number of counters utilized
+/// @field       num_entries Number of code events profiled
+/// @field       max_entries Maximum number of code events profilable
+/// @field         *counters The ids of the counters used
+/// @field   **counter_names The string names of the counters
+/// @field          *entries The actual entries
+typedef struct {
+  hpx_time_t         start_time;
+  hpx_time_t           end_time;
+  size_t           num_counters;
+  size_t            num_entries;
+  size_t            max_entries;
+  int                 *counters;
+  const char    **counter_names;
+  profile_list_t       *entries;
 } profile_log_t;
 
 #define PROFILE_INIT {                      \
     .start_time = HPX_TIME_INIT,            \
     .end_time = HPX_TIME_INIT,              \
-    .tally = 0,                             \
-    .counter_totals = NULL,                 \
+    .num_counters = 0,                      \
+    .num_entries = 0,                     \
+    .max_entries = 2,                     \
     .counters = NULL,                       \
     .counter_names = NULL,                  \
-    .num_counters = 0,                      \
-    .prof_running = false                   \
+    .entries = NULL,                        \
     }
 
 /// Initialize profiling. This is usually called in hpx_init().
 void prof_init(struct config *cfg)
   HPX_NON_NULL(1);
 
-/// Mark the beginning of profiling a type of event.
-/// The event may occur several times between prof_begin() and prof_end(),
-/// and profiling of the event occurrences should be done using 
-/// papi_start_counters() and papi_stop_counters(), or prof_tally_mark() if
-/// details of the events performance are not required.
-void prof_begin();
-
-/// Mark the end of profiling a type of event.  This will also stop any running
-/// PAPI counters.  Note that if PAPI counters are not currently running any 
-/// arguments passed in will be ignored and the end time will just be recorded.
-/// @param      values A pointer to an array where the values will be stored
-/// @param  num_values The size of the array
-int prof_end(long long *values, int num_values);
-
-/// Mark the occurrence of an event
-void prof_tally_mark();
+/// Cleanup
+int prof_fini();
 
 /// Obtain the average values of the counters across all profiled sessions
 /// @param      values A pointer to an array for storing counter values
 /// @param  num_values The size of the array
-int prof_get_averages(long long *values, int num_values);
+/// @param         key The key that identifies the code event
+int prof_get_averages(long long *values, int num_values, char *key);
 
 /// Return the accumulated totals of the counters
 /// @param      values A pointer to an array where the totals will be stored
 /// @param  num_values The size of the array
-int prof_get_totals(long long *values, int num_values);
+/// @param         key The key that identifies the code event
+int prof_get_totals(long long *values, int num_values, char *key);
 
 /// Return the tally of event occurrences
-size_t prof_get_tally();
+/// @param         key The key that identifies the code event
+size_t prof_get_tally(char *key);
+
+/// Return the average amount of time that a code event runs for
+/// @param         key The key that identifies the code event
+void prof_get_average_time(char *key, hpx_time_t *avg);
+
+/// Return the total amount of time spent on a code event
+/// @param         key The key that identifies the code event
+void prof_get_total_time(char *key, hpx_time_t *tot);
 
 /// Return the number of counters being used
 int prof_get_num_counters();
@@ -83,33 +118,26 @@ int prof_get_num_counters();
 /// ended, the duration of the recording session
 hpx_time_t prof_get_duration();
 
-/// Reset the profiling information and stop PAPI counters if they are running
-int prof_reset();
-
-/// Cleanup
-int prof_fini();
+/// Mark the occurrence of an event
+/// @param         key The key that identifies the code event
+void prof_increment_tally(char *key);
 
 /// Begin profiling. This begins recording performance information of an event.
-int prof_start_papi_counters();
+/// @param         key The key that identifies the code event
+void prof_start_timing(char *key);
+
+/// Stop profiling.  This ends recording performance information of an event.
+/// Additionally, the times are added to the running total time.
+/// @param         key The key that identifies the code event
+void prof_stop_timing(char *key);
+
+/// Begin profiling. This begins recording performance information of an event.
+/// @param         key The key that identifies the code event
+int prof_start_hardware_counters(char *key);
 
 /// Stop profiling.  This ends recording performance information of an event.
 /// Additionally, the counter values are added to the running total counts.
-/// @param      values A pointer to an array for storing counter values
-/// @param  num_values The size of the array
-int prof_stop_papi_counters(long long *values, int num_values);
-
-/// Collect the current values of the profiled statistics.  This will reset the
-/// counters but leave them running. Additionally, the counter values are added 
-/// to the running total counts.
-/// @param      values A pointer to an array for storing counter values
-/// @param  num_values The size of the array
-int prof_read_papi_counters(long long *values, int num_values);
-
-/// Add the counts of the previous event to the passed in array.  This will 
-/// reset the counters but leave them running. Additionally, the counter values 
-/// are added to the running total counts.
-/// @param      values A pointer to an array for accumulating counter values
-/// @param  num_values The size of the array
-int prof_accum_papi_counters(long long *values, int num_values);
+/// @param         key The key that identifies the code event
+int prof_stop_hardware_counters(char *key);
 
 #endif

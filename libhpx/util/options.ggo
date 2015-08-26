@@ -128,6 +128,10 @@ typestr="event"
 values="none"
 enum optional
 
+option "hpx-prof-action" - "set which action to profile"
+typestr="action"
+string optional
+
 section "ISIR Network Options"
 
 option "hpx-isir-testwindow" - "number of ISIR requests to test in progress loop"
