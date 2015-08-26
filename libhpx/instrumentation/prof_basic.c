@@ -16,7 +16,6 @@
 #endif
 
 #include <errno.h>
-#include <papi.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
