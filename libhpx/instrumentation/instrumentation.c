@@ -237,51 +237,6 @@ void inst_fini(void) {
 }
 
 void inst_prof_dump(profile_log_t profile_log){
-/*
-  if(_log_path == NULL){
-    return;
-  }
-
-  char filename[256];
-  snprintf(filename, 256, "profile.%d.log", hpx_get_my_rank());
-  char *filepath = _get_complete_path(_log_path, filename);
-  FILE *f = fopen(filepath, "w");
-  if(f == NULL){
-    log_error("failed to open profile log file %s\n", filepath);
-    free(filepath);
-    return;
-  }
-  free(filepath);
-
-  int counters = profile_log.num_counters;
-  if(profile_log.key != NULL){
-    fprintf(f, "Action name: %s\n", profile_log.key);
-  }
-  fprintf(f, "Event occurrences: %ld in %f ms\n\n", profile_log.tally,
-          hpx_time_diff_ms(profile_log.start_time, profile_log.end_time));
-
-  fprintf(f, "%-16s%-16s%-16s\n", "Counter Name", "Total", "Average");
-  
-  for(int i = 0; i < counters; i++){
-    if(profile_log.tally > 0){
-      fprintf(f, "%-16s%-16lld%-16lld\n", 
-              profile_log.counter_names[i],
-              profile_log.counter_totals[i], 
-              profile_log.counter_totals[i]/profile_log.tally);
-    }
-    else{
-      fprintf(f, "%-16s%-16lld%-16s\n", 
-              profile_log.counter_names[i],
-              profile_log.counter_totals[i], 
-              "unknown");
-    }
-  }
-  
-  int e = fclose(f);
-  if(e != 0){
-    log_error("failed to write profile info to %s\n", filepath);
-  }
-  */
 }
 
 void inst_vtrace(int UNUNSED, int n, int id, ...) {
