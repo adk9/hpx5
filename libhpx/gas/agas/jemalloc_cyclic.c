@@ -27,21 +27,35 @@
 #include <libhpx/memory.h>
 #include "agas.h"
 
-static void *
-_cyclic_chunk_alloc(void *addr, size_t n, size_t align, bool *z, unsigned arena)
-{
+static void *_cyclic_chunk_alloc(void *addr, size_t n, size_t align, bool *zero,
+                                 bool *commit, unsigned arena) {
   dbg_assert(here && here->gas);
   agas_t *agas = (agas_t*)here->gas;
   dbg_assert(agas->cyclic_bitmap);
   void *chunk = agas_chunk_alloc(agas, agas->cyclic_bitmap, addr, n, align);
-  if (z && *z && chunk) {
+  if (!chunk) {
+    return NULL;
+  }
+
+  // According to the jemalloc man page, if addr is set, then we *must* return a
+  // chunk at that address.
+  if (addr && addr != chunk) {
+    agas_chunk_dalloc(agas, agas->cyclic_bitmap, addr, n);
+    return NULL;
+  }
+
+  // If we are asked to zero a chunk, then we do so.
+  if (*zero) {
     memset(chunk, 0, n);
   }
+
+  // Commit is not relevant for linux/darwin.
+  *commit = true;
   return chunk;
 }
 
-static bool
-_cyclic_chunk_free(void *addr, size_t n, unsigned arena) {
+static bool _cyclic_chunk_free(void *addr, size_t n, bool commited,
+                               unsigned arena) {
   dbg_assert(here && here->gas);
   agas_t *agas = (agas_t*)here->gas;
   dbg_assert(agas->cyclic_bitmap);
@@ -49,19 +63,16 @@ _cyclic_chunk_free(void *addr, size_t n, unsigned arena) {
   return 0;
 }
 
-static bool
-_cyclic_chunk_purge(void *addr, size_t offset, size_t size, unsigned arena) {
-  log_error("purging cyclic memory is currently unsupported\n");
-  return 1;
-}
+void agas_cyclic_allocator_init(agas_t *agas) {
+  static const chunk_hooks_t _cyclic_hooks = {
+    .alloc    = _cyclic_chunk_alloc,
+    .dalloc   = _cyclic_chunk_free,
+    .commit   = as_null_commit,
+    .decommit = as_null_decommit,
+    .purge    = as_null_purge,
+    .split    = as_null_split,
+    .merge    = as_null_merge
+  };
 
-static chunk_allocator_t _agas_cyclic_allocator = {
-  .challoc = _cyclic_chunk_alloc,
-  .chfree  = _cyclic_chunk_free,
-  .chpurge = _cyclic_chunk_purge
-};
-
-void
-agas_cyclic_allocator_init(agas_t *agas) {
-  as_set_allocator(AS_CYCLIC, &_agas_cyclic_allocator);
+  as_set_allocator(AS_CYCLIC, &_cyclic_hooks);
 }
