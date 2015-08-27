@@ -28,7 +28,7 @@ struct config;
 struct profile_entry {
   hpx_time_t         start_time;
   hpx_time_t           end_time;
-  long long     *counter_totals;
+  int64_t     *counter_totals;
   bool                   marked;
 };
 
@@ -91,13 +91,13 @@ int prof_fini();
 /// @param      values A pointer to an array for storing counter values
 /// @param  num_values The size of the array
 /// @param         key The key that identifies the code event
-int prof_get_averages(long long *values, int num_values, char *key);
+int prof_get_averages(int64_t *values, int num_values, char *key);
 
 /// Return the accumulated totals of the counters
 /// @param      values A pointer to an array where the totals will be stored
 /// @param  num_values The size of the array
 /// @param         key The key that identifies the code event
-int prof_get_totals(long long *values, int num_values, char *key);
+int prof_get_totals(int64_t *values, int num_values, char *key);
 
 /// Return the tally of event occurrences
 /// @param         key The key that identifies the code event

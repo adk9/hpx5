@@ -144,7 +144,7 @@ static void _create_new_entry(struct profile_entry *entries,
   }
   else{
     entries[index].counter_totals = malloc(_profile_log.num_counters * 
-                                           sizeof(long long));
+                                           sizeof(int64_t));
   }
   entries[index].marked = false;
 }
@@ -262,7 +262,7 @@ int prof_fini(){
   return LIBHPX_OK;
 }
 
-int prof_get_averages(long long *values, int num_values, char *key){
+int prof_get_averages(int64_t *values, int num_values, char *key){
   if(num_values != _profile_log.num_counters){
     return PAPI_EINVAL;
   }
@@ -289,7 +289,7 @@ int prof_get_averages(long long *values, int num_values, char *key){
   return PAPI_OK;
 }
 
-int prof_get_totals(long long *values, int num_values, char *key){
+int prof_get_totals(int64_t *values, int num_values, char *key){
   if(num_values != _profile_log.num_counters){
     return PAPI_EINVAL;
   }
@@ -323,7 +323,7 @@ void prof_get_average_time(char *key, hpx_time_t *avg){
     return;
   }
 
-  unsigned long seconds, ns, average = 0;
+  uint64_t seconds, ns, average = 0;
   for(int i = 0; i < _profile_log.entries[event].num_entries; i++){
     if(_profile_log.entries[event].entries[i].marked){
       average += hpx_time_diff_ns(_profile_log.entries[event].entries[i].start_time,
@@ -424,7 +424,7 @@ int prof_start_hardware_counters(char *key){
 
 int prof_stop_hardware_counters(char *key){
   prof_stop_timing(key);
-  long long values[_profile_log.num_counters];
+  int64_t values[_profile_log.num_counters];
   int event = _get_event_num(key);
   if(event == -1 || _profile_log.entries[event].simple){
     return PAPI_EINVAL;
