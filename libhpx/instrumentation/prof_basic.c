@@ -127,11 +127,11 @@ int prof_fini(){
   return LIBHPX_OK;
 }
 
-int prof_get_averages(long long *values, int num_values, char *key){
+int prof_get_averages(int64_t *values, int num_values, char *key){
   return LIBHPX_OK;
 }
 
-int prof_get_totals(long long *values, int num_values, char *key){
+int prof_get_totals(int64_t *values, int num_values, char *key){
   return LIBHPX_OK;
 }
 
@@ -149,7 +149,7 @@ void prof_get_average_time(char *key, hpx_time_t *avg){
     return;
   }
 
-  unsigned long seconds, ns, average = 0;
+  uint64_t seconds, ns, average = 0;
   for(int i = 0; i < _profile_log.entries[event].num_entries; i++){
     if(_profile_log.entries[event].entries[i].marked){
       average += hpx_time_diff_ns(_profile_log.entries[event].entries[i].start_time,
@@ -169,7 +169,7 @@ void prof_get_total_time(char *key, hpx_time_t *tot){
     return;
   }
 
-  unsigned long seconds, ns, total = 0;
+  uint64_t seconds, ns, total = 0;
   for(int i = 0; i < _profile_log.entries[event].num_entries; i++){
     if(_profile_log.entries[event].entries[i].marked){
       total += hpx_time_diff_ns(_profile_log.entries[event].entries[i].start_time,
