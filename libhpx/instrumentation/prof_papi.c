@@ -424,7 +424,9 @@ int prof_start_hardware_counters(char *key){
 
 int prof_stop_hardware_counters(char *key){
   prof_stop_timing(key);
-  int64_t values[_profile_log.num_counters];
+  // I leave this as type long long instead of int64_t to suppress a warning
+  // at compile time if I do otherwise
+  long long values[_profile_log.num_counters];
   int event = _get_event_num(key);
   if(event == -1 || _profile_log.entries[event].simple){
     return PAPI_EINVAL;
@@ -446,7 +448,8 @@ int prof_stop_hardware_counters(char *key){
     return -1;
   }
   for(int i = 0; i < _profile_log.num_counters; i++){
-    _profile_log.entries[event].entries[where].counter_totals[i] = values[i];
+    _profile_log.entries[event].entries[where].counter_totals[i] 
+      = (int64_t) values[i];
   }
 
   return PAPI_OK;
