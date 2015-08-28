@@ -28,7 +28,7 @@ typedef struct {
 #ifdef __VFP_FP__
   void  *vfp_alignment;
   void          *fpscr;
-  void    *vfpregs[16];
+  void     *vfpregs[8];
 #endif
   thread_entry_t    x19; // used to hold f(), called by align_stack_trampoline
   void             *x20; // we use this to hold the parcel that is passed to f()

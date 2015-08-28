@@ -14,6 +14,20 @@
 #include "reg_macros.h"
 #include "../common/asm_macros.h"
 
+#ifdef __VFP_FP__
+#  ifdef ENABLE_DEBUG
+#    define FRAME_SIZE 192
+#  else
+#    define FRAME_SIZE 208
+#  endif
+#else
+#  ifdef ENABLE_DEBUG
+#    define FRAME_SIZE 112
+#  else
+#    define FRAME_SIZE 96
+#  endif
+#endif
+
         // @param x0 - a pointer to the stack pointer to transfer to
         // @param x1 - the continuation to call after the sp exchange
         // @param x2 - the environment for the continutation
@@ -27,15 +41,18 @@
 LABEL(thread_transfer)
         STARTPROC
 
-        sub sp, sp, #176
+        sub sp, sp, FRAME_SIZE
+
 #define REG_PAIR(REG1, REG2, OFFS)	stp REG1, REG2, [sp, OFFS]
 #define REG_ONE(REG1, OFFS)		str REG1, [sp, OFFS]
         GPR_LAYOUT
+#ifdef __VFP_FP__
         FPR_LAYOUT
+#endif
 #undef REG_PAIR
 #undef REG_ONE
 
-#if __VFP_FP__
+#ifdef __VFP_FP__
         vmrs x5, fpscr
         str x5, [sp, #160]
 #endif
@@ -58,10 +75,12 @@ LABEL(thread_transfer)
 #define REG_PAIR(REG1, REG2, OFFS)	ldp REG1, REG2, [sp, OFFS]
 #define REG_ONE(REG1, OFFS)		ldr REG1, [sp, OFFS]
         GPR_LAYOUT
+#ifdef __VFP_FP__
         FPR_LAYOUT
+#endif
 #undef REG_PAIR
 #undef REG_ONE
-        add sp, sp, #176
+        add sp, sp, FRAME_SIZE
 
         ret x30
         ENDPROC
