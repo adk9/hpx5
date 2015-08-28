@@ -15,6 +15,8 @@
 # include "config.h"
 #endif
 
+#include <stddef.h>
+#include <stdio.h>
 #include <libhpx/debug.h>
 #include "../../thread.h"
 #include "../common/asm.h"
@@ -25,16 +27,14 @@
 ///
 /// This should be managed in an asm-specific manner.
 typedef struct {
-#ifdef __VFP_FP__
-  void  *vfp_alignment;
-  void          *fpscr;
-  void     *vfpregs[8];
-#endif
   thread_entry_t    x19; // used to hold f(), called by align_stack_trampoline
   void             *x20; // we use this to hold the parcel that is passed to f()
   void         *regs[8]; // x21-x28
   void             *x29; // The frame pointer
   void     (*x30)(void); // return address - set to align_stack_trampoline
+  void  *vfp_alignment;
+  void          *fpscr;
+  void     *vfpregs[8];
 #ifdef ENABLE_DEBUG
   void         *top_x19;
   void (*top_x30)(void);
