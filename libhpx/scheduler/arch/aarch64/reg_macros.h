@@ -23,9 +23,9 @@
 	REG_PAIR (x29, x30, 80);
 
 #define FPR_LAYOUT			\
-	REG_PAIR ( d8,  d9, 96);	\
-	REG_PAIR (d10, d11, 112);	\
-	REG_PAIR (d12, d13, 128);	\
-	REG_PAIR (d14, d15, 144);
+	REG_PAIR ( d8,  d9, 112);	\
+	REG_PAIR (d10, d11, 128);	\
+	REG_PAIR (d12, d13, 144);	\
+	REG_PAIR (d14, d15, 160);
 
 #endif // LIBHPX_REG_MACROS_H

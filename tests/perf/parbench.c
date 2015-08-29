@@ -87,7 +87,7 @@ static void _usage(FILE *f, int error) {
 static HPX_ACTION_DECL(_main);
 static int _main_action(int iters, int work, int ntasks) {
   printf("parbench(iters=%d, work=%d, ntasks=%d)\n", iters, work, ntasks);
-  printf("time resolution: milliseconds\n", iters, work, ntasks);
+  printf("time resolution: milliseconds\n");
   fflush(stdout);
 
   hpx_time_t start = hpx_time_now();
