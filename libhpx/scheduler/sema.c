@@ -34,6 +34,7 @@ typedef struct {
   lco_t       lco;
   cvar_t    avail;
   volatile uintptr_t count;
+  uintptr_t init;
 } _sema_t;
 
 static void _sema_fini(lco_t *lco);
@@ -48,6 +49,7 @@ static void _reset(_sema_t *sema, int reset) {
     dbg_assert_str(cvar_empty(&sema->avail),
                    "Reset on a sema that has waiting threads.\n");
     cvar_reset(&sema->avail);
+    sync_store(&sema->count, sema->init, SYNC_RELEASE);
   }
 }
 
@@ -74,6 +76,7 @@ static int _sema_init_handler(_sema_t *sema, unsigned count) {
   lco_init(&sema->lco, &_sema_vtable);
   cvar_reset(&sema->avail);
   sema->count = count;
+  sema->init = count;
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _sema_init_async,
