@@ -15,11 +15,15 @@
 #include "config.h"
 #endif
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <mpi.h>
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
+
+// Did we initialize MPI? If not, we don't want to finalize it.
+static bool _inited_mpi = false;
 
 static HPX_RETURNS_NON_NULL const char *_id(void) {
   return "MPI";
@@ -28,7 +32,7 @@ static HPX_RETURNS_NON_NULL const char *_id(void) {
 static void _delete(boot_t *boot) {
   int finalized;
   MPI_Finalized(&finalized);
-  if (!finalized) {
+  if (!finalized && _inited_mpi) {
     MPI_Finalize();
   }
 }
@@ -121,6 +125,7 @@ boot_t *boot_new_mpi(void) {
     log_error("mpi initialization failed\n");
     return NULL;
   }
+  _inited_mpi = true;
 
   if (level != LIBHPX_THREAD_LEVEL) {
     log_boot("MPI thread level failed requested %d, received %d.\n",
