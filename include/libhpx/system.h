@@ -23,8 +23,10 @@ extern "C" {
 
 int system_get_cores(void);
 
-int system_set_affinity(pthread_t thread, int core_id);
+/// Set the thread affinity to a specific core with id @p id.
+int system_set_affinity(pthread_t thread, int id);
 
+/// Set the thread affinity to a group of cores from 0 to @p ncores.
 int system_set_affinity_group(pthread_t thread, int ncores);
 
 /// Find out how many cores are in the thread's affinity group.
