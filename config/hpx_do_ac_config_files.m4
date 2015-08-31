@@ -4,6 +4,9 @@
 # Use autoconf to configure all of the files that need to be processed.
 # -----------------------------------------------------------------------------
 AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
+ AC_CONFIG_FILES([tools/hpx-config], 
+                 [chmod +x tools/hpx-config])
+
  AC_CONFIG_FILES([
    hpx.pc
    Makefile
