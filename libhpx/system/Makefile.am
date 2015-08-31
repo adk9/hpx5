@@ -1,7 +1,7 @@
 # LT Utility libraries
 noinst_LTLIBRARIES	= libsystem.la
 
-libsystem_la_SOURCES =
+libsystem_la_SOURCES    = affinity.c
 
 if OS_LINUX
 SUBDIRS = linux
