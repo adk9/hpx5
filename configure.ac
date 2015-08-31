@@ -9,11 +9,52 @@
 
 AC_PREREQ([2.63])
 AC_INIT([hpx-5], [1.2.0], [hpx@indiana.edu])
+
+AC_SUBST(HPX_COPYRIGHT,["Copyright (c) 2013-2015, Trustees of Indiana University."])
+AC_COPYRIGHT([Copyright (c) 2013-2015, Trustees of Indiana University.])
+
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
 
 # Figure out what the version of HPX is.
 HPX_CONFIG_VERSION
+
+CONFIG=`echo ${ac_configure_args} | sed -e 's#'"'"'\([^ ]*\)'"'"'#\1#g'`
+AC_SUBST([CONFIG])
+
+srcroot=$srcdir
+if test "x${srcroot}" = "x." ; then
+  srcroot=""
+else
+  srcroot="${srcroot}/"
+fi
+AC_SUBST([srcroot])
+abs_srcroot="`cd \"${srcdir}\"; pwd`/"
+AC_SUBST([abs_srcroot])
+
+objroot=""
+AC_SUBST([objroot])
+abs_objroot="`pwd`/"
+AC_SUBST([abs_objroot])
+
+dnl Munge install path variables.
+if test "x$prefix" = "xNONE" ; then
+  prefix="/usr/local"
+fi
+if test "x$exec_prefix" = "xNONE" ; then
+  exec_prefix=$prefix
+fi
+PREFIX=$prefix
+AC_SUBST([PREFIX])
+BINDIR=`eval echo $bindir`
+BINDIR=`eval echo $BINDIR`
+AC_SUBST([BINDIR])
+INCLUDEDIR=`eval echo $includedir`
+INCLUDEDIR=`eval echo $INCLUDEDIR`
+AC_SUBST([INCLUDEDIR])
+LIBDIR=`eval echo $libdir`
+LIBDIR=`eval echo $LIBDIR`
+AC_SUBST([LIBDIR])
 
 AC_LANG([C])
 

@@ -7,10 +7,12 @@ AC_DEFUN([HPX_DO_SUMMARY], [
 
  # Compute some friendly strings
  AS_IF([test "x$have_mpi" == xyes], [networks="MPI"])
+ AS_IF([test "x$have_pmi" == xyes], [networks="PMI $networks"])
  AS_IF([test "x$have_photon" == xyes], [networks="Photon $networks"])
 
  AS_IF([test "x$have_jemalloc" == xyes], [allocator="jemalloc"])
  AS_IF([test "x$have_tbbmalloc" == xyes], [allocator="tbbmalloc"])
+ AS_IF([test "x$have_dlmalloc" == xyes], [allocator="dlmalloc"])
 
  AS_IF([test "x$enable_tests" == xyes], [tests="integration"])
  AS_IF([test "x$enable_lengthy_tests" == xyes], [tests="$tests lengthy"])
