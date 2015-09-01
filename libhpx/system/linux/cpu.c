@@ -17,7 +17,6 @@
 
 #include <string.h>
 #include <unistd.h>
-#include <hpx/hpx.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/system.h>
