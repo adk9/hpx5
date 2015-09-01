@@ -97,7 +97,8 @@
         double*      :sync_load_d,              \
         void**       :sync_load_p)(addr, mm)
 #else
-#warning No support for generic synchronization for your platform.
+#warning Falling back to using the compiler's __sync_ primitives.
+#include "gcc/sync.h"
 #endif
 
 /*
