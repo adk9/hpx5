@@ -24,10 +24,10 @@
 
 AC_DEFUN([HPX_CONFIG_COMPILER], [
  AX_COMPILER_VENDOR
- AX_GCC_BUILTIN(__builtin_unreachable)
- AX_GCC_BUILTIN(__builtin_expect)
- AX_GCC_BUILTIN(__builtin_ctzl)
- AX_GCC_BUILTIN(__builtin_clzl)
- AX_GCC_BUILTIN(__builtin_clz)
- AX_GCC_BUILTIN(__builtin_popcountl)
+ AX_GCC_BUILTIN([__builtin_expect])
+ AX_GCC_BUILTIN([__builtin_unreachable])
+ AX_GCC_BUILTIN([__builtin_ctzl])
+ AX_GCC_BUILTIN([__builtin_clzl])
+ AX_GCC_BUILTIN([__builtin_clz])
+ AX_GCC_BUILTIN([__builtin_popcountl])
 ])
