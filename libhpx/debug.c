@@ -30,7 +30,7 @@
 #include "libhpx/locality.h"
 #include "libhpx/debug.h"
 
-static char *_fetchHostname(char *hostname, int size) {
+static char *_get_hostname(char *hostname, int size) {
   gethostname(hostname, size);
   return hostname;
 }
@@ -40,7 +40,7 @@ static char *_fetchHostname(char *hostname, int size) {
 HPX_NO_OPTIMIZE void dbg_wait(void) {
   int i = 0;
   char hostname[256];
-  _fetchHostname(hostname, 255);
+  _get_hostname(hostname, 255);
   printf("PID %d on %s ready for attach\n", getpid(), hostname);
   fflush(stdout);
   while (0 == i)
