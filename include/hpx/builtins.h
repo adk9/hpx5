@@ -27,13 +27,20 @@
 #define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 \
                      + __GNUC_PATCHLEVEL__)
 
-#define likely(S) (__builtin_expect(S, 1))
-#define unlikely(S) (__builtin_expect(S, 0))
-#if (GCC_VERSION >= 40500) || defined(__INTEL_COMPILER) || defined(__clang__)
-#define unreachable() __builtin_unreachable()
+#ifdef HAVE___BUILTIN_EXPECT
+# define likely(S) (__builtin_expect(S, 1))
+# define unlikely(S) (__builtin_expect(S, 0))
 #else
-#define unreachable()
+# define likely(S) (S)
+# define unlikely(S) (S)
 #endif
+
+#ifdef HAVE___BUILTIN_UNREACHABLE
+# define unreachable() __builtin_unreachable()
+#else
+# define unreachable()
+#endif
+
 #define ctzl(N) __builtin_ctzl(N)
 #define clzl(N) __builtin_clzl(N)
 #define clz(N) __builtin_clz(N)
