@@ -24,11 +24,13 @@
 #include "parcel_utils.h"
 #include "xport.h"
 
+extern MPI_Comm LIBHPX_COMM;
+
 static void
 _mpi_check_tag(int tag) {
   int *tag_ub;
   int flag = 0;
-  int e = MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &tag_ub, &flag);
+  int e = MPI_Comm_get_attr(LIBHPX_COMM, MPI_TAG_UB, &tag_ub, &flag);
   dbg_check(e, "Could not extract tag upper bound\n");
   dbg_assert_str(*tag_ub > tag, "tag value out of bounds (%d > %d)\n", tag,
                  *tag_ub);
@@ -46,7 +48,7 @@ _mpi_sizeof_status(void) {
 
 static int
 _mpi_isend(int to, const void *from, unsigned n, int tag, void *r) {
-  int e = MPI_Isend((void *)from, n, MPI_BYTE, to, tag, MPI_COMM_WORLD, r);
+  int e = MPI_Isend((void *)from, n, MPI_BYTE, to, tag, LIBHPX_COMM, r);
   if (MPI_SUCCESS != e) {
     return log_error("failed MPI_Isend: %u bytes to %d\n", n, to);
   }
@@ -58,7 +60,7 @@ _mpi_isend(int to, const void *from, unsigned n, int tag, void *r) {
 static int
 _mpi_irecv(void *to, size_t n, int tag, void *request) {
   const int src = MPI_ANY_SOURCE;
-  const MPI_Comm com = MPI_COMM_WORLD;
+  const MPI_Comm com = LIBHPX_COMM;
   if (MPI_SUCCESS != MPI_Irecv(to, n, MPI_BYTE, src, tag, com, request)) {
     return log_error("could not start irecv\n");
   }
@@ -69,7 +71,7 @@ static int
 _mpi_iprobe(int *tag) {
   int flag;
   MPI_Status stat;
-  int e = MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &stat);
+  int e = MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, LIBHPX_COMM, &flag, &stat);
   if (MPI_SUCCESS != e) {
     return log_error("failed MPI_Iprobe\n");
   }
