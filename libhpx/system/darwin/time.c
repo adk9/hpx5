@@ -95,7 +95,7 @@ uint64_t hpx_time_elapsed_ns(hpx_time_t from) {
 }
 
 uint64_t hpx_time_to_ns(hpx_time_t t) {
-  return (uint64_t)hpx_time_elapsed_ns(_beginning_of_time, t);
+  return (uint64_t)hpx_time_diff_ns(_beginning_of_time, t);
 }
 
 void libhpx_time_start() {
