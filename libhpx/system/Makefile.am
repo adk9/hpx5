@@ -1,6 +1,8 @@
 # LT Utility libraries
 noinst_LTLIBRARIES	= libsystem.la
 
+libsystem_la_CPPFLAGS	= -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
+libsystem_la_CFLAGS	= $(LIBHPX_CFLAGS)
 libsystem_la_SOURCES    = affinity.c
 
 if OS_LINUX
