@@ -19,7 +19,9 @@
 #include <unistd.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
 #include <libhpx/system.h>
+#include <hwloc.h>
 
 static int _hwloc_cpubind(hwloc_thread_t thread, hwloc_bitmap_t set) {
   int e = hwloc_set_thread_cpubind(here->topology, thread,
