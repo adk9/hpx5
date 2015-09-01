@@ -81,10 +81,6 @@ AC_DEFUN([HPX_CONFIG_HWLOC], [
                    [How we find hwloc @<:@default=system@:>@])],
    [], [with_hwloc=system])
 
- AS_IF([test "x$enable_hwloc" == xno],
-  [AC_MSG_WARN([hwloc is required, defaulting --with-hwloc=yes])
-   with_hwloc=yes])
-
  AS_CASE($with_hwloc,
    [contrib], [build_hwloc=yes],
 
