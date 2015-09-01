@@ -133,7 +133,7 @@ boot_t *boot_new_mpi(void) {
          LIBHPX_THREAD_LEVEL, level);
   }
 
-  if (MPI_SUCCESS != MPI_Comm_dup(LIBHPX_COMM, &LIBHPX_COMM)) {
+  if (MPI_SUCCESS != MPI_Comm_dup(MPI_COMM_WORLD, &LIBHPX_COMM)) {
     log_error("mpi communicator duplication failed\n");
     return NULL;
   }
