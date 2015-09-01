@@ -104,7 +104,7 @@ AC_DEFUN([HPX_CONFIG_LIBFFI], [
  
  # allow the user to override the way we try and find libffi.
  AC_ARG_WITH(libffi,
-   [AS_HELP_STRING([--with-libffi{=system,contrib,PKG}],
+   [AS_HELP_STRING([--with-libffi{=system,PKG,contrib}],
                    [Control which libffi we use @<:@default=system@:>@])],
    [], [with_libffi=yes])
 

@@ -79,7 +79,7 @@ AC_DEFUN([HPX_CONFIG_HWLOC], [
  
  # allow the user to override how we find hwloc
  AC_ARG_WITH(hwloc,
-   [AS_HELP_STRING([--with-hwloc{=system,contrib,PKG}],
+   [AS_HELP_STRING([--with-hwloc{=system,PKG,contrib}],
                    [How we find hwloc @<:@default=system@:>@])],
    [], [with_hwloc=yes])
 
