@@ -21,7 +21,6 @@
 #include <inttypes.h>
 #include <sys/types.h>
 #include <sys/sysctl.h>
-#include <hpx/hpx.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/system.h>
