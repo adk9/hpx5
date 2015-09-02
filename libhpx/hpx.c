@@ -196,6 +196,13 @@ int hpx_init(int *argc, char ***argv) {
     goto unwind1;
   }
 
+  if (!here->config->cores) {
+    here->config->cores = system_get_job_cpus();
+    if (!here->config->cores) {
+      here->config->cores = system_get_cores();
+    }
+  }
+
   if (!here->config->threads) {
     here->config->threads = here->config->cores;
   }
