@@ -14,6 +14,11 @@
 #ifndef LIBHPX_UTILS_H
 #define LIBHPX_UTILS_H
 
-uint32_t hash_string(const char *str, size_t len);
+/// Hash a string @p str of length @p len.
+uint32_t libhpx_hash_string(const char *str, size_t len);
+
+/// Get a value from the environment associated with a case-sensitive
+/// key @p key.
+char *libhpx_getenv(const char * const key);
 
 #endif // LIBHPX_UTILS_H
