@@ -70,7 +70,7 @@ static const config_t _default_cfg = {
 /// @param         flag Indicates if the option key is a flag or not.
 static void _from_env(UT_string *str, const char * const var,
                       const char * const arg, bool flag) {
-  const char *c = libhpx_getenv(var);
+  const char *c = libhpx_getenv_str(var);
   if (!c) {
     return;
   }
