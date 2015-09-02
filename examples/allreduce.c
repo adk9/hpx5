@@ -101,5 +101,7 @@ int main(int argc, char** argv) {
   // Initialize the values that we want to reduce
   value = HPX_LOCALITY_ID;
 
-  return hpx_run(&allreduce, NULL, 0);
+  int e = hpx_run(&allreduce, NULL, 0);
+  hpx_finalize();
+  return e;
 }

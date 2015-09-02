@@ -100,5 +100,7 @@ int main(int argc, char *argv[argc]) {
 
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, root, root_action, HPX_POINTER, HPX_SIZE_T);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, get_rank, get_rank_action, HPX_POINTER, HPX_SIZE_T);
-  return hpx_run(&root, NULL, 0);
+  int e = hpx_run(&root, NULL, 0);
+  hpx_finalize();
+  return e;
 }

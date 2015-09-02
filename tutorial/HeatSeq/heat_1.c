@@ -412,5 +412,7 @@ int main(int argc, char *argv[])
 
   _register_actions();
 
-  return hpx_run(&_main, NULL, 0);
+  e = hpx_run(&_main, NULL, 0);
+  hpx_finalize();
+  return e;
 }

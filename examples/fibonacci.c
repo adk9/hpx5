@@ -139,6 +139,8 @@ int main(int argc, char *argv[]) {
                       HPX_POINTER, HPX_SIZE_T);
 
   // run the main action
-  return hpx_run(&_fib_main, &n, sizeof(n));
+  e = hpx_run(&_fib_main, &n, sizeof(n));
+  hpx_finalize();
+  return e;
 }
 
