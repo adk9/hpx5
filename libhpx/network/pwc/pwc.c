@@ -16,19 +16,17 @@
 
 #include <stdlib.h>
 #include <string.h>
-
-#include "hpx/builtins.h"
-
-#include "libhpx/action.h"
-#include "libhpx/boot.h"
-#include "libhpx/config.h"
-#include "libhpx/debug.h"
-#include "libhpx/gpa.h"
-#include "libhpx/gas.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
+#include <hpx/builtins.h>
+#include <libhpx/action.h>
+#include <libhpx/boot.h>
+#include <libhpx/config.h>
+#include <libhpx/debug.h>
+#include <libhpx/gpa.h>
+#include <libhpx/gas.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
+#include <libhpx/parcel.h>
+#include <libhpx/scheduler.h>
 #include "commands.h"
 #include "parcel_emulation.h"
 #include "pwc.h"
@@ -171,11 +169,9 @@ int pwc_command(void *network, hpx_addr_t loc, hpx_action_t rop, uint64_t args)
   return pwc->xport->command(&op);
 }
 
-static int
-_pwc_pwc(void *network,
-         hpx_addr_t to, const void *lva, size_t n,
-         hpx_action_t lop, hpx_addr_t laddr,
-         hpx_action_t rop, hpx_addr_t raddr)
+static int _pwc_pwc(void *network, hpx_addr_t to, const void *lva, size_t n,
+                    hpx_action_t lop, hpx_addr_t laddr,
+                    hpx_action_t rop, hpx_addr_t raddr)
 {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(here->gas, to);
@@ -195,18 +191,16 @@ _pwc_pwc(void *network,
   return pwc->xport->pwc(&op);
 }
 
-static int
-_pwc_put(void *network, hpx_addr_t to, const void *from, size_t n,
-         hpx_action_t lop, hpx_addr_t laddr)
+static int _pwc_put(void *network, hpx_addr_t to, const void *from, size_t n,
+                    hpx_action_t lop, hpx_addr_t laddr)
 {
   hpx_action_t rop = HPX_ACTION_NULL;
   hpx_addr_t raddr = HPX_NULL;
   return _pwc_pwc(network, to, from, n, lop, laddr, rop, raddr);
 }
 
-static int
-_pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
-         hpx_action_t lop, hpx_addr_t laddr)
+static int _pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
+                    hpx_action_t lop, hpx_addr_t laddr)
 {
   pwc_network_t *pwc = network;
   int rank = gas_owner_of(here->gas, from);
@@ -226,13 +220,11 @@ _pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
   return pwc->xport->gwc(&op);
 }
 
-static void
-_pwc_set_flush(void *network) {
+static void _pwc_set_flush(void *network) {
   // pwc networks always flush their rdma
 }
 
-static void
-_pwc_flush(pwc_network_t *pwc) {
+static void _pwc_flush(pwc_network_t *pwc) {
   int remaining, src;
   command_t command;
   do {
@@ -241,8 +233,7 @@ _pwc_flush(pwc_network_t *pwc) {
   boot_barrier(here->boot);
 }
 
-static void
-_pwc_delete(void *network) {
+static void _pwc_delete(void *network) {
   dbg_assert(network);
   pwc_network_t *pwc = network;
   _pwc_flush(pwc);
@@ -280,12 +271,8 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
               cfg->pwc_parceleagerlimit, cfg->pwc_parcelbuffersize);
   }
 
-
-  // Allocate the network object.
+  // Allocate the network object and initialize its virtual function table.
   pwc_network_t *pwc = malloc(sizeof(*pwc));
-  dbg_assert_str(pwc, "could not allocate put-with-completion network\n");
-
-  // Initialize the network's virtual function table.
   pwc->vtable.type = HPX_NETWORK_PWC;
   pwc->vtable.delete = _pwc_delete;
   pwc->vtable.progress = _pwc_progress;
@@ -308,33 +295,30 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   pwc->send_buffers = calloc(here->ranks, sizeof(send_buffer_t));
   pwc->heap_segments = calloc(here->ranks, sizeof(heap_segment_t));
 
-  // Register the heap segment.
+  // Register the gas heap segment.
   heap_segment_t heap = {
     .n = gas_local_size(here->gas),
     .base = gas_local_base(here->gas)
   };
   _pwc_register_dma(pwc, heap.base, heap.n, &heap.key);
 
-  // Exchange all the heap keys
+  // Exchange all the heap keys, and make sure it went okay
   boot_allgather(boot, &heap, pwc->heap_segments, sizeof(heap));
 
-  // Make sure the exchange went well.
-  if (DEBUG) {
-    heap_segment_t *segment = &pwc->heap_segments[here->rank];
-    dbg_assert(heap.n == segment->n);
-    dbg_assert(heap.base == segment->base);
-    dbg_assert(!strncmp(heap.key, segment->key, XPORT_KEY_SIZE));
-    (void)segment;
-  }
+  heap_segment_t *segment = &pwc->heap_segments[here->rank];
+  dbg_assert(heap.n == segment->n);
+  dbg_assert(heap.base == segment->base);
+  dbg_assert(!strncmp(heap.key, segment->key, XPORT_KEY_SIZE));
 
   // Initialize the send buffers.
   for (int i = 0, e = here->ranks; i < e; ++i) {
     send_buffer_t *send = &pwc->send_buffers[i];
     int rc = send_buffer_init(send, i, pwc->parcels, pwc->xport, 8);
-    if (LIBHPX_OK != rc) {
-      dbg_error("failed to initialize send buffer %d of %u\n", i, e);
-    }
+    dbg_check(rc, "failed to initialize send buffer %d of %u\n", i, e);
   }
 
   return &pwc->vtable;
+
+  // avoid unused variable warnings
+  (void)segment;
 }
