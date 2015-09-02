@@ -97,7 +97,7 @@
         double*      :sync_load_d,              \
         void**       :sync_load_p)(addr, mm)
 #else
-#warning Falling back to using the compiler's __sync_ primitives.
+#warning Falling back to using the compilers __sync_ primitives.
 #include "gcc/sync.h"
 #endif
 
