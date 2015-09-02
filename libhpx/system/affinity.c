@@ -55,13 +55,11 @@ int system_get_affinity_group_size(pthread_t thread, int *ncores) {
   int e = hwloc_get_thread_cpubind(here->topology, (hwloc_thread_t)thread,
                                    cpu_set, HWLOC_CPUBIND_THREAD);
   if (e) {
-    log_error("system_get_affinity_group_size failed with error %s.\n",
-              strerror(e));
-    hwloc_bitmap_free(cpu_set);
-    return LIBHPX_ERROR;
+    *ncores = 0;
+  } else {
+    *ncores = hwloc_bitmap_weight(cpu_set);
   }
 
-  *ncores = hwloc_bitmap_weight(cpu_set);
   hwloc_bitmap_free(cpu_set);
   return LIBHPX_OK;
 }
