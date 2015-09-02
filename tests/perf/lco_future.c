@@ -145,5 +145,7 @@ int main(int argc, char *argv[]) {
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _get_value, action_get_value, HPX_POINTER, HPX_SIZE_T);
 
   // run the main action
-  return hpx_run(&_main, NULL, 0);
+  int e = hpx_run(&_main, NULL, 0);
+  hpx_finalize();
+  return e;
 }

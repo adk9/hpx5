@@ -72,5 +72,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_handler);
 
 int main(int argc, char *argv[]) {
   hpx_init(&argc, &argv);
-  return hpx_run(&_main);
+  int e = hpx_run(&_main);
+  hpx_finalize();
+  return e;
 }

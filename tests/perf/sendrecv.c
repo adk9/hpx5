@@ -148,5 +148,7 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  return hpx_run(&_main, &levels, &work);
+  int e = hpx_run(&_main, &levels, &work);
+  hpx_finalize();
+  return e;
 }

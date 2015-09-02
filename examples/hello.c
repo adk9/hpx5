@@ -24,5 +24,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _hello, _hello_action);
 int main(int argc, char *argv[argc]) {
   if (hpx_init(&argc, &argv) != 0)
     return -1;
-  return hpx_run(&_hello);
+  int e = hpx_run(&_hello);
+  hpx_finalize();
+  return e;
 }

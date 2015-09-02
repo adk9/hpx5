@@ -127,6 +127,8 @@ int main(int argc, char *argv[]) {
   }
 
   // run the main action
-  return hpx_run(&_main);
+  int e = hpx_run(&_main);
+  hpx_finalize();
+  return e;
 }
 

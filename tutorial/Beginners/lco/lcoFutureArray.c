@@ -47,5 +47,7 @@ int main(int argc, char *argv[]) {
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _get, _get_action, HPX_POINTER, HPX_SIZE_T);
 
-  return hpx_run(&_main, NULL, 0);
+  e = hpx_run(&_main, NULL, 0);
+  hpx_finalize();
+  return e;
 }

@@ -218,5 +218,7 @@ int main(int argc, char *argv[])
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init, _init_action, HPX_POINTER, HPX_SIZE_T);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _gather, _gather_action, HPX_POINTER, HPX_SIZE_T);
 
-  return hpx_run(&_main, &max_msg_size, sizeof(max_msg_size));
+  int e = hpx_run(&_main, &max_msg_size, sizeof(max_msg_size));
+  hpx_finalize();
+  return e;
 }

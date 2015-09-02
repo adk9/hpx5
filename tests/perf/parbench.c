@@ -160,6 +160,8 @@ int main(int argc, char *argv[]) {
   argc -= optind;
   argv += optind;
 
-  return hpx_run(&_main, &iters, &work, &ntasks);
+  e = hpx_run(&_main, &iters, &work, &ntasks);
+  hpx_finalize();
+  return e;
 }
 

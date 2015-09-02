@@ -375,5 +375,7 @@ int main(int argc, char *argv[])
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _mover, _mover_action, HPX_POINTER, HPX_SIZE_T);
 
   // run the update_table action
-  return hpx_run(&_main, &guppie_cfg, sizeof(guppie_cfg));
+  e = hpx_run(&_main, &guppie_cfg, sizeof(guppie_cfg));
+  hpx_finalize();
+  return e;
 }
