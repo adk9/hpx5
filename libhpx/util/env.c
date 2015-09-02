@@ -43,8 +43,8 @@ static char *_getenv_upper(const char * const key) {
   return c;
 }
 
-/// Get a value from a environment variable @p key.
-char *libhpx_getenv(const char * const key) {
+/// Get a string value from a environment variable @p key.
+char *libhpx_getenv_str(const char * const key) {
   char *c = getenv(key);
   if (!c) {
     c = _getenv_upper(key);
@@ -53,5 +53,12 @@ char *libhpx_getenv(const char * const key) {
     return NULL;
   }
   return c;
+}
+
+/// Get a numeric value from a environment variable @p key, returning
+/// @p default_num if the variable is not found.
+int libhpx_getenv_num(const char * const key, int default_num) {
+  char *c = libhpx_getenv_str(key);
+  return (c ? atoi(c) : default_num);
 }
 
