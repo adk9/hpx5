@@ -45,14 +45,12 @@
 #include "gcc/sync.h"
 #elif defined(_CRAYC)
 #include "craycc/sync.h"
+#elif GCC_VERSION >= 40100 && GCC_VERSION < 40201
+#include "gcc/sync.h"
 #else
 
 #if defined(__aarch64__)
 #error "sync.h is not supported for AARCH64"
-#endif
-
-#if GCC_VERSION >= 40100 && GCC_VERSION < 40201
-#include "gcc/sync.h"
 #endif
 
 #define SYNC_RELAXED 0
@@ -101,7 +99,7 @@
         double*      :sync_load_d,              \
         void**       :sync_load_p)(addr, mm)
 #else
-#warning Falling back to using the compilers __sync_ primitives.
+#warning No support for generic synchronization for your platform.
 #endif
 
 /*
