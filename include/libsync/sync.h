@@ -51,6 +51,10 @@
 #error "sync.h is not supported for AARCH64"
 #endif
 
+#if GCC_VERSION >= 40100 && GCC_VERSION < 40201
+#include "gcc/sync.h"
+#endif
+
 #define SYNC_RELAXED 0
 #define SYNC_CONSUME 1
 #define SYNC_ACQUIRE 2
@@ -98,7 +102,6 @@
         void**       :sync_load_p)(addr, mm)
 #else
 #warning Falling back to using the compilers __sync_ primitives.
-#include "gcc/sync.h"
 #endif
 
 /*
