@@ -38,6 +38,7 @@
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/system.h>
+#include <libhpx/utils.h>
 
 #include "parser.h"
 
@@ -52,21 +53,6 @@ static const config_t _default_cfg = {
 # include "libhpx/options.def"
 #undef LIBHPX_OPT
 };
-
-/// Getenv, but with an upper-case version of @p var.
-static const char *_getenv_upper(const char * const var) {
-  const char *c = NULL;
-  const size_t len = strlen(var);
-  char *uvar = malloc(len + 1);
-  dbg_assert_str(uvar, "Could not malloc %zu bytes during option parsing", len);
-  for (int i = 0; i < len; ++i) {
-    uvar[i] = toupper(var[i]);
-  }
-  uvar[len] = '\0';
-  c = getenv(uvar);
-  free(uvar);
-  return c;
-}
 
 /// Get a configuration value from an environment variable.
 ///
@@ -84,10 +70,7 @@ static const char *_getenv_upper(const char * const var) {
 /// @param         flag Indicates if the option key is a flag or not.
 static void _from_env(UT_string *str, const char * const var,
                       const char * const arg, bool flag) {
-  const char *c = getenv(var);
-  if (!c) {
-    c = _getenv_upper(var);
-  }
+  const char *c = libhpx_getenv(var);
   if (!c) {
     return;
   }
