@@ -8,5 +8,5 @@ Description: Photon.
 URL: https://gitlab.crest.iu.edu/damsl/photon
 Version: @VERSION@
 Cflags: -I${includedir}
-Libs: -L${libdir} -lphoton
-Libs.private: @VERBS_LIBS@ @UGNI_LIBS@
+Libs: -L${libdir} -lphoton @PHOTON_PC_LIBS@
+Libs.private: @PHOTON_PC_LIBS_PRIVATE@ 
