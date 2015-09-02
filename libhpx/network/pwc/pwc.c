@@ -26,7 +26,6 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
 #include "commands.h"
 #include "parcel_emulation.h"
 #include "pwc.h"
@@ -88,66 +87,15 @@ static void _pwc_release_dma(void *network, const void* base, size_t n) {
   pwc->xport->unpin(base, n);
 }
 
-typedef struct {
-  int        rank;
-  hpx_parcel_t *p;
-  size_t        n;
-  xport_key_t key;
-} _rendezvous_get_args_t;
-
-static int _rendezvous_launch_handler(int src, command_t cmd) {
-  uintptr_t arg = command_get_arg(cmd);
-  hpx_parcel_t *p = (void*)arg;
-  parcel_set_state(p, PARCEL_SERIALIZED);
-  EVENT_PARCEL_RECV(p);
-  scheduler_spawn(p);
-  return HPX_SUCCESS;
-}
-COMMAND_DEF(_rendezvous_launch, _rendezvous_launch_handler);
-
-static int _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size) {
-  pwc_network_t *pwc = (pwc_network_t*)here->network;
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, args->n - sizeof(*p));
-  dbg_assert(p);
-  xport_op_t op = {
-    .rank = args->rank,
-    .n = args->n,
-    .dest = p,
-    .dest_key = pwc->xport->key_find_ref(pwc->xport, p, args->n),
-    .src = args->p,
-    .src_key = &args->key,
-    .lop = command_pack(_rendezvous_launch, (uintptr_t)p),
-    .rop = command_pack(release_parcel, (uintptr_t)args->p)
-  };
-  int e = pwc->xport->gwc(&op);
-  dbg_check(e, "could not issue get during rendezvous parcel\n");
-  return HPX_SUCCESS;
-}
-static LIBHPX_ACTION(HPX_INTERRUPT, HPX_MARSHALLED, _rendezvous_get,
-                     _rendezvous_get_handler, HPX_POINTER, HPX_SIZE_T);
-
-static int _pwc_rendezvous_send(pwc_network_t *pwc, hpx_parcel_t *p, int rank) {
-  size_t n = parcel_size(p);
-  _rendezvous_get_args_t args = {
-    .rank = here->rank,
-    .p = p,
-    .n = n
-  };
-  pwc->xport->key_find(pwc->xport, p, n, &args.key);
-  hpx_addr_t there = HPX_THERE(rank);
-  return hpx_call(there, _rendezvous_get, HPX_NULL, &args, sizeof(args));
-}
-
 static int _pwc_send(void *network, hpx_parcel_t *p) {
+  if (parcel_size(p) >= here->config->pwc_parceleagerlimit) {
+    return pwc_rendezvous_send(network, p);
+  }
+
   pwc_network_t *pwc = network;
   int rank = gas_owner_of(here->gas, p->target);
-  if (parcel_size(p) > pwc->cfg->pwc_parceleagerlimit) {
-    return _pwc_rendezvous_send(network, p, rank);
-  }
-  else {
-    send_buffer_t *buffer = &pwc->send_buffers[rank];
-    return send_buffer_send(buffer, HPX_NULL, p);
-  }
+  send_buffer_t *buffer = &pwc->send_buffers[rank];
+  return send_buffer_send(buffer, HPX_NULL, p);
 }
 
 int pwc_command(void *network, hpx_addr_t loc, hpx_action_t rop, uint64_t args)
