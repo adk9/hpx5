@@ -64,8 +64,9 @@ LT_INIT([disable-shared])
 # LIBHPX_LDFLAGS: -L and -Wl flags needed to link installed libhpx
 # LIBHPX_LIBS: -l dependencies required to link installed libhpx
 #
-# HPX_APPS_CFLAGS: CFLAGS required to link to build libhpx.la
-# HPX_APPS_LDADD: .la libraries require to link build libhpx.la
+# HPX_APPS_CPPFLAGS: CPPFLAGS required to link to build-tree libhpx.la
+# HPX_APPS_CFLAGS: CFLAGS required to link to build-tree libhpx.la
+# HPX_APPS_LDADD: .la libraries require to link build-tree libhpx.la
 # HPX_APPS_DEPS: .la library dependendencies for apps
 #
 # HPX_PC_CFLAGS: C and CPP flags (typically just -D) for installed libhps.so
@@ -130,6 +131,7 @@ AS_IF([test "x$enable_parallel_config" != xno],
 #   LIBHPX_LDFLAGS
 #   LIBHPX_LIBS
 #
+#   HPX_APPS_CPPFLAGS
 #   HPX_APPS_CFLAGS
 #
 #   HPX_PC_PUBLIC_LIBS
@@ -221,6 +223,7 @@ AC_SUBST(HPX_PC_PRIVATE_PKGS)
 HPX_APPS_LDADD="\$(top_builddir)/libhpx/libhpx.la"
 HPX_APPS_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la"
 
+AC_SUBST(HPX_APPS_CPPFLAGS)
 AC_SUBST(HPX_APPS_CFLAGS)
 AC_SUBST(HPX_APPS_LDADD)
 AC_SUBST(HPX_APPS_DEPS)

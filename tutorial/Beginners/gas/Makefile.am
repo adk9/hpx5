@@ -2,9 +2,10 @@ gasdir                        = $(datarootdir)/doc/@PACKAGE@
 gas_PROGRAMS                  = gasalloc memget memget1 memput \
                                 memcpy memput1 memTryPin 
 
-AM_CPPFLAGS			= -D_GNU_SOURCE $(HPX_APPS_CFLAGS) -I$(top_srcdir)/include
-AM_LDFLAGS			= $(LIBHPX_LDFLAGS) -no-install
-LDADD				= $(HPX_APPS_LDADD)
+AM_CPPFLAGS      		= -D_GNU_SOURCE $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include
+AM_CFLAGS               = $(HPX_APPS_CFLAGS) -Wno-unused
+AM_LDFLAGS       		= -no-install
+LDADD            		= $(HPX_APPS_LDADD)
 
 gasalloc_SOURCES              = gasalloc.c
 memget_SOURCES                = memget.c
