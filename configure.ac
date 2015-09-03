@@ -9,6 +9,10 @@
 
 AC_PREREQ([2.63])
 AC_INIT([hpx-5], [1.2.0], [hpx@indiana.edu])
+
+AC_SUBST(HPX_COPYRIGHT,["Copyright (c) 2013-2015, Trustees of Indiana University."])
+AC_COPYRIGHT([Copyright (c) 2013-2015, Trustees of Indiana University.])
+
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
 
