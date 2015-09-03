@@ -114,6 +114,7 @@ contrib/libcuckoo/
 /tests/unit/Makefile
 /tests/perf/Makefile
 tests/unit/apex_test
+tests/unit/allreduce
 tests/unit/call_when
 tests/unit/gas_alloc
 tests/unit/parcel_send_through

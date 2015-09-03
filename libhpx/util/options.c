@@ -38,6 +38,7 @@
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/system.h>
+#include <libhpx/utils.h>
 
 #include "parser.h"
 
@@ -52,21 +53,6 @@ static const config_t _default_cfg = {
 # include "libhpx/options.def"
 #undef LIBHPX_OPT
 };
-
-/// Getenv, but with an upper-case version of @p var.
-static const char *_getenv_upper(const char * const var) {
-  const char *c = NULL;
-  const size_t len = strlen(var);
-  char *uvar = malloc(len + 1);
-  dbg_assert_str(uvar, "Could not malloc %zu bytes during option parsing", len);
-  for (int i = 0; i < len; ++i) {
-    uvar[i] = toupper(var[i]);
-  }
-  uvar[len] = '\0';
-  c = getenv(uvar);
-  free(uvar);
-  return c;
-}
 
 /// Get a configuration value from an environment variable.
 ///
@@ -84,10 +70,7 @@ static const char *_getenv_upper(const char * const var) {
 /// @param         flag Indicates if the option key is a flag or not.
 static void _from_env(UT_string *str, const char * const var,
                       const char * const arg, bool flag) {
-  const char *c = getenv(var);
-  if (!c) {
-    c = _getenv_upper(var);
-  }
+  const char *c = libhpx_getenv_str(var);
   if (!c) {
     return;
   }
@@ -417,7 +400,15 @@ config_print(config_t *cfg, FILE *f) {
   fprintf(f, "\nDebugging\n");
   fprintf(f, "  mprotectstacks\t%d\n", cfg->dbg_mprotectstacks);
   fprintf(f, "  waitonabort\t\t%d\n", cfg->dbg_waitonabort);
-  fprintf(f, "  waitonsegv\t\t%d\n", cfg->dbg_waitonsegv);
+  fprintf(f, "  waitonsig\t\t");
+  for (int i = 0, e = sizeof(HPX_WAITON_TO_STRING) /
+               sizeof(HPX_WAITON_TO_STRING[0]); i < e; ++i) {
+    uint64_t signal = 1lu << i;
+    if (cfg->dbg_waitonsig & signal) {
+      fprintf(f, "\"%s\", ", HPX_WAITON_TO_STRING[i]);
+    }
+  }
+  fprintf(f, "\n");
   fprintf(f, "  waitat\t\t");
   if (!cfg->dbg_waitat) {
     fprintf(f, "all");
@@ -480,7 +471,7 @@ config_print(config_t *cfg, FILE *f) {
 #ifdef HAVE_PHOTON
   fprintf(f, "\nPhoton\n");
   fprintf(f, "  backend\t\t%s\n",
-	  PHOTON_BACKEND_TO_STRING[cfg->photon_backend]);
+      PHOTON_BACKEND_TO_STRING[cfg->photon_backend]);
   fprintf(f, "  ibport\t\t%d\n", cfg->photon_ibport);
   fprintf(f, "  ledgersize\t\t%d\n", cfg->photon_ledgersize);
   fprintf(f, "  eagerbufsize\t\t%d\n", cfg->photon_eagerbufsize);

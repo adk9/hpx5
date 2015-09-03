@@ -45,6 +45,8 @@
 #include "gcc/sync.h"
 #elif defined(_CRAYC)
 #include "craycc/sync.h"
+#elif GCC_VERSION >= 40100 && GCC_VERSION < 40201
+#include "gcc/sync.h"
 #else
 
 #if defined(__aarch64__)

@@ -21,10 +21,16 @@
 extern "C" {
 #endif
 
+/// Get the number of available CPUs in the system.
 int system_get_cores(void);
 
-int system_set_affinity(pthread_t thread, int core_id);
+/// Get the number of available CPUS to the job.
+int system_get_job_cpus(void);
 
+/// Set the thread affinity to a specific core with id @p id.
+int system_set_affinity(pthread_t thread, int id);
+
+/// Set the thread affinity to a group of cores from 0 to @p ncores.
 int system_set_affinity_group(pthread_t thread, int ncores);
 
 /// Find out how many cores are in the thread's affinity group.

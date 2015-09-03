@@ -57,7 +57,10 @@ endif
 
 if HAVE_LIBFABRIC
 AM_CFLAGS += -I@PHOTON_SRCDIR@/src/fi @PHOTON_LIBFABRIC_CPPFLAGS@
-libphoton_la_SOURCES += fi/photon_fi.c
+libphoton_la_SOURCES += fi/photon_fi.c                         \
+	        fi/photon_fi_connect.c                         \
+	        fi/photon_fi_buffer.c
+
 libphoton_la_LIBADD += @PHOTON_BUILDDIR@/src/contrib/libfabric/src/libfabric.la
 endif
 

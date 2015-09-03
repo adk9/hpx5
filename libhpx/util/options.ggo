@@ -73,8 +73,9 @@ typestr="[localities]"
 int optional multiple
 
 option "hpx-log-level" - "set the logging level"
-typestr="level"
-values="default","boot","sched","gas","lco","net","trans","parcel","action","config","memory","all"
+typestr="level,..."
+values="boot","sched","gas","lco","net","trans","parcel","action","config","memory","all"
+default="all"
 enum optional argoptional multiple
 
 section "HPX Debug Options"
@@ -83,11 +84,14 @@ option "hpx-dbg-waitat" - "wait for debugger at specific locality"
 typestr="[locality]"
 int optional multiple
 
-option "hpx-dbg-waitonabort" - "call hpx_wait() inside of hpx_abort() for debugging"
+option "hpx-dbg-waitonabort" - "wait inside of hpx_abort()"
 flag off
 
-option "hpx-dbg-waitonsegv" - "call hpx_wait() for SIGSEGV for debugging (unreliable)"
-flag off
+option "hpx-dbg-waitonsig" - "wait on program error signals"
+typestr="sig,..."
+values="segv","abrt","fpe","ill","bus","iot","sys","trap","all"
+default="all"
+enum optional argoptional multiple
 
 option "hpx-dbg-mprotectstacks" - "use mprotect() to bracket stacks to look for stack overflows"
 flag off
