@@ -134,5 +134,7 @@ AC_DEFUN([HPX_CONFIG_LIBFFI], [
 
  AS_IF([test "x$have_libffi" != xyes],
    [AC_MSG_ERROR([Failed to find libffi for --with-libffi=$with_libffi])])
+
+ HPX_APPS_CFLAGS="$HPX_APPS_CFLAGS $LIBFFI_CFLAGS"
 ])
 

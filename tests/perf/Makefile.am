@@ -1,8 +1,8 @@
 noinst_PROGRAMS  = $(TESTS)
 
-AM_CPPFLAGS      = $(LIBFFI_CFLAGS) -I$(top_srcdir)/include -Wno-unused
+AM_CPPFLAGS      = $(HPX_APPS_CFLAGS) -I$(top_srcdir)/include -Wno-unused
 AM_LDFLAGS       = $(LIBHPX_LDFLAGS) -no-install
-LDADD            = $(LIBHPX_LDADD)
+LDADD            = $(HPX_APPS_LDADD)
 
 TESTS = gas_alloc	    \
         gas_addr_trans	    \
@@ -26,11 +26,11 @@ sendrecv_SOURCES                = sendrecv.c
 parbench_SOURCES                        = parbench.c
 thread_switch_SOURCES			= thread_switch.c
 
-gas_alloc_DEPENDENCIES			= $(LIBHPX_DEPS)
-gas_addr_trans_DEPENDENCIES		= $(LIBHPX_DEPS)
-lco_and_DEPENDENCIES			= $(LIBHPX_DEPS)
-lco_sema_DEPENDENCIES			= $(LIBHPX_DEPS)
-lco_future_DEPENDENCIES			= $(LIBHPX_DEPS)
-sendrecv_DEPENDENCIES			= $(LIBHPX_DEPS)
-parbench_DEPENDENCIES			= $(LIBHPX_DEPS)
-thread_switch_DEPENDENCIES		= $(LIBHPX_DEPS)
+gas_alloc_DEPENDENCIES			= $(HPX_APPS_DEPS)
+gas_addr_trans_DEPENDENCIES		= $(HPX_APPS_DEPS)
+lco_and_DEPENDENCIES			= $(HPX_APPS_DEPS)
+lco_sema_DEPENDENCIES			= $(HPX_APPS_DEPS)
+lco_future_DEPENDENCIES			= $(HPX_APPS_DEPS)
+sendrecv_DEPENDENCIES			= $(HPX_APPS_DEPS)
+parbench_DEPENDENCIES			= $(HPX_APPS_DEPS)
+thread_switch_DEPENDENCIES		= $(HPX_APPS_DEPS)
