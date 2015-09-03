@@ -83,6 +83,7 @@ static int
 _join_leaf_handler(hpx_addr_t allreduce, int i, int j, hpx_addr_t sum) {
   CHECK( hpx_lco_allreduce_join(allreduce, i, sizeof(j), &j, hpx_lco_set_action,
                                 sum) );
+  return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _join_leaf, _join_leaf_handler, HPX_ADDR,
                   HPX_INT, HPX_INT, HPX_ADDR);

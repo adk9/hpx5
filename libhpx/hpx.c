@@ -86,11 +86,9 @@ static void _cleanup(locality_t *l) {
     l->boot = NULL;
   }
 
-#ifdef HAVE_HWLOC
   if (l->topology) {
     hwloc_topology_destroy(l->topology);
   }
-#endif
 
   if (l->actions) {
     action_table_free(l->actions);
@@ -133,7 +131,6 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // topology
-#ifdef HAVE_HWLOC
   int e = hwloc_topology_init(&here->topology);
   if (e) {
     status = log_error("failed to initialize a topology.\n");
@@ -144,7 +141,6 @@ int hpx_init(int *argc, char ***argv) {
     status = log_error("failed to load the topology.\n");
     goto unwind1;
   }
-#endif
 
   // bootstrap
   here->boot = boot_new(here->config->boot);
@@ -198,6 +194,10 @@ int hpx_init(int *argc, char ***argv) {
   status = system_get_affinity_group_size(pthread_self(), &here->config->cores);
   if (status) {
     goto unwind1;
+  }
+
+  if (!here->config->cores) {
+    here->config->cores = system_get_job_cpus();
   }
 
   if (!here->config->threads) {

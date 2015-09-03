@@ -158,6 +158,7 @@ struct sock_fabric {
 
 struct sock_conn {
         int sock_fd;
+        int disconnected;
         struct sockaddr_in addr;
         struct sock_pe_entry *rx_pe_entry;
         struct sock_pe_entry *tx_pe_entry;
@@ -536,7 +537,8 @@ struct sock_rx_entry {
 	uint8_t is_claimed;
 	uint8_t is_complete;
 	uint8_t is_tagged;
-	uint8_t reserved[3];
+	uint8_t is_pool_entry;
+	uint8_t reserved[2];
 
 	uint64_t used;
 	uint64_t total_len;
@@ -551,6 +553,8 @@ struct sock_rx_entry {
 	
 	union sock_iov iov[SOCK_EP_MAX_IOV_LIMIT];
 	struct dlist_entry entry;
+	struct slist_entry pool_entry;
+	struct sock_rx_ctx *rx_ctx;
 };
 
 struct sock_rx_ctx {
@@ -566,6 +570,7 @@ struct sock_rx_ctx {
 	uint16_t buffered_len;
 	uint16_t min_multi_recv;
 	uint16_t num_left;
+	uint8_t is_ctrl_ctx;
 	uint8_t reserved[5];
 
 	uint64_t addr;
@@ -587,6 +592,8 @@ struct sock_rx_ctx {
 	fastlock_t lock;
 
 	struct fi_rx_attr attr;
+	struct sock_rx_entry *rx_entry_pool;
+	struct slist pool_list;
 };
 
 struct sock_tx_ctx {
@@ -606,6 +613,7 @@ struct sock_tx_ctx {
 
 	uint64_t addr;
 	struct sock_comp comp;
+	struct sock_rx_ctx *rx_ctrl_ctx;
 
 	struct sock_ep *ep;
 	struct sock_av *av;
@@ -979,6 +987,7 @@ struct sock_rx_ctx *sock_rx_ctx_alloc(const struct fi_rx_attr *attr, void *conte
 void sock_rx_ctx_free(struct sock_rx_ctx *rx_ctx);
 
 struct sock_tx_ctx *sock_tx_ctx_alloc(const struct fi_tx_attr *attr, void *context);
+struct sock_tx_ctx *sock_stx_ctx_alloc(const struct fi_tx_attr *attr, void *context);
 void sock_tx_ctx_free(struct sock_tx_ctx *tx_ctx);
 void sock_tx_ctx_start(struct sock_tx_ctx *tx_ctx);
 void sock_tx_ctx_write(struct sock_tx_ctx *tx_ctx, const void *buf, size_t len);
@@ -1077,6 +1086,7 @@ ssize_t sock_comm_peek(struct sock_conn *conn, void *buf, size_t len);
 ssize_t sock_comm_discard(struct sock_conn *conn, size_t len);
 ssize_t sock_comm_data_avail(struct sock_conn *conn);
 ssize_t sock_comm_flush(struct sock_conn *conn);
+int sock_comm_tx_done(struct sock_conn *conn);
 
 ssize_t sock_ep_recvmsg(struct fid_ep *ep, const struct fi_msg *msg, 
 			uint64_t flags);

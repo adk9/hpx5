@@ -68,7 +68,6 @@ AC_CONFIG_MACRO_DIR([config])
 AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
-AX_COMPILER_VENDOR
 
 # Checks for programs that we depend on. Our use of CXX is conditional, however
 # we have autotools errors if we don't include the AC_PROG_CXX
@@ -106,6 +105,8 @@ LT_INIT([disable-shared])
 # HPX_PC_REQUIRES_PKGS: packages required to link to installed libhpx.so
 # HPX_PC_PRIVATE_LIBS: -L and -l flags required to link to installed libhpx.a
 # HPX_PC_PRIVATE_PKGS: packages required to link to installed libhpx.a
+
+HPX_CONFIG_COMPILER
 HPX_CONFIG_HOST
 HPX_PE_ENV
 

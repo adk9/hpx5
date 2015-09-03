@@ -460,7 +460,7 @@ static void psmx_fini(void)
 struct fi_provider psmx_prov = {
 	.name = PSMX_PROV_NAME,
 	.version = FI_VERSION(0, 9),
-	.fi_version = FI_VERSION(FI_MAJOR_VERSION, FI_MINOR_VERSION),
+	.fi_version = FI_VERSION(1, 1),
 	.getinfo = psmx_getinfo,
 	.fabric = psmx_fabric,
 	.cleanup = psmx_fini
@@ -485,7 +485,7 @@ PSM_INI
 			"Whether to use tagged messages for large size "
 			"RMA or not (default: yes)");
 
-	fi_param_define(&psmx_prov, "uuid", FI_PARAM_INT,
+	fi_param_define(&psmx_prov, "uuid", FI_PARAM_STRING,
 			"Unique Job ID required by the fabric");
 
         psm_error_register_handler(NULL, PSM_ERRHANDLER_NO_HANDLER);

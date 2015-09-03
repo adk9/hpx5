@@ -82,13 +82,13 @@ int __verbs_alloc_ctx(verbs_cnct_ctx *ctx) {
   }    
 
   for (i = 0; i < ctx->num_cq; i++) {
-    ctx->ib_cq[i] = ibv_create_cq(ctx->ib_context, ctx->max_qp_wr, ctx, NULL,  0);
+    ctx->ib_cq[i] = ibv_create_cq(ctx->ib_context, ctx->max_cqe, ctx, NULL,  0);
     if (!ctx->ib_cq[i]) {
       dbg_err("Could not create send completion queue %d of %d", i, ctx->num_cq);
       return PHOTON_ERROR;
     }
     if (ctx->use_rcq) {
-      ctx->ib_rq[i] = ibv_create_cq(ctx->ib_context, ctx->max_qp_wr, ctx, NULL,  0);
+      ctx->ib_rq[i] = ibv_create_cq(ctx->ib_context, ctx->max_cqe, ctx, NULL,  0);
       if (!ctx->ib_rq[i]) {
 	dbg_err("Could not create recv completion queue %d of %d", i, ctx->num_cq);
 	return PHOTON_ERROR;
@@ -255,6 +255,7 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
 	  ctx->ib_mtu_attr = attr.active_mtu;
 	  ctx->max_qp_wr = dattr.max_qp_wr;
 	  ctx->max_srq_wr = dattr.max_srq_wr;
+	  ctx->max_cqe = dattr.max_cqe;
 	  ctx->tx_depth = dattr.max_qp_wr - DEF_SUB_WR;
 	  ctx->rx_depth = dattr.max_qp_wr - DEF_SUB_WR;
 	  ctx->ib_dev = strdup(dev_name);
@@ -561,6 +562,7 @@ static int __verbs_init_context_cma(verbs_cnct_ctx *ctx, struct rdma_cm_id *cm_i
     ctx->rx_depth = dattr.max_qp_wr - DEF_SUB_WR;
     ctx->max_qp_wr = dattr.max_qp_wr;
     ctx->max_srq_wr = dattr.max_srq_wr;
+    ctx->max_cqe = dattr.max_cqe;
 
     if (__verbs_alloc_ctx(ctx) != PHOTON_OK) {
       dbg_err("Could not allocate verbs context");

@@ -928,7 +928,7 @@ src_libfabric_la_SOURCES = include/fi.h include/fi_enosys.h \
 src_libfabric_la_CPPFLAGS = $(AM_CPPFLAGS) $(am__append_8) \
 	$(am__append_15) $(am__append_20)
 src_libfabric_la_LDFLAGS = $(am__append_9) $(am__append_16) \
-	$(am__append_21) -version-info 1 -export-dynamic \
+	$(am__append_21) -version-info 2:0:1 -export-dynamic \
 	$(libfabric_version_script)
 src_libfabric_la_LIBADD = $(am__append_5) $(am__append_10) \
 	$(am__append_17) $(am__append_22)
