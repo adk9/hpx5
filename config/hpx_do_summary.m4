@@ -7,7 +7,6 @@ AC_DEFUN([HPX_DO_SUMMARY], [
 
  # Compute some friendly strings
  AS_IF([test "x$have_mpi" == xyes], [networks="MPI"])
- AS_IF([test "x$have_pmi" == xyes], [networks="PMI $networks"])
  AS_IF([test "x$have_photon" == xyes], [networks="Photon $networks"])
 
  AS_IF([test "x$have_jemalloc" == xyes], [allocator="jemalloc"])
