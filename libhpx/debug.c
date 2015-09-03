@@ -113,17 +113,52 @@ static int _register_wait_on_sig(int signum) {
   return LIBHPX_OK;
 }
 
-int
-dbg_init(config_t *config) {
+int dbg_init(config_t *config) {
   int e = LIBHPX_OK;
-  if (config->dbg_waitonsegv) {
+  if (config_dbg_waitonsig_isset(config, HPX_WAITON_SIGSEGV)) {
     e = _register_wait_on_sig(SIGSEGV);
     if (e != LIBHPX_OK) {
       return e;
     }
   }
-  if (config->dbg_waitonabort) {
+  if (config_dbg_waitonsig_isset(config, HPX_WAITON_SIGABRT)) {
     e = _register_wait_on_sig(SIGABRT);
+    if (e != LIBHPX_OK) {
+      return e;
+    }
+  }
+  if (config_dbg_waitonsig_isset(config, HPX_WAITON_SIGFPE)) {
+    e = _register_wait_on_sig(SIGFPE);
+    if (e != LIBHPX_OK) {
+      return e;
+    }
+  }
+  if (config_dbg_waitonsig_isset(config, HPX_WAITON_SIGILL)) {
+    e = _register_wait_on_sig(SIGILL);
+    if (e != LIBHPX_OK) {
+      return e;
+    }
+  }
+  if (config_dbg_waitonsig_isset(config, HPX_WAITON_SIGBUS)) {
+    e = _register_wait_on_sig(SIGBUS);
+    if (e != LIBHPX_OK) {
+      return e;
+    }
+  }
+  if (config_dbg_waitonsig_isset(config, HPX_WAITON_SIGIOT)) {
+    e = _register_wait_on_sig(SIGIOT);
+    if (e != LIBHPX_OK) {
+      return e;
+    }
+  }
+  if (config_dbg_waitonsig_isset(config, HPX_WAITON_SIGSYS)) {
+    e = _register_wait_on_sig(SIGSYS);
+    if (e != LIBHPX_OK) {
+      return e;
+    }
+  }
+  if (config_dbg_waitonsig_isset(config, HPX_WAITON_SIGTRAP)) {
+    e = _register_wait_on_sig(SIGTRAP);
     if (e != LIBHPX_OK) {
       return e;
     }

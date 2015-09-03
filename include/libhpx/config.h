@@ -112,7 +112,6 @@ static const char* const HPX_BOOT_TO_STRING[] = {
 #define HPX_LOG_MEMORY  1024            //!< Log memory (coarse grained)
 
 static const char *const HPX_LOG_LEVEL_TO_STRING[] = {
-  "default",
   "boot",
   "sched",
   "gas",
@@ -178,6 +177,27 @@ typedef enum {
 static const char* const HPX_PROF_EVENT_TO_STRING[] = {
   "HPX_PROF_EVENT_NONE",
   "INVALID"
+};
+
+#define HPX_WAITON_NONE     (UINT64_C(0))
+#define HPX_WAITON_SIGSEGV  (UINT64_C(1) << 0)
+#define HPX_WAITON_SIGABRT  (UINT64_C(1) << 1)
+#define HPX_WAITON_SIGFPE   (UINT64_C(1) << 2)
+#define HPX_WAITON_SIGILL   (UINT64_C(1) << 3)
+#define HPX_WAITON_SIGBUS   (UINT64_C(1) << 4)
+#define HPX_WAITON_SIGIOT   (UINT64_C(1) << 5)
+#define HPX_WAITON_SIGSYS   (UINT64_C(1) << 6)
+#define HPX_WAITON_SIGTRAP  (UINT64_C(1) << 7)
+
+static const char* const HPX_WAITON_TO_STRING[] = {
+  "SIGSEGV",
+  "SIGABRT",
+  "SIGFPE",
+  "SIGILL",
+  "SIGBUS",
+  "SIGIOT",
+  "SIGSYS",
+  "SIGTRAP"
 };
 
 /// The HPX configuration type.
