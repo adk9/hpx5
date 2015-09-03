@@ -18,9 +18,7 @@ AC_SUBST(CLEANFILES)
 
 # Figure out what the version of HPX is.
 HPX_CONFIG_VERSION
-
-CONFIG=`echo ${ac_configure_args} | sed -e 's#'"'"'\([^ ]*\)'"'"'#\1#g'`
-AC_SUBST([CONFIG])
+HPX_DO_CONFIG_SCRIPT
 
 srcroot=$srcdir
 if test "x${srcroot}" = "x." ; then
