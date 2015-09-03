@@ -93,9 +93,10 @@ static int photon_pwc_check_gwc_align(photonBuffer lbuf, photonBuffer rbuf, uint
   rc =  __photon_backend->get_info(NULL, 0, (void**)&align, &asize, PHOTON_GET_ALIGN);
   if (rc != PHOTON_OK) {
     dbg_warn("Could not get alignment info from backend");
-    *align = 0;
   }
   
+  assert(*align > 0);
+
   if (!TEST_ALIGN(lbuf->addr, *align) ||
       !TEST_ALIGN(rbuf->addr, *align) ||
       !TEST_ALIGN(size, *align)) {
