@@ -15,9 +15,10 @@
 AC_DEFUN([HPX_CONFIG_VERSION], [
  AS_IF([test -e "$ac_confdir/.git" ],
    [cmd="git --git-dir=$ac_confdir/.git describe --abbrev=7 --dirty --always --tags"
-    hpx_version=$($cmd)]
-   [hpx_version=$PACKAGE_VERSION])
-   
- AC_DEFINE_UNQUOTED([HPX_VERSION], ["$hpx_version"], [The HPX interface version])
- AC_DEFINE_UNQUOTED([LIBHPX_VERSION], ["$hpx_version"], [The libhpx library version])
+    HPX_VERSION=$($cmd)]
+   [HPX_VERSION=$PACKAGE_VERSION])
+
+ AC_DEFINE_UNQUOTED([HPX_VERSION], ["$HPX_VERSION"], [The HPX interface version])
+ AC_DEFINE_UNQUOTED([LIBHPX_VERSION], ["$HPX_VERSION"], [The libhpx library version])
+ AC_SUBST(HPX_VERSION)
 ])
