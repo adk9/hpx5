@@ -400,7 +400,15 @@ config_print(config_t *cfg, FILE *f) {
   fprintf(f, "\nDebugging\n");
   fprintf(f, "  mprotectstacks\t%d\n", cfg->dbg_mprotectstacks);
   fprintf(f, "  waitonabort\t\t%d\n", cfg->dbg_waitonabort);
-  fprintf(f, "  waitonsegv\t\t%d\n", cfg->dbg_waitonsegv);
+  fprintf(f, "  waitonsig\t\t");
+  for (int i = 0, e = sizeof(HPX_WAITON_TO_STRING) /
+               sizeof(HPX_WAITON_TO_STRING[0]); i < e; ++i) {
+    uint64_t signal = 1lu << i;
+    if (cfg->dbg_waitonsig & signal) {
+      fprintf(f, "\"%s\", ", HPX_WAITON_TO_STRING[i]);
+    }
+  }
+  fprintf(f, "\n");
   fprintf(f, "  waitat\t\t");
   if (!cfg->dbg_waitat) {
     fprintf(f, "all");
@@ -463,7 +471,7 @@ config_print(config_t *cfg, FILE *f) {
 #ifdef HAVE_PHOTON
   fprintf(f, "\nPhoton\n");
   fprintf(f, "  backend\t\t%s\n",
-	  PHOTON_BACKEND_TO_STRING[cfg->photon_backend]);
+      PHOTON_BACKEND_TO_STRING[cfg->photon_backend]);
   fprintf(f, "  ibport\t\t%d\n", cfg->photon_ibport);
   fprintf(f, "  ledgersize\t\t%d\n", cfg->photon_ledgersize);
   fprintf(f, "  eagerbufsize\t\t%d\n", cfg->photon_eagerbufsize);
