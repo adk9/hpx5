@@ -18,6 +18,7 @@ AC_SUBST(CLEANFILES)
 
 # Figure out what the version of HPX is.
 HPX_CONFIG_VERSION
+HPX_DO_CONFIG_SCRIPT
 
 AC_LANG([C])
 

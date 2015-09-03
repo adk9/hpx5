@@ -21,6 +21,7 @@
 /Makefile
 /Makefile.in
 /hpx.pc
+/scripts/hpx-config
 
 # /config/
 /config/*
