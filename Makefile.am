@@ -13,7 +13,7 @@ ACLOCAL_AMFLAGS = -I config -I contrib/hwloc-1.11.0/config
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = hpx.pc
 
-SUBDIRS       = contrib libsync libhpx include examples 
+SUBDIRS       = contrib libsync libhpx include examples
 DIST_SUBDIRS  = contrib libsync libhpx include examples
 
 if HAVE_APEX
@@ -36,7 +36,7 @@ SUBDIRS      += tutorial
 DIST_SUBDIRS += tutorial
 endif
 
-bin_SCRIPTS = tools/hpx-config
+bin_SCRIPTS = scripts/hpx-config
 
 install-exec-hook:
 	cd $(DESTDIR)$(libdir); find $(DESTDIR)$(libdir) -type f -name \*.la -delete
