@@ -240,15 +240,13 @@ static int run(struct fi_info *hints, char *node, char *port)
 	struct fi_info *info;
 	int ret;
 
-	ret = fi_getinfo(FI_VERSION(FI_MAJOR_VERSION, FI_MINOR_VERSION), node, port, 0, hints, &info);
+	ret = fi_getinfo(FI_VERSION(1, 1), node, port, 0, hints, &info);
 	if (ret) {
 		fprintf(stderr, "fi_getinfo: %d\n", ret);
 		return ret;
 	}
 
-	if (env)
-		ret = print_vars();
-	else if (verbose)
+	if (verbose)
 		ret = print_long_info(info);
 	else
 		ret = print_short_info(info);
@@ -321,7 +319,13 @@ int main(int argc, char **argv)
 		return EXIT_SUCCESS;
 	}
 
+	if (env) {
+		ret = print_vars();
+		goto out;
+	}
+
 	ret = run(use_hints ? hints : NULL, node, port);
+out:
 	fi_freeinfo(hints);
 	return -ret;
 }

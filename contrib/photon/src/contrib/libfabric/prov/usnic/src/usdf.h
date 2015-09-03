@@ -72,11 +72,6 @@ extern struct fi_provider usdf_ops;
 
 #define USDF_MAX_PEERS (16 * 1024)
 
-#define USDF_DGRAM_CAPS (FI_MSG | FI_SOURCE | FI_SEND | FI_RECV)
-
-#define USDF_DGRAM_SUPP_MODE (FI_LOCAL_MR | FI_MSG_PREFIX)
-#define USDF_DGRAM_REQ_MODE (FI_LOCAL_MR)
-
 /* usdf event flags */
 #define USDF_EVENT_FLAG_ERROR (1ULL << 62)
 #define USDF_EVENT_FLAG_FREE_BUF (1ULL << 63)
@@ -276,6 +271,9 @@ struct usdf_ep {
 	uint8_t ep_tx_dflt_signal_comp;
 	uint8_t ep_rx_dflt_signal_comp;
 
+	uint8_t ep_tx_completion;
+	uint8_t ep_rx_completion;
+
 	uint32_t ep_wqe;	/* requested queue sizes */
 	uint32_t ep_rqe;
 
@@ -294,6 +292,15 @@ struct usdf_ep {
 
 			int ep_sock;
 			struct usdf_av *ep_av;
+
+			/* TODO: Remove in favor of accessing op flags through
+			 * ep_tx and ep_rx. Update once tx/rx context support
+			 * is added to dgram */
+			uint64_t tx_op_flags;
+			uint64_t rx_op_flags;
+
+			size_t tx_iov_limit;
+			size_t rx_iov_limit;
 
 			void *ep_hdr_buf;
 			struct usd_udp_hdr **ep_hdr_ptr;

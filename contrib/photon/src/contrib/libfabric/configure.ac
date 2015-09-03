@@ -1,7 +1,7 @@
 dnl Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.60])
-AC_INIT([libfabric], [1.1.0rc1], [ofiwg@lists.openfabrics.org])
+AC_INIT([libfabric], [1.1.0], [ofiwg@lists.openfabrics.org])
 AC_CONFIG_SRCDIR([src/fabric.c])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_MACRO_DIR(config)
@@ -164,7 +164,7 @@ AS_IF([test "$icc_symver_hack"],
 [
 
 AC_TRY_LINK([],
-	[__asm__(".symver main_, main@@ABIVER_1.0");],
+	[__asm__(".symver main_, main@ABIVER_1.0");],
 	[
 		AC_MSG_RESULT(yes)
 		ac_asm_symver_support=1
