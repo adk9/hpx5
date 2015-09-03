@@ -5,6 +5,7 @@
 # ------------------------------------------------------------------------------
 AC_DEFUN([HPX_DO_AM_CONDITIONALS], [
  HWLOC_DO_AM_CONDITIONALS
+ HPX_DO_CONFIG_SCRIPT
 
  AM_CONDITIONAL([OS_LINUX], [[[[ "x$host_os" = xlinux* ]]]])
  AM_CONDITIONAL([OS_DARWIN], [[[[ "x$host_os" = xdarwin* ]]]])

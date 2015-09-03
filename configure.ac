@@ -37,7 +37,6 @@ AC_SUBST([objroot])
 abs_objroot="`pwd`/"
 AC_SUBST([abs_objroot])
 
-dnl Munge install path variables.
 if test "x$prefix" = "xNONE" ; then
   prefix="/usr/local"
 fi
