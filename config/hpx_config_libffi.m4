@@ -37,9 +37,15 @@ AC_DEFUN([_HPX_CONTRIB_LIBFFI], [
  HPX_MERGE_STATIC_SHARED([LIBFFI_CARGS])
  ACX_CONFIGURE_DIR([$contrib], [$contrib], ["$LIBFFI_CARGS"])
  _HAVE_LIBFFI
- LIBFFI_CFLAGS="-I\$(top_builddir)/$contrib/include"
- LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -I\$(top_builddir)/$contrib/include"
+
+ # add the la dependency to libhpx and make sure it can find ffi.h
  LIBHPX_LIBADD="$LIBHPX_LIBADD \$(top_builddir)/$contrib/libffi.la"
+ LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -I\$(top_builddir)/$contrib/include"
+
+ # set the libffi cflags path---this is needed internally
+ LIBFFI_CFLAGS="-I\$(top_builddir)/$contrib/include"
+
+ # expose the libffi package as a public dependency to clients
  HPX_PC_REQUIRES_PKGS="$HPX_PC_REQUIRES_PKGS libffi"
 ])
 
@@ -135,6 +141,9 @@ AC_DEFUN([HPX_CONFIG_LIBFFI], [
  AS_IF([test "x$have_libffi" != xyes],
    [AC_MSG_ERROR([Failed to find libffi for --with-libffi=$with_libffi])])
 
+ # we export the cflags internally to the apps, because the header is a public
+ # dependency and we always need to know how to find it when linking---external
+ # clients get it through the hpx.pc infrastructure
  HPX_APPS_CFLAGS="$HPX_APPS_CFLAGS $LIBFFI_CFLAGS"
 ])
 

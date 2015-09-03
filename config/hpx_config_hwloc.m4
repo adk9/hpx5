@@ -48,17 +48,18 @@ AC_DEFUN([_HPX_CONTRIB_HWLOC], [
 
  _HAVE_HWLOC
 
- # export the hwloc cppflags, ldadd, and libs, to build libhpx.la
- LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS $HWLOC_EMBEDDED_CPPFLAGS"
+ # attach the convenience library.
  LIBHPX_LIBADD="$LIBHPX_LIBADD $HWLOC_EMBEDDED_LDADD"
- LIBHPX_LDFLAGS="$LIBHPX_LDFLAGS $HWLOC_EMBEDDED_LIBS"
 
- # export the hwloc cppflags to build the internal apps, since they don't get
- # paths through hpx.pc and they aren't acquired through libhpx.la
- HPX_APPS_CFLAGS="$HPX_APPS_CFLAGS $HWLOC_EMBEDDED_CPPFLAGS"
+ # Export the hwloc flags internally in this case, because some of our tests
+ # depend on the LIBHPX headers directly and need to find hwloc.h. This isn't
+ # necessary for external apps because hpx.h doesn't have a public dependency on
+ # hwloc.
+ HPX_APPS_CPPFLAGS="$HPX_APPS_CFLAGS $HWLOC_EMBEDDED_CPPFLAGS"
+ HPX_APPS_CFLAGS="$HPX_APPS_CFLAGS $HWLOC_EMBEDDED_CFLAGS"
 
- # export and hwloc lib dependencies to external clients, internal apps get
- # these through the libtool .la infrastructure
+ # Export hwloc lib dependencies to external clients, internal apps get these
+ # through the libtool .la infrastructure.
  HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS $HWLOC_EMBEDDED_LIBS"
 ])
 

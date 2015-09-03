@@ -1,8 +1,9 @@
 noinst_PROGRAMS  = $(TESTS)
 
-AM_CPPFLAGS      = $(HPX_APPS_CFLAGS) -I$(top_srcdir)/include -Wno-unused
-AM_LDFLAGS       = $(LIBHPX_LDFLAGS) -no-install
-LDADD            = $(HPX_APPS_LDADD)
+AM_CPPFLAGS      		= $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include
+AM_CFLAGS               = $(HPX_APPS_CFLAGS) -Wno-unused
+AM_LDFLAGS       		= -no-install
+LDADD            		= $(HPX_APPS_LDADD)
 
 TESTS = gas_alloc	    \
         gas_addr_trans	    \

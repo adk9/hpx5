@@ -19,9 +19,10 @@ hello_SOURCES           = hello.c
 call_SOURCES            = call.c
 netbench_SOURCES        = netbench.c
 
-AM_CPPFLAGS          = -D_GNU_SOURCE $(HPX_APPS_CFLAGS) -I$(top_srcdir)/include
-AM_LDFLAGS           = $(LIBHPX_LDFLAGS) -no-install
-LDADD                = $(HPX_APPS_LDADD)
+AM_CPPFLAGS      		= -D_GNU_SOURCE $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include
+AM_CFLAGS               = $(HPX_APPS_CFLAGS) -Wno-unused
+AM_LDFLAGS       		= -no-install
+LDADD            		= $(HPX_APPS_LDADD)
 
 fibonacci_DEPENDENCIES       = $(HPX_APPS_DEPS)
 pingpong_DEPENDENCIES        = $(HPX_APPS_DEPS)

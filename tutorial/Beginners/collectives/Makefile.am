@@ -1,9 +1,10 @@
 collectivesdir                = $(datarootdir)/doc/@PACKAGE@
 collectives_PROGRAMS          = allreduce allgather alltoall 
 
-AM_CPPFLAGS			= -D_GNU_SOURCE $(HPX_APPS_CFLAGS) -I$(top_srcdir)/include
-AM_LDFLAGS			= $(LIBHPX_LDFLAGS) -no-install
-LDADD				= $(HPX_APPS_LDADD)
+AM_CPPFLAGS      		= -D_GNU_SOURCE $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include
+AM_CFLAGS               = $(HPX_APPS_CFLAGS) -Wno-unused
+AM_LDFLAGS       		= -no-install
+LDADD            		= $(HPX_APPS_LDADD)
 
 allreduce_SOURCES             = allreduce.c 
 allgather_SOURCES             = allgather.c
