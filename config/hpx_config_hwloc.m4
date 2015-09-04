@@ -48,7 +48,9 @@ AC_DEFUN([_HPX_CONTRIB_HWLOC], [
 
  _HAVE_HWLOC
 
- # attach the convenience library.
+ # attach the convenience library, cflags, and cppflags to build libhpx.la
+ LIBHPX_CFLAGS="$LIBHPX_CFLAGS $HWLOC_EMBEDDED_CFLAGS"
+ LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS $HWLOC_EMBEDDED_CPPFLAGS"
  LIBHPX_LIBADD="$LIBHPX_LIBADD $HWLOC_EMBEDDED_LDADD"
 
  # Export the hwloc flags internally in this case, because some of our tests
