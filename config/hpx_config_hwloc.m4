@@ -52,6 +52,7 @@ AC_DEFUN([_HPX_CONTRIB_HWLOC], [
  LIBHPX_CFLAGS="$LIBHPX_CFLAGS $HWLOC_EMBEDDED_CFLAGS"
  LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS $HWLOC_EMBEDDED_CPPFLAGS"
  LIBHPX_LIBADD="$LIBHPX_LIBADD $HWLOC_EMBEDDED_LDADD"
+ LIBHPX_LIBS="$LIBHPX_LIBS $HWLOC_EMBEDDED_LIBS"
 
  # Export the hwloc flags internally in this case, because some of our tests
  # depend on the LIBHPX headers directly and need to find hwloc.h. This isn't
