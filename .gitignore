@@ -112,7 +112,6 @@ contrib/libcuckoo/
 /tests/Makefile
 /tests/Makefile.in
 /tests/unit/Makefile
-/tests/perf/Makefile
 tests/unit/apex_test
 tests/unit/allreduce
 tests/unit/call_when
@@ -146,10 +145,12 @@ tests/unit/lco_and
 tests/unit/runtime
 tests/unit/libhpx_boot
 tests/unit/parcel_send_rendezvous
+/tests/perf/Makefile
 tests/perf/gas_alloc
 tests/perf/gas_addr_trans
 tests/perf/lco_sema
 tests/perf/lco_future
+tests/perf/collbench
 tests/perf/parbench
 tests/perf/thread_switch
 
