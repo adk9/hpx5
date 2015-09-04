@@ -299,6 +299,13 @@ void hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync) {
   }
 }
 
+void hpx_lco_delete_sync(hpx_addr_t target) {
+  hpx_addr_t sync = hpx_lco_future_new(0);
+  hpx_lco_delete(target, sync);
+  hpx_lco_wait(sync);
+  hpx_lco_delete(sync, HPX_NULL);
+}
+
 void hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync) {
   if (code == HPX_SUCCESS) {
     hpx_lco_set(target, 0, NULL, HPX_NULL, rsync);

@@ -60,6 +60,11 @@ typedef bool (*hpx_predicate_t)(void *i, size_t bytes);
 /// @param rsync an LCO to signal remote completion
 void hpx_lco_delete(hpx_addr_t lco, hpx_addr_t rsync);
 
+/// Delete an LCO synchronously.
+///
+/// @param   lco the address of the LCO to delete
+void hpx_lco_delete_sync(hpx_addr_t lco);
+
 /// Delete a local array of LCOs.
 ///
 /// This interface does not permit the user to wait on individual delete
