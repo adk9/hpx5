@@ -581,20 +581,6 @@ hpx_status_t hpx_lco_allreduce_join_sync(hpx_addr_t allreduce, int id,
                                          size_t bytes, const void *value,
                                          void *out);
 
-/// Join an all-reduction LCO.
-///
-/// @param    allreduce The allreduce LCO to join.
-/// @param           id The id of this input.
-/// @param        bytes The number of bytes to send.
-/// @param        value The value to send.
-/// @param[out]     out The location to output the reduced value, must be at
-///                     least @p size bytes.
-///
-/// @return             The status of the LCO.
-hpx_status_t hpx_lco_allreduce_join_sync(hpx_addr_t allreduce, int id,
-                                         size_t bytes, const void *value,
-                                         void *out);
-
 /// Set an allgather.
 ///
 /// The allgather LCO hpx_lco_set operation does not work correctly, because
