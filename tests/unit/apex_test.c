@@ -148,6 +148,8 @@ int main(int argc, char *argv[]) {
   // run the main action
   int rc = hpx_run(&_fib_main, &n, sizeof(n));
 
+  hpx_finalize();
+
 #ifdef HAVE_APEX
   // validate the APEX counts
   printf("_fib_action Function calls : %d\n", function_count);
