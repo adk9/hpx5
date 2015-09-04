@@ -91,7 +91,7 @@ int    _hpx_run(hpx_action_t *entry, int nargs, ...);
 /// This call is cooperative and synchronous, so it may not return if there are
 /// misbehaving HPX lightweight threads.
 ///
-/// It is safe to call hpx_run() again after hpx_shudown().
+/// It is safe to call hpx_run() again after hpx_shutdown().
 ///
 /// @param code a status code to be returned by hpx_run()
 void hpx_shutdown(int code)

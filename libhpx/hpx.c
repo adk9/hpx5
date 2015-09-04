@@ -299,9 +299,7 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
     hpx_gas_free(_hpx_143, HPX_NULL);
   }
 
-#if defined(ENABLE_PROFILING) || defined(HAVE_APEX)
-  libhpx_stats_print();
-
+#if defined(HAVE_APEX)
   // this will add the stats to the APEX data set
   libhpx_save_apex_stats();
 #endif
@@ -371,5 +369,8 @@ const char *hpx_strerror(hpx_status_t s) {
 }
 
 void hpx_finalize() {
+#if defined(ENABLE_PROFILING)
+  libhpx_stats_print();
+#endif
   _cleanup(here);
 }
