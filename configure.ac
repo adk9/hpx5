@@ -66,6 +66,7 @@ LT_INIT([disable-shared])
 #
 # HPX_APPS_CPPFLAGS: CPPFLAGS required to link to build-tree libhpx.la
 # HPX_APPS_CFLAGS: CFLAGS required to link to build-tree libhpx.la
+# HPX_APPS_LDFLAGS: LDFLAGS required to link to build-tree libhpx.la
 # HPX_APPS_LDADD: .la libraries require to link build-tree libhpx.la
 # HPX_APPS_DEPS: .la library dependendencies for apps
 #
@@ -225,6 +226,7 @@ HPX_APPS_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhp
 
 AC_SUBST(HPX_APPS_CPPFLAGS)
 AC_SUBST(HPX_APPS_CFLAGS)
+AC_SUBST(HPX_APPS_LDFLAGS)
 AC_SUBST(HPX_APPS_LDADD)
 AC_SUBST(HPX_APPS_DEPS)
 

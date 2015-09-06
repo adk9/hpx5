@@ -6,7 +6,7 @@ threads_PROGRAMS            = threadSpawn1 threadSpawn2 threadSpawn3 threadSpawn
 
 AM_CPPFLAGS      		= -D_GNU_SOURCE $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include
 AM_CFLAGS               = $(HPX_APPS_CFLAGS) -Wno-unused
-AM_LDFLAGS       		= -no-install
+AM_LDFLAGS       		= $(HPX_APPS_LDFLAGS) -no-install
 LDADD            		= $(HPX_APPS_LDADD)
 
 threadSpawn1_SOURCES        = threadSpawn1.c
