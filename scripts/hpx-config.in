@@ -3,7 +3,7 @@
 usage() {
         cat <<EOF
 Usage:
-  @CONFIGDIR@/hpx-config <option>
+  hpx-config <option>
 Options:
   --help | -h  : Print usage.
   --version    : Print hpx version.
