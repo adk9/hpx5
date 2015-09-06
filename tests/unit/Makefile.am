@@ -3,7 +3,7 @@ noinst_HEADERS   = tests.h
 noinst_PROGRAMS  = $(TESTS)
 
 AM_CPPFLAGS      = $(HPX_APPS_CPPFLAGS) $(HPX_APPS_CFLAGS) -I$(top_srcdir)/include -Wno-unused
-AM_LDFLAGS       = -no-install
+AM_LDFLAGS       = $(HPX_APPS_LDFLAGS) -no-install
 LDADD            = $(HPX_APPS_LDADD)
 
 LOG_COMPILER = $(TESTS_CMD)
