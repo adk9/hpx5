@@ -86,7 +86,7 @@ static int _benchmark(char *name, hpx_action_t op, int iters, size_t size) {
 
 static HPX_ACTION_DECL(_main);
 static int _main_action(int iters, size_t size) {
-  printf("collbench(iters=%d, size=%d)\n", iters, size);
+  printf("collbench(iters=%d, size=%lu)\n", iters, size);
   printf("time resolution: milliseconds\n");
   fflush(stdout);
 
