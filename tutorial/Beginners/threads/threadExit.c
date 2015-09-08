@@ -55,7 +55,7 @@ static int _main_action(int *args, size_t size) {
 
   hpx_lco_delete(done, HPX_NULL);
 
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {

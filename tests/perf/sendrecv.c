@@ -90,7 +90,7 @@ static int _main_action(int levels, int work) {
     free(buf);
   }
 
-  hpx_shutdown(0);
+  hpx_exit(0);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_action, HPX_INT, HPX_INT);
 

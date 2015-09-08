@@ -44,7 +44,7 @@ static int _main_action(int *args, size_t size) {
   hpx_call_sync(HPX_HERE, _cleanup, block, DATA_SIZE, &rank, sizeof(rank));
   printf("Value in block is %"PRIu64"\n", *block);
 
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {

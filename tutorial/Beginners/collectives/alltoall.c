@@ -107,7 +107,7 @@ static int _main_action(void *args, size_t size) {
   hpx_lco_wait(complete);
   hpx_lco_delete(complete, HPX_NULL);
   hpx_gas_free(domain, HPX_NULL);
-  hpx_shutdown(HPX_SUCCESS);  
+  hpx_exit(HPX_SUCCESS);  
 }
 
 int main(int argc, char *argv[]) {

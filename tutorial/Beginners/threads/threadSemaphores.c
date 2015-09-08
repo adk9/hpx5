@@ -103,7 +103,7 @@ static int _main_action(int *args, size_t size) {
   free (a);
   free (b);
 
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {

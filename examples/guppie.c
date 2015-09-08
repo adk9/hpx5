@@ -310,7 +310,7 @@ void _main_action(guppie_config_t *cfg, size_t size)
   printf("Found %lu errors in %lu locations (%s).\n",
          j, cfg->tabsize, (j <= 0.01*cfg->tabsize) ? "passed" : "failed");
 
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 static void _usage(FILE *stream) {

@@ -69,7 +69,7 @@ static int _cswitch_main_action(int *args, size_t size) {
   printf("seconds: %.7f\n", elapsed);
   printf("localities: %d\n", HPX_LOCALITIES);
   printf("threads/locality: %d\n", HPX_THREADS);
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {

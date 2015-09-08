@@ -39,7 +39,7 @@ static int _main_action(void *args, size_t n) {
   printf("Free a global allocation\n");
   hpx_gas_free(calloc, HPX_NULL);
  
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {

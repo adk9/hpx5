@@ -325,9 +325,9 @@ int hpx_get_num_threads(void) {
 }
 
 /// Called by the application to terminate the scheduler and network.
-void hpx_shutdown(int code) {
+void hpx_exit(int code) {
   dbg_assert_str(here->ranks,
-                 "hpx_shutdown can only be called when the system is running.\n");
+                 "hpx_exit can only be called when the system is running.\n");
 
   // make sure we flush our local network when we shutdown
   network_flush_on_shutdown(here->network);

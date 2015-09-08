@@ -36,7 +36,7 @@ static int _main_action(void *args, size_t size) {
 
   printf("LCO Set succeeded\n");
 
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {

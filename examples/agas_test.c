@@ -46,7 +46,7 @@ static int root_action(void *args, size_t size) {
 
   if (r == HPX_LOCALITY_ID) {
     printf("AGAS test: failed.\n");
-    hpx_shutdown(0);
+    hpx_exit(0);
   }
 
   hpx_addr_t done = hpx_lco_future_new(0);
@@ -62,7 +62,7 @@ static int root_action(void *args, size_t size) {
   printf("target locality's rank (after move): %d\n", r);
 
   printf("AGAS test: %s.\n", ((r == hpx_get_my_rank()) ? "passed" : "failed"));
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 static void usage(FILE *f) {

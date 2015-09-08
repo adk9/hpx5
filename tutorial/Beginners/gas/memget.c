@@ -68,7 +68,7 @@ static int _main_action(void *args, size_t n) {
   printf("hpx_gas_memget succeeded for size = %d\n", SIZE);
 
   hpx_gas_free(data, HPX_NULL);
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {
