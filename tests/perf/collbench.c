@@ -10,6 +10,11 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+//
+
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include <stdint.h>
 #include <stdio.h>
@@ -99,7 +104,8 @@ void _benchmark_mpi(int iters, size_t size) {
   }
 
   double elapsed = MPI_Wtime() - start;
-  printf("MPI_Allreduce: %.7f\n", name, elapsed/iters);
+  printf("MPI_Allreduce: %.7f\n", elapsed/iters);
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 #endif
 
