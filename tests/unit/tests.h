@@ -53,7 +53,7 @@
 #define TEST_MAIN(tests)                                \
   static int _main_handler(void) {                      \
     tests                                               \
-    hpx_shutdown(HPX_SUCCESS);                          \
+    hpx_exit(HPX_SUCCESS);                          \
     return HPX_SUCCESS;                                 \
   }                                                     \
   static HPX_ACTION(HPX_DEFAULT, 0, _main,              \
@@ -81,7 +81,9 @@
         return -1;                                      \
       }                                                 \
     }                                                   \
-    return hpx_run(&_main);                             \
+    int ret_status = hpx_run(&_main);                   \
+    hpx_finalize();                                     \
+    return ret_status;                                  \
   }                                                     \
   int main(int argc, char *argv[])
 

@@ -90,6 +90,10 @@ static int _main_action(int iters, int work, int ntasks) {
   printf("time resolution: milliseconds\n");
   fflush(stdout);
 
+  if (ntasks == 0) {
+    ntasks = HPX_THREADS;
+  }
+
   hpx_time_t start = hpx_time_now();
   for (int i = 0; i < ntasks; ++i) {
     fwq(work);
@@ -124,7 +128,7 @@ static int _main_action(int iters, int work, int ntasks) {
   elapsed = hpx_time_elapsed_ms(start);
   printf("hpx_par_call_sync: %.7f\n", elapsed/iters);
 
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_action, HPX_INT, HPX_INT, HPX_INT);
 
@@ -137,7 +141,7 @@ int main(int argc, char *argv[]) {
 
   int iters = 5;
   int work = 5555;
-  int ntasks = HPX_THREADS;
+  int ntasks = 0;
   int opt = 0;
   while ((opt = getopt(argc, argv, "i:w:n:h?")) != -1) {
     switch (opt) {
@@ -160,6 +164,8 @@ int main(int argc, char *argv[]) {
   argc -= optind;
   argv += optind;
 
-  return hpx_run(&_main, &iters, &work, &ntasks);
+  e = hpx_run(&_main, &iters, &work, &ntasks);
+  hpx_finalize();
+  return e;
 }
 

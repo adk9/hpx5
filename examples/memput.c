@@ -70,7 +70,7 @@ static int _main_handler(void) {
 
   if (size == 1) {
     fprintf(stderr, "This test requires at least two HPX threads\n");
-    hpx_shutdown(HPX_ERROR);
+    hpx_exit(HPX_ERROR);
   }
 
   hpx_addr_t data = hpx_gas_alloc_cyclic(size, MAX_MSG_SIZE*2, 0);
@@ -111,7 +111,7 @@ static int _main_handler(void) {
             FLOAT_PRECISION, latency);
     fflush(stdout);
   }
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_handler);
 
@@ -146,5 +146,7 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  return hpx_run(&_main);
+  int e = hpx_run(&_main);
+  hpx_finalize();
+  return e;
 }
