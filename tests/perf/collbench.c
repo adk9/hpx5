@@ -17,6 +17,14 @@
 #include <getopt.h>
 #include <hpx/hpx.h>
 
+#ifdef HAVE_MPI
+# include <mpi.h>
+#endif
+
+// Global send/receive buffers
+char *sbuf;
+char *rbuf;
+
 /// Allreduce "reduction" operations.
 static void initdouble_handler(double *input, const size_t size) {
   *input = 99999999.0;
@@ -32,9 +40,8 @@ static HPX_ACTION(HPX_FUNCTION, 0, mindouble, mindouble_handler);
 /// Use a set-get pair for the allreduce operation.
 static int
 _allreduce_set_get_handler(hpx_addr_t allreduce, size_t size) {
-  char buf[size];
-  hpx_lco_set_lsync(allreduce, size, buf, HPX_NULL);
-  hpx_lco_get(allreduce, size, buf);
+  hpx_lco_set_lsync(allreduce, size, sbuf, HPX_NULL);
+  hpx_lco_get(allreduce, size, rbuf);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_set_get,
@@ -43,9 +50,8 @@ static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_set_get,
 /// Use a synchronous join for the allreduce operation.
 static int
 _allreduce_join_handler(hpx_addr_t allreduce, size_t size) {
-  char buf[size];
   hpx_addr_t f = hpx_lco_future_new(0);
-  hpx_lco_allreduce_join_async(allreduce, HPX_LOCALITY_ID, size, buf, buf, f);
+  hpx_lco_allreduce_join_async(allreduce, HPX_LOCALITY_ID, size, sbuf, rbuf, f);
   hpx_lco_wait(f);
   hpx_lco_delete(f, HPX_NULL);
   return HPX_SUCCESS;
@@ -56,8 +62,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_join, _allreduce_join_handler,
 /// Use join-sync for the allreduce operation.
 static int
 _allreduce_join_sync_handler(hpx_addr_t allreduce, size_t size) {
-  char buf[size];
-  hpx_lco_allreduce_join_sync(allreduce, HPX_LOCALITY_ID, size, buf, buf);
+  hpx_lco_allreduce_join_sync(allreduce, HPX_LOCALITY_ID, size, sbuf, rbuf);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_join_sync,
@@ -84,6 +89,20 @@ static int _benchmark(char *name, hpx_action_t op, int iters, size_t size) {
 #define _STR(l) #l
 #define _BENCHMARK(op, iters, size) _benchmark(_XSTR(op), op, iters, size)
 
+#ifdef HAVE_MPI
+void _benchmark_mpi(int iters, size_t size) {
+  int ranks = HPX_LOCALITIES;
+  double start = MPI_Wtime();
+
+  for (int i = 0; i < iters; ++i) {
+    MPI_Allreduce(sbuf, rbuf, size, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+  }
+
+  double elapsed = MPI_Wtime() - start;
+  printf("MPI_Allreduce: %.7f\n", name, elapsed/iters);
+}
+#endif
+
 static HPX_ACTION_DECL(_main);
 static int _main_action(int iters, size_t size) {
   printf("collbench(iters=%d, size=%lu)\n", iters, size);
@@ -94,6 +113,8 @@ static int _main_action(int iters, size_t size) {
   _BENCHMARK(_allreduce_join, iters, size);
   _BENCHMARK(_allreduce_join_sync, iters, size);
 
+  free(sbuf);
+  free(rbuf);
   hpx_shutdown(HPX_SUCCESS);
 }  
 static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_action, HPX_INT, HPX_SIZE_T);
@@ -135,6 +156,13 @@ int main(int argc, char *argv[]) {
 
   argc -= optind;
   argv += optind;
+
+  sbuf = calloc(1, size);
+  rbuf = calloc(1, size);
+
+#ifdef HAVE_MPI
+  _benchmark_mpi(iters, size);
+#endif
 
   return hpx_run(&_main, &iters, &size);
 }
