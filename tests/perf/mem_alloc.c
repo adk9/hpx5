@@ -52,7 +52,7 @@ static int _main_action(void *args, size_t n) {
 
   fprintf(stdout, "%s\t\t%*s%*s%*s%*s\n", "# Size ", HEADER_FIELD_WIDTH,
 	  " MALLOC ", HEADER_FIELD_WIDTH, " FREE ", HEADER_FIELD_WIDTH,
-	  " MALLOC_REG ", HEADER_FIELD_WIDTH, " FREE ", HEADER_FIELD_WIDTH);
+	  " MALLOC_REG ", HEADER_FIELD_WIDTH, " FREE ");
 
   for (size_t size = 1; size <= MAX_BYTES; size*=2) {
     t = hpx_time_now();
