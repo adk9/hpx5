@@ -17,7 +17,7 @@
 #include <unistd.h>
 #include <hpx/hpx.h>
 
-#define MAX_BYTES        (1024*1024*1024*4UL)
+#define MAX_BYTES        (1024*1024*1024*1UL)
 #define SKIP_LARGE       10
 #define LOOP_LARGE       100
 
