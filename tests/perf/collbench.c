@@ -121,7 +121,7 @@ static int _main_action(int iters, size_t size) {
 
   free(sbuf);
   free(rbuf);
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }  
 static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_action, HPX_INT, HPX_SIZE_T);
 

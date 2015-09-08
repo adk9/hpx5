@@ -153,6 +153,7 @@ tests/perf/lco_future
 tests/perf/collbench
 tests/perf/parbench
 tests/perf/thread_switch
+tests/perf/mem_alloc
 
 # /docs
 /docs/doxyfile.stamp
