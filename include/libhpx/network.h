@@ -256,7 +256,7 @@ network_probe(void *obj, int rank) {
 ///
 /// Normally the network progress engine will cancel outstanding requests when
 /// it shuts down. This will change that functionality to flush the outstanding
-/// requests during shutdown. This is used to ensure that the hpx_shutdown()
+/// requests during shutdown. This is used to ensure that the hpx_exit()
 /// broadcast operation is sent successfully before the local network stops
 /// progressing.
 ///

@@ -15,7 +15,7 @@
 #include "tests.h"
 
 static int _main_handler(void) {
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_handler);

@@ -70,7 +70,7 @@ void send_pong(echo_args_t *args) {
 
 int echo_pong_action(echo_args_t *args, size_t size) {
   if (args->dst != hpx_get_my_rank())
-    hpx_shutdown(-1);
+    hpx_exit(-1);
   send_pong(args);
   return HPX_SUCCESS;
 }
@@ -84,7 +84,7 @@ int echo_finish_action(echo_args_t *args, size_t size) {
 int hpx_main_action(void *args, size_t size) {
   if (hpx_get_num_ranks() < 2) {
     printf("Too few ranks, need at least two.\n");
-    hpx_shutdown(HPX_SUCCESS);
+    hpx_exit(HPX_SUCCESS);
   }
     
   size_t sizes[] = {1, 128, 1024, 4096, 8192, 64*1024, 256*1024, 1024*1024, 4*1024*1024};
@@ -119,7 +119,7 @@ int hpx_main_action(void *args, size_t size) {
     hpx_lco_delete(lco, HPX_NULL);
   }
 
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 

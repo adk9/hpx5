@@ -128,7 +128,7 @@ static int _main_action(int iters, int work, int ntasks) {
   elapsed = hpx_time_elapsed_ms(start);
   printf("hpx_par_call_sync: %.7f\n", elapsed/iters);
 
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_action, HPX_INT, HPX_INT, HPX_INT);
 

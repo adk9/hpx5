@@ -51,7 +51,7 @@ typedef struct {
   do {                                                        \
     if (!p) {                                                 \
       fprintf(stderr, err);                                   \
-      hpx_shutdown(1);                                        \
+      hpx_exit(1);                                        \
     }                                                         \
   } while (0)
 
@@ -131,7 +131,7 @@ static int _ping_handler(args_t *args, size_t n) {
   // If we completed the number of ping-pong operations that we set out to do,
   // then output the latency and terminate execution.
   if (args->id < 0)
-    hpx_shutdown(HPX_SUCCESS);
+    hpx_exit(HPX_SUCCESS);
 
   // Generate a ping targeting pong.
   hpx_addr_t to = _partner();

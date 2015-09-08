@@ -34,7 +34,7 @@ static int _main_action(void *args, size_t size) {
   hpx_call_sync(other, _get, &value, sizeof(value), NULL, 0);
   printf("value = %"PRIu64"\n", value);
 
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {

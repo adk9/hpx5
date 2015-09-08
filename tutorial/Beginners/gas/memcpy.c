@@ -88,7 +88,7 @@ static int _main_action(void *args, size_t n) {
 
   hpx_gas_free(data, HPX_NULL);
   free(src);
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {

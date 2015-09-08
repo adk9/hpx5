@@ -66,7 +66,7 @@ static int _main_action(void *args, size_t size) {
   printf("Return value from first thread is [%d]\n", value[0]);
   printf("Return value from second thread is [%d]\n", value[1]);
 
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {

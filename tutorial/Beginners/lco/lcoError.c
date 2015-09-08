@@ -37,7 +37,7 @@ static int _main_action(void *args, size_t size) {
 
   printf("Propagate an error to an LCO succeeded\n");
 
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {

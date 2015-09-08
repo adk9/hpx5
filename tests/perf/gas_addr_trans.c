@@ -111,7 +111,7 @@ static int _main_action(void *args, size_t n) {
 
     fprintf(stdout, "\n");
   }
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 int

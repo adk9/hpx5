@@ -32,7 +32,7 @@
 /// hpx_abort() is called from an HPX lightweight thread to terminate scheduler
 /// execution asynchronously
 ///
-/// hpx_shutdown() is called from an HPX lightweight thread to terminate
+/// hpx_exit() is called from an HPX lightweight thread to terminate
 /// scheduler execution
 
 
@@ -59,7 +59,7 @@ void hpx_finalize();
 /// This creates an HPX "main" process, and calls the given action @p
 /// entry in the context of this process. The @p entry action is
 /// invoked only on the root locality. On termination, it deletes the
-/// main process and returns the status returned by hpx_shutdown()
+/// main process and returns the status returned by hpx_exit()
 ///
 /// hpx_run finalizes action registration, starts up any scheduler and
 /// native threads that need to run, and transfers all control into
@@ -75,13 +75,13 @@ void hpx_finalize();
 ///              incoming parcel or a inter-locality steal (if implemented)
 /// @param  args arguments to pass to @p entry
 /// @param  size the size of @p args
-/// @returns     the status code passed to hpx_shutdown() upon
+/// @returns     the status code passed to hpx_exit() upon
 ///              termination.
 int    _hpx_run(hpx_action_t *entry, int nargs, ...);
 #define hpx_run(entry, ...) _hpx_run(entry, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 
-/// Shutdown the HPX runtime.
+/// Exit the HPX runtime.
 ///
 /// This causes the hpx_run() in the main native thread to return the @p code.
 /// The returned thread is executing the original native thread, and all
@@ -91,10 +91,10 @@ int    _hpx_run(hpx_action_t *entry, int nargs, ...);
 /// This call is cooperative and synchronous, so it may not return if there are
 /// misbehaving HPX lightweight threads.
 ///
-/// It is safe to call hpx_run() again after hpx_shutdown().
+/// It is safe to call hpx_run() again after hpx_exit().
 ///
 /// @param code a status code to be returned by hpx_run()
-void hpx_shutdown(int code)
+void hpx_exit(int code)
   HPX_NORETURN;
 
 /// Abort the HPX runtime.

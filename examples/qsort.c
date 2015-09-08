@@ -117,7 +117,7 @@ static int _main_action(uint64_t *args, size_t size) {
 
   free(lyst);
   free(lystbck);
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 int main (int argc, char *argv[])
