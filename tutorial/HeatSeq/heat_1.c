@@ -370,7 +370,7 @@ static int _main_action(int *input, size_t size)
   hpx_gas_free(new_grid, HPX_NULL);
   hpx_gas_free(domain, HPX_NULL);
 
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 /**
@@ -412,5 +412,7 @@ int main(int argc, char *argv[])
 
   _register_actions();
 
-  return hpx_run(&_main, NULL, 0);
+  e = hpx_run(&_main, NULL, 0);
+  hpx_finalize();
+  return e;
 }

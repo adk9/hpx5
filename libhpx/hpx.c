@@ -52,6 +52,25 @@ static int _hpx_143_fix_handler(void) {
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _hpx_143_fix, _hpx_143_fix_handler);
 
+/// Stop HPX
+///
+/// This will stop HPX by stopping the network and scheduler, and cleaning up
+/// anything that should not persist between hpx_run() calls.
+static void _stop(locality_t *l) {
+  if (!l)
+    return;  
+
+  if (l->sched) {
+    scheduler_delete(l->sched);
+    l->sched = NULL;
+  }
+
+  if (l->network) {
+    network_delete(l->network);
+    l->network = NULL;
+  }
+}
+
 /// Cleanup utility function.
 ///
 /// This will delete the global objects, if they've been allocated.
@@ -63,16 +82,6 @@ static void _cleanup(locality_t *l) {
   // finalize APEX
   apex_finalize();
 #endif
-
-  if (l->sched) {
-    scheduler_delete(l->sched);
-    l->sched = NULL;
-  }
-
-  if (l->network) {
-    network_delete(l->network);
-    l->network = NULL;
-  }
 
   if (l->gas) {
     gas_dealloc(l->gas);
@@ -206,6 +215,22 @@ int hpx_init(int *argc, char ***argv) {
   log("HPX running %d worker threads on %d cores\n", here->config->threads,
       here->config->cores);
 
+  return status;
+ unwind1:
+  _stop(here);
+  _cleanup(here);
+ unwind0:
+  return status;
+}
+
+/// Called to run HPX.
+int _hpx_run(hpx_action_t *act, int n, ...) {
+  int status = HPX_SUCCESS;
+  if (!here) {
+    status = log_error("hpx_init() must be called before hpx_run()\n");
+    goto unwind0;
+  }
+
   // Initialize the network. This will initialize a transport and, as a side
   // effect initialize our allocators.
   here->network = network_new(here->config, here->boot, here->gas);
@@ -218,7 +243,7 @@ int hpx_init(int *argc, char ***argv) {
   here->sched = scheduler_new(here->config);
   if (!here->sched) {
     status = log_error("failed to create scheduler.\n");
-    goto unwind1;
+    goto unwind0;
   }
 
 #ifdef HAVE_APEX 
@@ -226,21 +251,6 @@ int hpx_init(int *argc, char ***argv) {
   apex_init("HPX WORKER THREAD");
   apex_set_node_id(here->rank);
 #endif
-
-  return status;
- unwind1:
-  _cleanup(here);
- unwind0:
-  return status;
-}
-
-/// Called to run HPX.
-int _hpx_run(hpx_action_t *act, int n, ...) {
-  int status = HPX_SUCCESS;
-  if (!here || !here->sched) {
-    status = log_error("hpx_init() must be called before hpx_run()\n");
-    goto unwind0;
-  }
 
   here->actions = action_table_finalize();
   if (!here->actions) {
@@ -289,9 +299,7 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
     hpx_gas_free(_hpx_143, HPX_NULL);
   }
 
-#if defined(ENABLE_PROFILING) || defined(HAVE_APEX)
-  libhpx_stats_print();
-
+#if defined(HAVE_APEX)
   // this will add the stats to the APEX data set
   libhpx_save_apex_stats();
 #endif
@@ -299,7 +307,7 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
  unwind2:
   probe_stop();
  unwind1:
-  _cleanup(here);
+  _stop(here);
  unwind0:
   return status;
 }
@@ -317,9 +325,9 @@ int hpx_get_num_threads(void) {
 }
 
 /// Called by the application to terminate the scheduler and network.
-void hpx_shutdown(int code) {
+void hpx_exit(int code) {
   dbg_assert_str(here->ranks,
-                 "hpx_shutdown can only be called when the system is running.\n");
+                 "hpx_exit can only be called when the system is running.\n");
 
   // make sure we flush our local network when we shutdown
   network_flush_on_shutdown(here->network);
@@ -358,4 +366,11 @@ const char *hpx_strerror(hpx_status_t s) {
    case (HPX_USER): return "HPX_USER";
    default: return "HPX undefined error value";
   }
+}
+
+void hpx_finalize() {
+#if defined(ENABLE_PROFILING)
+  libhpx_stats_print();
+#endif
+  _cleanup(here);
 }

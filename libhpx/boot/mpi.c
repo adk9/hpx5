@@ -15,11 +15,16 @@
 #include "config.h"
 #endif
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <mpi.h>
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
+
+// Did we initialize MPI? If not, we don't want to finalize it.
+static bool _inited_mpi = false;
+MPI_Comm LIBHPX_COMM;
 
 static HPX_RETURNS_NON_NULL const char *_id(void) {
   return "MPI";
@@ -28,14 +33,14 @@ static HPX_RETURNS_NON_NULL const char *_id(void) {
 static void _delete(boot_t *boot) {
   int finalized;
   MPI_Finalized(&finalized);
-  if (!finalized) {
+  if (!finalized && _inited_mpi) {
     MPI_Finalize();
   }
 }
 
 static int _rank(const boot_t *boot) {
   int rank;
-  if (MPI_Comm_rank(MPI_COMM_WORLD, &rank) != MPI_SUCCESS) {
+  if (MPI_Comm_rank(LIBHPX_COMM, &rank) != MPI_SUCCESS) {
     hpx_abort();
   }
   return rank;
@@ -43,14 +48,14 @@ static int _rank(const boot_t *boot) {
 
 static int _n_ranks(const boot_t *boot) {
   int ranks;
-  if (MPI_Comm_size(MPI_COMM_WORLD, &ranks) != MPI_SUCCESS) {
+  if (MPI_Comm_size(LIBHPX_COMM, &ranks) != MPI_SUCCESS) {
     hpx_abort();
   }
   return ranks;
 }
 
 static int _barrier(const boot_t *boot) {
-  if (MPI_Barrier(MPI_COMM_WORLD) != MPI_SUCCESS) {
+  if (MPI_Barrier(LIBHPX_COMM) != MPI_SUCCESS) {
     return HPX_ERROR;
   }
   return LIBHPX_OK;
@@ -58,7 +63,7 @@ static int _barrier(const boot_t *boot) {
 
 static int _allgather(const boot_t *boot, const void *restrict src,
                       void *restrict dest, int n) {
-  int e = MPI_Allgather((void *)src, n, MPI_BYTE, dest, n, MPI_BYTE, MPI_COMM_WORLD);
+  int e = MPI_Allgather((void *)src, n, MPI_BYTE, dest, n, MPI_BYTE, LIBHPX_COMM);
   if (MPI_SUCCESS != e) {
     dbg_error("failed MPI_Allgather %d.\n", e);
   }
@@ -79,7 +84,7 @@ static int _mpi_alltoall(const void *boot, void *restrict dest,
   }
   if (MPI_SUCCESS != MPI_Alltoallv((void *)src, counts, offsets, MPI_BYTE,
                                    dest, counts, offsets, MPI_BYTE,
-                                   MPI_COMM_WORLD)) {
+                                   LIBHPX_COMM)) {
     dbg_error("MPI_Alltoallv failed at bootstrap\n");
   }
   free(offsets);
@@ -88,7 +93,7 @@ static int _mpi_alltoall(const void *boot, void *restrict dest,
 }
 
 static void _abort(const boot_t *boot) {
-  MPI_Abort(MPI_COMM_WORLD, -6);
+  MPI_Abort(LIBHPX_COMM, -6);
 }
 
 static boot_t _mpi_boot_class = {
@@ -121,10 +126,16 @@ boot_t *boot_new_mpi(void) {
     log_error("mpi initialization failed\n");
     return NULL;
   }
+  _inited_mpi = true;
 
   if (level != LIBHPX_THREAD_LEVEL) {
     log_boot("MPI thread level failed requested %d, received %d.\n",
          LIBHPX_THREAD_LEVEL, level);
+  }
+
+  if (MPI_SUCCESS != MPI_Comm_dup(MPI_COMM_WORLD, &LIBHPX_COMM)) {
+    log_error("mpi communicator duplication failed\n");
+    return NULL;
   }
 
   log_boot("thread_support_provided = %d\n", level);
