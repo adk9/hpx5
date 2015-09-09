@@ -112,6 +112,7 @@ static const char* const HPX_BOOT_TO_STRING[] = {
 #define HPX_LOG_MEMORY  1024            //!< Log memory (coarse grained)
 
 static const char *const HPX_LOG_LEVEL_TO_STRING[] = {
+  "default",
   "boot",
   "sched",
   "gas",
