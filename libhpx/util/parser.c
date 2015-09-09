@@ -47,7 +47,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-sched-stackcachelimit=stacks\n                                bound on the number of stacks to cache",
   "\nLog options:",
   "      --hpx-log-at=[localities] selectively output log information",
-  "      --hpx-log-level[=level,...]\n                                set the logging level  (possible \n                                  values=\"boot\", \"sched\", \"gas\", \"lco\", \n                                  \"net\", \"trans\", \"parcel\", \"action\", \n                                  \"config\", \"memory\", \"all\" \n                                  default=`all')",
+  "      --hpx-log-level[=level,...]\n                                set the logging level  (possible \n                                  values=\"default\", \"boot\", \"sched\", \n                                  \"gas\", \"lco\", \"net\", \"trans\", \n                                  \"parcel\", \"action\", \"config\", \n                                  \"memory\", \"all\" default=`all')",
   "\nHPX Debug Options:",
   "      --hpx-dbg-waitat=[locality]\n                                wait for debugger at specific locality",
   "      --hpx-dbg-waitonabort     wait inside of hpx_abort()  (default=off)",
@@ -139,7 +139,7 @@ char *hpx_option_parser_hpx_gas_values[] = {"default", "smp", "pgas", "agas", 0}
 char *hpx_option_parser_hpx_boot_values[] = {"default", "smp", "mpi", "pmi", 0} ;	/* Possible values for hpx-boot.  */
 char *hpx_option_parser_hpx_transport_values[] = {"default", "mpi", "photon", 0} ;	/* Possible values for hpx-transport.  */
 char *hpx_option_parser_hpx_network_values[] = {"default", "smp", "pwc", "isir", 0} ;	/* Possible values for hpx-network.  */
-char *hpx_option_parser_hpx_log_level_values[] = {"boot", "sched", "gas", "lco", "net", "trans", "parcel", "action", "config", "memory", "all", 0} ;	/* Possible values for hpx-log-level.  */
+char *hpx_option_parser_hpx_log_level_values[] = {"default", "boot", "sched", "gas", "lco", "net", "trans", "parcel", "action", "config", "memory", "all", 0} ;	/* Possible values for hpx-log-level.  */
 char *hpx_option_parser_hpx_dbg_waitonsig_values[] = {"segv", "abrt", "fpe", "ill", "bus", "iot", "sys", "trap", "all", 0} ;	/* Possible values for hpx-dbg-waitonsig.  */
 char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "pwc", "sched", "lco", "process", "memory", "schedtimes", "all", 0} ;	/* Possible values for hpx-trace-classes.  */
 char *hpx_option_parser_hpx_prof_counters_values[] = {"HPX_L1_TCM", "HPX_L2_TCM", "HPX_L3_TCM", "HPX_TLB_TL", "HPX_TOT_INS", "HPX_INT_INS", "HPX_FP_INS", "HPX_LD_INS", "HPX_SR_INS", "HPX_BR_INS", "HPX_TOT_CYC", "all", 0} ;	/* Possible values for hpx-prof-counters.  */

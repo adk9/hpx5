@@ -74,7 +74,7 @@ int optional multiple
 
 option "hpx-log-level" - "set the logging level"
 typestr="level,..."
-values="boot","sched","gas","lco","net","trans","parcel","action","config","memory","all"
+values="default","boot","sched","gas","lco","net","trans","parcel","action","config","memory","all"
 default="all"
 enum optional argoptional multiple
 
