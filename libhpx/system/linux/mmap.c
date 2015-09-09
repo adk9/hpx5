@@ -187,8 +187,6 @@ void system_munmap_huge_pages(void *UNUSED, void *addr, size_t size) {
     long padding = _hugepage_size - r;
     size += padding;
   }
-  log_mem("munmapping %lu huge page bytes for a total of %lu\n", size,
-          _update_total(-size));
 #endif
   system_munmap(UNUSED, addr, size);
 }
