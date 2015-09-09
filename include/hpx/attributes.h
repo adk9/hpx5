@@ -35,12 +35,12 @@
 #define HPX_DESTRUCTOR       HPX_ATTRIBUTE((destructor))
 #define HPX_PRINTF(f, s)     HPX_ATTRIBUTE((format (printf, f, s)))
 
-/* Attribute `returns_nonnull' was valid as of gcc 4.9.  */
+// Attribute `returns_nonnull' was valid as of gcc 4.9.
 #if (GCC_VERSION >= 40900)
 # define HPX_RETURNS_NON_NULL HPX_ATTRIBUTE((returns_nonnull))
 #else
 # define HPX_RETURNS_NON_NULL
-#endif /* GNUC >= 4.9 */
+#endif // GNUC >= 4.9
 
 #ifdef __clang__
 # define HPX_NO_OPTIMIZE HPX_ATTRIBUTE((optnone))
