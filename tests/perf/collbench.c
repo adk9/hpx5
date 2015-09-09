@@ -99,6 +99,7 @@ void _benchmark_mpi(int iters, size_t size) {
   int ranks = HPX_LOCALITIES;
   double start = MPI_Wtime();
 
+  MPI_Barrier(MPI_COMM_WORLD);
   for (int i = 0; i < iters; ++i) {
     MPI_Allreduce(sbuf, rbuf, size, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
   }
@@ -170,5 +171,7 @@ int main(int argc, char *argv[]) {
   _benchmark_mpi(iters, size);
 #endif
 
-  return hpx_run(&_main, &iters, &size);
+  e = hpx_run(&_main, &iters, &size);
+  assert(e == HPX_SUCCESS);
+  hpx_finalize();
 }
