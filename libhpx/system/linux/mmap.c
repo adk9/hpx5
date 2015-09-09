@@ -24,6 +24,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <libsync/sync.h>
 #include <libhpx/debug.h>
 #include <libhpx/system.h>
 
@@ -49,6 +50,18 @@ static void HPX_DESTRUCTOR _system_fini(void) {
   }
 }
 #endif
+
+#ifdef ENABLE_DEBUG
+static uintptr_t _total = 0;
+#endif
+
+static uintptr_t _update_total(intptr_t n) {
+#ifndef ENABLE_DEBUG
+  return 0;
+#else
+  return sync_addf(&_total, n, SYNC_ACQ_REL);
+#endif
+}
 
 /// A simple mmap wrapper that guarantees alignment.
 ///
@@ -83,10 +96,10 @@ static void *_mmap_aligned(void *addr, size_t n, int prot, int flags, int fd,
   // return the overallocated pages back to the OS, system_munmap here is fine
   // because we know our sizes are okay even for huge allocations
   if (prefix) {
-    system_munmap(NULL, buffer, prefix);
+    dbg_check( munmap(buffer, prefix) );
   }
   if (suffix) {
-    system_munmap(NULL, buffer + prefix + n, suffix);
+    dbg_check( munmap(buffer + prefix + n, suffix) );
   }
 
   // and return the correctly aligned range
@@ -118,11 +131,12 @@ static void *_mmap_lucky(void *addr, size_t n, int prot, int flags, int fd,
     return buffer;
   }
 
-  system_munmap(NULL, buffer, n);
+  dbg_check(munmap(buffer, n));
   return _mmap_aligned(addr, n, prot, flags, fd, off, align);
 }
 
 void *system_mmap(void *UNUSED, void *addr, size_t n, size_t align) {
+  log_mem("mmaping %lu bytes for a total of %lu\n", n, _update_total(n));
   static const  int prot = PROT_READ | PROT_WRITE;
   static const int flags = MAP_ANONYMOUS | MAP_PRIVATE;
   return _mmap_lucky(addr, n, prot, flags, -1, 0, align);
@@ -145,7 +159,8 @@ void *system_mmap_huge_pages(void *UNUSED, void *addr, size_t n, size_t align) {
     log_mem("adding %ld bytes to huge page allocation request\n", padding);
     n += padding;
   }
-  log_mem("mmaping %lu bytes from huge pages\n", n);
+  log_mem("mmaping %lu bytes from huge pages for a total of %lu\n", n,
+          _update_total(n));
   if (_hugepage_fd >= 0) {
     return _mmap_lucky(addr, n, prot, flags, _hugepage_fd, 0, align);
   }
@@ -161,6 +176,8 @@ void system_munmap(void *UNUSED, void *addr, size_t size) {
     dbg_error("munmap failed: %s.  addr is %"PRIuPTR", and size is %zu\n",
           strerror(errno), (uintptr_t)addr, size);
   }
+  log_mem("munmapped %lu bytes for a total of %lu\n", size,
+          _update_total(-size));
 }
 
 void system_munmap_huge_pages(void *UNUSED, void *addr, size_t size) {
@@ -170,7 +187,8 @@ void system_munmap_huge_pages(void *UNUSED, void *addr, size_t size) {
     long padding = _hugepage_size - r;
     size += padding;
   }
-  log_mem("munmapping %lu huge page bytes\n", size);
+  log_mem("munmapping %lu huge page bytes for a total of %lu\n", size,
+          _update_total(-size));
 #endif
   system_munmap(UNUSED, addr, size);
 }
