@@ -19,7 +19,7 @@
 #include <libhpx/debug.h>
 #include <libhpx/memory.h>
 
-const char *je_malloc_conf = "lg_dirty_mult:-1,lg_chunk:22";
+const char *je_malloc_conf = "lg_chunk:22";
 
 /// Backing declaration for the flags.
 __thread int as_flags[AS_COUNT] = {0};
@@ -62,6 +62,11 @@ void as_join(int id) {
   char path[128];
   snprintf(path, 128, "arena.%u.chunk_hooks", arena);
   dbg_check( je_mallctl(path, NULL, NULL, (void*)hooks, sizeof(*hooks)) );
+
+  // Disable dirty page purging for this arena
+  snprintf(path, 124, "arena.%u.lg_dirty_mult", arena);
+  int i = -1;
+  dbg_check( je_mallctl(path, NULL, NULL, (void*)&i, sizeof(i)) );
 
   // Create a cache.
   unsigned cache;
