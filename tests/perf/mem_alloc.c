@@ -51,8 +51,8 @@ static int _main_action(void *args, size_t n) {
                   size, ranks, blocks/ranks);
 
   fprintf(stdout, "%s\t\t%*s%*s%*s%*s\n", "# Size ", HEADER_FIELD_WIDTH,
-	  " MALLOC ", HEADER_FIELD_WIDTH, " FREE ", HEADER_FIELD_WIDTH,
-	  " MALLOC_REG ", HEADER_FIELD_WIDTH, " FREE ");
+      " MALLOC ", HEADER_FIELD_WIDTH, " FREE ", HEADER_FIELD_WIDTH,
+      " MALLOC_REG ", HEADER_FIELD_WIDTH, " FREE ");
 
   for (size_t size = 1; size <= MAX_BYTES; size*=2) {
     t = hpx_time_now();
@@ -100,5 +100,7 @@ int main(int argc, char *argv[]) {
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
 
   // run the main action
-  return hpx_run(&_main, NULL, 0);
+  int e = hpx_run(&_main, NULL, 0);
+  hpx_finalize();
+  return e;
 }
