@@ -18,4 +18,10 @@
 #define PHOTON_CONSTRUCTOR      __attribute__((constructor))
 #define PHOTON_DESTRUCTOR       __attribute__((destructor))
 
+#ifdef __clang
+#define PHOTON_NO_OPTIMIZE      PHOTON_OPTIMIZE((optnone))
+#else
+#define PHOTON_NO_OPTIMIZE      PHOTON_OPTIMIZE("O0")
+#endif
+
 #endif

@@ -65,7 +65,7 @@ static int __fi_alloc_context(fi_cnct_ctx *ctx, struct fi_info *fi) {
     goto err1;
   }
   
-  ctx->addrs = (fi_addr_t**)malloc(_photon_nproc * sizeof(fi_addr_t*));
+  ctx->addrs = (fi_addr_t*)malloc(_photon_nproc * sizeof(fi_addr_t));
   if (!ctx->addrs) {
     dbg_err("Could not allocate fi_addr memory");
     goto err2;
@@ -248,15 +248,11 @@ int __fi_connect_peers(fi_cnct_ctx *ctx, struct fi_info *fi) {
   }
 
   // add addresses to AV and set remote addr handles
-  for (i = 0; i < _photon_nproc; i++) {
-    offset = i * ctx->addr_len;
-    rc = fi_av_insert(ctx->av, &sbuf[offset], 1, ctx->addrs[i], 0,
-		      &ctx->fi_ctx_av);
-    if (rc != 1) {
-      dbg_err("Could not insert addr %d of %d into AV: %s", i+1, _photon_nproc,
-	      fi_strerror(rc));
-      goto err1;
-    }
+  rc = fi_av_insert(ctx->av, sbuf, _photon_nproc, ctx->addrs, 0,
+		    &ctx->fi_ctx_av);
+  if (rc != _photon_nproc) {
+    dbg_err("Could not insert addrs into AV: %s", fi_strerror(rc));
+    goto err1;
   }
 
   // make sure each rank has completed AV inserts
