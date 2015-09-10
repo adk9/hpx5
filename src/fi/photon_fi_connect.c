@@ -133,7 +133,7 @@ int __fi_init_context(fi_cnct_ctx *ctx) {
   }
 
 #ifdef ENABLE_DEBUG
-  __print_long_info(ctx->fi);
+  __print_short_info(ctx->fi);
 #endif
 
   rc = fi_fabric(ctx->fi->fabric_attr, &ctx->fab, NULL);
@@ -198,7 +198,7 @@ int __fi_connect_peers(fi_cnct_ctx *ctx, struct fi_info *fi) {
   cqind = PHOTON_GET_CQ_IND(ctx->num_cq, _photon_myrank);
   
   // bind CQ
-  rc = fi_ep_bind(ep, &ctx->cqs[cqind]->fid, FI_TRANSMIT|FI_WRITE);
+  rc = fi_ep_bind(ep, &ctx->cqs[cqind]->fid, FI_SEND);
   if (rc) {
     dbg_err("Could not bind CQ to self EP");
     goto error_exit;
@@ -258,6 +258,9 @@ int __fi_connect_peers(fi_cnct_ctx *ctx, struct fi_info *fi) {
       goto err1;
     }
   }
+
+  // make sure each rank has completed AV inserts
+  photon_exchange_barrier();
     
   free(sbuf);
   return PHOTON_OK;
