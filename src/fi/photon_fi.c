@@ -140,11 +140,12 @@ static int fi_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss)
     goto error_exit;
   }
 
-  //fi_ctx.hints->domain_attr->name = strdup("sockets");
+  fi_ctx.hints->domain_attr->name = strdup("sockets");
   fi_ctx.hints->domain_attr->mr_mode = FI_MR_BASIC;
   fi_ctx.hints->domain_attr->threading = FI_THREAD_SAFE;
+  fi_ctx.hints->rx_attr->comp_order = FI_ORDER_STRICT;
   fi_ctx.hints->ep_attr->type = FI_EP_RDM;
-  fi_ctx.hints->caps = FI_MSG | FI_RMA | FI_RMA_EVENT;
+  fi_ctx.hints->caps = FI_MSG | FI_RMA;
   fi_ctx.hints->mode = FI_CONTEXT | FI_LOCAL_MR;
 
   if(__fi_init_context(&fi_ctx)) {

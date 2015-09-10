@@ -60,6 +60,12 @@ struct rdma_cma_thread_args {
 int __verbs_alloc_ctx(verbs_cnct_ctx *ctx) {
   int i;
 
+  // adjust queue sizes based on nprocs and device characteristics
+  if (__verbs_adjust_ctx(ctx) != PHOTON_OK) {
+    dbg_err("Could not set appropriate context values");
+    return PHOTON_ERROR;
+  }
+  
   ctx->ib_pd = ibv_alloc_pd(ctx->ib_context);
   if (!ctx->ib_pd) {
     dbg_err("Could not create protection domain");
@@ -149,9 +155,8 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
   for (i=0; i<(_photon_nproc + _photon_nforw); i++) {
     ctx->qp[i] = NULL;
   }
-
-  if (__photon_config->ibv.use_cma) {
-
+  
+  if (ctx->use_cma) {
     ctx->cm_id = (struct rdma_cm_id**)malloc((_photon_nproc + _photon_nforw) * sizeof(struct rdma_cm_id*));
     if (!ctx->cm_id) {
       log_err("Could not allocate CM_ID memory");
@@ -202,9 +207,9 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
     }
     
     photon_dev_list *dlist;
-    rc = photon_parse_devstr(__photon_config->ibv.ib_dev, &dlist);
+    rc = photon_parse_devstr(ctx->ib_dev, &dlist);
     if (rc < 0) {
-      dbg_err("Could not parse HCA device filter: %s", __photon_config->ibv.ib_dev);
+      dbg_err("Could not parse HCA device filter: %s", ctx->ib_dev);
       return PHOTON_ERROR;
     }
     
@@ -277,12 +282,11 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
     }
 
     if (!found) {
-      log_err("Could not find a suitable IB HCA (filter='%s')", __photon_config->ibv.ib_dev);
+      log_err("Could not find a suitable IB HCA (filter='%s')", ctx->ib_dev);
       return PHOTON_ERROR;
     }
     
     if (__verbs_alloc_ctx(ctx) != PHOTON_OK) {
-      dbg_err("Could not allocate verbs context");
       return PHOTON_ERROR;
     }
 
@@ -374,15 +378,15 @@ int __verbs_create_connect_info(verbs_cnct_ctx *ctx) {
     if (ifa->ifa_addr == NULL)
       continue;
 
-    if (!strcmp(ifa->ifa_name, __photon_config->ibv.eth_dev) &&
+    if (!strcmp(ifa->ifa_name, ctx->eth_dev) &&
         ifa->ifa_addr->sa_family == AF_INET) {
       dbg_info("Found ETH dev for CMA: %s", ifa->ifa_name);
       break;
     }
   }
 
-  if (__photon_config->ibv.use_cma && !ifa) {
-    log_err("Could not find ETH dev for CMA: %s", __photon_config->ibv.eth_dev);
+  if (ctx->use_cma && !ifa) {
+    log_err("Could not find ETH dev for CMA: %s", ctx->eth_dev);
     goto error_exit;
   }
 
@@ -397,7 +401,7 @@ int __verbs_create_connect_info(verbs_cnct_ctx *ctx) {
       
       memset(&(ctx->local_ci[iproc][i].gid.raw), 0, sizeof(union ibv_gid));
       
-      if (__photon_config->ibv.use_cma) {
+      if (ctx->use_cma) {
         ctx->local_ci[iproc][i].qpn = 0x0;
       }
       else {
@@ -445,7 +449,7 @@ int __verbs_connect_single(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info,
 			   photon_connect_mode_t mode) {
   switch (mode) {
   case PHOTON_CONN_ACTIVE:
-    if (__photon_config->ibv.use_cma) {
+    if (ctx->use_cma) {
       return __verbs_connect_qps_cma(ctx, local_info, remote_info, pindex, MAX_QP);
     }
     else {
@@ -453,7 +457,7 @@ int __verbs_connect_single(verbs_cnct_ctx *ctx, verbs_cnct_info *local_info,
     }
     break;
   case PHOTON_CONN_PASSIVE:
-    if (__photon_config->ibv.use_cma) {
+    if (ctx->use_cma) {
       pthread_t cma_thread;
       struct rdma_cma_thread_args *args;
       args = malloc(sizeof(struct rdma_cma_thread_args));
@@ -492,7 +496,7 @@ int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
 
   photon_exchange_barrier();
 
-  if (__photon_config->ibv.use_cma) {
+  if (ctx->use_cma) {
     // in the CMA case, only connect actively for ranks greater than or equal to our rank
     for (iproc = _photon_myrank; iproc < _photon_nproc; iproc++) {
       if (__verbs_connect_qps_cma(ctx, ctx->local_ci[iproc], ctx->remote_ci[iproc], iproc, MAX_QP)) {
@@ -511,7 +515,7 @@ int __verbs_connect_peers(verbs_cnct_ctx *ctx) {
   }
 
   // make sure everyone is connected before proceeding
-  if (__photon_config->ibv.use_cma) {
+  if (ctx->use_cma) {
     if (_photon_myrank > 0) {
       dbg_trace("waiting for listener to finish...");
       pthread_join(cma_listener, NULL);
