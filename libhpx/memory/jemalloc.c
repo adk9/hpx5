@@ -65,7 +65,7 @@ void as_join(int id) {
 
   // Disable dirty page purging for this arena
   snprintf(path, 124, "arena.%u.lg_dirty_mult", arena);
-  int i = -1;
+  ssize_t i = -1;
   dbg_check( je_mallctl(path, NULL, NULL, (void*)&i, sizeof(i)) );
 
   // Create a cache.
