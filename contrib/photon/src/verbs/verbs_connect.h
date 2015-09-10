@@ -14,6 +14,7 @@ typedef struct verbs_cnct_info_t {
 
 typedef struct verbs_cnct_ctx_t {
   char                      *ib_dev;
+  char                      *eth_dev;
   int                        ib_port;
   struct ibv_context        *ib_context;
   struct ibv_pd             *ib_pd;
@@ -33,6 +34,7 @@ typedef struct verbs_cnct_ctx_t {
   struct ibv_qp             *ud_qp;
   int                        psn;
   int                        num_qp;
+  int                        use_cma;
   int                        use_ud;
 
   int                        tx_depth;
