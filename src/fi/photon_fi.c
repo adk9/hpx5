@@ -131,6 +131,10 @@ static int fi_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss)
 
   // __initialized: 0 - not; -1 - initializing; 1 - initialized
   __initialized = -1;
+
+  if (_photon_myrank == 0) {
+    //dbg_wait();
+  }
   
   fi_ctx.num_cq = cfg->cap.num_cq;
 
@@ -222,14 +226,14 @@ static int fi_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size
   }
 
   rc = fi_write(fi_ctx.eps[_photon_myrank], (void*)laddr, size,
-		fi_mr_desc(db->priv_ptr), *fi_ctx.addrs[proc], raddr,
+		fi_mr_desc(db->priv_ptr), fi_ctx.addrs[proc], raddr,
 		rbuf->priv.key1, (void*)id);
   if (rc) {
     dbg_err("Could not PUT to %p, size %lu: %s", (void*)raddr, size,
 	    fi_strerror(-rc));
     goto error_exit;
   }
-  
+
   return PHOTON_OK;
   
  error_exit:
@@ -238,7 +242,27 @@ static int fi_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size
 
 static int fi_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
 		       photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags) {
+  photonBI db;
+  int rc;
+
+  if (buffertable_find_containing((void *)laddr, size, &db) != PHOTON_OK) {
+    log_err("Tried GET to a local buffer that is not registered: %p", (void*)laddr);
+    goto error_exit;
+  }
+  
+  rc = fi_read(fi_ctx.eps[_photon_myrank], (void*)laddr, size,
+	       fi_mr_desc(db->priv_ptr), fi_ctx.addrs[proc], raddr,
+	       rbuf->priv.key1, (void*)id);
+  if (rc) {
+    dbg_err("Could not GET from %p, size %lu: %s", (void*)raddr, size,
+	    fi_strerror(-rc));
+    goto error_exit;
+  }
+  
   return PHOTON_OK;
+  
+ error_exit:
+  return PHOTON_ERROR;
 }
 
 static int fi_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
@@ -314,5 +338,5 @@ error_exit:
 }
 
 static int fi_get_revent(int proc, int max, photon_rid *ids, uint64_t *imms, int *n) {
-  return PHOTON_EVENT_OK;
+  return PHOTON_EVENT_NOTIMPL;
 }

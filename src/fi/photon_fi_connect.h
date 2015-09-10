@@ -14,9 +14,9 @@ typedef struct fi_cnct_ctx_t {
   struct fid_domain      *dom;
   struct fid_av          *av;
   struct fid_ep         **eps;
-  fi_addr_t             **addrs;
   struct fid_cq         **cqs;
   struct fi_context       fi_ctx_av;
+  fi_addr_t              *addrs;
 
   void                   *local_addr;
   size_t                  addr_len;
