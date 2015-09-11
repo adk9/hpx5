@@ -74,6 +74,7 @@ contrib/hwloc-1.11.0/
 contrib/libffi/
 contrib/libffi-mic/
 contrib/libffi-mic/doc/libffi.info
+contrib/libffi-mic/fficonfig.py
 contrib/jemalloc/
 contrib/jemalloc_hpx/
 contrib/photon/
