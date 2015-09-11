@@ -144,13 +144,13 @@ static int fi_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss)
     goto error_exit;
   }
 
-  fi_ctx.hints->domain_attr->name = strdup("sockets");
+  fi_ctx.hints->domain_attr->name = strdup("psm");
   fi_ctx.hints->domain_attr->mr_mode = FI_MR_BASIC;
   fi_ctx.hints->domain_attr->threading = FI_THREAD_SAFE;
   fi_ctx.hints->rx_attr->comp_order = FI_ORDER_STRICT;
   fi_ctx.hints->ep_attr->type = FI_EP_RDM;
   fi_ctx.hints->caps = FI_MSG | FI_RMA;
-  fi_ctx.hints->mode = FI_CONTEXT | FI_LOCAL_MR;
+  fi_ctx.hints->mode = FI_CONTEXT | FI_LOCAL_MR | FI_RX_CQ_DATA;
 
   if(__fi_init_context(&fi_ctx)) {
     log_err("Could not initialize libfabric context");
@@ -220,6 +220,8 @@ static int fi_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size
   photonBI db;
   int rc;
 
+  dbg_trace("(size=%lu, id=0x%016lx, raddr: %p)", size, id, raddr);
+
   if (buffertable_find_containing((void *)laddr, size, &db) != PHOTON_OK) {
     log_err("Tried PUT from a local buffer that is not registered: %p", (void*)laddr);
     goto error_exit;
@@ -244,6 +246,8 @@ static int fi_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size
 		       photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags) {
   photonBI db;
   int rc;
+
+  dbg_trace("(size=%lu, id=0x%016lx, raddr: %p)", size, id, raddr);
 
   if (buffertable_find_containing((void *)laddr, size, &db) != PHOTON_OK) {
     log_err("Tried GET to a local buffer that is not registered: %p", (void*)laddr);

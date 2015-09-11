@@ -198,7 +198,7 @@ int __fi_connect_peers(fi_cnct_ctx *ctx, struct fi_info *fi) {
   cqind = PHOTON_GET_CQ_IND(ctx->num_cq, _photon_myrank);
   
   // bind CQ
-  rc = fi_ep_bind(ep, &ctx->cqs[cqind]->fid, FI_SEND);
+  rc = fi_ep_bind(ep, &ctx->cqs[cqind]->fid, FI_SEND|FI_WRITE|FI_TRANSMIT);
   if (rc) {
     dbg_err("Could not bind CQ to self EP");
     goto error_exit;
