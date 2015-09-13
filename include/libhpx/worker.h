@@ -85,12 +85,4 @@ int worker_is_active(void);
 /// Check to see if the current worker should shut down completely.
 int worker_is_shutdown(void);
 
-/// Check to see if the current worker has enough space for an alloca.
-///
-/// @param        bytes The number of bytes to allocate.
-///
-/// @returns            The number of bytes remaining on the stack after the
-///                     alloca.
-intptr_t worker_can_alloca(size_t bytes);
-
 #endif // LIBHPX_WORKER_H

@@ -873,6 +873,11 @@ int hpx_thread_get_tls_id(void) {
   return stack->tls_id;
 }
 
+intptr_t hpx_thread_can_alloca(size_t bytes) {
+  ustack_t *current = self->current->ustack;
+  return ((uintptr_t)&current - (uintptr_t)current->stack < bytes);
+}
+
 void hpx_thread_set_affinity(int affinity) {
   // make sure affinity is in bounds
   dbg_assert(affinity >= -1);
@@ -918,7 +923,3 @@ void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   (void)p;
 }
 
-intptr_t worker_can_alloca(size_t bytes) {
-  ustack_t *current = self->current->ustack;
-  return ((uintptr_t)&current - (uintptr_t)current->stack < bytes);
-}

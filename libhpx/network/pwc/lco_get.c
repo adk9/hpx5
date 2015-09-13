@@ -170,7 +170,7 @@ static int _pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args,
 
   // If there is enough space to stack allocate a buffer to copy, use the stack
   // version, otherwise malloc a buffer to copy to.
-  else if (worker_can_alloca(args->n) >= HPX_PAGE_SIZE) {
+  else if (hpx_thread_can_alloca(args->n) >= HPX_PAGE_SIZE) {
     return _get_reply_stack(args, pwc, lco);
   }
 
