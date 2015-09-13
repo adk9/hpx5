@@ -22,8 +22,8 @@
 ///
 /// HPX threads are spawned as a result of hpx_parcel_send() or
 /// hpx_parcel_send_sync(), or as a result of an hpx_call() (or variant) which
-/// which relies on an implicit parcel send. The may return values to their
-/// LCO continuations using this hpx_thread_exit() call, which terminates the
+/// which relies on an implicit parcel send. They may return values to their
+/// LCO continuations using the hpx_thread_exit() call, which terminates the
 /// thread's execution.
 
 /// Get the target of the current thread.
@@ -62,6 +62,13 @@ void hpx_thread_yield(void);
 ///          calling thread
 int hpx_thread_get_tls_id(void);
 
+/// Check to see if the current thread has enough space for an alloca.
+///
+/// @param        bytes The number of bytes to allocate.
+///
+/// @returns            The number of bytes remaining on the stack after the
+///                     alloca.
+intptr_t hpx_thread_can_alloca(size_t bytes);
 
 /// Set a lightweight thread's affinity.
 ///
