@@ -26,21 +26,30 @@
 # include <mpi.h>
 #endif
 
+/// This is a microbenchmark to evaluate the performance of collective LCO operations in HPX.
+///
+/// The included micro-benchmarks are:
+/// 1. allreduce
+
 // Global send/receive buffers
-char *sbuf;
-char *rbuf;
+unsigned char *sbuf;
+unsigned char *rbuf;
 
 /// Allreduce "reduction" operations.
-static void initdouble_handler(double *input, const size_t size) {
-  *input = 99999999.0;
+static void _init_handler(unsigned char *id, const size_t size) {
+  for (int i = 0; i < size; ++i) {
+    id+i = rand();
+  }
 }
-static HPX_ACTION(HPX_FUNCTION, 0, initdouble, initdouble_handler);
+static HPX_ACTION(HPX_FUNCTION, 0, _init, _init_handler);
 
-static void mindouble_handler(double *output, const double *input, const size_t size) {
-  if ( *output > *input ) *output = *input;
+static void
+_min_handler(unsigned char *out, const unsigned char *in, const size_t size) {
+  for (int i = 0; i < size; ++i) {
+    if (out[i] > in[i]) *out = *in;
+  }
 }
-static HPX_ACTION(HPX_FUNCTION, 0, mindouble, mindouble_handler);
-
+static HPX_ACTION(HPX_FUNCTION, 0, _min, _min_handler);
 
 /// Use a set-get pair for the allreduce operation.
 static int
@@ -80,7 +89,7 @@ static int _benchmark(char *name, hpx_action_t op, int iters, size_t size) {
 
   hpx_time_t start = hpx_time_now();
   hpx_addr_t allreduce = hpx_lco_allreduce_new(ranks, ranks, size,
-                                               initdouble, mindouble);
+                                               _init, _min);
   for (int i = 0; i < iters; ++i) {
     hpx_bcast_rsync(op, &allreduce, &size);
   }
