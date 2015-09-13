@@ -38,7 +38,7 @@ unsigned char *rbuf;
 /// Allreduce "reduction" operations.
 static void _init_handler(unsigned char *id, const size_t size) {
   for (int i = 0; i < size; ++i) {
-    id+i = rand();
+    id[i] = rand();
   }
 }
 static HPX_ACTION(HPX_FUNCTION, 0, _init, _init_handler);
@@ -65,7 +65,8 @@ static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_set_get,
 static int
 _allreduce_join_handler(hpx_addr_t allreduce, size_t size) {
   hpx_addr_t f = hpx_lco_future_new(0);
-  hpx_lco_allreduce_join_async(allreduce, HPX_LOCALITY_ID, size, sbuf, rbuf, f);
+  int id = (HPX_LOCALITY_ID * HPX_THREADS) + HPX_THREAD_ID;
+  hpx_lco_allreduce_join_async(allreduce, id, size, sbuf, rbuf, f);
   hpx_lco_wait(f);
   hpx_lco_delete(f, HPX_NULL);
   return HPX_SUCCESS;
@@ -76,54 +77,65 @@ static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_join, _allreduce_join_handler,
 /// Use join-sync for the allreduce operation.
 static int
 _allreduce_join_sync_handler(hpx_addr_t allreduce, size_t size) {
-  hpx_lco_allreduce_join_sync(allreduce, HPX_LOCALITY_ID, size, sbuf, rbuf);
+  int id = (HPX_LOCALITY_ID * HPX_THREADS) + HPX_THREAD_ID;
+  hpx_lco_allreduce_join_sync(allreduce, id, size, sbuf, rbuf);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_join_sync,
                   _allreduce_join_sync_handler, HPX_ADDR, HPX_SIZE_T);
 
+#ifdef HAVE_MPI
+static int
+_allreduce_mpi_handler(hpx_addr_t allreduce, size_t size) {
+  MPI_Allreduce(sbuf, rbuf, size, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+  return HPX_SUCCESS;
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_mpi,
+                  _allreduce_mpi_handler, HPX_ADDR, HPX_SIZE_T);
+#endif
+
+static int
+_fill_node_handler(hpx_action_t op, hpx_addr_t allreduce, size_t size) {
+  for (int i = 0; i < HPX_THREADS; ++i) {
+    hpx_xcall(HPX_HERE, op, HPX_NULL, allreduce, size);
+  }
+  return HPX_SUCCESS;
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _fill_node,
+                  _fill_node_handler, HPX_ACTION_T, HPX_ADDR, HPX_SIZE_T);
 
 /// A utility that tests a certain leaf function through I iterations.
 static int _benchmark(char *name, hpx_action_t op, int iters, size_t size) {
-  int ranks = HPX_LOCALITIES;
-
-  hpx_time_t start = hpx_time_now();
+  int ranks = HPX_LOCALITIES * HPX_THREADS;
   hpx_addr_t allreduce = hpx_lco_allreduce_new(ranks, ranks, size,
                                                _init, _min);
+  hpx_addr_t done = hpx_lco_and_new(ranks);
+  
+  hpx_time_t start = hpx_time_now();
   for (int i = 0; i < iters; ++i) {
-    hpx_bcast_rsync(op, &allreduce, &size);
+    hpx_bcast(_fill_node, HPX_NULL, HPX_NULL, &op, &allreduce, &size);
   }
-  hpx_lco_delete(allreduce, HPX_NULL);
 
+  hpx_lco_wait(done);
   double elapsed = hpx_time_elapsed_ms(start);
   printf("%s: %.7f\n", name, elapsed/iters);
+  hpx_lco_delete(done, HPX_NULL);
+  hpx_lco_delete(allreduce, HPX_NULL);
   return HPX_SUCCESS;
 }
 #define _XSTR(s) _STR(s)
 #define _STR(l) #l
 #define _BENCHMARK(op, iters, size) _benchmark(_XSTR(op), op, iters, size)
 
-#ifdef HAVE_MPI
-void _benchmark_mpi(int iters, size_t size) {
-  int ranks = HPX_LOCALITIES;
-  double start = MPI_Wtime();
-
-  MPI_Barrier(MPI_COMM_WORLD);
-  for (int i = 0; i < iters; ++i) {
-    MPI_Allreduce(sbuf, rbuf, size, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-  }
-
-  double elapsed = MPI_Wtime() - start;
-  printf("MPI_Allreduce: %.7f\n", elapsed/iters);
-  MPI_Barrier(MPI_COMM_WORLD);
-}
-#endif
-
 static HPX_ACTION_DECL(_main);
 static int _main_action(int iters, size_t size) {
   printf("collbench(iters=%d, size=%lu)\n", iters, size);
   printf("time resolution: milliseconds\n");
   fflush(stdout);
+
+#ifdef HAVE_MPI
+  _BENCHMARK(_allreduce_mpi, iters, size);
+#endif
 
   _BENCHMARK(_allreduce_set_get, iters, size);
   _BENCHMARK(_allreduce_join, iters, size);
@@ -175,10 +187,6 @@ int main(int argc, char *argv[]) {
 
   sbuf = calloc(1, size);
   rbuf = calloc(1, size);
-
-#ifdef HAVE_MPI
-  _benchmark_mpi(iters, size);
-#endif
 
   e = hpx_run(&_main, &iters, &size);
   assert(e == HPX_SUCCESS);
