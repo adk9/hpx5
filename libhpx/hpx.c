@@ -200,13 +200,14 @@ int hpx_init(int *argc, char ***argv) {
   if (here->config->cores) {
     log_error("--hpx-cores is deprecated, ignoring\n");
   }
-  status = system_get_affinity_group_size(pthread_self(), &here->config->cores);
-  if (status) {
-    goto unwind1;
-  }
+
+  here->config->cores = system_get_job_cpus();
 
   if (!here->config->cores) {
-    here->config->cores = system_get_job_cpus();
+    status = system_get_affinity_group_size(pthread_self(), &here->config->cores);
+    if (status) {
+      goto unwind1;
+    }
   }
 
   if (!here->config->threads) {
