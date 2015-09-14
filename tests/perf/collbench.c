@@ -22,10 +22,6 @@
 #include <getopt.h>
 #include <hpx/hpx.h>
 
-#ifdef HAVE_MPI
-# include <mpi.h>
-#endif
-
 /// This is a microbenchmark to evaluate the performance of collective LCO operations in HPX.
 ///
 /// The included micro-benchmarks are:
@@ -84,16 +80,6 @@ _allreduce_join_sync_handler(hpx_addr_t allreduce, size_t size) {
 static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_join_sync,
                   _allreduce_join_sync_handler, HPX_ADDR, HPX_SIZE_T);
 
-#ifdef HAVE_MPI
-static int
-_allreduce_mpi_handler(hpx_addr_t allreduce, size_t size) {
-  MPI_Allreduce(sbuf, rbuf, size, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-  return HPX_SUCCESS;
-}
-static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_mpi,
-                  _allreduce_mpi_handler, HPX_ADDR, HPX_SIZE_T);
-#endif
-
 static int
 _fill_node_handler(hpx_action_t op, hpx_addr_t allreduce, size_t size) {
   for (int i = 0; i < HPX_THREADS; ++i) {
@@ -114,6 +100,7 @@ static int _benchmark(char *name, hpx_action_t op, int iters, size_t size) {
     hpx_bcast(_fill_node, HPX_NULL, HPX_NULL, &op, &allreduce, &size);
   }
 
+  hpx_lco_wait(allreduce);
   double elapsed = hpx_time_elapsed_ms(start);
   printf("%s: %.7f\n", name, elapsed/iters);
   hpx_lco_delete(allreduce, HPX_NULL);
@@ -128,10 +115,6 @@ static int _main_action(int iters, size_t size) {
   printf("collbench(iters=%d, size=%lu)\n", iters, size);
   printf("time resolution: milliseconds\n");
   fflush(stdout);
-
-#ifdef HAVE_MPI
-  _BENCHMARK(_allreduce_mpi, iters, size);
-#endif
 
   _BENCHMARK(_allreduce_set_get, iters, size);
   _BENCHMARK(_allreduce_join, iters, size);
