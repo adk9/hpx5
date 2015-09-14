@@ -82,6 +82,9 @@ typedef void (*system_munmap_t)(void *, void *, size_t);
 /// Sleep for microseconds.
 void system_usleep(size_t useconds);
 
+/// Print a stack trace.
+void system_print_trace(void *fd);
+
 /// Cross-platform pthread barrier interface
 
 #if defined(__linux)
@@ -110,9 +113,6 @@ int system_barrier_destroy(system_barrier_t *barrier);
 
 /// System specific thread barrier wait function
 int system_barrier_wait(system_barrier_t *barrier);
-
-/// Print a stack trace.
-void system_print_trace(void *fd);
 
 #endif
 
