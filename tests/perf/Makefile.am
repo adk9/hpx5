@@ -6,7 +6,6 @@ AM_LDFLAGS                      = $(HPX_APPS_LDFLAGS) -no-install
 LDADD                           = $(HPX_APPS_LDADD)
 
 TESTS = gas_alloc           \
-	mem_alloc           \
         gas_addr_trans      \
         lco_sema            \
         lco_future          \
@@ -15,7 +14,7 @@ TESTS = gas_alloc           \
         thread_switch
 
 if ENABLE_LENGTHY_TESTS
-TESTS += lco_and sendrecv 
+TESTS += lco_and sendrecv mem_alloc
 endif
 
 LOG_COMPILER = $(TESTS_CMD)
