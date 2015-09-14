@@ -109,17 +109,13 @@ static int _benchmark(char *name, hpx_action_t op, int iters, size_t size) {
   int ranks = HPX_LOCALITIES * HPX_THREADS;
   hpx_addr_t allreduce = hpx_lco_allreduce_new(ranks, ranks, size,
                                                _init, _min);
-  hpx_addr_t done = hpx_lco_and_new(ranks);
-  
   hpx_time_t start = hpx_time_now();
   for (int i = 0; i < iters; ++i) {
     hpx_bcast(_fill_node, HPX_NULL, HPX_NULL, &op, &allreduce, &size);
   }
 
-  hpx_lco_wait(done);
   double elapsed = hpx_time_elapsed_ms(start);
   printf("%s: %.7f\n", name, elapsed/iters);
-  hpx_lco_delete(done, HPX_NULL);
   hpx_lco_delete(allreduce, HPX_NULL);
   return HPX_SUCCESS;
 }
