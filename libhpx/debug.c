@@ -26,9 +26,10 @@
 
 #include "libhpx/action.h"
 #include "libhpx/config.h"
+#include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
-#include "libhpx/debug.h"
+#include "libhpx/system.h"
 
 static char *_get_hostname(char *hostname, int size) {
   gethostname(hostname, size);
@@ -41,6 +42,7 @@ HPX_NO_OPTIMIZE void dbg_wait(void) {
   int i = 0;
   char hostname[256];
   _get_hostname(hostname, 255);
+  system_print_trace(stdout);
   printf("PID %d on %s ready for attach\n", getpid(), hostname);
   fflush(stdout);
   while (0 == i)
