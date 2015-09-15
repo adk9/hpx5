@@ -529,14 +529,10 @@ void hpx_lco_release(hpx_addr_t target, void *out) {
     // guaranteed to be a registered temporary buffer if the LCO was non-local
     registered_free(out);
   }
-
-  // release tells us if we left the LCO pinned in getref
-  int unpin = _release(lco, out);
-  if (unpin) {
-      hpx_gas_unpin(target);
+  else if (_release(lco, out)) {
+    // release tells us if we left the LCO pinned in getref
+    hpx_gas_unpin(target);
   }
-
-  // matching unpin for the local pin above
   hpx_gas_unpin(target);
 }
 
