@@ -325,6 +325,7 @@ int action_execute(hpx_parcel_t *p) {
   hpx_action_t              id = p->action;
   const _table_t        *table = _get_actions();
   hpx_action_handler_t handler = table->entries[id].handler;
+  dbg_assert(handler);
   ffi_cif                 *cif = table->entries[id].cif;
   bool                  pinned = action_is_pinned(table, id);
   void                   *args = hpx_parcel_get_data(p);
