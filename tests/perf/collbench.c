@@ -63,12 +63,12 @@ static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_set_get,
 static int
 _allreduce_join_handler(hpx_addr_t allreduce, int iters, size_t size) {
   int id = (HPX_LOCALITY_ID * HPX_THREADS) + HPX_THREAD_ID;
+  hpx_addr_t f = hpx_lco_future_new(0);
   for (int i = 0; i < iters; ++i) {
-    hpx_addr_t f = hpx_lco_future_new(0);
     hpx_lco_allreduce_join_async(allreduce, id, size, sbuf, rbuf, f);
-    hpx_lco_wait(f);
-    hpx_lco_delete(f, HPX_NULL);
+    hpx_lco_wait_reset(f);
   }
+  hpx_lco_delete(f, HPX_NULL);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_join, _allreduce_join_handler,
