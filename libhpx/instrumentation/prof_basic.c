@@ -41,7 +41,7 @@ static void _prof_end(){
   _profile_log.end_time = hpx_time_now();
 }
 
-static void _create_new_list(profile_list_t *list, profile_list_t new_list, 
+static void _create_new_list(profile_list_t *list, profile_list_t new_list,
                       char *key, bool simple){
   if(_profile_log.num_entries == _profile_log.max_entries){
     _profile_log.max_entries *= 2;
@@ -66,13 +66,13 @@ static void _create_new_list(profile_list_t *list, profile_list_t new_list,
   list[index].simple = simple;
 }
 
-static void _create_new_entry(struct profile_entry *entries, 
+static void _create_new_entry(struct profile_entry *entries,
                        struct profile_entry new_entry,
                        int event, bool simple){
-  if(_profile_log.entries[event].num_entries == 
+  if(_profile_log.entries[event].num_entries ==
      _profile_log.entries[event].max_entries){
     _profile_log.entries[event].max_entries *= 2;
-    struct profile_entry *new_list = 
+    struct profile_entry *new_list =
                                 malloc(_profile_log.entries[event].max_entries *
                                        sizeof(struct profile_entry));
     for(int i = 0; i < _profile_log.entries[event].num_entries; i++){
@@ -104,7 +104,7 @@ void prof_init(struct config *cfg){
   _profile_log.counters = NULL;
   _profile_log.counter_names = NULL;
   _profile_log.num_counters = 0;
-  _profile_log.entries = malloc(_profile_log.max_entries * 
+  _profile_log.entries = malloc(_profile_log.max_entries *
                                 sizeof(profile_list_t));
 
   if(cfg->prof_action){
@@ -155,6 +155,9 @@ void prof_get_average_time(char *key, hpx_time_t *avg){
       average += hpx_time_diff_ns(_profile_log.entries[event].entries[i].start_time,
                                 _profile_log.entries[event].entries[i].end_time);
     }
+  }
+  if (_profile_log.entries[event].num_entries == 0) {
+    dbg_error("profiler event has no entries for average.\n");
   }
   average /= _profile_log.entries[event].num_entries;
   seconds = average / 1e9;
