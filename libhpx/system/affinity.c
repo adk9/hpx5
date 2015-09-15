@@ -30,16 +30,6 @@ int system_get_job_cpus(void) {
   // Cray ALPS
   int ncpus = libhpx_getenv_num("ALPS_APP_DEPTH", 0);
 
-  // PBS/Moab (qsub)
-  if (!ncpus) {
-    ncpus = libhpx_getenv_num("PBS_NUM_PPN", 0);
-  }
-
-  // SLURM
-  if (!ncpus) {
-    ncpus = libhpx_getenv_num("SLURM_JOB_CPUS_PER_NODE", 0);
-  }
-
   // ..otherwise, use all available cores
   if (!ncpus) {
     ncpus = system_get_cores();
