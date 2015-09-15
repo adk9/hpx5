@@ -49,61 +49,66 @@ static HPX_ACTION(HPX_FUNCTION, 0, _min, _min_handler);
 
 /// Use a set-get pair for the allreduce operation.
 static int
-_allreduce_set_get_handler(hpx_addr_t allreduce, size_t size) {
-  hpx_lco_set_lsync(allreduce, size, sbuf, HPX_NULL);
-  hpx_lco_get(allreduce, size, rbuf);
-  return HPX_SUCCESS;
-}
-static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_set_get,
-                  _allreduce_set_get_handler, HPX_ADDR, HPX_SIZE_T);
-
-/// Use a synchronous join for the allreduce operation.
-static int
-_allreduce_join_handler(hpx_addr_t allreduce, size_t size) {
-  hpx_addr_t f = hpx_lco_future_new(0);
-  int id = (HPX_LOCALITY_ID * HPX_THREADS) + HPX_THREAD_ID;
-  hpx_lco_allreduce_join_async(allreduce, id, size, sbuf, rbuf, f);
-  hpx_lco_wait(f);
-  hpx_lco_delete(f, HPX_NULL);
-  return HPX_SUCCESS;
-}
-static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_join, _allreduce_join_handler,
-                  HPX_ADDR, HPX_SIZE_T);
-
-/// Use join-sync for the allreduce operation.
-static int
-_allreduce_join_sync_handler(hpx_addr_t allreduce, size_t size) {
-  int id = (HPX_LOCALITY_ID * HPX_THREADS) + HPX_THREAD_ID;
-  hpx_lco_allreduce_join_sync(allreduce, id, size, sbuf, rbuf);
-  return HPX_SUCCESS;
-}
-static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_join_sync,
-                  _allreduce_join_sync_handler, HPX_ADDR, HPX_SIZE_T);
-
-static int
-_fill_node_handler(hpx_action_t op, hpx_addr_t allreduce, size_t size) {
-  for (int i = 0; i < HPX_THREADS; ++i) {
-    hpx_xcall(HPX_HERE, op, HPX_NULL, allreduce, size);
+_allreduce_set_get_handler(hpx_addr_t allreduce, int iters, size_t size) {
+  for (int i = 0; i < iters; ++i) {
+    hpx_lco_set_lsync(allreduce, size, sbuf, HPX_NULL);
+    hpx_lco_get(allreduce, size, rbuf);
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, 0, _fill_node,
-                  _fill_node_handler, HPX_ACTION_T, HPX_ADDR, HPX_SIZE_T);
+static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_set_get,
+                  _allreduce_set_get_handler, HPX_ADDR, HPX_INT, HPX_SIZE_T);
+
+/// Use a synchronous join for the allreduce operation.
+static int
+_allreduce_join_handler(hpx_addr_t allreduce, int iters, size_t size) {
+  int id = (HPX_LOCALITY_ID * HPX_THREADS) + HPX_THREAD_ID;
+  for (int i = 0; i < iters; ++i) {
+    hpx_addr_t f = hpx_lco_future_new(0);
+    hpx_lco_allreduce_join_async(allreduce, id, size, sbuf, rbuf, f);
+    hpx_lco_wait(f);
+    hpx_lco_delete(f, HPX_NULL);
+  }
+  return HPX_SUCCESS;
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_join, _allreduce_join_handler,
+                  HPX_ADDR, HPX_INT, HPX_SIZE_T);
+
+/// Use join-sync for the allreduce operation.
+static int
+_allreduce_join_sync_handler(hpx_addr_t allreduce, int iters, size_t size) {
+  int id = (HPX_LOCALITY_ID * HPX_THREADS) + HPX_THREAD_ID;
+  for (int i = 0; i < iters; ++i) {
+    hpx_lco_allreduce_join_sync(allreduce, id, size, sbuf, rbuf);
+  }
+  return HPX_SUCCESS;
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_join_sync,
+                  _allreduce_join_sync_handler, HPX_ADDR, HPX_INT, HPX_SIZE_T);
+
+static int
+_fill_node_handler(hpx_action_t op, hpx_addr_t done, hpx_addr_t allreduce, int iters,
+                   size_t size) {
+  for (int i = 0; i < HPX_THREADS; ++i) {
+    hpx_xcall(HPX_HERE, op, done, allreduce, iters, size);
+  }
+  return HPX_SUCCESS;
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _fill_node, _fill_node_handler,
+                  HPX_ACTION_T, HPX_ADDR, HPX_ADDR, HPX_INT, HPX_SIZE_T);
 
 /// A utility that tests a certain leaf function through I iterations.
 static int _benchmark(char *name, hpx_action_t op, int iters, size_t size) {
   int ranks = HPX_LOCALITIES * HPX_THREADS;
-  hpx_addr_t allreduce = hpx_lco_allreduce_new(ranks, ranks, size,
-                                               _init, _min);
+  hpx_addr_t allreduce = hpx_lco_allreduce_new(ranks, ranks, size, _init, _min);
+  hpx_addr_t done = hpx_lco_and_new(ranks);
   hpx_time_t start = hpx_time_now();
-  for (int i = 0; i < iters; ++i) {
-    hpx_bcast(_fill_node, HPX_NULL, HPX_NULL, &op, &allreduce, &size);
-  }
-
-  hpx_lco_wait(allreduce);
+  hpx_bcast(_fill_node, HPX_NULL, HPX_NULL, &op, &done, &allreduce, &iters, &size);
+  hpx_lco_wait(done);
   double elapsed = hpx_time_elapsed_ms(start);
-  printf("%s: %.7f\n", name, elapsed/iters);
   hpx_lco_delete(allreduce, HPX_NULL);
+  hpx_lco_delete(done, HPX_NULL);
+  printf("%s: %.7f\n", name, elapsed/iters);
   return HPX_SUCCESS;
 }
 #define _XSTR(s) _STR(s)
