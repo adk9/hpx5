@@ -137,6 +137,8 @@ static void _usage(FILE *f, int error) {
 }
 
 int main(int argc, char *argv[]) {
+  return 77;
+  
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
