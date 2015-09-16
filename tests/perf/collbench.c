@@ -27,10 +27,6 @@
 /// The included micro-benchmarks are:
 /// 1. allreduce
 
-// Global send/receive buffers
-unsigned char *sbuf;
-unsigned char *rbuf;
-
 /// Allreduce "reduction" operations.
 static void _init_handler(unsigned char *id, const size_t size) {
   for (int i = 0; i < size; ++i) {
@@ -50,6 +46,8 @@ static HPX_ACTION(HPX_FUNCTION, 0, _min, _min_handler);
 /// Use a set-get pair for the allreduce operation.
 static int
 _allreduce_set_get_handler(hpx_addr_t allreduce, int iters, size_t size) {
+  unsigned char sbuf[size];
+  unsigned char rbuf[size];
   for (int i = 0; i < iters; ++i) {
     hpx_lco_set_lsync(allreduce, size, sbuf, HPX_NULL);
     hpx_lco_get(allreduce, size, rbuf);
@@ -62,6 +60,8 @@ static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_set_get,
 /// Use a synchronous join for the allreduce operation.
 static int
 _allreduce_join_handler(hpx_addr_t allreduce, int iters, size_t size) {
+  unsigned char sbuf[size];
+  unsigned char rbuf[size];
   int id = (HPX_LOCALITY_ID * HPX_THREADS) + HPX_THREAD_ID;
   hpx_addr_t f = hpx_lco_future_new(0);
   for (int i = 0; i < iters; ++i) {
@@ -77,6 +77,8 @@ static HPX_ACTION(HPX_DEFAULT, 0, _allreduce_join, _allreduce_join_handler,
 /// Use join-sync for the allreduce operation.
 static int
 _allreduce_join_sync_handler(hpx_addr_t allreduce, int iters, size_t size) {
+  unsigned char sbuf[size];
+  unsigned char rbuf[size];
   int id = (HPX_LOCALITY_ID * HPX_THREADS) + HPX_THREAD_ID;
   for (int i = 0; i < iters; ++i) {
     hpx_lco_allreduce_join_sync(allreduce, id, size, sbuf, rbuf);
@@ -125,8 +127,6 @@ static int _main_action(int iters, size_t size) {
   _BENCHMARK(_allreduce_join, iters, size);
   _BENCHMARK(_allreduce_join_sync, iters, size);
 
-  free(sbuf);
-  free(rbuf);
   hpx_exit(HPX_SUCCESS);
 }  
 static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_action, HPX_INT, HPX_SIZE_T);
@@ -168,9 +168,6 @@ int main(int argc, char *argv[]) {
 
   argc -= optind;
   argv += optind;
-
-  sbuf = calloc(1, size);
-  rbuf = calloc(1, size);
 
   e = hpx_run(&_main, &iters, &size);
   assert(e == HPX_SUCCESS);
