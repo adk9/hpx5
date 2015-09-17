@@ -20,6 +20,7 @@
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/memory.h>
+#include <libhpx/locality.h>
 #include <malloc-2.8.6.h>
 
 mspace mspaces[AS_COUNT] = {NULL};
