@@ -25,7 +25,7 @@ AC_DEFUN([_HPX_CC_TBBMALLOC], [
  AC_CHECK_HEADER([tbb/scalable_allocator.h],
    [AC_CHECK_LIB([tbbmalloc], [scalable_malloc],
      [_HAVE_TBBMALLOC
-      LIBHPX_LIBS="$LIBHPX_LIBS -ltbbmalloc_proxy -ltbbmalloc"
+      LIBHPX_LIBS="$LIBHPX_LIBS -ltbbmalloc_proxy -ltbbmalloc -lstdc++"
       HPX_PC_PUBLIC_LIBS="$HPX_PC_PUBLIC_LIBS -ltbbmalloc_proxy"
       HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -ltbbmalloc"])])
 ])
