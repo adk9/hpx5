@@ -37,6 +37,12 @@
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
+/* mxm provider is built */
+#undef HAVE_MXM
+
+/* mxm provider is built as DSO */
+#undef HAVE_MXM_DL
+
 /* Define to 1 if you have the <netlink/netlink.h> header file. */
 #undef HAVE_NETLINK_NETLINK_H
 
@@ -138,6 +144,9 @@
 
 /* Define to 1 if pthread_spin_init is available. */
 #undef PT_LOCK_SPIN
+
+/* The size of `void *', as computed by sizeof. */
+#undef SIZEOF_VOID_P
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
