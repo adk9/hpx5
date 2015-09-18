@@ -14,7 +14,8 @@ typedef struct fi_cnct_ctx_t {
   struct fid_domain      *dom;
   struct fid_av          *av;
   struct fid_ep         **eps;
-  struct fid_cq         **cqs;
+  struct fid_cq         **lcq;
+  struct fid_cq         **rcq;
   struct fi_context       fi_ctx_av;
   fi_addr_t              *addrs;
 
@@ -28,6 +29,7 @@ typedef struct fi_cnct_ctx_t {
   char                   *provider;
 
   int                     num_cq;
+  int                     use_rcq;
   int                     rdma_get_align;
   int                     rdma_put_align;
 } fi_cnct_ctx;

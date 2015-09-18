@@ -19,6 +19,9 @@ struct photon_config_t cfg = {
     .eth_dev = NULL,
     .bte_thresh = -1,
   },
+  .fi = {
+    .provider = "psm",
+  },
   .cap = {
     .small_msg_size = -1,
     .small_pwc_size =  1024,
