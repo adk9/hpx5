@@ -154,21 +154,19 @@ int photon_init(photonConfig cfg) {
       __photon_backend = be = &photon_ugni_backend;
       photon_buffer_init(&ugni_buffer_interface);
       lcfg->backend = PHOTON_BACKEND_UGNI;
-      one_debug("Using uGNI backend");
 #elif HAVE_VERBS
       __photon_backend = be = &photon_verbs_backend;
       photon_buffer_init(&verbs_buffer_interface);
       lcfg->backend = PHOTON_BACKEND_VERBS;
-      one_debug("Using Verbs backend");
 #elif HAVE_LIBFABRIC
       __photon_backend = be = &photon_fi_backend;
       photon_buffer_init(&fi_buffer_interface);
       lcfg->backend = PHOTON_BACKEND_FI;
-      one_debug("Using libfabric backend");
 #else
       errmsg = "network backend";
       goto error_exit;
 #endif
+      one_debug("Using %s backend", PHOTON_BACKEND_TO_STRING[lcfg->backend]);
     }
     break;
   }
@@ -224,10 +222,13 @@ int photon_init(photonConfig cfg) {
   if (lcfg->cap.use_rcq < 0)
     lcfg->cap.use_rcq = DEF_USE_RCQ;
 
-  if ((lcfg->backend == PHOTON_BACKEND_UGNI) &&
+  // some of our backends should always use RCQ
+  if (((lcfg->backend == PHOTON_BACKEND_UGNI) ||
+       (lcfg->backend == PHOTON_BACKEND_FI)) &&
       (lcfg->cap.use_rcq <= 0)) {
     lcfg->cap.use_rcq = 1;
-    one_debug("Enabling remote completion support for uGNI backend");
+    one_debug("Enabling remote completion support for %s backend",
+	      PHOTON_BACKEND_TO_STRING[lcfg->backend]);
   }
   
   if (lcfg->cap.num_cq > _photon_nproc) {

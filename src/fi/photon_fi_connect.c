@@ -59,12 +59,20 @@ static int __fi_alloc_context(fi_cnct_ctx *ctx, struct fi_info *fi) {
     goto error_exit;
   }
 
-  ctx->cqs = (struct fid_cq**)malloc(ctx->num_cq * sizeof(struct fid_cq*));
-  if (!ctx->cqs) {
-    dbg_err("Could not allocate CQ memory");
+  ctx->lcq = (struct fid_cq**)malloc(ctx->num_cq * sizeof(struct fid_cq*));
+  if (!ctx->lcq) {
+    dbg_err("Could not allocate local CQ memory");
     goto err1;
   }
   
+  if (ctx->use_rcq) {
+    ctx->rcq = (struct fid_cq**)malloc(ctx->num_cq * sizeof(struct fid_cq*));
+    if (!ctx->rcq) {
+      dbg_err("Could not allocate remote CQ memory");
+      goto err1;
+    }
+  }
+
   ctx->addrs = (fi_addr_t*)malloc(_photon_nproc * sizeof(fi_addr_t));
   if (!ctx->addrs) {
     dbg_err("Could not allocate fi_addr memory");
@@ -85,13 +93,21 @@ static int __fi_alloc_context(fi_cnct_ctx *ctx, struct fi_info *fi) {
   memset(&cq_attr, 0, sizeof(cq_attr));
   cq_attr.format = FI_CQ_FORMAT_DATA;
   cq_attr.wait_obj = FI_WAIT_NONE;
-  cq_attr.size = 128; // FIXME
+  cq_attr.size = 16384; // FIXME
   
   for (i = 0; i < ctx->num_cq; i++) {
-    rc = fi_cq_open(ctx->dom, &cq_attr, &ctx->cqs[i], NULL);
+    rc = fi_cq_open(ctx->dom, &cq_attr, &ctx->lcq[i], NULL);
     if (rc) {
-      dbg_err("Could not open CQ number %d", i);
+      dbg_err("Could not open local CQ number %d", i);
       goto err3;
+    }
+
+    if (ctx->use_rcq) {
+      rc = fi_cq_open(ctx->dom, &cq_attr, &ctx->rcq[i], NULL);
+      if (rc) {
+	dbg_err("Could not open remote CQ number %d", i);
+	goto err3;
+      }
     }
   }
   
@@ -114,7 +130,8 @@ static int __fi_alloc_context(fi_cnct_ctx *ctx, struct fi_info *fi) {
  err3:
   free(ctx->addrs);
  err2:
-  free(ctx->cqs);
+  free(ctx->lcq);
+  free(ctx->rcq);
  err1:
   free(ctx->eps);
  error_exit:
@@ -133,7 +150,8 @@ int __fi_init_context(fi_cnct_ctx *ctx) {
   }
 
 #ifdef ENABLE_DEBUG
-  __print_short_info(ctx->fi);
+  if (_photon_myrank == 0)
+    __print_long_info(ctx->fi);
 #endif
 
   rc = fi_fabric(ctx->fi->fabric_attr, &ctx->fab, NULL);
@@ -197,13 +215,22 @@ int __fi_connect_peers(fi_cnct_ctx *ctx, struct fi_info *fi) {
   ep = ctx->eps[_photon_myrank];
   cqind = PHOTON_GET_CQ_IND(ctx->num_cq, _photon_myrank);
   
-  // bind CQ
-  rc = fi_ep_bind(ep, &ctx->cqs[cqind]->fid, FI_SEND|FI_WRITE|FI_TRANSMIT);
+  // bind local CQ
+  rc = fi_ep_bind(ep, &ctx->lcq[cqind]->fid, FI_SEND|FI_WRITE|FI_TRANSMIT);
   if (rc) {
-    dbg_err("Could not bind CQ to self EP");
+    dbg_err("Could not bind local CQ to self EP");
     goto error_exit;
   }
-  
+
+  if (ctx->use_rcq) {
+    // bind remote CQ
+    rc = fi_ep_bind(ep, &ctx->rcq[cqind]->fid, FI_RECV|FI_REMOTE_WRITE);
+    if (rc) {
+      dbg_err("Could not bind remote CQ to self EP");
+      goto error_exit;
+    }
+  }  
+
   // bind AV
   rc = fi_ep_bind(ep, &ctx->av->fid, 0);
   if (rc) {

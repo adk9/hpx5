@@ -17,6 +17,9 @@ struct photon_config_t cfg = {
   .ugni = {
     .bte_thresh = -1,
   },
+  .fi = {
+    .provider = "psm",
+  },
   .cap = {
     .small_msg_size = -1,
     .small_pwc_size = -1,

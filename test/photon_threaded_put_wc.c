@@ -40,7 +40,7 @@ static void __attribute__((used)) dbg_wait(void) {
 
 #define PHOTON_BUF_SIZE (1024*1024*256) // 256M
 #define PHOTON_TAG UINT32_MAX
-#define SQ_SIZE 3000
+#define SQ_SIZE 30
 
 static int ITERS = 10000;
 static char *send, **recv;

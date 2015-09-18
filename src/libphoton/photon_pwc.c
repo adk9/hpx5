@@ -450,7 +450,7 @@ static int photon_pwc_try_packed(photonRequest req, int offset) {
   hdr->addr    = req->remote_info.buf.addr;
   hdr->length  = req->size;
   hdr->footer  = UINT8_MAX;
-  
+
   memcpy((void*)((uintptr_t)hdr + sizeof(*hdr)), (void*)req->local_info.buf.addr, req->size);
   // set a tail flag, the last byte in aligned buffer
   tail = (uint8_t*)((uintptr_t)hdr + asize - 1);
@@ -907,6 +907,8 @@ static int photon_pwc_probe_ledger(int proc, int *flag, photon_rid *request, int
 	    photon_pwc_process_command(i, req, addr, size, payload);
 	  }
 	  else {
+	    assert(addr);
+	    assert(payload);
 	    memcpy((void*)addr, payload, size);
 	    *request = req;
 	    *src = i;
