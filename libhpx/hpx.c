@@ -39,6 +39,7 @@
 #include <libhpx/scheduler.h>
 #include <libhpx/system.h>
 #include <libhpx/time.h>
+#include <libhpx/utils.h>
 #include "network/probe.h"
 
 #ifdef HAVE_APEX
@@ -201,12 +202,15 @@ int hpx_init(int *argc, char ***argv) {
     log_error("--hpx-cores is deprecated, ignoring\n");
   }
 
-  here->config->cores = system_get_job_cpus();
-
+  // On Cray platforms, we look at the ALPS depth environment variable
+  // to figure out how many cores to use 
+  here->config->cores = libhpx_getenv_num("ALPS_APP_DEPTH", 0);
   if (!here->config->cores) {
-    status = system_get_affinity_group_size(pthread_self(), &here->config->cores);
-    if (status) {
-      goto unwind1;
+    system_get_affinity_group_size(pthread_self(), &here->config->cores);
+
+    // ..otherwise, use all available cores
+    if (!here->config->cores) {
+      here->config->cores = system_get_cores();
     }
   }
 
