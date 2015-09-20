@@ -21,22 +21,7 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/system.h>
-#include <libhpx/utils.h>
 #include <hwloc.h>
-
-int system_get_job_cpus(void) {
-  // todo: detect which system we're on.
-
-  // Cray ALPS
-  int ncpus = libhpx_getenv_num("ALPS_APP_DEPTH", 0);
-
-  // ..otherwise, use all available cores
-  if (!ncpus) {
-    ncpus = system_get_cores();
-  }
-
-  return ncpus;
-}
 
 static int _hwloc_cpubind(hwloc_thread_t thread, hwloc_bitmap_t set) {
   int e = hwloc_set_thread_cpubind(here->topology, thread,
