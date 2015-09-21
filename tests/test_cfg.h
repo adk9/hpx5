@@ -24,7 +24,7 @@ struct photon_config_t cfg = {
   },
   .cap = {
     .small_msg_size = -1,
-    .small_pwc_size =  1024,
+    .small_pwc_size = -1,
     .eager_buf_size = -1,
     .ledger_entries = -1,
     .max_rd         = -1,
@@ -38,5 +38,5 @@ struct photon_config_t cfg = {
   },
   .meta_exch = PHOTON_EXCH_MPI,
   .comm = NULL,
-  .backend = PHOTON_BACKEND_DEFAULT
+  .backend = PHOTON_BACKEND_FI
 };

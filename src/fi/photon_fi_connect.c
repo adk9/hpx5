@@ -151,7 +151,7 @@ int __fi_init_context(fi_cnct_ctx *ctx) {
 
 #ifdef ENABLE_DEBUG
   if (_photon_myrank == 0)
-    __print_long_info(ctx->fi);
+    __print_short_info(ctx->fi);
 #endif
 
   rc = fi_fabric(ctx->fi->fabric_attr, &ctx->fab, NULL);
@@ -179,6 +179,10 @@ int __fi_init_context(fi_cnct_ctx *ctx) {
   if (!f) {
     dbg_err("Could not use any libfabric providers!");
     goto err1;
+  }
+
+  if (ctx->fi->domain_attr->threading & FI_THREAD_SAFE) {
+    ctx->thread_safe = 1;
   }
 
   rc = __fi_alloc_context(ctx, f);

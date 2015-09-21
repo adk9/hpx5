@@ -52,6 +52,8 @@ static int ugni_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
                           photonBuffer lbuf, uint64_t id, uint64_t imm, int flags);
 static int ugni_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
                           photonBuffer lbuf, uint64_t id, int flags);
+static int ugni_tx_size_left(int proc);
+static int ugni_rx_size_left(int proc);
 static int ugni_get_event(int proc, int max, photon_rid *ids, int *n);
 static int ugni_get_revent(int proc, int max, photon_rid *ids, uint64_t *imms, int *n);
 
@@ -102,6 +104,8 @@ struct photon_backend_t photon_ugni_backend = {
   .rdma_get = ugni_rdma_get,
   .rdma_send = ugni_rdma_send,
   .rdma_recv = ugni_rdma_recv,
+  .tx_size_left = ugni_tx_size_left,
+  .rx_size_left = ugni_rx_size_left,
   .get_event = ugni_get_event,
   .get_revent = ugni_get_revent
 };
@@ -388,6 +392,14 @@ static int ugni_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
 static int ugni_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
                           photonBuffer lbuf, uint64_t id, int flags) {
   return PHOTON_OK;
+}
+
+static int ugni_tx_size_left(int proc) {
+  return _LEDGER_SIZE;
+}
+
+static int ugni_tx_size_left(int proc) {
+  return _LEDGER_SIZE;
 }
 
 static int ugni_get_event(int proc, int max, photon_rid *ids, int *n) {
