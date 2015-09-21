@@ -31,7 +31,7 @@ void _agas_allocator_init(agas_t *agas, int id) {
   void *base = system_mmap(NULL, NULL, bytes, agas->chunk_size);
   dbg_assert(base);
   chunk_table_insert(agas->chunk_table, base, 0);
-  mspaces[id] = create_mspace_with_base(base, bytes, 0);
+  mspaces[id] = create_mspace_with_base(base, bytes, 1);
 }
 
 void

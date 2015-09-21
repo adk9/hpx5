@@ -32,5 +32,5 @@ registered_allocator_init(pwc_xport_t *xport) {
   }
 
   xport->pin(base, bytes, NULL);
-  mspaces[AS_REGISTERED] = create_mspace_with_base(base, bytes, 0);
+  mspaces[AS_REGISTERED] = create_mspace_with_base(base, bytes, 1);
 }
