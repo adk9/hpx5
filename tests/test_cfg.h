@@ -20,7 +20,7 @@ struct photon_config_t cfg = {
     .bte_thresh = -1,
   },
   .fi = {
-    .provider = "psm",
+    .provider = "sockets",
   },
   .cap = {
     .small_msg_size = -1,
