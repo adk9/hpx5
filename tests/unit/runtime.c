@@ -30,10 +30,6 @@ int main(int argc, char *argv[]) {
 
   return 77;
 
-  if (hpx_init(&argc, &argv)) {
-    fprintf(stderr, "failed to initialize HPX.\n");
-    return 1;
-  }
   e = hpx_run(&_main);
   printf("2 hpx_run returned %d.\n", e);
   return e;
