@@ -398,7 +398,7 @@ static int ugni_tx_size_left(int proc) {
   return _LEDGER_SIZE;
 }
 
-static int ugni_tx_size_left(int proc) {
+static int ugni_rx_size_left(int proc) {
   return _LEDGER_SIZE;
 }
 
