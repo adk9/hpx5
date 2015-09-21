@@ -259,7 +259,7 @@ static int photon_pwc_process_queued_gwc(int proc, photonRequestTable rt) {
   int rc;
 
   // make sure there are TX resources first
-  rc = __photon_backend->tx_size_left(req->proc);
+  rc = __photon_backend->tx_size_left(proc);
   if (rc < 1) {
     goto error_resource;
   }
