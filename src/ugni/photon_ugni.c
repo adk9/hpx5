@@ -395,11 +395,11 @@ static int ugni_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
 }
 
 static int ugni_tx_size_left(int proc) {
-  return _LEDGER_SIZE;
+  return MAX_CQ_ENTRIES;
 }
 
 static int ugni_rx_size_left(int proc) {
-  return _LEDGER_SIZE;
+  return MAX_CQ_ENTRIES;
 }
 
 static int ugni_get_event(int proc, int max, photon_rid *ids, int *n) {
