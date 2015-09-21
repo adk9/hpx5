@@ -720,17 +720,18 @@ int _photon_get_with_completion(int proc, uint64_t size,
     req->flags |= REQUEST_FLAG_ROP;
   }
 
+  rt = photon_processes[proc].request_table;
+
   // make sure there are TX resources first
   rc = __photon_backend->tx_size_left(proc);
   if (rc < 1) {
     goto queue_exit;
   }
 
-  rt = photon_processes[proc].request_table;
-
   // process any queued requests for this peer first
   rc = photon_pwc_process_queued_gwc(proc, rt);
-  if (rc == PHOTON_OK) {
+  if ((rc == PHOTON_OK) || 
+      (rc == PHOTON_ERROR_RESOURCE)) {
     goto queue_exit;
   }
   
