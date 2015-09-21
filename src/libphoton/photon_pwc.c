@@ -257,7 +257,13 @@ static int photon_pwc_process_queued_gwc(int proc, photonRequestTable rt) {
   photonRequest req;
   uint32_t val;
   int rc;
-  
+
+  // make sure there are TX resources first
+  rc = __photon_backend->tx_size_left(req->proc);
+  if (rc < 1) {
+    goto error_resource;
+  }
+     
   do {
     val = sync_load(&rt->gcount, SYNC_RELAXED);
   } while (val && !sync_cas(&rt->gcount, val, val-1, SYNC_RELAXED, SYNC_RELAXED));
@@ -265,12 +271,15 @@ static int photon_pwc_process_queued_gwc(int proc, photonRequestTable rt) {
   if (!val) {
     return PHOTON_ERROR;
   }
-
+  
   req = sync_two_lock_queue_dequeue(rt->gwc_q);
   assert(req);
 
   rc = photon_pwc_try_gwc(req);
   if (rc != PHOTON_OK) {
+    if (rc == PHOTON_ERROR_RESOURCE) {
+      goto error_resource;
+    }
     dbg_err("RDMA GET (PWC data) failed for 0x%016lx", req->rattr.cookie);
     goto error_exit;
   }
@@ -278,6 +287,9 @@ static int photon_pwc_process_queued_gwc(int proc, photonRequestTable rt) {
   dbg_trace("Posted Request: %d/0x%016lx/0x%016lx", proc, req->local_info.id, req->rattr.cookie);
   
   return PHOTON_OK;
+
+ error_resource:
+  return PHOTON_ERROR_RESOURCE;
 
  error_exit:
   return PHOTON_ERROR;
@@ -322,7 +334,7 @@ static int photon_pwc_try_gwc(photonRequest req) {
   int rc;
   photonBI db;
   photonRequestTable rt;
-
+  
   rt = photon_processes[req->proc].request_table;
 
   if (!req->local_info.buf.priv.key0 && !req->local_info.buf.priv.key1) {
@@ -353,7 +365,7 @@ static int photon_pwc_try_gwc(photonRequest req) {
     sync_tatas_release(&rt->pack_loc);
     
     if (rc != PHOTON_OK) {
-      goto queued_exit;
+      goto error_resource;
     }
   }
   else {
@@ -375,11 +387,8 @@ static int photon_pwc_try_gwc(photonRequest req) {
   
   return PHOTON_OK;
 
- queued_exit:
-  sync_two_lock_queue_enqueue(rt->gwc_q, req);
-  sync_fadd(&rt->gcount, 1, SYNC_RELAXED);
-  dbg_trace("Enqueued GWC-PUT req: 0x%016lx", req->id);
-  return PHOTON_OK;
+ error_resource:
+  return PHOTON_ERROR_RESOURCE;
   
  error_exit:
   return PHOTON_ERROR;
@@ -710,7 +719,13 @@ int _photon_get_with_completion(int proc, uint64_t size,
   if (! (flags & PHOTON_REQ_PWC_NO_RCE)) {
     req->flags |= REQUEST_FLAG_ROP;
   }
- 
+
+  // make sure there are TX resources first
+  rc = __photon_backend->tx_size_left(proc);
+  if (rc < 1) {
+    goto queue_exit;
+  }
+
   rt = photon_processes[proc].request_table;
 
   // process any queued requests for this peer first
@@ -721,10 +736,13 @@ int _photon_get_with_completion(int proc, uint64_t size,
   
   rc = photon_pwc_try_gwc(req);
   if (rc != PHOTON_OK) {
+    if (rc == PHOTON_ERROR_RESOURCE) {
+      goto queue_exit;
+    }
     dbg_err("RDMA GET (PWC data) failed for 0x%016lx", req->rattr.cookie);
     goto error_exit;
   }
-
+  
   return PHOTON_OK;
 
  queue_exit:

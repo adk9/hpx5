@@ -38,6 +38,10 @@ void photon_rdma_eager_buf_free(photonEagerBuf buf) {
 int photon_rdma_eager_buf_get_offset(int proc, photonEagerBuf buf, int size, int lim) {
   uint64_t curr, new, left, tail, rcur, wrap;
   int offset;
+  int rc = __photon_backend->tx_size_left(proc);
+  if (rc < 2) {
+    return -1;
+  }
 
   do {
     rcur = sync_load(&buf->acct.rcur, SYNC_RELAXED);

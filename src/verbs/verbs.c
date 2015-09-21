@@ -59,6 +59,8 @@ static int verbs_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
                            photonBuffer lbuf, uint64_t id, uint64_t imm, int flags);
 static int verbs_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
                            photonBuffer lbuf, uint64_t id, int flags);
+static int verbs_tx_size_left(int proc);
+static int verbs_rx_size_left(int proc);
 static int verbs_get_event(int proc, int max, photon_rid *ids, int *n);
 static int verbs_get_revent(int proc, int max, photon_rid *ids, uint64_t *imms, int *n);
 static int verbs_get_dev_addr(int af, photonAddr addr);
@@ -139,6 +141,8 @@ struct photon_backend_t photon_verbs_backend = {
   .rdma_get = verbs_rdma_get,
   .rdma_send = verbs_rdma_send,
   .rdma_recv = verbs_rdma_recv,
+  .tx_size_left = verbs_tx_size_left,
+  .rx_size_left = verbs_rx_size_left,
   .get_event = verbs_get_event,
   .get_revent = verbs_get_revent
 };
@@ -546,6 +550,14 @@ static int verbs_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
   args.sg_list = &list;
   args.num_sge = 1;
   return __verbs_do_recv(&args, flags);
+}
+
+static int verbs_tx_size_left(int proc) {
+  return verbs_ctx.max_qp_wr;
+}
+
+static int verbs_rx_size_left(int proc) {
+  return verbs_ctx.max_qp_wr;
 }
 
 static int verbs_get_event(int proc, int max, photon_rid *ids, int *n) {

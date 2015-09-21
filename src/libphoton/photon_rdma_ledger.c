@@ -43,7 +43,11 @@ void photon_rdma_ledger_free(photonLedger ledger) {
 
 int photon_rdma_ledger_get_next(int proc, photonLedger l) {
   uint64_t curr, tail, rcur;
- 
+  int rc = __photon_backend->tx_size_left(proc);
+  if (rc < 2) {
+    return -1;
+  }
+  
   do {
     rcur = sync_load(&l->acct.rcur, SYNC_RELAXED);
     curr = sync_load(&l->curr, SYNC_RELAXED);

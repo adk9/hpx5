@@ -30,7 +30,7 @@ struct rdma_args_t {
   uint64_t size;
 };
 
-static tatas_lock_t cq_lock;
+static tatas_lock_t op_lock;
 static int __initialized = 0;
 
 static int fi_initialized(void);
@@ -47,10 +47,13 @@ static int fi_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
 			photonBuffer lbuf, uint64_t id, uint64_t imm_data, int flags);
 static int fi_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
 			photonBuffer lbuf, uint64_t id, int flags);
+static int pfi_tx_size_left(int proc);
+static int pfi_rx_size_left(int proc);
 static int fi_get_event(int proc, int max, photon_rid *ids, int *n);
 static int fi_get_revent(int proc, int max, photon_rid *ids, uint64_t *imms, int *n);
 
 static fi_cnct_ctx fi_ctx = {
+  .thread_safe = 0,
   .node = NULL,
   .service = NULL,
   .domain = NULL,
@@ -101,6 +104,8 @@ struct photon_backend_t photon_fi_backend = {
   .rdma_get = fi_rdma_get,
   .rdma_send = fi_rdma_send,
   .rdma_recv = fi_rdma_recv,
+  .tx_size_left = pfi_tx_size_left,
+  .rx_size_left = pfi_rx_size_left,
   .get_event = fi_get_event,
   .get_revent = fi_get_revent
 };
@@ -130,14 +135,9 @@ static int fi_initialized() {
 
 static int fi_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss) {
 
-  // __initialized: 0 - not; -1 - initializing; 1 - initialized
   __initialized = -1;
 
-  sync_tatas_init(&cq_lock);
-
-  if (_photon_myrank == 0) {
-    //dbg_wait();
-  }
+  sync_tatas_init(&op_lock);
   
   fi_ctx.num_cq  = cfg->cap.num_cq;
   fi_ctx.use_rcq = cfg->cap.use_rcq;
@@ -231,18 +231,25 @@ static int fi_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size
     goto error_exit;
   }
 
-  sync_tatas_acquire(&cq_lock);
+  (!fi_ctx.thread_safe) ? sync_tatas_acquire(&op_lock):NULL;
   {  
-    rc = fi_write(fi_ctx.eps[_photon_myrank], (void*)laddr, size,
-		  fi_mr_desc(db->priv_ptr), fi_ctx.addrs[proc], raddr,
-		  rbuf->priv.key1, (void*)id);
+    if (fi_ctx.use_rcq && (flags & RDMA_FLAG_WITH_IMM)) {
+      rc = fi_writedata(fi_ctx.eps[_photon_myrank], (void*)laddr, size,
+			fi_mr_desc(db->priv_ptr), imm_data, fi_ctx.addrs[proc],
+			raddr, rbuf->priv.key1, (void*)id);
+    }
+    else {
+      rc = fi_write(fi_ctx.eps[_photon_myrank], (void*)laddr, size,
+		    fi_mr_desc(db->priv_ptr), fi_ctx.addrs[proc], raddr,
+		    rbuf->priv.key1, (void*)id);
+    }
     if (rc) {
       dbg_err("Could not PUT to %p, size %lu: %s", (void*)raddr, size,
 	      fi_strerror(-rc));
       goto error_exit;
     }
   }
-  sync_tatas_release(&cq_lock);
+  (!fi_ctx.thread_safe) ? sync_tatas_release(&op_lock):NULL;
   
   return PHOTON_OK;
   
@@ -261,8 +268,10 @@ static int fi_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size
     log_err("Tried GET to a local buffer that is not registered: %p", (void*)laddr);
     goto error_exit;
   }
+
+  ssize_t c = fi_tx_size_left(fi_ctx.eps[_photon_myrank]);
   
-  sync_tatas_acquire(&cq_lock);
+  (!fi_ctx.thread_safe) ? sync_tatas_acquire(&op_lock):NULL;
   {  
     rc = fi_read(fi_ctx.eps[_photon_myrank], (void*)laddr, size,
 		 fi_mr_desc(db->priv_ptr), fi_ctx.addrs[proc], raddr,
@@ -273,7 +282,7 @@ static int fi_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size
       goto error_exit;
     }
   }
-  sync_tatas_release(&cq_lock);
+  (!fi_ctx.thread_safe) ? sync_tatas_release(&op_lock):NULL;
 
 
   return PHOTON_OK;
@@ -290,6 +299,26 @@ static int fi_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
 static int fi_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
 			photonBuffer lbuf, uint64_t id, int flags) {
   return PHOTON_OK;
+}
+
+static int pfi_tx_size_left(int proc) {
+  int c;
+  (!fi_ctx.thread_safe) ? sync_tatas_acquire(&op_lock):NULL;
+  {
+    c = (int)fi_tx_size_left(fi_ctx.eps[_photon_myrank]);
+  }
+  (!fi_ctx.thread_safe) ? sync_tatas_release(&op_lock):NULL;
+  return c;
+}
+
+static int pfi_rx_size_left(int proc) {
+  int c;
+  (!fi_ctx.thread_safe) ? sync_tatas_acquire(&op_lock):NULL;
+  {
+    c = (int)fi_rx_size_left(fi_ctx.eps[_photon_myrank]);
+  }
+  (!fi_ctx.thread_safe) ? sync_tatas_release(&op_lock):NULL;
+  return c;
 }
 
 static int fi_get_event(int proc, int max, photon_rid *ids, int *n) {
@@ -314,7 +343,7 @@ static int fi_get_event(int proc, int max, photon_rid *ids, int *n) {
     end = start+1;
   }
 
-  sync_tatas_acquire(&cq_lock);
+  (!fi_ctx.thread_safe) ? sync_tatas_acquire(&op_lock):NULL;
   {
     for (i=start; i<end && comp<max; i++) {
       retries = MAX_RETRIES;
@@ -345,7 +374,7 @@ static int fi_get_event(int proc, int max, photon_rid *ids, int *n) {
     
     *n = comp;
   }
-  sync_tatas_release(&cq_lock);
+  (!fi_ctx.thread_safe) ? sync_tatas_release(&op_lock):NULL;
 
   // CQs are empty
   if (comp == 0) {
@@ -384,7 +413,7 @@ static int fi_get_revent(int proc, int max, photon_rid *ids, uint64_t *imms, int
     end = start+1;
   }
 
-  sync_tatas_acquire(&cq_lock);
+  (!fi_ctx.thread_safe) ? sync_tatas_acquire(&op_lock):NULL;
   {
     for (i=start; i<end && comp<max; i++) {
       retries = MAX_RETRIES;
@@ -408,15 +437,14 @@ static int fi_get_revent(int proc, int max, photon_rid *ids, uint64_t *imms, int
       while ((ne < 1) && --retries);
       
       for (j=0; j<ne && j<MAX_CQ_POLL; j++) {
-	printf("got revent!\n");
 	ids[j+comp] = (uint64_t)entries[j].op_context;
+	imms[j+comp] = entries[j].data;
       }
       comp += ne;
     }
-    
     *n = comp;
   }
-  sync_tatas_release(&cq_lock);
+  (!fi_ctx.thread_safe) ? sync_tatas_release(&op_lock):NULL;
   
   // CQs are empty
   if (comp == 0) {

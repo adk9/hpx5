@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
 
   // now we can proceed with our benchmark
   if (rank == 0)
-    printf("%-7s%-9s%-12s%-11s%-12s%-12s%-12s\n", "Ranks", "Senders", "Bytes", "Sync (us)", " Sync GET");
+    printf("%-7s%-9s%-12s%-11s%-12s\n", "Ranks", "Senders", "Bytes", "Sync (us)", " Sync GET");
 
   struct timespec time_s, time_e;
   

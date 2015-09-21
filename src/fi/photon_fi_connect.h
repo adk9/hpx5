@@ -19,6 +19,7 @@ typedef struct fi_cnct_ctx_t {
   struct fi_context       fi_ctx_av;
   fi_addr_t              *addrs;
 
+  int                     thread_safe;
   void                   *local_addr;
   size_t                  addr_len;
   

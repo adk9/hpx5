@@ -96,6 +96,8 @@ struct photon_backend_t photon_default_backend = {
   .rdma_put = NULL,
   .rdma_send = NULL,
   .rdma_recv = NULL,
+  .tx_size_left = NULL,
+  .rx_size_left = NULL,
   .get_event = NULL
 };
 
