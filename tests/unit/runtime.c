@@ -28,9 +28,12 @@ int main(int argc, char *argv[]) {
   int e = hpx_run(&_main);
   printf("1 hpx_run returned %d.\n", e);
 
+  // remove the following block to call hpx_run() twice:
+  hpx_finalize();
   return 77;
 
   e = hpx_run(&_main);
   printf("2 hpx_run returned %d.\n", e);
+  hpx_finalize();
   return e;
 }
