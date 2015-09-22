@@ -9,7 +9,9 @@ libpwc_la_SOURCES  = pwc.c \
                      send_buffer.c \
                      circular_buffer.c \
                      lco_get.c \
-                     commands.c
+                     lco_wait.c \
+                     commands.c \
+                     rendezvous_send.c
 
 if HAVE_PHOTON
 libpwc_la_SOURCES += xport_photon.c
@@ -20,13 +22,9 @@ libpwc_la_SOURCES += jemalloc_registered.c
 endif
 
 if HAVE_TBBMALLOC
-noinst_LTLIBRARIES		   += libtbbmalloc.la
+noinst_LTLIBRARIES	       += libtbbmalloc.la
 libtbbmalloc_la_CPPFLAGS	= -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
 libtbbmalloc_la_CXXFLAGS 	= $(LIBHPX_CXXFLAGS)
 libtbbmalloc_la_SOURCES  	= tbbmalloc_registered.cc
-libpwc_la_LIBADD			= libtbbmalloc.la
-endif
-
-if HAVE_DLMALLOC
-libpwc_la_SOURCES += dlmalloc_registered.c
+libpwc_la_LIBADD	        = libtbbmalloc.la
 endif

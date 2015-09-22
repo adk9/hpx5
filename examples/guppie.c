@@ -310,7 +310,7 @@ void _main_action(guppie_config_t *cfg, size_t size)
   printf("Found %lu errors in %lu locations (%s).\n",
          j, cfg->tabsize, (j <= 0.01*cfg->tabsize) ? "passed" : "failed");
 
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 static void _usage(FILE *stream) {
@@ -375,5 +375,7 @@ int main(int argc, char *argv[])
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _mover, _mover_action, HPX_POINTER, HPX_SIZE_T);
 
   // run the update_table action
-  return hpx_run(&_main, &guppie_cfg, sizeof(guppie_cfg));
+  e = hpx_run(&_main, &guppie_cfg, sizeof(guppie_cfg));
+  hpx_finalize();
+  return e;
 }

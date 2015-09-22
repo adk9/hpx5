@@ -81,7 +81,7 @@ static int _main_action(void *args, size_t n) {
     fprintf(stdout, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
     fprintf(stdout, "\n");
   }
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {
@@ -109,5 +109,7 @@ int main(int argc, char *argv[]) {
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
 
   // run the main action
-  return hpx_run(&_main, NULL, 0);
+  int e = hpx_run(&_main, NULL, 0);
+  hpx_finalize();
+  return e;
 }

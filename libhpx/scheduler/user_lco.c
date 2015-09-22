@@ -22,11 +22,11 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
-#include <libhpx/locality.h>
-#include <libhpx/memory.h>
-#include <libhpx/scheduler.h>
+#include "libhpx/action.h"
+#include "libhpx/debug.h"
+#include "libhpx/locality.h"
+#include "libhpx/memory.h"
+#include "libhpx/scheduler.h"
 #include "cvar.h"
 #include "lco.h"
 
@@ -42,10 +42,18 @@ typedef struct {
   void              *buf;
 } _user_lco_t;
 
-
 // Forward declaration---used during reset as well.
 static int _user_lco_init_handler(_user_lco_t *u, size_t size, hpx_action_t id,
                                   hpx_action_t op, hpx_action_t predicate);
+
+static void _reset(_user_lco_t *u) {
+  cvar_clear_error(&u->cvar);
+  dbg_assert_str(cvar_empty(&u->cvar),
+                 "Reset on an LCO that has waiting threads.\n");
+  lco_reset_triggered(&u->lco);
+  _user_lco_init_handler(u, u->size, u->id, u->op, u->predicate);
+}
+
 
 static bool _trigger(_user_lco_t *u) {
   if (lco_get_triggered(&u->lco)) {
@@ -86,11 +94,7 @@ static void _user_lco_error(lco_t *lco, hpx_status_t code) {
 static void _user_lco_reset(lco_t *lco) {
   _user_lco_t *u = (_user_lco_t *)lco;
   lco_lock(lco);
-  cvar_clear_error(&u->cvar);
-  dbg_assert_str(cvar_empty(&u->cvar),
-                 "Reset on an LCO that has waiting threads.\n");
-  lco_reset_triggered(&u->lco);
-  _user_lco_init_handler(u, u->size, u->id, u->op, u->predicate);
+  _reset(u);
   lco_unlock(lco);
 }
 
@@ -153,16 +157,25 @@ static hpx_status_t _wait(_user_lco_t *u) {
 }
 
 /// Get the user-defined LCO's buffer.
-static hpx_status_t _user_lco_get(lco_t *lco, int size, void *out) {
+static hpx_status_t _user_lco_get(lco_t *lco, int size, void *out, int reset) {
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
 
   _user_lco_t *u = (_user_lco_t *)lco;
 
   status = _wait(u);
+  if (status != HPX_SUCCESS) {
+    lco_unlock(lco);
+    return status;
+  }
+
   // copy out the value if the caller wants it
-  if ((status == HPX_SUCCESS) && out) {
+  if (out) {
     memcpy(out, u->buf, size);
+  }
+
+  if (reset) {
+    _reset(u);
   }
 
   lco_unlock(lco);
@@ -170,11 +183,15 @@ static hpx_status_t _user_lco_get(lco_t *lco, int size, void *out) {
 }
 
 // Wait for the reduction.
-static hpx_status_t _user_lco_wait(lco_t *lco) {
+static hpx_status_t _user_lco_wait(lco_t *lco, int reset) {
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
   _user_lco_t *u = (_user_lco_t *)lco;
   status = _wait(u);
+  if (reset && status == HPX_SUCCESS) {
+    _reset(u);
+  }
+
   lco_unlock(lco);
   return status;
 }

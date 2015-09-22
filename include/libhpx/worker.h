@@ -49,13 +49,13 @@ typedef struct {
   struct ustack     *stacks;                    // freelisted stacks
   PAD_TO_CACHELINE(sizeof(pthread_t) +
                    sizeof(int) * 6 +
-                   sizeof(void *) +
-                   sizeof(hpx_parcel_t*) +
+                   sizeof(hpx_parcel_t*) * 2 +
                    sizeof(struct ustack*));
   chase_lev_ws_deque_t work;                    // my work
   PAD_TO_CACHELINE(sizeof(chase_lev_ws_deque_t));
   two_lock_queue_t    inbox;                    // mail sent to me
   libhpx_stats_t      stats;                    // per-worker statistics
+  int           last_victim;                    // last successful victim
   void            *profiler;                    // worker maintains a reference to its profiler
 } worker_t HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
@@ -84,13 +84,5 @@ int worker_is_active(void);
 
 /// Check to see if the current worker should shut down completely.
 int worker_is_shutdown(void);
-
-/// Check to see if the current worker has enough space for an alloca.
-///
-/// @param        bytes The number of bytes to allocate.
-///
-/// @returns            The number of bytes remaining on the stack after the
-///                     alloca.
-intptr_t worker_can_alloca(size_t bytes);
 
 #endif // LIBHPX_WORKER_H

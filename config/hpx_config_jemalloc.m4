@@ -9,8 +9,10 @@
 #
 # Appends
 #   LIBHPX_CPPFLAGS
+#   LIBHPX_LDFLAGS
 #   LIBHPX_LIBADD
 #   LIBHPX_LIBS
+#   HPX_APPS_LDFLAGS
 #   HPX_PC_PRIVATE_PKGS
 #   HPX_PC_PRIVATE_LIBS
 #
@@ -55,6 +57,11 @@ AC_DEFUN([_HPX_CONTRIB_JEMALLOC], [
  LIBHPX_LDFLAGS="-L\$(abs_top_builddir)/$contrib/lib $LIBHPX_LDFLAGS"
  LIBHPX_LDFLAGS="-Wl,-rpath,\$(abs_top_builddir)/$contrib/lib $LIBHPX_LDFLAGS"
  LIBHPX_LIBS="$LIBHPX_LIBS -ljemalloc" 
+
+ # libtool does not correctly propagate rpaths for linking---external users use
+ # pkg-config which doesn't have this problem, but we need to do it manually for
+ # internal apps
+ HPX_APPS_LDFLAGS="-Wl,-rpath,\$(abs_top_builddir)/$contrib/lib $HPX_APPS_LDFLAGS"
 
  # we install the jemalloc pkg-config script with hpx.pc so external
  # applications will get jemalloc, we make it public so that it resolves

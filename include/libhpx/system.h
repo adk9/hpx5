@@ -21,10 +21,13 @@
 extern "C" {
 #endif
 
+/// Get the number of available CPUs in the system.
 int system_get_cores(void);
 
-int system_set_affinity(pthread_t thread, int core_id);
+/// Set the thread affinity to a specific core with id @p id.
+int system_set_affinity(pthread_t thread, int id);
 
+/// Set the thread affinity to a group of cores from 0 to @p ncores.
 int system_set_affinity_group(pthread_t thread, int ncores);
 
 /// Find out how many cores are in the thread's affinity group.
@@ -76,6 +79,9 @@ typedef void (*system_munmap_t)(void *, void *, size_t);
 /// Sleep for microseconds.
 void system_usleep(size_t useconds);
 
+/// Print a stack trace.
+void system_print_trace(void *fd);
+
 /// Cross-platform pthread barrier interface
 
 #if defined(__linux)
@@ -104,9 +110,6 @@ int system_barrier_destroy(system_barrier_t *barrier);
 
 /// System specific thread barrier wait function
 int system_barrier_wait(system_barrier_t *barrier);
-
-/// Print a stack trace.
-void system_print_trace(void *fd);
 
 #endif
 

@@ -23,11 +23,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
-#include <libhpx/locality.h>
-#include <libhpx/memory.h>
-#include <libhpx/scheduler.h>
+#include "libhpx/action.h"
+#include "libhpx/debug.h"
+#include "libhpx/locality.h"
+#include "libhpx/memory.h"
+#include "libhpx/parcel.h"
+#include "libhpx/scheduler.h"
 #include "cvar.h"
 #include "lco.h"
 
@@ -45,8 +46,82 @@ typedef struct {
   void        *value;  // out-of-place for alignment reasons
 } _allreduce_t;
 
-static const int _reducing = 0;
-static const  int _reading = 1;
+static const int REDUCING = 0;
+static const int READING = 1;
+
+static void _op(_allreduce_t *r, size_t size, const void *from) {
+  dbg_assert(!size || r->op);
+  dbg_assert(!size || from);
+  if (size) {
+    hpx_action_handler_t f = action_table_get_handler(here->actions, r->op);
+    hpx_monoid_op_t op = (hpx_monoid_op_t)f;
+    op(r->value, from, size);
+  }
+}
+
+static void _id(_allreduce_t *r, size_t size) {
+  dbg_assert(!size || r->id);
+  if (r->id) {
+    hpx_action_handler_t f = action_table_get_handler(here->actions, r->id);
+    hpx_monoid_id_t id = (hpx_monoid_id_t)f;
+    id(r->value, size);
+  }
+}
+
+static void _set(_allreduce_t *allreduce, size_t size, const void *value) {
+  // wait until we're reducing (rather than reading) and then perform the
+  // operation
+  while (allreduce->phase != REDUCING) {
+    if (HPX_SUCCESS != scheduler_wait(&allreduce->lco.lock, &allreduce->wait)) {
+      return;
+    }
+  }
+
+  _op(allreduce, size, value);
+
+  // if we were the last one to arrive then its our responsibility to switch the
+  // phase
+  if (0 == --allreduce->count) {
+    allreduce->phase = READING;
+    scheduler_signal_all(&allreduce->wait);
+  }
+}
+
+static hpx_status_t _get(_allreduce_t *r, int size, void *out) {
+  dbg_assert(!size || out);
+  hpx_status_t rc = HPX_SUCCESS;
+
+  // wait until we're reading
+  while ((r->phase != READING) && (rc == HPX_SUCCESS)) {
+    rc = scheduler_wait(&r->lco.lock, &r->wait);
+  }
+
+  if (rc != HPX_SUCCESS) {
+    return rc;
+  }
+
+  // copy out the value if the caller wants it
+  if (size) {
+    memcpy(out, r->value, size);
+  }
+
+  // update the count, if I'm the last reader to arrive, switch the mode and
+  // release all of the other readers, otherwise wait for the phase to change
+  // back to reducing---this blocking behavior prevents gets from one "epoch"
+  // to satisfy earlier READING epochs because sets don't block
+  if (r->readers == ++r->count) {
+    r->count = r->writers;
+    r->phase = REDUCING;
+    _id(r, size);
+    scheduler_signal_all(&r->wait);
+    return rc;
+  }
+
+  while ((r->phase == READING) && (rc == HPX_SUCCESS)) {
+    rc = scheduler_wait(&r->lco.lock, &r->wait);
+  }
+  return rc;
+}
 
 static size_t _allreduce_size(lco_t *lco) {
   _allreduce_t *allreduce = (_allreduce_t *)lco;
@@ -82,33 +157,9 @@ static void _allreduce_reset(lco_t *lco) {
 
 /// Update the reduction, will wait if the phase is reading.
 static void _allreduce_set(lco_t *lco, int size, const void *from) {
-  hpx_status_t status = HPX_SUCCESS;
   lco_lock(lco);
-  _allreduce_t *r = (_allreduce_t *)lco;
-
-  // wait until we're reducing, then perform the op() and join the reduction
-  while ((r->phase != _reducing) && (status == HPX_SUCCESS)) {
-    status = scheduler_wait(&lco->lock, &r->wait);
-  }
-
-  if (status != HPX_SUCCESS) {
-    goto unlock;
-  }
-
-  //perform the op()
-  assert(size && from);
-  hpx_action_handler_t f = action_table_get_handler(here->actions, r->op);
-  hpx_monoid_op_t op = (hpx_monoid_op_t)f;
-  op(r->value, from, size);
-
-  // if we're the last one to arrive, switch the phase and signal readers.
-  if (--r->count == 0) {
-    r->phase = _reading;
-    scheduler_signal_all(&r->wait);
-  }
-
-  unlock:
-   lco_unlock(lco);
+  _set((_allreduce_t *)lco, size, from);
+  lco_unlock(lco);
 }
 
 static hpx_status_t _allreduce_attach(lco_t *lco, hpx_parcel_t *p) {
@@ -118,7 +169,7 @@ static hpx_status_t _allreduce_attach(lco_t *lco, hpx_parcel_t *p) {
 
   // Pick attach to mean "set" for allreduce. We have to wait for reducing to
   // complete before sending the parcel.
-  if (r->phase != _reducing) {
+  if (r->phase != REDUCING) {
     status = cvar_attach(&r->wait, p);
     goto unlock;
   }
@@ -133,57 +184,23 @@ static hpx_status_t _allreduce_attach(lco_t *lco, hpx_parcel_t *p) {
   // Go ahead and send this parcel eagerly.
   hpx_parcel_send(p, HPX_NULL);
 
-  unlock:
-    lco_unlock(lco);
-    return status;
+ unlock:
+  lco_unlock(lco);
+  return status;
 }
 
-
 /// Get the value of the reduction, will wait if the phase is reducing.
-static hpx_status_t _allreduce_get(lco_t *lco, int size, void *out) {
-  _allreduce_t *r = (_allreduce_t *)lco;
-  hpx_status_t status = HPX_SUCCESS;
+static hpx_status_t _allreduce_get(lco_t *lco, int size, void *out, int reset) {
+  hpx_status_t rc = HPX_SUCCESS;
   lco_lock(lco);
-
-  // wait until we're reading
-  while ((r->phase != _reading) && (status == HPX_SUCCESS)) {
-    status = scheduler_wait(&lco->lock, &r->wait);
-  }
-
-  // if there was an error signal, unlock and return it
-  if (status != HPX_SUCCESS) {
-    goto unlock;
-  }
-
-  // copy out the value if the caller wants it
-  if (size && out)
-    memcpy(out, r->value, size);
-
-  // update the count, if I'm the last reader to arrive, switch the mode and
-  // release all of the other readers, otherwise wait for the phase to change
-  // back to reducing---this blocking behavior prevents gets from one "epoch"
-  // to satisfy earlier _reading epochs
-  if (++r->count == r->readers) {
-    r->count = r->writers;
-    r->phase = _reducing;
-    hpx_action_handler_t f = action_table_get_handler(here->actions, r->id);
-    hpx_monoid_id_t id = (hpx_monoid_id_t)f;
-    id(r->value, size);
-    scheduler_signal_all(&r->wait);
-  }
-  else {
-    while ((r->phase == _reading) && (status == HPX_SUCCESS))
-      status = scheduler_wait(&r->lco.lock, &r->wait);
-  }
-
-  unlock:
-   lco_unlock(lco);
-   return status;
+  rc = _get((_allreduce_t *)lco, size, out);
+  lco_unlock(lco);
+  return rc;
 }
 
 // Wait for the reduction, loses the value of the reduction for this round.
-static hpx_status_t _allreduce_wait(lco_t *lco) {
-  return _allreduce_get(lco, 0, NULL);
+static hpx_status_t _allreduce_wait(lco_t *lco, int reset) {
+  return _allreduce_get(lco, 0, NULL, reset);
 }
 
 // We universally clone the buffer here, because the all* family of LCOs will
@@ -192,13 +209,12 @@ static hpx_status_t
 _allreduce_getref(lco_t *lco, int size, void **out, int *unpin) {
   *out = registered_malloc(size);
   *unpin = 1;
-  return _allreduce_get(lco, size, *out);
+  return _allreduce_get(lco, size, *out, 0);
 }
 
 // We know that allreduce buffers were always copies, so we can just free them
 // here.
-static int
-_allreduce_release(lco_t *lco, void *out) {
+static int _allreduce_release(lco_t *lco, void *out) {
   registered_free(out);
   return 0;
 }
@@ -220,8 +236,10 @@ static const lco_class_t _allreduce_vtable = {
 static int
 _allreduce_init_handler(_allreduce_t *r, size_t writers, size_t readers,
                         size_t size, hpx_action_t id, hpx_action_t op) {
-  assert(id);
-  assert(op);
+  if (size) {
+    assert(id);
+    assert(op);
+  }
 
   lco_init(&r->lco, &_allreduce_vtable);
   cvar_reset(&r->wait);
@@ -230,17 +248,14 @@ _allreduce_init_handler(_allreduce_t *r, size_t writers, size_t readers,
   r->id = id;
   r->count = writers;
   r->writers = writers;
-  r->phase = _reducing;
+  r->phase = REDUCING;
   r->value = NULL;
 
   if (size) {
     r->value = malloc(size);
     assert(r->value);
+    _id(r, size);
   }
-
-  hpx_action_handler_t f = action_table_get_handler(here->actions, r->id);
-  hpx_monoid_id_t lid = (hpx_monoid_id_t)f;
-  lid(r->value, size);
 
   return HPX_SUCCESS;
 }
@@ -268,8 +283,7 @@ hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
   return gva;
 }
 
-
-/// Initialize a block of array of lco.
+/// Initialize a block allreduce LCOs.
 static int
 _block_local_init_handler(void *lco, int n, size_t participants, size_t readers,
                           size_t size, hpx_action_t id, hpx_action_t op) {
@@ -285,30 +299,147 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
                      HPX_SIZE_T, HPX_SIZE_T, HPX_POINTER, HPX_SIZE_T,
                      HPX_POINTER);
 
-/// Allocate an array of allreduce LCO local to the calling locality.
-/// @param            n The (total) number of lcos to allocate
-/// @param participants The static number of participants in the reduction.
-/// @param      readers The static number of the readers of the result of the reduction.
-/// @param         size The size of the data being reduced.
-/// @param           id An initialization function for the data, this is
-///                     used to initialize the data in every epoch.
-/// @param           op The commutative-associative operation we're
-///                     performing.
-///
-/// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_allreduce_local_array_new(int n, size_t participants,
-                                             size_t readers, size_t size,
-                                             hpx_action_t id,
-                                             hpx_action_t op) {
+hpx_addr_t
+hpx_lco_allreduce_local_array_new(int n, size_t participants, size_t readers,
+                                  size_t size, hpx_action_t id, hpx_action_t op)
+{
   uint32_t lco_bytes = sizeof(_allreduce_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
   uint32_t  block_bytes = n * lco_bytes;
   hpx_addr_t base = hpx_gas_alloc_local(block_bytes, 0);
 
-  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &n, &participants, &readers,
-                        &size, &id, &op);
-  dbg_check(e, "call of _block_init_action failed\n");
+  dbg_check( hpx_call_sync(base, _block_local_init, NULL, 0, &n, &participants,
+                           &readers, &size, &id, &op) );
 
   // return the base address of the allocation
   return base;
 }
+
+static int
+_join_sync(_allreduce_t *allreduce, size_t size, const void *value, void *out) {
+  int rc = HPX_SUCCESS;
+  lco_lock(&allreduce->lco);
+  _set(allreduce, size, value);
+  rc = _get(allreduce, size, out);
+  lco_unlock(&allreduce->lco);
+  return rc;
+}
+
+/// Generic allreduce join functionaliy
+/// @{
+
+/// This address just continues the reduced data after the join.
+static int _join_handler(_allreduce_t *lco, const void *data, size_t n) {
+  hpx_parcel_t *p = self->current;
+
+  // Allocate a parcel that targeting our continuation with enough space for the
+  // reduced value, and use its data buffer to join---this prevents a copy or
+  // two. This "steals" the current continuation.
+  hpx_parcel_t *c = parcel_new(p->c_target, p->c_action, 0, 0, p->pid, NULL, n);
+  dbg_assert(c);
+  p->c_target = 0;
+  p->c_action = 0;
+  int rc = _join_sync(lco, n, data, hpx_parcel_get_data(c));
+  parcel_launch_error(c, rc);
+  return HPX_SUCCESS;
+}
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_PINNED, _join,
+                     _join_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
+
+hpx_status_t
+hpx_lco_allreduce_join(hpx_addr_t lco, int id, size_t n, const void *value,
+                       hpx_action_t cont, hpx_addr_t at) {
+  dbg_assert(cont && at);
+
+  // This interface is *asynchronous* so we can just blast out a
+  // call-with-continuation using the arguments, even if the allreduce is
+  // local.
+  return hpx_call_with_continuation(lco, _join, at, cont, value, n);
+}
+/// @}
+
+/// Synchronous allreduce join interface.
+/// @{
+hpx_status_t
+hpx_lco_allreduce_join_sync(hpx_addr_t lco, int id, size_t n,
+                            const void *value, void *out) {
+  _allreduce_t *allreduce = NULL;
+  if (!hpx_gas_try_pin(lco, (void**)&allreduce)) {
+    return hpx_call_sync(lco, _join, out, n, value, n);
+  }
+
+  int rc = _join_sync(allreduce, n, value, out);
+  hpx_gas_unpin(lco);
+  return rc;
+}
+/// @}
+
+/// Async allreduce join functionality. This is slightly complicated because of
+/// the interface. It's set up like a memget-with-completion interface where the
+/// user is supplying both a local target address and an LCO to signal when the
+/// get is complete. The LCO isn't necessarily local to the caller though, so we
+/// need to pass it through a couple of levels. We use an explicit request-reply
+/// mechanism here, rather than relying on pwc, because of that.
+/// @{
+
+/// The request-reply structure is a header and a data buffer.
+typedef struct {
+  void *out;
+  hpx_addr_t done;
+  char data[];
+} _join_async_args_t;
+
+/// The request handler uses the _join_sync operation to do the join, and then
+/// continues the reduced value along with the header information.
+static int
+_join_async_request_handler(_allreduce_t *lco, _join_async_args_t *args,
+                            size_t n) {
+  size_t bytes = n - sizeof(*args);
+  int rc = _join_sync(lco, bytes, &args->data, &args->data);
+  if (rc != HPX_SUCCESS) {
+    hpx_thread_exit(rc);
+  }
+  hpx_thread_continue(args, n);
+}
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_PINNED,
+                     _join_async_request, _join_async_request_handler,
+                     HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
+
+/// The join reply handler copies the data as specified in the arguments, and
+/// then signals the done LCO explicitly.
+static int _join_async_reply_handler(_join_async_args_t *args, size_t n) {
+  size_t bytes = n - sizeof(*args);
+  if (bytes) {
+    memcpy(args->out, args->data, bytes);
+  }
+  hpx_lco_error(args->done, HPX_SUCCESS, HPX_NULL);
+  return HPX_SUCCESS;
+}
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _join_async_reply,
+                     _join_async_reply_handler, HPX_POINTER, HPX_SIZE_T);
+
+hpx_status_t
+hpx_lco_allreduce_join_async(hpx_addr_t lco, int id, size_t n,
+                             const void *value, void *out, hpx_addr_t done) {
+  _allreduce_t *allreduce = NULL;
+  if (!hpx_gas_try_pin(lco, (void**)&allreduce)) {
+    // avoid extra copy by allocating and sending a parcel directly
+    size_t bytes = sizeof(_join_async_args_t) + n;
+    uint64_t pid = self->current->pid;
+    hpx_parcel_t *p = parcel_new(lco, _join_async_request, HPX_HERE,
+                                 _join_async_reply, pid, NULL, bytes);
+    _join_async_args_t *args = hpx_parcel_get_data(p);
+    args->out = out;
+    args->done = done;
+    memcpy(args->data, value, n);
+    parcel_launch(p);
+    return HPX_SUCCESS;
+  }
+
+  int rc = _join_sync(allreduce, n, value, out);
+  hpx_lco_error(done, rc, HPX_NULL);
+  hpx_gas_unpin(lco);
+  return rc;
+}
+/// @}
+

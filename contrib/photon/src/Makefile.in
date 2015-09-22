@@ -111,7 +111,10 @@ target_triplet = @target@
 #ugni_test_LDFLAGS = @UGNI_LIBS@ @MPI_LIBS@
 #ugni_test_SOURCES = ugni/utility_functions.c
 @HAVE_LIBFABRIC_TRUE@am__append_7 = -I@PHOTON_SRCDIR@/src/fi @PHOTON_LIBFABRIC_CPPFLAGS@
-@HAVE_LIBFABRIC_TRUE@am__append_8 = fi/photon_fi.c
+@HAVE_LIBFABRIC_TRUE@am__append_8 = fi/photon_fi.c                         \
+@HAVE_LIBFABRIC_TRUE@	        fi/photon_fi_connect.c                         \
+@HAVE_LIBFABRIC_TRUE@	        fi/photon_fi_buffer.c
+
 @HAVE_LIBFABRIC_TRUE@am__append_9 = @PHOTON_BUILDDIR@/src/contrib/libfabric/src/libfabric.la
 @HAVE_MPI_TRUE@am__append_10 = @MPI_CFLAGS@
 @HAVE_MPI_TRUE@am__append_11 = @MPI_LIBS@
@@ -182,7 +185,8 @@ am__libphoton_la_SOURCES_DIST = libphoton/libphoton.c \
 	verbs/verbs_util.c verbs/verbs_connect.c verbs/verbs_buffer.c \
 	verbs/verbs_ud.c ugni/photon_ugni.c ugni/photon_ugni_connect.c \
 	ugni/photon_ugni_buffer.c ugni/utility_functions.c \
-	fi/photon_fi.c forwarder/photon_xsp_forwarder.c
+	fi/photon_fi.c fi/photon_fi_connect.c fi/photon_fi_buffer.c \
+	forwarder/photon_xsp_forwarder.c
 am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_VERBS_TRUE@am__objects_1 = verbs/verbs.lo verbs/verbs_util.lo \
 @HAVE_VERBS_TRUE@	verbs/verbs_connect.lo verbs/verbs_buffer.lo \
@@ -191,7 +195,9 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_UGNI_TRUE@	ugni/photon_ugni_connect.lo \
 @HAVE_UGNI_TRUE@	ugni/photon_ugni_buffer.lo \
 @HAVE_UGNI_TRUE@	ugni/utility_functions.lo
-@HAVE_LIBFABRIC_TRUE@am__objects_3 = fi/photon_fi.lo
+@HAVE_LIBFABRIC_TRUE@am__objects_3 = fi/photon_fi.lo \
+@HAVE_LIBFABRIC_TRUE@	fi/photon_fi_connect.lo \
+@HAVE_LIBFABRIC_TRUE@	fi/photon_fi_buffer.lo
 @HAVE_XSP_TRUE@am__objects_4 = forwarder/photon_xsp_forwarder.lo
 am_libphoton_la_OBJECTS = libphoton/libphoton.lo \
 	libphoton/photon_request.lo libphoton/photon_event.lo \
@@ -631,6 +637,10 @@ fi/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) fi/$(DEPDIR)
 	@: > fi/$(DEPDIR)/$(am__dirstamp)
 fi/photon_fi.lo: fi/$(am__dirstamp) fi/$(DEPDIR)/$(am__dirstamp)
+fi/photon_fi_connect.lo: fi/$(am__dirstamp) \
+	fi/$(DEPDIR)/$(am__dirstamp)
+fi/photon_fi_buffer.lo: fi/$(am__dirstamp) \
+	fi/$(DEPDIR)/$(am__dirstamp)
 forwarder/$(am__dirstamp):
 	@$(MKDIR_P) forwarder
 	@: > forwarder/$(am__dirstamp)
@@ -660,6 +670,8 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@fi/$(DEPDIR)/photon_fi.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@fi/$(DEPDIR)/photon_fi_buffer.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@fi/$(DEPDIR)/photon_fi_connect.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@forwarder/$(DEPDIR)/photon_xsp_forwarder.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/libphoton.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/photon_backend.Plo@am__quote@

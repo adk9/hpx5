@@ -57,7 +57,7 @@ static int _main_action(void *args, size_t n) {
   printf("The hpx_gas_memput succeeded for size = %d\n", SIZE);
 
   hpx_gas_free(data, HPX_NULL);
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[argc]) {
@@ -70,5 +70,7 @@ int main(int argc, char *argv[argc]) {
                       HPX_POINTER, HPX_SIZE_T);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _verify, _verify_action,
                       HPX_POINTER, HPX_SIZE_T);
-  return hpx_run(&_main, NULL, 0);
+  int e = hpx_run(&_main, NULL, 0);
+  hpx_finalize();
+  return e;
 }

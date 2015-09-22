@@ -33,19 +33,21 @@
 /// separately. Global (per-scheduler) statistics are accumulated
 /// after each worker shuts down.
 typedef struct libhpx_stats {
-  unsigned long     spawns;
-  unsigned long     steals;
-  unsigned long       mail;
-  unsigned long     stacks;
-  unsigned long     yields;
+  unsigned long        spawns;
+  unsigned long failed_steals;
+  unsigned long        steals;
+  unsigned long          mail;
+  unsigned long        stacks;
+  unsigned long        yields;
 } libhpx_stats_t;
 
 #define LIBHPX_STATS_INIT { \
-    .spawns     = 0,        \
-    .steals     = 0,        \
-    .mail       = 0,        \
-    .stacks     = 0,        \
-    .yields     = 0,        \
+    .spawns        = 0,     \
+    .failed_steals = 0,     \
+    .steals        = 0,     \
+    .mail          = 0,     \
+    .stacks        = 0,     \
+    .yields        = 0,     \
   }
 
 /// Initialize the libhpx statistics structure.

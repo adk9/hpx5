@@ -23,21 +23,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <hpx/builtins.h>
-
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
-#include <libhpx/gas.h>
-#include <libhpx/libhpx.h>
-#include <libhpx/locality.h>
-#include <libhpx/instrumentation.h>
-#include <libhpx/memory.h>
-#include <libhpx/network.h>
-#include <libhpx/parcel.h>                      // used as thread-control block
-#include <libhpx/process.h>
-#include <libhpx/scheduler.h>
-#include <libhpx/system.h>
-#include <libhpx/worker.h>
+#include "hpx/builtins.h"
+#include "libhpx/action.h"
+#include "libhpx/debug.h"
+#include "libhpx/gas.h"
+#include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
+#include "libhpx/instrumentation.h"
+#include "libhpx/memory.h"
+#include "libhpx/network.h"
+#include "libhpx/parcel.h"                      // used as thread-control block
+#include "libhpx/process.h"
+#include "libhpx/scheduler.h"
+#include "libhpx/system.h"
+#include "libhpx/worker.h"
 #include "cvar.h"
 #include "lco.h"
 #include "thread.h"
@@ -308,16 +307,22 @@ static hpx_parcel_t *_schedule_steal(worker_t *w) {
     return NULL;
   }
 
-  worker_t *victim = NULL;
-  do {
-    int id = rand_r(&w->seed) % n;
-    victim = scheduler_get_worker(here->sched, id);
-  } while (victim == w);
+  int id = w->last_victim;
+  if (id < 0) {
+    do {
+      id = rand_r(&w->seed) % n;
+    } while (id == w->id);
+  }
 
+  worker_t *victim = scheduler_get_worker(here->sched, id);
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
   if (p) {
+    w->last_victim = id;
     EVENT_STEAL_LIFO(p, victim);
     COUNTER_SAMPLE(++w->stats.steals);
+  } else {
+    w->last_victim = -1;
+    COUNTER_SAMPLE(++w->stats.failed_steals);
   }
 
   return p;
@@ -508,17 +513,18 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
 }
 
 int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
-  w->thread     = 0;
-  w->id         = id;
-  w->seed       = seed;
-  w->work_first = 0;
-  w->nstacks    = 0;
-  w->yielded    = 0;
-  w->system     = NULL;
-  w->current    = NULL;
-  w->stacks     = NULL;
-  w->active     = true;
-  w->profiler   = NULL;
+  w->thread      = 0;
+  w->id          = id;
+  w->seed        = seed;
+  w->work_first  = 0;
+  w->nstacks     = 0;
+  w->yielded     = 0;
+  w->last_victim = -1;
+  w->system      = NULL;
+  w->current     = NULL;
+  w->stacks      = NULL;
+  w->active      = true;
+  w->profiler    = NULL;
 
   sync_chase_lev_ws_deque_init(&w->work, work_size);
   sync_two_lock_queue_init(&w->inbox, NULL);
@@ -868,6 +874,11 @@ int hpx_thread_get_tls_id(void) {
   return stack->tls_id;
 }
 
+intptr_t hpx_thread_can_alloca(size_t bytes) {
+  ustack_t *current = self->current->ustack;
+  return ((uintptr_t)&current - (uintptr_t)current->stack < bytes);
+}
+
 void hpx_thread_set_affinity(int affinity) {
   // make sure affinity is in bounds
   dbg_assert(affinity >= -1);
@@ -913,7 +924,3 @@ void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   (void)p;
 }
 
-intptr_t worker_can_alloca(size_t bytes) {
-  ustack_t *current = self->current->ustack;
-  return ((uintptr_t)&current - (uintptr_t)current->stack < bytes);
-}

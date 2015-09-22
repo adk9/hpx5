@@ -40,7 +40,7 @@ static int _send_action(int *args, size_t size) {
     printf("locality: %d, thread: %d, count: %d\n", HPX_LOCALITY_ID, HPX_THREAD_ID, i);
     hpx_call_sync(rand_rank(), increment, &i, sizeof(i), &i, sizeof(i));
   }
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 static void usage(FILE *f, int error) {
@@ -83,5 +83,7 @@ int main(int argc, char * argv[argc]) {
 
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, send, _send_action, HPX_POINTER, HPX_SIZE_T);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, increment, _increment_action, HPX_POINTER, HPX_SIZE_T);
-  return hpx_run(&send, &n, sizeof(n));
+  int e = hpx_run(&send, &n, sizeof(n));
+  hpx_finalize();
+  return e;
 }

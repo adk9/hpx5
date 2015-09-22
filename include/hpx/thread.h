@@ -20,10 +20,10 @@
 /// @file
 /// @brief HPX thread interface
 ///
-/// HPX threads are spawned as a result of hpx_parcel_send() or 
+/// HPX threads are spawned as a result of hpx_parcel_send() or
 /// hpx_parcel_send_sync(), or as a result of an hpx_call() (or variant) which
-/// which relies on an implicit parcel send. The may return values to their 
-/// LCO continuations using this hpx_thread_exit() call, which terminates the 
+/// which relies on an implicit parcel send. They may return values to their
+/// LCO continuations using the hpx_thread_exit() call, which terminates the
 /// thread's execution.
 
 /// Get the target of the current thread.
@@ -62,6 +62,13 @@ void hpx_thread_yield(void);
 ///          calling thread
 int hpx_thread_get_tls_id(void);
 
+/// Check to see if the current thread has enough space for an alloca.
+///
+/// @param        bytes The number of bytes to allocate.
+///
+/// @returns            The number of bytes remaining on the stack after the
+///                     alloca.
+intptr_t hpx_thread_can_alloca(size_t bytes);
 
 /// Set a lightweight thread's affinity.
 ///
@@ -100,7 +107,6 @@ void _hpx_thread_continue(int nargs, ...)
 /// @param v the value to be sent to the thread's continuation
 #define HPX_THREAD_CONTINUE(v) hpx_thread_continue(&v, sizeof(v))
 
-
 /// Finishes the current thread's execution, sending @p value to the thread's
 /// continuation address.
 ///
@@ -117,7 +123,6 @@ void _hpx_thread_continue_cleanup(void (*cleanup)(void*), void *env,
 
 #define hpx_thread_continue_cleanup(cleanup, env, ...)                  \
   _hpx_thread_continue_cleanup(cleanup, env, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
-
 
 /// Finish the current thread's execution.
 ///
@@ -137,7 +142,7 @@ void _hpx_thread_continue_cleanup(void (*cleanup)(void*), void *env,
 ///
 /// - HPX_LCO_EXCEPTION: Continue an exception to the continuation address.
 ///
-/// @param status a status to be returned to the function that created this 
+/// @param status a status to be returned to the function that created this
 ///        thread
 void hpx_thread_exit(int status)
   HPX_NORETURN;

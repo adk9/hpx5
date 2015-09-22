@@ -258,6 +258,7 @@ dnl Define cpp macros in CPPFLAGS, rather than doing AC_DEFINE(macro), since the
 dnl definitions need to be seen before any headers are included, which is a pain
 dnl to make happen otherwise.
 default_munmap="1"
+maps_coalesce="1"
 case "${host}" in
   *-*-darwin* | *-*-ios*)
 	CFLAGS="$CFLAGS"
@@ -341,6 +342,7 @@ case "${host}" in
 	abi="pecoff"
 	force_tls="0"
 	force_lazy_lock="1"
+	maps_coalesce="0"
 	RPATH=""
 	so="dll"
 	if test "x$je_cv_msvc" = "xyes" ; then
@@ -862,6 +864,12 @@ if test "x$enable_tcache" = "x1" ; then
 fi
 AC_SUBST([enable_tcache])
 
+dnl Indicate whether adjacent virtual memory mappings automatically coalesce
+dnl (and fragment on demand).
+if test "x${maps_coalesce}" = "x1" ; then
+  AC_DEFINE([JEMALLOC_MAPS_COALESCE], [ ])
+fi
+
 dnl Enable VM deallocation via munmap() by default.
 AC_ARG_ENABLE([munmap],
   [AS_HELP_STRING([--disable-munmap], [Disable VM deallocation via munmap(2)])],
@@ -1182,6 +1190,14 @@ fi
 
 CPPFLAGS="$CPPFLAGS -D_REENTRANT"
 
+dnl Check whether clock_gettime(2) is in libc or librt.  This function is only
+dnl used in test code, so save the result to TESTLIBS to avoid poluting LIBS.
+SAVED_LIBS="${LIBS}"
+LIBS=
+AC_SEARCH_LIBS([clock_gettime], [rt], [TESTLIBS="${LIBS}"])
+AC_SUBST([TESTLIBS])
+LIBS="${SAVED_LIBS}"
+
 dnl Check if the GNU-specific secure_getenv function exists.
 AC_CHECK_FUNC([secure_getenv],
               [have_secure_getenv="1"],
@@ -1234,9 +1250,9 @@ else
   enable_lazy_lock="1"
 fi
 ],
-[enable_lazy_lock="0"]
+[enable_lazy_lock=""]
 )
-if test "x$enable_lazy_lock" = "x0" -a "x${force_lazy_lock}" = "x1" ; then
+if test "x$enable_lazy_lock" = "x" -a "x${force_lazy_lock}" = "x1" ; then
   AC_MSG_RESULT([Forcing lazy-lock to avoid allocator/threading bootstrap issues])
   enable_lazy_lock="1"
 fi
@@ -1249,6 +1265,8 @@ if test "x$enable_lazy_lock" = "x1" ; then
       ])
   fi
   AC_DEFINE([JEMALLOC_LAZY_LOCK], [ ])
+else
+  enable_lazy_lock="0"
 fi
 AC_SUBST([enable_lazy_lock])
 
@@ -1260,15 +1278,18 @@ else
   enable_tls="1"
 fi
 ,
-enable_tls="1"
+enable_tls=""
 )
-if test "x${enable_tls}" = "x0" -a "x${force_tls}" = "x1" ; then
-  AC_MSG_RESULT([Forcing TLS to avoid allocator/threading bootstrap issues])
-  enable_tls="1"
-fi
-if test "x${enable_tls}" = "x1" -a "x${force_tls}" = "x0" ; then
-  AC_MSG_RESULT([Forcing no TLS to avoid allocator/threading bootstrap issues])
-  enable_tls="0"
+if test "x${enable_tls}" = "x" ; then
+  if test "x${force_tls}" = "x1" ; then
+    AC_MSG_RESULT([Forcing TLS to avoid allocator/threading bootstrap issues])
+    enable_tls="1"
+  elif test "x${force_tls}" = "x0" ; then
+    AC_MSG_RESULT([Forcing no TLS to avoid allocator/threading bootstrap issues])
+    enable_tls="0"
+  else
+    enable_tls="1"
+  fi
 fi
 if test "x${enable_tls}" = "x1" ; then
 AC_MSG_CHECKING([for TLS])
@@ -1283,12 +1304,17 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
               AC_MSG_RESULT([yes]),
               AC_MSG_RESULT([no])
               enable_tls="0")
+else
+  enable_tls="0"
 fi
 AC_SUBST([enable_tls])
 if test "x${enable_tls}" = "x1" ; then
+  if test "x${force_tls}" = "x0" ; then
+    AC_MSG_WARN([TLS enabled despite being marked unusable on this platform])
+  fi
   AC_DEFINE_UNQUOTED([JEMALLOC_TLS], [ ])
 elif test "x${force_tls}" = "x1" ; then
-  AC_MSG_ERROR([Failed to configure TLS, which is mandatory for correct function])
+  AC_MSG_WARN([TLS disabled despite being marked critical on this platform])
 fi
 
 dnl ============================================================================
@@ -1603,8 +1629,9 @@ AC_CONFIG_COMMANDS([include/jemalloc/internal/public_unnamespace.h], [
 ])
 AC_CONFIG_COMMANDS([include/jemalloc/internal/size_classes.h], [
   mkdir -p "${objroot}include/jemalloc/internal"
-  "${srcdir}/include/jemalloc/internal/size_classes.sh" "${LG_QUANTA}" ${LG_TINY_MIN} "${LG_PAGE_SIZES}" ${LG_SIZE_CLASS_GROUP} > "${objroot}include/jemalloc/internal/size_classes.h"
+  "${SHELL}" "${srcdir}/include/jemalloc/internal/size_classes.sh" "${LG_QUANTA}" ${LG_TINY_MIN} "${LG_PAGE_SIZES}" ${LG_SIZE_CLASS_GROUP} > "${objroot}include/jemalloc/internal/size_classes.h"
 ], [
+  SHELL="${SHELL}"
   srcdir="${srcdir}"
   objroot="${objroot}"
   LG_QUANTA="${LG_QUANTA}"
@@ -1675,6 +1702,7 @@ AC_MSG_RESULT([CPPFLAGS           : ${CPPFLAGS}])
 AC_MSG_RESULT([LDFLAGS            : ${LDFLAGS}])
 AC_MSG_RESULT([EXTRA_LDFLAGS      : ${EXTRA_LDFLAGS}])
 AC_MSG_RESULT([LIBS               : ${LIBS}])
+AC_MSG_RESULT([TESTLIBS           : ${TESTLIBS}])
 AC_MSG_RESULT([RPATH_EXTRA        : ${RPATH_EXTRA}])
 AC_MSG_RESULT([])
 AC_MSG_RESULT([XSLTPROC           : ${XSLTPROC}])
