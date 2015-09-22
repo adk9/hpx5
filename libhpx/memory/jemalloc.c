@@ -63,10 +63,10 @@ void as_join(int id) {
   snprintf(path, 128, "arena.%u.chunk_hooks", arena);
   dbg_check( je_mallctl(path, NULL, NULL, (void*)hooks, sizeof(*hooks)) );
 
-  // Disable dirty page purging for this arena
-  snprintf(path, 124, "arena.%u.lg_dirty_mult", arena);
-  ssize_t i = -1;
-  dbg_check( je_mallctl(path, NULL, NULL, (void*)&i, sizeof(i)) );
+  // // Disable dirty page purging for this arena
+  // snprintf(path, 124, "arena.%u.lg_dirty_mult", arena);
+  // ssize_t i = -1;
+  // dbg_check( je_mallctl(path, NULL, NULL, (void*)&i, sizeof(i)) );
 
   // Create a cache.
   unsigned cache;
@@ -113,11 +113,15 @@ bool as_null_commit(void *chunk, size_t size, size_t offset, size_t length,
 
 bool as_null_decommit(void *chunk, size_t size, size_t offset, size_t length,
                       unsigned arena_ind) {
+  log_mem("decommit of %zu bytes at offset %zu requested and ignored by HPX\n",
+          size, offset);
   return true;
 }
 
 bool as_null_purge(void *chunk, size_t size, size_t offset, size_t length,
                    unsigned arena_ind) {
+  log_mem("purge of %zu bytes at offset %zu requested and ignored by HPX\n",
+                   size, offset);
   return true;
 }
 
