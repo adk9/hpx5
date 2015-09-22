@@ -10,13 +10,9 @@ libagas_la_SOURCES += jemalloc_cyclic.c jemalloc_global.c
 endif
 
 if HAVE_TBBMALLOC
-noinst_LTLIBRARIES		   += libtbbmalloc.la
-libtbbmalloc_la_CPPFLAGS	= -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
-libtbbmalloc_la_CXXFLAGS 	= $(LIBHPX_CXXFLAGS)
-libtbbmalloc_la_SOURCES  	= tbbmalloc_cyclic.cc tbbmalloc_global.cc
+noinst_LTLIBRARIES         += libtbbmalloc.la
+libtbbmalloc_la_CPPFLAGS    = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
+libtbbmalloc_la_CXXFLAGS    = $(LIBHPX_CXXFLAGS)
+libtbbmalloc_la_SOURCES     = tbbmalloc_cyclic.cc tbbmalloc_global.cc
 libagas_la_LIBADD           = libtbbmalloc.la
-endif
-
-if HAVE_DLMALLOC
-libagas_la_SOURCES += dlmalloc.c
 endif

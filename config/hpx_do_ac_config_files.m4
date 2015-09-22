@@ -63,8 +63,4 @@ AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
      tests/unit/Makefile
      tests/perf/Makefile])])
 
-
- AS_IF([test "x$have_dlmalloc" != xno], [
-   AC_CONFIG_FILES([
-     contrib/dlmalloc/Makefile])])
 ])

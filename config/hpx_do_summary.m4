@@ -11,7 +11,6 @@ AC_DEFUN([HPX_DO_SUMMARY], [
 
  AS_IF([test "x$have_jemalloc" == xyes], [allocator="jemalloc"])
  AS_IF([test "x$have_tbbmalloc" == xyes], [allocator="tbbmalloc"])
- AS_IF([test "x$have_dlmalloc" == xyes], [allocator="dlmalloc"])
 
  AS_IF([test "x$enable_tests" == xyes], [tests="integration"])
  AS_IF([test "x$enable_lengthy_tests" == xyes], [tests="$tests lengthy"])

@@ -149,7 +149,6 @@ HPX_CONFIG_MPI([ompi])
 HPX_CONFIG_PMI([cray-pmi])
 HPX_CONFIG_JEMALLOC([contrib/jemalloc], ["jemalloc >= 4.0"]) 
 HPX_CONFIG_TBBMALLOC
-HPX_CONFIG_DLMALLOC([contrib/dlmalloc])
 HPX_CONFIG_HWLOC([contrib/hwloc-1.11.0], [hwloc])
 HPX_CONFIG_HUGETLBFS([hugetlbfs])
 HPX_CONFIG_UTHASH([contrib/uthash-fe01a6ad1b])
@@ -171,21 +170,15 @@ AS_IF([test "x$have_photon" == xyes -o "x$have_mpi" == xyes],
   [AC_DEFINE([HAVE_NETWORK], [1], [We have a high speed network available])
    have_network=yes])
 
-AS_IF([test "x$have_jemalloc" == xyes -o "x$have_tbbmalloc" == xyes -o "x$have_dlmalloc" == xyes],
+AS_IF([test "x$have_jemalloc" == xyes -o "x$have_tbbmalloc" == xyes],
   [AC_DEFINE([HAVE_ALLOCATOR], [1], [We have a GAS allocator available])
    have_allocator=yes])
 
 AS_IF([test "x$have_jemalloc" == xyes -a "x$have_tbbmalloc" == xyes],
   [AC_MSG_ERROR(jemalloc and tbbmalloc are mutually exclusive)])
 
-AS_IF([test "x$have_jemalloc" == xyes -a "x$have_dlmalloc" == xyes],
-  [AC_MSG_ERROR(jemalloc and dlmalloc are mutually exclusive)])
-
-AS_IF([test "x$have_dlmalloc" == xyes -a "x$have_tbbmalloc" == xyes],
-  [AC_MSG_ERROR(dlmalloc and tbbmalloc are mutually exclusive)])
-
 AS_IF([test "x$have_network" == xyes -a "x$have_allocator" != xyes],
-  [AC_MSG_ERROR(HPX requires jemalloc, tbbmalloc or dlmalloc for network operation)])
+  [AC_MSG_ERROR(HPX requires jemalloc, tbbmalloc for network operation)])
 
 # Make sure that static linking libhpx.a with $(CC) works when we have a C++
 # dependency.
