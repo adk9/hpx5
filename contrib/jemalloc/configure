@@ -628,6 +628,7 @@ cfghdrs_in
 enable_zone_allocator
 enable_tls
 enable_lazy_lock
+TESTLIBS
 jemalloc_version_gid
 jemalloc_version_nrev
 jemalloc_version_bugfix
@@ -7123,6 +7124,67 @@ fi
 
 CPPFLAGS="$CPPFLAGS -D_REENTRANT"
 
+SAVED_LIBS="${LIBS}"
+LIBS=
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing clock_gettime" >&5
+$as_echo_n "checking for library containing clock_gettime... " >&6; }
+if ${ac_cv_search_clock_gettime+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char clock_gettime ();
+int
+main ()
+{
+return clock_gettime ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' rt; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_clock_gettime=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_clock_gettime+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_clock_gettime+:} false; then :
+
+else
+  ac_cv_search_clock_gettime=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_clock_gettime" >&5
+$as_echo "$ac_cv_search_clock_gettime" >&6; }
+ac_res=$ac_cv_search_clock_gettime
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+  TESTLIBS="${LIBS}"
+fi
+
+
+LIBS="${SAVED_LIBS}"
+
 ac_fn_c_check_func "$LINENO" "secure_getenv" "ac_cv_func_secure_getenv"
 if test "x$ac_cv_func_secure_getenv" = xyes; then :
   have_secure_getenv="1"
@@ -7280,15 +7342,18 @@ else
 
 fi
 
-if test "x${enable_tls}" = "x" -a "x${force_tls}" = "x1" ; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Forcing TLS to avoid allocator/threading bootstrap issues" >&5
+if test "x${enable_tls}" = "x" ; then
+  if test "x${force_tls}" = "x1" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: Forcing TLS to avoid allocator/threading bootstrap issues" >&5
 $as_echo "Forcing TLS to avoid allocator/threading bootstrap issues" >&6; }
-  enable_tls="1"
-fi
-if test "x${enable_tls}" = "x" -a "x${force_tls}" = "x0" ; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Forcing no TLS to avoid allocator/threading bootstrap issues" >&5
+    enable_tls="1"
+  elif test "x${force_tls}" = "x0" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: Forcing no TLS to avoid allocator/threading bootstrap issues" >&5
 $as_echo "Forcing no TLS to avoid allocator/threading bootstrap issues" >&6; }
-  enable_tls="0"
+    enable_tls="0"
+  else
+    enable_tls="1"
+  fi
 fi
 if test "x${enable_tls}" = "x1" ; then
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for TLS" >&5
@@ -7324,12 +7389,17 @@ else
 fi
 
 if test "x${enable_tls}" = "x1" ; then
+  if test "x${force_tls}" = "x0" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: TLS enabled despite being marked unusable on this platform" >&5
+$as_echo "$as_me: WARNING: TLS enabled despite being marked unusable on this platform" >&2;}
+  fi
   cat >>confdefs.h <<_ACEOF
 #define JEMALLOC_TLS
 _ACEOF
 
 elif test "x${force_tls}" = "x1" ; then
-  as_fn_error $? "Failed to configure TLS, which is mandatory for correct function" "$LINENO" 5
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: TLS disabled despite being marked critical on this platform" >&5
+$as_echo "$as_me: WARNING: TLS disabled despite being marked critical on this platform" >&2;}
 fi
 
 
@@ -8839,6 +8909,7 @@ cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1
   objroot="${objroot}"
 
 
+  SHELL="${SHELL}"
   srcdir="${srcdir}"
   objroot="${objroot}"
   LG_QUANTA="${LG_QUANTA}"
@@ -9482,7 +9553,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
  ;;
     "include/jemalloc/internal/size_classes.h":C)
   mkdir -p "${objroot}include/jemalloc/internal"
-  "${srcdir}/include/jemalloc/internal/size_classes.sh" "${LG_QUANTA}" ${LG_TINY_MIN} "${LG_PAGE_SIZES}" ${LG_SIZE_CLASS_GROUP} > "${objroot}include/jemalloc/internal/size_classes.h"
+  "${SHELL}" "${srcdir}/include/jemalloc/internal/size_classes.sh" "${LG_QUANTA}" ${LG_TINY_MIN} "${LG_PAGE_SIZES}" ${LG_SIZE_CLASS_GROUP} > "${objroot}include/jemalloc/internal/size_classes.h"
  ;;
     "include/jemalloc/jemalloc_protos_jet.h":C)
   mkdir -p "${objroot}include/jemalloc"
@@ -9565,6 +9636,8 @@ $as_echo "LDFLAGS            : ${LDFLAGS}" >&6; }
 $as_echo "EXTRA_LDFLAGS      : ${EXTRA_LDFLAGS}" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: LIBS               : ${LIBS}" >&5
 $as_echo "LIBS               : ${LIBS}" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: TESTLIBS           : ${TESTLIBS}" >&5
+$as_echo "TESTLIBS           : ${TESTLIBS}" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: RPATH_EXTRA        : ${RPATH_EXTRA}" >&5
 $as_echo "RPATH_EXTRA        : ${RPATH_EXTRA}" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: " >&5
