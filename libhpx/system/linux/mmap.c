@@ -136,10 +136,11 @@ static void *_mmap_lucky(void *addr, size_t n, int prot, int flags, int fd,
 }
 
 void *system_mmap(void *UNUSED, void *addr, size_t n, size_t align) {
-  log_mem("mmaping %lu bytes for a total of %lu\n", n, _update_total(n));
   static const  int prot = PROT_READ | PROT_WRITE;
   static const int flags = MAP_ANONYMOUS | MAP_PRIVATE;
-  return _mmap_lucky(addr, n, prot, flags, -1, 0, align);
+  void *p = _mmap_lucky(addr, n, prot, flags, -1, 0, align);
+  log_mem("mmap %lu bytes at %p for a total of %lu\n", n, p, _update_total(n));
+  return p;
 }
 
 void *system_mmap_huge_pages(void *UNUSED, void *addr, size_t n, size_t align) {
@@ -159,14 +160,15 @@ void *system_mmap_huge_pages(void *UNUSED, void *addr, size_t n, size_t align) {
     log_mem("adding %ld bytes to huge page allocation request\n", padding);
     n += padding;
   }
-  log_mem("mmaping %lu bytes from huge pages for a total of %lu\n", n,
-          _update_total(n));
+  void *p = NULL;
   if (_hugepage_fd >= 0) {
-    return _mmap_lucky(addr, n, prot, flags, _hugepage_fd, 0, align);
+    p = _mmap_lucky(addr, n, prot, flags, _hugepage_fd, 0, align);
   }
   else {
-    return system_mmap(UNUSED, addr, n, align);
+    p = system_mmap(UNUSED, addr, n, align);
   }
+  log_mem("mmap %lu bytes at %p from huge pages for a total of %lu\n", n, p,
+          _update_total(n));
 #endif
 }
 
