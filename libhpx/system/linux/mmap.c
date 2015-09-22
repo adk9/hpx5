@@ -169,6 +169,7 @@ void *system_mmap_huge_pages(void *UNUSED, void *addr, size_t n, size_t align) {
   }
   log_mem("mmap %lu bytes at %p from huge pages for a total of %lu\n", n, p,
           _update_total(n));
+  return p;
 #endif
 }
 
