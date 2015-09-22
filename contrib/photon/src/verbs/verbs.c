@@ -154,25 +154,12 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
   // __initialized: 0 - not; -1 - initializing; 1 - initialized 
   __initialized = -1;
 
-  verbs_ctx.tx_depth = _LEDGER_SIZE;
-  verbs_ctx.rx_depth = _LEDGER_SIZE;
-  verbs_ctx.num_srq  = (cfg->ibv.num_srq < 0) ? VERBS_DEF_NUM_SRQ : cfg->ibv.num_srq;
-  verbs_ctx.num_cq   = cfg->cap.num_cq;
-  verbs_ctx.use_rcq  = cfg->cap.use_rcq;
-  
-  if (verbs_ctx.num_srq > _photon_nproc) {
-    verbs_ctx.num_srq = _photon_nproc;
-    one_warn("Requesting (num_srq > nproc), setting num_srq to nproc");
-  }
-  
-  if (cfg->ibv.use_cma && !cfg->ibv.eth_dev) {
-    log_err("CMA specified but Ethernet dev missing");
+  if (__verbs_handle_config(&verbs_ctx, cfg)) {
+    log_err("Failed to set valid verbs backend config");
     goto error_exit;
   }
 
-  if (cfg->ibv.use_ud) {
-    verbs_ctx.use_ud = cfg->ibv.use_ud;
-    
+  if (verbs_ctx.use_ud) {
     dbg_trace("create ah_table");
     ah_table = htable_create(1009);
     if (!ah_table) {
@@ -180,9 +167,8 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
       goto error_exit;
     }
   }
-
+  
   if(__verbs_init_context(&verbs_ctx)) {
-    log_err("Could not initialize verbs context");
     goto error_exit;
   }
 
@@ -210,20 +196,6 @@ static int verbs_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI 
         log_err("Could not perform connect with forwarder(s)");
         goto error_exit;
       }
-    }
-  }
-
-  // Check if queues could be overrun
-  // TODO: automatically adjust if requested
-  if ((2 * _LEDGER_SIZE * _photon_nproc / verbs_ctx.num_cq) > verbs_ctx.max_qp_wr) {
-    one_warn("Possible CQ overrun with current config (nproc=%d, nledger=%d, ncq=%d)",
-	     _photon_nproc, _LEDGER_SIZE, verbs_ctx.num_cq);
-  }
-
-  if (verbs_ctx.num_srq > 0) {
-    if ((_LEDGER_SIZE * _photon_nproc / verbs_ctx.num_srq) > verbs_ctx.max_srq_wr) {
-      one_warn("Possible SRQ overrun with current config (nproc=%d, nledger=%d, nsrq=%d)",
-	       _photon_nproc, _LEDGER_SIZE, verbs_ctx.num_srq);
     }
   }
 

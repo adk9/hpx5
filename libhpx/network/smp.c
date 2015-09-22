@@ -17,11 +17,11 @@
 
 #include <stdlib.h>
 
-#include <libhpx/boot.h>
-#include <libhpx/debug.h>
-#include <libhpx/libhpx.h>
-#include <libhpx/memory.h>
-#include <libhpx/network.h>
+#include "libhpx/boot.h"
+#include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
+#include "libhpx/memory.h"
+#include "libhpx/network.h"
 #include "smp.h"
 
 // Define the transports allowed for the SMP network
@@ -60,21 +60,26 @@ static int _smp_get(void *network, void *to, hpx_addr_t from, size_t n,
   return LIBHPX_EUNIMPLEMENTED;
 }
 
-static hpx_parcel_t *
-_smp_probe(void *network, int nrx) {
+static hpx_parcel_t *_smp_probe(void *network, int nrx) {
   return NULL;
 }
 
-static void
-_smp_set_flush(void *network) {
+static void _smp_set_flush(void *network) {
 }
 
-static void
-_smp_register_dma(void *obj, const void *addr, size_t n, void *key) {
+static void _smp_register_dma(void *obj, const void *addr, size_t n, void *key)
+{
 }
 
-static void
-_smp_release_dma(void *obj, const void *addr, size_t n) {
+static void _smp_release_dma(void *obj, const void *addr, size_t n) {
+}
+
+static int _smp_lco_wait(void *o, hpx_addr_t lco, int reset) {
+  return (reset) ? hpx_lco_wait_reset(lco) : hpx_lco_wait(lco);
+}
+
+static int _smp_lco_get(void *o, hpx_addr_t lco, size_t n, void *to, int reset) {
+  return (reset) ? hpx_lco_get_reset(lco, n, to) : hpx_lco_get(lco, n, to);
 }
 
 static network_t _smp = {
@@ -89,7 +94,9 @@ static network_t _smp = {
   .probe = _smp_probe,
   .set_flush = _smp_set_flush,
   .register_dma = _smp_register_dma,
-  .release_dma = _smp_release_dma
+  .release_dma = _smp_release_dma,
+  .lco_get = _smp_lco_get,
+  .lco_wait = _smp_lco_wait
 };
 
 network_t *network_smp_new(const struct config *cfg, boot_t *boot) {

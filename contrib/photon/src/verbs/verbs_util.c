@@ -8,6 +8,88 @@
 #include "verbs_util.h"
 #include "verbs_buffer.h"
 
+int __verbs_handle_config(verbs_cnct_ctx *ctx, photonConfig cfg) {
+  int safe = false;
+
+  ctx->tx_depth = _LEDGER_SIZE;
+  ctx->rx_depth = _LEDGER_SIZE;
+  ctx->ib_dev   = cfg->ibv.ib_dev;
+  ctx->eth_dev  = cfg->ibv.eth_dev;
+  ctx->use_cma  = cfg->ibv.use_cma;
+  ctx->use_ud   = cfg->ibv.use_ud;
+  ctx->num_srq  = (cfg->ibv.num_srq < 0) ? VERBS_DEF_NUM_SRQ : cfg->ibv.num_srq;
+  ctx->num_cq   = cfg->cap.num_cq;
+  ctx->use_rcq  = cfg->cap.use_rcq;
+  
+  if (ctx->num_srq > _photon_nproc) {
+    ctx->num_srq = _photon_nproc;
+    one_info("Requesting (num_srq > nproc), setting num_srq to nproc");
+  }
+  
+  if (cfg->ibv.use_cma && !cfg->ibv.eth_dev) {
+    log_err("CMA specified but Ethernet dev missing");
+    goto error_exit;
+  }
+
+  return PHOTON_OK;
+
+ error_exit:
+  return PHOTON_ERROR;
+}
+
+int __verbs_adjust_ctx(verbs_cnct_ctx *ctx) {
+
+  if (ctx->num_srq > 0) {
+    if ((2 * _LEDGER_SIZE * _photon_nproc / ctx->num_srq) > ctx->max_cqe) {
+      one_warn("Adjusting SRQ count to avoid possible overrun with specified "
+	       "config (nproc=%d, nledger=%d, nsrq=%d)",
+	       _photon_nproc, _LEDGER_SIZE, ctx->num_srq);
+      do {
+	ctx->num_srq++;
+	if (ctx->num_srq > _photon_nproc) {
+	  one_err("SRQ count exceeds number of ranks, reduce ledger size!");
+	  goto error_exit;
+	}
+      } while ((2 * _LEDGER_SIZE * _photon_nproc / ctx->num_srq) > ctx->max_cqe);
+      one_info("SRQ count is now set to %d", ctx->num_srq);    }
+  }
+
+  if ((2 * _LEDGER_SIZE * _photon_nproc / ctx->num_cq) > ctx->max_cqe) {
+    one_info("Adjusting CQ count to avoid possible overrun with specified "
+	     "config (nproc=%d, nledger=%d, ncq=%d)",
+	     _photon_nproc, _LEDGER_SIZE, ctx->num_cq);
+    do {
+      ctx->num_cq++;
+      if (ctx->num_cq > _photon_nproc) {
+	one_err("CQ count exceeds number of ranks, reduce ledger size!");
+	goto error_exit;
+      }
+    } while ((2 * _LEDGER_SIZE * _photon_nproc / ctx->num_cq) > ctx->max_cqe);
+    one_info("CQ count is now set to %d", ctx->num_cq);
+  }
+
+  if (ctx->num_srq > 0) {
+    if ((2 * _LEDGER_SIZE * _photon_nproc / ctx->num_srq) > ctx->max_srq_wr) {
+      one_warn("Possible SRQ WR overrun with current config (2*nledger*"
+	       "nproc/nsrq=%d > max_srq_wr=%d)",
+	       2*_LEDGER_SIZE*_photon_nproc/ctx->num_srq, ctx->max_srq_wr);
+      one_info("Decrease Photon ledger size on this sytem!");
+    }
+  }
+  else {
+    if ((2 * _LEDGER_SIZE) > ctx->max_qp_wr) {
+      one_warn("Possible QP WR overrun with current config (2*nledger=%d > "
+	       "max_qp_wr=%d)", 2*_LEDGER_SIZE, ctx->max_qp_wr);
+      one_info("Decrease Photon ledger size on this sytem!");
+    }
+  }
+
+  return PHOTON_OK;
+
+ error_exit:
+  return PHOTON_ERROR;
+}
+
 int __verbs_post_srq_recv(verbs_cnct_ctx *ctx, uint64_t id, int proc, int num) {
   int i, j, start, end;
   int nposts = (num < 0) ? ctx->max_srq_wr : num;

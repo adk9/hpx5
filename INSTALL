@@ -67,7 +67,7 @@ $ ./configure --enable-mpi CC=mpicc --enable-photon
 
 ```
 $ module unload PrgEnv-cray
-$ module unload PrgEnv-intel/5.2.40
+$ module unload PrgEnv-intel
 $ module load PrgEnv-gnu
 $ setenv CRAYPE_LINK_TYPE dynamic
 $ ./configure --prefix=/path/to/install/ CC=cc

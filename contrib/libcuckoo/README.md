@@ -1,3 +1,12 @@
+Note to existing users: the iterator implementation has changed significantly
+since we introduced the `locked_table` in [this
+commit](https://github.com/efficient/libcuckoo/commit/2bedb3d0c811cd8b3adb3e78e2d2a28c66ba1d1d).
+Please see the [`locked_table`
+documentation](http://efficient.github.io/libcuckoo/classcuckoohash__map_1_1locked__table.html)
+and [examples
+directory](https://github.com/efficient/libcuckoo/tree/master/examples) for
+information and examples of how to use iterators.
+
 libcuckoo
 =========
 
@@ -26,7 +35,10 @@ This library has been tested on Mac OSX >= 10.8 and Ubuntu >= 12.04.
 
 It compiles with clang++ >= 3.1 and g++ >= 4.7, however we strongly suggest
 using the latest versions of both compilers, as they have greatly improved
-support for atomic operations. Building the library requires the autotools.
+support for atomic operations. Building the library requires the
+autotools. Install them on Ubuntu
+
+    $ sudo apt-get update && sudo apt-get install build-essential autoconf libtool
 
 Building
 ==========

@@ -96,7 +96,7 @@ static int _fib_main_action(int *args, size_t size) {
   printf("seconds: %.7f\n", elapsed);
   printf("localities: %d\n", HPX_LOCALITIES);
   printf("threads/locality: %d\n", HPX_THREADS);
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {
@@ -139,6 +139,8 @@ int main(int argc, char *argv[]) {
                       HPX_POINTER, HPX_SIZE_T);
 
   // run the main action
-  return hpx_run(&_fib_main, &n, sizeof(n));
+  e = hpx_run(&_fib_main, &n, sizeof(n));
+  hpx_finalize();
+  return e;
 }
 

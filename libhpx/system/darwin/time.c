@@ -81,7 +81,7 @@ double hpx_time_ms(hpx_time_t time) {
   return _ns(time)/1e6;
 }
 
-uint64_t hpx_time_elapsed_ns(hpx_time_t from, hpx_time_t to) {
+int64_t hpx_time_diff_ns(hpx_time_t from, hpx_time_t to) {
   static mach_timebase_info_data_t tbi;
   if (tbi.denom == 0)
     (void) mach_timebase_info(&tbi);
@@ -90,8 +90,27 @@ uint64_t hpx_time_elapsed_ns(hpx_time_t from, hpx_time_t to) {
   return ((to - from) * tbi.numer/tbi.denom);
 }
 
+uint64_t hpx_time_elapsed_ns(hpx_time_t from) {
+  return (uint64_t)hpx_time_diff_ns(from, hpx_time_now());
+}
+
 uint64_t hpx_time_to_ns(hpx_time_t t) {
-  return hpx_time_elapsed_ns(_beginning_of_time, t);
+  return (uint64_t)hpx_time_diff_ns(_beginning_of_time, t);
+}
+
+hpx_time_t hpx_time_construct(unsigned long s, unsigned long ns) {
+  static mach_timebase_info_data_t tbi;
+  if (tbi.denom == 0)
+    (void) mach_timebase_info(&tbi);
+  assert(tbi.denom != 0);
+
+  hpx_time_t t;
+  t = (s * 1e9 + ns) * (tbi.denom / tbi.numer);
+  return t;
+}
+
+hpx_time_t hpx_time_point(hpx_time_t time, hpx_time_t duration) {
+  return time + duration;
 }
 
 void libhpx_time_start() {

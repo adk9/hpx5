@@ -4,9 +4,10 @@ threads_PROGRAMS            = threadSpawn1 threadSpawn2 threadSpawn3 threadSpawn
                               threadSemaphores threadYield threadExit \
                               threadCurrentTarget  
 
-AM_CPPFLAGS			= -D_GNU_SOURCE $(LIBFFI_CFLAGS) -I$(top_srcdir)/include
-AM_LDFLAGS			= $(LIBHPX_LDFLAGS) -no-install
-LDADD				= $(LIBHPX_LDADD)
+AM_CPPFLAGS      		= -D_GNU_SOURCE $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include
+AM_CFLAGS               = $(HPX_APPS_CFLAGS) -Wno-unused
+AM_LDFLAGS       		= $(HPX_APPS_LDFLAGS) -no-install
+LDADD            		= $(HPX_APPS_LDADD)
 
 threadSpawn1_SOURCES        = threadSpawn1.c
 threadSpawn2_SOURCES        = threadSpawn2.c
@@ -20,14 +21,14 @@ threadYield_SOURCES         = threadYield.c
 threadExit_SOURCES          = threadExit.c
 threadCurrentTarget_SOURCES = threadCurrentTarget.c
 
-threadSpawn1_DEPENDENCIES          = $(LIBHPX_DEPS)
-threadSpawn2_DEPENDENCIES          = $(LIBHPX_DEPS)
-threadSpawn3_DEPENDENCIES          = $(LIBHPX_DEPS)
-threadSpawn4_DEPENDENCIES          = $(LIBHPX_DEPS)
-threadArgPassing_DEPENDENCIES      = $(LIBHPX_DEPS)
-threadContinue_DEPENDENCIES        = $(LIBHPX_DEPS)
-threadContCleanup_DEPENDENCIES     = $(LIBHPX_DEPS)
-threadSemaphores_DEPENDENCIES      = $(LIBHPX_DEPS)
-threadYield_DEPENDENCIES           = $(LIBHPX_DEPS)
-threadExit_DEPENDENCIES            = $(LIBHPX_DEPS)
-threadCurrentTarget_DEPENDENCIES   = $(LIBHPX_DEPS)
+threadSpawn1_DEPENDENCIES          = $(HPX_APPS_DEPS)
+threadSpawn2_DEPENDENCIES          = $(HPX_APPS_DEPS)
+threadSpawn3_DEPENDENCIES          = $(HPX_APPS_DEPS)
+threadSpawn4_DEPENDENCIES          = $(HPX_APPS_DEPS)
+threadArgPassing_DEPENDENCIES      = $(HPX_APPS_DEPS)
+threadContinue_DEPENDENCIES        = $(HPX_APPS_DEPS)
+threadContCleanup_DEPENDENCIES     = $(HPX_APPS_DEPS)
+threadSemaphores_DEPENDENCIES      = $(HPX_APPS_DEPS)
+threadYield_DEPENDENCIES           = $(HPX_APPS_DEPS)
+threadExit_DEPENDENCIES            = $(HPX_APPS_DEPS)
+threadCurrentTarget_DEPENDENCIES   = $(HPX_APPS_DEPS)

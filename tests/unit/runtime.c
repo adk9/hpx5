@@ -15,7 +15,7 @@
 #include "tests.h"
 
 static int _main_handler(void) {
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_handler);
@@ -28,13 +28,12 @@ int main(int argc, char *argv[]) {
   int e = hpx_run(&_main);
   printf("1 hpx_run returned %d.\n", e);
 
+  // remove the following block to call hpx_run() twice:
+  hpx_finalize();
   return 77;
 
-  if (hpx_init(&argc, &argv)) {
-    fprintf(stderr, "failed to initialize HPX.\n");
-    return 1;
-  }
   e = hpx_run(&_main);
   printf("2 hpx_run returned %d.\n", e);
+  hpx_finalize();
   return e;
 }

@@ -60,6 +60,11 @@ typedef bool (*hpx_predicate_t)(void *i, size_t bytes);
 /// @param rsync an LCO to signal remote completion
 void hpx_lco_delete(hpx_addr_t lco, hpx_addr_t rsync);
 
+/// Delete an LCO synchronously.
+///
+/// @param   lco the address of the LCO to delete
+void hpx_lco_delete_sync(hpx_addr_t lco);
+
 /// Delete a local array of LCOs.
 ///
 /// This interface does not permit the user to wait on individual delete
@@ -163,6 +168,9 @@ void hpx_lco_set_rsync(hpx_addr_t lco, int size, const void *value);
 /// @returns   HPX_SUCCESS or the code passed to hpx_lco_error()
 hpx_status_t hpx_lco_wait(hpx_addr_t lco);
 
+/// Performs a compound atomic wait-and-reset operation.
+hpx_status_t hpx_lco_wait_reset(hpx_addr_t lco);
+
 /// Perform a get operation.
 ///
 /// An LCO blocks the caller until it is set, and then copies its value
@@ -177,6 +185,22 @@ hpx_status_t hpx_lco_wait(hpx_addr_t lco);
 /// @param[out] out the output location (may be null)
 /// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
 hpx_status_t hpx_lco_get(hpx_addr_t lco, int size, void *value);
+
+/// Perform a get operation.
+///
+/// This version of get includes a compound atomic reset operation. An LCO
+/// blocks the caller until it is set, and then copies its value data into the
+/// provided buffer.
+///
+/// If the return status is not HPX_SUCCESS then the LCO was triggered by
+/// hpx_lco_error() rather than hpx_lco_set(), in such a case the memory pointed
+/// to by @p out will not be inspected.
+///
+/// @param      lco the LCO we're processing
+/// @param     size the size of the data
+/// @param[out] out the output location (may be null)
+/// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
+hpx_status_t hpx_lco_get_reset(hpx_addr_t lco, int size, void *value);
 
 /// Perform a "get" operation on an LCO but instead of copying the LCO
 /// buffer out, get a reference to the LCO's buffer.
@@ -478,16 +502,84 @@ hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_action_t id,
 /// Allocate a new all-reduction LCO.
 ///
 /// The reduction is allocated in reduce-mode, i.e., it expects @p participants
-/// to call the hpx_lco_set() operation as the first phase of operation.
+/// to call the hpx_lco_set() operation as the first phase of operation, and @p
+/// readers to "get" the value of the allreduce.
+///
+/// The preferred mode of operation with the allreduce, however, is through the
+/// hpx_lco_allreduce_join(), hpx_lco_allreduce_join_async(),
+/// hpx_lco_allreduce_join_sync(). In these contexts, the join operation is
+/// considered both a write and a read operation.
 ///
 /// @param participants The static number of participants in the reduction.
-/// @param readers      The static number of the readers of the result of the reduction.
-/// @param size         The size of the data being reduced.
-/// @param id           A function that is used to initialize the data
+/// @param      readers The static number of the readers of the result of the
+///                     reduction.
+/// @param         size The size of the data being reduced.
+/// @param           id A function that is used to initialize the data
 ///                     in every epoch.
-/// @param op           The commutative-associative operation we're performing.
+/// @param           op The commutative-associative operation we're performing.
+///
+/// @returns            The newly allocated LCO, or HPX_NULL on error.
 hpx_addr_t hpx_lco_allreduce_new(size_t participants, size_t readers, size_t size,
                                  hpx_action_t id, hpx_action_t op);
+
+/// Join an all-reduction LCO.
+///
+/// This version of the join operation allows an arbitrary continuation for the
+/// reduced data. This counts as both a set and a get operation, even if the
+/// continuation is null.
+///
+/// This interface is locally synchronous---it is safe to reuse or free @p value
+/// when it returns.
+///
+/// @param    allreduce The allreduce LCO to join.
+/// @param           id The id of this input.
+/// @param        bytes The number of bytes to send.
+/// @param        value The value to send.
+/// @param         cont A continuation action for the reduced value.
+/// @param           at A continuation target for the reduced value.
+///
+/// @return             The status of the LCO.
+hpx_status_t hpx_lco_allreduce_join(hpx_addr_t allreduce, int id, size_t bytes,
+                                    const void *value, hpx_action_t cont,
+                                    hpx_addr_t at);
+
+/// Join an all-reduction LCO.
+///
+/// This version of the join operation returns the reduced value asynchronously
+/// to the caller. This counts as both a set and a get operation.
+///
+/// This interface is locally synchronous---it is safe to reuse or free @p value
+/// when it returns.
+///
+/// @param    allreduce The allreduce LCO to join.
+/// @param           id The id of this input.
+/// @param        bytes The number of bytes to send.
+/// @param        value The value to send.
+/// @param          out The location to output the reduced value, must be at
+///                     least @p size bytes.
+/// @param         done An LCO that will be set when the operation completes.
+///
+/// @return             The status of the LCO.
+hpx_status_t hpx_lco_allreduce_join_async(hpx_addr_t allreduce, int id,
+                                          size_t bytes, const void *value,
+                                          void *out, hpx_addr_t done);
+
+/// Join an all-reduction LCO.
+///
+/// This version of the join operation returns the reduced value synchronously
+/// to the caller. This counts as both a set and a get operation.
+///
+/// @param    allreduce The allreduce LCO to join.
+/// @param           id The id of this input.
+/// @param        bytes The number of bytes to send.
+/// @param        value The value to send.
+/// @param          out The location to output the reduced value, must be at
+///                     least @p size bytes.
+///
+/// @return             The status of the LCO.
+hpx_status_t hpx_lco_allreduce_join_sync(hpx_addr_t allreduce, int id,
+                                         size_t bytes, const void *value,
+                                         void *out);
 
 /// Set an allgather.
 ///

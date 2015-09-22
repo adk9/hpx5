@@ -117,7 +117,7 @@ static int _main_action(uint64_t *args, size_t size) {
 
   free(lyst);
   free(lystbck);
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
 }
 
 int main (int argc, char *argv[])
@@ -161,7 +161,9 @@ int main (int argc, char *argv[])
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _parallelQuicksortHelper,
                       _parallelQuicksortHelper_action, HPX_POINTER, HPX_SIZE_T);
   // Run the main action
-  return hpx_run(&_main, &NUM, sizeof(NUM));
+  e = hpx_run(&_main, &NUM, sizeof(NUM));
+  hpx_finalize();
+  return e;
 }
 
 void quicksort(double lyst[], int size)

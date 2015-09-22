@@ -78,7 +78,7 @@ action_allreduce(void *unused, size_t size) {
   for (int i = 0; i < num_ranks; ++i)
     hpx_lco_delete(futures[i], HPX_NULL);
 
-  hpx_shutdown(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS);
   (void)my_rank;
 }
 
@@ -101,5 +101,7 @@ int main(int argc, char** argv) {
   // Initialize the values that we want to reduce
   value = HPX_LOCALITY_ID;
 
-  return hpx_run(&allreduce, NULL, 0);
+  int e = hpx_run(&allreduce, NULL, 0);
+  hpx_finalize();
+  return e;
 }

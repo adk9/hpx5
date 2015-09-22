@@ -2,20 +2,21 @@ noinst_HEADERS   = tests.h
 
 noinst_PROGRAMS  = $(TESTS)
 
-AM_CPPFLAGS      = $(LIBFFI_CFLAGS) -I$(top_srcdir)/include -Wno-unused $(LIBHPX_CFLAGS)
-AM_LDFLAGS       = $(LIBHPX_LDFLAGS) -no-install
-LDADD            = $(LIBHPX_LDADD)
+AM_CPPFLAGS      = $(HPX_APPS_CPPFLAGS) $(HPX_APPS_CFLAGS) -I$(top_srcdir)/include -Wno-unused
+AM_LDFLAGS       = $(HPX_APPS_LDFLAGS) -no-install
+LDADD            = $(HPX_APPS_LDADD)
 
 LOG_COMPILER = $(TESTS_CMD)
 
 TESTS = apex_test               \
+	    allreduce               \
         bcast                   \
         call_when               \
         gas_alloc               \
         gas_global_alloc        \
         gas_memget              \
         gas_memput              \
-        lco_get_remote          \
+		lco_get_remote          \
         lco_and                 \
         lco_array               \
         lco_collectives         \
@@ -45,67 +46,35 @@ if ENABLE_LENGTHY_TESTS
 TESTS           += lco_wait
 endif
 
-bcast_SOURCES                       =  bcast.c
-call_when_SOURCES                   =  call_when.c
-gas_alloc_SOURCES                   =  gas_alloc.c
-gas_global_alloc_SOURCES            =  gas_global_alloc.c
-gas_memget_SOURCES                  =  gas_memget.c
-gas_memput_SOURCES                  =  gas_memput.c
-lco_get_remote_SOURCES              =  lco_get_remote.c
-lco_and_SOURCES                     =  lco_and.c
-lco_array_SOURCES                   =  lco_array.c
-lco_collectives_SOURCES             =  lco_collectives.c
-lco_futures_SOURCES                 =  lco_futures.c
-lco_gencount_SOURCES                =  lco_gencount.c
-lco_sema_SOURCES                    =  lco_sema.c
-lco_setget_SOURCES                  =  lco_setget.c
-lco_user_SOURCES                    =  lco_user.c
-lco_wait_SOURCES                    =  lco_wait.c
-libhpx_boot_SOURCES                 =  libhpx_boot.c
-parcel_continuation_SOURCES         =  parcel_continuation.c
-parcel_create_SOURCES               =  parcel_create.c
-parcel_send_SOURCES                 =  parcel_send.c
-parcel_send_rendezvous_SOURCES      =  parcel_send_rendezvous.c
-parcel_send_through_SOURCES         =  parcel_send_through.c
-process_SOURCES                     =  process.c
-runtime_SOURCES                     =  runtime.c
-task_SOURCES                        =  task.c
-thread_cont_action_SOURCES          =  thread_cont_action.c
-thread_continue_SOURCES             =  thread_continue.c
-thread_create_SOURCES               =  thread_create.c
-thread_gettlsid_SOURCES             =  thread_gettlsid.c
-thread_set_affinity_SOURCES         =  thread_set_affinity.c
-thread_yield_SOURCES                =  thread_yield.c
-
-bcast_DEPENDENCIES                  = $(LIBHPX_DEPS)
-call_when_DEPENDENCIES              = $(LIBHPX_DEPS)
-gas_alloc_DEPENDENCIES              = $(LIBHPX_DEPS)
-gas_global_alloc_DEPENDENCIES       = $(LIBHPX_DEPS)
-gas_memget_DEPENDENCIES             = $(LIBHPX_DEPS)
-gas_memput_DEPENDENCIES             = $(LIBHPX_DEPS)
-lco_and_DEPENDENCIES                = $(LIBHPX_DEPS)
-lco_array_DEPENDENCIES              = $(LIBHPX_DEPS)
-lco_collectives_DEPENDENCIES        = $(LIBHPX_DEPS)
-lco_futures_DEPENDENCIES            = $(LIBHPX_DEPS)
-lco_gencount_DEPENDENCIES           = $(LIBHPX_DEPS)
-lco_get_remote_DEPENDENCIES         = $(LIBHPX_DEPS)
-lco_reduce_DEPENDENCIES             = $(LIBHPX_DEPS)
-lco_sema_DEPENDENCIES               = $(LIBHPX_DEPS)
-lco_setget_DEPENDENCIES             = $(LIBHPX_DEPS)
-lco_user_DEPENDENCIES               = $(LIBHPX_DEPS)
-lco_wait_DEPENDENCIES               = $(LIBHPX_DEPS)
-libhpx_boot_DEPENDENCIES            = $(LIBHPX_DEPS)
-parcel_continuation_DEPENDENCIES    = $(LIBHPX_DEPS)
-parcel_create_DEPENDENCIES          = $(LIBHPX_DEPS)
-parcel_send_DEPENDENCIES            = $(LIBHPX_DEPS)
-parcel_send_rendezvous_DEPENDENCIES = $(LIBHPX_DEPS)
-parcel_send_through_DEPENDENCIES    = $(LIBHPX_DEPS)
-process_DEPENDENCIES                = $(LIBHPX_DEPS)
-runtime_DEPENDENCIES                = $(LIBHPX_DEPS)
-task_DEPENDENCIES                   = $(LIBHPX_DEPS)
-thread_cont_action_DEPENDENCIES     = $(LIBHPX_DEPS)
-thread_continue_DEPENDENCIES        = $(LIBHPX_DEPS)
-thread_create_DEPENDENCIES          = $(LIBHPX_DEPS)
-thread_gettlsid_DEPENDENCIES        = $(LIBHPX_DEPS)
-thread_set_affinity_DEPENDENCIES    = $(LIBHPX_DEPS)
-thread_yield_DEPENDENCIES           = $(LIBHPX_DEPS)
+bcast_DEPENDENCIES                  = $(HPX_APPS_DEPS)
+call_when_DEPENDENCIES              = $(HPX_APPS_DEPS)
+gas_alloc_DEPENDENCIES              = $(HPX_APPS_DEPS)
+gas_global_alloc_DEPENDENCIES       = $(HPX_APPS_DEPS)
+gas_memget_DEPENDENCIES             = $(HPX_APPS_DEPS)
+gas_memput_DEPENDENCIES             = $(HPX_APPS_DEPS)
+lco_and_DEPENDENCIES                = $(HPX_APPS_DEPS)
+lco_array_DEPENDENCIES              = $(HPX_APPS_DEPS)
+lco_collectives_DEPENDENCIES        = $(HPX_APPS_DEPS)
+lco_futures_DEPENDENCIES            = $(HPX_APPS_DEPS)
+lco_gencount_DEPENDENCIES           = $(HPX_APPS_DEPS)
+lco_get_remote_DEPENDENCIES         = $(HPX_APPS_DEPS)
+lco_reduce_DEPENDENCIES             = $(HPX_APPS_DEPS)
+lco_sema_DEPENDENCIES               = $(HPX_APPS_DEPS)
+lco_setget_DEPENDENCIES             = $(HPX_APPS_DEPS)
+lco_user_DEPENDENCIES               = $(HPX_APPS_DEPS)
+lco_wait_DEPENDENCIES               = $(HPX_APPS_DEPS)
+libhpx_boot_DEPENDENCIES            = $(HPX_APPS_DEPS)
+parcel_continuation_DEPENDENCIES    = $(HPX_APPS_DEPS)
+parcel_create_DEPENDENCIES          = $(HPX_APPS_DEPS)
+parcel_send_DEPENDENCIES            = $(HPX_APPS_DEPS)
+parcel_send_rendezvous_DEPENDENCIES = $(HPX_APPS_DEPS)
+parcel_send_through_DEPENDENCIES    = $(HPX_APPS_DEPS)
+process_DEPENDENCIES                = $(HPX_APPS_DEPS)
+runtime_DEPENDENCIES                = $(HPX_APPS_DEPS)
+task_DEPENDENCIES                   = $(HPX_APPS_DEPS)
+thread_cont_action_DEPENDENCIES     = $(HPX_APPS_DEPS)
+thread_continue_DEPENDENCIES        = $(HPX_APPS_DEPS)
+thread_create_DEPENDENCIES          = $(HPX_APPS_DEPS)
+thread_gettlsid_DEPENDENCIES        = $(HPX_APPS_DEPS)
+thread_set_affinity_DEPENDENCIES    = $(HPX_APPS_DEPS)
+thread_yield_DEPENDENCIES           = $(HPX_APPS_DEPS)

@@ -26,14 +26,14 @@
 # include <apex.h>
 #endif
 
-#include <hpx/builtins.h>
-#include <libhpx/action.h>
-#include <libhpx/config.h>
-#include <libhpx/debug.h>
-#include <libhpx/libhpx.h>
-#include <libhpx/locality.h>
-#include <libhpx/memory.h>
-#include <libhpx/scheduler.h>
+#include "hpx/builtins.h"
+#include "libhpx/action.h"
+#include "libhpx/config.h"
+#include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
+#include "libhpx/memory.h"
+#include "libhpx/scheduler.h"
 #include "thread.h"
 
 static void _bind_self(worker_t *worker) {

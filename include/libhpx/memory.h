@@ -79,27 +79,7 @@ static inline void as_free(int id, void *ptr) {
 /// jemalloc is actually exposing.
 #define JEMALLOC_NO_DEMANGLE
 #include <jemalloc/jemalloc.h>
-
-/// A chunk allocator.
-///
-/// The chunk allocator parameterizes an address space, and provides jemalloc
-/// with the callbacks necessary to get more memory to manage. The default
-/// jemalloc allocator uses mmap (decorated to provide aligned allocations),
-/// munmap, and madvise for it's allocator.
-///
-/// In HPX, we want to do things like register the chunks or get them from a
-/// specific address range, or fragment up huge TLB pages, or all three. At
-/// initialization time the system will set an allocator for each address space
-/// that needs custom handling. *This must be done before system threads join
-/// the address space with as_join().*
-///
-/// @{
-typedef struct {
-  chunk_alloc_t *challoc;
-  chunk_dalloc_t *chfree;
-  chunk_purge_t *chpurge;
-} chunk_allocator_t;
-/// @}
+#undef JEMALLOC_NO_DEMANGLE
 
 /// Each thread "joins" the custom address space world by figuring out what
 /// flags to pass to jemalloc for each address space, and storing them in this
@@ -118,9 +98,9 @@ extern __thread int as_flags[AS_COUNT];
 /// allocations, e.g., without a custom allocator as_malloc(ID, n) forwards to
 /// malloc(n).
 ///
-/// @param              id The address space id to update.
-/// @param       allocator An allocator implementation.
-void as_set_allocator(int id, chunk_allocator_t *allocator);
+/// @param           id The address space id to update.
+/// @param        hooks An allocator implementation.
+void as_set_allocator(int id, const chunk_hooks_t *hooks);
 
 /// Call by each thread to join the memory system.
 ///
@@ -150,7 +130,23 @@ void *as_calloc(int id, size_t nmemb, size_t bytes);
 void *as_memalign(int id, size_t boundary, size_t size);
 void as_free(int id, void *ptr);
 
-#undef JEMALLOC_NO_DEMANGLE
+/// Generic null hooks for events that we don't generally handle.
+/// @{
+bool as_null_commit(void *chunk, size_t size, size_t offset, size_t length,
+                    unsigned arena_ind);
+
+bool as_null_decommit(void *chunk, size_t size, size_t offset, size_t length,
+                      unsigned arena_ind);
+
+bool as_null_purge(void *chunk, size_t size, size_t offset, size_t length,
+                   unsigned arena_ind);
+
+bool as_null_split(void *chunk, size_t size, size_t size_a, size_t size_b,
+                   bool committed, unsigned arena_ind);
+
+bool as_null_merge(void *chunk_a, size_t size_a, void *chunk_b, size_t size_b,
+                   bool committed, unsigned arena_ind);
+/// @}
 
 #elif defined(HAVE_TBBMALLOC)
 

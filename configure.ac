@@ -8,12 +8,17 @@
 # Research in Extreme Scale Technologies (CREST).
 
 AC_PREREQ([2.63])
-AC_INIT([hpx-5], [1.2.0], [hpx@indiana.edu])
+AC_INIT([hpx-5], [1.3.0], [hpx@indiana.edu])
+
+AC_SUBST(HPX_COPYRIGHT,["Copyright (c) 2013-2015, Trustees of Indiana University."])
+AC_COPYRIGHT([Copyright (c) 2013-2015, Trustees of Indiana University.])
+
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
 
 # Figure out what the version of HPX is.
 HPX_CONFIG_VERSION
+HPX_DO_CONFIG_SCRIPT
 
 AC_LANG([C])
 
@@ -27,7 +32,6 @@ AC_CONFIG_MACRO_DIR([config])
 AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
-AX_COMPILER_VENDOR
 
 # Checks for programs that we depend on. Our use of CXX is conditional, however
 # we have autotools errors if we don't include the AC_PROG_CXX
@@ -57,14 +61,22 @@ LT_INIT([disable-shared])
 # LIBHPX_CFLAGS: CFLAGS required to build libhpx.la
 # LIBHPX_CXXFLAGS: CXXFLAGS required to build libhpx.la
 # LIBHPX_LIBADD: .la dependencies required to build libhpx.la
-# LIBHPX_LDFLAGS: -L and -Wl flags needed to link libhpx.la
-# LIBHPX_LIBS: -l dependencies required to link libhpx.la
+# LIBHPX_LDFLAGS: -L and -Wl flags needed to link installed libhpx
+# LIBHPX_LIBS: -l dependencies required to link installed libhpx
+#
+# HPX_APPS_CPPFLAGS: CPPFLAGS required to link to build-tree libhpx.la
+# HPX_APPS_CFLAGS: CFLAGS required to link to build-tree libhpx.la
+# HPX_APPS_LDFLAGS: LDFLAGS required to link to build-tree libhpx.la
+# HPX_APPS_LDADD: .la libraries require to link build-tree libhpx.la
+# HPX_APPS_DEPS: .la library dependendencies for apps
 #
 # HPX_PC_CFLAGS: C and CPP flags (typically just -D) for installed libhps.so
 # HPX_PC_PUBLIC_LIBS: -L and -l flags required to link to installed libhpx.so
 # HPX_PC_REQUIRES_PKGS: packages required to link to installed libhpx.so
 # HPX_PC_PRIVATE_LIBS: -L and -l flags required to link to installed libhpx.a
 # HPX_PC_PRIVATE_PKGS: packages required to link to installed libhpx.a
+
+HPX_CONFIG_COMPILER
 HPX_CONFIG_HOST
 HPX_PE_ENV
 
@@ -120,6 +132,9 @@ AS_IF([test "x$enable_parallel_config" != xno],
 #   LIBHPX_LDFLAGS
 #   LIBHPX_LIBS
 #
+#   HPX_APPS_CPPFLAGS
+#   HPX_APPS_CFLAGS
+#
 #   HPX_PC_PUBLIC_LIBS
 #   HPX_PC_REQUIRES_PKGS
 #   HPX_PC_PRIVATE_LIBS
@@ -134,8 +149,7 @@ HPX_CONFIG_MPI([ompi])
 HPX_CONFIG_PMI([cray-pmi])
 HPX_CONFIG_JEMALLOC([contrib/jemalloc], ["jemalloc >= 4.0"]) 
 HPX_CONFIG_TBBMALLOC
-HPX_CONFIG_DLMALLOC([contrib/dlmalloc])
-#HPX_CONFIG_HWLOC([contrib/hwloc-1.11.0], [hwloc])
+HPX_CONFIG_HWLOC([contrib/hwloc-1.11.0], [hwloc])
 HPX_CONFIG_HUGETLBFS([hugetlbfs])
 HPX_CONFIG_UTHASH([contrib/uthash-fe01a6ad1b])
 HPX_CONFIG_VALGRIND([contrib/valgrind])
@@ -156,26 +170,22 @@ AS_IF([test "x$have_photon" == xyes -o "x$have_mpi" == xyes],
   [AC_DEFINE([HAVE_NETWORK], [1], [We have a high speed network available])
    have_network=yes])
 
-AS_IF([test "x$have_jemalloc" == xyes -o "x$have_tbbmalloc" == xyes -o "x$have_dlmalloc" == xyes],
+AS_IF([test "x$have_jemalloc" == xyes -o "x$have_tbbmalloc" == xyes],
   [AC_DEFINE([HAVE_ALLOCATOR], [1], [We have a GAS allocator available])
    have_allocator=yes])
 
 AS_IF([test "x$have_jemalloc" == xyes -a "x$have_tbbmalloc" == xyes],
   [AC_MSG_ERROR(jemalloc and tbbmalloc are mutually exclusive)])
 
-AS_IF([test "x$have_jemalloc" == xyes -a "x$have_dlmalloc" == xyes],
-  [AC_MSG_ERROR(jemalloc and dlmalloc are mutually exclusive)])
-
-AS_IF([test "x$have_dlmalloc" == xyes -a "x$have_tbbmalloc" == xyes],
-  [AC_MSG_ERROR(dlmalloc and tbbmalloc are mutually exclusive)])
-
 AS_IF([test "x$have_network" == xyes -a "x$have_allocator" != xyes],
-  [AC_MSG_ERROR(HPX requires jemalloc, tbbmalloc or dlmalloc for network operation)])
+  [AC_MSG_ERROR(HPX requires jemalloc, tbbmalloc for network operation)])
 
 # Make sure that static linking libhpx.a with $(CC) works when we have a C++
 # dependency.
 AS_IF([test "x$have_tbbmalloc" == xyes -o "x$have_libcuckoo" == xyes],
-  [HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lstdc++"])
+  [HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lstdc++"
+   LIBHPX_LIBS="$LIBHPX_LIBS -lstdc++"
+   HPX_APP_LIBS="$HPX_APP_LIBS -lstdc++"])
 
 # Configure all of the automake conditionals that our build requires.
 HPX_DO_AM_CONDITIONALS
@@ -206,13 +216,14 @@ AC_SUBST(HPX_PC_REQUIRES_PKGS)
 AC_SUBST(HPX_PC_PRIVATE_PKGS)
 
 # do substitution for the test and example makefiles
-LIBHPX_LDADD="\$(top_builddir)/libhpx/libhpx.la"
-LIBHPX_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la"
+HPX_APPS_LDADD="\$(top_builddir)/libhpx/libhpx.la"
+HPX_APPS_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la"
 
-# LIBFFI_CFLAGS is a special-case for the in-tree binaries
-AC_SUBST(LIBFFI_CFLAGS)
-AC_SUBST(LIBHPX_LDADD)
-AC_SUBST(LIBHPX_DEPS)
+AC_SUBST(HPX_APPS_CPPFLAGS)
+AC_SUBST(HPX_APPS_CFLAGS)
+AC_SUBST(HPX_APPS_LDFLAGS)
+AC_SUBST(HPX_APPS_LDADD)
+AC_SUBST(HPX_APPS_DEPS)
 
 HPX_DO_AC_CONFIG_FILES
 

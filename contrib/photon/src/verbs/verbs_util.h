@@ -4,6 +4,8 @@
 #include "verbs.h"
 #include "verbs_connect.h"
 
+PHOTON_INTERNAL int __verbs_adjust_ctx(verbs_cnct_ctx *ctx);
+PHOTON_INTERNAL int __verbs_handle_config(verbs_cnct_ctx *ctx, photonConfig cfg);
 PHOTON_INTERNAL int __verbs_post_srq_recv(verbs_cnct_ctx *ctx, uint64_t id, int proc, int num);
 PHOTON_INTERNAL int __verbs_post_rq_recv(verbs_cnct_ctx *ctx, uint64_t id, int proc, int num);
 PHOTON_INTERNAL int __verbs_sync_qpn(verbs_cnct_ctx *ctx);

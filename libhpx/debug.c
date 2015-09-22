@@ -26,11 +26,12 @@
 
 #include "libhpx/action.h"
 #include "libhpx/config.h"
+#include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
-#include "libhpx/debug.h"
+#include "libhpx/system.h"
 
-static char *_fetchHostname(char *hostname, int size) {
+static char *_get_hostname(char *hostname, int size) {
   gethostname(hostname, size);
   return hostname;
 }
@@ -40,7 +41,8 @@ static char *_fetchHostname(char *hostname, int size) {
 HPX_NO_OPTIMIZE void dbg_wait(void) {
   int i = 0;
   char hostname[256];
-  _fetchHostname(hostname, 255);
+  _get_hostname(hostname, 255);
+  system_print_trace(stdout);
   printf("PID %d on %s ready for attach\n", getpid(), hostname);
   fflush(stdout);
   while (0 == i)
@@ -113,17 +115,52 @@ static int _register_wait_on_sig(int signum) {
   return LIBHPX_OK;
 }
 
-int
-dbg_init(config_t *config) {
+int dbg_init(config_t *config) {
   int e = LIBHPX_OK;
-  if (config->dbg_waitonsegv) {
+  if (config_dbg_waitonsig_isset(config, HPX_WAITON_SIGSEGV)) {
     e = _register_wait_on_sig(SIGSEGV);
     if (e != LIBHPX_OK) {
       return e;
     }
   }
-  if (config->dbg_waitonabort) {
+  if (config_dbg_waitonsig_isset(config, HPX_WAITON_SIGABRT)) {
     e = _register_wait_on_sig(SIGABRT);
+    if (e != LIBHPX_OK) {
+      return e;
+    }
+  }
+  if (config_dbg_waitonsig_isset(config, HPX_WAITON_SIGFPE)) {
+    e = _register_wait_on_sig(SIGFPE);
+    if (e != LIBHPX_OK) {
+      return e;
+    }
+  }
+  if (config_dbg_waitonsig_isset(config, HPX_WAITON_SIGILL)) {
+    e = _register_wait_on_sig(SIGILL);
+    if (e != LIBHPX_OK) {
+      return e;
+    }
+  }
+  if (config_dbg_waitonsig_isset(config, HPX_WAITON_SIGBUS)) {
+    e = _register_wait_on_sig(SIGBUS);
+    if (e != LIBHPX_OK) {
+      return e;
+    }
+  }
+  if (config_dbg_waitonsig_isset(config, HPX_WAITON_SIGIOT)) {
+    e = _register_wait_on_sig(SIGIOT);
+    if (e != LIBHPX_OK) {
+      return e;
+    }
+  }
+  if (config_dbg_waitonsig_isset(config, HPX_WAITON_SIGSYS)) {
+    e = _register_wait_on_sig(SIGSYS);
+    if (e != LIBHPX_OK) {
+      return e;
+    }
+  }
+  if (config_dbg_waitonsig_isset(config, HPX_WAITON_SIGTRAP)) {
+    e = _register_wait_on_sig(SIGTRAP);
     if (e != LIBHPX_OK) {
       return e;
     }
