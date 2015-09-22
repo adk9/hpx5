@@ -16,7 +16,7 @@ AC_DEFUN([HPX_CONFIG_DLMALLOC], [
 
  AS_IF([test "x$enable_dlmalloc" != xno],
    [AC_DEFINE([HAVE_DLMALLOC], [1], [We have dlmalloc])
-    LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -DONLY_MSPACES -I\$(top_srcdir)/$contrib/"
+    LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -DONLY_MSPACES -DUSE_DL_PREFIX -I\$(top_srcdir)/$contrib/"
     LIBHPX_LIBADD="$LIBHPX_LIBADD \$(top_builddir)/$contrib/libmalloc-2.8.6.la"
     have_dlmalloc=yes])
 ])
