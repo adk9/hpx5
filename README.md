@@ -21,10 +21,9 @@ There are several pre-requisites to successfully configure and run HPX–5.
 * GNU M4 1.4.17      (Only required if building from the git version of HPX–5)
 * libtool 2.4.6      (Only required if building from the git version of HPX–5)
 * pkg-config         
-* MPI                (optional - Tested with 1.6.3, 1.6.5, 1.8.1, 1.8.4 
+* MPI                (optional - Tested with 1.6.3, 1.6.5, 1.8.1, 1.8.4, 1.10.0 
                                  MPICH 3.0.4, mvapich2/2.0b (Stampede))
 * doxygen            (optional; required to build the documentation)
-* dlmalloc           (embedded with HPX–5)
 * Photon             (embedded with HPX–5)
 * jemalloc           (embedded with HPX–5, If available, tbbmalloc may be used 
                       instead of jemalloc)
