@@ -11,10 +11,10 @@ AC_DEFUN([PHOTON_DO_AM_CONDITIONALS], [
  AM_CONDITIONAL([CPU_ARM], [test "x$host_cpu" = xarmv7l])
  AM_CONDITIONAL([CPU_AARCH64], [test "x$host_cpu" = xaarch64])
 
- AM_CONDITIONAL([GNU_PE_ENV], [test "x$hpx_pe_env" = xGNU])
- AM_CONDITIONAL([CRAY_PE_ENV], [test "x$hpx_pe_env" = xCRAY])
- AM_CONDITIONAL([PGI_PE_ENV], [test "x$hpx_pe_env" = xPGI])
- AM_CONDITIONAL([INTEL_PE_ENV], [test "x$hpx_pe_env" = xINTEL])
+ AM_CONDITIONAL([GNU_PE_ENV], [test "x$photon_pe_env" = xGNU])
+ AM_CONDITIONAL([CRAY_PE_ENV], [test "x$photon_pe_env" = xCRAY])
+ AM_CONDITIONAL([PGI_PE_ENV], [test "x$photon_pe_env" = xPGI])
+ AM_CONDITIONAL([INTEL_PE_ENV], [test "x$photon_pe_env" = xINTEL])
 
  AM_CONDITIONAL([BUILD_LIBFABRIC], [test "x$build_libfabric" == xyes])
  AM_CONDITIONAL([BUILD_FORWARDER], [test "x$build_forwarder" == xyes])

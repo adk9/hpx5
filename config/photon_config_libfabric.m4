@@ -23,7 +23,7 @@ AC_ARG_VAR([LIBFABRIC_CARGS], [Additional arguments passed to libfabric contrib]
 
 AC_DEFUN([_HAVE_LIBFABRIC], [
   AC_DEFINE([HAVE_LIBFABRIC], [1], [libfabric support available])
-  LIBHPX_LIBADD="$LIBHPX_LIBADD \$(top_builddir)/src/fi/libfi.la"
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/fi/libfi.la"
   have_libfabric=yes
 ])
 

@@ -20,7 +20,7 @@
 # ------------------------------------------------------------------------------
 AC_DEFUN([_HAVE_VERBS], [
   AC_DEFINE([HAVE_VERBS], [1], [VERBS support available])
-  LIBHPX_LIBADD="$LIBHPX_LIBADD \$(top_builddir)/src/verbs/libverbs.la"
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/verbs/libverbs.la"
   have_verbs=yes
 ])
 
