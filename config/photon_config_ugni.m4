@@ -20,7 +20,7 @@
 # ------------------------------------------------------------------------------
 AC_DEFUN([_HAVE_UGNI], [
   AC_DEFINE([HAVE_UGNI], [1], [UGNI support available])
-  LIBHPX_LIBADD="$LIBHPX_LIBADD \$(top_builddir)/src/ugni/libugni.la"
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/ugni/libugni.la"
   have_ugni=yes
 ])
 
