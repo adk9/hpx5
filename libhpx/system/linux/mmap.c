@@ -176,8 +176,8 @@ void *system_mmap_huge_pages(void *UNUSED, void *addr, size_t n, size_t align) {
 void system_munmap(void *UNUSED, void *addr, size_t size) {
   int e = munmap(addr, size);
   if (e < 0) {
-    dbg_error("munmap failed: %s.  addr is %"PRIuPTR", and size is %zu\n",
-          strerror(errno), (uintptr_t)addr, size);
+    dbg_error("munmap failed: %s.  addr is %p, and size is %zu\n",
+          strerror(errno), addr, size);
   }
   log_mem("munmapped %lu bytes for a total of %lu\n", size,
           _update_total(-size));
