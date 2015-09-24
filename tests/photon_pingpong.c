@@ -16,7 +16,7 @@
 #define PHOTON_TAG  13
 #define PING         0
 #define PONG         1
-#define ITERS    10000
+#define ITERS      100
 #define SIZE        32
 //****************************************************************************
 // Photon pingpong test

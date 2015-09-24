@@ -116,6 +116,7 @@ PHOTON_CONFIG_MPI([ompi])
 #PHOTON_CONFIG_FORWARDER([forwarder])
 
 # Add some known include paths
+LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS -I\$(top_srcdir)/include"
 LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS -I\$(top_srcdir)/src/util"
 LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS -I\$(top_srcdir)/src/libphoton"
 LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS -I\$(top_srcdir)/src/forwarder"
@@ -129,11 +130,6 @@ PHOTON_WITH_PKG([check],[check],[build with check unit tests],[no],[CHECK])
 AS_IF([test "x$enable_testsuite" != xno && test "x$with_check" != xno],
   [enable_tests=yes],
   [enable_tests=no])
-
-
-PHOTON_PC_LIBS_PRIVATE="$VERBS_LIBS $UGNI_LIBS"
-AS_IF([test "x$enable_shared" != xyes],
-  [PHOTON_PC_LIBS="$PHOTON_PC_LIBS_PRIVATE"])
 
 # Configure all of the automake conditionals that our build requires.
 PHOTON_DO_AM_CONDITIONALS
