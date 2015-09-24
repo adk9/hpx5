@@ -37,7 +37,7 @@ libphoton_la_SOURCES  = libphoton/libphoton.c                   \
                         libphoton/photon_rdma_INFO_ledger.c     \
                         libphoton/photon_rdma_EAGER_buf.c
 
-libphoton_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBPHOTON_CPPFLAGS)
+libphoton_la_CPPFLAGS = $(LIBPHOTON_CPPFLAGS)
 libphoton_la_CFLAGS   = $(LIBPHOTON_CFLAGS)                     \
 			-I$(top_srcdir)/src/verbs               \
 			-I$(top_srcdir)/src/ugni                \
