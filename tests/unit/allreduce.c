@@ -16,7 +16,7 @@
 #include "tests.h"
 
 static const int I = 32;
-static const int N = 64;
+static const int N = 16;
 
 /// Allreduce initialization operation for a summation.
 static void _init_handler(int *input, size_t UNUSED) {
@@ -143,8 +143,8 @@ static HPX_ACTION(HPX_DEFAULT, 0, _test_allreduce_join_sync,
                   _test_allreduce_join_sync_handler);
 
 TEST_MAIN({
-    ADD_TEST(_test_allreduce_set_get, 0);
-    ADD_TEST(_test_allreduce_join_async, 0);
-    ADD_TEST(_test_allreduce_join_sync, 0);
+    // ADD_TEST(_test_allreduce_set_get, 0);
+    // ADD_TEST(_test_allreduce_join_async, 0);
+    // ADD_TEST(_test_allreduce_join_sync, 0);
     ADD_TEST(_test_allreduce_join, 0);
   });
