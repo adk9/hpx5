@@ -78,7 +78,7 @@ boot_t *boot_new(libhpx_boot_t type) {
     dbg_error("failed to initialize the bootstrapper.\n");
   }
   else {
-    log("bootstrapped using %s.\n", boot->id());
+    log_dflt("bootstrapped using %s.\n", boot->id());
   }
 
   return boot;

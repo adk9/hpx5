@@ -178,7 +178,7 @@ void action_table_free(const _table_t *table) {
   type action_table_get_##name(const struct action_table *table,        \
                                hpx_action_t id) {                       \
     if (id == HPX_ACTION_INVALID) {                                     \
-      log("action registration is not complete");                       \
+      log_dflt("action registration is not complete");                  \
       return (type)init;                                                \
     } else if (id >= table->n) {                                        \
       dbg_error("action id, %d, out of bounds [0,%u)\n", id, table->n); \

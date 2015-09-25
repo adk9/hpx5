@@ -85,7 +85,7 @@ void log_internal(unsigned line, const char *filename, const char *func,
 # define log_level(level, ...)
 #endif
 
-#define log(...)        log_level(HPX_LOG_DEFAULT, __VA_ARGS__)
+#define log_dflt(...)   log_level(HPX_LOG_DEFAULT, __VA_ARGS__)
 #define log_cfg(...)    log_level(HPX_LOG_CONFIG, __VA_ARGS__)
 #define log_boot(...)   log_level(HPX_LOG_BOOT, __VA_ARGS__)
 #define log_sched(...)  log_level(HPX_LOG_SCHED, __VA_ARGS__)

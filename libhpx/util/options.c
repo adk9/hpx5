@@ -305,7 +305,7 @@ config_t *config_new(int *argc, char ***argv) {
   *cfg = _default_cfg;
 
   if (!argc || !argv) {
-    log("hpx_init(NULL, NULL) called, using default configuration\n");
+    log_dflt("hpx_init(NULL, NULL) called, using default configuration\n");
     return cfg;
   }
 
