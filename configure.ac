@@ -164,6 +164,7 @@ HPX_CONFIG_PAPI([papi], [$have_instrumentation])
 HPX_CONFIG_APEX([apex])
 HPX_CONFIG_TESTS
 HPX_CONFIG_TUTORIAL
+HPX_CONFIG_LIBHPX
 
 # Set and check some composite conditions to make sure the configuration makes
 # sense. 
@@ -187,13 +188,6 @@ AS_IF([test "x$have_dlmalloc" == xyes -a "x$have_tbbmalloc" == xyes],
 AS_IF([test "x$have_network" == xyes -a "x$have_allocator" != xyes],
   [AC_MSG_ERROR(HPX requires jemalloc, tbbmalloc or dlmalloc for network operation)])
 
-# Make sure that static linking libhpx.a with $(CC) works when we have a C++
-# dependency.
-AS_IF([test "x$have_tbbmalloc" == xyes -o "x$have_libcuckoo" == xyes],
-  [HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lstdc++"
-   LIBHPX_LIBS="$LIBHPX_LIBS -lstdc++"
-   HPX_APP_LIBS="$HPX_APP_LIBS -lstdc++"])
-
 # Configure all of the automake conditionals that our build requires.
 HPX_DO_AM_CONDITIONALS
 
@@ -206,25 +200,11 @@ AC_SUBST(LIBHPX_LDFLAGS)
 AC_SUBST(LIBHPX_LIBADD)
 AC_SUBST(LIBHPX_LIBS)
 
-# Special handling for libsync. Maybe we should make a libsync.pc?
-HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lsync"
-
-# Substitute the variables required for pkg-config linking of libhpx
-# externally. Note if we're only building libhpx.a then the --libs output must
-# contain all private dependencies as well.
-AS_IF([test "x$enable_shared" != xyes],
-  [HPX_PC_PUBLIC_LIBS="$HPX_PC_PUBLIC_LIBS $HPX_PC_PRIVATE_LIBS"
-   HPX_PC_REQUIRES_PKGS="$HPX_PC_REQUIRES_PKGS $HPX_PC_PRIVATE_PKGS"])
-
 AC_SUBST(HPX_PC_CFLAGS)
 AC_SUBST(HPX_PC_PUBLIC_LIBS)
 AC_SUBST(HPX_PC_PRIVATE_LIBS)
 AC_SUBST(HPX_PC_REQUIRES_PKGS)
 AC_SUBST(HPX_PC_PRIVATE_PKGS)
-
-# do substitution for the test and example makefiles
-HPX_APPS_LDADD="\$(top_builddir)/libhpx/libhpx.la"
-HPX_APPS_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la"
 
 AC_SUBST(HPX_APPS_CPPFLAGS)
 AC_SUBST(HPX_APPS_CFLAGS)
