@@ -62,11 +62,11 @@ static void *_create_mmap(size_t size, int file) {
     return NULL;
   }
   else {
-    log("mapped %zu byte trace file at %p.\n", size * sizeof(record_t), base);
+    log_dflt("mapped %zu byte trace file at %p.\n", size * sizeof(record_t), base);
   }
 
   if ((uintptr_t)base % HPX_CACHELINE_SIZE) {
-    log("log records are not cacheline aligned\n");
+    log_dflt("log records are not cacheline aligned\n");
   }
 
   return base;
@@ -140,7 +140,7 @@ void logtable_append(logtable_t *log, uint64_t u1, uint64_t u2, uint64_t u3,
     return;
   }
   sync_fadd(&log->last, 1, SYNC_ACQ_REL); // update size
- 
+
   record_t *r = &log->records[i];
   r->worker = hpx_get_my_thread_id();
   r->ns = hpx_time_to_ns(hpx_time_now());

@@ -59,7 +59,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _hpx_143_fix, _hpx_143_fix_handler);
 /// anything that should not persist between hpx_run() calls.
 static void _stop(locality_t *l) {
   if (!l)
-    return;  
+    return;
 
   if (l->sched) {
     scheduler_delete(l->sched);
@@ -79,7 +79,7 @@ static void _cleanup(locality_t *l) {
   if (!l)
     return;
 
-#ifdef HAVE_APEX 
+#ifdef HAVE_APEX
   // finalize APEX
   apex_finalize();
 #endif
@@ -185,7 +185,7 @@ int hpx_init(int *argc, char ***argv) {
 
   // Initialize our instrumentation.
   if (inst_init(here->config)) {
-    log("error detected while initializing instrumentation\n");
+    log_dflt("error detected while initializing instrumentation\n");
   }
 
   prof_init(here->config);
@@ -203,7 +203,7 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // On Cray platforms, we look at the ALPS depth environment variable
-  // to figure out how many cores to use 
+  // to figure out how many cores to use
   here->config->cores = libhpx_getenv_num("ALPS_APP_DEPTH", 0);
   if (!here->config->cores) {
     system_get_affinity_group_size(pthread_self(), &here->config->cores);
@@ -217,8 +217,8 @@ int hpx_init(int *argc, char ***argv) {
   if (!here->config->threads) {
     here->config->threads = here->config->cores;
   }
-  log("HPX running %d worker threads on %d cores\n", here->config->threads,
-      here->config->cores);
+  log_dflt("HPX running %d worker threads on %d cores\n", here->config->threads,
+           here->config->cores);
 
   return status;
  unwind1:
@@ -251,7 +251,7 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
     goto unwind0;
   }
 
-#ifdef HAVE_APEX 
+#ifdef HAVE_APEX
   // initialize APEX, give this main thread a name
   apex_init("HPX WORKER THREAD");
   apex_set_node_id(here->rank);

@@ -110,7 +110,7 @@ static int _register_wait_on_sig(int signum) {
     return LIBHPX_ERROR;
   }
   else {
-    log("registered _dbg_wait_on_sig for signal(%d)\n", signum);
+    log_dflt("registered _dbg_wait_on_sig for signal(%d)\n", signum);
   }
   return LIBHPX_OK;
 }
