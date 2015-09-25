@@ -170,7 +170,6 @@ int inst_init(config_t *cfg) {
   if (_log_path == NULL) {
     return LIBHPX_OK;
   }
-  printf("initialized %s for instrumentation\n", _log_path);
 
   // create log files
   hpx_time_t start = hpx_time_now();
@@ -237,6 +236,58 @@ void inst_fini(void) {
 }
 
 void inst_prof_dump(profile_log_t profile_log){
+  if(_log_path == NULL){
+    return;
+  }
+
+  char filename[256];
+  snprintf(filename, 256, "profile.%d", hpx_get_my_rank());
+  char *filepath = _get_complete_path(_log_path, filename);
+  FILE *f = fopen(filepath, "w");
+  if(f == NULL){
+    log_error("failed to open profiling output file %s\n", filepath);
+    free(filepath);
+    return;
+  }
+
+  double duration;
+  duration = hpx_time_diff_ms(profile_log.start_time, profile_log.end_time);
+  fprintf(f, "Duration of application: %.3f seconds \n", duration/1000);
+  for(int i = 0; i < profile_log.num_events; i++){
+    int64_t averages[profile_log.num_counters];
+    int64_t minimums[profile_log.num_counters];
+    int64_t maximums[profile_log.num_counters];
+    hpx_time_t average_t, min_t, max_t;
+    fprintf(f, "\nCode event %s:\n", profile_log.events[i].key);
+    fprintf(f, "Number of occurrences: %lu\n", profile_log.events[i].tally);
+    
+    fprintf(f, "Performance Statistics:\n");
+    fprintf(f, "%-24s%-24s%-24s%-24s\n", 
+           "Type", "Average", "Minimum", "Maximum");
+    if(profile_log.num_counters > 0){
+      prof_get_averages(averages, profile_log.events[i].key);
+      prof_get_minimums(minimums, profile_log.events[i].key);
+      prof_get_maximums(maximums, profile_log.events[i].key);
+      for(int j = 0; j < profile_log.num_counters; j++){
+        fprintf(f, "%-24s%-24lu%-24lu%-24lu\n", 
+                profile_log.counter_names[j],
+                averages[j], minimums[j], maximums[j]);
+      }
+    }
+    prof_get_average_time(profile_log.events[i].key, &average_t);
+    prof_get_min_time(profile_log.events[i].key, &min_t);
+    prof_get_max_time(profile_log.events[i].key, &max_t);
+
+    fprintf(f, "%-24s%-24.2f%-24.2f%-24.2f\n", "Time (ms)",
+            hpx_time_ms(average_t),
+            hpx_time_ms(min_t), hpx_time_ms(max_t));
+  }
+  int e = fclose(f);
+  if(e != 0){
+    log_error("failed to write profiling output to %s\n", filepath);
+  }
+
+  free(filepath);
 }
 
 void inst_vtrace(int UNUNSED, int n, int id, ...) {
