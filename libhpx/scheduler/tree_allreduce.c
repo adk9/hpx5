@@ -327,9 +327,13 @@ hpx_status_t hpx_lco_allreduce_join(hpx_addr_t lco, int id, size_t n,
 
 hpx_status_t hpx_lco_allreduce_join_sync(hpx_addr_t lco, int id, size_t n,
                                          const void *value, void *out) {
-  return HPX_ERROR;
+  hpx_addr_t future = hpx_lco_future_new(n);
+  dbg_assert(future);
+  hpx_lco_allreduce_join(lco, id, n, value, hpx_lco_set_action, future);
+  int e = hpx_lco_get(future, n, out);
+  hpx_lco_delete(future, HPX_NULL);
+  return e;
 }
-
 
 hpx_status_t hpx_lco_allreduce_join_async(hpx_addr_t lco, int id, size_t n,
                                           const void *value, void *out,
