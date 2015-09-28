@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <inttypes.h>
 #include <unistd.h> // for chdir
 #include <pwd.h>    //for username
 
@@ -259,7 +260,7 @@ void inst_prof_dump(profile_log_t profile_log){
     int64_t maximums[profile_log.num_counters];
     hpx_time_t average_t, min_t, max_t;
     fprintf(f, "\nCode event %s:\n", profile_log.events[i].key);
-    fprintf(f, "Number of occurrences: %lu\n", profile_log.events[i].tally);
+    fprintf(f, "Number of occurrences: %"PRId32"\n", profile_log.events[i].tally);
     
     fprintf(f, "Performance Statistics:\n");
     fprintf(f, "%-24s%-24s%-24s%-24s\n", 

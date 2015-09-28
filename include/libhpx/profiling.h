@@ -129,7 +129,7 @@ int prof_get_maximums(int64_t *values, char *key);
 
 /// Return the tally of event occurrences
 /// @param         key The key that identifies the code event
-int32_t prof_get_tally(char *key);
+int prof_get_tally(char *key);
 
 /// Return the average amount of time that a code event runs for
 /// @param         key The key that identifies the code event

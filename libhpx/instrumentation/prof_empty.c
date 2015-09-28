@@ -52,7 +52,7 @@ int prof_get_maximums(int64_t *values, char *key){
   return LIBHPX_OK;
 }
 
-int64_t prof_get_tally(char *key){
+int prof_get_tally(char *key){
   return LIBHPX_OK;
 }
 
