@@ -37,8 +37,8 @@ struct profile_entry {
   hpx_time_t         start_time;
   hpx_time_t           run_time;
   int64_t       *counter_totals;
-  int64_t            last_entry;
-  int64_t            last_event;
+  int32_t            last_entry;
+  int32_t            last_event;
   bool                   marked;
   bool                   paused;
   int                  eventset;
@@ -52,9 +52,9 @@ struct profile_entry {
 /// @field          *entries The actual entries
 /// @field            simple True if hardware counters don't apply
 typedef struct {
-  volatile int64_t            max_entries;
-  volatile int64_t            num_entries;
-  volatile int64_t                  tally;
+  volatile int32_t            max_entries;
+  volatile int32_t            num_entries;
+  volatile int32_t                  tally;
   char                              *key;
   volatile struct profile_entry *entries;
   volatile bool                   simple;
@@ -79,7 +79,7 @@ typedef struct {
   volatile int                 *counters;
   volatile const char    **counter_names;
   volatile profile_list_t        *events;
-  volatile int64_t          current_entry;
+  volatile int32_t         current_entry;
   volatile int             current_event;
 } profile_log_t;
 
@@ -129,7 +129,7 @@ int prof_get_maximums(int64_t *values, char *key);
 
 /// Return the tally of event occurrences
 /// @param         key The key that identifies the code event
-int64_t prof_get_tally(char *key);
+int32_t prof_get_tally(char *key);
 
 /// Return the average amount of time that a code event runs for
 /// @param         key The key that identifies the code event

@@ -123,7 +123,7 @@ static void _create_new_list(profile_list_t new_list,
   _profile_log.events[index].simple = simple;
 }
 
-static int64_t _create_new_entry(struct profile_entry new_entry,
+static int32_t _create_new_entry(struct profile_entry new_entry,
                              int event, bool simple){
   int eventset = PAPI_NULL;
   int retval = PAPI_create_eventset(&eventset);
@@ -143,7 +143,7 @@ static int64_t _create_new_entry(struct profile_entry new_entry,
     struct profile_entry *new_list = 
                                 malloc(_profile_log.events[event].max_entries *
                                        sizeof(struct profile_entry));
-    for(int64_t i = 0; i < _profile_log.events[event].num_entries; i++){
+    for(int32_t i = 0; i < _profile_log.events[event].num_entries; i++){
       new_list[i].start_time = _profile_log.events[event].entries[i].start_time;
       new_list[i].run_time = _profile_log.events[event].entries[i].run_time;
       new_list[i].counter_totals = _profile_log.events[event].entries[i].counter_totals;
@@ -155,7 +155,7 @@ static int64_t _create_new_entry(struct profile_entry new_entry,
     free((void *)_profile_log.events[event].entries);
     _profile_log.events[event].entries = new_list;
   }
-  int64_t index = _profile_log.events[event].num_entries;
+  int32_t index = _profile_log.events[event].num_entries;
   _profile_log.events[event].tally++;
   _profile_log.events[event].num_entries++;
   _profile_log.events[event].entries[index] = new_entry;
@@ -279,7 +279,7 @@ int prof_fini(){
   inst_prof_dump(_profile_log);
   for(int i = 0; i < _profile_log.num_events; i++){
     if(!_profile_log.events[i].simple){
-      for(int64_t j = 0; j < _profile_log.events[i].num_entries; j++){
+      for(int32_t j = 0; j < _profile_log.events[i].num_entries; j++){
         free(_profile_log.events[i].entries[j].counter_totals);
       }
     }
@@ -300,7 +300,7 @@ int prof_get_averages(int64_t *values, char *key){
   for(int i = 0; i < _profile_log.num_counters; i++){
     values[i] = 0;
     double divisor = 0;
-    for(int64_t j = 0; j < _profile_log.events[event].num_entries; j++){
+    for(int32_t j = 0; j < _profile_log.events[event].num_entries; j++){
       if(_profile_log.events[event].entries[j].marked &&
          _profile_log.events[event].entries[j].counter_totals[i] >= 0){
         values[i] += _profile_log.events[event].entries[j].counter_totals[i];
@@ -322,7 +322,7 @@ int prof_get_totals(int64_t *values, char *key){
 
   for(int i = 0; i < _profile_log.num_counters; i++){
     values[i] = 0;
-    for(int64_t j = 0; j < _profile_log.events[event].num_entries; j++){
+    for(int32_t j = 0; j < _profile_log.events[event].num_entries; j++){
       if(_profile_log.events[event].entries[j].marked &&
          _profile_log.events[event].entries[j].counter_totals[i] >= 0){
         values[i] += _profile_log.events[event].entries[j].counter_totals[i];
@@ -340,16 +340,16 @@ int prof_get_minimums(int64_t *values, char *key){
 
   for(int i = 0; i < _profile_log.num_counters; i++){
     values[i] = 0;
-    int64_t start = _profile_log.events[event].num_entries;
+    int32_t start = _profile_log.events[event].num_entries;
     int64_t temp;
-    for(int64_t j = 0; j < _profile_log.events[event].num_entries; j++){
+    for(int32_t j = 0; j < _profile_log.events[event].num_entries; j++){
       if(_profile_log.events[event].entries[i].marked){
         values[i] = _profile_log.events[event].entries[j].counter_totals[i];
         start = j + 1;
         break;
       }
     }
-    for(int64_t j = start; j < _profile_log.events[event].num_entries; j++){
+    for(int32_t j = start; j < _profile_log.events[event].num_entries; j++){
       if(_profile_log.events[event].entries[j].marked){
         temp = _profile_log.events[event].entries[j].counter_totals[i];
         if(temp < values[i] && temp >= 0){
@@ -369,16 +369,16 @@ int prof_get_maximums(int64_t *values, char *key){
 
   for(int i = 0; i < _profile_log.num_counters; i++){
     values[i] = 0;
-    int64_t start = _profile_log.events[event].num_entries;
+    int32_t start = _profile_log.events[event].num_entries;
     int64_t temp;
-    for(int64_t j = 0; j < _profile_log.events[event].num_entries; j++){
+    for(int32_t j = 0; j < _profile_log.events[event].num_entries; j++){
       if(_profile_log.events[event].entries[i].marked){
         values[i] = _profile_log.events[event].entries[j].counter_totals[i];
         start = j + 1;
         break;
       }
     }
-    for(int64_t j = start; j < _profile_log.events[event].num_entries; j++){
+    for(int32_t j = start; j < _profile_log.events[event].num_entries; j++){
       if(_profile_log.events[event].entries[j].marked){
         temp = _profile_log.events[event].entries[j].counter_totals[i];
         if(temp > values[i]){
@@ -390,7 +390,7 @@ int prof_get_maximums(int64_t *values, char *key){
   return PAPI_OK;
 }
 
-int64_t prof_get_tally(char *key){
+int32_t prof_get_tally(char *key){
   int event = _get_event_num(key);
   if(event == HPX_PROF_NO_RESULT){
     return 0;
@@ -406,7 +406,7 @@ void prof_get_average_time(char *key, hpx_time_t *avg){
 
   int64_t seconds, ns, average = 0;
   double divisor = 0;
-  for(int64_t i = 0; i < _profile_log.events[event].num_entries; i++){
+  for(int32_t i = 0; i < _profile_log.events[event].num_entries; i++){
     if(_profile_log.events[event].entries[i].marked){
       int64_t amount = hpx_time_diff_ns(TIME_NULL,
                                   _profile_log.events[event].entries[i].run_time);
@@ -431,7 +431,7 @@ void prof_get_total_time(char *key, hpx_time_t *tot){
   }
 
   int64_t seconds, ns, total = 0;
-  for(int64_t i = 0; i < _profile_log.events[event].num_entries; i++){
+  for(int32_t i = 0; i < _profile_log.events[event].num_entries; i++){
     if(_profile_log.events[event].entries[i].marked){
       total += hpx_time_diff_ns(TIME_NULL, 
                                 _profile_log.events[event].entries[i].run_time);
@@ -451,10 +451,10 @@ void prof_get_min_time(char *key, hpx_time_t *min){
 
   int64_t seconds, ns, temp;
   int64_t minimum = 0;
-  int64_t start = _profile_log.events[event].num_entries;
+  int32_t start = _profile_log.events[event].num_entries;
 
   if(_profile_log.events[event].num_entries > 0 ){
-    for(int64_t i = 0; i < _profile_log.events[event].num_entries; i++){
+    for(int32_t i = 0; i < _profile_log.events[event].num_entries; i++){
       if(_profile_log.events[event].entries[i].marked){
         minimum = hpx_time_diff_ns(TIME_NULL, 
                                    _profile_log.events[event].entries[0].run_time);
@@ -463,7 +463,7 @@ void prof_get_min_time(char *key, hpx_time_t *min){
       }
     }
   }
-  for(int64_t i = start; i < _profile_log.events[event].num_entries; i++){
+  for(int32_t i = start; i < _profile_log.events[event].num_entries; i++){
     if(_profile_log.events[event].entries[i].marked){
       temp = hpx_time_diff_ns(TIME_NULL,
                               _profile_log.events[event].entries[i].run_time);
@@ -492,10 +492,10 @@ void prof_get_max_time(char *key, hpx_time_t *max){
 
   int64_t seconds, ns, temp;
   int64_t maximum = 0;
-  int64_t start = _profile_log.events[event].num_entries;
+  int32_t start = _profile_log.events[event].num_entries;
 
   if(_profile_log.events[event].num_entries > 0 ){
-    for(int64_t i = 0; i < _profile_log.events[event].num_entries; i++){
+    for(int32_t i = 0; i < _profile_log.events[event].num_entries; i++){
       if(_profile_log.events[event].entries[i].marked){
         maximum = hpx_time_diff_ns(TIME_NULL,
                                    _profile_log.events[event].entries[0].run_time);
@@ -504,7 +504,7 @@ void prof_get_max_time(char *key, hpx_time_t *max){
       }
     }
   }
-  for(int64_t i = start; i < _profile_log.events[event].num_entries; i++){
+  for(int32_t i = start; i < _profile_log.events[event].num_entries; i++){
     if(_profile_log.events[event].entries[i].marked){
       temp = hpx_time_diff_ns(TIME_NULL,
                               _profile_log.events[event].entries[i].run_time);
@@ -574,7 +574,7 @@ void prof_start_timing(char *key, int *tag){
   }
 
   struct profile_entry entry;
-  int64_t index = _create_new_entry(entry, event, _profile_log.events[event].simple);
+  int32_t index = _create_new_entry(entry, event, _profile_log.events[event].simple);
   _profile_log.events[event].entries[index].last_entry = _profile_log.current_entry;
   _profile_log.events[event].entries[index].last_event = _profile_log.current_event;
   _profile_log.current_entry = index;
@@ -590,7 +590,7 @@ int prof_stop_timing(char *key, int *tag){
   }
 
   if(*tag == HPX_PROF_NO_TAG){
-    for(int64_t i = _profile_log.events[event].num_entries - 1; i >= 0; i--){
+    for(int32_t i = _profile_log.events[event].num_entries - 1; i >= 0; i--){
       if(!_profile_log.events[event].entries[i].marked){
         *tag = i;
         break;
@@ -670,7 +670,7 @@ int prof_start_hardware_counters(char *key, int *tag){
   }
 
   struct profile_entry entry;
-  int64_t index = _create_new_entry(entry, event, _profile_log.events[event].simple);
+  int32_t index = _create_new_entry(entry, event, _profile_log.events[event].simple);
   
   _profile_log.events[event].entries[index].last_entry = _profile_log.current_entry;
   _profile_log.events[event].entries[index].last_event = _profile_log.current_event;
@@ -726,7 +726,7 @@ int prof_pause(char *key, int *tag){
   }
 
   if(*tag == HPX_PROF_NO_TAG){
-    for(int64_t i = _profile_log.events[event].num_entries - 1; i >= 0; i--){
+    for(int32_t i = _profile_log.events[event].num_entries - 1; i >= 0; i--){
       if(!_profile_log.events[event].entries[i].marked && 
          !_profile_log.events[event].entries[i].paused){
         *tag = i;
@@ -778,7 +778,7 @@ int prof_resume(char *key, int *tag){
   }
 
   if(*tag == HPX_PROF_NO_TAG){
-    for(int64_t i = _profile_log.events[event].num_entries - 1; i >= 0; i--){
+    for(int32_t i = _profile_log.events[event].num_entries - 1; i >= 0; i--){
       if(!_profile_log.events[event].entries[i].marked && 
          _profile_log.events[event].entries[i].paused){
         *tag = i;
