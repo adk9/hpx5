@@ -170,16 +170,6 @@ static const char *const HPX_PROF_COUNTER_TO_STRING[] = {
   "all"
 };
 
-typedef enum {
-  HPX_PROF_EVENT_NONE = 0,
-  HPX_PROF_EVENT_MAX
-} libhpx_prof_event_t;
-
-static const char* const HPX_PROF_EVENT_TO_STRING[] = {
-  "HPX_PROF_EVENT_NONE",
-  "INVALID"
-};
-
 #define HPX_WAITON_NONE     (UINT64_C(0))
 #define HPX_WAITON_SIGSEGV  (UINT64_C(1) << 0)
 #define HPX_WAITON_SIGABRT  (UINT64_C(1) << 1)
