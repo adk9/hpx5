@@ -184,7 +184,7 @@ void prof_get_average_time(char *key, hpx_time_t *avg){
   }
   average /= _profile_log.events[event].num_entries;
   seconds = average / 1e9;
-  ns = average % (long)1e9;
+  ns = average % (int64_t)1e9;
 
   *avg = hpx_time_construct(seconds, ns);
 }
@@ -203,7 +203,7 @@ void prof_get_total_time(char *key, hpx_time_t *tot){
     }
   }
   seconds = total / 1e9;
-  ns = total % (long)1e9;
+  ns = total % (int64_t)1e9;
 
   *tot = hpx_time_construct(seconds, ns);
 }
@@ -239,7 +239,7 @@ void prof_get_min_time(char *key, hpx_time_t *min){
     }
   }
   seconds = minimum / 1e9;
-  ns = minimum % (long)1e9;
+  ns = minimum % (int64_t)1e9;
 
   *min = hpx_time_construct(seconds, ns);
 }
@@ -275,7 +275,7 @@ void prof_get_max_time(char *key, hpx_time_t *max){
     }
   }
   seconds = maximum / 1e9;
-  ns = maximum % (long)1e9;
+  ns = maximum % (int64_t)1e9;
 
   *max = hpx_time_construct(seconds, ns);
 }
