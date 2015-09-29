@@ -260,7 +260,7 @@ void inst_prof_dump(profile_log_t profile_log){
     int64_t maximums[profile_log.num_counters];
     hpx_time_t average_t, min_t, max_t;
     fprintf(f, "\nCode event %s:\n", profile_log.events[i].key);
-    fprintf(f, "Number of occurrences: %"PRId32"\n", profile_log.events[i].tally);
+    fprintf(f, "Number of occurrences: %d\n", profile_log.events[i].tally);
     
     fprintf(f, "Performance Statistics:\n");
     fprintf(f, "%-24s%-24s%-24s%-24s\n", 
@@ -270,7 +270,7 @@ void inst_prof_dump(profile_log_t profile_log){
       prof_get_minimums(minimums, profile_log.events[i].key);
       prof_get_maximums(maximums, profile_log.events[i].key);
       for(int j = 0; j < profile_log.num_counters; j++){
-        fprintf(f, "%-24s%-24lu%-24lu%-24lu\n", 
+        fprintf(f, "%-24s%-24ld%-24ld%-24ld\n", 
                 profile_log.counter_names[j],
                 averages[j], minimums[j], maximums[j]);
       }
@@ -279,7 +279,7 @@ void inst_prof_dump(profile_log_t profile_log){
     prof_get_min_time(profile_log.events[i].key, &min_t);
     prof_get_max_time(profile_log.events[i].key, &max_t);
 
-    fprintf(f, "%-24s%-24.2f%-24.2f%-24.2f\n", "Time (ms)",
+    fprintf(f, "%-24s%-24.3f%-24.3f%-24.3f\n", "Time (ms)",
             hpx_time_ms(average_t),
             hpx_time_ms(min_t), hpx_time_ms(max_t));
   }

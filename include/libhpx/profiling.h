@@ -37,8 +37,8 @@ struct profile_entry {
   hpx_time_t         start_time;
   hpx_time_t           run_time;
   int64_t       *counter_totals;
-  int32_t            last_entry;
-  int32_t            last_event;
+  int            last_entry;
+  int            last_event;
   bool                   marked;
   bool                   paused;
   int                  eventset;
@@ -52,9 +52,9 @@ struct profile_entry {
 /// @field          *entries The actual entries
 /// @field            simple True if hardware counters don't apply
 typedef struct {
-  volatile int32_t            max_entries;
-  volatile int32_t            num_entries;
-  volatile int32_t                  tally;
+  volatile int            max_entries;
+  volatile int            num_entries;
+  volatile int                  tally;
   char                              *key;
   volatile struct profile_entry *entries;
   volatile bool                   simple;
@@ -79,7 +79,7 @@ typedef struct {
   volatile int                 *counters;
   volatile const char    **counter_names;
   volatile profile_list_t        *events;
-  volatile int32_t         current_entry;
+  volatile int         current_entry;
   volatile int             current_event;
 } profile_log_t;
 
