@@ -11,7 +11,7 @@ libhpx_la_CFLAGS   = $(LIBHPX_CFLAGS)
 libhpx_la_CXXFLAGS = $(LIBHPX_CXXFLAGS)
 libhpx_la_SOURCES  = libhpx.c hpx.c call.c bcast.c par.c action.c debug.c version.c
 
-libhpx_la_LDFLAGS  = $(LIBHPX_LDFLAGS) -export-symbols libhpx.export
+libhpx_la_LDFLAGS  = $(LIBHPX_LDFLAGS)
 libhpx_la_LIBADD   = $(LIBHPX_LIBS) $(LIBHPX_LIBADD) \
                      $(top_builddir)/libsync/libsync.la \
                      boot/libboot.la \

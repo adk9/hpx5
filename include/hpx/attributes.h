@@ -34,6 +34,7 @@
 #define HPX_CONSTRUCTOR      HPX_ATTRIBUTE((constructor))
 #define HPX_DESTRUCTOR       HPX_ATTRIBUTE((destructor))
 #define HPX_PRINTF(f, s)     HPX_ATTRIBUTE((format (printf, f, s)))
+#define HPX_PUBLIC           HPX_ATTRIBUTE((visibility("default")))
 
 // Attribute `returns_nonnull' was valid as of gcc 4.9.
 #if (GCC_VERSION >= 40900)

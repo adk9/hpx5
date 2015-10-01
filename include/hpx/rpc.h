@@ -39,7 +39,7 @@
 /// @returns HPX_SUCCESS, or an error code if the action generated an error that
 ///          could not be handled remotely.
 int     _hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out, size_t olen,
-                       int nargs, ...);
+                       int nargs, ...) HPX_PUBLIC;
 #define hpx_call_sync(addr, action, out, olen, ...)                   \
   _hpx_call_sync(addr, action, out, olen, __HPX_NARGS(__VA_ARGS__) ,  \
                  ##__VA_ARGS__)
@@ -61,7 +61,7 @@ int     _hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out, size_t o
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
 int    _hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result,
-                 int nargs, ...);
+                 int nargs, ...) HPX_PUBLIC;
 #define hpx_call(addr, action, result, ...) \
   _hpx_call(addr, action, result, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
@@ -88,7 +88,7 @@ int    _hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result,
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
 int    _hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
-                      hpx_addr_t result, int nargs, ...);
+                      hpx_addr_t result, int nargs, ...) HPX_PUBLIC;
 #define hpx_call_when(gate, addr, action, result, ...)                  \
   _hpx_call_when(gate, addr, action, result, __HPX_NARGS(__VA_ARGS__) , \
                  ##__VA_ARGS__)
@@ -107,7 +107,8 @@ int    _hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 ///          the hpx_call invocation.
 int    _hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr,
                                         hpx_action_t action, hpx_addr_t c_target,
-                                        hpx_action_t c_action, int nargs, ...);
+                                        hpx_action_t c_action, int nargs, ...)
+  HPX_PUBLIC;
 #define hpx_call_when_with_continuation(gate, addr, action, c_target,   \
                                         c_action, ...)                  \
   _hpx_call_when_with_continuation(gate, addr, action, c_target,        \
@@ -133,7 +134,7 @@ int    _hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr,
 /// @returns HPX_SUCCESS, or an error code if the action generated an error that
 ///          could not be handled remotely.
 int    _hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
-                           void *out, size_t olen, int nargs, ...);
+                           void *out, size_t olen, int nargs, ...) HPX_PUBLIC;
 #define hpx_call_when_sync(gate, addr, action, out, olen, ...)          \
   _hpx_call_when_sync(gate, addr, action, out, olen,                    \
                       __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
@@ -155,7 +156,7 @@ int    _hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action
 ///          the hpx_call invocation.
 int    _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
                                    hpx_addr_t c_target, hpx_action_t c_action,
-                                   int nargs, ...);
+                                   int nargs, ...) HPX_PUBLIC;
 #define hpx_call_with_continuation(addr, action, c_target, c_action, ...) \
   _hpx_call_with_continuation(addr, action, c_target, c_action,           \
                               __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
@@ -181,7 +182,7 @@ int    _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call_async invocation.
 int    _hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t lsync,
-                       hpx_addr_t result, int nargs, ...);
+                       hpx_addr_t result, int nargs, ...) HPX_PUBLIC;
 #define hpx_call_async(addr, action, lsync, result, ...)                  \
   _hpx_call_async(addr, action, lsync, result, __HPX_NARGS(__VA_ARGS__) , \
                   ##__VA_ARGS__)
@@ -206,7 +207,7 @@ int    _hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t lsync,
 ///          the hpx_call_cc invocation.
 void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
                        void (*cleanup)(void*), void *env, int nargs, ...)
-  HPX_NORETURN;
+  HPX_NORETURN HPX_PUBLIC;
 
 #define hpx_call_when_cc(gate, addr, action, cleanup, env, ...) \
   _hpx_call_when_cc(gate, addr, action, cleanup, env,           \
@@ -235,7 +236,7 @@ void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 ///
 /// @returns      HPX_SUCCESS if no errors were encountered.
 int    _hpx_bcast(hpx_action_t action, hpx_addr_t lsync, hpx_addr_t rsync, int
-                  nargs, ...);
+                  nargs, ...) HPX_PUBLIC;
 #define hpx_bcast(action, lsync, rsync, ...)                            \
   _hpx_bcast(action, lsync, rsync, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
@@ -255,7 +256,8 @@ int    _hpx_bcast(hpx_action_t action, hpx_addr_t lsync, hpx_addr_t rsync, int
 /// @param          len The length of @p args.
 ///
 /// @returns      HPX_SUCCESS if no errors were encountered.
-int    _hpx_bcast_lsync(hpx_action_t action, hpx_addr_t rsync, int nargs, ...);
+int    _hpx_bcast_lsync(hpx_action_t action, hpx_addr_t rsync, int nargs, ...)
+  HPX_PUBLIC;
 #define hpx_bcast_lsync(action, rsync, ...)                          \
   _hpx_bcast_lsync(action, rsync, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
@@ -274,7 +276,7 @@ int    _hpx_bcast_lsync(hpx_action_t action, hpx_addr_t rsync, int nargs, ...);
 /// @param          len The length of @p args.
 ///
 /// @returns      HPX_SUCCESS if no errors were encountered.
-int    _hpx_bcast_rsync(hpx_action_t action, int nargs, ...);
+int    _hpx_bcast_rsync(hpx_action_t action, int nargs, ...) HPX_PUBLIC;
 #define hpx_bcast_rsync(action, ...)                                    \
   _hpx_bcast_rsync(action, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 

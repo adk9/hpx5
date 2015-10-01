@@ -31,26 +31,26 @@
 /// to spawn the current thread.
 ///
 /// @returns the global address of the thread's target
-hpx_addr_t hpx_thread_current_target(void);
+hpx_addr_t hpx_thread_current_target(void) HPX_PUBLIC;
 
 /// Get the action that the current thread is executing.
 /// @returns the action ID of the current thread
-hpx_action_t hpx_thread_current_action(void);
+hpx_action_t hpx_thread_current_action(void) HPX_PUBLIC;
 
 /// Get the address of the continuation for the current thread
 /// @returns the address of the current thread's continuation
-hpx_addr_t hpx_thread_current_cont_target(void);
+hpx_addr_t hpx_thread_current_cont_target(void) HPX_PUBLIC;
 
 /// Get the continuation action for the current thread
 /// @returns the continuation action for the current thread
-hpx_action_t hpx_thread_current_cont_action(void);
+hpx_action_t hpx_thread_current_cont_action(void) HPX_PUBLIC;
 
 /// Get the process identifier of the current thread
 /// @returns the PID for the current thread
-hpx_pid_t hpx_thread_current_pid(void);
+hpx_pid_t hpx_thread_current_pid(void) HPX_PUBLIC;
 
 /// Pause execution and gives other threads the opportunity to be scheduled
-void hpx_thread_yield(void);
+void hpx_thread_yield(void) HPX_PUBLIC;
 
 /// Generates a consecutive new ID for a thread.
 ///
@@ -60,7 +60,7 @@ void hpx_thread_yield(void);
 ///
 /// @returns < 0 if there is an error, otherwise a unique, compact id for the
 ///          calling thread
-int hpx_thread_get_tls_id(void);
+int hpx_thread_get_tls_id(void) HPX_PUBLIC;
 
 /// Check to see if the current thread has enough space for an alloca.
 ///
@@ -68,7 +68,7 @@ int hpx_thread_get_tls_id(void);
 ///
 /// @returns            The number of bytes remaining on the stack after the
 ///                     alloca.
-intptr_t hpx_thread_can_alloca(size_t bytes);
+intptr_t hpx_thread_can_alloca(size_t bytes) HPX_PUBLIC;
 
 /// Set a lightweight thread's affinity.
 ///
@@ -88,7 +88,7 @@ intptr_t hpx_thread_can_alloca(size_t bytes);
 ///
 /// @param thread_id the scheduler thread id we'd like to set the affinity to,
 ///                  must be in the range [0, hpx_get_num_threads()).
-void hpx_thread_set_affinity(int thread_id);
+void hpx_thread_set_affinity(int thread_id) HPX_PUBLIC;
 
 
 /// Finish the current thread's execution, sending @p value to the thread's
@@ -97,7 +97,7 @@ void hpx_thread_set_affinity(int thread_id);
 /// @param size the size of @p value
 /// @param value the value to be sent to the thread's continuation address
 void _hpx_thread_continue(int nargs, ...)
-  HPX_NORETURN;
+  HPX_NORETURN HPX_PUBLIC;
 
 #define hpx_thread_continue(...)                                        \
   _hpx_thread_continue(__HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
@@ -119,7 +119,7 @@ void _hpx_thread_continue(int nargs, ...)
 /// @param   value the value to be sent to the thread's continuation address
 void _hpx_thread_continue_cleanup(void (*cleanup)(void*), void *env,
                                   int nargs, ...)
-  HPX_NORETURN;
+  HPX_NORETURN HPX_PUBLIC;
 
 #define hpx_thread_continue_cleanup(cleanup, env, ...)                  \
   _hpx_thread_continue_cleanup(cleanup, env, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
@@ -145,7 +145,7 @@ void _hpx_thread_continue_cleanup(void (*cleanup)(void*), void *env,
 /// @param status a status to be returned to the function that created this
 ///        thread
 void hpx_thread_exit(int status)
-  HPX_NORETURN;
+  HPX_NORETURN HPX_PUBLIC;
 
 /// @}
 
