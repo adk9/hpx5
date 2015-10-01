@@ -68,6 +68,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <hpx/attributes.h>
 
 /*
   ====================================================================
@@ -293,7 +294,7 @@
   ====================================================================
 */
 
-void sync_fence(int);
+void sync_fence(int) HPX_PUBLIC;
 
 #endif
 

@@ -28,7 +28,7 @@ typedef uint64_t hpx_addr_t;
 
 /// An address representing this locality in general, that is suitable for use
 /// as a parcel target.
-extern hpx_addr_t HPX_HERE;
+extern hpx_addr_t HPX_HERE HPX_PUBLIC;
 
 /// An address representing some other locality, that is suitable for use as a
 /// parcel target.
@@ -36,7 +36,7 @@ extern hpx_addr_t HPX_HERE;
 /// @param         i A locality.
 ///
 /// @returns An address representing that locality.
-hpx_addr_t HPX_THERE(uint32_t i);
+hpx_addr_t HPX_THERE(uint32_t i) HPX_PUBLIC;
 
 /// Perform global address displacement arithmetic.
 ///
@@ -52,7 +52,8 @@ hpx_addr_t HPX_THERE(uint32_t i);
 /// @param    bsize The block size of the allocation associated with @p addr.
 ///
 /// @returns The address of the memory at offset @p bytes from @p addr.
-hpx_addr_t hpx_addr_add(hpx_addr_t addr, int64_t bytes, uint32_t bsize);
+hpx_addr_t hpx_addr_add(hpx_addr_t addr, int64_t bytes, uint32_t bsize)
+  HPX_PUBLIC;
 
 /// Perform global address distance arithmetic.
 ///
@@ -70,7 +71,8 @@ hpx_addr_t hpx_addr_add(hpx_addr_t addr, int64_t bytes, uint32_t bsize);
 ///          - positive if @p lhs > @p rhs
 ///          - 0 if @p lhs == @p rhs
 ///          - negative if @p lhs < @p rhs
-int64_t hpx_addr_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize);
+int64_t hpx_addr_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize)
+  HPX_PUBLIC;
 
 /// @}
 
