@@ -40,34 +40,34 @@ typedef struct chase_lev_ws_deque {
      .top = 1                                   \
     }
 
-chase_lev_ws_deque_t *sync_chase_lev_ws_deque_new(uint32_t capacity);
+chase_lev_ws_deque_t *sync_chase_lev_ws_deque_new(uint32_t capacity) HPX_PUBLIC;
 
 void sync_chase_lev_ws_deque_init(chase_lev_ws_deque_t *d, uint32_t capacity)
-  HPX_NON_NULL(1);
+  HPX_NON_NULL(1) HPX_PUBLIC;
 
 void sync_chase_lev_ws_deque_fini(chase_lev_ws_deque_t *d)
-  HPX_NON_NULL(1);
+  HPX_NON_NULL(1) HPX_PUBLIC;
 
-void sync_chase_lev_ws_deque_delete(chase_lev_ws_deque_t *d);
+void sync_chase_lev_ws_deque_delete(chase_lev_ws_deque_t *d) HPX_PUBLIC;
 
 /// Query the size of the deque.
 ///
 /// This is a good estimate of the size of the deque, as it will sync_load the
 /// bottom and the top. This will not update the top bound.
 uint64_t sync_chase_lev_ws_deque_size(chase_lev_ws_deque_t *d)
-  HPX_NON_NULL(1);
+  HPX_NON_NULL(1) HPX_PUBLIC;
 
 /// Pushes an item onto the deque.
 ///
 /// This will return the current estimate of the size of the deque for callers
 /// to use. This is only an approximate value.
 uint64_t sync_chase_lev_ws_deque_push(chase_lev_ws_deque_t *d, void *val)
-  HPX_NON_NULL(1);
+  HPX_NON_NULL(1) HPX_PUBLIC;
 
 void *sync_chase_lev_ws_deque_pop(chase_lev_ws_deque_t *d)
-  HPX_NON_NULL(1);
+  HPX_NON_NULL(1) HPX_PUBLIC;
 
 void *sync_chase_lev_ws_deque_steal(chase_lev_ws_deque_t *d)
-  HPX_NON_NULL(1);
+  HPX_NON_NULL(1) HPX_PUBLIC;
 
 #endif // LIBHPX_DEQUES_H

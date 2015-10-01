@@ -79,14 +79,14 @@ typedef struct {
 ///
 /// @returns SYNC_SPSCQ_OK for success otherwise returns ENOMEM.
 int sync_spscq_init(sync_spscq_t *q, uint32_t n)
-  HPX_NON_NULL(1);
+  HPX_NON_NULL(1) HPX_PUBLIC;
 
 
 /// Finalize a single-producer, single-consumer queue.
 ///
 /// @param           q The queue.
 void sync_spscq_fini(sync_spscq_t *q)
-  HPX_NON_NULL(1);
+  HPX_NON_NULL(1) HPX_PUBLIC;
 
 
 /// Try to enqueue a message.
@@ -96,7 +96,7 @@ void sync_spscq_fini(sync_spscq_t *q)
 ///
 /// @returns SYNC_SPSCQ_OK or SYNC_SPSCQ_FULL.
 int sync_spscq_try_enqueue(sync_spscq_t *q, void *data)
-  HPX_NON_NULL(1);
+  HPX_NON_NULL(1) HPX_PUBLIC;
 
 
 /// Enqueue a message.
@@ -109,7 +109,7 @@ int sync_spscq_try_enqueue(sync_spscq_t *q, void *data)
 ///
 /// @returns SYNC_SPSCQ_OK or ENOMEM.
 int sync_spscq_enqueue(sync_spscq_t *q, void *data)
-  HPX_NON_NULL(1);
+  HPX_NON_NULL(1) HPX_PUBLIC;
 
 
 /// Try to dequeue a message.
@@ -119,7 +119,7 @@ int sync_spscq_enqueue(sync_spscq_t *q, void *data)
 ///
 /// @returns SYNC_SPSCQ_OK or SYNC_SPSCQ_EMPTY.
 int sync_spscq_try_dequeue(sync_spscq_t *q, void **data)
-  HPX_NON_NULL(1, 2);
+  HPX_NON_NULL(1, 2) HPX_PUBLIC;
 
 static inline void *sync_spscq_dequeue(sync_spscq_t *q) {
   void *data = NULL;
