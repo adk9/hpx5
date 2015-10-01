@@ -93,7 +93,8 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
 /// @returns     HPX_SUCCESS or an error code
 int hpx_register_action(hpx_action_type_t type, uint32_t attr,
                         const char *key, hpx_action_t *id,
-                        hpx_action_handler_t f, unsigned int nargs, ...);
+                        hpx_action_handler_t f, unsigned int nargs, ...)
+  HPX_PUBLIC;
 
 /// Wraps the hpx_register_action() function to make it slightly
 /// more convenient to use.
@@ -109,7 +110,7 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr,
                       __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 /// Get the handler associated with a given action id.
-hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
+hpx_action_handler_t hpx_action_get_handler(hpx_action_t id) HPX_PUBLIC;
 
 /// Declare an action.
 ///

@@ -16,6 +16,7 @@
 
 #include <ffi.h>
 #include "hpx/builtins.h"
+#include "hpx/attributes.h"
 
 /// @file include/hpx/types.h
 
@@ -33,7 +34,7 @@ typedef short hpx_status_t;
 #define  HPX_ENOMEM          ((hpx_status_t)6)
 #define  HPX_USER            ((hpx_status_t)127)
 
-const char *hpx_strerror(hpx_status_t);
+const char *hpx_strerror(hpx_status_t) HPX_PUBLIC;
 
 /// @}
 
