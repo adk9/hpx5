@@ -84,9 +84,9 @@ struct hpx_options_t
   long hpx_stacksize_arg;	/**< @brief set HPX stack size.  */
   char * hpx_stacksize_orig;	/**< @brief set HPX stack size original value given at command line.  */
   const char *hpx_stacksize_help; /**< @brief set HPX stack size help description.  */
-  long hpx_wfthreshold_arg;	/**< @brief bound on help-first tasks before work-first scheduling.  */
-  char * hpx_wfthreshold_orig;	/**< @brief bound on help-first tasks before work-first scheduling original value given at command line.  */
-  const char *hpx_wfthreshold_help; /**< @brief bound on help-first tasks before work-first scheduling help description.  */
+  long hpx_sched_wfthreshold_arg;	/**< @brief bound on help-first tasks before work-first scheduling.  */
+  char * hpx_sched_wfthreshold_orig;	/**< @brief bound on help-first tasks before work-first scheduling original value given at command line.  */
+  const char *hpx_sched_wfthreshold_help; /**< @brief bound on help-first tasks before work-first scheduling help description.  */
   int hpx_sched_stackcachelimit_arg;	/**< @brief bound on the number of stacks to cache.  */
   char * hpx_sched_stackcachelimit_orig;	/**< @brief bound on the number of stacks to cache original value given at command line.  */
   const char *hpx_sched_stackcachelimit_help; /**< @brief bound on the number of stacks to cache help description.  */
@@ -209,7 +209,7 @@ struct hpx_options_t
   unsigned int hpx_cores_given ;	/**< @brief Whether hpx-cores was given.  */
   unsigned int hpx_threads_given ;	/**< @brief Whether hpx-threads was given.  */
   unsigned int hpx_stacksize_given ;	/**< @brief Whether hpx-stacksize was given.  */
-  unsigned int hpx_wfthreshold_given ;	/**< @brief Whether hpx-wfthreshold was given.  */
+  unsigned int hpx_sched_wfthreshold_given ;	/**< @brief Whether hpx-sched-wfthreshold was given.  */
   unsigned int hpx_sched_stackcachelimit_given ;	/**< @brief Whether hpx-sched-stackcachelimit was given.  */
   unsigned int hpx_log_at_given ;	/**< @brief Whether hpx-log-at was given.  */
   unsigned int hpx_log_level_given ;	/**< @brief Whether hpx-log-level was given.  */
