@@ -367,7 +367,7 @@ config_print(config_t *cfg, FILE *f) {
   fprintf(f, "  cores\t\t\t%d\n", cfg->cores);
   fprintf(f, "  threads\t\t%d\n", cfg->threads);
   fprintf(f, "  stacksize\t\t%u\n", cfg->stacksize);
-  fprintf(f, "  wfthreshold\t\t%u\n", cfg->wfthreshold);
+  fprintf(f, "  wfthreshold\t\t%u\n", cfg->sched_wfthreshold);
   fprintf(f, "  stackcachelimit\t%u\n", cfg->sched_stackcachelimit);
 
   fprintf(f, "\nLogging\n");
