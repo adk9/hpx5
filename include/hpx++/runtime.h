@@ -14,7 +14,9 @@
 #ifndef HPX_RUNTIME_PLUS_PLUS_H
 #define HPX_RUNTIME_PLUS_PLUS_H
 
-#include "hpx/runtime.h"
+extern "C" {
+  #include "hpx/runtime.h"
+}  
 
 namespace hpx {
   /// @defgroup system System

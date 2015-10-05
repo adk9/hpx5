@@ -24,25 +24,31 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "hpx/attributes.h"
-#include "hpx/types.h"
-#include "hpx/action.h"
+extern "C" {
+  #include "hpx/attributes.h"
+  #include "hpx/types.h"
+  #include "hpx/action.h"
+}
 
 // #include "hpx/addr.h"
 // #include "hpx/gas.h"
 
 #include "hpx++/global_ptr.h"
 
-#include "hpx/lco.h"
-#include "hpx/par.h"
-#include "hpx/parcel.h"
-#include "hpx/process.h"
-#include "hpx/rpc.h"
+extern "C" {
+  #include "hpx/lco.h"
+  #include "hpx/par.h"
+  #include "hpx/parcel.h"
+  #include "hpx/process.h"
+  #include "hpx/rpc.h"
+}
 
 #include "hpx++/runtime.h"
 
-#include "hpx/thread.h"
-#include "hpx/time.h"
-#include "hpx/topology.h"
+extern "C" {
+  #include "hpx/thread.h"
+  #include "hpx/time.h"
+  #include "hpx/topology.h"
+}
 
 #endif // HPX_PLUS_PLUS_H
