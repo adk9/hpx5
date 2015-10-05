@@ -4,9 +4,11 @@
 #include <memory>
 #include <exception>
 
-#include "hpx/addr.h"
-#include "hpx/gas.h"
-
+extern "C" {
+  #include "hpx/addr.h"
+  #include "hpx/gas.h"
+}
+  
 namespace hpx {
   
   struct non_local_addr_exception : public std::exception {
