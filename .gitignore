@@ -208,3 +208,9 @@ tutorial/Makefile
 tutorial/cpi/Makefile
 tutorial/cpi/cpi
 
+hpx++/Makefile
+hpx++/examples/Makefile
+hpx++/examples/guppie
+hpx++/tests/Makefile
+hpx++/tests/unit/Makefile
+include/hpx++/.kdev_include_paths
