@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #pragma once
 #ifndef HPX_SYNC_SYNC_H_
 #define HPX_SYNC_SYNC_H_
@@ -44,7 +45,13 @@
 #include "gcc/sync.h"
 #elif defined(_CRAYC)
 #include "craycc/sync.h"
+#elif GCC_VERSION >= 40100 && GCC_VERSION < 40201
+#include "gcc/sync.h"
 #else
+
+#if defined(__aarch64__)
+#error "sync.h is not supported for AARCH64"
+#endif
 
 #define SYNC_RELAXED 0
 #define SYNC_CONSUME 1
