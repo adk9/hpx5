@@ -4,7 +4,7 @@ examplesdir          = $(datarootdir)/doc/@PACKAGE@
 
 noinst_PROGRAMS         = fibonacci pingpong allreduce countdown seqspawn \
                           parspawn future memput memget guppie hello \
-                          qsort call netbench guppie_xx
+                          qsort call netbench
 
 fibonacci_SOURCES       = fibonacci.c
 pingpong_SOURCES        = pingpong.c
@@ -20,7 +20,6 @@ qsort_SOURCES           = qsort.c
 hello_SOURCES           = hello.c
 call_SOURCES            = call.c
 netbench_SOURCES        = netbench.c
-guppie_xx_SOURCES	= guppie_xx.cpp
 
 #AM_CXXFLAGS      		= -D_GNU_SOURCE $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include
 AM_CFLAGS               = $(HPX_APPS_CFLAGS) -Wno-unused
@@ -42,4 +41,3 @@ qsort_DEPENDENCIES           = $(HPX_APPS_DEPS)
 hello_DEPENDENCIES           = $(HPX_APPS_DEPS)
 call_DEPENDENCIES            = $(HPX_APPS_DEPS)
 netbench_DEPENDENCIES        = $(HPX_APPS_DEPS)
-guppie_xx_DEPENDENCIES	     = $(HPX_APPS_DEPS)
