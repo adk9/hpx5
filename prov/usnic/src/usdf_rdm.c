@@ -1137,7 +1137,7 @@ usdf_rdm_tx_progress(struct usdf_tx *tx)
 	}
 }
 
-static inline void
+static void inline
 usdf_rdm_recv_complete(struct usdf_rx *rx, struct usdf_rdm_connection *rdc,
 		struct usdf_rdm_qe *rqe)
 {

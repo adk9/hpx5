@@ -569,17 +569,11 @@ static int sock_ep_atomic_valid(struct fid_ep *ep, enum fi_datatype datatype,
 		    op == FI_BXOR || op == FI_MSWAP)
 			return -FI_ENOENT;
 		break;
-
+		
 	case FI_FLOAT_COMPLEX:
 	case FI_DOUBLE_COMPLEX:
 	case FI_LONG_DOUBLE_COMPLEX:
-		if (op == FI_BOR      || op == FI_BAND     ||
-		    op == FI_BXOR     || op == FI_MSWAP    ||
-		    op == FI_MIN      || op == FI_MAX      ||
-		    op == FI_CSWAP_LE || op == FI_CSWAP_LT ||
-		    op == FI_CSWAP_GE || op == FI_CSWAP_GT)
-			return -FI_ENOENT;
-        break;
+		return -FI_ENOENT;
 	default:
 		break;
 	}
