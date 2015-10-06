@@ -29,25 +29,20 @@
 use strict;
 use warnings;
 
-use File::Temp qw/ tempdir /;
 use File::Basename;
 use Getopt::Long;
 
-my $libfabric_dir_arg;
-my $fabtests_dir_arg;
+my $source_dir_arg;
 my $download_dir_arg;
-my $libfabric_coverity_token_arg;
-my $fabtests_coverity_token_arg;
+my $coverity_token_arg;
 my $logfile_dir_arg;
 my $help_arg;
 my $verbose_arg;
 my $debug_arg;
 
-my $ok = Getopt::Long::GetOptions("libfabric-source-dir=s" => \$libfabric_dir_arg,
-                                  "fabtests-source-dir=s" => \$fabtests_dir_arg,
+my $ok = Getopt::Long::GetOptions("source-dir=s" => \$source_dir_arg,
                                   "download-dir=s" => \$download_dir_arg,
-                                  "libfabric-coverity-token=s" => \$libfabric_coverity_token_arg,
-                                  "fabtests-coverity-token=s" => \$fabtests_coverity_token_arg,
+                                  "coverity-token=s" => \$coverity_token_arg,
                                   "logfile-dir=s" => \$logfile_dir_arg,
                                   "verbose" => \$verbose_arg,
                                   "debug" => \$debug_arg,
@@ -55,19 +50,18 @@ my $ok = Getopt::Long::GetOptions("libfabric-source-dir=s" => \$libfabric_dir_ar
                                   );
 
 if ($help_arg || !$ok) {
-    print "$0 --libfabric-source-dir libfabric_git_tree --fabtests-source-dir fabtests_git_tree --download-dir download_tree\n";
+    print "$0 --source-dir libfabric_git_tree --download-dir download_tree\n";
     exit(0);
 }
 
 # Sanity checks
-die "Must specify --libfabric-source-dir, --fabtests-source-dir, and --download-dir"
-    if (!defined($libfabric_dir_arg) || $libfabric_dir_arg eq "" ||
-        !defined($fabtests_dir_arg) || $fabtests_dir_arg eq "" ||
+die "Must specify both --source-dir and --download-dir"
+    if (!defined($source_dir_arg) || $source_dir_arg eq "" ||
         !defined($download_dir_arg) || $download_dir_arg eq "");
-die "$libfabric_dir_arg is not a valid directory"
-    if (! -d $libfabric_dir_arg);
-die "$libfabric_dir_arg is not libfabric git clone"
-    if (! -d "$libfabric_dir_arg/.git" || ! -f "$libfabric_dir_arg/src/fi_tostr.c");
+die "$source_dir_arg is not a valid directory"
+    if (! -d $source_dir_arg);
+die "$source_dir_arg is not libfabric git clone"
+    if (! -d "$source_dir_arg/.git" || ! -f "$source_dir_arg/src/fi_tostr.c");
 die "$download_dir_arg is not a valid directory"
     if (! -d $download_dir_arg);
 
@@ -96,7 +90,7 @@ sub doit {
         # If we die/fail, ensure to a) restore the git tree to a clean
         # state, and b) change out of the temp tree so that it can be
         # removed upon exit.
-        chdir($libfabric_dir_arg);
+        chdir($source_dir_arg);
         system("git clean -dfx");
         system("git reset --hard HEAD");
         chdir("/");
@@ -112,115 +106,106 @@ sub verbose {
         if ($verbose_arg);
 }
 
-sub git_cleanup {
-    verbose("*** Ensuring we have a clean git tree...\n");
+#####################################################################
 
-    doit(0, "git clean -dfx", "git-clean");
-    doit(0, "git reset --hard HEAD", "git-reset");
-    doit(0, "git pull", "git-pull");
-}
+# Git pull to get the latest; ensure we have a totally clean tree
+verbose("*** Ensuring we have a clean git tree...\n");
+chdir($source_dir_arg);
+doit(0, "git clean -dfx", "git-clean");
+doit(0, "git reset --hard HEAD", "git-reset");
+doit(0, "git pull", "git-pull");
 
-sub get_git_version {
-    # Get a git describe id (minus the initial 'v' in the tag name, if any)
-    my $version = `git describe --tags --always`;
-    chomp($version);
+# Get a git describe id (minus the initial 'v' in the tag name, if any)
+my $gd = `git describe --tags --always`;
+chomp($gd);
+$gd =~ s/^v//;
+verbose("*** Git describe: $gd\n");
 
-    verbose("*** Git describe: $version\n");
-    $version =~ s/^v//;
-    $version =~ y/-/./;
-    return $version;
-}
-
-sub make_tarball {
-    my $base_name = shift;
-    my $source_dir = shift;
-    my $version = shift;
-    my $installdir = shift;
-
-    my $configure_args = "CPPFLAGS=-I$installdir/include LDFLAGS=-L$installdir/lib";
-
-    # Read in configure.ac
-    verbose("*** Reading version number from configure.ac...\n");
-    open(IN, "configure.ac") || die "Can't open configure.ac for reading";
-    my $config;
-    $config .= $_
+# Read in configure.ac
+verbose("*** Reading version number from configure.ac...\n");
+open(IN, "configure.ac") || die "Can't open configure.ac for reading";
+my $config;
+$config .= $_
     while(<IN>);
-    close(IN);
+close(IN);
 
-    # Get the original version number
-    $config =~ m/AC_INIT\(\[\Q$base_name\E\], \[(.+?)\]/;
-    my $orig_version = $1;
-    verbose("*** Replacing configure.ac version: $orig_version\n");
-    verbose("*** Nightly tarball version: $version\n");
+# Get the original version number
+$config =~ m/AC_INIT\(\[libfabric\], \[(.+?)\]/;
+my $orig_version = $1;
+verbose("*** Replacing configure.ac version: $orig_version\n");
+my $version = $gd;
+$version =~ y/-/./;
+verbose("*** Nightly tarball version: $version\n");
 
-    # Update the version number with the output from "git describe"
-    verbose("*** Re-writing configure.ac with git describe results...\n");
-    $config =~ s/(AC_INIT\(\[\Q$base_name\E\], \[).+?\]/$1$version]/;
-    open(OUT, ">configure.ac");
-    print OUT $config;
-    close(OUT);
-
-    # Now make the tarball
-    verbose("*** Running autogen.sh...\n");
-    doit(0, "./autogen.sh", "autogen");
-    verbose("*** Running configure...\n");
-    doit(0, "./configure $configure_args --prefix=$installdir", "configure");
-    verbose("*** Running make install...\n");
-    doit(0, "make install", "make-install");
-
-    # Is there already a tarball of this version in the download
-    # directory?  If so, just exit now without doing anything.
-    if (-f "$download_dir_arg/$base_name-$version.tar.gz") {
-        verbose("*** Target tarball already exists: $base_name-$version.tar.gz\n");
-        return 0;
-    }
-
-    # Note that distscript.pl, invoked by "make dist", checks for a dirty
-    # git tree.  We have to tell it that a modified configure.ac is ok.
-    # Put the name "configure.ac" in a magic environment variable.
-    $ENV{'LIBFABRIC_DISTSCRIPT_DIRTY_FILES'} = "configure.ac";
-
-    verbose("*** Running make distcheck...\n");
-    doit(0, "AM_MAKEFLAGS=V=1 DISTCHECK_CONFIGURE_FLAGS=\"$configure_args\" make distcheck", "distcheck");
-
-    delete $ENV{'LIBFABRIC_DISTSCRIPT_DIRTY_FILES'};
-
-    # Restore configure.ac
-    verbose("*** Restoring configure.ac...\n");
-    doit(0, "git checkout configure.ac");
-
-    # Move the resulting tarballs to the downloads directory
-    verbose("*** Placing tarballs in download directory...\n");
-    doit(0, "mv $base_name-$version.tar.gz $base_name-$version.tar.bz2 $download_dir_arg");
-
-    # Make sym links to these newest tarballs
-    chdir($download_dir_arg);
-    unlink("$base_name-latest.tar.gz");
-    unlink("$base_name-latest.tar.bz2");
-    doit(0, "ln -s $base_name-$version.tar.gz $base_name-latest.tar.gz");
-    doit(0, "ln -s $base_name-$version.tar.bz2 $base_name-latest.tar.bz2");
-
-    return 1;
+# Is there already a tarball of this version in the download
+# directory?  If so, just exit now without doing anything.
+if (-f "$download_dir_arg/libfabric-$version.tar.gz") {
+    verbose("*** Target tarball already exists: libfabric-$version.tar.gz\n");
+    verbose("*** Exiting without doing anything\n");
+    exit(0);
 }
 
-sub submit_to_coverity {
-    my $project_name = shift;
-    my $version = shift;
-    my $configure_args = shift;
-    my $coverity_token = shift;
+# Update the version number with the output from "git describe"
+verbose("*** Re-writing configure.ac with git describe results...\n");
+$config =~ s/(AC_INIT\(\[libfabric\], \[).+?\]/$1$version]/;
+open(OUT, ">configure.ac");
+print OUT $config;
+close(OUT);
 
-    verbose("*** Preparing/submitting to Coverity...\n");
+# Now make the tarball
+verbose("*** Running autogen.sh...\n");
+doit(0, "./autogen.sh", "autogen");
+verbose("*** Running configure...\n");
+doit(0, "./configure", "configure");
+
+# Note that distscript.pl, invoked by "make dist", checks for a dirty
+# git tree.  We have to tell it that a modified configure.ac is ok.
+# Put the name "configure.ac" in a magic environment variable.
+$ENV{'LIBFABRIC_DISTSCRIPT_DIRTY_FILES'} = "configure.ac";
+
+verbose("*** Running make distcheck...\n");
+doit(0, "AM_MAKEFLAGS=-j32 make distcheck", "distcheck");
+
+delete $ENV{'LIBFABRIC_DISTSCRIPT_SHA1_configure.ac'};
+
+# Restore configure.ac
+verbose("*** Restoring configure.ac...\n");
+doit(0, "git checkout configure.ac");
+
+# Move the resulting tarballs to the downloads directory
+verbose("*** Placing tarballs in download directory...\n");
+doit(0, "mv libfabric-$version.tar.gz libfabric-$version.tar.bz2 $download_dir_arg");
+
+# Make sym links to these newest tarballs
+chdir($download_dir_arg);
+unlink("libfabric-latest.tar.gz");
+unlink("libfabric-latest.tar.bz2");
+doit(0, "ln -s libfabric-$version.tar.gz libfabric-latest.tar.gz");
+doit(0, "ln -s libfabric-$version.tar.bz2 libfabric-latest.tar.bz2");
+
+# Re-generate hashes
+verbose("*** Re-generating md5/sha1sums...\n");
+doit(0, "md5sum libfabric*tar* > md5sums.txt");
+doit(0, "sha1sum libfabric*tar* > sha1sums.txt");
+
+# Re-write latest.txt
+verbose("*** Re-creating latest.txt...\n");
+unlink("latest.txt");
+open(OUT, ">latest.txt") || die "Can't write to latest.txt";
+print OUT "libfabric-$version\n";
+close(OUT);
+
+# Run the coverity script if requested
+if (defined($coverity_token_arg)) {
+    verbose("*** Perparing/submitting to Coverity...\n");
 
     # The coverity script will be in the same directory as this script
     my $dir = dirname($0);
-    my $base_name = $project_name;
-    $base_name =~ s/^ofiwg(%2F|-)([a-z]+)$/$2/;
     my $cmd = "$dir/cron-submit-coverity.pl " .
-        "--filename $download_dir_arg/$base_name-$version.tar.bz2 " .
-        "--coverity-token $coverity_token " .
+        "--filename $download_dir_arg/libfabric-$version.tar.bz2 " .
+        "--coverity-token $coverity_token_arg " .
         "--make-args=-j8 " .
-        "--configure-args=\"$configure_args\" " .
-        "--project=$project_name ";
+        "--configure-args=\"--enable-sockets --enable-verbs --enable-psm --enable-usnic\" ";
 
     $cmd .= "--verbose "
         if ($verbose_arg);
@@ -231,54 +216,6 @@ sub submit_to_coverity {
 
     # Coverity script will do its own logging
     doit(0, $cmd);
-}
-
-#####################################################################
-
-# Create a temporary directory to install into
-my $installdir = tempdir(CLEANUP => 1);
-
-verbose("*** Building libfabric...\n");
-chdir($libfabric_dir_arg);
-git_cleanup();
-my $libfabric_version = get_git_version();
-my $rebuilt_libfabric = make_tarball("libfabric", $libfabric_dir_arg,
-    $libfabric_version, $installdir);
-
-verbose("\n\n*** Building fabtests...\n");
-chdir($fabtests_dir_arg);
-git_cleanup();
-my $fabtests_version = get_git_version();
-my $rebuilt_fabtests = make_tarball("fabtests", $fabtests_dir_arg,
-    $fabtests_version, $installdir);
-
-if ($rebuilt_libfabric || $rebuilt_fabtests) {
-    # Re-generate hashes
-    verbose("*** Re-generating md5/sha1sums...\n");
-    chdir($download_dir_arg);
-    doit(0, "md5sum libfabric*tar* fabtests*tar* > md5sums.txt");
-    doit(0, "sha1sum libfabric*tar* fabtests*tar* > sha1sums.txt");
-}
-
-if ($rebuilt_libfabric) {
-    # Re-write latest.txt
-    verbose("*** Re-creating latest.txt...\n");
-    unlink("latest.txt");
-    open(OUT, ">latest.txt") || die "Can't write to latest.txt";
-    print OUT "libfabric-$libfabric_version\n";
-    close(OUT);
-}
-
-# Run the coverity script if requested
-if (defined($libfabric_coverity_token_arg) && $rebuilt_libfabric) {
-    submit_to_coverity("ofiwg%2Flibfabric", $libfabric_version,
-            "--enable-sockets --enable-verbs --enable-psm --enable-usnic",
-            $libfabric_coverity_token_arg);
-}
-if (defined($fabtests_coverity_token_arg) && $rebuilt_fabtests) {
-    submit_to_coverity("ofiwg%2Ffabtests", $fabtests_version,
-            "CPPFLAGS=-I$installdir/include LDFLAGS=-L$installdir/lib",
-            $fabtests_coverity_token_arg);
 }
 
 # All done

@@ -891,7 +891,7 @@ usdf_msg_tx_progress(struct usdf_tx *tx)
 	}
 }
 
-static inline void
+static void inline
 usdf_msg_recv_complete_err(struct usdf_ep *ep, struct usdf_msg_qe *rqe,
 			int status)
 {
@@ -905,7 +905,7 @@ usdf_msg_recv_complete_err(struct usdf_ep *ep, struct usdf_msg_qe *rqe,
 	usdf_msg_put_rx_rqe(rx, rqe);
 }
 
-static inline void
+static void inline
 usdf_msg_recv_complete(struct usdf_ep *ep, struct usdf_msg_qe *rqe)
 {
 	struct usdf_cq_hard *hcq;

@@ -87,11 +87,7 @@ $logfile_dir =
     sprintf("%s/cron-run-all-md2nroff-logs-%04d-%02d-%02d-%02d%02d",
             $logfile_dir_arg, $year + 1900, $mon + 1, $mday,
             $hour, $min);
-my $rc = system("mkdir $logfile_dir");
-if ($rc != 0 || ! -d $logfile_dir || ! -w $logfile_dir) {
-    chdir("/");
-    die "mkdir of $logfile_dir failed, or can't write to it";
-}
+system("mkdir -p $logfile_dir");
 
 # First, git clone the source branch of the repo
 verbose("*** Cloning repo: $repo_arg / $source_branch_arg...\n");

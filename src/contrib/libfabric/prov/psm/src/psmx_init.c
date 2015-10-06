@@ -42,7 +42,6 @@ struct psmx_env psmx_env = {
 	.am_msg		= 0,
 	.tagged_rma	= 1,
 	.uuid		= PSMX_DEFAULT_UUID,
-	.delay		= 1,
 	.timeout	= PSMX_TIME_OUT,
 };
 
@@ -55,7 +54,6 @@ static void psmx_init_env(void)
 	fi_param_get_bool(&psmx_prov, "am_msg", &psmx_env.am_msg);
 	fi_param_get_bool(&psmx_prov, "tagged_rma", &psmx_env.tagged_rma);
 	fi_param_get_str(&psmx_prov, "uuid", &psmx_env.uuid);
-	fi_param_get_int(&psmx_prov, "delay", &psmx_env.delay);
 	fi_param_get_int(&psmx_prov, "timeout", &psmx_env.timeout);
 }
 
@@ -609,11 +607,7 @@ struct fi_provider psmx_prov = {
 	.cleanup = psmx_fini
 };
 
-#if (PSM_VERNO_MAJOR >= 2)
-PSM2_INI
-#else
 PSM_INI
-#endif
 {
 	int major, minor;
 	int err;
@@ -634,9 +628,6 @@ PSM_INI
 
 	fi_param_define(&psmx_prov, "uuid", FI_PARAM_STRING,
 			"Unique Job ID required by the fabric");
-
-	fi_param_define(&psmx_prov, "delay", FI_PARAM_INT,
-			"Delay (seconds) before finalization (for debugging)");
 
 	fi_param_define(&psmx_prov, "timeout", FI_PARAM_INT,
 			"Timeout (seconds) for gracefully closing the PSM endpoint");
