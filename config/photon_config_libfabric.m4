@@ -85,8 +85,8 @@ AC_DEFUN([PHOTON_CONFIG_LIBFABRIC], [
  # Allow the user to override the way we try and find libfabric.
  AC_ARG_ENABLE([libfabric],
    [AS_HELP_STRING([--enable-libfabric],
-                   [Enable the libfabric backend @<:@default=no@:>@])],
-   [], [enable_libfabric=no])
+                   [Enable the libfabric backend @<:@default=yes@:>@])],
+   [], [enable_libfabric=yes])
 
  AC_ARG_WITH(libfabric,
    [AS_HELP_STRING([--with-libfabric{=contrib,system,PKG}],

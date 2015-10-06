@@ -93,8 +93,8 @@ AC_DEFUN([PHOTON_CONFIG_VERBS], [
  # Select if we want to support verbs, and how to find it if we do.
  AC_ARG_ENABLE([verbs],
    [AS_HELP_STRING([--enable-verbs],
-                   [Enable VERBS support @<:@default=no@:>@])],
-   [], [enable_verbs=no])
+                   [Enable VERBS support @<:@default=yes@:>@])],
+   [], [enable_verbs=yes])
 
  AC_ARG_WITH(verbs,
    [AS_HELP_STRING([--with-verbs{=system,PKG}],
