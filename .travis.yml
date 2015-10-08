@@ -1,0 +1,6 @@
+sudo: false
+install: ./autogen.sh
+language: c
+compiler:
+    - clang
+    - gcc
