@@ -70,9 +70,6 @@ The verbs provider supports a subset of OFI features.
 *CQ*
 : cq_readfrom operations are not supported.
 
-*EQ*
-: fi_eq_write is not supported.
-
 *Memory Regions*
 : Adding regions via s/g list is not supported. Generic fi_mr_regattr is not
   supported. No support for binding memory regions to a counter.
