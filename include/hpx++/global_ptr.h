@@ -1,3 +1,16 @@
+// =============================================================================
+//  High Performance ParalleX Library (libhpx)
+//
+//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  All rights reserved.
+//
+//  This software may be modified and distributed under the terms of the BSD
+//  license.  See the COPYING file for details.
+//
+//  This software was created at the Indiana University Center for Research in
+//  Extreme Scale Technologies (CREST).
+// =============================================================================
+
 #ifndef GLOBAL_PTR_H
 #define GLOBAL_PTR_H
 
@@ -11,12 +24,15 @@ extern "C" {
   
 namespace hpx {
   
+  /// This is thrown if pin on global_ptr is unsuccessful
   struct non_local_addr_exception : public std::exception {
     virtual const char* what() const throw() {
       return "Pinning non local address not allowed";
     }
   };
   
+  /// An HPX global address ptr.
+  /// Basically wraps hpx_addr_t and provides address arithmetic and pin/unpin methods
   template <typename T, size_t B=sizeof(T)>
   class global_ptr {
     
