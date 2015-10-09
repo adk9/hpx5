@@ -214,3 +214,5 @@ hpx++/examples/guppie
 hpx++/tests/Makefile
 hpx++/tests/unit/Makefile
 include/hpx++/.kdev_include_paths
+hpx++/tests/unit/globalp
+
