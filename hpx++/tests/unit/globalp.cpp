@@ -18,6 +18,15 @@ hpx_status_t test_addr_arith() {
   return HPX_SUCCESS;
 }
 
+hpx_status_t test_pin_unpin() {
+  int n1 = 10;
+  auto ptr1 = hpx::gas::alloc_local<int>(n1);
+  int* local = ptr1.pin();
+  // ...
+  ptr1.unpin();
+  return HPX_SUCCESS;
+}
+
 int main(int argc, char* argv[]) {
   
   int e = hpx::init(&argc, &argv);

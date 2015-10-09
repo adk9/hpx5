@@ -42,15 +42,16 @@ namespace hpx {
     global_ptr() : _gbl_ptr(HPX_NULL), _n(0) {}
     global_ptr(hpx_addr_t addr, size_t n) : _gbl_ptr(addr), _n(n) {}
     
+    /// return raw hpx_addr_t
     inline
     hpx_addr_t ptr() const {
       return _gbl_ptr;
     }
     
-    // pin and unpin
+    /// pin and unpin
     T* pin() {
       T* ret = new T[_n];
-      bool success = hpx_gas_try_pin(_gbl_ptr, &ret);
+      bool success = hpx_gas_try_pin(_gbl_ptr, (void**)&ret);
       if (!success) {
 	// throw an exception?
 	throw non_local_addr_exception();
@@ -61,17 +62,11 @@ namespace hpx {
     
     inline
     void unpin() {
-      unpin(_gbl_ptr);
+      hpx_gas_unpin(_gbl_ptr);
     }
     
-    // casting stuff
-//     template <typename T, typename B2>
-//     global_ptr<T, B>&
-//     operator=(const global_ptr<T, B2>& rhs) {
-//       this->n = rhs.n;
-//       this->blk_sz = rhs.blk_sz;
-//       return *this;
-//     }
+    // TODO casting
+
   private:
     hpx_addr_t _gbl_ptr;
     size_t _n;
