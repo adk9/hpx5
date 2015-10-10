@@ -46,6 +46,23 @@ void hpx_process_delete(hpx_addr_t process, hpx_addr_t sync);
 
 hpx_pid_t hpx_process_getpid(hpx_addr_t process);
 
+/// Allocate a distributed allreduce.
+hpx_addr_t hpx_process_collective_allreduce_new(hpx_pid_t pid, size_t size,
+                                                int inputs, hpx_action_t op);
+
+void hpx_process_collective_allreduce_delete(hpx_pid_t pid,
+                                             hpx_addr_t collective);
+
+int hpx_process_collective_allreduce_join(hpx_pid_t pid, hpx_addr_t collective,
+                                          int id, size_t bytes, const void *in,
+                                          hpx_addr_t c_target,
+                                          hpx_action_t c_action);
+
+int hpx_process_collective_allreduce_join_sync(hpx_pid_t pid,
+                                               hpx_addr_t collective, int id,
+                                               size_t bytes_in, const void *in,
+                                               size_t bytes_out, void *out);
+
 /// @}
 
 #endif

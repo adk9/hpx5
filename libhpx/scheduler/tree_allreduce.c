@@ -26,7 +26,6 @@
 #include <libhpx/memory.h>
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
-#include "lco.h"
 
 #define K 7
 
@@ -58,18 +57,15 @@ typedef struct {
 
 _HPX_ASSERT(sizeof(_tree_node_t) == HPX_CACHELINE_SIZE, _tree_node_unexpected_size);
 
-/// The tree structure provides the LCO functions, as well as storing some
-/// global information about the tree including the reduction callbacks, the
-/// size of the value being reduced, the phase, and the array of nodes.
+/// The tree structure stores some global information about the tree including
+/// the reduction callback, the size of the value being reduced, and the array
+/// of nodes.
 typedef struct {
-  lco_t       lco;
-  hpx_action_t op;
   int           n;
   int           N;
   int           I;
-  PAD_TO_CACHELINE(sizeof(lco_t) +
-                   sizeof(hpx_action_t) * 2 +
-                   sizeof(int));
+  hpx_action_t op;
+  PAD_TO_CACHELINE(sizeof(int) * 3 + sizeof(hpx_action_t));
   _tree_node_t nodes[];
 } _tree_t;
 
@@ -192,30 +188,7 @@ static int _reduce(_tree_t *tree, _tree_node_t *node, int c, hpx_parcel_t *p) {
   return _reduce(tree, parent, d, node->parcels[0]);
 }
 
-static void _tree_fini(lco_t *lco) {
-  if (!lco) {
-    return;
-  }
-
-  lco_lock(lco);
-  lco_fini(lco);
-}
-
-static const lco_class_t _tree_vtable = {
-  .on_fini     = _tree_fini,
-  .on_error    = NULL,
-  .on_set      = NULL,
-  .on_attach   = NULL,
-  .on_get      = NULL,
-  .on_getref   = NULL,
-  .on_release  = NULL,
-  .on_wait     = NULL,
-  .on_reset    = NULL,
-  .on_size     = NULL
-};
-
 static int _tree_init_handler(_tree_t *tree, int n, int N, int I, hpx_action_t op) {
-  lco_init(&tree->lco, &_tree_vtable);
   tree->op = op;
   tree->n = n;
   tree->N = N;
@@ -249,14 +222,9 @@ static int _tree_init_handler(_tree_t *tree, int n, int N, int I, hpx_action_t o
   return HPX_SUCCESS;
 }
 
-hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
-                                 hpx_action_t id, hpx_action_t op) {
-  dbg_assert(inputs == outputs);
-  dbg_assert(!size || id);
-  dbg_assert(!size || op);
-
-  dbg_assert(inputs < UINT32_MAX/2);
-
+hpx_addr_t hpx_process_collective_allreduce_new(hpx_pid_t pid, size_t size,
+                                                int inputs, hpx_action_t op)
+{
   // How many leaves will I need?
   int L = ceil_div_32((int)inputs, K);
 
@@ -267,8 +235,8 @@ hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
   int N = L + I;
 
   size_t bytes = sizeof(_tree_t) + sizeof(_tree_node_t) * N;
-  hpx_addr_t gva = hpx_gas_calloc_local(1, bytes, 0);
-  LCO_LOG_NEW(gva);
+  dbg_assert(bytes < UINT32_MAX);
+  hpx_addr_t gva = hpx_gas_calloc_local(1, bytes, HPX_CACHELINE_SIZE);
 
   _tree_t *tree = NULL;
   if (!hpx_gas_try_pin(gva, (void**)&tree)) {
@@ -307,36 +275,37 @@ static int _join_handler(_tree_t *tree, _join_args_t *args, size_t n) {
 static HPX_ACTION(HPX_INTERRUPT, HPX_PINNED | HPX_MARSHALLED, _join,
                   _join_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
-hpx_status_t hpx_lco_allreduce_join(hpx_addr_t lco, int id, size_t n,
-                                    const void *value, hpx_action_t cont,
-                                    hpx_addr_t at) {
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(_join_args_t) + n);
+int hpx_process_collective_allreduce_join(hpx_pid_t pid, hpx_addr_t target,
+                                          int id, size_t bytes, const void *in,
+                                          hpx_addr_t c_target,
+                                          hpx_action_t c_action) {
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(_join_args_t) + bytes);
   dbg_assert(p);
-  p->target = lco;
+  p->target = target;
   p->action = _join;
-  p->c_target = at;
-  p->c_action = cont;
+  p->c_target = c_target;
+  p->c_action = c_action;
 
   _join_args_t *args = hpx_parcel_get_data(p);
   args->id = id;
-  memcpy(args->data, value, n);
+  memcpy(args->data, in, bytes);
 
   parcel_launch(p);
   return HPX_SUCCESS;
 }
 
-hpx_status_t hpx_lco_allreduce_join_sync(hpx_addr_t lco, int id, size_t n,
-                                         const void *value, void *out) {
-  hpx_addr_t future = hpx_lco_future_new(n);
+int hpx_process_collective_allreduce_join_sync(hpx_pid_t pid, hpx_addr_t target,
+                                               int id, size_t bytes_in,
+                                               const void *in, size_t bytes_out,
+                                               void *out) {
+  hpx_addr_t future = hpx_lco_future_new(bytes_out);
   dbg_assert(future);
-  hpx_lco_allreduce_join(lco, id, n, value, hpx_lco_set_action, future);
-  int e = hpx_lco_get(future, n, out);
+  hpx_process_collective_allreduce_join(pid, target, id, bytes_in, in,
+                                        hpx_lco_set_action, future);
+  int e = hpx_lco_get(future, bytes_out, out);
   hpx_lco_delete(future, HPX_NULL);
   return e;
 }
 
-hpx_status_t hpx_lco_allreduce_join_async(hpx_addr_t lco, int id, size_t n,
-                                          const void *value, void *out,
-                                          hpx_addr_t done) {
-  return HPX_ERROR;
+void hpx_process_collective_allreduce_delete(hpx_pid_t pid, hpx_addr_t target) {
 }
