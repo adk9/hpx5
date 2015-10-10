@@ -87,7 +87,6 @@ contrib/libcuckoo/
 
 # /libhpx/
 /libhpx/Makefile
-/libhpx/libhpx.export
 /libhpx/boot/Makefile
 /libhpx/gas/Makefile
 /libhpx/gas/agas/Makefile
@@ -105,7 +104,6 @@ contrib/libcuckoo/
 /libhpx/transport/Makefile
 /libhpx/util/Makefile
 /libsync/Makefile
-/libsync/libsync.export
 /libsync/arch/Makefile
 
 # /tests/

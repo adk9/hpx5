@@ -15,4 +15,3 @@ endif
 
 libsync_la_CPPFLAGS = -I$(top_srcdir)/include
 libsync_la_LIBADD   = arch/libarch.la
-libsync_la_LDFLAGS  = -export-symbols libsync.export

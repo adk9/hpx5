@@ -42,7 +42,6 @@ HPX_NO_OPTIMIZE void dbg_wait(void) {
   int i = 0;
   char hostname[256];
   _get_hostname(hostname, 255);
-  system_print_trace(stdout);
   printf("PID %d on %s ready for attach\n", getpid(), hostname);
   fflush(stdout);
   while (0 == i)

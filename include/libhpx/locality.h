@@ -83,7 +83,7 @@ extern HPX_ACTION_DECL(locality_shutdown);
 /// @}
 
 /// The global locality is exposed through this "here" pointer.
-extern locality_t *here;
+extern locality_t *here HPX_PUBLIC;
 
 #ifdef __cplusplus
 }
