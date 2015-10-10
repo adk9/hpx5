@@ -14,6 +14,8 @@
 #ifndef HPX_SYNC_BARRIERS_H_
 #define HPX_SYNC_BARRIERS_H_
 
+#include <hpx/attributes.h>
+
 /// ----------------------------------------------------------------------------
 /// The barrier class.
 ///
@@ -44,6 +46,6 @@ static inline int sync_barrier_join(barrier_t *barrier, int i) {
 /// This isn't the most scalable barrier in the world, but it's not terrible for
 /// occasional use, and it's really easy to implement and use.
 /// ----------------------------------------------------------------------------
-barrier_t *sr_barrier_new(int n_threads);
+barrier_t *sr_barrier_new(int n_threads) HPX_PUBLIC;
 
 #endif /* HPX_SYNC_BARRIERS_H_ */

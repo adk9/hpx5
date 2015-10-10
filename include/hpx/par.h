@@ -24,12 +24,11 @@
 typedef int (*hpx_for_action_t)(const int, const void*);
 
 
-int
-hpx_par_for(hpx_for_action_t f, const int min, const int max, const void *args,
-            hpx_addr_t sync);
+int hpx_par_for(hpx_for_action_t f, const int min, const int max,
+                const void *args, hpx_addr_t sync) HPX_PUBLIC;
 
-int
-hpx_par_for_sync(hpx_for_action_t f, const int min, const int max, const void *args);
+int hpx_par_for_sync(hpx_for_action_t f, const int min, const int max,
+                     const void *args) HPX_PUBLIC;
 
 
 /// Perform a parallel call.
@@ -66,7 +65,7 @@ int hpx_par_call(hpx_action_t action,
                 const size_t arg_size,
                 void (*arg_init)(void*, const int, const void*),
                 const size_t env_size, const void *env,
-                hpx_addr_t sync);
+                hpx_addr_t sync) HPX_PUBLIC;
 
 
 int hpx_par_call_sync(hpx_action_t action,
@@ -75,7 +74,7 @@ int hpx_par_call_sync(hpx_action_t action,
                      const size_t arg_size,
                      void (*arg_init)(void*, const int, const void*),
                      const size_t env_size,
-                     const void *env);
+                     const void *env) HPX_PUBLIC;
 
 int hpx_count_range_call(hpx_action_t action,
 			 const hpx_addr_t addr,
@@ -83,7 +82,7 @@ int hpx_count_range_call(hpx_action_t action,
 			 const size_t increment,
 			 const uint32_t bsize,
 			 const size_t arg_size,
-			 void *const arg);
+			 void *const arg) HPX_PUBLIC;
 
 /// @}
 

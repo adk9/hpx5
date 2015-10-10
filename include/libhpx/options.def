@@ -109,7 +109,7 @@ LIBHPX_OPT_SCALAR(, network, HPX_NETWORK_DEFAULT, libhpx_network_t)
 LIBHPX_OPT_SCALAR(, cores, 0, int)
 LIBHPX_OPT_SCALAR(, threads, 0, int)
 LIBHPX_OPT_SCALAR(, stacksize, 32768, unsigned)
-LIBHPX_OPT_SCALAR(, wfthreshold, 256, uint32_t)
+LIBHPX_OPT_SCALAR(sched_, wfthreshold, 256, uint32_t)
 LIBHPX_OPT_SCALAR(sched_, stackcachelimit, 32, int32_t)
 /// @}
 
@@ -143,8 +143,6 @@ LIBHPX_OPT_BITSET(trace_, classes, LIBHPX_OPT_BITSET_NONE)
 /// Profiling options
 /// @{
 LIBHPX_OPT_BITSET(prof_, counters, LIBHPX_OPT_BITSET_NONE)
-LIBHPX_OPT_SCALAR(prof_, event, HPX_PROF_EVENT_NONE, libhpx_prof_event_t)
-LIBHPX_OPT_STRING(prof_, action, NULL)
 /// @}
 
 /// PWC options
