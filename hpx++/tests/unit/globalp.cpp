@@ -5,11 +5,11 @@ using namespace std;
 
 hpx_status_t test_addr_arith() {
   int n1 = 10, n2 = 20;
-  hpx::global_ptr<uint64_t, sizeof(uint64_t)> ptr1 = hpx::gas::alloc_cyclic<uint64_t, sizeof(uint64_t)>(n1);
+  hpx::global_ptr<uint64_t> ptr1 = hpx::gas::alloc_cyclic<uint64_t>(n1);
   
   // TODO populate ptr1 and dereference at some index and check the value
   
-  auto ptr2 = hpx::gas::alloc_cyclic<uint64_t>(n2);
+  auto ptr2 = hpx::gas::alloc_cyclic<uint64_t>(n2,2);
   
   auto dist = ptr2 - ptr1;
   // is dist guaranteed to be > 0?
