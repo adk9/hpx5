@@ -34,6 +34,7 @@ void prof_init(struct config *cfg){
 }
 
 int prof_fini(){
+  return LIBHPX_OK;
 }
 
 int prof_get_averages(int64_t *values, char *key){
@@ -83,6 +84,7 @@ void prof_start_timing(char *key, int *tag){
 }
 
 int prof_stop_timing(char *key, int *tag){
+  return LIBHPX_OK;
 }
 
 int prof_start_hardware_counters(char *key, int *tag){
