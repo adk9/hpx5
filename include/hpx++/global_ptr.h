@@ -78,9 +78,10 @@ namespace hpx {
     
     // TODO casting
 
-    // TODO subscript operator
-//     operator[](size_t index) {
-//     }
+    inline
+    global_ptr<T> operator[](size_t index) const {
+      return *(this) + index;
+    }
   private:
     hpx_addr_t _gbl_ptr;
     size_t _blk_size;
