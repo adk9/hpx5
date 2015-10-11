@@ -15,6 +15,8 @@ hpx_status_t test_addr_arith() {
   // is dist guaranteed to be > 0?
   cout << "dist: " << dist << endl;
   
+  auto ptr4 = ptr1[4];
+  
   return HPX_SUCCESS;
 }
 
