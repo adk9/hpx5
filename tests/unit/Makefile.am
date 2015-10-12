@@ -17,6 +17,7 @@ TESTS = apex_test               \
         gas_memget              \
         gas_memput              \
 		lco_get_remote          \
+        lco_allreduce           \
         lco_and                 \
         lco_array               \
         lco_collectives         \
@@ -53,6 +54,7 @@ gas_alloc_DEPENDENCIES              = $(HPX_APPS_DEPS)
 gas_global_alloc_DEPENDENCIES       = $(HPX_APPS_DEPS)
 gas_memget_DEPENDENCIES             = $(HPX_APPS_DEPS)
 gas_memput_DEPENDENCIES             = $(HPX_APPS_DEPS)
+lco_allreduce_DEPENDENCIES          = $(HPX_APPS_DEPS)
 lco_and_DEPENDENCIES                = $(HPX_APPS_DEPS)
 lco_array_DEPENDENCIES              = $(HPX_APPS_DEPS)
 lco_collectives_DEPENDENCIES        = $(HPX_APPS_DEPS)
