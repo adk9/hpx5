@@ -211,74 +211,23 @@ void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 
 #define hpx_call_when_cc(gate, addr, action, cleanup, env, ...) \
   _hpx_call_when_cc(gate, addr, action, cleanup, env,           \
-                    __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+                    __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
 #define hpx_call_cc(addr, action, cleanup, env, ...)            \
   _hpx_call_when_cc(HPX_NULL, addr, action, cleanup, env,       \
-                    __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+                    __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
-
-/// HPX collective operations.
-///
-/// This is a parallel call interface that performs an @p action on @p args at
-/// all available localities. The output values are not returned, but the
-/// completion of the broadcast operation can be tracked through the @p lco LCO.
-///
-/// @param       action The action to perform.
-/// @param        lsync The address of an LCO to trigger when the broadcast
-///                       operation is complete locally, and the buffer can be
-///                       reused or released.
-/// @param        rsync The address of an LCO to trigger when the broadcast
-///                       operation is complete globally, i.e., when all of the
-///                       broadcast handlers have run.
-/// @param         args The argument data for @p action.
-/// @param          len The length of @p args.
-///
-/// @returns      HPX_SUCCESS if no errors were encountered.
-int    _hpx_bcast(hpx_action_t action, hpx_addr_t lsync, hpx_addr_t rsync, int
-                  nargs, ...) HPX_PUBLIC;
 #define hpx_bcast(action, lsync, rsync, ...)                            \
-  _hpx_bcast(action, lsync, rsync, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+  _hpx_process_broadcast(hpx_thread_current_pid(), action, lsync, rsync, \
+                         __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
-/// HPX collective operations.
-///
-/// This is a parallel call interface that performs an @p action on @p args at
-/// all available localities. The output values are not returned.
-///
-/// This variant of bcast is locally synchronous. It will not return to the
-/// caller until it is safe to reuse or delete the @p args buffer.
-///
-/// @param       action The action to perform.
-/// @param        rsync The address of an LCO to trigger when the broadcast
-///                       operation is complete globally, i.e., when all of the
-///                       broadcast handlers have run.
-/// @param         args The argument data for @p action.
-/// @param          len The length of @p args.
-///
-/// @returns      HPX_SUCCESS if no errors were encountered.
-int    _hpx_bcast_lsync(hpx_action_t action, hpx_addr_t rsync, int nargs, ...)
-  HPX_PUBLIC;
-#define hpx_bcast_lsync(action, rsync, ...)                          \
-  _hpx_bcast_lsync(action, rsync, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+#define hpx_bcast_lsync(action, rsync, ...)                             \
+  _hpx_process_broadcast_lsync(hpx_thread_current_pid(), action, rsync, \
+                               __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
-
-/// HPX collective operations.
-///
-/// This is a parallel call interface that performs an @p action on @p args at
-/// all available localities. The output values are not returned.
-///
-/// This variant of bcast is synchronous. It will not return to the caller until
-/// specified action has run at every locality (this implies local completion as
-/// well).
-///
-/// @param       action The action to perform.
-/// @param         args The argument data for @p action.
-/// @param          len The length of @p args.
-///
-/// @returns      HPX_SUCCESS if no errors were encountered.
-int    _hpx_bcast_rsync(hpx_action_t action, int nargs, ...) HPX_PUBLIC;
 #define hpx_bcast_rsync(action, ...)                                    \
-  _hpx_bcast_rsync(action, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+  _hpx_process_broadcast_rsync(hpx_thread_current_pid(), action,        \
+                               __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
 /// @}
 
