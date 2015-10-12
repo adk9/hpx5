@@ -140,6 +140,15 @@ int hpx_init(int *argc, char ***argv) {
     dbg_wait();
   }
 
+  // bootstrap
+  here->boot = boot_new(here->config->boot);
+  if (!here->boot) {
+    status = log_error("failed to bootstrap.\n");
+    goto unwind1;
+  }
+  here->rank = boot_rank(here->boot);
+  here->ranks = boot_n_ranks(here->boot);
+
   // topology
   int e = hwloc_topology_init(&here->topology);
   if (e) {
@@ -150,22 +159,6 @@ int hpx_init(int *argc, char ***argv) {
   if (e) {
     status = log_error("failed to load the topology.\n");
     goto unwind1;
-  }
-
-  // bootstrap
-  here->boot = boot_new(here->config->boot);
-  if (!here->boot) {
-    status = log_error("failed to bootstrap.\n");
-    goto unwind1;
-  }
-  here->rank = boot_rank(here->boot);
-  here->ranks = boot_n_ranks(here->boot);
-
-  // see if we're supposed to output the configuration, only do this at rank 0
-  if (config_log_level_isset(here->config, HPX_LOG_CONFIG)) {
-    if (here->rank == 0) {
-      config_print(here->config, stdout);
-    }
   }
 
   // initialize the debugging system
@@ -180,6 +173,13 @@ int hpx_init(int *argc, char ***argv) {
     // Don't wait twice.
     if (!config_dbg_waitat_isset(here->config, HPX_LOCALITY_ALL)) {
       dbg_wait();
+    }
+  }
+
+  // see if we're supposed to output the configuration, only do this at rank 0
+  if (config_log_level_isset(here->config, HPX_LOG_CONFIG)) {
+    if (here->rank == 0) {
+      config_print(here->config, stdout);
     }
   }
 
