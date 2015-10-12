@@ -80,6 +80,10 @@ void hpx_lco_delete_sync(hpx_addr_t lco) HPX_PUBLIC;
 ///          individual delete operations are reported through rsync).
 int hpx_lco_delete_all(int n, hpx_addr_t *lcos, hpx_addr_t rsync) HPX_PUBLIC;
 
+/// An action-based interface to the LCO delete operation.
+/// The delete action is a user-packed action that takes a NULL buffer.
+extern HPX_ACTION_DECL(hpx_lco_delete_action) HPX_PUBLIC;
+
 /// Propagate an error to an LCO.
 ///
 /// If the error code is HPX_SUCCESS then this is equivalent to
@@ -113,13 +117,7 @@ void hpx_lco_error_sync(hpx_addr_t lco, hpx_status_t code) HPX_PUBLIC;
 void hpx_lco_reset(hpx_addr_t future, hpx_addr_t sync) HPX_PUBLIC;
 void hpx_lco_reset_sync(hpx_addr_t future) HPX_PUBLIC;
 
-/// An action-based interface to the interface;
-/// The set action is a user-packed action that takes a buffer.
-extern HPX_ACTION_DECL(hpx_lco_set_action) HPX_PUBLIC;
-
-/// The delete action us a user-packed action that takes a NULL buffer.
-extern HPX_ACTION_DECL(hpx_lco_delete_action) HPX_PUBLIC;
-
+/// An action-based interface to the LCO reset operation.
 /// The reset action is a user-packed action that takes a NULL buffer.
 extern HPX_ACTION_DECL(hpx_lco_reset_action) HPX_PUBLIC;
 
@@ -159,6 +157,10 @@ void hpx_lco_set_lsync(hpx_addr_t lco, int size, const void *value,
 /// @param         size The size of the data.
 /// @param        value The address of the value to set.
 void hpx_lco_set_rsync(hpx_addr_t lco, int size, const void *value) HPX_PUBLIC;
+
+/// An action-based interface to the LCO set operation.
+/// The set action is a user-packed action that takes a buffer.
+extern HPX_ACTION_DECL(hpx_lco_set_action) HPX_PUBLIC;
 
 /// Perform a wait operation.
 ///
