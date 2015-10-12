@@ -222,9 +222,8 @@ static int _tree_init_handler(_tree_t *tree, int n, int N, int I, hpx_action_t o
   return HPX_SUCCESS;
 }
 
-hpx_addr_t hpx_process_collective_allreduce_new(hpx_pid_t pid, size_t size,
-                                                int inputs, hpx_action_t op)
-{
+hpx_addr_t hpx_process_collective_allreduce_new(size_t size, int inputs,
+                                                hpx_action_t op) {
   // How many leaves will I need?
   int L = ceil_div_32((int)inputs, K);
 
@@ -240,7 +239,7 @@ hpx_addr_t hpx_process_collective_allreduce_new(hpx_pid_t pid, size_t size,
 
   _tree_t *tree = NULL;
   if (!hpx_gas_try_pin(gva, (void**)&tree)) {
-    dbg_error("could not allocate %zu bytes for an allreduce", bytes);
+    dbg_error("could not allocate an allreduce\n");
   }
 
   _tree_init_handler(tree, inputs, N, I, op);
@@ -275,10 +274,10 @@ static int _join_handler(_tree_t *tree, _join_args_t *args, size_t n) {
 static HPX_ACTION(HPX_INTERRUPT, HPX_PINNED | HPX_MARSHALLED, _join,
                   _join_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
-int hpx_process_collective_allreduce_join(hpx_pid_t pid, hpx_addr_t target,
+int hpx_process_collective_allreduce_join(hpx_addr_t target,
                                           int id, size_t bytes, const void *in,
-                                          hpx_addr_t c_target,
-                                          hpx_action_t c_action) {
+                                          hpx_action_t c_action,
+                                          hpx_addr_t c_target) {
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(_join_args_t) + bytes);
   dbg_assert(p);
   p->target = target;
@@ -294,17 +293,17 @@ int hpx_process_collective_allreduce_join(hpx_pid_t pid, hpx_addr_t target,
   return HPX_SUCCESS;
 }
 
-int hpx_process_collective_allreduce_join_sync(hpx_pid_t pid, hpx_addr_t target,
+int hpx_process_collective_allreduce_join_sync(hpx_addr_t target,
                                                int id, size_t bytes,
                                                const void *in, void *out) {
   hpx_addr_t future = hpx_lco_future_new(bytes);
   dbg_assert(future);
-  hpx_process_collective_allreduce_join(pid, target, id, bytes, in,
-                                        future, hpx_lco_set_action);
+  hpx_process_collective_allreduce_join(target, id, bytes, in,
+                                        hpx_lco_set_action, future);
   int e = hpx_lco_get(future, bytes, out);
   hpx_lco_delete(future, HPX_NULL);
   return e;
 }
 
-void hpx_process_collective_allreduce_delete(hpx_pid_t pid, hpx_addr_t target) {
+void hpx_process_collective_allreduce_delete(hpx_addr_t target) {
 }
