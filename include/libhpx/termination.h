@@ -10,21 +10,14 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
 #ifndef LIBHPX_TERMINATION_H
 #define LIBHPX_TERMINATION_H
 
 /// ----------------------------------------------------------------------------
 /// @file include/libhpx/termination.h
 /// ----------------------------------------------------------------------------
-
-#include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
-#include <limits.h>
-
-#include "libsync/sync.h"
-#include "hpx/attributes.h"
+#include <hpx/attributes.h>
 
 /// Credit-Recovery for detecting termination using a variant of
 /// Mattern's credit-recovery scheme as described in:
