@@ -54,9 +54,8 @@ static HPX_ACTION(HPX_DEFAULT, 0, _test_bcast, _test_bcast_handler, HPX_ADDR,
 static int _test(hpx_action_t leaf) {
   int L = HPX_LOCALITIES;
   int n = N * L;
-  hpx_pid_t pid = hpx_thread_current_pid();
-  hpx_addr_t allreduce = hpx_process_collective_allreduce_new(pid, sizeof(int),
-                                                              n, _sum);
+  hpx_addr_t allreduce = hpx_process_collective_allreduce_new(sizeof(int), n,
+                                                              _sum);
   hpx_addr_t sum = hpx_lco_reduce_new(n, sizeof(int), _init, _sum);
   for (int i = 0; i < I; ++i) {
     int r;
@@ -65,16 +64,15 @@ static int _test(hpx_action_t leaf) {
     test_assert(r == n * HPX_LOCALITIES * (N + 1) * N / 2);
   }
   hpx_lco_delete(sum, HPX_NULL);
-  hpx_process_collective_allreduce_delete(pid, allreduce);
+  hpx_process_collective_allreduce_delete(allreduce);
   return HPX_SUCCESS;
 }
 
 /// Use a join operation in the allreduce leaf.
 static int
 _join_leaf_handler(hpx_addr_t allreduce, int i, int j, hpx_addr_t sum) {
-  hpx_pid_t pid = hpx_thread_current_pid();
-  CHECK( hpx_process_collective_allreduce_join(pid, allreduce, i, sizeof(j), &j,
-                                               sum, hpx_lco_set_action) );
+  CHECK( hpx_process_collective_allreduce_join(allreduce, i, sizeof(j), &j,
+                                               hpx_lco_set_action, sum) );
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _join_leaf, _join_leaf_handler, HPX_ADDR,
@@ -84,9 +82,8 @@ static HPX_ACTION(HPX_DEFAULT, 0, _join_leaf, _join_leaf_handler, HPX_ADDR,
 static int
 _join_sync_leaf_handler(hpx_addr_t allreduce, int i, int j, hpx_addr_t sum) {
   int r;
-  hpx_pid_t pid = hpx_thread_current_pid();
-  CHECK( hpx_process_collective_allreduce_join_sync(pid, allreduce, i,
-                                                    sizeof(j), &j, &r) );
+  CHECK( hpx_process_collective_allreduce_join_sync(allreduce, i, sizeof(j), &j,
+                                                    &r) );
   test_assert(r == HPX_LOCALITIES * N * (N + 1) / 2);
   hpx_call_cc(sum, hpx_lco_set_action, NULL, NULL, &r, sizeof(r));
 }
