@@ -295,14 +295,13 @@ int hpx_process_collective_allreduce_join(hpx_pid_t pid, hpx_addr_t target,
 }
 
 int hpx_process_collective_allreduce_join_sync(hpx_pid_t pid, hpx_addr_t target,
-                                               int id, size_t bytes_in,
-                                               const void *in, size_t bytes_out,
-                                               void *out) {
-  hpx_addr_t future = hpx_lco_future_new(bytes_out);
+                                               int id, size_t bytes,
+                                               const void *in, void *out) {
+  hpx_addr_t future = hpx_lco_future_new(bytes);
   dbg_assert(future);
-  hpx_process_collective_allreduce_join(pid, target, id, bytes_in, in,
-                                        hpx_lco_set_action, future);
-  int e = hpx_lco_get(future, bytes_out, out);
+  hpx_process_collective_allreduce_join(pid, target, id, bytes, in,
+                                        future, hpx_lco_set_action);
+  int e = hpx_lco_get(future, bytes, out);
   hpx_lco_delete(future, HPX_NULL);
   return e;
 }
