@@ -23,24 +23,25 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "hpx/builtins.h"
-#include "libhpx/action.h"
-#include "libhpx/debug.h"
-#include "libhpx/gas.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/instrumentation.h"
-#include "libhpx/memory.h"
-#include "libhpx/network.h"
-#include "libhpx/parcel.h"                      // used as thread-control block
-#include "libhpx/process.h"
-#include "libhpx/scheduler.h"
-#include "libhpx/system.h"
-#include "libhpx/worker.h"
+#include <hpx/builtins.h>
+#include <libhpx/action.h>
+#include <libhpx/debug.h>
+#include <libhpx/gas.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
+#include <libhpx/instrumentation.h>
+#include <libhpx/memory.h>
+#include <libhpx/network.h>
+#include <libhpx/parcel.h>                      // used as thread-control block
+#include <libhpx/process.h>
+#include <libhpx/scheduler.h>
+#include <libhpx/system.h>
+#include <libhpx/termination.h>
+#include <libhpx/worker.h>
 #include "cvar.h"
 #include "lco.h"
 #include "thread.h"
-#include "termination.h"
+
 
 /// Storage for the thread-local worker pointer.
 __thread worker_t * volatile self = NULL;

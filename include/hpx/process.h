@@ -46,6 +46,82 @@ void hpx_process_delete(hpx_addr_t process, hpx_addr_t sync) HPX_PUBLIC;
 
 hpx_pid_t hpx_process_getpid(hpx_addr_t process) HPX_PUBLIC;
 
+/// HPX process broadcast.
+///
+/// This is a parallel call interface that performs an @p action on @p args at
+/// all the localities associated with the process. The output values are not
+/// returned, but the completion of the broadcast operation can be tracked
+/// through the @p lco LCO.
+///
+/// @param          pid The process to which to broadcast.
+/// @param       action The action to perform.
+/// @param        lsync The address of an LCO to trigger when the broadcast
+///                       operation is complete locally, and the buffer can be
+///                       reused or released.
+/// @param        rsync The address of an LCO to trigger when the broadcast
+///                       operation is complete globally, i.e., when all of the
+///                       broadcast handlers have run.
+/// @param         args The argument data for @p action.
+/// @param          len The length of @p args.
+///
+/// @returns      HPX_SUCCESS if no errors were encountered.
+int _hpx_process_broadcast(hpx_pid_t pid, hpx_action_t action, hpx_addr_t lsync,
+                           hpx_addr_t rsync, int nargs, ...)
+  HPX_PUBLIC;
+
+#define hpx_process_broadcast(pid, action, lsync, rsync, ...)           \
+  _hpx_process_broadcast(pid, action, lsync, rsync, __HPX_NARGS(__VA_ARGS__), \
+                         ##__VA_ARGS__)
+
+/// HPX process broadcast.
+///
+/// This is a parallel call interface that performs an @p action on @p args at
+/// all localities associated with a process. The output values are not
+/// returned.
+///
+/// This variant of broadcast is locally synchronous. It will not return to the
+/// caller until it is safe to reuse or delete the @p args buffer.
+///
+/// @param          pid The process to which to broadcast.
+/// @param       action The action to perform.
+/// @param        rsync The address of an LCO to trigger when the broadcast
+///                       operation is complete globally, i.e., when all of the
+///                       broadcast handlers have run.
+/// @param         args The argument data for @p action.
+/// @param          len The length of @p args.
+///
+/// @returns      HPX_SUCCESS if no errors were encountered.
+int _hpx_process_broadcast_lsync(hpx_pid_t pid, hpx_action_t action,
+                                 hpx_addr_t rsync, int nargs, ...)
+  HPX_PUBLIC;
+
+#define hpx_process_broadcast_lsync(action, rsync, ...)                 \
+  _hpx_process_broadcast_lsync(pid, action, rsync, __HPX_NARGS(__VA_ARGS__), \
+                               ##__VA_ARGS__)
+
+/// HPX process broadcast.
+///
+/// This is a parallel call interface that performs an @p action on @p args at
+/// all localities associated with the process. The output values are not
+/// returned.
+///
+/// This variant of broadcast is synchronous. It will not return to the caller
+/// until specified action has run at every locality (this implies local
+/// completion as well).
+///
+/// @param          pid The process to which to broadcast.
+/// @param       action The action to perform.
+/// @param         args The argument data for @p action.
+/// @param          len The length of @p args.
+///
+/// @returns      HPX_SUCCESS if no errors were encountered.
+int _hpx_process_broadcast_rsync(hpx_pid_t pid, hpx_action_t action, int nargs,
+                                 ...)
+  HPX_PUBLIC;
+
+#define hpx_process_broadcast_rsync(pid, action, ...)                   \
+  _hpx_broadcast_rsync(pid, action, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+
 /// Allocate a distributed allreduce collective in the current process.
 ///
 /// This allreduce has basically the same behavior as a traditional allreduce
