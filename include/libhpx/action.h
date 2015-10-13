@@ -68,7 +68,7 @@ ffi_cif *action_table_get_cif(const struct action_table *, hpx_action_t)
   HPX_NON_NULL(1);
 
 /// Serialize the vargs into the parcel.
-hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs);
+hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int nargs, va_list *vargs);
 
 /// Returns a parcel that encodes the target address, an action and
 /// its argument, and the continuation. The parcel is ready to be sent
