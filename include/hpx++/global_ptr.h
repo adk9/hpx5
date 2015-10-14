@@ -31,6 +31,9 @@ namespace hpx {
     }
   };
   
+  template <typename T>
+  class gp_subscr;
+  
   /// An HPX global address ptr.
   /// Basically wraps hpx_addr_t and provides address arithmetic and pin/unpin methods
   template <typename T>
@@ -39,8 +42,8 @@ namespace hpx {
   public:
     typedef T value_type;
     
-    global_ptr() : _gbl_ptr(HPX_NULL), _blk_size(1) {}
-    global_ptr(hpx_addr_t addr, uint32_t b_s=1) : _gbl_ptr(addr), _blk_size(b_s) {}
+    global_ptr() : _gbl_ptr(HPX_NULL), _elems_per_blk(1) {}
+    global_ptr(hpx_addr_t addr, uint32_t b_s=1) : _gbl_ptr(addr), _elems_per_blk(b_s) {}
     
     /// return raw hpx_addr_t
     inline
@@ -50,7 +53,7 @@ namespace hpx {
     
     inline
     uint32_t get_block_size() const {
-      return _blk_size;
+      return _elems_per_blk;
     }
     
     /// pin and unpin
@@ -79,14 +82,32 @@ namespace hpx {
     // TODO casting
 
     inline
-    global_ptr<T> operator[](size_t index) const {
-      return *(this) + index;
-    }
+    gp_subscr<T> operator[](size_t index) const;
   private:
     hpx_addr_t _gbl_ptr;
-    size_t _blk_size;
+    size_t _elems_per_blk;
   };
 
+  template <typename T>
+  class gp_subscr {
+  public:
+    gp_subscr(const global_ptr<T>& gp, size_t offset) : _gp(gp), _offset(offset) {}
+    
+    inline
+    global_ptr<T> operator&() const {
+      return _gp + _offset;
+    }
+  private:
+    global_ptr<T> _gp;
+    size_t _offset;
+  };
+  
+  template <typename T>
+  inline
+  gp_subscr<T> global_ptr<T>::operator[](size_t index) const {
+    return gp_subscr<T>(*this, index);
+  }
+  
   namespace gas {
     template <typename T>
     inline
@@ -96,14 +117,16 @@ namespace hpx {
     
     template <typename T>
     inline
-    global_ptr<T> alloc_cyclic(size_t n, uint32_t blk_size=1, uint32_t boundary=0) {
-      return global_ptr<T>(hpx_gas_alloc_cyclic(n * sizeof(T), blk_size, boundary), blk_size);
+    global_ptr<T> alloc_cyclic(size_t total_elems, uint32_t elems_per_block=1, uint32_t boundary=0) {
+      size_t n = total_elems / elems_per_block;
+      return global_ptr<T>(hpx_gas_alloc_cyclic(n, elems_per_block * sizeof(T), boundary), elems_per_block);
     }
     
     template <typename T>
     inline
-    global_ptr<T> alloc_blocked(size_t n, uint32_t blk_size=1, uint32_t boundary=0) {
-      return global_ptr<T>(hpx_gas_alloc_blocked(n * sizeof(T), blk_size, boundary), blk_size);
+    global_ptr<T> alloc_blocked(size_t total_elems, uint32_t elems_per_block=1, uint32_t boundary=0) {
+      size_t n = total_elems / elems_per_block;
+      return global_ptr<T>(hpx_gas_alloc_blocked(n, elems_per_block * sizeof(T), boundary), elems_per_block);
     }
   }
   
@@ -112,13 +135,13 @@ namespace hpx {
 template <typename T>
 inline
 hpx::global_ptr<T> operator+(const hpx::global_ptr<T>& lhs, size_t n) {
-  return hpx::global_ptr<T>(hpx_addr_add(lhs.ptr(), n * sizeof(T), lhs.get_block_size()), n);
+  return hpx::global_ptr<T>(hpx_addr_add(lhs.ptr(), n * sizeof(T), lhs.get_block_size() * sizeof(T)), lhs.get_block_size());
 }
 
 template <typename T>
 inline
 int64_t operator-(const hpx::global_ptr<T>& lhs, const hpx::global_ptr<T>& rhs) {
-  return hpx_addr_sub(lhs.ptr(), rhs.ptr(), lhs.get_block_size());
+  return hpx_addr_sub(lhs.ptr(), rhs.ptr(), lhs.get_block_size() * sizeof(T));
 }
 
 #endif
