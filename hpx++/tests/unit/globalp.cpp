@@ -29,6 +29,13 @@ hpx_status_t test_pin_unpin() {
   return HPX_SUCCESS;
 }
 
+hpx_status_t test_subscript() {
+  int n1 = 10;
+  auto ptr = hpx::gas::alloc_cyclic<uint64_t>(n1);
+  hpx::global_ptr<uint64_t> ptr1 = &ptr[2];
+  return HPX_SUCCESS;
+}
+
 int main(int argc, char* argv[]) {
   
   int e = hpx::init(&argc, &argv);
