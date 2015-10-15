@@ -2,7 +2,8 @@ noinst_HEADERS   = tests.h
 
 noinst_PROGRAMS  = $(TESTS)
 
-AM_CPPFLAGS      = $(HPX_APPS_CPPFLAGS) $(HPX_APPS_CFLAGS) -I$(top_srcdir)/include -Wno-unused
+AM_CPPFLAGS      = $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include -Wno-unused
+AM_CFLAGS        = $(HPX_APPS_CFLAGS)
 AM_LDFLAGS       = $(HPX_APPS_LDFLAGS) -no-install
 LDADD            = $(HPX_APPS_LDADD)
 
@@ -46,6 +47,10 @@ TESTS = apex_test               \
 if ENABLE_LENGTHY_TESTS
 TESTS           += lco_wait
 endif
+
+# Override libhpx tests so that they have the right paths and flags.
+libhpx_boot_CPPFLAGS                = $(LIBHPX_CPPFLAGS) -I$(top_srcdir)/include -Wno-unused
+libhpx_boot_CFLAGS                  = $(LIBHPX_CFLAGS) 
 
 allreduce_DEPENDENCIES              = $(HPX_APPS_DEPS)
 bcast_DEPENDENCIES                  = $(HPX_APPS_DEPS)
