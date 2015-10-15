@@ -14,11 +14,10 @@
 # include "config.h"
 #endif
 
-#include <hpx/hpx.h>
-#include <libhpx/locality.h>
-#include <libhpx/boot.h>
-#include <libhpx/config.h>
 #include <libsync/locks.h>
+#include <hpx/hpx.h>
+#include <libhpx/boot.h>
+#include <libhpx/locality.h>
 #include "tests.h"
 
 #define FAIL(dst, ...) do {                                 \
