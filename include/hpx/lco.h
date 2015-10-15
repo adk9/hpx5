@@ -322,7 +322,7 @@ hpx_addr_t hpx_lco_and_new(int64_t inputs) HPX_PUBLIC;
 /// @param  and the global address of the "and" LCO to set.
 /// @param sync the address of an LCO to set when the "and" LCO is set;
 ///             may be HPX_NULL
-void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t sync) HPX_PUBLIC;
+void hpx_lco_and_set(hpx_addr_t gate, hpx_addr_t sync) HPX_PUBLIC;
 
 
 /// Set an "and" LCO @p num times, triggering it if appropriate.
@@ -331,7 +331,7 @@ void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t sync) HPX_PUBLIC;
 /// @param  num number of times to set the "and" LCO.
 /// @param sync the address of an LCO to set when the "and" LCO is set;
 ///             may be HPX_NULL
-void hpx_lco_and_set_num(hpx_addr_t and, int num, hpx_addr_t sync)
+void hpx_lco_and_set_num(hpx_addr_t gate, int num, hpx_addr_t sync)
   HPX_PUBLIC;
 /// @}
 
