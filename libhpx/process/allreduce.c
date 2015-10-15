@@ -27,8 +27,13 @@
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
 
-#define K 7
+/// The maximum tree arity is set based on the number of pointers we can fit in
+/// a cacheline along with the node metadata.
+/// @{
+#define K ((HPX_CACHELINE_SIZE - 2 * sizeof(int)) / sizeof(void*))
+/// @}
 
+/// The join action is a marshaled action---this is its argument type.
 typedef struct {
   int id;
   char data[];
@@ -46,9 +51,10 @@ static void _op(hpx_action_t act, hpx_parcel_t *lhs, hpx_parcel_t *rhs) {
 
 /// A tree node.
 ///
-/// Each tree node takes up one cacheline and stores up to 7 values to
-/// reduce. Tree nodes are always allocated in arrays, so we can figure out
-/// parents and children as long as we know the index of the tree node.
+/// Each tree node takes up one cacheline and stores up to K values to
+/// reduce. Tree nodes are always allocated in arrays, so we can figure out the
+/// index of the node using pointer arithmetic, and using the index we can
+/// compute its parents and children.
 typedef struct {
   int             count;
   int          children;
@@ -61,12 +67,12 @@ _HPX_ASSERT(sizeof(_tree_node_t) == HPX_CACHELINE_SIZE, _tree_node_unexpected_si
 /// the reduction callback, the size of the value being reduced, and the array
 /// of nodes.
 typedef struct {
-  int           n;
-  int           N;
-  int           I;
-  hpx_action_t op;
+  int           n;                              // the number of leaf nodes
+  int           N;                              // the total number of nodes
+  int           I;                              // the number of internal nodes
+  hpx_action_t op;                              // the reduction operation
   PAD_TO_CACHELINE(sizeof(int) * 3 + sizeof(hpx_action_t));
-  _tree_node_t nodes[];
+  _tree_node_t nodes[];                         // the array of tree nodes
 } _tree_t;
 
 /// Get the node's parent node.
@@ -85,12 +91,12 @@ static _tree_node_t *_get_parent(_tree_t *tree, _tree_node_t *node) {
   return &tree->nodes[j];
 }
 
-/// Get the ith child o f the node.
+/// Get the ith child of the node.
 ///
 /// This does some index and pointer arithmetic to figure out the address of the
 /// node's ith child. This is possible because the tree is stored as an array,
-/// the node knows its index in the array, and the child(c) relation has a
-/// closed form for a K-ary tree stored in an array.
+/// we can compute the node's index in the array, and the child(c) relation has
+/// a closed form for a K-ary tree stored in an array.
 static _tree_node_t *_get_child(_tree_t *tree, _tree_node_t *node, int c) {
   int i = node - tree->nodes;
   int j = K * i + 1 + c;
@@ -100,12 +106,9 @@ static _tree_node_t *_get_child(_tree_t *tree, _tree_node_t *node, int c) {
 
 /// Figure out how many inputs (i.e., children), a node has.
 ///
-/// This is possible because we know the index of the node in the array, and we
-/// can use that, combined with the number of nodes in the array, to figure out
-/// if this is an internal or leaf node, and how many inputs it should have. We
-/// are using a complete K-ary tree stored in an array which gives us that
-/// closed form solution.
-static int _get_children(_tree_t *tree, _tree_node_t *node) {
+/// The node actually stores its number of children, except that for convenience
+/// 0 means K children. This function performs that adjustment.
+static int _get_children(const _tree_node_t *node) {
   return (node->children) ? node->children : K;
 }
 
@@ -139,7 +142,7 @@ static int _tree_broadcast(_tree_t *tree) {
     // generation start to arrive, which is okay because input n can't try and
     // join before it gets the previous generation response
     sync_store(&node->count, 0, SYNC_RELEASE);
-    for (int c = 0, e = _get_children(tree, node); c < e; ++c) {
+    for (int c = 0, e = _get_children(node); c < e; ++c) {
       hpx_parcel_t *p = node->parcels[c];
       node->parcels[c] = NULL;
       dbg_assert(!p->ustack);
@@ -153,30 +156,31 @@ static int _tree_broadcast(_tree_t *tree) {
 
 /// Perform a reduction on a node.
 ///
-/// The value to reduce is stored in the parcel, @p p's data buffer, and @p id
-/// is the child index that we are reducing from. This will recursively reduce
-/// at the next tree level up, if this is the last child arriving at @p node. If
-/// @p node is the root node, and this is the last child arriving, this will
-/// cascade into a broadcast of the reduced value.
+/// The value to reduce is stored in the parcel, @p p's data buffer, and @p c is
+/// the child index that we are reducing from. This will recursively reduce at
+/// @p node's parent, if this is the last child arriving at @p node. If @p node
+/// is the root node, and this is the last child arriving, this will cascade
+/// into a broadcast of the reduced value.
 static int _reduce(_tree_t *tree, _tree_node_t *node, int c, hpx_parcel_t *p) {
   dbg_assert(p);
   dbg_assert(node->parcels[c] == NULL);
+
+  // record the incoming value as the contribution from the @p c child, and see
+  // if this was the last value for this node
   node->parcels[c] = p;
   int n = sync_fadd(&node->count, 1, SYNC_ACQ_REL) + 1;
-  int children = _get_children(tree, node);
+  int children = _get_children(node);
   if (n < children) {
     return HPX_SUCCESS;
   }
 
-  // perform the reduction into the data buffer for the first parcel
+  // perform the reduction into the data buffer for the 0th child for this node
   hpx_action_t op = tree->op;
   for (int i = 1; i < children; ++i) {
     _op(op, node->parcels[0], node->parcels[i]);
   }
 
-  // if this was the root, broadcast the result---have to replace whichever
-  // continutation parcel we store that is "me" though, otherwise we could try
-  // and send it concurrent with the broadcast loop---that would be bad
+  // if this was the root, broadcast the result
   _tree_node_t *parent = _get_parent(tree, node);
   if (!parent) {
     return _tree_broadcast(tree);
@@ -188,7 +192,9 @@ static int _reduce(_tree_t *tree, _tree_node_t *node, int c, hpx_parcel_t *p) {
   return _reduce(tree, parent, d, node->parcels[0]);
 }
 
-static int _tree_init_handler(_tree_t *tree, int n, int N, int I, hpx_action_t op) {
+/// Initialize the local tree object.
+static int _tree_init_handler(_tree_t *tree, int n, int N, int I,
+                              hpx_action_t op) {
   tree->op = op;
   tree->n = n;
   tree->N = N;
@@ -204,6 +210,7 @@ static int _tree_init_handler(_tree_t *tree, int n, int N, int I, hpx_action_t o
   int h = ceil(logN/logK);
 
   // do braindead integer exponent to figure out how many extra nodes we have
+  dbg_assert(hpx_thread_can_alloca(h * sizeof(int)) > 0);
   int nodes[h];
   nodes[0] = 1;
   for (int i = 1, e = h; i < e; ++i) {
@@ -222,10 +229,11 @@ static int _tree_init_handler(_tree_t *tree, int n, int N, int I, hpx_action_t o
   return HPX_SUCCESS;
 }
 
+/// Create a local allreduce tree.
 hpx_addr_t hpx_process_collective_allreduce_new(size_t size, int inputs,
                                                 hpx_action_t op) {
   // How many leaves will I need?
-  int L = ceil_div_32((int)inputs, K);
+  int L = ceil_div_32(inputs, K);
 
   // How many internal nodes will I need?
   // L = (K - 1) * I + 1
@@ -233,6 +241,7 @@ hpx_addr_t hpx_process_collective_allreduce_new(size_t size, int inputs,
   int I = ceil_div_32(L - 1, K - 1);
   int N = L + I;
 
+  // Allocate enough aligned bytes.
   size_t bytes = sizeof(_tree_t) + sizeof(_tree_node_t) * N;
   dbg_assert(bytes < UINT32_MAX);
   hpx_addr_t gva = hpx_gas_calloc_local(1, bytes, HPX_CACHELINE_SIZE);
@@ -241,20 +250,22 @@ hpx_addr_t hpx_process_collective_allreduce_new(size_t size, int inputs,
   if (!hpx_gas_try_pin(gva, (void**)&tree)) {
     dbg_error("could not allocate an allreduce\n");
   }
+  // verify the tree alignment---this is important for scalability
+  dbg_assert(((uintptr_t)tree & (HPX_CACHELINE_SIZE - 1)) == 0);
 
   _tree_init_handler(tree, inputs, N, I, op);
   hpx_gas_unpin(gva);
   return gva;
 }
 
-/// This serves as the entry point for the join operation.
+/// This serves as the entry point for the asynchronous join operation.
 ///
 /// Joining uses a variable-length buffer because we don't know how large the
 /// joined data is, and it also needs to send along the id of the input that we
 /// are joining.
 static int _join_handler(_tree_t *tree, _join_args_t *args, size_t n) {
   // Create a continuation parcel that "steals" the current continuation, and
-  // serves as storage for the reduced value. The alignemnt of parcel data is
+  // serves as storage for the reduced value. The alignment of parcel data is
   // important---it should be at least 16-byte aligned so that we can use it to
   // reduce into, and it's important that we eagerly copy the value because it
   // will evaporate when we exit otherwise.
@@ -266,6 +277,7 @@ static int _join_handler(_tree_t *tree, _join_args_t *args, size_t n) {
   c->c_target = HPX_NULL;
   c->c_action = HPX_ACTION_NULL;
 
+  // Figure out which node this input maps to, and start reducing.
   int id = args->id;
   int leaf = tree->I + id / K;
   int child = id % K;
@@ -274,6 +286,10 @@ static int _join_handler(_tree_t *tree, _join_args_t *args, size_t n) {
 static HPX_ACTION(HPX_INTERRUPT, HPX_PINNED | HPX_MARSHALLED, _join,
                   _join_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
+/// The asynchronous join operation.
+///
+/// This will asynchronously call the continuation action with the reduced data
+/// once the reduction is complete.
 int hpx_process_collective_allreduce_join(hpx_addr_t target,
                                           int id, size_t bytes, const void *in,
                                           hpx_action_t c_action,
@@ -293,6 +309,9 @@ int hpx_process_collective_allreduce_join(hpx_addr_t target,
   return HPX_SUCCESS;
 }
 
+/// The synchronous join operation.
+///
+/// This currently just forwards to the asynchronous version and waits.
 int hpx_process_collective_allreduce_join_sync(hpx_addr_t target,
                                                int id, size_t bytes,
                                                const void *in, void *out) {
@@ -305,5 +324,6 @@ int hpx_process_collective_allreduce_join_sync(hpx_addr_t target,
   return e;
 }
 
+/// Delete an allreduce.
 void hpx_process_collective_allreduce_delete(hpx_addr_t target) {
 }
