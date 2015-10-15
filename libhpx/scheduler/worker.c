@@ -876,7 +876,7 @@ int hpx_thread_get_tls_id(void) {
 
 intptr_t hpx_thread_can_alloca(size_t bytes) {
   ustack_t *current = self->current->ustack;
-  return ((uintptr_t)&current - (uintptr_t)current->stack < bytes);
+  return (uintptr_t)&current - (uintptr_t)current->stack - bytes;
 }
 
 void hpx_thread_set_affinity(int affinity) {
