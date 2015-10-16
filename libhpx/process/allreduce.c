@@ -26,6 +26,7 @@
 #include <libhpx/memory.h>
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
+#include "process_collective_continuation.h"
 
 /// The maximum tree arity is set based on the number of pointers we can fit in
 /// a cacheline along with the node metadata.
@@ -67,10 +68,11 @@ _HPX_ASSERT(sizeof(_tree_node_t) == HPX_CACHELINE_SIZE, _tree_node_unexpected_si
 /// the reduction callback, the size of the value being reduced, and the array
 /// of nodes.
 typedef struct {
-  int           n;                              // the number of leaf nodes
-  int           N;                              // the total number of nodes
-  int           I;                              // the number of internal nodes
-  hpx_action_t op;                              // the reduction operation
+  hpx_addr_t bcast;                             // the broadcast tree
+  int            n;                             // the number of leaf nodes
+  int            N;                             // the total number of nodes
+  int            I;                             // the number of internal nodes
+  hpx_action_t  op;                             // the reduction operation
   PAD_TO_CACHELINE(sizeof(int) * 3 + sizeof(hpx_action_t));
   _tree_node_t nodes[];                         // the array of tree nodes
 } _tree_t;
@@ -119,40 +121,40 @@ static int _get_children(const _tree_node_t *node) {
 /// for the broadcast. These nodes are contiguous in the tree array, so we could
 /// do this with a parallel for. We could also use to the tree structure to do a
 /// parallel async spawn.
-static int _tree_broadcast(_tree_t *tree) {
-  const void *data = hpx_parcel_get_data(tree->nodes[0].parcels[0]);
-  size_t bytes = tree->nodes[0].parcels[0]->size;
-  char *value = malloc(bytes);
-  dbg_assert(value);
-  memcpy(value, data, bytes);
+// static int _tree_broadcast(_tree_t *tree) {
+//   const void *data = hpx_parcel_get_data(tree->nodes[0].parcels[0]);
+//   size_t bytes = tree->nodes[0].parcels[0]->size;
+//   char *value = malloc(bytes);
+//   dbg_assert(value);
+//   memcpy(value, data, bytes);
 
-  // clear all of the the internal nodes, preserving the children count of the
-  // last internal node
-  if (tree->I) {
-    int children = tree->nodes[tree->I - 1].children;
-    // NB: missing synchronization on counts, is this okay?
-    memset(tree->nodes, 0, sizeof(_tree_node_t) * tree->I);
-    tree->nodes[tree->I - 1].children = children;
-  }
+//   // clear all of the the internal nodes, preserving the children count of the
+//   // last internal node
+//   if (tree->I) {
+//     int children = tree->nodes[tree->I - 1].children;
+//     // NB: missing synchronization on counts, is this okay?
+//     memset(tree->nodes, 0, sizeof(_tree_node_t) * tree->I);
+//     tree->nodes[tree->I - 1].children = children;
+//   }
 
-  for (int i = tree->I, e = tree->N; i < e; ++i) {
-    _tree_node_t *node = &tree->nodes[i];
+//   for (int i = tree->I, e = tree->N; i < e; ++i) {
+//     _tree_node_t *node = &tree->nodes[i];
 
-    // reset the count at this node---this will let joins for the next
-    // generation start to arrive, which is okay because input n can't try and
-    // join before it gets the previous generation response
-    sync_store(&node->count, 0, SYNC_RELEASE);
-    for (int c = 0, e = _get_children(node); c < e; ++c) {
-      hpx_parcel_t *p = node->parcels[c];
-      node->parcels[c] = NULL;
-      dbg_assert(!p->ustack);
-      memcpy(p->buffer, value, bytes);
-      p->size = bytes;
-      parcel_launch(p);
-    }
-  }
-  return HPX_SUCCESS;
-}
+//     // reset the count at this node---this will let joins for the next
+//     // generation start to arrive, which is okay because input n can't try and
+//     // join before it gets the previous generation response
+//     sync_store(&node->count, 0, SYNC_RELEASE);
+//     for (int c = 0, e = _get_children(node); c < e; ++c) {
+//       hpx_parcel_t *p = node->parcels[c];
+//       node->parcels[c] = NULL;
+//       dbg_assert(!p->ustack);
+//       memcpy(p->buffer, value, bytes);
+//       p->size = bytes;
+//       parcel_launch(p);
+//     }
+//   }
+//   return HPX_SUCCESS;
+// }
 
 /// Perform a reduction on a node.
 ///
@@ -174,31 +176,47 @@ static int _reduce(_tree_t *tree, _tree_node_t *node, int c, hpx_parcel_t *p) {
     return HPX_SUCCESS;
   }
 
-  // perform the reduction into the data buffer for the 0th child for this node
+  // perform the reduction into the data buffer for the 0th child for this node,
+  // freeing the parcels as we go
   hpx_action_t op = tree->op;
+  p = node->parcels[0];
+  node->parcels[0] = NULL;
   for (int i = 1; i < children; ++i) {
-    _op(op, node->parcels[0], node->parcels[i]);
+    hpx_parcel_t *q = node->parcels[i];
+    node->parcels[i] = NULL;
+    _op(op, p, q);
+    hpx_parcel_release(q);
   }
+
+  // reset node count for reuse
+  sync_store(&node->count, 0, SYNC_RELEASE);
 
   // if this was the root, broadcast the result
   _tree_node_t *parent = _get_parent(tree, node);
   if (!parent) {
-    return _tree_broadcast(tree);
+    const void *data = hpx_parcel_get_data(p);
+    size_t bytes = p->size;
+    hpx_addr_t bcast = tree->bcast;
+    int e = process_collective_continuation_set_lsync(bcast, bytes, data);
+    hpx_parcel_release(p);
+    return e;
   }
 
   // figure out which child I am for my parent, and continue reducing
   int d = node - _get_child(tree, parent, 0);
   dbg_assert(node == _get_child(tree, parent, d));
-  return _reduce(tree, parent, d, node->parcels[0]);
+  return _reduce(tree, parent, d, p);
 }
 
 /// Initialize the local tree object.
 static int _tree_init_handler(_tree_t *tree, int n, int N, int I,
-                              hpx_action_t op) {
-  tree->op = op;
+                              hpx_action_t op, hpx_addr_t bcast) {
+
+  tree->bcast = bcast;
   tree->n = n;
   tree->N = N;
   tree->I = I;
+  tree->op = op;
 
   // the last leaf could be missing some children
   tree->nodes[N - 1].children = n % K;
@@ -230,6 +248,10 @@ static int _tree_init_handler(_tree_t *tree, int n, int N, int I,
 }
 
 /// Create a local allreduce tree.
+///
+/// We will allocate a tree reduction LCO at the locality that is calling this
+/// routine. In addition, we will allocate a cyclic broadcast array that will
+/// manage the broadcast of the result of the reduction.
 hpx_addr_t hpx_process_collective_allreduce_new(size_t size, int inputs,
                                                 hpx_action_t op) {
   // How many leaves will I need?
@@ -253,9 +275,15 @@ hpx_addr_t hpx_process_collective_allreduce_new(size_t size, int inputs,
   // verify the tree alignment---this is important for scalability
   dbg_assert(((uintptr_t)tree & (HPX_CACHELINE_SIZE - 1)) == 0);
 
-  _tree_init_handler(tree, inputs, N, I, op);
+  // Allocate the distributed continuation
+  hpx_addr_t bcast = process_collective_continuation_new(size, gva);
+
+  // initialize the reduce tree
+  _tree_init_handler(tree, inputs, N, I, op, bcast);
   hpx_gas_unpin(gva);
-  return gva;
+
+  // the client actually gets back the distributed continuation
+  return bcast;
 }
 
 /// This serves as the entry point for the asynchronous join operation.
@@ -296,7 +324,8 @@ int hpx_process_collective_allreduce_join(hpx_addr_t target,
                                           hpx_addr_t c_target) {
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(_join_args_t) + bytes);
   dbg_assert(p);
-  p->target = target;
+  p->target = process_collective_continuation_append(target, bytes,
+                                                     c_action, c_target);
   p->action = _join;
   p->c_target = c_target;
   p->c_action = c_action;
