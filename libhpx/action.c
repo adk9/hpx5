@@ -198,10 +198,10 @@ int action_table_size(const struct action_table *table) {
   return table->n;
 }
 
-hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs) {
+hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int nargs, va_list *vargs) {
   dbg_assert(p);
 
-  if (!n) {
+  if (!nargs) {
     return p;
   }
 
@@ -214,8 +214,8 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs) {
   const char         *key = action_table_get_key(actions, p->action);
   uint32_t           attr = action_table_get_attr(actions, p->action);
 
-  if (cif == NULL && n != 2) {
-    dbg_error("%s requires 2 arguments (%d given).\n", key, n);
+  if (cif == NULL && nargs != 2) {
+    dbg_error("%s requires 2 arguments (%d given).\n", key, nargs);
   }
 
   // marshalled, don't pack
@@ -225,17 +225,17 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs) {
 
   // pinned actions have an implicit pointer, so update the caller's value
   if (attr & HPX_PINNED) {
-    n++;
+    nargs++;
   }
 
-  if (n != cif->nargs) {
-    dbg_error("%s requires %d arguments (%d given).\n", key, cif->nargs, n);
+  if (nargs != cif->nargs) {
+    dbg_error("%s requires %d arguments (%d given).\n", key, cif->nargs, nargs);
   }
 
   dbg_assert(ffi_raw_size((void*)cif) > 0);
 
   // copy the vaargs (pointers) to my stack array, which is what ffi wants
-  void *argps[n];
+  void *argps[nargs];
   int i = 0;
 
   // special case pinned actions
@@ -244,7 +244,7 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs) {
   }
 
   // copy the individual vaargs
-  while (i < n) {
+  while (i < nargs) {
     argps[i++] = va_arg(*vargs, void*);
   }
 
