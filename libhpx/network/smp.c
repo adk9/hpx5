@@ -16,13 +16,17 @@
 #endif
 
 #include <stdlib.h>
+#include <string.h>
+#include <libhpx/boot.h>
+#include <libhpx/debug.h>
+#include <libhpx/gpa.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/memory.h>
+#include <libhpx/network.h>
 
-#include "libhpx/boot.h"
-#include "libhpx/debug.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/memory.h"
-#include "libhpx/network.h"
 #include "smp.h"
+
+static const int _zero = 0;
 
 // Define the transports allowed for the SMP network
 static void _smp_delete(void *network) {
@@ -38,15 +42,27 @@ static int _smp_send(void *network, hpx_parcel_t *p) {
 
 static int _smp_command(void *network, hpx_addr_t rank,
                         hpx_action_t op, uint64_t args) {
-  static const int zero = 0;
-  return hpx_xcall(HPX_HERE, op, HPX_NULL, zero, args);
+  return hpx_xcall(HPX_HERE, op, HPX_NULL, _zero, args);
 }
 
 static int _smp_pwc(void *network,
                     hpx_addr_t to, const void *from, size_t n,
                     hpx_action_t lop, hpx_addr_t laddr,
                     hpx_action_t rop, hpx_addr_t raddr) {
-  return LIBHPX_EUNIMPLEMENTED;
+  if (n) {
+    void *t = (void*)to;
+    memcpy(t, from, n);
+  }
+
+  if (lop && laddr) {
+    dbg_check( hpx_xcall(HPX_HERE, lop, HPX_NULL, _zero, laddr) );
+  }
+
+  if (rop && raddr) {
+    dbg_check( hpx_xcall(HPX_HERE, rop, HPX_NULL, _zero, raddr) );
+  }
+
+  return LIBHPX_OK;
 }
 
 static int _smp_put(void *network, hpx_addr_t to,
