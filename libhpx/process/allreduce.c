@@ -252,7 +252,8 @@ static int _tree_init_handler(_tree_t *tree, int n, int N, int I,
 /// We will allocate a tree reduction LCO at the locality that is calling this
 /// routine. In addition, we will allocate a cyclic broadcast array that will
 /// manage the broadcast of the result of the reduction.
-hpx_addr_t hpx_process_collective_allreduce_new(size_t size, int inputs,
+hpx_addr_t hpx_process_collective_allreduce_new(int inputs, size_t size,
+                                                hpx_action_t reset,
                                                 hpx_action_t op) {
   // How many leaves will I need?
   int L = ceil_div_32(inputs, K);
