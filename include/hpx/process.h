@@ -132,13 +132,15 @@ int _hpx_process_broadcast_rsync(hpx_pid_t pid, hpx_action_t action, int nargs,
 /// reductions should be deterministic. It does not, however, specify any
 /// specific execution tree, so the error may vary due to machine precision.
 ///
-/// @param        bytes The size, in bytes, of the reduced value.
 /// @param       inputs The number of inputs to the allreduce.
+/// @param        bytes The size, in bytes, of the reduced value.
+/// @param        reset A reset operation for the reduction type.
 /// @param           op The reduce operation.
 ///
 /// @returns            The global address to use for the allreduce, or HPX_NULL
 ///                     if there was an allocation problem.
-hpx_addr_t hpx_process_collective_allreduce_new(size_t bytes, int inputs,
+hpx_addr_t hpx_process_collective_allreduce_new(int inputs, size_t bytes,
+                                                hpx_action_t reset,
                                                 hpx_action_t op)
   HPX_PUBLIC;
 

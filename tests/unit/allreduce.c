@@ -54,8 +54,8 @@ static HPX_ACTION(HPX_DEFAULT, 0, _test_bcast, _test_bcast_handler, HPX_ADDR,
 static int _test(hpx_action_t leaf) {
   int L = HPX_LOCALITIES;
   int n = N * L;
-  hpx_addr_t allreduce = hpx_process_collective_allreduce_new(sizeof(int), n,
-                                                              _sum);
+  hpx_addr_t allreduce = hpx_process_collective_allreduce_new(n, sizeof(int),
+                                                              _init, _sum);
   hpx_addr_t sum = hpx_lco_reduce_new(n, sizeof(int), _init, _sum);
   for (int i = 0; i < I; ++i) {
     int r;
