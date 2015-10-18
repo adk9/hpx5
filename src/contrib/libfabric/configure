@@ -13770,34 +13770,48 @@ fi
     LIBS="$fi_check_package_psm_save_LIBS"
 
 	       if test $psm_happy -eq 1; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if PSM version is 1.x" >&5
-$as_echo_n "checking if PSM version is 1.x... " >&6; }
-		      if test "$cross_compiling" = yes; then :
-  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "cannot run test program while cross compiling
-See \`config.log' for more details" "$LINENO" 5; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for psm_am_get_source in -lpsm_infinipath" >&5
+$as_echo_n "checking for psm_am_get_source in -lpsm_infinipath... " >&6; }
+if ${ac_cv_lib_psm_infinipath_psm_am_get_source+:} false; then :
+  $as_echo_n "(cached) " >&6
 else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lpsm_infinipath  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
-						    #include <psm.h>
-						    int main()
-						    {
-							return PSM_VERNO_MAJOR < 2 ? 0 : 1;
-						    }
-
-
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char psm_am_get_source ();
+int
+main ()
+{
+return psm_am_get_source ();
+  ;
+  return 0;
+}
 _ACEOF
-if ac_fn_c_try_run "$LINENO"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_psm_infinipath_psm_am_get_source=yes
 else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }; psm_happy=0
+  ac_cv_lib_psm_infinipath_psm_am_get_source=no
 fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_psm_infinipath_psm_am_get_source" >&5
+$as_echo "$ac_cv_lib_psm_infinipath_psm_am_get_source" >&6; }
+if test "x$ac_cv_lib_psm_infinipath_psm_am_get_source" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: PSM version is not 1.x" >&5
+$as_echo "PSM version is not 1.x" >&6; }; psm_happy=0
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: PSM version is 1.x" >&5
+$as_echo "PSM version is 1.x" >&6; }
 fi
 
 
@@ -13904,27 +13918,15 @@ fi
 	if test x"$enable_direct" = x"psm"; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for prov/psm/include/rdma/fi_direct.h" >&5
 $as_echo_n "checking for prov/psm/include/rdma/fi_direct.h... " >&6; }
-if ${ac_cv_file_prov_psm_include_rdma_fi_direct_h+:} false; then :
-  $as_echo_n "(cached) " >&6
+		 if test -f "prov/psm/include/rdma/fi_direct.h"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 else
-  test "$cross_compiling" = yes &&
-  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
-if test -r "prov/psm/include/rdma/fi_direct.h"; then
-  ac_cv_file_prov_psm_include_rdma_fi_direct_h=yes
-else
-  ac_cv_file_prov_psm_include_rdma_fi_direct_h=no
-fi
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_file_prov_psm_include_rdma_fi_direct_h" >&5
-$as_echo "$ac_cv_file_prov_psm_include_rdma_fi_direct_h" >&6; }
-if test "x$ac_cv_file_prov_psm_include_rdma_fi_direct_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+			  as_fn_error $? "psm provider was requested as direct, but is missing fi_direct.h" "$LINENO" 5
 
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: psm provider was requested as direct, but is missing required files" >&5
-$as_echo "$as_me: WARNING: psm provider was requested as direct, but is missing required files" >&2;}
-			 as_fn_error $? "Cannot continue" "$LINENO" 5
 fi
-
 fi
 
 
@@ -14659,27 +14661,15 @@ fi
 	if test x"$enable_direct" = x"psm2"; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for prov/psm2/include/rdma/fi_direct.h" >&5
 $as_echo_n "checking for prov/psm2/include/rdma/fi_direct.h... " >&6; }
-if ${ac_cv_file_prov_psm2_include_rdma_fi_direct_h+:} false; then :
-  $as_echo_n "(cached) " >&6
+		 if test -f "prov/psm2/include/rdma/fi_direct.h"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 else
-  test "$cross_compiling" = yes &&
-  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
-if test -r "prov/psm2/include/rdma/fi_direct.h"; then
-  ac_cv_file_prov_psm2_include_rdma_fi_direct_h=yes
-else
-  ac_cv_file_prov_psm2_include_rdma_fi_direct_h=no
-fi
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_file_prov_psm2_include_rdma_fi_direct_h" >&5
-$as_echo "$ac_cv_file_prov_psm2_include_rdma_fi_direct_h" >&6; }
-if test "x$ac_cv_file_prov_psm2_include_rdma_fi_direct_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+			  as_fn_error $? "psm2 provider was requested as direct, but is missing fi_direct.h" "$LINENO" 5
 
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: psm2 provider was requested as direct, but is missing required files" >&5
-$as_echo "$as_me: WARNING: psm2 provider was requested as direct, but is missing required files" >&2;}
-			 as_fn_error $? "Cannot continue" "$LINENO" 5
 fi
-
 fi
 
 
@@ -15431,27 +15421,15 @@ fi
 	if test x"$enable_direct" = x"sockets"; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for prov/sockets/include/rdma/fi_direct.h" >&5
 $as_echo_n "checking for prov/sockets/include/rdma/fi_direct.h... " >&6; }
-if ${ac_cv_file_prov_sockets_include_rdma_fi_direct_h+:} false; then :
-  $as_echo_n "(cached) " >&6
+		 if test -f "prov/sockets/include/rdma/fi_direct.h"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 else
-  test "$cross_compiling" = yes &&
-  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
-if test -r "prov/sockets/include/rdma/fi_direct.h"; then
-  ac_cv_file_prov_sockets_include_rdma_fi_direct_h=yes
-else
-  ac_cv_file_prov_sockets_include_rdma_fi_direct_h=no
-fi
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_file_prov_sockets_include_rdma_fi_direct_h" >&5
-$as_echo "$ac_cv_file_prov_sockets_include_rdma_fi_direct_h" >&6; }
-if test "x$ac_cv_file_prov_sockets_include_rdma_fi_direct_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+			  as_fn_error $? "sockets provider was requested as direct, but is missing fi_direct.h" "$LINENO" 5
 
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: sockets provider was requested as direct, but is missing required files" >&5
-$as_echo "$as_me: WARNING: sockets provider was requested as direct, but is missing required files" >&2;}
-			 as_fn_error $? "Cannot continue" "$LINENO" 5
 fi
-
 fi
 
 
@@ -16748,27 +16726,15 @@ fi
 	if test x"$enable_direct" = x"verbs"; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for prov/verbs/include/rdma/fi_direct.h" >&5
 $as_echo_n "checking for prov/verbs/include/rdma/fi_direct.h... " >&6; }
-if ${ac_cv_file_prov_verbs_include_rdma_fi_direct_h+:} false; then :
-  $as_echo_n "(cached) " >&6
+		 if test -f "prov/verbs/include/rdma/fi_direct.h"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 else
-  test "$cross_compiling" = yes &&
-  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
-if test -r "prov/verbs/include/rdma/fi_direct.h"; then
-  ac_cv_file_prov_verbs_include_rdma_fi_direct_h=yes
-else
-  ac_cv_file_prov_verbs_include_rdma_fi_direct_h=no
-fi
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_file_prov_verbs_include_rdma_fi_direct_h" >&5
-$as_echo "$ac_cv_file_prov_verbs_include_rdma_fi_direct_h" >&6; }
-if test "x$ac_cv_file_prov_verbs_include_rdma_fi_direct_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+			  as_fn_error $? "verbs provider was requested as direct, but is missing fi_direct.h" "$LINENO" 5
 
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: verbs provider was requested as direct, but is missing required files" >&5
-$as_echo "$as_me: WARNING: verbs provider was requested as direct, but is missing required files" >&2;}
-			 as_fn_error $? "Cannot continue" "$LINENO" 5
 fi
-
 fi
 
 
@@ -18322,27 +18288,15 @@ fi
 	if test x"$enable_direct" = x"usnic"; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for prov/usnic/include/rdma/fi_direct.h" >&5
 $as_echo_n "checking for prov/usnic/include/rdma/fi_direct.h... " >&6; }
-if ${ac_cv_file_prov_usnic_include_rdma_fi_direct_h+:} false; then :
-  $as_echo_n "(cached) " >&6
+		 if test -f "prov/usnic/include/rdma/fi_direct.h"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 else
-  test "$cross_compiling" = yes &&
-  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
-if test -r "prov/usnic/include/rdma/fi_direct.h"; then
-  ac_cv_file_prov_usnic_include_rdma_fi_direct_h=yes
-else
-  ac_cv_file_prov_usnic_include_rdma_fi_direct_h=no
-fi
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_file_prov_usnic_include_rdma_fi_direct_h" >&5
-$as_echo "$ac_cv_file_prov_usnic_include_rdma_fi_direct_h" >&6; }
-if test "x$ac_cv_file_prov_usnic_include_rdma_fi_direct_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+			  as_fn_error $? "usnic provider was requested as direct, but is missing fi_direct.h" "$LINENO" 5
 
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: usnic provider was requested as direct, but is missing required files" >&5
-$as_echo "$as_me: WARNING: usnic provider was requested as direct, but is missing required files" >&2;}
-			 as_fn_error $? "Cannot continue" "$LINENO" 5
 fi
-
 fi
 
 
@@ -18697,27 +18651,15 @@ fi
 	if test x"$enable_direct" = x"mxm"; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for prov/mxm/include/rdma/fi_direct.h" >&5
 $as_echo_n "checking for prov/mxm/include/rdma/fi_direct.h... " >&6; }
-if ${ac_cv_file_prov_mxm_include_rdma_fi_direct_h+:} false; then :
-  $as_echo_n "(cached) " >&6
+		 if test -f "prov/mxm/include/rdma/fi_direct.h"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 else
-  test "$cross_compiling" = yes &&
-  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
-if test -r "prov/mxm/include/rdma/fi_direct.h"; then
-  ac_cv_file_prov_mxm_include_rdma_fi_direct_h=yes
-else
-  ac_cv_file_prov_mxm_include_rdma_fi_direct_h=no
-fi
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_file_prov_mxm_include_rdma_fi_direct_h" >&5
-$as_echo "$ac_cv_file_prov_mxm_include_rdma_fi_direct_h" >&6; }
-if test "x$ac_cv_file_prov_mxm_include_rdma_fi_direct_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+			  as_fn_error $? "mxm provider was requested as direct, but is missing fi_direct.h" "$LINENO" 5
 
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: mxm provider was requested as direct, but is missing required files" >&5
-$as_echo "$as_me: WARNING: mxm provider was requested as direct, but is missing required files" >&2;}
-			 as_fn_error $? "Cannot continue" "$LINENO" 5
 fi
-
 fi
 
 
