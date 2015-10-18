@@ -172,6 +172,9 @@ struct hpx_options_t
   int hpx_photon_btethresh_arg;	/**< @brief [ugni] set size in bytes for when BTE is used over FMA.  */
   char * hpx_photon_btethresh_orig;	/**< @brief [ugni] set size in bytes for when BTE is used over FMA original value given at command line.  */
   const char *hpx_photon_btethresh_help; /**< @brief [ugni] set size in bytes for when BTE is used over FMA help description.  */
+  char * hpx_photon_fiprov_arg;	/**< @brief [libfabric] provider to use (sockets, psm, etc.).  */
+  char * hpx_photon_fiprov_orig;	/**< @brief [libfabric] provider to use (sockets, psm, etc.) original value given at command line.  */
+  const char *hpx_photon_fiprov_help; /**< @brief [libfabric] provider to use (sockets, psm, etc.) help description.  */
   int hpx_photon_ledgersize_arg;	/**< @brief set number of ledger entries.  */
   char * hpx_photon_ledgersize_orig;	/**< @brief set number of ledger entries original value given at command line.  */
   const char *hpx_photon_ledgersize_help; /**< @brief set number of ledger entries help description.  */
@@ -235,6 +238,7 @@ struct hpx_options_t
   unsigned int hpx_photon_usecma_given ;	/**< @brief Whether hpx-photon-usecma was given.  */
   unsigned int hpx_photon_ibsrq_given ;	/**< @brief Whether hpx-photon-ibsrq was given.  */
   unsigned int hpx_photon_btethresh_given ;	/**< @brief Whether hpx-photon-btethresh was given.  */
+  unsigned int hpx_photon_fiprov_given ;	/**< @brief Whether hpx-photon-fiprov was given.  */
   unsigned int hpx_photon_ledgersize_given ;	/**< @brief Whether hpx-photon-ledgersize was given.  */
   unsigned int hpx_photon_eagerbufsize_given ;	/**< @brief Whether hpx-photon-eagerbufsize was given.  */
   unsigned int hpx_photon_smallpwcsize_given ;	/**< @brief Whether hpx-photon-smallpwcsize was given.  */

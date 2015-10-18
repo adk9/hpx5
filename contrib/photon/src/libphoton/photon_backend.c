@@ -96,6 +96,8 @@ struct photon_backend_t photon_default_backend = {
   .rdma_put = NULL,
   .rdma_send = NULL,
   .rdma_recv = NULL,
+  .tx_size_left = NULL,
+  .rx_size_left = NULL,
   .get_event = NULL
 };
 
@@ -932,8 +934,9 @@ error_exit:
 
 static int _photon_wait_recv_buffer_rdma(int proc, uint64_t size, int tag, photon_rid *request) {
   photonRILedgerEntry curr_entry, entry_iterator;
+  photonRequest req;
   uint64_t curr;
-  int c_ind;
+  int rc, c_ind;
 
   dbg_trace("(%d, %d)", proc, tag);
 
@@ -948,6 +951,11 @@ static int _photon_wait_recv_buffer_rdma(int proc, uint64_t size, int tag, photo
   entry_iterator = curr_entry;
   do {
     while (entry_iterator->header == 0 || entry_iterator->footer == 0) {
+      rc = __photon_try_one_event(&req);
+      if (rc == PHOTON_EVENT_ERROR) {
+	dbg_err("Failure getting event");
+	return PHOTON_ERROR;
+      }
       ;
     }
     if( (tag < 0) || (entry_iterator->tag == tag ) ) {

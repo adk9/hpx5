@@ -102,7 +102,8 @@ int fi_compare_atomicvalid(struct fid_ep *ep, enum fi_datatype datatype,
 : Vectored data buffer(s).
 
 *count / compare_count / result_count*
-: Count of vectored data entries.
+: Count of vectored data entries.  The number of elements referenced,
+  where each element is the indicated datatype.
 
 *addr*
 : Address of remote memory to access.
@@ -292,42 +293,42 @@ addr[i] = buf[i]
 *FI_CSWAP*
 : Compare values and if equal swap with data
 {% highlight c %}
-if (addr[i] == compare[i])
+if (compare[i] == addr[i])
     addr[i] = buf[i]
 {% endhighlight %}
 
 *FI_CSWAP_NE*
 : Compare values and if not equal swap with data
 {% highlight c %}
-if (addr[i] != compare[i])
+if (compare[i] != addr[i])
     addr[i] = buf[i]
 {% endhighlight %}
 
 *FI_CSWAP_LE*
 : Compare values and if less than or equal swap with data
 {% highlight c %}
-if (addr[i] <= compare[i])
+if (compare[i] <= addr[i])
     addr[i] = buf[i]
 {% endhighlight %}
 
 *FI_CSWAP_LT*
 : Compare values and if less than swap with data
 {% highlight c %}
-if (addr[i] < compare[i])
+if (compare[i] < addr[i])
     addr[i] = buf[i]
 {% endhighlight %}
 
 *FI_CSWAP_GE*
 : Compare values and if greater than or equal swap with data
 {% highlight c %}
-if (addr[i] >= compare[i])
+if (compare[i] >= addr[i])
     addr[i] = buf[i]
 {% endhighlight %}
 
 *FI_CSWAP_GT*
 : Compare values and if greater than swap with data
 {% highlight c %}
-if (addr[i] > compare[i])
+if (compare[i] > addr[i])
     addr[i] = buf[i]
 {% endhighlight %}
 

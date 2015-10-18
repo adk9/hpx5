@@ -87,16 +87,19 @@ photonRequest photon_pwc_pop_req(int proc) {
 
 static int photon_pwc_check_gwc_align(photonBuffer lbuf, photonBuffer rbuf, uint64_t size) {
   int *align;
-  int asize;
+  int asize = 1;
   int rc;
+
+  // default to no alignment constraint
+  align = &asize;
 
   rc =  __photon_backend->get_info(NULL, 0, (void**)&align, &asize, PHOTON_GET_ALIGN);
   if (rc != PHOTON_OK) {
     dbg_warn("Could not get alignment info from backend");
   }
-  
-  assert(*align > 0);
 
+  assert(*align);
+  
   if (!TEST_ALIGN(lbuf->addr, *align) ||
       !TEST_ALIGN(rbuf->addr, *align) ||
       !TEST_ALIGN(size, *align)) {
@@ -177,6 +180,8 @@ static int photon_pwc_process_command(int proc, photon_rid cmd, uintptr_t id,
       int rc;
       photon_rid rid;
       struct photon_buffer_t lbuf, rbuf;
+      // make sure we took this branch with a valid payload
+      assert(ptr);
       // switch the sent lbuf/rbuf
       memcpy(&rbuf, ptr, sizeof(rbuf));
       memcpy(&lbuf, ptr+sizeof(rbuf), sizeof(lbuf));
@@ -258,7 +263,13 @@ static int photon_pwc_process_queued_gwc(int proc, photonRequestTable rt) {
   photonRequest req;
   uint32_t val;
   int rc;
-  
+
+  // make sure there are TX resources first
+  rc = __photon_backend->tx_size_left(proc);
+  if (rc < 1) {
+    goto error_resource;
+  }
+     
   do {
     val = sync_load(&rt->gcount, SYNC_RELAXED);
   } while (val && !sync_cas(&rt->gcount, val, val-1, SYNC_RELAXED, SYNC_RELAXED));
@@ -266,7 +277,7 @@ static int photon_pwc_process_queued_gwc(int proc, photonRequestTable rt) {
   if (!val) {
     return PHOTON_ERROR;
   }
-
+  
   req = sync_two_lock_queue_dequeue(rt->gwc_q);
   assert(req);
 
@@ -279,6 +290,9 @@ static int photon_pwc_process_queued_gwc(int proc, photonRequestTable rt) {
   dbg_trace("Posted Request: %d/0x%016lx/0x%016lx", proc, req->local_info.id, req->rattr.cookie);
   
   return PHOTON_OK;
+
+ error_resource:
+  return PHOTON_ERROR_RESOURCE;
 
  error_exit:
   return PHOTON_ERROR;
@@ -323,7 +337,7 @@ static int photon_pwc_try_gwc(photonRequest req) {
   int rc;
   photonBI db;
   photonRequestTable rt;
-
+  
   rt = photon_processes[req->proc].request_table;
 
   if (!req->local_info.buf.priv.key0 && !req->local_info.buf.priv.key1) {
@@ -354,7 +368,7 @@ static int photon_pwc_try_gwc(photonRequest req) {
     sync_tatas_release(&rt->pack_loc);
     
     if (rc != PHOTON_OK) {
-      goto queued_exit;
+      goto queue_exit;
     }
   }
   else {
@@ -376,10 +390,10 @@ static int photon_pwc_try_gwc(photonRequest req) {
   
   return PHOTON_OK;
 
- queued_exit:
+ queue_exit:
   sync_two_lock_queue_enqueue(rt->gwc_q, req);
   sync_fadd(&rt->gcount, 1, SYNC_RELAXED);
-  dbg_trace("Enqueued GWC-PUT req: 0x%016lx", req->id);
+  dbg_trace("Enqueued GWC-PUT request: 0x%016lx", req->id);
   return PHOTON_OK;
   
  error_exit:
@@ -451,7 +465,7 @@ static int photon_pwc_try_packed(photonRequest req, int offset) {
   hdr->addr    = req->remote_info.buf.addr;
   hdr->length  = req->size;
   hdr->footer  = UINT8_MAX;
-  
+
   memcpy((void*)((uintptr_t)hdr + sizeof(*hdr)), (void*)req->local_info.buf.addr, req->size);
   // set a tail flag, the last byte in aligned buffer
   tail = (uint8_t*)((uintptr_t)hdr + asize - 1);
@@ -711,12 +725,19 @@ int _photon_get_with_completion(int proc, uint64_t size,
   if (! (flags & PHOTON_REQ_PWC_NO_RCE)) {
     req->flags |= REQUEST_FLAG_ROP;
   }
- 
+
   rt = photon_processes[proc].request_table;
+
+  // make sure there are TX resources first
+  rc = __photon_backend->tx_size_left(proc);
+  if (rc < 1) {
+    goto queue_exit;
+  }
 
   // process any queued requests for this peer first
   rc = photon_pwc_process_queued_gwc(proc, rt);
-  if (rc == PHOTON_OK) {
+  if ((rc == PHOTON_OK) || 
+      (rc == PHOTON_ERROR_RESOURCE)) {
     goto queue_exit;
   }
   
@@ -725,7 +746,7 @@ int _photon_get_with_completion(int proc, uint64_t size,
     dbg_err("RDMA GET (PWC data) failed for 0x%016lx", req->rattr.cookie);
     goto error_exit;
   }
-
+  
   return PHOTON_OK;
 
  queue_exit:
@@ -908,6 +929,8 @@ static int photon_pwc_probe_ledger(int proc, int *flag, photon_rid *request, int
 	    photon_pwc_process_command(i, req, addr, size, payload);
 	  }
 	  else {
+	    assert(addr);
+	    assert(payload);
 	    memcpy((void*)addr, payload, size);
 	    *request = req;
 	    *src = i;
@@ -968,7 +991,7 @@ static int photon_pwc_probe_ledger(int proc, int *flag, photon_rid *request, int
 
 int _photon_probe_completion(int proc, int *flag, int *remaining,
 			     photon_rid *request, int *src, int flags) {
-  int i, rc;
+  int i, rc = PHOTON_EVENT_NONE;
 
   *flag = 0;
   *src = proc;
