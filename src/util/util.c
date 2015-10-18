@@ -29,7 +29,7 @@ static char *_get_hostname(char *hostname, int size) {
 
 // Used for debugging. Causes a process to wait for a debugger to
 // attach, and set the value if i != 0.
-PHOTON_NO_OPTIMIZE void dbg_wait(void) {
+PHOTON_NO_OPTIMIZE void photon_dbg_wait(void) {
   int i = 0;
   char hostname[256];
   _get_hostname(hostname, 255);
