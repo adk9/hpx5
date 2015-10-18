@@ -92,12 +92,27 @@ target_triplet = @target@
 subdir = src/contrib/bit_array
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/acx_configure_dir.m4 \
+	$(top_srcdir)/config/ax_compiler_vendor.m4 \
+	$(top_srcdir)/config/ax_gcc_builtin.m4 \
+	$(top_srcdir)/config/ax_pthread.m4 \
 	$(top_srcdir)/config/libtool.m4 \
 	$(top_srcdir)/config/ltoptions.m4 \
 	$(top_srcdir)/config/ltsugar.m4 \
 	$(top_srcdir)/config/ltversion.m4 \
 	$(top_srcdir)/config/lt~obsolete.m4 \
-	$(top_srcdir)/config/photon_contrib_libfabric.m4 \
+	$(top_srcdir)/config/photon_aarch64_get_cachelinesize.m4 \
+	$(top_srcdir)/config/photon_check_cmpxchg16b.m4 \
+	$(top_srcdir)/config/photon_config_compiler.m4 \
+	$(top_srcdir)/config/photon_config_host.m4 \
+	$(top_srcdir)/config/photon_config_libfabric.m4 \
+	$(top_srcdir)/config/photon_config_mpi.m4 \
+	$(top_srcdir)/config/photon_config_pmi.m4 \
+	$(top_srcdir)/config/photon_config_ugni.m4 \
+	$(top_srcdir)/config/photon_config_verbs.m4 \
+	$(top_srcdir)/config/photon_do_ac_config_files.m4 \
+	$(top_srcdir)/config/photon_do_am_conditionals.m4 \
+	$(top_srcdir)/config/photon_merge_shared_static.m4 \
+	$(top_srcdir)/config/photon_pe_env.m4 \
 	$(top_srcdir)/config/photon_with_pkg.m4 \
 	$(top_srcdir)/config/pkg.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -221,9 +236,17 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LIBFABRIC_CARGS = @LIBFABRIC_CARGS@
 LIBFABRIC_CFLAGS = @LIBFABRIC_CFLAGS@
 LIBFABRIC_LIBS = @LIBFABRIC_LIBS@
 LIBOBJS = @LIBOBJS@
+LIBPHOTON_CCASFLAGS = @LIBPHOTON_CCASFLAGS@
+LIBPHOTON_CFLAGS = @LIBPHOTON_CFLAGS@
+LIBPHOTON_CPPFLAGS = @LIBPHOTON_CPPFLAGS@
+LIBPHOTON_CXXFLAGS = @LIBPHOTON_CXXFLAGS@
+LIBPHOTON_LDFLAGS = @LIBPHOTON_LDFLAGS@
+LIBPHOTON_LIBADD = @LIBPHOTON_LIBADD@
+LIBPHOTON_LIBS = @LIBPHOTON_LIBS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
@@ -235,7 +258,6 @@ MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 MPI_CFLAGS = @MPI_CFLAGS@
 MPI_LIBS = @MPI_LIBS@
-MPI_PKG = @MPI_PKG@
 NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
@@ -250,34 +272,35 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
-PHOTON_BUILDDIR = @PHOTON_BUILDDIR@
-PHOTON_LIBFABRIC_CARGS = @PHOTON_LIBFABRIC_CARGS@
-PHOTON_LIBFABRIC_CFLAGS = @PHOTON_LIBFABRIC_CFLAGS@
-PHOTON_LIBFABRIC_CPPFLAGS = @PHOTON_LIBFABRIC_CPPFLAGS@
-PHOTON_LIBFABRIC_DEPS = @PHOTON_LIBFABRIC_DEPS@
-PHOTON_LIBFABRIC_LIBS = @PHOTON_LIBFABRIC_LIBS@
-PHOTON_PC_LIBS = @PHOTON_PC_LIBS@
-PHOTON_PC_LIBS_PRIVATE = @PHOTON_PC_LIBS_PRIVATE@
-PHOTON_SRCDIR = @PHOTON_SRCDIR@
+PE_ENV = @PE_ENV@
+PHOTON_APPS_CFLAGS = @PHOTON_APPS_CFLAGS@
+PHOTON_APPS_CPPFLAGS = @PHOTON_APPS_CPPFLAGS@
+PHOTON_APPS_DEPS = @PHOTON_APPS_DEPS@
+PHOTON_APPS_LDADD = @PHOTON_APPS_LDADD@
+PHOTON_APPS_LDFLAGS = @PHOTON_APPS_LDFLAGS@
+PHOTON_PC_CFLAGS = @PHOTON_PC_CFLAGS@
+PHOTON_PC_PRIVATE_LIBS = @PHOTON_PC_PRIVATE_LIBS@
+PHOTON_PC_PRIVATE_PKGS = @PHOTON_PC_PRIVATE_PKGS@
+PHOTON_PC_PUBLIC_LIBS = @PHOTON_PC_PUBLIC_LIBS@
+PHOTON_PC_REQUIRES_PKGS = @PHOTON_PC_REQUIRES_PKGS@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 PMI_CFLAGS = @PMI_CFLAGS@
 PMI_LIBS = @PMI_LIBS@
-PMI_PKG = @PMI_PKG@
+PTHREAD_CC = @PTHREAD_CC@
+PTHREAD_CFLAGS = @PTHREAD_CFLAGS@
+PTHREAD_LIBS = @PTHREAD_LIBS@
 RANLIB = @RANLIB@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
-THREAD_LIBS = @THREAD_LIBS@
 UGNI_CFLAGS = @UGNI_CFLAGS@
 UGNI_LIBS = @UGNI_LIBS@
-UGNI_PKG = @UGNI_PKG@
+VERBS_CFLAGS = @VERBS_CFLAGS@
 VERBS_LIBS = @VERBS_LIBS@
 VERSION = @VERSION@
-XSP_CFLAGS = @XSP_CFLAGS@
-XSP_LIBS = @XSP_LIBS@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -291,6 +314,7 @@ am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
+ax_pthread_config = @ax_pthread_config@
 bindir = @bindir@
 build = @build@
 build_alias = @build_alias@

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <time.h>
 #include <sys/time.h>
 #include <arpa/inet.h>
@@ -20,6 +21,23 @@ time_t _tictoc(time_t stime, int proc) {
   }
   return stime;
 }
+
+static char *_get_hostname(char *hostname, int size) {
+  gethostname(hostname, size);
+  return hostname;
+}
+
+// Used for debugging. Causes a process to wait for a debugger to
+// attach, and set the value if i != 0.
+PHOTON_NO_OPTIMIZE void photon_dbg_wait(void) {
+  int i = 0;
+  char hostname[256];
+  _get_hostname(hostname, 255);
+  printf("PID %d on %s ready for attach\n", getpid(), hostname);
+  fflush(stdout);
+  while (0 == i)
+    sleep(12);
+}
 #endif
 
 void photon_gettime_(double *s) {
@@ -32,7 +50,7 @@ void photon_gettime_(double *s) {
 }
 
 const char *photon_addr_getstr(photon_addr *addr, int af) {
-  char *buf = malloc(40);
+  char buf[40];
   return inet_ntop(AF_INET6, addr->raw, buf, 40);
 }
   
@@ -76,6 +94,7 @@ int photon_parse_devstr(const char *devstr, photon_dev_list **ret_list) {
 	}
 	else {
 	  // we didn't get a port num
+	  photon_free_devlist(dlist);
 	  return -1;
 	}
       }

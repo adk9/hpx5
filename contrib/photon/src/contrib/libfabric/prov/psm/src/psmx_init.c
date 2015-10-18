@@ -42,19 +42,30 @@ struct psmx_env psmx_env = {
 	.am_msg		= 0,
 	.tagged_rma	= 1,
 	.uuid		= PSMX_DEFAULT_UUID,
+	.delay		= 1,
+	.timeout	= 5,
+	.prog_interval	= -1,
+	.prog_affinity	= NULL,
 };
 
 static void psmx_init_env(void)
 {
+	if (getenv("OMPI_COMM_WORLD_RANK") || getenv("PMI_RANK"))
+		psmx_env.name_server = 0;
+
 	fi_param_get_bool(&psmx_prov, "name_server", &psmx_env.name_server);
 	fi_param_get_bool(&psmx_prov, "am_msg", &psmx_env.am_msg);
 	fi_param_get_bool(&psmx_prov, "tagged_rma", &psmx_env.tagged_rma);
 	fi_param_get_str(&psmx_prov, "uuid", &psmx_env.uuid);
+	fi_param_get_int(&psmx_prov, "delay", &psmx_env.delay);
+	fi_param_get_int(&psmx_prov, "timeout", &psmx_env.timeout);
+	fi_param_get_int(&psmx_prov, "prog_interval", &psmx_env.prog_interval);
+	fi_param_get_str(&psmx_prov, "prog_affinity", &psmx_env.prog_affinity);
 }
 
 static int psmx_reserve_tag_bits(int *caps, uint64_t *max_tag_value)
 {
-	int reserved_bits = 0;
+	uint64_t reserved_bits = 0;
 	int ret_caps;
 	int ask_caps = *caps;
 
@@ -122,6 +133,9 @@ static int psmx_getinfo(uint32_t version, const char *node, const char *service,
 	int ep_type = FI_EP_RDM;
 	int av_type = FI_AV_UNSPEC;
 	enum fi_mr_mode mr_mode = FI_MR_SCALABLE;
+	enum fi_threading threading = FI_THREAD_COMPLETION;
+	enum fi_progress control_progress = FI_PROGRESS_MANUAL;
+	enum fi_progress data_progress = FI_PROGRESS_MANUAL;
 	int caps = 0;
 	uint64_t max_tag_value = 0;
 	int err = -FI_ENODATA;
@@ -284,6 +298,54 @@ static int psmx_getinfo(uint32_t version, const char *node, const char *service,
 					FI_MR_SCALABLE);
 				goto err_out;
 			}
+
+			switch (hints->domain_attr->threading) {
+			case FI_THREAD_UNSPEC:
+				break;
+			case FI_THREAD_FID:
+			case FI_THREAD_ENDPOINT:
+			case FI_THREAD_COMPLETION:
+			case FI_THREAD_DOMAIN:
+				threading = hints->domain_attr->threading;
+				break;
+			default:
+				FI_INFO(&psmx_prov, FI_LOG_CORE,
+					"hints->domain_attr->threading=%d, supported=%d %d %d %d %d\n",
+					hints->domain_attr->threading, FI_THREAD_UNSPEC,
+					FI_THREAD_FID, FI_THREAD_ENDPOINT, FI_THREAD_COMPLETION,
+					FI_THREAD_DOMAIN);
+				goto err_out;
+			}
+
+			switch (hints->domain_attr->control_progress) {
+			case FI_PROGRESS_UNSPEC:
+				break;
+			case FI_PROGRESS_MANUAL:
+			case FI_PROGRESS_AUTO:
+				control_progress = hints->domain_attr->control_progress;
+				break;
+			default:
+				FI_INFO(&psmx_prov, FI_LOG_CORE,
+					"hints->domain_attr->control_progress=%d, supported=%d %d %d\n",
+					hints->domain_attr->control_progress, FI_PROGRESS_UNSPEC,
+					FI_PROGRESS_MANUAL, FI_PROGRESS_AUTO);
+				goto err_out;
+			}
+
+			switch (hints->domain_attr->data_progress) {
+			case FI_PROGRESS_UNSPEC:
+				break;
+			case FI_PROGRESS_MANUAL:
+			case FI_PROGRESS_AUTO:
+				data_progress = hints->domain_attr->data_progress;
+				break;
+			default:
+				FI_INFO(&psmx_prov, FI_LOG_CORE,
+					"hints->domain_attr->data_progress=%d, supported=%d %d %d\n",
+					hints->domain_attr->data_progress, FI_PROGRESS_UNSPEC,
+					FI_PROGRESS_MANUAL, FI_PROGRESS_AUTO);
+				goto err_out;
+			}
 		}
 
 		if (hints->ep_attr) {
@@ -296,6 +358,77 @@ static int psmx_getinfo(uint32_t version, const char *node, const char *service,
 				goto err_out;
 			}
 			max_tag_value = fi_tag_bits(hints->ep_attr->mem_tag_format);
+		}
+
+		if (hints->tx_attr) {
+			if ((hints->tx_attr->msg_order & PSMX_MSG_ORDER) !=
+			    hints->tx_attr->msg_order) {
+				FI_INFO(&psmx_prov, FI_LOG_CORE,
+					"hints->tx_attr->msg_order=%lx,"
+					"supported=%lx.\n",
+					hints->tx_attr->msg_order,
+					PSMX_MSG_ORDER);
+				goto err_out;
+			}
+			if ((hints->tx_attr->comp_order & PSMX_COMP_ORDER) !=
+			    hints->tx_attr->comp_order) {
+				FI_INFO(&psmx_prov, FI_LOG_CORE,
+					"hints->tx_attr->msg_order=%lx,"
+					"supported=%lx.\n",
+					hints->tx_attr->comp_order,
+					PSMX_COMP_ORDER);
+				goto err_out;
+			}
+			if (hints->tx_attr->inject_size > PSMX_INJECT_SIZE) {
+				FI_INFO(&psmx_prov, FI_LOG_CORE,
+					"hints->tx_attr->inject_size=%ld,"
+					"supported=%d.\n",
+					hints->tx_attr->inject_size,
+					PSMX_INJECT_SIZE);
+				goto err_out;
+			}
+			if (hints->tx_attr->iov_limit > 1) {
+				FI_INFO(&psmx_prov, FI_LOG_CORE,
+					"hints->tx_attr->iov_limit=%ld,"
+					"supported=1.\n",
+					hints->tx_attr->iov_limit);
+				goto err_out;
+			}
+			if (hints->tx_attr->rma_iov_limit > 1) {
+				FI_INFO(&psmx_prov, FI_LOG_CORE,
+					"hints->tx_attr->rma_iov_limit=%ld,"
+					"supported=1.\n",
+					hints->tx_attr->rma_iov_limit);
+				goto err_out;
+			}
+		}
+
+		if (hints->rx_attr) {
+			if ((hints->rx_attr->msg_order & PSMX_MSG_ORDER) !=
+			    hints->rx_attr->msg_order) {
+				FI_INFO(&psmx_prov, FI_LOG_CORE,
+					"hints->rx_attr->msg_order=%lx,"
+					"supported=%lx.\n",
+					hints->rx_attr->msg_order,
+					PSMX_MSG_ORDER);
+				goto err_out;
+			}
+			if ((hints->rx_attr->comp_order & PSMX_COMP_ORDER) !=
+			    hints->rx_attr->comp_order) {
+				FI_INFO(&psmx_prov, FI_LOG_CORE,
+					"hints->rx_attr->msg_order=%lx,"
+					"supported=%lx.\n",
+					hints->rx_attr->comp_order,
+					PSMX_COMP_ORDER);
+				goto err_out;
+			}
+			if (hints->rx_attr->iov_limit > 1) {
+				FI_INFO(&psmx_prov, FI_LOG_CORE,
+					"hints->rx_attr->iov_limit=%ld,"
+					"supported=1.\n",
+					hints->rx_attr->iov_limit);
+				goto err_out;
+			}
 		}
 
 		caps = hints->caps;
@@ -320,9 +453,9 @@ static int psmx_getinfo(uint32_t version, const char *node, const char *service,
 	psmx_info->ep_attr->tx_ctx_cnt = 1;
 	psmx_info->ep_attr->rx_ctx_cnt = 1;
 
-	psmx_info->domain_attr->threading = FI_THREAD_COMPLETION;
-	psmx_info->domain_attr->control_progress = FI_PROGRESS_MANUAL;
-	psmx_info->domain_attr->data_progress = FI_PROGRESS_MANUAL;
+	psmx_info->domain_attr->threading = threading;
+	psmx_info->domain_attr->control_progress = control_progress;
+	psmx_info->domain_attr->data_progress = data_progress;
 	psmx_info->domain_attr->name = strdup(PSMX_DOMAIN_NAME);
 	psmx_info->domain_attr->resource_mgmt = FI_RM_ENABLED;
 	psmx_info->domain_attr->av_type = av_type;
@@ -347,24 +480,25 @@ static int psmx_getinfo(uint32_t version, const char *node, const char *service,
 	psmx_info->src_addr = NULL;
 	psmx_info->dest_addr = dest_addr;
 	psmx_info->fabric_attr->name = strdup(PSMX_FABRIC_NAME);
-	psmx_info->fabric_attr->prov_name = strdup(PSMX_PROV_NAME);
+	psmx_info->fabric_attr->prov_name = NULL;
 
 	psmx_info->tx_attr->caps = psmx_info->caps;
 	psmx_info->tx_attr->mode = psmx_info->mode;
 	psmx_info->tx_attr->op_flags = (hints && hints->tx_attr && hints->tx_attr->op_flags)
 					? hints->tx_attr->op_flags : 0;
-	psmx_info->tx_attr->msg_order = FI_ORDER_SAS;
-	psmx_info->tx_attr->comp_order = FI_ORDER_NONE;
+	psmx_info->tx_attr->msg_order = PSMX_MSG_ORDER;
+	psmx_info->tx_attr->comp_order = PSMX_COMP_ORDER;
 	psmx_info->tx_attr->inject_size = PSMX_INJECT_SIZE;
 	psmx_info->tx_attr->size = UINT64_MAX;
 	psmx_info->tx_attr->iov_limit = 1;
+	psmx_info->tx_attr->rma_iov_limit = 1;
 
 	psmx_info->rx_attr->caps = psmx_info->caps;
 	psmx_info->rx_attr->mode = psmx_info->mode;
-	psmx_info->rx_attr->op_flags = (hints && hints->rx_attr && hints->tx_attr->op_flags)
-					? hints->tx_attr->op_flags : 0;
-	psmx_info->rx_attr->msg_order = FI_ORDER_SAS;
-	psmx_info->rx_attr->comp_order = FI_ORDER_NONE;
+	psmx_info->rx_attr->op_flags = (hints && hints->rx_attr && hints->rx_attr->op_flags)
+					? hints->rx_attr->op_flags : 0;
+	psmx_info->rx_attr->msg_order = PSMX_MSG_ORDER;
+	psmx_info->rx_attr->comp_order = PSMX_COMP_ORDER;
 	psmx_info->rx_attr->total_buffered_recv = ~(0ULL); /* that's how PSM handles it internally! */
 	psmx_info->rx_attr->size = UINT64_MAX;
 	psmx_info->rx_attr->iov_limit = 1;
@@ -373,17 +507,41 @@ static int psmx_getinfo(uint32_t version, const char *node, const char *service,
 	return 0;
 
 err_out:
+	if (dest_addr)
+		free(dest_addr);
+
 	return err;
 }
 
 static int psmx_fabric_close(fid_t fid)
 {
 	struct psmx_fid_fabric *fabric;
+	void *exit_code;
+	int ret;
 
 	FI_INFO(&psmx_prov, FI_LOG_CORE, "\n");
 
 	fabric = container_of(fid, struct psmx_fid_fabric, fabric.fid);
-	if (--fabric->refcnt) {
+	if (! --fabric->refcnt) {
+		if (psmx_env.name_server &&
+		    !pthread_equal(fabric->name_server_thread, pthread_self())) {
+			ret = pthread_cancel(fabric->name_server_thread);
+			if (ret) {
+				FI_INFO(&psmx_prov, FI_LOG_CORE,
+					"pthread_cancel returns %d\n", ret);
+			}
+			ret = pthread_join(fabric->name_server_thread, &exit_code);
+			if (ret) {
+				FI_INFO(&psmx_prov, FI_LOG_CORE,
+					"pthread_join returns %d\n", ret);
+			}
+			else {
+				FI_INFO(&psmx_prov, FI_LOG_CORE,
+					"name server thread exited with code %ld (%s)\n",
+					(uintptr_t)exit_code,
+					(exit_code == PTHREAD_CANCELED) ? "PTHREAD_CANCELED" : "?");
+			}
+		}
 		if (fabric->active_domain)
 			fi_close(&fabric->active_domain->domain.fid);
 		assert(fabric == psmx_active_fabric);
@@ -411,8 +569,7 @@ static int psmx_fabric(struct fi_fabric_attr *attr,
 		       struct fid_fabric **fabric, void *context)
 {
 	struct psmx_fid_fabric *fabric_priv;
-	pthread_t thread;
-	pthread_attr_t thread_attr;
+	int ret;
 
 	FI_INFO(&psmx_prov, FI_LOG_CORE, "\n");
 
@@ -437,15 +594,21 @@ static int psmx_fabric(struct fi_fabric_attr *attr,
 	psmx_get_uuid(fabric_priv->uuid);
 
 	if (psmx_env.name_server) {
-		pthread_attr_init(&thread_attr);
-		pthread_attr_setdetachstate(&thread_attr,PTHREAD_CREATE_DETACHED);
-		pthread_create(&thread, &thread_attr, psmx_name_server, (void *)fabric_priv);
+		ret = pthread_create(&fabric_priv->name_server_thread, NULL,
+				     psmx_name_server, (void *)fabric_priv);
+		if (ret) {
+			FI_INFO(&psmx_prov, FI_LOG_CORE, "pthread_create returns %d\n", ret);
+			/* use the main thread's ID as invalid value for the new thread */
+			fabric_priv->name_server_thread = pthread_self();
+		}
 	}
 
 	psmx_query_mpi();
 
 	fabric_priv->refcnt = 1;
 	*fabric = &fabric_priv->fabric;
+	psmx_active_fabric = fabric_priv;
+
 	return 0;
 }
 
@@ -466,7 +629,11 @@ struct fi_provider psmx_prov = {
 	.cleanup = psmx_fini
 };
 
+#if (PSM_VERNO_MAJOR >= 2)
+PSM2_INI
+#else
 PSM_INI
+#endif
 {
 	int major, minor;
 	int err;
@@ -487,6 +654,25 @@ PSM_INI
 
 	fi_param_define(&psmx_prov, "uuid", FI_PARAM_STRING,
 			"Unique Job ID required by the fabric");
+
+	fi_param_define(&psmx_prov, "delay", FI_PARAM_INT,
+			"Delay (seconds) before finalization (for debugging)");
+
+	fi_param_define(&psmx_prov, "timeout", FI_PARAM_INT,
+			"Timeout (seconds) for gracefully closing the PSM endpoint");
+
+	fi_param_define(&psmx_prov, "prog_interval", FI_PARAM_INT,
+			"Interval (microseconds) between progress calls made in the "
+			"progress thread (default: 1 if affinity is set, 1000 if not)");
+
+	fi_param_define(&psmx_prov, "prog_affinity", FI_PARAM_STRING,
+			"When set, specify the set of CPU cores to set the progress "
+			"thread affinity to. The format is "
+			"<start>[:<end>[:<stride>]][,<start>[:<end>[:<stride>]]]*, "
+			"where each triplet <start>:<end>:<stride> defines a block "
+			"of core_ids. Both <start> and <end> can be either the core_id "
+			"(when >=0) or core_id - num_cores (when <0). "
+			"(default: affinity not set)");
 
         psm_error_register_handler(NULL, PSM_ERRHANDLER_NO_HANDLER);
 

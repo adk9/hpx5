@@ -201,6 +201,9 @@ int photon_exchange_ledgers(ProcessInfo *processes, int flags) {
   return PHOTON_OK;
 
  error_exit:
+  free(key_0);
+  free(key_1);
+  free(va);
   return PHOTON_ERROR;
 }
 

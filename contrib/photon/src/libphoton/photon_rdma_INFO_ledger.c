@@ -40,6 +40,11 @@ void photon_ri_ledger_free(photonRILedger ledger) {
 
 int photon_ri_ledger_get_next(int proc, photonRILedger l) {
   uint64_t curr, tail, rcur;
+  int rc = __photon_backend->tx_size_left(proc);
+  if (rc < 2) {
+    return -1;
+  }
+
   do {
     rcur = sync_load(&l->acct.rcur, SYNC_RELAXED);
     curr = sync_load(&l->curr, SYNC_RELAXED);

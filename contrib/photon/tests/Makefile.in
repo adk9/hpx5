@@ -94,12 +94,27 @@ check_PROGRAMS = photontest$(EXEEXT)
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/acx_configure_dir.m4 \
+	$(top_srcdir)/config/ax_compiler_vendor.m4 \
+	$(top_srcdir)/config/ax_gcc_builtin.m4 \
+	$(top_srcdir)/config/ax_pthread.m4 \
 	$(top_srcdir)/config/libtool.m4 \
 	$(top_srcdir)/config/ltoptions.m4 \
 	$(top_srcdir)/config/ltsugar.m4 \
 	$(top_srcdir)/config/ltversion.m4 \
 	$(top_srcdir)/config/lt~obsolete.m4 \
-	$(top_srcdir)/config/photon_contrib_libfabric.m4 \
+	$(top_srcdir)/config/photon_aarch64_get_cachelinesize.m4 \
+	$(top_srcdir)/config/photon_check_cmpxchg16b.m4 \
+	$(top_srcdir)/config/photon_config_compiler.m4 \
+	$(top_srcdir)/config/photon_config_host.m4 \
+	$(top_srcdir)/config/photon_config_libfabric.m4 \
+	$(top_srcdir)/config/photon_config_mpi.m4 \
+	$(top_srcdir)/config/photon_config_pmi.m4 \
+	$(top_srcdir)/config/photon_config_ugni.m4 \
+	$(top_srcdir)/config/photon_config_verbs.m4 \
+	$(top_srcdir)/config/photon_do_ac_config_files.m4 \
+	$(top_srcdir)/config/photon_do_am_conditionals.m4 \
+	$(top_srcdir)/config/photon_merge_shared_static.m4 \
+	$(top_srcdir)/config/photon_pe_env.m4 \
 	$(top_srcdir)/config/photon_with_pkg.m4 \
 	$(top_srcdir)/config/pkg.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -110,36 +125,29 @@ CONFIG_HEADER = $(top_builddir)/include/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 PROGRAMS = $(noinst_PROGRAMS)
-am_photontest_OBJECTS = photontest-photonmain.$(OBJEXT) \
-	photontest-photoninit.$(OBJEXT) photontest-kernel.$(OBJEXT) \
-	photontest-photon_test.$(OBJEXT) \
-	photontest-photon_data_movement.$(OBJEXT) \
-	photontest-photon_message_passing.$(OBJEXT) \
-	photontest-photon_pingpong.$(OBJEXT) \
-	photontest-photon_buffers_remote.$(OBJEXT) \
-	photontest-photon_buffers_private.$(OBJEXT) \
-	photontest-photon_rendezvous.$(OBJEXT) \
-	photontest-photon_one_sided_put.$(OBJEXT) \
-	photontest-photon_one_sided_get.$(OBJEXT) \
-	photontest-photon_rdma_with_completion.$(OBJEXT) \
-	photontest-photon_test_put_wc.$(OBJEXT) \
-	photontest-photon_os_get_bench.$(OBJEXT) \
-	photontest-photon_os_put_bench.$(OBJEXT) \
-	photontest-photon_send_buffer_bench.$(OBJEXT) \
-	photontest-photon_recv_buffer_bench.$(OBJEXT) \
-	photontest-photon_send_buffer_bd_bench.$(OBJEXT) \
-	photontest-photon_recv_buffer_bd_bench.$(OBJEXT) \
-	photontest-photon_put_wc_bw.$(OBJEXT) \
-	photontest-photon_threaded_put_wc.$(OBJEXT)
+am_photontest_OBJECTS = photonmain.$(OBJEXT) photoninit.$(OBJEXT) \
+	kernel.$(OBJEXT) photon_test.$(OBJEXT) \
+	photon_data_movement.$(OBJEXT) \
+	photon_message_passing.$(OBJEXT) photon_pingpong.$(OBJEXT) \
+	photon_buffers_remote.$(OBJEXT) \
+	photon_buffers_private.$(OBJEXT) photon_rendezvous.$(OBJEXT) \
+	photon_one_sided_put.$(OBJEXT) photon_one_sided_get.$(OBJEXT) \
+	photon_rdma_with_completion.$(OBJEXT) \
+	photon_test_put_wc.$(OBJEXT) photon_os_get_bench.$(OBJEXT) \
+	photon_os_put_bench.$(OBJEXT) \
+	photon_send_buffer_bench.$(OBJEXT) \
+	photon_recv_buffer_bench.$(OBJEXT) \
+	photon_send_buffer_bd_bench.$(OBJEXT) \
+	photon_recv_buffer_bd_bench.$(OBJEXT) \
+	photon_put_wc_bw.$(OBJEXT) photon_threaded_put_wc.$(OBJEXT)
 photontest_OBJECTS = $(am_photontest_OBJECTS)
-photontest_DEPENDENCIES = $(top_builddir)/src/libphoton.la
+photontest_LDADD = $(LDADD)
+am__DEPENDENCIES_1 =
+photontest_DEPENDENCIES = $(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
-photontest_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(photontest_CFLAGS) \
-	$(CFLAGS) $(photontest_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -451,9 +459,17 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LIBFABRIC_CARGS = @LIBFABRIC_CARGS@
 LIBFABRIC_CFLAGS = @LIBFABRIC_CFLAGS@
 LIBFABRIC_LIBS = @LIBFABRIC_LIBS@
 LIBOBJS = @LIBOBJS@
+LIBPHOTON_CCASFLAGS = @LIBPHOTON_CCASFLAGS@
+LIBPHOTON_CFLAGS = @LIBPHOTON_CFLAGS@
+LIBPHOTON_CPPFLAGS = @LIBPHOTON_CPPFLAGS@
+LIBPHOTON_CXXFLAGS = @LIBPHOTON_CXXFLAGS@
+LIBPHOTON_LDFLAGS = @LIBPHOTON_LDFLAGS@
+LIBPHOTON_LIBADD = @LIBPHOTON_LIBADD@
+LIBPHOTON_LIBS = @LIBPHOTON_LIBS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
@@ -465,7 +481,6 @@ MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 MPI_CFLAGS = @MPI_CFLAGS@
 MPI_LIBS = @MPI_LIBS@
-MPI_PKG = @MPI_PKG@
 NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
@@ -480,34 +495,35 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
-PHOTON_BUILDDIR = @PHOTON_BUILDDIR@
-PHOTON_LIBFABRIC_CARGS = @PHOTON_LIBFABRIC_CARGS@
-PHOTON_LIBFABRIC_CFLAGS = @PHOTON_LIBFABRIC_CFLAGS@
-PHOTON_LIBFABRIC_CPPFLAGS = @PHOTON_LIBFABRIC_CPPFLAGS@
-PHOTON_LIBFABRIC_DEPS = @PHOTON_LIBFABRIC_DEPS@
-PHOTON_LIBFABRIC_LIBS = @PHOTON_LIBFABRIC_LIBS@
-PHOTON_PC_LIBS = @PHOTON_PC_LIBS@
-PHOTON_PC_LIBS_PRIVATE = @PHOTON_PC_LIBS_PRIVATE@
-PHOTON_SRCDIR = @PHOTON_SRCDIR@
+PE_ENV = @PE_ENV@
+PHOTON_APPS_CFLAGS = @PHOTON_APPS_CFLAGS@
+PHOTON_APPS_CPPFLAGS = @PHOTON_APPS_CPPFLAGS@
+PHOTON_APPS_DEPS = @PHOTON_APPS_DEPS@
+PHOTON_APPS_LDADD = @PHOTON_APPS_LDADD@
+PHOTON_APPS_LDFLAGS = @PHOTON_APPS_LDFLAGS@
+PHOTON_PC_CFLAGS = @PHOTON_PC_CFLAGS@
+PHOTON_PC_PRIVATE_LIBS = @PHOTON_PC_PRIVATE_LIBS@
+PHOTON_PC_PRIVATE_PKGS = @PHOTON_PC_PRIVATE_PKGS@
+PHOTON_PC_PUBLIC_LIBS = @PHOTON_PC_PUBLIC_LIBS@
+PHOTON_PC_REQUIRES_PKGS = @PHOTON_PC_REQUIRES_PKGS@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 PMI_CFLAGS = @PMI_CFLAGS@
 PMI_LIBS = @PMI_LIBS@
-PMI_PKG = @PMI_PKG@
+PTHREAD_CC = @PTHREAD_CC@
+PTHREAD_CFLAGS = @PTHREAD_CFLAGS@
+PTHREAD_LIBS = @PTHREAD_LIBS@
 RANLIB = @RANLIB@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
-THREAD_LIBS = @THREAD_LIBS@
 UGNI_CFLAGS = @UGNI_CFLAGS@
 UGNI_LIBS = @UGNI_LIBS@
-UGNI_PKG = @UGNI_PKG@
+VERBS_CFLAGS = @VERBS_CFLAGS@
 VERBS_LIBS = @VERBS_LIBS@
 VERSION = @VERSION@
-XSP_CFLAGS = @XSP_CFLAGS@
-XSP_LIBS = @XSP_LIBS@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -521,6 +537,7 @@ am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
+ax_pthread_config = @ax_pthread_config@
 bindir = @bindir@
 build = @build@
 build_alias = @build_alias@
@@ -567,35 +584,33 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 check_SCRIPTS = run_tests.sh
 TESTS = run_tests.sh
-photontest_SOURCES = photonmain.c \
-                      photoninit.c \
-                      kernel.c \
-                      photon_test.c \
-                      photon_data_movement.c \
-                      photon_message_passing.c \
-                      photon_pingpong.c \
-                      photon_buffers_remote.c \
-                      photon_buffers_private.c \
-                      photon_rendezvous.c \
-                      photon_one_sided_put.c \
-                      photon_one_sided_get.c \
+photontest_SOURCES = photonmain.c                  \
+                      photoninit.c                  \
+                      kernel.c                      \
+                      photon_test.c                 \
+                      photon_data_movement.c        \
+                      photon_message_passing.c      \
+                      photon_pingpong.c             \
+                      photon_buffers_remote.c       \
+                      photon_buffers_private.c      \
+                      photon_rendezvous.c           \
+                      photon_one_sided_put.c        \
+                      photon_one_sided_get.c        \
                       photon_rdma_with_completion.c \
-                      photon_test_put_wc.c \
-                      photon_os_get_bench.c \
-                      photon_os_put_bench.c \
-                      photon_send_buffer_bench.c \
-                      photon_recv_buffer_bench.c \
+                      photon_test_put_wc.c          \
+                      photon_os_get_bench.c         \
+                      photon_os_put_bench.c         \
+                      photon_send_buffer_bench.c    \
+                      photon_recv_buffer_bench.c    \
                       photon_send_buffer_bd_bench.c \
                       photon_recv_buffer_bd_bench.c \
-                      photon_put_wc_bw.c \
+                      photon_put_wc_bw.c            \
                       photon_threaded_put_wc.c 
 
-photontest_LDADD = $(top_builddir)/src/libphoton.la
-photontest_LDFLAGS = -lm -lcrypto -lcheck @CHECK_LIBS@ @THREAD_LIBS@ @UGNI_LIBS@ @VERBS_LIBS@ @MPI_LIBS@ -lrt -no-install
-photontest_CFLAGS = @CFLAGS@ @CHECK_CFLAGS@ @MPI_CFLAGS@ \
-	-I$(top_srcdir)/include -D_GNU_SOURCE -g -Wunused \
-	-Wno-unused-result -Wunused-function -Wunused-label \
-	-Wunused-parameter -Wunused-value -Wunused-variable
+AM_CPPFLAGS = -D_GNU_SOURCE $(PHOTON_APPS_CPPFLAGS) -I$(top_srcdir)/include
+AM_CFLAGS = $(PHOTON_APPS_CFLAGS) @CHECK_CFLAGS@ -Wno-unused
+AM_LDFLAGS = $(PHOTON_APPS_LDFLAGS) @CHECK_LIBS@ -no-install -lcrypto
+LDADD = $(PHOTON_APPS_LDADD)
 all: all-am
 
 .SUFFIXES:
@@ -650,7 +665,7 @@ clean-noinstPROGRAMS:
 
 photontest$(EXEEXT): $(photontest_OBJECTS) $(photontest_DEPENDENCIES) $(EXTRA_photontest_DEPENDENCIES) 
 	@rm -f photontest$(EXEEXT)
-	$(AM_V_CCLD)$(photontest_LINK) $(photontest_OBJECTS) $(photontest_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(LINK) $(photontest_OBJECTS) $(photontest_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -658,28 +673,28 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-kernel.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photon_buffers_private.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photon_buffers_remote.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photon_data_movement.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photon_message_passing.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photon_one_sided_get.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photon_one_sided_put.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photon_os_get_bench.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photon_os_put_bench.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photon_pingpong.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photon_put_wc_bw.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photon_rdma_with_completion.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photon_recv_buffer_bd_bench.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photon_recv_buffer_bench.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photon_rendezvous.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photon_send_buffer_bd_bench.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photon_send_buffer_bench.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photon_test.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photon_test_put_wc.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photon_threaded_put_wc.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photoninit.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photontest-photonmain.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kernel.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_buffers_private.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_buffers_remote.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_data_movement.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_message_passing.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_one_sided_get.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_one_sided_put.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_os_get_bench.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_os_put_bench.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_pingpong.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_put_wc_bw.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_rdma_with_completion.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_recv_buffer_bd_bench.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_recv_buffer_bench.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_rendezvous.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_send_buffer_bd_bench.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_send_buffer_bench.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_test.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_test_put_wc.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_threaded_put_wc.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photoninit.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photonmain.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -704,314 +719,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
-
-photontest-photonmain.o: photonmain.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photonmain.o -MD -MP -MF $(DEPDIR)/photontest-photonmain.Tpo -c -o photontest-photonmain.o `test -f 'photonmain.c' || echo '$(srcdir)/'`photonmain.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photonmain.Tpo $(DEPDIR)/photontest-photonmain.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photonmain.c' object='photontest-photonmain.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photonmain.o `test -f 'photonmain.c' || echo '$(srcdir)/'`photonmain.c
-
-photontest-photonmain.obj: photonmain.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photonmain.obj -MD -MP -MF $(DEPDIR)/photontest-photonmain.Tpo -c -o photontest-photonmain.obj `if test -f 'photonmain.c'; then $(CYGPATH_W) 'photonmain.c'; else $(CYGPATH_W) '$(srcdir)/photonmain.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photonmain.Tpo $(DEPDIR)/photontest-photonmain.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photonmain.c' object='photontest-photonmain.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photonmain.obj `if test -f 'photonmain.c'; then $(CYGPATH_W) 'photonmain.c'; else $(CYGPATH_W) '$(srcdir)/photonmain.c'; fi`
-
-photontest-photoninit.o: photoninit.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photoninit.o -MD -MP -MF $(DEPDIR)/photontest-photoninit.Tpo -c -o photontest-photoninit.o `test -f 'photoninit.c' || echo '$(srcdir)/'`photoninit.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photoninit.Tpo $(DEPDIR)/photontest-photoninit.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photoninit.c' object='photontest-photoninit.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photoninit.o `test -f 'photoninit.c' || echo '$(srcdir)/'`photoninit.c
-
-photontest-photoninit.obj: photoninit.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photoninit.obj -MD -MP -MF $(DEPDIR)/photontest-photoninit.Tpo -c -o photontest-photoninit.obj `if test -f 'photoninit.c'; then $(CYGPATH_W) 'photoninit.c'; else $(CYGPATH_W) '$(srcdir)/photoninit.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photoninit.Tpo $(DEPDIR)/photontest-photoninit.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photoninit.c' object='photontest-photoninit.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photoninit.obj `if test -f 'photoninit.c'; then $(CYGPATH_W) 'photoninit.c'; else $(CYGPATH_W) '$(srcdir)/photoninit.c'; fi`
-
-photontest-kernel.o: kernel.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-kernel.o -MD -MP -MF $(DEPDIR)/photontest-kernel.Tpo -c -o photontest-kernel.o `test -f 'kernel.c' || echo '$(srcdir)/'`kernel.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-kernel.Tpo $(DEPDIR)/photontest-kernel.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='kernel.c' object='photontest-kernel.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-kernel.o `test -f 'kernel.c' || echo '$(srcdir)/'`kernel.c
-
-photontest-kernel.obj: kernel.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-kernel.obj -MD -MP -MF $(DEPDIR)/photontest-kernel.Tpo -c -o photontest-kernel.obj `if test -f 'kernel.c'; then $(CYGPATH_W) 'kernel.c'; else $(CYGPATH_W) '$(srcdir)/kernel.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-kernel.Tpo $(DEPDIR)/photontest-kernel.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='kernel.c' object='photontest-kernel.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-kernel.obj `if test -f 'kernel.c'; then $(CYGPATH_W) 'kernel.c'; else $(CYGPATH_W) '$(srcdir)/kernel.c'; fi`
-
-photontest-photon_test.o: photon_test.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_test.o -MD -MP -MF $(DEPDIR)/photontest-photon_test.Tpo -c -o photontest-photon_test.o `test -f 'photon_test.c' || echo '$(srcdir)/'`photon_test.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_test.Tpo $(DEPDIR)/photontest-photon_test.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_test.c' object='photontest-photon_test.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_test.o `test -f 'photon_test.c' || echo '$(srcdir)/'`photon_test.c
-
-photontest-photon_test.obj: photon_test.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_test.obj -MD -MP -MF $(DEPDIR)/photontest-photon_test.Tpo -c -o photontest-photon_test.obj `if test -f 'photon_test.c'; then $(CYGPATH_W) 'photon_test.c'; else $(CYGPATH_W) '$(srcdir)/photon_test.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_test.Tpo $(DEPDIR)/photontest-photon_test.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_test.c' object='photontest-photon_test.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_test.obj `if test -f 'photon_test.c'; then $(CYGPATH_W) 'photon_test.c'; else $(CYGPATH_W) '$(srcdir)/photon_test.c'; fi`
-
-photontest-photon_data_movement.o: photon_data_movement.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_data_movement.o -MD -MP -MF $(DEPDIR)/photontest-photon_data_movement.Tpo -c -o photontest-photon_data_movement.o `test -f 'photon_data_movement.c' || echo '$(srcdir)/'`photon_data_movement.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_data_movement.Tpo $(DEPDIR)/photontest-photon_data_movement.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_data_movement.c' object='photontest-photon_data_movement.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_data_movement.o `test -f 'photon_data_movement.c' || echo '$(srcdir)/'`photon_data_movement.c
-
-photontest-photon_data_movement.obj: photon_data_movement.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_data_movement.obj -MD -MP -MF $(DEPDIR)/photontest-photon_data_movement.Tpo -c -o photontest-photon_data_movement.obj `if test -f 'photon_data_movement.c'; then $(CYGPATH_W) 'photon_data_movement.c'; else $(CYGPATH_W) '$(srcdir)/photon_data_movement.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_data_movement.Tpo $(DEPDIR)/photontest-photon_data_movement.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_data_movement.c' object='photontest-photon_data_movement.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_data_movement.obj `if test -f 'photon_data_movement.c'; then $(CYGPATH_W) 'photon_data_movement.c'; else $(CYGPATH_W) '$(srcdir)/photon_data_movement.c'; fi`
-
-photontest-photon_message_passing.o: photon_message_passing.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_message_passing.o -MD -MP -MF $(DEPDIR)/photontest-photon_message_passing.Tpo -c -o photontest-photon_message_passing.o `test -f 'photon_message_passing.c' || echo '$(srcdir)/'`photon_message_passing.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_message_passing.Tpo $(DEPDIR)/photontest-photon_message_passing.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_message_passing.c' object='photontest-photon_message_passing.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_message_passing.o `test -f 'photon_message_passing.c' || echo '$(srcdir)/'`photon_message_passing.c
-
-photontest-photon_message_passing.obj: photon_message_passing.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_message_passing.obj -MD -MP -MF $(DEPDIR)/photontest-photon_message_passing.Tpo -c -o photontest-photon_message_passing.obj `if test -f 'photon_message_passing.c'; then $(CYGPATH_W) 'photon_message_passing.c'; else $(CYGPATH_W) '$(srcdir)/photon_message_passing.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_message_passing.Tpo $(DEPDIR)/photontest-photon_message_passing.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_message_passing.c' object='photontest-photon_message_passing.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_message_passing.obj `if test -f 'photon_message_passing.c'; then $(CYGPATH_W) 'photon_message_passing.c'; else $(CYGPATH_W) '$(srcdir)/photon_message_passing.c'; fi`
-
-photontest-photon_pingpong.o: photon_pingpong.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_pingpong.o -MD -MP -MF $(DEPDIR)/photontest-photon_pingpong.Tpo -c -o photontest-photon_pingpong.o `test -f 'photon_pingpong.c' || echo '$(srcdir)/'`photon_pingpong.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_pingpong.Tpo $(DEPDIR)/photontest-photon_pingpong.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_pingpong.c' object='photontest-photon_pingpong.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_pingpong.o `test -f 'photon_pingpong.c' || echo '$(srcdir)/'`photon_pingpong.c
-
-photontest-photon_pingpong.obj: photon_pingpong.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_pingpong.obj -MD -MP -MF $(DEPDIR)/photontest-photon_pingpong.Tpo -c -o photontest-photon_pingpong.obj `if test -f 'photon_pingpong.c'; then $(CYGPATH_W) 'photon_pingpong.c'; else $(CYGPATH_W) '$(srcdir)/photon_pingpong.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_pingpong.Tpo $(DEPDIR)/photontest-photon_pingpong.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_pingpong.c' object='photontest-photon_pingpong.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_pingpong.obj `if test -f 'photon_pingpong.c'; then $(CYGPATH_W) 'photon_pingpong.c'; else $(CYGPATH_W) '$(srcdir)/photon_pingpong.c'; fi`
-
-photontest-photon_buffers_remote.o: photon_buffers_remote.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_buffers_remote.o -MD -MP -MF $(DEPDIR)/photontest-photon_buffers_remote.Tpo -c -o photontest-photon_buffers_remote.o `test -f 'photon_buffers_remote.c' || echo '$(srcdir)/'`photon_buffers_remote.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_buffers_remote.Tpo $(DEPDIR)/photontest-photon_buffers_remote.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_buffers_remote.c' object='photontest-photon_buffers_remote.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_buffers_remote.o `test -f 'photon_buffers_remote.c' || echo '$(srcdir)/'`photon_buffers_remote.c
-
-photontest-photon_buffers_remote.obj: photon_buffers_remote.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_buffers_remote.obj -MD -MP -MF $(DEPDIR)/photontest-photon_buffers_remote.Tpo -c -o photontest-photon_buffers_remote.obj `if test -f 'photon_buffers_remote.c'; then $(CYGPATH_W) 'photon_buffers_remote.c'; else $(CYGPATH_W) '$(srcdir)/photon_buffers_remote.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_buffers_remote.Tpo $(DEPDIR)/photontest-photon_buffers_remote.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_buffers_remote.c' object='photontest-photon_buffers_remote.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_buffers_remote.obj `if test -f 'photon_buffers_remote.c'; then $(CYGPATH_W) 'photon_buffers_remote.c'; else $(CYGPATH_W) '$(srcdir)/photon_buffers_remote.c'; fi`
-
-photontest-photon_buffers_private.o: photon_buffers_private.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_buffers_private.o -MD -MP -MF $(DEPDIR)/photontest-photon_buffers_private.Tpo -c -o photontest-photon_buffers_private.o `test -f 'photon_buffers_private.c' || echo '$(srcdir)/'`photon_buffers_private.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_buffers_private.Tpo $(DEPDIR)/photontest-photon_buffers_private.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_buffers_private.c' object='photontest-photon_buffers_private.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_buffers_private.o `test -f 'photon_buffers_private.c' || echo '$(srcdir)/'`photon_buffers_private.c
-
-photontest-photon_buffers_private.obj: photon_buffers_private.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_buffers_private.obj -MD -MP -MF $(DEPDIR)/photontest-photon_buffers_private.Tpo -c -o photontest-photon_buffers_private.obj `if test -f 'photon_buffers_private.c'; then $(CYGPATH_W) 'photon_buffers_private.c'; else $(CYGPATH_W) '$(srcdir)/photon_buffers_private.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_buffers_private.Tpo $(DEPDIR)/photontest-photon_buffers_private.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_buffers_private.c' object='photontest-photon_buffers_private.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_buffers_private.obj `if test -f 'photon_buffers_private.c'; then $(CYGPATH_W) 'photon_buffers_private.c'; else $(CYGPATH_W) '$(srcdir)/photon_buffers_private.c'; fi`
-
-photontest-photon_rendezvous.o: photon_rendezvous.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_rendezvous.o -MD -MP -MF $(DEPDIR)/photontest-photon_rendezvous.Tpo -c -o photontest-photon_rendezvous.o `test -f 'photon_rendezvous.c' || echo '$(srcdir)/'`photon_rendezvous.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_rendezvous.Tpo $(DEPDIR)/photontest-photon_rendezvous.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_rendezvous.c' object='photontest-photon_rendezvous.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_rendezvous.o `test -f 'photon_rendezvous.c' || echo '$(srcdir)/'`photon_rendezvous.c
-
-photontest-photon_rendezvous.obj: photon_rendezvous.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_rendezvous.obj -MD -MP -MF $(DEPDIR)/photontest-photon_rendezvous.Tpo -c -o photontest-photon_rendezvous.obj `if test -f 'photon_rendezvous.c'; then $(CYGPATH_W) 'photon_rendezvous.c'; else $(CYGPATH_W) '$(srcdir)/photon_rendezvous.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_rendezvous.Tpo $(DEPDIR)/photontest-photon_rendezvous.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_rendezvous.c' object='photontest-photon_rendezvous.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_rendezvous.obj `if test -f 'photon_rendezvous.c'; then $(CYGPATH_W) 'photon_rendezvous.c'; else $(CYGPATH_W) '$(srcdir)/photon_rendezvous.c'; fi`
-
-photontest-photon_one_sided_put.o: photon_one_sided_put.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_one_sided_put.o -MD -MP -MF $(DEPDIR)/photontest-photon_one_sided_put.Tpo -c -o photontest-photon_one_sided_put.o `test -f 'photon_one_sided_put.c' || echo '$(srcdir)/'`photon_one_sided_put.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_one_sided_put.Tpo $(DEPDIR)/photontest-photon_one_sided_put.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_one_sided_put.c' object='photontest-photon_one_sided_put.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_one_sided_put.o `test -f 'photon_one_sided_put.c' || echo '$(srcdir)/'`photon_one_sided_put.c
-
-photontest-photon_one_sided_put.obj: photon_one_sided_put.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_one_sided_put.obj -MD -MP -MF $(DEPDIR)/photontest-photon_one_sided_put.Tpo -c -o photontest-photon_one_sided_put.obj `if test -f 'photon_one_sided_put.c'; then $(CYGPATH_W) 'photon_one_sided_put.c'; else $(CYGPATH_W) '$(srcdir)/photon_one_sided_put.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_one_sided_put.Tpo $(DEPDIR)/photontest-photon_one_sided_put.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_one_sided_put.c' object='photontest-photon_one_sided_put.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_one_sided_put.obj `if test -f 'photon_one_sided_put.c'; then $(CYGPATH_W) 'photon_one_sided_put.c'; else $(CYGPATH_W) '$(srcdir)/photon_one_sided_put.c'; fi`
-
-photontest-photon_one_sided_get.o: photon_one_sided_get.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_one_sided_get.o -MD -MP -MF $(DEPDIR)/photontest-photon_one_sided_get.Tpo -c -o photontest-photon_one_sided_get.o `test -f 'photon_one_sided_get.c' || echo '$(srcdir)/'`photon_one_sided_get.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_one_sided_get.Tpo $(DEPDIR)/photontest-photon_one_sided_get.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_one_sided_get.c' object='photontest-photon_one_sided_get.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_one_sided_get.o `test -f 'photon_one_sided_get.c' || echo '$(srcdir)/'`photon_one_sided_get.c
-
-photontest-photon_one_sided_get.obj: photon_one_sided_get.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_one_sided_get.obj -MD -MP -MF $(DEPDIR)/photontest-photon_one_sided_get.Tpo -c -o photontest-photon_one_sided_get.obj `if test -f 'photon_one_sided_get.c'; then $(CYGPATH_W) 'photon_one_sided_get.c'; else $(CYGPATH_W) '$(srcdir)/photon_one_sided_get.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_one_sided_get.Tpo $(DEPDIR)/photontest-photon_one_sided_get.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_one_sided_get.c' object='photontest-photon_one_sided_get.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_one_sided_get.obj `if test -f 'photon_one_sided_get.c'; then $(CYGPATH_W) 'photon_one_sided_get.c'; else $(CYGPATH_W) '$(srcdir)/photon_one_sided_get.c'; fi`
-
-photontest-photon_rdma_with_completion.o: photon_rdma_with_completion.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_rdma_with_completion.o -MD -MP -MF $(DEPDIR)/photontest-photon_rdma_with_completion.Tpo -c -o photontest-photon_rdma_with_completion.o `test -f 'photon_rdma_with_completion.c' || echo '$(srcdir)/'`photon_rdma_with_completion.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_rdma_with_completion.Tpo $(DEPDIR)/photontest-photon_rdma_with_completion.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_rdma_with_completion.c' object='photontest-photon_rdma_with_completion.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_rdma_with_completion.o `test -f 'photon_rdma_with_completion.c' || echo '$(srcdir)/'`photon_rdma_with_completion.c
-
-photontest-photon_rdma_with_completion.obj: photon_rdma_with_completion.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_rdma_with_completion.obj -MD -MP -MF $(DEPDIR)/photontest-photon_rdma_with_completion.Tpo -c -o photontest-photon_rdma_with_completion.obj `if test -f 'photon_rdma_with_completion.c'; then $(CYGPATH_W) 'photon_rdma_with_completion.c'; else $(CYGPATH_W) '$(srcdir)/photon_rdma_with_completion.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_rdma_with_completion.Tpo $(DEPDIR)/photontest-photon_rdma_with_completion.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_rdma_with_completion.c' object='photontest-photon_rdma_with_completion.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_rdma_with_completion.obj `if test -f 'photon_rdma_with_completion.c'; then $(CYGPATH_W) 'photon_rdma_with_completion.c'; else $(CYGPATH_W) '$(srcdir)/photon_rdma_with_completion.c'; fi`
-
-photontest-photon_test_put_wc.o: photon_test_put_wc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_test_put_wc.o -MD -MP -MF $(DEPDIR)/photontest-photon_test_put_wc.Tpo -c -o photontest-photon_test_put_wc.o `test -f 'photon_test_put_wc.c' || echo '$(srcdir)/'`photon_test_put_wc.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_test_put_wc.Tpo $(DEPDIR)/photontest-photon_test_put_wc.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_test_put_wc.c' object='photontest-photon_test_put_wc.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_test_put_wc.o `test -f 'photon_test_put_wc.c' || echo '$(srcdir)/'`photon_test_put_wc.c
-
-photontest-photon_test_put_wc.obj: photon_test_put_wc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_test_put_wc.obj -MD -MP -MF $(DEPDIR)/photontest-photon_test_put_wc.Tpo -c -o photontest-photon_test_put_wc.obj `if test -f 'photon_test_put_wc.c'; then $(CYGPATH_W) 'photon_test_put_wc.c'; else $(CYGPATH_W) '$(srcdir)/photon_test_put_wc.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_test_put_wc.Tpo $(DEPDIR)/photontest-photon_test_put_wc.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_test_put_wc.c' object='photontest-photon_test_put_wc.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_test_put_wc.obj `if test -f 'photon_test_put_wc.c'; then $(CYGPATH_W) 'photon_test_put_wc.c'; else $(CYGPATH_W) '$(srcdir)/photon_test_put_wc.c'; fi`
-
-photontest-photon_os_get_bench.o: photon_os_get_bench.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_os_get_bench.o -MD -MP -MF $(DEPDIR)/photontest-photon_os_get_bench.Tpo -c -o photontest-photon_os_get_bench.o `test -f 'photon_os_get_bench.c' || echo '$(srcdir)/'`photon_os_get_bench.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_os_get_bench.Tpo $(DEPDIR)/photontest-photon_os_get_bench.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_os_get_bench.c' object='photontest-photon_os_get_bench.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_os_get_bench.o `test -f 'photon_os_get_bench.c' || echo '$(srcdir)/'`photon_os_get_bench.c
-
-photontest-photon_os_get_bench.obj: photon_os_get_bench.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_os_get_bench.obj -MD -MP -MF $(DEPDIR)/photontest-photon_os_get_bench.Tpo -c -o photontest-photon_os_get_bench.obj `if test -f 'photon_os_get_bench.c'; then $(CYGPATH_W) 'photon_os_get_bench.c'; else $(CYGPATH_W) '$(srcdir)/photon_os_get_bench.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_os_get_bench.Tpo $(DEPDIR)/photontest-photon_os_get_bench.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_os_get_bench.c' object='photontest-photon_os_get_bench.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_os_get_bench.obj `if test -f 'photon_os_get_bench.c'; then $(CYGPATH_W) 'photon_os_get_bench.c'; else $(CYGPATH_W) '$(srcdir)/photon_os_get_bench.c'; fi`
-
-photontest-photon_os_put_bench.o: photon_os_put_bench.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_os_put_bench.o -MD -MP -MF $(DEPDIR)/photontest-photon_os_put_bench.Tpo -c -o photontest-photon_os_put_bench.o `test -f 'photon_os_put_bench.c' || echo '$(srcdir)/'`photon_os_put_bench.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_os_put_bench.Tpo $(DEPDIR)/photontest-photon_os_put_bench.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_os_put_bench.c' object='photontest-photon_os_put_bench.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_os_put_bench.o `test -f 'photon_os_put_bench.c' || echo '$(srcdir)/'`photon_os_put_bench.c
-
-photontest-photon_os_put_bench.obj: photon_os_put_bench.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_os_put_bench.obj -MD -MP -MF $(DEPDIR)/photontest-photon_os_put_bench.Tpo -c -o photontest-photon_os_put_bench.obj `if test -f 'photon_os_put_bench.c'; then $(CYGPATH_W) 'photon_os_put_bench.c'; else $(CYGPATH_W) '$(srcdir)/photon_os_put_bench.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_os_put_bench.Tpo $(DEPDIR)/photontest-photon_os_put_bench.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_os_put_bench.c' object='photontest-photon_os_put_bench.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_os_put_bench.obj `if test -f 'photon_os_put_bench.c'; then $(CYGPATH_W) 'photon_os_put_bench.c'; else $(CYGPATH_W) '$(srcdir)/photon_os_put_bench.c'; fi`
-
-photontest-photon_send_buffer_bench.o: photon_send_buffer_bench.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_send_buffer_bench.o -MD -MP -MF $(DEPDIR)/photontest-photon_send_buffer_bench.Tpo -c -o photontest-photon_send_buffer_bench.o `test -f 'photon_send_buffer_bench.c' || echo '$(srcdir)/'`photon_send_buffer_bench.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_send_buffer_bench.Tpo $(DEPDIR)/photontest-photon_send_buffer_bench.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_send_buffer_bench.c' object='photontest-photon_send_buffer_bench.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_send_buffer_bench.o `test -f 'photon_send_buffer_bench.c' || echo '$(srcdir)/'`photon_send_buffer_bench.c
-
-photontest-photon_send_buffer_bench.obj: photon_send_buffer_bench.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_send_buffer_bench.obj -MD -MP -MF $(DEPDIR)/photontest-photon_send_buffer_bench.Tpo -c -o photontest-photon_send_buffer_bench.obj `if test -f 'photon_send_buffer_bench.c'; then $(CYGPATH_W) 'photon_send_buffer_bench.c'; else $(CYGPATH_W) '$(srcdir)/photon_send_buffer_bench.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_send_buffer_bench.Tpo $(DEPDIR)/photontest-photon_send_buffer_bench.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_send_buffer_bench.c' object='photontest-photon_send_buffer_bench.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_send_buffer_bench.obj `if test -f 'photon_send_buffer_bench.c'; then $(CYGPATH_W) 'photon_send_buffer_bench.c'; else $(CYGPATH_W) '$(srcdir)/photon_send_buffer_bench.c'; fi`
-
-photontest-photon_recv_buffer_bench.o: photon_recv_buffer_bench.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_recv_buffer_bench.o -MD -MP -MF $(DEPDIR)/photontest-photon_recv_buffer_bench.Tpo -c -o photontest-photon_recv_buffer_bench.o `test -f 'photon_recv_buffer_bench.c' || echo '$(srcdir)/'`photon_recv_buffer_bench.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_recv_buffer_bench.Tpo $(DEPDIR)/photontest-photon_recv_buffer_bench.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_recv_buffer_bench.c' object='photontest-photon_recv_buffer_bench.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_recv_buffer_bench.o `test -f 'photon_recv_buffer_bench.c' || echo '$(srcdir)/'`photon_recv_buffer_bench.c
-
-photontest-photon_recv_buffer_bench.obj: photon_recv_buffer_bench.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_recv_buffer_bench.obj -MD -MP -MF $(DEPDIR)/photontest-photon_recv_buffer_bench.Tpo -c -o photontest-photon_recv_buffer_bench.obj `if test -f 'photon_recv_buffer_bench.c'; then $(CYGPATH_W) 'photon_recv_buffer_bench.c'; else $(CYGPATH_W) '$(srcdir)/photon_recv_buffer_bench.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_recv_buffer_bench.Tpo $(DEPDIR)/photontest-photon_recv_buffer_bench.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_recv_buffer_bench.c' object='photontest-photon_recv_buffer_bench.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_recv_buffer_bench.obj `if test -f 'photon_recv_buffer_bench.c'; then $(CYGPATH_W) 'photon_recv_buffer_bench.c'; else $(CYGPATH_W) '$(srcdir)/photon_recv_buffer_bench.c'; fi`
-
-photontest-photon_send_buffer_bd_bench.o: photon_send_buffer_bd_bench.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_send_buffer_bd_bench.o -MD -MP -MF $(DEPDIR)/photontest-photon_send_buffer_bd_bench.Tpo -c -o photontest-photon_send_buffer_bd_bench.o `test -f 'photon_send_buffer_bd_bench.c' || echo '$(srcdir)/'`photon_send_buffer_bd_bench.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_send_buffer_bd_bench.Tpo $(DEPDIR)/photontest-photon_send_buffer_bd_bench.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_send_buffer_bd_bench.c' object='photontest-photon_send_buffer_bd_bench.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_send_buffer_bd_bench.o `test -f 'photon_send_buffer_bd_bench.c' || echo '$(srcdir)/'`photon_send_buffer_bd_bench.c
-
-photontest-photon_send_buffer_bd_bench.obj: photon_send_buffer_bd_bench.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_send_buffer_bd_bench.obj -MD -MP -MF $(DEPDIR)/photontest-photon_send_buffer_bd_bench.Tpo -c -o photontest-photon_send_buffer_bd_bench.obj `if test -f 'photon_send_buffer_bd_bench.c'; then $(CYGPATH_W) 'photon_send_buffer_bd_bench.c'; else $(CYGPATH_W) '$(srcdir)/photon_send_buffer_bd_bench.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_send_buffer_bd_bench.Tpo $(DEPDIR)/photontest-photon_send_buffer_bd_bench.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_send_buffer_bd_bench.c' object='photontest-photon_send_buffer_bd_bench.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_send_buffer_bd_bench.obj `if test -f 'photon_send_buffer_bd_bench.c'; then $(CYGPATH_W) 'photon_send_buffer_bd_bench.c'; else $(CYGPATH_W) '$(srcdir)/photon_send_buffer_bd_bench.c'; fi`
-
-photontest-photon_recv_buffer_bd_bench.o: photon_recv_buffer_bd_bench.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_recv_buffer_bd_bench.o -MD -MP -MF $(DEPDIR)/photontest-photon_recv_buffer_bd_bench.Tpo -c -o photontest-photon_recv_buffer_bd_bench.o `test -f 'photon_recv_buffer_bd_bench.c' || echo '$(srcdir)/'`photon_recv_buffer_bd_bench.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_recv_buffer_bd_bench.Tpo $(DEPDIR)/photontest-photon_recv_buffer_bd_bench.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_recv_buffer_bd_bench.c' object='photontest-photon_recv_buffer_bd_bench.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_recv_buffer_bd_bench.o `test -f 'photon_recv_buffer_bd_bench.c' || echo '$(srcdir)/'`photon_recv_buffer_bd_bench.c
-
-photontest-photon_recv_buffer_bd_bench.obj: photon_recv_buffer_bd_bench.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_recv_buffer_bd_bench.obj -MD -MP -MF $(DEPDIR)/photontest-photon_recv_buffer_bd_bench.Tpo -c -o photontest-photon_recv_buffer_bd_bench.obj `if test -f 'photon_recv_buffer_bd_bench.c'; then $(CYGPATH_W) 'photon_recv_buffer_bd_bench.c'; else $(CYGPATH_W) '$(srcdir)/photon_recv_buffer_bd_bench.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_recv_buffer_bd_bench.Tpo $(DEPDIR)/photontest-photon_recv_buffer_bd_bench.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_recv_buffer_bd_bench.c' object='photontest-photon_recv_buffer_bd_bench.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_recv_buffer_bd_bench.obj `if test -f 'photon_recv_buffer_bd_bench.c'; then $(CYGPATH_W) 'photon_recv_buffer_bd_bench.c'; else $(CYGPATH_W) '$(srcdir)/photon_recv_buffer_bd_bench.c'; fi`
-
-photontest-photon_put_wc_bw.o: photon_put_wc_bw.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_put_wc_bw.o -MD -MP -MF $(DEPDIR)/photontest-photon_put_wc_bw.Tpo -c -o photontest-photon_put_wc_bw.o `test -f 'photon_put_wc_bw.c' || echo '$(srcdir)/'`photon_put_wc_bw.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_put_wc_bw.Tpo $(DEPDIR)/photontest-photon_put_wc_bw.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_put_wc_bw.c' object='photontest-photon_put_wc_bw.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_put_wc_bw.o `test -f 'photon_put_wc_bw.c' || echo '$(srcdir)/'`photon_put_wc_bw.c
-
-photontest-photon_put_wc_bw.obj: photon_put_wc_bw.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_put_wc_bw.obj -MD -MP -MF $(DEPDIR)/photontest-photon_put_wc_bw.Tpo -c -o photontest-photon_put_wc_bw.obj `if test -f 'photon_put_wc_bw.c'; then $(CYGPATH_W) 'photon_put_wc_bw.c'; else $(CYGPATH_W) '$(srcdir)/photon_put_wc_bw.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_put_wc_bw.Tpo $(DEPDIR)/photontest-photon_put_wc_bw.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_put_wc_bw.c' object='photontest-photon_put_wc_bw.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_put_wc_bw.obj `if test -f 'photon_put_wc_bw.c'; then $(CYGPATH_W) 'photon_put_wc_bw.c'; else $(CYGPATH_W) '$(srcdir)/photon_put_wc_bw.c'; fi`
-
-photontest-photon_threaded_put_wc.o: photon_threaded_put_wc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_threaded_put_wc.o -MD -MP -MF $(DEPDIR)/photontest-photon_threaded_put_wc.Tpo -c -o photontest-photon_threaded_put_wc.o `test -f 'photon_threaded_put_wc.c' || echo '$(srcdir)/'`photon_threaded_put_wc.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_threaded_put_wc.Tpo $(DEPDIR)/photontest-photon_threaded_put_wc.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_threaded_put_wc.c' object='photontest-photon_threaded_put_wc.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_threaded_put_wc.o `test -f 'photon_threaded_put_wc.c' || echo '$(srcdir)/'`photon_threaded_put_wc.c
-
-photontest-photon_threaded_put_wc.obj: photon_threaded_put_wc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -MT photontest-photon_threaded_put_wc.obj -MD -MP -MF $(DEPDIR)/photontest-photon_threaded_put_wc.Tpo -c -o photontest-photon_threaded_put_wc.obj `if test -f 'photon_threaded_put_wc.c'; then $(CYGPATH_W) 'photon_threaded_put_wc.c'; else $(CYGPATH_W) '$(srcdir)/photon_threaded_put_wc.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photontest-photon_threaded_put_wc.Tpo $(DEPDIR)/photontest-photon_threaded_put_wc.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_threaded_put_wc.c' object='photontest-photon_threaded_put_wc.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photontest_CFLAGS) $(CFLAGS) -c -o photontest-photon_threaded_put_wc.obj `if test -f 'photon_threaded_put_wc.c'; then $(CYGPATH_W) 'photon_threaded_put_wc.c'; else $(CYGPATH_W) '$(srcdir)/photon_threaded_put_wc.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

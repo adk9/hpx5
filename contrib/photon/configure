@@ -632,63 +632,88 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='THREAD_LIBS
-am__EXEEXT_FALSE
+ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
-PHOTON_PC_LIBS_PRIVATE
-PHOTON_PC_LIBS
-PHOTON_BUILDDIR
-PHOTON_SRCDIR
+LIBOBJS
+PHOTON_APPS_DEPS
+PHOTON_APPS_LDADD
+PHOTON_APPS_LDFLAGS
+PHOTON_APPS_CFLAGS
+PHOTON_APPS_CPPFLAGS
+PHOTON_PC_PRIVATE_PKGS
+PHOTON_PC_REQUIRES_PKGS
+PHOTON_PC_PRIVATE_LIBS
+PHOTON_PC_PUBLIC_LIBS
+PHOTON_PC_CFLAGS
+LIBPHOTON_LIBS
+LIBPHOTON_LIBADD
+LIBPHOTON_LDFLAGS
+LIBPHOTON_CCASFLAGS
+LIBPHOTON_CXXFLAGS
+LIBPHOTON_CFLAGS
+LIBPHOTON_CPPFLAGS
+ENABLE_TESTS_FALSE
+ENABLE_TESTS_TRUE
+HAVE_XSP_FALSE
+HAVE_XSP_TRUE
+HAVE_PMI_FALSE
+HAVE_PMI_TRUE
+HAVE_MPI_FALSE
+HAVE_MPI_TRUE
+HAVE_LIBFABRIC_FALSE
+HAVE_LIBFABRIC_TRUE
+HAVE_UGNI_FALSE
+HAVE_UGNI_TRUE
+HAVE_VERBS_FALSE
+HAVE_VERBS_TRUE
 HAVE_CMPXCHG16B_FALSE
 HAVE_CMPXCHG16B_TRUE
+BUILD_FORWARDER_FALSE
+BUILD_FORWARDER_TRUE
 BUILD_LIBFABRIC_FALSE
 BUILD_LIBFABRIC_TRUE
+INTEL_PE_ENV_FALSE
+INTEL_PE_ENV_TRUE
+PGI_PE_ENV_FALSE
+PGI_PE_ENV_TRUE
+CRAY_PE_ENV_FALSE
+CRAY_PE_ENV_TRUE
+GNU_PE_ENV_FALSE
+GNU_PE_ENV_TRUE
+CPU_AARCH64_FALSE
+CPU_AARCH64_TRUE
+CPU_ARM_FALSE
+CPU_ARM_TRUE
 CPU_X86_64_FALSE
 CPU_X86_64_TRUE
-PHOTON_ENABLE_TESTS_FALSE
-PHOTON_ENABLE_TESTS_TRUE
+OS_DARWIN_FALSE
+OS_DARWIN_TRUE
+OS_LINUX_FALSE
+OS_LINUX_TRUE
 HAVE_CHECK_FALSE
 HAVE_CHECK_TRUE
 CHECK_PKG
 CHECK_LIBS
 CHECK_CFLAGS
-HAVE_XSP_FALSE
-HAVE_XSP_TRUE
-XSP_LIBS
-XSP_CFLAGS
-HAVE_MPI_FALSE
-HAVE_MPI_TRUE
-MPI_PKG
 MPI_LIBS
 MPI_CFLAGS
-HAVE_PMI_FALSE
-HAVE_PMI_TRUE
-PMI_PKG
 PMI_LIBS
 PMI_CFLAGS
-HAVE_UGNI_FALSE
-HAVE_UGNI_TRUE
-UGNI_PKG
-UGNI_LIBS
-UGNI_CFLAGS
-HAVE_LIBFABRIC_FALSE
-HAVE_LIBFABRIC_TRUE
-PHOTON_LIBFABRIC_DEPS
-PHOTON_LIBFABRIC_LIBS
-PHOTON_LIBFABRIC_CFLAGS
-PHOTON_LIBFABRIC_CPPFLAGS
 LIBFABRIC_LIBS
 LIBFABRIC_CFLAGS
+UGNI_LIBS
+UGNI_CFLAGS
+VERBS_LIBS
+VERBS_CFLAGS
 PKG_CONFIG_LIBDIR
 PKG_CONFIG_PATH
 PKG_CONFIG
-HAVE_VERBS_FALSE
-HAVE_VERBS_TRUE
-VERBS_LIBS
-LIBOBJS
-HAVE_LIBRT_FALSE
-HAVE_LIBRT_TRUE
+PTHREAD_CFLAGS
+PTHREAD_LIBS
+PTHREAD_CC
+ax_pthread_config
+PE_ENV
 am__fastdepCCAS_FALSE
 am__fastdepCCAS_TRUE
 CCASDEPMODE
@@ -819,7 +844,7 @@ PACKAGE_TARNAME
 PACKAGE_NAME
 PATH_SEPARATOR
 SHELL
-PHOTON_LIBFABRIC_CARGS'
+LIBFABRIC_CARGS'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
@@ -837,18 +862,18 @@ enable_testsuite
 enable_debug
 enable_calltrace
 enable_verbs
-enable_libfabric
-enable_external_libfabric
+with_verbs
+enable_ugni
 with_ugni
+enable_libfabric
+with_libfabric
+enable_pmi
 with_pmi
+enable_mpi
 with_mpi
-with_mpi_include_path
-with_mpi_ld_path
-with_xsp_include_path
-with_xsp_ld_path
 with_check
 '
-      ac_precious_vars='PHOTON_LIBFABRIC_CARGS
+      ac_precious_vars='LIBFABRIC_CARGS
 build_alias
 host_alias
 target_alias
@@ -868,10 +893,12 @@ CCASFLAGS
 PKG_CONFIG
 PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
-LIBFABRIC_CFLAGS
-LIBFABRIC_LIBS
+VERBS_CFLAGS
+VERBS_LIBS
 UGNI_CFLAGS
 UGNI_LIBS
+LIBFABRIC_CFLAGS
+LIBFABRIC_LIBS
 PMI_CFLAGS
 PMI_LIBS
 MPI_CFLAGS
@@ -1511,11 +1538,11 @@ Optional Features:
   --enable-testsuite      Enable test suite (requires check) [default=no]
   --enable-debug          Enable debug logging [default=no]
   --enable-calltrace      Enable call tracing to file [default=no]
-  --disable-verbs         disable verbs (IBV) support (default is autodetect)
-  --enable-libfabric      build with libfabric support [default=no]
-  --enable-external-libfabric
-                          Enable the use of system-installed libfabric
-                          [default=no]
+  --enable-verbs          Enable VERBS support [default=yes]
+  --enable-ugni           Enable UGNI support [default=no]
+  --enable-libfabric      Enable the libfabric backend [default=yes]
+  --enable-pmi            Enable PMI support [default=no]
+  --enable-mpi            Enable MPI support (network, mpirun) [default=no]
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1528,19 +1555,18 @@ Optional Packages:
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
   --with-sysroot[=DIR]    Search for dependent libraries within DIR (or the
                           compiler's sysroot if not specified).
-  --with-ugni[=PKGS]      Build with UGNI [default=no]
-  --with-pmi[=PKGS]       Build with PMI [default=no]
-  --with-mpi[=PKGS]       Build with MPI [default=no]
-  --with-mpi-include-path=PATH
-                          find MPI headers in PATH
-  --with-mpi-ld-path=PATH find MPI libraries in PATH
-  --with-xsp-include-path=PATH
-                          find XSP headers in PATH
-  --with-xsp-ld-path=PATH find XSP libraries in PATH
+  --with-verbs{=system,PKG}
+                          How we find VERBS [default=system,$pkg]
+  --with-ugni{=system,PKG}
+                          How we find UGNI [default=system,$pkg]
+  --with-libfabric{=contrib,system,PKG}
+                          How we find libfabric [default=contrib]
+  --with-pmi{=system,PKG} How we find PMI [default=system,$pkg]
+  --with-mpi{=system,PKG} How we find MPI [default=system,$pkg]
   --with-check[=PKGS]     build with check unit tests [default=no]
 
 Some influential environment variables:
-  PHOTON_LIBFABRIC_CARGS
+  LIBFABRIC_CARGS
               Additional arguments passed to libfabric contrib
   CC          C compiler command
   CFLAGS      C compiler flags
@@ -1562,12 +1588,15 @@ Some influential environment variables:
               directories to add to pkg-config's search path
   PKG_CONFIG_LIBDIR
               path overriding pkg-config's built-in search path
+  VERBS_CFLAGS
+              C compiler flags for VERBS, overriding pkg-config
+  VERBS_LIBS  linker flags for VERBS, overriding pkg-config
+  UGNI_CFLAGS C compiler flags for UGNI, overriding pkg-config
+  UGNI_LIBS   linker flags for UGNI, overriding pkg-config
   LIBFABRIC_CFLAGS
               C compiler flags for LIBFABRIC, overriding pkg-config
   LIBFABRIC_LIBS
               linker flags for LIBFABRIC, overriding pkg-config
-  UGNI_CFLAGS C compiler flags for UGNI, overriding pkg-config
-  UGNI_LIBS   linker flags for UGNI, overriding pkg-config
   PMI_CFLAGS  C compiler flags for PMI, overriding pkg-config
   PMI_LIBS    linker flags for PMI, overriding pkg-config
   MPI_CFLAGS  C compiler flags for MPI, overriding pkg-config
@@ -17161,19 +17190,6 @@ $as_echo "#define STDC_HEADERS 1" >>confdefs.h
 
 fi
 
-for ac_header in arpa/inet.h fcntl.h float.h inttypes.h malloc.h netdb.h netinet/in.h netinet/in_systm.h stdint.h stdlib.h string.h strings.h sys/param.h sys/queue.h sys/socket.h sys/time.h unistd.h values.h byteswap.h libkern/OSByteOrder.h linux/unistd.h
-do :
-  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
-ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
-if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
-  cat >>confdefs.h <<_ACEOF
-#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
-_ACEOF
-
-fi
-
-done
-
 
 # Checks for typedefs, structures, and compiler characteristics.
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for an ANSI C-conforming const" >&5
@@ -17346,184 +17362,7 @@ $as_echo "#define TIME_WITH_SYS_TIME 1" >>confdefs.h
 fi
 
 
-# Checks for libraries.
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ceilf in -lm" >&5
-$as_echo_n "checking for ceilf in -lm... " >&6; }
-if ${ac_cv_lib_m_ceilf+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lm  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char ceilf ();
-int
-main ()
-{
-return ceilf ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_m_ceilf=yes
-else
-  ac_cv_lib_m_ceilf=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_m_ceilf" >&5
-$as_echo "$ac_cv_lib_m_ceilf" >&6; }
-if test "x$ac_cv_lib_m_ceilf" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBM 1
-_ACEOF
-
-  LIBS="-lm $LIBS"
-
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_mutex_init in -lpthread" >&5
-$as_echo_n "checking for pthread_mutex_init in -lpthread... " >&6; }
-if ${ac_cv_lib_pthread_pthread_mutex_init+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpthread  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char pthread_mutex_init ();
-int
-main ()
-{
-return pthread_mutex_init ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_pthread_pthread_mutex_init=yes
-else
-  ac_cv_lib_pthread_pthread_mutex_init=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pthread_pthread_mutex_init" >&5
-$as_echo "$ac_cv_lib_pthread_pthread_mutex_init" >&6; }
-if test "x$ac_cv_lib_pthread_pthread_mutex_init" = xyes; then :
-  THREAD_LIBS="$THREAD_LIBS -lpthread"
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_mutex_init in -lc_r" >&5
-$as_echo_n "checking for pthread_mutex_init in -lc_r... " >&6; }
-if ${ac_cv_lib_c_r_pthread_mutex_init+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lc_r  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char pthread_mutex_init ();
-int
-main ()
-{
-return pthread_mutex_init ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_c_r_pthread_mutex_init=yes
-else
-  ac_cv_lib_c_r_pthread_mutex_init=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_c_r_pthread_mutex_init" >&5
-$as_echo "$ac_cv_lib_c_r_pthread_mutex_init" >&6; }
-if test "x$ac_cv_lib_c_r_pthread_mutex_init" = xyes; then :
-  THREAD_LIBS="$THREAD_LIBS -pthread -lc_r"
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for sem_init in -lrt" >&5
-$as_echo_n "checking for sem_init in -lrt... " >&6; }
-if ${ac_cv_lib_rt_sem_init+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lrt  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char sem_init ();
-int
-main ()
-{
-return sem_init ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_rt_sem_init=yes
-else
-  ac_cv_lib_rt_sem_init=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_rt_sem_init" >&5
-$as_echo "$ac_cv_lib_rt_sem_init" >&6; }
-if test "x$ac_cv_lib_rt_sem_init" = xyes; then :
-  use_rt=yes
-fi
-
-
- if test x$use_rt = xyes; then
-  HAVE_LIBRT_TRUE=
-  HAVE_LIBRT_FALSE='#'
-else
-  HAVE_LIBRT_TRUE='#'
-  HAVE_LIBRT_FALSE=
-fi
-
-
 # Checks for typedefs, structures, and compiler characteristics.
-#AC_CHECK_HEADER_STDBOOL
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for inline" >&5
 $as_echo_n "checking for inline... " >&6; }
 if ${ac_cv_c_inline+:} false; then :
@@ -17768,469 +17607,1001 @@ _ACEOF
 fi
 
 
-# Checks for library functions.
-for ac_header in vfork.h
-do :
-  ac_fn_c_check_header_mongrel "$LINENO" "vfork.h" "ac_cv_header_vfork_h" "$ac_includes_default"
-if test "x$ac_cv_header_vfork_h" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_VFORK_H 1
-_ACEOF
+# Initialize our build flags based on the programming environemnt.
+#
+# LIBPHOTON_CPPFLAGS: CPPFLAGS required to build libphoton.la
+# LIBPHOTON_CFLAGS: CFLAGS required to build libphoton.la
+# LIBPHOTON_CXXFLAGS: CXXFLAGS required to build libphoton.la
+# LIBPHOTON_LIBADD: .la dependencies required to build libphoton.la
+# LIBPHOTON_LDFLAGS: -L and -Wl flags needed to link installed libphoton
+# LIBPHOTON_LIBS: -l dependencies required to link installed libphoton
+#
+# PHOTON_APPS_CPPFLAGS: CPPFLAGS required to link to build-tree libphoton.la
+# PHOTON_APPS_CFLAGS: CFLAGS required to link to build-tree libphoton.la
+# PHOTON_APPS_LDFLAGS: LDFLAGS required to link to build-tree libphoton.la
+# PHOTON_APPS_LDADD: .la libraries require to link build-tree libphoton.la
+# PHOTON_APPS_DEPS: .la library dependendencies for apps
+#
+# PHOTON_PC_CFLAGS: C and CPP flags (typically just -D) for installed libhps.so
+# PHOTON_PC_PUBLIC_LIBS: -L and -l flags required to link to installed libphoton.so
+# PHOTON_PC_REQUIRES_PKGS: packages required to link to installed libphoton.so
+# PHOTON_PC_PRIVATE_LIBS: -L and -l flags required to link to installed libphoton.a
+# PHOTON_PC_PRIVATE_PKGS: packages required to link to installed libphoton.a
 
-fi
 
-done
-
-for ac_func in fork vfork
-do :
-  as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
-ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
-if eval test \"x\$"$as_ac_var"\" = x"yes"; then :
-  cat >>confdefs.h <<_ACEOF
-#define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
-_ACEOF
-
-fi
-done
-
-if test "x$ac_cv_func_fork" = xyes; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for working fork" >&5
-$as_echo_n "checking for working fork... " >&6; }
-if ${ac_cv_func_fork_works+:} false; then :
+ { $as_echo "$as_me:${as_lineno-$LINENO}: checking for C compiler vendor" >&5
+$as_echo_n "checking for C compiler vendor... " >&6; }
+if ${ax_cv_c_compiler_vendor+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  if test "$cross_compiling" = yes; then :
-  ac_cv_func_fork_works=cross
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+    # note: don't check for gcc first since some other compilers define __GNUC__
+  vendors="intel:     __ICC,__ECC,__INTEL_COMPILER
+           ibm:       __xlc__,__xlC__,__IBMC__,__IBMCPP__
+           pathscale: __PATHCC__,__PATHSCALE__
+           clang:     __clang__
+           cray:      _CRAYC
+           fujitsu:   __FUJITSU
+           gnu:       __GNUC__
+           sun:       __SUNPRO_C,__SUNPRO_CC
+           hp:        __HP_cc,__HP_aCC
+           dec:       __DECC,__DECCXX,__DECC_VER,__DECCXX_VER
+           borland:   __BORLANDC__,__CODEGEARC__,__TURBOC__
+           comeau:    __COMO__
+           kai:       __KCC
+           lcc:       __LCC__
+           sgi:       __sgi,sgi
+           microsoft: _MSC_VER
+           metrowerks: __MWERKS__
+           watcom:    __WATCOMC__
+           portland:  __PGI
+           tcc:       __TINYC__
+           unknown:   UNKNOWN"
+  for ventest in $vendors; do
+    case $ventest in
+      *:) vendor=$ventest; continue ;;
+      *)  vencpp="defined("`echo $ventest | sed 's/,/) || defined(/g'`")" ;;
+    esac
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-$ac_includes_default
+
 int
 main ()
 {
 
-	  /* By Ruediger Kuhlmann. */
-	  return fork () < 0;
+      #if !($vencpp)
+        thisisanerror;
+      #endif
 
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_run "$LINENO"; then :
-  ac_cv_func_fork_works=yes
-else
-  ac_cv_func_fork_works=no
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_fork_works" >&5
-$as_echo "$ac_cv_func_fork_works" >&6; }
-
-else
-  ac_cv_func_fork_works=$ac_cv_func_fork
-fi
-if test "x$ac_cv_func_fork_works" = xcross; then
-  case $host in
-    *-*-amigaos* | *-*-msdosdjgpp*)
-      # Override, as these systems have only a dummy fork() stub
-      ac_cv_func_fork_works=no
-      ;;
-    *)
-      ac_cv_func_fork_works=yes
-      ;;
-  esac
-  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: result $ac_cv_func_fork_works guessed because of cross compilation" >&5
-$as_echo "$as_me: WARNING: result $ac_cv_func_fork_works guessed because of cross compilation" >&2;}
-fi
-ac_cv_func_vfork_works=$ac_cv_func_vfork
-if test "x$ac_cv_func_vfork" = xyes; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for working vfork" >&5
-$as_echo_n "checking for working vfork... " >&6; }
-if ${ac_cv_func_vfork_works+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  if test "$cross_compiling" = yes; then :
-  ac_cv_func_vfork_works=cross
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-/* Thanks to Paul Eggert for this test.  */
-$ac_includes_default
-#include <sys/wait.h>
-#ifdef HAVE_VFORK_H
-# include <vfork.h>
-#endif
-/* On some sparc systems, changes by the child to local and incoming
-   argument registers are propagated back to the parent.  The compiler
-   is told about this with #include <vfork.h>, but some compilers
-   (e.g. gcc -O) don't grok <vfork.h>.  Test for this by using a
-   static variable whose address is put into a register that is
-   clobbered by the vfork.  */
-static void
-#ifdef __cplusplus
-sparc_address_test (int arg)
-# else
-sparc_address_test (arg) int arg;
-#endif
-{
-  static pid_t child;
-  if (!child) {
-    child = vfork ();
-    if (child < 0) {
-      perror ("vfork");
-      _exit(2);
-    }
-    if (!child) {
-      arg = getpid();
-      write(-1, "", 0);
-      _exit (arg);
-    }
-  }
-}
-
-int
-main ()
-{
-  pid_t parent = getpid ();
-  pid_t child;
-
-  sparc_address_test (0);
-
-  child = vfork ();
-
-  if (child == 0) {
-    /* Here is another test for sparc vfork register problems.  This
-       test uses lots of local variables, at least as many local
-       variables as main has allocated so far including compiler
-       temporaries.  4 locals are enough for gcc 1.40.3 on a Solaris
-       4.1.3 sparc, but we use 8 to be safe.  A buggy compiler should
-       reuse the register of parent for one of the local variables,
-       since it will think that parent can't possibly be used any more
-       in this routine.  Assigning to the local variable will thus
-       munge parent in the parent process.  */
-    pid_t
-      p = getpid(), p1 = getpid(), p2 = getpid(), p3 = getpid(),
-      p4 = getpid(), p5 = getpid(), p6 = getpid(), p7 = getpid();
-    /* Convince the compiler that p..p7 are live; otherwise, it might
-       use the same hardware register for all 8 local variables.  */
-    if (p != p1 || p != p2 || p != p3 || p != p4
-	|| p != p5 || p != p6 || p != p7)
-      _exit(1);
-
-    /* On some systems (e.g. IRIX 3.3), vfork doesn't separate parent
-       from child file descriptors.  If the child closes a descriptor
-       before it execs or exits, this munges the parent's descriptor
-       as well.  Test for this by closing stdout in the child.  */
-    _exit(close(fileno(stdout)) != 0);
-  } else {
-    int status;
-    struct stat st;
-
-    while (wait(&status) != child)
-      ;
-    return (
-	 /* Was there some problem with vforking?  */
-	 child < 0
-
-	 /* Did the child fail?  (This shouldn't happen.)  */
-	 || status
-
-	 /* Did the vfork/compiler bug occur?  */
-	 || parent != getpid()
-
-	 /* Did the file descriptor bug occur?  */
-	 || fstat(fileno(stdout), &st) != 0
-	 );
-  }
-}
-_ACEOF
-if ac_fn_c_try_run "$LINENO"; then :
-  ac_cv_func_vfork_works=yes
-else
-  ac_cv_func_vfork_works=no
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_vfork_works" >&5
-$as_echo "$ac_cv_func_vfork_works" >&6; }
-
-fi;
-if test "x$ac_cv_func_fork_works" = xcross; then
-  ac_cv_func_vfork_works=$ac_cv_func_vfork
-  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: result $ac_cv_func_vfork_works guessed because of cross compilation" >&5
-$as_echo "$as_me: WARNING: result $ac_cv_func_vfork_works guessed because of cross compilation" >&2;}
-fi
-
-if test "x$ac_cv_func_vfork_works" = xyes; then
-
-$as_echo "#define HAVE_WORKING_VFORK 1" >>confdefs.h
-
-else
-
-$as_echo "#define vfork fork" >>confdefs.h
-
-fi
-if test "x$ac_cv_func_fork_works" = xyes; then
-
-$as_echo "#define HAVE_WORKING_FORK 1" >>confdefs.h
-
-fi
-
-#AC_FUNC_MALLOC
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for working memcmp" >&5
-$as_echo_n "checking for working memcmp... " >&6; }
-if ${ac_cv_func_memcmp_working+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  if test "$cross_compiling" = yes; then :
-  ac_cv_func_memcmp_working=no
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-$ac_includes_default
-int
-main ()
-{
-
-  /* Some versions of memcmp are not 8-bit clean.  */
-  char c0 = '\100', c1 = '\200', c2 = '\201';
-  if (memcmp(&c0, &c2, 1) >= 0 || memcmp(&c1, &c2, 1) >= 0)
-    return 1;
-
-  /* The Next x86 OpenStep bug shows up only when comparing 16 bytes
-     or more and with at least one buffer not starting on a 4-byte boundary.
-     William Lewis provided this test program.   */
-  {
-    char foo[21];
-    char bar[21];
-    int i;
-    for (i = 0; i < 4; i++)
-      {
-	char *a = foo + i;
-	char *b = bar + i;
-	strcpy (a, "--------01111111");
-	strcpy (b, "--------10000000");
-	if (memcmp (a, b, 16) >= 0)
-	  return 1;
-      }
-    return 0;
-  }
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_run "$LINENO"; then :
-  ac_cv_func_memcmp_working=yes
-else
-  ac_cv_func_memcmp_working=no
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_memcmp_working" >&5
-$as_echo "$ac_cv_func_memcmp_working" >&6; }
-test $ac_cv_func_memcmp_working = no && case " $LIBOBJS " in
-  *" memcmp.$ac_objext "* ) ;;
-  *) LIBOBJS="$LIBOBJS memcmp.$ac_objext"
- ;;
-esac
-
-
-for ac_header in stdlib.h
-do :
-  ac_fn_c_check_header_mongrel "$LINENO" "stdlib.h" "ac_cv_header_stdlib_h" "$ac_includes_default"
-if test "x$ac_cv_header_stdlib_h" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_STDLIB_H 1
-_ACEOF
-
-fi
-
-done
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for GNU libc compatible realloc" >&5
-$as_echo_n "checking for GNU libc compatible realloc... " >&6; }
-if ${ac_cv_func_realloc_0_nonnull+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  if test "$cross_compiling" = yes; then :
-  ac_cv_func_realloc_0_nonnull=no
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#if defined STDC_HEADERS || defined HAVE_STDLIB_H
-# include <stdlib.h>
-#else
-char *realloc ();
-#endif
-
-int
-main ()
-{
-return ! realloc (0, 0);
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_run "$LINENO"; then :
-  ac_cv_func_realloc_0_nonnull=yes
-else
-  ac_cv_func_realloc_0_nonnull=no
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_realloc_0_nonnull" >&5
-$as_echo "$ac_cv_func_realloc_0_nonnull" >&6; }
-if test $ac_cv_func_realloc_0_nonnull = yes; then :
-
-$as_echo "#define HAVE_REALLOC 1" >>confdefs.h
-
-else
-  $as_echo "#define HAVE_REALLOC 0" >>confdefs.h
-
-   case " $LIBOBJS " in
-  *" realloc.$ac_objext "* ) ;;
-  *) LIBOBJS="$LIBOBJS realloc.$ac_objext"
- ;;
-esac
-
-
-$as_echo "#define realloc rpl_realloc" >>confdefs.h
-
-fi
-
-
-for ac_header in sys/select.h sys/socket.h
-do :
-  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
-ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
-if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
-  cat >>confdefs.h <<_ACEOF
-#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
-_ACEOF
-
-fi
-
-done
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking types of arguments for select" >&5
-$as_echo_n "checking types of arguments for select... " >&6; }
-if ${ac_cv_func_select_args+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  for ac_arg234 in 'fd_set *' 'int *' 'void *'; do
- for ac_arg1 in 'int' 'size_t' 'unsigned long int' 'unsigned int'; do
-  for ac_arg5 in 'struct timeval *' 'const struct timeval *'; do
-   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-$ac_includes_default
-#ifdef HAVE_SYS_SELECT_H
-# include <sys/select.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-# include <sys/socket.h>
-#endif
-
-int
-main ()
-{
-extern int select ($ac_arg1,
-					    $ac_arg234, $ac_arg234, $ac_arg234,
-					    $ac_arg5);
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_compile "$LINENO"; then :
-  ac_cv_func_select_args="$ac_arg1,$ac_arg234,$ac_arg5"; break 3
+  break
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
   done
- done
-done
-# Provide a safe default value.
-: "${ac_cv_func_select_args=int,int *,struct timeval *}"
+  ax_cv_c_compiler_vendor=`echo $vendor | cut -d: -f1`
 
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_select_args" >&5
-$as_echo "$ac_cv_func_select_args" >&6; }
-ac_save_IFS=$IFS; IFS=','
-set dummy `echo "$ac_cv_func_select_args" | sed 's/\*/\*/g'`
-IFS=$ac_save_IFS
-shift
-
-cat >>confdefs.h <<_ACEOF
-#define SELECT_TYPE_ARG1 $1
-_ACEOF
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_c_compiler_vendor" >&5
+$as_echo "$ax_cv_c_compiler_vendor" >&6; }
 
 
-cat >>confdefs.h <<_ACEOF
-#define SELECT_TYPE_ARG234 ($2)
-_ACEOF
 
 
-cat >>confdefs.h <<_ACEOF
-#define SELECT_TYPE_ARG5 ($3)
-_ACEOF
-
-rm -f conftest*
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking return type of signal handlers" >&5
-$as_echo_n "checking return type of signal handlers... " >&6; }
-if ${ac_cv_type_signal+:} false; then :
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for __builtin_expect" >&5
+$as_echo_n "checking for __builtin_expect... " >&6; }
+if ${ax_cv_have___builtin_expect+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-#include <sys/types.h>
-#include <signal.h>
 
 int
 main ()
 {
-return *(signal (0, 0)) (0) == 1;
+
+            __builtin_expect(0, 0)
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ax_cv_have___builtin_expect=yes
+else
+  ax_cv_have___builtin_expect=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_have___builtin_expect" >&5
+$as_echo "$ax_cv_have___builtin_expect" >&6; }
+
+    if test yes = $ax_cv_have___builtin_expect; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE___BUILTIN_EXPECT 1
+_ACEOF
+
+fi
+
+
+
+
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for __builtin_unreachable" >&5
+$as_echo_n "checking for __builtin_unreachable... " >&6; }
+if ${ax_cv_have___builtin_unreachable+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+            __builtin_unreachable()
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ax_cv_have___builtin_unreachable=yes
+else
+  ax_cv_have___builtin_unreachable=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_have___builtin_unreachable" >&5
+$as_echo "$ax_cv_have___builtin_unreachable" >&6; }
+
+    if test yes = $ax_cv_have___builtin_unreachable; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE___BUILTIN_UNREACHABLE 1
+_ACEOF
+
+fi
+
+
+
+
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for __builtin_ctzl" >&5
+$as_echo_n "checking for __builtin_ctzl... " >&6; }
+if ${ax_cv_have___builtin_ctzl+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+            __builtin_ctzl(0)
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ax_cv_have___builtin_ctzl=yes
+else
+  ax_cv_have___builtin_ctzl=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_have___builtin_ctzl" >&5
+$as_echo "$ax_cv_have___builtin_ctzl" >&6; }
+
+    if test yes = $ax_cv_have___builtin_ctzl; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE___BUILTIN_CTZL 1
+_ACEOF
+
+fi
+
+
+
+
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for __builtin_clzl" >&5
+$as_echo_n "checking for __builtin_clzl... " >&6; }
+if ${ax_cv_have___builtin_clzl+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+            __builtin_clzl(0)
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ax_cv_have___builtin_clzl=yes
+else
+  ax_cv_have___builtin_clzl=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_have___builtin_clzl" >&5
+$as_echo "$ax_cv_have___builtin_clzl" >&6; }
+
+    if test yes = $ax_cv_have___builtin_clzl; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE___BUILTIN_CLZL 1
+_ACEOF
+
+fi
+
+
+
+
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for __builtin_clz" >&5
+$as_echo_n "checking for __builtin_clz... " >&6; }
+if ${ax_cv_have___builtin_clz+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+            __builtin_clz(0)
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ax_cv_have___builtin_clz=yes
+else
+  ax_cv_have___builtin_clz=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_have___builtin_clz" >&5
+$as_echo "$ax_cv_have___builtin_clz" >&6; }
+
+    if test yes = $ax_cv_have___builtin_clz; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE___BUILTIN_CLZ 1
+_ACEOF
+
+fi
+
+
+
+
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for __builtin_popcountl" >&5
+$as_echo_n "checking for __builtin_popcountl... " >&6; }
+if ${ax_cv_have___builtin_popcountl+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+            __builtin_popcountl(0)
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ax_cv_have___builtin_popcountl=yes
+else
+  ax_cv_have___builtin_popcountl=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_have___builtin_popcountl" >&5
+$as_echo "$ax_cv_have___builtin_popcountl" >&6; }
+
+    if test yes = $ax_cv_have___builtin_popcountl; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE___BUILTIN_POPCOUNTL 1
+_ACEOF
+
+fi
+
+
+
+
+
+
+ case $host_os in #(
+  linux*) :
+
+ case $host_cpu in #(
+  x86_64) :
+
+ { $as_echo "$as_me:${as_lineno-$LINENO}: checking for support of CMPXCHG16B instruction" >&5
+$as_echo_n "checking for support of CMPXCHG16B instruction... " >&6; }
+
+ ac_ext=S
+ ac_cpp='$CPP $CPPFLAGS'
+ ac_compile='$CCAS -c $CCASFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ ac_link='$CCAS -o conftest$ac_exeext $CCASFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext
+ $LIBS >&5'
+ ac_compiler_gnu=$ac_cv_ccas_compiler_gnu
+
+ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+ cmpxchg16b (%rdi)
+_ACEOF
+if ac_fn_casm_try_compile "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+$as_echo "#define HAVE_CMPXCHG16B 1" >>confdefs.h
+
+    have_cmpxchg16b=yes
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
+              l1d_linesize=`cat /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size` ;; #(
+  aarch64) :
+
+ { $as_echo "$as_me:${as_lineno-$LINENO}: checking verifying cachlinesize=64 for aarch64" >&5
+$as_echo_n "checking verifying cachlinesize=64 for aarch64... " >&6; }
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ if test "$cross_compiling" = yes; then :
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "cannot run test program while cross compiling
+See \`config.log' for more details" "$LINENO" 5; }
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+int
+main ()
+{
+unsigned int cache_info = 0;
+                      unsigned int l1d_linesize;
+                      asm volatile ("mrs\t%0, ctr_el0":"=r" (cache_info));
+                      l1d_linesize = 4 << ((cache_info >> 16) & 0xF);
+                      return (l1d_linesize == 64) ? 0 : 1;
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_run "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+    l1d_linesize=64
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
+              $as_echo "checking cache line size for aarch64... $l1d_linesize" ;; #(
+  arm*) :
+    l1d_linesize=32 ;; #(
+  *) :
+    l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE` ;;
+esac
+ pagesize=`getconf PAGESIZE`
+
+
+$as_echo "#define _POSIX_C_SOURCE 200809L" >>confdefs.h
+
+ LIBPHOTON_LIBS="$LIBPHOTON_LIBS -lrt"
+ PHOTON_PC_CFLAGS="$PHOTON_PC_CFLAGS -D_POSIX_C_SOURCE=200809L"
+ PHOTON_PC_PUBLIC_LIBS="$PHOTON_PC_PUBLIC_LIBS -lrt"
+ ;; #(
+  darwin*) :
+
+ l1d_linesize=`sysctl -n hw.cachelinesize`
+ pagesize=`getconf PAGESIZE`
+ ;; #(
+  *) :
+    as_fn_error $? "Unsupported Host OS $host_os" "$LINENO" 5 ;;
+esac
+
+
+cat >>confdefs.h <<_ACEOF
+#define PHOTON_CACHELINE_SIZE $l1d_linesize
+_ACEOF
+
+
+cat >>confdefs.h <<_ACEOF
+#define HPX_CACHELINE_SIZE $l1d_linesize
+_ACEOF
+
+
+cat >>confdefs.h <<_ACEOF
+#define PHOTON_PAGE_SIZE $pagesize
+_ACEOF
+
+
+cat >>confdefs.h <<_ACEOF
+#define HPX_PAGE_SIZE $pagesize
+_ACEOF
+
+
+
+ # Defaults will be overriden in a PE-specific way.
+
+ # Cray uses the PE_ENV environment variable for programming environment. We
+ # want to deal with this in a uniform way on all systems, so we go ahead and
+ # set PE_ENV if it isn't already set.
+ { $as_echo "$as_me:${as_lineno-$LINENO}: checking for programming environment" >&5
+$as_echo_n "checking for programming environment... " >&6; }
+ if test -z "$PE_ENV"; then :
+  case $ax_cv_c_compiler_vendor in #(
+  cray*) :
+    PE_ENV="CRAY"
+ ;; #(
+  portland*) :
+    PE_ENV="PGI"
+ ;; #(
+  intel*) :
+    PE_ENV="INTEL"
+ ;; #(
+  gnu*) :
+    PE_ENV="GNU"
+ ;; #(
+  clang*) :
+    PE_ENV="CLANG"
+ ;; #(
+  *) :
+    PE_ENV="UNKNOWN"
+ ;;
+esac
+fi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PE_ENV" >&5
+$as_echo "$PE_ENV" >&6; }
+
+ # Each programming environment is slightly different. Add PE-specific flags for
+ # compilation.
+
+ case $PE_ENV in #(
+  CRAY*) :
+
+ LIBPHOTON_CPPFLAGS="$LIBPHOTON_CPPFLAGS ‐h noomp"
+ LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS -h nomessage=1254"
+ LIBPHOTON_CCASFLAGS="$LIBPHOTON_CCASFLAGS -h gnu -h nomessage=1254"
+ ;; #(
+  PGI*) :
+
+ ;; #(
+  GNU*) :
+
+ photon_pe_env_cflags_pedantic="-pedantic"
+ photon_pe_env_cflags_wall="-Wall"
+ ;; #(
+  INTEL*) :
+
+ photon_pe_env_cflags_pedantic="-pedantic"
+ photon_pe_env_cflags_wall="-Wall"
+ ;; #(
+  CLANG*) :
+
+ LIBPHOTON_CPPFLAGS="$LIBPHOTON_CPPFLAGS -Wno-gnu-zero-variadic-macro-arguments"
+ photon_pe_env_cflags_pedantic="-pedantic"
+ photon_pe_env_cflags_wall="-Wall"
+
+                 { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Unknown programming environment" >&5
+$as_echo "$as_me: WARNING: Unknown programming environment" >&2;} ;; #(
+  *) :
+     ;;
+esac
+
+
+# Check for pthreads. This will set CFLAGS and LIBS as necessary in a
+# platform-specific way. According to ax_pthread.m4 PTHREAD_CFLAGS are meant to
+# be on the link line too, so add them for pkg-config static linking.
+
+
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ax_pthread_ok=no
+
+# We used to check for pthread.h first, but this fails if pthread.h
+# requires special compiler flags (e.g. on True64 or Sequent).
+# It gets checked for in the link test anyway.
+
+# First of all, check if the user has set any of the PTHREAD_LIBS,
+# etcetera environment variables, and if threads linking works using
+# them:
+if test x"$PTHREAD_LIBS$PTHREAD_CFLAGS" != x; then
+save_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
+save_LIBS="$LIBS"
+LIBS="$PTHREAD_LIBS $LIBS"
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_join in LIBS=$PTHREAD_LIBS with CFLAGS=$PTHREAD_CFLAGS" >&5
+$as_echo_n "checking for pthread_join in LIBS=$PTHREAD_LIBS with CFLAGS=$PTHREAD_CFLAGS... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char pthread_join ();
+int
+main ()
+{
+return pthread_join ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ax_pthread_ok=yes
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_pthread_ok" >&5
+$as_echo "$ax_pthread_ok" >&6; }
+if test x"$ax_pthread_ok" = xno; then
+PTHREAD_LIBS=""
+PTHREAD_CFLAGS=""
+fi
+LIBS="$save_LIBS"
+CFLAGS="$save_CFLAGS"
+fi
+
+# We must check for the threads library under a number of different
+# names; the ordering is very important because some systems
+# (e.g. DEC) have both -lpthread and -lpthreads, where one of the
+# libraries is broken (non-POSIX).
+
+# Create a list of thread flags to try.  Items starting with a "-" are
+# C compiler flags, and other items are library names, except for "none"
+# which indicates that we try without any flags at all, and "pthread-config"
+# which is a program returning the flags for the Pth emulation library.
+
+ax_pthread_flags="pthreads none -Kthread -kthread lthread -pthread -pthreads -mthreads pthread --thread-safe -mt pthread-config"
+
+# The ordering *is* (sometimes) important.  Some notes on the
+# individual items follow:
+
+# pthreads: AIX (must check this before -lpthread)
+# none: in case threads are in libc; should be tried before -Kthread and
+#       other compiler flags to prevent continual compiler warnings
+# -Kthread: Sequent (threads in libc, but -Kthread needed for pthread.h)
+# -kthread: FreeBSD kernel threads (preferred to -pthread since SMP-able)
+# lthread: LinuxThreads port on FreeBSD (also preferred to -pthread)
+# -pthread: Linux/gcc (kernel threads), BSD/gcc (userland threads)
+# -pthreads: Solaris/gcc
+# -mthreads: Mingw32/gcc, Lynx/gcc
+# -mt: Sun Workshop C (may only link SunOS threads [-lthread], but it
+#      doesn't hurt to check since this sometimes defines pthreads too;
+#      also defines -D_REENTRANT)
+#      ... -mt is also the pthreads flag for HP/aCC
+# pthread: Linux, etcetera
+# --thread-safe: KAI C++
+# pthread-config: use pthread-config program (for GNU Pth library)
+
+case ${host_os} in
+solaris*)
+
+# On Solaris (at least, for some versions), libc contains stubbed
+# (non-functional) versions of the pthreads routines, so link-based
+# tests will erroneously succeed.  (We need to link with -pthreads/-mt/
+# -lpthread.)  (The stubs are missing pthread_cleanup_push, or rather
+# a function called by this macro, so we could check for that, but
+# who knows whether they'll stub that too in a future libc.)  So,
+# we'll just look for -pthreads and -lpthread first:
+
+ax_pthread_flags="-pthreads pthread -mt -pthread $ax_pthread_flags"
+;;
+
+darwin*)
+ax_pthread_flags="-pthread $ax_pthread_flags"
+;;
+esac
+
+# Clang doesn't consider unrecognized options an error unless we specify
+# -Werror. We throw in some extra Clang-specific options to ensure that
+# this doesn't happen for GCC, which also accepts -Werror.
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if compiler needs -Werror to reject unknown flags" >&5
+$as_echo_n "checking if compiler needs -Werror to reject unknown flags... " >&6; }
+save_CFLAGS="$CFLAGS"
+ax_pthread_extra_flags="-Werror"
+CFLAGS="$CFLAGS $ax_pthread_extra_flags -Wunknown-warning-option -Wsizeof-array-argument"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+int foo(void);
+int
+main ()
+{
+foo()
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_compile "$LINENO"; then :
-  ac_cv_type_signal=int
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 else
-  ac_cv_type_signal=void
+  ax_pthread_extra_flags=
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+CFLAGS="$save_CFLAGS"
+
+if test x"$ax_pthread_ok" = xno; then
+for flag in $ax_pthread_flags; do
+
+case $flag in
+none)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether pthreads work without any flags" >&5
+$as_echo_n "checking whether pthreads work without any flags... " >&6; }
+;;
+
+-*)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether pthreads work with $flag" >&5
+$as_echo_n "checking whether pthreads work with $flag... " >&6; }
+PTHREAD_CFLAGS="$flag"
+;;
+
+pthread-config)
+# Extract the first word of "pthread-config", so it can be a program name with args.
+set dummy pthread-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_ax_pthread_config+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$ax_pthread_config"; then
+  ac_cv_prog_ax_pthread_config="$ax_pthread_config" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_ax_pthread_config="yes"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_prog_ax_pthread_config" && ac_cv_prog_ax_pthread_config="no"
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_type_signal" >&5
-$as_echo "$ac_cv_type_signal" >&6; }
+fi
+ax_pthread_config=$ac_cv_prog_ax_pthread_config
+if test -n "$ax_pthread_config"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_pthread_config" >&5
+$as_echo "$ax_pthread_config" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+if test x"$ax_pthread_config" = xno; then continue; fi
+PTHREAD_CFLAGS="`pthread-config --cflags`"
+PTHREAD_LIBS="`pthread-config --ldflags` `pthread-config --libs`"
+;;
+
+*)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for the pthreads library -l$flag" >&5
+$as_echo_n "checking for the pthreads library -l$flag... " >&6; }
+PTHREAD_LIBS="-l$flag"
+;;
+esac
+
+save_LIBS="$LIBS"
+save_CFLAGS="$CFLAGS"
+LIBS="$PTHREAD_LIBS $LIBS"
+CFLAGS="$CFLAGS $PTHREAD_CFLAGS $ax_pthread_extra_flags"
+
+# Check for various functions.  We must include pthread.h,
+# since some functions may be macros.  (On the Sequent, we
+# need a special flag -Kthread to make this header compile.)
+# We check for pthread_join because it is in -lpthread on IRIX
+# while pthread_create is in libc.  We check for pthread_attr_init
+# due to DEC craziness with -lpthreads.  We check for
+# pthread_cleanup_push because it is one of the few pthread
+# functions on Solaris that doesn't have a non-functional libc stub.
+# We try pthread_create on general principles.
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <pthread.h>
+static void routine(void *a) { a = 0; }
+static void *start_routine(void *a) { return a; }
+int
+main ()
+{
+pthread_t th; pthread_attr_t attr;
+pthread_create(&th, 0, start_routine, 0);
+pthread_join(th, 0);
+pthread_attr_init(&attr);
+pthread_cleanup_push(routine, 0);
+pthread_cleanup_pop(0) /* ; */
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ax_pthread_ok=yes
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+LIBS="$save_LIBS"
+CFLAGS="$save_CFLAGS"
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_pthread_ok" >&5
+$as_echo "$ax_pthread_ok" >&6; }
+if test "x$ax_pthread_ok" = xyes; then
+break;
+fi
+
+PTHREAD_LIBS=""
+PTHREAD_CFLAGS=""
+done
+fi
+
+# Various other checks:
+if test "x$ax_pthread_ok" = xyes; then
+save_LIBS="$LIBS"
+LIBS="$PTHREAD_LIBS $LIBS"
+save_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
+
+# Detect AIX lossage: JOINABLE attribute is called UNDETACHED.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for joinable pthread attribute" >&5
+$as_echo_n "checking for joinable pthread attribute... " >&6; }
+attr_name=unknown
+for attr in PTHREAD_CREATE_JOINABLE PTHREAD_CREATE_UNDETACHED; do
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <pthread.h>
+int
+main ()
+{
+int attr = $attr; return attr /* ; */
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  attr_name=$attr; break
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+done
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $attr_name" >&5
+$as_echo "$attr_name" >&6; }
+if test "$attr_name" != PTHREAD_CREATE_JOINABLE; then
 
 cat >>confdefs.h <<_ACEOF
-#define RETSIGTYPE $ac_cv_type_signal
-_ACEOF
-
-
-for ac_func in atoll atoq gethostbyaddr gethostbyname gethostname gettimeofday inet_ntoa memset select socket strcasecmp strchr strdup strerror strlcat strlcpy strstr strtoul strtoll inet_ntop
-do :
-  as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
-ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
-if eval test \"x\$"$as_ac_var"\" = x"yes"; then :
-  cat >>confdefs.h <<_ACEOF
-#define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
+#define PTHREAD_CREATE_JOINABLE $attr_name
 _ACEOF
 
 fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if more special flags are required for pthreads" >&5
+$as_echo_n "checking if more special flags are required for pthreads... " >&6; }
+flag=no
+case ${host_os} in
+aix* | freebsd* | darwin*) flag="-D_THREAD_SAFE";;
+osf* | hpux*) flag="-D_REENTRANT";;
+solaris*)
+if test "$GCC" = "yes"; then
+flag="-D_REENTRANT"
+else
+# TODO: What about Clang on Solaris?
+flag="-mt -D_REENTRANT"
+fi
+;;
+esac
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $flag" >&5
+$as_echo "$flag" >&6; }
+if test "x$flag" != xno; then
+PTHREAD_CFLAGS="$flag $PTHREAD_CFLAGS"
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for PTHREAD_PRIO_INHERIT" >&5
+$as_echo_n "checking for PTHREAD_PRIO_INHERIT... " >&6; }
+if ${ax_cv_PTHREAD_PRIO_INHERIT+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <pthread.h>
+int
+main ()
+{
+int i = PTHREAD_PRIO_INHERIT;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ax_cv_PTHREAD_PRIO_INHERIT=yes
+else
+  ax_cv_PTHREAD_PRIO_INHERIT=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_PTHREAD_PRIO_INHERIT" >&5
+$as_echo "$ax_cv_PTHREAD_PRIO_INHERIT" >&6; }
+if test "x$ax_cv_PTHREAD_PRIO_INHERIT" = "xyes"; then :
+
+$as_echo "#define HAVE_PTHREAD_PRIO_INHERIT 1" >>confdefs.h
+
+fi
+
+LIBS="$save_LIBS"
+CFLAGS="$save_CFLAGS"
+
+# More AIX lossage: compile with *_r variant
+if test "x$GCC" != xyes; then
+case $host_os in
+aix*)
+case "x/$CC" in #(
+  x*/c89|x*/c89_128|x*/c99|x*/c99_128|x*/cc|x*/cc128|x*/xlc|x*/xlc_v6|x*/xlc128|x*/xlc128_v6) :
+    #handle absolute path differently from PATH based program lookup
+case "x$CC" in #(
+  x/*) :
+    if as_fn_executable_p ${CC}_r; then :
+  PTHREAD_CC="${CC}_r"
+fi ;; #(
+  *) :
+    for ac_prog in ${CC}_r
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_PTHREAD_CC+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$PTHREAD_CC"; then
+  ac_cv_prog_PTHREAD_CC="$PTHREAD_CC" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_PTHREAD_CC="$ac_prog"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
 done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+PTHREAD_CC=$ac_cv_prog_PTHREAD_CC
+if test -n "$PTHREAD_CC"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PTHREAD_CC" >&5
+$as_echo "$PTHREAD_CC" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$PTHREAD_CC" && break
+done
+test -n "$PTHREAD_CC" || PTHREAD_CC="$CC"
+ ;;
+esac ;; #(
+  *) :
+     ;;
+esac
+;;
+esac
+fi
+fi
+
+test -n "$PTHREAD_CC" || PTHREAD_CC="$CC"
+
+
+
+
+
+# Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
+if test x"$ax_pthread_ok" = xyes; then
+LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS $PTHREAD_CFLAGS"
+  LIBPHOTON_LIBS="$LIBPHOTON_LIBS $PTHREAD_LIBS"
+  PHOTON_PC_PRIVATE_LIBS="$PTHREAD_CFLAGS $PHOTON_PC_PRIVATE_LIBS $PTHREAD_LIBS"
+:
+else
+ax_pthread_ok=no
+as_fn_error $? "Could not find pthread implementation" "$LINENO" 5
+fi
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
@@ -18270,145 +18641,6 @@ if test "x$enable_calltrace" != xno; then :
 $as_echo "#define ENABLE_CALLTRACE 1" >>confdefs.h
 
 fi
-
-# Check whether --enable-verbs was given.
-if test "${enable_verbs+set}" = set; then :
-  enableval=$enable_verbs; enable_verbs=$enableval
-else
-  enable_verbs=try
-fi
-
-
-if test "$enable_verbs" != "no" ; then
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -libverbs" >&5
-$as_echo_n "checking for main in -libverbs... " >&6; }
-if ${ac_cv_lib_ibverbs_main+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-libverbs  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-int
-main ()
-{
-return main ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_ibverbs_main=yes
-else
-  ac_cv_lib_ibverbs_main=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ibverbs_main" >&5
-$as_echo "$ac_cv_lib_ibverbs_main" >&6; }
-if test "x$ac_cv_lib_ibverbs_main" = xyes; then :
-
-                for ac_header in infiniband/verbs.h
-do :
-  ac_fn_c_check_header_mongrel "$LINENO" "infiniband/verbs.h" "ac_cv_header_infiniband_verbs_h" "$ac_includes_default"
-if test "x$ac_cv_header_infiniband_verbs_h" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_INFINIBAND_VERBS_H 1
-_ACEOF
-
-                        VERBS_LIBS="-libverbs"
-                        have_verbs=yes
-
-fi
-
-done
-
-
-fi
-
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lrdmacm" >&5
-$as_echo_n "checking for main in -lrdmacm... " >&6; }
-if ${ac_cv_lib_rdmacm_main+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lrdmacm  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-int
-main ()
-{
-return main ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_rdmacm_main=yes
-else
-  ac_cv_lib_rdmacm_main=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_rdmacm_main" >&5
-$as_echo "$ac_cv_lib_rdmacm_main" >&6; }
-if test "x$ac_cv_lib_rdmacm_main" = xyes; then :
-
-                for ac_header in rdma/rdma_cma.h
-do :
-  ac_fn_c_check_header_mongrel "$LINENO" "rdma/rdma_cma.h" "ac_cv_header_rdma_rdma_cma_h" "$ac_includes_default"
-if test "x$ac_cv_header_rdma_rdma_cma_h" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_RDMA_RDMA_CMA_H 1
-_ACEOF
-
-                        VERBS_LIBS+=" -lrdmacm"
-                        have_rdmacm=yes
-
-fi
-
-done
-
-
-fi
-
-
-        if test "x$have_verbs" == "xyes" && test "x$have_rdmacm" == "xyes"; then
-
-$as_echo "#define HAVE_VERBS 1" >>confdefs.h
-
-
-		have_vr=yes
-        else
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: IB/RDMA Verbs not found.  Try installing OFED or libibverbs-devel and librdmacm-devel" >&5
-$as_echo "$as_me: IB/RDMA Verbs not found.  Try installing OFED or libibverbs-devel and librdmacm-devel" >&6;}
-	fi
-fi
- if test x$have_vr == xyes; then
-  HAVE_VERBS_TRUE=
-  HAVE_VERBS_FALSE='#'
-else
-  HAVE_VERBS_TRUE='#'
-  HAVE_VERBS_FALSE=
-fi
-
-
-# Check whether --enable-libfabric was given.
-if test "${enable_libfabric+set}" = set; then :
-  enableval=$enable_libfabric;
-else
-  enable_libfabric=no
-fi
-
 
 
 
@@ -18530,24 +18762,215 @@ $as_echo "no" >&6; }
 		PKG_CONFIG=""
 	fi
 fi
-if test "x$enable_libfabric" != xno; then :
-  # Check whether --enable-external-libfabric was given.
-if test "${enable_external_libfabric+set}" = set; then :
-  enableval=$enable_external_libfabric;
-pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBFABRIC" >&5
-$as_echo_n "checking for LIBFABRIC... " >&6; }
 
-if test -n "$LIBFABRIC_CFLAGS"; then
-    pkg_cv_LIBFABRIC_CFLAGS="$LIBFABRIC_CFLAGS"
+ pkg=verbs
+
+ # Select if we want to support verbs, and how to find it if we do.
+ # Check whether --enable-verbs was given.
+if test "${enable_verbs+set}" = set; then :
+  enableval=$enable_verbs;
+else
+  enable_verbs=yes
+fi
+
+
+
+# Check whether --with-verbs was given.
+if test "${with_verbs+set}" = set; then :
+  withval=$with_verbs;
+else
+  with_verbs=system
+fi
+
+
+ if test "x$enable_verbs" != xno; then :
+
+ pkg=$pkg
+
+ # handle the with_verbs option if VERBS is enabled
+ case $with_verbs in #(
+  no) :
+    as_fn_error $? "--enable-verbs=$enable_verbs excludes --without-verbs" "$LINENO" 5 ;; #(
+  system) :
+
+ # see if our CC just "knows" how to cover VERBS and RDMACM without extra work
+ # (i.e., no extra CFLAGS or -lverbs
+ { $as_echo "$as_me:${as_lineno-$LINENO}: checking for direct CC support for VERBS" >&5
+$as_echo_n "checking for direct CC support for VERBS... " >&6; }
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stddef.h>
+                      #include <infiniband/verbs.h>
+		      #include <rdma/rdma_cma.h>
+
+int
+main ()
+{
+struct ibv_context *ctx;
+		      ibv_alloc_pd(ctx);
+		      return rdma_create_event_channel();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+
+$as_echo "#define HAVE_VERBS 1" >>confdefs.h
+
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/verbs/libverbs.la"
+  have_verbs=yes
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
+              if test "x$have_verbs" != xyes; then :
+
+ # look for libverbs in the path, this differs from _PHOTON_CC_VERBS in the sense that
+ # it is testing -lverbs, not simply expecting something like CC to do the work
+ ac_fn_c_check_header_mongrel "$LINENO" "infiniband/verbs.h" "ac_cv_header_infiniband_verbs_h" "$ac_includes_default"
+if test "x$ac_cv_header_infiniband_verbs_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ibv_reg_mr in -libverbs" >&5
+$as_echo_n "checking for ibv_reg_mr in -libverbs... " >&6; }
+if ${ac_cv_lib_ibverbs_ibv_reg_mr+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-libverbs  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char ibv_reg_mr ();
+int
+main ()
+{
+return ibv_reg_mr ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_ibverbs_ibv_reg_mr=yes
+else
+  ac_cv_lib_ibverbs_ibv_reg_mr=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ibverbs_ibv_reg_mr" >&5
+$as_echo "$ac_cv_lib_ibverbs_ibv_reg_mr" >&6; }
+if test "x$ac_cv_lib_ibverbs_ibv_reg_mr" = xyes; then :
+  have_v=yes
+fi
+
+fi
+
+
+
+ ac_fn_c_check_header_mongrel "$LINENO" "rdma/rdma_cma.h" "ac_cv_header_rdma_rdma_cma_h" "$ac_includes_default"
+if test "x$ac_cv_header_rdma_rdma_cma_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for rdma_connect in -lrdmacm" >&5
+$as_echo_n "checking for rdma_connect in -lrdmacm... " >&6; }
+if ${ac_cv_lib_rdmacm_rdma_connect+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lrdmacm  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char rdma_connect ();
+int
+main ()
+{
+return rdma_connect ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_rdmacm_rdma_connect=yes
+else
+  ac_cv_lib_rdmacm_rdma_connect=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_rdmacm_rdma_connect" >&5
+$as_echo "$ac_cv_lib_rdmacm_rdma_connect" >&6; }
+if test "x$ac_cv_lib_rdmacm_rdma_connect" = xyes; then :
+  have_r=yes
+fi
+
+fi
+
+
+
+ if test "$have_v" = "yes" -a "$have_r" = "yes"; then :
+
+
+$as_echo "#define HAVE_VERBS 1" >>confdefs.h
+
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/verbs/libverbs.la"
+  have_verbs=yes
+
+        LIBPHOTON_LIBS="$LIBPHOTON_LIBS -libverbs -lrdmacm"
+	PHOTON_PC_PRIVATE_LIBS="$PHOTON_PC_PRIVATE_LIBS -libverbs -lrdmacm"
+fi
+
+fi
+              if test "x$have_verbs" != xyes; then :
+
+ pkg=$pkg
+
+ # see if there is an verbs package
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for VERBS" >&5
+$as_echo_n "checking for VERBS... " >&6; }
+
+if test -n "$VERBS_CFLAGS"; then
+    pkg_cv_VERBS_CFLAGS="$VERBS_CFLAGS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libfabric\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libfabric") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_LIBFABRIC_CFLAGS=`$PKG_CONFIG --cflags "libfabric" 2>/dev/null`
+  pkg_cv_VERBS_CFLAGS=`$PKG_CONFIG --cflags "$pkg" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -18555,16 +18978,16 @@ fi
  else
     pkg_failed=untried
 fi
-if test -n "$LIBFABRIC_LIBS"; then
-    pkg_cv_LIBFABRIC_LIBS="$LIBFABRIC_LIBS"
+if test -n "$VERBS_LIBS"; then
+    pkg_cv_VERBS_LIBS="$VERBS_LIBS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libfabric\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libfabric") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_LIBFABRIC_LIBS=`$PKG_CONFIG --libs "libfabric" 2>/dev/null`
+  pkg_cv_VERBS_LIBS=`$PKG_CONFIG --libs "$pkg" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -18585,44 +19008,1343 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-	        LIBFABRIC_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libfabric" 2>&1`
+	        VERBS_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$pkg" 2>&1`
         else
-	        LIBFABRIC_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libfabric" 2>&1`
+	        VERBS_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$pkg" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$VERBS_PKG_ERRORS" >&5
+
+	as_fn_error $? "Package requirements ($pkg) were not met:
+
+$VERBS_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables VERBS_CFLAGS
+and VERBS_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables VERBS_CFLAGS
+and VERBS_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
+else
+	VERBS_CFLAGS=$pkg_cv_VERBS_CFLAGS
+	VERBS_LIBS=$pkg_cv_VERBS_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+
+$as_echo "#define HAVE_VERBS 1" >>confdefs.h
+
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/verbs/libverbs.la"
+  have_verbs=yes
+
+    LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS $VERBS_CFLAGS"
+    PHOTON_APPS_CFLAGS="$PHOTON_APPS_CFLAGS $VERBS_CFLAGS"
+    LIBPHOTON_LIBS="$LIBPHOTON_LIBS $VERBS_LIBS"
+    PHOTON_PC_PRIVATE_PKGS="$PHOTON_PC_PRIVATE_PKGS $pkg"
+fi
+
+fi ;; #(
+  yes) :
+
+ # see if our CC just "knows" how to cover VERBS and RDMACM without extra work
+ # (i.e., no extra CFLAGS or -lverbs
+ { $as_echo "$as_me:${as_lineno-$LINENO}: checking for direct CC support for VERBS" >&5
+$as_echo_n "checking for direct CC support for VERBS... " >&6; }
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stddef.h>
+                      #include <infiniband/verbs.h>
+		      #include <rdma/rdma_cma.h>
+
+int
+main ()
+{
+struct ibv_context *ctx;
+		      ibv_alloc_pd(ctx);
+		      return rdma_create_event_channel();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+
+$as_echo "#define HAVE_VERBS 1" >>confdefs.h
+
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/verbs/libverbs.la"
+  have_verbs=yes
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
+              if test "x$have_verbs" != xyes; then :
+
+ # look for libverbs in the path, this differs from _PHOTON_CC_VERBS in the sense that
+ # it is testing -lverbs, not simply expecting something like CC to do the work
+ ac_fn_c_check_header_mongrel "$LINENO" "infiniband/verbs.h" "ac_cv_header_infiniband_verbs_h" "$ac_includes_default"
+if test "x$ac_cv_header_infiniband_verbs_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ibv_reg_mr in -libverbs" >&5
+$as_echo_n "checking for ibv_reg_mr in -libverbs... " >&6; }
+if ${ac_cv_lib_ibverbs_ibv_reg_mr+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-libverbs  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char ibv_reg_mr ();
+int
+main ()
+{
+return ibv_reg_mr ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_ibverbs_ibv_reg_mr=yes
+else
+  ac_cv_lib_ibverbs_ibv_reg_mr=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ibverbs_ibv_reg_mr" >&5
+$as_echo "$ac_cv_lib_ibverbs_ibv_reg_mr" >&6; }
+if test "x$ac_cv_lib_ibverbs_ibv_reg_mr" = xyes; then :
+  have_v=yes
+fi
+
+fi
+
+
+
+ ac_fn_c_check_header_mongrel "$LINENO" "rdma/rdma_cma.h" "ac_cv_header_rdma_rdma_cma_h" "$ac_includes_default"
+if test "x$ac_cv_header_rdma_rdma_cma_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for rdma_connect in -lrdmacm" >&5
+$as_echo_n "checking for rdma_connect in -lrdmacm... " >&6; }
+if ${ac_cv_lib_rdmacm_rdma_connect+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lrdmacm  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char rdma_connect ();
+int
+main ()
+{
+return rdma_connect ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_rdmacm_rdma_connect=yes
+else
+  ac_cv_lib_rdmacm_rdma_connect=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_rdmacm_rdma_connect" >&5
+$as_echo "$ac_cv_lib_rdmacm_rdma_connect" >&6; }
+if test "x$ac_cv_lib_rdmacm_rdma_connect" = xyes; then :
+  have_r=yes
+fi
+
+fi
+
+
+
+ if test "$have_v" = "yes" -a "$have_r" = "yes"; then :
+
+
+$as_echo "#define HAVE_VERBS 1" >>confdefs.h
+
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/verbs/libverbs.la"
+  have_verbs=yes
+
+        LIBPHOTON_LIBS="$LIBPHOTON_LIBS -libverbs -lrdmacm"
+	PHOTON_PC_PRIVATE_LIBS="$PHOTON_PC_PRIVATE_LIBS -libverbs -lrdmacm"
+fi
+
+fi
+              if test "x$have_verbs" != xyes; then :
+
+ pkg=$pkg
+
+ # see if there is an verbs package
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for VERBS" >&5
+$as_echo_n "checking for VERBS... " >&6; }
+
+if test -n "$VERBS_CFLAGS"; then
+    pkg_cv_VERBS_CFLAGS="$VERBS_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_VERBS_CFLAGS=`$PKG_CONFIG --cflags "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$VERBS_LIBS"; then
+    pkg_cv_VERBS_LIBS="$VERBS_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_VERBS_LIBS=`$PKG_CONFIG --libs "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        VERBS_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$pkg" 2>&1`
+        else
+	        VERBS_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$pkg" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$VERBS_PKG_ERRORS" >&5
+
+	as_fn_error $? "Package requirements ($pkg) were not met:
+
+$VERBS_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables VERBS_CFLAGS
+and VERBS_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables VERBS_CFLAGS
+and VERBS_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
+else
+	VERBS_CFLAGS=$pkg_cv_VERBS_CFLAGS
+	VERBS_LIBS=$pkg_cv_VERBS_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+
+$as_echo "#define HAVE_VERBS 1" >>confdefs.h
+
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/verbs/libverbs.la"
+  have_verbs=yes
+
+    LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS $VERBS_CFLAGS"
+    PHOTON_APPS_CFLAGS="$PHOTON_APPS_CFLAGS $VERBS_CFLAGS"
+    LIBPHOTON_LIBS="$LIBPHOTON_LIBS $VERBS_LIBS"
+    PHOTON_PC_PRIVATE_PKGS="$PHOTON_PC_PRIVATE_PKGS $pkg"
+fi
+
+fi ;; #(
+  *) :
+
+ pkg=$with_verbs
+
+ # see if there is an verbs package
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for VERBS" >&5
+$as_echo_n "checking for VERBS... " >&6; }
+
+if test -n "$VERBS_CFLAGS"; then
+    pkg_cv_VERBS_CFLAGS="$VERBS_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_VERBS_CFLAGS=`$PKG_CONFIG --cflags "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$VERBS_LIBS"; then
+    pkg_cv_VERBS_LIBS="$VERBS_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_VERBS_LIBS=`$PKG_CONFIG --libs "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        VERBS_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$pkg" 2>&1`
+        else
+	        VERBS_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$pkg" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$VERBS_PKG_ERRORS" >&5
+
+	as_fn_error $? "Package requirements ($pkg) were not met:
+
+$VERBS_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables VERBS_CFLAGS
+and VERBS_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables VERBS_CFLAGS
+and VERBS_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
+else
+	VERBS_CFLAGS=$pkg_cv_VERBS_CFLAGS
+	VERBS_LIBS=$pkg_cv_VERBS_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+
+$as_echo "#define HAVE_VERBS 1" >>confdefs.h
+
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/verbs/libverbs.la"
+  have_verbs=yes
+
+    LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS $VERBS_CFLAGS"
+    PHOTON_APPS_CFLAGS="$PHOTON_APPS_CFLAGS $VERBS_CFLAGS"
+    LIBPHOTON_LIBS="$LIBPHOTON_LIBS $VERBS_LIBS"
+    PHOTON_PC_PRIVATE_PKGS="$PHOTON_PC_PRIVATE_PKGS $pkg"
+fi
+ ;;
+esac
+
+fi
+
+
+ pkg=cray-ugni
+
+ # Select if we want to support ugni, and how to find it if we do.
+ # Check whether --enable-ugni was given.
+if test "${enable_ugni+set}" = set; then :
+  enableval=$enable_ugni;
+else
+  enable_ugni=no
+fi
+
+
+
+# Check whether --with-ugni was given.
+if test "${with_ugni+set}" = set; then :
+  withval=$with_ugni;
+else
+  with_ugni=system
+fi
+
+
+ if test "x$enable_ugni" != xno; then :
+
+ pkg=$pkg
+
+ # handle the with_ugni option if UGNI is enabled
+ case $with_ugni in #(
+  no) :
+    as_fn_error $? "--enable-ugni=$enable_ugni excludes --without-ugni" "$LINENO" 5 ;; #(
+  system) :
+
+ # see if our CC just "knows" how to cover UGNI and RDMACM without extra work
+ # (i.e., no extra CFLAGS or -lugni
+ { $as_echo "$as_me:${as_lineno-$LINENO}: checking for direct CC support for UGNI" >&5
+$as_echo_n "checking for direct CC support for UGNI... " >&6; }
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stddef.h>
+                      #include <gni_pub.h>
+
+int
+main ()
+{
+gni_cdm_handle_t handle;
+		      return GNI_EpCreate(0x100, 0, 0, 0, &handle);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+
+$as_echo "#define HAVE_UGNI 1" >>confdefs.h
+
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/ugni/libugni.la"
+  have_ugni=yes
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
+              if test "x$have_ugni" != xyes; then :
+
+ # look for libugni in the path, this differs from _PHOTON_CC_UGNI in the sense that
+ # it is testing -lugni, not simply expecting something like CC to do the work
+ ac_fn_c_check_header_mongrel "$LINENO" "gni_pub.h" "ac_cv_header_gni_pub_h" "$ac_includes_default"
+if test "x$ac_cv_header_gni_pub_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for GNI_MemRegister in -lugni" >&5
+$as_echo_n "checking for GNI_MemRegister in -lugni... " >&6; }
+if ${ac_cv_lib_ugni_GNI_MemRegister+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lugni  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char GNI_MemRegister ();
+int
+main ()
+{
+return GNI_MemRegister ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_ugni_GNI_MemRegister=yes
+else
+  ac_cv_lib_ugni_GNI_MemRegister=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ugni_GNI_MemRegister" >&5
+$as_echo "$ac_cv_lib_ugni_GNI_MemRegister" >&6; }
+if test "x$ac_cv_lib_ugni_GNI_MemRegister" = xyes; then :
+
+
+$as_echo "#define HAVE_UGNI 1" >>confdefs.h
+
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/ugni/libugni.la"
+  have_ugni=yes
+
+      LIBPHOTON_LIBS="$LIBPHOTON_LIBS -lugni"
+      PHOTON_PC_PRIVATE_LIBS="$PHOTON_PC_PRIVATE_LIBS -lugni"
+fi
+
+fi
+
+
+
+fi
+              if test "x$have_ugni" != xyes; then :
+
+ pkg=$pkg
+
+ # see if there is an ugni package
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for UGNI" >&5
+$as_echo_n "checking for UGNI... " >&6; }
+
+if test -n "$UGNI_CFLAGS"; then
+    pkg_cv_UGNI_CFLAGS="$UGNI_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_UGNI_CFLAGS=`$PKG_CONFIG --cflags "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$UGNI_LIBS"; then
+    pkg_cv_UGNI_LIBS="$UGNI_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_UGNI_LIBS=`$PKG_CONFIG --libs "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        UGNI_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$pkg" 2>&1`
+        else
+	        UGNI_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$pkg" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$UGNI_PKG_ERRORS" >&5
+
+	as_fn_error $? "Package requirements ($pkg) were not met:
+
+$UGNI_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables UGNI_CFLAGS
+and UGNI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables UGNI_CFLAGS
+and UGNI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
+else
+	UGNI_CFLAGS=$pkg_cv_UGNI_CFLAGS
+	UGNI_LIBS=$pkg_cv_UGNI_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+
+$as_echo "#define HAVE_UGNI 1" >>confdefs.h
+
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/ugni/libugni.la"
+  have_ugni=yes
+
+    LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS $UGNI_CFLAGS"
+    PHOTON_APPS_CFLAGS="$PHOTON_APPS_CFLAGS $UGNI_CFLAGS"
+    LIBPHOTON_LIBS="$LIBPHOTON_LIBS $UGNI_LIBS"
+    PHOTON_PC_PRIVATE_PKGS="$PHOTON_PC_PRIVATE_PKGS $pkg"
+fi
+
+fi ;; #(
+  yes) :
+
+ # see if our CC just "knows" how to cover UGNI and RDMACM without extra work
+ # (i.e., no extra CFLAGS or -lugni
+ { $as_echo "$as_me:${as_lineno-$LINENO}: checking for direct CC support for UGNI" >&5
+$as_echo_n "checking for direct CC support for UGNI... " >&6; }
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stddef.h>
+                      #include <gni_pub.h>
+
+int
+main ()
+{
+gni_cdm_handle_t handle;
+		      return GNI_EpCreate(0x100, 0, 0, 0, &handle);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+
+$as_echo "#define HAVE_UGNI 1" >>confdefs.h
+
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/ugni/libugni.la"
+  have_ugni=yes
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
+              if test "x$have_ugni" != xyes; then :
+
+ # look for libugni in the path, this differs from _PHOTON_CC_UGNI in the sense that
+ # it is testing -lugni, not simply expecting something like CC to do the work
+ ac_fn_c_check_header_mongrel "$LINENO" "gni_pub.h" "ac_cv_header_gni_pub_h" "$ac_includes_default"
+if test "x$ac_cv_header_gni_pub_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for GNI_MemRegister in -lugni" >&5
+$as_echo_n "checking for GNI_MemRegister in -lugni... " >&6; }
+if ${ac_cv_lib_ugni_GNI_MemRegister+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lugni  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char GNI_MemRegister ();
+int
+main ()
+{
+return GNI_MemRegister ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_ugni_GNI_MemRegister=yes
+else
+  ac_cv_lib_ugni_GNI_MemRegister=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ugni_GNI_MemRegister" >&5
+$as_echo "$ac_cv_lib_ugni_GNI_MemRegister" >&6; }
+if test "x$ac_cv_lib_ugni_GNI_MemRegister" = xyes; then :
+
+
+$as_echo "#define HAVE_UGNI 1" >>confdefs.h
+
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/ugni/libugni.la"
+  have_ugni=yes
+
+      LIBPHOTON_LIBS="$LIBPHOTON_LIBS -lugni"
+      PHOTON_PC_PRIVATE_LIBS="$PHOTON_PC_PRIVATE_LIBS -lugni"
+fi
+
+fi
+
+
+
+fi
+              if test "x$have_ugni" != xyes; then :
+
+ pkg=$pkg
+
+ # see if there is an ugni package
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for UGNI" >&5
+$as_echo_n "checking for UGNI... " >&6; }
+
+if test -n "$UGNI_CFLAGS"; then
+    pkg_cv_UGNI_CFLAGS="$UGNI_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_UGNI_CFLAGS=`$PKG_CONFIG --cflags "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$UGNI_LIBS"; then
+    pkg_cv_UGNI_LIBS="$UGNI_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_UGNI_LIBS=`$PKG_CONFIG --libs "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        UGNI_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$pkg" 2>&1`
+        else
+	        UGNI_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$pkg" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$UGNI_PKG_ERRORS" >&5
+
+	as_fn_error $? "Package requirements ($pkg) were not met:
+
+$UGNI_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables UGNI_CFLAGS
+and UGNI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables UGNI_CFLAGS
+and UGNI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
+else
+	UGNI_CFLAGS=$pkg_cv_UGNI_CFLAGS
+	UGNI_LIBS=$pkg_cv_UGNI_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+
+$as_echo "#define HAVE_UGNI 1" >>confdefs.h
+
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/ugni/libugni.la"
+  have_ugni=yes
+
+    LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS $UGNI_CFLAGS"
+    PHOTON_APPS_CFLAGS="$PHOTON_APPS_CFLAGS $UGNI_CFLAGS"
+    LIBPHOTON_LIBS="$LIBPHOTON_LIBS $UGNI_LIBS"
+    PHOTON_PC_PRIVATE_PKGS="$PHOTON_PC_PRIVATE_PKGS $pkg"
+fi
+
+fi ;; #(
+  *) :
+
+ pkg=$with_ugni
+
+ # see if there is an ugni package
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for UGNI" >&5
+$as_echo_n "checking for UGNI... " >&6; }
+
+if test -n "$UGNI_CFLAGS"; then
+    pkg_cv_UGNI_CFLAGS="$UGNI_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_UGNI_CFLAGS=`$PKG_CONFIG --cflags "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$UGNI_LIBS"; then
+    pkg_cv_UGNI_LIBS="$UGNI_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_UGNI_LIBS=`$PKG_CONFIG --libs "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        UGNI_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$pkg" 2>&1`
+        else
+	        UGNI_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$pkg" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$UGNI_PKG_ERRORS" >&5
+
+	as_fn_error $? "Package requirements ($pkg) were not met:
+
+$UGNI_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables UGNI_CFLAGS
+and UGNI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables UGNI_CFLAGS
+and UGNI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
+else
+	UGNI_CFLAGS=$pkg_cv_UGNI_CFLAGS
+	UGNI_LIBS=$pkg_cv_UGNI_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+
+$as_echo "#define HAVE_UGNI 1" >>confdefs.h
+
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/ugni/libugni.la"
+  have_ugni=yes
+
+    LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS $UGNI_CFLAGS"
+    PHOTON_APPS_CFLAGS="$PHOTON_APPS_CFLAGS $UGNI_CFLAGS"
+    LIBPHOTON_LIBS="$LIBPHOTON_LIBS $UGNI_LIBS"
+    PHOTON_PC_PRIVATE_PKGS="$PHOTON_PC_PRIVATE_PKGS $pkg"
+fi
+ ;;
+esac
+
+fi
+
+
+ contrib=src/contrib/libfabric
+ pkg=libfabric
+
+ # Allow the user to override the way we try and find libfabric.
+ # Check whether --enable-libfabric was given.
+if test "${enable_libfabric+set}" = set; then :
+  enableval=$enable_libfabric;
+else
+  enable_libfabric=yes
+fi
+
+
+
+# Check whether --with-libfabric was given.
+if test "${with_libfabric+set}" = set; then :
+  withval=$with_libfabric;
+else
+  with_libfabric=contrib
+fi
+
+
+ if test "x$enable_libfabric" != xno; then :
+
+ pkg=$pkg
+
+ # handle the with_photon option, if enable_libfabric is selected
+ case $with_libfabric in #(
+  no) :
+    as_fn_error $? "--enable-photon=$enable_libfabric excludes --without-photon" "$LINENO" 5 ;; #(
+  # contrib means we should just go ahead and build the library
+   contrib) :
+    build_libfabric=yes ;; #(
+  yes) :
+    build_libfabric=yes ;; #(
+  # system means that we look for a library in the system path, or a
+   # default-named pkg-config package
+   system) :
+
+ # look for libfabric in the path
+ ac_fn_c_check_header_mongrel "$LINENO" "fabric.h" "ac_cv_header_fabric_h" "$ac_includes_default"
+if test "x$ac_cv_header_fabric_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for fi_getinfo in -llibfabric" >&5
+$as_echo_n "checking for fi_getinfo in -llibfabric... " >&6; }
+if ${ac_cv_lib_libfabric_fi_getinfo+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-llibfabric  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char fi_getinfo ();
+int
+main ()
+{
+return fi_getinfo ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_libfabric_fi_getinfo=yes
+else
+  ac_cv_lib_libfabric_fi_getinfo=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_libfabric_fi_getinfo" >&5
+$as_echo "$ac_cv_lib_libfabric_fi_getinfo" >&6; }
+if test "x$ac_cv_lib_libfabric_fi_getinfo" = xyes; then :
+
+
+$as_echo "#define HAVE_LIBFABRIC 1" >>confdefs.h
+
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/fi/libfi.la"
+  have_libfabric=yes
+
+      LIBPHOTON_LIBS="$LIBPHOTON_LIBS -lfabric"
+      PHOTON_PC_PRIVATE_LIBS="$PHOTON_PC_PRIVATE_LIBS -lfabric"
+fi
+
+fi
+
+
+
+              if test "x$with_libfabric" != xyes; then :
+
+ pkg=$pkg
+
+ # search for a libfabric pkg-config package
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBFABRIC" >&5
+$as_echo_n "checking for LIBFABRIC... " >&6; }
+
+if test -n "$LIBFABRIC_CFLAGS"; then
+    pkg_cv_LIBFABRIC_CFLAGS="$LIBFABRIC_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBFABRIC_CFLAGS=`$PKG_CONFIG --cflags "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$LIBFABRIC_LIBS"; then
+    pkg_cv_LIBFABRIC_LIBS="$LIBFABRIC_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBFABRIC_LIBS=`$PKG_CONFIG --libs "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        LIBFABRIC_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$pkg" 2>&1`
+        else
+	        LIBFABRIC_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$pkg" 2>&1`
         fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$LIBFABRIC_PKG_ERRORS" >&5
 
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: pkg-config could not find libfabric" >&5
-$as_echo "$as_me: WARNING: pkg-config could not find libfabric" >&2;}
-         { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: falling back to {LIBFABRIC_CFLAGS, LIBFABRIC_CPPFLAGS, LIBFABRIC_LIBS} variables" >&5
-$as_echo "$as_me: WARNING: falling back to {LIBFABRIC_CFLAGS, LIBFABRIC_CPPFLAGS, LIBFABRIC_LIBS} variables" >&2;}
+	as_fn_error $? "Package requirements ($pkg) were not met:
+
+$LIBFABRIC_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables LIBFABRIC_CFLAGS
+and LIBFABRIC_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
      	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: pkg-config could not find libfabric" >&5
-$as_echo "$as_me: WARNING: pkg-config could not find libfabric" >&2;}
-         { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: falling back to {LIBFABRIC_CFLAGS, LIBFABRIC_CPPFLAGS, LIBFABRIC_LIBS} variables" >&5
-$as_echo "$as_me: WARNING: falling back to {LIBFABRIC_CFLAGS, LIBFABRIC_CPPFLAGS, LIBFABRIC_LIBS} variables" >&2;}
+	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables LIBFABRIC_CFLAGS
+and LIBFABRIC_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
 else
 	LIBFABRIC_CFLAGS=$pkg_cv_LIBFABRIC_CFLAGS
 	LIBFABRIC_LIBS=$pkg_cv_LIBFABRIC_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 
+
+$as_echo "#define HAVE_LIBFABRIC 1" >>confdefs.h
+
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/fi/libfi.la"
+  have_libfabric=yes
+
+    LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS $PHOTON_CFLAGS"
+    LIBPHOTON_LIBS="$LIBPHOTON_LIBS $PHOTON_LIBS"
+    PHOTON_PC_PRIVATE_LIBS="$PHOTON_PC_PRIVATE_LIBS -lfabric"
 fi
-        PHOTON_LIBFABRIC_CPPFLAGS="$LIBFABRIC_CPPFLAGS"
 
-        PHOTON_LIBFABRIC_CFLAGS="$LIBFABRIC_CFLAGS"
+fi ;; #(
+  *) :
+    # any other string is interpreted as a custom pkg-config package
 
-        PHOTON_LIBFABRIC_LIBS="$LIBFABRIC_LIBS"
+ pkg=$with_libfabric
 
-	enable_external_libfabric=yes
+ # search for a libfabric pkg-config package
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBFABRIC" >&5
+$as_echo_n "checking for LIBFABRIC... " >&6; }
+
+if test -n "$LIBFABRIC_CFLAGS"; then
+    pkg_cv_LIBFABRIC_CFLAGS="$LIBFABRIC_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBFABRIC_CFLAGS=`$PKG_CONFIG --cflags "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
 else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$LIBFABRIC_LIBS"; then
+    pkg_cv_LIBFABRIC_LIBS="$LIBFABRIC_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBFABRIC_LIBS=`$PKG_CONFIG --libs "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        LIBFABRIC_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$pkg" 2>&1`
+        else
+	        LIBFABRIC_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$pkg" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$LIBFABRIC_PKG_ERRORS" >&5
+
+	as_fn_error $? "Package requirements ($pkg) were not met:
+
+$LIBFABRIC_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables LIBFABRIC_CFLAGS
+and LIBFABRIC_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables LIBFABRIC_CFLAGS
+and LIBFABRIC_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
+else
+	LIBFABRIC_CFLAGS=$pkg_cv_LIBFABRIC_CFLAGS
+	LIBFABRIC_LIBS=$pkg_cv_LIBFABRIC_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+
+$as_echo "#define HAVE_LIBFABRIC 1" >>confdefs.h
+
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/fi/libfi.la"
+  have_libfabric=yes
+
+    LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS $PHOTON_CFLAGS"
+    LIBPHOTON_LIBS="$LIBPHOTON_LIBS $PHOTON_LIBS"
+    PHOTON_PC_PRIVATE_LIBS="$PHOTON_PC_PRIVATE_LIBS -lfabric"
+fi
+ ;;
+esac
+
+fi
+ if test "x$build_libfabric" == xyes; then :
+
+ contrib=$contrib
+
+ # configure and build the included photon library
+
+ if test "x$enable_static" == xyes; then :
+  cargs="--enable-static"
+else
+  cargs="--disable-static"
+fi
+ if test "x$enable_shared" == xyes; then :
+  cargs="--enable-shared $cargs"
+else
+  cargs="--disable-shared $cargs"
+fi
+
+ LIBFABRIC_CARGS="$cargs $LIBFABRIC_CARGS"
+
 
 config() {
-  in_src=src/contrib/libfabric
-  in_build=src/contrib/libfabric
-  ac_sub_configure_args=" $PHOTON_LIBFABRIC_CARGS"
+  in_src=$contrib
+  in_build=$contrib
+  ac_sub_configure_args="$LIBFABRIC_CARGS"
 
   # Remove --cache-file, --srcdir, and --disable-option-checking arguments
   # so they do not pile up.
@@ -18732,194 +20454,115 @@ else
 fi
 
 
-      	PHOTON_LIBFABRIC_CPPFLAGS=" -I\$(top_srcdir)/src/contrib/libfabric/include"
 
-	PHOTON_LIBFABRIC_DEPS="\$(top_builddir)/src/contrib/libfabric/src/libfabirc.la"
-
-        PHOTON_LIBFABRIC_LIBS="\$(top_builddir)/src/contrib/libfabric/src/libfabric.la"
-
-	enable_external_libfabric=no
-	photon_have_libfabric=yes
-fi
-
-
-as_nl='
-'
-export as_nl
-# Printing a long string crashes Solaris 7 /usr/bin/printf.
-as_echo='\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\'
-as_echo=$as_echo$as_echo$as_echo$as_echo$as_echo
-as_echo=$as_echo$as_echo$as_echo$as_echo$as_echo$as_echo
-# Prefer a ksh shell builtin over an external printf program on Solaris,
-# but without wasting forks for bash or zsh.
-if test -z "$BASH_VERSION$ZSH_VERSION" \
-    && (test "X`print -r -- $as_echo`" = "X$as_echo") 2>/dev/null; then
-  as_echo='print -r --'
-  as_echo_n='print -rn --'
-elif (test "X`printf %s $as_echo`" = "X$as_echo") 2>/dev/null; then
-  as_echo='printf %s\n'
-  as_echo_n='printf %s'
-else
-  if test "X`(/usr/ucb/echo -n -n $as_echo) 2>/dev/null`" = "X-n $as_echo"; then
-    as_echo_body='eval /usr/ucb/echo -n "src/contrib/libfabric$as_nl"'
-    as_echo_n='/usr/ucb/echo -n'
-  else
-    as_echo_body='eval expr "Xsrc/contrib/libfabric" : "X\\(.*\\)"'
-    as_echo_n_body='eval
-      arg=src/contrib/libfabric;
-      case $arg in #(
-      *"$as_nl"*)
-	expr "X$arg" : "X\\(.*\\)$as_nl";
-	arg=`expr "X$arg" : ".*$as_nl\\(.*\\)"`;;
-      esac;
-      expr "X$arg" : "X\\(.*\\)" | tr -d "$as_nl"
-    '
-    export as_echo_n_body
-    as_echo_n='sh -c $as_echo_n_body as_echo'
-  fi
-  export as_echo_body
-  as_echo='sh -c $as_echo_body as_echo'
-fi
 
 $as_echo "#define HAVE_LIBFABRIC 1" >>confdefs.h
 
+  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/src/fi/libfi.la"
+  have_libfabric=yes
+
+ LIBPHOTON_CPPFLAGS="$LIBPHOTON_CPPFLAGS -I\$(top_srcdir)/$contrib/include"
+ LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/$contrib/src/libfabric.la"
+ PHOTON_PC_PRIVATE_LIBS="$PHOTON_PC_PRIVATE_LIBS -lfabric"
+
+fi
+
+
+ pkg=cray-pmi
+
+ # Allow the user to select if we should use PMI or not
+ # Check whether --enable-pmi was given.
+if test "${enable_pmi+set}" = set; then :
+  enableval=$enable_pmi;
 else
-  photon_have_libfabric=no
-fi
- if test x$photon_have_libfabric == xyes; then
-  HAVE_LIBFABRIC_TRUE=
-  HAVE_LIBFABRIC_FALSE='#'
-else
-  HAVE_LIBFABRIC_TRUE='#'
-  HAVE_LIBFABRIC_FALSE=
+  enable_pmi=no
 fi
 
-
-
-# Check whether --with-ugni was given.
-if test "${with_ugni+set}" = set; then :
-  withval=$with_ugni;
-else
-  with_ugni=no
-fi
-
-
-   if test "x$with_ugni" = xyes; then :
-  with_ugni=cray-ugni
-fi
-
-   if test "x$with_ugni" != xno; then :
-
-pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for UGNI" >&5
-$as_echo_n "checking for UGNI... " >&6; }
-
-if test -n "$UGNI_CFLAGS"; then
-    pkg_cv_UGNI_CFLAGS="$UGNI_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$with_ugni\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "$with_ugni") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_UGNI_CFLAGS=`$PKG_CONFIG --cflags "$with_ugni" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$UGNI_LIBS"; then
-    pkg_cv_UGNI_LIBS="$UGNI_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$with_ugni\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "$with_ugni") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_UGNI_LIBS=`$PKG_CONFIG --libs "$with_ugni" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        UGNI_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$with_ugni" 2>&1`
-        else
-	        UGNI_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$with_ugni" 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$UGNI_PKG_ERRORS" >&5
-
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: pkg-config could not find ugni=$with_ugni" >&5
-$as_echo "$as_me: WARNING: pkg-config could not find ugni=$with_ugni" >&2;}
-         { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: falling back to {UGNI_CFLAGS, UGNI_LIBS} variables" >&5
-$as_echo "$as_me: WARNING: falling back to {UGNI_CFLAGS, UGNI_LIBS} variables" >&2;}
-elif test $pkg_failed = untried; then
-     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: pkg-config could not find ugni=$with_ugni" >&5
-$as_echo "$as_me: WARNING: pkg-config could not find ugni=$with_ugni" >&2;}
-         { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: falling back to {UGNI_CFLAGS, UGNI_LIBS} variables" >&5
-$as_echo "$as_me: WARNING: falling back to {UGNI_CFLAGS, UGNI_LIBS} variables" >&2;}
-else
-	UGNI_CFLAGS=$pkg_cv_UGNI_CFLAGS
-	UGNI_LIBS=$pkg_cv_UGNI_LIBS
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-
-fi
-
-
-      UGNI_PKG=$with_ugni
-
-fi
-
-   if test "x$with_ugni" != xno; then :
-
-$as_echo "#define HAVE_UGNI 1" >>confdefs.h
-
-fi
-
-    if test "x$with_ugni" != xno; then
-  HAVE_UGNI_TRUE=
-  HAVE_UGNI_FALSE='#'
-else
-  HAVE_UGNI_TRUE='#'
-  HAVE_UGNI_FALSE=
-fi
 
 
 # Check whether --with-pmi was given.
 if test "${with_pmi+set}" = set; then :
   withval=$with_pmi;
 else
-  with_pmi=no
+  with_pmi=system
 fi
 
 
-   if test "x$with_pmi" = xyes; then :
-  with_pmi=cray-pmi
+ if test "x$enable_pmi" != xno; then :
+
+ pkg=$pkg
+
+ # handle with_pmi when enable_pmi is set
+ case $with_pmi in #(
+  no) :
+    as_fn_error $? "--enable-pmi=$enable_pmi excludes --without-pmi" "$LINENO" 5 ;; #(
+  system) :
+
+ # check if the compiler just supports PMI without a package
+ ac_fn_c_check_header_mongrel "$LINENO" "pmi.h" "ac_cv_header_pmi_h" "$ac_includes_default"
+if test "x$ac_cv_header_pmi_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for PMI_Init in -lpmi" >&5
+$as_echo_n "checking for PMI_Init in -lpmi... " >&6; }
+if ${ac_cv_lib_pmi_PMI_Init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lpmi  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char PMI_Init ();
+int
+main ()
+{
+return PMI_Init ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_pmi_PMI_Init=yes
+else
+  ac_cv_lib_pmi_PMI_Init=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pmi_PMI_Init" >&5
+$as_echo "$ac_cv_lib_pmi_PMI_Init" >&6; }
+if test "x$ac_cv_lib_pmi_PMI_Init" = xyes; then :
+  LIBPHOTON_LIBS="$LIBPHOTON_LIBS -lpmi"
+      PHOTON_PC_PRIVATE_LIBS="$PHOTON_PC_PRIVATE_LIBS -lpmi"
 fi
 
-   if test "x$with_pmi" != xno; then :
+fi
+
+
+
+ ac_fn_c_check_header_mongrel "$LINENO" "pmi_cray_ext.h" "ac_cv_header_pmi_cray_ext_h" "$ac_includes_default"
+if test "x$ac_cv_header_pmi_cray_ext_h" = xyes; then :
+
+
+$as_echo "#define HAVE_PMI_CRAY_EXT 1" >>confdefs.h
+
+ have_pmi_cray_ext=yes
+
+fi
+
+
+
+              if test "x$have_pmi" != xyes; then :
+
+ pkg=$pkg
+
+ # try to find PMI through a package
 
 pkg_failed=no
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for PMI" >&5
@@ -18929,12 +20572,12 @@ if test -n "$PMI_CFLAGS"; then
     pkg_cv_PMI_CFLAGS="$PMI_CFLAGS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$with_pmi\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "$with_pmi") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_PMI_CFLAGS=`$PKG_CONFIG --cflags "$with_pmi" 2>/dev/null`
+  pkg_cv_PMI_CFLAGS=`$PKG_CONFIG --cflags "$pkg" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -18946,12 +20589,12 @@ if test -n "$PMI_LIBS"; then
     pkg_cv_PMI_LIBS="$PMI_LIBS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$with_pmi\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "$with_pmi") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_PMI_LIBS=`$PKG_CONFIG --libs "$with_pmi" 2>/dev/null`
+  pkg_cv_PMI_LIBS=`$PKG_CONFIG --libs "$pkg" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -18972,80 +20615,153 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-	        PMI_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$with_pmi" 2>&1`
+	        PMI_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$pkg" 2>&1`
         else
-	        PMI_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$with_pmi" 2>&1`
+	        PMI_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$pkg" 2>&1`
         fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$PMI_PKG_ERRORS" >&5
 
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: pkg-config could not find pmi=$with_pmi" >&5
-$as_echo "$as_me: WARNING: pkg-config could not find pmi=$with_pmi" >&2;}
-         { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: falling back to {PMI_CFLAGS, PMI_LIBS} variables" >&5
-$as_echo "$as_me: WARNING: falling back to {PMI_CFLAGS, PMI_LIBS} variables" >&2;}
+	as_fn_error $? "Package requirements ($pkg) were not met:
+
+$PMI_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables PMI_CFLAGS
+and PMI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
      	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: pkg-config could not find pmi=$with_pmi" >&5
-$as_echo "$as_me: WARNING: pkg-config could not find pmi=$with_pmi" >&2;}
-         { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: falling back to {PMI_CFLAGS, PMI_LIBS} variables" >&5
-$as_echo "$as_me: WARNING: falling back to {PMI_CFLAGS, PMI_LIBS} variables" >&2;}
+	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables PMI_CFLAGS
+and PMI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
 else
 	PMI_CFLAGS=$pkg_cv_PMI_CFLAGS
 	PMI_LIBS=$pkg_cv_PMI_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 
-fi
-
-
-      PMI_PKG=$with_pmi
-
-fi
-
-   if test "x$with_pmi" != xno; then :
 
 $as_echo "#define HAVE_PMI 1" >>confdefs.h
 
+ have_pmi=yes
+
+    LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS $PMI_CFLAGS"
+    LIBPHOTON_LIBS="$LIBPHOTON_LIBS $PMI_LIBS"
+    PHOTON_PC_PRIVATE_PKGS="$PHOTON_PC_PRIVATE_PKGS $pkg"
 fi
 
-    if test "x$with_pmi" != xno; then
-  HAVE_PMI_TRUE=
-  HAVE_PMI_FALSE='#'
+ # check for cray extensions
+ old_CPPFLAGS=$CPPFLAGS
+ CPPFLAGS="$CPPFLAGS $PMI_CFLAGS"
+ ac_fn_c_check_header_mongrel "$LINENO" "pmi_cray_ext.h" "ac_cv_header_pmi_cray_ext_h" "$ac_includes_default"
+if test "x$ac_cv_header_pmi_cray_ext_h" = xyes; then :
+
+
+$as_echo "#define HAVE_PMI_CRAY_EXT 1" >>confdefs.h
+
+ have_pmi_cray_ext=yes
+
+fi
+
+
+ CPPFLAGS=$old_CPPFLAGS
+
+fi ;; #(
+  yes) :
+
+ # check if the compiler just supports PMI without a package
+ ac_fn_c_check_header_mongrel "$LINENO" "pmi.h" "ac_cv_header_pmi_h" "$ac_includes_default"
+if test "x$ac_cv_header_pmi_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for PMI_Init in -lpmi" >&5
+$as_echo_n "checking for PMI_Init in -lpmi... " >&6; }
+if ${ac_cv_lib_pmi_PMI_Init+:} false; then :
+  $as_echo_n "(cached) " >&6
 else
-  HAVE_PMI_TRUE='#'
-  HAVE_PMI_FALSE=
-fi
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lpmi  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
 
-
-# Check whether --with-mpi was given.
-if test "${with_mpi+set}" = set; then :
-  withval=$with_mpi;
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char PMI_Init ();
+int
+main ()
+{
+return PMI_Init ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_pmi_PMI_Init=yes
 else
-  with_mpi=no
+  ac_cv_lib_pmi_PMI_Init=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pmi_PMI_Init" >&5
+$as_echo "$ac_cv_lib_pmi_PMI_Init" >&6; }
+if test "x$ac_cv_lib_pmi_PMI_Init" = xyes; then :
+  LIBPHOTON_LIBS="$LIBPHOTON_LIBS -lpmi"
+      PHOTON_PC_PRIVATE_LIBS="$PHOTON_PC_PRIVATE_LIBS -lpmi"
+fi
+
 fi
 
 
-   if test "x$with_mpi" = xyes; then :
-  with_mpi=mpi
+
+ ac_fn_c_check_header_mongrel "$LINENO" "pmi_cray_ext.h" "ac_cv_header_pmi_cray_ext_h" "$ac_includes_default"
+if test "x$ac_cv_header_pmi_cray_ext_h" = xyes; then :
+
+
+$as_echo "#define HAVE_PMI_CRAY_EXT 1" >>confdefs.h
+
+ have_pmi_cray_ext=yes
+
 fi
 
-   if test "x$with_mpi" != xno; then :
+
+
+              if test "x$have_pmi" != xyes; then :
+
+ pkg=$pkg
+
+ # try to find PMI through a package
 
 pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for MPI" >&5
-$as_echo_n "checking for MPI... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for PMI" >&5
+$as_echo_n "checking for PMI... " >&6; }
 
-if test -n "$MPI_CFLAGS"; then
-    pkg_cv_MPI_CFLAGS="$MPI_CFLAGS"
+if test -n "$PMI_CFLAGS"; then
+    pkg_cv_PMI_CFLAGS="$PMI_CFLAGS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$with_mpi\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "$with_mpi") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_MPI_CFLAGS=`$PKG_CONFIG --cflags "$with_mpi" 2>/dev/null`
+  pkg_cv_PMI_CFLAGS=`$PKG_CONFIG --cflags "$pkg" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -19053,16 +20769,16 @@ fi
  else
     pkg_failed=untried
 fi
-if test -n "$MPI_LIBS"; then
-    pkg_cv_MPI_LIBS="$MPI_LIBS"
+if test -n "$PMI_LIBS"; then
+    pkg_cv_PMI_LIBS="$PMI_LIBS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$with_mpi\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "$with_mpi") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_MPI_LIBS=`$PKG_CONFIG --libs "$with_mpi" 2>/dev/null`
+  pkg_cv_PMI_LIBS=`$PKG_CONFIG --libs "$pkg" 2>/dev/null`
 		      test "x$?" != "x0" && pkg_failed=yes
 else
   pkg_failed=yes
@@ -19083,99 +20799,285 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-	        MPI_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$with_mpi" 2>&1`
+	        PMI_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$pkg" 2>&1`
         else
-	        MPI_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$with_mpi" 2>&1`
+	        PMI_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$pkg" 2>&1`
         fi
 	# Put the nasty error message in config.log where it belongs
-	echo "$MPI_PKG_ERRORS" >&5
+	echo "$PMI_PKG_ERRORS" >&5
 
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: pkg-config could not find mpi=$with_mpi" >&5
-$as_echo "$as_me: WARNING: pkg-config could not find mpi=$with_mpi" >&2;}
-         { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: falling back to {MPI_CFLAGS, MPI_LIBS} variables" >&5
-$as_echo "$as_me: WARNING: falling back to {MPI_CFLAGS, MPI_LIBS} variables" >&2;}
+	as_fn_error $? "Package requirements ($pkg) were not met:
+
+$PMI_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables PMI_CFLAGS
+and PMI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
      	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: pkg-config could not find mpi=$with_mpi" >&5
-$as_echo "$as_me: WARNING: pkg-config could not find mpi=$with_mpi" >&2;}
-         { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: falling back to {MPI_CFLAGS, MPI_LIBS} variables" >&5
-$as_echo "$as_me: WARNING: falling back to {MPI_CFLAGS, MPI_LIBS} variables" >&2;}
+	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables PMI_CFLAGS
+and PMI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
 else
-	MPI_CFLAGS=$pkg_cv_MPI_CFLAGS
-	MPI_LIBS=$pkg_cv_MPI_LIBS
+	PMI_CFLAGS=$pkg_cv_PMI_CFLAGS
+	PMI_LIBS=$pkg_cv_PMI_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 
+
+$as_echo "#define HAVE_PMI 1" >>confdefs.h
+
+ have_pmi=yes
+
+    LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS $PMI_CFLAGS"
+    LIBPHOTON_LIBS="$LIBPHOTON_LIBS $PMI_LIBS"
+    PHOTON_PC_PRIVATE_PKGS="$PHOTON_PC_PRIVATE_PKGS $pkg"
+fi
+
+ # check for cray extensions
+ old_CPPFLAGS=$CPPFLAGS
+ CPPFLAGS="$CPPFLAGS $PMI_CFLAGS"
+ ac_fn_c_check_header_mongrel "$LINENO" "pmi_cray_ext.h" "ac_cv_header_pmi_cray_ext_h" "$ac_includes_default"
+if test "x$ac_cv_header_pmi_cray_ext_h" = xyes; then :
+
+
+$as_echo "#define HAVE_PMI_CRAY_EXT 1" >>confdefs.h
+
+ have_pmi_cray_ext=yes
+
 fi
 
 
-      MPI_PKG=$with_mpi
+ CPPFLAGS=$old_CPPFLAGS
+
+fi ;; #(
+  *) :
+
+ pkg=$with_pmi
+
+ # try to find PMI through a package
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for PMI" >&5
+$as_echo_n "checking for PMI... " >&6; }
+
+if test -n "$PMI_CFLAGS"; then
+    pkg_cv_PMI_CFLAGS="$PMI_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_PMI_CFLAGS=`$PKG_CONFIG --cflags "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$PMI_LIBS"; then
+    pkg_cv_PMI_LIBS="$PMI_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_PMI_LIBS=`$PKG_CONFIG --libs "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        PMI_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$pkg" 2>&1`
+        else
+	        PMI_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$pkg" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$PMI_PKG_ERRORS" >&5
+
+	as_fn_error $? "Package requirements ($pkg) were not met:
+
+$PMI_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables PMI_CFLAGS
+and PMI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables PMI_CFLAGS
+and PMI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
+else
+	PMI_CFLAGS=$pkg_cv_PMI_CFLAGS
+	PMI_LIBS=$pkg_cv_PMI_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+
+$as_echo "#define HAVE_PMI 1" >>confdefs.h
+
+ have_pmi=yes
+
+    LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS $PMI_CFLAGS"
+    LIBPHOTON_LIBS="$LIBPHOTON_LIBS $PMI_LIBS"
+    PHOTON_PC_PRIVATE_PKGS="$PHOTON_PC_PRIVATE_PKGS $pkg"
+fi
+
+ # check for cray extensions
+ old_CPPFLAGS=$CPPFLAGS
+ CPPFLAGS="$CPPFLAGS $PMI_CFLAGS"
+ ac_fn_c_check_header_mongrel "$LINENO" "pmi_cray_ext.h" "ac_cv_header_pmi_cray_ext_h" "$ac_includes_default"
+if test "x$ac_cv_header_pmi_cray_ext_h" = xyes; then :
+
+
+$as_echo "#define HAVE_PMI_CRAY_EXT 1" >>confdefs.h
+
+ have_pmi_cray_ext=yes
 
 fi
 
-   if test "x$with_mpi" != xno; then :
+
+ CPPFLAGS=$old_CPPFLAGS
+ ;;
+esac
+
+fi
+
+
+ pkg=ompi
+
+ # Select if we want to support mpi, and how to find it if we do.
+ # Check whether --enable-mpi was given.
+if test "${enable_mpi+set}" = set; then :
+  enableval=$enable_mpi;
+else
+  enable_mpi=no
+fi
+
+
+
+# Check whether --with-mpi was given.
+if test "${with_mpi+set}" = set; then :
+  withval=$with_mpi;
+else
+  with_mpi=system
+fi
+
+
+ if test "x$enable_mpi" != xno; then :
+
+ pkg=$pkg
+
+ # handle the with_mpi option if MPI is enabled
+ case $with_mpi in #(
+  no) :
+    as_fn_error $? "--enable-mpi=$enable_mpi excludes --without-mpi" "$LINENO" 5 ;; #(
+  system) :
+
+ # see if our CC just "knows" how to compile MPI without extra work (i.e., no
+ # extra CFLAGS or -lmpi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: checking for direct CC support for MPI" >&5
+$as_echo_n "checking for direct CC support for MPI... " >&6; }
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stddef.h>
+                      #include <mpi.h>
+
+int
+main ()
+{
+return MPI_Init(NULL, NULL);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
 
 $as_echo "#define HAVE_MPI 1" >>confdefs.h
 
-fi
+  have_mpi=yes
 
-    if test "x$with_mpi" != xno; then
-  HAVE_MPI_TRUE=
-  HAVE_MPI_FALSE='#'
 else
-  HAVE_MPI_TRUE='#'
-  HAVE_MPI_FALSE=
-fi
-
-
-
-# Check whether --with-mpi-include-path was given.
-if test "${with_mpi_include_path+set}" = set; then :
-  withval=$with_mpi_include_path; with_mpi_include=$withval
-else
-  with_mpi_include=no
-fi
-
-
-if test "$with_mpi_include" != "no"; then
-   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for mpi.h in $with_mpi_include" >&5
-$as_echo_n "checking for mpi.h in $with_mpi_include... " >&6; }
-   if test -f $with_mpi_include/mpi.h; then
-   	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-	  MPI_CFLAGS="-I$with_mpi_include"
-
-	  $as_echo "#define HAVE_MPI 1" >>confdefs.h
-
-	  have_mpi=yes
-   else
-	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-      as_fn_error $? "No MPI headers found!" "$LINENO" 5
-   fi
 fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
-# Check whether --with-mpi-ld-path was given.
-if test "${with_mpi_ld_path+set}" = set; then :
-  withval=$with_mpi_ld_path; with_mpi_lib=$withval
-else
-  with_mpi_lib=no
-fi
+              if test "x$have_mpi" != xyes; then :
 
-
-if test "$with_mpi_lib" != "no"; then
-   #AC_MSG_CHECKING(for MPI libs in $with_mpi_lib with $LDFLAGS)
-   save_LDFLAGS=$LDFLAGS
-   LDFLAGS="-L$with_mpi_lib"
-   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for MPI_Init in -lmpi" >&5
+ # look for libmpi in the path, this differs from _PHOTON_CC_MPI in the sense that
+ # it is testing -lmpi, not simply expecting something like mpicc to do the work
+ ac_fn_c_check_header_mongrel "$LINENO" "mpi.h" "ac_cv_header_mpi_h" "$ac_includes_default"
+if test "x$ac_cv_header_mpi_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for MPI_Init in -lmpi" >&5
 $as_echo_n "checking for MPI_Init in -lmpi... " >&6; }
 if ${ac_cv_lib_mpi_MPI_Init+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lmpi -lpthread $LIBS"
+LIBS="-lmpi  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -19206,16 +21108,188 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_mpi_MPI_Init" >&5
 $as_echo "$ac_cv_lib_mpi_MPI_Init" >&6; }
 if test "x$ac_cv_lib_mpi_MPI_Init" = xyes; then :
-  MPI_LIBS="-L$with_mpi_lib -lmpi"
+
+
+$as_echo "#define HAVE_MPI 1" >>confdefs.h
+
+  have_mpi=yes
+
+      LIBPHOTON_LIBS="$LIBPHOTON_LIBS -lmpi"
+      PHOTON_PC_PRIVATE_LIBS="$PHOTON_PC_PRIVATE_LIBS -lmpi"
+fi
+
+fi
+
+
+
+fi
+              if test "x$have_mpi" != xyes; then :
+
+ pkg=$pkg
+
+ # see if there is an mpi package
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for MPI" >&5
+$as_echo_n "checking for MPI... " >&6; }
+
+if test -n "$MPI_CFLAGS"; then
+    pkg_cv_MPI_CFLAGS="$MPI_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_MPI_CFLAGS=`$PKG_CONFIG --cflags "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$MPI_LIBS"; then
+    pkg_cv_MPI_LIBS="$MPI_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_MPI_LIBS=`$PKG_CONFIG --libs "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        MPI_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$pkg" 2>&1`
+        else
+	        MPI_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$pkg" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$MPI_PKG_ERRORS" >&5
+
+	as_fn_error $? "Package requirements ($pkg) were not met:
+
+$MPI_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables MPI_CFLAGS
+and MPI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables MPI_CFLAGS
+and MPI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
+else
+	MPI_CFLAGS=$pkg_cv_MPI_CFLAGS
+	MPI_LIBS=$pkg_cv_MPI_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+
+$as_echo "#define HAVE_MPI 1" >>confdefs.h
+
+  have_mpi=yes
+
+    LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS $MPI_CFLAGS"
+    PHOTON_APPS_CFLAGS="$PHOTON_APPS_CFLAGS $MPI_CFLAGS"
+    LIBPHOTON_LIBS="$LIBPHOTON_LIBS $MPI_LIBS"
+    PHOTON_PC_PRIVATE_PKGS="$PHOTON_PC_PRIVATE_PKGS $pkg"
+fi
+
+fi ;; #(
+  yes) :
+
+ # see if our CC just "knows" how to compile MPI without extra work (i.e., no
+ # extra CFLAGS or -lmpi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: checking for direct CC support for MPI" >&5
+$as_echo_n "checking for direct CC support for MPI... " >&6; }
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stddef.h>
+                      #include <mpi.h>
+
+int
+main ()
+{
+return MPI_Init(NULL, NULL);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+
+$as_echo "#define HAVE_MPI 1" >>confdefs.h
+
+  have_mpi=yes
 
 else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for MPI_Init in -lmpich" >&5
-$as_echo_n "checking for MPI_Init in -lmpich... " >&6; }
-if ${ac_cv_lib_mpich_MPI_Init+:} false; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
+              if test "x$have_mpi" != xyes; then :
+
+ # look for libmpi in the path, this differs from _PHOTON_CC_MPI in the sense that
+ # it is testing -lmpi, not simply expecting something like mpicc to do the work
+ ac_fn_c_check_header_mongrel "$LINENO" "mpi.h" "ac_cv_header_mpi_h" "$ac_includes_default"
+if test "x$ac_cv_header_mpi_h" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for MPI_Init in -lmpi" >&5
+$as_echo_n "checking for MPI_Init in -lmpi... " >&6; }
+if ${ac_cv_lib_mpi_MPI_Init+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lmpich  -lpthread $LIBS"
+LIBS="-lmpi  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -19235,246 +21309,259 @@ return MPI_Init ();
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_mpich_MPI_Init=yes
+  ac_cv_lib_mpi_MPI_Init=yes
 else
-  ac_cv_lib_mpich_MPI_Init=no
+  ac_cv_lib_mpi_MPI_Init=no
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_mpich_MPI_Init" >&5
-$as_echo "$ac_cv_lib_mpich_MPI_Init" >&6; }
-if test "x$ac_cv_lib_mpich_MPI_Init" = xyes; then :
-  MPI_LIBS="-L$with_mpi_lib -lmpich"
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_mpi_MPI_Init" >&5
+$as_echo "$ac_cv_lib_mpi_MPI_Init" >&6; }
+if test "x$ac_cv_lib_mpi_MPI_Init" = xyes; then :
 
+
+$as_echo "#define HAVE_MPI 1" >>confdefs.h
+
+  have_mpi=yes
+
+      LIBPHOTON_LIBS="$LIBPHOTON_LIBS -lmpi"
+      PHOTON_PC_PRIVATE_LIBS="$PHOTON_PC_PRIVATE_LIBS -lmpi"
+fi
+
+fi
+
+
+
+fi
+              if test "x$have_mpi" != xyes; then :
+
+ pkg=$pkg
+
+ # see if there is an mpi package
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for MPI" >&5
+$as_echo_n "checking for MPI... " >&6; }
+
+if test -n "$MPI_CFLAGS"; then
+    pkg_cv_MPI_CFLAGS="$MPI_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_MPI_CFLAGS=`$PKG_CONFIG --cflags "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
 else
-  as_fn_error $? "No MPI libs found!" "$LINENO" 5
+  pkg_failed=yes
 fi
-
+ else
+    pkg_failed=untried
 fi
-
-   LDFLAGS=$save_LDFLAGS
-fi
-
- if test x$have_mpi = xyes || test x$with_mpi != xno; then
-  HAVE_MPI_TRUE=
-  HAVE_MPI_FALSE='#'
+if test -n "$MPI_LIBS"; then
+    pkg_cv_MPI_LIBS="$MPI_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_MPI_LIBS=`$PKG_CONFIG --libs "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
 else
-  HAVE_MPI_TRUE='#'
-  HAVE_MPI_FALSE=
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
 fi
 
 
 
-# Check whether --with-xsp-include-path was given.
-if test "${with_xsp_include_path+set}" = set; then :
-  withval=$with_xsp_include_path; with_xsp_include=$withval
-else
-  with_xsp_include=no
-fi
-
-
-if test "$with_xsp_include" != "no"; then
-   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libxsp_client.h in $with_xsp_include" >&5
-$as_echo_n "checking for libxsp_client.h in $with_xsp_include... " >&6; }
-   if test -f $with_xsp_include/libxsp_client.h; then
-   	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-	  XSP_CFLAGS="-I$with_xsp_include"
-
-
-$as_echo "#define HAVE_XSP 1" >>confdefs.h
-
-	  have_xsp=yes
-   else
-	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-      as_fn_error $? "No MPI headers found!" "$LINENO" 5
-   fi
-fi
 
-
-# Check whether --with-xsp-ld-path was given.
-if test "${with_xsp_ld_path+set}" = set; then :
-  withval=$with_xsp_ld_path; with_xsp_lib=$withval
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
 else
-  with_xsp_lib=no
+        _pkg_short_errors_supported=no
 fi
+        if test $_pkg_short_errors_supported = yes; then
+	        MPI_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$pkg" 2>&1`
+        else
+	        MPI_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$pkg" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$MPI_PKG_ERRORS" >&5
 
+	as_fn_error $? "Package requirements ($pkg) were not met:
 
-if test "$with_xsp_lib" != "no"; then
-   #AC_MSG_CHECKING(for XSP libs in $with_xsp_lib)
-   save_LDFLAGS=$LDFLAGS
-   LDFLAGS="-L$with_xsp_lib"
-   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libxsp_init in -lxsp_client" >&5
-$as_echo_n "checking for libxsp_init in -lxsp_client... " >&6; }
-if ${ac_cv_lib_xsp_client_libxsp_init+:} false; then :
-  $as_echo_n "(cached) " >&6
+$MPI_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables MPI_CFLAGS
+and MPI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables MPI_CFLAGS
+and MPI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
 else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lxsp_client -lssl $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char libxsp_init ();
-int
-main ()
-{
-return libxsp_init ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_xsp_client_libxsp_init=yes
-else
-  ac_cv_lib_xsp_client_libxsp_init=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_xsp_client_libxsp_init" >&5
-$as_echo "$ac_cv_lib_xsp_client_libxsp_init" >&6; }
-if test "x$ac_cv_lib_xsp_client_libxsp_init" = xyes; then :
-  XSP_LIBS="-L$with_xsp_lib -lxsp_client -lssl"
-
-else
-  XSP_LIBS="-lxsp_client"
-
-fi
-
-   LDFLAGS=$save_LDFLAGS
-fi
- if test x$have_xsp = xyes; then
-  HAVE_XSP_TRUE=
-  HAVE_XSP_FALSE='#'
-else
-  HAVE_XSP_TRUE='#'
-  HAVE_XSP_FALSE=
-fi
-
-
-# ---------------------------------------------------------------------------
-# Perform host-specific work here.
-# ---------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-case $host_os in #(
-  linux*) :
-    case $host_cpu in #(
-  x86_64) :
-
- { $as_echo "$as_me:${as_lineno-$LINENO}: checking for support of CMPXCHG16B instruction" >&5
-$as_echo_n "checking for support of CMPXCHG16B instruction... " >&6; }
-
- ac_ext=S
- ac_cpp='$CPP $CPPFLAGS'
- ac_compile='$CCAS -c $CCASFLAGS $CPPFLAGS conftest.$ac_ext >&5'
- ac_link='$CCAS -o conftest$ac_exeext $CCASFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext
- $LIBS >&5'
- ac_compiler_gnu=$ac_cv_ccas_compiler_gnu
-
- cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
- cmpxchg16b (%rdi)
-_ACEOF
-if ac_fn_casm_try_compile "$LINENO"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+	MPI_CFLAGS=$pkg_cv_MPI_CFLAGS
+	MPI_LIBS=$pkg_cv_MPI_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 
-$as_echo "#define HAVE_CMPXCHG16B 1" >>confdefs.h
 
-    have_cmpxchg16b=yes
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
+$as_echo "#define HAVE_MPI 1" >>confdefs.h
+
+  have_mpi=yes
+
+    LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS $MPI_CFLAGS"
+    PHOTON_APPS_CFLAGS="$PHOTON_APPS_CFLAGS $MPI_CFLAGS"
+    LIBPHOTON_LIBS="$LIBPHOTON_LIBS $MPI_LIBS"
+    PHOTON_PC_PRIVATE_PKGS="$PHOTON_PC_PRIVATE_PKGS $pkg"
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
- ac_ext=c
-ac_cpp='$CPP $CPPFLAGS'
-ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
-
-              l1d_linesize=`cat /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size` ;; #(
-  arm*) :
-
-$as_echo "#define _POSIX_C_SOURCE 200809L" >>confdefs.h
-
-             l1d_linesize=32
-             pagesize=`getconf PAGESIZE` ;; #(
+fi ;; #(
   *) :
 
-$as_echo "#define _POSIX_C_SOURCE 200809L" >>confdefs.h
+ pkg=$with_mpi
 
-                          l1d_linesize=`cat /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size`
-             pagesize=`getconf PAGESIZE` ;;
-esac ;; #(
-  darwin*) :
-    l1d_linesize=`sysctl -n hw.cachelinesize`
-                 pagesize=`getconf PAGESIZE` ;; #(
-  solaris*) :
-    l1d_linesize=`prtpicl -v -c cpu | \
-                               grep l1-dcache-line-size | uniq | \
-                               awk '{print $2}'`
-                { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Unexpected Host OS $host_os, using defaults" >&5
-$as_echo "$as_me: WARNING: Unexpected Host OS $host_os, using defaults" >&2;}
-                 l1d_linesize=128
-                 pagesize=4096 ;; #(
-  *) :
-     ;;
+ # see if there is an mpi package
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for MPI" >&5
+$as_echo_n "checking for MPI... " >&6; }
+
+if test -n "$MPI_CFLAGS"; then
+    pkg_cv_MPI_CFLAGS="$MPI_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_MPI_CFLAGS=`$PKG_CONFIG --cflags "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$MPI_LIBS"; then
+    pkg_cv_MPI_LIBS="$MPI_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"\$pkg\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "$pkg") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_MPI_LIBS=`$PKG_CONFIG --libs "$pkg" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        MPI_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$pkg" 2>&1`
+        else
+	        MPI_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$pkg" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$MPI_PKG_ERRORS" >&5
+
+	as_fn_error $? "Package requirements ($pkg) were not met:
+
+$MPI_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables MPI_CFLAGS
+and MPI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables MPI_CFLAGS
+and MPI_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
+else
+	MPI_CFLAGS=$pkg_cv_MPI_CFLAGS
+	MPI_LIBS=$pkg_cv_MPI_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+
+$as_echo "#define HAVE_MPI 1" >>confdefs.h
+
+  have_mpi=yes
+
+    LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS $MPI_CFLAGS"
+    PHOTON_APPS_CFLAGS="$PHOTON_APPS_CFLAGS $MPI_CFLAGS"
+    LIBPHOTON_LIBS="$LIBPHOTON_LIBS $MPI_LIBS"
+    PHOTON_PC_PRIVATE_PKGS="$PHOTON_PC_PRIVATE_PKGS $pkg"
+fi
+ ;;
 esac
 
+fi
 
-cat >>confdefs.h <<_ACEOF
-#define PHOTON_CACHELINE_SIZE $l1d_linesize
-_ACEOF
+#PHOTON_CONFIG_XSP([xsp])
+#PHOTON_CONFIG_FORWARDER([forwarder])
 
-
-cat >>confdefs.h <<_ACEOF
-#define PHOTON_PAGE_SIZE $pagesize
-_ACEOF
-
-
-cat >>confdefs.h <<_ACEOF
-#define HPX_CACHELINE_SIZE $l1d_linesize
-_ACEOF
-
-
-cat >>confdefs.h <<_ACEOF
-#define HPXPAGE_SIZE $pagesize
-_ACEOF
-
+# Add some known include paths
+LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS -I\$(top_srcdir)/include"
+LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS -I\$(top_srcdir)/src/util"
+LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS -I\$(top_srcdir)/src/libphoton"
+LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS -I\$(top_srcdir)/src/forwarder"
+LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS -I\$(top_srcdir)/src/contrib"
+LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS -I\$(top_srcdir)/src/contrib/libsync/include"
 
 # ---------------------------------------------------------------------------
 # --with-options, see config/photon_with_pkg.m4 for details
@@ -19595,15 +21682,27 @@ if test "x$enable_testsuite" != xno && test "x$with_check" != xno; then :
 else
   enable_tests=no
 fi
- if test "x$enable_tests" != xno; then
-  PHOTON_ENABLE_TESTS_TRUE=
-  PHOTON_ENABLE_TESTS_FALSE='#'
+
+# Configure all of the automake conditionals that our build requires.
+
+
+  if [[ "x$host_os" = xlinux* ]]; then
+  OS_LINUX_TRUE=
+  OS_LINUX_FALSE='#'
 else
-  PHOTON_ENABLE_TESTS_TRUE='#'
-  PHOTON_ENABLE_TESTS_FALSE=
+  OS_LINUX_TRUE='#'
+  OS_LINUX_FALSE=
 fi
 
- if test "x$host_cpu" = xx86_64; then
+  if [[ "x$host_os" = xdarwin* ]]; then
+  OS_DARWIN_TRUE=
+  OS_DARWIN_FALSE='#'
+else
+  OS_DARWIN_TRUE='#'
+  OS_DARWIN_FALSE=
+fi
+
+  if test "x$host_cpu" = xx86_64; then
   CPU_X86_64_TRUE=
   CPU_X86_64_FALSE='#'
 else
@@ -19611,7 +21710,57 @@ else
   CPU_X86_64_FALSE=
 fi
 
- if test "x$enable_external_libfabric" == xno; then
+  if test "x$host_cpu" = xarmv7l; then
+  CPU_ARM_TRUE=
+  CPU_ARM_FALSE='#'
+else
+  CPU_ARM_TRUE='#'
+  CPU_ARM_FALSE=
+fi
+
+  if test "x$host_cpu" = xaarch64; then
+  CPU_AARCH64_TRUE=
+  CPU_AARCH64_FALSE='#'
+else
+  CPU_AARCH64_TRUE='#'
+  CPU_AARCH64_FALSE=
+fi
+
+
+  if test "x$photon_pe_env" = xGNU; then
+  GNU_PE_ENV_TRUE=
+  GNU_PE_ENV_FALSE='#'
+else
+  GNU_PE_ENV_TRUE='#'
+  GNU_PE_ENV_FALSE=
+fi
+
+  if test "x$photon_pe_env" = xCRAY; then
+  CRAY_PE_ENV_TRUE=
+  CRAY_PE_ENV_FALSE='#'
+else
+  CRAY_PE_ENV_TRUE='#'
+  CRAY_PE_ENV_FALSE=
+fi
+
+  if test "x$photon_pe_env" = xPGI; then
+  PGI_PE_ENV_TRUE=
+  PGI_PE_ENV_FALSE='#'
+else
+  PGI_PE_ENV_TRUE='#'
+  PGI_PE_ENV_FALSE=
+fi
+
+  if test "x$photon_pe_env" = xINTEL; then
+  INTEL_PE_ENV_TRUE=
+  INTEL_PE_ENV_FALSE='#'
+else
+  INTEL_PE_ENV_TRUE='#'
+  INTEL_PE_ENV_FALSE=
+fi
+
+
+  if test "x$build_libfabric" == xyes; then
   BUILD_LIBFABRIC_TRUE=
   BUILD_LIBFABRIC_FALSE='#'
 else
@@ -19619,7 +21768,16 @@ else
   BUILD_LIBFABRIC_FALSE=
 fi
 
- if test "x$have_cmpxchg16b" == xyes; then
+  if test "x$build_forwarder" == xyes; then
+  BUILD_FORWARDER_TRUE=
+  BUILD_FORWARDER_FALSE='#'
+else
+  BUILD_FORWARDER_TRUE='#'
+  BUILD_FORWARDER_FALSE=
+fi
+
+
+  if test "x$have_cmpxchg16b" == xyes; then
   HAVE_CMPXCHG16B_TRUE=
   HAVE_CMPXCHG16B_FALSE='#'
 else
@@ -19627,33 +21785,111 @@ else
   HAVE_CMPXCHG16B_FALSE=
 fi
 
+  if test "x$have_verbs" == xyes; then
+  HAVE_VERBS_TRUE=
+  HAVE_VERBS_FALSE='#'
+else
+  HAVE_VERBS_TRUE='#'
+  HAVE_VERBS_FALSE=
+fi
 
-# Set source and build directories
-PHOTON_SRCDIR="\${top_srcdir}"
+  if test "x$have_ugni" == xyes; then
+  HAVE_UGNI_TRUE=
+  HAVE_UGNI_FALSE='#'
+else
+  HAVE_UGNI_TRUE='#'
+  HAVE_UGNI_FALSE=
+fi
 
-PHOTON_BUILDDIR="\${top_builddir}"
+  if test "x$have_libfabric" == xyes; then
+  HAVE_LIBFABRIC_TRUE=
+  HAVE_LIBFABRIC_FALSE='#'
+else
+  HAVE_LIBFABRIC_TRUE='#'
+  HAVE_LIBFABRIC_FALSE=
+fi
+
+  if test "x$have_mpi" == xyes; then
+  HAVE_MPI_TRUE=
+  HAVE_MPI_FALSE='#'
+else
+  HAVE_MPI_TRUE='#'
+  HAVE_MPI_FALSE=
+fi
+
+  if test "x$have_pmi" == xyes; then
+  HAVE_PMI_TRUE=
+  HAVE_PMI_FALSE='#'
+else
+  HAVE_PMI_TRUE='#'
+  HAVE_PMI_FALSE=
+fi
+
+  if test "x$have_xsp" == xyes; then
+  HAVE_XSP_TRUE=
+  HAVE_XSP_FALSE='#'
+else
+  HAVE_XSP_TRUE='#'
+  HAVE_XSP_FALSE=
+fi
+
+
+  if test "x$enable_tests" == xyes; then
+  ENABLE_TESTS_TRUE=
+  ENABLE_TESTS_FALSE='#'
+else
+  ENABLE_TESTS_TRUE='#'
+  ENABLE_TESTS_FALSE=
+fi
 
 
 
-PHOTON_PC_LIBS_PRIVATE="$VERBS_LIBS $UGNI_LIBS"
+# Substitute the variables required for libtool linking of libphoton internally.
+
+
+
+
+
+
+
+
+# Substitute the variables required for pkg-config linking of libphoton
+# externally. Note if we're only building libphoton.a then the --libs output must
+# contain all private dependencies as well.
 if test "x$enable_shared" != xyes; then :
-  PHOTON_PC_LIBS="$PHOTON_PC_LIBS_PRIVATE"
+  PHOTON_PC_PUBLIC_LIBS="$PHOTON_PC_PUBLIC_LIBS $PHOTON_PC_PRIVATE_LIBS"
+   PHOTON_PC_REQUIRES_PKGS="$PHOTON_PC_REQUIRES_PKGS $PHOTON_PC_PRIVATE_PKGS"
 fi
 
 
 
 
-ac_config_files="$ac_config_files Makefile src/contrib/Makefile src/contrib/bit_array/Makefile src/contrib/libsync/Makefile src/contrib/libsync/arch/Makefile src/util/Makefile src/Makefile photon.pc"
 
 
-if test "x$enable_tests" != xno; then :
+
+# do substitution for the test and example makefiles
+PHOTON_APPS_LDADD="\$(top_builddir)/src/libphoton.la"
+
+
+
+
+
+
+
+
+
+ ac_config_files="$ac_config_files Makefile src/contrib/Makefile src/contrib/bit_array/Makefile src/contrib/libsync/Makefile src/contrib/libsync/arch/Makefile src/util/Makefile src/verbs/Makefile src/ugni/Makefile src/fi/Makefile src/forwarder/Makefile src/Makefile photon.pc"
+
+
+ if test "x$enable_tests" != xno; then :
   ac_config_files="$ac_config_files tests/Makefile"
 
-   if test x$have_mpi = xyes || test x$with_mpi != xno; then :
+   if test x$have_mpi = xyes -o x$with_mpi != xno; then :
   ac_config_files="$ac_config_files test/Makefile"
 
 fi
 fi
+
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -19795,56 +22031,84 @@ if test -z "${am__fastdepCCAS_TRUE}" && test -z "${am__fastdepCCAS_FALSE}"; then
   as_fn_error $? "conditional \"am__fastdepCCAS\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
-if test -z "${HAVE_LIBRT_TRUE}" && test -z "${HAVE_LIBRT_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_LIBRT\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${HAVE_VERBS_TRUE}" && test -z "${HAVE_VERBS_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_VERBS\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${HAVE_LIBFABRIC_TRUE}" && test -z "${HAVE_LIBFABRIC_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_LIBFABRIC\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${HAVE_UGNI_TRUE}" && test -z "${HAVE_UGNI_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_UGNI\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${HAVE_PMI_TRUE}" && test -z "${HAVE_PMI_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_PMI\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${HAVE_MPI_TRUE}" && test -z "${HAVE_MPI_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_MPI\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${HAVE_MPI_TRUE}" && test -z "${HAVE_MPI_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_MPI\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${HAVE_XSP_TRUE}" && test -z "${HAVE_XSP_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_XSP\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
 if test -z "${HAVE_CHECK_TRUE}" && test -z "${HAVE_CHECK_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_CHECK\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
-if test -z "${PHOTON_ENABLE_TESTS_TRUE}" && test -z "${PHOTON_ENABLE_TESTS_FALSE}"; then
-  as_fn_error $? "conditional \"PHOTON_ENABLE_TESTS\" was never defined.
+if test -z "${OS_LINUX_TRUE}" && test -z "${OS_LINUX_FALSE}"; then
+  as_fn_error $? "conditional \"OS_LINUX\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${OS_DARWIN_TRUE}" && test -z "${OS_DARWIN_FALSE}"; then
+  as_fn_error $? "conditional \"OS_DARWIN\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${CPU_X86_64_TRUE}" && test -z "${CPU_X86_64_FALSE}"; then
   as_fn_error $? "conditional \"CPU_X86_64\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${CPU_ARM_TRUE}" && test -z "${CPU_ARM_FALSE}"; then
+  as_fn_error $? "conditional \"CPU_ARM\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${CPU_AARCH64_TRUE}" && test -z "${CPU_AARCH64_FALSE}"; then
+  as_fn_error $? "conditional \"CPU_AARCH64\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${GNU_PE_ENV_TRUE}" && test -z "${GNU_PE_ENV_FALSE}"; then
+  as_fn_error $? "conditional \"GNU_PE_ENV\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${CRAY_PE_ENV_TRUE}" && test -z "${CRAY_PE_ENV_FALSE}"; then
+  as_fn_error $? "conditional \"CRAY_PE_ENV\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${PGI_PE_ENV_TRUE}" && test -z "${PGI_PE_ENV_FALSE}"; then
+  as_fn_error $? "conditional \"PGI_PE_ENV\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${INTEL_PE_ENV_TRUE}" && test -z "${INTEL_PE_ENV_FALSE}"; then
+  as_fn_error $? "conditional \"INTEL_PE_ENV\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${BUILD_LIBFABRIC_TRUE}" && test -z "${BUILD_LIBFABRIC_FALSE}"; then
   as_fn_error $? "conditional \"BUILD_LIBFABRIC\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${BUILD_FORWARDER_TRUE}" && test -z "${BUILD_FORWARDER_FALSE}"; then
+  as_fn_error $? "conditional \"BUILD_FORWARDER\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${HAVE_CMPXCHG16B_TRUE}" && test -z "${HAVE_CMPXCHG16B_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_CMPXCHG16B\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_VERBS_TRUE}" && test -z "${HAVE_VERBS_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_VERBS\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_UGNI_TRUE}" && test -z "${HAVE_UGNI_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_UGNI\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_LIBFABRIC_TRUE}" && test -z "${HAVE_LIBFABRIC_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_LIBFABRIC\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_MPI_TRUE}" && test -z "${HAVE_MPI_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_MPI\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_PMI_TRUE}" && test -z "${HAVE_PMI_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_PMI\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_XSP_TRUE}" && test -z "${HAVE_XSP_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_XSP\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${ENABLE_TESTS_TRUE}" && test -z "${ENABLE_TESTS_FALSE}"; then
+  as_fn_error $? "conditional \"ENABLE_TESTS\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 
@@ -20829,6 +23093,10 @@ do
     "src/contrib/libsync/Makefile") CONFIG_FILES="$CONFIG_FILES src/contrib/libsync/Makefile" ;;
     "src/contrib/libsync/arch/Makefile") CONFIG_FILES="$CONFIG_FILES src/contrib/libsync/arch/Makefile" ;;
     "src/util/Makefile") CONFIG_FILES="$CONFIG_FILES src/util/Makefile" ;;
+    "src/verbs/Makefile") CONFIG_FILES="$CONFIG_FILES src/verbs/Makefile" ;;
+    "src/ugni/Makefile") CONFIG_FILES="$CONFIG_FILES src/ugni/Makefile" ;;
+    "src/fi/Makefile") CONFIG_FILES="$CONFIG_FILES src/fi/Makefile" ;;
+    "src/forwarder/Makefile") CONFIG_FILES="$CONFIG_FILES src/forwarder/Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
     "photon.pc") CONFIG_FILES="$CONFIG_FILES photon.pc" ;;
     "tests/Makefile") CONFIG_FILES="$CONFIG_FILES tests/Makefile" ;;
@@ -22268,9 +24536,6 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: unrecognized options: $ac_unrecognized_opts" >&5
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
-
-
-
 
 
 cat << EOF

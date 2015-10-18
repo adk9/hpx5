@@ -327,8 +327,7 @@ additional optimizations.
 
 *FI_RMA_EVENT*
 : Requests that an endpoint support the generation of completion events
-  when it is the target of an RMA and/or atomic operation.  If set, the
-  provider will support both completion queue and counter events.  This
+  when it is the target of an RMA and/or atomic operation.  This
   flag requires that FI_REMOTE_READ and/or FI_REMOTE_WRITE be enabled on
   the endpoint.
 
@@ -358,7 +357,7 @@ Primary capabilities: FI_MSG, FI_RMA, FI_TAGGED, FI_ATOMIC, FI_NAMED_RX_CTX,
 FI_DIRECTED_RECV, FI_READ, FI_WRITE, FI_RECV, FI_SEND, FI_REMOTE_READ,
 and FI_REMOTE_WRITE.
 
-Secondary capabilities: FI_MULTI_RECV, FI_SOURCE, FI_FENCE 
+Secondary capabilities: FI_MULTI_RECV, FI_SOURCE, FI_RMA_EVENT, FI_TRIGGER, FI_FENCE.
 
 # MODE
 
@@ -443,7 +442,8 @@ below.
   IOV buffering may have a negative impact on performance and memory
   consumption.  The FI_ASYNC_IOV mode indicates that the application
   must provide the buffering needed for the IO vectors.  When set,
-  an application must not modify an IO vector until the associated
+  an application must not modify an IO vector, including any
+  related memory descriptor array, until the associated
   operation has completed.
 
 *FI_RX_CQ_DATA*

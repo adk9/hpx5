@@ -59,6 +59,11 @@ AC_DEFUN([FI_PROVIDER_SETUP],[
 	      [],
 	      [enable_$1=auto])
 
+	# Save CPPFLAGS and LDFLAGS before they are modified by FI_CHECK_PREFIX_DIR
+	# Provider's local macros could use the value if needed.
+	$1_orig_CPPFLAGS=$CPPFLAGS
+	$1_orig_LDFLAGS=$LDFLAGS
+
 	# Check the --enable-<$1> value
 	$1_dl=0
 	AS_CASE([$enable_$1],
@@ -111,9 +116,12 @@ AC_DEFUN([FI_PROVIDER_SETUP],[
 	# If this provider was requested for direct build, ensure that
 	# provider's fi_direct.h exists in tree. Error otherwise.
 	AS_IF([test x"$enable_direct" = x"$1"],
-		[AC_CHECK_FILE(prov/$1/include/rdma/fi_direct.h, [],
-			[AC_MSG_WARN([$1 provider was requested as direct, but is missing required files])
-			 AC_MSG_ERROR([Cannot continue])])])
+		[AC_MSG_CHECKING(for prov/$1/include/rdma/fi_direct.h)
+		 AS_IF([test -f "prov/$1/include/rdma/fi_direct.h"],
+			[AC_MSG_RESULT(yes)],
+			[AC_MSG_RESULT(no)
+			  AC_MSG_ERROR([$1 provider was requested as direct, but is missing fi_direct.h])]
+			)])
 ])
 
 
