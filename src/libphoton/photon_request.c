@@ -26,7 +26,7 @@ int photon_request_init(photonConfig cfg) {
     rt->size            = cfg->cap.default_rd;
     rt->free            = (uint32_t*)malloc(DEF_NR_LEVELS * sizeof(uint32_t));
     rt->free[rt->level] = cfg->cap.default_rd;
-    rt->reqs = (photonRequest*)malloc(DEF_NR_LEVELS * sizeof(struct photon_req_t));
+    rt->reqs = (photonRequest*)malloc(DEF_NR_LEVELS * sizeof(photonRequest));
     if (!rt->reqs) {
       log_err("Could not allocate request array for proc %d", i);
       goto error_exit;

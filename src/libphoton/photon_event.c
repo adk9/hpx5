@@ -376,7 +376,7 @@ int __photon_wait_event(photonRequest req) {
   
   do {
     rc = __photon_try_one_event(&treq);
-  } while (rc != PHOTON_EVENT_REQCOMP && (treq->id != req->id));
+  } while (rc != PHOTON_EVENT_REQCOMP && treq && (treq->id != req->id));
   
   return PHOTON_OK;
 }

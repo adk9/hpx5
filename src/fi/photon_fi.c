@@ -268,8 +268,6 @@ static int fi_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size
     log_err("Tried GET to a local buffer that is not registered: %p", (void*)laddr);
     goto error_exit;
   }
-
-  ssize_t c = fi_tx_size_left(fi_ctx.eps[_photon_myrank]);
   
   (!fi_ctx.thread_safe) ? sync_tatas_acquire(&op_lock):NULL;
   {  
