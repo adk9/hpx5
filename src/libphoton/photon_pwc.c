@@ -87,14 +87,18 @@ photonRequest photon_pwc_pop_req(int proc) {
 
 static int photon_pwc_check_gwc_align(photonBuffer lbuf, photonBuffer rbuf, uint64_t size) {
   int *align;
-  int asize;
+  int asize = 1;
   int rc;
+
+  // default to no alignment constraint
+  align = &asize;
 
   rc =  __photon_backend->get_info(NULL, 0, (void**)&align, &asize, PHOTON_GET_ALIGN);
   if (rc != PHOTON_OK) {
     dbg_warn("Could not get alignment info from backend");
-    *align = 0;
   }
+
+  assert(*align);
   
   if (!TEST_ALIGN(lbuf->addr, *align) ||
       !TEST_ALIGN(rbuf->addr, *align) ||
@@ -176,6 +180,8 @@ static int photon_pwc_process_command(int proc, photon_rid cmd, uintptr_t id,
       int rc;
       photon_rid rid;
       struct photon_buffer_t lbuf, rbuf;
+      // make sure we took this branch with a valid payload
+      assert(ptr);
       // switch the sent lbuf/rbuf
       memcpy(&rbuf, ptr, sizeof(rbuf));
       memcpy(&lbuf, ptr+sizeof(rbuf), sizeof(lbuf));
@@ -985,7 +991,7 @@ static int photon_pwc_probe_ledger(int proc, int *flag, photon_rid *request, int
 
 int _photon_probe_completion(int proc, int *flag, int *remaining,
 			     photon_rid *request, int *src, int flags) {
-  int i, rc;
+  int i, rc = PHOTON_EVENT_NONE;
 
   *flag = 0;
   *src = proc;

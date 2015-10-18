@@ -188,7 +188,7 @@ int htable_update(htable_t *htable, uint64_t key, void *value, void **old_value)
     }
 
     if (old_value)
-      old_value = temp->value;
+      *old_value = temp->value;
     temp->value = value;
   }
   sync_tatas_release(&htable->tlock);

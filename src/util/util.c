@@ -50,7 +50,7 @@ void photon_gettime_(double *s) {
 }
 
 const char *photon_addr_getstr(photon_addr *addr, int af) {
-  char *buf = malloc(40);
+  char buf[40];
   return inet_ntop(AF_INET6, addr->raw, buf, 40);
 }
   
@@ -94,6 +94,7 @@ int photon_parse_devstr(const char *devstr, photon_dev_list **ret_list) {
 	}
 	else {
 	  // we didn't get a port num
+	  photon_free_devlist(dlist);
 	  return -1;
 	}
       }

@@ -230,6 +230,8 @@ int __verbs_sync_qpn(verbs_cnct_ctx *ctx) {
   tmp_qp = ibv_create_qp(ctx->ib_pd, &attr);
   if (!tmp_qp) {
     dbg_err("Could not create temp QP");
+    ibv_destroy_qp(tmp_qp);
+    free(qp_numbers);
     return PHOTON_ERROR;
   }
   
@@ -259,7 +261,7 @@ int __verbs_sync_qpn(verbs_cnct_ctx *ctx) {
     for (i = local_qpn; i <= max_qpn; i++) {
       tmp_qp = ibv_create_qp(ctx->ib_pd, &attr);
       local_qpn = tmp_qp->qp_num;
-      status = ibv_destroy_qp(tmp_qp);
+      ibv_destroy_qp(tmp_qp);
     }
   }
 

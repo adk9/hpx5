@@ -22,7 +22,7 @@ photonMsgBuf photon_msgbuffer_new(uint64_t size, uint64_t p_size, int p_offset, 
   ret = posix_memalign((void*)&bptr, getpagesize(), size);
   if (ret) {
     dbg_err("could not allocate buffer space");
-    goto error_exit;
+    goto error_exit_buf;
   }
 
   mbuf->db = photon_buffer_create(bptr, size);
@@ -59,9 +59,9 @@ photonMsgBuf photon_msgbuffer_new(uint64_t size, uint64_t p_size, int p_offset, 
   return mbuf;
 
  error_exit_db:
-  photon_buffer_free(mbuf->db);
- error_exit_buf:
   free(bptr);
+ error_exit_buf:
+  free(mbuf);
  error_exit:
   return NULL;
 }
