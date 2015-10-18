@@ -216,21 +216,20 @@ struct fi_av_attr {
   call, and the data field in the final completion entry will report
   the number of addresses successfully inserted.
   If an error occurs during the asynchronous insertion, an error
-  completion entry is returned (see [`fi_av`(3)](fi_av.3.html) for a
+  completion entry is returned (see [`fi_eq`(3)](fi_eq.3.html) for a
   discussion of the fi_eq_err_entry error completion struct).  The
   context field of the error completion will be the context that was
   specified in the insert call; the data field will contain the index
   of the failed address.  There will be one error completion returned
   for each address that fails to insert into the AV.
 
-: &nbsp;
-: If an AV is opened with FI_EVENT, any insertions attempted before an
+  If an AV is opened with FI_EVENT, any insertions attempted before an
   EQ is bound to the AV will fail with -FI_ENOEQ.
-: &nbsp;
-: Error completions for failed insertions will contain the index of
+
+  Error completions for failed insertions will contain the index of
   the failed address in the index field of the error completion entry.
-: &nbsp;
-: Note that the order of delivery of insert completions may not match
+
+  Note that the order of delivery of insert completions may not match
   the order in which the calls to fi_av_insert were made.  The only
   guarantee is that all error completions for a given call to
   fi_av_insert will precede the single associated non-error

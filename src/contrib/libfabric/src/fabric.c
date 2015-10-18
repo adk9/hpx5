@@ -500,9 +500,17 @@ int DEFAULT_SYMVER_PRE(fi_getinfo)(uint32_t version, const char *node, const cha
 		else
 			tail->next = cur;
 		for (tail = cur; tail->next; tail = tail->next) {
+			if (tail->fabric_attr->prov_name != NULL)
+				FI_WARN(&core_prov, FI_LOG_CORE,
+					"prov_name field is not NULL (%s)\n",
+					tail->fabric_attr->prov_name);
 			tail->fabric_attr->prov_name = strdup(prov->provider->name);
 			tail->fabric_attr->prov_version = prov->provider->version;
 		}
+		if (tail->fabric_attr->prov_name != NULL)
+			FI_WARN(&core_prov, FI_LOG_CORE,
+				"prov_name field is not NULL (%s)\n",
+				tail->fabric_attr->prov_name);
 		tail->fabric_attr->prov_name = strdup(prov->provider->name);
 		tail->fabric_attr->prov_version = prov->provider->version;
 	}

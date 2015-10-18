@@ -104,8 +104,6 @@ extern "C" {
 
 extern struct fi_provider psmx_prov;
 
-#define PSMX_TIME_OUT	120
-
 #define PSMX_OP_FLAGS	(FI_INJECT | FI_MULTI_RECV | FI_COMPLETION | \
 			 FI_TRIGGER | FI_INJECT_COMPLETE | \
 			 FI_TRANSMIT_COMPLETE | FI_DELIVERY_COMPLETE)
@@ -333,6 +331,14 @@ struct psmx_fid_domain {
 	 * as 0. This field is a bit mask, with reserved bits valued as "1".
 	 */
 	uint64_t		reserved_tag_bits; 
+
+	/* lock to prevent the sequence of psm_mq_ipeek and psm_mq_test be
+	 * interleaved in a multithreaded environment.
+	 */
+	pthread_spinlock_t	poll_lock;
+
+	int			progress_thread_enabled;
+	pthread_t		progress_thread;
 };
 
 struct psmx_cq_event {
@@ -622,6 +628,8 @@ struct psmx_env {
 	char *uuid;
 	int delay;
 	int timeout;
+	int prog_interval;
+	char *prog_affinity;
 };
 
 extern struct fi_ops_mr		psmx_mr_ops;
