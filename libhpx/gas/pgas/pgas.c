@@ -247,6 +247,30 @@ _pgas_parcel_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
   return HPX_SUCCESS;
 }
 
+static int
+_pgas_parcel_memcpy_sync(void *gas, hpx_addr_t to, hpx_addr_t from,
+                         size_t size) {
+  int e = HPX_SUCCESS;
+  if (!size) {
+    return e;
+  }
+
+  hpx_addr_t sync = hpx_lco_future_new(0);
+  if (sync == HPX_NULL) {
+    log_error("could not allocate an LCO.\n");
+    return HPX_ENOMEM;
+  }
+
+  e = _pgas_parcel_memcpy(gas, to, from, size, sync);
+
+  if (HPX_SUCCESS != hpx_lco_wait(sync)) {
+    dbg_error("failed agas_memcpy_sync\n");
+  }
+
+  hpx_lco_delete(sync, HPX_NULL);
+  return e;
+}
+
 static int _lco_rsync_handler(int src, uint64_t command) {
   return network_command(here->network, HPX_THERE(src), lco_set, command);
 }
@@ -454,6 +478,7 @@ static gas_t _pgas_vtable = {
   .memput_lsync   = _pgas_memput_lsync,
   .memput_rsync   = _pgas_memput_rsync,
   .memcpy         = _pgas_parcel_memcpy,
+  .memcpy_sync    = _pgas_parcel_memcpy_sync,
   .owner_of       = _pgas_owner_of
 };
 
