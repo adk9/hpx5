@@ -107,7 +107,7 @@ static int _va_map(hpx_action_t action, uint32_t n,
   hpx_parcel_release(p);
   return e;
 }
-    
+
 int _hpx_map(hpx_action_t action, uint32_t n,
              hpx_addr_t src, uint32_t src_stride,
              hpx_addr_t dst, uint32_t dst_stride,
