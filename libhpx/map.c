@@ -18,7 +18,9 @@
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
+#include <libhpx/memory.h>
 #include <libhpx/parcel.h>
+#include <libhpx/worker.h>
 
 
 typedef struct {
@@ -36,9 +38,9 @@ _call_and_memput_action_handler(_call_and_memput_args_t *args, size_t size) {
 
   // replace the "dst" lco in the parcel's continuation addr with the
   // local future
-  hpx_addr_t dst = parcel->c_addr;
+  hpx_addr_t dst = parcel->c_target;
   hpx_addr_t local = hpx_lco_future_new(args->dst_stride);
-  parcel->c_addr = local;
+  parcel->c_target = local;
 
   // send the parcel..
   hpx_parcel_send_sync(parcel);
@@ -57,8 +59,8 @@ _call_and_memput_action_handler(_call_and_memput_args_t *args, size_t size) {
 
   // steal the current continuation
   hpx_parcel_t *cur_p = self->current;
-  e = hpx_gas_memput_lsync(dst, buf, args->dst_stride, cur_p->c_target);
-  cur_p->c_target = NULL;
+  hpx_gas_memput_lsync(dst, buf, args->dst_stride, cur_p->c_target);
+  cur_p->c_target = HPX_NULL;
 
   if (!stack_allocated) {
       registered_free(buf);
@@ -74,9 +76,9 @@ static int _va_map(hpx_action_t action, uint32_t n,
                    uint32_t bsize, hpx_addr_t sync, int nargs, va_list *vargs) {
   int e = HPX_SUCCESS;
   hpx_addr_t remote = HPX_NULL;
-  if (rsync) {
+  if (sync) {
       remote = hpx_lco_and_new(n);
-      e = hpx_call_when_with_continuation(remote, rsync, hpx_lco_set_action,
+      e = hpx_call_when_with_continuation(remote, sync, hpx_lco_set_action,
                                           remote, hpx_lco_delete_action, NULL, 0);
       dbg_check(e, "could not chain LCO\n");
   }
@@ -97,7 +99,6 @@ static int _va_map(hpx_action_t action, uint32_t n,
     p->target = src;
 
     // ..and put the new destination in the payload
-    args->dst = dst;
     memcpy(args->data, p, parcel_size(p));
 
     e = hpx_call_with_continuation(src, _call_and_memput_action, remote,
