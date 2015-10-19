@@ -93,12 +93,27 @@ target_triplet = @target@
 subdir = src/contrib/libsync/arch
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/acx_configure_dir.m4 \
+	$(top_srcdir)/config/ax_compiler_vendor.m4 \
+	$(top_srcdir)/config/ax_gcc_builtin.m4 \
+	$(top_srcdir)/config/ax_pthread.m4 \
 	$(top_srcdir)/config/libtool.m4 \
 	$(top_srcdir)/config/ltoptions.m4 \
 	$(top_srcdir)/config/ltsugar.m4 \
 	$(top_srcdir)/config/ltversion.m4 \
 	$(top_srcdir)/config/lt~obsolete.m4 \
-	$(top_srcdir)/config/photon_contrib_libfabric.m4 \
+	$(top_srcdir)/config/photon_aarch64_get_cachelinesize.m4 \
+	$(top_srcdir)/config/photon_check_cmpxchg16b.m4 \
+	$(top_srcdir)/config/photon_config_compiler.m4 \
+	$(top_srcdir)/config/photon_config_host.m4 \
+	$(top_srcdir)/config/photon_config_libfabric.m4 \
+	$(top_srcdir)/config/photon_config_mpi.m4 \
+	$(top_srcdir)/config/photon_config_pmi.m4 \
+	$(top_srcdir)/config/photon_config_ugni.m4 \
+	$(top_srcdir)/config/photon_config_verbs.m4 \
+	$(top_srcdir)/config/photon_do_ac_config_files.m4 \
+	$(top_srcdir)/config/photon_do_am_conditionals.m4 \
+	$(top_srcdir)/config/photon_merge_shared_static.m4 \
+	$(top_srcdir)/config/photon_pe_env.m4 \
 	$(top_srcdir)/config/photon_with_pkg.m4 \
 	$(top_srcdir)/config/pkg.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -110,16 +125,24 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 libarch_la_LIBADD =
-am__libarch_la_SOURCES_DIST = x86_64/nop.S x86_64/cptr.S
+am__libarch_la_SOURCES_DIST = common/nop.c arm/cptr.S x86_64/nop.S \
+	x86_64/cptr.S
 am__dirstamp = $(am__leading_dot)dirstamp
 @CPU_X86_64_TRUE@@HAVE_CMPXCHG16B_TRUE@am__objects_1 = x86_64/libarch_la-cptr.lo
-@CPU_X86_64_TRUE@am_libarch_la_OBJECTS = x86_64/libarch_la-nop.lo \
-@CPU_X86_64_TRUE@	$(am__objects_1)
+@CPU_AARCH64_FALSE@@CPU_ARM_FALSE@@CPU_X86_64_TRUE@am_libarch_la_OBJECTS = x86_64/libarch_la-nop.lo \
+@CPU_AARCH64_FALSE@@CPU_ARM_FALSE@@CPU_X86_64_TRUE@	$(am__objects_1)
+@CPU_AARCH64_FALSE@@CPU_ARM_TRUE@am_libarch_la_OBJECTS =  \
+@CPU_AARCH64_FALSE@@CPU_ARM_TRUE@	common/libarch_la-nop.lo \
+@CPU_AARCH64_FALSE@@CPU_ARM_TRUE@	arm/libarch_la-cptr.lo
+@CPU_AARCH64_TRUE@am_libarch_la_OBJECTS = common/libarch_la-nop.lo
 libarch_la_OBJECTS = $(am_libarch_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
+libarch_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(libarch_la_CFLAGS) \
+	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -236,9 +259,17 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LIBFABRIC_CARGS = @LIBFABRIC_CARGS@
 LIBFABRIC_CFLAGS = @LIBFABRIC_CFLAGS@
 LIBFABRIC_LIBS = @LIBFABRIC_LIBS@
 LIBOBJS = @LIBOBJS@
+LIBPHOTON_CCASFLAGS = @LIBPHOTON_CCASFLAGS@
+LIBPHOTON_CFLAGS = @LIBPHOTON_CFLAGS@
+LIBPHOTON_CPPFLAGS = @LIBPHOTON_CPPFLAGS@
+LIBPHOTON_CXXFLAGS = @LIBPHOTON_CXXFLAGS@
+LIBPHOTON_LDFLAGS = @LIBPHOTON_LDFLAGS@
+LIBPHOTON_LIBADD = @LIBPHOTON_LIBADD@
+LIBPHOTON_LIBS = @LIBPHOTON_LIBS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
@@ -250,7 +281,6 @@ MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 MPI_CFLAGS = @MPI_CFLAGS@
 MPI_LIBS = @MPI_LIBS@
-MPI_PKG = @MPI_PKG@
 NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
@@ -265,34 +295,35 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
-PHOTON_BUILDDIR = @PHOTON_BUILDDIR@
-PHOTON_LIBFABRIC_CARGS = @PHOTON_LIBFABRIC_CARGS@
-PHOTON_LIBFABRIC_CFLAGS = @PHOTON_LIBFABRIC_CFLAGS@
-PHOTON_LIBFABRIC_CPPFLAGS = @PHOTON_LIBFABRIC_CPPFLAGS@
-PHOTON_LIBFABRIC_DEPS = @PHOTON_LIBFABRIC_DEPS@
-PHOTON_LIBFABRIC_LIBS = @PHOTON_LIBFABRIC_LIBS@
-PHOTON_PC_LIBS = @PHOTON_PC_LIBS@
-PHOTON_PC_LIBS_PRIVATE = @PHOTON_PC_LIBS_PRIVATE@
-PHOTON_SRCDIR = @PHOTON_SRCDIR@
+PE_ENV = @PE_ENV@
+PHOTON_APPS_CFLAGS = @PHOTON_APPS_CFLAGS@
+PHOTON_APPS_CPPFLAGS = @PHOTON_APPS_CPPFLAGS@
+PHOTON_APPS_DEPS = @PHOTON_APPS_DEPS@
+PHOTON_APPS_LDADD = @PHOTON_APPS_LDADD@
+PHOTON_APPS_LDFLAGS = @PHOTON_APPS_LDFLAGS@
+PHOTON_PC_CFLAGS = @PHOTON_PC_CFLAGS@
+PHOTON_PC_PRIVATE_LIBS = @PHOTON_PC_PRIVATE_LIBS@
+PHOTON_PC_PRIVATE_PKGS = @PHOTON_PC_PRIVATE_PKGS@
+PHOTON_PC_PUBLIC_LIBS = @PHOTON_PC_PUBLIC_LIBS@
+PHOTON_PC_REQUIRES_PKGS = @PHOTON_PC_REQUIRES_PKGS@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 PMI_CFLAGS = @PMI_CFLAGS@
 PMI_LIBS = @PMI_LIBS@
-PMI_PKG = @PMI_PKG@
+PTHREAD_CC = @PTHREAD_CC@
+PTHREAD_CFLAGS = @PTHREAD_CFLAGS@
+PTHREAD_LIBS = @PTHREAD_LIBS@
 RANLIB = @RANLIB@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
-THREAD_LIBS = @THREAD_LIBS@
 UGNI_CFLAGS = @UGNI_CFLAGS@
 UGNI_LIBS = @UGNI_LIBS@
-UGNI_PKG = @UGNI_PKG@
+VERBS_CFLAGS = @VERBS_CFLAGS@
 VERBS_LIBS = @VERBS_LIBS@
 VERSION = @VERSION@
-XSP_CFLAGS = @XSP_CFLAGS@
-XSP_LIBS = @XSP_LIBS@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -306,6 +337,7 @@ am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
+ax_pthread_config = @ax_pthread_config@
 bindir = @bindir@
 build = @build@
 build_alias = @build_alias@
@@ -351,12 +383,16 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 noinst_LTLIBRARIES = libarch.la
-libarch_la_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/libsync
+libarch_la_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src/contrib/libsync
+libarch_la_CFLAGS = $(LIBPHOTON_CFLAGS)
+libarch_la_CCASFLAGS = $(LIBPHOTON_CCASFLAGS)
+@CPU_AARCH64_TRUE@libarch_la_SOURCES = common/nop.c
+@CPU_ARM_TRUE@libarch_la_SOURCES = common/nop.c arm/cptr.S
 @CPU_X86_64_TRUE@libarch_la_SOURCES = x86_64/nop.S $(am__append_1)
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .S .lo .o .obj
+.SUFFIXES: .S .c .lo .o .obj
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -397,6 +433,22 @@ clean-noinstLTLIBRARIES:
 	  echo rm -f $${locs}; \
 	  rm -f $${locs}; \
 	}
+common/$(am__dirstamp):
+	@$(MKDIR_P) common
+	@: > common/$(am__dirstamp)
+common/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) common/$(DEPDIR)
+	@: > common/$(DEPDIR)/$(am__dirstamp)
+common/libarch_la-nop.lo: common/$(am__dirstamp) \
+	common/$(DEPDIR)/$(am__dirstamp)
+arm/$(am__dirstamp):
+	@$(MKDIR_P) arm
+	@: > arm/$(am__dirstamp)
+arm/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) arm/$(DEPDIR)
+	@: > arm/$(DEPDIR)/$(am__dirstamp)
+arm/libarch_la-cptr.lo: arm/$(am__dirstamp) \
+	arm/$(DEPDIR)/$(am__dirstamp)
 x86_64/$(am__dirstamp):
 	@$(MKDIR_P) x86_64
 	@: > x86_64/$(am__dirstamp)
@@ -409,16 +461,22 @@ x86_64/libarch_la-cptr.lo: x86_64/$(am__dirstamp) \
 	x86_64/$(DEPDIR)/$(am__dirstamp)
 
 libarch.la: $(libarch_la_OBJECTS) $(libarch_la_DEPENDENCIES) $(EXTRA_libarch_la_DEPENDENCIES) 
-	$(AM_V_CCLD)$(LINK)  $(libarch_la_OBJECTS) $(libarch_la_LIBADD) $(LIBS)
+	$(AM_V_CCLD)$(libarch_la_LINK)  $(libarch_la_OBJECTS) $(libarch_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f arm/*.$(OBJEXT)
+	-rm -f arm/*.lo
+	-rm -f common/*.$(OBJEXT)
+	-rm -f common/*.lo
 	-rm -f x86_64/*.$(OBJEXT)
 	-rm -f x86_64/*.lo
 
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@arm/$(DEPDIR)/libarch_la-cptr.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@common/$(DEPDIR)/libarch_la-nop.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@x86_64/$(DEPDIR)/libarch_la-cptr.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@x86_64/$(DEPDIR)/libarch_la-nop.Plo@am__quote@
 
@@ -446,25 +504,65 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCCAS_FALSE@	DEPDIR=$(DEPDIR) $(CCASDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCCAS_FALSE@	$(AM_V_CPPAS@am__nodep@)$(LTCPPASCOMPILE) -c -o $@ $<
 
+arm/libarch_la-cptr.lo: arm/cptr.S
+@am__fastdepCCAS_TRUE@	$(AM_V_CPPAS)$(LIBTOOL) $(AM_V_lt) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CCAS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libarch_la_CPPFLAGS) $(CPPFLAGS) $(libarch_la_CCASFLAGS) $(CCASFLAGS) -MT arm/libarch_la-cptr.lo -MD -MP -MF arm/$(DEPDIR)/libarch_la-cptr.Tpo -c -o arm/libarch_la-cptr.lo `test -f 'arm/cptr.S' || echo '$(srcdir)/'`arm/cptr.S
+@am__fastdepCCAS_TRUE@	$(AM_V_at)$(am__mv) arm/$(DEPDIR)/libarch_la-cptr.Tpo arm/$(DEPDIR)/libarch_la-cptr.Plo
+@AMDEP_TRUE@@am__fastdepCCAS_FALSE@	$(AM_V_CPPAS)source='arm/cptr.S' object='arm/libarch_la-cptr.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCCAS_FALSE@	DEPDIR=$(DEPDIR) $(CCASDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCCAS_FALSE@	$(AM_V_CPPAS@am__nodep@)$(LIBTOOL) $(AM_V_lt) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CCAS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libarch_la_CPPFLAGS) $(CPPFLAGS) $(libarch_la_CCASFLAGS) $(CCASFLAGS) -c -o arm/libarch_la-cptr.lo `test -f 'arm/cptr.S' || echo '$(srcdir)/'`arm/cptr.S
+
 x86_64/libarch_la-nop.lo: x86_64/nop.S
-@am__fastdepCCAS_TRUE@	$(AM_V_CPPAS)$(LIBTOOL) $(AM_V_lt) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CCAS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libarch_la_CPPFLAGS) $(CPPFLAGS) $(AM_CCASFLAGS) $(CCASFLAGS) -MT x86_64/libarch_la-nop.lo -MD -MP -MF x86_64/$(DEPDIR)/libarch_la-nop.Tpo -c -o x86_64/libarch_la-nop.lo `test -f 'x86_64/nop.S' || echo '$(srcdir)/'`x86_64/nop.S
+@am__fastdepCCAS_TRUE@	$(AM_V_CPPAS)$(LIBTOOL) $(AM_V_lt) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CCAS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libarch_la_CPPFLAGS) $(CPPFLAGS) $(libarch_la_CCASFLAGS) $(CCASFLAGS) -MT x86_64/libarch_la-nop.lo -MD -MP -MF x86_64/$(DEPDIR)/libarch_la-nop.Tpo -c -o x86_64/libarch_la-nop.lo `test -f 'x86_64/nop.S' || echo '$(srcdir)/'`x86_64/nop.S
 @am__fastdepCCAS_TRUE@	$(AM_V_at)$(am__mv) x86_64/$(DEPDIR)/libarch_la-nop.Tpo x86_64/$(DEPDIR)/libarch_la-nop.Plo
 @AMDEP_TRUE@@am__fastdepCCAS_FALSE@	$(AM_V_CPPAS)source='x86_64/nop.S' object='x86_64/libarch_la-nop.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCCAS_FALSE@	DEPDIR=$(DEPDIR) $(CCASDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCCAS_FALSE@	$(AM_V_CPPAS@am__nodep@)$(LIBTOOL) $(AM_V_lt) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CCAS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libarch_la_CPPFLAGS) $(CPPFLAGS) $(AM_CCASFLAGS) $(CCASFLAGS) -c -o x86_64/libarch_la-nop.lo `test -f 'x86_64/nop.S' || echo '$(srcdir)/'`x86_64/nop.S
+@am__fastdepCCAS_FALSE@	$(AM_V_CPPAS@am__nodep@)$(LIBTOOL) $(AM_V_lt) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CCAS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libarch_la_CPPFLAGS) $(CPPFLAGS) $(libarch_la_CCASFLAGS) $(CCASFLAGS) -c -o x86_64/libarch_la-nop.lo `test -f 'x86_64/nop.S' || echo '$(srcdir)/'`x86_64/nop.S
 
 x86_64/libarch_la-cptr.lo: x86_64/cptr.S
-@am__fastdepCCAS_TRUE@	$(AM_V_CPPAS)$(LIBTOOL) $(AM_V_lt) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CCAS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libarch_la_CPPFLAGS) $(CPPFLAGS) $(AM_CCASFLAGS) $(CCASFLAGS) -MT x86_64/libarch_la-cptr.lo -MD -MP -MF x86_64/$(DEPDIR)/libarch_la-cptr.Tpo -c -o x86_64/libarch_la-cptr.lo `test -f 'x86_64/cptr.S' || echo '$(srcdir)/'`x86_64/cptr.S
+@am__fastdepCCAS_TRUE@	$(AM_V_CPPAS)$(LIBTOOL) $(AM_V_lt) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CCAS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libarch_la_CPPFLAGS) $(CPPFLAGS) $(libarch_la_CCASFLAGS) $(CCASFLAGS) -MT x86_64/libarch_la-cptr.lo -MD -MP -MF x86_64/$(DEPDIR)/libarch_la-cptr.Tpo -c -o x86_64/libarch_la-cptr.lo `test -f 'x86_64/cptr.S' || echo '$(srcdir)/'`x86_64/cptr.S
 @am__fastdepCCAS_TRUE@	$(AM_V_at)$(am__mv) x86_64/$(DEPDIR)/libarch_la-cptr.Tpo x86_64/$(DEPDIR)/libarch_la-cptr.Plo
 @AMDEP_TRUE@@am__fastdepCCAS_FALSE@	$(AM_V_CPPAS)source='x86_64/cptr.S' object='x86_64/libarch_la-cptr.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCCAS_FALSE@	DEPDIR=$(DEPDIR) $(CCASDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCCAS_FALSE@	$(AM_V_CPPAS@am__nodep@)$(LIBTOOL) $(AM_V_lt) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CCAS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libarch_la_CPPFLAGS) $(CPPFLAGS) $(AM_CCASFLAGS) $(CCASFLAGS) -c -o x86_64/libarch_la-cptr.lo `test -f 'x86_64/cptr.S' || echo '$(srcdir)/'`x86_64/cptr.S
+@am__fastdepCCAS_FALSE@	$(AM_V_CPPAS@am__nodep@)$(LIBTOOL) $(AM_V_lt) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CCAS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libarch_la_CPPFLAGS) $(CPPFLAGS) $(libarch_la_CCASFLAGS) $(CCASFLAGS) -c -o x86_64/libarch_la-cptr.lo `test -f 'x86_64/cptr.S' || echo '$(srcdir)/'`x86_64/cptr.S
+
+.c.o:
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ $<
+
+.c.obj:
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+.c.lo:
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.lo$$||'`;\
+@am__fastdepCC_TRUE@	$(LTCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
+
+common/libarch_la-nop.lo: common/nop.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libarch_la_CPPFLAGS) $(CPPFLAGS) $(libarch_la_CFLAGS) $(CFLAGS) -MT common/libarch_la-nop.lo -MD -MP -MF common/$(DEPDIR)/libarch_la-nop.Tpo -c -o common/libarch_la-nop.lo `test -f 'common/nop.c' || echo '$(srcdir)/'`common/nop.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) common/$(DEPDIR)/libarch_la-nop.Tpo common/$(DEPDIR)/libarch_la-nop.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='common/nop.c' object='common/libarch_la-nop.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libarch_la_CPPFLAGS) $(CPPFLAGS) $(libarch_la_CFLAGS) $(CFLAGS) -c -o common/libarch_la-nop.lo `test -f 'common/nop.c' || echo '$(srcdir)/'`common/nop.c
 
 mostlyclean-libtool:
 	-rm -f *.lo
 
 clean-libtool:
 	-rm -rf .libs _libs
+	-rm -rf arm/.libs arm/_libs
+	-rm -rf common/.libs common/_libs
 	-rm -rf x86_64/.libs x86_64/_libs
 
 ID: $(am__tagged_files)
@@ -580,6 +678,10 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-rm -f arm/$(DEPDIR)/$(am__dirstamp)
+	-rm -f arm/$(am__dirstamp)
+	-rm -f common/$(DEPDIR)/$(am__dirstamp)
+	-rm -f common/$(am__dirstamp)
 	-rm -f x86_64/$(DEPDIR)/$(am__dirstamp)
 	-rm -f x86_64/$(am__dirstamp)
 
@@ -592,7 +694,7 @@ clean-am: clean-generic clean-libtool clean-noinstLTLIBRARIES \
 	mostlyclean-am
 
 distclean: distclean-am
-	-rm -rf x86_64/$(DEPDIR)
+	-rm -rf arm/$(DEPDIR) common/$(DEPDIR) x86_64/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -638,7 +740,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-	-rm -rf x86_64/$(DEPDIR)
+	-rm -rf arm/$(DEPDIR) common/$(DEPDIR) x86_64/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

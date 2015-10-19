@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifndef HPX_SYNC_CPTR_H
 #define HPX_SYNC_CPTR_H
 
@@ -29,12 +30,12 @@
 /// @field p - the actual pointer that we're protecting
 /// @field c - the count of the number of times this pointer has been CASed
 /// ----------------------------------------------------------------------------
-#ifdef __x86_64__
+#ifdef __LP64__
 typedef struct {
   void *p;
   uint64_t c;
 } cptr_t __attribute__((aligned(16)));
-#elif defined(__ARMEL__)
+#else
 typedef struct {
   void *p;
   uint32_t c;

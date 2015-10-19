@@ -272,14 +272,15 @@ int __verbs_init_context(verbs_cnct_ctx *ctx) {
 	}
       }
       if (found) {
-	photon_free_devlist(dlist);
-	ibv_free_device_list(dev_list);
 	break;
       }
       else {
 	ibv_close_device(dev_ctx);
       }
     }
+
+    photon_free_devlist(dlist);
+    ibv_free_device_list(dev_list);
 
     if (!found) {
       log_err("Could not find a suitable IB HCA (filter='%s')", ctx->ib_dev);

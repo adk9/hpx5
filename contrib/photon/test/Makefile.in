@@ -98,12 +98,27 @@ bin_PROGRAMS = photon_test$(EXEEXT) photon_test_get$(EXEEXT) \
 subdir = test
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/acx_configure_dir.m4 \
+	$(top_srcdir)/config/ax_compiler_vendor.m4 \
+	$(top_srcdir)/config/ax_gcc_builtin.m4 \
+	$(top_srcdir)/config/ax_pthread.m4 \
 	$(top_srcdir)/config/libtool.m4 \
 	$(top_srcdir)/config/ltoptions.m4 \
 	$(top_srcdir)/config/ltsugar.m4 \
 	$(top_srcdir)/config/ltversion.m4 \
 	$(top_srcdir)/config/lt~obsolete.m4 \
-	$(top_srcdir)/config/photon_contrib_libfabric.m4 \
+	$(top_srcdir)/config/photon_aarch64_get_cachelinesize.m4 \
+	$(top_srcdir)/config/photon_check_cmpxchg16b.m4 \
+	$(top_srcdir)/config/photon_config_compiler.m4 \
+	$(top_srcdir)/config/photon_config_host.m4 \
+	$(top_srcdir)/config/photon_config_libfabric.m4 \
+	$(top_srcdir)/config/photon_config_mpi.m4 \
+	$(top_srcdir)/config/photon_config_pmi.m4 \
+	$(top_srcdir)/config/photon_config_ugni.m4 \
+	$(top_srcdir)/config/photon_config_verbs.m4 \
+	$(top_srcdir)/config/photon_do_ac_config_files.m4 \
+	$(top_srcdir)/config/photon_do_am_conditionals.m4 \
+	$(top_srcdir)/config/photon_merge_shared_static.m4 \
+	$(top_srcdir)/config/photon_pe_env.m4 \
 	$(top_srcdir)/config/photon_with_pkg.m4 \
 	$(top_srcdir)/config/pkg.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -118,6 +133,8 @@ PROGRAMS = $(bin_PROGRAMS)
 am_photon_pingpong_OBJECTS = photon_pingpong.$(OBJEXT)
 photon_pingpong_OBJECTS = $(am_photon_pingpong_OBJECTS)
 photon_pingpong_LDADD = $(LDADD)
+am__DEPENDENCIES_1 =
+photon_pingpong_DEPENDENCIES = $(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -125,43 +142,48 @@ am__v_lt_1 =
 am_photon_test_OBJECTS = kernel.$(OBJEXT) photon_test.$(OBJEXT)
 photon_test_OBJECTS = $(am_photon_test_OBJECTS)
 photon_test_LDADD = $(LDADD)
+photon_test_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_photon_test_forwarder_OBJECTS = photon_test_forwarder.$(OBJEXT)
 photon_test_forwarder_OBJECTS = $(am_photon_test_forwarder_OBJECTS)
 photon_test_forwarder_LDADD = $(LDADD)
+photon_test_forwarder_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_photon_test_get_OBJECTS = photon_test_get.$(OBJEXT)
 photon_test_get_OBJECTS = $(am_photon_test_get_OBJECTS)
 photon_test_get_LDADD = $(LDADD)
+photon_test_get_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_photon_test_interleaved_OBJECTS =  \
 	photon_test_interleaved.$(OBJEXT)
 photon_test_interleaved_OBJECTS =  \
 	$(am_photon_test_interleaved_OBJECTS)
 photon_test_interleaved_LDADD = $(LDADD)
+photon_test_interleaved_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_photon_test_put_OBJECTS = photon_test_put.$(OBJEXT)
 photon_test_put_OBJECTS = $(am_photon_test_put_OBJECTS)
 photon_test_put_LDADD = $(LDADD)
+photon_test_put_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_photon_test_put_wc_OBJECTS = photon_test_put_wc.$(OBJEXT)
 photon_test_put_wc_OBJECTS = $(am_photon_test_put_wc_OBJECTS)
 photon_test_put_wc_LDADD = $(LDADD)
-am_photon_threaded_put_wc_OBJECTS =  \
-	photon_threaded_put_wc-photon_threaded_put_wc.$(OBJEXT)
+photon_test_put_wc_DEPENDENCIES = $(am__DEPENDENCIES_1)
+am_photon_threaded_put_wc_OBJECTS = photon_threaded_put_wc.$(OBJEXT)
 photon_threaded_put_wc_OBJECTS = $(am_photon_threaded_put_wc_OBJECTS)
 photon_threaded_put_wc_LDADD = $(LDADD)
-photon_threaded_put_wc_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
-	$(photon_threaded_put_wc_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
-	$(LDFLAGS) -o $@
+photon_threaded_put_wc_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am__dirstamp = $(am__leading_dot)dirstamp
 am_photon_ud_blockid_OBJECTS =  \
 	ud_bravo_tests/photon_ud_blockid.$(OBJEXT)
 photon_ud_blockid_OBJECTS = $(am_photon_ud_blockid_OBJECTS)
 photon_ud_blockid_LDADD = $(LDADD)
+photon_ud_blockid_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_photon_ud_mton_OBJECTS = ud_bravo_tests/photon_ud_mton.$(OBJEXT)
 photon_ud_mton_OBJECTS = $(am_photon_ud_mton_OBJECTS)
 photon_ud_mton_LDADD = $(LDADD)
+photon_ud_mton_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_photon_ud_pingpong_OBJECTS =  \
 	ud_bravo_tests/photon_ud_pingpong.$(OBJEXT)
 photon_ud_pingpong_OBJECTS = $(am_photon_ud_pingpong_OBJECTS)
 photon_ud_pingpong_LDADD = $(LDADD)
+photon_ud_pingpong_DEPENDENCIES = $(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -278,9 +300,17 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LIBFABRIC_CARGS = @LIBFABRIC_CARGS@
 LIBFABRIC_CFLAGS = @LIBFABRIC_CFLAGS@
 LIBFABRIC_LIBS = @LIBFABRIC_LIBS@
 LIBOBJS = @LIBOBJS@
+LIBPHOTON_CCASFLAGS = @LIBPHOTON_CCASFLAGS@
+LIBPHOTON_CFLAGS = @LIBPHOTON_CFLAGS@
+LIBPHOTON_CPPFLAGS = @LIBPHOTON_CPPFLAGS@
+LIBPHOTON_CXXFLAGS = @LIBPHOTON_CXXFLAGS@
+LIBPHOTON_LDFLAGS = @LIBPHOTON_LDFLAGS@
+LIBPHOTON_LIBADD = @LIBPHOTON_LIBADD@
+LIBPHOTON_LIBS = @LIBPHOTON_LIBS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
@@ -292,7 +322,6 @@ MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 MPI_CFLAGS = @MPI_CFLAGS@
 MPI_LIBS = @MPI_LIBS@
-MPI_PKG = @MPI_PKG@
 NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
@@ -307,34 +336,35 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
-PHOTON_BUILDDIR = @PHOTON_BUILDDIR@
-PHOTON_LIBFABRIC_CARGS = @PHOTON_LIBFABRIC_CARGS@
-PHOTON_LIBFABRIC_CFLAGS = @PHOTON_LIBFABRIC_CFLAGS@
-PHOTON_LIBFABRIC_CPPFLAGS = @PHOTON_LIBFABRIC_CPPFLAGS@
-PHOTON_LIBFABRIC_DEPS = @PHOTON_LIBFABRIC_DEPS@
-PHOTON_LIBFABRIC_LIBS = @PHOTON_LIBFABRIC_LIBS@
-PHOTON_PC_LIBS = @PHOTON_PC_LIBS@
-PHOTON_PC_LIBS_PRIVATE = @PHOTON_PC_LIBS_PRIVATE@
-PHOTON_SRCDIR = @PHOTON_SRCDIR@
+PE_ENV = @PE_ENV@
+PHOTON_APPS_CFLAGS = @PHOTON_APPS_CFLAGS@
+PHOTON_APPS_CPPFLAGS = @PHOTON_APPS_CPPFLAGS@
+PHOTON_APPS_DEPS = @PHOTON_APPS_DEPS@
+PHOTON_APPS_LDADD = @PHOTON_APPS_LDADD@
+PHOTON_APPS_LDFLAGS = @PHOTON_APPS_LDFLAGS@
+PHOTON_PC_CFLAGS = @PHOTON_PC_CFLAGS@
+PHOTON_PC_PRIVATE_LIBS = @PHOTON_PC_PRIVATE_LIBS@
+PHOTON_PC_PRIVATE_PKGS = @PHOTON_PC_PRIVATE_PKGS@
+PHOTON_PC_PUBLIC_LIBS = @PHOTON_PC_PUBLIC_LIBS@
+PHOTON_PC_REQUIRES_PKGS = @PHOTON_PC_REQUIRES_PKGS@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 PMI_CFLAGS = @PMI_CFLAGS@
 PMI_LIBS = @PMI_LIBS@
-PMI_PKG = @PMI_PKG@
+PTHREAD_CC = @PTHREAD_CC@
+PTHREAD_CFLAGS = @PTHREAD_CFLAGS@
+PTHREAD_LIBS = @PTHREAD_LIBS@
 RANLIB = @RANLIB@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
-THREAD_LIBS = @THREAD_LIBS@
 UGNI_CFLAGS = @UGNI_CFLAGS@
 UGNI_LIBS = @UGNI_LIBS@
-UGNI_PKG = @UGNI_PKG@
+VERBS_CFLAGS = @VERBS_CFLAGS@
 VERBS_LIBS = @VERBS_LIBS@
 VERSION = @VERSION@
-XSP_CFLAGS = @XSP_CFLAGS@
-XSP_LIBS = @XSP_LIBS@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -348,6 +378,7 @@ am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
+ax_pthread_config = @ax_pthread_config@
 bindir = @bindir@
 build = @build@
 build_alias = @build_alias@
@@ -392,11 +423,10 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-AM_CFLAGS = @CFLAGS@                         \
-	    @MPI_CFLAGS@                     \
-	    -I@top_srcdir@/include
-
-AM_LDFLAGS = $(top_builddir)/src/libphoton.la -lm -lcrypto @THREAD_LIBS@ @UGNI_LIBS@ @VERBS_LIBS@ @MPI_LIBS@ -lrt -no-install
+AM_CPPFLAGS = -D_GNU_SOURCE $(PHOTON_APPS_CPPFLAGS) -I$(top_srcdir)/include
+AM_CFLAGS = $(PHOTON_APPS_CFLAGS) -Wno-unused
+AM_LDFLAGS = $(PHOTON_APPS_LDFLAGS) -no-install -lcrypto
+LDADD = $(PHOTON_APPS_LDADD)
 photon_test_SOURCES = kernel.c photon_test.c
 photon_test_get_SOURCES = photon_test_get.c
 photon_test_put_SOURCES = photon_test_put.c
@@ -408,7 +438,6 @@ photon_pingpong_SOURCES = photon_pingpong.c
 photon_ud_blockid_SOURCES = ud_bravo_tests/photon_ud_blockid.c
 photon_ud_pingpong_SOURCES = ud_bravo_tests/photon_ud_pingpong.c
 photon_ud_mton_SOURCES = ud_bravo_tests/photon_ud_mton.c
-photon_threaded_put_wc_CFLAGS = ${AM_CFLAGS} -D_GNU_SOURCE
 all: all-am
 
 .SUFFIXES:
@@ -522,7 +551,7 @@ photon_test_put_wc$(EXEEXT): $(photon_test_put_wc_OBJECTS) $(photon_test_put_wc_
 
 photon_threaded_put_wc$(EXEEXT): $(photon_threaded_put_wc_OBJECTS) $(photon_threaded_put_wc_DEPENDENCIES) $(EXTRA_photon_threaded_put_wc_DEPENDENCIES) 
 	@rm -f photon_threaded_put_wc$(EXEEXT)
-	$(AM_V_CCLD)$(photon_threaded_put_wc_LINK) $(photon_threaded_put_wc_OBJECTS) $(photon_threaded_put_wc_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(LINK) $(photon_threaded_put_wc_OBJECTS) $(photon_threaded_put_wc_LDADD) $(LIBS)
 ud_bravo_tests/$(am__dirstamp):
 	@$(MKDIR_P) ud_bravo_tests
 	@: > ud_bravo_tests/$(am__dirstamp)
@@ -566,7 +595,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_test_interleaved.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_test_put.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_test_put_wc.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_threaded_put_wc-photon_threaded_put_wc.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/photon_threaded_put_wc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@ud_bravo_tests/$(DEPDIR)/photon_ud_blockid.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@ud_bravo_tests/$(DEPDIR)/photon_ud_mton.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@ud_bravo_tests/$(DEPDIR)/photon_ud_pingpong.Po@am__quote@
@@ -594,20 +623,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
-
-photon_threaded_put_wc-photon_threaded_put_wc.o: photon_threaded_put_wc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photon_threaded_put_wc_CFLAGS) $(CFLAGS) -MT photon_threaded_put_wc-photon_threaded_put_wc.o -MD -MP -MF $(DEPDIR)/photon_threaded_put_wc-photon_threaded_put_wc.Tpo -c -o photon_threaded_put_wc-photon_threaded_put_wc.o `test -f 'photon_threaded_put_wc.c' || echo '$(srcdir)/'`photon_threaded_put_wc.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photon_threaded_put_wc-photon_threaded_put_wc.Tpo $(DEPDIR)/photon_threaded_put_wc-photon_threaded_put_wc.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_threaded_put_wc.c' object='photon_threaded_put_wc-photon_threaded_put_wc.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photon_threaded_put_wc_CFLAGS) $(CFLAGS) -c -o photon_threaded_put_wc-photon_threaded_put_wc.o `test -f 'photon_threaded_put_wc.c' || echo '$(srcdir)/'`photon_threaded_put_wc.c
-
-photon_threaded_put_wc-photon_threaded_put_wc.obj: photon_threaded_put_wc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photon_threaded_put_wc_CFLAGS) $(CFLAGS) -MT photon_threaded_put_wc-photon_threaded_put_wc.obj -MD -MP -MF $(DEPDIR)/photon_threaded_put_wc-photon_threaded_put_wc.Tpo -c -o photon_threaded_put_wc-photon_threaded_put_wc.obj `if test -f 'photon_threaded_put_wc.c'; then $(CYGPATH_W) 'photon_threaded_put_wc.c'; else $(CYGPATH_W) '$(srcdir)/photon_threaded_put_wc.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/photon_threaded_put_wc-photon_threaded_put_wc.Tpo $(DEPDIR)/photon_threaded_put_wc-photon_threaded_put_wc.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='photon_threaded_put_wc.c' object='photon_threaded_put_wc-photon_threaded_put_wc.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(photon_threaded_put_wc_CFLAGS) $(CFLAGS) -c -o photon_threaded_put_wc-photon_threaded_put_wc.obj `if test -f 'photon_threaded_put_wc.c'; then $(CYGPATH_W) 'photon_threaded_put_wc.c'; else $(CYGPATH_W) '$(srcdir)/photon_threaded_put_wc.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
