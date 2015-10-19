@@ -17,6 +17,9 @@ struct photon_config_t cfg = {
   .ugni = {
     .bte_thresh = -1,
   },
+  .fi = {
+    .provider = "sockets",
+  },
   .cap = {
     .small_msg_size = -1,
     .small_pwc_size = -1,
@@ -33,5 +36,5 @@ struct photon_config_t cfg = {
   },
   .meta_exch = PHOTON_EXCH_MPI,
   .comm = NULL,
-  .backend = PHOTON_BACKEND_VERBS
+  .backend = PHOTON_BACKEND_FI
 };

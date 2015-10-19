@@ -80,6 +80,9 @@ static void psmx_wait_start_progress(struct psmx_fid_domain *domain)
 	if (!domain)
 		return;
 
+	if (domain->progress_thread_enabled && domain->progress_thread != pthread_self())
+		return;
+
 	if (!psmx_wait_thread) {
 		pthread_mutex_init(&psmx_wait_mutex, NULL);
 		pthread_cond_init(&psmx_wait_cond, NULL);
@@ -242,7 +245,12 @@ static int psmx_wait_init(struct psmx_fid_wait *wait, int type)
 		if (socketpair(AF_UNIX, SOCK_STREAM, 0, wait->fd))
 			return -errno;
 
-		fcntl(wait->fd[0], F_GETFL, &flags);
+		if (fcntl(wait->fd[0], F_GETFL, &flags) == -1) {
+			close(wait->fd[0]);
+			close(wait->fd[1]);
+			return -errno;
+		}
+
 		if (fcntl(wait->fd[0], F_SETFL, flags | O_NONBLOCK)) {
 			close(wait->fd[0]);
 			close(wait->fd[1]);

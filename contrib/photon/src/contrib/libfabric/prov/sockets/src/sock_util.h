@@ -42,30 +42,36 @@ extern const char sock_dom_name[];
 extern const char sock_prov_name[];
 extern struct fi_provider sock_prov;
 extern int sock_pe_waittime;
+extern int sock_conn_retry;
+extern int sock_cm_def_map_sz;
+extern int sock_av_def_sz;
+extern int sock_cq_def_sz;
+extern int sock_eq_def_sz;
+extern char *sock_pe_affinity_str;
 #if ENABLE_DEBUG
 extern int sock_dgram_drop_rate;
 #endif
 
-#define _SOCK_LOG_DBG(subsys, ...) FI_DBG(&sock_prov, subsys, __VA_ARGS__);
-#define _SOCK_LOG_ERROR(subsys, ...) FI_WARN(&sock_prov, subsys, __VA_ARGS__);
+#define _SOCK_LOG_DBG(subsys, ...) FI_DBG(&sock_prov, subsys, __VA_ARGS__)
+#define _SOCK_LOG_ERROR(subsys, ...) FI_WARN(&sock_prov, subsys, __VA_ARGS__)
 
 static inline int sock_drop_packet(struct sock_ep *sock_ep)
-{	
-#if ENABLE_DEBUG	
-	if(sock_ep->ep_type == FI_EP_DGRAM && sock_dgram_drop_rate > 0) {
+{
+#if ENABLE_DEBUG
+	if (sock_ep->ep_type == FI_EP_DGRAM && sock_dgram_drop_rate > 0) {
 		sock_ep->domain->fab->num_send_msg++;
-		if(!(sock_ep->domain->fab->num_send_msg % sock_dgram_drop_rate))
+		if (!(sock_ep->domain->fab->num_send_msg % sock_dgram_drop_rate))
 			return 1;
 	}
 #endif
 	return 0;
 }
 
-static inline void *sock_mremap(void *old_address, size_t old_size, 
+static inline void *sock_mremap(void *old_address, size_t old_size,
 				size_t new_size)
 {
 #ifdef __APPLE__
-	return (void*) -1;
+	return (void *) -1;
 #else
 	return mremap(old_address, old_size, new_size, 0);
 #endif

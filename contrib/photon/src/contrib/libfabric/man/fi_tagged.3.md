@@ -46,6 +46,9 @@ ssize_t fi_tinject(struct fid_ep *ep, const void *buf, size_t len,
 ssize_t fi_tsenddata(struct fid_ep *ep, const void *buf, size_t len,
 	void *desc, uint64_t data, fi_addr_t dest_addr, uint64_t tag,
 	void *context);
+
+ssize_t fi_tinjectdata(struct fid_ep *ep, const void *buf, size_t len,
+	uint64_t data, fi_addr_t dest_addr, uint64_t tag);
 {% endhighlight %}
 
 # ARGUMENTS
@@ -186,6 +189,12 @@ The tagged send data call is similar to fi_tsend, but allows for the
 sending of remote CQ data (see FI_REMOTE_CQ_DATA flag) as part of the
 transfer.
 
+## fi_tinjectdata
+
+The tagged inject data call is similar to fi_tinject, but allows for the
+sending of remote CQ data (see FI_REMOTE_CQ_DATA flag) as part of the
+transfer.
+
 ## fi_trecv
 
 The fi_trecv call posts a data buffer to the receive queue of the
@@ -262,9 +271,12 @@ The following flags may be used with fi_trecvmsg.
   A peek request is often useful on endpoints that have provider
   allocated buffering enabled (see fi_rx_attr total_buffered_recv).
   Unlike standard receive operations, a receive operation with the FI_PEEK
-  flag set does not remain queued with the provider until the peek completes
-  successfully.  If no data is available, the FI_PEEK receive will complete
-  with a status of FI_ENOMSG.
+  flag set does not remain queued with the provider after the peek completes
+  successfully. The peek operation operates asynchronously, and the results 
+  of the peek operation are available in the completion queue associated with
+  the endpoint. If no message is found matching the tags specified in the peek
+  request, then a completion queue error entry with err field set to FI_ENOMSG
+  will be available.
 
   If a peek request locates a matching message, the operation will complete
   successfully.  The returned completion data will indicate the meta-data
@@ -272,14 +284,18 @@ The following flags may be used with fi_trecvmsg.
   available CQ data, tag, and source address.  The data available is subject to
   the completion entry format (e.g. struct fi_cq_tagged_entry).
 
-  An application may supply a buffer as part of the peek operation.  If
-  given, the provider may return a copy of the message data.  The returned data
-  is limited to the size of the input buffer(s) or the message size, if
-  smaller.  A provider indicates if data is available by setting the buf
-  field of the CQ entry to the user's first input buffer.  If buf is NULL, no
-  data was available to return.  A provider may return NULL even if the
-  peek operation completes successfully.  Note that the CQ entry len field
-  will reference the size of the message, not necessarily the size of the
+  An application may supply a buffer if it desires to receive data as
+  a part of the peek operation. In order to receive data as a part of
+  the peek operation, the buf and len fields must be available in the
+  CQ format. In particular, FI_CQ_FORMAT_CONTEXT and FI_CQ_FORMAT_MSG
+  cannot be used if peek operations desire to obtain a copy of the
+  data. The returned data is limited to the size of the input
+  buffer(s) or the message size, if smaller.  A provider indicates if
+  data is available by setting the buf field of the CQ entry to the
+  user's first input buffer.  If buf is NULL, no data was available to
+  return.  A provider may return NULL even if the peek operation
+  completes successfully.  Note that the CQ entry len field will
+  reference the size of the message, not necessarily the size of the
   returned data.
 
 *FI_CLAIM*

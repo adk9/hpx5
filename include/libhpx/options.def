@@ -175,6 +175,7 @@ LIBHPX_OPT_SCALAR(photon_, usercq, 0, int)
 LIBHPX_OPT_FLAG(photon_, usecma, 0)
 LIBHPX_OPT_STRING(photon_, ethdev, "roce0")
 LIBHPX_OPT_STRING(photon_, ibdev, "qib0+mlx4_0")
+LIBHPX_OPT_STRING(photon_, fiprov, "sockets")
 /// @}
 #endif
 

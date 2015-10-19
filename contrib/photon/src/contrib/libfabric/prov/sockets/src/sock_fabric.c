@@ -54,6 +54,12 @@ int sock_pe_waittime = SOCK_PE_WAITTIME;
 const char sock_fab_name[] = "IP";
 const char sock_dom_name[] = "sockets";
 const char sock_prov_name[] = "sockets";
+int sock_conn_retry = SOCK_CM_DEF_RETRY;
+int sock_cm_def_map_sz = SOCK_CMAP_DEF_SZ;
+int sock_av_def_sz = SOCK_AV_DEF_SZ;
+int sock_cq_def_sz = SOCK_CQ_DEF_SZ;
+int sock_eq_def_sz = SOCK_EQ_DEF_SZ;
+char *sock_pe_affinity_str = NULL;
 #if ENABLE_DEBUG
 int sock_dgram_drop_rate = 0;
 #endif
@@ -68,6 +74,7 @@ const struct fi_fabric_attr sock_fabric_attr = {
 static struct dlist_entry sock_fab_list;
 static struct dlist_entry sock_dom_list;
 static fastlock_t sock_list_lock;
+static int read_default_params;
 
 void sock_dom_add_to_list(struct sock_domain *domain)
 {
@@ -80,9 +87,9 @@ static inline int sock_dom_check_list_internal(struct sock_domain *domain)
 {
 	struct dlist_entry *entry;
 	struct sock_domain *dom_entry;
-	for (entry = sock_dom_list.next; entry != &sock_dom_list; 
+	for (entry = sock_dom_list.next; entry != &sock_dom_list;
 	     entry = entry->next) {
-		dom_entry = container_of(entry, struct sock_domain, 
+		dom_entry = container_of(entry, struct sock_domain,
 					 dom_list_entry);
 		if (dom_entry == domain)
 			return 1;
@@ -90,7 +97,7 @@ static inline int sock_dom_check_list_internal(struct sock_domain *domain)
 	return 0;
 }
 
-int sock_dom_check_list(struct sock_domain *domain) 
+int sock_dom_check_list(struct sock_domain *domain)
 {
 	int found;
 	fastlock_acquire(&sock_list_lock);
@@ -102,9 +109,9 @@ int sock_dom_check_list(struct sock_domain *domain)
 void sock_dom_remove_from_list(struct sock_domain *domain)
 {
 	fastlock_acquire(&sock_list_lock);
-	if (sock_dom_check_list_internal(domain)) {
+	if (sock_dom_check_list_internal(domain))
 		dlist_remove(&domain->dom_list_entry);
-	}
+
 	fastlock_release(&sock_list_lock);
 }
 
@@ -115,7 +122,7 @@ struct sock_domain *sock_dom_list_head(void)
 	if (dlist_empty(&sock_dom_list)) {
 		domain = NULL;
 	} else {
-		domain = container_of(sock_dom_list.next, 
+		domain = container_of(sock_dom_list.next,
 				      struct sock_domain, dom_list_entry);
 	}
 	fastlock_release(&sock_list_lock);
@@ -133,9 +140,9 @@ static inline int sock_fab_check_list_internal(struct sock_fabric *fabric)
 {
 	struct dlist_entry *entry;
 	struct sock_fabric *fab_entry;
-	for (entry = sock_fab_list.next; entry != &sock_fab_list; 
+	for (entry = sock_fab_list.next; entry != &sock_fab_list;
 	     entry = entry->next) {
-		fab_entry = container_of(entry, struct sock_fabric, 
+		fab_entry = container_of(entry, struct sock_fabric,
 					 fab_list_entry);
 		if (fab_entry == fabric)
 			return 1;
@@ -143,7 +150,7 @@ static inline int sock_fab_check_list_internal(struct sock_fabric *fabric)
 	return 0;
 }
 
-int sock_fab_check_list(struct sock_fabric *fabric) 
+int sock_fab_check_list(struct sock_fabric *fabric)
 {
 	int found;
 	fastlock_acquire(&sock_list_lock);
@@ -155,9 +162,9 @@ int sock_fab_check_list(struct sock_fabric *fabric)
 void sock_fab_remove_from_list(struct sock_fabric *fabric)
 {
 	fastlock_acquire(&sock_list_lock);
-	if (sock_fab_check_list_internal(fabric)) {
+	if (sock_fab_check_list_internal(fabric))
 		dlist_remove(&fabric->fab_list_entry);
-	}
+
 	fastlock_release(&sock_list_lock);
 }
 
@@ -168,7 +175,7 @@ struct sock_fabric *sock_fab_list_head(void)
 	if (dlist_empty(&sock_fab_list)) {
 		fabric = NULL;
 	} else {
-		fabric = container_of(sock_fab_list.next, 
+		fabric = container_of(sock_fab_list.next,
 				      struct sock_fabric, fab_list_entry);
 	}
 	fastlock_release(&sock_list_lock);
@@ -185,7 +192,7 @@ int sock_verify_fabric_attr(struct fi_fabric_attr *attr)
 		return -FI_ENODATA;
 
 	if (attr->prov_version) {
-		if (attr->prov_version != 
+		if (attr->prov_version !=
 		   FI_VERSION(SOCK_MAJOR_VERSION, SOCK_MINOR_VERSION))
 			return -FI_ENODATA;
 	}
@@ -254,7 +261,7 @@ int sock_verify_info(struct fi_info *hints)
 		}
 	}
 	ret = sock_verify_domain_attr(hints->domain_attr);
-	if (ret) 
+	if (ret)
 		return ret;
 
 	if (hints->fabric_attr && hints->fabric_attr->fabric) {
@@ -266,7 +273,7 @@ int sock_verify_info(struct fi_info *hints)
 		}
 	}
 	ret = sock_verify_fabric_attr(hints->fabric_attr);
-	if (ret) 
+	if (ret)
 		return ret;
 
 	return 0;
@@ -284,9 +291,8 @@ static int sock_fabric_close(fid_t fid)
 {
 	struct sock_fabric *fab;
 	fab = container_of(fid, struct sock_fabric, fab_fid);
-	if (atomic_get(&fab->ref)) {
+	if (atomic_get(&fab->ref))
 		return -FI_EBUSY;
-	}
 
 	sock_fab_remove_from_list(fab);
 	fastlock_destroy(&fab->lock);
@@ -302,35 +308,55 @@ static struct fi_ops sock_fab_fi_ops = {
 	.ops_open = fi_no_ops_open,
 };
 
+static void sock_read_default_params()
+{
+	if (!read_default_params) {
+		fi_param_get_int(&sock_prov, "pe_waittime", &sock_pe_waittime);
+		fi_param_get_int(&sock_prov, "max_conn_retry", &sock_conn_retry);
+		fi_param_get_int(&sock_prov, "def_conn_map_sz", &sock_cm_def_map_sz);
+		fi_param_get_int(&sock_prov, "def_av_sz", &sock_av_def_sz);
+		fi_param_get_int(&sock_prov, "def_cq_sz", &sock_cq_def_sz);
+		fi_param_get_int(&sock_prov, "def_eq_sz", &sock_eq_def_sz);
+		if (fi_param_get_str(&sock_prov, "pe_affinity", &sock_pe_affinity_str) != FI_SUCCESS)
+			sock_pe_affinity_str = NULL;
+#if ENABLE_DEBUG
+		fi_param_get_int(&sock_prov, "dgram_drop_rate", &sock_dgram_drop_rate);
+#endif
+		read_default_params = 1;
+	}
+}
+
 static int sock_fabric(struct fi_fabric_attr *attr,
 		       struct fid_fabric **fabric, void *context)
 {
 	struct sock_fabric *fab;
 
 	if (strcmp(attr->name, sock_fab_name))
-		return -FI_ENODATA;
-	
+		return -FI_EINVAL;
+
 	fab = calloc(1, sizeof(*fab));
 	if (!fab)
 		return -FI_ENOMEM;
 
+	sock_read_default_params();
+
 	fastlock_init(&fab->lock);
 	dlist_init(&fab->service_list);
-	
+
 	fab->fab_fid.fid.fclass = FI_CLASS_FABRIC;
 	fab->fab_fid.fid.context = context;
 	fab->fab_fid.fid.ops = &sock_fab_fi_ops;
 	fab->fab_fid.ops = &sock_fab_ops;
 	*fabric = &fab->fab_fid;
 	atomic_initialize(&fab->ref, 0);
-#if ENABLE_DEBUG	
+#if ENABLE_DEBUG
 	fab->num_send_msg = 0;
 #endif
-	sock_fab_add_to_list(fab);	
+	sock_fab_add_to_list(fab);
 	return 0;
 }
 
-static struct sock_service_entry *sock_fabric_find_service(struct sock_fabric *fab, 
+static struct sock_service_entry *sock_fabric_find_service(struct sock_fabric *fab,
 							   int service)
 {
 	struct dlist_entry *entry;
@@ -338,11 +364,10 @@ static struct sock_service_entry *sock_fabric_find_service(struct sock_fabric *f
 
 	for (entry = fab->service_list.next; entry != &fab->service_list;
 	     entry = entry->next) {
-		service_entry = container_of(entry, 
+		service_entry = container_of(entry,
 					     struct sock_service_entry, entry);
-		if (service_entry->service == service) {
+		if (service_entry->service == service)
 			return service_entry;
-		}
 	}
 	return NULL;
 }
@@ -361,7 +386,7 @@ void sock_fabric_add_service(struct sock_fabric *fab, int service)
 {
 	struct sock_service_entry *entry;
 
-	entry = calloc(1, sizeof *entry);
+	entry = calloc(1, sizeof(*entry));
 	if (!entry)
 		return;
 
@@ -394,10 +419,11 @@ int sock_get_src_addr(struct sockaddr_in *dest_addr,
 		return -errno;
 
 	len = sizeof(*dest_addr);
-	ret = connect(sock, (struct sockaddr*)dest_addr, len);
+	ret = connect(sock, (struct sockaddr *) dest_addr, len);
 	if (ret) {
 		SOCK_LOG_DBG("Failed to connect udp socket\n");
-		ret = -errno;
+
+		ret = sock_get_src_addr_from_hostname(src_addr, NULL);
 		goto out;
 	}
 
@@ -503,17 +529,17 @@ static int sock_getinfo(uint32_t version, const char *node, const char *service,
 		return -FI_ENODATA;
 
 	ret = sock_verify_info(hints);
-	if (ret) 
+	if (ret)
 		return ret;
 
 	if (!node && !service && !hints) {
 		flags |= FI_SOURCE;
-		gethostname(hostname, sizeof hostname);
+		gethostname(hostname, sizeof(hostname));
 		node = hostname;
 	}
 
 	if (!node && !service && !(flags & FI_SOURCE) && !hints->dest_addr) {
-		gethostname(hostname, sizeof hostname);
+		gethostname(hostname, sizeof(hostname));
 		node = hostname;
 	}
 
@@ -566,7 +592,7 @@ static void fi_sockets_fini(void)
 
 struct fi_provider sock_prov = {
 	.name = sock_prov_name,
-	.version = FI_VERSION(SOCK_MAJOR_VERSION, SOCK_MINOR_VERSION), 
+	.version = FI_VERSION(SOCK_MAJOR_VERSION, SOCK_MINOR_VERSION),
 	.fi_version = FI_VERSION(1, 1),
 	.getinfo = sock_getinfo,
 	.fabric = sock_fabric,
@@ -576,8 +602,26 @@ struct fi_provider sock_prov = {
 SOCKETS_INI
 {
 	fi_param_define(&sock_prov, "pe_waittime", FI_PARAM_INT,
-                        "How many milliseconds to spin while waiting for progress");
-	fi_param_get_int(&sock_prov, "pe_waittime", &sock_pe_waittime);
+			"How many milliseconds to spin while waiting for progress");
+
+	fi_param_define(&sock_prov, "max_conn_retry", FI_PARAM_INT,
+			"Number of connection retries before reporting as failure");
+
+	fi_param_define(&sock_prov, "def_conn_map_sz", FI_PARAM_INT,
+			"Default connection map size");
+
+	fi_param_define(&sock_prov, "def_av_sz", FI_PARAM_INT,
+			"Default address vector size");
+
+	fi_param_define(&sock_prov, "def_cq_sz", FI_PARAM_INT,
+			"Default completion queue size");
+
+	fi_param_define(&sock_prov, "def_eq_sz", FI_PARAM_INT,
+			"Default event queue size");
+
+	fi_param_define(&sock_prov, "pe_affinity", FI_PARAM_STRING,
+			"If specified, bind the progress thread to the indicated range(s) of Linux virtual processor ID(s). "
+			"This option is currently not supported on OS X. Usage: id_start[-id_end[:stride]][,]");
 
 	fastlock_init(&sock_list_lock);
 	dlist_init(&sock_fab_list);
@@ -585,7 +629,6 @@ SOCKETS_INI
 #if ENABLE_DEBUG
 	fi_param_define(&sock_prov, "dgram_drop_rate", FI_PARAM_INT,
 			"Drop every Nth dgram frame (debug only)");
-	fi_param_get_int(&sock_prov, "dgram_drop_rate", &sock_dgram_drop_rate);
 #endif
-	return (&sock_prov);
+	return &sock_prov;
 }

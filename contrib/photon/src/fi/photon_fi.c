@@ -30,6 +30,7 @@ struct rdma_args_t {
   uint64_t size;
 };
 
+static tatas_lock_t op_lock;
 static int __initialized = 0;
 
 static int fi_initialized(void);
@@ -46,10 +47,13 @@ static int fi_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
 			photonBuffer lbuf, uint64_t id, uint64_t imm_data, int flags);
 static int fi_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
 			photonBuffer lbuf, uint64_t id, int flags);
+static int pfi_tx_size_left(int proc);
+static int pfi_rx_size_left(int proc);
 static int fi_get_event(int proc, int max, photon_rid *ids, int *n);
 static int fi_get_revent(int proc, int max, photon_rid *ids, uint64_t *imms, int *n);
 
 static fi_cnct_ctx fi_ctx = {
+  .thread_safe = 0,
   .node = NULL,
   .service = NULL,
   .domain = NULL,
@@ -100,6 +104,8 @@ struct photon_backend_t photon_fi_backend = {
   .rdma_get = fi_rdma_get,
   .rdma_send = fi_rdma_send,
   .rdma_recv = fi_rdma_recv,
+  .tx_size_left = pfi_tx_size_left,
+  .rx_size_left = pfi_rx_size_left,
   .get_event = fi_get_event,
   .get_revent = fi_get_revent
 };
@@ -129,10 +135,12 @@ static int fi_initialized() {
 
 static int fi_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss) {
 
-  // __initialized: 0 - not; -1 - initializing; 1 - initialized
   __initialized = -1;
+
+  sync_tatas_init(&op_lock);
   
-  fi_ctx.num_cq = cfg->cap.num_cq;
+  fi_ctx.num_cq  = cfg->cap.num_cq;
+  fi_ctx.use_rcq = cfg->cap.use_rcq;
 
   fi_ctx.hints = fi_allocinfo();
   if (!fi_ctx.hints) {
@@ -140,13 +148,13 @@ static int fi_init(photonConfig cfg, ProcessInfo *photon_processes, photonBI ss)
     goto error_exit;
   }
 
-  fi_ctx.hints->domain_attr->name = strdup("sockets");
+  fi_ctx.hints->domain_attr->name = strdup(cfg->fi.provider);
   fi_ctx.hints->domain_attr->mr_mode = FI_MR_BASIC;
-  fi_ctx.hints->domain_attr->threading = FI_THREAD_SAFE;
-  fi_ctx.hints->rx_attr->comp_order = FI_ORDER_STRICT;
+  //fi_ctx.hints->domain_attr->threading = FI_THREAD_SAFE;
+  //fi_ctx.hints->rx_attr->comp_order = FI_ORDER_STRICT | FI_ORDER_DATA;
   fi_ctx.hints->ep_attr->type = FI_EP_RDM;
-  fi_ctx.hints->caps = FI_MSG | FI_RMA;
-  fi_ctx.hints->mode = FI_CONTEXT | FI_LOCAL_MR;
+  fi_ctx.hints->caps = FI_MSG | FI_RMA | FI_RMA_EVENT;
+  fi_ctx.hints->mode = FI_CONTEXT | FI_LOCAL_MR | FI_RX_CQ_DATA;
 
   if(__fi_init_context(&fi_ctx)) {
     log_err("Could not initialize libfabric context");
@@ -216,19 +224,32 @@ static int fi_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size
   photonBI db;
   int rc;
 
+  dbg_trace("(size=%lu, id=0x%016lx, raddr: %p)", size, id, raddr);
+
   if (buffertable_find_containing((void *)laddr, size, &db) != PHOTON_OK) {
     log_err("Tried PUT from a local buffer that is not registered: %p", (void*)laddr);
     goto error_exit;
   }
 
-  rc = fi_write(fi_ctx.eps[_photon_myrank], (void*)laddr, size,
-		fi_mr_desc(db->priv_ptr), *fi_ctx.addrs[proc], raddr,
-		rbuf->priv.key1, (void*)id);
-  if (rc) {
-    dbg_err("Could not PUT to %p, size %lu: %s", (void*)raddr, size,
-	    fi_strerror(-rc));
-    goto error_exit;
+  (!fi_ctx.thread_safe) ? sync_tatas_acquire(&op_lock):NULL;
+  {  
+    if (fi_ctx.use_rcq && (flags & RDMA_FLAG_WITH_IMM)) {
+      rc = fi_writedata(fi_ctx.eps[_photon_myrank], (void*)laddr, size,
+			fi_mr_desc(db->priv_ptr), imm_data, fi_ctx.addrs[proc],
+			raddr, rbuf->priv.key1, (void*)id);
+    }
+    else {
+      rc = fi_write(fi_ctx.eps[_photon_myrank], (void*)laddr, size,
+		    fi_mr_desc(db->priv_ptr), fi_ctx.addrs[proc], raddr,
+		    rbuf->priv.key1, (void*)id);
+    }
+    if (rc) {
+      dbg_err("Could not PUT to %p, size %lu: %s", (void*)raddr, size,
+	      fi_strerror(-rc));
+      goto error_exit;
+    }
   }
+  (!fi_ctx.thread_safe) ? sync_tatas_release(&op_lock):NULL;
   
   return PHOTON_OK;
   
@@ -238,7 +259,34 @@ static int fi_rdma_put(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size
 
 static int fi_rdma_get(int proc, uintptr_t laddr, uintptr_t raddr, uint64_t size,
 		       photonBuffer lbuf, photonBuffer rbuf, uint64_t id, int flags) {
+  photonBI db;
+  int rc;
+
+  dbg_trace("(size=%lu, id=0x%016lx, raddr: %p)", size, id, raddr);
+
+  if (buffertable_find_containing((void *)laddr, size, &db) != PHOTON_OK) {
+    log_err("Tried GET to a local buffer that is not registered: %p", (void*)laddr);
+    goto error_exit;
+  }
+  
+  (!fi_ctx.thread_safe) ? sync_tatas_acquire(&op_lock):NULL;
+  {  
+    rc = fi_read(fi_ctx.eps[_photon_myrank], (void*)laddr, size,
+		 fi_mr_desc(db->priv_ptr), fi_ctx.addrs[proc], raddr,
+		 rbuf->priv.key1, (void*)id);
+    if (rc) {
+      dbg_err("Could not GET from %p, size %lu: %s", (void*)raddr, size,
+	      fi_strerror(-rc));
+      goto error_exit;
+    }
+  }
+  (!fi_ctx.thread_safe) ? sync_tatas_release(&op_lock):NULL;
+
+
   return PHOTON_OK;
+  
+ error_exit:
+  return PHOTON_ERROR;
 }
 
 static int fi_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
@@ -249,6 +297,26 @@ static int fi_rdma_send(photonAddr addr, uintptr_t laddr, uint64_t size,
 static int fi_rdma_recv(photonAddr addr, uintptr_t laddr, uint64_t size,
 			photonBuffer lbuf, uint64_t id, int flags) {
   return PHOTON_OK;
+}
+
+static int pfi_tx_size_left(int proc) {
+  int c;
+  (!fi_ctx.thread_safe) ? sync_tatas_acquire(&op_lock):NULL;
+  {
+    c = (int)fi_tx_size_left(fi_ctx.eps[_photon_myrank]);
+  }
+  (!fi_ctx.thread_safe) ? sync_tatas_release(&op_lock):NULL;
+  return c;
+}
+
+static int pfi_rx_size_left(int proc) {
+  int c;
+  (!fi_ctx.thread_safe) ? sync_tatas_acquire(&op_lock):NULL;
+  {
+    c = (int)fi_rx_size_left(fi_ctx.eps[_photon_myrank]);
+  }
+  (!fi_ctx.thread_safe) ? sync_tatas_release(&op_lock):NULL;
+  return c;
 }
 
 static int fi_get_event(int proc, int max, photon_rid *ids, int *n) {
@@ -273,34 +341,38 @@ static int fi_get_event(int proc, int max, photon_rid *ids, int *n) {
     end = start+1;
   }
 
-  for (i=start; i<end && comp<max; i++) {
-    retries = MAX_RETRIES;
-    do {
-      ne = fi_cq_read(fi_ctx.cqs[i], entries, max);
-      if (ne < 0) {
-	if (ne == -FI_EAGAIN) {
-	  ne = 0;
-	  continue;
-	}
-	else if (ne == -FI_EAVAIL) {
-	  cq_readerr(fi_ctx.cqs[i], "local CQ");
-	  goto error_exit;
-	}
-	else {
-	  log_err("fi_cq_read() failed: %s", fi_strerror(-ne));
-	  goto error_exit;
+  (!fi_ctx.thread_safe) ? sync_tatas_acquire(&op_lock):NULL;
+  {
+    for (i=start; i<end && comp<max; i++) {
+      retries = MAX_RETRIES;
+      do {
+	ne = fi_cq_read(fi_ctx.lcq[i], entries, max);
+	if (ne < 0) {
+	  if (ne == -FI_EAGAIN) {
+	    ne = 0;
+	    continue;
+	  }
+	  else if (ne == -FI_EAVAIL) {
+	    cq_readerr(fi_ctx.lcq[i], "local CQ");
+	    goto error_exit;
+	  }
+	  else {
+	    log_err("fi_cq_read() failed: %s", fi_strerror(-ne));
+	    goto error_exit;
+	  }
 	}
       }
+      while ((ne < 1) && --retries);
+      
+      for (j=0; j<ne && j<MAX_CQ_POLL; j++) {
+	ids[j+comp] = (uint64_t)entries[j].op_context;
+      }
+      comp += ne;
     }
-    while ((ne < 1) && --retries);
-
-    for (j=0; j<ne && j<MAX_CQ_POLL; j++) {
-      ids[j+comp] = (uint64_t)entries[j].op_context;
-    }
-    comp += ne;
+    
+    *n = comp;
   }
-  
-  *n = comp;
+  (!fi_ctx.thread_safe) ? sync_tatas_release(&op_lock):NULL;
 
   // CQs are empty
   if (comp == 0) {
@@ -314,5 +386,71 @@ error_exit:
 }
 
 static int fi_get_revent(int proc, int max, photon_rid *ids, uint64_t *imms, int *n) {
+  int i, j, ne, comp;
+  int start, end;
+  int retries;
+  struct fi_cq_data_entry entries[MAX_CQ_POLL];
+
+  if (!fi_ctx.use_rcq) {
+    return PHOTON_EVENT_NOTIMPL;
+  }
+  
+  *n = 0;
+  comp = 0;
+
+  if (fi_ctx.num_cq == 1) {
+    start = 0;
+    end = 1;
+  }
+  else if (proc == PHOTON_ANY_SOURCE) {
+    start = 0;
+    end = fi_ctx.num_cq;
+  }
+  else {
+    start = PHOTON_GET_CQ_IND(fi_ctx.num_cq, proc);
+    end = start+1;
+  }
+
+  (!fi_ctx.thread_safe) ? sync_tatas_acquire(&op_lock):NULL;
+  {
+    for (i=start; i<end && comp<max; i++) {
+      retries = MAX_RETRIES;
+      do {
+	ne = fi_cq_read(fi_ctx.rcq[i], entries, max);
+	if (ne < 0) {
+	  if (ne == -FI_EAGAIN) {
+	    ne = 0;
+	    continue;
+	  }
+	  else if (ne == -FI_EAVAIL) {
+	    cq_readerr(fi_ctx.rcq[i], "remote CQ");
+	    goto error_exit;
+	  }
+	  else {
+	    log_err("fi_cq_read() failed: %s", fi_strerror(-ne));
+	    goto error_exit;
+	  }
+	}
+      }
+      while ((ne < 1) && --retries);
+      
+      for (j=0; j<ne && j<MAX_CQ_POLL; j++) {
+	ids[j+comp] = (uint64_t)entries[j].op_context;
+	imms[j+comp] = entries[j].data;
+      }
+      comp += ne;
+    }
+    *n = comp;
+  }
+  (!fi_ctx.thread_safe) ? sync_tatas_release(&op_lock):NULL;
+  
+  // CQs are empty
+  if (comp == 0) {
+    return PHOTON_EVENT_NONE;
+  }
+
   return PHOTON_EVENT_OK;
+
+ error_exit:
+  return PHOTON_EVENT_ERROR;
 }
