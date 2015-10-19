@@ -64,9 +64,9 @@ void flat_continuation_trigger(void *obj, const void *value, size_t bytes) {
     slots[i].stack = NULL;
   }
 
-  // Send all of the waiting parcels. It might make sense to do this in a
-  // locality-aware, parallel way, using scheduler mailboxes, rather than
-  // consolidating the entire thing here.
+  // Send all of the waiting parcels. I spot-tested sending these back to the
+  // thread that they waited from directly using the worker mailboxes, but that
+  // has a slight adverse effect.
   hpx_parcel_t *p = NULL;
   for (int i = 0, e = n; i < e; ++i) {
     while ((p = parcel_stack_pop(&stacks[i]))) {
