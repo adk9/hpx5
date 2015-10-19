@@ -18,6 +18,7 @@
 
 
 
+
 VPATH = @srcdir@
 am__is_gnu_make = { \
   if test -z '$(MAKELEVEL)'; then \
@@ -124,7 +125,8 @@ bin_PROGRAMS = util/fi_info$(EXEEXT)
 @HAVE_MXM_DL_FALSE@@HAVE_MXM_TRUE@am__append_27 = $(_mxm_files)
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/config/fi_provider.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/config/fi_config_pc.m4 \
+	$(top_srcdir)/config/fi_provider.m4 \
 	$(top_srcdir)/config/libtool.m4 \
 	$(top_srcdir)/config/ltoptions.m4 \
 	$(top_srcdir)/config/ltsugar.m4 \
@@ -146,7 +148,7 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = config.h
-CONFIG_CLEAN_FILES = libfabric.spec
+CONFIG_CLEAN_FILES = libfabric.pc libfabric.spec
 CONFIG_CLEAN_VPATH_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -177,8 +179,8 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pkglibdir)" \
 	"$(DESTDIR)$(bindir)" "$(DESTDIR)$(man3dir)" \
-	"$(DESTDIR)$(man7dir)" "$(DESTDIR)$(rdmaincludedir)" \
-	"$(DESTDIR)$(rdmaincludedir)"
+	"$(DESTDIR)$(man7dir)" "$(DESTDIR)$(pkgconfigdir)" \
+	"$(DESTDIR)$(rdmaincludedir)" "$(DESTDIR)$(rdmaincludedir)"
 LTLIBRARIES = $(lib_LTLIBRARIES) $(noinst_LTLIBRARIES) \
 	$(pkglib_LTLIBRARIES)
 libmlxm_fi_la_LIBADD =
@@ -821,6 +823,7 @@ man3dir = $(mandir)/man3
 man7dir = $(mandir)/man7
 NROFF = nroff
 MANS = $(man_MANS)
+DATA = $(pkgconfig_DATA)
 am__rdmainclude_HEADERS_DIST = prov/usnic/src/fi_ext_usnic.h \
 	$(top_srcdir)/include/rdma/fabric.h \
 	$(top_srcdir)/include/rdma/fi_atomic.h \
@@ -858,8 +861,9 @@ CTAGS = ctags
 CSCOPE = cscope
 AM_RECURSIVE_TARGETS = cscope
 am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/config.h.in \
-	$(srcdir)/libfabric.spec.in $(top_srcdir)/config/ar-lib \
-	$(top_srcdir)/config/compile $(top_srcdir)/config/config.guess \
+	$(srcdir)/libfabric.pc.in $(srcdir)/libfabric.spec.in \
+	$(top_srcdir)/config/ar-lib $(top_srcdir)/config/compile \
+	$(top_srcdir)/config/config.guess \
 	$(top_srcdir)/config/config.sub $(top_srcdir)/config/depcomp \
 	$(top_srcdir)/config/install-sh $(top_srcdir)/config/ltmain.sh \
 	$(top_srcdir)/config/missing AUTHORS COPYING README \
@@ -917,6 +921,11 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LIBFABRIC_PC_CFLAGS = @LIBFABRIC_PC_CFLAGS@
+LIBFABRIC_PC_PRIVATE_LIBS = @LIBFABRIC_PC_PRIVATE_LIBS@
+LIBFABRIC_PC_PRIVATE_PKGS = @LIBFABRIC_PC_PRIVATE_PKGS@
+LIBFABRIC_PC_PUBLIC_LIBS = @LIBFABRIC_PC_PUBLIC_LIBS@
+LIBFABRIC_PC_REQUIRES_PKGS = @LIBFABRIC_PC_REQUIRES_PKGS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
@@ -1459,6 +1468,8 @@ dummy_man_pages = \
         man/man3/fi_writev.3
 
 man_MANS = $(real_man_pages) $(dummy_man_pages)
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libfabric.pc
 EXTRA_DIST = \
         NEWS.md \
         libfabric.map \
@@ -1519,6 +1530,8 @@ $(srcdir)/config.h.in:  $(am__configure_deps)
 
 distclean-hdr:
 	-rm -f config.h stamp-h1
+libfabric.pc: $(top_builddir)/config.status $(srcdir)/libfabric.pc.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
 libfabric.spec: $(top_builddir)/config.status $(srcdir)/libfabric.spec.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 
@@ -4098,6 +4111,27 @@ uninstall-man7:
 	} | sed -e 's,.*/,,;h;s,.*\.,,;s,^[^7][0-9a-z]*$$,7,;x' \
 	      -e 's,\.[0-9a-z]*$$,,;$(transform);G;s,\n,.,'`; \
 	dir='$(DESTDIR)$(man7dir)'; $(am__uninstall_files_from_dir)
+install-pkgconfigDATA: $(pkgconfig_DATA)
+	@$(NORMAL_INSTALL)
+	@list='$(pkgconfig_DATA)'; test -n "$(pkgconfigdir)" || list=; \
+	if test -n "$$list"; then \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(pkgconfigdir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(pkgconfigdir)" || exit 1; \
+	fi; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(pkgconfigdir)'"; \
+	  $(INSTALL_DATA) $$files "$(DESTDIR)$(pkgconfigdir)" || exit $$?; \
+	done
+
+uninstall-pkgconfigDATA:
+	@$(NORMAL_UNINSTALL)
+	@list='$(pkgconfig_DATA)'; test -n "$(pkgconfigdir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	dir='$(DESTDIR)$(pkgconfigdir)'; $(am__uninstall_files_from_dir)
 install-nodist_rdmaincludeHEADERS: $(nodist_rdmainclude_HEADERS)
 	@$(NORMAL_INSTALL)
 	@list='$(nodist_rdmainclude_HEADERS)'; test -n "$(rdmaincludedir)" || list=; \
@@ -4367,12 +4401,12 @@ distcleancheck: distclean
 	       exit 1; } >&2
 check-am: all-am
 check: check-am
-all-am: Makefile $(LTLIBRARIES) $(PROGRAMS) $(MANS) $(HEADERS) \
+all-am: Makefile $(LTLIBRARIES) $(PROGRAMS) $(MANS) $(DATA) $(HEADERS) \
 		config.h
 install-binPROGRAMS: install-libLTLIBRARIES
 
 installdirs:
-	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pkglibdir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man3dir)" "$(DESTDIR)$(man7dir)" "$(DESTDIR)$(rdmaincludedir)" "$(DESTDIR)$(rdmaincludedir)"; do \
+	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pkglibdir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man3dir)" "$(DESTDIR)$(man7dir)" "$(DESTDIR)$(pkgconfigdir)" "$(DESTDIR)$(rdmaincludedir)" "$(DESTDIR)$(rdmaincludedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -4451,7 +4485,7 @@ info: info-am
 info-am:
 
 install-data-am: install-man install-nodist_rdmaincludeHEADERS \
-	install-rdmaincludeHEADERS
+	install-pkgconfigDATA install-rdmaincludeHEADERS
 
 install-dvi: install-dvi-am
 
@@ -4502,7 +4536,8 @@ ps-am:
 
 uninstall-am: uninstall-binPROGRAMS uninstall-libLTLIBRARIES \
 	uninstall-man uninstall-nodist_rdmaincludeHEADERS \
-	uninstall-pkglibLTLIBRARIES uninstall-rdmaincludeHEADERS
+	uninstall-pkgconfigDATA uninstall-pkglibLTLIBRARIES \
+	uninstall-rdmaincludeHEADERS
 
 uninstall-man: uninstall-man3 uninstall-man7
 
@@ -4522,16 +4557,17 @@ uninstall-man: uninstall-man3 uninstall-man7
 	install-exec-am install-html install-html-am install-info \
 	install-info-am install-libLTLIBRARIES install-man \
 	install-man3 install-man7 install-nodist_rdmaincludeHEADERS \
-	install-pdf install-pdf-am install-pkglibLTLIBRARIES \
-	install-ps install-ps-am install-rdmaincludeHEADERS \
-	install-strip installcheck installcheck-am installdirs \
-	maintainer-clean maintainer-clean-generic mostlyclean \
-	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
-	pdf pdf-am ps ps-am tags tags-am uninstall uninstall-am \
-	uninstall-binPROGRAMS uninstall-libLTLIBRARIES uninstall-man \
-	uninstall-man3 uninstall-man7 \
-	uninstall-nodist_rdmaincludeHEADERS \
-	uninstall-pkglibLTLIBRARIES uninstall-rdmaincludeHEADERS
+	install-pdf install-pdf-am install-pkgconfigDATA \
+	install-pkglibLTLIBRARIES install-ps install-ps-am \
+	install-rdmaincludeHEADERS install-strip installcheck \
+	installcheck-am installdirs maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-compile \
+	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
+	tags tags-am uninstall uninstall-am uninstall-binPROGRAMS \
+	uninstall-libLTLIBRARIES uninstall-man uninstall-man3 \
+	uninstall-man7 uninstall-nodist_rdmaincludeHEADERS \
+	uninstall-pkgconfigDATA uninstall-pkglibLTLIBRARIES \
+	uninstall-rdmaincludeHEADERS
 
 .PRECIOUS: Makefile
 

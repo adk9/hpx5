@@ -219,6 +219,9 @@ AS_IF([test x"$enable_direct" != x"no"],
 
 AM_CONDITIONAL([HAVE_DIRECT], [test x"$enable_direct" != x"no"])
 
+# Setup vars for the .pc file
+FI_CONFIG_PC
+
 AC_CONFIG_FILES([Makefile libfabric.spec])
 AC_OUTPUT
 
