@@ -184,6 +184,13 @@ hpx_gas_free_sync(hpx_addr_t addr) {
   hpx_lco_delete(sync, HPX_NULL);
 }
 
+static int _hpx_gas_free_handler(void) {
+  hpx_addr_t target = hpx_thread_current_target();
+  hpx_gas_free_sync(target);
+  return HPX_SUCCESS;
+}
+LIBHPX_ACTION(HPX_DEFAULT, 0, hpx_gas_free_action, _hpx_gas_free_handler);
+
 void
 hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
   dbg_assert(here && here->gas);
