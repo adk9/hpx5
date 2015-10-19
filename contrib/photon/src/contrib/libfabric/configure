@@ -636,6 +636,11 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+LIBFABRIC_PC_PRIVATE_PKGS
+LIBFABRIC_PC_REQUIRES_PKGS
+LIBFABRIC_PC_PRIVATE_LIBS
+LIBFABRIC_PC_PUBLIC_LIBS
+LIBFABRIC_PC_CFLAGS
 HAVE_DIRECT_FALSE
 HAVE_DIRECT_TRUE
 PROVIDER_DIRECT
@@ -18690,6 +18695,66 @@ else
 fi
 
 
+# Setup vars for the .pc file
+
+
+  if test $psm_happy -eq 1; then :
+
+    LIBFABRIC_PC_CFLAGS="$LIBFABRIC_PC_CFLAGS $psm_CFLAGS $psm_CPPFLAGS"
+    LIBFABRIC_PC_PRIVATE_LIBS="$LIBFABRIC_PC_PRIVATE_LIBS $psm_LIBS"
+fi
+
+
+  if test $psm2_happy -eq 1; then :
+
+    LIBFABRIC_PC_CFLAGS="$LIBFABRIC_PC_CFLAGS $psm2_CFLAGS $psm2_CPPFLAGS"
+    LIBFABRIC_PC_PRIVATE_LIBS="$LIBFABRIC_PC_PRIVATE_LIBS $psm2_LIBS"
+fi
+
+
+  if test $sockets_happy -eq 1; then :
+
+    LIBFABRIC_PC_CFLAGS="$LIBFABRIC_PC_CFLAGS $sockets_CFLAGS $sockets_CPPFLAGS"
+    LIBFABRIC_PC_PRIVATE_LIBS="$LIBFABRIC_PC_PRIVATE_LIBS $sockets_LIBS"
+fi
+
+
+  if test $verbs_happy -eq 1; then :
+
+    LIBFABRIC_PC_CFLAGS="$LIBFABRIC_PC_CFLAGS $verbs_CFLAGS $verbs_CPPFLAGS"
+    LIBFABRIC_PC_PRIVATE_LIBS="$LIBFABRIC_PC_PRIVATE_LIBS $verbs_LIBS"
+fi
+
+
+  if test $usnic_happy -eq 1; then :
+
+    LIBFABRIC_PC_CFLAGS="$LIBFABRIC_PC_CFLAGS $usnic_CFLAGS $usnic_CPPFLAGS"
+    LIBFABRIC_PC_PRIVATE_LIBS="$LIBFABRIC_PC_PRIVATE_LIBS $usnic_LIBS"
+fi
+
+
+  if test $mxm_happy -eq 1; then :
+
+    LIBFABRIC_PC_CFLAGS="$LIBFABRIC_PC_CFLAGS $mxm_CFLAGS $mxm_CPPFLAGS"
+    LIBFABRIC_PC_PRIVATE_LIBS="$LIBFABRIC_PC_PRIVATE_LIBS $mxm_LIBS"
+fi
+
+
+  if test "x$enable_shared" != xyes; then :
+  LIBFABRIC_PC_PUBLIC_LIBS="$LIBFABRIC_PC_PUBLIC_LIBS $LIBFABRIC_PC_PRIVATE_LIBS"
+     LIBFABRIC_PC_REQUIRES_PKGS="$LIBFABRIC_PC_REQUIRES_PKGS $LIBFABRIC_PC_PRIVATE_PKGS"
+fi
+
+
+
+
+
+
+
+  ac_config_files="$ac_config_files libfabric.pc"
+
+
+
 ac_config_files="$ac_config_files Makefile libfabric.spec"
 
 cat >confcache <<\_ACEOF
@@ -19779,6 +19844,7 @@ do
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
+    "libfabric.pc") CONFIG_FILES="$CONFIG_FILES libfabric.pc" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "libfabric.spec") CONFIG_FILES="$CONFIG_FILES libfabric.spec" ;;
 
