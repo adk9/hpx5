@@ -20376,10 +20376,6 @@ config() {
 $as_echo "$as_me: running $SHELL $ac_sub_configure $ac_sub_configure_args --cache-file=$ac_sub_cache_file --srcdir=$ac_srcdir" >&6;}
   config_cmd="\$SHELL \"\$ac_sub_configure\" $ac_sub_configure_args \
        --cache-file=\"\$ac_sub_cache_file\" --srcdir=\"\$ac_srcdir\""
-  if test "x$enable_parallel_config" != xno; then
-    touch config.output
-    config_cmd+=" > config.output"
-  fi
 
   # The eval makes quoting arguments work.
   eval $config_cmd || as_fn_error $? "$ac_sub_configure failed for $ac_dir" "$LINENO" 5
@@ -20387,11 +20383,7 @@ $as_echo "$as_me: running $SHELL $ac_sub_configure $ac_sub_configure_args --cach
   cd "$ac_popdir"
 }
 
-if test "x$enable_parallel_config" != xno; then :
-  config&
-else
-  config
-fi
+config
 
 
 
