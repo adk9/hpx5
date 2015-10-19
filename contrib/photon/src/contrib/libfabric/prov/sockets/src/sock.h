@@ -60,7 +60,7 @@
 
 #define SOCK_EP_MAX_MSG_SZ (1<<23)
 #define SOCK_EP_MAX_INJECT_SZ ((1<<8) - 1)
-#define SOCK_EP_MAX_BUFF_RECV (1<<24)
+#define SOCK_EP_MAX_BUFF_RECV (1<<26)
 #define SOCK_EP_MAX_ORDER_RAW_SZ SOCK_EP_MAX_MSG_SZ
 #define SOCK_EP_MAX_ORDER_WAR_SZ SOCK_EP_MAX_MSG_SZ
 #define SOCK_EP_MAX_ORDER_WAW_SZ SOCK_EP_MAX_MSG_SZ
@@ -87,6 +87,7 @@
 #define SOCK_EQ_DEF_SZ (1<<8)
 #define SOCK_CQ_DEF_SZ (1<<8)
 #define SOCK_AV_DEF_SZ (1<<8)
+#define SOCK_CMAP_DEF_SZ (1<<10)
 
 #define SOCK_CQ_DATA_SIZE (sizeof(uint64_t))
 #define SOCK_TAG_SIZE (sizeof(uint64_t))
@@ -95,21 +96,37 @@
 #define SOCK_CM_COMM_TIMEOUT (2000)
 #define SOCK_EP_MAX_RETRY (5)
 #define SOCK_EP_MAX_CM_DATA_SZ (256)
+#define SOCK_CM_DEF_BACKLOG (128)
+#define SOCK_CM_DEF_RETRY (5)
 
-#define SOCK_EP_RDM_CAP (FI_MSG | FI_RMA | FI_TAGGED | FI_ATOMICS |	\
+#define SOCK_EP_RDM_PRI_CAP (FI_MSG | FI_RMA | FI_TAGGED | FI_ATOMICS |	\
 			 FI_NAMED_RX_CTX | \
-			 FI_DIRECTED_RECV | FI_MULTI_RECV | \
-			 FI_SOURCE | FI_READ | FI_WRITE | FI_RECV | FI_SEND | \
-			 FI_REMOTE_READ | FI_REMOTE_WRITE | \
+			 FI_DIRECTED_RECV | \
+			 FI_READ | FI_WRITE | FI_RECV | FI_SEND | \
+			 FI_REMOTE_READ | FI_REMOTE_WRITE)
+
+#define SOCK_EP_RDM_SEC_CAP (FI_MULTI_RECV | \
+			 FI_SOURCE | \
 			 FI_RMA_EVENT | \
-			 FI_MORE | FI_FENCE | FI_TRIGGER)
+			 FI_FENCE | FI_TRIGGER)
 
-#define SOCK_EP_MSG_CAP SOCK_EP_RDM_CAP
+#define SOCK_EP_RDM_CAP (SOCK_EP_RDM_PRI_CAP | SOCK_EP_RDM_SEC_CAP)
 
-#define SOCK_EP_DGRAM_CAP (FI_MSG | FI_TAGGED | \
+#define SOCK_EP_MSG_PRI_CAP SOCK_EP_RDM_PRI_CAP
+
+#define SOCK_EP_MSG_SEC_CAP SOCK_EP_RDM_SEC_CAP
+
+#define SOCK_EP_MSG_CAP (SOCK_EP_MSG_PRI_CAP | SOCK_EP_MSG_SEC_CAP)
+
+#define SOCK_EP_DGRAM_PRI_CAP (FI_MSG | FI_TAGGED | \
 			   FI_NAMED_RX_CTX | FI_DIRECTED_RECV | \
-			   FI_MULTI_RECV | FI_SOURCE | FI_RECV | FI_SEND | \
-			   FI_MORE | FI_FENCE | FI_TRIGGER)
+			   FI_RECV | FI_SEND)
+
+#define SOCK_EP_DGRAM_SEC_CAP (FI_MULTI_RECV | \
+			   FI_SOURCE | \
+			   FI_FENCE | FI_TRIGGER)
+
+#define SOCK_EP_DGRAM_CAP (SOCK_EP_DGRAM_PRI_CAP | SOCK_EP_DGRAM_SEC_CAP)
 
 #define SOCK_EP_MSG_ORDER (FI_ORDER_RAR | FI_ORDER_RAW | FI_ORDER_RAS|	\
 			   FI_ORDER_WAR | FI_ORDER_WAW | FI_ORDER_WAS |	\
@@ -428,18 +445,10 @@ struct sock_eq {
 struct sock_comp {
 	uint8_t send_cq_event;
 	uint8_t recv_cq_event;
-	uint8_t read_cq_event;
-	uint8_t write_cq_event;
-	uint8_t rem_read_cq_event;
-	uint8_t rem_write_cq_event;
 	char reserved[2];
 
 	struct sock_cq	*send_cq;
 	struct sock_cq	*recv_cq;
-	struct sock_cq	*read_cq;
-	struct sock_cq	*write_cq;
-	struct sock_cq *rem_read_cq;
-	struct sock_cq *rem_write_cq;
 
 	struct sock_cntr *send_cntr;
 	struct sock_cntr *recv_cntr;
@@ -476,12 +485,11 @@ struct sock_ep {
 	size_t fclass;
 	uint64_t op_flags;
 
-	uint8_t connected;
-	char reserved[1];
-	uint8_t tx_shared;
-	uint8_t rx_shared;
-	uint16_t buffered_len;
-	uint16_t min_multi_recv;
+	int connected;
+	int tx_shared;
+	int rx_shared;
+	size_t buffered_len;
+	size_t min_multi_recv;
 
 	atomic_t ref;
 	struct sock_comp comp;
@@ -561,18 +569,14 @@ struct sock_rx_ctx {
 	struct fid_ep ctx;
 
 	uint16_t rx_id;
-	uint8_t enabled;
-	uint8_t progress;
+	int enabled;
+	int progress;
+	int is_ctrl_ctx;
+	int recv_cq_event;
 
-	uint8_t recv_cq_event;
-	uint8_t rem_read_cq_event;
-	uint8_t rem_write_cq_event;
-	uint16_t buffered_len;
-	uint16_t min_multi_recv;
-	uint16_t num_left;
-	uint8_t is_ctrl_ctx;
-	uint8_t reserved[5];
-
+	size_t num_left;
+	size_t buffered_len;
+	size_t min_multi_recv;
 	uint64_t addr;
 	struct sock_comp comp;
 
@@ -889,6 +893,7 @@ int sock_msg_verify_ep_attr(struct fi_ep_attr *ep_attr, struct fi_tx_attr *tx_at
 			    struct fi_rx_attr *rx_attr);
 int sock_get_src_addr(struct sockaddr_in *dest_addr,
 		      struct sockaddr_in *src_addr);
+int sock_get_src_addr_from_hostname(struct sockaddr_in *src_addr, const char *service);
 
 struct fi_info *sock_fi_info(enum fi_ep_type ep_type, 
 			     struct fi_info *hints, void *src_addr, void *dest_addr);
@@ -942,9 +947,6 @@ int sock_ep_enable(struct fid_ep *ep);
 int sock_ep_disable(struct fid_ep *ep);
 int sock_ep_is_send_cq_low(struct sock_comp *comp, uint64_t flags);
 int sock_ep_is_recv_cq_low(struct sock_comp *comp, uint64_t flags);
-int sock_ep_is_write_cq_low(struct sock_comp *comp, uint64_t flags);
-int sock_ep_is_read_cq_low(struct sock_comp *comp, uint64_t flags);
-
 
 int sock_stx_ctx(struct fid_domain *domain,
 		 struct fi_tx_attr *attr, struct fid_stx **stx, void *context);

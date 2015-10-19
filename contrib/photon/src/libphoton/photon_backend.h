@@ -151,6 +151,8 @@ struct photon_backend_t {
                    photonBuffer lbuf, uint64_t id, uint64_t imm, int flags);
   int (*rdma_recv)(photonAddr addr, uintptr_t laddr, uint64_t size,
                    photonBuffer lbuf, uint64_t id, int flags);
+  int (*tx_size_left)(int proc);
+  int (*rx_size_left)(int proc);
   int (*get_event)(int proc, int max, photon_rid *ids, int *n);
   int (*get_revent)(int proc, int max, photon_rid *ids, uint64_t *imms, int *n);
 };

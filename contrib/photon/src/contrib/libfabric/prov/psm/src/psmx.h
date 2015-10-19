@@ -1,3 +1,35 @@
+/*
+ * Copyright (c) 2013-2014 Intel Corporation. All rights reserved.
+ *
+ * This software is available to you under a choice of one of two
+ * licenses.  You may choose to be licensed under the terms of the GNU
+ * General Public License (GPL) Version 2, available from the file
+ * COPYING in the main directory of this source tree, or the
+ * BSD license below:
+ *
+ *     Redistribution and use in source and binary forms, with or
+ *     without modification, are permitted provided that the following
+ *     conditions are met:
+ *
+ *      - Redistributions of source code must retain the above
+ *        copyright notice, this list of conditions and the following
+ *        disclaimer.
+ *
+ *      - Redistributions in binary form must reproduce the above
+ *        copyright notice, this list of conditions and the following
+ *        disclaimer in the documentation and/or other materials
+ *        provided with the distribution.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+ * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 #ifndef _FI_PSM_H
 #define _FI_PSM_H
 
@@ -32,33 +64,55 @@ extern "C" {
 #include <rdma/fi_trigger.h>
 #include <rdma/fi_cm.h>
 #include <rdma/fi_errno.h>
+#include <rdma/fi_log.h>
+
+#include "version.h"
+#if (PSMX_VERSION >= 2)
+#include <psm2.h>
+#include <psm2_mq.h>
+#include <psm2_am.h>
+#else
 #include <psm.h>
 #include <psm_mq.h>
 #include "psm_am.h"
+#if (PSM_VERNO_MAJOR >= 2)
+#error "building PSM provider against PSM2 is not supported"
+#endif
+#endif
 
 #include "fi.h"
 #include "fi_enosys.h"
 #include "fi_list.h"
-#include <rdma/fi_log.h>
 
+#if (PSM_VERNO_MAJOR >= 2)
+#define PSMX_PROV_NAME		"psm2"
+#define PSMX_PROV_NAME_LEN	4
+#define PSMX_DOMAIN_NAME	"psm2"
+#define PSMX_DOMAIN_NAME_LEN	4
+#define PSMX_FABRIC_NAME	"psm2"
+#define PSMX_FABRIC_NAME_LEN	4
+#else
 #define PSMX_PROV_NAME		"psm"
 #define PSMX_PROV_NAME_LEN	3
 #define PSMX_DOMAIN_NAME	"psm"
 #define PSMX_DOMAIN_NAME_LEN	3
 #define PSMX_FABRIC_NAME	"psm"
 #define PSMX_FABRIC_NAME_LEN	3
+#endif
 
 #define PSMX_DEFAULT_UUID	"0FFF0FFF-0000-0000-0000-0FFF0FFF0FFF"
 
 extern struct fi_provider psmx_prov;
 
-#define PSMX_TIME_OUT	120
-
 #define PSMX_OP_FLAGS	(FI_INJECT | FI_MULTI_RECV | FI_COMPLETION | \
 			 FI_TRIGGER | FI_INJECT_COMPLETE | \
 			 FI_TRANSMIT_COMPLETE | FI_DELIVERY_COMPLETE)
 
+#if (PSM_VERNO_MAJOR >= 2)
+#define PSMX_CAP_EXT	(FI_REMOTE_CQ_DATA)
+#else
 #define PSMX_CAP_EXT	(0)
+#endif
 
 #define PSMX_CAPS	(FI_TAGGED | FI_MSG | FI_ATOMICS | \
 			 FI_RMA | FI_MULTI_RECV | \
@@ -68,7 +122,11 @@ extern struct fi_provider psmx_prov;
 			 FI_RMA_EVENT | \
 			 PSMX_CAP_EXT)
 
+#if (PSM_VERNO_MAJOR >= 2)
+#define PSMX_CAPS2	(PSMX_CAPS | FI_DIRECTED_RECV)
+#else
 #define PSMX_CAPS2	((PSMX_CAPS | FI_DIRECTED_RECV) & ~FI_TAGGED)
+#endif
 
 #define PSMX_SUB_CAPS	(FI_READ | FI_WRITE | FI_REMOTE_READ | FI_REMOTE_WRITE | \
 			 FI_SEND | FI_RECV)
@@ -77,6 +135,8 @@ extern struct fi_provider psmx_prov;
 
 #define PSMX_MAX_MSG_SIZE	((0x1ULL << 32) - 1)
 #define PSMX_INJECT_SIZE	(64)
+#define PSMX_MSG_ORDER	FI_ORDER_SAS
+#define PSMX_COMP_ORDER	FI_ORDER_NONE
 
 #define PSMX_MSG_BIT	(0x1ULL << 63)
 #define PSMX_RMA_BIT	(0x1ULL << 62)
@@ -110,6 +170,14 @@ union psmx_pi {
 #define PSMX_CTXT_USER(fi_context)	((fi_context)->internal[2])
 #define PSMX_CTXT_EP(fi_context)	((fi_context)->internal[3])
 
+#if (PSM_VERNO_MAJOR >= 2)
+#define PSMX_SET_TAG(tag96,tag64,tag32)	do { \
+						tag96.tag0 = (uint32_t)tag64; \
+						tag96.tag1 = (uint32_t)(tag64>>32); \
+						tag96.tag2 = tag32; \
+					} while (0)
+#endif
+
 #define PSMX_AM_RMA_HANDLER	0
 #define PSMX_AM_MSG_HANDLER	1
 #define PSMX_AM_ATOMIC_HANDLER	2
@@ -122,10 +190,6 @@ union psmx_pi {
 #define PSMX_AM_EOM		0x40000000
 #define PSMX_AM_DATA		0x20000000
 #define PSMX_AM_FORCE_ACK	0x10000000
-
-#ifndef PSMX_AM_USE_SEND_QUEUE
-#define PSMX_AM_USE_SEND_QUEUE	0
-#endif
 
 enum {
 	PSMX_AM_REQ_WRITE = 1,
@@ -142,13 +206,6 @@ enum {
 	PSMX_AM_REP_ATOMIC_READWRITE,
 	PSMX_AM_REQ_ATOMIC_COMPWRITE,
 	PSMX_AM_REP_ATOMIC_COMPWRITE,
-};
-
-enum {
-	PSMX_AM_STATE_NEW,
-	PSMX_AM_STATE_QUEUED,
-	PSMX_AM_STATE_PROCESSED,
-	PSMX_AM_STATE_DONE
 };
 
 struct psmx_am_request {
@@ -201,7 +258,6 @@ struct psmx_am_request {
 	uint64_t cq_flags;
 	struct fi_context fi_context;
 	struct psmx_fid_ep *ep;
-	int state;
 	int no_event;
 	int error;
 	struct slist_entry list_entry;
@@ -237,6 +293,7 @@ struct psmx_fid_fabric {
 	int			refcnt;
 	struct psmx_fid_domain	*active_domain;
 	psm_uuid_t		uuid;
+	pthread_t		name_server_thread;
 };
 
 struct psmx_fid_domain {
@@ -256,19 +313,11 @@ struct psmx_fid_domain {
 
 	int			am_initialized;
 
-#if PSMX_AM_USE_SEND_QUEUE
-	pthread_cond_t		progress_cond;
-	pthread_mutex_t		progress_mutex;
-	pthread_t		progress_thread;
-#endif
-
 	/* incoming req queue for AM based RMA request. */
 	struct psmx_req_queue	rma_queue;
 
-#if PSMX_AM_USE_SEND_QUEUE
 	/* send queue for AM based messages. */
 	struct psmx_req_queue	send_queue;
-#endif
 
 	/* recv queue for AM based messages. */
 	struct psmx_req_queue	recv_queue;
@@ -282,6 +331,14 @@ struct psmx_fid_domain {
 	 * as 0. This field is a bit mask, with reserved bits valued as "1".
 	 */
 	uint64_t		reserved_tag_bits; 
+
+	/* lock to prevent the sequence of psm_mq_ipeek and psm_mq_test be
+	 * interleaved in a multithreaded environment.
+	 */
+	pthread_spinlock_t	poll_lock;
+
+	int			progress_thread_enabled;
+	pthread_t		progress_thread;
 };
 
 struct psmx_cq_event {
@@ -384,6 +441,9 @@ struct psmx_trigger {
 			fi_addr_t	dest_addr;
 			void		*context;
 			uint64_t	flags;
+#if (PSM_VERNO_MAJOR >= 2)
+			uint32_t	data;
+#endif
 		} send;
 		struct {
 			struct fid_ep	*ep;
@@ -403,6 +463,9 @@ struct psmx_trigger {
 			uint64_t	tag;
 			void		*context;
 			uint64_t	flags;
+#if (PSM_VERNO_MAJOR >= 2)
+			uint32_t	data;
+#endif
 		} tsend;
 		struct {
 			struct fid_ep	*ep;
@@ -563,6 +626,10 @@ struct psmx_env {
 	int am_msg;
 	int tagged_rma;
 	char *uuid;
+	int delay;
+	int timeout;
+	int prog_interval;
+	char *prog_affinity;
 };
 
 extern struct fi_ops_mr		psmx_mr_ops;
@@ -610,6 +677,7 @@ void 	*psmx_name_server(void *args);
 void	*psmx_resolve_name(const char *servername, int port);
 void	psmx_get_uuid(psm_uuid_t uuid);
 int	psmx_uuid_to_port(psm_uuid_t uuid);
+char	*psmx_uuid_to_string(psm_uuid_t uuid);
 int	psmx_errno(int err);
 int	psmx_epid_to_epaddr(struct psmx_fid_domain *domain,
 			    psm_epid_t epid, psm_epaddr_t *epaddr);
@@ -642,12 +710,21 @@ int	psmx_am_process_rma(struct psmx_fid_domain *domain,
 				struct psmx_am_request *req);
 int	psmx_process_trigger(struct psmx_fid_domain *domain,
 				struct psmx_trigger *trigger);
+#if (PSM_VERNO_MAJOR >= 2)
+int	psmx_am_msg_handler(psm_am_token_t token,
+				psm_amarg_t *args, int nargs, void *src, uint32_t len);
+int	psmx_am_rma_handler(psm_am_token_t token,
+				psm_amarg_t *args, int nargs, void *src, uint32_t len);
+int	psmx_am_atomic_handler(psm_am_token_t token,
+				psm_amarg_t *args, int nargs, void *src, uint32_t len);
+#else
 int	psmx_am_msg_handler(psm_am_token_t token, psm_epaddr_t epaddr,
 				psm_amarg_t *args, int nargs, void *src, uint32_t len);
 int	psmx_am_rma_handler(psm_am_token_t token, psm_epaddr_t epaddr,
 				psm_amarg_t *args, int nargs, void *src, uint32_t len);
 int	psmx_am_atomic_handler(psm_am_token_t token, psm_epaddr_t epaddr,
 				psm_amarg_t *args, int nargs, void *src, uint32_t len);
+#endif
 
 void	psmx_am_ack_rma(struct psmx_am_request *req);
 
@@ -668,19 +745,32 @@ static inline void psmx_progress(struct psmx_fid_domain *domain)
 {
 	if (domain) {
 		psmx_cq_poll_mq(NULL, domain, NULL, 0, NULL);
-		psmx_am_progress(domain);
+		if (domain->am_initialized)
+			psmx_am_progress(domain);
 	}
 }
 
+#if (PSM_VERNO_MAJOR >= 2)
+ssize_t _psmx_send(struct fid_ep *ep, const void *buf, size_t len,
+		   void *desc, fi_addr_t dest_addr, void *context,
+		   uint64_t flags, uint32_t data);
+#else
 ssize_t _psmx_send(struct fid_ep *ep, const void *buf, size_t len,
 		   void *desc, fi_addr_t dest_addr, void *context,
 		   uint64_t flags);
+#endif
 ssize_t _psmx_recv(struct fid_ep *ep, void *buf, size_t len,
 		   void *desc, fi_addr_t src_addr, void *context,
 		   uint64_t flags);
+#if (PSM_VERNO_MAJOR >= 2)
+ssize_t _psmx_tagged_send(struct fid_ep *ep, const void *buf, size_t len,
+			  void *desc, fi_addr_t dest_addr, uint64_t tag,
+			  void *context, uint64_t flags, uint32_t data);
+#else
 ssize_t _psmx_tagged_send(struct fid_ep *ep, const void *buf, size_t len,
 			  void *desc, fi_addr_t dest_addr, uint64_t tag,
 			  void *context, uint64_t flags);
+#endif
 ssize_t _psmx_tagged_recv(struct fid_ep *ep, void *buf, size_t len,
 			  void *desc, fi_addr_t src_addr, uint64_t tag,
 			  uint64_t ignore, void *context, uint64_t flags);

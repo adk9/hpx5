@@ -18,6 +18,7 @@
 
 
 
+
 VPATH = @srcdir@
 am__is_gnu_make = { \
   if test -z '$(MAKELEVEL)'; then \
@@ -113,13 +114,19 @@ bin_PROGRAMS = util/fi_info$(EXEEXT)
 @HAVE_USNIC_DL_FALSE@@HAVE_USNIC_TRUE@am__append_16 = $(usnic_nl_LDFLAGS)
 @HAVE_USNIC_DL_FALSE@@HAVE_USNIC_TRUE@am__append_17 = $(_usnic_libibverbs) $(usnic_nl_LIBS)
 @HAVE_PSM_DL_TRUE@@HAVE_PSM_TRUE@am__append_18 = libpsmx-fi.la
-@HAVE_PSM_DL_FALSE@@HAVE_PSM_TRUE@am__append_19 = $(_psm_files)
-@HAVE_PSM_DL_FALSE@@HAVE_PSM_TRUE@am__append_20 = $(psm_CPPFLAGS)
-@HAVE_PSM_DL_FALSE@@HAVE_PSM_TRUE@am__append_21 = $(psm_LDFLAGS)
-@HAVE_PSM_DL_FALSE@@HAVE_PSM_TRUE@am__append_22 = $(psm_LIBS)
+@HAVE_PSM_DL_FALSE@@HAVE_PSM_TRUE@am__append_19 = libpsmx.la
+@HAVE_PSM_DL_FALSE@@HAVE_PSM_TRUE@am__append_20 = libpsmx.la
+@HAVE_PSM_DL_FALSE@@HAVE_PSM_TRUE@am__append_21 = libpsmx.la
+@HAVE_PSM2_DL_TRUE@@HAVE_PSM2_TRUE@am__append_22 = libpsmx2-fi.la
+@HAVE_PSM2_DL_FALSE@@HAVE_PSM2_TRUE@am__append_23 = libpsmx2.la
+@HAVE_PSM2_DL_FALSE@@HAVE_PSM2_TRUE@am__append_24 = libpsmx2.la
+@HAVE_PSM2_DL_FALSE@@HAVE_PSM2_TRUE@am__append_25 = libpsmx2.la
+@HAVE_MXM_DL_TRUE@@HAVE_MXM_TRUE@am__append_26 = libmlxm-fi.la
+@HAVE_MXM_DL_FALSE@@HAVE_MXM_TRUE@am__append_27 = $(_mxm_files)
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/config/fi_provider.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/config/fi_config_pc.m4 \
+	$(top_srcdir)/config/fi_provider.m4 \
 	$(top_srcdir)/config/libtool.m4 \
 	$(top_srcdir)/config/ltoptions.m4 \
 	$(top_srcdir)/config/ltsugar.m4 \
@@ -127,10 +134,11 @@ am__aclocal_m4_deps = $(top_srcdir)/config/fi_provider.m4 \
 	$(top_srcdir)/config/lt~obsolete.m4 \
 	$(top_srcdir)/config/fi_check_package.m4 \
 	$(top_srcdir)/prov/psm/configure.m4 \
+	$(top_srcdir)/prov/psm2/configure.m4 \
 	$(top_srcdir)/prov/sockets/configure.m4 \
 	$(top_srcdir)/prov/verbs/configure.m4 \
 	$(top_srcdir)/prov/usnic/configure.m4 \
-	$(top_srcdir)/configure.ac
+	$(top_srcdir)/prov/mxm/configure.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 DIST_COMMON = $(srcdir)/Makefile.am $(top_srcdir)/configure \
@@ -140,7 +148,7 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = config.h
-CONFIG_CLEAN_FILES = libfabric.spec
+CONFIG_CLEAN_FILES = libfabric.pc libfabric.spec
 CONFIG_CLEAN_VPATH_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -171,23 +179,52 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pkglibdir)" \
 	"$(DESTDIR)$(bindir)" "$(DESTDIR)$(man3dir)" \
-	"$(DESTDIR)$(man7dir)" "$(DESTDIR)$(rdmaincludedir)" \
-	"$(DESTDIR)$(rdmaincludedir)"
-LTLIBRARIES = $(lib_LTLIBRARIES) $(pkglib_LTLIBRARIES)
-am__DEPENDENCIES_1 =
-am__libpsmx_fi_la_SOURCES_DIST = prov/psm/src/psm_am.h \
-	prov/psm/src/psmx.h prov/psm/src/psmx_init.c \
-	prov/psm/src/psmx_domain.c prov/psm/src/psmx_cq.c \
-	prov/psm/src/psmx_eq.c prov/psm/src/psmx_cntr.c \
-	prov/psm/src/psmx_av.c prov/psm/src/psmx_ep.c \
-	prov/psm/src/psmx_cm.c prov/psm/src/psmx_tagged.c \
-	prov/psm/src/psmx_msg.c prov/psm/src/psmx_msg2.c \
-	prov/psm/src/psmx_rma.c prov/psm/src/psmx_atomic.c \
-	prov/psm/src/psmx_am.c prov/psm/src/psmx_mr.c \
-	prov/psm/src/psmx_wait.c prov/psm/src/psmx_poll.c \
-	prov/psm/src/psmx_util.c src/common.c src/enosys.c
+	"$(DESTDIR)$(man7dir)" "$(DESTDIR)$(pkgconfigdir)" \
+	"$(DESTDIR)$(rdmaincludedir)" "$(DESTDIR)$(rdmaincludedir)"
+LTLIBRARIES = $(lib_LTLIBRARIES) $(noinst_LTLIBRARIES) \
+	$(pkglib_LTLIBRARIES)
+libmlxm_fi_la_LIBADD =
+am__libmlxm_fi_la_SOURCES_DIST = prov/mxm/src/mlxm.h \
+	prov/mxm/src/mlxm_init.c prov/mxm/src/mlxm_domain.c \
+	prov/mxm/src/mlxm_cq.c prov/mxm/src/mlxm_av.c \
+	prov/mxm/src/mlxm_ep.c prov/mxm/src/mlxm_cm.c \
+	prov/mxm/src/mlxm_tagged.c prov/mxm/src/mlxm_mr.c src/common.c \
+	src/enosys.c
 am__dirstamp = $(am__leading_dot)dirstamp
-@HAVE_PSM_TRUE@am__objects_1 =  \
+@HAVE_MXM_TRUE@am__objects_1 = prov/mxm/src/mlxm_init.lo \
+@HAVE_MXM_TRUE@	prov/mxm/src/mlxm_domain.lo \
+@HAVE_MXM_TRUE@	prov/mxm/src/mlxm_cq.lo prov/mxm/src/mlxm_av.lo \
+@HAVE_MXM_TRUE@	prov/mxm/src/mlxm_ep.lo prov/mxm/src/mlxm_cm.lo \
+@HAVE_MXM_TRUE@	prov/mxm/src/mlxm_tagged.lo \
+@HAVE_MXM_TRUE@	prov/mxm/src/mlxm_mr.lo
+am__objects_2 = src/common.lo src/enosys.lo
+@HAVE_MXM_DL_TRUE@@HAVE_MXM_TRUE@am_libmlxm_fi_la_OBJECTS =  \
+@HAVE_MXM_DL_TRUE@@HAVE_MXM_TRUE@	$(am__objects_1) \
+@HAVE_MXM_DL_TRUE@@HAVE_MXM_TRUE@	$(am__objects_2)
+libmlxm_fi_la_OBJECTS = $(am_libmlxm_fi_la_OBJECTS)
+AM_V_lt = $(am__v_lt_@AM_V@)
+am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
+am__v_lt_0 = --silent
+am__v_lt_1 = 
+libmlxm_fi_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(libmlxm_fi_la_LDFLAGS) $(LDFLAGS) -o $@
+@HAVE_MXM_DL_TRUE@@HAVE_MXM_TRUE@am_libmlxm_fi_la_rpath = -rpath \
+@HAVE_MXM_DL_TRUE@@HAVE_MXM_TRUE@	$(pkglibdir)
+am__DEPENDENCIES_1 =
+am__libpsmx_fi_la_SOURCES_DIST = prov/psm/src/version.h \
+	prov/psm/src/psm_am.h prov/psm/src/psmx.h \
+	prov/psm/src/psmx_init.c prov/psm/src/psmx_domain.c \
+	prov/psm/src/psmx_cq.c prov/psm/src/psmx_eq.c \
+	prov/psm/src/psmx_cntr.c prov/psm/src/psmx_av.c \
+	prov/psm/src/psmx_ep.c prov/psm/src/psmx_cm.c \
+	prov/psm/src/psmx_tagged.c prov/psm/src/psmx_msg.c \
+	prov/psm/src/psmx_msg2.c prov/psm/src/psmx_rma.c \
+	prov/psm/src/psmx_atomic.c prov/psm/src/psmx_am.c \
+	prov/psm/src/psmx_mr.c prov/psm/src/psmx_wait.c \
+	prov/psm/src/psmx_poll.c prov/psm/src/psmx_util.c src/common.c \
+	src/enosys.c
+@HAVE_PSM_TRUE@am__objects_3 =  \
 @HAVE_PSM_TRUE@	prov/psm/src/libpsmx_fi_la-psmx_init.lo \
 @HAVE_PSM_TRUE@	prov/psm/src/libpsmx_fi_la-psmx_domain.lo \
 @HAVE_PSM_TRUE@	prov/psm/src/libpsmx_fi_la-psmx_cq.lo \
@@ -206,21 +243,137 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_PSM_TRUE@	prov/psm/src/libpsmx_fi_la-psmx_wait.lo \
 @HAVE_PSM_TRUE@	prov/psm/src/libpsmx_fi_la-psmx_poll.lo \
 @HAVE_PSM_TRUE@	prov/psm/src/libpsmx_fi_la-psmx_util.lo
-am__objects_2 = src/libpsmx_fi_la-common.lo \
+am__objects_4 = src/libpsmx_fi_la-common.lo \
 	src/libpsmx_fi_la-enosys.lo
 @HAVE_PSM_DL_TRUE@@HAVE_PSM_TRUE@am_libpsmx_fi_la_OBJECTS =  \
-@HAVE_PSM_DL_TRUE@@HAVE_PSM_TRUE@	$(am__objects_1) \
-@HAVE_PSM_DL_TRUE@@HAVE_PSM_TRUE@	$(am__objects_2)
+@HAVE_PSM_DL_TRUE@@HAVE_PSM_TRUE@	$(am__objects_3) \
+@HAVE_PSM_DL_TRUE@@HAVE_PSM_TRUE@	$(am__objects_4)
 libpsmx_fi_la_OBJECTS = $(am_libpsmx_fi_la_OBJECTS)
-AM_V_lt = $(am__v_lt_@AM_V@)
-am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
-am__v_lt_0 = --silent
-am__v_lt_1 = 
 libpsmx_fi_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(libpsmx_fi_la_LDFLAGS) $(LDFLAGS) -o $@
 @HAVE_PSM_DL_TRUE@@HAVE_PSM_TRUE@am_libpsmx_fi_la_rpath = -rpath \
 @HAVE_PSM_DL_TRUE@@HAVE_PSM_TRUE@	$(pkglibdir)
+@HAVE_PSM_DL_FALSE@@HAVE_PSM_TRUE@libpsmx_la_DEPENDENCIES =  \
+@HAVE_PSM_DL_FALSE@@HAVE_PSM_TRUE@	$(am__DEPENDENCIES_1)
+am__libpsmx_la_SOURCES_DIST = prov/psm/src/version.h \
+	prov/psm/src/psm_am.h prov/psm/src/psmx.h \
+	prov/psm/src/psmx_init.c prov/psm/src/psmx_domain.c \
+	prov/psm/src/psmx_cq.c prov/psm/src/psmx_eq.c \
+	prov/psm/src/psmx_cntr.c prov/psm/src/psmx_av.c \
+	prov/psm/src/psmx_ep.c prov/psm/src/psmx_cm.c \
+	prov/psm/src/psmx_tagged.c prov/psm/src/psmx_msg.c \
+	prov/psm/src/psmx_msg2.c prov/psm/src/psmx_rma.c \
+	prov/psm/src/psmx_atomic.c prov/psm/src/psmx_am.c \
+	prov/psm/src/psmx_mr.c prov/psm/src/psmx_wait.c \
+	prov/psm/src/psmx_poll.c prov/psm/src/psmx_util.c
+@HAVE_PSM_TRUE@am__objects_5 = prov/psm/src/libpsmx_la-psmx_init.lo \
+@HAVE_PSM_TRUE@	prov/psm/src/libpsmx_la-psmx_domain.lo \
+@HAVE_PSM_TRUE@	prov/psm/src/libpsmx_la-psmx_cq.lo \
+@HAVE_PSM_TRUE@	prov/psm/src/libpsmx_la-psmx_eq.lo \
+@HAVE_PSM_TRUE@	prov/psm/src/libpsmx_la-psmx_cntr.lo \
+@HAVE_PSM_TRUE@	prov/psm/src/libpsmx_la-psmx_av.lo \
+@HAVE_PSM_TRUE@	prov/psm/src/libpsmx_la-psmx_ep.lo \
+@HAVE_PSM_TRUE@	prov/psm/src/libpsmx_la-psmx_cm.lo \
+@HAVE_PSM_TRUE@	prov/psm/src/libpsmx_la-psmx_tagged.lo \
+@HAVE_PSM_TRUE@	prov/psm/src/libpsmx_la-psmx_msg.lo \
+@HAVE_PSM_TRUE@	prov/psm/src/libpsmx_la-psmx_msg2.lo \
+@HAVE_PSM_TRUE@	prov/psm/src/libpsmx_la-psmx_rma.lo \
+@HAVE_PSM_TRUE@	prov/psm/src/libpsmx_la-psmx_atomic.lo \
+@HAVE_PSM_TRUE@	prov/psm/src/libpsmx_la-psmx_am.lo \
+@HAVE_PSM_TRUE@	prov/psm/src/libpsmx_la-psmx_mr.lo \
+@HAVE_PSM_TRUE@	prov/psm/src/libpsmx_la-psmx_wait.lo \
+@HAVE_PSM_TRUE@	prov/psm/src/libpsmx_la-psmx_poll.lo \
+@HAVE_PSM_TRUE@	prov/psm/src/libpsmx_la-psmx_util.lo
+@HAVE_PSM_DL_FALSE@@HAVE_PSM_TRUE@am_libpsmx_la_OBJECTS =  \
+@HAVE_PSM_DL_FALSE@@HAVE_PSM_TRUE@	$(am__objects_5)
+libpsmx_la_OBJECTS = $(am_libpsmx_la_OBJECTS)
+libpsmx_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(libpsmx_la_LDFLAGS) $(LDFLAGS) -o $@
+@HAVE_PSM_DL_FALSE@@HAVE_PSM_TRUE@am_libpsmx_la_rpath =
+am__libpsmx2_fi_la_SOURCES_DIST = prov/psm2/src/rename.h \
+	prov/psm2/src/version.h prov/psm2/src/psmx.h \
+	prov/psm2/src/psmx_init.c prov/psm2/src/psmx_domain.c \
+	prov/psm2/src/psmx_cq.c prov/psm2/src/psmx_eq.c \
+	prov/psm2/src/psmx_cntr.c prov/psm2/src/psmx_av.c \
+	prov/psm2/src/psmx_ep.c prov/psm2/src/psmx_cm.c \
+	prov/psm2/src/psmx_tagged.c prov/psm2/src/psmx_msg.c \
+	prov/psm2/src/psmx_msg2.c prov/psm2/src/psmx_rma.c \
+	prov/psm2/src/psmx_atomic.c prov/psm2/src/psmx_am.c \
+	prov/psm2/src/psmx_mr.c prov/psm2/src/psmx_wait.c \
+	prov/psm2/src/psmx_poll.c prov/psm2/src/psmx_util.c \
+	src/common.c src/enosys.c
+@HAVE_PSM2_TRUE@am__objects_6 =  \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_fi_la-psmx_init.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_fi_la-psmx_domain.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_fi_la-psmx_cq.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_fi_la-psmx_eq.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_fi_la-psmx_cntr.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_fi_la-psmx_av.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_fi_la-psmx_ep.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_fi_la-psmx_cm.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_fi_la-psmx_tagged.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_fi_la-psmx_msg.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_fi_la-psmx_msg2.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_fi_la-psmx_rma.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_fi_la-psmx_atomic.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_fi_la-psmx_am.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_fi_la-psmx_mr.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_fi_la-psmx_wait.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_fi_la-psmx_poll.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_fi_la-psmx_util.lo
+am__objects_7 = src/libpsmx2_fi_la-common.lo \
+	src/libpsmx2_fi_la-enosys.lo
+@HAVE_PSM2_DL_TRUE@@HAVE_PSM2_TRUE@am_libpsmx2_fi_la_OBJECTS =  \
+@HAVE_PSM2_DL_TRUE@@HAVE_PSM2_TRUE@	$(am__objects_6) \
+@HAVE_PSM2_DL_TRUE@@HAVE_PSM2_TRUE@	$(am__objects_7)
+libpsmx2_fi_la_OBJECTS = $(am_libpsmx2_fi_la_OBJECTS)
+libpsmx2_fi_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(AM_CFLAGS) $(CFLAGS) $(libpsmx2_fi_la_LDFLAGS) $(LDFLAGS) -o \
+	$@
+@HAVE_PSM2_DL_TRUE@@HAVE_PSM2_TRUE@am_libpsmx2_fi_la_rpath = -rpath \
+@HAVE_PSM2_DL_TRUE@@HAVE_PSM2_TRUE@	$(pkglibdir)
+@HAVE_PSM2_DL_FALSE@@HAVE_PSM2_TRUE@libpsmx2_la_DEPENDENCIES =  \
+@HAVE_PSM2_DL_FALSE@@HAVE_PSM2_TRUE@	$(am__DEPENDENCIES_1)
+am__libpsmx2_la_SOURCES_DIST = prov/psm2/src/rename.h \
+	prov/psm2/src/version.h prov/psm2/src/psmx.h \
+	prov/psm2/src/psmx_init.c prov/psm2/src/psmx_domain.c \
+	prov/psm2/src/psmx_cq.c prov/psm2/src/psmx_eq.c \
+	prov/psm2/src/psmx_cntr.c prov/psm2/src/psmx_av.c \
+	prov/psm2/src/psmx_ep.c prov/psm2/src/psmx_cm.c \
+	prov/psm2/src/psmx_tagged.c prov/psm2/src/psmx_msg.c \
+	prov/psm2/src/psmx_msg2.c prov/psm2/src/psmx_rma.c \
+	prov/psm2/src/psmx_atomic.c prov/psm2/src/psmx_am.c \
+	prov/psm2/src/psmx_mr.c prov/psm2/src/psmx_wait.c \
+	prov/psm2/src/psmx_poll.c prov/psm2/src/psmx_util.c
+@HAVE_PSM2_TRUE@am__objects_8 =  \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_la-psmx_init.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_la-psmx_domain.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_la-psmx_cq.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_la-psmx_eq.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_la-psmx_cntr.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_la-psmx_av.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_la-psmx_ep.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_la-psmx_cm.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_la-psmx_tagged.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_la-psmx_msg.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_la-psmx_msg2.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_la-psmx_rma.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_la-psmx_atomic.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_la-psmx_am.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_la-psmx_mr.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_la-psmx_wait.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_la-psmx_poll.lo \
+@HAVE_PSM2_TRUE@	prov/psm2/src/libpsmx2_la-psmx_util.lo
+@HAVE_PSM2_DL_FALSE@@HAVE_PSM2_TRUE@am_libpsmx2_la_OBJECTS =  \
+@HAVE_PSM2_DL_FALSE@@HAVE_PSM2_TRUE@	$(am__objects_8)
+libpsmx2_la_OBJECTS = $(am_libpsmx2_la_OBJECTS)
+libpsmx2_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(libpsmx2_la_LDFLAGS) $(LDFLAGS) -o $@
+@HAVE_PSM2_DL_FALSE@@HAVE_PSM2_TRUE@am_libpsmx2_la_rpath =
 am__libsockets_fi_la_SOURCES_DIST = prov/sockets/src/sock.h \
 	prov/sockets/src/sock_av.c prov/sockets/src/sock_dom.c \
 	prov/sockets/src/sock_eq.c prov/sockets/src/sock_cq.c \
@@ -235,7 +388,7 @@ am__libsockets_fi_la_SOURCES_DIST = prov/sockets/src/sock.h \
 	prov/sockets/src/sock_rma.c prov/sockets/src/sock_atomic.c \
 	prov/sockets/src/sock_trigger.c prov/sockets/src/sock_util.h \
 	prov/sockets/src/indexer.c src/common.c src/enosys.c
-@HAVE_SOCKETS_TRUE@am__objects_3 = prov/sockets/src/sock_av.lo \
+@HAVE_SOCKETS_TRUE@am__objects_9 = prov/sockets/src/sock_av.lo \
 @HAVE_SOCKETS_TRUE@	prov/sockets/src/sock_dom.lo \
 @HAVE_SOCKETS_TRUE@	prov/sockets/src/sock_eq.lo \
 @HAVE_SOCKETS_TRUE@	prov/sockets/src/sock_cq.lo \
@@ -257,10 +410,9 @@ am__libsockets_fi_la_SOURCES_DIST = prov/sockets/src/sock.h \
 @HAVE_SOCKETS_TRUE@	prov/sockets/src/sock_atomic.lo \
 @HAVE_SOCKETS_TRUE@	prov/sockets/src/sock_trigger.lo \
 @HAVE_SOCKETS_TRUE@	prov/sockets/src/indexer.lo
-am__objects_4 = src/common.lo src/enosys.lo
 @HAVE_SOCKETS_DL_TRUE@@HAVE_SOCKETS_TRUE@am_libsockets_fi_la_OBJECTS =  \
-@HAVE_SOCKETS_DL_TRUE@@HAVE_SOCKETS_TRUE@	$(am__objects_3) \
-@HAVE_SOCKETS_DL_TRUE@@HAVE_SOCKETS_TRUE@	$(am__objects_4)
+@HAVE_SOCKETS_DL_TRUE@@HAVE_SOCKETS_TRUE@	$(am__objects_9) \
+@HAVE_SOCKETS_DL_TRUE@@HAVE_SOCKETS_TRUE@	$(am__objects_2)
 libsockets_fi_la_OBJECTS = $(am_libsockets_fi_la_OBJECTS)
 libsockets_fi_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
@@ -343,7 +495,7 @@ am__libusnic_fi_la_SOURCES_DIST =  \
 	prov/usnic/src/usdf_rudp.h prov/usnic/src/usdf_timer.c \
 	prov/usnic/src/usdf_timer.h prov/usnic/src/usdf_fake_ibv.c \
 	src/common.c src/enosys.c
-@HAVE_USNIC_TRUE@am__objects_5 = prov/usnic/src/usnic_direct/libusnic_fi_la-libnl_utils_common.lo \
+@HAVE_USNIC_TRUE@am__objects_10 = prov/usnic/src/usnic_direct/libusnic_fi_la-libnl_utils_common.lo \
 @HAVE_USNIC_TRUE@	prov/usnic/src/usnic_direct/libusnic_fi_la-usd_caps.lo \
 @HAVE_USNIC_TRUE@	prov/usnic/src/usnic_direct/libusnic_fi_la-usd_dest.lo \
 @HAVE_USNIC_TRUE@	prov/usnic/src/usnic_direct/libusnic_fi_la-usd_device.lo \
@@ -364,8 +516,8 @@ am__libusnic_fi_la_SOURCES_DIST =  \
 @HAVE_USNIC_TRUE@	prov/usnic/src/usnic_direct/libusnic_fi_la-vnic_dev.lo \
 @HAVE_USNIC_TRUE@	prov/usnic/src/usnic_direct/libusnic_fi_la-vnic_rq.lo \
 @HAVE_USNIC_TRUE@	prov/usnic/src/usnic_direct/libusnic_fi_la-vnic_wq.lo
-@HAVE_USNIC_TRUE@@HAVE_VERBS_TRUE@am__objects_6 = prov/usnic/src/libusnic_fi_la-usdf_fake_ibv.lo
-@HAVE_USNIC_TRUE@am__objects_7 = $(am__objects_5) \
+@HAVE_USNIC_TRUE@@HAVE_VERBS_TRUE@am__objects_11 = prov/usnic/src/libusnic_fi_la-usdf_fake_ibv.lo
+@HAVE_USNIC_TRUE@am__objects_12 = $(am__objects_10) \
 @HAVE_USNIC_TRUE@	prov/usnic/src/libusnic_fi_la-usdf_av.lo \
 @HAVE_USNIC_TRUE@	prov/usnic/src/libusnic_fi_la-usdf_cm.lo \
 @HAVE_USNIC_TRUE@	prov/usnic/src/libusnic_fi_la-usdf_cq.lo \
@@ -383,12 +535,12 @@ am__libusnic_fi_la_SOURCES_DIST =  \
 @HAVE_USNIC_TRUE@	prov/usnic/src/libusnic_fi_la-usdf_progress.lo \
 @HAVE_USNIC_TRUE@	prov/usnic/src/libusnic_fi_la-usdf_rdm.lo \
 @HAVE_USNIC_TRUE@	prov/usnic/src/libusnic_fi_la-usdf_timer.lo \
-@HAVE_USNIC_TRUE@	$(am__objects_6)
-am__objects_8 = src/libusnic_fi_la-common.lo \
+@HAVE_USNIC_TRUE@	$(am__objects_11)
+am__objects_13 = src/libusnic_fi_la-common.lo \
 	src/libusnic_fi_la-enosys.lo
 @HAVE_USNIC_DL_TRUE@@HAVE_USNIC_TRUE@am_libusnic_fi_la_OBJECTS =  \
-@HAVE_USNIC_DL_TRUE@@HAVE_USNIC_TRUE@	$(am__objects_7) \
-@HAVE_USNIC_DL_TRUE@@HAVE_USNIC_TRUE@	$(am__objects_8)
+@HAVE_USNIC_DL_TRUE@@HAVE_USNIC_TRUE@	$(am__objects_12) \
+@HAVE_USNIC_DL_TRUE@@HAVE_USNIC_TRUE@	$(am__objects_13)
 libusnic_fi_la_OBJECTS = $(am_libusnic_fi_la_OBJECTS)
 libusnic_fi_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
@@ -398,13 +550,13 @@ libusnic_fi_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 @HAVE_USNIC_DL_TRUE@@HAVE_USNIC_TRUE@	$(pkglibdir)
 am__libverbs_fi_la_SOURCES_DIST = prov/verbs/src/fi_verbs.c \
 	src/common.c src/enosys.c
-@HAVE_VERBS_TRUE@am__objects_9 =  \
+@HAVE_VERBS_TRUE@am__objects_14 =  \
 @HAVE_VERBS_TRUE@	prov/verbs/src/libverbs_fi_la-fi_verbs.lo
-am__objects_10 = src/libverbs_fi_la-common.lo \
+am__objects_15 = src/libverbs_fi_la-common.lo \
 	src/libverbs_fi_la-enosys.lo
 @HAVE_VERBS_DL_TRUE@@HAVE_VERBS_TRUE@am_libverbs_fi_la_OBJECTS =  \
-@HAVE_VERBS_DL_TRUE@@HAVE_VERBS_TRUE@	$(am__objects_9) \
-@HAVE_VERBS_DL_TRUE@@HAVE_VERBS_TRUE@	$(am__objects_10)
+@HAVE_VERBS_DL_TRUE@@HAVE_VERBS_TRUE@	$(am__objects_14) \
+@HAVE_VERBS_DL_TRUE@@HAVE_VERBS_TRUE@	$(am__objects_15)
 libverbs_fi_la_OBJECTS = $(am_libverbs_fi_la_OBJECTS)
 libverbs_fi_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
@@ -419,13 +571,11 @@ libverbs_fi_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 @HAVE_USNIC_DL_FALSE@@HAVE_USNIC_TRUE@am__DEPENDENCIES_4 =  \
 @HAVE_USNIC_DL_FALSE@@HAVE_USNIC_TRUE@	$(am__DEPENDENCIES_1) \
 @HAVE_USNIC_DL_FALSE@@HAVE_USNIC_TRUE@	$(am__DEPENDENCIES_1)
-@HAVE_PSM_DL_FALSE@@HAVE_PSM_TRUE@am__DEPENDENCIES_5 =  \
-@HAVE_PSM_DL_FALSE@@HAVE_PSM_TRUE@	$(am__DEPENDENCIES_1)
 am__src_libfabric_la_SOURCES_DIST = include/fi.h include/fi_enosys.h \
-	include/fi_indexer.h include/fi_list.h include/fi_rbuf.h \
-	include/prov.h src/fabric.c src/fi_tostr.c src/log.c src/var.c \
-	src/common.c src/enosys.c src/osx/osd.c include/osx/osd.h \
-	include/linux/osd.h prov/sockets/src/sock.h \
+	include/fi_indexer.h include/fi_list.h include/fi_signal.h \
+	include/fi_rbuf.h include/prov.h src/fabric.c src/fi_tostr.c \
+	src/log.c src/var.c src/common.c src/enosys.c src/osx/osd.c \
+	include/osx/osd.h include/linux/osd.h prov/sockets/src/sock.h \
 	prov/sockets/src/sock_av.c prov/sockets/src/sock_dom.c \
 	prov/sockets/src/sock_eq.c prov/sockets/src/sock_cq.c \
 	prov/sockets/src/sock_cntr.c prov/sockets/src/sock_poll.c \
@@ -512,21 +662,16 @@ am__src_libfabric_la_SOURCES_DIST = include/fi.h include/fi_enosys.h \
 	prov/usnic/src/usdf_rdm.c prov/usnic/src/usdf_rdm.h \
 	prov/usnic/src/usdf_rudp.h prov/usnic/src/usdf_timer.c \
 	prov/usnic/src/usdf_timer.h prov/usnic/src/usdf_fake_ibv.c \
-	prov/psm/src/psm_am.h prov/psm/src/psmx.h \
-	prov/psm/src/psmx_init.c prov/psm/src/psmx_domain.c \
-	prov/psm/src/psmx_cq.c prov/psm/src/psmx_eq.c \
-	prov/psm/src/psmx_cntr.c prov/psm/src/psmx_av.c \
-	prov/psm/src/psmx_ep.c prov/psm/src/psmx_cm.c \
-	prov/psm/src/psmx_tagged.c prov/psm/src/psmx_msg.c \
-	prov/psm/src/psmx_msg2.c prov/psm/src/psmx_rma.c \
-	prov/psm/src/psmx_atomic.c prov/psm/src/psmx_am.c \
-	prov/psm/src/psmx_mr.c prov/psm/src/psmx_wait.c \
-	prov/psm/src/psmx_poll.c prov/psm/src/psmx_util.c
-am__objects_11 = src/src_libfabric_la-common.lo \
+	prov/mxm/src/mlxm.h prov/mxm/src/mlxm_init.c \
+	prov/mxm/src/mlxm_domain.c prov/mxm/src/mlxm_cq.c \
+	prov/mxm/src/mlxm_av.c prov/mxm/src/mlxm_ep.c \
+	prov/mxm/src/mlxm_cm.c prov/mxm/src/mlxm_tagged.c \
+	prov/mxm/src/mlxm_mr.c
+am__objects_16 = src/src_libfabric_la-common.lo \
 	src/src_libfabric_la-enosys.lo
-@MACOS_TRUE@am__objects_12 = src/osx/src_libfabric_la-osd.lo
-am__objects_13 =
-@HAVE_SOCKETS_TRUE@am__objects_14 = prov/sockets/src/src_libfabric_la-sock_av.lo \
+@MACOS_TRUE@am__objects_17 = src/osx/src_libfabric_la-osd.lo
+am__objects_18 =
+@HAVE_SOCKETS_TRUE@am__objects_19 = prov/sockets/src/src_libfabric_la-sock_av.lo \
 @HAVE_SOCKETS_TRUE@	prov/sockets/src/src_libfabric_la-sock_dom.lo \
 @HAVE_SOCKETS_TRUE@	prov/sockets/src/src_libfabric_la-sock_eq.lo \
 @HAVE_SOCKETS_TRUE@	prov/sockets/src/src_libfabric_la-sock_cq.lo \
@@ -548,13 +693,13 @@ am__objects_13 =
 @HAVE_SOCKETS_TRUE@	prov/sockets/src/src_libfabric_la-sock_atomic.lo \
 @HAVE_SOCKETS_TRUE@	prov/sockets/src/src_libfabric_la-sock_trigger.lo \
 @HAVE_SOCKETS_TRUE@	prov/sockets/src/src_libfabric_la-indexer.lo
-@HAVE_SOCKETS_DL_FALSE@@HAVE_SOCKETS_TRUE@am__objects_15 =  \
-@HAVE_SOCKETS_DL_FALSE@@HAVE_SOCKETS_TRUE@	$(am__objects_14)
-@HAVE_VERBS_TRUE@am__objects_16 =  \
+@HAVE_SOCKETS_DL_FALSE@@HAVE_SOCKETS_TRUE@am__objects_20 =  \
+@HAVE_SOCKETS_DL_FALSE@@HAVE_SOCKETS_TRUE@	$(am__objects_19)
+@HAVE_VERBS_TRUE@am__objects_21 =  \
 @HAVE_VERBS_TRUE@	prov/verbs/src/src_libfabric_la-fi_verbs.lo
-@HAVE_VERBS_DL_FALSE@@HAVE_VERBS_TRUE@am__objects_17 =  \
-@HAVE_VERBS_DL_FALSE@@HAVE_VERBS_TRUE@	$(am__objects_16)
-@HAVE_USNIC_TRUE@am__objects_18 = prov/usnic/src/usnic_direct/src_libfabric_la-libnl_utils_common.lo \
+@HAVE_VERBS_DL_FALSE@@HAVE_VERBS_TRUE@am__objects_22 =  \
+@HAVE_VERBS_DL_FALSE@@HAVE_VERBS_TRUE@	$(am__objects_21)
+@HAVE_USNIC_TRUE@am__objects_23 = prov/usnic/src/usnic_direct/src_libfabric_la-libnl_utils_common.lo \
 @HAVE_USNIC_TRUE@	prov/usnic/src/usnic_direct/src_libfabric_la-usd_caps.lo \
 @HAVE_USNIC_TRUE@	prov/usnic/src/usnic_direct/src_libfabric_la-usd_dest.lo \
 @HAVE_USNIC_TRUE@	prov/usnic/src/usnic_direct/src_libfabric_la-usd_device.lo \
@@ -575,8 +720,8 @@ am__objects_13 =
 @HAVE_USNIC_TRUE@	prov/usnic/src/usnic_direct/src_libfabric_la-vnic_dev.lo \
 @HAVE_USNIC_TRUE@	prov/usnic/src/usnic_direct/src_libfabric_la-vnic_rq.lo \
 @HAVE_USNIC_TRUE@	prov/usnic/src/usnic_direct/src_libfabric_la-vnic_wq.lo
-@HAVE_USNIC_TRUE@@HAVE_VERBS_TRUE@am__objects_19 = prov/usnic/src/src_libfabric_la-usdf_fake_ibv.lo
-@HAVE_USNIC_TRUE@am__objects_20 = $(am__objects_18) \
+@HAVE_USNIC_TRUE@@HAVE_VERBS_TRUE@am__objects_24 = prov/usnic/src/src_libfabric_la-usdf_fake_ibv.lo
+@HAVE_USNIC_TRUE@am__objects_25 = $(am__objects_23) \
 @HAVE_USNIC_TRUE@	prov/usnic/src/src_libfabric_la-usdf_av.lo \
 @HAVE_USNIC_TRUE@	prov/usnic/src/src_libfabric_la-usdf_cm.lo \
 @HAVE_USNIC_TRUE@	prov/usnic/src/src_libfabric_la-usdf_cq.lo \
@@ -594,34 +739,24 @@ am__objects_13 =
 @HAVE_USNIC_TRUE@	prov/usnic/src/src_libfabric_la-usdf_progress.lo \
 @HAVE_USNIC_TRUE@	prov/usnic/src/src_libfabric_la-usdf_rdm.lo \
 @HAVE_USNIC_TRUE@	prov/usnic/src/src_libfabric_la-usdf_timer.lo \
-@HAVE_USNIC_TRUE@	$(am__objects_19)
-@HAVE_USNIC_DL_FALSE@@HAVE_USNIC_TRUE@am__objects_21 =  \
-@HAVE_USNIC_DL_FALSE@@HAVE_USNIC_TRUE@	$(am__objects_20)
-@HAVE_PSM_TRUE@am__objects_22 =  \
-@HAVE_PSM_TRUE@	prov/psm/src/src_libfabric_la-psmx_init.lo \
-@HAVE_PSM_TRUE@	prov/psm/src/src_libfabric_la-psmx_domain.lo \
-@HAVE_PSM_TRUE@	prov/psm/src/src_libfabric_la-psmx_cq.lo \
-@HAVE_PSM_TRUE@	prov/psm/src/src_libfabric_la-psmx_eq.lo \
-@HAVE_PSM_TRUE@	prov/psm/src/src_libfabric_la-psmx_cntr.lo \
-@HAVE_PSM_TRUE@	prov/psm/src/src_libfabric_la-psmx_av.lo \
-@HAVE_PSM_TRUE@	prov/psm/src/src_libfabric_la-psmx_ep.lo \
-@HAVE_PSM_TRUE@	prov/psm/src/src_libfabric_la-psmx_cm.lo \
-@HAVE_PSM_TRUE@	prov/psm/src/src_libfabric_la-psmx_tagged.lo \
-@HAVE_PSM_TRUE@	prov/psm/src/src_libfabric_la-psmx_msg.lo \
-@HAVE_PSM_TRUE@	prov/psm/src/src_libfabric_la-psmx_msg2.lo \
-@HAVE_PSM_TRUE@	prov/psm/src/src_libfabric_la-psmx_rma.lo \
-@HAVE_PSM_TRUE@	prov/psm/src/src_libfabric_la-psmx_atomic.lo \
-@HAVE_PSM_TRUE@	prov/psm/src/src_libfabric_la-psmx_am.lo \
-@HAVE_PSM_TRUE@	prov/psm/src/src_libfabric_la-psmx_mr.lo \
-@HAVE_PSM_TRUE@	prov/psm/src/src_libfabric_la-psmx_wait.lo \
-@HAVE_PSM_TRUE@	prov/psm/src/src_libfabric_la-psmx_poll.lo \
-@HAVE_PSM_TRUE@	prov/psm/src/src_libfabric_la-psmx_util.lo
-@HAVE_PSM_DL_FALSE@@HAVE_PSM_TRUE@am__objects_23 = $(am__objects_22)
+@HAVE_USNIC_TRUE@	$(am__objects_24)
+@HAVE_USNIC_DL_FALSE@@HAVE_USNIC_TRUE@am__objects_26 =  \
+@HAVE_USNIC_DL_FALSE@@HAVE_USNIC_TRUE@	$(am__objects_25)
+@HAVE_MXM_TRUE@am__objects_27 =  \
+@HAVE_MXM_TRUE@	prov/mxm/src/src_libfabric_la-mlxm_init.lo \
+@HAVE_MXM_TRUE@	prov/mxm/src/src_libfabric_la-mlxm_domain.lo \
+@HAVE_MXM_TRUE@	prov/mxm/src/src_libfabric_la-mlxm_cq.lo \
+@HAVE_MXM_TRUE@	prov/mxm/src/src_libfabric_la-mlxm_av.lo \
+@HAVE_MXM_TRUE@	prov/mxm/src/src_libfabric_la-mlxm_ep.lo \
+@HAVE_MXM_TRUE@	prov/mxm/src/src_libfabric_la-mlxm_cm.lo \
+@HAVE_MXM_TRUE@	prov/mxm/src/src_libfabric_la-mlxm_tagged.lo \
+@HAVE_MXM_TRUE@	prov/mxm/src/src_libfabric_la-mlxm_mr.lo
+@HAVE_MXM_DL_FALSE@@HAVE_MXM_TRUE@am__objects_28 = $(am__objects_27)
 am_src_libfabric_la_OBJECTS = src/src_libfabric_la-fabric.lo \
 	src/src_libfabric_la-fi_tostr.lo src/src_libfabric_la-log.lo \
-	src/src_libfabric_la-var.lo $(am__objects_11) \
-	$(am__objects_12) $(am__objects_13) $(am__objects_15) \
-	$(am__objects_17) $(am__objects_21) $(am__objects_23)
+	src/src_libfabric_la-var.lo $(am__objects_16) \
+	$(am__objects_17) $(am__objects_18) $(am__objects_20) \
+	$(am__objects_22) $(am__objects_26) $(am__objects_28)
 src_libfabric_la_OBJECTS = $(am_src_libfabric_la_OBJECTS)
 src_libfabric_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
@@ -665,10 +800,16 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(libpsmx_fi_la_SOURCES) $(libsockets_fi_la_SOURCES) \
+SOURCES = $(libmlxm_fi_la_SOURCES) $(libpsmx_fi_la_SOURCES) \
+	$(libpsmx_la_SOURCES) $(libpsmx2_fi_la_SOURCES) \
+	$(libpsmx2_la_SOURCES) $(libsockets_fi_la_SOURCES) \
 	$(libusnic_fi_la_SOURCES) $(libverbs_fi_la_SOURCES) \
 	$(src_libfabric_la_SOURCES) $(util_fi_info_SOURCES)
-DIST_SOURCES = $(am__libpsmx_fi_la_SOURCES_DIST) \
+DIST_SOURCES = $(am__libmlxm_fi_la_SOURCES_DIST) \
+	$(am__libpsmx_fi_la_SOURCES_DIST) \
+	$(am__libpsmx_la_SOURCES_DIST) \
+	$(am__libpsmx2_fi_la_SOURCES_DIST) \
+	$(am__libpsmx2_la_SOURCES_DIST) \
 	$(am__libsockets_fi_la_SOURCES_DIST) \
 	$(am__libusnic_fi_la_SOURCES_DIST) \
 	$(am__libverbs_fi_la_SOURCES_DIST) \
@@ -682,6 +823,7 @@ man3dir = $(mandir)/man3
 man7dir = $(mandir)/man7
 NROFF = nroff
 MANS = $(man_MANS)
+DATA = $(pkgconfig_DATA)
 am__rdmainclude_HEADERS_DIST = prov/usnic/src/fi_ext_usnic.h \
 	$(top_srcdir)/include/rdma/fabric.h \
 	$(top_srcdir)/include/rdma/fi_atomic.h \
@@ -719,8 +861,9 @@ CTAGS = ctags
 CSCOPE = cscope
 AM_RECURSIVE_TARGETS = cscope
 am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/config.h.in \
-	$(srcdir)/libfabric.spec.in $(top_srcdir)/config/ar-lib \
-	$(top_srcdir)/config/compile $(top_srcdir)/config/config.guess \
+	$(srcdir)/libfabric.pc.in $(srcdir)/libfabric.spec.in \
+	$(top_srcdir)/config/ar-lib $(top_srcdir)/config/compile \
+	$(top_srcdir)/config/config.guess \
 	$(top_srcdir)/config/config.sub $(top_srcdir)/config/depcomp \
 	$(top_srcdir)/config/install-sh $(top_srcdir)/config/ltmain.sh \
 	$(top_srcdir)/config/missing AUTHORS COPYING README \
@@ -778,6 +921,11 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LIBFABRIC_PC_CFLAGS = @LIBFABRIC_PC_CFLAGS@
+LIBFABRIC_PC_PRIVATE_LIBS = @LIBFABRIC_PC_PRIVATE_LIBS@
+LIBFABRIC_PC_PRIVATE_PKGS = @LIBFABRIC_PC_PRIVATE_PKGS@
+LIBFABRIC_PC_PUBLIC_LIBS = @LIBFABRIC_PC_PUBLIC_LIBS@
+LIBFABRIC_PC_REQUIRES_PKGS = @LIBFABRIC_PC_REQUIRES_PKGS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
@@ -856,6 +1004,9 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
+psm2_CPPFLAGS = @psm2_CPPFLAGS@
+psm2_LDFLAGS = @psm2_LDFLAGS@
+psm2_LIBS = @psm2_LIBS@
 psm_CPPFLAGS = @psm_CPPFLAGS@
 psm_LDFLAGS = @psm_LDFLAGS@
 psm_LIBS = @psm_LIBS@
@@ -888,7 +1039,9 @@ AM_CPPFLAGS = \
 
 lib_LTLIBRARIES = src/libfabric.la
 pkglib_LTLIBRARIES = $(DL_PROVIDERS) $(am__append_3) $(am__append_6) \
-	$(am__append_13) $(am__append_18)
+	$(am__append_13) $(am__append_18) $(am__append_22) \
+	$(am__append_26)
+noinst_LTLIBRARIES = $(am__append_19) $(am__append_23)
 ACLOCAL_AMFLAGS = -I config
 AM_CFLAGS = -g -Wall
 @HAVE_LD_VERSION_SCRIPT_FALSE@libfabric_version_script = 
@@ -921,17 +1074,20 @@ util_fi_info_SOURCES = \
 
 util_fi_info_LDADD = $(linkback)
 src_libfabric_la_SOURCES = include/fi.h include/fi_enosys.h \
-	include/fi_indexer.h include/fi_list.h include/fi_rbuf.h \
-	include/prov.h src/fabric.c src/fi_tostr.c src/log.c src/var.c \
-	$(common_srcs) $(am__append_1) $(am__append_2) $(am__append_4) \
-	$(am__append_7) $(am__append_14) $(am__append_19)
+	include/fi_indexer.h include/fi_list.h include/fi_signal.h \
+	include/fi_rbuf.h include/prov.h src/fabric.c src/fi_tostr.c \
+	src/log.c src/var.c $(common_srcs) $(am__append_1) \
+	$(am__append_2) $(am__append_4) $(am__append_7) \
+	$(am__append_14) $(am__append_27)
 src_libfabric_la_CPPFLAGS = $(AM_CPPFLAGS) $(am__append_8) \
-	$(am__append_15) $(am__append_20)
+	$(am__append_15)
 src_libfabric_la_LDFLAGS = $(am__append_9) $(am__append_16) \
-	$(am__append_21) -version-info 2:0:1 -export-dynamic \
+	-version-info 2:0:1 -export-dynamic \
 	$(libfabric_version_script)
 src_libfabric_la_LIBADD = $(am__append_5) $(am__append_10) \
-	$(am__append_17) $(am__append_22)
+	$(am__append_17) $(am__append_20) $(am__append_24)
+src_libfabric_la_DEPENDENCIES = $(srcdir)/libfabric.map \
+	$(am__append_21) $(am__append_25)
 @HAVE_SOCKETS_TRUE@_sockets_files = \
 @HAVE_SOCKETS_TRUE@	prov/sockets/src/sock.h \
 @HAVE_SOCKETS_TRUE@	prov/sockets/src/sock_av.c \
@@ -1083,9 +1239,9 @@ src_libfabric_la_LIBADD = $(am__append_5) $(am__append_10) \
 @HAVE_USNIC_DL_TRUE@@HAVE_USNIC_TRUE@libusnic_fi_la_LIBADD = $(linkback) $(_usnic_libibverbs) $(usnic_nl_LIBS)
 @HAVE_USNIC_DL_TRUE@@HAVE_USNIC_TRUE@libusnic_fi_la_DEPENDENCIES = $(linkback)
 @HAVE_PSM_TRUE@_psm_files = \
+@HAVE_PSM_TRUE@	prov/psm/src/version.h \
 @HAVE_PSM_TRUE@	prov/psm/src/psm_am.h \
 @HAVE_PSM_TRUE@	prov/psm/src/psmx.h \
-@HAVE_PSM_TRUE@	prov/psm/src/psm_am.h \
 @HAVE_PSM_TRUE@	prov/psm/src/psmx_init.c \
 @HAVE_PSM_TRUE@	prov/psm/src/psmx_domain.c \
 @HAVE_PSM_TRUE@	prov/psm/src/psmx_cq.c \
@@ -1112,7 +1268,56 @@ src_libfabric_la_LIBADD = $(am__append_5) $(am__append_10) \
 
 @HAVE_PSM_DL_TRUE@@HAVE_PSM_TRUE@libpsmx_fi_la_LIBADD = $(linkback) $(psm_LIBS)
 @HAVE_PSM_DL_TRUE@@HAVE_PSM_TRUE@libpsmx_fi_la_DEPENDENCIES = $(linkback)
-src_libfabric_la_DEPENDENCIES = $(srcdir)/libfabric.map
+@HAVE_PSM_DL_FALSE@@HAVE_PSM_TRUE@libpsmx_la_SOURCES = $(_psm_files)
+@HAVE_PSM_DL_FALSE@@HAVE_PSM_TRUE@libpsmx_la_CPPFLAGS = $(src_libfabric_la_CPPFLAGS) $(psm_CPPFLAGS)
+@HAVE_PSM_DL_FALSE@@HAVE_PSM_TRUE@libpsmx_la_LDFLAGS = $(psm_LDFLAGS)
+@HAVE_PSM_DL_FALSE@@HAVE_PSM_TRUE@libpsmx_la_LIBADD = $(psm_LIBS)
+@HAVE_PSM2_TRUE@_psm2_files = \
+@HAVE_PSM2_TRUE@	prov/psm2/src/rename.h \
+@HAVE_PSM2_TRUE@	prov/psm2/src/version.h \
+@HAVE_PSM2_TRUE@	prov/psm2/src/psmx.h \
+@HAVE_PSM2_TRUE@	prov/psm2/src/psmx_init.c \
+@HAVE_PSM2_TRUE@	prov/psm2/src/psmx_domain.c \
+@HAVE_PSM2_TRUE@	prov/psm2/src/psmx_cq.c \
+@HAVE_PSM2_TRUE@	prov/psm2/src/psmx_eq.c \
+@HAVE_PSM2_TRUE@	prov/psm2/src/psmx_cntr.c \
+@HAVE_PSM2_TRUE@	prov/psm2/src/psmx_av.c \
+@HAVE_PSM2_TRUE@	prov/psm2/src/psmx_ep.c \
+@HAVE_PSM2_TRUE@	prov/psm2/src/psmx_cm.c \
+@HAVE_PSM2_TRUE@	prov/psm2/src/psmx_tagged.c \
+@HAVE_PSM2_TRUE@	prov/psm2/src/psmx_msg.c \
+@HAVE_PSM2_TRUE@	prov/psm2/src/psmx_msg2.c \
+@HAVE_PSM2_TRUE@	prov/psm2/src/psmx_rma.c \
+@HAVE_PSM2_TRUE@	prov/psm2/src/psmx_atomic.c \
+@HAVE_PSM2_TRUE@	prov/psm2/src/psmx_am.c \
+@HAVE_PSM2_TRUE@	prov/psm2/src/psmx_mr.c \
+@HAVE_PSM2_TRUE@	prov/psm2/src/psmx_wait.c \
+@HAVE_PSM2_TRUE@	prov/psm2/src/psmx_poll.c \
+@HAVE_PSM2_TRUE@	prov/psm2/src/psmx_util.c
+
+@HAVE_PSM2_DL_TRUE@@HAVE_PSM2_TRUE@libpsmx2_fi_la_SOURCES = $(_psm2_files) $(common_srcs)
+@HAVE_PSM2_DL_TRUE@@HAVE_PSM2_TRUE@libpsmx2_fi_la_CPPFLAGS = $(AM_CPPFLAGS) $(psm2_CPPFLAGS)
+@HAVE_PSM2_DL_TRUE@@HAVE_PSM2_TRUE@libpsmx2_fi_la_LDFLAGS = \
+@HAVE_PSM2_DL_TRUE@@HAVE_PSM2_TRUE@    -module -avoid-version -shared -export-dynamic $(psm2_LDFLAGS)
+
+@HAVE_PSM2_DL_TRUE@@HAVE_PSM2_TRUE@libpsmx2_fi_la_LIBADD = $(linkback) $(psm2_LIBS)
+@HAVE_PSM2_DL_TRUE@@HAVE_PSM2_TRUE@libpsmx2_fi_la_DEPENDENCIES = $(linkback)
+@HAVE_PSM2_DL_FALSE@@HAVE_PSM2_TRUE@libpsmx2_la_SOURCES = $(_psm2_files)
+@HAVE_PSM2_DL_FALSE@@HAVE_PSM2_TRUE@libpsmx2_la_CPPFLAGS = $(src_libfabric_la_CPPFLAGS) $(psm2_CPPFLAGS)
+@HAVE_PSM2_DL_FALSE@@HAVE_PSM2_TRUE@libpsmx2_la_LDFLAGS = $(psm2_LDFLAGS)
+@HAVE_PSM2_DL_FALSE@@HAVE_PSM2_TRUE@libpsmx2_la_LIBADD = $(psm2_LIBS)
+@HAVE_MXM_TRUE@_mxm_files = prov/mxm/src/mlxm.h \
+@HAVE_MXM_TRUE@	prov/mxm/src/mlxm_init.c \
+@HAVE_MXM_TRUE@	prov/mxm/src/mlxm_domain.c \
+@HAVE_MXM_TRUE@	prov/mxm/src/mlxm_cq.c \
+@HAVE_MXM_TRUE@	prov/mxm/src/mlxm_av.c \
+@HAVE_MXM_TRUE@	prov/mxm/src/mlxm_ep.c \
+@HAVE_MXM_TRUE@	prov/mxm/src/mlxm_cm.c \
+@HAVE_MXM_TRUE@	prov/mxm/src/mlxm_tagged.c \
+@HAVE_MXM_TRUE@	prov/mxm/src/mlxm_mr.c
+
+@HAVE_MXM_DL_TRUE@@HAVE_MXM_TRUE@libmlxm_fi_la_SOURCES = $(_mxm_files) $(common_srcs)
+@HAVE_MXM_DL_TRUE@@HAVE_MXM_TRUE@libmlxm_fi_la_LDFLAGS = -module -avoid-version -shared -export-dynamic $(linkback)
 @HAVE_DIRECT_TRUE@nodist_rdmainclude_HEADERS = \
 @HAVE_DIRECT_TRUE@	$(top_srcdir)/prov/$(PROVIDER_DIRECT)/include/rdma/fi_direct.h \
 @HAVE_DIRECT_TRUE@	$(top_srcdir)/prov/$(PROVIDER_DIRECT)/include/rdma/fi_direct_domain.h \
@@ -1263,7 +1468,15 @@ dummy_man_pages = \
         man/man3/fi_writev.3
 
 man_MANS = $(real_man_pages) $(dummy_man_pages)
-EXTRA_DIST = libfabric.map libfabric.spec.in config/distscript.pl $(man_MANS)
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libfabric.pc
+EXTRA_DIST = \
+        NEWS.md \
+        libfabric.map \
+        libfabric.spec.in \
+        config/distscript.pl \
+        $(man_MANS)
+
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -1317,6 +1530,8 @@ $(srcdir)/config.h.in:  $(am__configure_deps)
 
 distclean-hdr:
 	-rm -f config.h stamp-h1
+libfabric.pc: $(top_builddir)/config.status $(srcdir)/libfabric.pc.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
 libfabric.spec: $(top_builddir)/config.status $(srcdir)/libfabric.spec.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 
@@ -1347,6 +1562,17 @@ uninstall-libLTLIBRARIES:
 clean-libLTLIBRARIES:
 	-test -z "$(lib_LTLIBRARIES)" || rm -f $(lib_LTLIBRARIES)
 	@list='$(lib_LTLIBRARIES)'; \
+	locs=`for p in $$list; do echo $$p; done | \
+	      sed 's|^[^/]*$$|.|; s|/[^/]*$$||; s|$$|/so_locations|' | \
+	      sort -u`; \
+	test -z "$$locs" || { \
+	  echo rm -f $${locs}; \
+	  rm -f $${locs}; \
+	}
+
+clean-noinstLTLIBRARIES:
+	-test -z "$(noinst_LTLIBRARIES)" || rm -f $(noinst_LTLIBRARIES)
+	@list='$(noinst_LTLIBRARIES)'; \
 	locs=`for p in $$list; do echo $$p; done | \
 	      sed 's|^[^/]*$$|.|; s|/[^/]*$$||; s|$$|/so_locations|' | \
 	      sort -u`; \
@@ -1389,6 +1615,39 @@ clean-pkglibLTLIBRARIES:
 	  echo rm -f $${locs}; \
 	  rm -f $${locs}; \
 	}
+prov/mxm/src/$(am__dirstamp):
+	@$(MKDIR_P) prov/mxm/src
+	@: > prov/mxm/src/$(am__dirstamp)
+prov/mxm/src/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) prov/mxm/src/$(DEPDIR)
+	@: > prov/mxm/src/$(DEPDIR)/$(am__dirstamp)
+prov/mxm/src/mlxm_init.lo: prov/mxm/src/$(am__dirstamp) \
+	prov/mxm/src/$(DEPDIR)/$(am__dirstamp)
+prov/mxm/src/mlxm_domain.lo: prov/mxm/src/$(am__dirstamp) \
+	prov/mxm/src/$(DEPDIR)/$(am__dirstamp)
+prov/mxm/src/mlxm_cq.lo: prov/mxm/src/$(am__dirstamp) \
+	prov/mxm/src/$(DEPDIR)/$(am__dirstamp)
+prov/mxm/src/mlxm_av.lo: prov/mxm/src/$(am__dirstamp) \
+	prov/mxm/src/$(DEPDIR)/$(am__dirstamp)
+prov/mxm/src/mlxm_ep.lo: prov/mxm/src/$(am__dirstamp) \
+	prov/mxm/src/$(DEPDIR)/$(am__dirstamp)
+prov/mxm/src/mlxm_cm.lo: prov/mxm/src/$(am__dirstamp) \
+	prov/mxm/src/$(DEPDIR)/$(am__dirstamp)
+prov/mxm/src/mlxm_tagged.lo: prov/mxm/src/$(am__dirstamp) \
+	prov/mxm/src/$(DEPDIR)/$(am__dirstamp)
+prov/mxm/src/mlxm_mr.lo: prov/mxm/src/$(am__dirstamp) \
+	prov/mxm/src/$(DEPDIR)/$(am__dirstamp)
+src/$(am__dirstamp):
+	@$(MKDIR_P) src
+	@: > src/$(am__dirstamp)
+src/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) src/$(DEPDIR)
+	@: > src/$(DEPDIR)/$(am__dirstamp)
+src/common.lo: src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/enosys.lo: src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+
+libmlxm-fi.la: $(libmlxm_fi_la_OBJECTS) $(libmlxm_fi_la_DEPENDENCIES) $(EXTRA_libmlxm_fi_la_DEPENDENCIES) 
+	$(AM_V_CCLD)$(libmlxm_fi_la_LINK) $(am_libmlxm_fi_la_rpath) $(libmlxm_fi_la_OBJECTS) $(libmlxm_fi_la_LIBADD) $(LIBS)
 prov/psm/src/$(am__dirstamp):
 	@$(MKDIR_P) prov/psm/src
 	@: > prov/psm/src/$(am__dirstamp)
@@ -1434,12 +1693,6 @@ prov/psm/src/libpsmx_fi_la-psmx_poll.lo: prov/psm/src/$(am__dirstamp) \
 	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
 prov/psm/src/libpsmx_fi_la-psmx_util.lo: prov/psm/src/$(am__dirstamp) \
 	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
-src/$(am__dirstamp):
-	@$(MKDIR_P) src
-	@: > src/$(am__dirstamp)
-src/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) src/$(DEPDIR)
-	@: > src/$(DEPDIR)/$(am__dirstamp)
 src/libpsmx_fi_la-common.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/libpsmx_fi_la-enosys.lo: src/$(am__dirstamp) \
@@ -1447,6 +1700,154 @@ src/libpsmx_fi_la-enosys.lo: src/$(am__dirstamp) \
 
 libpsmx-fi.la: $(libpsmx_fi_la_OBJECTS) $(libpsmx_fi_la_DEPENDENCIES) $(EXTRA_libpsmx_fi_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libpsmx_fi_la_LINK) $(am_libpsmx_fi_la_rpath) $(libpsmx_fi_la_OBJECTS) $(libpsmx_fi_la_LIBADD) $(LIBS)
+prov/psm/src/libpsmx_la-psmx_init.lo: prov/psm/src/$(am__dirstamp) \
+	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm/src/libpsmx_la-psmx_domain.lo: prov/psm/src/$(am__dirstamp) \
+	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm/src/libpsmx_la-psmx_cq.lo: prov/psm/src/$(am__dirstamp) \
+	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm/src/libpsmx_la-psmx_eq.lo: prov/psm/src/$(am__dirstamp) \
+	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm/src/libpsmx_la-psmx_cntr.lo: prov/psm/src/$(am__dirstamp) \
+	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm/src/libpsmx_la-psmx_av.lo: prov/psm/src/$(am__dirstamp) \
+	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm/src/libpsmx_la-psmx_ep.lo: prov/psm/src/$(am__dirstamp) \
+	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm/src/libpsmx_la-psmx_cm.lo: prov/psm/src/$(am__dirstamp) \
+	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm/src/libpsmx_la-psmx_tagged.lo: prov/psm/src/$(am__dirstamp) \
+	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm/src/libpsmx_la-psmx_msg.lo: prov/psm/src/$(am__dirstamp) \
+	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm/src/libpsmx_la-psmx_msg2.lo: prov/psm/src/$(am__dirstamp) \
+	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm/src/libpsmx_la-psmx_rma.lo: prov/psm/src/$(am__dirstamp) \
+	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm/src/libpsmx_la-psmx_atomic.lo: prov/psm/src/$(am__dirstamp) \
+	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm/src/libpsmx_la-psmx_am.lo: prov/psm/src/$(am__dirstamp) \
+	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm/src/libpsmx_la-psmx_mr.lo: prov/psm/src/$(am__dirstamp) \
+	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm/src/libpsmx_la-psmx_wait.lo: prov/psm/src/$(am__dirstamp) \
+	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm/src/libpsmx_la-psmx_poll.lo: prov/psm/src/$(am__dirstamp) \
+	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm/src/libpsmx_la-psmx_util.lo: prov/psm/src/$(am__dirstamp) \
+	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
+
+libpsmx.la: $(libpsmx_la_OBJECTS) $(libpsmx_la_DEPENDENCIES) $(EXTRA_libpsmx_la_DEPENDENCIES) 
+	$(AM_V_CCLD)$(libpsmx_la_LINK) $(am_libpsmx_la_rpath) $(libpsmx_la_OBJECTS) $(libpsmx_la_LIBADD) $(LIBS)
+prov/psm2/src/$(am__dirstamp):
+	@$(MKDIR_P) prov/psm2/src
+	@: > prov/psm2/src/$(am__dirstamp)
+prov/psm2/src/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) prov/psm2/src/$(DEPDIR)
+	@: > prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_fi_la-psmx_init.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_fi_la-psmx_domain.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_fi_la-psmx_cq.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_fi_la-psmx_eq.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_fi_la-psmx_cntr.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_fi_la-psmx_av.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_fi_la-psmx_ep.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_fi_la-psmx_cm.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_fi_la-psmx_tagged.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_fi_la-psmx_msg.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_fi_la-psmx_msg2.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_fi_la-psmx_rma.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_fi_la-psmx_atomic.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_fi_la-psmx_am.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_fi_la-psmx_mr.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_fi_la-psmx_wait.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_fi_la-psmx_poll.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_fi_la-psmx_util.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+src/libpsmx2_fi_la-common.lo: src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/libpsmx2_fi_la-enosys.lo: src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+
+libpsmx2-fi.la: $(libpsmx2_fi_la_OBJECTS) $(libpsmx2_fi_la_DEPENDENCIES) $(EXTRA_libpsmx2_fi_la_DEPENDENCIES) 
+	$(AM_V_CCLD)$(libpsmx2_fi_la_LINK) $(am_libpsmx2_fi_la_rpath) $(libpsmx2_fi_la_OBJECTS) $(libpsmx2_fi_la_LIBADD) $(LIBS)
+prov/psm2/src/libpsmx2_la-psmx_init.lo: prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_la-psmx_domain.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_la-psmx_cq.lo: prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_la-psmx_eq.lo: prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_la-psmx_cntr.lo: prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_la-psmx_av.lo: prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_la-psmx_ep.lo: prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_la-psmx_cm.lo: prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_la-psmx_tagged.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_la-psmx_msg.lo: prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_la-psmx_msg2.lo: prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_la-psmx_rma.lo: prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_la-psmx_atomic.lo:  \
+	prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_la-psmx_am.lo: prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_la-psmx_mr.lo: prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_la-psmx_wait.lo: prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_la-psmx_poll.lo: prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+prov/psm2/src/libpsmx2_la-psmx_util.lo: prov/psm2/src/$(am__dirstamp) \
+	prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+
+libpsmx2.la: $(libpsmx2_la_OBJECTS) $(libpsmx2_la_DEPENDENCIES) $(EXTRA_libpsmx2_la_DEPENDENCIES) 
+	$(AM_V_CCLD)$(libpsmx2_la_LINK) $(am_libpsmx2_la_rpath) $(libpsmx2_la_OBJECTS) $(libpsmx2_la_LIBADD) $(LIBS)
 prov/sockets/src/$(am__dirstamp):
 	@$(MKDIR_P) prov/sockets/src
 	@: > prov/sockets/src/$(am__dirstamp)
@@ -1497,8 +1898,6 @@ prov/sockets/src/sock_trigger.lo: prov/sockets/src/$(am__dirstamp) \
 	prov/sockets/src/$(DEPDIR)/$(am__dirstamp)
 prov/sockets/src/indexer.lo: prov/sockets/src/$(am__dirstamp) \
 	prov/sockets/src/$(DEPDIR)/$(am__dirstamp)
-src/common.lo: src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
-src/enosys.lo: src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 
 libsockets-fi.la: $(libsockets_fi_la_OBJECTS) $(libsockets_fi_la_DEPENDENCIES) $(EXTRA_libsockets_fi_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libsockets_fi_la_LINK) $(am_libsockets_fi_la_rpath) $(libsockets_fi_la_OBJECTS) $(libsockets_fi_la_LIBADD) $(LIBS)
@@ -1860,60 +2259,30 @@ prov/usnic/src/src_libfabric_la-usdf_timer.lo:  \
 prov/usnic/src/src_libfabric_la-usdf_fake_ibv.lo:  \
 	prov/usnic/src/$(am__dirstamp) \
 	prov/usnic/src/$(DEPDIR)/$(am__dirstamp)
-prov/psm/src/src_libfabric_la-psmx_init.lo:  \
-	prov/psm/src/$(am__dirstamp) \
-	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
-prov/psm/src/src_libfabric_la-psmx_domain.lo:  \
-	prov/psm/src/$(am__dirstamp) \
-	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
-prov/psm/src/src_libfabric_la-psmx_cq.lo:  \
-	prov/psm/src/$(am__dirstamp) \
-	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
-prov/psm/src/src_libfabric_la-psmx_eq.lo:  \
-	prov/psm/src/$(am__dirstamp) \
-	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
-prov/psm/src/src_libfabric_la-psmx_cntr.lo:  \
-	prov/psm/src/$(am__dirstamp) \
-	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
-prov/psm/src/src_libfabric_la-psmx_av.lo:  \
-	prov/psm/src/$(am__dirstamp) \
-	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
-prov/psm/src/src_libfabric_la-psmx_ep.lo:  \
-	prov/psm/src/$(am__dirstamp) \
-	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
-prov/psm/src/src_libfabric_la-psmx_cm.lo:  \
-	prov/psm/src/$(am__dirstamp) \
-	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
-prov/psm/src/src_libfabric_la-psmx_tagged.lo:  \
-	prov/psm/src/$(am__dirstamp) \
-	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
-prov/psm/src/src_libfabric_la-psmx_msg.lo:  \
-	prov/psm/src/$(am__dirstamp) \
-	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
-prov/psm/src/src_libfabric_la-psmx_msg2.lo:  \
-	prov/psm/src/$(am__dirstamp) \
-	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
-prov/psm/src/src_libfabric_la-psmx_rma.lo:  \
-	prov/psm/src/$(am__dirstamp) \
-	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
-prov/psm/src/src_libfabric_la-psmx_atomic.lo:  \
-	prov/psm/src/$(am__dirstamp) \
-	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
-prov/psm/src/src_libfabric_la-psmx_am.lo:  \
-	prov/psm/src/$(am__dirstamp) \
-	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
-prov/psm/src/src_libfabric_la-psmx_mr.lo:  \
-	prov/psm/src/$(am__dirstamp) \
-	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
-prov/psm/src/src_libfabric_la-psmx_wait.lo:  \
-	prov/psm/src/$(am__dirstamp) \
-	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
-prov/psm/src/src_libfabric_la-psmx_poll.lo:  \
-	prov/psm/src/$(am__dirstamp) \
-	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
-prov/psm/src/src_libfabric_la-psmx_util.lo:  \
-	prov/psm/src/$(am__dirstamp) \
-	prov/psm/src/$(DEPDIR)/$(am__dirstamp)
+prov/mxm/src/src_libfabric_la-mlxm_init.lo:  \
+	prov/mxm/src/$(am__dirstamp) \
+	prov/mxm/src/$(DEPDIR)/$(am__dirstamp)
+prov/mxm/src/src_libfabric_la-mlxm_domain.lo:  \
+	prov/mxm/src/$(am__dirstamp) \
+	prov/mxm/src/$(DEPDIR)/$(am__dirstamp)
+prov/mxm/src/src_libfabric_la-mlxm_cq.lo:  \
+	prov/mxm/src/$(am__dirstamp) \
+	prov/mxm/src/$(DEPDIR)/$(am__dirstamp)
+prov/mxm/src/src_libfabric_la-mlxm_av.lo:  \
+	prov/mxm/src/$(am__dirstamp) \
+	prov/mxm/src/$(DEPDIR)/$(am__dirstamp)
+prov/mxm/src/src_libfabric_la-mlxm_ep.lo:  \
+	prov/mxm/src/$(am__dirstamp) \
+	prov/mxm/src/$(DEPDIR)/$(am__dirstamp)
+prov/mxm/src/src_libfabric_la-mlxm_cm.lo:  \
+	prov/mxm/src/$(am__dirstamp) \
+	prov/mxm/src/$(DEPDIR)/$(am__dirstamp)
+prov/mxm/src/src_libfabric_la-mlxm_tagged.lo:  \
+	prov/mxm/src/$(am__dirstamp) \
+	prov/mxm/src/$(DEPDIR)/$(am__dirstamp)
+prov/mxm/src/src_libfabric_la-mlxm_mr.lo:  \
+	prov/mxm/src/$(am__dirstamp) \
+	prov/mxm/src/$(DEPDIR)/$(am__dirstamp)
 
 src/libfabric.la: $(src_libfabric_la_OBJECTS) $(src_libfabric_la_DEPENDENCIES) $(EXTRA_src_libfabric_la_DEPENDENCIES) src/$(am__dirstamp)
 	$(AM_V_CCLD)$(src_libfabric_la_LINK) -rpath $(libdir) $(src_libfabric_la_OBJECTS) $(src_libfabric_la_LIBADD) $(LIBS)
@@ -1981,8 +2350,12 @@ util/fi_info$(EXEEXT): $(util_fi_info_OBJECTS) $(util_fi_info_DEPENDENCIES) $(EX
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f prov/mxm/src/*.$(OBJEXT)
+	-rm -f prov/mxm/src/*.lo
 	-rm -f prov/psm/src/*.$(OBJEXT)
 	-rm -f prov/psm/src/*.lo
+	-rm -f prov/psm2/src/*.$(OBJEXT)
+	-rm -f prov/psm2/src/*.lo
 	-rm -f prov/sockets/src/*.$(OBJEXT)
 	-rm -f prov/sockets/src/*.lo
 	-rm -f prov/usnic/src/*.$(OBJEXT)
@@ -2000,6 +2373,22 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@prov/mxm/src/$(DEPDIR)/mlxm_av.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/mxm/src/$(DEPDIR)/mlxm_cm.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/mxm/src/$(DEPDIR)/mlxm_cq.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/mxm/src/$(DEPDIR)/mlxm_domain.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/mxm/src/$(DEPDIR)/mlxm_ep.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/mxm/src/$(DEPDIR)/mlxm_init.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/mxm/src/$(DEPDIR)/mlxm_mr.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/mxm/src/$(DEPDIR)/mlxm_tagged.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_av.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_cm.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_cq.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_domain.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_ep.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_init.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_mr.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_tagged.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_fi_la-psmx_am.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_fi_la-psmx_atomic.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_fi_la-psmx_av.Plo@am__quote@
@@ -2018,24 +2407,60 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_fi_la-psmx_tagged.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_fi_la-psmx_util.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_fi_la-psmx_wait.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_am.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_atomic.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_av.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_cm.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_cntr.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_cq.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_domain.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_ep.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_eq.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_init.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_mr.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_msg.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_msg2.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_poll.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_rma.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_tagged.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_util.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_wait.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_am.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_atomic.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_av.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_cm.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_cntr.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_cq.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_domain.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_ep.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_eq.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_init.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_mr.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_msg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_msg2.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_poll.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_rma.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_tagged.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_util.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_wait.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_am.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_atomic.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_av.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_cm.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_cntr.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_cq.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_domain.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_ep.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_eq.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_init.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_mr.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_msg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_msg2.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_poll.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_rma.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_tagged.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_util.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_wait.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_am.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_atomic.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_av.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_cm.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_cntr.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_cq.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_domain.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_ep.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_eq.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_init.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_mr.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_msg.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_msg2.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_poll.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_rma.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_tagged.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_util.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_wait.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@prov/sockets/src/$(DEPDIR)/indexer.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@prov/sockets/src/$(DEPDIR)/sock_atomic.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@prov/sockets/src/$(DEPDIR)/sock_av.Plo@am__quote@
@@ -2162,6 +2587,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@prov/verbs/src/$(DEPDIR)/src_libfabric_la-fi_verbs.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/common.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/enosys.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libpsmx2_fi_la-common.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libpsmx2_fi_la-enosys.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libpsmx_fi_la-common.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libpsmx_fi_la-enosys.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/libusnic_fi_la-common.Plo@am__quote@
@@ -2340,6 +2767,398 @@ src/libpsmx_fi_la-enosys.lo: src/enosys.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/enosys.c' object='src/libpsmx_fi_la-enosys.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o src/libpsmx_fi_la-enosys.lo `test -f 'src/enosys.c' || echo '$(srcdir)/'`src/enosys.c
+
+prov/psm/src/libpsmx_la-psmx_init.lo: prov/psm/src/psmx_init.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/libpsmx_la-psmx_init.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_init.Tpo -c -o prov/psm/src/libpsmx_la-psmx_init.lo `test -f 'prov/psm/src/psmx_init.c' || echo '$(srcdir)/'`prov/psm/src/psmx_init.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_init.Tpo prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_init.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_init.c' object='prov/psm/src/libpsmx_la-psmx_init.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/libpsmx_la-psmx_init.lo `test -f 'prov/psm/src/psmx_init.c' || echo '$(srcdir)/'`prov/psm/src/psmx_init.c
+
+prov/psm/src/libpsmx_la-psmx_domain.lo: prov/psm/src/psmx_domain.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/libpsmx_la-psmx_domain.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_domain.Tpo -c -o prov/psm/src/libpsmx_la-psmx_domain.lo `test -f 'prov/psm/src/psmx_domain.c' || echo '$(srcdir)/'`prov/psm/src/psmx_domain.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_domain.Tpo prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_domain.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_domain.c' object='prov/psm/src/libpsmx_la-psmx_domain.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/libpsmx_la-psmx_domain.lo `test -f 'prov/psm/src/psmx_domain.c' || echo '$(srcdir)/'`prov/psm/src/psmx_domain.c
+
+prov/psm/src/libpsmx_la-psmx_cq.lo: prov/psm/src/psmx_cq.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/libpsmx_la-psmx_cq.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_cq.Tpo -c -o prov/psm/src/libpsmx_la-psmx_cq.lo `test -f 'prov/psm/src/psmx_cq.c' || echo '$(srcdir)/'`prov/psm/src/psmx_cq.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_cq.Tpo prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_cq.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_cq.c' object='prov/psm/src/libpsmx_la-psmx_cq.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/libpsmx_la-psmx_cq.lo `test -f 'prov/psm/src/psmx_cq.c' || echo '$(srcdir)/'`prov/psm/src/psmx_cq.c
+
+prov/psm/src/libpsmx_la-psmx_eq.lo: prov/psm/src/psmx_eq.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/libpsmx_la-psmx_eq.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_eq.Tpo -c -o prov/psm/src/libpsmx_la-psmx_eq.lo `test -f 'prov/psm/src/psmx_eq.c' || echo '$(srcdir)/'`prov/psm/src/psmx_eq.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_eq.Tpo prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_eq.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_eq.c' object='prov/psm/src/libpsmx_la-psmx_eq.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/libpsmx_la-psmx_eq.lo `test -f 'prov/psm/src/psmx_eq.c' || echo '$(srcdir)/'`prov/psm/src/psmx_eq.c
+
+prov/psm/src/libpsmx_la-psmx_cntr.lo: prov/psm/src/psmx_cntr.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/libpsmx_la-psmx_cntr.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_cntr.Tpo -c -o prov/psm/src/libpsmx_la-psmx_cntr.lo `test -f 'prov/psm/src/psmx_cntr.c' || echo '$(srcdir)/'`prov/psm/src/psmx_cntr.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_cntr.Tpo prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_cntr.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_cntr.c' object='prov/psm/src/libpsmx_la-psmx_cntr.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/libpsmx_la-psmx_cntr.lo `test -f 'prov/psm/src/psmx_cntr.c' || echo '$(srcdir)/'`prov/psm/src/psmx_cntr.c
+
+prov/psm/src/libpsmx_la-psmx_av.lo: prov/psm/src/psmx_av.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/libpsmx_la-psmx_av.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_av.Tpo -c -o prov/psm/src/libpsmx_la-psmx_av.lo `test -f 'prov/psm/src/psmx_av.c' || echo '$(srcdir)/'`prov/psm/src/psmx_av.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_av.Tpo prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_av.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_av.c' object='prov/psm/src/libpsmx_la-psmx_av.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/libpsmx_la-psmx_av.lo `test -f 'prov/psm/src/psmx_av.c' || echo '$(srcdir)/'`prov/psm/src/psmx_av.c
+
+prov/psm/src/libpsmx_la-psmx_ep.lo: prov/psm/src/psmx_ep.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/libpsmx_la-psmx_ep.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_ep.Tpo -c -o prov/psm/src/libpsmx_la-psmx_ep.lo `test -f 'prov/psm/src/psmx_ep.c' || echo '$(srcdir)/'`prov/psm/src/psmx_ep.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_ep.Tpo prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_ep.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_ep.c' object='prov/psm/src/libpsmx_la-psmx_ep.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/libpsmx_la-psmx_ep.lo `test -f 'prov/psm/src/psmx_ep.c' || echo '$(srcdir)/'`prov/psm/src/psmx_ep.c
+
+prov/psm/src/libpsmx_la-psmx_cm.lo: prov/psm/src/psmx_cm.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/libpsmx_la-psmx_cm.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_cm.Tpo -c -o prov/psm/src/libpsmx_la-psmx_cm.lo `test -f 'prov/psm/src/psmx_cm.c' || echo '$(srcdir)/'`prov/psm/src/psmx_cm.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_cm.Tpo prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_cm.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_cm.c' object='prov/psm/src/libpsmx_la-psmx_cm.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/libpsmx_la-psmx_cm.lo `test -f 'prov/psm/src/psmx_cm.c' || echo '$(srcdir)/'`prov/psm/src/psmx_cm.c
+
+prov/psm/src/libpsmx_la-psmx_tagged.lo: prov/psm/src/psmx_tagged.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/libpsmx_la-psmx_tagged.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_tagged.Tpo -c -o prov/psm/src/libpsmx_la-psmx_tagged.lo `test -f 'prov/psm/src/psmx_tagged.c' || echo '$(srcdir)/'`prov/psm/src/psmx_tagged.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_tagged.Tpo prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_tagged.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_tagged.c' object='prov/psm/src/libpsmx_la-psmx_tagged.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/libpsmx_la-psmx_tagged.lo `test -f 'prov/psm/src/psmx_tagged.c' || echo '$(srcdir)/'`prov/psm/src/psmx_tagged.c
+
+prov/psm/src/libpsmx_la-psmx_msg.lo: prov/psm/src/psmx_msg.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/libpsmx_la-psmx_msg.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_msg.Tpo -c -o prov/psm/src/libpsmx_la-psmx_msg.lo `test -f 'prov/psm/src/psmx_msg.c' || echo '$(srcdir)/'`prov/psm/src/psmx_msg.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_msg.Tpo prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_msg.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_msg.c' object='prov/psm/src/libpsmx_la-psmx_msg.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/libpsmx_la-psmx_msg.lo `test -f 'prov/psm/src/psmx_msg.c' || echo '$(srcdir)/'`prov/psm/src/psmx_msg.c
+
+prov/psm/src/libpsmx_la-psmx_msg2.lo: prov/psm/src/psmx_msg2.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/libpsmx_la-psmx_msg2.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_msg2.Tpo -c -o prov/psm/src/libpsmx_la-psmx_msg2.lo `test -f 'prov/psm/src/psmx_msg2.c' || echo '$(srcdir)/'`prov/psm/src/psmx_msg2.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_msg2.Tpo prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_msg2.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_msg2.c' object='prov/psm/src/libpsmx_la-psmx_msg2.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/libpsmx_la-psmx_msg2.lo `test -f 'prov/psm/src/psmx_msg2.c' || echo '$(srcdir)/'`prov/psm/src/psmx_msg2.c
+
+prov/psm/src/libpsmx_la-psmx_rma.lo: prov/psm/src/psmx_rma.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/libpsmx_la-psmx_rma.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_rma.Tpo -c -o prov/psm/src/libpsmx_la-psmx_rma.lo `test -f 'prov/psm/src/psmx_rma.c' || echo '$(srcdir)/'`prov/psm/src/psmx_rma.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_rma.Tpo prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_rma.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_rma.c' object='prov/psm/src/libpsmx_la-psmx_rma.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/libpsmx_la-psmx_rma.lo `test -f 'prov/psm/src/psmx_rma.c' || echo '$(srcdir)/'`prov/psm/src/psmx_rma.c
+
+prov/psm/src/libpsmx_la-psmx_atomic.lo: prov/psm/src/psmx_atomic.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/libpsmx_la-psmx_atomic.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_atomic.Tpo -c -o prov/psm/src/libpsmx_la-psmx_atomic.lo `test -f 'prov/psm/src/psmx_atomic.c' || echo '$(srcdir)/'`prov/psm/src/psmx_atomic.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_atomic.Tpo prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_atomic.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_atomic.c' object='prov/psm/src/libpsmx_la-psmx_atomic.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/libpsmx_la-psmx_atomic.lo `test -f 'prov/psm/src/psmx_atomic.c' || echo '$(srcdir)/'`prov/psm/src/psmx_atomic.c
+
+prov/psm/src/libpsmx_la-psmx_am.lo: prov/psm/src/psmx_am.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/libpsmx_la-psmx_am.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_am.Tpo -c -o prov/psm/src/libpsmx_la-psmx_am.lo `test -f 'prov/psm/src/psmx_am.c' || echo '$(srcdir)/'`prov/psm/src/psmx_am.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_am.Tpo prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_am.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_am.c' object='prov/psm/src/libpsmx_la-psmx_am.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/libpsmx_la-psmx_am.lo `test -f 'prov/psm/src/psmx_am.c' || echo '$(srcdir)/'`prov/psm/src/psmx_am.c
+
+prov/psm/src/libpsmx_la-psmx_mr.lo: prov/psm/src/psmx_mr.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/libpsmx_la-psmx_mr.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_mr.Tpo -c -o prov/psm/src/libpsmx_la-psmx_mr.lo `test -f 'prov/psm/src/psmx_mr.c' || echo '$(srcdir)/'`prov/psm/src/psmx_mr.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_mr.Tpo prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_mr.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_mr.c' object='prov/psm/src/libpsmx_la-psmx_mr.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/libpsmx_la-psmx_mr.lo `test -f 'prov/psm/src/psmx_mr.c' || echo '$(srcdir)/'`prov/psm/src/psmx_mr.c
+
+prov/psm/src/libpsmx_la-psmx_wait.lo: prov/psm/src/psmx_wait.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/libpsmx_la-psmx_wait.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_wait.Tpo -c -o prov/psm/src/libpsmx_la-psmx_wait.lo `test -f 'prov/psm/src/psmx_wait.c' || echo '$(srcdir)/'`prov/psm/src/psmx_wait.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_wait.Tpo prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_wait.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_wait.c' object='prov/psm/src/libpsmx_la-psmx_wait.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/libpsmx_la-psmx_wait.lo `test -f 'prov/psm/src/psmx_wait.c' || echo '$(srcdir)/'`prov/psm/src/psmx_wait.c
+
+prov/psm/src/libpsmx_la-psmx_poll.lo: prov/psm/src/psmx_poll.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/libpsmx_la-psmx_poll.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_poll.Tpo -c -o prov/psm/src/libpsmx_la-psmx_poll.lo `test -f 'prov/psm/src/psmx_poll.c' || echo '$(srcdir)/'`prov/psm/src/psmx_poll.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_poll.Tpo prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_poll.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_poll.c' object='prov/psm/src/libpsmx_la-psmx_poll.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/libpsmx_la-psmx_poll.lo `test -f 'prov/psm/src/psmx_poll.c' || echo '$(srcdir)/'`prov/psm/src/psmx_poll.c
+
+prov/psm/src/libpsmx_la-psmx_util.lo: prov/psm/src/psmx_util.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/libpsmx_la-psmx_util.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_util.Tpo -c -o prov/psm/src/libpsmx_la-psmx_util.lo `test -f 'prov/psm/src/psmx_util.c' || echo '$(srcdir)/'`prov/psm/src/psmx_util.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_util.Tpo prov/psm/src/$(DEPDIR)/libpsmx_la-psmx_util.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_util.c' object='prov/psm/src/libpsmx_la-psmx_util.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/libpsmx_la-psmx_util.lo `test -f 'prov/psm/src/psmx_util.c' || echo '$(srcdir)/'`prov/psm/src/psmx_util.c
+
+prov/psm2/src/libpsmx2_fi_la-psmx_init.lo: prov/psm2/src/psmx_init.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_fi_la-psmx_init.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_init.Tpo -c -o prov/psm2/src/libpsmx2_fi_la-psmx_init.lo `test -f 'prov/psm2/src/psmx_init.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_init.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_init.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_init.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_init.c' object='prov/psm2/src/libpsmx2_fi_la-psmx_init.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_fi_la-psmx_init.lo `test -f 'prov/psm2/src/psmx_init.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_init.c
+
+prov/psm2/src/libpsmx2_fi_la-psmx_domain.lo: prov/psm2/src/psmx_domain.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_fi_la-psmx_domain.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_domain.Tpo -c -o prov/psm2/src/libpsmx2_fi_la-psmx_domain.lo `test -f 'prov/psm2/src/psmx_domain.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_domain.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_domain.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_domain.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_domain.c' object='prov/psm2/src/libpsmx2_fi_la-psmx_domain.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_fi_la-psmx_domain.lo `test -f 'prov/psm2/src/psmx_domain.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_domain.c
+
+prov/psm2/src/libpsmx2_fi_la-psmx_cq.lo: prov/psm2/src/psmx_cq.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_fi_la-psmx_cq.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_cq.Tpo -c -o prov/psm2/src/libpsmx2_fi_la-psmx_cq.lo `test -f 'prov/psm2/src/psmx_cq.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_cq.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_cq.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_cq.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_cq.c' object='prov/psm2/src/libpsmx2_fi_la-psmx_cq.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_fi_la-psmx_cq.lo `test -f 'prov/psm2/src/psmx_cq.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_cq.c
+
+prov/psm2/src/libpsmx2_fi_la-psmx_eq.lo: prov/psm2/src/psmx_eq.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_fi_la-psmx_eq.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_eq.Tpo -c -o prov/psm2/src/libpsmx2_fi_la-psmx_eq.lo `test -f 'prov/psm2/src/psmx_eq.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_eq.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_eq.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_eq.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_eq.c' object='prov/psm2/src/libpsmx2_fi_la-psmx_eq.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_fi_la-psmx_eq.lo `test -f 'prov/psm2/src/psmx_eq.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_eq.c
+
+prov/psm2/src/libpsmx2_fi_la-psmx_cntr.lo: prov/psm2/src/psmx_cntr.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_fi_la-psmx_cntr.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_cntr.Tpo -c -o prov/psm2/src/libpsmx2_fi_la-psmx_cntr.lo `test -f 'prov/psm2/src/psmx_cntr.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_cntr.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_cntr.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_cntr.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_cntr.c' object='prov/psm2/src/libpsmx2_fi_la-psmx_cntr.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_fi_la-psmx_cntr.lo `test -f 'prov/psm2/src/psmx_cntr.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_cntr.c
+
+prov/psm2/src/libpsmx2_fi_la-psmx_av.lo: prov/psm2/src/psmx_av.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_fi_la-psmx_av.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_av.Tpo -c -o prov/psm2/src/libpsmx2_fi_la-psmx_av.lo `test -f 'prov/psm2/src/psmx_av.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_av.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_av.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_av.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_av.c' object='prov/psm2/src/libpsmx2_fi_la-psmx_av.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_fi_la-psmx_av.lo `test -f 'prov/psm2/src/psmx_av.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_av.c
+
+prov/psm2/src/libpsmx2_fi_la-psmx_ep.lo: prov/psm2/src/psmx_ep.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_fi_la-psmx_ep.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_ep.Tpo -c -o prov/psm2/src/libpsmx2_fi_la-psmx_ep.lo `test -f 'prov/psm2/src/psmx_ep.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_ep.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_ep.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_ep.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_ep.c' object='prov/psm2/src/libpsmx2_fi_la-psmx_ep.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_fi_la-psmx_ep.lo `test -f 'prov/psm2/src/psmx_ep.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_ep.c
+
+prov/psm2/src/libpsmx2_fi_la-psmx_cm.lo: prov/psm2/src/psmx_cm.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_fi_la-psmx_cm.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_cm.Tpo -c -o prov/psm2/src/libpsmx2_fi_la-psmx_cm.lo `test -f 'prov/psm2/src/psmx_cm.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_cm.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_cm.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_cm.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_cm.c' object='prov/psm2/src/libpsmx2_fi_la-psmx_cm.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_fi_la-psmx_cm.lo `test -f 'prov/psm2/src/psmx_cm.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_cm.c
+
+prov/psm2/src/libpsmx2_fi_la-psmx_tagged.lo: prov/psm2/src/psmx_tagged.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_fi_la-psmx_tagged.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_tagged.Tpo -c -o prov/psm2/src/libpsmx2_fi_la-psmx_tagged.lo `test -f 'prov/psm2/src/psmx_tagged.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_tagged.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_tagged.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_tagged.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_tagged.c' object='prov/psm2/src/libpsmx2_fi_la-psmx_tagged.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_fi_la-psmx_tagged.lo `test -f 'prov/psm2/src/psmx_tagged.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_tagged.c
+
+prov/psm2/src/libpsmx2_fi_la-psmx_msg.lo: prov/psm2/src/psmx_msg.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_fi_la-psmx_msg.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_msg.Tpo -c -o prov/psm2/src/libpsmx2_fi_la-psmx_msg.lo `test -f 'prov/psm2/src/psmx_msg.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_msg.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_msg.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_msg.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_msg.c' object='prov/psm2/src/libpsmx2_fi_la-psmx_msg.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_fi_la-psmx_msg.lo `test -f 'prov/psm2/src/psmx_msg.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_msg.c
+
+prov/psm2/src/libpsmx2_fi_la-psmx_msg2.lo: prov/psm2/src/psmx_msg2.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_fi_la-psmx_msg2.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_msg2.Tpo -c -o prov/psm2/src/libpsmx2_fi_la-psmx_msg2.lo `test -f 'prov/psm2/src/psmx_msg2.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_msg2.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_msg2.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_msg2.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_msg2.c' object='prov/psm2/src/libpsmx2_fi_la-psmx_msg2.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_fi_la-psmx_msg2.lo `test -f 'prov/psm2/src/psmx_msg2.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_msg2.c
+
+prov/psm2/src/libpsmx2_fi_la-psmx_rma.lo: prov/psm2/src/psmx_rma.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_fi_la-psmx_rma.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_rma.Tpo -c -o prov/psm2/src/libpsmx2_fi_la-psmx_rma.lo `test -f 'prov/psm2/src/psmx_rma.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_rma.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_rma.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_rma.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_rma.c' object='prov/psm2/src/libpsmx2_fi_la-psmx_rma.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_fi_la-psmx_rma.lo `test -f 'prov/psm2/src/psmx_rma.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_rma.c
+
+prov/psm2/src/libpsmx2_fi_la-psmx_atomic.lo: prov/psm2/src/psmx_atomic.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_fi_la-psmx_atomic.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_atomic.Tpo -c -o prov/psm2/src/libpsmx2_fi_la-psmx_atomic.lo `test -f 'prov/psm2/src/psmx_atomic.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_atomic.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_atomic.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_atomic.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_atomic.c' object='prov/psm2/src/libpsmx2_fi_la-psmx_atomic.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_fi_la-psmx_atomic.lo `test -f 'prov/psm2/src/psmx_atomic.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_atomic.c
+
+prov/psm2/src/libpsmx2_fi_la-psmx_am.lo: prov/psm2/src/psmx_am.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_fi_la-psmx_am.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_am.Tpo -c -o prov/psm2/src/libpsmx2_fi_la-psmx_am.lo `test -f 'prov/psm2/src/psmx_am.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_am.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_am.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_am.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_am.c' object='prov/psm2/src/libpsmx2_fi_la-psmx_am.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_fi_la-psmx_am.lo `test -f 'prov/psm2/src/psmx_am.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_am.c
+
+prov/psm2/src/libpsmx2_fi_la-psmx_mr.lo: prov/psm2/src/psmx_mr.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_fi_la-psmx_mr.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_mr.Tpo -c -o prov/psm2/src/libpsmx2_fi_la-psmx_mr.lo `test -f 'prov/psm2/src/psmx_mr.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_mr.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_mr.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_mr.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_mr.c' object='prov/psm2/src/libpsmx2_fi_la-psmx_mr.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_fi_la-psmx_mr.lo `test -f 'prov/psm2/src/psmx_mr.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_mr.c
+
+prov/psm2/src/libpsmx2_fi_la-psmx_wait.lo: prov/psm2/src/psmx_wait.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_fi_la-psmx_wait.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_wait.Tpo -c -o prov/psm2/src/libpsmx2_fi_la-psmx_wait.lo `test -f 'prov/psm2/src/psmx_wait.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_wait.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_wait.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_wait.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_wait.c' object='prov/psm2/src/libpsmx2_fi_la-psmx_wait.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_fi_la-psmx_wait.lo `test -f 'prov/psm2/src/psmx_wait.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_wait.c
+
+prov/psm2/src/libpsmx2_fi_la-psmx_poll.lo: prov/psm2/src/psmx_poll.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_fi_la-psmx_poll.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_poll.Tpo -c -o prov/psm2/src/libpsmx2_fi_la-psmx_poll.lo `test -f 'prov/psm2/src/psmx_poll.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_poll.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_poll.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_poll.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_poll.c' object='prov/psm2/src/libpsmx2_fi_la-psmx_poll.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_fi_la-psmx_poll.lo `test -f 'prov/psm2/src/psmx_poll.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_poll.c
+
+prov/psm2/src/libpsmx2_fi_la-psmx_util.lo: prov/psm2/src/psmx_util.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_fi_la-psmx_util.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_util.Tpo -c -o prov/psm2/src/libpsmx2_fi_la-psmx_util.lo `test -f 'prov/psm2/src/psmx_util.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_util.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_util.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_fi_la-psmx_util.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_util.c' object='prov/psm2/src/libpsmx2_fi_la-psmx_util.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_fi_la-psmx_util.lo `test -f 'prov/psm2/src/psmx_util.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_util.c
+
+src/libpsmx2_fi_la-common.lo: src/common.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT src/libpsmx2_fi_la-common.lo -MD -MP -MF src/$(DEPDIR)/libpsmx2_fi_la-common.Tpo -c -o src/libpsmx2_fi_la-common.lo `test -f 'src/common.c' || echo '$(srcdir)/'`src/common.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpsmx2_fi_la-common.Tpo src/$(DEPDIR)/libpsmx2_fi_la-common.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/common.c' object='src/libpsmx2_fi_la-common.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o src/libpsmx2_fi_la-common.lo `test -f 'src/common.c' || echo '$(srcdir)/'`src/common.c
+
+src/libpsmx2_fi_la-enosys.lo: src/enosys.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT src/libpsmx2_fi_la-enosys.lo -MD -MP -MF src/$(DEPDIR)/libpsmx2_fi_la-enosys.Tpo -c -o src/libpsmx2_fi_la-enosys.lo `test -f 'src/enosys.c' || echo '$(srcdir)/'`src/enosys.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/libpsmx2_fi_la-enosys.Tpo src/$(DEPDIR)/libpsmx2_fi_la-enosys.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/enosys.c' object='src/libpsmx2_fi_la-enosys.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o src/libpsmx2_fi_la-enosys.lo `test -f 'src/enosys.c' || echo '$(srcdir)/'`src/enosys.c
+
+prov/psm2/src/libpsmx2_la-psmx_init.lo: prov/psm2/src/psmx_init.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_la-psmx_init.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_init.Tpo -c -o prov/psm2/src/libpsmx2_la-psmx_init.lo `test -f 'prov/psm2/src/psmx_init.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_init.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_init.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_init.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_init.c' object='prov/psm2/src/libpsmx2_la-psmx_init.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_la-psmx_init.lo `test -f 'prov/psm2/src/psmx_init.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_init.c
+
+prov/psm2/src/libpsmx2_la-psmx_domain.lo: prov/psm2/src/psmx_domain.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_la-psmx_domain.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_domain.Tpo -c -o prov/psm2/src/libpsmx2_la-psmx_domain.lo `test -f 'prov/psm2/src/psmx_domain.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_domain.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_domain.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_domain.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_domain.c' object='prov/psm2/src/libpsmx2_la-psmx_domain.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_la-psmx_domain.lo `test -f 'prov/psm2/src/psmx_domain.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_domain.c
+
+prov/psm2/src/libpsmx2_la-psmx_cq.lo: prov/psm2/src/psmx_cq.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_la-psmx_cq.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_cq.Tpo -c -o prov/psm2/src/libpsmx2_la-psmx_cq.lo `test -f 'prov/psm2/src/psmx_cq.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_cq.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_cq.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_cq.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_cq.c' object='prov/psm2/src/libpsmx2_la-psmx_cq.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_la-psmx_cq.lo `test -f 'prov/psm2/src/psmx_cq.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_cq.c
+
+prov/psm2/src/libpsmx2_la-psmx_eq.lo: prov/psm2/src/psmx_eq.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_la-psmx_eq.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_eq.Tpo -c -o prov/psm2/src/libpsmx2_la-psmx_eq.lo `test -f 'prov/psm2/src/psmx_eq.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_eq.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_eq.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_eq.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_eq.c' object='prov/psm2/src/libpsmx2_la-psmx_eq.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_la-psmx_eq.lo `test -f 'prov/psm2/src/psmx_eq.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_eq.c
+
+prov/psm2/src/libpsmx2_la-psmx_cntr.lo: prov/psm2/src/psmx_cntr.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_la-psmx_cntr.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_cntr.Tpo -c -o prov/psm2/src/libpsmx2_la-psmx_cntr.lo `test -f 'prov/psm2/src/psmx_cntr.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_cntr.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_cntr.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_cntr.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_cntr.c' object='prov/psm2/src/libpsmx2_la-psmx_cntr.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_la-psmx_cntr.lo `test -f 'prov/psm2/src/psmx_cntr.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_cntr.c
+
+prov/psm2/src/libpsmx2_la-psmx_av.lo: prov/psm2/src/psmx_av.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_la-psmx_av.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_av.Tpo -c -o prov/psm2/src/libpsmx2_la-psmx_av.lo `test -f 'prov/psm2/src/psmx_av.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_av.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_av.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_av.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_av.c' object='prov/psm2/src/libpsmx2_la-psmx_av.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_la-psmx_av.lo `test -f 'prov/psm2/src/psmx_av.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_av.c
+
+prov/psm2/src/libpsmx2_la-psmx_ep.lo: prov/psm2/src/psmx_ep.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_la-psmx_ep.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_ep.Tpo -c -o prov/psm2/src/libpsmx2_la-psmx_ep.lo `test -f 'prov/psm2/src/psmx_ep.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_ep.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_ep.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_ep.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_ep.c' object='prov/psm2/src/libpsmx2_la-psmx_ep.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_la-psmx_ep.lo `test -f 'prov/psm2/src/psmx_ep.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_ep.c
+
+prov/psm2/src/libpsmx2_la-psmx_cm.lo: prov/psm2/src/psmx_cm.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_la-psmx_cm.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_cm.Tpo -c -o prov/psm2/src/libpsmx2_la-psmx_cm.lo `test -f 'prov/psm2/src/psmx_cm.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_cm.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_cm.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_cm.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_cm.c' object='prov/psm2/src/libpsmx2_la-psmx_cm.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_la-psmx_cm.lo `test -f 'prov/psm2/src/psmx_cm.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_cm.c
+
+prov/psm2/src/libpsmx2_la-psmx_tagged.lo: prov/psm2/src/psmx_tagged.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_la-psmx_tagged.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_tagged.Tpo -c -o prov/psm2/src/libpsmx2_la-psmx_tagged.lo `test -f 'prov/psm2/src/psmx_tagged.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_tagged.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_tagged.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_tagged.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_tagged.c' object='prov/psm2/src/libpsmx2_la-psmx_tagged.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_la-psmx_tagged.lo `test -f 'prov/psm2/src/psmx_tagged.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_tagged.c
+
+prov/psm2/src/libpsmx2_la-psmx_msg.lo: prov/psm2/src/psmx_msg.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_la-psmx_msg.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_msg.Tpo -c -o prov/psm2/src/libpsmx2_la-psmx_msg.lo `test -f 'prov/psm2/src/psmx_msg.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_msg.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_msg.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_msg.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_msg.c' object='prov/psm2/src/libpsmx2_la-psmx_msg.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_la-psmx_msg.lo `test -f 'prov/psm2/src/psmx_msg.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_msg.c
+
+prov/psm2/src/libpsmx2_la-psmx_msg2.lo: prov/psm2/src/psmx_msg2.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_la-psmx_msg2.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_msg2.Tpo -c -o prov/psm2/src/libpsmx2_la-psmx_msg2.lo `test -f 'prov/psm2/src/psmx_msg2.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_msg2.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_msg2.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_msg2.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_msg2.c' object='prov/psm2/src/libpsmx2_la-psmx_msg2.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_la-psmx_msg2.lo `test -f 'prov/psm2/src/psmx_msg2.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_msg2.c
+
+prov/psm2/src/libpsmx2_la-psmx_rma.lo: prov/psm2/src/psmx_rma.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_la-psmx_rma.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_rma.Tpo -c -o prov/psm2/src/libpsmx2_la-psmx_rma.lo `test -f 'prov/psm2/src/psmx_rma.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_rma.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_rma.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_rma.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_rma.c' object='prov/psm2/src/libpsmx2_la-psmx_rma.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_la-psmx_rma.lo `test -f 'prov/psm2/src/psmx_rma.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_rma.c
+
+prov/psm2/src/libpsmx2_la-psmx_atomic.lo: prov/psm2/src/psmx_atomic.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_la-psmx_atomic.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_atomic.Tpo -c -o prov/psm2/src/libpsmx2_la-psmx_atomic.lo `test -f 'prov/psm2/src/psmx_atomic.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_atomic.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_atomic.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_atomic.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_atomic.c' object='prov/psm2/src/libpsmx2_la-psmx_atomic.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_la-psmx_atomic.lo `test -f 'prov/psm2/src/psmx_atomic.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_atomic.c
+
+prov/psm2/src/libpsmx2_la-psmx_am.lo: prov/psm2/src/psmx_am.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_la-psmx_am.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_am.Tpo -c -o prov/psm2/src/libpsmx2_la-psmx_am.lo `test -f 'prov/psm2/src/psmx_am.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_am.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_am.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_am.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_am.c' object='prov/psm2/src/libpsmx2_la-psmx_am.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_la-psmx_am.lo `test -f 'prov/psm2/src/psmx_am.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_am.c
+
+prov/psm2/src/libpsmx2_la-psmx_mr.lo: prov/psm2/src/psmx_mr.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_la-psmx_mr.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_mr.Tpo -c -o prov/psm2/src/libpsmx2_la-psmx_mr.lo `test -f 'prov/psm2/src/psmx_mr.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_mr.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_mr.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_mr.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_mr.c' object='prov/psm2/src/libpsmx2_la-psmx_mr.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_la-psmx_mr.lo `test -f 'prov/psm2/src/psmx_mr.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_mr.c
+
+prov/psm2/src/libpsmx2_la-psmx_wait.lo: prov/psm2/src/psmx_wait.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_la-psmx_wait.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_wait.Tpo -c -o prov/psm2/src/libpsmx2_la-psmx_wait.lo `test -f 'prov/psm2/src/psmx_wait.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_wait.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_wait.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_wait.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_wait.c' object='prov/psm2/src/libpsmx2_la-psmx_wait.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_la-psmx_wait.lo `test -f 'prov/psm2/src/psmx_wait.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_wait.c
+
+prov/psm2/src/libpsmx2_la-psmx_poll.lo: prov/psm2/src/psmx_poll.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_la-psmx_poll.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_poll.Tpo -c -o prov/psm2/src/libpsmx2_la-psmx_poll.lo `test -f 'prov/psm2/src/psmx_poll.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_poll.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_poll.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_poll.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_poll.c' object='prov/psm2/src/libpsmx2_la-psmx_poll.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_la-psmx_poll.lo `test -f 'prov/psm2/src/psmx_poll.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_poll.c
+
+prov/psm2/src/libpsmx2_la-psmx_util.lo: prov/psm2/src/psmx_util.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm2/src/libpsmx2_la-psmx_util.lo -MD -MP -MF prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_util.Tpo -c -o prov/psm2/src/libpsmx2_la-psmx_util.lo `test -f 'prov/psm2/src/psmx_util.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_util.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_util.Tpo prov/psm2/src/$(DEPDIR)/libpsmx2_la-psmx_util.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm2/src/psmx_util.c' object='prov/psm2/src/libpsmx2_la-psmx_util.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libpsmx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm2/src/libpsmx2_la-psmx_util.lo `test -f 'prov/psm2/src/psmx_util.c' || echo '$(srcdir)/'`prov/psm2/src/psmx_util.c
 
 prov/usnic/src/usnic_direct/libusnic_fi_la-libnl_utils_common.lo: prov/usnic/src/usnic_direct/libnl_utils_common.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libusnic_fi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/usnic/src/usnic_direct/libusnic_fi_la-libnl_utils_common.lo -MD -MP -MF prov/usnic/src/usnic_direct/$(DEPDIR)/libusnic_fi_la-libnl_utils_common.Tpo -c -o prov/usnic/src/usnic_direct/libusnic_fi_la-libnl_utils_common.lo `test -f 'prov/usnic/src/usnic_direct/libnl_utils_common.c' || echo '$(srcdir)/'`prov/usnic/src/usnic_direct/libnl_utils_common.c
@@ -3132,138 +3951,70 @@ prov/usnic/src/src_libfabric_la-usdf_fake_ibv.lo: prov/usnic/src/usdf_fake_ibv.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/usnic/src/src_libfabric_la-usdf_fake_ibv.lo `test -f 'prov/usnic/src/usdf_fake_ibv.c' || echo '$(srcdir)/'`prov/usnic/src/usdf_fake_ibv.c
 
-prov/psm/src/src_libfabric_la-psmx_init.lo: prov/psm/src/psmx_init.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/src_libfabric_la-psmx_init.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_init.Tpo -c -o prov/psm/src/src_libfabric_la-psmx_init.lo `test -f 'prov/psm/src/psmx_init.c' || echo '$(srcdir)/'`prov/psm/src/psmx_init.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_init.Tpo prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_init.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_init.c' object='prov/psm/src/src_libfabric_la-psmx_init.lo' libtool=yes @AMDEPBACKSLASH@
+prov/mxm/src/src_libfabric_la-mlxm_init.lo: prov/mxm/src/mlxm_init.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/mxm/src/src_libfabric_la-mlxm_init.lo -MD -MP -MF prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_init.Tpo -c -o prov/mxm/src/src_libfabric_la-mlxm_init.lo `test -f 'prov/mxm/src/mlxm_init.c' || echo '$(srcdir)/'`prov/mxm/src/mlxm_init.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_init.Tpo prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_init.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/mxm/src/mlxm_init.c' object='prov/mxm/src/src_libfabric_la-mlxm_init.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/src_libfabric_la-psmx_init.lo `test -f 'prov/psm/src/psmx_init.c' || echo '$(srcdir)/'`prov/psm/src/psmx_init.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/mxm/src/src_libfabric_la-mlxm_init.lo `test -f 'prov/mxm/src/mlxm_init.c' || echo '$(srcdir)/'`prov/mxm/src/mlxm_init.c
 
-prov/psm/src/src_libfabric_la-psmx_domain.lo: prov/psm/src/psmx_domain.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/src_libfabric_la-psmx_domain.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_domain.Tpo -c -o prov/psm/src/src_libfabric_la-psmx_domain.lo `test -f 'prov/psm/src/psmx_domain.c' || echo '$(srcdir)/'`prov/psm/src/psmx_domain.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_domain.Tpo prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_domain.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_domain.c' object='prov/psm/src/src_libfabric_la-psmx_domain.lo' libtool=yes @AMDEPBACKSLASH@
+prov/mxm/src/src_libfabric_la-mlxm_domain.lo: prov/mxm/src/mlxm_domain.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/mxm/src/src_libfabric_la-mlxm_domain.lo -MD -MP -MF prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_domain.Tpo -c -o prov/mxm/src/src_libfabric_la-mlxm_domain.lo `test -f 'prov/mxm/src/mlxm_domain.c' || echo '$(srcdir)/'`prov/mxm/src/mlxm_domain.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_domain.Tpo prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_domain.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/mxm/src/mlxm_domain.c' object='prov/mxm/src/src_libfabric_la-mlxm_domain.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/src_libfabric_la-psmx_domain.lo `test -f 'prov/psm/src/psmx_domain.c' || echo '$(srcdir)/'`prov/psm/src/psmx_domain.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/mxm/src/src_libfabric_la-mlxm_domain.lo `test -f 'prov/mxm/src/mlxm_domain.c' || echo '$(srcdir)/'`prov/mxm/src/mlxm_domain.c
 
-prov/psm/src/src_libfabric_la-psmx_cq.lo: prov/psm/src/psmx_cq.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/src_libfabric_la-psmx_cq.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_cq.Tpo -c -o prov/psm/src/src_libfabric_la-psmx_cq.lo `test -f 'prov/psm/src/psmx_cq.c' || echo '$(srcdir)/'`prov/psm/src/psmx_cq.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_cq.Tpo prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_cq.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_cq.c' object='prov/psm/src/src_libfabric_la-psmx_cq.lo' libtool=yes @AMDEPBACKSLASH@
+prov/mxm/src/src_libfabric_la-mlxm_cq.lo: prov/mxm/src/mlxm_cq.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/mxm/src/src_libfabric_la-mlxm_cq.lo -MD -MP -MF prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_cq.Tpo -c -o prov/mxm/src/src_libfabric_la-mlxm_cq.lo `test -f 'prov/mxm/src/mlxm_cq.c' || echo '$(srcdir)/'`prov/mxm/src/mlxm_cq.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_cq.Tpo prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_cq.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/mxm/src/mlxm_cq.c' object='prov/mxm/src/src_libfabric_la-mlxm_cq.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/src_libfabric_la-psmx_cq.lo `test -f 'prov/psm/src/psmx_cq.c' || echo '$(srcdir)/'`prov/psm/src/psmx_cq.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/mxm/src/src_libfabric_la-mlxm_cq.lo `test -f 'prov/mxm/src/mlxm_cq.c' || echo '$(srcdir)/'`prov/mxm/src/mlxm_cq.c
 
-prov/psm/src/src_libfabric_la-psmx_eq.lo: prov/psm/src/psmx_eq.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/src_libfabric_la-psmx_eq.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_eq.Tpo -c -o prov/psm/src/src_libfabric_la-psmx_eq.lo `test -f 'prov/psm/src/psmx_eq.c' || echo '$(srcdir)/'`prov/psm/src/psmx_eq.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_eq.Tpo prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_eq.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_eq.c' object='prov/psm/src/src_libfabric_la-psmx_eq.lo' libtool=yes @AMDEPBACKSLASH@
+prov/mxm/src/src_libfabric_la-mlxm_av.lo: prov/mxm/src/mlxm_av.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/mxm/src/src_libfabric_la-mlxm_av.lo -MD -MP -MF prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_av.Tpo -c -o prov/mxm/src/src_libfabric_la-mlxm_av.lo `test -f 'prov/mxm/src/mlxm_av.c' || echo '$(srcdir)/'`prov/mxm/src/mlxm_av.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_av.Tpo prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_av.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/mxm/src/mlxm_av.c' object='prov/mxm/src/src_libfabric_la-mlxm_av.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/src_libfabric_la-psmx_eq.lo `test -f 'prov/psm/src/psmx_eq.c' || echo '$(srcdir)/'`prov/psm/src/psmx_eq.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/mxm/src/src_libfabric_la-mlxm_av.lo `test -f 'prov/mxm/src/mlxm_av.c' || echo '$(srcdir)/'`prov/mxm/src/mlxm_av.c
 
-prov/psm/src/src_libfabric_la-psmx_cntr.lo: prov/psm/src/psmx_cntr.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/src_libfabric_la-psmx_cntr.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_cntr.Tpo -c -o prov/psm/src/src_libfabric_la-psmx_cntr.lo `test -f 'prov/psm/src/psmx_cntr.c' || echo '$(srcdir)/'`prov/psm/src/psmx_cntr.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_cntr.Tpo prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_cntr.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_cntr.c' object='prov/psm/src/src_libfabric_la-psmx_cntr.lo' libtool=yes @AMDEPBACKSLASH@
+prov/mxm/src/src_libfabric_la-mlxm_ep.lo: prov/mxm/src/mlxm_ep.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/mxm/src/src_libfabric_la-mlxm_ep.lo -MD -MP -MF prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_ep.Tpo -c -o prov/mxm/src/src_libfabric_la-mlxm_ep.lo `test -f 'prov/mxm/src/mlxm_ep.c' || echo '$(srcdir)/'`prov/mxm/src/mlxm_ep.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_ep.Tpo prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_ep.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/mxm/src/mlxm_ep.c' object='prov/mxm/src/src_libfabric_la-mlxm_ep.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/src_libfabric_la-psmx_cntr.lo `test -f 'prov/psm/src/psmx_cntr.c' || echo '$(srcdir)/'`prov/psm/src/psmx_cntr.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/mxm/src/src_libfabric_la-mlxm_ep.lo `test -f 'prov/mxm/src/mlxm_ep.c' || echo '$(srcdir)/'`prov/mxm/src/mlxm_ep.c
 
-prov/psm/src/src_libfabric_la-psmx_av.lo: prov/psm/src/psmx_av.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/src_libfabric_la-psmx_av.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_av.Tpo -c -o prov/psm/src/src_libfabric_la-psmx_av.lo `test -f 'prov/psm/src/psmx_av.c' || echo '$(srcdir)/'`prov/psm/src/psmx_av.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_av.Tpo prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_av.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_av.c' object='prov/psm/src/src_libfabric_la-psmx_av.lo' libtool=yes @AMDEPBACKSLASH@
+prov/mxm/src/src_libfabric_la-mlxm_cm.lo: prov/mxm/src/mlxm_cm.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/mxm/src/src_libfabric_la-mlxm_cm.lo -MD -MP -MF prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_cm.Tpo -c -o prov/mxm/src/src_libfabric_la-mlxm_cm.lo `test -f 'prov/mxm/src/mlxm_cm.c' || echo '$(srcdir)/'`prov/mxm/src/mlxm_cm.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_cm.Tpo prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_cm.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/mxm/src/mlxm_cm.c' object='prov/mxm/src/src_libfabric_la-mlxm_cm.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/src_libfabric_la-psmx_av.lo `test -f 'prov/psm/src/psmx_av.c' || echo '$(srcdir)/'`prov/psm/src/psmx_av.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/mxm/src/src_libfabric_la-mlxm_cm.lo `test -f 'prov/mxm/src/mlxm_cm.c' || echo '$(srcdir)/'`prov/mxm/src/mlxm_cm.c
 
-prov/psm/src/src_libfabric_la-psmx_ep.lo: prov/psm/src/psmx_ep.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/src_libfabric_la-psmx_ep.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_ep.Tpo -c -o prov/psm/src/src_libfabric_la-psmx_ep.lo `test -f 'prov/psm/src/psmx_ep.c' || echo '$(srcdir)/'`prov/psm/src/psmx_ep.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_ep.Tpo prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_ep.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_ep.c' object='prov/psm/src/src_libfabric_la-psmx_ep.lo' libtool=yes @AMDEPBACKSLASH@
+prov/mxm/src/src_libfabric_la-mlxm_tagged.lo: prov/mxm/src/mlxm_tagged.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/mxm/src/src_libfabric_la-mlxm_tagged.lo -MD -MP -MF prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_tagged.Tpo -c -o prov/mxm/src/src_libfabric_la-mlxm_tagged.lo `test -f 'prov/mxm/src/mlxm_tagged.c' || echo '$(srcdir)/'`prov/mxm/src/mlxm_tagged.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_tagged.Tpo prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_tagged.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/mxm/src/mlxm_tagged.c' object='prov/mxm/src/src_libfabric_la-mlxm_tagged.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/src_libfabric_la-psmx_ep.lo `test -f 'prov/psm/src/psmx_ep.c' || echo '$(srcdir)/'`prov/psm/src/psmx_ep.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/mxm/src/src_libfabric_la-mlxm_tagged.lo `test -f 'prov/mxm/src/mlxm_tagged.c' || echo '$(srcdir)/'`prov/mxm/src/mlxm_tagged.c
 
-prov/psm/src/src_libfabric_la-psmx_cm.lo: prov/psm/src/psmx_cm.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/src_libfabric_la-psmx_cm.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_cm.Tpo -c -o prov/psm/src/src_libfabric_la-psmx_cm.lo `test -f 'prov/psm/src/psmx_cm.c' || echo '$(srcdir)/'`prov/psm/src/psmx_cm.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_cm.Tpo prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_cm.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_cm.c' object='prov/psm/src/src_libfabric_la-psmx_cm.lo' libtool=yes @AMDEPBACKSLASH@
+prov/mxm/src/src_libfabric_la-mlxm_mr.lo: prov/mxm/src/mlxm_mr.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/mxm/src/src_libfabric_la-mlxm_mr.lo -MD -MP -MF prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_mr.Tpo -c -o prov/mxm/src/src_libfabric_la-mlxm_mr.lo `test -f 'prov/mxm/src/mlxm_mr.c' || echo '$(srcdir)/'`prov/mxm/src/mlxm_mr.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_mr.Tpo prov/mxm/src/$(DEPDIR)/src_libfabric_la-mlxm_mr.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/mxm/src/mlxm_mr.c' object='prov/mxm/src/src_libfabric_la-mlxm_mr.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/src_libfabric_la-psmx_cm.lo `test -f 'prov/psm/src/psmx_cm.c' || echo '$(srcdir)/'`prov/psm/src/psmx_cm.c
-
-prov/psm/src/src_libfabric_la-psmx_tagged.lo: prov/psm/src/psmx_tagged.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/src_libfabric_la-psmx_tagged.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_tagged.Tpo -c -o prov/psm/src/src_libfabric_la-psmx_tagged.lo `test -f 'prov/psm/src/psmx_tagged.c' || echo '$(srcdir)/'`prov/psm/src/psmx_tagged.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_tagged.Tpo prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_tagged.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_tagged.c' object='prov/psm/src/src_libfabric_la-psmx_tagged.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/src_libfabric_la-psmx_tagged.lo `test -f 'prov/psm/src/psmx_tagged.c' || echo '$(srcdir)/'`prov/psm/src/psmx_tagged.c
-
-prov/psm/src/src_libfabric_la-psmx_msg.lo: prov/psm/src/psmx_msg.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/src_libfabric_la-psmx_msg.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_msg.Tpo -c -o prov/psm/src/src_libfabric_la-psmx_msg.lo `test -f 'prov/psm/src/psmx_msg.c' || echo '$(srcdir)/'`prov/psm/src/psmx_msg.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_msg.Tpo prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_msg.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_msg.c' object='prov/psm/src/src_libfabric_la-psmx_msg.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/src_libfabric_la-psmx_msg.lo `test -f 'prov/psm/src/psmx_msg.c' || echo '$(srcdir)/'`prov/psm/src/psmx_msg.c
-
-prov/psm/src/src_libfabric_la-psmx_msg2.lo: prov/psm/src/psmx_msg2.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/src_libfabric_la-psmx_msg2.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_msg2.Tpo -c -o prov/psm/src/src_libfabric_la-psmx_msg2.lo `test -f 'prov/psm/src/psmx_msg2.c' || echo '$(srcdir)/'`prov/psm/src/psmx_msg2.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_msg2.Tpo prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_msg2.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_msg2.c' object='prov/psm/src/src_libfabric_la-psmx_msg2.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/src_libfabric_la-psmx_msg2.lo `test -f 'prov/psm/src/psmx_msg2.c' || echo '$(srcdir)/'`prov/psm/src/psmx_msg2.c
-
-prov/psm/src/src_libfabric_la-psmx_rma.lo: prov/psm/src/psmx_rma.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/src_libfabric_la-psmx_rma.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_rma.Tpo -c -o prov/psm/src/src_libfabric_la-psmx_rma.lo `test -f 'prov/psm/src/psmx_rma.c' || echo '$(srcdir)/'`prov/psm/src/psmx_rma.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_rma.Tpo prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_rma.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_rma.c' object='prov/psm/src/src_libfabric_la-psmx_rma.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/src_libfabric_la-psmx_rma.lo `test -f 'prov/psm/src/psmx_rma.c' || echo '$(srcdir)/'`prov/psm/src/psmx_rma.c
-
-prov/psm/src/src_libfabric_la-psmx_atomic.lo: prov/psm/src/psmx_atomic.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/src_libfabric_la-psmx_atomic.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_atomic.Tpo -c -o prov/psm/src/src_libfabric_la-psmx_atomic.lo `test -f 'prov/psm/src/psmx_atomic.c' || echo '$(srcdir)/'`prov/psm/src/psmx_atomic.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_atomic.Tpo prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_atomic.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_atomic.c' object='prov/psm/src/src_libfabric_la-psmx_atomic.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/src_libfabric_la-psmx_atomic.lo `test -f 'prov/psm/src/psmx_atomic.c' || echo '$(srcdir)/'`prov/psm/src/psmx_atomic.c
-
-prov/psm/src/src_libfabric_la-psmx_am.lo: prov/psm/src/psmx_am.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/src_libfabric_la-psmx_am.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_am.Tpo -c -o prov/psm/src/src_libfabric_la-psmx_am.lo `test -f 'prov/psm/src/psmx_am.c' || echo '$(srcdir)/'`prov/psm/src/psmx_am.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_am.Tpo prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_am.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_am.c' object='prov/psm/src/src_libfabric_la-psmx_am.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/src_libfabric_la-psmx_am.lo `test -f 'prov/psm/src/psmx_am.c' || echo '$(srcdir)/'`prov/psm/src/psmx_am.c
-
-prov/psm/src/src_libfabric_la-psmx_mr.lo: prov/psm/src/psmx_mr.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/src_libfabric_la-psmx_mr.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_mr.Tpo -c -o prov/psm/src/src_libfabric_la-psmx_mr.lo `test -f 'prov/psm/src/psmx_mr.c' || echo '$(srcdir)/'`prov/psm/src/psmx_mr.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_mr.Tpo prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_mr.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_mr.c' object='prov/psm/src/src_libfabric_la-psmx_mr.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/src_libfabric_la-psmx_mr.lo `test -f 'prov/psm/src/psmx_mr.c' || echo '$(srcdir)/'`prov/psm/src/psmx_mr.c
-
-prov/psm/src/src_libfabric_la-psmx_wait.lo: prov/psm/src/psmx_wait.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/src_libfabric_la-psmx_wait.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_wait.Tpo -c -o prov/psm/src/src_libfabric_la-psmx_wait.lo `test -f 'prov/psm/src/psmx_wait.c' || echo '$(srcdir)/'`prov/psm/src/psmx_wait.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_wait.Tpo prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_wait.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_wait.c' object='prov/psm/src/src_libfabric_la-psmx_wait.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/src_libfabric_la-psmx_wait.lo `test -f 'prov/psm/src/psmx_wait.c' || echo '$(srcdir)/'`prov/psm/src/psmx_wait.c
-
-prov/psm/src/src_libfabric_la-psmx_poll.lo: prov/psm/src/psmx_poll.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/src_libfabric_la-psmx_poll.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_poll.Tpo -c -o prov/psm/src/src_libfabric_la-psmx_poll.lo `test -f 'prov/psm/src/psmx_poll.c' || echo '$(srcdir)/'`prov/psm/src/psmx_poll.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_poll.Tpo prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_poll.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_poll.c' object='prov/psm/src/src_libfabric_la-psmx_poll.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/src_libfabric_la-psmx_poll.lo `test -f 'prov/psm/src/psmx_poll.c' || echo '$(srcdir)/'`prov/psm/src/psmx_poll.c
-
-prov/psm/src/src_libfabric_la-psmx_util.lo: prov/psm/src/psmx_util.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT prov/psm/src/src_libfabric_la-psmx_util.lo -MD -MP -MF prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_util.Tpo -c -o prov/psm/src/src_libfabric_la-psmx_util.lo `test -f 'prov/psm/src/psmx_util.c' || echo '$(srcdir)/'`prov/psm/src/psmx_util.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_util.Tpo prov/psm/src/$(DEPDIR)/src_libfabric_la-psmx_util.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='prov/psm/src/psmx_util.c' object='prov/psm/src/src_libfabric_la-psmx_util.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/psm/src/src_libfabric_la-psmx_util.lo `test -f 'prov/psm/src/psmx_util.c' || echo '$(srcdir)/'`prov/psm/src/psmx_util.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(src_libfabric_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o prov/mxm/src/src_libfabric_la-mlxm_mr.lo `test -f 'prov/mxm/src/mlxm_mr.c' || echo '$(srcdir)/'`prov/mxm/src/mlxm_mr.c
 
 mostlyclean-libtool:
 	-rm -f *.lo
 
 clean-libtool:
 	-rm -rf .libs _libs
+	-rm -rf prov/mxm/src/.libs prov/mxm/src/_libs
 	-rm -rf prov/psm/src/.libs prov/psm/src/_libs
+	-rm -rf prov/psm2/src/.libs prov/psm2/src/_libs
 	-rm -rf prov/sockets/src/.libs prov/sockets/src/_libs
 	-rm -rf prov/usnic/src/.libs prov/usnic/src/_libs
 	-rm -rf prov/usnic/src/usnic_direct/.libs prov/usnic/src/usnic_direct/_libs
@@ -3360,6 +4111,27 @@ uninstall-man7:
 	} | sed -e 's,.*/,,;h;s,.*\.,,;s,^[^7][0-9a-z]*$$,7,;x' \
 	      -e 's,\.[0-9a-z]*$$,,;$(transform);G;s,\n,.,'`; \
 	dir='$(DESTDIR)$(man7dir)'; $(am__uninstall_files_from_dir)
+install-pkgconfigDATA: $(pkgconfig_DATA)
+	@$(NORMAL_INSTALL)
+	@list='$(pkgconfig_DATA)'; test -n "$(pkgconfigdir)" || list=; \
+	if test -n "$$list"; then \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(pkgconfigdir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(pkgconfigdir)" || exit 1; \
+	fi; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(pkgconfigdir)'"; \
+	  $(INSTALL_DATA) $$files "$(DESTDIR)$(pkgconfigdir)" || exit $$?; \
+	done
+
+uninstall-pkgconfigDATA:
+	@$(NORMAL_UNINSTALL)
+	@list='$(pkgconfig_DATA)'; test -n "$(pkgconfigdir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	dir='$(DESTDIR)$(pkgconfigdir)'; $(am__uninstall_files_from_dir)
 install-nodist_rdmaincludeHEADERS: $(nodist_rdmainclude_HEADERS)
 	@$(NORMAL_INSTALL)
 	@list='$(nodist_rdmainclude_HEADERS)'; test -n "$(rdmaincludedir)" || list=; \
@@ -3629,12 +4401,12 @@ distcleancheck: distclean
 	       exit 1; } >&2
 check-am: all-am
 check: check-am
-all-am: Makefile $(LTLIBRARIES) $(PROGRAMS) $(MANS) $(HEADERS) \
+all-am: Makefile $(LTLIBRARIES) $(PROGRAMS) $(MANS) $(DATA) $(HEADERS) \
 		config.h
 install-binPROGRAMS: install-libLTLIBRARIES
 
 installdirs:
-	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pkglibdir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man3dir)" "$(DESTDIR)$(man7dir)" "$(DESTDIR)$(rdmaincludedir)" "$(DESTDIR)$(rdmaincludedir)"; do \
+	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pkglibdir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(man3dir)" "$(DESTDIR)$(man7dir)" "$(DESTDIR)$(pkgconfigdir)" "$(DESTDIR)$(rdmaincludedir)" "$(DESTDIR)$(rdmaincludedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -3663,8 +4435,12 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-rm -f prov/mxm/src/$(DEPDIR)/$(am__dirstamp)
+	-rm -f prov/mxm/src/$(am__dirstamp)
 	-rm -f prov/psm/src/$(DEPDIR)/$(am__dirstamp)
 	-rm -f prov/psm/src/$(am__dirstamp)
+	-rm -f prov/psm2/src/$(DEPDIR)/$(am__dirstamp)
+	-rm -f prov/psm2/src/$(am__dirstamp)
 	-rm -f prov/sockets/src/$(DEPDIR)/$(am__dirstamp)
 	-rm -f prov/sockets/src/$(am__dirstamp)
 	-rm -f prov/usnic/src/$(DEPDIR)/$(am__dirstamp)
@@ -3686,11 +4462,12 @@ maintainer-clean-generic:
 clean: clean-am
 
 clean-am: clean-binPROGRAMS clean-generic clean-libLTLIBRARIES \
-	clean-libtool clean-pkglibLTLIBRARIES mostlyclean-am
+	clean-libtool clean-noinstLTLIBRARIES clean-pkglibLTLIBRARIES \
+	mostlyclean-am
 
 distclean: distclean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -rf prov/psm/src/$(DEPDIR) prov/sockets/src/$(DEPDIR) prov/usnic/src/$(DEPDIR) prov/usnic/src/usnic_direct/$(DEPDIR) prov/verbs/src/$(DEPDIR) src/$(DEPDIR) src/osx/$(DEPDIR) util/$(DEPDIR)
+	-rm -rf prov/mxm/src/$(DEPDIR) prov/psm/src/$(DEPDIR) prov/psm2/src/$(DEPDIR) prov/sockets/src/$(DEPDIR) prov/usnic/src/$(DEPDIR) prov/usnic/src/usnic_direct/$(DEPDIR) prov/verbs/src/$(DEPDIR) src/$(DEPDIR) src/osx/$(DEPDIR) util/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-hdr distclean-libtool distclean-tags
@@ -3708,7 +4485,7 @@ info: info-am
 info-am:
 
 install-data-am: install-man install-nodist_rdmaincludeHEADERS \
-	install-rdmaincludeHEADERS
+	install-pkgconfigDATA install-rdmaincludeHEADERS
 
 install-dvi: install-dvi-am
 
@@ -3740,7 +4517,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -rf prov/psm/src/$(DEPDIR) prov/sockets/src/$(DEPDIR) prov/usnic/src/$(DEPDIR) prov/usnic/src/usnic_direct/$(DEPDIR) prov/verbs/src/$(DEPDIR) src/$(DEPDIR) src/osx/$(DEPDIR) util/$(DEPDIR)
+	-rm -rf prov/mxm/src/$(DEPDIR) prov/psm/src/$(DEPDIR) prov/psm2/src/$(DEPDIR) prov/sockets/src/$(DEPDIR) prov/usnic/src/$(DEPDIR) prov/usnic/src/usnic_direct/$(DEPDIR) prov/verbs/src/$(DEPDIR) src/$(DEPDIR) src/osx/$(DEPDIR) util/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
@@ -3759,7 +4536,8 @@ ps-am:
 
 uninstall-am: uninstall-binPROGRAMS uninstall-libLTLIBRARIES \
 	uninstall-man uninstall-nodist_rdmaincludeHEADERS \
-	uninstall-pkglibLTLIBRARIES uninstall-rdmaincludeHEADERS
+	uninstall-pkgconfigDATA uninstall-pkglibLTLIBRARIES \
+	uninstall-rdmaincludeHEADERS
 
 uninstall-man: uninstall-man3 uninstall-man7
 
@@ -3767,18 +4545,19 @@ uninstall-man: uninstall-man3 uninstall-man7
 
 .PHONY: CTAGS GTAGS TAGS all all-am am--refresh check check-am clean \
 	clean-binPROGRAMS clean-cscope clean-generic \
-	clean-libLTLIBRARIES clean-libtool clean-pkglibLTLIBRARIES \
-	cscope cscopelist-am ctags ctags-am dist dist-all dist-bzip2 \
-	dist-gzip dist-hook dist-lzip dist-shar dist-tarZ dist-xz \
-	dist-zip distcheck distclean distclean-compile \
-	distclean-generic distclean-hdr distclean-libtool \
-	distclean-tags distcleancheck distdir distuninstallcheck dvi \
-	dvi-am html html-am info info-am install install-am \
-	install-binPROGRAMS install-data install-data-am install-dvi \
-	install-dvi-am install-exec install-exec-am install-html \
-	install-html-am install-info install-info-am \
-	install-libLTLIBRARIES install-man install-man3 install-man7 \
-	install-nodist_rdmaincludeHEADERS install-pdf install-pdf-am \
+	clean-libLTLIBRARIES clean-libtool clean-noinstLTLIBRARIES \
+	clean-pkglibLTLIBRARIES cscope cscopelist-am ctags ctags-am \
+	dist dist-all dist-bzip2 dist-gzip dist-hook dist-lzip \
+	dist-shar dist-tarZ dist-xz dist-zip distcheck distclean \
+	distclean-compile distclean-generic distclean-hdr \
+	distclean-libtool distclean-tags distcleancheck distdir \
+	distuninstallcheck dvi dvi-am html html-am info info-am \
+	install install-am install-binPROGRAMS install-data \
+	install-data-am install-dvi install-dvi-am install-exec \
+	install-exec-am install-html install-html-am install-info \
+	install-info-am install-libLTLIBRARIES install-man \
+	install-man3 install-man7 install-nodist_rdmaincludeHEADERS \
+	install-pdf install-pdf-am install-pkgconfigDATA \
 	install-pkglibLTLIBRARIES install-ps install-ps-am \
 	install-rdmaincludeHEADERS install-strip installcheck \
 	installcheck-am installdirs maintainer-clean \
@@ -3787,7 +4566,8 @@ uninstall-man: uninstall-man3 uninstall-man7
 	tags tags-am uninstall uninstall-am uninstall-binPROGRAMS \
 	uninstall-libLTLIBRARIES uninstall-man uninstall-man3 \
 	uninstall-man7 uninstall-nodist_rdmaincludeHEADERS \
-	uninstall-pkglibLTLIBRARIES uninstall-rdmaincludeHEADERS
+	uninstall-pkgconfigDATA uninstall-pkglibLTLIBRARIES \
+	uninstall-rdmaincludeHEADERS
 
 .PRECIOUS: Makefile
 
@@ -3801,6 +4581,12 @@ nroff:
 dist-hook: libfabric.spec
 	cp libfabric.spec $(distdir)
 	"$(top_srcdir)/config/distscript.pl" "$(distdir)" "$(PACKAGE_VERSION)"
+
+test:
+	./util/fi_info
+
+rpm: dist
+	rpmbuild -ta libfabric-*.tar.bz2
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

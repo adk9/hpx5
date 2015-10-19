@@ -181,6 +181,10 @@ option "hpx-photon-btethresh" - "[ugni] set size in bytes for when BTE is used o
 typestr="integer"
 int optional
 
+option "hpx-photon-fiprov" - "[libfabric] provider to use (sockets, psm, etc.)"
+typestr="provider"
+string optional
+
 option "hpx-photon-ledgersize" - "set number of ledger entries"
 typestr="integer"
 int optional

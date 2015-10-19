@@ -382,8 +382,8 @@ Canceling an operation causes the fabric provider to search for the
 operation and, if it is still pending, complete it as having been
 canceled.  If multiple outstanding operations match the context
 parameter, only one will be canceled.  In this case, the operation
-which is canceled is provider specific.  The cancel operation will
-complete within a bounded period of time.
+which is canceled is provider specific.  The cancel operation is
+asynchronous, but will complete within a bounded period of time.
 
 ## fi_alias
 
@@ -940,10 +940,12 @@ the _Transmit Context Attribute_ section.
 
 ## total_buffered_recv
 
-Defines the total available space allocated by the provider to
-buffer messages that are received for which there is no matching
-receive operation.  If set to 0, any messages that arrive before a
-receive buffer has been posted are lost.
+Defines the total available space allocated by the provider to buffer messages
+that are received for which there is no matching receive operation.  If set to
+0, and the domain does not support FI_RM_ENABLED, any messages that arrive
+before a receive buffer has been posted are lost. When the domain supports
+FI_RM_ENABLED, the actual amount of buffering provided may exceed the value
+specified in total_buffered_recv.
 
 ## size
 
@@ -1173,7 +1175,8 @@ increment the error counter and generate a completion event.
 # RETURN VALUES
 
 Returns 0 on success.  On error, a negative value corresponding to
-fabric errno is returned.
+fabric errno is returned.  For fi_cancel, a return value of 0
+indicates that the cancel request was submitted for processing.
 
 Fabric errno values are defined in `rdma/fi_errno.h`.
 

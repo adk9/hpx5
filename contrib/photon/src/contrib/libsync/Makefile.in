@@ -93,12 +93,27 @@ target_triplet = @target@
 subdir = src/contrib/libsync
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/acx_configure_dir.m4 \
+	$(top_srcdir)/config/ax_compiler_vendor.m4 \
+	$(top_srcdir)/config/ax_gcc_builtin.m4 \
+	$(top_srcdir)/config/ax_pthread.m4 \
 	$(top_srcdir)/config/libtool.m4 \
 	$(top_srcdir)/config/ltoptions.m4 \
 	$(top_srcdir)/config/ltsugar.m4 \
 	$(top_srcdir)/config/ltversion.m4 \
 	$(top_srcdir)/config/lt~obsolete.m4 \
-	$(top_srcdir)/config/photon_contrib_libfabric.m4 \
+	$(top_srcdir)/config/photon_aarch64_get_cachelinesize.m4 \
+	$(top_srcdir)/config/photon_check_cmpxchg16b.m4 \
+	$(top_srcdir)/config/photon_config_compiler.m4 \
+	$(top_srcdir)/config/photon_config_host.m4 \
+	$(top_srcdir)/config/photon_config_libfabric.m4 \
+	$(top_srcdir)/config/photon_config_mpi.m4 \
+	$(top_srcdir)/config/photon_config_pmi.m4 \
+	$(top_srcdir)/config/photon_config_ugni.m4 \
+	$(top_srcdir)/config/photon_config_verbs.m4 \
+	$(top_srcdir)/config/photon_do_ac_config_files.m4 \
+	$(top_srcdir)/config/photon_do_am_conditionals.m4 \
+	$(top_srcdir)/config/photon_merge_shared_static.m4 \
+	$(top_srcdir)/config/photon_pe_env.m4 \
 	$(top_srcdir)/config/photon_with_pkg.m4 \
 	$(top_srcdir)/config/pkg.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -113,15 +128,20 @@ libsync_la_DEPENDENCIES = arch/libarch.la
 am__libsync_la_SOURCES_DIST = locks.c sr_barrier.c two_lock_queue.c \
 	chase_lev_ws_deque.c backoff.c lockable_ptr.c spscq.c \
 	clh_lock.c mcs_lock.c ms_queue.c
-@HAVE_CMPXCHG16B_TRUE@am__objects_1 = ms_queue.lo
-am_libsync_la_OBJECTS = locks.lo sr_barrier.lo two_lock_queue.lo \
-	chase_lev_ws_deque.lo backoff.lo lockable_ptr.lo spscq.lo \
-	clh_lock.lo mcs_lock.lo $(am__objects_1)
+@HAVE_CMPXCHG16B_TRUE@am__objects_1 = libsync_la-ms_queue.lo
+am_libsync_la_OBJECTS = libsync_la-locks.lo libsync_la-sr_barrier.lo \
+	libsync_la-two_lock_queue.lo libsync_la-chase_lev_ws_deque.lo \
+	libsync_la-backoff.lo libsync_la-lockable_ptr.lo \
+	libsync_la-spscq.lo libsync_la-clh_lock.lo \
+	libsync_la-mcs_lock.lo $(am__objects_1)
 libsync_la_OBJECTS = $(am_libsync_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
+libsync_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(libsync_la_CFLAGS) \
+	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -270,9 +290,17 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LIBFABRIC_CARGS = @LIBFABRIC_CARGS@
 LIBFABRIC_CFLAGS = @LIBFABRIC_CFLAGS@
 LIBFABRIC_LIBS = @LIBFABRIC_LIBS@
 LIBOBJS = @LIBOBJS@
+LIBPHOTON_CCASFLAGS = @LIBPHOTON_CCASFLAGS@
+LIBPHOTON_CFLAGS = @LIBPHOTON_CFLAGS@
+LIBPHOTON_CPPFLAGS = @LIBPHOTON_CPPFLAGS@
+LIBPHOTON_CXXFLAGS = @LIBPHOTON_CXXFLAGS@
+LIBPHOTON_LDFLAGS = @LIBPHOTON_LDFLAGS@
+LIBPHOTON_LIBADD = @LIBPHOTON_LIBADD@
+LIBPHOTON_LIBS = @LIBPHOTON_LIBS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
@@ -284,7 +312,6 @@ MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 MPI_CFLAGS = @MPI_CFLAGS@
 MPI_LIBS = @MPI_LIBS@
-MPI_PKG = @MPI_PKG@
 NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
@@ -299,34 +326,35 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
-PHOTON_BUILDDIR = @PHOTON_BUILDDIR@
-PHOTON_LIBFABRIC_CARGS = @PHOTON_LIBFABRIC_CARGS@
-PHOTON_LIBFABRIC_CFLAGS = @PHOTON_LIBFABRIC_CFLAGS@
-PHOTON_LIBFABRIC_CPPFLAGS = @PHOTON_LIBFABRIC_CPPFLAGS@
-PHOTON_LIBFABRIC_DEPS = @PHOTON_LIBFABRIC_DEPS@
-PHOTON_LIBFABRIC_LIBS = @PHOTON_LIBFABRIC_LIBS@
-PHOTON_PC_LIBS = @PHOTON_PC_LIBS@
-PHOTON_PC_LIBS_PRIVATE = @PHOTON_PC_LIBS_PRIVATE@
-PHOTON_SRCDIR = @PHOTON_SRCDIR@
+PE_ENV = @PE_ENV@
+PHOTON_APPS_CFLAGS = @PHOTON_APPS_CFLAGS@
+PHOTON_APPS_CPPFLAGS = @PHOTON_APPS_CPPFLAGS@
+PHOTON_APPS_DEPS = @PHOTON_APPS_DEPS@
+PHOTON_APPS_LDADD = @PHOTON_APPS_LDADD@
+PHOTON_APPS_LDFLAGS = @PHOTON_APPS_LDFLAGS@
+PHOTON_PC_CFLAGS = @PHOTON_PC_CFLAGS@
+PHOTON_PC_PRIVATE_LIBS = @PHOTON_PC_PRIVATE_LIBS@
+PHOTON_PC_PRIVATE_PKGS = @PHOTON_PC_PRIVATE_PKGS@
+PHOTON_PC_PUBLIC_LIBS = @PHOTON_PC_PUBLIC_LIBS@
+PHOTON_PC_REQUIRES_PKGS = @PHOTON_PC_REQUIRES_PKGS@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 PMI_CFLAGS = @PMI_CFLAGS@
 PMI_LIBS = @PMI_LIBS@
-PMI_PKG = @PMI_PKG@
+PTHREAD_CC = @PTHREAD_CC@
+PTHREAD_CFLAGS = @PTHREAD_CFLAGS@
+PTHREAD_LIBS = @PTHREAD_LIBS@
 RANLIB = @RANLIB@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
-THREAD_LIBS = @THREAD_LIBS@
 UGNI_CFLAGS = @UGNI_CFLAGS@
 UGNI_LIBS = @UGNI_LIBS@
-UGNI_PKG = @UGNI_PKG@
+VERBS_CFLAGS = @VERBS_CFLAGS@
 VERBS_LIBS = @VERBS_LIBS@
 VERSION = @VERSION@
-XSP_CFLAGS = @XSP_CFLAGS@
-XSP_LIBS = @XSP_LIBS@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -340,6 +368,7 @@ am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
+ax_pthread_config = @ax_pthread_config@
 bindir = @bindir@
 build = @build@
 build_alias = @build_alias@
@@ -384,11 +413,10 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-AM_CFLAGS = @CFLAGS@ -I@PHOTON_SRCDIR@/src/contrib \
-	-I@PHOTON_SRCDIR@/src/contrib/libsync/include \
-	-fvisibility=hidden
 SUBDIRS = arch
 noinst_LTLIBRARIES = libsync.la
+libsync_la_CPPFLAGS = $(LIBPHOTON_CPPFLAGS)
+libsync_la_CFLAGS = $(LIBPHOTON_CFLAGS) -fvisibility=hidden
 libsync_la_SOURCES = locks.c sr_barrier.c two_lock_queue.c \
 	chase_lev_ws_deque.c backoff.c lockable_ptr.c spscq.c \
 	clh_lock.c mcs_lock.c $(am__append_1)
@@ -439,7 +467,7 @@ clean-noinstLTLIBRARIES:
 	}
 
 libsync.la: $(libsync_la_OBJECTS) $(libsync_la_DEPENDENCIES) $(EXTRA_libsync_la_DEPENDENCIES) 
-	$(AM_V_CCLD)$(LINK)  $(libsync_la_OBJECTS) $(libsync_la_LIBADD) $(LIBS)
+	$(AM_V_CCLD)$(libsync_la_LINK)  $(libsync_la_OBJECTS) $(libsync_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -447,16 +475,16 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/backoff.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/chase_lev_ws_deque.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/clh_lock.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lockable_ptr.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/locks.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mcs_lock.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ms_queue.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spscq.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sr_barrier.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/two_lock_queue.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsync_la-backoff.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsync_la-chase_lev_ws_deque.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsync_la-clh_lock.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsync_la-lockable_ptr.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsync_la-locks.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsync_la-mcs_lock.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsync_la-ms_queue.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsync_la-spscq.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsync_la-sr_barrier.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libsync_la-two_lock_queue.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -481,6 +509,76 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
+
+libsync_la-locks.lo: locks.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -MT libsync_la-locks.lo -MD -MP -MF $(DEPDIR)/libsync_la-locks.Tpo -c -o libsync_la-locks.lo `test -f 'locks.c' || echo '$(srcdir)/'`locks.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsync_la-locks.Tpo $(DEPDIR)/libsync_la-locks.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='locks.c' object='libsync_la-locks.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -c -o libsync_la-locks.lo `test -f 'locks.c' || echo '$(srcdir)/'`locks.c
+
+libsync_la-sr_barrier.lo: sr_barrier.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -MT libsync_la-sr_barrier.lo -MD -MP -MF $(DEPDIR)/libsync_la-sr_barrier.Tpo -c -o libsync_la-sr_barrier.lo `test -f 'sr_barrier.c' || echo '$(srcdir)/'`sr_barrier.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsync_la-sr_barrier.Tpo $(DEPDIR)/libsync_la-sr_barrier.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sr_barrier.c' object='libsync_la-sr_barrier.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -c -o libsync_la-sr_barrier.lo `test -f 'sr_barrier.c' || echo '$(srcdir)/'`sr_barrier.c
+
+libsync_la-two_lock_queue.lo: two_lock_queue.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -MT libsync_la-two_lock_queue.lo -MD -MP -MF $(DEPDIR)/libsync_la-two_lock_queue.Tpo -c -o libsync_la-two_lock_queue.lo `test -f 'two_lock_queue.c' || echo '$(srcdir)/'`two_lock_queue.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsync_la-two_lock_queue.Tpo $(DEPDIR)/libsync_la-two_lock_queue.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='two_lock_queue.c' object='libsync_la-two_lock_queue.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -c -o libsync_la-two_lock_queue.lo `test -f 'two_lock_queue.c' || echo '$(srcdir)/'`two_lock_queue.c
+
+libsync_la-chase_lev_ws_deque.lo: chase_lev_ws_deque.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -MT libsync_la-chase_lev_ws_deque.lo -MD -MP -MF $(DEPDIR)/libsync_la-chase_lev_ws_deque.Tpo -c -o libsync_la-chase_lev_ws_deque.lo `test -f 'chase_lev_ws_deque.c' || echo '$(srcdir)/'`chase_lev_ws_deque.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsync_la-chase_lev_ws_deque.Tpo $(DEPDIR)/libsync_la-chase_lev_ws_deque.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='chase_lev_ws_deque.c' object='libsync_la-chase_lev_ws_deque.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -c -o libsync_la-chase_lev_ws_deque.lo `test -f 'chase_lev_ws_deque.c' || echo '$(srcdir)/'`chase_lev_ws_deque.c
+
+libsync_la-backoff.lo: backoff.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -MT libsync_la-backoff.lo -MD -MP -MF $(DEPDIR)/libsync_la-backoff.Tpo -c -o libsync_la-backoff.lo `test -f 'backoff.c' || echo '$(srcdir)/'`backoff.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsync_la-backoff.Tpo $(DEPDIR)/libsync_la-backoff.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='backoff.c' object='libsync_la-backoff.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -c -o libsync_la-backoff.lo `test -f 'backoff.c' || echo '$(srcdir)/'`backoff.c
+
+libsync_la-lockable_ptr.lo: lockable_ptr.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -MT libsync_la-lockable_ptr.lo -MD -MP -MF $(DEPDIR)/libsync_la-lockable_ptr.Tpo -c -o libsync_la-lockable_ptr.lo `test -f 'lockable_ptr.c' || echo '$(srcdir)/'`lockable_ptr.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsync_la-lockable_ptr.Tpo $(DEPDIR)/libsync_la-lockable_ptr.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='lockable_ptr.c' object='libsync_la-lockable_ptr.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -c -o libsync_la-lockable_ptr.lo `test -f 'lockable_ptr.c' || echo '$(srcdir)/'`lockable_ptr.c
+
+libsync_la-spscq.lo: spscq.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -MT libsync_la-spscq.lo -MD -MP -MF $(DEPDIR)/libsync_la-spscq.Tpo -c -o libsync_la-spscq.lo `test -f 'spscq.c' || echo '$(srcdir)/'`spscq.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsync_la-spscq.Tpo $(DEPDIR)/libsync_la-spscq.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='spscq.c' object='libsync_la-spscq.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -c -o libsync_la-spscq.lo `test -f 'spscq.c' || echo '$(srcdir)/'`spscq.c
+
+libsync_la-clh_lock.lo: clh_lock.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -MT libsync_la-clh_lock.lo -MD -MP -MF $(DEPDIR)/libsync_la-clh_lock.Tpo -c -o libsync_la-clh_lock.lo `test -f 'clh_lock.c' || echo '$(srcdir)/'`clh_lock.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsync_la-clh_lock.Tpo $(DEPDIR)/libsync_la-clh_lock.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='clh_lock.c' object='libsync_la-clh_lock.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -c -o libsync_la-clh_lock.lo `test -f 'clh_lock.c' || echo '$(srcdir)/'`clh_lock.c
+
+libsync_la-mcs_lock.lo: mcs_lock.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -MT libsync_la-mcs_lock.lo -MD -MP -MF $(DEPDIR)/libsync_la-mcs_lock.Tpo -c -o libsync_la-mcs_lock.lo `test -f 'mcs_lock.c' || echo '$(srcdir)/'`mcs_lock.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsync_la-mcs_lock.Tpo $(DEPDIR)/libsync_la-mcs_lock.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='mcs_lock.c' object='libsync_la-mcs_lock.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -c -o libsync_la-mcs_lock.lo `test -f 'mcs_lock.c' || echo '$(srcdir)/'`mcs_lock.c
+
+libsync_la-ms_queue.lo: ms_queue.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -MT libsync_la-ms_queue.lo -MD -MP -MF $(DEPDIR)/libsync_la-ms_queue.Tpo -c -o libsync_la-ms_queue.lo `test -f 'ms_queue.c' || echo '$(srcdir)/'`ms_queue.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libsync_la-ms_queue.Tpo $(DEPDIR)/libsync_la-ms_queue.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='ms_queue.c' object='libsync_la-ms_queue.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsync_la_CPPFLAGS) $(CPPFLAGS) $(libsync_la_CFLAGS) $(CFLAGS) -c -o libsync_la-ms_queue.lo `test -f 'ms_queue.c' || echo '$(srcdir)/'`ms_queue.c
 
 mostlyclean-libtool:
 	-rm -f *.lo

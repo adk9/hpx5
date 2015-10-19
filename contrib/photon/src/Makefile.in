@@ -89,49 +89,38 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-@HAVE_VERBS_TRUE@am__append_1 = -I@PHOTON_SRCDIR@/src/verbs
-@HAVE_VERBS_TRUE@am__append_2 = @VERBS_LIBS@
-@HAVE_VERBS_TRUE@am__append_3 = verbs/verbs.c                          \
-@HAVE_VERBS_TRUE@                    verbs/verbs_util.c                         \
-@HAVE_VERBS_TRUE@                    verbs/verbs_connect.c                      \
-@HAVE_VERBS_TRUE@                    verbs/verbs_buffer.c                       \
-@HAVE_VERBS_TRUE@                    verbs/verbs_ud.c
-
-@HAVE_UGNI_TRUE@am__append_4 = -I@PHOTON_SRCDIR@/src/ugni @UGNI_CFLAGS@
-@HAVE_UGNI_TRUE@am__append_5 = @UGNI_LIBS@
-@HAVE_UGNI_TRUE@am__append_6 = ugni/photon_ugni.c                     \
-@HAVE_UGNI_TRUE@                    ugni/photon_ugni_connect.c                 \
-@HAVE_UGNI_TRUE@                    ugni/photon_ugni_buffer.c                  \
-@HAVE_UGNI_TRUE@                    ugni/utility_functions.c
-
-
-#noinst_bindir = @PHOTON_BUILDDIR@/test
-#noinst_bin_PROGRAMS = ugni_test
-#ugni_test_CFLAGS = ${AM_CFLAGS} @UGNI_CFLAGS@ @MPI_FLAGS@
-#ugni_test_LDFLAGS = @UGNI_LIBS@ @MPI_LIBS@
-#ugni_test_SOURCES = ugni/utility_functions.c
-@HAVE_LIBFABRIC_TRUE@am__append_7 = -I@PHOTON_SRCDIR@/src/fi @PHOTON_LIBFABRIC_CPPFLAGS@
-@HAVE_LIBFABRIC_TRUE@am__append_8 = fi/photon_fi.c                         \
-@HAVE_LIBFABRIC_TRUE@	        fi/photon_fi_connect.c                         \
-@HAVE_LIBFABRIC_TRUE@	        fi/photon_fi_buffer.c
-
-@HAVE_LIBFABRIC_TRUE@am__append_9 = @PHOTON_BUILDDIR@/src/contrib/libfabric/src/libfabric.la
-@HAVE_MPI_TRUE@am__append_10 = @MPI_CFLAGS@
-@HAVE_MPI_TRUE@am__append_11 = @MPI_LIBS@
-@HAVE_PMI_TRUE@am__append_12 = @PMI_CFLAGS@
-@HAVE_PMI_TRUE@am__append_13 = @PMI_LIBS@
-@HAVE_XSP_TRUE@am__append_14 = @XSP_CFLAGS@
-@HAVE_XSP_TRUE@am__append_15 = @XSP_LIBS@
-@HAVE_XSP_TRUE@am__append_16 = forwarder/photon_xsp_forwarder.c
+@HAVE_VERBS_TRUE@am__append_1 = verbs
+@HAVE_VERBS_TRUE@am__append_2 = verbs
+@HAVE_UGNI_TRUE@am__append_3 = ugni
+@HAVE_UGNI_TRUE@am__append_4 = ugni
+@HAVE_LIBFABRIC_TRUE@am__append_5 = fi
+@HAVE_LIBFABRIC_TRUE@am__append_6 = fi
+@BUILD_FORWARDER_TRUE@@HAVE_XSP_TRUE@am__append_7 = forwarder
+@BUILD_FORWARDER_TRUE@@HAVE_XSP_TRUE@am__append_8 = forwarder
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/acx_configure_dir.m4 \
+	$(top_srcdir)/config/ax_compiler_vendor.m4 \
+	$(top_srcdir)/config/ax_gcc_builtin.m4 \
+	$(top_srcdir)/config/ax_pthread.m4 \
 	$(top_srcdir)/config/libtool.m4 \
 	$(top_srcdir)/config/ltoptions.m4 \
 	$(top_srcdir)/config/ltsugar.m4 \
 	$(top_srcdir)/config/ltversion.m4 \
 	$(top_srcdir)/config/lt~obsolete.m4 \
-	$(top_srcdir)/config/photon_contrib_libfabric.m4 \
+	$(top_srcdir)/config/photon_aarch64_get_cachelinesize.m4 \
+	$(top_srcdir)/config/photon_check_cmpxchg16b.m4 \
+	$(top_srcdir)/config/photon_config_compiler.m4 \
+	$(top_srcdir)/config/photon_config_host.m4 \
+	$(top_srcdir)/config/photon_config_libfabric.m4 \
+	$(top_srcdir)/config/photon_config_mpi.m4 \
+	$(top_srcdir)/config/photon_config_pmi.m4 \
+	$(top_srcdir)/config/photon_config_ugni.m4 \
+	$(top_srcdir)/config/photon_config_verbs.m4 \
+	$(top_srcdir)/config/photon_do_ac_config_files.m4 \
+	$(top_srcdir)/config/photon_do_am_conditionals.m4 \
+	$(top_srcdir)/config/photon_merge_shared_static.m4 \
+	$(top_srcdir)/config/photon_pe_env.m4 \
 	$(top_srcdir)/config/photon_with_pkg.m4 \
 	$(top_srcdir)/config/pkg.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -170,52 +159,32 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(libdir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
-libphoton_la_DEPENDENCIES = @PHOTON_BUILDDIR@/src/util/libutil.la \
-	@PHOTON_BUILDDIR@/src/contrib/bit_array/libbit_array.la \
-	@PHOTON_BUILDDIR@/src/contrib/libsync/libsync.la \
-	$(am__append_9)
-am__libphoton_la_SOURCES_DIST = libphoton/libphoton.c \
-	libphoton/photon_request.c libphoton/photon_event.c \
-	libphoton/photon_pwc.c libphoton/photon_backend.c \
-	libphoton/photon_exchange.c libphoton/photon_buffer.c \
-	libphoton/photon_msgbuffer.c libphoton/photon_buffertable.c \
-	libphoton/photon_rdma_ledger.c \
-	libphoton/photon_rdma_INFO_ledger.c \
-	libphoton/photon_rdma_EAGER_buf.c verbs/verbs.c \
-	verbs/verbs_util.c verbs/verbs_connect.c verbs/verbs_buffer.c \
-	verbs/verbs_ud.c ugni/photon_ugni.c ugni/photon_ugni_connect.c \
-	ugni/photon_ugni_buffer.c ugni/utility_functions.c \
-	fi/photon_fi.c fi/photon_fi_connect.c fi/photon_fi_buffer.c \
-	forwarder/photon_xsp_forwarder.c
+am__DEPENDENCIES_1 =
+libphoton_la_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(top_builddir)/src/util/libutil.la \
+	$(top_builddir)/src/contrib/bit_array/libbit_array.la \
+	$(top_builddir)/src/contrib/libsync/libsync.la
 am__dirstamp = $(am__leading_dot)dirstamp
-@HAVE_VERBS_TRUE@am__objects_1 = verbs/verbs.lo verbs/verbs_util.lo \
-@HAVE_VERBS_TRUE@	verbs/verbs_connect.lo verbs/verbs_buffer.lo \
-@HAVE_VERBS_TRUE@	verbs/verbs_ud.lo
-@HAVE_UGNI_TRUE@am__objects_2 = ugni/photon_ugni.lo \
-@HAVE_UGNI_TRUE@	ugni/photon_ugni_connect.lo \
-@HAVE_UGNI_TRUE@	ugni/photon_ugni_buffer.lo \
-@HAVE_UGNI_TRUE@	ugni/utility_functions.lo
-@HAVE_LIBFABRIC_TRUE@am__objects_3 = fi/photon_fi.lo \
-@HAVE_LIBFABRIC_TRUE@	fi/photon_fi_connect.lo \
-@HAVE_LIBFABRIC_TRUE@	fi/photon_fi_buffer.lo
-@HAVE_XSP_TRUE@am__objects_4 = forwarder/photon_xsp_forwarder.lo
-am_libphoton_la_OBJECTS = libphoton/libphoton.lo \
-	libphoton/photon_request.lo libphoton/photon_event.lo \
-	libphoton/photon_pwc.lo libphoton/photon_backend.lo \
-	libphoton/photon_exchange.lo libphoton/photon_buffer.lo \
-	libphoton/photon_msgbuffer.lo libphoton/photon_buffertable.lo \
-	libphoton/photon_rdma_ledger.lo \
-	libphoton/photon_rdma_INFO_ledger.lo \
-	libphoton/photon_rdma_EAGER_buf.lo $(am__objects_1) \
-	$(am__objects_2) $(am__objects_3) $(am__objects_4)
+am_libphoton_la_OBJECTS = libphoton/libphoton_la-libphoton.lo \
+	libphoton/libphoton_la-photon_request.lo \
+	libphoton/libphoton_la-photon_event.lo \
+	libphoton/libphoton_la-photon_pwc.lo \
+	libphoton/libphoton_la-photon_backend.lo \
+	libphoton/libphoton_la-photon_exchange.lo \
+	libphoton/libphoton_la-photon_buffer.lo \
+	libphoton/libphoton_la-photon_msgbuffer.lo \
+	libphoton/libphoton_la-photon_buffertable.lo \
+	libphoton/libphoton_la-photon_rdma_ledger.lo \
+	libphoton/libphoton_la-photon_rdma_INFO_ledger.lo \
+	libphoton/libphoton_la-photon_rdma_EAGER_buf.lo
 libphoton_la_OBJECTS = $(am_libphoton_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
 libphoton_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(libphoton_la_LDFLAGS) $(LDFLAGS) -o $@
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(libphoton_la_CFLAGS) \
+	$(CFLAGS) $(libphoton_la_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -251,7 +220,7 @@ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(libphoton_la_SOURCES)
-DIST_SOURCES = $(am__libphoton_la_SOURCES_DIST)
+DIST_SOURCES = $(libphoton_la_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -363,9 +332,17 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LIBFABRIC_CARGS = @LIBFABRIC_CARGS@
 LIBFABRIC_CFLAGS = @LIBFABRIC_CFLAGS@
 LIBFABRIC_LIBS = @LIBFABRIC_LIBS@
 LIBOBJS = @LIBOBJS@
+LIBPHOTON_CCASFLAGS = @LIBPHOTON_CCASFLAGS@
+LIBPHOTON_CFLAGS = @LIBPHOTON_CFLAGS@
+LIBPHOTON_CPPFLAGS = @LIBPHOTON_CPPFLAGS@
+LIBPHOTON_CXXFLAGS = @LIBPHOTON_CXXFLAGS@
+LIBPHOTON_LDFLAGS = @LIBPHOTON_LDFLAGS@
+LIBPHOTON_LIBADD = @LIBPHOTON_LIBADD@
+LIBPHOTON_LIBS = @LIBPHOTON_LIBS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
 LIPO = @LIPO@
@@ -377,7 +354,6 @@ MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 MPI_CFLAGS = @MPI_CFLAGS@
 MPI_LIBS = @MPI_LIBS@
-MPI_PKG = @MPI_PKG@
 NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
@@ -392,34 +368,35 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
-PHOTON_BUILDDIR = @PHOTON_BUILDDIR@
-PHOTON_LIBFABRIC_CARGS = @PHOTON_LIBFABRIC_CARGS@
-PHOTON_LIBFABRIC_CFLAGS = @PHOTON_LIBFABRIC_CFLAGS@
-PHOTON_LIBFABRIC_CPPFLAGS = @PHOTON_LIBFABRIC_CPPFLAGS@
-PHOTON_LIBFABRIC_DEPS = @PHOTON_LIBFABRIC_DEPS@
-PHOTON_LIBFABRIC_LIBS = @PHOTON_LIBFABRIC_LIBS@
-PHOTON_PC_LIBS = @PHOTON_PC_LIBS@
-PHOTON_PC_LIBS_PRIVATE = @PHOTON_PC_LIBS_PRIVATE@
-PHOTON_SRCDIR = @PHOTON_SRCDIR@
+PE_ENV = @PE_ENV@
+PHOTON_APPS_CFLAGS = @PHOTON_APPS_CFLAGS@
+PHOTON_APPS_CPPFLAGS = @PHOTON_APPS_CPPFLAGS@
+PHOTON_APPS_DEPS = @PHOTON_APPS_DEPS@
+PHOTON_APPS_LDADD = @PHOTON_APPS_LDADD@
+PHOTON_APPS_LDFLAGS = @PHOTON_APPS_LDFLAGS@
+PHOTON_PC_CFLAGS = @PHOTON_PC_CFLAGS@
+PHOTON_PC_PRIVATE_LIBS = @PHOTON_PC_PRIVATE_LIBS@
+PHOTON_PC_PRIVATE_PKGS = @PHOTON_PC_PRIVATE_PKGS@
+PHOTON_PC_PUBLIC_LIBS = @PHOTON_PC_PUBLIC_LIBS@
+PHOTON_PC_REQUIRES_PKGS = @PHOTON_PC_REQUIRES_PKGS@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 PMI_CFLAGS = @PMI_CFLAGS@
 PMI_LIBS = @PMI_LIBS@
-PMI_PKG = @PMI_PKG@
+PTHREAD_CC = @PTHREAD_CC@
+PTHREAD_CFLAGS = @PTHREAD_CFLAGS@
+PTHREAD_LIBS = @PTHREAD_LIBS@
 RANLIB = @RANLIB@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
-THREAD_LIBS = @THREAD_LIBS@
 UGNI_CFLAGS = @UGNI_CFLAGS@
 UGNI_LIBS = @UGNI_LIBS@
-UGNI_PKG = @UGNI_PKG@
+VERBS_CFLAGS = @VERBS_CFLAGS@
 VERBS_LIBS = @VERBS_LIBS@
 VERSION = @VERSION@
-XSP_CFLAGS = @XSP_CFLAGS@
-XSP_LIBS = @XSP_LIBS@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -433,6 +410,7 @@ am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
+ax_pthread_config = @ax_pthread_config@
 bindir = @bindir@
 build = @build@
 build_alias = @build_alias@
@@ -477,32 +455,39 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-AM_CFLAGS = @CFLAGS@ -I@PHOTON_SRCDIR@/include \
-	-I@PHOTON_SRCDIR@/src/util -I@PHOTON_SRCDIR@/src/libphoton \
-	-I@PHOTON_SRCDIR@/src/forwarder -I@PHOTON_SRCDIR@/src/contrib \
-	-I@PHOTON_SRCDIR@/src/contrib/libsync/include $(am__append_1) \
-	$(am__append_4) $(am__append_7) $(am__append_10) \
-	$(am__append_12) $(am__append_14)
-#-DPHOTON_MULTITHREADED
-SUBDIRS = util contrib
-DIST_SUBDIRS = util contrib
+SUBDIRS = util contrib $(am__append_1) $(am__append_3) $(am__append_5) \
+	$(am__append_7)
+DIST_SUBDIRS = util contrib $(am__append_2) $(am__append_4) \
+	$(am__append_6) $(am__append_8)
 lib_LTLIBRARIES = libphoton.la
-libphoton_la_SOURCES = libphoton/libphoton.c \
-	libphoton/photon_request.c libphoton/photon_event.c \
-	libphoton/photon_pwc.c libphoton/photon_backend.c \
-	libphoton/photon_exchange.c libphoton/photon_buffer.c \
-	libphoton/photon_msgbuffer.c libphoton/photon_buffertable.c \
-	libphoton/photon_rdma_ledger.c \
-	libphoton/photon_rdma_INFO_ledger.c \
-	libphoton/photon_rdma_EAGER_buf.c $(am__append_3) \
-	$(am__append_6) $(am__append_8) $(am__append_16)
-libphoton_ladir = @PHOTON_SRCDIR@/src/libphoton
-libphoton_la_LDFLAGS = @THREAD_LIBS@ $(am__append_2) $(am__append_5) \
-	$(am__append_11) $(am__append_13) $(am__append_15)
-libphoton_la_LIBADD = @PHOTON_BUILDDIR@/src/util/libutil.la \
-	@PHOTON_BUILDDIR@/src/contrib/bit_array/libbit_array.la \
-	@PHOTON_BUILDDIR@/src/contrib/libsync/libsync.la \
-	$(am__append_9)
+libphoton_la_SOURCES = libphoton/libphoton.c                   \
+		        libphoton/photon_request.c              \
+		        libphoton/photon_event.c                \
+		        libphoton/photon_pwc.c                  \
+                        libphoton/photon_backend.c              \
+                        libphoton/photon_exchange.c             \
+                        libphoton/photon_buffer.c               \
+                        libphoton/photon_msgbuffer.c            \
+                        libphoton/photon_buffertable.c          \
+                        libphoton/photon_rdma_ledger.c          \
+                        libphoton/photon_rdma_INFO_ledger.c     \
+                        libphoton/photon_rdma_EAGER_buf.c
+
+libphoton_la_CPPFLAGS = $(LIBPHOTON_CPPFLAGS)
+libphoton_la_CFLAGS = $(LIBPHOTON_CFLAGS)                     \
+			-I$(top_srcdir)/src/verbs               \
+			-I$(top_srcdir)/src/ugni                \
+			-I$(top_srcdir)/src/fi                  \
+			-I$(top_srcdir)/src/forwarder
+
+libphoton_la_CXXFLAGS = $(LIBPHOTON_CXXFLAGS)
+libphoton_ladir = $(top_builddir)/src/libphoton
+libphoton_la_LDFLAGS = $(LIBPHOTON_LDFLAGS)
+libphoton_la_LIBADD = $(LIBPHOTON_LIBS) $(LIBPHOTON_LIBADD)                    \
+			$(top_builddir)/src/util/libutil.la                      \
+		        $(top_builddir)/src/contrib/bit_array/libbit_array.la    \
+		        $(top_builddir)/src/contrib/libsync/libsync.la
+
 all: all-recursive
 
 .SUFFIXES:
@@ -577,123 +562,54 @@ libphoton/$(am__dirstamp):
 libphoton/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) libphoton/$(DEPDIR)
 	@: > libphoton/$(DEPDIR)/$(am__dirstamp)
-libphoton/libphoton.lo: libphoton/$(am__dirstamp) \
+libphoton/libphoton_la-libphoton.lo: libphoton/$(am__dirstamp) \
 	libphoton/$(DEPDIR)/$(am__dirstamp)
-libphoton/photon_request.lo: libphoton/$(am__dirstamp) \
+libphoton/libphoton_la-photon_request.lo: libphoton/$(am__dirstamp) \
 	libphoton/$(DEPDIR)/$(am__dirstamp)
-libphoton/photon_event.lo: libphoton/$(am__dirstamp) \
+libphoton/libphoton_la-photon_event.lo: libphoton/$(am__dirstamp) \
 	libphoton/$(DEPDIR)/$(am__dirstamp)
-libphoton/photon_pwc.lo: libphoton/$(am__dirstamp) \
+libphoton/libphoton_la-photon_pwc.lo: libphoton/$(am__dirstamp) \
 	libphoton/$(DEPDIR)/$(am__dirstamp)
-libphoton/photon_backend.lo: libphoton/$(am__dirstamp) \
+libphoton/libphoton_la-photon_backend.lo: libphoton/$(am__dirstamp) \
 	libphoton/$(DEPDIR)/$(am__dirstamp)
-libphoton/photon_exchange.lo: libphoton/$(am__dirstamp) \
+libphoton/libphoton_la-photon_exchange.lo: libphoton/$(am__dirstamp) \
 	libphoton/$(DEPDIR)/$(am__dirstamp)
-libphoton/photon_buffer.lo: libphoton/$(am__dirstamp) \
+libphoton/libphoton_la-photon_buffer.lo: libphoton/$(am__dirstamp) \
 	libphoton/$(DEPDIR)/$(am__dirstamp)
-libphoton/photon_msgbuffer.lo: libphoton/$(am__dirstamp) \
+libphoton/libphoton_la-photon_msgbuffer.lo: libphoton/$(am__dirstamp) \
 	libphoton/$(DEPDIR)/$(am__dirstamp)
-libphoton/photon_buffertable.lo: libphoton/$(am__dirstamp) \
-	libphoton/$(DEPDIR)/$(am__dirstamp)
-libphoton/photon_rdma_ledger.lo: libphoton/$(am__dirstamp) \
-	libphoton/$(DEPDIR)/$(am__dirstamp)
-libphoton/photon_rdma_INFO_ledger.lo: libphoton/$(am__dirstamp) \
-	libphoton/$(DEPDIR)/$(am__dirstamp)
-libphoton/photon_rdma_EAGER_buf.lo: libphoton/$(am__dirstamp) \
-	libphoton/$(DEPDIR)/$(am__dirstamp)
-verbs/$(am__dirstamp):
-	@$(MKDIR_P) verbs
-	@: > verbs/$(am__dirstamp)
-verbs/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) verbs/$(DEPDIR)
-	@: > verbs/$(DEPDIR)/$(am__dirstamp)
-verbs/verbs.lo: verbs/$(am__dirstamp) verbs/$(DEPDIR)/$(am__dirstamp)
-verbs/verbs_util.lo: verbs/$(am__dirstamp) \
-	verbs/$(DEPDIR)/$(am__dirstamp)
-verbs/verbs_connect.lo: verbs/$(am__dirstamp) \
-	verbs/$(DEPDIR)/$(am__dirstamp)
-verbs/verbs_buffer.lo: verbs/$(am__dirstamp) \
-	verbs/$(DEPDIR)/$(am__dirstamp)
-verbs/verbs_ud.lo: verbs/$(am__dirstamp) \
-	verbs/$(DEPDIR)/$(am__dirstamp)
-ugni/$(am__dirstamp):
-	@$(MKDIR_P) ugni
-	@: > ugni/$(am__dirstamp)
-ugni/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) ugni/$(DEPDIR)
-	@: > ugni/$(DEPDIR)/$(am__dirstamp)
-ugni/photon_ugni.lo: ugni/$(am__dirstamp) \
-	ugni/$(DEPDIR)/$(am__dirstamp)
-ugni/photon_ugni_connect.lo: ugni/$(am__dirstamp) \
-	ugni/$(DEPDIR)/$(am__dirstamp)
-ugni/photon_ugni_buffer.lo: ugni/$(am__dirstamp) \
-	ugni/$(DEPDIR)/$(am__dirstamp)
-ugni/utility_functions.lo: ugni/$(am__dirstamp) \
-	ugni/$(DEPDIR)/$(am__dirstamp)
-fi/$(am__dirstamp):
-	@$(MKDIR_P) fi
-	@: > fi/$(am__dirstamp)
-fi/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) fi/$(DEPDIR)
-	@: > fi/$(DEPDIR)/$(am__dirstamp)
-fi/photon_fi.lo: fi/$(am__dirstamp) fi/$(DEPDIR)/$(am__dirstamp)
-fi/photon_fi_connect.lo: fi/$(am__dirstamp) \
-	fi/$(DEPDIR)/$(am__dirstamp)
-fi/photon_fi_buffer.lo: fi/$(am__dirstamp) \
-	fi/$(DEPDIR)/$(am__dirstamp)
-forwarder/$(am__dirstamp):
-	@$(MKDIR_P) forwarder
-	@: > forwarder/$(am__dirstamp)
-forwarder/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) forwarder/$(DEPDIR)
-	@: > forwarder/$(DEPDIR)/$(am__dirstamp)
-forwarder/photon_xsp_forwarder.lo: forwarder/$(am__dirstamp) \
-	forwarder/$(DEPDIR)/$(am__dirstamp)
+libphoton/libphoton_la-photon_buffertable.lo:  \
+	libphoton/$(am__dirstamp) libphoton/$(DEPDIR)/$(am__dirstamp)
+libphoton/libphoton_la-photon_rdma_ledger.lo:  \
+	libphoton/$(am__dirstamp) libphoton/$(DEPDIR)/$(am__dirstamp)
+libphoton/libphoton_la-photon_rdma_INFO_ledger.lo:  \
+	libphoton/$(am__dirstamp) libphoton/$(DEPDIR)/$(am__dirstamp)
+libphoton/libphoton_la-photon_rdma_EAGER_buf.lo:  \
+	libphoton/$(am__dirstamp) libphoton/$(DEPDIR)/$(am__dirstamp)
 
 libphoton.la: $(libphoton_la_OBJECTS) $(libphoton_la_DEPENDENCIES) $(EXTRA_libphoton_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libphoton_la_LINK) -rpath $(libdir) $(libphoton_la_OBJECTS) $(libphoton_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
-	-rm -f fi/*.$(OBJEXT)
-	-rm -f fi/*.lo
-	-rm -f forwarder/*.$(OBJEXT)
-	-rm -f forwarder/*.lo
 	-rm -f libphoton/*.$(OBJEXT)
 	-rm -f libphoton/*.lo
-	-rm -f ugni/*.$(OBJEXT)
-	-rm -f ugni/*.lo
-	-rm -f verbs/*.$(OBJEXT)
-	-rm -f verbs/*.lo
 
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@fi/$(DEPDIR)/photon_fi.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@fi/$(DEPDIR)/photon_fi_buffer.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@fi/$(DEPDIR)/photon_fi_connect.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@forwarder/$(DEPDIR)/photon_xsp_forwarder.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/libphoton.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/photon_backend.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/photon_buffer.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/photon_buffertable.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/photon_event.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/photon_exchange.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/photon_msgbuffer.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/photon_pwc.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/photon_rdma_EAGER_buf.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/photon_rdma_INFO_ledger.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/photon_rdma_ledger.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/photon_request.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@ugni/$(DEPDIR)/photon_ugni.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@ugni/$(DEPDIR)/photon_ugni_buffer.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@ugni/$(DEPDIR)/photon_ugni_connect.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@ugni/$(DEPDIR)/utility_functions.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@verbs/$(DEPDIR)/verbs.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@verbs/$(DEPDIR)/verbs_buffer.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@verbs/$(DEPDIR)/verbs_connect.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@verbs/$(DEPDIR)/verbs_ud.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@verbs/$(DEPDIR)/verbs_util.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/libphoton_la-libphoton.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/libphoton_la-photon_backend.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/libphoton_la-photon_buffer.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/libphoton_la-photon_buffertable.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/libphoton_la-photon_event.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/libphoton_la-photon_exchange.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/libphoton_la-photon_msgbuffer.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/libphoton_la-photon_pwc.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/libphoton_la-photon_rdma_EAGER_buf.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/libphoton_la-photon_rdma_INFO_ledger.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/libphoton_la-photon_rdma_ledger.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@libphoton/$(DEPDIR)/libphoton_la-photon_request.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -719,16 +635,96 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
 
+libphoton/libphoton_la-libphoton.lo: libphoton/libphoton.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -MT libphoton/libphoton_la-libphoton.lo -MD -MP -MF libphoton/$(DEPDIR)/libphoton_la-libphoton.Tpo -c -o libphoton/libphoton_la-libphoton.lo `test -f 'libphoton/libphoton.c' || echo '$(srcdir)/'`libphoton/libphoton.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) libphoton/$(DEPDIR)/libphoton_la-libphoton.Tpo libphoton/$(DEPDIR)/libphoton_la-libphoton.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='libphoton/libphoton.c' object='libphoton/libphoton_la-libphoton.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -c -o libphoton/libphoton_la-libphoton.lo `test -f 'libphoton/libphoton.c' || echo '$(srcdir)/'`libphoton/libphoton.c
+
+libphoton/libphoton_la-photon_request.lo: libphoton/photon_request.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -MT libphoton/libphoton_la-photon_request.lo -MD -MP -MF libphoton/$(DEPDIR)/libphoton_la-photon_request.Tpo -c -o libphoton/libphoton_la-photon_request.lo `test -f 'libphoton/photon_request.c' || echo '$(srcdir)/'`libphoton/photon_request.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) libphoton/$(DEPDIR)/libphoton_la-photon_request.Tpo libphoton/$(DEPDIR)/libphoton_la-photon_request.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='libphoton/photon_request.c' object='libphoton/libphoton_la-photon_request.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -c -o libphoton/libphoton_la-photon_request.lo `test -f 'libphoton/photon_request.c' || echo '$(srcdir)/'`libphoton/photon_request.c
+
+libphoton/libphoton_la-photon_event.lo: libphoton/photon_event.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -MT libphoton/libphoton_la-photon_event.lo -MD -MP -MF libphoton/$(DEPDIR)/libphoton_la-photon_event.Tpo -c -o libphoton/libphoton_la-photon_event.lo `test -f 'libphoton/photon_event.c' || echo '$(srcdir)/'`libphoton/photon_event.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) libphoton/$(DEPDIR)/libphoton_la-photon_event.Tpo libphoton/$(DEPDIR)/libphoton_la-photon_event.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='libphoton/photon_event.c' object='libphoton/libphoton_la-photon_event.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -c -o libphoton/libphoton_la-photon_event.lo `test -f 'libphoton/photon_event.c' || echo '$(srcdir)/'`libphoton/photon_event.c
+
+libphoton/libphoton_la-photon_pwc.lo: libphoton/photon_pwc.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -MT libphoton/libphoton_la-photon_pwc.lo -MD -MP -MF libphoton/$(DEPDIR)/libphoton_la-photon_pwc.Tpo -c -o libphoton/libphoton_la-photon_pwc.lo `test -f 'libphoton/photon_pwc.c' || echo '$(srcdir)/'`libphoton/photon_pwc.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) libphoton/$(DEPDIR)/libphoton_la-photon_pwc.Tpo libphoton/$(DEPDIR)/libphoton_la-photon_pwc.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='libphoton/photon_pwc.c' object='libphoton/libphoton_la-photon_pwc.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -c -o libphoton/libphoton_la-photon_pwc.lo `test -f 'libphoton/photon_pwc.c' || echo '$(srcdir)/'`libphoton/photon_pwc.c
+
+libphoton/libphoton_la-photon_backend.lo: libphoton/photon_backend.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -MT libphoton/libphoton_la-photon_backend.lo -MD -MP -MF libphoton/$(DEPDIR)/libphoton_la-photon_backend.Tpo -c -o libphoton/libphoton_la-photon_backend.lo `test -f 'libphoton/photon_backend.c' || echo '$(srcdir)/'`libphoton/photon_backend.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) libphoton/$(DEPDIR)/libphoton_la-photon_backend.Tpo libphoton/$(DEPDIR)/libphoton_la-photon_backend.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='libphoton/photon_backend.c' object='libphoton/libphoton_la-photon_backend.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -c -o libphoton/libphoton_la-photon_backend.lo `test -f 'libphoton/photon_backend.c' || echo '$(srcdir)/'`libphoton/photon_backend.c
+
+libphoton/libphoton_la-photon_exchange.lo: libphoton/photon_exchange.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -MT libphoton/libphoton_la-photon_exchange.lo -MD -MP -MF libphoton/$(DEPDIR)/libphoton_la-photon_exchange.Tpo -c -o libphoton/libphoton_la-photon_exchange.lo `test -f 'libphoton/photon_exchange.c' || echo '$(srcdir)/'`libphoton/photon_exchange.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) libphoton/$(DEPDIR)/libphoton_la-photon_exchange.Tpo libphoton/$(DEPDIR)/libphoton_la-photon_exchange.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='libphoton/photon_exchange.c' object='libphoton/libphoton_la-photon_exchange.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -c -o libphoton/libphoton_la-photon_exchange.lo `test -f 'libphoton/photon_exchange.c' || echo '$(srcdir)/'`libphoton/photon_exchange.c
+
+libphoton/libphoton_la-photon_buffer.lo: libphoton/photon_buffer.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -MT libphoton/libphoton_la-photon_buffer.lo -MD -MP -MF libphoton/$(DEPDIR)/libphoton_la-photon_buffer.Tpo -c -o libphoton/libphoton_la-photon_buffer.lo `test -f 'libphoton/photon_buffer.c' || echo '$(srcdir)/'`libphoton/photon_buffer.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) libphoton/$(DEPDIR)/libphoton_la-photon_buffer.Tpo libphoton/$(DEPDIR)/libphoton_la-photon_buffer.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='libphoton/photon_buffer.c' object='libphoton/libphoton_la-photon_buffer.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -c -o libphoton/libphoton_la-photon_buffer.lo `test -f 'libphoton/photon_buffer.c' || echo '$(srcdir)/'`libphoton/photon_buffer.c
+
+libphoton/libphoton_la-photon_msgbuffer.lo: libphoton/photon_msgbuffer.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -MT libphoton/libphoton_la-photon_msgbuffer.lo -MD -MP -MF libphoton/$(DEPDIR)/libphoton_la-photon_msgbuffer.Tpo -c -o libphoton/libphoton_la-photon_msgbuffer.lo `test -f 'libphoton/photon_msgbuffer.c' || echo '$(srcdir)/'`libphoton/photon_msgbuffer.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) libphoton/$(DEPDIR)/libphoton_la-photon_msgbuffer.Tpo libphoton/$(DEPDIR)/libphoton_la-photon_msgbuffer.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='libphoton/photon_msgbuffer.c' object='libphoton/libphoton_la-photon_msgbuffer.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -c -o libphoton/libphoton_la-photon_msgbuffer.lo `test -f 'libphoton/photon_msgbuffer.c' || echo '$(srcdir)/'`libphoton/photon_msgbuffer.c
+
+libphoton/libphoton_la-photon_buffertable.lo: libphoton/photon_buffertable.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -MT libphoton/libphoton_la-photon_buffertable.lo -MD -MP -MF libphoton/$(DEPDIR)/libphoton_la-photon_buffertable.Tpo -c -o libphoton/libphoton_la-photon_buffertable.lo `test -f 'libphoton/photon_buffertable.c' || echo '$(srcdir)/'`libphoton/photon_buffertable.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) libphoton/$(DEPDIR)/libphoton_la-photon_buffertable.Tpo libphoton/$(DEPDIR)/libphoton_la-photon_buffertable.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='libphoton/photon_buffertable.c' object='libphoton/libphoton_la-photon_buffertable.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -c -o libphoton/libphoton_la-photon_buffertable.lo `test -f 'libphoton/photon_buffertable.c' || echo '$(srcdir)/'`libphoton/photon_buffertable.c
+
+libphoton/libphoton_la-photon_rdma_ledger.lo: libphoton/photon_rdma_ledger.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -MT libphoton/libphoton_la-photon_rdma_ledger.lo -MD -MP -MF libphoton/$(DEPDIR)/libphoton_la-photon_rdma_ledger.Tpo -c -o libphoton/libphoton_la-photon_rdma_ledger.lo `test -f 'libphoton/photon_rdma_ledger.c' || echo '$(srcdir)/'`libphoton/photon_rdma_ledger.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) libphoton/$(DEPDIR)/libphoton_la-photon_rdma_ledger.Tpo libphoton/$(DEPDIR)/libphoton_la-photon_rdma_ledger.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='libphoton/photon_rdma_ledger.c' object='libphoton/libphoton_la-photon_rdma_ledger.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -c -o libphoton/libphoton_la-photon_rdma_ledger.lo `test -f 'libphoton/photon_rdma_ledger.c' || echo '$(srcdir)/'`libphoton/photon_rdma_ledger.c
+
+libphoton/libphoton_la-photon_rdma_INFO_ledger.lo: libphoton/photon_rdma_INFO_ledger.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -MT libphoton/libphoton_la-photon_rdma_INFO_ledger.lo -MD -MP -MF libphoton/$(DEPDIR)/libphoton_la-photon_rdma_INFO_ledger.Tpo -c -o libphoton/libphoton_la-photon_rdma_INFO_ledger.lo `test -f 'libphoton/photon_rdma_INFO_ledger.c' || echo '$(srcdir)/'`libphoton/photon_rdma_INFO_ledger.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) libphoton/$(DEPDIR)/libphoton_la-photon_rdma_INFO_ledger.Tpo libphoton/$(DEPDIR)/libphoton_la-photon_rdma_INFO_ledger.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='libphoton/photon_rdma_INFO_ledger.c' object='libphoton/libphoton_la-photon_rdma_INFO_ledger.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -c -o libphoton/libphoton_la-photon_rdma_INFO_ledger.lo `test -f 'libphoton/photon_rdma_INFO_ledger.c' || echo '$(srcdir)/'`libphoton/photon_rdma_INFO_ledger.c
+
+libphoton/libphoton_la-photon_rdma_EAGER_buf.lo: libphoton/photon_rdma_EAGER_buf.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -MT libphoton/libphoton_la-photon_rdma_EAGER_buf.lo -MD -MP -MF libphoton/$(DEPDIR)/libphoton_la-photon_rdma_EAGER_buf.Tpo -c -o libphoton/libphoton_la-photon_rdma_EAGER_buf.lo `test -f 'libphoton/photon_rdma_EAGER_buf.c' || echo '$(srcdir)/'`libphoton/photon_rdma_EAGER_buf.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) libphoton/$(DEPDIR)/libphoton_la-photon_rdma_EAGER_buf.Tpo libphoton/$(DEPDIR)/libphoton_la-photon_rdma_EAGER_buf.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='libphoton/photon_rdma_EAGER_buf.c' object='libphoton/libphoton_la-photon_rdma_EAGER_buf.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libphoton_la_CPPFLAGS) $(CPPFLAGS) $(libphoton_la_CFLAGS) $(CFLAGS) -c -o libphoton/libphoton_la-photon_rdma_EAGER_buf.lo `test -f 'libphoton/photon_rdma_EAGER_buf.c' || echo '$(srcdir)/'`libphoton/photon_rdma_EAGER_buf.c
+
 mostlyclean-libtool:
 	-rm -f *.lo
 
 clean-libtool:
 	-rm -rf .libs _libs
-	-rm -rf fi/.libs fi/_libs
-	-rm -rf forwarder/.libs forwarder/_libs
 	-rm -rf libphoton/.libs libphoton/_libs
-	-rm -rf ugni/.libs ugni/_libs
-	-rm -rf verbs/.libs verbs/_libs
 
 # This directory's subdirectories are mostly independent; you can cd
 # into them and run 'make' without going through this Makefile.
@@ -919,16 +915,8 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
-	-rm -f fi/$(DEPDIR)/$(am__dirstamp)
-	-rm -f fi/$(am__dirstamp)
-	-rm -f forwarder/$(DEPDIR)/$(am__dirstamp)
-	-rm -f forwarder/$(am__dirstamp)
 	-rm -f libphoton/$(DEPDIR)/$(am__dirstamp)
 	-rm -f libphoton/$(am__dirstamp)
-	-rm -f ugni/$(DEPDIR)/$(am__dirstamp)
-	-rm -f ugni/$(am__dirstamp)
-	-rm -f verbs/$(DEPDIR)/$(am__dirstamp)
-	-rm -f verbs/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -939,7 +927,7 @@ clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
 	mostlyclean-am
 
 distclean: distclean-recursive
-	-rm -rf fi/$(DEPDIR) forwarder/$(DEPDIR) libphoton/$(DEPDIR) ugni/$(DEPDIR) verbs/$(DEPDIR)
+	-rm -rf libphoton/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -985,7 +973,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-recursive
-	-rm -rf fi/$(DEPDIR) forwarder/$(DEPDIR) libphoton/$(DEPDIR) ugni/$(DEPDIR) verbs/$(DEPDIR)
+	-rm -rf libphoton/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
