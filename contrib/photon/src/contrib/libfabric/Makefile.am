@@ -544,6 +544,9 @@ dummy_man_pages = \
 
 man_MANS = $(real_man_pages) $(dummy_man_pages)
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libfabric.pc
+
 nroff:
 	@for file in $(real_man_pages); do \
 	    source=`echo $$file | sed -e 's@/man[0-9]@@'`; \
