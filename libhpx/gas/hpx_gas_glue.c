@@ -235,13 +235,20 @@ hpx_gas_memput_rsync(hpx_addr_t to, const void *from, size_t size) {
 }
 
 int
-hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
-{
+hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
   dbg_assert(gas->memcpy);
   // NB: weird call syntax prevents clang error when memcpy is builtin
   return (*gas->memcpy)(here->gas, to, from, size, sync);
+}
+
+int
+hpx_gas_memcpy_sync(hpx_addr_t to, hpx_addr_t from, size_t size) {
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->memcpy_sync);
+  return gas->memcpy_sync(here->gas, to, from, size);
 }
 
 static int

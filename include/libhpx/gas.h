@@ -68,6 +68,8 @@ typedef struct gas {
   int (*memcpy)(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
                 hpx_addr_t sync);
 
+  int (*memcpy_sync)(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size);
+
   // implement hpx/gas.h
   __typeof(hpx_gas_alloc_cyclic) *alloc_cyclic;
   __typeof(hpx_gas_calloc_cyclic) *calloc_cyclic;

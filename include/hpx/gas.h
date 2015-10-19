@@ -305,7 +305,7 @@ int hpx_gas_memput_lsync(hpx_addr_t to, const void *from, size_t size,
 ///
 /// This shares the same functionality as hpx_gas_memput(), but will not return
 /// until the write has completed remotely. This exposes the potential for
-/// a more efficient mechanism for synchronous operation, and shoudl be
+/// a more efficient mechanism for synchronous operation, and should be
 /// preferred where fully synchronous semantics are necessary.
 ///
 /// @param           to The global address to copy to.
@@ -339,6 +339,22 @@ int hpx_gas_memput_rsync(hpx_addr_t to, const void *from, size_t size)
 ///
 /// @returns  HPX_SUCCESS
 int hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
+  HPX_PUBLIC;
+
+/// This copies data synchronously from a global address to another
+/// global address.
+///
+/// This shares the same functionality as hpx_gas_memcpy(), but will not return
+/// until the copu has completed remotely. This exposes the potential for
+/// a more efficient mechanism for synchronous operation, and should be
+/// preferred where fully synchronous semantics are necessary.
+///
+/// @param           to The global address to copy to.
+/// @param         from The global address to copy from.
+/// @param         size The size, in bytes, of the buffer to copy
+///
+/// @returns  HPX_SUCCESS
+int hpx_gas_memcpy_sync(hpx_addr_t to, hpx_addr_t from, size_t size)
   HPX_PUBLIC;
 
 /// @}
