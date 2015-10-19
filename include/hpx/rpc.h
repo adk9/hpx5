@@ -280,6 +280,21 @@ int    _hpx_bcast_rsync(hpx_action_t action, int nargs, ...) HPX_PUBLIC;
 #define hpx_bcast_rsync(action, ...)                                    \
   _hpx_bcast_rsync(action, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
-/// @}
+
+/// Map
+int _hpx_map(hpx_action_t op, uint32_t n,
+             hpx_addr_t src, uint32_t src_stride,
+             hpx_addr_t dst, uint32_t dst_stride,
+             uint32_t bsize, hpx_addr_t sync, int nargs, ...) HPX_PUBLIC;
+#define hpx_map(op, n, src, src_stride, dst, dst_stride, bsize, sync, ...) \
+  _hpx_map(op, n, src, src_stride, dst, dst_stride, bsize, sync,           \
+           __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+
+int _hpx_map_sync(hpx_action_t op, uint32_t n, hpx_addr_t src,
+                  uint32_t src_stride, hpx_addr_t dst, uint32_t dst_stride,
+                  uint32_t bsize, int nargs, ...) HPX_PUBLIC;
+#define hpx_map_sync(op, n, src, src_stride, dst, dst_stride, bsize, ...)  \
+  _hpx_map_sync(op, n, src, src_stride, dst, dst_stride, bsize,            \
+                __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 #endif
