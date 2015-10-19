@@ -20148,6 +20148,7 @@ $as_echo "#define HAVE_LIBFABRIC 1" >>confdefs.h
     LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS $PHOTON_CFLAGS"
     LIBPHOTON_LIBS="$LIBPHOTON_LIBS $PHOTON_LIBS"
     PHOTON_PC_PRIVATE_LIBS="$PHOTON_PC_PRIVATE_LIBS -lfabric"
+    PHOTON_PC_PRIVATE_PKGS="$PHOTON_PC_PRIVATE_PKGS libfabric"
 fi
 
 fi ;; #(
@@ -20256,6 +20257,7 @@ $as_echo "#define HAVE_LIBFABRIC 1" >>confdefs.h
     LIBPHOTON_CFLAGS="$LIBPHOTON_CFLAGS $PHOTON_CFLAGS"
     LIBPHOTON_LIBS="$LIBPHOTON_LIBS $PHOTON_LIBS"
     PHOTON_PC_PRIVATE_LIBS="$PHOTON_PC_PRIVATE_LIBS -lfabric"
+    PHOTON_PC_PRIVATE_PKGS="$PHOTON_PC_PRIVATE_PKGS libfabric"
 fi
  ;;
 esac
@@ -20265,7 +20267,7 @@ fi
 
  contrib=$contrib
 
- # configure and build the included photon library
+ # configure and build the included libfabric library
 
  if test "x$enable_static" == xyes; then :
   cargs="--enable-static"
@@ -20395,7 +20397,7 @@ $as_echo "#define HAVE_LIBFABRIC 1" >>confdefs.h
 
  LIBPHOTON_CPPFLAGS="$LIBPHOTON_CPPFLAGS -I\$(top_srcdir)/$contrib/include"
  LIBPHOTON_LIBADD="$LIBPHOTON_LIBADD \$(top_builddir)/$contrib/src/libfabric.la"
- PHOTON_PC_PRIVATE_LIBS="$PHOTON_PC_PRIVATE_LIBS -lfabric"
+ PHOTON_PC_PRIVATE_PKGS="$PHOTON_PC_PRIVATE_PKGS libfabric"
 
 fi
 
