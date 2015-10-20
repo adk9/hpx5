@@ -117,15 +117,15 @@ tests/unit/call_when
 tests/unit/gas_alloc
 tests/unit/parcel_send_through
 tests/unit/gas_global_alloc
-tests/unit/process
 tests/unit/lco_collectives
 tests/unit/lco_array
 tests/unit/lco_futures
 tests/unit/lco_get_remote
-tests/unit/parcel_create
 tests/unit/lco_user
 tests/unit/gas_memget
+tests/unit/parcel_create
 tests/unit/parcel_send
+tests/unit/process
 tests/unit/thread_continue
 tests/unit/gas_memput
 tests/unit/thread_yield
@@ -144,6 +144,7 @@ tests/unit/lco_and
 tests/unit/runtime
 tests/unit/libhpx_boot
 tests/unit/parcel_send_rendezvous
+tests/unit/map
 /tests/perf/Makefile
 tests/perf/gas_alloc
 tests/perf/gas_addr_trans
