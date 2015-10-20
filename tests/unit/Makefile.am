@@ -15,6 +15,7 @@ TESTS = apex_test               \
         call_when               \
         gas_alloc               \
         gas_global_alloc        \
+        gas_map                 \
         gas_memget              \
         gas_memput              \
         lco_get_remote          \
@@ -29,7 +30,6 @@ TESTS = apex_test               \
         lco_setget              \
         lco_user                \
         libhpx_boot             \
-        map                     \
         parcel_continuation     \
         parcel_create           \
         parcel_send             \
@@ -58,6 +58,7 @@ bcast_DEPENDENCIES                  = $(HPX_APPS_DEPS)
 call_when_DEPENDENCIES              = $(HPX_APPS_DEPS)
 gas_alloc_DEPENDENCIES              = $(HPX_APPS_DEPS)
 gas_global_alloc_DEPENDENCIES       = $(HPX_APPS_DEPS)
+gas_map_DEPENDENCIES                = $(HPX_APPS_DEPS)
 gas_memget_DEPENDENCIES             = $(HPX_APPS_DEPS)
 gas_memput_DEPENDENCIES             = $(HPX_APPS_DEPS)
 lco_allreduce_DEPENDENCIES          = $(HPX_APPS_DEPS)
@@ -73,7 +74,6 @@ lco_setget_DEPENDENCIES             = $(HPX_APPS_DEPS)
 lco_user_DEPENDENCIES               = $(HPX_APPS_DEPS)
 lco_wait_DEPENDENCIES               = $(HPX_APPS_DEPS)
 libhpx_boot_DEPENDENCIES            = $(HPX_APPS_DEPS)
-map_DEPENDENCIES                    = $(HPX_APPS_DEPS)
 parcel_continuation_DEPENDENCIES    = $(HPX_APPS_DEPS)
 parcel_create_DEPENDENCIES          = $(HPX_APPS_DEPS)
 parcel_send_DEPENDENCIES            = $(HPX_APPS_DEPS)
