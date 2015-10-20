@@ -20,6 +20,7 @@
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/parcel.h>
+#include <libhpx/scheduler.h>
 #include <libhpx/worker.h>
 
 
@@ -33,7 +34,7 @@ typedef struct {
 // and then copies the result into a remote global address.
 static int
 _call_and_memput_action_handler(_call_and_memput_args_t *args, size_t size) {
-  hpx_parcel_t *parcel = (hpx_parcel_t*)args->data;
+  hpx_parcel_t *parcel = parcel_clone((hpx_parcel_t*)args->data);
   dbg_assert(parcel);
 
   // replace the "dst" lco in the parcel's continuation addr with the
@@ -43,7 +44,7 @@ _call_and_memput_action_handler(_call_and_memput_args_t *args, size_t size) {
   parcel->c_target = local;
 
   // send the parcel..
-  hpx_parcel_send_sync(parcel);
+  hpx_parcel_send(parcel, HPX_NULL);
 
   void *buf;
   bool stack_allocated = true;
@@ -58,9 +59,9 @@ _call_and_memput_action_handler(_call_and_memput_args_t *args, size_t size) {
   hpx_lco_delete(local, HPX_NULL);
 
   // steal the current continuation
-  hpx_parcel_t *cur_p = self->current;
-  hpx_gas_memput_lsync(dst, buf, args->dst_stride, cur_p->c_target);
-  cur_p->c_target = HPX_NULL;
+  hpx_parcel_t *parent = scheduler_current_parcel();
+  hpx_gas_memput_lsync(dst, buf, args->dst_stride, parent->c_target);
+  parent->c_target = HPX_NULL;
 
   if (!stack_allocated) {
       registered_free(buf);
@@ -83,6 +84,11 @@ static int _va_map(hpx_action_t action, uint32_t n,
       dbg_check(e, "could not chain LCO\n");
   }
 
+  if (dst == HPX_NULL) {
+    printf("process-map not implemented.\n");
+    hpx_abort();
+  }
+
   // the root of all evil: Use "dst" as the continuation address to
   // avoid creating another field in the args structure.
   hpx_parcel_t *p = action_create_parcel_va(src, action, dst, hpx_lco_set_action,
@@ -94,10 +100,10 @@ static int _va_map(hpx_action_t action, uint32_t n,
   for (int i = 0; i < n; ++i) {
     // Update the target of the parcel..
     p->target = src;
+    p->c_target = dst;
 
     // ..and put the new destination in the payload
     memcpy(args->data, p, parcel_size(p));
-
     e = hpx_call_with_continuation(src, _call_and_memput_action, remote,
                                    hpx_lco_set_action, args, args_size);
     dbg_check(e, "could not send parcel for map\n");
