@@ -9,14 +9,14 @@ LDADD            = $(HPX_APPS_LDADD)
 LOG_COMPILER = $(TESTS_CMD)
 
 TESTS = apex_test               \
-	    allreduce               \
+        allreduce               \
         bcast                   \
         call_when               \
         gas_alloc               \
         gas_global_alloc        \
         gas_memget              \
         gas_memput              \
-		lco_get_remote          \
+        lco_get_remote          \
         lco_allreduce           \
         lco_and                 \
         lco_array               \
@@ -28,6 +28,7 @@ TESTS = apex_test               \
         lco_setget              \
         lco_user                \
         libhpx_boot             \
+        map                     \
         parcel_continuation     \
         parcel_create           \
         parcel_send             \
@@ -67,6 +68,7 @@ lco_setget_DEPENDENCIES             = $(HPX_APPS_DEPS)
 lco_user_DEPENDENCIES               = $(HPX_APPS_DEPS)
 lco_wait_DEPENDENCIES               = $(HPX_APPS_DEPS)
 libhpx_boot_DEPENDENCIES            = $(HPX_APPS_DEPS)
+map_DEPENDENCIES                    = $(HPX_APPS_DEPS)
 parcel_continuation_DEPENDENCIES    = $(HPX_APPS_DEPS)
 parcel_create_DEPENDENCIES          = $(HPX_APPS_DEPS)
 parcel_send_DEPENDENCIES            = $(HPX_APPS_DEPS)
