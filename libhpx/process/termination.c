@@ -21,10 +21,10 @@
 #include <string.h>
 #include <assert.h>
 
-#include "libsync/sync.h"
-#include "libsync/lockable_ptr.h"
-#include "libhpx/debug.h"
-#include "termination.h"
+#include <libsync/sync.h>
+#include <libsync/lockable_ptr.h>
+#include <libhpx/debug.h>
+#include <libhpx/termination.h>
 
 lockable_ptr_t ptr;
 

@@ -10,18 +10,17 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
-#ifndef LIBHPX_PADDING_H
-#define LIBHPX_PADDING_H
+#include <libhpx/gpa.h>
+#include <libhpx/locality.h>
+#include <libhpx/network.h>
 
-/// Given a number of bytes, how many bytes of padding do we need to get a size
-/// that is a multiple of HPX_CACHELINE_SIZE? Macro because it's used in
-/// structure definitions for padding.
-
-#define _CAT1(S, T) S##T
-#define _CAT(S, T) _CAT1(S, T)
-#define _BYTES(N, S) (N - ((S) % N))
-#define PAD_TO_N(N, S) const char _CAT(_padding,__LINE__)[_BYTES(N, S)]
-#define PAD_TO_CACHELINE(S) PAD_TO_N(HPX_CACHELINE_SIZE, S)
-
-#endif // LIBHPX_PADDING_H
+static int _lco_set_handler(int src, uint64_t command) {
+  hpx_addr_t lco = offset_to_gpa(here->rank, command);
+  hpx_lco_set(lco, 0, NULL, HPX_NULL, HPX_NULL);
+  return HPX_SUCCESS;
+}
+COMMAND_DEF(lco_set, _lco_set_handler);

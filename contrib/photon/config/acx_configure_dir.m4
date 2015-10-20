@@ -82,6 +82,11 @@ config() {
     ac_sub_configure_args="--silent $ac_sub_configure_args"
   fi
 
+  # Propagate --host
+  if test -n "$host"; then
+    ac_sub_configure_args="--host=$host $ac_sub_configure_args"
+  fi
+
   # Always prepend --disable-option-checking to silence warnings, since
   # different subdirs can have different --enable and --with options.
   ac_sub_configure_args="--disable-option-checking $ac_sub_configure_args"
