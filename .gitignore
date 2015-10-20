@@ -96,6 +96,7 @@ contrib/libcuckoo/
 /libhpx/network/isir/Makefile
 /libhpx/network/pwc/Makefile
 /libhpx/memory/Makefile
+/libhpx/process/Makefile
 /libhpx/scheduler/Makefile
 /libhpx/scheduler/arch/Makefile
 /libhpx/system/Makefile
@@ -120,6 +121,7 @@ tests/unit/gas_global_alloc
 tests/unit/process
 tests/unit/lco_collectives
 tests/unit/lco_array
+tests/unit/lco_allreduce
 tests/unit/lco_futures
 tests/unit/lco_get_remote
 tests/unit/parcel_create
