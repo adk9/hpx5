@@ -52,6 +52,35 @@ static int _allreduce_fini_handler(_allreduce_t *r) {
 static LIBHPX_ACTION(HPX_INTERRUPT, HPX_PINNED, _allreduce_fini,
                      _allreduce_fini_handler, HPX_POINTER);
 
+/// The allreduce delete operation.
+///
+/// We want to perform the allreduce asynchronously at the outermost layer, but
+/// it requires some blocking and complex dataflow. We could build this with
+/// some call-when-with-continuation work, but it's easier just to do it in a
+/// thread.
+///
+/// If the client really wants to wait they can use a continuation to do
+/// that.
+static int _allreduce_delete_handler(_allreduce_t *r) {
+  // Finalize and free the root reduction.
+  dbg_check( hpx_call_sync(r->reduce, flat_reduce_fini, NULL, 0) );
+  hpx_gas_free_sync(r->reduce);
+
+  // Finalize all of the continuation elements.
+  hpx_addr_t allreduce = hpx_thread_current_target();
+  hpx_addr_t and = hpx_lco_and_new(here->ranks);
+  dbg_check( map_reduce(_allreduce_fini, allreduce, here->ranks, sizeof(*r), 0,
+                        hpx_lco_set_action, and) );
+  dbg_check( hpx_lco_wait(and) );
+  hpx_lco_delete(and, HPX_NULL);
+
+  // Free the continuation array---use call_cc() because we currently have the
+  // root of the continuation array pinned.
+  hpx_call_cc(allreduce, hpx_gas_free_action, NULL, NULL);
+}
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _allreduce_delete,
+                     _allreduce_delete_handler, HPX_POINTER);
+
 /// The handler for broadcasting the reduced value to all of the waiting nodes.
 ///
 /// This marshaled action handles the allreduce broadcast phase. It just
@@ -121,32 +150,10 @@ hpx_addr_t hpx_process_collective_allreduce_new(int inputs, size_t bytes,
 
 /// Free an allreduce LCO.
 ///
-/// We need to free both the reduction object, and the distributed continuation
-/// array.
+/// This performs an asychronous delete operation, but we could expose the
+/// ability to wait if we needed it.
 void hpx_process_collective_allreduce_delete(hpx_addr_t allreduce) {
-  size_t bsize = sizeof(_allreduce_t);
-  int ranks = here->ranks;
-
-  // Get the address of the flat reduce from our element of the allreduce.
-  _allreduce_t *r = NULL;
-  hpx_addr_t element = hpx_addr_add(allreduce, ranks * bsize, bsize);
-  if (!hpx_gas_try_pin(element, (void*)&r)) {
-    dbg_error("could not pin local element for allreduce\n");
-  }
-  dbg_check( hpx_call_with_continuation(r->reduce, flat_reduce_fini, r->reduce,
-                                        hpx_gas_free_action) );
-  hpx_gas_unpin(element);
-
-  // This is slightly complicated because we can't free the array allocation
-  // before we finalize each element in the array, but we don't want to block
-  // the caller. We deal with this by setting up some dataflow based on the
-  // map_allreduce and the call when functionality.
-  hpx_addr_t and = hpx_lco_and_new(ranks);
-  dbg_check( hpx_call_when_with_continuation(and,
-                                             allreduce, hpx_gas_free_action,
-                                             and, hpx_lco_delete_action) );
-  dbg_check( map_reduce(_allreduce_fini, allreduce, ranks, bsize, 0,
-                        hpx_lco_set_action, and) );
+  dbg_check( hpx_call(allreduce, _allreduce_delete, HPX_NULL) );
 }
 
 /// Join a flat allreduce.
