@@ -48,24 +48,24 @@ static int map_handler(void) {
   uint64_t nelts = (bsize * blocks)/sizeof(float);
   float initializer = 4.0;
 
-  printf("Testing hpx_map...\n");
+  printf("Testing hpx_gas_map...\n");
   
   hpx_addr_t lco = hpx_lco_future_new(0);
-  int e = hpx_map(_initialize, nelts, array, sizeof(float),
-                  out_array, sizeof(float),
-                  bsize, lco, &initializer);
+  int e = hpx_gas_map(_initialize, nelts, array, sizeof(float),
+                      out_array, sizeof(float),
+                      bsize, lco, &initializer);
 
   test_assert(e == HPX_SUCCESS);
   e = hpx_lco_wait(lco);
   test_assert(e == HPX_SUCCESS);
   hpx_lco_delete(lco, HPX_NULL);
 
-  printf("Testing hpx_map_sync...\n");
+  printf("Testing hpx_gas_map_sync...\n");
 
   float multiplier = 5.0;
-  e = hpx_map_sync(_multiply, nelts, array, sizeof(float),
-                   out_array, sizeof(float),
-                   bsize, &multiplier);
+  e = hpx_gas_map_sync(_multiply, nelts, array, sizeof(float),
+                       out_array, sizeof(float),
+                       bsize, &multiplier);
   test_assert(e == HPX_SUCCESS);
 
   printf("Verifying results...\n");
