@@ -92,9 +92,6 @@ static int _va_map(hpx_action_t action, uint32_t n,
   args->dst_stride = dst_stride;
 
   for (int i = 0; i < n; ++i) {
-    src = hpx_addr_add(src, src_stride, bsize);
-    dst = hpx_addr_add(dst, dst_stride, bsize);
-
     // Update the target of the parcel..
     p->target = src;
 
@@ -104,6 +101,9 @@ static int _va_map(hpx_action_t action, uint32_t n,
     e = hpx_call_with_continuation(src, _call_and_memput_action, remote,
                                    hpx_lco_set_action, args, args_size);
     dbg_check(e, "could not send parcel for map\n");
+
+    src = hpx_addr_add(src, src_stride, bsize);
+    dst = hpx_addr_add(dst, dst_stride, bsize);
   }
   hpx_parcel_release(p);
   return e;
