@@ -115,10 +115,10 @@ static int _va_map(hpx_action_t action, uint32_t n,
   return e;
 }
 
-int _hpx_map(hpx_action_t action, uint32_t n,
-             hpx_addr_t src, uint32_t src_stride,
-             hpx_addr_t dst, uint32_t dst_stride,
-             uint32_t bsize, hpx_addr_t sync, int nargs, ...) {
+int _hpx_gas_map(hpx_action_t action, uint32_t n,
+                 hpx_addr_t src, uint32_t src_stride,
+                 hpx_addr_t dst, uint32_t dst_stride,
+                 uint32_t bsize, hpx_addr_t sync, int nargs, ...) {
   va_list vargs;
   va_start(vargs, nargs);
   int e = _va_map(action, n, src, src_stride, dst, dst_stride, bsize, sync,
@@ -127,10 +127,10 @@ int _hpx_map(hpx_action_t action, uint32_t n,
   return e;
 }
 
-int _hpx_map_sync(hpx_action_t action, uint32_t n,
-                  hpx_addr_t src, uint32_t src_stride,
-                  hpx_addr_t dst, uint32_t dst_stride,
-                  uint32_t bsize, int nargs, ...) {
+int _hpx_gas_map_sync(hpx_action_t action, uint32_t n,
+                      hpx_addr_t src, uint32_t src_stride,
+                      hpx_addr_t dst, uint32_t dst_stride,
+                      uint32_t bsize, int nargs, ...) {
   hpx_addr_t sync = hpx_lco_future_new(0);
   if (sync == HPX_NULL) {
     log_error("could not allocate an LCO.\n");
