@@ -10,7 +10,6 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -21,15 +20,14 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "libsync/sync.h"
-#include "libhpx/action.h"
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/parcel.h"
-#include "libhpx/process.h"
-#include "libhpx/scheduler.h"
-#include "termination.h"
-
+#include <libsync/sync.h>
+#include <libhpx/action.h>
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/parcel.h>
+#include <libhpx/process.h>
+#include <libhpx/scheduler.h>
+#include <libhpx/termination.h>
 
 typedef struct {
   volatile uint64_t    credit;               // credit balance

@@ -10,12 +10,14 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
-#include <hpx/hpx.h>
-#include <libhpx/locality.h>
-#include <libhpx/boot.h>
-#include <libhpx/config.h>
 #include <libsync/locks.h>
+#include <hpx/hpx.h>
+#include <libhpx/boot.h>
+#include <libhpx/locality.h>
 #include "tests.h"
 
 #define FAIL(dst, ...) do {                                 \

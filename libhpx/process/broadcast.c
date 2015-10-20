@@ -10,16 +10,16 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
 
+#include <hpx/hpx.h>
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
-// #include "libhpx/libhpx.h"
 #include <libhpx/locality.h>
 
+/// The core broadcast handler.
 static int _vabcast(hpx_action_t action, hpx_addr_t lsync, hpx_addr_t rsync,
                     int nargs, va_list *vargs) {
   int e = HPX_SUCCESS;
@@ -51,17 +51,18 @@ static int _vabcast(hpx_action_t action, hpx_addr_t lsync, hpx_addr_t rsync,
   return HPX_SUCCESS;
 }
 
-int _hpx_bcast(hpx_action_t action, hpx_addr_t lsync, hpx_addr_t rsync,
-               int nargs, ...) {
-    va_list vargs;
-    va_start(vargs, nargs);
-    int e = _vabcast(action, lsync, rsync, nargs, &vargs);
-    dbg_check(e, "failed broadcast\n");
-    va_end(vargs);
-    return e;
+int _hpx_process_broadcast(hpx_pid_t pid, hpx_action_t action, hpx_addr_t lsync,
+                           hpx_addr_t rsync, int nargs, ...) {
+  va_list vargs;
+  va_start(vargs, nargs);
+  int e = _vabcast(action, lsync, rsync, nargs, &vargs);
+  dbg_check(e, "failed broadcast\n");
+  va_end(vargs);
+  return e;
 }
 
-int _hpx_bcast_lsync(hpx_action_t action, hpx_addr_t rsync, int nargs, ...) {
+int _hpx_process_broadcast_lsync(hpx_pid_t pid, hpx_action_t action,
+                                 hpx_addr_t rsync, int nargs, ...) {
   hpx_addr_t lsync = hpx_lco_future_new(0);
   if (lsync == HPX_NULL) {
     log_error("could not allocate an LCO.\n");
@@ -83,7 +84,8 @@ int _hpx_bcast_lsync(hpx_action_t action, hpx_addr_t rsync, int nargs, ...) {
   return HPX_SUCCESS;
 }
 
-int _hpx_bcast_rsync(hpx_action_t action, int nargs, ...) {
+int _hpx_process_broadcast_rsync(hpx_pid_t pid, hpx_action_t action, int nargs,
+                                 ...) {
   hpx_addr_t rsync = hpx_lco_future_new(0);
   if (rsync == HPX_NULL) {
     log_error("could not allocate an LCO.\n");
@@ -104,4 +106,3 @@ int _hpx_bcast_rsync(hpx_action_t action, int nargs, ...) {
   hpx_lco_delete(rsync, HPX_NULL);
   return HPX_SUCCESS;
 }
-
