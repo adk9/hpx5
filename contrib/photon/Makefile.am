@@ -10,9 +10,8 @@ inst_HEADERS=include/photon.h                 \
 	     include/photon_xsp_forwarder.h   \
 	     include/photon_attributes.h
 
-EXTRA_DIST = autogen.sh      \
-        README NEWS TODO     \
-        docs
+EXTRA_DIST = autogen.sh                       \
+	     README NEWS TODO
 
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS= -I config

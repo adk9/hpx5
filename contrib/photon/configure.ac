@@ -1,5 +1,5 @@
 3AC_PREREQ([2.63])
-AC_INIT([photon], [0.1a], [photon@crest.iu.edu])
+AC_INIT([photon], [1.0], [photon@crest.iu.edu])
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
 
