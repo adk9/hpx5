@@ -1,7 +1,8 @@
 SUBDIRS		= bit_array libsync
-DIST_SUBDIRS	= bit_array libsync
+DIST_SUBDIRS	= bit_array libsync libfabric
 
 if BUILD_LIBFABRIC
 SUBDIRS        += libfabric
-DIST_SUBDIRS   += libfabric
 endif
+
+EXTRA_DIST      = hpx
