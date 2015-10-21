@@ -2,8 +2,11 @@ noinst_LTLIBRARIES   = libugni.la
 
 libugni_la_CPPFLAGS  = $(LIBPHOTON_CPPFLAGS)
 libugni_la_CFLAGS    = $(LIBPHOTON_CFLAGS)
-libugni_la_SOURCES   = photon_ugni.c                     \
+libugni_la_SOURCES   = photon_ugni.h                     \
+		       photon_ugni.c                     \
+                       photon_ugni_connect.h             \
                        photon_ugni_connect.c             \
+                       photon_ugni_buffer.h              \
                        photon_ugni_buffer.c              \
                        utility_functions.c
 

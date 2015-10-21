@@ -2,7 +2,10 @@ noinst_PROGRAMS     = photontest
 check_SCRIPTS       = run_tests.sh
 TESTS               = run_tests.sh
 check_PROGRAMS      = photontest
-photontest_SOURCES  = photonmain.c                  \
+photontest_SOURCES  = test_cfg.h                    \
+		      tests.h                       \
+		      cutter_ids.h                  \
+		      photonmain.c                  \
                       photoninit.c                  \
                       kernel.c                      \
                       photon_test.c                 \
@@ -29,3 +32,5 @@ AM_CPPFLAGS         = -D_GNU_SOURCE $(PHOTON_APPS_CPPFLAGS) -I$(top_srcdir)/incl
 AM_CFLAGS           = $(PHOTON_APPS_CFLAGS) @CHECK_CFLAGS@ -Wno-unused
 AM_LDFLAGS          = $(PHOTON_APPS_LDFLAGS) @CHECK_LIBS@ -no-install -lcrypto
 LDADD               = $(PHOTON_APPS_LDADD)
+
+EXTRA_DIST          = run_tests.sh
