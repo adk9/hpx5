@@ -114,7 +114,8 @@ static int _agas_free_segment_handler(hpx_addr_t base) {
 
   return HPX_SUCCESS;
 }
-static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_free_segment, _agas_free_segment_handler, HPX_ADDR);
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_free_segment,
+                     _agas_free_segment_handler, HPX_ADDR);
 
 /// Free an allocation asynchronously.
 ///
