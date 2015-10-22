@@ -10,8 +10,7 @@ libgas_la_SOURCES  = hpx_gas_glue.c \
                      gas.c \
                      gpa.c \
                      smp/smp.c \
-                     parcel/memcpy.c \
-		     map.c
+                     parcel/memcpy.c
 libgas_la_LIBADD   = 
 
 
