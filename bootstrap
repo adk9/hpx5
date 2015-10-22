@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 URL="http://stout.crest.iu.edu/hpx"
-DIR="/tmp"
+DIR=$(mktemp -d hpx.XXXXXXX --tmpdir=/tmp)
 CONTRIB=contrib
 
 # set the array of tarball deps here
@@ -24,9 +24,9 @@ for ((i=0; i<${#contrib_tars[@]}; i++)); do
     $CMD ${DIR}/$file ${URL}/$file
     mkdir -p ${CONTRIB}/$dir
     tar --strip-components=1 -xf ${DIR}/$file -C ${CONTRIB}/$dir
-    rm -f ${DIR}/$file
   fi
 done
+rm -rf ${DIR}
 echo "DONE"
 
 set -e
