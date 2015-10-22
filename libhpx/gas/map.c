@@ -91,7 +91,11 @@ _call_and_memput_action_handler(hpx_parcel_t *parcel, size_t size) {
     buf = registered_malloc(stride);
   }
 
-  hpx_lco_get(local, stride, buf);
+  int e = hpx_lco_get(local, stride, buf);
+  if (e != HPX_SUCCESS) {
+    log_error("failed gas_map operation.\n");
+    return e;
+  }
   hpx_lco_delete(local, HPX_NULL);
 
   // steal the current continuation
