@@ -29,11 +29,11 @@ int _map_reduce(hpx_action_t action, hpx_addr_t base, int n, size_t offset,
                 ...);
 
 #define map_reduce(ACTION, BASE, N, OFFSET, BSIZE, ROP, RADDR, ...) \
-  _map_reduce(ACTION, BASE, N, BSIZE, OFFSET, ROP, RADDR,           \
+  _map_reduce(ACTION, BASE, N, OFFSET, BSIZE, ROP, RADDR,           \
               __HPX_NARGS(__VA_ARGS__),##__VA_ARGS__)
 
 #define map(ACTION, BASE, N, OFFSET, BSIZE, ...)                        \
-  _map_reduce(ACTION, BASE, N, BSIZE, OFFSET, HPX_ACTION_NULL, HPX_NULL, \
+  _map_reduce(ACTION, BASE, N, OFFSET, BSIZE, HPX_ACTION_NULL, HPX_NULL, \
               __HPX_NARGS(__VA_ARGS__),##__VA_ARGS__)
 
 #endif // LIBHPX_PROCESS_MAP_REDUCE_H

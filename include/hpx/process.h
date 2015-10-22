@@ -128,18 +128,20 @@ int _hpx_process_broadcast_rsync(hpx_pid_t pid, hpx_action_t action, int nargs,
 /// collective in a SPMD model, except that there is no expectation that the
 /// inputs to the allreduce are perfectly balanced.
 ///
-/// This allreduce guarantees a deterministic reduce order, so floating point
-/// reductions should be deterministic. It does not, however, specify any
-/// specific execution tree, so the error may vary due to machine precision.
+/// Clients of the allreduce must register with the allreduce before use. While
+/// inconvenient, this allows efficient implementations of the synchronization
+/// structure. See hpx_process_collective_allreduce_subscribe() for details.
 ///
-/// @param       inputs The number of inputs to the allreduce.
+/// This allreduce does not guarantee a deterministic reduce order, so floating
+/// point reductions must account for machine precision issues.
+///
 /// @param        bytes The size, in bytes, of the reduced value.
 /// @param        reset A reset operation for the reduction type.
 /// @param           op The reduce operation.
 ///
 /// @returns            The global address to use for the allreduce, or HPX_NULL
 ///                     if there was an allocation problem.
-hpx_addr_t hpx_process_collective_allreduce_new(int inputs, size_t bytes,
+hpx_addr_t hpx_process_collective_allreduce_new(size_t bytes,
                                                 hpx_action_t reset,
                                                 hpx_action_t op)
   HPX_PUBLIC;
@@ -153,26 +155,56 @@ hpx_addr_t hpx_process_collective_allreduce_new(int inputs, size_t bytes,
 void hpx_process_collective_allreduce_delete(hpx_addr_t allreduce)
   HPX_PUBLIC;
 
+/// Subscribe to use an allreduce.
+///
+/// This notifies the process that a new participant exists at the calling
+/// locality. This is unsynchronized and may cause undefined results if it is
+/// executed during an active reduction epoch.
+///
+/// The subscription is defined in terms of a continuation action to be invoked
+/// with the reduced value after each epoch. The continuation must be a
+/// marshalled action type, and be compatible with the size defined during
+/// allreduce allocation. The subscription returns an identifier token that
+/// should be used during the join operation.
+///
+/// @param    allreduce The allreduce to subscribe to.
+/// @param     c_action The continuation action.
+/// @param     c_target The continuation target.
+///
+/// @returns            A token to be used during the join operation, or -1 on
+///                     error.
+int32_t hpx_process_collective_allreduce_subscribe(hpx_addr_t allreduce,
+                                                   hpx_action_t c_action,
+                                                   hpx_addr_t c_target)
+  HPX_PUBLIC;
+
+/// Unsubscribe from an allreduce.
+///
+/// This notifies the process that a participant at the current locality is
+/// leaving the allreduce. This is unsynchronized and may cause undefined
+/// results if it is executed during an active reduction epoch.
+///
+/// @param    allreduce The allreduce to unsubscribe from.
+/// @param        token The identifier associated with the continuation.
+void hpx_process_collective_allreduce_unsubscribe(hpx_addr_t allreduce,
+                                                  int32_t token)
+  HPX_PUBLIC;
 
 /// Join an allreduce asynchronously.
 ///
-/// This interface joins an allreduce, and provides a continuation for the
-/// allreduce value once it is computed. This will often be an LCO set
-/// operation.
+/// This interface joins an allreduce. Clients must provide an identifier that
+/// is valid for the allreduce at the current locality.
 ///
 /// @param    allreduce The collective address.
 /// @param           id The input id.
 /// @param        bytes The size of the allreduce value in bytes.
 /// @param           in A pointer to the allreduce input value.
-/// @param     c_action The continuation action for the allreduce result.
-/// @param     c_target The continuation target for the allreduce result.
 ///
 /// @return             HPX_SUCCESS if the local part of this operation
 ///                     completes successfully, or an error code if it fails.
 int hpx_process_collective_allreduce_join(hpx_addr_t allreduce,
-                                          int id, size_t bytes, const void *in,
-                                          hpx_action_t c_action,
-                                          hpx_addr_t c_target)
+                                          int32_t id, size_t bytes,
+                                          const void *in)
   HPX_PUBLIC;
 
 /// Join an allreduce synchronously.
@@ -191,10 +223,10 @@ int hpx_process_collective_allreduce_join(hpx_addr_t allreduce,
 ///
 /// @return             HPX_SUCCESS if the local part of this operation
 ///                     completes successfully, or an error code if it fails.
-int hpx_process_collective_allreduce_join_sync(hpx_addr_t collective, int id,
-                                               size_t bytes, const void *in,
-                                               void *out)
-  HPX_PUBLIC;
+// int hpx_process_collective_allreduce_join_sync(hpx_addr_t collective, int id,
+//                                                size_t bytes, const void *in,
+//                                                void *out)
+//   HPX_PUBLIC;
 
 /// @}
 
