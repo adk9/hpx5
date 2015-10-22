@@ -250,8 +250,8 @@ void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 /// @param        nargs The number of arguments for the action.
 /// @param          ... The addresses of each argument.
 int _hpx_map_with_continuation(hpx_action_t action, hpx_addr_t base, int n,
-                              size_t offset, size_t bsize, hpx_action_t cont,
-                              hpx_addr_t caddr,int nargs, ...);
+                               size_t offset, size_t bsize, hpx_action_t cont,
+                               hpx_addr_t caddr,int nargs, ...);
 
 #define hpx_map_with_continuation(ACTION, BASE, N, OFFSET, BSIZE, CONT,  \
                                   CADDR, ...)                            \
