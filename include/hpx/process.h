@@ -48,7 +48,7 @@ hpx_pid_t hpx_process_getpid(hpx_addr_t process) HPX_PUBLIC;
 
 /// HPX process broadcast.
 ///
-/// This is a parallel call interface that performs an @p action on @p args at
+/// This is a parallel call interface that performs an @p action with @p args at
 /// all the localities associated with the process. The output values are not
 /// returned, but the completion of the broadcast operation can be tracked
 /// through the @p lco LCO.
@@ -75,7 +75,7 @@ int _hpx_process_broadcast(hpx_pid_t pid, hpx_action_t action, hpx_addr_t lsync,
 
 /// HPX process broadcast.
 ///
-/// This is a parallel call interface that performs an @p action on @p args at
+/// This is a parallel call interface that performs an @p action with @p args at
 /// all localities associated with a process. The output values are not
 /// returned.
 ///
@@ -101,7 +101,7 @@ int _hpx_process_broadcast_lsync(hpx_pid_t pid, hpx_action_t action,
 
 /// HPX process broadcast.
 ///
-/// This is a parallel call interface that performs an @p action on @p args at
+/// This is a parallel call interface that performs an @p action with @p args at
 /// all localities associated with the process. The output values are not
 /// returned.
 ///

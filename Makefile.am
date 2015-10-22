@@ -1,11 +1,10 @@
-####################
+###################
 # Makefile for HPX #
 ####################
 
 EXTRA_DIST = \
-        README NEWS          \
-        INSTALL AUTHORS      \
-        docs
+        README.md README.apex \
+        INSTALL AUTHORS
 
 AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = -I config -I contrib/hwloc-1.11.0/config
