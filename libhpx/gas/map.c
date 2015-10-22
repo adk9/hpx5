@@ -24,23 +24,27 @@
 #include <libhpx/worker.h>
 
 
-typedef struct {
-  uint32_t dst_stride;
-  char data[0];
-} _call_and_memput_args_t;
-
 // This action allocates a local future, sends a parcel that's
 // embedded in its payload with the local future as its continuation,
 // and then copies the result into a remote global address.
 static int
-_call_and_memput_action_handler(_call_and_memput_args_t *args, size_t size) {
-  hpx_parcel_t *parcel = parcel_clone((hpx_parcel_t*)args->data);
+_call_and_memput_action_handler(hpx_parcel_t *parcel, size_t size) {
+  hpx_parcel_t *parent = scheduler_current_parcel();
+  parcel_state_t state = parcel_get_state(parent);
+  dbg_assert(!parcel_retained(state));
+  state |= PARCEL_RETAINED;
+  parcel_set_state(parent, state);
+
   dbg_assert(parcel);
+  state = parcel_get_state(parcel);
+  dbg_assert(!parcel_nested(state));
+  state |= PARCEL_NESTED;
 
   // replace the "dst" lco in the parcel's continuation addr with the
   // local future
   hpx_addr_t dst = parcel->c_target;
-  hpx_addr_t local = hpx_lco_future_new(args->dst_stride);
+  uint64_t stride = (uintptr_t)parcel->next;
+  hpx_addr_t local = hpx_lco_future_new(stride);
   parcel->c_target = local;
 
   // send the parcel..
@@ -48,19 +52,18 @@ _call_and_memput_action_handler(_call_and_memput_args_t *args, size_t size) {
 
   void *buf;
   bool stack_allocated = true;
-  if (hpx_thread_can_alloca(args->dst_stride) >= HPX_PAGE_SIZE) {
-      buf = alloca(args->dst_stride);
+  if (hpx_thread_can_alloca(stride) >= HPX_PAGE_SIZE) {
+      buf = alloca(stride);
   } else {
       stack_allocated = false;
-      buf = registered_malloc(args->dst_stride);
+      buf = registered_malloc(stride);
   }
 
-  hpx_lco_get(local, args->dst_stride, buf);
+  hpx_lco_get(local, stride, buf);
   hpx_lco_delete(local, HPX_NULL);
 
   // steal the current continuation
-  hpx_parcel_t *parent = scheduler_current_parcel();
-  hpx_gas_memput_lsync(dst, buf, args->dst_stride, parent->c_target);
+  hpx_gas_memput_lsync(dst, buf, stride, parent->c_target);
   parent->c_target = HPX_NULL;
 
   if (!stack_allocated) {
@@ -89,13 +92,15 @@ static int _va_map(hpx_action_t action, uint32_t n,
     hpx_abort();
   }
 
-  // the root of all evil: Use "dst" as the continuation address to
-  // avoid creating another field in the args structure.
+  // hack: Use "dst" as the continuation address to avoid creating
+  // another field in the args structure.
   hpx_parcel_t *p = action_create_parcel_va(src, action, dst, hpx_lco_set_action,
                                             nargs, vargs);
-  size_t args_size = sizeof(_call_and_memput_args_t) + parcel_size(p);
-  _call_and_memput_args_t *args = malloc(args_size);
-  args->dst_stride = dst_stride;
+  size_t size = parcel_size(p);
+  hpx_parcel_t *args = malloc(size);
+  // hack: use the parcel's "next" parameter to pass the output
+  // stride.
+  args->next = (void*)(uintptr_t)(dst_stride);
 
   for (int i = 0; i < n; ++i) {
     // Update the target of the parcel..
@@ -103,9 +108,9 @@ static int _va_map(hpx_action_t action, uint32_t n,
     p->c_target = dst;
 
     // ..and put the new destination in the payload
-    memcpy(args->data, p, parcel_size(p));
+    memcpy(args, p, size);
     e = hpx_call_with_continuation(src, _call_and_memput_action, remote,
-                                   hpx_lco_set_action, args, args_size);
+                                   hpx_lco_set_action, args, size);
     dbg_check(e, "could not send parcel for map\n");
 
     src = hpx_addr_add(src, src_stride, bsize);
