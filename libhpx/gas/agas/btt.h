@@ -38,6 +38,11 @@ int btt_get_all(const void *btt, gva_t gva, void **lva, size_t *blocks, int32_t 
 /// block the calling thread until that condition is true.
 int btt_remove_when_count_zero(void *btt, gva_t gva, void** lva);
 
+/// This function updates the block metadata to point to its new owner
+/// denoted by @p rank. The function blocks the calling thread until
+/// all "pinned" references to the block reach a count of zero.
+int btt_try_move(void *obj, gva_t gva, int rank, void **lva);
+
 #ifdef __cplusplus
 }
 #endif

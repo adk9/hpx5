@@ -41,11 +41,12 @@ namespace {
   class BTT : public Map {
    public:
     BTT(size_t);
-    hpx_parcel_t *tryDelete(gva_t gva, hpx_parcel_t *p);
+    hpx_parcel_t *attachParcel(gva_t gva, hpx_parcel_t *p);
     bool tryPin(gva_t gva, void** lva);
     hpx_parcel_t *unpin(gva_t gva);
     void *lookup(gva_t gva) const;
     uint32_t getOwner(gva_t gva) const;
+    void setOwner(gva_t gva) const;
     size_t getBlocks(gva_t gva) const;
   };
 }
@@ -54,7 +55,7 @@ BTT::BTT(size_t size) : Map(size) {
 }
 
 hpx_parcel_t *
-BTT::tryDelete(gva_t gva, hpx_parcel_t *p) {
+BTT::attachParcel(gva_t gva, hpx_parcel_t *p) {
   uint64_t key = gva_to_key(gva);
   bool ret = false;
   bool found = update_fn(key, [&](Entry& entry) {
@@ -139,6 +140,16 @@ BTT::getOwner(gva_t gva) const {
   }
   else {
     return gva.bits.home;
+  }
+}
+
+void
+BTT::setOwner(gva_t gva, uint32_t owner) const {
+  Entry entry;
+  uint64_t key = gva_to_key(gva);
+  bool found = find(key, entry);
+  if (found) {
+    entry.owner = owner;
   }
 }
 
@@ -240,19 +251,20 @@ btt_get_all(const void *o, gva_t gva, void **lva, size_t *blocks, int32_t *cnt) 
 typedef struct {
   BTT        *btt;
   gva_t       gva;
-} _btt_try_delete_env_t;
+} _btt_attach_parcel_env_t;
 
-static void _btt_try_delete_continuation(hpx_parcel_t *p, void *e) {
-  _btt_try_delete_env_t *env = static_cast<_btt_try_delete_env_t*>(e);
+static void _btt_attach_parcel_continuation(hpx_parcel_t *p, void *e) {
+  _btt_attach_parcel_env_t *env = static_cast<_btt_attach_parcel_env_t*>(e);
   BTT *btt = env->btt;
   gva_t gva = env->gva;
-  if ((p = btt->tryDelete(gva, p))) {
+  if ((p = btt->attachParcel(gva, p))) {
     parcel_launch(p);
   }
 }
 
-int btt_remove_when_count_zero(void *o, gva_t gva, void **lva) {
-  BTT *btt = static_cast<BTT*>(o);
+static int
+_btt_wait_until_count_zero(void *obj, gva_t gva, void **lva) {
+  BTT *btt = static_cast<BTT*>(obj);
   Entry entry;
   uint64_t key = gva_to_key(gva);
   if (!btt->find(key, entry)) {
@@ -265,16 +277,26 @@ int btt_remove_when_count_zero(void *o, gva_t gva, void **lva) {
 
   // Wait until the reference count hits zero.
   if (entry.count) {
-    _btt_try_delete_env_t env = {
+    _btt_attach_parcel_env_t env = {
       .btt = btt,
       .gva = gva
     };
 
-    scheduler_suspend(_btt_try_delete_continuation, &env, 0);
+    scheduler_suspend(_btt_attach_parcel_continuation, &env, 0);
   }
+  return HPX_SUCCESS;
+}
 
+int btt_remove_when_count_zero(void *obj, gva_t gva, void **lva) {
+  int e = _btt_wait_until_count_zero(obj, gva, lva);
   bool erased = btt->erase(key);
   assert(erased);
-  return HPX_SUCCESS;
+  return e;
   (void)erased;
+}
+
+int btt_try_move(void *obj, gva_t gva, int rank, void **lva) {
+  int e = _btt_wait_until_count_zero(obj, gva, lva);
+  btt->setOwner(gva, rank);
+  return e;
 }

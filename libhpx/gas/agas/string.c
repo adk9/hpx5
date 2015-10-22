@@ -33,7 +33,7 @@ static int _agas_invalidate_mapping_handler(int rank) {
   size_t bsize = UINT64_C(1) << gva.bits.size;
 
   void *block = NULL;
-  int e = btt_try_move(agas->btt, src, rank, &block);
+  int e = btt_try_move(agas->btt, gva, rank, &block);
   if (e != HPX_SUCCESS) {
     log_error("failed to invalidate remote mapping.\n");
     return e;
