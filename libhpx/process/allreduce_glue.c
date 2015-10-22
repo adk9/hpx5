@@ -17,7 +17,6 @@
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include "allreduce.h"
-#include "map_reduce.h"
 
 static const size_t BSIZE = sizeof(allreduce_t);
 
@@ -38,8 +37,9 @@ hpx_addr_t hpx_process_collective_allreduce_new(size_t bytes,
 
   // initialize the array to point to the root as their parent (fat tree)
   hpx_addr_t and = hpx_lco_and_new(n);
-  dbg_check( map_reduce(allreduce_init_async, base, n, 0, BSIZE,
-                        hpx_lco_set_action, and, &bytes, &root, &reset, &op) );
+  dbg_check( hpx_map_with_continuation(allreduce_init_async, base, n, 0, BSIZE,
+                                       hpx_lco_set_action, and, &bytes, &root,
+                                       &reset, &op) );
   hpx_lco_wait(and);
   hpx_lco_delete_sync(and);
 
@@ -59,8 +59,8 @@ void hpx_process_collective_allreduce_delete(hpx_addr_t allreduce) {
 
   int n = here->ranks;
   hpx_addr_t and = hpx_lco_and_new(n + 1);
-  dbg_check( map_reduce(allreduce_fini_async, allreduce, n, 0, BSIZE,
-                        hpx_lco_set_action, and) );
+  dbg_check( hpx_map_with_continuation(allreduce_fini_async, allreduce, n, 0,
+                                       BSIZE, hpx_lco_set_action, and) );
   dbg_check( hpx_call(root, allreduce_fini_async, and) );
   hpx_lco_wait(and);
   hpx_lco_delete_sync(and);

@@ -306,7 +306,7 @@ int hpx_gas_memput_lsync(hpx_addr_t to, const void *from, size_t size,
 ///
 /// This shares the same functionality as hpx_gas_memput(), but will not return
 /// until the write has completed remotely. This exposes the potential for
-/// a more efficient mechanism for synchronous operation, and shoudl be
+/// a more efficient mechanism for synchronous operation, and should be
 /// preferred where fully synchronous semantics are necessary.
 ///
 /// @param           to The global address to copy to.
@@ -341,6 +341,87 @@ int hpx_gas_memput_rsync(hpx_addr_t to, const void *from, size_t size)
 /// @returns  HPX_SUCCESS
 int hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
   HPX_PUBLIC;
+
+/// This copies data synchronously from a global address to another
+/// global address.
+///
+/// This shares the same functionality as hpx_gas_memcpy(), but will not return
+/// until the copu has completed remotely. This exposes the potential for
+/// a more efficient mechanism for synchronous operation, and should be
+/// preferred where fully synchronous semantics are necessary.
+///
+/// @param           to The global address to copy to.
+/// @param         from The global address to copy from.
+/// @param         size The size, in bytes, of the buffer to copy
+///
+/// @returns  HPX_SUCCESS
+int hpx_gas_memcpy_sync(hpx_addr_t to, hpx_addr_t from, size_t size)
+  HPX_PUBLIC;
+
+/// GAS collectives.
+///
+/// This is a parallel call interface (similar to hpx_bcast) that
+/// performs an @p action on an array in the global address space
+/// starting at the base address @p src with an equal stride of @p
+/// src_stride bytes. The output values are stored in the global
+/// address space starting at offset @p dst with an output stride of
+/// @p dst_stride bytes.
+///
+/// @param           op The action to perform.
+/// @param            n The number of input/output elements in the global array.
+/// @param          src The starting offset of the input array.
+/// @param   src_stride The stride, in bytes, between the elements of
+///                     the input array.
+/// @param          dst The starting offset of the output array.
+/// @param   dst_stride The stride, in bytes, between the elements of
+///                     the output array.
+/// @param        bsize The block size, in bytes, of the input/output array.
+/// @param        sync  The address of an LCO to trigger when the map
+///                       operation is complete globally.
+/// @param         args The argument data for @p op.
+///
+/// @returns      HPX_SUCCESS if no errors were encountered.
+int _hpx_gas_map(hpx_action_t op, uint32_t n,
+                 hpx_addr_t src, uint32_t src_stride,
+                 hpx_addr_t dst, uint32_t dst_stride,
+                 uint32_t bsize, hpx_addr_t sync, int nargs, ...) HPX_PUBLIC;
+#define hpx_gas_map(op, n, src, src_stride, dst, dst_stride, bsize, sync, ...) \
+  _hpx_gas_map(op, n, src, src_stride, dst, dst_stride, bsize, sync,           \
+               __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+
+/// GAS collectives.
+///
+/// This is a parallel call interface (similar to hpx_bcast) that
+/// performs an @p action on an array in the global address space
+/// starting at the base address @p src with an equal stride of @p
+/// src_stride bytes. The output values are stored in the global
+/// address space starting at offset @p dst with an output stride of
+/// @p dst_stride bytes.
+///
+/// This variant of map is synchronous. It will not return to the caller until
+/// specified action has been run on the entire global array and the
+/// output global array has been generated.
+///
+/// @param           op The action to perform.
+/// @param            n The number of input/output elements in the global array.
+/// @param          src The starting offset of the input array.
+/// @param   src_stride The stride, in bytes, between the elements of
+///                     the input array.
+/// @param          dst The starting offset of the output array.
+/// @param   dst_stride The stride, in bytes, between the elements of
+///                     the output array.
+/// @param        bsize The block size, in bytes, of the input/output array.
+/// @param        sync  The address of an LCO to trigger when the map
+///                       operation is complete globally.
+/// @param         args The argument data for @p op.
+///
+/// @returns      HPX_SUCCESS if no errors were encountered.
+int _hpx_gas_map_sync(hpx_action_t op, uint32_t n, hpx_addr_t src,
+                      uint32_t src_stride, hpx_addr_t dst, uint32_t dst_stride,
+                      uint32_t bsize, int nargs, ...) HPX_PUBLIC;
+#define hpx_gas_map_sync(op, n, src, src_stride, dst, dst_stride, bsize, ...)  \
+  _hpx_gas_map_sync(op, n, src, src_stride, dst, dst_stride, bsize,            \
+                    __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 /// @}
 
