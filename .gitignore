@@ -146,7 +146,7 @@ tests/unit/lco_and
 tests/unit/runtime
 tests/unit/libhpx_boot
 tests/unit/parcel_send_rendezvous
-tests/unit/gas_map
+tests/unit/map
 /tests/perf/Makefile
 tests/perf/gas_alloc
 tests/perf/gas_addr_trans
