@@ -37,7 +37,7 @@ static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _verify, _verify_handler,
                   HPX_POINTER, HPX_FLOAT);
 
 static int map_handler(void) {
-  uint64_t bsize = 64*sizeof(float);
+  uint64_t bsize = 4*sizeof(float);
   int blocks = HPX_LOCALITIES;
   hpx_addr_t array = hpx_gas_alloc_cyclic(blocks, bsize, 0);
   test_assert(array != HPX_NULL);
