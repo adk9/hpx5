@@ -197,7 +197,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
 
   switch (e) {
    case HPX_SUCCESS:
-    log_sched("completed interrupt\n");
+    log_sched("completed interrupt %p\n", p);
     _continue_parcel(p, 0, NULL);
     if (action_is_pinned(here->actions, p->action)) {
       hpx_gas_unpin(p->target);
