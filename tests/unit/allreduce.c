@@ -18,6 +18,8 @@
 static const int I = 32;
 static const int N = 16;
 
+#define BSIZE (N * sizeof(element_t))
+
 /// Allreduce initialization operation for a summation.
 static void _init_handler(int *input, size_t UNUSED) {
   *input = 0;
@@ -30,81 +32,100 @@ static void _sum_handler(int *lhs, const int *rhs, size_t UNUSED) {
 }
 static HPX_ACTION(HPX_FUNCTION, 0, _sum, _sum_handler);
 
-/// Handle the test broadcast.
-///
-/// We want to stress the allreduce by generating a bunch of parallel operations
-/// on it from different parts of the system. We do this by broadcasting this
-/// operation, which will spawn N instances of the @p leaf operation locally.
-static int
-_test_bcast_handler(hpx_addr_t allreduce, hpx_addr_t sum, hpx_action_t leaf) {
-  int r;
-  int row = N * HPX_LOCALITY_ID;
+typedef struct {
+  hpx_addr_t f;
+  int32_t   id;
+} element_t;
+
+static int _subscribe_handler(element_t *block, hpx_addr_t allreduce) {
   for (int i = 0; i < N; ++i) {
-    int j = row + i;
-    int k = i + 1;
-    // &sum is passed explicitly instead of as a continuation for the _join_leaf
-    CHECK( hpx_call(HPX_HERE, leaf, HPX_NULL, &allreduce, &j, &k, &sum) );
+    block[i].f = hpx_lco_future_new(sizeof(int32_t));
+    block[i].id = hpx_process_collective_allreduce_subscribe(allreduce,
+                                                             hpx_lco_set_action,
+                                                             block[i].f);
   }
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, 0, _test_bcast, _test_bcast_handler, HPX_ADDR,
-                  HPX_ADDR, HPX_ACTION_T);
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _subscribe, _subscribe_handler,
+                  HPX_POINTER, HPX_ADDR);
 
-/// A utility that tests a certain leaf function through I iterations.
-static int _test(hpx_action_t leaf) {
-  int L = HPX_LOCALITIES;
-  int n = N * L;
-  hpx_addr_t allreduce = hpx_process_collective_allreduce_new(n, sizeof(int),
+static int _unsubscribe_handler(element_t *block, hpx_addr_t allreduce) {
+  for (int i = 0; i < N; ++i) {
+    hpx_process_collective_allreduce_unsubscribe(allreduce, block[i].id);
+    hpx_lco_delete_sync(block[i].f);
+  }
+  return HPX_SUCCESS;
+}
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _unsubscribe, _unsubscribe_handler,
+                  HPX_POINTER, HPX_ADDR);
+
+static int _reduce_handler(element_t *element, hpx_addr_t allreduce, int i) {
+  hpx_process_collective_allreduce_join(allreduce, element->id, sizeof(i), &i);
+  hpx_lco_get_reset(element->f, sizeof(i), &i);
+  HPX_THREAD_CONTINUE(i);
+}
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _reduce, _reduce_handler,
+                  HPX_POINTER, HPX_ADDR, HPX_INT);
+
+static int _reduce_block_handler(hpx_addr_t allreduce) {
+  hpx_addr_t block = hpx_thread_current_target();
+  hpx_addr_t reduce = hpx_lco_reduce_new(N, sizeof(int), _init, _sum);
+  for (int i = 0; i < N; ++i) {
+    hpx_addr_t element = hpx_addr_add(block, i * sizeof(element_t), BSIZE);
+    hpx_call(element, _reduce, reduce, &allreduce, &i);
+  }
+  int result;
+  hpx_lco_get(reduce, sizeof(result), &result);
+  hpx_lco_delete_sync(reduce);
+  HPX_THREAD_CONTINUE(result);
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _reduce_block, _reduce_block_handler,
+                  HPX_ADDR);
+
+static int _test_handler(void) {
+  hpx_addr_t base = hpx_gas_alloc_cyclic(HPX_LOCALITIES, BSIZE, 0);
+  hpx_addr_t allreduce = hpx_process_collective_allreduce_new(sizeof(int),
                                                               _init, _sum);
-  hpx_addr_t sum = hpx_lco_reduce_new(n, sizeof(int), _init, _sum);
-  for (int i = 0; i < I; ++i) {
-    int r;
-    CHECK( hpx_bcast(_test_bcast, HPX_NULL, HPX_NULL, &allreduce, &sum, &leaf) );
-    CHECK( hpx_lco_get_reset(sum, sizeof(r), &r) );
-    test_assert(r == n * HPX_LOCALITIES * (N + 1) * N / 2);
+
+  hpx_addr_t and = hpx_lco_and_new(HPX_LOCALITIES);
+  for (int i = 0, e =  HPX_LOCALITIES; i < e; ++i) {
+    hpx_addr_t block = hpx_addr_add(base, i * BSIZE, BSIZE);
+    hpx_call(block, _subscribe, and, &allreduce);
   }
-  hpx_lco_delete(sum, HPX_NULL);
+  hpx_lco_wait_reset(and);
+
+  hpx_addr_t reduce = hpx_lco_reduce_new(HPX_LOCALITIES, sizeof(int), _init,
+                                         _sum);
+  for (int i = 0, e = I; i < e; ++i) {
+    for (int j = 0, e = HPX_LOCALITIES; j < e; ++j) {
+      hpx_addr_t block = hpx_addr_add(base, j * BSIZE, BSIZE);
+      hpx_call(block, _reduce_block, reduce, &allreduce);
+    }
+
+    int result;
+    hpx_lco_get_reset(reduce, sizeof(result), &result);
+
+    // each locality contributes N * (N -1) / 2 to the total, so each leaf
+    int leaves = HPX_LOCALITIES * N;
+    int total = (N * (N - 1) / 2) * HPX_LOCALITIES;
+    int expected = leaves * total;
+    test_assert(result == expected);
+  }
+  hpx_lco_delete_sync(reduce);
+
+  for (int i = 0, e =  HPX_LOCALITIES; i < e; ++i) {
+    hpx_addr_t block = hpx_addr_add(base, i * BSIZE, BSIZE);
+    hpx_call(block, _unsubscribe, and, &allreduce);
+  }
+  hpx_lco_wait_reset(and);
+  hpx_lco_delete(and, HPX_NULL);
   hpx_process_collective_allreduce_delete(allreduce);
+  hpx_gas_free(base, HPX_NULL);
+
   return HPX_SUCCESS;
 }
-
-/// Use a join operation in the allreduce leaf.
-static int
-_join_leaf_handler(hpx_addr_t allreduce, int i, int j, hpx_addr_t sum) {
-  CHECK( hpx_process_collective_allreduce_join(allreduce, i, sizeof(j), &j,
-                                               hpx_lco_set_action, sum) );
-  return HPX_SUCCESS;
-}
-static HPX_ACTION(HPX_DEFAULT, 0, _join_leaf, _join_leaf_handler, HPX_ADDR,
-                  HPX_INT, HPX_INT, HPX_ADDR);
-
-/// Use the join_sync operation in the allreduce leaf.
-static int
-_join_sync_leaf_handler(hpx_addr_t allreduce, int i, int j, hpx_addr_t sum) {
-  int r;
-  CHECK( hpx_process_collective_allreduce_join_sync(allreduce, i, sizeof(j), &j,
-                                                    &r) );
-  test_assert(r == HPX_LOCALITIES * N * (N + 1) / 2);
-  hpx_call_cc(sum, hpx_lco_set_action, NULL, NULL, &r, sizeof(r));
-}
-static HPX_ACTION(HPX_DEFAULT, 0, _join_sync_leaf, _join_sync_leaf_handler,
-                  HPX_ADDR, HPX_INT, HPX_INT, HPX_ADDR);
-
-/// Spawn the join test.
-static int _test_allreduce_join_handler(void) {
-  return _test(_join_leaf);
-}
-static HPX_ACTION(HPX_DEFAULT, 0, _test_allreduce_join,
-                  _test_allreduce_join_handler);
-
-/// Spawn the join sync test.
-static int _test_allreduce_join_sync_handler(void) {
-  return _test(_join_sync_leaf);
-}
-static HPX_ACTION(HPX_DEFAULT, 0, _test_allreduce_join_sync,
-                  _test_allreduce_join_sync_handler);
+static HPX_ACTION(HPX_DEFAULT, 0, _test, _test_handler);
 
 TEST_MAIN({
-    ADD_TEST(_test_allreduce_join_sync, 0);
-    ADD_TEST(_test_allreduce_join, 0);
+    ADD_TEST(_test, 0);
   });
