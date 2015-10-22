@@ -25,7 +25,7 @@
 namespace {
   struct Entry {
     int32_t count;
-    int32_t owner;
+    uint32_t owner;
     void *lva;
     size_t blocks;
     hpx_parcel_t *onunpin;
@@ -41,8 +41,8 @@ namespace {
   class BTT : public Map {
    public:
     BTT(size_t);
-    hpx_parcel_t *trydelete(gva_t gva, hpx_parcel_t *p);
-    bool trypin(gva_t gva, void** lva);
+    hpx_parcel_t *tryDelete(gva_t gva, hpx_parcel_t *p);
+    bool tryPin(gva_t gva, void** lva);
     hpx_parcel_t *unpin(gva_t gva);
     void *lookup(gva_t gva) const;
     uint32_t getOwner(gva_t gva) const;
@@ -54,23 +54,26 @@ BTT::BTT(size_t size) : Map(size) {
 }
 
 hpx_parcel_t *
-BTT::trydelete(gva_t gva, hpx_parcel_t *p) {
+BTT::tryDelete(gva_t gva, hpx_parcel_t *p) {
   uint64_t key = gva_to_key(gva);
   bool ret = false;
   bool found = update_fn(key, [&](Entry& entry) {
-      if (entry.count > 0) {
-        assert(entry.onunpin == NULL);
-        entry.onunpin = p;
-      } else {
+      if (entry.owner != here->rank || entry.count == 0) {
         ret = true;
+        return;
       }
+
+      // If there are pending pins on this block, we register a parcel
+      // that is launched when the reference count goes to 0.
+      assert(entry.onunpin == NULL);
+      entry.onunpin = p;
     });
   assert(found);
   return (ret ? p : NULL);
 }
 
 bool
-BTT::trypin(gva_t gva, void** lva) {
+BTT::tryPin(gva_t gva, void** lva) {
   uint64_t key = gva_to_key(gva);
   bool ret = true;
   bool found = update_fn(key, [&](Entry& entry) {
@@ -78,7 +81,9 @@ BTT::trypin(gva_t gva, void** lva) {
         return;
       }
 
-      if (entry.onunpin != NULL) {
+      // If we do not own the block or if there is a pending delete on
+      // this block, the try-pin operation fails.
+      if (entry.owner != here->rank || entry.onunpin != NULL) {
         ret = false;
         return;
       }
@@ -97,6 +102,7 @@ BTT::unpin(gva_t gva) {
   bool ret = false;
   hpx_parcel_t *p;
   bool found = update_fn(key, [&](Entry& entry) {
+      assert(entry.owner == here->rank);
       assert(entry.count > 0);
       entry.count--;
       // printf("%lu %d --\n", key, entry.count);
@@ -161,7 +167,7 @@ btt_delete(void* obj) {
 }
 
 void
-btt_insert(void *obj, gva_t gva, int32_t owner, void *lva, size_t blocks) {
+btt_insert(void *obj, gva_t gva, uint32_t owner, void *lva, size_t blocks) {
   BTT *btt = static_cast<BTT*>(obj);
   uint64_t key = gva_to_key(gva);
   bool inserted = btt->insert(key, Entry(owner, lva, blocks, NULL));
@@ -181,7 +187,7 @@ btt_remove(void *obj, gva_t gva) {
 bool
 btt_try_pin(void* obj, gva_t gva, void** lva) {
   BTT *btt = static_cast<BTT*>(obj);
-  return btt->trypin(gva, lva);
+  return btt->tryPin(gva, lva);
 }
 
 void
@@ -189,7 +195,7 @@ btt_unpin(void* obj, gva_t gva) {
   BTT *btt = static_cast<BTT*>(obj);
   hpx_parcel_t *p = btt->unpin(gva);
   if (p) {
-    hpx_parcel_send_sync(p);
+    parcel_launch(p);
   }
 }
 
@@ -240,7 +246,7 @@ static void _btt_try_delete_continuation(hpx_parcel_t *p, void *e) {
   _btt_try_delete_env_t *env = static_cast<_btt_try_delete_env_t*>(e);
   BTT *btt = env->btt;
   gva_t gva = env->gva;
-  if ((p = btt->trydelete(gva, p))) {
+  if ((p = btt->tryDelete(gva, p))) {
     parcel_launch(p);
   }
 }
