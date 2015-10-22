@@ -217,6 +217,10 @@ void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
   _hpx_call_when_cc(HPX_NULL, addr, action, cleanup, env,       \
                     __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
+
+/// Collective calls.
+///
+
 #define hpx_bcast(action, lsync, rsync, ...)                            \
   _hpx_process_broadcast(hpx_thread_current_pid(), action, lsync, rsync, \
                          __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
@@ -228,5 +232,49 @@ void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 #define hpx_bcast_rsync(action, ...)                                    \
   _hpx_process_broadcast_rsync(hpx_thread_current_pid(), action,        \
                                __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
+
+/// HPX map operation.
+///
+/// This is a parallel call (map) that performs an @p action with @p
+/// args on a global array with base @p base and @p n elements. The
+/// output "continued" by the action is returned to the continuation
+/// @p cont at the address @p caddr.
+///
+/// @param       action The action to run.
+/// @param         base The base of the array.
+/// @param            n The number of elements in the array.
+/// @param       offset The offset within each element to target.
+/// @param        bsize The block size for the array.
+/// @param         cont The continuation.
+/// @param        raddr The continuation address.
+/// @param        nargs The number of arguments for the action.
+/// @param          ... The addresses of each argument.
+int _hpx_map_with_continuation(hpx_action_t action, hpx_addr_t base, int n,
+                              size_t offset, size_t bsize, hpx_action_t cont,
+                              hpx_addr_t caddr,int nargs, ...);
+
+#define hpx_map_with_continuation(ACTION, BASE, N, OFFSET, BSIZE, CONT,  \
+                                  CADDR, ...)                            \
+  _hpx_map_with_continuation(ACTION, BASE, N, OFFSET, BSIZE, CONT, CADDR,\
+                             __HPX_NARGS(__VA_ARGS__),##__VA_ARGS__)
+
+/// HPX map operation.
+///
+/// This is a parallel call (map) that performs an @p action with @p
+/// args on a global array with base @p base and @p n elements. The
+/// output "continued" by the action, if any, is not returned.
+///
+/// @param       action The action to run.
+/// @param         base The base of the array.
+/// @param            n The number of elements in the array.
+/// @param       offset The offset within each element to target.
+/// @param        bsize The block size for the array.
+/// @param        nargs The number of arguments for the action.
+/// @param          ... The addresses of each argument.
+///
+/// @returns      HPX_SUCCESS if no errors were encountered.
+#define hpx_map(ACTION, BASE, N, OFFSET, BSIZE, ...)                         \
+  _hpx_map_with_continuation(ACTION, BASE, N, OFFSET, BSIZE, HPX_ACTION_NULL,\
+                             HPX_NULL, __HPX_NARGS(__VA_ARGS__),##__VA_ARGS__)
 
 #endif
