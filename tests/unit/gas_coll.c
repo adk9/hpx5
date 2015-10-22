@@ -71,7 +71,7 @@ static int map_handler(void) {
   printf("Verifying results...\n");
 
   float expected = initializer * multiplier;
-  hpx_map(_verify, out_array, nelts, sizeof(float), bsize, &expected);
+  hpx_gas_bcast(_verify, out_array, nelts, sizeof(float), bsize, &expected);
   hpx_gas_free(array, HPX_NULL);
   return HPX_SUCCESS;
 }

@@ -23,9 +23,10 @@
 #include <libhpx/scheduler.h>
 #include <libhpx/worker.h>
 
-static int _va_map_cont(hpx_action_t action, hpx_addr_t base, int n,
-                        size_t offset, size_t bsize, hpx_action_t rop,
-                        hpx_addr_t raddr,int nargs, va_list *vargs) {
+static
+int _va_gas_bcast_cont(hpx_action_t action, hpx_addr_t base, int n,
+                       size_t offset, size_t bsize, hpx_action_t rop,
+                       hpx_addr_t raddr,int nargs, va_list *vargs) {
   hpx_addr_t and = hpx_lco_and_new(n);
   for (int i = 0; i < n; ++i) {
     va_list temp;
@@ -41,14 +42,15 @@ static int _va_map_cont(hpx_action_t action, hpx_addr_t base, int n,
   return e;
 }
 
-int _hpx_map_with_continuation(hpx_action_t action, hpx_addr_t base, int n,
-                               size_t offset, size_t bsize, hpx_action_t rop,
-                               hpx_addr_t raddr,int nargs, ...) {
+int
+_hpx_gas_bcast_with_continuation(hpx_action_t action, hpx_addr_t base, int n,
+                                 size_t offset, size_t bsize, hpx_action_t rop,
+                                 hpx_addr_t raddr,int nargs, ...) {
   va_list vargs;
   va_start(vargs, nargs);
-  int e = _va_map_cont(action, base, n, offset, bsize, rop, raddr, nargs,
-                         &vargs);
-  dbg_check(e, "failed _hpx_map_with_continuation\n");
+  int e = _va_gas_bcast_cont(action, base, n, offset, bsize, rop, raddr, nargs,
+                             &vargs);
+  dbg_check(e, "failed _hpx_gas_bcast_with_continuation\n");
   va_end(vargs);
   return e;
 }
@@ -118,8 +120,8 @@ static int _va_map(hpx_action_t action, uint32_t n,
   }
 
   if (dst == HPX_NULL) {
-    return _va_map_cont(action, src, n, src_stride, bsize, HPX_ACTION_NULL,
-                        HPX_NULL, nargs, vargs);
+    return _va_gas_bcast_cont(action, src, n, src_stride, bsize,
+                              HPX_ACTION_NULL, HPX_NULL, nargs, vargs);
   }
 
   // hack: Use "dst" as the continuation address to avoid creating
