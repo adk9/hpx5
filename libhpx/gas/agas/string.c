@@ -17,6 +17,7 @@
 
 #include <string.h>
 #include <libhpx/action.h>
+#include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/network.h>
@@ -27,6 +28,10 @@
 
 void
 agas_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
+  libhpx_network_t net = here->config->network;
+  if (net != HPX_NETWORK_ISIR) {
+    hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
+  }
 }
 
 static int _agas_lco_set_handler(int src, uint64_t command) {
