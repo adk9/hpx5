@@ -53,10 +53,10 @@ _call_and_memput_action_handler(hpx_parcel_t *parcel, size_t size) {
   void *buf;
   bool stack_allocated = true;
   if (hpx_thread_can_alloca(stride) >= HPX_PAGE_SIZE) {
-      buf = alloca(stride);
+    buf = alloca(stride);
   } else {
-      stack_allocated = false;
-      buf = registered_malloc(stride);
+    stack_allocated = false;
+    buf = registered_malloc(stride);
   }
 
   hpx_lco_get(local, stride, buf);
@@ -67,7 +67,7 @@ _call_and_memput_action_handler(hpx_parcel_t *parcel, size_t size) {
   parent->c_target = HPX_NULL;
 
   if (!stack_allocated) {
-      registered_free(buf);
+    registered_free(buf);
   }
   return HPX_SUCCESS;
 }
@@ -81,10 +81,10 @@ static int _va_map(hpx_action_t action, uint32_t n,
   int e = HPX_SUCCESS;
   hpx_addr_t remote = HPX_NULL;
   if (sync) {
-      remote = hpx_lco_and_new(n);
-      e = hpx_call_when_with_continuation(remote, sync, hpx_lco_set_action,
-                                          remote, hpx_lco_delete_action, NULL, 0);
-      dbg_check(e, "could not chain LCO\n");
+    remote = hpx_lco_and_new(n);
+    e = hpx_call_when_with_continuation(remote, sync, hpx_lco_set_action,
+                                        remote, hpx_lco_delete_action, NULL, 0);
+    dbg_check(e, "could not chain LCO\n");
   }
 
   if (dst == HPX_NULL) {
