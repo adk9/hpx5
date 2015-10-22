@@ -69,20 +69,9 @@ static int map_handler(void) {
   test_assert(e == HPX_SUCCESS);
 
   printf("Verifying results...\n");
-  hpx_addr_t and = hpx_lco_and_new(nelts);
-  // We should use a process map-reduce here eventually..
-  hpx_addr_t base = out_array;
+
   float expected = initializer * multiplier;
-  for (int i = 0; i < nelts; ++i) {
-    e = hpx_call(base, _verify, and, &expected);
-    test_assert(e == HPX_SUCCESS);
-    base = hpx_addr_add(base, sizeof(float), bsize);
-  }
-
-  e = hpx_lco_wait(and);
-  test_assert(e == HPX_SUCCESS);
-  hpx_lco_delete(and, HPX_NULL);
-
+  hpx_map(_verify, out_array, nelts, sizeof(float), bsize, &expected);
   hpx_gas_free(array, HPX_NULL);
   return HPX_SUCCESS;
 }
