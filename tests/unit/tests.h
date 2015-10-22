@@ -38,17 +38,6 @@
 #define test_assert_msg(cond, msg) test_assert(cond && msg)
 #define CHECK(e) test_assert(e == HPX_SUCCESS)
 
-#define ADD_FAIL_TEST(test, at) do {                        \
-    printf("====== TEST %s at %d ======\n", #test, HPX_LOCALITY_ID);\
-    int e = hpx_call_sync(HPX_THERE(at), test, NULL, 0);    \
-    if (e != HPX_SUCCESS) {                                 \
-      printf("======== EXPECTED FAILURE ========\n");       \
-    } else {                                                \
-      printf("======== UNEXPECTED SUCCESS ========\n");     \
-      exit(EXIT_FAILURE);                                   \
-    }                                                       \
-  } while (0)
-
 #define ADD_TEST(test, at) do {                             \
     printf("====== TEST %s at %d ======\n", #test, HPX_LOCALITY_ID);    \
     int e = hpx_call_sync(HPX_THERE(at), test, NULL, 0);    \
