@@ -358,9 +358,55 @@ int hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
 int hpx_gas_memcpy_sync(hpx_addr_t to, hpx_addr_t from, size_t size)
   HPX_PUBLIC;
 
-/// GAS collectives.
+/// GAS collectives (hpx_gas_bcast_with_continuation).
 ///
-/// This is a parallel call interface (similar to hpx_bcast) that
+/// This is a parallel call (bcast) that performs an @p action with @p
+/// args on a global array with base @p base and @p n elements. The
+/// output "continued" by the action is returned to the continuation
+/// @p cont at the address @p caddr.
+///
+/// @param       action The action to run.
+/// @param         base The base of the array.
+/// @param            n The number of elements in the array.
+/// @param       offset The offset within each element to target.
+/// @param        bsize The block size for the array.
+/// @param         cont The continuation.
+/// @param        raddr The continuation address.
+/// @param        nargs The number of arguments for the action.
+/// @param          ... The addresses of each argument.
+int
+_hpx_gas_bcast_with_continuation(hpx_action_t action, hpx_addr_t base, int n,
+                                 size_t offset, size_t bsize, hpx_action_t cont,
+                                 hpx_addr_t caddr, int nargs, ...) HPX_PUBLIC;
+
+#define hpx_gas_bcast_with_continuation(ACTION, BASE, N, OFFSET, BSIZE, CONT,  \
+                                        CADDR, ...)                            \
+  _hpx_gas_bcast_with_continuation(ACTION, BASE, N, OFFSET, BSIZE, CONT, CADDR,\
+                                   __HPX_NARGS(__VA_ARGS__),##__VA_ARGS__)
+
+/// GAS collectives (hpx_gas_bcast).
+///
+/// This is a parallel call (bcast) that performs an @p action with @p
+/// args on a global array with base @p base and @p n elements. The
+/// output "continued" by the action, if any, is not returned.
+///
+/// @param       action The action to run.
+/// @param         base The base of the array.
+/// @param            n The number of elements in the array.
+/// @param       offset The offset within each element to target.
+/// @param        bsize The block size for the array.
+/// @param        nargs The number of arguments for the action.
+/// @param          ... The addresses of each argument.
+///
+/// @returns      HPX_SUCCESS if no errors were encountered.
+#define hpx_gas_bcast(ACTION, BASE, N, OFFSET, BSIZE, ...)                   \
+  _hpx_gas_bcast_with_continuation(ACTION, BASE, N, OFFSET, BSIZE,           \
+                                   HPX_ACTION_NULL, HPX_NULL,                \
+                                   __HPX_NARGS(__VA_ARGS__),##__VA_ARGS__)
+
+/// GAS collectives (hpx_gas_map).
+///
+/// This is a parallel call interface (similar to hpx_gas_bcast) that
 /// performs an @p action on an array in the global address space
 /// starting at the base address @p src with an equal stride of @p
 /// src_stride bytes. The output values are stored in the global
@@ -389,7 +435,7 @@ int _hpx_gas_map(hpx_action_t op, uint32_t n,
   _hpx_gas_map(op, n, src, src_stride, dst, dst_stride, bsize, sync,           \
                __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
-/// GAS collectives.
+/// GAS collectives (hpx_gas_map_sync).
 ///
 /// This is a parallel call interface (similar to hpx_bcast) that
 /// performs an @p action on an array in the global address space
