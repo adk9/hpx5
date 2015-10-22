@@ -168,6 +168,11 @@ _smp_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
   return HPX_SUCCESS;
 }
 
+static int
+_smp_memcpy_sync(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size) {
+  return _smp_memcpy(gas, to, from, size, HPX_NULL);
+}
+
 /// Copy memory from a local address to a global address.
 static int
 _smp_memput(void *gas, hpx_addr_t to, const void *from, size_t size,
@@ -258,7 +263,8 @@ static gas_t _smp_vtable = {
   .memput         = _smp_memput,
   .memput_lsync   = _smp_memput_lsync,
   .memput_rsync   = _smp_memput_rsync,
-  .memcpy         = _smp_memcpy
+  .memcpy         = _smp_memcpy,
+  .memcpy_sync    = _smp_memcpy_sync
 };
 
 gas_t *gas_smp_new(void) {

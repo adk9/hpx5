@@ -21,7 +21,6 @@
 #include <libhpx/worker.h>
 #include "flat_reduce.h"
 #include "flat_continuation.h"
-#include "map_reduce.h"
 
 // At each locality I need a flat_continuation, and to know the flat_reduce
 // address to reduce into. For now I'm allocating local memory for these
@@ -69,8 +68,8 @@ static int _allreduce_delete_handler(_allreduce_t *r) {
   // Finalize all of the continuation elements.
   hpx_addr_t allreduce = hpx_thread_current_target();
   hpx_addr_t and = hpx_lco_and_new(here->ranks);
-  dbg_check( map_reduce(_allreduce_fini, allreduce, here->ranks, sizeof(*r), 0,
-                        hpx_lco_set_action, and) );
+  dbg_check( hpx_map_with_continuation(_allreduce_fini, allreduce, here->ranks,
+                                       sizeof(*r), 0, hpx_lco_set_action, and) );
   dbg_check( hpx_lco_wait(and) );
   hpx_lco_delete(and, HPX_NULL);
 
@@ -106,7 +105,7 @@ static int _allreduce_join_handler(void *r, void *v, size_t n) {
     hpx_addr_t bcast = self->current->c_target;
     size_t bsize = sizeof(_allreduce_t);
     int ranks = here->ranks;
-    dbg_check( map(_allreduce_bcast, bcast, ranks, bsize, 0, v, n) );
+    dbg_check( hpx_map(_allreduce_bcast, bcast, ranks, bsize, 0, v, n) );
   }
 
   // squash the continuation---this abuses the parcel infrastructure, but we
@@ -143,8 +142,9 @@ hpx_addr_t hpx_process_collective_allreduce_new(int inputs, size_t bytes,
   dbg_assert(allreduce);
   hpx_addr_t and = hpx_lco_and_new(here->ranks);
   dbg_assert(and);
-  dbg_check( map_reduce(_allreduce_init, allreduce, here->ranks, bsize, 0,
-                        hpx_lco_set_action, and, &reduce) );
+  dbg_check( hpx_map_with_continuation(_allreduce_init, allreduce, here->ranks,
+                                       bsize, 0, hpx_lco_set_action,
+                                       and, &reduce) );
   return allreduce;
 }
 

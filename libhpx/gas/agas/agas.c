@@ -279,6 +279,7 @@ static gas_t _agas_vtable = {
   .memput_lsync   = agas_memput_lsync,
   .memput_rsync   = agas_memput_rsync,
   .memcpy         = agas_memcpy,
+  .memcpy_sync    = agas_memcpy_sync,
   .owner_of       = _agas_owner_of
 };
 

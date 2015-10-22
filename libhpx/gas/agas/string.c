@@ -197,3 +197,26 @@ agas_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
 }
+
+int
+agas_memcpy_sync(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size) {
+  int e = HPX_SUCCESS;
+  if (!size) {
+    return e;
+  }
+
+  hpx_addr_t sync = hpx_lco_future_new(0);
+  if (sync == HPX_NULL) {
+    log_error("could not allocate an LCO.\n");
+    return HPX_ENOMEM;
+  }
+
+  e = agas_memcpy(gas, to, from, size, sync);
+
+  if (HPX_SUCCESS != hpx_lco_wait(sync)) {
+    dbg_error("failed agas_memcpy_sync\n");
+  }
+
+  hpx_lco_delete(sync, HPX_NULL);
+  return e;
+}
