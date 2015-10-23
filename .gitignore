@@ -46,7 +46,6 @@
 /examples/seqspawn
 /examples/parspawn
 /examples/future
-/examples/agas_test
 /examples/memput
 /examples/memget
 /examples/guppie
@@ -76,10 +75,7 @@ contrib/libffi-mic/
 contrib/libffi-mic/doc/libffi.info
 contrib/libffi-mic/fficonfig.py
 contrib/jemalloc/
-contrib/jemalloc_hpx/
 contrib/photon/
-contrib/jemalloc_build_global/
-contrib/jemalloc_build_registered/
 contrib/libcuckoo/
 
 # /libapex/
