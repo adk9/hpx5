@@ -38,8 +38,11 @@ static int _agas_invalidate_mapping_handler(int rank) {
     log_error("failed to invalidate remote mapping.\n");
     return e;
   }
-  hpx_thread_continue(block, bsize);
-  // TODO: free the src block here.
+  if (gva.bits.cyclic && here->rank == 0) {
+    hpx_thread_continue(block, bsize);
+  } else {
+    hpx_thread_continue_cleanup(block, bsize, free, block);
+  }
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_invalidate_mapping,
