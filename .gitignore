@@ -147,6 +147,7 @@ tests/unit/runtime
 tests/unit/libhpx_boot
 tests/unit/parcel_send_rendezvous
 tests/unit/gas_coll
+tests/unit/gas_move
 /tests/perf/Makefile
 tests/perf/gas_alloc
 tests/perf/gas_addr_trans
