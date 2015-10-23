@@ -66,6 +66,11 @@ continuation_t *continuation_new(size_t bytes) {
 
 void continuation_delete(continuation_t *c) {
   if (c) {
+    for (int i = 0, e = c->n; i < e; ++i) {
+      if (c->parcels[i]) {
+        hpx_parcel_release(c->parcels[i]);
+      }
+    }
     free(c);
   }
 }
