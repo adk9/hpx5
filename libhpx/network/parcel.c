@@ -89,6 +89,7 @@ parcel_state_t parcel_exchange_state(hpx_parcel_t *p, parcel_state_t state) {
 void parcel_retain(hpx_parcel_t *p) {
   parcel_state_t state = parcel_get_state(p);
   dbg_assert_str(parcel_serialized(state), "cannot retain out-of-place parcels\n");
+  dbg_assert_str(!parcel_retained(state), "cannot retain already retained parcels\n");
   state |= PARCEL_RETAINED;
   parcel_set_state(p, state);
 }
