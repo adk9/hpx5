@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <libhpx/libhpx.h>
 #include "hpx/hpx.h"
+#include "tests.h"
 
 /// @file tests/unit/gas_move.c
 ///
@@ -24,22 +25,23 @@
 /// a move operation, we verify if the remote future has moved to the
 /// local calling locality. 
 
-static hpx_action_t root = 0;
-static hpx_action_t get_rank = 0;
-
-static int get_rank_action(void *args, size_t size) {
+static int get_rank_handler(void) {
   int rank = HPX_LOCALITY_ID;
   HPX_THREAD_CONTINUE(rank);
 }
+static HPX_ACTION(HPX_DEFAULT, 0, get_rank, get_rank_handler);
 
 static int gas_move_handler(void) {
+  if (HPX_LOCALITIES < 2) {
+    return HPX_SUCCESS;
+  }
   printf("root locality: %d, thread: %d.\n", HPX_LOCALITY_ID, HPX_THREAD_ID);
   hpx_addr_t base = hpx_lco_future_array_new(2, sizeof(int), 1);
   hpx_addr_t other = hpx_lco_future_array_at(base, 1, sizeof(int), 1);
 
   int my_rank = 0;
   int other_rank = 0;
-  hpx_call_sync(other, get_rank, &other_rank, sizeof(other_rank), NULL, 0);
+  hpx_call_sync(other, get_rank, &other_rank, sizeof(other_rank));
   printf("target locality's ID (before move): %d\n", other_rank);
 
   if (other_rank == HPX_LOCALITY_ID) {
@@ -58,7 +60,7 @@ static int gas_move_handler(void) {
 
   hpx_lco_delete(done, HPX_NULL);
 
-  hpx_call_sync(other, get_rank, &my_rank, sizeof(my_rank), NULL, 0);
+  hpx_call_sync(other, get_rank, &my_rank, sizeof(my_rank));
   printf("target locality's rank (after move): %d\n", my_rank);
 
   libhpx_config_t *cfg = libhpx_get_config();
