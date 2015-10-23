@@ -46,7 +46,7 @@ namespace {
     hpx_parcel_t *unpin(gva_t gva);
     void *lookup(gva_t gva) const;
     uint32_t getOwner(gva_t gva) const;
-    void setOwner(gva_t gva) const;
+    void setOwner(gva_t gva, uint32_t owner) const;
     size_t getBlocks(gva_t gva) const;
   };
 }
@@ -288,6 +288,8 @@ _btt_wait_until_count_zero(void *obj, gva_t gva, void **lva) {
 }
 
 int btt_remove_when_count_zero(void *obj, gva_t gva, void **lva) {
+  BTT *btt = static_cast<BTT*>(obj);
+  uint64_t key = gva_to_key(gva);
   int e = _btt_wait_until_count_zero(obj, gva, lva);
   bool erased = btt->erase(key);
   assert(erased);
@@ -296,6 +298,7 @@ int btt_remove_when_count_zero(void *obj, gva_t gva, void **lva) {
 }
 
 int btt_try_move(void *obj, gva_t gva, int rank, void **lva) {
+  BTT *btt = static_cast<BTT*>(obj);
   int e = _btt_wait_until_count_zero(obj, gva, lva);
   btt->setOwner(gva, rank);
   return e;
