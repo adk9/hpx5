@@ -51,6 +51,7 @@ static int _agas_move_handler(hpx_addr_t src) {
   size_t bsize = UINT64_C(1) << gva.bits.size;
   hpx_addr_t local = hpx_lco_future_new(bsize);
 
+  int rank = here->rank;
   int e = hpx_call(src, _agas_invalidate_mapping, local, &rank);
   if (e != HPX_SUCCESS) {
     log_error("failed agas move operation.\n");
