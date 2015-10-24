@@ -28,7 +28,6 @@
 /// wrap common functionality that needs access to the global here object.
 
 #include <hpx/hpx.h>
-#include <hwloc.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,6 +40,7 @@ struct boot;
 struct config;
 struct network;
 struct scheduler;
+struct topology;
 /// @}
 
 /// The locality object.
@@ -72,7 +72,7 @@ typedef struct locality {
   struct scheduler            *sched;
   struct config              *config;
   const struct action_table *actions;
-  hwloc_topology_t          topology;
+  struct topology          *topology;
 } locality_t;
 
 /// Inter-locality action interface.

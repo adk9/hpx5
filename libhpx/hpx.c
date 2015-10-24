@@ -39,6 +39,7 @@
 #include <libhpx/scheduler.h>
 #include <libhpx/system.h>
 #include <libhpx/time.h>
+#include <libhpx/topology.h>
 #include <libhpx/utils.h>
 #include "network/probe.h"
 
@@ -97,7 +98,8 @@ static void _cleanup(locality_t *l) {
   }
 
   if (l->topology) {
-    hwloc_topology_destroy(l->topology);
+    topology_delete(l->topology);
+    l->topology = NULL;
   }
 
   if (l->actions) {
@@ -149,18 +151,6 @@ int hpx_init(int *argc, char ***argv) {
   here->rank = boot_rank(here->boot);
   here->ranks = boot_n_ranks(here->boot);
 
-  // topology
-  int e = hwloc_topology_init(&here->topology);
-  if (e) {
-    status = log_error("failed to initialize a topology.\n");
-    goto unwind1;
-  }
-  e = hwloc_topology_load(here->topology);
-  if (e) {
-    status = log_error("failed to load the topology.\n");
-    goto unwind1;
-  }
-
   // initialize the debugging system
   // @todo We would like to do this earlier but MPI_init() for the bootstrap
   //       network overwrites our segv handler.
@@ -181,6 +171,13 @@ int hpx_init(int *argc, char ***argv) {
     if (here->rank == 0) {
       config_print(here->config, stdout);
     }
+  }
+
+  // topology
+  here->topology = topology_new();
+  if (!here->topology) {
+    status = log_error("failed to discover topology.\n");
+    goto unwind1;
   }
 
   // Initialize our instrumentation.
@@ -210,7 +207,7 @@ int hpx_init(int *argc, char ***argv) {
 
     // ..otherwise, use all available cores
     if (!here->config->cores) {
-      here->config->cores = system_get_cores();
+      here->config->cores = here->topology->ncpus;
     }
   }
 

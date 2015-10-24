@@ -18,6 +18,32 @@
 /// @file include/libhpx/topology.h
 #include <stdint.h>
 #include <hpx/hpx.h>
+#include <hwloc.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/// The "physical" topology object.
+///
+/// @field hwloc_topology The HWLOC topology object.
+/// @field         ncores The number of physical cores in the system.
+/// @field          cores The HWLOC object corresponding to each core.
+/// @field         nnodes The number of NUMA nodes in the system.
+/// @field     numa_nodes The HWLOC object corresponding to each NUMA node.
+/// @field       numa_map The NUMA map of the system (cpu-id ->
+///                       numa-node mapping)
+typedef struct topology {
+  hwloc_topology_t hwloc_topology;
+  int                       ncpus;
+  hwloc_obj_t               *cpus;
+  int                      nnodes;
+  hwloc_obj_t         *numa_nodes;
+  int                   *numa_map;
+} topology_t;
+
+topology_t *topology_new(void);
+void topology_delete(topology_t *topology);
 
 // if hpx_addr_t and uint64_t do not match, this header will need rewritten
 _HPX_ASSERT(sizeof(hpx_addr_t) == sizeof(uint64_t), hpx_addr_t_size);
