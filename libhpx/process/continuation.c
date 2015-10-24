@@ -15,6 +15,7 @@
 #endif
 
 #include <stdlib.h>
+#include <string.h>
 #include <libhpx/debug.h>
 #include <libhpx/parcel.h>
 #include "allreduce.h"
