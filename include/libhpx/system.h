@@ -21,9 +21,6 @@
 extern "C" {
 #endif
 
-/// Get the number of available CPUs in the system.
-int system_get_cores(void);
-
 /// Set the thread affinity to a specific core with id @p id.
 int system_set_affinity(pthread_t thread, int id);
 
