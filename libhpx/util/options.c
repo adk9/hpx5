@@ -364,7 +364,6 @@ config_print(config_t *cfg, FILE *f) {
   fprintf(f, "  network\t\t\"%s\"\n", HPX_NETWORK_TO_STRING[cfg->network]);
 
   fprintf(f, "\nScheduler\n");
-  fprintf(f, "  cores\t\t\t%d\n", cfg->cores);
   fprintf(f, "  threads\t\t%d\n", cfg->threads);
   fprintf(f, "  stacksize\t\t%u\n", cfg->stacksize);
   fprintf(f, "  wfthreshold\t\t%u\n", cfg->sched_wfthreshold);

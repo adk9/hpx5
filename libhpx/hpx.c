@@ -195,27 +195,24 @@ int hpx_init(int *argc, char ***argv) {
   }
   HPX_HERE = HPX_THERE(here->rank);
 
-  if (here->config->cores) {
-    log_error("--hpx-cores is deprecated, ignoring\n");
-  }
-
+  int cores;
   // On Cray platforms, we look at the ALPS depth environment variable
   // to figure out how many cores to use
-  here->config->cores = libhpx_getenv_num("ALPS_APP_DEPTH", 0);
-  if (!here->config->cores) {
-    system_get_affinity_group_size(pthread_self(), &here->config->cores);
+  cores = libhpx_getenv_num("ALPS_APP_DEPTH", 0);
+  if (!cores) {
+    system_get_affinity_group_size(pthread_self(), &cores);
 
     // ..otherwise, use all available cores
-    if (!here->config->cores) {
-      here->config->cores = here->topology->ncpus;
+    if (!cores) {
+      cores = here->topology->ncpus;
     }
   }
 
   if (!here->config->threads) {
-    here->config->threads = here->config->cores;
+    here->config->threads = cores;
   }
   log_dflt("HPX running %d worker threads on %d cores\n", here->config->threads,
-           here->config->cores);
+           cores);
 
   return status;
  unwind1:
