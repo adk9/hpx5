@@ -39,7 +39,7 @@
 #include "libhpx/parcel.h"
 #include "libhpx/parcel_block.h"
 #include "libhpx/scheduler.h"
-#include "libhpx/topo.h"
+#include "libhpx/topology.h"
 
 #ifdef ENABLE_INSTRUMENTATION
 __thread uint64_t parcel_count = 0;

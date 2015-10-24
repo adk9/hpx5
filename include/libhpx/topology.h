@@ -11,11 +11,11 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef LIBHPX_TOPO_H
-#define LIBHPX_TOPO_H
+#ifndef LIBHPX_TOPOLOGY_H
+#define LIBHPX_TOPOLOGY_H
 
 
-/// @file include/libhpx/topo.h
+/// @file include/libhpx/topology.h
 #include <stdint.h>
 #include <hpx/hpx.h>
 
@@ -75,4 +75,8 @@ static inline uint64_t topo_offset_to_value(uint32_t locality, uint32_t worker,
   return pe + core + dat;
 }
 
-#endif // LIBHPX_TOPO_H
+#ifdef __cplusplus
+}
+#endif
+
+#endif // LIBHPX_TOPOLOGY_H
