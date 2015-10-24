@@ -46,10 +46,6 @@ string optional
 
 section "Scheduler Options"
 
-option "hpx-cores" - "number of scheduler cores (deprecated)"
-typestr="cores"
-int optional
-
 option "hpx-threads" - "number of scheduler threads"
 typestr="threads"
 int optional
