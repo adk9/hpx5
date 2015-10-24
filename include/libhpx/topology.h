@@ -27,8 +27,8 @@ extern "C" {
 /// The "physical" topology object.
 ///
 /// @field hwloc_topology The HWLOC topology object.
-/// @field         ncores The number of physical cores in the system.
-/// @field          cores The HWLOC object corresponding to each core.
+/// @field          ncpus The number of physical CPUs in the system.
+/// @field           cpus The HWLOC object corresponding to each CPU.
 /// @field         nnodes The number of NUMA nodes in the system.
 /// @field     numa_nodes The HWLOC object corresponding to each NUMA node.
 /// @field       numa_map The NUMA map of the system (cpu-id ->
