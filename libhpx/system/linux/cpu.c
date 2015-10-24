@@ -22,10 +22,6 @@
 #include <libhpx/system.h>
 #include <pthread.h>
 
-int system_get_cores(void) {
-  return sysconf(_SC_NPROCESSORS_ONLN);
-}
-
 void system_get_stack(pthread_t thread, void **base, size_t *size) {
   dbg_assert(base && size);
 
