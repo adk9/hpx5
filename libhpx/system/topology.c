@@ -37,6 +37,19 @@ topology_t *topology_new(void) {
     return NULL;
   }
 
+  topology->allowed_cpus = hwloc_bitmap_alloc();
+  if (!topology->allowed_cpus) {
+    log_error("failed to allocate memory for cpuset.\n");
+    return NULL;
+  }
+
+  e = hwloc_get_cpubind(topology->hwloc_topology, topology->allowed_cpus,
+                        HWLOC_CPUBIND_PROCESS);
+  if (e) {
+    // failed to get the CPU binding, empty the allowed cpuset.
+    hwloc_bitmap_zero(topology->allowed_cpus);
+  }
+
   // get the CPUs in the system
   topology->ncpus = hwloc_get_nbobjs_by_type(topology->hwloc_topology,
                                              HWLOC_OBJ_PU);
@@ -99,6 +112,11 @@ void topology_delete(topology_t *topology) {
   if (topology->numa_map) {
     free(topology->numa_map);
     topology->numa_map = NULL;
+  }
+
+  if (topology->allowed_cpus) {
+    hwloc_bitmap_free(topology->allowed_cpus);
+    topology->allowed_cpus = NULL;
   }
 
   hwloc_topology_destroy(topology->hwloc_topology);
