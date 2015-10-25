@@ -40,6 +40,7 @@ typedef struct topology {
   int                      nnodes;
   hwloc_obj_t         *numa_nodes;
   int                   *numa_map;
+  hwloc_cpuset_t     allowed_cpus;
 } topology_t;
 
 topology_t *topology_new(void);

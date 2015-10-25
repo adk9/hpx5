@@ -200,7 +200,7 @@ int hpx_init(int *argc, char ***argv) {
   // to figure out how many cores to use
   cores = libhpx_getenv_num("ALPS_APP_DEPTH", 0);
   if (!cores) {
-    system_get_affinity_group_size(pthread_self(), &cores);
+    cores = system_get_affinity_group_size();
 
     // ..otherwise, use all available cores
     if (!cores) {
