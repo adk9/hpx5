@@ -27,8 +27,8 @@ int system_set_affinity(pthread_t thread, int id);
 /// Set the thread affinity to a group of cores from 0 to @p ncores.
 int system_set_affinity_group(pthread_t thread, int ncores);
 
-/// Get the number of cores in the current process' affinity group.
-int system_get_affinity_group_size(void);
+/// Get the number of available cores we can run on.
+int system_get_available_cores(void);
 
 /// Get the pthread's stack extent.
 ///
