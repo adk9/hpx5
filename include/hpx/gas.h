@@ -127,14 +127,15 @@ hpx_addr_t hpx_gas_calloc_blocked(size_t n, uint32_t bsize, uint32_t boundary)
 /// it is accessible from any locality, and may be relocated by the
 /// runtime.
 ///
-/// @param        bytes The number of bytes to allocate.
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
 /// @param     boundary The alignment (2^k).
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_alloc_local(uint32_t bytes, uint32_t boundary) HPX_PUBLIC;
-hpx_addr_t hpx_gas_alloc_local_at_sync(uint32_t bytes, uint32_t boundary,
+hpx_addr_t hpx_gas_alloc_local(size_t n, uint32_t bsize, uint32_t boundary) HPX_PUBLIC;
+hpx_addr_t hpx_gas_alloc_local_at_sync(size_t n, uint32_t bsize, uint32_t boundary,
                                        hpx_addr_t loc) HPX_PUBLIC;
-void hpx_gas_alloc_local_at_async(uint32_t bytes, uint32_t boundary,
+void hpx_gas_alloc_local_at_async(size_t n, uint32_t bsize, uint32_t boundary,
                                   hpx_addr_t loc, hpx_addr_t lco) HPX_PUBLIC;
 extern HPX_PUBLIC HPX_ACTION_DECL(hpx_gas_alloc_local_at_action);
 
@@ -149,17 +150,17 @@ extern HPX_PUBLIC HPX_ACTION_DECL(hpx_gas_alloc_local_at_action);
 /// *Note however that we do not track the alignment of allocations.* Users
 /// should make sure to preserve alignment during move.
 ///
-/// @param        nmemb The number of elements to allocate.
-/// @param         size The number of bytes per element
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
 /// @param     boundary The alignment (2^k).
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_calloc_local(size_t nmemb, size_t size, uint32_t boundary)
+hpx_addr_t hpx_gas_calloc_local(size_t n, uint32_t size, uint32_t boundary)
   HPX_PUBLIC;
-hpx_addr_t hpx_gas_calloc_local_at_sync(size_t nmemb, size_t size,
+hpx_addr_t hpx_gas_calloc_local_at_sync(size_t n, uint32_t bsize,
                                         uint32_t boundary, hpx_addr_t loc)
   HPX_PUBLIC;
-void hpx_gas_calloc_local_at_async(size_t nmemb, size_t size,
+void hpx_gas_calloc_local_at_async(size_t n, uint32_t bsize,
                                    uint32_t boundary, hpx_addr_t loc,
                                    hpx_addr_t out) HPX_PUBLIC;
 extern HPX_PUBLIC HPX_ACTION_DECL(hpx_gas_calloc_local_at_action);

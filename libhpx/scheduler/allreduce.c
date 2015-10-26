@@ -267,7 +267,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _allreduce_init_async,
 hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
                                  hpx_action_t id, hpx_action_t op) {
   _allreduce_t *r = NULL;
-  hpx_addr_t gva = hpx_gas_alloc_local(sizeof(*r), 0);
+  hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*r), 0);
   LCO_LOG_NEW(gva);
 
   if (!hpx_gas_try_pin(gva, (void**)&r)) {
@@ -305,8 +305,7 @@ hpx_lco_allreduce_local_array_new(int n, size_t participants, size_t readers,
 {
   uint32_t lco_bytes = sizeof(_allreduce_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
-  uint32_t  block_bytes = n * lco_bytes;
-  hpx_addr_t base = hpx_gas_alloc_local(block_bytes, 0);
+  hpx_addr_t base = hpx_gas_alloc_local(n, lco_bytes, 0);
 
   dbg_check( hpx_call_sync(base, _block_local_init, NULL, 0, &n, &participants,
                            &readers, &size, &id, &op) );
