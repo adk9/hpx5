@@ -94,8 +94,8 @@ void hpx_thread_set_affinity(int thread_id) HPX_PUBLIC;
 /// Finish the current thread's execution, sending @p value to the thread's
 /// continuation address
 ///
-/// @param size the size of @p value
 /// @param value the value to be sent to the thread's continuation address
+/// @param size the size of @p value
 void _hpx_thread_continue(int nargs, ...)
   HPX_NORETURN HPX_PUBLIC;
 
