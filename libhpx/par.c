@@ -225,3 +225,61 @@ int hpx_par_call_sync(hpx_action_t action,
   hpx_lco_delete(sync, HPX_NULL);
   return e;
 }
+
+typedef struct {
+  hpx_action_t action;
+  hpx_addr_t addr;
+  size_t count;
+  size_t increment;
+  size_t bsize;
+  size_t arg_size;
+  char arg[];
+} hpx_count_range_call_args_t;
+
+static int
+_hpx_count_range_call_handler(const hpx_count_range_call_args_t *const args, size_t n) {
+  int status;
+  for (size_t i = 0; i < args->count; ++i) {
+    const hpx_addr_t target =
+      hpx_addr_add(args->addr, i * args->increment, args->bsize);
+    status = hpx_call(target, args->action, HPX_NULL, args->arg, args->arg_size);
+    if (status != HPX_SUCCESS) {
+      return status;
+    }
+  }
+
+  return HPX_SUCCESS;
+}
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _hpx_count_range_call,
+                     _hpx_count_range_call_handler, HPX_POINTER, HPX_SIZE_T);
+
+int hpx_count_range_call(hpx_action_t action,
+                         const hpx_addr_t addr,
+                         const size_t count,
+                         const size_t increment,
+                         const uint32_t bsize,
+                         const size_t arg_size,
+                         void *const arg) {
+  const size_t thread_chunk = count / (HPX_LOCALITIES * HPX_THREADS);
+  hpx_count_range_call_args_t *args = malloc(sizeof(*args) + arg_size);
+  memcpy(args->arg, arg, arg_size);
+  args->action = action; args->count = thread_chunk;
+  args->increment = increment; args->bsize = bsize; args->arg_size = arg_size;
+  for (size_t l = 0; l < HPX_LOCALITIES; ++l) {
+    for (size_t t = 0; t < HPX_THREADS; ++t) {
+      const uint64_t addr_delta =
+        (l * HPX_THREADS + t) * thread_chunk * increment;
+      args->addr = hpx_addr_add(addr, addr_delta, bsize);
+      hpx_call(HPX_THERE(l), _hpx_count_range_call, HPX_NULL, args,
+               sizeof(*args) + arg_size);
+    }
+  }
+  args->count = count % (HPX_LOCALITIES * HPX_THREADS);
+  const uint64_t addr_delta =
+    HPX_LOCALITIES * HPX_THREADS * thread_chunk * increment;
+  args->addr = hpx_addr_add(addr, addr_delta, bsize);
+  hpx_call(HPX_HERE, _hpx_count_range_call, HPX_NULL, args,
+           sizeof(*args) + arg_size);
+  free(args);
+  return HPX_SUCCESS;
+}
