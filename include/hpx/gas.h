@@ -155,7 +155,7 @@ extern HPX_PUBLIC HPX_ACTION_DECL(hpx_gas_alloc_local_at_action);
 /// @param     boundary The alignment (2^k).
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_calloc_local(size_t n, uint32_t size, uint32_t boundary)
+hpx_addr_t hpx_gas_calloc_local(size_t n, uint32_t bsize, uint32_t boundary)
   HPX_PUBLIC;
 hpx_addr_t hpx_gas_calloc_local_at_sync(size_t n, uint32_t bsize,
                                         uint32_t boundary, hpx_addr_t loc)
