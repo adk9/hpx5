@@ -51,6 +51,6 @@ int system_set_affinity_group(pthread_t thread, int ncores) {
   return e;
 }
 
-int system_get_affinity_group_size(void) {
+int system_get_available_cores(void) {
   return hwloc_bitmap_weight(here->topology->allowed_cpus);
 }

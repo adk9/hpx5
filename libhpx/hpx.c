@@ -40,7 +40,6 @@
 #include <libhpx/system.h>
 #include <libhpx/time.h>
 #include <libhpx/topology.h>
-#include <libhpx/utils.h>
 #include "network/probe.h"
 
 #ifdef HAVE_APEX
@@ -195,18 +194,8 @@ int hpx_init(int *argc, char ***argv) {
   }
   HPX_HERE = HPX_THERE(here->rank);
 
-  int cores;
-  // On Cray platforms, we look at the ALPS depth environment variable
-  // to figure out how many cores to use
-  cores = libhpx_getenv_num("ALPS_APP_DEPTH", 0);
-  if (!cores) {
-    cores = system_get_affinity_group_size();
-
-    // ..otherwise, use all available cores
-    if (!cores) {
-      cores = here->topology->ncpus;
-    }
-  }
+  int cores = system_get_available_cores();
+  dbg_assert(cores > 0);
 
   if (!here->config->threads) {
     here->config->threads = cores;
