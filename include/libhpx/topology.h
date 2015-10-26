@@ -29,7 +29,9 @@ extern "C" {
 /// @field hwloc_topology The HWLOC topology object.
 /// @field          ncpus The number of physical CPUs in the system.
 /// @field           cpus The HWLOC object corresponding to each CPU.
-/// @field         nnodes The number of NUMA nodes in the system.
+/// @field         ncores The number of physical cores in the system
+/// @field       core_map The core map of the system (cpu/hw thread id
+///                           -> core-id mapping)
 /// @field     numa_nodes The HWLOC object corresponding to each NUMA node.
 /// @field       numa_map The NUMA map of the system (cpu-id ->
 ///                       numa-node mapping)
@@ -39,6 +41,8 @@ typedef struct topology {
   hwloc_obj_t               *cpus;
   int                      nnodes;
   hwloc_obj_t         *numa_nodes;
+  int                      ncores;
+  int                   *core_map;
   int                   *numa_map;
   hwloc_cpuset_t     allowed_cpus;
 } topology_t;
