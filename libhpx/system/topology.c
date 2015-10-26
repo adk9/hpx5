@@ -22,6 +22,7 @@
 #include <libhpx/locality.h>
 #include <libhpx/system.h>
 #include <libhpx/topology.h>
+#include <libhpx/utils.h>
 #include <hwloc.h>
 
 topology_t *topology_new(void) {
@@ -37,22 +38,31 @@ topology_t *topology_new(void) {
     return NULL;
   }
 
+  // get the CPUs in the system
+  topology->ncpus = hwloc_get_nbobjs_by_type(topology->hwloc_topology,
+                                             HWLOC_OBJ_PU);
+
+  // detect how many CPUs we can run on based on affinity or
+  // environment information. on cray platforms, we look at the ALPS
+  // depth to figure out how many CPUs to use
   topology->allowed_cpus = hwloc_bitmap_alloc();
   if (!topology->allowed_cpus) {
     log_error("failed to allocate memory for cpuset.\n");
     return NULL;
   }
 
-  e = hwloc_get_cpubind(topology->hwloc_topology, topology->allowed_cpus,
-                        HWLOC_CPUBIND_PROCESS);
-  if (e) {
-    // failed to get the CPU binding, empty the allowed cpuset.
-    hwloc_bitmap_zero(topology->allowed_cpus);
+  int cores = libhpx_getenv_num("ALPS_APP_DEPTH", 0);
+  if (!cores) {
+    e = hwloc_get_cpubind(topology->hwloc_topology, topology->allowed_cpus,
+                          HWLOC_CPUBIND_PROCESS);
+    if (e) {
+      // failed to get the CPU binding, use all available cpus
+      hwloc_bitmap_set_range(topology->allowed_cpus, 0, topology->ncpus);
+    }
+  } else {
+    hwloc_bitmap_set_range(topology->allowed_cpus, 0, cores);
   }
 
-  // get the CPUs in the system
-  topology->ncpus = hwloc_get_nbobjs_by_type(topology->hwloc_topology,
-                                             HWLOC_OBJ_PU);
   topology->cpus = calloc(topology->ncpus, sizeof(hwloc_obj_t));
   if (!topology->cpus) {
     log_error("failed to allocate memory for cpu objects.\n");
