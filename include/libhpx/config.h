@@ -61,6 +61,7 @@ static const char* const HPX_TRANSPORT_TO_STRING[] = {
   "INVALID_ID"
 };
 
+//! Configuration options for networks in HPX.
 typedef enum {
   HPX_NETWORK_DEFAULT = 0,
   HPX_NETWORK_SMP,
@@ -92,6 +93,23 @@ static const char* const HPX_BOOT_TO_STRING[] = {
   "MPI",
   "PMI",
   "INVALID_ID"
+};
+
+//! Configuration options the thread affinity policies.
+typedef enum {
+  HPX_THREAD_AFFINITY_DEFAULT = 0,
+  HPX_THREAD_AFFINITY_HWTHREAD,
+  HPX_THREAD_AFFINITY_CORE,
+  HPX_THREAD_AFFINITY_NUMA,
+  HPX_THREAD_AFFINITY_NONE
+} libhpx_thread_affinity_t;
+
+static const char * const HPX_THREAD_AFFINITY_TO_STRING[] = {
+  "DEFAULT",
+  "HW THREAD",
+  "CORE",
+  "NUMA",
+  "NONE"
 };
 
 //! Locality types in HPX.

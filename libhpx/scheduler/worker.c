@@ -569,6 +569,14 @@ int worker_start(void) {
   // make sure the system is initialized
   dbg_assert(here && here->config && here->network);
 
+  // affinitize the worker thread
+  int status = system_set_worker_affinity(self->id,
+                                          here->config->thread_affinity);
+  if (status != LIBHPX_OK) {
+    log_error("WARNING: running with no worker thread affinity. "
+              "This MAY result in diminished performance.\n");
+  }
+
   // wait for local threads to start up
   struct scheduler *sched = here->sched;
   system_barrier_wait(&sched->barrier);
