@@ -96,7 +96,7 @@ static int gas_global_mem_alloc_handler(void) {
   uint64_t size = 1024*1024*100;
   int blocks = HPX_LOCALITIES;
 
-  hpx_addr_t local = hpx_gas_alloc_local(size, 0);
+  hpx_addr_t local = hpx_gas_alloc_local(1, size, 0);
   hpx_gas_free(local, HPX_NULL);
 
   hpx_addr_t global = hpx_gas_alloc_cyclic(blocks, size, 0);

@@ -89,7 +89,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _sema_init_async,
 /// @returns The global address of the new semaphore.
 hpx_addr_t hpx_lco_sema_new(unsigned count) {
   _sema_t *sema = NULL;
-  hpx_addr_t gva = hpx_gas_alloc_local(sizeof(*sema), 0);
+  hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*sema), 0);
   LCO_LOG_NEW(gva);
 
   if (!hpx_gas_try_pin(gva, (void**)&sema)) {

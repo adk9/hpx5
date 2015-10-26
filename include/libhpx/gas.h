@@ -45,8 +45,9 @@ typedef struct gas {
   bool (*try_pin)(void *gas, hpx_addr_t addr, void **local);
   void (*unpin)(void *gas, hpx_addr_t addr);
 
-  hpx_addr_t (*alloc_local)(void *gas, uint32_t bytes, uint32_t boundary);
-  hpx_addr_t (*calloc_local)(void *gas, size_t nmemb, size_t size,
+  hpx_addr_t (*alloc_local)(void *gas, size_t n, uint32_t bsize,
+                            uint32_t boundary);
+  hpx_addr_t (*calloc_local)(void *gas, size_t n, uint32_t bsize,
                              uint32_t boundary);
   void (*free)(void *gas, hpx_addr_t addr, hpx_addr_t rsync);
 
