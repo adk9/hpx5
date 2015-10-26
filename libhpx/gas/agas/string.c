@@ -17,6 +17,7 @@
 
 #include <string.h>
 #include <libhpx/action.h>
+#include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/network.h>
@@ -25,8 +26,74 @@
 #include "btt.h"
 #include "../parcel/emulation.h"
 
+static int _agas_invalidate_mapping_handler(int rank) {
+  agas_t *agas = (agas_t*)here->gas;
+  hpx_addr_t src = hpx_thread_current_target();
+  gva_t gva = { .addr = src };
+  size_t bsize = UINT64_C(1) << gva.bits.size;
+
+  void *block = NULL;
+  int e = btt_try_move(agas->btt, gva, rank, &block);
+  if (e != HPX_SUCCESS) {
+    log_error("failed to invalidate remote mapping.\n");
+    return e;
+  }
+  if (gva.bits.cyclic && here->rank == 0) {
+    hpx_thread_continue(block, bsize);
+  } else {
+    hpx_thread_continue_cleanup(block, bsize, free, block);
+  }
+  return HPX_SUCCESS;
+}
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_invalidate_mapping,
+                     _agas_invalidate_mapping_handler, HPX_INT);
+
+static int _agas_move_handler(hpx_addr_t src) {
+  agas_t *agas = (agas_t*)here->gas;
+  gva_t gva = { .addr = src };
+  size_t bsize = UINT64_C(1) << gva.bits.size;
+  hpx_addr_t local = hpx_lco_future_new(bsize);
+
+  int rank = here->rank;
+  int e = hpx_call(src, _agas_invalidate_mapping, local, &rank);
+  if (e != HPX_SUCCESS) {
+    log_error("failed agas move operation.\n");
+    return e;
+  }
+
+  void *buf;
+  bool stack_allocated = true;
+  if (hpx_thread_can_alloca(bsize) >= HPX_PAGE_SIZE) {
+    buf = alloca(bsize);
+  } else {
+    stack_allocated = false;
+    buf = malloc(bsize);
+  }
+
+  e = hpx_lco_get(local, bsize, buf);
+  if (e != HPX_SUCCESS) {
+    log_error("failed agas move operation.\n");
+    return e;
+  }
+
+  btt_insert(agas->btt, gva, here->rank, buf, 1);
+
+  hpx_lco_delete(local, HPX_NULL);
+  if (!stack_allocated) {
+    free(buf);
+  }
+  return HPX_SUCCESS;
+}
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_move, _agas_move_handler, HPX_ADDR);
+
 void
 agas_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
+  libhpx_network_t net = here->config->network;
+  if (net != HPX_NETWORK_ISIR) {
+    hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
+  }
+
+  hpx_call(dst, _agas_move, sync, &src);
 }
 
 static int _agas_lco_set_handler(int src, uint64_t command) {

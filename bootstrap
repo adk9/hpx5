@@ -5,9 +5,9 @@ DIR=$(mktemp -d hpx.XXXXXXX --tmpdir=/tmp)
 CONTRIB=contrib
 
 # set the array of tarball deps here
-contrib_tars=("photon-1.0.tar.bz2")
+contrib_tars=("photon-1.0.tar.bz2" "libcuckoo-1.0.tar.gz")
 # and matching target contrib directories
-contrib_dirs=("photon")
+contrib_dirs=("photon" "libcuckoo")
 
 # set the command to fetch the tarballs
 CMD="wget --quiet -O"
@@ -19,7 +19,7 @@ echo -n "Downloading and extracting contrib tarballs..."
 for ((i=0; i<${#contrib_tars[@]}; i++)); do
   dir=${contrib_dirs[$i]}
   file=${contrib_tars[$i]}
-  if [ ! -d ${CONTRIB}/$dir ]; then
+  if [[ ! -d ${CONTRIB}/$dir ]]; then
     echo -n "$dir..."
     $CMD ${DIR}/$file ${URL}/$file
     mkdir -p ${CONTRIB}/$dir

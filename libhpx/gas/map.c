@@ -60,17 +60,9 @@ _hpx_gas_bcast_with_continuation(hpx_action_t action, hpx_addr_t base, int n,
 // embedded in its payload with the local future as its continuation,
 // and then copies the result into a remote global address.
 static int
-_call_and_memput_action_handler(hpx_parcel_t *parcel, size_t size) {
+_call_and_memput_action_handler(hpx_parcel_t *p, size_t size) {
   hpx_parcel_t *parent = scheduler_current_parcel();
-  parcel_state_t state = parcel_get_state(parent);
-  dbg_assert(!parcel_retained(state));
-  state |= PARCEL_RETAINED;
-  parcel_set_state(parent, state);
-
-  dbg_assert(parcel);
-  state = parcel_get_state(parcel);
-  dbg_assert(!parcel_nested(state));
-  state |= PARCEL_NESTED;
+  hpx_parcel_t *parcel = parcel_clone(p);
 
   // replace the "dst" lco in the parcel's continuation addr with the
   // local future
@@ -91,7 +83,11 @@ _call_and_memput_action_handler(hpx_parcel_t *parcel, size_t size) {
     buf = registered_malloc(stride);
   }
 
-  hpx_lco_get(local, stride, buf);
+  int e = hpx_lco_get(local, stride, buf);
+  if (e != HPX_SUCCESS) {
+    log_error("failed gas_map operation.\n");
+    return e;
+  }
   hpx_lco_delete(local, HPX_NULL);
 
   // steal the current continuation
@@ -128,21 +124,16 @@ static int _va_map(hpx_action_t action, uint32_t n,
   // another field in the args structure.
   hpx_parcel_t *p = action_create_parcel_va(src, action, dst, hpx_lco_set_action,
                                             nargs, vargs);
-  size_t size = parcel_size(p);
-  hpx_parcel_t *args = malloc(size);
   // hack: use the parcel's "next" parameter to pass the output
   // stride.
-  args->next = (void*)(uintptr_t)(dst_stride);
-
+  p->next = (void*)(uintptr_t)(dst_stride);
   for (int i = 0; i < n; ++i) {
     // Update the target of the parcel..
     p->target = src;
     p->c_target = dst;
 
-    // ..and put the new destination in the payload
-    memcpy(args, p, size);
     e = hpx_call_with_continuation(src, _call_and_memput_action, remote,
-                                   hpx_lco_set_action, args, size);
+                                   hpx_lco_set_action, p, parcel_size(p));
     dbg_check(e, "could not send parcel for map\n");
 
     src = hpx_addr_add(src, src_stride, bsize);

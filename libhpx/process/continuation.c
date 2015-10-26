@@ -15,6 +15,7 @@
 #endif
 
 #include <stdlib.h>
+#include <string.h>
 #include <libhpx/debug.h>
 #include <libhpx/parcel.h>
 #include "allreduce.h"
@@ -66,6 +67,11 @@ continuation_t *continuation_new(size_t bytes) {
 
 void continuation_delete(continuation_t *c) {
   if (c) {
+    for (int i = 0, e = c->n; i < e; ++i) {
+      if (c->parcels[i]) {
+        hpx_parcel_release(c->parcels[i]);
+      }
+    }
     free(c);
   }
 }
@@ -88,13 +94,13 @@ void continuation_trigger(continuation_t *c, const void *value) {
 
   for (int i = 0, e = c->n; i < e; ++i) {
     if (c->parcels[i]) {
-      // hpx_parcel_set_data(c->parcels[i], value, c->bytes);
-      // parcel_retain(c->parcels[i]);
-      // parcel_launch(c->parcels[i]);
+      hpx_parcel_set_data(c->parcels[i], value, c->bytes);
+      parcel_retain(c->parcels[i]);
+      parcel_launch(c->parcels[i]);
 
-      hpx_parcel_t *p = parcel_clone(c->parcels[i]);
-      hpx_parcel_set_data(p, value, c->bytes);
-      parcel_launch(p);
+      // hpx_parcel_t *p = parcel_clone(c->parcels[i]);
+      // hpx_parcel_set_data(p, value, c->bytes);
+      // parcel_launch(p);
     }
   }
 }

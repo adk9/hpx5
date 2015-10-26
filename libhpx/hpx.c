@@ -39,6 +39,7 @@
 #include <libhpx/scheduler.h>
 #include <libhpx/system.h>
 #include <libhpx/time.h>
+#include <libhpx/topology.h>
 #include <libhpx/utils.h>
 #include "network/probe.h"
 
@@ -97,7 +98,8 @@ static void _cleanup(locality_t *l) {
   }
 
   if (l->topology) {
-    hwloc_topology_destroy(l->topology);
+    topology_delete(l->topology);
+    l->topology = NULL;
   }
 
   if (l->actions) {
@@ -149,18 +151,6 @@ int hpx_init(int *argc, char ***argv) {
   here->rank = boot_rank(here->boot);
   here->ranks = boot_n_ranks(here->boot);
 
-  // topology
-  int e = hwloc_topology_init(&here->topology);
-  if (e) {
-    status = log_error("failed to initialize a topology.\n");
-    goto unwind1;
-  }
-  e = hwloc_topology_load(here->topology);
-  if (e) {
-    status = log_error("failed to load the topology.\n");
-    goto unwind1;
-  }
-
   // initialize the debugging system
   // @todo We would like to do this earlier but MPI_init() for the bootstrap
   //       network overwrites our segv handler.
@@ -183,6 +173,13 @@ int hpx_init(int *argc, char ***argv) {
     }
   }
 
+  // topology
+  here->topology = topology_new();
+  if (!here->topology) {
+    status = log_error("failed to discover topology.\n");
+    goto unwind1;
+  }
+
   // Initialize our instrumentation.
   if (inst_init(here->config)) {
     log_dflt("error detected while initializing instrumentation\n");
@@ -198,27 +195,24 @@ int hpx_init(int *argc, char ***argv) {
   }
   HPX_HERE = HPX_THERE(here->rank);
 
-  if (here->config->cores) {
-    log_error("--hpx-cores is deprecated, ignoring\n");
-  }
-
+  int cores;
   // On Cray platforms, we look at the ALPS depth environment variable
   // to figure out how many cores to use
-  here->config->cores = libhpx_getenv_num("ALPS_APP_DEPTH", 0);
-  if (!here->config->cores) {
-    system_get_affinity_group_size(pthread_self(), &here->config->cores);
+  cores = libhpx_getenv_num("ALPS_APP_DEPTH", 0);
+  if (!cores) {
+    system_get_affinity_group_size(pthread_self(), &cores);
 
     // ..otherwise, use all available cores
-    if (!here->config->cores) {
-      here->config->cores = system_get_cores();
+    if (!cores) {
+      cores = here->topology->ncpus;
     }
   }
 
   if (!here->config->threads) {
-    here->config->threads = here->config->cores;
+    here->config->threads = cores;
   }
   log_dflt("HPX running %d worker threads on %d cores\n", here->config->threads,
-           here->config->cores);
+           cores);
 
   return status;
  unwind1:
