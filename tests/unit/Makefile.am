@@ -18,6 +18,7 @@ TESTS = apex_test               \
         gas_global_alloc        \
         gas_memget              \
         gas_memput              \
+        gas_move                \
         lco_get_remote          \
         lco_allreduce           \
         lco_and                 \
@@ -53,6 +54,7 @@ endif
 libhpx_boot_CPPFLAGS                = $(LIBHPX_CPPFLAGS) -I$(top_srcdir)/include -Wno-unused
 libhpx_boot_CFLAGS                  = $(LIBHPX_CFLAGS) 
 
+apex_test_DEPENDENCIES              = $(HPX_APPS_DEPS)
 allreduce_DEPENDENCIES              = $(HPX_APPS_DEPS)
 bcast_DEPENDENCIES                  = $(HPX_APPS_DEPS)
 call_when_DEPENDENCIES              = $(HPX_APPS_DEPS)
@@ -61,6 +63,7 @@ gas_coll_DEPENDENCIES               = $(HPX_APPS_DEPS)
 gas_global_alloc_DEPENDENCIES       = $(HPX_APPS_DEPS)
 gas_memget_DEPENDENCIES             = $(HPX_APPS_DEPS)
 gas_memput_DEPENDENCIES             = $(HPX_APPS_DEPS)
+gas_move_DEPENDENCIES               = $(HPX_APPS_DEPS)
 lco_allreduce_DEPENDENCIES          = $(HPX_APPS_DEPS)
 lco_and_DEPENDENCIES                = $(HPX_APPS_DEPS)
 lco_array_DEPENDENCIES              = $(HPX_APPS_DEPS)
