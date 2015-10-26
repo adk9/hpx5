@@ -15,6 +15,7 @@
 # include "config.h"
 #endif
 
+#include <stdlib.h>
 #include <string.h>
 #include <libhpx/action.h>
 #include <libhpx/config.h>
@@ -41,7 +42,7 @@ static int _agas_invalidate_mapping_handler(int rank) {
   if (gva.bits.cyclic && here->rank == 0) {
     hpx_thread_continue(block, bsize);
   } else {
-    hpx_thread_continue_cleanup(block, bsize, free, block);
+    hpx_thread_continue_cleanup(free, block, block, bsize);
   }
   return HPX_SUCCESS;
 }
