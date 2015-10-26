@@ -66,9 +66,10 @@ int agas_memcpy_sync(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size);
 
 gva_t agas_lva_to_gva(agas_t *gas, void *lva, uint32_t bsize);
 
-hpx_addr_t agas_local_alloc(void *gas, uint32_t bytes, uint32_t boundary);
+hpx_addr_t agas_local_alloc(void *gas, size_t n, uint32_t bsize,
+                            uint32_t boundary);
 
-hpx_addr_t agas_local_calloc(void *gas, size_t nmemb, size_t size,
+hpx_addr_t agas_local_calloc(void *gas, size_t n, uint32_t bsize,
                              uint32_t boundary);
 
 int64_t agas_local_sub(const agas_t *agas, gva_t lhs, gva_t rhs, uint32_t bsize);

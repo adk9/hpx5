@@ -248,7 +248,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_init,
 
 hpx_addr_t hpx_lco_future_new(int size) {
   _future_t *future = NULL;
-  hpx_addr_t gva = hpx_gas_alloc_local(sizeof(*future) + size, 0);
+  hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*future) + size, 0);
   LCO_LOG_NEW(gva);
 
   if (!hpx_gas_try_pin(gva, (void**)&future)) {
@@ -313,8 +313,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
 hpx_addr_t hpx_lco_future_local_array_new(int n, int size) {
   uint32_t lco_bytes = sizeof(_future_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
-  uint32_t  block_bytes = n * lco_bytes;
-  hpx_addr_t base = hpx_gas_alloc_local(block_bytes, 0);
+  hpx_addr_t base = hpx_gas_alloc_local(n, lco_bytes, 0);
 
   // for each block, initialize the future.
   int e = hpx_call_sync(base, _block_local_init, NULL, 0, &n, &size);

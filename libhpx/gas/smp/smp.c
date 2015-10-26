@@ -117,12 +117,12 @@ _smp_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
 
 /// Allocate a bunch of global memory
 static hpx_addr_t
-_smp_gas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
+_smp_gas_alloc_local(void *gas, size_t n, uint32_t bsize, uint32_t boundary) {
+  size_t bytes = n * bsize;
   void *p = NULL;
   if (boundary) {
     dbg_check(posix_memalign(&p, boundary, bytes));
-  }
-  else {
+  } else {
     p = malloc(bytes);
   }
   return _smp_lva_to_gva(p);
@@ -130,14 +130,14 @@ _smp_gas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
 
 /// Allocate a bunch of initialized global memory
 static hpx_addr_t
-_smp_gas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
-  size_t bytes = nmemb * size;
+_smp_gas_calloc_local(void *gas, size_t n, uint32_t bsize, uint32_t boundary) {
+  size_t bytes = n * bsize;
   void *p = NULL;
   if (boundary) {
     dbg_check(posix_memalign(&p, boundary, bytes));
     p = memset(p, 0, bytes);
   } else {
-    p = calloc(nmemb, size);
+    p = calloc(n, bsize);
   }
   return _smp_lva_to_gva(p);
 }
