@@ -11,13 +11,39 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef LIBHPX_TOPO_H
-#define LIBHPX_TOPO_H
+#ifndef LIBHPX_TOPOLOGY_H
+#define LIBHPX_TOPOLOGY_H
 
 
-/// @file include/libhpx/topo.h
+/// @file include/libhpx/topology.h
 #include <stdint.h>
 #include <hpx/hpx.h>
+#include <hwloc.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/// The "physical" topology object.
+///
+/// @field hwloc_topology The HWLOC topology object.
+/// @field          ncpus The number of physical CPUs in the system.
+/// @field           cpus The HWLOC object corresponding to each CPU.
+/// @field         nnodes The number of NUMA nodes in the system.
+/// @field     numa_nodes The HWLOC object corresponding to each NUMA node.
+/// @field       numa_map The NUMA map of the system (cpu-id ->
+///                       numa-node mapping)
+typedef struct topology {
+  hwloc_topology_t hwloc_topology;
+  int                       ncpus;
+  hwloc_obj_t               *cpus;
+  int                      nnodes;
+  hwloc_obj_t         *numa_nodes;
+  int                   *numa_map;
+} topology_t;
+
+topology_t *topology_new(void);
+void topology_delete(topology_t *topology);
 
 // if hpx_addr_t and uint64_t do not match, this header will need rewritten
 _HPX_ASSERT(sizeof(hpx_addr_t) == sizeof(uint64_t), hpx_addr_t_size);
@@ -75,4 +101,8 @@ static inline uint64_t topo_offset_to_value(uint32_t locality, uint32_t worker,
   return pe + core + dat;
 }
 
-#endif // LIBHPX_TOPO_H
+#ifdef __cplusplus
+}
+#endif
+
+#endif // LIBHPX_TOPOLOGY_H

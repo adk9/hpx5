@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <stdlib.h>
 #include <libhpx/debug.h>
 #include <libhpx/parcel.h>
 #include "allreduce.h"

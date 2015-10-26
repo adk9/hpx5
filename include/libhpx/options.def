@@ -106,7 +106,6 @@ LIBHPX_OPT_SCALAR(, network, HPX_NETWORK_DEFAULT, libhpx_network_t)
 
 /// Scheduler options
 /// @{
-LIBHPX_OPT_SCALAR(, cores, 0, int)
 LIBHPX_OPT_SCALAR(, threads, 0, int)
 LIBHPX_OPT_SCALAR(, stacksize, 32768, unsigned)
 LIBHPX_OPT_SCALAR(sched_, wfthreshold, 256, uint32_t)
