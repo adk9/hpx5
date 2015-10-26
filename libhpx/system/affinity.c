@@ -20,35 +20,45 @@
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
+#include <libhpx/scheduler.h>
 #include <libhpx/system.h>
 #include <libhpx/topology.h>
+#include <libhpx/worker.h>
 #include <hwloc.h>
 
-static int _hwloc_cpubind(hwloc_thread_t thread, hwloc_bitmap_t set) {
-  int e = hwloc_set_thread_cpubind(here->topology->hwloc_topology,
-                                   thread, set, HWLOC_CPUBIND_THREAD);
+static int _hwloc_bind_curthread(hwloc_bitmap_t set) {
+  int e = hwloc_set_cpubind(here->topology->hwloc_topology,
+                            set, HWLOC_CPUBIND_THREAD);
   if (e) {
-    log_error("_hwloc_cpubind() failed with error %s.\n", strerror(e));
+    log_error("_hwloc_bind_curthread() failed with error %s.\n", strerror(e));
     return LIBHPX_ERROR;
   }
 
   return LIBHPX_OK;
 }
 
-int system_set_affinity(pthread_t thread, int id) {
-  hwloc_bitmap_t cpu_set = hwloc_bitmap_alloc();
-  hwloc_bitmap_set(cpu_set, id);
-  int e = _hwloc_cpubind(thread, cpu_set);
-  hwloc_bitmap_free(cpu_set);
-  return e;
-}
+int system_set_worker_affinity(int id, libhpx_thread_affinity_t policy) {
+  int resource;
+  switch (policy) {
+   case HPX_THREAD_AFFINITY_DEFAULT:
+   case HPX_THREAD_AFFINITY_NUMA:
+     resource = here->topology->numa_map[id];
+     break;
+   case HPX_THREAD_AFFINITY_CORE:
+     resource = here->topology->core_map[id];
+     break;
+   case HPX_THREAD_AFFINITY_HWTHREAD:
+     resource = id;
+     break;
+   case HPX_THREAD_AFFINITY_NONE:
+     return LIBHPX_OK;
+   default:
+     log_error("unknown thread affinity policy\n");
+     return LIBHPX_ERROR;
+  }
 
-int system_set_affinity_group(pthread_t thread, int ncores) {
-  hwloc_bitmap_t cpu_set = hwloc_bitmap_alloc();
-  hwloc_bitmap_set_range(cpu_set, 0, ncores);
-  int e = _hwloc_cpubind(thread, cpu_set);
-  hwloc_bitmap_free(cpu_set);
-  return e;
+  hwloc_cpuset_t cpuset = here->topology->cpu_affinity_map[resource];
+  return _hwloc_bind_curthread(cpuset);
 }
 
 int system_get_available_cores(void) {

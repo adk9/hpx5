@@ -47,6 +47,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-configfile=file     HPX runtime configuration file",
   "\nScheduler Options:",
   "      --hpx-threads=threads     number of scheduler threads",
+  "      --hpx-thread-affinity=policy\n                                affinitize HPX worker threads  (possible\n                                  values=\"default\", \"hwthread\", \"core\",\n                                  \"numa\", \"none\")",
   "      --hpx-stacksize=bytes     set HPX stack size",
   "      --hpx-sched-wfthreshold=tasks\n                                bound on help-first tasks before work-first\n                                  scheduling",
   "      --hpx-sched-stackcachelimit=stacks\n                                bound on the number of stacks to cache",
@@ -143,6 +144,7 @@ const char *hpx_option_parser_hpx_gas_values[] = {"default", "smp", "pgas", "aga
 const char *hpx_option_parser_hpx_boot_values[] = {"default", "smp", "mpi", "pmi", 0}; /*< Possible values for hpx-boot. */
 const char *hpx_option_parser_hpx_transport_values[] = {"default", "mpi", "photon", 0}; /*< Possible values for hpx-transport. */
 const char *hpx_option_parser_hpx_network_values[] = {"default", "smp", "pwc", "isir", 0}; /*< Possible values for hpx-network. */
+const char *hpx_option_parser_hpx_thread_affinity_values[] = {"default", "hwthread", "core", "numa", "none", 0}; /*< Possible values for hpx-thread-affinity. */
 const char *hpx_option_parser_hpx_log_level_values[] = {"default", "boot", "sched", "gas", "lco", "net", "trans", "parcel", "action", "config", "memory", "coll", "all", 0}; /*< Possible values for hpx-log-level. */
 const char *hpx_option_parser_hpx_dbg_waitonsig_values[] = {"segv", "abrt", "fpe", "ill", "bus", "iot", "sys", "trap", "all", 0}; /*< Possible values for hpx-dbg-waitonsig. */
 const char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "pwc", "sched", "lco", "process", "memory", "schedtimes", "all", 0}; /*< Possible values for hpx-trace-classes. */
@@ -165,6 +167,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_statistics_given = 0 ;
   args_info->hpx_configfile_given = 0 ;
   args_info->hpx_threads_given = 0 ;
+  args_info->hpx_thread_affinity_given = 0 ;
   args_info->hpx_stacksize_given = 0 ;
   args_info->hpx_sched_wfthreshold_given = 0 ;
   args_info->hpx_sched_stackcachelimit_given = 0 ;
@@ -222,6 +225,8 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_configfile_arg = NULL;
   args_info->hpx_configfile_orig = NULL;
   args_info->hpx_threads_orig = NULL;
+  args_info->hpx_thread_affinity_arg = hpx_thread_affinity__NULL;
+  args_info->hpx_thread_affinity_orig = NULL;
   args_info->hpx_stacksize_orig = NULL;
   args_info->hpx_sched_wfthreshold_orig = NULL;
   args_info->hpx_sched_stackcachelimit_orig = NULL;
@@ -288,56 +293,57 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_statistics_help = hpx_options_t_help[9] ;
   args_info->hpx_configfile_help = hpx_options_t_help[10] ;
   args_info->hpx_threads_help = hpx_options_t_help[12] ;
-  args_info->hpx_stacksize_help = hpx_options_t_help[13] ;
-  args_info->hpx_sched_wfthreshold_help = hpx_options_t_help[14] ;
-  args_info->hpx_sched_stackcachelimit_help = hpx_options_t_help[15] ;
-  args_info->hpx_log_at_help = hpx_options_t_help[17] ;
+  args_info->hpx_thread_affinity_help = hpx_options_t_help[13] ;
+  args_info->hpx_stacksize_help = hpx_options_t_help[14] ;
+  args_info->hpx_sched_wfthreshold_help = hpx_options_t_help[15] ;
+  args_info->hpx_sched_stackcachelimit_help = hpx_options_t_help[16] ;
+  args_info->hpx_log_at_help = hpx_options_t_help[18] ;
   args_info->hpx_log_at_min = 0;
   args_info->hpx_log_at_max = 0;
-  args_info->hpx_log_level_help = hpx_options_t_help[18] ;
+  args_info->hpx_log_level_help = hpx_options_t_help[19] ;
   args_info->hpx_log_level_min = 0;
   args_info->hpx_log_level_max = 0;
-  args_info->hpx_dbg_waitat_help = hpx_options_t_help[20] ;
+  args_info->hpx_dbg_waitat_help = hpx_options_t_help[21] ;
   args_info->hpx_dbg_waitat_min = 0;
   args_info->hpx_dbg_waitat_max = 0;
-  args_info->hpx_dbg_waitonabort_help = hpx_options_t_help[21] ;
-  args_info->hpx_dbg_waitonsig_help = hpx_options_t_help[22] ;
+  args_info->hpx_dbg_waitonabort_help = hpx_options_t_help[22] ;
+  args_info->hpx_dbg_waitonsig_help = hpx_options_t_help[23] ;
   args_info->hpx_dbg_waitonsig_min = 0;
   args_info->hpx_dbg_waitonsig_max = 0;
-  args_info->hpx_dbg_mprotectstacks_help = hpx_options_t_help[23] ;
-  args_info->hpx_dbg_syncfree_help = hpx_options_t_help[24] ;
-  args_info->hpx_inst_dir_help = hpx_options_t_help[26] ;
-  args_info->hpx_inst_at_help = hpx_options_t_help[27] ;
+  args_info->hpx_dbg_mprotectstacks_help = hpx_options_t_help[24] ;
+  args_info->hpx_dbg_syncfree_help = hpx_options_t_help[25] ;
+  args_info->hpx_inst_dir_help = hpx_options_t_help[27] ;
+  args_info->hpx_inst_at_help = hpx_options_t_help[28] ;
   args_info->hpx_inst_at_min = 0;
   args_info->hpx_inst_at_max = 0;
-  args_info->hpx_trace_classes_help = hpx_options_t_help[29] ;
+  args_info->hpx_trace_classes_help = hpx_options_t_help[30] ;
   args_info->hpx_trace_classes_min = 0;
   args_info->hpx_trace_classes_max = 0;
-  args_info->hpx_trace_filesize_help = hpx_options_t_help[30] ;
-  args_info->hpx_prof_counters_help = hpx_options_t_help[32] ;
+  args_info->hpx_trace_filesize_help = hpx_options_t_help[31] ;
+  args_info->hpx_prof_counters_help = hpx_options_t_help[33] ;
   args_info->hpx_prof_counters_min = 0;
   args_info->hpx_prof_counters_max = 0;
-  args_info->hpx_isir_testwindow_help = hpx_options_t_help[34] ;
-  args_info->hpx_isir_sendlimit_help = hpx_options_t_help[35] ;
-  args_info->hpx_isir_recvlimit_help = hpx_options_t_help[36] ;
-  args_info->hpx_pwc_parcelbuffersize_help = hpx_options_t_help[38] ;
-  args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[39] ;
-  args_info->hpx_photon_backend_help = hpx_options_t_help[41] ;
-  args_info->hpx_photon_ibdev_help = hpx_options_t_help[42] ;
-  args_info->hpx_photon_ethdev_help = hpx_options_t_help[43] ;
-  args_info->hpx_photon_ibport_help = hpx_options_t_help[44] ;
-  args_info->hpx_photon_usecma_help = hpx_options_t_help[45] ;
-  args_info->hpx_photon_ibsrq_help = hpx_options_t_help[46] ;
-  args_info->hpx_photon_btethresh_help = hpx_options_t_help[47] ;
-  args_info->hpx_photon_fiprov_help = hpx_options_t_help[48] ;
-  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[49] ;
-  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[50] ;
-  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[51] ;
-  args_info->hpx_photon_maxrd_help = hpx_options_t_help[52] ;
-  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[53] ;
-  args_info->hpx_photon_numcq_help = hpx_options_t_help[54] ;
-  args_info->hpx_photon_usercq_help = hpx_options_t_help[55] ;
-  args_info->hpx_opt_smp_help = hpx_options_t_help[57] ;
+  args_info->hpx_isir_testwindow_help = hpx_options_t_help[35] ;
+  args_info->hpx_isir_sendlimit_help = hpx_options_t_help[36] ;
+  args_info->hpx_isir_recvlimit_help = hpx_options_t_help[37] ;
+  args_info->hpx_pwc_parcelbuffersize_help = hpx_options_t_help[39] ;
+  args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[40] ;
+  args_info->hpx_photon_backend_help = hpx_options_t_help[42] ;
+  args_info->hpx_photon_ibdev_help = hpx_options_t_help[43] ;
+  args_info->hpx_photon_ethdev_help = hpx_options_t_help[44] ;
+  args_info->hpx_photon_ibport_help = hpx_options_t_help[45] ;
+  args_info->hpx_photon_usecma_help = hpx_options_t_help[46] ;
+  args_info->hpx_photon_ibsrq_help = hpx_options_t_help[47] ;
+  args_info->hpx_photon_btethresh_help = hpx_options_t_help[48] ;
+  args_info->hpx_photon_fiprov_help = hpx_options_t_help[49] ;
+  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[50] ;
+  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[51] ;
+  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[52] ;
+  args_info->hpx_photon_maxrd_help = hpx_options_t_help[53] ;
+  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[54] ;
+  args_info->hpx_photon_numcq_help = hpx_options_t_help[55] ;
+  args_info->hpx_photon_usercq_help = hpx_options_t_help[56] ;
+  args_info->hpx_opt_smp_help = hpx_options_t_help[58] ;
   
 }
 
@@ -475,6 +481,7 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_configfile_arg));
   free_string_field (&(args_info->hpx_configfile_orig));
   free_string_field (&(args_info->hpx_threads_orig));
+  free_string_field (&(args_info->hpx_thread_affinity_orig));
   free_string_field (&(args_info->hpx_stacksize_orig));
   free_string_field (&(args_info->hpx_sched_wfthreshold_orig));
   free_string_field (&(args_info->hpx_sched_stackcachelimit_orig));
@@ -617,6 +624,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-configfile", args_info->hpx_configfile_orig, 0);
   if (args_info->hpx_threads_given)
     write_into_file(outfile, "hpx-threads", args_info->hpx_threads_orig, 0);
+  if (args_info->hpx_thread_affinity_given)
+    write_into_file(outfile, "hpx-thread-affinity", args_info->hpx_thread_affinity_orig, hpx_option_parser_hpx_thread_affinity_values);
   if (args_info->hpx_stacksize_given)
     write_into_file(outfile, "hpx-stacksize", args_info->hpx_stacksize_orig, 0);
   if (args_info->hpx_sched_wfthreshold_given)
@@ -1295,6 +1304,7 @@ hpx_option_parser_internal (
         { "hpx-statistics",	0, NULL, 0 },
         { "hpx-configfile",	1, NULL, 0 },
         { "hpx-threads",	1, NULL, 0 },
+        { "hpx-thread-affinity",	1, NULL, 0 },
         { "hpx-stacksize",	1, NULL, 0 },
         { "hpx-sched-wfthreshold",	1, NULL, 0 },
         { "hpx-sched-stackcachelimit",	1, NULL, 0 },
@@ -1472,6 +1482,20 @@ hpx_option_parser_internal (
                 &(local_args_info.hpx_threads_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "hpx-threads", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* affinitize HPX worker threads.  */
+          else if (strcmp (long_options[option_index].name, "hpx-thread-affinity") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_thread_affinity_arg), 
+                 &(args_info->hpx_thread_affinity_orig), &(args_info->hpx_thread_affinity_given),
+                &(local_args_info.hpx_thread_affinity_given), optarg, hpx_option_parser_hpx_thread_affinity_values, 0, ARG_ENUM,
+                check_ambiguity, override, 0, 0,
+                "hpx-thread-affinity", '-',
                 additional_error))
               goto failure;
           

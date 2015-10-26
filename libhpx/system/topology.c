@@ -17,6 +17,7 @@
 
 #include <string.h>
 #include <unistd.h>
+#include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
@@ -25,7 +26,77 @@
 #include <libhpx/utils.h>
 #include <hwloc.h>
 
-topology_t *topology_new(void) {
+static int _get_resources_by_affinity(topology_t *topology,
+                                      libhpx_thread_affinity_t policy) {
+  int n = 0;
+  switch (policy) {
+   case HPX_THREAD_AFFINITY_DEFAULT:
+   case HPX_THREAD_AFFINITY_NUMA:
+     n = topology->nnodes;
+     break;
+   case HPX_THREAD_AFFINITY_CORE:
+     n = topology->ncores;
+     break;
+   case HPX_THREAD_AFFINITY_HWTHREAD:
+     n = topology->ncpus;
+     break;
+   case HPX_THREAD_AFFINITY_NONE:
+     return 0;
+   default:
+     log_error("unknown thread affinity policy\n");
+     return 0;
+  }
+  dbg_assert(n > 0);
+  return n;
+}
+
+static hwloc_cpuset_t *_cpu_affinity_map_new(topology_t *topology, 
+                                             libhpx_thread_affinity_t policy) {
+  int resources = _get_resources_by_affinity(topology, policy);
+  hwloc_cpuset_t *cpu_affinity_map = calloc(resources, sizeof(hwloc_cpuset_t));
+
+  for (int r = 0; r < resources; ++r) {
+    hwloc_cpuset_t cpuset = cpu_affinity_map[r] = hwloc_bitmap_alloc();  
+    switch (policy) {
+     case HPX_THREAD_AFFINITY_DEFAULT:
+     case HPX_THREAD_AFFINITY_NUMA:
+       for (int i = 0; i < topology->ncpus; ++i) {
+         if (r == topology->numa_map[i]) {
+           hwloc_bitmap_set(cpuset, i);
+         }
+       }
+       break;
+     case HPX_THREAD_AFFINITY_CORE:
+       for (int i = 0; i < topology->ncpus; ++i) {
+         if (r == topology->core_map[i]) {
+           hwloc_bitmap_set(cpuset, i);
+         }
+       }
+       break;
+     case HPX_THREAD_AFFINITY_HWTHREAD:
+       hwloc_bitmap_set(cpuset, r);
+       hwloc_bitmap_singlify(cpuset);
+       break;
+     case HPX_THREAD_AFFINITY_NONE:
+       hwloc_bitmap_set_range(cpuset, 0, topology->ncpus);       
+       break;
+     default:
+       log_error("unknown thread affinity policy\n");
+       return NULL;
+    }
+  }
+  return cpu_affinity_map;
+}
+
+static void _cpu_affinity_map_delete(topology_t *topology) {
+  int resources = _get_resources_by_affinity(topology, here->config->thread_affinity);
+  for (int r = 0; r < resources; ++r) {
+    hwloc_bitmap_free(topology->cpu_affinity_map[r]);
+  }
+  free(topology->cpu_affinity_map);
+}
+
+topology_t *topology_new(const struct config *config) {
   topology_t *topology = malloc(sizeof(*topology));
   int e = hwloc_topology_init(&topology->hwloc_topology);
   if (e) {
@@ -38,7 +109,7 @@ topology_t *topology_new(void) {
     return NULL;
   }
 
-  // get the CPUs in the system
+  // get the number of CPUs in the system
   topology->ncpus = hwloc_get_nbobjs_by_type(topology->hwloc_topology,
                                              HWLOC_OBJ_PU);
 
@@ -86,7 +157,7 @@ topology_t *topology_new(void) {
     return NULL;
   }
 
-  // get the NUMA nodes in the system
+  // get the number of NUMA nodes in the system
   topology->nnodes = hwloc_get_nbobjs_by_type(topology->hwloc_topology,
                                               HWLOC_OBJ_NODE);
   topology->numa_nodes = calloc(topology->nnodes, sizeof(hwloc_obj_t));
@@ -117,7 +188,14 @@ topology_t *topology_new(void) {
     }
     topology->numa_map[cpu->os_index] = numa_node->os_index;
   }
-  
+
+  // generate the CPU affinity map
+  topology->cpu_affinity_map = _cpu_affinity_map_new(topology, config->thread_affinity);
+  if (!topology->cpu_affinity_map) {
+    log_error("failed to allocate memory for the CPU affinity map.\n");
+    return NULL;
+  }
+
   return topology;
 }
 
@@ -146,5 +224,11 @@ void topology_delete(topology_t *topology) {
     topology->allowed_cpus = NULL;
   }
 
+  if (topology->cpu_affinity_map) {
+    _cpu_affinity_map_delete(topology);
+    topology->cpu_affinity_map  = NULL;
+  }
+
   hwloc_topology_destroy(topology->hwloc_topology);
+  free(topology);
 }
