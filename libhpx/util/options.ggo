@@ -50,6 +50,11 @@ option "hpx-threads" - "number of scheduler threads"
 typestr="threads"
 int optional
 
+option "hpx-thread-affinity" - "affinitize HPX worker threads"
+typestr="policy"
+values="default","hwthread","core","numa","none"
+enum optional
+
 option "hpx-stacksize" - "set HPX stack size"
 typestr="bytes"
 long optional

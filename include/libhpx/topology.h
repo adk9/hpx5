@@ -24,30 +24,48 @@
 extern "C" {
 #endif
 
+/// Forward declarations
+/// @{
+struct config;
+/// @}
+
 /// The "physical" topology object.
 ///
-/// @field hwloc_topology The HWLOC topology object.
-/// @field          ncpus The number of physical CPUs in the system.
-/// @field           cpus The HWLOC object corresponding to each CPU.
-/// @field         ncores The number of physical cores in the system
-/// @field       core_map The core map of the system (cpu/hw thread id
-///                           -> core-id mapping)
-/// @field     numa_nodes The HWLOC object corresponding to each NUMA node.
-/// @field       numa_map The NUMA map of the system (cpu-id ->
-///                       numa-node mapping)
+/// @field   hwloc_topology The HWLOC topology object.
+/// @field            ncpus The number of physical CPUs in the system.
+/// @field             cpus The HWLOC object corresponding to each CPU.
+/// @field           ncores The number of physical cores in the system
+/// @field         core_map The core map of the system (cpu-id -> core-id)
+/// @field       numa_nodes The HWLOC object corresponding to each NUMA node.
+/// @field         numa_map The NUMA map of the system (cpu-id -> numa-node)
+/// @field     allowed_cpus The initial CPU binding of the HPX process
+/// @field cpu_affinity_map The CPU affinity map that maintains the
+///                         CPU binding for a resource (numa-node, core-id)
+///                         depending on the global affinity policy.
 typedef struct topology {
-  hwloc_topology_t hwloc_topology;
-  int                       ncpus;
-  hwloc_obj_t               *cpus;
-  int                      nnodes;
-  hwloc_obj_t         *numa_nodes;
-  int                      ncores;
-  int                   *core_map;
-  int                   *numa_map;
-  hwloc_cpuset_t     allowed_cpus;
+  hwloc_topology_t  hwloc_topology;
+  int                        ncpus;
+  hwloc_obj_t                *cpus;
+  int                       ncores;
+  int                    *core_map;
+  int                       nnodes;
+  hwloc_obj_t          *numa_nodes;
+  int                    *numa_map;
+  hwloc_cpuset_t      allowed_cpus;
+  hwloc_cpuset_t *cpu_affinity_map;
 } topology_t;
 
-topology_t *topology_new(void);
+/// Allocate and initialize a new topology object.
+///
+/// @param       config The configuration object.
+///
+/// @returns            The topology object, or NULL if there was an error.
+topology_t *topology_new(const struct config *config)
+  HPX_MALLOC;
+
+/// Finalize and free the topology object.
+///
+/// @param    topology The topology object to free.
 void topology_delete(topology_t *topology);
 
 // if hpx_addr_t and uint64_t do not match, this header will need rewritten

@@ -173,7 +173,7 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // topology
-  here->topology = topology_new();
+  here->topology = topology_new(here->config);
   if (!here->topology) {
     status = log_error("failed to discover topology.\n");
     goto unwind1;
