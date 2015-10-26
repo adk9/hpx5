@@ -69,6 +69,16 @@ topology_t *topology_new(void) {
     return NULL;
   }
 
+  // get the number of cores in the system
+  topology->ncores = hwloc_get_nbobjs_by_type(topology->hwloc_topology,
+                                              HWLOC_OBJ_CORE);
+  // initalize the core map
+  topology->core_map = calloc(topology->ncpus, sizeof(int));
+  if (!topology->core_map) {
+    log_error("failed to allocate memory for the core map.\n");
+    return NULL;
+  }
+
   // initalize the NUMA map
   topology->numa_map = calloc(topology->ncpus, sizeof(int));
   if (!topology->numa_map) {
@@ -91,6 +101,13 @@ topology_t *topology_new(void) {
                                      HWLOC_OBJ_PU, cpu);
     dbg_assert(cpu);
     topology->cpus[cpu->os_index] = cpu;
+
+    hwloc_obj_t core =
+      hwloc_get_ancestor_obj_by_type(topology->hwloc_topology,
+                                     HWLOC_OBJ_CORE, cpu);
+    dbg_assert(core);
+    topology->core_map[cpu->os_index] = core->os_index;
+
     hwloc_obj_t numa_node =
       hwloc_get_ancestor_obj_by_type(topology->hwloc_topology,
                                      HWLOC_OBJ_NODE, cpu);
