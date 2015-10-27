@@ -110,6 +110,7 @@ LIBHPX_OPT_SCALAR(, threads, 0, int)
 LIBHPX_OPT_SCALAR(, thread_affinity, HPX_THREAD_AFFINITY_DEFAULT,
                   libhpx_thread_affinity_t)
 LIBHPX_OPT_SCALAR(, stacksize, 32768, unsigned)
+LIBHPX_OPT_SCALAR(sched_, policy, HPX_SCHED_POLICY_DEFAULT, libhpx_sched_policy_t)
 LIBHPX_OPT_SCALAR(sched_, wfthreshold, 256, uint32_t)
 LIBHPX_OPT_SCALAR(sched_, stackcachelimit, 32, int32_t)
 /// @}
