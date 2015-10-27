@@ -43,6 +43,7 @@ enum enum_hpx_boot { hpx_boot__NULL = -1, hpx_boot_arg_default = 0, hpx_boot_arg
 enum enum_hpx_transport { hpx_transport__NULL = -1, hpx_transport_arg_default = 0, hpx_transport_arg_mpi, hpx_transport_arg_photon };
 enum enum_hpx_network { hpx_network__NULL = -1, hpx_network_arg_default = 0, hpx_network_arg_smp, hpx_network_arg_pwc, hpx_network_arg_isir };
 enum enum_hpx_thread_affinity { hpx_thread_affinity__NULL = -1, hpx_thread_affinity_arg_default = 0, hpx_thread_affinity_arg_hwthread, hpx_thread_affinity_arg_core, hpx_thread_affinity_arg_numa, hpx_thread_affinity_arg_none };
+enum enum_hpx_sched_policy { hpx_sched_policy__NULL = -1, hpx_sched_policy_arg_default = 0, hpx_sched_policy_arg_random, hpx_sched_policy_arg_last, hpx_sched_policy_arg_half, hpx_sched_policy_arg_hybrid };
 enum enum_hpx_log_level { hpx_log_level__NULL = -1, hpx_log_level_arg_default = 0, hpx_log_level_arg_boot, hpx_log_level_arg_sched, hpx_log_level_arg_gas, hpx_log_level_arg_lco, hpx_log_level_arg_net, hpx_log_level_arg_trans, hpx_log_level_arg_parcel, hpx_log_level_arg_action, hpx_log_level_arg_config, hpx_log_level_arg_memory, hpx_log_level_arg_coll, hpx_log_level_arg_all };
 enum enum_hpx_dbg_waitonsig { hpx_dbg_waitonsig__NULL = -1, hpx_dbg_waitonsig_arg_segv = 0, hpx_dbg_waitonsig_arg_abrt, hpx_dbg_waitonsig_arg_fpe, hpx_dbg_waitonsig_arg_ill, hpx_dbg_waitonsig_arg_bus, hpx_dbg_waitonsig_arg_iot, hpx_dbg_waitonsig_arg_sys, hpx_dbg_waitonsig_arg_trap, hpx_dbg_waitonsig_arg_all };
 enum enum_hpx_trace_classes { hpx_trace_classes__NULL = -1, hpx_trace_classes_arg_parcel = 0, hpx_trace_classes_arg_pwc, hpx_trace_classes_arg_sched, hpx_trace_classes_arg_lco, hpx_trace_classes_arg_process, hpx_trace_classes_arg_memory, hpx_trace_classes_arg_schedtimes, hpx_trace_classes_arg_all };
@@ -85,6 +86,9 @@ struct hpx_options_t
   long hpx_stacksize_arg;	/**< @brief set HPX stack size.  */
   char * hpx_stacksize_orig;	/**< @brief set HPX stack size original value given at command line.  */
   const char *hpx_stacksize_help; /**< @brief set HPX stack size help description.  */
+  enum enum_hpx_sched_policy hpx_sched_policy_arg;	/**< @brief work-stealing policy for the HPX scheduler.  */
+  char * hpx_sched_policy_orig;	/**< @brief work-stealing policy for the HPX scheduler original value given at command line.  */
+  const char *hpx_sched_policy_help; /**< @brief work-stealing policy for the HPX scheduler help description.  */
   long hpx_sched_wfthreshold_arg;	/**< @brief bound on help-first tasks before work-first scheduling.  */
   char * hpx_sched_wfthreshold_orig;	/**< @brief bound on help-first tasks before work-first scheduling original value given at command line.  */
   const char *hpx_sched_wfthreshold_help; /**< @brief bound on help-first tasks before work-first scheduling help description.  */
@@ -213,6 +217,7 @@ struct hpx_options_t
   unsigned int hpx_threads_given ;	/**< @brief Whether hpx-threads was given.  */
   unsigned int hpx_thread_affinity_given ;	/**< @brief Whether hpx-thread-affinity was given.  */
   unsigned int hpx_stacksize_given ;	/**< @brief Whether hpx-stacksize was given.  */
+  unsigned int hpx_sched_policy_given ;	/**< @brief Whether hpx-sched-policy was given.  */
   unsigned int hpx_sched_wfthreshold_given ;	/**< @brief Whether hpx-sched-wfthreshold was given.  */
   unsigned int hpx_sched_stackcachelimit_given ;	/**< @brief Whether hpx-sched-stackcachelimit was given.  */
   unsigned int hpx_log_at_given ;	/**< @brief Whether hpx-log-at was given.  */
@@ -440,6 +445,7 @@ extern const char *hpx_option_parser_hpx_boot_values[];  /**< @brief Possible va
 extern const char *hpx_option_parser_hpx_transport_values[];  /**< @brief Possible values for hpx-transport. */
 extern const char *hpx_option_parser_hpx_network_values[];  /**< @brief Possible values for hpx-network. */
 extern const char *hpx_option_parser_hpx_thread_affinity_values[];  /**< @brief Possible values for hpx-thread-affinity. */
+extern const char *hpx_option_parser_hpx_sched_policy_values[];  /**< @brief Possible values for hpx-sched-policy. */
 extern const char *hpx_option_parser_hpx_log_level_values[];  /**< @brief Possible values for hpx-log-level. */
 extern const char *hpx_option_parser_hpx_dbg_waitonsig_values[];  /**< @brief Possible values for hpx-dbg-waitonsig. */
 extern const char *hpx_option_parser_hpx_trace_classes_values[];  /**< @brief Possible values for hpx-trace-classes. */
