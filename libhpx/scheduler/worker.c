@@ -431,7 +431,7 @@ static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
 ///
 /// @returns            The status from _transfer.
 static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
-  uint64_t start_time = hpx_time_to_ns(hpx_time_now());
+  INST(uint64_t start_time = hpx_time_to_ns(hpx_time_now()));
   int source = -1;
   int spins = 0;
   hpx_parcel_t *p = NULL;
@@ -508,10 +508,6 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   if (p != self->current) {
     _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = f, .env = env });
   }
-
-  (void)start_time;
-  (void)source;
-  (void)spins;
 }
 
 int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
