@@ -23,7 +23,7 @@ static int _main_action(void *args, size_t n) {
   int blocks = HPX_LOCALITIES;
 
   printf("Allocating a block of global memory of size = %" PRIu64 "\n", size);
-  hpx_addr_t local = hpx_gas_alloc_local(size, 0);
+  hpx_addr_t local = hpx_gas_alloc_local(1, size, 0);
   printf("Free a global allocation\n");
   hpx_gas_free(local, HPX_NULL);
 
