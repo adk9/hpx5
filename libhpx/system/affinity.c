@@ -52,10 +52,15 @@ int system_set_worker_affinity(int id, libhpx_thread_affinity_t policy) {
      resource = cpu;
      break;
    case HPX_THREAD_AFFINITY_NONE:
-     return LIBHPX_OK;
+     resource = -1;
    default:
      log_error("unknown thread affinity policy\n");
      return LIBHPX_ERROR;
+  }
+
+  // if we didn't find a valid cpuset, we ignore affinity.
+  if (resource < 0) {
+    return LIBHPX_OK;
   }
 
   hwloc_cpuset_t cpuset = here->topology->cpu_affinity_map[resource];

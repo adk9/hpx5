@@ -46,13 +46,15 @@ static int _get_resources_by_affinity(topology_t *topology,
      log_error("unknown thread affinity policy\n");
      return 0;
   }
-  dbg_assert(n > 0);
   return n;
 }
 
 static hwloc_cpuset_t *_cpu_affinity_map_new(topology_t *topology, 
                                              libhpx_thread_affinity_t policy) {
   int resources = _get_resources_by_affinity(topology, policy);
+  if (!resources) {
+    return NULL;
+  }
   hwloc_cpuset_t *cpu_affinity_map = calloc(resources, sizeof(*cpu_affinity_map));
 
   for (int r = 0; r < resources; ++r) {
@@ -160,10 +162,12 @@ topology_t *topology_new(const struct config *config) {
   // get the number of NUMA nodes in the system
   topology->nnodes = hwloc_get_nbobjs_by_type(topology->hwloc_topology,
                                               HWLOC_OBJ_NODE);
-  topology->numa_nodes = calloc(topology->nnodes, sizeof(hwloc_obj_t));
-  if (!topology->numa_nodes) {
-    log_error("failed to allocate memory for numa node objects.\n");
-    return NULL;
+  if (topology->nnodes > 0) {
+    topology->numa_nodes = calloc(topology->nnodes, sizeof(hwloc_obj_t));
+    if (!topology->numa_nodes) {
+      log_error("failed to allocate memory for numa node objects.\n");
+      return NULL;
+    }
   }
 
   hwloc_obj_t cpu = NULL;
@@ -176,13 +180,13 @@ topology_t *topology_new(const struct config *config) {
     hwloc_obj_t core =
       hwloc_get_ancestor_obj_by_type(topology->hwloc_topology,
                                      HWLOC_OBJ_CORE, cpu);
-    dbg_assert(core);
-    topology->core_map[cpu->os_index] = core->os_index;
+    int index = core ? core->os_index : -1;
+    topology->core_map[cpu->os_index] = index;
 
     hwloc_obj_t numa_node =
       hwloc_get_ancestor_obj_by_type(topology->hwloc_topology,
                                      HWLOC_OBJ_NODE, cpu);
-    int index = numa_node ? numa_node->os_index : 0;
+    index = numa_node ? numa_node->os_index : -1;
     if (numa_node && topology->numa_nodes[index] == NULL) {
       topology->numa_nodes[index] = numa_node;
     }
