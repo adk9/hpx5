@@ -53,7 +53,7 @@ static int _get_resources_by_affinity(topology_t *topology,
 static hwloc_cpuset_t *_cpu_affinity_map_new(topology_t *topology, 
                                              libhpx_thread_affinity_t policy) {
   int resources = _get_resources_by_affinity(topology, policy);
-  hwloc_cpuset_t *cpu_affinity_map = calloc(resources, sizeof(hwloc_cpuset_t));
+  hwloc_cpuset_t *cpu_affinity_map = calloc(resources, sizeof(*cpu_affinity_map));
 
   for (int r = 0; r < resources; ++r) {
     hwloc_cpuset_t cpuset = cpu_affinity_map[r] = hwloc_bitmap_alloc();  
@@ -182,11 +182,11 @@ topology_t *topology_new(const struct config *config) {
     hwloc_obj_t numa_node =
       hwloc_get_ancestor_obj_by_type(topology->hwloc_topology,
                                      HWLOC_OBJ_NODE, cpu);
-    dbg_assert(numa_node);
-    if (topology->numa_nodes[numa_node->os_index] == NULL) {
-      topology->numa_nodes[numa_node->os_index] = numa_node;
+    int index = numa_node ? numa_node->os_index : 0;
+    if (numa_node && topology->numa_nodes[index] == NULL) {
+      topology->numa_nodes[index] = numa_node;
     }
-    topology->numa_map[cpu->os_index] = numa_node->os_index;
+    topology->numa_map[cpu->os_index] = index;
   }
 
   // generate the CPU affinity map
