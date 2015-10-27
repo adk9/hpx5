@@ -579,11 +579,7 @@ int worker_start(void) {
   }
 
   int cpu = self->id % here->topology->ncpus;
-  if (policy != HPX_THREAD_AFFINITY_NONE) {
-    self->numa_node = here->topology->numa_map[cpu];
-  } else {
-    self->numa_node = -1;
-  }
+  self->numa_node = here->topology->numa_map[cpu];
 
   // wait for local threads to start up
   struct scheduler *sched = here->sched;
