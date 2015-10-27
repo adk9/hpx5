@@ -195,11 +195,6 @@ topology_t *topology_new(const struct config *config) {
 
   // generate the CPU affinity map
   topology->cpu_affinity_map = _cpu_affinity_map_new(topology, config->thread_affinity);
-  if (!topology->cpu_affinity_map) {
-    log_error("failed to allocate memory for the CPU affinity map.\n");
-    return NULL;
-  }
-
   return topology;
 }
 
