@@ -169,6 +169,11 @@ int _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
                                                  hpx_lco_set_action, n, &vargs);
   va_end(vargs);
 
+  if (hpx_thread_current_pid() == hpx_process_getpid(process)) {
+    hpx_parcel_send_sync(parcel);
+    return HPX_SUCCESS;
+  }
+
   hpx_addr_t sync = hpx_lco_future_new(0);
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, parcel_size(parcel));
   p->target = process;
