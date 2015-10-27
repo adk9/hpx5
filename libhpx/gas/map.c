@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <alloca.h>
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
