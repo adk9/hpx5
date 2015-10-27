@@ -57,7 +57,7 @@ static int _main_action(void *args, size_t n) {
 
   for (size_t size = 1; size <= MAX_BYTES; size*=2) {
     t = hpx_time_now();
-    local = hpx_gas_alloc_local(size, 0);
+    local = hpx_gas_alloc_local(1, size, 0);
     fprintf(stdout, "%-*zu%*g", 10,  size, FIELD_WIDTH, hpx_time_elapsed_ms(t));
 
     t = hpx_time_now();

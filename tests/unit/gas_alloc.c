@@ -25,7 +25,7 @@ static const int N = 10;
 
 static int gas_alloc_handler(void) {
   printf("Starting the GAS local memory allocation test\n");
-  hpx_addr_t local = hpx_gas_alloc_local(N, 0);
+  hpx_addr_t local = hpx_gas_alloc_local(1, N, 0);
 
   if (!local) {
     fflush(stdout);
@@ -49,7 +49,7 @@ static int gas_memalign_handler(void) {
   for (int i = 4, e = 24; i < e; ++i) {
     unsigned long alignment = (UINT64_C(1) << i);
     printf("checking alignment %lu\n", alignment);
-    hpx_addr_t local = hpx_gas_alloc_local(N, alignment);
+    hpx_addr_t local = hpx_gas_alloc_local(1, N, alignment);
     if (!local) {
       fflush(stdout);
       fprintf(stderr, "hpx_gas_alloc_local returned HPX_NULL\n");
@@ -141,7 +141,7 @@ static HPX_ACTION(HPX_INTERRUPT, 0, verify_at, verify_at_handler, HPX_ADDR, HPX_
 static int gas_alloc_at_handler(void) {
   printf("Starting the GAS remote memory allocation test\n");
   int peer = (HPX_LOCALITY_ID + 1) % HPX_LOCALITIES;
-  hpx_addr_t addr = hpx_gas_alloc_local_at_sync(N * sizeof(int), 0, HPX_THERE(peer));
+  hpx_addr_t addr = hpx_gas_alloc_local_at_sync(N, sizeof(int), 0, HPX_THERE(peer));
   if (!addr) {
     fflush(stdout);
     fprintf(stderr, "failed to allocate memory at %d\n", peer);

@@ -98,7 +98,7 @@ static int thread_continue_cleanup_handler(void) {
   // Start the timer
   hpx_time_t t1 = hpx_time_now();
 
-  hpx_addr_t src = hpx_gas_alloc_local(sizeof(uint64_t), sizeof(uint64_t));
+  hpx_addr_t src = hpx_gas_alloc_local(1, sizeof(uint64_t), sizeof(uint64_t));
 
   uint64_t *block = malloc(DATA_SIZE);
   assert(block);
