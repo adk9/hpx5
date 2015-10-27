@@ -39,16 +39,17 @@ static int _hwloc_bind_curthread(hwloc_bitmap_t set) {
 
 int system_set_worker_affinity(int id, libhpx_thread_affinity_t policy) {
   int resource;
+  int cpu = (id % here->topology->ncpus);
   switch (policy) {
    case HPX_THREAD_AFFINITY_DEFAULT:
    case HPX_THREAD_AFFINITY_NUMA:
-     resource = here->topology->numa_map[id];
+     resource = here->topology->numa_map[cpu];
      break;
    case HPX_THREAD_AFFINITY_CORE:
-     resource = here->topology->core_map[id];
+     resource = here->topology->core_map[cpu];
      break;
    case HPX_THREAD_AFFINITY_HWTHREAD:
-     resource = id;
+     resource = cpu;
      break;
    case HPX_THREAD_AFFINITY_NONE:
      return LIBHPX_OK;
