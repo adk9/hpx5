@@ -298,38 +298,6 @@ static hpx_parcel_t *_schedule_yielded(worker_t *w) {
   return sync_two_lock_queue_dequeue(&here->sched->yielded);
 }
 
-/// Steal a lightweight thread during scheduling.
-///
-/// NB: we can be much smarter about who to steal from and how much to
-/// steal. Ultimately though, we're building a distributed runtime so SMP work
-/// stealing isn't that big a deal.
-static hpx_parcel_t *_schedule_steal(worker_t *w) {
-  int n = here->sched->n_workers;
-  if (n == 1) {
-    return NULL;
-  }
-
-  int id = w->last_victim;
-  if (id < 0) {
-    do {
-      id = rand_r(&w->seed) % n;
-    } while (id == w->id);
-  }
-
-  worker_t *victim = scheduler_get_worker(here->sched, id);
-  hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
-  if (p) {
-    w->last_victim = id;
-    EVENT_STEAL_LIFO(p, victim);
-    COUNTER_SAMPLE(++w->stats.steals);
-  } else {
-    w->last_victim = -1;
-    COUNTER_SAMPLE(++w->stats.failed_steals);
-  }
-
-  return p;
-}
-
 /// Send a mail message to another worker.
 static void _send_mail(hpx_parcel_t *p, void *worker) {
   worker_t *w = worker;
@@ -344,9 +312,125 @@ static void _handle_mail(worker_t *w) {
   while ((parcels = sync_two_lock_queue_dequeue(&w->inbox))) {
     while ((p = parcel_stack_pop(&parcels))) {
       COUNTER_SAMPLE(++w->stats.mail);
+      //      printf("%d: p->target %lu p->action %s p->next = %p.\n",
+      //             w->id, p->target, action_table_get_key(here->actions, p->action), p->next);
       _push_lifo(p, w);
     }
   }
+}
+
+/// The action that pushes half the work to a thief.
+static HPX_ACTION_DECL(_push_half);
+static int _push_half_handler(int src) {
+  const int steal_half_threshold = 6;
+  log_sched("received push half request from worker %d\n", src);
+  worker_t *thief = scheduler_get_worker(here->sched, src);
+  int qsize = sync_chase_lev_ws_deque_size(&self->work);
+  if (qsize < steal_half_threshold) {
+    return HPX_SUCCESS;
+  }
+
+  // pop half of the total parcels from my work queue
+  int count = (qsize >> 1);
+  hpx_parcel_t *parcels = NULL;
+  for (int i = 0; i < count; ++i) {
+    hpx_parcel_t *p = _schedule_lifo(self);
+    if (!p) {
+      continue;
+    }
+
+    // if we find multiple push-half requests, purge the other ones
+    if (p->action == _push_half) {
+      hpx_parcel_release(p);
+      count++;
+      continue;
+    }
+    parcel_stack_push(&parcels, p);
+  }
+
+  // send them back to the thief
+  if (parcels) {
+    _send_mail(parcels, thief);
+  }
+  return HPX_SUCCESS;
+}
+static LIBHPX_ACTION(HPX_INTERRUPT, 0, _push_half, _push_half_handler, HPX_INT);
+
+/// Steal half of a random victim's work.
+static hpx_parcel_t *_steal_half(worker_t *w, int n) {
+  int id;
+  do {
+    id = rand_r(&w->seed) % n;
+  } while (id == w->id);
+  worker_t *victim = scheduler_get_worker(here->sched, id);
+  hpx_parcel_t *p = action_create_parcel(HPX_HERE, _push_half, HPX_NULL,
+                                         HPX_ACTION_NULL, 1, &w->id);
+  _send_mail(p, victim);
+  EVENT_STEAL_LIFO(p, victim);
+  return NULL;
+}
+
+/// Steal one parcel from a random victim.
+static hpx_parcel_t *_steal_random(worker_t *w, int n) {
+  int id;
+  do {
+    id = rand_r(&w->seed) % n;
+  } while (id == w->id);
+  worker_t *victim = scheduler_get_worker(here->sched, id);
+  hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
+  EVENT_STEAL_LIFO(p, victim);
+  return p;
+}
+
+/// Steal one parcel from the last succesful victim.
+static hpx_parcel_t *_steal_last(worker_t *w, int n) {
+  int id = w->last_victim;
+  hpx_parcel_t *p;
+  if (id < 0) {
+    p = _steal_random(w, n);
+  } else {
+    worker_t *victim = scheduler_get_worker(here->sched, id);
+    p = sync_chase_lev_ws_deque_steal(&victim->work);
+    EVENT_STEAL_LIFO(p, victim);
+  }
+  w->last_victim = p ? id : -1;
+  return p;
+}
+
+/// Steal a lightweight thread during scheduling.
+///
+/// NB: we can be much smarter about who to steal from and how much to
+/// steal. Ultimately though, we're building a distributed runtime so SMP work
+/// stealing isn't that big a deal.
+static hpx_parcel_t *_schedule_steal(worker_t *w) {
+  int n = here->sched->n_workers;
+  if (n == 1) {
+    return NULL;
+  }
+
+  hpx_parcel_t *p;
+  libhpx_sched_policy_t policy = here->config->sched_policy;
+  switch (policy) {
+    case HPX_SCHED_POLICY_DEFAULT:
+    case HPX_SCHED_POLICY_RANDOM:
+    case HPX_SCHED_POLICY_HYBRID: // unimplemented
+    default:
+      p = _steal_random(w, n);
+      break;
+    case HPX_SCHED_POLICY_LAST:
+      p = _steal_last(w, n);
+      break;
+    case HPX_SCHED_POLICY_HALF:
+      p = _steal_half(w, n);
+      break;
+  }
+
+  if (p) {
+    COUNTER_SAMPLE(++w->stats.steals);
+  } else {
+    COUNTER_SAMPLE(++w->stats.failed_steals);
+  }
+  return p;
 }
 
 /// Freelist a parcel's stack.
@@ -508,6 +592,9 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   if (p != self->current) {
     _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = f, .env = env });
   }
+
+  (void)source;
+  (void)spins;
 }
 
 int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
