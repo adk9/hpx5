@@ -101,7 +101,8 @@ typedef enum {
   HPX_THREAD_AFFINITY_HWTHREAD,
   HPX_THREAD_AFFINITY_CORE,
   HPX_THREAD_AFFINITY_NUMA,
-  HPX_THREAD_AFFINITY_NONE
+  HPX_THREAD_AFFINITY_NONE,
+  HPX_THREAD_AFFINITY_MAX
 } libhpx_thread_affinity_t;
 
 static const char * const HPX_THREAD_AFFINITY_TO_STRING[] = {
@@ -109,7 +110,8 @@ static const char * const HPX_THREAD_AFFINITY_TO_STRING[] = {
   "HW THREAD",
   "CORE",
   "NUMA",
-  "NONE"
+  "NONE",
+  "INVALID_POLICY"
 };
 
 //! Locality types in HPX.
