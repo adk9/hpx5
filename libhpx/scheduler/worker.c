@@ -37,6 +37,7 @@
 #include <libhpx/scheduler.h>
 #include <libhpx/system.h>
 #include <libhpx/termination.h>
+#include <libhpx/topology.h>
 #include <libhpx/worker.h>
 #include "cvar.h"
 #include "lco.h"
@@ -570,11 +571,18 @@ int worker_start(void) {
   dbg_assert(here && here->config && here->network);
 
   // affinitize the worker thread
-  int status = system_set_worker_affinity(self->id,
-                                          here->config->thread_affinity);
+  libhpx_thread_affinity_t policy = here->config->thread_affinity;
+  int status = system_set_worker_affinity(self->id, policy);
   if (status != LIBHPX_OK) {
     log_error("WARNING: running with no worker thread affinity. "
               "This MAY result in diminished performance.\n");
+  }
+
+  int cpu = self->id % here->topology->ncpus;
+  if (policy != HPX_THREAD_AFFINITY_NONE) {
+    self->numa_node = here->topology->numa_map[cpu];
+  } else {
+    self->numa_node = -1;
   }
 
   // wait for local threads to start up

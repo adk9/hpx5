@@ -56,7 +56,9 @@ typedef struct {
   two_lock_queue_t    inbox;                    // mail sent to me
   libhpx_stats_t      stats;                    // per-worker statistics
   int           last_victim;                    // last successful victim
-  void            *profiler;                    // worker maintains a reference to its profiler
+  int             numa_node;                    // this worker's numa node
+  void            *profiler;                    // worker maintains a
+                                                // reference to its profiler
 } worker_t HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
 extern __thread worker_t * volatile self;
