@@ -53,6 +53,7 @@ int system_set_worker_affinity(int id, libhpx_thread_affinity_t policy) {
      break;
    case HPX_THREAD_AFFINITY_NONE:
      resource = -1;
+     break;
    default:
      log_error("unknown thread affinity policy\n");
      return LIBHPX_ERROR;
