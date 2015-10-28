@@ -209,7 +209,7 @@ static int _lco_wait_handler(lco_t *lco, int reset) {
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_wait, _lco_wait_handler,
                      HPX_POINTER, HPX_INT);
 
-int attach_handler(lco_t *lco, hpx_parcel_t *p, size_t size) {
+int lco_attach_handler(lco_t *lco, hpx_parcel_t *p, size_t size) {
   hpx_parcel_t *parent = scheduler_current_parcel();
   dbg_assert(hpx_parcel_get_data(parent) == p);
   log_lco("retaining %p, nesting %p\n", (void*)parent, (void*)p);
@@ -226,8 +226,8 @@ int attach_handler(lco_t *lco, hpx_parcel_t *p, size_t size) {
   parcel_set_state(p, state);
   return _attach(lco, p);
 }
-LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, attach,
-              attach_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, lco_attach,
+              lco_attach_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 /// @}
 

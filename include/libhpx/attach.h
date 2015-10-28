@@ -26,6 +26,6 @@
 /// @args             p The parcel to attach.
 ///
 /// @continues          HPX_SUCCESS or an error code
-extern hpx_action_t attach;
+extern hpx_action_t lco_attach;
 
 #endif
