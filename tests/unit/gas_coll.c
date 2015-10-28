@@ -52,15 +52,14 @@ static int map_handler(void) {
   test_assert(array != HPX_NULL);
 
   float initializer = 4.0;
-  printf("Testing hpx_gas_bcast...\n");
-  int e = hpx_gas_bcast(_initialize, array, blocks, bsize, bsize, &initializer);
-  test_assert(e == HPX_SUCCESS);
+  printf("Testing hpx_gas_bcast_sync...\n");
+  int e = hpx_gas_bcast_sync(_initialize, array, blocks, 0, bsize,
+                             &initializer);
 
   printf("Testing hpx_gas_bcast_with_continuation...\n");
-  hpx_addr_t lco = hpx_lco_future_new(0);
-
   float multiplier = 5.0;
-  e = hpx_gas_bcast_with_continuation(_multiply, array, blocks, bsize, bsize,
+  hpx_addr_t lco = hpx_lco_and_new(blocks);
+  e = hpx_gas_bcast_with_continuation(_multiply, array, blocks, 0, bsize,
                                       hpx_lco_set_action, lco, &multiplier);
   test_assert(e == HPX_SUCCESS);
   e = hpx_lco_wait(lco);
@@ -68,14 +67,8 @@ static int map_handler(void) {
   hpx_lco_delete(lco, HPX_NULL);
 
   printf("Verifying results...\n");
-
   float expected = initializer * multiplier;
-  hpx_addr_t done = hpx_lco_future_new(0);
-  hpx_gas_bcast_with_continuation(_verify, array, blocks, bsize, bsize,
-                                  hpx_lco_set_action, done, &expected);
-  hpx_lco_wait(done);
-  hpx_lco_delete(done, HPX_NULL);
-
+  hpx_gas_bcast_sync(_verify, array, blocks, 0, bsize, &expected);
   hpx_gas_free(array, HPX_NULL);
   return HPX_SUCCESS;
 }

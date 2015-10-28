@@ -387,9 +387,10 @@ _hpx_gas_bcast_with_continuation(hpx_action_t action, hpx_addr_t base, int n,
 
 /// GAS collectives (hpx_gas_bcast).
 ///
-/// This is a parallel call (bcast) that performs an @p action with @p
-/// args on a global array with base @p base and @p n elements. The
-/// output "continued" by the action, if any, is not returned.
+/// This is an asynchronous parallel call (bcast) that performs an @p
+/// action with @p args on a global array with base @p base and @p n
+/// elements. The output "continued" by the action, if any, is not
+/// returned.
 ///
 /// @param       action The action to run.
 /// @param         base The base of the array.
@@ -404,6 +405,32 @@ _hpx_gas_bcast_with_continuation(hpx_action_t action, hpx_addr_t base, int n,
   _hpx_gas_bcast_with_continuation(ACTION, BASE, N, OFFSET, BSIZE,           \
                                    HPX_ACTION_NULL, HPX_NULL,                \
                                    __HPX_NARGS(__VA_ARGS__),##__VA_ARGS__)
+
+/// GAS collectives (hpx_gas_bcast_sync).
+///
+/// This is a synchronous parallel call (bcast) that performs an @p
+/// action with @p args on a global array with base @p base and @p n
+/// elements. The output "continued" by the action, if any, is not
+/// returned.
+///
+/// @param       action The action to run.
+/// @param         base The base of the array.
+/// @param            n The number of elements in the array.
+/// @param       offset The offset within each element to target.
+/// @param        bsize The block size for the array.
+/// @param        nargs The number of arguments for the action.
+/// @param          ... The addresses of each argument.
+///
+/// @returns      HPX_SUCCESS if no errors were encountered.
+int
+_hpx_gas_bcast_sync(hpx_action_t action, hpx_addr_t base, int n,
+                    size_t offset, size_t bsize, int nargs, ...) HPX_PUBLIC;
+
+#define hpx_gas_bcast_sync(ACTION, BASE, N, OFFSET, BSIZE, ...) \
+  _hpx_gas_bcast_sync(ACTION, BASE, N, OFFSET, BSIZE,           \
+                      __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+
+
 /// @}
 
 #endif
