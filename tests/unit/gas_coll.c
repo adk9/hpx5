@@ -14,25 +14,32 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
+static const int elts_per_block = 4;
+static const size_t bsize = 4 * sizeof(float);
+
 static int _initialize_handler(float *element, float initializer) {
-  *element = initializer;
-  hpx_thread_continue(element, sizeof(*element));
+  for (int i = 0; i < elts_per_block; ++i) {
+    element[i] = initializer;
+  }
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _initialize, _initialize_handler,
                   HPX_POINTER, HPX_FLOAT);
 
 static int _multiply_handler(float *multiplicand, float multiplier) {
-  *multiplicand *= multiplier;
-  hpx_thread_continue(multiplicand, sizeof(*multiplicand));
+  for (int i = 0; i < elts_per_block; ++i) {
+    multiplicand[i] *= multiplier;
+  }
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _multiply, _multiply_handler,
                   HPX_POINTER, HPX_FLOAT);
 
 static int _verify_handler(float *element, float expected) {
-  if (*element != expected) {
-    hpx_exit(EXIT_FAILURE);
+  for (int i = 0; i < elts_per_block; ++i) {
+    if (element[i] != expected) {
+      hpx_exit(EXIT_FAILURE);
+    }
   }
   return HPX_SUCCESS;
 }
@@ -40,48 +47,36 @@ static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _verify, _verify_handler,
                   HPX_POINTER, HPX_FLOAT);
 
 static int map_handler(void) {
-  uint64_t bsize = 4*sizeof(float);
   int blocks = HPX_LOCALITIES;
-  hpx_addr_t array = hpx_gas_alloc_cyclic(blocks, bsize, 0);
+  hpx_addr_t array = hpx_gas_calloc_cyclic(blocks, bsize, 0);
   test_assert(array != HPX_NULL);
 
-  hpx_addr_t out_array = hpx_gas_alloc_cyclic(blocks, bsize, 0);
-  test_assert(out_array != HPX_NULL);
-
-  uint64_t nelts = (bsize * blocks)/sizeof(float);
   float initializer = 4.0;
+  printf("Testing hpx_gas_bcast...\n");
+  int e = hpx_gas_bcast(_initialize, array, blocks, bsize, bsize, &initializer);
+  test_assert(e == HPX_SUCCESS);
 
-  printf("Testing hpx_gas_map...\n");
-  
+  printf("Testing hpx_gas_bcast_with_continuation...\n");
   hpx_addr_t lco = hpx_lco_future_new(0);
-  int e = hpx_gas_map(_initialize, nelts, array, sizeof(float),
-                      out_array, sizeof(float),
-                      bsize, lco, &initializer);
 
+  float multiplier = 5.0;
+  e = hpx_gas_bcast_with_continuation(_multiply, array, blocks, bsize, bsize,
+                                      hpx_lco_set_action, lco, &multiplier);
   test_assert(e == HPX_SUCCESS);
   e = hpx_lco_wait(lco);
   test_assert(e == HPX_SUCCESS);
   hpx_lco_delete(lco, HPX_NULL);
 
-  printf("Testing hpx_gas_map_sync...\n");
-
-  float multiplier = 5.0;
-  e = hpx_gas_map_sync(_multiply, nelts, array, sizeof(float),
-                       out_array, sizeof(float),
-                       bsize, &multiplier);
-  test_assert(e == HPX_SUCCESS);
-
   printf("Verifying results...\n");
 
   float expected = initializer * multiplier;
   hpx_addr_t done = hpx_lco_future_new(0);
-  hpx_gas_bcast_with_continuation(_verify, out_array, nelts, sizeof(float),
-                                  bsize, hpx_lco_set_action, done, &expected);
+  hpx_gas_bcast_with_continuation(_verify, array, blocks, bsize, bsize,
+                                  hpx_lco_set_action, done, &expected);
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
 
   hpx_gas_free(array, HPX_NULL);
-  hpx_gas_free(out_array, HPX_NULL);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, map, map_handler);
