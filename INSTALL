@@ -10,8 +10,7 @@ $ ./bootstrap
 ```
 
 Bootstrap is a bash script that generate the initialization required to create 
-a configure script when using GNU autotools. This calls the autoreconf. Run 
-./bootstrap in the HPX-5 source directory
+a configure script when using GNU autotools.
 
 Building without MPI enables the SMP bootstrapper. This allows you to run HPX-5
  on a single node. However, if you launch HPX-5 with –np > 1 then either MPI or

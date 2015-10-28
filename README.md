@@ -49,20 +49,6 @@ The script takes an path to install autotools to. After
 installing autotools, be sure to update your PATH variable. Only after 
 installing the latest autotools should the user run ./bootstrap.
 
-### Bootstrapping
-
-Note: ./bootstrap should not be used with release tarballs.
- 
-HPX–5 provides a bootstrap script in its build. In the HPX–5 directory run the 
-bootstrap script using
-
-```
-$ ./bootstrap
-```
-
-Bootstrap is a bash script that generate the initialization required to create 
-a configure script when using GNU autotools. This calls the autoreconf.
-
 ### Configuration
 
 The HPX–5 configuration will pull a number of dependencies from your 
