@@ -31,7 +31,10 @@ static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _multiply, _multiply_handler,
                   HPX_POINTER, HPX_FLOAT);
 
 static int _verify_handler(float *element, float expected) {
-  return !(*element == expected);
+  if (*element != expected) {
+    hpx_exit(EXIT_FAILURE);
+  }
+  return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _verify, _verify_handler,
                   HPX_POINTER, HPX_FLOAT);
@@ -71,8 +74,14 @@ static int map_handler(void) {
   printf("Verifying results...\n");
 
   float expected = initializer * multiplier;
-  hpx_gas_bcast(_verify, out_array, nelts, sizeof(float), bsize, &expected);
+  hpx_addr_t done = hpx_lco_future_new(0);
+  hpx_gas_bcast_with_continuation(_verify, out_array, nelts, sizeof(float),
+                                  bsize, hpx_lco_set_action, done, &expected);
+  hpx_lco_wait(done);
+  hpx_lco_delete(done, HPX_NULL);
+
   hpx_gas_free(array, HPX_NULL);
+  hpx_gas_free(out_array, HPX_NULL);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, map, map_handler);
