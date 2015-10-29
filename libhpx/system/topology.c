@@ -162,6 +162,7 @@ topology_t *topology_new(const struct config *config) {
   // get the number of NUMA nodes in the system
   topology->nnodes = hwloc_get_nbobjs_by_type(topology->hwloc_topology,
                                               HWLOC_OBJ_NODE);
+  topology->numa_nodes = NULL;
   if (topology->nnodes > 0) {
     topology->numa_nodes = calloc(topology->nnodes, sizeof(hwloc_obj_t));
     if (!topology->numa_nodes) {
