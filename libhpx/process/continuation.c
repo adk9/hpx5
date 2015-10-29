@@ -94,13 +94,13 @@ void continuation_trigger(continuation_t *c, const void *value) {
 
   for (int i = 0, e = c->n; i < e; ++i) {
     if (c->parcels[i]) {
-      hpx_parcel_set_data(c->parcels[i], value, c->bytes);
-      parcel_retain(c->parcels[i]);
-      parcel_launch(c->parcels[i]);
+      // hpx_parcel_set_data(c->parcels[i], value, c->bytes);
+      // parcel_retain(c->parcels[i]);
+      // parcel_launch(c->parcels[i]);
 
-      // hpx_parcel_t *p = parcel_clone(c->parcels[i]);
-      // hpx_parcel_set_data(p, value, c->bytes);
-      // parcel_launch(p);
+      hpx_parcel_t *p = parcel_clone(c->parcels[i]);
+      hpx_parcel_set_data(p, value, c->bytes);
+      parcel_launch(p);
     }
   }
 }
