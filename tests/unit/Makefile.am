@@ -14,6 +14,7 @@ TESTS = apex_test               \
         bcast                   \
         call_when               \
         gas_alloc               \
+        gas_alloc_dist          \
         gas_coll                \
         gas_global_alloc        \
         gas_memget              \
@@ -46,6 +47,8 @@ TESTS = apex_test               \
         thread_gettlsid         \
         thread_yield
 
+XFAIL_TESTS = gas_alloc_dist
+
 if ENABLE_LENGTHY_TESTS
 TESTS           += lco_wait
 endif
@@ -59,6 +62,7 @@ allreduce_DEPENDENCIES              = $(HPX_APPS_DEPS)
 bcast_DEPENDENCIES                  = $(HPX_APPS_DEPS)
 call_when_DEPENDENCIES              = $(HPX_APPS_DEPS)
 gas_alloc_DEPENDENCIES              = $(HPX_APPS_DEPS)
+gas_alloc_dist_DEPENDENCIES         = $(HPX_APPS_DEPS)
 gas_coll_DEPENDENCIES               = $(HPX_APPS_DEPS)
 gas_global_alloc_DEPENDENCIES       = $(HPX_APPS_DEPS)
 gas_memget_DEPENDENCIES             = $(HPX_APPS_DEPS)
