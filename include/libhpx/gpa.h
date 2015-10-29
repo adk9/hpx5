@@ -75,7 +75,7 @@ static inline hpx_addr_t offset_to_gpa(uint32_t locality, uint64_t offset)
 
 /// Compute the (signed) distance, in bytes, between two global addresses.
 ///
-/// This is only balid if @p lhs and @p rhs come from the same global
+/// This is only valid if @p lhs and @p rhs come from the same global
 /// allocation.
 ///
 /// @param          lhs The left-hand-side address.
