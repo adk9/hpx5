@@ -5,9 +5,9 @@ DIR=$(mktemp -d hpx.XXXXXXX --tmpdir=/tmp)
 CONTRIB=contrib
 
 # set the array of tarball deps here
-contrib_tars=(photon-1.0.tar.bz2 libcuckoo-1.0.tar.gz jemalloc-4.0.4.tar.bz2)
+contrib_tars=(photon-1.0.tar.bz2 libcuckoo-b6e84f2.tar.gz jemalloc-4.0.4.tar.bz2 libffi-e9de7e3.tar.gz)
 # and matching target contrib directories
-contrib_dirs=(photon libcuckoo jemalloc)
+contrib_dirs=(photon libcuckoo jemalloc libffi)
 
 # set the command to fetch the tarballs
 CMD="wget --quiet -O"
