@@ -657,8 +657,8 @@ int worker_start(void) {
   libhpx_thread_affinity_t policy = here->config->thread_affinity;
   int status = system_set_worker_affinity(self->id, policy);
   if (status != LIBHPX_OK) {
-    log_error("WARNING: running with no worker thread affinity. "
-              "This MAY result in diminished performance.\n");
+    log_dflt("WARNING: running with no worker thread affinity. "
+             "This MAY result in diminished performance.\n");
   }
 
   int cpu = self->id % here->topology->ncpus;
