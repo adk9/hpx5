@@ -36,6 +36,7 @@ struct config;
 /// @field             cpus The HWLOC object corresponding to each CPU.
 /// @field           ncores The number of physical cores in the system
 /// @field         core_map The core map of the system (cpu-id -> core-id)
+/// @field           nnodes The number of NUMA nodes in the system
 /// @field       numa_nodes The HWLOC object corresponding to each NUMA node.
 /// @field         numa_map The NUMA map of the system (cpu-id -> numa-node)
 /// @field     allowed_cpus The initial CPU binding of the HPX process
