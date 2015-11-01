@@ -33,13 +33,13 @@
 
 /// An action table entry type.
 ///
-/// This will store the function and unique key associated with the action, as
-/// well as the address of the id the user would like to be assigned during
-/// action finalization.
+/// This stores information associated with an HPX action. In
+/// particular, an action entry maintains the action handler
+/// (function), a globally unique string key, a unique id generated
+/// during action finalization, action types and attributes, e.g., can
+/// they block, should we pre-pin their arguments, etc., and an
+/// environment pointer.
 ///
-/// @note In the future this entry type can contain more information about the
-///       actions, e.g., can they block, should we pre-pin their arguments,
-///       etc.
 typedef struct {
   hpx_action_handler_t handler;
   hpx_action_t             *id;
@@ -47,6 +47,7 @@ typedef struct {
   hpx_action_type_t       type;
   uint32_t                attr;
   ffi_cif                 *cif;
+  void                    *env;
 } _entry_t;
 
 /// Compare two entries by their keys.
@@ -125,11 +126,14 @@ static void _assign_ids(_table_t *table) {
 /// @param          key The unique key for this action; read in _sort_entries().
 /// @param            f The handler for this action.
 /// @param         type The type of this action.
+/// @param         attr The attributes associated with this action.
+/// @param          cif FFI datatype information.
+/// @param          env Action's environment.
 ///
 /// @return             HPX_SUCCESS or an error if the push fails.
 static int _push_back(_table_t *table, hpx_action_t *id, const char *key,
                       hpx_action_handler_t f, hpx_action_type_t type,
-                      uint32_t attr, ffi_cif* cif) {
+                      uint32_t attr, ffi_cif* cif, void *env) {
   int i = table->n++;
   if (LIBHPX_ACTION_TABLE_SIZE < i) {
     dbg_error("action table overflow\n");
@@ -141,6 +145,7 @@ static int _push_back(_table_t *table, hpx_action_t *id, const char *key,
   back->type = type;
   back->attr = attr;
   back->cif = cif;
+  back->env = env;
   return HPX_SUCCESS;
 }
 
@@ -193,6 +198,7 @@ _ACTION_TABLE_GET(hpx_action_type_t, type, HPX_ACTION_INVALID);
 _ACTION_TABLE_GET(uint32_t, attr, 0);
 _ACTION_TABLE_GET(hpx_action_handler_t, handler, NULL);
 _ACTION_TABLE_GET(ffi_cif *, cif, NULL);
+_ACTION_TABLE_GET(void *, env, NULL);
 
 int action_table_size(const struct action_table *table) {
   return table->n;
@@ -320,7 +326,9 @@ int action_call_va(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
 int action_execute(hpx_parcel_t *p) {
   dbg_assert(p->target != HPX_NULL);
   dbg_assert_str(p->action != HPX_ACTION_INVALID, "registration error\n");
-  dbg_assert_str(p->action < _get_actions()->n, "action, %d, out of bounds [0,%u)\n", p->action, _get_actions()->n);
+  dbg_assert_str(p->action < _get_actions()->n,
+                 "action, %d, out of bounds [0,%u)\n",
+                 p->action, _get_actions()->n);
 
   hpx_action_t              id = p->action;
   const _table_t        *table = _get_actions();
@@ -411,7 +419,7 @@ _register_action_va(hpx_action_type_t type, uint32_t attr,
     dbg_assert(addr == HPX_POINTER);
     dbg_assert(size == HPX_INT || size == HPX_UINT || size == HPX_SIZE_T);
     va_end(vargs);
-    return _push_back(_get_actions(), id, key, f, type, attr, NULL);
+    return _push_back(_get_actions(), id, key, f, type, attr, NULL, NULL);
     (void)size;
     (void)addr;
   }
@@ -428,7 +436,7 @@ _register_action_va(hpx_action_type_t type, uint32_t attr,
   if (s != FFI_OK) {
     dbg_error("failed to process type information for action id %d.\n", *id);
   }
-  return _push_back(_get_actions(), id, key, f, type, attr, cif);
+  return _push_back(_get_actions(), id, key, f, type, attr, cif, NULL);
 }
 
 int
