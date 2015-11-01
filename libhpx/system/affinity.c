@@ -43,10 +43,10 @@ int system_set_worker_affinity(int id, libhpx_thread_affinity_t policy) {
   switch (policy) {
    case HPX_THREAD_AFFINITY_DEFAULT:
    case HPX_THREAD_AFFINITY_NUMA:
-     resource = here->topology->numa_map[cpu];
+     resource = here->topology->cpu_to_numa[cpu];
      break;
    case HPX_THREAD_AFFINITY_CORE:
-     resource = here->topology->core_map[cpu];
+     resource = here->topology->cpu_to_core[cpu];
      break;
    case HPX_THREAD_AFFINITY_HWTHREAD:
      resource = cpu;

@@ -63,14 +63,14 @@ static hwloc_cpuset_t *_cpu_affinity_map_new(topology_t *topology,
      case HPX_THREAD_AFFINITY_DEFAULT:
      case HPX_THREAD_AFFINITY_NUMA:
        for (int i = 0; i < topology->ncpus; ++i) {
-         if (r == topology->numa_map[i]) {
+         if (r == topology->cpu_to_numa[i]) {
            hwloc_bitmap_set(cpuset, i);
          }
        }
        break;
      case HPX_THREAD_AFFINITY_CORE:
        for (int i = 0; i < topology->ncpus; ++i) {
-         if (r == topology->core_map[i]) {
+         if (r == topology->cpu_to_core[i]) {
            hwloc_bitmap_set(cpuset, i);
          }
        }
@@ -146,15 +146,15 @@ topology_t *topology_new(const struct config *config) {
   topology->ncores = hwloc_get_nbobjs_by_type(topology->hwloc_topology,
                                               HWLOC_OBJ_CORE);
   // initalize the core map
-  topology->core_map = calloc(topology->ncpus, sizeof(int));
-  if (!topology->core_map) {
+  topology->cpu_to_core = calloc(topology->ncpus, sizeof(int));
+  if (!topology->cpu_to_core) {
     log_error("failed to allocate memory for the core map.\n");
     return NULL;
   }
 
   // initalize the NUMA map
-  topology->numa_map = calloc(topology->ncpus, sizeof(int));
-  if (!topology->numa_map) {
+  topology->cpu_to_numa = calloc(topology->ncpus, sizeof(int));
+  if (!topology->cpu_to_numa) {
     log_error("failed to allocate memory for the NUMA map.\n");
     return NULL;
   }
@@ -167,6 +167,26 @@ topology_t *topology_new(const struct config *config) {
     topology->numa_nodes = calloc(topology->nnodes, sizeof(hwloc_obj_t));
     if (!topology->numa_nodes) {
       log_error("failed to allocate memory for numa node objects.\n");
+      return NULL;
+    }
+    topology->cpus_per_node = topology->ncpus / topology->nnodes;
+  } else {
+    topology->cpus_per_node = topology->ncpus;
+  }
+
+  // initialize the reverse NUMA map
+  topology->numa_to_cpus = calloc(topology->nnodes, sizeof(int));
+  if (!topology->numa_to_cpus) {
+    log_error("failed to allocate memory for the reverse NUMA map.\n");
+    return NULL;
+  }
+
+  int numa_to_cpus_index[topology->nnodes];
+  for (int i = 0; i < topology->nnodes; ++i) {
+    numa_to_cpus_index[i] = 0;
+    topology->numa_to_cpus[i] = calloc(topology->cpus_per_node, sizeof(int));
+    if (!topology->numa_to_cpus[i]) {
+      log_error("failed to allocate memory for the reverse NUMA map.\n");
       return NULL;
     }
   }
@@ -182,7 +202,7 @@ topology_t *topology_new(const struct config *config) {
       hwloc_get_ancestor_obj_by_type(topology->hwloc_topology,
                                      HWLOC_OBJ_CORE, cpu);
     int index = core ? core->os_index : -1;
-    topology->core_map[cpu->os_index] = index;
+    topology->cpu_to_core[cpu->os_index] = index;
 
     hwloc_obj_t numa_node =
       hwloc_get_ancestor_obj_by_type(topology->hwloc_topology,
@@ -191,7 +211,9 @@ topology_t *topology_new(const struct config *config) {
     if (numa_node && topology->numa_nodes[index] == NULL) {
       topology->numa_nodes[index] = numa_node;
     }
-    topology->numa_map[cpu->os_index] = index;
+    topology->cpu_to_numa[cpu->os_index] = index;
+    int map_index = numa_to_cpus_index[index]++;
+    topology->numa_to_cpus[index][map_index] = cpu->os_index;
   }
 
   // generate the CPU affinity map
@@ -214,9 +236,25 @@ void topology_delete(topology_t *topology) {
     topology->numa_nodes = NULL;
   }
 
-  if (topology->numa_map) {
-    free(topology->numa_map);
-    topology->numa_map = NULL;
+  if (topology->cpu_to_core) {
+    free(topology->cpu_to_core);
+    topology->cpu_to_core = NULL;
+  }
+
+  if (topology->cpu_to_numa) {
+    free(topology->cpu_to_numa);
+    topology->cpu_to_numa = NULL;
+  }
+
+  if (topology->numa_to_cpus) {
+    for (int i = 0; i < topology->cpus_per_node; ++i) {
+      if (topology->numa_to_cpus[i]) {
+        free(topology->numa_to_cpus[i]);
+        topology->numa_to_cpus[i] = NULL;
+      }
+    }
+    free(topology->numa_to_cpus);
+    topology->numa_to_cpus = NULL;
   }
 
   if (topology->allowed_cpus) {
