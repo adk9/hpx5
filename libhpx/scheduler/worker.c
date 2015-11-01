@@ -662,7 +662,7 @@ int worker_start(void) {
   }
 
   int cpu = self->id % here->topology->ncpus;
-  self->numa_node = here->topology->numa_map[cpu];
+  self->numa_node = here->topology->cpu_to_numa[cpu];
 
   // wait for local threads to start up
   struct scheduler *sched = here->sched;
