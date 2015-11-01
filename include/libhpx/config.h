@@ -116,20 +116,16 @@ static const char * const HPX_THREAD_AFFINITY_TO_STRING[] = {
 
 //! Configuration options for the (work-stealing) scheduling policy.
 typedef enum {
-  HPX_SCHED_POLICY_DEFAULT = 0, //!< The default is to steal randomly.
+  HPX_SCHED_POLICY_DEFAULT = 0, //!< The default policy is "random".
   HPX_SCHED_POLICY_RANDOM,      //!< Steal from a randomly chosen worker.
-  HPX_SCHED_POLICY_LAST,        //!< Steal from the last successful victim.
-  HPX_SCHED_POLICY_HALF,        //!< Steal half of the work from random.
-  HPX_SCHED_POLICY_HYBRID,      //!< A hybrid of the above 3 policies.
+  HPX_SCHED_POLICY_HIER,        //!< A hierarchical work-stealing policy.
   HPX_SCHED_POLICY_MAX
 } libhpx_sched_policy_t;
 
 static const char * const HPX_SCHED_POLICY_TO_STRING[] = {
   "DEFAULT",
   "RANDOM",
-  "LAST",
-  "HALF",
-  "HYBRID",
+  "HIER",
   "INVALID_POLICY"
 };
 
