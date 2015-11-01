@@ -247,10 +247,9 @@ void topology_delete(topology_t *topology) {
   }
 
   if (topology->numa_to_cpus) {
-    for (int i = 0; i < topology->cpus_per_node; ++i) {
+    for (int i = 0; i < topology->nnodes; ++i) {
       if (topology->numa_to_cpus[i]) {
         free(topology->numa_to_cpus[i]);
-        topology->numa_to_cpus[i] = NULL;
       }
     }
     free(topology->numa_to_cpus);

@@ -351,50 +351,100 @@ static int _push_half_handler(int src) {
   // send them back to the thief
   if (parcels) {
     _send_mail(parcels, thief);
+    EVENT_STEAL_LIFO(parcels, self);
   }
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_INTERRUPT, 0, _push_half, _push_half_handler, HPX_INT);
 
-/// Steal half of a random victim's work.
-static hpx_parcel_t *_steal_half(worker_t *w, int n) {
-  int id;
-  do {
-    id = rand_r(&w->seed) % n;
-  } while (id == w->id);
-  worker_t *victim = scheduler_get_worker(here->sched, id);
-  hpx_parcel_t *p = action_create_parcel(HPX_HERE, _push_half, HPX_NULL,
-                                         HPX_ACTION_NULL, 1, &w->id);
-  _send_mail(p, victim);
-  EVENT_STEAL_LIFO(p, victim);
-  return NULL;
-}
-
-/// Steal one parcel from a random victim.
-static hpx_parcel_t *_steal_random(worker_t *w, int n) {
-  int id;
-  do {
-    id = rand_r(&w->seed) % n;
-  } while (id == w->id);
+/// Steal a parcel from a worker with the given @p id.
+static hpx_parcel_t *_steal_from(worker_t *w, int id) {
   worker_t *victim = scheduler_get_worker(here->sched, id);
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
-  EVENT_STEAL_LIFO(p, victim);
+  if (p) {
+    w->last_victim = id;
+    EVENT_STEAL_LIFO(p, victim);
+  } else {
+    w->last_victim = -1;
+  }
   return p;
 }
 
-/// Steal one parcel from the last succesful victim.
-static hpx_parcel_t *_steal_last(worker_t *w, int n) {
-  int id = w->last_victim;
-  hpx_parcel_t *p;
-  if (id < 0) {
-    p = _steal_random(w, n);
-  } else {
-    worker_t *victim = scheduler_get_worker(here->sched, id);
-    p = sync_chase_lev_ws_deque_steal(&victim->work);
-    EVENT_STEAL_LIFO(p, victim);
+/// Steal a parcel from a random worker out of all workers.
+static hpx_parcel_t *_steal_random_all(worker_t *w) {
+  int id;
+  do {
+    id = rand_r(&w->seed) % here->sched->n_workers;
+  } while (id == w->id);
+  return _steal_from(w, id);
+}
+
+/// Steal a parcel from a random worker from the same NUMA node.
+static hpx_parcel_t *_steal_random_node(worker_t *w) {
+  int id;
+  do {
+    int cpu = rand_r(&w->seed) % here->topology->cpus_per_node;
+    id = here->topology->numa_to_cpus[w->numa_node][cpu];
+  } while (id == w->id);
+  return _steal_from(w, id);
+}
+
+/// Hierarchical work-stealing policy.
+///
+/// This policy is only applicable if the worker threads are
+/// pinned. This policy works as follows:
+///
+/// 1. try to steal from the last succesful victim in
+///    the same numa domain.
+/// 2. if failed, try to steal randomly from the same numa domain.
+/// 3. if failed, repeat step 2.
+/// 4. if failed, try to steal half randomly from across the numa domain.
+/// 5. if failed, go idle.
+///
+static hpx_parcel_t *_steal_hier(worker_t *w) {
+  libhpx_thread_affinity_t policy = here->config->thread_affinity;
+  if (unlikely(policy == HPX_THREAD_AFFINITY_NONE)) {
+    return _steal_random_all(w);
   }
-  w->last_victim = p ? id : -1;
-  return p;
+
+  dbg_assert(w->numa_node >= 0);
+  hpx_parcel_t *p;
+
+  // step 1
+  int cpu = w->last_victim;
+  if (cpu >= 0) {
+    p = _steal_from(w, cpu);
+    if (p) {
+      return p;
+    }
+  }
+
+  // step 2
+  p = _steal_random_node(w);
+  if (p) {
+    return p;
+  } else {
+    // step 3
+    p = _steal_random_node(w);
+    if (p) {
+      return p;
+    }
+  }
+
+  // step 4
+  int numa_node;
+  do {
+    numa_node = rand_r(&w->seed) % here->topology->nnodes;
+  } while (numa_node == w->numa_node);
+
+  int idx = rand_r(&w->seed) % here->topology->cpus_per_node;
+  cpu = here->topology->numa_to_cpus[numa_node][idx];
+
+  worker_t *victim = scheduler_get_worker(here->sched, cpu);
+  p = action_create_parcel(HPX_HERE, _push_half, HPX_NULL,
+                           HPX_ACTION_NULL, 1, &w->id);
+  _send_mail(p, victim);
+  return NULL;
 }
 
 /// Steal a lightweight thread during scheduling.
@@ -411,17 +461,14 @@ static hpx_parcel_t *_schedule_steal(worker_t *w) {
   hpx_parcel_t *p;
   libhpx_sched_policy_t policy = here->config->sched_policy;
   switch (policy) {
+    default:
+      log_dflt("invalid scheduling policy, defaulting to random..");
     case HPX_SCHED_POLICY_DEFAULT:
     case HPX_SCHED_POLICY_RANDOM:
-    case HPX_SCHED_POLICY_HYBRID: // unimplemented
-    default:
-      p = _steal_random(w, n);
+      p = _steal_random_all(w);
       break;
-    case HPX_SCHED_POLICY_LAST:
-      p = _steal_last(w, n);
-      break;
-    case HPX_SCHED_POLICY_HALF:
-      p = _steal_half(w, n);
+    case HPX_SCHED_POLICY_HIER:
+      p = _steal_hier(w);
       break;
   }
 
