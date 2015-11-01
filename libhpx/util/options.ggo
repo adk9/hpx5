@@ -61,7 +61,7 @@ long optional
 
 option "hpx-sched-policy" - "work-stealing policy for the HPX scheduler"
 typestr="policy"
-values="default","random","last","half","hybrid"
+values="default","random","hier"
 enum optional
 
 option "hpx-sched-wfthreshold" - "bound on help-first tasks before work-first scheduling"

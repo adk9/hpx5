@@ -49,7 +49,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-threads=threads     number of scheduler threads",
   "      --hpx-thread-affinity=policy\n                                affinitize HPX worker threads  (possible\n                                  values=\"default\", \"hwthread\", \"core\",\n                                  \"numa\", \"none\")",
   "      --hpx-stacksize=bytes     set HPX stack size",
-  "      --hpx-sched-policy=policy work-stealing policy for the HPX scheduler\n                                  (possible values=\"default\", \"random\",\n                                  \"last\", \"half\", \"hybrid\")",
+  "      --hpx-sched-policy=policy work-stealing policy for the HPX scheduler\n                                  (possible values=\"default\", \"random\",\n                                  \"hier\")",
   "      --hpx-sched-wfthreshold=tasks\n                                bound on help-first tasks before work-first\n                                  scheduling",
   "      --hpx-sched-stackcachelimit=stacks\n                                bound on the number of stacks to cache",
   "\nLog options:",
@@ -146,7 +146,7 @@ const char *hpx_option_parser_hpx_boot_values[] = {"default", "smp", "mpi", "pmi
 const char *hpx_option_parser_hpx_transport_values[] = {"default", "mpi", "photon", 0}; /*< Possible values for hpx-transport. */
 const char *hpx_option_parser_hpx_network_values[] = {"default", "smp", "pwc", "isir", 0}; /*< Possible values for hpx-network. */
 const char *hpx_option_parser_hpx_thread_affinity_values[] = {"default", "hwthread", "core", "numa", "none", 0}; /*< Possible values for hpx-thread-affinity. */
-const char *hpx_option_parser_hpx_sched_policy_values[] = {"default", "random", "last", "half", "hybrid", 0}; /*< Possible values for hpx-sched-policy. */
+const char *hpx_option_parser_hpx_sched_policy_values[] = {"default", "random", "hier", 0}; /*< Possible values for hpx-sched-policy. */
 const char *hpx_option_parser_hpx_log_level_values[] = {"default", "boot", "sched", "gas", "lco", "net", "trans", "parcel", "action", "config", "memory", "coll", "all", 0}; /*< Possible values for hpx-log-level. */
 const char *hpx_option_parser_hpx_dbg_waitonsig_values[] = {"segv", "abrt", "fpe", "ill", "bus", "iot", "sys", "trap", "all", 0}; /*< Possible values for hpx-dbg-waitonsig. */
 const char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "pwc", "sched", "lco", "process", "memory", "schedtimes", "all", 0}; /*< Possible values for hpx-trace-classes. */
