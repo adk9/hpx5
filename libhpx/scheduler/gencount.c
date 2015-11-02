@@ -82,7 +82,7 @@ void _gencount_reset(lco_t *lco) {
 }
 
 /// Set is equivalent to incrementing the generation count
-static void _gencount_set(lco_t *lco, int size, const void *from) {
+static int _gencount_set(lco_t *lco, int size, const void *from) {
   lco_lock(lco);
   _gencount_t *gencnt = (_gencount_t *)lco;
   unsigned long gen = ++gencnt->gen;
@@ -93,6 +93,7 @@ static void _gencount_set(lco_t *lco, int size, const void *from) {
     scheduler_signal_all(cvar);
   }
   lco_unlock(lco);
+  return 1;
 }
 
 /// Get returns the current generation, it does not block.

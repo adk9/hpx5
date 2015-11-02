@@ -119,7 +119,8 @@ static void _reduce_reset(lco_t *lco) {
 }
 
 /// Update the reduction.
-static void _reduce_set(lco_t *lco, int size, const void *from) {
+static int _reduce_set(lco_t *lco, int size, const void *from) {
+  int set = 0;
   lco_lock(lco);
   _reduce_t *r = (_reduce_t *)lco;
 
@@ -131,6 +132,7 @@ static void _reduce_set(lco_t *lco, int size, const void *from) {
 
   if (--r->remaining == 0) {
     scheduler_signal_all(&r->barrier);
+    set = 1;
   }
   else {
     log_lco("reduce: received input %d\n", r->remaining);
@@ -139,6 +141,7 @@ static void _reduce_set(lco_t *lco, int size, const void *from) {
   }
 
   lco_unlock(lco);
+  return set;
 }
 
 /// Get the value of the reduction.
