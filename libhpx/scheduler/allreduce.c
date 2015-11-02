@@ -68,12 +68,12 @@ static void _id(_allreduce_t *r, size_t size) {
   }
 }
 
-static void _set(_allreduce_t *allreduce, size_t size, const void *value) {
+static int _set(_allreduce_t *allreduce, size_t size, const void *value) {
   // wait until we're reducing (rather than reading) and then perform the
   // operation
   while (allreduce->phase != REDUCING) {
     if (HPX_SUCCESS != scheduler_wait(&allreduce->lco.lock, &allreduce->wait)) {
-      return;
+      return 0;
     }
   }
 
@@ -84,7 +84,10 @@ static void _set(_allreduce_t *allreduce, size_t size, const void *value) {
   if (0 == --allreduce->count) {
     allreduce->phase = READING;
     scheduler_signal_all(&allreduce->wait);
+    return 1;
   }
+
+  return 0;
 }
 
 static hpx_status_t _get(_allreduce_t *r, int size, void *out) {
@@ -156,10 +159,12 @@ static void _allreduce_reset(lco_t *lco) {
 }
 
 /// Update the reduction, will wait if the phase is reading.
-static void _allreduce_set(lco_t *lco, int size, const void *from) {
+static int _allreduce_set(lco_t *lco, int size, const void *from) {
+  int set = 0;
   lco_lock(lco);
-  _set((_allreduce_t *)lco, size, from);
+  set = _set((_allreduce_t *)lco, size, from);
   lco_unlock(lco);
+  return set;
 }
 
 static hpx_status_t _allreduce_attach(lco_t *lco, hpx_parcel_t *p) {

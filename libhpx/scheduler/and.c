@@ -105,7 +105,7 @@ static void _and_reset(lco_t *lco) {
 
 /// Fast set decrements the count, and sets triggered and signals when it gets
 /// to 0.
-static void _and_set(lco_t *lco, int size, const void *from) {
+static int _and_set(lco_t *lco, int size, const void *from) {
   dbg_assert(lco);
   dbg_assert(!size || from);
 
@@ -116,7 +116,7 @@ static void _and_set(lco_t *lco, int size, const void *from) {
   log_lco("%p reduced count to %" PRIdPTR " lco %p\n", (void*)self->current, count - num, (void*)lco);
 
   if (count > num) {
-    return;
+    return 0;
   }
 
   if (count == num) {
@@ -126,11 +126,12 @@ static void _and_set(lco_t *lco, int size, const void *from) {
     lco_set_triggered(lco);
     scheduler_signal_all(&and->barrier);
     lco_unlock(lco);
-    return;
+    return 1;
   }
 
   dbg_assert_str(count > num,
                  "too many threads joined (%"PRIdPTR").\n", count - num);
+  return 0;
 }
 
 static size_t _and_size(lco_t *lco) {

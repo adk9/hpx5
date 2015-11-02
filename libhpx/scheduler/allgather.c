@@ -309,9 +309,10 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _allgather_setid_
                      HPX_POINTER, HPX_SIZE_T);
 
 /// Update the gathering, will wait if the phase is reading.
-static void _allgather_set(lco_t *lco, int size, const void *from) {
+static int _allgather_set(lco_t *lco, int size, const void *from) {
   // can't call set on an allgather
   hpx_abort();
+  return 0;
 }
 
 static const lco_class_t _allgather_vtable = {

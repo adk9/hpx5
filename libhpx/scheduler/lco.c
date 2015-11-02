@@ -67,8 +67,8 @@ static hpx_status_t _set(lco_t *lco, size_t size, const void *data) {
   _EVENT(lco, HPX_INST_EVENT_LCO_SET);
   const lco_class_t *class = _class(lco);
   dbg_assert_str(class->on_set, "LCO has no on_set handler\n");
-  class->on_set(lco, size, data);
-  return HPX_SUCCESS;
+  int i = class->on_set(lco, size, data);
+  HPX_THREAD_CONTINUE(i);
 }
 
 static size_t _size(lco_t *lco) {
@@ -360,35 +360,52 @@ void hpx_lco_reset_sync(hpx_addr_t addr) {
   hpx_lco_delete(sync, HPX_NULL);
 }
 
-void hpx_lco_set(hpx_addr_t target, int size, const void *value,
-                 hpx_addr_t lsync, hpx_addr_t rsync) {
+void hpx_lco_set_with_continuation(hpx_addr_t target,
+                                   int size, const void *value,
+                                   hpx_addr_t lsync,
+                                   hpx_addr_t rsync, hpx_action_t rop) {
+
   if (target == HPX_NULL) {
     if (lsync) {
       hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
     }
     if (rsync) {
-      hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+      int zero = 0;
+      hpx_call(rsync, rop, HPX_NULL, &zero, sizeof(zero));
     }
     return;
   }
 
   lco_t *lco = NULL;
   if ((size < HPX_LCO_SET_ASYNC) && hpx_gas_try_pin(target, (void**)&lco)) {
-    _set(lco, size, value);
+    int set = _set(lco, size, value);
     hpx_gas_unpin(target);
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_call(rsync, rop, HPX_NULL, &set, sizeof(set));
     return;
   }
 
-  int e = hpx_call_async(target, hpx_lco_set_action, lsync, rsync, value, size);
+  hpx_parcel_t *p = hpx_parcel_acquire(value, size);
+  p->target = target;
+  p->action = hpx_lco_set_action;
+  p->c_target = rsync;
+  p->c_action = rop;
+
+  int e = hpx_parcel_send(p, lsync);
   dbg_check(e, "Could not forward lco_set\n");
+}
+
+void hpx_lco_set(hpx_addr_t target, int size, const void *value,
+                 hpx_addr_t lsync, hpx_addr_t rsync) {
+  hpx_lco_set_with_continuation(target, size, value, lsync, rsync,
+                                hpx_lco_set_action);
 }
 
 void hpx_lco_set_lsync(hpx_addr_t target, int size, const void *value,
                        hpx_addr_t rsync) {
   if (target == HPX_NULL) {
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    int zero = 0;
+    hpx_call(rsync, hpx_lco_set_action, HPX_NULL, &zero, sizeof(zero));
     return;
   }
 
@@ -399,9 +416,9 @@ void hpx_lco_set_lsync(hpx_addr_t target, int size, const void *value,
 
   lco_t *lco = NULL;
   if (hpx_gas_try_pin(target, (void**)&lco)) {
-    _set(lco, size, value);
+    int set = _set(lco, size, value);
     hpx_gas_unpin(target);
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_call(rsync, hpx_lco_set_action, HPX_NULL, &set, sizeof(set));
     return;
   }
 
@@ -411,27 +428,31 @@ void hpx_lco_set_lsync(hpx_addr_t target, int size, const void *value,
   hpx_lco_delete(lsync, HPX_NULL);
 }
 
-void hpx_lco_set_rsync(hpx_addr_t target, int size, const void *value) {
+int hpx_lco_set_rsync(hpx_addr_t target, int size, const void *value) {
   if (target == HPX_NULL) {
-    return;
+    return 0;
   }
 
   if (size >= HPX_LCO_SET_ASYNC) {
-    dbg_check( hpx_call_sync(target, hpx_lco_set_action, NULL, 0, value, size) );
-    return;
+    int set;
+    dbg_check( hpx_call_sync(target, hpx_lco_set_action, &set, sizeof(set),
+                             value, size) );
+    return set;
   }
 
   lco_t *lco = NULL;
   if (hpx_gas_try_pin(target, (void**)&lco)) {
-    _set(lco, size, value);
+    int set = _set(lco, size, value);
     hpx_gas_unpin(target);
-    return;
+    return set;
   }
 
+  int set = 0;
   hpx_addr_t rsync = hpx_lco_future_new(0);
   hpx_lco_set(target, size, value, HPX_NULL, rsync);
-  hpx_lco_wait(rsync);
+  hpx_lco_get(rsync, sizeof(set), &set);
   hpx_lco_delete(rsync, HPX_NULL);
+  return set;
 }
 
 hpx_status_t hpx_lco_wait(hpx_addr_t target) {

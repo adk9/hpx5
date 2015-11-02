@@ -99,7 +99,8 @@ static void _user_lco_reset(lco_t *lco) {
 }
 
 /// Invoke an operation on the user-defined LCO's buffer.
-static void _user_lco_set(lco_t *lco, int size, const void *from) {
+static int _user_lco_set(lco_t *lco, int size, const void *from) {
+  int set = 0;
   lco_lock(lco);
   _user_lco_t *u = (_user_lco_t *)lco;
 
@@ -119,10 +120,12 @@ static void _user_lco_set(lco_t *lco, int size, const void *from) {
   if (predicate(u->buf, size)) {
     lco_set_triggered(&u->lco);
     scheduler_signal_all(&u->cvar);
+    set = 1;
   }
 
   unlock:
    lco_unlock(lco);
+   return set;
 }
 
 static hpx_status_t _user_lco_attach(lco_t *lco, hpx_parcel_t *p) {
