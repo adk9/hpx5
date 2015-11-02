@@ -174,21 +174,25 @@ topology_t *topology_new(const struct config *config) {
     topology->cpus_per_node = topology->ncpus;
   }
 
-  // initialize the reverse NUMA map
-  topology->numa_to_cpus = calloc(topology->nnodes, sizeof(int));
-  if (!topology->numa_to_cpus) {
-    log_error("failed to allocate memory for the reverse NUMA map.\n");
-    return NULL;
-  }
-
   int numa_to_cpus_index[topology->nnodes];
-  for (int i = 0; i < topology->nnodes; ++i) {
-    numa_to_cpus_index[i] = 0;
-    topology->numa_to_cpus[i] = calloc(topology->cpus_per_node, sizeof(int));
-    if (!topology->numa_to_cpus[i]) {
+  // initialize the reverse NUMA map
+  if (topology->nnodes > 0) {
+    topology->numa_to_cpus = calloc(topology->nnodes, sizeof(int));
+    if (!topology->numa_to_cpus) {
       log_error("failed to allocate memory for the reverse NUMA map.\n");
       return NULL;
     }
+
+    for (int i = 0; i < topology->nnodes; ++i) {
+      numa_to_cpus_index[i] = 0;
+      topology->numa_to_cpus[i] = calloc(topology->cpus_per_node, sizeof(int));
+      if (!topology->numa_to_cpus[i]) {
+        log_error("failed to allocate memory for the reverse NUMA map.\n");
+        return NULL;
+      }
+    }
+  } else {
+    topology->numa_to_cpus = NULL;
   }
 
   hwloc_obj_t cpu = NULL;
@@ -212,8 +216,10 @@ topology_t *topology_new(const struct config *config) {
       topology->numa_nodes[index] = numa_node;
     }
     topology->cpu_to_numa[cpu->os_index] = index;
-    int map_index = numa_to_cpus_index[index]++;
-    topology->numa_to_cpus[index][map_index] = cpu->os_index;
+    if (topology->numa_to_cpus && index >= 0) {
+      int map_index = numa_to_cpus_index[index]++;
+      topology->numa_to_cpus[index][map_index] = cpu->os_index;
+    }
   }
 
   // generate the CPU affinity map
