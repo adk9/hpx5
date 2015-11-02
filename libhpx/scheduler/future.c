@@ -43,6 +43,7 @@ typedef struct {
 static void _reset(_future_t *f) {
   dbg_assert_str(cvar_empty(&f->full),
                  "Reset on a future that has waiting threads.\n");
+  log_lco("resetting future %p\n", (void*)f);
   lco_reset_triggered(&f->lco);
   cvar_reset(&f->full);
 }
@@ -80,9 +81,11 @@ static void _future_fini(lco_t *lco) {
 }
 
 /// Copies @p from into the appropriate location.
-static void _future_set(lco_t *lco, int size, const void *from) {
+static int _future_set(lco_t *lco, int size, const void *from) {
+  int set = 0;
   lco_lock(lco);
   _future_t *f = (_future_t *)lco;
+  log_lco("setting future %p\n", (void*)f);
   // futures are write-once
   if (!_trigger(f)) {
     dbg_error("cannot set an already set future\n");
@@ -94,13 +97,10 @@ static void _future_set(lco_t *lco, int size, const void *from) {
   }
 
   scheduler_signal_all(&f->full);
-
+  set = 1;
  unlock:
   lco_unlock(lco);
-}
-
-void lco_future_set(lco_t *lco, int size, const void *from) {
-  _future_set(lco, size, from);
+  return set;
 }
 
 static void _future_error(lco_t *lco, hpx_status_t code) {
@@ -223,6 +223,7 @@ static const lco_class_t _future_vtable = {
 
 /// initialize the future
 static int _future_init_handler(_future_t *f, int size) {
+  log_lco("initializing future %p\n", (void*)f);
   lco_init(&f->lco, &_future_vtable);
   cvar_reset(&f->full);
   if (size) {

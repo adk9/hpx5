@@ -40,7 +40,7 @@ typedef struct {
 static void _sema_fini(lco_t *lco);
 static void _sema_error(lco_t *lco, hpx_status_t code);
 static void _sema_reset(lco_t *lco);
-static void _sema_set(lco_t *lco, int size, const void *from);
+static int _sema_set(lco_t *lco, int size, const void *from);
 static hpx_status_t _sema_wait(lco_t *lco, int reset);
 static hpx_status_t _sema_get(lco_t *lco, int size, void *out, int reset);
 
@@ -160,7 +160,7 @@ void _sema_reset(lco_t *lco) {
 }
 
 /// Set is equivalent to returning a resource to the semaphore.
-void _sema_set(lco_t *lco, int size, const void *from) {
+int _sema_set(lco_t *lco, int size, const void *from) {
   lco_lock(lco);
   _sema_t *sema = (_sema_t *)lco;
   if (sema->count++ == 0) {
@@ -170,6 +170,7 @@ void _sema_set(lco_t *lco, int size, const void *from) {
   }
 
   lco_unlock(lco);
+  return 1;
 }
 
 hpx_status_t _sema_wait(lco_t *lco, int reset) {

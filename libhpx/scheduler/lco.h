@@ -48,7 +48,7 @@ extern HPX_ACTION_DECL(lco_error);
 /// This interface is locally synchronous, but will be invoked externally
 /// through the set of hpx_lco_* operations that may use them asynchronously.
 typedef void (*lco_fini_t)(lco_t *lco);
-typedef void (*lco_set_t)(lco_t *lco, int size, const void *value);
+typedef int (*lco_set_t)(lco_t *lco, int size, const void *value);
 typedef void (*lco_error_t)(lco_t *lco, hpx_status_t code);
 typedef hpx_status_t (*lco_get_t)(lco_t *lco, int size, void *value, int reset);
 typedef hpx_status_t (*lco_getref_t)(lco_t *lco, int size, void **out, int *unpin);
