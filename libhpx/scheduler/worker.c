@@ -402,8 +402,12 @@ static hpx_parcel_t *_steal_random_node(worker_t *w) {
 /// 5. if failed, go idle.
 ///
 static hpx_parcel_t *_steal_hier(worker_t *w) {
+
+  // disable hierarchical stealing if the worker threads are not
+  // bound, or if the system is not hierarchical.
   libhpx_thread_affinity_t policy = here->config->thread_affinity;
-  if (unlikely(policy == HPX_THREAD_AFFINITY_NONE)) {
+  if (unlikely(policy == HPX_THREAD_AFFINITY_NONE ||
+               here->topology->numa_to_cpus == NULL)) {
     return _steal_random_all(w);
   }
 
