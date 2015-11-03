@@ -245,8 +245,14 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int nargs, va_list *vargs) {
   }
 
   // pinned actions have an implicit pointer, so update the caller's value
-  if (attr & HPX_PINNED) {
+  bool pinned = attr & HPX_PINNED;
+  if (pinned) {
     nargs++;
+  }
+
+  // if it's a 0-adic action, ignore the arguments
+  if (cif->nargs == pinned) {
+    return p;
   }
 
   if (nargs != cif->nargs) {
@@ -260,7 +266,7 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int nargs, va_list *vargs) {
   int i = 0;
 
   // special case pinned actions
-  if (attr & HPX_PINNED) {
+  if (pinned) {
     argps[i++] = &argps[0];
   }
 
