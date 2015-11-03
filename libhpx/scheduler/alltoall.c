@@ -359,7 +359,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _alltoall_setid_p
                      HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 
-static void _alltoall_set(lco_t *lco, int size, const void *from) {
+static int _alltoall_set(lco_t *lco, int size, const void *from) {
   dbg_assert_str(false, "can't call set on an alltoall LCO.\n");
 }
 
