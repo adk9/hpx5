@@ -293,6 +293,7 @@ static hpx_parcel_t *_action_parcel_acquire(hpx_action_t action, int nargs,
       for (int i = 0; i < nargs; i+=2) {
         void *data = va_arg(*args, void*);
         n += va_arg(*args, int);
+        (void)data;
       }
       return hpx_parcel_acquire(NULL, n);
     }
@@ -363,7 +364,7 @@ int action_execute(hpx_parcel_t *p) {
   bool                  pinned = action_is_pinned(table, id);
   void                   *args = hpx_parcel_get_data(p);
 
-  if (!pinned && !cif) {
+  if (!pinned && marshalled) {
     return handler(args, p->size);
   }
 
@@ -380,7 +381,7 @@ int action_execute(hpx_parcel_t *p) {
     return HPX_RESEND;
   }
 
-  if (!cif) {
+  if (marshalled) {
     return ((hpx_pinned_action_handler_t)handler)(target, args, p->size);
   }
 
@@ -440,7 +441,8 @@ _register_action_va(hpx_action_type_t type, uint32_t attr,
       (void)translated;
     }
 
-    dbg_assert(nargs % 2 == 0);
+    int e = nargs % 2;
+    dbg_assert(!e);
     for (int i = 0; i < nargs; i+=2) {
       hpx_type_t addr = va_arg(vargs, hpx_type_t);
       hpx_type_t size = va_arg(vargs, hpx_type_t);
