@@ -21,6 +21,7 @@
 
 void allreduce_init(allreduce_t *r, size_t bytes, hpx_addr_t parent,
                     hpx_monoid_id_t id, hpx_monoid_op_t op) {
+  log_coll("initializing allreduce %p\n", r);
   r->lock = hpx_lco_sema_new(1);
   r->bytes = bytes;
   r->parent = parent;
