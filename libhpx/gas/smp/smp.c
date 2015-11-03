@@ -223,8 +223,6 @@ _smp_memget_sync(void *gas, void *to, hpx_addr_t from, size_t size) {
 /// Move memory from one locality to another.
 static void
 _smp_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
-  dbg_assert(src == HPX_HERE);
-  dbg_assert(dst == HPX_HERE);
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
