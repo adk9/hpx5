@@ -97,6 +97,7 @@ static int _test_handler(void) {
   hpx_addr_t reduce = hpx_lco_reduce_new(HPX_LOCALITIES, sizeof(int), _init,
                                          _sum);
   for (int i = 0, e = I; i < e; ++i) {
+    printf("reduce iteration %d\n", i);
     for (int j = 0, e = HPX_LOCALITIES; j < e; ++j) {
       hpx_addr_t block = hpx_addr_add(base, j * BSIZE, BSIZE);
       hpx_call(block, _reduce_block, reduce, &allreduce);
