@@ -447,11 +447,14 @@ hpx_addr_t hpx_lco_alltoall_local_array_new(int n, size_t inputs, size_t size)
 /// @param         op The commutative-associative operation we're
 ///                   performing.
 /// @param  predicate Predicate to guard the LCO.
+/// @param       init Buffer to initialize the LCO with.
+/// @param  init_size The size of the initializer.
 ///
 /// @returns the global address of the allocated array lco.
 hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size,
                                         hpx_action_t id, hpx_action_t op,
-                                        hpx_action_t predicate) HPX_PUBLIC;
+                                        hpx_action_t predicate, void *init,
+                                        size_t init_size) HPX_PUBLIC;
 
 /// Allocate a new generation counter.
 ///
@@ -652,12 +655,15 @@ hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) HPX_PUBLIC;
 /// Allocate a user-defined LCO.
 ///
 /// @param size         The size of the LCO buffer.
-/// @param op           The commutative-associative operation we're performing.
 /// @param id           An initialization function for the data, this is used to
 ///                     initialize the data in every epoch.
+/// @param op           The commutative-associative operation we're performing.
 /// @param predicate    Predicate to guard the LCO.
+/// @param init         Buffer to initialize the LCO with.
+/// @param init_size    The size of the initializer.
 hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
-                            hpx_action_t predicate) HPX_PUBLIC;
+                            hpx_action_t predicate, void *init,
+                            size_t init_size) HPX_PUBLIC;
 /// @}
 
 /// @}
