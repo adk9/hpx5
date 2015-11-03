@@ -181,11 +181,11 @@ int hpx_lco_set_rsync(hpx_addr_t lco, int size, const void *value)
 /// @param lsync An LCO to signal local completion (HPX_NULL == don't wait)
 ///                local completion indicates that the @p value may be freed
 ///                or reused.
-/// @param rsync A continuation address for the set return value.
+/// @param raddr A continuation address for the set return value.
 /// @param   rop The continuation operation (should be marshalled).
 void hpx_lco_set_with_continuation(hpx_addr_t lco, int size, const void *value,
                                    hpx_addr_t lsync,
-                                   hpx_addr_t rsync, hpx_action_t rop)
+                                   hpx_addr_t raddr, hpx_action_t rop)
   HPX_PUBLIC;
 
 
