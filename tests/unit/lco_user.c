@@ -21,8 +21,9 @@
 // Goal of this testcase is to use the user-defined LCO to achieve
 // the “OR” gate
 
-static void _lco_init_handler(bool *val, const size_t size) {
-  *val = 0;
+static void _lco_init_handler(bool *val, const size_t size,
+                              int *init, size_t init_size) {
+  *val = init ? *init : 0;
 }
 static HPX_ACTION(HPX_FUNCTION, 0, _lco_init, _lco_init_handler);
 
@@ -64,7 +65,9 @@ static int lco_user_handler(void) {
   printf("Test user lco.\n");
   srand(time(NULL));
   hpx_addr_t lco;
-  lco = hpx_lco_user_new(sizeof(bool), _lco_init, _lco_op, _lco_predicate);
+  int init = 0;
+  lco = hpx_lco_user_new(sizeof(bool), _lco_init, _lco_op, _lco_predicate,
+                         &init, sizeof(init));
   for (int i = 0; i < 16; ++i) {
     hpx_addr_t and = hpx_lco_and_new(2);
     hpx_call(lco, _lco_set, and, &i);
