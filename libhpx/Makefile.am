@@ -23,3 +23,5 @@ libhpx_la_LIBADD   = $(LIBHPX_LIBS) $(LIBHPX_LIBADD) \
                      system/libsystem.la \
                      process/libprocess.la \
                      instrumentation/libinstrumentation.la
+
+libhpx_la_DEPENDENCIES = $(LIBHPX_LIBADD)
