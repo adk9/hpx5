@@ -28,6 +28,7 @@ typedef struct {
 } count_t;
 
 struct reduce {
+  volatile uint64_t version;
   int              n;
   const int  padding;
   size_t       bytes;
@@ -36,7 +37,8 @@ struct reduce {
   hpx_monoid_op_t op;
   count_t    *counts;
   char       *values;
-  PAD_TO_CACHELINE(2 * sizeof(int) +
+  PAD_TO_CACHELINE(sizeof(uint64_t) +
+                   2 * sizeof(int) +
                    2 * sizeof(size_t) +
                    2 * sizeof(void(*)()) +
                    2 * sizeof(void*));
@@ -56,6 +58,7 @@ reduce_t *reduce_new(size_t bytes, hpx_monoid_id_t id, hpx_monoid_op_t op) {
     dbg_error("could not allocate aligned reduction\n");
   }
 
+  sync_store(&r->version, UINT64_C(0), SYNC_RELEASE);
   r->n = 0;
   r->bytes = bytes;
   r->padded = padded;
@@ -122,6 +125,7 @@ static int _steal(volatile int *local, volatile int *victim) {
     int leave = n - steal;
     if (sync_cas(victim, n, leave, SYNC_ACQ_REL, SYNC_RELAXED)) {
       log_coll("stole %d, left %d, have %d\n", steal, leave, have);
+      log_dflt("stole %d, left %d, have %d\n", steal, leave, have);
       return leave + have;
     }
 
@@ -155,21 +159,61 @@ static int _balance(count_t *counts, int local) {
     }
   }
   int i = sync_load(&counts[local].i, SYNC_ACQUIRE);
-  log_coll("detected count==i from numa node %d\n", local);
+  log_coll("detected total count %d at node %d\n", i, local);
   return i;
 }
 
 int reduce_join(reduce_t *r, const void *in) {
+  // 1) join with this workers' partially reduced value
   void *buffer = r->values + self->id * r->padded;
   r->op(buffer, in, r->bytes);
+
+  // 2) reduce the count at this numa node
   int numa = self->numa_node;
+  log_coll("reducing on %p at numa node %d\n", r, numa);
   count_t *c = &r->counts[numa];
   if (sync_fadd(&c->i, -1, SYNC_ACQ_REL) > 1) {
     return 0;
   }
-  else {
-    return (_balance(r->counts, numa) == 0);
+
+  // 3) do a balance operation
+  //
+  // Balancing means that we iterate through the numa nodes, and try to "take"
+  // half of the remaining count from the first one we discover with a positive
+  // value. Balance will return 0 if it detects a state where the total count is
+  // 0. In that case, we need to notify the higher-level that the bound has been
+  // reached. There are some simple cases where more than one thread can
+  // concurrently detect that the total count is zero.
+  //
+  //   count[0] = 1, count[1] = 1
+  //
+  //   Thread 0   | Thread 1
+  //   -----------+----------------
+  //   count[0]-- | count [1]--
+  //   balance()  | balance()
+  //     return 0 |   return 0
+  //
+  // The interface requires that exactly 1 thread receive the signal that the
+  // counter is at its limit. We use a basic consistent snapshot algorithm to
+  // implement a consensus algorithm to deal with the case above.
+  //
+  // Each thread will load the reduce's version before each balance attempt. If
+  // it detects a 0 total count then it conditionally increments the
+  // version. The thread that successfully increments the version is designated
+  // as the winner, and returns 1. Everyone else will lose and will return 0.
+  //
+  // Note that a balance may be underway when the winner returns 1. Balancing is
+  // guaranteed not to decrease the total value of the counter, though there are
+  // transient states where the counter looks like it has a larger count than it
+  // should.
+  uint64_t v = sync_load(&r->version, SYNC_ACQUIRE);
+  int n = _balance(r->counts, numa);
+  if (n == 0) {
+    return sync_cas(&r->version, v, v + 1, SYNC_RELEASE, SYNC_RELAXED);
   }
+
+  // We saw a state where there are still resources available.
+  return 0;
 }
 
 void reduce_reset(reduce_t *r, void *out) {
@@ -185,6 +229,7 @@ void reduce_reset(reduce_t *r, void *out) {
   int n = r->n / nodes;
   int m = r->n % nodes;
   log_coll("resetting %p to %d\n", (void*)r, r->n);
+  log_dflt("resetting %p to %d\n", (void*)r, r->n);
   for (int i = 0, e = nodes; i < e; ++i) {
     int v = n + ((i < m) ? 1 : 0);
     log_coll("adding %d to %p at node %d\n", v, (void*)r, i);
