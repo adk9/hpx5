@@ -118,13 +118,13 @@ static int _steal(volatile int *local, volatile int *victim) {
     // false-positive zeros. Remember how many we have because we will return
     // that value to the caller so that they can figure out if the aggregate
     // value is 0.
-    int have = sync_fadd(local, steal, SYNC_ACQ_REL) + steal;
+    sync_fadd(local, steal, SYNC_ACQ_REL);
 
     // Now go back and perform the steal operation. If this succeeds then
     // everything is good, and we can return the victim's count.
     int leave = n - steal;
     if (sync_cas(victim, n, leave, SYNC_ACQ_REL, SYNC_RELAXED)) {
-      log_coll("stole %d, left %d, have %d\n", steal, leave, have);
+      int have = sync_load(local, SYNC_ACQUIRE);
       log_dflt("stole %d, left %d, have %d\n", steal, leave, have);
       return leave + have;
     }
@@ -169,9 +169,13 @@ int reduce_join(reduce_t *r, const void *in) {
   r->op(buffer, in, r->bytes);
 
   // 2) reduce the count at this numa node
+  //
+  // We also need a consistent snapshot going on here because the reset
+  // operation happens externally. Grab the snapshot now so that it can be
+  // consistent with the decrement.
   int numa = self->numa_node;
-  log_coll("reducing on %p at numa node %d\n", r, numa);
   count_t *c = &r->counts[numa];
+  uint64_t v = sync_load(&r->version, SYNC_ACQUIRE);
   if (sync_fadd(&c->i, -1, SYNC_ACQ_REL) > 1) {
     return 0;
   }
@@ -206,9 +210,7 @@ int reduce_join(reduce_t *r, const void *in) {
   // guaranteed not to decrease the total value of the counter, though there are
   // transient states where the counter looks like it has a larger count than it
   // should.
-  uint64_t v = sync_load(&r->version, SYNC_ACQUIRE);
-  int n = _balance(r->counts, numa);
-  if (n == 0) {
+  if (_balance(r->counts, numa) == 0) {
     return sync_cas(&r->version, v, v + 1, SYNC_RELEASE, SYNC_RELAXED);
   }
 
