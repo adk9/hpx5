@@ -39,7 +39,7 @@ reduce_t *reduce_new(size_t bytes, hpx_monoid_id_t id, hpx_monoid_op_t op) {
 
   // allocate enough space so that each
   int workers = here->sched->n_workers;
-  size_t padded = _BYTES(HPX_CACHELINE_SIZE, bytes);
+  size_t padded = _BYTES(HPX_CACHELINE_SIZE, bytes) + bytes;
   size_t size = sizeof(*r) + padded * workers;
   if (posix_memalign((void*)&r, HPX_CACHELINE_SIZE, size)) {
     dbg_error("could not allocate aligned reduction\n");
