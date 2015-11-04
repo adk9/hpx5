@@ -13,7 +13,7 @@ TESTS = apex_test               \
         allreduce               \
         bcast                   \
         call_when               \
-        call_marshalled         \
+        call_vectored           \
         gas_alloc               \
         gas_alloc_dist          \
         gas_coll                \
@@ -62,7 +62,7 @@ apex_test_DEPENDENCIES              = $(HPX_APPS_DEPS)
 allreduce_DEPENDENCIES              = $(HPX_APPS_DEPS)
 bcast_DEPENDENCIES                  = $(HPX_APPS_DEPS)
 call_when_DEPENDENCIES              = $(HPX_APPS_DEPS)
-call_marshalled_DEPENDENCIES        = $(HPX_APPS_DEPS)
+call_vectored_DEPENDENCIES          = $(HPX_APPS_DEPS)
 gas_alloc_DEPENDENCIES              = $(HPX_APPS_DEPS)
 gas_alloc_dist_DEPENDENCIES         = $(HPX_APPS_DEPS)
 gas_coll_DEPENDENCIES               = $(HPX_APPS_DEPS)
