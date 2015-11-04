@@ -34,8 +34,14 @@ typedef uint16_t hpx_action_t;
 /// The type of functions that can be registered with hpx_register_action().
 typedef int (*hpx_action_handler_t)(void*, size_t);
 
-/// The type of functions that can be registed with pinned actions.
+/// The type of functions that can be registered with pinned actions.
 typedef int (*hpx_pinned_action_handler_t)(void *, void*, size_t);
+
+/// The type of functions that can be registered with vectored actions.
+typedef int (*hpx_vectored_action_handler_t)(int, void*, size_t *);
+
+/// The type of functions that can be registered with pinned vectored actions.
+typedef int (*hpx_pinned_vectored_action_handler_t)(void *, int, void*, size_t *);
 
 /// The equivalent of NULL for HPX actions.
 #define HPX_ACTION_NULL ((hpx_action_t)0u)
@@ -77,6 +83,8 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
 #define HPX_PINNED     0x2
 // Action is a libhpx action
 #define HPX_INTERNAL   0x4
+// Action is a vectored action
+#define HPX_VECTORED   0x8
 //@}
 
 /// Register an HPX action of a given @p type.
