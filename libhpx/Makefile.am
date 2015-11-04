@@ -24,4 +24,14 @@ libhpx_la_LIBADD   = $(LIBHPX_LIBS) $(LIBHPX_LIBADD) \
                      process/libprocess.la \
                      instrumentation/libinstrumentation.la
 
-libhpx_la_DEPENDENCIES = $(LIBHPX_LIBADD)
+libhpx_la_DEPENDENCIES = $(LIBHPX_LIBADD) \
+                         $(top_builddir)/libsync/libsync.la \
+                         boot/libboot.la \
+                         memory/libmemory.la \
+                         gas/libgas.la \
+                         network/libnetwork.la \
+                         scheduler/libscheduler.la \
+                         util/libutil.la \
+                         system/libsystem.la \
+                         process/libprocess.la \
+                         instrumentation/libinstrumentation.la
