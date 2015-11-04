@@ -100,6 +100,10 @@ bool action_is_pinned(const struct action_table *, hpx_action_t)
 bool action_is_marshalled(const struct action_table *, hpx_action_t)
   HPX_NON_NULL(1);
 
+/// Is the action a vectored action?
+bool action_is_vectored(const struct action_table *, hpx_action_t)
+  HPX_NON_NULL(1);
+
 /// Is the action internal?
 bool action_is_internal(const struct action_table *, hpx_action_t)
   HPX_NON_NULL(1);

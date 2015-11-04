@@ -47,7 +47,6 @@ typedef struct {
   hpx_action_type_t       type;
   uint32_t                attr;
   ffi_cif                 *cif;
-  int                    nargs;
   void                    *env;
 } _entry_t;
 
@@ -129,13 +128,12 @@ static void _assign_ids(_table_t *table) {
 /// @param         type The type of this action.
 /// @param         attr The attributes associated with this action.
 /// @param          cif FFI datatype information.
-/// @param        nargs Number of argument types associated with the action.
 /// @param          env Action's environment.
 ///
 /// @return             HPX_SUCCESS or an error if the push fails.
 static int _push_back(_table_t *table, hpx_action_t *id, const char *key,
                       hpx_action_handler_t f, hpx_action_type_t type,
-                      uint32_t attr, ffi_cif* cif, int nargs, void *env) {
+                      uint32_t attr, ffi_cif *cif, void *env) {
   int i = table->n++;
   if (LIBHPX_ACTION_TABLE_SIZE < i) {
     dbg_error("action table overflow\n");
@@ -147,7 +145,6 @@ static int _push_back(_table_t *table, hpx_action_t *id, const char *key,
   back->type = type;
   back->attr = attr;
   back->cif = cif;
-  back->nargs = nargs;
   back->env = env;
   return HPX_SUCCESS;
 }
@@ -201,7 +198,6 @@ _ACTION_TABLE_GET(hpx_action_type_t, type, HPX_ACTION_INVALID);
 _ACTION_TABLE_GET(uint32_t, attr, 0);
 _ACTION_TABLE_GET(hpx_action_handler_t, handler, NULL);
 _ACTION_TABLE_GET(ffi_cif *, cif, NULL);
-_ACTION_TABLE_GET(int, nargs, -1);
 _ACTION_TABLE_GET(void *, env, NULL);
 
 int action_table_size(const struct action_table *table) {
@@ -219,33 +215,36 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int nargs, va_list *vargs) {
     dbg_error("parcel must have an action to serialize arguments.\n");
   }
 
-  const _table_t *actions = _get_actions();
-  const ffi_cif      *cif = action_table_get_cif(actions, p->action);
-  const char         *key = action_table_get_key(actions, p->action);
-  uint32_t           attr = action_table_get_attr(actions, p->action);
-  int           exp_nargs = action_table_get_nargs(actions, p->action);
+  const _table_t     *actions = _get_actions();
+  const ffi_cif          *cif = action_table_get_cif(actions, p->action);
+  const char             *key = action_table_get_key(actions, p->action);
+  uint32_t               attr = action_table_get_attr(actions, p->action);
 
-  if (action_is_marshalled(actions, p->action)) {
-    if (nargs != exp_nargs) {
-      dbg_error("%s requires %d arguments (%d given).\n",
-                key, exp_nargs, nargs);
-    }
+  bool marshalled = attr & HPX_MARSHALLED;
+  bool     pinned = attr & HPX_PINNED;
+  bool   vectored = attr & HPX_VECTORED;
 
-    // marshalled, don't pack
-    if (nargs > 2) {
-      void *to = hpx_parcel_get_data(p);
+  if (marshalled) {
+    if (vectored) {
+      nargs >>= 1;
+      void *buf = hpx_parcel_get_data(p);
+      *(int*)buf = nargs;
+      size_t *sizes = (size_t*)((char*)buf + sizeof(int));
+      void *args = (char*)sizes + (sizeof(size_t) * nargs);
+
       size_t n = 0;
-      for (int i = 0; i < nargs; i+=2) {
+      for (int i = 0; i < nargs; ++i) {
         void *arg = va_arg(*vargs, void*);
-        n += va_arg(*vargs, int);
-        memcpy(to + n, arg, n);
-      }
+        size_t size = va_arg(*vargs, size_t);
+        sizes[i] = size;
+        memcpy(args+n, arg, size);
+        n += size;
+      }      
     }
     return p;
   }
 
   // pinned actions have an implicit pointer, so update the caller's value
-  bool pinned = attr & HPX_PINNED;
   if (pinned) {
     nargs++;
   }
@@ -282,29 +281,40 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int nargs, va_list *vargs) {
 }
 
 static hpx_parcel_t *_action_parcel_acquire(hpx_action_t action, int nargs,
-                                            va_list *args) {
-  if (!args) {
+                                            va_list *vargs) {
+  if (!vargs) {
     return hpx_parcel_acquire(NULL, 0);
   }
 
   const _table_t *actions = _get_actions();
-  if (action_is_marshalled(actions, action)) {
-    int nargs = action_table_get_nargs(actions, action);
-    if (nargs == 2) {
-      void *data = va_arg(*args, void*);
-      size_t n = va_arg(*args, int);
+  bool marshalled = action_is_marshalled(actions, action);
+  bool   vectored = action_is_vectored(actions, action);
+
+  if (marshalled) {
+    if (likely(!vectored)) {
+      void *data = va_arg(*vargs, void*);
+      size_t n = va_arg(*vargs, size_t);
       return hpx_parcel_acquire(data, n);
     } else {
+      va_list temp;
+      va_copy(temp, *vargs);
+      
+      int e = nargs % 2;
+      dbg_assert_str(!e, "invalid number of vectored arguments %d\n", nargs);
+
       size_t n = 0;
-      for (int i = 0; i < nargs; i+=2) {
-        void *data = va_arg(*args, void*);
-        n += va_arg(*args, int);
+      for (int i = 0; i < nargs; i += 2) {
+        void *data = va_arg(temp, void*);
+        size_t size = va_arg(temp, size_t);
+        n += (size + sizeof(size_t));
         (void)data;
       }
-      return hpx_parcel_acquire(NULL, n);
+      va_end(temp);
+      return hpx_parcel_acquire(NULL, n + sizeof(int));
     }
   } else {
     const ffi_cif *cif = action_table_get_cif(actions, action);
+    dbg_assert(cif);
     size_t n = ffi_raw_size((void*)cif);
     return hpx_parcel_acquire(NULL, n);
   }
@@ -368,10 +378,22 @@ int action_execute(hpx_parcel_t *p) {
   ffi_cif                 *cif = table->entries[id].cif;
   bool              marshalled = action_is_marshalled(table, id);
   bool                  pinned = action_is_pinned(table, id);
+  bool                vectored = action_is_vectored(table, id);
   void                   *args = hpx_parcel_get_data(p);
 
   if (!pinned && marshalled) {
-    return handler(args, p->size);
+    if (likely(!vectored)) {
+      return handler(args, p->size);
+    }
+
+    int nargs = *(int*)args;
+    size_t *sizes = (size_t*)((char*)args + sizeof(int));
+    void *argsp[nargs];
+    argsp[0] = (char*)sizes + (nargs * sizeof(size_t));
+    for (int i = 0; i < nargs-1; ++i) {
+      argsp[i+1] = (char*)argsp[i] + sizes[i];
+    }
+    return ((hpx_vectored_action_handler_t)handler)(nargs, argsp, sizes);
   }
 
   if (!pinned) {
@@ -388,7 +410,19 @@ int action_execute(hpx_parcel_t *p) {
   }
 
   if (marshalled) {
-    return ((hpx_pinned_action_handler_t)handler)(target, args, p->size);
+    if (likely(!vectored)) {
+      return ((hpx_pinned_action_handler_t)handler)(target, args, p->size);
+    }
+
+    int nargs = *(int*)args;
+    size_t *sizes = (size_t*)((char*)args + sizeof(int));
+    void *argsp[nargs];
+    argsp[0] = (char*)sizes + (nargs * sizeof(size_t));
+    for (int i = 0; i < nargs-1; ++i) {
+      argsp[i+1] = (char*)argsp[i] + sizes[i];
+    }
+    return ((hpx_pinned_vectored_action_handler_t)handler)(target, nargs,
+                                                           &argsp, sizes);
   }
 
   void *avalue[cif->nargs];
@@ -406,6 +440,10 @@ bool action_is_pinned(const struct action_table *table, hpx_action_t id) {
 
 bool action_is_marshalled(const struct action_table *table, hpx_action_t id) {
   return (action_table_get_attr(table, id) & HPX_MARSHALLED);
+}
+
+bool action_is_vectored(const struct action_table *table, hpx_action_t id) {
+  return (action_table_get_attr(table, id) & HPX_VECTORED);
 }
 
 bool action_is_internal(const struct action_table *table, hpx_action_t id) {
@@ -439,17 +477,30 @@ _register_action_va(hpx_action_type_t type, uint32_t attr,
     attr |= HPX_INTERNAL;
   }
 
-  if (attr & HPX_MARSHALLED) {
-    if (attr & HPX_PINNED) {
+  bool marshalled = attr & HPX_MARSHALLED;
+  bool     pinned = attr & HPX_PINNED;
+  bool   vectored = attr & HPX_VECTORED;
+
+  if (marshalled) {
+    if (pinned) {
       hpx_type_t translated = va_arg(vargs, hpx_type_t);
       dbg_assert(translated == HPX_POINTER);
-      nargs--;
       (void)translated;
     }
 
-    int e = nargs % 2;
-    dbg_assert(!e);
-    for (int i = 0; i < nargs; i+=2) {
+    if (vectored) {
+      hpx_type_t count = va_arg(vargs, hpx_type_t);
+      hpx_type_t args = va_arg(vargs, hpx_type_t);
+      hpx_type_t sizes = va_arg(vargs, hpx_type_t);
+
+      dbg_assert(count == HPX_INT || count == HPX_UINT || count == HPX_SIZE_T);
+      dbg_assert(args == HPX_POINTER);
+      dbg_assert(sizes == HPX_POINTER);
+
+      (void)count;
+      (void)args;
+      (void)sizes;
+    } else {
       hpx_type_t addr = va_arg(vargs, hpx_type_t);
       hpx_type_t size = va_arg(vargs, hpx_type_t);
 
@@ -460,8 +511,7 @@ _register_action_va(hpx_action_type_t type, uint32_t attr,
     }
 
     va_end(vargs);
-    return _push_back(_get_actions(), id, key, f, type,
-                      attr, NULL, nargs, NULL);
+    return _push_back(_get_actions(), id, key, f, type, attr, NULL, NULL);
   }
 
   ffi_cif *cif = calloc(1, sizeof(*cif));
@@ -476,7 +526,7 @@ _register_action_va(hpx_action_type_t type, uint32_t attr,
   if (s != FFI_OK) {
     dbg_error("failed to process type information for action id %d.\n", *id);
   }
-  return _push_back(_get_actions(), id, key, f, type, attr, cif, nargs, NULL);
+  return _push_back(_get_actions(), id, key, f, type, attr, cif, NULL);
 }
 
 int
