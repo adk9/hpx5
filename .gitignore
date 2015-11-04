@@ -111,6 +111,7 @@ contrib/libcuckoo/
 tests/unit/apex_test
 tests/unit/allreduce
 tests/unit/call_when
+tests/unit/call_vectored
 tests/unit/gas_alloc
 tests/unit/parcel_send_through
 tests/unit/gas_global_alloc
