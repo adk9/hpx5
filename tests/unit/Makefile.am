@@ -47,8 +47,6 @@ TESTS = allreduce               \
         thread_gettlsid         \
         thread_yield
 
-XFAIL_TESTS = gas_alloc_dist
-
 if ENABLE_LENGTHY_TESTS
 TESTS           += lco_wait
 endif
