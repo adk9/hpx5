@@ -15,15 +15,16 @@
 #include "tests.h"
 
 static const int blocksize = 4 * sizeof(int);
-typedef enum {
-  _cyclic,
-  _blocked
-} _dist_type;
 
 typedef enum {
-  _alloc,
+  _alloc = 0,
   _calloc
 } _alloc_type;
+
+typedef enum {
+  _cyclic = 0,
+  _blocked
+} _dist_type;
 
 static int _block_rank_handler(hpx_addr_t base) {
   hpx_addr_t target = hpx_thread_current_target();
@@ -73,7 +74,7 @@ static int _verify(_dist_type dist) {
   return 0;
 }
 
-static int _run_test(_dist_type dist, _alloc_type alloc) {
+static int _run_test(_alloc_type alloc, _dist_type dist) {
   hpx_addr_t (*alloc_fn)(size_t, uint32_t, uint32_t);
   if (dist == _cyclic && alloc == _alloc) {
     alloc_fn = hpx_gas_alloc_cyclic;
@@ -138,6 +139,6 @@ static HPX_ACTION(HPX_DEFAULT, 0, gas_calloc_blocked,
 TEST_MAIN({
     ADD_TEST(gas_alloc_cyclic, 0);
     ADD_TEST(gas_calloc_cyclic, 0);
-    ADD_TEST(gas_alloc_blocked, 0);
-    ADD_TEST(gas_calloc_blocked, 0);
+    // ADD_TEST(gas_alloc_blocked, 0);
+    // ADD_TEST(gas_calloc_blocked, 0);
 });
