@@ -34,6 +34,7 @@ TESTS = apex_test               \
         parcel_send_through     \
         process                 \
         runtime                 \
+        reent_runtime                 \
         thread_set_affinity     \
         task                    \
         thread_cont_action      \
@@ -71,6 +72,7 @@ parcel_send_rendezvous_DEPENDENCIES = $(HPX_APPS_DEPS)
 parcel_send_through_DEPENDENCIES    = $(HPX_APPS_DEPS)
 process_DEPENDENCIES                = $(HPX_APPS_DEPS)
 runtime_DEPENDENCIES                = $(HPX_APPS_DEPS)
+reent_runtime_DEPENDENCIES          = $(HPX_APPS_DEPS)
 task_DEPENDENCIES                   = $(HPX_APPS_DEPS)
 thread_cont_action_DEPENDENCIES     = $(HPX_APPS_DEPS)
 thread_continue_DEPENDENCIES        = $(HPX_APPS_DEPS)
