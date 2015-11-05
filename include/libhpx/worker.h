@@ -37,6 +37,11 @@ struct ustack;
 ///
 /// @{
 typedef struct {
+  chase_lev_ws_deque_t work;                    // my work
+  PAD_TO_CACHELINE(sizeof(chase_lev_ws_deque_t));
+} padded_deque_t;
+
+typedef struct {
   pthread_t          thread;                    // this worker's native thread
   int                    id;                    // this worker's id
   unsigned             seed;                    // my random seed
@@ -51,8 +56,9 @@ typedef struct {
                    sizeof(int) * 6 +
                    sizeof(hpx_parcel_t*) * 2 +
                    sizeof(struct ustack*));
-  chase_lev_ws_deque_t work;                    // my work
-  PAD_TO_CACHELINE(sizeof(chase_lev_ws_deque_t));
+  int               work_id;                    // which queue are we using
+  PAD_TO_CACHELINE(sizeof(int));
+  padded_deque_t  queues[2];
   two_lock_queue_t    inbox;                    // mail sent to me
   libhpx_stats_t      stats;                    // per-worker statistics
   int           last_victim;                    // last successful victim

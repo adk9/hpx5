@@ -269,6 +269,10 @@ static hpx_parcel_t *_try_bind(worker_t *w, hpx_parcel_t *p) {
   (void)old;                                    // avoid unused variable warning
 }
 
+static chase_lev_ws_deque_t *_work(worker_t *worker) {
+  return &worker->queues[worker->work_id].work;
+}
+
 /// Add a parcel to the top of the worker's work queue.
 ///
 /// This interface is designed so that it can be used as a schedule()
@@ -281,13 +285,13 @@ static void _push_lifo(hpx_parcel_t *p, void *worker) {
   dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
   EVENT_PUSH_LIFO(p);
   worker_t *w = worker;
-  uint64_t size = sync_chase_lev_ws_deque_push(&w->work, p);
+  uint64_t size = sync_chase_lev_ws_deque_push(_work(w), p);
   w->work_first = (here->sched->wf_threshold < size);
 }
 
 /// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *_schedule_lifo(worker_t *w) {
-  hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(&w->work);
+  hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(_work(w));
   EVENT_POP_LIFO(p);
   EVENT_WQSIZE(w);
   return p;
@@ -325,7 +329,7 @@ static int _push_half_handler(int src) {
   const int steal_half_threshold = 6;
   log_sched("received push half request from worker %d\n", src);
   worker_t *thief = scheduler_get_worker(here->sched, src);
-  int qsize = sync_chase_lev_ws_deque_size(&self->work);
+  int qsize = sync_chase_lev_ws_deque_size(_work(self));
   if (qsize < steal_half_threshold) {
     return HPX_SUCCESS;
   }
@@ -360,7 +364,7 @@ static LIBHPX_ACTION(HPX_INTERRUPT, 0, _push_half, _push_half_handler, HPX_INT);
 /// Steal a parcel from a worker with the given @p id.
 static hpx_parcel_t *_steal_from(worker_t *w, int id) {
   worker_t *victim = scheduler_get_worker(here->sched, id);
-  hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(&victim->work);
+  hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(_work(victim));
   if (p) {
     w->last_victim = id;
     EVENT_STEAL_LIFO(p, victim);
@@ -659,10 +663,12 @@ int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   w->system      = NULL;
   w->current     = NULL;
   w->stacks      = NULL;
+  w->work_id     = 0;
   w->active      = true;
   w->profiler    = NULL;
 
-  sync_chase_lev_ws_deque_init(&w->work, work_size);
+  sync_chase_lev_ws_deque_init(&w->queues[0].work, work_size);
+  sync_chase_lev_ws_deque_init(&w->queues[1].work, work_size);
   sync_two_lock_queue_init(&w->inbox, NULL);
   libhpx_stats_init(&w->stats);
 
@@ -680,7 +686,8 @@ void worker_fini(worker_t *w) {
   while ((p = _schedule_lifo(w))) {
     hpx_parcel_release(p);
   }
-  sync_chase_lev_ws_deque_fini(&w->work);
+  sync_chase_lev_ws_deque_fini(&w->queues[0].work);
+  sync_chase_lev_ws_deque_fini(&w->queues[1].work);
 
   // and delete any cached stacks
   ustack_t *stack = NULL;
@@ -698,7 +705,7 @@ int worker_start(void) {
 
   // double-check this
   dbg_assert(((uintptr_t)self & (HPX_CACHELINE_SIZE - 1)) == 0);
-  dbg_assert(((uintptr_t)&self->work & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&self->queues & (HPX_CACHELINE_SIZE - 1)) == 0);
   dbg_assert(((uintptr_t)&self->inbox & (HPX_CACHELINE_SIZE - 1))== 0);
 
   // make sure the system is initialized
