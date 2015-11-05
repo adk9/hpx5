@@ -9,8 +9,7 @@ LDADD            = $(HPX_APPS_LDADD)
 
 LOG_COMPILER = $(TESTS_CMD)
 
-TESTS = apex_test               \
-        allreduce               \
+TESTS = allreduce               \
         bcast                   \
         call_when               \
         call_vectored           \
@@ -54,11 +53,16 @@ if ENABLE_LENGTHY_TESTS
 TESTS           += lco_wait
 endif
 
+if HAVE_APEX
+TESTS           += apex
+endif
+
+
 # Override libhpx tests so that they have the right paths and flags.
 libhpx_boot_CPPFLAGS                = $(LIBHPX_CPPFLAGS) -I$(top_srcdir)/include -Wno-unused
 libhpx_boot_CFLAGS                  = $(LIBHPX_CFLAGS) 
 
-apex_test_DEPENDENCIES              = $(HPX_APPS_DEPS)
+apex_DEPENDENCIES                   = $(HPX_APPS_DEPS)
 allreduce_DEPENDENCIES              = $(HPX_APPS_DEPS)
 bcast_DEPENDENCIES                  = $(HPX_APPS_DEPS)
 call_when_DEPENDENCIES              = $(HPX_APPS_DEPS)
