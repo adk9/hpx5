@@ -192,9 +192,6 @@ static hpx_time_t _add_times(hpx_time_t time1, hpx_time_t time2){
   total = hpx_time_diff_ns(TIME_NULL, time1) + hpx_time_diff_ns(TIME_NULL, time2);
   seconds = total / 1e9;
   ns = total % (int64_t)1e9;
-  if(seconds > 10){
-    printf("whoa!\n");
-  }
   return hpx_time_construct(seconds, ns);
 }
 
@@ -412,9 +409,6 @@ void prof_get_average_time(char *key, hpx_time_t *avg){
                                   _profile_log.events[event].entries[i].run_time);
       divisor++;
       average += amount;
-      if(amount > 1e9){
-        printf("dang\n");
-      }
     }
   }
   average /= divisor;
