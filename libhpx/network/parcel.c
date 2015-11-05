@@ -60,7 +60,9 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _delete_launch_through_parcel,
 
 static void _prepare(hpx_parcel_t *p) {
   parcel_state_t state = parcel_get_state(p);
+  /*printf("[HPX parcel prepare state == serialized? :  %d   size : %d  pid : %d  no_credit? : %d .....] \n", parcel_serialized(state), p->size, p->pid, !p->credit);*/
   if (!parcel_serialized(state) && p->size) {
+    /*printf("[HPX parcel send : NOT serialized : %d .....] \n", parcel_serialized(state));*/
     void *buffer = hpx_parcel_get_data(p);
     memcpy(&p->buffer, buffer, p->size);
     state |= PARCEL_SERIALIZED;
@@ -69,6 +71,7 @@ static void _prepare(hpx_parcel_t *p) {
 
   if (p->pid && !p->credit) {
     hpx_parcel_t *parent = scheduler_current_parcel();
+    /*printf("[HPX parcel send : serialized : %d   pid : %d  parent pid : %d.....] \n", parcel_serialized(state), p->pid, parent->pid);*/
     dbg_assert(parent->pid == p->pid);
     p->credit = ++parent->credit;
   }
