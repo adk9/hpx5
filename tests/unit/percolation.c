@@ -20,17 +20,19 @@
 const char *_vec_add_kernel =                    "\n" \
   "#pragma OPENCL EXTENSION cl_khr_fp64 : enable  \n" \
   "__kernel void vecAdd(__global double *a,       \n" \
+  "                     const unsigned int n_a,   \n" \
   "                     __global double *b,       \n" \
+  "                     const unsigned int n_b,   \n" \
   "                     __global double *c,       \n" \
-  "                     const unsigned int n) {   \n" \
+  "                     const unsigned int n_c) { \n" \
   "    int id = get_global_id(0);                 \n" \
-  "                                               \n" \
-  "    if (id < n) {                              \n" \
+  "    if (id < n_a) {                            \n" \
   "      c[id] = a[id] + b[id];                   \n" \
   "    }                                          \n" \
   "}                                              \n" \
   "\n";
-static HPX_ACTION(HPX_OPENCL, 0, _vec_add, _vec_add_kernel);
+static HPX_ACTION(HPX_OPENCL, HPX_MARSHALLED | HPX_VECTORED,
+                  _vec_add, _vec_add_kernel);
 
 
 /// Test percolation.
@@ -50,7 +52,7 @@ _test_percolation_handler(void) {
     b[i] = cosf(i) * cosf(i);
   }
 
-  CHECK( hpx_call(HPX_HERE, _vec_add, HPX_NULL, a, n, b, n, c, n) );
+  CHECK( hpx_call_sync(HPX_HERE, _vec_add, c, n, a, n, b, n) );
 
   double sum = 0.0;
   for (int i = 0; i < n; ++i) {
