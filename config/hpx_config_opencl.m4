@@ -23,7 +23,7 @@ AC_DEFUN([_HAVE_OPENCL], [
 AC_DEFUN([_HPX_CC_OPENCL], [
   # check and see if opencl is "just available" without any work
   AC_CHECK_HEADER([CL/cl.h],
-    [AC_CHECK_LIB([opencl], [clCreateContext],
+    [AC_CHECK_LIB([OpenCL], [clCreateContext],
       [_HAVE_OPENCL
        LIBHPX_LIBS="$LIBHPX_LIBS -lOpenCL"
        HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lOpenCL"])])
