@@ -37,6 +37,7 @@ libhpx_la_DEPENDENCIES = $(LIBHPX_LIBADD) \
                          instrumentation/libinstrumentation.la
 
 if HAVE_PERCOLATION
-SUBDIRS           += percolation
-libhpx_la_LIBADD  += percolation/percolation.c 
+SUBDIRS                += percolation
+libhpx_la_LIBADD       += percolation/libpercolation.la
+libhpx_la_DEPENDENCIES += percolation/libpercolation.la 
 endif

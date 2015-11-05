@@ -19,7 +19,7 @@
 /// Simple vec add kernel.
 const char *_vec_add_kernel =                    "\n" \
   "#pragma OPENCL EXTENSION cl_khr_fp64 : enable  \n" \
-  "__kernel void vecAdd(__global double *a,       \n" \
+  "__kernel void _vec_add(__global double *a,     \n" \
   "                     const unsigned int n_a,   \n" \
   "                     __global double *b,       \n" \
   "                     const unsigned int n_b,   \n" \
@@ -32,7 +32,8 @@ const char *_vec_add_kernel =                    "\n" \
   "}                                              \n" \
   "\n";
 static HPX_ACTION(HPX_OPENCL, HPX_MARSHALLED | HPX_VECTORED,
-                  _vec_add, _vec_add_kernel);
+                  _vec_add, _vec_add_kernel,
+                  HPX_INT, HPX_POINTER, HPX_POINTER);
 
 
 /// Test percolation.
