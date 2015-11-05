@@ -258,6 +258,7 @@ void inst_prof_dump(profile_log_t profile_log){
     int64_t averages[profile_log.num_counters];
     int64_t minimums[profile_log.num_counters];
     int64_t maximums[profile_log.num_counters];
+
     hpx_time_t average_t, min_t, max_t;
     fprintf(f, "\nCode event %s:\n", profile_log.events[i].key);
     fprintf(f, "Number of occurrences: %d\n", profile_log.events[i].tally);
@@ -265,7 +266,7 @@ void inst_prof_dump(profile_log_t profile_log){
     fprintf(f, "Performance Statistics:\n");
     fprintf(f, "%-24s%-24s%-24s%-24s\n", 
            "Type", "Average", "Minimum", "Maximum");
-    if(profile_log.num_counters > 0){
+    if(profile_log.num_counters > 0 && !profile_log.events[i].simple){
       prof_get_averages(averages, profile_log.events[i].key);
       prof_get_minimums(minimums, profile_log.events[i].key);
       prof_get_maximums(maximums, profile_log.events[i].key);
