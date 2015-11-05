@@ -373,7 +373,7 @@ static int _hpx_run_phase2(hpx_action_t *act, int n, ...){
 
 /// Called to run HPX.
 int _hpx_run(hpx_action_t *act, int n, ...) {
-  printf("[HPX RUN START..... ] \n");
+  log("hpx_run starting up .....\n");
   va_list vargs;
   va_start(vargs, n);
   int status = HPX_SUCCESS;
@@ -385,13 +385,12 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   }
 
   //enable global or locality wide synchronization between each hpx_run() calls
-  printf("[BEFOREE BARRIER SYNC..] \n");
+  /*printf("[BEFOREE BARRIER SYNC..] \n");*/
   boot_barrier(here->boot);
-  /*here->network->barrier(here->network);*/
-  printf("[AFTER BARRIER SYNC..] \n");
+  /*printf("[AFTER BARRIER SYNC..] \n");*/
   
   va_end(vargs);
-  printf("[HPX RUN END.....] \n");
+  log("hpx_run ending.....\n");
   
   return status;
 }
