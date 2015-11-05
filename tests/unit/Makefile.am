@@ -37,7 +37,6 @@ TESTS = allreduce               \
         parcel_send             \
         parcel_send_rendezvous  \
         parcel_send_through     \
-        percolation             \
         process                 \
         runtime                 \
         thread_set_affinity     \
@@ -56,6 +55,9 @@ if HAVE_APEX
 TESTS           += apex
 endif
 
+if HAVE_PERCOLATION
+TESTS           += percolation
+endif
 
 # Override libhpx tests so that they have the right paths and flags.
 libhpx_boot_CPPFLAGS                = $(LIBHPX_CPPFLAGS) -I$(top_srcdir)/include -Wno-unused
