@@ -277,6 +277,10 @@ static chase_lev_ws_deque_t *_yielded(worker_t *worker) {
   return &worker->queues[1 - worker->work_id].work;
 }
 
+static void _swap_epoch(worker_t *worker) {
+  worker->work_id = 1 - worker->work_id;
+}
+
 /// Add a parcel to the top of the worker's work queue.
 ///
 /// This interface is designed so that it can be used as a schedule()
@@ -299,16 +303,6 @@ static hpx_parcel_t *_schedule_lifo(worker_t *w) {
   EVENT_POP_LIFO(p);
   EVENT_WQSIZE(w);
   return p;
-}
-
-/// Process the next available yielded thread.
-static hpx_parcel_t *_schedule_yielded(worker_t *w) {
-  // return sync_two_lock_queue_dequeue(&here->sched->yielded);
-  // hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(_yield(w));
-  // EVENT_POP_LIFO(p);
-  // EVENT_WQSIZE(w);
-  // return p;
-  return NULL;
 }
 
 /// Send a mail message to another worker.
@@ -597,6 +591,10 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
 
     // If we're not supposed to be active, then don't schedule anything.
     if (!worker_is_active()) {
+      // make sure we don't have anything stuck in our yield queue
+      while (p = sync_chase_lev_ws_deque_pop(_yielded(w))) {
+        _push_lifo(p, w);
+      }
       continue;
     }
 
@@ -607,45 +605,15 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
     }
 
     // Swap our yield queue with our primary queue
-    w->work_id = 1 - w->work_id;
+    _swap_epoch(w);
 
-    // randomly determine if we yield or steal first
-    int r = rand_r(&w->seed);
-    hpx_parcel_t *(*yield_steal_0)(worker_t *) = NULL;
-    hpx_parcel_t *(*yield_steal_1)(worker_t *) = NULL;
-    if (r < RAND_MAX/2) {
-      // we prioritize yielded threads over stealing
-      yield_steal_0 = _schedule_yielded;
-      yield_steal_1 = _schedule_steal;
-    }
-    else {
-      // try to steal some work first
-      yield_steal_0 = _schedule_steal;
-      yield_steal_1 = _schedule_yielded;
-    }
-
-    if ((p = yield_steal_0(w))) {
-      if (INSTRUMENTATION && yield_steal_0 == _schedule_yielded) {
-        source = SOURCE_YIELD;
-      }
-      else {
-        source = SOURCE_STEAL;
-      }
+    // Try and steal some work
+    if ((p = _schedule_steal(w))) {
+      source = SOURCE_STEAL;
       break;
     }
 
-    if ((p = yield_steal_1(w))) {
-      if (INSTRUMENTATION && yield_steal_1 == _schedule_yielded) {
-        source = SOURCE_YIELD;
-      }
-      else {
-        source = SOURCE_STEAL;
-      }
-      break;
-    }
-
-    // couldn't find any work to do, we sleep for a while before looking again
-    // system_usleep(1);
+    // couldn't find any work to do, eagerly spin
     INST(spins++);
   }
 

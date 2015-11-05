@@ -145,8 +145,6 @@ struct scheduler *scheduler_new(const config_t *cfg) {
     return NULL;
   }
 
-  sync_two_lock_queue_init(&s->yielded, NULL);
-
   sync_store(&s->shutdown, INT_MAX, SYNC_RELEASE);
   sync_store(&s->next_tls_id, 0, SYNC_RELEASE);
   s->n_workers    = workers;
@@ -180,7 +178,6 @@ void scheduler_delete(struct scheduler *sched) {
     free(sched->workers);
   }
 
-  sync_two_lock_queue_fini(&sched->yielded);
   free(sched);
 }
 
