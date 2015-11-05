@@ -33,6 +33,7 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/memory.h"
+#include "libhpx/network.h"
 #include "libhpx/scheduler.h"
 #include "thread.h"
 
@@ -167,6 +168,16 @@ void scheduler_delete(struct scheduler *sched) {
     return;
   }
 
+  log("hpx finalizing worker threads..] \n");
+  _locality_shutdown(here);
+  worker_wait();
+
+  worker_t *worker = NULL;
+  for (int i = 1; i < sched->n_workers; ++i) {
+    worker = scheduler_get_worker(sched, i);
+    _join(worker);
+  }
+  log("hpx finalizing thread join completed..] \n");
   // unbind this thread's worker
   self = NULL;
 
@@ -188,6 +199,23 @@ worker_t *scheduler_get_worker(struct scheduler *sched, int id) {
   assert(id >= 0);
   assert(id < sched->n_workers);
   return &sched->workers[id];
+}
+
+int scheduler_reent_startup(struct scheduler *sched){
+  int status = LIBHPX_OK;
+  
+  sync_store(&sched->shutdown, INT_MAX, SYNC_RELEASE);
+  status = worker_start();
+  if (status != LIBHPX_OK) {
+    scheduler_abort(sched);
+  }
+  return status;
+}
+
+void scheduler_reset_reent_state(struct scheduler *scheduler){
+    //reset current stack for this worker
+    //current parcel may have been released at each reentrance 
+    self->current = self->system;
 }
 
 int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
@@ -221,10 +249,10 @@ int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
     scheduler_abort(sched);
   }
 
-  for (int i = 1; i < sched->n_workers; ++i) {
-    worker = scheduler_get_worker(sched, i);
-    _join(worker);
-  }
+  /*for (int i = 1; i < sched->n_workers; ++i) {*/
+    /*worker = scheduler_get_worker(sched, i);*/
+    /*_join(worker);*/
+  /*}*/
 
   return status;
 }
