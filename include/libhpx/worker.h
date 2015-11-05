@@ -85,4 +85,15 @@ int worker_is_active(void);
 /// Check to see if the current worker should shut down completely.
 int worker_is_shutdown(void);
 
+// for all threads except system thread wait .
+// retrun true if worker is a slave 
+int worker_wait_if_slave(void);
+
+int worker_is_master_thread();
+
+//enforce some policy to wait on 
+int worker_wait_policy();
+
+int worker_wait();
+
 #endif // LIBHPX_WORKER_H

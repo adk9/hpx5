@@ -31,7 +31,7 @@ static int _probe_handler(network_t *network) {
   hpx_parcel_t *stack = NULL,
                    *p = NULL;
 
-  while (!scheduler_is_shutdown(here->sched)) {
+  while (true) {
     INST(uint64_t start_time = hpx_time_to_ns(hpx_time_now()));
 
     while ((stack = network_probe(network, hpx_get_my_thread_id()))) {
@@ -49,7 +49,7 @@ static int _probe_handler(network_t *network) {
 }
 
 static int _progress_handler(network_t *network) {
-  while (!scheduler_is_shutdown(here->sched)) {
+  while (true) {
     INST(uint64_t start_time = hpx_time_to_ns(hpx_time_now()));
     network_progress(network);
     inst_trace(HPX_INST_SCHEDTIMES, HPX_INST_SCHEDTIMES_PROGRESS, start_time);
