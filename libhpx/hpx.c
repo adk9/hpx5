@@ -130,6 +130,23 @@ int hpx_init(int *argc, char ***argv) {
   here->ranks = 0;
   here->actions = NULL;
 
+  here->reent_state.reent_st = REENT_NOT_ACTIVE;
+  here->reent_state.barrier_count = 0;
+  here->reent_state.barrier_enabled = 1;
+  sync_store(&here->reent_state.loc_shutdown, INT_MAX, SYNC_RELEASE);
+  here->reent_state.reent_mutex = malloc(sizeof(pthread_mutex_t));
+  int ret = pthread_mutex_init(here->reent_state.reent_mutex, NULL);
+  if (ret != 0) {
+    status = log_error("failed to allocate re-entrance state properly.\n");
+    goto unwind0;
+  }
+  here->reent_state.reent_wait = malloc(sizeof(pthread_cond_t));
+  ret = pthread_cond_init(here->reent_state.reent_wait, NULL);
+  if (ret != 0) {
+    status = log_error("failed to allocate re-entrance state properly.\n");
+    goto unwind0;
+  }
+
   here->config = config_new(argc, argv);
   if (!here->config) {
     status = log_error("failed to create a configuration.\n");
@@ -211,8 +228,7 @@ int hpx_init(int *argc, char ***argv) {
   return status;
 }
 
-/// Called to run HPX.
-int _hpx_run(hpx_action_t *act, int n, ...) {
+static int _hpx_run_phase1(hpx_action_t *act, int n, ...){
   int status = HPX_SUCCESS;
   if (!here) {
     status = log_error("hpx_init() must be called before hpx_run()\n");
@@ -234,7 +250,11 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
     goto unwind0;
   }
 
-#ifdef HAVE_APEX
+  //reentrance state init
+  //TODO move to a better place
+  here->reent_state.barrier_trips = hpx_get_num_threads();
+
+#ifdef HAVE_APEX 
   // initialize APEX, give this main thread a name
   apex_init("HPX WORKER THREAD");
   apex_set_node_id(here->rank);
@@ -275,28 +295,86 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
       }
     }
   }
-
   // start the scheduler, this will return after scheduler_shutdown()
   if (scheduler_startup(here->sched, here->config) != LIBHPX_OK) {
     log_error("scheduler shut down with error.\n");
     goto unwind2;
   }
 
-  // clean up after _hpx_143
-  if (_hpx_143 != HPX_NULL) {
-    hpx_gas_free(_hpx_143, HPX_NULL);
-  }
-
-#if defined(HAVE_APEX)
-  // this will add the stats to the APEX data set
-  libhpx_save_apex_stats();
-#endif
+  return status;
 
  unwind2:
   probe_stop();
  unwind1:
   _stop(here);
  unwind0:
+  
+  return status;
+
+}
+
+
+static int _hpx_run_phase2(hpx_action_t *act, int n, ...){
+  int status = HPX_SUCCESS;
+  if (!here) {
+    status = log_error("hpx_init() must be called before hpx_run()\n");
+    goto unwind0;
+  }
+  dbg_assert(here->reent_state.reent_st == REENT_ACTIVE);
+
+  //reentrance state is active
+  //1. send main action parcel
+  //2. system/main thread signal other threads to start work	
+  if (here->rank == 0) {
+    //reset scheduler to some sanity	  
+    scheduler_reset_reent_state(here->sched);
+
+    va_list vargs;
+    va_start(vargs, n);
+    hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, &vargs);
+		  
+    int status = hpx_parcel_send(p, HPX_NULL);
+    va_end(vargs);
+
+    if (status != LIBHPX_OK) {
+	log_error("failed to spawn initial action\n");
+	goto unwind2;
+    }
+  }
+  scheduler_reent_startup(here->sched);
+  goto unwind0;	  
+
+
+ unwind2:
+  probe_stop();
+ unwind1:
+  _stop(here);
+ unwind0:
+  return status;
+}
+
+
+/// Called to run HPX.
+int _hpx_run(hpx_action_t *act, int n, ...) {
+  log("hpx_run starting up .....\n");
+  va_list vargs;
+  va_start(vargs, n);
+  int status = HPX_SUCCESS;
+  if(!here->reent_state.reent_st == REENT_ACTIVE){
+ 	status = _hpx_run_phase1(act, n, &vargs);	 
+  	here->reent_state.reent_st = REENT_ACTIVE;
+  }else{
+ 	status = _hpx_run_phase2(act, n, &vargs);	 
+  }
+
+  //enable global or locality wide synchronization between each hpx_run() calls
+  /*printf("[BEFOREE BARRIER SYNC..] \n");*/
+  boot_barrier(here->boot);
+  /*printf("[AFTER BARRIER SYNC..] \n");*/
+  
+  va_end(vargs);
+  log("hpx_run ending.....\n");
+  
   return status;
 }
 
@@ -321,9 +399,15 @@ void hpx_exit(int code) {
   network_flush_on_shutdown(here->network);
   for (int i = 0, e = here->ranks; i < e; ++i) {
     int e = network_command(here->network, HPX_THERE(i), locality_shutdown,
-                            (uint64_t)code);
+			    (uint64_t)code);
+    /*printf("[HPX NETWRK EXIT COMMAND to %d from locality %d ] \n", i, hpx_get_my_rank());*/
+    /*fflush(stdout);*/
     dbg_check(e);
   }
+  //we do a flush of all remaining network packets - fix for isir transport
+  //there is a probability that network might not progress (to send all outbound shutdown signals) once all threads ssupends
+  //flush will ensure we will progress these forcefully in this thread
+  here->network->flush_all(here->network, 1);
   hpx_thread_exit(HPX_SUCCESS);
 }
 
@@ -357,6 +441,19 @@ const char *hpx_strerror(hpx_status_t s) {
 }
 
 void hpx_finalize() {
+  // clean up after _hpx_143
+  if (_hpx_143 != HPX_NULL) {
+    hpx_gas_free(_hpx_143, HPX_NULL);
+  }
+ 
+#if defined(HAVE_APEX)
+  // this will add the stats to the APEX data set
+  libhpx_save_apex_stats();
+#endif
+
+  probe_stop();
+  _stop(here);
+  
 #if defined(ENABLE_PROFILING)
   libhpx_stats_print();
 #endif

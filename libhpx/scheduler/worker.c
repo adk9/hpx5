@@ -693,6 +693,57 @@ void worker_fini(worker_t *w) {
 static void _null(hpx_parcel_t *p, void *env) {
 }
 
+int worker_wait(){
+  int status = 0 ;
+  int barrier_enabled = 0 ;
+  pthread_mutex_lock(here->reent_state.reent_mutex);
+  barrier_enabled = here->reent_state.barrier_enabled;
+  
+  if(barrier_enabled){
+     struct scheduler *sched = here->sched;
+     ++(here->reent_state.barrier_count);
+
+     //other workers will wait on condition untill notified again in the next hpx_run epoch
+     
+     if (here->reent_state.barrier_count >= here->reent_state.barrier_trips) {
+        here->reent_state.barrier_count = 0;
+	pthread_cond_broadcast(here->reent_state.reent_wait);
+	
+	status = _locality_ready_for_shutdown(here);
+	/*printf("======== exit barrier\n");*/
+	if(status){
+	  /*printf("======== disable barrier \n");*/
+	  here->reent_state.barrier_enabled = 0 ;
+ 	}
+     }else{
+     	pthread_cond_wait(here->reent_state.reent_wait, here->reent_state.reent_mutex);
+	status = _locality_ready_for_shutdown(here);
+     }
+  }
+  pthread_mutex_unlock(here->reent_state.reent_mutex);
+  return status;
+}
+
+int worker_is_master_thread(){
+	return self->id == 0 ;
+}
+
+int worker_wait_if_slave(void){
+  int is_slave = !worker_is_master_thread();	
+  if(is_slave){
+     struct scheduler *sched = here->sched;
+     /*system_barrier_wait(&sched->barrier);*/
+     //other workers will wait on condition untill notified again in the next hpx_run epoch
+     worker_wait();
+  }
+
+  return is_slave;
+}
+
+int worker_wait_policy(){
+	return worker_wait_if_slave();
+}
+
 int worker_start(void) {
   dbg_assert(self);
 
@@ -717,28 +768,45 @@ int worker_start(void) {
 
   // wait for local threads to start up
   struct scheduler *sched = here->sched;
-  system_barrier_wait(&sched->barrier);
+
+  //reset shutdown flag
+  if(here->reent_state.reent_st == REENT_ACTIVE){
+	  sync_store(&sched->shutdown, INT_MAX, SYNC_RELEASE);
+  }else{
 
   // allocate a parcel and a stack header for the system stack
-  hpx_parcel_t p;
-  parcel_init(0, 0, 0, 0, 0, NULL, 0, &p);
-  ustack_t stack = {
-    .sp = NULL,
-    .parcel = &p,
-    .next = NULL,
-    .lco_depth = 0,
-    .tls_id = -1,
-    .stack_id = -1,
-    .size = 0,
-    .affinity = -1
-  };
-  p.ustack = &stack;
+    hpx_parcel_t* p = malloc(sizeof(hpx_parcel_t));
+    parcel_init(0, 0, 0, 0, 0, NULL, 0, p);
+	
+    ustack_t tmp_stack = {
+    	.sp = NULL,
+    	.parcel = p,
+    	.next = NULL,
+    	.lco_depth = 0,
+    	.tls_id = -1,
+    	.stack_id = -1,
+    	.size = 0,
+    	.affinity = -1
+  	};
+    ustack_t* stack = malloc(sizeof(ustack_t)); 
+    *stack = tmp_stack;    
+    p->ustack = stack;
 
-  self->system = &p;
-  self->current = self->system;
+    self->system = p;
+    self->current = self->system;
+  }
 
+  /*system_barrier_wait(&sched->barrier);*/
+  worker_wait();
   // the system thread will loop to find work until the scheduler has shutdown
-  while (!worker_is_shutdown()) {
+  while (true){
+    if(worker_is_shutdown() && !worker_wait_policy()){
+    	break;
+    }
+    if(_locality_ready_for_shutdown(here)){
+	worker_wait();    
+    	break;
+    }
     _schedule(_null, NULL, 1);
   }
 
