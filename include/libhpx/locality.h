@@ -41,6 +41,7 @@ struct config;
 struct network;
 struct scheduler;
 struct topology;
+struct percolation;
 /// @}
 
 /// The locality object.
@@ -73,6 +74,9 @@ typedef struct locality {
   struct config              *config;
   const struct action_table *actions;
   struct topology          *topology;
+#ifdef HAVE_PERCOLATION
+  struct percolation    *percolation;
+#endif
 } locality_t;
 
 /// Inter-locality action interface.
