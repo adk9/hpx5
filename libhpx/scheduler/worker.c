@@ -273,6 +273,10 @@ static chase_lev_ws_deque_t *_work(worker_t *worker) {
   return &worker->queues[worker->work_id].work;
 }
 
+static chase_lev_ws_deque_t *_yielded(worker_t *worker) {
+  return &worker->queues[1 - worker->work_id].work;
+}
+
 /// Add a parcel to the top of the worker's work queue.
 ///
 /// This interface is designed so that it can be used as a schedule()
@@ -299,7 +303,12 @@ static hpx_parcel_t *_schedule_lifo(worker_t *w) {
 
 /// Process the next available yielded thread.
 static hpx_parcel_t *_schedule_yielded(worker_t *w) {
-  return sync_two_lock_queue_dequeue(&here->sched->yielded);
+  // return sync_two_lock_queue_dequeue(&here->sched->yielded);
+  // hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(_yield(w));
+  // EVENT_POP_LIFO(p);
+  // EVENT_WQSIZE(w);
+  // return p;
+  return NULL;
 }
 
 /// Send a mail message to another worker.
@@ -636,7 +645,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
     }
 
     // couldn't find any work to do, we sleep for a while before looking again
-    system_usleep(1);
+    // system_usleep(1);
     INST(spins++);
   }
 
@@ -838,8 +847,10 @@ void scheduler_spawn(hpx_parcel_t *p) {
 ///    processed in FIFO order by threads that don't have anything else to do.
 ///
 static void _yield(hpx_parcel_t *p, void *env) {
-  sync_two_lock_queue_enqueue(&here->sched->yielded, p);
-  self->yielded = 0;
+  // sync_two_lock_queue_enqueue(&here->sched->yielded, p);
+  worker_t *w = self;
+  sync_chase_lev_ws_deque_push(_yielded(w), p);
+  w->yielded = 0;
 }
 
 void scheduler_yield(void) {
