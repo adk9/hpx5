@@ -467,7 +467,7 @@ bool action_is_function(const struct action_table *table, hpx_action_t id) {
 }
 
 bool action_is_opencl(const struct action_table *table, hpx_action_t id) {
-  return (action_table_get_type(table, id) == HPX_OPENCL_KERNEL);
+  return (action_table_get_type(table, id) == HPX_OPENCL);
 }
 
 static int

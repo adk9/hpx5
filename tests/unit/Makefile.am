@@ -37,6 +37,7 @@ TESTS = allreduce               \
         parcel_send             \
         parcel_send_rendezvous  \
         parcel_send_through     \
+        percolation             \
         process                 \
         runtime                 \
         thread_set_affinity     \
@@ -90,6 +91,7 @@ parcel_create_DEPENDENCIES          = $(HPX_APPS_DEPS)
 parcel_send_DEPENDENCIES            = $(HPX_APPS_DEPS)
 parcel_send_rendezvous_DEPENDENCIES = $(HPX_APPS_DEPS)
 parcel_send_through_DEPENDENCIES    = $(HPX_APPS_DEPS)
+percolation_DEPENDENCIES            = $(HPX_APPS_DEPS)
 process_DEPENDENCIES                = $(HPX_APPS_DEPS)
 runtime_DEPENDENCIES                = $(HPX_APPS_DEPS)
 task_DEPENDENCIES                   = $(HPX_APPS_DEPS)

@@ -6,7 +6,7 @@
 # ------------------------------------------------------------------------------
 AC_DEFUN([HPX_CONFIG_PERCOLATION], [
  AC_ARG_ENABLE([percolation],
-   [AS_HELP_STRING([--enable-percolation], [Enable percolation support
+   [AS_HELP_STRING([--enable-percolation], [Enable percolation support @<:@default=no@:>@])],
    [], [enable_percolation=no])
 
  AS_IF([test "x$enable_percolation" != xno],
