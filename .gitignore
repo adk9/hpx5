@@ -108,7 +108,7 @@ contrib/libcuckoo/
 /tests/Makefile
 /tests/Makefile.in
 /tests/unit/Makefile
-tests/unit/apex_test
+tests/unit/apex
 tests/unit/allreduce
 tests/unit/call_when
 tests/unit/call_vectored
