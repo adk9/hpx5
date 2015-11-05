@@ -168,7 +168,7 @@ void scheduler_delete(struct scheduler *sched) {
     return;
   }
 
-  printf("[HPX WAIT THREAD JOIN..] \n");
+  log("hpx finalizing worker threads..] \n");
   _locality_shutdown(here);
   worker_wait();
 
@@ -177,7 +177,7 @@ void scheduler_delete(struct scheduler *sched) {
     worker = scheduler_get_worker(sched, i);
     _join(worker);
   }
-  printf("[HPX DONE THREAD JOIN...] \n");
+  log("hpx finalizing thread join completed..] \n");
   // unbind this thread's worker
   self = NULL;
 
