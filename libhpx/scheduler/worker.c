@@ -574,29 +574,34 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   int source = -1;
   int spins = 0;
   hpx_parcel_t *p = NULL;
+  worker_t *w = self;
   while (!worker_is_shutdown()) {
     if (!block) {
-      p = _schedule_lifo(self);
+      p = _schedule_lifo(w);
       if (INSTRUMENTATION && p != NULL) {
         source = SOURCE_LIFO;
       }
       break;
     }
 
-    _handle_mail(self);
+    _handle_mail(w);
 
     // If we're not supposed to be active, then don't schedule anything.
     if (!worker_is_active()) {
       continue;
     }
 
-    if ((p = _schedule_lifo(self))) {
+    // See if we have primary lifo work.
+    if ((p = _schedule_lifo(w))) {
       INST(source = SOURCE_LIFO);
       break;
     }
 
+    // Swap our yield queue with our primary queue
+    w->work_id = 1 - w->work_id;
+
     // randomly determine if we yield or steal first
-    int r = rand_r(&self->seed);
+    int r = rand_r(&w->seed);
     hpx_parcel_t *(*yield_steal_0)(worker_t *) = NULL;
     hpx_parcel_t *(*yield_steal_1)(worker_t *) = NULL;
     if (r < RAND_MAX/2) {
@@ -610,7 +615,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
       yield_steal_1 = _schedule_yielded;
     }
 
-    if ((p = yield_steal_0(self))) {
+    if ((p = yield_steal_0(w))) {
       if (INSTRUMENTATION && yield_steal_0 == _schedule_yielded) {
         source = SOURCE_YIELD;
       }
@@ -620,7 +625,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
       break;
     }
 
-    if ((p = yield_steal_1(self))) {
+    if ((p = yield_steal_1(w))) {
       if (INSTRUMENTATION && yield_steal_1 == _schedule_yielded) {
         source = SOURCE_YIELD;
       }
@@ -638,13 +643,13 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   // This somewhat clunky expression just makes sure that, if we found a parcel
   // to transfer to then it has a stack, or if we didn't find anything to
   // transfer to then pick the system stack
-  p = (p) ? _try_bind(self, p) : self->system;
+  p = (p) ? _try_bind(w, p) : w->system;
 
   inst_trace(HPX_INST_SCHEDTIMES, HPX_INST_SCHEDTIMES_SCHED,
     start_time, source, spins);
 
   // don't transfer to the same parcel
-  if (p != self->current) {
+  if (p != w->current) {
     _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = f, .env = env });
   }
 
