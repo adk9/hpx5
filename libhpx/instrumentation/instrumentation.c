@@ -158,8 +158,7 @@ int inst_init(config_t *cfg) {
 #ifndef ENABLE_INSTRUMENTATION
   return LIBHPX_OK;
 #endif
-  if (!config_trace_classes_isset(cfg, LIBHPX_OPT_BITSET_ALL)
-      && !config_prof_counters_isset(cfg, LIBHPX_OPT_BITSET_ALL)) {
+  if (!cfg->inst_dir) {
     return LIBHPX_OK;
   }
 
