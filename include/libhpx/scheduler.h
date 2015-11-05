@@ -47,11 +47,6 @@ struct config;
 struct cvar;
 /// @}
 
-/// Typedefs
-/// @{
-typedef two_lock_queue_t yield_queue_t;
-/// @}
-
 /// The scheduler class.
 ///
 /// The scheduler class represents the shared-memory state of the entire
@@ -66,7 +61,6 @@ typedef two_lock_queue_t yield_queue_t;
 /// table, though all of the functionality that is required to make this work is
 /// not implemented.
 struct scheduler {
-  yield_queue_t       yielded;
   volatile int       shutdown;
   volatile int    next_tls_id;
   int               n_workers;
