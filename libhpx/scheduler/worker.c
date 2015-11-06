@@ -592,7 +592,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
     // If we're not supposed to be active, then don't schedule anything.
     if (!worker_is_active()) {
       // make sure we don't have anything stuck in our yield queue
-      while (p = sync_chase_lev_ws_deque_pop(_yielded(w))) {
+      while ((p = sync_chase_lev_ws_deque_pop(_yielded(w)))) {
         _push_lifo(p, w);
       }
       continue;
