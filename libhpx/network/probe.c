@@ -63,6 +63,8 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _probe, _probe_handler, HPX_POINTER);
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _progress, _progress_handler, HPX_POINTER);
 
 int probe_start(network_t *network) {
+  return HPX_SUCCESS;
+
   // NB: we should encapsulate this probe infrastructure inside of the networks
   // themselves, but for now we just avoid probing for SMP.
   if (network->type == HPX_NETWORK_SMP) {
