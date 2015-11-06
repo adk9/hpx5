@@ -36,6 +36,8 @@ AC_DEFUN([HPX_DO_AM_CONDITIONALS], [
  AM_CONDITIONAL([HAVE_LIBCUCKOO], [test "x$have_libcuckoo" == xyes])
  AM_CONDITIONAL([HAVE_PAPI], [test "x$have_papi" == xyes])
  AM_CONDITIONAL([HAVE_APEX], [test "x$have_apex" == xyes])
+ AM_CONDITIONAL([HAVE_PERCOLATION], [test "x$have_percolation" == xyes])
+ AM_CONDITIONAL([HAVE_OPENCL], [test "x$have_opencl" == xyes])
 
  AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" == xyes])
  AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" == xyes])
