@@ -159,13 +159,15 @@ const _table_t *action_table_finalize(void) {
     const char *key = table->entries[i].key;
     hpx_action_type_t type = table->entries[i].type;
     hpx_action_handler_t f = table->entries[i].handler;
-    
+
+#ifdef HAVE_PERCOLATION
     if (here->percolation && type == HPX_OPENCL) {
       void *env = percolation_prepare(here->percolation, key, (const char*)f);
       dbg_assert_str(env, "failed to prepare percolation kernel: %s\n", key);
       table->entries[i].handler =
         (hpx_action_handler_t)percolation_execute_handler;
     }
+#endif
 
     log_action("%d: %s (%p) %s %x.\n", *table->entries[i].id,
                key, (void*)(uintptr_t)f, HPX_ACTION_TYPE_TO_STRING[type],
@@ -186,10 +188,12 @@ void action_table_free(const _table_t *table) {
       free(cif);
     }
 
+#ifdef HAVE_PERCOLATION
     void *env = table->entries[i].env;
     if (env && table->entries[i].type == HPX_OPENCL) {
       percolation_destroy(here->percolation, env);
     }
+#endif
   }
   free((void*)table);
 }
