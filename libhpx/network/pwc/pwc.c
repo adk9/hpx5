@@ -63,13 +63,19 @@ static hpx_parcel_t *_probe(pwc_network_t *pwc, int rank) {
 
 static int _pwc_progress(void *network, int id) {
   pwc_network_t *pwc = network;
-  _probe_local(pwc, id);
+  if (sync_swap(&pwc->progress_lock, 0, SYNC_ACQUIRE)) {
+    _probe_local(pwc, id);
+    sync_store(&pwc->progress_lock, 1, SYNC_RELEASE);
+  }
   return 0;
 }
 
 static hpx_parcel_t *_pwc_probe(void *network, int rank) {
   pwc_network_t *pwc = network;
-  _probe(pwc, XPORT_ANY_SOURCE);
+  if (sync_swap(&pwc->probe_lock, 0, SYNC_ACQUIRE)) {
+    _probe(pwc, XPORT_ANY_SOURCE);
+    sync_store(&pwc->probe_lock, 1, SYNC_RELEASE);
+  }
   return NULL;
 }
 
