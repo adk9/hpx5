@@ -54,7 +54,7 @@ typedef struct pwc_xport {
   int (*command)(const xport_op_t *op);
   int (*pwc)(xport_op_t *op);
   int (*gwc)(xport_op_t *op);
-  int (*test)(command_t *op, int *remaining, int *src);
+  int (*test)(command_t *op, int *remaining, int id, int *src);
   int (*probe)(command_t *op, int *remaining, int rank, int *src);
   void (*pin)(const void *base, size_t bytes, void *key);
   void (*unpin)(const void *base, size_t bytes);

@@ -613,6 +613,9 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
       break;
     }
 
+    // Try and progress the network
+
+
     // couldn't find any work to do, eagerly spin
     INST(spins++);
   }

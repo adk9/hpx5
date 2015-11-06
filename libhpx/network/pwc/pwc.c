@@ -39,13 +39,13 @@ typedef struct heap_segment {
   xport_key_t key;
 } heap_segment_t;
 
-static void _probe_local(pwc_network_t *pwc) {
+static void _probe_local(pwc_network_t *pwc, int id) {
   int rank = here->rank;
 
   // Each time through the loop, we deal with local completions.
   command_t command;
   int src;
-  while (pwc->xport->test(&command, NULL, &src)) {
+  while (pwc->xport->test(&command, NULL, XPORT_ANY_SOURCE, &src)) {
     int e = command_run(rank, command);
     dbg_check(e, "failed to process local command\n");
   }
@@ -61,9 +61,9 @@ static hpx_parcel_t *_probe(pwc_network_t *pwc, int rank) {
   return NULL;
 }
 
-static int _pwc_progress(void *network) {
+static int _pwc_progress(void *network, int id) {
   pwc_network_t *pwc = network;
-  _probe_local(pwc);
+  _probe_local(pwc, id);
   return 0;
 }
 
@@ -177,7 +177,7 @@ static void _pwc_flush(pwc_network_t *pwc) {
   int remaining, src;
   command_t command;
   do {
-    pwc->xport->test(&command, &remaining, &src);
+    pwc->xport->test(&command, &remaining, XPORT_ANY_SOURCE, &src);
   } while (remaining > 0);
   boot_barrier(here->boot);
 }

@@ -51,7 +51,7 @@ static int _probe_handler(network_t *network) {
 static int _progress_handler(network_t *network) {
   while (!scheduler_is_shutdown(here->sched)) {
     INST(uint64_t start_time = hpx_time_to_ns(hpx_time_now()));
-    network_progress(network);
+    network_progress(network, 0);
     inst_trace(HPX_INST_SCHEDTIMES, HPX_INST_SCHEDTIMES_PROGRESS, start_time);
     hpx_thread_yield();
   }
