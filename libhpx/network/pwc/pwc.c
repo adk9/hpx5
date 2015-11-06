@@ -221,7 +221,10 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   }
 
   // Allocate the network object and initialize its virtual function table.
-  pwc_network_t *pwc = malloc(sizeof(*pwc));
+  pwc_network_t *pwc;
+  posix_memalign((void*)&pwc, HPX_CACHELINE_SIZE, sizeof(*pwc));
+  dbg_assert(pwc);
+
   pwc->vtable.type = HPX_NETWORK_PWC;
   pwc->vtable.delete = _pwc_delete;
   pwc->vtable.progress = _pwc_progress;
@@ -236,6 +239,10 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   pwc->vtable.release_dma = _pwc_release_dma;
   pwc->vtable.lco_get = pwc_lco_get;
   pwc->vtable.lco_wait = pwc_lco_wait;
+
+  // Initialize locks.
+  sync_store(&pwc->probe_lock, 1, SYNC_RELEASE);
+  sync_store(&pwc->progress_lock, 1, SYNC_RELEASE);
 
   // Initialize transports.
   pwc->cfg = cfg;
