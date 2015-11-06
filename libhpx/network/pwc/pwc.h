@@ -16,6 +16,7 @@
 
 #include <hpx/hpx.h>
 #include <libhpx/network.h>
+#include <libhpx/padding.h>
 
 /// Forward declarations.
 /// @{
@@ -34,6 +35,12 @@ typedef struct {
   struct parcel_emulator    *parcels;
   struct send_buffer   *send_buffers;
   struct heap_segment *heap_segments;
+  PAD_TO_CACHELINE(sizeof(network_t) +
+                   5 * sizeof(void*));
+  volatile int probe_lock;
+  PAD_TO_CACHELINE(sizeof(int));
+  volatile int progress_lock;
+  PAD_TO_CACHELINE(sizeof(int));
 } pwc_network_t;
 
 /// Allocate and initialize a PWC network instance.
