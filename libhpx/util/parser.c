@@ -85,6 +85,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-photon-ibsrq=integer\n                                [verbs] number of shared receive queues\n                                  (default 0, disabled)",
   "      --hpx-photon-btethresh=integer\n                                [ugni] set size in bytes for when BTE is used\n                                  over FMA",
   "      --hpx-photon-fiprov=provider\n                                [libfabric] provider to use (sockets, psm,\n                                  etc.)",
+  "      --hpx-photon-fidev=interface\n                                [libfabric] network interface to use",
   "      --hpx-photon-ledgersize=integer\n                                set number of ledger entries",
   "      --hpx-photon-eagerbufsize=bytes\n                                set size of eager buffers",
   "      --hpx-photon-smallpwcsize=bytes\n                                set PWC small msg limit",
@@ -199,6 +200,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_photon_ibsrq_given = 0 ;
   args_info->hpx_photon_btethresh_given = 0 ;
   args_info->hpx_photon_fiprov_given = 0 ;
+  args_info->hpx_photon_fidev_given = 0 ;
   args_info->hpx_photon_ledgersize_given = 0 ;
   args_info->hpx_photon_eagerbufsize_given = 0 ;
   args_info->hpx_photon_smallpwcsize_given = 0 ;
@@ -272,6 +274,8 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_photon_btethresh_orig = NULL;
   args_info->hpx_photon_fiprov_arg = NULL;
   args_info->hpx_photon_fiprov_orig = NULL;
+  args_info->hpx_photon_fidev_arg = NULL;
+  args_info->hpx_photon_fidev_orig = NULL;
   args_info->hpx_photon_ledgersize_orig = NULL;
   args_info->hpx_photon_eagerbufsize_orig = NULL;
   args_info->hpx_photon_smallpwcsize_orig = NULL;
@@ -342,14 +346,15 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_photon_ibsrq_help = hpx_options_t_help[48] ;
   args_info->hpx_photon_btethresh_help = hpx_options_t_help[49] ;
   args_info->hpx_photon_fiprov_help = hpx_options_t_help[50] ;
-  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[51] ;
-  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[52] ;
-  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[53] ;
-  args_info->hpx_photon_maxrd_help = hpx_options_t_help[54] ;
-  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[55] ;
-  args_info->hpx_photon_numcq_help = hpx_options_t_help[56] ;
-  args_info->hpx_photon_usercq_help = hpx_options_t_help[57] ;
-  args_info->hpx_opt_smp_help = hpx_options_t_help[59] ;
+  args_info->hpx_photon_fidev_help = hpx_options_t_help[51] ;
+  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[52] ;
+  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[53] ;
+  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[54] ;
+  args_info->hpx_photon_maxrd_help = hpx_options_t_help[55] ;
+  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[56] ;
+  args_info->hpx_photon_numcq_help = hpx_options_t_help[57] ;
+  args_info->hpx_photon_usercq_help = hpx_options_t_help[58] ;
+  args_info->hpx_opt_smp_help = hpx_options_t_help[60] ;
   
 }
 
@@ -524,6 +529,8 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_photon_btethresh_orig));
   free_string_field (&(args_info->hpx_photon_fiprov_arg));
   free_string_field (&(args_info->hpx_photon_fiprov_orig));
+  free_string_field (&(args_info->hpx_photon_fidev_arg));
+  free_string_field (&(args_info->hpx_photon_fidev_orig));
   free_string_field (&(args_info->hpx_photon_ledgersize_orig));
   free_string_field (&(args_info->hpx_photon_eagerbufsize_orig));
   free_string_field (&(args_info->hpx_photon_smallpwcsize_orig));
@@ -684,6 +691,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-photon-btethresh", args_info->hpx_photon_btethresh_orig, 0);
   if (args_info->hpx_photon_fiprov_given)
     write_into_file(outfile, "hpx-photon-fiprov", args_info->hpx_photon_fiprov_orig, 0);
+  if (args_info->hpx_photon_fidev_given)
+    write_into_file(outfile, "hpx-photon-fidev", args_info->hpx_photon_fidev_orig, 0);
   if (args_info->hpx_photon_ledgersize_given)
     write_into_file(outfile, "hpx-photon-ledgersize", args_info->hpx_photon_ledgersize_orig, 0);
   if (args_info->hpx_photon_eagerbufsize_given)
@@ -1343,6 +1352,7 @@ hpx_option_parser_internal (
         { "hpx-photon-ibsrq",	1, NULL, 0 },
         { "hpx-photon-btethresh",	1, NULL, 0 },
         { "hpx-photon-fiprov",	1, NULL, 0 },
+        { "hpx-photon-fidev",	1, NULL, 0 },
         { "hpx-photon-ledgersize",	1, NULL, 0 },
         { "hpx-photon-eagerbufsize",	1, NULL, 0 },
         { "hpx-photon-smallpwcsize",	1, NULL, 0 },
@@ -1883,6 +1893,20 @@ hpx_option_parser_internal (
                 &(local_args_info.hpx_photon_fiprov_given), optarg, 0, 0, ARG_STRING,
                 check_ambiguity, override, 0, 0,
                 "hpx-photon-fiprov", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* [libfabric] network interface to use.  */
+          else if (strcmp (long_options[option_index].name, "hpx-photon-fidev") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_photon_fidev_arg), 
+                 &(args_info->hpx_photon_fidev_orig), &(args_info->hpx_photon_fidev_given),
+                &(local_args_info.hpx_photon_fidev_given), optarg, 0, 0, ARG_STRING,
+                check_ambiguity, override, 0, 0,
+                "hpx-photon-fidev", '-',
                 additional_error))
               goto failure;
           
