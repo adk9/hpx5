@@ -191,7 +191,7 @@ _funneled_release_dma(void *obj, const void* base, size_t n) {
 }
 
 static int
-_funneled_progress(void *network) {
+_funneled_progress(void *network, int id) {
   _funneled_t *isir = network;
   hpx_parcel_t *chain = irecv_buffer_progress(&isir->irecvs);
   int n = 0;
