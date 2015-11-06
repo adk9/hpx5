@@ -39,3 +39,6 @@ bin_SCRIPTS = scripts/hpx-config
 
 install-exec-hook:
 	cd $(DESTDIR)$(libdir); find $(DESTDIR)$(libdir) -type f -name \*.la -delete
+
+uninstall-hook:
+	rm -rf $(prefix)
