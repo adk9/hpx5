@@ -199,30 +199,32 @@ _funneled_release_dma(void *obj, const void* base, size_t n) {
 static int
 _funneled_progress(void *network, int id) {
   _funneled_t *isir = network;
-  hpx_parcel_t *chain = irecv_buffer_progress(&isir->irecvs);
-  int n = 0;
-  if (chain) {
-    ++n;
-    sync_two_lock_queue_enqueue(&isir->recvs, chain);
+  if (sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE)) {
+    hpx_parcel_t *chain = irecv_buffer_progress(&isir->irecvs);
+    int n = 0;
+    if (chain) {
+      ++n;
+      sync_two_lock_queue_enqueue(&isir->recvs, chain);
+    }
+
+    DEBUG_IF(n) {
+      log_net("completed %d recvs\n", n);
+    }
+
+    int m = isend_buffer_progress(&isir->isends);
+
+    DEBUG_IF(m) {
+      log_net("completed %d sends\n", m);
+    }
+
+    _send_all(isir);
+    sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
+    (void)n;
+    (void)m;
   }
-
-  DEBUG_IF(n) {
-    log_net("completed %d recvs\n", n);
-  }
-
-  int m = isend_buffer_progress(&isir->isends);
-
-  DEBUG_IF(m) {
-    log_net("completed %d sends\n", m);
-  }
-
-  _send_all(isir);
-
   return LIBHPX_OK;
 
   // suppress unused warnings
-  (void)n;
-  (void)m;
 }
 
 network_t *
