@@ -55,7 +55,7 @@ __thread worker_t * volatile self = NULL;
 static void EVENT_WQSIZE(worker_t *w) {
   static const int class = INST_SCHED;
   static const int id = HPX_INST_EVENT_SCHED_WQSIZE;
-  inst_trace(class, id, sync_chase_lev_ws_deque_size(&w->work));
+  inst_trace(class, id, sync_chase_lev_ws_deque_size(&w->queues[w->work_id].work));
 }
 
 static void EVENT_PUSH_LIFO(hpx_parcel_t *p) {
