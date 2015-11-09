@@ -23,7 +23,7 @@
 #include "isir/isir.h"
 #include "pwc/pwc.h"
 #include "smp.h"
-
+#include <libhpx/coalescing_network.h>
 static const int LEVEL = HPX_LOG_CONFIG | HPX_LOG_NET | HPX_LOG_DEFAULT;
 
 network_t *network_new(config_t *cfg, boot_t *boot, struct gas *gas) {
@@ -101,6 +101,10 @@ network_t *network_new(config_t *cfg, boot_t *boot, struct gas *gas) {
   else {
     log_level(LEVEL, "%s network initialized\n", HPX_NETWORK_TO_STRING[type]);
   }
+
+  if (cfg->coalescing_enabled) {
+    network = (network_t*) coalesced_network_new(network);
+  } 
 
   return network;
 }

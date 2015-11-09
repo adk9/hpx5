@@ -58,7 +58,7 @@ static int _delete_launch_through_parcel_handler(hpx_parcel_t *p) {
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _delete_launch_through_parcel,
                      _delete_launch_through_parcel_handler, HPX_POINTER);
 
-static void _prepare(hpx_parcel_t *p) {
+void _prepare(hpx_parcel_t *p) {
   parcel_state_t state = parcel_get_state(p);
   if (!parcel_serialized(state) && p->size) {
     void *buffer = hpx_parcel_get_data(p);
