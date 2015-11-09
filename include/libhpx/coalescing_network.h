@@ -48,6 +48,7 @@ static int coalesced_network_send(void *network,  hpx_parcel_t *p);
 static int coalesced_network_progress(void *obj);
 static uint64_t coalesced_network_parcel_queue_size(void *network);
 static uint64_t coalesced_network_buffer_size(void *obj);
+
 static int coalesced_network_pwc(void *obj, hpx_addr_t to, const void *from, size_t n,
 		   hpx_action_t lop, hpx_addr_t laddr, hpx_action_t rop,
 				 hpx_addr_t raddr);
@@ -201,6 +202,7 @@ static void _send_all(coalesced_network_t *coalesced_network) {
        break;
      
      //printf("temporarily copying contents\n");
+
      //append to the chain
      parcel_stack_push(&coalesced_chain, p);
      number_of_parcels_dequeued++ ;
