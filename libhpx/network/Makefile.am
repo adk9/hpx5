@@ -13,7 +13,7 @@ libnetwork_la_SOURCES  = locality.c \
                          parcel_block.c \
                          hpx_parcel_glue.c \
                          probe.c \
-                         smp.c \
+                         smp.c inst.c \
                          commands.c
 
 if HAVE_NETWORK

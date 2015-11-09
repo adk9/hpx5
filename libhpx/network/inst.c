@@ -16,6 +16,7 @@
 
 #include <stdlib.h>
 #include <libhpx/debug.h>
+#include <libhpx/instrumentation.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/network.h>
 
@@ -29,12 +30,11 @@ typedef struct {
 // Define the transports allowed for the SMP network
 static void _inst_delete(void *network) {
   _inst_network_t *inst = network;
-  inst->impl->delete(impl);
+  inst->impl->delete(network);
   free(inst);
 }
 
 static int _inst_progress(void *network, int id) {
-  assert(false);
   _inst_network_t *inst = network;
   uint64_t start_time = hpx_time_to_ns(hpx_time_now());
   int r = inst->impl->progress(network, id);
@@ -65,7 +65,7 @@ static int _inst_put(void *network, hpx_addr_t to,
                     const void *from, size_t n,
                     hpx_action_t lop, hpx_addr_t laddr) {
   _inst_network_t *inst = network;
-  return inst->impl->pu(network, to, from, n, lop, laddr);
+  return inst->impl->put(network, to, from, n, lop, laddr);
 }
 
 static int _inst_get(void *network, void *to, hpx_addr_t from, size_t n,
@@ -84,7 +84,7 @@ static hpx_parcel_t *_inst_probe(void *network, int nrx) {
 
 static void _inst_set_flush(void *network) {
   _inst_network_t *inst = network;
-  inst->impl->flush(network);
+  inst->impl->set_flush(network);
 }
 
 static void _inst_register_dma(void *network, const void *addr, size_t n,
@@ -100,7 +100,7 @@ static void _inst_release_dma(void *network, const void *addr, size_t n) {
 
 static int _inst_lco_wait(void *network, hpx_addr_t lco, int reset) {
   _inst_network_t *inst = network;
-  return inst->impl->(network, lco, reset);
+  return inst->impl->lco_wait(network, lco, reset);
 }
 
 static int _inst_lco_get(void *network, hpx_addr_t lco, size_t n, void *to,
@@ -109,44 +109,27 @@ static int _inst_lco_get(void *network, hpx_addr_t lco, size_t n, void *to,
   return inst->impl->lco_get(network, lco, n, to, reset);
 }
 
-static network_t _inst = {
-  .type = HPX_NETWORK_INST,
-  .delete = _inst_delete,
-  .progress = _inst_progress,
-  .send = _inst_send,
-  .command = _inst_command,
-  .pwc = _inst_pwc,
-  .put = _inst_put,
-  .get = _inst_get,
-  .probe = _inst_probe,
-  .set_flush = _inst_set_flush,
-  .register_dma = _inst_register_dma,
-  .release_dma = _inst_release_dma,
-  .lco_get = _inst_lco_get,
-  .lco_wait = _inst_lco_wait
-};
-
 network_t *network_inst_new(network_t *impl) {
   dbg_assert(impl);
   _inst_network_t *inst = malloc(sizeof(*inst));
   dbg_assert(inst);
 
-  inst->vtable.type = impl->vtable.type;
+  inst->vtable.type = impl->type;
   inst->vtable.delete = _inst_delete;
   inst->vtable.progress = _inst_progress;
   inst->vtable.send = _inst_send;
-  inst->vtable.command = inst_command;
-  inst->vtable.inst = _inst_inst;
+  inst->vtable.command = _inst_command;
+  inst->vtable.pwc = _inst_pwc;
   inst->vtable.put = _inst_put;
   inst->vtable.get = _inst_get;
   inst->vtable.probe = _inst_probe;
   inst->vtable.set_flush = _inst_set_flush;
   inst->vtable.register_dma = _inst_register_dma;
   inst->vtable.release_dma = _inst_release_dma;
-  inst->vtable.lco_get = inst_lco_get;
-  inst->vtable.lco_wait = inst_lco_wait;
+  inst->vtable.lco_get = _inst_lco_get;
+  inst->vtable.lco_wait = _inst_lco_wait;
 
   inst->impl = impl;
 
-  return inst;
+  return &inst->vtable;
 }
