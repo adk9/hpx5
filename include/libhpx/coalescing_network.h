@@ -48,6 +48,22 @@ static int coalesced_network_send(void *network,  hpx_parcel_t *p);
 static int coalesced_network_progress(void *obj);
 static uint64_t coalesced_network_parcel_queue_size(void *network);
 static uint64_t coalesced_network_buffer_size(void *obj);
+static int coalesced_network_pwc(void *obj, hpx_addr_t to, const void *from, size_t n,
+		   hpx_action_t lop, hpx_addr_t laddr, hpx_action_t rop,
+				 hpx_addr_t raddr);
+static int coalesced_network_put(void *obj, hpx_addr_t to, const void *from, size_t n,
+				 hpx_action_t lop, hpx_addr_t laddr);
+static int coalesced_network_get(void *obj, void *to, hpx_addr_t from, size_t n,
+				 hpx_action_t lop, hpx_addr_t laddr);
+static hpx_parcel_t* coalesced_network_probe(void *obj, int rank);
+static void coalesced_network_set_flush(void *obj);
+static void coalesced_network_register_dma(void *obj, const void *base, size_t bytes, void *key);
+static void coalesced_network_release_dma(void *obj, const void *base, size_t bytes);
+static int coalesced_network_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset);
+static int coalesced_network_lco_wait(void *obj, hpx_addr_t lco, int reset);
+static void coalesced_network_delete(void *obj);
+static int coalesced_network_command(void *obj, hpx_addr_t locality, hpx_action_t op,
+				     uint64_t args);
 
 static int coalesced_network_pwc(void *obj, hpx_addr_t to, const void *from, size_t n,
 		   hpx_action_t lop, hpx_addr_t laddr, hpx_action_t rop,
