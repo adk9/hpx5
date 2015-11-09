@@ -88,6 +88,9 @@ typedef struct network {
 
   void (*register_dma)(void *, const void *base, size_t bytes, void *key);
   void (*release_dma)(void *, const void *base, size_t bytes);
+
+  uint64_t (*send_buffer_size)(void *);
+
 } network_t;
 
 /// Create a new network.
@@ -293,6 +296,11 @@ static inline int
 network_lco_wait(void *obj, hpx_addr_t lco, int reset) {
   network_t *network = obj;
   return network->lco_wait(network, lco, reset);
+}
+
+static inline uint64_t network_send_buffer_size(void *obj) {
+  network_t *network = obj;
+  return network->send_buffer_size(network);
 }
 
 #endif // LIBHPX_NETWORK_H

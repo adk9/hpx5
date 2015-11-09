@@ -41,6 +41,7 @@ typedef struct {
   const char _paddinga[HPX_CACHELINE_SIZE - sizeof(two_lock_queue_node_t*)];
   two_lock_queue_node_t *tail;
   const char _paddingb[HPX_CACHELINE_SIZE - sizeof(two_lock_queue_node_t*)];
+  uint64_t size;
 } HPX_ALIGNED(64) two_lock_queue_t;
 
 #define SYNC_TWO_LOCK_QUEUE_INIT {              \
@@ -50,27 +51,30 @@ typedef struct {
     ._paddingb = {0}                            \
   }
 
-two_lock_queue_t *sync_two_lock_queue_new(void) HPX_MALLOC HPX_PUBLIC;
-void sync_two_lock_queue_delete(two_lock_queue_t *q) HPX_PUBLIC;
+two_lock_queue_t *sync_two_lock_queue_new(void) HPX_MALLOC;
+void sync_two_lock_queue_delete(two_lock_queue_t *q);
 
 void sync_two_lock_queue_init(two_lock_queue_t *q, two_lock_queue_node_t *init)
-  HPX_NON_NULL(1) HPX_PUBLIC;
+  HPX_NON_NULL(1);
 
 void sync_two_lock_queue_fini(two_lock_queue_t *q)
-  HPX_NON_NULL(1) HPX_PUBLIC;
+  HPX_NON_NULL(1);
 
 void sync_two_lock_queue_enqueue(two_lock_queue_t *q, void *val)
-  HPX_NON_NULL(1) HPX_PUBLIC;
+  HPX_NON_NULL(1);
 
 void *sync_two_lock_queue_dequeue(two_lock_queue_t *q)
-  HPX_NON_NULL(1) HPX_PUBLIC;
+  HPX_NON_NULL(1);
 
 void sync_two_lock_queue_enqueue_node(two_lock_queue_t *q,
                                       two_lock_queue_node_t *node)
-  HPX_NON_NULL(2) HPX_PUBLIC;
+  HPX_NON_NULL(2);
 
 two_lock_queue_node_t *sync_two_lock_queue_dequeue_node(two_lock_queue_t *q)
-  HPX_NON_NULL(1) HPX_PUBLIC;
+  HPX_NON_NULL(1);
+
+/* uint64_t sync_two_lock_queue_size(two_lock_queue_t *q) */
+/*   HPX_NON_NULL(1); */
 
 typedef struct {
   volatile cptr_t head;
@@ -87,13 +91,12 @@ typedef struct {
  ._paddingb = {0}                               \
   }
 
-ms_queue_t *sync_ms_queue_new(void) HPX_MALLOC HPX_PUBLIC;
-void sync_ms_queue_delete(ms_queue_t *q) HPX_PUBLIC;
+ms_queue_t *sync_ms_queue_new(void) HPX_MALLOC;
+void sync_ms_queue_delete(ms_queue_t *q);
 
-void  sync_ms_queue_init(ms_queue_t *q, void *val) HPX_NON_NULL(1) HPX_PUBLIC;
-void  sync_ms_queue_fini(ms_queue_t *q) HPX_NON_NULL(1) HPX_PUBLIC;
-void  sync_ms_queue_enqueue(ms_queue_t *q, void *val)
-  HPX_NON_NULL(1) HPX_PUBLIC;
-void *sync_ms_queue_dequeue(ms_queue_t *q) HPX_NON_NULL(1) HPX_PUBLIC;
+void  sync_ms_queue_init(ms_queue_t *q, void *val) HPX_NON_NULL(1);
+void  sync_ms_queue_fini(ms_queue_t *q) HPX_NON_NULL(1);
+void  sync_ms_queue_enqueue(ms_queue_t *q, void *val) HPX_NON_NULL(1);
+void *sync_ms_queue_dequeue(ms_queue_t *q) HPX_NON_NULL(1);
 
 #endif // LIBHPX_QUEUES_H

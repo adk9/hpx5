@@ -293,7 +293,7 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_photon_numcq_orig = NULL;
   args_info->hpx_photon_usercq_orig = NULL;
   args_info->hpx_opt_smp_orig = NULL;
-  
+
 }
 
 static
@@ -367,7 +367,28 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_photon_numcq_help = hpx_options_t_help[60] ;
   args_info->hpx_photon_usercq_help = hpx_options_t_help[61] ;
   args_info->hpx_opt_smp_help = hpx_options_t_help[63] ;
-  
+  args_info->hpx_isir_testwindow_help = hpx_options_t_help[38] ;
+  args_info->hpx_isir_sendlimit_help = hpx_options_t_help[39] ;
+  args_info->hpx_isir_recvlimit_help = hpx_options_t_help[40] ;
+  args_info->hpx_pwc_parcelbuffersize_help = hpx_options_t_help[42] ;
+  args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[43] ;
+  args_info->hpx_photon_backend_help = hpx_options_t_help[45] ;
+  args_info->hpx_photon_ibdev_help = hpx_options_t_help[46] ;
+  args_info->hpx_photon_ethdev_help = hpx_options_t_help[47] ;
+  args_info->hpx_photon_ibport_help = hpx_options_t_help[48] ;
+  args_info->hpx_photon_usecma_help = hpx_options_t_help[49] ;
+  args_info->hpx_photon_ibsrq_help = hpx_options_t_help[50] ;
+  args_info->hpx_photon_btethresh_help = hpx_options_t_help[51] ;
+  args_info->hpx_photon_fiprov_help = hpx_options_t_help[52] ;
+  args_info->hpx_photon_fidev_help = hpx_options_t_help[53] ;
+  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[54] ;
+  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[55] ;
+  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[56] ;
+  args_info->hpx_photon_maxrd_help = hpx_options_t_help[57] ;
+  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[58] ;
+  args_info->hpx_photon_numcq_help = hpx_options_t_help[59] ;
+  args_info->hpx_photon_usercq_help = hpx_options_t_help[60] ;
+  args_info->hpx_opt_smp_help = hpx_options_t_help[62] ;
 }
 
 void
@@ -417,7 +438,7 @@ void
 hpx_option_parser_params_init(struct hpx_option_parser_params *params)
 {
   if (params)
-    { 
+    {
       params->override = 0;
       params->initialize = 1;
       params->check_required = 1;
@@ -429,9 +450,9 @@ hpx_option_parser_params_init(struct hpx_option_parser_params *params)
 struct hpx_option_parser_params *
 hpx_option_parser_params_create(void)
 {
-  struct hpx_option_parser_params *params = 
+  struct hpx_option_parser_params *params =
     (struct hpx_option_parser_params *)malloc(sizeof(struct hpx_option_parser_params));
-  hpx_option_parser_params_init(params);  
+  hpx_option_parser_params_init(params);
   return params;
 }
 
@@ -462,7 +483,7 @@ struct generic_list
 };
 
 /**
- * @brief add a node at the head of the list 
+ * @brief add a node at the head of the list
  */
 static void add_node(struct generic_list **list) {
   struct generic_list *new_node = (struct generic_list *) malloc (sizeof (struct generic_list));
@@ -552,8 +573,8 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_photon_numcq_orig));
   free_string_field (&(args_info->hpx_photon_usercq_orig));
   free_string_field (&(args_info->hpx_opt_smp_orig));
-  
-  
+
+
 
   clear_given (args_info);
 }
@@ -600,7 +621,7 @@ write_into_file(FILE *outfile, const char *opt, const char *arg, const char *val
   int found = -1;
   if (arg) {
     if (values) {
-      found = check_possible_values(arg, values);      
+      found = check_possible_values(arg, values);
     }
     if (found >= 0)
       fprintf(outfile, "%s=\"%s\" # %s\n", opt, arg, values[found]);
@@ -615,7 +636,7 @@ static void
 write_multiple_into_file(FILE *outfile, int len, const char *opt, char **arg, const char *values[])
 {
   int i;
-  
+
   for (i = 0; i < len; ++i)
     write_into_file(outfile, opt, (arg ? arg[i] : 0), values);
 }
@@ -728,7 +749,7 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-photon-usercq", args_info->hpx_photon_usercq_orig, 0);
   if (args_info->hpx_opt_smp_given)
     write_into_file(outfile, "hpx-opt-smp", args_info->hpx_opt_smp_orig, 0);
-  
+
 
   i = EXIT_SUCCESS;
   return i;
@@ -814,8 +835,8 @@ get_multiple_arg_token(const char *arg)
   j = 0;
   while (arg[i] && (j < len-1))
     {
-      if (arg[i] == '\\' && 
-	  arg[ i + 1 ] && 
+      if (arg[i] == '\\' &&
+	  arg[ i + 1 ] &&
 	  arg[ i + 1 ] == ',')
         ++i;
 
@@ -907,7 +928,7 @@ check_multiple_option_occurrences(const char *prog_name, unsigned int option_giv
             }
         }
     }
-    
+
   return error_occurred;
 }
 int
@@ -928,7 +949,7 @@ hpx_option_parser_ext (int argc, char **argv, struct hpx_options_t *args_info,
       hpx_option_parser_free (args_info);
       exit (EXIT_FAILURE);
     }
-  
+
   return result;
 }
 
@@ -937,7 +958,7 @@ hpx_option_parser2 (int argc, char **argv, struct hpx_options_t *args_info, int 
 {
   int result;
   struct hpx_option_parser_params params;
-  
+
   params.override = override;
   params.initialize = initialize;
   params.check_required = check_required;
@@ -951,7 +972,7 @@ hpx_option_parser2 (int argc, char **argv, struct hpx_options_t *args_info, int 
       hpx_option_parser_free (args_info);
       exit (EXIT_FAILURE);
     }
-  
+
   return result;
 }
 
@@ -968,7 +989,7 @@ hpx_option_parser_required (struct hpx_options_t *args_info, const char *prog_na
       hpx_option_parser_free (args_info);
       exit (EXIT_FAILURE);
     }
-  
+
   return result;
 }
 
@@ -981,26 +1002,26 @@ hpx_option_parser_required2 (struct hpx_options_t *args_info, const char *prog_n
   /* checks for required options */
   if (check_multiple_option_occurrences(prog_name, args_info->hpx_log_at_given, args_info->hpx_log_at_min, args_info->hpx_log_at_max, "'--hpx-log-at'"))
      error_occurred = 1;
-  
+
   if (check_multiple_option_occurrences(prog_name, args_info->hpx_log_level_given, args_info->hpx_log_level_min, args_info->hpx_log_level_max, "'--hpx-log-level'"))
      error_occurred = 1;
-  
+
   if (check_multiple_option_occurrences(prog_name, args_info->hpx_dbg_waitat_given, args_info->hpx_dbg_waitat_min, args_info->hpx_dbg_waitat_max, "'--hpx-dbg-waitat'"))
      error_occurred = 1;
-  
+
   if (check_multiple_option_occurrences(prog_name, args_info->hpx_dbg_waitonsig_given, args_info->hpx_dbg_waitonsig_min, args_info->hpx_dbg_waitonsig_max, "'--hpx-dbg-waitonsig'"))
      error_occurred = 1;
-  
+
   if (check_multiple_option_occurrences(prog_name, args_info->hpx_inst_at_given, args_info->hpx_inst_at_min, args_info->hpx_inst_at_max, "'--hpx-inst-at'"))
      error_occurred = 1;
-  
+
   if (check_multiple_option_occurrences(prog_name, args_info->hpx_trace_classes_given, args_info->hpx_trace_classes_min, args_info->hpx_trace_classes_max, "'--hpx-trace-classes'"))
      error_occurred = 1;
-  
+
   if (check_multiple_option_occurrences(prog_name, args_info->hpx_prof_counters_given, args_info->hpx_prof_counters_min, args_info->hpx_prof_counters_max, "'--hpx-prof-counters'"))
      error_occurred = 1;
-  
-  
+
+
   /* checks for dependences among options */
 
   return error_occurred;
@@ -1029,7 +1050,7 @@ static char *package_name = 0;
  */
 static
 int update_arg(void *field, char **orig_field,
-               unsigned int *field_given, unsigned int *prev_given, 
+               unsigned int *field_given, unsigned int *prev_given,
                char *value, const char *possible_values[],
                const char *default_value,
                hpx_option_parser_arg_type arg_type,
@@ -1050,11 +1071,11 @@ int update_arg(void *field, char **orig_field,
   if (!multiple_option && prev_given && (*prev_given || (check_ambiguity && *field_given)))
     {
       if (short_opt != '-')
-        fprintf (stderr, "%s: `--%s' (`-%c') option given more than once%s\n", 
+        fprintf (stderr, "%s: `--%s' (`-%c') option given more than once%s\n",
                package_name, long_opt, short_opt,
                (additional_error ? additional_error : ""));
       else
-        fprintf (stderr, "%s: `--%s' option given more than once%s\n", 
+        fprintf (stderr, "%s: `--%s' option given more than once%s\n",
                package_name, long_opt,
                (additional_error ? additional_error : ""));
       return 1; /* failure */
@@ -1063,16 +1084,16 @@ int update_arg(void *field, char **orig_field,
   if (possible_values && (found = check_possible_values((value ? value : default_value), possible_values)) < 0)
     {
       if (short_opt != '-')
-        fprintf (stderr, "%s: %s argument, \"%s\", for option `--%s' (`-%c')%s\n", 
+        fprintf (stderr, "%s: %s argument, \"%s\", for option `--%s' (`-%c')%s\n",
           package_name, (found == -2) ? "ambiguous" : "invalid", value, long_opt, short_opt,
           (additional_error ? additional_error : ""));
       else
-        fprintf (stderr, "%s: %s argument, \"%s\", for option `--%s'%s\n", 
+        fprintf (stderr, "%s: %s argument, \"%s\", for option `--%s'%s\n",
           package_name, (found == -2) ? "ambiguous" : "invalid", value, long_opt,
           (additional_error ? additional_error : ""));
       return 1; /* failure */
     }
-    
+
   if (field_given && *field_given && ! override)
     return 0;
   if (prev_given)
@@ -1168,7 +1189,7 @@ int update_multiple_arg_temp(struct generic_list **list,
     {
       add_node (list);
       if (update_arg((void *)&((*list)->arg), &((*list)->orig), 0,
-          prev_given, multi_token, possible_values, default_value, 
+          prev_given, multi_token, possible_values, default_value,
           arg_type, 0, 1, 1, 1, long_opt, short_opt, additional_error)) {
         if (multi_token) free(multi_token);
         return 1; /* failure */
@@ -1233,11 +1254,11 @@ void update_multiple_arg(void *field, char ***orig_field,
     default:
       break;
     };
-    
+
     for (i = (prev_given - 1); i >= 0; --i)
       {
         tmp = list;
-        
+
         switch(arg_type) {
         case ARG_INT:
           (*((int **)field))[i + field_given] = tmp->arg.int_arg; break;
@@ -1249,7 +1270,7 @@ void update_multiple_arg(void *field, char ***orig_field,
           (*((char ***)field))[i + field_given] = tmp->arg.string_arg; break;
         default:
           break;
-        }        
+        }
         (*orig_field) [i + field_given] = list->orig;
         list = list->next;
         free (tmp);
@@ -1261,7 +1282,7 @@ void update_multiple_arg(void *field, char ***orig_field,
       case ARG_ENUM:
         if (! *((int **)field)) {
           *((int **)field) = (int *)malloc (sizeof (int));
-          (*((int **)field))[0] = default_value->int_arg; 
+          (*((int **)field))[0] = default_value->int_arg;
         }
         break;
       case ARG_LONG:
@@ -1303,14 +1324,14 @@ hpx_option_parser_internal (
   struct generic_list * hpx_prof_counters_list = NULL;
   int error_occurred = 0;
   struct hpx_options_t local_args_info;
-  
+
   int override;
   int initialize;
   int check_required;
   int check_ambiguity;
-  
+
   package_name = argv[0];
-  
+
   override = params->override;
   initialize = params->initialize;
   check_required = params->check_required;
@@ -1397,693 +1418,693 @@ hpx_option_parser_internal (
           /* print HPX help.  */
           if (strcmp (long_options[option_index].name, "hpx-help") == 0)
           {
-          
-          
+
+
             if (update_arg((void *)&(args_info->hpx_help_flag), 0, &(args_info->hpx_help_given),
                 &(local_args_info.hpx_help_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "hpx-help", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* print HPX version.  */
           else if (strcmp (long_options[option_index].name, "hpx-version") == 0)
           {
-          
-          
+
+
             if (update_arg((void *)&(args_info->hpx_version_flag), 0, &(args_info->hpx_version_given),
                 &(local_args_info.hpx_version_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "hpx-version", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* set HPX per-PE global heap size.  */
           else if (strcmp (long_options[option_index].name, "hpx-heapsize") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_heapsize_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_heapsize_arg),
                  &(args_info->hpx_heapsize_orig), &(args_info->hpx_heapsize_given),
                 &(local_args_info.hpx_heapsize_given), optarg, 0, 0, ARG_LONG,
                 check_ambiguity, override, 0, 0,
                 "hpx-heapsize", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* type of Global Address Space (GAS).  */
           else if (strcmp (long_options[option_index].name, "hpx-gas") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_gas_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_gas_arg),
                  &(args_info->hpx_gas_orig), &(args_info->hpx_gas_given),
                 &(local_args_info.hpx_gas_given), optarg, hpx_option_parser_hpx_gas_values, 0, ARG_ENUM,
                 check_ambiguity, override, 0, 0,
                 "hpx-gas", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* HPX bootstrap method to use.  */
           else if (strcmp (long_options[option_index].name, "hpx-boot") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_boot_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_boot_arg),
                  &(args_info->hpx_boot_orig), &(args_info->hpx_boot_given),
                 &(local_args_info.hpx_boot_given), optarg, hpx_option_parser_hpx_boot_values, 0, ARG_ENUM,
                 check_ambiguity, override, 0, 0,
                 "hpx-boot", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* Enable coalescing.  */
           else if (strcmp (long_options[option_index].name, "hpx-coalescing-enabled") == 0)
           {
-          
-          
+
+
             if (update_arg((void *)&(args_info->hpx_coalescing_enabled_flag), 0, &(args_info->hpx_coalescing_enabled_given),
                 &(local_args_info.hpx_coalescing_enabled_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "hpx-coalescing-enabled", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* Coalescing buffer size.  */
           else if (strcmp (long_options[option_index].name, "hpx-coalescing-buffersize") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_coalescing_buffersize_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_coalescing_buffersize_arg),
                  &(args_info->hpx_coalescing_buffersize_orig), &(args_info->hpx_coalescing_buffersize_given),
                 &(local_args_info.hpx_coalescing_buffersize_given), optarg, 0, 0, ARG_LONG,
                 check_ambiguity, override, 0, 0,
                 "hpx-coalescing-buffersize", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* type of transport to use.  */
           else if (strcmp (long_options[option_index].name, "hpx-transport") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_transport_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_transport_arg),
                  &(args_info->hpx_transport_orig), &(args_info->hpx_transport_given),
                 &(local_args_info.hpx_transport_given), optarg, hpx_option_parser_hpx_transport_values, 0, ARG_ENUM,
                 check_ambiguity, override, 0, 0,
                 "hpx-transport", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* type of network to use.  */
           else if (strcmp (long_options[option_index].name, "hpx-network") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_network_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_network_arg),
                  &(args_info->hpx_network_orig), &(args_info->hpx_network_given),
                 &(local_args_info.hpx_network_given), optarg, hpx_option_parser_hpx_network_values, 0, ARG_ENUM,
                 check_ambiguity, override, 0, 0,
                 "hpx-network", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* print HPX runtime statistics.  */
           else if (strcmp (long_options[option_index].name, "hpx-statistics") == 0)
           {
-          
-          
+
+
             if (update_arg((void *)&(args_info->hpx_statistics_flag), 0, &(args_info->hpx_statistics_given),
                 &(local_args_info.hpx_statistics_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "hpx-statistics", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* HPX runtime configuration file.  */
           else if (strcmp (long_options[option_index].name, "hpx-configfile") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_configfile_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_configfile_arg),
                  &(args_info->hpx_configfile_orig), &(args_info->hpx_configfile_given),
                 &(local_args_info.hpx_configfile_given), optarg, 0, 0, ARG_STRING,
                 check_ambiguity, override, 0, 0,
                 "hpx-configfile", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* number of scheduler threads.  */
           else if (strcmp (long_options[option_index].name, "hpx-threads") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_threads_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_threads_arg),
                  &(args_info->hpx_threads_orig), &(args_info->hpx_threads_given),
                 &(local_args_info.hpx_threads_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "hpx-threads", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* affinitize HPX worker threads.  */
           else if (strcmp (long_options[option_index].name, "hpx-thread-affinity") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_thread_affinity_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_thread_affinity_arg),
                  &(args_info->hpx_thread_affinity_orig), &(args_info->hpx_thread_affinity_given),
                 &(local_args_info.hpx_thread_affinity_given), optarg, hpx_option_parser_hpx_thread_affinity_values, 0, ARG_ENUM,
                 check_ambiguity, override, 0, 0,
                 "hpx-thread-affinity", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* set HPX stack size.  */
           else if (strcmp (long_options[option_index].name, "hpx-stacksize") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_stacksize_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_stacksize_arg),
                  &(args_info->hpx_stacksize_orig), &(args_info->hpx_stacksize_given),
                 &(local_args_info.hpx_stacksize_given), optarg, 0, 0, ARG_LONG,
                 check_ambiguity, override, 0, 0,
                 "hpx-stacksize", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* work-stealing policy for the HPX scheduler.  */
           else if (strcmp (long_options[option_index].name, "hpx-sched-policy") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_sched_policy_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_sched_policy_arg),
                  &(args_info->hpx_sched_policy_orig), &(args_info->hpx_sched_policy_given),
                 &(local_args_info.hpx_sched_policy_given), optarg, hpx_option_parser_hpx_sched_policy_values, 0, ARG_ENUM,
                 check_ambiguity, override, 0, 0,
                 "hpx-sched-policy", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* bound on help-first tasks before work-first scheduling.  */
           else if (strcmp (long_options[option_index].name, "hpx-sched-wfthreshold") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_sched_wfthreshold_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_sched_wfthreshold_arg),
                  &(args_info->hpx_sched_wfthreshold_orig), &(args_info->hpx_sched_wfthreshold_given),
                 &(local_args_info.hpx_sched_wfthreshold_given), optarg, 0, 0, ARG_LONG,
                 check_ambiguity, override, 0, 0,
                 "hpx-sched-wfthreshold", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* bound on the number of stacks to cache.  */
           else if (strcmp (long_options[option_index].name, "hpx-sched-stackcachelimit") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_sched_stackcachelimit_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_sched_stackcachelimit_arg),
                  &(args_info->hpx_sched_stackcachelimit_orig), &(args_info->hpx_sched_stackcachelimit_given),
                 &(local_args_info.hpx_sched_stackcachelimit_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "hpx-sched-stackcachelimit", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* selectively output log information.  */
           else if (strcmp (long_options[option_index].name, "hpx-log-at") == 0)
           {
-          
-            if (update_multiple_arg_temp(&hpx_log_at_list, 
+
+            if (update_multiple_arg_temp(&hpx_log_at_list,
                 &(local_args_info.hpx_log_at_given), optarg, 0, 0, ARG_INT,
                 "hpx-log-at", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* set the logging level.  */
           else if (strcmp (long_options[option_index].name, "hpx-log-level") == 0)
           {
-          
-            if (update_multiple_arg_temp(&hpx_log_level_list, 
+
+            if (update_multiple_arg_temp(&hpx_log_level_list,
                 &(local_args_info.hpx_log_level_given), optarg, hpx_option_parser_hpx_log_level_values, "all", ARG_ENUM,
                 "hpx-log-level", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* wait for debugger at specific locality.  */
           else if (strcmp (long_options[option_index].name, "hpx-dbg-waitat") == 0)
           {
-          
-            if (update_multiple_arg_temp(&hpx_dbg_waitat_list, 
+
+            if (update_multiple_arg_temp(&hpx_dbg_waitat_list,
                 &(local_args_info.hpx_dbg_waitat_given), optarg, 0, 0, ARG_INT,
                 "hpx-dbg-waitat", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* wait inside of hpx_abort().  */
           else if (strcmp (long_options[option_index].name, "hpx-dbg-waitonabort") == 0)
           {
-          
-          
+
+
             if (update_arg((void *)&(args_info->hpx_dbg_waitonabort_flag), 0, &(args_info->hpx_dbg_waitonabort_given),
                 &(local_args_info.hpx_dbg_waitonabort_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "hpx-dbg-waitonabort", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* wait on program error signals.  */
           else if (strcmp (long_options[option_index].name, "hpx-dbg-waitonsig") == 0)
           {
-          
-            if (update_multiple_arg_temp(&hpx_dbg_waitonsig_list, 
+
+            if (update_multiple_arg_temp(&hpx_dbg_waitonsig_list,
                 &(local_args_info.hpx_dbg_waitonsig_given), optarg, hpx_option_parser_hpx_dbg_waitonsig_values, "all", ARG_ENUM,
                 "hpx-dbg-waitonsig", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* use mprotect() to bracket stacks to look for stack overflows.  */
           else if (strcmp (long_options[option_index].name, "hpx-dbg-mprotectstacks") == 0)
           {
-          
-          
+
+
             if (update_arg((void *)&(args_info->hpx_dbg_mprotectstacks_flag), 0, &(args_info->hpx_dbg_mprotectstacks_given),
                 &(local_args_info.hpx_dbg_mprotectstacks_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "hpx-dbg-mprotectstacks", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* use synchronous GAS free operations.  */
           else if (strcmp (long_options[option_index].name, "hpx-dbg-syncfree") == 0)
           {
-          
-          
+
+
             if (update_arg((void *)&(args_info->hpx_dbg_syncfree_flag), 0, &(args_info->hpx_dbg_syncfree_given),
                 &(local_args_info.hpx_dbg_syncfree_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "hpx-dbg-syncfree", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* directory to output instrumentation files.  */
           else if (strcmp (long_options[option_index].name, "hpx-inst-dir") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_inst_dir_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_inst_dir_arg),
                  &(args_info->hpx_inst_dir_orig), &(args_info->hpx_inst_dir_given),
                 &(local_args_info.hpx_inst_dir_given), optarg, 0, 0, ARG_STRING,
                 check_ambiguity, override, 0, 0,
                 "hpx-inst-dir", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* set the localities to activate instrumentation at.  */
           else if (strcmp (long_options[option_index].name, "hpx-inst-at") == 0)
           {
-          
-            if (update_multiple_arg_temp(&hpx_inst_at_list, 
+
+            if (update_multiple_arg_temp(&hpx_inst_at_list,
                 &(local_args_info.hpx_inst_at_given), optarg, 0, 0, ARG_INT,
                 "hpx-inst-at", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* set the event classes to trace.  */
           else if (strcmp (long_options[option_index].name, "hpx-trace-classes") == 0)
           {
-          
-            if (update_multiple_arg_temp(&hpx_trace_classes_list, 
+
+            if (update_multiple_arg_temp(&hpx_trace_classes_list,
                 &(local_args_info.hpx_trace_classes_given), optarg, hpx_option_parser_hpx_trace_classes_values, 0, ARG_ENUM,
                 "hpx-trace-classes", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* set the size of each trace file.  */
           else if (strcmp (long_options[option_index].name, "hpx-trace-filesize") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_trace_filesize_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_trace_filesize_arg),
                  &(args_info->hpx_trace_filesize_orig), &(args_info->hpx_trace_filesize_given),
                 &(local_args_info.hpx_trace_filesize_given), optarg, 0, 0, ARG_LONG,
                 check_ambiguity, override, 0, 0,
                 "hpx-trace-filesize", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* set which HW counters to use for profiling.  */
           else if (strcmp (long_options[option_index].name, "hpx-prof-counters") == 0)
           {
-          
-            if (update_multiple_arg_temp(&hpx_prof_counters_list, 
+
+            if (update_multiple_arg_temp(&hpx_prof_counters_list,
                 &(local_args_info.hpx_prof_counters_given), optarg, hpx_option_parser_hpx_prof_counters_values, 0, ARG_ENUM,
                 "hpx-prof-counters", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* dump all individual measurements to file in addition to summaries.  */
           else if (strcmp (long_options[option_index].name, "hpx-prof-detailed") == 0)
           {
-          
-          
+
+
             if (update_arg((void *)&(args_info->hpx_prof_detailed_flag), 0, &(args_info->hpx_prof_detailed_given),
                 &(local_args_info.hpx_prof_detailed_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "hpx-prof-detailed", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* number of ISIR requests to test in progress loop.  */
           else if (strcmp (long_options[option_index].name, "hpx-isir-testwindow") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_isir_testwindow_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_isir_testwindow_arg),
                  &(args_info->hpx_isir_testwindow_orig), &(args_info->hpx_isir_testwindow_given),
                 &(local_args_info.hpx_isir_testwindow_given), optarg, 0, 0, ARG_LONG,
                 check_ambiguity, override, 0, 0,
                 "hpx-isir-testwindow", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* ISIR network send limit.  */
           else if (strcmp (long_options[option_index].name, "hpx-isir-sendlimit") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_isir_sendlimit_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_isir_sendlimit_arg),
                  &(args_info->hpx_isir_sendlimit_orig), &(args_info->hpx_isir_sendlimit_given),
                 &(local_args_info.hpx_isir_sendlimit_given), optarg, 0, 0, ARG_LONG,
                 check_ambiguity, override, 0, 0,
                 "hpx-isir-sendlimit", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* ISIR network recv limit.  */
           else if (strcmp (long_options[option_index].name, "hpx-isir-recvlimit") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_isir_recvlimit_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_isir_recvlimit_arg),
                  &(args_info->hpx_isir_recvlimit_orig), &(args_info->hpx_isir_recvlimit_given),
                 &(local_args_info.hpx_isir_recvlimit_given), optarg, 0, 0, ARG_LONG,
                 check_ambiguity, override, 0, 0,
                 "hpx-isir-recvlimit", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* set the size of p2p recv buffers for parcel sends.  */
           else if (strcmp (long_options[option_index].name, "hpx-pwc-parcelbuffersize") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_pwc_parcelbuffersize_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_pwc_parcelbuffersize_arg),
                  &(args_info->hpx_pwc_parcelbuffersize_orig), &(args_info->hpx_pwc_parcelbuffersize_given),
                 &(local_args_info.hpx_pwc_parcelbuffersize_given), optarg, 0, 0, ARG_LONG,
                 check_ambiguity, override, 0, 0,
                 "hpx-pwc-parcelbuffersize", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* set the largest eager parcel size (header inclusive).  */
           else if (strcmp (long_options[option_index].name, "hpx-pwc-parceleagerlimit") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_pwc_parceleagerlimit_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_pwc_parceleagerlimit_arg),
                  &(args_info->hpx_pwc_parceleagerlimit_orig), &(args_info->hpx_pwc_parceleagerlimit_given),
                 &(local_args_info.hpx_pwc_parceleagerlimit_given), optarg, 0, 0, ARG_LONG,
                 check_ambiguity, override, 0, 0,
                 "hpx-pwc-parceleagerlimit", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* set the underlying network API to use.  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-backend") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_photon_backend_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_photon_backend_arg),
                  &(args_info->hpx_photon_backend_orig), &(args_info->hpx_photon_backend_given),
                 &(local_args_info.hpx_photon_backend_given), optarg, hpx_option_parser_hpx_photon_backend_values, 0, ARG_ENUM,
                 check_ambiguity, override, 0, 0,
                 "hpx-photon-backend", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* [verbs] set a particular IB device (also a filter for device and port discovery, e.g. qib0:1+mlx4_0:2).  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-ibdev") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_photon_ibdev_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_photon_ibdev_arg),
                  &(args_info->hpx_photon_ibdev_orig), &(args_info->hpx_photon_ibdev_given),
                 &(local_args_info.hpx_photon_ibdev_given), optarg, 0, 0, ARG_STRING,
                 check_ambiguity, override, 0, 0,
                 "hpx-photon-ibdev", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* [verbs] set a particular ETH device (for CMA mode only).  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-ethdev") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_photon_ethdev_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_photon_ethdev_arg),
                  &(args_info->hpx_photon_ethdev_orig), &(args_info->hpx_photon_ethdev_given),
                 &(local_args_info.hpx_photon_ethdev_given), optarg, 0, 0, ARG_STRING,
                 check_ambiguity, override, 0, 0,
                 "hpx-photon-ethdev", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* [verbs] set a particular IB port.  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-ibport") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_photon_ibport_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_photon_ibport_arg),
                  &(args_info->hpx_photon_ibport_orig), &(args_info->hpx_photon_ibport_given),
                 &(local_args_info.hpx_photon_ibport_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "hpx-photon-ibport", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* [verbs] enable CMA connection mode.  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-usecma") == 0)
           {
-          
-          
+
+
             if (update_arg((void *)&(args_info->hpx_photon_usecma_flag), 0, &(args_info->hpx_photon_usecma_given),
                 &(local_args_info.hpx_photon_usecma_given), optarg, 0, 0, ARG_FLAG,
                 check_ambiguity, override, 1, 0, "hpx-photon-usecma", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* [verbs] number of shared receive queues (default 0, disabled).  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-ibsrq") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_photon_ibsrq_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_photon_ibsrq_arg),
                  &(args_info->hpx_photon_ibsrq_orig), &(args_info->hpx_photon_ibsrq_given),
                 &(local_args_info.hpx_photon_ibsrq_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "hpx-photon-ibsrq", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* [ugni] set size in bytes for when BTE is used over FMA.  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-btethresh") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_photon_btethresh_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_photon_btethresh_arg),
                  &(args_info->hpx_photon_btethresh_orig), &(args_info->hpx_photon_btethresh_given),
                 &(local_args_info.hpx_photon_btethresh_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "hpx-photon-btethresh", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* [libfabric] provider to use (sockets, psm, etc.).  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-fiprov") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_photon_fiprov_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_photon_fiprov_arg),
                  &(args_info->hpx_photon_fiprov_orig), &(args_info->hpx_photon_fiprov_given),
                 &(local_args_info.hpx_photon_fiprov_given), optarg, 0, 0, ARG_STRING,
                 check_ambiguity, override, 0, 0,
                 "hpx-photon-fiprov", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* [libfabric] network interface to use.  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-fidev") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_photon_fidev_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_photon_fidev_arg),
                  &(args_info->hpx_photon_fidev_orig), &(args_info->hpx_photon_fidev_given),
                 &(local_args_info.hpx_photon_fidev_given), optarg, 0, 0, ARG_STRING,
                 check_ambiguity, override, 0, 0,
                 "hpx-photon-fidev", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* set number of ledger entries.  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-ledgersize") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_photon_ledgersize_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_photon_ledgersize_arg),
                  &(args_info->hpx_photon_ledgersize_orig), &(args_info->hpx_photon_ledgersize_given),
                 &(local_args_info.hpx_photon_ledgersize_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "hpx-photon-ledgersize", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* set size of eager buffers.  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-eagerbufsize") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_photon_eagerbufsize_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_photon_eagerbufsize_arg),
                  &(args_info->hpx_photon_eagerbufsize_orig), &(args_info->hpx_photon_eagerbufsize_given),
                 &(local_args_info.hpx_photon_eagerbufsize_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "hpx-photon-eagerbufsize", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* set PWC small msg limit.  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-smallpwcsize") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_photon_smallpwcsize_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_photon_smallpwcsize_arg),
                  &(args_info->hpx_photon_smallpwcsize_orig), &(args_info->hpx_photon_smallpwcsize_given),
                 &(local_args_info.hpx_photon_smallpwcsize_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "hpx-photon-smallpwcsize", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* set max number of request descriptors.  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-maxrd") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_photon_maxrd_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_photon_maxrd_arg),
                  &(args_info->hpx_photon_maxrd_orig), &(args_info->hpx_photon_maxrd_given),
                 &(local_args_info.hpx_photon_maxrd_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "hpx-photon-maxrd", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* set default number of allocated descriptors.  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-defaultrd") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_photon_defaultrd_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_photon_defaultrd_arg),
                  &(args_info->hpx_photon_defaultrd_orig), &(args_info->hpx_photon_defaultrd_given),
                 &(local_args_info.hpx_photon_defaultrd_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "hpx-photon-defaultrd", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* set number of completion queues to use (cyclic assignment to ranks).  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-numcq") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_photon_numcq_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_photon_numcq_arg),
                  &(args_info->hpx_photon_numcq_orig), &(args_info->hpx_photon_numcq_given),
                 &(local_args_info.hpx_photon_numcq_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "hpx-photon-numcq", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* enable remote completion support (default 0, disabled).  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-usercq") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_photon_usercq_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_photon_usercq_arg),
                  &(args_info->hpx_photon_usercq_orig), &(args_info->hpx_photon_usercq_given),
                 &(local_args_info.hpx_photon_usercq_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "hpx-photon-usercq", '-',
                 additional_error))
               goto failure;
-          
+
           }
           /* optimize for SMP execution.  */
           else if (strcmp (long_options[option_index].name, "hpx-opt-smp") == 0)
           {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_opt_smp_arg), 
+
+
+            if (update_arg( (void *)&(args_info->hpx_opt_smp_arg),
                  &(args_info->hpx_opt_smp_orig), &(args_info->hpx_opt_smp_given),
                 &(local_args_info.hpx_opt_smp_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "hpx-opt-smp", '-',
                 additional_error))
               goto failure;
-          
+
           }
-          
+
           break;
         case '?':	/* Invalid option.  */
           /* `getopt_long' already printed an error message.  */
@@ -2141,7 +2162,7 @@ hpx_option_parser_internal (
   local_args_info.hpx_trace_classes_given = 0;
   args_info->hpx_prof_counters_given += local_args_info.hpx_prof_counters_given;
   local_args_info.hpx_prof_counters_given = 0;
-  
+
   if (check_required)
     {
       error_occurred += hpx_option_parser_required2 (args_info, argv[0], additional_error);
@@ -2162,7 +2183,7 @@ failure:
   free_list (hpx_inst_at_list, 0 );
   free_list (hpx_trace_classes_list, 0 );
   free_list (hpx_prof_counters_list, 0 );
-  
+
   hpx_option_parser_release (&local_args_info);
   return (EXIT_FAILURE);
 }
@@ -2325,7 +2346,7 @@ hpx_option_parser_configfile (
   params.check_required = check_required;
   params.check_ambiguity = 0;
   params.print_errors = 1;
-  
+
   return hpx_option_parser_config_file (filename, args_info, &params);
 }
 
@@ -2376,7 +2397,7 @@ hpx_option_parser_config_file (const char *filename,
       hpx_option_parser_free (args_info);
       exit (EXIT_FAILURE);
     }
-  
+
   return result;
 }
 
@@ -2468,25 +2489,24 @@ hpx_option_parser_string_ext(const char *cmdline, struct hpx_options_t *args_inf
   char **argv_ptr = 0;
   int result;
   unsigned int argc;
-  
+
   argc = hpx_option_parser_create_argv(cmdline, &argv_ptr, prog_name);
-  
+
   result =
     hpx_option_parser_internal (argc, argv_ptr, args_info, params, 0);
-  
+
   if (argv_ptr)
     {
       free (argv_ptr);
     }
 
   free_cmd_list();
-  
+
   if (result == EXIT_FAILURE)
     {
       hpx_option_parser_free (args_info);
       exit (EXIT_FAILURE);
     }
-  
+
   return result;
 }
-
