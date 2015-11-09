@@ -27,7 +27,6 @@
 #include "inst.h"
 #include "smp.h"
 
-
 static const int LEVEL = HPX_LOG_CONFIG | HPX_LOG_NET | HPX_LOG_DEFAULT;
 
 network_t *network_new(config_t *cfg, boot_t *boot, struct gas *gas) {
