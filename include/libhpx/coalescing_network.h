@@ -126,6 +126,7 @@ static network_t* coalesced_network_new (network_t *network) {
 
   printf("Created coalescing network\n");
   return ((network_t*) coalesced_network);
+
 }
 
 static void coalesced_network_delete(void *obj) {
