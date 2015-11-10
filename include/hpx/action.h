@@ -62,6 +62,7 @@ typedef enum {
   /// or continuation in a parcel. Functions can only be called by using the
   /// returned value from hpx_action_get_handler().
   HPX_FUNCTION,
+  HPX_OPENCL,
 } hpx_action_type_t;
 
 static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
@@ -69,6 +70,7 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
   "TASK",
   "INTERRUPT",
   "FUNCTION",
+  "OPENCL"
 };
 
 /// @name Action attributes.

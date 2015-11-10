@@ -41,6 +41,7 @@ struct config;
 struct network;
 struct scheduler;
 struct topology;
+struct percolation;
 /// @}
 //
 typedef enum {
@@ -89,6 +90,9 @@ typedef struct locality {
   const struct action_table *actions;
   struct topology          *topology;
   reent_t 		 reent_state;	 	
+#ifdef HAVE_PERCOLATION
+  struct percolation    *percolation;
+#endif
 } locality_t;
 
 void _locality_shutdown(locality_t* loc)
