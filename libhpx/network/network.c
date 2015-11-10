@@ -103,7 +103,7 @@ network_t *network_new(config_t *cfg, boot_t *boot, struct gas *gas) {
   }
 
   if (cfg->coalescing_enabled) {
-    network = (network_t*) coalesced_network_new(network);
+    network =  coalesced_network_new(network);
   } 
 
   return network;
