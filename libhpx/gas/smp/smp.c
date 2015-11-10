@@ -89,7 +89,8 @@ _smp_there(void *gas, uint32_t i) {
 
 /// Allocate a global array.
 static hpx_addr_t
-_smp_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
+_smp_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
+                      uint32_t attr) {
   void *p = NULL;
   if (boundary) {
     dbg_check(posix_memalign(&p, boundary, n * bsize));
@@ -102,7 +103,8 @@ _smp_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
 
 /// Allocate a 0-filled global array.
 static hpx_addr_t
-_smp_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
+_smp_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
+                       uint32_t attr) {
   size_t bytes = n * bsize;
   void *p = NULL;
   if (boundary) {
@@ -117,7 +119,8 @@ _smp_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
 
 /// Allocate a bunch of global memory
 static hpx_addr_t
-_smp_gas_alloc_local(void *gas, size_t n, uint32_t bsize, uint32_t boundary) {
+_smp_gas_alloc_local(size_t n, uint32_t bsize, uint32_t boundary,
+                     uint32_t attr) {
   size_t bytes = n * bsize;
   void *p = NULL;
   if (boundary) {
@@ -130,7 +133,8 @@ _smp_gas_alloc_local(void *gas, size_t n, uint32_t bsize, uint32_t boundary) {
 
 /// Allocate a bunch of initialized global memory
 static hpx_addr_t
-_smp_gas_calloc_local(void *gas, size_t n, uint32_t bsize, uint32_t boundary) {
+_smp_gas_calloc_local(size_t n, uint32_t bsize, uint32_t boundary,
+                      uint32_t attr) {
   size_t bytes = n * bsize;
   void *p = NULL;
   if (boundary) {

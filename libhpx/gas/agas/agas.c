@@ -213,7 +213,7 @@ LIBHPX_ACTION(HPX_DEFAULT, 0, agas_alloc_cyclic, _alloc_cyclic_handler,
               HPX_SIZE_T, HPX_SIZE_T);
 
 static hpx_addr_t
-_agas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
+_agas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary, uint32_t attr) {
   hpx_addr_t addr;
   if (here->rank == 0) {
     addr = agas_alloc_cyclic_sync(n, bsize);
@@ -240,7 +240,8 @@ LIBHPX_ACTION(HPX_DEFAULT, 0, agas_calloc_cyclic, _calloc_cyclic_handler,
               HPX_SIZE_T, HPX_SIZE_T);
 
 static hpx_addr_t
-_agas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
+_agas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
+                    uint32_t attr) {
   hpx_addr_t addr;
   if (here->rank == 0) {
     addr = agas_calloc_cyclic_sync(n, bsize);

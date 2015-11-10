@@ -27,7 +27,8 @@
 #include "gva.h"
 
 hpx_addr_t
-agas_local_alloc(void *gas, size_t n, uint32_t bsize, uint32_t boundary) {
+agas_local_alloc(size_t n, uint32_t bsize, uint32_t boundary, uint32_t attr) {
+  agas_t *agas = (agas_t*)here->gas;
   // use the local allocator to get some memory that is part of the global
   // address space
   uint32_t align = ceil_log2_32(bsize);
@@ -36,8 +37,7 @@ agas_local_alloc(void *gas, size_t n, uint32_t bsize, uint32_t boundary) {
   uint32_t aligned = max_u32(boundary, padded);
 
   char *lva = global_memalign(aligned, n * padded);
-  agas_t *agas = gas;
-  gva_t gva = agas_lva_to_gva(gas, lva, padded);
+  gva_t gva = agas_lva_to_gva(agas, lva, padded);
   hpx_addr_t base = gva.addr;
   for (int i = 0; i < n; i++) {
     btt_insert(agas->btt, gva, here->rank, lva, n);
@@ -48,7 +48,8 @@ agas_local_alloc(void *gas, size_t n, uint32_t bsize, uint32_t boundary) {
 }
 
 hpx_addr_t
-agas_local_calloc(void *gas, size_t n, uint32_t bsize, uint32_t boundary) {
+agas_local_calloc(size_t n, uint32_t bsize, uint32_t boundary, uint32_t attr) {
+  agas_t *agas = (agas_t*)here->gas;
   uint32_t align = ceil_log2_32(bsize);
   dbg_assert(align < 32);
   uint32_t padded = UINT32_C(1) << align;
@@ -57,8 +58,7 @@ agas_local_calloc(void *gas, size_t n, uint32_t bsize, uint32_t boundary) {
   char *lva = global_memalign(aligned, n * padded);
   memset(lva, 0, n * padded);
 
-  agas_t *agas = gas;
-  gva_t gva = agas_lva_to_gva(gas, lva, padded);
+  gva_t gva = agas_lva_to_gva(agas, lva, padded);
   hpx_addr_t base = gva.addr;
   for (int i = 0; i < n; i++) {
     btt_insert(agas->btt, gva, here->rank, lva, n);
