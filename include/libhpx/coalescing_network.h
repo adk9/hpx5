@@ -72,7 +72,6 @@ typedef struct coalesced_network{
   two_lock_queue_t sends;
   uint64_t previous_queue_size;
   uint32_t* total_byte_count; 
-  uint32_t* total_previous_byte_count;
  } coalesced_network_t;
 
 
@@ -103,12 +102,6 @@ static network_t* coalesced_network_new (network_t *network) {
    coalesced_network->total_byte_count = (uint32_t *) malloc (HPX_LOCALITIES * sizeof(uint32_t));
    for(i = 0; i < HPX_LOCALITIES; i++ ) {
      coalesced_network->total_byte_count[i] = 0;
-   }
-
-   //allocate another array to get total bytecount upto previous destination
-   coalesced_network->total_previous_byte_count = (uint32_t *) malloc (HPX_LOCALITIES * sizeof(uint32_t));
-   for(i = 0; i < HPX_LOCALITIES; i++ ) {
-     coalesced_network->total_previous_byte_count[i] = 0;
    }
 
    coalesced_network->vtable.delete = coalesced_network_delete;
@@ -142,7 +135,7 @@ static void coalesced_network_delete(void *obj) {
 static int _demultiplex_message_handler(void* fatparcel, size_t n) {
   //retrieve the next parcel from the fat parcel
   hpx_parcel_t* p = fatparcel;
-  printf("In demultiplexer action\n");
+  //printf("In demultiplexer action\n");
   uint32_t current_size = n;
   uint32_t small_parcel_size  = 0;
   hpx_parcel_t *clone = NULL;
@@ -182,11 +175,8 @@ static void _send_all(coalesced_network_t *coalesced_network) {
 
   //TODO; optimization later: if I am the locality, then skip my entries
   if(coalesced_network_parcel_queue_size(coalesced_network) > 0) {
-    printf("queue size of coalesced send %"PRIu64 " \n", coalesced_network_parcel_queue_size(coalesced_network));
+    //printf("queue size of coalesced send %"PRIu64 " \n", coalesced_network_parcel_queue_size(coalesced_network));
 
-   for(i = 2; i < HPX_LOCALITIES; i++ ) {
-     coalesced_network->total_previous_byte_count[i] =  coalesced_network->total_byte_count[i-1] + coalesced_network->total_previous_byte_count[i-1];
-   }
 
    //allocate buffers for each destination
    coalesced_network->coalesced_buffer = (char **) malloc (HPX_LOCALITIES * sizeof(char *));
@@ -203,15 +193,15 @@ static void _send_all(coalesced_network_t *coalesced_network) {
      current_destination_buffer_index[i] = 0;
    }
 
-   printf("Sorting the parcels according to destinations\n");
+   //printf("Sorting the parcels according to destinations\n");
    uint32_t n = 0;
    //sort the parcels to destination bin
    
    while ((p = sync_two_lock_queue_dequeue(&coalesced_network->sends))) {
-     printf("Processing parcel and putting it into the right destination buffer\n");
+     //printf("Processing parcel and putting it into the right destination buffer\n");
      uint64_t destination = gas_owner_of(here->gas, p->target);
      n = parcel_size(p);
-     memcpy((char*) coalesced_network->coalesced_buffer + coalesced_network->total_previous_byte_count[destination] + current_destination_buffer_index[destination], p, n);
+     memcpy(coalesced_network->coalesced_buffer[destination] + current_destination_buffer_index[destination], p, n);
      current_destination_buffer_index[destination] += n;
      number_of_parcels_dequeued++ ;
    }
@@ -237,7 +227,7 @@ static void _send_all(coalesced_network_t *coalesced_network) {
      //create the fat parcel
      hpx_pid_t pid = hpx_thread_current_pid();
      hpx_addr_t target = HPX_THERE(rank);
-     hpx_parcel_t *p = parcel_new(target, _demultiplexer, 0, 0, pid, (char*)coalesced_network->coalesced_buffer + coalesced_network->total_previous_byte_count[rank], coalesced_network->total_byte_count[rank]); 
+     hpx_parcel_t *p = parcel_new(target, _demultiplexer, 0, 0, pid, (char*)coalesced_network->coalesced_buffer[rank] , coalesced_network->total_byte_count[rank]); 
      _prepare(p);
      //printf("Created a fat parcel\n");
      //call base network send interface
@@ -246,7 +236,7 @@ static void _send_all(coalesced_network_t *coalesced_network) {
    }
  
    //clean up code
-   printf("cleaning up after one network send\n");
+   //printf("cleaning up after one network send\n");
    for (i = 0; i < HPX_LOCALITIES; i++) {
      free(coalesced_network->coalesced_buffer[i]);
    }
@@ -257,10 +247,6 @@ static void _send_all(coalesced_network_t *coalesced_network) {
      coalesced_network->total_byte_count[i] = 0;
    }
 
-   for(i = 0; i < HPX_LOCALITIES; i++ ) {
-     coalesced_network->total_previous_byte_count[i] = 0;
-   }
-   
    for (i = 0; i < HPX_LOCALITIES; i++) {
      coalesced_network->destination_buffer_size[i] = 0;
    }
@@ -272,7 +258,7 @@ static void _send_all(coalesced_network_t *coalesced_network) {
 
 static int coalesced_network_send(void *network,  hpx_parcel_t *p) {
   coalesced_network_t *coalesced_network = network; 
-  printf("In coalesced network send\n");
+  //printf("In coalesced network send\n");
 
   uint64_t current_coalescing_queue_size = coalesced_network_parcel_queue_size(coalesced_network);
 
@@ -311,8 +297,6 @@ static int coalesced_network_progress(void *obj) {
   }
 
   //Then call underlying base network progress function
-  //hpx_parcel_t *chain = network_progress(coalesced_network->base_network);
-  //return chain;
   return network_progress(coalesced_network->base_network);
 }
 
