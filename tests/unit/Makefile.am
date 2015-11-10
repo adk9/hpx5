@@ -56,6 +56,9 @@ if HAVE_APEX
 TESTS           += apex
 endif
 
+if HAVE_PERCOLATION
+TESTS           += percolation
+endif
 
 # Override libhpx tests so that they have the right paths and flags.
 libhpx_boot_CPPFLAGS                = $(LIBHPX_CPPFLAGS) -I$(top_srcdir)/include -Wno-unused
@@ -91,6 +94,7 @@ parcel_create_DEPENDENCIES          = $(HPX_APPS_DEPS)
 parcel_send_DEPENDENCIES            = $(HPX_APPS_DEPS)
 parcel_send_rendezvous_DEPENDENCIES = $(HPX_APPS_DEPS)
 parcel_send_through_DEPENDENCIES    = $(HPX_APPS_DEPS)
+percolation_DEPENDENCIES            = $(HPX_APPS_DEPS)
 process_DEPENDENCIES                = $(HPX_APPS_DEPS)
 runtime_DEPENDENCIES                = $(HPX_APPS_DEPS)
 reent_runtime_DEPENDENCIES          = $(HPX_APPS_DEPS)

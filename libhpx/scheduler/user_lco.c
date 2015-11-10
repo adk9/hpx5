@@ -121,7 +121,7 @@ static int _user_lco_set(lco_t *lco, int size, const void *from) {
 
   f = action_table_get_handler(here->actions, u->predicate);
   hpx_predicate_t predicate = (hpx_predicate_t)f;
-  if (predicate(u->buffer, size)) {
+  if (predicate(u->buffer, u->size)) {
     lco_set_triggered(&u->lco);
     scheduler_signal_all(&u->cvar);
     set = 1;

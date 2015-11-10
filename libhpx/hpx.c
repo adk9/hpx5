@@ -46,6 +46,10 @@
 #include "apex.h"
 #endif
 
+#ifdef HAVE_PERCOLATION
+#include <libhpx/percolation.h>
+#endif
+
 static hpx_addr_t _hpx_143;
 static int _hpx_143_fix_handler(void) {
   _hpx_143 = hpx_gas_alloc_cyclic(sizeof(void*), HPX_LOCALITIES, 0);
@@ -80,8 +84,14 @@ static void _cleanup(locality_t *l) {
     return;
 
 #ifdef HAVE_APEX
-  // finalize APEX
   apex_finalize();
+#endif
+
+#ifdef HAVE_PERCOLATION
+  if (l->percolation) {
+    percolation_delete(l->percolation);
+    l->percolation = NULL;
+  }
 #endif
 
   if (l->gas) {
@@ -210,6 +220,14 @@ int hpx_init(int *argc, char ***argv) {
     goto unwind1;
   }
   HPX_HERE = HPX_THERE(here->rank);
+
+#ifdef HAVE_PERCOLATION
+  here->percolation = percolation_new();
+  if (!here->percolation) {
+    status = log_error("failed to activate percolation.\n");
+    goto unwind1;
+  }
+#endif
 
   int cores = system_get_available_cores();
   dbg_assert(cores > 0);

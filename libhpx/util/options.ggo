@@ -191,6 +191,10 @@ option "hpx-photon-fiprov" - "[libfabric] provider to use (sockets, psm, etc.)"
 typestr="provider"
 string optional
 
+option "hpx-photon-fidev" - "[libfabric] network interface to use"
+typestr="interface"
+string optional
+
 option "hpx-photon-ledgersize" - "set number of ledger entries"
 typestr="integer"
 int optional

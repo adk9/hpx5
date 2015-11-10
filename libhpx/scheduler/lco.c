@@ -367,10 +367,11 @@ void hpx_lco_set_with_continuation(hpx_addr_t target,
                                    hpx_addr_t raddr, hpx_action_t rop) {
 
   if (target == HPX_NULL) {
-    if (lsync) {
-      hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+    if (lsync != HPX_NULL) {
+      hpx_lco_set_with_continuation(lsync, 0, NULL, HPX_NULL, HPX_NULL,
+                                    HPX_ACTION_NULL);
     }
-    if (raddr) {
+    if (raddr != HPX_NULL) {
       int zero = 0;
       hpx_call(raddr, rop, HPX_NULL, &zero, sizeof(zero));
     }
@@ -381,10 +382,11 @@ void hpx_lco_set_with_continuation(hpx_addr_t target,
   if ((size < HPX_LCO_SET_ASYNC) && hpx_gas_try_pin(target, (void**)&lco)) {
     int set = _set(lco, size, value);
     hpx_gas_unpin(target);
-    if (lsync) {
-      hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+    if (lsync != HPX_NULL) {
+      hpx_lco_set_with_continuation(lsync, 0, NULL, HPX_NULL, HPX_NULL,
+                                    HPX_ACTION_NULL);
     }
-    if (raddr) {
+    if (raddr != HPX_NULL) {
       hpx_call(raddr, rop, HPX_NULL, &set, sizeof(set));
     }
     return;
