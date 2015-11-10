@@ -76,7 +76,6 @@ typedef struct coalesced_network{
  } coalesced_network_t;
 
 
-//TODO: global access to coalesced network instance, as part of here?
 static network_t* coalesced_network_new (network_t *network) { 
   int i;
   coalesced_network_t *coalesced_network = (coalesced_network_t *) malloc(sizeof(coalesced_network_t));
@@ -90,7 +89,7 @@ static network_t* coalesced_network_new (network_t *network) {
 
   coalesced_network->previous_queue_size = 0;
 
-  //initially the coalesing buffers are null
+  //initially the coalescing buffers are null
   coalesced_network->coalesced_buffer = NULL;
 
   //allocate array for maintaining size of the coalesced buffers and initialize them
@@ -111,15 +110,6 @@ static network_t* coalesced_network_new (network_t *network) {
    for(i = 0; i < HPX_LOCALITIES; i++ ) {
      coalesced_network->total_previous_byte_count[i] = 0;
    }
-
-   printf("Zeroing out count array for destination buffer\n");
-   //zero out the Parcel count array per destination coalesced buffer
-   for (i = 0; i < HPX_LOCALITIES; i++) {
-     //printf("Assigning value zero\n");
-     coalesced_network->destination_buffer_size[i] = 0;
-     //printf("After assigning value zero\n");
-   }
-
 
    coalesced_network->vtable.delete = coalesced_network_delete;
    coalesced_network->vtable.progress = coalesced_network_progress;
