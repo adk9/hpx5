@@ -92,6 +92,7 @@ contrib/libcuckoo/
 /libhpx/network/isir/Makefile
 /libhpx/network/pwc/Makefile
 /libhpx/memory/Makefile
+/libhpx/percolation/Makefile
 /libhpx/process/Makefile
 /libhpx/scheduler/Makefile
 /libhpx/scheduler/arch/Makefile
@@ -124,6 +125,7 @@ tests/unit/lco_user
 tests/unit/gas_memget
 tests/unit/parcel_create
 tests/unit/parcel_send
+tests/unit/percolation
 tests/unit/process
 tests/unit/thread_continue
 tests/unit/gas_memput
