@@ -98,7 +98,7 @@ void scheduler_delete(struct scheduler *scheduler);
 /// The scheduler must already have been shutdown with
 /// scheduler_shutdown(). At reentrance we do not release any resources instead
 /// suspend workers. However current parcel of reentrance thread may have been released
-//  during previous execution. we will restate that. 
+///  during previous execution. we will restate that. 
 ///
 /// @param    scheduler The scheduler obj.
 void scheduler_reset_reent_state(struct scheduler *scheduler);
