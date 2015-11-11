@@ -68,6 +68,8 @@ int system_set_worker_affinity(int id, libhpx_thread_affinity_t policy) {
   return _hwloc_bind_curthread(cpuset);
 }
 
+/// Return the weight of the bitmap that represents the CPUs we are
+///  allowed to run on. This bitmap is set in libhpx/system/topology.c.
 int system_get_available_cores(void) {
   return hwloc_bitmap_weight(here->topology->allowed_cpus);
 }
