@@ -264,6 +264,7 @@ static void _send_all(coalesced_network_t *coalesced_network) {
      memcpy(coalesced_buffer[destination] + current_destination_buffer_index[destination], p, n);
      current_destination_buffer_index[destination] += n;
      number_of_parcels_dequeued++ ;
+     current_coalescing_queue_size--;
    }
 
   
