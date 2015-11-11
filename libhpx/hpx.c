@@ -372,7 +372,7 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   va_list vargs;
   va_start(vargs, n);
   int status = HPX_SUCCESS;
-  if (!here->reent_state.reent_st == REENT_ACTIVE) {
+  if (here->reent_state.reent_st == REENT_NOT_ACTIVE) {
     status = _hpx_run_phase1(act, n, &vargs);	 
     here->reent_state.reent_st = REENT_ACTIVE;
   } else {
