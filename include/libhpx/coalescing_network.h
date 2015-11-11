@@ -126,7 +126,6 @@ static network_t* coalesced_network_new (network_t *network) {
 
   printf("Created coalescing network\n");
   return ((network_t*) coalesced_network);
-
 }
 
 static void coalesced_network_delete(void *obj) {
@@ -263,8 +262,6 @@ static void _send_all(coalesced_network_t *coalesced_network) {
      n = parcel_size(p);
      memcpy(coalesced_buffer[destination] + current_destination_buffer_index[destination], p, n);
      current_destination_buffer_index[destination] += n;
-     number_of_parcels_dequeued++ ;
-     current_coalescing_queue_size--;
    }
 
   
