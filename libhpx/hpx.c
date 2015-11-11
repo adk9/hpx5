@@ -358,7 +358,6 @@ static int _hpx_run_phase2(hpx_action_t *act, int n, va_list* vargs) {
 
 /// Called to run HPX.
 int _hpx_run(hpx_action_t *act, int n, ...) {
-  log_dflt("hpx_run starting up .....\n");
   va_list vargs;
   va_start(vargs, n);
   int status = HPX_SUCCESS;
@@ -373,8 +372,6 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   boot_barrier(here->boot);
   
   va_end(vargs);
-  log_dflt("hpx_run ending.....\n");
-  
   return status;
 }
 
@@ -399,7 +396,7 @@ void hpx_exit(int code) {
   network_flush_on_shutdown(here->network);
   for (int i = 0, e = here->ranks; i < e; ++i) {
     int e = network_command(here->network, HPX_THERE(i), locality_shutdown,
-			    (uint64_t)code);
+                            (uint64_t)code);
     dbg_check(e);
   }
 
