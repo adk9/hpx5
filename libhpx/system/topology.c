@@ -177,7 +177,7 @@ topology_t *topology_new(const struct config *config) {
   int numa_to_cpus_index[topology->nnodes];
   // initialize the reverse NUMA map
   if (topology->nnodes > 0) {
-    topology->numa_to_cpus = calloc(topology->nnodes, sizeof(int));
+    topology->numa_to_cpus = calloc(topology->nnodes, sizeof(int*));
     if (!topology->numa_to_cpus) {
       log_error("failed to allocate memory for the reverse NUMA map.\n");
       return NULL;
@@ -218,8 +218,7 @@ topology_t *topology_new(const struct config *config) {
     topology->cpu_to_numa[cpu->os_index] = index;
     if (topology->numa_to_cpus && index >= 0) {
       int map_index = numa_to_cpus_index[index]++;
-      int *cpuset = topology->numa_to_cpus[index];
-      cpuset[map_index] = cpu->os_index;
+      topology->numa_to_cpus[index][map_index] = cpu->os_index;
     }
   }
 
