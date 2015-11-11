@@ -648,8 +648,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   (void)spins;
 }
 
-// Reset the current stack for this worker. Note that the current
-// parcel may have been released if the scheduler was suspended.
+// Reset the worker state.
 void worker_reset(worker_t *w){
   w->work_first  = 0;
   w->nstacks     = 0;
