@@ -68,17 +68,14 @@ static int coalesced_network_command(void *obj, hpx_addr_t locality, hpx_action_
 typedef struct coalesced_network{
   network_t       vtable;
   network_t *base_network;
-  char **coalesced_buffer;
-  uint32_t *destination_buffer_size;
+  //char **coalesced_buffer;
   two_lock_queue_t sends;
   uint64_t previous_queue_size;
-  uint32_t* total_byte_count; 
   uint64_t count_parcels;
  } coalesced_network_t;
 
 
 static network_t* coalesced_network_new (network_t *network) { 
-  int i;
   coalesced_network_t *coalesced_network = (coalesced_network_t *) malloc(sizeof(coalesced_network_t));
   
   //set the base network
@@ -91,40 +88,27 @@ static network_t* coalesced_network_new (network_t *network) {
   coalesced_network->previous_queue_size = 0;
   coalesced_network->count_parcels = 0;
   //initially the coalescing buffers are null
-  coalesced_network->coalesced_buffer = NULL;
+  //coalesced_network->coalesced_buffer = NULL;
 
-  //allocate array for maintaining size of the coalesced buffers and initialize them
-  coalesced_network->destination_buffer_size = (uint32_t *) malloc (HPX_LOCALITIES * sizeof(uint32_t));
-  
-  for (i = 0; i < HPX_LOCALITIES; i++) {
-    coalesced_network->destination_buffer_size[i] = 0;
-  }
+  coalesced_network->vtable.delete = coalesced_network_delete;
+  coalesced_network->vtable.progress = coalesced_network_progress;
+  coalesced_network->vtable.send =  coalesced_network_send;
+  coalesced_network->vtable.command = coalesced_network_command; 
+  coalesced_network->vtable.pwc = coalesced_network_pwc;
+  coalesced_network->vtable.put = coalesced_network_put; 
+  coalesced_network->vtable.get = coalesced_network_get;
+  coalesced_network->vtable.probe = coalesced_network_probe; 
+  coalesced_network->vtable.set_flush =  coalesced_network_set_flush;
+  coalesced_network->vtable.register_dma = coalesced_network_register_dma;
+  coalesced_network->vtable.release_dma = coalesced_network_release_dma; 
+  coalesced_network->vtable.lco_get = coalesced_network_lco_get;
+  coalesced_network->vtable.lco_wait = coalesced_network_lco_wait;
 
-   //allocate another array to get bytecount per destination
-   coalesced_network->total_byte_count = (uint32_t *) malloc (HPX_LOCALITIES * sizeof(uint32_t));
-   for(i = 0; i < HPX_LOCALITIES; i++ ) {
-     coalesced_network->total_byte_count[i] = 0;
-   }
+  //coalesced_network->vtable.network_parcel_queue_size = coalesced_network_parcel_queue_size;
+  //coalesced_network->vtable.network_buffer_size = coalesced_network_buffer_size;
 
-   coalesced_network->vtable.delete = coalesced_network_delete;
-   coalesced_network->vtable.progress = coalesced_network_progress;
-   coalesced_network->vtable.send =  coalesced_network_send;
-   coalesced_network->vtable.command = coalesced_network_command; 
-   coalesced_network->vtable.pwc = coalesced_network_pwc;
-   coalesced_network->vtable.put = coalesced_network_put; 
-   coalesced_network->vtable.get = coalesced_network_get;
-   coalesced_network->vtable.probe = coalesced_network_probe; 
-   coalesced_network->vtable.set_flush =  coalesced_network_set_flush;
-   coalesced_network->vtable.register_dma = coalesced_network_register_dma;
-   coalesced_network->vtable.release_dma = coalesced_network_release_dma; 
-   coalesced_network->vtable.lco_get = coalesced_network_lco_get;
-   coalesced_network->vtable.lco_wait = coalesced_network_lco_wait;
-
-   //coalesced_network->vtable.network_parcel_queue_size = coalesced_network_parcel_queue_size;
-   //coalesced_network->vtable.network_buffer_size = coalesced_network_buffer_size;
-
-   printf("Created coalescing network\n");
-   return ((network_t*) coalesced_network);
+  printf("Created coalescing network\n");
+  return ((network_t*) coalesced_network);
 }
 
 static void coalesced_network_delete(void *obj) {
@@ -170,7 +154,7 @@ static uint64_t coalesced_network_parcel_queue_size(void *network) {
 }
 
 static void _send_all(coalesced_network_t *coalesced_network) {
-  assert(coalesced_network->destination_buffer_size);
+  //assert(destination_buffer_size);
   hpx_parcel_t *p = NULL;
   uint64_t number_of_parcels_dequeued = 0;
   uint64_t i = 0;
@@ -179,12 +163,58 @@ static void _send_all(coalesced_network_t *coalesced_network) {
   if(coalesced_network_parcel_queue_size(coalesced_network) > 0) {
     //printf("queue size of coalesced send %"PRIu64 " \n", coalesced_network_parcel_queue_size(coalesced_network));
 
+   //allocate an array to get bytecount per destination
+   uint32_t* total_byte_count = (uint32_t *) malloc (HPX_LOCALITIES * sizeof(uint32_t));
+   for(i = 0; i < HPX_LOCALITIES; i++ ) {
+     total_byte_count[i] = 0;
+   }
+
+   //allocate array for maintaining how many parcels per destination in the coalesced buffers and initialize them
+   uint32_t* destination_buffer_size = (uint32_t *) malloc (HPX_LOCALITIES * sizeof(uint32_t));
+   for (i = 0; i < HPX_LOCALITIES; i++) {
+     destination_buffer_size[i] = 0;
+   }
+
+
+   //adjust the queue size before we proceed to copying out parcels from the queue to local buffer
+   uint64_t current_coalescing_queue_size = coalesced_network_parcel_queue_size(coalesced_network);
+   uint64_t readjusted_coalescing_queue_size = coalesced_network_parcel_queue_size(coalesced_network) - current_coalescing_queue_size;
+   while (true) {
+     uint64_t current_size = coalesced_network_parcel_queue_size(coalesced_network);
+     if(current_size >= current_coalescing_queue_size) {
+       uint64_t viewed_coalescing_queue_size = sync_cas_val(&coalesced_network->sends.size, current_size, readjusted_coalescing_queue_size, SYNC_RELAXED, SYNC_RELAXED);
+       if (viewed_coalescing_queue_size == current_size) {
+	 break;
+       } else {
+	 continue;
+       }       
+     } else {
+       break;
+     }
+   }
+
+   //temporarily copy content of the queue into a buffer and get an estimation of how many buffers need to be allocated per destination.
+   hpx_parcel_t *coalesced_chain = NULL;
+   while (current_coalescing_queue_size > 0) {
+     p = sync_two_lock_queue_dequeue(&coalesced_network->sends);
+     //printf("temporarily copying contents\n");
+     //append to the chain
+     parcel_stack_push(&coalesced_chain, p);
+     number_of_parcels_dequeued++ ;
+     //check the parcel destination
+     uint64_t destination = gas_owner_of(here->gas, p->target);
+     //increase the  destination buffer size
+     destination_buffer_size[destination] += 1; 
+     total_byte_count[destination] += parcel_size(p);
+     current_coalescing_queue_size--;
+   }
+
 
    //allocate buffers for each destination
-   coalesced_network->coalesced_buffer = (char **) malloc (HPX_LOCALITIES * sizeof(char *));
+   char** coalesced_buffer = (char **) malloc (HPX_LOCALITIES * sizeof(char *));
 
    for (i = 0; i < HPX_LOCALITIES; i++) {
-     coalesced_network->coalesced_buffer[i] = (char *) malloc (coalesced_network->total_byte_count[i] * sizeof(char));
+     coalesced_buffer[i] = (char *) malloc (total_byte_count[i] * sizeof(char));
    }
 
    //allocate array for current buffer index position for each destination
@@ -200,33 +230,17 @@ static void _send_all(coalesced_network_t *coalesced_network) {
   
    //sync_fadd(&coalesced_network->sends.size, -number_of_parcels_dequeued, SYNC_RELAXED);
    
-   //adjust the queue size before we proceed to sorting parcel according to destination
-   uint64_t current_coalescing_queue_size = coalesced_network_parcel_queue_size(coalesced_network);
-   uint64_t readjusted_coalescing_queue_size = coalesced_network_parcel_queue_size(coalesced_network) - current_coalescing_queue_size;
-   while (true) {
-     if(coalesced_network_parcel_queue_size(coalesced_network) >= current_coalescing_queue_size) {
-       uint64_t viewed_coalescing_queue_size = sync_cas_val(&coalesced_network->sends.size, current_coalescing_queue_size, readjusted_coalescing_queue_size, SYNC_RELAXED, SYNC_RELAXED);
-       if (viewed_coalescing_queue_size == current_coalescing_queue_size) {
-	 break;
-       } else {
-	 continue;
-       }       
-     } else {
-       break;
-     }
-   }
-
+   
    //Now, sort the parcels to destination bin
    
-   while (current_coalescing_queue_size > 0 ) {
+   for (i = 0; i < number_of_parcels_dequeued; i++) {
      //printf("Processing parcel and putting it into the right destination buffer\n");
-     p = sync_two_lock_queue_dequeue(&coalesced_network->sends); 
+     p = NULL;
+     p = parcel_stack_pop(&coalesced_chain);
      uint64_t destination = gas_owner_of(here->gas, p->target);
      n = parcel_size(p);
-     memcpy(coalesced_network->coalesced_buffer[destination] + current_destination_buffer_index[destination], p, n);
+     memcpy(coalesced_buffer[destination] + current_destination_buffer_index[destination], p, n);
      current_destination_buffer_index[destination] += n;
-     number_of_parcels_dequeued++ ;
-     current_coalescing_queue_size--;
    }
 
   
@@ -242,14 +256,14 @@ static void _send_all(coalesced_network_t *coalesced_network) {
    uint64_t rank = 0;
    for (rank = 0; rank < HPX_LOCALITIES; rank++) {
      //check whether the particular destination has any parcel to recieve ie. check if zero parcel count
-     if(coalesced_network->destination_buffer_size[rank] == 0) {
+     if(destination_buffer_size[rank] == 0) {
        continue;
      }
 
      //create the fat parcel
      hpx_pid_t pid = hpx_thread_current_pid();
      hpx_addr_t target = HPX_THERE(rank);
-     hpx_parcel_t *p = parcel_new(target, _demultiplexer, 0, 0, pid, coalesced_network->coalesced_buffer[rank] , coalesced_network->total_byte_count[rank]); 
+     hpx_parcel_t *p = parcel_new(target, _demultiplexer, 0, 0, pid, coalesced_buffer[rank] , total_byte_count[rank]); 
      _prepare(p);
      //printf("Created a fat parcel\n");
      //call base network send interface
@@ -260,20 +274,13 @@ static void _send_all(coalesced_network_t *coalesced_network) {
    //clean up code
    //printf("cleaning up after one network send\n");
    for (i = 0; i < HPX_LOCALITIES; i++) {
-     free(coalesced_network->coalesced_buffer[i]);
+     free(coalesced_buffer[i]);
    }
-   free(coalesced_network->coalesced_buffer);
-   coalesced_network->coalesced_buffer =NULL;
+   free(coalesced_buffer);
+  
+   free(total_byte_count);
+   free(destination_buffer_size);
 
-   for(i = 0; i < HPX_LOCALITIES; i++ ) {
-     coalesced_network->total_byte_count[i] = 0;
-   }
-
-   for (i = 0; i < HPX_LOCALITIES; i++) {
-     coalesced_network->destination_buffer_size[i] = 0;
-   }
-
-   //coalesced_network->previous_queue_size = 0;
  }
 
 }
@@ -284,12 +291,9 @@ static int coalesced_network_send(void *network,  hpx_parcel_t *p) {
   uint64_t coalescing_size =  COALESCING_SIZE;
   //uint64_t prev_count = sync_load(&coalesced_network->count_parcels, SYNC_RELAXED);
   uint64_t prev_count = sync_cas_val(&coalesced_network->count_parcels, coalescing_size, 0, SYNC_RELAXED, SYNC_RELAXED);
-  if(prev_count == COALESCING_SIZE) {
-    //uint64_t current_coalescing_queue_size = coalesced_network_parcel_queue_size(coalesced_network);
-
+ 
   //Before putting the parcel in the queue, check whether the queue size is the same as the coalescing size 
-
-  //if (current_coalescing_queue_size == COALESCING_SIZE ) {
+  if(prev_count == COALESCING_SIZE) {
     //then we empty the queue
     _send_all(coalesced_network);
   } else {
@@ -300,13 +304,9 @@ static int coalesced_network_send(void *network,  hpx_parcel_t *p) {
   sync_two_lock_queue_enqueue(&coalesced_network->sends, p);
   sync_fadd(&coalesced_network->sends.size, 1, SYNC_RELAXED);
 
-  //update the data structures for byte count
-  //check the parcel destination
-  uint64_t destination = gas_owner_of(here->gas, p->target);
-  //increase the  destination buffer size
-  coalesced_network->destination_buffer_size[destination] += 1; 
-  coalesced_network->total_byte_count[destination] += parcel_size(p);
-  sync_store(&coalesced_network->previous_queue_size, coalesced_network_parcel_queue_size(coalesced_network), SYNC_RELAXED);
+  //check whether we can update the previous parcel count for flush condition 
+  uint64_t old_coalescing_queue_size = sync_load(&coalesced_network->previous_queue_size, SYNC_RELAXED);
+ uint64_t seen_previous_queue_size = sync_cas_val(&coalesced_network->previous_queue_size, old_coalescing_queue_size, coalesced_network->sends.size, SYNC_RELAXED, SYNC_RELAXED); 
 
   //printf("Returning from coalescing network send\n");
   return LIBHPX_OK;
