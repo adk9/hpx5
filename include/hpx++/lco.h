@@ -63,16 +63,102 @@ namespace hpx {
   };
   
   class Future : public BaseLCO<Future> {
-    
+    void fini() {}
+    void set(int size, const void *value) {}
+    void error(hpx_status_t code) {}
+    hpx_status_t get(int size, void *value, int reset) {
+      return HPX_LCO_ERROR;
+    }
+    hpx_status_t getref(int size, void **out, int *unpin) {
+      return HPX_LCO_ERROR;
+    }
+    int release(void *out) {
+      return HPX_LCO_ERROR;
+    }
+    hpx_status_t wait(int reset) {
+      return HPX_LCO_ERROR;
+    }
+    hpx_status_t attach(hpx_parcel_t *p) {
+      return HPX_LCO_ERROR;
+    }
+    void reset() {}
+    std::size_t size() {
+      return 0;
+    }
   };
   
   class AndGate : public BaseLCO<AndGate> {
+    void fini() {}
+    void set(int size, const void *value) {}
+    void error(hpx_status_t code) {}
+    hpx_status_t get(int size, void *value, int reset) {
+      return HPX_LCO_ERROR;
+    }
+    hpx_status_t getref(int size, void **out, int *unpin) {
+      return HPX_LCO_ERROR;
+    }
+    int release(void *out) {
+      return HPX_LCO_ERROR;
+    }
+    hpx_status_t wait(int reset) {
+      return HPX_LCO_ERROR;
+    }
+    hpx_status_t attach(hpx_parcel_t *p) {
+      return HPX_LCO_ERROR;
+    }
+    void reset() {}
+    std::size_t size() {
+      return 0;
+    }
   };
   
   class Reduce : public BaseLCO<Reduce> {
-    
+    void fini() {}
+    void set(int size, const void *value) {}
+    void error(hpx_status_t code) {}
+    hpx_status_t get(int size, void *value, int reset) {
+      return HPX_LCO_ERROR;
+    }
+    hpx_status_t getref(int size, void **out, int *unpin) {
+      return HPX_LCO_ERROR;
+    }
+    int release(void *out) {
+      return HPX_LCO_ERROR;
+    }
+    hpx_status_t wait(int reset) {
+      return HPX_LCO_ERROR;
+    }
+    hpx_status_t attach(hpx_parcel_t *p) {
+      return HPX_LCO_ERROR;
+    }
+    void reset() {}
+    std::size_t size() {
+      return 0;
+    }
   };
   class Semaphore : public BaseLCO<Semaphore> {
+    void fini() {}
+    void set(int size, const void *value) {}
+    void error(hpx_status_t code) {}
+    hpx_status_t get(int size, void *value, int reset) {
+      return HPX_LCO_ERROR;
+    }
+    hpx_status_t getref(int size, void **out, int *unpin) {
+      return HPX_LCO_ERROR;
+    }
+    int release(void *out) {
+      return HPX_LCO_ERROR;
+    }
+    hpx_status_t wait(int reset) {
+      return HPX_LCO_ERROR;
+    }
+    hpx_status_t attach(hpx_parcel_t *p) {
+      return HPX_LCO_ERROR;
+    }
+    void reset() {}
+    std::size_t size() {
+      return 0;
+    }
   };
   
 }
