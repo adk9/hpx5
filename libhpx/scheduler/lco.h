@@ -131,4 +131,12 @@ void lco_reset_triggered(lco_t *lco)
 uintptr_t lco_get_triggered(const lco_t *lco)
   HPX_NON_NULL(1);
 
+
+void lco_set_user(lco_t *lco)
+  HPX_NON_NULL(1);
+
+uintptr_t lco_get_user(const lco_t *lco)
+  HPX_NON_NULL(1);
+
+
 #endif // LIBHPX_LCO_H
