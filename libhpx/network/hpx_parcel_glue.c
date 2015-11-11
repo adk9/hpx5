@@ -22,12 +22,10 @@
 #include <libhpx/debug.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/parcel.h>
-#include <inttypes.h>
 
 hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {
   hpx_addr_t target = HPX_HERE;
   hpx_pid_t pid = hpx_thread_current_pid();
-  /*printf("[HPX parcel init state target : %"PRIu64"  pid : %llu .....] \n", target, pid);*/
   return parcel_new(target, 0, 0, 0, pid, buffer, bytes);
 }
 
@@ -43,13 +41,11 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _send_async, hpx_parcel_send_sync, HPX_POIN
 hpx_status_t hpx_parcel_send(hpx_parcel_t *p, hpx_addr_t lsync) {
   parcel_state_t state = parcel_get_state(p);
   if (p->size < LIBHPX_SMALL_THRESHOLD || parcel_serialized(state)) {
-    /*printf("[HPX parcel send with error: %d .....] \n", parcel_serialized(state));*/
     parcel_launch(p);
     hpx_lco_error(lsync, HPX_SUCCESS, HPX_NULL);
     return HPX_SUCCESS;
   }
   else {
-    /*printf("[HPX parcel send normal: %d .....] \n", parcel_serialized(state));*/
     return hpx_call(HPX_HERE, _send_async, lsync, &p);
   }
 }
