@@ -137,7 +137,8 @@ _pgas_unpin(void *gas, hpx_addr_t addr) {
 }
 
 static hpx_addr_t
-_pgas_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
+_pgas_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
+                       uint32_t attr) {
   hpx_addr_t addr;
   if (here->rank == 0) {
     addr = pgas_alloc_cyclic_sync(n, bsize);
@@ -152,7 +153,8 @@ _pgas_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
 }
 
 static hpx_addr_t
-_pgas_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
+_pgas_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
+                        uint32_t attr) {
   hpx_addr_t addr;
   if (here->rank == 0) {
     addr = pgas_calloc_cyclic_sync(n, bsize);
@@ -169,7 +171,8 @@ _pgas_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
 /// Allocate a single global block from the global heap, and return it as an
 /// hpx_addr_t.
 static hpx_addr_t
-_pgas_gas_alloc_local(void *gas, size_t n, uint32_t bsize, uint32_t boundary) {
+_pgas_gas_alloc_local(size_t n, uint32_t bsize, uint32_t boundary,
+                      uint32_t attr) {
   size_t bytes = n * bsize;
   void *lva = NULL;
   if (boundary) {
@@ -184,8 +187,8 @@ _pgas_gas_alloc_local(void *gas, size_t n, uint32_t bsize, uint32_t boundary) {
 /// Allocate a single global block, filled with 0, from the global heap, and
 /// return it as an hpx_addr_t.
 static hpx_addr_t
-_pgas_gas_calloc_local(void *gas, size_t n, uint32_t bsize, uint32_t boundary)
-{
+_pgas_gas_calloc_local(size_t n, uint32_t bsize, uint32_t boundary,
+                       uint32_t attr) {
   size_t bytes = n * bsize;
   void *lva = NULL;
   if (boundary) {

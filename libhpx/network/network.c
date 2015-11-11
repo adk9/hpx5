@@ -19,9 +19,11 @@
 #include <libhpx/boot.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
+#include <libhpx/instrumentation.h>
 #include <libhpx/network.h>
 #include "isir/isir.h"
 #include "pwc/pwc.h"
+#include "inst.h"
 #include "smp.h"
 
 static const int LEVEL = HPX_LOG_CONFIG | HPX_LOG_NET | HPX_LOG_DEFAULT;
@@ -102,5 +104,13 @@ network_t *network_new(config_t *cfg, boot_t *boot, struct gas *gas) {
     log_level(LEVEL, "%s network initialized\n", HPX_NETWORK_TO_STRING[type]);
   }
 
-  return network;
+  if (!config_inst_at_isset(here->config, here->rank)) {
+    return network;
+  }
+
+  if (!inst_trace_class(HPX_INST_SCHEDTIMES)) {
+    return network;
+  }
+
+  return network_inst_new(network);
 }

@@ -39,13 +39,13 @@ typedef struct heap_segment {
   xport_key_t key;
 } heap_segment_t;
 
-static void _probe_local(pwc_network_t *pwc) {
+static void _probe_local(pwc_network_t *pwc, int id) {
   int rank = here->rank;
 
   // Each time through the loop, we deal with local completions.
   command_t command;
   int src;
-  while (pwc->xport->test(&command, NULL, &src)) {
+  while (pwc->xport->test(&command, NULL, XPORT_ANY_SOURCE, &src)) {
     int e = command_run(rank, command);
     dbg_check(e, "failed to process local command\n");
   }
@@ -61,15 +61,21 @@ static hpx_parcel_t *_probe(pwc_network_t *pwc, int rank) {
   return NULL;
 }
 
-static int _pwc_progress(void *network) {
+static int _pwc_progress(void *network, int id) {
   pwc_network_t *pwc = network;
-  _probe_local(pwc);
+  if (sync_swap(&pwc->progress_lock, 0, SYNC_ACQUIRE)) {
+    _probe_local(pwc, id);
+    sync_store(&pwc->progress_lock, 1, SYNC_RELEASE);
+  }
   return 0;
 }
 
 static hpx_parcel_t *_pwc_probe(void *network, int rank) {
   pwc_network_t *pwc = network;
-  _probe(pwc, XPORT_ANY_SOURCE);
+  if (sync_swap(&pwc->probe_lock, 0, SYNC_ACQUIRE)) {
+    _probe(pwc, XPORT_ANY_SOURCE);
+    sync_store(&pwc->probe_lock, 1, SYNC_RELEASE);
+  }
   return NULL;
 }
 
@@ -182,7 +188,7 @@ static void _pwc_flush(pwc_network_t *pwc) {
   int remaining, src;
   command_t command;
   do {
-    pwc->xport->test(&command, &remaining, &src);
+    pwc->xport->test(&command, &remaining, XPORT_ANY_SOURCE, &src);
   } while (remaining > 0);
   boot_barrier(here->boot);
 }
@@ -226,7 +232,10 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   }
 
   // Allocate the network object and initialize its virtual function table.
-  pwc_network_t *pwc = malloc(sizeof(*pwc));
+  pwc_network_t *pwc;
+  posix_memalign((void*)&pwc, HPX_CACHELINE_SIZE, sizeof(*pwc));
+  dbg_assert(pwc);
+
   pwc->vtable.type = HPX_NETWORK_PWC;
   pwc->vtable.delete = _pwc_delete;
   pwc->vtable.progress = _pwc_progress;
@@ -242,6 +251,10 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   pwc->vtable.release_dma = _pwc_release_dma;
   pwc->vtable.lco_get = pwc_lco_get;
   pwc->vtable.lco_wait = pwc_lco_wait;
+
+  // Initialize locks.
+  sync_store(&pwc->probe_lock, 1, SYNC_RELEASE);
+  sync_store(&pwc->progress_lock, 1, SYNC_RELEASE);
 
   // Initialize transports.
   pwc->cfg = cfg;

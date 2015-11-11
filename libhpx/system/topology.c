@@ -80,7 +80,7 @@ static hwloc_cpuset_t *_cpu_affinity_map_new(topology_t *topology,
        hwloc_bitmap_singlify(cpuset);
        break;
      case HPX_THREAD_AFFINITY_NONE:
-       hwloc_bitmap_set_range(cpuset, 0, topology->ncpus);       
+       hwloc_bitmap_set_range(cpuset, 0, topology->ncpus-1);
        break;
      default:
        log_error("unknown thread affinity policy\n");
@@ -130,10 +130,10 @@ topology_t *topology_new(const struct config *config) {
                           HWLOC_CPUBIND_PROCESS);
     if (e) {
       // failed to get the CPU binding, use all available cpus
-      hwloc_bitmap_set_range(topology->allowed_cpus, 0, topology->ncpus);
+      hwloc_bitmap_set_range(topology->allowed_cpus, 0, topology->ncpus-1);
     }
   } else {
-    hwloc_bitmap_set_range(topology->allowed_cpus, 0, cores);
+    hwloc_bitmap_set_range(topology->allowed_cpus, 0, cores-1);
   }
 
   topology->cpus = calloc(topology->ncpus, sizeof(hwloc_obj_t));
@@ -177,7 +177,7 @@ topology_t *topology_new(const struct config *config) {
   int numa_to_cpus_index[topology->nnodes];
   // initialize the reverse NUMA map
   if (topology->nnodes > 0) {
-    topology->numa_to_cpus = calloc(topology->nnodes, sizeof(int));
+    topology->numa_to_cpus = calloc(topology->nnodes, sizeof(int*));
     if (!topology->numa_to_cpus) {
       log_error("failed to allocate memory for the reverse NUMA map.\n");
       return NULL;

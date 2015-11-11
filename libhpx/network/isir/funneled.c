@@ -43,6 +43,12 @@ typedef struct {
   two_lock_queue_t recvs;
   isend_buffer_t  isends;
   irecv_buffer_t  irecvs;
+  PAD_TO_CACHELINE(2 * sizeof(two_lock_queue_t) +
+                   sizeof(irecv_buffer_t) +
+                   sizeof(isend_buffer_t));
+  volatile int probe_lock;
+  PAD_TO_CACHELINE(sizeof(int));
+  volatile int progress_lock;
 } _funneled_t;
 
 /// Transfer any parcels in the funneled sends queue into the isends buffer.
@@ -200,37 +206,40 @@ _funneled_release_dma(void *obj, const void* base, size_t n) {
 }
 
 static int
-_funneled_progress(void *network) {
+_funneled_progress(void *network, int id) {
   _funneled_t *isir = network;
-  hpx_parcel_t *chain = irecv_buffer_progress(&isir->irecvs);
-  int n = 0;
-  if (chain) {
-    ++n;
-    sync_two_lock_queue_enqueue(&isir->recvs, chain);
+  if (sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE)) {
+    hpx_parcel_t *chain = irecv_buffer_progress(&isir->irecvs);
+    int n = 0;
+    if (chain) {
+      ++n;
+      sync_two_lock_queue_enqueue(&isir->recvs, chain);
+    }
+
+    DEBUG_IF(n) {
+      log_net("completed %d recvs\n", n);
+    }
+
+    int m = isend_buffer_progress(&isir->isends);
+
+    DEBUG_IF(m) {
+      log_net("completed %d sends\n", m);
+    }
+
+    _send_all(isir);
+    sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
+    (void)n;
+    (void)m;
   }
-
-  DEBUG_IF(n) {
-    log_net("completed %d recvs\n", n);
-  }
-
-  int m = isend_buffer_progress(&isir->isends);
-
-  DEBUG_IF(m) {
-    log_net("completed %d sends\n", m);
-  }
-
-  _send_all(isir);
-
   return LIBHPX_OK;
 
   // suppress unused warnings
-  (void)n;
-  (void)m;
 }
 
 network_t *
 network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
-  _funneled_t *network = malloc(sizeof(*network));
+  _funneled_t *network = NULL;
+  posix_memalign((void*)&network, HPX_CACHELINE_SIZE, sizeof(*network));
   if (!network) {
     log_error("could not allocate a funneled Isend/Irecv network\n");
     return NULL;
@@ -267,6 +276,9 @@ network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
   isend_buffer_init(&network->isends, network->xport, 64, cfg->isir_sendlimit,
             cfg->isir_testwindow);
   irecv_buffer_init(&network->irecvs, network->xport, 64, cfg->isir_recvlimit);
+
+  sync_store(&network->probe_lock, 1, SYNC_RELEASE);
+  sync_store(&network->progress_lock, 1, SYNC_RELEASE);
 
   return &network->vtable;
 }

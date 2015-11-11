@@ -544,6 +544,7 @@ void prof_increment_tally(char *key){
 }
 
 void prof_start_timing(char *key, int *tag){
+  hpx_time_t now = hpx_time_now();
   int event = _get_event_num(key);
   if(event == HPX_PROF_NO_RESULT){
     profile_list_t new_list;
@@ -559,8 +560,7 @@ void prof_start_timing(char *key, int *tag){
                           _profile_log.current_entry].paused){
     hpx_time_t dur;
     hpx_time_diff(_profile_log.events[_profile_log.current_event].entries[
-                  _profile_log.current_entry].start_time,
-                  hpx_time_now(), &dur);
+                  _profile_log.current_entry].start_time, now, &dur);
     _profile_log.events[_profile_log.current_event].entries[
                         _profile_log.current_entry].run_time =
              _add_times(_profile_log.events[_profile_log.current_event].entries[
@@ -578,6 +578,7 @@ void prof_start_timing(char *key, int *tag){
 }
 
 int prof_stop_timing(char *key, int *tag){
+  hpx_time_t end = hpx_time_now();
   int event = _get_event_num(key);
   if(event == HPX_PROF_NO_RESULT){
     return event;
@@ -596,7 +597,6 @@ int prof_stop_timing(char *key, int *tag){
   }
 
   if(!_profile_log.events[event].entries[*tag].paused){
-    hpx_time_t end = hpx_time_now();
     hpx_time_t dur;
     hpx_time_diff(_profile_log.events[event].entries[*tag].start_time, end, &dur);
 
@@ -620,6 +620,7 @@ int prof_stop_timing(char *key, int *tag){
 }
 
 int prof_start_hardware_counters(char *key, int *tag){
+  hpx_time_t end = hpx_time_now();
   int event = _get_event_num(key);
   if(event == HPX_PROF_NO_RESULT){
     profile_list_t new_list;
@@ -646,7 +647,6 @@ int prof_start_hardware_counters(char *key, int *tag){
     PAPI_stop(_profile_log.events[_profile_log.current_event].entries[
                                   _profile_log.current_entry].eventset, values);
 
-    hpx_time_t end = hpx_time_now();
     hpx_time_t dur;
     hpx_time_diff(_profile_log.events[
                   _profile_log.current_event].entries[
@@ -670,10 +670,10 @@ int prof_start_hardware_counters(char *key, int *tag){
   _profile_log.events[event].entries[index].last_event = _profile_log.current_event;
   _profile_log.current_entry = index;
   _profile_log.current_event = event;
-  _profile_log.events[event].entries[index].start_time = hpx_time_now();
   *tag = index;
   PAPI_reset(_profile_log.events[_profile_log.current_event].entries[
                                  _profile_log.current_entry].eventset);
+  _profile_log.events[event].entries[index].start_time = hpx_time_now();
   return PAPI_start(_profile_log.events[event].entries[index].eventset);
 }
 
@@ -714,6 +714,7 @@ int prof_stop_hardware_counters(char *key, int *tag){
 }
 
 int prof_pause(char *key, int *tag){
+  hpx_time_t end = hpx_time_now();
   int event = _get_event_num(key);
   if(event == HPX_PROF_NO_RESULT){
     return PAPI_EINVAL;
@@ -735,7 +736,6 @@ int prof_pause(char *key, int *tag){
   }
 
   // first store timing information
-  hpx_time_t end = hpx_time_now();
   hpx_time_t dur;
   hpx_time_diff(_profile_log.events[event].entries[*tag].start_time, end, &dur);
   _profile_log.events[event].entries[*tag].run_time = 

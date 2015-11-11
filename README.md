@@ -16,10 +16,10 @@ There are several pre-requisites to successfully configure and run HPX–5.
 * clang Tested with 3.6 (3.5 and earlier are known to be broken).
 * icc (Tested with 15.0.1).
 * GNU Make 3.81+    
-* autoconf 2.6.9     (Only required if building from the git version of HPX–5)
-* automake 1.15      (Only required if building from the git version of HPX–5)
-* GNU M4 1.4.17      (Only required if building from the git version of HPX–5)
-* libtool 2.4.6      (Only required if building from the git version of HPX–5)
+* autoconf 2.6.9     (Only required if building from source repo)
+* automake 1.15      (Only required if building from source repo)
+* GNU M4 1.4.17      (Only required if building from source repo)
+* libtool 2.4.6      (Only required if building from source repo)
 * pkg-config         
 * MPI                (optional - Tested with 1.6.3, 1.6.5, 1.8.1, 1.8.4, 1.10.0 
                                  MPICH 3.0.4, mvapich2/2.0b (Stampede))

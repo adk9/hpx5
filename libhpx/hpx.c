@@ -41,7 +41,6 @@
 #include <libhpx/system.h>
 #include <libhpx/time.h>
 #include <libhpx/topology.h>
-#include "network/probe.h"
 
 #ifdef HAVE_APEX
 #include "apex.h"
@@ -278,11 +277,6 @@ static int _hpx_run_phase1(hpx_action_t *act, int n, va_list* vargs) {
 
   inst_start();
 
-  if (probe_start(here->network) != LIBHPX_OK) {
-    status = log_error("could not start network probe\n");
-    goto unwind1;
-  }
-
   // create the initial application-level thread to run
   if (here->rank == 0) {
     hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, vargs);
@@ -290,7 +284,7 @@ static int _hpx_run_phase1(hpx_action_t *act, int n, va_list* vargs) {
 
     if (status != LIBHPX_OK) {
       log_error("failed to spawn initial action\n");
-      goto unwind2;
+      goto unwind1;
     }
 
     // Fix for https://uisapp2.iu.edu/jira-prd/browse/HPX-143
@@ -298,20 +292,18 @@ static int _hpx_run_phase1(hpx_action_t *act, int n, va_list* vargs) {
       status = hpx_call(HPX_HERE, _hpx_143_fix, HPX_NULL);
       if (status != LIBHPX_OK) {
         log_error("failed to spawn the initial cyclic allocation");
-        goto unwind2;
+        goto unwind1;
       }
     }
   }
   // start the scheduler, this will return after scheduler_shutdown()
   if (scheduler_startup(here->sched, here->config) != LIBHPX_OK) {
     log_error("scheduler shut down with error.\n");
-    goto unwind2;
+    goto unwind1;
   }
 
   return status;
 
- unwind2:
-  probe_stop();
  unwind1:
   _stop(here);
  unwind0:
@@ -341,15 +333,13 @@ static int _hpx_run_phase2(hpx_action_t *act, int n, va_list* vargs) {
     int status = hpx_parcel_send(p, HPX_NULL);
     if (status != LIBHPX_OK) {
       log_error("failed to spawn initial action\n");
-      goto unwind2;
+      goto unwind1;
     }
   }
   scheduler_restart(here->sched);
   goto unwind0;	  
 
-
- unwind2:
-  probe_stop();
+ unwind1:
   _stop(here);
  unwind0:
   return status;
