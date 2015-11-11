@@ -708,7 +708,7 @@ int worker_wait() {
   pthread_mutex_lock(here->reent_state.reent_mutex);
   barrier_enabled = here->reent_state.barrier_enabled;
   
-  if(barrier_enabled){
+  if (barrier_enabled) {
      struct scheduler *sched = here->sched;
      ++(here->reent_state.barrier_count);
 
@@ -722,7 +722,7 @@ int worker_wait() {
 	if(status){
 	  here->reent_state.barrier_enabled = 0;
  	}
-     }else{
+     } else {
      	pthread_cond_wait(here->reent_state.reent_wait, here->reent_state.reent_mutex);
 	status = _locality_ready_for_shutdown(here);
      }
@@ -743,7 +743,7 @@ static int _worker_is_master_thread() {
 /// @retruns true if worker is a slave 
 static int _worker_wait_if_slave(void) {
   int is_slave = !_worker_is_master_thread();	
-  if(is_slave){
+  if (is_slave) {
      struct scheduler *sched = here->sched;
      /*system_barrier_wait(&sched->barrier);*/
      //other workers will wait on condition untill notified again in the next hpx_run epoch
@@ -786,9 +786,9 @@ int worker_start(void) {
   struct scheduler *sched = here->sched;
 
   //reset shutdown flag
-  if(here->reent_state.reent_st == REENT_ACTIVE){
+  if (here->reent_state.reent_st == REENT_ACTIVE) {
 	  sync_store(&sched->shutdown, INT_MAX, SYNC_RELEASE);
-  }else{
+  } else {
 
   // allocate a parcel and a stack header for the system stack
     hpx_parcel_t* p = malloc(sizeof(hpx_parcel_t));
@@ -815,11 +815,11 @@ int worker_start(void) {
   /*system_barrier_wait(&sched->barrier);*/
   worker_wait();
   // the system thread will loop to find work until the scheduler has shutdown
-  while (true){
-    if(worker_is_shutdown() && !_worker_wait_policy()){
+  while (true) {
+    if (worker_is_shutdown() && !_worker_wait_policy()) {
     	break;
     }
-    if(_locality_ready_for_shutdown(here)){
+    if (_locality_ready_for_shutdown(here)) {
 	worker_wait();    
     	break;
     }

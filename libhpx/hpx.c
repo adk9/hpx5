@@ -246,7 +246,8 @@ int hpx_init(int *argc, char ***argv) {
   return status;
 }
 
-static int _hpx_run_phase1(hpx_action_t *act, int n, ...){
+static int _hpx_run_phase1(hpx_action_t *act, int n, ...) {
+  log_dflt("hpx_run phase1 starting up .....\n");
   int status = HPX_SUCCESS;
   if (!here) {
     status = log_error("hpx_init() must be called before hpx_run()\n");
@@ -332,7 +333,8 @@ static int _hpx_run_phase1(hpx_action_t *act, int n, ...){
 }
 
 
-static int _hpx_run_phase2(hpx_action_t *act, int n, ...){
+static int _hpx_run_phase2(hpx_action_t *act, int n, ...) {
+  log_dflt("hpx_run phase2 starting up .....\n");
   int status = HPX_SUCCESS;
   if (!here) {
     status = log_error("hpx_init() must be called before hpx_run()\n");
@@ -355,8 +357,8 @@ static int _hpx_run_phase2(hpx_action_t *act, int n, ...){
     va_end(vargs);
 
     if (status != LIBHPX_OK) {
-	log_error("failed to spawn initial action\n");
-	goto unwind2;
+      log_error("failed to spawn initial action\n");
+      goto unwind2;
     }
   }
   scheduler_reent_startup(here->sched);
@@ -378,17 +380,15 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   va_list vargs;
   va_start(vargs, n);
   int status = HPX_SUCCESS;
-  if(!here->reent_state.reent_st == REENT_ACTIVE){
- 	status = _hpx_run_phase1(act, n, &vargs);	 
-  	here->reent_state.reent_st = REENT_ACTIVE;
-  }else{
- 	status = _hpx_run_phase2(act, n, &vargs);	 
+  if (!here->reent_state.reent_st == REENT_ACTIVE) {
+    status = _hpx_run_phase1(act, n, &vargs);	 
+    here->reent_state.reent_st = REENT_ACTIVE;
+  } else {
+    status = _hpx_run_phase2(act, n, &vargs);	 
   }
 
-  //enable global or locality wide synchronization between each hpx_run() calls
-  /*printf("[BEFOREE BARRIER SYNC..] \n");*/
+  // enable global or locality wide synchronization between each hpx_run() calls
   boot_barrier(here->boot);
-  /*printf("[AFTER BARRIER SYNC..] \n");*/
   
   va_end(vargs);
   log_dflt("hpx_run ending.....\n");
@@ -418,13 +418,13 @@ void hpx_exit(int code) {
   for (int i = 0, e = here->ranks; i < e; ++i) {
     int e = network_command(here->network, HPX_THERE(i), locality_shutdown,
 			    (uint64_t)code);
-    /*printf("[HPX NETWRK EXIT COMMAND to %d from locality %d ] \n", i, hpx_get_my_rank());*/
-    /*fflush(stdout);*/
     dbg_check(e);
   }
-  //we do a flush of all remaining network packets - fix for isir transport
-  //there is a probability that network might not progress (to send all outbound shutdown signals) once all threads ssupends
-  //flush will ensure we will progress these forcefully in this thread
+
+  // we do a flush of all remaining network packets - fix for isir transport
+  // there is a probability that network might not progress
+  // (to send all outbound shutdown signals) once all threads suspend
+  // flush will ensure we will progress these forcefully in this thread
   here->network->flush_all(here->network, 1);
   hpx_thread_exit(HPX_SUCCESS);
 }
