@@ -710,9 +710,7 @@ int worker_wait(){
 	pthread_cond_broadcast(here->reent_state.reent_wait);
 	
 	status = _locality_ready_for_shutdown(here);
-	/*printf("======== exit barrier\n");*/
 	if(status){
-	  /*printf("======== disable barrier \n");*/
 	  here->reent_state.barrier_enabled = 0 ;
  	}
      }else{
