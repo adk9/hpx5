@@ -438,7 +438,6 @@ void hpx_finalize() {
   libhpx_save_apex_stats();
 #endif
 
-  probe_stop();
   _stop(here);
   
 #if defined(ENABLE_PROFILING)
