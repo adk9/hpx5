@@ -713,42 +713,36 @@ int worker_wait(void) {
   barrier_enabled = here->reent_state.barrier_enabled;
   
   if (barrier_enabled) {
-     ++(here->reent_state.barrier_count);
+    ++(here->reent_state.barrier_count);
 
-     //other workers will wait on condition untill notified again in the next hpx_run epoch
-     if (here->reent_state.barrier_count >= here->reent_state.barrier_trips) {
-        here->reent_state.barrier_count = 0;
-	pthread_cond_broadcast(&here->reent_state.cond);
+    // other workers will wait on condition untill notified again in
+    // the next hpx_run epoch
+    if (here->reent_state.barrier_count >= here->reent_state.barrier_trips) {
+      here->reent_state.barrier_count = 0;
+      pthread_cond_broadcast(&here->reent_state.cond);
 	
-	status = _locality_ready_for_shutdown(here);
-	if (status) {
-	  here->reent_state.barrier_enabled = 0;
- 	}
-     } else {
-     	pthread_cond_wait(&here->reent_state.cond, &here->reent_state.mutex);
-	status = _locality_ready_for_shutdown(here);
-     }
+      status = _locality_ready_for_shutdown(here);
+      if (status) {
+        here->reent_state.barrier_enabled = 0;
+      }
+    } else {
+      pthread_cond_wait(&here->reent_state.cond, &here->reent_state.mutex);
+      status = _locality_ready_for_shutdown(here);
+    }
   }
   pthread_mutex_unlock(&here->reent_state.mutex);
   return status;
-}
-
-/// Check if the worker is the system thread
-///
-/// @returns true if worker is the system thread
-static int _worker_is_master_thread() {
-	return self->id == 0 ;
 }
 
 /// Check to see if slave (not system thread) then wait .
 ///
 /// @retruns true if worker is a slave 
 static int _worker_wait_if_slave(void) {
-  int is_slave = !_worker_is_master_thread();	
+  int is_slave = (self->id != 0);
   if (is_slave) {
-     /*system_barrier_wait(&sched->barrier);*/
-     //other workers will wait on condition untill notified again in the next hpx_run epoch
-     worker_wait();
+    // other workers will wait on condition untill notified again in
+    // the next hpx_run epoch
+    worker_wait();
   }
 
   return is_slave;
@@ -756,9 +750,9 @@ static int _worker_wait_if_slave(void) {
 
 /// Enforce some policy to wait on 
 ///
-/// @returns true if worker if worker has waited on some policy
-static int _worker_wait_policy() {
-	return _worker_wait_if_slave();
+/// @returns true if worker has waited on some policy
+static int _worker_wait_policy(void) {
+  return _worker_wait_if_slave();
 }
 
 int worker_start(void) {
@@ -809,9 +803,9 @@ int worker_start(void) {
   self->system = &p;
   self->current = self->system;
 
-  /*system_barrier_wait(&sched->barrier);*/
   worker_wait();
-  // the system thread will loop to find work until the scheduler has shutdown
+  // the system thread will loop to find work until the scheduler has
+  // shutdown
   while (true) {
     if (worker_is_shutdown() && !_worker_wait_policy()) {
     	break;
