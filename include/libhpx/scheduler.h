@@ -93,7 +93,7 @@ struct scheduler *scheduler_new(const struct config *config)
 /// @param    scheduler The scheduler to free.
 void scheduler_delete(struct scheduler *scheduler);
 
-/// reset scheduler object for rentrance.
+/// Reset scheduler object for rentrance.
 ///
 /// The scheduler must already have been shutdown with
 /// scheduler_shutdown(). At reentrance we do not release any resources instead
