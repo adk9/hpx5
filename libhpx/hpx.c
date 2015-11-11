@@ -24,6 +24,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
 #include <libhpx/boot.h>
@@ -144,18 +145,8 @@ int hpx_init(int *argc, char ***argv) {
   here->reent_state.barrier_count = 0;
   here->reent_state.barrier_enabled = 1;
   sync_store(&here->reent_state.shutdown, INT_MAX, SYNC_RELEASE);
-  here->reent_state.mutex = malloc(sizeof(pthread_mutex_t));
-  int ret = pthread_mutex_init(here->reent_state.mutex, NULL);
-  if (ret != 0) {
-    status = log_error("failed to allocate re-entrance state properly.\n");
-    goto unwind0;
-  }
-  here->reent_state.cond = malloc(sizeof(pthread_cond_t));
-  ret = pthread_cond_init(here->reent_state.cond, NULL);
-  if (ret != 0) {
-    status = log_error("failed to allocate re-entrance state properly.\n");
-    goto unwind0;
-  }
+  here->reent_state.mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+  here->reent_state.cond = (pthread_cond_t)PTHREAD_COND_INITIALIZER;
 
   here->config = config_new(argc, argv);
   if (!here->config) {

@@ -67,7 +67,7 @@ typedef two_lock_queue_t yield_queue_t;
 /// not implemented.
 struct scheduler {
   yield_queue_t       yielded;
-  volatile int       shutdown;  //indicates scheduler will suspend(ie: for each epoch)
+  volatile int       shutdown;  // indicates if the scheduler will suspend
   volatile int    next_tls_id;
   int               n_workers;
   uint32_t       wf_threshold;

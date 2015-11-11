@@ -50,8 +50,8 @@ typedef struct reent_t {
   bool                   active;
   // indicates that hpx is going to exit or quit
   volatile int         shutdown;
-  pthread_mutex_t*        mutex;
-  pthread_cond_t*          cond;
+  pthread_mutex_t         mutex;
+  pthread_cond_t           cond;
   int             barrier_count;
   int             barrier_trips;
   int           barrier_enabled;

@@ -707,10 +707,10 @@ static int _locality_ready_for_shutdown(locality_t* loc) {
   return (shutdown != INT_MAX);
 }
 
-int worker_wait() {
+int worker_wait(void) {
   int status = 0;
   int barrier_enabled = 0;
-  pthread_mutex_lock(here->reent_state.mutex);
+  pthread_mutex_lock(&here->reent_state.mutex);
   barrier_enabled = here->reent_state.barrier_enabled;
   
   if (barrier_enabled) {
@@ -719,18 +719,18 @@ int worker_wait() {
      //other workers will wait on condition untill notified again in the next hpx_run epoch
      if (here->reent_state.barrier_count >= here->reent_state.barrier_trips) {
         here->reent_state.barrier_count = 0;
-	pthread_cond_broadcast(here->reent_state.cond);
+	pthread_cond_broadcast(&here->reent_state.cond);
 	
 	status = _locality_ready_for_shutdown(here);
-	if(status){
+	if (status) {
 	  here->reent_state.barrier_enabled = 0;
  	}
      } else {
-     	pthread_cond_wait(here->reent_state.cond, here->reent_state.mutex);
+     	pthread_cond_wait(&here->reent_state.cond, &here->reent_state.mutex);
 	status = _locality_ready_for_shutdown(here);
      }
   }
-  pthread_mutex_unlock(here->reent_state.mutex);
+  pthread_mutex_unlock(&here->reent_state.mutex);
   return status;
 }
 
