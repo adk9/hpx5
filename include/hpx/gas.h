@@ -38,15 +38,21 @@ typedef hpx_addr_t (*hpx_gas_dist_t)(uint32_t i, size_t n, uint32_t bsize);
 #define HPX_GAS_DIST_CYCLIC  (hpx_gas_dist_t)HPX_DIST_TYPE_CYCLIC
 #define HPX_GAS_DIST_BLOCKED (hpx_gas_dist_t)HPX_DIST_TYPE_BLOCKED
 
+/// Global address-space Attributes
+
+#define HPX_GAS_ATTR_NONE  0x0  //!< Empty attribute.
+#define HPX_GAS_ATTR_RO    0x1  //!< This block is read-only.
+#define HPX_GAS_ATTR_LB    0x2  //!< Consider for automatic load balancing.
+
 /// Allocate distributed global memory given a distribution.
 ///
 hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bsize, uint32_t boundary,
-                         hpx_gas_dist_t dist) HPX_PUBLIC;
+                         hpx_gas_dist_t dist, uint32_t attr) HPX_PUBLIC;
 
 /// Allocate distributed zeroed global memory given a distribution.
 ///
 hpx_addr_t hpx_gas_calloc(size_t n, uint32_t bsize, uint32_t boundary,
-                          hpx_gas_dist_t dist) HPX_PUBLIC;
+                          hpx_gas_dist_t dist, uint32_t attr) HPX_PUBLIC;
 
 /// Allocate cyclically distributed global memory.
 ///
@@ -164,6 +170,26 @@ void hpx_gas_calloc_local_at_async(size_t n, uint32_t bsize,
                                    uint32_t boundary, hpx_addr_t loc,
                                    hpx_addr_t out) HPX_PUBLIC;
 extern HPX_PUBLIC HPX_ACTION_DECL(hpx_gas_calloc_local_at_action);
+
+/// Global memory allocation routines with GAS attributes.
+hpx_addr_t hpx_gas_alloc_cyclic_attr(size_t n, uint32_t bsize, uint32_t boundary,
+                                     uint32_t attr)
+  HPX_PUBLIC;
+hpx_addr_t hpx_gas_calloc_cyclic_attr(size_t n, uint32_t bsize, uint32_t boundary,
+                                      uint32_t attr)
+  HPX_PUBLIC;
+hpx_addr_t hpx_gas_alloc_blocked_attr(size_t n, uint32_t bsize, uint32_t boundary,
+                                      uint32_t attr)
+  HPX_PUBLIC;
+hpx_addr_t hpx_gas_calloc_blocked_attr(size_t n, uint32_t bsize, uint32_t boundary,
+                                       uint32_t attr)
+  HPX_PUBLIC;
+hpx_addr_t hpx_gas_alloc_local_attr(size_t n, uint32_t bsize, uint32_t boundary,
+                                    uint32_t attr)
+  HPX_PUBLIC;
+hpx_addr_t hpx_gas_calloc_local_attr(size_t n, uint32_t bsize, uint32_t boundary,
+                                     uint32_t attr)
+  HPX_PUBLIC;
 
 /// Free a global allocation.
 ///

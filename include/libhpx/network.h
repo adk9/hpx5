@@ -63,7 +63,7 @@ typedef struct network {
 
   void (*delete)(void*);
 
-  int (*progress)(void*);
+  int (*progress)(void*, int);
 
   int (*send)(void*, hpx_parcel_t *p);
 
@@ -126,10 +126,10 @@ network_delete(void *obj) {
 ///
 /// @returns  LIBHPX_OK The network was progressed without error.
 static inline int
-network_progress(void *obj) {
+network_progress(void *obj, int id) {
   network_t *network = obj;
   assert(network);
-  return network->progress(network);
+  return network->progress(network, id);
 }
 
 /// Initiate a parcel send over the network.

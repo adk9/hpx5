@@ -32,7 +32,7 @@ static const int _zero = 0;
 static void _smp_delete(void *network) {
 }
 
-static int _smp_progress(void *network) {
+static int _smp_progress(void *network, int id) {
   return 0;
 }
 
