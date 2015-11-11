@@ -648,10 +648,9 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   (void)spins;
 }
 
-int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
-  w->thread      = 0;
-  w->id          = id;
-  w->seed        = seed;
+// Reset the current stack for this worker. Note that the current
+// parcel may have been released if the scheduler was suspended.
+void worker_reset(worker_t *w){
   w->work_first  = 0;
   w->nstacks     = 0;
   w->yielded     = 0;
@@ -661,7 +660,13 @@ int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   w->stacks      = NULL;
   w->active      = true;
   w->profiler    = NULL;
+}
 
+int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
+  w->thread      = 0;
+  w->id          = id;
+  w->seed        = seed;
+  worker_reset(w);
   sync_chase_lev_ws_deque_init(&w->work, work_size);
   sync_two_lock_queue_init(&w->inbox, NULL);
   libhpx_stats_init(&w->stats);

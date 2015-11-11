@@ -209,28 +209,15 @@ worker_t *scheduler_get_worker(struct scheduler *sched, int id) {
   return &sched->workers[id];
 }
 
-int scheduler_reent_startup(struct scheduler *sched){
+int scheduler_restart(struct scheduler *sched) {
   int status = LIBHPX_OK;
-  
+
   sync_store(&sched->shutdown, INT_MAX, SYNC_RELEASE);
   status = worker_start();
   if (status != LIBHPX_OK) {
     scheduler_abort(sched);
   }
   return status;
-}
-
-void scheduler_reset_reent_state(struct scheduler *scheduler){
-  //reset current stack for this worker
-  //current parcel may have been released at each reentrance 
-  self->work_first  = 0;
-  self->nstacks     = 0;
-  self->yielded     = 0;
-  self->last_victim = -1;
-  self->system      = NULL;
-  self->current     = NULL;
-  self->stacks      = NULL;
-  self->active      = true;
 }
 
 int scheduler_startup(struct scheduler *sched, const config_t *cfg) {

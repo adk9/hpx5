@@ -247,7 +247,7 @@ int hpx_init(int *argc, char ***argv) {
 }
 
 static int _hpx_run_phase1(hpx_action_t *act, int n, va_list* vargs) {
-  log_dflt("hpx_run phase1 starting up .....\n");
+  log_dflt("In hpx_run phase1\n");
   int status = HPX_SUCCESS;
   if (!here) {
     status = log_error("hpx_init() must be called before hpx_run()\n");
@@ -326,12 +326,11 @@ static int _hpx_run_phase1(hpx_action_t *act, int n, va_list* vargs) {
  unwind0:
   
   return status;
-
 }
 
 
 static int _hpx_run_phase2(hpx_action_t *act, int n, va_list* vargs) {
-  log_dflt("hpx_run phase2 starting up .....\n");
+  log_dflt("In hpx_run phase2\n");
   int status = HPX_SUCCESS;
   if (!here) {
     status = log_error("hpx_init() must be called before hpx_run()\n");
@@ -339,22 +338,22 @@ static int _hpx_run_phase2(hpx_action_t *act, int n, va_list* vargs) {
   }
   dbg_assert(here->reent_state.active);
 
-  //reentrance state is active
-  //1. send main action parcel
-  //2. system/main thread signal other threads to start work	
+  // reentrance state is active
+  // 1. send main action parcel
+  // 2. system/main thread signal other threads to start work	
   if (here->rank == 0) {
-    //reset scheduler to some sanity	  
-    scheduler_reset_reent_state(here->sched);
+    // reset the scheduler
+    worker_reset(self);
 
+    // spawn the hpx-run action
     hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, vargs);
     int status = hpx_parcel_send(p, HPX_NULL);
-
     if (status != LIBHPX_OK) {
       log_error("failed to spawn initial action\n");
       goto unwind2;
     }
   }
-  scheduler_reent_startup(here->sched);
+  scheduler_restart(here->sched);
   goto unwind0;	  
 
 

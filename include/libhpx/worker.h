@@ -81,6 +81,10 @@ void worker_fini(worker_t *w)
 /// Start processing lightweight threads.
 int worker_start(void);
 
+/// Reset a worker thread.
+void worker_reset(worker_t *w)
+  HPX_NON_NULL(1);
+
 /// Check to see if the current worker should be active.
 int worker_is_active(void);
 
@@ -91,6 +95,6 @@ int worker_is_shutdown(void);
 ///  disable automatically if a locality wide shutdown is issued.
 ///  This generally happens at hpx_finalize() and will enable all waiting
 ///  threads to comeout of the main schedule loop()
-int worker_wait();
+int worker_wait(void);
 
 #endif // LIBHPX_WORKER_H

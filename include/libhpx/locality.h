@@ -87,7 +87,7 @@ typedef struct locality {
   struct config              *config;
   const struct action_table *actions;
   struct topology          *topology;
-  reent_t 		 reent_state;	 	
+  reent_t                reent_state;
 #ifdef HAVE_PERCOLATION
   struct percolation    *percolation;
 #endif
