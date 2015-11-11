@@ -262,26 +262,28 @@ void inst_prof_dump(profile_log_t profile_log){
     fprintf(f, "\nCode event %s:\n", profile_log.events[i].key);
     fprintf(f, "Number of occurrences: %d\n", profile_log.events[i].tally);
     
-    fprintf(f, "Performance Statistics:\n");
-    fprintf(f, "%-24s%-24s%-24s%-24s\n", 
-           "Type", "Average", "Minimum", "Maximum");
-    if(profile_log.num_counters > 0 && !profile_log.events[i].simple){
-      prof_get_averages(averages, profile_log.events[i].key);
-      prof_get_minimums(minimums, profile_log.events[i].key);
-      prof_get_maximums(maximums, profile_log.events[i].key);
-      for(int j = 0; j < profile_log.num_counters; j++){
-        fprintf(f, "%-24s%-24ld%-24ld%-24ld\n", 
-                profile_log.counter_names[j],
-                averages[j], minimums[j], maximums[j]);
+    if(profile_log.events[i].num_entries > 0){
+      fprintf(f, "Performance Statistics:\n");
+      fprintf(f, "%-24s%-24s%-24s%-24s\n", 
+             "Type", "Average", "Minimum", "Maximum");
+      if(profile_log.num_counters > 0 && !profile_log.events[i].simple){
+        prof_get_averages(averages, profile_log.events[i].key);
+        prof_get_minimums(minimums, profile_log.events[i].key);
+        prof_get_maximums(maximums, profile_log.events[i].key);
+        for(int j = 0; j < profile_log.num_counters; j++){
+          fprintf(f, "%-24s%-24ld%-24ld%-24ld\n", 
+                  profile_log.counter_names[j],
+                  averages[j], minimums[j], maximums[j]);
+        }
       }
-    }
-    prof_get_average_time(profile_log.events[i].key, &average_t);
-    prof_get_min_time(profile_log.events[i].key, &min_t);
-    prof_get_max_time(profile_log.events[i].key, &max_t);
+      prof_get_average_time(profile_log.events[i].key, &average_t);
+      prof_get_min_time(profile_log.events[i].key, &min_t);
+      prof_get_max_time(profile_log.events[i].key, &max_t);
 
-    fprintf(f, "%-24s%-24.3f%-24.3f%-24.3f\n", "Time (ms)",
-            hpx_time_ms(average_t),
-            hpx_time_ms(min_t), hpx_time_ms(max_t));
+      fprintf(f, "%-24s%-24.3f%-24.3f%-24.3f\n", "Time (ms)",
+              hpx_time_ms(average_t),
+              hpx_time_ms(min_t), hpx_time_ms(max_t));
+    }
   }
   int e = fclose(f);
   if(e != 0){
