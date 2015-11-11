@@ -459,7 +459,7 @@ int hpx_lco_set_rsync(hpx_addr_t target, int size, const void *value) {
   }
 
   int set = 0;
-  hpx_addr_t rsync = hpx_lco_future_new(0);
+  hpx_addr_t rsync = hpx_lco_future_new(4);
   hpx_lco_set(target, size, value, HPX_NULL, rsync);
   hpx_lco_get(rsync, sizeof(set), &set);
   hpx_lco_delete(rsync, HPX_NULL);
