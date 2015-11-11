@@ -360,7 +360,6 @@ static int _hpx_run_phase2(hpx_action_t *act, int n, va_list* vargs) {
 
  unwind2:
   probe_stop();
- unwind1:
   _stop(here);
  unwind0:
   return status;

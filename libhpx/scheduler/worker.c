@@ -709,11 +709,9 @@ int worker_wait() {
   barrier_enabled = here->reent_state.barrier_enabled;
   
   if (barrier_enabled) {
-     struct scheduler *sched = here->sched;
      ++(here->reent_state.barrier_count);
 
      //other workers will wait on condition untill notified again in the next hpx_run epoch
-     
      if (here->reent_state.barrier_count >= here->reent_state.barrier_trips) {
         here->reent_state.barrier_count = 0;
 	pthread_cond_broadcast(here->reent_state.reent_wait);
@@ -744,7 +742,6 @@ static int _worker_is_master_thread() {
 static int _worker_wait_if_slave(void) {
   int is_slave = !_worker_is_master_thread();	
   if (is_slave) {
-     struct scheduler *sched = here->sched;
      /*system_barrier_wait(&sched->barrier);*/
      //other workers will wait on condition untill notified again in the next hpx_run epoch
      worker_wait();
