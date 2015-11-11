@@ -37,7 +37,7 @@
 /// We pack state into the LCO pointer---least-significant-bit is already used
 /// in the sync_lockable_ptr interface
 #define _TRIGGERED_MASK    (0x2)
-#define _DELETED_MASK      (0x4)
+#define _USER_MASK         (0x4)
 #define _STATE_MASK        (0x7)
 
 static void _EVENT(const lco_t *lco, const int id) {
@@ -256,18 +256,7 @@ void lco_init(lco_t *lco, const lco_class_t *class) {
 }
 
 void lco_fini(lco_t *lco) {
-  if (DEBUG) {
-    lco->bits |= _DELETED_MASK;
-  }
   lco_unlock(lco);
-}
-
-void lco_reset_deleted(lco_t *lco) {
-  lco->bits &= ~_DELETED_MASK;
-}
-
-uintptr_t lco_get_deleted(const lco_t *lco) {
-  return lco->bits & _DELETED_MASK;
 }
 
 void lco_set_triggered(lco_t *lco) {
@@ -281,6 +270,14 @@ void lco_reset_triggered(lco_t *lco) {
 
 uintptr_t lco_get_triggered(const lco_t *lco) {
   return lco->bits & _TRIGGERED_MASK;
+}
+
+void lco_set_user(lco_t *lco) {
+  lco->bits |= _USER_MASK;
+}
+
+uintptr_t lco_get_user(const lco_t *lco) {
+  return lco->bits & _USER_MASK;
 }
 
 /// @}
@@ -459,7 +456,7 @@ int hpx_lco_set_rsync(hpx_addr_t target, int size, const void *value) {
   }
 
   int set = 0;
-  hpx_addr_t rsync = hpx_lco_future_new(0);
+  hpx_addr_t rsync = hpx_lco_future_new(4);
   hpx_lco_set(target, size, value, HPX_NULL, rsync);
   hpx_lco_get(rsync, sizeof(set), &set);
   hpx_lco_delete(rsync, HPX_NULL);

@@ -82,6 +82,8 @@ static void _future_fini(lco_t *lco) {
 
 /// Copies @p from into the appropriate location.
 static int _future_set(lco_t *lco, int size, const void *from) {
+  dbg_assert(!size || lco_get_user(lco));
+
   int set = 0;
   lco_lock(lco);
   _future_t *f = (_future_t *)lco;
@@ -149,6 +151,8 @@ static hpx_status_t _future_attach(lco_t *lco, hpx_parcel_t *p) {
 
 /// Copies the appropriate value into @p out, waiting if the lco isn't set yet.
 static hpx_status_t _future_get(lco_t *lco, int size, void *out, int reset) {
+  dbg_assert(!size || lco_get_user(lco));
+
   lco_lock(lco);
 
   _future_t *f = (_future_t *)lco;
@@ -227,6 +231,9 @@ static int _future_init_handler(_future_t *f, int size) {
   lco_init(&f->lco, &_future_vtable);
   cvar_reset(&f->full);
   if (size) {
+    if (DEBUG) {
+      lco_set_user(&f->lco);
+    }
     memset(&f->value, 0, size);
   }
   return HPX_SUCCESS;
