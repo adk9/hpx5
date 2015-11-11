@@ -102,25 +102,6 @@ void lco_init(lco_t *lco, const lco_class_t *class)
 void lco_fini(lco_t *lco)
   HPX_NON_NULL(1);
 
-/// Resets the user state bit to zero.
-///
-/// This operation does not acquire the LCO lock---the caller must lock the
-/// pointer first if this could occur concurrently.
-///
-/// @param           lco The LCO to reset.
-void lco_reset_user(lco_t *lco)
-  HPX_NON_NULL(1);
-
-/// Get the user state bit.
-///
-/// This operation does not acquire the LCO lock---the caller must lock the
-/// pointer first if this could occur concurrently.
-///
-/// @param           lco The LCO to read.
-/// @returns Non-zero if the user state bit is set, zero otherwise
-uintptr_t lco_get_user(const lco_t *lco)
-  HPX_NON_NULL(1);
-
 /// Set the triggered state to true.
 ///
 /// This operation does not acquire the LCO lock---the caller must lock the
