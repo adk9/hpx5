@@ -67,7 +67,7 @@ typedef two_lock_queue_t yield_queue_t;
 /// not implemented.
 struct scheduler {
   yield_queue_t       yielded;
-  volatile int       shutdown;  //indicates scheduler will shutdown temporarily (ie:- for each epoch)
+  volatile int       shutdown;  // indicates if the scheduler will suspend
   volatile int    next_tls_id;
   int               n_workers;
   uint32_t       wf_threshold;
@@ -93,16 +93,6 @@ struct scheduler *scheduler_new(const struct config *config)
 /// @param    scheduler The scheduler to free.
 void scheduler_delete(struct scheduler *scheduler);
 
-/// reset scheduler object for rentrance.
-///
-/// The scheduler must already have been shutdown with
-/// scheduler_shutdown(). At reentrance we do not release any resources instead
-/// suspend workers. However current parcel of reentrance thread may have been released
-//  during previous execution. we will restate that. 
-///
-/// @param    scheduler The scheduler obj.
-void scheduler_reset_reent_state(struct scheduler *scheduler);
-
 /// Starts the scheduler.
 ///
 /// This starts all of the low-level scheduler threads. After this call, threads
@@ -116,19 +106,19 @@ void scheduler_reset_reent_state(struct scheduler *scheduler);
 int scheduler_startup(struct scheduler *scheduler, const struct config *cfg)
   HPX_NON_NULL(1);
 
-/// Re-starts the scheduler.
+/// Restart the scheduler.
 ///
-/// This resumes all of the low-level scheduler threads that were suspened at the end of the
-/// previous execution of hpx_run. Also release any scheduler specific flags to its 
-//  original state.
+/// This resumes all of the low-level scheduler threads that were
+/// suspened at the end of the previous execution of hpx_run. Also
+/// reset any scheduler specific flags to their original state.
 ///
-/// @param    scheduler The scheduler to re-start.
+/// @param    scheduler The scheduler to restart.
 ///
 /// @returns            LIBHPX_OK or an error code.
-int scheduler_reent_startup(struct scheduler *scheduler)
+int scheduler_restart(struct scheduler *scheduler)
   HPX_NON_NULL(1);
 
-/// Temporaraily Suspend the scheduler cooperatively.
+/// Suspend the scheduler cooperatively.
 ///
 /// This asks all of the threads to shutdown the next time they get a chance to
 /// schedule. It is nonblocking.
