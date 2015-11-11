@@ -787,7 +787,7 @@ int worker_start(void) {
 
   //reset shutdown flag
   if (here->reent_state.reent_st == REENT_ACTIVE) {
-	  sync_store(&sched->shutdown, INT_MAX, SYNC_RELEASE);
+    sync_store(&sched->shutdown, INT_MAX, SYNC_RELEASE);
   } else {
 
   // allocate a parcel and a stack header for the system stack
