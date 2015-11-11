@@ -101,6 +101,6 @@ int worker_is_shutdown(void);
 ///  locality-wide shutdown is issued.  This generally happens at hpx_finalize()
 ///  and will enable all waiting threads to come out of the main schedule
 ///  loop().
-int worker_wait(void);
+void worker_wait(void);
 
 #endif // LIBHPX_WORKER_H
