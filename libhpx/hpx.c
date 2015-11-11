@@ -140,7 +140,7 @@ int hpx_init(int *argc, char ***argv) {
   here->ranks = 0;
   here->actions = NULL;
 
-  here->reent_state.reent_st = REENT_NOT_ACTIVE;
+  here->reent_state.active = false;
   here->reent_state.barrier_count = 0;
   here->reent_state.barrier_enabled = 1;
   sync_store(&here->reent_state.loc_shutdown, INT_MAX, SYNC_RELEASE);
@@ -337,7 +337,7 @@ static int _hpx_run_phase2(hpx_action_t *act, int n, va_list* vargs) {
     status = log_error("hpx_init() must be called before hpx_run()\n");
     goto unwind0;
   }
-  dbg_assert(here->reent_state.reent_st == REENT_ACTIVE);
+  dbg_assert(here->reent_state.active);
 
   //reentrance state is active
   //1. send main action parcel
@@ -372,9 +372,9 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   va_list vargs;
   va_start(vargs, n);
   int status = HPX_SUCCESS;
-  if (here->reent_state.reent_st == REENT_NOT_ACTIVE) {
+  if (!here->reent_state.active) {
     status = _hpx_run_phase1(act, n, &vargs);	 
-    here->reent_state.reent_st = REENT_ACTIVE;
+    here->reent_state.active = true;
   } else {
     status = _hpx_run_phase2(act, n, &vargs);	 
   }

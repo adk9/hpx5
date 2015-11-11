@@ -783,7 +783,7 @@ int worker_start(void) {
   struct scheduler *sched = here->sched;
 
   //reset shutdown flag
-  if (here->reent_state.reent_st == REENT_ACTIVE) {
+  if (here->reent_state.active) {
     sync_store(&sched->shutdown, INT_MAX, SYNC_RELEASE);
   } 
   
