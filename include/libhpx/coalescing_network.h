@@ -45,7 +45,7 @@ typedef unsigned char byte_t;
 
 //hpx_parcel_t* _coalesced_network_progress(void *obj);
 static int coalesced_network_send(void *network,  hpx_parcel_t *p);
-static int coalesced_network_progress(void *obj);
+static int coalesced_network_progress(void *obj, int id);
 static uint64_t coalesced_network_parcel_queue_size(void *network);
 static uint64_t coalesced_network_buffer_size(void *obj);
 static int coalesced_network_pwc(void *obj, hpx_addr_t to, const void *from, size_t n,
@@ -334,7 +334,7 @@ static int coalesced_network_send(void *network,  hpx_parcel_t *p) {
   return LIBHPX_OK;
 }
 
-static int coalesced_network_progress(void *obj) {
+static int coalesced_network_progress(void *obj, int id) {
   coalesced_network_t *coalesced_network = obj;
   assert(coalesced_network);
   //printf("In coalescing network progress\n");
@@ -351,7 +351,7 @@ static int coalesced_network_progress(void *obj) {
   }
 
   //Then call underlying base network progress function
-  return network_progress(coalesced_network->base_network);
+  return network_progress(coalesced_network->base_network, 0);
 }
 
 static int coalesced_network_pwc(void *obj, hpx_addr_t to, const void *from, size_t n,
