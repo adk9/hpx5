@@ -702,9 +702,9 @@ static int _locality_ready_for_shutdown(locality_t* loc) {
   return (shutdown != INT_MAX);
 }
 
-int worker_wait(){
-  int status = 0 ;
-  int barrier_enabled = 0 ;
+int worker_wait() {
+  int status = 0;
+  int barrier_enabled = 0;
   pthread_mutex_lock(here->reent_state.reent_mutex);
   barrier_enabled = here->reent_state.barrier_enabled;
   
@@ -720,7 +720,7 @@ int worker_wait(){
 	
 	status = _locality_ready_for_shutdown(here);
 	if(status){
-	  here->reent_state.barrier_enabled = 0 ;
+	  here->reent_state.barrier_enabled = 0;
  	}
      }else{
      	pthread_cond_wait(here->reent_state.reent_wait, here->reent_state.reent_mutex);
