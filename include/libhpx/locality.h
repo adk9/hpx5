@@ -45,11 +45,11 @@ struct percolation;
 /// @}
 //
 typedef enum {
-	REENT_NOT_ACTIVE = 0 ,
+	REENT_NOT_ACTIVE = 0,
 	REENT_ACTIVE
 } reent_state_t;
 
-typedef struct reent_t{
+typedef struct reent_t {
 	reent_state_t          reent_st;
   	volatile int       loc_shutdown;  //indicates that hpx is going to exit or quit
 	pthread_mutex_t*    reent_mutex;
@@ -57,7 +57,7 @@ typedef struct reent_t{
 	int               barrier_count;
 	int 		  barrier_trips;
 	int 		barrier_enabled;
-}reent_t;
+} reent_t;
 
 /// The locality object.
 ///
