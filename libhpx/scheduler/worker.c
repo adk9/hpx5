@@ -788,29 +788,25 @@ int worker_start(void) {
   //reset shutdown flag
   if (here->reent_state.reent_st == REENT_ACTIVE) {
     sync_store(&sched->shutdown, INT_MAX, SYNC_RELEASE);
-  } else {
-
+  } 
+  
   // allocate a parcel and a stack header for the system stack
-    hpx_parcel_t* p = malloc(sizeof(hpx_parcel_t));
-    parcel_init(0, 0, 0, 0, 0, NULL, 0, p);
-	
-    ustack_t tmp_stack = {
-    	.sp = NULL,
-    	.parcel = p,
-    	.next = NULL,
-    	.lco_depth = 0,
-    	.tls_id = -1,
-    	.stack_id = -1,
-    	.size = 0,
-    	.affinity = -1
-  	};
-    ustack_t* stack = malloc(sizeof(ustack_t)); 
-    *stack = tmp_stack;    
-    p->ustack = stack;
+  hpx_parcel_t p;
+  parcel_init(0, 0, 0, 0, 0, NULL, 0, &p);
+  ustack_t stack = {
+    .sp = NULL,
+    .parcel = &p,
+    .next = NULL,
+    .lco_depth = 0,
+    .tls_id = -1,
+    .stack_id = -1,
+    .size = 0,
+    .affinity = -1
+  };
+  p.ustack = &stack;
 
-    self->system = p;
-    self->current = self->system;
-  }
+  self->system = &p;
+  self->current = self->system;
 
   /*system_barrier_wait(&sched->barrier);*/
   worker_wait();

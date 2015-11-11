@@ -221,9 +221,16 @@ int scheduler_reent_startup(struct scheduler *sched){
 }
 
 void scheduler_reset_reent_state(struct scheduler *scheduler){
-    //reset current stack for this worker
-    //current parcel may have been released at each reentrance 
-    self->current = self->system;
+  //reset current stack for this worker
+  //current parcel may have been released at each reentrance 
+  self->work_first  = 0;
+  self->nstacks     = 0;
+  self->yielded     = 0;
+  self->last_victim = -1;
+  self->system      = NULL;
+  self->current     = NULL;
+  self->stacks      = NULL;
+  self->active      = true;
 }
 
 int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
