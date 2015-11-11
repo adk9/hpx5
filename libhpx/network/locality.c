@@ -33,4 +33,3 @@ static int _locality_shutdown_handler(int src, uint64_t code) {
 }
 LIBHPX_ACTION(HPX_INTERRUPT, 0, locality_shutdown, _locality_shutdown_handler,
               HPX_INT, HPX_UINT64);
-

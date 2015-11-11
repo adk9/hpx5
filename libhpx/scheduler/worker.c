@@ -698,14 +698,14 @@ static void _null(hpx_parcel_t *p, void *env) {
 /// is to enforce for scheduler suspension at exit of each hpx_run 
 ///
 static int _locality_ready_for_shutdown(locality_t* loc) {
-  int shutdown = sync_load(&loc->reent_state.loc_shutdown, SYNC_ACQUIRE);
+  int shutdown = sync_load(&loc->reent_state.shutdown, SYNC_ACQUIRE);
   return (shutdown != INT_MAX);
 }
 
 int worker_wait() {
   int status = 0;
   int barrier_enabled = 0;
-  pthread_mutex_lock(here->reent_state.reent_mutex);
+  pthread_mutex_lock(here->reent_state.mutex);
   barrier_enabled = here->reent_state.barrier_enabled;
   
   if (barrier_enabled) {
@@ -714,18 +714,18 @@ int worker_wait() {
      //other workers will wait on condition untill notified again in the next hpx_run epoch
      if (here->reent_state.barrier_count >= here->reent_state.barrier_trips) {
         here->reent_state.barrier_count = 0;
-	pthread_cond_broadcast(here->reent_state.reent_wait);
+	pthread_cond_broadcast(here->reent_state.cond);
 	
 	status = _locality_ready_for_shutdown(here);
 	if(status){
 	  here->reent_state.barrier_enabled = 0;
  	}
      } else {
-     	pthread_cond_wait(here->reent_state.reent_wait, here->reent_state.reent_mutex);
+     	pthread_cond_wait(here->reent_state.cond, here->reent_state.mutex);
 	status = _locality_ready_for_shutdown(here);
      }
   }
-  pthread_mutex_unlock(here->reent_state.reent_mutex);
+  pthread_mutex_unlock(here->reent_state.mutex);
   return status;
 }
 

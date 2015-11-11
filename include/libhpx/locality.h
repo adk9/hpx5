@@ -29,6 +29,7 @@
 
 #include <hpx/hpx.h>
 #include <pthread.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -48,9 +49,9 @@ struct percolation;
 typedef struct reent_t {
   bool                   active;
   // indicates that hpx is going to exit or quit
-  volatile int     loc_shutdown;
-  pthread_mutex_t*  reent_mutex;
-  pthread_cond_t*    reent_wait;
+  volatile int         shutdown;
+  pthread_mutex_t*        mutex;
+  pthread_cond_t*          cond;
   int             barrier_count;
   int             barrier_trips;
   int           barrier_enabled;
@@ -91,7 +92,6 @@ typedef struct locality {
   struct percolation    *percolation;
 #endif
 } locality_t;
-
 
 /// Inter-locality action interface.
 /// @{

@@ -143,15 +143,15 @@ int hpx_init(int *argc, char ***argv) {
   here->reent_state.active = false;
   here->reent_state.barrier_count = 0;
   here->reent_state.barrier_enabled = 1;
-  sync_store(&here->reent_state.loc_shutdown, INT_MAX, SYNC_RELEASE);
-  here->reent_state.reent_mutex = malloc(sizeof(pthread_mutex_t));
-  int ret = pthread_mutex_init(here->reent_state.reent_mutex, NULL);
+  sync_store(&here->reent_state.shutdown, INT_MAX, SYNC_RELEASE);
+  here->reent_state.mutex = malloc(sizeof(pthread_mutex_t));
+  int ret = pthread_mutex_init(here->reent_state.mutex, NULL);
   if (ret != 0) {
     status = log_error("failed to allocate re-entrance state properly.\n");
     goto unwind0;
   }
-  here->reent_state.reent_wait = malloc(sizeof(pthread_cond_t));
-  ret = pthread_cond_init(here->reent_state.reent_wait, NULL);
+  here->reent_state.cond = malloc(sizeof(pthread_cond_t));
+  ret = pthread_cond_init(here->reent_state.cond, NULL);
   if (ret != 0) {
     status = log_error("failed to allocate re-entrance state properly.\n");
     goto unwind0;

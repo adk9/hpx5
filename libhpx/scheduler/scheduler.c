@@ -167,7 +167,7 @@ struct scheduler *scheduler_new(const config_t *cfg) {
 /// this is different from shutdown handler which is to suspend workers
 ///
 static void _locality_shutdown(locality_t* loc) {
-  sync_store(&loc->reent_state.loc_shutdown, 0, SYNC_RELEASE);
+  sync_store(&loc->reent_state.shutdown, 0, SYNC_RELEASE);
 }
 
 
