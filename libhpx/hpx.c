@@ -246,7 +246,7 @@ int hpx_init(int *argc, char ***argv) {
   return status;
 }
 
-static int _hpx_run_phase1(hpx_action_t *act, int n, ...) {
+static int _hpx_run_phase1(hpx_action_t *act, int n, va_list* vargs) {
   log_dflt("hpx_run phase1 starting up .....\n");
   int status = HPX_SUCCESS;
   if (!here) {
@@ -294,11 +294,8 @@ static int _hpx_run_phase1(hpx_action_t *act, int n, ...) {
 
   // create the initial application-level thread to run
   if (here->rank == 0) {
-    va_list vargs;
-    va_start(vargs, n);
-    hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, &vargs);
+    hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, vargs);
     int status = hpx_parcel_send(p, HPX_NULL);
-    va_end(vargs);
 
     if (status != LIBHPX_OK) {
       log_error("failed to spawn initial action\n");
@@ -333,7 +330,7 @@ static int _hpx_run_phase1(hpx_action_t *act, int n, ...) {
 }
 
 
-static int _hpx_run_phase2(hpx_action_t *act, int n, ...) {
+static int _hpx_run_phase2(hpx_action_t *act, int n, va_list* vargs) {
   log_dflt("hpx_run phase2 starting up .....\n");
   int status = HPX_SUCCESS;
   if (!here) {
@@ -349,12 +346,8 @@ static int _hpx_run_phase2(hpx_action_t *act, int n, ...) {
     //reset scheduler to some sanity	  
     scheduler_reset_reent_state(here->sched);
 
-    va_list vargs;
-    va_start(vargs, n);
-    hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, &vargs);
-		  
+    hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, vargs);
     int status = hpx_parcel_send(p, HPX_NULL);
-    va_end(vargs);
 
     if (status != LIBHPX_OK) {
       log_error("failed to spawn initial action\n");
