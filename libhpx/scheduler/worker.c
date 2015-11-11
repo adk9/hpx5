@@ -294,6 +294,9 @@ static void _push_lifo(hpx_parcel_t *p, void *worker) {
   EVENT_PUSH_LIFO(p);
   worker_t *w = worker;
   uint64_t size = sync_chase_lev_ws_deque_push(_work(w), p);
+  if (w->work_first < 0) {
+    return;
+  }
   w->work_first = (here->sched->wf_threshold < size);
 }
 
@@ -319,8 +322,6 @@ static void _handle_mail(worker_t *w) {
   while ((parcels = sync_two_lock_queue_dequeue(&w->inbox))) {
     while ((p = parcel_stack_pop(&parcels))) {
       COUNTER_SAMPLE(++w->stats.mail);
-      //      printf("%d: p->target %lu p->action %s p->next = %p.\n",
-      //             w->id, p->target, action_table_get_key(here->actions, p->action), p->next);
       _push_lifo(p, w);
     }
   }
@@ -554,15 +555,21 @@ static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
 }
 
 /// Probe and progress the network.
-static void _schedule_network(network_t *network) {
+static void _schedule_network(worker_t *w, network_t *network) {
+  // suppress work-first scheduling while we're inside the network.
+  w->work_first = -1;
   hpx_parcel_t *stack = network_probe(network, 0);
+  w->work_first = 0;
+
   hpx_parcel_t *p = NULL;
   while ((p = parcel_stack_pop(&stack))) {
     EVENT_PARCEL_RECV(p);
     parcel_launch(p);
   }
 
+  w->work_first = -1;
   network_progress(network, 0);
+  w->work_first = 0;
 }
 
 /// The main scheduling loop.
@@ -620,7 +627,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
     _swap_epoch(w);
 
     // Do some network stuff;
-    _schedule_network(here->network);
+    _schedule_network(w, here->network);
 
     // Try and steal some work
     if ((p = _schedule_steal(w))) {
@@ -656,7 +663,7 @@ int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   w->thread      = 0;
   w->id          = id;
   w->seed        = seed;
-  w->work_first  = 0;
+  w->work_first  = -1;
   w->nstacks     = 0;
   w->yielded     = 0;
   w->last_victim = -1;
@@ -743,6 +750,7 @@ int worker_start(void) {
 
   self->system = &p;
   self->current = self->system;
+  self->work_first = 0;
 
   // the system thread will loop to find work until the scheduler has shutdown
   while (!worker_is_shutdown()) {
@@ -770,13 +778,6 @@ void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
   COUNTER_SAMPLE(w->stats.spawns++);
 
-  // Don't run anything until we have started up.
-  hpx_parcel_t *current = w->current;
-  if (!current) {
-    _push_lifo(p, w);
-    return;
-  }
-
   // If we're shutting down then push the parcel and return. This prevents an
   // infinite spawn from inhibiting termination.
   if (worker_is_shutdown()) {
@@ -784,8 +785,15 @@ void scheduler_spawn(hpx_parcel_t *p) {
     return;
   }
 
+  // If we're not in work-first mode, then push the parcel for later.
+  if (w->work_first < 1) {
+    _push_lifo(p, w);
+    return;
+  }
+
   // If we're holding a lock then we have to push the spawn for later
   // processing, or we could end up causing a deadlock.
+  hpx_parcel_t *current = w->current;
   if (current->ustack->lco_depth) {
     _push_lifo(p, w);
     return;
@@ -800,12 +808,6 @@ void scheduler_spawn(hpx_parcel_t *p) {
   // If we are running an interrupt, then we can't work-first since we don't
   // have our own stack to suspend.
   if (action_is_interrupt(here->actions, current->action)) {
-    _push_lifo(p, w);
-    return;
-  }
-
-  // If we're not in work-first mode, then push the parcel for later.
-  if (!w->work_first) {
     _push_lifo(p, w);
     return;
   }
