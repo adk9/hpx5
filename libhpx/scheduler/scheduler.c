@@ -163,12 +163,20 @@ struct scheduler *scheduler_new(const config_t *cfg) {
   return s;
 }
 
+/// Send a locality wide shutdown signal to exit/terminate all workers
+/// this is different from shutdown handler which is to suspend workers
+///
+static void _locality_shutdown(locality_t* loc) {
+  sync_store(&loc->reent_state.shutdown, 0, SYNC_RELEASE);
+}
+
+
 void scheduler_delete(struct scheduler *sched) {
   if (!sched) {
     return;
   }
 
-  log("hpx finalizing worker threads..] \n");
+  log_sched("hpx finalizing worker threads.. \n");
   _locality_shutdown(here);
   worker_wait();
 
@@ -177,7 +185,7 @@ void scheduler_delete(struct scheduler *sched) {
     worker = scheduler_get_worker(sched, i);
     _join(worker);
   }
-  log("hpx finalizing thread join completed..] \n");
+  log_sched("hpx finalizing thread join completed.. \n");
   // unbind this thread's worker
   self = NULL;
 
@@ -201,21 +209,15 @@ worker_t *scheduler_get_worker(struct scheduler *sched, int id) {
   return &sched->workers[id];
 }
 
-int scheduler_reent_startup(struct scheduler *sched){
+int scheduler_restart(struct scheduler *sched) {
   int status = LIBHPX_OK;
-  
+
   sync_store(&sched->shutdown, INT_MAX, SYNC_RELEASE);
   status = worker_start();
   if (status != LIBHPX_OK) {
     scheduler_abort(sched);
   }
   return status;
-}
-
-void scheduler_reset_reent_state(struct scheduler *scheduler){
-    //reset current stack for this worker
-    //current parcel may have been released at each reentrance 
-    self->current = self->system;
 }
 
 int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
@@ -248,11 +250,6 @@ int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
   if (status != LIBHPX_OK) {
     scheduler_abort(sched);
   }
-
-  /*for (int i = 1; i < sched->n_workers; ++i) {*/
-    /*worker = scheduler_get_worker(sched, i);*/
-    /*_join(worker);*/
-  /*}*/
 
   return status;
 }

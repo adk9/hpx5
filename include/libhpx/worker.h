@@ -81,27 +81,20 @@ void worker_fini(worker_t *w)
 /// Start processing lightweight threads.
 int worker_start(void);
 
+/// Reset a worker thread.
+void worker_reset(worker_t *w)
+  HPX_NON_NULL(1);
+
 /// Check to see if the current worker should be active.
 int worker_is_active(void);
 
 /// Check to see if the current worker should shut down completely.
 int worker_is_shutdown(void);
 
-// for all threads except system thread wait .
-// retrun true if worker is a slave 
-int worker_wait_if_slave(void);
-
-/// this will check if the worker is the system thread
-// return true if worker is the system thread
-int worker_is_master_thread();
-
-//enforce some policy to wait on 
-int worker_wait_policy();
-
-/// worker wait is a custom barrier that implements a thread barrier which will 
-//  disable automatically if a locality wide shutdown is issued.
-//  This generally happens at hpx_finalize() and will enable all waiting
-//  threads to comeout of the main schedule loop()
-int worker_wait();
+///  This is a custom thread barrier which will be disabled
+///  automatically if a locality-wide shutdown is issued.  This
+///  generally happens at hpx_finalize() and will enable all waiting
+///  threads to come out of the main schedule loop().
+int worker_wait(void);
 
 #endif // LIBHPX_WORKER_H

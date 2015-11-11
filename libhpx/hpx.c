@@ -24,6 +24,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
 #include <libhpx/boot.h>
@@ -140,22 +141,12 @@ int hpx_init(int *argc, char ***argv) {
   here->ranks = 0;
   here->actions = NULL;
 
-  here->reent_state.reent_st = REENT_NOT_ACTIVE;
+  here->reent_state.active = false;
   here->reent_state.barrier_count = 0;
   here->reent_state.barrier_enabled = 1;
-  sync_store(&here->reent_state.loc_shutdown, INT_MAX, SYNC_RELEASE);
-  here->reent_state.reent_mutex = malloc(sizeof(pthread_mutex_t));
-  int ret = pthread_mutex_init(here->reent_state.reent_mutex, NULL);
-  if (ret != 0) {
-    status = log_error("failed to allocate re-entrance state properly.\n");
-    goto unwind0;
-  }
-  here->reent_state.reent_wait = malloc(sizeof(pthread_cond_t));
-  ret = pthread_cond_init(here->reent_state.reent_wait, NULL);
-  if (ret != 0) {
-    status = log_error("failed to allocate re-entrance state properly.\n");
-    goto unwind0;
-  }
+  sync_store(&here->reent_state.shutdown, INT_MAX, SYNC_RELEASE);
+  here->reent_state.mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+  here->reent_state.cond = (pthread_cond_t)PTHREAD_COND_INITIALIZER;
 
   here->config = config_new(argc, argv);
   if (!here->config) {
@@ -246,7 +237,8 @@ int hpx_init(int *argc, char ***argv) {
   return status;
 }
 
-static int _hpx_run_phase1(hpx_action_t *act, int n, ...){
+static int _hpx_run_phase1(hpx_action_t *act, int n, va_list* vargs) {
+  log_dflt("In hpx_run phase1\n");
   int status = HPX_SUCCESS;
   if (!here) {
     status = log_error("hpx_init() must be called before hpx_run()\n");
@@ -293,11 +285,8 @@ static int _hpx_run_phase1(hpx_action_t *act, int n, ...){
 
   // create the initial application-level thread to run
   if (here->rank == 0) {
-    va_list vargs;
-    va_start(vargs, n);
-    hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, &vargs);
+    hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, vargs);
     int status = hpx_parcel_send(p, HPX_NULL);
-    va_end(vargs);
 
     if (status != LIBHPX_OK) {
       log_error("failed to spawn initial action\n");
@@ -328,44 +317,39 @@ static int _hpx_run_phase1(hpx_action_t *act, int n, ...){
  unwind0:
   
   return status;
-
 }
 
 
-static int _hpx_run_phase2(hpx_action_t *act, int n, ...){
+static int _hpx_run_phase2(hpx_action_t *act, int n, va_list* vargs) {
+  log_dflt("In hpx_run phase2\n");
   int status = HPX_SUCCESS;
   if (!here) {
     status = log_error("hpx_init() must be called before hpx_run()\n");
     goto unwind0;
   }
-  dbg_assert(here->reent_state.reent_st == REENT_ACTIVE);
+  dbg_assert(here->reent_state.active);
 
-  //reentrance state is active
-  //1. send main action parcel
-  //2. system/main thread signal other threads to start work	
+  // reentrance state is active
+  // 1. send main action parcel
+  // 2. system/main thread signal other threads to start work	
   if (here->rank == 0) {
-    //reset scheduler to some sanity	  
-    scheduler_reset_reent_state(here->sched);
+    // reset the scheduler
+    worker_reset(self);
 
-    va_list vargs;
-    va_start(vargs, n);
-    hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, &vargs);
-		  
+    // spawn the hpx-run action
+    hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, vargs);
     int status = hpx_parcel_send(p, HPX_NULL);
-    va_end(vargs);
-
     if (status != LIBHPX_OK) {
-	log_error("failed to spawn initial action\n");
-	goto unwind2;
+      log_error("failed to spawn initial action\n");
+      goto unwind2;
     }
   }
-  scheduler_reent_startup(here->sched);
+  scheduler_restart(here->sched);
   goto unwind0;	  
 
 
  unwind2:
   probe_stop();
- unwind1:
   _stop(here);
  unwind0:
   return status;
@@ -374,25 +358,20 @@ static int _hpx_run_phase2(hpx_action_t *act, int n, ...){
 
 /// Called to run HPX.
 int _hpx_run(hpx_action_t *act, int n, ...) {
-  log("hpx_run starting up .....\n");
   va_list vargs;
   va_start(vargs, n);
   int status = HPX_SUCCESS;
-  if(!here->reent_state.reent_st == REENT_ACTIVE){
- 	status = _hpx_run_phase1(act, n, &vargs);	 
-  	here->reent_state.reent_st = REENT_ACTIVE;
-  }else{
- 	status = _hpx_run_phase2(act, n, &vargs);	 
+  if (!here->reent_state.active) {
+    status = _hpx_run_phase1(act, n, &vargs);	 
+    here->reent_state.active = true;
+  } else {
+    status = _hpx_run_phase2(act, n, &vargs);	 
   }
 
-  //enable global or locality wide synchronization between each hpx_run() calls
-  /*printf("[BEFOREE BARRIER SYNC..] \n");*/
+  // enable global or locality wide synchronization between each hpx_run() calls
   boot_barrier(here->boot);
-  /*printf("[AFTER BARRIER SYNC..] \n");*/
   
   va_end(vargs);
-  log("hpx_run ending.....\n");
-  
   return status;
 }
 
@@ -417,14 +396,14 @@ void hpx_exit(int code) {
   network_flush_on_shutdown(here->network);
   for (int i = 0, e = here->ranks; i < e; ++i) {
     int e = network_command(here->network, HPX_THERE(i), locality_shutdown,
-			    (uint64_t)code);
-    /*printf("[HPX NETWRK EXIT COMMAND to %d from locality %d ] \n", i, hpx_get_my_rank());*/
-    /*fflush(stdout);*/
+                            (uint64_t)code);
     dbg_check(e);
   }
-  //we do a flush of all remaining network packets - fix for isir transport
-  //there is a probability that network might not progress (to send all outbound shutdown signals) once all threads ssupends
-  //flush will ensure we will progress these forcefully in this thread
+
+  // we do a flush of all remaining network packets - fix for isir transport
+  // there is a probability that network might not progress
+  // (to send all outbound shutdown signals) once all threads suspend
+  // flush will ensure we will progress these forcefully in this thread
   here->network->flush_all(here->network, 1);
   hpx_thread_exit(HPX_SUCCESS);
 }
