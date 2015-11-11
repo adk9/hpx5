@@ -17,38 +17,27 @@
 #define RUNS 3
 #define ACTIONS_PER_RUN 10
 
-int _main_action_handler(void); 
-HPX_ACTION(HPX_DEFAULT, 0, _hello, _main_action_handler); 
-int _foo_action_handler(void); 
-HPX_ACTION(HPX_DEFAULT, 0, _foo, _foo_action_handler); 
-
-/*static HPX_ACTION_DECL(_hello);*/
-
 int _foo_action_handler(void) {
-  printf("Foo action : %u : ranks : %u : threads : %u.\n", hpx_get_my_rank(), hpx_get_num_ranks(), 
-  hpx_get_num_threads());
-
+  printf("Foo action : %u : ranks : %u : threads : %u.\n",
+         hpx_get_my_rank(), hpx_get_num_ranks(), hpx_get_num_threads());
   return HPX_SUCCESS;
 }
+HPX_ACTION(HPX_DEFAULT, 0, _foo, _foo_action_handler);
 
 int _main_action_handler(void) {
-  printf("Hello World from main action rank : %u : ranks : %u : threads : %u.\n", hpx_get_my_rank(),
-  hpx_get_num_ranks(), hpx_get_num_threads());
+  printf("Hello World from main action rank : %u : ranks : %u : threads : %u.\n",
+         hpx_get_my_rank(), hpx_get_num_ranks(), hpx_get_num_threads());
 
-  int i ;
   hpx_addr_t done = hpx_lco_and_new(ACTIONS_PER_RUN); 
-  for (i = 0; i < ACTIONS_PER_RUN; i++) {
+  for (int i = 0; i < ACTIONS_PER_RUN; i++) {
 	int loc = i % hpx_get_num_ranks();  
   	hpx_call(HPX_THERE(loc), _foo, done);
   }
   hpx_lco_wait(done); 
   hpx_lco_delete(done, HPX_NULL);
-
   hpx_exit(HPX_SUCCESS);
 }
-
-
-/*static HPX_ACTION(HPX_DEFAULT, 0, _hello, _main_action_handler);*/
+HPX_ACTION(HPX_DEFAULT, 0, _hello, _main_action_handler); 
 
 int main(int argc, char *argv[argc]) {
   printf("hello world....\n");
@@ -56,16 +45,13 @@ int main(int argc, char *argv[argc]) {
     fprintf(stderr, "failed to initialize HPX.\n");
     return -1;
   }
-  int success ;
-  int i ;
-  for (i = 0; i < RUNS; ++i) {
-  	success = hpx_run(&_hello);
-  	printf("%i hpx_run returned %d.\n", i+1, success);
-	/*if(hpx_get_my_rank() == 0)*/
-		/*sleep(5);*/
+  int success;
+  for (int i = 0; i < RUNS; ++i) {
+    success = hpx_run(&_hello);
+    printf("%i hpx_run returned %d.\n", i+1, success);
   }
 
   hpx_finalize();
-  printf("hpx_finalize  got completed %d.\n", 1);
+  printf("hpx_finalize completed %d.\n", 1);
   return success;
 }
