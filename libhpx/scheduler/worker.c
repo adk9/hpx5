@@ -697,7 +697,7 @@ static void _null(hpx_parcel_t *p, void *env) {
 /// this is different from shutdown handler which 
 /// is to enforce for scheduler suspension at exit of each hpx_run 
 ///
-int _locality_ready_for_shutdown(locality_t* loc) {
+static int _locality_ready_for_shutdown(locality_t* loc) {
   int shutdown = sync_load(&loc->reent_state.loc_shutdown, SYNC_ACQUIRE);
   return (shutdown != INT_MAX);
 }
