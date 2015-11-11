@@ -50,13 +50,13 @@ typedef enum {
 } reent_state_t;
 
 typedef struct reent_t{
-	reent_state_t      reent_st;
+	reent_state_t          reent_st;
   	volatile int       loc_shutdown;  //indicates that hpx is going to exit or quit
-	pthread_mutex_t* reent_mutex;
-	pthread_cond_t* reent_wait;
-	int barrier_count;
-	int barrier_trips;
-	int barrier_enabled;
+	pthread_mutex_t*    reent_mutex;
+	pthread_cond_t*      reent_wait;
+	int               barrier_count;
+	int 		  barrier_trips;
+	int 		barrier_enabled;
 }reent_t;
 
 /// The locality object.
