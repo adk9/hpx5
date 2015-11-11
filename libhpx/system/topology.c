@@ -218,7 +218,8 @@ topology_t *topology_new(const struct config *config) {
     topology->cpu_to_numa[cpu->os_index] = index;
     if (topology->numa_to_cpus && index >= 0) {
       int map_index = numa_to_cpus_index[index]++;
-      topology->numa_to_cpus[index][map_index] = cpu->os_index;
+      int *cpuset = topology->numa_to_cpus[index];
+      cpuset[map_index] = cpu->os_index;
     }
   }
 
