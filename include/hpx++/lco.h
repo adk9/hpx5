@@ -18,6 +18,7 @@ extern "C" {
   #include "hpx/addr.h"
   #include "hpx/gas.h"
   #include "hpx/types.h"
+  #include "hpx/lco.h"
 }
 
 #include <cstdlib>
@@ -30,135 +31,73 @@ namespace hpx {
    */
   template <typename T>
   class BaseLCO {
-    void fini() {
-      static_cast<T*>(this)->fini();
+  
+  public:
+    BaseLCO() : _size(sizeof(T)) {}
+    
+    virtual void fini() {
+      hpx_lco_delete_sync(_lco);
     }
-    void set(int size, const void *value) {
-      static_cast<T*>(this)->set(size, value);
+    virtual void set(int size, const void *value) {
+      hpx_lco_delete_sync(_lco);
     }
-    void error(hpx_status_t code) {
-      static_cast<T*>(this)->error(code);
+    virtual void error(hpx_status_t code) {
+      hpx_lco_error_sync(_lco, code);
     }
-    hpx_status_t get(int size, void *value, int reset) {
-      return static_cast<T*>(this)->get(size, value, reset);
+    virtual hpx_status_t get(T& value) {
+      return hpx_lco_get(_lco, sizeof(T), &value);
     }
-    hpx_status_t getref(int size, void **out, int *unpin) {
-      return static_cast<T*>(this)->getref(size, out, unpin);
+    hpx_status_t getref(T** out) {
+      return hpx_lco_getref(_lco, sizeof(T), (void**) out);
     }
     int release(void *out) {
-      return static_cast<T*>(this)->release(out);
+      return hpx_lco_release(_lco, out);
     }
-    hpx_status_t wait(int reset) {
-      return static_cast<T*>(this)->wait(reset);
+    hpx_status_t wait() {
+      return hpx_lco_wait(_lco);
     }
-    hpx_status_t attach(hpx_parcel_t *p) {
-      return static_cast<T*>(this)->attach(p);
-    }
+    // TODO not sure what to do here
+//     hpx_status_t attach(hpx_parcel_t *p) {
+//       return static_cast<T*>(this)->attach(p);
+//     }
+    
     void reset() {
-      static_cast<T*>(this)->reset();
+      hpx_lco_reset_sync(_lco);
     }
+    
     std::size_t size() {
-      return static_cast<T*>(this)->size();
+      return _size;
+    }
+    
+  protected:
+    hpx_addr_t _lco;
+    std::size_t _size;
+  };
+
+  template <typename T>
+  class Future : public BaseLCO<T> {
+  public:
+    Future() {
+      this->_lco = hpx_lco_future_new(sizeof(T));
     }
   };
   
-  class Future : public BaseLCO<Future> {
-    void fini() {}
-    void set(int size, const void *value) {}
-    void error(hpx_status_t code) {}
-    hpx_status_t get(int size, void *value, int reset) {
-      return HPX_LCO_ERROR;
-    }
-    hpx_status_t getref(int size, void **out, int *unpin) {
-      return HPX_LCO_ERROR;
-    }
-    int release(void *out) {
-      return HPX_LCO_ERROR;
-    }
-    hpx_status_t wait(int reset) {
-      return HPX_LCO_ERROR;
-    }
-    hpx_status_t attach(hpx_parcel_t *p) {
-      return HPX_LCO_ERROR;
-    }
-    void reset() {}
-    std::size_t size() {
-      return 0;
-    }
+  template <typename T>
+  class AndGate : public BaseLCO<T> {
+  public:
+    AndGate() {}
   };
   
-  class AndGate : public BaseLCO<AndGate> {
-    void fini() {}
-    void set(int size, const void *value) {}
-    void error(hpx_status_t code) {}
-    hpx_status_t get(int size, void *value, int reset) {
-      return HPX_LCO_ERROR;
-    }
-    hpx_status_t getref(int size, void **out, int *unpin) {
-      return HPX_LCO_ERROR;
-    }
-    int release(void *out) {
-      return HPX_LCO_ERROR;
-    }
-    hpx_status_t wait(int reset) {
-      return HPX_LCO_ERROR;
-    }
-    hpx_status_t attach(hpx_parcel_t *p) {
-      return HPX_LCO_ERROR;
-    }
-    void reset() {}
-    std::size_t size() {
-      return 0;
-    }
+  template <typename T>
+  class Reduce : public BaseLCO<T> {
+  public:
+    Reduce() {}
   };
   
-  class Reduce : public BaseLCO<Reduce> {
-    void fini() {}
-    void set(int size, const void *value) {}
-    void error(hpx_status_t code) {}
-    hpx_status_t get(int size, void *value, int reset) {
-      return HPX_LCO_ERROR;
-    }
-    hpx_status_t getref(int size, void **out, int *unpin) {
-      return HPX_LCO_ERROR;
-    }
-    int release(void *out) {
-      return HPX_LCO_ERROR;
-    }
-    hpx_status_t wait(int reset) {
-      return HPX_LCO_ERROR;
-    }
-    hpx_status_t attach(hpx_parcel_t *p) {
-      return HPX_LCO_ERROR;
-    }
-    void reset() {}
-    std::size_t size() {
-      return 0;
-    }
-  };
-  class Semaphore : public BaseLCO<Semaphore> {
-    void fini() {}
-    void set(int size, const void *value) {}
-    void error(hpx_status_t code) {}
-    hpx_status_t get(int size, void *value, int reset) {
-      return HPX_LCO_ERROR;
-    }
-    hpx_status_t getref(int size, void **out, int *unpin) {
-      return HPX_LCO_ERROR;
-    }
-    int release(void *out) {
-      return HPX_LCO_ERROR;
-    }
-    hpx_status_t wait(int reset) {
-      return HPX_LCO_ERROR;
-    }
-    hpx_status_t attach(hpx_parcel_t *p) {
-      return HPX_LCO_ERROR;
-    }
-    void reset() {}
-    std::size_t size() {
-      return 0;
-    }
+  template <typename T>
+  class Semaphore : public BaseLCO<T> {
+  public:
+    Semaphore() {}
   };
   
 }
