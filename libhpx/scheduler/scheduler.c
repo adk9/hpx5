@@ -176,7 +176,7 @@ void scheduler_delete(struct scheduler *sched) {
     return;
   }
 
-  log_sched("hpx finalizing worker threads..] \n");
+  log_sched("hpx finalizing worker threads.. \n");
   _locality_shutdown(here);
   worker_wait();
 
@@ -185,7 +185,7 @@ void scheduler_delete(struct scheduler *sched) {
     worker = scheduler_get_worker(sched, i);
     _join(worker);
   }
-  log_sched("hpx finalizing thread join completed..] \n");
+  log_sched("hpx finalizing thread join completed.. \n");
   // unbind this thread's worker
   self = NULL;
 
@@ -256,11 +256,6 @@ int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
   if (status != LIBHPX_OK) {
     scheduler_abort(sched);
   }
-
-  /*for (int i = 1; i < sched->n_workers; ++i) {*/
-    /*worker = scheduler_get_worker(sched, i);*/
-    /*_join(worker);*/
-  /*}*/
 
   return status;
 }
