@@ -37,6 +37,7 @@
 /// We pack state into the LCO pointer---least-significant-bit is already used
 /// in the sync_lockable_ptr interface
 #define _TRIGGERED_MASK    (0x2)
+#define _USER_MASK         (0x4)
 #define _STATE_MASK        (0x7)
 
 static void _EVENT(const lco_t *lco, const int id) {
@@ -269,6 +270,14 @@ void lco_reset_triggered(lco_t *lco) {
 
 uintptr_t lco_get_triggered(const lco_t *lco) {
   return lco->bits & _TRIGGERED_MASK;
+}
+
+void lco_set_user(lco_t *lco) {
+  lco->bits |= _USER_MASK;
+}
+
+uintptr_t lco_get_user(const lco_t *lco) {
+  return lco->bits & _USER_MASK;
 }
 
 /// @}
