@@ -374,7 +374,7 @@ static int _hpx_run_phase2(hpx_action_t *act, int n, ...){
 
 /// Called to run HPX.
 int _hpx_run(hpx_action_t *act, int n, ...) {
-  log("hpx_run starting up .....\n");
+  log_dflt("hpx_run starting up .....\n");
   va_list vargs;
   va_start(vargs, n);
   int status = HPX_SUCCESS;
@@ -391,7 +391,7 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   /*printf("[AFTER BARRIER SYNC..] \n");*/
   
   va_end(vargs);
-  log("hpx_run ending.....\n");
+  log_dflt("hpx_run ending.....\n");
   
   return status;
 }

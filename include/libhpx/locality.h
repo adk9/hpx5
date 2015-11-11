@@ -28,7 +28,7 @@
 /// wrap common functionality that needs access to the global here object.
 
 #include <hpx/hpx.h>
-
+#include <pthread.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
