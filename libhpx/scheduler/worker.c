@@ -724,12 +724,18 @@ int worker_wait(){
   return status;
 }
 
-int worker_is_master_thread(){
+/// Check if the worker is the system thread
+///
+/// @returns true if worker is the system thread
+static int _worker_is_master_thread() {
 	return self->id == 0 ;
 }
 
-int worker_wait_if_slave(void){
-  int is_slave = !worker_is_master_thread();	
+/// Check to see if slave (not system thread) then wait .
+///
+/// @retruns true if worker is a slave 
+static int _worker_wait_if_slave(void) {
+  int is_slave = !_worker_is_master_thread();	
   if(is_slave){
      struct scheduler *sched = here->sched;
      /*system_barrier_wait(&sched->barrier);*/
@@ -740,8 +746,11 @@ int worker_wait_if_slave(void){
   return is_slave;
 }
 
-int worker_wait_policy(){
-	return worker_wait_if_slave();
+/// Enforce some policy to wait on 
+///
+/// @returns true if worker if worker has waited on some policy
+static int _worker_wait_policy() {
+	return _worker_wait_if_slave();
 }
 
 int worker_start(void) {
@@ -800,7 +809,7 @@ int worker_start(void) {
   worker_wait();
   // the system thread will loop to find work until the scheduler has shutdown
   while (true){
-    if(worker_is_shutdown() && !worker_wait_policy()){
+    if(worker_is_shutdown() && !_worker_wait_policy()){
     	break;
     }
     if(_locality_ready_for_shutdown(here)){

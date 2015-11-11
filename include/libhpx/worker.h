@@ -87,21 +87,10 @@ int worker_is_active(void);
 /// Check to see if the current worker should shut down completely.
 int worker_is_shutdown(void);
 
-/// Check to see if slave (not system thread) then wait .
-/// @retruns true if worker is a slave 
-int worker_wait_if_slave(void);
-
-/// this will check if the worker is the system thread
-// return true if worker is the system thread
-int worker_is_master_thread();
-
-//enforce some policy to wait on 
-int worker_wait_policy();
-
-/// worker wait is a custom barrier that implements a thread barrier which will 
-//  disable automatically if a locality wide shutdown is issued.
-//  This generally happens at hpx_finalize() and will enable all waiting
-//  threads to comeout of the main schedule loop()
+///  Worker wait is a custom barrier that implements a thread barrier which will 
+///  disable automatically if a locality wide shutdown is issued.
+///  This generally happens at hpx_finalize() and will enable all waiting
+///  threads to comeout of the main schedule loop()
 int worker_wait();
 
 #endif // LIBHPX_WORKER_H
