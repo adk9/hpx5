@@ -749,7 +749,7 @@ int worker_wait(void) {
   return status;
 }
 
-/// Check to see if slave (not system thread) then wait .
+/// Check to see if slave (not system thread) then wait.
 ///
 /// @retruns true if worker is a slave 
 static int _worker_wait_if_slave(void) {
@@ -761,13 +761,6 @@ static int _worker_wait_if_slave(void) {
   }
 
   return is_slave;
-}
-
-/// Enforce some policy to wait on 
-///
-/// @returns true if worker has waited on some policy
-static int _worker_wait_policy(void) {
-  return _worker_wait_if_slave();
 }
 
 int worker_start(void) {
@@ -823,12 +816,12 @@ int worker_start(void) {
   // the system thread will loop to find work until the scheduler has
   // shutdown
   while (true) {
-    if (worker_is_shutdown() && !_worker_wait_policy()) {
-    	break;
+    if (worker_is_shutdown() && !_worker_wait_if_slave()) {
+      break;
     }
     if (_locality_ready_for_shutdown(here)) {
-	worker_wait();    
-    	break;
+      worker_wait();    
+      break;
     }
     _schedule(_null, NULL, 1);
   }
