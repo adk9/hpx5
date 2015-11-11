@@ -10,16 +10,14 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
-#ifndef LIBHPX_NETWORK_PROBE_H
-#define LIBHPX_NETWORK_PROBE_H
+#ifndef LIBHPX_NETWORK_INST_H
+#define LIBHPX_NETWORK_INST_H
 
 /// Forward declarations.
 /// @{
 struct network;
 /// @}
 
-int probe_start(struct network *network);
-void probe_stop(void);
+struct network *network_inst_new(struct network *impl);
 
-#endif // LIBHPX_NETWORK_PROBE_H
+#endif

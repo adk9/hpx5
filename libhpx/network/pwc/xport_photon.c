@@ -302,8 +302,8 @@ _poll(command_t *op, int *remaining, int rank, int *src, int type) {
 }
 
 static int
-_photon_test(command_t *op, int *remaining, int *src) {
-  return _poll(op, remaining, PHOTON_ANY_SOURCE, src, PHOTON_PROBE_EVQ);
+_photon_test(command_t *op, int *remaining, int id, int *src) {
+  return _poll(op, remaining, id, src, PHOTON_PROBE_EVQ);
 }
 
 static int
