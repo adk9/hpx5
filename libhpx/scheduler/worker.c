@@ -678,7 +678,7 @@ int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   w->id          = id;
   w->seed        = seed;
   worker_reset(w);
-  
+
   sync_chase_lev_ws_deque_init(&w->queues[0].work, work_size);
   sync_chase_lev_ws_deque_init(&w->queues[1].work, work_size);
   sync_two_lock_queue_init(&w->inbox, NULL);
@@ -713,77 +713,62 @@ static void _null(hpx_parcel_t *p, void *env) {
 }
 
 /// Check shutting down of entire locality
-/// this is different from shutdown handler which 
-/// is to enforce for scheduler suspension at exit of each hpx_run 
+/// this is different from shutdown handler which
+/// is to enforce for scheduler suspension at exit of each hpx_run
 ///
 static int _locality_ready_for_shutdown(locality_t* loc) {
   int shutdown = sync_load(&loc->reent_state.shutdown, SYNC_ACQUIRE);
   return (shutdown != INT_MAX);
 }
 
-int worker_wait(void) {
-  int status = 0;
-  int barrier_enabled = 0;
-  pthread_mutex_lock(&here->reent_state.mutex);
-  barrier_enabled = here->reent_state.barrier_enabled;
-  
-  if (barrier_enabled) {
-    ++(here->reent_state.barrier_count);
-
-    // other workers will wait on condition untill notified again in
-    // the next hpx_run epoch
-    if (here->reent_state.barrier_count >= here->reent_state.barrier_trips) {
-      here->reent_state.barrier_count = 0;
-      pthread_cond_broadcast(&here->reent_state.cond);
-	
-      status = _locality_ready_for_shutdown(here);
-      if (status) {
-        here->reent_state.barrier_enabled = 0;
-      }
-    } else {
-      pthread_cond_wait(&here->reent_state.cond, &here->reent_state.mutex);
-      status = _locality_ready_for_shutdown(here);
+void worker_wait(void) {
+  reent_t *state = &here->reent_state;
+  pthread_mutex_lock(&state->mutex);
+  if (state->barrier_enabled) {
+    if (++state->barrier_count < state->barrier_trips) {
+      pthread_cond_wait(&state->cond, &state->mutex);
+    }
+    else {
+      state->barrier_count = 0;
+      pthread_cond_broadcast(&state->cond);
+      state->barrier_enabled = !_locality_ready_for_shutdown(here);
     }
   }
-  pthread_mutex_unlock(&here->reent_state.mutex);
-  return status;
+  pthread_mutex_unlock(&state->mutex);
 }
 
 /// Check to see if slave (not system thread) then wait.
 ///
-/// @retruns true if worker is a slave 
-static int _worker_wait_if_slave(void) {
-  int is_slave = (self->id != 0);
-  if (is_slave) {
-    // other workers will wait on condition untill notified again in
-    // the next hpx_run epoch
+/// @retruns true if worker is a slave
+static int _worker_wait_if_slave(worker_t *w) {
+  if (w->id != 0) {
     worker_wait();
   }
-
-  return is_slave;
+  return w->id;
 }
 
 int worker_start(void) {
-  dbg_assert(self);
+  worker_t *w = self;
+  dbg_assert(w);
 
   // double-check this
-  dbg_assert(((uintptr_t)self & (HPX_CACHELINE_SIZE - 1)) == 0);
-  dbg_assert(((uintptr_t)&self->queues & (HPX_CACHELINE_SIZE - 1)) == 0);
-  dbg_assert(((uintptr_t)&self->inbox & (HPX_CACHELINE_SIZE - 1))== 0);
+  dbg_assert(((uintptr_t)w & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&w->queues & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&w->inbox & (HPX_CACHELINE_SIZE - 1))== 0);
 
   // make sure the system is initialized
   dbg_assert(here && here->config && here->network);
 
   // affinitize the worker thread
   libhpx_thread_affinity_t policy = here->config->thread_affinity;
-  int status = system_set_worker_affinity(self->id, policy);
+  int status = system_set_worker_affinity(w->id, policy);
   if (status != LIBHPX_OK) {
     log_dflt("WARNING: running with no worker thread affinity. "
              "This MAY result in diminished performance.\n");
   }
 
-  int cpu = self->id % here->topology->ncpus;
-  self->numa_node = here->topology->cpu_to_numa[cpu];
+  int cpu = w->id % here->topology->ncpus;
+  w->numa_node = here->topology->cpu_to_numa[cpu];
 
   // wait for local threads to start up
   struct scheduler *sched = here->sched;
@@ -791,8 +776,8 @@ int worker_start(void) {
   //reset shutdown flag
   if (here->reent_state.active) {
     sync_store(&sched->shutdown, INT_MAX, SYNC_RELEASE);
-  } 
-  
+  }
+
   // allocate a parcel and a stack header for the system stack
   hpx_parcel_t p;
   parcel_init(0, 0, 0, 0, 0, NULL, 0, &p);
@@ -808,19 +793,19 @@ int worker_start(void) {
   };
   p.ustack = &stack;
 
-  self->system = &p;
-  self->current = self->system;
-  self->work_first = 0;
+  w->system = &p;
+  w->current = w->system;
+  w->work_first = 0;
 
   worker_wait();
   // the system thread will loop to find work until the scheduler has
   // shutdown
   while (true) {
-    if (worker_is_shutdown() && !_worker_wait_if_slave()) {
+    if (worker_is_shutdown() && !_worker_wait_if_slave(w)) {
       break;
     }
     if (_locality_ready_for_shutdown(here)) {
-      worker_wait();    
+      worker_wait();
       break;
     }
     _schedule(_null, NULL, 1);
