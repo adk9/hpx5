@@ -95,12 +95,6 @@ typedef struct locality {
 #endif
 } locality_t;
 
-void _locality_shutdown(locality_t* loc)
-  HPX_NON_NULL(1);
-
-
-int _locality_ready_for_shutdown(locality_t* loc)
-  HPX_NON_NULL(1);
 
 /// Inter-locality action interface.
 /// @{

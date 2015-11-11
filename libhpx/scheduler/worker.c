@@ -693,6 +693,15 @@ void worker_fini(worker_t *w) {
 static void _null(hpx_parcel_t *p, void *env) {
 }
 
+/// Check shutting down of entire locality
+/// this is different from shutdown handler which 
+/// is to enforce for scheduler suspension at exit of each hpx_run 
+///
+int _locality_ready_for_shutdown(locality_t* loc) {
+  int shutdown = sync_load(&loc->reent_state.loc_shutdown, SYNC_ACQUIRE);
+  return (shutdown != INT_MAX);
+}
+
 int worker_wait(){
   int status = 0 ;
   int barrier_enabled = 0 ;

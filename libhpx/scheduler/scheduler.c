@@ -163,6 +163,14 @@ struct scheduler *scheduler_new(const config_t *cfg) {
   return s;
 }
 
+/// API to indicate shutting down of entire locality
+/// this is different from shutdown handler (suspend)
+///
+static void _locality_shutdown(locality_t* loc) {
+  sync_store(&loc->reent_state.loc_shutdown, 0, SYNC_RELEASE);
+}
+
+
 void scheduler_delete(struct scheduler *sched) {
   if (!sched) {
     return;
