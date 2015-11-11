@@ -67,7 +67,7 @@ typedef two_lock_queue_t yield_queue_t;
 /// not implemented.
 struct scheduler {
   yield_queue_t       yielded;
-  volatile int       shutdown;  //indicates scheduler will shutdown temporarily (ie:- for each epoch)
+  volatile int       shutdown;  //indicates scheduler will suspend(ie: for each epoch)
   volatile int    next_tls_id;
   int               n_workers;
   uint32_t       wf_threshold;
@@ -96,9 +96,9 @@ void scheduler_delete(struct scheduler *scheduler);
 /// Reset scheduler object for rentrance.
 ///
 /// The scheduler must already have been shutdown with
-/// scheduler_shutdown(). At reentrance we do not release any resources instead
+/// scheduler_shutdown(). We do not release any resources instead
 /// suspend workers. However current parcel of reentrance thread may have been released
-///  during previous execution. we will restate that. 
+/// during previous execution. we will restate that. 
 ///
 /// @param    scheduler The scheduler obj.
 void scheduler_reset_reent_state(struct scheduler *scheduler);
