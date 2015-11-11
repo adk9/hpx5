@@ -553,26 +553,16 @@ static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
   c->f(prev, c->env);
 }
 
-
-static void _schedule_network(void) {
-  network_t *network = here->network;
-  {
-    INST(uint64_t start_time = hpx_time_to_ns(hpx_time_now()));
-
-    hpx_parcel_t *stack = network_probe(here->network, 0);
-    hpx_parcel_t *p = NULL;
-    while ((p = parcel_stack_pop(&stack))) {
-      EVENT_PARCEL_RECV(p);
-      parcel_launch(p);
-    }
-
-    inst_trace(HPX_INST_SCHEDTIMES, HPX_INST_SCHEDTIMES_PROBE, start_time);
+/// Probe and progress the network.
+static void _schedule_network(network_t *network) {
+  hpx_parcel_t *stack = network_probe(network, 0);
+  hpx_parcel_t *p = NULL;
+  while ((p = parcel_stack_pop(&stack))) {
+    EVENT_PARCEL_RECV(p);
+    parcel_launch(p);
   }
-  {
-    INST(uint64_t start_time = hpx_time_to_ns(hpx_time_now()));
-    network_progress(network, 0);
-    inst_trace(HPX_INST_SCHEDTIMES, HPX_INST_SCHEDTIMES_PROGRESS, start_time);
-  }
+
+  network_progress(network, 0);
 }
 
 /// The main scheduling loop.
@@ -630,7 +620,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
     _swap_epoch(w);
 
     // Do some network stuff;
-    _schedule_network();
+    _schedule_network(here->network);
 
     // Try and steal some work
     if ((p = _schedule_steal(w))) {
