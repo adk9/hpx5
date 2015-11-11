@@ -197,20 +197,39 @@ static void _send_all(coalesced_network_t *coalesced_network) {
 
    //printf("Sorting the parcels according to destinations\n");
    uint32_t n = 0;
-   //sort the parcels to destination bin
+  
+   //sync_fadd(&coalesced_network->sends.size, -number_of_parcels_dequeued, SYNC_RELAXED);
    
-   while ((p = sync_two_lock_queue_dequeue(&coalesced_network->sends))) {
+   //adjust the queue size before we proceed to sorting parcel according to destination
+   uint64_t current_coalescing_queue_size = coalesced_network_parcel_queue_size(coalesced_network);
+   uint64_t readjusted_coalescing_queue_size = coalesced_network_parcel_queue_size(coalesced_network) - current_coalescing_queue_size;
+   while (true) {
+     if(coalesced_network_parcel_queue_size(coalesced_network) >= current_coalescing_queue_size) {
+       uint64_t viewed_coalescing_queue_size = sync_cas_val(&coalesced_network->sends.size, current_coalescing_queue_size, readjusted_coalescing_queue_size, SYNC_RELAXED, SYNC_RELAXED);
+       if (viewed_coalescing_queue_size == current_coalescing_queue_size) {
+	 break;
+       } else {
+	 continue;
+       }       
+     } else {
+       break;
+     }
+   }
+
+   //Now, sort the parcels to destination bin
+   
+   while (current_coalescing_queue_size > 0 ) {
      //printf("Processing parcel and putting it into the right destination buffer\n");
-     assert(coalesced_network->sends.size > 0);
+     p = sync_two_lock_queue_dequeue(&coalesced_network->sends); 
      uint64_t destination = gas_owner_of(here->gas, p->target);
      n = parcel_size(p);
      memcpy(coalesced_network->coalesced_buffer[destination] + current_destination_buffer_index[destination], p, n);
      current_destination_buffer_index[destination] += n;
      number_of_parcels_dequeued++ ;
+     current_coalescing_queue_size--;
    }
 
-   sync_fadd(&coalesced_network->sends.size, -number_of_parcels_dequeued, SYNC_RELAXED);
-
+  
    //printf("number_of_parcels_dequeued %" PRIu64 "\n", number_of_parcels_dequeued);
   
    //again zeroing out the current position buffer
