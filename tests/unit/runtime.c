@@ -22,7 +22,7 @@ int _foo_action_handler(void) {
          hpx_get_my_rank(), hpx_get_num_ranks(), hpx_get_num_threads());
   return HPX_SUCCESS;
 }
-HPX_ACTION(HPX_DEFAULT, 0, _foo, _foo_action_handler);
+static HPX_ACTION(HPX_DEFAULT, 0, _foo, _foo_action_handler);
 
 int _main_action_handler(void) {
   printf("Hello World from main action rank : %u : ranks : %u : threads : %u.\n",
@@ -40,7 +40,6 @@ int _main_action_handler(void) {
 HPX_ACTION(HPX_DEFAULT, 0, _hello, _main_action_handler); 
 
 int main(int argc, char *argv[argc]) {
-  printf("hello world....\n");
   if (hpx_init(&argc, &argv) != 0) {
     fprintf(stderr, "failed to initialize HPX.\n");
     return -1;
