@@ -99,7 +99,7 @@ void hpx_parcel_set_cont_target(hpx_parcel_t *p, hpx_addr_t cont) {
   p->c_target = cont;
 }
 
-void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size) {
+void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, size_t size) {
   if (size) {
     void *to = hpx_parcel_get_data(p);
     memmove(to, data, size);

@@ -138,7 +138,7 @@ HPX_PUBLIC extern HPX_ACTION_DECL(hpx_lco_reset_action);
 ///                local completion indicates that the @p value may be freed
 ///                or reused.
 /// @param rsync an LCO to signal remote completion (HPX_NULL == don't wait)
-void hpx_lco_set(hpx_addr_t lco, int size, const void *value, hpx_addr_t lsync,
+void hpx_lco_set(hpx_addr_t lco, size_t size, const void *value, hpx_addr_t lsync,
                  hpx_addr_t rsync)
   HPX_PUBLIC;
 
@@ -152,7 +152,7 @@ void hpx_lco_set(hpx_addr_t lco, int size, const void *value, hpx_addr_t lsync,
 /// @param         size The size of the data.
 /// @param        value The address of the value to set.
 /// @param        rsync an LCO to wait for completion (HPX_NULL == don't wait)
-void hpx_lco_set_lsync(hpx_addr_t lco, int size, const void *value,
+void hpx_lco_set_lsync(hpx_addr_t lco, size_t size, const void *value,
                        hpx_addr_t rsync)
   HPX_PUBLIC;
 
@@ -167,7 +167,7 @@ void hpx_lco_set_lsync(hpx_addr_t lco, int size, const void *value,
 ///
 /// @returns            The value from lco set. This value is LCO-specific, but
 ///                     is meant to be 1 if the set caused the LCO to "trigger."
-int hpx_lco_set_rsync(hpx_addr_t lco, int size, const void *value)
+int hpx_lco_set_rsync(hpx_addr_t lco, size_t size, const void *value)
   HPX_PUBLIC;
 
 
@@ -183,7 +183,7 @@ int hpx_lco_set_rsync(hpx_addr_t lco, int size, const void *value)
 ///                or reused.
 /// @param raddr A continuation address for the set return value.
 /// @param   rop The continuation operation (should be marshalled).
-void hpx_lco_set_with_continuation(hpx_addr_t lco, int size, const void *value,
+void hpx_lco_set_with_continuation(hpx_addr_t lco, size_t size, const void *value,
                                    hpx_addr_t lsync,
                                    hpx_addr_t raddr, hpx_action_t rop)
   HPX_PUBLIC;
@@ -220,7 +220,7 @@ hpx_status_t hpx_lco_wait_reset(hpx_addr_t lco)
 /// @param     size the size of the data
 /// @param[out] out the output location (may be null)
 /// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
-hpx_status_t hpx_lco_get(hpx_addr_t lco, int size, void *value)
+hpx_status_t hpx_lco_get(hpx_addr_t lco, size_t size, void *value)
   HPX_PUBLIC;
 
 /// Perform a get operation.
@@ -237,7 +237,7 @@ hpx_status_t hpx_lco_get(hpx_addr_t lco, int size, void *value)
 /// @param     size the size of the data
 /// @param[out] out the output location (may be null)
 /// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
-hpx_status_t hpx_lco_get_reset(hpx_addr_t lco, int size, void *value)
+hpx_status_t hpx_lco_get_reset(hpx_addr_t lco, size_t size, void *value)
   HPX_PUBLIC;
 
 /// Perform a "get" operation on an LCO but instead of copying the LCO
@@ -250,7 +250,7 @@ hpx_status_t hpx_lco_get_reset(hpx_addr_t lco, int size, void *value)
 /// @param     size the size of the LCO buffer
 /// @param[out] ref pointer to hold the reference to an LCO's buffer
 /// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
-hpx_status_t hpx_lco_getref(hpx_addr_t lco, int size, void **ref)
+hpx_status_t hpx_lco_getref(hpx_addr_t lco, size_t size, void **ref)
   HPX_PUBLIC;
 
 /// Release the reference to an LCO's buffer.
@@ -299,7 +299,7 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[])
 /// @returns The number of entries in @p statuses that have non-HPX_SUCCESS
 ///                        values, will be set irrespective of if @p statuses is
 ///                        NULL.
-int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
+int hpx_lco_get_all(int n, hpx_addr_t lcos[], size_t sizes[], void *values[],
                     hpx_status_t statuses[])
   HPX_PUBLIC;
 
