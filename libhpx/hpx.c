@@ -258,6 +258,12 @@ int hpx_init(int *argc, char ***argv) {
 
   inst_start();
 
+  // start the scheduler, this will return after scheduler_shutdown()
+  if (scheduler_startup(here->sched, here->config) != LIBHPX_OK) {
+    log_error("scheduler shut down with error.\n");
+    goto unwind1;
+  }
+
   if (here->ranks > 1 && here->config->gas != HPX_GAS_AGAS) {
     status = hpx_run(&_hpx_143_fix);
   }
@@ -270,90 +276,22 @@ int hpx_init(int *argc, char ***argv) {
   return status;
 }
 
-static int _hpx_run_phase1(hpx_action_t *act, int n, va_list* vargs) {
-  log_dflt("In hpx_run pha2se1\n");
-  int status = HPX_SUCCESS;
-  if (!here) {
-    status = log_error("hpx_init() must be called before hpx_run()\n");
-    goto unwind0;
-  }
-
-  // create the initial application-level thread to run
-  if (here->rank == 0) {
-    hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, vargs);
-    int status = hpx_parcel_send(p, HPX_NULL);
-
-    if (status != LIBHPX_OK) {
-      log_error("failed to spawn initial action\n");
-      goto unwind1;
-    }
-  }
-
-  // start the scheduler, this will return after scheduler_shutdown()
-  if (scheduler_startup(here->sched, here->config) != LIBHPX_OK) {
-    log_error("scheduler shut down with error.\n");
-    goto unwind1;
-  }
-
-  return status;
-
- unwind1:
-  _stop(here);
- unwind0:
-  return status;
-}
-
-
-static int _hpx_run_phase2(hpx_action_t *act, int n, va_list* vargs) {
-  log_dflt("In hpx_run phase2\n");
-  int status = HPX_SUCCESS;
-  if (!here) {
-    status = log_error("hpx_init() must be called before hpx_run()\n");
-    goto unwind0;
-  }
-  dbg_assert(here->reent_state.active);
-
-  // reentrance state is active
-  // 1. send main action parcel
-  // 2. system/main thread signal other threads to start work
+/// Called to run HPX.
+int _hpx_run(hpx_action_t *act, int n, ...) {
   if (here->rank == 0) {
     // reset the scheduler
     worker_reset(self);
 
-    // spawn the hpx-run action
-    hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, vargs);
-    int status = hpx_parcel_send(p, HPX_NULL);
-    if (status != LIBHPX_OK) {
-      log_error("failed to spawn initial action\n");
-      goto unwind1;
-    }
+    va_list vargs;
+    va_start(vargs, n);
+    hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, &vargs);
+    va_end(vargs);
+    dbg_check(hpx_parcel_send(p, HPX_NULL), "failed to spawn initial action\n");
   }
-  scheduler_restart(here->sched);
-  goto unwind0;
-
- unwind1:
-  _stop(here);
- unwind0:
-  return status;
-}
-
-
-/// Called to run HPX.
-int _hpx_run(hpx_action_t *act, int n, ...) {
-  va_list vargs;
-  va_start(vargs, n);
-  int status = HPX_SUCCESS;
-  if (!here->reent_state.active) {
-    status = _hpx_run_phase1(act, n, &vargs);
-    here->reent_state.active = true;
-  } else {
-    status = _hpx_run_phase2(act, n, &vargs);
-  }
+  int status = scheduler_restart(here->sched);
 
   // enable global or locality wide synchronization between each hpx_run() calls
   boot_barrier(here->boot);
-
-  va_end(vargs);
   return status;
 }
 

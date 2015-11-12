@@ -235,7 +235,6 @@ int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
     }
   }
 
-  status = worker_start();
   if (status != LIBHPX_OK) {
     scheduler_abort(sched);
   }
