@@ -24,4 +24,7 @@
 #define PAD_TO_N(N, S) const char _CAT(_padding,__LINE__)[_BYTES(N, S)]
 #define PAD_TO_CACHELINE(S) PAD_TO_N(HPX_CACHELINE_SIZE, S)
 
+/// Alignment bytes to a a align=2^k alignment.
+#define ALIGN(bytes, align) ((align - (bytes & (align - 1))) & (align-1))
+
 #endif // LIBHPX_PADDING_H
