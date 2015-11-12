@@ -94,8 +94,7 @@ void hpx_thread_set_affinity(int thread_id) HPX_PUBLIC;
 /// Finish the current thread's execution, sending @p value to the thread's
 /// continuation address
 ///
-/// @param value the value to be sent to the thread's continuation address
-/// @param size the size of @p value
+/// @param  nargs The number of arguments being passed in.
 void _hpx_thread_continue(int nargs, ...)
   HPX_NORETURN HPX_PUBLIC;
 
@@ -115,8 +114,7 @@ void _hpx_thread_continue(int nargs, ...)
 ///
 /// @param cleanup a handler function to be run after the thread ends
 /// @param     env an environment to pass to @p cleanup
-/// @param    size the size of @p value
-/// @param   value the value to be sent to the thread's continuation address
+/// @param   nargs The number of arguments being passed in.
 void _hpx_thread_continue_cleanup(void (*cleanup)(void*), void *env,
                                   int nargs, ...)
   HPX_NORETURN HPX_PUBLIC;
