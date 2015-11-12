@@ -228,24 +228,6 @@ int hpx_init(int *argc, char ***argv) {
   log_dflt("HPX running %d worker threads on %d cores\n", here->config->threads,
            cores);
 
-  return status;
- unwind1:
-  _stop(here);
-  _cleanup(here);
- unwind0:
-  return status;
-}
-
-static int _hpx_run_phase1(hpx_action_t *act, int n, va_list* vargs) {
-  log_dflt("In hpx_run phase1\n");
-  int status = HPX_SUCCESS;
-  if (!here) {
-    status = log_error("hpx_init() must be called before hpx_run()\n");
-    goto unwind0;
-  }
-
-  // Initialize the network. This will initialize a transport and, as a side
-  // effect initialize our allocators.
   here->network = network_new(here->config, here->boot, here->gas);
   if (!here->network) {
     status = log_error("failed to create network.\n");
@@ -256,18 +238,32 @@ static int _hpx_run_phase1(hpx_action_t *act, int n, va_list* vargs) {
   here->sched = scheduler_new(here->config);
   if (!here->sched) {
     status = log_error("failed to create scheduler.\n");
-    goto unwind0;
+    goto unwind1;
   }
 
-  //reentrance state init
-  //TODO move to a better place
-  here->reent_state.barrier_trips = hpx_get_num_threads();
+  here->reent_state.barrier_trips = here->sched->n_workers;
 
 #ifdef HAVE_APEX
   // initialize APEX, give this main thread a name
   apex_init("HPX WORKER THREAD");
   apex_set_node_id(here->rank);
 #endif
+
+  return status;
+ unwind1:
+  _stop(here);
+  _cleanup(here);
+ unwind0:
+  return status;
+}
+
+static int _hpx_run_phase1(hpx_action_t *act, int n, va_list* vargs) {
+  log_dflt("In hpx_run pha2se1\n");
+  int status = HPX_SUCCESS;
+  if (!here) {
+    status = log_error("hpx_init() must be called before hpx_run()\n");
+    goto unwind0;
+  }
 
   here->actions = action_table_finalize();
   if (!here->actions) {
