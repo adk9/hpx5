@@ -73,8 +73,7 @@ void hpx_finalize() HPX_PUBLIC;
 ///
 /// @param entry an action to execute, or HPX_ACTION NULL to wait for an
 ///              incoming parcel or a inter-locality steal (if implemented)
-/// @param  args arguments to pass to @p entry
-/// @param  size the size of @p args
+/// @param nargs the number of arguments to pass to @p entry
 /// @returns     the status code passed to hpx_exit() upon
 ///              termination.
 int    _hpx_run(hpx_action_t *entry, int nargs, ...) HPX_PUBLIC;
