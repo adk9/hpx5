@@ -48,12 +48,12 @@ struct percolation;
 
 typedef struct reent_t {
   // indicates that hpx is going to exit or quit
-  volatile int         shutdown;
-  pthread_mutex_t         mutex;
-  pthread_cond_t           cond;
-  int             barrier_count;
-  int             barrier_trips;
-  int           barrier_enabled;
+  volatile int shutdown;
+  int           padding;
+  pthread_mutex_t mutex;
+  pthread_cond_t   cond;
+  int     barrier_count;
+  int   barrier_enabled;
 } reent_t;
 
 /// The locality object.
