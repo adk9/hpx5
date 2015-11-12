@@ -322,6 +322,7 @@ static void _handle_mail(worker_t *w) {
   while ((parcels = sync_two_lock_queue_dequeue(&w->inbox))) {
     while ((p = parcel_stack_pop(&parcels))) {
       COUNTER_SAMPLE(++w->stats.mail);
+      log_sched("got mail %p\n", p);
       _push_lifo(p, w);
     }
   }
@@ -592,6 +593,7 @@ static void _schedule_network(worker_t *w, network_t *network) {
 ///
 /// @returns            The status from _transfer.
 static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
+  log_sched("hello\n");
   INST(uint64_t start_time = hpx_time_to_ns(hpx_time_now()));
   int source = -1;
   int spins = 0;
@@ -632,6 +634,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
     // Try and steal some work
     if ((p = _schedule_steal(w))) {
       source = SOURCE_STEAL;
+      log_sched("stole work %p\n", p);
       break;
     }
 
@@ -709,31 +712,6 @@ void worker_fini(worker_t *w) {
 static void _null(hpx_parcel_t *p, void *env) {
 }
 
-/// Check shutting down of entire locality
-/// this is different from shutdown handler which
-/// is to enforce for scheduler suspension at exit of each hpx_run
-///
-static int _locality_is_shutdown(locality_t* loc) {
-  int shutdown = sync_load(&loc->reent_state.shutdown, SYNC_ACQUIRE);
-  return (shutdown != INT_MAX);
-}
-
-void worker_wait(void) {
-  reent_t *state = &here->reent_state;
-  pthread_mutex_lock(&state->mutex);
-  if (state->barrier_enabled) {
-    if (++state->barrier_count < here->sched->n_active_workers) {
-      pthread_cond_wait(&state->cond, &state->mutex);
-    }
-    else {
-      state->barrier_count = 0;
-      pthread_cond_broadcast(&state->cond);
-      state->barrier_enabled = !_locality_is_shutdown(here);
-    }
-  }
-  pthread_mutex_unlock(&state->mutex);
-}
-
 int worker_start(void) {
   worker_t *w = self;
   dbg_assert(w);
@@ -757,14 +735,6 @@ int worker_start(void) {
   int cpu = w->id % here->topology->ncpus;
   w->numa_node = here->topology->cpu_to_numa[cpu];
 
-  // wait for local threads to start up
-  struct scheduler *sched = here->sched;
-
-  // reset flag
-  if (w->id == 0) {
-    sync_store(&sched->stopped, INT_MAX, SYNC_RELEASE);
-  }
-
   // allocate a parcel and a stack header for the system stack
   hpx_parcel_t p;
   parcel_init(0, 0, 0, 0, 0, NULL, 0, &p);
@@ -784,9 +754,7 @@ int worker_start(void) {
   w->current = w->system;
   w->work_first = 0;
 
-  worker_wait();
-  // the system thread will loop to find work until the scheduler has
-  // shutdown
+  struct scheduler *sched = here->sched;
   while (true) {
     int stop = worker_is_stopped();
     if (stop && w->id == 0) {
@@ -794,22 +762,26 @@ int worker_start(void) {
     }
 
     if (stop) {
-      worker_wait();
+      int state = 0;
+      pthread_mutex_lock(&sched->run_state.lock);
+      while ((state = sched->run_state.state) == SCHED_STOP) {
+        pthread_cond_wait(&sched->run_state.running, &sched->run_state.lock);
+      }
+      pthread_mutex_unlock(&sched->run_state.lock);
+      if (state == SCHED_SHUTDOWN) {
+        break;
+      }
     }
 
-    if (_locality_is_shutdown(here)) {
-      worker_wait();
-      break;
-    }
     _schedule(_null, NULL, 1);
   }
 
-  if (sched->stopped != HPX_SUCCESS && here->rank == 0) {
-    log_error("application exited with a non-zero exit code: %d.\n",
-              sched->stopped);
+  int code = sched->stopped;
+  if (code != HPX_SUCCESS && here->rank == 0) {
+    log_error("application exited with a non-zero exit code: %d.\n", code);
   }
 
-  return sched->stopped;
+  return code;
 }
 
 /// Spawn a parcel.
