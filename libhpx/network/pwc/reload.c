@@ -102,7 +102,7 @@ _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
   size_t r = send->n - i;
   if (op->n < r) {
     // make sure i stays 8-byte aligned
-    size_t align = (8ul - (op->n & 7ul)) & 7ul;
+    size_t align = ALIGN(op->n, 8);
     send->i += op->n + align;
     log_parcel("allocating %zu bytes in buffer %p (%zu remain)\n",
                op->n + align, (void*)send->block, send->n - send->i);
