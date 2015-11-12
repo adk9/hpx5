@@ -29,13 +29,13 @@ int hpx_get_my_rank(void) HPX_PUBLIC;
 /// @returns the number of ranks in the system
 int hpx_get_num_ranks(void) HPX_PUBLIC;
 
-/// Get the number of heavy-weight threads at the current locality
+/// Get the number of heavy-weight threads at the current locality.
 /// These threads are the heavy-weight threads used internally by HPX
-/// and are not the same as HPX threads
+/// and are not the same as HPX threads.
 /// @returns the number of heavy-weight threads at the current locality
 int hpx_get_num_threads(void) HPX_PUBLIC;
 
-/// Get the thread id of the current heavy-weight thread
+/// Get the thread id of the current heavy-weight thread.
 /// These threads are the heavy-weight threads used internally by HPX
 /// and are not the same as HPX threads.
 /// If you need an id for a light-weight HPX thread use
