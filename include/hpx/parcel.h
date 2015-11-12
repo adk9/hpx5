@@ -154,7 +154,7 @@ hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
 /// @param            p The parcel to send, must correspond to a parcel returned
 ///                       from hpx_parcel_acquire().
 ///
-/// @param         gate The LCO that will serve as the gate.
+/// @param          lco The LCO that will serve as the gate.
 ///
 /// @returns            HPX_SUCCESS or an error code.
 hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t lco)
