@@ -256,6 +256,7 @@ void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, size_t size)
 /// Set the data buffer for a parcel using the given arguments.
 ///
 /// @param            p The parcel we're updating.
+/// @param        nargs The number of arguments.
 /// @param         ...  Variadic arguments to serialize into the
 ///                     parcel buffer.
 void   _hpx_parcel_set_args(hpx_parcel_t *p, int nargs, ...)

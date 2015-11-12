@@ -293,6 +293,8 @@ void hpx_gas_unpin(hpx_addr_t addr) HPX_PUBLIC;
 /// for these operations.
 ///
 /// @param        bytes The number of bytes to allocate.
+///
+/// @returns      The buffer, or NULL if there was an error.
 void *hpx_malloc_registered(size_t bytes) HPX_PUBLIC;
 
 /// Free local memory that was allocated with hpx_malloc_registered().
