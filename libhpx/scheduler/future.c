@@ -82,7 +82,9 @@ static void _future_fini(lco_t *lco) {
 
 /// Copies @p from into the appropriate location.
 static int _future_set(lco_t *lco, int size, const void *from) {
-  dbg_assert(!size || lco_get_user(lco));
+  DEBUG_IF (size && !lco_get_user(lco)) {
+    dbg_error("setting 0-sized future with %d bytes\n", size);
+  }
 
   int set = 0;
   lco_lock(lco);
@@ -151,7 +153,9 @@ static hpx_status_t _future_attach(lco_t *lco, hpx_parcel_t *p) {
 
 /// Copies the appropriate value into @p out, waiting if the lco isn't set yet.
 static hpx_status_t _future_get(lco_t *lco, int size, void *out, int reset) {
-  dbg_assert(!size || lco_get_user(lco));
+  DEBUG_IF (size && !lco_get_user(lco)) {
+    dbg_error("getting %d bytes from a 0-sized future\n", size);
+  }
 
   lco_lock(lco);
 
