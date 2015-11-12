@@ -271,9 +271,6 @@ int hpx_init(int *argc, char ***argv) {
 /// Called to run HPX.
 int _hpx_run(hpx_action_t *act, int n, ...) {
   if (here->rank == 0) {
-    // reset the scheduler
-    worker_reset(self);
-
     va_list vargs;
     va_start(vargs, n);
     hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, &vargs);

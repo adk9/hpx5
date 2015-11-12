@@ -658,9 +658,11 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   (void)spins;
 }
 
-// Reset the worker state.
-void worker_reset(worker_t *w){
-  w->work_first  = -1;
+int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
+  w->thread      = -1;
+  w->id          = id;
+  w->seed        = seed;
+  w->work_first  = 0;
   w->nstacks     = 0;
   w->yielded     = 0;
   w->last_victim = -1;
@@ -670,13 +672,6 @@ void worker_reset(worker_t *w){
   w->work_id     = 0;
   w->active      = true;
   w->profiler    = NULL;
-}
-
-int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
-  w->thread      = 0;
-  w->id          = id;
-  w->seed        = seed;
-  worker_reset(w);
 
   sync_chase_lev_ws_deque_init(&w->queues[0].work, work_size);
   sync_chase_lev_ws_deque_init(&w->queues[1].work, work_size);
@@ -775,6 +770,9 @@ int worker_start(void) {
     _schedule(_null, NULL, 1);
   }
 
+  w->system      = NULL;
+  w->current     = NULL;
+
   int code = sched->stopped;
   if (code != HPX_SUCCESS && here->rank == 0) {
     log_error("application exited with a non-zero exit code: %d.\n", code);
@@ -832,6 +830,8 @@ void scheduler_spawn(hpx_parcel_t *p) {
 
   // Process p work-first
   EVENT_THREAD_SUSPEND(current, w);
+  dbg_assert(current->action);
+  dbg_assert(current->target);
   p = _try_bind(w, p);
   _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = _push_lifo, .env = w });
   EVENT_THREAD_RESUME(current, self);
