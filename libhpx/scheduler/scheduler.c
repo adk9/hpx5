@@ -161,21 +161,13 @@ struct scheduler *scheduler_new(const config_t *cfg) {
   return s;
 }
 
-/// Send a locality wide shutdown signal to exit/terminate all workers
-/// this is different from shutdown handler which is to suspend workers
-///
-static void _locality_shutdown(locality_t* loc) {
-  sync_store(&loc->reent_state.shutdown, 0, SYNC_RELEASE);
-}
-
-
 void scheduler_delete(struct scheduler *sched) {
   if (!sched) {
     return;
   }
 
   log_sched("hpx finalizing worker threads.. \n");
-  _locality_shutdown(here);
+  sync_store(&here->reent_state.shutdown, 0, SYNC_RELEASE);
   worker_wait();
 
   worker_t *worker = NULL;
