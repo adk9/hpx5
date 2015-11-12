@@ -261,7 +261,8 @@ int hpx_init(int *argc, char ***argv) {
     goto unwind1;
   }
 
-  if (here->ranks > 1 && here->config->gas != HPX_GAS_AGAS) {
+  if ((here->ranks > 1 && here->config->gas != HPX_GAS_AGAS) ||
+      !here->config->opt_smp) {
     status = hpx_run(&_hpx_143_fix);
   }
 
