@@ -635,9 +635,6 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
       break;
     }
 
-    // Try and progress the network
-
-
     // couldn't find any work to do, eagerly spin
     INST(spins++);
   }
@@ -737,16 +734,6 @@ void worker_wait(void) {
   pthread_mutex_unlock(&state->mutex);
 }
 
-/// Check to see if slave (not system thread) then wait.
-///
-/// @retruns true if worker is a slave
-static int _worker_wait_if_slave(worker_t *w) {
-  if (w->id != 0) {
-    worker_wait();
-  }
-  return w->id;
-}
-
 int worker_start(void) {
   worker_t *w = self;
   dbg_assert(w);
@@ -801,9 +788,15 @@ int worker_start(void) {
   // the system thread will loop to find work until the scheduler has
   // shutdown
   while (true) {
-    if (worker_is_shutdown() && !_worker_wait_if_slave(w)) {
+    int shutdown = worker_is_shutdown();
+    if (shutdown && w->id == 0) {
       break;
     }
+
+    if (shutdown) {
+      worker_wait();
+    }
+
     if (_locality_ready_for_shutdown(here)) {
       worker_wait();
       break;
