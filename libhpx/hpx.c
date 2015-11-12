@@ -263,7 +263,7 @@ static int _hpx_run_phase1(hpx_action_t *act, int n, va_list* vargs) {
   //TODO move to a better place
   here->reent_state.barrier_trips = hpx_get_num_threads();
 
-#ifdef HAVE_APEX 
+#ifdef HAVE_APEX
   // initialize APEX, give this main thread a name
   apex_init("HPX WORKER THREAD");
   apex_set_node_id(here->rank);
@@ -323,7 +323,7 @@ static int _hpx_run_phase2(hpx_action_t *act, int n, va_list* vargs) {
 
   // reentrance state is active
   // 1. send main action parcel
-  // 2. system/main thread signal other threads to start work	
+  // 2. system/main thread signal other threads to start work
   if (here->rank == 0) {
     // reset the scheduler
     worker_reset(self);
@@ -337,7 +337,7 @@ static int _hpx_run_phase2(hpx_action_t *act, int n, va_list* vargs) {
     }
   }
   scheduler_restart(here->sched);
-  goto unwind0;	  
+  goto unwind0;
 
  unwind1:
   _stop(here);
@@ -352,15 +352,15 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   va_start(vargs, n);
   int status = HPX_SUCCESS;
   if (!here->reent_state.active) {
-    status = _hpx_run_phase1(act, n, &vargs);	 
+    status = _hpx_run_phase1(act, n, &vargs);
     here->reent_state.active = true;
   } else {
-    status = _hpx_run_phase2(act, n, &vargs);	 
+    status = _hpx_run_phase2(act, n, &vargs);
   }
 
   // enable global or locality wide synchronization between each hpx_run() calls
   boot_barrier(here->boot);
-  
+
   va_end(vargs);
   return status;
 }
@@ -385,7 +385,7 @@ void hpx_exit(int code) {
   // make sure we flush our local network when we shutdown
   network_flush_on_shutdown(here->network);
   for (int i = 0, e = here->ranks; i < e; ++i) {
-    int e = network_command(here->network, HPX_THERE(i), locality_shutdown,
+    int e = network_command(here->network, HPX_THERE(i), locality_stop,
                             (uint64_t)code);
     dbg_check(e);
   }
@@ -432,14 +432,14 @@ void hpx_finalize() {
   if (_hpx_143 != HPX_NULL) {
     hpx_gas_free(_hpx_143, HPX_NULL);
   }
- 
+
 #if defined(HAVE_APEX)
   // this will add the stats to the APEX data set
   libhpx_save_apex_stats();
 #endif
 
   _stop(here);
-  
+
 #if defined(ENABLE_PROFILING)
   libhpx_stats_print();
 #endif

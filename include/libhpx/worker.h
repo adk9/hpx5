@@ -92,10 +92,12 @@ void worker_reset(worker_t *w)
   HPX_NON_NULL(1);
 
 /// Check to see if the current worker should be active.
+///
+/// This file is distinct to the APEX subsystem.
 int worker_is_active(void);
 
-/// Check to see if the current worker should shut down completely.
-int worker_is_shutdown(void);
+/// Check to see if the current worker should stop.
+int worker_is_stopped(void);
 
 ///  This is a custom thread barrier which will be disabled automatically if a
 ///  locality-wide shutdown is issued.  This generally happens at hpx_finalize()

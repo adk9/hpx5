@@ -24,8 +24,8 @@ int worker_is_active(void) {
   return 1;
 }
 
-int worker_is_shutdown(void) {
-  return scheduler_is_shutdown(here->sched);
+int worker_is_stopped(void) {
+  return scheduler_is_stopped(here->sched);
 }
 #else
 # include <pthread.h>
@@ -132,8 +132,8 @@ int worker_is_active(void) {
   return _apex_check_active();
 }
 
-int worker_is_shutdown(void) {
-  int e = scheduler_is_shutdown(here->sched);
+int worker_is_stopped(void) {
+  int e = scheduler_is_stopped(here->sched);
   if (e) {
     _apex_worker_shutdown();
   }
