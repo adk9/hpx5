@@ -344,6 +344,7 @@ static int coalesced_network_progress(void *obj, int id) {
   
   if((old_coalescing_queue_size == previous_coalescing_queue_size && current_coalescing_queue_size > 0)) {
     //if that is the case, then flush outstanding buffer
+    sync_store(&coalesced_network->count_parcels, 0,  SYNC_RELAXED);
     _send_all(coalesced_network);
   }
 
