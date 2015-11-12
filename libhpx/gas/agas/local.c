@@ -40,7 +40,7 @@ agas_local_alloc(size_t n, uint32_t bsize, uint32_t boundary, uint32_t attr) {
   gva_t gva = agas_lva_to_gva(agas, lva, padded);
   hpx_addr_t base = gva.addr;
   for (int i = 0; i < n; i++) {
-    btt_insert(agas->btt, gva, here->rank, lva, n);
+    btt_insert(agas->btt, gva, here->rank, lva, n, attr);
     lva += padded;
     gva.bits.offset += padded;
   }
@@ -61,7 +61,7 @@ agas_local_calloc(size_t n, uint32_t bsize, uint32_t boundary, uint32_t attr) {
   gva_t gva = agas_lva_to_gva(agas, lva, padded);
   hpx_addr_t base = gva.addr;
   for (int i = 0; i < n; i++) {
-    btt_insert(agas->btt, gva, here->rank, lva, n);
+    btt_insert(agas->btt, gva, here->rank, lva, n, attr);
     lva += padded;
     gva.bits.offset += padded;
   }
