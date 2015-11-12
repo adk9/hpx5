@@ -32,7 +32,7 @@ static int _printHello_action(int *args, size_t size) {
 //****************************************************************************
 static int _main_action(void *args, size_t size) {
   hpx_addr_t and = hpx_lco_and_new(NUM_THREADS);
-  for (int i = 0; i < NUM_THREADS; i++) 
+  for (int i = 0; i < NUM_THREADS; i++)
     hpx_call(HPX_HERE, _printHello, and, &i, sizeof(i));
 
   hpx_lco_wait(and);
@@ -42,14 +42,14 @@ static int _main_action(void *args, size_t size) {
 }
 
 int main(int argc, char *argv[]) {
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _printHello, _printHello_action, HPX_POINTER, HPX_SIZE_T);
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-   
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _printHello, _printHello_action, HPX_POINTER, HPX_SIZE_T);
 
   e = hpx_run(&_main, NULL, 0);
   hpx_finalize();

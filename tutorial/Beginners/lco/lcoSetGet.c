@@ -36,20 +36,20 @@ static int _main_action(void *args, size_t size) {
 
   hpx_lco_get(done, sizeof(uint64_t), &result);
   printf("LCO value got = %" PRIu64 "\n", result);
-  
+
   hpx_lco_delete(done, HPX_NULL);
   hpx_exit(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _lcoSetGet, _lcoSetGet_action, HPX_POINTER, HPX_SIZE_T);
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-   
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _lcoSetGet, _lcoSetGet_action, HPX_POINTER, HPX_SIZE_T);
 
   e = hpx_run(&_main, NULL, 0);
   hpx_finalize();

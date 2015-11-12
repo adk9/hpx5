@@ -597,7 +597,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   int spins = 0;
   hpx_parcel_t *p = NULL;
   worker_t *w = self;
-  while (!worker_is_shutdown()) {
+  while (!worker_is_stopped()) {
     if (!block) {
       p = _schedule_lifo(w);
       if (INSTRUMENTATION && p != NULL) {
@@ -635,9 +635,6 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
       break;
     }
 
-    // Try and progress the network
-
-
     // couldn't find any work to do, eagerly spin
     INST(spins++);
   }
@@ -659,10 +656,8 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   (void)spins;
 }
 
-int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
-  w->thread      = 0;
-  w->id          = id;
-  w->seed        = seed;
+// Reset the worker state.
+void worker_reset(worker_t *w){
   w->work_first  = -1;
   w->nstacks     = 0;
   w->yielded     = 0;
@@ -673,6 +668,13 @@ int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   w->work_id     = 0;
   w->active      = true;
   w->profiler    = NULL;
+}
+
+int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
+  w->thread      = 0;
+  w->id          = id;
+  w->seed        = seed;
+  worker_reset(w);
 
   sync_chase_lev_ws_deque_init(&w->queues[0].work, work_size);
   sync_chase_lev_ws_deque_init(&w->queues[1].work, work_size);
@@ -707,31 +709,61 @@ void worker_fini(worker_t *w) {
 static void _null(hpx_parcel_t *p, void *env) {
 }
 
+/// Check shutting down of entire locality
+/// this is different from shutdown handler which
+/// is to enforce for scheduler suspension at exit of each hpx_run
+///
+static int _locality_is_shutdown(locality_t* loc) {
+  int shutdown = sync_load(&loc->reent_state.shutdown, SYNC_ACQUIRE);
+  return (shutdown != INT_MAX);
+}
+
+void worker_wait(void) {
+  reent_t *state = &here->reent_state;
+  pthread_mutex_lock(&state->mutex);
+  if (state->barrier_enabled) {
+    if (++state->barrier_count < here->sched->n_active_workers) {
+      pthread_cond_wait(&state->cond, &state->mutex);
+    }
+    else {
+      state->barrier_count = 0;
+      pthread_cond_broadcast(&state->cond);
+      state->barrier_enabled = !_locality_is_shutdown(here);
+    }
+  }
+  pthread_mutex_unlock(&state->mutex);
+}
+
 int worker_start(void) {
-  dbg_assert(self);
+  worker_t *w = self;
+  dbg_assert(w);
 
   // double-check this
-  dbg_assert(((uintptr_t)self & (HPX_CACHELINE_SIZE - 1)) == 0);
-  dbg_assert(((uintptr_t)&self->queues & (HPX_CACHELINE_SIZE - 1)) == 0);
-  dbg_assert(((uintptr_t)&self->inbox & (HPX_CACHELINE_SIZE - 1))== 0);
+  dbg_assert(((uintptr_t)w & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&w->queues & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&w->inbox & (HPX_CACHELINE_SIZE - 1))== 0);
 
   // make sure the system is initialized
   dbg_assert(here && here->config && here->network);
 
   // affinitize the worker thread
   libhpx_thread_affinity_t policy = here->config->thread_affinity;
-  int status = system_set_worker_affinity(self->id, policy);
+  int status = system_set_worker_affinity(w->id, policy);
   if (status != LIBHPX_OK) {
     log_dflt("WARNING: running with no worker thread affinity. "
              "This MAY result in diminished performance.\n");
   }
 
-  int cpu = self->id % here->topology->ncpus;
-  self->numa_node = here->topology->cpu_to_numa[cpu];
+  int cpu = w->id % here->topology->ncpus;
+  w->numa_node = here->topology->cpu_to_numa[cpu];
 
   // wait for local threads to start up
   struct scheduler *sched = here->sched;
-  system_barrier_wait(&sched->barrier);
+
+  // reset flag
+  if (w->id == 0) {
+    sync_store(&sched->stopped, INT_MAX, SYNC_RELEASE);
+  }
 
   // allocate a parcel and a stack header for the system stack
   hpx_parcel_t p;
@@ -748,21 +780,36 @@ int worker_start(void) {
   };
   p.ustack = &stack;
 
-  self->system = &p;
-  self->current = self->system;
-  self->work_first = 0;
+  w->system = &p;
+  w->current = w->system;
+  w->work_first = 0;
 
-  // the system thread will loop to find work until the scheduler has shutdown
-  while (!worker_is_shutdown()) {
+  worker_wait();
+  // the system thread will loop to find work until the scheduler has
+  // shutdown
+  while (true) {
+    int stop = worker_is_stopped();
+    if (stop && w->id == 0) {
+      break;
+    }
+
+    if (stop) {
+      worker_wait();
+    }
+
+    if (_locality_is_shutdown(here)) {
+      worker_wait();
+      break;
+    }
     _schedule(_null, NULL, 1);
   }
 
-  if (sched->shutdown != HPX_SUCCESS && here->rank == 0) {
+  if (sched->stopped != HPX_SUCCESS && here->rank == 0) {
     log_error("application exited with a non-zero exit code: %d.\n",
-              sched->shutdown);
+              sched->stopped);
   }
 
-  return sched->shutdown;
+  return sched->stopped;
 }
 
 /// Spawn a parcel.
@@ -778,9 +825,9 @@ void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
   COUNTER_SAMPLE(w->stats.spawns++);
 
-  // If we're shutting down then push the parcel and return. This prevents an
+  // If we're stopped down then push the parcel and return. This prevents an
   // infinite spawn from inhibiting termination.
-  if (worker_is_shutdown()) {
+  if (worker_is_stopped()) {
     _push_lifo(p, w);
     return;
   }

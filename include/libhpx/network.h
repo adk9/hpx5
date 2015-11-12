@@ -85,6 +85,7 @@ typedef struct network {
   hpx_parcel_t *(*probe)(void*, int nrx);
 
   void (*set_flush)(void*);
+  void (*flush_all)(void*, int force);
 
   void (*register_dma)(void *, const void *base, size_t bytes, void *key);
   void (*release_dma)(void *, const void *base, size_t bytes);

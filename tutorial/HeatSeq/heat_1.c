@@ -392,6 +392,8 @@ void _register_actions(void) {
 // Main routine
 int main(int argc, char *argv[])
 {
+  _register_actions();
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
@@ -409,8 +411,6 @@ int main(int argc, char *argv[])
        _usage(stderr, EXIT_FAILURE);
     }
   }
-
-  _register_actions();
 
   e = hpx_run(&_main, NULL, 0);
   hpx_finalize();

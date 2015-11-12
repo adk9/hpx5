@@ -54,9 +54,9 @@ static int _main_action(void *args, size_t n) {
   int peerid = (rank + 1) % size;
 
   // Initialize the master copy
-  for (int i = 0; i < SIZE; i++) 
+  for (int i = 0; i < SIZE; i++)
     masterCopy[i] = (uint64_t)(i);
-  
+
   hpx_addr_t data = hpx_gas_alloc_cyclic(size, sizeof(masterCopy), 0);
   hpx_addr_t remote = hpx_addr_add(data, peerid * sizeof(masterCopy), sizeof(masterCopy));
 
@@ -64,7 +64,7 @@ static int _main_action(void *args, size_t n) {
   hpx_call(remote, _init_array, done, masterCopy, sizeof(masterCopy));
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
- 
+
   // Copy the masterCopy's content to local array
   hpx_addr_t completed = hpx_lco_future_new(0);
   hpx_gas_memget(&localCopy[0], remote, sizeof(masterCopy), completed);
@@ -72,7 +72,7 @@ static int _main_action(void *args, size_t n) {
   hpx_lco_delete(completed, HPX_NULL);
 
   // Perform the error checking
-  for (int i = 0; i < SIZE; i++) 
+  for (int i = 0; i < SIZE; i++)
     assert(localCopy[0][i] == masterCopy[i]);
 
   for (int i = 0; i < SIZE; i++)
@@ -90,11 +90,11 @@ static int _main_action(void *args, size_t n) {
     hpx_lco_wait(rfut1);
     hpx_lco_delete(rfut1, HPX_NULL);
   }
-    
+
   // Perform error checking
   for (int i = 0; i < LOCALCOPY; i++)
     for (int j = 0; j < SIZE; j++)
-      assert(localCopy[i][j] == (uint64_t)((uint64_t)(j) * (uint64_t)(10) + (uint64_t)(1))); 
+      assert(localCopy[i][j] == (uint64_t)((uint64_t)(j) * (uint64_t)(10) + (uint64_t)(1)));
 
   printf("hpx_gas_memget succeeded for size = %d\n", SIZE);
 
@@ -103,14 +103,14 @@ static int _main_action(void *args, size_t n) {
 }
 
 int main(int argc, char *argv[]) {
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_array, _init_array_action, HPX_POINTER, HPX_SIZE_T);
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-   
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_array, _init_array_action, HPX_POINTER, HPX_SIZE_T);
 
   e = hpx_run(&_main, NULL, 0);
   hpx_finalize();

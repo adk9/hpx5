@@ -175,6 +175,11 @@ static int _pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
   return pwc->xport->gwc(&op);
 }
 
+static void
+_pwc_flush_all(void *network, int force) {
+  // pwc networks always flush their rdma
+}
+
 static void _pwc_set_flush(void *network) {
   // pwc networks always flush their rdma
 }
@@ -241,6 +246,7 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   pwc->vtable.get = _pwc_get;
   pwc->vtable.probe = _pwc_probe;
   pwc->vtable.set_flush = _pwc_set_flush;
+  pwc->vtable.flush_all = _pwc_flush_all;
   pwc->vtable.register_dma = _pwc_register_dma;
   pwc->vtable.release_dma = _pwc_release_dma;
   pwc->vtable.lco_get = pwc_lco_get;

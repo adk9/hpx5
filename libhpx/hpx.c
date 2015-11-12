@@ -24,6 +24,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
 #include <libhpx/boot.h>
@@ -52,6 +53,7 @@
 static hpx_addr_t _hpx_143;
 static int _hpx_143_fix_handler(void) {
   _hpx_143 = hpx_gas_alloc_cyclic(sizeof(void*), HPX_LOCALITIES, 0);
+  hpx_exit(HPX_SUCCESS);
   return LIBHPX_OK;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _hpx_143_fix, _hpx_143_fix_handler);
@@ -139,6 +141,12 @@ int hpx_init(int *argc, char ***argv) {
   here->ranks = 0;
   here->actions = NULL;
 
+  here->reent_state.barrier_count = 0;
+  here->reent_state.barrier_enabled = 1;
+  sync_store(&here->reent_state.shutdown, INT_MAX, SYNC_RELEASE);
+  here->reent_state.mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+  here->reent_state.cond = (pthread_cond_t)PTHREAD_COND_INITIALIZER;
+
   here->config = config_new(argc, argv);
   if (!here->config) {
     status = log_error("failed to create a configuration.\n");
@@ -220,24 +228,6 @@ int hpx_init(int *argc, char ***argv) {
   log_dflt("HPX running %d worker threads on %d cores\n", here->config->threads,
            cores);
 
-  return status;
- unwind1:
-  _stop(here);
-  _cleanup(here);
- unwind0:
-  return status;
-}
-
-/// Called to run HPX.
-int _hpx_run(hpx_action_t *act, int n, ...) {
-  int status = HPX_SUCCESS;
-  if (!here) {
-    status = log_error("hpx_init() must be called before hpx_run()\n");
-    goto unwind0;
-  }
-
-  // Initialize the network. This will initialize a transport and, as a side
-  // effect initialize our allocators.
   here->network = network_new(here->config, here->boot, here->gas);
   if (!here->network) {
     status = log_error("failed to create network.\n");
@@ -248,7 +238,7 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   here->sched = scheduler_new(here->config);
   if (!here->sched) {
     status = log_error("failed to create scheduler.\n");
-    goto unwind0;
+    goto unwind1;
   }
 
 #ifdef HAVE_APEX
@@ -260,33 +250,10 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   here->actions = action_table_finalize();
   if (!here->actions) {
     status = log_error("failed to finalize the action table.\n");
-    goto unwind0;
+    goto unwind1;
   }
 
   inst_start();
-
-  // create the initial application-level thread to run
-  if (here->rank == 0) {
-    va_list vargs;
-    va_start(vargs, n);
-    hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, &vargs);
-    int status = hpx_parcel_send(p, HPX_NULL);
-    va_end(vargs);
-
-    if (status != LIBHPX_OK) {
-      log_error("failed to spawn initial action\n");
-      goto unwind1;
-    }
-
-    // Fix for https://uisapp2.iu.edu/jira-prd/browse/HPX-143
-    if (here->ranks > 1 && here->config->gas != HPX_GAS_AGAS) {
-      status = hpx_call(HPX_HERE, _hpx_143_fix, HPX_NULL);
-      if (status != LIBHPX_OK) {
-        log_error("failed to spawn the initial cyclic allocation");
-        goto unwind1;
-      }
-    }
-  }
 
   // start the scheduler, this will return after scheduler_shutdown()
   if (scheduler_startup(here->sched, here->config) != LIBHPX_OK) {
@@ -294,19 +261,34 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
     goto unwind1;
   }
 
-  // clean up after _hpx_143
-  if (_hpx_143 != HPX_NULL) {
-    hpx_gas_free(_hpx_143, HPX_NULL);
+  if (here->ranks > 1 && here->config->gas != HPX_GAS_AGAS) {
+    status = hpx_run(&_hpx_143_fix);
   }
 
-#if defined(HAVE_APEX)
-  // this will add the stats to the APEX data set
-  libhpx_save_apex_stats();
-#endif
-
+  return status;
  unwind1:
   _stop(here);
+  _cleanup(here);
  unwind0:
+  return status;
+}
+
+/// Called to run HPX.
+int _hpx_run(hpx_action_t *act, int n, ...) {
+  if (here->rank == 0) {
+    // reset the scheduler
+    worker_reset(self);
+
+    va_list vargs;
+    va_start(vargs, n);
+    hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, &vargs);
+    va_end(vargs);
+    dbg_check(hpx_parcel_send(p, HPX_NULL), "failed to spawn initial action\n");
+  }
+  int status = scheduler_restart(here->sched);
+
+  // enable global or locality wide synchronization between each hpx_run() calls
+  boot_barrier(here->boot);
   return status;
 }
 
@@ -330,10 +312,16 @@ void hpx_exit(int code) {
   // make sure we flush our local network when we shutdown
   network_flush_on_shutdown(here->network);
   for (int i = 0, e = here->ranks; i < e; ++i) {
-    int e = network_command(here->network, HPX_THERE(i), locality_shutdown,
+    int e = network_command(here->network, HPX_THERE(i), locality_stop,
                             (uint64_t)code);
     dbg_check(e);
   }
+
+  // we do a flush of all remaining network packets - fix for isir transport
+  // there is a probability that network might not progress
+  // (to send all outbound shutdown signals) once all threads suspend
+  // flush will ensure we will progress these forcefully in this thread
+  here->network->flush_all(here->network, 1);
   hpx_thread_exit(HPX_SUCCESS);
 }
 
@@ -367,6 +355,18 @@ const char *hpx_strerror(hpx_status_t s) {
 }
 
 void hpx_finalize() {
+  // clean up after _hpx_143
+  if (_hpx_143 != HPX_NULL) {
+    hpx_gas_free(_hpx_143, HPX_NULL);
+  }
+
+#if defined(HAVE_APEX)
+  // this will add the stats to the APEX data set
+  libhpx_save_apex_stats();
+#endif
+
+  _stop(here);
+
 #if defined(ENABLE_PROFILING)
   libhpx_stats_print();
 #endif

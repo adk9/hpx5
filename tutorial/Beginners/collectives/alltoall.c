@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-// Program that computes transpose of a matrix using 
+// Program that computes transpose of a matrix using
 // hpx_lco_alltoall.
 
 #include <stdio.h>
@@ -20,7 +20,7 @@
 
 static hpx_action_t _main      = 0;
 static hpx_action_t _init      = 0;
-static hpx_action_t _check_sum = 0; 
+static hpx_action_t _check_sum = 0;
 
 int nDoms                   = 8;
 
@@ -63,7 +63,7 @@ static int _check_sum_action(int *args, size_t size) {
     gnewdt[k] = (k+1) + ld->index * nDoms;
   }
 
-  hpx_lco_alltoall_setid(ld->newdt, ld->index, nDoms * sizeof(int), 
+  hpx_lco_alltoall_setid(ld->newdt, ld->index, nDoms * sizeof(int),
                          gnewdt, HPX_NULL, HPX_NULL);
 
   // Get the gathered value, and print it.
@@ -107,22 +107,22 @@ static int _main_action(void *args, size_t size) {
   hpx_lco_wait(complete);
   hpx_lco_delete(complete, HPX_NULL);
   hpx_gas_free(domain, HPX_NULL);
-  hpx_exit(HPX_SUCCESS);  
+  hpx_exit(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {
   // Seed the random number generator to get different results each time.
   srand(time(NULL));
 
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init, _init_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _check_sum, _check_sum_action, HPX_POINTER, HPX_SIZE_T);
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-   
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init, _init_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _check_sum, _check_sum_action, HPX_POINTER, HPX_SIZE_T);
 
   e = hpx_run(&_main, NULL, 0);
   hpx_finalize();

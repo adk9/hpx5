@@ -33,6 +33,7 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/memory.h"
+#include "libhpx/network.h"
 #include "libhpx/scheduler.h"
 #include "thread.h"
 
@@ -145,7 +146,7 @@ struct scheduler *scheduler_new(const config_t *cfg) {
     return NULL;
   }
 
-  sync_store(&s->shutdown, INT_MAX, SYNC_RELEASE);
+  sync_store(&s->stopped, INT_MAX, SYNC_RELEASE);
   sync_store(&s->next_tls_id, 0, SYNC_RELEASE);
   s->n_workers    = workers;
   s->n_active_workers = workers;
@@ -165,6 +166,15 @@ void scheduler_delete(struct scheduler *sched) {
     return;
   }
 
+  sync_store(&here->reent_state.shutdown, 0, SYNC_RELEASE);
+  worker_wait();
+
+  worker_t *worker = NULL;
+  for (int i = 1; i < sched->n_workers; ++i) {
+    worker = scheduler_get_worker(sched, i);
+    _join(worker);
+  }
+  log_sched("joined worker threads.\n");
   // unbind this thread's worker
   self = NULL;
 
@@ -185,6 +195,17 @@ worker_t *scheduler_get_worker(struct scheduler *sched, int id) {
   assert(id >= 0);
   assert(id < sched->n_workers);
   return &sched->workers[id];
+}
+
+int scheduler_restart(struct scheduler *sched) {
+  int status = LIBHPX_OK;
+
+  sync_store(&sched->stopped, INT_MAX, SYNC_RELEASE);
+  status = worker_start();
+  if (status != LIBHPX_OK) {
+    scheduler_abort(sched);
+  }
+  return status;
 }
 
 int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
@@ -213,26 +234,20 @@ int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
     }
   }
 
-  status = worker_start();
   if (status != LIBHPX_OK) {
     scheduler_abort(sched);
-  }
-
-  for (int i = 1; i < sched->n_workers; ++i) {
-    worker = scheduler_get_worker(sched, i);
-    _join(worker);
   }
 
   return status;
 }
 
-void scheduler_shutdown(struct scheduler *sched, int code) {
-  sync_store(&sched->shutdown, code, SYNC_RELEASE);
+void scheduler_stop(struct scheduler *sched, int code) {
+  sync_store(&sched->stopped, code, SYNC_RELEASE);
 }
 
-int scheduler_is_shutdown(struct scheduler *sched) {
-  int shutdown = sync_load(&sched->shutdown, SYNC_ACQUIRE);
-  return (shutdown != INT_MAX);
+int scheduler_is_stopped(struct scheduler *sched) {
+  int stopped = sync_load(&sched->stopped, SYNC_ACQUIRE);
+  return (stopped != INT_MAX);
 }
 
 void scheduler_abort(struct scheduler *sched) {

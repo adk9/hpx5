@@ -13,7 +13,7 @@
 
 //****************************************************************************
 // Example code - A hello world program which demonstrates another safe way
-// to pass arguments to threads during thread creation. In this case, a 
+// to pass arguments to threads during thread creation. In this case, a
 // structure is used to pass multiple arguments.
 //****************************************************************************
 #include <stdio.h>
@@ -51,7 +51,7 @@ static int _printHello_action(void *threadarg, size_t size) {
 static int _main_action(void *args, size_t size) {
   messages[0] = "English: Hello World!";
   messages[1] = "French:  Bonjour, le monde!";
-  messages[2] = "German:  Guten Tag, Welt!"; 
+  messages[2] = "German:  Guten Tag, Welt!";
   messages[3] = "Japan:   Sekai e konnichiwa!";
   messages[4] = "Latin:   Orbis, te saluto!";
 
@@ -69,14 +69,14 @@ static int _main_action(void *args, size_t size) {
 }
 
 int main(int argc, char *argv[]) {
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _printHello, _printHello_action, HPX_POINTER, HPX_SIZE_T);
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-   
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _printHello, _printHello_action, HPX_POINTER, HPX_SIZE_T);
 
   e = hpx_run(&_main, NULL, 0);
   hpx_finalize();

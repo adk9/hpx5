@@ -53,6 +53,7 @@ static void usage(FILE *f, int error) {
 }
 
 int main(int argc, char * argv[argc]) {
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, send, _send_action, HPX_POINTER, HPX_SIZE_T);
 
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "HPX failed to initialize.\n");
@@ -82,7 +83,6 @@ int main(int argc, char * argv[argc]) {
      break;
   }
 
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, send, _send_action, HPX_POINTER, HPX_SIZE_T);
   int e = hpx_run(&send, &n, sizeof(n));
   hpx_finalize();
   return e;
