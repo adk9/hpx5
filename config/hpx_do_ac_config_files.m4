@@ -33,19 +33,6 @@ AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
    include/Makefile
    include/libhpx/Makefile
    examples/Makefile])
-
- AS_IF([test "x$enable_tutorial" != xno], [
-   AC_CONFIG_FILES([
-     tutorial/Makefile
-     tutorial/Beginners/Makefile
-     tutorial/Beginners/threads/Makefile
-     tutorial/Beginners/gas/Makefile
-     tutorial/Beginners/collectives/Makefile
-     tutorial/Beginners/lco/Makefile
-     tutorial/Beginners/parcel/Makefile
-     tutorial/HeatSeq/Makefile
-     tutorial/CollectiveBench/Makefile
-     tutorial/cpi/Makefile])])
   
  AS_IF([test "x$have_docs" != xno], [
    AC_CONFIG_FILES([

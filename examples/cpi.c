@@ -83,9 +83,9 @@ static int _main_action(int *args, size_t size) {
   int MYTHREAD = HPX_LOCALITY_ID;
   int interval = *(int*)args;
 
-  double    values[THREADS];
-  void      *addrs[THREADS];
-  int        sizes[THREADS];
+  double      values[THREADS];
+  void        *addrs[THREADS];
+  size_t       sizes[THREADS];
   hpx_addr_t futures[THREADS];
 
   for (int i = 0; i < THREADS; ++i) {
