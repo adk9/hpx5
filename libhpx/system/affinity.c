@@ -26,17 +26,6 @@
 #include <libhpx/worker.h>
 #include <hwloc.h>
 
-static int _hwloc_bind_curthread(hwloc_bitmap_t set) {
-  int e = hwloc_set_cpubind(here->topology->hwloc_topology,
-                            set, HWLOC_CPUBIND_THREAD);
-  if (e) {
-    log_error("_hwloc_bind_curthread() failed with error %s.\n", strerror(e));
-    return LIBHPX_ERROR;
-  }
-
-  return LIBHPX_OK;
-}
-
 int system_set_worker_affinity(int id, libhpx_thread_affinity_t policy) {
   int resource;
   int cpu = (id % here->topology->ncpus);
@@ -65,7 +54,8 @@ int system_set_worker_affinity(int id, libhpx_thread_affinity_t policy) {
   }
 
   hwloc_cpuset_t cpuset = here->topology->cpu_affinity_map[resource];
-  return _hwloc_bind_curthread(cpuset);
+  return  hwloc_set_cpubind(here->topology->hwloc_topology,
+                            cpuset, HWLOC_CPUBIND_THREAD);
 }
 
 /// Return the weight of the bitmap that represents the CPUs we are
