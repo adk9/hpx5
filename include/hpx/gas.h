@@ -45,12 +45,22 @@ typedef hpx_addr_t (*hpx_gas_dist_t)(uint32_t i, size_t n, uint32_t bsize);
 #define HPX_GAS_ATTR_LB    0x2  //!< Consider for automatic load balancing.
 
 /// Allocate distributed global memory given a distribution.
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
+/// @param     boundary The alignment (2^k).
+/// @param         attr The attributes of this global allocation space
 ///
+/// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bsize, uint32_t boundary,
                          hpx_gas_dist_t dist, uint32_t attr) HPX_PUBLIC;
 
 /// Allocate distributed zeroed global memory given a distribution.
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
+/// @param     boundary The alignment (2^k).
+/// @param         attr The attributes of this global allocation space
 ///
+/// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_calloc(size_t n, uint32_t bsize, uint32_t boundary,
                           hpx_gas_dist_t dist, uint32_t attr) HPX_PUBLIC;
 
@@ -172,21 +182,57 @@ void hpx_gas_calloc_local_at_async(size_t n, uint32_t bsize,
 extern HPX_PUBLIC HPX_ACTION_DECL(hpx_gas_calloc_local_at_action);
 
 /// Global memory allocation routines with GAS attributes.
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
+/// @param     boundary The alignment (2^k).
+/// @param         attr The attributes of this global allocation space
+///
+/// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_alloc_cyclic_attr(size_t n, uint32_t bsize, uint32_t boundary,
                                      uint32_t attr)
   HPX_PUBLIC;
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
+/// @param     boundary The alignment (2^k).
+/// @param         attr The attributes of this global allocation space
+///
+/// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_calloc_cyclic_attr(size_t n, uint32_t bsize, uint32_t boundary,
                                       uint32_t attr)
   HPX_PUBLIC;
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
+/// @param     boundary The alignment (2^k).
+/// @param         attr The attributes of this global allocation space
+///
+/// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_alloc_blocked_attr(size_t n, uint32_t bsize, uint32_t boundary,
                                       uint32_t attr)
   HPX_PUBLIC;
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
+/// @param     boundary The alignment (2^k).
+/// @param         attr The attributes of this global allocation space
+///
+/// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_calloc_blocked_attr(size_t n, uint32_t bsize, uint32_t boundary,
                                        uint32_t attr)
   HPX_PUBLIC;
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
+/// @param     boundary The alignment (2^k).
+/// @param         attr The attributes of this global allocation space
+///
+/// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_alloc_local_attr(size_t n, uint32_t bsize, uint32_t boundary,
                                     uint32_t attr)
   HPX_PUBLIC;
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
+/// @param     boundary The alignment (2^k).
+/// @param         attr The attributes of this global allocation space
+///
+/// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_calloc_local_attr(size_t n, uint32_t bsize, uint32_t boundary,
                                      uint32_t attr)
   HPX_PUBLIC;
@@ -247,8 +293,6 @@ void hpx_gas_unpin(hpx_addr_t addr) HPX_PUBLIC;
 /// for these operations.
 ///
 /// @param        bytes The number of bytes to allocate.
-///
-/// @returns            The buffer, or NULL if there was an error.
 void *hpx_malloc_registered(size_t bytes) HPX_PUBLIC;
 
 /// Free local memory that was allocated with hpx_malloc_registered().
@@ -398,7 +442,7 @@ int hpx_gas_memcpy_sync(hpx_addr_t to, hpx_addr_t from, size_t size)
 /// @param       offset The offset within each element to target.
 /// @param        bsize The block size for the array.
 /// @param         cont The continuation.
-/// @param        raddr The continuation address.
+/// @param        caddr The continuation address.
 /// @param        nargs The number of arguments for the action.
 /// @param          ... The addresses of each argument.
 int
@@ -423,7 +467,6 @@ _hpx_gas_bcast_with_continuation(hpx_action_t action, hpx_addr_t base, int n,
 /// @param            n The number of elements in the array.
 /// @param       offset The offset within each element to target.
 /// @param        bsize The block size for the array.
-/// @param        nargs The number of arguments for the action.
 /// @param          ... The addresses of each argument.
 ///
 /// @returns      HPX_SUCCESS if no errors were encountered.
