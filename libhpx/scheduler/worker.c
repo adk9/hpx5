@@ -713,7 +713,7 @@ static void _null(hpx_parcel_t *p, void *env) {
 /// this is different from shutdown handler which
 /// is to enforce for scheduler suspension at exit of each hpx_run
 ///
-static int _locality_ready_for_shutdown(locality_t* loc) {
+static int _locality_is_shutdown(locality_t* loc) {
   int shutdown = sync_load(&loc->reent_state.shutdown, SYNC_ACQUIRE);
   return (shutdown != INT_MAX);
 }
@@ -728,7 +728,7 @@ void worker_wait(void) {
     else {
       state->barrier_count = 0;
       pthread_cond_broadcast(&state->cond);
-      state->barrier_enabled = !_locality_ready_for_shutdown(here);
+      state->barrier_enabled = !_locality_is_shutdown(here);
     }
   }
   pthread_mutex_unlock(&state->mutex);
@@ -797,7 +797,7 @@ int worker_start(void) {
       worker_wait();
     }
 
-    if (_locality_ready_for_shutdown(here)) {
+    if (_locality_is_shutdown(here)) {
       worker_wait();
       break;
     }
