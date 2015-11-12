@@ -83,10 +83,6 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _sema_init_async,
                      _sema_init_handler, HPX_POINTER, HPX_UINT);
 
 /// Allocate a semaphore LCO.
-///
-/// @param count The initial count for the semaphore.
-///
-/// @returns The global address of the new semaphore.
 hpx_addr_t hpx_lco_sema_new(unsigned count) {
   _sema_t *sema = NULL;
   hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*sema), 0);

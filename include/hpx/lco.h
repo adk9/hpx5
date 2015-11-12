@@ -386,7 +386,7 @@ void hpx_lco_and_set_num(hpx_addr_t lco, int num, hpx_addr_t sync)
 /// addresses are used as the targets of parcels.
 ///
 /// @param size the size in bytes of the future's value (may be 0)
-/// @returns    the glboal address of the newly allocated future
+/// @returns    the global address of the newly allocated future
 hpx_addr_t hpx_lco_future_new(int size)
   HPX_PUBLIC;
 /// @}
