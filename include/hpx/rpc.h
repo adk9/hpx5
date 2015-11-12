@@ -33,8 +33,7 @@
 /// @param action The action to perform.
 /// @param    out Address of the output buffer.
 /// @param   olen The length of the @p output buffer.
-/// @param   args The argument data buffer for @p action.
-/// @param   alen The length of the @p args buffer.
+/// @param  nargs The number of arguments for @p action.
 ///
 /// @returns HPX_SUCCESS, or an error code if the action generated an error that
 ///          could not be handled remotely.

@@ -204,6 +204,9 @@ hpx_status_t hpx_lco_wait(hpx_addr_t lco)
   HPX_PUBLIC;
 
 /// Performs a compound atomic wait-and-reset operation.
+///
+/// @param lco the LCO we're processing
+/// @returns   HPX_SUCCESS or the code passed to hpx_lco_error()
 hpx_status_t hpx_lco_wait_reset(hpx_addr_t lco)
   HPX_PUBLIC;
 
