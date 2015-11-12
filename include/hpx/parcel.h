@@ -250,7 +250,7 @@ void hpx_parcel_set_cont_target(hpx_parcel_t *p, hpx_addr_t addr)
 /// @param            p The parcel we're updating.
 /// @param         data The data buffer to copy into the parcel.
 /// @param         size The size of the @p data buffer.
-void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, int size)
+void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, size_t size)
   HPX_NON_NULL(1) HPX_PUBLIC;
 
 /// Set the data buffer for a parcel using the given arguments.

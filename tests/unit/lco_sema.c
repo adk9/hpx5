@@ -53,7 +53,7 @@ static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _sema,
 static int lco_sema_handler(void) {
   hpx_addr_t peers[] = {HPX_HERE, HPX_HERE};
   uint32_t i[] = {0, 1};
-  int sizes[] = {sizeof(uint32_t), sizeof(uint32_t)};
+  size_t sizes[] = {sizeof(uint32_t), sizeof(uint32_t)};
   uint32_t array[] = {0, 0};
   void *addrs[] = {&array[0], &array[1]};
 

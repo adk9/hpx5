@@ -297,7 +297,7 @@ static int _parallelQuicksortHelper_action(void *threadarg, size_t size)
     &pqs[1]
   };
 
-  int sizes[] = {
+  size_t sizes[] = {
     sizeof(int),
     sizeof(int)
   };

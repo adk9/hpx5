@@ -67,7 +67,7 @@ static int _fib_action(int *args, size_t size) {
     &fns[1]
   };
 
-  int sizes[] = {
+  size_t sizes[] = {
     sizeof(int),
     sizeof(int)
   };
