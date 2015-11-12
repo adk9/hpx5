@@ -46,8 +46,15 @@ int    _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t actio
   _hpx_process_call(process, addr, action, result, __HPX_NARGS(__VA_ARGS__),\
                     __VA_ARGS__)
 
+/// Delete a specified process
+///
+/// @param    process the hpx address of the process to delete
+/// @param       sync an lco to wait on for the delete operation
 void hpx_process_delete(hpx_addr_t process, hpx_addr_t sync) HPX_PUBLIC;
 
+/// Get the pid of a process
+///
+/// @param    process the hpx address of the process
 hpx_pid_t hpx_process_getpid(hpx_addr_t process) HPX_PUBLIC;
 
 /// HPX process broadcast.
@@ -65,8 +72,7 @@ hpx_pid_t hpx_process_getpid(hpx_addr_t process) HPX_PUBLIC;
 /// @param        rsync The address of an LCO to trigger when the broadcast
 ///                       operation is complete globally, i.e., when all of the
 ///                       broadcast handlers have run.
-/// @param         args The argument data for @p action.
-/// @param          len The length of @p args.
+/// @param        nargs The number of @p args
 ///
 /// @returns      HPX_SUCCESS if no errors were encountered.
 int _hpx_process_broadcast(hpx_pid_t pid, hpx_action_t action, hpx_addr_t lsync,
@@ -91,8 +97,7 @@ int _hpx_process_broadcast(hpx_pid_t pid, hpx_action_t action, hpx_addr_t lsync,
 /// @param        rsync The address of an LCO to trigger when the broadcast
 ///                       operation is complete globally, i.e., when all of the
 ///                       broadcast handlers have run.
-/// @param         args The argument data for @p action.
-/// @param          len The length of @p args.
+/// @param        nargs The number of @p args
 ///
 /// @returns      HPX_SUCCESS if no errors were encountered.
 int _hpx_process_broadcast_lsync(hpx_pid_t pid, hpx_action_t action,
@@ -115,8 +120,7 @@ int _hpx_process_broadcast_lsync(hpx_pid_t pid, hpx_action_t action,
 ///
 /// @param          pid The process to which to broadcast.
 /// @param       action The action to perform.
-/// @param         args The argument data for @p action.
-/// @param          len The length of @p args.
+/// @param        nargs The number of @p args
 ///
 /// @returns      HPX_SUCCESS if no errors were encountered.
 int _hpx_process_broadcast_rsync(hpx_pid_t pid, hpx_action_t action, int nargs,
