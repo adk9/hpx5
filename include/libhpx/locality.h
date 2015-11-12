@@ -96,8 +96,8 @@ typedef struct locality {
 /// Inter-locality action interface.
 /// @{
 
-/// Used to cause a locality to shutdown.
-extern HPX_ACTION_DECL(locality_shutdown);
+/// Used to cause a locality to stop.
+extern HPX_ACTION_DECL(locality_stop);
 /// @}
 
 /// The global locality is exposed through this "here" pointer.

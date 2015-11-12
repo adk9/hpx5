@@ -61,13 +61,13 @@ struct cvar;
 /// table, though all of the functionality that is required to make this work is
 /// not implemented.
 struct scheduler {
-  volatile int       shutdown;
-  volatile int    next_tls_id;
-  int               n_workers;
-  uint32_t       wf_threshold;
-  system_barrier_t    barrier;
-  worker_t           *workers;
-  int        n_active_workers;  // used by APEX scheduler throttling : akp
+  volatile int     stopped;
+  volatile int next_tls_id;
+  int            n_workers;
+  uint32_t    wf_threshold;
+  system_barrier_t barrier;
+  worker_t        *workers;
+  int     n_active_workers;           // used by APEX scheduler throttling : akp
 };
 
 /// Allocate and initialize a new scheduler.
@@ -117,17 +117,17 @@ int scheduler_restart(struct scheduler *scheduler)
 /// This asks all of the threads to shutdown the next time they get a chance to
 /// schedule. It is nonblocking.
 ///
-/// @param    scheduler The scheduler to shutdown.
-/// @param         code The code to return from scheduler_startup().
-void scheduler_shutdown(struct scheduler *scheduler, int code)
+/// @param    scheduler The scheduler to stop.
+/// @param         code The code to return from scheduler_stop().
+void scheduler_stop(struct scheduler *scheduler, int code)
   HPX_NON_NULL(1);
 
 /// Check to see if the scheduler was shutdown.
 ///
 /// @param    scheduler The scheduler to check.
 ///
-/// @returns            True if the scheduler was shutdown..
-int scheduler_is_shutdown(struct scheduler *scheduler)
+/// @returns            True if the scheduler is stopped.
+int scheduler_is_stopped(struct scheduler *scheduler)
   HPX_NON_NULL(1);
 
 /// Join the scheduler at shutdown.

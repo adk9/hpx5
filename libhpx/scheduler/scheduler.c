@@ -146,7 +146,7 @@ struct scheduler *scheduler_new(const config_t *cfg) {
     return NULL;
   }
 
-  sync_store(&s->shutdown, INT_MAX, SYNC_RELEASE);
+  sync_store(&s->stopped, INT_MAX, SYNC_RELEASE);
   sync_store(&s->next_tls_id, 0, SYNC_RELEASE);
   s->n_workers    = workers;
   s->n_active_workers = workers;
@@ -201,7 +201,7 @@ worker_t *scheduler_get_worker(struct scheduler *sched, int id) {
 int scheduler_restart(struct scheduler *sched) {
   int status = LIBHPX_OK;
 
-  sync_store(&sched->shutdown, INT_MAX, SYNC_RELEASE);
+  sync_store(&sched->stopped, INT_MAX, SYNC_RELEASE);
   status = worker_start();
   if (status != LIBHPX_OK) {
     scheduler_abort(sched);
@@ -243,13 +243,13 @@ int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
   return status;
 }
 
-void scheduler_shutdown(struct scheduler *sched, int code) {
-  sync_store(&sched->shutdown, code, SYNC_RELEASE);
+void scheduler_stop(struct scheduler *sched, int code) {
+  sync_store(&sched->stopped, code, SYNC_RELEASE);
 }
 
-int scheduler_is_shutdown(struct scheduler *sched) {
-  int shutdown = sync_load(&sched->shutdown, SYNC_ACQUIRE);
-  return (shutdown != INT_MAX);
+int scheduler_is_stopped(struct scheduler *sched) {
+  int stopped = sync_load(&sched->stopped, SYNC_ACQUIRE);
+  return (stopped != INT_MAX);
 }
 
 void scheduler_abort(struct scheduler *sched) {
