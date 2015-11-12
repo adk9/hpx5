@@ -722,7 +722,7 @@ void worker_wait(void) {
   reent_t *state = &here->reent_state;
   pthread_mutex_lock(&state->mutex);
   if (state->barrier_enabled) {
-    if (++state->barrier_count < state->barrier_trips) {
+    if (++state->barrier_count < here->sched->n_active_workers) {
       pthread_cond_wait(&state->cond, &state->mutex);
     }
     else {
