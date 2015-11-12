@@ -25,6 +25,7 @@
 #define PAD_TO_CACHELINE(S) PAD_TO_N(HPX_CACHELINE_SIZE, S)
 
 /// Alignment bytes to a a align=2^k alignment.
-#define ALIGN(bytes, align) ((align - (bytes & (align - 1))) & (align-1))
+#define ALIGN(bytes, align)                                 \
+  (((align) - ((bytes) & ((align) - 1))) & ((align) - 1))
 
 #endif // LIBHPX_PADDING_H

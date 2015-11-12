@@ -26,6 +26,7 @@
 extern "C" {
 #endif
 
+#include <pthread.h>
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
 #include <libsync/lockable_ptr.h>
@@ -61,7 +62,14 @@ struct cvar;
 /// table, though all of the functionality that is required to make this work is
 /// not implemented.
 struct scheduler {
-  volatile int     stopped;
+  volatile int     stopped;                     // fast flag to avoid locking
+
+  struct {
+    volatile int     state;
+    pthread_mutex_t   lock;
+    pthread_cond_t running;
+  } run_state;
+
   volatile int next_tls_id;
   int            n_workers;
   uint32_t    wf_threshold;
@@ -69,6 +77,10 @@ struct scheduler {
   worker_t        *workers;
   int     n_active_workers;           // used by APEX scheduler throttling : akp
 };
+
+#define SCHED_RUN INT_MAX
+#define SCHED_STOP 1
+#define SCHED_SHUTDOWN 2
 
 /// Allocate and initialize a new scheduler.
 ///
