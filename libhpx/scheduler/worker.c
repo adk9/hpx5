@@ -309,7 +309,7 @@ static hpx_parcel_t *_schedule_lifo(worker_t *w) {
 }
 
 /// Send a mail message to another worker.
-void worker_send_mail(hpx_parcel_t *p, void *worker) {
+static void _send_mail(hpx_parcel_t *p, void *worker) {
   worker_t *w = worker;
   log_sched("sending %p to worker %d\n", (void*)p, w->id);
   sync_two_lock_queue_enqueue(&w->inbox, p);
@@ -358,7 +358,7 @@ static int _push_half_handler(int src) {
 
   // send them back to the thief
   if (parcels) {
-    worker_send_mail(parcels, thief);
+    _send_mail(parcels, thief);
     EVENT_STEAL_LIFO(parcels, self);
   }
   return HPX_SUCCESS;
@@ -455,7 +455,7 @@ static hpx_parcel_t *_steal_hier(worker_t *w) {
   worker_t *victim = scheduler_get_worker(here->sched, cpu);
   p = action_create_parcel(HPX_HERE, _push_half, HPX_NULL,
                            HPX_ACTION_NULL, 1, &w->id);
-  worker_send_mail(p, victim);
+  _send_mail(p, victim);
   return NULL;
 }
 
@@ -947,7 +947,7 @@ static void _resume_parcels(hpx_parcel_t *parcels) {
     ustack_t *stack = p->ustack;
     if (stack && stack->affinity >= 0) {
       worker_t *w = scheduler_get_worker(here->sched, stack->affinity);
-      worker_send_mail(p, w);
+      _send_mail(p, w);
     }
     else {
       parcel_launch(p);
@@ -1112,7 +1112,7 @@ void hpx_thread_set_affinity(int affinity) {
   // move this thread to the proper worker through the mailbox
   EVENT_THREAD_SUSPEND(p, worker);
   worker_t *w = scheduler_get_worker(here->sched, affinity);
-  _schedule(worker_send_mail, w, 0);
+  _schedule(_send_mail, w, 0);
   EVENT_THREAD_RESUME(p, self);
 }
 
