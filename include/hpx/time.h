@@ -78,25 +78,25 @@ void hpx_time_diff(hpx_time_t start, hpx_time_t end, hpx_time_t *diff)
 
 /// Get the time elapsed since @p from, in microseconds
 /// @param from the start time to measure from
-/// @returns    the difference between @from and now,
+/// @returns    the difference between @p from and now,
 ///             in microseconds
 double hpx_time_elapsed_us(hpx_time_t from) HPX_PUBLIC;
 
 /// Get the time elapsed since @p from, in milliseconds
 /// @param from the start time to measure from
-/// @returns    the difference between @from and now,
+/// @returns    the difference between @p from and now,
 ///             in milliseconds
 double hpx_time_elapsed_ms(hpx_time_t from) HPX_PUBLIC;
 
 /// Get the time elapsed since @p from, in nanoseconds
 /// @param from the start time to measure from
-/// @returns    the difference between @from and now,
+/// @returns    the difference between @p from and now,
 ///             in nanoseconds
 uint64_t hpx_time_elapsed_ns(hpx_time_t from) HPX_PUBLIC;
 
 /// Get the time elapsed since @p from, in hpx_time_t.
 /// @param start the start time to measure from
-/// @param  diff the difference between @start and now.
+/// @param  diff the difference between @p start and now.
 void hpx_time_elapsed(hpx_time_t start, hpx_time_t *diff) HPX_PUBLIC;
 
 /// Construct an hpx time object
