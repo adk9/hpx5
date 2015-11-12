@@ -597,7 +597,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   int spins = 0;
   hpx_parcel_t *p = NULL;
   worker_t *w = self;
-  while (!worker_is_shutdown()) {
+  while (!worker_is_stopped()) {
     if (!block) {
       p = _schedule_lifo(w);
       if (INSTRUMENTATION && p != NULL) {
@@ -760,9 +760,9 @@ int worker_start(void) {
   // wait for local threads to start up
   struct scheduler *sched = here->sched;
 
-  //reset shutdown flag
+  // reset flag
   if (here->reent_state.active) {
-    sync_store(&sched->shutdown, INT_MAX, SYNC_RELEASE);
+    sync_store(&sched->stopped, INT_MAX, SYNC_RELEASE);
   }
 
   // allocate a parcel and a stack header for the system stack
@@ -788,12 +788,12 @@ int worker_start(void) {
   // the system thread will loop to find work until the scheduler has
   // shutdown
   while (true) {
-    int shutdown = worker_is_shutdown();
-    if (shutdown && w->id == 0) {
+    int stop = worker_is_stopped();
+    if (stop && w->id == 0) {
       break;
     }
 
-    if (shutdown) {
+    if (stop) {
       worker_wait();
     }
 
@@ -804,12 +804,12 @@ int worker_start(void) {
     _schedule(_null, NULL, 1);
   }
 
-  if (sched->shutdown != HPX_SUCCESS && here->rank == 0) {
+  if (sched->stopped != HPX_SUCCESS && here->rank == 0) {
     log_error("application exited with a non-zero exit code: %d.\n",
-              sched->shutdown);
+              sched->stopped);
   }
 
-  return sched->shutdown;
+  return sched->stopped;
 }
 
 /// Spawn a parcel.
@@ -825,9 +825,9 @@ void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(action_table_get_handler(here->actions, p->action) != NULL);
   COUNTER_SAMPLE(w->stats.spawns++);
 
-  // If we're shutting down then push the parcel and return. This prevents an
+  // If we're stopped down then push the parcel and return. This prevents an
   // infinite spawn from inhibiting termination.
-  if (worker_is_shutdown()) {
+  if (worker_is_stopped()) {
     _push_lifo(p, w);
     return;
   }
