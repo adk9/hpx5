@@ -211,6 +211,8 @@ static void _send_all(coalesced_network_t *coalesced_network) {
    hpx_parcel_t *coalesced_chain = NULL;
    while (current_coalescing_queue_size > 0) {
      p = sync_two_lock_queue_dequeue(&coalesced_network->sends);
+     if(p==NULL)
+       break;
      //printf("temporarily copying contents\n");
 
      //append to the chain

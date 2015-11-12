@@ -133,7 +133,6 @@ void parcel_launch(hpx_parcel_t *p) {
   // parcel out to the network
   if (hpx_gas_try_pin(p->target, NULL)) {
     EVENT_PARCEL_RECV(p); // instrument local "receives"
-    assert(p->action!=103);
     scheduler_spawn(p);
   }
   else {
