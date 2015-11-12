@@ -73,7 +73,7 @@ action_allreduce(void *unused, size_t size) {
     hpx_call(HPX_THERE(i), set_value, futures[i], &value, sizeof(value));
   }
 
-  hpx_lco_get_all(num_ranks, futures, sizes, addrs, NULL);
+  hpx_lco_wait_all(num_ranks, futures, NULL);
 
   for (int i = 0; i < num_ranks; ++i)
     hpx_lco_delete(futures[i], HPX_NULL);
