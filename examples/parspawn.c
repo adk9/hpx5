@@ -58,6 +58,9 @@ static int _main_action(int *args, size_t size) {
 /// The main function parses the command line, sets up the HPX runtime system,
 /// and initiates the first HPX thread to perform parspawn(n).
 int main(int argc, char *argv[]) {
+  // register the actions
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _nop, _nop_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
 
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "HPX: failed to initialize.\n");
@@ -88,10 +91,6 @@ int main(int argc, char *argv[]) {
      n = atoi(argv[0]);
      break;
   }
-
-  // register the actions
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _nop, _nop_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
 
   // run the main action
   int e = hpx_run(&_main, &n, sizeof(n));

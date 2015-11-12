@@ -11,7 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-/* The ubiquitous cpi program. Compute pi using a simple quadrature rule in 
+/* The ubiquitous cpi program. Compute pi using a simple quadrature rule in
    parallel */
 
 #include <stdio.h>
@@ -52,7 +52,7 @@ double integrate(double left, double right, int intervals) {
 
 static double myreduce(int count, double values[count]) {
   double total = 0;
-  for (int i = 0; i < count; ++i) 
+  for (int i = 0; i < count; ++i)
     total += values[i];
   return total;
 }
@@ -78,7 +78,7 @@ static int _setVal_action(void *args, size_t size) {
 }
 
 static int _main_action(int *args, size_t size) {
-  double realpi=3.141592653589793238462643;  
+  double realpi=3.141592653589793238462643;
   int THREADS = HPX_LOCALITIES;
   int MYTHREAD = HPX_LOCALITY_ID;
   int interval = *(int*)args;
@@ -122,6 +122,10 @@ static int _main_action(int *args, size_t size) {
 int main(int argc, char *argv[]) {
   int interval = INTERVALS_PER_THREAD_DEFAULT;
 
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _setVal, _setVal_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _getVal, _getVal_action, HPX_POINTER, HPX_SIZE_T);
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
@@ -131,10 +135,6 @@ int main(int argc, char *argv[]) {
   if(argc > 1) {
     interval = atoi(argv[1]);
   }
-   
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _setVal, _setVal_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _getVal, _getVal_action, HPX_POINTER, HPX_SIZE_T);
 
   e = hpx_run(&_main, &interval, sizeof(interval));
   hpx_finalize();

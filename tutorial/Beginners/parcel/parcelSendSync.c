@@ -30,7 +30,7 @@ hpx_addr_t _partner(void) {
   int ranks = hpx_get_num_ranks();
   return HPX_THERE((rank) ? 0 : ranks - 1);
 }
- 
+
 static int _sendData_action(const parcel_data_t *args, size_t size)
 {
   printf("Received #%d: Message = %s\n", args->index, args->message);
@@ -61,14 +61,14 @@ static int _main_action(void *args, size_t size) {
 }
 
 int main(int argc, char *argv[]) {
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _sendData, _sendData_action, HPX_POINTER, HPX_SIZE_T);
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-   
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _sendData, _sendData_action, HPX_POINTER, HPX_SIZE_T);
 
   e = hpx_run(&_main, NULL, 0);
   hpx_finalize();

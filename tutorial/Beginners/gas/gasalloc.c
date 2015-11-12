@@ -32,24 +32,24 @@ static int _main_action(void *args, size_t n) {
   hpx_addr_t global = hpx_gas_alloc_cyclic(blocks, size, 0);
   printf("Free a global allocation\n");
   hpx_gas_free(global, HPX_NULL);
- 
+
   printf("Allocating distributed global zeroed memory of num localities = %d, \
           size = %" PRIu64 "\n", blocks, size);
   hpx_addr_t calloc = hpx_gas_calloc_cyclic(blocks, size, 0);
   printf("Free a global allocation\n");
   hpx_gas_free(calloc, HPX_NULL);
- 
+
   hpx_exit(HPX_SUCCESS);
 }
 
 int main(int argc, char *argv[]) {
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-   
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
 
   e = hpx_run(&_main, NULL, 0);
   hpx_finalize();

@@ -47,7 +47,7 @@ static int _main_action(void *args, size_t n) {
       src[i * BLOCK_COUNT + j] = (uint64_t)(i);
 
   hpx_addr_t data = hpx_gas_alloc_cyclic(size, BLOCK_SIZE, 0);
-  
+
   hpx_addr_t done = hpx_lco_and_new(size);
   for (int i = 0; i < size; i++) {
     hpx_addr_t remote_block = hpx_addr_add(data, i * BLOCK_SIZE, BLOCK_SIZE);
@@ -70,7 +70,7 @@ static int _main_action(void *args, size_t n) {
   // Now we will copy the block from the locality with the highest id
   // to locality 0.
   unsigned last_rank = (size - 1);
-  hpx_addr_t remote_data = hpx_addr_add(data, 
+  hpx_addr_t remote_data = hpx_addr_add(data,
                                         last_rank * BLOCK_SIZE,
                                         BLOCK_SIZE);
   hpx_addr_t completed = hpx_lco_future_new(0);
@@ -92,14 +92,14 @@ static int _main_action(void *args, size_t n) {
 }
 
 int main(int argc, char *argv[]) {
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_array, _init_array_action, HPX_POINTER, HPX_SIZE_T);
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-   
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_array, _init_array_action, HPX_POINTER, HPX_SIZE_T);
 
   e = hpx_run(&_main, NULL, 0);
   hpx_finalize();

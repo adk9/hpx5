@@ -14,26 +14,43 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 
-static int _main_handler(void) {
-  hpx_exit(HPX_SUCCESS);
+#define RUNS 3
+#define ACTIONS_PER_RUN 10
+
+int _foo_action_handler(void) {
+  printf("Foo action : %u : ranks : %u : threads : %u.\n",
+         hpx_get_my_rank(), hpx_get_num_ranks(), hpx_get_num_threads());
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_handler);
+static HPX_ACTION(HPX_DEFAULT, 0, _foo, _foo_action_handler);
 
-int main(int argc, char *argv[]) {
-  if (hpx_init(&argc, &argv)) {
-    fprintf(stderr, "failed to initialize HPX.\n");
-    return 1;
+int _main_action_handler(void) {
+  printf("Hello World from main action rank : %u : ranks : %u : threads : %u.\n",
+         hpx_get_my_rank(), hpx_get_num_ranks(), hpx_get_num_threads());
+
+  hpx_addr_t done = hpx_lco_and_new(ACTIONS_PER_RUN); 
+  for (int i = 0; i < ACTIONS_PER_RUN; i++) {
+	int loc = i % hpx_get_num_ranks();  
+  	hpx_call(HPX_THERE(loc), _foo, done);
   }
-  int e = hpx_run(&_main);
-  printf("1 hpx_run returned %d.\n", e);
+  hpx_lco_wait(done); 
+  hpx_lco_delete(done, HPX_NULL);
+  hpx_exit(HPX_SUCCESS);
+}
+HPX_ACTION(HPX_DEFAULT, 0, _hello, _main_action_handler); 
 
-  // remove the following block to call hpx_run() twice:
-  hpx_finalize();
-  return 77;
+int main(int argc, char *argv[argc]) {
+  if (hpx_init(&argc, &argv) != 0) {
+    fprintf(stderr, "failed to initialize HPX.\n");
+    return -1;
+  }
+  int success;
+  for (int i = 0; i < RUNS; ++i) {
+    success = hpx_run(&_hello);
+    printf("%i hpx_run returned %d.\n", i+1, success);
+  }
 
-  e = hpx_run(&_main);
-  printf("2 hpx_run returned %d.\n", e);
   hpx_finalize();
-  return e;
+  printf("hpx_finalize completed %d.\n", 1);
+  return success;
 }
