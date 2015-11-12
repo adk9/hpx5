@@ -29,9 +29,10 @@ namespace {
     void *lva;
     size_t blocks;
     hpx_parcel_t *onunpin;
-    Entry() : count(0), owner(0), lva(NULL), blocks(1), onunpin(NULL) {
+    uint32_t attr;
+    Entry() : count(0), owner(0), lva(NULL), blocks(1), onunpin(NULL), attr(0) {
     }
-    Entry(int32_t o, void *l, size_t b, hpx_parcel_t *p) : count(0), owner(o), lva(l), blocks(b), onunpin(p)
+    Entry(int32_t o, void *l, size_t b, hpx_parcel_t *p, uint32_t a) : count(0), owner(o), lva(l), blocks(b), onunpin(p), attr(a)
     {
     }
   };
@@ -178,10 +179,11 @@ btt_delete(void* obj) {
 }
 
 void
-btt_insert(void *obj, gva_t gva, uint32_t owner, void *lva, size_t blocks) {
+btt_insert(void *obj, gva_t gva, uint32_t owner, void *lva, size_t blocks,
+           uint32_t attr) {
   BTT *btt = static_cast<BTT*>(obj);
   uint64_t key = gva_to_key(gva);
-  bool inserted = btt->insert(key, Entry(owner, lva, blocks, NULL));
+  bool inserted = btt->insert(key, Entry(owner, lva, blocks, NULL, attr));
   assert(inserted);
   (void)inserted;
 }
@@ -229,7 +231,8 @@ btt_get_blocks(const void* obj, gva_t gva) {
 }
 
 int
-btt_get_all(const void *o, gva_t gva, void **lva, size_t *blocks, int32_t *cnt) {
+btt_get_all(const void *o, gva_t gva, void **lva, size_t *blocks,
+            int32_t *cnt) {
   const BTT *btt = static_cast<const BTT*>(o);
   Entry entry;
   uint64_t key = gva_to_key(gva);
@@ -263,7 +266,7 @@ static void _btt_attach_parcel_continuation(hpx_parcel_t *p, void *e) {
 }
 
 static int
-_btt_wait_until_count_zero(void *obj, gva_t gva, void **lva) {
+_btt_wait_until_count_zero(void *obj, gva_t gva, void **lva, uint32_t *attr) {
   BTT *btt = static_cast<BTT*>(obj);
   Entry entry;
   uint64_t key = gva_to_key(gva);
@@ -273,6 +276,10 @@ _btt_wait_until_count_zero(void *obj, gva_t gva, void **lva) {
 
   if (lva) {
     *lva = entry.lva;
+  }
+
+  if (attr) {
+    *attr = entry.attr;
   }
 
   // Wait until the reference count hits zero.
@@ -290,16 +297,16 @@ _btt_wait_until_count_zero(void *obj, gva_t gva, void **lva) {
 int btt_remove_when_count_zero(void *obj, gva_t gva, void **lva) {
   BTT *btt = static_cast<BTT*>(obj);
   uint64_t key = gva_to_key(gva);
-  int e = _btt_wait_until_count_zero(obj, gva, lva);
+  int e = _btt_wait_until_count_zero(obj, gva, lva, NULL);
   bool erased = btt->erase(key);
   assert(erased);
   return e;
   (void)erased;
 }
 
-int btt_try_move(void *obj, gva_t gva, int rank, void **lva) {
+int btt_try_move(void *obj, gva_t gva, int rank, void **lva, uint32_t *attr) {
   BTT *btt = static_cast<BTT*>(obj);
-  int e = _btt_wait_until_count_zero(obj, gva, lva);
+  int e = _btt_wait_until_count_zero(obj, gva, lva, attr);
   btt->setOwner(gva, rank);
   return e;
 }
