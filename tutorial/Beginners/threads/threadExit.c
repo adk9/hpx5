@@ -17,12 +17,12 @@
 //                 parameter, and is equivalent to returning status from the
 //                 action.
 // Possible status codes:
-//                 HPX_SUCCESS: Normal termination, send a parcel with 0-sized 
+//                 HPX_SUCCESS: Normal termination, send a parcel with 0-sized
 //                              data to the thread's continuation address.
 //                 HPX_ERROR: Abnormal termination. Terminates execution.
-//                 HPX_RESEND: Terminate execution, and resend the thread's 
+//                 HPX_RESEND: Terminate execution, and resend the thread's
 //                             parcel (NOT the continuation parcel). This
-//                             can be used for application-level forwarding 
+//                             can be used for application-level forwarding
 //                             when hpx_addr_try_pin() fails.
 //                 HPX_LCO_EXCEPTION: Continue an exception to the
 //                             continuation address.
@@ -59,14 +59,14 @@ static int _main_action(int *args, size_t size) {
 }
 
 int main(int argc, char *argv[]) {
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _exitSuccess, _exitSuccess_action, HPX_POINTER, HPX_SIZE_T);
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-   
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _exitSuccess, _exitSuccess_action, HPX_POINTER, HPX_SIZE_T);
 
   e = hpx_run(&_main, NULL, 0);
   hpx_finalize();

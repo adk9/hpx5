@@ -46,7 +46,7 @@ static int _main_action(void *args, size_t n) {
   int peerid = (rank + 1) % size;
 
   hpx_addr_t data = hpx_gas_alloc_cyclic(size, sizeof(block), 0);
-  hpx_addr_t remote = hpx_addr_add(data, peerid * sizeof(block), sizeof(block)); 
+  hpx_addr_t remote = hpx_addr_add(data, peerid * sizeof(block), sizeof(block));
 
   hpx_addr_t rfut = hpx_lco_future_new(0);
   hpx_gas_memput(remote, block, sizeof(block), HPX_NULL, rfut);
@@ -64,14 +64,14 @@ static int _main_action(void *args, size_t n) {
 }
 
 int main(int argc, char *argv[]) {
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _verify, _verify_action, HPX_POINTER, HPX_SIZE_T);
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-   
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _verify, _verify_action, HPX_POINTER, HPX_SIZE_T);
 
   e = hpx_run(&_main, NULL, 0);
   hpx_finalize();

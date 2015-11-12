@@ -53,6 +53,7 @@
 static hpx_addr_t _hpx_143;
 static int _hpx_143_fix_handler(void) {
   _hpx_143 = hpx_gas_alloc_cyclic(sizeof(void*), HPX_LOCALITIES, 0);
+  hpx_exit(HPX_SUCCESS);
   return LIBHPX_OK;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _hpx_143_fix, _hpx_143_fix_handler);
@@ -249,6 +250,18 @@ int hpx_init(int *argc, char ***argv) {
   apex_set_node_id(here->rank);
 #endif
 
+  here->actions = action_table_finalize();
+  if (!here->actions) {
+    status = log_error("failed to finalize the action table.\n");
+    goto unwind1;
+  }
+
+  inst_start();
+
+  if (here->ranks > 1 && here->config->gas != HPX_GAS_AGAS) {
+    status = hpx_run(&_hpx_143_fix);
+  }
+
   return status;
  unwind1:
   _stop(here);
@@ -265,14 +278,6 @@ static int _hpx_run_phase1(hpx_action_t *act, int n, va_list* vargs) {
     goto unwind0;
   }
 
-  here->actions = action_table_finalize();
-  if (!here->actions) {
-    status = log_error("failed to finalize the action table.\n");
-    goto unwind0;
-  }
-
-  inst_start();
-
   // create the initial application-level thread to run
   if (here->rank == 0) {
     hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, vargs);
@@ -281,15 +286,6 @@ static int _hpx_run_phase1(hpx_action_t *act, int n, va_list* vargs) {
     if (status != LIBHPX_OK) {
       log_error("failed to spawn initial action\n");
       goto unwind1;
-    }
-
-    // Fix for https://uisapp2.iu.edu/jira-prd/browse/HPX-143
-    if (here->ranks > 1 && here->config->gas != HPX_GAS_AGAS) {
-      status = hpx_call(HPX_HERE, _hpx_143_fix, HPX_NULL);
-      if (status != LIBHPX_OK) {
-        log_error("failed to spawn the initial cyclic allocation");
-        goto unwind1;
-      }
     }
   }
 
