@@ -18,6 +18,10 @@
 /// @brief Functions and definitions for using HPX processes
 /// @{
 
+/// @file
+/// @brief HPX process interface
+
+/// HPX process id type
 typedef hpx_addr_t hpx_pid_t;
 
 /// HPX Process creation.
