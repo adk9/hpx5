@@ -177,7 +177,7 @@ agas_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t n) {
     return HPX_SUCCESS;
   }
 
-  hpx_addr_t rsync = hpx_lco_future_new(0);
+  hpx_addr_t rsync = hpx_lco_future_new(4);
   int e = network_pwc(here->network, to, from, n, HPX_ACTION_NULL, HPX_NULL,
                       _agas_lco_set, rsync);
   dbg_check(e, "failed network pwc\n");
