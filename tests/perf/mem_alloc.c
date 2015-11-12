@@ -76,6 +76,9 @@ static int _main_action(void *args, size_t n) {
 }
 
 int main(int argc, char *argv[]) {
+  // Register the main action
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return 1;
@@ -95,9 +98,6 @@ int main(int argc, char *argv[]) {
   }
 
   fprintf(stdout, "Starting the cost of Memory Allocation benchmark\n");
-
-  // Register the main action
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
 
   // run the main action
   int e = hpx_run(&_main, NULL, 0);
