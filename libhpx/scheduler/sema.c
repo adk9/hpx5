@@ -103,10 +103,6 @@ hpx_addr_t hpx_lco_sema_new(unsigned count) {
 /// Decrement a semaphore.
 ///
 /// Just forward to the equivalent lco_wait() operation.
-///
-/// @param sema The global address of the semaphore we're reducing.
-///
-/// @returns HPX_SUCCESS, or an error code if the sema is in an error state.
 hpx_status_t hpx_lco_sema_p(hpx_addr_t sema) {
   return hpx_lco_wait(sema);
 }
@@ -116,9 +112,6 @@ hpx_status_t hpx_lco_sema_p(hpx_addr_t sema) {
 /// If the semaphore is local, then we can use the _sema_set operation directly,
 /// otherwise we perform the operation as an asynchronous remote call using the
 /// _sema_v action.
-///
-/// @param         sema The global address of the semaphore we're incrementing.
-/// @param        rsync An LCO to set when the set operation completed.
 void hpx_lco_sema_v(hpx_addr_t sema, hpx_addr_t rsync) {
   hpx_lco_set(sema, 0, NULL, HPX_NULL, rsync);
 }
@@ -126,8 +119,6 @@ void hpx_lco_sema_v(hpx_addr_t sema, hpx_addr_t rsync) {
 /// Increment a semaphore synchronously.
 ///
 /// Just forwards on.
-///
-/// @param         sema The global address of the semaphore we're incrementing.
 void hpx_lco_sema_v_sync(hpx_addr_t sema) {
   hpx_lco_set_rsync(sema, 0, NULL);
 }
