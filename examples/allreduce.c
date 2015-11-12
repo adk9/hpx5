@@ -53,7 +53,7 @@ action_allreduce(void *unused, size_t size) {
 
   T          values[num_ranks];
   void      *addrs[num_ranks];
-  int        sizes[num_ranks];
+  size_t     sizes[num_ranks];
   hpx_addr_t futures[num_ranks];
 
   for (int i = 0; i < num_ranks; ++i) {

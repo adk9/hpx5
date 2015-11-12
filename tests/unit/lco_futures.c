@@ -41,7 +41,7 @@ static int lco_future_new_handler(void) {
   int count = HPX_LOCALITIES;
   uint64_t values[count];
   void *addresses[count];
-  int sizes[count];
+  size_t sizes[count];
   hpx_addr_t futures[count];
 
   // allocate and start a timer

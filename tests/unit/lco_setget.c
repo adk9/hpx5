@@ -311,7 +311,7 @@ static int _getAll_handler(uint32_t *args, size_t size) {
     &ssn[1]
   };
 
-  int sizes[] = {
+  size_t sizes[] = {
     sizeof(uint32_t),
     sizeof(uint32_t)
   };
