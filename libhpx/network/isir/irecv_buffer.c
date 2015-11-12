@@ -239,10 +239,12 @@ static hpx_parcel_t *_finish(irecv_buffer_t *irecvs, int i, void *status) {
   irecvs->xport->finish(status, &src, &n);
 
   hpx_parcel_t *p = irecvs->records[i].parcel;
-  int to = gas_owner_of(here->gas, p->target);
-  if (to != here->rank) {
-    network_send(here->network, p);
-    return NULL;
+  if (here->config->gas == HPX_GAS_AGAS) {
+    int to = gas_owner_of(here->gas, p->target);
+    if (to != here->rank) {
+      network_send(here->network, p);
+      return NULL;
+    }
   }
 
   p->src = src;
