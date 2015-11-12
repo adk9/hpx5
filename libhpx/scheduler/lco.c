@@ -359,7 +359,7 @@ void hpx_lco_reset_sync(hpx_addr_t addr) {
 }
 
 void hpx_lco_set_with_continuation(hpx_addr_t target,
-                                   int size, const void *value,
+                                   size_t size, const void *value,
                                    hpx_addr_t lsync,
                                    hpx_addr_t raddr, hpx_action_t rop) {
 
@@ -399,13 +399,13 @@ void hpx_lco_set_with_continuation(hpx_addr_t target,
   dbg_check(e, "Could not forward lco_set\n");
 }
 
-void hpx_lco_set(hpx_addr_t target, int size, const void *value,
+void hpx_lco_set(hpx_addr_t target, size_t size, const void *value,
                  hpx_addr_t lsync, hpx_addr_t rsync) {
   hpx_lco_set_with_continuation(target, size, value, lsync, rsync,
                                 hpx_lco_set_action);
 }
 
-void hpx_lco_set_lsync(hpx_addr_t target, int size, const void *value,
+void hpx_lco_set_lsync(hpx_addr_t target, size_t size, const void *value,
                        hpx_addr_t rsync) {
   if (target == HPX_NULL) {
     if (rsync) {
@@ -436,7 +436,7 @@ void hpx_lco_set_lsync(hpx_addr_t target, int size, const void *value,
   hpx_lco_delete(lsync, HPX_NULL);
 }
 
-int hpx_lco_set_rsync(hpx_addr_t target, int size, const void *value) {
+int hpx_lco_set_rsync(hpx_addr_t target, size_t size, const void *value) {
   if (target == HPX_NULL) {
     return 0;
   }
@@ -498,7 +498,7 @@ size_t hpx_lco_size(hpx_addr_t target) {
   return hpx_call_sync(target, _lco_size, &size, size, NULL, 0);
 }
 
-hpx_status_t hpx_lco_get(hpx_addr_t target, int size, void *value) {
+hpx_status_t hpx_lco_get(hpx_addr_t target, size_t size, void *value) {
   if (size == 0) {
     return hpx_lco_wait(target);
   }
@@ -514,7 +514,7 @@ hpx_status_t hpx_lco_get(hpx_addr_t target, int size, void *value) {
   return status;
 }
 
-hpx_status_t hpx_lco_get_reset(hpx_addr_t target, int size, void *value) {
+hpx_status_t hpx_lco_get_reset(hpx_addr_t target, size_t size, void *value) {
   if (size == 0) {
     return hpx_lco_wait_reset(target);
   }
@@ -530,7 +530,7 @@ hpx_status_t hpx_lco_get_reset(hpx_addr_t target, int size, void *value) {
   return status;
 }
 
-hpx_status_t hpx_lco_getref(hpx_addr_t target, int size, void **out) {
+hpx_status_t hpx_lco_getref(hpx_addr_t target, size_t size, void **out) {
   if (size == 0) {
     return hpx_lco_wait(target);
   }
@@ -632,7 +632,7 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
   return errors;
 }
 
-int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
+int hpx_lco_get_all(int n, hpx_addr_t lcos[], size_t sizes[], void *values[],
                     hpx_status_t statuses[]) {
   dbg_assert(n > 0);
 

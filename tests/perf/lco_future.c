@@ -90,7 +90,7 @@ static int _main_action(int *args, size_t size) {
     count = num_readers[i];
     int values[count];
     void *addrs[count];
-    int sizes[count];
+    size_t sizes[count];
     hpx_addr_t futures[count];
 
     for (int j = 0; j < count; j++) {
