@@ -158,6 +158,11 @@ static inline uint64_t max_u64(uint64_t lhs, uint64_t rhs) {
     29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, \
     10, 9,  8,  7,  6,  5,  4,  3,  2,  1,  0
 
+/// Make sure that the preprocessor will work for the empty NARGS macro. If the
+/// user forces std=c99, then it will return 1 instead of 0. If you fail this
+/// assertion you are probably trying to for strict c99 compliance.
+_HPX_ASSERT(__HPX_NARGS() == 0, __c_preprocessor_is_not_gnu99_compatible);
+
 #define _HPX_FOREACH_0(F)
 #define _HPX_FOREACH_1(F, car) F(car)
 #define _HPX_FOREACH_2(F, car, ...) F(car),_HPX_FOREACH_1(F, __VA_ARGS__)
