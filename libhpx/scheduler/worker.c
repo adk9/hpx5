@@ -593,7 +593,6 @@ static void _schedule_network(worker_t *w, network_t *network) {
 ///
 /// @returns            The status from _transfer.
 static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
-  log_sched("hello\n");
   INST(uint64_t start_time = hpx_time_to_ns(hpx_time_now()));
   int source = -1;
   int spins = 0;
