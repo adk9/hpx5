@@ -47,7 +47,6 @@ struct percolation;
 //
 
 typedef struct reent_t {
-  bool                   active;
   // indicates that hpx is going to exit or quit
   volatile int         shutdown;
   pthread_mutex_t         mutex;

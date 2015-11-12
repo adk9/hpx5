@@ -141,7 +141,6 @@ int hpx_init(int *argc, char ***argv) {
   here->ranks = 0;
   here->actions = NULL;
 
-  here->reent_state.active = false;
   here->reent_state.barrier_count = 0;
   here->reent_state.barrier_enabled = 1;
   sync_store(&here->reent_state.shutdown, INT_MAX, SYNC_RELEASE);

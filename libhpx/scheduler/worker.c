@@ -761,7 +761,7 @@ int worker_start(void) {
   struct scheduler *sched = here->sched;
 
   // reset flag
-  if (here->reent_state.active) {
+  if (w->id == 0) {
     sync_store(&sched->stopped, INT_MAX, SYNC_RELEASE);
   }
 
