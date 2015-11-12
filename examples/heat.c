@@ -235,6 +235,7 @@ static int _updateGrid_action(void *args, size_t size) {
                  &max, HPX_NULL);
 
     hpx_lco_get(max, sizeof(dTmax), &dTmax);
+    hpx_lco_delete(max, HPX_NULL);
 
     // printf("%g\n", dTmax);
 
@@ -365,6 +366,9 @@ static int _main_action(int *input, size_t size)
   }
   hpx_lco_wait(complete);
   hpx_lco_delete(complete, HPX_NULL);
+
+  hpx_lco_delete(dTmax, HPX_NULL);
+  hpx_lco_delete(runtimes, HPX_NULL);
 
   hpx_gas_free(grid, HPX_NULL);
   hpx_gas_free(new_grid, HPX_NULL);
