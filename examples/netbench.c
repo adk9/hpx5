@@ -166,5 +166,6 @@ int main(int argc, char *argv[]) {
   }
 
   int e = hpx_run(&hpx_main, NULL, 0);
+  hpx_finalize();
   return e;
 }
