@@ -62,6 +62,7 @@ typedef enum {
   /// or continuation in a parcel. Functions can only be called by using the
   /// returned value from hpx_action_get_handler().
   HPX_FUNCTION,
+  /// Action that runs OpenCL kernels
   HPX_OPENCL,
 } hpx_action_type_t;
 
