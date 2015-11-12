@@ -55,8 +55,7 @@ int     _hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out, size_t o
 /// @param   addr The address that defines where the action is executed.
 /// @param action The action to perform.
 /// @param result An address of an LCO to trigger with the result.
-/// @param   args The argument data buffer for @p action.
-/// @param    len The length of the @p args buffer.
+/// @param  nargs The number of arguments for @p action.
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
@@ -82,8 +81,7 @@ int    _hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result,
 /// @param   addr The address that defines where the action is executed.
 /// @param action The action to perform.
 /// @param result An address of an LCO to trigger with the result.
-/// @param   args The argument data buffer for @p action.
-/// @param    len The length of the @p args buffer.
+/// @param  nargs The number of arguments for @p action.
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
@@ -100,8 +98,7 @@ int    _hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 /// @param action   The action to perform.
 /// @param c_target The address where the continuation action is executed.
 /// @param c_action The continuation action to perform.
-/// @param   args   The argument data buffer for @p action.
-/// @param    len   The length of the @p args buffer.
+/// @param  nargs The number of arguments for @p action.
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
@@ -128,8 +125,7 @@ int    _hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr,
 /// @param action The action to perform.
 /// @param    out Address of the output buffer.
 /// @param   olen The length of the @p output buffer.
-/// @param   args The argument data buffer for @p action.
-/// @param   alen The length of the @p args buffer.
+/// @param  nargs The number of arguments for @p action.
 ///
 /// @returns HPX_SUCCESS, or an error code if the action generated an error that
 ///          could not be handled remotely.
@@ -149,8 +145,7 @@ int    _hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action
 /// @param action   The action to perform.
 /// @param c_target The address where the continuation action is executed.
 /// @param c_action The continuation action to perform.
-/// @param   args   The argument data buffer for @p action.
-/// @param    len   The length of the @p args buffer.
+/// @param  nargs The number of arguments for @p action.
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
@@ -177,7 +172,7 @@ int    _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
 ///                   (i.e., R/W access to, or free of @p args is safe),
 ///                   HPX_NULL if we don't care.
 /// @param     result The global address of an LCO to signal with the result.
-/// @param       args The arguments for @p action.
+/// @param  nargs The number of arguments for @p action.
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call_async invocation.
@@ -200,8 +195,7 @@ int    _hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t lsync,
 /// @param cleanup A callback function that is run after the action
 ///                has been invoked.
 /// @param     env The environment to pass to the cleanup function.
-/// @param    args The argument data buffer for @p action.
-/// @param     len The length of the @p args buffer.
+/// @param  nargs The number of arguments for @p action.
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem during
 ///          the hpx_call_cc invocation.
