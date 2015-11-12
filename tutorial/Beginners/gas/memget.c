@@ -43,9 +43,9 @@ static int _main_action(void *args, size_t n) {
   int size = HPX_LOCALITIES;
   int peerid = (rank + 1) % size;
 
-  for (int i = 0; i < SIZE; i++) 
+  for (int i = 0; i < SIZE; i++)
     src[i] = (uint64_t)(i);
-  
+
   hpx_addr_t data = hpx_gas_alloc_cyclic(size, sizeof(src), 0);
   hpx_addr_t remote = hpx_addr_add(data, peerid * sizeof(src), sizeof(src));
 
@@ -53,7 +53,7 @@ static int _main_action(void *args, size_t n) {
   hpx_call(remote, _init_array, done, src, sizeof(src));
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
- 
+
   uint64_t dst[SIZE];
   memset(dst, 0xFF, SIZE);
 
@@ -62,7 +62,7 @@ static int _main_action(void *args, size_t n) {
   hpx_lco_wait(completed);
   hpx_lco_delete(completed, HPX_NULL);
 
-  for (int i = 0; i < SIZE; i++) 
+  for (int i = 0; i < SIZE; i++)
     assert(dst[i] == src[i]);
 
   printf("hpx_gas_memget succeeded for size = %d\n", SIZE);
@@ -72,14 +72,14 @@ static int _main_action(void *args, size_t n) {
 }
 
 int main(int argc, char *argv[]) {
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_array, _init_array_action, HPX_POINTER, HPX_SIZE_T);
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-   
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_array, _init_array_action, HPX_POINTER, HPX_SIZE_T);
 
   e = hpx_run(&_main, NULL, 0);
   hpx_finalize();

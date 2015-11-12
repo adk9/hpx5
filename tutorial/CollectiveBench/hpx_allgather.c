@@ -171,6 +171,10 @@ static int _main_action(int *args, size_t size) {
 
 int main(int argc, char *argv[])
 {
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init, _init_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _gather, _gather_action, HPX_POINTER, HPX_SIZE_T);
+
   int max_msg_size = DEFAULT_MAX_MESSAGE_SIZE;
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "HPX failed to initialize.\n");
@@ -209,10 +213,6 @@ int main(int argc, char *argv[])
     fprintf(stderr, "A minimum of 2 localities are required to run this test\n.");
     return 1;
   }
-
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init, _init_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _gather, _gather_action, HPX_POINTER, HPX_SIZE_T);
 
   int e = hpx_run(&_main, &max_msg_size, sizeof(max_msg_size));
   hpx_finalize();

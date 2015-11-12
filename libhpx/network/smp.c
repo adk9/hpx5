@@ -80,6 +80,10 @@ static hpx_parcel_t *_smp_probe(void *network, int nrx) {
   return NULL;
 }
 
+static void
+_smp_flush_all(void *network, int force) {
+  // nothing to do here
+}
 static void _smp_set_flush(void *network) {
 }
 
@@ -109,6 +113,7 @@ static network_t _smp = {
   .get = _smp_get,
   .probe = _smp_probe,
   .set_flush = _smp_set_flush,
+  .flush_all = _smp_flush_all,
   .register_dma = _smp_register_dma,
   .release_dma = _smp_release_dma,
   .lco_get = _smp_lco_get,

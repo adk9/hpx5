@@ -140,15 +140,15 @@ int main(int argc, char *argv[]) {
   // Seed the random number generator to get different results each time.
   srand(time(NULL));
 
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init, _init_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _check_sum, _check_sum_action, HPX_POINTER, HPX_SIZE_T);
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init, _init_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _check_sum, _check_sum_action, HPX_POINTER, HPX_SIZE_T);
 
   e = hpx_run(&_main, NULL, 0);
   hpx_finalize();

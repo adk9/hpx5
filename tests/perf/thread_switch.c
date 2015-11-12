@@ -73,6 +73,14 @@ static int _cswitch_main_action(int *args, size_t size) {
 }
 
 int main(int argc, char *argv[]) {
+  // register the cswitch action
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _setter, _setter_action,
+                      HPX_INT, HPX_ADDR, HPX_ADDR);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _getter, _getter_action,
+                      HPX_INT, HPX_ADDR, HPX_ADDR);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _cswitch_main, _cswitch_main_action,
+                      HPX_POINTER, HPX_SIZE_T);
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
@@ -104,14 +112,6 @@ int main(int argc, char *argv[]) {
      n = atoi(argv[0]);
      break;
   }
-
-  // register the cswitch action
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _setter, _setter_action,
-                      HPX_INT, HPX_ADDR, HPX_ADDR);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _getter, _getter_action,
-                      HPX_INT, HPX_ADDR, HPX_ADDR);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _cswitch_main, _cswitch_main_action,
-                      HPX_POINTER, HPX_SIZE_T);
 
   // run the main action
   e = hpx_run(&_cswitch_main, &n, sizeof(n));

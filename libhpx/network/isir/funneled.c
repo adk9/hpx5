@@ -177,6 +177,15 @@ _funneled_probe(void *network, int nrx) {
 }
 
 static void
+_funneled_flush_all(void *network, int force) {
+  _funneled_t *isir = network;
+  if (isir->flush || force) {
+    _send_all(isir);
+    isend_buffer_flush(&isir->isends);
+  }
+}
+
+static void
 _funneled_set_flush(void *network) {
   _funneled_t *isir = network;
   sync_store(&isir->flush, 1, SYNC_RELEASE);
@@ -253,6 +262,7 @@ network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
   network->vtable.get = _funneled_get;
   network->vtable.probe = _funneled_probe;
   network->vtable.set_flush = _funneled_set_flush;
+  network->vtable.flush_all = _funneled_flush_all;
   network->vtable.register_dma = _funneled_register_dma;
   network->vtable.release_dma = _funneled_release_dma;
   network->vtable.lco_get = isir_lco_get;
