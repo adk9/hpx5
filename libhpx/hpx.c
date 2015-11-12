@@ -141,12 +141,6 @@ int hpx_init(int *argc, char ***argv) {
   here->ranks = 0;
   here->actions = NULL;
 
-  here->reent_state.barrier_count = 0;
-  here->reent_state.barrier_enabled = 1;
-  sync_store(&here->reent_state.shutdown, INT_MAX, SYNC_RELEASE);
-  here->reent_state.mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
-  here->reent_state.cond = (pthread_cond_t)PTHREAD_COND_INITIALIZER;
-
   here->config = config_new(argc, argv);
   if (!here->config) {
     status = log_error("failed to create a configuration.\n");
@@ -261,7 +255,8 @@ int hpx_init(int *argc, char ***argv) {
     goto unwind1;
   }
 
-  if (here->ranks > 1 && here->config->gas != HPX_GAS_AGAS) {
+  if ((here->ranks > 1 && here->config->gas != HPX_GAS_AGAS) ||
+      !here->config->opt_smp) {
     status = hpx_run(&_hpx_143_fix);
   }
 
@@ -285,10 +280,13 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
     va_end(vargs);
     dbg_check(hpx_parcel_send(p, HPX_NULL), "failed to spawn initial action\n");
   }
+  log_dflt("hpx started running\n");
   int status = scheduler_restart(here->sched);
+  log_dflt("hpx stopped running\n");
 
   // enable global or locality wide synchronization between each hpx_run() calls
   boot_barrier(here->boot);
+
   return status;
 }
 

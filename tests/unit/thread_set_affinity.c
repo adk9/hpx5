@@ -19,10 +19,10 @@
 #include "tests.h"
 
 static int _test_thread_set_affinity_handler(void) {
-  // printf("running on %d\n", HPX_THREAD_ID);
+  printf("running on %d\n", HPX_THREAD_ID);
   int to = (HPX_THREAD_ID + 1) % HPX_THREADS;
   hpx_thread_set_affinity(to);
-  // printf("running on %d\n", HPX_THREAD_ID);
+  printf("running on %d\n", HPX_THREAD_ID);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _test_thread_set_affinity,

@@ -26,6 +26,7 @@
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
+#include <libhpx/padding.h>
 #include <libhpx/percolation.h>
 #include <libhpx/utils.h>
 
@@ -251,13 +252,13 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int nargs, va_list *vargs) {
       size_t *sizes = (size_t*)((char*)buf + sizeof(int));
       void *args = (char*)sizes + (sizeof(size_t) * nargs);
 
-      size_t n = 0;
+      size_t n = ALIGN(args-buf, 8);
       for (int i = 0; i < nargs; ++i) {
         void *arg = va_arg(*vargs, void*);
         size_t size = va_arg(*vargs, size_t);
         sizes[i] = size;
         memcpy(args+n, arg, size);
-        n += size;
+        n += size + ALIGN(size, 8);
       }      
     }
     return p;
@@ -321,11 +322,11 @@ static hpx_parcel_t *_action_parcel_acquire(hpx_action_t action, int nargs,
       int e = nargs % 2;
       dbg_assert_str(!e, "invalid number of vectored arguments %d\n", nargs);
 
-      size_t n = 0;
+      size_t n = 8;
       for (int i = 0; i < nargs; i += 2) {
         void *data = va_arg(temp, void*);
         size_t size = va_arg(temp, size_t);
-        n += (size + sizeof(size_t));
+        n += (sizeof(size_t) + size + ALIGN(size, 8));
         (void)data;
       }
       va_end(temp);
@@ -408,9 +409,11 @@ int action_execute(hpx_parcel_t *p) {
     int nargs = *(int*)args;
     size_t *sizes = (size_t*)((char*)args + sizeof(int));
     void *argsp[nargs];
-    argsp[0] = (char*)sizes + (nargs * sizeof(size_t));
+    void *vargs = (char*)sizes + (nargs * sizeof(size_t));
+    argsp[0] = (char*)vargs + ALIGN(vargs-args, 8);
+
     for (int i = 0; i < nargs-1; ++i) {
-      argsp[i+1] = (char*)argsp[i] + sizes[i];
+      argsp[i+1] = (char*)argsp[i] + sizes[i] + ALIGN(sizes[i], 8);
     }
     return ((hpx_vectored_action_handler_t)handler)(nargs, argsp, sizes);
   }
@@ -436,9 +439,11 @@ int action_execute(hpx_parcel_t *p) {
     int nargs = *(int*)args;
     size_t *sizes = (size_t*)((char*)args + sizeof(int));
     void *argsp[nargs];
-    argsp[0] = (char*)sizes + (nargs * sizeof(size_t));
+    void *vargs = (char*)sizes + (nargs * sizeof(size_t));
+    argsp[0] = (char*)vargs + ALIGN(vargs-args, 8);
+
     for (int i = 0; i < nargs-1; ++i) {
-      argsp[i+1] = (char*)argsp[i] + sizes[i];
+      argsp[i+1] = (char*)argsp[i] + sizes[i] + ALIGN(sizes[i], 8);
     }
     return ((hpx_pinned_vectored_action_handler_t)handler)(target, nargs,
                                                            &argsp, sizes);
