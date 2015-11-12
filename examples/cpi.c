@@ -106,7 +106,7 @@ static int _main_action(int *args, size_t size) {
              sizeof(reduce_result));
   }
 
-  hpx_lco_get_all(THREADS, futures, sizes, addrs, NULL);
+  hpx_lco_wait_all(THREADS, futures, NULL);
 
   for (int i = 0; i < THREADS; ++i)
     hpx_lco_delete(futures[i], HPX_NULL);
