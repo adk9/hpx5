@@ -105,4 +105,7 @@ int worker_is_stopped(void);
 ///  loop().
 void worker_wait(void);
 
+/// Send mail to a worker.
+void worker_send_mail(hpx_parcel_t *p, void *w);
+
 #endif // LIBHPX_WORKER_H
