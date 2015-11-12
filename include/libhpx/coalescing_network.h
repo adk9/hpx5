@@ -85,7 +85,6 @@ static int coalesced_network_command(void *obj, hpx_addr_t locality, hpx_action_
 typedef struct coalesced_network{
   network_t       vtable;
   network_t *base_network;
-  //char **coalesced_buffer;
   two_lock_queue_t sends;
   uint64_t previous_queue_size;
   uint64_t count_parcels;
@@ -104,8 +103,6 @@ static network_t* coalesced_network_new (network_t *network) {
 
   coalesced_network->previous_queue_size = 0;
   coalesced_network->count_parcels = 0;
-  //initially the coalescing buffers are null
-  //coalesced_network->coalesced_buffer = NULL;
 
   coalesced_network->vtable.delete = coalesced_network_delete;
   coalesced_network->vtable.progress = coalesced_network_progress;
