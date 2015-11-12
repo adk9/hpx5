@@ -96,8 +96,8 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
 /// @param  type The type of the action to be registered.
 /// @param  attr The attribute of the action (PINNED, PACKED, ...).
 /// @param   key A unique string key for the action.
-/// @param     f The local function pointer to associate with the action.
 /// @param    id The action id for this action to be returned after
+/// @param     f The local function pointer to associate with the action.
 ///                registration.
 /// @param nargs The variadic number of parameters that the action accepts.
 /// @param   ... The HPX types of the action parameters (HPX_INT, ...).
