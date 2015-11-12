@@ -91,6 +91,8 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
 
 /// Register an HPX action of a given @p type.
 ///
+/// This must be called prior to hpx_init().
+///
 /// @param  type The type of the action to be registered.
 /// @param  attr The attribute of the action (PINNED, PACKED, ...).
 /// @param   key A unique string key for the action.
