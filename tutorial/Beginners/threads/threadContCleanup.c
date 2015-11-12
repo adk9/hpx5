@@ -14,7 +14,7 @@
 //****************************************************************************
 // Example code - Thread continue cleanup tutorial -- Finishes the current
 // thread's execution, sending value to the thread's contination address.
-// This version gives the application to cleanup for instance, to free the 
+// This version gives the application to cleanup for instance, to free the
 // value. After dealing with the continued data, it will run cleanup(env)
 //****************************************************************************
 #include <stdio.h>
@@ -48,14 +48,14 @@ static int _main_action(int *args, size_t size) {
 }
 
 int main(int argc, char *argv[]) {
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _cleanup, _cleanup_action, HPX_POINTER, HPX_SIZE_T);
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-   
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _cleanup, _cleanup_action, HPX_POINTER, HPX_SIZE_T);
 
   e = hpx_run(&_main, NULL, 0);
   hpx_finalize();

@@ -53,14 +53,14 @@ static int _main_action(void *args, size_t size) {
 }
 
 int main(int argc, char *argv[]) {
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _add, _add_action, HPX_POINTER, HPX_SIZE_T);
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _add, _add_action, HPX_POINTER, HPX_SIZE_T);
 
   e = hpx_run(&_main, NULL, 0);
   hpx_finalize();

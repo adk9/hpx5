@@ -239,7 +239,6 @@ hpx_parcel_t *scheduler_current_parcel(void);
 worker_t *scheduler_get_worker(struct scheduler *sched, int id)
   HPX_NON_NULL(1);
 
-
 #ifdef __cplusplus
 }
 #endif

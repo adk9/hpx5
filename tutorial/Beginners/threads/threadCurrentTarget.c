@@ -13,7 +13,7 @@
 
 //****************************************************************************
 // Example code - hpx_thread_current_target  -- Get the target of the current
-//                target. The target of the thread is the destination that a 
+//                target. The target of the thread is the destination that a
 //                parcel was sent to spawn the current thread.
 //****************************************************************************
 #include <stdio.h>
@@ -32,8 +32,8 @@ static hpx_action_t _initArray   = 0;
 /// Initialize a array.
 static int _initArray_action(void *args, size_t size)
 {
-  // Get the address this parcel was sent to, and map it to a local 
-  // address---if this fails then the message arrived at the wrong 
+  // Get the address this parcel was sent to, and map it to a local
+  // address---if this fails then the message arrived at the wrong
   // place, so resend the parcel.
   hpx_addr_t target = hpx_thread_current_target();
   uint64_t *local = NULL;
@@ -50,7 +50,7 @@ static int _initArray_action(void *args, size_t size)
     printf("%" PRIu64 " ", local[i]);
   printf("\n");
 
-  // return success---this triggers whatever continuation was set 
+  // return success---this triggers whatever continuation was set
   // by the parcel sender
   return HPX_SUCCESS;
 }
@@ -59,7 +59,7 @@ static int _main_action(void *args, size_t n) {
   int rank = HPX_LOCALITY_ID;
   int size = HPX_LOCALITIES;
   int peerid = (rank+1)%size;
- 
+
   // Allocate the domain array
   hpx_addr_t global = hpx_gas_alloc_cyclic(size, sizeof(block), 0);
   hpx_addr_t remote = hpx_addr_add(global, peerid * sizeof(block), sizeof(block));
@@ -77,14 +77,14 @@ static int _main_action(void *args, size_t n) {
 }
 
 int main(int argc, char *argv[]) {
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initArray, _initArray_action, HPX_POINTER, HPX_SIZE_T);
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return e;
   }
-   
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initArray, _initArray_action, HPX_POINTER, HPX_SIZE_T);
 
   e = hpx_run(&_main, NULL, 0);
   hpx_finalize();
