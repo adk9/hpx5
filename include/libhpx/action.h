@@ -24,7 +24,7 @@ struct hpx_parcel;
 /// Register an HPX action of a given @p type. This is similar to the
 /// hpx_register_action routine, except that it gives us the chance to "tag"
 /// LIBHPX actions in their own way. This can be useful for instrumentation or
-/// optimization later.
+/// optimization later. This must be called before hpx_init().
 ///
 /// @param  type The type of the action to be registered.
 /// @param  attr The attribute of the action (PINNED, PACKED, ...).
