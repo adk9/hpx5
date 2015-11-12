@@ -241,8 +241,6 @@ int hpx_init(int *argc, char ***argv) {
     goto unwind1;
   }
 
-  here->reent_state.barrier_trips = here->sched->n_workers;
-
 #ifdef HAVE_APEX
   // initialize APEX, give this main thread a name
   apex_init("HPX WORKER THREAD");
