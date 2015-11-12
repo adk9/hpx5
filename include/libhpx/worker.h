@@ -87,10 +87,6 @@ void worker_fini(worker_t *w)
 /// Start processing lightweight threads.
 int worker_start(void);
 
-/// Reset a worker thread.
-void worker_reset(worker_t *w)
-  HPX_NON_NULL(1);
-
 /// Check to see if the current worker should be active.
 ///
 /// This file is distinct to the APEX subsystem.
