@@ -146,7 +146,12 @@ struct scheduler *scheduler_new(const config_t *cfg) {
     return NULL;
   }
 
-  sync_store(&s->stopped, INT_MAX, SYNC_RELEASE);
+  // initialize the run state.
+  sync_store(&s->stopped, SCHED_STOP, SYNC_RELEASE);
+  s->run_state.state = SCHED_STOP;
+  s->run_state.lock = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+  s->run_state.running = (pthread_cond_t)PTHREAD_COND_INITIALIZER;
+
   sync_store(&s->next_tls_id, 0, SYNC_RELEASE);
   s->n_workers    = workers;
   s->n_active_workers = workers;
@@ -157,6 +162,8 @@ struct scheduler *scheduler_new(const config_t *cfg) {
 
   // bind a worker for this thread so that we can spawn lightweight threads
   _bind_self(&s->workers[0]);
+
+
   log_sched("worker 0 ready.\n");
   return s;
 }
@@ -166,8 +173,11 @@ void scheduler_delete(struct scheduler *sched) {
     return;
   }
 
-  sync_store(&here->reent_state.shutdown, 0, SYNC_RELEASE);
-  worker_wait();
+  // shut everyone down
+  pthread_mutex_lock(&sched->run_state.lock);
+  sched->run_state.state = SCHED_SHUTDOWN;
+  pthread_cond_broadcast(&sched->run_state.running);
+  pthread_mutex_unlock(&sched->run_state.lock);
 
   worker_t *worker = NULL;
   for (int i = 1; i < sched->n_workers; ++i) {
@@ -200,11 +210,25 @@ worker_t *scheduler_get_worker(struct scheduler *sched, int id) {
 int scheduler_restart(struct scheduler *sched) {
   int status = LIBHPX_OK;
 
-  sync_store(&sched->stopped, INT_MAX, SYNC_RELEASE);
+  // notify everyone that they don't have to keep checking the lock.
+  sync_store(&sched->stopped, SCHED_RUN, SYNC_RELEASE);
+
+  // now switch the state of the running condition
+  pthread_mutex_lock(&sched->run_state.lock);
+  sched->run_state.state = SCHED_RUN;
+  pthread_cond_broadcast(&sched->run_state.running);
+  pthread_mutex_unlock(&sched->run_state.lock);
+
   status = worker_start();
   if (status != LIBHPX_OK) {
     scheduler_abort(sched);
   }
+
+  // now switch the state to stopped
+  pthread_mutex_lock(&sched->run_state.lock);
+  sched->run_state.state = SCHED_STOP;
+  pthread_mutex_unlock(&sched->run_state.lock);
+
   return status;
 }
 
@@ -247,7 +271,7 @@ void scheduler_stop(struct scheduler *sched, int code) {
 
 int scheduler_is_stopped(struct scheduler *sched) {
   int stopped = sync_load(&sched->stopped, SYNC_ACQUIRE);
-  return (stopped != INT_MAX);
+  return (stopped != SCHED_RUN);
 }
 
 void scheduler_abort(struct scheduler *sched) {

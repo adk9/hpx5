@@ -28,7 +28,6 @@
 /// wrap common functionality that needs access to the global here object.
 
 #include <hpx/hpx.h>
-#include <pthread.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,16 +44,6 @@ struct topology;
 struct percolation;
 /// @}
 //
-
-typedef struct reent_t {
-  // indicates that hpx is going to exit or quit
-  volatile int shutdown;
-  int           padding;
-  pthread_mutex_t mutex;
-  pthread_cond_t   cond;
-  int     barrier_count;
-  int   barrier_enabled;
-} reent_t;
 
 /// The locality object.
 ///
@@ -86,7 +75,6 @@ typedef struct locality {
   struct config              *config;
   const struct action_table *actions;
   struct topology          *topology;
-  reent_t                reent_state;
 #ifdef HAVE_PERCOLATION
   struct percolation    *percolation;
 #endif

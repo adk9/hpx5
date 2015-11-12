@@ -99,10 +99,4 @@ int worker_is_active(void);
 /// Check to see if the current worker should stop.
 int worker_is_stopped(void);
 
-///  This is a custom thread barrier which will be disabled automatically if a
-///  locality-wide shutdown is issued.  This generally happens at hpx_finalize()
-///  and will enable all waiting threads to come out of the main schedule
-///  loop().
-void worker_wait(void);
-
 #endif // LIBHPX_WORKER_H
