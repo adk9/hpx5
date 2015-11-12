@@ -30,11 +30,6 @@ SUBDIRS      += tests
 DIST_SUBDIRS += tests
 endif
 
-if ENABLE_TUTORIAL
-SUBDIRS      += tutorial
-DIST_SUBDIRS += tutorial
-endif
-
 bin_SCRIPTS = scripts/hpx-config
 
 install-exec-hook:

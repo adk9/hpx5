@@ -165,7 +165,6 @@ HPX_CONFIG_INSTRUMENTATION
 HPX_CONFIG_PAPI([papi], [$have_instrumentation])
 HPX_CONFIG_APEX([apex])
 HPX_CONFIG_TESTS
-HPX_CONFIG_TUTORIAL
 HPX_CONFIG_LIBHPX
 
 # Set and check some composite conditions to make sure the configuration makes

@@ -143,7 +143,7 @@ static int _stencil_action(struct spawn_stencil_args *args, size_t size) {
     hpx_lco_future_new(sizeof(double))
   };
 
-  int sizes[4] = {
+  size_t sizes[4] = {
     sizeof(double),
     sizeof(double),
     sizeof(double),
