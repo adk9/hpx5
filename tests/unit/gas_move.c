@@ -51,7 +51,7 @@ static int gas_move_handler(void) {
 
   hpx_addr_t done = hpx_lco_future_new(0);
   // move address to our locality.
-  printf("initiating AGAS move from (%lu) to (%lu).\n", other, HPX_HERE);
+  printf("initiating AGAS move from (%p) to (%p).\n", (void*)other, (void*)HPX_HERE);
   hpx_gas_move(other, HPX_HERE, done);
   if (hpx_lco_wait(done) != HPX_SUCCESS) {
     printf("error in hpx_move().\n");
