@@ -44,7 +44,6 @@ int hpx_is_active(void) HPX_PUBLIC;
 /// @returns numer of times hpx_run is called
 int hpx_get_epoch(void) HPX_PUBLIC;
 
-
 /// Get the thread id of the current heavy-weight thread.
 /// These threads are the heavy-weight threads used internally by HPX
 /// and are not the same as HPX threads.
