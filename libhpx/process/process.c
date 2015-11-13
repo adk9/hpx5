@@ -201,7 +201,7 @@ void hpx_process_delete(hpx_addr_t process, hpx_addr_t sync) {
     return;
   }
 
-  hpx_call_sync(process, _proc_delete, NULL, 0, NULL, (size_t)0);
+  hpx_call_sync(process, _proc_delete, NULL, 0, NULL, 0);
   hpx_gas_free(process, sync);
 #ifdef ENABLE_INSTRUMENTATION
   inst_trace(HPX_INST_CLASS_PROCESS, HPX_INST_EVENT_PROCESS_DELETE, process);

@@ -49,8 +49,7 @@ int hpx_par_for(hpx_for_action_t f, const int min, const int max,
   if (sync) {
     and = hpx_lco_and_new(nthreads);
     hpx_call_when_with_continuation(and, sync, hpx_lco_set_action,
-                                    and, hpx_lco_delete_action,
-                                    NULL, (size_t)0);
+                                    and, hpx_lco_delete_action, NULL, 0);
   }
 
   const int n = max - min;
@@ -199,8 +198,7 @@ int hpx_par_call(hpx_action_t action, const int min, const int max,
   if (sync) {
     and = hpx_lco_and_new(max - min);
     hpx_call_when_with_continuation(and, sync, hpx_lco_set_action,
-                                    and, hpx_lco_delete_action,
-                                    NULL, (size_t)0);
+                                    and, hpx_lco_delete_action, NULL, 0);
   }
   return _hpx_par_call_helper(action, min, max, branching_factor, cutoff,
                               arg_size, arg_init, env_size, env, and);
