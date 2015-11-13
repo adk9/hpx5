@@ -361,7 +361,6 @@ void hpx_finalize() {
   // this will add the stats to the APEX data set
   libhpx_save_apex_stats();
 #endif
-
   _stop(here);
 
 #if defined(ENABLE_PROFILING)
