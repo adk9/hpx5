@@ -22,6 +22,7 @@
 /// libhpx.
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
@@ -139,6 +140,7 @@ int hpx_init(int *argc, char ***argv) {
 
   here->rank = -1;
   here->ranks = 0;
+  here->epoch = 0;
   here->actions = NULL;
 
   here->config = config_new(argc, argv);
@@ -277,13 +279,18 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
     va_end(vargs);
     dbg_check(hpx_parcel_send(p, HPX_NULL), "failed to spawn initial action\n");
   }
-  log_dflt("hpx started running\n");
+  log_dflt("hpx started running %"PRIu64"\n", here->epoch);
   int status = scheduler_restart(here->sched);
-  log_dflt("hpx stopped running\n");
+  log_dflt("hpx stopped running %"PRIu64"\n", here->epoch);
 
   // We need to flush the network here, because it might have messages that are
   // required for progress.
   here->network->flush(here->network);
+
+  // Bump our epoch, and enforce the "collective" nature of run with a boot
+  // barrier.
+  here->epoch++;
+  boot_barrier(here->boot);
 
   return status;
 }

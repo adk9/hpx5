@@ -47,27 +47,31 @@ struct percolation;
 
 /// The locality object.
 ///
-/// @field      rank The dense, 0-based rank of this locality.
-/// @field     ranks The total number of ranks running the current job.
-/// @field      boot The bootstrap object. This provides rank and ranks, as well
-///                  as some basic, IP-based networking functionality.
-/// @field       gas The global address space object. This provides global
-///                  memory allocation and address space functionality.
-/// @field   network The network layer. This provides an active message
-///                  interface targeting global addresses.
-/// @field     sched The lightweight thread scheduler. This provides the
-///                  infrastructure required to create lightweight threads, and
-///                  to deal with inter-thread data and control dependencies
-///                  using LCOs.
-/// @field    config The libhpx configuration object. This stores the
-///                  per-locality configuration parameters based on
-///                  the user-specified runtime configuration values
-///                  and/or the defaults.
-/// @field   actions The symmetric "action table" which stores the
-///                  details of all of the actions registered at this locality.
+/// @field        rank The dense, 0-based rank of this locality.
+/// @field       ranks The total number of ranks running the current job.
+/// @filed       epoch Keep track of the current hpx_run() epoch.
+/// @field        boot The bootstrap object. This provides rank and ranks, as well
+///                    as some basic, IP-based networking functionality.
+/// @field         gas The global address space object. This provides global
+///                    memory allocation and address space functionality.
+/// @field     network The network layer. This provides an active message
+///                    interface targeting global addresses.
+/// @field       sched The lightweight thread scheduler. This provides the
+///                    infrastructure required to create lightweight threads, and
+///                    to deal with inter-thread data and control dependencies
+///                    using LCOs.
+/// @field      config The libhpx configuration object. This stores the
+///                    per-locality configuration parameters based on
+///                    the user-specified runtime configuration values
+///                    and/or the defaults.
+/// @field     actions The symmetric "action table" which stores the
+///                    details of all of the actions registered at this locality.
+/// @field    topology The topology information.
+/// @field percolation An interface for dealing with GPU backends.
 typedef struct locality {
   uint32_t                      rank;
   uint32_t                     ranks;
+  uint64_t                     epoch;
   struct boot                  *boot;
   void                          *gas;
   struct network            *network;
