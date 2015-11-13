@@ -659,7 +659,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
 }
 
 int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
-  w->thread      = -1;
+  w->thread      = 0;
   w->id          = id;
   w->seed        = seed;
   w->work_first  = 0;
