@@ -67,11 +67,8 @@ static void *_run(void *worker) {
   apex_register_thread("HPX WORKER THREAD");
 #endif
 
-  int e = system_barrier_wait(&here->sched->barrier);
-  if (e < 0) {
-    dbg_error("failed to join the scheduler barrier.\n");
-    return NULL;
-  }
+  // wait for the other threads to join
+  system_barrier_wait(&here->sched->barrier);
 
   if (worker_start()) {
     dbg_error("failed to start processing lightweight threads.\n");
@@ -268,11 +265,7 @@ int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
   }
 
   // wait for the other slave worker threads to launch
-  int e = system_barrier_wait(&sched->barrier);
-  if (e < 0) {
-    dbg_error("failed to join the scheduler barrier.\n");
-    return e;
-  }
+  system_barrier_wait(&sched->barrier);
 
   return status;
 }
