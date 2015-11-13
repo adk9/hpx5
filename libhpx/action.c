@@ -160,6 +160,7 @@ const _table_t *action_table_finalize(void) {
     const char *key = table->entries[i].key;
     hpx_action_type_t type = table->entries[i].type;
     hpx_action_handler_t f = table->entries[i].handler;
+    (void) key, (void) type, (void) f;
 
 #ifdef HAVE_PERCOLATION
     if (here->percolation && type == HPX_OPENCL) {
