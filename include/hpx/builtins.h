@@ -161,7 +161,9 @@ static inline uint64_t max_u64(uint64_t lhs, uint64_t rhs) {
 /// Make sure that the preprocessor will work for the empty NARGS macro. If the
 /// user forces std=c99, then it will return 1 instead of 0. If you fail this
 /// assertion you are probably trying to for strict c99 compliance.
+#ifndef __cplusplus
 _HPX_ASSERT(__HPX_NARGS() == 0, __c_preprocessor_is_not_gnu99_compatible);
+#endif
 
 #define _HPX_FOREACH_0(F)
 #define _HPX_FOREACH_1(F, car) F(car)
