@@ -1,5 +1,6 @@
 # The process infrastructure
-noinst_LTLIBRARIES       = libprocess.la
+noinst_LTLIBRARIES     = libprocess.la
+noinst_HEADERS         = allreduce.h
 
 libprocess_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
 libprocess_la_CFLAGS   = $(LIBHPX_CFLAGS)

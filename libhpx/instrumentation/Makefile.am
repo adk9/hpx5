@@ -1,4 +1,5 @@
 noinst_LTLIBRARIES = libinstrumentation.la
+noinst_HEADERS     = file_header.h logtable.h
 
 libinstrumentation_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
 libinstrumentation_la_CFLAGS   = $(LIBHPX_CFLAGS)
