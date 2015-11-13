@@ -139,7 +139,7 @@ void *system_mmap(void *UNUSED, void *addr, size_t n, size_t align) {
   static const  int prot = PROT_READ | PROT_WRITE;
   static const int flags = MAP_ANONYMOUS | MAP_PRIVATE;
   void *p = _mmap_lucky(addr, n, prot, flags, -1, 0, align);
-  log_mem("mmap %lu bytes at %p for a total of %lu\n", n, p, _update_total(n));
+  log_mem("mmap %zu bytes at %p for a total of %zu\n", n, p, _update_total(n));
   return p;
 }
 
@@ -167,7 +167,7 @@ void *system_mmap_huge_pages(void *UNUSED, void *addr, size_t n, size_t align) {
   else {
     p = system_mmap(UNUSED, addr, n, align);
   }
-  log_mem("mmap %lu bytes at %p from huge pages for a total of %lu\n", n, p,
+  log_mem("mmap %zu bytes at %p from huge pages for a total of %zu\n", n, p,
           _update_total(n));
   return p;
 #endif
@@ -179,7 +179,7 @@ void system_munmap(void *UNUSED, void *addr, size_t size) {
     dbg_error("munmap failed: %s.  addr is %p, and size is %zu\n",
           strerror(errno), addr, size);
   }
-  log_mem("munmapped %lu bytes for a total of %lu\n", size,
+  log_mem("munmapped %zu bytes for a total of %zu\n", size,
           _update_total(-size));
 }
 

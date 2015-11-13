@@ -237,7 +237,7 @@ _photon_pwc(xport_op_t *op) {
     _photon_key_copy(&lbuf.priv, op->src_key);
   }
   else {
-    log_net("temporarily registering buffer (%p, %lu)\n", op->src, op->n);
+    log_net("temporarily registering buffer (%p, %zu)\n", op->src, op->n);
     _photon_pin(op->src, op->n, &lbuf.priv);
     op->lop = _chain_unpin(op->src, op->n, op->lop);
   }
@@ -269,7 +269,7 @@ _photon_gwc(xport_op_t *op) {
     _photon_key_copy(&lbuf.priv, op->dest_key);
   }
   else {
-    log_net("temporarily registering buffer (%p, %lu)\n", op->dest, op->n);
+    log_net("temporarily registering buffer (%p, %zu)\n", op->dest, op->n);
     _photon_pin(op->dest, op->n, &lbuf.priv);
     op->lop = _chain_unpin(op->dest, op->n, op->lop);
   }
