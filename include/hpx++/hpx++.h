@@ -36,7 +36,7 @@ extern "C" {
 #include "hpx++/global_ptr.h"
 
 extern "C" {
-  #include "hpx/lco.h"
+//   #include "hpx/lco.h"
   #include "hpx/par.h"
   #include "hpx/parcel.h"
   #include "hpx/process.h"
@@ -44,6 +44,7 @@ extern "C" {
 }
 
 #include "hpx++/runtime.h"
+#include "hpx++/lco.h"
 
 extern "C" {
   #include "hpx/thread.h"
