@@ -1,7 +1,5 @@
 hpxdocdir=$(top_builddir)/docs/man/man3
 
-
-
 dist_man3_MANS = $(hpxdocdir)/hpx_parcel.3
 $(hpxdocdir)/hpx_parcel.3: doxyfile.stamp
 

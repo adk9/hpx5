@@ -2,6 +2,7 @@ SUBDIRS = arch
 
 # The networking library
 noinst_LTLIBRARIES       = libscheduler.la
+noinst_HEADERS           = cvar.h lco.h thread.h
 
 libscheduler_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
 libscheduler_la_CFLAGS   = $(LIBHPX_CFLAGS)
