@@ -1,5 +1,5 @@
 // =============================================================================
-//  High Performance ParalleX Library (libapex)
+//  High Performance ParalleX Library (libhpx)
 //
 //  Copyright (c) 2013-2015, Trustees of Indiana University,
 //  All rights reserved.
@@ -74,7 +74,7 @@ static int _fib_action(int *args, size_t size) {
     &fns[1]
   };
 
-  int sizes[] = {
+  size_t sizes[] = {
     sizeof(int),
     sizeof(int)
   };
@@ -108,6 +108,12 @@ static int _fib_main_action(int *args, size_t size) {
 }
 
 int main(int argc, char *argv[]) {
+  // register the fib action
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _fib, _fib_action,
+                      HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _fib_main, _fib_main_action,
+                      HPX_POINTER, HPX_SIZE_T);
+
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
@@ -139,15 +145,8 @@ int main(int argc, char *argv[]) {
      break;
   }
 
-  // register the fib action
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _fib, _fib_action,
-                      HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _fib_main, _fib_main_action,
-                      HPX_POINTER, HPX_SIZE_T);
-
   // run the main action
-  int rc = hpx_run(&_fib_main, &n, sizeof(n));
-
+  e = hpx_run(&_fib_main, &n, sizeof(n));
   hpx_finalize();
 
 #ifdef HAVE_APEX
@@ -164,6 +163,6 @@ int main(int argc, char *argv[]) {
       }
   }
 #endif
-  return rc;
+  return e;
 }
 
