@@ -14,6 +14,7 @@
 # include "config.h"
 #endif
 
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 #include <libhpx/debug.h>
@@ -77,7 +78,7 @@ void continuation_delete(continuation_t *c) {
 }
 
 int32_t continuation_add(continuation_t **c, hpx_action_t op, hpx_addr_t addr) {
-  log_coll("registering continuation (%d, %zu) at %p\n", op, addr, *c);
+  log_coll("registering continuation (%d, %"PRIu64") at %p\n", op, addr, *c);
   int32_t i = _insert(*c, op, addr);
   *c = _try_expand(*c);
   return i;

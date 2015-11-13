@@ -271,7 +271,7 @@ void inst_prof_dump(profile_log_t profile_log){
         prof_get_minimums(minimums, profile_log.events[i].key);
         prof_get_maximums(maximums, profile_log.events[i].key);
         for(int j = 0; j < profile_log.num_counters; j++){
-          fprintf(f, "%-24s%-24ld%-24ld%-24ld\n", 
+          fprintf(f, "%-24s%-24"PRIu64"%-24"PRIu64"%-24"PRIu64"\n", 
                   profile_log.counter_names[j],
                   averages[j], minimums[j], maximums[j]);
         }
