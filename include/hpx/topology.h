@@ -35,6 +35,15 @@ int hpx_get_num_ranks(void) HPX_PUBLIC;
 /// @returns the number of heavy-weight threads at the current locality
 int hpx_get_num_threads(void) HPX_PUBLIC;
 
+/// Check if HPX is running
+/// Useful to check if particular code is inside a hpx_run
+/// @returns true if hpx is active
+int hpx_is_active(void) HPX_PUBLIC;
+
+/// Get the epoch number for this hpx_run
+/// @returns numer of times hpx_run is called
+int hpx_get_epoch(void) HPX_PUBLIC;
+
 /// Get the thread id of the current heavy-weight thread.
 /// These threads are the heavy-weight threads used internally by HPX
 /// and are not the same as HPX threads.
