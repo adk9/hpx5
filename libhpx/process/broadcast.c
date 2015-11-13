@@ -28,14 +28,16 @@ static int _vabcast(hpx_action_t action, hpx_addr_t lsync, hpx_addr_t rsync,
   if (rsync) {
     remote = hpx_lco_and_new(here->ranks);
     e = hpx_call_when_with_continuation(remote, rsync, hpx_lco_set_action,
-                                        remote, hpx_lco_delete_action, NULL, 0);
+                                        remote, hpx_lco_delete_action,
+                                        NULL, (size_t)0);
     dbg_check(e, "could not chain LCO\n");
   }
 
   if (lsync) {
     local = hpx_lco_and_new(here->ranks);
     e = hpx_call_when_with_continuation(local, lsync, hpx_lco_set_action,
-                                        local, hpx_lco_delete_action, NULL, 0);
+                                        local, hpx_lco_delete_action,
+                                        NULL, (size_t)0);
     dbg_check(e, "could not chain LCO\n");
   }
 

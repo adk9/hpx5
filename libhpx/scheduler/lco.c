@@ -701,7 +701,9 @@ int hpx_lco_delete_all(int n, hpx_addr_t *lcos, hpx_addr_t rsync) {
   if (rsync) {
     and = hpx_lco_and_new(n);
     int e;
-    e = hpx_call_when_with_continuation(and, rsync, hpx_lco_set_action, and, hpx_lco_delete_action, NULL, 0);
+    e = hpx_call_when_with_continuation(and, rsync, hpx_lco_set_action, and,
+                                        hpx_lco_delete_action,
+                                        NULL, (size_t)0);
     dbg_check(e, "failed to enqueue delete action\n");
   }
 
