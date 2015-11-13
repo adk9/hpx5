@@ -559,18 +559,15 @@ static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
 static void _schedule_network(worker_t *w, network_t *network) {
   // suppress work-first scheduling while we're inside the network.
   w->work_first = -1;
+  network_progress(network, 0);
   hpx_parcel_t *stack = network_probe(network, 0);
   w->work_first = 0;
 
   hpx_parcel_t *p = NULL;
   while ((p = parcel_stack_pop(&stack))) {
     EVENT_PARCEL_RECV(p);
-    parcel_launch(p);
+    _push_lifo(p, w);
   }
-
-  w->work_first = -1;
-  network_progress(network, 0);
-  w->work_first = 0;
 }
 
 /// The main scheduling loop.
@@ -807,9 +804,10 @@ void scheduler_spawn(hpx_parcel_t *p) {
     return;
   }
 
+  hpx_parcel_t *current = w->current;
+
   // If we're holding a lock then we have to push the spawn for later
   // processing, or we could end up causing a deadlock.
-  hpx_parcel_t *current = w->current;
   if (current->ustack->lco_depth) {
     _push_lifo(p, w);
     return;
@@ -828,12 +826,16 @@ void scheduler_spawn(hpx_parcel_t *p) {
     return;
   }
 
-  // Process p work-first
+  // Process p work-first. If we're running the system thread then we need to
+  // prevent it from being stolen, which we can do by using the NULL
+  // continuation.
+  _checkpoint_env_t env = {
+    .f = (current == w->system) ? _null : _push_lifo,
+     .env = w
+  };
+
   EVENT_THREAD_SUSPEND(current, w);
-  dbg_assert(current->action);
-  dbg_assert(current->target);
-  p = _try_bind(w, p);
-  _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = _push_lifo, .env = w });
+  _transfer(_try_bind(w, p), _checkpoint, &env);
   EVENT_THREAD_RESUME(current, self);
 }
 
