@@ -312,14 +312,21 @@ void hpx_exit(int code) {
   dbg_assert_str(here->ranks,
                  "hpx_exit can only be called when the system is running.\n");
 
-  // make sure we flush our local network when we stop
+  // Make sure we flush our local network when we stop, but don't send our own
+  // shutdown here because it can "arrive" locally very quickly, before we've
+  // even come close to sending the rest of the stop commands. This can cause
+  // problems with flushing.
+  uint64_t c = code;
   for (int i = 0, e = here->ranks; i < e; ++i) {
-    uint64_t c = code;
-    int e = network_command(here->network, HPX_THERE(i), locality_stop, c);
-    dbg_check(e);
+    if (i != here->rank) {
+      int e = network_command(here->network, HPX_THERE(i), locality_stop, c);
+      dbg_check(e);
+    }
   }
 
-  hpx_thread_exit(HPX_SUCCESS);
+  // Call our own shutdown through cc, which orders it locally after the effects
+  // from the loop above.
+  hpx_call_cc(HPX_HERE, locality_stop, NULL, NULL, &here->rank, &c);
 }
 
 /// Called by the application to shutdown the scheduler and network. May be

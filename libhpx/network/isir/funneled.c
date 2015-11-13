@@ -15,6 +15,7 @@
 # include "config.h"
 #endif
 
+#include <inttypes.h>
 #include <stdlib.h>
 #include <hpx/builtins.h>
 #include <libsync/queues.h>
@@ -44,8 +45,6 @@ typedef struct {
   PAD_TO_CACHELINE(2 * sizeof(two_lock_queue_t) +
                    sizeof(irecv_buffer_t) +
                    sizeof(isend_buffer_t));
-  volatile int probe_lock;
-  PAD_TO_CACHELINE(sizeof(int));
   volatile int progress_lock;
 } _funneled_t;
 
@@ -170,8 +169,11 @@ _funneled_probe(void *network, int nrx) {
 static void
 _funneled_flush(void *network) {
   _funneled_t *isir = network;
+  while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
+    ;
   _send_all(isir);
   isend_buffer_flush(&isir->isends);
+  sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
 }
 
 /// Create a network registration.
@@ -258,7 +260,6 @@ network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
             cfg->isir_testwindow);
   irecv_buffer_init(&network->irecvs, network->xport, 64, cfg->isir_recvlimit);
 
-  sync_store(&network->probe_lock, 1, SYNC_RELEASE);
   sync_store(&network->progress_lock, 1, SYNC_RELEASE);
 
   return &network->vtable;
