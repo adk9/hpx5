@@ -281,8 +281,9 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   int status = scheduler_restart(here->sched);
   log_dflt("hpx stopped running\n");
 
-  // enable global or locality wide synchronization between each hpx_run() calls
-  boot_barrier(here->boot);
+  // We need to flush the network here, because it might have messages that are
+  // required for progress.
+  here->network->flush(here->network);
 
   return status;
 }
@@ -304,19 +305,13 @@ void hpx_exit(int code) {
   dbg_assert_str(here->ranks,
                  "hpx_exit can only be called when the system is running.\n");
 
-  // make sure we flush our local network when we shutdown
-  network_flush_on_shutdown(here->network);
+  // make sure we flush our local network when we stop
   for (int i = 0, e = here->ranks; i < e; ++i) {
-    int e = network_command(here->network, HPX_THERE(i), locality_stop,
-                            (uint64_t)code);
+    uint64_t c = code;
+    int e = network_command(here->network, HPX_THERE(i), locality_stop, c);
     dbg_check(e);
   }
 
-  // we do a flush of all remaining network packets - fix for isir transport
-  // there is a probability that network might not progress
-  // (to send all outbound shutdown signals) once all threads suspend
-  // flush will ensure we will progress these forcefully in this thread
-  here->network->flush_all(here->network, 1);
   hpx_thread_exit(HPX_SUCCESS);
 }
 

@@ -36,9 +36,7 @@ typedef struct {
   network_t       vtable;
   gas_t             *gas;
   isir_xport_t    *xport;
-  volatile int     flush;
-  PAD_TO_CACHELINE(sizeof(network_t) + sizeof(gas_t*) + sizeof(isir_xport_t*) +
-                   sizeof(int));
+  PAD_TO_CACHELINE(sizeof(network_t) + sizeof(gas_t*) + sizeof(isir_xport_t*));
   two_lock_queue_t sends;
   two_lock_queue_t recvs;
   isend_buffer_t  isends;
@@ -66,13 +64,6 @@ _funneled_delete(void *network) {
   dbg_assert(network);
 
   _funneled_t *isir = network;
-
-  // flush sends if we're supposed to
-  if (isir->flush) {
-    _send_all(isir);
-    isend_buffer_flush(&isir->isends);
-  }
-
   isend_buffer_fini(&isir->isends);
   irecv_buffer_fini(&isir->irecvs);
 
@@ -177,18 +168,10 @@ _funneled_probe(void *network, int nrx) {
 }
 
 static void
-_funneled_flush_all(void *network, int force) {
+_funneled_flush(void *network) {
   _funneled_t *isir = network;
-  if (isir->flush || force) {
-    _send_all(isir);
-    isend_buffer_flush(&isir->isends);
-  }
-}
-
-static void
-_funneled_set_flush(void *network) {
-  _funneled_t *isir = network;
-  sync_store(&isir->flush, 1, SYNC_RELEASE);
+  _send_all(isir);
+  isend_buffer_flush(&isir->isends);
 }
 
 /// Create a network registration.
@@ -261,15 +244,13 @@ network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
   network->vtable.put = _funneled_put;
   network->vtable.get = _funneled_get;
   network->vtable.probe = _funneled_probe;
-  network->vtable.set_flush = _funneled_set_flush;
-  network->vtable.flush_all = _funneled_flush_all;
+  network->vtable.flush = _funneled_flush;
   network->vtable.register_dma = _funneled_register_dma;
   network->vtable.release_dma = _funneled_release_dma;
   network->vtable.lco_get = isir_lco_get;
   network->vtable.lco_wait = isir_lco_wait;
   network->gas = gas;
 
-  sync_store(&network->flush, 0, SYNC_RELEASE);
   sync_two_lock_queue_init(&network->sends, NULL);
   sync_two_lock_queue_init(&network->recvs, NULL);
 
