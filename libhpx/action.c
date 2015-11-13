@@ -160,6 +160,7 @@ const _table_t *action_table_finalize(void) {
     const char *key = table->entries[i].key;
     hpx_action_type_t type = table->entries[i].type;
     hpx_action_handler_t f = table->entries[i].handler;
+    (void) key, (void) type, (void) f;
 
 #ifdef HAVE_PERCOLATION
     if (here->percolation && type == HPX_OPENCL) {
@@ -255,7 +256,7 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int nargs, va_list *vargs) {
       size_t n = ALIGN(args-buf, 8);
       for (int i = 0; i < nargs; ++i) {
         void *arg = va_arg(*vargs, void*);
-        size_t size = va_arg(*vargs, size_t);
+        size_t size = va_arg(*vargs, int);
         sizes[i] = size;
         memcpy(args+n, arg, size);
         n += size + ALIGN(size, 8);
@@ -313,7 +314,7 @@ static hpx_parcel_t *_action_parcel_acquire(hpx_action_t action, int nargs,
   if (marshalled) {
     if (likely(!vectored)) {
       void *data = va_arg(*vargs, void*);
-      size_t n = va_arg(*vargs, size_t);
+      size_t n = va_arg(*vargs, int);
       return hpx_parcel_acquire(data, n);
     } else {
       va_list temp;
@@ -325,7 +326,7 @@ static hpx_parcel_t *_action_parcel_acquire(hpx_action_t action, int nargs,
       size_t n = 8;
       for (int i = 0; i < nargs; i += 2) {
         void *data = va_arg(temp, void*);
-        size_t size = va_arg(temp, size_t);
+        size_t size = va_arg(temp, int);
         n += (sizeof(size_t) + size + ALIGN(size, 8));
         (void)data;
       }
