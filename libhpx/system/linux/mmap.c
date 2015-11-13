@@ -55,7 +55,7 @@ static void HPX_DESTRUCTOR _system_fini(void) {
 static uintptr_t _total = 0;
 #endif
 
-static uintptr_t _update_total(intptr_t n) {
+static uintptr_t HPX_USED _update_total(intptr_t n) {
 #ifndef ENABLE_DEBUG
   return 0;
 #else
