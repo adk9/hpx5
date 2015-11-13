@@ -175,29 +175,26 @@ static int _pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
   return pwc->xport->gwc(&op);
 }
 
-static void
-_pwc_flush_all(void *network, int force) {
-  // pwc networks always flush their rdma
-}
-
-static void _pwc_set_flush(void *network) {
-  // pwc networks always flush their rdma
-}
-
-static void _pwc_flush(pwc_network_t *pwc) {
-  int remaining, src;
-  command_t command;
-  do {
-    pwc->xport->test(&command, &remaining, XPORT_ANY_SOURCE, &src);
-  } while (remaining > 0);
-  boot_barrier(here->boot);
+static void _pwc_flush(void *pwc) {
 }
 
 static void _pwc_delete(void *network) {
   dbg_assert(network);
   pwc_network_t *pwc = network;
-  _pwc_flush(pwc);
 
+  // Cleanup any remaining local work---this can leak memory and stuff, because
+  // we aren't actually running the commands that we cleanup.
+  int remaining, src;
+  command_t command;
+  do {
+    pwc->xport->test(&command, &remaining, XPORT_ANY_SOURCE, &src);
+  } while (remaining > 0);
+
+  // Network deletion is effectively a collective, so this enforces that
+  // everyone is done with rdma before we go and deregister anything.
+  boot_barrier(here->boot);
+
+  // Finalize send buffers.
   for (int i = 0, e = here->ranks; i < e; ++i) {
     send_buffer_fini(&pwc->send_buffers[i]);
   }
@@ -206,6 +203,7 @@ static void _pwc_delete(void *network) {
   _pwc_release_dma(pwc, heap->base, heap->n);
   free(pwc->heap_segments);
   free(pwc->send_buffers);
+
   parcel_emulator_delete(pwc->parcels);
   pwc->xport->dealloc(pwc->xport);
   free(pwc);
@@ -245,8 +243,7 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   pwc->vtable.put = _pwc_put;
   pwc->vtable.get = _pwc_get;
   pwc->vtable.probe = _pwc_probe;
-  pwc->vtable.set_flush = _pwc_set_flush;
-  pwc->vtable.flush_all = _pwc_flush_all;
+  pwc->vtable.flush = _pwc_flush;
   pwc->vtable.register_dma = _pwc_register_dma;
   pwc->vtable.release_dma = _pwc_release_dma;
   pwc->vtable.lco_get = pwc_lco_get;

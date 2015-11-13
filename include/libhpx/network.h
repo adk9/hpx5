@@ -84,8 +84,7 @@ typedef struct network {
 
   hpx_parcel_t *(*probe)(void*, int nrx);
 
-  void (*set_flush)(void*);
-  void (*flush_all)(void*, int force);
+  void (*flush)(void*);
 
   void (*register_dma)(void *, const void *base, size_t bytes, void *key);
   void (*release_dma)(void *, const void *base, size_t bytes);
@@ -251,21 +250,6 @@ static inline hpx_parcel_t *
 network_probe(void *obj, int rank) {
   network_t *network = obj;
   return network->probe(network, rank);
-}
-
-/// Set the network's flush-on-shutdown flag.
-///
-/// Normally the network progress engine will cancel outstanding requests when
-/// it shuts down. This will change that functionality to flush the outstanding
-/// requests during shutdown. This is used to ensure that the hpx_exit()
-/// broadcast operation is sent successfully before the local network stops
-/// progressing.
-///
-/// @param      network The network to modify.
-static inline void
-network_flush_on_shutdown(void *obj) {
-  network_t *network = obj;
-  network->set_flush(network);
 }
 
 /// Register a memory region for dma access.

@@ -82,9 +82,9 @@ static hpx_parcel_t *_inst_probe(void *network, int nrx) {
   return p;
 }
 
-static void _inst_set_flush(void *network) {
+static void _inst_flush(void *network) {
   _inst_network_t *inst = network;
-  inst->impl->set_flush(network);
+  inst->impl->flush(network);
 }
 
 static void _inst_register_dma(void *network, const void *addr, size_t n,
@@ -123,11 +123,11 @@ network_t *network_inst_new(network_t *impl) {
   inst->vtable.put = _inst_put;
   inst->vtable.get = _inst_get;
   inst->vtable.probe = _inst_probe;
-  inst->vtable.set_flush = _inst_set_flush;
   inst->vtable.register_dma = _inst_register_dma;
   inst->vtable.release_dma = _inst_release_dma;
   inst->vtable.lco_get = _inst_lco_get;
   inst->vtable.lco_wait = _inst_lco_wait;
+  inst->vtable.flush = _inst_flush;
 
   inst->impl = impl;
 
