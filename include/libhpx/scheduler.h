@@ -79,7 +79,7 @@ struct scheduler {
 };
 
 #define SCHED_RUN INT_MAX
-#define SCHED_STOP 1
+#define SCHED_STOP HPX_SUCCESS
 #define SCHED_SHUTDOWN 2
 
 /// Allocate and initialize a new scheduler.
