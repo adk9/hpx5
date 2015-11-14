@@ -366,7 +366,7 @@ const char *hpx_strerror(hpx_status_t s) {
   }
 }
 
-void hpx_finalize() {
+void hpx_finalize(void) {
   // clean up after _hpx_143
   if (_hpx_143 != HPX_NULL) {
     hpx_gas_free(_hpx_143, HPX_NULL);
