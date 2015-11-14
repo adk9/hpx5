@@ -13,6 +13,8 @@ AC_DEFUN([HPX_DO_SUMMARY], [
  AS_IF([test "x$have_tbbmalloc" == xyes], [allocator="tbbmalloc"])
  AS_IF([test "x$have_dlmalloc" == xyes], [allocator="dlmalloc"])
 
+ AS_IF([test "x$have_agas" == xyes], [gas="AGAS"], [gas="PGAS"])
+
  AS_IF([test "x$enable_tests" == xyes], [tests="integration"])
  AS_IF([test "x$enable_lengthy_tests" == xyes], [tests="$tests lengthy"])
 
@@ -24,12 +26,12 @@ AC_DEFUN([HPX_DO_SUMMARY], [
  echo "                Host OS : $host_os"
  echo "               Networks : $networks"
  echo "              Allocator : $allocator"
+ echo "                    GAS : $gas"
  echo "        Instrumentation : $have_instrumentation"
  echo "                   PAPI : $have_papi"     
  echo "                   APEX : $have_apex"
  echo "         hugetlbfs heap : $have_hugetlbfs"
  echo "          Documentation : $enable_docs"
- echo "               Tutorial : $enable_tutorial"
  echo "             Test Suite : $tests"
  echo "         Extra CPPFLAGS : $hpx_extra_cppflags"
  echo "           Extra CFLAGS : $hpx_extra_cflags"
