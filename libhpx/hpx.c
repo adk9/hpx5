@@ -311,10 +311,6 @@ int hpx_is_active(void) {
   return !scheduler_is_stopped(here->sched);
 }
 
-int hpx_get_epoch(void) {
-  return here->epoch;
-}
-
 /// Called by the application to terminate the scheduler and network.
 void hpx_exit(int code) {
   dbg_assert_str(here->ranks,
