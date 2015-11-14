@@ -8,7 +8,7 @@
 # Research in Extreme Scale Technologies (CREST).
 
 AC_PREREQ([2.63])
-AC_INIT([hpx-5], [1.3.0], [hpx@indiana.edu])
+AC_INIT([hpx-5], [2.0.0], [hpx@indiana.edu])
 
 AC_SUBST(HPX_COPYRIGHT,["Copyright (c) 2013-2015, Trustees of Indiana University."])
 AC_COPYRIGHT([Copyright (c) 2013-2015, Trustees of Indiana University.])
