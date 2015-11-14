@@ -90,6 +90,6 @@ int main(int argc, char *argv[]) {
 
   boot_t *boot = here->boot;
   int e = alltoall_handler(boot);
-  boot_delete(boot);
+  hpx_finalize();
   return e;
 }
