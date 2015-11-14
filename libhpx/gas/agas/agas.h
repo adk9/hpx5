@@ -32,7 +32,6 @@ typedef struct {
   void *btt;
   void *bitmap;
   void *cyclic_bitmap;
-  unsigned cyclic_arena;
 } agas_t;
 
 struct gas *gas_agas_new(const struct config *config, struct boot *boot);
