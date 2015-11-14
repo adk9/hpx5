@@ -176,7 +176,6 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _locality_alloc_cyclic,
 hpx_addr_t _agas_alloc_cyclic_sync(size_t n, uint32_t bsize, uint32_t attr,
                                    int zero) {
   agas_t *agas = (agas_t*)here->gas;
-  dbg_assert(agas->cyclic_arena < UINT32_MAX);
   dbg_assert(here->rank == 0);
 
   // Figure out how many blocks per node we need.
