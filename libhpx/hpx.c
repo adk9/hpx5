@@ -308,7 +308,7 @@ int hpx_get_num_threads(void) {
 }
 
 int hpx_is_active(void) {
-  return !scheduler_is_stopped(here->sched);
+  return (self->current != NULL);
 }
 
 /// Called by the application to terminate the scheduler and network.
