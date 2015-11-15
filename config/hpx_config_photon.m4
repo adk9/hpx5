@@ -33,9 +33,11 @@ AC_DEFUN([_HAVE_PHOTON], [
 
 AC_DEFUN([_HPX_CONFIG_PHOTON], [
  contrib=$1
- 
+
  # configure and build the included photon library
  HPX_MERGE_STATIC_SHARED([PHOTON_CARGS])
+ # add some default CARGS
+ PHOTON_CARGS="$PHOTON_CARGS LIBFABRIC_CARGS=\"$LIBFABRIC_CARGS --disable-verbs\""
  ACX_CONFIGURE_DIR([$contrib], [$contrib], ["$PHOTON_CARGS"])
  _HAVE_PHOTON
  LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -I\$(top_srcdir)/$1/include"

@@ -39,7 +39,7 @@
 #include "libhpx/parcel.h"
 #include "libhpx/parcel_block.h"
 #include "libhpx/scheduler.h"
-#include "libhpx/topo.h"
+#include "libhpx/topology.h"
 
 #ifdef ENABLE_INSTRUMENTATION
 __thread uint64_t parcel_count = 0;
@@ -86,6 +86,14 @@ parcel_state_t parcel_exchange_state(hpx_parcel_t *p, parcel_state_t state) {
   return sync_swap(&p->state, state, SYNC_ACQ_REL);
 }
 
+void parcel_retain(hpx_parcel_t *p) {
+  parcel_state_t state = parcel_get_state(p);
+  dbg_assert_str(parcel_serialized(state), "cannot retain out-of-place parcels\n");
+  dbg_assert_str(!parcel_retained(state), "cannot retain already retained parcels\n");
+  state |= PARCEL_RETAINED;
+  parcel_set_state(p, state);
+}
+
 void parcel_launch(hpx_parcel_t *p) {
   dbg_assert(p->action);
 
@@ -128,7 +136,7 @@ void parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate) {
   if (gate) {
     _prepare(p);
     hpx_pid_t pid = self->current->pid;
-    p = parcel_new(gate, attach, 0, 0, pid, p, parcel_size(p));
+    p = parcel_new(gate, lco_attach, 0, 0, pid, p, parcel_size(p));
   }
   parcel_launch(p);
 }

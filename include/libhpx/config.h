@@ -61,6 +61,7 @@ static const char* const HPX_TRANSPORT_TO_STRING[] = {
   "INVALID_ID"
 };
 
+//! Configuration options for networks in HPX.
 typedef enum {
   HPX_NETWORK_DEFAULT = 0,
   HPX_NETWORK_SMP,
@@ -94,6 +95,40 @@ static const char* const HPX_BOOT_TO_STRING[] = {
   "INVALID_ID"
 };
 
+//! Configuration options for the thread affinity policies.
+typedef enum {
+  HPX_THREAD_AFFINITY_DEFAULT = 0,  //!< The default is to bind to NUMA node.
+  HPX_THREAD_AFFINITY_HWTHREAD,     //!< Bind to hyper-thread/slot.
+  HPX_THREAD_AFFINITY_CORE,         //!< Bind to the core.
+  HPX_THREAD_AFFINITY_NUMA,         //!< Bind to the numa node of the PE.
+  HPX_THREAD_AFFINITY_NONE,         //!< Do not bind threads.
+  HPX_THREAD_AFFINITY_MAX
+} libhpx_thread_affinity_t;
+
+static const char * const HPX_THREAD_AFFINITY_TO_STRING[] = {
+  "DEFAULT",
+  "HW THREAD",
+  "CORE",
+  "NUMA",
+  "NONE",
+  "INVALID_POLICY"
+};
+
+//! Configuration options for the (work-stealing) scheduling policy.
+typedef enum {
+  HPX_SCHED_POLICY_DEFAULT = 0, //!< The default policy is "random".
+  HPX_SCHED_POLICY_RANDOM,      //!< Steal from a randomly chosen worker.
+  HPX_SCHED_POLICY_HIER,        //!< A hierarchical work-stealing policy.
+  HPX_SCHED_POLICY_MAX
+} libhpx_sched_policy_t;
+
+static const char * const HPX_SCHED_POLICY_TO_STRING[] = {
+  "DEFAULT",
+  "RANDOM",
+  "HIER",
+  "INVALID_POLICY"
+};
+
 //! Locality types in HPX.
 #define HPX_LOCALITY_NONE  -2                   //!< Represents no locality.
 #define HPX_LOCALITY_ALL   -1                   //!< Represents all localities.
@@ -110,6 +145,7 @@ static const char* const HPX_BOOT_TO_STRING[] = {
 #define HPX_LOG_ACTION  256             //!< Log action registration.
 #define HPX_LOG_CONFIG  512             //!< Log configuration.
 #define HPX_LOG_MEMORY  1024            //!< Log memory (coarse grained)
+#define HPX_LOG_COLL    2048            //!< Log collectives
 
 static const char *const HPX_LOG_LEVEL_TO_STRING[] = {
   "default",
@@ -168,16 +204,6 @@ static const char *const HPX_PROF_COUNTER_TO_STRING[] = {
   "HPX_PAPI_BR_INS",
   "HPX_PAPI_TOT_CYC",
   "all"
-};
-
-typedef enum {
-  HPX_PROF_EVENT_NONE = 0,
-  HPX_PROF_EVENT_MAX
-} libhpx_prof_event_t;
-
-static const char* const HPX_PROF_EVENT_TO_STRING[] = {
-  "HPX_PROF_EVENT_NONE",
-  "INVALID"
 };
 
 #define HPX_WAITON_NONE     (UINT64_C(0))

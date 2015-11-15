@@ -52,6 +52,11 @@ _init_photon_config(const config_t *cfg, boot_t *boot,
   pcfg->nproc                   = boot_n_ranks(boot);
   pcfg->address                 = boot_rank(boot);
   pcfg->comm                    = NULL;
+  pcfg->fi.provider             = cfg->photon_fiprov;
+  pcfg->fi.eth_dev              = cfg->photon_fidev;
+  pcfg->fi.node                 = NULL;
+  pcfg->fi.service              = NULL;
+  pcfg->fi.domain               = NULL;
   pcfg->ibv.use_cma             = cfg->photon_usecma;
   pcfg->ibv.eth_dev             = cfg->photon_ethdev;
   pcfg->ibv.ib_dev              = cfg->photon_ibdev;
@@ -232,7 +237,7 @@ _photon_pwc(xport_op_t *op) {
     _photon_key_copy(&lbuf.priv, op->src_key);
   }
   else {
-    log_net("temporarily registering buffer (%p, %lu)\n", op->src, op->n);
+    log_net("temporarily registering buffer (%p, %zu)\n", op->src, op->n);
     _photon_pin(op->src, op->n, &lbuf.priv);
     op->lop = _chain_unpin(op->src, op->n, op->lop);
   }
@@ -264,7 +269,7 @@ _photon_gwc(xport_op_t *op) {
     _photon_key_copy(&lbuf.priv, op->dest_key);
   }
   else {
-    log_net("temporarily registering buffer (%p, %lu)\n", op->dest, op->n);
+    log_net("temporarily registering buffer (%p, %zu)\n", op->dest, op->n);
     _photon_pin(op->dest, op->n, &lbuf.priv);
     op->lop = _chain_unpin(op->dest, op->n, op->lop);
   }
@@ -297,8 +302,8 @@ _poll(command_t *op, int *remaining, int rank, int *src, int type) {
 }
 
 static int
-_photon_test(command_t *op, int *remaining, int *src) {
-  return _poll(op, remaining, PHOTON_ANY_SOURCE, src, PHOTON_PROBE_EVQ);
+_photon_test(command_t *op, int *remaining, int id, int *src) {
+  return _poll(op, remaining, id, src, PHOTON_PROBE_EVQ);
 }
 
 static int

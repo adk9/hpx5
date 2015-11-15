@@ -18,7 +18,9 @@
 #include <stdlib.h>
 #include <hpx/builtins.h>
 #include <libhpx/debug.h>
+#include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
+#include <libhpx/network.h>
 #include <libhpx/parcel.h>
 #include "irecv_buffer.h"
 #include "parcel_utils.h"
@@ -237,6 +239,14 @@ static hpx_parcel_t *_finish(irecv_buffer_t *irecvs, int i, void *status) {
   irecvs->xport->finish(status, &src, &n);
 
   hpx_parcel_t *p = irecvs->records[i].parcel;
+  if (here->config->gas == HPX_GAS_AGAS) {
+    int to = gas_owner_of(here->gas, p->target);
+    if (to != here->rank) {
+      network_send(here->network, p);
+      return NULL;
+    }
+  }
+
   p->src = src;
   p->size = isir_bytes_to_payload_size(n);
   log_net("finished a recv for a %u-byte payload\n", p->size);
@@ -306,7 +316,9 @@ hpx_parcel_t *irecv_buffer_progress(irecv_buffer_t *buffer) {
     int j = out[i];
     void *status = _status_at(buffer, i);
     hpx_parcel_t *p = _finish(buffer, j, status);
-    parcel_stack_push(&completed, p);
+    if (p) {
+      parcel_stack_push(&completed, p);
+    }
   }
 
   return completed;

@@ -43,6 +43,7 @@ typedef struct {
 static void _reset(_future_t *f) {
   dbg_assert_str(cvar_empty(&f->full),
                  "Reset on a future that has waiting threads.\n");
+  log_lco("resetting future %p\n", (void*)f);
   lco_reset_triggered(&f->lco);
   cvar_reset(&f->full);
 }
@@ -80,9 +81,15 @@ static void _future_fini(lco_t *lco) {
 }
 
 /// Copies @p from into the appropriate location.
-static void _future_set(lco_t *lco, int size, const void *from) {
+static int _future_set(lco_t *lco, int size, const void *from) {
+  DEBUG_IF (size && !lco_get_user(lco)) {
+    dbg_error("setting 0-sized future with %d bytes\n", size);
+  }
+
+  int set = 0;
   lco_lock(lco);
   _future_t *f = (_future_t *)lco;
+  log_lco("setting future %p\n", (void*)f);
   // futures are write-once
   if (!_trigger(f)) {
     dbg_error("cannot set an already set future\n");
@@ -94,13 +101,10 @@ static void _future_set(lco_t *lco, int size, const void *from) {
   }
 
   scheduler_signal_all(&f->full);
-
+  set = 1;
  unlock:
   lco_unlock(lco);
-}
-
-void lco_future_set(lco_t *lco, int size, const void *from) {
-  _future_set(lco, size, from);
+  return set;
 }
 
 static void _future_error(lco_t *lco, hpx_status_t code) {
@@ -149,6 +153,10 @@ static hpx_status_t _future_attach(lco_t *lco, hpx_parcel_t *p) {
 
 /// Copies the appropriate value into @p out, waiting if the lco isn't set yet.
 static hpx_status_t _future_get(lco_t *lco, int size, void *out, int reset) {
+  DEBUG_IF (size && !lco_get_user(lco)) {
+    dbg_error("getting %d bytes from a 0-sized future\n", size);
+  }
+
   lco_lock(lco);
 
   _future_t *f = (_future_t *)lco;
@@ -223,9 +231,13 @@ static const lco_class_t _future_vtable = {
 
 /// initialize the future
 static int _future_init_handler(_future_t *f, int size) {
+  log_lco("initializing future %p\n", (void*)f);
   lco_init(&f->lco, &_future_vtable);
   cvar_reset(&f->full);
   if (size) {
+    if (DEBUG) {
+      lco_set_user(&f->lco);
+    }
     memset(&f->value, 0, size);
   }
   return HPX_SUCCESS;
@@ -248,7 +260,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_init,
 
 hpx_addr_t hpx_lco_future_new(int size) {
   _future_t *future = NULL;
-  hpx_addr_t gva = hpx_gas_alloc_local(sizeof(*future) + size, 0);
+  hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*future) + size, 0);
   LCO_LOG_NEW(gva);
 
   if (!hpx_gas_try_pin(gva, (void**)&future)) {
@@ -313,8 +325,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
 hpx_addr_t hpx_lco_future_local_array_new(int n, int size) {
   uint32_t lco_bytes = sizeof(_future_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
-  uint32_t  block_bytes = n * lco_bytes;
-  hpx_addr_t base = hpx_gas_alloc_local(block_bytes, 0);
+  hpx_addr_t base = hpx_gas_alloc_local(n, lco_bytes, 0);
 
   // for each block, initialize the future.
   int e = hpx_call_sync(base, _block_local_init, NULL, 0, &n, &size);

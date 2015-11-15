@@ -24,7 +24,7 @@ struct hpx_parcel;
 /// Register an HPX action of a given @p type. This is similar to the
 /// hpx_register_action routine, except that it gives us the chance to "tag"
 /// LIBHPX actions in their own way. This can be useful for instrumentation or
-/// optimization later.
+/// optimization later. This must be called before hpx_init().
 ///
 /// @param  type The type of the action to be registered.
 /// @param  attr The attribute of the action (PINNED, PACKED, ...).
@@ -56,6 +56,14 @@ hpx_action_handler_t action_table_get_handler(const struct action_table *,
                                               hpx_action_t)
   HPX_NON_NULL(1);
 
+/// Get the FFI type information associated with an action.
+ffi_cif *action_table_get_cif(const struct action_table *, hpx_action_t)
+  HPX_NON_NULL(1);
+
+/// Get the environment associated with the action.
+void *action_table_get_env(const struct action_table *, hpx_action_t)
+  HPX_NON_NULL(1);
+
 /// Report the number of actions registerd in the table
 int action_table_size(const struct action_table *table);
 
@@ -63,12 +71,8 @@ int action_table_size(const struct action_table *table);
 int action_execute(struct hpx_parcel *)
   HPX_NON_NULL(1);
 
-/// Get the FFI type information associated with an action.
-ffi_cif *action_table_get_cif(const struct action_table *, hpx_action_t)
-  HPX_NON_NULL(1);
-
 /// Serialize the vargs into the parcel.
-hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *vargs);
+hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int nargs, va_list *vargs);
 
 /// Returns a parcel that encodes the target address, an action and
 /// its argument, and the continuation. The parcel is ready to be sent
@@ -96,6 +100,10 @@ bool action_is_pinned(const struct action_table *, hpx_action_t)
 bool action_is_marshalled(const struct action_table *, hpx_action_t)
   HPX_NON_NULL(1);
 
+/// Is the action a vectored action?
+bool action_is_vectored(const struct action_table *, hpx_action_t)
+  HPX_NON_NULL(1);
+
 /// Is the action internal?
 bool action_is_internal(const struct action_table *, hpx_action_t)
   HPX_NON_NULL(1);
@@ -114,6 +122,10 @@ bool action_is_interrupt(const struct action_table *, hpx_action_t)
 
 /// Is the action a function?
 bool action_is_function(const struct action_table *, hpx_action_t)
+  HPX_NON_NULL(1);
+
+/// Is the action an OpenCL kernel?
+bool action_is_opencl(const struct action_table *, hpx_action_t)
   HPX_NON_NULL(1);
 
 /// Build an action table.

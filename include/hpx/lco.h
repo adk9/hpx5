@@ -58,12 +58,14 @@ typedef bool (*hpx_predicate_t)(void *i, size_t bytes);
 ///
 /// @param   lco the address of the LCO to delete
 /// @param rsync an LCO to signal remote completion
-void hpx_lco_delete(hpx_addr_t lco, hpx_addr_t rsync);
+void hpx_lco_delete(hpx_addr_t lco, hpx_addr_t rsync)
+  HPX_PUBLIC;
 
 /// Delete an LCO synchronously.
 ///
 /// @param   lco the address of the LCO to delete
-void hpx_lco_delete_sync(hpx_addr_t lco);
+void hpx_lco_delete_sync(hpx_addr_t lco)
+  HPX_PUBLIC;
 
 /// Delete a local array of LCOs.
 ///
@@ -78,7 +80,12 @@ void hpx_lco_delete_sync(hpx_addr_t lco);
 ///
 /// @returns HPX_SUCCESS, or an error if the operation failed (errors in the
 ///          individual delete operations are reported through rsync).
-int hpx_lco_delete_all(int n, hpx_addr_t *lcos, hpx_addr_t rsync);
+int hpx_lco_delete_all(int n, hpx_addr_t *lcos, hpx_addr_t rsync)
+  HPX_PUBLIC;
+
+/// An action-based interface to the LCO delete operation.
+/// The delete action is a user-packed action that takes a NULL buffer.
+HPX_PUBLIC extern HPX_ACTION_DECL(hpx_lco_delete_action);
 
 /// Propagate an error to an LCO.
 ///
@@ -93,8 +100,10 @@ int hpx_lco_delete_all(int n, hpx_addr_t *lcos, hpx_addr_t rsync);
 /// @param   lco the LCO's global address
 /// @param  code a user-defined error code
 /// @param rsync an LCO to signal remote completion
-void hpx_lco_error(hpx_addr_t lco, hpx_status_t code, hpx_addr_t rsync);
-void hpx_lco_error_sync(hpx_addr_t lco, hpx_status_t code);
+void hpx_lco_error(hpx_addr_t lco, hpx_status_t code, hpx_addr_t rsync)
+  HPX_PUBLIC;
+void hpx_lco_error_sync(hpx_addr_t lco, hpx_status_t code)
+  HPX_PUBLIC;
 
 /// Reset an LCO.
 ///
@@ -109,18 +118,14 @@ void hpx_lco_error_sync(hpx_addr_t lco, hpx_status_t code);
 /// @param  future the global address of the future to reset.
 /// @param    sync the address of an LCO to set when the future is reset;
 ///                may be HPX_NULL
-void hpx_lco_reset(hpx_addr_t future, hpx_addr_t sync);
-void hpx_lco_reset_sync(hpx_addr_t future);
+void hpx_lco_reset(hpx_addr_t future, hpx_addr_t sync)
+  HPX_PUBLIC;
+void hpx_lco_reset_sync(hpx_addr_t future)
+  HPX_PUBLIC;
 
-/// An action-based interface to the interface;
-/// The set action is a user-packed action that takes a buffer.
-extern HPX_ACTION_DECL(hpx_lco_set_action);
-
-/// The delete action us a user-packed action that takes a NULL buffer.
-extern HPX_ACTION_DECL(hpx_lco_delete_action);
-
+/// An action-based interface to the LCO reset operation.
 /// The reset action is a user-packed action that takes a NULL buffer.
-extern HPX_ACTION_DECL(hpx_lco_reset_action);
+HPX_PUBLIC extern HPX_ACTION_DECL(hpx_lco_reset_action);
 
 /// Set an LCO, optionally with data.
 ///
@@ -133,8 +138,9 @@ extern HPX_ACTION_DECL(hpx_lco_reset_action);
 ///                local completion indicates that the @p value may be freed
 ///                or reused.
 /// @param rsync an LCO to signal remote completion (HPX_NULL == don't wait)
-void hpx_lco_set(hpx_addr_t lco, int size, const void *value, hpx_addr_t lsync,
-                 hpx_addr_t rsync);
+void hpx_lco_set(hpx_addr_t lco, size_t size, const void *value, hpx_addr_t lsync,
+                 hpx_addr_t rsync)
+  HPX_PUBLIC;
 
 /// Set an LCO, optionally with data.
 ///
@@ -146,8 +152,9 @@ void hpx_lco_set(hpx_addr_t lco, int size, const void *value, hpx_addr_t lsync,
 /// @param         size The size of the data.
 /// @param        value The address of the value to set.
 /// @param        rsync an LCO to wait for completion (HPX_NULL == don't wait)
-void hpx_lco_set_lsync(hpx_addr_t lco, int size, const void *value,
-                       hpx_addr_t rsync);
+void hpx_lco_set_lsync(hpx_addr_t lco, size_t size, const void *value,
+                       hpx_addr_t rsync)
+  HPX_PUBLIC;
 
 /// Set an LCO, optionally with data.
 ///
@@ -157,7 +164,34 @@ void hpx_lco_set_lsync(hpx_addr_t lco, int size, const void *value,
 /// @param          lco The LCO to set, can be HPX_NULL.
 /// @param         size The size of the data.
 /// @param        value The address of the value to set.
-void hpx_lco_set_rsync(hpx_addr_t lco, int size, const void *value);
+///
+/// @returns            The value from lco set. This value is LCO-specific, but
+///                     is meant to be 1 if the set caused the LCO to "trigger."
+int hpx_lco_set_rsync(hpx_addr_t lco, size_t size, const void *value)
+  HPX_PUBLIC;
+
+
+/// Set an LCO, optionally with data.
+///
+/// If @p LCO is HPX_NULL then this is equivalent to a no-op.
+///
+/// @param   lco The LCO to set, can be HPX_NULL.
+/// @param  size The size of the data.
+/// @param value The address of the value to set.
+/// @param lsync An LCO to signal local completion (HPX_NULL == don't wait)
+///                local completion indicates that the @p value may be freed
+///                or reused.
+/// @param raddr A continuation address for the set return value.
+/// @param   rop The continuation operation (should be marshalled).
+void hpx_lco_set_with_continuation(hpx_addr_t lco, size_t size, const void *value,
+                                   hpx_addr_t lsync,
+                                   hpx_addr_t raddr, hpx_action_t rop)
+  HPX_PUBLIC;
+
+
+/// An action-based interface to the LCO set operation.
+/// The set action is a user-packed action that takes a buffer.
+HPX_PUBLIC extern HPX_ACTION_DECL(hpx_lco_set_action);
 
 /// Perform a wait operation.
 ///
@@ -166,10 +200,15 @@ void hpx_lco_set_rsync(hpx_addr_t lco, int size, const void *value);
 ///
 /// @param lco the LCO we're processing
 /// @returns   HPX_SUCCESS or the code passed to hpx_lco_error()
-hpx_status_t hpx_lco_wait(hpx_addr_t lco);
+hpx_status_t hpx_lco_wait(hpx_addr_t lco)
+  HPX_PUBLIC;
 
 /// Performs a compound atomic wait-and-reset operation.
-hpx_status_t hpx_lco_wait_reset(hpx_addr_t lco);
+///
+/// @param lco the LCO we're processing
+/// @returns   HPX_SUCCESS or the code passed to hpx_lco_error()
+hpx_status_t hpx_lco_wait_reset(hpx_addr_t lco)
+  HPX_PUBLIC;
 
 /// Perform a get operation.
 ///
@@ -184,7 +223,8 @@ hpx_status_t hpx_lco_wait_reset(hpx_addr_t lco);
 /// @param     size the size of the data
 /// @param[out] out the output location (may be null)
 /// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
-hpx_status_t hpx_lco_get(hpx_addr_t lco, int size, void *value);
+hpx_status_t hpx_lco_get(hpx_addr_t lco, size_t size, void *value)
+  HPX_PUBLIC;
 
 /// Perform a get operation.
 ///
@@ -200,7 +240,8 @@ hpx_status_t hpx_lco_get(hpx_addr_t lco, int size, void *value);
 /// @param     size the size of the data
 /// @param[out] out the output location (may be null)
 /// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
-hpx_status_t hpx_lco_get_reset(hpx_addr_t lco, int size, void *value);
+hpx_status_t hpx_lco_get_reset(hpx_addr_t lco, size_t size, void *value)
+  HPX_PUBLIC;
 
 /// Perform a "get" operation on an LCO but instead of copying the LCO
 /// buffer out, get a reference to the LCO's buffer.
@@ -212,14 +253,16 @@ hpx_status_t hpx_lco_get_reset(hpx_addr_t lco, int size, void *value);
 /// @param     size the size of the LCO buffer
 /// @param[out] ref pointer to hold the reference to an LCO's buffer
 /// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
-hpx_status_t hpx_lco_getref(hpx_addr_t lco, int size, void **ref);
+hpx_status_t hpx_lco_getref(hpx_addr_t lco, size_t size, void **ref)
+  HPX_PUBLIC;
 
 /// Release the reference to an LCO's buffer.
 ///
 /// @param      lco the LCO we're processing
 /// @param[out] ref the reference to an LCO's buffer
 /// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
-void hpx_lco_release(hpx_addr_t lco, void *ref);
+void hpx_lco_release(hpx_addr_t lco, void *ref)
+  HPX_PUBLIC;
 
 /// Wait for all of the LCOs to be set.
 ///
@@ -237,7 +280,8 @@ void hpx_lco_release(hpx_addr_t lco, void *ref);
 /// @returns             the number of entries in @p statuses that have
 ///                      non-HPX_SUCCESS values, will be set irrespective of if
 ///                      @p statuses is NULL
-int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]);
+int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[])
+  HPX_PUBLIC;
 
 /// Get values for all of the LCOs.
 ///
@@ -258,15 +302,17 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]);
 /// @returns The number of entries in @p statuses that have non-HPX_SUCCESS
 ///                        values, will be set irrespective of if @p statuses is
 ///                        NULL.
-int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
-                     hpx_status_t statuses[]);
+int hpx_lco_get_all(int n, hpx_addr_t lcos[], size_t sizes[], void *values[],
+                    hpx_status_t statuses[])
+  HPX_PUBLIC;
 
 /// Semaphores are builtin LCOs that represent resource usage.
 ///
 /// @param init initial value semaphore will be created with
 ///
 /// @returns The global address of the new semaphore.
-hpx_addr_t hpx_lco_sema_new(unsigned init);
+hpx_addr_t hpx_lco_sema_new(unsigned init)
+  HPX_PUBLIC;
 
 /// Standard semaphore V (signal) operation.
 ///
@@ -279,7 +325,8 @@ hpx_addr_t hpx_lco_sema_new(unsigned init);
 ///
 /// @param        sema The global address of a semaphore.
 /// @param       rsync An LCO to set so the caller can make this synchronous.
-void hpx_lco_sema_v(hpx_addr_t sema, hpx_addr_t rsync);
+void hpx_lco_sema_v(hpx_addr_t sema, hpx_addr_t rsync)
+  HPX_PUBLIC;
 
 /// Standard semaphore V (signal) operation.
 ///
@@ -287,7 +334,8 @@ void hpx_lco_sema_v(hpx_addr_t sema, hpx_addr_t rsync);
 /// transitions from 0 to 1.
 ///
 /// @param        sema The global address of a semaphore.
-void hpx_lco_sema_v_sync(hpx_addr_t sema);
+void hpx_lco_sema_v_sync(hpx_addr_t sema)
+  HPX_PUBLIC;
 
 /// Standard semaphore P (wait) operation.
 ///
@@ -297,7 +345,8 @@ void hpx_lco_sema_v_sync(hpx_addr_t sema);
 ///
 /// @returns HPX_SUCCESS, or an error code if the semaphore is in an error
 ///          condition
-hpx_status_t hpx_lco_sema_p(hpx_addr_t sema);
+hpx_status_t hpx_lco_sema_p(hpx_addr_t sema)
+  HPX_PUBLIC;
 
 /// An and LCO represents an AND gate.
 /// @{
@@ -307,26 +356,29 @@ hpx_status_t hpx_lco_sema_p(hpx_addr_t sema);
 /// @param inputs the number of inputs to the and (must be >= 0)
 ///
 /// @returns The global address of the new and gate.
-hpx_addr_t hpx_lco_and_new(int64_t inputs);
+hpx_addr_t hpx_lco_and_new(int64_t inputs)
+  HPX_PUBLIC;
 
 /// Join an "and" LCO, triggering it (i.e. setting it) if appropriate.
 ///
 /// If this set is the last one the "and" LCO is waiting on, the "and" LCO
 /// will be set.
 ///
-/// @param  and the global address of the "and" LCO to set.
+/// @param  lco the global address of the "and" LCO to set.
 /// @param sync the address of an LCO to set when the "and" LCO is set;
 ///             may be HPX_NULL
-void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t sync);
+void hpx_lco_and_set(hpx_addr_t lco, hpx_addr_t sync)
+  HPX_PUBLIC;
 
 
 /// Set an "and" LCO @p num times, triggering it if appropriate.
 ///
-/// @param  and the global address of the "and" LCO to set.
+/// @param  lco the global address of the "and" LCO to set.
 /// @param  num number of times to set the "and" LCO.
 /// @param sync the address of an LCO to set when the "and" LCO is set;
 ///             may be HPX_NULL
-void hpx_lco_and_set_num(hpx_addr_t and, int num, hpx_addr_t sync);
+void hpx_lco_and_set_num(hpx_addr_t lco, int num, hpx_addr_t sync)
+  HPX_PUBLIC;
 /// @}
 
 /// Create a future.
@@ -337,8 +389,9 @@ void hpx_lco_and_set_num(hpx_addr_t and, int num, hpx_addr_t sync);
 /// addresses are used as the targets of parcels.
 ///
 /// @param size the size in bytes of the future's value (may be 0)
-/// @returns    the glboal address of the newly allocated future
-hpx_addr_t hpx_lco_future_new(int size);
+/// @returns    the global address of the newly allocated future
+hpx_addr_t hpx_lco_future_new(int size)
+  HPX_PUBLIC;
 /// @}
 
 /// Allocate a global array of futures.
@@ -346,7 +399,8 @@ hpx_addr_t hpx_lco_future_new(int size);
 /// @param          n The (total) number of futures to allocate
 /// @param       size The size of each futures' value
 /// @param block_size The number of futures per block
-hpx_addr_t hpx_lco_future_array_new(int n, int size, int block_size);
+hpx_addr_t hpx_lco_future_array_new(int n, int size, int block_size)
+  HPX_PUBLIC;
 
 /// Get an address of a future in a future array
 ///
@@ -356,7 +410,8 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int block_size);
 /// @param     bsize The number of futures in each block.
 ///
 /// @returns The address of the ith future in the array.
-hpx_addr_t hpx_lco_future_array_at(hpx_addr_t base, int i, int size, int bsize);
+hpx_addr_t hpx_lco_future_array_at(hpx_addr_t base, int i, int size, int bsize)
+  HPX_PUBLIC;
 
 /// Get an address of a lco in a LCO array
 ///
@@ -366,7 +421,8 @@ hpx_addr_t hpx_lco_future_array_at(hpx_addr_t base, int i, int size, int bsize);
 ///                  and lco.
 ///
 /// @returns The address of the ith lco in the array.
-hpx_addr_t hpx_lco_array_at(hpx_addr_t base, int i, int size);
+hpx_addr_t hpx_lco_array_at(hpx_addr_t base, int i, int size)
+  HPX_PUBLIC;
 
 
 /// Allocate an array of future LCO local to the calling locality.
@@ -374,14 +430,16 @@ hpx_addr_t hpx_lco_array_at(hpx_addr_t base, int i, int size);
 /// @param       size The size of each future's value
 ///
 /// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_future_local_array_new(int n, int size);
+hpx_addr_t hpx_lco_future_local_array_new(int n, int size)
+  HPX_PUBLIC;
 
 /// Allocate an array of and LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate
 /// @param     inputs number of inputs to the and (must be >= 0)
 ///
 /// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_and_local_array_new(int n, int inputs);
+hpx_addr_t hpx_lco_and_local_array_new(int n, int inputs)
+  HPX_PUBLIC;
 
 /// Allocate an array of reduce LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate
@@ -395,7 +453,8 @@ hpx_addr_t hpx_lco_and_local_array_new(int n, int inputs);
 /// @returns the global address of the allocated array lco.
 hpx_addr_t hpx_lco_reduce_local_array_new(int n, int inputs, size_t size,
                                           hpx_action_t id,
-                                          hpx_action_t op);
+                                          hpx_action_t op)
+  HPX_PUBLIC;
 
 
 /// Allocate an array of allgather LCO local to the calling locality.
@@ -404,7 +463,8 @@ hpx_addr_t hpx_lco_reduce_local_array_new(int n, int inputs, size_t size,
 /// @param       size The size of the value for allgather LCO
 ///
 /// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_allgather_local_array_new(int n, size_t inputs, size_t size);
+hpx_addr_t hpx_lco_allgather_local_array_new(int n, size_t inputs, size_t size)
+  HPX_PUBLIC;
 
 /// Allocate an array of allreduce LCO local to the calling locality.
 /// @param            n The (total) number of lcos to allocate
@@ -420,7 +480,8 @@ hpx_addr_t hpx_lco_allgather_local_array_new(int n, size_t inputs, size_t size);
 hpx_addr_t hpx_lco_allreduce_local_array_new(int n, size_t participants,
                                              size_t readers, size_t size,
                                              hpx_action_t id,
-                                             hpx_action_t op);
+                                             hpx_action_t op)
+  HPX_PUBLIC;
 
 /// Allocate an array of alltoall LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate
@@ -428,7 +489,8 @@ hpx_addr_t hpx_lco_allreduce_local_array_new(int n, size_t participants,
 /// @param       size The size of the value that we're gathering
 ///
 /// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_alltoall_local_array_new(int n, size_t inputs, size_t size);
+hpx_addr_t hpx_lco_alltoall_local_array_new(int n, size_t inputs, size_t size)
+  HPX_PUBLIC;
 
 /// Allocate an array of user LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate
@@ -438,11 +500,15 @@ hpx_addr_t hpx_lco_alltoall_local_array_new(int n, size_t inputs, size_t size);
 /// @param         op The commutative-associative operation we're
 ///                   performing.
 /// @param  predicate Predicate to guard the LCO.
+/// @param       init Buffer to initialize the LCO with.
+/// @param  init_size The size of the initializer.
 ///
 /// @returns the global address of the allocated array lco.
 hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size,
                                         hpx_action_t id, hpx_action_t op,
-                                        hpx_action_t predicate);
+                                        hpx_action_t predicate, void *init,
+                                        size_t init_size)
+  HPX_PUBLIC;
 
 /// Allocate a new generation counter.
 ///
@@ -460,13 +526,15 @@ hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size,
 /// @param ninplace the typical number of active generations
 ///
 /// @returns The global address of the new generation count.
-hpx_addr_t hpx_lco_gencount_new(unsigned long ninplace);
+hpx_addr_t hpx_lco_gencount_new(unsigned long ninplace)
+  HPX_PUBLIC;
 
 /// Increment the generation counter.
 ///
 /// @param gencnt the counter to increment
 /// @param  rsync The global address of an LCO signal remote completion.
-void hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync);
+void hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync)
+  HPX_PUBLIC;
 
 /// Wait for the generation counter to reach a certain value.
 ///
@@ -484,7 +552,8 @@ void hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync);
 /// @param    gen The generation to wait for.
 ///
 /// @returns HPX_SUCCESS or an error code.
-hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen);
+hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen)
+  HPX_PUBLIC;
 
 /// Allocate a new reduction LCO.
 ///
@@ -497,7 +566,8 @@ hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen);
 ///                     initialize the data in every epoch.
 /// @param op           The commutative-associative operation we're performing.
 hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_action_t id,
-                              hpx_action_t op);
+                              hpx_action_t op)
+  HPX_PUBLIC;
 
 /// Allocate a new all-reduction LCO.
 ///
@@ -520,7 +590,8 @@ hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_action_t id,
 ///
 /// @returns            The newly allocated LCO, or HPX_NULL on error.
 hpx_addr_t hpx_lco_allreduce_new(size_t participants, size_t readers, size_t size,
-                                 hpx_action_t id, hpx_action_t op);
+                                 hpx_action_t id, hpx_action_t op)
+  HPX_PUBLIC;
 
 /// Join an all-reduction LCO.
 ///
@@ -541,7 +612,8 @@ hpx_addr_t hpx_lco_allreduce_new(size_t participants, size_t readers, size_t siz
 /// @return             The status of the LCO.
 hpx_status_t hpx_lco_allreduce_join(hpx_addr_t allreduce, int id, size_t bytes,
                                     const void *value, hpx_action_t cont,
-                                    hpx_addr_t at);
+                                    hpx_addr_t at)
+  HPX_PUBLIC;
 
 /// Join an all-reduction LCO.
 ///
@@ -562,7 +634,8 @@ hpx_status_t hpx_lco_allreduce_join(hpx_addr_t allreduce, int id, size_t bytes,
 /// @return             The status of the LCO.
 hpx_status_t hpx_lco_allreduce_join_async(hpx_addr_t allreduce, int id,
                                           size_t bytes, const void *value,
-                                          void *out, hpx_addr_t done);
+                                          void *out, hpx_addr_t done)
+  HPX_PUBLIC;
 
 /// Join an all-reduction LCO.
 ///
@@ -579,7 +652,8 @@ hpx_status_t hpx_lco_allreduce_join_async(hpx_addr_t allreduce, int id,
 /// @return             The status of the LCO.
 hpx_status_t hpx_lco_allreduce_join_sync(hpx_addr_t allreduce, int id,
                                          size_t bytes, const void *value,
-                                         void *out);
+                                         void *out)
+  HPX_PUBLIC;
 
 /// Set an allgather.
 ///
@@ -594,7 +668,8 @@ hpx_status_t hpx_lco_allreduce_join_sync(hpx_addr_t allreduce, int id,
 /// @param rsync     An LCO to test for remote completion.
 hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id,
                                      int size, const void *value,
-                                     hpx_addr_t lsync, hpx_addr_t rsync);
+                                     hpx_addr_t lsync, hpx_addr_t rsync)
+  HPX_PUBLIC;
 
 /// Allocate an allgather.
 ///
@@ -602,7 +677,8 @@ hpx_status_t hpx_lco_allgather_setid(hpx_addr_t allgather, unsigned id,
 ///
 /// @param inputs The number of participants in the allgather.
 /// @param size   The size of the value type that we're gathering.
-hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size);
+hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size)
+  HPX_PUBLIC;
 
 /// Set an alltoall.
 ///
@@ -617,7 +693,8 @@ hpx_addr_t hpx_lco_allgather_new(size_t inputs, size_t size);
 /// @param rsync       An LCO to test for remote completion.
 hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id,
                                     int size, const void *value,
-                                    hpx_addr_t lsync, hpx_addr_t rsync);
+                                    hpx_addr_t lsync, hpx_addr_t rsync)
+  HPX_PUBLIC;
 
 /// Get the ID for alltoall. This is global getid for the user to use.
 ///
@@ -625,9 +702,9 @@ hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id,
 /// @param   id          The ID of our rank
 /// @param   size        The size of the data being gathered
 /// @param   value       Address of the value buffer
-hpx_status_t
-hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
-                       void *value);
+hpx_status_t hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
+                                    void *value)
+  HPX_PUBLIC;
 
 /// Allocate an alltoall.
 ///
@@ -635,17 +712,22 @@ hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
 ///
 /// @param inputs The number of participants in the alltoall.
 /// @param size   The size of the value type that we're gathering.
-hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size);
+hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size)
+  HPX_PUBLIC;
 
 /// Allocate a user-defined LCO.
 ///
 /// @param size         The size of the LCO buffer.
-/// @param op           The commutative-associative operation we're performing.
 /// @param id           An initialization function for the data, this is used to
 ///                     initialize the data in every epoch.
+/// @param op           The commutative-associative operation we're performing.
 /// @param predicate    Predicate to guard the LCO.
+/// @param init         Buffer to initialize the LCO with.
+/// @param init_size    The size of the initializer.
 hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
-                            hpx_action_t predicate);
+                            hpx_action_t predicate, void *init,
+                            size_t init_size)
+  HPX_PUBLIC;
 /// @}
 
 /// @}

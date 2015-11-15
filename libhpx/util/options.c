@@ -305,7 +305,7 @@ config_t *config_new(int *argc, char ***argv) {
   *cfg = _default_cfg;
 
   if (!argc || !argv) {
-    log("hpx_init(NULL, NULL) called, using default configuration\n");
+    log_dflt("hpx_init(NULL, NULL) called, using default configuration\n");
     return cfg;
   }
 
@@ -364,10 +364,9 @@ config_print(config_t *cfg, FILE *f) {
   fprintf(f, "  network\t\t\"%s\"\n", HPX_NETWORK_TO_STRING[cfg->network]);
 
   fprintf(f, "\nScheduler\n");
-  fprintf(f, "  cores\t\t\t%d\n", cfg->cores);
   fprintf(f, "  threads\t\t%d\n", cfg->threads);
   fprintf(f, "  stacksize\t\t%u\n", cfg->stacksize);
-  fprintf(f, "  wfthreshold\t\t%u\n", cfg->wfthreshold);
+  fprintf(f, "  wfthreshold\t\t%u\n", cfg->sched_wfthreshold);
   fprintf(f, "  stackcachelimit\t%u\n", cfg->sched_stackcachelimit);
 
   fprintf(f, "\nLogging\n");

@@ -105,7 +105,7 @@ static void _and_reset(lco_t *lco) {
 
 /// Fast set decrements the count, and sets triggered and signals when it gets
 /// to 0.
-static void _and_set(lco_t *lco, int size, const void *from) {
+static int _and_set(lco_t *lco, int size, const void *from) {
   dbg_assert(lco);
   dbg_assert(!size || from);
 
@@ -116,7 +116,7 @@ static void _and_set(lco_t *lco, int size, const void *from) {
   log_lco("%p reduced count to %" PRIdPTR " lco %p\n", (void*)self->current, count - num, (void*)lco);
 
   if (count > num) {
-    return;
+    return 0;
   }
 
   if (count == num) {
@@ -126,11 +126,12 @@ static void _and_set(lco_t *lco, int size, const void *from) {
     lco_set_triggered(lco);
     scheduler_signal_all(&and->barrier);
     lco_unlock(lco);
-    return;
+    return 1;
   }
 
   dbg_assert_str(count > num,
                  "too many threads joined (%"PRIdPTR").\n", count - num);
+  return 0;
 }
 
 static size_t _and_size(lco_t *lco) {
@@ -217,7 +218,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _and_init, _and_init_handler,
 /// Allocate an and LCO. This is synchronous.
 hpx_addr_t hpx_lco_and_new(int64_t limit) {
   _and_t *and = NULL;
-  hpx_addr_t gva = hpx_gas_alloc_local(sizeof(*and), 0);
+  hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*and), 0);
   LCO_LOG_NEW(gva);
 
   if (!hpx_gas_try_pin(gva, (void**)&and)) {
@@ -257,8 +258,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
 hpx_addr_t hpx_lco_and_local_array_new(int n, int arg) {
   uint32_t lco_bytes = sizeof(_and_t);
   dbg_assert(lco_bytes < (UINT64_C(1) << GPA_MAX_LG_BSIZE) / n);
-  uint32_t  block_bytes = n * lco_bytes;
-  hpx_addr_t base = hpx_gas_alloc_local(block_bytes, 0);
+  hpx_addr_t base = hpx_gas_alloc_local(n, lco_bytes, 0);
   int e = hpx_call_sync(base, _block_local_init, NULL, 0, &n, &arg);
   dbg_check(e, "call of _block_init_action failed\n");
   return base;

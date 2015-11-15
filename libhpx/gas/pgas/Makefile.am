@@ -1,6 +1,7 @@
 # The PGAS library
 noinst_LTLIBRARIES  = libpgas.la
 
+noinst_HEADERS = cyclic.h heap.h global.h pgas.h
 libpgas_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
 libpgas_la_CFLAGS   = $(LIBHPX_CFLAGS)
 libpgas_la_SOURCES  = actions.c \

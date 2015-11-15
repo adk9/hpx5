@@ -68,7 +68,7 @@ static int _new_future_at_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, _new_future_at, _new_future_at_handler);
 
 static int _test_set_handler(hpx_addr_t lco) {
-  hpx_addr_t sync = hpx_lco_future_new(0);
+  hpx_addr_t sync = hpx_lco_future_new(4);
 
   printf("\ttesting async ... ");
   {
@@ -108,7 +108,7 @@ static int _test_set_handler(hpx_addr_t lco) {
 static HPX_ACTION(HPX_DEFAULT, 0, _test_set, _test_set_handler, HPX_ADDR);
 
 static int _test_set_lsync_handler(hpx_addr_t lco) {
-  hpx_addr_t rsync = hpx_lco_future_new(0);
+  hpx_addr_t rsync = hpx_lco_future_new(4);
 
   printf("\ttesting ... ");
   {
@@ -311,7 +311,7 @@ static int _getAll_handler(uint32_t *args, size_t size) {
     &ssn[1]
   };
 
-  int sizes[] = {
+  size_t sizes[] = {
     sizeof(uint32_t),
     sizeof(uint32_t)
   };

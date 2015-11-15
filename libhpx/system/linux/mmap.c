@@ -55,7 +55,7 @@ static void HPX_DESTRUCTOR _system_fini(void) {
 static uintptr_t _total = 0;
 #endif
 
-static uintptr_t _update_total(intptr_t n) {
+static uintptr_t HPX_USED _update_total(intptr_t n) {
 #ifndef ENABLE_DEBUG
   return 0;
 #else
@@ -139,7 +139,7 @@ void *system_mmap(void *UNUSED, void *addr, size_t n, size_t align) {
   static const  int prot = PROT_READ | PROT_WRITE;
   static const int flags = MAP_ANONYMOUS | MAP_PRIVATE;
   void *p = _mmap_lucky(addr, n, prot, flags, -1, 0, align);
-  log_mem("mmap %lu bytes at %p for a total of %lu\n", n, p, _update_total(n));
+  log_mem("mmap %zu bytes at %p for a total of %zu\n", n, p, _update_total(n));
   return p;
 }
 
@@ -167,7 +167,7 @@ void *system_mmap_huge_pages(void *UNUSED, void *addr, size_t n, size_t align) {
   else {
     p = system_mmap(UNUSED, addr, n, align);
   }
-  log_mem("mmap %lu bytes at %p from huge pages for a total of %lu\n", n, p,
+  log_mem("mmap %zu bytes at %p from huge pages for a total of %zu\n", n, p,
           _update_total(n));
   return p;
 #endif
@@ -176,10 +176,10 @@ void *system_mmap_huge_pages(void *UNUSED, void *addr, size_t n, size_t align) {
 void system_munmap(void *UNUSED, void *addr, size_t size) {
   int e = munmap(addr, size);
   if (e < 0) {
-    dbg_error("munmap failed: %s.  addr is %"PRIuPTR", and size is %zu\n",
-          strerror(errno), (uintptr_t)addr, size);
+    dbg_error("munmap failed: %s.  addr is %p, and size is %zu\n",
+          strerror(errno), addr, size);
   }
-  log_mem("munmapped %lu bytes for a total of %lu\n", size,
+  log_mem("munmapped %zu bytes for a total of %zu\n", size,
           _update_total(-size));
 }
 

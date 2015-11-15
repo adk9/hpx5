@@ -46,7 +46,6 @@
 /examples/seqspawn
 /examples/parspawn
 /examples/future
-/examples/agas_test
 /examples/memput
 /examples/memget
 /examples/guppie
@@ -55,6 +54,8 @@
 /examples/qsort
 /examples/call
 /examples/netbench
+/examples/cpi
+/examples/heat
 
 # /include/
 /include/stamp-h1
@@ -75,10 +76,7 @@ contrib/libffi-mic/
 contrib/libffi-mic/doc/libffi.info
 contrib/libffi-mic/fficonfig.py
 contrib/jemalloc/
-contrib/jemalloc_hpx/
 contrib/photon/
-contrib/jemalloc_build_global/
-contrib/jemalloc_build_registered/
 contrib/libcuckoo/
 
 # /libapex/
@@ -86,7 +84,6 @@ contrib/libcuckoo/
 
 # /libhpx/
 /libhpx/Makefile
-/libhpx/libhpx.export
 /libhpx/boot/Makefile
 /libhpx/gas/Makefile
 /libhpx/gas/agas/Makefile
@@ -96,6 +93,8 @@ contrib/libcuckoo/
 /libhpx/network/isir/Makefile
 /libhpx/network/pwc/Makefile
 /libhpx/memory/Makefile
+/libhpx/percolation/Makefile
+/libhpx/process/Makefile
 /libhpx/scheduler/Makefile
 /libhpx/scheduler/arch/Makefile
 /libhpx/system/Makefile
@@ -104,7 +103,6 @@ contrib/libcuckoo/
 /libhpx/transport/Makefile
 /libhpx/util/Makefile
 /libsync/Makefile
-/libsync/libsync.export
 /libsync/arch/Makefile
 
 # /tests/
@@ -112,21 +110,24 @@ contrib/libcuckoo/
 /tests/Makefile
 /tests/Makefile.in
 /tests/unit/Makefile
-tests/unit/apex_test
+tests/unit/apex
 tests/unit/allreduce
 tests/unit/call_when
+tests/unit/call_vectored
 tests/unit/gas_alloc
 tests/unit/parcel_send_through
 tests/unit/gas_global_alloc
-tests/unit/process
 tests/unit/lco_collectives
 tests/unit/lco_array
+tests/unit/lco_allreduce
 tests/unit/lco_futures
 tests/unit/lco_get_remote
-tests/unit/parcel_create
 tests/unit/lco_user
 tests/unit/gas_memget
+tests/unit/parcel_create
 tests/unit/parcel_send
+tests/unit/percolation
+tests/unit/process
 tests/unit/thread_continue
 tests/unit/gas_memput
 tests/unit/thread_yield
@@ -142,16 +143,22 @@ tests/unit/thread_gettlsid
 tests/unit/thread_set_affinity
 tests/unit/task
 tests/unit/lco_and
+tests/unit/lco_wait
 tests/unit/runtime
 tests/unit/libhpx_boot
 tests/unit/parcel_send_rendezvous
+tests/unit/gas_coll
+tests/unit/gas_move
+tests/unit/gas_alloc_dist
 /tests/perf/Makefile
 tests/perf/gas_alloc
 tests/perf/gas_addr_trans
 tests/perf/lco_sema
+tests/perf/lco_and
 tests/perf/lco_future
 tests/perf/collbench
 tests/perf/parbench
+tests/perf/sendrecv
 tests/perf/thread_switch
 tests/perf/mem_alloc
 

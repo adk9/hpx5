@@ -136,8 +136,8 @@ _agas_owner_of(const void *gas, hpx_addr_t addr) {
 }
 
 static int
-_locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align,
-                               uint64_t offset, void *lva, int zero) {
+_locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align, uint64_t offset,
+                               void *lva, uint32_t attr, int zero) {
   agas_t *agas = (agas_t*)here->gas;
   uint32_t bsize = 1u << align;
   if (here->rank != 0) {
@@ -163,19 +163,19 @@ _locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align,
   };
 
   for (int i = 0; i < blocks; i++) {
-    btt_insert(agas->btt, gva, here->rank, lva, blocks);
+    btt_insert(agas->btt, gva, here->rank, lva, blocks, attr);
     lva += bsize;
     gva.bits.offset += bsize;
   }
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _locality_alloc_cyclic,
-                     _locality_alloc_cyclic_handler, HPX_UINT64,
-                     HPX_UINT32, HPX_UINT64, HPX_POINTER, HPX_INT);
+                     _locality_alloc_cyclic_handler, HPX_UINT64, HPX_UINT32,
+                     HPX_UINT64, HPX_POINTER, HPX_UINT32, HPX_INT);
 
-hpx_addr_t _agas_alloc_cyclic_sync(size_t n, uint32_t bsize, int zero) {
+hpx_addr_t _agas_alloc_cyclic_sync(size_t n, uint32_t bsize, uint32_t attr,
+                                   int zero) {
   agas_t *agas = (agas_t*)here->gas;
-  dbg_assert(agas->cyclic_arena < UINT32_MAX);
   dbg_assert(here->rank == 0);
 
   // Figure out how many blocks per node we need.
@@ -193,61 +193,63 @@ hpx_addr_t _agas_alloc_cyclic_sync(size_t n, uint32_t bsize, int zero) {
   gva_t gva = agas_lva_to_gva(agas, lva, padded);
   gva.bits.cyclic = 1;
   uint64_t offset = gva.bits.offset;
-  int e = hpx_bcast_rsync(_locality_alloc_cyclic, &blocks, &align, &offset, &lva, &zero);
+  int e = hpx_bcast_rsync(_locality_alloc_cyclic, &blocks, &align, &offset,
+                          &lva, &attr, &zero);
   dbg_check(e, "failed to insert btt entries.\n");
 
   // and return the address
   return gva.addr;
 }
 
-hpx_addr_t agas_alloc_cyclic_sync(size_t n, uint32_t bsize) {
+hpx_addr_t agas_alloc_cyclic_sync(size_t n, uint32_t bsize, uint32_t attr) {
   dbg_assert(here->rank == 0);
-  return _agas_alloc_cyclic_sync(n, bsize, 0);
+  return _agas_alloc_cyclic_sync(n, bsize, attr, 0);
 }
 
-static int _alloc_cyclic_handler(size_t n, size_t bsize) {
-  hpx_addr_t addr = agas_alloc_cyclic_sync(n, bsize);
+static int _alloc_cyclic_handler(size_t n, size_t bsize, uint32_t attr) {
+  hpx_addr_t addr = agas_alloc_cyclic_sync(n, bsize, attr);
   HPX_THREAD_CONTINUE(addr);
 }
 LIBHPX_ACTION(HPX_DEFAULT, 0, agas_alloc_cyclic, _alloc_cyclic_handler,
-              HPX_SIZE_T, HPX_SIZE_T);
+              HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32);
 
 static hpx_addr_t
-_agas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
+_agas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary, uint32_t attr) {
   hpx_addr_t addr;
   if (here->rank == 0) {
-    addr = agas_alloc_cyclic_sync(n, bsize);
+    addr = agas_alloc_cyclic_sync(n, bsize, attr);
   }
   else {
     int e = hpx_call_sync(HPX_THERE(0), agas_alloc_cyclic, &addr, sizeof(addr),
-                          &n, &bsize);
+                          &n, &bsize, &attr);
     dbg_check(e, "Failed to call agas_alloc_cyclic_handler.\n");
   }
   dbg_assert_str(addr != HPX_NULL, "HPX_NULL is not a valid allocation\n");
   return addr;
 }
 
-hpx_addr_t agas_calloc_cyclic_sync(size_t n, uint32_t bsize) {
+hpx_addr_t agas_calloc_cyclic_sync(size_t n, uint32_t bsize, uint32_t attr) {
   assert(here->rank == 0);
-  return _agas_alloc_cyclic_sync(n, bsize, 1);
+  return _agas_alloc_cyclic_sync(n, bsize, attr, 1);
 }
 
-static int _calloc_cyclic_handler(size_t n, size_t bsize) {
-  hpx_addr_t addr = agas_calloc_cyclic_sync(n, bsize);
+static int _calloc_cyclic_handler(size_t n, size_t bsize, uint32_t attr) {
+  hpx_addr_t addr = agas_calloc_cyclic_sync(n, bsize, attr);
   HPX_THREAD_CONTINUE(addr);
 }
 LIBHPX_ACTION(HPX_DEFAULT, 0, agas_calloc_cyclic, _calloc_cyclic_handler,
-              HPX_SIZE_T, HPX_SIZE_T);
+              HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32);
 
 static hpx_addr_t
-_agas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
+_agas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
+                    uint32_t attr) {
   hpx_addr_t addr;
   if (here->rank == 0) {
-    addr = agas_calloc_cyclic_sync(n, bsize);
+    addr = agas_calloc_cyclic_sync(n, bsize, attr);
   }
   else {
     int e = hpx_call_sync(HPX_THERE(0), agas_calloc_cyclic, &addr, sizeof(addr),
-                          &n, &bsize);
+                          &n, &bsize, &attr);
     dbg_check(e, "Failed to call agas_calloc_cyclic_handler.\n");
   }
   dbg_assert_str(addr != HPX_NULL, "HPX_NULL is not a valid allocation\n");
@@ -279,6 +281,7 @@ static gas_t _agas_vtable = {
   .memput_lsync   = agas_memput_lsync,
   .memput_rsync   = agas_memput_rsync,
   .memcpy         = agas_memcpy,
+  .memcpy_sync    = agas_memcpy_sync,
   .owner_of       = _agas_owner_of
 };
 
@@ -310,7 +313,7 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   }
 
   gva_t there = { .addr = _agas_there(agas, here->rank) };
-  btt_insert(agas->btt, there, here->rank, here, 1);
+  btt_insert(agas->btt, there, here->rank, here, 1, HPX_GAS_ATTR_NONE);
   return &agas->vtable;
 }
 

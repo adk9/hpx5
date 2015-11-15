@@ -15,8 +15,10 @@
 # include "config.h"
 #endif
 
+#include <stdlib.h>
 #include <string.h>
 #include <libhpx/action.h>
+#include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/network.h>
@@ -25,8 +27,67 @@
 #include "btt.h"
 #include "../parcel/emulation.h"
 
+static int _insert_block_handler(int n, void *args[], size_t sizes[]) {
+  agas_t *agas = (agas_t*)here->gas;
+  void *block = args[0];
+  hpx_addr_t *src = args[1];
+  uint32_t *attr = args[2];
+
+  gva_t gva = { .addr = *src };
+  btt_insert(agas->btt, gva, here->rank, block, 1, *attr);
+  return HPX_SUCCESS;
+}
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_VECTORED, _insert_block,
+                     _insert_block_handler, HPX_INT, HPX_POINTER, HPX_POINTER);
+
+/// Invalidate the remote block mapping. This action blocks until it
+/// can safely invalide the block.
+static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int rank) {
+  agas_t *agas = (agas_t*)here->gas;
+  hpx_addr_t src = hpx_thread_current_target();
+  gva_t gva = { .addr = src };
+  size_t bsize = UINT64_C(1) << gva.bits.size;
+
+  void *block = NULL;
+  uint32_t attr;
+  int e = btt_try_move(agas->btt, gva, rank, &block, &attr);
+  if (e != HPX_SUCCESS) {
+    log_error("failed to invalidate remote mapping.\n");
+    return e;
+  }
+
+  void (*_cleanup)(void*) = NULL;
+  void *_env = NULL;
+
+  // since rank 0 maintains the cyclic global address space, we cannot
+  // free cyclic blocks on rank 0.
+  if (!(gva.bits.cyclic && here->rank == 0)) {
+    _cleanup = free;
+    _env = block;
+  }
+
+  hpx_call_cc(dst, _insert_block, _cleanup, _env,
+              &block, bsize, &src, sizeof(src), &attr, sizeof(attr));
+  return HPX_SUCCESS;
+}
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_invalidate_mapping,
+                     _agas_invalidate_mapping_handler, HPX_ADDR, HPX_INT);
+
+static int _agas_move_handler(hpx_addr_t src) {
+  int rank = here->rank;
+  hpx_addr_t dst = hpx_thread_current_target();
+  hpx_call_cc(src, _agas_invalidate_mapping, NULL, NULL, &dst, &rank);
+  return HPX_SUCCESS;
+}
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_move, _agas_move_handler, HPX_ADDR);
+
 void
 agas_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
+  libhpx_network_t net = here->config->network;
+  if (net != HPX_NETWORK_ISIR) {
+    hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
+  }
+  hpx_call(dst, _agas_move, sync, &src);
 }
 
 static int _agas_lco_set_handler(int src, uint64_t command) {
@@ -116,7 +177,7 @@ agas_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t n) {
     return HPX_SUCCESS;
   }
 
-  hpx_addr_t rsync = hpx_lco_future_new(0);
+  hpx_addr_t rsync = hpx_lco_future_new(4);
   int e = network_pwc(here->network, to, from, n, HPX_ACTION_NULL, HPX_NULL,
                       _agas_lco_set, rsync);
   dbg_check(e, "failed network pwc\n");
@@ -196,4 +257,27 @@ agas_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
   hpx_gas_unpin(from);
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
+}
+
+int
+agas_memcpy_sync(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size) {
+  int e = HPX_SUCCESS;
+  if (!size) {
+    return e;
+  }
+
+  hpx_addr_t sync = hpx_lco_future_new(0);
+  if (sync == HPX_NULL) {
+    log_error("could not allocate an LCO.\n");
+    return HPX_ENOMEM;
+  }
+
+  e = agas_memcpy(gas, to, from, size, sync);
+
+  if (HPX_SUCCESS != hpx_lco_wait(sync)) {
+    dbg_error("failed agas_memcpy_sync\n");
+  }
+
+  hpx_lco_delete(sync, HPX_NULL);
+  return e;
 }

@@ -57,7 +57,7 @@ static int _main_action(void *args, size_t n) {
 
   for (size_t size = 1; size <= MAX_BYTES; size*=2) {
     t = hpx_time_now();
-    local = hpx_gas_alloc_local(size, 0);
+    local = hpx_gas_alloc_local(1, size, 0);
     fprintf(stdout, "%-*zu%*g", 10,  size, FIELD_WIDTH, hpx_time_elapsed_ms(t));
 
     t = hpx_time_now();
@@ -85,6 +85,9 @@ static int _main_action(void *args, size_t n) {
 }
 
 int main(int argc, char *argv[]) {
+  // Register the main action
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return 1;
@@ -105,8 +108,6 @@ int main(int argc, char *argv[]) {
 
   fprintf(stdout, "Starting the cost of GAS Allocation benchmark\n");
 
-  // Register the main action
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
 
   // run the main action
   int e = hpx_run(&_main, NULL, 0);

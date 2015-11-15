@@ -68,12 +68,12 @@ static void _id(_allreduce_t *r, size_t size) {
   }
 }
 
-static void _set(_allreduce_t *allreduce, size_t size, const void *value) {
+static int _set(_allreduce_t *allreduce, size_t size, const void *value) {
   // wait until we're reducing (rather than reading) and then perform the
   // operation
   while (allreduce->phase != REDUCING) {
     if (HPX_SUCCESS != scheduler_wait(&allreduce->lco.lock, &allreduce->wait)) {
-      return;
+      return 0;
     }
   }
 
@@ -84,7 +84,10 @@ static void _set(_allreduce_t *allreduce, size_t size, const void *value) {
   if (0 == --allreduce->count) {
     allreduce->phase = READING;
     scheduler_signal_all(&allreduce->wait);
+    return 1;
   }
+
+  return 0;
 }
 
 static hpx_status_t _get(_allreduce_t *r, int size, void *out) {
@@ -156,10 +159,12 @@ static void _allreduce_reset(lco_t *lco) {
 }
 
 /// Update the reduction, will wait if the phase is reading.
-static void _allreduce_set(lco_t *lco, int size, const void *from) {
+static int _allreduce_set(lco_t *lco, int size, const void *from) {
+  int set = 0;
   lco_lock(lco);
-  _set((_allreduce_t *)lco, size, from);
+  set = _set((_allreduce_t *)lco, size, from);
   lco_unlock(lco);
+  return set;
 }
 
 static hpx_status_t _allreduce_attach(lco_t *lco, hpx_parcel_t *p) {
@@ -267,7 +272,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _allreduce_init_async,
 hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
                                  hpx_action_t id, hpx_action_t op) {
   _allreduce_t *r = NULL;
-  hpx_addr_t gva = hpx_gas_alloc_local(sizeof(*r), 0);
+  hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*r), 0);
   LCO_LOG_NEW(gva);
 
   if (!hpx_gas_try_pin(gva, (void**)&r)) {
@@ -305,8 +310,7 @@ hpx_lco_allreduce_local_array_new(int n, size_t participants, size_t readers,
 {
   uint32_t lco_bytes = sizeof(_allreduce_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
-  uint32_t  block_bytes = n * lco_bytes;
-  hpx_addr_t base = hpx_gas_alloc_local(block_bytes, 0);
+  hpx_addr_t base = hpx_gas_alloc_local(n, lco_bytes, 0);
 
   dbg_check( hpx_call_sync(base, _block_local_init, NULL, 0, &n, &participants,
                            &readers, &size, &id, &op) );

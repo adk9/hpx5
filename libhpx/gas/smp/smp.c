@@ -89,7 +89,8 @@ _smp_there(void *gas, uint32_t i) {
 
 /// Allocate a global array.
 static hpx_addr_t
-_smp_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
+_smp_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
+                      uint32_t attr) {
   void *p = NULL;
   if (boundary) {
     dbg_check(posix_memalign(&p, boundary, n * bsize));
@@ -102,7 +103,8 @@ _smp_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
 
 /// Allocate a 0-filled global array.
 static hpx_addr_t
-_smp_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
+_smp_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
+                       uint32_t attr) {
   size_t bytes = n * bsize;
   void *p = NULL;
   if (boundary) {
@@ -117,12 +119,13 @@ _smp_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
 
 /// Allocate a bunch of global memory
 static hpx_addr_t
-_smp_gas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
+_smp_gas_alloc_local(size_t n, uint32_t bsize, uint32_t boundary,
+                     uint32_t attr) {
+  size_t bytes = n * bsize;
   void *p = NULL;
   if (boundary) {
     dbg_check(posix_memalign(&p, boundary, bytes));
-  }
-  else {
+  } else {
     p = malloc(bytes);
   }
   return _smp_lva_to_gva(p);
@@ -130,14 +133,15 @@ _smp_gas_alloc_local(void *gas, uint32_t bytes, uint32_t boundary) {
 
 /// Allocate a bunch of initialized global memory
 static hpx_addr_t
-_smp_gas_calloc_local(void *gas, size_t nmemb, size_t size, uint32_t boundary) {
-  size_t bytes = nmemb * size;
+_smp_gas_calloc_local(size_t n, uint32_t bsize, uint32_t boundary,
+                      uint32_t attr) {
+  size_t bytes = n * bsize;
   void *p = NULL;
   if (boundary) {
     dbg_check(posix_memalign(&p, boundary, bytes));
     p = memset(p, 0, bytes);
   } else {
-    p = calloc(nmemb, size);
+    p = calloc(n, bsize);
   }
   return _smp_lva_to_gva(p);
 }
@@ -166,6 +170,11 @@ _smp_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
   }
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
   return HPX_SUCCESS;
+}
+
+static int
+_smp_memcpy_sync(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size) {
+  return _smp_memcpy(gas, to, from, size, HPX_NULL);
 }
 
 /// Copy memory from a local address to a global address.
@@ -218,8 +227,6 @@ _smp_memget_sync(void *gas, void *to, hpx_addr_t from, size_t size) {
 /// Move memory from one locality to another.
 static void
 _smp_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
-  dbg_assert(src == HPX_HERE);
-  dbg_assert(dst == HPX_HERE);
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
@@ -258,7 +265,8 @@ static gas_t _smp_vtable = {
   .memput         = _smp_memput,
   .memput_lsync   = _smp_memput_lsync,
   .memput_rsync   = _smp_memput_rsync,
-  .memcpy         = _smp_memcpy
+  .memcpy         = _smp_memcpy,
+  .memcpy_sync    = _smp_memcpy_sync
 };
 
 gas_t *gas_smp_new(void) {

@@ -34,8 +34,14 @@ typedef uint16_t hpx_action_t;
 /// The type of functions that can be registered with hpx_register_action().
 typedef int (*hpx_action_handler_t)(void*, size_t);
 
-/// The type of functions that can be registed with pinned actions.
+/// The type of functions that can be registered with pinned actions.
 typedef int (*hpx_pinned_action_handler_t)(void *, void*, size_t);
+
+/// The type of functions that can be registered with vectored actions.
+typedef int (*hpx_vectored_action_handler_t)(int, void*, size_t *);
+
+/// The type of functions that can be registered with pinned vectored actions.
+typedef int (*hpx_pinned_vectored_action_handler_t)(void *, int, void*, size_t *);
 
 /// The equivalent of NULL for HPX actions.
 #define HPX_ACTION_NULL ((hpx_action_t)0u)
@@ -56,6 +62,8 @@ typedef enum {
   /// or continuation in a parcel. Functions can only be called by using the
   /// returned value from hpx_action_get_handler().
   HPX_FUNCTION,
+  /// Action that runs OpenCL kernels
+  HPX_OPENCL,
 } hpx_action_type_t;
 
 static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
@@ -63,6 +71,7 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
   "TASK",
   "INTERRUPT",
   "FUNCTION",
+  "OPENCL"
 };
 
 /// @name Action attributes.
@@ -77,15 +86,19 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
 #define HPX_PINNED     0x2
 // Action is a libhpx action
 #define HPX_INTERNAL   0x4
+// Action is a vectored action
+#define HPX_VECTORED   0x8
 //@}
 
 /// Register an HPX action of a given @p type.
 ///
+/// This must be called prior to hpx_init().
+///
 /// @param  type The type of the action to be registered.
 /// @param  attr The attribute of the action (PINNED, PACKED, ...).
 /// @param   key A unique string key for the action.
-/// @param     f The local function pointer to associate with the action.
 /// @param    id The action id for this action to be returned after
+/// @param     f The local function pointer to associate with the action.
 ///                registration.
 /// @param nargs The variadic number of parameters that the action accepts.
 /// @param   ... The HPX types of the action parameters (HPX_INT, ...).
@@ -93,7 +106,8 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
 /// @returns     HPX_SUCCESS or an error code
 int hpx_register_action(hpx_action_type_t type, uint32_t attr,
                         const char *key, hpx_action_t *id,
-                        hpx_action_handler_t f, unsigned int nargs, ...);
+                        hpx_action_handler_t f, unsigned int nargs, ...)
+  HPX_PUBLIC;
 
 /// Wraps the hpx_register_action() function to make it slightly
 /// more convenient to use.
@@ -109,7 +123,7 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr,
                       __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 /// Get the handler associated with a given action id.
-hpx_action_handler_t hpx_action_get_handler(hpx_action_t id);
+hpx_action_handler_t hpx_action_get_handler(hpx_action_t id) HPX_PUBLIC;
 
 /// Declare an action.
 ///

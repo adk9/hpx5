@@ -8,7 +8,7 @@
 # Research in Extreme Scale Technologies (CREST).
 
 AC_PREREQ([2.63])
-AC_INIT([hpx-5], [1.3.0], [hpx@indiana.edu])
+AC_INIT([hpx-5], [2.0.0], [hpx@indiana.edu])
 
 AC_SUBST(HPX_COPYRIGHT,["Copyright (c) 2013-2015, Trustees of Indiana University."])
 AC_COPYRIGHT([Copyright (c) 2013-2015, Trustees of Indiana University.])
@@ -151,18 +151,20 @@ HPX_CONFIG_JEMALLOC([contrib/jemalloc], ["jemalloc >= 4.0"])
 HPX_CONFIG_TBBMALLOC
 HPX_CONFIG_HWLOC([contrib/hwloc-1.11.0], [hwloc])
 HPX_CONFIG_HUGETLBFS([hugetlbfs])
-HPX_CONFIG_UTHASH([contrib/uthash-fe01a6ad1b])
+HPX_CONFIG_UTHASH([contrib/uthash])
 HPX_CONFIG_VALGRIND([contrib/valgrind])
 HPX_CONFIG_LIBFFI([contrib/$libffi_contrib_dir], [libffi])
 HPX_CONFIG_AGAS
 HPX_CONFIG_LIBCUCKOO([contrib/libcuckoo], [$have_agas])
+HPX_CONFIG_PERCOLATION
+HPX_CONFIG_OPENCL([opencl], [$have_percolation])
 HPX_CONFIG_DOCS
 HPX_CONFIG_DEBUG
 HPX_CONFIG_INSTRUMENTATION
 HPX_CONFIG_PAPI([papi], [$have_instrumentation])
 HPX_CONFIG_APEX([apex])
 HPX_CONFIG_TESTS
-HPX_CONFIG_TUTORIAL
+HPX_CONFIG_LIBHPX
 
 # Set and check some composite conditions to make sure the configuration makes
 # sense. 
@@ -180,13 +182,6 @@ AS_IF([test "x$have_jemalloc" == xyes -a "x$have_tbbmalloc" == xyes],
 AS_IF([test "x$have_network" == xyes -a "x$have_allocator" != xyes],
   [AC_MSG_ERROR(HPX requires jemalloc, tbbmalloc for network operation)])
 
-# Make sure that static linking libhpx.a with $(CC) works when we have a C++
-# dependency.
-AS_IF([test "x$have_tbbmalloc" == xyes -o "x$have_libcuckoo" == xyes],
-  [HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lstdc++"
-   LIBHPX_LIBS="$LIBHPX_LIBS -lstdc++"
-   HPX_APP_LIBS="$HPX_APP_LIBS -lstdc++"])
-
 # Configure all of the automake conditionals that our build requires.
 HPX_DO_AM_CONDITIONALS
 
@@ -199,25 +194,11 @@ AC_SUBST(LIBHPX_LDFLAGS)
 AC_SUBST(LIBHPX_LIBADD)
 AC_SUBST(LIBHPX_LIBS)
 
-# Special handling for libsync. Maybe we should make a libsync.pc?
-HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lsync"
-
-# Substitute the variables required for pkg-config linking of libhpx
-# externally. Note if we're only building libhpx.a then the --libs output must
-# contain all private dependencies as well.
-AS_IF([test "x$enable_shared" != xyes],
-  [HPX_PC_PUBLIC_LIBS="$HPX_PC_PUBLIC_LIBS $HPX_PC_PRIVATE_LIBS"
-   HPX_PC_REQUIRES_PKGS="$HPX_PC_REQUIRES_PKGS $HPX_PC_PRIVATE_PKGS"])
-
 AC_SUBST(HPX_PC_CFLAGS)
 AC_SUBST(HPX_PC_PUBLIC_LIBS)
 AC_SUBST(HPX_PC_PRIVATE_LIBS)
 AC_SUBST(HPX_PC_REQUIRES_PKGS)
 AC_SUBST(HPX_PC_PRIVATE_PKGS)
-
-# do substitution for the test and example makefiles
-HPX_APPS_LDADD="\$(top_builddir)/libhpx/libhpx.la"
-HPX_APPS_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la"
 
 AC_SUBST(HPX_APPS_CPPFLAGS)
 AC_SUBST(HPX_APPS_CFLAGS)

@@ -1,5 +1,6 @@
 # The isend-irecv network implementations
-noinst_LTLIBRARIES	= libisir.la
+noinst_LTLIBRARIES  = libisir.la
+noinst_HEADERS      = emulate_pwc.h irecv_buffer.h isend_buffer.h isir.h parcel_utils.h xport.h
 
 libisir_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
 libisir_la_CFLAGS   = $(LIBHPX_CFLAGS)

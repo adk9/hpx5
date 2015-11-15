@@ -26,13 +26,6 @@
 #include <libhpx/system.h>
 #include <pthread.h>
 
-int system_get_cores(void) {
-  int cores;
-  size_t length = sizeof(cores);
-  sysctlbyname("hw.ncpu", &cores, &length, NULL, 0);
-  return cores;
-}
-
 void system_get_stack(pthread_t thread, void **base, size_t *size) {
   dbg_assert(base && size);
   *size = pthread_get_stacksize_np(thread);

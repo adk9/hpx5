@@ -3,7 +3,8 @@ SUBDIRS = isir pwc
 endif
 
 # The networking library
-noinst_LTLIBRARIES	   = libnetwork.la
+noinst_LTLIBRARIES     = libnetwork.la
+noinst_HEADERS         = inst.h smp.h
 
 libnetwork_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
 libnetwork_la_CFLAGS   = $(LIBHPX_CFLAGS)
@@ -12,8 +13,8 @@ libnetwork_la_SOURCES  = locality.c \
                          parcel.c \
                          parcel_block.c \
                          hpx_parcel_glue.c \
-                         probe.c \
-                         smp.c 
+                         smp.c inst.c \
+                         commands.c
 
 if HAVE_NETWORK
 libnetwork_la_LIBADD   = isir/libisir.la \

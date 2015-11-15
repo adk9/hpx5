@@ -68,6 +68,7 @@ _HPX_ASSERT(sizeof(parcel_state_t) == 2, packed_parcel_state);
 /// @field       target The target address for parcel_send().
 /// @field     c_target The target address for the continuation.
 /// @field           id A unique identifier for parcel tracing.
+/// @field      padding Ensure consistent buffer alignment with instrumentation.
 /// @field       buffer Either an in-place payload, or a pointer.
 struct hpx_parcel {
   struct ustack   *ustack;
@@ -84,6 +85,7 @@ struct hpx_parcel {
   uint64_t         credit;
 #ifdef ENABLE_INSTRUMENTATION
   uint64_t             id;
+  const uint64_t  padding;
 #endif
   char             buffer[];
 };
@@ -97,7 +99,7 @@ struct hpx_parcel {
   #endif
 #else
   #ifdef ENABLE_INSTRUMENTATION
-      _HPX_ASSERT(sizeof(hpx_parcel_t) == 72, parcel_size);
+      _HPX_ASSERT(sizeof(hpx_parcel_t) == 80, parcel_size);
   #else
       _HPX_ASSERT(sizeof(hpx_parcel_t) == HPX_CACHELINE_SIZE, parcel_size);
   #endif
@@ -166,6 +168,8 @@ void parcel_set_state(hpx_parcel_t *p, parcel_state_t state);
 parcel_state_t parcel_get_state(const hpx_parcel_t *p);
 
 parcel_state_t parcel_exchange_state(hpx_parcel_t *p, parcel_state_t state);
+
+void parcel_retain(hpx_parcel_t *p);
 
 /// Treat a parcel as a stack of parcels, and pop the top.
 ///

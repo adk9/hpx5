@@ -47,6 +47,7 @@ AC_DEFUN([_HPX_LIB_TBBMALLOC], [
      LIBHPX_LDFLAGS="-L$tbblib -R$tbblib $LIBHPX_LDFLAGS"
      HPX_APPS_LDFLAGS="-L$tbblib -R$tbblib $HPX_APPS_LDFLAGS"
      LIBHPX_LIBS="$LIBHPX_LIBS $TBBMALLOC_LIBS"
+     HPX_PC_PUBLIC_LIBS="-L$tbblib -Wl,-rpath,$tbblib $HPX_PC_PUBLIC_LIBS"
      HPX_PC_PRIVATE_LIBS="-L$tbblib -Wl,-rpath,$tbblib $HPX_PC_PRIVATE_LIBS"])
 ])
 
