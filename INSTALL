@@ -1,9 +1,79 @@
 # Installation Instructions
 
+## Configuring
+
+HPX-5 is designed to use standard autotools configuration techniques. HPX-5
+releases come bootstrapped, *there is no need to bootstrap in this case.* If you
+have a development release you will need to follow the bootstrapping
+documentation at the end of this guide.
+
+Building HPX-5 without a network (the default) allows you to run
+HPX-applications on a single node. For distributed execution either MPI or
+Photon networking should be enabled which is detailed in next section.
+
+The HPX-5 configuration infrastructure supports the use of ‘pkg-config’ to look
+for installed packages. In particular, if your compilation environment requires
+explicit paths to MPI, you should compile with --enable-mpi --with-mpi=ompi,
+mvapich2, etc.
+
+See ‘./configure --help’ for further details.
+
+## Infiniband Networks
+
+### Configuring with MPI
+
+```
+$ ./configure --prefix=/path/to/install --enable-mpi
+```
+
+### Configuring with Photon
+
+The Photon netorking library is distributed with HPX-5. Note that MPI should
+also be configured in order to build in support for the `mpirun` launcher.
+
+```
+$ ./configure --prefix=/path/to/install --enable-mpi --enable-photon
+```
+
+## CRAY/uGNI
+
+HPX-5 supports either `PrgEnv-intel` or `PrgEnv-gnu`.
+
+HPX-5 can be built to support fully `-static` linking, however we recommend that
+you enable dynamic linking by setting `CRAYPE_LINK_TYPE=dynamic` in your
+environment.
+
+HPX-5 requires the explicit use of the `cc` wrapper on Cray playtforms.
+
+```
+$ ./configure --prefix=/path/to/install/ CC=cc
+```
+
+### Configuring with MPI
+
+If you have MPICH installed, you need to specify the pkg-config package
+manually. 
+
+```
+‘$ ./configure --prefix=/path/to/install --enable-mpi --with-mpi=mpich 
+   CC=cc’
+```
+
+### Configuring with Photon
+
+```
+$ ./configure --prefix=/path/to/install/ CC=cc --enable-photon 
+  --enable-pmi PHOTON_CARGS="--enable-ugni"
+```
+
+## To complete the build and install use:
+make
+make install
+
 ## Bootstrapping
 
-HPX-5 provides a bootstrap script in its build. *There is no need to bootstrap 
-with the release tarball.* In the HPX-5 directory run the bootstrap script using
+HPX-5 provides a bootstrap script in its build. In the HPX-5 directory run the
+bootstrap script.
 
 ```
 $ ./bootstrap
@@ -11,10 +81,6 @@ $ ./bootstrap
 
 Bootstrap is a bash script that generate the initialization required to create 
 a configure script when using GNU autotools.
-
-Building without MPI enables the SMP bootstrapper. This allows you to run HPX-5
- on a single node. However, if you launch HPX-5 with –np > 1 then either MPI or
- Photon transport should be enabled which is detailed in next section.
 
 To bootstrap you would need the latest version of autotools. There is a script 
 to install the latest tools in scripts folder.
@@ -26,67 +92,14 @@ GNU M4	        1.4.17	Macro processor for configuration
 Libtool	        2.4.6	Shared library manager 
 Pkg-config	0.26+   Returns information about installed libraries	
 
-## Environment dependencies
+## System-specific Notes
 
-The number of HPX-5 configuration supports to use ‘pkg-config’ to look for 
-installed packages. In particular, if your compilation environment requires 
-explicit paths to MPI, you should compile with --enable-mpi 
---with-mpi=ompi, mvapich2, etc
+### Stampede
 
-See ‘./configure --help’ for further details.
-
-HPX-5 can build and run successfully without any network backend, but at 
-present, MPI or Photon is required for networking by HPX-5.
-
-## IBV
-
-### Configuring with MPI
-
-```
-$ ./configure --prefix=/path/to/install --enable-mpi
-```
-### Configuring with Photon
-
-The Photon transport is included in HPX-5 within the contrib directory. To 
-configure HPX-5 with Photon use option --enable-photon
-
-```
-$ ./configure --prefix=/path/to/install/ --enable-mpi --enable-photon
-```
-
-On Stampede
-On stampede pass PHOTON_CARGS to ofed path:
+In order to build with Photon networking on stampede pass PHOTON_CARGS to ofed
+path during configuration.
 
 ```
 $ ./configure --enable-mpi CC=mpicc --enable-photon 
   PHOTON_CARGS="LDFLAGS=-L/opt/ofed/lib64 CPPFLAGS=-I/opt/ofed/include"
 ```
-
-### CRAY
-
-```
-$ module unload PrgEnv-cray
-$ module unload PrgEnv-intel
-$ module load PrgEnv-gnu
-$ setenv CRAYPE_LINK_TYPE dynamic
-$ ./configure --prefix=/path/to/install/ CC=cc
-```
-
-#### Configuring with MPI
-
-If you have MPICH installed, you need to specify: 
-‘$ ./configure --prefix=/path/to/install --enable-mpi --with-mpi=mpich 
-   CC=cc’ will instruct
- ‘configure’ to look for ‘mpich.pc’.
-
-#### Configuring with Photon
-
-```
-$ ./configure --prefix=/path/to/install/ CC=cc --enable-photon 
---enable-pmi --enable-mpi PHOTON_CARGS="--with-ugni"
-```
-
-## To complete the build and install use:
-make
-make install
-
