@@ -10,7 +10,7 @@ export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/path/to/apex/installation/lib/pkgconfig
 
 Then, add the "--with-apex" option to the configure. For example:
 
-./configure --enable-photon --with-mpi --with-apex
+./configure --enable-photon --enable-mpi --with-apex={=system,PKG}
 
 For instructions on downloading and building APEX, please see:
 https://github.com/khuck/xpress-apex
@@ -18,12 +18,12 @@ https://github.com/khuck/xpress-apex
 To build HPX-5 with APEX on Edison, do the following:
 
 -----------------------------------------------------
-1) load the right modules
+1) load the right modulesmodule unload darshan
 -----------------------------------------------------
 
 module swap PrgEnv-intel PrgEnv-gnu
 module load gcc/4.9.2
-module load cmake/2.8.12.2
+module load cmake/3.0.0
 module load boost
 module load automake/1.14
 module load autoconf
@@ -35,11 +35,35 @@ module load papi
 2) build APEX
 -----------------------------------------------------
 
-wget https://github.com/khuck/xpress-apex/archive/v0.1-beta.tar.gz
-tar -xvzf v0.1-beta.tar.gz
-cd xpress-apex-v0.1-beta
-# run the bootstrap script
-./bootstrap-configs/bootstrap-edison.sh -c -j
+APEX is built with CMake. The minimum CMake settings needed
+for APEX are:
+
+-DCMAKE_INSTALL_PREFIX=<some path to an installation location>
+
+1. Get the code:
+wget https://github.com/khuck/xpress-apex/archive/v0.1.tar.gz
+tar -xvzf v0.1.tar.gz
+cd xpress-apex-v0.1
+
+2. Enter the repo directory, make a build directory:
+
+cd xpress-apex-0.1
+mkdir build
+cd build
+
+3. configure using CMake:
+
+cmake -DCMAKE_INSTALL_PREFIX=<installation-path> ..
+
+4. build with make:
+
+make
+make test
+make doc
+make install
+
+Other CMake setting, depending on you needs can be set:
+https://github.com/khuck/xpress-apex/blob/master/README.rst
 
 -----------------------------------------------------
 3) Build HPX
@@ -50,10 +74,9 @@ git checkout git@gitlab.crest.iu.edu:extreme/hpx.git
 
 # set environment variables for HPX for photon support
 export CRAYPE_LINK_TYPE=dynamic
-export HPX_PHOTON_CARGS=--with-ugni
 export HPX_PHOTON_BACKEND=ugni
 
-# set Pkgconfig for APEX
+#set Pkgconfig for APEX
 XPRESS_APEX=${HOME}/src/xpress-apex/install/lib/pkgconfig
 if [ ${PKG_CONFIG_PATH} ] ; then
     export PKG_CONFIG_PATH=$XPRESS_APEX:${PKG_CONFIG_PATH}
@@ -66,7 +89,7 @@ export PATH=/path/to/install/bin:$PATH
 # bootstrap to make the configure script with APEX options
 ./bootstrap
 # run configure
-./configure --prefix=/path/to/install --enable-mpi CC=cc HPX_PHOTON_CARGS=--with-ugni --enable-photon --with-apex --enable-debug
+./configure --prefix=path-to-hpx-install --enable-mpi CC=cc PHOTON_CARGS="--enable-ugni" --enable-photon --with-apex
 make && make install
 
 -----------------------------------------------------
@@ -75,55 +98,40 @@ make && make install
 
 # (get hpx-apps from gitlab)
 cd hpx-apps/lulesh/parcels
+$ export PKG_CONFIG_PATH=/path-to-hpx-install/lib/pkgconfig:$PKG_CONFIG_PATH
+$ export LD_LIBRARY_PATH=/path-to-hpx-install/lib:$LD_LIBRARY_PATH
 
-# edit the Makefile to include pkg-config info for APEX. Here's the git diff:
+Edit the lulesh-hpx.c
 
-====================
---- a/lulesh/parcels/Makefile
-+++ b/lulesh/parcels/Makefile
-@@ -1,8 +1,11 @@
-+
- CC = gcc 
- CFLAGS = -g -std=gnu99 -Wno-unused -Wno-implicit-function-declaration -Wno-unused-variable -Wno-uninitialized
- 
- LIBS    = $(shell pkg-config --libs hpx)
-+LIBS   += $(shell pkg-config --libs apex)
- CFLAGS += $(shell pkg-config --cflags hpx)
-+CFLAGS += $(shell pkg-config --cflags apex) -DHAVE_APEX
- 
- LINKER = $(CC)
- #LINKER  = libtool --mode=link $(CC)
-====================
-
-# edit lulesh-hpx.c to include apex.h and initialize throttling. Here's the git diff:
-
-====================
+diff --git a/lulesh/parcels/lulesh-hpx.c b/lulesh/parcels/lulesh-hpx.c
+index 9cd2fc5..3313a46 100644
 --- a/lulesh/parcels/lulesh-hpx.c
 +++ b/lulesh/parcels/lulesh-hpx.c
-@@ -1,6 +1,10 @@
+@@ -18,6 +18,10 @@
  #include "lulesh-hpx.h"
- #include <hpx/lco.h>
- 
+ #include "trace.h"
+
 +#if defined(HAVE_APEX)
 +#include "apex.h"
 +#endif
 +
- static hpx_action_t _main          = 0;
- static hpx_action_t _advanceDomain = 0;
- static hpx_action_t _initDomain    = 0;
-@@ -410,6 +414,10 @@ int main(int argc, char **argv)
-   HPX_REGISTER_ACTION(_MonoQ_sends_action, &_MonoQ_sends);
-   HPX_REGISTER_ACTION(_MonoQ_result_action, &_MonoQ_result);
- 
+ #ifdef DIAGNOSTICS
+ uint64_t remote_comms = 0;
+ uint64_t total_comms = 0;
+@@ -476,6 +480,10 @@ int main(int argc, char **argv) {
+     printf(" Number of domains: %d nx: %d maxcycles: %d core-major ordering: %d\n",nDoms,nx,maxcycles,core_major);
+   }
+
 +#ifdef HAVE_APEX
 +  apex_setup_power_cap_throttling();
 +#endif
 +
-   int input[3];
-   input[0] = nDoms;
-   input[1] = nx;
-====================
+   e = hpx_run(&_main, &nDoms, &nx, &maxcycles);
+   hpx_finalize();
+   return e;
 
+./bootstrap
+./configure CC=cc CFLAGS="-O3"
 make
 
 # Set runtime environment variables for APEX before the aprun call.
@@ -145,4 +153,4 @@ aprun -n 16 -N 1 -j2 -d 48 ./luleshparcels -n 343 -x 48 -i 100 --hpx-threads=48
 # to aggregate them into one script):
 
 module load gnuplot
-gnuplot -persist concurrency.*.gnuplot
+gnuplot-persist concurrency.*.gnuplot

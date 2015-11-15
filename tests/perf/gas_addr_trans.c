@@ -76,7 +76,7 @@ static int _main_action(void *args, size_t n) {
   for (int i = 0; i < sizeof(num)/sizeof(num[0]); i++) {
     fprintf(stdout, "%d", num[i]);
 
-    hpx_addr_t local = hpx_gas_alloc_local(TEST_BUF_SIZE, 0);
+    hpx_addr_t local = hpx_gas_alloc_local(1, TEST_BUF_SIZE, 0);
     hpx_addr_t completed = hpx_lco_and_new(num[i]);
     now = hpx_time_now();
     for (int j = 0; j < num[i]; j++)
@@ -116,6 +116,10 @@ static int _main_action(void *args, size_t n) {
 
 int
 main(int argc, char *argv[]) {
+  // register the actions
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _address_translation, _address_translation_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "HPX: failed to initialize.\n");
     return 1;
@@ -133,10 +137,6 @@ main(int argc, char *argv[]) {
      return -1;
     }
   }
-
-  // register the actions
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _address_translation, _address_translation_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
 
   // run the main action
   int e = hpx_run(&_main, NULL, 0);

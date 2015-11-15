@@ -40,7 +40,7 @@ typedef struct {
 static void _sema_fini(lco_t *lco);
 static void _sema_error(lco_t *lco, hpx_status_t code);
 static void _sema_reset(lco_t *lco);
-static void _sema_set(lco_t *lco, int size, const void *from);
+static int _sema_set(lco_t *lco, int size, const void *from);
 static hpx_status_t _sema_wait(lco_t *lco, int reset);
 static hpx_status_t _sema_get(lco_t *lco, int size, void *out, int reset);
 
@@ -83,13 +83,9 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _sema_init_async,
                      _sema_init_handler, HPX_POINTER, HPX_UINT);
 
 /// Allocate a semaphore LCO.
-///
-/// @param count The initial count for the semaphore.
-///
-/// @returns The global address of the new semaphore.
 hpx_addr_t hpx_lco_sema_new(unsigned count) {
   _sema_t *sema = NULL;
-  hpx_addr_t gva = hpx_gas_alloc_local(sizeof(*sema), 0);
+  hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*sema), 0);
   LCO_LOG_NEW(gva);
 
   if (!hpx_gas_try_pin(gva, (void**)&sema)) {
@@ -107,10 +103,6 @@ hpx_addr_t hpx_lco_sema_new(unsigned count) {
 /// Decrement a semaphore.
 ///
 /// Just forward to the equivalent lco_wait() operation.
-///
-/// @param sema The global address of the semaphore we're reducing.
-///
-/// @returns HPX_SUCCESS, or an error code if the sema is in an error state.
 hpx_status_t hpx_lco_sema_p(hpx_addr_t sema) {
   return hpx_lco_wait(sema);
 }
@@ -120,9 +112,6 @@ hpx_status_t hpx_lco_sema_p(hpx_addr_t sema) {
 /// If the semaphore is local, then we can use the _sema_set operation directly,
 /// otherwise we perform the operation as an asynchronous remote call using the
 /// _sema_v action.
-///
-/// @param         sema The global address of the semaphore we're incrementing.
-/// @param        rsync An LCO to set when the set operation completed.
 void hpx_lco_sema_v(hpx_addr_t sema, hpx_addr_t rsync) {
   hpx_lco_set(sema, 0, NULL, HPX_NULL, rsync);
 }
@@ -130,8 +119,6 @@ void hpx_lco_sema_v(hpx_addr_t sema, hpx_addr_t rsync) {
 /// Increment a semaphore synchronously.
 ///
 /// Just forwards on.
-///
-/// @param         sema The global address of the semaphore we're incrementing.
 void hpx_lco_sema_v_sync(hpx_addr_t sema) {
   hpx_lco_set_rsync(sema, 0, NULL);
 }
@@ -160,7 +147,7 @@ void _sema_reset(lco_t *lco) {
 }
 
 /// Set is equivalent to returning a resource to the semaphore.
-void _sema_set(lco_t *lco, int size, const void *from) {
+int _sema_set(lco_t *lco, int size, const void *from) {
   lco_lock(lco);
   _sema_t *sema = (_sema_t *)lco;
   if (sema->count++ == 0) {
@@ -170,6 +157,7 @@ void _sema_set(lco_t *lco, int size, const void *from) {
   }
 
   lco_unlock(lco);
+  return 1;
 }
 
 hpx_status_t _sema_wait(lco_t *lco, int reset) {

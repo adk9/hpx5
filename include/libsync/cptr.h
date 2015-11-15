@@ -15,6 +15,7 @@
 #define HPX_SYNC_CPTR_H
 
 #include <stdint.h>
+#include <hpx/attributes.h>
 #include "sync.h"
 
 /// ----------------------------------------------------------------------------
@@ -58,7 +59,8 @@ typedef struct {
 /// @param from - the value we're expecting to see at *ptr
 /// @param   to - the address that we're trying to update *ptr to
 /// ----------------------------------------------------------------------------
-void sync_cptr_cas_val(volatile cptr_t *ptr, const cptr_t *from, const void *to);
+void sync_cptr_cas_val(volatile cptr_t *ptr, const cptr_t *from, const void *to)
+  HPX_PUBLIC;
 
 /// ----------------------------------------------------------------------------
 /// CAS a counted pointer.
@@ -67,7 +69,8 @@ void sync_cptr_cas_val(volatile cptr_t *ptr, const cptr_t *from, const void *to)
 /// it succeeds and false if it fails. Pass the from by-value, and don't tell
 /// gcc about it, because it doesn't make any
 /// ----------------------------------------------------------------------------
-bool sync_cptr_cas(volatile cptr_t *ptr, const cptr_t *from, const void *to);
+bool sync_cptr_cas(volatile cptr_t *ptr, const cptr_t *from, const void *to)
+  HPX_PUBLIC;
 
 /// ----------------------------------------------------------------------------
 /// Checks to see if a counted pointer has changed.
@@ -75,7 +78,8 @@ bool sync_cptr_cas(volatile cptr_t *ptr, const cptr_t *from, const void *to);
 /// Because we need to use an atomic cmpchg16b to read a location anyway, we can
 /// find out if it has changed by supplying an expected value.
 /// ----------------------------------------------------------------------------
-bool sync_cptr_is_consistent(volatile cptr_t *ptr, const cptr_t *val);
+bool sync_cptr_is_consistent(volatile cptr_t *ptr, const cptr_t *val)
+  HPX_PUBLIC;
 
 /// ----------------------------------------------------------------------------
 /// Atomically load a counted pointer.
@@ -83,6 +87,6 @@ bool sync_cptr_is_consistent(volatile cptr_t *ptr, const cptr_t *val);
 /// For x86_64, which we've implemented here, the only valid way to read a 16
 /// byte memory address atomically is with the cmpxch16b instruction.
 /// ----------------------------------------------------------------------------
-void sync_cptr_load(volatile cptr_t *ptr, cptr_t *out);
+void sync_cptr_load(volatile cptr_t *ptr, cptr_t *out) HPX_PUBLIC;
 
 #endif // HPX_SYNC_CPTR_H

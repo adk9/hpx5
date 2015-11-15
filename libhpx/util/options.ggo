@@ -46,19 +46,25 @@ string optional
 
 section "Scheduler Options"
 
-option "hpx-cores" - "number of scheduler cores (deprecated)"
-typestr="cores"
-int optional
-
 option "hpx-threads" - "number of scheduler threads"
 typestr="threads"
 int optional
+
+option "hpx-thread-affinity" - "affinitize HPX worker threads"
+typestr="policy"
+values="default","hwthread","core","numa","none"
+enum optional
 
 option "hpx-stacksize" - "set HPX stack size"
 typestr="bytes"
 long optional
 
-option "hpx-wfthreshold" - "bound on help-first tasks before work-first scheduling"
+option "hpx-sched-policy" - "work-stealing policy for the HPX scheduler"
+typestr="policy"
+values="default","random","hier"
+enum optional
+
+option "hpx-sched-wfthreshold" - "bound on help-first tasks before work-first scheduling"
 typestr="tasks"
 long optional
 
@@ -74,7 +80,7 @@ int optional multiple
 
 option "hpx-log-level" - "set the logging level"
 typestr="level,..."
-values="default","boot","sched","gas","lco","net","trans","parcel","action","config","memory","all"
+values="default","boot","sched","gas","lco","net","trans","parcel","action","config","memory","coll","all"
 default="all"
 enum optional argoptional multiple
 
@@ -126,15 +132,6 @@ option "hpx-prof-counters" - "set which PAPI counters to use for profiling"
 typestr="counters"
 values="HPX_L1_TCM","HPX_L2_TCM","HPX_L3_TCM","HPX_TLB_TL","HPX_TOT_INS","HPX_INT_INS","HPX_FP_INS","HPX_LD_INS","HPX_SR_INS","HPX_BR_INS","HPX_TOT_CYC","all"
 enum optional multiple
-
-option "hpx-prof-event" - "set which event to profile"
-typestr="event"
-values="none"
-enum optional
-
-option "hpx-prof-action" - "set which action to profile"
-typestr="action"
-string optional
 
 section "ISIR Network Options"
 
@@ -189,6 +186,14 @@ int optional
 option "hpx-photon-btethresh" - "[ugni] set size in bytes for when BTE is used over FMA"
 typestr="integer"
 int optional
+
+option "hpx-photon-fiprov" - "[libfabric] provider to use (sockets, psm, etc.)"
+typestr="provider"
+string optional
+
+option "hpx-photon-fidev" - "[libfabric] network interface to use"
+typestr="interface"
+string optional
 
 option "hpx-photon-ledgersize" - "set number of ledger entries"
 typestr="integer"

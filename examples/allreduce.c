@@ -53,7 +53,7 @@ action_allreduce(void *unused, size_t size) {
 
   T          values[num_ranks];
   void      *addrs[num_ranks];
-  int        sizes[num_ranks];
+  size_t     sizes[num_ranks];
   hpx_addr_t futures[num_ranks];
 
   for (int i = 0; i < num_ranks; ++i) {
@@ -73,7 +73,7 @@ action_allreduce(void *unused, size_t size) {
     hpx_call(HPX_THERE(i), set_value, futures[i], &value, sizeof(value));
   }
 
-  hpx_lco_get_all(num_ranks, futures, sizes, addrs, NULL);
+  hpx_lco_wait_all(num_ranks, futures, NULL);
 
   for (int i = 0; i < num_ranks; ++i)
     hpx_lco_delete(futures[i], HPX_NULL);
@@ -84,12 +84,6 @@ action_allreduce(void *unused, size_t size) {
 
 int main(int argc, char** argv) {
 
-  int success = hpx_init(&argc, &argv);
-  if (success != 0) {
-    printf("Error %d in hpx_init!\n", success);
-    exit(EXIT_FAILURE);
-  }
-
   // register action for parcel
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, set_value,
                       action_set_value, HPX_POINTER, HPX_SIZE_T);
@@ -97,6 +91,12 @@ int main(int argc, char** argv) {
                       action_get_value, HPX_POINTER, HPX_SIZE_T);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, allreduce,
                       action_allreduce, HPX_POINTER, HPX_SIZE_T);
+
+  int success = hpx_init(&argc, &argv);
+  if (success != 0) {
+    printf("Error %d in hpx_init!\n", success);
+    exit(EXIT_FAILURE);
+  }
 
   // Initialize the values that we want to reduce
   value = HPX_LOCALITY_ID;

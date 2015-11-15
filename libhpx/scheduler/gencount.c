@@ -82,7 +82,7 @@ void _gencount_reset(lco_t *lco) {
 }
 
 /// Set is equivalent to incrementing the generation count
-static void _gencount_set(lco_t *lco, int size, const void *from) {
+static int _gencount_set(lco_t *lco, int size, const void *from) {
   lco_lock(lco);
   _gencount_t *gencnt = (_gencount_t *)lco;
   unsigned long gen = ++gencnt->gen;
@@ -93,6 +93,7 @@ static void _gencount_set(lco_t *lco, int size, const void *from) {
     scheduler_signal_all(cvar);
   }
   lco_unlock(lco);
+  return 1;
 }
 
 /// Get returns the current generation, it does not block.
@@ -178,7 +179,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _gencount_wait_gen_proxy,
 hpx_addr_t hpx_lco_gencount_new(unsigned long ninplace) {
   _gencount_t *cnt = NULL;
   size_t bytes = sizeof(_gencount_t) + ninplace * sizeof(cvar_t);
-  hpx_addr_t gva = hpx_gas_alloc_local(bytes, 0);
+  hpx_addr_t gva = hpx_gas_alloc_local(1, bytes, 0);
   LCO_LOG_NEW(gva);
 
   if (!hpx_gas_try_pin(gva, (void**)&cnt)) {

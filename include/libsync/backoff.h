@@ -16,10 +16,10 @@
 
 #include "hpx/attributes.h"
 
-void sync_backoff(unsigned int i);
+void sync_backoff(unsigned int i) HPX_PUBLIC;
 
 void sync_backoff_exp_r(unsigned int *prev)
-  HPX_NON_NULL(1);
+  HPX_NON_NULL(1) HPX_PUBLIC;
 
 
 #endif // LIBSYNC_BACKOFF_H

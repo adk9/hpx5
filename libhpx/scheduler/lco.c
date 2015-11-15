@@ -37,7 +37,7 @@
 /// We pack state into the LCO pointer---least-significant-bit is already used
 /// in the sync_lockable_ptr interface
 #define _TRIGGERED_MASK    (0x2)
-#define _DELETED_MASK      (0x4)
+#define _USER_MASK         (0x4)
 #define _STATE_MASK        (0x7)
 
 static void _EVENT(const lco_t *lco, const int id) {
@@ -67,8 +67,8 @@ static hpx_status_t _set(lco_t *lco, size_t size, const void *data) {
   _EVENT(lco, HPX_INST_EVENT_LCO_SET);
   const lco_class_t *class = _class(lco);
   dbg_assert_str(class->on_set, "LCO has no on_set handler\n");
-  class->on_set(lco, size, data);
-  return HPX_SUCCESS;
+  int e = class->on_set(lco, size, data);
+  return e;
 }
 
 static size_t _size(lco_t *lco) {
@@ -147,7 +147,8 @@ static int _lco_delete_action_handler(void) {
 LIBHPX_ACTION(HPX_DEFAULT, 0, hpx_lco_delete_action, _lco_delete_action_handler);
 
 int hpx_lco_set_action_handler(lco_t *lco, void *data, size_t n) {
-  return _set(lco, n, data);
+  int i = _set(lco, n, data);
+  HPX_THREAD_CONTINUE(i);
 }
 LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, hpx_lco_set_action,
               hpx_lco_set_action_handler, HPX_POINTER, HPX_POINTER,
@@ -209,7 +210,7 @@ static int _lco_wait_handler(lco_t *lco, int reset) {
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_wait, _lco_wait_handler,
                      HPX_POINTER, HPX_INT);
 
-int attach_handler(lco_t *lco, hpx_parcel_t *p, size_t size) {
+int lco_attach_handler(lco_t *lco, hpx_parcel_t *p, size_t size) {
   hpx_parcel_t *parent = scheduler_current_parcel();
   dbg_assert(hpx_parcel_get_data(parent) == p);
   log_lco("retaining %p, nesting %p\n", (void*)parent, (void*)p);
@@ -226,8 +227,8 @@ int attach_handler(lco_t *lco, hpx_parcel_t *p, size_t size) {
   parcel_set_state(p, state);
   return _attach(lco, p);
 }
-LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, attach,
-              attach_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, lco_attach,
+              lco_attach_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 /// @}
 
@@ -255,18 +256,7 @@ void lco_init(lco_t *lco, const lco_class_t *class) {
 }
 
 void lco_fini(lco_t *lco) {
-  if (DEBUG) {
-    lco->bits |= _DELETED_MASK;
-  }
   lco_unlock(lco);
-}
-
-void lco_reset_deleted(lco_t *lco) {
-  lco->bits &= ~_DELETED_MASK;
-}
-
-uintptr_t lco_get_deleted(const lco_t *lco) {
-  return lco->bits & _DELETED_MASK;
 }
 
 void lco_set_triggered(lco_t *lco) {
@@ -280,6 +270,14 @@ void lco_reset_triggered(lco_t *lco) {
 
 uintptr_t lco_get_triggered(const lco_t *lco) {
   return lco->bits & _TRIGGERED_MASK;
+}
+
+void lco_set_user(lco_t *lco) {
+  lco->bits |= _USER_MASK;
+}
+
+uintptr_t lco_get_user(const lco_t *lco) {
+  return lco->bits & _USER_MASK;
 }
 
 /// @}
@@ -360,35 +358,60 @@ void hpx_lco_reset_sync(hpx_addr_t addr) {
   hpx_lco_delete(sync, HPX_NULL);
 }
 
-void hpx_lco_set(hpx_addr_t target, int size, const void *value,
-                 hpx_addr_t lsync, hpx_addr_t rsync) {
+void hpx_lco_set_with_continuation(hpx_addr_t target,
+                                   size_t size, const void *value,
+                                   hpx_addr_t lsync,
+                                   hpx_addr_t raddr, hpx_action_t rop) {
+
   if (target == HPX_NULL) {
-    if (lsync) {
-      hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+    if (lsync != HPX_NULL) {
+      hpx_lco_set_with_continuation(lsync, 0, NULL, HPX_NULL, HPX_NULL,
+                                    HPX_ACTION_NULL);
     }
-    if (rsync) {
-      hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    if (raddr != HPX_NULL) {
+      int zero = 0;
+      hpx_call(raddr, rop, HPX_NULL, &zero, sizeof(zero));
     }
     return;
   }
 
   lco_t *lco = NULL;
   if ((size < HPX_LCO_SET_ASYNC) && hpx_gas_try_pin(target, (void**)&lco)) {
-    _set(lco, size, value);
+    int set = _set(lco, size, value);
     hpx_gas_unpin(target);
-    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    if (lsync != HPX_NULL) {
+      hpx_lco_set_with_continuation(lsync, 0, NULL, HPX_NULL, HPX_NULL,
+                                    HPX_ACTION_NULL);
+    }
+    if (raddr != HPX_NULL) {
+      hpx_call(raddr, rop, HPX_NULL, &set, sizeof(set));
+    }
     return;
   }
 
-  int e = hpx_call_async(target, hpx_lco_set_action, lsync, rsync, value, size);
+  hpx_parcel_t *p = hpx_parcel_acquire(value, size);
+  p->target = target;
+  p->action = hpx_lco_set_action;
+  p->c_target = raddr;
+  p->c_action = rop;
+
+  int e = hpx_parcel_send(p, lsync);
   dbg_check(e, "Could not forward lco_set\n");
 }
 
-void hpx_lco_set_lsync(hpx_addr_t target, int size, const void *value,
+void hpx_lco_set(hpx_addr_t target, size_t size, const void *value,
+                 hpx_addr_t lsync, hpx_addr_t rsync) {
+  hpx_lco_set_with_continuation(target, size, value, lsync, rsync,
+                                hpx_lco_set_action);
+}
+
+void hpx_lco_set_lsync(hpx_addr_t target, size_t size, const void *value,
                        hpx_addr_t rsync) {
   if (target == HPX_NULL) {
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    if (rsync) {
+      int zero = 0;
+      hpx_call(rsync, hpx_lco_set_action, HPX_NULL, &zero, sizeof(zero));
+    }
     return;
   }
 
@@ -399,9 +422,11 @@ void hpx_lco_set_lsync(hpx_addr_t target, int size, const void *value,
 
   lco_t *lco = NULL;
   if (hpx_gas_try_pin(target, (void**)&lco)) {
-    _set(lco, size, value);
+    int set = _set(lco, size, value);
     hpx_gas_unpin(target);
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    if (rsync) {
+      hpx_call(rsync, hpx_lco_set_action, HPX_NULL, &set, sizeof(set));
+    }
     return;
   }
 
@@ -411,27 +436,31 @@ void hpx_lco_set_lsync(hpx_addr_t target, int size, const void *value,
   hpx_lco_delete(lsync, HPX_NULL);
 }
 
-void hpx_lco_set_rsync(hpx_addr_t target, int size, const void *value) {
+int hpx_lco_set_rsync(hpx_addr_t target, size_t size, const void *value) {
   if (target == HPX_NULL) {
-    return;
+    return 0;
   }
 
   if (size >= HPX_LCO_SET_ASYNC) {
-    dbg_check( hpx_call_sync(target, hpx_lco_set_action, NULL, 0, value, size) );
-    return;
+    int set;
+    dbg_check( hpx_call_sync(target, hpx_lco_set_action, &set, sizeof(set),
+                             value, size) );
+    return set;
   }
 
   lco_t *lco = NULL;
   if (hpx_gas_try_pin(target, (void**)&lco)) {
-    _set(lco, size, value);
+    int set = _set(lco, size, value);
     hpx_gas_unpin(target);
-    return;
+    return set;
   }
 
-  hpx_addr_t rsync = hpx_lco_future_new(0);
+  int set = 0;
+  hpx_addr_t rsync = hpx_lco_future_new(4);
   hpx_lco_set(target, size, value, HPX_NULL, rsync);
-  hpx_lco_wait(rsync);
+  hpx_lco_get(rsync, sizeof(set), &set);
   hpx_lco_delete(rsync, HPX_NULL);
+  return set;
 }
 
 hpx_status_t hpx_lco_wait(hpx_addr_t target) {
@@ -469,7 +498,7 @@ size_t hpx_lco_size(hpx_addr_t target) {
   return hpx_call_sync(target, _lco_size, &size, size, NULL, 0);
 }
 
-hpx_status_t hpx_lco_get(hpx_addr_t target, int size, void *value) {
+hpx_status_t hpx_lco_get(hpx_addr_t target, size_t size, void *value) {
   if (size == 0) {
     return hpx_lco_wait(target);
   }
@@ -485,7 +514,7 @@ hpx_status_t hpx_lco_get(hpx_addr_t target, int size, void *value) {
   return status;
 }
 
-hpx_status_t hpx_lco_get_reset(hpx_addr_t target, int size, void *value) {
+hpx_status_t hpx_lco_get_reset(hpx_addr_t target, size_t size, void *value) {
   if (size == 0) {
     return hpx_lco_wait_reset(target);
   }
@@ -501,7 +530,7 @@ hpx_status_t hpx_lco_get_reset(hpx_addr_t target, int size, void *value) {
   return status;
 }
 
-hpx_status_t hpx_lco_getref(hpx_addr_t target, int size, void **out) {
+hpx_status_t hpx_lco_getref(hpx_addr_t target, size_t size, void **out) {
   if (size == 0) {
     return hpx_lco_wait(target);
   }
@@ -603,7 +632,7 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
   return errors;
 }
 
-int hpx_lco_get_all(int n, hpx_addr_t lcos[], int sizes[], void *values[],
+int hpx_lco_get_all(int n, hpx_addr_t lcos[], size_t sizes[], void *values[],
                     hpx_status_t statuses[]) {
   dbg_assert(n > 0);
 

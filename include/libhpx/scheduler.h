@@ -26,6 +26,7 @@
 extern "C" {
 #endif
 
+#include <pthread.h>
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
 #include <libsync/lockable_ptr.h>
@@ -47,11 +48,6 @@ struct config;
 struct cvar;
 /// @}
 
-/// Typedefs
-/// @{
-typedef two_lock_queue_t yield_queue_t;
-/// @}
-
 /// The scheduler class.
 ///
 /// The scheduler class represents the shared-memory state of the entire
@@ -66,15 +62,25 @@ typedef two_lock_queue_t yield_queue_t;
 /// table, though all of the functionality that is required to make this work is
 /// not implemented.
 struct scheduler {
-  yield_queue_t       yielded;
-  volatile int       shutdown;
-  volatile int    next_tls_id;
-  int               n_workers;
-  uint32_t       wf_threshold;
-  system_barrier_t    barrier;
-  worker_t           *workers;
-  int        n_active_workers;  // used by APEX scheduler throttling : akp
+  volatile int     stopped;                     // fast flag to avoid locking
+
+  struct {
+    volatile int     state;
+    pthread_mutex_t   lock;
+    pthread_cond_t running;
+  } run_state;
+
+  volatile int next_tls_id;
+  int            n_workers;
+  uint32_t    wf_threshold;
+  system_barrier_t barrier;
+  worker_t        *workers;
+  int     n_active_workers;           // used by APEX scheduler throttling : akp
 };
+
+#define SCHED_RUN INT_MAX
+#define SCHED_STOP HPX_SUCCESS
+#define SCHED_SHUTDOWN 2
 
 /// Allocate and initialize a new scheduler.
 ///
@@ -106,22 +112,34 @@ void scheduler_delete(struct scheduler *scheduler);
 int scheduler_startup(struct scheduler *scheduler, const struct config *cfg)
   HPX_NON_NULL(1);
 
-/// Stops the scheduler cooperatively.
+/// Restart the scheduler.
+///
+/// This resumes all of the low-level scheduler threads that were
+/// suspened at the end of the previous execution of hpx_run. Also
+/// reset any scheduler specific flags to their original state.
+///
+/// @param    scheduler The scheduler to restart.
+///
+/// @returns            LIBHPX_OK or an error code.
+int scheduler_restart(struct scheduler *scheduler)
+  HPX_NON_NULL(1);
+
+/// Suspend the scheduler cooperatively.
 ///
 /// This asks all of the threads to shutdown the next time they get a chance to
 /// schedule. It is nonblocking.
 ///
-/// @param    scheduler The scheduler to shutdown.
-/// @param         code The code to return from scheduler_startup().
-void scheduler_shutdown(struct scheduler *scheduler, int code)
+/// @param    scheduler The scheduler to stop.
+/// @param         code The code to return from scheduler_stop().
+void scheduler_stop(struct scheduler *scheduler, int code)
   HPX_NON_NULL(1);
 
 /// Check to see if the scheduler was shutdown.
 ///
 /// @param    scheduler The scheduler to check.
 ///
-/// @returns            True if the scheduler was shutdown..
-int scheduler_is_shutdown(struct scheduler *scheduler)
+/// @returns            True if the scheduler is stopped.
+int scheduler_is_stopped(struct scheduler *scheduler)
   HPX_NON_NULL(1);
 
 /// Join the scheduler at shutdown.
@@ -232,7 +250,6 @@ hpx_parcel_t *scheduler_current_parcel(void);
 /// Get a worker by id.
 worker_t *scheduler_get_worker(struct scheduler *sched, int id)
   HPX_NON_NULL(1);
-
 
 #ifdef __cplusplus
 }

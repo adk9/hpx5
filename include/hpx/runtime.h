@@ -45,14 +45,14 @@
 /// @param argc   count of command-line arguments
 /// @param argv   array of command-line arguments
 /// @returns      HPX_SUCCESS on success
-int hpx_init(int *argc, char ***argv);
+int hpx_init(int *argc, char ***argv) HPX_PUBLIC;
 
 /// Finalize/cleanup from the HPX runtime.
 ///
 /// This function will remove almost all data structures and allocations, and
 /// will finalize the underlying network implementation. Note that hpx_run() 
 /// must never be called after hpx_finalize().
-void hpx_finalize();
+void hpx_finalize() HPX_PUBLIC;
 
 /// Start the HPX runtime, and run a given action.
 ///
@@ -73,11 +73,10 @@ void hpx_finalize();
 ///
 /// @param entry an action to execute, or HPX_ACTION NULL to wait for an
 ///              incoming parcel or a inter-locality steal (if implemented)
-/// @param  args arguments to pass to @p entry
-/// @param  size the size of @p args
+/// @param nargs the number of arguments to pass to @p entry
 /// @returns     the status code passed to hpx_exit() upon
 ///              termination.
-int    _hpx_run(hpx_action_t *entry, int nargs, ...);
+int    _hpx_run(hpx_action_t *entry, int nargs, ...) HPX_PUBLIC;
 #define hpx_run(entry, ...) _hpx_run(entry, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 
@@ -95,7 +94,7 @@ int    _hpx_run(hpx_action_t *entry, int nargs, ...);
 ///
 /// @param code a status code to be returned by hpx_run()
 void hpx_exit(int code)
-  HPX_NORETURN;
+  HPX_NORETURN HPX_PUBLIC;
 
 /// Abort the HPX runtime.
 ///
@@ -108,16 +107,16 @@ void hpx_exit(int code)
 /// application's main native thread should only rely on the async-safe
 /// interface provided in signal(7).
 void hpx_abort(void)
-  HPX_NORETURN;
+  HPX_NORETURN HPX_PUBLIC;
 
 /// Print the help string associated with the runtime configuration
 /// options supported by the HPX runtime.
 ///
-void hpx_print_help(void);
+void hpx_print_help(void) HPX_PUBLIC;
 
 /// Print the version string associated with the HPX interface implemented by
 /// the runtime.
-void hpx_print_version(void);
+void hpx_print_version(void) HPX_PUBLIC;
 
 /// @}
 

@@ -2,21 +2,26 @@ noinst_HEADERS   = tests.h
 
 noinst_PROGRAMS  = $(TESTS)
 
-AM_CPPFLAGS      = $(HPX_APPS_CPPFLAGS) $(HPX_APPS_CFLAGS) -I$(top_srcdir)/include -Wno-unused
+AM_CPPFLAGS      = $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include -Wno-unused
+AM_CFLAGS        = $(HPX_APPS_CFLAGS)
 AM_LDFLAGS       = $(HPX_APPS_LDFLAGS) -no-install
 LDADD            = $(HPX_APPS_LDADD)
 
 LOG_COMPILER = $(TESTS_CMD)
 
-TESTS = apex_test               \
-	    allreduce               \
+TESTS = allreduce               \
         bcast                   \
         call_when               \
+        call_vectored           \
         gas_alloc               \
+        gas_alloc_dist          \
+        gas_coll                \
         gas_global_alloc        \
         gas_memget              \
         gas_memput              \
-		lco_get_remote          \
+        gas_move                \
+        lco_get_remote          \
+        lco_allreduce           \
         lco_and                 \
         lco_array               \
         lco_collectives         \
@@ -46,12 +51,31 @@ if ENABLE_LENGTHY_TESTS
 TESTS           += lco_wait
 endif
 
+if HAVE_APEX
+TESTS           += apex
+endif
+
+if HAVE_PERCOLATION
+TESTS           += percolation
+endif
+
+# Override libhpx tests so that they have the right paths and flags.
+libhpx_boot_CPPFLAGS                = $(LIBHPX_CPPFLAGS) -I$(top_srcdir)/include -Wno-unused
+libhpx_boot_CFLAGS                  = $(LIBHPX_CFLAGS) 
+
+apex_DEPENDENCIES                   = $(HPX_APPS_DEPS)
+allreduce_DEPENDENCIES              = $(HPX_APPS_DEPS)
 bcast_DEPENDENCIES                  = $(HPX_APPS_DEPS)
 call_when_DEPENDENCIES              = $(HPX_APPS_DEPS)
+call_vectored_DEPENDENCIES          = $(HPX_APPS_DEPS)
 gas_alloc_DEPENDENCIES              = $(HPX_APPS_DEPS)
+gas_alloc_dist_DEPENDENCIES         = $(HPX_APPS_DEPS)
+gas_coll_DEPENDENCIES               = $(HPX_APPS_DEPS)
 gas_global_alloc_DEPENDENCIES       = $(HPX_APPS_DEPS)
 gas_memget_DEPENDENCIES             = $(HPX_APPS_DEPS)
 gas_memput_DEPENDENCIES             = $(HPX_APPS_DEPS)
+gas_move_DEPENDENCIES               = $(HPX_APPS_DEPS)
+lco_allreduce_DEPENDENCIES          = $(HPX_APPS_DEPS)
 lco_and_DEPENDENCIES                = $(HPX_APPS_DEPS)
 lco_array_DEPENDENCIES              = $(HPX_APPS_DEPS)
 lco_collectives_DEPENDENCIES        = $(HPX_APPS_DEPS)
@@ -69,6 +93,7 @@ parcel_create_DEPENDENCIES          = $(HPX_APPS_DEPS)
 parcel_send_DEPENDENCIES            = $(HPX_APPS_DEPS)
 parcel_send_rendezvous_DEPENDENCIES = $(HPX_APPS_DEPS)
 parcel_send_through_DEPENDENCIES    = $(HPX_APPS_DEPS)
+percolation_DEPENDENCIES            = $(HPX_APPS_DEPS)
 process_DEPENDENCIES                = $(HPX_APPS_DEPS)
 runtime_DEPENDENCIES                = $(HPX_APPS_DEPS)
 task_DEPENDENCIES                   = $(HPX_APPS_DEPS)

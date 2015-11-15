@@ -44,10 +44,6 @@ typedef struct gas {
   uint32_t (*owner_of)(const void *gas, hpx_addr_t gpa);
   bool (*try_pin)(void *gas, hpx_addr_t addr, void **local);
   void (*unpin)(void *gas, hpx_addr_t addr);
-
-  hpx_addr_t (*alloc_local)(void *gas, uint32_t bytes, uint32_t boundary);
-  hpx_addr_t (*calloc_local)(void *gas, size_t nmemb, size_t size,
-                             uint32_t boundary);
   void (*free)(void *gas, hpx_addr_t addr, hpx_addr_t rsync);
 
   void (*move)(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
@@ -68,11 +64,15 @@ typedef struct gas {
   int (*memcpy)(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
                 hpx_addr_t sync);
 
+  int (*memcpy_sync)(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size);
+
   // implement hpx/gas.h
-  __typeof(hpx_gas_alloc_cyclic) *alloc_cyclic;
-  __typeof(hpx_gas_calloc_cyclic) *calloc_cyclic;
-  __typeof(hpx_gas_alloc_blocked) *alloc_blocked;
-  __typeof(hpx_gas_calloc_blocked) *calloc_blocked;
+  __typeof(hpx_gas_alloc_local_attr) *alloc_local;
+  __typeof(hpx_gas_calloc_local_attr) *calloc_local;
+  __typeof(hpx_gas_alloc_cyclic_attr) *alloc_cyclic;
+  __typeof(hpx_gas_calloc_cyclic_attr) *calloc_cyclic;
+  __typeof(hpx_gas_alloc_blocked_attr) *alloc_blocked;
+  __typeof(hpx_gas_calloc_blocked_attr) *calloc_blocked;
 } gas_t;
 
 gas_t *gas_new(config_t *cfg, struct boot *boot)

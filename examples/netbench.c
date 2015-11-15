@@ -33,7 +33,7 @@ typedef struct {
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: netbench [options] [ITERATIONS]\n"
-	  "\t-y, the number of iterations after which to yield\n"
+      "\t-y, the number of iterations after which to yield\n"
           "\t-h, show help\n");
   hpx_print_help();
   fflush(stream);
@@ -86,7 +86,7 @@ int hpx_main_action(void *args, size_t size) {
     printf("Too few ranks, need at least two.\n");
     hpx_exit(HPX_SUCCESS);
   }
-    
+
   size_t sizes[] = {1, 128, 1024, 4096, 8192, 64*1024, 256*1024, 1024*1024, 4*1024*1024};
   int num_sizes = sizeof(sizes)/sizeof(size_t);
   //  hpx_addr_t lco = hpx_lco_gencount_new(num_sizes);
@@ -101,21 +101,21 @@ int hpx_main_action(void *args, size_t size) {
     //lco = hpx_lco_gencount_new(iterations);
     hpx_time_t time_start = hpx_time_now();
     for (int j = 0; j < iterations; j++) {
-      send_ping(lco, 0, 1, actual_size);  
+      send_ping(lco, 0, 1, actual_size);
       if (yield_iterations > 0 && j % yield_iterations)
-	hpx_thread_yield();
-    } 
+    hpx_thread_yield();
+    }
     // hpx_lco_gencount_wait(lco, iterations);
     hpx_lco_wait(lco);
     hpx_time_t time_end = hpx_time_now();
     double time_in_ms = hpx_time_diff_ms(time_start, time_end);
     double avg_time_in_ms = time_in_ms/iterations;
-    printf("%zu\t%.4g\t%.4g\t%.6g\t%.4g\n", 
-	   actual_size, 
-	   time_in_ms,
-	   avg_time_in_ms,
-	   (iterations*1.0)/time_in_ms*1000.0,
-	   (iterations*1.0)/time_in_ms*1000.0*actual_size);
+    printf("%zu\t%.4g\t%.4g\t%.6g\t%.4g\n",
+       actual_size,
+       time_in_ms,
+       avg_time_in_ms,
+       (iterations*1.0)/time_in_ms*1000.0,
+       (iterations*1.0)/time_in_ms*1000.0*actual_size);
     hpx_lco_delete(lco, HPX_NULL);
   }
 
@@ -127,6 +127,11 @@ int hpx_main_action(void *args, size_t size) {
 int main(int argc, char *argv[]) {
   yield_iterations = 0;
 
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, echo_pong, echo_pong_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, echo_finish, echo_finish_action, HPX_POINTER, HPX_SIZE_T);
+  hpx_action_t hpx_main;
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, hpx_main, hpx_main_action, HPX_POINTER, HPX_SIZE_T);
+
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "HPX failed to initialize.\n");
     return -1;
@@ -136,8 +141,8 @@ int main(int argc, char *argv[]) {
   while ((opt = getopt(argc, argv, "y:h?")) != -1) {
     switch (opt) {
       case 'y':
-	yield_iterations = atol(optarg);
-	break;
+    yield_iterations = atol(optarg);
+    break;
       case 'h':
         _usage(stdout);
         return 0;
@@ -154,17 +159,13 @@ int main(int argc, char *argv[]) {
   iterations = 0;
   if (argc != 0)
     iterations = strtol(argv[0], NULL, 10);
-  
+
   if (iterations == 0) {
     iterations = DEFAULT_ITERS;
     printf("read ITERATIONS as 0, setting them to default of %lu.\n", iterations);
   }
 
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, echo_pong, echo_pong_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, echo_finish, echo_finish_action, HPX_POINTER, HPX_SIZE_T);
-  hpx_action_t hpx_main;
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, hpx_main, hpx_main_action, HPX_POINTER, HPX_SIZE_T);
-
   int e = hpx_run(&hpx_main, NULL, 0);
+  hpx_finalize();
   return e;
 }

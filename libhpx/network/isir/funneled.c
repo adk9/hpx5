@@ -15,6 +15,7 @@
 # include "config.h"
 #endif
 
+#include <inttypes.h>
 #include <stdlib.h>
 #include <hpx/builtins.h>
 #include <libsync/queues.h>
@@ -36,13 +37,15 @@ typedef struct {
   network_t       vtable;
   gas_t             *gas;
   isir_xport_t    *xport;
-  volatile int     flush;
-  PAD_TO_CACHELINE(sizeof(network_t) + sizeof(gas_t*) + sizeof(isir_xport_t*) +
-                   sizeof(int));
+  PAD_TO_CACHELINE(sizeof(network_t) + sizeof(gas_t*) + sizeof(isir_xport_t*));
   two_lock_queue_t sends;
   two_lock_queue_t recvs;
   isend_buffer_t  isends;
   irecv_buffer_t  irecvs;
+  PAD_TO_CACHELINE(2 * sizeof(two_lock_queue_t) +
+                   sizeof(irecv_buffer_t) +
+                   sizeof(isend_buffer_t));
+  volatile int progress_lock;
 } _funneled_t;
 
 /// Transfer any parcels in the funneled sends queue into the isends buffer.
@@ -60,13 +63,6 @@ _funneled_delete(void *network) {
   dbg_assert(network);
 
   _funneled_t *isir = network;
-
-  // flush sends if we're supposed to
-  if (isir->flush) {
-    _send_all(isir);
-    isend_buffer_flush(&isir->isends);
-  }
-
   isend_buffer_fini(&isir->isends);
   irecv_buffer_fini(&isir->irecvs);
 
@@ -171,9 +167,13 @@ _funneled_probe(void *network, int nrx) {
 }
 
 static void
-_funneled_set_flush(void *network) {
+_funneled_flush(void *network) {
   _funneled_t *isir = network;
-  sync_store(&isir->flush, 1, SYNC_RELEASE);
+  while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
+    ;
+  _send_all(isir);
+  isend_buffer_flush(&isir->isends);
+  sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
 }
 
 /// Create a network registration.
@@ -191,37 +191,40 @@ _funneled_release_dma(void *obj, const void* base, size_t n) {
 }
 
 static int
-_funneled_progress(void *network) {
+_funneled_progress(void *network, int id) {
   _funneled_t *isir = network;
-  hpx_parcel_t *chain = irecv_buffer_progress(&isir->irecvs);
-  int n = 0;
-  if (chain) {
-    ++n;
-    sync_two_lock_queue_enqueue(&isir->recvs, chain);
+  if (sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE)) {
+    hpx_parcel_t *chain = irecv_buffer_progress(&isir->irecvs);
+    int n = 0;
+    if (chain) {
+      ++n;
+      sync_two_lock_queue_enqueue(&isir->recvs, chain);
+    }
+
+    DEBUG_IF(n) {
+      log_net("completed %d recvs\n", n);
+    }
+
+    int m = isend_buffer_progress(&isir->isends);
+
+    DEBUG_IF(m) {
+      log_net("completed %d sends\n", m);
+    }
+
+    _send_all(isir);
+    sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
+    (void)n;
+    (void)m;
   }
-
-  DEBUG_IF(n) {
-    log_net("completed %d recvs\n", n);
-  }
-
-  int m = isend_buffer_progress(&isir->isends);
-
-  DEBUG_IF(m) {
-    log_net("completed %d sends\n", m);
-  }
-
-  _send_all(isir);
-
   return LIBHPX_OK;
 
   // suppress unused warnings
-  (void)n;
-  (void)m;
 }
 
 network_t *
 network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
-  _funneled_t *network = malloc(sizeof(*network));
+  _funneled_t *network = NULL;
+  posix_memalign((void*)&network, HPX_CACHELINE_SIZE, sizeof(*network));
   if (!network) {
     log_error("could not allocate a funneled Isend/Irecv network\n");
     return NULL;
@@ -243,20 +246,21 @@ network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
   network->vtable.put = _funneled_put;
   network->vtable.get = _funneled_get;
   network->vtable.probe = _funneled_probe;
-  network->vtable.set_flush = _funneled_set_flush;
+  network->vtable.flush = _funneled_flush;
   network->vtable.register_dma = _funneled_register_dma;
   network->vtable.release_dma = _funneled_release_dma;
   network->vtable.lco_get = isir_lco_get;
   network->vtable.lco_wait = isir_lco_wait;
   network->gas = gas;
 
-  sync_store(&network->flush, 0, SYNC_RELEASE);
   sync_two_lock_queue_init(&network->sends, NULL);
   sync_two_lock_queue_init(&network->recvs, NULL);
 
   isend_buffer_init(&network->isends, network->xport, 64, cfg->isir_sendlimit,
             cfg->isir_testwindow);
   irecv_buffer_init(&network->irecvs, network->xport, 64, cfg->isir_recvlimit);
+
+  sync_store(&network->progress_lock, 1, SYNC_RELEASE);
 
   return &network->vtable;
 }

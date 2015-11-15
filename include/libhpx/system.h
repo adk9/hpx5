@@ -15,23 +15,19 @@
 #define LIBHPX_SYSTEM_H
 
 #include <pthread.h>
+#include <libhpx/config.h>
 #include <hpx/attributes.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/// Get the number of available CPUs in the system.
-int system_get_cores(void);
+/// Set the affinity of worker thread with @p id according to the
+/// globally specified thread affinity @p policy.
+int system_set_worker_affinity(int id, libhpx_thread_affinity_t policy);
 
-/// Set the thread affinity to a specific core with id @p id.
-int system_set_affinity(pthread_t thread, int id);
-
-/// Set the thread affinity to a group of cores from 0 to @p ncores.
-int system_set_affinity_group(pthread_t thread, int ncores);
-
-/// Find out how many cores are in the thread's affinity group.
-int system_get_affinity_group_size(pthread_t thread, int *ncores);
+/// Get the number of available cores we can run on.
+int system_get_available_cores(void);
 
 /// Get the pthread's stack extent.
 ///

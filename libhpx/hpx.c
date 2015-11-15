@@ -22,8 +22,10 @@
 /// libhpx.
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
 #include <libhpx/boot.h>
@@ -39,16 +41,20 @@
 #include <libhpx/scheduler.h>
 #include <libhpx/system.h>
 #include <libhpx/time.h>
-#include <libhpx/utils.h>
-#include "network/probe.h"
+#include <libhpx/topology.h>
 
 #ifdef HAVE_APEX
 #include "apex.h"
 #endif
 
+#ifdef HAVE_PERCOLATION
+#include <libhpx/percolation.h>
+#endif
+
 static hpx_addr_t _hpx_143;
 static int _hpx_143_fix_handler(void) {
   _hpx_143 = hpx_gas_alloc_cyclic(sizeof(void*), HPX_LOCALITIES, 0);
+  hpx_exit(HPX_SUCCESS);
   return LIBHPX_OK;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _hpx_143_fix, _hpx_143_fix_handler);
@@ -59,7 +65,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _hpx_143_fix, _hpx_143_fix_handler);
 /// anything that should not persist between hpx_run() calls.
 static void _stop(locality_t *l) {
   if (!l)
-    return;  
+    return;
 
   if (l->sched) {
     scheduler_delete(l->sched);
@@ -79,9 +85,15 @@ static void _cleanup(locality_t *l) {
   if (!l)
     return;
 
-#ifdef HAVE_APEX 
-  // finalize APEX
+#ifdef HAVE_APEX
   apex_finalize();
+#endif
+
+#ifdef HAVE_PERCOLATION
+  if (l->percolation) {
+    percolation_delete(l->percolation);
+    l->percolation = NULL;
+  }
 #endif
 
   if (l->gas) {
@@ -97,7 +109,8 @@ static void _cleanup(locality_t *l) {
   }
 
   if (l->topology) {
-    hwloc_topology_destroy(l->topology);
+    topology_delete(l->topology);
+    l->topology = NULL;
   }
 
   if (l->actions) {
@@ -127,6 +140,7 @@ int hpx_init(int *argc, char ***argv) {
 
   here->rank = -1;
   here->ranks = 0;
+  here->epoch = 0;
   here->actions = NULL;
 
   here->config = config_new(argc, argv);
@@ -140,18 +154,6 @@ int hpx_init(int *argc, char ***argv) {
     dbg_wait();
   }
 
-  // topology
-  int e = hwloc_topology_init(&here->topology);
-  if (e) {
-    status = log_error("failed to initialize a topology.\n");
-    goto unwind1;
-  }
-  e = hwloc_topology_load(here->topology);
-  if (e) {
-    status = log_error("failed to load the topology.\n");
-    goto unwind1;
-  }
-
   // bootstrap
   here->boot = boot_new(here->config->boot);
   if (!here->boot) {
@@ -160,13 +162,6 @@ int hpx_init(int *argc, char ***argv) {
   }
   here->rank = boot_rank(here->boot);
   here->ranks = boot_n_ranks(here->boot);
-
-  // see if we're supposed to output the configuration, only do this at rank 0
-  if (config_log_level_isset(here->config, HPX_LOG_CONFIG)) {
-    if (here->rank == 0) {
-      config_print(here->config, stdout);
-    }
-  }
 
   // initialize the debugging system
   // @todo We would like to do this earlier but MPI_init() for the bootstrap
@@ -183,9 +178,23 @@ int hpx_init(int *argc, char ***argv) {
     }
   }
 
+  // see if we're supposed to output the configuration, only do this at rank 0
+  if (config_log_level_isset(here->config, HPX_LOG_CONFIG)) {
+    if (here->rank == 0) {
+      config_print(here->config, stdout);
+    }
+  }
+
+  // topology
+  here->topology = topology_new(here->config);
+  if (!here->topology) {
+    status = log_error("failed to discover topology.\n");
+    goto unwind1;
+  }
+
   // Initialize our instrumentation.
   if (inst_init(here->config)) {
-    log("error detected while initializing instrumentation\n");
+    log_dflt("error detected while initializing instrumentation\n");
   }
 
   prof_init(here->config);
@@ -198,27 +207,60 @@ int hpx_init(int *argc, char ***argv) {
   }
   HPX_HERE = HPX_THERE(here->rank);
 
-  if (here->config->cores) {
-    log_error("--hpx-cores is deprecated, ignoring\n");
+#ifdef HAVE_PERCOLATION
+  here->percolation = percolation_new();
+  if (!here->percolation) {
+    status = log_error("failed to activate percolation.\n");
+    goto unwind1;
   }
+#endif
 
-  // On Cray platforms, we look at the ALPS depth environment variable
-  // to figure out how many cores to use 
-  here->config->cores = libhpx_getenv_num("ALPS_APP_DEPTH", 0);
-  if (!here->config->cores) {
-    system_get_affinity_group_size(pthread_self(), &here->config->cores);
-
-    // ..otherwise, use all available cores
-    if (!here->config->cores) {
-      here->config->cores = system_get_cores();
-    }
-  }
+  int cores = system_get_available_cores();
+  dbg_assert(cores > 0);
 
   if (!here->config->threads) {
-    here->config->threads = here->config->cores;
+    here->config->threads = cores;
   }
-  log("HPX running %d worker threads on %d cores\n", here->config->threads,
-      here->config->cores);
+  log_dflt("HPX running %d worker threads on %d cores\n", here->config->threads,
+           cores);
+
+  here->network = network_new(here->config, here->boot, here->gas);
+  if (!here->network) {
+    status = log_error("failed to create network.\n");
+    goto unwind1;
+  }
+
+  // thread scheduler
+  here->sched = scheduler_new(here->config);
+  if (!here->sched) {
+    status = log_error("failed to create scheduler.\n");
+    goto unwind1;
+  }
+
+#ifdef HAVE_APEX
+  // initialize APEX, give this main thread a name
+  apex_init("HPX WORKER THREAD");
+  apex_set_node_id(here->rank);
+#endif
+
+  here->actions = action_table_finalize();
+  if (!here->actions) {
+    status = log_error("failed to finalize the action table.\n");
+    goto unwind1;
+  }
+
+  inst_start();
+
+  // start the scheduler, this will return after scheduler_shutdown()
+  if (scheduler_startup(here->sched, here->config) != LIBHPX_OK) {
+    log_error("scheduler shut down with error.\n");
+    goto unwind1;
+  }
+
+  if ((here->ranks > 1 && here->config->gas != HPX_GAS_AGAS) ||
+      !here->config->opt_smp) {
+    status = hpx_run(&_hpx_143_fix);
+  }
 
   return status;
  unwind1:
@@ -230,90 +272,26 @@ int hpx_init(int *argc, char ***argv) {
 
 /// Called to run HPX.
 int _hpx_run(hpx_action_t *act, int n, ...) {
-  int status = HPX_SUCCESS;
-  if (!here) {
-    status = log_error("hpx_init() must be called before hpx_run()\n");
-    goto unwind0;
-  }
-
-  // Initialize the network. This will initialize a transport and, as a side
-  // effect initialize our allocators.
-  here->network = network_new(here->config, here->boot, here->gas);
-  if (!here->network) {
-    status = log_error("failed to create network.\n");
-    goto unwind1;
-  }
-
-  // thread scheduler
-  here->sched = scheduler_new(here->config);
-  if (!here->sched) {
-    status = log_error("failed to create scheduler.\n");
-    goto unwind0;
-  }
-
-#ifdef HAVE_APEX 
-  // initialize APEX, give this main thread a name
-  apex_init("HPX WORKER THREAD");
-  apex_set_node_id(here->rank);
-#endif
-
-  here->actions = action_table_finalize();
-  if (!here->actions) {
-    status = log_error("failed to finalize the action table.\n");
-    goto unwind0;
-  }
-
-  inst_start();
-
-  if (probe_start(here->network) != LIBHPX_OK) {
-    status = log_error("could not start network probe\n");
-    goto unwind1;
-  }
-
-  // create the initial application-level thread to run
   if (here->rank == 0) {
     va_list vargs;
     va_start(vargs, n);
     hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, &vargs);
-    int status = hpx_parcel_send(p, HPX_NULL);
     va_end(vargs);
-
-    if (status != LIBHPX_OK) {
-      log_error("failed to spawn initial action\n");
-      goto unwind2;
-    }
-
-    // Fix for https://uisapp2.iu.edu/jira-prd/browse/HPX-143
-    if (here->ranks > 1 && here->config->gas != HPX_GAS_AGAS) {
-      status = hpx_call(HPX_HERE, _hpx_143_fix, HPX_NULL);
-      if (status != LIBHPX_OK) {
-        log_error("failed to spawn the initial cyclic allocation");
-        goto unwind2;
-      }
-    }
+    dbg_check(hpx_parcel_send(p, HPX_NULL), "failed to spawn initial action\n");
   }
+  log_dflt("hpx started running %"PRIu64"\n", here->epoch);
+  int status = scheduler_restart(here->sched);
+  log_dflt("hpx stopped running %"PRIu64"\n", here->epoch);
 
-  // start the scheduler, this will return after scheduler_shutdown()
-  if (scheduler_startup(here->sched, here->config) != LIBHPX_OK) {
-    log_error("scheduler shut down with error.\n");
-    goto unwind2;
-  }
+  // We need to flush the network here, because it might have messages that are
+  // required for progress.
+  here->network->flush(here->network);
 
-  // clean up after _hpx_143
-  if (_hpx_143 != HPX_NULL) {
-    hpx_gas_free(_hpx_143, HPX_NULL);
-  }
+  // Bump our epoch, and enforce the "collective" nature of run with a boot
+  // barrier.
+  here->epoch++;
+  boot_barrier(here->boot);
 
-#if defined(HAVE_APEX)
-  // this will add the stats to the APEX data set
-  libhpx_save_apex_stats();
-#endif
-
- unwind2:
-  probe_stop();
- unwind1:
-  _stop(here);
- unwind0:
   return status;
 }
 
@@ -329,19 +307,30 @@ int hpx_get_num_threads(void) {
   return (here && here->sched) ? here->sched->n_workers : 0;
 }
 
+int hpx_is_active(void) {
+  return (self->current != NULL);
+}
+
 /// Called by the application to terminate the scheduler and network.
 void hpx_exit(int code) {
   dbg_assert_str(here->ranks,
                  "hpx_exit can only be called when the system is running.\n");
 
-  // make sure we flush our local network when we shutdown
-  network_flush_on_shutdown(here->network);
+  // Make sure we flush our local network when we stop, but don't send our own
+  // shutdown here because it can "arrive" locally very quickly, before we've
+  // even come close to sending the rest of the stop commands. This can cause
+  // problems with flushing.
+  uint64_t c = code;
   for (int i = 0, e = here->ranks; i < e; ++i) {
-    int e = network_command(here->network, HPX_THERE(i), locality_shutdown,
-                            (uint64_t)code);
-    dbg_check(e);
+    if (i != here->rank) {
+      int e = network_command(here->network, HPX_THERE(i), locality_stop, c);
+      dbg_check(e);
+    }
   }
-  hpx_thread_exit(HPX_SUCCESS);
+
+  // Call our own shutdown through cc, which orders it locally after the effects
+  // from the loop above.
+  hpx_call_cc(HPX_HERE, locality_stop, NULL, NULL, &here->rank, &c);
 }
 
 /// Called by the application to shutdown the scheduler and network. May be
@@ -373,7 +362,18 @@ const char *hpx_strerror(hpx_status_t s) {
   }
 }
 
-void hpx_finalize() {
+void hpx_finalize(void) {
+  // clean up after _hpx_143
+  if (_hpx_143 != HPX_NULL) {
+    hpx_gas_free(_hpx_143, HPX_NULL);
+  }
+
+#if defined(HAVE_APEX)
+  // this will add the stats to the APEX data set
+  libhpx_save_apex_stats();
+#endif
+  _stop(here);
+
 #if defined(ENABLE_PROFILING)
   libhpx_stats_print();
 #endif

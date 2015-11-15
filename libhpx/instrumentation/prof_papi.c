@@ -31,6 +31,8 @@
 #include <libhpx/profiling.h>
 #include <libsync/sync.h>
 
+#define TIME_NULL hpx_time_construct(0, 0)
+
 /// Each locality maintains a single profile log
 static profile_log_t _profile_log = PROFILE_INIT;
 
@@ -42,7 +44,7 @@ static void _prof_end(){
   _profile_log.end_time = hpx_time_now();
 }
 
-static const char* _get_counter_string(size_t papi_event){
+static const char* _get_counter_string(uint64_t papi_event){
   switch(papi_event){
     case PAPI_L1_TCM:  return "PAPI_L1_TCM";
     case PAPI_L2_TCM:  return "PAPI_L2_TCM";
@@ -59,21 +61,19 @@ static const char* _get_counter_string(size_t papi_event){
   }
 }
 
-static void _set_event(size_t papi_event, size_t bit, size_t bitset, 
+static void _set_event(uint64_t papi_event, uint64_t bit, uint64_t bitset, 
                        int max_counters, int *num_counters){
   if(!(bit & bitset) || (PAPI_query_event(papi_event) != PAPI_OK)
                      || (*num_counters >= max_counters)){
     return;
   }
 
-  for(int i = 0; i < _profile_log.max_entries; i++){
-    _profile_log.counters[*num_counters] = papi_event;
-    _profile_log.counter_names[*num_counters] = _get_counter_string(papi_event);
-    *num_counters+=1;
-  }
+  _profile_log.counters[*num_counters] = papi_event;
+  _profile_log.counter_names[*num_counters] = _get_counter_string(papi_event);
+  *num_counters+=1;
 }
 
-static void _test_event(size_t papi_event, size_t bit, size_t bitset,
+static void _test_event(uint64_t papi_event, uint64_t bit, uint64_t bitset,
                         int max_counters, int *num_counters){
   if(!(bit & bitset)){
     return;
@@ -94,87 +94,118 @@ static void _test_event(size_t papi_event, size_t bit, size_t bitset,
   }
 }
 
-static void _create_new_list(profile_list_t *list, profile_list_t new_list, 
+static void _create_new_list(profile_list_t new_list, 
                              char *key, bool simple){
-  if(_profile_log.num_entries == _profile_log.max_entries){
-    _profile_log.max_entries *= 2;
-    profile_list_t *new_list_list = malloc(_profile_log.max_entries *
+  if(_profile_log.num_events == _profile_log.max_events){
+    _profile_log.max_events *= 2;
+    profile_list_t *new_list_list = malloc(_profile_log.max_events *
                                            sizeof(profile_list_t));
-    for(int i = 0; i < _profile_log.num_entries; i++){
-      new_list_list[i] = list[i];
+    for(int i = 0; i < _profile_log.num_events; i++){
+      new_list_list[i].max_entries = _profile_log.events[i].max_entries;
+      new_list_list[i].num_entries = _profile_log.events[i].num_entries;
+      new_list_list[i].tally = _profile_log.events[i].tally;
+      new_list_list[i].key = _profile_log.events[i].key;
+      new_list_list[i].entries = _profile_log.events[i].entries;
+      new_list_list[i].simple = _profile_log.events[i].simple;
     }
-    free(list);
-    list = new_list_list;
-    _profile_log.entries = list;
+    free((void *) _profile_log.events);
+    _profile_log.events = new_list_list;
   }
-  int index = _profile_log.num_entries;
-  _profile_log.num_entries++;
-  list[index] = new_list;
-  list[index].entries = malloc(_profile_log.max_entries *
+  int index = _profile_log.num_events;
+  _profile_log.num_events++;
+  _profile_log.events[index] = new_list;
+  _profile_log.events[index].entries = malloc(_profile_log.max_events *
                                sizeof(struct profile_entry));
-  list[index].tally = 0;
-  list[index].num_entries = 0;
-  list[index].max_entries = _profile_log.max_entries;
-  list[index].key = key;
-  list[index].simple = simple;
+  _profile_log.events[index].tally = 0;
+  _profile_log.events[index].num_entries = 0;
+  _profile_log.events[index].max_entries = _profile_log.max_events;
+  _profile_log.events[index].key = key;
+  _profile_log.events[index].simple = simple;
 }
 
-static void _create_new_entry(struct profile_entry *entries, 
-                              struct profile_entry new_entry,
-                              int event, bool simple){
-  if(_profile_log.entries[event].num_entries == 
-     _profile_log.entries[event].max_entries){
-    _profile_log.entries[event].max_entries *= 2;
-    struct profile_entry *new_list = 
-                                malloc(_profile_log.entries[event].max_entries *
-                                       sizeof(struct profile_entry));
-    for(int i = 0; i < _profile_log.entries[event].num_entries; i++){
-      new_list[i] = entries[i];
-    }
-    free(entries);
-    entries = new_list;
-    _profile_log.entries[event].entries = entries;
-  }
-  int index = _profile_log.entries[event].num_entries;
-  _profile_log.entries[event].tally++;
-  _profile_log.entries[event].num_entries++;
-  entries[index] = new_entry;
-  if(simple){
-    entries[index].counter_totals = NULL;
+static int _create_new_entry(struct profile_entry new_entry,
+                             int event, bool simple){
+  int eventset = PAPI_NULL;
+  int retval = PAPI_create_eventset(&eventset);
+  if(retval != PAPI_OK){
+    log_error("unable to create eventset with error code %d\n", retval);
   }
   else{
-    entries[index].counter_totals = malloc(_profile_log.num_counters * 
-                                           sizeof(int64_t));
+    for(int i = 0; i < _profile_log.num_counters; i++){
+      PAPI_add_event(eventset, _profile_log.counters[i]);
+    }
   }
-  entries[index].marked = false;
+
+  //grow the list of entries if needed
+  if(_profile_log.events[event].num_entries == 
+     _profile_log.events[event].max_entries){
+    _profile_log.events[event].max_entries *= 2;
+    struct profile_entry *new_list = 
+                                malloc(_profile_log.events[event].max_entries *
+                                       sizeof(struct profile_entry));
+    for(int i = 0; i < _profile_log.events[event].num_entries; i++){
+      new_list[i].start_time = _profile_log.events[event].entries[i].start_time;
+      new_list[i].run_time = _profile_log.events[event].entries[i].run_time;
+      new_list[i].counter_totals = _profile_log.events[event].entries[i].counter_totals;
+      new_list[i].last_entry = _profile_log.events[event].entries[i].last_entry;
+      new_list[i].last_event = _profile_log.events[event].entries[i].last_event;
+      new_list[i].marked = _profile_log.events[event].entries[i].marked;
+      new_list[i].eventset = _profile_log.events[event].entries[i].eventset;
+    }
+    free((void *)_profile_log.events[event].entries);
+    _profile_log.events[event].entries = new_list;
+  }
+  int index = _profile_log.events[event].num_entries;
+  _profile_log.events[event].tally++;
+  _profile_log.events[event].num_entries++;
+  _profile_log.events[event].entries[index] = new_entry;
+  if(simple){
+    _profile_log.events[event].entries[index].counter_totals = NULL;
+  }
+  else{
+    _profile_log.events[event].entries[index].counter_totals = 
+        malloc(_profile_log.num_counters * sizeof(int64_t));
+    for(int i = 0; i < _profile_log.num_counters; i++){
+      _profile_log.events[event].entries[index].counter_totals[i] = HPX_PROF_NO_RESULT;
+    }
+  }
+
+  _profile_log.events[event].entries[index].run_time = TIME_NULL;
+  _profile_log.events[event].entries[index].marked = false;
+  _profile_log.events[event].entries[index].paused = false;
+  _profile_log.events[event].entries[index].eventset = eventset;
+  return index;
 }
 
 //returns index of matching key/creates new entry if index doesn't exist
 static int _get_event_num(char *key){
-  for(int i = 0; i < _profile_log.num_entries; i++){
-    if(strcmp(key, _profile_log.entries[i].key) == 0){
+  for(int i = 0; i < _profile_log.num_events; i++){
+    if(strcmp(key, _profile_log.events[i].key) == 0){
       return i;
     }
   }
-  return -1;
+  return HPX_PROF_NO_RESULT;
+}
+
+static hpx_time_t _add_times(hpx_time_t time1, hpx_time_t time2){
+  int64_t seconds, ns, total;
+  total = hpx_time_diff_ns(TIME_NULL, time1) + hpx_time_diff_ns(TIME_NULL, time2);
+  seconds = total / 1e9;
+  ns = total % (int64_t)1e9;
+  return hpx_time_construct(seconds, ns);
 }
 
 void prof_init(struct config *cfg){
   int max_counters = PAPI_num_counters();
   int num_counters = 0;
-  size_t counters = cfg->prof_counters;
+  uint64_t counters = cfg->prof_counters;
 
-  int eventset = PAPI_NULL;
   int retval = PAPI_library_init(PAPI_VER_CURRENT);
   if(retval != PAPI_VER_CURRENT){
     log_error("unable to initialize PAPI with error code %d\n", retval);
   }
-  retval = PAPI_create_eventset(&eventset);
-  if(retval != PAPI_OK){
-    log_error("unable to create eventset with error code %d\n", retval);
-  }
 
-  //test events first to generate warnings and determine which counters
+  //test events first to generate warnings and determine where counters
   //can have space allocated for them
   _test_event(PAPI_L1_TCM, HPX_PAPI_L1_TCM, counters, 
               max_counters, &num_counters);
@@ -207,7 +238,7 @@ void prof_init(struct config *cfg){
   _profile_log.counters = malloc(num_counters * sizeof(int));
   _profile_log.counter_names = malloc(num_counters * sizeof(char*));
   _profile_log.num_counters = num_counters;
-  _profile_log.entries = malloc(_profile_log.max_entries * 
+  _profile_log.events = malloc(_profile_log.max_events * 
                                 sizeof(profile_list_t));
 
   max_counters = num_counters;
@@ -237,123 +268,255 @@ void prof_init(struct config *cfg){
   _set_event(PAPI_TOT_CYC, HPX_PAPI_TOT_CYC, counters,
              max_counters, &num_counters);
 
-  if(cfg->prof_action){
-    profile_list_t new_list;
-    _create_new_list(_profile_log.entries, new_list, cfg->prof_action, false);
-  }
   _prof_begin();
 }
 
 int prof_fini(){
-  if(_profile_log.num_counters > 0){
-    _prof_end();
-    inst_prof_dump(_profile_log);
-    for(int i = 0; i < _profile_log.num_entries; i++){
-      if(!_profile_log.entries[i].simple){
-        for(int j = 0; j < _profile_log.entries[i].num_entries; j++){
-          free(_profile_log.entries[i].entries[j].counter_totals);
-        }
+  _prof_end();
+  inst_prof_dump(_profile_log);
+  for(int i = 0; i < _profile_log.num_events; i++){
+    if(!_profile_log.events[i].simple){
+      for(int j = 0; j < _profile_log.events[i].num_entries; j++){
+        free(_profile_log.events[i].entries[j].counter_totals);
       }
-      free(_profile_log.entries[i].entries);
     }
-    free(_profile_log.counters);
-    free(_profile_log.counter_names);
+    free((void *)_profile_log.events[i].entries);
   }
+  free((void *)_profile_log.events);
+  free((void *)_profile_log.counters);
+  free((void *)_profile_log.counter_names);
   return LIBHPX_OK;
 }
 
-int prof_get_averages(int64_t *values, int num_values, char *key){
-  if(num_values != _profile_log.num_counters){
-    return PAPI_EINVAL;
-  }
+int prof_get_averages(int64_t *values, char *key){
   int event = _get_event_num(key);
-  if(event == -1 ||_profile_log.entries[event].simple){
+  if(event == HPX_PROF_NO_RESULT ||_profile_log.events[event].simple){
     return PAPI_EINVAL;
   }
 
-  double divisor = _profile_log.entries[event].num_entries;
-
-  if(divisor == 0){
-    return PAPI_ENOTRUN;
-  }
-
-  for(int i = 0; i < num_values; i++){
+  for(int i = 0; i < _profile_log.num_counters; i++){
     values[i] = 0;
-    for(int j = 0; j < _profile_log.entries[event].num_entries; j++){
-      if(_profile_log.entries[event].entries[i].marked){
-        values[i] += _profile_log.entries[event].entries[j].counter_totals[i];
+    double divisor = 0;
+    for(int j = 0; j < _profile_log.events[event].num_entries; j++){
+      if(_profile_log.events[event].entries[j].marked &&
+         _profile_log.events[event].entries[j].counter_totals[i] >= 0){
+        values[i] += _profile_log.events[event].entries[j].counter_totals[i];
+        divisor++;
       }
     }
-    values[i] /= divisor;
+    if(divisor > 0){
+      values[i] /= divisor;
+    }
   }
   return PAPI_OK;
 }
 
-int prof_get_totals(int64_t *values, int num_values, char *key){
-  if(num_values != _profile_log.num_counters){
-    return PAPI_EINVAL;
-  }
+int prof_get_totals(int64_t *values, char *key){
   int event = _get_event_num(key);
-  if(event == -1 || _profile_log.entries[event].simple){
+  if(event == HPX_PROF_NO_RESULT || _profile_log.events[event].simple){
     return PAPI_EINVAL;
   }
 
-  for(int i = 0; i < num_values; i++){
+  for(int i = 0; i < _profile_log.num_counters; i++){
     values[i] = 0;
-    for(int j = 0; j < _profile_log.entries[event].num_entries; j++){
-      if(_profile_log.entries[event].entries[i].marked){
-        values[i] += _profile_log.entries[event].entries[j].counter_totals[i];
+    for(int j = 0; j < _profile_log.events[event].num_entries; j++){
+      if(_profile_log.events[event].entries[j].marked &&
+         _profile_log.events[event].entries[j].counter_totals[i] >= 0){
+        values[i] += _profile_log.events[event].entries[j].counter_totals[i];
       }
     }
   }
   return PAPI_OK;
 }
 
-size_t prof_get_tally(char *key){
+int prof_get_minimums(int64_t *values, char *key){
   int event = _get_event_num(key);
-  if(event == -1){
+  if(event == HPX_PROF_NO_RESULT ||_profile_log.events[event].simple){
+    return PAPI_EINVAL;
+  }
+
+  for(int i = 0; i < _profile_log.num_counters; i++){
+    values[i] = 0;
+    int start = _profile_log.events[event].num_entries;
+    int64_t temp;
+    for(int j = 0; j < _profile_log.events[event].num_entries; j++){
+      if(_profile_log.events[event].entries[i].marked){
+        values[i] = _profile_log.events[event].entries[j].counter_totals[i];
+        start = j + 1;
+        break;
+      }
+    }
+    for(int j = start; j < _profile_log.events[event].num_entries; j++){
+      if(_profile_log.events[event].entries[j].marked){
+        temp = _profile_log.events[event].entries[j].counter_totals[i];
+        if(temp < values[i] && temp >= 0){
+          values[i] = temp;
+        }
+      }
+    }
+  }
+  return PAPI_OK;
+}
+
+int prof_get_maximums(int64_t *values, char *key){
+  int event = _get_event_num(key);
+  if(event == HPX_PROF_NO_RESULT ||_profile_log.events[event].simple){
+    return PAPI_EINVAL;
+  }
+
+  for(int i = 0; i < _profile_log.num_counters; i++){
+    values[i] = 0;
+    int start = _profile_log.events[event].num_entries;
+    int64_t temp;
+    for(int j = 0; j < _profile_log.events[event].num_entries; j++){
+      if(_profile_log.events[event].entries[i].marked){
+        values[i] = _profile_log.events[event].entries[j].counter_totals[i];
+        start = j + 1;
+        break;
+      }
+    }
+    for(int j = start; j < _profile_log.events[event].num_entries; j++){
+      if(_profile_log.events[event].entries[j].marked){
+        temp = _profile_log.events[event].entries[j].counter_totals[i];
+        if(temp > values[i]){
+          values[i] = temp;
+        }
+      }
+    }
+  }
+  return PAPI_OK;
+}
+
+int prof_get_tally(char *key){
+  int event = _get_event_num(key);
+  if(event == HPX_PROF_NO_RESULT){
     return 0;
   }
-  return _profile_log.entries[event].tally;
+  return _profile_log.events[event].tally;
 }
 
 void prof_get_average_time(char *key, hpx_time_t *avg){
   int event = _get_event_num(key);
-  if(event == -1){
+  if(event == HPX_PROF_NO_RESULT){
     return;
   }
 
-  uint64_t seconds, ns, average = 0;
-  for(int i = 0; i < _profile_log.entries[event].num_entries; i++){
-    if(_profile_log.entries[event].entries[i].marked){
-      average += hpx_time_diff_ns(_profile_log.entries[event].entries[i].start_time,
-                                _profile_log.entries[event].entries[i].end_time);
+  int64_t seconds, ns, average = 0;
+  double divisor = 0;
+  for(int i = 0; i < _profile_log.events[event].num_entries; i++){
+    if(_profile_log.events[event].entries[i].marked){
+      int64_t amount = hpx_time_diff_ns(TIME_NULL,
+                                  _profile_log.events[event].entries[i].run_time);
+      divisor++;
+      average += amount;
     }
   }
-  average /= _profile_log.entries[event].num_entries;
+  average /= divisor;
   seconds = average / 1e9;
-  ns = average % (long)1e9;
+  ns = average % (int64_t)1e9;
 
   *avg = hpx_time_construct(seconds, ns);
 }
 
 void prof_get_total_time(char *key, hpx_time_t *tot){
   int event = _get_event_num(key);
-  if(event == -1){
+  if(event == HPX_PROF_NO_RESULT){
     return;
   }
 
   int64_t seconds, ns, total = 0;
-  for(int i = 0; i < _profile_log.entries[event].num_entries; i++){
-    if(_profile_log.entries[event].entries[i].marked){
-      total += hpx_time_diff_ns(_profile_log.entries[event].entries[i].start_time,
-                                _profile_log.entries[event].entries[i].end_time);
+  for(int i = 0; i < _profile_log.events[event].num_entries; i++){
+    if(_profile_log.events[event].entries[i].marked){
+      total += hpx_time_diff_ns(TIME_NULL, 
+                                _profile_log.events[event].entries[i].run_time);
     }
   }
   seconds = total / 1e9;
-  ns = total % (long)1e9;
+  ns = total % (int64_t)1e9;
 
   *tot = hpx_time_construct(seconds, ns);
+}
+
+void prof_get_min_time(char *key, hpx_time_t *min){
+  int event = _get_event_num(key);
+  if(event == HPX_PROF_NO_RESULT){
+    return;
+  }
+
+  int64_t seconds, ns, temp;
+  int64_t minimum = 0;
+  int start = _profile_log.events[event].num_entries;
+
+  if(_profile_log.events[event].num_entries > 0 ){
+    for(int i = 0; i < _profile_log.events[event].num_entries; i++){
+      if(_profile_log.events[event].entries[i].marked){
+        minimum = hpx_time_diff_ns(TIME_NULL, 
+                                   _profile_log.events[event].entries[0].run_time);
+        start = i+1;
+        break;
+      }
+    }
+  }
+  for(int i = start; i < _profile_log.events[event].num_entries; i++){
+    if(_profile_log.events[event].entries[i].marked){
+      temp = hpx_time_diff_ns(TIME_NULL,
+                              _profile_log.events[event].entries[i].run_time);
+      if(temp < minimum){
+        minimum = temp;
+      }
+    }
+  }
+  if(minimum > 0){
+    seconds = minimum / 1e9;
+    ns = minimum % (int64_t)1e9;
+  }
+  else{
+    seconds = 0;
+    ns = 0;
+  }
+
+  *min = hpx_time_construct(seconds, ns);
+}
+
+void prof_get_max_time(char *key, hpx_time_t *max){
+  int event = _get_event_num(key);
+  if(event == HPX_PROF_NO_RESULT){
+    return;
+  }
+
+  int64_t seconds, ns, temp;
+  int64_t maximum = 0;
+  int start = _profile_log.events[event].num_entries;
+
+  if(_profile_log.events[event].num_entries > 0 ){
+    for(int i = 0; i < _profile_log.events[event].num_entries; i++){
+      if(_profile_log.events[event].entries[i].marked){
+        maximum = hpx_time_diff_ns(TIME_NULL,
+                                   _profile_log.events[event].entries[0].run_time);
+        start = i+1;
+        break;
+      }
+    }
+  }
+  for(int i = start; i < _profile_log.events[event].num_entries; i++){
+    if(_profile_log.events[event].entries[i].marked){
+      temp = hpx_time_diff_ns(TIME_NULL,
+                              _profile_log.events[event].entries[i].run_time);
+      if(temp > maximum){
+        maximum = temp;
+      }
+    }
+  }
+  if(maximum > 0){
+    seconds = maximum / 1e9;
+    ns = maximum % (int64_t)1e9;
+  }
+  else{
+    seconds = 0;
+    ns = 0;
+  }
+
+  *max = hpx_time_construct(seconds, ns);
 }
 
 int prof_get_num_counters(){
@@ -371,87 +534,262 @@ hpx_time_t prof_get_duration(){
 
 void prof_increment_tally(char *key){
   int event = _get_event_num(key);
-  if(event == -1){
+  if(event == HPX_PROF_NO_RESULT){
     profile_list_t new_list;
-    _create_new_list(_profile_log.entries, new_list, key, true);
-    event = _profile_log.num_entries-1;
+    _create_new_list(new_list, key, SIMPLE);
+    event = _profile_log.num_events - 1;
   }
 
-  _profile_log.entries[event].tally++;
+  _profile_log.events[event].tally++;
 }
 
-void prof_start_timing(char *key){
+void prof_start_timing(char *key, int *tag){
+  hpx_time_t now = hpx_time_now();
   int event = _get_event_num(key);
-  if(event == -1){
+  if(event == HPX_PROF_NO_RESULT){
     profile_list_t new_list;
-    _create_new_list(_profile_log.entries, new_list, key, true);
-    event = _profile_log.num_entries-1;
+    _create_new_list(new_list, key, SIMPLE);
+    event = _profile_log.num_events - 1;
+  }
+
+  // interrupt current timing
+  if(_profile_log.current_event >= 0 && 
+     !_profile_log.events[_profile_log.current_event].entries[
+                          _profile_log.current_entry].marked &&
+     !_profile_log.events[_profile_log.current_event].entries[
+                          _profile_log.current_entry].paused){
+    hpx_time_t dur;
+    hpx_time_diff(_profile_log.events[_profile_log.current_event].entries[
+                  _profile_log.current_entry].start_time, now, &dur);
+    _profile_log.events[_profile_log.current_event].entries[
+                        _profile_log.current_entry].run_time =
+             _add_times(_profile_log.events[_profile_log.current_event].entries[
+                        _profile_log.current_entry].run_time, dur);
   }
 
   struct profile_entry entry;
-  _create_new_entry(_profile_log.entries[event].entries, entry, event,
-                    _profile_log.entries[event].simple);
-  _profile_log.entries[event].entries[
-                       _profile_log.entries[
-                       event].num_entries - 1].start_time = hpx_time_now();
+  int index = _create_new_entry(entry, event, _profile_log.events[event].simple);
+  _profile_log.events[event].entries[index].last_entry = _profile_log.current_entry;
+  _profile_log.events[event].entries[index].last_event = _profile_log.current_event;
+  _profile_log.current_entry = index;
+  _profile_log.current_event = event;
+  _profile_log.events[event].entries[index].start_time = hpx_time_now();
+  *tag = index;
 }
 
-void prof_stop_timing(char *key){
+int prof_stop_timing(char *key, int *tag){
+  hpx_time_t end = hpx_time_now();
   int event = _get_event_num(key);
-  if(event == -1){
-    return;
+  if(event == HPX_PROF_NO_RESULT){
+    return event;
   }
-  for(int i = _profile_log.entries[event].num_entries-1; i >= 0; i--){
-    if(!_profile_log.entries[event].entries[i].marked){
-      _profile_log.entries[event].entries[i].end_time = hpx_time_now();
-      _profile_log.entries[event].entries[i].marked = true;
-      break;
+
+  if(*tag == HPX_PROF_NO_TAG){
+    for(int i = _profile_log.events[event].num_entries - 1; i >= 0; i--){
+      if(!_profile_log.events[event].entries[i].marked){
+        *tag = i;
+        break;
+      }
     }
   }
+  if(*tag == HPX_PROF_NO_TAG){
+    return event;
+  }
+
+  if(!_profile_log.events[event].entries[*tag].paused){
+    hpx_time_t dur;
+    hpx_time_diff(_profile_log.events[event].entries[*tag].start_time, end, &dur);
+
+    _profile_log.events[event].entries[*tag].run_time = 
+        _add_times(_profile_log.events[event].entries[*tag].run_time, dur);
+  }
+  _profile_log.events[event].entries[*tag].marked = true;
+  
+  // if another event/entry was being measured prior to switching to the current
+  // event/entry, then pick up where we left off
+  if(_profile_log.events[event].entries[*tag].last_event >= 0){
+    _profile_log.current_entry = _profile_log.events[event].entries[*tag].last_entry;
+    _profile_log.current_event = _profile_log.events[event].entries[*tag].last_event;
+    if(!_profile_log.events[event].entries[_profile_log.current_entry].paused){
+      _profile_log.events[_profile_log.current_event].entries
+                       [_profile_log.current_entry].start_time
+                        = hpx_time_now();
+    }
+  }
+  return event;
 }
 
-int prof_start_hardware_counters(char *key){
-  prof_start_timing(key);
+int prof_start_hardware_counters(char *key, int *tag){
+  hpx_time_t end = hpx_time_now();
   int event = _get_event_num(key);
-  if(_profile_log.entries[event].simple){
+  if(event == HPX_PROF_NO_RESULT){
+    profile_list_t new_list;
+    _create_new_list(new_list, key, !SIMPLE);
+    event = _profile_log.num_events - 1;
+  }
+
+  if(_profile_log.events[event].simple){
     return PAPI_EINVAL;
   }
   
-  int retval = PAPI_start_counters(_profile_log.counters, 
-                                   _profile_log.num_counters);
-  return retval;
+  // update the current event and entry being recorded
+  if(_profile_log.current_event >= 0 && 
+     !_profile_log.events[_profile_log.current_event].entries[
+                          _profile_log.current_entry].marked &&
+     !_profile_log.events[_profile_log.current_event].entries[
+                          _profile_log.current_entry].paused){
+    // I leave this as type long long instead of int64_t to suppress a warning
+    // at compile time that appears if I do otherwise
+    long long values[_profile_log.num_counters];
+    for(int i = 0; i < _profile_log.num_counters; i++){
+      values[i] = HPX_PROF_NO_RESULT;
+    }
+    PAPI_stop(_profile_log.events[_profile_log.current_event].entries[
+                                  _profile_log.current_entry].eventset, values);
+
+    hpx_time_t dur;
+    hpx_time_diff(_profile_log.events[
+                  _profile_log.current_event].entries[
+                  _profile_log.current_entry].start_time, end, &dur);
+    _profile_log.events[_profile_log.current_event].entries[
+                        _profile_log.current_entry].run_time =
+             _add_times(_profile_log.events[_profile_log.current_event].entries[
+                        _profile_log.current_entry].run_time, dur);
+
+    for(int i = 0; i < _profile_log.num_counters; i++){
+      _profile_log.events[_profile_log.current_event].entries[
+                          _profile_log.current_entry].counter_totals[i] 
+                          += (int64_t) values[i];
+    }
+  }
+
+  struct profile_entry entry;
+  int index = _create_new_entry(entry, event, _profile_log.events[event].simple);
+  
+  _profile_log.events[event].entries[index].last_entry = _profile_log.current_entry;
+  _profile_log.events[event].entries[index].last_event = _profile_log.current_event;
+  _profile_log.current_entry = index;
+  _profile_log.current_event = event;
+  *tag = index;
+  PAPI_reset(_profile_log.events[_profile_log.current_event].entries[
+                                 _profile_log.current_entry].eventset);
+  _profile_log.events[event].entries[index].start_time = hpx_time_now();
+  return PAPI_start(_profile_log.events[event].entries[index].eventset);
 }
 
-int prof_stop_hardware_counters(char *key){
-  prof_stop_timing(key);
-  // I leave this as type long long instead of int64_t to suppress a warning
-  // at compile time if I do otherwise
-  long long values[_profile_log.num_counters];
-  int event = _get_event_num(key);
-  if(event == -1 || _profile_log.entries[event].simple){
+int prof_stop_hardware_counters(char *key, int *tag){
+  int event = prof_stop_timing(key, tag);
+  if(event == HPX_PROF_NO_RESULT || *tag == HPX_PROF_NO_TAG){
     return PAPI_EINVAL;
   }
-  int retval = PAPI_read_counters(values, _profile_log.num_counters);
+
+  // I leave this as type long long instead of int64_t to suppress a warning
+  // at compile time that appears if I do otherwise
+  long long values[_profile_log.num_counters];
+  for(int i = 0; i < _profile_log.num_counters; i++){
+    values[i] = HPX_PROF_NO_RESULT;
+  }
+  int retval = PAPI_stop(_profile_log.events[event].entries[*tag].eventset, 
+                         values);
+  PAPI_reset(_profile_log.events[event].entries[*tag].eventset);
   if(retval != PAPI_OK){
     return retval;
   }
   
-  int where = -1;
-  for(int i = _profile_log.entries[event].num_entries-1; i >= 0; i--){
-    if(!_profile_log.entries[event].entries[i].marked){
-      where = i;
-      _profile_log.entries[event].entries[i].marked = true;
-      break;
-    }
-  }
-  if(where == -1){
-    return -1;
-  }
   for(int i = 0; i < _profile_log.num_counters; i++){
-    _profile_log.entries[event].entries[where].counter_totals[i] 
-      = (int64_t) values[i];
+    _profile_log.events[event].entries[*tag].counter_totals[i] 
+      += (int64_t) values[i];
+  }
+
+  // if another event/entry was being measured prior to switching to the current
+  // event/entry, then pick up where we left off (check current_event because it
+  // was already updated in prof_stop_timing())
+  if(_profile_log.current_event >= 0 && 
+     !_profile_log.events[event].entries[_profile_log.current_entry].paused){
+    PAPI_start(_profile_log.events[_profile_log.current_event].entries[
+                                   _profile_log.current_entry].eventset);
   }
 
   return PAPI_OK;
 }
 
+int prof_pause(char *key, int *tag){
+  hpx_time_t end = hpx_time_now();
+  int event = _get_event_num(key);
+  if(event == HPX_PROF_NO_RESULT){
+    return PAPI_EINVAL;
+  }
+
+  if(*tag == HPX_PROF_NO_TAG){
+    for(int i = _profile_log.events[event].num_entries - 1; i >= 0; i--){
+      if(!_profile_log.events[event].entries[i].marked && 
+         !_profile_log.events[event].entries[i].paused){
+        *tag = i;
+        break;
+      }
+    }
+  }
+  if(*tag == HPX_PROF_NO_TAG ||
+     _profile_log.events[event].entries[*tag].marked ||
+     _profile_log.events[event].entries[*tag].paused){
+    return PAPI_EINVAL;
+  }
+
+  // first store timing information
+  hpx_time_t dur;
+  hpx_time_diff(_profile_log.events[event].entries[*tag].start_time, end, &dur);
+  _profile_log.events[event].entries[*tag].run_time = 
+      _add_times(_profile_log.events[event].entries[*tag].run_time, dur);
+
+  // then store counter information if necessary
+  if(!_profile_log.events[event].simple){
+    // I leave this as type long long instead of int64_t to suppress a warning
+    // at compile time that appears if I do otherwise
+    long long values[_profile_log.num_counters];
+    for(int i = 0; i < _profile_log.num_counters; i++){
+      values[i] = HPX_PROF_NO_RESULT;
+    }
+    int retval = PAPI_stop(_profile_log.events[event].entries[*tag].eventset, 
+                           values);
+    PAPI_reset(_profile_log.events[event].entries[*tag].eventset);
+    if(retval != PAPI_OK){
+      return retval;
+    }
+    
+    for(int i = 0; i < _profile_log.num_counters; i++){
+      _profile_log.events[event].entries[*tag].counter_totals[i] 
+        += (int64_t) values[i];
+    }
+  }
+  _profile_log.events[event].entries[*tag].paused = true;
+  return PAPI_OK;
+}
+
+int prof_resume(char *key, int *tag){
+  int event = _get_event_num(key);
+  if(event == HPX_PROF_NO_RESULT){
+    return PAPI_EINVAL;
+  }
+
+  if(*tag == HPX_PROF_NO_TAG){
+    for(int i = _profile_log.events[event].num_entries - 1; i >= 0; i--){
+      if(!_profile_log.events[event].entries[i].marked && 
+         _profile_log.events[event].entries[i].paused){
+        *tag = i;
+        break;
+      }
+    }
+  }
+  if(*tag == HPX_PROF_NO_TAG){
+    return PAPI_EINVAL;
+  }
+
+  _profile_log.events[event].entries[*tag].paused = false;
+  _profile_log.events[event].entries[*tag].start_time = hpx_time_now();
+  if(!_profile_log.events[event].simple){
+    PAPI_reset(_profile_log.events[_profile_log.current_event].entries[
+                                   _profile_log.current_entry].eventset);
+    return PAPI_start(_profile_log.events[event].entries[*tag].eventset);
+  }
+  return PAPI_OK;
+}

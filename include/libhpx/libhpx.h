@@ -15,6 +15,7 @@
 #define LIBHPX_LIBHPX_H
 
 #include <errno.h>
+#include <hpx/attributes.h>
 #include <libhpx/config.h>
 
 enum {
@@ -28,9 +29,9 @@ enum {
 
 struct config;
 typedef struct config libhpx_config_t;
-libhpx_config_t *libhpx_get_config(void);
+libhpx_config_t *libhpx_get_config(void) HPX_PUBLIC;
 
 /// Print the version of libhpx.
-void libhpx_print_version(void);
+void libhpx_print_version(void) HPX_PUBLIC;
 
 #endif  // LIBHPX_LIBHPX_H

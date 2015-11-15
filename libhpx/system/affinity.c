@@ -20,46 +20,46 @@
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
+#include <libhpx/scheduler.h>
 #include <libhpx/system.h>
+#include <libhpx/topology.h>
+#include <libhpx/worker.h>
 #include <hwloc.h>
 
-static int _hwloc_cpubind(hwloc_thread_t thread, hwloc_bitmap_t set) {
-  int e = hwloc_set_thread_cpubind(here->topology, thread,
-                                   set, HWLOC_CPUBIND_THREAD);
-  if (e) {
-    log_error("_hwloc_cpubind() failed with error %s.\n", strerror(e));
-    return LIBHPX_ERROR;
+int system_set_worker_affinity(int id, libhpx_thread_affinity_t policy) {
+  int resource;
+  int cpu = (id % here->topology->ncpus);
+  switch (policy) {
+   case HPX_THREAD_AFFINITY_DEFAULT:
+   case HPX_THREAD_AFFINITY_NUMA:
+     resource = here->topology->cpu_to_numa[cpu];
+     break;
+   case HPX_THREAD_AFFINITY_CORE:
+     resource = here->topology->cpu_to_core[cpu];
+     break;
+   case HPX_THREAD_AFFINITY_HWTHREAD:
+     resource = cpu;
+     break;
+   case HPX_THREAD_AFFINITY_NONE:
+     resource = -1;
+     break;
+   default:
+     log_error("unknown thread affinity policy\n");
+     return LIBHPX_ERROR;
   }
 
-  return LIBHPX_OK;
-}
-
-int system_set_affinity(pthread_t thread, int id) {
-  hwloc_bitmap_t cpu_set = hwloc_bitmap_alloc();
-  hwloc_bitmap_set(cpu_set, id);
-  int e = _hwloc_cpubind(thread, cpu_set);
-  hwloc_bitmap_free(cpu_set);
-  return e;
-}
-
-int system_set_affinity_group(pthread_t thread, int ncores) {
-  hwloc_bitmap_t cpu_set = hwloc_bitmap_alloc();
-  hwloc_bitmap_set_range(cpu_set, 0, ncores);
-  int e = _hwloc_cpubind(thread, cpu_set);
-  hwloc_bitmap_free(cpu_set);
-  return e;
-}
-
-int system_get_affinity_group_size(pthread_t thread, int *ncores) {
-  hwloc_bitmap_t cpu_set = hwloc_bitmap_alloc();
-  int e = hwloc_get_thread_cpubind(here->topology, (hwloc_thread_t)thread,
-                                   cpu_set, HWLOC_CPUBIND_THREAD);
-  if (e) {
-    *ncores = 0;
-  } else {
-    *ncores = hwloc_bitmap_weight(cpu_set);
+  // if we didn't find a valid cpuset, we ignore affinity.
+  if (resource < 0) {
+    return LIBHPX_OK;
   }
 
-  hwloc_bitmap_free(cpu_set);
-  return LIBHPX_OK;
+  hwloc_cpuset_t cpuset = here->topology->cpu_affinity_map[resource];
+  return  hwloc_set_cpubind(here->topology->hwloc_topology,
+                            cpuset, HWLOC_CPUBIND_THREAD);
+}
+
+/// Return the weight of the bitmap that represents the CPUs we are
+///  allowed to run on. This bitmap is set in libhpx/system/topology.c.
+int system_get_available_cores(void) {
+  return hwloc_bitmap_weight(here->topology->allowed_cpus);
 }

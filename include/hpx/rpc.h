@@ -33,13 +33,12 @@
 /// @param action The action to perform.
 /// @param    out Address of the output buffer.
 /// @param   olen The length of the @p output buffer.
-/// @param   args The argument data buffer for @p action.
-/// @param   alen The length of the @p args buffer.
+/// @param  nargs The number of arguments for @p action.
 ///
 /// @returns HPX_SUCCESS, or an error code if the action generated an error that
 ///          could not be handled remotely.
 int     _hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out, size_t olen,
-                       int nargs, ...);
+                       int nargs, ...) HPX_PUBLIC;
 #define hpx_call_sync(addr, action, out, olen, ...)                   \
   _hpx_call_sync(addr, action, out, olen, __HPX_NARGS(__VA_ARGS__) ,  \
                  ##__VA_ARGS__)
@@ -55,13 +54,12 @@ int     _hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out, size_t o
 /// @param   addr The address that defines where the action is executed.
 /// @param action The action to perform.
 /// @param result An address of an LCO to trigger with the result.
-/// @param   args The argument data buffer for @p action.
-/// @param    len The length of the @p args buffer.
+/// @param  nargs The number of arguments for @p action.
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
 int    _hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result,
-                 int nargs, ...);
+                 int nargs, ...) HPX_PUBLIC;
 #define hpx_call(addr, action, result, ...) \
   _hpx_call(addr, action, result, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
@@ -82,13 +80,12 @@ int    _hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result,
 /// @param   addr The address that defines where the action is executed.
 /// @param action The action to perform.
 /// @param result An address of an LCO to trigger with the result.
-/// @param   args The argument data buffer for @p action.
-/// @param    len The length of the @p args buffer.
+/// @param  nargs The number of arguments for @p action.
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
 int    _hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
-                      hpx_addr_t result, int nargs, ...);
+                      hpx_addr_t result, int nargs, ...) HPX_PUBLIC;
 #define hpx_call_when(gate, addr, action, result, ...)                  \
   _hpx_call_when(gate, addr, action, result, __HPX_NARGS(__VA_ARGS__) , \
                  ##__VA_ARGS__)
@@ -100,14 +97,14 @@ int    _hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 /// @param action   The action to perform.
 /// @param c_target The address where the continuation action is executed.
 /// @param c_action The continuation action to perform.
-/// @param   args   The argument data buffer for @p action.
-/// @param    len   The length of the @p args buffer.
+/// @param  nargs The number of arguments for @p action.
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
 int    _hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr,
                                         hpx_action_t action, hpx_addr_t c_target,
-                                        hpx_action_t c_action, int nargs, ...);
+                                        hpx_action_t c_action, int nargs, ...)
+  HPX_PUBLIC;
 #define hpx_call_when_with_continuation(gate, addr, action, c_target,   \
                                         c_action, ...)                  \
   _hpx_call_when_with_continuation(gate, addr, action, c_target,        \
@@ -127,13 +124,12 @@ int    _hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr,
 /// @param action The action to perform.
 /// @param    out Address of the output buffer.
 /// @param   olen The length of the @p output buffer.
-/// @param   args The argument data buffer for @p action.
-/// @param   alen The length of the @p args buffer.
+/// @param  nargs The number of arguments for @p action.
 ///
 /// @returns HPX_SUCCESS, or an error code if the action generated an error that
 ///          could not be handled remotely.
 int    _hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
-                           void *out, size_t olen, int nargs, ...);
+                           void *out, size_t olen, int nargs, ...) HPX_PUBLIC;
 #define hpx_call_when_sync(gate, addr, action, out, olen, ...)          \
   _hpx_call_when_sync(gate, addr, action, out, olen,                    \
                       __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
@@ -148,14 +144,13 @@ int    _hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action
 /// @param action   The action to perform.
 /// @param c_target The address where the continuation action is executed.
 /// @param c_action The continuation action to perform.
-/// @param   args   The argument data buffer for @p action.
-/// @param    len   The length of the @p args buffer.
+/// @param  nargs The number of arguments for @p action.
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call invocation.
 int    _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
                                    hpx_addr_t c_target, hpx_action_t c_action,
-                                   int nargs, ...);
+                                   int nargs, ...) HPX_PUBLIC;
 #define hpx_call_with_continuation(addr, action, c_target, c_action, ...) \
   _hpx_call_with_continuation(addr, action, c_target, c_action,           \
                               __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
@@ -176,12 +171,12 @@ int    _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
 ///                   (i.e., R/W access to, or free of @p args is safe),
 ///                   HPX_NULL if we don't care.
 /// @param     result The global address of an LCO to signal with the result.
-/// @param       args The arguments for @p action.
+/// @param  nargs The number of arguments for @p action.
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem locally during
 ///          the hpx_call_async invocation.
 int    _hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t lsync,
-                       hpx_addr_t result, int nargs, ...);
+                       hpx_addr_t result, int nargs, ...) HPX_PUBLIC;
 #define hpx_call_async(addr, action, lsync, result, ...)                  \
   _hpx_call_async(addr, action, lsync, result, __HPX_NARGS(__VA_ARGS__) , \
                   ##__VA_ARGS__)
@@ -199,85 +194,36 @@ int    _hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t lsync,
 /// @param cleanup A callback function that is run after the action
 ///                has been invoked.
 /// @param     env The environment to pass to the cleanup function.
-/// @param    args The argument data buffer for @p action.
-/// @param     len The length of the @p args buffer.
+/// @param  nargs The number of arguments for @p action.
 ///
 /// @returns HPX_SUCCESS, or an error code if there was a problem during
 ///          the hpx_call_cc invocation.
 void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
                        void (*cleanup)(void*), void *env, int nargs, ...)
-  HPX_NORETURN;
+  HPX_NORETURN HPX_PUBLIC;
 
 #define hpx_call_when_cc(gate, addr, action, cleanup, env, ...) \
   _hpx_call_when_cc(gate, addr, action, cleanup, env,           \
-                    __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+                    __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
 #define hpx_call_cc(addr, action, cleanup, env, ...)            \
   _hpx_call_when_cc(HPX_NULL, addr, action, cleanup, env,       \
-                    __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+                    __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
 
-/// HPX collective operations.
+/// Collective calls.
 ///
-/// This is a parallel call interface that performs an @p action on @p args at
-/// all available localities. The output values are not returned, but the
-/// completion of the broadcast operation can be tracked through the @p lco LCO.
-///
-/// @param       action The action to perform.
-/// @param        lsync The address of an LCO to trigger when the broadcast
-///                       operation is complete locally, and the buffer can be
-///                       reused or released.
-/// @param        rsync The address of an LCO to trigger when the broadcast
-///                       operation is complete globally, i.e., when all of the
-///                       broadcast handlers have run.
-/// @param         args The argument data for @p action.
-/// @param          len The length of @p args.
-///
-/// @returns      HPX_SUCCESS if no errors were encountered.
-int    _hpx_bcast(hpx_action_t action, hpx_addr_t lsync, hpx_addr_t rsync, int
-                  nargs, ...);
+
 #define hpx_bcast(action, lsync, rsync, ...)                            \
-  _hpx_bcast(action, lsync, rsync, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+  _hpx_process_broadcast(hpx_thread_current_pid(), action, lsync, rsync, \
+                         __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
-/// HPX collective operations.
-///
-/// This is a parallel call interface that performs an @p action on @p args at
-/// all available localities. The output values are not returned.
-///
-/// This variant of bcast is locally synchronous. It will not return to the
-/// caller until it is safe to reuse or delete the @p args buffer.
-///
-/// @param       action The action to perform.
-/// @param        rsync The address of an LCO to trigger when the broadcast
-///                       operation is complete globally, i.e., when all of the
-///                       broadcast handlers have run.
-/// @param         args The argument data for @p action.
-/// @param          len The length of @p args.
-///
-/// @returns      HPX_SUCCESS if no errors were encountered.
-int    _hpx_bcast_lsync(hpx_action_t action, hpx_addr_t rsync, int nargs, ...);
-#define hpx_bcast_lsync(action, rsync, ...)                          \
-  _hpx_bcast_lsync(action, rsync, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+#define hpx_bcast_lsync(action, rsync, ...)                             \
+  _hpx_process_broadcast_lsync(hpx_thread_current_pid(), action, rsync, \
+                               __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
-
-/// HPX collective operations.
-///
-/// This is a parallel call interface that performs an @p action on @p args at
-/// all available localities. The output values are not returned.
-///
-/// This variant of bcast is synchronous. It will not return to the caller until
-/// specified action has run at every locality (this implies local completion as
-/// well).
-///
-/// @param       action The action to perform.
-/// @param         args The argument data for @p action.
-/// @param          len The length of @p args.
-///
-/// @returns      HPX_SUCCESS if no errors were encountered.
-int    _hpx_bcast_rsync(hpx_action_t action, int nargs, ...);
 #define hpx_bcast_rsync(action, ...)                                    \
-  _hpx_bcast_rsync(action, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
-
-/// @}
+  _hpx_process_broadcast_rsync(hpx_thread_current_pid(), action,        \
+                               __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
 #endif
