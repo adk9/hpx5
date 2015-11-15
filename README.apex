@@ -74,10 +74,9 @@ git checkout git@gitlab.crest.iu.edu:extreme/hpx.git
 
 # set environment variables for HPX for photon support
 export CRAYPE_LINK_TYPE=dynamic
-export HPX_PHOTON_CARGS=--with-ugni
 export HPX_PHOTON_BACKEND=ugni
 
-# set Pkgconfig for APEX
+#set Pkgconfig for APEX
 XPRESS_APEX=${HOME}/src/xpress-apex/install/lib/pkgconfig
 if [ ${PKG_CONFIG_PATH} ] ; then
     export PKG_CONFIG_PATH=$XPRESS_APEX:${PKG_CONFIG_PATH}
