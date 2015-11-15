@@ -33,7 +33,7 @@ The following tools have been verified to work with HPX-5.
 * icc (Tested with 15.0.1).
 * GNU Make 3.81+
 
-# Configuration and Running
+# Configuration and Building
 
 HPX-5 relies on standard autotools infrastructure for configuration and
 building. Basic details can be found in the INSTALL file, while advanced
