@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
-General Instructions for building HPX-5 with APEX measurement/adaptation support
+wap PrgEnv-intel PrgEnv-gnumodule load cmake/3.0.0eneral Instructions for building HPX-5 with APEX measurement/adaptation support
 --------------------------------------------------------------------------------
 
 To include APEX support in HPX-5, add the APEX pkgconfig path to the 
@@ -90,7 +90,7 @@ export PATH=/path/to/install/bin:$PATH
 # bootstrap to make the configure script with APEX options
 ./bootstrap
 # run configure
-./configure --prefix=path-to-hpx-install --enable-mpi CC=cc HPX_PHOTON_CARGS=--with-ugni --enable-photon --with-apex --enable-debug
+./configure --prefix=path-to-hpx-install --enable-mpi CC=cc PHOTON_CARGS="--enable-ugni" --enable-photon --with-apex
 make && make install
 
 -----------------------------------------------------
