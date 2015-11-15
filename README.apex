@@ -18,7 +18,7 @@ https://github.com/khuck/xpress-apex
 To build HPX-5 with APEX on Edison, do the following:
 
 -----------------------------------------------------
-1) load the right modulesmodule unload darshan
+1) load the right modules
 -----------------------------------------------------
 
 module swap PrgEnv-intel PrgEnv-gnu
