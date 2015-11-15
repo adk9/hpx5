@@ -86,6 +86,9 @@ const char *hpx_options_t_help[] = {
   "      --hpx-photon-btethresh=integer\n                                [ugni] set size in bytes for when BTE is used\n                                  over FMA",
   "      --hpx-photon-fiprov=provider\n                                [libfabric] provider to use (sockets, psm,\n                                  etc.)",
   "      --hpx-photon-fidev=interface\n                                [libfabric] network interface to use",
+  "      --hpx-photon-colldev=interface\n                                [hwcoll] device to use for hardware collective",
+  "      --hpx-photon-collid=integer\n                                [hwcoll] hardware collective id",
+  "      --hpx-photon-collsize=integer\n                                [hwcoll] hardware collective size",
   "      --hpx-photon-ledgersize=integer\n                                set number of ledger entries",
   "      --hpx-photon-eagerbufsize=bytes\n                                set size of eager buffers",
   "      --hpx-photon-smallpwcsize=bytes\n                                set PWC small msg limit",
@@ -201,6 +204,9 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_photon_btethresh_given = 0 ;
   args_info->hpx_photon_fiprov_given = 0 ;
   args_info->hpx_photon_fidev_given = 0 ;
+  args_info->hpx_photon_colldev_given = 0 ;
+  args_info->hpx_photon_collid_given = 0 ;
+  args_info->hpx_photon_collsize_given = 0 ;
   args_info->hpx_photon_ledgersize_given = 0 ;
   args_info->hpx_photon_eagerbufsize_given = 0 ;
   args_info->hpx_photon_smallpwcsize_given = 0 ;
@@ -276,6 +282,10 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_photon_fiprov_orig = NULL;
   args_info->hpx_photon_fidev_arg = NULL;
   args_info->hpx_photon_fidev_orig = NULL;
+  args_info->hpx_photon_colldev_arg = NULL;
+  args_info->hpx_photon_colldev_orig = NULL;
+  args_info->hpx_photon_collid_orig = NULL;
+  args_info->hpx_photon_collsize_orig = NULL;
   args_info->hpx_photon_ledgersize_orig = NULL;
   args_info->hpx_photon_eagerbufsize_orig = NULL;
   args_info->hpx_photon_smallpwcsize_orig = NULL;
@@ -347,14 +357,17 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_photon_btethresh_help = hpx_options_t_help[49] ;
   args_info->hpx_photon_fiprov_help = hpx_options_t_help[50] ;
   args_info->hpx_photon_fidev_help = hpx_options_t_help[51] ;
-  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[52] ;
-  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[53] ;
-  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[54] ;
-  args_info->hpx_photon_maxrd_help = hpx_options_t_help[55] ;
-  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[56] ;
-  args_info->hpx_photon_numcq_help = hpx_options_t_help[57] ;
-  args_info->hpx_photon_usercq_help = hpx_options_t_help[58] ;
-  args_info->hpx_opt_smp_help = hpx_options_t_help[60] ;
+  args_info->hpx_photon_colldev_help = hpx_options_t_help[52] ;
+  args_info->hpx_photon_collid_help = hpx_options_t_help[53] ;
+  args_info->hpx_photon_collsize_help = hpx_options_t_help[54] ;
+  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[55] ;
+  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[56] ;
+  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[57] ;
+  args_info->hpx_photon_maxrd_help = hpx_options_t_help[58] ;
+  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[59] ;
+  args_info->hpx_photon_numcq_help = hpx_options_t_help[60] ;
+  args_info->hpx_photon_usercq_help = hpx_options_t_help[61] ;
+  args_info->hpx_opt_smp_help = hpx_options_t_help[63] ;
   
 }
 
@@ -531,6 +544,10 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_photon_fiprov_orig));
   free_string_field (&(args_info->hpx_photon_fidev_arg));
   free_string_field (&(args_info->hpx_photon_fidev_orig));
+  free_string_field (&(args_info->hpx_photon_colldev_arg));
+  free_string_field (&(args_info->hpx_photon_colldev_orig));
+  free_string_field (&(args_info->hpx_photon_collid_orig));
+  free_string_field (&(args_info->hpx_photon_collsize_orig));
   free_string_field (&(args_info->hpx_photon_ledgersize_orig));
   free_string_field (&(args_info->hpx_photon_eagerbufsize_orig));
   free_string_field (&(args_info->hpx_photon_smallpwcsize_orig));
@@ -693,6 +710,12 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-photon-fiprov", args_info->hpx_photon_fiprov_orig, 0);
   if (args_info->hpx_photon_fidev_given)
     write_into_file(outfile, "hpx-photon-fidev", args_info->hpx_photon_fidev_orig, 0);
+  if (args_info->hpx_photon_colldev_given)
+    write_into_file(outfile, "hpx-photon-colldev", args_info->hpx_photon_colldev_orig, 0);
+  if (args_info->hpx_photon_collid_given)
+    write_into_file(outfile, "hpx-photon-collid", args_info->hpx_photon_collid_orig, 0);
+  if (args_info->hpx_photon_collsize_given)
+    write_into_file(outfile, "hpx-photon-collsize", args_info->hpx_photon_collsize_orig, 0);
   if (args_info->hpx_photon_ledgersize_given)
     write_into_file(outfile, "hpx-photon-ledgersize", args_info->hpx_photon_ledgersize_orig, 0);
   if (args_info->hpx_photon_eagerbufsize_given)
@@ -1353,6 +1376,9 @@ hpx_option_parser_internal (
         { "hpx-photon-btethresh",	1, NULL, 0 },
         { "hpx-photon-fiprov",	1, NULL, 0 },
         { "hpx-photon-fidev",	1, NULL, 0 },
+        { "hpx-photon-colldev",	1, NULL, 0 },
+        { "hpx-photon-collid",	1, NULL, 0 },
+        { "hpx-photon-collsize",	1, NULL, 0 },
         { "hpx-photon-ledgersize",	1, NULL, 0 },
         { "hpx-photon-eagerbufsize",	1, NULL, 0 },
         { "hpx-photon-smallpwcsize",	1, NULL, 0 },
@@ -1907,6 +1933,48 @@ hpx_option_parser_internal (
                 &(local_args_info.hpx_photon_fidev_given), optarg, 0, 0, ARG_STRING,
                 check_ambiguity, override, 0, 0,
                 "hpx-photon-fidev", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* [hwcoll] device to use for hardware collective.  */
+          else if (strcmp (long_options[option_index].name, "hpx-photon-colldev") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_photon_colldev_arg), 
+                 &(args_info->hpx_photon_colldev_orig), &(args_info->hpx_photon_colldev_given),
+                &(local_args_info.hpx_photon_colldev_given), optarg, 0, 0, ARG_STRING,
+                check_ambiguity, override, 0, 0,
+                "hpx-photon-colldev", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* [hwcoll] hardware collective id.  */
+          else if (strcmp (long_options[option_index].name, "hpx-photon-collid") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_photon_collid_arg), 
+                 &(args_info->hpx_photon_collid_orig), &(args_info->hpx_photon_collid_given),
+                &(local_args_info.hpx_photon_collid_given), optarg, 0, 0, ARG_INT,
+                check_ambiguity, override, 0, 0,
+                "hpx-photon-collid", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* [hwcoll] hardware collective size.  */
+          else if (strcmp (long_options[option_index].name, "hpx-photon-collsize") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_photon_collsize_arg), 
+                 &(args_info->hpx_photon_collsize_orig), &(args_info->hpx_photon_collsize_given),
+                &(local_args_info.hpx_photon_collsize_given), optarg, 0, 0, ARG_INT,
+                check_ambiguity, override, 0, 0,
+                "hpx-photon-collsize", '-',
                 additional_error))
               goto failure;
           

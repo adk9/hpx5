@@ -195,6 +195,18 @@ option "hpx-photon-fidev" - "[libfabric] network interface to use"
 typestr="interface"
 string optional
 
+option "hpx-photon-colldev" - "[hwcoll] device to use for hardware collective"
+typestr="interface"
+string optional
+
+option "hpx-photon-collid" - "[hwcoll] hardware collective id"
+typestr="integer"
+int optional
+
+option "hpx-photon-collsize" - "[hwcoll] hardware collective size"
+typestr="integer"
+int optional
+
 option "hpx-photon-ledgersize" - "set number of ledger entries"
 typestr="integer"
 int optional

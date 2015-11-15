@@ -61,6 +61,9 @@ _init_photon_config(const config_t *cfg, boot_t *boot,
   pcfg->ibv.eth_dev             = cfg->photon_ethdev;
   pcfg->ibv.ib_dev              = cfg->photon_ibdev;
   pcfg->ibv.num_srq             = cfg->photon_ibsrq;
+  pcfg->hwcoll.eth_dev          = cfg->photon_colldev;
+  pcfg->hwcoll.comm_id          = cfg->photon_collid;
+  pcfg->hwcoll.comm_size        = cfg->photon_collsize;
   pcfg->ugni.eth_dev            = cfg->photon_ethdev;
   pcfg->ugni.bte_thresh         = cfg->photon_btethresh;
   pcfg->cap.eager_buf_size      = cfg->photon_eagerbufsize;
@@ -78,6 +81,7 @@ _init_photon_config(const config_t *cfg, boot_t *boot,
   pcfg->exch.allgather      = (__typeof__(pcfg->exch.allgather))boot->allgather;
   pcfg->exch.barrier        = (__typeof__(pcfg->exch.barrier))boot->barrier;
   pcfg->backend             = cfg->photon_backend;
+  printf("Setting backend to %d %s\n", pcfg->backend, PHOTON_BACKEND_TO_STRING[pcfg->backend]);
 }
 
 static void

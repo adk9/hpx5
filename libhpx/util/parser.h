@@ -183,6 +183,15 @@ struct hpx_options_t
   char * hpx_photon_fidev_arg;	/**< @brief [libfabric] network interface to use.  */
   char * hpx_photon_fidev_orig;	/**< @brief [libfabric] network interface to use original value given at command line.  */
   const char *hpx_photon_fidev_help; /**< @brief [libfabric] network interface to use help description.  */
+  char * hpx_photon_colldev_arg;	/**< @brief [hwcoll] device to use for hardware collective.  */
+  char * hpx_photon_colldev_orig;	/**< @brief [hwcoll] device to use for hardware collective original value given at command line.  */
+  const char *hpx_photon_colldev_help; /**< @brief [hwcoll] device to use for hardware collective help description.  */
+  int hpx_photon_collid_arg;	/**< @brief [hwcoll] hardware collective id.  */
+  char * hpx_photon_collid_orig;	/**< @brief [hwcoll] hardware collective id original value given at command line.  */
+  const char *hpx_photon_collid_help; /**< @brief [hwcoll] hardware collective id help description.  */
+  int hpx_photon_collsize_arg;	/**< @brief [hwcoll] hardware collective size.  */
+  char * hpx_photon_collsize_orig;	/**< @brief [hwcoll] hardware collective size original value given at command line.  */
+  const char *hpx_photon_collsize_help; /**< @brief [hwcoll] hardware collective size help description.  */
   int hpx_photon_ledgersize_arg;	/**< @brief set number of ledger entries.  */
   char * hpx_photon_ledgersize_orig;	/**< @brief set number of ledger entries original value given at command line.  */
   const char *hpx_photon_ledgersize_help; /**< @brief set number of ledger entries help description.  */
@@ -249,6 +258,9 @@ struct hpx_options_t
   unsigned int hpx_photon_btethresh_given ;	/**< @brief Whether hpx-photon-btethresh was given.  */
   unsigned int hpx_photon_fiprov_given ;	/**< @brief Whether hpx-photon-fiprov was given.  */
   unsigned int hpx_photon_fidev_given ;	/**< @brief Whether hpx-photon-fidev was given.  */
+  unsigned int hpx_photon_colldev_given ;	/**< @brief Whether hpx-photon-colldev was given.  */
+  unsigned int hpx_photon_collid_given ;	/**< @brief Whether hpx-photon-collid was given.  */
+  unsigned int hpx_photon_collsize_given ;	/**< @brief Whether hpx-photon-collsize was given.  */
   unsigned int hpx_photon_ledgersize_given ;	/**< @brief Whether hpx-photon-ledgersize was given.  */
   unsigned int hpx_photon_eagerbufsize_given ;	/**< @brief Whether hpx-photon-eagerbufsize was given.  */
   unsigned int hpx_photon_smallpwcsize_given ;	/**< @brief Whether hpx-photon-smallpwcsize was given.  */

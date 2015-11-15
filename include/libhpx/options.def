@@ -179,6 +179,10 @@ LIBHPX_OPT_STRING(photon_, ethdev, "roce0")
 LIBHPX_OPT_STRING(photon_, ibdev, "qib0+mlx4_0")
 LIBHPX_OPT_STRING(photon_, fiprov, "sockets")
 LIBHPX_OPT_STRING(photon_, fidev, NULL)
+LIBHPX_OPT_STRING(photon_, colldev, "eth0")
+LIBHPX_OPT_SCALAR(photon_, collid, 1, int)
+LIBHPX_OPT_SCALAR(photon_, collsize, 2, int)
+
 /// @}
 #endif
 
