@@ -27,6 +27,11 @@
 #include <libhpx/scheduler.h>
 
 
+#ifdef HAVE_PHOTON
+#include <photon.h>
+#include "../process/allreduce.h"
+#endif
+
 static int _probe_handler(network_t *network) {
   hpx_parcel_t *stack = NULL,
                    *p = NULL;
@@ -41,6 +46,19 @@ static int _probe_handler(network_t *network) {
       }
     }
 
+#ifdef HAVE_PHOTON
+    photon_rid hwrreq;
+    void *ctx;
+    void *value;
+    int rc = photon_hw_collective_probe(value, &ctx, &hwrreq);
+    if (ctx) {
+      allreduce_t *r = (allreduce_t*)ctx;
+      log_coll("broadcasting at %p\n", r);
+      // just trigger the continuation stored in this node
+      allreduce_bcast(r, value);
+    }
+#endif
+    
     inst_trace(HPX_INST_SCHEDTIMES, HPX_INST_SCHEDTIMES_PROBE, start_time);
     hpx_thread_yield();
   }

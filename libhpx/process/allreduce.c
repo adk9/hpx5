@@ -19,6 +19,11 @@
 #include <libhpx/parcel.h>
 #include "allreduce.h"
 
+#ifdef HAVE_PHOTON
+#include <photon.h>
+#include <photon_collectives.h>
+#endif
+
 void allreduce_init(allreduce_t *r, size_t bytes, hpx_addr_t parent,
                     hpx_monoid_id_t id, hpx_monoid_op_t op) {
   r->lock = hpx_lco_sema_new(1);
@@ -27,6 +32,22 @@ void allreduce_init(allreduce_t *r, size_t bytes, hpx_addr_t parent,
   r->continuation = continuation_new(bytes);
   r->reduce = reduce_new(bytes, id, op);
   r->id = -1;
+#ifdef HAVE_PHOTON
+  photon_rid hwsreq;
+  int rc;
+  int rank = hpx_get_my_rank();
+  int nranks = hpx_get_num_ranks();
+  rc = photon_hw_collective_init(bytes, rank, nranks, 8,
+				 PHOTON_COLL_BARRIER,
+				 PHOTON_COLL_ALGO_RING,
+				 PHOTON_COLL_DATA_DOUBLE,
+				 PHOTON_COLL_OP_MIN,
+				 (void*)r, &hwsreq);
+  if (rc != PHOTON_OK) {
+    fprintf(stderr, "%d: could not initialize hw collective\n", rank);
+    return;
+  }
+#endif
 }
 
 void allreduce_fini(allreduce_t *r) {
@@ -52,7 +73,7 @@ int32_t allreduce_add(allreduce_t *r, hpx_action_t op, hpx_addr_t addr) {
                              sizeof(r->id), &allreduce_bcast_async,
                              &allreduce) );
   }
-
+  
   // release the lock
   hpx_lco_sema_v_sync(r->lock);
   return i;
@@ -78,6 +99,11 @@ void allreduce_remove(allreduce_t *r, int32_t id) {
 }
 
 void allreduce_reduce(allreduce_t *r, const void *val) {
+#ifdef HAVE_PHOTON
+  log_coll("reducing at %p\n", r);
+  photon_rid hwsreq = 0x0;
+  photon_hw_collective_join(hwsreq, 8, val);
+#else
   log_coll("reducing at %p\n", r);
   // if this isn't the last local value then just continue
   if (!reduce_join(r->reduce, val)) {
@@ -99,6 +125,7 @@ void allreduce_reduce(allreduce_t *r, const void *val) {
   reduce_reset(r->reduce, result);
   allreduce_bcast(r, result);
   free(result);
+#endif
 }
 
 void allreduce_bcast(allreduce_t *r, const void *value) {
