@@ -122,8 +122,8 @@ AC_DEFUN([HPX_CONFIG_JEMALLOC], [
  # Allow the user to override the way we try and find jemalloc.
  AC_ARG_ENABLE([jemalloc],
    [AS_HELP_STRING([--enable-jemalloc],
-                   [Enable the jemalloc allocator @<:@default=yes@:>@])],
-   [], [enable_jemalloc=yes])
+                   [Enable the jemalloc allocator])],
+   [], [enable_jemalloc=$jemalloc_default])
 
  AC_ARG_WITH(jemalloc,
    [AS_HELP_STRING([--with-jemalloc{=contrib,system,PKG}],

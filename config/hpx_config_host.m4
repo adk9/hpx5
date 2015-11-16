@@ -28,6 +28,7 @@ AC_DEFUN([_HPX_DO_LINUX], [
      [arm*], [l1d_linesize=32],
              [l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`])
  pagesize=`getconf PAGESIZE`
+ jemalloc_default=yes
 
  AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
  LIBHPX_LIBS="$LIBHPX_LIBS -lrt"
@@ -38,6 +39,7 @@ AC_DEFUN([_HPX_DO_LINUX], [
 AC_DEFUN([_HPX_DO_DARWIN], [
  l1d_linesize=`sysctl -n hw.cachelinesize`
  pagesize=`getconf PAGESIZE`
+ jemalloc_default=no
 ])
 
 AC_DEFUN([HPX_CONFIG_HOST], [
