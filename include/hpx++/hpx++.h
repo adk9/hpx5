@@ -27,12 +27,12 @@
 extern "C" {
   #include "hpx/attributes.h"
   #include "hpx/types.h"
-  #include "hpx/action.h"
+//   #include "hpx/action.h"
 }
 
 // #include "hpx/addr.h"
 // #include "hpx/gas.h"
-
+#include "hpx++/action.h"
 #include "hpx++/global_ptr.h"
 
 extern "C" {
