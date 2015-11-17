@@ -37,7 +37,7 @@ void allreduce_init(allreduce_t *r, size_t bytes, hpx_addr_t parent,
   int rc;
   int rank = hpx_get_my_rank();
   int nranks = hpx_get_num_ranks();
-  rc = photon_hw_collective_init(bytes, rank, nranks, 8,
+  rc = photon_hw_collective_init(bytes, rank, nranks, nranks,
 				 PHOTON_COLL_BARRIER,
 				 PHOTON_COLL_ALGO_RING,
 				 PHOTON_COLL_DATA_DOUBLE,
@@ -47,6 +47,7 @@ void allreduce_init(allreduce_t *r, size_t bytes, hpx_addr_t parent,
     dbg_error("%d: could not initialize hw collective\n", rank);
     return;
   }
+  log_coll("init reduce at %p\n", r);
 #endif
 }
 
@@ -99,8 +100,8 @@ void allreduce_remove(allreduce_t *r, int32_t id) {
 }
 
 void allreduce_reduce(allreduce_t *r, const void *val) {
-#ifdef HAVE_PHOTON
   log_coll("reducing at %p\n", r);
+#ifdef HAVE_PHOTON
   photon_rid hwsreq = 0x0;
   photon_hw_collective_join(hwsreq, 8, val);
 #else

@@ -48,14 +48,13 @@ static int _probe_handler(network_t *network) {
 
 #ifdef HAVE_PHOTON
     photon_rid hwrreq;
-    void *ctx;
-    void *value;
-    int rc = photon_hw_collective_probe(value, &ctx, &hwrreq);
+    void *ctx = NULL;
+    double value;
+    int rc = photon_hw_collective_probe((void*)&value, &ctx, &hwrreq);
     if (ctx) {
       allreduce_t *r = (allreduce_t*)ctx;
-      log_coll("broadcasting at %p\n", r);
       // just trigger the continuation stored in this node
-      allreduce_bcast(r, value);
+      allreduce_bcast(r, (const void*)&value);
     }
 #endif
     
