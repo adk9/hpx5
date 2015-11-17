@@ -44,7 +44,7 @@ void allreduce_init(allreduce_t *r, size_t bytes, hpx_addr_t parent,
 				 PHOTON_COLL_OP_MIN,
 				 (void*)r, &hwsreq);
   if (rc != PHOTON_OK) {
-    fprintf(stderr, "%d: could not initialize hw collective\n", rank);
+    dbg_error("%d: could not initialize hw collective\n", rank);
     return;
   }
 #endif

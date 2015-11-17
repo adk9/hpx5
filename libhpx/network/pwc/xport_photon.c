@@ -81,7 +81,6 @@ _init_photon_config(const config_t *cfg, boot_t *boot,
   pcfg->exch.allgather      = (__typeof__(pcfg->exch.allgather))boot->allgather;
   pcfg->exch.barrier        = (__typeof__(pcfg->exch.barrier))boot->barrier;
   pcfg->backend             = cfg->photon_backend;
-  printf("Setting backend to %d %s\n", pcfg->backend, PHOTON_BACKEND_TO_STRING[pcfg->backend]);
 }
 
 static void
