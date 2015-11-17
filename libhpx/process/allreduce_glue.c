@@ -24,11 +24,11 @@ hpx_addr_t hpx_process_collective_allreduce_new(size_t bytes,
                                                 hpx_action_t reset,
                                                 hpx_action_t op) {
   // allocate and initialize a root node
-  hpx_addr_t root = hpx_gas_alloc_local(1, BSIZE, 0);
-  dbg_assert(root);
+  hpx_addr_t root = HPX_NULL; //hpx_gas_alloc_local(1, BSIZE, 0);
+  //dbg_assert(root);
   hpx_addr_t null = HPX_NULL;
-  dbg_check( hpx_call_sync(root, allreduce_init_async, NULL, 0, &bytes, &null,
-                           &reset, &op) );
+  //dbg_check( hpx_call_sync(root, allreduce_init_async, NULL, 0, &bytes, &null,
+  //&reset, &op) );
 
   // allocate an array of local elements for the process
   int n = here->ranks;
