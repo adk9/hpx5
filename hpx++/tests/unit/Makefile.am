@@ -3,6 +3,7 @@ noinst_PROGRAMS         = globalp future_test
 
 globalp_SOURCES		= globalp.cpp
 future_test_SOURCES 	= future_test.cpp
+action_tests_SOURCES	= action_tests.cpp
 
 #AM_CXXFLAGS      		= -D_GNU_SOURCE $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include
 AM_CFLAGS               = $(HPX_APPS_CFLAGS) -Wno-unused
@@ -12,3 +13,5 @@ LDADD            		= $(HPX_APPS_LDADD)
 
 globalp_DEPENDENCIES		= $(HPX_APPS_DEPS)
 future_test_DEPENDENCIES	= $(HPX_APPS_DEPS)
+action_tests_DEPENDENCIES	= $(HPX_APPS_DEPS)
+
