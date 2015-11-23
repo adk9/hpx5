@@ -62,11 +62,11 @@ void hpx_process_collective_allreduce_delete(hpx_addr_t allreduce) {
   dbg_check( hpx_gas_bcast_with_continuation(allreduce_fini_async, allreduce,
                                              n, 0, BSIZE, hpx_lco_set_action,
                                              and) );
-  dbg_check( hpx_call(root, allreduce_fini_async, and) );
+  //dbg_check( hpx_call(root, allreduce_fini_async, and) );
   hpx_lco_wait(and);
   hpx_lco_delete_sync(and);
 
-  hpx_gas_free_sync(root);
+  //hpx_gas_free_sync(root);
   hpx_gas_free_sync(allreduce);
 }
 
