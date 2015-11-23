@@ -33,6 +33,9 @@ hpx_status_t test_subscript() {
   int n1 = 10;
   auto ptr = hpx::gas::alloc_cyclic<uint64_t>(n1);
   hpx::global_ptr<uint64_t> ptr1 = &ptr[2];
+  
+//   uint64_t val = ptr[2]; // not allowed
+  
   return HPX_SUCCESS;
 }
 
