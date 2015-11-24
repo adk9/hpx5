@@ -214,8 +214,10 @@ topology_t *topology_new(const struct config *config) {
       hwloc_get_ancestor_obj_by_type(topology->hwloc_topology,
                                      HWLOC_OBJ_NODE, cpu);
     index = numa_node ? numa_node->os_index : -1;
-    if (numa_node && topology->numa_nodes[index] == NULL) {
-      topology->numa_nodes[index] = numa_node;
+    if (numa_node && topology->numa_nodes) {
+      if (topology->numa_nodes[index] == NULL) {
+        topology->numa_nodes[index] = numa_node;
+      }
     }
     topology->cpu_to_numa[cpu->os_index] = index;
     if (topology->numa_to_cpus && index >= 0) {
