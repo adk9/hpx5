@@ -303,4 +303,9 @@ static inline uint64_t network_send_buffer_size(void *obj) {
   return network->send_buffer_size(network);
 }
 
+static inline void
+network_flush_on_shutdown(void *obj) {
+  network_t *network = obj;
+  network->flush(network);
+}
 #endif // LIBHPX_NETWORK_H

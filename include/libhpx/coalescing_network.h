@@ -112,7 +112,9 @@ static network_t* coalesced_network_new (network_t *network) {
   coalesced_network->vtable.put = coalesced_network_put; 
   coalesced_network->vtable.get = coalesced_network_get;
   coalesced_network->vtable.probe = coalesced_network_probe; 
-  coalesced_network->vtable.set_flush =  coalesced_network_set_flush;
+  //TODO:fix flush interface
+  //coalesced_network->flush =  coalesced_network_set_flush;
+  coalesced_network->vtable.flush =  coalesced_network_set_flush;
   coalesced_network->vtable.register_dma = coalesced_network_register_dma;
   coalesced_network->vtable.release_dma = coalesced_network_release_dma; 
   coalesced_network->vtable.lco_get = coalesced_network_lco_get;
@@ -122,7 +124,8 @@ static network_t* coalesced_network_new (network_t *network) {
   //coalesced_network->vtable.network_buffer_size = coalesced_network_buffer_size;
 
   printf("Created coalescing network\n");
-  return ((network_t*) coalesced_network);
+  //return ((network_t*) coalesced_network);
+  return &coalesced_network->vtable;
 }
 
 static void coalesced_network_delete(void *obj) {
