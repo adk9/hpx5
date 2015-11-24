@@ -71,6 +71,13 @@ void sync_ms_queue_delete(ms_queue_t *q) {
 
 
 void sync_ms_queue_enqueue(ms_queue_t *q, void *val) {
+#ifdef __clang_analyzer__
+  // The static analyzer thinks that we leak the *node because it is written in
+  // inline asm. This prevents the analyzer from processing this function,
+  // though the produced code doesn't "work" in any meaningful way.
+  return;
+#endif
+
   _node_t *node = _node_new(val);
   cptr_t tail, next;
 
