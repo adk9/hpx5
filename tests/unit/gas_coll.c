@@ -55,7 +55,7 @@ static int map_handler(void) {
   printf("Testing hpx_gas_bcast_sync...\n");
   int e = hpx_gas_bcast_sync(_initialize, array, blocks, 0, bsize,
                              &initializer);
-
+  test_assert(e == HPX_SUCCESS);
   printf("Testing hpx_gas_bcast_with_continuation...\n");
   float multiplier = 5.0;
   hpx_addr_t lco = hpx_lco_and_new(blocks);
