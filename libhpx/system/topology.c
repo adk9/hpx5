@@ -15,6 +15,7 @@
 # include "config.h"
 #endif
 
+#include <alloca.h>
 #include <string.h>
 #include <unistd.h>
 #include <libhpx/config.h>
@@ -174,9 +175,10 @@ topology_t *topology_new(const struct config *config) {
     topology->cpus_per_node = topology->ncpus;
   }
 
-  int numa_to_cpus_index[topology->nnodes];
+  int *numa_to_cpus_index;
   // initialize the reverse NUMA map
   if (topology->nnodes > 0) {
+    numa_to_cpus_index = alloca(topology->nnodes * sizeof(int));
     topology->numa_to_cpus = calloc(topology->nnodes, sizeof(int*));
     if (!topology->numa_to_cpus) {
       log_error("failed to allocate memory for the reverse NUMA map.\n");
