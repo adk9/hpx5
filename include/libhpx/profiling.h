@@ -33,16 +33,16 @@ struct config;
 /// @field          end_time Time of closing
 /// @field   *counter_totals Counter totals
 /// @field            marked True if values have been recorded
-struct profile_entry {
-  hpx_time_t         start_time;
-  hpx_time_t           run_time;
-  int64_t       *counter_totals;
-  int            last_entry;
-  int            last_event;
-  bool                   marked;
-  bool                   paused;
-  int                  eventset;
-};
+typedef struct {
+  hpx_time_t   start_time;
+  hpx_time_t     run_time;
+  int64_t *counter_totals;
+  int          last_entry;
+  int          last_event;
+  bool             marked;
+  bool             paused;
+  int            eventset;
+} profile_entry_t;
 
 /// The data structure representing a profiled code event
 /// @field       max_entries Maximum length of the list
@@ -52,12 +52,12 @@ struct profile_entry {
 /// @field          *entries The actual entries
 /// @field            simple True if hardware counters don't apply
 typedef struct {
-  volatile int            max_entries;
-  volatile int            num_entries;
-  volatile int                  tally;
-  char                              *key;
-  volatile struct profile_entry *entries;
-  volatile bool                   simple;
+  int          max_entries;
+  int          num_entries;
+  int                tally;
+  char                *key;
+  profile_entry_t *entries;
+  bool              simple;
 } profile_list_t;
 
 /// The data structure for storing profiling entries
@@ -71,16 +71,16 @@ typedef struct {
 /// @field   **counter_names The string names of the counters
 /// @field          *entries The actual entries
 typedef struct {
-  volatile hpx_time_t         start_time;
-  volatile hpx_time_t           end_time;
-  volatile int              num_counters;
-  volatile int                num_events;
-  volatile int                max_events;
-  volatile int                 *counters;
-  volatile const char    **counter_names;
-  volatile profile_list_t        *events;
-  volatile int         current_entry;
-  volatile int             current_event;
+  hpx_time_t      start_time;
+  hpx_time_t        end_time;
+  int           num_counters;
+  int             num_events;
+  int             max_events;
+  int              *counters;
+  const char **counter_names;
+  profile_list_t     *events;
+  int          current_entry;
+  int          current_event;
 } profile_log_t;
 
 #define PROFILE_INIT {                      \
