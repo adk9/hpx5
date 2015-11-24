@@ -56,7 +56,7 @@ char *_get_complete_path(const char *path, const char *filename) {
 
 /// This will output a list of action ids and names as a two-column csv file
 /// This is so that traced parcels can be interpreted more easily.
-static void _dump_actions() {
+static void _dump_actions(void) {
   char filename[256];
   snprintf(filename, 256, "actions.%d.csv", hpx_get_my_rank());
   char *file_path = _get_complete_path(_log_path, filename);
@@ -184,7 +184,7 @@ int inst_init(config_t *cfg) {
   return LIBHPX_OK;
 }
 
-static void _dump_hostnames() {
+static void _dump_hostnames(void) {
   if(_log_path == NULL){
     return;
   }
@@ -214,7 +214,7 @@ static void _dump_hostnames() {
 /// Specifically, actions must have been finalized. There may be additional
 /// restrictions in the future.
 /// Right now the only thing inst_start() does is write the action table.
-int inst_start() {
+int inst_start(void) {
 #ifndef ENABLE_INSTRUMENTATION
   return LIBHPX_OK;
 #endif
