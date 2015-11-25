@@ -40,7 +40,7 @@ AC_DEFUN([HPX_CONFIG_COMPILER], [
    ]])],
     [AC_MSG_RESULT([yes])],
     [AC_MSG_RESULT([no])
-     AC_MSG_WARN([
+     AC_MSG_ERROR([
 The selected GCC compiler is not new enough to build HPX-5. Please upgrade
 to GCC version 4.6.4 or newer.])])
  fi
