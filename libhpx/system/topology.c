@@ -133,11 +133,11 @@ topology_t *topology_new(const struct config *config) {
   }
 
   // Query the hwloc object for cpus, cores, and numa nodes---"fix" nnodes if
-  // hwloc returns 0.
+  // hwloc returns something unpleasant
   topo->ncpus = hwloc_get_nbobjs_by_type(*hwloc, HWLOC_OBJ_PU);
   topo->ncores = hwloc_get_nbobjs_by_type(*hwloc, HWLOC_OBJ_CORE);
   topo->nnodes = hwloc_get_nbobjs_by_type(*hwloc, HWLOC_OBJ_NODE);
-  topo->nnodes = (topo->nnodes) ?: 1;
+  topo->nnodes = (topo->nnodes > 0) ? topo->nnodes : 1;
   topo->cpus_per_node = topo->ncpus / topo->nnodes;
 
   // Allocate our secondary arrays.
