@@ -53,18 +53,4 @@ hpx_time_t hpx_time_construct(unsigned long s, unsigned long ns) {
   return t;
 }
 
-hpx_time_t hpx_time_add(hpx_time_t time, hpx_time_t duration) {
-  hpx_time_t t;
-  long ns = time.tv_nsec + duration.tv_nsec;
-  if (ns > 1e9) {
-    t.tv_nsec = ns % 1000000000;
-    t.tv_sec = time.tv_nsec + duration.tv_nsec + 1;
-  }
-  else {
-    t.tv_nsec = ns;
-    t.tv_sec = time.tv_nsec + duration.tv_nsec;
-  }
-
-  return t;
-}
 

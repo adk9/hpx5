@@ -80,3 +80,10 @@ hpx_time_t libhpx_beginning_of_time(void) {
 uint64_t hpx_time_from_start_ns(hpx_time_t t) {
   return (uint64_t)hpx_time_diff_ns(_beginning_of_time, t);
 }
+
+hpx_time_t hpx_time_add(hpx_time_t time1, hpx_time_t time2) {
+  int64_t total = hpx_time_ns(time1) + hpx_time_ns(time2);
+  int64_t ns = total % (int64_t)1e9;
+  int64_t s = (total / 1e9);
+  return hpx_time_construct(s, ns);
+}

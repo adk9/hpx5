@@ -52,7 +52,3 @@ hpx_time_t hpx_time_construct(unsigned long s, unsigned long ns) {
   t = (s * 1e9 + ns) * (tbi.denom / tbi.numer);
   return t;
 }
-
-hpx_time_t hpx_time_add(hpx_time_t time, hpx_time_t duration) {
-  return time + duration;
-}
