@@ -115,7 +115,7 @@ static void _create_new_list(profile_list_t new_list,
   _profile_log.num_events++;
   _profile_log.events[index] = new_list;
   _profile_log.events[index].entries = malloc(_profile_log.max_events *
-                               sizeof(struct profile_entry));
+                               sizeof(profile_entry_t));
   _profile_log.events[index].tally = 0;
   _profile_log.events[index].num_entries = 0;
   _profile_log.events[index].max_entries = _profile_log.max_events;
@@ -123,7 +123,7 @@ static void _create_new_list(profile_list_t new_list,
   _profile_log.events[index].simple = simple;
 }
 
-static int _create_new_entry(struct profile_entry new_entry,
+static int _create_new_entry(profile_entry_t new_entry,
                              int event, bool simple) {
   int eventset = PAPI_NULL;
   int retval = PAPI_create_eventset(&eventset);
@@ -140,9 +140,9 @@ static int _create_new_entry(struct profile_entry new_entry,
   if (_profile_log.events[event].num_entries == 
      _profile_log.events[event].max_entries) {
     _profile_log.events[event].max_entries *= 2;
-    struct profile_entry *new_list = 
+    profile_entry_t *new_list = 
                                 malloc(_profile_log.events[event].max_entries *
-                                       sizeof(struct profile_entry));
+                                       sizeof(profile_entry_t));
     for (int i = 0; i < _profile_log.events[event].num_entries; i++) {
       new_list[i].start_time = _profile_log.events[event].entries[i].start_time;
       new_list[i].run_time = _profile_log.events[event].entries[i].run_time;
@@ -567,7 +567,7 @@ void prof_start_timing(char *key, int *tag) {
                         _profile_log.current_entry].run_time, dur);
   }
 
-  struct profile_entry entry;
+  profile_entry_t entry;
   int index = _create_new_entry(entry, event, _profile_log.events[event].simple);
   _profile_log.events[event].entries[index].last_entry = _profile_log.current_entry;
   _profile_log.events[event].entries[index].last_event = _profile_log.current_event;
@@ -663,7 +663,7 @@ int prof_start_hardware_counters(char *key, int *tag) {
     }
   }
 
-  struct profile_entry entry;
+  profile_entry_t entry;
   int index = _create_new_entry(entry, event, _profile_log.events[event].simple);
   
   _profile_log.events[event].entries[index].last_entry = _profile_log.current_entry;
