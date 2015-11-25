@@ -23,16 +23,17 @@
 #if defined(__linux__)
 #include <time.h>
 typedef struct timespec hpx_time_t;
+#define HPX_TIME_INIT {0}
 #elif defined(__APPLE__)
 #include <stdint.h>
 typedef uint64_t hpx_time_t;
+#define HPX_TIME_INIT (0)
 #endif
 
 /// @struct {hpx_time_t} the type used internally by HPX to represent
 /// time
 
 #define HPX_TIME_NULL hpx_time_construct(0,0)
-
 
 /// Get the current time
 /// @returns the current time at the highest resolution possible
