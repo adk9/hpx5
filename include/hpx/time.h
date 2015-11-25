@@ -39,7 +39,7 @@ hpx_time_t hpx_time_now(void) HPX_PUBLIC;
 /// Convert a time object to an integer counting nanoseconds since some start time
 /// "Start" is not specifically defined, but occurs sometime before the first call
 /// to hpx_time_now().
-uint64_t hpx_time_to_ns(hpx_time_t t) HPX_PUBLIC;
+uint64_t hpx_time_from_start_ns(hpx_time_t t) HPX_PUBLIC;
 
 /// Get a double representing a time in nanoseconds
 /// @param from the time to convert

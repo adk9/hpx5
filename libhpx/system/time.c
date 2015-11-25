@@ -77,6 +77,6 @@ hpx_time_t libhpx_beginning_of_time(void) {
   return _beginning_of_time;
 }
 
-uint64_t hpx_time_to_ns(hpx_time_t t) {
+uint64_t hpx_time_from_start_ns(hpx_time_t t) {
   return (uint64_t)hpx_time_diff_ns(_beginning_of_time, t);
 }

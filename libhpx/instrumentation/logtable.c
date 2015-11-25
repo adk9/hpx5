@@ -143,7 +143,7 @@ void logtable_append(logtable_t *log, uint64_t u1, uint64_t u2, uint64_t u3,
 
   record_t *r = &log->records[i];
   r->worker = hpx_get_my_thread_id();
-  r->ns = hpx_time_to_ns(hpx_time_now());
+  r->ns = hpx_time_from_start_ns(hpx_time_now());
   r->user[0] = u1;
   r->user[1] = u2;
   r->user[2] = u3;
