@@ -35,14 +35,6 @@
 /// Each locality maintains a single profile log
 static profile_log_t _profile_log = PROFILE_INIT;
 
-static void _prof_begin(void) {
-  _profile_log.start_time = hpx_time_now();
-}
-
-static void _prof_end(void) {
-  _profile_log.end_time = hpx_time_now();
-}
-
 static void _create_new_list(char *key, bool simple) {
   if (_profile_log.num_events == _profile_log.max_events) {
     _profile_log.max_events *= 2;
@@ -105,11 +97,11 @@ void prof_init(struct config *cfg) {
   _profile_log.events = malloc(_profile_log.max_events *
                                 sizeof(profile_list_t));
 
-  _prof_begin();
+  _profile_log.start_time = hpx_time_now();
 }
 
 int prof_fini(void) {
-  _prof_end();
+  _profile_log.end_time = hpx_time_now();
   inst_prof_dump(_profile_log);
   for (int i = 0; i < _profile_log.num_events; i++) {
     free((void *)_profile_log.events[i].entries);

@@ -36,14 +36,6 @@
 /// Each locality maintains a single profile log
 static profile_log_t _profile_log = PROFILE_INIT;
 
-static void _prof_begin() {
-  _profile_log.start_time = hpx_time_now();
-}
-
-static void _prof_end() {
-  _profile_log.end_time = hpx_time_now();
-}
-
 static const char* _get_counter_string(uint64_t papi_event) {
   switch(papi_event) {
     case PAPI_L1_TCM:  return "PAPI_L1_TCM";
@@ -268,11 +260,11 @@ void prof_init(struct config *cfg) {
   _set_event(PAPI_TOT_CYC, HPX_PAPI_TOT_CYC, counters,
              max_counters, &num_counters);
 
-  _prof_begin();
+  _profile_log.start_time = hpx_time_now();
 }
 
 int prof_fini() {
-  _prof_end();
+  _profile_log.end_time = hpx_time_now();
   inst_prof_dump(_profile_log);
   for (int i = 0; i < _profile_log.num_events; i++) {
     if (!_profile_log.events[i].simple) {
