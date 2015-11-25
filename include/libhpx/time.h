@@ -25,4 +25,4 @@ void libhpx_time_start();
 /// are counting time from the same start time.
 hpx_time_t libhpx_beginning_of_time();
 
-#endif // LIBHPX_UTILS_H
+#endif // LIBHPX_TIME_H
