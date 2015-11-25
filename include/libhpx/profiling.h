@@ -84,8 +84,8 @@ typedef struct {
 } profile_log_t;
 
 #define PROFILE_INIT {                      \
-    .start_time = HPX_TIME_INIT,            \
-    .end_time = HPX_TIME_INIT,              \
+    .start_time = HPX_TIME_NULL,            \
+    .end_time = HPX_TIME_NULL,              \
     .num_counters = 0,                      \
     .num_events = 0,                        \
     .max_events = 256,                      \
