@@ -30,16 +30,18 @@ AC_DEFUN([HPX_CONFIG_COMPILER], [
  AX_GCC_BUILTIN([__builtin_clzl])
  AX_GCC_BUILTIN([__builtin_clz])
  AX_GCC_BUILTIN([__builtin_popcountl])
- 
- AC_MSG_CHECKING([whether GCC is new enough])
- AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
- #if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 8 && __GNUC_PATCH__ < 4)
- #error This version of GCC is too old to build HPX-5
- #endif
- ]])],
-  [AC_MSG_RESULT([yes])],
-  [AC_MSG_RESULT([no])
-  AC_MSG_ERROR([
+
+ if test "x$ac_cv_c_compiler_gnu" = "xyes"; then 
+   AC_MSG_CHECKING([whether GCC is new enough])
+   AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+   #if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 6 && __GNUC_PATCH__ < 4)
+   #error This version of GCC is too old to build HPX-5
+   #endif
+   ]])],
+    [AC_MSG_RESULT([yes])],
+    [AC_MSG_RESULT([no])
+     AC_MSG_WARN([
 The selected GCC compiler is not new enough to build HPX-5. Please upgrade
-to GCC version 4.8.4 or newer.])])
-])
+to GCC version 4.6.4 or newer.])])
+ fi
+ ])
