@@ -111,14 +111,14 @@ void hpx_time_elapsed(hpx_time_t from, hpx_time_t *diff) HPX_PUBLIC;
 ///           duration
 hpx_time_t hpx_time_construct(unsigned long s, unsigned long ns) HPX_PUBLIC;
 
-/// Construct an hpx time to represent a point in time
+/// Add two hpx time objects
 /// Given a point in time, and a duration from that point, construct a new
 /// point in time. Duration at present must be a positive interval.
-/// @param     time A starting time
+/// @param    start A starting time
 /// @param duration A duration from the starting time
 /// @returns        A pointer to an object of type hpx_time_t that represents
 ///                 a point in time, based on the start time and duration
-hpx_time_t hpx_time_point(hpx_time_t time, hpx_time_t duration) HPX_PUBLIC;
+hpx_time_t hpx_time_add(hpx_time_t start, hpx_time_t duration) HPX_PUBLIC;
 
 /// @}
 
