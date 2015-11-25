@@ -205,8 +205,8 @@ topology_t *topology_new(const struct config *config) {
     hwloc_bitmap_set_range(topo->allowed_cpus, 0, topo->ncpus - 1);
   }
 
-  // We want to be able to map from a numa domain to it's associated cpus, but
-  // we are going to iterate through the cpus in an undefined order. This array
+  // We want to be able to map from a numa domain to its associated cpus, but we
+  // are going to iterate through the cpus in an undefined order. This array
   // keeps track of the "next" index for each numa node array, so that we can
   // insert into the right place.
   int numa_to_cpus_next[topo->nnodes];
