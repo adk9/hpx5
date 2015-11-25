@@ -41,6 +41,11 @@ hpx_time_t hpx_time_now(void) HPX_PUBLIC;
 /// to hpx_time_now().
 uint64_t hpx_time_to_ns(hpx_time_t t) HPX_PUBLIC;
 
+/// Get a double representing a time in nanoseconds
+/// @param from the time to convert
+/// @returns    the time as converted to a double, in nanoseconds
+double hpx_time_ns(hpx_time_t from) HPX_PUBLIC;
+
 /// Get a double representing a time in microseconds
 /// @param from the time to convert
 /// @returns    the time as converted to a double, in microseconds
