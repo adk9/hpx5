@@ -30,65 +30,8 @@
 #include <libhpx/profiling.h>
 #include <libsync/sync.h>
 
-#define TIME_NULL hpx_time_construct(0, 0)
-
 /// Each locality maintains a single profile log
 static profile_log_t _profile_log = PROFILE_INIT;
-
-static void _create_new_list(char *key, bool simple) {
-  if (_profile_log.num_events == _profile_log.max_events) {
-    _profile_log.max_events *= 2;
-    size_t bytes = _profile_log.max_events * sizeof(profile_list_t);
-    _profile_log.events = realloc(_profile_log.events, bytes);
-    dbg_assert(_profile_log.events);
-  }
-  int index = _profile_log.num_events++;
-  profile_list_t *list = &_profile_log.events[index];
-  list->entries = malloc(_profile_log.max_events * sizeof(profile_entry_t));
-  dbg_assert(list->entries);
-  list->tally = 0;
-  list->num_entries = 0;
-  list->max_entries = _profile_log.max_events;
-  list->key = key;
-  list->simple = simple;
-}
-
-static int _create_new_entry(int event, bool simple) {
-  profile_list_t *list = &_profile_log.events[event];
-  dbg_assert(list->max_entries > 0);
-  if (list->num_entries == list->max_entries) {
-    list->max_entries *= 2;
-    size_t bytes = list->max_entries * sizeof(profile_entry_t);
-    list->entries = realloc(list->entries, bytes);
-    dbg_assert(list->entries);
-  }
-
-  int index = list->num_entries++;
-  list->tally++;
-  list->entries[index].counter_totals = NULL;
-  list->entries[index].run_time = TIME_NULL;
-  list->entries[index].marked = false;
-  list->entries[index].paused = false;
-  return index;
-}
-
-//returns index of matching key/creates new entry if index doesn't exist
-static int _get_event_num(char *key) {
-  for (int i = 0; i < _profile_log.num_events; i++) {
-    if (strcmp(key, _profile_log.events[i].key) == 0) {
-      return i;
-    }
-  }
-  return HPX_PROF_NO_RESULT;
-}
-
-static hpx_time_t _add_times(hpx_time_t time1, hpx_time_t time2) {
-  int64_t seconds, ns, total;
-  total = hpx_time_diff_ns(TIME_NULL, time1) + hpx_time_diff_ns(TIME_NULL, time2);
-  seconds = total / 1e9;
-  ns = total % (int64_t)1e9;
-  return hpx_time_construct(seconds, ns);
-}
 
 void prof_init(struct config *cfg) {
   _profile_log.counters = NULL;
@@ -127,7 +70,7 @@ int prof_get_maximums(int64_t *values, char *key) {
 }
 
 int prof_get_tally(char *key) {
-  int event = _get_event_num(key);
+  int event = profile_get_event(&_profile_log, key);
   if (event == HPX_PROF_NO_RESULT) {
     return 0;
   }
@@ -135,7 +78,7 @@ int prof_get_tally(char *key) {
 }
 
 void prof_get_average_time(char *key, hpx_time_t *avg) {
-  int event = _get_event_num(key);
+  int event = profile_get_event(&_profile_log, key);
   if (event == HPX_PROF_NO_RESULT) {
     return;
   }
@@ -143,7 +86,7 @@ void prof_get_average_time(char *key, hpx_time_t *avg) {
   uint64_t seconds, ns, average = 0;
   for (int i = 0; i < _profile_log.events[event].num_entries; i++) {
     if (_profile_log.events[event].entries[i].marked) {
-      average += hpx_time_diff_ns(TIME_NULL,
+      average += hpx_time_diff_ns(HPX_TIME_NULL,
                                   _profile_log.events[event].entries[i].run_time);
     }
   }
@@ -158,7 +101,7 @@ void prof_get_average_time(char *key, hpx_time_t *avg) {
 }
 
 void prof_get_total_time(char *key, hpx_time_t *tot) {
-  int event = _get_event_num(key);
+  int event = profile_get_event(&_profile_log, key);
   if (event == HPX_PROF_NO_RESULT) {
     return;
   }
@@ -166,7 +109,7 @@ void prof_get_total_time(char *key, hpx_time_t *tot) {
   uint64_t seconds, ns, total = 0;
   for (int i = 0; i < _profile_log.events[event].num_entries; i++) {
     if (_profile_log.events[event].entries[i].marked) {
-      total += hpx_time_diff_ns(TIME_NULL,
+      total += hpx_time_diff_ns(HPX_TIME_NULL,
                                 _profile_log.events[event].entries[i].run_time);
     }
   }
@@ -177,7 +120,7 @@ void prof_get_total_time(char *key, hpx_time_t *tot) {
 }
 
 void prof_get_min_time(char *key, hpx_time_t *min) {
-  int event = _get_event_num(key);
+  int event = profile_get_event(&_profile_log, key);
   if (event == HPX_PROF_NO_RESULT) {
     return;
   }
@@ -190,7 +133,7 @@ void prof_get_min_time(char *key, hpx_time_t *min) {
     for (int i = 0; i < _profile_log.events[event].num_entries; i++) {
       if (_profile_log.events[event].entries[i].marked) {
         minimum =
-             hpx_time_diff_ns(TIME_NULL,
+             hpx_time_diff_ns(HPX_TIME_NULL,
                               _profile_log.events[event].entries[0].run_time);
         start = i+1;
         break;
@@ -199,7 +142,7 @@ void prof_get_min_time(char *key, hpx_time_t *min) {
   }
   for (int i = start; i < _profile_log.events[event].num_entries; i++) {
     if (_profile_log.events[event].entries[i].marked) {
-      temp = hpx_time_diff_ns(TIME_NULL,
+      temp = hpx_time_diff_ns(HPX_TIME_NULL,
                               _profile_log.events[event].entries[i].run_time);
       if (temp < minimum) {
         minimum = temp;
@@ -213,7 +156,7 @@ void prof_get_min_time(char *key, hpx_time_t *min) {
 }
 
 void prof_get_max_time(char *key, hpx_time_t *max) {
-  int event = _get_event_num(key);
+  int event = profile_get_event(&_profile_log, key);
   if (event == HPX_PROF_NO_RESULT) {
     return;
   }
@@ -226,7 +169,7 @@ void prof_get_max_time(char *key, hpx_time_t *max) {
     for (int i = 0; i < _profile_log.events[event].num_entries; i++) {
       if (_profile_log.events[event].entries[i].marked) {
         maximum =
-             hpx_time_diff_ns(TIME_NULL,
+             hpx_time_diff_ns(HPX_TIME_NULL,
                               _profile_log.events[event].entries[0].run_time);
         start = i+1;
         break;
@@ -235,7 +178,7 @@ void prof_get_max_time(char *key, hpx_time_t *max) {
   }
   for (int i = start; i < _profile_log.events[event].num_entries; i++) {
     if (_profile_log.events[event].entries[i].marked) {
-      temp = hpx_time_diff_ns(TIME_NULL,
+      temp = hpx_time_diff_ns(HPX_TIME_NULL,
                               _profile_log.events[event].entries[i].run_time);
       if (temp > maximum) {
         maximum = temp;
@@ -262,9 +205,9 @@ hpx_time_t prof_get_duration(void) {
 }
 
 void prof_increment_tally(char *key) {
-  int event = _get_event_num(key);
+  int event = profile_get_event(&_profile_log, key);
   if (event == HPX_PROF_NO_RESULT) {
-    _create_new_list(key, true);
+    profile_new_list(&_profile_log, key, true);
     event = _profile_log.num_events - 1;
   }
 
@@ -273,9 +216,9 @@ void prof_increment_tally(char *key) {
 
 void prof_start_timing(char *key, int *tag) {
   hpx_time_t now = hpx_time_now();
-  int event = _get_event_num(key);
+  int event = profile_get_event(&_profile_log, key);
   if (event == HPX_PROF_NO_RESULT) {
-    _create_new_list(key, true);
+    profile_new_list(&_profile_log, key, true);
     event = _profile_log.num_events - 1;
   }
 
@@ -290,11 +233,11 @@ void prof_start_timing(char *key, int *tag) {
                   _profile_log.current_entry].start_time, now, &dur);
     _profile_log.events[_profile_log.current_event].entries[
                         _profile_log.current_entry].run_time =
-             _add_times(_profile_log.events[_profile_log.current_event].entries[
+             hpx_time_add(_profile_log.events[_profile_log.current_event].entries[
                         _profile_log.current_entry].run_time, dur);
   }
 
-  int index = _create_new_entry(event, _profile_log.events[event].simple);
+  int index = profile_new_entry(&_profile_log, event, 0);
   _profile_log.events[event].entries[index].last_entry = _profile_log.current_entry;
   _profile_log.events[event].entries[index].last_event = _profile_log.current_event;
   _profile_log.current_entry = index;
@@ -305,7 +248,7 @@ void prof_start_timing(char *key, int *tag) {
 
 int prof_stop_timing(char *key, int *tag) {
   hpx_time_t end = hpx_time_now();
-  int event = _get_event_num(key);
+  int event = profile_get_event(&_profile_log, key);
   if (event == HPX_PROF_NO_RESULT) {
     return HPX_PROF_NO_RESULT;
   }
@@ -326,7 +269,7 @@ int prof_stop_timing(char *key, int *tag) {
     hpx_time_t dur;
     hpx_time_diff(_profile_log.events[event].entries[*tag].start_time, end, &dur);
     _profile_log.events[event].entries[*tag].run_time =
-        _add_times(_profile_log.events[event].entries[*tag].run_time, dur);
+        hpx_time_add(_profile_log.events[event].entries[*tag].run_time, dur);
   }
   _profile_log.events[event].entries[*tag].marked = true;
 
@@ -356,7 +299,7 @@ int prof_stop_hardware_counters(char *key, int *tag) {
 
 int prof_pause(char *key, int *tag) {
   hpx_time_t end = hpx_time_now();
-  int event = _get_event_num(key);
+  int event = profile_get_event(&_profile_log, key);
   if (event == HPX_PROF_NO_RESULT) {
     return LIBHPX_OK;
   }
@@ -380,14 +323,14 @@ int prof_pause(char *key, int *tag) {
   hpx_time_t dur;
   hpx_time_diff(_profile_log.events[event].entries[*tag].start_time, end, &dur);
   _profile_log.events[event].entries[*tag].run_time =
-      _add_times(_profile_log.events[event].entries[*tag].run_time, dur);
+      hpx_time_add(_profile_log.events[event].entries[*tag].run_time, dur);
 
   _profile_log.events[event].entries[*tag].paused = true;
   return LIBHPX_OK;
 }
 
 int prof_resume(char *key, int *tag) {
-  int event = _get_event_num(key);
+  int event = profile_get_event(&_profile_log, key);
   if (event == HPX_PROF_NO_RESULT) {
     return LIBHPX_OK;
   }

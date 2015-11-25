@@ -96,6 +96,25 @@ typedef struct {
     .current_event = -1                     \
     }
 
+/// Add a new entry to the profile list in the profile log @p log.
+/// @field               log The profile log to add the entry to
+/// @field             event The event id of the new entry being added
+/// @field          eventset The eventset of the new event entry
+/// @returns                 Index of the new entry.  
+int profile_new_entry(profile_log_t *log, int event, int eventset);
+
+/// Get the event corresponding to the event key @p key in the profile
+/// log @p log.
+/// @field               log The profile log to add the entry to
+/// @field               key The key of the event we are getting
+int profile_get_event(profile_log_t *log, char *key);
+
+/// Create a new profile list in the profile log @p log.
+/// @field               log The profile log to add the entry to
+/// @field               key The key of the event we are creating
+/// @field            simple True if hardware counters don't apply
+int profile_new_list(profile_log_t *log, char *key, bool simple);
+
 /// Initialize profiling. This is usually called in hpx_init().
 void prof_init(struct config *cfg)
   HPX_NON_NULL(1);
