@@ -31,7 +31,7 @@ AC_DEFUN([HPX_CONFIG_COMPILER], [
  AX_GCC_BUILTIN([__builtin_clz])
  AX_GCC_BUILTIN([__builtin_popcountl])
 
- if test "x$ac_cv_c_compiler_gnu" = "xyes"; then 
+ if test "x$ac_cv_prog_ac_ct_CC" = "xgcc"; then
    AC_MSG_CHECKING([whether GCC is new enough])
    AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
    #if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 6 && __GNUC_PATCH__ < 4)
