@@ -185,7 +185,7 @@ int inst_init(config_t *cfg) {
 }
 
 static void _dump_hostnames(void) {
-  if(_log_path == NULL){
+  if (_log_path == NULL) {
     return;
   }
   char hostname[HOSTNAME_LENGTH];
@@ -195,7 +195,7 @@ static void _dump_hostnames(void) {
   snprintf(filename, 256, "hostname.%d", hpx_get_my_rank());
   char *filepath = _get_complete_path(_log_path, filename);
   FILE *f = fopen(filepath, "w");
-  if(f == NULL){
+  if (f == NULL) {
     log_error("failed to open hostname file %s\n", filepath);
     free(filepath);
     return;
@@ -203,7 +203,7 @@ static void _dump_hostnames(void) {
 
   fprintf(f, "%s\n", hostname);
   int e = fclose(f);
-  if(e != 0){
+  if (e != 0) {
     log_error("failed to write hostname to %s\n", filepath);
   }
 
@@ -235,8 +235,8 @@ void inst_fini(void) {
   free((void*)_log_path);
 }
 
-void inst_prof_dump(profile_log_t profile_log){
-  if(_log_path == NULL){
+void inst_prof_dump(profile_log_t log) {
+  if (!_log_path) {
     return;
   }
 
@@ -244,49 +244,50 @@ void inst_prof_dump(profile_log_t profile_log){
   snprintf(filename, 256, "profile.%d", hpx_get_my_rank());
   char *filepath = _get_complete_path(_log_path, filename);
   FILE *f = fopen(filepath, "w");
-  if(f == NULL){
+  if (!f) {
     log_error("failed to open profiling output file %s\n", filepath);
     free(filepath);
     return;
   }
 
-  double duration;
-  duration = hpx_time_diff_ms(profile_log.start_time, profile_log.end_time);
-  fprintf(f, "Duration of application: %.3f seconds \n", duration/1000);
-  for(int i = 0; i < profile_log.num_events; i++){
-    int64_t averages[profile_log.num_counters];
-    int64_t minimums[profile_log.num_counters];
-    int64_t maximums[profile_log.num_counters];
-
-    hpx_time_t average_t, min_t, max_t;
-    fprintf(f, "\nCode event %s:\n", profile_log.events[i].key);
-    fprintf(f, "Number of occurrences: %d\n", profile_log.events[i].tally);
+  double duration = hpx_time_diff_ms(log.start_time, log.end_time);
+  fprintf(f, "Total time: %.3f seconds \n", duration/1000);
+  for (int i = 0; i < log.num_events; i++) {
+    fprintf(f, "\nEvent %s:\n", log.events[i].key);
+    fprintf(f, "Count: %d\n", log.events[i].tally);
     
-    if(profile_log.events[i].num_entries > 0){
-      fprintf(f, "Performance Statistics:\n");
+    if (log.events[i].num_entries > 0) {
+      fprintf(f, "Statistics:\n");
       fprintf(f, "%-24s%-24s%-24s%-24s\n", 
              "Type", "Average", "Minimum", "Maximum");
-      if(profile_log.num_counters > 0 && !profile_log.events[i].simple){
-        prof_get_averages(averages, profile_log.events[i].key);
-        prof_get_minimums(minimums, profile_log.events[i].key);
-        prof_get_maximums(maximums, profile_log.events[i].key);
-        for(int j = 0; j < profile_log.num_counters; j++){
+      if (log.num_counters > 0 && !log.events[i].simple) {
+        int64_t averages[log.num_counters];
+        int64_t minimums[log.num_counters];
+        int64_t maximums[log.num_counters];
+
+        prof_get_averages(averages, log.events[i].key);
+        prof_get_minimums(minimums, log.events[i].key);
+        prof_get_maximums(maximums, log.events[i].key);
+        for (int j = 0; j < log.num_counters; j++) {
           fprintf(f, "%-24s%-24"PRIu64"%-24"PRIu64"%-24"PRIu64"\n", 
-                  profile_log.counter_names[j],
+                  log.counter_names[j],
                   averages[j], minimums[j], maximums[j]);
         }
       }
-      prof_get_average_time(profile_log.events[i].key, &average_t);
-      prof_get_min_time(profile_log.events[i].key, &min_t);
-      prof_get_max_time(profile_log.events[i].key, &max_t);
+
+      hpx_time_t average, min, max;
+      prof_get_average_time(log.events[i].key, &average);
+      prof_get_min_time(log.events[i].key, &min);
+      prof_get_max_time(log.events[i].key, &max);
 
       fprintf(f, "%-24s%-24.3f%-24.3f%-24.3f\n", "Time (ms)",
-              hpx_time_ms(average_t),
-              hpx_time_ms(min_t), hpx_time_ms(max_t));
+              hpx_time_ms(average),
+              hpx_time_ms(min),
+              hpx_time_ms(max));
     }
   }
   int e = fclose(f);
-  if(e != 0){
+  if (e != 0) {
     log_error("failed to write profiling output to %s\n", filepath);
   }
 
