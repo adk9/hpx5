@@ -170,12 +170,9 @@ void prof_init(struct config *cfg) {
              max_counters, &num_counters);  
   _set_event(PAPI_TOT_CYC, HPX_PAPI_TOT_CYC, counters,
              max_counters, &num_counters);
-
-  _profile_log.start_time = hpx_time_now();
 }
 
 int prof_fini(void) {
-  _profile_log.end_time = hpx_time_now();
   inst_prof_dump(_profile_log);
   for (int i = 0; i < _profile_log.num_events; i++) {
     if (!_profile_log.events[i].simple) {
@@ -424,15 +421,6 @@ void prof_get_max_time(char *key, hpx_time_t *max) {
 
 int prof_get_num_counters() {
   return _profile_log.num_counters;
-}
-
-hpx_time_t prof_get_duration() {
-  hpx_time_t duration;
-  hpx_time_t end;
-  end = hpx_time_now();
-
-  hpx_time_diff(_profile_log.start_time, end, &duration);
-  return duration;
 }
 
 void prof_increment_tally(char *key) {

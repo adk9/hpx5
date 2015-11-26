@@ -73,10 +73,6 @@ int prof_get_num_counters(void) {
   return LIBHPX_OK;
 }
 
-hpx_time_t prof_get_duration(void) {
-  return hpx_time_now();
-}
-
 void prof_increment_tally(char *key) {
 }
 

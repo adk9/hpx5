@@ -39,8 +39,6 @@ void prof_init(struct config *cfg) {
   _profile_log.num_counters = 0;
   _profile_log.events = malloc(_profile_log.max_events *
                                 sizeof(profile_list_t));
-
-  _profile_log.start_time = hpx_time_now();
 }
 
 int prof_fini(void) {
@@ -193,15 +191,6 @@ void prof_get_max_time(char *key, hpx_time_t *max) {
 
 int prof_get_num_counters(void) {
   return _profile_log.num_counters;
-}
-
-hpx_time_t prof_get_duration(void) {
-  hpx_time_t duration;
-  hpx_time_t end;
-  end = hpx_time_now();
-
-  hpx_time_diff(_profile_log.start_time, end, &duration);
-  return duration;
 }
 
 void prof_increment_tally(char *key) {

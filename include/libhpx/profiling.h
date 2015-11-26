@@ -61,8 +61,6 @@ typedef struct {
 } profile_list_t;
 
 /// The data structure for storing profiling entries
-/// @field        start_time Time of initialization
-/// @field          end_time Time of closing
 /// @field         cur_depth Current relative stack frame to other entries
 /// @field      num_counters Number of counters utilized
 /// @field       num_entries Number of code events profiled
@@ -71,8 +69,6 @@ typedef struct {
 /// @field   **counter_names The string names of the counters
 /// @field          *entries The actual entries
 typedef struct {
-  hpx_time_t      start_time;
-  hpx_time_t        end_time;
   int           num_counters;
   int             num_events;
   int             max_events;
@@ -84,8 +80,6 @@ typedef struct {
 } profile_log_t;
 
 #define PROFILE_INIT {                      \
-    .start_time = HPX_TIME_INIT,            \
-    .end_time = HPX_TIME_INIT,              \
     .num_counters = 0,                      \
     .num_events = 0,                        \
     .max_events = 256,                      \
@@ -168,10 +162,6 @@ void prof_get_max_time(char *key, hpx_time_t *max);
 
 /// Return the number of counters being used
 int prof_get_num_counters();
-
-/// Return the time since the recording session began, or if the session has
-/// ended, the duration of the recording session
-hpx_time_t prof_get_duration();
 
 /// Mark the occurrence of an event
 /// @param         key The key that identifies the code event

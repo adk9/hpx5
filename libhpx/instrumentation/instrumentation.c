@@ -250,10 +250,10 @@ void inst_prof_dump(profile_log_t log) {
     return;
   }
 
-  double duration = hpx_time_diff_ms(log.start_time, log.end_time);
-  fprintf(f, "Total time: %.3f seconds \n", duration/1000);
+  double duration = hpx_time_from_start_ns(hpx_time_now())/1e9;
+  fprintf(f, "Total time: %.3f seconds \n", duration);
   for (int i = 0; i < log.num_events; i++) {
-    fprintf(f, "\nEvent %s:\n", log.events[i].key);
+    fprintf(f, "\nEvent: %s\n", log.events[i].key);
     fprintf(f, "Count: %d\n", log.events[i].tally);
     
     if (log.events[i].num_entries > 0) {
