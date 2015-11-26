@@ -110,11 +110,11 @@ int profile_get_event(profile_log_t *log, char *key);
 int profile_new_list(profile_log_t *log, char *key, bool simple);
 
 /// Initialize profiling. This is usually called in hpx_init().
-void prof_init(struct config *cfg)
+int prof_init(struct config *cfg)
   HPX_NON_NULL(1);
 
 /// Cleanup
-int prof_fini();
+void prof_fini(void);
 
 /// Obtain the average values of the counters across all profiled sessions
 /// @param      values A pointer to an array for storing counter values

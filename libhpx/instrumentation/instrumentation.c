@@ -34,6 +34,7 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
+#include <libhpx/profiling.h>
 #include "logtable.h"
 #include <time.h>
 
@@ -179,6 +180,11 @@ int inst_init(config_t *cfg) {
         _log_create(cl, id, cfg->trace_filesize, start);
       }
     }
+  }
+
+  // enable profiling
+  if (prof_init(cfg)) {
+    log_dflt("error detected while initializing profiling\n");
   }
 
   return LIBHPX_OK;

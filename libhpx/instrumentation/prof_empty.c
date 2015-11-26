@@ -30,11 +30,11 @@
 #include <libhpx/profiling.h>
 #include <libsync/sync.h>
 
-void prof_init(struct config *cfg) {
+int prof_init(struct config *cfg) {
+  return LIBHPX_OK;
 }
 
-int prof_fini(void) {
-  return LIBHPX_OK;
+void prof_fini(void) {
 }
 
 int prof_get_averages(int64_t *values, char *key) {

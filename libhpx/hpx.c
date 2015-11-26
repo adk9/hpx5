@@ -37,7 +37,6 @@
 #include <libhpx/instrumentation.h>
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
-#include <libhpx/profiling.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/system.h>
 #include <libhpx/time.h>
@@ -185,7 +184,7 @@ int hpx_init(int *argc, char ***argv) {
     }
   }
 
-  // topology
+  // topology discovery and initialization
   here->topology = topology_new(here->config);
   if (!here->topology) {
     status = log_error("failed to discover topology.\n");
@@ -196,8 +195,6 @@ int hpx_init(int *argc, char ***argv) {
   if (inst_init(here->config)) {
     log_dflt("error detected while initializing instrumentation\n");
   }
-
-  prof_init(here->config);
 
   // Allocate the global heap.
   here->gas = gas_new(here->config, here->boot);

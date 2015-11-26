@@ -33,21 +33,21 @@
 /// Each locality maintains a single profile log
 static profile_log_t _profile_log = PROFILE_INIT;
 
-void prof_init(struct config *cfg) {
+int prof_init(struct config *cfg) {
   _profile_log.counters = NULL;
   _profile_log.counter_names = NULL;
   _profile_log.num_counters = 0;
   _profile_log.events = malloc(_profile_log.max_events *
                                 sizeof(profile_list_t));
+  return LIBHPX_OK;
 }
 
-int prof_fini(void) {
+void prof_fini(void) {
   inst_prof_dump(_profile_log);
   for (int i = 0; i < _profile_log.num_events; i++) {
     free((void *)_profile_log.events[i].entries);
   }
   free((void *)_profile_log.events);
-  return LIBHPX_OK;
 }
 
 int prof_get_averages(int64_t *values, char *key) {

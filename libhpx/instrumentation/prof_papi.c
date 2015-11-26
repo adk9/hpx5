@@ -98,7 +98,7 @@ static int _create_new_entry(int event) {
   return profile_new_entry(&_profile_log, event, eventset);
 }
 
-void prof_init(struct config *cfg) {
+int prof_init(config_t *cfg) {
   int max_counters = PAPI_num_counters();
   int num_counters = 0;
   uint64_t counters = cfg->prof_counters;
@@ -172,7 +172,7 @@ void prof_init(struct config *cfg) {
              max_counters, &num_counters);
 }
 
-int prof_fini(void) {
+void prof_fini(void) {
   inst_prof_dump(_profile_log);
   for (int i = 0; i < _profile_log.num_events; i++) {
     if (!_profile_log.events[i].simple) {
@@ -185,7 +185,6 @@ int prof_fini(void) {
   free((void *)_profile_log.events);
   free((void *)_profile_log.counters);
   free((void *)_profile_log.counter_names);
-  return LIBHPX_OK;
 }
 
 int prof_get_averages(int64_t *values, char *key) {
