@@ -42,7 +42,6 @@ void prof_init(struct config *cfg) {
 }
 
 int prof_fini(void) {
-  _profile_log.end_time = hpx_time_now();
   inst_prof_dump(_profile_log);
   for (int i = 0; i < _profile_log.num_events; i++) {
     free((void *)_profile_log.events[i].entries);
