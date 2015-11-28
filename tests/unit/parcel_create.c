@@ -133,24 +133,25 @@ static int parcel_get_data_handler(void) {
 static HPX_ACTION(HPX_DEFAULT, 0, parcel_get_data, parcel_get_data_handler);
 
 // Testcase to test hpx_parcel_release function which explicitly releases a
-// a parcel. The input argument must correspond to a parcel pointer returned
-// from hpx_parcel_acquire
-static int parcel_release_handler(void) {
+// parcel. The input argument must correspond to a parcel pointer returned from
+// hpx_parcel_acquire.
+static int _parcel_delete_handler(void) {
   printf("Testing the parcel release function\n");
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(initBuffer_t));
   hpx_parcel_set_target(p, HPX_HERE);
   hpx_parcel_set_action(p, _send_data);
   initBuffer_t *args = (initBuffer_t *)hpx_parcel_get_data(p);
   args->index = hpx_get_my_rank();
+  hpx_parcel_retain(p);
   strcpy(args->message,"parcel release test");
   hpx_parcel_release(p);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, 0, parcel_release, parcel_release_handler);
+static HPX_ACTION(HPX_DEFAULT, 0, _parcel_delete, _parcel_delete_handler);
 
 TEST_MAIN({
   ADD_TEST(parcel_create, 0);
   ADD_TEST(parcel_get_action, 0);
   ADD_TEST(parcel_get_data, 0);
-  ADD_TEST(parcel_release, 0);
+  ADD_TEST(_parcel_delete, 0);
 });

@@ -26,14 +26,14 @@
 #include "commands.h"
 
 static int
-_release_parcel_handler(int src, command_t command) {
+_delete_parcel_handler(int src, command_t command) {
   uintptr_t arg = command_get_arg(command);
   hpx_parcel_t *p = (hpx_parcel_t *)arg;
   log_net("releasing sent parcel %p\n", (void*)p);
-  hpx_parcel_release(p);
+  parcel_delete(p);
   return HPX_SUCCESS;
 }
-COMMAND_DEF(release_parcel, _release_parcel_handler);
+COMMAND_DEF(delete_parcel, _delete_parcel_handler);
 
 static int
 _resume_parcel_remote_handler(int src, command_t command) {

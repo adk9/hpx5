@@ -31,10 +31,16 @@ struct ustack;
 
 typedef uint16_t parcel_state_t;
 
-static const parcel_state_t PARCEL_SERIALIZED = 1;
-static const parcel_state_t PARCEL_RETAINED = 2;
-static const parcel_state_t PARCEL_NESTED = 4;
-static const parcel_state_t PARCEL_BLOCK_ALLOCATED = 8;
+static const parcel_state_t      PARCEL_SERIALIZED = UINT16_C(0x1 << 1);
+static const parcel_state_t        PARCEL_RETAINED = UINT16_C(0x1 << 2);
+static const parcel_state_t          PARCEL_NESTED = UINT16_C(0x1 << 3);
+static const parcel_state_t PARCEL_BLOCK_ALLOCATED = UINT16_C(0x1 << 4);
+static const parcel_state_t          PARCEL_PINNED = UINT16_C(0x1 << 5);
+
+void parcel_pin(hpx_parcel_t *p);
+void parcel_nest(hpx_parcel_t *p);
+void parcel_retain(hpx_parcel_t *p);
+void parcel_release(hpx_parcel_t *p);
 
 static inline uint16_t parcel_serialized(parcel_state_t state) {
   return state & PARCEL_SERIALIZED;
@@ -52,8 +58,9 @@ static inline uint16_t parcel_block_allocated(parcel_state_t state) {
   return state & PARCEL_BLOCK_ALLOCATED;
 }
 
-// Verify that this bitfield is actually being packed correctly.
-_HPX_ASSERT(sizeof(parcel_state_t) == 2, packed_parcel_state);
+static inline uint16_t parcel_pinned(parcel_state_t state) {
+  return state & PARCEL_PINNED;
+}
 
 /// The hpx_parcel structure is what the user-level interacts with.
 ///
@@ -169,8 +176,6 @@ parcel_state_t parcel_get_state(const hpx_parcel_t *p);
 
 parcel_state_t parcel_exchange_state(hpx_parcel_t *p, parcel_state_t state);
 
-void parcel_retain(hpx_parcel_t *p);
-
 /// Treat a parcel as a stack of parcels, and pop the top.
 ///
 /// @param[in,out] stack The address of the top parcel in the stack, modified
@@ -209,4 +214,3 @@ static inline uint32_t parcel_payload_size(const hpx_parcel_t *p) {
 #endif
 
 #endif // LIBHPX_PARCEL_H
-

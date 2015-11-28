@@ -135,7 +135,7 @@ _reload_send(void *obj, pwc_xport_t *xport, int rank, const hpx_parcel_t *p) {
     .dest_key = NULL,
     .src = p,
     .src_key = xport->key_find_ref(xport, p, n),
-    .lop = command_pack(release_parcel, (uintptr_t)p),
+    .lop = command_pack(delete_parcel, (uintptr_t)p),
     .rop = {0}
   };
 

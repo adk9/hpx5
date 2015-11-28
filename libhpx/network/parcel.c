@@ -10,7 +10,6 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -25,29 +24,24 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ffi.h>
-#include "hpx/hpx.h"
-#include "libsync/sync.h"
-#include "libhpx/action.h"
-#include "libhpx/attach.h"
-#include "libhpx/debug.h"
-#include "libhpx/gas.h"
-#include "libhpx/instrumentation.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/memory.h"
-#include "libhpx/network.h"
-#include "libhpx/parcel.h"
-#include "libhpx/parcel_block.h"
-#include "libhpx/scheduler.h"
-#include "libhpx/topology.h"
+#include <hpx/hpx.h>
+#include <libsync/sync.h>
+#include <libhpx/action.h>
+#include <libhpx/attach.h>
+#include <libhpx/debug.h>
+#include <libhpx/gas.h>
+#include <libhpx/instrumentation.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+#include <libhpx/network.h>
+#include <libhpx/parcel.h>
+#include <libhpx/parcel_block.h>
+#include <libhpx/scheduler.h>
+#include <libhpx/topology.h>
 
-#ifdef ENABLE_INSTRUMENTATION
+// this will only be used during instrumentation
 __thread uint64_t parcel_count = 0;
-#endif
-
-static size_t _max(size_t lhs, size_t rhs) {
-  return (lhs > rhs) ? lhs : rhs;
-}
 
 static int _delete_launch_through_parcel_handler(hpx_parcel_t *p) {
   hpx_addr_t lsync = hpx_thread_current_target();
@@ -58,6 +52,7 @@ static int _delete_launch_through_parcel_handler(hpx_parcel_t *p) {
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _delete_launch_through_parcel,
                      _delete_launch_through_parcel_handler, HPX_POINTER);
 
+/// Serialize and bless a parcel before sending or copying it.
 static void _prepare(hpx_parcel_t *p) {
   parcel_state_t state = parcel_get_state(p);
   if (!parcel_serialized(state) && p->size) {
@@ -86,12 +81,34 @@ parcel_state_t parcel_exchange_state(hpx_parcel_t *p, parcel_state_t state) {
   return sync_swap(&p->state, state, SYNC_ACQ_REL);
 }
 
+void parcel_pin(hpx_parcel_t *p) {
+  parcel_state_t state = parcel_get_state(p);
+  dbg_assert_str(parcel_serialized(state), "cannot pin out-of-place parcels\n");
+  dbg_assert_str(!parcel_nested(state), "cannot pin nested parcels\n");
+  dbg_assert_str(!parcel_retained(state), "cannot pin retained parcels\n");
+  parcel_set_state(p, state | PARCEL_PINNED);
+}
+
+void parcel_nest(hpx_parcel_t *p) {
+  parcel_state_t state = parcel_get_state(p);
+  dbg_assert_str(parcel_serialized(state), "cannot nest out-of-place parcels\n");
+  dbg_assert_str(!parcel_pinned(state), "cannot nest pinned parcels\n");
+  dbg_assert_str(!parcel_retained(state), "cannot nest retained parcels\n");
+  parcel_set_state(p, state | PARCEL_NESTED);
+}
+
 void parcel_retain(hpx_parcel_t *p) {
   parcel_state_t state = parcel_get_state(p);
   dbg_assert_str(parcel_serialized(state), "cannot retain out-of-place parcels\n");
-  dbg_assert_str(!parcel_retained(state), "cannot retain already retained parcels\n");
-  state |= PARCEL_RETAINED;
-  parcel_set_state(p, state);
+  dbg_assert_str(!parcel_pinned(state), "cannot retain pinned parcels\n");
+  dbg_assert_str(!parcel_nested(state), "cannot retain nested parcels\n");
+  parcel_set_state(p, state | PARCEL_RETAINED);
+}
+
+void parcel_release(hpx_parcel_t *p) {
+  parcel_state_t state = parcel_get_state(p);
+  dbg_assert_str(parcel_retained(state), "can only release retained parcels\n");
+  parcel_set_state(p, state & ~PARCEL_RETAINED);
 }
 
 void parcel_launch(hpx_parcel_t *p) {
@@ -99,7 +116,6 @@ void parcel_launch(hpx_parcel_t *p) {
 
   _prepare(p);
 
-  // if (p->action != scheduler_nop) {
   log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64") => %s@(%"PRIu64")\n",
              p->pid,
              p->credit,
@@ -109,7 +125,6 @@ void parcel_launch(hpx_parcel_t *p) {
              p->target,
              action_table_get_key(here->actions, p->c_action),
              p->c_target);
-  // }
 
   EVENT_PARCEL_SEND(p);
 
@@ -160,8 +175,9 @@ void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
 #ifdef ENABLE_INSTRUMENTATION
   if (inst_trace_class(HPX_INST_CLASS_PARCEL)) {
     parcel_count++;
-    p->id = topo_offset_to_value(hpx_get_my_rank(), hpx_get_my_thread_id(),
-                                 parcel_count);
+    int rank = hpx_get_my_rank();
+    int thread = hpx_get_my_thread_id();
+    p->id = topo_offset_to_value(rank, thread, parcel_count);
   }
 #endif
 
@@ -182,7 +198,7 @@ hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action,
                          hpx_pid_t pid, const void *data, size_t len) {
   size_t size = sizeof(hpx_parcel_t);
   if (len != 0) {
-    size += _max(sizeof(void*), len);
+    size += max_size_t(sizeof(void*), len);
   }
 
   hpx_parcel_t *p = as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, size);
@@ -210,7 +226,11 @@ void parcel_delete(hpx_parcel_t *p) {
 
   parcel_state_t state = parcel_get_state(p);
 
-  if (parcel_nested(state)) {
+  if (unlikely(parcel_retained(state))) {
+    return;
+  }
+
+  if (unlikely(parcel_nested(state))) {
     size_t n = parcel_size(p);
     hpx_parcel_t *parent = (void*)((char*)p - sizeof(*p));
     size_t m = parent->size;
@@ -221,12 +241,12 @@ void parcel_delete(hpx_parcel_t *p) {
     return;
   }
 
-  if (parcel_retained(state)) {
-    state &= ~PARCEL_RETAINED;
+  if (unlikely(parcel_pinned(state))) {
+    state &= ~PARCEL_PINNED;
     state = parcel_exchange_state(p, state);
   }
 
-  if (parcel_retained(state)) {
+  if (unlikely(parcel_pinned(state))) {
     return;
   }
 

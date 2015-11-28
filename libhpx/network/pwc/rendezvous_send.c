@@ -55,7 +55,7 @@ typedef struct {
 ///
 /// This handler will allocate a parcel to "get" into, and then initiate the
 /// get-with-completion operation. It does not need to persist across the get
-/// operation because it can attach the release_parcel and _rendezvous_launch
+/// operation because it can attach the delete_parcel and _rendezvous_launch
 /// event handlers to the get operation.
 ///
 /// We need to use a marshaled operation because we send the transport key by
@@ -72,7 +72,7 @@ static int _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size) {
     .src = args->p,
     .src_key = &args->key,
     .lop = command_pack(_rendezvous_launch, (uintptr_t)p),
-    .rop = command_pack(release_parcel, (uintptr_t)args->p)
+    .rop = command_pack(delete_parcel, (uintptr_t)args->p)
   };
   int e = pwc->xport->gwc(&op);
   dbg_check(e, "could not issue get during rendezvous parcel\n");

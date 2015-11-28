@@ -74,6 +74,16 @@ typedef struct hpx_parcel hpx_parcel_t;
 hpx_parcel_t *hpx_parcel_acquire(const void *data, size_t bytes)
   HPX_MALLOC HPX_PUBLIC;
 
+/// Prevent a parcel from being released by the system during a send operation.
+///
+/// Retained parcels can be useful for regular applications that resend the same
+/// parcels repeatedly, and *must* be manually released using
+/// hpx_parcel_release().
+///
+/// @param            p The parcel to retain.
+void hpx_parcel_retain(hpx_parcel_t *p)
+  HPX_NON_NULL(1) HPX_PUBLIC;
+
 /// Explicitly release a parcel.
 ///
 /// The @p p argument must correspond to a parcel pointer returned from

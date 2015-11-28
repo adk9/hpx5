@@ -43,8 +43,8 @@ struct transport;
 #define COMMAND_DECL(symbol) HPX_ACTION_DECL(symbol)
 /// @}
 
-/// The release_parcel command will release a parcel.
-extern COMMAND_DECL(release_parcel);
+/// The delete_parcel command will delete a parcel.
+extern COMMAND_DECL(delete_parcel);
 
 /// The resume_parcel operation will perform parcel_launch() on a parcel at the
 /// receiver's locality.

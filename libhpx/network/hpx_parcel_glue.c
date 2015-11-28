@@ -79,7 +79,12 @@ hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
   }
 }
 
+void hpx_parcel_retain(hpx_parcel_t *p) {
+  parcel_retain(p);
+}
+
 void hpx_parcel_release(hpx_parcel_t *p) {
+  parcel_release(p);
   parcel_delete(p);
 }
 

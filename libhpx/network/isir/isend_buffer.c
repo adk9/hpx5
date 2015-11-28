@@ -225,7 +225,7 @@ static int _test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n, int o) {
     assert(i <= k && k < i + n);
 
     // handle each of the completed requests
-    hpx_parcel_release(buffer->records[k].parcel);
+    parcel_delete(buffer->records[k].parcel);
     hpx_gas_free(buffer->records[k].handler, HPX_NULL);
   }
 
@@ -332,7 +332,7 @@ static int _cancel(isend_buffer_t *buffer, int i) {
 
   if (buffer->records) {
     hpx_gas_free(buffer->records[i].handler, HPX_NULL);
-    hpx_parcel_release(buffer->records[i].parcel);
+    parcel_delete(buffer->records[i].parcel);
   }
   return LIBHPX_OK;
 }

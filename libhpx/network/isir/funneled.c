@@ -68,10 +68,10 @@ _funneled_delete(void *network) {
 
   hpx_parcel_t *p = NULL;
   while ((p = sync_two_lock_queue_dequeue(&isir->sends))) {
-    hpx_parcel_release(p);
+    parcel_delete(p);
   }
   while ((p = sync_two_lock_queue_dequeue(&isir->recvs))) {
-    hpx_parcel_release(p);
+    parcel_delete(p);
   }
 
   sync_two_lock_queue_fini(&isir->sends);

@@ -350,7 +350,7 @@ static int _push_half_handler(int src) {
 
     // if we find multiple push-half requests, purge the other ones
     if (p->action == _push_half) {
-      hpx_parcel_release(p);
+      parcel_delete(p);
       count++;
       continue;
     }
@@ -687,7 +687,7 @@ void worker_fini(worker_t *w) {
   // and clean up the workqueue parcels
   hpx_parcel_t *p = NULL;
   while ((p = _schedule_lifo(w))) {
-    hpx_parcel_release(p);
+    parcel_delete(p);
   }
   sync_chase_lev_ws_deque_fini(&w->queues[0].work);
   sync_chase_lev_ws_deque_fini(&w->queues[1].work);

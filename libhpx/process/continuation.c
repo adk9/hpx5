@@ -32,6 +32,7 @@ static int32_t _insert(continuation_t *c, hpx_action_t op, hpx_addr_t addr) {
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, c->bytes);
   p->action = op;
   p->target = addr;
+  parcel_retain(p);
 
   // fill any spots left by leavers
   for (int i = 0, e = c->n; i < e; ++i) {
@@ -67,14 +68,17 @@ continuation_t *continuation_new(size_t bytes) {
 }
 
 void continuation_delete(continuation_t *c) {
-  if (c) {
-    for (int i = 0, e = c->n; i < e; ++i) {
-      if (c->parcels[i]) {
-        hpx_parcel_release(c->parcels[i]);
-      }
-    }
-    free(c);
+  if (!c) {
+    return;
   }
+
+  for (int i = 0, e = c->n; i < e; ++i) {
+    if (c->parcels[i]) {
+      parcel_release(c->parcels[i]);
+      parcel_delete(c->parcels[i]);
+    }
+  }
+  free(c);
 }
 
 int32_t continuation_add(continuation_t **c, hpx_action_t op, hpx_addr_t addr) {
@@ -86,7 +90,8 @@ int32_t continuation_add(continuation_t **c, hpx_action_t op, hpx_addr_t addr) {
 
 void continuation_remove(continuation_t **c, int32_t id) {
   dbg_assert(0 <= id && id < (*c)->n);
-  hpx_parcel_release((*c)->parcels[id]);
+  parcel_release((*c)->parcels[id]);
+  parcel_delete((*c)->parcels[id]);
   (*c)->parcels[id] = NULL;
 }
 
@@ -95,13 +100,13 @@ void continuation_trigger(continuation_t *c, const void *value) {
 
   for (int i = 0, e = c->n; i < e; ++i) {
     if (c->parcels[i]) {
-      // hpx_parcel_set_data(c->parcels[i], value, c->bytes);
-      // parcel_retain(c->parcels[i]);
-      // parcel_launch(c->parcels[i]);
+      hpx_parcel_set_data(c->parcels[i], value, c->bytes);
+      // hpx_parcel_retain(c->parcels[i]);
+      parcel_launch(c->parcels[i]);
 
-      hpx_parcel_t *p = parcel_clone(c->parcels[i]);
-      hpx_parcel_set_data(p, value, c->bytes);
-      parcel_launch(p);
+      // hpx_parcel_t *p = parcel_clone(c->parcels[i]);
+      // hpx_parcel_set_data(p, value, c->bytes);
+      // parcel_launch(p);
     }
   }
 }

@@ -189,7 +189,7 @@ int _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
 #endif
   hpx_parcel_send_sync(p);
 
-  hpx_parcel_release(parcel);
+  parcel_delete(parcel);
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
   return HPX_SUCCESS;

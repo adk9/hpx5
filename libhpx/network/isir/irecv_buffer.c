@@ -64,7 +64,7 @@ static hpx_parcel_t *_cancel(irecv_buffer_t *buffer, int i) {
   }
 
   if (cancelled) {
-    hpx_parcel_release(buffer->records[i].parcel);
+    parcel_delete(buffer->records[i].parcel);
     return NULL;
   }
   else {
@@ -283,7 +283,7 @@ void irecv_buffer_fini(irecv_buffer_t *buffer) {
 
   hpx_parcel_t *p = NULL;
   while ((p = parcel_stack_pop(&chain))) {
-    hpx_parcel_release(p);
+    parcel_delete(p);
   }
 
   dbg_assert(!buffer->records);
