@@ -10,17 +10,17 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
 
-
+#include <stdlib.h>                             // rand_r
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/locality.h>
+#include <libhpx/worker.h>                      // for random seed
 
 hpx_addr_t HPX_HERE = 0;
 
@@ -139,18 +139,66 @@ hpx_addr_t hpx_gas_calloc_blocked(size_t n, uint32_t bsize, uint32_t boundary) {
   return gas->calloc_blocked(n, bsize, boundary, HPX_GAS_ATTR_NONE);
 }
 
+static hpx_addr_t _gas_local_search(size_t n, uint32_t bsize, uint32_t boundary,
+                                    hpx_action_t act) {
+  hpx_addr_t addr = HPX_NULL;
+  int *seed = &self->seed;
+  for (int i = 0, e = here->ranks; i < e; ++i) {
+    int j = rand_r(seed) % e;
+    hpx_addr_t l = HPX_THERE(j);
+    int e = hpx_call_sync(l, act, &addr, sizeof(addr), &n, &bsize, &boundary);
+    dbg_check(e, "Failed synchronous alloc at\n");
+    if (addr) {
+      return addr;
+    }
+    log_mem("out-of-memory detected at locality %d, searching\n", j);
+  }
+
+  for (int i = 0, e = here->ranks; i < e; ++i) {
+    hpx_addr_t l = HPX_THERE(i);
+    int e = hpx_call_sync(l, act, &addr, sizeof(addr), &n, &bsize, &boundary);
+    dbg_check(e, "Failed synchronous alloc at\n");
+    if (addr) {
+      return addr;
+    }
+    log_mem("out-of-memory detected at locality %d, searching\n", i);
+  }
+
+  return addr;
+}
+
 hpx_addr_t hpx_gas_alloc_local(size_t n, uint32_t bsize, uint32_t boundary) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
   dbg_assert(gas->alloc_local);
-  return gas->alloc_local(n, bsize, boundary, HPX_GAS_ATTR_NONE);
+  hpx_addr_t addr = gas->alloc_local(n, bsize, boundary, HPX_GAS_ATTR_NONE);
+  if (addr) {
+    return addr;
+  }
+
+  log_mem("out-of-memory detected at locality %d, searching\n", here->rank);
+  addr = _gas_local_search(n, bsize, boundary, hpx_gas_alloc_local_at_action);
+  if (!addr) {
+    dbg_error("out-of-memory detected\n");
+  }
+  return addr;
 }
 
 hpx_addr_t hpx_gas_calloc_local(size_t n, uint32_t bsize, uint32_t boundary) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
   dbg_assert(gas->calloc_local);
-  return gas->calloc_local(n, bsize, boundary, HPX_GAS_ATTR_NONE);
+  hpx_addr_t addr = gas->calloc_local(n, bsize, boundary, HPX_GAS_ATTR_NONE);
+  if (addr) {
+    return addr;
+  }
+
+  log_mem("out-of-memory detected at locality %d, searching\n", here->rank);
+  addr = _gas_local_search(n, bsize, boundary, hpx_gas_calloc_local_at_action);
+  if (!addr) {
+    dbg_error("out-of-memory detected\n");
+  }
+  return addr;
 }
 
 void hpx_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
