@@ -63,12 +63,12 @@ static bool _gpa_is_cyclic(hpx_addr_t gpa) {
 }
 
 hpx_addr_t pgas_lva_to_gpa(const void *lva) {
-  const uint64_t offset = heap_lva_to_offset(global_heap, lva);
+  uint64_t offset = heap_lva_to_offset(global_heap, lva);
   return offset_to_gpa(here->rank, offset);
 }
 
 void *pgas_gpa_to_lva(hpx_addr_t gpa) {
-   const uint64_t offset = gpa_to_offset(gpa);
+  uint64_t offset = gpa_to_offset(gpa);
    return heap_offset_to_lva(global_heap, offset);
 }
 
@@ -82,8 +82,8 @@ uint64_t pgas_max_offset(void) {
 
 static int64_t
 _pgas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
-  const bool l = _gpa_is_cyclic(lhs);
-  const bool r = _gpa_is_cyclic(rhs);
+  bool l = _gpa_is_cyclic(lhs);
+  bool r = _gpa_is_cyclic(rhs);
   dbg_assert_str(l == r, "cannot compare addresses across allocations.\n");
   dbg_assert_str(!(l ^ r), "cannot compare cyclic with non-cyclic.\n");
 
@@ -92,7 +92,7 @@ _pgas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
 
 static hpx_addr_t
 _pgas_add(const void *gas, hpx_addr_t gpa, int64_t bytes, uint32_t bsize) {
-  const bool cyclic = _gpa_is_cyclic(gpa);
+  bool cyclic = _gpa_is_cyclic(gpa);
   return (cyclic) ? gpa_add_cyclic(gpa, bytes, bsize) : gpa_add(gpa, bytes);
 }
 
@@ -172,8 +172,7 @@ static hpx_addr_t _pgas_gas_alloc_local(size_t n, uint32_t bsize,
   } else {
     lva = global_malloc(bytes);
   }
-  dbg_assert(heap_contains_lva(global_heap, lva));
-  return pgas_lva_to_gpa(lva);
+  return (lva) ? pgas_lva_to_gpa(lva) : HPX_NULL;
 }
 
 /// Allocate global zero-filled blocks from the global heap.
@@ -187,8 +186,7 @@ static hpx_addr_t _pgas_gas_calloc_local(size_t n, uint32_t bsize,
   } else {
     lva = global_calloc(n, bsize);
   }
-  dbg_assert(heap_contains_lva(global_heap, lva));
-  return pgas_lva_to_gpa(lva);
+  return (lva) ? pgas_lva_to_gpa(lva) : HPX_NULL;
 }
 
 /// Free a global address.

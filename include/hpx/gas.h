@@ -148,11 +148,17 @@ hpx_addr_t hpx_gas_calloc_blocked(size_t n, uint32_t bsize, uint32_t boundary)
 /// @param     boundary The alignment (2^k).
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_alloc_local(size_t n, uint32_t bsize, uint32_t boundary) HPX_PUBLIC;
+hpx_addr_t hpx_gas_alloc_local(size_t n, uint32_t bsize, uint32_t boundary)
+  HPX_PUBLIC;
+
 hpx_addr_t hpx_gas_alloc_local_at_sync(size_t n, uint32_t bsize, uint32_t boundary,
-                                       hpx_addr_t loc) HPX_PUBLIC;
+                                       hpx_addr_t loc)
+  HPX_PUBLIC;
+
 void hpx_gas_alloc_local_at_async(size_t n, uint32_t bsize, uint32_t boundary,
-                                  hpx_addr_t loc, hpx_addr_t lco) HPX_PUBLIC;
+                                  hpx_addr_t loc, hpx_addr_t lco)
+  HPX_PUBLIC;
+
 extern HPX_PUBLIC HPX_ACTION_DECL(hpx_gas_alloc_local_at_action);
 
 /// Allocate a 0-initialized block of global memory.
@@ -173,12 +179,16 @@ extern HPX_PUBLIC HPX_ACTION_DECL(hpx_gas_alloc_local_at_action);
 /// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_calloc_local(size_t n, uint32_t bsize, uint32_t boundary)
   HPX_PUBLIC;
+
 hpx_addr_t hpx_gas_calloc_local_at_sync(size_t n, uint32_t bsize,
                                         uint32_t boundary, hpx_addr_t loc)
   HPX_PUBLIC;
+
 void hpx_gas_calloc_local_at_async(size_t n, uint32_t bsize,
                                    uint32_t boundary, hpx_addr_t loc,
-                                   hpx_addr_t out) HPX_PUBLIC;
+                                   hpx_addr_t out)
+  HPX_PUBLIC;
+
 extern HPX_PUBLIC HPX_ACTION_DECL(hpx_gas_calloc_local_at_action);
 
 /// Global memory allocation routines with GAS attributes.

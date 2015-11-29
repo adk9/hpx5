@@ -37,6 +37,10 @@ agas_local_alloc(size_t n, uint32_t bsize, uint32_t boundary, uint32_t attr) {
   uint32_t aligned = max_u32(boundary, padded);
 
   char *lva = global_memalign(aligned, n * padded);
+  if (!lva) {
+    return HPX_NULL;
+  }
+
   gva_t gva = agas_lva_to_gva(agas, lva, padded);
   hpx_addr_t base = gva.addr;
   for (int i = 0; i < n; i++) {
@@ -56,6 +60,10 @@ agas_local_calloc(size_t n, uint32_t bsize, uint32_t boundary, uint32_t attr) {
   uint32_t aligned = max_u32(boundary, padded);
 
   char *lva = global_memalign(aligned, n * padded);
+  if (!lva) {
+    return HPX_NULL;
+  }
+
   memset(lva, 0, n * padded);
 
   gva_t gva = agas_lva_to_gva(agas, lva, padded);
