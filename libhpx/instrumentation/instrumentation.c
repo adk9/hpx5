@@ -17,17 +17,17 @@
 
 #include <errno.h>
 #include <stdarg.h>
-#include <stdio.h> // for snprintf and file methods
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <inttypes.h>
-#include <unistd.h> // for chdir
-#include <pwd.h>    //for username
+#include <unistd.h>
+#include <pwd.h>
 
 #include <hpx/hpx.h>
-#include <libsync/sync.h>
-#include <libhpx/action.h> // for action_table functions
+#include <libhpx/action.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/instrumentation.h>
@@ -36,7 +36,6 @@
 #include <libhpx/parcel.h>
 #include <libhpx/profiling.h>
 #include "logtable.h"
-#include <time.h>
 
 /// complete path to the directory to which log files, etc. will be written
 static const char *_log_path = NULL;
