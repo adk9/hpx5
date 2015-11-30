@@ -28,7 +28,7 @@ struct config;
 /// The data structure representing profiling entries
 /// @field        start_time Time of initialization
 /// @field          end_time Time of closing
-/// @field   *counter_totals Counter totals
+/// @field    counter_totals Counter totals
 /// @field            marked True if values have been recorded
 typedef struct {
   hpx_time_t   start_time;
@@ -45,8 +45,8 @@ typedef struct {
 /// @field       max_entries Maximum length of the list
 /// @field       num_entries Number of entries in the list
 /// @field             tally Number of occurrences of the event
-/// @field              *key The name of the profiled event
-/// @field          *entries The actual entries
+/// @field               key The name of the profiled event
+/// @field           entries The actual entries
 /// @field            simple True if hardware counters don't apply
 typedef struct {
   int          max_entries;
@@ -58,13 +58,14 @@ typedef struct {
 } profile_list_t;
 
 /// The data structure for storing profiling entries
-/// @field         cur_depth Current relative stack frame to other entries
 /// @field      num_counters Number of counters utilized
 /// @field       num_entries Number of code events profiled
-/// @field       max_entries Maximum number of code events profilable
-/// @field         *counters The ids of the counters used
-/// @field   **counter_names The string names of the counters
-/// @field          *entries The actual entries
+/// @field        max_events Maximum number of code events profilable
+/// @field          counters The ids of the counters used
+/// @field     counter_names The string names of the counters
+/// @field            events The actual profiled events
+/// @field     current_entry The current entry
+/// @field     current_event The current code event
 typedef struct {
   int           num_counters;
   int             num_events;
