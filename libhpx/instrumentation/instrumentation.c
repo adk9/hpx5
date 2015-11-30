@@ -44,7 +44,7 @@ static const char *_log_path = NULL;
 static logtable_t _logs[HPX_INST_NUM_EVENTS] = {LOGTABLE_INIT};
 
 /// Concatenate two paths. Callee must free returned char*.
-char *_get_complete_path(const char *path, const char *filename) {
+static char *_get_complete_path(const char *path, const char *filename) {
   int len_path = strlen(path);
   int len_filename = strlen(filename);
   int len_complete_path = len_path + len_filename + 2;
@@ -84,7 +84,6 @@ static void _dump_actions(void) {
   if (e != 0) {
     log_error("failed to write actions\n");
   }
-
 }
 
 static void _log_create(int class, int id, size_t size, hpx_time_t now) {
@@ -126,7 +125,7 @@ static const char *_mktmp(void) {
   char dirname[256];
   struct passwd *pwd = getpwuid(getuid());
   const char *username = pwd->pw_name;
-  snprintf(dirname, 256, "%s.%.4d%.2d%.2d.%.2d%.2d", username,
+  snprintf(dirname, 256, "hpx-%s.%.4d%.2d%.2d.%.2d%.2d", username,
            lt.tm_year + 1900, lt.tm_mon + 1, lt.tm_mday, lt.tm_hour, lt.tm_min);
 
   return _mkdir(_get_complete_path("/tmp", dirname));
