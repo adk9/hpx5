@@ -83,7 +83,7 @@ void prof_get_average_time(char *key, hpx_time_t *avg) {
   uint64_t seconds, ns, average = 0;
   for(int i = 0; i < _profile_log.events[event].num_entries; i++){
     if(_profile_log.events[event].entries[i].marked){
-      int64_t value = hpx_time_diff_ns(TIME_NULL,
+      int64_t value = hpx_time_diff_ns(HPX_TIME_NULL,
                                   _profile_log.events[event].entries[i].run_time);
       if(value > 0){
         average += value;

@@ -203,6 +203,29 @@ static hpx_status_t _user_lco_wait(lco_t *lco, int reset) {
   return status;
 }
 
+// Get the reference to the reduction.
+static hpx_status_t _user_lco_getref(lco_t *lco, int size, void **out, int *unpin) {
+  dbg_assert(size && out);
+
+  hpx_status_t status = _user_lco_wait(lco, 0);
+  if (status != HPX_SUCCESS) {
+    return status;
+  }
+
+  // No need for a lock here, synchronization happened in _wait(), and the LCO
+  // is pinned externally.
+  _user_lco_t *u = (_user_lco_t *)lco;
+  *out  = u->buffer;
+  *unpin = 0;
+  return HPX_SUCCESS;
+}
+
+// Release the reference to the buffer.
+static int _user_lco_release(lco_t *lco, void *out) {
+  dbg_assert(lco && out && out == ((_user_lco_t *)lco)->buffer);
+  return 1;
+}
+
 // vtable
 static const lco_class_t _user_lco_vtable = {
   .on_fini     = _user_lco_fini,
@@ -210,8 +233,8 @@ static const lco_class_t _user_lco_vtable = {
   .on_set      = _user_lco_set,
   .on_attach   = _user_lco_attach,
   .on_get      = _user_lco_get,
-  .on_getref   = NULL,
-  .on_release  = NULL,
+  .on_getref   = _user_lco_getref,
+  .on_release  = _user_lco_release,
   .on_wait     = _user_lco_wait,
   .on_reset    = _user_lco_reset,
   .on_size     = _user_lco_size

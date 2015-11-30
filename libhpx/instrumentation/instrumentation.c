@@ -17,17 +17,17 @@
 
 #include <errno.h>
 #include <stdarg.h>
-#include <stdio.h> // for snprintf and file methods
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <inttypes.h>
-#include <unistd.h> // for chdir
-#include <pwd.h>    //for username
+#include <unistd.h>
+#include <pwd.h>
 
 #include <hpx/hpx.h>
-#include <libsync/sync.h>
-#include <libhpx/action.h> // for action_table functions
+#include <libhpx/action.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/instrumentation.h>
@@ -36,7 +36,6 @@
 #include <libhpx/parcel.h>
 #include <libhpx/profiling.h>
 #include "logtable.h"
-#include <time.h>
 
 /// complete path to the directory to which log files, etc. will be written
 static const char *_log_path = NULL;
@@ -49,7 +48,7 @@ static bool _detailed_prof = false;
 static logtable_t _logs[HPX_INST_NUM_EVENTS] = {LOGTABLE_INIT};
 
 /// Concatenate two paths. Callee must free returned char*.
-char *_get_complete_path(const char *path, const char *filename) {
+static char *_get_complete_path(const char *path, const char *filename) {
   int len_path = strlen(path);
   int len_filename = strlen(filename);
   int len_complete_path = len_path + len_filename + 2;
@@ -89,7 +88,6 @@ static void _dump_actions(void) {
   if (e != 0) {
     log_error("failed to write actions\n");
   }
-
 }
 
 static void _log_create(int class, int id, size_t size, hpx_time_t now) {
@@ -131,7 +129,7 @@ static const char *_mktmp(void) {
   char dirname[256];
   struct passwd *pwd = getpwuid(getuid());
   const char *username = pwd->pw_name;
-  snprintf(dirname, 256, "%s.%.4d%.2d%.2d.%.2d%.2d", username,
+  snprintf(dirname, 256, "hpx-%s.%.4d%.2d%.2d.%.2d%.2d", username,
            lt.tm_year + 1900, lt.tm_mon + 1, lt.tm_mday, lt.tm_hour, lt.tm_min);
 
   return _mkdir(_get_complete_path("/tmp", dirname));
@@ -155,7 +153,7 @@ static const char *_get_log_path(const char *dir) {
   }
 
   // path exists but isn't a directory.
-  log_error("--with-trace-file=%s does not point to a directory\n", dir);
+  log_error("--with-inst-dir=%s does not point to a directory\n", dir);
   return NULL;
 }
 
@@ -163,10 +161,6 @@ int inst_init(config_t *cfg) {
 #ifndef ENABLE_INSTRUMENTATION
   return LIBHPX_OK;
 #endif
-  if (!cfg->inst_dir) {
-    return LIBHPX_OK;
-  }
-
   if (!config_inst_at_isset(cfg, hpx_get_my_rank())) {
     return LIBHPX_OK;
   }
