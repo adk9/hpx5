@@ -20,11 +20,8 @@
 
 #define SIMPLE true
 
-// The following two macros are effectively the same, the only difference is the
-// context that each should be used in. HPX_PROF_NO_RESULT is used solely as a
-// return value while the other may be used as an argument to several functions.
+// Indicates a profile event with no tag.
 #define HPX_PROF_NO_TAG -1
-#define HPX_PROF_NO_RESULT -1
 
 struct config;
 
@@ -103,11 +100,11 @@ int profile_new_entry(profile_log_t *log, int event, int eventset);
 /// @field               key The key of the event we are getting
 int profile_get_event(profile_log_t *log, char *key);
 
-/// Create a new profile list in the profile log @p log.
+/// Create a new profile event list in the profile log @p log.
 /// @field               log The profile log to add the entry to
 /// @field               key The key of the event we are creating
 /// @field            simple True if hardware counters don't apply
-int profile_new_list(profile_log_t *log, char *key, bool simple);
+int profile_new_event(profile_log_t *log, char *key, bool simple);
 
 /// Initialize profiling. This is usually called in hpx_init().
 int prof_init(struct config *cfg)

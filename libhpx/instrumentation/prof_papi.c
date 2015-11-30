@@ -189,7 +189,7 @@ void prof_fini(void) {
 
 int prof_get_averages(int64_t *values, char *key) {
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT ||_profile_log.events[event].simple) {
+  if (event < 0 ||_profile_log.events[event].simple) {
     return PAPI_EINVAL;
   }
 
@@ -212,7 +212,7 @@ int prof_get_averages(int64_t *values, char *key) {
 
 int prof_get_totals(int64_t *values, char *key) {
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT || _profile_log.events[event].simple) {
+  if (event < 0 || _profile_log.events[event].simple) {
     return PAPI_EINVAL;
   }
 
@@ -230,7 +230,7 @@ int prof_get_totals(int64_t *values, char *key) {
 
 int prof_get_minimums(int64_t *values, char *key) {
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT ||_profile_log.events[event].simple) {
+  if (event < 0 ||_profile_log.events[event].simple) {
     return PAPI_EINVAL;
   }
 
@@ -259,7 +259,7 @@ int prof_get_minimums(int64_t *values, char *key) {
 
 int prof_get_maximums(int64_t *values, char *key) {
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT ||_profile_log.events[event].simple) {
+  if (event < 0 ||_profile_log.events[event].simple) {
     return PAPI_EINVAL;
   }
 
@@ -288,7 +288,7 @@ int prof_get_maximums(int64_t *values, char *key) {
 
 int prof_get_tally(char *key) {
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
+  if (event < 0) {
     return 0;
   }
   return _profile_log.events[event].tally;
@@ -296,7 +296,7 @@ int prof_get_tally(char *key) {
 
 void prof_get_average_time(char *key, hpx_time_t *avg) {
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
+  if (event < 0) {
     return;
   }
 
@@ -319,7 +319,7 @@ void prof_get_average_time(char *key, hpx_time_t *avg) {
 
 void prof_get_total_time(char *key, hpx_time_t *tot) {
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
+  if (event < 0) {
     return;
   }
 
@@ -338,7 +338,7 @@ void prof_get_total_time(char *key, hpx_time_t *tot) {
 
 void prof_get_min_time(char *key, hpx_time_t *min) {
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
+  if (event < 0) {
     return;
   }
 
@@ -379,7 +379,7 @@ void prof_get_min_time(char *key, hpx_time_t *min) {
 
 void prof_get_max_time(char *key, hpx_time_t *max) {
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
+  if (event < 0) {
     return;
   }
 
@@ -424,21 +424,20 @@ int prof_get_num_counters() {
 
 void prof_increment_tally(char *key) {
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
-    profile_new_list(&_profile_log, key, SIMPLE);
-    event = _profile_log.num_events - 1;
+  if (event < 0) {
+    event = profile_new_event(&_profile_log, key, SIMPLE);
   }
-
+  dbg_assert(event >= 0);
   _profile_log.events[event].tally++;
 }
 
 void prof_start_timing(char *key, int *tag) {
   hpx_time_t now = hpx_time_now();
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
-    profile_new_list(&_profile_log, key, SIMPLE);
-    event = _profile_log.num_events - 1;
+  if (event < 0) {
+    event = profile_new_event(&_profile_log, key, SIMPLE);
   }
+  dbg_assert(event >= 0);
 
   // interrupt current timing
   if (_profile_log.current_event >= 0 && 
@@ -467,7 +466,7 @@ void prof_start_timing(char *key, int *tag) {
 int prof_stop_timing(char *key, int *tag) {
   hpx_time_t end = hpx_time_now();
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
+  if (event < 0) {
     return event;
   }
 
@@ -509,10 +508,10 @@ int prof_stop_timing(char *key, int *tag) {
 int prof_start_hardware_counters(char *key, int *tag) {
   hpx_time_t end = hpx_time_now();
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
-    profile_new_list(&_profile_log, key, !SIMPLE);
-    event = _profile_log.num_events - 1;
+  if (event < 0) {
+    event = profile_new_event(&_profile_log, key, !SIMPLE);
   }
+  dbg_assert(event >= 0);
 
   if (_profile_log.events[event].simple) {
     return PAPI_EINVAL;
@@ -524,11 +523,11 @@ int prof_start_hardware_counters(char *key, int *tag) {
                           _profile_log.current_entry].marked &&
      !_profile_log.events[_profile_log.current_event].entries[
                           _profile_log.current_entry].paused) {
-    // I leave this as type long long instead of int64_t to suppress a warning
-    // at compile time that appears if I do otherwise
+    // left as long long instead of int64_t to suppress a warning
+    // at compile time
     long long values[_profile_log.num_counters];
     for (int i = 0; i < _profile_log.num_counters; i++) {
-      values[i] = HPX_PROF_NO_RESULT;
+      values[i] = -1;
     }
     PAPI_stop(_profile_log.events[_profile_log.current_event].entries[
                                   _profile_log.current_entry].eventset, values);
@@ -564,15 +563,15 @@ int prof_start_hardware_counters(char *key, int *tag) {
 
 int prof_stop_hardware_counters(char *key, int *tag) {
   int event = prof_stop_timing(key, tag);
-  if (event == HPX_PROF_NO_RESULT || *tag == HPX_PROF_NO_TAG) {
+  if (event < 0 || *tag == HPX_PROF_NO_TAG) {
     return PAPI_EINVAL;
   }
 
-  // I leave this as type long long instead of int64_t to suppress a warning
-  // at compile time that appears if I do otherwise
+  // left as long long instead of int64_t to suppress a warning
+  // at compile time
   long long values[_profile_log.num_counters];
   for (int i = 0; i < _profile_log.num_counters; i++) {
-    values[i] = HPX_PROF_NO_RESULT;
+    values[i] = -1;
   }
   int retval = PAPI_stop(_profile_log.events[event].entries[*tag].eventset, 
                          values);
@@ -601,7 +600,7 @@ int prof_stop_hardware_counters(char *key, int *tag) {
 int prof_pause(char *key, int *tag) {
   hpx_time_t end = hpx_time_now();
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
+  if (event < 0) {
     return PAPI_EINVAL;
   }
 
@@ -632,7 +631,7 @@ int prof_pause(char *key, int *tag) {
     // at compile time that appears if I do otherwise
     long long values[_profile_log.num_counters];
     for (int i = 0; i < _profile_log.num_counters; i++) {
-      values[i] = HPX_PROF_NO_RESULT;
+      values[i] = -1;
     }
     int retval = PAPI_stop(_profile_log.events[event].entries[*tag].eventset, 
                            values);
@@ -652,7 +651,7 @@ int prof_pause(char *key, int *tag) {
 
 int prof_resume(char *key, int *tag) {
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
+  if (event < 0) {
     return PAPI_EINVAL;
   }
 

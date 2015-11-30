@@ -30,7 +30,7 @@
 #include <libhpx/profiling.h>
 #include <libsync/sync.h>
 
-int profile_new_list(profile_log_t *log, char *key, bool simple) {
+int profile_new_event(profile_log_t *log, char *key, bool simple) {
   if (!log) {
     return LIBHPX_ERROR;
   }
@@ -50,7 +50,18 @@ int profile_new_list(profile_log_t *log, char *key, bool simple) {
   list->max_entries = log->max_events;
   list->key = key;
   list->simple = simple;
-  return LIBHPX_OK;
+  return index;
+}
+
+// Returns index of matching key or returns -1 if the event
+// does not exist.
+int profile_get_event(profile_log_t *log, char *key) {
+  for (int i = 0; i < log->num_events; i++) {
+    if (strcmp(key, log->events[i].key) == 0) {
+      return i;
+    }
+  }
+  return -1;
 }
 
 int profile_new_entry(profile_log_t *log, int event, int eventset) {
@@ -77,20 +88,9 @@ int profile_new_entry(profile_log_t *log, int event, int eventset) {
     list->entries[index].counter_totals =
         malloc(log->num_counters * sizeof(int64_t));
     for (int i = 0; i < log->num_counters; ++i) {
-      list->entries[index].counter_totals[i] = HPX_PROF_NO_RESULT;
+      list->entries[index].counter_totals[i] = -1;
     }
   }
   return index;
-}
-
-// Returns index of matching key/creates new entry if index doesn't
-// exist
-int profile_get_event(profile_log_t *log, char *key) {
-  for (int i = 0; i < log->num_events; i++) {
-    if (strcmp(key, log->events[i].key) == 0) {
-      return i;
-    }
-  }
-  return HPX_PROF_NO_RESULT;
 }
 

@@ -68,7 +68,7 @@ int prof_get_maximums(int64_t *values, char *key) {
 
 int prof_get_tally(char *key) {
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
+  if (event < 0) {
     return 0;
   }
   return _profile_log.events[event].tally;
@@ -76,7 +76,7 @@ int prof_get_tally(char *key) {
 
 void prof_get_average_time(char *key, hpx_time_t *avg) {
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
+  if (event < 0) {
     return;
   }
 
@@ -99,7 +99,7 @@ void prof_get_average_time(char *key, hpx_time_t *avg) {
 
 void prof_get_total_time(char *key, hpx_time_t *tot) {
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
+  if (event < 0) {
     return;
   }
 
@@ -118,7 +118,7 @@ void prof_get_total_time(char *key, hpx_time_t *tot) {
 
 void prof_get_min_time(char *key, hpx_time_t *min) {
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
+  if (event < 0) {
     return;
   }
 
@@ -154,7 +154,7 @@ void prof_get_min_time(char *key, hpx_time_t *min) {
 
 void prof_get_max_time(char *key, hpx_time_t *max) {
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
+  if (event < 0) {
     return;
   }
 
@@ -194,9 +194,8 @@ int prof_get_num_counters(void) {
 
 void prof_increment_tally(char *key) {
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
-    profile_new_list(&_profile_log, key, true);
-    event = _profile_log.num_events - 1;
+  if (event < 0) {
+    event = profile_new_event(&_profile_log, key, true);
   }
 
   _profile_log.events[event].tally++;
@@ -205,10 +204,10 @@ void prof_increment_tally(char *key) {
 void prof_start_timing(char *key, int *tag) {
   hpx_time_t now = hpx_time_now();
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
-    profile_new_list(&_profile_log, key, true);
-    event = _profile_log.num_events - 1;
+  if (event < 0) {
+    event = profile_new_event(&_profile_log, key, true);
   }
+  dbg_assert(event >= 0);
 
   // interrupt current timing
   if (_profile_log.current_event >= 0 &&
@@ -237,8 +236,8 @@ void prof_start_timing(char *key, int *tag) {
 int prof_stop_timing(char *key, int *tag) {
   hpx_time_t end = hpx_time_now();
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
-    return HPX_PROF_NO_RESULT;
+  if (event < 0) {
+    return 0;
   }
 
   if (*tag == HPX_PROF_NO_TAG) {
@@ -288,7 +287,7 @@ int prof_stop_hardware_counters(char *key, int *tag) {
 int prof_pause(char *key, int *tag) {
   hpx_time_t end = hpx_time_now();
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
+  if (event < 0) {
     return LIBHPX_OK;
   }
 
@@ -319,7 +318,7 @@ int prof_pause(char *key, int *tag) {
 
 int prof_resume(char *key, int *tag) {
   int event = profile_get_event(&_profile_log, key);
-  if (event == HPX_PROF_NO_RESULT) {
+  if (event < 0) {
     return LIBHPX_OK;
   }
 
