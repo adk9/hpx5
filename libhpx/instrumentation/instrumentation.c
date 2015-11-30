@@ -151,7 +151,7 @@ static const char *_get_log_path(const char *dir) {
   }
 
   // path exists but isn't a directory.
-  log_error("--with-trace-file=%s does not point to a directory\n", dir);
+  log_error("--with-inst-dir=%s does not point to a directory\n", dir);
   return NULL;
 }
 
@@ -159,10 +159,6 @@ int inst_init(config_t *cfg) {
 #ifndef ENABLE_INSTRUMENTATION
   return LIBHPX_OK;
 #endif
-  if (!cfg->inst_dir) {
-    return LIBHPX_OK;
-  }
-
   if (!config_inst_at_isset(cfg, hpx_get_my_rank())) {
     return LIBHPX_OK;
   }
