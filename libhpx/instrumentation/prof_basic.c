@@ -45,9 +45,9 @@ int prof_init(struct config *cfg) {
 void prof_fini(void) {
   inst_prof_dump(_profile_log);
   for (int i = 0; i < _profile_log.num_events; i++) {
-    free((void *)_profile_log.events[i].entries);
+    free(_profile_log.events[i].entries);
   }
-  free((void *)_profile_log.events);
+  free(_profile_log.events);
 }
 
 int prof_get_averages(int64_t *values, char *key) {

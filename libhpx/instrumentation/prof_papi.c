@@ -180,11 +180,11 @@ void prof_fini(void) {
         free(_profile_log.events[i].entries[j].counter_totals);
       }
     }
-    free((void *)_profile_log.events[i].entries);
+    free(profile_log.events[i].entries);
   }
-  free((void *)_profile_log.events);
-  free((void *)_profile_log.counters);
-  free((void *)_profile_log.counter_names);
+  free(profile_log.events);
+  free(profile_log.counters);
+  free(profile_log.counter_names);
 }
 
 int prof_get_averages(int64_t *values, char *key) {
