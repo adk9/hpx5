@@ -306,7 +306,7 @@ void prof_get_average_time(char *key, hpx_time_t *avg) {
     if (_profile_log.events[event].entries[i].marked) {
       int64_t amount = hpx_time_diff_ns(HPX_TIME_NULL,
                                   _profile_log.events[event].entries[i].run_time);
-      if(amount > 0){
+      if (amount > 0) {
         divisor++;
         average += amount;
       }
@@ -350,10 +350,10 @@ void prof_get_min_time(char *key, hpx_time_t *min) {
   int64_t minimum = 0;
   int start = _profile_log.events[event].num_entries;
 
-  if(_profile_log.events[event].num_entries > 0 ){
-    for(int i = 0; i < _profile_log.events[event].num_entries; i++){
-      if(_profile_log.events[event].entries[i].marked &&
-         0 < hpx_time_diff_ns(HPX_TIME_NULL, _profile_log.events[event].entries[i].run_time)){
+  if (_profile_log.events[event].num_entries > 0 ) {
+    for (int i = 0; i < _profile_log.events[event].num_entries; i++) {
+      if (_profile_log.events[event].entries[i].marked &&
+         0 < hpx_time_diff_ns(HPX_TIME_NULL, _profile_log.events[event].entries[i].run_time)) {
         minimum = hpx_time_diff_ns(HPX_TIME_NULL, 
                                    _profile_log.events[event].entries[i].run_time);
         start = i+1;
@@ -365,7 +365,7 @@ void prof_get_min_time(char *key, hpx_time_t *min) {
     if (_profile_log.events[event].entries[i].marked) {
       temp = hpx_time_diff_ns(HPX_TIME_NULL,
                               _profile_log.events[event].entries[i].run_time);
-      if(temp < minimum && temp > 0){
+      if (temp < minimum && temp > 0) {
         minimum = temp;
       }
     }
