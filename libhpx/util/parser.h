@@ -142,6 +142,8 @@ struct hpx_options_t
   unsigned int hpx_prof_counters_min; /**< @brief set which PAPI counters to use for profiling's minimum occurreces */
   unsigned int hpx_prof_counters_max; /**< @brief set which PAPI counters to use for profiling's maximum occurreces */
   const char *hpx_prof_counters_help; /**< @brief set which PAPI counters to use for profiling help description.  */
+  int hpx_prof_detailed_flag;	/**< @brief dump all individual measurements to file in addition to summaries (default=off).  */
+  const char *hpx_prof_detailed_help; /**< @brief dump all individual measurements to file in addition to summaries help description.  */
   long hpx_isir_testwindow_arg;	/**< @brief number of ISIR requests to test in progress loop.  */
   char * hpx_isir_testwindow_orig;	/**< @brief number of ISIR requests to test in progress loop original value given at command line.  */
   const char *hpx_isir_testwindow_help; /**< @brief number of ISIR requests to test in progress loop help description.  */
@@ -235,6 +237,7 @@ struct hpx_options_t
   unsigned int hpx_trace_classes_given ;	/**< @brief Whether hpx-trace-classes was given.  */
   unsigned int hpx_trace_filesize_given ;	/**< @brief Whether hpx-trace-filesize was given.  */
   unsigned int hpx_prof_counters_given ;	/**< @brief Whether hpx-prof-counters was given.  */
+  unsigned int hpx_prof_detailed_given ;	/**< @brief Whether hpx-prof-detailed was given.  */
   unsigned int hpx_isir_testwindow_given ;	/**< @brief Whether hpx-isir-testwindow was given.  */
   unsigned int hpx_isir_sendlimit_given ;	/**< @brief Whether hpx-isir-sendlimit was given.  */
   unsigned int hpx_isir_recvlimit_given ;	/**< @brief Whether hpx-isir-recvlimit was given.  */
