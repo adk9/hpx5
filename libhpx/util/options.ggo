@@ -133,6 +133,9 @@ typestr="counters"
 values="HPX_L1_TCM","HPX_L2_TCM","HPX_L3_TCM","HPX_TLB_TL","HPX_TOT_INS","HPX_INT_INS","HPX_FP_INS","HPX_LD_INS","HPX_SR_INS","HPX_BR_INS","HPX_TOT_CYC","all"
 enum optional multiple
 
+option "hpx-prof-detailed" - "dump all individual measurements to file in addition to summaries"
+flag off
+
 section "ISIR Network Options"
 
 option "hpx-isir-testwindow" - "number of ISIR requests to test in progress loop"

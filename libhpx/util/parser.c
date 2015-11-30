@@ -69,6 +69,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-trace-filesize=bytes\n                                set the size of each trace file",
   "\nProfiling:",
   "      --hpx-prof-counters=counters\n                                set which PAPI counters to use for profiling\n                                  (possible values=\"HPX_L1_TCM\",\n                                  \"HPX_L2_TCM\", \"HPX_L3_TCM\",\n                                  \"HPX_TLB_TL\", \"HPX_TOT_INS\",\n                                  \"HPX_INT_INS\", \"HPX_FP_INS\",\n                                  \"HPX_LD_INS\", \"HPX_SR_INS\",\n                                  \"HPX_BR_INS\", \"HPX_TOT_CYC\", \"all\")",
+  "      --hpx-prof-detailed       dump all individual measurements to file in\n                                  addition to summaries  (default=off)",
   "\nISIR Network Options:",
   "      --hpx-isir-testwindow=requests\n                                number of ISIR requests to test in progress\n                                  loop",
   "      --hpx-isir-sendlimit=requests\n                                ISIR network send limit",
@@ -187,6 +188,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_trace_classes_given = 0 ;
   args_info->hpx_trace_filesize_given = 0 ;
   args_info->hpx_prof_counters_given = 0 ;
+  args_info->hpx_prof_detailed_given = 0 ;
   args_info->hpx_isir_testwindow_given = 0 ;
   args_info->hpx_isir_sendlimit_given = 0 ;
   args_info->hpx_isir_recvlimit_given = 0 ;
@@ -257,6 +259,7 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_trace_filesize_orig = NULL;
   args_info->hpx_prof_counters_arg = NULL;
   args_info->hpx_prof_counters_orig = NULL;
+  args_info->hpx_prof_detailed_flag = 0;
   args_info->hpx_isir_testwindow_orig = NULL;
   args_info->hpx_isir_sendlimit_orig = NULL;
   args_info->hpx_isir_recvlimit_orig = NULL;
@@ -333,28 +336,29 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_prof_counters_help = hpx_options_t_help[34] ;
   args_info->hpx_prof_counters_min = 0;
   args_info->hpx_prof_counters_max = 0;
-  args_info->hpx_isir_testwindow_help = hpx_options_t_help[36] ;
-  args_info->hpx_isir_sendlimit_help = hpx_options_t_help[37] ;
-  args_info->hpx_isir_recvlimit_help = hpx_options_t_help[38] ;
-  args_info->hpx_pwc_parcelbuffersize_help = hpx_options_t_help[40] ;
-  args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[41] ;
-  args_info->hpx_photon_backend_help = hpx_options_t_help[43] ;
-  args_info->hpx_photon_ibdev_help = hpx_options_t_help[44] ;
-  args_info->hpx_photon_ethdev_help = hpx_options_t_help[45] ;
-  args_info->hpx_photon_ibport_help = hpx_options_t_help[46] ;
-  args_info->hpx_photon_usecma_help = hpx_options_t_help[47] ;
-  args_info->hpx_photon_ibsrq_help = hpx_options_t_help[48] ;
-  args_info->hpx_photon_btethresh_help = hpx_options_t_help[49] ;
-  args_info->hpx_photon_fiprov_help = hpx_options_t_help[50] ;
-  args_info->hpx_photon_fidev_help = hpx_options_t_help[51] ;
-  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[52] ;
-  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[53] ;
-  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[54] ;
-  args_info->hpx_photon_maxrd_help = hpx_options_t_help[55] ;
-  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[56] ;
-  args_info->hpx_photon_numcq_help = hpx_options_t_help[57] ;
-  args_info->hpx_photon_usercq_help = hpx_options_t_help[58] ;
-  args_info->hpx_opt_smp_help = hpx_options_t_help[60] ;
+  args_info->hpx_prof_detailed_help = hpx_options_t_help[35] ;
+  args_info->hpx_isir_testwindow_help = hpx_options_t_help[37] ;
+  args_info->hpx_isir_sendlimit_help = hpx_options_t_help[38] ;
+  args_info->hpx_isir_recvlimit_help = hpx_options_t_help[39] ;
+  args_info->hpx_pwc_parcelbuffersize_help = hpx_options_t_help[41] ;
+  args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[42] ;
+  args_info->hpx_photon_backend_help = hpx_options_t_help[44] ;
+  args_info->hpx_photon_ibdev_help = hpx_options_t_help[45] ;
+  args_info->hpx_photon_ethdev_help = hpx_options_t_help[46] ;
+  args_info->hpx_photon_ibport_help = hpx_options_t_help[47] ;
+  args_info->hpx_photon_usecma_help = hpx_options_t_help[48] ;
+  args_info->hpx_photon_ibsrq_help = hpx_options_t_help[49] ;
+  args_info->hpx_photon_btethresh_help = hpx_options_t_help[50] ;
+  args_info->hpx_photon_fiprov_help = hpx_options_t_help[51] ;
+  args_info->hpx_photon_fidev_help = hpx_options_t_help[52] ;
+  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[53] ;
+  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[54] ;
+  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[55] ;
+  args_info->hpx_photon_maxrd_help = hpx_options_t_help[56] ;
+  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[57] ;
+  args_info->hpx_photon_numcq_help = hpx_options_t_help[58] ;
+  args_info->hpx_photon_usercq_help = hpx_options_t_help[59] ;
+  args_info->hpx_opt_smp_help = hpx_options_t_help[61] ;
   
 }
 
@@ -665,6 +669,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
   if (args_info->hpx_trace_filesize_given)
     write_into_file(outfile, "hpx-trace-filesize", args_info->hpx_trace_filesize_orig, 0);
   write_multiple_into_file(outfile, args_info->hpx_prof_counters_given, "hpx-prof-counters", args_info->hpx_prof_counters_orig, hpx_option_parser_hpx_prof_counters_values);
+  if (args_info->hpx_prof_detailed_given)
+    write_into_file(outfile, "hpx-prof-detailed", 0, 0 );
   if (args_info->hpx_isir_testwindow_given)
     write_into_file(outfile, "hpx-isir-testwindow", args_info->hpx_isir_testwindow_orig, 0);
   if (args_info->hpx_isir_sendlimit_given)
@@ -1339,6 +1345,7 @@ hpx_option_parser_internal (
         { "hpx-trace-classes",	1, NULL, 0 },
         { "hpx-trace-filesize",	1, NULL, 0 },
         { "hpx-prof-counters",	1, NULL, 0 },
+        { "hpx-prof-detailed",	0, NULL, 0 },
         { "hpx-isir-testwindow",	1, NULL, 0 },
         { "hpx-isir-sendlimit",	1, NULL, 0 },
         { "hpx-isir-recvlimit",	1, NULL, 0 },
@@ -1713,6 +1720,18 @@ hpx_option_parser_internal (
             if (update_multiple_arg_temp(&hpx_prof_counters_list, 
                 &(local_args_info.hpx_prof_counters_given), optarg, hpx_option_parser_hpx_prof_counters_values, 0, ARG_ENUM,
                 "hpx-prof-counters", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* dump all individual measurements to file in addition to summaries.  */
+          else if (strcmp (long_options[option_index].name, "hpx-prof-detailed") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->hpx_prof_detailed_flag), 0, &(args_info->hpx_prof_detailed_given),
+                &(local_args_info.hpx_prof_detailed_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "hpx-prof-detailed", '-',
                 additional_error))
               goto failure;
           

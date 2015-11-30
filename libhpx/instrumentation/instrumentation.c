@@ -40,6 +40,10 @@
 /// complete path to the directory to which log files, etc. will be written
 static const char *_log_path = NULL;
 
+/// when profiling, setting detailed_prof = true will dump each individual 
+/// measurement to file
+static bool _detailed_prof = false;
+
 /// We're keeping one log per event per locality. Here are their headers.
 static logtable_t _logs[HPX_INST_NUM_EVENTS] = {LOGTABLE_INIT};
 
@@ -178,6 +182,7 @@ int inst_init(config_t *cfg) {
 
   // enable profiling
   if (prof_init(cfg)) {
+    _detailed_prof = cfg->prof_detailed;
     log_dflt("error detected while initializing profiling\n");
   }
 
@@ -284,6 +289,21 @@ void inst_prof_dump(profile_log_t log) {
               hpx_time_ms(average),
               hpx_time_ms(min),
               hpx_time_ms(max));
+
+      if(_detailed_prof){
+        fprintf(f, "\nDUMP:\n\n%-24s", "Entry #");
+        for(int j = 0; j < log.num_counters; j++){
+          fprintf(f, "%-24s", log.counter_names[j]);
+        }
+        fprintf(f, "%-24s\n", "Time (ms)");
+        for(int j = 0; j < log.events[i].num_entries; j++){
+          fprintf(f, "%-24d", j);
+          for(int k = 0; k < log.num_counters; k++){
+            fprintf(f, "%-24"PRIu64, log.events[i].entries[j].counter_totals[k]);
+          }
+          fprintf(f, "%-24f\n", hpx_time_ms(log.events[i].entries[j].run_time));
+        }
+      }
     }
   }
   int e = fclose(f);

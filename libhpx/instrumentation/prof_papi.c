@@ -180,11 +180,11 @@ void prof_fini(void) {
         free(_profile_log.events[i].entries[j].counter_totals);
       }
     }
-    free(profile_log.events[i].entries);
+    free(_profile_log.events[i].entries);
   }
-  free(profile_log.events);
-  free(profile_log.counters);
-  free(profile_log.counter_names);
+  free(_profile_log.events);
+  free(_profile_log.counters);
+  free(_profile_log.counter_names);
 }
 
 int prof_get_averages(int64_t *values, char *key) {
@@ -306,11 +306,15 @@ void prof_get_average_time(char *key, hpx_time_t *avg) {
     if (_profile_log.events[event].entries[i].marked) {
       int64_t amount = hpx_time_diff_ns(HPX_TIME_NULL,
                                   _profile_log.events[event].entries[i].run_time);
-      divisor++;
-      average += amount;
+      if (amount > 0) {
+        divisor++;
+        average += amount;
+      }
     }
   }
-  average /= divisor;
+  if(divisor > 0){
+    average /= divisor;
+  }
   seconds = average / 1e9;
   ns = average % (int64_t)1e9;
 
@@ -348,9 +352,10 @@ void prof_get_min_time(char *key, hpx_time_t *min) {
 
   if (_profile_log.events[event].num_entries > 0 ) {
     for (int i = 0; i < _profile_log.events[event].num_entries; i++) {
-      if (_profile_log.events[event].entries[i].marked) {
+      if (_profile_log.events[event].entries[i].marked &&
+         0 < hpx_time_diff_ns(HPX_TIME_NULL, _profile_log.events[event].entries[i].run_time)) {
         minimum = hpx_time_diff_ns(HPX_TIME_NULL, 
-                                   _profile_log.events[event].entries[0].run_time);
+                                   _profile_log.events[event].entries[i].run_time);
         start = i+1;
         break;
       }
@@ -360,7 +365,7 @@ void prof_get_min_time(char *key, hpx_time_t *min) {
     if (_profile_log.events[event].entries[i].marked) {
       temp = hpx_time_diff_ns(HPX_TIME_NULL,
                               _profile_log.events[event].entries[i].run_time);
-      if (temp < minimum) {
+      if (temp < minimum && temp > 0) {
         minimum = temp;
       }
     }
