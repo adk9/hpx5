@@ -1,5 +1,5 @@
 if HAVE_NETWORK
-SUBDIRS = isir pwc
+SUBDIRS = isir pwc simple_coalesced
 endif
 
 # The networking library
@@ -19,5 +19,6 @@ libnetwork_la_SOURCES  = locality.c \
 
 if HAVE_NETWORK
 libnetwork_la_LIBADD   = isir/libisir.la \
-                         pwc/libpwc.la
+                         pwc/libpwc.la \
+			 simple_coalesced/libcoalesced.la
 endif
