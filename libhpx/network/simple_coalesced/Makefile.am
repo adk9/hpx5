@@ -1,4 +1,5 @@
 # The coalesced network implementations
+noinst_LTLIBRARIES  = libcoalesced.la
 noinst_HEADERS      = coalesced_network.h
 
 libcoalesced_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
