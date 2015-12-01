@@ -285,7 +285,7 @@ void inst_prof_dump(profile_log_t log) {
       prof_get_min_time(log.events[i].key, &min);
       prof_get_max_time(log.events[i].key, &max);
 
-      fprintf(f, "%-24s%-24.3f%-24.3f%-24.3f\n", "Time (ms)",
+      fprintf(f, "%-24s%-24.6f%-24.6f%-24.6f\n", "Time (ms)",
               hpx_time_ms(average),
               hpx_time_ms(min),
               hpx_time_ms(max));

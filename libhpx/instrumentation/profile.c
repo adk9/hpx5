@@ -30,7 +30,8 @@
 #include <libhpx/profiling.h>
 #include <libsync/sync.h>
 
-int profile_new_event(profile_log_t *log, char *key, bool simple) {
+int profile_new_event(profile_log_t *log, char *key, 
+                      bool simple, int eventset) {
   if (!log) {
     return LIBHPX_ERROR;
   }
@@ -50,6 +51,7 @@ int profile_new_event(profile_log_t *log, char *key, bool simple) {
   list->max_entries = log->max_events;
   list->key = key;
   list->simple = simple;
+  list->eventset = eventset;
   return index;
 }
 
@@ -64,7 +66,7 @@ int profile_get_event(profile_log_t *log, char *key) {
   return -1;
 }
 
-int profile_new_entry(profile_log_t *log, int event, int eventset) {
+int profile_new_entry(profile_log_t *log, int event) {
   profile_list_t *list = &log->events[event];
   dbg_assert(list->max_entries > 0);
   if (list->num_entries == list->max_entries) {
@@ -79,7 +81,6 @@ int profile_new_entry(profile_log_t *log, int event, int eventset) {
   list->entries[index].run_time = HPX_TIME_NULL;
   list->entries[index].marked = false;
   list->entries[index].paused = false;
-  list->entries[index].eventset = eventset;
 
   list->entries[index].counter_totals = NULL;
   if (list->simple) {

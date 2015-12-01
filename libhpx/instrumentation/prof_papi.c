@@ -84,18 +84,20 @@ static void _test_event(uint64_t papi_event, uint64_t bit, uint64_t bitset,
   }
 }
 
-static int _create_new_entry(int event) {
+static int _create_new_event(char *key, bool simple) {
   int eventset = PAPI_NULL;
-  int retval = PAPI_create_eventset(&eventset);
-  if (retval != PAPI_OK) {
-    log_error("unable to create eventset with error code %d\n", retval);
-  } else {
-    for (int i = 0; i < _profile_log.num_counters; i++) {
-      PAPI_add_event(eventset, _profile_log.counters[i]);
+  if (!simple) {
+    int retval = PAPI_create_eventset(&eventset);
+    if (retval != PAPI_OK) {
+      log_error("unable to create eventset with error code %d\n", retval);
+    } else {
+      for (int i = 0; i < _profile_log.num_counters; i++) {
+        PAPI_add_event(eventset, _profile_log.counters[i]);
+      }
     }
   }
 
-  return profile_new_entry(&_profile_log, event, eventset);
+  return profile_new_event(&_profile_log, key, simple, eventset);
 }
 
 int prof_init(config_t *cfg) {
@@ -430,7 +432,7 @@ int prof_get_num_counters() {
 void prof_increment_tally(char *key) {
   int event = profile_get_event(&_profile_log, key);
   if (event < 0) {
-    event = profile_new_event(&_profile_log, key, SIMPLE);
+    event = _create_new_event(key, SIMPLE);
   }
   dbg_assert(event >= 0);
   _profile_log.events[event].tally++;
@@ -440,7 +442,7 @@ void prof_start_timing(char *key, int *tag) {
   hpx_time_t now = hpx_time_now();
   int event = profile_get_event(&_profile_log, key);
   if (event < 0) {
-    event = profile_new_event(&_profile_log, key, SIMPLE);
+    event = _create_new_event(key, SIMPLE);
   }
   dbg_assert(event >= 0);
 
@@ -459,7 +461,7 @@ void prof_start_timing(char *key, int *tag) {
                         _profile_log.current_entry].run_time, dur);
   }
 
-  int index = _create_new_entry(event);
+  int index = profile_new_entry(&_profile_log, event);
   _profile_log.events[event].entries[index].last_entry = _profile_log.current_entry;
   _profile_log.events[event].entries[index].last_event = _profile_log.current_event;
   _profile_log.current_entry = index;
@@ -514,7 +516,7 @@ int prof_start_hardware_counters(char *key, int *tag) {
   hpx_time_t end = hpx_time_now();
   int event = profile_get_event(&_profile_log, key);
   if (event < 0) {
-    event = profile_new_event(&_profile_log, key, !SIMPLE);
+    event = _create_new_event(key, !SIMPLE);
   }
   dbg_assert(event >= 0);
 
@@ -534,8 +536,8 @@ int prof_start_hardware_counters(char *key, int *tag) {
     for (int i = 0; i < _profile_log.num_counters; i++) {
       values[i] = -1;
     }
-    PAPI_stop(_profile_log.events[_profile_log.current_event].entries[
-                                  _profile_log.current_entry].eventset, values);
+    PAPI_stop(_profile_log.events[_profile_log.current_event].eventset, 
+              values);
 
     hpx_time_t dur;
     hpx_time_diff(_profile_log.events[
@@ -553,17 +555,16 @@ int prof_start_hardware_counters(char *key, int *tag) {
     }
   }
 
-  int index = _create_new_entry(event);
+  int index = profile_new_entry(&_profile_log, event);
   
   _profile_log.events[event].entries[index].last_entry = _profile_log.current_entry;
   _profile_log.events[event].entries[index].last_event = _profile_log.current_event;
   _profile_log.current_entry = index;
   _profile_log.current_event = event;
   *tag = index;
-  PAPI_reset(_profile_log.events[_profile_log.current_event].entries[
-                                 _profile_log.current_entry].eventset);
+  PAPI_reset(_profile_log.events[_profile_log.current_event].eventset);
   _profile_log.events[event].entries[index].start_time = hpx_time_now();
-  return PAPI_start(_profile_log.events[event].entries[index].eventset);
+  return PAPI_start(_profile_log.events[event].eventset);
 }
 
 int prof_stop_hardware_counters(char *key, int *tag) {
@@ -578,9 +579,8 @@ int prof_stop_hardware_counters(char *key, int *tag) {
   for (int i = 0; i < _profile_log.num_counters; i++) {
     values[i] = -1;
   }
-  int retval = PAPI_stop(_profile_log.events[event].entries[*tag].eventset, 
-                         values);
-  PAPI_reset(_profile_log.events[event].entries[*tag].eventset);
+  int retval = PAPI_stop(_profile_log.events[event].eventset, values);
+  PAPI_reset(_profile_log.events[event].eventset);
   if (retval != PAPI_OK) {
     return retval;
   }
@@ -595,8 +595,7 @@ int prof_stop_hardware_counters(char *key, int *tag) {
   // was already updated in prof_stop_timing())
   if (_profile_log.current_event >= 0 && 
      !_profile_log.events[event].entries[_profile_log.current_entry].paused) {
-    PAPI_start(_profile_log.events[_profile_log.current_event].entries[
-                                   _profile_log.current_entry].eventset);
+    PAPI_start(_profile_log.events[_profile_log.current_event].eventset);
   }
 
   return PAPI_OK;
@@ -638,9 +637,8 @@ int prof_pause(char *key, int *tag) {
     for (int i = 0; i < _profile_log.num_counters; i++) {
       values[i] = -1;
     }
-    int retval = PAPI_stop(_profile_log.events[event].entries[*tag].eventset, 
-                           values);
-    PAPI_reset(_profile_log.events[event].entries[*tag].eventset);
+    int retval = PAPI_stop(_profile_log.events[event].eventset, values);
+    PAPI_reset(_profile_log.events[event].eventset);
     if (retval != PAPI_OK) {
       return retval;
     }
@@ -676,9 +674,8 @@ int prof_resume(char *key, int *tag) {
   _profile_log.events[event].entries[*tag].paused = false;
   _profile_log.events[event].entries[*tag].start_time = hpx_time_now();
   if (!_profile_log.events[event].simple) {
-    PAPI_reset(_profile_log.events[_profile_log.current_event].entries[
-                                   _profile_log.current_entry].eventset);
-    return PAPI_start(_profile_log.events[event].entries[*tag].eventset);
+    PAPI_reset(_profile_log.events[_profile_log.current_event].eventset);
+    return PAPI_start(_profile_log.events[event].eventset);
   }
   return PAPI_OK;
 }

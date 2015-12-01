@@ -200,7 +200,7 @@ int prof_get_num_counters(void) {
 void prof_increment_tally(char *key) {
   int event = profile_get_event(&_profile_log, key);
   if (event < 0) {
-    event = profile_new_event(&_profile_log, key, true);
+    event = profile_new_event(&_profile_log, key, true, 0);
   }
 
   _profile_log.events[event].tally++;
@@ -210,7 +210,7 @@ void prof_start_timing(char *key, int *tag) {
   hpx_time_t now = hpx_time_now();
   int event = profile_get_event(&_profile_log, key);
   if (event < 0) {
-    event = profile_new_event(&_profile_log, key, true);
+    event = profile_new_event(&_profile_log, key, true, 0);
   }
   dbg_assert(event >= 0);
 
@@ -229,7 +229,7 @@ void prof_start_timing(char *key, int *tag) {
                         _profile_log.current_entry].run_time, dur);
   }
 
-  int index = profile_new_entry(&_profile_log, event, 0);
+  int index = profile_new_entry(&_profile_log, event);
   _profile_log.events[event].entries[index].last_entry = _profile_log.current_entry;
   _profile_log.events[event].entries[index].last_event = _profile_log.current_event;
   _profile_log.current_entry = index;

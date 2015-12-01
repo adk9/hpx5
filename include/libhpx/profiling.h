@@ -27,9 +27,12 @@ struct config;
 
 /// The data structure representing profiling entries
 /// @field        start_time Time of initialization
-/// @field          end_time Time of closing
+/// @field          run_time Total time spent in this entry
 /// @field    counter_totals Counter totals
+/// @field        last_entry The previous entry being recorded
+/// @field        last_event The previous event being recorded
 /// @field            marked True if values have been recorded
+/// @field            paused True if recording has been paused
 typedef struct {
   hpx_time_t   start_time;
   hpx_time_t     run_time;
@@ -38,7 +41,6 @@ typedef struct {
   int          last_event;
   bool             marked;
   bool             paused;
-  int            eventset;
 } profile_entry_t;
 
 /// The data structure representing a profiled code event
@@ -48,6 +50,7 @@ typedef struct {
 /// @field               key The name of the profiled event
 /// @field           entries The actual entries
 /// @field            simple True if hardware counters don't apply
+/// @field          eventset The eventset that will be used for this event
 typedef struct {
   int          max_entries;
   int          num_entries;
@@ -55,6 +58,7 @@ typedef struct {
   char                *key;
   profile_entry_t *entries;
   bool              simple;
+  int             eventset;
 } profile_list_t;
 
 /// The data structure for storing profiling entries
@@ -91,9 +95,8 @@ typedef struct {
 /// Add a new entry to the profile list in the profile log @p log.
 /// @field               log The profile log to add the entry to
 /// @field             event The event id of the new entry being added
-/// @field          eventset The eventset of the new event entry
 /// @returns                 Index of the new entry.  
-int profile_new_entry(profile_log_t *log, int event, int eventset);
+int profile_new_entry(profile_log_t *log, int event);
 
 /// Get the event corresponding to the event key @p key in the profile
 /// log @p log.
@@ -105,7 +108,8 @@ int profile_get_event(profile_log_t *log, char *key);
 /// @field               log The profile log to add the entry to
 /// @field               key The key of the event we are creating
 /// @field            simple True if hardware counters don't apply
-int profile_new_event(profile_log_t *log, char *key, bool simple);
+/// @field          eventset The eventset of the new event entry
+int profile_new_event(profile_log_t *log, char *key, bool simple, int eventset);
 
 /// Initialize profiling. This is usually called in hpx_init().
 int prof_init(struct config *cfg)
