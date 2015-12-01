@@ -48,7 +48,7 @@ typedef struct coalesced_network{
 
 
 
-static void coalesced_network_delete(void *obj) {
+static void _coalesced_network_delete(void *obj) {
   coalesced_network_t *coalesced_network = obj;
   dbg_assert(coalesced_network);
   network_delete(coalesced_network->base_network);
@@ -190,7 +190,7 @@ static void _send_n(coalesced_network_t *coalesced_network, uint64_t current_par
  }
 }
 
-static int coalesced_network_send(void *network,  hpx_parcel_t *p) {
+static int _coalesced_network_send(void *network,  hpx_parcel_t *p) {
   coalesced_network_t *coalesced_network = network;
   //printf("In coalesced network send\n");
 
@@ -217,7 +217,7 @@ static int coalesced_network_send(void *network,  hpx_parcel_t *p) {
     }
   }
 
-  //Otherwise put the parcel in the coalesced send queue
+  //Put the parcel in the coalesced send queue
   sync_fadd(&coalesced_network->parcel_count, 1, SYNC_RELAXED);
   sync_two_lock_queue_enqueue(&coalesced_network->sends, p);
   sync_fadd(&coalesced_network->sends.size, 1, SYNC_RELAXED);
@@ -227,7 +227,7 @@ static int coalesced_network_send(void *network,  hpx_parcel_t *p) {
   return LIBHPX_OK;
 }
 
-static int coalesced_network_progress(void *obj, int id) {
+static int _coalesced_network_progress(void *obj, int id) {
   coalesced_network_t *coalesced_network = obj;
   assert(coalesced_network);
   //printf("In coalescing network progress\n");
@@ -242,8 +242,8 @@ static int coalesced_network_progress(void *obj, int id) {
       uint64_t parcel_count = sync_load(&coalesced_network->parcel_count,  SYNC_RELAXED);
       uint64_t readjusted_parcel_count = parcel_count - current_parcel_count;
       if(parcel_count >= current_parcel_count) {
-	uint64_t viewed_parcel_size = sync_cas_val(&coalesced_network->parcel_count, parcel_count, readjusted_parcel_count, SYNC_RELAXED, SYNC_RELAXED);
-	if (viewed_parcel_size == parcel_count) {
+	uint64_t viewed_parcel_count = sync_cas_val(&coalesced_network->parcel_count, parcel_count, readjusted_parcel_count, SYNC_RELAXED, SYNC_RELAXED);
+	if (viewed_parcel_count == parcel_count) {
 	  //flush outstanding buffer
 	  _send_n(coalesced_network, current_parcel_count);
 	  break;
@@ -260,57 +260,57 @@ static int coalesced_network_progress(void *obj, int id) {
   return network_progress(coalesced_network->base_network, 0);
 }
 
-static int coalesced_network_command(void *obj, hpx_addr_t locality, hpx_action_t op,
+static int _coalesced_network_command(void *obj, hpx_addr_t locality, hpx_action_t op,
 		   uint64_t args) {
   coalesced_network_t *coalesced_network = obj;
   return network_command(coalesced_network->base_network, locality, op, args);
 }
 
-static int coalesced_network_pwc(void *obj, hpx_addr_t to, const void *from, size_t n,
+static int _coalesced_network_pwc(void *obj, hpx_addr_t to, const void *from, size_t n,
 		   hpx_action_t lop, hpx_addr_t laddr, hpx_action_t rop,
 		   hpx_addr_t raddr) {
   coalesced_network_t *coalesced_network = obj;
   return network_pwc(coalesced_network->base_network, to, from, n, lop, laddr, rop, raddr);
 }
 
-static int coalesced_network_put(void *obj, hpx_addr_t to, const void *from, size_t n,
+static int _coalesced_network_put(void *obj, hpx_addr_t to, const void *from, size_t n,
 		   hpx_action_t lop, hpx_addr_t laddr){
   coalesced_network_t *coalesced_network = obj;
   return network_put(coalesced_network->base_network, to, from, n, lop, laddr);
 }
 
-static int coalesced_network_get(void *obj, void *to, hpx_addr_t from, size_t n,
+static int _coalesced_network_get(void *obj, void *to, hpx_addr_t from, size_t n,
 		   hpx_action_t lop, hpx_addr_t laddr) {
   coalesced_network_t *coalesced_network = obj;
   return network_get(coalesced_network->base_network, to, from, n, lop, laddr);
 }
 
-static hpx_parcel_t* coalesced_network_probe(void *obj, int rank) {
+static hpx_parcel_t* _coalesced_network_probe(void *obj, int rank) {
   coalesced_network_t *coalesced_network = obj;
   return network_probe(coalesced_network->base_network, rank);
 }
 
-static void coalesced_network_set_flush(void *obj) {
+static void _coalesced_network_set_flush(void *obj) {
   coalesced_network_t *coalesced_network = obj;
   network_flush_on_shutdown(coalesced_network->base_network);
 }
 
-static void coalesced_network_register_dma(void *obj, const void *base, size_t bytes, void *key) {
+static void _coalesced_network_register_dma(void *obj, const void *base, size_t bytes, void *key) {
   coalesced_network_t *coalesced_network = obj;
   network_register_dma(coalesced_network->base_network, base, bytes, key);
 }
 
-static void coalesced_network_release_dma(void *obj, const void *base, size_t bytes) {
+static void _coalesced_network_release_dma(void *obj, const void *base, size_t bytes) {
   coalesced_network_t *coalesced_network = obj;
   network_release_dma(coalesced_network->base_network, base, bytes);
 }
 
-static int coalesced_network_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset) {
+static int _coalesced_network_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset) {
   coalesced_network_t *coalesced_network = obj;
   return network_lco_get(coalesced_network->base_network, lco, n, out, reset);
 }
 
-static int coalesced_network_lco_wait(void *obj, hpx_addr_t lco, int reset) {
+static int _coalesced_network_lco_wait(void *obj, hpx_addr_t lco, int reset) {
   coalesced_network_t *coalesced_network = obj;
   return network_lco_wait(coalesced_network->base_network, lco, reset);
 }
@@ -321,7 +321,7 @@ static int coalesced_network_lco_wait(void *obj, hpx_addr_t lco, int reset) {
 /*   return coalesced_network->base_network.send_buffer_size(coalesced_network->base_network); */
 /* } */
 
-static uint64_t coalesced_network_buffer_size(void *obj) {
+static uint64_t _coalesced_network_buffer_size(void *obj) {
   coalesced_network_t *coalesced_network = obj;
   return network_send_buffer_size(coalesced_network->base_network);
 }
@@ -355,19 +355,19 @@ network_t* coalesced_network_new (network_t *network,  const struct config *cfg)
   coalesced_network->previous_parcel_count = 0;
 
   //set the vtable
-  coalesced_network->vtable.delete = coalesced_network_delete;
-  coalesced_network->vtable.progress = coalesced_network_progress;
-  coalesced_network->vtable.send =  coalesced_network_send;
-  coalesced_network->vtable.command = coalesced_network_command;
-  coalesced_network->vtable.pwc = coalesced_network_pwc;
-  coalesced_network->vtable.put = coalesced_network_put;
-  coalesced_network->vtable.get = coalesced_network_get;
-  coalesced_network->vtable.probe = coalesced_network_probe;
-  coalesced_network->vtable.flush =  coalesced_network_set_flush;
-  coalesced_network->vtable.register_dma = coalesced_network_register_dma;
-  coalesced_network->vtable.release_dma = coalesced_network_release_dma;
-  coalesced_network->vtable.lco_get = coalesced_network_lco_get;
-  coalesced_network->vtable.lco_wait = coalesced_network_lco_wait;
+  coalesced_network->vtable.delete = _coalesced_network_delete;
+  coalesced_network->vtable.progress = _coalesced_network_progress;
+  coalesced_network->vtable.send =  _coalesced_network_send;
+  coalesced_network->vtable.command = _coalesced_network_command;
+  coalesced_network->vtable.pwc = _coalesced_network_pwc;
+  coalesced_network->vtable.put = _coalesced_network_put;
+  coalesced_network->vtable.get = _coalesced_network_get;
+  coalesced_network->vtable.probe = _coalesced_network_probe;
+  coalesced_network->vtable.flush =  _coalesced_network_set_flush;
+  coalesced_network->vtable.register_dma = _coalesced_network_register_dma;
+  coalesced_network->vtable.release_dma = _coalesced_network_release_dma;
+  coalesced_network->vtable.lco_get = _coalesced_network_lco_get;
+  coalesced_network->vtable.lco_wait = _coalesced_network_lco_wait;
 
   //coalesced_network->vtable.network_parcel_queue_size = coalesced_network_parcel_queue_size;
   //coalesced_network->vtable.network_buffer_size = coalesced_network_buffer_size;
