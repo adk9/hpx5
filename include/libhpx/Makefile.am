@@ -25,5 +25,4 @@ noinst_HEADERS = \
                  time.h \
                  topology.h \
                  utils.h \
-                 worker.h \
-                 coalescing_network.h
+                 worker.h
