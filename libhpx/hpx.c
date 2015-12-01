@@ -41,7 +41,6 @@
 #include <libhpx/system.h>
 #include <libhpx/time.h>
 #include <libhpx/topology.h>
-#include <libhpx/coalescing_network.h>
 
 #ifdef HAVE_APEX
 #include "apex.h"
