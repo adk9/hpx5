@@ -4,15 +4,19 @@ noinst_PROGRAMS  = $(TESTS)
 
 AM_CPPFLAGS      = $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include -Wno-unused
 AM_CFLAGS        = $(HPX_APPS_CFLAGS)
+AM_CXXFLAGS      = $(HPX_APPS_CXXFLAGS)
 AM_LDFLAGS       = $(HPX_APPS_LDFLAGS) -no-install
 LDADD            = $(HPX_APPS_LDADD)
 
 LOG_COMPILER = $(TESTS_CMD)
 
+TEST_EXTENSIONS = .cc .c
+
 TESTS = allreduce               \
         bcast                   \
         call_when               \
         call_vectored           \
+        cxx_raii                \
         gas_alloc               \
         gas_alloc_dist          \
         gas_coll                \
@@ -47,6 +51,8 @@ TESTS = allreduce               \
         thread_gettlsid         \
         thread_yield
 
+XFAIL_TESTS = cxx_raii
+
 if ENABLE_LENGTHY_TESTS
 TESTS           += lco_wait
 endif
@@ -59,7 +65,11 @@ if HAVE_PERCOLATION
 TESTS           += percolation
 endif
 
-# Override libhpx tests so that they have the right paths and flags.
+# For some reason I need to explicitly set C++ source files
+cxx_raii_SOURCES                    = cxx_raii.cc
+
+# Override libhpx tests so that they have the right paths and flags, which are
+# the LIBHPX versions rather than the HPX_APPS version.
 libhpx_boot_CPPFLAGS                = $(LIBHPX_CPPFLAGS) -I$(top_srcdir)/include -Wno-unused
 libhpx_boot_CFLAGS                  = $(LIBHPX_CFLAGS) 
 
@@ -68,6 +78,7 @@ allreduce_DEPENDENCIES              = $(HPX_APPS_DEPS)
 bcast_DEPENDENCIES                  = $(HPX_APPS_DEPS)
 call_when_DEPENDENCIES              = $(HPX_APPS_DEPS)
 call_vectored_DEPENDENCIES          = $(HPX_APPS_DEPS)
+cxx_raii_DEPENDENCIES               = $(HPX_APPS_DEPS)
 gas_alloc_DEPENDENCIES              = $(HPX_APPS_DEPS)
 gas_alloc_dist_DEPENDENCIES         = $(HPX_APPS_DEPS)
 gas_coll_DEPENDENCIES               = $(HPX_APPS_DEPS)
