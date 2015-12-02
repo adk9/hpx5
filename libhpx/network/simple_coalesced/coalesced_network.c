@@ -24,6 +24,7 @@
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
+#include <libhpx/config.h>
 
 #include "libsync/locks.h"
 #include "libhpx/parcel.h"
@@ -49,7 +50,7 @@ typedef struct coalesced_network{
 
 
 static void _coalesced_network_delete(void *obj) {
-  coalesced_network_t *coalesced_network = obj;
+  _coalesced_network_t *coalesced_network = obj;
   dbg_assert(coalesced_network);
   network_delete(coalesced_network->base_network);
 }
@@ -77,11 +78,11 @@ static int _demultiplex_message_handler(void* fatparcel, size_t n) {
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _demultiplexer, _demultiplex_message_handler, HPX_POINTER, HPX_SIZE_T);
 
 static uint64_t coalesced_network_parcel_queue_size(void *network) {
-  coalesced_network_t *coalesced_network = network;
+  _coalesced_network_t *coalesced_network = network;
   return sync_load(&coalesced_network->sends.size, SYNC_RELAXED);
 }
 
-static void _send_n(coalesced_network_t *coalesced_network, uint64_t current_parcel_count) {
+static void _send_n(_coalesced_network_t *coalesced_network, uint64_t current_parcel_count) {
   //assert(destination_buffer_size);
   hpx_parcel_t *p = NULL;
   uint64_t number_of_parcels_dequeued = 0;
@@ -191,7 +192,7 @@ static void _send_n(coalesced_network_t *coalesced_network, uint64_t current_par
 }
 
 static int _coalesced_network_send(void *network,  hpx_parcel_t *p) {
-  coalesced_network_t *coalesced_network = network;
+  _coalesced_network_t *coalesced_network = network;
   //printf("In coalesced network send\n");
 
   //Before putting the parcel in the queue, check whether the queue size has reached the  coalescing size
@@ -228,7 +229,7 @@ static int _coalesced_network_send(void *network,  hpx_parcel_t *p) {
 }
 
 static int _coalesced_network_progress(void *obj, int id) {
-  coalesced_network_t *coalesced_network = obj;
+  _coalesced_network_t *coalesced_network = obj;
   assert(coalesced_network);
   //printf("In coalescing network progress\n");
 
@@ -262,73 +263,73 @@ static int _coalesced_network_progress(void *obj, int id) {
 
 static int _coalesced_network_command(void *obj, hpx_addr_t locality, hpx_action_t op,
 		   uint64_t args) {
-  coalesced_network_t *coalesced_network = obj;
+  _coalesced_network_t *coalesced_network = obj;
   return network_command(coalesced_network->base_network, locality, op, args);
 }
 
 static int _coalesced_network_pwc(void *obj, hpx_addr_t to, const void *from, size_t n,
 		   hpx_action_t lop, hpx_addr_t laddr, hpx_action_t rop,
 		   hpx_addr_t raddr) {
-  coalesced_network_t *coalesced_network = obj;
+  _coalesced_network_t *coalesced_network = obj;
   return network_pwc(coalesced_network->base_network, to, from, n, lop, laddr, rop, raddr);
 }
 
 static int _coalesced_network_put(void *obj, hpx_addr_t to, const void *from, size_t n,
 		   hpx_action_t lop, hpx_addr_t laddr){
-  coalesced_network_t *coalesced_network = obj;
+  _coalesced_network_t *coalesced_network = obj;
   return network_put(coalesced_network->base_network, to, from, n, lop, laddr);
 }
 
 static int _coalesced_network_get(void *obj, void *to, hpx_addr_t from, size_t n,
 		   hpx_action_t lop, hpx_addr_t laddr) {
-  coalesced_network_t *coalesced_network = obj;
+  _coalesced_network_t *coalesced_network = obj;
   return network_get(coalesced_network->base_network, to, from, n, lop, laddr);
 }
 
 static hpx_parcel_t* _coalesced_network_probe(void *obj, int rank) {
-  coalesced_network_t *coalesced_network = obj;
+  _coalesced_network_t *coalesced_network = obj;
   return network_probe(coalesced_network->base_network, rank);
 }
 
 static void _coalesced_network_set_flush(void *obj) {
-  coalesced_network_t *coalesced_network = obj;
+  _coalesced_network_t *coalesced_network = obj;
   network_flush_on_shutdown(coalesced_network->base_network);
 }
 
 static void _coalesced_network_register_dma(void *obj, const void *base, size_t bytes, void *key) {
-  coalesced_network_t *coalesced_network = obj;
+  _coalesced_network_t *coalesced_network = obj;
   network_register_dma(coalesced_network->base_network, base, bytes, key);
 }
 
 static void _coalesced_network_release_dma(void *obj, const void *base, size_t bytes) {
-  coalesced_network_t *coalesced_network = obj;
+  _coalesced_network_t *coalesced_network = obj;
   network_release_dma(coalesced_network->base_network, base, bytes);
 }
 
 static int _coalesced_network_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset) {
-  coalesced_network_t *coalesced_network = obj;
+  _coalesced_network_t *coalesced_network = obj;
   return network_lco_get(coalesced_network->base_network, lco, n, out, reset);
 }
 
 static int _coalesced_network_lco_wait(void *obj, hpx_addr_t lco, int reset) {
-  coalesced_network_t *coalesced_network = obj;
+  _coalesced_network_t *coalesced_network = obj;
   return network_lco_wait(coalesced_network->base_network, lco, reset);
 }
 
 
 /* static inline uint64_t network_send_buffer_size(void *obj) { */
-/* coalesced_network_t *coalesced_network = obj; */
+/* _coalesced_network_t *coalesced_network = obj; */
 /*   return coalesced_network->base_network.send_buffer_size(coalesced_network->base_network); */
 /* } */
 
 static uint64_t _coalesced_network_buffer_size(void *obj) {
-  coalesced_network_t *coalesced_network = obj;
+  _coalesced_network_t *coalesced_network = obj;
   return network_send_buffer_size(coalesced_network->base_network);
 }
 
 
 /* static inline uint64_t network_parcel_queue_size(void *obj) { */
-/* coalesced_network_t *coalesced_network = obj; */
+/* _coalesced_network_t *coalesced_network = obj; */
 /*   return coalesced_network->base_network.parcel_queue_size(coalesced_network->base_network); */
 /* } */
 
@@ -348,7 +349,7 @@ network_t* coalesced_network_new (network_t *network,  const struct config *cfg)
   sync_store(&coalesced_network->sends.size, 0, SYNC_RELAXED);
 
   //set coalescing size
-  coalesced_network->coalescing_size = cfg->coalescing-buffersize;
+  coalesced_network->coalescing_size = cfg->coalescing_buffersize;
 
   //coalesced_network->previous_queue_size = 0;
   coalesced_network->parcel_count = 0;
