@@ -182,9 +182,9 @@ int inst_init(config_t *cfg) {
 
   // enable profiling
   if (prof_init(cfg)) {
-    _detailed_prof = cfg->prof_detailed;
     log_dflt("error detected while initializing profiling\n");
   }
+  _detailed_prof = cfg->prof_detailed;
 
   return LIBHPX_OK;
 }
