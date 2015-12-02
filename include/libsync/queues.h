@@ -41,7 +41,6 @@ typedef struct {
   const char _paddinga[HPX_CACHELINE_SIZE - sizeof(two_lock_queue_node_t*)];
   two_lock_queue_node_t *tail;
   const char _paddingb[HPX_CACHELINE_SIZE - sizeof(two_lock_queue_node_t*)];
-  uint64_t size;
 } HPX_ALIGNED(64) two_lock_queue_t;
 
 #define SYNC_TWO_LOCK_QUEUE_INIT {              \
@@ -72,9 +71,6 @@ void sync_two_lock_queue_enqueue_node(two_lock_queue_t *q,
 
 two_lock_queue_node_t *sync_two_lock_queue_dequeue_node(two_lock_queue_t *q)
   HPX_NON_NULL(1);
-
-/* uint64_t sync_two_lock_queue_size(two_lock_queue_t *q) */
-/*   HPX_NON_NULL(1); */
 
 typedef struct {
   volatile cptr_t head;
