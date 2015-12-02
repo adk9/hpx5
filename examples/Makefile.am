@@ -1,4 +1,4 @@
-examplesdir          = $(datarootdir)/doc/@PACKAGE@
+examplesdir             = $(datarootdir)/doc/@PACKAGE@
 
 noinst_PROGRAMS         = fibonacci pingpong allreduce countdown seqspawn \
                           parspawn future memput memget guppie hello \
@@ -21,10 +21,10 @@ netbench_SOURCES        = netbench.c
 cpi_SOURCES             = cpi.c
 heat_SOURCES            = heat.c
 
-AM_CPPFLAGS      		= -D_GNU_SOURCE $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include
+AM_CPPFLAGS             = -D_GNU_SOURCE $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include
 AM_CFLAGS               = $(HPX_APPS_CFLAGS) -Wno-unused
-AM_LDFLAGS       		= $(HPX_APPS_LDFLAGS) -no-install
-LDADD            		= $(HPX_APPS_LDADD)
+AM_LDFLAGS              = $(HPX_APPS_LDFLAGS) -no-install
+LDADD                   = $(HPX_APPS_LDADD)
 
 fibonacci_DEPENDENCIES  = $(HPX_APPS_DEPS)
 pingpong_DEPENDENCIES   = $(HPX_APPS_DEPS)
