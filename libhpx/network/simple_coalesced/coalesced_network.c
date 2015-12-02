@@ -175,27 +175,18 @@ static int _coalesced_network_send(void *network,  hpx_parcel_t *p) {
   _coalesced_network_t *coalesced_network = network;
   //printf("In coalesced network send\n");
 
-  //Before putting the parcel in the queue, check whether the queue size has reached the  coalescing size
-  uint64_t current_parcel_count = sync_load(&coalesced_network->parcel_count,  SYNC_RELAXED);
-  if(current_parcel_count == coalesced_network->coalescing_size) {
-    //then we empty the queue
-    //if that is the case, then try to adjust the parcel count before we proceed to creating fat parcels
-    while (true) {
-      uint64_t parcel_count = sync_load(&coalesced_network->parcel_count,  SYNC_RELAXED);
-      uint64_t readjusted_parcel_count = parcel_count - current_parcel_count;
-      if(parcel_count >= current_parcel_count) {
-	uint64_t viewed_parcel_count = sync_cas_val(&coalesced_network->parcel_count, parcel_count, readjusted_parcel_count, SYNC_RELAXED, SYNC_RELAXED);
-	if (viewed_parcel_count == parcel_count) {
-	  //flush outstanding buffer
-	  _send_n(coalesced_network, current_parcel_count);
-	  break;
-	} else {
-	  continue;
-	}
-      } else {
-	break;
-      }
+  //Before putting the parcel in the queue, check whether the queue size has reached the  coalescing size then we empty the queue. If that is the case, then try to adjust the parcel count before we proceed to creating fat parcels
+
+  uint64_t parcel_count = sync_load(&coalesced_network->parcel_count,  SYNC_RELAXED);
+  while ( parcel_count >= coalesced_network->coalescing_size ) {
+    uint64_t readjusted_parcel_count = parcel_count - coalesced_network->coalescing_size;
+    uint64_t viewed_parcel_count = sync_cas_val(&coalesced_network->parcel_count, parcel_count, readjusted_parcel_count, SYNC_RELAXED, SYNC_RELAXED);
+    if (viewed_parcel_count == parcel_count) {
+      //flush outstanding buffer
+      _send_n(coalesced_network, coalesced_network->coalescing_size);
+      break;
     }
+    parcel_count = sync_load(&coalesced_network->parcel_count,  SYNC_RELAXED);
   }
 
   //Put the parcel in the coalesced send queue
@@ -213,27 +204,18 @@ static int _coalesced_network_progress(void *obj, int id) {
   //printf("In coalescing network progress\n");
 
   //check whether the queue has not grown since the last time
-  uint64_t current_parcel_count = sync_load(&coalesced_network->parcel_count,  SYNC_RELAXED);
+  uint64_t current_parcel_count = sync_load(&coalesced_network->parcel_count, SYNC_RELAXED);
   uint64_t previous_parcel_count =  sync_cas_val(&coalesced_network->previous_parcel_count, current_parcel_count, 0,  SYNC_RELAXED, SYNC_RELAXED);
 
-  if((previous_parcel_count == current_parcel_count && current_parcel_count > 0)) {
-    //if that is the case, then try to adjust the parcel count before we proceed to creating fat parcels
-    while (true) {
-      uint64_t parcel_count = sync_load(&coalesced_network->parcel_count,  SYNC_RELAXED);
-      uint64_t readjusted_parcel_count = parcel_count - current_parcel_count;
-      if(parcel_count >= current_parcel_count) {
-	uint64_t viewed_parcel_count = sync_cas_val(&coalesced_network->parcel_count, parcel_count, readjusted_parcel_count, SYNC_RELAXED, SYNC_RELAXED);
-	if (viewed_parcel_count == parcel_count) {
-	  //flush outstanding buffer
-	  _send_n(coalesced_network, current_parcel_count);
-	  break;
-	} else {
-	  continue;
-	}
-      } else {
-	break;
-      }
+  //if that is the case, then try to adjust the parcel count before we proceed to creating fat parcels
+  while (previous_parcel_count == current_parcel_count && current_parcel_count > 0) {
+    uint64_t viewed_parcel_count = sync_cas_val(&coalesced_network->parcel_count, current_parcel_count, 0, SYNC_RELAXED, SYNC_RELAXED);
+    if (viewed_parcel_count == current_parcel_count) {
+      //flush outstanding buffer
+      _send_n(coalesced_network, current_parcel_count);
+      break;
     }
+    current_parcel_count = sync_load(&coalesced_network->parcel_count, SYNC_RELAXED);
   }
 
   //Then call the underlying base network progress function
