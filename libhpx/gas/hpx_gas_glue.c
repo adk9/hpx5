@@ -14,13 +14,13 @@
 # include "config.h"
 #endif
 
-#include <stdlib.h>                             // rand_r
+#include <stdlib.h>
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/locality.h>
-#include <libhpx/worker.h>                      // for random seed
+#include <libhpx/worker.h>
 
 hpx_addr_t HPX_HERE = 0;
 
@@ -111,42 +111,63 @@ void hpx_gas_unpin(const hpx_addr_t addr) {
   gas->unpin(here->gas, addr);
 }
 
-hpx_addr_t hpx_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
+hpx_addr_t hpx_gas_alloc_cyclic_attr(size_t n, uint32_t bsize, uint32_t boundary,
+                                     uint32_t attr) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
   dbg_assert(gas->alloc_cyclic);
-  return gas->alloc_cyclic(n, bsize, boundary, HPX_GAS_ATTR_NONE);
+  return gas->alloc_cyclic(n, bsize, boundary, attr);
 }
 
-hpx_addr_t hpx_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
+hpx_addr_t hpx_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
+  return hpx_gas_alloc_cyclic_attr(n, bsize, boundary, HPX_GAS_ATTR_NONE);
+}
+
+hpx_addr_t hpx_gas_calloc_cyclic_attr(size_t n, uint32_t bsize,
+                                      uint32_t boundary, uint32_t attr) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
   dbg_assert(gas->calloc_cyclic);
-  return gas->calloc_cyclic(n, bsize, boundary, HPX_GAS_ATTR_NONE);
+  return gas->calloc_cyclic(n, bsize, boundary, attr);
 }
 
-hpx_addr_t hpx_gas_alloc_blocked(size_t n, uint32_t bsize, uint32_t boundary) {
+hpx_addr_t hpx_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary) {
+  return hpx_gas_calloc_cyclic_attr(n, bsize, boundary, HPX_GAS_ATTR_NONE);
+}
+
+hpx_addr_t hpx_gas_alloc_blocked_attr(size_t n, uint32_t bsize,
+                                      uint32_t boundary, uint32_t attr) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
   dbg_assert(gas->alloc_blocked);
-  return gas->alloc_blocked(n, bsize, boundary, HPX_GAS_ATTR_NONE);
+  return gas->alloc_blocked(n, bsize, boundary, attr);
 }
 
-hpx_addr_t hpx_gas_calloc_blocked(size_t n, uint32_t bsize, uint32_t boundary) {
+hpx_addr_t hpx_gas_alloc_blocked(size_t n, uint32_t bsize, uint32_t boundary) {
+  return hpx_gas_alloc_blocked_attr(n, bsize, boundary, HPX_GAS_ATTR_NONE);
+}
+
+hpx_addr_t hpx_gas_calloc_blocked_attr(size_t n, uint32_t bsize,
+                                       uint32_t boundary, uint32_t attr) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
   dbg_assert(gas->calloc_blocked);
-  return gas->calloc_blocked(n, bsize, boundary, HPX_GAS_ATTR_NONE);
+  return gas->calloc_blocked(n, bsize, boundary, attr);
+}
+
+hpx_addr_t hpx_gas_calloc_blocked(size_t n, uint32_t bsize, uint32_t boundary) {
+  return hpx_gas_calloc_blocked_attr(n, bsize, boundary, HPX_GAS_ATTR_NONE);
 }
 
 static hpx_addr_t _gas_local_search(size_t n, uint32_t bsize, uint32_t boundary,
-                                    hpx_action_t act) {
+                                    uint32_t attr, hpx_action_t act) {
   hpx_addr_t addr = HPX_NULL;
   unsigned *seed = &self->seed;
   for (int i = 0, e = here->ranks; i < e; ++i) {
     int j = rand_r(seed) % e;
     hpx_addr_t l = HPX_THERE(j);
-    int e = hpx_call_sync(l, act, &addr, sizeof(addr), &n, &bsize, &boundary);
+    int e = hpx_call_sync(l, act, &addr, sizeof(addr), &n, &bsize,
+                          &boundary, &attr);
     dbg_check(e, "Failed synchronous alloc at\n");
     if (addr) {
       return addr;
@@ -156,7 +177,8 @@ static hpx_addr_t _gas_local_search(size_t n, uint32_t bsize, uint32_t boundary,
 
   for (int i = 0, e = here->ranks; i < e; ++i) {
     hpx_addr_t l = HPX_THERE(i);
-    int e = hpx_call_sync(l, act, &addr, sizeof(addr), &n, &bsize, &boundary);
+    int e = hpx_call_sync(l, act, &addr, sizeof(addr), &n, &bsize,
+                          &boundary, &attr);
     dbg_check(e, "Failed synchronous alloc at\n");
     if (addr) {
       return addr;
@@ -167,17 +189,42 @@ static hpx_addr_t _gas_local_search(size_t n, uint32_t bsize, uint32_t boundary,
   return addr;
 }
 
-hpx_addr_t hpx_gas_alloc_local(size_t n, uint32_t bsize, uint32_t boundary) {
+hpx_addr_t hpx_gas_alloc_local_attr(size_t n, uint32_t bsize,
+                                    uint32_t boundary, uint32_t attr) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
   dbg_assert(gas->alloc_local);
-  hpx_addr_t addr = gas->alloc_local(n, bsize, boundary, HPX_GAS_ATTR_NONE);
+  hpx_addr_t addr = gas->alloc_local(n, bsize, boundary, attr);
   if (addr) {
     return addr;
   }
 
   log_mem("out-of-memory detected at locality %d, searching\n", here->rank);
-  addr = _gas_local_search(n, bsize, boundary, hpx_gas_alloc_local_at_action);
+  addr = _gas_local_search(n, bsize, boundary, attr,
+                           hpx_gas_alloc_local_at_action);
+  if (!addr) {
+    dbg_error("out-of-memory detected\n");
+  }
+  return addr;
+}
+
+hpx_addr_t hpx_gas_alloc_local(size_t n, uint32_t bsize, uint32_t boundary) {
+  return hpx_gas_alloc_local_attr(n, bsize, boundary, HPX_GAS_ATTR_NONE);
+}
+
+hpx_addr_t hpx_gas_calloc_local_attr(size_t n, uint32_t bsize,
+                                     uint32_t boundary, uint32_t attr) {
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->calloc_local);
+  hpx_addr_t addr = gas->calloc_local(n, bsize, boundary, attr);
+  if (addr) {
+    return addr;
+  }
+
+  log_mem("out-of-memory detected at locality %d, searching\n", here->rank);
+  addr = _gas_local_search(n, bsize, boundary, attr,
+                           hpx_gas_calloc_local_at_action);
   if (!addr) {
     dbg_error("out-of-memory detected\n");
   }
@@ -185,20 +232,7 @@ hpx_addr_t hpx_gas_alloc_local(size_t n, uint32_t bsize, uint32_t boundary) {
 }
 
 hpx_addr_t hpx_gas_calloc_local(size_t n, uint32_t bsize, uint32_t boundary) {
-  dbg_assert(here && here->gas);
-  gas_t *gas = here->gas;
-  dbg_assert(gas->calloc_local);
-  hpx_addr_t addr = gas->calloc_local(n, bsize, boundary, HPX_GAS_ATTR_NONE);
-  if (addr) {
-    return addr;
-  }
-
-  log_mem("out-of-memory detected at locality %d, searching\n", here->rank);
-  addr = _gas_local_search(n, bsize, boundary, hpx_gas_calloc_local_at_action);
-  if (!addr) {
-    dbg_error("out-of-memory detected\n");
-  }
-  return addr;
+  return hpx_gas_calloc_local_attr(n, bsize, boundary, HPX_GAS_ATTR_NONE);
 }
 
 void hpx_gas_free(hpx_addr_t addr, hpx_addr_t sync) {
@@ -283,48 +317,55 @@ int hpx_gas_memcpy_sync(hpx_addr_t to, hpx_addr_t from, size_t size) {
 }
 
 static int _gas_alloc_local_at_handler(size_t n, uint32_t bsize,
-                                       uint32_t boundary) {
-  hpx_addr_t addr = hpx_gas_alloc_local(n, bsize, boundary);
+                                       uint32_t boundary, uint32_t attr) {
+  hpx_addr_t addr = hpx_gas_alloc_local_attr(n, bsize, boundary, attr);
   HPX_THREAD_CONTINUE(addr);
 }
 LIBHPX_ACTION(HPX_DEFAULT, 0, hpx_gas_alloc_local_at_action,
-              _gas_alloc_local_at_handler, HPX_SIZE_T, HPX_UINT32, HPX_UINT32);
+              _gas_alloc_local_at_handler, HPX_SIZE_T, HPX_UINT32,
+              HPX_UINT32, HPX_UINT32);
 
 hpx_addr_t hpx_gas_alloc_local_at_sync(size_t n, uint32_t bsize,
                                        uint32_t boundary, hpx_addr_t loc) {
   hpx_addr_t addr = 0;
+  uint32_t attr = HPX_GAS_ATTR_NONE;
   dbg_check( hpx_call_sync(loc, hpx_gas_alloc_local_at_action, &addr,
-                           sizeof(addr), &n, &bsize, &boundary),
+                           sizeof(addr), &n, &bsize, &boundary, &attr),
              "Failed synchronous call during allocation\n");
   return addr;
 }
 
 void hpx_gas_alloc_local_at_async(size_t n, uint32_t bsize, uint32_t boundary,
                                   hpx_addr_t loc, hpx_addr_t lco) {
+  uint32_t attr = HPX_GAS_ATTR_NONE;
   dbg_check( hpx_call(loc, hpx_gas_alloc_local_at_action, lco, &n, &bsize,
-                      &boundary),
+                      &boundary, &attr),
              "Failed async call during allocation\n");
 }
 
-static int _gas_calloc_at_handler(size_t n, uint32_t bsize, uint32_t boundary) {
-  hpx_addr_t addr = hpx_gas_calloc_local(n, bsize, boundary);
+static int _gas_calloc_at_handler(size_t n, uint32_t bsize, uint32_t boundary,
+                                  uint32_t attr) {
+  hpx_addr_t addr = hpx_gas_calloc_local_attr(n, bsize, boundary, attr);
   HPX_THREAD_CONTINUE(addr);
 }
 LIBHPX_ACTION(HPX_DEFAULT, 0, hpx_gas_calloc_local_at_action,
-              _gas_calloc_at_handler, HPX_SIZE_T, HPX_UINT32, HPX_UINT32);
+              _gas_calloc_at_handler, HPX_SIZE_T, HPX_UINT32,
+              HPX_UINT32, HPX_UINT32);
 
 hpx_addr_t hpx_gas_calloc_local_at_sync(size_t n, uint32_t bsize,
                                         uint32_t boundary, hpx_addr_t loc) {
   hpx_addr_t addr = 0;
+  uint32_t attr = HPX_GAS_ATTR_NONE;
   dbg_check( hpx_call_sync(loc, hpx_gas_calloc_local_at_action, &addr,
-                           sizeof(addr), &n, &bsize, &boundary),
+                           sizeof(addr), &n, &bsize, &boundary, &attr),
             "Failed synchronous call during allocation\n");
   return addr;
 }
 
 void hpx_gas_calloc_local_at_async(size_t n, uint32_t bsize, uint32_t boundary,
                                    hpx_addr_t loc, hpx_addr_t lco) {
+  uint32_t attr = HPX_GAS_ATTR_NONE;
   dbg_check( hpx_call(loc, hpx_gas_calloc_local_at_action, lco, &n, &bsize,
-                      &boundary),
+                      &boundary, &attr),
              "Failed async call during allocation\n");
 }
