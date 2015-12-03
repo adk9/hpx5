@@ -88,7 +88,6 @@ typedef struct network {
 
   void (*register_dma)(void *, const void *base, size_t bytes, void *key);
   void (*release_dma)(void *, const void *base, size_t bytes);
-
 } network_t;
 
 /// Create a new network.
