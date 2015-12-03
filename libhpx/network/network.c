@@ -23,9 +23,10 @@
 #include <libhpx/network.h>
 #include "isir/isir.h"
 #include "pwc/pwc.h"
+#include "coalesced_network.h"
 #include "inst.h"
 #include "smp.h"
-#include "simple_coalesced/coalesced_network.h"
+
 
 static const int LEVEL = HPX_LOG_CONFIG | HPX_LOG_NET | HPX_LOG_DEFAULT;
 

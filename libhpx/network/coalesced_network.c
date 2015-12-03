@@ -15,28 +15,23 @@
 # include "config.h"
 #endif
 
-#include <stdlib.h>
 #include <inttypes.h>
-#include <libhpx/libhpx.h>
-#include <libsync/queues.h>
+#include <stdlib.h>
 #include <string.h>
-
 #include <hpx/hpx.h>
+#include <libsync/locks.h>
+#include <libsync/queues.h>
+#include <libsync/sync.h>
+
 #include <libhpx/action.h>
-#include <libhpx/debug.h>
 #include <libhpx/config.h>
-
-#include "libsync/locks.h"
-#include "libhpx/parcel.h"
-#include "libhpx/network.h"
-#include "libhpx/memory.h"
-#include "libsync/sync.h"
-
+#include <libhpx/debug.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/memory.h>
+#include <libhpx/network.h>
 #include <libhpx/padding.h>
+#include <libhpx/parcel.h>
 #include <libhpx/gas.h>
-
-
-#define COALESCING_SIZE 10000 //TODO: coalescing size should be a command line parameter
 
 typedef struct coalesced_network{
   network_t       vtable;
@@ -45,9 +40,7 @@ typedef struct coalesced_network{
   uint64_t parcel_count;
   uint64_t previous_parcel_count;
   uint64_t coalescing_size;
- } _coalesced_network_t;
-
-
+} _coalesced_network_t;
 
 static void _coalesced_network_delete(void *obj) {
   _coalesced_network_t *coalesced_network = obj;
@@ -56,20 +49,18 @@ static void _coalesced_network_delete(void *obj) {
 }
 
 //demultiplexing action on the receiver side
-static int _demultiplex_message_handler(void* fatparcel, size_t n) {
+static int _demultiplex_message_handler(void* fatparcel, size_t fat_parcel_size) {
   //retrieve the next parcel from the fat parcel
   hpx_parcel_t* next = fatparcel;
   //printf("In demultiplexer action\n");
-  uint32_t current_size = n;
-  uint32_t small_parcel_size  = 0;
-  hpx_parcel_t *clone = NULL;
-  while (current_size > 0) {
+  while (fat_parcel_size > 0) {
     //assuming that after src we have the size field, get the size of the next parcel
-    small_parcel_size = parcel_size(next); //get the next parcel size
-    clone = parcel_clone(next);
+    uint32_t small_parcel_size = parcel_size(next); //get the next parcel size
+    hpx_parcel_t *clone = parcel_clone(next);
     parcel_launch(clone);
     next = (hpx_parcel_t*) (((char*) next) + (small_parcel_size ));
-    current_size -= small_parcel_size;
+    fat_parcel_size -= small_parcel_size;
+    dbg_assert(fat_parcel_size >= 0);
     clone = NULL;
   }
   return HPX_SUCCESS;
