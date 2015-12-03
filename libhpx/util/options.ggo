@@ -27,6 +27,13 @@ typestr="type"
 values="default","smp","mpi","pmi"
 enum optional
 
+option "hpx-coalescing-enabled" - "Enable coalescing"
+flag off
+
+option "hpx-coalescing-buffersize" - "Coalescing buffer size"
+typestr="coalescing_size"
+long optional
+
 option "hpx-transport" - "type of transport to use"
 typestr="type"
 values="default","mpi","photon"
@@ -156,7 +163,7 @@ option "hpx-pwc-parcelbuffersize" - "set the size of p2p recv buffers for parcel
 typestr="bytes"
 long optional
 
-option "hpx-pwc-parceleagerlimit" - "set the largest eager parcel size (header inclusive)" 
+option "hpx-pwc-parceleagerlimit" - "set the largest eager parcel size (header inclusive)"
 typestr="bytes"
 long optional
 
