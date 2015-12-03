@@ -17,6 +17,7 @@
 /// @file thread.h
 /// @brief Defines the lightweight thread stack structure and interface for user
 ///        level threads.
+#include <unwind.h>
 #include <hpx/hpx.h>
 
 /// Forward declarations
@@ -28,6 +29,7 @@ typedef struct ustack {
   void             *sp;                         // checkpointed stack pointer
   hpx_parcel_t *parcel;                         // the progenitor parcel
   struct ustack  *next;                         // freelists and condition vars
+  struct _Unwind_Exception exception;
   int        lco_depth;                         // how many lco locks we hold
   int           tls_id;                         //
   int         stack_id;                         //

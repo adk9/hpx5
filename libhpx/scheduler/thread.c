@@ -128,6 +128,13 @@ static size_t _alignment(void) {
 #endif
 }
 
+static const union {
+  uint8_t  str[8];
+  uint64_t val;
+} _exception_class ={
+  .str = {'H', 'P', 'X', '\0', '\0', '\0', 'C', '\0' }
+};
+
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
   void *base = as_memalign(AS_REGISTERED, _alignment(), _buffer_size);
   dbg_assert(base);
@@ -136,6 +143,7 @@ ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
   ustack_t *thread = _protect(base);
   thread->stack_id = _register(thread);
   thread_init(thread, parcel, f, _thread_size);
+  thread->exception.exception_class = _exception_class.val;
   return thread;
 }
 

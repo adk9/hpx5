@@ -22,6 +22,7 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <libunwind.h>
 
 #include <hpx/builtins.h>
 #include <libhpx/action.h>
@@ -940,6 +941,28 @@ void scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
   _resume_parcels(cvar_set_error(cvar, code));
 }
 
+
+static _Unwind_Reason_Code _stop(int version, _Unwind_Action actions,
+                                 uint64_t exceptionClass,
+                                 struct _Unwind_Exception *exceptionObject,
+                                 struct _Unwind_Context *context,
+                                 void *stop_parameter) {
+  unw_set_caching_policy(unw_local_addr_space, UNW_CACHE_NONE);
+  hpx_parcel_t *parcel = stop_parameter;
+  if (_Unwind_GetIP(context)) {
+    return _URC_NO_REASON;
+  }
+
+  // unpin the current target
+  if (action_is_pinned(here->actions, parcel->action)) {
+    hpx_gas_unpin(parcel->target);
+  }
+
+  EVENT_THREAD_END(parcel, self);
+  _schedule(_free_parcel, NULL, 1);
+  unreachable();
+}
+
 static void HPX_NORETURN
 _continue(worker_t *worker, void (*cleanup)(void*), void *env, int nargs,
           va_list *args) {
@@ -953,13 +976,8 @@ _continue(worker_t *worker, void (*cleanup)(void*), void *env, int nargs,
     cleanup(env);
   }
 
-  // unpin the current target
-  if (action_is_pinned(here->actions, parcel->action)) {
-    hpx_gas_unpin(parcel->target);
-  }
-
-  EVENT_THREAD_END(parcel, worker);
-  _schedule(_free_parcel, NULL, 1);
+  // and unwind any C++ stack stuff
+  _Unwind_ForcedUnwind(&parcel->ustack->exception, _stop, parcel);
   unreachable();
 }
 
