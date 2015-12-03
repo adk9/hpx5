@@ -400,10 +400,7 @@ _join_async_request_handler(_allreduce_t *lco, _join_async_args_t *args,
                             size_t n) {
   size_t bytes = n - sizeof(*args);
   int rc = _join_sync(lco, bytes, &args->data, &args->data);
-  if (rc != HPX_SUCCESS) {
-    hpx_thread_exit(rc);
-  }
-  return hpx_thread_continue(args, n);
+  return (rc != HPX_SUCCESS) ? rc : hpx_thread_continue(args, n);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_PINNED,
                      _join_async_request, _join_async_request_handler,

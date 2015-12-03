@@ -968,6 +968,7 @@ static void HPX_NORETURN _finish_thread(hpx_parcel_t *p, int status) {
    default:
     dbg_error("thread produced unexpected error %s.\n", hpx_strerror(status));
   }
+
   unreachable();
 }
 
@@ -989,12 +990,29 @@ int _hpx_thread_continue(int n, ...) {
   return HPX_SUCCESS;
 }
 
+static _Unwind_Reason_Code _thread_exit(int version, _Unwind_Action actions,
+                                        uint64_t exceptionClass,
+                                        exception_t *exceptionObject,
+                                        struct _Unwind_Context *context,
+                                        void *stop_parameter) {
+  if (_Unwind_GetIP(context)) {
+    return _URC_NO_REASON;
+  }
+
+  hpx_parcel_t *p = stop_parameter;
+  action_exit(p->action, p);
+  _finish_thread(p, p->ustack->error);
+}
+
 /// Exit a thread through a non-local control transfer.
 void HPX_NORETURN hpx_thread_exit(int status) {
   worker_t *w = self;
   hpx_parcel_t *p = w->current;
-  action_exit(p->action, p);
-  _finish_thread(p, status);
+
+  // force an unwind to clean up any C++ stack stuff
+  p->ustack->error = status;
+  _Unwind_ForcedUnwind(&p->ustack->exception, _thread_exit, p);
+  unreachable();
 }
 
 hpx_parcel_t *scheduler_current_parcel(void) {

@@ -17,6 +17,7 @@
 /// @file thread.h
 /// @brief Defines the lightweight thread stack structure and interface for user
 ///        level threads.
+#include <unwind.h>
 #include <hpx/hpx.h>
 
 /// Forward declarations
@@ -24,18 +25,24 @@
 struct lco_class;
 /// @}
 
+/// Typedefs
+/// @{
+typedef struct _Unwind_Exception exception_t;
+/// @}
+
 typedef struct ustack {
-  void             *sp;                         // checkpointed stack pointer
-  hpx_parcel_t *parcel;                         // the progenitor parcel
-  struct ustack  *next;                         // freelists and condition vars
-  int        lco_depth;                         // how many lco locks we hold
-  int           tls_id;                         // backs tls
-  int         stack_id;                         // used by VALGRIND
-  int             size;                         // the size of this stack
-  int            error;                         // like errno for this thread
-  short           cont;                         // the continuation flag
-  short       affinity;                         // set by user
-  char           stack[];
+  void              *sp;                        // checkpointed stack pointer
+  hpx_parcel_t  *parcel;                        // the progenitor parcel
+  struct ustack   *next;                        // freelists and condition vars
+  exception_t exception;                        // exception for hpx_exit
+  int         lco_depth;                        // how many lco locks we hold
+  int            tls_id;                        // backs tls
+  int          stack_id;                        // used by VALGRIND
+  int              size;                        // the size of this stack
+  int             error;                        // like errno for this thread
+  short            cont;                        // the continuation flag
+  short        affinity;                        // set by user
+  char            stack[];
 } ustack_t;
 
 /// This is the type of an HPX thread entry function.
