@@ -79,7 +79,7 @@ int prof_pause(char *key, int *tag) {
   hpx_time_t end = hpx_time_now();
   int event = profile_get_event(key);
   if (event < 0) {
-    return LIBHPX_OK;
+    return LIBHPX_EINVAL;
   }
 
   if (*tag == HPX_PROF_NO_TAG) {
@@ -94,7 +94,7 @@ int prof_pause(char *key, int *tag) {
   if (*tag == HPX_PROF_NO_TAG ||
      _profile_log.events[event].entries[*tag].marked ||
      _profile_log.events[event].entries[*tag].paused) {
-    return LIBHPX_OK;
+    return LIBHPX_EINVAL;
   }
 
   // first store timing information
@@ -110,7 +110,7 @@ int prof_pause(char *key, int *tag) {
 int prof_resume(char *key, int *tag) {
   int event = profile_get_event(key);
   if (event < 0) {
-    return LIBHPX_OK;
+    return LIBHPX_EINVAL;
   }
 
   if (*tag == HPX_PROF_NO_TAG) {
@@ -123,7 +123,7 @@ int prof_resume(char *key, int *tag) {
     }
   }
   if (*tag == HPX_PROF_NO_TAG) {
-    return LIBHPX_OK;
+    return LIBHPX_EINVAL;
   }
 
   _profile_log.events[event].entries[*tag].paused = false;

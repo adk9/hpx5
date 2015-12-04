@@ -110,7 +110,7 @@ void prof_fini(void) {
 int prof_get_averages(int64_t *values, char *key) {
   int event = profile_get_event(key);
   if (event < 0 ||_profile_log.events[event].simple) {
-    return PAPI_EINVAL;
+    return LIBHPX_EINVAL;
   }
 
   for (int i = 0; i < _profile_log.num_counters; i++) {
@@ -133,7 +133,7 @@ int prof_get_averages(int64_t *values, char *key) {
 int prof_get_totals(int64_t *values, char *key) {
   int event = profile_get_event(key);
   if (event < 0 || _profile_log.events[event].simple) {
-    return PAPI_EINVAL;
+    return LIBHPX_EINVAL;
   }
 
   for (int i = 0; i < _profile_log.num_counters; i++) {
@@ -151,7 +151,7 @@ int prof_get_totals(int64_t *values, char *key) {
 int prof_get_minimums(int64_t *values, char *key) {
   int event = profile_get_event(key);
   if (event < 0 ||_profile_log.events[event].simple) {
-    return PAPI_EINVAL;
+    return LIBHPX_EINVAL;
   }
 
   for (int i = 0; i < _profile_log.num_counters; i++) {
@@ -180,7 +180,7 @@ int prof_get_minimums(int64_t *values, char *key) {
 int prof_get_maximums(int64_t *values, char *key) {
   int event = profile_get_event(key);
   if (event < 0 ||_profile_log.events[event].simple) {
-    return PAPI_EINVAL;
+    return LIBHPX_EINVAL;
   }
 
   for (int i = 0; i < _profile_log.num_counters; i++) {
@@ -229,7 +229,7 @@ int prof_start_hardware_counters(char *key, int *tag) {
   dbg_assert(event >= 0);
 
   if (_profile_log.events[event].simple) {
-    return PAPI_EINVAL;
+    return LIBHPX_EINVAL;
   }
   
   // update the current event and entry being recorded
@@ -278,7 +278,7 @@ int prof_start_hardware_counters(char *key, int *tag) {
 int prof_stop_hardware_counters(char *key, int *tag) {
   int event = prof_stop_timing(key, tag);
   if (event < 0 || *tag == HPX_PROF_NO_TAG) {
-    return PAPI_EINVAL;
+    return LIBHPX_EINVAL;
   }
 
   // left as long long instead of int64_t to suppress a warning
@@ -313,7 +313,7 @@ int prof_pause(char *key, int *tag) {
   hpx_time_t end = hpx_time_now();
   int event = profile_get_event(key);
   if (event < 0) {
-    return PAPI_EINVAL;
+    return LIBHPX_EINVAL;
   }
 
   if (*tag == HPX_PROF_NO_TAG) {
@@ -328,7 +328,7 @@ int prof_pause(char *key, int *tag) {
   if (*tag == HPX_PROF_NO_TAG ||
      _profile_log.events[event].entries[*tag].marked ||
      _profile_log.events[event].entries[*tag].paused) {
-    return PAPI_EINVAL;
+    return LIBHPX_EINVAL;
   }
 
   // first store timing information
@@ -363,7 +363,7 @@ int prof_pause(char *key, int *tag) {
 int prof_resume(char *key, int *tag) {
   int event = profile_get_event(key);
   if (event < 0) {
-    return PAPI_EINVAL;
+    return LIBHPX_EINVAL;
   }
 
   if (*tag == HPX_PROF_NO_TAG) {
@@ -376,7 +376,7 @@ int prof_resume(char *key, int *tag) {
     }
   }
   if (*tag == HPX_PROF_NO_TAG) {
-    return PAPI_EINVAL;
+    return LIBHPX_EINVAL;
   }
 
   _profile_log.events[event].entries[*tag].paused = false;
