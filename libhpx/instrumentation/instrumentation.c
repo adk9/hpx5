@@ -290,15 +290,15 @@ void inst_prof_dump(profile_log_t log) {
               hpx_time_ms(min),
               hpx_time_ms(max));
 
-      if(_detailed_prof){
+      if (_detailed_prof) {
         fprintf(f, "\nDUMP:\n\n%-24s", "Entry #");
-        for(int j = 0; j < log.num_counters; j++){
+        for (int j = 0; j < log.num_counters; j++) {
           fprintf(f, "%-24s", log.counter_names[j]);
         }
         fprintf(f, "%-24s\n", "Time (ms)");
-        for(int j = 0; j < log.events[i].num_entries; j++){
+        for (int j = 0; j < log.events[i].num_entries; j++) {
           fprintf(f, "%-24d", j);
-          for(int k = 0; k < log.num_counters; k++){
+          for (int k = 0; k < log.num_counters; k++) {
             fprintf(f, "%-24"PRIu64, log.events[i].entries[j].counter_totals[k]);
           }
           fprintf(f, "%-24f\n", hpx_time_ms(log.events[i].entries[j].run_time));
