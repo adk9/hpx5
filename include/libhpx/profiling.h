@@ -66,7 +66,6 @@ typedef struct {
 /// @field       num_entries Number of code events profiled
 /// @field        max_events Maximum number of code events profilable
 /// @field          counters The ids of the counters used
-/// @field     counter_names The string names of the counters
 /// @field            events The actual profiled events
 /// @field     current_entry The current entry
 /// @field     current_event The current code event
@@ -75,7 +74,6 @@ typedef struct {
   int             num_events;
   int             max_events;
   int              *counters;
-  const char **counter_names;
   profile_list_t     *events;
   int          current_entry;
   int          current_event;
@@ -86,7 +84,6 @@ typedef struct {
     .num_events = 0,                        \
     .max_events = 256,                      \
     .counters = NULL,                       \
-    .counter_names = NULL,                  \
     .events = NULL,                         \
     .current_entry = -1,                    \
     .current_event = -1                     \
@@ -163,7 +160,7 @@ void prof_get_min_time(char *key, hpx_time_t *min);
 void prof_get_max_time(char *key, hpx_time_t *max);
 
 /// Return the number of counters being used
-int prof_get_num_counters();
+int prof_get_num_counters(void);
 
 /// Mark the occurrence of an event
 /// @param         key The key that identifies the code event

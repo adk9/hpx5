@@ -59,7 +59,6 @@ static void _set_event(uint64_t papi_event, uint64_t bit, uint64_t bitset,
   }
 
   _profile_log.counters[*num_counters] = papi_event;
-  _profile_log.counter_names[*num_counters] = _get_counter_string(papi_event);
   *num_counters+=1;
 }
 
@@ -71,7 +70,6 @@ static void _test_event(uint64_t papi_event, uint64_t bit, uint64_t bitset,
 
   if (PAPI_query_event(papi_event) != PAPI_OK) {
     const char *counter_name = _get_counter_string(papi_event);
-    
     log_error("Warning: %s is not available on this system\n", counter_name);
     return;
   }
@@ -139,7 +137,6 @@ int prof_init(config_t *cfg) {
   }
 
   _profile_log.counters = malloc(num_counters * sizeof(int));
-  _profile_log.counter_names = malloc(num_counters * sizeof(char*));
   _profile_log.num_counters = num_counters;
   _profile_log.events = malloc(_profile_log.max_events * 
                                 sizeof(profile_list_t));
@@ -185,7 +182,6 @@ void prof_fini(void) {
   }
   free(_profile_log.events);
   free(_profile_log.counters);
-  free(_profile_log.counter_names);
 }
 
 int prof_get_averages(int64_t *values, char *key) {

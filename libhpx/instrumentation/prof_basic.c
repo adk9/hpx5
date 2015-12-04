@@ -35,7 +35,6 @@ extern profile_log_t _profile_log;
 
 int prof_init(struct config *cfg) {
   _profile_log.counters = NULL;
-  _profile_log.counter_names = NULL;
   _profile_log.num_counters = 0;
   _profile_log.events = malloc(_profile_log.max_events *
                                 sizeof(profile_list_t));
