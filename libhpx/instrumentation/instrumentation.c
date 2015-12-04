@@ -275,7 +275,7 @@ void inst_prof_dump(profile_log_t log) {
         prof_get_maximums(maximums, log.events[i].key);
         for (int j = 0; j < log.num_counters; j++) {
           fprintf(f, "%-24s%-24"PRIu64"%-24"PRIu64"%-24"PRIu64"\n", 
-                  HPX_PROF_COUNTER_TO_STRING[j],
+                  HPX_COUNTER_TO_STRING[log.counters[j]],
                   averages[j], minimums[j], maximums[j]);
         }
       }
@@ -293,7 +293,7 @@ void inst_prof_dump(profile_log_t log) {
       if (_detailed_prof) {
         fprintf(f, "\nDUMP:\n\n%-24s", "Entry #");
         for (int j = 0; j < log.num_counters; j++) {
-          fprintf(f, "%-24s", HPX_PROF_COUNTER_TO_STRING[j]);
+          fprintf(f, "%-24s", HPX_COUNTER_TO_STRING[log.counters[j]]);
         }
         fprintf(f, "%-24s\n", "Time (ms)");
         for (int j = 0; j < log.events[i].num_entries; j++) {

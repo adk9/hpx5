@@ -70,7 +70,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-trace-classes=class set the event classes to trace  (possible\n                                  values=\"parcel\", \"pwc\", \"sched\",\n                                  \"lco\", \"process\", \"memory\",\n                                  \"schedtimes\", \"all\")",
   "      --hpx-trace-filesize=bytes\n                                set the size of each trace file",
   "\nProfiling:",
-  "      --hpx-prof-counters=counters\n                                set which PAPI counters to use for profiling\n                                  (possible values=\"HPX_L1_TCM\",\n                                  \"HPX_L2_TCM\", \"HPX_L3_TCM\",\n                                  \"HPX_TLB_TL\", \"HPX_TOT_INS\",\n                                  \"HPX_INT_INS\", \"HPX_FP_INS\",\n                                  \"HPX_LD_INS\", \"HPX_SR_INS\",\n                                  \"HPX_BR_INS\", \"HPX_TOT_CYC\", \"all\")",
+  "      --hpx-prof-counters=counters\n                                set which HW counters to use for profiling\n                                  (possible values=\"L1_TCM\", \"L2_TCM\",\n                                  \"L3_TCM\", \"TLB_TL\", \"TOT_INS\",\n                                  \"INT_INS\", \"FP_INS\", \"LD_INS\",\n                                  \"SR_INS\", \"BR_INS\", \"TOT_CYC\", \"all\")",
   "      --hpx-prof-detailed       dump all individual measurements to file in\n                                  addition to summaries  (default=off)",
   "\nISIR Network Options:",
   "      --hpx-isir-testwindow=requests\n                                number of ISIR requests to test in progress\n                                  loop",
@@ -154,7 +154,7 @@ const char *hpx_option_parser_hpx_sched_policy_values[] = {"default", "random", 
 const char *hpx_option_parser_hpx_log_level_values[] = {"default", "boot", "sched", "gas", "lco", "net", "trans", "parcel", "action", "config", "memory", "coll", "all", 0}; /*< Possible values for hpx-log-level. */
 const char *hpx_option_parser_hpx_dbg_waitonsig_values[] = {"segv", "abrt", "fpe", "ill", "bus", "iot", "sys", "trap", "all", 0}; /*< Possible values for hpx-dbg-waitonsig. */
 const char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "pwc", "sched", "lco", "process", "memory", "schedtimes", "all", 0}; /*< Possible values for hpx-trace-classes. */
-const char *hpx_option_parser_hpx_prof_counters_values[] = {"HPX_L1_TCM", "HPX_L2_TCM", "HPX_L3_TCM", "HPX_TLB_TL", "HPX_TOT_INS", "HPX_INT_INS", "HPX_FP_INS", "HPX_LD_INS", "HPX_SR_INS", "HPX_BR_INS", "HPX_TOT_CYC", "all", 0}; /*< Possible values for hpx-prof-counters. */
+const char *hpx_option_parser_hpx_prof_counters_values[] = {"L1_TCM", "L2_TCM", "L3_TCM", "TLB_TL", "TOT_INS", "INT_INS", "FP_INS", "LD_INS", "SR_INS", "BR_INS", "TOT_CYC", "all", 0}; /*< Possible values for hpx-prof-counters. */
 const char *hpx_option_parser_hpx_photon_backend_values[] = {"default", "verbs", "ugni", "fi", 0}; /*< Possible values for hpx-photon-backend. */
 
 static char *
@@ -1754,7 +1754,7 @@ hpx_option_parser_internal (
               goto failure;
           
           }
-          /* set which PAPI counters to use for profiling.  */
+          /* set which HW counters to use for profiling.  */
           else if (strcmp (long_options[option_index].name, "hpx-prof-counters") == 0)
           {
           

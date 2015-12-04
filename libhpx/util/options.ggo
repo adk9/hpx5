@@ -135,9 +135,9 @@ long optional
 
 section "Profiling"
 
-option "hpx-prof-counters" - "set which PAPI counters to use for profiling"
+option "hpx-prof-counters" - "set which HW counters to use for profiling"
 typestr="counters"
-values="HPX_L1_TCM","HPX_L2_TCM","HPX_L3_TCM","HPX_TLB_TL","HPX_TOT_INS","HPX_INT_INS","HPX_FP_INS","HPX_LD_INS","HPX_SR_INS","HPX_BR_INS","HPX_TOT_CYC","all"
+values="L1_TCM","L2_TCM","L3_TCM","TLB_TL","TOT_INS","INT_INS","FP_INS","LD_INS","SR_INS","BR_INS","TOT_CYC","all"
 enum optional multiple
 
 option "hpx-prof-detailed" - "dump all individual measurements to file in addition to summaries"

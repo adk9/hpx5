@@ -179,30 +179,45 @@ static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
   "all"
 };
 
-#define HPX_PAPI_L1_TCM    (UINT64_C(1) << 0)
-#define HPX_PAPI_L2_TCM    (UINT64_C(1) << 1)
-#define HPX_PAPI_L3_TCM    (UINT64_C(1) << 2)
-#define HPX_PAPI_TLB_TL    (UINT64_C(1) << 3)
-#define HPX_PAPI_TOT_INS   (UINT64_C(1) << 4)
-#define HPX_PAPI_INT_INS   (UINT64_C(1) << 5)
-#define HPX_PAPI_FP_INS    (UINT64_C(1) << 6)
-#define HPX_PAPI_LD_INS    (UINT64_C(1) << 7)
-#define HPX_PAPI_SR_INS    (UINT64_C(1) << 8)
-#define HPX_PAPI_BR_INS    (UINT64_C(1) << 9)
-#define HPX_PAPI_TOT_CYC   (UINT64_C(1) << 10)
+typedef enum {
+ HPX_L1_TCM = 0,
+ HPX_L2_TCM,
+ HPX_L3_TCM,
+ HPX_TLB_TL,
+ HPX_TOT_INS,
+ HPX_INT_INS,
+ HPX_FP_INS,
+ HPX_LD_INS,
+ HPX_SR_INS,
+ HPX_BR_INS,
+ HPX_TOT_CYC,
+ HPX_COUNTER_MAX,
+} libhpx_hw_counters_t;
 
-static const char *const HPX_PROF_COUNTER_TO_STRING[] = {
-  "HPX_PAPI_L1_TCM",
-  "HPX_PAPI_L2_TCM",
-  "HPX_PAPI_L3_TCM",
-  "HPX_PAPI_TLB_TL",
-  "HPX_PAPI_TOT_INS",
-  "HPX_PAPI_INT_INS",
-  "HPX_PAPI_FP_INS",
-  "HPX_PAPI_LD_INS",
-  "HPX_PAPI_SR_INS",
-  "HPX_PAPI_BR_INS",
-  "HPX_PAPI_TOT_CYC",
+#define HPX_PROF_L1_TCM    (UINT64_C(1) << HPX_L1_TCM)
+#define HPX_PROF_L2_TCM    (UINT64_C(1) << HPX_L2_TCM)
+#define HPX_PROF_L3_TCM    (UINT64_C(1) << HPX_L3_TCM)
+#define HPX_PROF_TLB_TL    (UINT64_C(1) << HPX_TLB_TL)
+#define HPX_PROF_TOT_INS   (UINT64_C(1) << HPX_TOT_INS)
+#define HPX_PROF_INT_INS   (UINT64_C(1) << HPX_INT_INS)
+#define HPX_PROF_FP_INS    (UINT64_C(1) << HPX_FP_INS)
+#define HPX_PROF_LD_INS    (UINT64_C(1) << HPX_LD_INS)
+#define HPX_PROF_SR_INS    (UINT64_C(1) << HPX_SR_INS)
+#define HPX_PROF_BR_INS    (UINT64_C(1) << HPX_BR_INS)
+#define HPX_PROF_TOT_CYC   (UINT64_C(1) << HPX_TOT_CYC)
+
+static const char *const HPX_COUNTER_TO_STRING[] = {
+  "L1_TCM",
+  "L2_TCM",
+  "L3_TCM",
+  "TLB_TL",
+  "TOT_INS",
+  "INT_INS",
+  "FP_INS",
+  "LD_INS",
+  "SR_INS",
+  "BR_INS",
+  "TOT_CYC",
   "all"
 };
 

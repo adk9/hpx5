@@ -34,139 +34,62 @@
 /// Each locality maintains a single profile log
 extern profile_log_t _profile_log;
 
-static const char* _get_counter_string(uint64_t papi_event) {
-  switch(papi_event) {
-    case PAPI_L1_TCM:  return "PAPI_L1_TCM";
-    case PAPI_L2_TCM:  return "PAPI_L2_TCM";
-    case PAPI_L3_TCM:  return "PAPI_L3_TCM";
-    case PAPI_TLB_TL:  return "PAPI_TLB_TL";
-    case PAPI_TOT_INS: return "PAPI_TOT_INS";
-    case PAPI_INT_INS: return "PAPI_INT_INS";
-    case PAPI_FP_INS:  return "PAPI_FP_INS";
-    case PAPI_LD_INS:  return "PAPI_LD_INS";
-    case PAPI_SR_INS:  return "PAPI_SR_INS";
-    case PAPI_BR_INS:  return "PAPI_BR_INS";
-    case PAPI_TOT_CYC: return "PAPI_TOT_CYC";
-    default:           return "PAPI counter";
-  }
-}
+static uint64_t _papi_events[] = {
+  [HPX_L1_TCM]  = PAPI_L1_TCM,
+  [HPX_L2_TCM]  = PAPI_L2_TCM,
+  [HPX_L3_TCM]  = PAPI_L3_TCM,
+  [HPX_TLB_TL]  = PAPI_TLB_TL,
+  [HPX_TOT_INS] = PAPI_TOT_INS,
+  [HPX_INT_INS] = PAPI_INT_INS,
+  [HPX_FP_INS]  = PAPI_FP_INS,
+  [HPX_LD_INS]  = PAPI_LD_INS,
+  [HPX_SR_INS]  = PAPI_SR_INS,
+  [HPX_BR_INS]  = PAPI_BR_INS,
+  [HPX_TOT_CYC] = PAPI_TOT_CYC,
+};
 
-static void _set_event(uint64_t papi_event, uint64_t bit, uint64_t bitset, 
-                       int max_counters, int *num_counters) {
-  if (!(bit & bitset) || (PAPI_query_event(papi_event) != PAPI_OK)
-                     || (*num_counters >= max_counters)) {
-    return;
-  }
-
-  _profile_log.counters[*num_counters] = papi_event;
-  *num_counters+=1;
-}
-
-static void _test_event(uint64_t papi_event, uint64_t bit, uint64_t bitset,
-                        int max_counters, int *num_counters) {
-  if (!(bit & bitset)) {
-    return;
-  }
-
+static int _set_event(int id, uint64_t papi_event, uint64_t event) {
   if (PAPI_query_event(papi_event) != PAPI_OK) {
-    const char *counter_name = _get_counter_string(papi_event);
-    log_error("Warning: %s is not available on this system\n", counter_name);
-    return;
+    const char *counter_name = HPX_COUNTER_TO_STRING[event];
+    log_dflt("Warning: %s is not available on this system\n", counter_name);
+    return 0;
   }
 
-  *num_counters+=1;
-  if (*num_counters > max_counters) {
-    const char *counter_name = _get_counter_string(papi_event);
-    log_error("Warning: %s could not be included in profiling due to limited "
-              "resources\n", counter_name);
-  }
-}
-
-static int _create_new_event(char *key) {
-  int eventset = PAPI_NULL;
-  int retval = PAPI_create_eventset(&eventset);
-  if (retval != PAPI_OK) {
-    log_error("unable to create eventset with error code %d\n", retval);
-  } else {
-    for (int i = 0; i < _profile_log.num_counters; i++) {
-      PAPI_add_event(eventset, _profile_log.counters[i]);
-    }
-  }
-
-  return profile_new_event(key, false, eventset);
+  _profile_log.counters[id] = event;
+  return 1;
 }
 
 int prof_init(config_t *cfg) {
+  // initialize PAPI
+  int e = PAPI_library_init(PAPI_VER_CURRENT);
+  if (e != PAPI_VER_CURRENT) {
+    log_error("unable to initialize PAPI (error code %d)\n", e);
+  }
+
+  // get the number of available hardware counters on the platform
   int max_counters = PAPI_num_counters();
+
+  // get the number of counters requested by the user
+  int counters = cfg->prof_counters;
+  int req_counters = popcountl(counters);
+
+  if (req_counters > max_counters) {
+    log_dflt("WARNING: maximum available counters is %d\n", max_counters);
+    req_counters = max_counters;
+  }
+
+  _profile_log.counters = calloc(req_counters, sizeof(int));
+  _profile_log.events = calloc(_profile_log.max_events, sizeof(profile_list_t));
+
   int num_counters = 0;
-  uint64_t counters = cfg->prof_counters;
-
-  int retval = PAPI_library_init(PAPI_VER_CURRENT);
-  if (retval != PAPI_VER_CURRENT) {
-    log_error("unable to initialize PAPI with error code %d\n", retval);
+  for (int c = 0; c < HPX_COUNTER_MAX, num_counters < req_counters; ++c) {
+    if ((UINT64_C(1) << c) & counters) {
+      uint64_t papi_event = _papi_events[c];
+      num_counters += _set_event(num_counters, papi_event, c);
+    }
   }
 
-  //test events first to generate warnings and determine where counters
-  //can have space allocated for them
-  _test_event(PAPI_L1_TCM, HPX_PAPI_L1_TCM, counters, 
-              max_counters, &num_counters);
-  _test_event(PAPI_L2_TCM, HPX_PAPI_L2_TCM, counters, 
-              max_counters, &num_counters);
-  _test_event(PAPI_L3_TCM, HPX_PAPI_L3_TCM, counters, 
-              max_counters, &num_counters);
-  _test_event(PAPI_TLB_TL, HPX_PAPI_TLB_TL, counters, 
-              max_counters, &num_counters);
-  _test_event(PAPI_TOT_INS, HPX_PAPI_TOT_INS, counters,
-              max_counters, &num_counters);
-  _test_event(PAPI_INT_INS, HPX_PAPI_INT_INS, counters, 
-              max_counters, &num_counters);
-  _test_event(PAPI_FP_INS, HPX_PAPI_FP_INS, counters, 
-              max_counters, &num_counters);
-  _test_event(PAPI_LD_INS, HPX_PAPI_LD_INS, counters, 
-              max_counters, &num_counters);
-  _test_event(PAPI_SR_INS, HPX_PAPI_SR_INS, counters, 
-              max_counters, &num_counters);
-  _test_event(PAPI_BR_INS, HPX_PAPI_BR_INS, counters, 
-              max_counters, &num_counters);
-  _test_event(PAPI_TOT_CYC, HPX_PAPI_TOT_CYC, counters, 
-              max_counters, &num_counters);
-
-  if (num_counters > max_counters) {
-    log_error("Note: maximum available counters is %d\n", max_counters);
-    num_counters = max_counters;
-  }
-
-  _profile_log.counters = malloc(num_counters * sizeof(int));
   _profile_log.num_counters = num_counters;
-  _profile_log.events = malloc(_profile_log.max_events * 
-                                sizeof(profile_list_t));
-
-  max_counters = num_counters;
-  num_counters = 0;
-
-  //actually set the events
-  _set_event(PAPI_L1_TCM, HPX_PAPI_L1_TCM, counters, 
-             max_counters, &num_counters);  
-  _set_event(PAPI_L2_TCM, HPX_PAPI_L2_TCM, counters,
-             max_counters, &num_counters);  
-  _set_event(PAPI_L3_TCM, HPX_PAPI_L3_TCM, counters,
-             max_counters, &num_counters);  
-  _set_event(PAPI_TLB_TL, HPX_PAPI_TLB_TL, counters,
-             max_counters, &num_counters);  
-  _set_event(PAPI_TOT_INS, HPX_PAPI_TOT_INS, counters,
-             max_counters, &num_counters);
-  _set_event(PAPI_INT_INS, HPX_PAPI_INT_INS, counters,
-             max_counters, &num_counters);
-  _set_event(PAPI_FP_INS, HPX_PAPI_FP_INS, counters,
-             max_counters, &num_counters);  
-  _set_event(PAPI_LD_INS, HPX_PAPI_LD_INS, counters,
-             max_counters, &num_counters);  
-  _set_event(PAPI_SR_INS, HPX_PAPI_SR_INS, counters,
-             max_counters, &num_counters);  
-  _set_event(PAPI_BR_INS, HPX_PAPI_BR_INS, counters,
-             max_counters, &num_counters);  
-  _set_event(PAPI_TOT_CYC, HPX_PAPI_TOT_CYC, counters,
-             max_counters, &num_counters);
   return LIBHPX_OK;
 }
 
@@ -204,7 +127,7 @@ int prof_get_averages(int64_t *values, char *key) {
       values[i] /= divisor;
     }
   }
-  return PAPI_OK;
+  return LIBHPX_OK;
 }
 
 int prof_get_totals(int64_t *values, char *key) {
@@ -222,7 +145,7 @@ int prof_get_totals(int64_t *values, char *key) {
       }
     }
   }
-  return PAPI_OK;
+  return LIBHPX_OK;
 }
 
 int prof_get_minimums(int64_t *values, char *key) {
@@ -251,7 +174,7 @@ int prof_get_minimums(int64_t *values, char *key) {
       }
     }
   }
-  return PAPI_OK;
+  return LIBHPX_OK;
 }
 
 int prof_get_maximums(int64_t *values, char *key) {
@@ -280,7 +203,21 @@ int prof_get_maximums(int64_t *values, char *key) {
       }
     }
   }
-  return PAPI_OK;
+  return LIBHPX_OK;
+}
+
+static int _create_new_event(char *key) {
+  int eventset = PAPI_NULL;
+  int retval = PAPI_create_eventset(&eventset);
+  if (retval != PAPI_OK) {
+    log_error("unable to create eventset with error code %d\n", retval);
+  } else {
+    for (int i = 0; i < _profile_log.num_counters; i++) {
+      PAPI_add_event(eventset, _papi_events[_profile_log.counters[i]]);
+    }
+  }
+
+  return profile_new_event(key, false, eventset);
 }
 
 int prof_start_hardware_counters(char *key, int *tag) {
@@ -369,7 +306,7 @@ int prof_stop_hardware_counters(char *key, int *tag) {
     PAPI_start(_profile_log.events[_profile_log.current_event].eventset);
   }
 
-  return PAPI_OK;
+  return LIBHPX_OK;
 }
 
 int prof_pause(char *key, int *tag) {
@@ -420,7 +357,7 @@ int prof_pause(char *key, int *tag) {
     }
   }
   _profile_log.events[event].entries[*tag].paused = true;
-  return PAPI_OK;
+  return LIBHPX_OK;
 }
 
 int prof_resume(char *key, int *tag) {
@@ -448,5 +385,5 @@ int prof_resume(char *key, int *tag) {
     PAPI_reset(_profile_log.events[_profile_log.current_event].eventset);
     return PAPI_start(_profile_log.events[event].eventset);
   }
-  return PAPI_OK;
+  return LIBHPX_OK;
 }
