@@ -211,7 +211,7 @@ static inline uint32_t parcel_payload_size(const hpx_parcel_t *p) {
   return p->size;
 }
 
-void _prepare(hpx_parcel_t *p) 
+void parcel_prepare(hpx_parcel_t *p)
   HPX_NON_NULL(1);
 
 #ifdef __cplusplus

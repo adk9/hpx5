@@ -54,7 +54,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _delete_launch_through_parcel,
                      _delete_launch_through_parcel_handler, HPX_POINTER);
 
 /// Serialize and bless a parcel before sending or copying it.
-void _prepare(hpx_parcel_t *p) {
+void parcel_prepare(hpx_parcel_t *p) {
   parcel_state_t state = parcel_get_state(p);
   if (!parcel_serialized(state) && p->size) {
     void *buffer = hpx_parcel_get_data(p);
@@ -115,7 +115,7 @@ void parcel_release(hpx_parcel_t *p) {
 void parcel_launch(hpx_parcel_t *p) {
   dbg_assert(p->action);
 
-  _prepare(p);
+  parcel_prepare(p);
 
   log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64") => %s@(%"PRIu64")\n",
              p->pid,
@@ -150,7 +150,7 @@ void parcel_launch_error(hpx_parcel_t *p, int error) {
 
 void parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate) {
   if (gate) {
-    _prepare(p);
+    parcel_prepare(p);
     hpx_pid_t pid = self->current->pid;
     p = parcel_new(gate, lco_attach, 0, 0, pid, p, parcel_size(p));
   }

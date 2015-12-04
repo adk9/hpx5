@@ -4,7 +4,7 @@
 # Use autoconf to configure all of the files that need to be processed.
 # -----------------------------------------------------------------------------
 AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
- AC_CONFIG_FILES([scripts/hpx-config],
+ AC_CONFIG_FILES([scripts/hpx-config], 
                  [chmod +x scripts/hpx-config])
 
  AC_CONFIG_FILES([
@@ -34,7 +34,7 @@ AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
    include/Makefile
    include/libhpx/Makefile
    examples/Makefile])
-
+  
  AS_IF([test "x$have_docs" != xno], [
    AC_CONFIG_FILES([
      docs/Doxyfile
