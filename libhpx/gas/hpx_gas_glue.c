@@ -142,7 +142,7 @@ hpx_addr_t hpx_gas_calloc_blocked(size_t n, uint32_t bsize, uint32_t boundary) {
 static hpx_addr_t _gas_local_search(size_t n, uint32_t bsize, uint32_t boundary,
                                     hpx_action_t act) {
   hpx_addr_t addr = HPX_NULL;
-  int *seed = &self->seed;
+  unsigned *seed = &self->seed;
   for (int i = 0, e = here->ranks; i < e; ++i) {
     int j = rand_r(seed) % e;
     hpx_addr_t l = HPX_THERE(j);
