@@ -14,12 +14,6 @@
 #include "reg_macros.h"
 #include "../common/asm_macros.h"
 
-#ifdef ENABLE_DEBUG
-#  define FRAME_SIZE 192
-#else
-#  define FRAME_SIZE 176
-#endif
-
         // @param x0 - a pointer to the stack pointer to transfer to
         // @param x1 - the continuation to call after the sp exchange
         // @param x2 - the environment for the continutation

@@ -128,6 +128,34 @@ static size_t _alignment(void) {
 #endif
 }
 
+/// Architecture-specific transfer frame initialization.
+///
+/// Each architecture will provide its own functionality for initialing a
+/// stack stack frame, typically as an asm file. The result is a thread that we
+/// can start running through  thread_transfer.
+///
+/// @param          top The highest address in the stack.
+/// @param            p The parcel that we want to "pass" to @p f.
+/// @param            f The initial function to run after the transfer.
+void transfer_frame_init(void *top, hpx_parcel_t *p, thread_entry_t f)
+  HPX_NON_NULL(1, 2, 3);
+
+void thread_init(ustack_t *thread, hpx_parcel_t *parcel, thread_entry_t f,
+                 size_t size) {
+  // Initialize the architecture-independent bit of the stack.
+  thread->sp        = frame;
+  thread->next      = NULL;
+  thread->parcel    = parcel;
+  thread->lco_depth = 0;
+  thread->tls_id    = -1;
+  thread->size      = size;
+  thread->affinity  = -1;
+
+  // Initialize the top stack frame so that we can correctly "return" from it
+  // during the first transfer to this thread.
+  transfer_frame_init(&thread.stack[size], parcel, f);
+}
+
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
   void *base = as_memalign(AS_REGISTERED, _alignment(), _buffer_size);
   dbg_assert(base);
@@ -144,3 +172,4 @@ void thread_delete(ustack_t *thread) {
   void *base = _unprotect(thread);
   as_free(AS_REGISTERED, base);
 }
+
