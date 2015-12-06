@@ -166,8 +166,9 @@ extern void *transfer_frame_init(void *top, hpx_parcel_t *p, thread_entry_t f)
 void thread_init(ustack_t *thread, hpx_parcel_t *parcel, thread_entry_t f,
                  size_t size) {
   // Initialize the architecture-independent bit of the stack.
-  thread->next      = NULL;
   thread->parcel    = parcel;
+  thread->cont      = NULL;
+  thread->next      = NULL;
   thread->lco_depth = 0;
   thread->tls_id    = -1;
   thread->size      = size;

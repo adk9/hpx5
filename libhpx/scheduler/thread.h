@@ -27,6 +27,7 @@ struct lco_class;
 typedef struct ustack {
   void             *sp;                         // checkpointed stack pointer
   hpx_parcel_t *parcel;                         // the progenitor parcel
+  hpx_parcel_t   *cont;                         // the continuation parcel
   struct ustack  *next;                         // freelists and condition vars
   int        lco_depth;                         // how many lco locks we hold
   int           tls_id;                         //
