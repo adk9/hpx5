@@ -53,7 +53,10 @@ typedef struct {
   void     (*top_rip)(void);
 } HPX_PACKED _frame_t;
 
-void transfer_frame_init(void *top, hpx_parcel_t *p, thread_entry_t f) {
+void *transfer_frame_init(void *top, hpx_parcel_t *p, thread_entry_t f) {
+  // x86_64 wants 16 byte alignment, so we adjust the top pointer if necessary
+  top = (void*)((uintptr_t)top & ~(15));
+
   // Stack frame addresses go "down" while C struct addresses go "up, so compute
   // the frame base from the top of the frame using the size of the frame
   // structure. After this, we can just write values to the frame structure and
@@ -79,4 +82,6 @@ void transfer_frame_init(void *top, hpx_parcel_t *p, thread_entry_t f) {
   frame->top_rbp = NULL;
   frame->top_rip = NULL;
 #endif
+
+  return frame;
 }
