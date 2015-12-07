@@ -37,7 +37,7 @@ chunk_table_delete(void *obj) {
 uint64_t
 chunk_table_lookup(void *obj, void *chunk) {
   ChunkTable *table = static_cast<ChunkTable*>(obj);
-  uint64_t base;
+  uint64_t base = 0;
   bool found = table->find(chunk, base);
   assert(found);
   return base;
