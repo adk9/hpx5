@@ -224,11 +224,9 @@ _funneled_progress(void *network, int id) {
 network_t *
 network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
   _funneled_t *network = NULL;
-  posix_memalign((void*)&network, HPX_CACHELINE_SIZE, sizeof(*network));
-  if (!network) {
-    log_error("could not allocate a funneled Isend/Irecv network\n");
-    return NULL;
-  }
+  int e = posix_memalign((void*)&network, HPX_CACHELINE_SIZE, sizeof(*network));
+  dbg_check(e, "failed to allocate the pwc network structure\n");
+  dbg_assert(network);
 
   network->xport = isir_xport_new(cfg, gas);
   if (!network->xport) {

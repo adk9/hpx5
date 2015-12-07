@@ -231,7 +231,8 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
 
   // Allocate the network object and initialize its virtual function table.
   pwc_network_t *pwc;
-  posix_memalign((void*)&pwc, HPX_CACHELINE_SIZE, sizeof(*pwc));
+  int e = posix_memalign((void*)&pwc, HPX_CACHELINE_SIZE, sizeof(*pwc));
+  dbg_check(e, "failed to allocate the pwc network structure\n");
   dbg_assert(pwc);
 
   pwc->vtable.type = HPX_NETWORK_PWC;
