@@ -130,12 +130,12 @@ void prof_get_average_time(char *key, hpx_time_t *avg) {
 
 void prof_get_total_time(char *key, hpx_time_t *tot) {
   int event = profile_get_event(key);
+  hpx_time_t average = HPX_TIME_NULL;
   if (event < 0) {
     return;
   }
 
   int64_t seconds, ns, total;
-  hpx_time_t average;
 
   prof_get_average_time(key, &average);
 
