@@ -47,6 +47,7 @@ namespace hpx {
     struct function_traits<R(Args...)> {
 	using return_type = R;
 	static constexpr std::size_t arity = sizeof...(Args);
+	using arg_types = std::tuple<Args...>;
 	static constexpr auto arg_types_tpl = std::tuple<Args...>();
     };
     
@@ -93,6 +94,7 @@ namespace hpx {
       return ::std::make_tuple(HPX_POINTER, HPX_SIZE_T);
     }
     
+    template <typename A>
     struct action_struct {
       /*
       * 
@@ -105,28 +107,33 @@ namespace hpx {
       */
       // for 0 args, HPX_REGISTER_ACTION is not HPX_MARSHALLED
       template <typename F, typename Tpl>
-      static int _register_helper(hpx_action_t id, F f, Tpl&& t, seq<>&& s) {
-	return HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_ATTR_NONE, id, f);
+      static int _register_helper(F f, Tpl&& t, seq<>&& s) {
+	return HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_ATTR_NONE, A::id, f);
       }
       template <typename F, typename Tpl, unsigned... Is>
-      static int _register_helper(hpx_action_t id, F f, Tpl&& t, seq<Is...>&& s) {
-	return HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, id, f, ::std::get<Is>(t)...);
+      static int _register_helper(F f, Tpl&& t, seq<Is...>&& s) {
+	return HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, A::id, f, ::std::get<Is>(t)...);
       }
       
-      template <typename F, typename Tpl, unsigned... Is>
-      static int _register(hpx_action_t id, F f, Tpl&& arg_tpl, seq<Is...>&& s) {
-	auto tpl = ::std::tuple_cat(xform(::std::get<Is>(arg_tpl))...);
-	return _register_helper(id, f, tpl, gen_seq<::std::tuple_size<decltype(tpl)>::value>());
+      template <typename F, unsigned... Is>
+      static int _register(F f, seq<Is...>&& s) {
+	auto tpl = ::std::tuple_cat(xform(::std::get<Is>(A::traits::arg_types_tpl))...);
+	return _register_helper(f, tpl, gen_seq<::std::tuple_size<decltype(tpl)>::value>());
       }
       
+//       template <typename... Args>
+//       typename ::std::enable_if< ::std::is_void<typename A::traits::return_type>::value, int >::type
+//       operator()(hpx_addr_t addr, Args... args) {
+// 	return hpx_call_sync(addr, A::id, HPX_NULL, 0, args...);
+//       }
     };
     
     template <typename T, typename F>
     inline
     int _register_action(F f) {
-      return T::_register(T::id, f, T::traits::arg_types_tpl,
-		  hpx::detail::gen_seq<::std::tuple_size<decltype(T::traits::arg_types_tpl)>::value>());
+      return T::_register(f, hpx::detail::gen_seq<::std::tuple_size<decltype(T::traits::arg_types_tpl)>::value>());
     }
+    
   }
   
   /*
@@ -144,15 +151,18 @@ namespace hpx {
   }
 }
 
-// 
 #define HPXPP_REGISTER_ACTION(f)						\
-struct f##_action_struct : public hpx::detail::action_struct {			\
+struct f##_action_struct : public hpx::detail::action_struct<f##_action_struct> {\
   static hpx_action_t id;							\
   using traits = hpx::detail::function_traits<decltype(f)>;			\
   \
+  \
   template <typename... Args>							\
   int operator()(hpx_addr_t addr, traits::return_type& result, Args... args) {	\
-    return 0;									\
+    std::cout << traits::arity << ", " << sizeof...(Args) << std::endl;\
+    static_assert(hpx::detail::is_matching<traits, Args...>::value, \
+		  "action and argument types do not match");\
+    return hpx_call_sync(addr, id, &result, sizeof(traits::return_type), args...);\
   }										\
 };										\
 hpx_action_t f##_action_struct::id = 0;						\
