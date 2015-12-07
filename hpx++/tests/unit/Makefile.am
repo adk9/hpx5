@@ -1,5 +1,5 @@
 
-noinst_PROGRAMS         = globalp future_test
+noinst_PROGRAMS         = globalp future_test action_tests
 
 globalp_SOURCES		= globalp.cpp
 future_test_SOURCES 	= future_test.cpp
