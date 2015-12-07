@@ -36,7 +36,7 @@
  * extensions I can't figure out a good way to deal with the compiler barrier.
  */
 #if defined(__x86_64__) || defined(__ARMEL__)
-# define sync_load(addr, mm) *(addr); __asm volatile ("":::"memory")
+# define sync_load(addr, mm) ({ __typeof(*(addr)) a = *(addr); __asm volatile ("":::"memory"); a; })
 #else
 #error sync_load not implemented for your processor
 #endif
