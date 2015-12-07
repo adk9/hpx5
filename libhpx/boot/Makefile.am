@@ -9,11 +9,11 @@ libboot_la_SOURCES  = boot.c smp.c
 if HAVE_MPI
 libboot_la_CFLAGS  += @MPI_CFLAGS@
 libboot_la_SOURCES += mpi.c
-libboot_la_LIBADD  += @MPI_LIBS@
+libboot_la_LIBADD   = @MPI_LIBS@
 endif
 
 if HAVE_PMI
 libboot_la_CFLAGS  += @PMI_CFLAGS@
 libboot_la_SOURCES += pmi.c
-libboot_la_LIBADD  += @PMI_LIBS@
+libboot_la_LIBADD   = @PMI_LIBS@
 endif
