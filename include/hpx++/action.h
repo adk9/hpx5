@@ -159,7 +159,6 @@ struct f##_action_struct : public hpx::detail::action_struct<f##_action_struct> 
   \
   template <typename... Args>							\
   int operator()(hpx_addr_t addr, traits::return_type& result, Args... args) {	\
-    std::cout << traits::arity << ", " << sizeof...(Args) << std::endl;\
     static_assert(hpx::detail::is_matching<traits, Args...>::value, \
 		  "action and argument types do not match");\
     return hpx_call_sync(addr, id, &result, sizeof(traits::return_type), args...);\

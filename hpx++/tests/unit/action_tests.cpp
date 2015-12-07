@@ -1,6 +1,5 @@
 #include <iostream>
 #include "hpx++/hpx++.h"
-#include "hpx/rpc.h"
 
 int hello(int a) {
   std::cout << "Hello World from " << hpx_get_my_rank() << "." << std::endl;
@@ -26,7 +25,6 @@ int main(int argc, char* argv[]) {
   }
   
   test1();
-  
   hpx::finalize();
   return 0;
 }
