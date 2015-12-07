@@ -82,7 +82,7 @@ int prof_init(config_t *cfg) {
   _profile_log.events = calloc(_profile_log.max_events, sizeof(profile_list_t));
 
   int num_counters = 0;
-  for (int c = 0; c < HPX_COUNTER_MAX, num_counters < req_counters; ++c) {
+  for (int c = 0; c < HPX_COUNTER_MAX && num_counters < req_counters; ++c) {
     if ((UINT64_C(1) << c) & counters) {
       uint64_t papi_event = _papi_events[c];
       num_counters += _set_event(num_counters, papi_event, c);

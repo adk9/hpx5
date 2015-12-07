@@ -114,9 +114,6 @@ static const char *_mkdir(const char *dir) {
     if (errno != EEXIST) {
       log_error("Could not create %s for instrumentation\n", dir);
     }
-    else {
-      log_error("Unexpected error from mkdir(%s)->%s\n", dir, strerror(e));
-    }
   }
   return dir;
 }
