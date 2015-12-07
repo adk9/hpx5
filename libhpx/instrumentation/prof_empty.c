@@ -53,36 +53,6 @@ int prof_get_maximums(int64_t *values, char *key) {
   return LIBHPX_OK;
 }
 
-int prof_get_tally(char *key) {
-  return LIBHPX_OK;
-}
-
-void prof_get_average_time(char *key, hpx_time_t *avg) {
-}
-
-void prof_get_total_time(char *key, hpx_time_t *tot) {
-}
-
-void prof_get_min_time(char *key, hpx_time_t *min) {
-}
-
-void prof_get_max_time(char *key, hpx_time_t *max) {
-}
-
-int prof_get_num_counters(void) {
-  return LIBHPX_OK;
-}
-
-void prof_increment_tally(char *key) {
-}
-
-void prof_start_timing(char *key, int *tag) {
-}
-
-int prof_stop_timing(char *key, int *tag) {
-  return LIBHPX_OK;
-}
-
 int prof_start_hardware_counters(char *key, int *tag) {
   return LIBHPX_OK;
 }

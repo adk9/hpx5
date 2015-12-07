@@ -115,6 +115,7 @@ tests/unit/apex
 tests/unit/allreduce
 tests/unit/call_when
 tests/unit/call_vectored
+tests/unit/cxx_raii
 tests/unit/gas_alloc
 tests/unit/parcel_send_through
 tests/unit/gas_global_alloc
