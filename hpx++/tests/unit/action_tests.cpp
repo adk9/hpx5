@@ -1,12 +1,22 @@
 #include <iostream>
 #include "hpx++/hpx++.h"
 
-hpx_status_t l_tst() {
-  auto l = [](int x) {
-    return x;
-  };
+int t1(int a1, double a2) {
+  return a1;
+}
+
+HPXPP_REGISTER_ACTION(t1);
+
+hpx_status_t test1() {
   
-  return hpx::action::register_action(l);
+  hpx_addr_t addr;
+  
+  t1_action_struct obj;
+  
+  int r;
+  obj(addr, r, 1, 3.0);
+  
+  return HPX_SUCCESS;
 }
 
 int main(int argc, char* argv[]) {
@@ -17,7 +27,7 @@ int main(int argc, char* argv[]) {
     return e;
   }
   
-  l_tst();
+  test1();
   
   hpx::finalize();
   return 0;
