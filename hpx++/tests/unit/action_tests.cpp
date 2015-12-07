@@ -1,21 +1,19 @@
 #include <iostream>
 #include "hpx++/hpx++.h"
+#include "hpx/rpc.h"
 
-int t1(int a1, double a2) {
-  return a1;
+int hello(int a) {
+  std::cout << "Hello World from " << hpx_get_my_rank() << "." << std::endl;
+  return 0;
 }
 
-HPXPP_REGISTER_ACTION(t1);
+HPXPP_REGISTER_ACTION(hello);
 
 hpx_status_t test1() {
   
-  hpx_addr_t addr;
-  
-  t1_action_struct obj;
-  
+  hello_action_struct obj;
   int r;
-  obj(addr, r, 1, 3.0);
-  
+  obj(HPX_HERE, r, 1);
   return HPX_SUCCESS;
 }
 
