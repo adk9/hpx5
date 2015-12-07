@@ -58,5 +58,5 @@ AC_DEFUN([HPX_CONFIG_PAPI], [
                    [How we find PAPI @<:@default=system,$pkg@:>@])],
    [], [with_papi=system])
 
- AS_IF([test "x$wanted" == xyes], [_HPX_WITH_PAPI(pkg)])
+ AS_IF([test "x$wanted" == xyes], [_HPX_WITH_PAPI($pkg)])
 ])
