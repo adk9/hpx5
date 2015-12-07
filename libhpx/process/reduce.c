@@ -66,20 +66,14 @@ void reduce_delete(reduce_t *r) {
 }
 
 int reduce_add(reduce_t *r) {
-#ifdef ENABLE_DEBUG
-  int n = sync_load(&r->i, SYNC_ACQUIRE);
-  dbg_assert(n == r->n);
-#endif
+  dbg_assert(sync_load(&r->i, SYNC_ACQUIRE) == r->n);
   int i = ++r->n;
   sync_store(&r->i, i, SYNC_RELEASE);
   return (i == 1);
 }
 
 int reduce_remove(reduce_t *r) {
-#ifdef ENABLE_DEBUG
-  int n = sync_load(&r->i, SYNC_ACQUIRE);
-  dbg_assert(n == r->n);
-#endif
+  dbg_assert(sync_load(&r->i, SYNC_ACQUIRE) == r->n);
   int i = --r->n;
   sync_store(&r->i, i, SYNC_RELEASE);
   return (i == 0);
