@@ -248,16 +248,14 @@ parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
 }
 
 static int _reload_reply_handler(int src, command_t cmd) {
-  pwc_network_t *pwc = (pwc_network_t*)here->network;
-  send_buffer_t *sends = &pwc->send_buffers[src];
+  send_buffer_t *sends = &pwc_network->send_buffers[src];
   return send_buffer_progress(sends);
 }
 static COMMAND_DEF(_reload_reply, _reload_reply_handler);
 
 static int _reload_request_handler(int src, command_t cmd) {
-  pwc_network_t *pwc = (pwc_network_t*)here->network;
-  pwc_xport_t *xport = pwc->xport;
-  reload_t *reload = (reload_t*)pwc->parcels;
+  pwc_xport_t *xport = pwc_network->xport;
+  reload_t *reload = (reload_t*)pwc_network->parcels;
   buffer_t *recv = &reload->recv[src];
   size_t n = command_get_arg(cmd);
   if (n) {
@@ -279,4 +277,3 @@ static int _reload_request_handler(int src, command_t cmd) {
   return xport->pwc(&op);
 }
 static COMMAND_DEF(_reload_request, _reload_request_handler);
-
