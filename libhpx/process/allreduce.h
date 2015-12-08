@@ -40,6 +40,8 @@ typedef struct {
   continuation_t *continuation;           // our continuation data
   reduce_t             *reduce;           // the local reduction
   int32_t                   id;           // our identifier for our parent
+  int32_t                n_loc;           // total localities 
+  hpx_addr_t              *loc;           // locality list for communicator 
 } allreduce_t;
 
 void allreduce_init(allreduce_t *obj, size_t bytes, hpx_addr_t parent,
@@ -49,6 +51,7 @@ int32_t allreduce_add(allreduce_t *obj, hpx_action_t op, hpx_addr_t addr);
 void allreduce_remove(allreduce_t *obj, int32_t id);
 void allreduce_reduce(allreduce_t *obj, const void *in);
 void allreduce_bcast(allreduce_t *obj, const void *val);
+void allreduce_bcast_comm(allreduce_t *obj, const void *loc_array, int n);
 
 /// void allreduce_init_async(allreduce_t *, size_t bytes, hpx_addr_t parent,
 ///                           hpx_action_t id, hpx_action_t op);
@@ -69,5 +72,7 @@ extern HPX_ACTION_DECL(allreduce_join_async);
 
 /// void allreduce_bcast_async(allreduce_t *, const void *value, size_t bytes);
 extern HPX_ACTION_DECL(allreduce_bcast_async);
+
+extern HPX_ACTION_DECL(allreduce_bcast_comm_async);
 
 #endif // LIBHPX_PROCESS_ALLREDUCE_H
