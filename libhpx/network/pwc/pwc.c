@@ -94,6 +94,11 @@ static void _pwc_release_dma(void *network, const void* base, size_t n) {
   pwc->xport->unpin(base, n);
 }
 
+int _pwc_coll_sync(void *network, hpx_parcel_t *in, void* out, coll_t c){
+
+  return LIBHPX_OK;
+}
+
 static int _pwc_send(void *network, hpx_parcel_t *p) {
   if (parcel_size(p) >= here->config->pwc_parceleagerlimit) {
     return pwc_rendezvous_send(network, p);
@@ -238,6 +243,7 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   pwc->vtable.delete = _pwc_delete;
   pwc->vtable.progress = _pwc_progress;
   pwc->vtable.send = _pwc_send;
+  pwc->vtable.coll_sync = _pwc_coll_sync;
   pwc->vtable.command = pwc_command;
   pwc->vtable.pwc = _pwc_pwc;
   pwc->vtable.put = _pwc_put;
