@@ -75,6 +75,7 @@ network_t *network_new(config_t *cfg, boot_t *boot, struct gas *gas) {
    case HPX_NETWORK_PWC:
 #ifdef HAVE_NETWORK
     network = network_pwc_funneled_new(cfg, boot, gas);
+    pwc_network = (pwc_network_t*) network;
 #else
     log_level(LEVEL, "PWC network unavailable (no network configured)\n");
 #endif

@@ -43,6 +43,7 @@ typedef struct {
   PAD_TO_CACHELINE(sizeof(int));
 } pwc_network_t;
 
+extern pwc_network_t *pwc_network;
 /// Allocate and initialize a PWC network instance.
 network_t *network_pwc_funneled_new(const struct config *cfg, struct boot *boot,
                                     struct gas *gas)

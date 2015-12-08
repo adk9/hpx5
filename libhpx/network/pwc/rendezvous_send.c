@@ -61,20 +61,19 @@ typedef struct {
 /// We need to use a marshaled operation because we send the transport key by
 /// value and we don't have an FFI type to capture that.
 static int _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size) {
-  pwc_network_t *pwc = (pwc_network_t*)here->network;
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, args->n - sizeof(*p));
   dbg_assert(p);
   xport_op_t op = {
     .rank = args->rank,
     .n = args->n,
     .dest = p,
-    .dest_key = pwc->xport->key_find_ref(pwc->xport, p, args->n),
+    .dest_key = pwc_network->xport->key_find_ref(pwc_network->xport, p, args->n),
     .src = args->p,
     .src_key = &args->key,
     .lop = command_pack(_rendezvous_launch, (uintptr_t)p),
     .rop = command_pack(delete_parcel, (uintptr_t)args->p)
   };
-  int e = pwc->xport->gwc(&op);
+  int e = pwc_network->xport->gwc(&op);
   dbg_check(e, "could not issue get during rendezvous parcel\n");
   return HPX_SUCCESS;
 }
