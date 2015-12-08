@@ -105,7 +105,7 @@ network_t *network_new(config_t *cfg, boot_t *boot, struct gas *gas) {
     log_level(LEVEL, "%s network initialized\n", HPX_NETWORK_TO_STRING[type]);
   }
 
-  if (cfg->coalescing_enabled) {
+  if (cfg->coalescing_buffersize) {
     network =  coalesced_network_new(network, cfg);
   }
 

@@ -66,8 +66,6 @@ struct hpx_options_t
   enum enum_hpx_boot hpx_boot_arg;	/**< @brief HPX bootstrap method to use.  */
   char * hpx_boot_orig;	/**< @brief HPX bootstrap method to use original value given at command line.  */
   const char *hpx_boot_help; /**< @brief HPX bootstrap method to use help description.  */
-  int hpx_coalescing_enabled_flag;	/**< @brief Enable coalescing (default=off).  */
-  const char *hpx_coalescing_enabled_help; /**< @brief Enable coalescing help description.  */
   long hpx_coalescing_buffersize_arg;	/**< @brief Coalescing buffer size.  */
   char * hpx_coalescing_buffersize_orig;	/**< @brief Coalescing buffer size original value given at command line.  */
   const char *hpx_coalescing_buffersize_help; /**< @brief Coalescing buffer size help description.  */
@@ -220,7 +218,6 @@ struct hpx_options_t
   unsigned int hpx_heapsize_given ;	/**< @brief Whether hpx-heapsize was given.  */
   unsigned int hpx_gas_given ;	/**< @brief Whether hpx-gas was given.  */
   unsigned int hpx_boot_given ;	/**< @brief Whether hpx-boot was given.  */
-  unsigned int hpx_coalescing_enabled_given ;	/**< @brief Whether hpx-coalescing-enabled was given.  */
   unsigned int hpx_coalescing_buffersize_given ;	/**< @brief Whether hpx-coalescing-buffersize was given.  */
   unsigned int hpx_transport_given ;	/**< @brief Whether hpx-transport was given.  */
   unsigned int hpx_network_given ;	/**< @brief Whether hpx-network was given.  */

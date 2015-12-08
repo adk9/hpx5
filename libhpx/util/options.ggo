@@ -27,11 +27,8 @@ typestr="type"
 values="default","smp","mpi","pmi"
 enum optional
 
-option "hpx-coalescing-enabled" - "Enable coalescing"
-flag off
-
 option "hpx-coalescing-buffersize" - "Coalescing buffer size"
-typestr="coalescing_size"
+typestr="Integer"
 long optional
 
 option "hpx-transport" - "type of transport to use"
