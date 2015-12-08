@@ -260,7 +260,7 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int nargs, va_list *vargs) {
         sizes[i] = size;
         memcpy(args+n, arg, size);
         n += size + ALIGN(size, 8);
-      }      
+      }
     }
     return p;
   }
@@ -319,7 +319,7 @@ static hpx_parcel_t *_action_parcel_acquire(hpx_action_t action, int nargs,
     } else {
       va_list temp;
       va_copy(temp, *vargs);
-      
+
       int e = nargs % 2;
       dbg_assert_str(!e, "invalid number of vectored arguments %d\n", nargs);
 
@@ -469,6 +469,10 @@ bool action_is_marshalled(const struct action_table *table, hpx_action_t id) {
 
 bool action_is_vectored(const struct action_table *table, hpx_action_t id) {
   return (action_table_get_attr(table, id) & HPX_VECTORED);
+}
+
+bool action_is_coalesced(const struct action_table *table, hpx_action_t id) {
+  return (action_table_get_attr(table, id) & HPX_COALESCED);
 }
 
 bool action_is_internal(const struct action_table *table, hpx_action_t id) {

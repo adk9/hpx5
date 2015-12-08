@@ -128,6 +128,10 @@ bool action_is_function(const struct action_table *, hpx_action_t)
 bool action_is_opencl(const struct action_table *, hpx_action_t)
   HPX_NON_NULL(1);
 
+/// Is the action a  coalesced action?
+bool action_is_coalesced(const struct action_table *, hpx_action_t)
+  HPX_NON_NULL(1);
+
 /// Build an action table.
 ///
 /// This will process all of the registered actions, sorting them by key and
