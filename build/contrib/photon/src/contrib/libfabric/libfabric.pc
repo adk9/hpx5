@@ -1,0 +1,14 @@
+prefix=/u/jsfiroz/hpx_2_pre/hpx_simple_coalescing/hpx/install
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libfabric
+Description: OFI-WG libfabric
+URL: https://github.com/ofiwg/libfabric.git
+Version: 1.2.0
+Requires:  
+Cflags: -I${includedir}
+Libs: -L${libdir} -lfabric     -lnl -lm -lpthread -ldl 
+Libs.private:    -lnl -lm -lpthread -ldl  
+Requires.private: 

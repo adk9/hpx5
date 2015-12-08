@@ -1,0 +1,32 @@
+./commands.c:42:  return network_command(here->network, HPX_THERE(src), resume_parcel,
+./commands.c:51:  log_net("resuming %s, (%p)\n", action_table_get_key(here->actions, p->action),
+./commands.c:60:  dbg_assert(here && here->actions);
+./commands.c:61:  return action_table_get_key(here->actions, id);
+./commands.c:68:  hpx_action_handler_t handler = action_table_get_handler(here->actions, op);
+./tbbmalloc_registered.cc:31:/// here->network. We can simply capture the transport since we know we'll need
+./pwc.c:43:  int rank = here->rank;
+./pwc.c:98:  if (parcel_size(p) >= here->config->pwc_parceleagerlimit) {
+./pwc.c:103:  int rank = gas_owner_of(here->gas, p->target);
+./pwc.c:111:  int rank = gas_owner_of(here->gas, loc);
+./pwc.c:132:  int rank = gas_owner_of(here->gas, to);
+./pwc.c:161:  int rank = gas_owner_of(here->gas, from);
+./pwc.c:195:  boot_barrier(here->boot);
+./pwc.c:198:  for (int i = 0, e = here->ranks; i < e; ++i) {
+./pwc.c:202:  heap_segment_t *heap = &pwc->heap_segments[here->rank];
+./pwc.c:260:  pwc->send_buffers = calloc(here->ranks, sizeof(send_buffer_t));
+./pwc.c:261:  pwc->heap_segments = calloc(here->ranks, sizeof(heap_segment_t));
+./pwc.c:265:    .n = gas_local_size(here->gas),
+./pwc.c:266:    .base = gas_local_base(here->gas)
+./pwc.c:273:  heap_segment_t *segment = &pwc->heap_segments[here->rank];
+./pwc.c:279:  for (int i = 0, e = here->ranks; i < e; ++i) {
+./jemalloc_registered.c:27:/// here->network. We can simply capture the transport since we know we'll need
+./xport_photon.c:195:                                         &here->rank,  // src for command
+./reload.c:251:  pwc_network_t *pwc = (pwc_network_t*)here->network;
+./reload.c:258:  pwc_network_t *pwc = (pwc_network_t*)here->network;
+./rendezvous_send.c:64:  pwc_network_t *pwc = (pwc_network_t*)here->network;
+./rendezvous_send.c:88:    .rank = here->rank,
+./lco_get.c:31:  pwc_network_t *pwc = (pwc_network_t*)here->network;
+./lco_get.c:157:  pwc_network_t *pwc = (pwc_network_t*)here->network;
+./lco_get.c:215:  pwc_network_t *pwc = (pwc_network_t*)here->network;
+./lco_get.c:223:      .rank = here->rank,
+./lco_wait.c:37:  return pwc_command(here->network, curr->src, resume_parcel, p);

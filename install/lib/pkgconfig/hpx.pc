@@ -1,0 +1,14 @@
+prefix=/u/jsfiroz/hpx_2_pre/hpx_simple_coalescing/hpx/install
+exec_prefix=/u/jsfiroz/hpx_2_pre/hpx_simple_coalescing/hpx/install
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: hpx-5
+Description: The HPX-5 runtime system.
+URL: https://gitlab.crest.iu.edu/extreme/hpx
+Version: 2.0.0
+Requires:  jemalloc  photon ompi
+Cflags: -I${includedir}  -D_POSIX_C_SOURCE=200809L
+Libs: -L${libdir} -lhpx  -lrt -lffi -Wl,-rpath,${libdir} -pthread   -lhwloc -lm -lsync
+Libs.private: -Wl,-rpath,${libdir} -pthread   -lhwloc -lm -lsync
+Requires.private:  photon ompi

@@ -1,0 +1,79 @@
+#!/bin/sh
+
+usage() {
+	cat <<EOF
+Usage:
+  /u/jsfiroz/hpx_2_pre/hpx_simple_coalescing/hpx/install/bin/jemalloc-config <option>
+Options:
+  --help | -h  : Print usage.
+  --version    : Print jemalloc version.
+  --revision   : Print shared library revision number.
+  --config     : Print configure options used to build jemalloc.
+  --prefix     : Print installation directory prefix.
+  --bindir     : Print binary installation directory.
+  --datadir    : Print data installation directory.
+  --includedir : Print include installation directory.
+  --libdir     : Print library installation directory.
+  --mandir     : Print manual page installation directory.
+  --cc         : Print compiler used to build jemalloc.
+  --cflags     : Print compiler flags used to build jemalloc.
+  --cppflags   : Print preprocessor flags used to build jemalloc.
+  --ldflags    : Print library flags used to build jemalloc.
+  --libs       : Print libraries jemalloc was linked against.
+EOF
+}
+
+prefix="/u/jsfiroz/hpx_2_pre/hpx_simple_coalescing/hpx/install"
+exec_prefix="/u/jsfiroz/hpx_2_pre/hpx_simple_coalescing/hpx/install"
+
+case "$1" in
+--help | -h)
+	usage
+	exit 0
+	;;
+--version)
+	echo "4.0.4-0-g91010a9e2ebfc84b1ac1ed7fdde3bfed4f65f180"
+	;;
+--revision)
+	echo "2"
+	;;
+--config)
+	echo "--disable-option-checking --host=x86_64-unknown-linux-gnu --prefix=/u/jsfiroz/hpx_2_pre/hpx_simple_coalescing/hpx/install --enable-valgrind --enable-fill 'CPPFLAGS= -Dalways_inline=' EXTRA_CFLAGS= --cache-file=/dev/null --srcdir=../../../contrib/jemalloc host_alias=x86_64-unknown-linux-gnu 'CFLAGS=-O0 -g'"
+	;;
+--prefix)
+	echo "/u/jsfiroz/hpx_2_pre/hpx_simple_coalescing/hpx/install"
+	;;
+--bindir)
+	echo "/u/jsfiroz/hpx_2_pre/hpx_simple_coalescing/hpx/install/bin"
+	;;
+--datadir)
+	echo "/u/jsfiroz/hpx_2_pre/hpx_simple_coalescing/hpx/install/share"
+	;;
+--includedir)
+	echo "/u/jsfiroz/hpx_2_pre/hpx_simple_coalescing/hpx/install/include"
+	;;
+--libdir)
+	echo "/u/jsfiroz/hpx_2_pre/hpx_simple_coalescing/hpx/install/lib"
+	;;
+--mandir)
+	echo "/u/jsfiroz/hpx_2_pre/hpx_simple_coalescing/hpx/install/share/man"
+	;;
+--cc)
+	echo "x86_64-unknown-linux-gnu-gcc"
+	;;
+--cflags)
+	echo "-O0 -g -fvisibility=hidden"
+	;;
+--cppflags)
+	echo " -Dalways_inline= -D_GNU_SOURCE -D_REENTRANT"
+	;;
+--ldflags)
+	echo " "
+	;;
+--libs)
+	echo " -lpthread"
+	;;
+*)
+	usage
+	exit 1
+esac

@@ -1,0 +1,14 @@
+prefix=/u/jsfiroz/hpx_2_pre/hpx_simple_coalescing/hpx/install
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: photon
+Description: Photon.
+URL: https://gitlab.crest.iu.edu/damsl/photon
+Version: 1.0
+Requires:   libfabric
+Cflags: -I${includedir}
+Libs: -L${libdir} -lphoton  -lrt -pthread   -libverbs -lrdmacm
+Libs.private: -pthread   -libverbs -lrdmacm 
+Requires.private:  libfabric
