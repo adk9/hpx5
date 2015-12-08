@@ -81,6 +81,34 @@ _funneled_delete(void *network) {
   free(isir);
 }
 
+// todo remove
+#include <mpi.h>
+#include "parcel_utils.h"
+
+int _funneled_coll_sync(void *network, hpx_parcel_t *in, void* out, coll_t c){
+  MPI_Comm active_comm;
+  MPI_Group active_group, world_group;	
+  MPI_Comm_group ( MPI_COMM_WORLD, &world_group);
+  int* active_ranks;
+  int num_active;
+  //todo 
+  active_ranks = malloc(sizeof(int)* c.group_sz);
+  for (int i = 0; i < c.group_sz; ++i) {
+    hpx_addr_t loc = c.group[i];
+    active_ranks[i] = gas_owner_of(here->gas, loc);
+  }
+
+  MPI_Group_incl ( world_group, num_active, active_ranks, &active_group);
+  MPI_Comm_create ( MPI_COMM_WORLD, active_group, &active_comm);
+  
+  void *sendbuf = in->buffer;
+  int count     = in->size;
+
+  MPI_Allreduce(sendbuf, out, count, MPI_BYTE, MPI_SUM, active_group);
+
+  return LIBHPX_OK;
+}
+
 static int
 _funneled_send(void *network, hpx_parcel_t *p) {
   _funneled_t *isir = network;
@@ -241,6 +269,7 @@ network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
   network->vtable.delete = _funneled_delete;
   network->vtable.progress = _funneled_progress;
   network->vtable.send = _funneled_send;
+  network->vtable.coll_sync = _funneled_coll_sync;
   network->vtable.command = _funneled_command;
   network->vtable.pwc = _funneled_pwc;
   network->vtable.put = _funneled_put;
