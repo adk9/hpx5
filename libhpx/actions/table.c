@@ -36,7 +36,7 @@
 _ACTION_TABLE_GET(const char *, key, NULL);
 _ACTION_TABLE_GET(hpx_action_type_t, type, HPX_ACTION_INVALID);
 _ACTION_TABLE_GET(uint32_t, attr, 0);
-_ACTION_TABLE_GET(hpx_action_handler_t, handler, NULL);
+_ACTION_TABLE_GET(handler_t, handler, NULL);
 _ACTION_TABLE_GET(ffi_cif *, cif, NULL);
 _ACTION_TABLE_GET(void *, env, NULL);
 

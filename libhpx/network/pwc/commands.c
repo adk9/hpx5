@@ -65,7 +65,7 @@ int
 command_run(int src, command_t cmd) {
   hpx_addr_t op = command_get_op(cmd);
   log_net("invoking command: %s from %d\n", _straction(op), src);
-  hpx_action_handler_t handler = action_table_get_handler(here->actions, op);
+  handler_t handler = action_table_get_handler(here->actions, op);
   command_handler_t f = (command_handler_t)(handler);
   return f(src, cmd);
 }

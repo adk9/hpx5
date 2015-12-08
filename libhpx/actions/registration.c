@@ -69,8 +69,8 @@ static action_table_t *_get_actions(void) {
 ///
 /// @return             HPX_SUCCESS or an error if the push fails.
 static int _push_back(action_table_t *table, hpx_action_t *id, const char *key,
-                      hpx_action_handler_t f, hpx_action_type_t type,
-                      uint32_t attr, ffi_cif *cif, void *env) {
+                      handler_t f, hpx_action_type_t type, uint32_t attr,
+                      ffi_cif *cif, void *env) {
   int i = table->n++;
   if (_ACTION_MAX < i) {
     dbg_error("action table overflow\n");
@@ -83,6 +83,7 @@ static int _push_back(action_table_t *table, hpx_action_t *id, const char *key,
   back->attr = attr;
   back->cif = cif;
   back->env = env;
+  entry_set_execute(back);
   return HPX_SUCCESS;
 }
 
@@ -135,7 +136,7 @@ const action_table_t *action_table_finalize(void) {
   for (int i = 1, e = table->n; i < e; ++i) {
     const char *key = table->entries[i].key;
     hpx_action_type_t type = table->entries[i].type;
-    hpx_action_handler_t f = table->entries[i].handler;
+    void (*f)(void) = table->entries[i].handler;
     (void) key, (void) type, (void) f;
 
 #ifdef HAVE_PERCOLATION
@@ -176,10 +177,9 @@ void action_table_free(const action_table_t *table) {
   free((void*)table);
 }
 
-static int
-_register_action_va(hpx_action_type_t type, uint32_t attr,
-                    const char *key, hpx_action_t *id, hpx_action_handler_t f,
-                    int system, unsigned int nargs, va_list vargs) {
+static int _register_action_va(hpx_action_type_t type, uint32_t attr,
+                               const char *key, hpx_action_t *id, handler_t f,
+                               int system, unsigned int nargs, va_list vargs) {
   dbg_assert(id);
   *id = HPX_ACTION_INVALID;
 
@@ -239,10 +239,9 @@ _register_action_va(hpx_action_type_t type, uint32_t attr,
   return _push_back(_get_actions(), id, key, f, type, attr, cif, NULL);
 }
 
-int
-libhpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
-                       hpx_action_t *id, hpx_action_handler_t f,
-                       unsigned int nargs, ...) {
+int libhpx_register_action(hpx_action_type_t type, uint32_t attr,
+                           const char *key, hpx_action_t *id, handler_t f,
+                           unsigned nargs, ...) {
   va_list vargs;
   va_start(vargs, nargs);
   int e = _register_action_va(type, attr, key, id, f, 1, nargs, vargs);
@@ -250,10 +249,9 @@ libhpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
   return e;
 }
 
-int
-hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
-                    hpx_action_t *id, hpx_action_handler_t f,
-                    unsigned int nargs, ...) {
+int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
+                        hpx_action_t *id, handler_t f, unsigned nargs,
+                        ...) {
   va_list vargs;
   va_start(vargs, nargs);
   int e = _register_action_va(type, attr, key, id, f, 0, nargs, vargs);

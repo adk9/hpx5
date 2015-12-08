@@ -78,7 +78,7 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id) {
   const action_table_t *table = here->actions;
   CHECK_BOUND(table, id);
   const action_entry_t *entry = &table->entries[id];
-  return entry->handler;
+  return (hpx_action_handler_t)entry->handler;
 }
 
 int action_call_va(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,

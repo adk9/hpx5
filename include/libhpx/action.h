@@ -20,6 +20,7 @@
 ///
 struct action_table;
 struct hpx_parcel;
+typedef void (*handler_t)(void);
 
 /// Register an HPX action of a given @p type. This is similar to the
 /// hpx_register_action routine, except that it gives us the chance to "tag"
@@ -36,11 +37,9 @@ struct hpx_parcel;
 /// @param   ... The HPX types of the action parameters (HPX_INT, ...).
 ///
 /// @returns     HPX_SUCCESS or an error code
-
 int libhpx_register_action(hpx_action_type_t type, uint32_t attr,
-                           const char *key, hpx_action_t *id,
-                           hpx_action_handler_t f, unsigned int nargs, ...);
-
+                           const char *key, hpx_action_t *id, void (*f)(void),
+                           unsigned nargs, ...);
 
 /// Get the key for an action.
 const char *action_table_get_key(const struct action_table *, hpx_action_t)
@@ -52,8 +51,8 @@ hpx_action_type_t action_table_get_type(const struct action_table *,
   HPX_NON_NULL(1);
 
 /// Get the key for an action.
-hpx_action_handler_t action_table_get_handler(const struct action_table *,
-                                              hpx_action_t)
+handler_t action_table_get_handler(const struct action_table *,
+                                        hpx_action_t)
   HPX_NON_NULL(1);
 
 /// Get the FFI type information associated with an action.
@@ -152,7 +151,7 @@ void action_table_free(const struct action_table *action)
 /// @param __VA_ARGS__ The parameter types (HPX_INT, ...).
 #define LIBHPX_REGISTER_ACTION(type, attr, id, handler, ...)          \
   libhpx_register_action(type, attr, __FILE__ ":" _HPX_XSTR(id),      \
-                         &id, (hpx_action_handler_t)handler,          \
+                         &id, (handler_t)handler,          \
                          __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 /// Create an action id for a function, so that it can be called asynchronously.
