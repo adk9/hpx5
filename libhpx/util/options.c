@@ -486,8 +486,7 @@ config_print(config_t *cfg, FILE *f) {
   fprintf(f, "  smp\t\t\t%d\n", cfg->opt_smp);
 
   fprintf(f, "\nCoalescing parameters\n");
-  fprintf(f, " Coalescing enabled\t\t%d", cfg->coalescing_enabled);
-  //fprintf(f, " Coalescing buffer size\t\t%d", cfg->coalescing_buffersize);
+  fprintf(f, " Coalescing buffer size\t\t%d", cfg->coalescing_buffersize);
 
 
   fprintf(f, "------------------------\n"
