@@ -77,6 +77,16 @@ int32_t hpx_process_collective_allreduce_subscribe(hpx_addr_t allreduce,
   hpx_addr_t leaf = hpx_addr_add(allreduce, here->rank * BSIZE, BSIZE);
   dbg_check( hpx_call_sync(leaf, allreduce_add_async, &id, sizeof(id),
                            &c_action, &c_target) );
+  allreduce_t *r = NULL;
+  hpx_addr_t root = HPX_NULL;
+  if (!hpx_gas_try_pin(leaf, (void*)&r)) {
+    dbg_error("could not pin local element for an allreduce\n");
+  }
+  root = r->parent;
+  hpx_gas_unpin(leaf);
+
+  dbg_check( hpx_call_sync(root, allreduce_bcast_comm_async, NULL, 0,
+                           NULL, 0) );
   return id;
 }
 
