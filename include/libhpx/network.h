@@ -32,6 +32,20 @@ struct gas;
 struct transport;
 /// @}
 
+/// collective definitions/interfaces
+typedef enum {
+  ALL_REDUCE = 1000 ,
+} coll_type_t;
+
+typedef struct collective{
+  coll_type_t      type;   // type of collective operation
+  hpx_monoid_op_t    op;   // collective operator 
+  int32_t      group_sz;   // active group size
+  int32_t    recv_count;   // how many bytes to be recieved
+  int32_t    comm_bytes;   // active comm size in bytes
+  int32_t   group_bytes;   // active group size in bytes
+  char           data[];   // variable data - group of localities + communicator
+} coll_t;
 /// All network objects implement the network interface.
 typedef struct network {
   int type;
@@ -43,6 +57,9 @@ typedef struct network {
   int (*progress)(void*, int);
 
   int (*send)(void*, hpx_parcel_t *p);
+
+  int (*coll_init)(void*, coll_t** c);
+  int (*coll_sync)(void*, hpx_parcel_t *in, void* out, coll_t* c);
 
   int (*lco_wait)(void *, hpx_addr_t lco, int reset);
   int (*lco_get)(void *, hpx_addr_t lco, size_t n, void *to, int reset);
