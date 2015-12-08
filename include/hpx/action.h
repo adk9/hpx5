@@ -71,7 +71,8 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
   "TASK",
   "INTERRUPT",
   "FUNCTION",
-  "OPENCL"
+  "OPENCL",
+  "COALESCED"
 };
 
 /// @name Action attributes.
@@ -88,6 +89,8 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
 #define HPX_INTERNAL   0x4
 // Action is a vectored action
 #define HPX_VECTORED   0x8
+// Action is a coalesced action
+#define HPX_COALESCED 0x16
 //@}
 
 /// Register an HPX action of a given @p type.
