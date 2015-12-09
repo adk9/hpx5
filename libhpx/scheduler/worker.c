@@ -265,8 +265,11 @@ static hpx_parcel_t *_try_bind(worker_t *w, hpx_parcel_t *p) {
               "are trying to start a lightweight thread at the same time.\n",
               (void*)old, (void*)stack, (void*)p);
   }
+
+  // avoid unused variable warning
+  (void)old;
+
   return p;
-  (void)old;                                    // avoid unused variable warning
 }
 
 static chase_lev_ws_deque_t *_work(worker_t *worker) {

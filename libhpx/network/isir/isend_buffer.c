@@ -434,8 +434,8 @@ int isend_buffer_progress(isend_buffer_t *isends) {
     log_net("failed to start %d sends\n", n);
   }
 
-  return m;
-
   // avoid unused errors.
   (void)n;
+
+  return m;
 }
