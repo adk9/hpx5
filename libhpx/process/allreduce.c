@@ -38,6 +38,7 @@ void allreduce_fini(allreduce_t *r) {
   reduce_delete(r->reduce);
 }
 
+#include "inttypes.h"
 
 int32_t allreduce_add(allreduce_t *r, hpx_action_t op, hpx_addr_t addr) {
   int32_t i = 0;
@@ -51,13 +52,14 @@ int32_t allreduce_add(allreduce_t *r, hpx_action_t op, hpx_addr_t addr) {
   if(!r->parent){
    int i = r->n_loc++;
    r->loc[i] = addr;
-  }
-
+   printf("root add location : %"PRId64"  idx : %d \n", r->loc[i], i);
+  }	
   // extend the local reduction, if this is the first input then we need to
   // recursively tell our parent (if we have one) that we exist, and that we
   // need to have our bcast action run as a continuation
   if (reduce_add(r->reduce) && r->parent) {
     hpx_addr_t allreduce = hpx_thread_current_target();
+    printf("====non root location : %"PRId64"  parent : %"PRId64" \n", allreduce, r->parent);
     dbg_check( hpx_call_sync(r->parent, allreduce_add_async, &r->id,
                              sizeof(r->id), &allreduce_bcast_async,
                              &allreduce) );
@@ -115,6 +117,7 @@ void allreduce_reduce(allreduce_t *r, const void *val) {
 
   //call all local continuations to communicate the result
   continuation_trigger(r->continuation, output);
+  printf("reduce done ...current_node : %"PRId64" \n", hpx_thread_current_target());
 
   return;
 #endif
@@ -155,6 +158,8 @@ void allreduce_bcast_comm(allreduce_t *r, const void *loc_array, int n) {
     hpx_parcel_set_data(p, r->loc, bytes);
     hpx_parcel_set_action(p, allreduce_bcast_comm_async);
     hpx_parcel_set_target(p, r->loc[i]);
+    hpx_parcel_set_cont_action(p, hpx_lco_set_action);
+    hpx_parcel_set_cont_target(p, and);
     parcel_launch(p);
   }
   hpx_lco_wait(and);
@@ -166,6 +171,7 @@ void allreduce_bcast_comm(allreduce_t *r, const void *loc_array, int n) {
     r->n_loc = n ;
     for (int i = 0; i < n; ++i) {
       r->loc[i] = ((hpx_addr_t*)loc_array)[i];	
+      printf("broadcast task current_node : %"PRId64"  idx: %d  loc : %"PRId64" \n", hpx_thread_current_target(), i, r->loc[i] );
     }
   }
 }
