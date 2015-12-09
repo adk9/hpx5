@@ -100,7 +100,6 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int nargs, va_list *vargs) {
   return p;
 }
 
-
 static hpx_parcel_t *_parcel_acquire(hpx_action_t id, int n, va_list *args) {
   dbg_assert(!n || args);
 
@@ -144,7 +143,7 @@ static hpx_parcel_t *_parcel_acquire(hpx_action_t id, int n, va_list *args) {
   va_copy(temp, *args);
   va_arg(temp, void*);
   for (int i = 0, e = ntuples; i < e; ++i, va_arg(temp, void*)) {
-    bytes += ALIGN(n, 8);
+    bytes += ALIGN(bytes, 8);
     bytes += va_arg(temp, int);
   }
   va_end(temp);
