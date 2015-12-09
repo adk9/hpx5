@@ -125,29 +125,29 @@ int action_execute(hpx_parcel_t *p) {
   const action_table_t *table = here->actions;
   CHECK_BOUND(table, id);
   const action_entry_t *entry = &table->entries[id];
-  return entry->execute(entry, p);
+  return entry->execute_parcel(entry, p);
 }
 
-void entry_set_execute(action_entry_t *entry) {
+void entry_init_execute_parcel(action_entry_t *entry) {
   uint32_t attr = entry->attr & ~(HPX_INTERNAL);
   switch (attr) {
    case (HPX_ATTR_NONE):
-    entry->execute = _execute_ffi;
+    entry->execute_parcel = _execute_ffi;
     return;
    case (HPX_PINNED):
-    entry->execute = _execute_pinned_ffi;
+    entry->execute_parcel = _execute_pinned_ffi;
     return;
    case (HPX_MARSHALLED):
-    entry->execute = _execute_marshalled;
+    entry->execute_parcel = _execute_marshalled;
     return;
    case (HPX_PINNED | HPX_MARSHALLED):
-    entry->execute = _execute_pinned_marshalled;
+    entry->execute_parcel = _execute_pinned_marshalled;
     return;
    case (HPX_MARSHALLED | HPX_VECTORED):
-    entry->execute = _execute_vectored;
+    entry->execute_parcel = _execute_vectored;
     return;
    case (HPX_PINNED | HPX_MARSHALLED | HPX_VECTORED):
-    entry->execute = _execute_pinned_vectored;
+    entry->execute_parcel = _execute_pinned_vectored;
     return;
   }
   dbg_error("Could not find an execution handler for attr %" PRIu32 "\n",

@@ -26,8 +26,8 @@
 /// environment pointer.
 ///
 typedef struct {
-  int          (*execute)(const void *obj, hpx_parcel_t *buffer);
-  void    (*pack_args_va)(const void *obj, hpx_parcel_t *p, int n, va_list *vargs);
+  int           (*execute_parcel)(const void *obj, hpx_parcel_t *buffer);
+  hpx_parcel_t *(*new_parcel)(const void *obj, int n, va_list *args);
   handler_t      handler;
   hpx_action_t       *id;
   const char        *key;
@@ -43,8 +43,8 @@ typedef struct action_table {
   action_entry_t entries[];
 } action_table_t;
 
-void entry_set_execute(action_entry_t *entry);
-void entry_set_pack_args(action_entry_t *entry);
+void entry_init_execute_parcel(action_entry_t *entry);
+void entry_init_new_parcel(action_entry_t *entry);
 
 #ifdef ENABLE_DEBUG
 void CHECK_BOUND(const action_table_t *table, hpx_action_t id);
