@@ -27,6 +27,7 @@
 ///
 typedef struct {
   int           (*execute_parcel)(const void *obj, hpx_parcel_t *buffer);
+  void          (*pack_buffer)(const void *obj, void *buffer, int n, va_list *args);
   hpx_parcel_t *(*new_parcel)(const void *obj, hpx_addr_t addr,
                               hpx_addr_t c_addr, hpx_action_t c_action,
                               int n, va_list *args);
@@ -46,6 +47,7 @@ typedef struct action_table {
 } action_table_t;
 
 void entry_init_execute_parcel(action_entry_t *entry);
+void entry_init_pack_buffer(action_entry_t *entry);
 void entry_init_new_parcel(action_entry_t *entry);
 
 #ifdef ENABLE_DEBUG

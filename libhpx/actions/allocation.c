@@ -23,82 +23,73 @@
 #include <libhpx/parcel.h>
 #include "table.h"
 
-hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int nargs, va_list *vargs) {
-  dbg_assert(p);
+static void _pack_ffi_0(const void *obj, void *b, int n, va_list *args) {
+  // nothing to do
+}
 
-  if (!nargs) {
-    return p;
+static void _pack_ffi_n(const void *obj, void *b, int n, va_list *args) {
+  const action_entry_t *entry = obj;
+  const ffi_cif          *cif = entry->cif;
+
+  DEBUG_IF (n != cif->nargs) {
+    const char *key = entry->key;
+    dbg_error("%s requires %d arguments (%d given).\n", key, cif->nargs, n);
   }
 
-  if (p->action == HPX_ACTION_NULL) {
-    dbg_error("parcel must have an action to serialize arguments.\n");
-  }
-
-  const action_table_t *actions = here->actions;
-  CHECK_BOUND(actions, p->action);
-  const action_entry_t   *entry = &actions->entries[p->action];
-  const ffi_cif            *cif = entry->cif;
-  const char               *key = entry->key;
-  uint32_t                 attr = entry->attr;
-
-  bool marshalled = attr & HPX_MARSHALLED;
-  bool     pinned = attr & HPX_PINNED;
-  bool   vectored = attr & HPX_VECTORED;
-
-  if (marshalled) {
-    if (vectored) {
-      nargs >>= 1;
-      void *buf = hpx_parcel_get_data(p);
-      *(int*)buf = nargs;
-      size_t *sizes = (size_t*)((char*)buf + sizeof(int));
-      void *args = (char*)sizes + (sizeof(size_t) * nargs);
-
-      size_t n = ALIGN(args-buf, 8);
-      for (int i = 0; i < nargs; ++i) {
-        void *arg = va_arg(*vargs, void*);
-        size_t size = va_arg(*vargs, int);
-        sizes[i] = size;
-        memcpy(args+n, arg, size);
-        n += size + ALIGN(size, 8);
-      }
-    }
-    return p;
-  }
-
-  // pinned actions have an implicit pointer, so update the caller's value
-  if (pinned) {
-    nargs++;
-  }
-
-  // if it's a 0-adic action, ignore the arguments
-  if (cif->nargs == pinned) {
-    return p;
-  }
-
-  if (nargs != cif->nargs) {
-    dbg_error("%s requires %d arguments (%d given).\n", key, cif->nargs, nargs);
-  }
-
-  dbg_assert(ffi_raw_size((void*)cif) > 0);
-
-  // copy the vaargs (pointers) to my stack array, which is what ffi wants
-  void *argps[nargs];
-  int i = 0;
-
-  // special case pinned actions
-  if (pinned) {
-    argps[i++] = &argps[0];
-  }
-
-  // copy the individual vaargs
-  while (i < nargs) {
-    argps[i++] = va_arg(*vargs, void*);
+  // copy the vaargs (pointers) to my stack array, which is what ffi
+  // wants---this seems wasteful since va_args are likely *already* on my stack,
+  // but that's not public information
+  void *argps[n];
+  for (int i = 0, e = n; i < e; ++i) {
+    argps[i] = va_arg(*args, void*);
   }
 
   // use ffi to copy them to the buffer
-  ffi_raw *to = hpx_parcel_get_data(p);
-  ffi_ptrarray_to_raw((void*)cif, argps, to);
-  return p;
+  ffi_ptrarray_to_raw((void*)cif, argps, b);
+}
+
+static void _pack_pinned_ffi_n(const void *obj, void *b, int n, va_list *args) {
+  const action_entry_t *entry = obj;
+  const ffi_cif          *cif = entry->cif;
+
+  DEBUG_IF (n + 1 != cif->nargs) {
+    const char *key = entry->key;
+    dbg_error("%s requires %d arguments (%d given).\n", key, cif->nargs, n + 1);
+  }
+
+  // Copy the vaargs (pointers) to my stack array, which is what ffi wants,
+  // adding an extra "slot" for the pinned parameter.
+  void *argps[++n];
+
+  // special case pinned actions
+  argps[0] = &argps[0];
+
+  // copy the individual vaargs
+  for (int i = 1, e = n; i < e; ++i) {
+    argps[i] = va_arg(*args, void*);
+  }
+
+  // use ffi to copy them to the buffer
+  ffi_ptrarray_to_raw((void*)cif, argps, b);
+}
+
+static void _pack_marshalled(const void *obj, void *b, int n, va_list *args) {
+}
+
+static void _pack_vectored(const void *obj, void *b, int n, va_list *vargs) {
+  n >>= 1;
+  *(int*)b = n;
+  size_t *sizes = (size_t*)((char*)b + sizeof(int));
+  void *args = (char*)sizes + (sizeof(size_t) * n);
+
+  size_t bytes = ALIGN(args-b, 8);
+  for (int i = 0; i < n; ++i) {
+    void *arg = va_arg(*vargs, void*);
+    size_t size = va_arg(*vargs, int);
+    sizes[i] = size;
+    memcpy(args+bytes, arg, size);
+    bytes += size + ALIGN(size, 8);
+  }
 }
 
 static hpx_parcel_t *_new_marshalled(const void *obj, hpx_addr_t addr,
@@ -115,15 +106,39 @@ static hpx_parcel_t *_new_marshalled(const void *obj, hpx_addr_t addr,
   return parcel_new(addr, action, c_addr, c_action, pid, data, bytes);
 }
 
-static hpx_parcel_t *_new_ffi(const void *obj, hpx_addr_t addr,
-                              hpx_addr_t c_addr, hpx_action_t c_action,
-                              int n, va_list *args) {
+static hpx_parcel_t *_new_ffi_0(const void *obj, hpx_addr_t addr,
+                                hpx_addr_t c_addr, hpx_action_t c_action,
+                                int n, va_list *args) {
+  const action_entry_t *entry = obj;
+  hpx_action_t id = *entry->id;
+  hpx_pid_t pid = hpx_thread_current_pid();
+  return parcel_new(addr, id, c_addr, c_action, pid, NULL, 0);
+}
+
+static hpx_parcel_t *_new_ffi_n(const void *obj, hpx_addr_t addr,
+                                hpx_addr_t c_addr, hpx_action_t c_action,
+                                int n, va_list *args) {
   const action_entry_t *entry = obj;
   hpx_action_t id = *entry->id;
   hpx_pid_t pid = hpx_thread_current_pid();
   size_t bytes = ffi_raw_size(entry->cif);
   hpx_parcel_t *p = parcel_new(addr, id, c_addr, c_action, pid, NULL, bytes);
-  return action_pack_args(p, n, args);
+  void *buffer = hpx_parcel_get_data(p);
+  _pack_ffi_n(obj, buffer, n, args);
+  return p;
+}
+
+static hpx_parcel_t *_new_pinned_ffi_n(const void *obj, hpx_addr_t addr,
+                                       hpx_addr_t c_addr, hpx_action_t c_action,
+                                       int n, va_list *args) {
+  const action_entry_t *entry = obj;
+  hpx_action_t id = *entry->id;
+  hpx_pid_t pid = hpx_thread_current_pid();
+  size_t bytes = ffi_raw_size(entry->cif);
+  hpx_parcel_t *p = parcel_new(addr, id, c_addr, c_action, pid, NULL, bytes);
+  void *buffer = hpx_parcel_get_data(p);
+  _pack_pinned_ffi_n(obj, buffer, n, args);
+  return p;
 }
 
 static hpx_parcel_t *_new_vectored(const void *obj, hpx_addr_t addr,
@@ -157,24 +172,66 @@ static hpx_parcel_t *_new_vectored(const void *obj, hpx_addr_t addr,
   va_end(temp);
 
   hpx_parcel_t *p = parcel_new(addr, id, c_addr, c_action, pid, NULL, bytes);
-  return action_pack_args(p, n, args);
+  void *buffer = hpx_parcel_get_data(p);
+  _pack_vectored(obj, buffer, n, args);
+  return p;
 }
 
 void entry_init_new_parcel(action_entry_t *entry) {
-  uint32_t attr = entry->attr & (HPX_MARSHALLED | HPX_VECTORED);
+  uint32_t attr = entry->attr & (HPX_PINNED | HPX_MARSHALLED | HPX_VECTORED);
   switch (attr) {
    case (HPX_ATTR_NONE):
-    entry->new_parcel = _new_ffi;
+    dbg_assert(entry->cif);
+    entry->new_parcel = (entry->cif->nargs) ? _new_ffi_n : _new_ffi_0;
+    return;
+   case (HPX_PINNED):
+    dbg_assert(entry->cif);
+    entry->new_parcel = (entry->cif->nargs) ? _new_pinned_ffi_n : _new_ffi_0;
     return;
    case (HPX_MARSHALLED):
+   case (HPX_PINNED | HPX_MARSHALLED):
     entry->new_parcel = _new_marshalled;
     return;
    case (HPX_MARSHALLED | HPX_VECTORED):
+   case (HPX_PINNED | HPX_MARSHALLED | HPX_VECTORED):
     entry->new_parcel = _new_vectored;
     return;
   }
   dbg_error("Could not find a new parcel handler for attr %" PRIu32 "\n",
             entry->attr);
+}
+
+void entry_init_pack_buffer(action_entry_t *entry) {
+  uint32_t attr = entry->attr & (HPX_PINNED | HPX_MARSHALLED | HPX_VECTORED);
+  switch (attr) {
+   case (HPX_ATTR_NONE):
+    dbg_assert(entry->cif);
+    entry->pack_buffer = (entry->cif->nargs) ? _pack_ffi_n : _pack_ffi_0;
+    return;
+   case (HPX_PINNED):
+    dbg_assert(entry->cif);
+    entry->pack_buffer = (entry->cif->nargs) ? _pack_pinned_ffi_n : _pack_ffi_0;
+    return;
+   case (HPX_MARSHALLED):
+   case (HPX_PINNED | HPX_MARSHALLED):
+    entry->pack_buffer = _pack_marshalled;
+    return;
+   case (HPX_MARSHALLED | HPX_VECTORED):
+   case (HPX_PINNED | HPX_MARSHALLED | HPX_VECTORED):
+    entry->pack_buffer = _pack_vectored;
+    return;
+  }
+  dbg_error("Could not find a new pack buffer handler for attr %" PRIu32 "\n",
+            entry->attr);
+}
+
+hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *args) {
+  const action_table_t *actions = here->actions;
+  CHECK_BOUND(actions, p->action);
+  const action_entry_t *entry = &actions->entries[p->action];
+  void *buffer = hpx_parcel_get_data(p);
+  entry->pack_buffer(entry, buffer, n, args);
+  return p;
 }
 
 hpx_parcel_t *action_create_parcel_va(hpx_addr_t addr, hpx_action_t action,
