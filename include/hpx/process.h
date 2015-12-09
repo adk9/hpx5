@@ -186,6 +186,17 @@ int32_t hpx_process_collective_allreduce_subscribe(hpx_addr_t allreduce,
                                                    hpx_addr_t c_target)
   HPX_PUBLIC;
 
+/// Finalize subscription from an allreduce.
+///
+/// This notifies all the participant groups about the current active 
+/// group and its properties in preparation for collective call ahead
+///
+/// @param    allreduce The allreduce to finalize from.
+///
+int hpx_process_collective_allreduce_subscribe_finalize(hpx_addr_t allreduce)
+
+  HPX_PUBLIC;
+
 /// Unsubscribe from an allreduce.
 ///
 /// This notifies the process that a participant at the current locality is

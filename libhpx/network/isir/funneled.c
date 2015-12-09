@@ -84,28 +84,45 @@ _funneled_delete(void *network) {
 // todo remove
 #include <mpi.h>
 #include "parcel_utils.h"
+#include <inttypes.h>
 
 int _funneled_coll_sync(void *network, hpx_parcel_t *in, void* out, coll_t c){
   MPI_Comm active_comm;
   MPI_Group active_group, world_group;	
   MPI_Comm_group ( MPI_COMM_WORLD, &world_group);
   int* active_ranks;
-  int num_active;
+  int num_active = c.group_sz;
   //todo 
   active_ranks = malloc(sizeof(int)* c.group_sz);
   for (int i = 0; i < c.group_sz; ++i) {
     hpx_addr_t loc = c.group[i];
     active_ranks[i] = gas_owner_of(here->gas, loc);
+    printf("active ranks : %d  rank id : %d  gas loc : %"PRId64" \n", c.group_sz, active_ranks[i], loc );
   }
+
+  //flushing network is necessary (sufficient ?) to execute any packets
+  //destined for collective operation
+  _funneled_t* isir = network;
+  isir->vtable.flush(network);
 
   MPI_Group_incl ( world_group, num_active, active_ranks, &active_group);
   MPI_Comm_create ( MPI_COMM_WORLD, active_group, &active_comm);
-  
+  /*sleep(10);*/
   void *sendbuf = in->buffer;
   int count     = in->size;
 
-  MPI_Allreduce(sendbuf, out, count, MPI_BYTE, MPI_SUM, active_group);
+  printf("COLLECTIVE call ... current rank: %d count bytes: %d  partial reduction : %d \n", 
+		  gas_owner_of(here->gas, hpx_thread_current_target()), count, *((int*)sendbuf) ); 
 
+  MPI_Request r;
+  MPI_Status status;
+  int flag = 0 ;
+  MPI_Iallreduce(sendbuf, out, count, MPI_BYTE, MPI_SUM, active_comm, &r);
+
+  while(!flag){
+  	MPI_Test(&r, &flag, &status);
+	hpx_thread_yield();
+  }
   return LIBHPX_OK;
 }
 
