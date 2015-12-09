@@ -27,7 +27,9 @@
 ///
 typedef struct {
   int           (*execute_parcel)(const void *obj, hpx_parcel_t *buffer);
-  hpx_parcel_t *(*new_parcel)(const void *obj, int n, va_list *args);
+  hpx_parcel_t *(*new_parcel)(const void *obj, hpx_addr_t addr,
+                              hpx_addr_t c_addr, hpx_action_t c_action,
+                              int n, va_list *args);
   handler_t      handler;
   hpx_action_t       *id;
   const char        *key;

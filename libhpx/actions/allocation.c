@@ -15,6 +15,7 @@
 # include "config.h"
 #endif
 
+#include <inttypes.h>
 #include <string.h>
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
@@ -100,33 +101,40 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int nargs, va_list *vargs) {
   return p;
 }
 
-static hpx_parcel_t *_parcel_acquire(hpx_action_t id, int n, va_list *args) {
-  dbg_assert(!n || args);
+static hpx_parcel_t *_new_marshalled(const void *obj, hpx_addr_t addr,
+                                     hpx_addr_t c_addr, hpx_action_t c_action,
+                                     int n, va_list *args) {
+  dbg_assert_str(!n || args);
+  dbg_assert(!n || n == 2);
 
-  if (!n) {
-    return hpx_parcel_acquire(NULL, 0);
-  }
+  const action_entry_t *entry = obj;
+  hpx_action_t action = *entry->id;
+  hpx_pid_t pid = hpx_thread_current_pid();
+  void *data = (n) ? va_arg(*args, void*) : NULL;
+  int bytes = (n) ? va_arg(*args, int) : 0;
+  return parcel_new(addr, action, c_addr, c_action, pid, data, bytes);
+}
 
-  const action_table_t *actions = here->actions;
-  CHECK_BOUND(actions, id);
-  const action_entry_t *entry = &actions->entries[id];
+static hpx_parcel_t *_new_ffi(const void *obj, hpx_addr_t addr,
+                              hpx_addr_t c_addr, hpx_action_t c_action,
+                              int n, va_list *args) {
+  const action_entry_t *entry = obj;
+  hpx_action_t id = *entry->id;
+  hpx_pid_t pid = hpx_thread_current_pid();
+  size_t bytes = ffi_raw_size(entry->cif);
+  hpx_parcel_t *p = parcel_new(addr, id, c_addr, c_action, pid, NULL, bytes);
+  return action_pack_args(p, n, args);
+}
 
-  // Typed actions have fixed size stored in the ffi cif, and can ignore the
-  // varargs.
-  if (!entry_is_marshalled(entry)) {
-    size_t bytes = ffi_raw_size(entry->cif);
-    return hpx_parcel_acquire(NULL, bytes);
-  }
+static hpx_parcel_t *_new_vectored(const void *obj, hpx_addr_t addr,
+                                   hpx_addr_t c_addr, hpx_action_t c_action,
+                                   int n, va_list *args) {
+  dbg_assert(n && args);
+  dbg_assert_str(!(n & 1), "Vectored actions require even arg count: %d\n", n);
 
-  dbg_check(n & 1, "Untyped actions require even arg count: %d\n", n);
-
-  // Marshalled actions pass the size (and data) in the varargs. We're doing
-  // part of the argument packing here so we're not going to reuse the varargs.
-  if (!entry_is_vectored(entry)) {
-      void *data = va_arg(*args, void*);
-      size_t bytes = va_arg(*args, int);
-      return hpx_parcel_acquire(data, bytes);
-  }
+  const action_entry_t *entry = obj;
+  hpx_action_t id = *entry->id;
+  hpx_pid_t pid = hpx_thread_current_pid();
 
   // For vectored arguments we want to read through the argument pairs and
   // accumuluate the total number of bytes that we'll need to allocate.  We need
@@ -136,9 +144,9 @@ static hpx_parcel_t *_parcel_acquire(hpx_action_t id, int n, va_list *args) {
   int ntuples = n >> 1;
   size_t bytes = sizeof(int) + ntuples * sizeof(size_t);
 
-  // The client will need to iterate the va_args again, so we make a copy, and
-  // position its starting location on the first size. Then we just go through
-  // the list, checking every other list element for the next size.
+  // We will need to iterate the va_args again, so we make a copy, and position
+  // its starting location on the first size. Then we just go through the list,
+  // checking every other list element for the next size.
   va_list temp;
   va_copy(temp, *args);
   va_arg(temp, void*);
@@ -147,20 +155,35 @@ static hpx_parcel_t *_parcel_acquire(hpx_action_t id, int n, va_list *args) {
     bytes += va_arg(temp, int);
   }
   va_end(temp);
-  return hpx_parcel_acquire(NULL, bytes);
+
+  hpx_parcel_t *p = parcel_new(addr, id, c_addr, c_action, pid, NULL, bytes);
+  return action_pack_args(p, n, args);
+}
+
+void entry_init_new_parcel(action_entry_t *entry) {
+  uint32_t attr = entry->attr & (HPX_MARSHALLED | HPX_VECTORED);
+  switch (attr) {
+   case (HPX_ATTR_NONE):
+    entry->new_parcel = _new_ffi;
+    return;
+   case (HPX_MARSHALLED):
+    entry->new_parcel = _new_marshalled;
+    return;
+   case (HPX_MARSHALLED | HPX_VECTORED):
+    entry->new_parcel = _new_vectored;
+    return;
+  }
+  dbg_error("Could not find a new parcel handler for attr %" PRIu32 "\n",
+            entry->attr);
 }
 
 hpx_parcel_t *action_create_parcel_va(hpx_addr_t addr, hpx_action_t action,
                                       hpx_addr_t c_addr, hpx_action_t c_action,
                                       int nargs, va_list *args) {
-  dbg_assert(addr);
-  dbg_assert(action);
-  hpx_parcel_t *p = _parcel_acquire(action, nargs, args);
-  p->target = addr;
-  p->action = action;
-  p->c_target = c_addr;
-  p->c_action = c_action;
-  return action_pack_args(p, nargs, args);
+  const action_table_t *table = here->actions;
+  CHECK_BOUND(table, action);
+  const action_entry_t *entry = &table->entries[action];
+  return entry->new_parcel(entry, addr, c_addr, c_action, nargs, args);
 }
 
 hpx_parcel_t *action_create_parcel(hpx_addr_t addr, hpx_action_t action,
