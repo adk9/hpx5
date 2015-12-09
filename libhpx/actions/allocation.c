@@ -101,46 +101,54 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int nargs, va_list *vargs) {
 }
 
 
-static hpx_parcel_t *_action_parcel_acquire(hpx_action_t action, int nargs,
-                                            va_list *vargs) {
-  if (!vargs) {
+static hpx_parcel_t *_parcel_acquire(hpx_action_t id, int n, va_list *args) {
+  dbg_assert(!n || args);
+
+  if (!n) {
     return hpx_parcel_acquire(NULL, 0);
   }
 
   const action_table_t *actions = here->actions;
-  bool marshalled = action_is_marshalled(actions, action);
-  bool   vectored = action_is_vectored(actions, action);
+  CHECK_BOUND(actions, id);
+  const action_entry_t *entry = &actions->entries[id];
 
-  if (marshalled) {
-    if (likely(!vectored)) {
-      void *data = va_arg(*vargs, void*);
-      size_t n = va_arg(*vargs, int);
-      return hpx_parcel_acquire(data, n);
-    } else {
-      va_list temp;
-      va_copy(temp, *vargs);
-
-      int e = nargs % 2;
-      dbg_assert_str(!e, "invalid number of vectored arguments %d\n", nargs);
-
-      size_t n = 8;
-      for (int i = 0; i < nargs; i += 2) {
-        void *data = va_arg(temp, void*);
-        size_t size = va_arg(temp, int);
-        n += (sizeof(size_t) + size + ALIGN(size, 8));
-        (void)data;
-      }
-      va_end(temp);
-      return hpx_parcel_acquire(NULL, n + sizeof(int));
-    }
-  } else {
-    CHECK_BOUND(actions, action);
-    const action_entry_t *entry = &actions->entries[action];
-    const ffi_cif *cif = entry->cif;
-    dbg_assert(cif);
-    size_t n = ffi_raw_size((void*)cif);
-    return hpx_parcel_acquire(NULL, n);
+  // Typed actions have fixed size stored in the ffi cif, and can ignore the
+  // varargs.
+  if (!entry_is_marshalled(entry)) {
+    size_t bytes = ffi_raw_size(entry->cif);
+    return hpx_parcel_acquire(NULL, bytes);
   }
+
+  dbg_check(n & 1, "Untyped actions require even arg count: %d\n", n);
+
+  // Marshalled actions pass the size (and data) in the varargs. We're doing
+  // part of the argument packing here so we're not going to reuse the varargs.
+  if (!entry_is_vectored(entry)) {
+      void *data = va_arg(*args, void*);
+      size_t bytes = va_arg(*args, int);
+      return hpx_parcel_acquire(data, bytes);
+  }
+
+  // For vectored arguments we want to read through the argument pairs and
+  // accumuluate the total number of bytes that we'll need to allocate.  We need
+  // `int` bytes for the number of tuples, then `n/2` `size_t` bytes for the
+  // size array, then padding to align the first buffer, and then 8-byte aligned
+  // sizes for each buffer.
+  int ntuples = n >> 1;
+  size_t bytes = sizeof(int) + ntuples * sizeof(size_t);
+
+  // The client will need to iterate the va_args again, so we make a copy, and
+  // position its starting location on the first size. Then we just go through
+  // the list, checking every other list element for the next size.
+  va_list temp;
+  va_copy(temp, *args);
+  va_arg(temp, void*);
+  for (int i = 0, e = ntuples; i < e; ++i, va_arg(temp, void*)) {
+    bytes += ALIGN(n, 8);
+    bytes += va_arg(temp, int);
+  }
+  va_end(temp);
+  return hpx_parcel_acquire(NULL, bytes);
 }
 
 hpx_parcel_t *action_create_parcel_va(hpx_addr_t addr, hpx_action_t action,
@@ -148,7 +156,7 @@ hpx_parcel_t *action_create_parcel_va(hpx_addr_t addr, hpx_action_t action,
                                       int nargs, va_list *args) {
   dbg_assert(addr);
   dbg_assert(action);
-  hpx_parcel_t *p = _action_parcel_acquire(action, nargs, args);
+  hpx_parcel_t *p = _parcel_acquire(action, nargs, args);
   p->target = addr;
   p->action = action;
   p->c_target = c_addr;
