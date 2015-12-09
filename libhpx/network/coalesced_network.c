@@ -133,6 +133,11 @@ static void _send_n(_coalesced_network_t *coalesced_network, uint64_t n) {
 
 static int _coalesced_network_send(void *network,  hpx_parcel_t *p) {
   _coalesced_network_t *coalesced_network = network;
+  if (!action_is_coalesced(here->actions, hpx_parcel_get_action(p))) {
+    network_send(coalesced_network->base_network, p);
+    return LIBHPX_OK;
+  }
+
   // Before putting the parcel in the queue, check whether the queue size has reached the  coalescing size then we empty the queue. If that is the case, then try to adjust the parcel count before we proceed to creating fat parcels
 
   uint64_t parcel_count = sync_load(&coalesced_network->parcel_count,  SYNC_RELAXED);
