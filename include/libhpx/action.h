@@ -49,8 +49,6 @@ typedef struct {
 #define LIBHPX_ACTION_MAX (UINT32_C(1) << (sizeof(hpx_action_t) * 8))
 
 typedef struct action_table {
-  int                  n;
-  int            padding;
   action_entry_t entries[LIBHPX_ACTION_MAX];
 } action_table_t;
 

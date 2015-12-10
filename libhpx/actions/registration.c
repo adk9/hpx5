@@ -27,9 +27,8 @@
 /// We currently need to be able to register actions before we call hpx_init()
 /// because we use constructors inside of libhpx to do action registration. We
 /// expose this action table to be used for that purpose.
+static int _n = 1;
 action_table_t actions = {
-  .n = 1,
-  .padding = 0,
   .entries = {{
     .handler = NULL,
     .id = NULL,
@@ -40,6 +39,40 @@ action_table_t actions = {
     .env = NULL
     }, {0}}
 };
+
+#define _ACTION_TABLE_GET(type, name, init)                             \
+  type action_table_get_##name(const action_table_t *table, hpx_action_t id) { \
+    if (id == HPX_ACTION_INVALID) {                                     \
+      log_dflt("action registration is not complete");                  \
+      return (type)init;                                                \
+    } else if (id >= _n) {                                              \
+      dbg_error("action id, %d, out of bounds [0,%u)\n", id, _n);       \
+    }                                                                   \
+    return table->entries[id].name;                                     \
+  }                                                                     \
+  type action_table_get_##name(const action_table_t *table, hpx_action_t id)
+
+_ACTION_TABLE_GET(const char *, key, NULL);
+_ACTION_TABLE_GET(hpx_action_type_t, type, HPX_ACTION_INVALID);
+_ACTION_TABLE_GET(uint32_t, attr, 0);
+_ACTION_TABLE_GET(handler_t, handler, NULL);
+_ACTION_TABLE_GET(ffi_cif *, cif, NULL);
+_ACTION_TABLE_GET(void *, env, NULL);
+
+int action_table_size(const action_table_t *table) {
+  return _n;
+}
+
+#ifdef ENABLE_DEBUG
+void CHECK_BOUND(const action_table_t *table, hpx_action_t id) {
+  if (id == HPX_ACTION_INVALID) {
+    dbg_error("action registration is not complete");
+  }
+  else if (id >= _n) {
+    dbg_error("action id, %d, out of bounds [0,%u)\n", id, _n);
+  }
+}
+#endif
 
 /// Get the static action table.
 ///
@@ -65,7 +98,7 @@ static action_table_t *_get_actions(void) {
 static int _push_back(action_table_t *table, hpx_action_t *id, const char *key,
                       handler_t f, hpx_action_type_t type, uint32_t attr,
                       ffi_cif *cif, void *env) {
-  int i = table->n++;
+  int i = _n++;
   if (LIBHPX_ACTION_MAX < i) {
     dbg_error("action table overflow\n");
   }
@@ -112,12 +145,12 @@ static int _cmp_keys(const void *lhs, const void *rhs) {
 
 /// Sort the actions in an action table by their key.
 static void _sort_entries(action_table_t *table) {
-  qsort(&table->entries, table->n, sizeof(action_entry_t), _cmp_keys);
+  qsort(&table->entries, _n, sizeof(action_entry_t), _cmp_keys);
 }
 
 /// Assign all of the entry ids in the table.
 static void _assign_ids(action_table_t *table) {
-  for (int i = 1, e = table->n; i < e; ++i) {
+  for (int i = 1, e = _n; i < e; ++i) {
     *table->entries[i].id = i;
   }
 }
@@ -128,7 +161,7 @@ void action_table_complete(action_table_t *table) {
   _sort_entries(table);
   _assign_ids(table);
 
-  for (int i = 1, e = table->n; i < e; ++i) {
+  for (int i = 1, e = _n; i < e; ++i) {
     const char *key = table->entries[i].key;
     hpx_action_type_t type = table->entries[i].type;
     void (*f)(void) = table->entries[i].handler;
@@ -154,7 +187,7 @@ void action_table_complete(action_table_t *table) {
 }
 
 void action_table_finalize(const action_table_t *table) {
-  for (int i = 0, e = table->n; i < e; ++i) {
+  for (int i = 0, e = _n; i < e; ++i) {
     ffi_cif *cif = table->entries[i].cif;
     if (cif) {
       free(cif->arg_types);
