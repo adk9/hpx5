@@ -373,10 +373,7 @@ hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size, hpx_action_t id,
 
 /// Get the user-defined LCO's user data. This allows to access the buffer
 /// portion of the user-defined LCO regardless the LCO has been set or not.
-void *hpx_lco_user_get_user_data(void *lco, void **out) {
-  lco_lock(lco);
-  _user_lco_t *u = (_user_lco_t *)lco;
-  // Copy out the user data if the caller wants it.
-  *out = u->buffer;
-  lco_unlock(lco);
+void *hpx_lco_user_get_user_data(void *lco) {
+  _user_lco_t *u = lco;
+  return u->buffer;
 }
