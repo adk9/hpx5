@@ -11,10 +11,13 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
+#ifndef LIBHPX_ACTIONS_INIT_H
+#define LIBHPX_ACTIONS_INIT_H
 
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
-#include "table.h"
+#include <hpx/hpx.h>
+
+void entry_init_execute_parcel(action_entry_t *entry);
+void entry_init_pack_buffer(action_entry_t *entry);
+void entry_init_new_parcel(action_entry_t *entry);
+
+#endif // LIBHPX_ACTIONS_INIT_H

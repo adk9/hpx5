@@ -20,7 +20,7 @@
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
-#include "table.h"
+#include "init.h"
 
 /// A static action table.
 ///

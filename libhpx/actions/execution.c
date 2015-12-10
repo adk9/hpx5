@@ -21,7 +21,7 @@
 #include <libhpx/locality.h>
 #include <libhpx/padding.h>
 #include <libhpx/parcel.h>
-#include "table.h"
+#include "init.h"
 
 static int _execute_marshalled(const void *obj, hpx_parcel_t *p) {
   const action_entry_t *entry = obj;

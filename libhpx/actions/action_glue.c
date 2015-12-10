@@ -18,7 +18,7 @@
 #include <libhpx/action.h>
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
-#include "table.h"
+#include "init.h"
 
 hpx_action_handler_t hpx_action_get_handler(hpx_action_t id) {
   CHECK_BOUND(actions, id);

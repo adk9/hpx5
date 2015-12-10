@@ -21,7 +21,7 @@
 #include <libhpx/debug.h>
 #include <libhpx/padding.h>
 #include <libhpx/parcel.h>
-#include "table.h"
+#include "init.h"
 
 static void _pack_ffi_0(const void *obj, void *b, int n, va_list *args) {
   // nothing to do
