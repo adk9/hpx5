@@ -21,7 +21,7 @@ void entry_init_pack_buffer(action_entry_t *entry);
 void entry_init_new_parcel(action_entry_t *entry);
 
 #ifdef ENABLE_DEBUG
-void CHECK_BOUND(const action_table_t *table, hpx_action_t id);
+void CHECK_BOUND(const action_entry_t *table, hpx_action_t id);
 #else
 #define CHECK_BOUND(table, id)
 #endif

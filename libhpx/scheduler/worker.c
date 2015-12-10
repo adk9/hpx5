@@ -200,7 +200,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
    case HPX_SUCCESS:
     log_sched("completed interrupt %p\n", p);
     _continue_parcel(p, 0, NULL);
-    if (action_is_pinned(&actions, p->action)) {
+    if (action_is_pinned(actions, p->action)) {
       hpx_gas_unpin(p->target);
     }
     parcel_delete(p);
@@ -293,7 +293,7 @@ static void _swap_epoch(worker_t *worker) {
 /// @param       worker The worker pointer.
 static void _push_lifo(hpx_parcel_t *p, void *worker) {
   dbg_assert(p->target != HPX_NULL);
-  dbg_assert(action_table_get_handler(&actions, p->action) != NULL);
+  dbg_assert(action_table_get_handler(actions, p->action) != NULL);
   EVENT_PUSH_LIFO(p);
   worker_t *w = worker;
   uint64_t size = sync_chase_lev_ws_deque_push(_work(w), p);
@@ -791,7 +791,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(w->id >= 0);
   dbg_assert(p);
   dbg_assert(hpx_gas_try_pin(p->target, NULL)); // just performs translation
-  dbg_assert(action_table_get_handler(&actions, p->action) != NULL);
+  dbg_assert(action_table_get_handler(actions, p->action) != NULL);
   COUNTER_SAMPLE(w->stats.spawns++);
 
   // If we're stopped down then push the parcel and return. This prevents an
@@ -817,14 +817,14 @@ void scheduler_spawn(hpx_parcel_t *p) {
   }
 
   // At this point, if we are spawning an interrupt, just run it.
-  if (action_is_interrupt(&actions, p->action)) {
+  if (action_is_interrupt(actions, p->action)) {
     _execute_interrupt(p);
     return;
   }
 
   // If we are running an interrupt, then we can't work-first since we don't
   // have our own stack to suspend.
-  if (action_is_interrupt(&actions, current->action)) {
+  if (action_is_interrupt(actions, current->action)) {
     _push_lifo(p, w);
     return;
   }
@@ -865,7 +865,7 @@ static void _yield(hpx_parcel_t *p, void *env) {
 }
 
 void scheduler_yield(void) {
-  if (action_is_default(&actions, self->current->action)) {
+  if (action_is_default(actions, self->current->action)) {
     COUNTER_SAMPLE(++self->stats.yields);
     self->yielded = true;
     // NB: no trace point, overwhelms infrastructure
@@ -957,7 +957,7 @@ _continue(worker_t *worker, void (*cleanup)(void*), void *env, int nargs,
   }
 
   // unpin the current target
-  if (action_is_pinned(&actions, parcel->action)) {
+  if (action_is_pinned(actions, parcel->action)) {
     hpx_gas_unpin(parcel->target);
   }
 
@@ -1096,12 +1096,12 @@ void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   worker_t *w = self;
   hpx_parcel_t *p = w->current;
   log_sched("suspending %p in %s\n", (void*)p,
-            action_table_get_key(&actions, p->action));
+            action_table_get_key(actions, p->action));
   EVENT_THREAD_SUSPEND(p, w);
   _schedule(f, env, block);
   EVENT_THREAD_RESUME(p, self);
   log_sched("resuming %p\n in %s", (void*)p,
-            action_table_get_key(&actions, p->action));
+            action_table_get_key(actions, p->action));
   (void)p;
 }
 

@@ -112,7 +112,7 @@ static void _cleanup(locality_t *l) {
     l->topology = NULL;
   }
 
-  action_table_finalize(&actions);
+  action_table_finalize(actions);
 
   inst_fini();
 
@@ -237,7 +237,7 @@ int hpx_init(int *argc, char ***argv) {
   apex_set_node_id(here->rank);
 #endif
 
-  action_table_complete(&actions);
+  action_table_complete(actions);
   inst_start();
 
   // start the scheduler, this will return after scheduler_shutdown()

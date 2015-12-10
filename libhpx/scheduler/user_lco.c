@@ -114,11 +114,11 @@ static int _user_lco_set(lco_t *lco, int size, const void *from) {
   }
 
   // perform the op()
-  handler_t f = action_table_get_handler(&actions, u->op);
+  handler_t f = action_table_get_handler(actions, u->op);
   hpx_monoid_op_t op = (hpx_monoid_op_t)f;
   op(u->buffer, from, size);
 
-  f = action_table_get_handler(&actions, u->predicate);
+  f = action_table_get_handler(actions, u->predicate);
   hpx_predicate_t predicate = (hpx_predicate_t)f;
   if (predicate(u->buffer, u->size)) {
     lco_set_triggered(&u->lco);
@@ -258,7 +258,7 @@ _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
   u->init = u->data;
   u->buffer = (char*)u->data + init_size;
 
-  handler_t f = action_table_get_handler(&actions, u->id);
+  handler_t f = action_table_get_handler(actions, u->id);
   _hpx_user_lco_id_t init_fn = (_hpx_user_lco_id_t)f;
   init_fn(u->buffer, u->size, init, init_size);
   return HPX_SUCCESS;

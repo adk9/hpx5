@@ -48,11 +48,7 @@ typedef struct {
 /// The default libhpx action table size.
 #define LIBHPX_ACTION_MAX (UINT32_C(1) << (sizeof(hpx_action_t) * 8))
 
-typedef struct action_table {
-  action_entry_t entries[LIBHPX_ACTION_MAX];
-} action_table_t;
-
-extern action_table_t actions;
+extern action_entry_t actions[LIBHPX_ACTION_MAX];
 
 /// Register an HPX action of a given @p type. This is similar to the
 /// hpx_register_action routine, except that it gives us the chance to "tag"
@@ -74,29 +70,29 @@ int libhpx_register_action(hpx_action_type_t type, uint32_t attr,
                            unsigned nargs, ...);
 
 /// Get the key for an action.
-const char *action_table_get_key(const struct action_table *, hpx_action_t)
+const char *action_table_get_key(const action_entry_t *, hpx_action_t)
   HPX_NON_NULL(1);
 
 /// Get the action type.
-hpx_action_type_t action_table_get_type(const struct action_table *,
+hpx_action_type_t action_table_get_type(const action_entry_t *,
                                         hpx_action_t)
   HPX_NON_NULL(1);
 
 /// Get the key for an action.
-handler_t action_table_get_handler(const struct action_table *,
+handler_t action_table_get_handler(const action_entry_t *,
                                         hpx_action_t)
   HPX_NON_NULL(1);
 
 /// Get the FFI type information associated with an action.
-ffi_cif *action_table_get_cif(const struct action_table *, hpx_action_t)
+ffi_cif *action_table_get_cif(const action_entry_t *, hpx_action_t)
   HPX_NON_NULL(1);
 
 /// Get the environment associated with the action.
-void *action_table_get_env(const struct action_table *, hpx_action_t)
+void *action_table_get_env(const action_entry_t *, hpx_action_t)
   HPX_NON_NULL(1);
 
 /// Report the number of actions registerd in the table
-int action_table_size(const struct action_table *table);
+int action_table_size(const action_entry_t *table);
 
 /// Run the handler associated with an action.
 int action_execute(struct hpx_parcel *)
@@ -124,39 +120,39 @@ int action_call_va(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
                    int nargs, va_list *args);
 
 /// Is the action a pinned action?
-bool action_is_pinned(const struct action_table *, hpx_action_t)
+bool action_is_pinned(const action_entry_t *, hpx_action_t)
   HPX_NON_NULL(1);
 
 /// Is the action a marshalled action?
-bool action_is_marshalled(const struct action_table *, hpx_action_t)
+bool action_is_marshalled(const action_entry_t *, hpx_action_t)
   HPX_NON_NULL(1);
 
 /// Is the action a vectored action?
-bool action_is_vectored(const struct action_table *, hpx_action_t)
+bool action_is_vectored(const action_entry_t *, hpx_action_t)
   HPX_NON_NULL(1);
 
 /// Is the action internal?
-bool action_is_internal(const struct action_table *, hpx_action_t)
+bool action_is_internal(const action_entry_t *, hpx_action_t)
   HPX_NON_NULL(1);
 
 /// Is the action a default action?
-bool action_is_default(const struct action_table *, hpx_action_t)
+bool action_is_default(const action_entry_t *, hpx_action_t)
   HPX_NON_NULL(1);
 
 /// Is the action a task?
-bool action_is_task(const struct action_table *, hpx_action_t)
+bool action_is_task(const action_entry_t *, hpx_action_t)
   HPX_NON_NULL(1);
 
 /// Is the action an interrupt?
-bool action_is_interrupt(const struct action_table *, hpx_action_t)
+bool action_is_interrupt(const action_entry_t *, hpx_action_t)
   HPX_NON_NULL(1);
 
 /// Is the action a function?
-bool action_is_function(const struct action_table *, hpx_action_t)
+bool action_is_function(const action_entry_t *, hpx_action_t)
   HPX_NON_NULL(1);
 
 /// Is the action an OpenCL kernel?
-bool action_is_opencl(const struct action_table *, hpx_action_t)
+bool action_is_opencl(const action_entry_t *, hpx_action_t)
   HPX_NON_NULL(1);
 
 /// Build an action table.
@@ -167,10 +163,10 @@ bool action_is_opencl(const struct action_table *, hpx_action_t)
 ///
 /// @return             An action table that can be indexed by the keys
 ///                     originally registered.
-void action_table_complete(struct action_table *action);
+void action_table_complete(action_entry_t *actions);
 
 /// Free an action table.
-void action_table_finalize(const struct action_table *action);
+void action_table_finalize(const action_entry_t *actions);
 
 /// Wraps the libhpx_register_action() function to make it slightly
 /// more convenient to use.

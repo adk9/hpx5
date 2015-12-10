@@ -28,8 +28,10 @@
 /// because we use constructors inside of libhpx to do action registration. We
 /// expose this action table to be used for that purpose.
 static int _n = 1;
-action_table_t actions = {
-  .entries = {{
+action_entry_t actions[LIBHPX_ACTION_MAX];
+
+static void HPX_CONSTRUCTOR _init_null_handler(void) {
+  actions[0] = (action_entry_t){
     .handler = NULL,
     .id = NULL,
     .key = "",
@@ -37,20 +39,20 @@ action_table_t actions = {
     .attr = UINT32_C(0),
     .cif = NULL,
     .env = NULL
-    }, {0}}
-};
+  };
+}
 
 #define _ACTION_TABLE_GET(type, name, init)                             \
-  type action_table_get_##name(const action_table_t *table, hpx_action_t id) { \
+  type action_table_get_##name(const action_entry_t *table, hpx_action_t id) { \
     if (id == HPX_ACTION_INVALID) {                                     \
       log_dflt("action registration is not complete");                  \
       return (type)init;                                                \
     } else if (id >= _n) {                                              \
       dbg_error("action id, %d, out of bounds [0,%u)\n", id, _n);       \
     }                                                                   \
-    return table->entries[id].name;                                     \
+    return actions[id].name;                                     \
   }                                                                     \
-  type action_table_get_##name(const action_table_t *table, hpx_action_t id)
+  type action_table_get_##name(const action_entry_t *table, hpx_action_t id)
 
 _ACTION_TABLE_GET(const char *, key, NULL);
 _ACTION_TABLE_GET(hpx_action_type_t, type, HPX_ACTION_INVALID);
@@ -59,12 +61,12 @@ _ACTION_TABLE_GET(handler_t, handler, NULL);
 _ACTION_TABLE_GET(ffi_cif *, cif, NULL);
 _ACTION_TABLE_GET(void *, env, NULL);
 
-int action_table_size(const action_table_t *table) {
+int action_table_size(const action_entry_t *table) {
   return _n;
 }
 
 #ifdef ENABLE_DEBUG
-void CHECK_BOUND(const action_table_t *table, hpx_action_t id) {
+void CHECK_BOUND(const action_entry_t *table, hpx_action_t id) {
   if (id == HPX_ACTION_INVALID) {
     dbg_error("action registration is not complete");
   }
@@ -79,8 +81,8 @@ void CHECK_BOUND(const action_table_t *table, hpx_action_t id) {
 /// This is not synchronized and thus unsafe to call in a multithreaded
 /// environment, but we make sure to call it in hpx_init() where we assume we
 /// are running in single-threaded mode, so we should be safe.
-static action_table_t *_get_actions(void) {
-  return &actions;
+static action_entry_t *_get_actions(void) {
+  return actions;
 }
 
 /// Insert an action into a table.
@@ -95,14 +97,14 @@ static action_table_t *_get_actions(void) {
 /// @param          env Action's environment.
 ///
 /// @return             HPX_SUCCESS or an error if the push fails.
-static int _push_back(action_table_t *table, hpx_action_t *id, const char *key,
+static int _push_back(action_entry_t *table, hpx_action_t *id, const char *key,
                       handler_t f, hpx_action_type_t type, uint32_t attr,
                       ffi_cif *cif, void *env) {
   int i = _n++;
   if (LIBHPX_ACTION_MAX < i) {
     dbg_error("action table overflow\n");
   }
-  action_entry_t *back = &table->entries[i];
+  action_entry_t *back = &actions[i];
   back->handler = f;
   back->id = id;
   back->key = key;
@@ -144,59 +146,59 @@ static int _cmp_keys(const void *lhs, const void *rhs) {
 }
 
 /// Sort the actions in an action table by their key.
-static void _sort_entries(action_table_t *table) {
-  qsort(&table->entries, _n, sizeof(action_entry_t), _cmp_keys);
+static void _sort_entries(action_entry_t *table) {
+  qsort(&actions, _n, sizeof(action_entry_t), _cmp_keys);
 }
 
 /// Assign all of the entry ids in the table.
-static void _assign_ids(action_table_t *table) {
+static void _assign_ids(action_entry_t *table) {
   for (int i = 1, e = _n; i < e; ++i) {
-    *table->entries[i].id = i;
+    *actions[i].id = i;
   }
 }
 
-void action_table_complete(action_table_t *table) {
+void action_table_complete(action_entry_t *table) {
   dbg_assert(table);
 
   _sort_entries(table);
   _assign_ids(table);
 
   for (int i = 1, e = _n; i < e; ++i) {
-    const char *key = table->entries[i].key;
-    hpx_action_type_t type = table->entries[i].type;
-    void (*f)(void) = table->entries[i].handler;
+    const char *key = actions[i].key;
+    hpx_action_type_t type = actions[i].type;
+    void (*f)(void) = actions[i].handler;
     (void) key, (void) type, (void) f;
 
 #ifdef HAVE_PERCOLATION
     if (here->percolation && type == HPX_OPENCL) {
       void *env = percolation_prepare(here->percolation, key, (const char*)f);
       dbg_assert_str(env, "failed to prepare percolation kernel: %s\n", key);
-      table->entries[i].handler =
+      actions[i].handler =
         (hpx_action_handler_t)percolation_execute_handler;
     }
 #endif
 
-    log_action("%d: %s (%p) %s %x.\n", *table->entries[i].id,
+    log_action("%d: %s (%p) %s %x.\n", *actions[i].id,
                key, (void*)(uintptr_t)f, HPX_ACTION_TYPE_TO_STRING[type],
-               table->entries[i].attr);
+               actions[i].attr);
   }
 
   // this is a sanity check to ensure that the reserved "null" action
   // is still at index 0.
-  dbg_assert(table->entries[0].id == NULL);
+  dbg_assert(actions[0].id == NULL);
 }
 
-void action_table_finalize(const action_table_t *table) {
+void action_table_finalize(const action_entry_t *table) {
   for (int i = 0, e = _n; i < e; ++i) {
-    ffi_cif *cif = table->entries[i].cif;
+    ffi_cif *cif = actions[i].cif;
     if (cif) {
       free(cif->arg_types);
       free(cif);
     }
 
 #ifdef HAVE_PERCOLATION
-    void *env = table->entries[i].env;
-    if (env && table->entries[i].type == HPX_OPENCL) {
+    void *env = actions[i].env;
+    if (env && actions[i].type == HPX_OPENCL) {
       percolation_destroy(here->percolation, env);
     }
 #endif
