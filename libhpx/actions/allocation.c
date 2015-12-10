@@ -226,9 +226,8 @@ void entry_init_pack_buffer(action_entry_t *entry) {
 }
 
 hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *args) {
-  const action_table_t *actions = here->actions;
-  CHECK_BOUND(actions, p->action);
-  const action_entry_t *entry = &actions->entries[p->action];
+  CHECK_BOUND(&actions, p->action);
+  const action_entry_t *entry = &actions.entries[p->action];
   void *buffer = hpx_parcel_get_data(p);
   entry->pack_buffer(entry, buffer, n, args);
   return p;
@@ -237,9 +236,8 @@ hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *args) {
 hpx_parcel_t *action_create_parcel_va(hpx_addr_t addr, hpx_action_t action,
                                       hpx_addr_t c_addr, hpx_action_t c_action,
                                       int nargs, va_list *args) {
-  const action_table_t *table = here->actions;
-  CHECK_BOUND(table, action);
-  const action_entry_t *entry = &table->entries[action];
+  CHECK_BOUND(&actions, action);
+  const action_entry_t *entry = &actions.entries[action];
   return entry->new_parcel(entry, addr, c_addr, c_action, nargs, args);
 }
 

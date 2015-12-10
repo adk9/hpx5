@@ -35,7 +35,6 @@ extern "C" {
 
 /// Forward declarations.
 /// @{
-struct action_table;
 struct boot;
 struct config;
 struct network;
@@ -69,18 +68,17 @@ struct percolation;
 /// @field    topology The topology information.
 /// @field percolation An interface for dealing with GPU backends.
 typedef struct locality {
-  uint32_t                      rank;
-  uint32_t                     ranks;
-  uint64_t                     epoch;
-  struct boot                  *boot;
-  void                          *gas;
-  struct network            *network;
-  struct scheduler            *sched;
-  struct config              *config;
-  const struct action_table *actions;
-  struct topology          *topology;
+  uint32_t                   rank;
+  uint32_t                  ranks;
+  uint64_t                  epoch;
+  struct boot               *boot;
+  void                       *gas;
+  struct network         *network;
+  struct scheduler         *sched;
+  struct config           *config;
+  struct topology       *topology;
 #ifdef HAVE_PERCOLATION
-  struct percolation    *percolation;
+  struct percolation *percolation;
 #endif
 } locality_t;
 

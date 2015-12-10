@@ -16,36 +16,6 @@
 
 #include <hpx/hpx.h>
 
-/// An action table entry type.
-///
-/// This stores information associated with an HPX action. In
-/// particular, an action entry maintains the action handler
-/// (function), a globally unique string key, a unique id generated
-/// during action finalization, action types and attributes, e.g., can
-/// they block, should we pre-pin their arguments, etc., and an
-/// environment pointer.
-///
-typedef struct {
-  int           (*execute_parcel)(const void *obj, hpx_parcel_t *buffer);
-  void          (*pack_buffer)(const void *obj, void *buffer, int n, va_list *args);
-  hpx_parcel_t *(*new_parcel)(const void *obj, hpx_addr_t addr,
-                              hpx_addr_t c_addr, hpx_action_t c_action,
-                              int n, va_list *args);
-  handler_t      handler;
-  hpx_action_t       *id;
-  const char        *key;
-  hpx_action_type_t type;
-  uint32_t          attr;
-  ffi_cif           *cif;
-  void              *env;
-} action_entry_t;
-
-typedef struct action_table {
-  int                  n;
-  int            padding;
-  action_entry_t entries[];
-} action_table_t;
-
 void entry_init_execute_parcel(action_entry_t *entry);
 void entry_init_pack_buffer(action_entry_t *entry);
 void entry_init_new_parcel(action_entry_t *entry);

@@ -117,14 +117,13 @@ static int _execute_pinned_vectored(const void *obj, hpx_parcel_t *p) {
 int action_execute(hpx_parcel_t *p) {
   dbg_assert(p->target != HPX_NULL);
   dbg_assert_str(p->action != HPX_ACTION_INVALID, "registration error\n");
-  dbg_assert_str(p->action < here->actions->n,
+  dbg_assert_str(p->action < actions.n,
                  "action, %d, out of bounds [0,%u)\n",
-                 p->action, here->actions->n);
+                 p->action, actions.n);
 
-  hpx_action_t             id = p->action;
-  const action_table_t *table = here->actions;
-  CHECK_BOUND(table, id);
-  const action_entry_t *entry = &table->entries[id];
+  hpx_action_t id = p->action;
+  CHECK_BOUND(&actions, id);
+  const action_entry_t *entry = &actions.entries[id];
   return entry->execute_parcel(entry, p);
 }
 

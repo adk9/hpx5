@@ -22,15 +22,24 @@
 #include <libhpx/debug.h>
 #include "table.h"
 
-/// The default libhpx action table size.
-#define _ACTION_MAX (UINT32_C(1) << (sizeof(hpx_action_t) * 8))
-
 /// A static action table.
 ///
 /// We currently need to be able to register actions before we call hpx_init()
 /// because we use constructors inside of libhpx to do action registration. We
 /// expose this action table to be used for that purpose.
-static action_table_t *_actions = NULL;
+action_table_t actions = {
+  .n = 1,
+  .padding = 0,
+  .entries = {{
+    .handler = NULL,
+    .id = NULL,
+    .key = "",
+    .type = 0,
+    .attr = UINT32_C(0),
+    .cif = NULL,
+    .env = NULL
+    }, {0}}
+};
 
 /// Get the static action table.
 ///
@@ -38,22 +47,7 @@ static action_table_t *_actions = NULL;
 /// environment, but we make sure to call it in hpx_init() where we assume we
 /// are running in single-threaded mode, so we should be safe.
 static action_table_t *_get_actions(void) {
-  if (!_actions) {
-    int bytes = sizeof(*_actions) + _ACTION_MAX * sizeof(_actions->entries[0]);
-    _actions = malloc(bytes);
-    _actions->n = 1;
-    _actions->entries[0] = (action_entry_t){
-      .handler = NULL,
-      .id = NULL,
-      .key = "",
-      .type = 0,
-      .attr = UINT32_C(0),
-      .cif = NULL,
-      .env = NULL
-    };
-  }
-
-  return _actions;
+  return &actions;
 }
 
 /// Insert an action into a table.
@@ -72,7 +66,7 @@ static int _push_back(action_table_t *table, hpx_action_t *id, const char *key,
                       handler_t f, hpx_action_type_t type, uint32_t attr,
                       ffi_cif *cif, void *env) {
   int i = table->n++;
-  if (_ACTION_MAX < i) {
+  if (LIBHPX_ACTION_MAX < i) {
     dbg_error("action table overflow\n");
   }
   action_entry_t *back = &table->entries[i];
@@ -128,8 +122,7 @@ static void _assign_ids(action_table_t *table) {
   }
 }
 
-const action_table_t *action_table_finalize(void) {
-  action_table_t *table = _get_actions();
+void action_table_complete(action_table_t *table) {
   dbg_assert(table);
 
   _sort_entries(table);
@@ -158,10 +151,9 @@ const action_table_t *action_table_finalize(void) {
   // this is a sanity check to ensure that the reserved "null" action
   // is still at index 0.
   dbg_assert(table->entries[0].id == NULL);
-  return table;
 }
 
-void action_table_free(const action_table_t *table) {
+void action_table_finalize(const action_table_t *table) {
   for (int i = 0, e = table->n; i < e; ++i) {
     ffi_cif *cif = table->entries[i].cif;
     if (cif) {
@@ -176,7 +168,6 @@ void action_table_free(const action_table_t *table) {
     }
 #endif
   }
-  free((void*)table);
 }
 
 static int _register_action_va(hpx_action_type_t type, uint32_t attr,

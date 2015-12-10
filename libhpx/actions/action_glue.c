@@ -21,63 +21,62 @@
 #include "table.h"
 
 bool action_is_pinned(const struct action_table *table, hpx_action_t id) {
-  CHECK_BOUND(table, id);
+  CHECK_BOUND(&actions, id);
   const action_entry_t *entry = &table->entries[id];
   return entry_is_pinned(entry);
 }
 
 bool action_is_marshalled(const struct action_table *table, hpx_action_t id) {
-  CHECK_BOUND(table, id);
+  CHECK_BOUND(&actions, id);
   const action_entry_t *entry = &table->entries[id];
   return entry_is_marshalled(entry);
 }
 
 bool action_is_vectored(const struct action_table *table, hpx_action_t id) {
-  CHECK_BOUND(table, id);
+  CHECK_BOUND(&actions, id);
   const action_entry_t *entry = &table->entries[id];
   return entry_is_vectored(entry);
 }
 
 bool action_is_internal(const struct action_table *table, hpx_action_t id) {
-  CHECK_BOUND(table, id);
+  CHECK_BOUND(&actions, id);
   const action_entry_t *entry = &table->entries[id];
   return entry_is_internal(entry);
 }
 
 bool action_is_default(const struct action_table *table, hpx_action_t id) {
-  CHECK_BOUND(table, id);
+  CHECK_BOUND(&actions, id);
   const action_entry_t *entry = &table->entries[id];
   return entry_is_default(entry);
 }
 
 bool action_is_task(const struct action_table *table, hpx_action_t id) {
-  CHECK_BOUND(table, id);
+  CHECK_BOUND(&actions, id);
   const action_entry_t *entry = &table->entries[id];
   return entry_is_task(entry);
 }
 
 bool action_is_interrupt(const struct action_table *table, hpx_action_t id) {
-  CHECK_BOUND(table, id);
+  CHECK_BOUND(&actions, id);
   const action_entry_t *entry = &table->entries[id];
   return entry_is_interrupt(entry);
 }
 
 bool action_is_function(const struct action_table *table, hpx_action_t id) {
-  CHECK_BOUND(table, id);
+  CHECK_BOUND(&actions, id);
   const action_entry_t *entry = &table->entries[id];
   return entry_is_function(entry);
 }
 
 bool action_is_opencl(const struct action_table *table, hpx_action_t id) {
-  CHECK_BOUND(table, id);
+  CHECK_BOUND(&actions, id);
   const action_entry_t *entry = &table->entries[id];
   return entry_is_opencl(entry);
 }
 
 hpx_action_handler_t hpx_action_get_handler(hpx_action_t id) {
-  const action_table_t *table = here->actions;
-  CHECK_BOUND(table, id);
-  const action_entry_t *entry = &table->entries[id];
+  CHECK_BOUND(&actions, id);
+  const action_entry_t *entry = &actions.entries[id];
   return (hpx_action_handler_t)entry->handler;
 }
 

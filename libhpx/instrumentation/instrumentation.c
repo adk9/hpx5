@@ -40,7 +40,7 @@
 /// complete path to the directory to which log files, etc. will be written
 static const char *_log_path = NULL;
 
-/// when profiling, setting detailed_prof = true will dump each individual 
+/// when profiling, setting detailed_prof = true will dump each individual
 /// measurement to file
 static bool _detailed_prof = false;
 
@@ -72,7 +72,7 @@ static void _dump_actions(void) {
 
   free(file_path);
 
-  const struct action_table *table = here->actions;
+  const struct action_table *table = &actions;
   int num_actions = action_table_size(table);
   for (int i = 0; i < num_actions; i++) {
     const char *name = action_table_get_key(table, (hpx_action_t)i);
@@ -257,10 +257,10 @@ void inst_prof_dump(profile_log_t log) {
   for (int i = 0; i < log.num_events; i++) {
     fprintf(f, "\nEvent: %s\n", log.events[i].key);
     fprintf(f, "Count: %d\n", log.events[i].tally);
-    
+
     if (log.events[i].num_entries > 0) {
       fprintf(f, "Statistics:\n");
-      fprintf(f, "%-24s%-24s%-24s%-24s\n", 
+      fprintf(f, "%-24s%-24s%-24s%-24s\n",
              "Type", "Average", "Minimum", "Maximum");
       if (log.num_counters > 0 && !log.events[i].simple) {
         int64_t averages[log.num_counters];
@@ -271,7 +271,7 @@ void inst_prof_dump(profile_log_t log) {
         prof_get_minimums(minimums, log.events[i].key);
         prof_get_maximums(maximums, log.events[i].key);
         for (int j = 0; j < log.num_counters; j++) {
-          fprintf(f, "%-24s%-24"PRIu64"%-24"PRIu64"%-24"PRIu64"\n", 
+          fprintf(f, "%-24s%-24"PRIu64"%-24"PRIu64"%-24"PRIu64"\n",
                   HPX_COUNTER_TO_STRING[log.counters[j]],
                   averages[j], minimums[j], maximums[j]);
         }

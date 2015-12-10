@@ -18,9 +18,43 @@
 #include <hpx/hpx.h>
 
 ///
-struct action_table;
-struct hpx_parcel;
 typedef void (*handler_t)(void);
+
+
+/// An action table entry type.
+///
+/// This stores information associated with an HPX action. In
+/// particular, an action entry maintains the action handler
+/// (function), a globally unique string key, a unique id generated
+/// during action finalization, action types and attributes, e.g., can
+/// they block, should we pre-pin their arguments, etc., and an
+/// environment pointer.
+///
+typedef struct {
+  int           (*execute_parcel)(const void *obj, hpx_parcel_t *buffer);
+  void          (*pack_buffer)(const void *obj, void *buffer, int n, va_list *args);
+  hpx_parcel_t *(*new_parcel)(const void *obj, hpx_addr_t addr,
+                              hpx_addr_t c_addr, hpx_action_t c_action,
+                              int n, va_list *args);
+  handler_t      handler;
+  hpx_action_t       *id;
+  const char        *key;
+  hpx_action_type_t type;
+  uint32_t          attr;
+  ffi_cif           *cif;
+  void              *env;
+} action_entry_t;
+
+/// The default libhpx action table size.
+#define LIBHPX_ACTION_MAX (UINT32_C(1) << (sizeof(hpx_action_t) * 8))
+
+typedef struct action_table {
+  int                  n;
+  int            padding;
+  action_entry_t entries[LIBHPX_ACTION_MAX];
+} action_table_t;
+
+extern action_table_t actions;
 
 /// Register an HPX action of a given @p type. This is similar to the
 /// hpx_register_action routine, except that it gives us the chance to "tag"
@@ -135,11 +169,10 @@ bool action_is_opencl(const struct action_table *, hpx_action_t)
 ///
 /// @return             An action table that can be indexed by the keys
 ///                     originally registered.
-const struct action_table *action_table_finalize(void);
+void action_table_complete(struct action_table *action);
 
 /// Free an action table.
-void action_table_free(const struct action_table *action)
-  HPX_NON_NULL(1);
+void action_table_finalize(const struct action_table *action);
 
 /// Wraps the libhpx_register_action() function to make it slightly
 /// more convenient to use.
