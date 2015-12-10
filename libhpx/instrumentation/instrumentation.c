@@ -72,14 +72,12 @@ static void _dump_actions(void) {
 
   free(file_path);
 
-  int num_actions = action_table_size(actions);
-  for (int i = 0; i < num_actions; i++) {
-    const char *name = action_table_get_key(actions, (hpx_action_t)i);
-    if (action_is_internal(actions, (hpx_action_t)i)) {
-      fprintf(file, "%d,%s,INTERNAL\n", i, name);
+  for (int i = 0, e = action_table_size(); i < e; i++) {
+    if (action_is_internal(i)) {
+      fprintf(file, "%d,%s,INTERNAL\n", i, actions[i].key);
     }
     else {
-      fprintf(file, "%d,%s,USER\n", i, name);
+      fprintf(file, "%d,%s,USER\n", i, actions[i].key);
     }
   }
 

@@ -120,11 +120,11 @@ void parcel_launch(hpx_parcel_t *p) {
   log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64") => %s@(%"PRIu64")\n",
              p->pid,
              p->credit,
-             action_table_get_key(actions, p->action),
+             actions[p->action].key,
              hpx_parcel_get_data(p),
              p->size,
              p->target,
-             action_table_get_key(actions, p->c_action),
+             actions[p->c_action].key,
              p->c_target);
 
   EVENT_PARCEL_SEND(p);

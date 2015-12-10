@@ -51,7 +51,7 @@ static void _reset(_reduce_t *r) {
   cvar_reset(&r->barrier);
   r->remaining = r->inputs;
 
-  handler_t f = action_table_get_handler(actions, r->id);
+  handler_t f = actions[r->id].handler;
   hpx_monoid_id_t id = (hpx_monoid_id_t)f;
   id(r->value, r->size);
 }
@@ -126,7 +126,7 @@ static int _reduce_set(lco_t *lco, int size, const void *from) {
 
   // perform the op()
   assert(size && from);
-  handler_t f = action_table_get_handler(actions, r->op);
+  handler_t f = actions[r->op].handler;
   hpx_monoid_op_t op = (hpx_monoid_op_t)f;
   op(r->value, from, size);
 
@@ -241,7 +241,7 @@ static int _reduce_init_handler(_reduce_t *r, int inputs, size_t size,
     assert(r->value);
   }
 
-  handler_t f = action_table_get_handler(actions, r->id);
+  handler_t f = actions[r->id].handler;
   hpx_monoid_id_t lid = (hpx_monoid_id_t)f;
   lid(r->value, size);
 

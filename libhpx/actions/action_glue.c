@@ -20,60 +20,6 @@
 #include <libhpx/parcel.h>
 #include "table.h"
 
-bool action_is_pinned(const action_entry_t *table, hpx_action_t id) {
-  CHECK_BOUND(actions, id);
-  const action_entry_t *entry = &actions[id];
-  return entry_is_pinned(entry);
-}
-
-bool action_is_marshalled(const action_entry_t *table, hpx_action_t id) {
-  CHECK_BOUND(actions, id);
-  const action_entry_t *entry = &actions[id];
-  return entry_is_marshalled(entry);
-}
-
-bool action_is_vectored(const action_entry_t *table, hpx_action_t id) {
-  CHECK_BOUND(actions, id);
-  const action_entry_t *entry = &actions[id];
-  return entry_is_vectored(entry);
-}
-
-bool action_is_internal(const action_entry_t *table, hpx_action_t id) {
-  CHECK_BOUND(actions, id);
-  const action_entry_t *entry = &actions[id];
-  return entry_is_internal(entry);
-}
-
-bool action_is_default(const action_entry_t *table, hpx_action_t id) {
-  CHECK_BOUND(actions, id);
-  const action_entry_t *entry = &actions[id];
-  return entry_is_default(entry);
-}
-
-bool action_is_task(const action_entry_t *table, hpx_action_t id) {
-  CHECK_BOUND(actions, id);
-  const action_entry_t *entry = &actions[id];
-  return entry_is_task(entry);
-}
-
-bool action_is_interrupt(const action_entry_t *table, hpx_action_t id) {
-  CHECK_BOUND(actions, id);
-  const action_entry_t *entry = &actions[id];
-  return entry_is_interrupt(entry);
-}
-
-bool action_is_function(const action_entry_t *table, hpx_action_t id) {
-  CHECK_BOUND(actions, id);
-  const action_entry_t *entry = &actions[id];
-  return entry_is_function(entry);
-}
-
-bool action_is_opencl(const action_entry_t *table, hpx_action_t id) {
-  CHECK_BOUND(actions, id);
-  const action_entry_t *entry = &actions[id];
-  return entry_is_opencl(entry);
-}
-
 hpx_action_handler_t hpx_action_get_handler(hpx_action_t id) {
   CHECK_BOUND(actions, id);
   const action_entry_t *entry = &actions[id];

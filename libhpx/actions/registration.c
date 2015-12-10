@@ -61,7 +61,7 @@ _ACTION_TABLE_GET(handler_t, handler, NULL);
 _ACTION_TABLE_GET(ffi_cif *, cif, NULL);
 _ACTION_TABLE_GET(void *, env, NULL);
 
-int action_table_size(const action_entry_t *table) {
+int action_table_size(void) {
   return _n;
 }
 
@@ -146,22 +146,20 @@ static int _cmp_keys(const void *lhs, const void *rhs) {
 }
 
 /// Sort the actions in an action table by their key.
-static void _sort_entries(action_entry_t *table) {
+static void _sort_entries(void) {
   qsort(&actions, _n, sizeof(action_entry_t), _cmp_keys);
 }
 
 /// Assign all of the entry ids in the table.
-static void _assign_ids(action_entry_t *table) {
+static void _assign_ids(void) {
   for (int i = 1, e = _n; i < e; ++i) {
     *actions[i].id = i;
   }
 }
 
-void action_table_complete(action_entry_t *table) {
-  dbg_assert(table);
-
-  _sort_entries(table);
-  _assign_ids(table);
+void action_table_complete(void) {
+  _sort_entries();
+  _assign_ids();
 
   for (int i = 1, e = _n; i < e; ++i) {
     const char *key = actions[i].key;
@@ -188,7 +186,7 @@ void action_table_complete(action_entry_t *table) {
   dbg_assert(actions[0].id == NULL);
 }
 
-void action_table_finalize(const action_entry_t *table) {
+void action_table_finalize(void) {
   for (int i = 0, e = _n; i < e; ++i) {
     ffi_cif *cif = actions[i].cif;
     if (cif) {

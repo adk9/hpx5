@@ -50,6 +50,12 @@ typedef struct {
 
 extern action_entry_t actions[LIBHPX_ACTION_MAX];
 
+#ifdef ENABLE_DEBUG
+void CHECK_BOUND(const action_entry_t *table, hpx_action_t id);
+#else
+#define CHECK_BOUND(table, id)
+#endif
+
 /// Register an HPX action of a given @p type. This is similar to the
 /// hpx_register_action routine, except that it gives us the chance to "tag"
 /// LIBHPX actions in their own way. This can be useful for instrumentation or
@@ -69,30 +75,16 @@ int libhpx_register_action(hpx_action_type_t type, uint32_t attr,
                            const char *key, hpx_action_t *id, void (*f)(void),
                            unsigned nargs, ...);
 
-/// Get the key for an action.
-const char *action_table_get_key(const action_entry_t *, hpx_action_t)
-  HPX_NON_NULL(1);
 
-/// Get the action type.
-hpx_action_type_t action_table_get_type(const action_entry_t *,
-                                        hpx_action_t)
-  HPX_NON_NULL(1);
+/// Called when all of the actions have been registered.
+void action_table_complete(void);
 
-/// Get the key for an action.
-handler_t action_table_get_handler(const action_entry_t *,
-                                        hpx_action_t)
-  HPX_NON_NULL(1);
+/// Called to free any internal data allocated by the actions.
+void action_table_finalize(void);
 
-/// Get the FFI type information associated with an action.
-ffi_cif *action_table_get_cif(const action_entry_t *, hpx_action_t)
-  HPX_NON_NULL(1);
-
-/// Get the environment associated with the action.
-void *action_table_get_env(const action_entry_t *, hpx_action_t)
-  HPX_NON_NULL(1);
 
 /// Report the number of actions registerd in the table
-int action_table_size(const action_entry_t *table);
+int action_table_size(void);
 
 /// Run the handler associated with an action.
 int action_execute(struct hpx_parcel *)
@@ -119,54 +111,95 @@ int action_call_va(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
                    hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
                    int nargs, va_list *args);
 
-/// Is the action a pinned action?
-bool action_is_pinned(const action_entry_t *, hpx_action_t)
-  HPX_NON_NULL(1);
+static inline bool entry_is_pinned(const action_entry_t *e) {
+  return (e->attr & HPX_PINNED);
+}
 
-/// Is the action a marshalled action?
-bool action_is_marshalled(const action_entry_t *, hpx_action_t)
-  HPX_NON_NULL(1);
+static inline bool entry_is_marshalled(const action_entry_t *e) {
+  return (e->attr & HPX_MARSHALLED);
+}
 
-/// Is the action a vectored action?
-bool action_is_vectored(const action_entry_t *, hpx_action_t)
-  HPX_NON_NULL(1);
+static inline bool entry_is_vectored(const action_entry_t *e) {
+  return (e->attr & HPX_VECTORED);
+}
 
-/// Is the action internal?
-bool action_is_internal(const action_entry_t *, hpx_action_t)
-  HPX_NON_NULL(1);
+static inline bool entry_is_internal(const action_entry_t *e) {
+  return (e->attr & HPX_INTERNAL);
+}
 
-/// Is the action a default action?
-bool action_is_default(const action_entry_t *, hpx_action_t)
-  HPX_NON_NULL(1);
+static inline bool entry_is_default(const action_entry_t *e) {
+  return (e->type == HPX_DEFAULT);
+}
 
-/// Is the action a task?
-bool action_is_task(const action_entry_t *, hpx_action_t)
-  HPX_NON_NULL(1);
+static inline bool entry_is_task(const action_entry_t *e) {
+  return (e->type == HPX_TASK);
+}
 
-/// Is the action an interrupt?
-bool action_is_interrupt(const action_entry_t *, hpx_action_t)
-  HPX_NON_NULL(1);
+static inline bool entry_is_interrupt(const action_entry_t *e) {
+  return (e->type == HPX_INTERRUPT);
+}
 
-/// Is the action a function?
-bool action_is_function(const action_entry_t *, hpx_action_t)
-  HPX_NON_NULL(1);
+static inline bool entry_is_function(const action_entry_t *e) {
+  return (e->type == HPX_FUNCTION);
+}
 
-/// Is the action an OpenCL kernel?
-bool action_is_opencl(const action_entry_t *, hpx_action_t)
-  HPX_NON_NULL(1);
+static inline bool entry_is_opencl(const action_entry_t *e) {
+  return (e->type == HPX_OPENCL);
+}
 
-/// Build an action table.
-///
-/// This will process all of the registered actions, sorting them by key and
-/// assigning ids to their registered id addresses. The caller obtains ownership
-/// of the table and must call action_table_free() to release its resources.
-///
-/// @return             An action table that can be indexed by the keys
-///                     originally registered.
-void action_table_complete(action_entry_t *actions);
+static inline bool action_is_pinned(hpx_action_t id) {
+  CHECK_BOUND(actions, id);
+  const action_entry_t *entry = &actions[id];
+  return entry_is_pinned(entry);
+}
 
-/// Free an action table.
-void action_table_finalize(const action_entry_t *actions);
+static inline bool action_is_marshalled(hpx_action_t id) {
+  CHECK_BOUND(actions, id);
+  const action_entry_t *entry = &actions[id];
+  return entry_is_marshalled(entry);
+}
+
+static inline bool action_is_vectored(hpx_action_t id) {
+  CHECK_BOUND(actions, id);
+  const action_entry_t *entry = &actions[id];
+  return entry_is_vectored(entry);
+}
+
+static inline bool action_is_internal(hpx_action_t id) {
+  CHECK_BOUND(actions, id);
+  const action_entry_t *entry = &actions[id];
+  return entry_is_internal(entry);
+}
+
+static inline bool action_is_default(hpx_action_t id) {
+  CHECK_BOUND(actions, id);
+  const action_entry_t *entry = &actions[id];
+  return entry_is_default(entry);
+}
+
+static inline bool action_is_task(hpx_action_t id) {
+  CHECK_BOUND(actions, id);
+  const action_entry_t *entry = &actions[id];
+  return entry_is_task(entry);
+}
+
+static inline bool action_is_interrupt(hpx_action_t id) {
+  CHECK_BOUND(actions, id);
+  const action_entry_t *entry = &actions[id];
+  return entry_is_interrupt(entry);
+}
+
+static inline bool action_is_function(hpx_action_t id) {
+  CHECK_BOUND(actions, id);
+  const action_entry_t *entry = &actions[id];
+  return entry_is_function(entry);
+}
+
+static inline bool action_is_opencl(hpx_action_t id) {
+  CHECK_BOUND(actions, id);
+  const action_entry_t *entry = &actions[id];
+  return entry_is_opencl(entry);
+}
 
 /// Wraps the libhpx_register_action() function to make it slightly
 /// more convenient to use.
