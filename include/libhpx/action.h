@@ -90,16 +90,6 @@ int action_table_size(void);
 int action_execute(struct hpx_parcel *)
   HPX_NON_NULL(1);
 
-/// Serialize the vargs into the parcel.
-hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int nargs, va_list *vargs);
-
-/// Returns a parcel that encodes the target address, an action and
-/// its argument, and the continuation. The parcel is ready to be sent
-/// to effect a call operation.
-hpx_parcel_t *action_create_parcel_va(hpx_addr_t addr, hpx_action_t action,
-                                      hpx_addr_t c_addr, hpx_action_t c_action,
-                                      int nargs, va_list *args);
-
 /// Same as above, with the exception that the input arguments are
 /// variadic instead of a va_list.
 hpx_parcel_t *action_create_parcel(hpx_addr_t addr, hpx_action_t action,

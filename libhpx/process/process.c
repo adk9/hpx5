@@ -163,10 +163,13 @@ hpx_pid_t hpx_process_getpid(hpx_addr_t process) {
 
 int _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
                       hpx_addr_t result, int n, ...) {
+  CHECK_BOUND(actions, action);
+
   va_list vargs;
   va_start(vargs, n);
-  hpx_parcel_t *parcel = action_create_parcel_va(addr, action, result,
-                                                 hpx_lco_set_action, n, &vargs);
+  const action_entry_t *entry = &actions[action];
+  hpx_parcel_t *parcel =  entry->new_parcel(entry, addr, result,
+                                            hpx_lco_set_action, n, &vargs);
   va_end(vargs);
 
   if (hpx_thread_current_pid() == hpx_process_getpid(process)) {
