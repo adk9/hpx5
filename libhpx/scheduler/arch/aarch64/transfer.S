@@ -27,7 +27,7 @@
 LABEL(thread_transfer)
         STARTPROC
 
-        sub sp, sp, FRAME_SIZE
+        sub sp, sp, 192
 
 #define REG_PAIR(REG1, REG2, OFFS)	stp REG1, REG2, [sp, OFFS]
 #define REG_ONE(REG1, OFFS)		str REG1, [sp, OFFS]
@@ -60,7 +60,7 @@ LABEL(thread_transfer)
         FPR_LAYOUT
 #undef REG_PAIR
 #undef REG_ONE
-        add sp, sp, FRAME_SIZE
+        add sp, sp, 192
 
         ret x30
         ENDPROC

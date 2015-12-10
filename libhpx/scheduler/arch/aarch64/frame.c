@@ -47,7 +47,7 @@ void *transfer_frame_init(void *top, hpx_parcel_t *p, thread_entry_t f) {
   // the frame base from the top of the frame using the size of the frame
   // structure. After this, we can just write values to the frame structure and
   // they'll be in the right place for the initial return from transfer.
-  _frame_t *frame = (void*)((char*)base - sizeof(*top));
+  _frame_t *frame = (void*)((char*)top - sizeof(*frame));
   assert((uintptr_t)frame % 16 == 0);
 
   // register must be the same as the one in align_stack_trampoline
