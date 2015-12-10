@@ -195,6 +195,7 @@ static hpx_status_t _user_lco_wait(lco_t *lco, int reset) {
   lco_lock(lco);
   _user_lco_t *u = (_user_lco_t *)lco;
   status = _wait(u);
+
   if (reset && status == HPX_SUCCESS) {
     _reset(u);
   }
@@ -260,7 +261,7 @@ _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
 
   hpx_action_handler_t f = action_table_get_handler(here->actions, u->id);
   _hpx_user_lco_id_t init_fn = (_hpx_user_lco_id_t)f;
-  init_fn(u->buffer, u->size, u->init, init_size);
+  init_fn(u->buffer, u->size, init, init_size);
   return HPX_SUCCESS;
 }
 /// @}
@@ -368,4 +369,14 @@ hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size, hpx_action_t id,
   free(args);
   // return the base address of the allocation
   return base;
+}
+
+/// Get the user-defined LCO's user data. This allows to access the buffer
+/// portion of the user-defined LCO regardless the LCO has been set or not.
+void *hpx_lco_user_get_user_data(void *lco, void **out) {
+  lco_lock(lco);
+  _user_lco_t *u = (_user_lco_t *)lco;
+  // Copy out the user data if the caller wants it.
+  *out = u->buffer;
+  lco_unlock(lco);
 }

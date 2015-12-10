@@ -510,6 +510,13 @@ hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size,
                                         size_t init_size)
   HPX_PUBLIC;
 
+/// Get the user-defined LCO's user data. This allows to access the buffer
+/// portion of the user-defined LCO regardless the LCO has been set or not.
+/// @param        lco The LCO we're processing.
+/// @param        out The location to output the user lco value.
+void *hpx_lco_user_get_user_data(void *lco, void **out)
+  HPX_PUBLIC;
+
 /// Allocate a new generation counter.
 ///
 /// A generation counter allows an application programmer to efficiently wait
