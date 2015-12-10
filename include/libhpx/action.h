@@ -123,6 +123,10 @@ static inline bool entry_is_vectored(const action_entry_t *e) {
   return (e->attr & HPX_VECTORED);
 }
 
+static inline bool entry_is_ffi(const action_entry_t *e) {
+  return (!entry_is_marshalled(e) && !entry_is_vectored(e));
+}
+
 static inline bool entry_is_internal(const action_entry_t *e) {
   return (e->attr & HPX_INTERNAL);
 }

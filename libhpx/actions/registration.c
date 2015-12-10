@@ -112,9 +112,7 @@ static int _push_back(action_entry_t *table, hpx_action_t *id, const char *key,
   back->attr = attr;
   back->cif = cif;
   back->env = env;
-  entry_init_execute_parcel(back);
-  entry_init_pack_buffer(back);
-  entry_init_new_parcel(back);
+  entry_init_handlers(back);
   return HPX_SUCCESS;
 }
 

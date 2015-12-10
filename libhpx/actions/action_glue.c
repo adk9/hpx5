@@ -16,7 +16,7 @@
 #endif
 
 #include <libhpx/action.h>
-#include <libhpx/locality.h>
+#include <libhpx/debug.h>
 #include <libhpx/parcel.h>
 #include "init.h"
 
@@ -24,6 +24,44 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id) {
   CHECK_BOUND(actions, id);
   const action_entry_t *entry = &actions[id];
   return (hpx_action_handler_t)entry->handler;
+}
+
+hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int n, va_list *args) {
+  CHECK_BOUND(actions, p->action);
+  const action_entry_t *entry = &actions[p->action];
+  void *buffer = hpx_parcel_get_data(p);
+  entry->pack_buffer(entry, buffer, n, args);
+  return p;
+}
+
+hpx_parcel_t *action_create_parcel_va(hpx_addr_t addr, hpx_action_t action,
+                                      hpx_addr_t c_addr, hpx_action_t c_action,
+                                      int nargs, va_list *args) {
+  CHECK_BOUND(actions, action);
+  const action_entry_t *entry = &actions[action];
+  return entry->new_parcel(entry, addr, c_addr, c_action, nargs, args);
+}
+
+hpx_parcel_t *action_create_parcel(hpx_addr_t addr, hpx_action_t action,
+                                   hpx_addr_t c_addr, hpx_action_t c_action,
+                                   int nargs, ...) {
+  va_list args;
+  va_start(args, nargs);
+  hpx_parcel_t *p = action_create_parcel_va(addr, action, c_addr, c_action,
+                                            nargs, &args);
+  va_end(args);
+  return p;
+}
+
+int action_execute(hpx_parcel_t *p) {
+  dbg_assert(p->target != HPX_NULL);
+  dbg_assert_str(p->action != HPX_ACTION_INVALID, "registration error\n");
+  CHECK_BOUND(actions, p->action);
+
+  hpx_action_t id = p->action;
+  CHECK_BOUND(actions, id);
+  const action_entry_t *entry = &actions[id];
+  return entry->execute_parcel(entry, p);
 }
 
 int action_call_va(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,

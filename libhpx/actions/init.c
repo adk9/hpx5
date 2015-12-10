@@ -11,15 +11,26 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef LIBHPX_ACTIONS_INIT_H
-#define LIBHPX_ACTIONS_INIT_H
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
-#include <hpx/hpx.h>
+#include <inttypes.h>
+#include <libhpx/action.h>
+#include <libhpx/debug.h>
+#include "init.h"
 
-void entry_init_handlers(action_entry_t *entry);
-
-void entry_init_marshalled(action_entry_t *entry);
-void entry_init_ffi(action_entry_t *entry);
-void entry_init_vectored(action_entry_t *entry);
-
-#endif // LIBHPX_ACTIONS_INIT_H
+void entry_init_handlers(action_entry_t *entry) {
+  if (entry_is_vectored(entry)) {
+    entry_init_vectored(entry);
+  }
+  else if (entry_is_marshalled(entry)) {
+    entry_init_marshalled(entry);
+  }
+  else if (entry_is_ffi(entry)) {
+    entry_init_ffi(entry);
+  }
+  else {
+    dbg_error("Could not initialize entry for attr %" PRIu32 "\n", entry->attr);
+  }
+}
