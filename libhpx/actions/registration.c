@@ -28,10 +28,10 @@
 /// because we use constructors inside of libhpx to do action registration. We
 /// expose this action table to be used for that purpose.
 static int _n = 1;
-action_entry_t actions[LIBHPX_ACTION_MAX];
+action_t actions[LIBHPX_ACTION_MAX];
 
 static void HPX_CONSTRUCTOR _init_null_handler(void) {
-  actions[0] = (action_entry_t){
+  actions[0] = (action_t){
     .handler = NULL,
     .id = NULL,
     .key = "",
@@ -42,31 +42,12 @@ static void HPX_CONSTRUCTOR _init_null_handler(void) {
   };
 }
 
-#define _ACTION_TABLE_GET(type, name, init)                             \
-  type action_table_get_##name(const action_entry_t *table, hpx_action_t id) { \
-    if (id == HPX_ACTION_INVALID) {                                     \
-      log_dflt("action registration is not complete");                  \
-      return (type)init;                                                \
-    } else if (id >= _n) {                                              \
-      dbg_error("action id, %d, out of bounds [0,%u)\n", id, _n);       \
-    }                                                                   \
-    return actions[id].name;                                     \
-  }                                                                     \
-  type action_table_get_##name(const action_entry_t *table, hpx_action_t id)
-
-_ACTION_TABLE_GET(const char *, key, NULL);
-_ACTION_TABLE_GET(hpx_action_type_t, type, HPX_ACTION_INVALID);
-_ACTION_TABLE_GET(uint32_t, attr, 0);
-_ACTION_TABLE_GET(handler_t, handler, NULL);
-_ACTION_TABLE_GET(ffi_cif *, cif, NULL);
-_ACTION_TABLE_GET(void *, env, NULL);
-
 int action_table_size(void) {
   return _n;
 }
 
 #ifdef ENABLE_DEBUG
-void CHECK_BOUND(const action_entry_t *table, hpx_action_t id) {
+void CHECK_ACTION(hpx_action_t id) {
   if (id == HPX_ACTION_INVALID) {
     dbg_error("action registration is not complete");
   }
@@ -81,7 +62,7 @@ void CHECK_BOUND(const action_entry_t *table, hpx_action_t id) {
 /// This is not synchronized and thus unsafe to call in a multithreaded
 /// environment, but we make sure to call it in hpx_init() where we assume we
 /// are running in single-threaded mode, so we should be safe.
-static action_entry_t *_get_actions(void) {
+static action_t *_get_actions(void) {
   return actions;
 }
 
@@ -97,14 +78,14 @@ static action_entry_t *_get_actions(void) {
 /// @param          env Action's environment.
 ///
 /// @return             HPX_SUCCESS or an error if the push fails.
-static int _push_back(action_entry_t *table, hpx_action_t *id, const char *key,
+static int _push_back(action_t *table, hpx_action_t *id, const char *key,
                       handler_t f, hpx_action_type_t type, uint32_t attr,
                       ffi_cif *cif, void *env) {
   int i = _n++;
   if (LIBHPX_ACTION_MAX < i) {
     dbg_error("action table overflow\n");
   }
-  action_entry_t *back = &actions[i];
+  action_t *back = &actions[i];
   back->handler = f;
   back->id = id;
   back->key = key;
@@ -112,7 +93,7 @@ static int _push_back(action_entry_t *table, hpx_action_t *id, const char *key,
   back->attr = attr;
   back->cif = cif;
   back->env = env;
-  entry_init_handlers(back);
+  action_init_handlers(back);
   return HPX_SUCCESS;
 }
 
@@ -127,8 +108,8 @@ static int _push_back(action_entry_t *table, hpx_action_t *id, const char *key,
 ///
 /// @return             The lexicographic comparison of the entries' keys.
 static int _cmp_keys(const void *lhs, const void *rhs) {
-  const action_entry_t *el = lhs;
-  const action_entry_t *er = rhs;
+  const action_t *el = lhs;
+  const action_t *er = rhs;
 
   // if either the left or right entry's id is NULL, that means it is
   // our reserved action (user-registered actions can never have the
@@ -145,7 +126,7 @@ static int _cmp_keys(const void *lhs, const void *rhs) {
 
 /// Sort the actions in an action table by their key.
 static void _sort_entries(void) {
-  qsort(&actions, _n, sizeof(action_entry_t), _cmp_keys);
+  qsort(&actions, _n, sizeof(action_t), _cmp_keys);
 }
 
 /// Assign all of the entry ids in the table.
@@ -155,7 +136,7 @@ static void _assign_ids(void) {
   }
 }
 
-void action_table_complete(void) {
+void action_registration_finalize(void) {
   _sort_entries();
   _assign_ids();
 

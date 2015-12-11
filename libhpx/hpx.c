@@ -236,7 +236,7 @@ int hpx_init(int *argc, char ***argv) {
   apex_set_node_id(here->rank);
 #endif
 
-  action_table_complete();
+  action_registration_finalize();
   inst_start();
 
   // start the scheduler, this will return after scheduler_shutdown()
@@ -261,12 +261,12 @@ int hpx_init(int *argc, char ***argv) {
 /// Called to run HPX.
 int _hpx_run(hpx_action_t *act, int n, ...) {
   if (here->rank == 0) {
-    CHECK_BOUND(actions, *act);
-    va_list vargs;
-    va_start(vargs, n);
-    const action_entry_t *entry = &actions[*act];
-    hpx_parcel_t *p =  entry->new_parcel(entry, HPX_HERE, 0, 0, n, &vargs);
-    va_end(vargs);
+    CHECK_ACTION(*act);
+    va_list args;
+    va_start(args, n);
+    const action_t *action = &actions[*act];
+    hpx_parcel_t *p =  action->new(action, HPX_HERE, 0, 0, n, &args);
+    va_end(args);
     dbg_check(hpx_parcel_send(p, HPX_NULL), "failed to spawn initial action\n");
   }
   log_dflt("hpx started running %"PRIu64"\n", here->epoch);

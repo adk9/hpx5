@@ -21,7 +21,8 @@
 #include <libhpx/parcel.h>
 #include "init.h"
 
-static void _pack_marshalled(const void *obj, void *b, int n, va_list *args) {
+static void _pack_marshalled(const void *obj, hpx_parcel_t *p, int n,
+                             va_list *args) {
 }
 
 static hpx_parcel_t *_new_marshalled(const void *obj, hpx_addr_t addr,
@@ -30,38 +31,38 @@ static hpx_parcel_t *_new_marshalled(const void *obj, hpx_addr_t addr,
   dbg_assert_str(!n || args);
   dbg_assert(!n || n == 2);
 
-  const action_entry_t *entry = obj;
-  hpx_action_t action = *entry->id;
+  const action_t *action = obj;
+  hpx_action_t id = *action->id;
   hpx_pid_t pid = hpx_thread_current_pid();
   void *data = (n) ? va_arg(*args, void*) : NULL;
   int bytes = (n) ? va_arg(*args, int) : 0;
-  return parcel_new(addr, action, c_addr, c_action, pid, data, bytes);
+  return parcel_new(addr, id, c_addr, c_action, pid, data, bytes);
 }
 
-static int _execute_marshalled(const void *obj, hpx_parcel_t *p) {
-  const action_entry_t *entry = obj;
-  hpx_action_handler_t handler = (hpx_action_handler_t)entry->handler;
+static int _exec_marshalled(const void *obj, hpx_parcel_t *p) {
+  const action_t *action = obj;
+  hpx_action_handler_t handler = (hpx_action_handler_t)action->handler;
   void *args = hpx_parcel_get_data(p);
   return handler(args, p->size);
 }
 
-static int _execute_pinned_marshalled(const void *obj, hpx_parcel_t *p) {
+static int _exec_pinned_marshalled(const void *obj, hpx_parcel_t *p) {
   void *target;
   if (!hpx_gas_try_pin(p->target, &target)) {
     log_action("pinned action resend.\n");
     return HPX_RESEND;
   }
 
-  const action_entry_t *entry = obj;
+  const action_t *action = obj;
   hpx_pinned_action_handler_t handler =
-      (hpx_pinned_action_handler_t)entry->handler;
+      (hpx_pinned_action_handler_t)action->handler;
   void *args = hpx_parcel_get_data(p);
   return handler(target, args, p->size);
 }
 
-void entry_init_marshalled(action_entry_t *entry) {
-  entry->new_parcel = _new_marshalled;
-  entry->pack_buffer = _pack_marshalled;
-  entry->execute_parcel = (entry_is_pinned(entry)) ? _execute_pinned_marshalled
-                          : _execute_marshalled;
+void action_init_marshalled(action_t *action) {
+  uint32_t pinned = action->attr & HPX_PINNED;
+  action->exec = (pinned) ? _exec_pinned_marshalled : _exec_marshalled;
+  action->new = _new_marshalled;
+  action->pack = _pack_marshalled;
 }

@@ -161,38 +161,38 @@ hpx_pid_t hpx_process_getpid(hpx_addr_t process) {
   return (hpx_pid_t)process;
 }
 
-int _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
+int _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t id,
                       hpx_addr_t result, int n, ...) {
-  CHECK_BOUND(actions, action);
+  CHECK_ACTION(id);
 
-  va_list vargs;
-  va_start(vargs, n);
-  const action_entry_t *entry = &actions[action];
-  hpx_parcel_t *parcel =  entry->new_parcel(entry, addr, result,
-                                            hpx_lco_set_action, n, &vargs);
-  va_end(vargs);
+  va_list args;
+  va_start(args, n);
+  const action_t *action = &actions[id];
+  hpx_parcel_t *p =  action->new(action, addr, result, hpx_lco_set_action, n,
+                                 &args);
+  va_end(args);
 
   if (hpx_thread_current_pid() == hpx_process_getpid(process)) {
-    hpx_parcel_send_sync(parcel);
+    hpx_parcel_send_sync(p);
     return HPX_SUCCESS;
   }
 
   hpx_addr_t sync = hpx_lco_future_new(0);
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, parcel_size(parcel));
-  p->target = process;
-  p->action = _proc_call;
-  p->c_target = sync;
-  p->c_action = hpx_lco_set_action;
-  hpx_parcel_set_data(p, parcel, parcel_size(parcel));
-  p->pid = 0;
-  p->credit = 0;
+  hpx_parcel_t *q = hpx_parcel_acquire(NULL, parcel_size(p));
+  q->target = process;
+  q->action = _proc_call;
+  q->c_target = sync;
+  q->c_action = hpx_lco_set_action;
+  hpx_parcel_set_data(q, p, parcel_size(p));
+  q->pid = 0;
+  q->credit = 0;
 #ifdef ENABLE_INSTRUMENTATION
   inst_trace(HPX_INST_CLASS_PROCESS, HPX_INST_EVENT_PROCESS_CALL,
-             process, p->pid);
+             process, q->pid);
 #endif
-  hpx_parcel_send_sync(p);
+  hpx_parcel_send_sync(q);
 
-  parcel_delete(parcel);
+  parcel_delete(p);
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
   return HPX_SUCCESS;

@@ -20,17 +20,18 @@
 #include <libhpx/debug.h>
 #include "init.h"
 
-void entry_init_handlers(action_entry_t *entry) {
-  if (entry_is_vectored(entry)) {
-    entry_init_vectored(entry);
+void action_init_handlers(action_t *action) {
+  uint32_t attr = action->attr & (HPX_MARSHALLED | HPX_VECTORED);
+  switch (attr) {
+   case (HPX_ATTR_NONE):
+    action_init_ffi(action);
+    return;
+   case (HPX_MARSHALLED):
+    action_init_marshalled(action);
+    return;
+   case (HPX_MARSHALLED | HPX_VECTORED):
+    action_init_vectored(action);
+    return;
   }
-  else if (entry_is_marshalled(entry)) {
-    entry_init_marshalled(entry);
-  }
-  else if (entry_is_ffi(entry)) {
-    entry_init_ffi(entry);
-  }
-  else {
-    dbg_error("Could not initialize entry for attr %" PRIu32 "\n", entry->attr);
-  }
+  dbg_error("Could not initialize action for attr %" PRIu32 "\n", attr);
 }

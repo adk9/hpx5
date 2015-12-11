@@ -23,13 +23,15 @@
 #include <libhpx/padding.h>
 #include "init.h"
 
-static void _pack_vectored(const void *obj, void *b, int n, va_list *vargs) {
+static void _pack_vectored(const void *obj, hpx_parcel_t *p, int n,
+                           va_list *vargs) {
   n >>= 1;
-  *(int*)b = n;
-  size_t *sizes = (size_t*)((char*)b + sizeof(int));
+  void *buffer = hpx_parcel_get_data(p);
+  *(int*)buffer = n;
+  size_t *sizes = (size_t*)((char*)buffer + sizeof(int));
   void *args = (char*)sizes + (sizeof(size_t) * n);
 
-  size_t bytes = ALIGN(args-b, 8);
+  size_t bytes = ALIGN(args - buffer, 8);
   for (int i = 0; i < n; ++i) {
     void *arg = va_arg(*vargs, void*);
     size_t size = va_arg(*vargs, int);
@@ -45,8 +47,8 @@ static hpx_parcel_t *_new_vectored(const void *obj, hpx_addr_t addr,
   dbg_assert(n && args);
   dbg_assert_str(!(n & 1), "Vectored actions require even arg count: %d\n", n);
 
-  const action_entry_t *entry = obj;
-  hpx_action_t id = *entry->id;
+  const action_t *action = obj;
+  hpx_action_t id = *action->id;
   hpx_pid_t pid = hpx_thread_current_pid();
 
   // For vectored arguments we want to read through the argument pairs and
@@ -70,19 +72,18 @@ static hpx_parcel_t *_new_vectored(const void *obj, hpx_addr_t addr,
   va_end(temp);
 
   hpx_parcel_t *p = parcel_new(addr, id, c_addr, c_action, pid, NULL, bytes);
-  void *buffer = hpx_parcel_get_data(p);
-  _pack_vectored(obj, buffer, n, args);
+  _pack_vectored(obj, p, n, args);
   return p;
 }
 
-static int _execute_pinned_vectored(const void *obj, hpx_parcel_t *p) {
+static int _exec_pinned_vectored(const void *obj, hpx_parcel_t *p) {
   void *target;
   if (!hpx_gas_try_pin(p->target, &target)) {
     log_action("pinned action resend.\n");
     return HPX_RESEND;
   }
 
-  const action_entry_t *entry = obj;
+  const action_t *action = obj;
   void *args = hpx_parcel_get_data(p);
   int nargs = *(int*)args;
   size_t *sizes = (size_t*)((char*)args + sizeof(int));
@@ -95,12 +96,12 @@ static int _execute_pinned_vectored(const void *obj, hpx_parcel_t *p) {
   }
 
   hpx_pinned_vectored_action_handler_t handler =
-      (hpx_pinned_vectored_action_handler_t)entry->handler;
+      (hpx_pinned_vectored_action_handler_t)action->handler;
   return handler(target, nargs, argsp, sizes);
 }
 
-static int _execute_vectored(const void *obj, hpx_parcel_t *p) {
-  const action_entry_t *entry = obj;
+static int _exec_vectored(const void *obj, hpx_parcel_t *p) {
+  const action_t *action = obj;
   void *args = hpx_parcel_get_data(p);
   int nargs = *(int*)args;
   size_t *sizes = (size_t*)((char*)args + sizeof(int));
@@ -113,13 +114,13 @@ static int _execute_vectored(const void *obj, hpx_parcel_t *p) {
   }
 
   hpx_vectored_action_handler_t handler =
-      (hpx_vectored_action_handler_t )entry->handler;
+      (hpx_vectored_action_handler_t )action->handler;
   return handler(nargs, argsp, sizes);
 }
 
-void entry_init_vectored(action_entry_t *entry) {
-  entry->new_parcel = _new_vectored;
-  entry->pack_buffer = _pack_vectored;
-  entry->execute_parcel = (entry_is_pinned(entry)) ? _execute_pinned_vectored
-                          : _execute_vectored;
+void action_init_vectored(action_t *action) {
+  uint32_t pinned = action->attr & HPX_PINNED;
+  action->exec = (pinned) ? _exec_pinned_vectored : _exec_vectored;
+  action->new = _new_vectored;
+  action->pack = _pack_vectored;
 }

@@ -17,25 +17,17 @@
 #include <stdarg.h>
 #include <hpx/hpx.h>
 
-///
+/// Generic action handler type.
 typedef void (*handler_t)(void);
 
-
-/// An action table entry type.
+/// An action table action type.
 ///
-/// This stores information associated with an HPX action. In
-/// particular, an action entry maintains the action handler
-/// (function), a globally unique string key, a unique id generated
-/// during action finalization, action types and attributes, e.g., can
-/// they block, should we pre-pin their arguments, etc., and an
-/// environment pointer.
 ///
 typedef struct {
-  int           (*execute_parcel)(const void *obj, hpx_parcel_t *buffer);
-  void          (*pack_buffer)(const void *obj, void *buffer, int n, va_list *args);
-  hpx_parcel_t *(*new_parcel)(const void *obj, hpx_addr_t addr,
-                              hpx_addr_t c_addr, hpx_action_t c_action,
-                              int n, va_list *args);
+  int           (*exec)(const void *obj, hpx_parcel_t *p);
+  void          (*pack)(const void *obj, hpx_parcel_t *p, int n, va_list *args);
+  hpx_parcel_t *(*new)(const void *obj, hpx_addr_t addr, hpx_addr_t c_addr,
+                       hpx_action_t c_action, int n, va_list *args);
   handler_t      handler;
   hpx_action_t       *id;
   const char        *key;
@@ -43,17 +35,17 @@ typedef struct {
   uint32_t          attr;
   ffi_cif           *cif;
   void              *env;
-} action_entry_t;
+} action_t;
 
 /// The default libhpx action table size.
 #define LIBHPX_ACTION_MAX (UINT32_C(1) << (sizeof(hpx_action_t) * 8))
 
-extern action_entry_t actions[LIBHPX_ACTION_MAX];
+extern action_t actions[LIBHPX_ACTION_MAX];
 
 #ifdef ENABLE_DEBUG
-void CHECK_BOUND(const action_entry_t *table, hpx_action_t id);
+void CHECK_ACTION(hpx_action_t id);
 #else
-#define CHECK_BOUND(table, id)
+#define CHECK_ACTION(id)
 #endif
 
 /// Register an HPX action of a given @p type. This is similar to the
@@ -77,7 +69,7 @@ int libhpx_register_action(hpx_action_type_t type, uint32_t attr,
 
 
 /// Called when all of the actions have been registered.
-void action_table_complete(void);
+void action_registration_finalize(void);
 
 /// Called to free any internal data allocated by the actions.
 void action_table_finalize(void);
@@ -86,9 +78,9 @@ void action_table_finalize(void);
 /// Report the number of actions registerd in the table
 int action_table_size(void);
 
-/// Run the handler associated with an action.
-int action_execute(struct hpx_parcel *)
-  HPX_NON_NULL(1);
+// /// Run the handler associated with an action.
+// int action_execute(struct hpx_parcel *)
+//   HPX_NON_NULL(1);
 
 /// Same as above, with the exception that the input arguments are
 /// variadic instead of a va_list.
@@ -101,98 +93,58 @@ int action_call_va(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
                    hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
                    int nargs, va_list *args);
 
-static inline bool entry_is_pinned(const action_entry_t *e) {
-  return (e->attr & HPX_PINNED);
-}
-
-static inline bool entry_is_marshalled(const action_entry_t *e) {
-  return (e->attr & HPX_MARSHALLED);
-}
-
-static inline bool entry_is_vectored(const action_entry_t *e) {
-  return (e->attr & HPX_VECTORED);
-}
-
-static inline bool entry_is_ffi(const action_entry_t *e) {
-  return (!entry_is_marshalled(e) && !entry_is_vectored(e));
-}
-
-static inline bool entry_is_internal(const action_entry_t *e) {
-  return (e->attr & HPX_INTERNAL);
-}
-
-static inline bool entry_is_default(const action_entry_t *e) {
-  return (e->type == HPX_DEFAULT);
-}
-
-static inline bool entry_is_task(const action_entry_t *e) {
-  return (e->type == HPX_TASK);
-}
-
-static inline bool entry_is_interrupt(const action_entry_t *e) {
-  return (e->type == HPX_INTERRUPT);
-}
-
-static inline bool entry_is_function(const action_entry_t *e) {
-  return (e->type == HPX_FUNCTION);
-}
-
-static inline bool entry_is_opencl(const action_entry_t *e) {
-  return (e->type == HPX_OPENCL);
-}
-
 static inline bool action_is_pinned(hpx_action_t id) {
-  CHECK_BOUND(actions, id);
-  const action_entry_t *entry = &actions[id];
-  return entry_is_pinned(entry);
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->attr & HPX_PINNED);
 }
 
 static inline bool action_is_marshalled(hpx_action_t id) {
-  CHECK_BOUND(actions, id);
-  const action_entry_t *entry = &actions[id];
-  return entry_is_marshalled(entry);
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->attr & HPX_MARSHALLED);
 }
 
 static inline bool action_is_vectored(hpx_action_t id) {
-  CHECK_BOUND(actions, id);
-  const action_entry_t *entry = &actions[id];
-  return entry_is_vectored(entry);
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->attr & HPX_VECTORED);
 }
 
 static inline bool action_is_internal(hpx_action_t id) {
-  CHECK_BOUND(actions, id);
-  const action_entry_t *entry = &actions[id];
-  return entry_is_internal(entry);
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->attr & HPX_INTERNAL);
 }
 
 static inline bool action_is_default(hpx_action_t id) {
-  CHECK_BOUND(actions, id);
-  const action_entry_t *entry = &actions[id];
-  return entry_is_default(entry);
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->type == HPX_DEFAULT);
 }
 
 static inline bool action_is_task(hpx_action_t id) {
-  CHECK_BOUND(actions, id);
-  const action_entry_t *entry = &actions[id];
-  return entry_is_task(entry);
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->type == HPX_TASK);
 }
 
 static inline bool action_is_interrupt(hpx_action_t id) {
-  CHECK_BOUND(actions, id);
-  const action_entry_t *entry = &actions[id];
-  return entry_is_interrupt(entry);
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->type == HPX_INTERRUPT);
 }
 
 static inline bool action_is_function(hpx_action_t id) {
-  CHECK_BOUND(actions, id);
-  const action_entry_t *entry = &actions[id];
-  return entry_is_function(entry);
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->type == HPX_FUNCTION);
 }
 
 static inline bool action_is_opencl(hpx_action_t id) {
-  CHECK_BOUND(actions, id);
-  const action_entry_t *entry = &actions[id];
-  return entry_is_opencl(entry);
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->type == HPX_OPENCL);
 }
 
 /// Wraps the libhpx_register_action() function to make it slightly

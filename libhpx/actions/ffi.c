@@ -21,16 +21,19 @@
 #include <libhpx/parcel.h>
 #include "init.h"
 
-static void _pack_ffi_0(const void *obj, void *b, int n, va_list *args) {
+static void _pack_ffi_0(const void *obj, hpx_parcel_t *p, int n, va_list *args)
+{
   // nothing to do
 }
 
-static void _pack_ffi_n(const void *obj, void *b, int n, va_list *args) {
-  const action_entry_t *entry = obj;
-  const ffi_cif          *cif = entry->cif;
+static void _pack_ffi_n(const void *obj, hpx_parcel_t *p, int n, va_list *args)
+{
+  const action_t *action = obj;
+  const ffi_cif *cif = action->cif;
+  void *buffer = hpx_parcel_get_data(p);
 
   DEBUG_IF (n != cif->nargs) {
-    const char *key = entry->key;
+    const char *key = action->key;
     dbg_error("%s requires %d arguments (%d given).\n", key, cif->nargs, n);
   }
 
@@ -43,15 +46,17 @@ static void _pack_ffi_n(const void *obj, void *b, int n, va_list *args) {
   }
 
   // use ffi to copy them to the buffer
-  ffi_ptrarray_to_raw((void*)cif, argps, b);
+  ffi_ptrarray_to_raw((void*)cif, argps, buffer);
 }
 
-static void _pack_pinned_ffi_n(const void *obj, void *b, int n, va_list *args) {
-  const action_entry_t *entry = obj;
-  const ffi_cif          *cif = entry->cif;
+static void _pack_pinned_ffi_n(const void *obj, hpx_parcel_t *p, int n,
+                               va_list *args) {
+  const action_t *action = obj;
+  const ffi_cif *cif = action->cif;
+  void *buffer = hpx_parcel_get_data(p);
 
   DEBUG_IF (n + 1 != cif->nargs) {
-    const char *key = entry->key;
+    const char *key = action->key;
     dbg_error("%s requires %d arguments (%d given).\n", key, cif->nargs, n + 1);
   }
 
@@ -68,14 +73,14 @@ static void _pack_pinned_ffi_n(const void *obj, void *b, int n, va_list *args) {
   }
 
   // use ffi to copy them to the buffer
-  ffi_ptrarray_to_raw((void*)cif, argps, b);
+  ffi_ptrarray_to_raw((void*)cif, argps, buffer);
 }
 
 static hpx_parcel_t *_new_ffi_0(const void *obj, hpx_addr_t addr,
                                 hpx_addr_t c_addr, hpx_action_t c_action,
                                 int n, va_list *args) {
-  const action_entry_t *entry = obj;
-  hpx_action_t id = *entry->id;
+  const action_t *action = obj;
+  hpx_action_t id = *action->id;
   hpx_pid_t pid = hpx_thread_current_pid();
   return parcel_new(addr, id, c_addr, c_action, pid, NULL, 0);
 }
@@ -83,76 +88,75 @@ static hpx_parcel_t *_new_ffi_0(const void *obj, hpx_addr_t addr,
 static hpx_parcel_t *_new_ffi_n(const void *obj, hpx_addr_t addr,
                                 hpx_addr_t c_addr, hpx_action_t c_action,
                                 int n, va_list *args) {
-  const action_entry_t *entry = obj;
-  hpx_action_t id = *entry->id;
+  const action_t *action = obj;
+  hpx_action_t id = *action->id;
   hpx_pid_t pid = hpx_thread_current_pid();
-  size_t bytes = ffi_raw_size(entry->cif);
+  size_t bytes = ffi_raw_size(action->cif);
   hpx_parcel_t *p = parcel_new(addr, id, c_addr, c_action, pid, NULL, bytes);
-  void *buffer = hpx_parcel_get_data(p);
-  _pack_ffi_n(obj, buffer, n, args);
+  _pack_ffi_n(obj, p, n, args);
   return p;
 }
 
 static hpx_parcel_t *_new_pinned_ffi_n(const void *obj, hpx_addr_t addr,
                                        hpx_addr_t c_addr, hpx_action_t c_action,
                                        int n, va_list *args) {
-  const action_entry_t *entry = obj;
-  hpx_action_t id = *entry->id;
+  const action_t *action = obj;
+  hpx_action_t id = *action->id;
   hpx_pid_t pid = hpx_thread_current_pid();
-  size_t bytes = ffi_raw_size(entry->cif);
+  size_t bytes = ffi_raw_size(action->cif);
   hpx_parcel_t *p = parcel_new(addr, id, c_addr, c_action, pid, NULL, bytes);
-  void *buffer = hpx_parcel_get_data(p);
-  _pack_pinned_ffi_n(obj, buffer, n, args);
+  _pack_pinned_ffi_n(obj, p, n, args);
   return p;
 }
 
-static int _execute_ffi_n(const void *obj, hpx_parcel_t *p) {
-  const action_entry_t *entry = obj;
+static int _exec_ffi_n(const void *obj, hpx_parcel_t *p) {
+  const action_t *action = obj;
   char ffiret[8];               // https://github.com/atgreen/libffi/issues/35
   int *ret = (int*)&ffiret[0];
   void *args = hpx_parcel_get_data(p);
-  ffi_raw_call(entry->cif, entry->handler, ret, args);
+  ffi_raw_call(action->cif, action->handler, ret, args);
   return *ret;
 }
 
-static int _execute_pinned_ffi_n(const void *obj, hpx_parcel_t *p) {
+static int _exec_pinned_ffi_n(const void *obj, hpx_parcel_t *p) {
   void *target;
   if (!hpx_gas_try_pin(p->target, &target)) {
     log_action("pinned action resend.\n");
     return HPX_RESEND;
   }
 
-  const action_entry_t *entry = obj;
-  ffi_cif *cif = entry->cif;
+  const action_t *action = obj;
+  ffi_cif *cif = action->cif;
   void *args = hpx_parcel_get_data(p);
   void *avalue[cif->nargs];
   ffi_raw_to_ptrarray(cif, args, avalue);
   avalue[0] = &target;
   char ffiret[8];               // https://github.com/atgreen/libffi/issues/35
   int *ret = (int*)&ffiret[0];
-  ffi_call(cif, entry->handler, ret, avalue);
+  ffi_call(cif, action->handler, ret, avalue);
   return *ret;
 }
 
-void entry_init_ffi(action_entry_t *entry) {
-  dbg_assert(entry->cif);
-  if (!entry->cif->nargs) {
-    entry->new_parcel = _new_ffi_0;
-    entry->pack_buffer = _pack_ffi_0;
+void action_init_ffi(action_t *action) {
+  dbg_assert(action->cif);
+  uint32_t pinned = action->attr & HPX_PINNED;
+  if (!action->cif->nargs) {
+    action->new = _new_ffi_0;
+    action->pack = _pack_ffi_0;
   }
-  else if (entry_is_pinned(entry)) {
-    entry->new_parcel = _new_pinned_ffi_n;
-    entry->pack_buffer = _pack_pinned_ffi_n;
+  else if (pinned) {
+    action->new = _new_pinned_ffi_n;
+    action->pack = _pack_pinned_ffi_n;
   }
   else {
-    entry->new_parcel = _new_ffi_n;
-    entry->pack_buffer = _pack_ffi_n;
+    action->new = _new_ffi_n;
+    action->pack = _pack_ffi_n;
   }
 
-  if (entry_is_pinned(entry)) {
-    entry->execute_parcel = _execute_pinned_ffi_n;
+  if (pinned) {
+    action->exec = _exec_pinned_ffi_n;
   }
   else {
-    entry->execute_parcel = _execute_ffi_n;
+    action->exec = _exec_ffi_n;
   }
 }

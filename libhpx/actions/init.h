@@ -16,10 +16,10 @@
 
 #include <hpx/hpx.h>
 
-void entry_init_handlers(action_entry_t *entry);
+void action_init_handlers(action_t *action);
 
-void entry_init_marshalled(action_entry_t *entry);
-void entry_init_ffi(action_entry_t *entry);
-void entry_init_vectored(action_entry_t *entry);
+void action_init_marshalled(action_t *action);
+void action_init_ffi(action_t *action);
+void action_init_vectored(action_t *action);
 
 #endif // LIBHPX_ACTIONS_INIT_H

@@ -142,18 +142,18 @@ static void _dbg_transfer(hpx_parcel_t *p, thread_transfer_cont_t c, void *e) {
 /// Continue a parcel by invoking its parcel continuation.
 ///
 /// @param            p The parent parcel (usually self->current).
-/// @param        nargs The number of arguments to continue.
+/// @param            n The number of arguments to continue.
 /// @param         args The arguments we are continuing.
-static void _continue_parcel(hpx_parcel_t *p, int nargs, va_list *args) {
+static void _continue_parcel(hpx_parcel_t *p, int n, va_list *args) {
   if (p->c_target == HPX_NULL || p->c_action == HPX_ACTION_NULL) {
     process_recover_credit(p);
     return;
   }
 
   // create the parcel to continue and transfer whatever credit we have
-  CHECK_BOUND(actions, p->c_action);
-  const action_entry_t *entry = &actions[p->c_action];
-  hpx_parcel_t *c = entry->new_parcel(entry, p->c_target, 0, 0, nargs, args);
+  CHECK_ACTION(p->c_action);
+  const action_t *action = &actions[p->c_action];
+  hpx_parcel_t *c = action->new(action, p->c_target, 0, 0, n, args);
   dbg_assert(c);
   c->credit = p->credit;
   p->credit = 0;
@@ -190,7 +190,9 @@ static void _execute_interrupt(hpx_parcel_t *p) {
   p->ustack = q->ustack;
 
   EVENT_THREAD_RUN(p, w);
-  int e = action_execute(p);
+  CHECK_ACTION(p->action);
+  const action_t *action = &actions[p->action];
+  int e = action->exec(action, p);
   EVENT_THREAD_END(p, w);
 
   // Restore the current thread pointer.
@@ -228,7 +230,9 @@ static void _execute_interrupt(hpx_parcel_t *p) {
 static void _execute_thread(hpx_parcel_t *p) {
   // matching events are in hpx_thread_exit()
   EVENT_THREAD_RUN(p, self);
-  int e = action_execute(p);
+  CHECK_ACTION(p->action);
+  const action_t *action = &actions[p->action];
+  int e = action->exec(action, p);
   hpx_thread_exit(e);
   unreachable();
 }
