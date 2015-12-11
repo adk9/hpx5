@@ -25,8 +25,7 @@
 
 #include "commands.h"
 
-static int
-_delete_parcel_handler(int src, command_t command) {
+static int _delete_parcel_handler(int src, command_t command) {
   uintptr_t arg = command_get_arg(command);
   hpx_parcel_t *p = (hpx_parcel_t *)arg;
   log_net("releasing sent parcel %p\n", (void*)p);
@@ -35,8 +34,7 @@ _delete_parcel_handler(int src, command_t command) {
 }
 COMMAND_DEF(delete_parcel, _delete_parcel_handler);
 
-static int
-_resume_parcel_remote_handler(int src, command_t command) {
+static int _resume_parcel_remote_handler(int src, command_t command) {
   // bounce the command back to the src, because that is where the parcel to be
   // resumed is waiting
   return network_command(here->network, HPX_THERE(src), resume_parcel,
@@ -44,8 +42,7 @@ _resume_parcel_remote_handler(int src, command_t command) {
 }
 COMMAND_DEF(resume_parcel_remote, _resume_parcel_remote_handler);
 
-static int
-_resume_parcel_handler(int src, command_t command) {
+static int _resume_parcel_handler(int src, command_t command) {
   uintptr_t arg = command_get_arg(command);
   hpx_parcel_t *p = (hpx_parcel_t *)arg;
   log_net("resuming %s, (%p)\n", action_table_get_key(here->actions, p->action),
@@ -55,17 +52,16 @@ _resume_parcel_handler(int src, command_t command) {
 }
 COMMAND_DEF(resume_parcel, _resume_parcel_handler);
 
-static HPX_USED const char *
-_straction(hpx_action_t id) {
+static HPX_USED const char *_straction(hpx_action_t id) {
   dbg_assert(here && here->actions);
-  return action_table_get_key(here->actions, id);
+  CHECK_ACTION(id);
+  return actions[id].key;
 }
 
-int
-command_run(int src, command_t cmd) {
+int command_run(int src, command_t cmd) {
   hpx_addr_t op = command_get_op(cmd);
   log_net("invoking command: %s from %d\n", _straction(op), src);
-  hpx_action_handler_t handler = action_table_get_handler(here->actions, op);
-  command_handler_t f = (command_handler_t)(handler);
+  CHECK_ACTION(op);
+  command_handler_t f = (command_handler_t)(actions[op].handler);
   return f(src, cmd);
 }

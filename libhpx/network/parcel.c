@@ -35,6 +35,7 @@
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
+#include <libhpx/padding.h>
 #include <libhpx/parcel.h>
 #include <libhpx/parcel_block.h>
 #include <libhpx/scheduler.h>
@@ -119,11 +120,11 @@ void parcel_launch(hpx_parcel_t *p) {
   log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64") => %s@(%"PRIu64")\n",
              p->pid,
              p->credit,
-             action_table_get_key(here->actions, p->action),
+             actions[p->action].key,
              hpx_parcel_get_data(p),
              p->size,
              p->target,
-             action_table_get_key(here->actions, p->c_action),
+             actions[p->c_action].key,
              p->c_target);
 
   EVENT_PARCEL_SEND(p);
@@ -193,16 +194,22 @@ void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
   }
 }
 
-hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action,
-                         hpx_addr_t c_target, hpx_action_t c_action,
-                         hpx_pid_t pid, const void *data, size_t len) {
+hpx_parcel_t *parcel_alloc(size_t payload) {
   size_t size = sizeof(hpx_parcel_t);
-  if (len != 0) {
-    size += max_size_t(sizeof(void*), len);
+  if (payload != 0) {
+    size += max_size_t(sizeof(void*), payload);
+    size += _BYTES(8, size);
   }
 
   hpx_parcel_t *p = as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, size);
   dbg_assert_str(p, "parcel: failed to allocate %zu registered bytes.\n", size);
+  return p;
+}
+
+hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action,
+                         hpx_addr_t c_target, hpx_action_t c_action,
+                         hpx_pid_t pid, const void *data, size_t len) {
+  hpx_parcel_t *p = parcel_alloc(len);
   parcel_init(target, action, c_target, c_action, pid, data, len, p);
   EVENT_PARCEL_CREATE(p, self->current);
   return p;

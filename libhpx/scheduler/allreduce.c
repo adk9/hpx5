@@ -53,7 +53,7 @@ static void _op(_allreduce_t *r, size_t size, const void *from) {
   dbg_assert(!size || r->op);
   dbg_assert(!size || from);
   if (size) {
-    hpx_action_handler_t f = action_table_get_handler(here->actions, r->op);
+    handler_t f = actions[r->op].handler;
     hpx_monoid_op_t op = (hpx_monoid_op_t)f;
     op(r->value, from, size);
   }
@@ -62,7 +62,7 @@ static void _op(_allreduce_t *r, size_t size, const void *from) {
 static void _id(_allreduce_t *r, size_t size) {
   dbg_assert(!size || r->id);
   if (r->id) {
-    hpx_action_handler_t f = action_table_get_handler(here->actions, r->id);
+    handler_t f = actions[r->id].handler;
     hpx_monoid_id_t id = (hpx_monoid_id_t)f;
     id(r->value, size);
   }

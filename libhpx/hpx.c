@@ -112,10 +112,7 @@ static void _cleanup(locality_t *l) {
     l->topology = NULL;
   }
 
-  if (l->actions) {
-    action_table_free(l->actions);
-  }
-
+  action_table_finalize();
   inst_fini();
 
   if (l->config) {
@@ -140,7 +137,6 @@ int hpx_init(int *argc, char ***argv) {
   here->rank = -1;
   here->ranks = 0;
   here->epoch = 0;
-  here->actions = NULL;
 
   here->config = config_new(argc, argv);
   if (!here->config) {
@@ -240,12 +236,7 @@ int hpx_init(int *argc, char ***argv) {
   apex_set_node_id(here->rank);
 #endif
 
-  here->actions = action_table_finalize();
-  if (!here->actions) {
-    status = log_error("failed to finalize the action table.\n");
-    goto unwind1;
-  }
-
+  action_registration_finalize();
   inst_start();
 
   // start the scheduler, this will return after scheduler_shutdown()
@@ -270,10 +261,12 @@ int hpx_init(int *argc, char ***argv) {
 /// Called to run HPX.
 int _hpx_run(hpx_action_t *act, int n, ...) {
   if (here->rank == 0) {
-    va_list vargs;
-    va_start(vargs, n);
-    hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, &vargs);
-    va_end(vargs);
+    CHECK_ACTION(*act);
+    va_list args;
+    va_start(args, n);
+    const action_t *action = &actions[*act];
+    hpx_parcel_t *p =  action->new(action, HPX_HERE, 0, 0, n, &args);
+    va_end(args);
     dbg_check(hpx_parcel_send(p, HPX_NULL), "failed to spawn initial action\n");
   }
   log_dflt("hpx started running %"PRIu64"\n", here->epoch);

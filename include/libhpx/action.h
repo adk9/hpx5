@@ -17,9 +17,36 @@
 #include <stdarg.h>
 #include <hpx/hpx.h>
 
+/// Generic action handler type.
+typedef void (*handler_t)(void);
+
+/// An action table action type.
 ///
-struct action_table;
-struct hpx_parcel;
+///
+typedef struct {
+  int           (*exec)(const void *obj, hpx_parcel_t *p);
+  void          (*pack)(const void *obj, hpx_parcel_t *p, int n, va_list *args);
+  hpx_parcel_t *(*new)(const void *obj, hpx_addr_t addr, hpx_addr_t c_addr,
+                       hpx_action_t c_action, int n, va_list *args);
+  handler_t      handler;
+  hpx_action_t       *id;
+  const char        *key;
+  hpx_action_type_t type;
+  uint32_t          attr;
+  ffi_cif           *cif;
+  void              *env;
+} action_t;
+
+/// The default libhpx action table size.
+#define LIBHPX_ACTION_MAX (UINT32_C(1) << (sizeof(hpx_action_t) * 8))
+
+extern action_t actions[LIBHPX_ACTION_MAX];
+
+#ifdef ENABLE_DEBUG
+void CHECK_ACTION(hpx_action_t id);
+#else
+#define CHECK_ACTION(id)
+#endif
 
 /// Register an HPX action of a given @p type. This is similar to the
 /// hpx_register_action routine, except that it gives us the chance to "tag"
@@ -36,50 +63,24 @@ struct hpx_parcel;
 /// @param   ... The HPX types of the action parameters (HPX_INT, ...).
 ///
 /// @returns     HPX_SUCCESS or an error code
-
 int libhpx_register_action(hpx_action_type_t type, uint32_t attr,
-                           const char *key, hpx_action_t *id,
-                           hpx_action_handler_t f, unsigned int nargs, ...);
+                           const char *key, hpx_action_t *id, void (*f)(void),
+                           unsigned nargs, ...);
 
 
-/// Get the key for an action.
-const char *action_table_get_key(const struct action_table *, hpx_action_t)
-  HPX_NON_NULL(1);
+/// Called when all of the actions have been registered.
+void action_registration_finalize(void);
 
-/// Get the action type.
-hpx_action_type_t action_table_get_type(const struct action_table *,
-                                        hpx_action_t)
-  HPX_NON_NULL(1);
+/// Called to free any internal data allocated by the actions.
+void action_table_finalize(void);
 
-/// Get the key for an action.
-hpx_action_handler_t action_table_get_handler(const struct action_table *,
-                                              hpx_action_t)
-  HPX_NON_NULL(1);
-
-/// Get the FFI type information associated with an action.
-ffi_cif *action_table_get_cif(const struct action_table *, hpx_action_t)
-  HPX_NON_NULL(1);
-
-/// Get the environment associated with the action.
-void *action_table_get_env(const struct action_table *, hpx_action_t)
-  HPX_NON_NULL(1);
 
 /// Report the number of actions registerd in the table
-int action_table_size(const struct action_table *table);
+int action_table_size(void);
 
-/// Run the handler associated with an action.
-int action_execute(struct hpx_parcel *)
-  HPX_NON_NULL(1);
-
-/// Serialize the vargs into the parcel.
-hpx_parcel_t *action_pack_args(hpx_parcel_t *p, int nargs, va_list *vargs);
-
-/// Returns a parcel that encodes the target address, an action and
-/// its argument, and the continuation. The parcel is ready to be sent
-/// to effect a call operation.
-hpx_parcel_t *action_create_parcel_va(hpx_addr_t addr, hpx_action_t action,
-                                      hpx_addr_t c_addr, hpx_action_t c_action,
-                                      int nargs, va_list *args);
+// /// Run the handler associated with an action.
+// int action_execute(struct hpx_parcel *)
+//   HPX_NON_NULL(1);
 
 /// Same as above, with the exception that the input arguments are
 /// variadic instead of a va_list.
@@ -92,55 +93,59 @@ int action_call_va(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
                    hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
                    int nargs, va_list *args);
 
-/// Is the action a pinned action?
-bool action_is_pinned(const struct action_table *, hpx_action_t)
-  HPX_NON_NULL(1);
+static inline bool action_is_pinned(hpx_action_t id) {
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->attr & HPX_PINNED);
+}
 
-/// Is the action a marshalled action?
-bool action_is_marshalled(const struct action_table *, hpx_action_t)
-  HPX_NON_NULL(1);
+static inline bool action_is_marshalled(hpx_action_t id) {
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->attr & HPX_MARSHALLED);
+}
 
-/// Is the action a vectored action?
-bool action_is_vectored(const struct action_table *, hpx_action_t)
-  HPX_NON_NULL(1);
+static inline bool action_is_vectored(hpx_action_t id) {
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->attr & HPX_VECTORED);
+}
 
-/// Is the action internal?
-bool action_is_internal(const struct action_table *, hpx_action_t)
-  HPX_NON_NULL(1);
+static inline bool action_is_internal(hpx_action_t id) {
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->attr & HPX_INTERNAL);
+}
 
-/// Is the action a default action?
-bool action_is_default(const struct action_table *, hpx_action_t)
-  HPX_NON_NULL(1);
+static inline bool action_is_default(hpx_action_t id) {
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->type == HPX_DEFAULT);
+}
 
-/// Is the action a task?
-bool action_is_task(const struct action_table *, hpx_action_t)
-  HPX_NON_NULL(1);
+static inline bool action_is_task(hpx_action_t id) {
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->type == HPX_TASK);
+}
 
-/// Is the action an interrupt?
-bool action_is_interrupt(const struct action_table *, hpx_action_t)
-  HPX_NON_NULL(1);
+static inline bool action_is_interrupt(hpx_action_t id) {
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->type == HPX_INTERRUPT);
+}
 
-/// Is the action a function?
-bool action_is_function(const struct action_table *, hpx_action_t)
-  HPX_NON_NULL(1);
+static inline bool action_is_function(hpx_action_t id) {
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->type == HPX_FUNCTION);
+}
 
-/// Is the action an OpenCL kernel?
-bool action_is_opencl(const struct action_table *, hpx_action_t)
-  HPX_NON_NULL(1);
-
-/// Build an action table.
-///
-/// This will process all of the registered actions, sorting them by key and
-/// assigning ids to their registered id addresses. The caller obtains ownership
-/// of the table and must call action_table_free() to release its resources.
-///
-/// @return             An action table that can be indexed by the keys
-///                     originally registered.
-const struct action_table *action_table_finalize(void);
-
-/// Free an action table.
-void action_table_free(const struct action_table *action)
-  HPX_NON_NULL(1);
+static inline bool action_is_opencl(hpx_action_t id) {
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->type == HPX_OPENCL);
+}
 
 /// Wraps the libhpx_register_action() function to make it slightly
 /// more convenient to use.
@@ -152,7 +157,7 @@ void action_table_free(const struct action_table *action)
 /// @param __VA_ARGS__ The parameter types (HPX_INT, ...).
 #define LIBHPX_REGISTER_ACTION(type, attr, id, handler, ...)          \
   libhpx_register_action(type, attr, __FILE__ ":" _HPX_XSTR(id),      \
-                         &id, (hpx_action_handler_t)handler,          \
+                         &id, (handler_t)handler,          \
                          __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 /// Create an action id for a function, so that it can be called asynchronously.

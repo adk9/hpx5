@@ -143,6 +143,8 @@ void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
                  hpx_action_t c_action, hpx_pid_t pid, const void *data,
                  size_t len, hpx_parcel_t *p);
 
+hpx_parcel_t *parcel_alloc(size_t payload);
+
 hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
                          hpx_action_t c_action, hpx_pid_t pid, const void *data,
                          size_t len)
