@@ -30,7 +30,6 @@
 #include <libhpx/percolation.h>
 #include <libhpx/scheduler.h>
 
-
 percolation_t *percolation_new(void) {
 #ifdef HAVE_OPENCL
   return percolation_new_opencl();
@@ -39,17 +38,14 @@ percolation_t *percolation_new(void) {
   return NULL;
 }
 
-int percolation_execute_handler(int nargs, void *vargs[],
-                                size_t sizes[]) {
+int percolation_execute_handler(int nargs, void *vargs[], size_t sizes[]) {
   hpx_parcel_t *p = scheduler_current_parcel();
 
   percolation_t *percolation = here->percolation;
   dbg_assert(percolation);
 
-  const struct action_table *actions = here->actions;
-  dbg_assert(actions);
-
-  void *obj = action_table_get_env(actions, p->action);
+  CHECK_ACTION(p->action);
+  void *obj = actions[p->action].env;
   if (!obj) {
     return HPX_ERROR;
   }
