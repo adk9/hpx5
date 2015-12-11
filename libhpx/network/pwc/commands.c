@@ -45,7 +45,7 @@ COMMAND_DEF(resume_parcel_remote, _resume_parcel_remote_handler);
 static int _resume_parcel_handler(int src, command_t command) {
   uintptr_t arg = command_get_arg(command);
   hpx_parcel_t *p = (hpx_parcel_t *)arg;
-  log_net("resuming %s, (%p)\n", action_table_get_key(here->actions, p->action),
+  log_net("resuming %s, (%p)\n", actions[p->action].key,
           (void*)p);
   parcel_launch(p);
   return HPX_SUCCESS;
@@ -53,7 +53,7 @@ static int _resume_parcel_handler(int src, command_t command) {
 COMMAND_DEF(resume_parcel, _resume_parcel_handler);
 
 static HPX_USED const char *_straction(hpx_action_t id) {
-  dbg_assert(here && here->actions);
+  dbg_assert(here);
   CHECK_ACTION(id);
   return actions[id].key;
 }

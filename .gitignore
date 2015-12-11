@@ -86,6 +86,7 @@ contrib/libcuckoo/
 
 # /libhpx/
 /libhpx/Makefile
+/libhpx/actions/Makefile
 /libhpx/boot/Makefile
 /libhpx/gas/Makefile
 /libhpx/gas/agas/Makefile
