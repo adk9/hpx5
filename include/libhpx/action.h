@@ -93,7 +93,6 @@ int action_call_va(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
                    hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
                    int nargs, va_list *args);
 
-<<<<<<< HEAD
 static inline bool action_is_pinned(hpx_action_t id) {
   CHECK_ACTION(id);
   const action_t *action = &actions[id];
