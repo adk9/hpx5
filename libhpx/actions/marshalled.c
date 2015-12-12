@@ -47,22 +47,34 @@ static int _exec_marshalled(const void *obj, hpx_parcel_t *p) {
 }
 
 static int _exec_pinned_marshalled(const void *obj, hpx_parcel_t *p) {
+  const action_t *act = obj;
+
   void *target;
   if (!hpx_gas_try_pin(p->target, &target)) {
     log_action("pinned action resend.\n");
     return HPX_RESEND;
   }
 
-  const action_t *action = obj;
-  hpx_pinned_action_handler_t handler =
-      (hpx_pinned_action_handler_t)action->handler;
   void *args = hpx_parcel_get_data(p);
-  return handler(target, args, p->size);
+  int e = ((hpx_pinned_action_handler_t)act->handler)(target, args, p->size);
+  hpx_gas_unpin(p->target);
+  return e;
 }
+
+static const parcel_management_vtable_t _marshalled_vtable = {
+  .new = _new_marshalled,
+  .pack = _pack_marshalled,
+  .exec = _exec_marshalled
+};
+
+static const parcel_management_vtable_t _pinned_marshalled_vtable = {
+  .new = _new_marshalled,
+  .pack = _pack_marshalled,
+  .exec = _exec_pinned_marshalled
+};
 
 void action_init_marshalled(action_t *action) {
   uint32_t pinned = action->attr & HPX_PINNED;
-  action->exec = (pinned) ? _exec_pinned_marshalled : _exec_marshalled;
-  action->new = _new_marshalled;
-  action->pack = _pack_marshalled;
+  action->parcel_class = (pinned) ? &_pinned_marshalled_vtable :
+                         &_marshalled_vtable;
 }

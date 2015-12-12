@@ -134,29 +134,48 @@ static int _exec_pinned_ffi_n(const void *obj, hpx_parcel_t *p) {
   char ffiret[8];               // https://github.com/atgreen/libffi/issues/35
   int *ret = (int*)&ffiret[0];
   ffi_call(cif, action->handler, ret, avalue);
+  hpx_gas_unpin(p->target);
   return *ret;
 }
 
+static const parcel_management_vtable_t _ffi_0_vtable = {
+  .new = _new_ffi_0,
+  .pack = _pack_ffi_0,
+  .exec = _exec_ffi_n
+};
+
+static const parcel_management_vtable_t _pinned_ffi_0_vtable = {
+  .new = _new_ffi_0,
+  .pack = _pack_ffi_0,
+  .exec = _exec_pinned_ffi_n
+};
+
+static const parcel_management_vtable_t _ffi_n_vtable = {
+  .new = _new_ffi_n,
+  .pack = _pack_ffi_n,
+  .exec = _exec_ffi_n
+};
+
+static const parcel_management_vtable_t _pinned_ffi_n_vtable = {
+  .new = _new_pinned_ffi_n,
+  .pack = _pack_ffi_n,
+  .exec = _exec_pinned_ffi_n
+};
+
 void action_init_ffi(action_t *action) {
   dbg_assert(action->cif);
+
   uint32_t pinned = action->attr & HPX_PINNED;
-  if (!action->cif->nargs) {
-    action->new = _new_ffi_0;
-    action->pack = _pack_ffi_0;
+  if (pinned && action->cif->nargs) {
+    action->parcel_class = &_pinned_ffi_n_vtable;
   }
   else if (pinned) {
-    action->new = _new_pinned_ffi_n;
-    action->pack = _pack_pinned_ffi_n;
+    action->parcel_class = &_pinned_ffi_0_vtable;
+  }
+  else if (action->cif->nargs) {
+    action->parcel_class = &_ffi_n_vtable;
   }
   else {
-    action->new = _new_ffi_n;
-    action->pack = _pack_ffi_n;
-  }
-
-  if (pinned) {
-    action->exec = _exec_pinned_ffi_n;
-  }
-  else {
-    action->exec = _exec_ffi_n;
+    action->parcel_class = &_ffi_0_vtable;
   }
 }

@@ -55,7 +55,8 @@ __thread worker_t * volatile self = NULL;
 static void EVENT_WQSIZE(worker_t *w) {
   static const int class = INST_SCHED;
   static const int id = HPX_INST_EVENT_SCHED_WQSIZE;
-  inst_trace(class, id, sync_chase_lev_ws_deque_size(&w->queues[w->work_id].work));
+  inst_trace(class, id,
+             sync_chase_lev_ws_deque_size(&w->queues[w->work_id].work));
 }
 
 static void EVENT_PUSH_LIFO(hpx_parcel_t *p) {
@@ -151,9 +152,7 @@ static void _continue_parcel(hpx_parcel_t *p, int n, va_list *args) {
   }
 
   // create the parcel to continue and transfer whatever credit we have
-  CHECK_ACTION(p->c_action);
-  const action_t *action = &actions[p->c_action];
-  hpx_parcel_t *c = action->new(action, p->c_target, 0, 0, n, args);
+  hpx_parcel_t *c = action_new_parcel(p->c_action, p->c_target, 0, 0, n, args);
   dbg_assert(c);
   c->credit = p->credit;
   p->credit = 0;
@@ -190,9 +189,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
   p->ustack = q->ustack;
 
   EVENT_THREAD_RUN(p, w);
-  CHECK_ACTION(p->action);
-  const action_t *action = &actions[p->action];
-  int e = action->exec(action, p);
+  int e = action_exec_parcel(p->action, p);
   EVENT_THREAD_END(p, w);
 
   // Restore the current thread pointer.
@@ -230,9 +227,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
 static void _execute_thread(hpx_parcel_t *p) {
   // matching events are in hpx_thread_exit()
   EVENT_THREAD_RUN(p, self);
-  CHECK_ACTION(p->action);
-  const action_t *action = &actions[p->action];
-  int e = action->exec(action, p);
+  int e = action_exec_parcel(p->action, p);
   hpx_thread_exit(e);
   unreachable();
 }

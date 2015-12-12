@@ -20,14 +20,49 @@
 /// Generic action handler type.
 typedef void (*handler_t)(void);
 
+/// A set of handlers that defines how to call an action in a certain context.
+typedef struct {
+  int (*call)(const void *o, hpx_addr_t addr,
+              hpx_addr_t lsync, hpx_action_t lop,
+              hpx_addr_t rsync, hpx_action_t rop,
+              int n, va_list *args);
+
+  int (*call_lsync)(const void *o, hpx_addr_t addr,
+                    hpx_addr_t rsync, hpx_action_t rop,
+                    int n, va_list *args);
+
+  int (*call_rsync)(const void *o, hpx_addr_t addr,
+                    void *rout, size_t rbytes,
+                    int n, va_list *args);
+
+  int (*when)(const void *o, hpx_addr_t addr, hpx_addr_t gate,
+              hpx_addr_t lsync, hpx_action_t lop,
+              hpx_addr_t rsync, hpx_action_t rop,
+              int n, va_list *args);
+
+  int (*when_lsync)(const void *o, hpx_addr_t addr, hpx_addr_t gate,
+                    hpx_addr_t rsync, hpx_action_t rop,
+                    int n, va_list *args);
+
+  int (*when_rsync)(const void *o, hpx_addr_t addr, hpx_addr_t gate,
+                    void *rout, size_t rbytes,
+                    int n, va_list *args);
+} calling_convention_vtable_t;
+
+typedef struct {
+  int          (*exec)(const void *obj, hpx_parcel_t *p);
+  void         (*pack)(const void *obj, hpx_parcel_t *p, int n, va_list *args);
+  hpx_parcel_t *(*new)(const void *obj, hpx_addr_t addr, hpx_addr_t c_addr,
+                       hpx_action_t c_action, int n, va_list *args);
+} parcel_management_vtable_t;
+
 /// An action table action type.
 ///
 ///
 typedef struct {
-  int           (*exec)(const void *obj, hpx_parcel_t *p);
-  void          (*pack)(const void *obj, hpx_parcel_t *p, int n, va_list *args);
-  hpx_parcel_t *(*new)(const void *obj, hpx_addr_t addr, hpx_addr_t c_addr,
-                       hpx_action_t c_action, int n, va_list *args);
+  const parcel_management_vtable_t *parcel_class;
+  const calling_convention_vtable_t  *call_class;
+
   handler_t      handler;
   hpx_action_t       *id;
   const char        *key;
@@ -67,20 +102,14 @@ int libhpx_register_action(hpx_action_type_t type, uint32_t attr,
                            const char *key, hpx_action_t *id, void (*f)(void),
                            unsigned nargs, ...);
 
-
 /// Called when all of the actions have been registered.
 void action_registration_finalize(void);
 
 /// Called to free any internal data allocated by the actions.
 void action_table_finalize(void);
 
-
 /// Report the number of actions registerd in the table
 int action_table_size(void);
-
-// /// Run the handler associated with an action.
-// int action_execute(struct hpx_parcel *)
-//   HPX_NON_NULL(1);
 
 /// Same as above, with the exception that the input arguments are
 /// variadic instead of a va_list.
@@ -92,6 +121,28 @@ hpx_parcel_t *action_create_parcel(hpx_addr_t addr, hpx_action_t action,
 int action_call_va(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
                    hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
                    int nargs, va_list *args);
+
+static inline int action_exec_parcel(hpx_action_t id, hpx_parcel_t *p) {
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return action->parcel_class->exec(action, p);
+}
+
+static inline void action_pack_parcel(hpx_action_t id, hpx_parcel_t *p, int n,
+                                      va_list *args) {
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return action->parcel_class->pack(action, p, n, args);
+}
+
+static inline hpx_parcel_t *action_new_parcel(hpx_action_t id, hpx_addr_t addr,
+                                              hpx_addr_t c_addr,
+                                              hpx_action_t c_action, int n,
+                                              va_list *args) {
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return action->parcel_class->new(action, addr, c_addr, c_action, n, args);
+}
 
 static inline bool action_is_pinned(hpx_action_t id) {
   CHECK_ACTION(id);

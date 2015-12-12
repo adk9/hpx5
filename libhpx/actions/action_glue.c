@@ -29,11 +29,9 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id) {
 hpx_parcel_t *action_create_parcel(hpx_addr_t addr, hpx_action_t action,
                                    hpx_addr_t c_addr, hpx_action_t c_action,
                                    int n, ...) {
-  CHECK_ACTION(action);
   va_list args;
   va_start(args, n);
-  const action_t *entry = &actions[action];
-  hpx_parcel_t *p =  entry->new(entry, addr, c_addr, c_action, n, &args);
+  hpx_parcel_t *p = action_new_parcel(action, addr, c_addr, c_action, n, &args);
   va_end(args);
   return p;
 }
@@ -41,9 +39,7 @@ hpx_parcel_t *action_create_parcel(hpx_addr_t addr, hpx_action_t action,
 int action_call_va(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
                    hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
                    int n, va_list *args) {
-  CHECK_ACTION(action);
-  const action_t *entry = &actions[action];
-  hpx_parcel_t *p =  entry->new(entry, addr, c_addr, c_action, n, args);
+  hpx_parcel_t *p = action_new_parcel(action, addr, c_addr, c_action, n, args);
 
   if (likely(!gate && !lsync)) {
     parcel_launch(p);

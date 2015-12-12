@@ -112,11 +112,9 @@ void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, size_t size) {
 }
 
 void _hpx_parcel_set_args(hpx_parcel_t *p, int n, ...) {
-  CHECK_ACTION(p->action);
   va_list vargs;
   va_start(vargs, n);
-  const action_t *action = &actions[p->action];
-  action->pack(action, p, n, &vargs);
+  action_pack_parcel(p->action, p, n, &vargs);
   va_end(vargs);
 }
 

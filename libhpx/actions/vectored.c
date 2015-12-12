@@ -77,13 +77,14 @@ static hpx_parcel_t *_new_vectored(const void *obj, hpx_addr_t addr,
 }
 
 static int _exec_pinned_vectored(const void *obj, hpx_parcel_t *p) {
+  const action_t *act = obj;
+
   void *target;
   if (!hpx_gas_try_pin(p->target, &target)) {
     log_action("pinned action resend.\n");
     return HPX_RESEND;
   }
 
-  const action_t *action = obj;
   void *args = hpx_parcel_get_data(p);
   int nargs = *(int*)args;
   size_t *sizes = (size_t*)((char*)args + sizeof(int));
@@ -95,9 +96,10 @@ static int _exec_pinned_vectored(const void *obj, hpx_parcel_t *p) {
     argsp[i + 1] = (char*)argsp[i] + sizes[i] + ALIGN(sizes[i], 8);
   }
 
-  hpx_pinned_vectored_action_handler_t handler =
-      (hpx_pinned_vectored_action_handler_t)action->handler;
-  return handler(target, nargs, argsp, sizes);
+  int e = ((hpx_pinned_vectored_action_handler_t)act->handler)(target, nargs,
+                                                               argsp, sizes);
+  hpx_gas_unpin(p->target);
+  return e;
 }
 
 static int _exec_vectored(const void *obj, hpx_parcel_t *p) {
@@ -113,14 +115,23 @@ static int _exec_vectored(const void *obj, hpx_parcel_t *p) {
     argsp[i + 1] = (char*)argsp[i] + sizes[i] + ALIGN(sizes[i], 8);
   }
 
-  hpx_vectored_action_handler_t handler =
-      (hpx_vectored_action_handler_t )action->handler;
-  return handler(nargs, argsp, sizes);
+  return ((hpx_vectored_action_handler_t )action->handler)(nargs, argsp, sizes);
 }
+
+static const parcel_management_vtable_t _vectored_vtable = {
+  .new = _new_vectored,
+  .pack = _pack_vectored,
+  .exec = _exec_vectored
+};
+
+static const parcel_management_vtable_t _pinned_vectored_vtable = {
+  .new = _new_vectored,
+  .pack = _pack_vectored,
+  .exec = _exec_pinned_vectored
+};
 
 void action_init_vectored(action_t *action) {
   uint32_t pinned = action->attr & HPX_PINNED;
-  action->exec = (pinned) ? _exec_pinned_vectored : _exec_vectored;
-  action->new = _new_vectored;
-  action->pack = _pack_vectored;
+  action->parcel_class = (pinned) ? &_pinned_vectored_vtable :
+                         &_vectored_vtable;
 }
