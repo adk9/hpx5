@@ -133,7 +133,7 @@ static void _send_n(_coalesced_network_t *coalesced_network, uint64_t n) {
 
 static int _coalesced_network_send(void *network,  hpx_parcel_t *p) {
   _coalesced_network_t *coalesced_network = network;
-  if (!action_is_coalesced(here->actions, hpx_parcel_get_action(p))) {
+  if (!action_is_coalesced(p->action)) {
     network_send(coalesced_network->base_network, p);
     return LIBHPX_OK;
   }
