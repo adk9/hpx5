@@ -22,23 +22,23 @@ typedef void (*handler_t)(void);
 
 /// A set of handlers that defines how to call an action in a certain context.
 typedef struct {
-  int (*call)(const void *o, hpx_addr_t addr,
+  int (*async)(const void *o, hpx_addr_t addr,
               hpx_addr_t lsync, hpx_action_t lop,
               hpx_addr_t rsync, hpx_action_t rop,
               int n, va_list *args);
 
-  int (*call_lsync)(const void *o, hpx_addr_t addr,
+  int (*lsync)(const void *o, hpx_addr_t addr,
                     hpx_addr_t rsync, hpx_action_t rop,
                     int n, va_list *args);
 
-  int (*call_rsync)(const void *o, hpx_addr_t addr,
+  int (*rsync)(const void *o, hpx_addr_t addr,
                     void *rout, size_t rbytes,
                     int n, va_list *args);
 
-  int (*when)(const void *o, hpx_addr_t addr, hpx_addr_t gate,
-              hpx_addr_t lsync, hpx_action_t lop,
-              hpx_addr_t rsync, hpx_action_t rop,
-              int n, va_list *args);
+  int (*when_async)(const void *o, hpx_addr_t addr, hpx_addr_t gate,
+                    hpx_addr_t lsync, hpx_action_t lop,
+                    hpx_addr_t rsync, hpx_action_t rop,
+                    int n, va_list *args);
 
   int (*when_lsync)(const void *o, hpx_addr_t addr, hpx_addr_t gate,
                     hpx_addr_t rsync, hpx_action_t rop,
@@ -142,6 +142,60 @@ static inline hpx_parcel_t *action_new_parcel(hpx_action_t id, hpx_addr_t addr,
   CHECK_ACTION(id);
   const action_t *action = &actions[id];
   return action->parcel_class->new(action, addr, c_addr, c_action, n, args);
+}
+
+static inline int action_call_async(hpx_action_t id, hpx_addr_t addr,
+                                    hpx_addr_t lsync, hpx_action_t lop,
+                                    hpx_addr_t rsync, hpx_action_t rop,
+                                    int n, va_list *args) {
+  CHECK_ACTION(id);
+  const action_t *act = &actions[id];
+  return act->call_class->async(act, addr, lsync, lop, rsync, rop, n, args);
+}
+
+
+static inline int action_call_lsync(hpx_action_t id, hpx_addr_t addr,
+                                    hpx_addr_t rsync, hpx_action_t rop,
+                                    int n, va_list *args) {
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return action->call_class->lsync(action, addr, rsync, rop, n, args);
+}
+
+static inline int action_call_rsync(hpx_action_t id, hpx_addr_t addr,
+                                    void *rout, size_t rbytes, int n,
+                                    va_list *args) {
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return action->call_class->rsync(action, addr, rout, rbytes, n, args);
+}
+
+
+static inline int action_when_async(hpx_action_t id, hpx_addr_t addr,
+                                    hpx_addr_t gate, hpx_addr_t lsync,
+                                    hpx_action_t lop, hpx_addr_t rsync,
+                                    hpx_action_t rop, int n, va_list *args) {
+  CHECK_ACTION(id);
+  const action_t *act = &actions[id];
+  return act->call_class->when_async(act, addr, gate, lsync, lop, rsync, rop, n,
+                                     args);
+}
+
+
+static inline int action_when_lsync(hpx_action_t id, hpx_addr_t addr,
+                                    hpx_addr_t gate, hpx_addr_t rsync,
+                                    hpx_action_t rop, int n, va_list *args) {
+  CHECK_ACTION(id);
+  const action_t *act = &actions[id];
+  return act->call_class->when_lsync(act, addr, gate, rsync, rop, n, args);
+}
+
+static inline int action_when_rsync(hpx_action_t id, hpx_addr_t addr,
+                                    hpx_addr_t gate, void *rout, size_t rbytes,
+                                    int n, va_list *args) {
+  CHECK_ACTION(id);
+  const action_t *act = &actions[id];
+  return act->call_class->when_rsync(act, addr, gate, rout, rbytes, n, args);
 }
 
 static inline bool action_is_pinned(hpx_action_t id) {

@@ -134,4 +134,5 @@ void action_init_vectored(action_t *action) {
   uint32_t pinned = action->attr & HPX_PINNED;
   action->parcel_class = (pinned) ? &_pinned_vectored_vtable :
                          &_vectored_vtable;
+  action_init_call_by_parcel(action);
 }

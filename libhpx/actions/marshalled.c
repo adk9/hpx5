@@ -77,4 +77,5 @@ void action_init_marshalled(action_t *action) {
   uint32_t pinned = action->attr & HPX_PINNED;
   action->parcel_class = (pinned) ? &_pinned_marshalled_vtable :
                          &_marshalled_vtable;
+  action_init_call_by_parcel(action);
 }

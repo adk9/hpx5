@@ -178,4 +178,6 @@ void action_init_ffi(action_t *action) {
   else {
     action->parcel_class = &_ffi_0_vtable;
   }
+
+  action_init_call_by_parcel(action);
 }

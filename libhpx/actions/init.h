@@ -21,5 +21,6 @@ void action_init_handlers(action_t *action);
 void action_init_marshalled(action_t *action);
 void action_init_ffi(action_t *action);
 void action_init_vectored(action_t *action);
+void action_init_call_by_parcel(action_t *action);
 
 #endif // LIBHPX_ACTIONS_INIT_H

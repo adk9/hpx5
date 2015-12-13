@@ -181,7 +181,6 @@ int    _hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t lsync,
   _hpx_call_async(addr, action, lsync, result, __HPX_NARGS(__VA_ARGS__) , \
                   ##__VA_ARGS__)
 
-
 /// Call with current continuation.
 ///
 /// This calls an action passing the currrent thread's continuation as
@@ -206,9 +205,28 @@ void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
   _hpx_call_when_cc(gate, addr, action, cleanup, env,           \
                     __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
+/// Call with current continuation.
+///
+/// This calls an action passing the currrent thread's continuation as
+/// the continuation for the called action. It finishes the current
+/// thread's execution, and does not yield control back to the thread.
+///
+/// @param    addr The address where the action is executed.
+/// @param  action The action to perform.
+/// @param cleanup A callback function that is run after the action
+///                has been invoked.
+/// @param     env The environment to pass to the cleanup function.
+/// @param  nargs The number of arguments for @p action.
+///
+/// @returns HPX_SUCCESS, or an error code if there was a problem during
+///          the hpx_call_cc invocation.
+void _hpx_call_cc(hpx_addr_t addr, hpx_action_t action,
+                  void (*cleanup)(void*), void *env, int nargs, ...)
+  HPX_NORETURN HPX_PUBLIC;
+
 #define hpx_call_cc(addr, action, cleanup, env, ...)            \
-  _hpx_call_when_cc(HPX_NULL, addr, action, cleanup, env,       \
-                    __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
+  _hpx_call_cc(addr, action, cleanup, env,                      \
+               __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
 
 /// Collective calls.
