@@ -76,21 +76,70 @@ namespace hpx {
     template<> struct gen_seq<0> : seq<>{};
     template<> struct gen_seq<1> : seq<0>{};
     
+    /// HPX basic datatypes
+    /*
+     * HPX_CHAR, HPX_UCHAR, HPX_SCHAR, HPX_SHORT, HPX_USHORT, HPX_SSHORT, HPX_INT,
+     * HPX_UINT, HPX_SINT, HPX_LONG, HPX_ULONG, HPX_SLONG, HPX_VOID, HPX_UINT8, HPX_SINT8,
+     * HPX_UINT16, HPX_SINT16, HPX_UINT32, HPX_SINT32, HPX_UINT64, HPX_SINT64, HPX_FLOAT, HPX_DOUBLE, 
+     * HPX_POINTER, HPX_LONGDOUBLE, HPX_COMPLEX_FLOAT, HPX_COMPLEX_DOUBLE, HPX_COMPLEX_LONGDOUBLE
+     */
+    
+    inline
+    ::std::tuple<decltype(HPX_CHAR)> convert_arg_type(const char& t) {
+      return ::std::make_tuple(HPX_CHAR);
+    }
+    inline
+    ::std::tuple<decltype(HPX_SHORT)> convert_arg_type(const short& t) {
+      return ::std::make_tuple(HPX_SHORT);
+    }
+    inline
+    ::std::tuple<decltype(HPX_INT)> convert_arg_type(const int& t) {
+      return ::std::make_tuple(HPX_INT);
+    }
+    inline
+    ::std::tuple<decltype(HPX_FLOAT)> convert_arg_type(const float& t) {
+      return ::std::make_tuple(HPX_FLOAT);
+    }
+    inline
+    ::std::tuple<decltype(HPX_DOUBLE)> convert_arg_type(const double& t) {
+      return ::std::make_tuple(HPX_DOUBLE);
+    }
     template <typename T>
     inline
     ::std::tuple<decltype(HPX_POINTER), decltype(HPX_SIZE_T)>
-    xform(T&& t) {
+    convert_arg_type(T* t) {
       return ::std::make_tuple(HPX_POINTER, HPX_SIZE_T);
+    }
+    
+    inline
+    ::std::tuple<char*> convert_arg(char& t) {
+      return ::std::make_tuple(&t);
+    }
+    inline
+    ::std::tuple<short*> convert_arg(short& t) {
+      return ::std::make_tuple(&t);
+    }
+    inline
+    ::std::tuple<int*> convert_arg(int& t) {
+      return ::std::make_tuple(&t);
+    }
+    inline
+    ::std::tuple<float*> convert_arg(float& t) {
+      return ::std::make_tuple(&t);
+    }
+    inline
+    ::std::tuple<double*> convert_arg(double& t) {
+      return ::std::make_tuple(&t);
     }
     template <typename T>
     inline
-    ::std::tuple<T*, ::std::size_t>
-    convert_arg(T& arg) {
-      return ::std::make_tuple(&arg, sizeof(T));
+    ::std::tuple<T*, ::std::size_t> convert_arg(T* arg) {
+      return ::std::make_tuple(arg, sizeof(T));
     }
     
     template <typename A>
-    struct action_struct {
+    class action_struct {
+    private:
       /*
       * 
       /// @param        type The type of the action (THREAD, TASK, INTERRUPT, ...).
@@ -104,19 +153,13 @@ namespace hpx {
       template <typename F, typename Tpl>
       static int _register_helper(F f, Tpl&& t, seq<>&& s) {
 	return hpx_register_action(HPX_DEFAULT, HPX_ATTR_NONE, __FILE__ ":" _HPX_XSTR(A::id), 
-				   &(A::id), (hpx_action_handler_t) f);
+				   &(A::id), (hpx_action_handler_t) f, 0);
       }
       template <typename F, typename Tpl, unsigned... Is>
       static int _register_helper(F f, Tpl&& t, seq<Is...>&& s) {
-	return hpx_register_action(HPX_DEFAULT, HPX_MARSHALLED, __FILE__ ":" _HPX_XSTR(A::id), 
+	return hpx_register_action(HPX_DEFAULT, HPX_ATTR_NONE, __FILE__ ":" _HPX_XSTR(A::id), 
 				   &(A::id), (hpx_action_handler_t) f, 
 				   sizeof...(Is) , ::std::get<Is>(t)...);
-      }
-      
-      template <typename F, unsigned... Is>
-      static int _register(F f, seq<Is...>&& s) {
-	auto tpl = ::std::tuple_cat(xform(::std::get<Is>(A::traits::arg_types_tpl))...);
-	return _register_helper(f, tpl, gen_seq<::std::tuple_size<decltype(tpl)>::value>());
       }
       
       template <typename R, typename Tpl, unsigned... Is>
@@ -124,15 +167,25 @@ namespace hpx {
 	return _hpx_call_sync(addr, A::id, &result, sizeof(R), sizeof...(Is), ::std::get<Is>(tpl)...);
       }
       
-      template <typename R, typename... Args>
-      int call_sync(hpx_addr_t& addr, R& result, Args... args) {
-	auto tpl = ::std::tuple_cat(hpx::detail::convert_arg(args)...);
-	return _call_sync_helper(addr, result, tpl, hpx::detail::gen_seq<::std::tuple_size<decltype(tpl)>::value>());
-      }
-      
       template <typename Tpl, unsigned... Is>
       int _run_helper(Tpl&& tpl, hpx::detail::seq<Is...>&& s) {
 	return hpx::run(&(A::id), ::std::get<Is>(tpl)...);
+      }
+      
+    public:
+      
+      template <typename F, unsigned... Is>
+      static int _register(F f, seq<Is...>&& s) {
+	auto tpl = ::std::tuple_cat(convert_arg_type(::std::get<Is>(A::traits::arg_types_tpl))...);
+	return _register_helper(f, tpl, gen_seq<::std::tuple_size<decltype(tpl)>::value>());
+      }
+      
+      template <typename R, typename... Args>
+      int call_sync(hpx_addr_t& addr, R& result, Args... args) {
+	static_assert(::std::is_same< typename A::traits::arg_types, ::std::tuple<Args...> >::value,
+		      "action and argument types do not match");
+	auto tpl = ::std::tuple_cat(hpx::detail::convert_arg(args)...);
+	return _call_sync_helper(addr, result, tpl, hpx::detail::gen_seq<::std::tuple_size<decltype(tpl)>::value>());
       }
       
       template <typename... Args>
