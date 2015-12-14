@@ -22,6 +22,7 @@ extern "C" {
 }
 
 #include <hpx++/lco.h>
+#include <hpx++/runtime.h>
 
 #include <cstdlib>
 #include <tuple>
@@ -81,6 +82,12 @@ namespace hpx {
     xform(T&& t) {
       return ::std::make_tuple(HPX_POINTER, HPX_SIZE_T);
     }
+    template <typename T>
+    inline
+    ::std::tuple<T*, ::std::size_t>
+    convert_arg(T& arg) {
+      return ::std::make_tuple(&arg, sizeof(T));
+    }
     
     template <typename A>
     struct action_struct {
@@ -96,11 +103,14 @@ namespace hpx {
       // for 0 args, HPX_REGISTER_ACTION is not HPX_MARSHALLED
       template <typename F, typename Tpl>
       static int _register_helper(F f, Tpl&& t, seq<>&& s) {
-	return HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_ATTR_NONE, A::id, f);
+	return hpx_register_action(HPX_DEFAULT, HPX_ATTR_NONE, __FILE__ ":" _HPX_XSTR(A::id), 
+				   &(A::id), (hpx_action_handler_t) f);
       }
       template <typename F, typename Tpl, unsigned... Is>
       static int _register_helper(F f, Tpl&& t, seq<Is...>&& s) {
-	return HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, A::id, f, ::std::get<Is>(t)...);
+	return hpx_register_action(HPX_DEFAULT, HPX_MARSHALLED, __FILE__ ":" _HPX_XSTR(A::id), 
+				   &(A::id), (hpx_action_handler_t) f, 
+				   sizeof...(Is) , ::std::get<Is>(t)...);
       }
       
       template <typename F, unsigned... Is>
@@ -109,11 +119,28 @@ namespace hpx {
 	return _register_helper(f, tpl, gen_seq<::std::tuple_size<decltype(tpl)>::value>());
       }
       
+      template <typename R, typename Tpl, unsigned... Is>
+      int _call_sync_helper(hpx_addr_t& addr, R& result, Tpl&& tpl, hpx::detail::seq<Is...>&& s) {
+	return _hpx_call_sync(addr, A::id, &result, sizeof(R), sizeof...(Is), ::std::get<Is>(tpl)...);
+      }
+      
       template <typename R, typename... Args>
-      int operator()(hpx_addr_t addr, R& result, Args... args) {
+      int call_sync(hpx_addr_t& addr, R& result, Args... args) {
+	auto tpl = ::std::tuple_cat(hpx::detail::convert_arg(args)...);
+	return _call_sync_helper(addr, result, tpl, hpx::detail::gen_seq<::std::tuple_size<decltype(tpl)>::value>());
+      }
+      
+      template <typename Tpl, unsigned... Is>
+      int _run_helper(Tpl&& tpl, hpx::detail::seq<Is...>&& s) {
+	return hpx::run(&(A::id), ::std::get<Is>(tpl)...);
+      }
+      
+      template <typename... Args>
+      int operator()(Args... args) {
 	static_assert(::std::is_same< typename A::traits::arg_types, ::std::tuple<Args...> >::value,
 		      "action and argument types do not match");
-	return hpx_call_sync(addr, A::id, &result, sizeof(R), args...);
+	auto tpl = ::std::tuple_cat(hpx::detail::convert_arg(args)...);
+	return _run_helper(tpl, hpx::detail::gen_seq<::std::tuple_size<decltype(tpl)>::value>());
       }
 
     };
