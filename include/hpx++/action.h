@@ -189,11 +189,16 @@ namespace hpx {
       }
       
       template <typename... Args>
-      int operator()(Args... args) {
+      int run(Args... args) {
 	static_assert(::std::is_same< typename A::traits::arg_types, ::std::tuple<Args...> >::value,
 		      "action and argument types do not match");
 	auto tpl = ::std::tuple_cat(hpx::detail::convert_arg(args)...);
 	return _run_helper(tpl, hpx::detail::gen_seq<::std::tuple_size<decltype(tpl)>::value>());
+      }
+      
+      template <typename... Args>
+      int operator()(Args&&... args) {
+	return run(::std::forward<Args>(args)...);
       }
 
     };
