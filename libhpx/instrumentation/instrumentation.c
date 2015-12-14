@@ -166,6 +166,7 @@ int inst_init(config_t *cfg) {
 
   // create log files
   hpx_time_t start = hpx_time_now();
+  inst_trace(HPX_INST_CLASS_BOOKEND, HPX_INST_BOOKEND);
   for (int cl = 0, e = HPX_INST_NUM_CLASSES; cl < e; ++cl) {
     for (int id = INST_OFFSETS[cl], e = INST_OFFSETS[cl + 1]; id < e; ++id) {
       if (inst_trace_class(cl)) {
@@ -180,6 +181,7 @@ int inst_init(config_t *cfg) {
   }
   _detailed_prof = cfg->prof_detailed;
 
+  inst_trace(HPX_INST_CLASS_BOOKEND, HPX_INST_BOOKEND);
   return LIBHPX_OK;
 }
 
@@ -227,6 +229,7 @@ int inst_start(void) {
 }
 
 void inst_fini(void) {
+  inst_trace(HPX_INST_CLASS_BOOKEND, HPX_INST_BOOKEND);
   prof_fini();
   for (int i = 0, e = HPX_INST_NUM_EVENTS; i < e; ++i) {
     logtable_fini(&_logs[i]);

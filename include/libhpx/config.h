@@ -167,6 +167,7 @@ static const char *const HPX_LOG_LEVEL_TO_STRING[] = {
 #define HPX_TRACE_LCO       (UINT64_C(1) << 3)
 #define HPX_TRACE_PROCESS   (UINT64_C(1) << 4)
 #define HPX_TRACE_MEMORY    (UINT64_C(1) << 5)
+#define HPX_TRACE_BOOKEND   (UINT64_C(1) << 6)
 
 static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
   "parcels",
@@ -176,13 +177,17 @@ static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
   "process",
   "memory",
   "schedtimes",
+  "bookend",
   "all"
 };
 
 typedef enum {
  HPX_L1_TCM = 0,
+ HPX_L1_TCA,
  HPX_L2_TCM,
+ HPX_L2_TCA,
  HPX_L3_TCM,
+ HPX_L3_TCA,
  HPX_TLB_TL,
  HPX_TOT_INS,
  HPX_INT_INS,
@@ -195,8 +200,11 @@ typedef enum {
 } libhpx_hw_counters_t;
 
 #define HPX_PROF_L1_TCM    (UINT64_C(1) << HPX_L1_TCM)
+#define HPX_PROF_L1_TCA    (UINT64_C(1) << HPX_L1_TCA)
 #define HPX_PROF_L2_TCM    (UINT64_C(1) << HPX_L2_TCM)
+#define HPX_PROF_L2_TCA    (UINT64_C(1) << HPX_L2_TCA)
 #define HPX_PROF_L3_TCM    (UINT64_C(1) << HPX_L3_TCM)
+#define HPX_PROF_L3_TCA    (UINT64_C(1) << HPX_L3_TCA)
 #define HPX_PROF_TLB_TL    (UINT64_C(1) << HPX_TLB_TL)
 #define HPX_PROF_TOT_INS   (UINT64_C(1) << HPX_TOT_INS)
 #define HPX_PROF_INT_INS   (UINT64_C(1) << HPX_INT_INS)
@@ -208,8 +216,11 @@ typedef enum {
 
 static const char *const HPX_COUNTER_TO_STRING[] = {
   "L1_TCM",
+  "L1_TCA",
   "L2_TCM",
+  "L2_TCA",
   "L3_TCM",
+  "L3_TCA",
   "TLB_TL",
   "TOT_INS",
   "INT_INS",

@@ -109,6 +109,7 @@ static void _continue_parcel_va(hpx_parcel_t *p, int n, va_list *args) {
   }
   else {
     process_recover_credit(p);
+    EVENT_THREAD_RUN(p, self);
   }
 }
 
@@ -189,6 +190,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
     dbg_error("interrupt produced unexpected error %s.\n", hpx_strerror(e));
   }
 
+//<<<<<<< HEAD
   // Restore the appropriate interrupt mask, if we need to. If the parent had a
   // mask, then we restore that, otherwise we restore the default system mask.
   if (masked) {
@@ -523,7 +525,9 @@ typedef struct {
 static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = _swap_current(to, sp, self);
   _checkpoint_env_t *c = env;
+  EVENT_THREAD_RUN(to, self);
   c->f(prev, c->env);
+  EVENT_THREAD_END(to, self);
 }
 
 /// Probe and progress the network.
@@ -567,6 +571,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   hpx_parcel_t *p = NULL;
   worker_t *w = self;
   while (!worker_is_stopped()) {
+    EVENT_SCHED_ENTER();
     if (!block) {
       p = _schedule_lifo(w);
       if (INSTRUMENTATION && p != NULL) {
@@ -614,14 +619,17 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   // transfer to then pick the system stack
   p = (p) ? _try_bind(w, p) : w->system;
 
+  EVENT_SCHED_EXIT();
   inst_trace(HPX_INST_SCHEDTIMES, HPX_INST_SCHEDTIMES_SCHED,
     start_time, source, spins);
 
   // don't transfer to the same parcel
   if (p != w->current) {
+    EVENT_THREAD_RUN(p, w);
     _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = f, .env = env }, w);
   }
 
+  EVENT_THREAD_RESUME(p, w);
   (void)source;
   (void)spins;
 }
@@ -891,8 +899,8 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
 /// This scans through the passed list of parcels, and tests to see if it
 /// corresponds to a thread (i.e., has a stack) or not. If its a thread, we
 /// check to see if it has soft affinity and ship it to its home through a
-/// mailbox of necessary. If its just a parcel, we use the launch infrastructure
-/// to send it off.
+/// mailbox if necessary. If it's just a parcel, we use the launch
+/// infrastructure to send it off.
 ///
 /// @param      parcels A stack of parcels to resume.
 static void _resume_parcels(hpx_parcel_t *parcels) {

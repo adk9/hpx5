@@ -51,6 +51,18 @@ static inline void EVENT_STEAL_LIFO(hpx_parcel_t *p, const worker_t *victim) {
   inst_trace(type, id, p, victim->id);
 }
 
+static inline void EVENT_SCHED_ENTER() {
+  static const int type = INST_SCHED;
+  static const int id = HPX_INST_EVENT_SCHED_ENTER;
+  inst_trace(type, id);
+}
+
+static inline void EVENT_SCHED_EXIT() {
+  static const int type = INST_SCHED;
+  static const int id = HPX_INST_EVENT_SCHED_EXIT;
+  inst_trace(type, id);
+}
+
 static inline void EVENT_THREAD_RUN(hpx_parcel_t *p, worker_t *w) {
 #ifdef HAVE_APEX
   // if this is NOT a null or lightweight action, send a "start" event to APEX

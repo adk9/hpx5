@@ -123,7 +123,7 @@ section "Tracing"
 
 option "hpx-trace-classes" - "set the event classes to trace"
 typestr="class"
-values="parcel","pwc","sched","lco","process","memory","schedtimes","all"
+values="parcel","pwc","sched","lco","process","memory","schedtimes","bookend","all"
 enum optional multiple
 
 option "hpx-trace-filesize" - "set the size of each trace file"
@@ -134,7 +134,7 @@ section "Profiling"
 
 option "hpx-prof-counters" - "set which HW counters to use for profiling"
 typestr="counters"
-values="L1_TCM","L2_TCM","L3_TCM","TLB_TL","TOT_INS","INT_INS","FP_INS","LD_INS","SR_INS","BR_INS","TOT_CYC","all"
+values="L1_TCM","L1_TCA","L2_TCM","L2_TCA","L3_TCM","L3_TCA","TLB_TL","TOT_INS","INT_INS","FP_INS","LD_INS","SR_INS","BR_INS","TOT_CYC","all"
 enum optional multiple
 
 option "hpx-prof-detailed" - "dump all individual measurements to file in addition to summaries"
