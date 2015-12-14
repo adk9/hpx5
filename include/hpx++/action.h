@@ -51,18 +51,6 @@ namespace hpx {
 	static constexpr auto arg_types_tpl = std::tuple<Args...>();
     };
     
-    template <::std::size_t I, typename FT, typename... Args>
-    struct matching_helper {
-      using f_type = typename ::std::tuple_element< I, typename FT::arg_types >::type;
-      using s_type = typename ::std::tuple_element< I, std::tuple<Args...> >::type;
-      static constexpr bool value = ::std::is_same< f_type, s_type >::value;
-    };
-
-    template <typename FT, typename... Args>
-    struct is_matching {
-      static constexpr bool value = (FT::arity == sizeof...(Args)) && matching_helper<0, FT, Args...>::value;
-    };
-    
     // reference: http://stackoverflow.com/questions/17424477/implementation-c14-make-integer-sequence
     // using aliases for cleaner syntax
     template<class T> using Invoke = typename T::type;
@@ -121,11 +109,13 @@ namespace hpx {
 	return _register_helper(f, tpl, gen_seq<::std::tuple_size<decltype(tpl)>::value>());
       }
       
-//       template <typename... Args>
-//       typename ::std::enable_if< ::std::is_void<typename A::traits::return_type>::value, int >::type
-//       operator()(hpx_addr_t addr, Args... args) {
-// 	return hpx_call_sync(addr, A::id, HPX_NULL, 0, args...);
-//       }
+      template <typename R, typename... Args>
+      int operator()(hpx_addr_t addr, R& result, Args... args) {
+	static_assert(::std::is_same< typename A::traits::arg_types, ::std::tuple<Args...> >::value,
+		      "action and argument types do not match");
+	return hpx_call_sync(addr, A::id, &result, sizeof(R), args...);
+      }
+
     };
     
     template <typename T, typename F>
@@ -136,33 +126,12 @@ namespace hpx {
     
   }
   
-  /*
-   * int    _hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result,
-                 int nargs, ...) HPX_PUBLIC;
-     #define hpx_call(addr, action, result, ...) \
-	_hpx_call(addr, action, result, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
-   */
-  template <typename F, typename RType, typename... Args>
-  int call_sync(hpx_addr_t addr, F && f, RType& result, Args... args) {
-    static_assert(hpx::detail::is_matching<hpx::detail::function_traits<decltype(f)>, Args...>::value, 
-		  "action and argument types do not match");
-    // TODO make lco out of result and pass that here
-    return hpx_call_sync(addr, f, HPX_NULL, args...);
-  }
 }
 
 #define HPXPP_REGISTER_ACTION(f)						\
 struct f##_action_struct : public hpx::detail::action_struct<f##_action_struct> {\
   static hpx_action_t id;							\
   using traits = hpx::detail::function_traits<decltype(f)>;			\
-  \
-  \
-  template <typename... Args>							\
-  int operator()(hpx_addr_t addr, traits::return_type& result, Args... args) {	\
-    static_assert(hpx::detail::is_matching<traits, Args...>::value, \
-		  "action and argument types do not match");\
-    return hpx_call_sync(addr, id, &result, sizeof(traits::return_type), args...);\
-  }										\
 };										\
 hpx_action_t f##_action_struct::id = 0;						\
 int f##_action_struct_dummy = hpx::detail::_register_action<f##_action_struct>(f);
