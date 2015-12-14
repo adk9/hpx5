@@ -66,7 +66,7 @@
   ({ __typeof(to) expected = *(from);					\
     __typeof(to) actual = __sync_val_compare_and_swap(addr, from, to);	\
     bool success = (actual == expected);				\
-    if (!succes) *(from) = actual;					\
+    if (!success) *(from) = actual;					\
     success; })
 
 #define sync_fadd(addr, val, mm) __sync_fetch_and_add(addr, val)
