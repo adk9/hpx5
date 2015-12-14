@@ -87,7 +87,7 @@ namespace hpx {
   template <typename... Args>
   inline
   int run(hpx_action_t *entry, Args... args) {
-    _hpx_run(entry, sizeof...(Args), args...);
+    return _hpx_run(entry, sizeof...(Args), args...);
   }
 
   /// Exit the HPX runtime.
