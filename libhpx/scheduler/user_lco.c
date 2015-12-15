@@ -260,7 +260,6 @@ _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
 
   handler_t f = actions[u->id].handler;
   _hpx_user_lco_id_t init_fn = (_hpx_user_lco_id_t)f;
-  memcpy(u->init, init, init_size);
   init_fn(u->buffer, u->size, init, init_size);
   return HPX_SUCCESS;
 }
