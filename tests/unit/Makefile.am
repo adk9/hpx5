@@ -13,7 +13,6 @@ LOG_COMPILER = $(TESTS_CMD)
 TEST_EXTENSIONS = .cc .c
 
 TESTS = allreduce               \
-	parcel_send_coalesced   \
         bcast                   \
         call_when               \
         call_vectored           \
@@ -40,6 +39,7 @@ TESTS = allreduce               \
         parcel_continuation     \
         parcel_create           \
         parcel_send             \
+	parcel_send_coalesced   \
         parcel_send_rendezvous  \
         parcel_send_through     \
         process                 \
