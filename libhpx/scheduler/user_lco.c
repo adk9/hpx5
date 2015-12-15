@@ -311,6 +311,7 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
     dbg_check(e, "could not initialize an allreduce at %"PRIu64"\n", gva);
     free(args);
   } else {
+    memcpy(u->data, init, init_size);
     _user_lco_init(u, size, id, op, predicate, init, init_size);
     hpx_gas_unpin(gva);
   }
