@@ -312,6 +312,6 @@ network_t* coalesced_network_new (network_t *network,  const struct config *cfg)
   coalesced_network->parcel_count = 0;
   coalesced_network->previous_parcel_count = 0;
 
-  printf("Created coalescing network\n");
+  log_net("Created coalescing network\n");
   return &coalesced_network->vtable;
 }

@@ -33,7 +33,7 @@
 #include "send_buffer.h"
 #include "xport.h"
 
-pwc_network_t *pwc_network;
+pwc_network_t *pwc_network = NULL;
 
 typedef struct heap_segment {
   size_t        n;
