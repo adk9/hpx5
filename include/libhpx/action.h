@@ -40,7 +40,7 @@ typedef struct {
 /// The default libhpx action table size.
 #define LIBHPX_ACTION_MAX (UINT32_C(1) << (sizeof(hpx_action_t) * 8))
 
-extern action_t actions[LIBHPX_ACTION_MAX];
+extern action_t actions[LIBHPX_ACTION_MAX] HPX_ALIGNED(HPX_PAGE_SIZE);
 
 #ifdef ENABLE_DEBUG
 void CHECK_ACTION(hpx_action_t id);

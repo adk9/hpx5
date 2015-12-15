@@ -17,9 +17,11 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
+#include <libhpx/padding.h>
 #include "init.h"
 
 /// A static action table.
@@ -28,7 +30,7 @@
 /// because we use constructors inside of libhpx to do action registration. We
 /// expose this action table to be used for that purpose.
 static int _n = 1;
-action_t actions[LIBHPX_ACTION_MAX];
+HPX_ALIGNED(HPX_PAGE_SIZE) action_t actions[LIBHPX_ACTION_MAX];
 
 static void HPX_CONSTRUCTOR _init_null_handler(void) {
   actions[0] = (action_t){
@@ -151,6 +153,15 @@ void action_registration_finalize(void) {
   // this is a sanity check to ensure that the reserved "null" action
   // is still at index 0.
   dbg_assert(actions[0].id == NULL);
+
+#ifndef HAVE_HUGETLBFS
+  size_t bytes = _n * sizeof(actions[0]);
+  bytes += _BYTES(HPX_PAGE_SIZE, bytes);
+  int e1 = mprotect(&actions, bytes, PROT_READ);
+  if (e1) {
+    dbg_error("could not protect the action table\n");
+  }
+#endif
 }
 
 void action_table_finalize(void) {
