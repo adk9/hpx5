@@ -196,7 +196,8 @@ static int _coalesced_network_progress(void *obj, int id) {
       sync_cas_val(&coalesced_network->parcel_count,
                    temp_parcel_count, 0,
                    SYNC_RELAXED, SYNC_RELAXED);
-    if (viewed_parcel_count == current_parcel_count) {
+    if (viewed_parcel_count == current_parcel_count && current_parcel_count > 0)
+    {
       //  flush outstanding buffer
       _send_n(coalesced_network, current_parcel_count);
       break;
