@@ -59,10 +59,24 @@ static int _allreduce_join_handler(allreduce_t *r, void *value, size_t bytes) {
 HPX_ACTION(HPX_INTERRUPT, HPX_PINNED | HPX_MARSHALLED, allreduce_join_async,
            _allreduce_join_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
+#include "inttypes.h"
+
 static int _allreduce_bcast_comm_handler(allreduce_t *r, void *value, size_t bytes) {
-  int n;
-  n = (bytes == 0)? 0:(bytes/sizeof(hpx_addr_t));  
-  allreduce_bcast_comm(r, value, n);
+  if(!r->parent){
+    //if root netwrk node we pass only the base address for bcast	  
+    dbg_assert(bytes == sizeof(hpx_addr_t));
+    hpx_addr_t base = *((hpx_addr_t*)value);
+    
+    printf("[root node] base address : %"PRId64" \n", base);
+    allreduce_bcast_comm(r, base, NULL);
+    printf("========== bcast root end\n");
+    return HPX_SUCCESS;
+  }
+  
+  coll_t* ctx = value;
+  dbg_assert(bytes == (sizeof(coll_t) + ctx->group_bytes));
+  allreduce_bcast_comm(r, HPX_NULL, ctx);
+  printf("========== bcast leaf end\n");
   return HPX_SUCCESS;
 }
 HPX_ACTION(HPX_INTERRUPT, HPX_PINNED | HPX_MARSHALLED, allreduce_bcast_comm_async,

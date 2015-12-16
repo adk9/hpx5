@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <libhpx/debug.h>
 #include <libhpx/parcel.h>
+#include <libhpx/gas.h>
 #include "allreduce.h"
 
 void allreduce_init(allreduce_t *r, size_t bytes, hpx_addr_t parent,
@@ -27,9 +28,15 @@ void allreduce_init(allreduce_t *r, size_t bytes, hpx_addr_t parent,
   r->continuation = continuation_new(bytes);
   r->reduce = reduce_new(bytes, id, op);
   r->id = -1;
-  r->n_loc = 0 ;
-  //optimistic allocation ?
-  r->loc = malloc(sizeof(hpx_addr_t) * HPX_LOCALITIES);
+  //allocate memory for data structure plus for rank data
+  //optimistic allocation for ranks - for all lcoalities
+  int ctx_bytes= sizeof(coll_t) + sizeof(int32_t) * HPX_LOCALITIES;
+  r->ctx = malloc(ctx_bytes);
+  r->ctx->group_bytes = sizeof(int32_t) * HPX_LOCALITIES;
+  r->ctx->comm_bytes = 0 ;
+  r->ctx->group_sz = 0 ;
+  r->ctx->recv_count = bytes;
+  r->ctx->type = ALL_REDUCE;
 }
 
 void allreduce_fini(allreduce_t *r) {
@@ -50,16 +57,18 @@ int32_t allreduce_add(allreduce_t *r, hpx_action_t op, hpx_addr_t addr) {
 
   //if i am the root then add leaf node into to active locations
   if(!r->parent){
-   int i = r->n_loc++;
-   r->loc[i] = addr;
-   printf("root add location : %"PRId64"  idx : %d \n", r->loc[i], i);
+   int i = r->ctx->group_sz++;
+   /*r->ctx.group[i] = addr;*/
+   int32_t* ranks = (int32_t*)r->ctx->data;
+   ranks[i] =  gas_owner_of(here->gas, addr);
+   /*printf("root add location : %"PRId64"  idx : %d \n", r->loc[i], i);*/
   }	
   // extend the local reduction, if this is the first input then we need to
   // recursively tell our parent (if we have one) that we exist, and that we
   // need to have our bcast action run as a continuation
   if (reduce_add(r->reduce) && r->parent) {
     hpx_addr_t allreduce = hpx_thread_current_target();
-    printf("====non root location : %"PRId64"  parent : %"PRId64" \n", allreduce, r->parent);
+    /*printf("====non root location : %"PRId64"  parent : %"PRId64" \n", allreduce, r->parent);*/
     dbg_check( hpx_call_sync(r->parent, allreduce_add_async, &r->id,
                              sizeof(r->id), &allreduce_bcast_async,
                              &allreduce) );
@@ -101,23 +110,19 @@ void allreduce_reduce(allreduce_t *r, const void *val) {
 
 #ifdef SW_COLLECTIVES
   //for sw based direct collective join
-  coll_t cl;
-  cl.type = ALL_REDUCE;
-  cl.recv_count = r->bytes;
-  cl.group_sz = r->n_loc;
-  cl.group = r->loc;
-
   //create parcel and prepare for coll call
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, r->bytes) ; 
   reduce_reset(r->reduce, hpx_parcel_get_data(p));
   void *output = malloc(r->bytes);
 
+  /*int* input = (int*)hpx_parcel_get_data(p);*/
   //perform synchronized collective comm
-  here->network->coll_sync(here->network, p, output, cl );
+  here->network->coll_sync(here->network, p, output, r->ctx);
 
   //call all local continuations to communicate the result
   continuation_trigger(r->continuation, output);
-  printf("reduce done ...current_node : %"PRId64" \n", hpx_thread_current_target());
+  /*printf("reduce done ...current_node : %"PRId64" out bytes : %d output : %d input : %d \n", hpx_thread_current_target(), */
+		  /*cl.recv_count, *((int*)output), *input);*/
 
   return;
 #endif
@@ -144,34 +149,54 @@ void allreduce_bcast(allreduce_t *r, const void *value) {
   continuation_trigger(r->continuation, value);
 }
 
-void allreduce_bcast_comm(allreduce_t *r, const void *loc_array, int n) {
+void allreduce_bcast_comm(allreduce_t *r, hpx_addr_t base, const void *coll) {
   log_coll("broadcasting comm ranks from root %p\n", r);
   
   //boradcast my comm group to all leaves
   //this is executed only on network root
-  hpx_addr_t and = hpx_lco_and_new(r->n_loc);
-  //total bytes to send
-  int bytes = r->n_loc * sizeof(hpx_addr_t);	  
-
-  for (int i = 0; i < r->n_loc; ++i) {
-    hpx_parcel_t *p = hpx_parcel_acquire(NULL, bytes) ; 
-    hpx_parcel_set_data(p, r->loc, bytes);
-    hpx_parcel_set_action(p, allreduce_bcast_comm_async);
-    hpx_parcel_set_target(p, r->loc[i]);
-    hpx_parcel_set_cont_action(p, hpx_lco_set_action);
-    hpx_parcel_set_cont_target(p, and);
-    parcel_launch(p);
-  }
-  hpx_lco_wait(and);
-  hpx_lco_delete_sync(and);
-
-  //set the active locations in current leaf node
-  //this is executed only in all leaves (n > 0 )
-  if(n > 0){
-    r->n_loc = n ;
+  if(coll == NULL){
+    printf("[root] broadcast task current_node : %"PRId64"  n_loc : %d \n", hpx_thread_current_target(), r->ctx->group_sz );
+    hpx_addr_t target = HPX_NULL; 
+    int n = here->ranks;
+    hpx_addr_t and = hpx_lco_and_new(n);
     for (int i = 0; i < n; ++i) {
-      r->loc[i] = ((hpx_addr_t*)loc_array)[i];	
-      printf("broadcast task current_node : %"PRId64"  idx: %d  loc : %"PRId64" \n", hpx_thread_current_target(), i, r->loc[i] );
+      if(here->rank != i){	    
+	target = hpx_addr_add(base, i * sizeof(allreduce_t), sizeof(allreduce_t));  
+	hpx_call(target, allreduce_bcast_comm_async, and, r->ctx, (sizeof(coll_t) + r->ctx->group_bytes)); 	
+      }
     }
+    
+    target = hpx_addr_add(base, here->rank * sizeof(allreduce_t), sizeof(allreduce_t));  
+    //order sends to remote rank first and local rank then; here
+    //provided network is flushed ,this will facilitate blocking call 
+    //for a collective group creation in bcast_comm
+    hpx_call(target, allreduce_bcast_comm_async, and, r->ctx, sizeof(coll_t) + r->ctx->group_bytes); 	
+    
+    hpx_lco_wait(and);
+    hpx_lco_delete_sync(and);
+     
+    int32_t* ranks = (int32_t*)r->ctx->data;
+    for (int i = 0; i < r->ctx->group_sz; ++i) {
+       printf("broadcast task current_node : %"PRId64"  idx: %d  target rank : %d \n", 
+		       hpx_thread_current_target(), i, ranks[i] );
+    }
+    return;
   }
+  
+  //set the collective context in current leaf node
+  //this is executed only in leaves 
+  const coll_t* c = coll;
+  *r->ctx = *c;
+  dbg_assert(r->ctx->group_sz = c->group_sz);
+  dbg_assert(r->ctx->recv_count = c->recv_count);
+
+  int32_t* ranks = (int32_t*)r->ctx->data;
+  int32_t* copy_ranks = (int32_t*) c->data;
+  for (int i = 0; i < c->group_sz; ++i) {
+    ranks[i] = copy_ranks[i];    
+  }
+  //perform collective initialization for all leaf nodes here
+  dbg_check(here->network->coll_init(here->network, &r->ctx));
+  printf("[leaf] broadcast task current_node : %"PRId64"  n_loc : %d \n", hpx_thread_current_target(), r->ctx->group_sz );
+  
 }

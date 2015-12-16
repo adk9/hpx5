@@ -90,9 +90,9 @@ int hpx_process_collective_allreduce_subscribe_finalize(hpx_addr_t allreduce) {
   }
   root = r->parent;
    
-  printf("***** Finalize from non root location : %"PRId64"  parent : %"PRId64" \n", leaf, root);
+  /*printf("***** Finalize from non root location : %"PRId64"  parent : %"PRId64" \n", leaf, root);*/
   dbg_check( hpx_call_sync(root, allreduce_bcast_comm_async, NULL, 0,
- 			  NULL, 0) );
+ 			  &allreduce, sizeof(hpx_addr_t)) );
   return HPX_SUCCESS;
 }
 
@@ -106,7 +106,7 @@ int hpx_process_collective_allreduce_join(hpx_addr_t allreduce,
                                           int32_t id, size_t bytes,
                                           const void *in) {
   hpx_addr_t proxy = hpx_addr_add(allreduce, here->rank * BSIZE, BSIZE);
-  printf("reduce start...current_node : %"PRId64" \n", proxy);
+  /*printf("reduce start...current_node : %"PRId64" \n", proxy);*/
   allreduce_t *r = NULL;
   if (!hpx_gas_try_pin(proxy, (void*)&r)) {
     dbg_error("could not pin local element for an allreduce\n");
