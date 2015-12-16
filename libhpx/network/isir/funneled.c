@@ -86,42 +86,46 @@ _funneled_delete(void *network) {
 #include "parcel_utils.h"
 #include <inttypes.h>
 
-int _funneled_coll_sync(void *network, hpx_parcel_t *in, void* out, coll_t c){
-  MPI_Comm active_comm;
-  MPI_Group active_group, world_group;	
-  MPI_Comm_group ( MPI_COMM_WORLD, &world_group);
-  int* active_ranks;
-  int num_active = c.group_sz;
-  //todo 
-  active_ranks = malloc(sizeof(int)* c.group_sz);
-  for (int i = 0; i < c.group_sz; ++i) {
-    hpx_addr_t loc = c.group[i];
-    active_ranks[i] = gas_owner_of(here->gas, loc);
-    printf("active ranks : %d  rank id : %d  gas loc : %"PRId64" \n", c.group_sz, active_ranks[i], loc );
+static int _funneled_coll_init(void *network, coll_t **_c){
+  coll_t* c = *_c;
+  int num_active = c->group_sz;
+
+  //todo REMOVE -debug logs
+  printf("total active ranks : %d \n", num_active);
+  int32_t* ranks = (int32_t*) c->data;
+  for (int i = 0; i < c->group_sz; ++i) {
+    printf("active ranks : %d  rank id : %d  \n", c->group_sz, ranks[i]);
+  }
+  
+  if(c->comm_bytes == 0){
+    //we have not yet allocated a communicator
+    int32_t comm_bytes = sizeof(MPI_Comm);
+    *_c = realloc(c, sizeof(coll_t) + c->group_bytes + comm_bytes); 
+    c = *_c;
+    c->comm_bytes = comm_bytes;
   }
 
-  //flushing network is necessary (sufficient ?) to execute any packets
-  //destined for collective operation
-  _funneled_t* isir = network;
-  isir->vtable.flush(network);
+  //setup communicator
+  char *comm = c->data + c->group_bytes;
 
-  MPI_Group_incl ( world_group, num_active, active_ranks, &active_group);
-  MPI_Comm_create ( MPI_COMM_WORLD, active_group, &active_comm);
-  /*sleep(10);*/
+  _funneled_t* isir = network;
+  if(num_active < here->ranks){
+    //flushing network is necessary (sufficient ?) to execute any packets
+    //destined for collective group creation operation
+    isir->vtable.flush(network);
+  }  
+  isir->xport->create_comm(comm, ranks, num_active, here->ranks);
+  return LIBHPX_OK;	
+}
+
+static int _funneled_coll_sync(void *network, hpx_parcel_t *in, void* out, coll_t* c){
   void *sendbuf = in->buffer;
   int count     = in->size;
-
-  printf("COLLECTIVE call ... current rank: %d count bytes: %d  partial reduction : %d \n", 
-		  gas_owner_of(here->gas, hpx_thread_current_target()), count, *((int*)sendbuf) ); 
-
-  MPI_Request r;
-  MPI_Status status;
-  int flag = 0 ;
-  MPI_Iallreduce(sendbuf, out, count, MPI_BYTE, MPI_SUM, active_comm, &r);
-
-  while(!flag){
-  	MPI_Test(&r, &flag, &status);
-	hpx_thread_yield();
+  char *comm = c->data + c->group_bytes;
+  _funneled_t* isir = network;
+  
+  if(c->type == ALL_REDUCE) {
+    isir->xport->allreduce(sendbuf, out, count, NULL, NULL, comm);
   }
   return LIBHPX_OK;
 }
@@ -287,6 +291,7 @@ network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
   network->vtable.progress = _funneled_progress;
   network->vtable.send = _funneled_send;
   network->vtable.coll_sync = _funneled_coll_sync;
+  network->vtable.coll_init = _funneled_coll_init;
   network->vtable.command = _funneled_command;
   network->vtable.pwc = _funneled_pwc;
   network->vtable.put = _funneled_put;

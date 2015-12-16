@@ -69,10 +69,12 @@ typedef enum {
 
 typedef struct collective{
   coll_type_t      type;   // type of collective operation
-  hpx_addr_t     *group;   // group of localities in the collective
+  hpx_action_t       op;   // collective operator (optional)
   int32_t      group_sz;   // active group size
   int32_t    recv_count;   // how many bytes to be recieved
-  hpx_action_t       op;   // collective operator (optional)
+  int32_t    comm_bytes;   // active comm size in bytes
+  int32_t   group_bytes;   // active group size in bytes
+  char           data[];   // variable data - group of localities + communicator
 } coll_t;
 /// All network objects implement the network interface.
 typedef struct network {
@@ -86,7 +88,8 @@ typedef struct network {
 
   int (*command)(void*, hpx_addr_t rank, hpx_action_t op, uint64_t args);
   
-  int (*coll_sync)(void*, hpx_parcel_t *in, void* out, coll_t c);
+  int (*coll_init)(void*, coll_t** c);
+  int (*coll_sync)(void*, hpx_parcel_t *in, void* out, coll_t* c);
 
   int (*pwc)(void*, hpx_addr_t to, const void *from, size_t n,
              hpx_action_t lop, hpx_addr_t laddr, hpx_action_t rop,
