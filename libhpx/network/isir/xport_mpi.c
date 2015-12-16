@@ -168,6 +168,35 @@ _init_mpi(void) {
   }
 }
 
+static void _mpi_create_comm(void* c, void* active_ranks, int num_active, int total){
+  MPI_Comm *comm = (MPI_Comm*) c;	
+  MPI_Comm active_comm;
+  MPI_Group active_group, world_group;	
+  if(num_active < total){
+    MPI_Comm_group ( MPI_COMM_WORLD, &world_group);
+    MPI_Group_incl ( world_group, num_active, active_ranks, &active_group);
+    MPI_Comm_create ( MPI_COMM_WORLD, active_group, &active_comm);
+    *comm = active_comm;
+  } else {
+    //in this case we dont have to create an active comm group
+    //comm_group is MPI_COMM_WORKD
+    *comm = MPI_COMM_WORLD;
+  }
+}
+
+static void _mpi_allreduce(void *sendbuf, void* out, int count, void* datatype, void* op, void* c){
+  MPI_Request r;
+  MPI_Status status;
+  int flag = 0 ;
+  MPI_Comm *comm = c;
+  
+  MPI_Iallreduce(sendbuf, out, 1, MPI_INT, MPI_SUM, *comm, &r);
+  while(!flag){
+  	MPI_Test(&r, &flag, &status);
+	hpx_thread_yield();
+  }
+}
+
 isir_xport_t *
 isir_xport_new_mpi(const config_t *cfg, gas_t *gas) {
   isir_xport_t *xport = malloc(sizeof(*xport));
@@ -188,6 +217,8 @@ isir_xport_new_mpi(const config_t *cfg, gas_t *gas) {
   xport->finish         = _mpi_finish;
   xport->pin            = _mpi_pin;
   xport->unpin          = _mpi_unpin;
+  xport->create_comm    = _mpi_create_comm;
+  xport->allreduce      = _mpi_allreduce;
 
   // local = address_space_new_default(cfg);
   // registered = address_space_new_default(cfg);
