@@ -196,8 +196,7 @@ static int _coalesced_network_progress(void *obj, int id) {
       sync_cas_val(&coalesced_network->parcel_count,
                    temp_parcel_count, 0,
                    SYNC_RELAXED, SYNC_RELAXED);
-    if (viewed_parcel_count == current_parcel_count && current_parcel_count > 0)
-    {
+    if (viewed_parcel_count == current_parcel_count) {
       //  flush outstanding buffer
       _send_n(coalesced_network, current_parcel_count);
       break;
@@ -248,8 +247,9 @@ static hpx_parcel_t* _coalesced_network_probe(void *obj, int rank) {
 static void _coalesced_network_set_flush(void *obj) {
   _coalesced_network_t *coalesced_network = obj;
   uint64_t count = sync_swap(&coalesced_network->parcel_count, 0, SYNC_RELAXED);
-  _send_n(coalesced_network, count);
-
+  if(count > 0) {
+    _send_n(coalesced_network, count);
+  }
   coalesced_network->base_network->flush(coalesced_network->base_network);
 }
 
