@@ -124,8 +124,12 @@ static int _funneled_coll_sync(void *network, hpx_parcel_t *in, void* out, coll_
   char *comm = c->data + c->group_bytes;
   _funneled_t* isir = network;
   
+  //flushing network is necessary (sufficient ?) to execute any packets
+  //destined for collective operation
+  isir->vtable.flush(network);
+
   if(c->type == ALL_REDUCE) {
-    isir->xport->allreduce(sendbuf, out, count, NULL, NULL, comm);
+    isir->xport->allreduce(sendbuf, out, count, NULL, &c->op, comm);
   }
   return LIBHPX_OK;
 }

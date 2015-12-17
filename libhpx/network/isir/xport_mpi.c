@@ -184,17 +184,44 @@ static void _mpi_create_comm(void* c, void* active_ranks, int num_active, int to
   }
 }
 
+typedef struct {
+  hpx_monoid_op_t op;
+  int bytes;
+  char operands[];  
+} val_t;
+
+/// handle for reduction operation
+/// MPI will call this function in a colelctive reduction op
+/// and then delegate to the real action
+void op_handler( void *in, void* inout, int *len, MPI_Datatype *dp) {
+  val_t* v = (val_t*)in ;
+  val_t* out = (val_t*)inout ;
+  v->op(out->operands, v->operands, v->bytes);
+}
+
 static void _mpi_allreduce(void *sendbuf, void* out, int count, void* datatype, void* op, void* c){
-  MPI_Request r;
-  MPI_Status status;
-  int flag = 0 ;
   MPI_Comm *comm = c;
+  hpx_monoid_op_t *hpx_handle = (hpx_monoid_op_t*) op;
+  int bytes = sizeof(val_t) + count ;
   
-  MPI_Iallreduce(sendbuf, out, 1, MPI_INT, MPI_SUM, *comm, &r);
-  while(!flag){
-  	MPI_Test(&r, &flag, &status);
-	hpx_thread_yield();
-  }
+  //prepare operands for function
+  char val[bytes], result[bytes];
+  val_t* in = (val_t*) val;
+  val_t* res = (val_t*) result;
+  in->op = *hpx_handle;
+  in->bytes = count;
+  memcpy(in->operands, sendbuf, count);
+
+  MPI_Op usrOp;
+  /*we assume this function is commutative for now, hence 1*/
+  MPI_Op_create( op_handler, 1, &usrOp);
+
+  MPI_Allreduce(val, result, bytes, MPI_BYTE, usrOp, *comm);
+  /*MPI_Allreduce(sendbuf, out, 1, MPI_INT, MPI_SUM, *comm);*/
+  memcpy(out, res->operands ,count);
+  
+  /*printf("=====total bytes: %d op: %ld result : %d out : %d  result : %x res->operands : %x  dataptr : %x size : %d \n",*/
+   /*bytes, *hpx_handle, *((int*)res->operands), *((int*)out), result, res->operands, result + sizeof(val_t), sizeof(void*));*/
 }
 
 isir_xport_t *
