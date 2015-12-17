@@ -71,8 +71,7 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
   "TASK",
   "INTERRUPT",
   "FUNCTION",
-  "OPENCL",
-  "COALESCED"
+  "OPENCL"
 };
 
 /// @name Action attributes.
