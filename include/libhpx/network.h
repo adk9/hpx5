@@ -69,7 +69,7 @@ typedef enum {
 
 typedef struct collective{
   coll_type_t      type;   // type of collective operation
-  hpx_action_t       op;   // collective operator (optional)
+  hpx_monoid_op_t    op;   // collective operator 
   int32_t      group_sz;   // active group size
   int32_t    recv_count;   // how many bytes to be recieved
   int32_t    comm_bytes;   // active comm size in bytes
