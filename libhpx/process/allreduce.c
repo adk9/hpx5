@@ -37,6 +37,7 @@ void allreduce_init(allreduce_t *r, size_t bytes, hpx_addr_t parent,
   r->ctx->group_sz = 0 ;
   r->ctx->recv_count = bytes;
   r->ctx->type = ALL_REDUCE;
+  r->ctx->op = op;
 }
 
 void allreduce_fini(allreduce_t *r) {
@@ -60,7 +61,12 @@ int32_t allreduce_add(allreduce_t *r, hpx_action_t op, hpx_addr_t addr) {
    int i = r->ctx->group_sz++;
    /*r->ctx.group[i] = addr;*/
    int32_t* ranks = (int32_t*)r->ctx->data;
-   ranks[i] =  gas_owner_of(here->gas, addr);
+   if(here->ranks > 1){
+     ranks[i] =  gas_owner_of(here->gas, addr);
+   }else {
+     //smp mode
+     ranks[i] = 0 ;
+   }	
    /*printf("root add location : %"PRId64"  idx : %d \n", r->loc[i], i);*/
   }	
   // extend the local reduction, if this is the first input then we need to

@@ -23,6 +23,7 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
+#include <libhpx/parcel.h>
 
 #include "smp.h"
 
@@ -98,6 +99,18 @@ static int _smp_lco_get(void *o, hpx_addr_t lco, size_t n, void *to, int reset) 
   return (reset) ? hpx_lco_get_reset(lco, n, to) : hpx_lco_get(lco, n, to);
 }
 
+static int _smp_coll_init(void *network, coll_t **_c){
+
+  return LIBHPX_OK;
+}
+
+static int _smp_coll_sync(void *network, hpx_parcel_t *in, void* out, coll_t* c){
+  void *sendbuf = in->buffer;
+  int count     = in->size;
+  memcpy(out, sendbuf, count);
+  return LIBHPX_OK;
+}
+
 static network_t _smp = {
   .type = HPX_NETWORK_SMP,
   .delete = _smp_delete,
@@ -112,7 +125,9 @@ static network_t _smp = {
   .register_dma = _smp_register_dma,
   .release_dma = _smp_release_dma,
   .lco_get = _smp_lco_get,
-  .lco_wait = _smp_lco_wait
+  .lco_wait = _smp_lco_wait,
+  .coll_init = _smp_coll_init,
+  .coll_sync = _smp_coll_sync
 };
 
 network_t *network_smp_new(const struct config *cfg, boot_t *boot) {
