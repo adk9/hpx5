@@ -254,7 +254,6 @@ _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
   u->id = id;
   u->op = op;
   u->predicate = predicate;
-  memset(u->data + init_size, 0, size);
   u->init = u->data;
   u->buffer = (char*)u->data + init_size;
 
