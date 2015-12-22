@@ -75,6 +75,11 @@ static void *_run(void *worker) {
     return NULL;
   }
 
+#ifdef HAVE_APEX
+  // let APEX know the thread is exiting
+  apex_exit_thread();
+#endif
+
   // leave the global address space
   as_leave();
 

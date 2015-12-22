@@ -125,7 +125,6 @@ static void _apex_worker_shutdown(void) {
     apex_stop(w->profiler);
     w->profiler = NULL;
   }
-  apex_exit_thread();
 }
 
 int worker_is_active(void) {
