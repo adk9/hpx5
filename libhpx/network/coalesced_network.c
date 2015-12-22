@@ -247,9 +247,7 @@ static hpx_parcel_t* _coalesced_network_probe(void *obj, int rank) {
 static void _coalesced_network_set_flush(void *obj) {
   _coalesced_network_t *coalesced_network = obj;
   uint64_t count = sync_swap(&coalesced_network->parcel_count, 0, SYNC_RELAXED);
-  if(count > 0) {
-    _send_n(coalesced_network, count);
-  }
+  _send_n(coalesced_network, count);
   coalesced_network->base_network->flush(coalesced_network->base_network);
 }
 
