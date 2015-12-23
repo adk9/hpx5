@@ -244,10 +244,12 @@ static hpx_parcel_t* _coalesced_network_probe(void *obj, int rank) {
   return network_probe(coalesced_network->base_network, rank);
 }
 
-static void _coalesced_network_set_flush(void *obj) {
+static void _coalesced_network_flush(void *obj) {
   _coalesced_network_t *coalesced_network = obj;
   uint64_t count = sync_swap(&coalesced_network->parcel_count, 0, SYNC_RELAXED);
-  _send_n(coalesced_network, count);
+  if(count > 0) {
+    _send_n(coalesced_network, count);
+  }
   coalesced_network->base_network->flush(coalesced_network->base_network);
 }
 
@@ -293,7 +295,7 @@ network_t* coalesced_network_new (network_t *network,  const struct config *cfg)
   coalesced_network->vtable.put = _coalesced_network_put;
   coalesced_network->vtable.get = _coalesced_network_get;
   coalesced_network->vtable.probe = _coalesced_network_probe;
-  coalesced_network->vtable.flush =  _coalesced_network_set_flush;
+  coalesced_network->vtable.flush =  _coalesced_network_flush;
   coalesced_network->vtable.register_dma = _coalesced_network_register_dma;
   coalesced_network->vtable.release_dma = _coalesced_network_release_dma;
   coalesced_network->vtable.lco_get = _coalesced_network_lco_get;
