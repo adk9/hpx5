@@ -36,6 +36,7 @@ typedef struct {
   uint64_t          parcel_count;
   uint64_t previous_parcel_count;
   uint64_t       coalescing_size;
+  volatile uint64_t    syncflush;
 } _coalesced_network_t;
 
 static void _coalesced_network_delete(void *obj) {
@@ -157,6 +158,7 @@ static int _coalesced_network_send(void *network,  hpx_parcel_t *p) {
     uint64_t readjusted_parcel_count =
       parcel_count - coalesced_network->coalescing_size;
     uint64_t temp_parcel_count = parcel_count;
+    sync_fadd(&coalesced_network->syncflush, 1, SYNC_ACQ_REL);
     uint64_t viewed_parcel_count =
       sync_cas_val(&coalesced_network->parcel_count,
                    temp_parcel_count,
@@ -165,8 +167,10 @@ static int _coalesced_network_send(void *network,  hpx_parcel_t *p) {
     if (viewed_parcel_count == parcel_count) {
       //  flush outstanding buffer
       _send_n(coalesced_network, coalesced_network->coalescing_size);
-      break;
+     sync_fadd(&coalesced_network->syncflush, -1, SYNC_ACQ_REL);
+     break;
     }
+    sync_fadd(&coalesced_network->syncflush, -1, SYNC_ACQ_REL);
     parcel_count = sync_load(&coalesced_network->parcel_count,  SYNC_RELAXED);
   }
 
@@ -192,6 +196,7 @@ static int _coalesced_network_progress(void *obj, int id) {
   while (previous_parcel_count == current_parcel_count &&
 	 current_parcel_count > 0) {
     uint64_t temp_parcel_count = current_parcel_count;
+    sync_fadd(&coalesced_network->syncflush, 1, SYNC_ACQ_REL);
     uint64_t viewed_parcel_count =
       sync_cas_val(&coalesced_network->parcel_count,
                    temp_parcel_count, 0,
@@ -199,8 +204,10 @@ static int _coalesced_network_progress(void *obj, int id) {
     if (viewed_parcel_count == current_parcel_count) {
       //  flush outstanding buffer
       _send_n(coalesced_network, current_parcel_count);
+      sync_fadd(&coalesced_network->syncflush, -1, SYNC_ACQ_REL);
       break;
     }
+    sync_fadd(&coalesced_network->syncflush, -1, SYNC_ACQ_REL);
     current_parcel_count = sync_load(&coalesced_network->parcel_count,
 				     SYNC_RELAXED);
   }
@@ -250,6 +257,7 @@ static void _coalesced_network_flush(void *obj) {
   if(count > 0) {
     _send_n(coalesced_network, count);
   }
+  while(sync_load(&coalesced_network->syncflush, SYNC_ACQUIRE)!=0) ;
   coalesced_network->base_network->flush(coalesced_network->base_network);
 }
 
@@ -312,7 +320,7 @@ network_t* coalesced_network_new (network_t *network,  const struct config *cfg)
 
   coalesced_network->parcel_count = 0;
   coalesced_network->previous_parcel_count = 0;
-
+  coalesced_network->syncflush = 0;
   log_net("Created coalescing network\n");
   return &coalesced_network->vtable;
 }
