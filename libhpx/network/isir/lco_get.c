@@ -15,7 +15,6 @@
 # include "config.h"
 #endif
 
-#include <alloca.h>
 #include <string.h>
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
@@ -86,10 +85,14 @@ typedef struct {
 
 static void _lco_get_continuation(hpx_parcel_t *p, void *env) {
   _lco_get_env_t *e = env;
-  hpx_parcel_t *l = action_create_parcel(e->lco, _isir_lco_get_request,
-                                         HPX_HERE, _isir_lco_get_reply,
-                                         4, &p, &e->n, &e->out, &e->reset);
-  parcel_launch(l);
+  hpx_addr_t addr = e->lco;
+  size_t n = e->n;
+  void *out = e->out;
+  int reset = e->reset;
+  hpx_action_t act = _isir_lco_get_request;
+  hpx_addr_t rsync = HPX_HERE;
+  hpx_action_t rop = _isir_lco_get_reply;
+  dbg_check(action_call_lsync(act, addr, rsync, rop, 4, &p, &n, &out, &reset));
 }
 
 int isir_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset) {

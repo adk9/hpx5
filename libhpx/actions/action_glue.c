@@ -26,20 +26,10 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id) {
   return (hpx_action_handler_t)entry->handler;
 }
 
-hpx_parcel_t *action_create_parcel(hpx_addr_t addr, hpx_action_t action,
-                                   hpx_addr_t c_addr, hpx_action_t c_action,
-                                   int n, ...) {
-  va_list args;
-  va_start(args, n);
-  hpx_parcel_t *p = action_new_parcel(action, addr, c_addr, c_action, n, &args);
-  va_end(args);
-  return p;
-}
-
-int action_call_va(hpx_addr_t addr, hpx_action_t action, hpx_addr_t c_addr,
-                   hpx_action_t c_action, hpx_addr_t lsync, hpx_addr_t gate,
+int action_call_va(hpx_addr_t addr, hpx_action_t action, hpx_addr_t rsync,
+                   hpx_action_t rop, hpx_addr_t lsync, hpx_addr_t gate,
                    int n, va_list *args) {
-  hpx_parcel_t *p = action_new_parcel(action, addr, c_addr, c_action, n, args);
+  hpx_parcel_t *p = action_new_parcel_va(action, addr, rsync, rop, n, args);
 
   if (likely(!gate && !lsync)) {
     parcel_launch(p);

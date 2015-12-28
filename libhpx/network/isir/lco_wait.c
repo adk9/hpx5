@@ -46,11 +46,10 @@ typedef struct {
 
 static void _isir_lco_wait_continuation(hpx_parcel_t *p, void *env) {
   _isir_lco_wait_env_t *e = env;
-  hpx_addr_t gpa = offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p);
-  hpx_parcel_t *q = action_create_parcel(e->lco, _isir_lco_wait, gpa,
-                                         resume_parcel, 1, &e->reset);
-  dbg_assert(q);
-  parcel_launch(q);
+  hpx_action_t act = _isir_lco_wait;
+  hpx_addr_t rsync = offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p);
+  hpx_action_t rop = resume_parcel;
+  dbg_check(action_call_lsync(act, e->lco, rsync, rop, 1, &e->reset));
 }
 
 int isir_lco_wait(void *obj, hpx_addr_t lco, int reset) {

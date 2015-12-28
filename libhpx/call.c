@@ -32,7 +32,7 @@ int _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
                                 int n, ...) {
   va_list args;
   va_start(args, n);
-  int e = action_call_lsync(action, addr, c_target, c_action, n, &args);
+  int e = action_call_lsync_va(action, addr, c_target, c_action, n, &args);
   va_end(args);
   return e;
 }
@@ -42,7 +42,7 @@ int _hpx_call_async(hpx_addr_t addr, hpx_action_t id, hpx_addr_t lsync,
   va_list args;
   va_start(args, n);
   hpx_action_t op = hpx_lco_set_action;
-  int e = action_call_async(id, addr, lsync, op, rsync, op, n, &args);
+  int e = action_call_async_va(id, addr, lsync, op, rsync, op, n, &args);
   va_end(args);
   return e;
 }
@@ -51,7 +51,8 @@ int _hpx_call_async(hpx_addr_t addr, hpx_action_t id, hpx_addr_t lsync,
 int _hpx_call(hpx_addr_t addr, hpx_action_t id, hpx_addr_t result, int n, ...) {
   va_list args;
   va_start(args, n);
-  int e = action_call_lsync(id, addr, result, hpx_lco_set_action, n, &args);
+  hpx_action_t rop = hpx_lco_set_action;
+  int e = action_call_lsync_va(id, addr, result, rop, n, &args);
   va_end(args);
   return e;
 }
@@ -60,7 +61,7 @@ int _hpx_call_sync(hpx_addr_t addr, hpx_action_t id, void *out, size_t olen,
                    int n, ...) {
   va_list args;
   va_start(args, n);
-  int e = action_call_rsync(id, addr, out, olen, n, &args);
+  int e = action_call_rsync_va(id, addr, out, olen, n, &args);
   va_end(args);
   return e;
 }
@@ -72,7 +73,7 @@ void _hpx_call_cc(hpx_addr_t addr, hpx_action_t id, void (*cleanup)(void*),
   hpx_parcel_t *p = self->current;
   hpx_addr_t rsync = p->c_target;
   hpx_action_t rop = p->c_action;
-  int e = action_call_lsync(id, addr, rsync, rop, n, &args);
+  int e = action_call_lsync_va(id, addr, rsync, rop, n, &args);
   va_end(args);
 
   if (e == HPX_SUCCESS) {
@@ -89,8 +90,8 @@ int _hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t id,
                    hpx_addr_t result, int n, ...) {
   va_list args;
   va_start(args, n);
-  int e = action_when_lsync(id, addr, gate, result, hpx_lco_set_action, n,
-                            &args);
+  hpx_action_t rop = hpx_lco_set_action;
+  int e = action_when_lsync_va(id, addr, gate, result, rop, n, &args);
   va_end(args);
   return e;
 }
@@ -99,7 +100,7 @@ int _hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t id,
                         void *out, size_t olen, int n, ...) {
   va_list args;
   va_start(args, n);
-  int e = action_when_rsync(id, addr, gate, out, olen, n, &args);
+  int e = action_when_rsync_va(id, addr, gate, out, olen, n, &args);
   va_end(args);
   return e;
 }
@@ -110,7 +111,7 @@ int _hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr,
                                      hpx_action_t rop, int n, ...) {
   va_list args;
   va_start(args, n);
-  int e = action_when_lsync(id, addr, gate, rsync, rop, n, &args);
+  int e = action_when_lsync_va(id, addr, gate, rsync, rop, n, &args);
   va_end(args);
   return e;
 }
@@ -125,7 +126,7 @@ void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t id,
   p->c_target = HPX_NULL;
   p->c_action = HPX_NULL;
 
-  int e = action_when_lsync(id, addr, gate, rsync, rop, n, &args);
+  int e = action_when_lsync_va(id, addr, gate, rsync, rop, n, &args);
   va_end(args);
 
   if (e == HPX_SUCCESS) {

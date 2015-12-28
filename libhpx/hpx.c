@@ -263,7 +263,7 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   if (here->rank == 0) {
     va_list args;
     va_start(args, n);
-    hpx_parcel_t *p = action_new_parcel(*act, HPX_HERE, 0, 0, n, &args);
+    hpx_parcel_t *p = action_new_parcel_va(*act, HPX_HERE, 0, 0, n, &args);
     va_end(args);
     dbg_check(hpx_parcel_send(p, HPX_NULL), "failed to spawn initial action\n");
   }

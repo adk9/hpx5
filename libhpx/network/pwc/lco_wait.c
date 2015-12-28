@@ -47,10 +47,8 @@ typedef struct {
 static void _pwc_lco_wait_continuation(hpx_parcel_t *p, void *env) {
   _pwc_lco_wait_env_t *e = env;
   uint64_t arg = (uint64_t)(uintptr_t)p;
-  hpx_parcel_t *q = action_create_parcel(e->lco, _pwc_lco_wait, 0, 0, 2, &arg,
-                                         &e->reset);
-  dbg_assert(q);
-  parcel_launch(q);
+  hpx_action_t act = _pwc_lco_wait;
+  dbg_check(action_call_lsync(act, e->lco, 0, 0, 2, &arg, &e->reset));
 }
 
 int pwc_lco_wait(void *obj, hpx_addr_t lco, int reset) {

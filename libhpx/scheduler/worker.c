@@ -152,7 +152,9 @@ static void _continue_parcel(hpx_parcel_t *p, int n, va_list *args) {
   }
 
   // create the parcel to continue and transfer whatever credit we have
-  hpx_parcel_t *c = action_new_parcel(p->c_action, p->c_target, 0, 0, n, args);
+  hpx_action_t act = p->c_action;
+  hpx_addr_t addr = p->c_target;
+  hpx_parcel_t *c = action_new_parcel_va(act, addr, 0, 0, n, args);
   dbg_assert(c);
   c->credit = p->credit;
   p->credit = 0;
@@ -457,8 +459,7 @@ static hpx_parcel_t *_steal_hier(worker_t *w) {
   cpu = here->topology->numa_to_cpus[numa_node][idx];
 
   worker_t *victim = scheduler_get_worker(here->sched, cpu);
-  p = action_create_parcel(HPX_HERE, _push_half, HPX_NULL,
-                           HPX_ACTION_NULL, 1, &w->id);
+  p = action_new_parcel(_push_half, HPX_HERE, 0, 0, 1, &w->id);
   _send_mail(p, victim);
   return NULL;
 }

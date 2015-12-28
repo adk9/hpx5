@@ -196,11 +196,9 @@ typedef struct {
 static void _pwc_lco_get_continuation(hpx_parcel_t *p, void *env) {
   _pwc_lco_get_continuation_env_t *e = env;
   e->request.p = p;
-  hpx_parcel_t *q = action_create_parcel(e->lco, _pwc_lco_get_request,
-                                         HPX_NULL, HPX_ACTION_NULL,
-                                         2, &e->request, sizeof(e->request));
-  dbg_assert(q);
-  parcel_launch(q);
+  hpx_action_t act = _pwc_lco_get_request;
+  size_t n = sizeof(e->request);
+  dbg_check(action_call_lsync(act, e->lco, 0, 0, 2, &e->request, n));
 }
 
 /// This is the top-level LCO get handler that is called for (possibly) remote

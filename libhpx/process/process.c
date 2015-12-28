@@ -165,8 +165,8 @@ int _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t id,
                       hpx_addr_t result, int n, ...) {
   va_list args;
   va_start(args, n);
-  hpx_parcel_t *p = action_new_parcel(id, addr, result, hpx_lco_set_action, n,
-                                      &args);
+  hpx_action_t set = hpx_lco_set_action;
+  hpx_parcel_t  *p = action_new_parcel_va(id, addr, result, set, n, &args);
   va_end(args);
 
   if (hpx_thread_current_pid() == hpx_process_getpid(process)) {
