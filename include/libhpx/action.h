@@ -22,43 +22,188 @@ typedef void (*handler_t)(void);
 
 /// A set of handlers that defines how to call an action in a certain context.
 typedef struct {
+  /// Fully asynchronous action invocation.
+  ///
+  /// This interface invokes the action at the @p addr, and sets the (@p rsync,
+  /// @p rop) closure as the continuation. The (@p lsync, @p lop) continuation
+  /// will be invoked once the @p args are safe to modify or deallocate.
+  ///
+  /// @param          o The action object.
+  /// @param       addr The target for the invocation.
+  /// @param      lsync The target for the local completion event handler.
+  /// @param        lop The local completion event handler.
+  /// @param      rsync The target for the remote continuation.
+  /// @param        rop The continuation event handler.
+  /// @param          n The number of @p args.
+  /// @param       args The list of arguments for the action.
+  ///
+  /// @return           HPX_SUCCESS or an error code
   int (*async)(const void *o, hpx_addr_t addr,
-              hpx_addr_t lsync, hpx_action_t lop,
-              hpx_addr_t rsync, hpx_action_t rop,
-              int n, va_list *args);
+               hpx_addr_t lsync, hpx_action_t lop,
+               hpx_addr_t rsync, hpx_action_t rop,
+               int n, va_list *args);
 
+  /// Locally synchronous action invocation.
+  ///
+  /// This interface invokes the action at the @p addr, and sets the (@p rsync,
+  /// @p rop) closure as the continuation. It is safe to modify or free @p args
+  /// once this function returns.
+  ///
+  /// @param          o The action object.
+  /// @param       addr The target for the invocation.
+  /// @param      rsync The target for the remote continuation.
+  /// @param        rop The continuation event handler.
+  /// @param          n The number of @p args.
+  /// @param       args The list of arguments for the action.
+  ///
+  /// @return           HPX_SUCCESS or an error code
   int (*lsync)(const void *o, hpx_addr_t addr,
-                    hpx_addr_t rsync, hpx_action_t rop,
-                    int n, va_list *args);
+               hpx_addr_t rsync, hpx_action_t rop,
+               int n, va_list *args);
 
+  /// Synchronous remote procedure call.
+  ///
+  /// This interface invokes the action at the @p addr, and returns once the
+  /// action has completed. Any data produced by the action will be written into
+  /// the @p rout buffer, and it is safe to modify or free @p args once the call
+  /// returns.
+  ///
+  /// @param          o The action object.
+  /// @param       addr The target for the invocation.
+  /// @param       rout The buffer for the return value.
+  /// @param     rbytes The size of the return buffer.
+  /// @param          n The number of @p args.
+  /// @param       args The list of arguments for the action.
+  ///
+  /// @return           HPX_SUCCESS or an error code
   int (*rsync)(const void *o, hpx_addr_t addr,
-                    void *rout, size_t rbytes,
-                    int n, va_list *args);
+               void *rout, size_t rbytes,
+               int n, va_list *args);
 
+  /// Fully asynchronous dependent action invocation.
+  ///
+  /// This interface invokes the action at the @p addr when the @p gate is set,
+  /// and sets the (@p rsync, @p rop) closure as the continuation. The (@p
+  /// lsync, @p lop) continuation will be invoked once the @p args are safe to
+  /// modify or deallocate.
+  ///
+  /// @param          o The action object.
+  /// @param       addr The target for the invocation.
+  /// @param       gate The LCO that the invocation is dependent on.
+  /// @param      lsync The target for the local completion event handler.
+  /// @param        lop The local completion event handler.
+  /// @param      rsync The target for the remote continuation.
+  /// @param        rop The continuation event handler.
+  /// @param          n The number of @p args.
+  /// @param       args The list of arguments for the action.
+  ///
+  /// @return           HPX_SUCCESS or an error code
   int (*when_async)(const void *o, hpx_addr_t addr, hpx_addr_t gate,
                     hpx_addr_t lsync, hpx_action_t lop,
                     hpx_addr_t rsync, hpx_action_t rop,
                     int n, va_list *args);
 
+  /// Locally synchronous dependent action invocation.
+  ///
+  /// This interface invokes the action at the @p addr when the @p gate is set,
+  /// and sets the (@p rsync, @p rop) closure as the continuation. It is safe to
+  /// modify or free @p args once this function returns.
+  ///
+  /// @param          o The action object.
+  /// @param       addr The target for the invocation.
+  /// @param       gate The LCO that the invocation is dependent on.
+  /// @param      rsync The target for the remote continuation.
+  /// @param        rop The continuation event handler.
+  /// @param          n The number of @p args.
+  /// @param       args The list of arguments for the action.
+  ///
+  /// @return           HPX_SUCCESS or an error code
   int (*when_lsync)(const void *o, hpx_addr_t addr, hpx_addr_t gate,
                     hpx_addr_t rsync, hpx_action_t rop,
                     int n, va_list *args);
 
+  /// Synchronous dependent remote procedure call.
+  ///
+  /// This interface invokes the action at the @p addr when the @p gate is set,
+  /// and returns once the action has completed. Any data produced by the action
+  /// will be written into the @p rout buffer, and it is safe to modify or free
+  /// @p args once the call returns.
+  ///
+  /// @param          o The action object.
+  /// @param       addr The target for the remote procedure call.
+  /// @param       gate The LCO that the call is dependent on.
+  /// @param       rout The buffer for the return value.
+  /// @param     rbytes The size of the return buffer.
+  /// @param          n The number of @p args.
+  /// @param       args The list of arguments for the action.
+  ///
+  /// @return           HPX_SUCCESS or an error code
   int (*when_rsync)(const void *o, hpx_addr_t addr, hpx_addr_t gate,
                     void *rout, size_t rbytes,
                     int n, va_list *args);
 } calling_convention_vtable_t;
 
 typedef struct {
-  int          (*exec)(const void *obj, hpx_parcel_t *p);
-  void         (*pack)(const void *obj, hpx_parcel_t *p, int n, va_list *args);
-  hpx_parcel_t *(*new)(const void *obj, hpx_addr_t addr, hpx_addr_t c_addr,
-                       hpx_action_t c_action, int n, va_list *args);
+  /// Execute a parcel.
+  ///
+  /// This encapsulates the invocation of a parcel for a particular action. The
+  /// method for invoking an action depends on the action type, e.g., an
+  /// ffi-typed action will use libffi to call the action handler while a
+  /// marshaled C action will simply cast the handler and call it with the
+  /// parcel's data buffer directly.
+  ///
+  /// @param        obj The action object.
+  /// @param          p The parcel to call.
+  ///
+  /// @return           The result of the user handler.
+  int (*exec)(const void *obj, hpx_parcel_t *p);
+
+  /// Pack arguments into the parcel buffer.
+  ///
+  /// Parcel data must be packed into the parcel buffer, however the actual
+  /// mechanism used for this operation is action type specific, e.g., an ffi
+  /// action will use libffi to pack the arguments, while a marshaled C action
+  /// may simply memcpy the argument data.
+  ///
+  /// @param        obj The action object.
+  /// @param          p The parcel to pack.
+  void (*pack)(const void *obj, hpx_parcel_t *p, int n, va_list *args);
+
+  /// Create a parcel for an action.
+  ///
+  /// This will allocate, initialize, and pack a parcel in an action-specific
+  /// way. It is *not* safe to deallocate or free the arguments after this call,
+  /// though it is safe to finalize the va_list that they are passed in.
+  ///
+  /// @param        obj The action object.
+  /// @param       addr The target address of the parcel.
+  /// @param      rsync The continuation target.
+  /// @param        rop The continuation operation.
+  /// @param          n The number of @p args.
+  /// @param       args The list of args for the parcel.
+  ///
+  /// @return           The newly allocated parcel, or NULL if there was a
+  ///                   problem during allocation.
+  hpx_parcel_t *(*new)(const void *obj, hpx_addr_t addr, hpx_addr_t rsync,
+                       hpx_action_t rop, int n, va_list *args);
 } parcel_management_vtable_t;
 
 /// An action table action type.
 ///
+/// The action type uses basic multiple inheritance to implement the calling
+/// convention and call interfaces. Action types are allocated in an array, so
+/// their records contain the union of all of the fields that all of the
+/// different actions might need.
 ///
+/// @field parcel_class The parcel management vtable pointer.
+/// @field   call_class The calling convention vtable pointer.
+/// @field      handler The action handler function pointer.
+/// @field           id The pointer to the action id.
+/// @field          key The pointer to the unique key for the action.
+/// @field         type The action type.
+/// @field         attr Type attributes.
+/// @field          cif The ffi descriptor if the action is ffi-type.
+/// @field          env Type-specific data (e.g., compiled OpenCL).
 typedef struct {
   const parcel_management_vtable_t *parcel_class;
   const calling_convention_vtable_t  *call_class;
@@ -72,10 +217,19 @@ typedef struct {
   void              *env;
 } action_t;
 
-/// The default libhpx action table size.
+/// The libhpx action table.
+///
+/// This is overkill in a way, as we allocate 2^16 action records but are almost
+/// certainly only using hundreds of them. We're careful to allocate them in the
+/// .bss segment so that they don't take up space in the binary, and we
+/// currently make the decision that we can afford to blow a couple of MB of
+/// address space.
+///
+/// @{
 #define LIBHPX_ACTION_MAX (UINT32_C(1) << (sizeof(hpx_action_t) * 8))
 
 extern action_t actions[LIBHPX_ACTION_MAX] HPX_ALIGNED(HPX_PAGE_SIZE);
+/// @}
 
 #ifdef ENABLE_DEBUG
 void CHECK_ACTION(hpx_action_t id);
