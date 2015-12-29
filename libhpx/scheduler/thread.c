@@ -180,6 +180,14 @@ void thread_init(ustack_t *thread, hpx_parcel_t *parcel, thread_entry_t f,
 }
 
 ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
+  /// Define our own exception class.
+  static const union {
+    uint8_t  str[8];
+    uint64_t val;
+  } _exception_class ={
+    .str = {'H', 'P', 'X', '\0', '\0', '\0', 'C', '\0' }
+  };
+
   void *base = NULL;
   if (_protect_stacks()) {
     base = as_memalign(AS_REGISTERED, HPX_PAGE_SIZE, _buffer_size);
@@ -191,7 +199,9 @@ ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f) {
 
   ustack_t *thread = _protect(base);
   thread->stack_id = _register(thread);
+  thread->exception.exception_class = _exception_class.val;
   thread_init(thread, parcel, f, _thread_size);
+
   return thread;
 }
 

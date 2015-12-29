@@ -52,8 +52,6 @@ TESTS = allreduce               \
         thread_gettlsid         \
         thread_yield
 
-XFAIL_TESTS = cxx_raii
-
 if ENABLE_LENGTHY_TESTS
 TESTS           += lco_wait
 endif

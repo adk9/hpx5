@@ -66,9 +66,10 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int rank) {
     _env = block;
   }
 
-  hpx_call_cc(dst, _insert_block, _cleanup, _env,
-              &block, bsize, &src, sizeof(src), &attr, sizeof(attr));
-  return HPX_SUCCESS;
+  int e = hpx_call_cc(dst, _insert_block, &block, bsize, &src, sizeof(src),
+                      &attr, sizeof(attr));
+  _cleanup(_env)
+  return e;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_invalidate_mapping,
                      _agas_invalidate_mapping_handler, HPX_ADDR, HPX_INT);
@@ -76,8 +77,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_invalidate_mapping,
 static int _agas_move_handler(hpx_addr_t src) {
   int rank = here->rank;
   hpx_addr_t dst = hpx_thread_current_target();
-  hpx_call_cc(src, _agas_invalidate_mapping, NULL, NULL, &dst, &rank);
-  return HPX_SUCCESS;
+  return hpx_call_cc(src, _agas_invalidate_mapping, &dst, &rank);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_move, _agas_move_handler, HPX_ADDR);
 

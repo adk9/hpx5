@@ -136,7 +136,7 @@ static int _lco_delete_action_handler(void) {
   hpx_addr_t target = hpx_thread_current_target();
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    hpx_call_cc(target, hpx_lco_delete_action, NULL, NULL);
+    return hpx_call_cc(target, hpx_lco_delete_action);
   }
   log_lco("deleting lco %p\n", (void*)lco);
   _fini(lco);

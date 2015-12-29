@@ -36,7 +36,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _memcpy_reply,
                      HPX_SIZE_T);
 
 static int _memcpy_request_handler(char *local, size_t size, hpx_addr_t to) {
-  hpx_call_cc(to, _memcpy_reply, NULL, NULL, local, size);
+  return hpx_call_cc(to, _memcpy_reply, local, size);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _memcpy_request,
                      _memcpy_request_handler,

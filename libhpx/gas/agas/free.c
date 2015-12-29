@@ -53,13 +53,12 @@ static int _agas_free_block_handler(hpx_addr_t block) {
   if (here->rank == gva.bits.home) {
     return HPX_SUCCESS;
   }
-  else {
-    // This was a relocated block, free the clone and then forward the request
-    // back to the home locality.
-    free(lva);
-    hpx_addr_t home = HPX_THERE(gva.bits.home);
-    hpx_call_cc(home, _agas_free_block, NULL, NULL, &block);
-  }
+
+  // This was a relocated block, free the clone and then forward the request
+  // back to the home locality.x
+  free(lva);
+  hpx_addr_t home = HPX_THERE(gva.bits.home);
+  return hpx_call_cc(home, _agas_free_block, &block);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_free_block, _agas_free_block_handler,
                      HPX_ADDR);
