@@ -20,6 +20,7 @@
 #include <libhpx/debug.h>
 #include <libhpx/parcel.h>
 #include "init.h"
+#include "exit.h"
 
 static void _pack_marshalled(const void *obj, hpx_parcel_t *p, int n,
                              va_list *args) {
@@ -64,13 +65,15 @@ static int _exec_pinned_marshalled(const void *obj, hpx_parcel_t *p) {
 static const parcel_management_vtable_t _marshalled_vtable = {
   .new = _new_marshalled,
   .pack = _pack_marshalled,
-  .exec = _exec_marshalled
+  .exec = _exec_marshalled,
+  .exit = exit_action
 };
 
 static const parcel_management_vtable_t _pinned_marshalled_vtable = {
   .new = _new_marshalled,
   .pack = _pack_marshalled,
-  .exec = _exec_pinned_marshalled
+  .exec = _exec_pinned_marshalled,
+  .exit = exit_pinned_action
 };
 
 void action_init_marshalled(action_t *action) {

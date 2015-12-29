@@ -22,6 +22,7 @@
 #include <libhpx/parcel.h>
 #include <libhpx/padding.h>
 #include "init.h"
+#include "exit.h"
 
 static void _pack_vectored(const void *obj, hpx_parcel_t *p, int n,
                            va_list *vargs) {
@@ -96,8 +97,8 @@ static int _exec_pinned_vectored(const void *obj, hpx_parcel_t *p) {
     argsp[i + 1] = (char*)argsp[i] + sizes[i] + ALIGN(sizes[i], 8);
   }
 
-  int e = ((hpx_pinned_vectored_action_handler_t)act->handler)(target, nargs,
-                                                               argsp, sizes);
+  typedef hpx_pinned_vectored_action_handler_t handler_t;
+  int e = ((handler_t)act->handler)(target, nargs, argsp, sizes);
   hpx_gas_unpin(p->target);
   return e;
 }
@@ -121,13 +122,15 @@ static int _exec_vectored(const void *obj, hpx_parcel_t *p) {
 static const parcel_management_vtable_t _vectored_vtable = {
   .new = _new_vectored,
   .pack = _pack_vectored,
-  .exec = _exec_vectored
+  .exec = _exec_vectored,
+  .exit = exit_action
 };
 
 static const parcel_management_vtable_t _pinned_vectored_vtable = {
   .new = _new_vectored,
   .pack = _pack_vectored,
-  .exec = _exec_pinned_vectored
+  .exec = _exec_pinned_vectored,
+  .exit = exit_pinned_action
 };
 
 void action_init_vectored(action_t *action) {

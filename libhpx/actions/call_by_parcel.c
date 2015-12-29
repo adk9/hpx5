@@ -90,13 +90,14 @@ static int _call_by_parcel_when_rsync(const void *o, hpx_addr_t addr,
   return e;
 }
 
-static void _call_by_parcel_continue(const void *o, hpx_parcel_t *p,
-                                     int n, va_list *args) {
+static int _call_by_parcel_continue(const void *o, hpx_parcel_t *p, int n,
+                                    va_list *args) {
   const action_t *act = o;
   hpx_parcel_t *c = act->parcel_class->new(act, p->c_target, 0, 0, n, args);
   c->credit = p->credit;
   p->credit = 0;
   parcel_launch(c);
+  return HPX_SUCCESS;
 }
 
 static const calling_convention_vtable_t _call_by_parcel = {

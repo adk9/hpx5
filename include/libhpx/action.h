@@ -142,7 +142,7 @@ typedef struct {
                     void *rout, size_t rbytes,
                     int n, va_list *args);
 
-  /// Call an action as a continuation.
+  /// Generate a continuation.
   ///
   /// This is mostly equivalent to the lsync() interface with a NULL (rsync,
   /// rop), except that it uses the credit from the current thread to run and
@@ -152,7 +152,10 @@ typedef struct {
   /// @param          p The current parcel---necessary for the credit transfer.
   /// @param          n The number of @p args.
   /// @param       args The arguments for the continuation.
-  void (*cont)(const void *o, hpx_parcel_t *p, int n, va_list *args);
+  ///
+  /// @return           HPX_SUCCESS or an error condition if generating the
+  ///                   continuation causes an error.
+  int (*cont)(const void *o, hpx_parcel_t *p, int n, va_list *args);
 
 } calling_convention_vtable_t;
 
@@ -199,6 +202,16 @@ typedef struct {
   ///                   problem during allocation.
   hpx_parcel_t *(*new)(const void *obj, hpx_addr_t addr, hpx_addr_t rsync,
                        hpx_action_t rop, int n, va_list *args);
+
+  /// Exit a thread.
+  ///
+  /// This is used to provide an action a chance to clean up (e.g., unpin the
+  /// target) before exiting through a non-local control transfer.
+  ///
+  /// @param          o The action object.
+  /// @param          p The current parcel.
+  void (*exit)(const void *o, hpx_parcel_t *p);
+
 } parcel_management_vtable_t;
 
 /// An action table action type.
@@ -374,11 +387,17 @@ static inline int action_when_rsync_va(hpx_action_t id, hpx_addr_t addr,
   return act->call_class->when_rsync(act, addr, gate, rout, rbytes, n, args);
 }
 
-static inline void action_continue_va(hpx_action_t id, hpx_parcel_t *p, int n,
-                                      va_list *args) {
+static inline int action_continue_va(hpx_action_t id, hpx_parcel_t *p, int n,
+                                     va_list *args) {
   CHECK_ACTION(id);
   const action_t *act = &actions[id];
   return act->call_class->cont(act, p, n, args);
+}
+
+static inline void action_exit(hpx_action_t id, hpx_parcel_t *p) {
+  CHECK_ACTION(id);
+  const action_t *act = &actions[id];
+  act->parcel_class->exit(act, p);
 }
 
 static inline bool action_is_pinned(hpx_action_t id) {
