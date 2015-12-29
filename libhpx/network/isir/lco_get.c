@@ -47,11 +47,7 @@ _isir_lco_get_request_handler(hpx_parcel_t *p, size_t n, void *out, int reset) {
   // eagerly create a continuation parcel so that we can serialize the data into
   // it directly without an extra copy
   size_t bytes = sizeof(_isir_lco_get_reply_args_t) + n;
-  hpx_parcel_t *curr = self->current;
-  hpx_parcel_t *cont = parcel_new(curr->c_target, curr->c_action, 0, 0,
-                                  curr->pid, NULL, bytes);
-  curr->c_target = 0;
-  curr->c_action = 0;
+  hpx_parcel_t *cont = hpx_thread_generate_continuation(NULL, bytes);
 
   // forward the parcel and output buffer back to the sender
   _isir_lco_get_reply_args_t *args = hpx_parcel_get_data(cont);
@@ -60,11 +56,12 @@ _isir_lco_get_request_handler(hpx_parcel_t *p, size_t n, void *out, int reset) {
 
   // perform the blocking get operation
   int e = HPX_SUCCESS;
+  hpx_addr_t target = hpx_thread_current_target();
   if (reset) {
-    e = hpx_lco_get_reset(curr->target, n, args->data);
+    e = hpx_lco_get_reset(target, n, args->data);
   }
   else {
-    e = hpx_lco_get(curr->target, n, args->data);
+    e = hpx_lco_get(target, n, args->data);
   }
 
   // send the continuation
