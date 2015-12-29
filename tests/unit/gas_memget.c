@@ -88,7 +88,7 @@ _memget_local_handler(void) {
   CHECK( hpx_gas_memget(local, _local, sizeof(local), done) );
   CHECK( hpx_lco_wait(done) );
   _verify(local);
-  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(done, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _memget_local, _memget_local_handler);
 
@@ -156,7 +156,7 @@ static int _memget_stack_handler(void) {
   CHECK( hpx_gas_memget(local, _remote, sizeof(local), done) );
   CHECK( hpx_lco_wait(done) );
   _verify(local);
-  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(done, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _memget_stack,
                   _memget_stack_handler);
@@ -175,7 +175,7 @@ static int _memget_registered_handler(void) {
   CHECK( hpx_lco_wait(done) );
   _verify(local);
   hpx_free_registered(local);
-  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(done, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _memget_registered,
                   _memget_registered_handler);
@@ -189,7 +189,7 @@ static int _memget_global_handler(void) {
   CHECK( hpx_gas_memget(local, _remote, sizeof(local), done) );
   CHECK( hpx_lco_wait(done) );
   _verify(local);
-  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(done, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _memget_global,
                   _memget_global_handler);
@@ -207,7 +207,7 @@ static int _memget_malloc_handler(void) {
   CHECK( hpx_lco_wait(done) );
   _verify(local);
   free(local);
-  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(done, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _memget_malloc,
                   _memget_malloc_handler);

@@ -84,7 +84,9 @@ static int _single_wait(int inplace) {
   hpx_lco_delete(and, cleanup);
   hpx_lco_delete(counter, cleanup);
   hpx_lco_delete(done, cleanup);
-  hpx_call_cc(cleanup, hpx_lco_delete_action, _done, "");
+  int e = hpx_call_cc(cleanup, hpx_lco_delete_action);
+  _done("");
+  return e;
 }
 
 static int _multi_wait(int inplace) {
@@ -111,7 +113,9 @@ static int _multi_wait(int inplace) {
   hpx_lco_delete(done, cleanup);
   hpx_lco_delete(counter, cleanup);
   hpx_lco_delete(sets, cleanup);
-  hpx_call_cc(cleanup, hpx_lco_delete_action, _done, "");
+  int e = hpx_call_cc(cleanup, hpx_lco_delete_action);
+  _done("");
+  return e;
 }
 
 static int _single_wait_0_handler(void) {

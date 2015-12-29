@@ -66,8 +66,7 @@ int _hpx_call_sync(hpx_addr_t addr, hpx_action_t id, void *out, size_t olen,
   return e;
 }
 
-void _hpx_call_cc(hpx_addr_t addr, hpx_action_t id, void (*cleanup)(void*),
-                  void *env, int n, ...) {
+int _hpx_call_cc(hpx_addr_t addr, hpx_action_t id, int n, ...) {
   va_list args;
   va_start(args, n);
   hpx_parcel_t *p = self->current;
@@ -82,11 +81,7 @@ void _hpx_call_cc(hpx_addr_t addr, hpx_action_t id, void (*cleanup)(void*),
     e = hpx_thread_continue(NULL, 0);
   }
 
-  if (cleanup) {
-    cleanup(env);
-  }
-
-  hpx_thread_exit(e);
+  return e;
 }
 
 int _hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t id,
@@ -119,8 +114,8 @@ int _hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr,
   return e;
 }
 
-void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t id,
-                       void (*cleanup)(void*), void *env, int n, ...) {
+int _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t id, int n,
+                      ...) {
   va_list args;
   va_start(args, n);
   hpx_parcel_t *p = self->current;
@@ -136,9 +131,5 @@ void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t id,
     e = hpx_thread_continue(NULL, 0);
   }
 
-  if (cleanup) {
-    cleanup(env);
-  }
-
-  hpx_thread_exit(e);
+  return e;
 }

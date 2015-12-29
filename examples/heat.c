@@ -175,11 +175,9 @@ static int _stencil_action(struct spawn_stencil_args *args, size_t size) {
   double dT = T - v; // local variation
 
   // write out the new T and continue the dT for the min reduction
-  double cont_args[2] = { T, fabs(dT) };
+  double ccargs[2] = { T, fabs(dT) };
   hpx_addr_t new_grid_addr = hpx_addr_add(new_grid, offset_of(i, j), BLOCKSIZE);
-  hpx_call_cc(new_grid_addr, _write_double, NULL, NULL, cont_args,
-              sizeof(cont_args));
-  return HPX_SUCCESS;
+  return hpx_call_cc(new_grid_addr, _write_double, ccargs, sizeof(ccargs));
 }
 
 static void spawn_stencil_args_init(void *out, const int i, const void *env) {

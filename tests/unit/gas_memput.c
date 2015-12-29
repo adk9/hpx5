@@ -43,7 +43,7 @@ _verify_handler(uint64_t *local, uint64_t *args, size_t n) {
       _fail(i, args[i], local[i]);
     }
   }
-  hpx_call_cc(hpx_thread_current_target(), _reset, NULL, NULL);
+  return hpx_call_cc(hpx_thread_current_target(), _reset);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _verify,
                   _verify_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
@@ -151,7 +151,7 @@ _memput_local_handler(void) {
   test_assert(done != HPX_NULL);
   _test_memput(local, _local, done);
   CHECK( hpx_lco_wait(done) );
-  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(done, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _memput_local, _memput_local_handler);
 
@@ -163,7 +163,7 @@ _memput_stack_handler(void) {
   test_assert(done != HPX_NULL);
   _test_memput(local, _remote, done);
   CHECK( hpx_lco_wait(done) );
-  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(done, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _memput_stack, _memput_stack_handler);
 
@@ -178,7 +178,7 @@ _memput_registered_handler(void) {
   _test_memput(local, _remote, done);
   CHECK( hpx_lco_wait(done) );
   hpx_free_registered(local);
-  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(done, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _memput_registered,
                   _memput_registered_handler);
@@ -193,7 +193,7 @@ _memput_malloc_handler(void) {
   _test_memput(local, _remote, done);
   CHECK( hpx_lco_wait(done) );
   free(local);
-  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(done, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _memput_malloc, _memput_malloc_handler);
 
@@ -205,7 +205,7 @@ int _memput_global_handler(void) {
   test_assert(done != HPX_NULL);
   _test_memput(local, _remote, done);
   CHECK( hpx_lco_wait(done) );
-  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(done, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _memput_global, _memput_global_handler);
 
@@ -217,7 +217,7 @@ _memput_lsync_local_handler(void) {
   test_assert(done != HPX_NULL);
   _test_memput_lsync(local, _local, done);
   CHECK( hpx_lco_wait(done) );
-  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(done, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _memput_lsync_local,
                   _memput_lsync_local_handler);
@@ -230,7 +230,7 @@ _memput_lsync_stack_handler(void) {
   test_assert(done != HPX_NULL);
   _test_memput_lsync(local, _remote, done);
   CHECK( hpx_lco_wait(done) );
-  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(done, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _memput_lsync_stack,
                   _memput_lsync_stack_handler);
@@ -245,7 +245,7 @@ _memput_lsync_registered_handler(void) {
   _test_memput_lsync(local, _remote, done);
   CHECK( hpx_lco_wait(done) );
   hpx_free_registered(local);
-  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(done, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _memput_lsync_registered,
                   _memput_lsync_registered_handler);
@@ -260,7 +260,7 @@ _memput_lsync_malloc_handler(void) {
   _test_memput_lsync(local, _remote, done);
   CHECK( hpx_lco_wait(done) );
   free(local);
-  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(done, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _memput_lsync_malloc,
                   _memput_lsync_malloc_handler);
@@ -273,7 +273,7 @@ _memput_lsync_global_handler(void) {
   test_assert(done != HPX_NULL);
   _test_memput_lsync(local, _remote, done);
   CHECK( hpx_lco_wait(done) );
-  hpx_call_cc(done, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(done, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _memput_lsync_global,
                   _memput_lsync_global_handler);

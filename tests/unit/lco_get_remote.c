@@ -39,7 +39,7 @@ _lco_get_remote_handler(void) {
   e = hpx_lco_get(lco, sizeof(i), &i);
   assert(e == HPX_SUCCESS);
   assert(i = 42);
-  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(lco, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _lco_get_remote, _lco_get_remote_handler);
 

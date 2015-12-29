@@ -103,7 +103,7 @@ static int _test_set_handler(hpx_addr_t lco) {
   }
   printf("ok\n");
 
-  hpx_call_cc(sync, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(sync, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _test_set, _test_set_handler, HPX_ADDR);
 
@@ -133,7 +133,7 @@ static int _test_set_lsync_handler(hpx_addr_t lco) {
   }
   printf("ok\n");
 
-  hpx_call_cc(rsync, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(rsync, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _test_set_lsync, _test_set_lsync_handler, HPX_ADDR);
 
@@ -154,7 +154,7 @@ static int _test_set_local_handler(void) {
   hpx_addr_t lco;
   hpx_call_sync(HPX_HERE, _new_future_at, &lco, sizeof(lco));
   hpx_call_sync(HPX_HERE, _test_set, NULL, 0, &lco);
-  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(lco, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _test_set_local, _test_set_local_handler);
 
@@ -162,7 +162,7 @@ static int _test_set_lsync_local_handler(void) {
   hpx_addr_t lco;
   hpx_call_sync(HPX_HERE, _new_future_at, &lco, sizeof(lco));
   hpx_call_sync(HPX_HERE, _test_set_lsync, NULL, 0, &lco);
-  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(lco, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _test_set_lsync_local, _test_set_lsync_local_handler);
 
@@ -170,7 +170,7 @@ static int _test_set_rsync_local_handler(void) {
   hpx_addr_t lco;
   hpx_call_sync(HPX_HERE, _new_future_at, &lco, sizeof(lco));
   hpx_call_sync(HPX_HERE, _test_set_rsync, NULL, 0, &lco);
-  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(lco, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _test_set_rsync_local, _test_set_rsync_local_handler);
 
@@ -179,7 +179,7 @@ static int _test_set_remote_handler(void) {
   hpx_addr_t lco;
   hpx_call_sync(peer, _new_future_at, &lco, sizeof(lco));
   hpx_call_sync(peer, _test_set, NULL, 0, &lco);
-  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(lco, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _test_set_remote, _test_set_remote_handler);
 
@@ -188,7 +188,7 @@ static int _test_set_lsync_remote_handler(void) {
   hpx_addr_t lco;
   hpx_call_sync(peer, _new_future_at, &lco, sizeof(lco));
   hpx_call_sync(peer, _test_set_lsync, NULL, 0, &lco);
-  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(lco, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _test_set_lsync_remote, _test_set_lsync_remote_handler);
 
@@ -197,7 +197,7 @@ static int _test_set_rsync_remote_handler(void) {
   hpx_addr_t lco;
   hpx_call_sync(peer, _new_future_at, &lco, sizeof(lco));
   hpx_call_sync(peer, _test_set_rsync, NULL, 0, &lco);
-  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(lco, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _test_set_rsync_remote, _test_set_rsync_remote_handler);
 

@@ -318,7 +318,8 @@ void hpx_exit(int code) {
 
   // Call our own shutdown through cc, which orders it locally after the effects
   // from the loop above.
-  hpx_call_cc(HPX_HERE, locality_stop, NULL, NULL, &here->rank, &c);
+  int e = hpx_call_cc(HPX_HERE, locality_stop, &here->rank, &c);
+  hpx_thread_exit(e);
 }
 
 /// Called by the application to shutdown the scheduler and network. May be
