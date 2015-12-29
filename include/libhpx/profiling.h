@@ -47,6 +47,7 @@ typedef struct {
 /// @field       max_entries Maximum length of the list
 /// @field       num_entries Number of entries in the list
 /// @field             tally Number of occurrences of the event
+/// @field        user_total Stores the total value of a user-defined metric
 /// @field               key The name of the profiled event
 /// @field           entries The actual entries
 /// @field            simple True if hardware counters don't apply
@@ -55,6 +56,7 @@ typedef struct {
   int          max_entries;
   int          num_entries;
   int                tally;
+  double        user_total;
   char                *key;
   profile_entry_t *entries;
   bool              simple;
@@ -139,6 +141,10 @@ int prof_get_minimums(int64_t *values, char *key);
 /// @param         key The key that identifies the code event
 int prof_get_maximums(int64_t *values, char *key);
 
+/// Return the total of the user-defined metric
+/// @param         key The key that identifies the code event
+double prof_get_user_total(char *key);
+
 /// Return the tally of event occurrences
 /// @param         key The key that identifies the code event
 int prof_get_tally(char *key);
@@ -161,6 +167,11 @@ void prof_get_max_time(char *key, hpx_time_t *max);
 
 /// Return the number of counters being used
 int prof_get_num_counters(void);
+
+/// Add to the user defined metric's total
+/// @param         key The key that identifies the code event
+/// @param      amount The amount to add to the total
+void prof_add_to_user_total(char *key, double amount);
 
 /// Mark the occurrence of an event
 /// @param         key The key that identifies the code event

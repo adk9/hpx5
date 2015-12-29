@@ -45,6 +45,7 @@ int profile_new_event(char *key, bool simple, int eventset) {
   dbg_assert(list->entries);
   list->tally = 0;
   list->num_entries = 0;
+  list->user_total = 0;
   list->max_entries = _profile_log.max_events;
   list->key = key;
   list->simple = simple;
@@ -90,6 +91,14 @@ int profile_new_entry(int event) {
     }
   }
   return index;
+}
+
+double prof_get_user_total(char *key) {
+  int event = profile_get_event(key);
+  if (event < 0) {
+    return 0;
+  }
+  return _profile_log.events[event].user_total;
 }
 
 int prof_get_tally(char *key) {
@@ -222,6 +231,15 @@ void prof_get_max_time(char *key, hpx_time_t *max) {
 
 int prof_get_num_counters() {
   return _profile_log.num_counters;
+}
+
+void prof_add_to_user_total(char *key, double amount) {
+  int event = profile_get_event(key);
+  if (event < 0) {
+    event = profile_new_event(key, true, 0);
+  }
+  dbg_assert(event >= 0);
+  _profile_log.events[event].user_total += amount;
 }
 
 void prof_increment_tally(char *key) {
