@@ -88,7 +88,26 @@ static int _test_interrupt_handler(void) {
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _test_interrupt, _test_interrupt_handler);
 
+static int _generate_continue_handler(void) {
+  uint64_t value = SET_CONT_VALUE;
+  hpx_parcel_t *p = hpx_thread_generate_continuation(&value, sizeof(value));
+  hpx_parcel_send_sync(p);
+  return HPX_SUCCESS;
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _generate_continue,
+                  _generate_continue_handler);
+
+static int _test_generate_handler(void) {
+    uint64_t val = 0;
+  CHECK( hpx_call_sync(HPX_HERE, _generate_continue, &val, sizeof(val)) );
+  test_assert(val == 1234);
+  return HPX_SUCCESS;
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _test_generate, _test_generate_handler);
+
+
 TEST_MAIN({
   ADD_TEST(thread_continue, 0);
   ADD_TEST(_test_interrupt, 0);
+  ADD_TEST(_test_generate, 0);
 });

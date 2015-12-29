@@ -26,6 +26,11 @@
 /// LCO continuations using the hpx_thread_exit() call, which terminates the
 /// thread's execution.
 
+/// Forward declare the parcel type.
+/// @{
+struct hpx_parcel;
+/// @}
+
 /// Get the target of the current thread.
 /// The target of the thread is the destination that a parcel was sent to
 /// to spawn the current thread.
@@ -49,12 +54,14 @@ hpx_addr_t hpx_thread_current_cont_target(void)
 /// Get the continuation action for the current thread.
 ///
 /// @return             The continuation action for the current thread.
-hpx_action_t hpx_thread_current_cont_action(void) HPX_PUBLIC;
+hpx_action_t hpx_thread_current_cont_action(void)
+  HPX_PUBLIC;
 
 /// Get the process identifier of the current thread
 ///
 /// @return             The PID for the current thread.
-hpx_pid_t hpx_thread_current_pid(void) HPX_PUBLIC;
+hpx_pid_t hpx_thread_current_pid(void)
+  HPX_PUBLIC;
 
 /// Pause execution and gives other threads the opportunity to be scheduled.
 ///
@@ -136,6 +143,32 @@ int _hpx_thread_continue(int n, ...)
 /// continuation address
 /// @param v the value to be sent to the thread's continuation
 #define HPX_THREAD_CONTINUE(v) hpx_thread_continue(&v, sizeof(v))
+
+/// Generate the thread's continuation parcel explicitly.
+///
+/// This will allocate and pack a thread's continuation parcel explicitly. The
+/// user is responsible for launching the parcel before the thread
+/// terminates. Failure to do so is a programming error that cannot be tracked
+/// by HPX.
+///
+/// This does not logically terminate the current thread, and may be less
+/// efficient than explicitly continuing a value. The main use case for this
+/// interface is if the amount of data to be sent to the continuation is large
+/// and needs to be processed. This interface can eliminate an allocation and/or
+/// memcpy in that context.
+///
+/// @note This is an advanced interface and should be used with care.
+///
+/// @param            n The number of parameters.
+/// @param          ... The parameters to pack the parcel with.
+///
+/// @returns            A parcel suitable for use as the continuation, or NULL
+///                     if there was an error.
+struct hpx_parcel *_hpx_thread_generate_continuation(int n, ...)
+  HPX_PUBLIC;
+
+#define hpx_thread_generate_continuation(...) \
+  _hpx_thread_generate_continuation(__HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 /// Finish the current thread's execution.
 ///

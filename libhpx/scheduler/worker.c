@@ -140,6 +140,25 @@ static void _dbg_transfer(hpx_parcel_t *p, thread_transfer_cont_t c, void *e) {
 # define _transfer thread_transfer
 #endif
 
+hpx_parcel_t *_hpx_thread_generate_continuation(int n, ...) {
+  worker_t *w = self;
+  hpx_parcel_t *p = w->current;
+
+  dbg_assert(p->ustack->cont == 0);
+
+  hpx_action_t op = p->c_action;
+  hpx_addr_t target = p->c_target;
+  va_list args;
+  va_start(args, n);
+  hpx_parcel_t *c = action_new_parcel_va(op, target, 0, 0, n, &args);
+  va_end(args);
+
+  p->ustack->cont = 1;
+  p->c_action = 0;
+  p->c_target = 0;
+  return c;
+}
+
 /// Continue a parcel by invoking its parcel continuation.
 ///
 /// @param            p The parent parcel (usually self->current).
