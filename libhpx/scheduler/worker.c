@@ -146,19 +146,12 @@ static void _dbg_transfer(hpx_parcel_t *p, thread_transfer_cont_t c, void *e) {
 /// @param            n The number of arguments to continue.
 /// @param         args The arguments we are continuing.
 static void _continue_parcel(hpx_parcel_t *p, int n, va_list *args) {
-  if (p->c_target == HPX_NULL || p->c_action == HPX_ACTION_NULL) {
-    process_recover_credit(p);
-    return;
+  if (p->c_action && p->c_target) {
+    action_continue_va(p->c_action, p, n, args);
   }
-
-  // create the parcel to continue and transfer whatever credit we have
-  hpx_action_t act = p->c_action;
-  hpx_addr_t addr = p->c_target;
-  hpx_parcel_t *c = action_new_parcel_va(act, addr, 0, 0, n, args);
-  dbg_assert(c);
-  c->credit = p->credit;
-  p->credit = 0;
-  parcel_launch(c);
+  else {
+    process_recover_credit(p);
+  }
 }
 
 /// Swap the current parcel for a worker.
