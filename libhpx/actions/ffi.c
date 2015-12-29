@@ -169,7 +169,7 @@ void action_init_ffi(action_t *action) {
   dbg_assert(action->cif);
 
   uint32_t pinned = action->attr & HPX_PINNED;
-  if (pinned && action->cif->nargs) {
+  if (pinned && action->cif->nargs > 1) {
     action->parcel_class = &_pinned_ffi_n_vtable;
   }
   else if (pinned) {
