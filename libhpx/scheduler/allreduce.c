@@ -403,7 +403,7 @@ _join_async_request_handler(_allreduce_t *lco, _join_async_args_t *args,
   if (rc != HPX_SUCCESS) {
     hpx_thread_exit(rc);
   }
-  hpx_thread_continue(args, n);
+  return hpx_thread_continue(args, n);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_PINNED,
                      _join_async_request, _join_async_request_handler,

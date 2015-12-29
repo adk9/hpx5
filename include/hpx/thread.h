@@ -31,26 +31,38 @@
 /// to spawn the current thread.
 ///
 /// @returns the global address of the thread's target
-hpx_addr_t hpx_thread_current_target(void) HPX_PUBLIC;
+hpx_addr_t hpx_thread_current_target(void)
+  HPX_PUBLIC;
 
 /// Get the action that the current thread is executing.
-/// @returns the action ID of the current thread
-hpx_action_t hpx_thread_current_action(void) HPX_PUBLIC;
+///
+/// @return             The action ID of the current thread.
+hpx_action_t hpx_thread_current_action(void)
+  HPX_PUBLIC;
 
 /// Get the address of the continuation for the current thread
-/// @returns the address of the current thread's continuation
-hpx_addr_t hpx_thread_current_cont_target(void) HPX_PUBLIC;
+///
+/// @return             The address of the current thread's continuation.
+hpx_addr_t hpx_thread_current_cont_target(void)
+  HPX_PUBLIC;
 
-/// Get the continuation action for the current thread
-/// @returns the continuation action for the current thread
+/// Get the continuation action for the current thread.
+///
+/// @return             The continuation action for the current thread.
 hpx_action_t hpx_thread_current_cont_action(void) HPX_PUBLIC;
 
 /// Get the process identifier of the current thread
-/// @returns the PID for the current thread
+///
+/// @return             The PID for the current thread.
 hpx_pid_t hpx_thread_current_pid(void) HPX_PUBLIC;
 
-/// Pause execution and gives other threads the opportunity to be scheduled
-void hpx_thread_yield(void) HPX_PUBLIC;
+/// Pause execution and gives other threads the opportunity to be scheduled.
+///
+/// This call is *not* a runtime hint. The runtime *must* guarantee progress for
+/// non-yielding threads given a bounded number of threads in infinite yield
+/// loops.
+void hpx_thread_yield(void)
+  HPX_PUBLIC;
 
 /// Generates a consecutive new ID for a thread.
 ///
@@ -58,17 +70,19 @@ void hpx_thread_yield(void) HPX_PUBLIC;
 /// the next available ID. Each time it's called after that it returns that same
 /// id.
 ///
-/// @returns < 0 if there is an error, otherwise a unique, compact id for the
-///          calling thread
-int hpx_thread_get_tls_id(void) HPX_PUBLIC;
+/// @return             < 0 if there is an error, otherwise a unique, compact id
+///                     for the calling lightweight thread.
+int hpx_thread_get_tls_id(void)
+  HPX_PUBLIC;
 
 /// Check to see if the current thread has enough space for an alloca.
 ///
 /// @param        bytes The number of bytes to allocate.
 ///
-/// @returns            The number of bytes remaining on the stack after the
+/// @return             The number of bytes remaining on the stack after the
 ///                     alloca.
-intptr_t hpx_thread_can_alloca(size_t bytes) HPX_PUBLIC;
+intptr_t hpx_thread_can_alloca(size_t bytes)
+  HPX_PUBLIC;
 
 /// Set a lightweight thread's affinity.
 ///
@@ -79,24 +93,41 @@ intptr_t hpx_thread_can_alloca(size_t bytes) HPX_PUBLIC;
 /// This is not a hard guarantee for actual affinity. Various conditions at
 /// runtime @i{actually} control where threads execute, including system
 /// load. The scheduler will do its best to return a thread to it's assigned
-/// locality though. Using affinity badly can cause excessive thread movement
-/// and should be used carefully.
+/// locality. Using affinity badly can cause excessive thread movement and
+/// should be used carefully.
 ///
 /// This may block the calling thread in order to induce a context switch. This
 /// may be called as frequently as necessary---the most recent affinity will
 /// take precedence.
 ///
-/// @param thread_id the scheduler thread id we'd like to set the affinity to,
-///                  must be in the range [0, hpx_get_num_threads()).
-void hpx_thread_set_affinity(int thread_id) HPX_PUBLIC;
-
-
-/// Finish the current thread's execution, sending @p value to the thread's
-/// continuation address
+/// Specifying a @p thread_id of -1 will clear affinity for the current thread.
 ///
-/// @param  nargs The number of arguments being passed in.
-void _hpx_thread_continue(int nargs, ...)
-  HPX_NORETURN HPX_PUBLIC;
+/// The runtime may vary the number of system threads dynamically. If a
+/// lightweight thread is bound to a system thread that is disabled it may
+/// induce large performance overheads.
+///
+/// @param    thread_id The scheduler thread id we'd like to set the affinity
+///                     to, must be in the range [-1, hpx_get_num_threads()).
+void hpx_thread_set_affinity(int thread_id)
+  HPX_PUBLIC;
+
+/// Initiate the current thread's continuation.
+///
+/// This logically terminates the logical HPX thread, however the physical
+/// thread (lightweight) HPX thread will continue to run until it returns from
+/// the main action.
+///
+/// During this post-configure phase threads can clean up local resources, unpin
+/// pinned buffers, and perform HPX operations, however applications must not
+/// infer an order between the continued action and the cleanup phase in the
+/// current thread, and must not continue twice.
+///
+/// @param      n The number of arguments being passed in.
+/// @param    ... The arguments to continue (same as hpx_call)
+///
+/// @return       A status code, suitable for return from the main action.
+int _hpx_thread_continue(int n, ...)
+  HPX_PUBLIC;
 
 #define hpx_thread_continue(...)                                        \
   _hpx_thread_continue(__HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
@@ -106,44 +137,36 @@ void _hpx_thread_continue(int nargs, ...)
 /// @param v the value to be sent to the thread's continuation
 #define HPX_THREAD_CONTINUE(v) hpx_thread_continue(&v, sizeof(v))
 
-/// Finishes the current thread's execution, sending @p value to the thread's
-/// continuation address.
-///
-/// This version gives the application a chance to cleanup for instance, to free
-/// the value. After dealing with the continued data, it will run `cleanup(env)`.
-///
-/// @param cleanup a handler function to be run after the thread ends
-/// @param     env an environment to pass to @p cleanup
-/// @param   nargs The number of arguments being passed in.
-void _hpx_thread_continue_cleanup(void (*cleanup)(void*), void *env,
-                                  int nargs, ...)
-  HPX_NORETURN HPX_PUBLIC;
-
-#define hpx_thread_continue_cleanup(cleanup, env, ...)                  \
-  _hpx_thread_continue_cleanup(cleanup, env, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
-
 /// Finish the current thread's execution.
 ///
 /// The behavior of this call depends on the @p status parameter, and is
-/// equivalent to returning @p status from the action.
+/// semantically equivalent to returning @p status from the action. Due to the
+/// non-local control nature of this routine it may be much more expensive than
+/// simply returning the status code from the main action handler, and should be
+/// avoided when possible.
+///
+/// @note This routine invokes a non-local control transfer, however the runtime
+///       must correctly unwind the stack for languages that require such
+///       behavior (e.g., C++).
 ///
 /// Possible status codes:
-/// - HPX_SUCCESS: Normal termination, send a parcel with 0-sized data to
-///                the thread's continuation address.
 ///
-/// - HPX_ERROR: Abnormal termination. Terminates execution.
+///         HPX_SUCCESS: Normal termination, send a parcel with 0-sized data to
+///                      the thread's continuation address.
 ///
-/// - HPX_RESEND: Terminate execution, and resend the thread's parcel (NOT
-///               the continuation parcel). This can be used for
-///               application-level forwarding when hpx_addr_try_pin()
-///               fails.
+///           HPX_ERROR: Abnormal termination.
 ///
-/// - HPX_LCO_EXCEPTION: Continue an exception to the continuation address.
+///          HPX_RESEND: Terminate execution, and resend the thread's parcel
+///                      (NOT the continuation parcel). This can be used for
+///                      application-level forwarding when hpx_addr_try_pin()
+///                      fails.
+///
+///   HPX_LCO_EXCEPTION: Continue an exception to the continuation address.
 ///
 /// @param status a status to be returned to the function that created this
 ///        thread
 void hpx_thread_exit(int status)
-  HPX_NORETURN HPX_PUBLIC;
+  HPX_PUBLIC HPX_NORETURN;
 
 /// @}
 

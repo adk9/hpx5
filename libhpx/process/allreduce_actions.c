@@ -39,7 +39,7 @@ HPX_ACTION(HPX_DEFAULT, HPX_PINNED, allreduce_fini_async,
 static int _allreduce_add_handler(allreduce_t *r, hpx_action_t op,
                                   hpx_addr_t addr) {
   int32_t i = allreduce_add(r, op, addr);
-  HPX_THREAD_CONTINUE(i);
+  return HPX_THREAD_CONTINUE(i);
 }
 HPX_ACTION(HPX_DEFAULT, HPX_PINNED, allreduce_add_async,
            _allreduce_add_handler, HPX_POINTER, HPX_ACTION_T, HPX_ADDR);

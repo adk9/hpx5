@@ -23,7 +23,7 @@ static uint64_t value;
 // are always allocated in the global address space, because their addresses
 // are used as the targets of parcels.
 static int _get_value_handler(void) {
-  HPX_THREAD_CONTINUE(value);
+  return HPX_THREAD_CONTINUE(value);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _get_value, _get_value_handler);
 
@@ -80,7 +80,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, lco_future_new, lco_future_new_handler);
 // an address of a future in a future array
 static int _get_future_value_handler(void) {
   uint64_t data = SET_VALUE;
-  HPX_THREAD_CONTINUE(data);
+  return HPX_THREAD_CONTINUE(data);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _get_future_value, _get_future_value_handler);
 

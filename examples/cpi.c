@@ -69,7 +69,7 @@ static double _getVal_action(void *args, size_t size) {
 
   double value = integrate(mystart, myend, interval);
 
-  HPX_THREAD_CONTINUE(value);
+  return HPX_THREAD_CONTINUE(value);
 }
 
 static int _setVal_action(void *args, size_t size) {

@@ -51,7 +51,7 @@ bool apex_set_new_thread_caps(int count, apex_profile values[count]) {
   //double period_max = (reduced_value.maximum - previous_values[max_rank]);
   double period_max = reduced_value.maximum;
   // set each node thread cap to a relative multiple of that
-  for (int i = 0; i < count; ++i) { 
+  for (int i = 0; i < count; ++i) {
     int old_cap = thread_caps[i];
     // how much accumulated in the last period?
     //double last_period = values[i].accumulated - previous_values[i];
@@ -77,7 +77,7 @@ bool apex_set_new_thread_caps_hysteresis(int count, apex_profile values[count]) 
   static int countdown = APEX_WARMUP_ITERS; // wait for the application to warm up
   if (countdown > 0) {
     countdown = countdown - 1;
-    for (int i = 0; i < count; ++i) { 
+    for (int i = 0; i < count; ++i) {
       moving_average[i] = current_values[i] / (APEX_WARMUP_ITERS - countdown);
     }
     return false;
@@ -86,7 +86,7 @@ bool apex_set_new_thread_caps_hysteresis(int count, apex_profile values[count]) 
   double last_period = (current_values[max_rank] - previous_values[max_rank]);
   double moving_max = ((moving_average[max_rank] * (window_size-1)) + last_period) / window_size;
   // set each node thread cap to a relative multiple of that
-  for (int i = 0; i < count; ++i) { 
+  for (int i = 0; i < count; ++i) {
     int old_cap = thread_caps[i];
     // how much accumulated in the last period?
     last_period = current_values[i] - previous_values[i];
@@ -115,29 +115,29 @@ void apex_sum(int count, apex_profile values[count]) {
   double* tmp = current_values;
   current_values = previous_values;
   previous_values = tmp;
-  reduced_value.calls = values[0].calls; 
-  reduced_value.accumulated = values[0].accumulated; 
-  reduced_value.sum_squares = values[0].sum_squares; 
-  //reduced_value.minimum = values[0].minimum; 
-  //reduced_value.maximum = values[0].maximum; 
+  reduced_value.calls = values[0].calls;
+  reduced_value.accumulated = values[0].accumulated;
+  reduced_value.sum_squares = values[0].sum_squares;
+  //reduced_value.minimum = values[0].minimum;
+  //reduced_value.maximum = values[0].maximum;
   reduced_value.minimum = values[0].accumulated;
   reduced_value.maximum = values[0].accumulated;
   current_values[0] = values[0].accumulated;
   min_rank = max_rank = 0;
   int local_good_values = (values[0].calls > 0.0 && values[0].accumulated > 0.0) ? 1 : 0;
-  for (int i = 1; i < count; ++i) { 
-	  reduced_value.calls += values[i].calls; 
-	  reduced_value.accumulated += values[i].accumulated; 
-	  reduced_value.sum_squares += values[i].sum_squares; 
-	  //reduced_value.minimum = fmin(reduced_value.minimum,values[i].minimum); 
+  for (int i = 1; i < count; ++i) {
+      reduced_value.calls += values[i].calls;
+      reduced_value.accumulated += values[i].accumulated;
+      reduced_value.sum_squares += values[i].sum_squares;
+      //reduced_value.minimum = fmin(reduced_value.minimum,values[i].minimum);
       double accum = values[i].accumulated;
       if (accum < reduced_value.minimum) {
-	    reduced_value.minimum = accum; 
+        reduced_value.minimum = accum;
         min_rank = i;
       }
-	  //reduced_value.maximum = fmax(reduced_value.maximum,values[i].maximum); 
-	  if (accum > reduced_value.maximum) {
-	    reduced_value.maximum = accum; 
+      //reduced_value.maximum = fmax(reduced_value.maximum,values[i].maximum);
+      if (accum > reduced_value.maximum) {
+        reduced_value.maximum = accum;
         max_rank = i;
       }
       current_values[i] = values[i].accumulated;
@@ -152,18 +152,17 @@ int apex_get_value_action(void *args) {
   apex_profile * p;
   if (profiler_type == APEX_FUNCTION_ADDRESS) {
     p = apex_get_profile(APEX_FUNCTION_ADDRESS, (void*)profiled_action);
-  } else { 
+  } else {
     p = apex_get_profile(APEX_NAME_STRING, (void*)profiled_action_name);
   }
   if (p != NULL) {
-    value.calls = p->calls; 
-    value.accumulated = p->accumulated; 
-    value.sum_squares = p->sum_squares; 
-    value.minimum = p->minimum; 
-    value.maximum = p->maximum; 
+    value.calls = p->calls;
+    value.accumulated = p->accumulated;
+    value.sum_squares = p->sum_squares;
+    value.minimum = p->minimum;
+    value.maximum = p->maximum;
   }
-  HPX_THREAD_CONTINUE(value);
-  return HPX_SUCCESS;
+  return HPX_THREAD_CONTINUE(value);
 }
 
 int apex_set_local_cap_action(void *args, size_t size) {
@@ -204,7 +203,7 @@ int apex_allreduce_action(void *unused) {
         futures[i] = hpx_lco_future_new(0);
         hpx_call(HPX_THERE(i), apex_set_local_cap, futures[i], &(thread_caps[i]), sizeof(thread_caps[i]));
     }
-    
+
     hpx_lco_get_all(num_ranks, futures, sizes, addrs, NULL);
   }
 
@@ -252,14 +251,14 @@ void apex_global_setup(apex_profiler_type type, void* in_action) {
   apex_register_periodic_policy(1000000, apex_periodic_output);
   //apex_set_use_policy(true);
   //set_value      = HPX_REGISTER_ACTION(action_apex_set_value);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, 
-          apex_get_value, apex_get_value_action, 
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED,
+          apex_get_value, apex_get_value_action,
           HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, 
-          apex_set_local_cap, apex_set_local_cap_action, 
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED,
+          apex_set_local_cap, apex_set_local_cap_action,
           HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, 
-          apex_allreduce, apex_allreduce_action, 
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED,
+          apex_allreduce, apex_allreduce_action,
           HPX_POINTER, HPX_SIZE_T );
   graph_output = fopen("./profile_data.txt", "w");
   fprintf(graph_output,"\"calls\"\t\"mean\"\t\"stddev\"\t\"min\"\t\"min_rank\"\t\"max\"\t\"max_rank\"\n");
@@ -267,7 +266,7 @@ void apex_global_setup(apex_profiler_type type, void* in_action) {
   // get the max number of threads. All throttling will be done relative to this.
   max_threads = hpx_get_num_threads();
   thread_caps = calloc(HPX_LOCALITIES, sizeof(int));
-  for (int i = 0; i < HPX_LOCALITIES; ++i) { 
+  for (int i = 0; i < HPX_LOCALITIES; ++i) {
     thread_caps[i] = max_threads;
   }
   previous_values = calloc(HPX_LOCALITIES, sizeof(double));

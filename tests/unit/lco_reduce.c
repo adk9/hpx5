@@ -29,7 +29,7 @@ static void _addDouble_handler(double *lhs, const double *rhs, size_t UNUSED) {
 static HPX_ACTION(HPX_FUNCTION, 0, _addDouble, _addDouble_handler);
 
 static int _reduce_handler(double data) {
-  HPX_THREAD_CONTINUE(data);
+  return HPX_THREAD_CONTINUE(data);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _reduce, _reduce_handler, HPX_DOUBLE);
 

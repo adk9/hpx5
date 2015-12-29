@@ -29,7 +29,7 @@ static hpx_action_t increment = 0;
 
 static int _increment_action(int *args, size_t size) {
   int n = *args + 1;
-  HPX_THREAD_CONTINUE(n);
+  return HPX_THREAD_CONTINUE(n);
 }
 
 

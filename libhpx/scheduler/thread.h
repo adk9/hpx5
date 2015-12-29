@@ -27,13 +27,13 @@ struct lco_class;
 typedef struct ustack {
   void             *sp;                         // checkpointed stack pointer
   hpx_parcel_t *parcel;                         // the progenitor parcel
-  hpx_parcel_t   *cont;                         // the continuation parcel
   struct ustack  *next;                         // freelists and condition vars
   int        lco_depth;                         // how many lco locks we hold
-  int           tls_id;                         //
-  int         stack_id;                         //
-  int             size;                         //
+  int           tls_id;                         // backs tls
+  int         stack_id;                         // used by VALGRIND
+  int             size;                         // the size of this stack
   int            error;                         // like errno for this thread
+  short           cont;                         // the continuation flag
   short       affinity;                         // set by user
   char           stack[];
 } ustack_t;

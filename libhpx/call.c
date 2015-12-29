@@ -79,11 +79,14 @@ void _hpx_call_cc(hpx_addr_t addr, hpx_action_t id, void (*cleanup)(void*),
   if (e == HPX_SUCCESS) {
     p->c_target = HPX_NULL;
     p->c_action = HPX_NULL;
-    hpx_thread_continue_cleanup(cleanup, env, NULL, 0);
+    e = hpx_thread_continue(NULL, 0);
   }
-  else {
-    hpx_thread_exit(e);
+
+  if (cleanup) {
+    cleanup(env);
   }
+
+  hpx_thread_exit(e);
 }
 
 int _hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t id,
@@ -130,9 +133,12 @@ void _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t id,
   va_end(args);
 
   if (e == HPX_SUCCESS) {
-    hpx_thread_continue_cleanup(cleanup, env, NULL, 0);
+    e = hpx_thread_continue(NULL, 0);
   }
-  else {
-    hpx_thread_exit(e);
+
+  if (cleanup) {
+    cleanup(env);
   }
+
+  hpx_thread_exit(e);
 }

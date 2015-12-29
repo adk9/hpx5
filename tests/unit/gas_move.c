@@ -23,11 +23,11 @@
 /// This is a simple AGAS test: We allocate two futures cyclically,
 /// one on the root locality and the other on a remote locality. After
 /// a move operation, we verify if the remote future has moved to the
-/// local calling locality. 
+/// local calling locality.
 
 static int get_rank_handler(void) {
   int rank = HPX_LOCALITY_ID;
-  HPX_THREAD_CONTINUE(rank);
+  return HPX_THREAD_CONTINUE(rank);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, get_rank, get_rank_handler);
 

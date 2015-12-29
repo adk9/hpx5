@@ -25,28 +25,24 @@ static hpx_action_t set_value = 0;
 static hpx_action_t get_value = 0;
 static hpx_action_t allreduce = 0;
 
-static T
-sum(T count, T values[count]) {
+static T sum(T count, T values[count]) {
   T total = 0;
   for (int i = 0; i < count; ++i, total += values[i])
     ;
   return total;
 }
 
-static int
-action_get_value(void *args, size_t size) {
-  HPX_THREAD_CONTINUE(value);
+static int action_get_value(void *args, size_t size) {
+  return HPX_THREAD_CONTINUE(value);
 }
 
-static int
-action_set_value(void *args, size_t size) {
+static int action_set_value(void *args, size_t size) {
   value = *(T*)args;
   printf("At rank %d received value %lld\n", hpx_get_my_rank(), (long long)value);
   return HPX_SUCCESS;
 }
 
-static int
-action_allreduce(void *unused, size_t size) {
+static int action_allreduce(void *unused, size_t size) {
   int num_ranks = HPX_LOCALITIES;
   int my_rank = HPX_LOCALITY_ID;
   assert(my_rank == 0);

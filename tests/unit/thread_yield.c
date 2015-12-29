@@ -53,7 +53,7 @@ static int _yield_worker_handler(struct _yield_args *args, size_t n) {
   }
 
   // printf("Thread %d done after %f ms.\n", num, hpx_time_elapsed_ms(start_time));
-  HPX_THREAD_CONTINUE(timeout);
+  return HPX_THREAD_CONTINUE(timeout);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _yield_worker,
                   _yield_worker_handler, HPX_POINTER, HPX_SIZE_T);

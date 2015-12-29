@@ -21,7 +21,7 @@
 static int
 _new_future_handler(void) {
   hpx_addr_t f = hpx_lco_future_new(sizeof(int));
-  hpx_thread_continue(&f, sizeof(f));
+  return hpx_thread_continue(&f, sizeof(f));
 }
 static HPX_ACTION(HPX_TASK, 0, _new_future, _new_future_handler);
 

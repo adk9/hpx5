@@ -46,8 +46,9 @@ static int _fib_action(int *args, size_t size) {
   int n = *args;
   __sync_fetch_and_add(&function_count, 1); // increment the function count
 
-  if (n < 2)
-    HPX_THREAD_CONTINUE(n);
+  if (n < 2) {
+    return HPX_THREAD_CONTINUE(n);
+  }
 
   hpx_addr_t peers[] = {
     HPX_HERE,
@@ -86,8 +87,7 @@ static int _fib_action(int *args, size_t size) {
   hpx_lco_delete(futures[1], HPX_NULL);
 
   int fn = fns[0] + fns[1];
-  HPX_THREAD_CONTINUE(fn);
-  return HPX_SUCCESS;
+  return HPX_THREAD_CONTINUE(fn);
 }
 
 static int _fib_main_action(int *args, size_t size) {

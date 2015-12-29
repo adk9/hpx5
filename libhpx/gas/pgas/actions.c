@@ -60,7 +60,7 @@ hpx_addr_t pgas_alloc_cyclic_sync(size_t n, uint32_t bsize) {
 
 static int _alloc_cyclic_handler(size_t n, size_t bsize) {
   hpx_addr_t addr = pgas_alloc_cyclic_sync(n, bsize);
-  HPX_THREAD_CONTINUE(addr);
+  return HPX_THREAD_CONTINUE(addr);
 }
 LIBHPX_ACTION(HPX_DEFAULT, 0, pgas_alloc_cyclic, _alloc_cyclic_handler,
               HPX_SIZE_T, HPX_SIZE_T);
@@ -102,7 +102,7 @@ hpx_addr_t pgas_calloc_cyclic_sync(size_t n, uint32_t bsize) {
 
 static int _calloc_cyclic_handler(size_t n, size_t bsize) {
   hpx_addr_t addr = pgas_calloc_cyclic_sync(n, bsize);
-  HPX_THREAD_CONTINUE(addr);
+  return HPX_THREAD_CONTINUE(addr);
 }
 LIBHPX_ACTION(HPX_DEFAULT, 0, pgas_calloc_cyclic, _calloc_cyclic_handler,
               HPX_SIZE_T, HPX_SIZE_T);

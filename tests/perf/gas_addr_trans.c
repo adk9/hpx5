@@ -56,7 +56,7 @@ static int _address_translation_action(void* args, size_t size) {
 
   // make sure to unpin the address
   hpx_gas_unpin(local);
-  hpx_thread_continue(NULL, 0);
+  return hpx_thread_continue(NULL, 0);
 }
 
 static int _main_action(void *args, size_t n) {

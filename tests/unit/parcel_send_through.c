@@ -45,7 +45,7 @@ static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _store_int,
 
 /// Load a value from an integer in memory.
 static int _load_int_handler(int *addr) {
-  HPX_THREAD_CONTINUE(*addr);
+  return HPX_THREAD_CONTINUE(*addr);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _load_int,
                   _load_int_handler, HPX_POINTER);

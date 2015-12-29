@@ -222,7 +222,8 @@ hpx_status_t hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
 
   if (!hpx_gas_try_pin(alltoall, (void**)&local)) {
     _alltoall_get_offset_t args = {.size = size, .offset = id};
-    return hpx_call_sync(alltoall, _alltoall_getid_proxy, value, size, &args, sizeof(args));
+    hpx_action_t act = _alltoall_getid_proxy;
+    return hpx_call_sync(alltoall, act, value, size, &args, sizeof(args));
   }
 
   status = _alltoall_getid(local, id, size, value);
@@ -247,10 +248,11 @@ static int _alltoall_getid_proxy_handler(_alltoall_get_offset_t *args, size_t n)
 
   // if success, finish the current thread's execution, sending buffer value to
   // the thread's continuation address else finish the current thread's execution.
-  if(status == HPX_SUCCESS)
-    hpx_thread_continue(buffer, args->size);
-  else
-    hpx_thread_exit(status);
+  if (status == HPX_SUCCESS) {
+    return hpx_thread_continue(buffer, args->size);
+  }
+
+  return status;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _alltoall_getid_proxy,
                      _alltoall_getid_proxy_handler, HPX_POINTER, HPX_SIZE_T);

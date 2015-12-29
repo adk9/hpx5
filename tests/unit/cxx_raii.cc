@@ -30,11 +30,18 @@ namespace {
     }
   };
 
-  int _raii_handler(void) {
+  int _raii_continue_handler(void) {
+    RAII raii;
+    hpx_thread_continue();
+    return HPX_SUCCESS;
+  }
+  HPX_ACTION(HPX_DEFAULT, 0, _raii_continue, _raii_continue_handler);
+
+  int _raii_thread_exit_handler(void) {
     RAII raii;
     hpx_thread_exit(HPX_SUCCESS);
   }
-  HPX_ACTION(HPX_DEFAULT, 0, _raii, _raii_handler);
+  HPX_ACTION(HPX_DEFAULT, 0, _raii_thread_exit, _raii_thread_exit_handler);
 
   int _verify_handler(void) {
     test_assert_msg(resource == 0, "Destructor was not run correctly\n");
@@ -44,6 +51,8 @@ namespace {
 }
 
 TEST_MAIN({
-    ADD_TEST(_raii, 0);
+    ADD_TEST(_raii_continue, 0);
+    ADD_TEST(_verify, 0);
+    ADD_TEST(_raii_thread_exit, 0);
     ADD_TEST(_verify, 0);
   });

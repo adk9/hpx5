@@ -19,7 +19,7 @@
 #include "tests.h"
 
 static int _echo_handler(int *args, size_t n) {
-  hpx_thread_continue(args, n);
+  return hpx_thread_continue(args, n);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _echo,
                   _echo_handler, HPX_POINTER, HPX_SIZE_T);

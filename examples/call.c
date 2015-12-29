@@ -45,7 +45,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _my_typed, _my_typed_handler, HPX_INT,
 
 static int _cont_fut_handler(hpx_addr_t future) {
   printf("Continuing an LCO to a typed continuation action.\n");
-  hpx_thread_continue(&future);
+  return hpx_thread_continue(&future);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _cont_fut, _cont_fut_handler, HPX_ADDR);
 

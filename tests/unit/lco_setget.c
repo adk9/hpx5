@@ -63,7 +63,7 @@ static void _reset(int *set, int *get, hpx_addr_t sync, hpx_addr_t lco) {
 
 static int _new_future_at_handler(void) {
   hpx_addr_t future = hpx_lco_future_new(sizeof(ONES));
-  HPX_THREAD_CONTINUE(future);
+  return HPX_THREAD_CONTINUE(future);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _new_future_at, _new_future_at_handler);
 
@@ -283,8 +283,9 @@ static HPX_ACTION_DECL(_getAll);
 // Testcase to test hpx_lco_get_all function
 static int _getAll_handler(uint32_t *args, size_t size) {
   uint32_t n = *args;
-  if (n < 2)
-    HPX_THREAD_CONTINUE(n);
+  if (n < 2) {
+    return HPX_THREAD_CONTINUE(n);
+  }
 
   hpx_addr_t peers[] = {
     HPX_HERE,
@@ -331,8 +332,7 @@ static int _getAll_handler(uint32_t *args, size_t size) {
 
   uint32_t sn = ssn[0] * ssn[0] + ssn[1] * ssn[1];
 
-  HPX_THREAD_CONTINUE(sn);
-  return HPX_SUCCESS;
+  return HPX_THREAD_CONTINUE(sn);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _getAll,
                   _getAll_handler, HPX_POINTER, HPX_SIZE_T);

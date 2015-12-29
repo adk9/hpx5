@@ -319,7 +319,7 @@ int hpx_gas_memcpy_sync(hpx_addr_t to, hpx_addr_t from, size_t size) {
 static int _gas_alloc_local_at_handler(size_t n, uint32_t bsize,
                                        uint32_t boundary, uint32_t attr) {
   hpx_addr_t addr = hpx_gas_alloc_local_attr(n, bsize, boundary, attr);
-  HPX_THREAD_CONTINUE(addr);
+  return HPX_THREAD_CONTINUE(addr);
 }
 LIBHPX_ACTION(HPX_DEFAULT, 0, hpx_gas_alloc_local_at_action,
               _gas_alloc_local_at_handler, HPX_SIZE_T, HPX_UINT32,
@@ -346,7 +346,7 @@ void hpx_gas_alloc_local_at_async(size_t n, uint32_t bsize, uint32_t boundary,
 static int _gas_calloc_at_handler(size_t n, uint32_t bsize, uint32_t boundary,
                                   uint32_t attr) {
   hpx_addr_t addr = hpx_gas_calloc_local_attr(n, bsize, boundary, attr);
-  HPX_THREAD_CONTINUE(addr);
+  return HPX_THREAD_CONTINUE(addr);
 }
 LIBHPX_ACTION(HPX_DEFAULT, 0, hpx_gas_calloc_local_at_action,
               _gas_calloc_at_handler, HPX_SIZE_T, HPX_UINT32,

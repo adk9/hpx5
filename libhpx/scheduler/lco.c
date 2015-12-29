@@ -148,7 +148,7 @@ LIBHPX_ACTION(HPX_DEFAULT, 0, hpx_lco_delete_action, _lco_delete_action_handler)
 
 int hpx_lco_set_action_handler(lco_t *lco, void *data, size_t n) {
   int i = _set(lco, n, data);
-  HPX_THREAD_CONTINUE(i);
+  return HPX_THREAD_CONTINUE(i);
 }
 LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, hpx_lco_set_action,
               hpx_lco_set_action_handler, HPX_POINTER, HPX_POINTER,
@@ -173,18 +173,7 @@ static int _lco_size_handler(lco_t *lco, void *UNUSED) {
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_size,
                      _lco_size_handler, HPX_POINTER);
 
-typedef struct {
-  lco_t *lco;
-  void *buffer;
-} _cleanup_release_args_t;
-
-static void _cleanup_release(void *args) {
-  _cleanup_release_args_t *a = args;
-  _release(a->lco, a->buffer);
-}
-
-static int
-_lco_get_handler(lco_t *lco, int n) {
+static int _lco_get_handler(lco_t *lco, int n) {
   dbg_assert(n > 0);
 
   // Use the getref handler, no need to worry about pinning here because we
@@ -195,11 +184,9 @@ _lco_get_handler(lco_t *lco, int n) {
   if (status != HPX_SUCCESS) {
     return status;
   }
-  _cleanup_release_args_t args = {
-    lco,
-    buffer
-  };
-  hpx_thread_continue_cleanup(&_cleanup_release, &args, buffer, n);
+  int e = hpx_thread_continue(buffer, n);
+  _release(lco, buffer);
+  return e;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_get,
                      _lco_get_handler, HPX_POINTER, HPX_INT);

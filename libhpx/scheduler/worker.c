@@ -146,21 +146,14 @@ static void _dbg_transfer(hpx_parcel_t *p, thread_transfer_cont_t c, void *e) {
 /// @param            n The number of arguments to continue.
 /// @param         args The arguments we are continuing.
 static void _continue_parcel_va(hpx_parcel_t *p, int n, va_list *args) {
-  dbg_assert(p->ustack->cont == NULL);
-  p->ustack->cont = (void*)1;
+  dbg_assert(p->ustack->cont == 0);
+  p->ustack->cont = 1;
   if (p->c_action && p->c_target) {
     action_continue_va(p->c_action, p, n, args);
   }
   else {
     process_recover_credit(p);
   }
-}
-
-static void _continue_parcel(hpx_parcel_t *p, int n, ...) {
-  va_list args;
-  va_start(args, n);
-  _continue_parcel_va(p, n, &args);
-  va_end(args);
 }
 
 /// Swap the current parcel for a worker.
@@ -187,13 +180,16 @@ static void _execute_interrupt(hpx_parcel_t *p) {
   worker_t *w = self;
   hpx_parcel_t *q = _swap_current(p, NULL, w);
 
-  // "Borrow" the current thread's stack, so that we can use its lco_depth field
-  // if necessary.
+  // "Borrow" the current thread's stack, so that we can use its lco_depth and
+  // cont fields if necessary.
   dbg_assert(!p->ustack);
   p->ustack = q->ustack;
-  void* cont = p->ustack->cont;
+  short cont = p->ustack->cont;
 
+  // Suspend the outer thread, and start the interrupt
+  EVENT_THREAD_SUSPEND(q, w);
   EVENT_THREAD_RUN(p, w);
+
   int e = action_exec_parcel(p->action, p);
 
   // Restore the current thread pointer.
@@ -204,8 +200,11 @@ static void _execute_interrupt(hpx_parcel_t *p) {
   switch (e) {
    case HPX_SUCCESS:
     log_sched("completed interrupt %p\n", p);
-    _continue_parcel_va(p, 0, NULL);
+    if (!p->ustack->cont) {
+      _continue_parcel_va(p, 0, NULL);
+    }
     EVENT_THREAD_END(p, w);
+    EVENT_THREAD_RESUME(q, self);
     parcel_delete(p);
     break;
 
@@ -213,6 +212,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
     log_sched("resending interrupt to %"PRIu64"\n", p->target);
     EVENT_THREAD_END(p, w);
     EVENT_PARCEL_RESEND(p);
+    EVENT_THREAD_RESUME(q, self);
     parcel_launch(p);
     break;
 
@@ -229,6 +229,9 @@ static void _execute_interrupt(hpx_parcel_t *p) {
 ///
 /// @param       parcel The parcel that describes the thread to run.
 static void HPX_NORETURN _execute_thread(hpx_parcel_t *p);
+
+/// Finish a thread's execution, dealing with the returned status.
+static void HPX_NORETURN _finish_thread(hpx_parcel_t *p, int status);
 
 /// Create a new lightweight thread based on the parcel.
 ///
@@ -940,119 +943,58 @@ void scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
   _resume_parcels(cvar_set_error(cvar, code));
 }
 
-/// The entry function for all of the lightweight threads.
-///
-/// @param       parcel The parcel that describes the thread to run.
-static void HPX_NORETURN _execute_thread(hpx_parcel_t *p) {
-  EVENT_THREAD_RUN(p, self);
-  int e = action_exec_parcel(p->action, p);
-
-  // handle the return code
-  switch (e) {
+static void HPX_NORETURN _finish_thread(hpx_parcel_t *p, int status) {
+  switch (status) {
    case HPX_RESEND:
     EVENT_THREAD_END(p, self);
     EVENT_PARCEL_RESEND(self->current);
     _schedule(_resend_parcel, NULL, 0);
 
    case HPX_SUCCESS:
-    _continue_parcel_va(p, 0, NULL);
+    if (!p->ustack->cont) {
+      _continue_parcel_va(p, 0, NULL);
+    }
     EVENT_THREAD_END(p, self);
     _schedule(_free_parcel, NULL, 1);
 
    case HPX_LCO_ERROR:
     // rewrite to lco_error and continue the error status
-    self->current->c_action = lco_error;
-    hpx_thread_continue(&e, sizeof(e));
+    p->c_action = lco_error;
+    _hpx_thread_continue(2, &status, sizeof(status));
+    EVENT_THREAD_END(p, self);
+    _schedule(_free_parcel, NULL, 1);
 
    case HPX_ERROR:
    default:
-    dbg_error("thread produced unexpected error %s.\n", hpx_strerror(e));
+    dbg_error("thread produced unexpected error %s.\n", hpx_strerror(status));
   }
-
   unreachable();
 }
 
-void HPX_NORETURN _hpx_thread_continue(int n, ...) {
+static void HPX_NORETURN _execute_thread(hpx_parcel_t *p) {
+  EVENT_THREAD_RUN(p, self);
+  int status = action_exec_parcel(p->action, p);
+  _finish_thread(p, status);
+}
+
+int _hpx_thread_continue(int n, ...) {
   worker_t *w = self;
   hpx_parcel_t *p = w->current;
 
-  // 1) generate the continuation
   va_list args;
   va_start(args, n);
   _continue_parcel_va(p, n, &args);
   va_end(args);
 
-  // 2) tag this as a termination point
-  EVENT_THREAD_END(p, w);
-
-  // 3) give the thread a chance to clean up
-  action_exit(p->action, p);
-
-  // terminate the thread through non-local control
-  _schedule(_free_parcel, NULL, 1);
-  unreachable();
-}
-
-void HPX_NORETURN
-_hpx_thread_continue_cleanup(void (*f)(void*), void *env, int n, ...) {
-  worker_t *w = self;
-  hpx_parcel_t *p = w->current;
-
-  // 1) generate the continuation
-  va_list args;
-  va_start(args, n);
-  _continue_parcel_va(p, n, &args);
-  va_end(args);
-
-  // 2) run the cleanup handler
-  if (f) {
-    f(env);
-  }
-
-  // 3) tag this as a termination point
-  EVENT_THREAD_END(p, w);
-
-  // 4) give the thread a chance to clean up
-  action_exit(p->action, p);
-
-  // 5) terminate the thread through non-local control
-  _schedule(_free_parcel, NULL, 1);
-  unreachable();
+  return HPX_SUCCESS;
 }
 
 /// Exit a thread through a non-local control transfer.
 void HPX_NORETURN hpx_thread_exit(int status) {
   worker_t *w = self;
   hpx_parcel_t *p = w->current;
-
-  // 1) tag this as a termination point
-  EVENT_THREAD_END(p, w);
-
-  // 2) give the thread a chance to clean up
   action_exit(p->action, p);
-
-  // 3) handle the return code
-  switch (status) {
-   case HPX_RESEND:
-    EVENT_PARCEL_RESEND(p);
-    _schedule(_resend_parcel, NULL, 0);
-
-   case HPX_SUCCESS:
-    _continue_parcel_va(p, 0, NULL);
-    _schedule(_free_parcel, NULL, 1);
-
-   case HPX_LCO_ERROR:
-    // rewrite to lco_error and continue the error status
-    self->current->c_action = lco_error;
-    _continue_parcel(p, 2, &status, sizeof(status));
-    _schedule(_free_parcel, NULL, 1);
-
-   case HPX_ERROR:
-   default:
-    dbg_error("unexpected exit status %d.\n", status);
-  }
-
-  unreachable();
+  _finish_thread(p, status);
 }
 
 hpx_parcel_t *scheduler_current_parcel(void) {

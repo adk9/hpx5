@@ -30,8 +30,7 @@ static int _block_rank_handler(hpx_addr_t base) {
   hpx_addr_t target = hpx_thread_current_target();
   int id = hpx_addr_sub(target, base, blocksize) / blocksize;
   int block_rank = id * HPX_LOCALITY_ID;
-  HPX_THREAD_CONTINUE(block_rank);
-  return HPX_SUCCESS;
+  return HPX_THREAD_CONTINUE(block_rank);
 }
 HPX_ACTION(HPX_DEFAULT, 0, _block_rank, _block_rank_handler, HPX_ADDR);
 

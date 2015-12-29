@@ -78,24 +78,6 @@ static void *_prepare(const percolation_t *percolation, const char *key,
   return (void*)k;
 }
 
-typedef struct {
-  cl_mem obj;
-  void  *buf;
-} _cl_mem_buf_t;
-
-static void _free_cl_mem_buf(void *p) {
-  _cl_mem_buf_t *mem_buf = (_cl_mem_buf_t *)p;
-  if (!mem_buf) {
-    return;
-  }
-
-  clReleaseMemObject(mem_buf->obj);
-  if (mem_buf->buf) {
-    free(mem_buf->buf);
-  }
-  free(mem_buf);
-}
-
 static int _execute(const percolation_t *percolation, void *obj, int nargs,
                     void *vargs[], size_t sizes[]) {
   _opencl_percolation_t *cl = (_opencl_percolation_t*)percolation;
@@ -135,8 +117,8 @@ static int _execute(const percolation_t *percolation, void *obj, int nargs,
   // TODO: look at clEnqueueTask.
   size_t local_size = 64;
   size_t global_size = ceil(osize/local_size)*local_size;
-  
-  e = clEnqueueNDRangeKernel(cl->queue, kernel, 1, NULL, &global_size, 
+
+  e = clEnqueueNDRangeKernel(cl->queue, kernel, 1, NULL, &global_size,
                              &local_size, 0, NULL, NULL);
 
   // TODO: make kernel execution asynchronous
@@ -149,12 +131,14 @@ static int _execute(const percolation_t *percolation, void *obj, int nargs,
     clReleaseMemObject(buf[i]);
   }
 
-  _cl_mem_buf_t *mem_buf = malloc(sizeof(*mem_buf));
-  mem_buf->obj = obuf;
-  mem_buf->buf = output;
+  int e = hpx_thread_continue(output, osize);
 
-  hpx_thread_continue_cleanup(_free_cl_mem_buf, mem_buf, output, osize);
-  return HPX_SUCCESS;
+  clReleaseMemObject(obuf);
+  if (output) {
+    free(output);
+  }
+
+  return e;
 }
 
 static void _destroy(const percolation_t *percolation, void *obj) {

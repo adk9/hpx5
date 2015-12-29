@@ -35,7 +35,7 @@ const int SET_CONT_VALUE = 1234;
 // to be sent to the thread's continuation address.
 static int _set_cont_handler(void) {
   uint64_t value = SET_CONT_VALUE;
-  hpx_thread_continue(&value, DATA_SIZE);
+  return hpx_thread_continue(&value, DATA_SIZE);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _set_cont, _set_cont_handler);
 
@@ -73,49 +73,22 @@ static int thread_continue_handler(void) {
 }
 static HPX_ACTION(HPX_DEFAULT, 0, thread_continue, thread_continue_handler);
 
-// Finish the current thread's execution, sending value to the thread's
-// continuation address (size is the size of the value and value is the value
-// to be sent to the thread's continuation address. This version gives the
-// application a chance to cleanup for instance, to free the value. After
-// dealing with the continued data, it will run cleanup(env).
-static int _thread_cont_cleanup_handler(void) {
-  hpx_addr_t addr = hpx_thread_current_target();
-  uint64_t local;
-  if (!hpx_gas_try_pin(addr, (void**)&local))
-    return HPX_RESEND;
-
-  local = SET_CONT_VALUE;
-  uint64_t *value = malloc(sizeof(uint64_t));
-  *value = local;
-
-  hpx_gas_unpin(addr);
-  hpx_thread_continue_cleanup(free, value, value, DATA_SIZE);
+static int _interrupt_continue_handler(void) {
+  uint64_t value = SET_CONT_VALUE;
+  return hpx_thread_continue(&value, DATA_SIZE);
 }
-static HPX_ACTION(HPX_DEFAULT, 0, _thread_cont_cleanup, _thread_cont_cleanup_handler);
+static HPX_ACTION(HPX_INTERRUPT, 0, _interrupt_continue,
+                  _interrupt_continue_handler);
 
-static int thread_continue_cleanup_handler(void) {
-  printf("Starting the Thread continue cleanup test\n");
-  // Start the timer
-  hpx_time_t t1 = hpx_time_now();
-
-  hpx_addr_t src = hpx_gas_alloc_local(1, sizeof(uint64_t), sizeof(uint64_t));
-
-  uint64_t *block = malloc(DATA_SIZE);
-  assert(block);
-
-  hpx_call_sync(src, _thread_cont_cleanup, block, DATA_SIZE);
-  printf("value in block is %"PRIu64"\n", *block);
-
-  free(block);
-  hpx_gas_free(src, HPX_NULL);
-
-  printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+static int _test_interrupt_handler(void) {
+  uint64_t val = 0;
+  CHECK( hpx_call_sync(HPX_HERE, _interrupt_continue, &val, sizeof(val)) );
+  test_assert(val == 1234);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, 0, thread_continue_cleanup,
-                  thread_continue_cleanup_handler);
+static HPX_ACTION(HPX_DEFAULT, 0, _test_interrupt, _test_interrupt_handler);
 
 TEST_MAIN({
   ADD_TEST(thread_continue, 0);
-  ADD_TEST(thread_continue_cleanup, 0);
+  ADD_TEST(_test_interrupt, 0);
 });

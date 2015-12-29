@@ -49,7 +49,7 @@ static int num_readers[]  ={
 };
 
 static int action_get_value(void *args, size_t size) {
-  HPX_THREAD_CONTINUE(value);
+  return HPX_THREAD_CONTINUE(value);
 }
 
 static int action_set_value(void *args, size_t size) {

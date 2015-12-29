@@ -86,7 +86,7 @@ static int _write_double_action(double *d, size_t size) {
 
   *addr = d[0];
   hpx_gas_unpin(target);
-  HPX_THREAD_CONTINUE(d[1]);
+  return HPX_THREAD_CONTINUE(d[1]);
 }
 
 static int _read_double_action(void *unused, size_t size) {
@@ -98,7 +98,7 @@ static int _read_double_action(void *unused, size_t size) {
   double d = *addr;
 
   hpx_gas_unpin(target);
-  HPX_THREAD_CONTINUE(d);
+  return HPX_THREAD_CONTINUE(d);
 }
 
 static int offset_of(int i, int j) {
