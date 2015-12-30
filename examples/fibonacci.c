@@ -19,6 +19,7 @@
 /// demonstrate some of the basic of HPX and it may demonstrate a
 /// <em>pattern of computation</em> that might be used in the real world.)
 
+#include <signal.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -137,6 +138,8 @@ int main(int argc, char *argv[]) {
      n = atoi(argv[0]);
      break;
   }
+
+  sigprocmask(0, NULL, NULL);
 
   // run the main action
   e = hpx_run(&_fib_main, &n, sizeof(n));
