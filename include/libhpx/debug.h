@@ -14,7 +14,6 @@
 #ifndef LIBHPX_DEBUG_H
 #define LIBHPX_DEBUG_H
 
-#include <signal.h>
 #include <hpx/hpx.h>
 #include <libhpx/config.h>
 
@@ -105,11 +104,5 @@ int log_error_internal(unsigned line, const char *filename, const char *func,
 
 #define log_error(...)                                                  \
   log_error_internal(__LINE__, __FILE__, __func__, __VA_ARGS__)
-
-/// Used for static link-time interposition of library calls.
-///
-/// We expose this here so that our internal use can call it directly, and
-/// bypass checking code.
-int __real_sigaction(int, const struct sigaction *, struct sigaction *);
 
 #endif // LIBHPX_DEBUG_H

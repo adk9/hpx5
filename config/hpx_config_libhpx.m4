@@ -28,8 +28,4 @@ AC_DEFUN([HPX_CONFIG_LIBHPX], [
   # do substitution for the test and example makefiles
   HPX_APPS_LDADD="\$(top_builddir)/libhpx/libhpx.la"
   HPX_APPS_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la"
-
-  # export our symbol wrapping
-  HPX_APPS_LDFLAGS="$HPX_APPS_LDFLAGS -Wl,--wrap,sigprocmask,--wrap,pthread_sigmask,--wrap,signal,--wrap,sigaction"
-  HPX_PC_PUBLIC_LIBS="$HPX_PC_PUBLIC_LIBS -Wl,--wrap,sigprocmask,--wrap,pthread_sigmask,--wrap,signal,--wrap,sigaction"
 ])
