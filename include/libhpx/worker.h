@@ -95,4 +95,6 @@ int worker_is_active(void);
 /// Check to see if the current worker should stop.
 int worker_is_stopped(void);
 
+void _send_mail(hpx_parcel_t *p, void *worker);
+
 #endif // LIBHPX_WORKER_H

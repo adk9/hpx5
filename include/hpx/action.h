@@ -91,6 +91,8 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
 #define HPX_VECTORED   0x8
 // Action is a coalesced action
 #define HPX_COALESCED 0x10
+// Action is a priority action
+#define HPX_PRIORITY 0x20
 //@}
 
 /// Register an HPX action of a given @p type.

@@ -114,6 +114,13 @@ static void _cancel(worker_t *worker) {
   }
 }
 
+static void _priority_plugin_init(priority_plugin_t *p_sched) {
+  p_sched->work_produce = NULL;
+  p_sched->work_consume = NULL;
+  p_sched->work_steal   = NULL;
+  p_sched->on           = false;
+}
+
 struct scheduler *scheduler_new(const config_t *cfg) {
   const int workers = cfg->threads;
 
@@ -160,6 +167,7 @@ struct scheduler *scheduler_new(const config_t *cfg) {
   s->n_active_workers = workers;
   s->wf_threshold = cfg->sched_wfthreshold;
 
+  _priority_plugin_init(&s->p_sched);
   thread_set_stack_size(cfg->stacksize);
   log_sched("initialized a new scheduler.\n");
 

@@ -50,7 +50,7 @@ int hpx_init(int *argc, char ***argv) HPX_PUBLIC;
 /// Finalize/cleanup from the HPX runtime.
 ///
 /// This function will remove almost all data structures and allocations, and
-/// will finalize the underlying network implementation. Note that hpx_run() 
+/// will finalize the underlying network implementation. Note that hpx_run()
 /// must never be called after hpx_finalize().
 void hpx_finalize() HPX_PUBLIC;
 
@@ -117,6 +117,11 @@ void hpx_print_help(void) HPX_PUBLIC;
 /// Print the version string associated with the HPX interface implemented by
 /// the runtime.
 void hpx_print_version(void) HPX_PUBLIC;
+
+/// set the plugin scheduler
+void hpx_set_priority_scheduler(hpx_parcel_t* (*work_produce)(),
+				 void (*work_consume)(hpx_parcel_t*),
+				 hpx_parcel_t* (*work_steal)()) HPX_PUBLIC;
 
 /// @}
 

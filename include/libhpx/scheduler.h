@@ -48,6 +48,14 @@ struct config;
 struct cvar;
 /// @}
 
+///plugin scheduler interface
+typedef struct priority_plugin {
+  hpx_parcel_t* (*work_produce)();
+  void (*work_consume)(hpx_parcel_t *const);
+  hpx_parcel_t* (*work_steal)();
+  bool on;
+} priority_plugin_t;
+
 /// The scheduler class.
 ///
 /// The scheduler class represents the shared-memory state of the entire
@@ -62,20 +70,21 @@ struct cvar;
 /// table, though all of the functionality that is required to make this work is
 /// not implemented.
 struct scheduler {
-  volatile int     stopped;                     // fast flag to avoid locking
+  volatile int        stopped;                     // fast flag to avoid locking
 
   struct {
-    volatile int     state;
-    pthread_mutex_t   lock;
-    pthread_cond_t running;
+    volatile int        state;
+    pthread_mutex_t      lock;
+    pthread_cond_t    running;
   } run_state;
 
-  volatile int next_tls_id;
-  int            n_workers;
-  uint32_t    wf_threshold;
-  system_barrier_t barrier;
-  worker_t        *workers;
-  int     n_active_workers;           // used by APEX scheduler throttling : akp
+  volatile int    next_tls_id;
+  int               n_workers;
+  uint32_t       wf_threshold;
+  system_barrier_t    barrier;
+  worker_t           *workers;
+  int        n_active_workers;           // used by APEX scheduler throttling : akp
+  priority_plugin_t   p_sched;
 };
 
 #define SCHED_RUN INT_MAX
