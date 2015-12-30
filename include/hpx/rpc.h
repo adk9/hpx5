@@ -212,8 +212,7 @@ int _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 /// Call with current continuation.
 ///
 /// This calls an action passing the currrent thread's continuation as the
-/// continuation for the called action. It finishes the current thread's
-/// execution, and does not yield control back to the thread.
+/// continuation for the called action.
 ///
 /// @param         addr The address where the action is executed.
 /// @param       action The action to perform.
