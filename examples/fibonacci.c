@@ -139,8 +139,6 @@ int main(int argc, char *argv[]) {
      break;
   }
 
-  sigprocmask(0, NULL, NULL);
-
   // run the main action
   e = hpx_run(&_fib_main, &n, sizeof(n));
   hpx_finalize();
