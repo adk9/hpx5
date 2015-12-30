@@ -257,7 +257,7 @@ config_t *config_new(int *argc, char ***argv)
 
 void config_delete(config_t *cfg);
 
-void config_print(config_t *cfg, FILE *file);
+void config_print(const config_t *cfg, FILE *file);
 
 /// Add declarations to query each of the set options.
 ///

@@ -350,8 +350,7 @@ config_t *config_new(int *argc, char ***argv) {
   return cfg;
 }
 
-void
-config_print(config_t *cfg, FILE *f) {
+void config_print(const config_t *cfg, FILE *f) {
   fprintf(f, "------------------------\n"
              "HPX PARSED CONFIGURATION\n"
              "------------------------\n");
