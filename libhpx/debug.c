@@ -104,7 +104,7 @@ static int _register_wait_on_sig(int signum) {
   };
   sigemptyset (&segv.sa_mask);
 
-  if (-1 == sigaction(signum, &segv, NULL)) {
+  if (-1 == __real_sigaction(signum, &segv, NULL)) {
     log_error("could not register _dbg_wait_on_sig for signal(%d)\n", signum);
     return LIBHPX_ERROR;
   }
