@@ -20,7 +20,7 @@
 #include <libhpx/locality.h>
 
 
-libhpx_config_t *libhpx_get_config(void) {
+const libhpx_config_t *libhpx_get_config(void) {
   dbg_assert_str(here, "libhpx not initialized\n");
   dbg_assert_str(here->config, "libhpx config not available yet\n");
   return here->config;

@@ -26,10 +26,10 @@ static int _set_action(hpx_addr_t args, uint64_t count) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_COALESCED, _set, _set_action, HPX_ADDR,
-		  HPX_UINT64);
+          HPX_UINT64);
 
 static int _checkcoalescing_action(void) {
-  libhpx_config_t *cfg = libhpx_get_config();
+  const libhpx_config_t *cfg = libhpx_get_config();
   hpx_addr_t lco = hpx_lco_and_new(hpx_get_num_ranks());
   hpx_addr_t done = hpx_lco_future_new(0);
   uint64_t count = 1;
@@ -42,10 +42,10 @@ static int _checkcoalescing_action(void) {
   hpx_lco_delete(lco, HPX_NULL);
 
   lco = hpx_lco_and_new(cfg->coalescing_buffersize * hpx_get_num_ranks() +
-			hpx_get_num_ranks());
+            hpx_get_num_ranks());
   done = hpx_lco_future_new(0);
   count = (cfg->coalescing_buffersize * hpx_get_num_ranks() +
-	   hpx_get_num_ranks()) / HPX_LOCALITIES;
+       hpx_get_num_ranks()) / HPX_LOCALITIES;
   hpx_bcast(_set, HPX_NULL, done, &lco, &count);
 
   hpx_lco_wait(lco);

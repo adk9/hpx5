@@ -63,7 +63,7 @@ static int gas_move_handler(void) {
   hpx_call_sync(other, get_rank, &my_rank, sizeof(my_rank));
   printf("target locality's rank (after move): %d\n", my_rank);
 
-  libhpx_config_t *cfg = libhpx_get_config();
+  const libhpx_config_t *cfg = libhpx_get_config();
   if (((my_rank == HPX_LOCALITY_ID) && cfg->gas == HPX_GAS_AGAS) ||
       ((my_rank == other_rank) && cfg->gas == HPX_GAS_PGAS)) {
     printf("AGAS test: passed.\n");

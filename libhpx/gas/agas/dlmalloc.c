@@ -26,7 +26,7 @@
 
 void _agas_allocator_init(agas_t *agas, int id) {
   dbg_assert(id < AS_COUNT);
-  libhpx_config_t *cfg = libhpx_get_config();
+  const libhpx_config_t *cfg = libhpx_get_config();
   size_t bytes = ceil_div_size_t(cfg->heapsize, 2);
   void *base = system_mmap(NULL, NULL, bytes, agas->chunk_size);
   dbg_assert(base);

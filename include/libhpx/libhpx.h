@@ -27,11 +27,37 @@ enum {
   LIBHPX_RETRY
 };
 
+/// Forward declare the libhpx configuration type.
+/// @{
 struct config;
 typedef struct config libhpx_config_t;
-libhpx_config_t *libhpx_get_config(void) HPX_PUBLIC;
+/// @}
 
-/// Print the version of libhpx.
-void libhpx_print_version(void) HPX_PUBLIC;
+/// Get the current configuration.
+const libhpx_config_t *libhpx_get_config(void)
+  HPX_PUBLIC;
 
-#endif  // LIBHPX_LIBHPX_H
+/// Print the version of libhpx to stdout.
+void libhpx_print_version(void)
+  HPX_PUBLIC;
+
+#define LIBHPX_MAJOR 0
+#define LIBHPX_MINOR 1
+#define LIBHPX_PATCH 2
+
+/// Get the current version.
+///
+/// The returned version can be inspected using the LIBHPX_VERSION indeces.
+///
+///   int version[3];
+///   libhpx_get_version(version);
+///
+///   printf("major version %d\n, version[LIBHPX_MAJOR]);
+///   printf("minor version %d\n, version[LIBHPX_MINOR]);
+///   printf("patch version %d\n, version[LIBHPX_PATCH]);
+///
+/// @param[out]  version The output version.
+void libhpx_get_version(int version[3])
+  HPX_PUBLIC;
+
+#endif  // LIBHPX_LIBHPX_Hx
