@@ -30,6 +30,6 @@ AC_DEFUN([HPX_CONFIG_LIBHPX], [
   HPX_APPS_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la"
 
   # export our symbol wrapping
-  HPX_APPS_LDFLAGS="$HPX_APPS_LDFLAGS -Wl,--wrap,sigprocmask,--wrap,pthread_sigmask"
-  HPX_PC_PUBLIC_LIBS="$HPX_PC_PUBLIC_LIBS -Wl,--wrap,sigprocmask,--wrap,pthread_sigmask"
+  HPX_APPS_LDFLAGS="$HPX_APPS_LDFLAGS -Wl,--wrap,sigprocmask,--wrap,pthread_sigmask,--wrap,signal,--wrap,sigaction"
+  HPX_PC_PUBLIC_LIBS="$HPX_PC_PUBLIC_LIBS -Wl,--wrap,sigprocmask,--wrap,pthread_sigmask,--wrap,signal,--wrap,sigaction"
 ])

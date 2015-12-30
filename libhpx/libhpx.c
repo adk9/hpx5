@@ -30,9 +30,7 @@ const libhpx_config_t *libhpx_get_config(void) {
 
 /// Infrastructure for detecting incorrect usage inside of lightweight threads.
 /// @{
-int __real_sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
-int __real_pthread_sigmask(int how, const sigset_t *set, sigset_t *oldset);
-
+int __real_sigprocmask(int, const sigset_t *, sigset_t *);
 int __wrap_sigprocmask(int how, const sigset_t *set, sigset_t *oldset) {
   if (here && self && self->current) {
     dbg_error("Changing the signal mask during hpx_run is unsupported\n");
@@ -45,6 +43,7 @@ int __wrap_sigprocmask(int how, const sigset_t *set, sigset_t *oldset) {
   return __real_sigprocmask(how, set, oldset);
 }
 
+int __real_pthread_sigmask(int, const sigset_t *, sigset_t *);
 int __wrap_pthread_sigmask(int how, const sigset_t *set, sigset_t *oldset) {
   if (here && self && self->current) {
     dbg_error("Changing the signal mask during hpx_run is unsupported.\n");
@@ -54,6 +53,24 @@ int __wrap_pthread_sigmask(int how, const sigset_t *set, sigset_t *oldset) {
              "supported however it must be restored before re-entering "
              "HPX execution.\n");
   }
-  return __real_sigprocmask(how, set, oldset);
+  return __real_pthread_sigmask(how, set, oldset);
 }
+
+sighandler_t __real_signal(int, sighandler_t);
+sighandler_t __wrap_signal(int signum, sighandler_t handler) {
+  if (here) {
+    dbg_error("Registering signal handlers after hpx_init is unsupported.\n");
+  }
+  return __real_signal(signum, handler);
+}
+
+int __real_sigaction(int, const struct sigaction *, struct sigaction *);
+int __wrap_sigaction(int signum, const struct sigaction *act,
+                     struct sigaction *oldact) {
+  if (here) {
+    dbg_error("Registering signal handlers after hpx_init is unsupported.\n");
+  }
+  return __real_sigaction(signum, act, oldact);
+}
+
 /// @}
