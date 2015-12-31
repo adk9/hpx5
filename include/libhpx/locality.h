@@ -27,6 +27,7 @@
 /// Furthermore, this file defines a number of inline convenience functions that
 /// wrap common functionality that needs access to the global here object.
 
+#include <signal.h>
 #include <hpx/hpx.h>
 
 #ifdef __cplusplus
@@ -42,7 +43,6 @@ struct scheduler;
 struct topology;
 struct percolation;
 /// @}
-//
 
 /// The locality object.
 ///
@@ -67,6 +67,7 @@ struct percolation;
 ///                    details of all of the actions registered at this locality.
 /// @field    topology The topology information.
 /// @field percolation An interface for dealing with GPU backends.
+/// @field        mask The default signal mask.
 typedef struct locality {
   uint32_t                   rank;
   uint32_t                  ranks;
@@ -80,6 +81,7 @@ typedef struct locality {
 #ifdef HAVE_PERCOLATION
   struct percolation *percolation;
 #endif
+  sigset_t                   mask;
 } locality_t;
 
 /// Inter-locality action interface.

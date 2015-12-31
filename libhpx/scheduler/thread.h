@@ -42,6 +42,7 @@ typedef struct ustack {
   int             error;                        // like errno for this thread
   short            cont;                        // the continuation flag
   short        affinity;                        // set by user
+  short          masked;                        // should we checkpoint sigmask
   char            stack[];
 } ustack_t;
 

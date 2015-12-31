@@ -201,6 +201,45 @@ struct hpx_parcel *_hpx_thread_generate_continuation(int n, ...)
 void hpx_thread_exit(int status)
   HPX_PUBLIC HPX_NORETURN;
 
+#define HPX_SIGNONE     (INT32_C(0))
+#define HPX_SIGSEGV     (INT32_C(1) << 0)
+#define HPX_SIGABRT     (INT32_C(1) << 1)
+#define HPX_SIGFPE      (INT32_C(1) << 2)
+#define HPX_SIGILL      (INT32_C(1) << 3)
+#define HPX_SIGBUS      (INT32_C(1) << 4)
+#define HPX_SIGIOT      (INT32_C(1) << 5)
+#define HPX_SIGSYS      (INT32_C(1) << 6)
+#define HPX_SIGTRAP     (INT32_C(1) << 7)
+
+#define HPX_SIG_BLOCK   (INT32_C(0))
+#define HPX_SIG_UNBLOCK (INT32_C(1))
+#define HPX_SIG_SET     (INT32_C(2))
+
+/// Update the signal mask for the current lightweight thread.
+///
+/// This updates the current signal mask to be @p sig, and returns the previous
+/// mask. Note that currently the only signals that lightweight threads can
+/// manipulate are the "program error signals" defined in
+/// http://www.gnu.org/software/libc/manual/html_node/Program-Error-Signals.html
+/// though in the future HPX may allow access to a larger set of signals.
+///
+/// Changing the signal mask will increase the overheads of lightweight thread
+/// blocking, context switching, and termination for the current thread, but
+/// will not impact other concurrent threads.
+///
+/// The @p how parameter tells HPX how to modify the signal mask.
+///
+///   HPX_SIG_BLOCK:   Mask the passed set.
+///   HPX_SIG_UNBLOCK: Unmask the passed set.
+///   HPX_SIG_SET:    Replace the existing mask with the @p mask.
+///
+/// @param           how One of HPX_SIG_{BLOCK, UNBLOCK, SET}.
+/// @param          mask A bitset set of the signals to modify.
+///
+/// @returns             The previous signal mask.
+int hpx_thread_sigmask(int how, int mask)
+  HPX_PUBLIC;
+
 /// @}
 
 #endif

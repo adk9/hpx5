@@ -173,6 +173,7 @@ void thread_init(ustack_t *thread, hpx_parcel_t *parcel, thread_entry_t f,
   thread->size      = size;
   thread->cont      = 0;
   thread->affinity  = -1;
+  thread->masked    = 0;
 
   // Initialize the top stack frame so that we can correctly "return" from it
   // during the first transfer to this thread.

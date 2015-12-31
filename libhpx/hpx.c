@@ -138,6 +138,10 @@ int hpx_init(int *argc, char ***argv) {
   here->ranks = 0;
   here->epoch = 0;
 
+  sigset_t set;
+  sigemptyset(&set);
+  dbg_check(pthread_sigmask(SIG_BLOCK, &set, &here->mask));
+
   here->config = config_new(argc, argv);
   if (!here->config) {
     status = log_error("failed to create a configuration.\n");

@@ -39,17 +39,18 @@ TESTS = allreduce               \
         parcel_continuation     \
         parcel_create           \
         parcel_send             \
-	parcel_send_coalesced   \
+        parcel_send_coalesced   \
         parcel_send_rendezvous  \
         parcel_send_through     \
         process                 \
         runtime                 \
-        thread_set_affinity     \
         task                    \
         thread_cont_action      \
         thread_continue         \
         thread_create           \
         thread_gettlsid         \
+        thread_set_affinity     \
+        thread_sigmask          \
         thread_yield
 
 if ENABLE_LENGTHY_TESTS
@@ -113,4 +114,5 @@ thread_continue_DEPENDENCIES        = $(HPX_APPS_DEPS)
 thread_create_DEPENDENCIES          = $(HPX_APPS_DEPS)
 thread_gettlsid_DEPENDENCIES        = $(HPX_APPS_DEPS)
 thread_set_affinity_DEPENDENCIES    = $(HPX_APPS_DEPS)
+thread_sigmask_DEPENDENCIES         = $(HPX_APPS_DEPS)
 thread_yield_DEPENDENCIES           = $(HPX_APPS_DEPS)

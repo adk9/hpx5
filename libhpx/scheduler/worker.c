@@ -134,11 +134,22 @@ static void EVENT_THREAD_RESUME(hpx_parcel_t *p, worker_t *w) {
 static void _dbg_transfer(hpx_parcel_t *p, thread_transfer_cont_t c, void *e) {
   thread_transfer(p, c, e);
 }
-
-# define _transfer _dbg_transfer
 #else
-# define _transfer thread_transfer
+# define _dbg_transfer thread_transfer
 #endif
+
+static void _transfer(hpx_parcel_t *p, thread_transfer_cont_t c, void *e,
+                      worker_t *w) {
+  if (!w->current->ustack->masked) {
+    _dbg_transfer(p, c, e);
+  }
+  else {
+    sigset_t set;
+    dbg_check(pthread_sigmask(SIG_SETMASK, &here->mask, &set));
+    _dbg_transfer(p, c, e);
+    dbg_check(pthread_sigmask(SIG_SETMASK, &set, NULL));
+  }
+}
 
 hpx_parcel_t *_hpx_thread_generate_continuation(int n, ...) {
   worker_t *w = self;
@@ -204,6 +215,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
   dbg_assert(!p->ustack);
   p->ustack = q->ustack;
   short cont = p->ustack->cont;
+  short masked = p->ustack->masked;
 
   // Suspend the outer thread, and start the interrupt
   EVENT_THREAD_SUSPEND(q, w);
@@ -211,8 +223,13 @@ static void _execute_interrupt(hpx_parcel_t *p) {
 
   int e = action_exec_parcel(p->action, p);
 
+  if (p->ustack->masked) {
+    dbg_check(pthread_sigmask(SIG_SETMASK, &here->mask, NULL));
+  }
+
   // Restore the current thread pointer.
   _swap_current(q, NULL, w);
+  p->ustack->masked = masked;
   p->ustack->cont = cont;
   p->ustack = NULL;
 
@@ -670,7 +687,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
 
   // don't transfer to the same parcel
   if (p != w->current) {
-    _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = f, .env = env });
+    _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = f, .env = env }, w);
   }
 
   (void)source;
@@ -857,7 +874,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   };
 
   EVENT_THREAD_SUSPEND(current, w);
-  _transfer(_try_bind(w, p), _checkpoint, &env);
+  _transfer(_try_bind(w, p), _checkpoint, &env, w);
   EVENT_THREAD_RESUME(current, self);
 }
 
