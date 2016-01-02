@@ -66,9 +66,9 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int rank) {
     _env = block;
   }
 
-  int e = hpx_call_cc(dst, _insert_block, &block, bsize, &src, sizeof(src),
-                      &attr, sizeof(attr));
-  _cleanup(_env)
+  e = hpx_call_cc(dst, _insert_block, &block, bsize, &src, sizeof(src), &attr,
+                  sizeof(attr));
+  _cleanup(_env);
   return e;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_invalidate_mapping,
