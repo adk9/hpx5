@@ -36,19 +36,19 @@ AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 
-# Checks for programs that we depend on. Our use of CXX is conditional, however
-# we have autotools errors if we don't include the AC_PROG_CXX
-# unconditionally. This is annoying, but doesn't take very long so we just
-# leave it in. Where we need C++, we need C++11, so we use
-# AX_CXX_COMPILE_STDCXX_11 conditionally.
-#
-# @todo: Figure out if it is possible to avoid the AC_PROG_CXX check on the
-#        common path.
+# Checks for programs that we depend on.
 AC_PROG_CC_C99
 AC_PROG_CXX
 AC_PROG_INSTALL
 AM_PROG_AS
 AX_CFI_DIRECTIVES
+
+# C++ doesn't have an AC_PROG_CXX_CXX11 version, but we can get that effect
+# through the use of an AX m4 macro. We're currently mandating a gnu++11
+# compiler, but we could conceivably reduce the strength of our requirement in
+# cases where we're not specifically depending on C++11 functionality. The
+# modern systems are compliant enough for us though.
+AX_CXX_COMPILE_STDCXX_11([ext],[mandatory])
 
 # Initialize automake and libtool
 AM_INIT_AUTOMAKE([1.11 dist-bzip2 subdir-objects foreign tar-ustar -Wall
