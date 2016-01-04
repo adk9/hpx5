@@ -213,30 +213,40 @@ static void _execute_interrupt(hpx_parcel_t *p) {
   // "Borrow" the current thread's stack, so that we can use its lco_depth and
   // cont fields if necessary.
   dbg_assert(!p->ustack);
-  p->ustack = q->ustack;
-  short cont = p->ustack->cont;
-  short masked = p->ustack->masked;
+  ustack_t *stack = q->ustack;
+  short cont = stack->cont;
+  short masked = stack->masked;
+  stack->cont = 0;
+  stack->masked = 0;
+
+  sigset_t mask;
+  if (masked) {
+    dbg_check(pthread_sigmask(SIG_SETMASK, &here->mask, &mask));
+  }
 
   // Suspend the outer thread, and start the interrupt
   EVENT_THREAD_SUSPEND(q, w);
   EVENT_THREAD_RUN(p, w);
 
+  p->ustack = stack;
   int e = action_exec_parcel(p->action, p);
+  p->ustack = NULL;
 
-  if (p->ustack->masked) {
-    dbg_check(pthread_sigmask(SIG_SETMASK, &here->mask, NULL));
+  short interrupt_continued = stack->cont;
+  short interrupt_masked = stack->masked;
+  stack->masked = masked;
+  stack->cont = cont;
+
+  if (interrupt_masked) {
+    dbg_check(pthread_sigmask(SIG_SETMASK, &mask, NULL));
   }
 
-  // Restore the current thread pointer.
   _swap_current(q, NULL, w);
-  p->ustack->masked = masked;
-  p->ustack->cont = cont;
-  p->ustack = NULL;
 
   switch (e) {
    case HPX_SUCCESS:
     log_sched("completed interrupt %p\n", p);
-    if (!p->ustack->cont) {
+    if (!interrupt_continued) {
       _continue_parcel_va(p, 0, NULL);
     }
     EVENT_THREAD_END(p, w);
