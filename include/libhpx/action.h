@@ -424,6 +424,12 @@ static inline bool action_is_internal(hpx_action_t id) {
   return (action->attr & HPX_INTERNAL);
 }
 
+static inline bool action_is_coalesced(hpx_action_t id) {
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->attr & HPX_COALESCED);
+}
+
 static inline bool action_is_default(hpx_action_t id) {
   CHECK_ACTION(id);
   const action_t *action = &actions[id];
@@ -452,12 +458,6 @@ static inline bool action_is_opencl(hpx_action_t id) {
   CHECK_ACTION(id);
   const action_t *action = &actions[id];
   return (action->type == HPX_OPENCL);
-}
-
-static inline bool action_is_coalesced(hpx_action_t id) {
-  CHECK_ACTION(id);
-  const action_t *action = &actions[id];
-  return (action->type == HPX_COALESCED);
 }
 
 /// Wraps the libhpx_register_action() function to make it slightly
