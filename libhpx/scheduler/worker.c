@@ -204,16 +204,19 @@ static hpx_parcel_t *_swap_current(hpx_parcel_t *p, void *sp, worker_t *w) {
 ///
 /// @param            p The parcel that describes the interrupt.
 static void _execute_interrupt(hpx_parcel_t *p) {
+  dbg_assert(!p->ustack);
+
   // Exchange the current thread pointer for the duration of the call. This
   // allows the application code to access thread data, e.g., the current
   // target.
   worker_t *w = self;
   hpx_parcel_t *q = _swap_current(p, NULL, w);
+  ustack_t *stack = q->ustack;
 
   // "Borrow" the current thread's stack, so that we can use its lco_depth and
   // cont fields if necessary.
-  dbg_assert(!p->ustack);
-  ustack_t *stack = q->ustack;
+  p->ustack = stack;
+
   short cont = stack->cont;
   short masked = stack->masked;
   stack->cont = 0;
@@ -228,20 +231,25 @@ static void _execute_interrupt(hpx_parcel_t *p) {
   EVENT_THREAD_SUSPEND(q, w);
   EVENT_THREAD_RUN(p, w);
 
-  p->ustack = stack;
   int e = action_exec_parcel(p->action, p);
-  p->ustack = NULL;
 
   short interrupt_continued = stack->cont;
   short interrupt_masked = stack->masked;
   stack->masked = masked;
   stack->cont = cont;
 
-  if (interrupt_masked) {
+  // Restore the appropriate interrupt mask, if we need to. If the parent had a
+  // mask, then we restore that, otherwise we restore the default system mask.
+  if (masked) {
     dbg_check(pthread_sigmask(SIG_SETMASK, &mask, NULL));
   }
+  else if (interrupt_masked) {
+    dbg_check(pthread_sigmask(SIG_SETMASK, &here->mask, NULL));
+  }
 
+  // And swap back to the parent thread.
   _swap_current(q, NULL, w);
+  p->ustack = NULL;
 
   switch (e) {
    case HPX_SUCCESS:
