@@ -27,16 +27,20 @@ struct config;
 
 /// The data structure representing profiling entries
 /// @field        start_time Time of initialization
+/// @field          ref_time Time of resumption of recording session
 /// @field          run_time Total time spent in this entry
 /// @field    counter_totals Counter totals
+/// @field          user_val Stores the value of a user-defined metric
 /// @field        last_entry The previous entry being recorded
 /// @field        last_event The previous event being recorded
 /// @field            marked True if values have been recorded
 /// @field            paused True if recording has been paused
 typedef struct {
   hpx_time_t   start_time;
+  hpx_time_t     ref_time;
   hpx_time_t     run_time;
   int64_t *counter_totals;
+  double         user_val;
   int          last_entry;
   int          last_event;
   bool             marked;
@@ -46,8 +50,6 @@ typedef struct {
 /// The data structure representing a profiled code event
 /// @field       max_entries Maximum length of the list
 /// @field       num_entries Number of entries in the list
-/// @field             tally Number of occurrences of the event
-/// @field        user_total Stores the total value of a user-defined metric
 /// @field               key The name of the profiled event
 /// @field           entries The actual entries
 /// @field            simple True if hardware counters don't apply
@@ -55,8 +57,6 @@ typedef struct {
 typedef struct {
   int          max_entries;
   int          num_entries;
-  int                tally;
-  double        user_total;
   char                *key;
   profile_entry_t *entries;
   bool              simple;
@@ -145,9 +145,9 @@ int prof_get_maximums(int64_t *values, char *key);
 /// @param         key The key that identifies the code event
 double prof_get_user_total(char *key);
 
-/// Return the tally of event occurrences
+/// Return the number of event occurrences
 /// @param         key The key that identifies the code event
-int prof_get_tally(char *key);
+int prof_get_event_count(char *key);
 
 /// Return the average amount of time that a code event runs for
 /// @param         key The key that identifies the code event
@@ -171,11 +171,11 @@ int prof_get_num_counters(void);
 /// Add to the user defined metric's total
 /// @param         key The key that identifies the code event
 /// @param      amount The amount to add to the total
-void prof_add_to_user_total(char *key, double amount);
+void prof_record_user_val(char *key, double amount);
 
 /// Mark the occurrence of an event
 /// @param         key The key that identifies the code event
-void prof_increment_tally(char *key);
+void prof_mark(char *key);
 
 /// Begin profiling. This begins recording performance information of an event.
 /// @param         key The key that identifies the code event

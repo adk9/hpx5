@@ -250,7 +250,7 @@ int prof_start_hardware_counters(char *key, int *tag) {
     hpx_time_t dur;
     hpx_time_diff(_profile_log.events[
                   _profile_log.current_event].entries[
-                  _profile_log.current_entry].start_time, end, &dur);
+                  _profile_log.current_entry].ref_time, end, &dur);
     _profile_log.events[_profile_log.current_event].entries[
                         _profile_log.current_entry].run_time =
              hpx_time_add(_profile_log.events[_profile_log.current_event].entries[
@@ -272,6 +272,8 @@ int prof_start_hardware_counters(char *key, int *tag) {
   *tag = index;
   PAPI_reset(_profile_log.events[_profile_log.current_event].eventset);
   _profile_log.events[event].entries[index].start_time = hpx_time_now();
+  _profile_log.events[event].entries[index].ref_time = 
+    _profile_log.events[event].entries[index].start_time;
   return PAPI_start(_profile_log.events[event].eventset);
 }
 
@@ -333,7 +335,7 @@ int prof_pause(char *key, int *tag) {
 
   // first store timing information
   hpx_time_t dur;
-  hpx_time_diff(_profile_log.events[event].entries[*tag].start_time, end, &dur);
+  hpx_time_diff(_profile_log.events[event].entries[*tag].ref_time, end, &dur);
   _profile_log.events[event].entries[*tag].run_time = 
       hpx_time_add(_profile_log.events[event].entries[*tag].run_time, dur);
 
@@ -380,7 +382,7 @@ int prof_resume(char *key, int *tag) {
   }
 
   _profile_log.events[event].entries[*tag].paused = false;
-  _profile_log.events[event].entries[*tag].start_time = hpx_time_now();
+  _profile_log.events[event].entries[*tag].ref_time = hpx_time_now();
   if (!_profile_log.events[event].simple) {
     PAPI_reset(_profile_log.events[_profile_log.current_event].eventset);
     return PAPI_start(_profile_log.events[event].eventset);

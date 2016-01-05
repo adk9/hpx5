@@ -253,7 +253,7 @@ void inst_prof_dump(profile_log_t log) {
   fprintf(f, "Total time: %.3f seconds \n", duration);
   for (int i = 0; i < log.num_events; i++) {
     fprintf(f, "\nEvent: %s\n", log.events[i].key);
-    fprintf(f, "Count: %d\n", log.events[i].tally);
+    fprintf(f, "Count: %d\n", log.events[i].num_entries);
 
     if (log.events[i].num_entries > 0) {
       fprintf(f, "Statistics:\n");

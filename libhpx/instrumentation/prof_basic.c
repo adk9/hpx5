@@ -99,7 +99,7 @@ int prof_pause(char *key, int *tag) {
 
   // first store timing information
   hpx_time_t dur;
-  hpx_time_diff(_profile_log.events[event].entries[*tag].start_time, end, &dur);
+  hpx_time_diff(_profile_log.events[event].entries[*tag].ref_time, end, &dur);
   _profile_log.events[event].entries[*tag].run_time =
       hpx_time_add(_profile_log.events[event].entries[*tag].run_time, dur);
 
@@ -128,6 +128,8 @@ int prof_resume(char *key, int *tag) {
 
   _profile_log.events[event].entries[*tag].paused = false;
   _profile_log.events[event].entries[*tag].start_time = hpx_time_now();
+  _profile_log.events[event].entries[*tag].ref_time =
+    _profile_log.events[event].entries[*tag].start_time;
   return LIBHPX_OK;
 }
 
