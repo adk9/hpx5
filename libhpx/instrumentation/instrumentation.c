@@ -254,52 +254,77 @@ void inst_prof_dump(profile_log_t log) {
   for (int i = 0; i < log.num_events; i++) {
     fprintf(f, "\nEvent: %s\n", log.events[i].key);
     fprintf(f, "Count: %d\n", log.events[i].num_entries);
+    double total = prof_get_user_total(log.events[i].key);
+    double total_time_ms;
+    hpx_time_t total_time;
+    prof_get_total_time(log.events[i].key, &total_time);
+    total_time_ms = hpx_time_ms(total_time);
+    if(total != 0){
+      fprintf(f, "Total recorded user value: %f\n", total);
+    }
 
-    if (log.events[i].num_entries > 0) {
+    if(total_time_ms != 0 || (log.num_counters >0 && !log.events[i].simple)){
       fprintf(f, "Statistics:\n");
       fprintf(f, "%-24s%-24s%-24s%-24s\n",
              "Type", "Average", "Minimum", "Maximum");
-      if (log.num_counters > 0 && !log.events[i].simple) {
-        int64_t averages[log.num_counters];
-        int64_t minimums[log.num_counters];
-        int64_t maximums[log.num_counters];
+    }
+    if (log.num_counters > 0 && !log.events[i].simple) {
+      int64_t averages[log.num_counters];
+      int64_t minimums[log.num_counters];
+      int64_t maximums[log.num_counters];
 
-        prof_get_averages(averages, log.events[i].key);
-        prof_get_minimums(minimums, log.events[i].key);
-        prof_get_maximums(maximums, log.events[i].key);
-        for (int j = 0; j < log.num_counters; j++) {
-          fprintf(f, "%-24s%-24"PRIu64"%-24"PRIu64"%-24"PRIu64"\n",
-                  HPX_COUNTER_TO_STRING[log.counters[j]],
-                  averages[j], minimums[j], maximums[j]);
-        }
+      prof_get_averages(averages, log.events[i].key);
+      prof_get_minimums(minimums, log.events[i].key);
+      prof_get_maximums(maximums, log.events[i].key);
+      for (int j = 0; j < log.num_counters; j++) {
+        fprintf(f, "%-24s%-24"PRIu64"%-24"PRIu64"%-24"PRIu64"\n",
+                HPX_COUNTER_TO_STRING[log.counters[j]],
+                averages[j], minimums[j], maximums[j]);
       }
+    }
 
-      hpx_time_t average, min, max;
-      prof_get_average_time(log.events[i].key, &average);
-      prof_get_min_time(log.events[i].key, &min);
-      prof_get_max_time(log.events[i].key, &max);
+    hpx_time_t average, min, max;
+    prof_get_average_time(log.events[i].key, &average);
+    prof_get_min_time(log.events[i].key, &min);
+    prof_get_max_time(log.events[i].key, &max);
 
-      fprintf(f, "%-24s%-24.6f%-24.6f%-24.6f\n", "Time (ms)",
+    if(total_time_ms != 0){
+      fprintf(f, "%-24s%-24.6f%-24.6f%-24.6f\n", "Time",
               hpx_time_ms(average),
               hpx_time_ms(min),
               hpx_time_ms(max));
+    }
 
-      if (_detailed_prof) {
-        fprintf(f, "\nDUMP:\n\n%-24s", "Entry #");
-        for (int j = 0; j < log.num_counters; j++) {
-          fprintf(f, "%-24s", HPX_COUNTER_TO_STRING[log.counters[j]]);
+    if (_detailed_prof) {
+      fprintf(f, "\nDUMP:\n\n%-24s", "Entry #");
+      for (int j = 0; j < log.num_counters; j++) {
+        fprintf(f, "%-24s", HPX_COUNTER_TO_STRING[log.counters[j]]);
+      }
+      fprintf(f, "%-24s", "Start Time (ms)");
+      if(total_time_ms != 0){
+        fprintf(f, "%-24s", "CPU Time (ms)");
+      }
+      if(total != 0){
+        fprintf(f, "%-24s", "User Value (ms)");
+      }
+      fprintf(f, "\n");
+      for (int j = 0; j < log.events[i].num_entries; j++) {
+        fprintf(f, "%-24d", j);
+        for (int k = 0; k < log.num_counters; k++) {
+          fprintf(f, "%-24"PRIu64, log.events[i].entries[j].counter_totals[k]);
         }
-        fprintf(f, "%-24s\n", "Time (ms)");
-        for (int j = 0; j < log.events[i].num_entries; j++) {
-          fprintf(f, "%-24d", j);
-          for (int k = 0; k < log.num_counters; k++) {
-            fprintf(f, "%-24"PRIu64, log.events[i].entries[j].counter_totals[k]);
-          }
-          fprintf(f, "%-24f\n", hpx_time_ms(log.events[i].entries[j].run_time));
+        fprintf(f, "%-24f", hpx_time_ms(log.events[i].entries[j].start_time));
+        if(total_time_ms != 0){
+          fprintf(f, "%-24f", hpx_time_ms(log.events[i].entries[j].run_time));
         }
+        if(total != 0){
+          fprintf(f, "%-24f", log.events[i].entries[j].user_val);
+        }
+        fprintf(f, "\n");
       }
     }
   }
+
   int e = fclose(f);
   if (e != 0) {
     log_error("failed to write profiling output to %s\n", filepath);
