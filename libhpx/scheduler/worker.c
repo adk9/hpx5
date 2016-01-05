@@ -1045,7 +1045,7 @@ int _hpx_thread_continue(int n, ...) {
 }
 
 static _Unwind_Reason_Code _thread_exit(int version, _Unwind_Action actions,
-                                        uint64_t exceptionClass,
+                                        _Unwind_Exception_Class exceptionClass,
                                         exception_t *exceptionObject,
                                         struct _Unwind_Context *context,
                                         void *stop_parameter) {
