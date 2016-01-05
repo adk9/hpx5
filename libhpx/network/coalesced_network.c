@@ -95,7 +95,7 @@ static void _send_n(_coalesced_network_t *coalesced_network, uint64_t n) {
 
   //  allocate array for current buffer index position for each destination
   uint32_t* current_destination_buffer_index = calloc (HPX_LOCALITIES,
-						       sizeof(uint32_t));
+  						       sizeof(uint32_t));
 
    //  Now, sort the parcels to destination bin
   for (uint64_t i = 0; i < n; i++) {
@@ -103,8 +103,8 @@ static void _send_n(_coalesced_network_t *coalesced_network, uint64_t n) {
     uint64_t destination = gas_owner_of(here->gas, p->target);
     size_t current_parcel_size = parcel_size(p);
     memcpy(coalesced_buffer[destination] +
-	   current_destination_buffer_index[destination], p,
-	   current_parcel_size);
+  	   current_destination_buffer_index[destination], p,
+  	   current_parcel_size);
     current_destination_buffer_index[destination] += current_parcel_size;
   }
 
@@ -122,8 +122,8 @@ static void _send_n(_coalesced_network_t *coalesced_network, uint64_t n) {
     hpx_pid_t pid = hpx_thread_current_pid();
     hpx_addr_t target = HPX_THERE(rank);
     hpx_parcel_t *p = parcel_new(target, _demultiplexer, 0, 0, pid,
-				 coalesced_buffer[rank] ,
-				 total_byte_count[rank]);
+  				 coalesced_buffer[rank] ,
+  				 total_byte_count[rank]);
     parcel_prepare(p);
     //  call base network send interface
     network_send(coalesced_network->base_network, p);

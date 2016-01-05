@@ -636,8 +636,6 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
     // Swap our yield queue with our primary queue
     _swap_epoch(w);
 
-    // Do some network stuff;
-    _schedule_network(w, here->network);
 
     // if the priority scheduler is on, process work from there first
     if (here->sched->p_sched.on) {
@@ -646,6 +644,10 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
     if (p) {
       break;
    }
+
+    // Do some network stuff;
+    _schedule_network(w, here->network);
+
 
     // try to steal priority work
     /* if (here->sched->p_sched.on) p = here->sched->p_sched.work_steal(); */
