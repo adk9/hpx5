@@ -87,7 +87,7 @@ static void _send_n(_coalesced_network_t *coalesced_network, uint64_t n) {
   }
 
   //  allocate buffers for each destination
-  char** coalesced_buffer = malloc(HPX_LOCALITIES * sizeof(char *));
+  char** coalesced_buffer = calloc(HPX_LOCALITIES, sizeof(coalesced_buffer[0]));
 
   for (int i = 0; i < HPX_LOCALITIES; i++) {
     coalesced_buffer[i] = malloc(total_byte_count[i] * sizeof(char));
