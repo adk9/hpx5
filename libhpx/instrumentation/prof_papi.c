@@ -226,7 +226,9 @@ int prof_start_hardware_counters(char *key, int *tag) {
   if (event < 0) {
     event = _create_new_event(key);
   }
-  dbg_assert(event >= 0);
+  if(event < 0){
+    return LIBHPX_ERROR;
+  }
 
   if (_profile_log.events[event].simple) {
     return LIBHPX_EINVAL;

@@ -33,6 +33,9 @@
 profile_log_t _profile_log = PROFILE_INIT;
 
 int profile_new_event(char *key, bool simple, int eventset) {
+  if (_profile_log.events == NULL) {
+    return LIBHPX_ERROR;
+  }
   if (_profile_log.num_events == _profile_log.max_events) {
     _profile_log.max_events *= 2;
     size_t bytes = _profile_log.max_events * sizeof(profile_list_t);
@@ -41,6 +44,10 @@ int profile_new_event(char *key, bool simple, int eventset) {
   }
   int index = _profile_log.num_events++;
   profile_list_t *list = &_profile_log.events[index];
+  if (list == NULL) {
+    _profile_log.num_events--;
+    return LIBHPX_ERROR;
+  }
   list->entries = malloc(_profile_log.max_events * sizeof(profile_entry_t));
   dbg_assert(list->entries);
   list->num_entries = 0;
@@ -59,7 +66,7 @@ int profile_get_event(char *key) {
       return i;
     }
   }
-  return -1;
+  return LIBHPX_ERROR;
 }
 
 int profile_new_entry(int event) {
@@ -97,7 +104,7 @@ double prof_get_user_total(char *key) {
     return 0;
   }
   double total = 0;
-  for(int i = 0; i < _profile_log.events[event].num_entries; i++){
+  for (int i = 0; i < _profile_log.events[event].num_entries; i++) {
     total += _profile_log.events[event].entries[i].user_val;
   }
   return total;
@@ -130,7 +137,7 @@ void prof_get_average_time(char *key, hpx_time_t *avg) {
       }
     }
   }
-  if(divisor > 0){
+  if (divisor > 0) {
     average /= divisor;
   }
   seconds = average / 1e9;
@@ -240,7 +247,9 @@ void prof_record_user_val(char *key, double amount) {
   if (event < 0) {
     event = profile_new_event(key, true, 0);
   }
-  dbg_assert(event >= 0);
+  if (event < 0) {
+    return;
+  }
   int index = profile_new_entry(event);
   _profile_log.events[event].entries[index].start_time = hpx_time_now();
   _profile_log.events[event].entries[index].user_val = amount;
@@ -251,7 +260,9 @@ void prof_mark(char *key) {
   if (event < 0) {
     event = profile_new_event(key, true, 0);
   }
-  dbg_assert(event >= 0);
+  if (event < 0) {
+    return;
+  }
   int index = profile_new_entry(event);
   _profile_log.events[event].entries[index].start_time = hpx_time_now();
 }
@@ -262,7 +273,9 @@ void prof_start_timing(char *key, int *tag) {
   if (event < 0) {
     event = profile_new_event(key, true, 0);
   }
-  dbg_assert(event >= 0);
+  if (event < 0) {
+    return;
+  }
 
   // interrupt current timing
   if (_profile_log.current_event >= 0 && 
