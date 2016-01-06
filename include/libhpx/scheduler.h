@@ -94,8 +94,8 @@ struct scheduler *scheduler_new(const struct config *config)
 /// Finalize and free the scheduler object.
 ///
 /// The scheduler must already have been shutdown with
-/// scheduler_shutdown(). Shutting down a scheduler that is active, or was
-/// aborted with scheduler_abort(), results in undefined behavior.
+/// scheduler_shutdown(). Shutting down a scheduler that is active results in
+/// undefined behavior.
 ///
 /// @param    scheduler The scheduler to free.
 void scheduler_delete(struct scheduler *scheduler);
@@ -149,15 +149,6 @@ int scheduler_is_stopped(struct scheduler *scheduler)
 ///
 /// @param    scheduler The scheduler to join.
 void scheduler_join(struct scheduler *scheduler)
-  HPX_NON_NULL(1);
-
-/// Stops the scheduler asynchronously.
-///
-/// This cancels and joins all of the scheduler threads, and then returns. It
-/// should only be called by the main thread that called scheduler_startup().
-///
-/// @param    scheduler The scheduler to abort.
-void scheduler_abort(struct scheduler *scheduler)
   HPX_NON_NULL(1);
 
 /// Spawn a new user-level thread for the parcel.

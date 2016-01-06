@@ -119,6 +119,14 @@ static void _cancel(worker_t *worker) {
   }
 }
 
+static void _abort(struct scheduler *sched) {
+  worker_t *worker = NULL;
+  for (int i = 0, e = sched->n_workers; i < e; ++i) {
+    worker = scheduler_get_worker(sched, i);
+    _cancel(worker);
+  }
+}
+
 struct scheduler *scheduler_new(const config_t *cfg) {
   const int workers = cfg->threads;
 
@@ -228,7 +236,7 @@ int scheduler_restart(struct scheduler *sched) {
 
   status = worker_start();
   if (status != LIBHPX_OK) {
-    scheduler_abort(sched);
+    _abort(sched);
   }
 
   // now switch the state to stopped
@@ -266,7 +274,7 @@ int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
   }
 
   if (status != LIBHPX_OK) {
-    scheduler_abort(sched);
+    _abort(sched);
   }
 
   // wait for the other slave worker threads to launch
@@ -282,12 +290,4 @@ void scheduler_stop(struct scheduler *sched, int code) {
 int scheduler_is_stopped(struct scheduler *sched) {
   int stopped = sync_load(&sched->stopped, SYNC_ACQUIRE);
   return (stopped != SCHED_RUN);
-}
-
-void scheduler_abort(struct scheduler *sched) {
-  worker_t *worker = NULL;
-  for (int i = 0, e = sched->n_workers; i < e; ++i) {
-    worker = scheduler_get_worker(sched, i);
-    _cancel(worker);
-  }
 }
