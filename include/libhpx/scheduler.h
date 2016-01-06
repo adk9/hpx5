@@ -36,10 +36,11 @@ extern "C" {
 #include <libhpx/worker.h>
 
 /// Preprocessor define that tells us if the scheduler is cooperative or
-/// preemptive. Unused at this point
+/// preemptive. Unused at this point.
+/// @{
 #define LIBHPX_SCHEDULER_COOPERATIVE 1
 //#define LIBHPX_SCHEDULER_PREEMPTIVE 1
-
+/// @}
 
 /// Forward declarations
 /// @{
