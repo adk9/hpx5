@@ -308,11 +308,12 @@ void hpx_exit(int code) {
   dbg_assert_str(here->ranks,
                  "hpx_exit can only be called when the system is running.\n");
 
+  uint64_t c = (uint32_t)code;
+
   // Make sure we flush our local network when we stop, but don't send our own
   // shutdown here because it can "arrive" locally very quickly, before we've
   // even come close to sending the rest of the stop commands. This can cause
   // problems with flushing.
-  uint64_t c = code;
   for (int i = 0, e = here->ranks; i < e; ++i) {
     if (i != here->rank) {
       int e = network_command(here->network, HPX_THERE(i), locality_stop, c);
