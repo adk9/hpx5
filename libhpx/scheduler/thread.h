@@ -20,30 +20,36 @@
 #include <unwind.h>
 #include <hpx/hpx.h>
 
+/// Some unwind headers don't define this extended typedef.
+///
+/// @note: This preprocessor check only works if config.h is included. We don't
+///        have any headers that use this typedef yet, it's only used in source
+///        files that already include config.h, so we're okay.
+/// @{
+#ifndef HAVE_UNWIND_EXCEPTION_CLASS
+typedef uint64_t _Unwind_Exception_Class;
+#endif
+/// @}
+
 /// Forward declarations
 /// @{
 struct lco_class;
 /// @}
 
-/// Typedefs
-/// @{
-typedef struct _Unwind_Exception exception_t;
-/// @}
-
 typedef struct ustack {
-  void              *sp;                        // checkpointed stack pointer
-  hpx_parcel_t  *parcel;                        // the progenitor parcel
-  struct ustack   *next;                        // freelists and condition vars
-  exception_t exception;                        // exception for hpx_exit
-  int         lco_depth;                        // how many lco locks we hold
-  int            tls_id;                        // backs tls
-  int          stack_id;                        // used by VALGRIND
-  int              size;                        // the size of this stack
-  int             error;                        // like errno for this thread
-  short            cont;                        // the continuation flag
-  short        affinity;                        // set by user
-  short          masked;                        // should we checkpoint sigmask
-  char            stack[];
+  void *sp;                                     // checkpointed stack pointer
+  hpx_parcel_t *parcel;                         // the progenitor parcel
+  struct ustack *next;                          // freelists and condition vars
+  struct _Unwind_Exception exception;           // exception for hpx_exit
+  int lco_depth;                                // how many lco locks we hold
+  int tls_id;                                   // backs tls
+  int stack_id;                                 // used by VALGRIND
+  int size;                                     // the size of this stack
+  int error;                                    // like errno for this thread
+  short cont;                                   // the continuation flag
+  short affinity;                               // set by user
+  short masked;                                 // should we checkpoint sigmask
+  char stack[];
 } ustack_t;
 
 /// This is the type of an HPX thread entry function.

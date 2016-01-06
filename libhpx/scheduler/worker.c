@@ -1045,8 +1045,8 @@ int _hpx_thread_continue(int n, ...) {
 }
 
 static _Unwind_Reason_Code _thread_exit(int version, _Unwind_Action actions,
-                                        _Unwind_Exception_Class exceptionClass,
-                                        exception_t *exceptionObject,
+                                        _Unwind_Exception_Class class,
+                                        struct _Unwind_Exception *obj,
                                         struct _Unwind_Context *context,
                                         void *stop_parameter) {
   if (_Unwind_GetIP(context)) {
