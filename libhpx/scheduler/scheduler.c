@@ -100,18 +100,15 @@ static int _create(worker_t *worker, const config_t *cfg) {
 
 static void _join(worker_t *worker) {
   dbg_assert(worker);
-
-  if (worker->thread == pthread_self()) {
-    return;
-  }
-
+  dbg_assert(worker->thread != pthread_self());
   int e = pthread_join(worker->thread, NULL);
   if (e) {
     dbg_error("cannot join worker thread %d (%s).\n", worker->id, strerror(e));
   }
 }
 
-static void _cancel(worker_t *worker) {
+/// Cancel a worker thread.
+static void _cancel(const worker_t *worker) {
   dbg_assert(worker);
   dbg_assert(worker->thread != pthread_self());
   if (pthread_cancel(worker->thread)) {
@@ -215,7 +212,7 @@ worker_t *scheduler_get_worker(struct scheduler *sched, int id) {
 }
 
 int scheduler_restart(struct scheduler *sched) {
-  int status = LIBHPX_OK;
+  int status;
 
   // notify everyone that they don't have to keep checking the lock.
   sync_store(&sched->stopped, SCHED_RUN, SYNC_RELEASE);
@@ -227,9 +224,6 @@ int scheduler_restart(struct scheduler *sched) {
   pthread_mutex_unlock(&sched->run_state.lock);
 
   status = worker_start();
-  if (status != LIBHPX_OK) {
-    scheduler_abort(sched);
-  }
 
   // now switch the state to stopped
   pthread_mutex_lock(&sched->run_state.lock);
@@ -265,10 +259,6 @@ int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
     }
   }
 
-  if (status != LIBHPX_OK) {
-    scheduler_abort(sched);
-  }
-
   // wait for the other slave worker threads to launch
   system_barrier_wait(&sched->barrier);
 
@@ -282,12 +272,4 @@ void scheduler_stop(struct scheduler *sched, int code) {
 int scheduler_is_stopped(struct scheduler *sched) {
   int stopped = sync_load(&sched->stopped, SYNC_ACQUIRE);
   return (stopped != SCHED_RUN);
-}
-
-void scheduler_abort(struct scheduler *sched) {
-  worker_t *worker = NULL;
-  for (int i = 0, e = sched->n_workers; i < e; ++i) {
-    worker = scheduler_get_worker(sched, i);
-    _cancel(worker);
-  }
 }

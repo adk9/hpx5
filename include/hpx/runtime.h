@@ -29,8 +29,8 @@
 /// scheduler, network, and locality and should be called before any other HPX
 /// functions.
 ///
-/// @param argc   count of command-line arguments
-/// @param argv   array of command-line arguments
+/// @param         argc Count of command-line arguments.
+/// @param         argv Array of command-line arguments.
 /// @returns      HPX_SUCCESS on success
 int hpx_init(int *argc, char ***argv)
   HPX_PUBLIC;
@@ -58,11 +58,12 @@ void hpx_finalize()
 /// instance is running, waiting for a successful inter-locality steal operation
 /// (if that is implemented) or a network parcel.
 ///
-/// @param entry an action to execute, or HPX_ACTION NULL to wait for an
-///              incoming parcel or a inter-locality steal (if implemented)
-/// @param nargs the number of arguments to pass to @p entry
-/// @returns     the status code passed to hpx_exit() upon
-///              termination.
+/// @param        entry An action to execute, or HPX_ACTION NULL to wait for an
+///                     incoming parcel or a inter-locality steal (if
+///                     implemented).
+/// @param        nargs The number of arguments to pass to @p entry.
+///
+/// @returns            The status code passed to hpx_exit() upon termination.
 int _hpx_run(hpx_action_t *entry, int nargs, ...)
   HPX_PUBLIC;
 
@@ -89,14 +90,13 @@ int _hpx_run(hpx_action_t *entry, int nargs, ...)
 ///       consumption as a result of this call. In particular, runtime-spawned
 ///       system threads should be suspended.
 ///
-/// @param         code A status code to be returned by hpx_run()
+/// @param         code A status code to be returned by hpx_run().
 void hpx_exit(int code)
   HPX_PUBLIC HPX_NORETURN;
 
 /// Abort the HPX runtime.
 ///
-/// This is not cooperative, and will not clean up any resources. Furthermore,
-/// the state of the system after the return is not well defined.
+/// This is not cooperative, and will not clean up any resources.
 void hpx_abort(void)
   HPX_PUBLIC HPX_NORETURN;
 
