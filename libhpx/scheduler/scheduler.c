@@ -111,7 +111,8 @@ static void _join(worker_t *worker) {
   }
 }
 
-static void _cancel(worker_t *worker) {
+/// Cancel a worker thread.
+static void _cancel(const worker_t *worker) {
   dbg_assert(worker);
   dbg_assert(worker->thread != pthread_self());
   if (pthread_cancel(worker->thread)) {
@@ -119,10 +120,10 @@ static void _cancel(worker_t *worker) {
   }
 }
 
-static void _abort(struct scheduler *sched) {
-  worker_t *worker = NULL;
-  for (int i = 0, e = sched->n_workers; i < e; ++i) {
-    worker = scheduler_get_worker(sched, i);
+/// Cancel all of the secondary worker threads in the system.
+static void _cancel_secondary(struct scheduler *sched) {
+  for (int i = 1, e = sched->n_workers; i < e; ++i) {
+    worker_t *worker = scheduler_get_worker(sched, i);
     _cancel(worker);
   }
 }
@@ -236,7 +237,7 @@ int scheduler_restart(struct scheduler *sched) {
 
   status = worker_start();
   if (status != LIBHPX_OK) {
-    _abort(sched);
+    _cancel_secondary(sched);
   }
 
   // now switch the state to stopped
@@ -274,7 +275,7 @@ int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
   }
 
   if (status != LIBHPX_OK) {
-    _abort(sched);
+    _cancel_secondary(sched);
   }
 
   // wait for the other slave worker threads to launch
