@@ -120,14 +120,6 @@ static void _cancel(const worker_t *worker) {
   }
 }
 
-/// Cancel all of the secondary worker threads in the system.
-static void _cancel_secondary(struct scheduler *sched) {
-  for (int i = 1, e = sched->n_workers; i < e; ++i) {
-    worker_t *worker = scheduler_get_worker(sched, i);
-    _cancel(worker);
-  }
-}
-
 struct scheduler *scheduler_new(const config_t *cfg) {
   const int workers = cfg->threads;
 
@@ -224,7 +216,7 @@ worker_t *scheduler_get_worker(struct scheduler *sched, int id) {
 }
 
 int scheduler_restart(struct scheduler *sched) {
-  int status = LIBHPX_OK;
+  int status;
 
   // notify everyone that they don't have to keep checking the lock.
   sync_store(&sched->stopped, SCHED_RUN, SYNC_RELEASE);
@@ -236,9 +228,6 @@ int scheduler_restart(struct scheduler *sched) {
   pthread_mutex_unlock(&sched->run_state.lock);
 
   status = worker_start();
-  if (status != LIBHPX_OK) {
-    _cancel_secondary(sched);
-  }
 
   // now switch the state to stopped
   pthread_mutex_lock(&sched->run_state.lock);
@@ -272,10 +261,6 @@ int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
 
       return status;
     }
-  }
-
-  if (status != LIBHPX_OK) {
-    _cancel_secondary(sched);
   }
 
   // wait for the other slave worker threads to launch
