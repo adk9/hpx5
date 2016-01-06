@@ -100,11 +100,7 @@ static int _create(worker_t *worker, const config_t *cfg) {
 
 static void _join(worker_t *worker) {
   dbg_assert(worker);
-
-  if (worker->thread == pthread_self()) {
-    return;
-  }
-
+  dbg_assert(worker->thread != pthread_self());
   int e = pthread_join(worker->thread, NULL);
   if (e) {
     dbg_error("cannot join worker thread %d (%s).\n", worker->id, strerror(e));
