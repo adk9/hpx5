@@ -142,7 +142,8 @@ hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p)
 /// @param            p The parcel to send, must correspond to a parcel returned
 ///                       from hpx_parcel_acquire().
 ///
-/// @param         gate The LCO that will serve as the gate.
+/// @param         gate The LCO that will serve as the gate, must be
+///                       non-HPX_NULL.
 ///
 /// @param        lsync The global address of an LCO to set once the send has
 ///                       completed locally (i.e., the parcel's buffer can be
@@ -164,7 +165,8 @@ hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
 /// @param            p The parcel to send, must correspond to a parcel returned
 ///                       from hpx_parcel_acquire().
 ///
-/// @param          lco The LCO that will serve as the gate.
+/// @param          lco The LCO that will serve as the gate, must be
+///                       non-HPX_NULL.
 ///
 /// @returns            HPX_SUCCESS or an error code.
 hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t lco)

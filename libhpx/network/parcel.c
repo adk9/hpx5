@@ -149,11 +149,10 @@ void parcel_launch_error(hpx_parcel_t *p, int error) {
 }
 
 void parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate) {
-  if (gate) {
-    parcel_prepare(p);
-    hpx_pid_t pid = self->current->pid;
-    p = parcel_new(gate, lco_attach, 0, 0, pid, p, parcel_size(p));
-  }
+  dbg_assert(gate);
+  parcel_prepare(p);
+  hpx_pid_t pid = self->current->pid;
+  p = parcel_new(gate, lco_attach, 0, 0, pid, p, parcel_size(p));
   parcel_launch(p);
 }
 

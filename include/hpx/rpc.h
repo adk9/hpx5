@@ -75,9 +75,9 @@ int _hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result, int n,
 ///
 /// This is a locally-synchronous, globally-asynchronous variant of
 /// the remote-procedure call interface which implements the hpx_parcel_send_
-/// through() function.
+/// through() function. The gate must be non-HPX_NULL.
 ///
-/// @param         gate The LCO that will serve as the gate.
+/// @param         gate The LCO that will serve as the gate (not HPX_NULL).
 /// @param         addr The address that defines where the action is executed.
 /// @param       action The action to perform.
 /// @param       result An address of an LCO to trigger with the result.
@@ -95,7 +95,9 @@ int _hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 
 /// Locally synchronous call_when with continuation interface.
 ///
-/// @param         gate The LCO that will serve as the gate.
+/// The gate must be non-HPX_NULL.
+///
+/// @param         gate The LCO that will serve as the gate (not HPX_NULL).
 /// @param         addr The address that defines where the action is executed.
 /// @param       action The action to perform.
 /// @param     c_target The address where the continuation action is executed.
