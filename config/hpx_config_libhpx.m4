@@ -19,12 +19,6 @@ AC_DEFUN([HPX_CONFIG_LIBHPX], [
                  [unwind.h typedefs _Unwind_Exception_Class])],
                 [], [#include <unwind.h>])
   
-  # HPX uses some libm things to compute 
-  AC_CHECK_LIB([m], [log,ceil])
-  HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lm"
-  LIBHPX_LIBS="$LIBHPX_LIBS -lm"
-  HPX_APPS_LIBS="$HPX_APPS_LIBS -lm"
-
   # Make sure that static linking libhpx.a with $(CC) works when we have a C++
   # dependency built into libhpx. This is for C applications, external C++
   # clients will have to deal with linking libstdc++ on their own if they need
