@@ -61,7 +61,7 @@
 
 #define sync_cas(addr, from, to, onsuccess, onfailure) ({               \
       __typeof(to) expected = *(from);                                  \
-      __typeof(to) actual = __sync_val_compare_and_swap(addr, from, to); \
+      __typeof(to) actual = __sync_val_compare_and_swap(addr, expected, to); \
       bool success = (actual == expected);                              \
       if (!success) {                                                   \
         *(from) = actual;                                               \
