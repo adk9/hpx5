@@ -156,11 +156,10 @@ static int _coalesced_network_send(void *network,  hpx_parcel_t *p) {
     parcel_count - coalesced_network->coalescing_size;
     uint64_t temp_parcel_count = parcel_count;
     sync_fadd(&coalesced_network->syncflush, 1, SYNC_ACQ_REL);
-    uint64_t viewed_parcel_count =
-    sync_cas_val(&coalesced_network->parcel_count,
-                 temp_parcel_count,
-                 readjusted_parcel_count,
-                 SYNC_RELAXED, SYNC_RELAXED);
+    uint64_t viewed_parcel_count = sync_cas(&coalesced_network->parcel_count,
+                                            &temp_parcel_count,
+                                            readjusted_parcel_count, SYNC_RELAXED,
+                                            SYNC_RELAXED);
     if (viewed_parcel_count == parcel_count) {
       // flush outstanding buffer
       _send_n(coalesced_network, coalesced_network->coalescing_size);
@@ -194,10 +193,9 @@ static int _coalesced_network_progress(void *obj, int id) {
          current_parcel_count > 0) {
     uint64_t temp_parcel_count = current_parcel_count;
     sync_fadd(&coalesced_network->syncflush, 1, SYNC_ACQ_REL);
-    uint64_t viewed_parcel_count =
-    sync_cas_val(&coalesced_network->parcel_count,
-                 temp_parcel_count, 0,
-                 SYNC_RELAXED, SYNC_RELAXED);
+    uint64_t viewed_parcel_count = sync_cas(&coalesced_network->parcel_count,
+                                            &temp_parcel_count, 0, SYNC_RELAXED,
+                                            SYNC_RELAXED);
     if (viewed_parcel_count == current_parcel_count) {
       // flush outstanding buffer
       _send_n(coalesced_network, current_parcel_count);

@@ -59,15 +59,15 @@
 
 #define sync_swap(addr, val, mm) __sync_lock_test_and_set (addr, val)
 
-#define sync_cas(addr, from, to, onsuccess, onfailure)  \
-  __sync_bool_compare_and_swap(addr, from, to)
-
-#define sync_cas_val(addr, from, to, onsuccess, onfailure)		\
-  ({ __typeof(to) expected = *(from);					\
-    __typeof(to) actual = __sync_val_compare_and_swap(addr, from, to);	\
-    bool success = (actual == expected);				\
-    if (!success) *(from) = actual;					\
-    success; })
+#define sync_cas(addr, from, to, onsuccess, onfailure) ({               \
+      __typeof(to) expected = *(from);                                  \
+      __typeof(to) actual = __sync_val_compare_and_swap(addr, from, to); \
+      bool success = (actual == expected);                              \
+      if (!success) {                                                   \
+        *(from) = actual;                                               \
+      }                                                                 \
+      success;                                                          \
+    })
 
 #define sync_fadd(addr, val, mm) __sync_fetch_and_add(addr, val)
 #define sync_addf(addr, val, mm) __sync_add_and_fetch(addr, val)

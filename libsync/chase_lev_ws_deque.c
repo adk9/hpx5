@@ -114,7 +114,7 @@ static void _deque_set_top(chase_lev_ws_deque_t *deque, uint64_t top) {
 }
 
 static bool _deque_try_inc_top(chase_lev_ws_deque_t *deque, uint64_t top) {
-  return sync_cas(&deque->top, top, top + 1, SYNC_RELEASE, SYNC_RELAXED);
+  return sync_cas(&deque->top, &top, top + 1, SYNC_RELEASE, SYNC_RELAXED);
 }
 /// @}
 
