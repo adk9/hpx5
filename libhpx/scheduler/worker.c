@@ -233,30 +233,14 @@ static void _execute_interrupt(hpx_parcel_t *p) {
 
   int e = action_exec_parcel(p->action, p);
 
-  short interrupt_continued = stack->cont;
-  short interrupt_masked = stack->masked;
-  stack->masked = masked;
-  stack->cont = cont;
-
-  // Restore the appropriate interrupt mask, if we need to. If the parent had a
-  // mask, then we restore that, otherwise we restore the default system mask.
-  if (masked) {
-    dbg_check(pthread_sigmask(SIG_SETMASK, &mask, NULL));
-  }
-  else if (interrupt_masked) {
-    dbg_check(pthread_sigmask(SIG_SETMASK, &here->mask, NULL));
-  }
-
-  // And swap back to the parent thread.
-  _swap_current(q, NULL, w);
-  p->ustack = NULL;
-
   switch (e) {
    case HPX_SUCCESS:
     log_sched("completed interrupt %p\n", p);
-    if (!interrupt_continued) {
+    if (!stack->cont) {
       _continue_parcel_va(p, 0, NULL);
     }
+    _swap_current(q, NULL, w);
+    p->ustack = NULL;
     EVENT_THREAD_END(p, w);
     EVENT_THREAD_RESUME(q, self);
     parcel_delete(p);
@@ -267,6 +251,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
     EVENT_THREAD_END(p, w);
     EVENT_PARCEL_RESEND(p);
     EVENT_THREAD_RESUME(q, self);
+    p->ustack = NULL;
     parcel_launch(p);
     break;
 
@@ -277,6 +262,18 @@ static void _execute_interrupt(hpx_parcel_t *p) {
    default:
     dbg_error("interrupt produced unexpected error %s.\n", hpx_strerror(e));
   }
+
+  // Restore the appropriate interrupt mask, if we need to. If the parent had a
+  // mask, then we restore that, otherwise we restore the default system mask.
+  if (masked) {
+    dbg_check(pthread_sigmask(SIG_SETMASK, &mask, NULL));
+  }
+  else if (stack->masked) {
+    dbg_check(pthread_sigmask(SIG_SETMASK, &here->mask, NULL));
+  }
+
+  stack->masked = masked;
+  stack->cont = cont;
 }
 
 /// The entry function for all of the lightweight threads.
