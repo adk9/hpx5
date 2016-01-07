@@ -47,101 +47,78 @@ static void _coalesced_network_delete(void *obj) {
 }
 
 // demultiplexing action on the receiver side
-static int _demultiplex_message_handler(void* fatparcel, size_t remaining) {
+static int _demux_handler(char* buffer, int n) {
   // retrieve the next parcel from the fat parcel
-  hpx_parcel_t *next = fatparcel;
-  while (remaining > 0) {
-    uint32_t next_parcel_size = parcel_size(next);
-    hpx_parcel_t *clone = parcel_clone(next);
-    parcel_launch(clone);
-    next = (hpx_parcel_t*) (((char*) next) + (next_parcel_size));
-    remaining -= next_parcel_size;
-    dbg_assert(remaining >= 0);
+  while (n) {
+    hpx_parcel_t *p = parcel_clone((void*)buffer);
+    size_t bytes = parcel_size(p);
+    buffer += bytes;
+    n -= bytes;
+    dbg_assert(n >= 0);
+    parcel_launch(p);
   }
   return HPX_SUCCESS;
 }
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _demux, _demux_handler,
+                     HPX_POINTER, HPX_INT);
 
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _demultiplexer,
-                     _demultiplex_message_handler, HPX_POINTER, HPX_SIZE_T);
+static void _send_n(_coalesced_network_t *network, uint64_t n_parcels) {
+  // 0) Allocate temporary storage.
+  struct {
+    hpx_parcel_t *fatp;
+    char         *next;
+    int        n_bytes;
+  } *locs = calloc(HPX_LOCALITIES, sizeof(*locs));
 
-static void _send_n(_coalesced_network_t *coalesced_network, uint64_t n) {
-  uint64_t parcel_to_be_dequeued_count = n;
-
-  // allocate an array to get bytecount per destination
-  uint32_t *total_byte_count = calloc(HPX_LOCALITIES, sizeof(uint32_t));
-
-  // allocate array for maintaining how many parcels per destination in the
-  // coalesced buffers and initialize them
-  uint32_t *destination_buffer_size = calloc(HPX_LOCALITIES, sizeof(uint32_t));
-
-  // temporarily copy content of the queue into a buffer and get an estimation
-  // of how many buffers need to be allocated per destination.
-  hpx_parcel_t *coalesced_chain = NULL;
-  for (; parcel_to_be_dequeued_count > 0; parcel_to_be_dequeued_count--) {
-    hpx_parcel_t *p = sync_two_lock_queue_dequeue(&coalesced_network->sends);
-    dbg_assert(p);
-    parcel_stack_push(&coalesced_chain, p);
-    uint64_t destination = gas_owner_of(here->gas, p->target);
-    destination_buffer_size[destination] += 1;
-    total_byte_count[destination] += parcel_size(p);
+  // 1) We'll pull n parcels off the global send queue, and store them
+  //    temporarily in a local stack, so that we can accumulate the number of
+  //    bytes we need to send to each rank.
+  gas_t *gas = here->gas;
+  hpx_parcel_t *chain = NULL;
+  hpx_parcel_t *p = NULL;
+  while (n_parcels--) {
+    p = sync_two_lock_queue_dequeue(&network->sends);
+    size_t bytes = parcel_size(p);
+    uint32_t   l = gas_owner_of(gas, p->target);
+    locs[l].n_bytes += bytes;
+    parcel_stack_push(&chain, p);
   }
 
-  // allocate buffers for each destination
-  char **coalesced_buffer = calloc(HPX_LOCALITIES, sizeof(coalesced_buffer[0]));
-  hpx_parcel_t **fat_parcels = calloc(HPX_LOCALITIES, sizeof(fat_parcels[0]));
-
-  for (int i = 0; i < HPX_LOCALITIES; i++) {
-    if (total_byte_count[i]) {
-      void *null = NULL;
-      size_t size = total_byte_count[i];
-      hpx_addr_t target = HPX_THERE(i);
-      fat_parcels[i] = action_new_parcel(_demultiplexer, target, 0, 0, 2, &null,
-                                         &size);
-      coalesced_buffer[i] = hpx_parcel_get_data(fat_parcels[i]);
-   }
-  }
-
-  // allocate array for current buffer index position for each destination
-  uint32_t* current_destination_buffer_index = calloc (HPX_LOCALITIES,
-                                                       sizeof(uint32_t));
-
-  // Now, sort the parcels to destination bin
-  for (uint64_t i = 0; i < n; i++) {
-    hpx_parcel_t *p = parcel_stack_pop(&coalesced_chain);
-    uint64_t destination = gas_owner_of(here->gas, p->target);
-    size_t current_parcel_size = parcel_size(p);
-    memcpy(coalesced_buffer[destination] +
-           current_destination_buffer_index[destination], p,
-           current_parcel_size);
-    current_destination_buffer_index[destination] += current_parcel_size;
-  }
-
-  // create fat parcel for each destination and call base network interface to
-  // send it
-  for (int rank = 0; rank < HPX_LOCALITIES; rank++) {
-    // check whether the particular destination has any parcel to recieve ie.
-    // check if zero parcel count
-    if(destination_buffer_size[rank] == 0) {
-      continue;
+  // 2) Allocate a parcel for each rank that we have bytes going to, and grab a
+  //    pointer to the beginning of its buffer.
+  for (int l = 0, e = HPX_LOCALITIES; l < e; ++l) {
+    int n = locs[l].n_bytes;
+    if (n) {
+      locs[l].fatp = action_new_parcel(_demux, HPX_THERE(l), 0, 0, 2, NULL, n);
+      locs[l].next = hpx_parcel_get_data(locs[l].fatp);
     }
-
-    parcel_prepare(fat_parcels[rank]);
-    // call base network send interface
-    network_send(coalesced_network->base_network, fat_parcels[rank]);
   }
 
-  // clean up code
-  free(coalesced_buffer);
-  free(total_byte_count);
-  free(destination_buffer_size);
-  free(current_destination_buffer_index);
+  // 3) Copy the chained parcels to the appropriate buffers.
+  while ((p = parcel_stack_pop(&chain))) {
+    size_t bytes = parcel_size(p);
+    uint32_t   l = gas_owner_of(gas, p->target);
+    memcpy(locs[l].next, p, bytes);
+    locs[l].next += bytes;
+    parcel_delete(p);
+  }
+
+  // 4) Send the fat parcel to each target.
+  network_t *base = network->base_network;
+  for (int l = 0, e = HPX_LOCALITIES; l < e; ++l) {
+    if (locs[l].fatp) {
+      network_send(base, locs[l].fatp);
+    }
+  }
+
+  // 5) Clean up the temporary array.
+  free(locs);
 }
 
 static int _coalesced_network_send(void *network,  hpx_parcel_t *p) {
   _coalesced_network_t *coalesced_network = network;
   if (!action_is_coalesced(p->action)) {
-    network_send(coalesced_network->base_network, p);
-    return LIBHPX_OK;
+    return network_send(coalesced_network->base_network, p);
   }
 
   // Before putting the parcel in the queue, check whether the queue size has
@@ -170,7 +147,9 @@ static int _coalesced_network_send(void *network,  hpx_parcel_t *p) {
     parcel_count = sync_load(&coalesced_network->parcel_count,  SYNC_RELAXED);
   }
 
-  // Put the parcel in the coalesced send queue
+  // Prepare the parcel now, 1) to serialize it while its data is probably in
+  // our cache and 2) to make sure it gets a pid from the right parent. Put the
+  // parcel in the coalesced send queue.
   dbg_assert(p);
   sync_two_lock_queue_enqueue(&coalesced_network->sends, p);
   sync_fadd(&coalesced_network->parcel_count, 1, SYNC_RELAXED);
