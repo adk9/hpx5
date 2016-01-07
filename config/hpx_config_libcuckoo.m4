@@ -18,7 +18,9 @@ AC_DEFUN([HPX_CONFIG_LIBCUCKOO], [
  required=$2
 
  AS_IF([test "x$required" == xyes], 
-   [HPX_MERGE_STATIC_SHARED([LIBCUCKOO_CARGS]) 
+   [# libcuckoo requires C++11, and hpx.h uses gnu extensions, so ask for [ext]
+    HPX_MERGE_STATIC_SHARED([LIBCUCKOO_CARGS])
+    AX_CXX_COMPILE_STDCXX_11([ext],[mandatory])
     ACX_CONFIGURE_DIR([$contrib], [$contrib], ["$LIBCUCKOO_CARGS"])
     LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -I\$(top_srcdir)/$contrib/src/"
     LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -I\$(top_srcdir)/$contrib/cityhash-1.1.1/src/"
