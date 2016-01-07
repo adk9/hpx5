@@ -22,6 +22,10 @@ AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
    libhpx/network/Makefile
    libhpx/network/isir/Makefile
    libhpx/network/pwc/Makefile
+   libhpx/network/pwc/nbc-photon/Makefile
+   libhpx/network/pwc/nbc-photon/libdict/Makefile
+   libhpx/network/pwc/nbc-photon/ph/Makefile
+   libhpx/network/pwc/nbc-photon/test/Makefile
    libhpx/system/Makefile
    libhpx/system/linux/Makefile
    libhpx/system/darwin/Makefile

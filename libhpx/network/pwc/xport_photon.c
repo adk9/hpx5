@@ -35,6 +35,7 @@
 #include "commands.h"
 #include "registered.h"
 #include "xport.h"
+#include <nbc.h>
 
 // check to make sure we can fit a photon key in the key size
 _HPX_ASSERT(XPORT_KEY_SIZE == sizeof(struct photon_buffer_priv_t),
@@ -316,6 +317,27 @@ _photon_dealloc(void *photon) {
   free(photon);
 }
 
+static void _photon_create_comm(void* c, int rank, void* active_ranks, int num_active, int total){
+  NBC_Comminfo* comm = c ;
+  int res = NBC_Init_comm(rank, active_ranks, num_active, total, comm);
+  if(res != NBC_OK){
+    dbg_error( "Error NBC Initialization() from process %d \n", rank);
+  }
+}
+
+static void _photon_allreduce(void *sendbuf, void* out, int count, void* datatype, void* op, void* c){
+  NBC_Comminfo*comm = c;
+  //NBC right now does not support user operators
+  NBC_Handle handle;
+  NBC_Iallreduce(sendbuf, out, 1, MPI_INT, MPI_SUM, comm, &handle); 
+  int ret = NBC_Wait(&handle);
+
+  //handler errors
+  if(ret != NBC_OK){
+    dbg_error( "Error NBC allreduce() \n");
+  }
+}
+
 pwc_xport_t *
 pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas) {
   photon_pwc_xport_t *photon = malloc(sizeof(*photon));
@@ -335,6 +357,8 @@ pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas) {
   photon->vtable.gwc = _photon_gwc;
   photon->vtable.test = _photon_test;
   photon->vtable.probe = _photon_probe;
+  photon->vtable.create_comm = _photon_create_comm;
+  photon->vtable.allreduce = _photon_allreduce;
 
   // initialize the registered memory allocator
   registered_allocator_init(&photon->vtable);

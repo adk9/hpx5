@@ -1,0 +1,4 @@
+./configure --with-photon=/u/uswickra/hpx/hpx-libnbc/lightweight-libNBC/libnbc-photon/photon/install2 --prefix=/u/uswickra/hpx/hpx-libnbc/lightweight-libNBC/libnbc-photon/install/ CFLAGS="-std=c11 -DINIT_PHOTON=1
+
+./configure --with-photon=/u/uswickra/hpx/hpx-libnbc/lightweight-libNBC/libnbc-photon/photon/install2 --prefix=/u/uswickra/hpx/hpx-libnbc/lightweight-libNBC/libnbc-photon/install/ CFLAGS="-std=c99 -DINIT_PHOTON=1" 
+make clean && make -j 4 && make  install

@@ -1,0 +1,82 @@
+#
+# Copyright (c) 2006 The Trustees of Indiana University and Indiana
+#                    University Research and Technology
+#                    Corporation.  All rights reserved.
+# Copyright (c) 2006 The Technical University of Chemnitz. All 
+#                    rights reserved.
+#
+# Author(s): Torsten Hoefler <htor@cs.indiana.edu>
+#
+
+AC_PREREQ(2.59)
+AC_INIT(libNBC, 1.2, <empty>)
+AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_AUX_DIR(config)
+AC_CANONICAL_SYSTEM
+#AM_INIT_AUTOMAKE(libNBC, 1.0.1)
+AM_INIT_AUTOMAKE
+AM_CONFIG_HEADER([config.h])
+
+# check for wrapper compilers
+NBC_CHECK_MPI
+NBC_CHECK_THREAD
+NBC_CHECK_RT_THREAD
+KLM_SYS_WEAK_ALIAS
+
+# Checks for programs.
+#AC_PROG_CXX
+AC_PROG_CC([gcc])
+#AC_PROG_RANLIB
+
+# Checks for libraries.
+AC_CHECK_LIB([c], [printf])
+AC_CHECK_LIB([m], [log])
+
+# Checks for header files.
+AC_HEADER_STDC
+AC_CHECK_HEADERS([mpi.h stdlib.h stdio.h stdarg.h math.h string.h])
+CFLAGS="${CFLAGS}"
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_C_INLINE
+AC_HEADER_TIME
+
+# Checks for library functions.
+AC_PROG_GCC_TRADITIONAL
+AC_CHECK_FUNCS([realloc malloc memset printf MPI_Init free log pow sqrt])
+
+# defines F77 wrapper function macro F77_FUNC (name, NAME)
+AC_F77_WRAPPERS
+
+AM_DISABLE_SHARED
+AM_ENABLE_STATIC
+AC_PROG_LIBTOOL
+
+LT_INIT
+
+TEST_PHOTON
+AM_CONDITIONAL([HAVE_PHOTON], [test x$with_photon != x])
+
+AC_CONFIG_FILES([Makefile libdict/Makefile ph/Makefile test/Makefile])
+AC_OUTPUT
+
+echo ""
+echo "LibNBC Configuration Summary:"
+if test x$have_photon = x1; then
+	echo -n "configuring PHOTON as transport interface (patching nbc.h) ... "
+	cat nbc.h | sed -e "s/define USE_NONE/define USE_PHOTON/" > $srcdir/nbc.tmp
+	mv $srcdir/nbc.tmp $srcdir/nbc.h
+	echo "done"
+else
+	echo -n "configuring MPI as transport interface (patching nbc.h) ... "
+	cat nbc.h | sed -e "s/define USE_NONE/define USE_MPI/" > $srcdir/nbc.tmp
+	mv $srcdir/nbc.tmp $srcdir/nbc.h
+	echo "done"
+fi;  
+if test x$have_rt_thread = x1; then
+	echo "real-time progress thread enabled ... "
+elif test x$have_thread = x1; then
+	echo "progress thread enabled ... "
+fi;
+echo ""

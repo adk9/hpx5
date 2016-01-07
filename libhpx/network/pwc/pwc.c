@@ -32,6 +32,9 @@
 #include "pwc.h"
 #include "send_buffer.h"
 #include "xport.h"
+#ifdef HAVE_PHOTON
+#include <nbc.h>
+#endif
 
 typedef struct heap_segment {
   size_t        n;
@@ -96,11 +99,51 @@ static void _pwc_release_dma(void *network, const void* base, size_t n) {
 
 static int _pwc_coll_init(void *network, coll_t **_c){
 
+#ifdef HAVE_PHOTON
+  coll_t* c = *_c;
+  int num_active = c->group_sz;
+
+  //todo REMOVE - debug logs
+  printf("total active ranks : %d \n", num_active);
+  int32_t* ranks = (int32_t*) c->data;
+  for (int i = 0; i < c->group_sz; ++i) {
+    printf("active ranks : %d  rank id : %d  \n", c->group_sz, ranks[i]);
+  }
+  
+  if(c->comm_bytes == 0){
+    //we have not yet allocated a communicator
+    int32_t comm_bytes = sizeof(NBC_Comminfo);
+    *_c = realloc(c, sizeof(coll_t) + c->group_bytes + comm_bytes); 
+    c = *_c;
+    c->comm_bytes = comm_bytes;
+  }
+  char *comm = c->data + c->group_bytes;
+  pwc_network_t *pwc = network;
+
+  //todo remove
+  if(num_active < here->ranks){
+    //flushing network is necessary (sufficient ?) to execute any packets
+    //destined for collective group creation operation
+    pwc->vtable.flush(network);
+  }  
+  pwc->xport->create_comm(comm, here->rank, ranks, num_active, here->ranks);
+#endif
   return LIBHPX_OK;
 }
 
 int _pwc_coll_sync(void *network, hpx_parcel_t *in, void* out, coll_t* c){
+  void *sendbuf = in->buffer;
+  int count     = in->size;
+  char *comm    = c->data + c->group_bytes;
+  pwc_network_t *pwc = network;
+  
+  //flushing network is necessary (sufficient ?) to execute any packets
+  //destined for collective operation
+  pwc->vtable.flush(network);
 
+  if(c->type == ALL_REDUCE) {
+    pwc->xport->allreduce(sendbuf, out, count, NULL, &c->op, comm);
+  }
   return LIBHPX_OK;
 }
 

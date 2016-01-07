@@ -1,8 +1,12 @@
 # The isend-irecv network implementations
-noinst_LTLIBRARIES = libpwc.la
-noinst_HEADERS     = circular_buffer.h commands.h parcel_emulation.h pwc.h registered.h send_buffer.h xport.h
+if HAVE_PHOTON
+SUBDIRS = nbc-photon
+endif
 
-libpwc_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
+noinst_LTLIBRARIES = libpwc.la
+noinst_HEADERS     = circular_buffer.h commands.h parcel_emulation.h pwc.h registered.h send_buffer.h xport.h 
+
+libpwc_la_CPPFLAGS = -I$(top_srcdir)/include -Inbc-photon/ $(LIBHPX_CPPFLAGS)
 libpwc_la_CFLAGS   = $(LIBHPX_CFLAGS)
 libpwc_la_SOURCES  = pwc.c \
                      reload.c \
@@ -27,7 +31,9 @@ noinst_LTLIBRARIES		   += libtbbmalloc.la
 libtbbmalloc_la_CPPFLAGS	= -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
 libtbbmalloc_la_CXXFLAGS 	= $(LIBHPX_CXXFLAGS)
 libtbbmalloc_la_SOURCES  	= tbbmalloc_registered.cc
-libpwc_la_LIBADD			= libtbbmalloc.la
+libpwc_la_LIBADD			= nbc-photon/libnbc.la libtbbmalloc.la
+else
+libpwc_la_LIBADD			= nbc-photon/libnbc.la 
 endif
 
 if HAVE_DLMALLOC

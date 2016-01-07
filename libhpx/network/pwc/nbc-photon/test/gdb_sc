@@ -1,0 +1,8 @@
+b nbc.c:478
+b nbc.c:480
+b nbc.c:443
+b nbc_iallreduce.c:75
+disp *((int*)buf2)
+disp buf2
+disp *((int*)handle->tmpbuf) 
+disp handle->tmpbuf
