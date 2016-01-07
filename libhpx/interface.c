@@ -21,6 +21,7 @@
 #include <libhpx/scheduler.h>
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
+#include <libhpx/gas.h>
 #include <assert.h>
 
 /* void hpx_turnon_network_stat(bool turnon) { */
@@ -29,6 +30,10 @@
 /*     w->stats.turnon_network_stat = turnon; */
 /*   } */
 /* } */
+
+int hpx_gas_owner_of(hpx_addr_t addr) {
+  return gas_owner_of(here->gas, addr);
+}
 
 hpx_parcel_t *hpx_create_new_parcel(hpx_addr_t target, hpx_action_t action,
 				    hpx_addr_t c_target, hpx_action_t c_action,
