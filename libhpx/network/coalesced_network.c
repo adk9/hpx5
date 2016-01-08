@@ -30,19 +30,19 @@
 #include <libhpx/parcel.h>
 
 typedef struct {
-  network_t               vtable;
-  network_t        *base_network;
-  two_lock_queue_t         sends;
-  uint64_t          parcel_count;
-  uint64_t previous_parcel_count;
-  uint64_t       coalescing_size;
-  volatile uint64_t    syncflush;
+  network_t       vtable;
+  network_t        *next;
+  two_lock_queue_t sends;
+  int              count;
+  int     previous_count;
+  int    coalescing_size;
+  volatile int syncflush;
 } _coalesced_network_t;
 
 static void _coalesced_network_delete(void *obj) {
   _coalesced_network_t *coalesced_network = obj;
   dbg_assert(coalesced_network);
-  network_delete(coalesced_network->base_network);
+  network_delete(coalesced_network->next);
   free(obj);
 }
 
@@ -62,7 +62,7 @@ static int _demux_handler(char* buffer, int n) {
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _demux, _demux_handler,
                      HPX_POINTER, HPX_INT);
 
-static void _send_n(_coalesced_network_t *network, uint64_t n_parcels) {
+static void _send_n(_coalesced_network_t *network, int n) {
   // 0) Allocate temporary storage.
   struct {
     hpx_parcel_t *fatp;
@@ -76,7 +76,7 @@ static void _send_n(_coalesced_network_t *network, uint64_t n_parcels) {
   gas_t *gas = here->gas;
   hpx_parcel_t *chain = NULL;
   hpx_parcel_t *p = NULL;
-  while (n_parcels--) {
+  while (n--) {
     p = sync_two_lock_queue_dequeue(&network->sends);
     size_t bytes = parcel_size(p);
     uint32_t   l = gas_owner_of(gas, p->target);
@@ -104,10 +104,9 @@ static void _send_n(_coalesced_network_t *network, uint64_t n_parcels) {
   }
 
   // 4) Send the fat parcel to each target.
-  network_t *base = network->base_network;
   for (int l = 0, e = HPX_LOCALITIES; l < e; ++l) {
     if (locs[l].fatp) {
-      network_send(base, locs[l].fatp);
+      network_send(network->next, locs[l].fatp);
     }
   }
 
@@ -118,7 +117,7 @@ static void _send_n(_coalesced_network_t *network, uint64_t n_parcels) {
 static int _coalesced_network_send(void *network,  hpx_parcel_t *p) {
   _coalesced_network_t *coalesced_network = network;
   if (!action_is_coalesced(p->action)) {
-    return network_send(coalesced_network->base_network, p);
+    return network_send(coalesced_network->next, p);
   }
 
   // Before putting the parcel in the queue, check whether the queue size has
@@ -126,25 +125,24 @@ static int _coalesced_network_send(void *network,  hpx_parcel_t *p) {
   // then try to adjust the parcel count before we proceed to creating fat
   // parcels
 
-  uint64_t parcel_count = sync_load(&coalesced_network->parcel_count,
-                                    SYNC_RELAXED);
-  while ( parcel_count >= coalesced_network->coalescing_size ) {
-    uint64_t readjusted_parcel_count =
-    parcel_count - coalesced_network->coalescing_size;
-    uint64_t temp_parcel_count = parcel_count;
+  int count = sync_load(&coalesced_network->count, SYNC_RELAXED);
+  while ( count >= coalesced_network->coalescing_size ) {
+    int readjusted_count =
+    count - coalesced_network->coalescing_size;
+    int temp_count = count;
     sync_fadd(&coalesced_network->syncflush, 1, SYNC_ACQ_REL);
-    uint64_t viewed_parcel_count = sync_cas(&coalesced_network->parcel_count,
-                                            &temp_parcel_count,
-                                            readjusted_parcel_count, SYNC_RELAXED,
+    int viewed_count = sync_cas(&coalesced_network->count,
+                                            &temp_count,
+                                            readjusted_count, SYNC_RELAXED,
                                             SYNC_RELAXED);
-    if (viewed_parcel_count == parcel_count) {
+    if (viewed_count == count) {
       // flush outstanding buffer
       _send_n(coalesced_network, coalesced_network->coalescing_size);
       sync_fadd(&coalesced_network->syncflush, -1, SYNC_ACQ_REL);
       break;
     }
     sync_fadd(&coalesced_network->syncflush, -1, SYNC_ACQ_REL);
-    parcel_count = sync_load(&coalesced_network->parcel_count,  SYNC_RELAXED);
+    count = sync_load(&coalesced_network->count,  SYNC_RELAXED);
   }
 
   // Prepare the parcel now, 1) to serialize it while its data is probably in
@@ -152,7 +150,7 @@ static int _coalesced_network_send(void *network,  hpx_parcel_t *p) {
   // parcel in the coalesced send queue.
   dbg_assert(p);
   sync_two_lock_queue_enqueue(&coalesced_network->sends, p);
-  sync_fadd(&coalesced_network->parcel_count, 1, SYNC_RELAXED);
+  sync_fadd(&coalesced_network->count, 1, SYNC_RELAXED);
   return LIBHPX_OK;
 }
 
@@ -162,8 +160,8 @@ static int _coalesced_network_progress(void *obj, int id) {
   // If the number of buffered parcels is the same as the previous time we
   // progressed, we'll do an eager send operation to reduce latency and make
   // sure we're not inducing deadlock.
-  uint64_t current = sync_load(&network->parcel_count, SYNC_RELAXED);
-  uint64_t previous = sync_load(&network->previous_parcel_count, SYNC_RELAXED);
+  int current = sync_load(&network->count, SYNC_RELAXED);
+  int previous = sync_load(&network->previous_count, SYNC_RELAXED);
   while (current && (current == previous)) {
     // Notify the flush operation that I might be coalescing---this prevents a
     // race during flush where I have taken some parcels out of the queue but
@@ -171,8 +169,7 @@ static int _coalesced_network_progress(void *obj, int id) {
     sync_fadd(&network->syncflush, 1, SYNC_ACQ_REL);
 
     // Try and take all of the current parcels in the coalescing queue.
-    if (sync_cas(&network->parcel_count, &current, 0, SYNC_RELAXED,
-                 SYNC_RELAXED)) {
+    if (sync_cas(&network->count, &current, 0, SYNC_RELAXED, SYNC_RELAXED)) {
       _send_n(network, current);
       current = 0;
     }
@@ -185,49 +182,49 @@ static int _coalesced_network_progress(void *obj, int id) {
   }
 
   // Always post the last value that we saw.
-  sync_store(&network->previous_parcel_count, current, SYNC_RELAXED);
+  sync_store(&network->previous_count, current, SYNC_RELAXED);
 
   // Call the underlying network progress.
-  return network_progress(network->base_network, 0);
+  return network_progress(network->next, 0);
 }
 
 static int _coalesced_network_command(void *obj, hpx_addr_t locality,
                                       hpx_action_t op, uint64_t args) {
   _coalesced_network_t *coalesced_network = obj;
-  return network_command(coalesced_network->base_network, locality, op, args);
+  return network_command(coalesced_network->next, locality, op, args);
 }
 
 static int _coalesced_network_pwc(void *obj, hpx_addr_t to, const void *from,
                                   size_t n, hpx_action_t lop, hpx_addr_t laddr,
                                   hpx_action_t rop, hpx_addr_t raddr) {
   _coalesced_network_t *coalesced_network = obj;
-  return network_pwc(coalesced_network->base_network, to, from, n, lop, laddr,
+  return network_pwc(coalesced_network->next, to, from, n, lop, laddr,
                      rop, raddr);
 }
 
 static int _coalesced_network_put(void *obj, hpx_addr_t to, const void *from,
                                   size_t n, hpx_action_t lop, hpx_addr_t laddr){
   _coalesced_network_t *coalesced_network = obj;
-  return network_put(coalesced_network->base_network, to, from, n, lop, laddr);
+  return network_put(coalesced_network->next, to, from, n, lop, laddr);
 }
 
 static int _coalesced_network_get(void *obj, void *to, hpx_addr_t from,
                                   size_t n, hpx_action_t lop, hpx_addr_t laddr)
 {
   _coalesced_network_t *coalesced_network = obj;
-  return network_get(coalesced_network->base_network, to, from, n, lop, laddr);
+  return network_get(coalesced_network->next, to, from, n, lop, laddr);
 }
 
 static hpx_parcel_t* _coalesced_network_probe(void *obj, int rank) {
   _coalesced_network_t *coalesced_network = obj;
-  return network_probe(coalesced_network->base_network, rank);
+  return network_probe(coalesced_network->next, rank);
 }
 
 static void _coalesced_network_flush(void *obj) {
   _coalesced_network_t *network = obj;
 
   // coalesce the rest of the buffered sends
-  uint64_t count = sync_swap(&network->parcel_count, 0, SYNC_RELAXED);
+  int count = sync_swap(&network->count, 0, SYNC_RELAXED);
   if (count > 0) {
     _send_n(network, count);
   }
@@ -237,30 +234,30 @@ static void _coalesced_network_flush(void *obj) {
     /* spin */;
 
   // and flush the underlying network
-  network->base_network->flush(network->base_network);
+  network->next->flush(network->next);
 }
 
 static void _coalesced_network_register_dma(void *obj, const void *base,
                                             size_t bytes, void *key) {
   _coalesced_network_t *coalesced_network = obj;
-  network_register_dma(coalesced_network->base_network, base, bytes, key);
+  network_register_dma(coalesced_network->next, base, bytes, key);
 }
 
 static void _coalesced_network_release_dma(void *obj, const void *base,
                                            size_t bytes) {
   _coalesced_network_t *coalesced_network = obj;
-  network_release_dma(coalesced_network->base_network, base, bytes);
+  network_release_dma(coalesced_network->next, base, bytes);
 }
 
 static int _coalesced_network_lco_get(void *obj, hpx_addr_t lco, size_t n,
                                       void *out, int reset) {
   _coalesced_network_t *coalesced_network = obj;
-  return network_lco_get(coalesced_network->base_network, lco, n, out, reset);
+  return network_lco_get(coalesced_network->next, lco, n, out, reset);
 }
 
 static int _coalesced_network_lco_wait(void *obj, hpx_addr_t lco, int reset) {
   _coalesced_network_t *coalesced_network = obj;
-  return network_lco_wait(coalesced_network->base_network, lco, reset);
+  return network_lco_wait(coalesced_network->next, lco, reset);
 }
 
 network_t* coalesced_network_new (network_t *network,  const struct config *cfg)
@@ -288,8 +285,8 @@ network_t* coalesced_network_new (network_t *network,  const struct config *cfg)
   coalesced_network->vtable.lco_get = _coalesced_network_lco_get;
   coalesced_network->vtable.lco_wait = _coalesced_network_lco_wait;
 
-  // set the base network
-  coalesced_network->base_network = network;
+  // set the next network
+  coalesced_network->next = network;
 
   // initialize the local coalescing queue for the parcels
   sync_two_lock_queue_init(&coalesced_network->sends, NULL);
@@ -297,8 +294,8 @@ network_t* coalesced_network_new (network_t *network,  const struct config *cfg)
   // set coalescing size
   coalesced_network->coalescing_size = cfg->coalescing_buffersize;
 
-  coalesced_network->parcel_count = 0;
-  coalesced_network->previous_parcel_count = 0;
+  coalesced_network->count = 0;
+  coalesced_network->previous_count = 0;
   coalesced_network->syncflush = 0;
   log_net("Created coalescing network\n");
   return &coalesced_network->vtable;
