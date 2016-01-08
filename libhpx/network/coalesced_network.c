@@ -38,6 +38,14 @@ typedef struct {
   volatile int    syncflush;
 } _coalesced_network_t;
 
+static inline void _atomic_inc(volatile int *addr) {
+  sync_fadd(addr, 1, SYNC_ACQ_REL);
+}
+
+static inline void _atomic_dec(volatile int *addr) {
+  sync_fadd(addr, -1, SYNC_ACQ_REL);
+}
+
 static void _coalesced_network_delete(void *obj) {
   _coalesced_network_t *network = obj;
   network_delete(network->next);
@@ -128,7 +136,7 @@ static int _coalesced_network_send(void *obj, hpx_parcel_t *p) {
     // Notify flush operations that we might be coalescing. This prevents a race
     // where a flusher thinks everything is gone, but we have partially
     // coalesced buffers to send.
-    sync_fadd(&network->syncflush, 1, SYNC_ACQ_REL);
+    _atomic_inc(&network->syncflush);
 
     // The cas updates the count for the next loop iteration if it fails,
     // otherwise we manually update it.
@@ -139,7 +147,7 @@ static int _coalesced_network_send(void *obj, hpx_parcel_t *p) {
     }
 
     // Notify flush operations that we're not in their way anymore.
-    sync_fadd(&network->syncflush, -1, SYNC_ACQ_REL);
+    _atomic_dec(&network->syncflush);
   }
 
   // Prepare the parcel now, 1) to serialize it while its data is probably in
@@ -163,7 +171,7 @@ static int _coalesced_network_progress(void *obj, int id) {
     // Notify the flush operation that I might be coalescing---this prevents a
     // race during flush where I have taken some parcels out of the queue but
     // not submitted them to the underlying network yet.
-    sync_fadd(&network->syncflush, 1, SYNC_ACQ_REL);
+    _atomic_inc(&network->syncflush);
 
     // Try and take all of the current parcels in the coalescing queue.
     if (sync_cas(&network->count, &current, 0, SYNC_RELAXED, SYNC_RELAXED)) {
@@ -172,7 +180,7 @@ static int _coalesced_network_progress(void *obj, int id) {
     }
 
     // Notify any flush operations that we're no longer dangerous.
-    sync_fadd(&network->syncflush, -1, SYNC_ACQ_REL);
+    _atomic_dec(&network->syncflush);
 
     // Our "previous" is what we just saw (or left behind).
     previous = current;
