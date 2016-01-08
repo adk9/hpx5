@@ -10,17 +10,16 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
 
-#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
-#include <hpx/hpx.h>
 #include <libsync/queues.h>
 #include <libsync/sync.h>
-
+#include <hpx/hpx.h>
 #include <libhpx/action.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
@@ -30,23 +29,25 @@
 #include <libhpx/parcel.h>
 
 typedef struct {
-  network_t       vtable;
-  network_t        *next;
-  two_lock_queue_t sends;
-  int              count;
-  int     previous_count;
-  int    coalescing_size;
-  volatile int syncflush;
+  network_t          vtable;
+  network_t           *next;
+  two_lock_queue_t    sends;
+  int                 count;
+  int        previous_count;
+  const int coalescing_size;
+  volatile int    syncflush;
 } _coalesced_network_t;
 
 static void _coalesced_network_delete(void *obj) {
-  _coalesced_network_t *coalesced_network = obj;
-  dbg_assert(coalesced_network);
-  network_delete(coalesced_network->next);
+  _coalesced_network_t *network = obj;
+  network_delete(network->next);
   free(obj);
 }
 
-// demultiplexing action on the receiver side
+/// Demultiplex coalesced parcels on the receiver side.
+///
+/// @param       buffer The buffer of coalesced parcels.
+/// @param            n The number of coalesced bytes.
 static int _demux_handler(char* buffer, int n) {
   // retrieve the next parcel from the fat parcel
   while (n) {
@@ -62,6 +63,7 @@ static int _demux_handler(char* buffer, int n) {
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _demux, _demux_handler,
                      HPX_POINTER, HPX_INT);
 
+/// Send parcels from the coalesced network.
 static void _send_n(_coalesced_network_t *network, int n) {
   // 0) Allocate temporary storage.
   struct {
@@ -120,26 +122,24 @@ static int _coalesced_network_send(void *obj, hpx_parcel_t *p) {
     return network_send(network->next, p);
   }
 
-  // Before putting the parcel in the queue, check whether the queue size has
-  // reached the coalescing size then we empty the queue. If that is the case,
-  // then try to adjust the parcel count before we proceed to creating fat
-  // parcels
-
+  // Coalesce on demand as long as we have enough parcels available.
   int count = sync_load(&network->count, SYNC_RELAXED);
   while (count >= network->coalescing_size) {
-    int readjusted_count = count - network->coalescing_size;
-    int temp_count = count;
+    // Notify flush operations that we might be coalescing. This prevents a race
+    // where a flusher thinks everything is gone, but we have partially
+    // coalesced buffers to send.
     sync_fadd(&network->syncflush, 1, SYNC_ACQ_REL);
-    int viewed_count = sync_cas(&network->count, &temp_count, readjusted_count,
-                                SYNC_RELAXED, SYNC_RELAXED);
-    if (viewed_count == count) {
-      // flush outstanding buffer
+
+    // The cas updates the count for the next loop iteration if it fails,
+    // otherwise we manually update it.
+    int n = count - network->coalescing_size;
+    if (sync_cas(&network->count, &count, n, SYNC_RELAXED, SYNC_RELAXED)) {
       _send_n(network, network->coalescing_size);
-      sync_fadd(&network->syncflush, -1, SYNC_ACQ_REL);
-      break;
+      count = n;
     }
+
+    // Notify flush operations that we're not in their way anymore.
     sync_fadd(&network->syncflush, -1, SYNC_ACQ_REL);
-    count = sync_load(&network->count,  SYNC_RELAXED);
   }
 
   // Prepare the parcel now, 1) to serialize it while its data is probably in
@@ -182,34 +182,33 @@ static int _coalesced_network_progress(void *obj, int id) {
   sync_store(&network->previous_count, current, SYNC_RELAXED);
 
   // Call the underlying network progress.
-  return network_progress(network->next, 0);
+  return network_progress(network->next, id);
 }
 
 static int _coalesced_network_command(void *obj, hpx_addr_t locality,
                                       hpx_action_t op, uint64_t args) {
-  _coalesced_network_t *coalesced_network = obj;
-  return network_command(coalesced_network->next, locality, op, args);
+  _coalesced_network_t *network = obj;
+  return network_command(network->next, locality, op, args);
 }
 
 static int _coalesced_network_pwc(void *obj, hpx_addr_t to, const void *from,
                                   size_t n, hpx_action_t lop, hpx_addr_t laddr,
                                   hpx_action_t rop, hpx_addr_t raddr) {
-  _coalesced_network_t *coalesced_network = obj;
-  return network_pwc(coalesced_network->next, to, from, n, lop, laddr,
-                     rop, raddr);
+  _coalesced_network_t *network = obj;
+  return network_pwc(network->next, to, from, n, lop, laddr, rop, raddr);
 }
 
 static int _coalesced_network_put(void *obj, hpx_addr_t to, const void *from,
                                   size_t n, hpx_action_t lop, hpx_addr_t laddr){
-  _coalesced_network_t *coalesced_network = obj;
-  return network_put(coalesced_network->next, to, from, n, lop, laddr);
+  _coalesced_network_t *network = obj;
+  return network_put(network->next, to, from, n, lop, laddr);
 }
 
 static int _coalesced_network_get(void *obj, void *to, hpx_addr_t from,
                                   size_t n, hpx_action_t lop, hpx_addr_t laddr)
 {
-  _coalesced_network_t *coalesced_network = obj;
-  return network_get(coalesced_network->next, to, from, n, lop, laddr);
+  _coalesced_network_t *network = obj;
+  return network_get(network->next, to, from, n, lop, laddr);
 }
 
 static hpx_parcel_t* _coalesced_network_probe(void *obj, int rank) {
@@ -227,8 +226,9 @@ static void _coalesced_network_flush(void *obj) {
   }
 
   // wait for any concurrent flush operations to complete
-  while (sync_load(&network->syncflush, SYNC_ACQUIRE))
+  while (sync_load(&network->syncflush, SYNC_ACQUIRE)) {
     /* spin */;
+  }
 
   // and flush the underlying network
   network->next->flush(network->next);
@@ -236,64 +236,61 @@ static void _coalesced_network_flush(void *obj) {
 
 static void _coalesced_network_register_dma(void *obj, const void *base,
                                             size_t bytes, void *key) {
-  _coalesced_network_t *coalesced_network = obj;
-  network_register_dma(coalesced_network->next, base, bytes, key);
+  _coalesced_network_t *network = obj;
+  network_register_dma(network->next, base, bytes, key);
 }
 
 static void _coalesced_network_release_dma(void *obj, const void *base,
                                            size_t bytes) {
-  _coalesced_network_t *coalesced_network = obj;
-  network_release_dma(coalesced_network->next, base, bytes);
+  _coalesced_network_t *network = obj;
+  network_release_dma(network->next, base, bytes);
 }
 
 static int _coalesced_network_lco_get(void *obj, hpx_addr_t lco, size_t n,
                                       void *out, int reset) {
-  _coalesced_network_t *coalesced_network = obj;
-  return network_lco_get(coalesced_network->next, lco, n, out, reset);
+  _coalesced_network_t *network = obj;
+  return network_lco_get(network->next, lco, n, out, reset);
 }
 
 static int _coalesced_network_lco_wait(void *obj, hpx_addr_t lco, int reset) {
-  _coalesced_network_t *coalesced_network = obj;
-  return network_lco_wait(coalesced_network->next, lco, reset);
+  _coalesced_network_t *network = obj;
+  return network_lco_wait(network->next, lco, reset);
 }
 
-network_t* coalesced_network_new (network_t *network,  const struct config *cfg)
-{
-  _coalesced_network_t *coalesced_network = NULL;
-  posix_memalign((void*)&coalesced_network, HPX_CACHELINE_SIZE,
-                 sizeof(*coalesced_network));
-  if (!coalesced_network) {
+network_t* coalesced_network_new(network_t *next,  const struct config *cfg) {
+  _coalesced_network_t *network = NULL;
+  if (posix_memalign((void*)&network, HPX_CACHELINE_SIZE, sizeof(*network))) {
     log_error("could not allocate a coalesced network\n");
     return NULL;
   }
 
   // set the vtable
-  coalesced_network->vtable.delete = _coalesced_network_delete;
-  coalesced_network->vtable.progress = _coalesced_network_progress;
-  coalesced_network->vtable.send =  _coalesced_network_send;
-  coalesced_network->vtable.command = _coalesced_network_command;
-  coalesced_network->vtable.pwc = _coalesced_network_pwc;
-  coalesced_network->vtable.put = _coalesced_network_put;
-  coalesced_network->vtable.get = _coalesced_network_get;
-  coalesced_network->vtable.probe = _coalesced_network_probe;
-  coalesced_network->vtable.flush =  _coalesced_network_flush;
-  coalesced_network->vtable.register_dma = _coalesced_network_register_dma;
-  coalesced_network->vtable.release_dma = _coalesced_network_release_dma;
-  coalesced_network->vtable.lco_get = _coalesced_network_lco_get;
-  coalesced_network->vtable.lco_wait = _coalesced_network_lco_wait;
+  network->vtable.delete       = _coalesced_network_delete;
+  network->vtable.progress     = _coalesced_network_progress;
+  network->vtable.send         = _coalesced_network_send;
+  network->vtable.command      = _coalesced_network_command;
+  network->vtable.pwc          = _coalesced_network_pwc;
+  network->vtable.put          = _coalesced_network_put;
+  network->vtable.get          = _coalesced_network_get;
+  network->vtable.probe        = _coalesced_network_probe;
+  network->vtable.flush        = _coalesced_network_flush;
+  network->vtable.register_dma = _coalesced_network_register_dma;
+  network->vtable.release_dma  = _coalesced_network_release_dma;
+  network->vtable.lco_get      = _coalesced_network_lco_get;
+  network->vtable.lco_wait     = _coalesced_network_lco_wait;
 
   // set the next network
-  coalesced_network->next = network;
+  network->next = next;
 
   // initialize the local coalescing queue for the parcels
-  sync_two_lock_queue_init(&coalesced_network->sends, NULL);
+  sync_two_lock_queue_init(&network->sends, NULL);
 
-  // set coalescing size
-  coalesced_network->coalescing_size = cfg->coalescing_buffersize;
+  // set coalescing size (this is const after the allocation)
+  *(int*)&network->coalescing_size = cfg->coalescing_buffersize;
 
-  coalesced_network->count = 0;
-  coalesced_network->previous_count = 0;
-  coalesced_network->syncflush = 0;
+  network->count = 0;
+  network->previous_count = 0;
+  network->syncflush = 0;
   log_net("Created coalescing network\n");
-  return &coalesced_network->vtable;
+  return &network->vtable;
 }
