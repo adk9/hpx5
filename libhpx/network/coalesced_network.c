@@ -73,9 +73,9 @@ static void _send_n(_coalesced_network_t *network, int n) {
   // 1) We'll pull n parcels off the global send queue, and store them
   //    temporarily in a local stack, so that we can accumulate the number of
   //    bytes we need to send to each rank.
-  gas_t *gas = here->gas;
+  gas_t          *gas = here->gas;
   hpx_parcel_t *chain = NULL;
-  hpx_parcel_t *p = NULL;
+  hpx_parcel_t     *p = NULL;
   while (n--) {
     p = sync_two_lock_queue_dequeue(&network->sends);
     size_t bytes = parcel_size(p);
@@ -114,43 +114,40 @@ static void _send_n(_coalesced_network_t *network, int n) {
   free(locs);
 }
 
-static int _coalesced_network_send(void *network,  hpx_parcel_t *p) {
-  _coalesced_network_t *coalesced_network = network;
+static int _coalesced_network_send(void *obj, hpx_parcel_t *p) {
+  _coalesced_network_t *network = obj;
   if (!action_is_coalesced(p->action)) {
-    return network_send(coalesced_network->next, p);
+    return network_send(network->next, p);
   }
 
   // Before putting the parcel in the queue, check whether the queue size has
-  // reached the  coalescing size then we empty the queue. If that is the case,
+  // reached the coalescing size then we empty the queue. If that is the case,
   // then try to adjust the parcel count before we proceed to creating fat
   // parcels
 
-  int count = sync_load(&coalesced_network->count, SYNC_RELAXED);
-  while ( count >= coalesced_network->coalescing_size ) {
-    int readjusted_count =
-    count - coalesced_network->coalescing_size;
+  int count = sync_load(&network->count, SYNC_RELAXED);
+  while (count >= network->coalescing_size) {
+    int readjusted_count = count - network->coalescing_size;
     int temp_count = count;
-    sync_fadd(&coalesced_network->syncflush, 1, SYNC_ACQ_REL);
-    int viewed_count = sync_cas(&coalesced_network->count,
-                                            &temp_count,
-                                            readjusted_count, SYNC_RELAXED,
-                                            SYNC_RELAXED);
+    sync_fadd(&network->syncflush, 1, SYNC_ACQ_REL);
+    int viewed_count = sync_cas(&network->count, &temp_count, readjusted_count,
+                                SYNC_RELAXED, SYNC_RELAXED);
     if (viewed_count == count) {
       // flush outstanding buffer
-      _send_n(coalesced_network, coalesced_network->coalescing_size);
-      sync_fadd(&coalesced_network->syncflush, -1, SYNC_ACQ_REL);
+      _send_n(network, network->coalescing_size);
+      sync_fadd(&network->syncflush, -1, SYNC_ACQ_REL);
       break;
     }
-    sync_fadd(&coalesced_network->syncflush, -1, SYNC_ACQ_REL);
-    count = sync_load(&coalesced_network->count,  SYNC_RELAXED);
+    sync_fadd(&network->syncflush, -1, SYNC_ACQ_REL);
+    count = sync_load(&network->count,  SYNC_RELAXED);
   }
 
   // Prepare the parcel now, 1) to serialize it while its data is probably in
   // our cache and 2) to make sure it gets a pid from the right parent. Put the
   // parcel in the coalesced send queue.
-  dbg_assert(p);
-  sync_two_lock_queue_enqueue(&coalesced_network->sends, p);
-  sync_fadd(&coalesced_network->count, 1, SYNC_RELAXED);
+  parcel_prepare(p);
+  sync_two_lock_queue_enqueue(&network->sends, p);
+  sync_fadd(&network->count, 1, SYNC_RELAXED);
   return LIBHPX_OK;
 }
 
