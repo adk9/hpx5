@@ -10,7 +10,7 @@ job1:
   script:
   - ./bootstrap
   - ./configure --prefix=$HOME --enable-debug --enable-mpi --enable-photon --enable-testsuite
-                PHOTON_CARGS="--enable-debug" TEST_CMD="mpirun -np 2 -host gin,gin"
+                PHOTON_CARGS="--enable-debug"
   - make -j 8
   - make install
   - export HPX_NETWORK=isir
