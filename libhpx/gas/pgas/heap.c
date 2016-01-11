@@ -246,7 +246,7 @@ heap_set_csbrk(heap_t *heap, uint64_t offset) {
   // larger than the new offset, it means that this is happening out of order
   uint64_t old = sync_load(&heap->csbrk, SYNC_RELAXED);
   if (old < offset) {
-    sync_cas(&heap->csbrk, old, offset, SYNC_RELAXED, SYNC_RELAXED);
+    sync_cas(&heap->csbrk, &old, offset, SYNC_RELAXED, SYNC_RELAXED);
     int used = _chunks_are_used(heap, old, offset - old);
     return (used) ? HPX_ERROR : HPX_SUCCESS;
   }

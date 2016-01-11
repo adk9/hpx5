@@ -50,7 +50,7 @@ static int _smp_pwc(void *network,
                     hpx_action_t lop, hpx_addr_t laddr,
                     hpx_action_t rop, hpx_addr_t raddr) {
   if (n) {
-    void *t = (void*)to;
+    void *t = (void*)(uintptr_t)to;
     memcpy(t, from, n);
   }
 

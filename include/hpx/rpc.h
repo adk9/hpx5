@@ -75,9 +75,9 @@ int _hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result, int n,
 ///
 /// This is a locally-synchronous, globally-asynchronous variant of
 /// the remote-procedure call interface which implements the hpx_parcel_send_
-/// through() function.
+/// through() function. The gate must be non-HPX_NULL.
 ///
-/// @param         gate The LCO that will serve as the gate.
+/// @param         gate The LCO that will serve as the gate (not HPX_NULL).
 /// @param         addr The address that defines where the action is executed.
 /// @param       action The action to perform.
 /// @param       result An address of an LCO to trigger with the result.
@@ -95,7 +95,9 @@ int _hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 
 /// Locally synchronous call_when with continuation interface.
 ///
-/// @param         gate The LCO that will serve as the gate.
+/// The gate must be non-HPX_NULL.
+///
+/// @param         gate The LCO that will serve as the gate (not HPX_NULL).
 /// @param         addr The address that defines where the action is executed.
 /// @param       action The action to perform.
 /// @param     c_target The address where the continuation action is executed.
@@ -116,13 +118,15 @@ int _hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr,
                                    ##__VA_ARGS__)
 
 /// Fully synchronous call interface which implements hpx_parcel_send_through()
-/// when LCO is set
+/// when an LCO is set.
 ///
 /// Performs @p action on @p args at @p addr, and sets @p out with the resulting
 /// value. The output value @p out can be NULL (or the corresponding @p olen
 /// could be zero), in which case no return value is generated.
 ///
-/// @param         gate The LCO that will serve as the gate.
+/// The gate must be non-HPX_NULL.
+///
+/// @param         gate The LCO that will serve as the gate (non HPX_NULL).
 /// @param         addr The address that defines where the action is executed.
 /// @param       action The action to perform.
 /// @param          out Address of the output buffer.
@@ -194,7 +198,9 @@ int _hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t lsync,
 /// This calls an action passing the currrent thread's continuation as the
 /// continuation for the called action.
 ///
-/// @param         gate An LCO for a dependent call.
+/// The gate must be non-HPX_NULL.
+///
+/// @param         gate An LCO for a dependent call (must be non HPX_NULL).
 /// @param         addr The address where the action is executed.
 /// @param       action The action to perform.
 /// @param            n The number of arguments for @p action.

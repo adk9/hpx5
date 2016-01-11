@@ -102,7 +102,7 @@ static int _proc_return_credit_handler(_process_t *p, uint64_t *args, size_t siz
     uint64_t credit = sync_load(&p->credit, SYNC_ACQUIRE);
     if ((credit != 0) && ~(debt | ((UINT64_C(1) << (64-credit)) - 1)) == 0) {
       // log("detected quiescence...\n");
-      if (!sync_cas(&p->credit, credit, -credit, SYNC_RELEASE, SYNC_RELAXED)) {
+      if (!sync_cas(&p->credit, &credit, -credit, SYNC_RELEASE, SYNC_RELAXED)) {
         continue;
       }
       dbg_assert(_is_tracked(p));

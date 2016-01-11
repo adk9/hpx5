@@ -204,16 +204,19 @@ static hpx_parcel_t *_swap_current(hpx_parcel_t *p, void *sp, worker_t *w) {
 ///
 /// @param            p The parcel that describes the interrupt.
 static void _execute_interrupt(hpx_parcel_t *p) {
+  dbg_assert(!p->ustack);
+
   // Exchange the current thread pointer for the duration of the call. This
   // allows the application code to access thread data, e.g., the current
   // target.
   worker_t *w = self;
   hpx_parcel_t *q = _swap_current(p, NULL, w);
+  ustack_t *stack = q->ustack;
 
   // "Borrow" the current thread's stack, so that we can use its lco_depth and
   // cont fields if necessary.
-  dbg_assert(!p->ustack);
-  ustack_t *stack = q->ustack;
+  p->ustack = stack;
+
   short cont = stack->cont;
   short masked = stack->masked;
   stack->cont = 0;
@@ -228,27 +231,16 @@ static void _execute_interrupt(hpx_parcel_t *p) {
   EVENT_THREAD_SUSPEND(q, w);
   EVENT_THREAD_RUN(p, w);
 
-  p->ustack = stack;
   int e = action_exec_parcel(p->action, p);
-  p->ustack = NULL;
-
-  short interrupt_continued = stack->cont;
-  short interrupt_masked = stack->masked;
-  stack->masked = masked;
-  stack->cont = cont;
-
-  if (interrupt_masked) {
-    dbg_check(pthread_sigmask(SIG_SETMASK, &mask, NULL));
-  }
-
-  _swap_current(q, NULL, w);
 
   switch (e) {
    case HPX_SUCCESS:
     log_sched("completed interrupt %p\n", p);
-    if (!interrupt_continued) {
+    if (!stack->cont) {
       _continue_parcel_va(p, 0, NULL);
     }
+    _swap_current(q, NULL, w);
+    p->ustack = NULL;
     EVENT_THREAD_END(p, w);
     EVENT_THREAD_RESUME(q, self);
     parcel_delete(p);
@@ -259,6 +251,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
     EVENT_THREAD_END(p, w);
     EVENT_PARCEL_RESEND(p);
     EVENT_THREAD_RESUME(q, self);
+    p->ustack = NULL;
     parcel_launch(p);
     break;
 
@@ -269,6 +262,18 @@ static void _execute_interrupt(hpx_parcel_t *p) {
    default:
     dbg_error("interrupt produced unexpected error %s.\n", hpx_strerror(e));
   }
+
+  // Restore the appropriate interrupt mask, if we need to. If the parent had a
+  // mask, then we restore that, otherwise we restore the default system mask.
+  if (masked) {
+    dbg_check(pthread_sigmask(SIG_SETMASK, &mask, NULL));
+  }
+  else if (stack->masked) {
+    dbg_check(pthread_sigmask(SIG_SETMASK, &here->mask, NULL));
+  }
+
+  stack->masked = masked;
+  stack->cont = cont;
 }
 
 /// The entry function for all of the lightweight threads.
@@ -1037,8 +1042,8 @@ int _hpx_thread_continue(int n, ...) {
 }
 
 static _Unwind_Reason_Code _thread_exit(int version, _Unwind_Action actions,
-                                        uint64_t exceptionClass,
-                                        exception_t *exceptionObject,
+                                        _Unwind_Exception_Class class,
+                                        struct _Unwind_Exception *obj,
                                         struct _Unwind_Context *context,
                                         void *stop_parameter) {
   if (_Unwind_GetIP(context)) {

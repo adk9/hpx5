@@ -31,6 +31,7 @@ sync_lockable_ptr_lock(lockable_ptr_t *p)
 
     // load the ptr
     const void *ptr = sync_load(p, SYNC_ACQUIRE);
+    const void *tmp = ptr;
 
     // check to see if the ptr is locked
     uintptr_t bits = (uintptr_t)ptr;
@@ -41,7 +42,8 @@ sync_lockable_ptr_lock(lockable_ptr_t *p)
 
     // try and lock the ptr
     const void *lock = (const void*)(bits | _LOCK_MASK);
-    if (!sync_cas(p, ptr, lock, SYNC_ACQUIRE, SYNC_RELAXED)) {
+    if (!sync_cas(p, &tmp, lock, SYNC_ACQUIRE, SYNC_RELAXED)) {
+      tmp = ptr;
       sync_backoff_exp_r(&backoff);
       continue;
     }

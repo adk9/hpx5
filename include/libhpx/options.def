@@ -190,7 +190,7 @@ LIBHPX_OPT_SCALAR(opt_, smp, 1, int)
 
 /// coalescing option
 /// @{
-LIBHPX_OPT_SCALAR(coalescing_, buffersize, 0, uint32_t)
+LIBHPX_OPT_SCALAR(coalescing_, buffersize, 0, int)
 /// @}
 
 #ifdef _LIBHPX_OPT_INTSET_UNDEF

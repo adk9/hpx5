@@ -159,7 +159,7 @@ void action_registration_finalize(void) {
   bytes += _BYTES(HPX_PAGE_SIZE, bytes);
   int e1 = mprotect(&actions, bytes, PROT_READ);
   if (e1) {
-    dbg_error("could not protect the action table\n");
+    log_error("could not protect the action table\n");
   }
 #endif
 }

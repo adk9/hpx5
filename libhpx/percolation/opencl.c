@@ -116,7 +116,7 @@ static int _execute(const percolation_t *percolation, void *obj, int nargs,
   // TODO: determine optimal work group size.
   // TODO: look at clEnqueueTask.
   size_t local_size = 64;
-  size_t global_size = ceil(osize/local_size)*local_size;
+  size_t global_size = ((osize+local_size)/local_size)*local_size;
 
   e = clEnqueueNDRangeKernel(cl->queue, kernel, 1, NULL, &global_size,
                              &local_size, 0, NULL, NULL);

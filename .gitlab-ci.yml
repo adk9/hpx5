@@ -1,0 +1,18 @@
+before_script:
+ - uname -a
+ - df -h
+
+stages:
+  - build
+
+job1:
+  stage: build
+  script:
+  - ./bootstrap
+  - ./configure --prefix=$HOME --enable-debug --enable-mpi --enable-photon --enable-testsuite
+                PHOTON_CARGS="--enable-debug"
+  - make -j 8
+  - make install
+  - export HPX_NETWORK=isir
+  - export HPX_THREADS=1
+  - make -C tests check
