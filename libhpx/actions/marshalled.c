@@ -63,16 +63,16 @@ static int _exec_pinned_marshalled(const void *obj, hpx_parcel_t *p) {
 }
 
 static const parcel_management_vtable_t _marshalled_vtable = {
-  .new = _new_marshalled,
-  .pack = _pack_marshalled,
-  .exec = _exec_marshalled,
+  .new_parcel = _new_marshalled,
+  .pack_parcel = _pack_marshalled,
+  .exec_parcel = _exec_marshalled,
   .exit = exit_action
 };
 
 static const parcel_management_vtable_t _pinned_marshalled_vtable = {
-  .new = _new_marshalled,
-  .pack = _pack_marshalled,
-  .exec = _exec_pinned_marshalled,
+  .new_parcel = _new_marshalled,
+  .pack_parcel = _pack_marshalled,
+  .exec_parcel = _exec_pinned_marshalled,
   .exit = exit_pinned_action
 };
 

@@ -21,16 +21,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "libsync/sync.h"
-#include "libhpx/action.h"
-#include "libhpx/attach.h"
-#include "libhpx/debug.h"
-#include "libhpx/instrumentation.h"
-#include "libhpx/locality.h"
-#include "libhpx/memory.h"
-#include "libhpx/network.h"
-#include "libhpx/scheduler.h"
-#include "libhpx/parcel.h"
+#include <libsync/sync.h>
+#include <libhpx/action.h>
+#include <libhpx/attach.h>
+#include <libhpx/debug.h>
+#include <libhpx/instrumentation.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+#include <libhpx/network.h>
+#include <libhpx/scheduler.h>
+#include <libhpx/parcel.h>
 #include "lco.h"
 #include "thread.h"
 
@@ -42,7 +42,7 @@
 
 static void _EVENT(const lco_t *lco, const int id) {
   static const int class = HPX_INST_CLASS_LCO;
-  inst_trace(class, id, lco, hpx_get_my_thread_id(), lco->bits);
+  inst_trace(class, id, lco, (self) ? self->id : -1, lco->bits);
 }
 
 /// return the class pointer, masking out the state.
@@ -192,7 +192,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_wait, _lco_wait_handler,
                      HPX_POINTER, HPX_INT);
 
 int lco_attach_handler(lco_t *lco, hpx_parcel_t *p, size_t size) {
-  hpx_parcel_t *parent = scheduler_current_parcel();
+  hpx_parcel_t *parent = self->current;
   dbg_assert(hpx_parcel_get_data(parent) == p);
   log_lco("pinning %p, nesting %p\n", (void*)parent, (void*)p);
   parcel_pin(parent);

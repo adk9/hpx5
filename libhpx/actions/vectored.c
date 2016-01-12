@@ -120,16 +120,16 @@ static int _exec_vectored(const void *obj, hpx_parcel_t *p) {
 }
 
 static const parcel_management_vtable_t _vectored_vtable = {
-  .new = _new_vectored,
-  .pack = _pack_vectored,
-  .exec = _exec_vectored,
+  .new_parcel = _new_vectored,
+  .pack_parcel = _pack_vectored,
+  .exec_parcel = _exec_vectored,
   .exit = exit_action
 };
 
 static const parcel_management_vtable_t _pinned_vectored_vtable = {
-  .new = _new_vectored,
-  .pack = _pack_vectored,
-  .exec = _exec_pinned_vectored,
+  .new_parcel = _new_vectored,
+  .pack_parcel = _pack_vectored,
+  .exec_parcel = _exec_pinned_vectored,
   .exit = exit_pinned_action
 };
 

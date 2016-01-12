@@ -14,6 +14,10 @@
 #ifndef LIBHPX_ACTION_H
 #define LIBHPX_ACTION_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdarg.h>
 #include <hpx/hpx.h>
 
@@ -172,7 +176,7 @@ typedef struct {
   /// @param          p The parcel to call.
   ///
   /// @return           The result of the user handler.
-  int (*exec)(const void *obj, hpx_parcel_t *p);
+  int (*exec_parcel)(const void *obj, hpx_parcel_t *p);
 
   /// Pack arguments into the parcel buffer.
   ///
@@ -183,7 +187,7 @@ typedef struct {
   ///
   /// @param        obj The action object.
   /// @param          p The parcel to pack.
-  void (*pack)(const void *obj, hpx_parcel_t *p, int n, va_list *args);
+  void (*pack_parcel)(const void *obj, hpx_parcel_t *p, int n, va_list *args);
 
   /// Create a parcel for an action.
   ///
@@ -200,8 +204,9 @@ typedef struct {
   ///
   /// @return           The newly allocated parcel, or NULL if there was a
   ///                   problem during allocation.
-  hpx_parcel_t *(*new)(const void *obj, hpx_addr_t addr, hpx_addr_t rsync,
-                       hpx_action_t rop, int n, va_list *args);
+  hpx_parcel_t *(*new_parcel)(const void *obj, hpx_addr_t addr,
+                              hpx_addr_t rsync, hpx_action_t rop, int n,
+                              va_list *args);
 
   /// Exit a thread.
   ///
@@ -294,14 +299,14 @@ int action_table_size(void);
 static inline int action_exec_parcel(hpx_action_t id, hpx_parcel_t *p) {
   CHECK_ACTION(id);
   const action_t *action = &actions[id];
-  return action->parcel_class->exec(action, p);
+  return action->parcel_class->exec_parcel(action, p);
 }
 
 static inline void action_pack_parcel_va(hpx_action_t id, hpx_parcel_t *p,
                                          int n, va_list *args) {
   CHECK_ACTION(id);
   const action_t *action = &actions[id];
-  return action->parcel_class->pack(action, p, n, args);
+  return action->parcel_class->pack_parcel(action, p, n, args);
 }
 
 static inline hpx_parcel_t *action_new_parcel_va(hpx_action_t id,
@@ -311,7 +316,7 @@ static inline hpx_parcel_t *action_new_parcel_va(hpx_action_t id,
                                                  int n, va_list *args) {
   CHECK_ACTION(id);
   const action_t *action = &actions[id];
-  return action->parcel_class->new(action, addr, rsync, rop, n, args);
+  return action->parcel_class->new_parcel(action, addr, rsync, rop, n, args);
 }
 
 static inline hpx_parcel_t *action_new_parcel(hpx_action_t id, hpx_addr_t addr,
@@ -496,5 +501,10 @@ static inline bool action_is_opencl(hpx_action_t id) {
     LIBHPX_REGISTER_ACTION(type, attr, id, handler , ##__VA_ARGS__); \
   }                                                                  \
   static HPX_CONSTRUCTOR void _register##_##id(void)
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_ACTION_H
