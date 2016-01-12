@@ -201,7 +201,6 @@ static int _coalesced_network_progress(void *obj, int id) {
   }
   // Call the underlying network progress.
   return network_progress(network->next, id);
-
 }
 
 static int _coalesced_network_command(void *obj, hpx_addr_t locality,
@@ -238,19 +237,21 @@ static hpx_parcel_t* _coalesced_network_probe(void *obj, int rank) {
 static void _coalesced_network_flush(void *obj) {
   _coalesced_network_t *network = obj;
 
-  /* // coalesce the rest of the buffered sends */
-  /* int count = sync_swap(&network->count, 0, SYNC_RELAXED); */
-  /* if (count > 0) { */
-  /*   _send_n(network, count); */
-  /* } */
+  for (int i = 0; i < HPX_LOCALITIES; i++) {
+    // coalesce the rest of the buffered sends
+    int count = sync_swap(&(network->ranks[i].count), 0, SYNC_RELAXED);
+    if (count > 0) {
+      _send_n(network, count, i);
+    }
 
-  /* // wait for any concurrent flush operations to complete */
-  /* while (sync_load(&network->syncflush, SYNC_ACQUIRE)) { */
-  /*   /\* spin *\/; */
-  /* } */
+    // wait for any concurrent flush operations to complete
+    while (sync_load(&network->ranks[i].syncflush, SYNC_ACQUIRE)) {
+      /* spin */;
+    }
 
-  /* // and flush the underlying network */
-  /* network->next->flush(network->next); */
+    // and flush the underlying network
+    network->next->flush(network->next);
+  }
 }
 
 static void _coalesced_network_register_dma(void *obj, const void *base,
