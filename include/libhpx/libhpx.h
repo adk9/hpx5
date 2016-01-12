@@ -47,6 +47,6 @@ hpx_parcel_t *hpx_create_new_parcel(hpx_addr_t target, hpx_action_t action,
 				      hpx_addr_t c_target, hpx_action_t c_action,
 				      hpx_pid_t pid, const void *data, size_t len);
 int  hpx_check_no_thread();
-int hpx_gas_owner_of(hpx_addr_t addr);
+int hpx_gas_owner_of(hpx_addr_t addr) ;
 
 #endif  // LIBHPX_LIBHPX_H

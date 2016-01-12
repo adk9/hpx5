@@ -83,10 +83,7 @@ inline static void gas_dealloc(gas_t *gas) {
   gas->dealloc(gas);
 }
 
-inline uint32_t gas_owner_of(gas_t *gas, hpx_addr_t addr) {
-  assert(gas && gas->owner_of);
-  return gas->owner_of(gas, addr);
-}
+uint32_t gas_owner_of(gas_t *gas, hpx_addr_t addr);
 
 static inline size_t gas_local_size(gas_t *gas) {
   assert(gas && gas->local_size);
