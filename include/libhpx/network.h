@@ -57,6 +57,31 @@ extern COMMAND_DECL(resume_parcel_remote);
 /// The lco_set command will set an lco.
 extern COMMAND_DECL(lco_set);
 
+typedef enum {
+  ALL_REDUCE = 1000 ,
+  REDUCE            ,
+  ALL_GATHER        ,
+  GATHER            ,
+  ALL_SCATTER       ,
+  SCATTER           ,
+  BROADCAST         ,
+  BARRIER           ,
+  IBARRIER
+} coll_type_t;
+
+typedef struct collective{
+  void          *handle;   // internal xport collective ID
+  hpx_action_t      lop;   // optional action to run on completion
+  hpx_addr_t      laddr;   // optional local target address
+  coll_type_t      type;   // type of collective operation
+  hpx_monoid_op_t    op;   // collective operator 
+  int32_t      group_sz;   // active group size
+  int32_t    recv_count;   // how many bytes to be recieved
+  int32_t    comm_bytes;   // active comm size in bytes
+  int32_t   group_bytes;   // active group size in bytes
+  char           data[];   // variable data - group of localities + communicator
+} coll_t;
+
 /// All network objects implement the network interface.
 typedef struct network {
   int type;
@@ -66,6 +91,9 @@ typedef struct network {
   int (*progress)(void*, int);
 
   int (*send)(void*, hpx_parcel_t *p);
+
+  int (*coll_init)(void*, coll_t **c);
+  int (*coll_join)(void*, hpx_parcel_t *in, void *out, coll_t *c);
 
   int (*command)(void*, hpx_addr_t rank, hpx_action_t op, uint64_t args);
 

@@ -107,6 +107,34 @@ static int _pwc_send(void *network, hpx_parcel_t *p) {
   return send_buffer_send(buffer, HPX_NULL, p);
 }
 
+static int _pwc_coll_init(void *network, coll_t **_c) {
+  coll_t* c = *_c;
+  int num_active = c->group_sz;
+  int32_t* aranks = (int32_t*) c->data;
+  pwc_network_t *pwc = network;
+
+  if(num_active < here->ranks){
+    //flushing network is necessary (sufficient ?) to execute any packets
+    //destined for collective group creation operation
+    pwc->vtable.flush(network);
+  }  
+
+  command_t rop = command_pack(c->lop, c->laddr);
+  return pwc->xport->coll_init((void*)aranks, num_active, here->ranks,
+			       c->type, rop, c->handle);
+}
+
+static int _pwc_coll_join(void *network, hpx_parcel_t *in, void *out, coll_t *c) {
+  void *sendbuf = in->buffer;
+  int count     = in->size;
+  pwc_network_t *pwc = network;
+  
+  //flushing network is necessary (sufficient ?) to execute any packets
+  //destined for collective operation
+  pwc->vtable.flush(network);
+  return pwc->xport->coll_join(c->handle, sendbuf, out, count, NULL, &c->op);
+}
+
 int pwc_command(void *network, hpx_addr_t loc, hpx_action_t rop, uint64_t args)
 {
   pwc_network_t *pwc = (void*)network;
@@ -241,6 +269,8 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   pwc->vtable.delete = _pwc_delete;
   pwc->vtable.progress = _pwc_progress;
   pwc->vtable.send = _pwc_send;
+  pwc->vtable.coll_init = _pwc_coll_init;
+  pwc->vtable.coll_join = _pwc_coll_join;
   pwc->vtable.command = pwc_command;
   pwc->vtable.pwc = _pwc_pwc;
   pwc->vtable.put = _pwc_put;

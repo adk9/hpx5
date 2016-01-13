@@ -199,6 +199,54 @@ _chain_unpin(const void *addr, size_t n, command_t op) {
 }
 
 static int
+_photon_coll_init(void *aranks, int num_active, int ranks, int type,
+		  command_t op, void *handle) {
+  int ptype;
+
+  // TODO: make this a static mapping
+  switch (type) {
+  case BARRIER:
+    ptype = PHOTON_COLL_BARRIER;
+    break;
+  case IBARRIER:
+    ptype = PHOTON_COLL_IBARRIER;
+    break;
+  default:
+    dbg_error("unsupported transport collective requested");
+    break;
+  }
+  
+  // space for the returned request ID
+  handle = malloc(sizeof(uint64_t));
+  
+  int e = photon_collective_init(aranks, num_active, ranks, ptype,
+				 op.packed, handle);
+  if (e != PHOTON_OK) {
+    free(handle);
+    dbg_error("could not initialize photon collective\n");
+  }
+  
+  return LIBHPX_OK;
+}
+
+static int
+_photon_coll_join(void *handle, void *in, void *out, int count,
+		  void *datatype, void *op) {
+  if (datatype) {
+    // need to figure out what type of HPX datatype maps
+    // to photon collective datatypes...
+  }
+  photon_rid request = *(photon_rid*)handle;
+  int e = photon_collective_join(request, in, out, count,
+				 PHOTON_UINT8, op);
+  if (PHOTON_OK != e) {
+    dbg_error("could not complet collective join\n");
+  }
+  
+  return LIBHPX_OK;
+}
+
+static int
 _photon_command(const xport_op_t *op) {
   int flags = ((op->lop.packed) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
               ((op->rop.packed) ? 0 : PHOTON_REQ_PWC_NO_RCE);
@@ -330,6 +378,8 @@ pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas) {
   photon->vtable.key_copy = _photon_key_copy;
   photon->vtable.pin = _photon_pin;
   photon->vtable.unpin = _photon_unpin;
+  photon->vtable.coll_init = _photon_coll_init;
+  photon->vtable.coll_join = _photon_coll_join;
   photon->vtable.command = _photon_command;
   photon->vtable.pwc = _photon_pwc;
   photon->vtable.gwc = _photon_gwc;
