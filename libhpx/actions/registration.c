@@ -21,7 +21,11 @@
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
+#include <libhpx/locality.h>
 #include <libhpx/padding.h>
+#ifdef HAVE_PERCOLATION
+#include <libhpx/percolation.h>
+#endif
 #include "init.h"
 
 /// A static action table.
@@ -141,7 +145,7 @@ void action_registration_finalize(void) {
     if (here->percolation && type == HPX_OPENCL) {
       void *env = percolation_prepare(here->percolation, key, (const char*)f);
       dbg_assert_str(env, "failed to prepare percolation kernel: %s\n", key);
-      actions[i].handler = percolation_execute_handler;
+actions[i].handler = (handler_t)percolation_execute_handler;
     }
 #endif
 
