@@ -3,16 +3,34 @@ before_script:
  - df -h
 
 stages:
-  - build
+  - scan
+  - check
 
-job1:
-  stage: build
+scan-build:
+  stage: scan
+  script:
+  - ./bootstrap
+  - ./configure --enable-debug --enable-instrumentation --enable-percolation --enable-agas
+                --enable-mpi --enable-photon --enable-testsuite --with-photon=system
+                --with-jemalloc=system --with-hwloc=system --with-libffi=contrib CC=clang CXX=clang
+  - BOUT=/tmp/scan-build-${CI_BUILD_ID}
+  - scan-build --use-cc=clang -o /var/www/html/scan-builds make -j 8 | tee $BOUT
+  - if grep -q "bug found" $BOUT; then
+       DIR=`tail -n 1 $BOUT | egrep -o "[0-9]+-[0-9]+-[0-9]+-[0-9]+-[0-9]+-[0-9]"`;
+       echo "\nView report at http://gin.crest.iu.edu/scan-builds/$DIR";
+       exit 2;
+    fi
+
+check-build:
+  stage: check
   script:
   - ./bootstrap
   - ./configure --prefix=$HOME --enable-debug --enable-mpi --enable-photon --enable-testsuite
+                --enable-instrumentation --enable-percolation --enable-agas
                 PHOTON_CARGS="--enable-debug"
   - make -j 8
   - make install
   - export HPX_NETWORK=isir
   - export HPX_THREADS=1
   - make -C tests check
+
