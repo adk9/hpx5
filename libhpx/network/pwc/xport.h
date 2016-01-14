@@ -59,7 +59,7 @@ typedef struct pwc_xport {
   void (*pin)(const void *base, size_t bytes, void *key);
   void (*unpin)(const void *base, size_t bytes);
   int (*coll_init)(void *aranks, int num_active, int ranks, int type,
-		   command_t op, void *handle);
+		   command_t op, void **handle);
   int (*coll_join)(void *handle, void *in, void *out, int count,
 		   void *datatype, void *op);
 } pwc_xport_t;

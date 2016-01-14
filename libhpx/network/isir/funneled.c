@@ -239,6 +239,8 @@ network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
   network->vtable.delete = _funneled_delete;
   network->vtable.progress = _funneled_progress;
   network->vtable.send = _funneled_send;
+  network->vtable.coll_init = NULL;
+  network->vtable.coll_join = NULL;
   network->vtable.command = _funneled_command;
   network->vtable.pwc = _funneled_pwc;
   network->vtable.put = _funneled_put;

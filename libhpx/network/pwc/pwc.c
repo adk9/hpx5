@@ -121,7 +121,7 @@ static int _pwc_coll_init(void *network, coll_t **_c) {
 
   command_t rop = command_pack(c->lop, c->laddr);
   return pwc->xport->coll_init((void*)aranks, num_active, here->ranks,
-			       c->type, rop, c->handle);
+			       c->type, rop, &c->handle);
 }
 
 static int _pwc_coll_join(void *network, hpx_parcel_t *in, void *out, coll_t *c) {

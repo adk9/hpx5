@@ -200,8 +200,9 @@ _chain_unpin(const void *addr, size_t n, command_t op) {
 
 static int
 _photon_coll_init(void *aranks, int num_active, int ranks, int type,
-		  command_t op, void *handle) {
+		  command_t op, void **handle) {
   int ptype;
+  photon_rid *request = *(photon_rid**)handle;
 
   // TODO: make this a static mapping
   switch (type) {
@@ -217,10 +218,10 @@ _photon_coll_init(void *aranks, int num_active, int ranks, int type,
   }
   
   // space for the returned request ID
-  handle = malloc(sizeof(uint64_t));
+  request = malloc(sizeof(photon_rid));
   
   int e = photon_collective_init(aranks, num_active, ranks, ptype,
-				 op.packed, handle);
+				 op.packed, request);
   if (e != PHOTON_OK) {
     free(handle);
     dbg_error("could not initialize photon collective\n");
@@ -240,9 +241,11 @@ _photon_coll_join(void *handle, void *in, void *out, int count,
   int e = photon_collective_join(request, in, out, count,
 				 PHOTON_UINT8, op);
   if (PHOTON_OK != e) {
-    dbg_error("could not complet collective join\n");
+    dbg_error("could not complete collective join\n");
   }
   
+  free(handle);
+
   return LIBHPX_OK;
 }
 
