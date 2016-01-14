@@ -26,11 +26,12 @@ check-build:
   script:
   - ./bootstrap
   - ./configure --prefix=$HOME --enable-debug --enable-mpi --enable-photon --enable-testsuite
-                --enable-instrumentation --enable-percolation --enable-agas
-                PHOTON_CARGS="--enable-debug"
+                --enable-instrumentation --enable-agas PHOTON_CARGS="--enable-debug"
   - make -j 8
   - make install
-  - export HPX_NETWORK=isir
   - export HPX_THREADS=1
+  - export HPX_NETWORK=pwc
+  - make -C tests check
+  - export HPX_NETWORK=isir
   - make -C tests check
 
