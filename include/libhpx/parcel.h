@@ -31,11 +31,11 @@ struct ustack;
 
 typedef uint16_t parcel_state_t;
 
-static const parcel_state_t      PARCEL_SERIALIZED = __UINT16_C(0x1 << 1);
-static const parcel_state_t        PARCEL_RETAINED = __UINT16_C(0x1 << 2);
-static const parcel_state_t          PARCEL_NESTED = __UINT16_C(0x1 << 3);
-static const parcel_state_t PARCEL_BLOCK_ALLOCATED = __UINT16_C(0x1 << 4);
-static const parcel_state_t          PARCEL_PINNED = __UINT16_C(0x1 << 5);
+static const parcel_state_t      PARCEL_SERIALIZED = UINT16_C(0x1 << 1);
+static const parcel_state_t        PARCEL_RETAINED = UINT16_C(0x1 << 2);
+static const parcel_state_t          PARCEL_NESTED = UINT16_C(0x1 << 3);
+static const parcel_state_t PARCEL_BLOCK_ALLOCATED = UINT16_C(0x1 << 4);
+static const parcel_state_t          PARCEL_PINNED = UINT16_C(0x1 << 5);
 
 void parcel_pin(hpx_parcel_t *p);
 void parcel_nest(hpx_parcel_t *p);

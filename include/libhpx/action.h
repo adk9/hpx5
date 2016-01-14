@@ -257,7 +257,7 @@ typedef struct {
 /// address space.
 ///
 /// @{
-#define LIBHPX_ACTION_MAX (__UINT32_C(1) << (sizeof(hpx_action_t) * 8))
+#define LIBHPX_ACTION_MAX (UINT32_C(1) << (sizeof(hpx_action_t) * 8))
 
 extern action_t actions[LIBHPX_ACTION_MAX] HPX_ALIGNED(HPX_PAGE_SIZE);
 /// @}
