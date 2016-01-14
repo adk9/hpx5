@@ -4,10 +4,10 @@
 # ------------------------------------------------------------------------------
 AC_DEFUN([HPX_CONFIG_LIBHPX], [
   HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lstdc++"
-  LIBHPX_CXXFLAGS="$LIBHPX_CXXFLAGS -fno-rtti"
+  LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS"
+  LIBHPX_CXXFLAGS="-D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS $LIBHPX_CXXFLAGS -fno-rtti"
   LIBHPX_LIBS="$LIBHPX_LIBS -lstdc++"
   HPX_APPS_LIBS="$HPX_APPS_LIBS -lstdc++"
-  
 
   # Special handling for libsync. Maybe we should make a libsync.pc?
   HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lsync"

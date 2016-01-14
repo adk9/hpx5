@@ -19,6 +19,7 @@ extern "C" {
 #endif
 
 #include <stdarg.h>
+#include <stdint.h>
 #include <hpx/hpx.h>
 
 /// Generic action handler type.
