@@ -273,7 +273,6 @@ hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
                                  hpx_action_t id, hpx_action_t op) {
   _allreduce_t *r = NULL;
   hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*r), 0);
-  LCO_LOG_NEW(gva);
 
   if (!hpx_gas_try_pin(gva, (void**)&r)) {
     int e = hpx_call_sync(gva, _allreduce_init_async, NULL, 0, &inputs,
@@ -281,6 +280,7 @@ hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
     dbg_check(e, "could not initialize an allreduce at %"PRIu64"\n", gva);
   }
   else {
+    LCO_LOG_NEW(gva, r);
     _allreduce_init_handler(r, inputs, outputs, size, id, op);
     hpx_gas_unpin(gva);
   }

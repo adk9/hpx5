@@ -180,13 +180,13 @@ hpx_addr_t hpx_lco_gencount_new(unsigned long ninplace) {
   _gencount_t *cnt = NULL;
   size_t bytes = sizeof(_gencount_t) + ninplace * sizeof(cvar_t);
   hpx_addr_t gva = hpx_gas_alloc_local(1, bytes, 0);
-  LCO_LOG_NEW(gva);
 
   if (!hpx_gas_try_pin(gva, (void**)&cnt)) {
     int e = hpx_call_sync(gva, _gencount_init_async, NULL, 0, &ninplace);
     dbg_check(e, "could not initialize a generation counter at %"PRIu64"\n", gva);
   }
   else {
+    LCO_LOG_NEW(gva, cnt);
     _gencount_init_handler(cnt, ninplace);
     hpx_gas_unpin(gva);
   }

@@ -261,7 +261,7 @@ void hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync) {
     dbg_check(e, "Could not forward lco_delete\n");
   }
   else {
-    log_lco("deleting lco %p\n", (void*)lco);
+    log_lco("deleting lco %"PRIu64" (%p)\n", target, (void*)lco);
     int e = _fini(lco);
     hpx_gas_unpin(target);
     hpx_gas_free(target, HPX_NULL);
