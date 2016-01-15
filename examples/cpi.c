@@ -57,7 +57,7 @@ static double myreduce(int count, double values[count]) {
   return total;
 }
 
-static double _getVal_action(void *args, size_t size) {
+static int _getVal_action(void *args, size_t size) {
   int THREADS = HPX_LOCALITIES;
   int MYTHREAD = HPX_LOCALITY_ID;
 

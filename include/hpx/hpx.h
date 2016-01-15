@@ -20,7 +20,9 @@
 /// headers are included through it.
 
 #ifdef __cplusplus
-# define __STDC_LIMIT_MACROS
+# ifndef __STDC_LIMIT_MACROS
+#  define  __STDC_LIMIT_MACROS
+# endif
 extern "C" {
 #endif
 

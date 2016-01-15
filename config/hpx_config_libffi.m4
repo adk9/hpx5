@@ -102,8 +102,18 @@ AC_DEFUN([_HPX_PKG_LIBFFI], [
  # symbols will appear in application binaries and must be linked directly to
  # libffi, not simply transitively through libhpx.
  AS_IF([test "x$have_libffi" == xyes],
-   [LIBHPX_CFLAGS="$LIBHPX_CFLAGS $LIBFFI_CFLAGS"
+   [# Ensure libhpx can find the ffi.h header and has a direct dependency on 
+    # the libffi library.
+    LIBHPX_CFLAGS="$LIBHPX_CFLAGS $LIBFFI_CFLAGS"
+    LIBHPX_CXXFLAGS="$LIBHPX_CXXFLAGS $LIBFFI_CFLAGS"
     LIBHPX_LIBS="$LIBHPX_LIBS $LIBFFI_LIBS"
+
+    # Ensure that the included apps can find the ffi.h header (we don't use
+    # pkg-config locally. They get the lib dependency through libhpx.la.
+    HPX_APPS_CFLAGS="$HPX_APPS_CFLAGS $LIBFFI_CFLAGS"
+    HPX_APPS_CXXFLAGS="$HPX_APPS_CXXFLAGS $LIBFFI_CFLAGS"
+    
+    # Ensure external users depend on the ffi pkg.
     HPX_PC_REQUIRES_PKGS="$HPX_PC_REQUIRES_PKGS $pkg"])
 ])
 

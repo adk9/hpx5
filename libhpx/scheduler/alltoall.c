@@ -431,13 +431,13 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _alltoall_init_async,
 hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) {
   _alltoall_t *g = NULL;
   hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*g), 0);
-  LCO_LOG_NEW(gva);
 
   if (!hpx_gas_try_pin(gva, (void**)&g)) {
     int e = hpx_call_sync(gva, _alltoall_init_async, NULL, 0, &inputs, &size);
     dbg_check(e, "could not initialize an allreduce at %"PRIu64"\n", gva);
   }
   else {
+    LCO_LOG_NEW(gva, g);
     _alltoall_init_handler(g, inputs, size);
     hpx_gas_unpin(gva);
   }
