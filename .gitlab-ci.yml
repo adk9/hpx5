@@ -15,7 +15,7 @@ scan-build:
                 --with-jemalloc=system --with-hwloc=system --with-libffi=contrib CC=clang CXX=clang
   - BOUT=/tmp/scan-build-${CI_BUILD_ID}
   - scan-build --use-cc=clang -o /var/www/html/scan-builds make -j 8 | tee $BOUT
-  - if grep -q -E "(bug|bugs) found" $BOUT; then
+  - if grep -q -E "[0-9]+ (bug|bugs) found" $BOUT; then
        DIR=`tail -n 1 $BOUT | egrep -o "[0-9]+-[0-9]+-[0-9]+-[0-9]+-[0-9]+-[0-9]"`;
        echo; echo "View report at http://gin.crest.iu.edu/scan-builds/$DIR";
        exit 2;
