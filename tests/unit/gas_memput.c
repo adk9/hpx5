@@ -58,7 +58,7 @@ int init_handler(hpx_addr_t data) {
   CHECK( hpx_call_sync(local, reset, NULL, 0) );
   return HPX_SUCCESS;
 }
-HPX_ACTION(HPX_DEFAULT, 0, init, init_handler, HPX_ADDR);
+static HPX_ACTION(HPX_DEFAULT, 0, init, init_handler, HPX_ADDR);
 
 int init_globals_handler(void) {
   size_t n = ELEMENTS * sizeof(uint64_t);

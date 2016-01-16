@@ -64,7 +64,7 @@ int init_handler(hpx_addr_t d) {
   hpx_gas_unpin(local);
   return HPX_SUCCESS;
 }
-HPX_ACTION(HPX_DEFAULT, 0, init, init_handler, HPX_ADDR);
+static HPX_ACTION(HPX_DEFAULT, 0, init, init_handler, HPX_ADDR);
 
 int init_globals_handler(void) {
   size_t n = ELEMENTS * sizeof(uint64_t);
