@@ -32,32 +32,6 @@ struct gas;
 struct transport;
 /// @}
 
-/// The network interface uses a particular action type, the network *command*,
-/// which takes an integer indicating the source of the command, and an optional
-/// command argument.
-
-/// Command actions should be declared and defined using the following macros.
-/// @{
-#define COMMAND_DEF(symbol, handler)                                    \
-    LIBHPX_ACTION(HPX_INTERRUPT, 0, symbol, handler, HPX_INT, HPX_UINT64)
-
-#define COMMAND_DECL(symbol) HPX_ACTION_DECL(symbol)
-/// @}
-
-/// The delete_parcel command will delete a parcel.
-extern COMMAND_DECL(delete_parcel);
-
-/// The resume_parcel operation will perform parcel_launch() on a parcel at the
-/// receiver's locality.
-extern COMMAND_DECL(resume_parcel);
-
-/// The resume_parcel operation will perform parcel_launch() on a parcel at the
-/// sender's locality.
-extern COMMAND_DECL(resume_parcel_remote);
-
-/// The lco_set command will set an lco.
-extern COMMAND_DECL(lco_set);
-
 /// All network objects implement the network interface.
 typedef struct network {
   int type;
@@ -348,6 +322,5 @@ static inline int network_memcpy_sync(void *obj, hpx_addr_t to, hpx_addr_t from,
   network_t *network = obj;
   return network->string->memcpy_sync(network, to, from, size);
 }
-
 
 #endif // LIBHPX_NETWORK_H

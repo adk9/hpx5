@@ -15,10 +15,11 @@
 # include "config.h"
 #endif
 
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/parcel.h>
+#include <libhpx/scheduler.h>
+#include "commands.h"
 #include "pwc.h"
 
 /// Wait for an LCO to be set, and then resume a remote parcel.

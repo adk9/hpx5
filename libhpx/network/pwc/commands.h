@@ -18,6 +18,34 @@
 extern "C" {
 #endif
 
+#include <libhpx/action.h>
+
+/// The network interface uses a particular action type, the network *command*,
+/// which takes an integer indicating the source of the command, and an optional
+/// command argument.
+
+/// Command actions should be declared and defined using the following macros.
+/// @{
+#define COMMAND_DEF(symbol, handler)                                    \
+    LIBHPX_ACTION(HPX_INTERRUPT, 0, symbol, handler, HPX_INT, HPX_UINT64)
+
+#define COMMAND_DECL(symbol) HPX_ACTION_DECL(symbol)
+/// @}
+
+/// The delete_parcel command will delete a parcel.
+extern COMMAND_DECL(delete_parcel);
+
+/// The resume_parcel operation will perform parcel_launch() on a parcel at the
+/// receiver's locality.
+extern COMMAND_DECL(resume_parcel);
+
+/// The resume_parcel operation will perform parcel_launch() on a parcel at the
+/// sender's locality.
+extern COMMAND_DECL(resume_parcel_remote);
+
+/// The lco_set command will set an lco.
+extern COMMAND_DECL(lco_set);
+
 typedef uint16_t op_t;
 typedef uint64_t arg_t;
 
