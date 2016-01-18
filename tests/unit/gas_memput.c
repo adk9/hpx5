@@ -130,15 +130,17 @@ void test_lsync(const uint64_t *buffer, size_t n, hpx_addr_t block,
 void test_memput(const uint64_t *buffer, size_t n, hpx_addr_t block) {
   test_assert(buffer != NULL);
   test_assert(block != HPX_NULL);
-  hpx_addr_t up = HPX_THERE((HPX_LOCALITY_ID + 1) % HPX_LOCALITIES);
-  hpx_addr_t down = HPX_THERE((HPX_LOCALITY_ID - 1) % HPX_LOCALITIES);
-
   test(buffer, n, block, HPX_HERE, HPX_HERE);
   test(buffer, n, block, block, block);
   test(buffer, n, block, HPX_HERE, block);
   test(buffer, n, block, block, HPX_HERE);
-  test(buffer, n, block, up, down);
-  test(buffer, n, block, down, up);
+
+  unsigned here = HPX_LOCALITY_ID;
+  unsigned up = (here + 1) % HPX_LOCALITIES;
+  unsigned down = (here - 1) % HPX_LOCALITIES;
+
+  test(buffer, n, block, HPX_THERE(up), HPX_THERE(down));
+  test(buffer, n, block, HPX_THERE(down), HPX_THERE(up));
 }
 
 /// Test the gas_memput_lsync operation.
@@ -149,12 +151,15 @@ void test_memput(const uint64_t *buffer, size_t n, hpx_addr_t block) {
 void test_memput_lsync(const uint64_t *buffer, size_t n, hpx_addr_t block) {
   test_assert(buffer != NULL);
   test_assert(block != HPX_NULL);
-  hpx_addr_t up = HPX_THERE((HPX_LOCALITY_ID + 1) % HPX_LOCALITIES);
-  hpx_addr_t down = HPX_THERE((HPX_LOCALITY_ID - 1) % HPX_LOCALITIES);
   test_lsync(buffer, n, block, HPX_HERE);
   test_lsync(buffer, n, block, block);
-  test_lsync(buffer, n, block, up);
-  test_lsync(buffer, n, block, down);
+
+  unsigned here = HPX_LOCALITY_ID;
+  unsigned up = (here + 1) % HPX_LOCALITIES;
+  unsigned down = (here - 1) % HPX_LOCALITIES;
+
+  test_lsync(buffer, n, block, HPX_THERE(up));
+  test_lsync(buffer, n, block, HPX_THERE(down));
 }
 
 /// Test the gas_memput_rsync operation.

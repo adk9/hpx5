@@ -110,7 +110,9 @@ void test_memget(void *buffer, size_t n, hpx_addr_t block) {
   test_assert(block != HPX_NULL);
   test(buffer, n, block, HPX_HERE);
   test(buffer, n, block, remote);
-  test(buffer, n, block, HPX_THERE((HPX_LOCALITY_ID - 1) % HPX_LOCALITIES));
+  unsigned here = (unsigned)HPX_LOCALITY_ID;
+  unsigned there = (here - 1) % HPX_LOCALITIES;
+  test(buffer, n, block, HPX_THERE(there));
 }
 
 /// Test the gas_memget_sync operation.
