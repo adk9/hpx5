@@ -114,6 +114,7 @@ network_t *network_inst_new(network_t *impl) {
   _inst_network_t *inst = malloc(sizeof(*inst));
   dbg_assert(inst);
 
+  inst->vtable.string = impl->string;
   inst->vtable.type = impl->type;
   inst->vtable.delete = _inst_delete;
   inst->vtable.progress = _inst_progress;
