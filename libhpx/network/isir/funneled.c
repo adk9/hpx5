@@ -236,6 +236,7 @@ network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
   }
 
   network->vtable.type = HPX_NETWORK_ISIR;
+  network->vtable.string = &isir_string_vtable;
   network->vtable.delete = _funneled_delete;
   network->vtable.progress = _funneled_progress;
   network->vtable.send = _funneled_send;
