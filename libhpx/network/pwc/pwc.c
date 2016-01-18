@@ -238,6 +238,7 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   dbg_assert(pwc);
 
   pwc->vtable.type = HPX_NETWORK_PWC;
+  pwc->vtable.string = NULL;
   pwc->vtable.delete = _pwc_delete;
   pwc->vtable.progress = _pwc_progress;
   pwc->vtable.send = _pwc_send;
