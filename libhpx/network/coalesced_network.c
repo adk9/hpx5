@@ -273,6 +273,7 @@ network_t* coalesced_network_new(network_t *next,  const struct config *cfg) {
   }
 
   // set the vtable
+  network->vtable.string       = next->string;
   network->vtable.delete       = _coalesced_network_delete;
   network->vtable.progress     = _coalesced_network_progress;
   network->vtable.send         = _coalesced_network_send;
