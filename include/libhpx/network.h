@@ -22,6 +22,7 @@
 /// scheduler, and send them out via the configured transport.
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
+#include <libhpx/string.h>
 
 /// Forward declarations.
 /// @{
@@ -60,6 +61,8 @@ extern COMMAND_DECL(lco_set);
 /// All network objects implement the network interface.
 typedef struct network {
   int type;
+
+  const class_string_t * string;
 
   void (*delete)(void*);
 
@@ -294,5 +297,57 @@ network_lco_wait(void *obj, hpx_addr_t lco, int reset) {
   network_t *network = obj;
   return network->lco_wait(network, lco, reset);
 }
+
+static inline int network_memget(void *obj, void *to, hpx_addr_t from,
+                                 size_t size, hpx_addr_t lsync,
+                                 hpx_addr_t rsync) {
+  network_t *network = obj;
+  return network->string->memget(network, to, from, size, lsync, rsync);
+}
+
+static inline int network_memget_rsync(void *obj, void *to, hpx_addr_t from,
+                                       size_t size, hpx_addr_t lsync) {
+  network_t *network = obj;
+  return network->string->memget_rsync(network, to, from, size, lsync);
+}
+
+static inline int network_memget_lsync(void *obj, void *to, hpx_addr_t from,
+                                       size_t size) {
+  network_t *network = obj;
+  return network->string->memget_lsync(network, to, from, size);
+}
+
+static inline int network_memput(void *obj, hpx_addr_t to, const void *from,
+                                 size_t size, hpx_addr_t lsync,
+                                 hpx_addr_t rsync) {
+  network_t *network = obj;
+  return network->string->memput(network, to, from, size, lsync, rsync);
+}
+
+static inline int network_memput_lsync(void *obj, hpx_addr_t to,
+                                       const void *from, size_t size,
+                                       hpx_addr_t rsync) {
+  network_t *network = obj;
+  return network->string->memput_lsync(network, to, from, size, rsync);
+}
+
+static inline int network_memput_rsync(void *obj, hpx_addr_t to,
+                                       const void *from, size_t size) {
+  network_t *network = obj;
+  return network->string->memput_rsync(network, to, from, size);
+}
+
+static inline int network_memcpy(void *obj, hpx_addr_t to, hpx_addr_t from,
+                                 size_t size, hpx_addr_t sync) {
+  network_t *network = obj;
+  return network->string->memcpy(network, to, from, size, sync);
+}
+
+static inline int network_memcpy_sync(void *obj, hpx_addr_t to, hpx_addr_t from,
+                                      size_t size) {
+  network_t *network = obj;
+  return network->string->memcpy_sync(network, to, from, size);
+}
+
 
 #endif // LIBHPX_NETWORK_H
