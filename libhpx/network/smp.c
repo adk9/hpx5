@@ -100,6 +100,7 @@ static int _smp_lco_get(void *o, hpx_addr_t lco, size_t n, void *to, int reset) 
 
 static network_t _smp = {
   .type = HPX_NETWORK_SMP,
+  .string = NULL,
   .delete = _smp_delete,
   .progress = _smp_progress,
   .send = _smp_send,
