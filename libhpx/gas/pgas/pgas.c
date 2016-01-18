@@ -431,6 +431,16 @@ static uint32_t _pgas_owner_of(const void *pgas, hpx_addr_t addr) {
 
 static gas_t _pgas_vtable = {
   .type           = HPX_GAS_PGAS,
+  .string = {
+    .memget       = NULL,
+    .memget_rsync = _pgas_memget,
+    .memget_lsync = _pgas_memget_sync,
+    .memput       = _pgas_memput,
+    .memput_lsync = _pgas_memput_lsync,
+    .memput_rsync = _pgas_memput_rsync,
+    .memcpy       = _pgas_parcel_memcpy,
+    .memcpy_sync  = _pgas_parcel_memcpy_sync,
+  },
   .dealloc        = _pgas_dealloc,
   .local_size     = _pgas_local_size,
   .local_base     = _pgas_local_base,
@@ -447,13 +457,6 @@ static gas_t _pgas_vtable = {
   .calloc_local   = _pgas_gas_calloc_local,
   .free           = _pgas_gas_free,
   .move           = _pgas_move,
-  .memget         = _pgas_memget,
-  .memget_sync    = _pgas_memget_sync,
-  .memput         = _pgas_memput,
-  .memput_lsync   = _pgas_memput_lsync,
-  .memput_rsync   = _pgas_memput_rsync,
-  .memcpy         = _pgas_parcel_memcpy,
-  .memcpy_sync    = _pgas_parcel_memcpy_sync,
   .owner_of       = _pgas_owner_of
 };
 
