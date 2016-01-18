@@ -172,15 +172,15 @@ network_command(void *obj, hpx_addr_t rank, hpx_action_t op, uint64_t args) {
   return network->command(network, rank, op, args);
 }
 
-/// Initiate an rDMA put operation with a remote completion event.
+/// Initiate an rDMA put operation with a remote continuation.
 ///
 /// This will copy @p n bytes between the @p from buffer and the @p to buffer,
 /// setting the @p local LCO when the @p from buffer can be reused, and the @p
 /// remote LCO when the remote operation is complete.
 ///
-/// Furthermore, it will generate a remote completion event encoding (@p op,
-/// @p op_to) at the locality at which @to is currently mapped, allowing
-/// two-sided active-message semantics.
+/// Furthermore, it will generate a remote completion continuation encoding (@p
+/// rop, @p rsync) at the locality at which @p to is currently mapped,
+/// allowing two-sided active-message semantics.
 ///
 /// In this context, signaling the @p remote LCO and the delivery of the remote
 /// completion via @p op are independent events that potentially proceed in
@@ -193,7 +193,7 @@ network_command(void *obj, hpx_addr_t rank, hpx_action_t op, uint64_t args) {
 /// @param          lop The local continuation operation.
 /// @param        lsync The local continuation address.
 /// @param          rop The remote continuation operation.
-/// @param        op_to The remote continuation address.
+/// @param        rsync The remote continuation address.
 ///
 /// @returns            LIBHPX_OK
 static inline int
@@ -204,7 +204,7 @@ network_pwc(void *obj, hpx_addr_t to, const void *from, size_t n,
   return network->pwc(network, to, from, n, lop, lsync, rop, rsync);
 }
 
-/// Initiate an rDMA put operation with a local completion event.
+/// Initiate an rDMA put operation with a local completion continuation.
 ///
 /// This will copy @p n bytes between the @p from buffer and the @p to buffer,
 /// setting the @p local LCO when the @p from buffer can be reused, and the @p
