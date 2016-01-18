@@ -296,7 +296,7 @@ int hpx_get_num_ranks(void) {
 }
 
 int hpx_get_num_threads(void) {
-  return (here && here->sched) ? here->sched->n_workers : 0;
+  return (here && here->sched) ? here->sched->n_workers : -1;
 }
 
 int hpx_is_active(void) {
