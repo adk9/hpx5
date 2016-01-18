@@ -39,27 +39,24 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _par_for_async, _par_for_async_handler,
                      HPX_POINTER, HPX_POINTER, HPX_INT, HPX_INT);
 
 int hpx_par_for(hpx_for_action_t f, const int min, const int max,
-                const void *args, hpx_addr_t sync) {
+                const size_t chunks, const void *args, hpx_addr_t sync) {
   dbg_assert(max - min > 0);
-
-  // get the number of scheduler threads
-  int nthreads = HPX_THREADS;
 
   hpx_addr_t and = HPX_NULL;
   if (sync) {
-    and = hpx_lco_and_new(nthreads);
+    and = hpx_lco_and_new(chunks);
     hpx_call_when_with_continuation(and, sync, hpx_lco_set_action,
                                     and, hpx_lco_delete_action, NULL, 0);
   }
 
   const int n = max - min;
-  const int m = n / nthreads;
-  int r = n % nthreads;
+  const int m = n / chunks;
+  int r = n % chunks;
   int rmin = min;
   int rmax = max;
 
   int base = rmin;
-  for (int i = 0, e = nthreads; i < e; ++i) {
+  for (int i = 0, e = chunks; i < e; ++i) {
     rmin = base;
     rmax = base + m + ((r-- > 0) ? 1 : 0);
     base = rmax;
@@ -73,14 +70,14 @@ int hpx_par_for(hpx_for_action_t f, const int min, const int max,
 }
 
 int hpx_par_for_sync(hpx_for_action_t f, const int min, const int max,
-                     const void *args) {
+                     const size_t chunks, const void *args) {
   dbg_assert(max - min > 0);
   hpx_addr_t sync = hpx_lco_future_new(0);
   if (sync == HPX_NULL) {
     return log_error("could not allocate an LCO.\n");
   }
 
-  int e = hpx_par_for(f, min, max, args, sync);
+  int e = hpx_par_for(f, min, max, chunks, args, sync);
   if (!e) {
     e = hpx_lco_wait(sync);
   }

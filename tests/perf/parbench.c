@@ -115,7 +115,7 @@ static int _main_action(int iters, int work, int ntasks) {
 
   start = hpx_time_now();
   for (int i = 0; i < iters; ++i) {
-    hpx_par_for_sync(_fwq_parfor, 0, ntasks, &work);
+    hpx_par_for_sync(_fwq_parfor, 0, ntasks, HPX_THREADS, &work);
   }
   elapsed = hpx_time_elapsed_ms(start);
   printf("hpx_par_for_sync: %.7f\n", elapsed/iters);

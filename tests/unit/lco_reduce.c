@@ -144,7 +144,7 @@ static int lco_par_reduce_handler(void) {
   };
 
   // perform parallel reduction
-  hpx_par_for_sync(_par_reduce, 0, ITERS, &args);
+  hpx_par_for_sync(_par_reduce, 0, ITERS, HPX_THREADS, &args);
 
   // get the gathered value
   double ans;
