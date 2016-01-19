@@ -237,7 +237,7 @@ static uint32_t _pgas_owner_of(const void *pgas, hpx_addr_t addr) {
 static gas_t _pgas_vtable = {
   .type           = HPX_GAS_PGAS,
   .string = {
-    .memget       = NULL,
+    .memget       = pgas_memget,
     .memget_rsync = pgas_memget_rsync,
     .memget_lsync = pgas_memget_lsync,
     .memput       = pgas_memput,

@@ -33,10 +33,8 @@
 /// @{
 int pwc_memput(void *obj, hpx_addr_t to, const void *from, size_t size,
                hpx_addr_t lsync, hpx_addr_t rsync) {
-  command_t lcmd = {
-    .op = NOP,
-    .arg = lsync
-  };
+  command_t lcmd = { .op = NOP, .arg = lsync };
+  command_t rcmd = { .op = NOP, .arg = rsync };
 
   if (lsync) {
     if (gpa_to_rank(lsync) == here->rank) {
@@ -49,11 +47,6 @@ int pwc_memput(void *obj, hpx_addr_t to, const void *from, size_t size,
       lcmd.op  = RESUME_PARCEL;
     }
   }
-
-  command_t rcmd = {
-    .op = NOP,
-    .arg = rsync
-  };
 
   if (rsync) {
     if (gpa_to_rank(rsync) == here->rank) {

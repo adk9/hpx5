@@ -144,7 +144,29 @@ int agas_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t n) {
 }
 
 int agas_memget(void *gas, void *to, hpx_addr_t from, size_t n,
-                hpx_addr_t lsync) {
+                hpx_addr_t lsync, hpx_addr_t rsync) {
+  if (!n) {
+    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    return HPX_SUCCESS;
+  }
+
+  agas_t *agas = gas;
+  gva_t gva = { .addr = from };
+  void *lfrom = NULL;
+  if (btt_try_pin(agas->btt, gva, &lfrom)) {
+    memcpy(to, lfrom, n);
+    btt_unpin(agas->btt, gva);
+    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    return HPX_SUCCESS;
+  }
+
+  return network_memget(here->network, to, from, n, lsync, rsync);
+}
+
+int agas_memget_rsync(void *gas, void *to, hpx_addr_t from, size_t n,
+                      hpx_addr_t lsync) {
   if (!n) {
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
     return HPX_SUCCESS;

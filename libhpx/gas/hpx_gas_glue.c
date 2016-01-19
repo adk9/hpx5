@@ -267,7 +267,7 @@ int hpx_gas_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
   dbg_assert(gas->string.memget_rsync);
-  return gas->string.memget_rsync(here->gas, to, from, size, lsync);
+  return gas->string.memget(here->gas, to, from, size, lsync, HPX_NULL);
 }
 
 int hpx_gas_memget_sync(void *to, hpx_addr_t from, size_t size) {
