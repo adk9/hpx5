@@ -1,6 +1,7 @@
 # The isend-irecv network implementations
 noinst_LTLIBRARIES = libpwc.la
-noinst_HEADERS     = circular_buffer.h commands.h parcel_emulation.h pwc.h registered.h send_buffer.h xport.h
+noinst_HEADERS     = circular_buffer.h commands.h parcel_emulation.h pwc.h \
+                     registered.h send_buffer.h xport.h 
 
 libpwc_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
 libpwc_la_CFLAGS   = $(LIBHPX_CFLAGS)
@@ -12,7 +13,8 @@ libpwc_la_SOURCES  = pwc.c \
                      lco_get.c \
                      lco_wait.c \
                      commands.c \
-                     rendezvous_send.c
+                     rendezvous_send.c \
+                     memget.c memput.c memcpy.c
 
 if HAVE_PHOTON
 libpwc_la_SOURCES += xport_photon.c

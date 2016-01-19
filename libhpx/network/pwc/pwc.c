@@ -126,10 +126,9 @@ int pwc_command(void *network, hpx_addr_t loc, hpx_action_t rop, uint64_t args)
   return pwc->xport->command(&op);
 }
 
-static int _pwc_pwc(void *network, hpx_addr_t to, const void *lva, size_t n,
-                    hpx_action_t lop, hpx_addr_t laddr,
-                    hpx_action_t rop, hpx_addr_t raddr)
-{
+int pwc_pwc(void *network, hpx_addr_t to, const void *lva, size_t n,
+            hpx_action_t lop, hpx_addr_t laddr,
+            hpx_action_t rop, hpx_addr_t raddr) {
   pwc_network_t *pwc = (void*)network;
   int rank = gas_owner_of(here->gas, to);
   uint64_t offset = gpa_to_offset(to);
@@ -148,17 +147,15 @@ static int _pwc_pwc(void *network, hpx_addr_t to, const void *lva, size_t n,
   return pwc->xport->pwc(&op);
 }
 
-static int _pwc_put(void *network, hpx_addr_t to, const void *from, size_t n,
-                    hpx_action_t lop, hpx_addr_t laddr)
-{
+int pwc_put(void *network, hpx_addr_t to, const void *from, size_t n,
+            hpx_action_t lop, hpx_addr_t laddr) {
   hpx_action_t rop = HPX_ACTION_NULL;
   hpx_addr_t raddr = HPX_NULL;
-  return _pwc_pwc(network, to, from, n, lop, laddr, rop, raddr);
+  return pwc_pwc(network, to, from, n, lop, laddr, rop, raddr);
 }
 
-static int _pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
-                    hpx_action_t lop, hpx_addr_t laddr)
-{
+int pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
+            hpx_action_t lop, hpx_addr_t laddr) {
   pwc_network_t *pwc = network;
   int rank = gas_owner_of(here->gas, from);
   uint64_t offset = gpa_to_offset(from);
@@ -211,6 +208,17 @@ static void _pwc_delete(void *network) {
   free(pwc);
 }
 
+static const class_string_t _pwc_string_vtable = {
+  .memget       = pwc_memget,
+  .memget_lsync = pwc_memget_lsync,
+  .memget_rsync = pwc_memget_rsync,
+  .memput       = pwc_memput,
+  .memput_lsync = pwc_memput_lsync,
+  .memput_rsync = pwc_memput_rsync,
+  .memcpy       = NULL,
+  .memcpy_sync  = NULL
+};
+
 network_t *
 network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   // Validate parameters.
@@ -238,14 +246,14 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   dbg_assert(pwc);
 
   pwc->vtable.type = HPX_NETWORK_PWC;
-  pwc->vtable.string = NULL;
+  pwc->vtable.string = &_pwc_string_vtable;
   pwc->vtable.delete = _pwc_delete;
   pwc->vtable.progress = _pwc_progress;
   pwc->vtable.send = _pwc_send;
   pwc->vtable.command = pwc_command;
-  pwc->vtable.pwc = _pwc_pwc;
-  pwc->vtable.put = _pwc_put;
-  pwc->vtable.get = _pwc_get;
+  pwc->vtable.pwc = pwc_pwc;
+  pwc->vtable.put = pwc_put;
+  pwc->vtable.get = pwc_get;
   pwc->vtable.probe = _pwc_probe;
   pwc->vtable.flush = _pwc_flush;
   pwc->vtable.register_dma = _pwc_register_dma;
