@@ -10,6 +10,5 @@ AC_DEFUN([HPX_CONFIG_HPXPP], [
  AS_IF([test "x$enable_hpxpp" != xno],
    [AC_DEFINE([HAVE_HPXPP], [1], [We have hpx++])
     AX_CXX_COMPILE_STDCXX_11([ext],[mandatory])
-    dnl HPX_APPS_CPPFLAGS="$HPX_APPS_CPPFLAGS -I\$(top_srcdir)/include/hpx++"
     have_hpxpp=yes])
 ])
