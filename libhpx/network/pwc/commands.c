@@ -60,5 +60,19 @@ static HPX_USED const char *_straction(hpx_action_t id) {
 
 void command_run(int src, command_t cmd) {
   log_net("invoking command: %s from %d\n", _straction(cmd.op), src);
+
+  static const command_handler_t commands[] = {
+    NULL,
+    handle_resume_parcel,
+    handle_resume_parcel_source,
+    handle_delete_parcel,
+    handle_lco_set,
+    handle_lco_set_source,
+    handle_recv_parcel,
+    handle_rendezvous_launch,
+    handle_reload_request,
+    handle_reload_reply
+  };
+
   commands[cmd.op](src, cmd);
 }

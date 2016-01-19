@@ -44,19 +44,6 @@ void handle_rendezvous_launch(int src, command_t cmd);
 void handle_reload_request(int src, command_t cmd);
 void handle_reload_reply(int src, command_t cmd);
 
-static const command_handler_t commands[] = {
-  NULL,
-  handle_resume_parcel,
-  handle_resume_parcel_source,
-  handle_delete_parcel,
-  handle_lco_set,
-  handle_lco_set_source,
-  handle_recv_parcel,
-  handle_rendezvous_launch,
-  handle_reload_request,
-  handle_reload_reply
-};
-
 enum {
   NOP = 0,
   RESUME_PARCEL,
