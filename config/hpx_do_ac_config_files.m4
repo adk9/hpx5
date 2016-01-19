@@ -54,7 +54,7 @@ AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
      tests/unit/Makefile
      tests/perf/Makefile])])
 
- AS_IF([test "x$have_hpxpp" != xno], [
+ AS_IF([test "x$enable_hpxpp" != xno], [
    AC_CONFIG_FILES([
      hpx++/Makefile
      hpx++/examples/Makefile
