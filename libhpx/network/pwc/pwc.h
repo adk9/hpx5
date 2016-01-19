@@ -18,6 +18,8 @@
 #include <libhpx/network.h>
 #include <libhpx/padding.h>
 
+#include "commands.h"
+
 /// Forward declarations.
 /// @{
 struct boot;
@@ -48,82 +50,6 @@ extern pwc_network_t *pwc_network;
 network_t *network_pwc_funneled_new(const struct config *cfg, struct boot *boot,
                                     struct gas *gas)
   HPX_MALLOC;
-
-/// Perform a PWC network command.
-///
-/// This sends a "pure" command to the scheduler at a different rank, without
-/// any additional argument data. This can avoid using any additional eager
-/// parcel buffer space, and can always be satisfied with one low-level "put"
-/// operation.
-///
-/// @param      network The network object pointer.
-/// @param          loc The GAS global address of the target rank.
-/// @param          rop The network command operation.
-/// @param         args The network command argument.
-///
-/// @returns            The (local) status of the put operation.
-int pwc_command(void *network, hpx_addr_t loc, hpx_action_t rop, uint64_t args);
-
-/// Initiate an rDMA put operation with a remote continuation.
-///
-/// This will copy @p n bytes between the @p from buffer and the @p to buffer,
-/// setting the @p local LCO when the @p from buffer can be reused, and the @p
-/// remote LCO when the remote operation is complete.
-///
-/// Furthermore, it will generate a remote completion continuation encoding (@p
-/// rop, @p rsync) at the locality at which @p to is currently mapped,
-/// allowing two-sided active-message semantics.
-///
-/// In this context, signaling the @p remote LCO and the delivery of the remote
-/// completion via @p op are independent events that potentially proceed in
-/// parallel.
-///
-/// @param      network The network instance to use.
-/// @param           to The global target for the put.
-/// @param         from The local source for the put.
-/// @param            n The number of bytes to put.
-/// @param          lop The local continuation operation.
-/// @param        lsync The local continuation address.
-/// @param          rop The remote continuation operation.
-/// @param        rsync The remote continuation address.
-///
-/// @returns            LIBHPX_OK
-int pwc_pwc(void *network, hpx_addr_t to, const void *lva, size_t n,
-            hpx_action_t lop, hpx_addr_t laddr,
-            hpx_action_t rop, hpx_addr_t raddr);
-
-/// Initiate an rDMA put operation with a local completion continuation.
-///
-/// This will copy @p n bytes between the @p from buffer and the @p to buffer,
-/// setting the @p local LCO when the @p from buffer can be reused, and the @p
-/// remote LCO when the remote operation is complete.
-///
-/// @param      network The network instance to use.
-/// @param           to The global target for the put.
-/// @param         from The local source for the put.
-/// @param            n The number of bytes to put.
-/// @param          lop A local continuation, run when @p from can be modified.
-/// @param        laddr A local local continuation address.
-///
-/// @returns            LIBHPX_OK
-int pwc_put(void *network, hpx_addr_t to, const void *from, size_t n,
-            hpx_action_t lop, hpx_addr_t laddr);
-
-/// Initiate an rDMA get operation with a local completion event.
-///
-/// This will copy @p n bytes between the @p from buffer and the @p to buffer,
-/// setting the @p local LCO when the @p from buffer can be accessed.
-///
-/// @param      network The network instance to use.
-/// @param           to The local target for the get.
-/// @param         from The global source for the get.
-/// @param            n The number of bytes to get.
-/// @param          lop A local continuation, run when @p from can be modified.
-/// @param        laddr A local local continuation address.
-///
-/// @returns            LIBHPX_OK
-int pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
-            hpx_action_t lop, hpx_addr_t laddr);
 
 /// Perform an LCO wait operation through the PWC network.
 ///
@@ -284,5 +210,54 @@ int pwc_memcpy(void *obj, hpx_addr_t to, hpx_addr_t from, size_t size,
 ///
 /// @returns            HPX_SUCCESS;
 int pwc_memcpy_sync(void *obj, hpx_addr_t to, hpx_addr_t from, size_t size);
+
+/// Initiate an rDMA get operation.
+///
+/// This will copy @p n bytes between the @p from buffer and the @p lva, running
+/// the @p rcmd when the read completes remotely and running the @p lcmd when
+/// the local write is complete.
+///
+/// @param      network The network instance to use.
+/// @param           to The local target for the get.
+/// @param         from The global source for the get.
+/// @param            n The number of bytes to get.
+/// @param         lcmd A local command, run when @p lva is written.
+/// @param         rcmd A remote command, run when @p from has been read.
+///
+/// @returns            LIBHPX_OK
+int pwc_get(void *obj, void *lva, hpx_addr_t from, size_t n,
+            command_t lcmd, command_t rcmd);
+
+/// Initiate an rDMA put operation with a remote continuation.
+///
+/// This will copy @p n bytes between the @p lca and the @p to buffer, running
+/// the @p lcmd when the local buffer can be modified or deleted and the @p rcmd
+/// when the remote write has completed.
+///
+/// @param        network The transport instance to use.
+/// @param           to The global target for the put.
+/// @param         from The local source for the put.
+/// @param            n The number of bytes to put.
+/// @param         lcmd The local command, run when @p lva can be reused.
+/// @param         rcmd The remote command, run when @p to has be written.
+///
+/// @returns            LIBHPX_OK
+int pwc_put(void *obj, hpx_addr_t to, const void *lva, size_t n,
+            command_t lcmd, command_t rcmd);
+
+/// Perform a PWC network command.
+///
+/// This sends a "pure" command to the scheduler at a different rank, without
+/// any additional argument data. This can avoid using any additional eager
+/// parcel buffer space, and can always be satisfied with one low-level "put"
+/// operation.
+///
+/// @param          obj The network object pointer.
+/// @param         rank The rank id to send the remote command to.
+/// @param         lcmd A command to be run for local completion.
+/// @param         rcmd A remote command to be run at @p rank.
+///
+/// @returns            The (local) status of the put operation.
+int pwc_cmd(void *obj, int rank, command_t lcmd, command_t rcmd);
 
 #endif

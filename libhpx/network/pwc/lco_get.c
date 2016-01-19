@@ -31,7 +31,8 @@ static void _get_reply_continuation(hpx_parcel_t *p, void *env) {
   xport_op_t *op = env;
 
   // at this point we know which parcel to resume for local completion
-  op->lop = command_pack(resume_parcel, (uint64_t)(uintptr_t)p);
+  op->lop.op  = resume_parcel;
+  op->lop.arg = (uintptr_t)p;
   dbg_check( pwc_network->xport->pwc(op) );
 }
 
@@ -90,7 +91,11 @@ static int _get_reply_stack(_pwc_lco_get_request_args_t *args,
     dbg_error("Cannot yet return an error from a remote get operation\n");
   }
 
-  command_t resume = command_pack(resume_parcel, (uintptr_t)args->p);
+  command_t resume = {
+    .op  = resume_parcel,
+    .arg = (uintptr_t)args->p
+  };
+
   return _get_reply(args, pwc, ref, resume);
 }
 
@@ -113,7 +118,10 @@ static int _get_reply_malloc(_pwc_lco_get_request_args_t *args,
     dbg_error("Cannot yet return an error from a remote get operation\n");
   }
 
-  command_t resume = command_pack(resume_parcel, (uintptr_t)args->p);
+  command_t resume = {
+    .op  = resume_parcel,
+    .arg = (uintptr_t)args->p
+  };
   e = _get_reply(args, pwc, ref, resume);
   registered_free(ref);
   return e;
@@ -141,9 +149,11 @@ static int _get_reply_getref(_pwc_lco_get_request_args_t *args,
   hpx_lco_release(lco, ref);
 
   // Wake the remote getter up.
-  hpx_action_t cmd = resume_parcel;
-  hpx_addr_t  sync = (uintptr_t)args->p;
-  e = pwc_command(pwc, HPX_THERE(args->rank), cmd, sync);
+  command_t rcmd = {
+    .op  = resume_parcel,
+    .arg = (uintptr_t)args->p
+  };
+  e = pwc_cmd(pwc, args->rank, (command_t){0}, rcmd);
   dbg_check(e, "Failed to start resume command during remote lco get.\n");
   return e;
 }

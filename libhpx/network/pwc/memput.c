@@ -18,7 +18,6 @@
 #include <libhpx/gpa.h>
 #include <libhpx/locality.h>
 #include <libhpx/scheduler.h>
-#include "commands.h"
 #include "pwc.h"
 
 /// The asynchronous memput operation.
@@ -34,34 +33,43 @@
 /// @{
 int pwc_memput(void *obj, hpx_addr_t to, const void *from, size_t size,
                hpx_addr_t lsync, hpx_addr_t rsync) {
-  hpx_action_t lcmd = 0;
+  command_t lcmd = {
+    .op = 0,
+    .arg = lsync
+  };
+
   if (lsync) {
     if (gpa_to_rank(lsync) == here->rank) {
-      lcmd = lco_set;
+      lcmd.op = lco_set;
     }
     else {
-      hpx_parcel_t *l = action_new_parcel(hpx_lco_set_action, lsync, 0, 0, 0);
-      lsync = (uint64_t)l;
-      lcmd = resume_parcel;
+      hpx_parcel_t *p = action_new_parcel(hpx_lco_set_action, lsync, 0, 0, 0);
+      dbg_assert(p);
+      lcmd.arg = (uintptr_t)p;
+      lcmd.op  = resume_parcel;
     }
   }
 
-  hpx_action_t rcmd = 0;
+  command_t rcmd = {
+    .op = 0,
+    .arg = rsync
+  };
+
   if (rsync) {
     if (gpa_to_rank(rsync) == here->rank) {
-      rcmd = lco_set_source;
+      rcmd.op = lco_set_source;
     }
     else if (gpa_to_rank(rsync) == gpa_to_rank(to)) {
-      rcmd = lco_set;
+      rcmd.op = lco_set;
     }
     else {
-      hpx_parcel_t *r = action_new_parcel(hpx_lco_set_action, rsync, 0, 0, 0);
-      rsync = (uint64_t)r;
-      rcmd = resume_parcel_source;
+      hpx_parcel_t *p = action_new_parcel(hpx_lco_set_action, rsync, 0, 0, 0);
+      rcmd.arg = (uintptr_t)p;
+      rcmd.op  = resume_parcel_source;
     }
   }
 
-  return pwc_pwc(obj, to, from, size, lcmd, lsync, rcmd, rsync);
+  return pwc_put(obj, to, from, size, lcmd, rcmd);
 }
 /// @}
 
@@ -92,25 +100,31 @@ typedef struct {
 static void _pwc_memput_lsync_continuation(hpx_parcel_t *p, void *env) {
   _pwc_memput_lsync_continuation_env_t *e = env;
 
-  hpx_action_t rcmd = 0;
-  hpx_addr_t  rsync = e->rsync;
-  if (rsync) {
-    if (gpa_to_rank(rsync) == here->rank) {
-      rcmd = lco_set_source;
+  command_t rcmd = {
+    .op = 0,
+    .arg = e->rsync
+  };
+
+  if (e->rsync) {
+    if (gpa_to_rank(e->rsync) == here->rank) {
+      rcmd.op = lco_set_source;
     }
-    else if (gpa_to_rank(rsync) == gpa_to_rank(e->to)) {
-      rcmd = lco_set;
+    else if (gpa_to_rank(e->rsync) == gpa_to_rank(e->to)) {
+      rcmd.op = lco_set;
     }
     else {
-      hpx_parcel_t *r = action_new_parcel(hpx_lco_set_action, rsync, 0, 0, 0);
-      rcmd = resume_parcel_source;
-      rsync = (uintptr_t)r;
+      hpx_parcel_t *p = action_new_parcel(hpx_lco_set_action, e->rsync, 0, 0, 0);
+      rcmd.arg = (uintptr_t)p;
+      rcmd.op = resume_parcel_source;
     }
   }
 
-  hpx_action_t lcmd = resume_parcel;
-  hpx_addr_t  lsync = (uintptr_t)p;
-  dbg_check( pwc_pwc(e->obj, e->to, e->from, e->n, lcmd, lsync, rcmd, rsync) );
+  command_t lcmd = {
+    .op  = resume_parcel,
+    .arg = (uintptr_t)p
+  };
+
+  dbg_check( pwc_put(e->obj, e->to, e->from, e->n, lcmd, rcmd) );
 }
 
 int pwc_memput_lsync(void *obj, hpx_addr_t to, const void *from, size_t n,
@@ -141,9 +155,12 @@ typedef struct {
 
 static void _pwc_memput_rsync_continuation(hpx_parcel_t *p, void *env) {
   _pwc_memput_rsync_continuation_env_t *e = env;
-  hpx_action_t rcmd = resume_parcel_source;
-  hpx_addr_t  rsync = (uintptr_t)p;
-  dbg_check( pwc_pwc(e->obj, e->to, e->from, e->n, 0, 0, rcmd, rsync) );
+  command_t lcmd = { 0 };
+  command_t rcmd = {
+    .op  = resume_parcel_source,
+    .arg = (uintptr_t)p
+  };
+  dbg_check( pwc_put(e->obj, e->to, e->from, e->n, lcmd, rcmd) );
 }
 
 int pwc_memput_rsync(void *obj, hpx_addr_t to, const void *from, size_t n) {

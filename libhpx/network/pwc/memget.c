@@ -19,7 +19,6 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/scheduler.h>
-#include "commands.h"
 #include "pwc.h"
 
 /// The fully asynchronous memget operation.
@@ -46,18 +45,25 @@ int pwc_memget(void *obj, void *to, hpx_addr_t from, size_t size,
 /// @{
 int pwc_memget_rsync(void *obj, void *to, hpx_addr_t from, size_t n,
                      hpx_addr_t lsync) {
-  hpx_action_t lcmd = 0;
+  command_t lcmd = {
+    .op  = 0,
+    .arg = lsync
+  };
+
+  command_t rcmd = { 0 };
+
   if (lsync) {
     if (gpa_to_rank(lsync) == here->rank) {
-      lcmd = lco_set;
+      lcmd.op = lco_set;
     }
     else {
       hpx_parcel_t *c = action_new_parcel(hpx_lco_set_action, lsync, 0, 0, 0);
-      lsync = (uintptr_t)c;
-      lcmd = resume_parcel;
+      lcmd.arg = (uintptr_t)c;
+      lcmd.op  = resume_parcel;
     }
   }
-  return pwc_get(obj, to, from, n, lcmd, lsync);
+
+  return pwc_get(obj, to, from, n, lcmd, rcmd);
 }
 /// @}
 
@@ -73,9 +79,12 @@ typedef struct {
 
 static void _pwc_memget_lsync_continuation(hpx_parcel_t *p, void *env) {
   _pwc_memget_lsync_env_t *e = env;
-  hpx_action_t lcmd = resume_parcel;
-  hpx_addr_t  lsync = (uintptr_t)p;
-  dbg_check( pwc_get(e->network, e->to, e->from, e->n, lcmd, lsync) );
+  command_t lcmd = {
+    .op  = resume_parcel,
+    .arg = (uintptr_t)p
+  };
+  command_t rcmd = { 0 };
+  dbg_check( pwc_get(e->network, e->to, e->from, e->n, lcmd, rcmd) );
 }
 
 int pwc_memget_lsync(void *obj, void *to, hpx_addr_t from, size_t size) {

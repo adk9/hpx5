@@ -35,8 +35,7 @@
 /// This is used to schedule the transferred parcel once the get operation has
 /// completed. The command encodes the local address of the parcel to schedule.
 static int _rendezvous_launch_handler(int src, command_t cmd) {
-  uintptr_t arg = command_get_arg(cmd);
-  hpx_parcel_t *p = (void*)arg;
+  hpx_parcel_t *p = (hpx_parcel_t*)(uintptr_t)cmd.arg;
   parcel_set_state(p, PARCEL_SERIALIZED);
   EVENT_PARCEL_RECV(p);
   scheduler_spawn(p);
@@ -70,8 +69,8 @@ static int _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size) {
     .dest_key = pwc_network->xport->key_find_ref(pwc_network->xport, p, args->n),
     .src = args->p,
     .src_key = &args->key,
-    .lop = command_pack(_rendezvous_launch, (uintptr_t)p),
-    .rop = command_pack(delete_parcel, (uintptr_t)args->p)
+    .lop = (command_t){ .op = _rendezvous_launch, .arg = (uintptr_t)p },
+    .rop = (command_t){ .op = delete_parcel, .arg = (uintptr_t)args->p }
   };
   int e = pwc_network->xport->gwc(&op);
   dbg_check(e, "could not issue get during rendezvous parcel\n");
