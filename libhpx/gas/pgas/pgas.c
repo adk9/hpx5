@@ -217,120 +217,6 @@ static void _pgas_gas_free(void *gas, hpx_addr_t gpa, hpx_addr_t sync) {
   }
 }
 
-static int _pgas_parcel_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from,
-                               size_t size, hpx_addr_t sync) {
-  if (!size) {
-    return HPX_SUCCESS;
-  }
-
-  if (gpa_to_rank(to) != here->rank) {
-    return network_memcpy(here->network, to, from, size, sync);
-  }
-
-  if (gpa_to_rank(from) != here->rank) {
-    return network_memcpy(here->network, to, from, size, sync);
-  }
-
-  void *lto = pgas_gpa_to_lva(to);
-  void *lfrom = pgas_gpa_to_lva(from);
-  memcpy(lto, lfrom, size);
-  hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
-  return HPX_SUCCESS;
-}
-
-static int _pgas_parcel_memcpy_sync(void *gas, hpx_addr_t to, hpx_addr_t from,
-                                    size_t size) {
-  if (!size) {
-    return HPX_SUCCESS;
-  }
-
-  hpx_addr_t sync = hpx_lco_future_new(0);
-  dbg_assert_str(sync, "could not allocate an LCO for memcpy_sync.\n");
-
-  int e = _pgas_parcel_memcpy(gas, to, from, size, sync);
-  dbg_check(hpx_lco_wait(sync), "failed agas_memcpy_sync\n");
-  hpx_lco_delete(sync, HPX_NULL);
-  return e;
-}
-
-static int _pgas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
-                        hpx_addr_t lsync, hpx_addr_t rsync) {
-  if (!n) {
-    return HPX_SUCCESS;
-  }
-
-  if (gpa_to_rank(to) == here->rank) {
-    void *lto = pgas_gpa_to_lva(to);
-    memcpy(lto, from, n);
-    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
-    return HPX_SUCCESS;
-  }
-
-  return network_memput(here->network, to, from, n, lsync, rsync);
-}
-
-static int _pgas_memput_lsync(void *gas, hpx_addr_t to, const void *from,
-                              size_t n, hpx_addr_t rsync) {
-  if (!n) {
-    return HPX_SUCCESS;
-  }
-
-  if (gpa_to_rank(to) == here->rank) {
-    void *lto = pgas_gpa_to_lva(to);
-    memcpy(lto, from, n);
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
-    return HPX_SUCCESS;
-  }
-
-  return network_memput_lsync(here->network, to, from, n, rsync);
-}
-
-static int _pgas_memput_rsync(void *gas, hpx_addr_t to, const void *from,
-                              size_t n) {
-  if (!n) {
-    return HPX_SUCCESS;
-  }
-
-  if (gpa_to_rank(to) == here->rank) {
-    void *lto = pgas_gpa_to_lva(to);
-    memcpy(lto, from, n);
-    return HPX_SUCCESS;
-  }
-
-  return network_memput_rsync(here->network, to, from, n);
-}
-
-static int _pgas_memget_rsync(void *gas, void *to, hpx_addr_t from, size_t n,
-                              hpx_addr_t lsync) {
-  if (!n) {
-    return HPX_SUCCESS;
-  }
-
-  if (gpa_to_rank(from) == here->rank) {
-    const void *lfrom = pgas_gpa_to_lva(from);
-    memcpy(to, lfrom, n);
-    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-    return HPX_SUCCESS;
-  }
-
-  return network_memget_rsync(here->network, to, from, n, lsync);
-}
-
-static int _pgas_memget_lsync(void *gas, void *to, hpx_addr_t from, size_t n) {
-  if (!n) {
-    return HPX_SUCCESS;
-  }
-
-  if (gpa_to_rank(from) == here->rank) {
-    const void *lfrom = pgas_gpa_to_lva(from);
-    memcpy(to, lfrom, n);
-    return HPX_SUCCESS;
-  }
-
-  return network_memget_lsync(here->network, to, from, n);
-}
-
 static void _pgas_move(void *gas, hpx_addr_t src, hpx_addr_t dst,
                        hpx_addr_t sync) {
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
@@ -352,13 +238,13 @@ static gas_t _pgas_vtable = {
   .type           = HPX_GAS_PGAS,
   .string = {
     .memget       = NULL,
-    .memget_rsync = _pgas_memget_rsync,
-    .memget_lsync = _pgas_memget_lsync,
-    .memput       = _pgas_memput,
-    .memput_lsync = _pgas_memput_lsync,
-    .memput_rsync = _pgas_memput_rsync,
-    .memcpy       = _pgas_parcel_memcpy,
-    .memcpy_sync  = _pgas_parcel_memcpy_sync,
+    .memget_rsync = pgas_memget_rsync,
+    .memget_lsync = pgas_memget_lsync,
+    .memput       = pgas_memput,
+    .memput_lsync = pgas_memput_lsync,
+    .memput_rsync = pgas_memput_rsync,
+    .memcpy       = pgas_memcpy,
+    .memcpy_sync  = pgas_memcpy_sync,
   },
   .dealloc        = _pgas_dealloc,
   .local_size     = _pgas_local_size,
