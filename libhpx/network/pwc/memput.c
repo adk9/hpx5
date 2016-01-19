@@ -34,38 +34,38 @@
 int pwc_memput(void *obj, hpx_addr_t to, const void *from, size_t size,
                hpx_addr_t lsync, hpx_addr_t rsync) {
   command_t lcmd = {
-    .op = 0,
+    .op = NOP,
     .arg = lsync
   };
 
   if (lsync) {
     if (gpa_to_rank(lsync) == here->rank) {
-      lcmd.op = lco_set;
+      lcmd.op = LCO_SET;
     }
     else {
       hpx_parcel_t *p = action_new_parcel(hpx_lco_set_action, lsync, 0, 0, 0);
       dbg_assert(p);
       lcmd.arg = (uintptr_t)p;
-      lcmd.op  = resume_parcel;
+      lcmd.op  = RESUME_PARCEL;
     }
   }
 
   command_t rcmd = {
-    .op = 0,
+    .op = NOP,
     .arg = rsync
   };
 
   if (rsync) {
     if (gpa_to_rank(rsync) == here->rank) {
-      rcmd.op = lco_set_source;
+      rcmd.op = LCO_SET_SOURCE;
     }
     else if (gpa_to_rank(rsync) == gpa_to_rank(to)) {
-      rcmd.op = lco_set;
+      rcmd.op = LCO_SET;
     }
     else {
       hpx_parcel_t *p = action_new_parcel(hpx_lco_set_action, rsync, 0, 0, 0);
       rcmd.arg = (uintptr_t)p;
-      rcmd.op  = resume_parcel_source;
+      rcmd.op  = RESUME_PARCEL_SOURCE;
     }
   }
 
@@ -101,26 +101,26 @@ static void _pwc_memput_lsync_continuation(hpx_parcel_t *p, void *env) {
   _pwc_memput_lsync_continuation_env_t *e = env;
 
   command_t rcmd = {
-    .op = 0,
+    .op = NOP,
     .arg = e->rsync
   };
 
   if (e->rsync) {
     if (gpa_to_rank(e->rsync) == here->rank) {
-      rcmd.op = lco_set_source;
+      rcmd.op = LCO_SET_SOURCE;
     }
     else if (gpa_to_rank(e->rsync) == gpa_to_rank(e->to)) {
-      rcmd.op = lco_set;
+      rcmd.op = LCO_SET;
     }
     else {
       hpx_parcel_t *p = action_new_parcel(hpx_lco_set_action, e->rsync, 0, 0, 0);
       rcmd.arg = (uintptr_t)p;
-      rcmd.op = resume_parcel_source;
+      rcmd.op = RESUME_PARCEL_SOURCE;
     }
   }
 
   command_t lcmd = {
-    .op  = resume_parcel,
+    .op  = RESUME_PARCEL,
     .arg = (uintptr_t)p
   };
 
@@ -157,7 +157,7 @@ static void _pwc_memput_rsync_continuation(hpx_parcel_t *p, void *env) {
   _pwc_memput_rsync_continuation_env_t *e = env;
   command_t lcmd = { 0 };
   command_t rcmd = {
-    .op  = resume_parcel_source,
+    .op  = RESUME_PARCEL_SOURCE,
     .arg = (uintptr_t)p
   };
   dbg_check( pwc_put(e->obj, e->to, e->from, e->n, lcmd, rcmd) );

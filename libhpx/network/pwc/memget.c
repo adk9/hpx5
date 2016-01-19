@@ -46,7 +46,7 @@ int pwc_memget(void *obj, void *to, hpx_addr_t from, size_t size,
 int pwc_memget_rsync(void *obj, void *to, hpx_addr_t from, size_t n,
                      hpx_addr_t lsync) {
   command_t lcmd = {
-    .op  = 0,
+    .op  = NOP,
     .arg = lsync
   };
 
@@ -54,12 +54,12 @@ int pwc_memget_rsync(void *obj, void *to, hpx_addr_t from, size_t n,
 
   if (lsync) {
     if (gpa_to_rank(lsync) == here->rank) {
-      lcmd.op = lco_set;
+      lcmd.op = LCO_SET;
     }
     else {
       hpx_parcel_t *c = action_new_parcel(hpx_lco_set_action, lsync, 0, 0, 0);
       lcmd.arg = (uintptr_t)c;
-      lcmd.op  = resume_parcel;
+      lcmd.op  = RESUME_PARCEL;
     }
   }
 
@@ -80,7 +80,7 @@ typedef struct {
 static void _pwc_memget_lsync_continuation(hpx_parcel_t *p, void *env) {
   _pwc_memget_lsync_env_t *e = env;
   command_t lcmd = {
-    .op  = resume_parcel,
+    .op  = RESUME_PARCEL,
     .arg = (uintptr_t)p
   };
   command_t rcmd = { 0 };

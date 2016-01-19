@@ -157,7 +157,8 @@ _photon_unpin(const void *base, size_t n) {
 static int
 _photon_unpin_async(const void *base, size_t n, int src, uint64_t op) {
   _photon_unpin(base, n);
-  return command_run(src, (command_t){op});
+  command_run(src, (command_t){op});
+  return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_INTERRUPT, 0, _unpin_async, _photon_unpin_async,
                      HPX_POINTER, HPX_SIZE_T, HPX_INT, HPX_UINT64);
@@ -194,12 +195,12 @@ static command_t _chain_unpin(const void *addr, size_t n, command_t op) {
                                       &here->rank,  // src for command
                                       &op.packed);  // command
 
-  return (command_t){ .op = resume_parcel, .arg = (uintptr_t)p };
+  return (command_t){ .op = RESUME_PARCEL, .arg = (uintptr_t)p };
 }
 
 static int _photon_cmd(int rank, command_t lcmd, command_t rcmd) {
-  int flags = ((lcmd.op) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
-              ((rcmd.op) ? 0 : PHOTON_REQ_PWC_NO_RCE);
+  int flags = ((lcmd.op) ? NOP : PHOTON_REQ_PWC_NO_LCE) |
+              ((rcmd.op) ? NOP : PHOTON_REQ_PWC_NO_RCE);
 
   int e = photon_put_with_completion(rank, 0, NULL, NULL, lcmd.packed,
                                      rcmd.packed, flags);
@@ -216,8 +217,8 @@ static int _photon_cmd(int rank, command_t lcmd, command_t rcmd) {
 }
 
 static int _photon_pwc(xport_op_t *op) {
-  int flags = ((op->lop.packed) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
-              ((op->rop.packed) ? 0 : PHOTON_REQ_PWC_NO_RCE);
+  int flags = ((op->lop.op) ? NOP : PHOTON_REQ_PWC_NO_LCE) |
+              ((op->rop.op) ? NOP : PHOTON_REQ_PWC_NO_RCE);
 
   struct photon_buffer_t rbuf = {
     .addr = (uintptr_t)op->dest,
@@ -255,7 +256,7 @@ static int _photon_pwc(xport_op_t *op) {
 
 static int
 _photon_gwc(xport_op_t *op) {
-  int flags = (op->rop.packed) ? 0 : PHOTON_REQ_PWC_NO_RCE;
+  int flags = (op->rop.op) ? NOP : PHOTON_REQ_PWC_NO_RCE;
 
   struct photon_buffer_t lbuf = {
     .addr = (uintptr_t)op->dest,

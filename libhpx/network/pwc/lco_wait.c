@@ -35,7 +35,7 @@ static int _pwc_lco_wait_handler(uint64_t p, int reset) {
   if (e != HPX_SUCCESS) {
     dbg_error("Cannot yet return an error from a remote wait operation\n");
   }
-  command_t rcmd = { .op = resume_parcel, .arg = p };
+  command_t rcmd = { .op = RESUME_PARCEL, .arg = p };
   return pwc_cmd(pwc_network, curr->src, (command_t){0}, rcmd);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _pwc_lco_wait, _pwc_lco_wait_handler,

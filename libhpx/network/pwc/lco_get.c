@@ -31,7 +31,7 @@ static void _get_reply_continuation(hpx_parcel_t *p, void *env) {
   xport_op_t *op = env;
 
   // at this point we know which parcel to resume for local completion
-  op->lop.op  = resume_parcel;
+  op->lop.op  = RESUME_PARCEL;
   op->lop.arg = (uintptr_t)p;
   dbg_check( pwc_network->xport->pwc(op) );
 }
@@ -92,7 +92,7 @@ static int _get_reply_stack(_pwc_lco_get_request_args_t *args,
   }
 
   command_t resume = {
-    .op  = resume_parcel,
+    .op  = RESUME_PARCEL,
     .arg = (uintptr_t)args->p
   };
 
@@ -119,7 +119,7 @@ static int _get_reply_malloc(_pwc_lco_get_request_args_t *args,
   }
 
   command_t resume = {
-    .op  = resume_parcel,
+    .op  = RESUME_PARCEL,
     .arg = (uintptr_t)args->p
   };
   e = _get_reply(args, pwc, ref, resume);
@@ -150,7 +150,7 @@ static int _get_reply_getref(_pwc_lco_get_request_args_t *args,
 
   // Wake the remote getter up.
   command_t rcmd = {
-    .op  = resume_parcel,
+    .op  = RESUME_PARCEL,
     .arg = (uintptr_t)args->p
   };
   e = pwc_cmd(pwc, args->rank, (command_t){0}, rcmd);

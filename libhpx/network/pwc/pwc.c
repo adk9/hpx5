@@ -48,8 +48,7 @@ static void _probe_local(pwc_network_t *pwc, int id) {
   command_t command;
   int src;
   while (pwc->xport->test(&command, NULL, XPORT_ANY_SOURCE, &src)) {
-    int e = command_run(rank, command);
-    dbg_check(e, "failed to process local command\n");
+    command_run(rank, command);
   }
 }
 
@@ -57,8 +56,7 @@ static hpx_parcel_t *_probe(pwc_network_t *pwc, int rank) {
   command_t command;
   int src;
   while (pwc->xport->probe(&command, NULL, rank, &src)) {
-    int e = command_run(src, command);
-    dbg_check(e, "failed to process command from %d\n", src);
+    command_run(src, command);
   }
   return NULL;
 }
