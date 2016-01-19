@@ -85,8 +85,8 @@ static LIBHPX_ACTION(HPX_INTERRUPT, HPX_PINNED, _isir_memget_request,
 /// asynchronous memget. This interface allows the programmer to attach both an
 /// rsync LCO to determine when the remote read has completed, and an lsync LCO
 /// to determine when the local copy has completed.
-int isir_memget(void *obj, void *to, hpx_addr_t from, size_t size,
-                hpx_addr_t lsync, hpx_addr_t rsync) {
+static int _isir_memget(void *obj, void *to, hpx_addr_t from, size_t size,
+                        hpx_addr_t lsync, hpx_addr_t rsync) {
   hpx_action_t op  = _isir_memget_request;
   hpx_action_t rop = hpx_lco_set_action;
   return action_call_lsync(op, from, rsync, rop, 3, &to, &size, &lsync);
@@ -97,11 +97,11 @@ int isir_memget(void *obj, void *to, hpx_addr_t from, size_t size,
 /// The memget operation uses the request/reply mechanism to perform an
 /// asynchronous memget. This version of memget will not return until the remote
 /// read has completed.
-int isir_memget_rsync(void *obj, void *to, hpx_addr_t from, size_t size,
-                      hpx_addr_t lsync) {
+static int _isir_memget_rsync(void *obj, void *to, hpx_addr_t from, size_t size,
+                              hpx_addr_t lsync) {
   hpx_addr_t rsync = hpx_lco_future_new(0);
   dbg_assert(rsync);
-  dbg_check( isir_memget(obj, to, from, size, lsync, rsync) );
+  dbg_check( _isir_memget(obj, to, from, size, lsync, rsync) );
   int e = hpx_lco_wait(rsync);
   hpx_lco_delete_sync(rsync);
   return e;
@@ -116,11 +116,11 @@ int isir_memget_rsync(void *obj, void *to, hpx_addr_t from, size_t size,
 /// @param            n The number of bytes to copy.
 ///
 /// @returns            HPX_SUCCESS
-static int _isir_memget_handler(const void *from, size_t n) {
+static int _isir_memget_sync_handler(const void *from, size_t n) {
   return hpx_thread_continue(from, n);
 }
-static LIBHPX_ACTION(HPX_INTERRUPT, HPX_PINNED, _isir_memget,
-                     _isir_memget_handler, HPX_POINTER, HPX_SIZE_T);
+static LIBHPX_ACTION(HPX_INTERRUPT, HPX_PINNED, _isir_memget_sync,
+                     _isir_memget_sync_handler, HPX_POINTER, HPX_SIZE_T);
 
 /// The fully synchronous memget operation.
 ///
@@ -128,8 +128,9 @@ static LIBHPX_ACTION(HPX_INTERRUPT, HPX_PINNED, _isir_memget,
 /// locally, which implies that the read has completed on the remote side. This
 /// version of memget can use the simplified rsync form of memget without
 /// relying on the asynchronous version.
-int isir_memget_lsync(void *obj, void *to, hpx_addr_t from, size_t size) {
-  return action_call_rsync(_isir_memget, from, to, size, 1, &size);
+static int _isir_memget_lsync(void *obj, void *to, hpx_addr_t from,
+                              size_t size) {
+  return action_call_rsync(_isir_memget_sync, from, to, size, 1, &size);
 }
 
 /// The memput handler.
@@ -140,30 +141,31 @@ int isir_memget_lsync(void *obj, void *to, hpx_addr_t from, size_t size) {
 /// @param         from The temporary buffer we're copying from.
 ///
 /// @returns            HPX_SUCCESS
-static int _isir_memput_handler(void *to, const void *from, size_t n) {
+static int _isir_memput_request_handler(void *to, const void *from, size_t n) {
   memcpy(to, from, n);
   return HPX_SUCCESS;
 }
-static LIBHPX_ACTION(HPX_INTERRUPT, HPX_PINNED | HPX_MARSHALLED, _isir_memput,
-                     _isir_memput_handler, HPX_POINTER, HPX_POINTER,
-                     HPX_SIZE_T);
+static LIBHPX_ACTION(HPX_INTERRUPT, HPX_PINNED | HPX_MARSHALLED,
+                     _isir_memput_request, _isir_memput_request_handler,
+                     HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
-int isir_memput(void *obj, hpx_addr_t to, const void *from, size_t size,
-                hpx_addr_t lsync, hpx_addr_t rsync) {
-  hpx_action_t  op = _isir_memput;
+static int _isir_memput(void *obj, hpx_addr_t to, const void *from, size_t size,
+                        hpx_addr_t lsync, hpx_addr_t rsync) {
+  hpx_action_t  op = _isir_memput_request;
   hpx_action_t set = hpx_lco_set_action;
   return action_call_async(op, to, lsync, set, rsync, set, 2, from, size);
 }
 
-int isir_memput_lsync(void *obj, hpx_addr_t to, const void *from, size_t size,
-                      hpx_addr_t rsync) {
-  hpx_action_t  op = _isir_memput;
+static int _isir_memput_lsync(void *obj, hpx_addr_t to, const void *from,
+                              size_t size, hpx_addr_t rsync) {
+  hpx_action_t  op = _isir_memput_request;
   hpx_action_t set = hpx_lco_set_action;
   return action_call_lsync(op, to, rsync, set, 2, from, size);
 }
 
-int isir_memput_rsync(void *obj, hpx_addr_t to, const void *from, size_t size) {
-  return action_call_rsync(_isir_memput, to, NULL, 0, 2, from, size);
+static int _isir_memput_rsync(void *obj, hpx_addr_t to, const void *from,
+                              size_t size) {
+  return action_call_rsync(_isir_memput_request, to, NULL, 0, 2, from, size);
 }
 
 /// The memcpy reply handler.
@@ -203,24 +205,25 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _isir_memcpy_request,
                      _isir_memcpy_request_handler, HPX_POINTER, HPX_SIZE_T,
                      HPX_ADDR);
 
-int isir_memcpy(void *obj, hpx_addr_t to, hpx_addr_t from, size_t n,
-                hpx_addr_t rsync) {
+static int _isir_memcpy(void *obj, hpx_addr_t to, hpx_addr_t from, size_t n,
+                        hpx_addr_t rsync) {
   hpx_action_t  op = _isir_memcpy_request;
   hpx_action_t set = hpx_lco_set_action;
   return action_call_lsync(op, from, rsync, set, 2, &n, &to);
 }
 
-int isir_memcpy_sync(void *obj, hpx_addr_t to, hpx_addr_t from, size_t n) {
+static int _isir_memcpy_sync(void *obj, hpx_addr_t to, hpx_addr_t from,
+                             size_t n) {
   return action_call_rsync(_isir_memcpy_request, from, NULL, 0, 2, &n, &to);
 }
 
 const class_string_t isir_string_vtable = {
-  .memget = isir_memget,
-  .memget_rsync = isir_memget_rsync,
-  .memget_lsync = isir_memget_lsync,
-  .memput = isir_memput,
-  .memput_lsync = isir_memput_lsync,
-  .memput_rsync = isir_memput_rsync,
-  .memcpy = isir_memcpy,
-  .memcpy_sync = isir_memcpy_sync
+  .memget       = _isir_memget,
+  .memget_rsync = _isir_memget_rsync,
+  .memget_lsync = _isir_memget_lsync,
+  .memput       = _isir_memput,
+  .memput_lsync = _isir_memput_lsync,
+  .memput_rsync = _isir_memput_rsync,
+  .memcpy       = _isir_memcpy,
+  .memcpy_sync  = _isir_memcpy_sync
 };
