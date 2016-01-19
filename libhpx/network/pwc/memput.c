@@ -16,7 +16,7 @@
 #endif
 
 #include <libhpx/gpa.h>
-#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
 #include <libhpx/scheduler.h>
 #include "commands.h"
 #include "pwc.h"
