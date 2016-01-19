@@ -27,7 +27,6 @@
 #include <libhpx/padding.h>
 #include <libhpx/parcel.h>
 
-#include "emulate_pwc.h"
 #include "irecv_buffer.h"
 #include "isend_buffer.h"
 #include "isir.h"
@@ -86,78 +85,6 @@ _funneled_send(void *network, hpx_parcel_t *p) {
   _funneled_t *isir = network;
   sync_two_lock_queue_enqueue(&isir->sends, p);
   return LIBHPX_OK;
-}
-
-static int
-_funneled_command(void *network, hpx_addr_t locality, hpx_action_t op,
-                  uint64_t args) {
-  return hpx_xcall(locality, op, HPX_NULL, here->rank, args);
-}
-
-static int
-_funneled_pwc(void *network,
-              hpx_addr_t to, const void *from, size_t n,
-              hpx_action_t lop, hpx_addr_t laddr,
-              hpx_action_t rop, hpx_addr_t raddr) {
-  dbg_assert(lop || !laddr); // !lop => !lsync
-
-  hpx_addr_t lsync = HPX_NULL;
-  hpx_addr_t rsync = HPX_NULL;
-  if (lop && laddr) {
-    lsync = hpx_lco_future_new(0);
-    dbg_assert(lsync);
-    int e = hpx_call_when_with_continuation(lsync, laddr, lop, lsync,
-                                            hpx_lco_delete_action, &here->rank,
-                                            &laddr);
-    dbg_check(e, "failed to chain parcel\n");
-  }
-
-  if (rop && raddr) {
-    rsync = hpx_lco_future_new(0);
-    dbg_assert(rsync);
-    int e = hpx_call_when_with_continuation(rsync, raddr, rop, rsync,
-                                            hpx_lco_delete_action, &here->rank,
-                                            &raddr);
-    dbg_check(e, "failed to chain parcel\n");
-  }
-
-  return hpx_call_async(to, isir_emulate_pwc, lsync, rsync, from, n);
-}
-
-static int
-_funneled_put(void *network, hpx_addr_t to, const void *from, size_t n,
-              hpx_action_t lop, hpx_addr_t laddr) {
-  hpx_action_t rop = HPX_ACTION_NULL;
-  hpx_addr_t raddr = HPX_NULL;
-  return _funneled_pwc(network, to, from, n, lop, laddr, rop, raddr);
-}
-
-/// Transform the get() operation into a parcel emulation.
-static int
-_funneled_get(void *network, void *to, hpx_addr_t from, size_t n,
-              hpx_action_t lop, hpx_addr_t laddr) {
-  // if there isn't a lop, then lsync should be HPX_NULL
-  dbg_assert(lop || !laddr); // !lop => !laddr
-
-  // go ahead an set the local lco if there is nothing to do
-  if (!n) {
-    hpx_call(laddr, lop, HPX_NULL, &here->rank, &laddr);
-    return HPX_SUCCESS;
-  }
-
-  // Chain the lop handler to an LCO.
-  hpx_addr_t lsync = HPX_NULL;
-  if (lop) {
-    lsync = hpx_lco_future_new(0);
-    dbg_assert(lsync);
-    int e = hpx_call_when_with_continuation(lsync, laddr, lop, lsync,
-                                            hpx_lco_delete_action, &here->rank,
-                                            &laddr);
-    dbg_check(e, "failed to chain parcel\n");
-  }
-
-  // Concoct a global address that points to @p to @ here, and send it over.
-  return hpx_call(from, isir_emulate_gwc, lsync, &n, &HPX_HERE, &to);
 }
 
 static hpx_parcel_t *
@@ -236,13 +163,10 @@ network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
   }
 
   network->vtable.type = HPX_NETWORK_ISIR;
+  network->vtable.string = &isir_string_vtable;
   network->vtable.delete = _funneled_delete;
   network->vtable.progress = _funneled_progress;
   network->vtable.send = _funneled_send;
-  network->vtable.command = _funneled_command;
-  network->vtable.pwc = _funneled_pwc;
-  network->vtable.put = _funneled_put;
-  network->vtable.get = _funneled_get;
   network->vtable.probe = _funneled_probe;
   network->vtable.flush = _funneled_flush;
   network->vtable.register_dma = _funneled_register_dma;

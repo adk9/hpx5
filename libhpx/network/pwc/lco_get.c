@@ -141,8 +141,9 @@ static int _get_reply_getref(_pwc_lco_get_request_args_t *args,
   hpx_lco_release(lco, ref);
 
   // Wake the remote getter up.
-  e = network_command(pwc, HPX_THERE(args->rank), resume_parcel,
-                      (uintptr_t)args->p);
+  hpx_action_t cmd = resume_parcel;
+  hpx_addr_t  sync = (uintptr_t)args->p;
+  e = pwc_command(pwc, HPX_THERE(args->rank), cmd, sync);
   dbg_check(e, "Failed to start resume command during remote lco get.\n");
   return e;
 }

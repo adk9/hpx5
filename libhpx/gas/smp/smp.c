@@ -240,6 +240,16 @@ _smp_local_base(void *gas) {
 
 static gas_t _smp_vtable = {
   .type           = HPX_GAS_SMP,
+  .string = {
+    .memget       = NULL,
+    .memget_rsync = _smp_memget,
+    .memget_lsync = _smp_memget_sync,
+    .memput       = _smp_memput,
+    .memput_lsync = _smp_memput_lsync,
+    .memput_rsync = _smp_memput_rsync,
+    .memcpy       = _smp_memcpy,
+    .memcpy_sync  = _smp_memcpy_sync
+  },
   .dealloc        = _smp_dealloc,
   .local_size     = _smp_local_size,
   .local_base     = _smp_local_base,
@@ -256,13 +266,6 @@ static gas_t _smp_vtable = {
   .calloc_local   = _smp_gas_calloc_local,
   .free           = _smp_gas_free,
   .move           = _smp_move,
-  .memget         = _smp_memget,
-  .memget_sync    = _smp_memget_sync,
-  .memput         = _smp_memput,
-  .memput_lsync   = _smp_memput_lsync,
-  .memput_rsync   = _smp_memput_rsync,
-  .memcpy         = _smp_memcpy,
-  .memcpy_sync    = _smp_memcpy_sync
 };
 
 gas_t *gas_smp_new(void) {
