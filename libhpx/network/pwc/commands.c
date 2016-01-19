@@ -17,13 +17,12 @@
 
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
-#include <libhpx/action.h>
 #include <libhpx/gpa.h>
 #include <libhpx/locality.h>
-#include <libhpx/network.h>
 #include <libhpx/parcel.h>
 
 #include "commands.h"
+#include "pwc.h"
 
 static int _lco_set_handler(int src, uint64_t command) {
   hpx_addr_t lco = offset_to_gpa(here->rank, command);
@@ -66,7 +65,7 @@ COMMAND_DEF(resume_parcel, _resume_parcel_handler);
 /// command during remote completion.
 static int _resume_parcel_source_handler(int src, command_t command) {
   hpx_action_t cmd = resume_parcel;
-  return network_command(here->network, HPX_THERE(src), cmd, command.packed);
+  return pwc_command(pwc_network, HPX_THERE(src), cmd, command.packed);
 }
 COMMAND_DEF(resume_parcel_source, _resume_parcel_source_handler);
 

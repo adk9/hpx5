@@ -44,18 +44,6 @@ typedef struct network {
 
   int (*send)(void*, hpx_parcel_t *p);
 
-  int (*command)(void*, hpx_addr_t rank, hpx_action_t op, uint64_t args);
-
-  int (*pwc)(void*, hpx_addr_t to, const void *from, size_t n,
-             hpx_action_t lop, hpx_addr_t laddr, hpx_action_t rop,
-             hpx_addr_t raddr);
-
-  int (*put)(void*, hpx_addr_t to, const void *from, size_t n,
-             hpx_action_t lop, hpx_addr_t laddr);
-
-  int (*get)(void*, void *to, hpx_addr_t from, size_t n,
-             hpx_action_t lop, hpx_addr_t laddr);
-
   int (*lco_wait)(void *, hpx_addr_t lco, int reset);
   int (*lco_get)(void *, hpx_addr_t lco, size_t n, void *to, int reset);
 
@@ -131,95 +119,6 @@ static inline int
 network_send(void *obj, hpx_parcel_t *p) {
   network_t *network = obj;
   return network->send(network, p);
-}
-
-
-/// Send a network command.
-///
-/// This sends a remote completion event to a locality. There is no data
-/// associated with this command. This is always locally synchronous.
-///
-/// @param      network The network to use.
-/// @param         rank The target rank.
-/// @param           op The operation for the command.
-/// @param         args The arguments for the command (40 bits packed with op).
-static inline int
-network_command(void *obj, hpx_addr_t rank, hpx_action_t op, uint64_t args) {
-  network_t *network = obj;
-  return network->command(network, rank, op, args);
-}
-
-/// Initiate an rDMA put operation with a remote continuation.
-///
-/// This will copy @p n bytes between the @p from buffer and the @p to buffer,
-/// setting the @p local LCO when the @p from buffer can be reused, and the @p
-/// remote LCO when the remote operation is complete.
-///
-/// Furthermore, it will generate a remote completion continuation encoding (@p
-/// rop, @p rsync) at the locality at which @p to is currently mapped,
-/// allowing two-sided active-message semantics.
-///
-/// In this context, signaling the @p remote LCO and the delivery of the remote
-/// completion via @p op are independent events that potentially proceed in
-/// parallel.
-///
-/// @param      network The network instance to use.
-/// @param           to The global target for the put.
-/// @param         from The local source for the put.
-/// @param            n The number of bytes to put.
-/// @param          lop The local continuation operation.
-/// @param        lsync The local continuation address.
-/// @param          rop The remote continuation operation.
-/// @param        rsync The remote continuation address.
-///
-/// @returns            LIBHPX_OK
-static inline int
-network_pwc(void *obj, hpx_addr_t to, const void *from, size_t n,
-            hpx_action_t lop, hpx_addr_t lsync,
-            hpx_action_t rop, hpx_addr_t rsync) {
-  network_t *network = obj;
-  return network->pwc(network, to, from, n, lop, lsync, rop, rsync);
-}
-
-/// Initiate an rDMA put operation with a local completion continuation.
-///
-/// This will copy @p n bytes between the @p from buffer and the @p to buffer,
-/// setting the @p local LCO when the @p from buffer can be reused, and the @p
-/// remote LCO when the remote operation is complete.
-///
-/// @param      network The network instance to use.
-/// @param           to The global target for the put.
-/// @param         from The local source for the put.
-/// @param            n The number of bytes to put.
-/// @param          lop A local continuation, run when @p from can be modified.
-/// @param        laddr A local local continuation address.
-///
-/// @returns            LIBHPX_OK
-static inline int
-network_put(void *obj, hpx_addr_t to, const void *from, size_t n,
-            hpx_action_t lop, hpx_addr_t laddr) {
-  network_t *network = obj;
-  return network->put(network, to, from, n, lop, laddr);
-}
-
-/// Initiate an rDMA get operation with a local completion event.
-///
-/// This will copy @p n bytes between the @p from buffer and the @p to buffer,
-/// setting the @p local LCO when the @p from buffer can be accessed.
-///
-/// @param      network The network instance to use.
-/// @param           to The local target for the get.
-/// @param         from The global source for the get.
-/// @param            n The number of bytes to get.
-/// @param          lop A local continuation, run when @p from can be modified.
-/// @param        laddr A local local continuation address.
-///
-/// @returns            LIBHPX_OK
-static inline int
-network_get(void *obj, void *to, hpx_addr_t from, size_t n,
-            hpx_action_t lop, hpx_addr_t laddr) {
-  network_t *network = obj;
-  return network->get(network, to, from, n, lop, laddr);
 }
 
 /// Probe for received parcels.

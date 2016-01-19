@@ -316,14 +316,14 @@ void hpx_exit(int code) {
   // problems with flushing.
   for (int i = 0, e = here->ranks; i < e; ++i) {
     if (i != here->rank) {
-      int e = network_command(here->network, HPX_THERE(i), locality_stop, c);
+      int e = action_call_lsync(locality_stop, HPX_THERE(i), 0, 0, 1, &c);
       dbg_check(e);
     }
   }
 
   // Call our own shutdown through cc, which orders it locally after the effects
   // from the loop above.
-  int e = hpx_call_cc(HPX_HERE, locality_stop, &here->rank, &c);
+  int e = hpx_call_cc(HPX_HERE, locality_stop, &c);
   hpx_thread_exit(e);
 }
 

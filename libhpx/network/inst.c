@@ -47,33 +47,6 @@ static int _inst_send(void *network, hpx_parcel_t *p) {
   return inst->impl->send(network, p);
 }
 
-static int _inst_command(void *network, hpx_addr_t rank,
-                        hpx_action_t op, uint64_t args) {
-  _inst_network_t *inst = network;
-  return inst->impl->command(network, rank, op, args);
-}
-
-static int _inst_pwc(void *network,
-                    hpx_addr_t to, const void *from, size_t n,
-                    hpx_action_t lop, hpx_addr_t laddr,
-                    hpx_action_t rop, hpx_addr_t raddr) {
-  _inst_network_t *inst = network;
-  return inst->impl->pwc(network, to, from, n, lop, laddr, rop, raddr);
-}
-
-static int _inst_put(void *network, hpx_addr_t to,
-                    const void *from, size_t n,
-                    hpx_action_t lop, hpx_addr_t laddr) {
-  _inst_network_t *inst = network;
-  return inst->impl->put(network, to, from, n, lop, laddr);
-}
-
-static int _inst_get(void *network, void *to, hpx_addr_t from, size_t n,
-                     hpx_action_t lop, hpx_addr_t laddr) {
-  _inst_network_t *inst = network;
-  return inst->impl->get(network, to, from, n, lop, laddr);
-}
-
 static hpx_parcel_t *_inst_probe(void *network, int nrx) {
   _inst_network_t *inst = network;
   INST(uint64_t start_time = hpx_time_from_start_ns(hpx_time_now()));
@@ -119,10 +92,6 @@ network_t *network_inst_new(network_t *impl) {
   inst->vtable.delete = _inst_delete;
   inst->vtable.progress = _inst_progress;
   inst->vtable.send = _inst_send;
-  inst->vtable.command = _inst_command;
-  inst->vtable.pwc = _inst_pwc;
-  inst->vtable.put = _inst_put;
-  inst->vtable.get = _inst_get;
   inst->vtable.probe = _inst_probe;
   inst->vtable.register_dma = _inst_register_dma;
   inst->vtable.release_dma = _inst_release_dma;

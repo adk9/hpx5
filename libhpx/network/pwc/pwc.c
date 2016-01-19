@@ -250,10 +250,6 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   pwc->vtable.delete = _pwc_delete;
   pwc->vtable.progress = _pwc_progress;
   pwc->vtable.send = _pwc_send;
-  pwc->vtable.command = pwc_command;
-  pwc->vtable.pwc = pwc_pwc;
-  pwc->vtable.put = pwc_put;
-  pwc->vtable.get = pwc_get;
   pwc->vtable.probe = _pwc_probe;
   pwc->vtable.flush = _pwc_flush;
   pwc->vtable.register_dma = _pwc_register_dma;

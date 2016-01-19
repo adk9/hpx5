@@ -40,42 +40,6 @@ static int _smp_send(void *network, hpx_parcel_t *p) {
   hpx_abort();
 }
 
-static int _smp_command(void *network, hpx_addr_t rank,
-                        hpx_action_t op, uint64_t args) {
-  return hpx_xcall(HPX_HERE, op, HPX_NULL, _zero, args);
-}
-
-static int _smp_pwc(void *network,
-                    hpx_addr_t to, const void *from, size_t n,
-                    hpx_action_t lop, hpx_addr_t laddr,
-                    hpx_action_t rop, hpx_addr_t raddr) {
-  if (n) {
-    void *t = (void*)(uintptr_t)to;
-    memcpy(t, from, n);
-  }
-
-  if (lop && laddr) {
-    dbg_check( hpx_xcall(HPX_HERE, lop, HPX_NULL, _zero, laddr) );
-  }
-
-  if (rop && raddr) {
-    dbg_check( hpx_xcall(HPX_HERE, rop, HPX_NULL, _zero, raddr) );
-  }
-
-  return LIBHPX_OK;
-}
-
-static int _smp_put(void *network, hpx_addr_t to,
-                    const void *from, size_t n,
-                    hpx_action_t lop, hpx_addr_t laddr) {
-  return LIBHPX_EUNIMPLEMENTED;
-}
-
-static int _smp_get(void *network, void *to, hpx_addr_t from, size_t n,
-                    hpx_action_t lop, hpx_addr_t laddr) {
-  return LIBHPX_EUNIMPLEMENTED;
-}
-
 static hpx_parcel_t *_smp_probe(void *network, int nrx) {
   return NULL;
 }
@@ -104,10 +68,6 @@ static network_t _smp = {
   .delete = _smp_delete,
   .progress = _smp_progress,
   .send = _smp_send,
-  .command = _smp_command,
-  .pwc = _smp_pwc,
-  .put = _smp_put,
-  .get = _smp_get,
   .probe = _smp_probe,
   .flush = _smp_flush,
   .register_dma = _smp_register_dma,

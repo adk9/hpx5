@@ -64,16 +64,64 @@ network_t *network_pwc_funneled_new(const struct config *cfg, struct boot *boot,
 /// @returns            The (local) status of the put operation.
 int pwc_command(void *network, hpx_addr_t loc, hpx_action_t rop, uint64_t args);
 
-/// Perform a PWC network put-with-remote-command operation.
+/// Initiate an rDMA put operation with a remote continuation.
+///
+/// This will copy @p n bytes between the @p from buffer and the @p to buffer,
+/// setting the @p local LCO when the @p from buffer can be reused, and the @p
+/// remote LCO when the remote operation is complete.
+///
+/// Furthermore, it will generate a remote completion continuation encoding (@p
+/// rop, @p rsync) at the locality at which @p to is currently mapped,
+/// allowing two-sided active-message semantics.
+///
+/// In this context, signaling the @p remote LCO and the delivery of the remote
+/// completion via @p op are independent events that potentially proceed in
+/// parallel.
+///
+/// @param      network The network instance to use.
+/// @param           to The global target for the put.
+/// @param         from The local source for the put.
+/// @param            n The number of bytes to put.
+/// @param          lop The local continuation operation.
+/// @param        lsync The local continuation address.
+/// @param          rop The remote continuation operation.
+/// @param        rsync The remote continuation address.
+///
+/// @returns            LIBHPX_OK
 int pwc_pwc(void *network, hpx_addr_t to, const void *lva, size_t n,
             hpx_action_t lop, hpx_addr_t laddr,
             hpx_action_t rop, hpx_addr_t raddr);
 
-/// Perform a PWC network put operation.
+/// Initiate an rDMA put operation with a local completion continuation.
+///
+/// This will copy @p n bytes between the @p from buffer and the @p to buffer,
+/// setting the @p local LCO when the @p from buffer can be reused, and the @p
+/// remote LCO when the remote operation is complete.
+///
+/// @param      network The network instance to use.
+/// @param           to The global target for the put.
+/// @param         from The local source for the put.
+/// @param            n The number of bytes to put.
+/// @param          lop A local continuation, run when @p from can be modified.
+/// @param        laddr A local local continuation address.
+///
+/// @returns            LIBHPX_OK
 int pwc_put(void *network, hpx_addr_t to, const void *from, size_t n,
             hpx_action_t lop, hpx_addr_t laddr);
 
-/// Perform a PWC network get operation.
+/// Initiate an rDMA get operation with a local completion event.
+///
+/// This will copy @p n bytes between the @p from buffer and the @p to buffer,
+/// setting the @p local LCO when the @p from buffer can be accessed.
+///
+/// @param      network The network instance to use.
+/// @param           to The local target for the get.
+/// @param         from The global source for the get.
+/// @param            n The number of bytes to get.
+/// @param          lop A local continuation, run when @p from can be modified.
+/// @param        laddr A local local continuation address.
+///
+/// @returns            LIBHPX_OK
 int pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
             hpx_action_t lop, hpx_addr_t laddr);
 
