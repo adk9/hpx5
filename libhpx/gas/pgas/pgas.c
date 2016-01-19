@@ -34,7 +34,6 @@
 #include "global.h"
 #include "heap.h"
 #include "pgas.h"
-#include "../parcel/emulation.h"
 
 /// The PGAS type is a global address space that manages a shared heap.
 ///
@@ -218,200 +217,6 @@ static void _pgas_gas_free(void *gas, hpx_addr_t gpa, hpx_addr_t sync) {
   }
 }
 
-static int _pgas_parcel_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from,
-                               size_t size, hpx_addr_t sync) {
-  if (!size) {
-    return HPX_SUCCESS;
-  }
-
-  if (gpa_to_rank(to) != here->rank) {
-    return parcel_memcpy(to, from, size, sync);
-  }
-
-  if (gpa_to_rank(from) != here->rank) {
-    return parcel_memcpy(to, from, size, sync);
-  }
-
-  void *lto = pgas_gpa_to_lva(to);
-  void *lfrom = pgas_gpa_to_lva(from);
-  memcpy(lto, lfrom, size);
-  hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
-  return HPX_SUCCESS;
-}
-
-static int _pgas_parcel_memcpy_sync(void *gas, hpx_addr_t to, hpx_addr_t from,
-                                    size_t size) {
-  if (!size) {
-    return HPX_SUCCESS;
-  }
-
-  hpx_addr_t sync = hpx_lco_future_new(0);
-  dbg_assert_str(sync, "could not allocate an LCO for memcpy_sync.\n");
-
-  int e = _pgas_parcel_memcpy(gas, to, from, size, sync);
-  dbg_check(hpx_lco_wait(sync), "failed agas_memcpy_sync\n");
-  hpx_lco_delete(sync, HPX_NULL);
-  return e;
-}
-
-static int _lco_rsync_handler(int src, uint64_t command) {
-  return network_command(here->network, HPX_THERE(src), lco_set, command);
-}
-static COMMAND_DEF(_lco_rsync, _lco_rsync_handler);
-
-static int _pgas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
-                        hpx_addr_t lsync, hpx_addr_t rsync) {
-  if (!n) {
-    return HPX_SUCCESS;
-  }
-
-  if (gpa_to_rank(to) == here->rank) {
-    void *lto = pgas_gpa_to_lva(to);
-    memcpy(lto, from, n);
-    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
-    return HPX_SUCCESS;
-  }
-
-  hpx_action_t lop = lsync ? lco_set : HPX_ACTION_NULL;
-  if (rsync) {
-    return network_pwc(here->network, to, from, n, lop, lsync,
-                       _lco_rsync, rsync);
-  }
-  else {
-    return network_put(here->network, to, from, n, lop, lsync);
-  }
-}
-
-typedef struct {
-  hpx_addr_t to;
-  const void *from;
-  size_t n;
-  hpx_addr_t rsync;
-} _pgas_memput_lsync_continuation_env_t;
-
-static void _pgas_memput_lsync_continuation(hpx_parcel_t *p, void *env) {
-  _pgas_memput_lsync_continuation_env_t *e = env;
-  hpx_addr_t pgpa = offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p);
-  if (e->rsync) {
-    dbg_check( network_pwc(here->network, e->to, e->from, e->n, resume_parcel,
-                           pgpa, _lco_rsync, e->rsync) );
-  }
-  else {
-    dbg_check( network_put(here->network, e->to, e->from, e->n, resume_parcel,
-                           pgpa) );
-  }
-}
-
-static int _pgas_memput_lsync(void *gas, hpx_addr_t to, const void *from,
-                              size_t n, hpx_addr_t rsync) {
-  if (!n) {
-    return HPX_SUCCESS;
-  }
-
-  if (gpa_to_rank(to) == here->rank) {
-    void *lto = pgas_gpa_to_lva(to);
-    memcpy(lto, from, n);
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
-    return HPX_SUCCESS;
-  }
-
-  _pgas_memput_lsync_continuation_env_t env = {
-    .to = to,
-    .from = from,
-    .n = n,
-    .rsync = rsync
-  };
-
-  scheduler_suspend(_pgas_memput_lsync_continuation, &env, 0);
-  return HPX_SUCCESS;
-}
-
-typedef struct {
-  hpx_addr_t to;
-  const void *from;
-  size_t n;
-} _pgas_memput_rsync_continuation_env_t;
-
-static void _pgas_memput_rsync_continuation(hpx_parcel_t *p, void *env) {
-  _pgas_memput_rsync_continuation_env_t *e = env;
-  hpx_addr_t pgpa = offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p);
-  dbg_check( network_pwc(here->network, e->to, e->from, e->n, 0, 0,
-                         resume_parcel_remote, pgpa) );
-}
-
-static int _pgas_memput_rsync(void *gas, hpx_addr_t to, const void *from,
-                              size_t n) {
-  if (!n) {
-    return HPX_SUCCESS;
-  }
-
-  if (gpa_to_rank(to) == here->rank) {
-    void *lto = pgas_gpa_to_lva(to);
-    memcpy(lto, from, n);
-    return HPX_SUCCESS;
-  }
-
-  _pgas_memput_rsync_continuation_env_t env = {
-    .to = to,
-    .from = from,
-    .n = n
-  };
-
-  scheduler_suspend(_pgas_memput_rsync_continuation, &env, 0);
-  return HPX_SUCCESS;
-}
-
-static int _pgas_memget(void *gas, void *to, hpx_addr_t from, size_t n,
-                        hpx_addr_t lsync) {
-  if (!n) {
-    return HPX_SUCCESS;
-  }
-
-  if (gpa_to_rank(from) == here->rank) {
-    const void *lfrom = pgas_gpa_to_lva(from);
-    memcpy(to, lfrom, n);
-    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-    return HPX_SUCCESS;
-  }
-
-  return network_get(here->network, to, from, n, lco_set, lsync);
-}
-
-typedef struct {
-  void *to;
-  hpx_addr_t from;
-  size_t n;
-} _pgas_memget_sync_continutation_env_t;
-
-static void _pgas_memget_sync_continutation(hpx_parcel_t *p, void *env) {
-  _pgas_memget_sync_continutation_env_t *e = env;
-  hpx_addr_t pgpa = offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p);
-  dbg_check( network_get(here->network, e->to, e->from, e->n, resume_parcel,
-                         pgpa) );
-}
-
-static int _pgas_memget_sync(void *gas, void *to, hpx_addr_t from, size_t n) {
-  if (!n) {
-    return HPX_SUCCESS;
-  }
-
-  if (gpa_to_rank(from) == here->rank) {
-    const void *lfrom = pgas_gpa_to_lva(from);
-    memcpy(to, lfrom, n);
-    return HPX_SUCCESS;
-  }
-
-  _pgas_memget_sync_continutation_env_t env = {
-    .to = to,
-    .from = from,
-    .n = n
-  };
-
-  scheduler_suspend(_pgas_memget_sync_continutation, &env, 0);
-  return HPX_SUCCESS;
-}
-
 static void _pgas_move(void *gas, hpx_addr_t src, hpx_addr_t dst,
                        hpx_addr_t sync) {
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
@@ -431,6 +236,16 @@ static uint32_t _pgas_owner_of(const void *pgas, hpx_addr_t addr) {
 
 static gas_t _pgas_vtable = {
   .type           = HPX_GAS_PGAS,
+  .string = {
+    .memget       = NULL,
+    .memget_rsync = pgas_memget_rsync,
+    .memget_lsync = pgas_memget_lsync,
+    .memput       = pgas_memput,
+    .memput_lsync = pgas_memput_lsync,
+    .memput_rsync = pgas_memput_rsync,
+    .memcpy       = pgas_memcpy,
+    .memcpy_sync  = pgas_memcpy_sync,
+  },
   .dealloc        = _pgas_dealloc,
   .local_size     = _pgas_local_size,
   .local_base     = _pgas_local_base,
@@ -447,13 +262,6 @@ static gas_t _pgas_vtable = {
   .calloc_local   = _pgas_gas_calloc_local,
   .free           = _pgas_gas_free,
   .move           = _pgas_move,
-  .memget         = _pgas_memget,
-  .memget_sync    = _pgas_memget_sync,
-  .memput         = _pgas_memput,
-  .memput_lsync   = _pgas_memput_lsync,
-  .memput_rsync   = _pgas_memput_rsync,
-  .memcpy         = _pgas_parcel_memcpy,
-  .memcpy_sync    = _pgas_parcel_memcpy_sync,
   .owner_of       = _pgas_owner_of
 };
 

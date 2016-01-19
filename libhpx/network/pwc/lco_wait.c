@@ -15,11 +15,13 @@
 # include "config.h"
 #endif
 
-#include "libhpx/debug.h"
-#include "libhpx/locality.h"
-#include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/debug.h>
+#include <libhpx/locality.h>
+#include <libhpx/parcel.h>
+#include <libhpx/scheduler.h>
+#include "commands.h"
 #include "pwc.h"
+#include "xport.h"
 
 /// Wait for an LCO to be set, and then resume a remote parcel.
 ///
@@ -33,8 +35,8 @@ static int _pwc_lco_wait_handler(uint64_t p, int reset) {
   if (e != HPX_SUCCESS) {
     dbg_error("Cannot yet return an error from a remote wait operation\n");
   }
-
-  return pwc_command(here->network, curr->src, resume_parcel, p);
+  command_t rcmd = { .op = RESUME_PARCEL, .arg = p };
+  return pwc_cmd(pwc_network, curr->src, (command_t){0}, rcmd);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _pwc_lco_wait, _pwc_lco_wait_handler,
                      HPX_POINTER, HPX_INT);

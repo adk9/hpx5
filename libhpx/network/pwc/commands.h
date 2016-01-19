@@ -18,39 +18,61 @@
 extern "C" {
 #endif
 
-typedef uint16_t op_t;
+#include <stdint.h>
+
+typedef uint8_t op_t;
 typedef uint64_t arg_t;
 
 typedef union {
   uint64_t packed;
   struct {
-    uint64_t arg : 48;
-    uint64_t  op : 16;
-  } bits;
+    uint64_t   arg : 48;
+    uint64_t    op : 8;
+    uint64_t xport : 8;
+  };
 } command_t;
 
-typedef int (*command_handler_t)(int, command_t);
+typedef void (*command_handler_t)(int, command_t);
 
-static inline op_t command_get_op(command_t command) {
-  return command.bits.op;
-}
+void handle_resume_parcel(int src, command_t cmd);
+void handle_resume_parcel_source(int src, command_t cmd);
+void handle_delete_parcel(int src, command_t cmd);
+void handle_lco_set(int src, command_t cmd);
+void handle_lco_set_source(int src, command_t cmd);
+void handle_recv_parcel(int src, command_t cmd);
+void handle_rendezvous_launch(int src, command_t cmd);
+void handle_reload_request(int src, command_t cmd);
+void handle_reload_reply(int src, command_t cmd);
 
-static inline arg_t command_get_arg(command_t command) {
-  return command.bits.arg;
-}
+static const command_handler_t commands[] = {
+  NULL,
+  handle_resume_parcel,
+  handle_resume_parcel_source,
+  handle_delete_parcel,
+  handle_lco_set,
+  handle_lco_set_source,
+  handle_recv_parcel,
+  handle_rendezvous_launch,
+  handle_reload_request,
+  handle_reload_reply
+};
 
-static inline command_t command_pack(op_t op, arg_t arg) {
-  command_t command = {
-    .bits = {
-      .arg = arg,
-      .op = op
-    }
-  };
-  return command;
-}
+enum {
+  NOP = 0,
+  RESUME_PARCEL,
+  RESUME_PARCEL_SOURCE,
+  DELETE_PARCEL,
+  LCO_SET,
+  LCO_SET_SOURCE,
+  RECV_PARCEL,
+  RENDEZVOUS_LAUNCH,
+  RELOAD_REQUEST,
+  RELOAD_REPLY,
+  COMMAND_COUNT
+};
 
 /// Handle a command.
-int command_run(int src, command_t cmd);
+void command_run(int src, command_t cmd);
 
 #ifdef __cplusplus
 }

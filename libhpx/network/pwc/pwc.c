@@ -48,8 +48,7 @@ static void _probe_local(pwc_network_t *pwc, int id) {
   command_t command;
   int src;
   while (pwc->xport->test(&command, NULL, XPORT_ANY_SOURCE, &src)) {
-    int e = command_run(rank, command);
-    dbg_check(e, "failed to process local command\n");
+    command_run(rank, command);
   }
 }
 
@@ -57,8 +56,7 @@ static hpx_parcel_t *_probe(pwc_network_t *pwc, int rank) {
   command_t command;
   int src;
   while (pwc->xport->probe(&command, NULL, rank, &src)) {
-    int e = command_run(src, command);
-    dbg_check(e, "failed to process command from %d\n", src);
+    command_run(src, command);
   }
   return NULL;
 }
@@ -107,76 +105,6 @@ static int _pwc_send(void *network, hpx_parcel_t *p) {
   return send_buffer_send(buffer, HPX_NULL, p);
 }
 
-int pwc_command(void *network, hpx_addr_t loc, hpx_action_t rop, uint64_t args)
-{
-  pwc_network_t *pwc = (void*)network;
-  int rank = gas_owner_of(here->gas, loc);
-
-  xport_op_t op = {
-    .rank = rank,
-    .n = 0,
-    .dest = NULL,
-    .dest_key = NULL,
-    .src = NULL,
-    .src_key = NULL,
-    .lop = {0},
-    .rop = command_pack(rop, args)
-  };
-
-  return pwc->xport->command(&op);
-}
-
-static int _pwc_pwc(void *network, hpx_addr_t to, const void *lva, size_t n,
-                    hpx_action_t lop, hpx_addr_t laddr,
-                    hpx_action_t rop, hpx_addr_t raddr)
-{
-  pwc_network_t *pwc = (void*)network;
-  int rank = gas_owner_of(here->gas, to);
-  uint64_t offset = gpa_to_offset(to);
-
-  xport_op_t op = {
-    .rank = rank,
-    .n = n,
-    .dest = pwc->heap_segments[rank].base + offset,
-    .dest_key = &pwc->heap_segments[rank].key,
-    .src = lva,
-    .src_key = pwc->xport->key_find_ref(pwc->xport, lva, n),
-    .lop = command_pack(lop, laddr),
-    .rop = command_pack(rop, raddr)
-  };
-
-  return pwc->xport->pwc(&op);
-}
-
-static int _pwc_put(void *network, hpx_addr_t to, const void *from, size_t n,
-                    hpx_action_t lop, hpx_addr_t laddr)
-{
-  hpx_action_t rop = HPX_ACTION_NULL;
-  hpx_addr_t raddr = HPX_NULL;
-  return _pwc_pwc(network, to, from, n, lop, laddr, rop, raddr);
-}
-
-static int _pwc_get(void *network, void *lva, hpx_addr_t from, size_t n,
-                    hpx_action_t lop, hpx_addr_t laddr)
-{
-  pwc_network_t *pwc = network;
-  int rank = gas_owner_of(here->gas, from);
-  uint64_t offset = gpa_to_offset(from);
-
-  xport_op_t op = {
-    .rank = rank,
-    .n = n,
-    .dest = lva,
-    .dest_key = pwc->xport->key_find_ref(pwc->xport, lva, n),
-    .src = pwc->heap_segments[rank].base + offset,
-    .src_key = &pwc->heap_segments[rank].key,
-    .lop = command_pack(lop, laddr),
-    .rop = {0}
-  };
-
-  return pwc->xport->gwc(&op);
-}
-
 static void _pwc_flush(void *pwc) {
 }
 
@@ -211,6 +139,17 @@ static void _pwc_delete(void *network) {
   free(pwc);
 }
 
+static const class_string_t _pwc_string_vtable = {
+  .memget       = pwc_memget,
+  .memget_lsync = pwc_memget_lsync,
+  .memget_rsync = pwc_memget_rsync,
+  .memput       = pwc_memput,
+  .memput_lsync = pwc_memput_lsync,
+  .memput_rsync = pwc_memput_rsync,
+  .memcpy       = NULL,
+  .memcpy_sync  = NULL
+};
+
 network_t *
 network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   // Validate parameters.
@@ -238,13 +177,10 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   dbg_assert(pwc);
 
   pwc->vtable.type = HPX_NETWORK_PWC;
+  pwc->vtable.string = &_pwc_string_vtable;
   pwc->vtable.delete = _pwc_delete;
   pwc->vtable.progress = _pwc_progress;
   pwc->vtable.send = _pwc_send;
-  pwc->vtable.command = pwc_command;
-  pwc->vtable.pwc = _pwc_pwc;
-  pwc->vtable.put = _pwc_put;
-  pwc->vtable.get = _pwc_get;
   pwc->vtable.probe = _pwc_probe;
   pwc->vtable.flush = _pwc_flush;
   pwc->vtable.register_dma = _pwc_register_dma;
@@ -289,4 +225,47 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
 
   // avoid unused variable warnings
   (void)segment;
+}
+
+int pwc_get(void *obj, void *lva, hpx_addr_t from, size_t n,
+            command_t lcmd, command_t rcmd) {
+  pwc_network_t *pwc = obj;
+  int rank = gpa_to_rank(from);
+
+  xport_op_t op = {
+    .rank = rank,
+    .n = n,
+    .dest = lva,
+    .dest_key = pwc->xport->key_find_ref(pwc->xport, lva, n),
+    .src = pwc->heap_segments[rank].base + gpa_to_offset(from),
+    .src_key = &pwc->heap_segments[rank].key,
+    .lop = lcmd,
+    .rop = rcmd
+  };
+
+  return pwc->xport->gwc(&op);
+}
+
+int pwc_put(void *obj, hpx_addr_t to, const void *lva, size_t n,
+            command_t lcmd, command_t rcmd) {
+  pwc_network_t *pwc = obj;
+  int rank = gpa_to_rank(to);
+
+  xport_op_t op = {
+    .rank = rank,
+    .n = n,
+    .dest = pwc->heap_segments[rank].base + gpa_to_offset(to),
+    .dest_key = &pwc->heap_segments[rank].key,
+    .src = lva,
+    .src_key = pwc->xport->key_find_ref(pwc->xport, lva, n),
+    .lop = lcmd,
+    .rop = rcmd
+  };
+
+  return pwc->xport->pwc(&op);
+}
+
+int pwc_cmd(void *obj, int rank, command_t lcmd, command_t rcmd) {
+  pwc_network_t *pwc = obj;
+  return pwc->xport->cmd(rank, lcmd, rcmd);
 }

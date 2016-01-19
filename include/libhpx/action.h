@@ -339,6 +339,17 @@ static inline int action_call_async_va(hpx_action_t id, hpx_addr_t addr,
   return act->call_class->async(act, addr, lsync, lop, rsync, rop, n, args);
 }
 
+static inline int action_call_async(hpx_action_t id, hpx_addr_t addr,
+                                    hpx_addr_t lsync, hpx_action_t lop,
+                                    hpx_addr_t rsync, hpx_action_t rop,
+                                    int n, ...) {
+  va_list args;
+  va_start(args, n);
+  int e = action_call_async_va(id, addr, lsync, lop, rsync, rop, n, &args);
+  va_end(args);
+  return e;
+}
+
 static inline int action_call_lsync_va(hpx_action_t id, hpx_addr_t addr,
                                        hpx_addr_t rsync, hpx_action_t rop,
                                        int n, va_list *args) {
@@ -348,8 +359,8 @@ static inline int action_call_lsync_va(hpx_action_t id, hpx_addr_t addr,
 }
 
 static inline int action_call_lsync(hpx_action_t id, hpx_addr_t addr,
-                                       hpx_addr_t rsync, hpx_action_t rop,
-                                       int n, ...) {
+                                    hpx_addr_t rsync, hpx_action_t rop,
+                                    int n, ...) {
   va_list args;
   va_start(args, n);
   int e = action_call_lsync_va(id, addr, rsync, rop, n, &args);
@@ -365,6 +376,14 @@ static inline int action_call_rsync_va(hpx_action_t id, hpx_addr_t addr,
   return action->call_class->rsync(action, addr, rout, rbytes, n, args);
 }
 
+static inline int action_call_rsync(hpx_action_t id, hpx_addr_t addr,
+                                    void *rout, size_t rbytes, int n, ...) {
+  va_list args;
+  va_start(args, n);
+  int e = action_call_rsync_va(id, addr, rout, rbytes, n, &args);
+  va_end(args);
+  return e;
+}
 
 static inline int action_when_async_va(hpx_action_t id, hpx_addr_t addr,
                                        hpx_addr_t gate, hpx_addr_t lsync,

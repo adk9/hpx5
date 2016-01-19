@@ -157,7 +157,8 @@ _photon_unpin(const void *base, size_t n) {
 static int
 _photon_unpin_async(const void *base, size_t n, int src, uint64_t op) {
   _photon_unpin(base, n);
-  return command_run(src, (command_t){op});
+  command_run(src, (command_t){op});
+  return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_INTERRUPT, 0, _unpin_async, _photon_unpin_async,
                      HPX_POINTER, HPX_SIZE_T, HPX_INT, HPX_UINT64);
@@ -180,8 +181,7 @@ static LIBHPX_ACTION(HPX_INTERRUPT, 0, _unpin_async, _photon_unpin_async,
 /// @returns            The operation that should be used as the local
 ///                     completion event handler for the current operation
 ///                     (pwc/gwc instance).
-static command_t
-_chain_unpin(const void *addr, size_t n, command_t op) {
+static command_t _chain_unpin(const void *addr, size_t n, command_t op) {
   // we assume that this parcel doesn't need credit to run---technically it
   // not easy to account for this parcel because of the fact that pwc() can be
   // run as a scheduler_suspend() operation
@@ -195,16 +195,15 @@ _chain_unpin(const void *addr, size_t n, command_t op) {
                                       &here->rank,  // src for command
                                       &op.packed);  // command
 
-  return command_pack(resume_parcel, (uint64_t)(uintptr_t)p);
+  return (command_t){ .op = RESUME_PARCEL, .arg = (uintptr_t)p };
 }
 
-static int
-_photon_command(const xport_op_t *op) {
-  int flags = ((op->lop.packed) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
-              ((op->rop.packed) ? 0 : PHOTON_REQ_PWC_NO_RCE);
+static int _photon_cmd(int rank, command_t lcmd, command_t rcmd) {
+  int flags = ((lcmd.op) ? NOP : PHOTON_REQ_PWC_NO_LCE) |
+              ((rcmd.op) ? NOP : PHOTON_REQ_PWC_NO_RCE);
 
-  int e = photon_put_with_completion(op->rank, 0, NULL, NULL,
-                                     op->lop.packed, op->rop.packed, flags);
+  int e = photon_put_with_completion(rank, 0, NULL, NULL, lcmd.packed,
+                                     rcmd.packed, flags);
   if (PHOTON_OK == e) {
     return LIBHPX_OK;
   }
@@ -217,10 +216,9 @@ _photon_command(const xport_op_t *op) {
   dbg_error("could not initiate a put-with-completion\n");
 }
 
-static int
-_photon_pwc(xport_op_t *op) {
-  int flags = ((op->lop.packed) ? 0 : PHOTON_REQ_PWC_NO_LCE) |
-              ((op->rop.packed) ? 0 : PHOTON_REQ_PWC_NO_RCE);
+static int _photon_pwc(xport_op_t *op) {
+  int flags = ((op->lop.op) ? NOP : PHOTON_REQ_PWC_NO_LCE) |
+              ((op->rop.op) ? NOP : PHOTON_REQ_PWC_NO_RCE);
 
   struct photon_buffer_t rbuf = {
     .addr = (uintptr_t)op->dest,
@@ -258,7 +256,7 @@ _photon_pwc(xport_op_t *op) {
 
 static int
 _photon_gwc(xport_op_t *op) {
-  int flags = (op->rop.packed) ? 0 : PHOTON_REQ_PWC_NO_RCE;
+  int flags = (op->rop.op) ? NOP : PHOTON_REQ_PWC_NO_RCE;
 
   struct photon_buffer_t lbuf = {
     .addr = (uintptr_t)op->dest,
@@ -322,19 +320,19 @@ pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas) {
   dbg_assert(photon);
   _init_photon(cfg, boot);
 
-  photon->vtable.type = HPX_TRANSPORT_PHOTON;
-  photon->vtable.dealloc = _photon_dealloc;
+  photon->vtable.type         = HPX_TRANSPORT_PHOTON;
+  photon->vtable.dealloc      = _photon_dealloc;
   photon->vtable.key_find_ref = _photon_key_find_ref;
-  photon->vtable.key_find = _photon_key_find;
-  photon->vtable.key_clear = _photon_key_clear;
-  photon->vtable.key_copy = _photon_key_copy;
-  photon->vtable.pin = _photon_pin;
-  photon->vtable.unpin = _photon_unpin;
-  photon->vtable.command = _photon_command;
-  photon->vtable.pwc = _photon_pwc;
-  photon->vtable.gwc = _photon_gwc;
-  photon->vtable.test = _photon_test;
-  photon->vtable.probe = _photon_probe;
+  photon->vtable.key_find     = _photon_key_find;
+  photon->vtable.key_clear    = _photon_key_clear;
+  photon->vtable.key_copy     = _photon_key_copy;
+  photon->vtable.pin          = _photon_pin;
+  photon->vtable.unpin        = _photon_unpin;
+  photon->vtable.cmd          = _photon_cmd;
+  photon->vtable.pwc          = _photon_pwc;
+  photon->vtable.gwc          = _photon_gwc;
+  photon->vtable.test         = _photon_test;
+  photon->vtable.probe        = _photon_probe;
 
   // initialize the registered memory allocator
   registered_allocator_init(&photon->vtable);

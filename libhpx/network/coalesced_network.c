@@ -193,32 +193,6 @@ static int _coalesced_network_progress(void *obj, int id) {
   return network_progress(network->next, id);
 }
 
-static int _coalesced_network_command(void *obj, hpx_addr_t locality,
-                                      hpx_action_t op, uint64_t args) {
-  _coalesced_network_t *network = obj;
-  return network_command(network->next, locality, op, args);
-}
-
-static int _coalesced_network_pwc(void *obj, hpx_addr_t to, const void *from,
-                                  size_t n, hpx_action_t lop, hpx_addr_t laddr,
-                                  hpx_action_t rop, hpx_addr_t raddr) {
-  _coalesced_network_t *network = obj;
-  return network_pwc(network->next, to, from, n, lop, laddr, rop, raddr);
-}
-
-static int _coalesced_network_put(void *obj, hpx_addr_t to, const void *from,
-                                  size_t n, hpx_action_t lop, hpx_addr_t laddr){
-  _coalesced_network_t *network = obj;
-  return network_put(network->next, to, from, n, lop, laddr);
-}
-
-static int _coalesced_network_get(void *obj, void *to, hpx_addr_t from,
-                                  size_t n, hpx_action_t lop, hpx_addr_t laddr)
-{
-  _coalesced_network_t *network = obj;
-  return network_get(network->next, to, from, n, lop, laddr);
-}
-
 static hpx_parcel_t* _coalesced_network_probe(void *obj, int rank) {
   _coalesced_network_t *coalesced_network = obj;
   return network_probe(coalesced_network->next, rank);
@@ -273,13 +247,10 @@ network_t* coalesced_network_new(network_t *next,  const struct config *cfg) {
   }
 
   // set the vtable
+  network->vtable.string       = next->string;
   network->vtable.delete       = _coalesced_network_delete;
   network->vtable.progress     = _coalesced_network_progress;
   network->vtable.send         = _coalesced_network_send;
-  network->vtable.command      = _coalesced_network_command;
-  network->vtable.pwc          = _coalesced_network_pwc;
-  network->vtable.put          = _coalesced_network_put;
-  network->vtable.get          = _coalesced_network_get;
   network->vtable.probe        = _coalesced_network_probe;
   network->vtable.flush        = _coalesced_network_flush;
   network->vtable.register_dma = _coalesced_network_register_dma;
