@@ -10,7 +10,7 @@ scan-build:
   stage: scan
   script:
   - ./bootstrap
-  - ./configure --enable-debug --enable-instrumentation --enable-percolation --enable-agas
+  - ./configure --enable-debug --enable-instrumentation --enable-percolation --enable-agas --enable-hpx++
                 --enable-mpi --enable-photon --enable-testsuite --with-photon=system
                 --with-jemalloc=system --with-hwloc=system --with-libffi=contrib CC=clang CXX=clang
   - BOUT=/tmp/scan-build-${CI_BUILD_ID}
@@ -26,7 +26,7 @@ check-build:
   script:
   - ./bootstrap
   - ./configure --prefix=$HOME --enable-debug --enable-mpi --enable-photon --enable-testsuite
-                --enable-instrumentation --enable-agas PHOTON_CARGS="--enable-debug"
+                --enable-instrumentation --enable-agas --enable-hpx++ PHOTON_CARGS="--enable-debug"
   - make -j 8
   - make install
   - export HPX_THREADS=1
