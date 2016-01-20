@@ -1,6 +1,5 @@
 #include <iostream>
 #include "hpx++/hpx++.h"
-#include "hpx/rpc.h"
 
 using namespace std;
 
@@ -77,8 +76,6 @@ int main(int argc, char* argv[]) {
   int a = hpx_get_my_rank() + 1;
   main_act_action_struct obj;
   obj(a);
-  
-  test1();
   
   hpx::finalize();
   return 0;
