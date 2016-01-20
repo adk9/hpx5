@@ -91,10 +91,8 @@ namespace hpx {
   public:
     gp_subscr(const global_ptr<T>& gp, size_t offset) : _gp(gp), _offset(offset) {}
     
-    inline
-    global_ptr<T> operator&() const {
-      return _gp + _offset;
-    }
+    global_ptr<T> operator&() const;
+    
   private:
     global_ptr<T> _gp;
     size_t _offset;
@@ -140,6 +138,14 @@ template <typename T>
 inline
 int64_t operator-(const hpx::global_ptr<T>& lhs, const hpx::global_ptr<T>& rhs) {
   return hpx_addr_sub(lhs.ptr(), rhs.ptr(), lhs.get_block_size() * sizeof(T));
+}
+
+namespace hpx {
+  template <typename T>
+  inline
+  global_ptr<T> gp_subscr<T>::operator&() const {
+    return _gp + _offset;
+  }
 }
 
 #endif
