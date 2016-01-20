@@ -152,7 +152,8 @@ _init_mpi(void) {
   int init = 0;
   MPI_Initialized(&init);
   if (!init) {
-    static const int LIBHPX_THREAD_LEVEL = MPI_THREAD_FUNNELED;
+    /*static const int LIBHPX_THREAD_LEVEL = MPI_THREAD_FUNNELED;*/
+    static const int LIBHPX_THREAD_LEVEL = MPI_THREAD_MULTIPLE;
     int level;
     int e = MPI_Init_thread(NULL, NULL, LIBHPX_THREAD_LEVEL, &level);
     if (e != MPI_SUCCESS) {
@@ -180,6 +181,7 @@ static void _mpi_create_comm(void* c, void* active_ranks, int num_active, int to
   } else {
     //in this case we dont have to create an active comm group
     //comm_group is MPI_COMM_WORKD
+    /*MPI_Comm_dup(MPI_COMM_WORLD, comm);*/
     *comm = MPI_COMM_WORLD;
   }
 }

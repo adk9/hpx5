@@ -91,11 +91,11 @@ static int _funneled_coll_init(void *network, coll_t **_c){
   int num_active = c->group_sz;
 
   //todo REMOVE -debug logs
-  printf("total active ranks : %d \n", num_active);
+  printf("*******isir total active ranks : %d \n", num_active);
   int32_t* ranks = (int32_t*) c->data;
-  for (int i = 0; i < c->group_sz; ++i) {
-    printf("active ranks : %d  rank id : %d  \n", c->group_sz, ranks[i]);
-  }
+  /*for (int i = 0; i < c->group_sz; ++i) {*/
+    /*printf("isir active ranks : %d  rank id : %d  \n", c->group_sz, ranks[i]);*/
+  /*}*/
   
   if(c->comm_bytes == 0){
     //we have not yet allocated a communicator
@@ -109,12 +109,16 @@ static int _funneled_coll_init(void *network, coll_t **_c){
   char *comm = c->data + c->group_bytes;
 
   _funneled_t* isir = network;
-  if(num_active < here->ranks){
+  /*if(num_active < here->ranks){*/
     //flushing network is necessary (sufficient ?) to execute any packets
     //destined for collective group creation operation
     isir->vtable.flush(network);
-  }  
+  /*}  */
+  while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
+    ;
   isir->xport->create_comm(comm, ranks, num_active, here->ranks);
+  
+  sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
   return LIBHPX_OK;	
 }
 
@@ -128,9 +132,12 @@ static int _funneled_coll_sync(void *network, hpx_parcel_t *in, void* out, coll_
   //destined for collective operation
   isir->vtable.flush(network);
 
+  while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
+    ;
   if(c->type == ALL_REDUCE) {
     isir->xport->allreduce(sendbuf, out, count, NULL, &c->op, comm);
   }
+  sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
   return LIBHPX_OK;
 }
 

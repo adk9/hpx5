@@ -125,6 +125,8 @@ void allreduce_reduce(allreduce_t *r, const void *val) {
   //perform synchronized collective comm
   here->network->coll_sync(here->network, p, output, r->ctx);
 
+  /*int* res = (int*) output;*/
+  /**res = 240;*/
   //call all local continuations to communicate the result
   continuation_trigger(r->continuation, output);
   /*printf("reduce done ...current_node : %"PRId64" out bytes : %d output : %d input : %d \n", hpx_thread_current_target(), */
@@ -161,9 +163,9 @@ void allreduce_bcast_comm(allreduce_t *r, hpx_addr_t base, const void *coll) {
   //boradcast my comm group to all leaves
   //this is executed only on network root
   if(coll == NULL){
-    printf("[root] broadcast task current_node : %"PRId64"  n_loc : %d \n", hpx_thread_current_target(), r->ctx->group_sz );
-    hpx_addr_t target = HPX_NULL; 
     int n = here->ranks;
+    /*printf("[root] broadcast task current_node : %"PRId64"  n_loc : %d nranks : %d \n", hpx_thread_current_target(), r->ctx->group_sz, n );*/
+    hpx_addr_t target = HPX_NULL; 
     hpx_addr_t and = hpx_lco_and_new(n);
     for (int i = 0; i < n; ++i) {
       if(here->rank != i){	    
@@ -181,11 +183,13 @@ void allreduce_bcast_comm(allreduce_t *r, hpx_addr_t base, const void *coll) {
     hpx_lco_wait(and);
     hpx_lco_delete_sync(and);
      
+#if 0
     int32_t* ranks = (int32_t*)r->ctx->data;
     for (int i = 0; i < r->ctx->group_sz; ++i) {
        printf("broadcast task current_node : %"PRId64"  idx: %d  target rank : %d \n", 
 		       hpx_thread_current_target(), i, ranks[i] );
     }
+#endif
     return;
   }
   
@@ -203,6 +207,6 @@ void allreduce_bcast_comm(allreduce_t *r, hpx_addr_t base, const void *coll) {
   }
   //perform collective initialization for all leaf nodes here
   dbg_check(here->network->coll_init(here->network, &r->ctx));
-  printf("[leaf] broadcast task current_node : %"PRId64"  n_loc : %d \n", hpx_thread_current_target(), r->ctx->group_sz );
+  /*printf("[leaf] broadcast task current_node : %"PRId64"  n_loc : %d myrank : %d \n", hpx_thread_current_target(), r->ctx->group_sz, here->rank );*/
   
 }
