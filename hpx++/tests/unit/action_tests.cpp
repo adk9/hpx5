@@ -45,7 +45,7 @@ hpx_status_t test1(int arg) {
 //   obj(HPX_HERE, r);
 //   obj(HPX_HERE, r, "");
   
-  obj.call_sync(HPX_HERE, r, arg);
+  hello_action_struct::call_sync(HPX_HERE, r, arg);
   
   return HPX_SUCCESS;
 }
@@ -57,9 +57,8 @@ int main_act(int arg) {
   
   test1(arg);
   
-  _my_typed_handler_action_struct typed_o;
   int r, i = 1; float f = 3.0; char c = 'b';
-  typed_o.call_sync(HPX_HERE, r, i, f, c);
+  _my_typed_handler_action_struct::call_sync(HPX_HERE, r, i, f, c);
   
   hpx::exit(HPX_SUCCESS);
 }
@@ -74,8 +73,8 @@ int main(int argc, char* argv[]) {
     return e;
   }
   int a = hpx_get_my_rank() + 1;
-  main_act_action_struct obj;
-  obj(a);
+  
+  main_act_action_struct::run(a);
   
   hpx::finalize();
   return 0;
