@@ -91,7 +91,7 @@ static int _funneled_coll_init(void *network, coll_t **_c){
   int num_active = c->group_sz;
 
   //todo REMOVE -debug logs
-  printf("*******isir total active ranks : %d \n", num_active);
+  //printf("*******isir total active ranks : %d \n", num_active);
   int32_t* ranks = (int32_t*) c->data;
   /*for (int i = 0; i < c->group_sz; ++i) {*/
     /*printf("isir active ranks : %d  rank id : %d  \n", c->group_sz, ranks[i]);*/
@@ -132,7 +132,7 @@ static int _funneled_coll_sync(void *network, hpx_parcel_t *in, void* out, coll_
   //destined for collective operation
   /*isir->vtable.flush(network);*/
 
-  printf("*******isir coll_sync: rank %d \n", here->rank);
+  //printf("*******isir coll_sync: rank %d \n", here->rank);
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
     ;
     

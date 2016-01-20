@@ -33,7 +33,7 @@ libtbbmalloc_la_CXXFLAGS 	= $(LIBHPX_CXXFLAGS)
 libtbbmalloc_la_SOURCES  	= tbbmalloc_registered.cc
 libpwc_la_LIBADD			= nbc-photon/libnbc.la libtbbmalloc.la
 else
-libpwc_la_LIBADD			= nbc-photon/libnbc.la 
+#libpwc_la_LIBADD			= nbc-photon/libnbc.la 
 endif
 
 if HAVE_DLMALLOC

@@ -117,9 +117,15 @@ void allreduce_reduce(allreduce_t *r, const void *val) {
 #ifdef SW_COLLECTIVES
   //for sw based direct collective join
   //create parcel and prepare for coll call
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, r->bytes) ; 
-  reduce_reset(r->reduce, hpx_parcel_get_data(p));
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, r->bytes);
   void *output = malloc(r->bytes);
+
+  if (r->parent) {
+    reduce_reset(r->reduce, hpx_parcel_get_data(p));
+  }
+  else {
+    reduce_reset(r->reduce, output);
+  }
 
   /*int* input = (int*)hpx_parcel_get_data(p);*/
   //perform synchronized collective comm
@@ -132,6 +138,7 @@ void allreduce_reduce(allreduce_t *r, const void *val) {
   /*printf("reduce done ...current_node : %"PRId64" out bytes : %d output : %d input : %d \n", hpx_thread_current_target(), */
 		  /*cl.recv_count, *((int*)output), *input);*/
 
+  free(output);
   return;
 #endif
   // the local continuation is done, join the parent node asynchronously
