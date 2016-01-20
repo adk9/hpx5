@@ -79,8 +79,6 @@ namespace hpx {
       return hpx_gas_try_pin(_gbl_ptr, NULL);
     }
     
-    // TODO casting
-
     inline
     gp_subscr<T> operator[](size_t index) const;
   private:
@@ -112,7 +110,7 @@ namespace hpx {
     template <typename T>
     inline
     global_ptr<T> alloc_local(size_t n, uint32_t boundary=0) {
-      return global_ptr<T>(hpx_gas_alloc_local(n * sizeof(T), boundary));
+      return global_ptr<T>(hpx_gas_alloc_local(n, sizeof(T), boundary));
     }
     
     template <typename T>
