@@ -3,8 +3,8 @@
 #
 # ------------------------------------------------------------------------------
 AC_DEFUN([HPX_CONFIG_HPXPP], [
- AC_ARG_ENABLE([hpxpp],
-   [AS_HELP_STRING([--enable-hpxpp], [Enable HPX++ bindings (requires C++11) @<:@default=no@:>@])],
+ AC_ARG_ENABLE([hpx++],
+   [AS_HELP_STRING([--enable-hpx++], [Enable HPX++ bindings (requires C++11) @<:@default=no@:>@])],
    [], [enable_hpxpp=no])
 
  AS_IF([test "x$enable_hpxpp" != xno],
