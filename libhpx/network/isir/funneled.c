@@ -132,11 +132,11 @@ static int _funneled_coll_sync(void *network, hpx_parcel_t *in, void* out, coll_
   //destined for collective operation
   isir->vtable.flush(network);
 
+  printf("*******isir coll_sync: rank %d \n", here->rank);
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
     ;
-  if(c->type == ALL_REDUCE) {
-    isir->xport->allreduce(sendbuf, out, count, NULL, &c->op, comm);
-  }
+    
+  isir->xport->allreduce(sendbuf, out, count, NULL, &c->op, comm);
   sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
   return LIBHPX_OK;
 }

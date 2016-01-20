@@ -202,25 +202,13 @@ void op_handler( void *in, void* inout, int *len, MPI_Datatype *dp) {
 }
 
 static void _mpi_allreduce(void *sendbuf, void* out, int count, void* datatype, void* op, void* c){
-  MPI_Comm *comm = c;
-  hpx_monoid_op_t *hpx_handle = (hpx_monoid_op_t*) op;
-  int bytes = sizeof(val_t) + count ;
-  
-  //prepare operands for function
-  char val[bytes], result[bytes];
-  val_t* in = (val_t*) val;
-  val_t* res = (val_t*) result;
-  in->op = *hpx_handle;
-  in->bytes = count;
-  memcpy(in->operands, sendbuf, count);
-
-  MPI_Op usrOp;
-  /*we assume this function is commutative for now, hence 1*/
-  MPI_Op_create( op_handler, 1, &usrOp);
-
-  MPI_Allreduce(val, result, bytes, MPI_BYTE, usrOp, *comm);
+  printf("allreduce : myrank :%d \n", here->rank);	
+  if(count == 4){
+    MPI_Allreduce(sendbuf, out, 1, MPI_FLOAT, MPI_MIN, MPI_COMM_WORLD);
+  } else{
+    MPI_Allreduce(sendbuf, out, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+  }
   /*MPI_Allreduce(sendbuf, out, 1, MPI_INT, MPI_SUM, *comm);*/
-  memcpy(out, res->operands ,count);
   
   /*printf("=====total bytes: %d op: %ld result : %d out : %d  result : %x res->operands : %x  dataptr : %x size : %d \n",*/
    /*bytes, *hpx_handle, *((int*)res->operands), *((int*)out), result, res->operands, result + sizeof(val_t), sizeof(void*));*/
