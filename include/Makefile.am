@@ -33,3 +33,8 @@ nobase_include_HEADERS = hpx/action.h \
                          libhpx/libhpx.h \
                          libhpx/config.h \
                          libhpx/options.def
+
+if HAVE_HPXPP
+nobase_include_HEADERS += hpx++/action.h hpx++/global_ptr.h hpx++/hpx++.h \
+                          hpx++/lco.h hpx++/runtime.h
+endif
