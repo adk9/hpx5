@@ -153,12 +153,12 @@ namespace hpx {
       template <typename F, typename Tpl>
       static int _register_helper(F f, Tpl&& t, seq<>&& s) {
 	return hpx_register_action(HPX_DEFAULT, HPX_ATTR_NONE, __FILE__ ":" _HPX_XSTR(A::id), 
-				   &(A::id), (hpx_action_handler_t) f, 0);
+				   &(A::id), (void (*)(void)) f, 0);
       }
       template <typename F, typename Tpl, unsigned... Is>
       static int _register_helper(F f, Tpl&& t, seq<Is...>&& s) {
 	return hpx_register_action(HPX_DEFAULT, HPX_ATTR_NONE, __FILE__ ":" _HPX_XSTR(A::id), 
-				   &(A::id), (hpx_action_handler_t) f, 
+				   &(A::id), (void (*)(void)) f, 
 				   sizeof...(Is) , ::std::get<Is>(t)...);
       }
       
@@ -217,15 +217,6 @@ namespace hpx {
 struct f##_action_struct : public hpx::detail::action_struct<f##_action_struct> {\
   static hpx_action_t id;							\
   using traits = hpx::detail::function_traits<decltype(f)>;			\
-  \
-  \
-  template <typename... Args>							\
-  int operator()(hpx_addr_t addr, traits::return_type& result, Args... args) {	\
-    std::cout << traits::arity << ", " << sizeof...(Args) << std::endl;\
-    static_assert(hpx::detail::is_matching<traits, Args...>::value, \
-		  "action and argument types do not match");\
-    return hpx_call_sync(addr, id, &result, sizeof(traits::return_type), args...);\
-  }										\
 };										\
 hpx_action_t f##_action_struct::id = 0;						\
 int f##_action_struct_dummy = hpx::detail::_register_action<f##_action_struct>(f);
