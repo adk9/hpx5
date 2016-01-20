@@ -52,4 +52,13 @@ extern "C" {
   #include "hpx/topology.h"
 }
 
+namespace hpx {
+  /// Export the error codes into the HPX namespace as integers. We could use an
+  /// enum or something but this keeps the typing consistent.
+  /// @{
+  const int SUCCESS = HPX_SUCCESS;
+  const int ERROR = HPX_ERROR;
+  /// @}
+}
+
 #endif // HPX_PLUS_PLUS_H
