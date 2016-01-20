@@ -9,7 +9,7 @@ int main(int argc, char* argv[]) {
     return e;
   }
   
-  hpx::lco::Future<double> f1();
+  hpx::lco::Future<double> f1;
   
   hpx::finalize();
   return 0;
