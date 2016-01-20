@@ -163,12 +163,12 @@ namespace hpx {
       }
       
       template <typename R, typename Tpl, unsigned... Is>
-      int _call_sync_helper(hpx_addr_t& addr, R& result, Tpl&& tpl, hpx::detail::seq<Is...>&& s) {
+      static int _call_sync_helper(hpx_addr_t& addr, R& result, Tpl&& tpl, hpx::detail::seq<Is...>&& s) {
 	return _hpx_call_sync(addr, A::id, &result, sizeof(R), sizeof...(Is), ::std::get<Is>(tpl)...);
       }
       
       template <typename Tpl, unsigned... Is>
-      int _run_helper(Tpl&& tpl, hpx::detail::seq<Is...>&& s) {
+      static int _run_helper(Tpl&& tpl, hpx::detail::seq<Is...>&& s) {
 	return hpx::run(&(A::id), ::std::get<Is>(tpl)...);
       }
       
@@ -181,7 +181,7 @@ namespace hpx {
       }
       
       template <typename R, typename... Args>
-      int call_sync(hpx_addr_t& addr, R& result, Args... args) {
+      static int call_sync(hpx_addr_t& addr, R& result, Args... args) {
 	static_assert(::std::is_same< typename A::traits::arg_types, ::std::tuple<Args...> >::value,
 		      "action and argument types do not match");
 	auto tpl = ::std::tuple_cat(hpx::detail::convert_arg(args)...);
@@ -189,17 +189,17 @@ namespace hpx {
       }
       
       template <typename... Args>
-      int run(Args... args) {
+      static int run(Args... args) {
 	static_assert(::std::is_same< typename A::traits::arg_types, ::std::tuple<Args...> >::value,
 		      "action and argument types do not match");
 	auto tpl = ::std::tuple_cat(hpx::detail::convert_arg(args)...);
 	return _run_helper(tpl, hpx::detail::gen_seq<::std::tuple_size<decltype(tpl)>::value>());
       }
       
-      template <typename... Args>
-      int operator()(Args&&... args) {
-	return run(::std::forward<Args>(args)...);
-      }
+//       template <typename... Args>
+//       static int operator()(Args&&... args) {
+// 	return run(::std::forward<Args>(args)...);
+//       }
 
     };
     
