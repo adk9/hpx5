@@ -202,12 +202,7 @@ void op_handler( void *in, void* inout, int *len, MPI_Datatype *dp) {
 }
 
 static void _mpi_allreduce(void *sendbuf, void* out, int count, void* datatype, void* op, void* c){
-  //printf("allreduce : myrank :%d \n", here->rank);	
-  if(count == 4){
-    MPI_Allreduce(sendbuf, out, 1, MPI_FLOAT, MPI_MIN, MPI_COMM_WORLD);
-  } else{
-    MPI_Allreduce(sendbuf, out, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-  }
+  MPI_Allreduce(sendbuf, out, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
   /*MPI_Allreduce(sendbuf, out, 1, MPI_INT, MPI_SUM, *comm);*/
   
   /*printf("=====total bytes: %d op: %ld result : %d out : %d  result : %x res->operands : %x  dataptr : %x size : %d \n",*/

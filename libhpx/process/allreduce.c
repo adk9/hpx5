@@ -28,16 +28,6 @@ void allreduce_init(allreduce_t *r, size_t bytes, hpx_addr_t parent,
   r->continuation = continuation_new(bytes);
   r->reduce = reduce_new(bytes, id, op);
   r->id = -1;
-  //allocate memory for data structure plus for rank data
-  //optimistic allocation for ranks - for all lcoalities
-  int ctx_bytes= sizeof(coll_t) + sizeof(int32_t) * HPX_LOCALITIES;
-  r->ctx = malloc(ctx_bytes);
-  r->ctx->group_bytes = sizeof(int32_t) * HPX_LOCALITIES;
-  r->ctx->comm_bytes = 0 ;
-  r->ctx->group_sz = 0 ;
-  r->ctx->recv_count = bytes;
-  r->ctx->type = ALL_REDUCE;
-  r->ctx->op = op;
 }
 
 void allreduce_fini(allreduce_t *r) {
@@ -56,25 +46,12 @@ int32_t allreduce_add(allreduce_t *r, hpx_action_t op, hpx_addr_t addr) {
   // extend the local continuation structure and get and id for this input
   i = continuation_add(&r->continuation, op, addr);
 
-  //if i am the root then add leaf node into to active locations
-  if(!r->parent){
-   int i = r->ctx->group_sz++;
-   /*r->ctx.group[i] = addr;*/
-   int32_t* ranks = (int32_t*)r->ctx->data;
-   if(here->ranks > 1){
-     ranks[i] =  gas_owner_of(here->gas, addr);
-   }else {
-     //smp mode
-     ranks[i] = 0 ;
-   }	
-   /*printf("root add location : %"PRId64"  idx : %d \n", r->loc[i], i);*/
-  }	
   // extend the local reduction, if this is the first input then we need to
   // recursively tell our parent (if we have one) that we exist, and that we
   // need to have our bcast action run as a continuation
   if (reduce_add(r->reduce) && r->parent) {
     hpx_addr_t allreduce = hpx_thread_current_target();
-    /*printf("====non root location : %"PRId64"  parent : %"PRId64" \n", allreduce, r->parent);*/
+    //printf("====non root location : %"PRId64"  parent : %"PRId64" \n", allreduce, r->parent);
     dbg_check( hpx_call_sync(r->parent, allreduce_add_async, &r->id,
                              sizeof(r->id), &allreduce_bcast_async,
                              &allreduce) );
@@ -120,16 +97,11 @@ void allreduce_reduce(allreduce_t *r, const void *val) {
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, r->bytes);
   void *output = malloc(r->bytes);
 
-  if (r->parent) {
-    reduce_reset(r->reduce, hpx_parcel_get_data(p));
-  }
-  else {
-    reduce_reset(r->reduce, output);
-  }
-
+  reduce_reset(r->reduce, hpx_parcel_get_data(p));
+  
   /*int* input = (int*)hpx_parcel_get_data(p);*/
   //perform synchronized collective comm
-  here->network->coll_sync(here->network, p, output, r->ctx);
+  here->network->coll_sync(here->network, p, output, NULL);
 
   /*int* res = (int*) output;*/
   /**res = 240;*/

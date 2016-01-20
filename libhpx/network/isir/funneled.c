@@ -125,7 +125,7 @@ static int _funneled_coll_init(void *network, coll_t **_c){
 static int _funneled_coll_sync(void *network, hpx_parcel_t *in, void* out, coll_t* c){
   void *sendbuf = in->buffer;
   int count     = in->size;
-  char *comm = c->data + c->group_bytes;
+  //char *comm = c->data + c->group_bytes;
   _funneled_t* isir = network;
   
   //flushing network is necessary (sufficient ?) to execute any packets
@@ -136,7 +136,7 @@ static int _funneled_coll_sync(void *network, hpx_parcel_t *in, void* out, coll_
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
     ;
     
-  isir->xport->allreduce(sendbuf, out, count, NULL, &c->op, comm);
+  isir->xport->allreduce(sendbuf, out, count, NULL, NULL, NULL);
   sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
   return LIBHPX_OK;
 }
