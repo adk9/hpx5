@@ -130,7 +130,7 @@ static int _funneled_coll_sync(void *network, hpx_parcel_t *in, void* out, coll_
   
   //flushing network is necessary (sufficient ?) to execute any packets
   //destined for collective operation
-  isir->vtable.flush(network);
+  /*isir->vtable.flush(network);*/
 
   printf("*******isir coll_sync: rank %d \n", here->rank);
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
