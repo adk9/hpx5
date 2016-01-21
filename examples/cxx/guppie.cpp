@@ -25,14 +25,23 @@
 #include <unistd.h>
 #include <hpx/hpx++.h>
 
-// Macros for timing
+namespace {
+
+using typename hpx::global_ptr;
+using hpx::gas::alloc_cyclic;
+
 struct tms t;
-#define WSEC() (times(&t) / (double)sysconf(_SC_CLK_TCK))
-#define CPUSEC() (clock() / (double)CLOCKS_PER_SEC)
+double WSEC() {
+  return (times(&t) / (double)sysconf(_SC_CLK_TCK));
+}
+
+double CPUSEC() {
+  return (clock() / (double)CLOCKS_PER_SEC);
+}
 
 // Random number generator
-#define POLY 0x0000000000000007UL
-#define PERIOD 1317624576693539401L
+static const unsigned long POLY = 0x0000000000000007UL;
+static const long PERIOD = 1317624576693539401L;
 
 // Log size of main table
 // (suggested: half of global memory)
@@ -40,19 +49,16 @@ struct tms t;
 //#define LTABSIZE 25L
 #define LTABSIZE 10L
 #endif
-#define TABSIZE (1L << LTABSIZE)
+
+static const long TABSIZE = (1L << LTABSIZE);
 
 // Number of updates to table
 // (suggested: 4x number of table entries)
-#define NUPDATE (4L * TABSIZE)
-//#define NUPDATE 134217728
+static const long NUPDATE = (4L * TABSIZE);
+//static const long NUPDATE = 134217728;
 
-#define BLOCK_SIZE sizeof(uint64_t)
+static const size_t BLOCK_SIZE = sizeof(uint64_t);
 
-using typename hpx::global_ptr;
-using hpx::gas::alloc_cyclic;
-
-namespace {
 struct {
   long       ltabsize;           // local table size
   long       tabsize;            // global table size
@@ -77,7 +83,6 @@ uint64_t table_get(global_ptr<uint64_t> table, long i) {
 
   global_ptr<uint64_t> there = &table[i];
   hpx_gas_memget_sync(&val, there.ptr(), sizeof(val));
-
   return val;
 }
 
@@ -115,8 +120,9 @@ int _init_table_action() {
   long r = cfg.tabsize % nranks;
   long blocks = cfg.tabsize / nranks + ((me < r) ? 1 : 0);
   hpx_addr_t and_lco = hpx_lco_and_new(blocks);
-  for (long b = 0, i = me; b < blocks; ++b, i += nranks)
+  for (long b = 0, i = me; b < blocks; ++b, i += nranks) {
     table_set(cfg.table, i, i, and_lco);
+  }
 
   hpx_lco_wait(and_lco);
   hpx_lco_delete(and_lco, HPX_NULL);
@@ -125,10 +131,8 @@ int _init_table_action() {
 }
 HPX_ACTION(HPX_DEFAULT, 0, _init_table, _init_table_action);
 
-
 // Utility routine to start random number generator at Nth step
-uint64_t startr(long n)
-{
+uint64_t startr(long n) {
   int i, j;
   uint64_t m2[64];
   uint64_t temp, ran;
@@ -144,29 +148,33 @@ uint64_t startr(long n)
     temp = (temp << 1) ^ ((long) temp < 0 ? POLY : 0);
   }
 
-  for (i=62; i>=0; i--)
-    if ((n >> i) & 1)
+  for (i=62; i>=0; i--) {
+    if ((n >> i) & 1) {
       break;
+    }
+  }
 
   ran = 0x2;
   while (i > 0) {
     temp = 0;
-    for (j=0; j<64; j++)
-      if ((ran >> j) & 1)
+    for (j=0; j<64; j++) {
+      if ((ran >> j) & 1) {
         temp ^= m2[j];
+      }
+    }
     ran = temp;
     i -= 1;
-    if ((n >> i) & 1)
+    if ((n >> i) & 1) {
       ran = (ran << 1) ^ ((long) ran < 0 ? POLY : 0);
+    }
   }
 
   return ran;
 }
 
 // divide up total size (loop iters or space amount) in a blocked way
-void Block(int mype, int npes, long totalsize, long *start,
-           long *stop, long *size)
-{
+void Block(int mype, int npes, long totalsize, long& start,
+           long& stop, long& size) {
   long div;
   long rem;
 
@@ -174,13 +182,13 @@ void Block(int mype, int npes, long totalsize, long *start,
   rem = totalsize % npes;
 
   if (mype < rem) {
-    *start = mype * (div + 1);
-    *stop   = *start + div;
-    *size  = div + 1;
+    start = mype * (div + 1);
+    stop   = start + div;
+    size  = div + 1;
   } else {
-    *start = mype * div + rem;
-    *stop  = *start + div - 1;
-    *size  = div;
+    start = mype * div + rem;
+    stop  = start + div - 1;
+    size  = div;
   }
 }
 
@@ -218,35 +226,37 @@ int _update_table_action() {
   long start, stop, size;
   long i;
   long j;
-  hpx_addr_t and_lco;
 
   int me = HPX_LOCALITY_ID;
   int nranks = HPX_LOCALITIES;
 
-  Block(me, nranks, cfg.nupdate, &start, &stop, &size);
+  Block(me, nranks, cfg.nupdate, start, stop, size);
 
-  for (j=0; j<VLEN; j++)
+  for (j=0; j<VLEN; j++) {
     ran[j] = startr(start + (j * (size/VLEN)));
+  }
   for (i=0; i<size/VLEN; i++) {
     for (j=0; j<VLEN; j++) {
       ran[j] = (ran[j] << 1) ^ ((long) ran[j] < 0 ? POLY : 0);
     }
-    for (j=0; j<VLEN; j++)
+    for (j=0; j<VLEN; j++) {
       t1[j] = table_get(cfg.table, ran[j] & (cfg.tabsize-1));
+    }
 
-    for (j=0; j<VLEN; j++)
+    for (j=0; j<VLEN; j++) {
       t1[j] ^= ran[j];
+    }
 
-    and_lco = hpx_lco_and_new(VLEN);
-    for (j=0; j<VLEN; j++)
-      table_set(cfg.table, ran[j] & (cfg.tabsize-1), t1[j], and_lco);
-    hpx_lco_wait(and_lco);
-    hpx_lco_delete(and_lco, HPX_NULL);
+    hpx_addr_t done = hpx_lco_and_new(VLEN);
+    for (j=0; j<VLEN; j++) {
+      table_set(cfg.table, ran[j] & (cfg.tabsize-1), t1[j], done);
+    }
+    hpx_lco_wait(done);
+    hpx_lco_delete(done, HPX_NULL);
   }
   return HPX_SUCCESS;
 }
 HPX_ACTION(HPX_DEFAULT, 0, _update_table, _update_table_action);
-
 
 void _main_action() {
   double icputime;               // CPU time to init table
