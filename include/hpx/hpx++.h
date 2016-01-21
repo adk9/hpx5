@@ -32,6 +32,7 @@ extern "C" {
 
 #include <hpx/cxx/action.h>
 #include <hpx/cxx/global_ptr.h>
+#include <hpx/cxx/string.h>
 
 extern "C" {
 #include <hpx/par.h>
