@@ -24,13 +24,6 @@ extern "C" {
 
 namespace hpx {
 
-/// This is thrown if pin on global_ptr is unsuccessful
-struct non_local_addr_exception : public std::exception {
-  virtual const char* what() const throw() {
-    return "Pinning non local address not allowed";
-  }
-}; // struct non_local_addr_exception
-
 template <typename T>
 class gp_subscr;
 
@@ -44,40 +37,27 @@ class global_ptr {
  public:
   typedef T value_type;
 
-  global_ptr() : _gbl_ptr(HPX_NULL), _elems_per_blk(0) {}
-  global_ptr(hpx_addr_t addr, uint32_t b_s=1) : _gbl_ptr(addr), _elems_per_blk(b_s) {}
+  global_ptr() : _gbl_ptr(HPX_NULL), _elems_per_blk(0) {
+  }
+
+  global_ptr(hpx_addr_t addr) : _gbl_ptr(addr), _elems_per_blk(1) {
+  }
+
+  global_ptr(hpx_addr_t addr, uint32_t b_s) : _gbl_ptr(addr),
+                                              _elems_per_blk(b_s) {
+  }
 
   /// return raw hpx_addr_t
-  inline
   hpx_addr_t ptr() const {
     return _gbl_ptr;
   }
 
-  inline
   uint32_t get_block_size() const {
     return _elems_per_blk;
   }
 
-  /// pin and unpin
-  T* pin() {
-    T* ret;
-    bool success = hpx_gas_try_pin(_gbl_ptr, (void**)&ret);
-    if (!success) {
-      // throw an exception?
-      throw non_local_addr_exception();
-      ret = nullptr;
-    }
-    return ret;
-  }
-
-  inline
-  void unpin() {
-    hpx_gas_unpin(_gbl_ptr);
-  }
-
   /// returns true if the addr is local
-  inline
-  bool is_local() {
+  bool is_local() const {
     return hpx_gas_try_pin(_gbl_ptr, NULL);
   }
 
@@ -105,6 +85,94 @@ class global_ptr {
   size_t _elems_per_blk;
 }; // template class global_ptr
 
+template <typename T>
+class pinned_ptr {
+ public:
+
+  /// We throw this exception if pinning the operation fails.
+  struct Failed : public std::exception {
+    virtual const char* what() const throw() {
+      return "Pin operation failed\n";
+    }
+  };
+
+  /// Construct a pinned pointer.
+  ///
+  /// A pinned pointer will automatically unpin the address when it is
+  /// destroyed.
+  ///
+  /// This constructor version will throw a PinFailed() exception if the pin
+  /// operation fails. We generally recommend using the version that takes the
+  /// local flag as output.
+  ///
+  /// @param       addr The address we're trying to pin.
+  explicit pinned_ptr(global_ptr<T> &gva)
+    : _addr(gva.ptr()),
+      _lva(NULL),
+      _local(true) {
+    if (!hpx_gas_try_pin(_addr, (void*)&_lva)) {
+      throw Failed();
+    }
+  }
+
+  /// Construct a pinned pointer.
+  ///
+  /// A pinned pointer will automatically unpin the address when it is
+  /// destroyed.
+  ///
+  /// This constructor version will return its success/failure result through
+  /// the @p local flag.
+  pinned_ptr(global_ptr<T> &gva, bool& local)
+    : _addr(gva.ptr()),
+      _lva(NULL),
+      _local(hpx_gas_try_pin(_addr, (void*)&_lva)) {
+    local = _local;
+  }
+
+  /// Cast to a T*.
+  ///
+  /// The pinned pointer's lifetime *must* exceed that of the pointer. Using the
+  /// returned pointer once the object has been destroyed is an error.
+  T* unsafe_impl() const {
+    return _lva;
+  }
+
+  /// Standard smart pointer operation.
+  T* operator->() const {
+    return _lva;
+  }
+
+  /// Standard smart pointer operation.
+  T& operator*() const {
+    return *_lva;
+  }
+
+ private:
+  pinned_ptr();
+  pinned_ptr(const pinned_ptr<T>&);
+  pinned_ptr<T>& operator=(const pinned_ptr<T>&);
+
+  ~pinned_ptr() {
+    if (_local) {
+      hpx_gas_unpin(_addr);
+    }
+  }
+
+  hpx_addr_t _addr;
+  T*          _lva;
+  bool      _local;
+};
+
+/// Disable pinned pointers to void*.
+template <>
+class pinned_ptr<void> {
+ private:
+  pinned_ptr();
+  pinned_ptr(const pinned_ptr&);
+  pinned_ptr& operator=(const pinned_ptr&);
+  ~pinned_ptr();
+};
+
 /// Special case global pointers to void with a template specialization.
 ///
 /// These serve the same roll as void* pointers do. Other pointers can be cast
@@ -127,8 +195,7 @@ class global_ptr<void> {
   /// Construct a generic global pointer from a pointer to any other type---this
   /// serves to handle pointer casts as well.
   template <typename U>
-  global_ptr<void>(const global_ptr<U>& ptr)
-  : _impl(ptr.ptr()),
+  global_ptr<void>(const global_ptr<U>& ptr) : _impl(ptr.ptr()),
     _bsize(ptr.get_block_size()) {
   }
 
