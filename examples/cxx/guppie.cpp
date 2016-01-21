@@ -11,6 +11,10 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -19,7 +23,7 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <unistd.h>
-#include "hpx++/hpx++.h"
+#include <hpx/hpx++.h>
 
 // Macros for timing
 struct tms t;
@@ -65,14 +69,14 @@ static hpx_action_t _mover        = 0;
 // table get is synchronous and returns the value
 uint64_t table_get(hpx::global_ptr<uint64_t> table, long i) {
   uint64_t val;
-  
+
 //   size_t n = sizeof(val);
 //   hpx_addr_t there = hpx_addr_add(table, i*BLOCK_SIZE, BLOCK_SIZE);
 //   hpx_gas_memget_sync(&val, there, n);
-  
+
   hpx::global_ptr<uint64_t> there = &table[i];
   hpx_gas_memget_sync(&val, there.ptr(), sizeof(val));
-  
+
   return val;
 }
 
