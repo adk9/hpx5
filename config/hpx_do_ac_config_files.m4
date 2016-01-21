@@ -33,9 +33,14 @@ AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
    libhpx/instrumentation/Makefile
    include/Makefile
    include/libhpx/Makefile
-   examples/Makefile
-   examples/cxx/Makefile])
-  
+   examples/Makefile])
+
+ AS_IF([test "x$have_hpxpp" != xno], [
+   AC_CONFIG_FILES([
+     hpx++.pc
+     examples/cxx/Makefile
+     tests/cxx/Makefile])])
+   
  AS_IF([test "x$have_docs" != xno], [
    AC_CONFIG_FILES([
      docs/Doxyfile
@@ -53,7 +58,6 @@ AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
    AC_CONFIG_FILES([
      tests/Makefile
      tests/unit/Makefile
-     tests/cxx/Makefile
      tests/perf/Makefile])])
 
  AS_IF([test "x$have_dlmalloc" != xno], [
