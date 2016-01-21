@@ -266,12 +266,16 @@ static void _push_lifo(hpx_parcel_t *p, void *worker) {
   dbg_assert(actions[p->action].handler != NULL);
   EVENT_PUSH_LIFO(p);
   worker_t *w = worker;
-  uint64_t size = sync_chase_lev_ws_deque_push(_work(w), p);
-  if (w->work_first < 0) {
-    return;
+  if (action_is_priority(p->action)) {
+    here->sched->p_sched.work_consume(p);
+  } else {
+    uint64_t size = sync_chase_lev_ws_deque_push(_work(w), p);
+    if (w->work_first < 0) {
+      return;
+    }
+    w->work_first = (here->sched->wf_threshold < size);
   }
-  w->work_first = (here->sched->wf_threshold < size);
-}
+}  
 
 /// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *_schedule_lifo(worker_t *w) {
@@ -282,7 +286,7 @@ static hpx_parcel_t *_schedule_lifo(worker_t *w) {
 }
 
 /// Send a mail message to another worker.
-static void _send_mail(hpx_parcel_t *p, void *worker) {
+void _send_mail(hpx_parcel_t *p, void *worker) {
   worker_t *w = worker;
   log_sched("sending %p to worker %d\n", (void*)p, w->id);
   sync_two_lock_queue_enqueue(&w->inbox, p);
@@ -596,6 +600,14 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
     // Swap our yield queue with our primary queue
     _swap_epoch(w);
 
+    // if the priority scheduler is on, process work from there first
+    if (here->sched->p_sched.on) {
+      p = here->sched->p_sched.work_produce();
+    }
+    if (p) {
+      break;
+    }
+
     // Do some network stuff;
     _schedule_network(w, here->network);
 
@@ -605,6 +617,12 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
       log_sched("stole work %p\n", p);
       break;
     }
+
+    // try to steal priority work
+    /* if (here->sched->p_sched.on) p = here->sched->p_sched.work_steal(); */
+    /* if (p) { */
+    /*   break; */
+    /* } */
 
     // couldn't find any work to do, eagerly spin
     INST(spins++);

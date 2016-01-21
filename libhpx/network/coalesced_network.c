@@ -126,9 +126,9 @@ static void _send_n(_coalesced_network_t *network, int n) {
 
 static int _coalesced_network_send(void *obj, hpx_parcel_t *p) {
   _coalesced_network_t *network = obj;
-  if (!action_is_coalesced(p->action)) {
-    return network_send(network->next, p);
-  }
+/*   if (!action_is_coalesced(p->action)) { */
+/*     return network_send(network->next, p); */
+/*   } */
 
   // Coalesce on demand as long as we have enough parcels available.
   int count = sync_load(&network->count, SYNC_RELAXED);

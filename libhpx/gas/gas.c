@@ -76,3 +76,9 @@ gas_t *gas_new(config_t *cfg, struct boot *boot) {
 
   return gas;
 }
+
+uint32_t gas_owner_of(gas_t *gas, hpx_addr_t addr) {
+  assert(gas && gas->owner_of);
+  return gas->owner_of(gas, addr);
+}
+

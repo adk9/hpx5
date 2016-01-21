@@ -485,6 +485,12 @@ static inline bool action_is_opencl(hpx_action_t id) {
   return (action->type == HPX_OPENCL);
 }
 
+static inline bool action_is_priority(hpx_action_t id) {
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->type == HPX_PRIORITY);
+}
+
 /// Wraps the libhpx_register_action() function to make it slightly
 /// more convenient to use.
 ///

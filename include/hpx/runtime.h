@@ -110,6 +110,11 @@ void hpx_print_help(void)
 void hpx_print_version(void)
   HPX_PUBLIC;
 
+/// set the plugin scheduler
+void hpx_set_priority_scheduler(hpx_parcel_t* (*work_produce)(),
+				void (*work_consume)(hpx_parcel_t*),
+				hpx_parcel_t* (*work_steal)()) 
+  HPX_PUBLIC;
 /// @}
 
 #endif
