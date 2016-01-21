@@ -1,4 +1,4 @@
-// =============================================================================
+// ================================================================= -*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
 //  Copyright (c) 2013-2015, Trustees of Indiana University,
@@ -11,8 +11,9 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-/// @file include/hpx++/hpx++.h
+/// @file include/hpx/hpx++.h
 /// @brief The Main HPX++ header file.
+///
 /// To use the HPX++ API only this header is needed; all the other HPX++
 /// headers are included through it.
 
@@ -49,12 +50,12 @@ extern "C" {
 }
 
 namespace hpx {
-  /// Export the error codes into the HPX namespace as integers. We could use an
-  /// enum or something but this keeps the typing consistent.
-  /// @{
-  const int SUCCESS = HPX_SUCCESS;
-  const int ERROR = HPX_ERROR;
-  /// @}
+/// Export the error codes into the HPX namespace as integers. We could use an
+/// enum or something but this keeps the typing consistent.
+/// @{
+const int SUCCESS = HPX_SUCCESS;
+const int ERROR = HPX_ERROR;
+/// @}
 }
 
 #endif // HPX_PLUS_PLUS_H
