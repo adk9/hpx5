@@ -25,21 +25,3 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id) {
   const action_t *entry = &actions[id];
   return (hpx_action_handler_t)entry->handler;
 }
-
-int action_call_va(hpx_addr_t addr, hpx_action_t action, hpx_addr_t rsync,
-                   hpx_action_t rop, hpx_addr_t lsync, hpx_addr_t gate,
-                   int n, va_list *args) {
-  hpx_parcel_t *p = action_new_parcel_va(action, addr, rsync, rop, n, args);
-
-  if (likely(!gate && !lsync)) {
-    parcel_launch(p);
-    return HPX_SUCCESS;
-  }
-  if (!gate && lsync) {
-    return hpx_parcel_send(p, lsync);
-  }
-  if (!lsync) {
-    return hpx_parcel_send_through_sync(p, gate);
-  }
-  return hpx_parcel_send_through(p, gate, lsync);
-}
