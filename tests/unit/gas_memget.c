@@ -212,6 +212,7 @@ int _putget_action(void *UNUSED, size_t size) {
   hpx_gas_memput_rsync(destb,recv_length,num_neighbors*sizeof(int));
 
   hpx_lco_set(barrier, 0, NULL, HPX_NULL, HPX_NULL);
+  free(recv_length);
 
   // wait for the memputs to finish
   hpx_lco_wait(barrier);
