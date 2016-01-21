@@ -29,6 +29,8 @@ namespace {
 
 using typename hpx::global_ptr;
 using hpx::gas::alloc_cyclic;
+using hpx::gas::memget;
+using hpx::gas::memput;
 
 struct tms t;
 double WSEC() {
@@ -74,25 +76,18 @@ struct {
 };
 
 // table get is synchronous and returns the value
-uint64_t table_get(global_ptr<uint64_t> table, long i) {
-  uint64_t val;
-
-  //   size_t n = sizeof(val);
-  //   hpx_addr_t there = hpx_addr_add(table, i*BLOCK_SIZE, BLOCK_SIZE);
-  //   hpx_gas_memget_sync(&val, there, n);
-
-  global_ptr<uint64_t> there = &table[i];
-  hpx_gas_memget_sync(&val, there.ptr(), sizeof(val));
+template <typename T>
+T table_get(global_ptr<T> table, long i) {
+  T val;
+  memget(&val, &table[i], sizeof(T));
   return val;
 }
 
 // table set is asynchronous and uses an LCO for synchronization.
-void table_set(global_ptr<uint64_t> table, long i, uint64_t val,
-               hpx_addr_t lco) {
-  //   hpx_addr_t there = hpx_addr_add(table, i*BLOCK_SIZE, BLOCK_SIZE);
-  //   hpx_gas_memput(there, &val, sizeof(val), HPX_NULL, lco);
-  global_ptr<uint64_t> there = &table[i];
-  hpx_gas_memput(there.ptr(), &val, sizeof(val), HPX_NULL, lco);
+template <typename T>
+void table_set(global_ptr<T> table, long i, const T& val,
+               global_ptr<void> rsync) {
+  memput(&table[i], &val, sizeof(T), hpx::null_ptr, rsync);
 }
 
 int _bitwiseor_action(uint64_t *args, size_t size) {
@@ -121,9 +116,8 @@ int _init_table_action() {
   long blocks = cfg.tabsize / nranks + ((me < r) ? 1 : 0);
   hpx_addr_t and_lco = hpx_lco_and_new(blocks);
   for (long b = 0, i = me; b < blocks; ++b, i += nranks) {
-    table_set(cfg.table, i, i, and_lco);
+    table_set(cfg.table, i, (unsigned long)i, global_ptr<void>(and_lco, 1));
   }
-
   hpx_lco_wait(and_lco);
   hpx_lco_delete(and_lco, HPX_NULL);
   hpx_gas_unpin(target);
@@ -249,7 +243,8 @@ int _update_table_action() {
 
     hpx_addr_t done = hpx_lco_and_new(VLEN);
     for (j=0; j<VLEN; j++) {
-      table_set(cfg.table, ran[j] & (cfg.tabsize-1), t1[j], done);
+      table_set(cfg.table, ran[j] & (cfg.tabsize-1), t1[j],
+                global_ptr<void>(done, 1));
     }
     hpx_lco_wait(done);
     hpx_lco_delete(done, HPX_NULL);
