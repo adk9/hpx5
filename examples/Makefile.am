@@ -1,5 +1,5 @@
 if HAVE_HPXPP
-SUBDIR = cxx
+SUBDIRS = cxx
 endif
 
 examplesdir             = $(datarootdir)/doc/@PACKAGE@
