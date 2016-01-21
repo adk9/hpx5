@@ -25,27 +25,27 @@
 #include <stdint.h>
 
 extern "C" {
-  #include <hpx/attributes.h>
-  #include <hpx/types.h>
+#include <hpx/attributes.h>
+#include <hpx/types.h>
 }
 
 #include <hpx/cxx/action.h>
 #include <hpx/cxx/global_ptr.h>
 
 extern "C" {
-  #include <hpx/par.h>
-  #include <hpx/parcel.h>
-  #include <hpx/process.h>
-  #include <hpx/rpc.h>
+#include <hpx/par.h>
+#include <hpx/parcel.h>
+#include <hpx/process.h>
+#include <hpx/rpc.h>
 }
 
 #include <hpx/cxx/runtime.h>
 #include <hpx/cxx/lco.h>
 
 extern "C" {
-  #include <hpx/thread.h>
-  #include <hpx/time.h>
-  #include <hpx/topology.h>
+#include <hpx/thread.h>
+#include <hpx/time.h>
+#include <hpx/topology.h>
 }
 
 namespace hpx {

@@ -42,7 +42,7 @@ using namespace std;
 
 static int _my_typed_handler(int i, float f, char c) {
   printf("Hi, I am a typed action with args: %d %f %c!\n", i, f, c);
-//   hpx_call_cc(HPX_HERE, _my_action_handler_action_struct::id, NULL, NULL);
+  //   hpx_call_cc(HPX_HERE, _my_action_handler_action_struct::id, NULL, NULL);
   return HPX_SUCCESS;
 }
 HPXPP_REGISTER_ACTION(_my_typed_handler);
@@ -59,8 +59,8 @@ hpx_status_t test1(int arg) {
   int r;
 
   // commented code should fail to compile
-//   obj(HPX_HERE, r);
-//   obj(HPX_HERE, r, "");
+  //   obj(HPX_HERE, r);
+  //   obj(HPX_HERE, r, "");
 
   hello_action_struct::call_sync(HPX_HERE, r, arg);
 

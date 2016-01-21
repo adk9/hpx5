@@ -18,37 +18,37 @@
 #include "tests.h"
 
 namespace {
-  int resource;
+int resource;
 
-  class RAII {
-   public:
-    RAII() {
-      resource = 1;
-    }
-    ~RAII() {
-      resource = 0;
-    }
-  };
-
-  int _raii_continue_handler(void) {
-    RAII raii;
-    hpx_thread_continue();
-    return HPX_SUCCESS;
+class RAII {
+ public:
+  RAII() {
+    resource = 1;
   }
-  HPX_ACTION(HPX_DEFAULT, 0, _raii_continue, _raii_continue_handler);
-
-  int _raii_thread_exit_handler(void) {
-    RAII raii;
-    hpx_thread_exit(HPX_SUCCESS);
+  ~RAII() {
+    resource = 0;
   }
-  HPX_ACTION(HPX_DEFAULT, 0, _raii_thread_exit, _raii_thread_exit_handler);
+};
 
-  int _verify_handler(void) {
-    test_assert_msg(resource == 0, "Destructor was not run correctly\n");
-    return HPX_SUCCESS;
-  }
-  HPX_ACTION(HPX_DEFAULT, 0, _verify, _verify_handler);
+int _raii_continue_handler(void) {
+  RAII raii;
+  hpx_thread_continue();
+  return HPX_SUCCESS;
 }
+HPX_ACTION(HPX_DEFAULT, 0, _raii_continue, _raii_continue_handler);
+
+int _raii_thread_exit_handler(void) {
+  RAII raii;
+  hpx_thread_exit(HPX_SUCCESS);
+}
+HPX_ACTION(HPX_DEFAULT, 0, _raii_thread_exit, _raii_thread_exit_handler);
+
+int _verify_handler(void) {
+  test_assert_msg(resource == 0, "Destructor was not run correctly\n");
+  return HPX_SUCCESS;
+}
+HPX_ACTION(HPX_DEFAULT, 0, _verify, _verify_handler);
+} // namespace
 
 TEST_MAIN({
     ADD_TEST(_raii_continue, 0);

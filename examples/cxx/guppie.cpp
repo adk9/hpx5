@@ -53,7 +53,7 @@ typedef struct guppie_config {
   long       ltabsize;           // local table size
   long       tabsize;            // global table size
   long       nupdate;            // number of updates
-//   hpx_addr_t table;              // global address of the table
+  //   hpx_addr_t table;              // global address of the table
   hpx::global_ptr<uint64_t> table;              // global address of the table
 } guppie_config_t;
 
@@ -70,9 +70,9 @@ static hpx_action_t _mover        = 0;
 uint64_t table_get(hpx::global_ptr<uint64_t> table, long i) {
   uint64_t val;
 
-//   size_t n = sizeof(val);
-//   hpx_addr_t there = hpx_addr_add(table, i*BLOCK_SIZE, BLOCK_SIZE);
-//   hpx_gas_memget_sync(&val, there, n);
+  //   size_t n = sizeof(val);
+  //   hpx_addr_t there = hpx_addr_add(table, i*BLOCK_SIZE, BLOCK_SIZE);
+  //   hpx_gas_memget_sync(&val, there, n);
 
   hpx::global_ptr<uint64_t> there = &table[i];
   hpx_gas_memget_sync(&val, there.ptr(), sizeof(val));
@@ -83,8 +83,8 @@ uint64_t table_get(hpx::global_ptr<uint64_t> table, long i) {
 // table set is asynchronous and uses an LCO for synchronization.
 void table_set(hpx::global_ptr<uint64_t> table, long i, uint64_t val,
                hpx_addr_t lco) {
-//   hpx_addr_t there = hpx_addr_add(table, i*BLOCK_SIZE, BLOCK_SIZE);
-//   hpx_gas_memput(there, &val, sizeof(val), HPX_NULL, lco);
+  //   hpx_addr_t there = hpx_addr_add(table, i*BLOCK_SIZE, BLOCK_SIZE);
+  //   hpx_gas_memput(there, &val, sizeof(val), HPX_NULL, lco);
   hpx::global_ptr<uint64_t> there = &table[i];
   hpx_gas_memput(there.ptr(), &val, sizeof(val), HPX_NULL, lco);
 }
@@ -197,7 +197,7 @@ static int _mover_action(guppie_config_t *cfg, size_t n) {
     dst = (rand() % size);
 
     // get the random address into the table.
-//     hpx_addr_t there = hpx_addr_add(cfg->table, src * BLOCK_SIZE, BLOCK_SIZE);
+    //     hpx_addr_t there = hpx_addr_add(cfg->table, src * BLOCK_SIZE, BLOCK_SIZE);
     auto there = &(cfg->table[src]);
     lco = hpx_lco_future_new(0);
     // initiate a move
@@ -308,8 +308,8 @@ void _main_action(guppie_config_t *cfg, size_t size)
   lco = hpx_lco_and_new(cfg->nupdate);
   for (i=0; i<cfg->nupdate; i++) {
     temp = (temp << 1) ^ (((long) temp < 0) ? POLY : 0);
-//     there = hpx_addr_add(cfg->table, (temp & (cfg->tabsize-1))* BLOCK_SIZE, BLOCK_SIZE);
-//     hpx_call(there, _bitwiseor, lco, &temp, sizeof(temp));
+    //     there = hpx_addr_add(cfg->table, (temp & (cfg->tabsize-1))* BLOCK_SIZE, BLOCK_SIZE);
+    //     hpx_call(there, _bitwiseor, lco, &temp, sizeof(temp));
     auto there = &(cfg->table[temp & (cfg->tabsize-1)]);
     hpx_call(there.ptr(), _bitwiseor, lco, &temp, sizeof(temp));
   }
