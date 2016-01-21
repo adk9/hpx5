@@ -51,7 +51,7 @@ int32_t allreduce_add(allreduce_t *r, hpx_action_t op, hpx_addr_t addr) {
   // need to have our bcast action run as a continuation
   if (reduce_add(r->reduce) && r->parent) {
     hpx_addr_t allreduce = hpx_thread_current_target();
-    //printf("====non root location : %"PRId64"  parent : %"PRId64" \n", allreduce, r->parent);
+    printf("====non root location : %"PRId64"  parent : %"PRId64" \n", allreduce, r->parent);
     dbg_check( hpx_call_sync(r->parent, allreduce_add_async, &r->id,
                              sizeof(r->id), &allreduce_bcast_async,
                              &allreduce) );
@@ -98,7 +98,7 @@ void allreduce_reduce(allreduce_t *r, const void *val) {
   void *output = malloc(r->bytes);
 
   reduce_reset(r->reduce, hpx_parcel_get_data(p));
-  
+
   /*int* input = (int*)hpx_parcel_get_data(p);*/
   //perform synchronized collective comm
   here->network->coll_sync(here->network, p, output, NULL);
