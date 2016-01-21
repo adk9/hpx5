@@ -27,7 +27,7 @@
 
 namespace {
 
-using typename hpx::global_ptr;
+template <typename T> using global_ptr = hpx::global_ptr<T>;
 using hpx::gas::alloc_cyclic;
 using hpx::gas::memget;
 using hpx::gas::memput;
