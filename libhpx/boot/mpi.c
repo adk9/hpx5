@@ -119,7 +119,7 @@ boot_t *boot_new_mpi(void) {
     return &_mpi_boot_class;
   }
 
-  static const int LIBHPX_THREAD_LEVEL = MPI_THREAD_FUNNELED;
+  static const int LIBHPX_THREAD_LEVEL = MPI_THREAD_SERIALIZED;
 
   int level;
   if (MPI_SUCCESS != MPI_Init_thread(NULL, NULL, LIBHPX_THREAD_LEVEL, &level)) {
