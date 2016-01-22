@@ -14,19 +14,15 @@
 #ifndef HPX_CXX_ACTION_H
 #define HPX_CXX_ACTION_H
 
-extern "C" {
+#include <cstdlib>
+#include <tuple>
+#include <type_traits>
 #include <hpx/addr.h>
 #include <hpx/types.h>
 #include <hpx/action.h>
 #include <hpx/rpc.h>
-}
-
 #include <hpx/cxx/lco.h>
 #include <hpx/cxx/runtime.h>
-
-#include <cstdlib>
-#include <tuple>
-#include <type_traits>
 
 namespace hpx {
 
@@ -54,7 +50,7 @@ struct function_traits<R(Args...)> {
 
 template<class R, class... Args>
 constexpr std::tuple<Args...> function_traits<R(Args...)>::arg_types_tpl;
-  
+
 // reference: http://stackoverflow.com/questions/17424477/implementation-c14-make-integer-sequence
 // using aliases for cleaner syntax
 template<class T> using Invoke = typename T::type;

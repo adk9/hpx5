@@ -16,11 +16,8 @@
 
 #include <memory>
 #include <exception>
-
-extern "C" {
 #include <hpx/addr.h>
 #include <hpx/gas.h>
-}
 
 namespace hpx {
 

@@ -14,7 +14,13 @@
 #ifndef HPX_RPC_H
 #define HPX_RPC_H
 
-#include "hpx/builtins.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <hpx/builtins.h>
+#include <hpx/process.h>
+#include <hpx/thread.h>
 
 /// @file include/hpx/rpc.h
 
@@ -247,5 +253,9 @@ int _hpx_call_cc(hpx_addr_t addr, hpx_action_t action, int n, ...)
 #define hpx_bcast_rsync(action, ...)                                    \
   _hpx_process_broadcast_rsync(hpx_thread_current_pid(), action,        \
                                __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -14,9 +14,7 @@
 #ifndef HPX_CXX_RUNTIME_H
 #define HPX_CXX_RUNTIME_H
 
-extern "C" {
-  #include <hpx/runtime.h>
-}
+#include <hpx/runtime.h>
 
 namespace hpx {
 /// @defgroup system System

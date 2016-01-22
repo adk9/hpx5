@@ -14,6 +14,10 @@
 #ifndef HPX_TIME_H
 #define HPX_TIME_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @addtogroup other
 /// @{
 
@@ -124,5 +128,9 @@ hpx_time_t hpx_time_construct(unsigned long s, unsigned long ns) HPX_PUBLIC;
 hpx_time_t hpx_time_add(hpx_time_t start, hpx_time_t duration) HPX_PUBLIC;
 
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -1,5 +1,5 @@
 noinst_HEADERS   = 
-noinst_PROGRAMS  = global_ptr actions futures
+noinst_PROGRAMS  = global_ptr actions futures system
 
 AM_CPPFLAGS      = $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include -Wno-unused
 AM_CXXFLAGS      = $(HPX_APPS_CXXFLAGS)
@@ -12,7 +12,9 @@ TESTS = $(noinst_PROGRAMS)
 global_ptr_SOURCES = global_ptr.cpp
 actions_SOURCES = actions.cpp
 futures_SOURCES = futures.cpp
+system_SOURCES = system.cpp
 
 global_ptr_DEPENDENCIES = $(HPX_APPS_DEPS)
 actions_DEPENDENCIES = $(HPX_APPS_DEPS)
 futures_DEPENDENCIES = $(HPX_APPS_DEPS)
+system_DEPENDENCIES = $(HPX_APPS_DEPS)

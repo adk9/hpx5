@@ -14,17 +14,13 @@
 #ifndef HPX_CXX_LCO_H
 #define HPX_CXX_LCO_H
 
-extern "C" {
+#include <cstdlib>
 #include <hpx/addr.h>
 #include <hpx/gas.h>
 #include <hpx/types.h>
 #include <hpx/lco.h>
-}
-
-#include <cstdlib>
 
 namespace hpx {
-
 namespace lco {
 /// This class is provides the lco interface common to all types of LCOs
 /// extended by all LCO classes such as Future, Reduce, AndGate etc.

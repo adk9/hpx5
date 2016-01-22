@@ -15,10 +15,7 @@
 #define HPX_CXX_ERRORS_H
 
 #include <exception>
-
-extern "C" {
 #include <hpx/types.h>
-}
 
 namespace hpx {
 /// For now C++ API throws errors that correspond to the HPX hpx_status_t.

@@ -14,6 +14,10 @@
 #ifndef HPX_PAR_H
 #define HPX_PAR_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @addtogroup actions
 /// @{
 
@@ -77,13 +81,17 @@ int hpx_par_call_sync(hpx_action_t action,
                      const void *env) HPX_PUBLIC;
 
 int hpx_count_range_call(hpx_action_t action,
-			 const hpx_addr_t addr,
-			 const size_t count,
-			 const size_t increment,
-			 const uint32_t bsize,
-			 const size_t arg_size,
-			 void *const arg) HPX_PUBLIC;
+             const hpx_addr_t addr,
+             const size_t count,
+             const size_t increment,
+             const uint32_t bsize,
+             const size_t arg_size,
+             void *const arg) HPX_PUBLIC;
 
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // HPX_PAR_H

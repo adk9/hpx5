@@ -14,7 +14,11 @@
 #ifndef HPX_ACTION_H
 #define HPX_ACTION_H
 
-#include "hpx/builtins.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <hpx/builtins.h>
 
 /// @defgroup actions Actions and threads
 /// @brief Functions and definitions for registering, calling, and controlling
@@ -151,5 +155,9 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
   static HPX_CONSTRUCTOR void _register##_##id(void)
 
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

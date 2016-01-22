@@ -24,32 +24,14 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
-
-extern "C" {
-#include <hpx/attributes.h>
-#include <hpx/types.h>
-}
-
+#include <hpx/hpx.h>
 #include <hpx/cxx/errors.h>
 #include <hpx/cxx/action.h>
 #include <hpx/cxx/global_ptr.h>
 #include <hpx/cxx/string.h>
-
-extern "C" {
-#include <hpx/par.h>
-#include <hpx/parcel.h>
-#include <hpx/process.h>
-#include <hpx/rpc.h>
-}
-
-#include <hpx/cxx/runtime.h>
 #include <hpx/cxx/lco.h>
-
-extern "C" {
-#include <hpx/thread.h>
-#include <hpx/time.h>
-#include <hpx/topology.h>
-}
+#include <hpx/cxx/runtime.h>
+#include <hpx/cxx/system.h>
 
 namespace hpx {
 /// Export the error codes into the HPX namespace as integers. We could use an
