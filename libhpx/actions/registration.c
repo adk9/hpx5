@@ -138,9 +138,10 @@ void action_table_finalize(void) {
 /// @param            n The number of args.
 /// @param         args The args.
 static void _register_action_va(hpx_action_type_t type, uint32_t attr,
-                                const char *key, hpx_action_t *id, handler_t f,
+                                const char *key, hpx_action_t *id,
                                 int system, int n, va_list *args) {
   dbg_assert(id);
+  dbg_assert(n > 0);
   *id = HPX_ACTION_INVALID;
 
   if (system) {
@@ -151,7 +152,11 @@ static void _register_action_va(hpx_action_type_t type, uint32_t attr,
   if (_n >= LIBHPX_ACTION_MAX) {
     dbg_error("action table overflow\n");
   }
-  back->handler = f;
+
+  // consume the first argument here---it's currently always a handler
+  back->handler = va_arg(*args, void*);
+  n--;
+
   back->id = id;
   back->key = key;
   back->type = type;
@@ -162,19 +167,19 @@ static void _register_action_va(hpx_action_type_t type, uint32_t attr,
 }
 
 void libhpx_register_action(hpx_action_type_t type, uint32_t attr,
-                            const char *key, hpx_action_t *id, handler_t f,
-                            unsigned n, ...) {
+                            const char *key, hpx_action_t *id, unsigned n, ...)
+{
   va_list args;
   va_start(args, n);
-  _register_action_va(type, attr, key, id, f, 1, n, &args);
+  _register_action_va(type, attr, key, id, 1, n, &args);
   va_end(args);
 }
 
 int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
-                        hpx_action_t *id, handler_t f, unsigned n, ...) {
+                        hpx_action_t *id, unsigned n, ...) {
   va_list args;
   va_start(args, n);
-  _register_action_va(type, attr, key, id, f, 0, n, &args);
+  _register_action_va(type, attr, key, id, 0, n, &args);
   va_end(args);
   return HPX_SUCCESS;
 }

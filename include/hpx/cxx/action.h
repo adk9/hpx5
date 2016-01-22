@@ -54,7 +54,7 @@ struct function_traits<R(Args...)> {
 
 template<class R, class... Args>
 std::tuple<Args...> function_traits<R(Args...)>::arg_types_tpl = std::tuple<Args...>();
-  
+
 // reference: http://stackoverflow.com/questions/17424477/implementation-c14-make-integer-sequence
 // using aliases for cleaner syntax
 template<class T> using Invoke = typename T::type;
@@ -153,13 +153,13 @@ class action_struct {
   template <typename F, typename Tpl>
   static int _register_helper(F f, Tpl&& t, seq<>&& s) {
     return hpx_register_action(HPX_DEFAULT, HPX_ATTR_NONE, __FILE__ ":" _HPX_XSTR(A::id),
-                               &(A::id), (void (*)(void)) f, 0);
+                               &(A::id), 1, f);
   }
   template <typename F, typename Tpl, unsigned... Is>
   static int _register_helper(F f, Tpl&& t, seq<Is...>&& s) {
     return hpx_register_action(HPX_DEFAULT, HPX_ATTR_NONE, __FILE__ ":" _HPX_XSTR(A::id),
-                               &(A::id), (void (*)(void)) f,
-                               sizeof...(Is) , ::std::get<Is>(t)...);
+                               &(A::id), sizeof...(Is) + 1 , f,
+                               ::std::get<Is>(t)...);
   }
 
   template <typename R, typename Tpl, unsigned... Is>

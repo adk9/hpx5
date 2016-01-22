@@ -59,8 +59,7 @@ typedef enum {
   HPX_INTERRUPT,
   /// Functions are simple functions that have uniform ids across localities,
   /// but can not be called with the set of hpx_call operations or as the action
-  /// or continuation in a parcel. Functions can only be called by using the
-  /// returned value from hpx_action_get_handler().
+  /// or continuation in a parcel.
   HPX_FUNCTION,
   /// Action that runs OpenCL kernels
   HPX_OPENCL,
@@ -100,14 +99,12 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
 /// @param  attr The attribute of the action (PINNED, PACKED, ...).
 /// @param   key A unique string key for the action.
 /// @param    id The action id for this action to be returned after
-/// @param     f The local function pointer to associate with the action.
-///                registration.
-/// @param nargs The variadic number of parameters that the action accepts.
+/// @param     n The variadic number of parameters that the action accepts.
 /// @param   ... The HPX types of the action parameters (HPX_INT, ...).
 ///
 /// @returns     HPX_SUCCESS or an error code
 int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
-                        hpx_action_t *id, void (*f)(void), unsigned nargs, ...)
+                        hpx_action_t *id, unsigned n, ...)
   HPX_PUBLIC;
 
 /// Wraps the hpx_register_action() function to make it slightly
@@ -115,16 +112,11 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
 ///
 /// @param        type The type of the action (THREAD, TASK, INTERRUPT, ...).
 /// @param        attr The attribute of the action (PINNED, PACKED, ...).
-/// @param     handler The action handler (the function).
 /// @param          id The action id (the hpx_action_t address).
 /// @param __VA_ARGS__ The parameter types (HPX_INT, ...).
-#define HPX_REGISTER_ACTION(type, attr, id, handler, ...)          \
-  hpx_register_action(type, attr, __FILE__ ":" _HPX_XSTR(id),      \
-                      &id, (void (*)(void))handler,                \
-                      __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
-
-/// Get the handler associated with a given action id.
-hpx_action_handler_t hpx_action_get_handler(hpx_action_t id) HPX_PUBLIC;
+#define HPX_REGISTER_ACTION(type, attr, id, ...)                    \
+  hpx_register_action(type, attr, __FILE__ ":" _HPX_XSTR(id),       \
+                      &id, __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
 /// Declare an action.
 ///

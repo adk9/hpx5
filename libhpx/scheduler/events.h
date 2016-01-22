@@ -21,6 +21,7 @@
 extern "C" {
 #endif
 
+#include <libhpx/action.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/parcel.h>
 #include <libhpx/worker.h>
@@ -54,7 +55,8 @@ static inline void EVENT_THREAD_RUN(hpx_parcel_t *p, worker_t *w) {
 #ifdef HAVE_APEX
   // if this is NOT a null or lightweight action, send a "start" event to APEX
   if (p->action != hpx_lco_set_action) {
-    void* handler = (void*)hpx_action_get_handler(p->action);
+    CHECK_ACTION(p->action);
+    void* handler = (void*)actions[p->action].handler;
     w->profiler = (void*)(apex_start(APEX_FUNCTION_ADDRESS, handler));
   }
 #endif
@@ -90,7 +92,7 @@ static inline void EVENT_THREAD_SUSPEND(hpx_parcel_t *p, worker_t *w) {
 static inline void EVENT_THREAD_RESUME(hpx_parcel_t *p, worker_t *w) {
 #ifdef HAVE_APEX
   if (p->action != hpx_lco_set_action) {
-    void* handler = (void*)hpx_action_get_handler(p->action);
+    void* handler = (void*)actions[p->action].handler;
     w->profiler = (void*)(apex_resume(APEX_FUNCTION_ADDRESS, handler));
   }
 #endif
