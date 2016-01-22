@@ -22,16 +22,14 @@ using namespace std;
 
 hpx_status_t test_addr_arith() {
   int n1 = 10, n2 = 20;
-  hpx::global_ptr<uint64_t> ptr1 = hpx::gas::alloc_cyclic<uint64_t>(n1);
-
-  // TODO populate ptr1 and dereference at some index and check the value
-
-  auto ptr2 = hpx::gas::alloc_cyclic<uint64_t>(n2,2);
+  auto ptr1 = hpx::gas::alloc_cyclic<uint64_t>(n1, 2);
+  auto ptr2 = ptr1 + 5;
 
   auto dist = ptr2 - ptr1;
   // is dist guaranteed to be > 0?
   cout << "dist: " << dist << endl;
 
+  // this should fail?
   auto ptr4 = ptr1[4];
 
   return HPX_SUCCESS;
