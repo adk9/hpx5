@@ -236,6 +236,7 @@ int _putget_action(void *UNUSED, size_t size) {
     sum += buf[i];
   }
 
+  free(buf);
   printf("sum = %d expected = %d\n", sum, expected);
   test_assert(sum == expected);
   return HPX_SUCCESS;
