@@ -186,7 +186,7 @@ void action_init_ffi(action_t *action, int n, va_list *vargs) {
   // with ffi.
   hpx_type_t *args = calloc(n, sizeof(args[0]));
   for (int i = 0; i < n; ++i) {
-    args[i] = va_arg(vargs, hpx_type_t);
+    args[i] = va_arg(*vargs, hpx_type_t);
   }
 
   // Check to make sure that pinned actions start with a pointer type.

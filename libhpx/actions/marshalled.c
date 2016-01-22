@@ -93,13 +93,13 @@ void action_init_marshalled(action_t *action, int n, va_list *args) {
   // Check that the first argument type is a pointer if this is a pinned
   // action. Short circuit evaluation only consumes the first argument for
   // pinned actions.
-  if (pinned && (va_arg(args, hpx_type_t) != HPX_POINTER)) {
+  if (pinned && (va_arg(*args, hpx_type_t) != HPX_POINTER)) {
     dbg_error("First type of a pinned action should be HPX_POINTER\n");
   }
 
   // Verify the rest of the action type.
-  hpx_type_t addr = va_arg(args, hpx_type_t);
-  hpx_type_t size = va_arg(args, hpx_type_t);
+  hpx_type_t addr = va_arg(*args, hpx_type_t);
+  hpx_type_t size = va_arg(*args, hpx_type_t);
 
   if ((addr != HPX_POINTER) ||
       (size != HPX_INT && size != HPX_UINT && size != HPX_SIZE_T)) {

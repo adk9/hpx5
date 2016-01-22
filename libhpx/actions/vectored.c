@@ -169,14 +169,14 @@ void action_init_vectored(action_t *action, int n, va_list *vargs) {
   // Check that the first argument type is a pointer if this is a pinned
   // action. Short circuit evaluation only consumes the first argument for
   // pinned actions.
-  if (pinned && (va_arg(vargs, hpx_type_t) != HPX_POINTER)) {
+  if (pinned && (va_arg(*vargs, hpx_type_t) != HPX_POINTER)) {
     dbg_error("First type of a pinned action should be HPX_POINTER\n");
   }
 
   // Verify that the rest of the type matches.
-  hpx_type_t count = va_arg(vargs, hpx_type_t);
-  hpx_type_t args = va_arg(vargs, hpx_type_t);
-  hpx_type_t sizes = va_arg(vargs, hpx_type_t);
+  hpx_type_t count = va_arg(*vargs, hpx_type_t);
+  hpx_type_t args = va_arg(*vargs, hpx_type_t);
+  hpx_type_t sizes = va_arg(*vargs, hpx_type_t);
 
   if ((count != HPX_INT && count != HPX_UINT && count != HPX_SIZE_T) ||
       (args != HPX_POINTER) ||
