@@ -220,7 +220,12 @@ int _putget_action(void *UNUSED, size_t size) {
 
   // once everyone has finished these operations, get what we need
   int *buf = calloc(comm_size, comm_size*sizeof(int));
-  hpx_gas_memget_sync(buf,global_addr, comm_size*sizeof(int));
+  for (int i = 0; i < comm_size; ++i) {
+  hpx_addr_t destc = hpx_addr_add(global_addr,
+              i*comm_size*sizeof(int),comm_size*sizeof(int));
+
+    hpx_gas_memget_sync(buf+(i*comm_size),destc, comm_size*sizeof(int));
+  }
 
   int sum = 0;
   int expected = 0;
