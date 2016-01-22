@@ -110,7 +110,7 @@ class pinned_ptr {
     : _addr(gva.ptr()),
       _lva(NULL),
       _local(true) {
-    if (!hpx_gas_try_pin(_addr, (void*)&_lva)) {
+    if (!hpx_gas_try_pin(_addr, reinterpret_cast<void**>(&_lva))) {
       throw Failed();
     }
   }
@@ -125,9 +125,17 @@ class pinned_ptr {
   pinned_ptr(global_ptr<T> &gva, bool& local)
     : _addr(gva.ptr()),
       _lva(NULL),
-      _local(hpx_gas_try_pin(_addr, (void*)&_lva)) {
+      _local(hpx_gas_try_pin(_addr, reinterpret_cast<void**>(&_lva))) {
     local = _local;
   }
+
+  /// Release the address if it was pinned.
+  ~pinned_ptr() {
+    if (_local) {
+      hpx_gas_unpin(_addr);
+    }
+  }
+
 
   /// Cast to a T*.
   ///
@@ -151,12 +159,6 @@ class pinned_ptr {
   pinned_ptr();
   pinned_ptr(const pinned_ptr<T>&);
   pinned_ptr<T>& operator=(const pinned_ptr<T>&);
-
-  ~pinned_ptr() {
-    if (_local) {
-      hpx_gas_unpin(_addr);
-    }
-  }
 
   hpx_addr_t _addr;
   T*          _lva;

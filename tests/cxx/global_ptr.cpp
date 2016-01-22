@@ -40,11 +40,11 @@ hpx_status_t test_addr_arith() {
 hpx_status_t test_pin_unpin() {
   int n1 = 10;
   auto ptr1 = hpx::gas::alloc_local<int>(n1);
-  int* local = ptr1.pin();
-  for (int i = 0; i != n1; i++) {
-    local[i] = i;
-  }
-  ptr1.unpin();
+  hpx::pinned_ptr<int> ptr2(ptr1);
+  // for (int i = 0; i != n1; i++) {
+  //   *(ptr2 + i) = i;
+  // }
+  *ptr2 = 0;
   return HPX_SUCCESS;
 }
 
