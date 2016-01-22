@@ -40,7 +40,6 @@ static void HPX_CONSTRUCTOR _init_null_handler(void) {
     .key = "",
     .type = 0,
     .attr = UINT32_C(0),
-    .cif = NULL,
     .env = NULL
   };
 }
@@ -161,7 +160,6 @@ static void _register_action_va(hpx_action_type_t type, uint32_t attr,
   back->key = key;
   back->type = type;
   back->attr = attr;
-  back->cif = NULL;
   back->env = NULL;
   action_init(back, n, args);
 }

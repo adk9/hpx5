@@ -236,7 +236,6 @@ typedef struct {
 /// @field          key The pointer to the unique key for the action.
 /// @field         type The action type.
 /// @field         attr Type attributes.
-/// @field          cif The ffi descriptor if the action is ffi-type.
 /// @field          env Type-specific data (e.g., compiled OpenCL).
 typedef struct {
   const parcel_management_vtable_t *parcel_class;
@@ -249,7 +248,6 @@ typedef struct {
   const char        *key;
   hpx_action_type_t type;
   uint32_t          attr;
-  ffi_cif           *cif;
   void              *env;
 } action_t;
 
