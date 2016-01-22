@@ -213,7 +213,8 @@ static inline int network_memput_rsync(void *obj, hpx_addr_t to,
 static inline int network_memcpy(void *obj, hpx_addr_t to, hpx_addr_t from,
                                  size_t size, hpx_addr_t sync) {
   network_t *network = obj;
-  return network->string->memcpy(network, to, from, size, sync);
+  // use this call syntax do deal with issues on darwin with the memcpy symbol
+  return (*network->string->memcpy)(network, to, from, size, sync);
 }
 
 static inline int network_memcpy_sync(void *obj, hpx_addr_t to, hpx_addr_t from,

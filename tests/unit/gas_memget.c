@@ -184,6 +184,99 @@ int memget_malloc_handler(void) {
 }
 HPX_ACTION(HPX_DEFAULT, 0, memget_malloc, memget_malloc_handler);
 
+hpx_addr_t global_addr = 0;
+hpx_addr_t barrier = 0;
+
+int _putget_action(void *UNUSED, size_t size) {  
+  int comm_rank = hpx_get_my_rank();
+  int comm_size = hpx_get_num_ranks();
+
+  int num_neighbors = 0;
+  int *recv_length = 0;
+
+  if (comm_rank % 2 == 0) {
+    num_neighbors = 1;  
+    recv_length = malloc(num_neighbors*sizeof(int));
+    recv_length[0] = 256;
+  } else {
+    num_neighbors = 2;  
+    recv_length = malloc(num_neighbors*sizeof(int));
+    recv_length[0] = 256;
+    recv_length[1] = 256;
+  }
+
+  // put the data in the global address space
+  hpx_addr_t destb = hpx_addr_add(global_addr,
+              comm_rank*comm_size*sizeof(int),comm_size*sizeof(int)); 
+
+  hpx_gas_memput_rsync(destb,recv_length,num_neighbors*sizeof(int));
+
+  hpx_lco_set(barrier, 0, NULL, HPX_NULL, HPX_NULL);
+  free(recv_length);
+
+  // wait for the memputs to finish
+  hpx_lco_wait(barrier);
+
+  // once everyone has finished these operations, get what we need
+  int *buf = calloc(comm_size, comm_size*sizeof(int));
+  for (int i = 0; i < comm_size; ++i) {
+  hpx_addr_t destc = hpx_addr_add(global_addr,
+              i*comm_size*sizeof(int),comm_size*sizeof(int));
+
+    hpx_gas_memget_sync(buf+(i*comm_size),destc, comm_size*sizeof(int));
+  }
+
+  int sum = 0;
+  int expected = 0;
+  for (int i = 0; i < comm_size*comm_size; ++i) {
+    if (i < comm_size) {
+      expected += (((i%2 == 1)+1) * 256);
+    }
+    sum += buf[i];
+  }
+
+  free(buf);
+  printf("sum = %d expected = %d\n", sum, expected);
+  test_assert(sum == expected);
+
+  if (comm_rank == 0) {
+    hpx_lco_delete(barrier, HPX_NULL);
+  }
+  return HPX_SUCCESS;
+}
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _putget, _putget_action, HPX_POINTER, HPX_SIZE_T);
+
+int _bcast_addr_action(hpx_addr_t _global_addr, hpx_addr_t _barrier) {
+  global_addr = _global_addr;
+  barrier = _barrier;
+  return HPX_SUCCESS;
+}
+static HPX_ACTION(HPX_DEFAULT, 0, _bcast_addr, _bcast_addr_action, HPX_ADDR, HPX_ADDR);
+
+/// Test memget of more than 1 block.
+int memget_blocks_handler(void) {
+  printf("Testing hpx memget of more than 1 blocks\n");
+  int comm_size = hpx_get_num_ranks();
+  hpx_addr_t global_addr = hpx_gas_calloc_cyclic(comm_size,comm_size*sizeof(int), 0);
+  hpx_addr_t barrier = hpx_lco_and_new(comm_size);
+
+  hpx_addr_t complete = hpx_lco_and_new(comm_size);
+  for (int i=0;i<comm_size;i++) {
+    hpx_call(HPX_THERE(i),_bcast_addr,complete,&global_addr,&barrier);
+  }
+  hpx_lco_wait(complete);
+  hpx_lco_delete(complete, HPX_NULL);
+
+  complete = hpx_lco_and_new(comm_size);
+  for (int i=0;i<comm_size;i++) {
+    hpx_call(HPX_THERE(i),_putget,complete,NULL,0);
+  }
+  hpx_lco_wait(complete);
+  hpx_lco_delete(complete, HPX_NULL);
+  return HPX_SUCCESS;
+}
+HPX_ACTION(HPX_DEFAULT, 0, memget_blocks, memget_blocks_handler);
+
 TEST_MAIN({
     ADD_TEST(init_globals, 0);
     ADD_TEST(memget_stack, 0);
@@ -194,5 +287,6 @@ TEST_MAIN({
     ADD_TEST(memget_static, 1 % HPX_LOCALITIES);
     ADD_TEST(memget_malloc, 0);
     ADD_TEST(memget_malloc, 1 % HPX_LOCALITIES);
+    ADD_TEST(memget_blocks, 0);
     ADD_TEST(fini_globals, 0);
   });

@@ -54,7 +54,10 @@ int agas_memput_lsync(void *gas, hpx_addr_t to, const void *from, size_t n,
 int agas_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t n);
 
 int agas_memget(void *gas, void *to, hpx_addr_t from, size_t n,
-                hpx_addr_t lsync);
+                hpx_addr_t lsync, hpx_addr_t rsync);
+
+int agas_memget_rsync(void *gas, void *to, hpx_addr_t from, size_t n,
+                      hpx_addr_t lsync);
 
 int agas_memget_lsync(void *gas, void *to, hpx_addr_t from, size_t n);
 

@@ -106,6 +106,25 @@ int pgas_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t n) {
   return network_memput_rsync(here->network, to, from, n);
 }
 
+int pgas_memget(void *gas, void *to, hpx_addr_t from, size_t n,
+                hpx_addr_t lsync, hpx_addr_t rsync) {
+  if (!n) {
+    hpx_lco_error(lsync, HPX_SUCCESS, HPX_NULL);
+    hpx_lco_error(rsync, HPX_SUCCESS, HPX_NULL);
+    return HPX_SUCCESS;
+  }
+
+  if (gpa_to_rank(from) == here->rank) {
+    void *lfrom = pgas_gpa_to_lva(from);
+    memcpy(to, lfrom, n);
+    hpx_lco_error(lsync, HPX_SUCCESS, HPX_NULL);
+    hpx_lco_error(rsync, HPX_SUCCESS, HPX_NULL);
+    return HPX_SUCCESS;
+  }
+
+  return network_memget(here->network, to, from, n, lsync, rsync);
+}
+
 int pgas_memget_rsync(void *gas, void *to, hpx_addr_t from, size_t n,
                       hpx_addr_t lsync) {
   if (!n) {

@@ -200,10 +200,21 @@ _smp_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t size) {
   return _smp_memput(gas, to, from, size, HPX_NULL, HPX_NULL);
 }
 
-/// Copy memory from a global address to a local address.
 static int
-_smp_memget(void *gas, void *to, hpx_addr_t from, size_t size,
-            hpx_addr_t lsync) {
+_smp_memget_lsync(void *gas, void *to, hpx_addr_t from, size_t size) {
+  if (size) {
+    dbg_assert(to != NULL);
+    dbg_assert(from != HPX_NULL);
+
+    const void *lfrom = (void*)(size_t)from;
+    memcpy(to, lfrom, size);
+  }
+  return HPX_SUCCESS;
+}
+
+static int
+_smp_memget_rsync(void *gas, void *to, hpx_addr_t from, size_t size,
+                  hpx_addr_t lsync) {
   if (size) {
     dbg_assert(to != NULL);
     dbg_assert(from != HPX_NULL);
@@ -216,8 +227,18 @@ _smp_memget(void *gas, void *to, hpx_addr_t from, size_t size,
 }
 
 static int
-_smp_memget_sync(void *gas, void *to, hpx_addr_t from, size_t size) {
-  return _smp_memget(gas, to, from, size, HPX_NULL);
+_smp_memget(void *gas, void *to, hpx_addr_t from, size_t size,
+            hpx_addr_t lsync, hpx_addr_t rsync) {
+  if (size) {
+    dbg_assert(to != NULL);
+    dbg_assert(from != HPX_NULL);
+
+    const void *lfrom = (void*)(size_t)from;
+    memcpy(to, lfrom, size);
+  }
+  hpx_lco_error(lsync, HPX_SUCCESS, HPX_NULL);
+  hpx_lco_error(rsync, HPX_SUCCESS, HPX_NULL);
+  return HPX_SUCCESS;
 }
 
 /// Move memory from one locality to another.
@@ -241,9 +262,9 @@ _smp_local_base(void *gas) {
 static gas_t _smp_vtable = {
   .type           = HPX_GAS_SMP,
   .string = {
-    .memget       = NULL,
-    .memget_rsync = _smp_memget,
-    .memget_lsync = _smp_memget_sync,
+    .memget       = _smp_memget,
+    .memget_rsync = _smp_memget_rsync,
+    .memget_lsync = _smp_memget_lsync,
     .memput       = _smp_memput,
     .memput_lsync = _smp_memput_lsync,
     .memput_rsync = _smp_memput_rsync,

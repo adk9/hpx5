@@ -41,7 +41,6 @@ struct config;
 struct network;
 struct scheduler;
 struct topology;
-struct percolation;
 /// @}
 
 /// The locality object.
@@ -69,19 +68,17 @@ struct percolation;
 /// @field percolation An interface for dealing with GPU backends.
 /// @field        mask The default signal mask.
 typedef struct locality {
-  uint32_t                   rank;
-  uint32_t                  ranks;
-  uint64_t                  epoch;
-  struct boot               *boot;
-  void                       *gas;
-  struct network         *network;
-  struct scheduler         *sched;
-  struct config           *config;
-  struct topology       *topology;
-#ifdef HAVE_PERCOLATION
-  struct percolation *percolation;
-#endif
-  sigset_t                   mask;
+  uint32_t             rank;
+  uint32_t            ranks;
+  uint64_t            epoch;
+  struct boot         *boot;
+  void                 *gas;
+  struct network   *network;
+  struct scheduler   *sched;
+  struct config     *config;
+  struct topology *topology;
+  void         *percolation;
+  sigset_t             mask;
 } locality_t;
 
 /// Inter-locality action interface.

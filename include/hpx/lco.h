@@ -14,6 +14,10 @@
 #ifndef HPX_LCO_H
 #define HPX_LCO_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @defgroup lcos LCOs
 /// @brief Functions and definitions for using LCOs
 /// @{
@@ -24,8 +28,6 @@
 #include <hpx/addr.h>
 #include <hpx/attributes.h>
 #include <hpx/types.h>
-
-
 
 /// Forward declarations.
 /// @{
@@ -737,4 +739,9 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
 /// @}
 
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

@@ -1,6 +1,7 @@
 before_script:
  - uname -a
  - df -h
+ - source scripts/check_funcs.sh
 
 stages:
   - scan
@@ -10,28 +11,24 @@ scan-build:
   stage: scan
   script:
   - ./bootstrap
-  - ./configure --enable-debug --enable-instrumentation --enable-percolation --enable-agas
+  - ./configure --enable-debug --enable-instrumentation --enable-percolation --enable-agas --enable-hpx++
                 --enable-mpi --enable-photon --enable-testsuite --with-photon=system
                 --with-jemalloc=system --with-hwloc=system --with-libffi=contrib CC=clang CXX=clang
   - BOUT=/tmp/scan-build-${CI_BUILD_ID}
   - scan-build --use-cc=clang -o /var/www/html/scan-builds make -j 8 | tee $BOUT
-  - if grep -q -E "[0-9]+ (bug|bugs) found" $BOUT; then
-       DIR=`tail -n 1 $BOUT | egrep -o "[0-9]+-[0-9]+-[0-9]+-[0-9]+-[0-9]+-[0-9]"`;
-       echo; echo "View report at http://gin.crest.iu.edu/scan-builds/$DIR";
-       exit 2;
-    fi
+  - check_scan $BOUT
 
 check-build:
   stage: check
   script:
   - ./bootstrap
   - ./configure --prefix=$HOME --enable-debug --enable-mpi --enable-photon --enable-testsuite
-                --enable-instrumentation --enable-agas PHOTON_CARGS="--enable-debug"
+                --enable-instrumentation --enable-agas --enable-hpx++ PHOTON_CARGS="--enable-debug"
   - make -j 8
   - make install
   - export HPX_THREADS=1
   - export HPX_NETWORK=pwc
-  - make -C tests check
+  - make -C tests check || check_check
   - export HPX_NETWORK=isir
-  - make -C tests check
+  - make -C tests check || check_check
 

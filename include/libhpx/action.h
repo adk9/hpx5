@@ -229,23 +229,25 @@ typedef struct {
 ///
 /// @field parcel_class The parcel management vtable pointer.
 /// @field   call_class The calling convention vtable pointer.
+/// @field       finish Called to finish registration.
+/// @field         fini The destructor.
 /// @field      handler The action handler function pointer.
 /// @field           id The pointer to the action id.
 /// @field          key The pointer to the unique key for the action.
 /// @field         type The action type.
 /// @field         attr Type attributes.
-/// @field          cif The ffi descriptor if the action is ffi-type.
 /// @field          env Type-specific data (e.g., compiled OpenCL).
 typedef struct {
   const parcel_management_vtable_t *parcel_class;
   const calling_convention_vtable_t  *call_class;
+  void (*finish)(void*);
+  void (*fini)(void*);
 
   handler_t      handler;
   hpx_action_t       *id;
   const char        *key;
   hpx_action_type_t type;
   uint32_t          attr;
-  ffi_cif           *cif;
   void              *env;
 } action_t;
 
@@ -277,16 +279,13 @@ void CHECK_ACTION(hpx_action_t id);
 /// @param  type The type of the action to be registered.
 /// @param  attr The attribute of the action (PINNED, PACKED, ...).
 /// @param   key A unique string key for the action.
-/// @param     f The local function pointer to associate with the action.
 /// @param    id The action id for this action to be returned after
 ///                registration.
 /// @param nargs The variadic number of parameters that the action accepts.
 /// @param   ... The HPX types of the action parameters (HPX_INT, ...).
 ///
-/// @returns     HPX_SUCCESS or an error code
-int libhpx_register_action(hpx_action_type_t type, uint32_t attr,
-                           const char *key, hpx_action_t *id, void (*f)(void),
-                           unsigned nargs, ...);
+void libhpx_register_action(hpx_action_type_t type, uint32_t attr,
+                           const char *key, hpx_action_t *id, unsigned n, ...);
 
 /// Called when all of the actions have been registered.
 void action_registration_finalize(void);
@@ -490,13 +489,11 @@ static inline bool action_is_opencl(hpx_action_t id) {
 ///
 /// @param        type The type of the action (THREAD, TASK, INTERRUPT, ...).
 /// @param        attr The attribute of the action (PINNED, PACKED, ...).
-/// @param     handler The action handler (the function).
 /// @param          id The action id (the hpx_action_t address).
 /// @param __VA_ARGS__ The parameter types (HPX_INT, ...).
-#define LIBHPX_REGISTER_ACTION(type, attr, id, handler, ...)          \
-  libhpx_register_action(type, attr, __FILE__ ":" _HPX_XSTR(id),      \
-                         &id, (handler_t)handler,          \
-                         __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+#define LIBHPX_REGISTER_ACTION(type, attr, id,  ...)                    \
+  libhpx_register_action(type, attr, __FILE__ ":" _HPX_XSTR(id),        \
+                         &id, __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
 /// Create an action id for a function, so that it can be called asynchronously.
 ///
@@ -511,8 +508,8 @@ static inline bool action_is_opencl(hpx_action_t id) {
 ///
 /// @param         type The action type.
 /// @param         attr The action attributes.
-/// @param      handler The handler.
 /// @param           id The action id.
+/// @param      handler The handler.
 /// @param  __VA_ARGS__ The HPX types of the action paramters
 ///                     (HPX_INT, ...).
 #define LIBHPX_ACTION(type, attr, id, handler, ...)                  \

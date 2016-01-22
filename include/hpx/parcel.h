@@ -14,6 +14,10 @@
 #ifndef HPX_PARCEL_H
 #define HPX_PARCEL_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @defgroup parcels Parcels
 /// @brief Functions and definitions for using parcels (as distinct from actions)
 /// @{
@@ -285,5 +289,9 @@ void hpx_parcel_set_pid(hpx_parcel_t *p, const hpx_pid_t pid)
   HPX_NON_NULL(1) HPX_PUBLIC;
 
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

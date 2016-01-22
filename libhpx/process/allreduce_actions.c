@@ -14,14 +14,17 @@
 # include "config.h"
 #endif
 
+#include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include "allreduce.h"
 
 static int _allreduce_init_handler(allreduce_t *r, size_t bytes,
                                    hpx_addr_t parent, hpx_action_t id,
                                    hpx_action_t op) {
-  hpx_monoid_id_t rid = (hpx_monoid_id_t)hpx_action_get_handler(id);
-  hpx_monoid_op_t rop = (hpx_monoid_op_t)hpx_action_get_handler(op);
+  CHECK_ACTION(id);
+  CHECK_ACTION(op);
+  hpx_monoid_id_t rid = (hpx_monoid_id_t)actions[id].handler;
+  hpx_monoid_op_t rop = (hpx_monoid_op_t)actions[op].handler;
   allreduce_init(r, bytes, parent, rid, rop);
   return HPX_SUCCESS;
 }

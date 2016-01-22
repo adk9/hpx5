@@ -14,6 +14,10 @@
 #ifndef HPX_ATTRIBUTES_H
 #define HPX_ATTRIBUTES_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @file
 /// @brief Attribute definitions for HPX functions.
 
@@ -47,6 +51,10 @@
 # define HPX_NO_OPTIMIZE HPX_ATTRIBUTE((optnone))
 #else
 # define HPX_NO_OPTIMIZE HPX_OPTIMIZE("O0")
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif // HPX_ATTRIBUTES_H

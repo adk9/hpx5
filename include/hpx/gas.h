@@ -14,6 +14,10 @@
 #ifndef HPX_GAS_H
 #define HPX_GAS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @defgroup agas Global Address Space
 /// @brief Functions and definitions for using the global address space
 /// @{
@@ -513,5 +517,9 @@ _hpx_gas_bcast_sync(hpx_action_t action, hpx_addr_t base, int n,
 
 
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

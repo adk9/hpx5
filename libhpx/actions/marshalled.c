@@ -62,6 +62,17 @@ static int _exec_pinned_marshalled(const void *obj, hpx_parcel_t *p) {
   return e;
 }
 
+static void _marshalled_finish(void *act) {
+  action_t *action = act;
+  log_action("%d: %s (%p) %s %x.\n", *action->id, action->key,
+             (void*)(uintptr_t)action->handler,
+             HPX_ACTION_TYPE_TO_STRING[action->type],
+             action->attr);
+}
+
+static void _marshalled_fini(void *action) {
+}
+
 static const parcel_management_vtable_t _marshalled_vtable = {
   .new_parcel = _new_marshalled,
   .pack_parcel = _pack_marshalled,
@@ -76,9 +87,37 @@ static const parcel_management_vtable_t _pinned_marshalled_vtable = {
   .exit = exit_pinned_action
 };
 
-void action_init_marshalled(action_t *action) {
+void action_init_marshalled(action_t *action, int n, va_list *args) {
   uint32_t pinned = action->attr & HPX_PINNED;
-  action->parcel_class = (pinned) ? &_pinned_marshalled_vtable :
-                         &_marshalled_vtable;
+
+  // Check that the first argument type is a pointer if this is a pinned
+  // action. Short circuit evaluation only consumes the first argument for
+  // pinned actions.
+  if (pinned && (va_arg(*args, hpx_type_t) != HPX_POINTER)) {
+    dbg_error("First type of a pinned action should be HPX_POINTER\n");
+  }
+
+  // Verify the rest of the action type.
+  hpx_type_t addr = va_arg(*args, hpx_type_t);
+  hpx_type_t size = va_arg(*args, hpx_type_t);
+
+  if ((addr != HPX_POINTER) ||
+      (size != HPX_INT && size != HPX_UINT && size != HPX_SIZE_T)) {
+    dbg_error("Marshalled action type should be HPX_POINTER, HPX_INT\n");
+  }
+
+  // Initialize the parcel class.
+  if (pinned) {
+    action->parcel_class = &_pinned_marshalled_vtable;
+  }
+  else {
+    action->parcel_class = &_marshalled_vtable;
+  }
+
+  // Initialize the call class.
   action_init_call_by_parcel(action);
+
+  // Initialize the destructor.
+  action->finish = _marshalled_finish;
+  action->fini = _marshalled_fini;
 }

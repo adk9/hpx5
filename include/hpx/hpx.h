@@ -31,20 +31,20 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "hpx/attributes.h"
-#include "hpx/types.h"
-#include "hpx/action.h"
-#include "hpx/addr.h"
-#include "hpx/gas.h"
-#include "hpx/lco.h"
-#include "hpx/par.h"
-#include "hpx/parcel.h"
-#include "hpx/process.h"
-#include "hpx/rpc.h"
-#include "hpx/runtime.h"
-#include "hpx/thread.h"
-#include "hpx/time.h"
-#include "hpx/topology.h"
+#include <hpx/attributes.h>
+#include <hpx/types.h>
+#include <hpx/action.h>
+#include <hpx/addr.h>
+#include <hpx/gas.h>
+#include <hpx/lco.h>
+#include <hpx/par.h>
+#include <hpx/parcel.h>
+#include <hpx/process.h>
+#include <hpx/rpc.h>
+#include <hpx/runtime.h>
+#include <hpx/thread.h>
+#include <hpx/time.h>
+#include <hpx/topology.h>
 
 #ifdef __cplusplus
 }

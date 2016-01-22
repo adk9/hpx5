@@ -14,9 +14,13 @@
 #ifndef HPX_TYPES_H
 #define HPX_TYPES_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <ffi.h>
-#include "hpx/builtins.h"
-#include "hpx/attributes.h"
+#include <hpx/builtins.h>
+#include <hpx/attributes.h>
 
 /// @file include/hpx/types.h
 
@@ -81,5 +85,9 @@ typedef ffi_type* hpx_type_t;
 #define HPX_ADDR               HPX_UINT64
 #define HPX_ACTION_T           HPX_UINT16
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

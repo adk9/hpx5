@@ -260,8 +260,8 @@ _agas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
 static gas_t _agas_vtable = {
   .type           = HPX_GAS_AGAS,
   .string = {
-    .memget       = NULL,
-    .memget_rsync = agas_memget,
+    .memget       = agas_memget,
+    .memget_rsync = agas_memget_rsync,
     .memget_lsync = agas_memget_lsync,
     .memput       = agas_memput,
     .memput_lsync = agas_memput_lsync,

@@ -27,8 +27,36 @@
 /// @{
 int pwc_memget(void *obj, void *to, hpx_addr_t from, size_t size,
                hpx_addr_t lsync, hpx_addr_t rsync) {
-  // need pwc_gwc
-  return LIBHPX_EUNIMPLEMENTED;
+  command_t lcmd = { .op = NOP, .arg = lsync };
+  command_t rcmd = { .op = NOP, .arg = rsync };
+
+  if (lsync) {
+    if (gpa_to_rank(lsync) == here->rank) {
+      lcmd.op = LCO_SET;
+    }
+    else {
+      hpx_parcel_t *p = action_new_parcel(hpx_lco_set_action, lsync, 0, 0, 0);
+      dbg_assert(p);
+      lcmd.arg = (uintptr_t)p;
+      lcmd.op  = RESUME_PARCEL;
+    }
+  }
+
+  if (rsync) {
+    if (gpa_to_rank(rsync) == here->rank) {
+      rcmd.op = LCO_SET_SOURCE;
+    }
+    else if (gpa_to_rank(rsync) == gpa_to_rank(from)) {
+      rcmd.op = LCO_SET;
+    }
+    else {
+      hpx_parcel_t *p = action_new_parcel(hpx_lco_set_action, rsync, 0, 0, 0);
+      rcmd.arg = (uintptr_t)p;
+      rcmd.op  = RESUME_PARCEL_SOURCE;
+    }
+  }
+
+  return pwc_get(obj, to, from, size, lcmd, rcmd);
 }
 /// @}
 
@@ -43,27 +71,44 @@ int pwc_memget(void *obj, void *to, hpx_addr_t from, size_t size,
 /// We currently don't have an interface for get-with-remote-completion, so
 /// we're not actually handling this correctly.
 /// @{
-int pwc_memget_rsync(void *obj, void *to, hpx_addr_t from, size_t n,
-                     hpx_addr_t lsync) {
-  command_t lcmd = {
-    .op  = NOP,
-    .arg = lsync
-  };
+typedef struct {
+  void        *obj;
+  void         *to;
+  hpx_addr_t  from;
+  size_t         n;
+  hpx_addr_t lsync;
+} _pwc_memget_rsync_env_t;
 
-  command_t rcmd = { 0 };
+static void _pwc_memget_rsync_continuation(hpx_parcel_t *p, void *env) {
+  _pwc_memget_rsync_env_t *e = env;
+  command_t lcmd = { .op = NOP, .arg = e->lsync };
+  command_t rcmd = { .op = RESUME_PARCEL_SOURCE, .arg = (uintptr_t)p };
 
-  if (lsync) {
-    if (gpa_to_rank(lsync) == here->rank) {
+  if (e->lsync) {
+    if (gpa_to_rank(e->lsync) == here->rank) {
       lcmd.op = LCO_SET;
     }
     else {
-      hpx_parcel_t *c = action_new_parcel(hpx_lco_set_action, lsync, 0, 0, 0);
+      hpx_parcel_t *c = action_new_parcel(hpx_lco_set_action, e->lsync, 0, 0, 0);
       lcmd.arg = (uintptr_t)c;
       lcmd.op  = RESUME_PARCEL;
     }
   }
 
-  return pwc_get(obj, to, from, n, lcmd, rcmd);
+  dbg_check( pwc_get(e->obj, e->to, e->from, e->n, lcmd, rcmd) );
+}
+
+int pwc_memget_rsync(void *obj, void *to, hpx_addr_t from, size_t n,
+                     hpx_addr_t lsync) {
+  _pwc_memget_rsync_env_t env = {
+    .obj    = obj,
+    .to     = to,
+    .from  = from,
+    .n     = n,
+    .lsync = lsync
+  };
+  scheduler_suspend(_pwc_memget_rsync_continuation, &env, 0);
+  return HPX_SUCCESS;
 }
 /// @}
 

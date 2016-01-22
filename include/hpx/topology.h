@@ -14,6 +14,10 @@
 #ifndef HPX_TOPOLOGY_H
 #define HPX_TOPOLOGY_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @defgroup other Other
 /// @brief Miscellaneous support functions and definitions
 /// @{
@@ -76,5 +80,9 @@ int hpx_get_my_thread_id(void)
 #define HPX_THREAD_ID hpx_get_my_thread_id()
 
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

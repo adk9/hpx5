@@ -58,7 +58,7 @@ AC_DEFUN([_HPX_CONTRIB_HWLOC], [
  # depend on the LIBHPX headers directly and need to find hwloc.h. This isn't
  # necessary for external apps because hpx.h doesn't have a public dependency on
  # hwloc.
- HPX_APPS_CPPFLAGS="$HPX_APPS_CFLAGS $HWLOC_EMBEDDED_CPPFLAGS"
+ HPX_APPS_CPPFLAGS="$HPX_APPS_CPPFLAGS $HWLOC_EMBEDDED_CPPFLAGS"
  HPX_APPS_CFLAGS="$HPX_APPS_CFLAGS $HWLOC_EMBEDDED_CFLAGS"
 
  # Export hwloc lib dependencies to external clients, internal apps get these

@@ -14,6 +14,10 @@
 #ifndef HPX_BUILTINS_H
 #define HPX_BUILTINS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // ----------------------------------------------------------------------------
 /// @file builtins.h
 ///
@@ -232,5 +236,9 @@ _HPX_ASSERT(__HPX_NARGS() == 0, __c_preprocessor_is_not_gnu99_compatible);
 
 #define __HPX_FOREACH(F, ...)                                       \
   _HPX_CAT1(_HPX_FOREACH_, __HPX_NARGS(__VA_ARGS__))(F, __VA_ARGS__)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // HPX_BUILTINS_H

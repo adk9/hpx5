@@ -14,9 +14,13 @@
 #ifndef HPX_RUNTIME_H
 #define HPX_RUNTIME_H
 
-#include "hpx/attributes.h"
-#include "hpx/builtins.h"
-#include "hpx/action.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <hpx/attributes.h>
+#include <hpx/builtins.h>
+#include <hpx/action.h>
 
 /// @defgroup system System
 /// @file include/hpx/runtime.h
@@ -111,5 +115,9 @@ void hpx_print_version(void)
   HPX_PUBLIC;
 
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

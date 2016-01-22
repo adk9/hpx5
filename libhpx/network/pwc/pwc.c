@@ -27,7 +27,6 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
-#include "commands.h"
 #include "parcel_emulation.h"
 #include "pwc.h"
 #include "send_buffer.h"

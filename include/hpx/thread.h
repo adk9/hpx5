@@ -14,6 +14,10 @@
 #ifndef HPX_THREAD_H
 #define HPX_THREAD_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @addtogroup actions
 /// @{
 
@@ -241,5 +245,9 @@ int hpx_thread_sigmask(int how, int mask)
   HPX_PUBLIC;
 
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
