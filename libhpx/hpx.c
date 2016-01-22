@@ -37,6 +37,7 @@
 #include <libhpx/instrumentation.h>
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
+#include <libhpx/percolation.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/system.h>
 #include <libhpx/time.h>
@@ -44,10 +45,6 @@
 
 #ifdef HAVE_APEX
 #include "apex.h"
-#endif
-
-#ifdef HAVE_PERCOLATION
-#include <libhpx/percolation.h>
 #endif
 
 static hpx_addr_t _hpx_143;
@@ -88,12 +85,10 @@ static void _cleanup(locality_t *l) {
   apex_finalize();
 #endif
 
-#ifdef HAVE_PERCOLATION
   if (l->percolation) {
     percolation_delete(l->percolation);
     l->percolation = NULL;
   }
-#endif
 
   if (l->gas) {
     gas_dealloc(l->gas);
@@ -204,13 +199,11 @@ int hpx_init(int *argc, char ***argv) {
   }
   HPX_HERE = HPX_THERE(here->rank);
 
-#ifdef HAVE_PERCOLATION
   here->percolation = percolation_new();
   if (!here->percolation) {
     status = log_error("failed to activate percolation.\n");
     goto unwind1;
   }
-#endif
 
   int cores = system_get_available_cores();
   dbg_assert(cores > 0);

@@ -30,12 +30,40 @@
 #include <libhpx/percolation.h>
 #include <libhpx/scheduler.h>
 
+
+static const char *_dummy_id(void) {
+  return "dummy";
+}
+
+static void *_dummy_prepare(const void *obj, const char *key, const char *kern)
+{
+  return NULL;
+}
+
+static void _dummy_delete(void* obj) {
+}
+
+static int _dummy_execute(const void *obj, void *o, int n, void **v, size_t *s)
+{
+  return 0;
+}
+
+static void _dummy_destroy(const void *obj, void *o) {
+}
+
+static percolation_t _dummy = {
+  .id = _dummy_id,
+  .prepare = _dummy_prepare,
+  .delete = _dummy_delete,
+  .execute = _dummy_execute,
+  .destroy = _dummy_destroy
+};
+
 percolation_t *percolation_new(void) {
 #ifdef HAVE_OPENCL
   return percolation_new_opencl();
 #endif
-  log_error("percolation: no usable back-end found!\n");
-  return NULL;
+  return &_dummy;
 }
 
 int percolation_execute_handler(int nargs, void *vargs[], size_t sizes[]) {
