@@ -49,12 +49,12 @@ struct function_traits<R(Args...)> {
   using return_type = R;
   static constexpr std::size_t arity = sizeof...(Args);
   using arg_types = std::tuple<Args...>;
-  static std::tuple<Args...> arg_types_tpl;
+  constexpr static std::tuple<Args...> arg_types_tpl = std::tuple<Args...>();
 }; // template struct function_traits
 
 template<class R, class... Args>
-std::tuple<Args...> function_traits<R(Args...)>::arg_types_tpl = std::tuple<Args...>();
-
+constexpr std::tuple<Args...> function_traits<R(Args...)>::arg_types_tpl;
+  
 // reference: http://stackoverflow.com/questions/17424477/implementation-c14-make-integer-sequence
 // using aliases for cleaner syntax
 template<class T> using Invoke = typename T::type;
