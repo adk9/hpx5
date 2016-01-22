@@ -2,7 +2,7 @@
 # Makefile for HPX #
 ####################
 SUBDIRS = system util boot actions memory gas network scheduler process \
-          instrumentation 
+          instrumentation percolation
 
 # The main libhpx library
 lib_LTLIBRARIES	   = libhpx.la
@@ -24,7 +24,8 @@ libhpx_la_LIBADD   = $(LIBHPX_LIBS) $(LIBHPX_LIBADD) \
                      network/libnetwork.la \
                      scheduler/libscheduler.la \
                      process/libprocess.la \
-                     instrumentation/libinstrumentation.la
+                     instrumentation/libinstrumentation.la \
+                     percolation/libpercolation.la
 
 libhpx_la_DEPENDENCIES = $(LIBHPX_LIBADD) \
                          $(top_builddir)/libsync/libsync.la \
@@ -37,9 +38,5 @@ libhpx_la_DEPENDENCIES = $(LIBHPX_LIBADD) \
                          network/libnetwork.la \
                          scheduler/libscheduler.la \
                          process/libprocess.la \
-                         instrumentation/libinstrumentation.la
-if HAVE_PERCOLATION
-SUBDIRS                += percolation
-libhpx_la_LIBADD       += percolation/libpercolation.la
-libhpx_la_DEPENDENCIES += percolation/libpercolation.la 
-endif
+                         instrumentation/libinstrumentation.la \
+                         percolation/libpercolation.la
