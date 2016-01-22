@@ -15,6 +15,7 @@
 # include "config.h"
 #endif
 
+#include <stdlib.h>
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
@@ -137,6 +138,20 @@ static int _exec_pinned_ffi_n(const void *obj, hpx_parcel_t *p) {
   return *ret;
 }
 
+static void _ffi_finish(void *act) {
+  action_t *action = act;
+  log_action("%d: %s (%p) %s %x.\n", *action->id, action->key,
+             (void*)(uintptr_t)action->handler,
+             HPX_ACTION_TYPE_TO_STRING[action->type],
+             action->attr);
+}
+
+static void _ffi_fini(void *act) {
+  action_t *action = act;
+  free(action->cif->arg_types);
+  free(action->cif);
+}
+
 static const parcel_management_vtable_t _ffi_0_vtable = {
   .new_parcel = _new_ffi_0,
   .pack_parcel = _pack_ffi_0,
@@ -165,10 +180,32 @@ static const parcel_management_vtable_t _pinned_ffi_n_vtable = {
   .exit = exit_pinned_action
 };
 
-void action_init_ffi(action_t *action) {
+void action_init_ffi(action_t *action, int n, va_list *vargs) {
+  // Translate the argument types into a stack allocated buffer suitable for use
+  // with ffi.
+  hpx_type_t *args = calloc(n, sizeof(args[0]));
+  for (int i = 0; i < n; ++i) {
+    args[i] = va_arg(vargs, hpx_type_t);
+  }
+
+  // Check to make sure that pinned actions start with a pointer type.
+  uint32_t pinned = action->attr & HPX_PINNED;
+  if (pinned && (args[0] != HPX_POINTER)) {
+    dbg_error("First type of a pinned action should be HPX_POINTER\n");
+  }
+
+  // Allocate and initialize an ffi_cif, which is the structure that ffi uses to
+  // encode calling conventions.
+  action->cif = calloc(1, sizeof(ffi_cif));
   dbg_assert(action->cif);
 
-  uint32_t pinned = action->attr & HPX_PINNED;
+  ffi_status s = ffi_prep_cif(action->cif, FFI_DEFAULT_ABI, n, HPX_INT, args);
+  if (s != FFI_OK) {
+    dbg_error("failed to process type information for action id %d.\n",
+              *action->id);
+  }
+
+  // Initialize the parcel class.
   if (pinned && action->cif->nargs > 1) {
     action->parcel_class = &_pinned_ffi_n_vtable;
   }
@@ -182,5 +219,10 @@ void action_init_ffi(action_t *action) {
     action->parcel_class = &_ffi_0_vtable;
   }
 
+  // Initialize the action class.
   action_init_call_by_parcel(action);
+
+  // Initialize the destructor.
+  action->fini = _ffi_fini;
+  action->finish = _ffi_finish;
 }

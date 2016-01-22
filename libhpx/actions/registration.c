@@ -23,9 +23,6 @@
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/padding.h>
-#ifdef HAVE_PERCOLATION
-#include <libhpx/percolation.h>
-#endif
 #include "init.h"
 
 /// A static action table.
@@ -62,35 +59,6 @@ void CHECK_ACTION(hpx_action_t id) {
   }
 }
 #endif
-
-/// Insert an action into the table.
-///
-/// @param           id The address of the user's id; written in _assign_ids().
-/// @param          key The unique key for this action; read in _sort_entries().
-/// @param            f The handler for this action.
-/// @param         type The type of this action.
-/// @param         attr The attributes associated with this action.
-/// @param          cif FFI datatype information.
-/// @param          env Action's environment.
-///
-/// @return             HPX_SUCCESS or an error if the push fails.
-static int _push_back(hpx_action_t *id, const char *key, handler_t f,
-                      hpx_action_type_t type, uint32_t attr, ffi_cif *cif,
-                      void *env) {
-  action_t *back = &actions[_n++];
-  if (_n >= LIBHPX_ACTION_MAX) {
-    dbg_error("action table overflow\n");
-  }
-  back->handler = f;
-  back->id = id;
-  back->key = key;
-  back->type = type;
-  back->attr = attr;
-  back->cif = cif;
-  back->env = env;
-  action_init_handlers(back);
-  return HPX_SUCCESS;
-}
 
 /// Compare two entries by their keys.
 ///
@@ -136,22 +104,7 @@ void action_registration_finalize(void) {
   _assign_ids();
 
   for (int i = 1, e = _n; i < e; ++i) {
-    const char *key = actions[i].key;
-    hpx_action_type_t type = actions[i].type;
-    void (*f)(void) = actions[i].handler;
-    (void) key, (void) type, (void) f;
-
-#ifdef HAVE_PERCOLATION
-    if (here->percolation && type == HPX_OPENCL) {
-      void *env = percolation_prepare(here->percolation, key, (const char*)f);
-      dbg_assert_str(env, "failed to prepare percolation kernel: %s\n", key);
-      actions[i].handler = (handler_t)percolation_execute_handler;
-    }
-#endif
-
-    log_action("%d: %s (%p) %s %x.\n", *actions[i].id,
-               key, (void*)(uintptr_t)f, HPX_ACTION_TYPE_TO_STRING[type],
-               actions[i].attr);
+    actions[i].finish(&actions[i]);
   }
 
   // this is a sanity check to ensure that the reserved "null" action
@@ -169,25 +122,24 @@ void action_registration_finalize(void) {
 }
 
 void action_table_finalize(void) {
-  for (int i = 0, e = _n; i < e; ++i) {
-    ffi_cif *cif = actions[i].cif;
-    if (cif) {
-      free(cif->arg_types);
-      free(cif);
-    }
-
-#ifdef HAVE_PERCOLATION
-    void *env = actions[i].env;
-    if (env && actions[i].type == HPX_OPENCL) {
-      percolation_destroy(here->percolation, env);
-    }
-#endif
+  for (int i = 1, e = _n; i < e; ++i) {
+    actions[i].fini(&actions[i]);
   }
 }
 
-static int _register_action_va(hpx_action_type_t type, uint32_t attr,
-                               const char *key, hpx_action_t *id, handler_t f,
-                               int system, unsigned int nargs, va_list vargs) {
+/// Insert an action into the table.
+///
+/// @param         type The type of this action.
+/// @param         attr The attributes associated with this action.
+/// @param          key The unique key for this action; read in _sort_entries().
+/// @param           id The address of the user's id; written in _assign_ids().
+/// @param            f The handler for this action.
+/// @param       system A flag indicating if this is a system or user action.
+/// @param            n The number of args.
+/// @param         args The args.
+static void _register_action_va(hpx_action_type_t type, uint32_t attr,
+                                const char *key, hpx_action_t *id, handler_t f,
+                                int system, int n, va_list *args) {
   dbg_assert(id);
   *id = HPX_ACTION_INVALID;
 
@@ -195,78 +147,34 @@ static int _register_action_va(hpx_action_type_t type, uint32_t attr,
     attr |= HPX_INTERNAL;
   }
 
-  bool marshalled = attr & HPX_MARSHALLED;
-  bool     pinned = attr & HPX_PINNED;
-  bool   vectored = attr & HPX_VECTORED;
-
-  if (!marshalled) {
-    ffi_cif *cif = calloc(1, sizeof(*cif));
-    dbg_assert(cif);
-
-    hpx_type_t *args = calloc(nargs, sizeof(args[0]));
-    for (int i = 0; i < nargs; ++i) {
-      args[i] = va_arg(vargs, hpx_type_t);
-    }
-
-    ffi_status s = ffi_prep_cif(cif, FFI_DEFAULT_ABI, nargs, HPX_INT, args);
-    if (s != FFI_OK) {
-      dbg_error("failed to process type information for action id %d.\n", *id);
-    }
-
-    return _push_back(id, key, f, type, attr, cif, NULL);
+  action_t *back = &actions[_n++];
+  if (_n >= LIBHPX_ACTION_MAX) {
+    dbg_error("action table overflow\n");
   }
-
-  if (pinned) {
-    hpx_type_t translated = va_arg(vargs, hpx_type_t);
-    if (translated != HPX_POINTER) {
-      dbg_error("First type of a pinned action should be HPX_POINTER\n");
-    }
-  }
-
-  if (vectored) {
-    hpx_type_t count = va_arg(vargs, hpx_type_t);
-    hpx_type_t args = va_arg(vargs, hpx_type_t);
-    hpx_type_t sizes = va_arg(vargs, hpx_type_t);
-
-    if ((count != HPX_INT && count != HPX_UINT && count != HPX_SIZE_T) ||
-        (args != HPX_POINTER) ||
-        (sizes != HPX_POINTER)) {
-      dbg_error("Vectored registration type failure\n");
-    }
-
-    (void)count;
-    (void)args;
-    (void)sizes;
-  } else {
-    hpx_type_t addr = va_arg(vargs, hpx_type_t);
-    hpx_type_t size = va_arg(vargs, hpx_type_t);
-
-    if ((addr != HPX_POINTER) ||
-        (size != HPX_INT && size != HPX_UINT && size != HPX_SIZE_T)) {
-      dbg_error("Marshalled action type should be HPX_POINTER, HPX_INT\n");
-    }
-  }
-
-  va_end(vargs);
-  return _push_back(id, key, f, type, attr, NULL, NULL);
+  back->handler = f;
+  back->id = id;
+  back->key = key;
+  back->type = type;
+  back->attr = attr;
+  back->cif = NULL;
+  back->env = NULL;
+  action_init(back, n, args);
 }
 
-int libhpx_register_action(hpx_action_type_t type, uint32_t attr,
-                           const char *key, hpx_action_t *id, handler_t f,
-                           unsigned nargs, ...) {
-  va_list vargs;
-  va_start(vargs, nargs);
-  int e = _register_action_va(type, attr, key, id, f, 1, nargs, vargs);
-  va_end(vargs);
-  return e;
+void libhpx_register_action(hpx_action_type_t type, uint32_t attr,
+                            const char *key, hpx_action_t *id, handler_t f,
+                            unsigned n, ...) {
+  va_list args;
+  va_start(args, n);
+  _register_action_va(type, attr, key, id, f, 1, n, &args);
+  va_end(args);
 }
 
 int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
-                        hpx_action_t *id, handler_t f, unsigned nargs,
-                        ...) {
-  va_list vargs;
-  va_start(vargs, nargs);
-  int e = _register_action_va(type, attr, key, id, f, 0, nargs, vargs);
-  va_end(vargs);
-  return e;
+                        hpx_action_t *id, handler_t f, unsigned n, ...) {
+  va_list args;
+  va_start(args, n);
+  _register_action_va(type, attr, key, id, f, 0, n, &args);
+  va_end(args);
+  return HPX_SUCCESS;
 }

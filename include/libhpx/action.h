@@ -229,6 +229,8 @@ typedef struct {
 ///
 /// @field parcel_class The parcel management vtable pointer.
 /// @field   call_class The calling convention vtable pointer.
+/// @field       finish Called to finish registration.
+/// @field         fini The destructor.
 /// @field      handler The action handler function pointer.
 /// @field           id The pointer to the action id.
 /// @field          key The pointer to the unique key for the action.
@@ -239,6 +241,8 @@ typedef struct {
 typedef struct {
   const parcel_management_vtable_t *parcel_class;
   const calling_convention_vtable_t  *call_class;
+  void (*finish)(void*);
+  void (*fini)(void*);
 
   handler_t      handler;
   hpx_action_t       *id;
@@ -283,8 +287,7 @@ void CHECK_ACTION(hpx_action_t id);
 /// @param nargs The variadic number of parameters that the action accepts.
 /// @param   ... The HPX types of the action parameters (HPX_INT, ...).
 ///
-/// @returns     HPX_SUCCESS or an error code
-int libhpx_register_action(hpx_action_type_t type, uint32_t attr,
+void libhpx_register_action(hpx_action_type_t type, uint32_t attr,
                            const char *key, hpx_action_t *id, void (*f)(void),
                            unsigned nargs, ...);
 

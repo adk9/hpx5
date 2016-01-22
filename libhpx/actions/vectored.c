@@ -21,6 +21,7 @@
 #include <libhpx/debug.h>
 #include <libhpx/parcel.h>
 #include <libhpx/padding.h>
+#include <libhpx/percolation.h>
 #include "init.h"
 #include "exit.h"
 
@@ -119,6 +120,35 @@ static int _exec_vectored(const void *obj, hpx_parcel_t *p) {
   return ((hpx_vectored_action_handler_t )action->handler)(nargs, argsp, sizes);
 }
 
+static void _vectored_fini(void *action) {
+}
+
+static void _opencl_fini(void *act) {
+  action_t *action = act;
+  percolation_destroy(here->percolation, action->env);
+}
+
+static void _vectored_finish(void *act) {
+  action_t *action = act;
+  dbg_assert(here);
+  dbg_assert(here->percolation);
+
+  // Special-case for opencl actions.
+  if (action->type == HPX_OPENCL) {
+    action->env = percolation_prepare(here->percolation, action->key,
+                                      (const char*)action->handler);
+    dbg_assert_str(action->env, "failed to prepare percolation kernel: %s\n",
+                   action->key);
+    action->handler = (handler_t)percolation_execute_handler;
+    action->fini = _opencl_fini;
+  }
+
+  log_action("%d: %s (%p) %s %x.\n", *action->id, action->key,
+             (void*)(uintptr_t)action->handler,
+             HPX_ACTION_TYPE_TO_STRING[action->type],
+             action->attr);
+}
+
 static const parcel_management_vtable_t _vectored_vtable = {
   .new_parcel = _new_vectored,
   .pack_parcel = _pack_vectored,
@@ -133,9 +163,39 @@ static const parcel_management_vtable_t _pinned_vectored_vtable = {
   .exit = exit_pinned_action
 };
 
-void action_init_vectored(action_t *action) {
+void action_init_vectored(action_t *action, int n, va_list *vargs) {
   uint32_t pinned = action->attr & HPX_PINNED;
-  action->parcel_class = (pinned) ? &_pinned_vectored_vtable :
-                         &_vectored_vtable;
+
+  // Check that the first argument type is a pointer if this is a pinned
+  // action. Short circuit evaluation only consumes the first argument for
+  // pinned actions.
+  if (pinned && (va_arg(vargs, hpx_type_t) != HPX_POINTER)) {
+    dbg_error("First type of a pinned action should be HPX_POINTER\n");
+  }
+
+  // Verify that the rest of the type matches.
+  hpx_type_t count = va_arg(vargs, hpx_type_t);
+  hpx_type_t args = va_arg(vargs, hpx_type_t);
+  hpx_type_t sizes = va_arg(vargs, hpx_type_t);
+
+  if ((count != HPX_INT && count != HPX_UINT && count != HPX_SIZE_T) ||
+      (args != HPX_POINTER) ||
+      (sizes != HPX_POINTER)) {
+    dbg_error("Vectored registration type failure\n");
+  }
+
+  // Initialize the parcel class.
+  if (pinned) {
+    action->parcel_class = &_pinned_vectored_vtable;
+  }
+  else {
+    action->parcel_class = &_vectored_vtable;
+  }
+
+  // Initialize the call class.
   action_init_call_by_parcel(action);
+
+  // Initialize the destructor.
+  action->finish = _vectored_finish;
+  action->fini = _vectored_fini;
 }
