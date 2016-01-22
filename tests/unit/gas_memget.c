@@ -184,8 +184,8 @@ int memget_malloc_handler(void) {
 }
 HPX_ACTION(HPX_DEFAULT, 0, memget_malloc, memget_malloc_handler);
 
-hpx_addr_t global_addr;
-hpx_addr_t barrier;
+hpx_addr_t global_addr = 0;
+hpx_addr_t barrier = 0;
 
 int _putget_action(void *UNUSED, size_t size) {  
   int comm_rank = hpx_get_my_rank();
@@ -216,7 +216,6 @@ int _putget_action(void *UNUSED, size_t size) {
 
   // wait for the memputs to finish
   hpx_lco_wait(barrier);
-  hpx_lco_delete(barrier, HPX_NULL);
 
   // once everyone has finished these operations, get what we need
   int *buf = calloc(comm_size, comm_size*sizeof(int));
@@ -239,6 +238,10 @@ int _putget_action(void *UNUSED, size_t size) {
   free(buf);
   printf("sum = %d expected = %d\n", sum, expected);
   test_assert(sum == expected);
+
+  if (comm_rank == 0) {
+    hpx_lco_delete(barrier, HPX_NULL);
+  }
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _putget, _putget_action, HPX_POINTER, HPX_SIZE_T);
