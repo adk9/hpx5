@@ -32,6 +32,10 @@ void free(const global_ptr<void>& gva, const global_ptr<LCO<void>>& rsync) {
   hpx_gas_free(gva, rsync.get());
 }
 
+void free(const global_ptr<void>& gva, std::nullptr_t) {
+  hpx_gas_free(gva, HPX_NULL);
+}
+
 /// The generic gas allocation routine.
 template <typename T>
 global_ptr<T> malloc(size_t n, unsigned block, unsigned boundary,
