@@ -38,17 +38,17 @@ hpx_status_t test_addr_arith() {
 hpx_status_t test_pin_unpin() {
   int n1 = 10;
   auto ptr1 = hpx::gas::alloc_local<int>(n1);
-  hpx::pinned_ptr<int> ptr2(ptr1);
-  // for (int i = 0; i != n1; i++) {
-  //   *(ptr2 + i) = i;
-  // }
-  *ptr2 = 0;
+  hpx::pin_guard<int> guard(ptr1);
+  int *p = guard.get();
+  for (int i = 0; i != n1; i++) {
+    p[i] = i;
+  }
   return HPX_SUCCESS;
 }
 
 hpx_status_t test_subscript() {
   int n1 = 10;
-  auto ptr = hpx::gas::alloc_cyclic<uint64_t>(n1);
+  auto ptr = hpx::gas::alloc_cyclic<uint64_t>(n1, 1);
   hpx::global_ptr<uint64_t> ptr1 = &ptr[2];
 
   //   uint64_t val = ptr[2]; // not allowed
