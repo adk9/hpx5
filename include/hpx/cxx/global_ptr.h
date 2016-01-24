@@ -93,6 +93,11 @@ class global_ptr {
   global_ptr(hpx_addr_t addr, uint32_t n) : _gbl_ptr(addr), _elems_per_blk(n) {
   }
 
+  /// Allow smart pointers to be used in (!ptr) style tests.
+  operator bool() const {
+    return (_gbl_ptr != HPX_NULL);
+  }
+
   /// Returns the raw hpx_addr_t that this smart pointer encapsulates.
   hpx_addr_t get() const {
     return _gbl_ptr;
@@ -220,6 +225,11 @@ class global_ptr<void> {
   template <typename U>
   operator global_ptr<U>() const {
     return global_ptr<U>(_impl, _bsize);
+  }
+
+  /// Allow smart pointers to be used in (!ptr) style tests.
+  operator bool() const {
+    return (_impl != HPX_NULL);
   }
 
   /// Support any user that wants to get the underlying HPX address.
