@@ -15,10 +15,22 @@
 #define HPX_CXX_MALLOC_H
 
 #include <hpx/cxx/global_ptr.h>
+#include <hpx/cxx/lco.h>
 
 namespace hpx {
 
 namespace gas {
+
+void free(const global_ptr<void>& gva) {
+  hpx_gas_free_sync(gva);
+}
+
+template <template <typename> class LCO>
+void free(const global_ptr<void>& gva, const global_ptr<LCO<void>>& rsync) {
+  static_assert(std::is_base_of<lco::Base<void>, LCO<void>>::value,
+                "rsync must be a control-only LCO");
+  hpx_gas_free(gva, rsync.get());
+}
 
 /// The generic gas allocation routine.
 template <typename T>
