@@ -28,7 +28,7 @@
 namespace {
 
 template <typename T> using global_ptr = hpx::global_ptr<T>;
-using hpx::gas::alloc_cyclic;
+using hpx::alloc_cyclic;
 using hpx::gas::memget;
 using hpx::gas::memput;
 
@@ -77,17 +77,19 @@ struct {
 
 // table get is synchronous and returns the value
 template <typename T>
-T table_get(global_ptr<T> table, long i) {
+T table_get(const global_ptr<T>& table, long i) {
+  auto f = hpx::lco::Future<void>::Alloc();
   T val;
-  memget(&val, &table[i], sizeof(T));
+  memget(&val, &table[i], sizeof(T), f);
+  hpx::lco::get(f);
   return val;
 }
 
 // table set is asynchronous and uses an LCO for synchronization.
-template <typename T>
+template <typename T, template <typename> class L>
 void table_set(global_ptr<T> table, long i, const T& val,
-               global_ptr<void> rsync) {
-  memput(&table[i], &val, sizeof(T), hpx::null_ptr, rsync);
+               const global_ptr<L<void>>& rsync) {
+  memput(&table[i], &val, sizeof(T), nullptr, rsync);
 }
 
 int _bitwiseor_action(uint64_t *args, size_t size) {
@@ -116,7 +118,7 @@ int _init_table_action() {
   long blocks = cfg.tabsize / nranks + ((me < r) ? 1 : 0);
   hpx_addr_t and_lco = hpx_lco_and_new(blocks);
   for (long b = 0, i = me; b < blocks; ++b, i += nranks) {
-    table_set(cfg.table, i, (unsigned long)i, global_ptr<void>(and_lco, 1));
+    table_set(cfg.table, i, (unsigned long)i, global_ptr<hpx::lco::And<void>>(and_lco, 1));
   }
   hpx_lco_wait(and_lco);
   hpx_lco_delete(and_lco, HPX_NULL);
@@ -204,7 +206,7 @@ int _mover_action() {
     auto there = &(cfg.table[src]);
     lco = hpx_lco_future_new(0);
     // initiate a move
-    hpx_gas_move(there.ptr(), HPX_THERE(dst), lco);
+    hpx_gas_move(there.get(), HPX_THERE(dst), lco);
     hpx_lco_wait(lco);
     hpx_lco_delete(lco, HPX_NULL);
   }
@@ -244,7 +246,7 @@ int _update_table_action() {
     hpx_addr_t done = hpx_lco_and_new(VLEN);
     for (j=0; j<VLEN; j++) {
       table_set(cfg.table, ran[j] & (cfg.tabsize-1), t1[j],
-                global_ptr<void>(done, 1));
+                global_ptr<hpx::lco::And<void>>(done, 1));
     }
     hpx_lco_wait(done);
     hpx_lco_delete(done, HPX_NULL);
@@ -319,7 +321,7 @@ void _main_action() {
     //     there = hpx_addr_add(cfg.table, (temp & (cfg.tabsize-1))* BLOCK_SIZE, BLOCK_SIZE);
     //     hpx_call(there, _bitwiseor, lco, &temp, sizeof(temp));
     auto there = &(cfg.table[temp & (cfg.tabsize-1)]);
-    hpx_call(there.ptr(), _bitwiseor, lco, &temp, sizeof(temp));
+    hpx_call(there.get(), _bitwiseor, lco, &temp, sizeof(temp));
   }
   hpx_lco_wait(lco);
   hpx_lco_delete(lco, HPX_NULL);
@@ -333,6 +335,7 @@ void _main_action() {
   printf("Found %lu errors in %lu locations (%s).\n",
          j, cfg.tabsize, (j <= 0.01*cfg.tabsize) ? "passed" : "failed");
 
+  hpx::free(cfg.table);
   hpx::exit(HPX_SUCCESS);
 }
 HPX_ACTION(HPX_DEFAULT, 0, _main, _main_action);

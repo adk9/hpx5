@@ -18,12 +18,11 @@
 /// @brief Wrappers for the gas string functions (memget/memput/memcpy)
 
 #include <hpx/cxx/global_ptr.h>
+#include <hpx/cxx/lco.h>
 
 namespace hpx {
 namespace gas {
 
-/// The memget_sync wrappers.
-///
 /// These wrap the hpx_gas_memget operations, basically just allowing the client
 /// to pass in a global pointer instead of hpx_addr_t. They don't try and type
 /// check the @p to address (though one would expect it to be T*), and they
@@ -32,33 +31,44 @@ namespace gas {
 ///
 /// @{
 
+/// The memget_sync wrapper.
+///
 /// This version of memget is completely synchronous.
 ///
 /// @param           to The local pointer we're copying to.
 /// @param         from The global pointer we're copying from.
 /// @param            n The number of bytes to copy
 template <typename T>
-void memget(void* to, global_ptr<T> from, size_t n) {
-  if (int e = hpx_gas_memget_sync(to, from.ptr(), n)) {
+void memget(void* to, const global_ptr<T>& from, size_t n) {
+  if (int e = hpx_gas_memget_sync(to, from.get(), n)) {
     throw e;
   }
 } // template memget
 
+/// @overload memget(void*, const global_ptr<T>&, size_t)
+///
 /// This version of memget is completely asynchronous, i.e., it will return
-/// immediately.
+/// immediately. The user must provide an @p lsync LCO to test for memget
+/// completion, as there is no other safe mechanism to determine that the local
+/// buffer is safe to read.
+///
+/// There is currently no way to wait independently for remote completion.
 ///
 /// @param           to The local pointer we're copying to.
 /// @param         from The global pointer we're copying from.
 /// @param            n The number of bytes to copy
-template <typename T, typename U>
-void memget(void* to, global_ptr<T> from, size_t n, global_ptr<U> lsync) {
-  if (int e = hpx_gas_memget(to, from.ptr(), n, lsync.ptr())) {
+/// @param        lsync An LCO to test for local completion
+template <typename T, template <typename> class L>
+void memget(void* to, const global_ptr<T>& from, size_t n,
+            const global_ptr<L<void>>& lsync) {
+  static_assert(std::is_base_of<lco::Base<void>, L<void>>::value,
+                "lsync must be a control-only LCO");
+  if (int e = hpx_gas_memget(to, from.get(), n, lsync.get())) {
     throw e;
   }
 } // template memget<T, U>
 
 /// @} memget
-
 
 /// The memput wrappers.
 ///
@@ -70,47 +80,89 @@ void memget(void* to, global_ptr<T> from, size_t n, global_ptr<U> lsync) {
 ///
 /// @{
 
+/// The synchronous memput operation.
+///
 /// This version of memput is completely synchronous, it will not return until
-/// the remote value has completed.
+/// the remote write has completed.
 ///
 /// @param           to The global address we're putting to.
 /// @param         from The local address we're putting from.
 /// @param            n The number of bytes to put.
 template <typename T>
-void memput(global_ptr<T> to, const void *from, size_t n) {
-  if (int e = hpx_gas_memput_rsync(to.ptr(), from, n)) {
+void memput(const global_ptr<T>& to, const void *from, size_t n) {
+  if (int e = hpx_gas_memput_rsync(to.get(), from, n)) {
     throw e;
   }
 }
 
+/// @overload memput(const global_ptr<T>&, const void*, size_t)
+///
 /// This version of memput is locally synchronous, it will return when the @p
-/// from buffer can be modified or freed.
+/// from buffer can be modified or freed. The user must an @p rsync LCO to test
+/// for remote completion---without an @p rsync there is no way to determine if
+/// the remote operation has completed.
 ///
 /// @param           to The global address we're putting to.
 /// @param         from The local address we're putting from.
 /// @param            n The number of bytes to put.
 /// @param        rsync An LCO that will be set when the put is complete.
-template <typename T, typename U>
-void memput(global_ptr<T> to, const void *from, size_t n, global_ptr<U> rsync) {
-  if (int e = hpx_gas_memput_lsync(to.ptr(), from, n, rsync.ptr())) {
+template <typename T, template <typename> class R>
+void memput(const global_ptr<T>& to, const void *from, size_t n,
+            const global_ptr<R<void>>& rsync) {
+  static_assert(std::is_base_of<lco::Base<void>, R<void>>::value,
+                "rsync must be a control-only LCO");
+  if (int e = hpx_gas_memput_lsync(to.get(), from, n, rsync.get())) {
     throw e;
   }
 }
 
-/// This version of memput is fully asynchronous.
+/// @overload memput(const global_ptr<T>&, const void*, size_t)
+///
+/// This version of memput is fully asynchronous. The user will supply a
+/// required @p rsync LCO that they must use remote completion, and may supply
+/// an optional @p lsync LCO that can be used to test for local
+/// completion. Remote completion implies local completion.
 ///
 /// @param           to The global address we're putting to.
 /// @param         from The local address we're putting from.
 /// @param            n The number of bytes to put.
 /// @param        lsync An LCO that will be set when @p from can be modified.
 /// @param        rsync An LCO that will be set when the put is complete.
-template <typename T, typename U, typename V>
-void memput(global_ptr<T> to, const void *from, size_t n, global_ptr<U> lsync,
-            global_ptr<V> rsync) {
-  if (int e = hpx_gas_memput(to.ptr(), from, n, lsync.ptr(), rsync.ptr())) {
+template <typename T, template <typename> class L, template <typename> class R>
+void memput(const global_ptr<T>& to, const void *from, size_t n,
+            const global_ptr<L<void>>& lsync,
+            const global_ptr<R<void>>& rsync) {
+  static_assert(std::is_base_of<lco::Base<void>, L<void>>::value,
+                "lsync must be a control-only LCO");
+  static_assert(std::is_base_of<lco::Base<void>, R<void>>::value,
+                "rsync must be a control-only LCO");
+  if (int e = hpx_gas_memput(to.get(), from, n, lsync.get(), rsync.get())) {
     throw e;
   }
 }
+
+/// @overload memput(const global_ptr<T>&, const void*, size_t)
+///
+/// This version of memput is fully asynchronous. The user will supply a
+/// required @p rsync LCO that they must use remote completion, and may supply
+/// an optional @p lsync LCO that can be used to test for local
+/// completion. Remote completion implies local completion.
+///
+/// @param           to The global address we're putting to.
+/// @param         from The local address we're putting from.
+/// @param            n The number of bytes to put.
+/// @param        lsync An LCO that will be set when @p from can be modified.
+/// @param        rsync An LCO that will be set when the put is complete.
+template <typename T, template <typename> class R>
+void memput(const global_ptr<T>& to, const void *from, size_t n,
+            std::nullptr_t lsync, const global_ptr<R<void>>& rsync) {
+  static_assert(std::is_base_of<lco::Base<void>, R<void>>::value,
+                "rsync must be a control-only LCO");
+  if (int e = hpx_gas_memput(to.get(), from, n, HPX_NULL, rsync.get())) {
+    throw e;
+  }
+}
+
 
 /// @}
 

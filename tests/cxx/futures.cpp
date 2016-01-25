@@ -18,15 +18,28 @@
 #include <iostream>
 #include <hpx/hpx++.h>
 
+namespace {
+using namespace hpx;
+
+int test_handler(void) {
+  auto f1 = lco::Future<double>::Alloc();
+  auto f2 = lco::Future<void>::Alloc();
+
+  hpx_exit(hpx::SUCCESS);
+}
+HPX_ACTION(HPX_DEFAULT, 0, test, test_handler);
+}
+
 int main(int argc, char* argv[]) {
 
-  int e = hpx::init(&argc, &argv);
-  if (e) {
+  if (int e = hpx::init(&argc, &argv)) {
     std::cerr << "HPX: failed to initialize." << std::endl;
     return e;
   }
 
-  hpx::lco::Future<double> f1;
+  if (int e = hpx::run(&test)) {
+    return e;
+  }
 
   hpx::finalize();
   return 0;

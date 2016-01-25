@@ -37,8 +37,13 @@ nobase_include_HEADERS = hpx/action.h \
 if HAVE_HPXPP
 nobase_include_HEADERS += hpx/hpx++.h \
                           hpx/cxx/action.h \
+                          hpx/cxx/errors.h \
+                          hpx/cxx/gas.h \
                           hpx/cxx/global_ptr.h \
                           hpx/cxx/lco.h \
+                          hpx/cxx/malloc.h \
                           hpx/cxx/runtime.h \
-                          hpx/cxx/system.h
+                          hpx/cxx/string.h \
+                          hpx/cxx/system.h \
+                          hpx/cxx/thread.h
 endif
