@@ -67,7 +67,7 @@ class global_ptr {
   }
 
   /// The nullptr can be implicitly converted to a global_ptr.
-  global_ptr(nullptr_t null) : _gbl_ptr(HPX_NULL), _elems_per_blk(0) {
+  global_ptr(std::nullptr_t) : _gbl_ptr(HPX_NULL), _elems_per_blk(0) {
   }
 
   /// A global pointer can be explicitly constructed from an hpx_addr_t.
@@ -206,7 +206,7 @@ class global_ptr<void> {
   global_ptr<void>() : _impl(HPX_NULL), _bsize(0) {
   }
 
-  global_ptr<void>(nullptr_t null) : _impl(HPX_NULL), _bsize(0) {
+  global_ptr<void>(std::nullptr_t) : _impl(HPX_NULL), _bsize(0) {
   }
 
   /// Construct a generic global pointer from a generic HPX address and block
