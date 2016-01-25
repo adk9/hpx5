@@ -19,8 +19,6 @@
 
 namespace hpx {
 
-namespace gas {
-
 void free(const global_ptr<void>& gva) {
   hpx_gas_free_sync(gva.get());
 }
@@ -73,7 +71,6 @@ global_ptr<T> alloc_cyclic(size_t n, unsigned block) {
   return malloc<T>(n, block, 0, HPX_GAS_DIST_LOCAL, HPX_GAS_ATTR_NONE);
 }
 
-} // namespace gas
 } // namespace hpx
 
 #endif // HPX_CXX_MALLOC_H

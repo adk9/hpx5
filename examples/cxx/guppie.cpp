@@ -28,7 +28,7 @@
 namespace {
 
 template <typename T> using global_ptr = hpx::global_ptr<T>;
-using hpx::gas::alloc_cyclic;
+using hpx::alloc_cyclic;
 using hpx::gas::memget;
 using hpx::gas::memput;
 
@@ -335,6 +335,7 @@ void _main_action() {
   printf("Found %lu errors in %lu locations (%s).\n",
          j, cfg.tabsize, (j <= 0.01*cfg.tabsize) ? "passed" : "failed");
 
+  hpx::free(cfg.table);
   hpx::exit(HPX_SUCCESS);
 }
 HPX_ACTION(HPX_DEFAULT, 0, _main, _main_action);
