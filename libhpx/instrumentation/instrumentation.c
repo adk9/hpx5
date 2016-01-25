@@ -289,7 +289,7 @@ void inst_prof_dump(profile_log_t log) {
     prof_get_max_time(log.events[i].key, &max);
 
     if(total_time_ms != 0){
-      fprintf(f, "%-24s%-24.6f%-24.6f%-24.6f\n", "Time",
+      fprintf(f, "%-24s%-24.6f%-24.6f%-24.6f\n", "Time (ms)",
               hpx_time_ms(average),
               hpx_time_ms(min),
               hpx_time_ms(max));
@@ -297,8 +297,10 @@ void inst_prof_dump(profile_log_t log) {
 
     if (_detailed_prof) {
       fprintf(f, "\nDUMP:\n\n%-24s", "Entry #");
-      for (int j = 0; j < log.num_counters; j++) {
-        fprintf(f, "%-24s", HPX_COUNTER_TO_STRING[log.counters[j]]);
+      if(!log.events[i].simple){
+        for (int j = 0; j < log.num_counters; j++) {
+          fprintf(f, "%-24s", HPX_COUNTER_TO_STRING[log.counters[j]]);
+        }
       }
       fprintf(f, "%-24s", "Start Time (ms)");
       if(total_time_ms != 0){
@@ -310,8 +312,10 @@ void inst_prof_dump(profile_log_t log) {
       fprintf(f, "\n");
       for (int j = 0; j < log.events[i].num_entries; j++) {
         fprintf(f, "%-24d", j);
-        for (int k = 0; k < log.num_counters; k++) {
-          fprintf(f, "%-24"PRIu64, log.events[i].entries[j].counter_totals[k]);
+        if(!log.events[i].simple){
+          for (int k = 0; k < log.num_counters; k++) {
+            fprintf(f, "%-24"PRIu64, log.events[i].entries[j].counter_totals[k]);
+          }
         }
         fprintf(f, "%-24f", hpx_time_ms(log.events[i].entries[j].start_time));
         if(total_time_ms != 0){
