@@ -966,6 +966,11 @@ int hpx_get_my_thread_id(void) {
   return (w) ? w->id : -1;
 }
 
+const struct hpx_parcel *hpx_thread_current_parcel(void) {
+  worker_t *w = self;
+  return (w) ? w->current : NULL;
+}
+
 hpx_addr_t hpx_thread_current_target(void) {
   worker_t *w = self;
   return (w && w->current) ? w->current->target : HPX_NULL;

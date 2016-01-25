@@ -35,6 +35,16 @@ extern "C" {
 struct hpx_parcel;
 /// @}
 
+/// Get the current thread's progenitor parcel.
+///
+/// Every thread in HPX is created by a parcel. This allows users to get access
+/// to that underlying parcel if they need it.
+///
+/// @returns            The current progenitor parcel, or NULL if HPX is not
+///                     currently running.
+const struct hpx_parcel *hpx_thread_current_parcel(void)
+  HPX_PUBLIC;
+
 /// Get the target of the current thread.
 /// The target of the thread is the destination that a parcel was sent to
 /// to spawn the current thread.
