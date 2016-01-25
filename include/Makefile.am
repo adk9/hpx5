@@ -42,6 +42,7 @@ nobase_include_HEADERS += hpx/hpx++.h \
                           hpx/cxx/global_ptr.h \
                           hpx/cxx/lco.h \
                           hpx/cxx/malloc.h \
+                          hpx/cxx/par_for.h \
                           hpx/cxx/runtime.h \
                           hpx/cxx/string.h \
                           hpx/cxx/system.h \
