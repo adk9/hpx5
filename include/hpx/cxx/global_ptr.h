@@ -29,6 +29,55 @@ struct NotLocal : public std::exception {
   }
 };
 
+template <typename T>
+class global_ptr;
+
+/// Special case global pointers to void with a template specialization.
+///
+/// These serve the same roll as void* pointers do. Other pointers can be cast
+/// to global_ptr<void>, however we can't pin, unpin, or perform address
+/// arithmetic on them, and we don't know their block size.
+///
+/// This specialization is defined first because we use it in the implementation
+/// of the generic global_ptr template below (as part of an explicit cast
+/// operation).
+template <>
+class global_ptr<void> {
+ public:
+  /// Default constructor.
+  ///
+  /// This constructs a global_ptr<void> to NULL.
+  global_ptr<void>() : _impl(HPX_NULL) {
+  }
+
+  global_ptr<void>(std::nullptr_t) : _impl(HPX_NULL) {
+  }
+
+  /// Construct a generic global pointer from a generic HPX address.
+  global_ptr<void>(hpx_addr_t addr) : _impl(addr) {
+  }
+
+  /// Construct a generic global pointer from a pointer to any other type---this
+  /// serves to handle pointer casts as well.
+  template <typename U>
+  global_ptr<void>(const global_ptr<U>& ptr) : _impl(ptr.get()) {
+  }
+
+  /// Allow smart pointers to be used in (!ptr) style tests.
+  operator bool() const {
+    return (_impl != HPX_NULL);
+  }
+
+  /// Support any user that wants to get the underlying HPX address.
+  hpx_addr_t get() const {
+    return _impl;
+  }
+
+ private:
+  hpx_addr_t _impl;
+};
+
+
 /// An HPX global address ptr.
 ///
 /// Basically wraps hpx_addr_t and provides address arithmetic and pin/unpin
@@ -91,6 +140,12 @@ class global_ptr {
   /// @param       addr The hpx_addr_t.
   /// @param          n The number of elements per block.
   global_ptr(hpx_addr_t addr, uint32_t n) : _gbl_ptr(addr), _elems_per_blk(n) {
+  }
+
+  /// A typed global pointer can be constructed from a global_ptr<void>, as long
+  /// as the user provides a block size.
+  explicit global_ptr(const global_ptr<void>& gva, uint32_t n)
+    : _gbl_ptr(gva.get()), _elems_per_blk(n) {
   }
 
   /// Allow smart pointers to be used in (!ptr) style tests.
@@ -190,61 +245,6 @@ class global_ptr {
   hpx_addr_t _gbl_ptr;
   size_t _elems_per_blk;
 }; // template class global_ptr
-
-/// Special case global pointers to void with a template specialization.
-///
-/// These serve the same roll as void* pointers do. Other pointers can be cast
-/// to global_ptr<void> and global_ptr<void> will be cast to other pointers,
-/// however we can't pin, unpin, or perform address arithmetic on them.
-template <>
-class global_ptr<void> {
- public:
-  /// Default constructor.
-  ///
-  /// This constructs a global_ptr<void> to NULL.
-  global_ptr<void>() : _impl(HPX_NULL), _bsize(0) {
-  }
-
-  global_ptr<void>(std::nullptr_t) : _impl(HPX_NULL), _bsize(0) {
-  }
-
-  /// Construct a generic global pointer from a generic HPX address and block
-  /// size.
-  global_ptr<void>(hpx_addr_t addr, size_t bsize) : _impl(addr), _bsize(bsize) {
-  }
-
-  /// Construct a generic global pointer from a pointer to any other type---this
-  /// serves to handle pointer casts as well.
-  template <typename U>
-  global_ptr<void>(const global_ptr<U>& ptr) : _impl(ptr.get()),
-    _bsize(ptr.get_block_size()) {
-  }
-
-  /// Implicitly cast back to a typed smart pointer.
-  template <typename U>
-  operator global_ptr<U>() const {
-    return global_ptr<U>(_impl, _bsize);
-  }
-
-  /// Allow smart pointers to be used in (!ptr) style tests.
-  operator bool() const {
-    return (_impl != HPX_NULL);
-  }
-
-  /// Support any user that wants to get the underlying HPX address.
-  hpx_addr_t get() const {
-    return _impl;
-  }
-
-  /// Support any user that wants to get the underlying HPX block size.
-  size_t get_block_size() const {
-    return _bsize;
-  }
-
- private:
-  hpx_addr_t _impl;
-  size_t _bsize;
-};
 
 /// The standard global pointer operators.
 ///
