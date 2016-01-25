@@ -33,7 +33,7 @@
 ///   2.         Work (W): The amount of work per task (that acts as
 ///                        input to FWQ).
 ///   3. No. of Tasks (N): The number of tasks to execute in parallel
-///                        each performing work W. 
+///                        each performing work W.
 ///
 /// The benchmark is weakly-scaled in that that N tasks are spawned to
 /// perform work W. The work is fixed to equal the span, such that the
@@ -69,7 +69,7 @@ static void env_to_args(void *out, const int i, const void *env) {
   *args = *(int*)env;
 }
 
-int _fwq_parfor(const int idx, const void *work) {
+int _fwq_parfor(const int idx, void *work) {
   return fwq(*(int*)work);
 }
 

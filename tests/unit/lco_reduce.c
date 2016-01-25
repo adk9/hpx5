@@ -116,8 +116,8 @@ struct _par_reduce_args {
   double *nums;
 };
 
-static int _par_reduce(const int i, const void *args) {
-  struct _par_reduce_args *a = (struct _par_reduce_args*)args;
+static int _par_reduce(const int i, void *args) {
+  struct _par_reduce_args *a = args;
   hpx_lco_set(a->rlco, sizeof(double), &a->nums[i], HPX_NULL, HPX_NULL);
   return 0;
 }

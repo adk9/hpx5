@@ -25,15 +25,13 @@ extern "C" {
 /// @brief HPX parallel loop interface
 
 /// The type of functions that can be passed to hpx_par_for().
-typedef int (*hpx_for_action_t)(const int, const void*);
+typedef int (*hpx_for_action_t)(int, void*);
 
+int hpx_par_for(hpx_for_action_t f, int min, int max, void *args,
+                hpx_addr_t sync) HPX_PUBLIC;
 
-int hpx_par_for(hpx_for_action_t f, const int min, const int max,
-                const void *args, hpx_addr_t sync) HPX_PUBLIC;
-
-int hpx_par_for_sync(hpx_for_action_t f, const int min, const int max,
-                     const void *args) HPX_PUBLIC;
-
+int hpx_par_for_sync(hpx_for_action_t f, int min, int max,
+                     void *args) HPX_PUBLIC;
 
 /// Perform a parallel call.
 ///
