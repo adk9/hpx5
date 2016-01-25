@@ -192,7 +192,9 @@ class global_ptr {
   /// check this constraint more carefully.
   ptrdiff_t operator-(const global_ptr<T>& rhs) const {
     assert(_elems_per_blk == rhs.get_block_size());
-    return hpx_addr_sub(_gbl_ptr, rhs.get(), bsize());
+    int64_t bytes = hpx_addr_sub(_gbl_ptr, rhs.get(), bsize());
+    assert(bytes % sizeof(T) == 0);
+    return bytes / sizeof(T);
   }
 
   /// Pin the global pointer.
