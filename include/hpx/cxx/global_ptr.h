@@ -179,7 +179,6 @@ class global_ptr {
     hpx_gas_unpin(_gbl_ptr);
   }
 
- protected:
   /// Compute the HPX block size for the pointer. The HPX block size differs
   /// from the HPX++ block size because the HPX++ block size is in terms of T,
   /// while the HPX block size is in terms of bytes.

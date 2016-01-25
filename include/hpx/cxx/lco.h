@@ -16,6 +16,7 @@
 
 #include <hpx/addr.h>
 #include <hpx/lco.h>
+#include <hpx/cxx/errors.h>
 #include <hpx/cxx/global_ptr.h>
 
 namespace hpx {

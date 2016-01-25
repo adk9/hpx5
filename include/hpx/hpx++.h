@@ -25,8 +25,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <hpx/hpx.h>
-#include <hpx/cxx/errors.h>
 #include <hpx/cxx/action.h>
+#include <hpx/cxx/errors.h>
+#include <hpx/cxx/gas.h>
 #include <hpx/cxx/global_ptr.h>
 #include <hpx/cxx/lco.h>
 #include <hpx/cxx/malloc.h>
