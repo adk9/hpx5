@@ -34,6 +34,7 @@
 #include <hpx/cxx/runtime.h>
 #include <hpx/cxx/string.h>
 #include <hpx/cxx/system.h>
+#include <hpx/cxx/thread.h>
 
 namespace hpx {
 /// Export the error codes into the HPX namespace as integers. We could use an
