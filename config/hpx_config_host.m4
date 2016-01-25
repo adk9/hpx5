@@ -23,9 +23,15 @@ AC_DEFUN([_HPX_DO_LINUX], [
  AS_CASE([$host_cpu],
    [x86_64], [HPX_CHECK_CMPXCHG16B
               l1d_linesize=`cat /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size`],
-  [aarch64], [HPX_AARCH64_GET_CACHELINESIZE
+  [aarch64], [LIBHPX_CFLAGS="$LIBHPX_CFLAGS -fexceptions"
+  	      HPX_APPS_CFLAGS="$HPX_APPS_CFLAGS -fexceptions"
+  	      HPX_PC_CFLAGS="$HPX_PC_CFLAGS -fexceptions"
+              HPX_AARCH64_GET_CACHELINESIZE
               AS_ECHO(["checking cache line size for aarch64... $l1d_linesize"])],
-     [arm*], [l1d_linesize=32],
+     [arm*], [LIBHPX_CFLAGS="$LIBHPX_CFLAGS -fexceptions"
+  	      HPX_APPS_CFLAGS="$HPX_APPS_CFLAGS -fexceptions"
+  	      HPX_PC_CFLAGS="$HPX_PC_CFLAGS -fexceptions"
+              l1d_linesize=32],
              [l1d_linesize=`getconf LEVEL1_DCACHE_LINESIZE`])
  pagesize=`getconf PAGESIZE`
  jemalloc_default=yes

@@ -1,4 +1,4 @@
-// =============================================================================
+// ================================================================= -*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
 //  Copyright (c) 2013-2015, Trustees of Indiana University,
@@ -11,8 +11,9 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-/// @file include/hpx++/hpx++.h
+/// @file include/hpx/hpx++.h
 /// @brief The Main HPX++ header file.
+///
 /// To use the HPX++ API only this header is needed; all the other HPX++
 /// headers are included through it.
 
@@ -23,33 +24,23 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <hpx/hpx.h>
+#include <hpx/cxx/errors.h>
+#include <hpx/cxx/action.h>
+#include <hpx/cxx/global_ptr.h>
+#include <hpx/cxx/lco.h>
+#include <hpx/cxx/malloc.h>
+#include <hpx/cxx/runtime.h>
+#include <hpx/cxx/string.h>
+#include <hpx/cxx/system.h>
 
-extern "C" {
-  #include "hpx/attributes.h"
-  #include "hpx/types.h"
-//   #include "hpx/action.h"
-}
-
-// #include "hpx/addr.h"
-// #include "hpx/gas.h"
-#include "hpx++/action.h"
-#include "hpx++/global_ptr.h"
-
-extern "C" {
-//   #include "hpx/lco.h"
-  #include "hpx/par.h"
-  #include "hpx/parcel.h"
-  #include "hpx/process.h"
-  #include "hpx/rpc.h"
-}
-
-#include "hpx++/runtime.h"
-#include "hpx++/lco.h"
-
-extern "C" {
-  #include "hpx/thread.h"
-  #include "hpx/time.h"
-  #include "hpx/topology.h"
+namespace hpx {
+/// Export the error codes into the HPX namespace as integers. We could use an
+/// enum or something but this keeps the typing consistent.
+/// @{
+const int SUCCESS = HPX_SUCCESS;
+const int ERROR = HPX_ERROR;
+/// @}
 }
 
 #endif // HPX_PLUS_PLUS_H

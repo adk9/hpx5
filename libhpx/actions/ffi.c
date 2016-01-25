@@ -15,6 +15,7 @@
 # include "config.h"
 #endif
 
+#include <stdlib.h>
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
@@ -28,7 +29,7 @@ static void _pack_ffi_0(const void *o, hpx_parcel_t *p, int n, va_list *args) {
 static void _pack_ffi_n(const void *obj, hpx_parcel_t *p, int n, va_list *args)
 {
   const action_t *action = obj;
-  const ffi_cif *cif = action->cif;
+  const ffi_cif *cif = action->env;
   void *buffer = hpx_parcel_get_data(p);
 
   DEBUG_IF (n != cif->nargs) {
@@ -51,7 +52,7 @@ static void _pack_ffi_n(const void *obj, hpx_parcel_t *p, int n, va_list *args)
 static void _pack_pinned_ffi_n(const void *obj, hpx_parcel_t *p, int n,
                                va_list *args) {
   const action_t *action = obj;
-  const ffi_cif *cif = action->cif;
+  const ffi_cif *cif = action->env;
   void *buffer = hpx_parcel_get_data(p);
 
   DEBUG_IF (n + 1 != cif->nargs) {
@@ -90,7 +91,7 @@ static hpx_parcel_t *_new_ffi_n(const void *obj, hpx_addr_t addr,
   const action_t *action = obj;
   hpx_action_t id = *action->id;
   hpx_pid_t pid = hpx_thread_current_pid();
-  size_t bytes = ffi_raw_size(action->cif);
+  size_t bytes = ffi_raw_size(action->env);
   hpx_parcel_t *p = parcel_new(addr, id, c_addr, c_action, pid, NULL, bytes);
   _pack_ffi_n(obj, p, n, args);
   return p;
@@ -102,7 +103,7 @@ static hpx_parcel_t *_new_pinned_ffi_n(const void *obj, hpx_addr_t addr,
   const action_t *action = obj;
   hpx_action_t id = *action->id;
   hpx_pid_t pid = hpx_thread_current_pid();
-  size_t bytes = ffi_raw_size(action->cif);
+  size_t bytes = ffi_raw_size(action->env);
   hpx_parcel_t *p = parcel_new(addr, id, c_addr, c_action, pid, NULL, bytes);
   _pack_pinned_ffi_n(obj, p, n, args);
   return p;
@@ -113,7 +114,7 @@ static int _exec_ffi_n(const void *obj, hpx_parcel_t *p) {
   char ffiret[8];               // https://github.com/atgreen/libffi/issues/35
   int *ret = (int*)&ffiret[0];
   void *args = hpx_parcel_get_data(p);
-  ffi_raw_call(action->cif, action->handler, ret, args);
+  ffi_raw_call(action->env, action->handler, ret, args);
   return *ret;
 }
 
@@ -125,7 +126,7 @@ static int _exec_pinned_ffi_n(const void *obj, hpx_parcel_t *p) {
   }
 
   const action_t *action = obj;
-  ffi_cif *cif = action->cif;
+  ffi_cif *cif = action->env;
   void *args = hpx_parcel_get_data(p);
   void *avalue[cif->nargs];
   ffi_raw_to_ptrarray(cif, args, avalue);
@@ -137,50 +138,93 @@ static int _exec_pinned_ffi_n(const void *obj, hpx_parcel_t *p) {
   return *ret;
 }
 
+static void _ffi_finish(void *act) {
+  action_t *action = act;
+  log_action("%d: %s (%p) %s %x.\n", *action->id, action->key,
+             (void*)(uintptr_t)action->handler,
+             HPX_ACTION_TYPE_TO_STRING[action->type],
+             action->attr);
+}
+
+static void _ffi_fini(void *act) {
+  action_t *action = act;
+  ffi_cif *cif = action->env;
+  free(cif->arg_types);
+  free(action->env);
+}
+
 static const parcel_management_vtable_t _ffi_0_vtable = {
-  .new = _new_ffi_0,
-  .pack = _pack_ffi_0,
-  .exec = _exec_ffi_n,
+  .new_parcel = _new_ffi_0,
+  .pack_parcel = _pack_ffi_0,
+  .exec_parcel = _exec_ffi_n,
   .exit = exit_action
 };
 
 static const parcel_management_vtable_t _pinned_ffi_0_vtable = {
-  .new = _new_ffi_0,
-  .pack = _pack_ffi_0,
-  .exec = _exec_pinned_ffi_n,
+  .new_parcel = _new_ffi_0,
+  .pack_parcel = _pack_ffi_0,
+  .exec_parcel = _exec_pinned_ffi_n,
   .exit = exit_pinned_action
 };
 
 static const parcel_management_vtable_t _ffi_n_vtable = {
-  .new = _new_ffi_n,
-  .pack = _pack_ffi_n,
-  .exec = _exec_ffi_n,
+  .new_parcel = _new_ffi_n,
+  .pack_parcel = _pack_ffi_n,
+  .exec_parcel = _exec_ffi_n,
   .exit = exit_action
 };
 
 static const parcel_management_vtable_t _pinned_ffi_n_vtable = {
-  .new = _new_pinned_ffi_n,
-  .pack = _pack_ffi_n,
-  .exec = _exec_pinned_ffi_n,
+  .new_parcel = _new_pinned_ffi_n,
+  .pack_parcel = _pack_ffi_n,
+  .exec_parcel = _exec_pinned_ffi_n,
   .exit = exit_pinned_action
 };
 
-void action_init_ffi(action_t *action) {
-  dbg_assert(action->cif);
+void action_init_ffi(action_t *action, int n, va_list *vargs) {
+  // Translate the argument types into a stack allocated buffer suitable for use
+  // with ffi.
+  hpx_type_t *args = calloc(n, sizeof(args[0]));
+  for (int i = 0; i < n; ++i) {
+    args[i] = va_arg(*vargs, hpx_type_t);
+  }
 
+  // Check to make sure that pinned actions start with a pointer type.
   uint32_t pinned = action->attr & HPX_PINNED;
-  if (pinned && action->cif->nargs > 1) {
+  if (pinned && (args[0] != HPX_POINTER)) {
+    dbg_error("First type of a pinned action should be HPX_POINTER\n");
+  }
+
+  // Allocate and initialize an ffi_cif, which is the structure that ffi uses to
+  // encode calling conventions.
+  action->env = calloc(1, sizeof(ffi_cif));
+  dbg_assert(action->env);
+
+  ffi_status s = ffi_prep_cif(action->env, FFI_DEFAULT_ABI, n, HPX_INT, args);
+  if (s != FFI_OK) {
+    dbg_error("failed to process type information for action id %d.\n",
+              *action->id);
+  }
+
+  // Initialize the parcel class.
+  ffi_cif *cif = action->env;
+  if (pinned && cif->nargs > 1) {
     action->parcel_class = &_pinned_ffi_n_vtable;
   }
   else if (pinned) {
     action->parcel_class = &_pinned_ffi_0_vtable;
   }
-  else if (action->cif->nargs) {
+  else if (cif->nargs) {
     action->parcel_class = &_ffi_n_vtable;
   }
   else {
     action->parcel_class = &_ffi_0_vtable;
   }
 
+  // Initialize the action class.
   action_init_call_by_parcel(action);
+
+  // Initialize the destructor.
+  action->fini = _ffi_fini;
+  action->finish = _ffi_finish;
 }

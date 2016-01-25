@@ -58,8 +58,9 @@ void sync_mcs_lock_release(struct mcs_lock *mcs, struct mcs_node *node) {
     return;
   }
 
-  // release the lock to no one
-  if (sync_cas(&mcs->tail, node, NULL, SYNC_RELEASE, SYNC_RELAXED)) {
+  // release the lock to no one--don't overwrite "node" during a failed cas
+  struct mcs_node *temp = node;
+  if (sync_cas(&mcs->tail, &temp, NULL, SYNC_RELEASE, SYNC_RELAXED)) {
     return;
   }
 

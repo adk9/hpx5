@@ -37,10 +37,10 @@
 /// Derived OpenCL percolation class
 typedef struct {
   const char *(*id)(void);
-  void (*delete)(struct percolation*);
-  void *(*prepare)(const struct percolation*, const char *, const char *);
-  int (*execute)(const struct percolation*, void *, int, void **, size_t *);
-  void (*destroy)(const struct percolation*, void *);
+  void (*delete)(void*);
+  void *(*prepare)(const void*, const char *, const char *);
+  int (*execute)(const void*, void *, int, void **, size_t *);
+  void (*destroy)(const void*, void *);
 
   cl_device_id device;
   cl_platform_id platform;
@@ -52,15 +52,15 @@ static HPX_RETURNS_NON_NULL const char *_id(void) {
   return "OPENCL";
 }
 
-static void _delete(percolation_t *percolation) {
-  _opencl_percolation_t *cl = (_opencl_percolation_t*)percolation;
+static void _delete(void *percolation) {
+  _opencl_percolation_t *cl = percolation;
   clReleaseCommandQueue(cl->queue);
   clReleaseContext(cl->context);
 }
 
-static void *_prepare(const percolation_t *percolation, const char *key,
+static void *_prepare(const void *percolation, const char *key,
                       const char *kernel) {
-  _opencl_percolation_t *cl = (_opencl_percolation_t*)percolation;
+  _opencl_percolation_t *cl = percolation;
 
   int e;
   cl_program program = clCreateProgramWithSource(cl->context, 1, &kernel,
@@ -78,9 +78,9 @@ static void *_prepare(const percolation_t *percolation, const char *key,
   return (void*)k;
 }
 
-static int _execute(const percolation_t *percolation, void *obj, int nargs,
+static int _execute(const void *percolation, void *obj, int nargs,
                     void *vargs[], size_t sizes[]) {
-  _opencl_percolation_t *cl = (_opencl_percolation_t*)percolation;
+  _opencl_percolation_t *cl = percolation;
   cl_kernel kernel = (cl_kernel)obj;
 
   cl_mem buf[nargs];
@@ -116,7 +116,7 @@ static int _execute(const percolation_t *percolation, void *obj, int nargs,
   // TODO: determine optimal work group size.
   // TODO: look at clEnqueueTask.
   size_t local_size = 64;
-  size_t global_size = ceil(osize/local_size)*local_size;
+  size_t global_size = ((osize+local_size)/local_size)*local_size;
 
   e = clEnqueueNDRangeKernel(cl->queue, kernel, 1, NULL, &global_size,
                              &local_size, 0, NULL, NULL);
@@ -141,7 +141,7 @@ static int _execute(const percolation_t *percolation, void *obj, int nargs,
   return e;
 }
 
-static void _destroy(const percolation_t *percolation, void *obj) {
+static void _destroy(const void *percolation, void *obj) {
   cl_kernel kernel = (cl_kernel)obj;
   clReleaseKernel(kernel);
 }

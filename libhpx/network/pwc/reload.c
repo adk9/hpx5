@@ -57,9 +57,6 @@ typedef struct {
   remote_t        *remotes;
 } reload_t;
 
-static COMMAND_DECL(_reload_request);
-static COMMAND_DECL(_reload_reply);
-
 static void _buffer_fini(buffer_t *b) {
   if (b) {
     parcel_block_delete(b->block);
@@ -79,11 +76,11 @@ _buffer_init(buffer_t *b, size_t n, pwc_xport_t *xport) {
   _buffer_reload(b, xport);
 }
 
-static int _recv_parcel_handler(int src, command_t command) {
+void handle_recv_parcel(int src, command_t command) {
 #ifdef __LP64__
-  hpx_parcel_t *p = (hpx_parcel_t*)command_get_arg(command);
+  hpx_parcel_t *p = (hpx_parcel_t*)(uintptr_t)command.arg;
 #else
-  arg_t arg = command_get_arg(command);
+  arg_t arg = command.arg;
   dbg_assert((arg & 0xffffffff) == arg);
   hpx_parcel_t *p = (hpx_parcel_t*)(uint32_t)arg;
 #endif
@@ -91,9 +88,7 @@ static int _recv_parcel_handler(int src, command_t command) {
   parcel_set_state(p, PARCEL_SERIALIZED | PARCEL_BLOCK_ALLOCATED);
   EVENT_PARCEL_RECV(p);
   scheduler_spawn(p);
-  return HPX_SUCCESS;
 }
-static COMMAND_DEF(_recv_parcel, _recv_parcel_handler);
 
 static int
 _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
@@ -108,16 +103,18 @@ _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
                op->n + align, (void*)send->block, send->n - send->i);
     op->dest_key = &send->key;
     op->dest = parcel_block_at(send->block, i);
-    op->rop = command_pack(_recv_parcel, (uintptr_t)op->dest);
+    op->rop.op = RECV_PARCEL;
+    op->rop.arg = (uintptr_t)op->dest;
     return xport->pwc(op);
   }
 
   op->n = 0;
   op->src = NULL;
   op->src_key = NULL;
-  op->lop = (command_t){0};
-  op->rop = command_pack(_reload_request, r);
-  int e = xport->command(op);
+  op->lop.op = NOP;
+  op->rop.op = RELOAD_REQUEST;
+  op->rop.arg = r;
+  int e = xport->cmd(op->rank, op->lop, op->rop);
   if (LIBHPX_OK == e) {
     return LIBHPX_RETRY;
   }
@@ -135,7 +132,7 @@ _reload_send(void *obj, pwc_xport_t *xport, int rank, const hpx_parcel_t *p) {
     .dest_key = NULL,
     .src = p,
     .src_key = xport->key_find_ref(xport, p, n),
-    .lop = command_pack(delete_parcel, (uintptr_t)p),
+    .lop = (command_t){ .op = DELETE_PARCEL, .arg = (uintptr_t)p },
     .rop = {0}
   };
 
@@ -247,17 +244,16 @@ parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
   return reload;
 }
 
-static int _reload_reply_handler(int src, command_t cmd) {
+void handle_reload_reply(int src, command_t cmd) {
   send_buffer_t *sends = &pwc_network->send_buffers[src];
-  return send_buffer_progress(sends);
+  dbg_check( send_buffer_progress(sends) );
 }
-static COMMAND_DEF(_reload_reply, _reload_reply_handler);
 
-static int _reload_request_handler(int src, command_t cmd) {
+void handle_reload_request(int src, command_t cmd) {
   pwc_xport_t *xport = pwc_network->xport;
   reload_t *reload = (reload_t*)pwc_network->parcels;
   buffer_t *recv = &reload->recv[src];
-  size_t n = command_get_arg(cmd);
+  size_t n = cmd.arg;
   if (n) {
     parcel_block_deduct(recv->block, n);
   }
@@ -271,9 +267,8 @@ static int _reload_request_handler(int src, command_t cmd) {
     .src = recv,
     .src_key = reload->recv_key,
     .lop = {0},
-    .rop = command_pack(_reload_reply, 0)
+    .rop = (command_t){ .op = RELOAD_REPLY, .arg = 0 }
   };
 
-  return xport->pwc(&op);
+  dbg_check( xport->pwc(&op) );
 }
-static COMMAND_DEF(_reload_request, _reload_request_handler);

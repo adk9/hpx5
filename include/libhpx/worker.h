@@ -14,6 +14,10 @@
 #ifndef LIBHPX_WORKER_H
 #define LIBHPX_WORKER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <pthread.h>
 #include <hpx/hpx.h>
 #include <hpx/attributes.h>
@@ -26,7 +30,6 @@
 /// @{
 struct ustack;
 /// @}
-
 
 /// Class representing a worker thread's state.
 ///
@@ -87,6 +90,32 @@ void worker_fini(worker_t *w)
 /// Start processing lightweight threads.
 int worker_start(void);
 
+/// The thread entry function that the worker uses to start a thread.
+///
+/// This is the function that sits at the outermost stack frame for a
+/// lightweight thread, and deals with dispatching the parcel's action and
+/// handling the action's return value.
+///
+/// It does not return.
+///
+/// @param            p The parcel to execute.
+void worker_execute_thread(hpx_parcel_t *p)
+  HPX_NORETURN;
+
+/// Finish processing a worker thread.
+///
+/// This is the function that handles a return value from a thread. This will be
+/// called from worker_execute_thread to terminate processing and does not
+/// return.
+///
+/// @note This is only exposed publicly because it relies on scheduler internals
+///       that aren't otherwise visible.
+///
+/// @param            p The parcel to execute.
+/// @param       status The status code that the thread returned with.
+void worker_finish_thread(hpx_parcel_t *p, int status)
+  HPX_NORETURN;
+
 /// Check to see if the current worker should be active.
 ///
 /// This file is distinct to the APEX subsystem.
@@ -94,5 +123,9 @@ int worker_is_active(void);
 
 /// Check to see if the current worker should stop.
 int worker_is_stopped(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_WORKER_H

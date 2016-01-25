@@ -14,7 +14,12 @@
 #ifndef LIBHPX_ACTION_H
 #define LIBHPX_ACTION_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdarg.h>
+#include <stdint.h>
 #include <hpx/hpx.h>
 
 /// Generic action handler type.
@@ -172,7 +177,7 @@ typedef struct {
   /// @param          p The parcel to call.
   ///
   /// @return           The result of the user handler.
-  int (*exec)(const void *obj, hpx_parcel_t *p);
+  int (*exec_parcel)(const void *obj, hpx_parcel_t *p);
 
   /// Pack arguments into the parcel buffer.
   ///
@@ -183,7 +188,7 @@ typedef struct {
   ///
   /// @param        obj The action object.
   /// @param          p The parcel to pack.
-  void (*pack)(const void *obj, hpx_parcel_t *p, int n, va_list *args);
+  void (*pack_parcel)(const void *obj, hpx_parcel_t *p, int n, va_list *args);
 
   /// Create a parcel for an action.
   ///
@@ -200,8 +205,9 @@ typedef struct {
   ///
   /// @return           The newly allocated parcel, or NULL if there was a
   ///                   problem during allocation.
-  hpx_parcel_t *(*new)(const void *obj, hpx_addr_t addr, hpx_addr_t rsync,
-                       hpx_action_t rop, int n, va_list *args);
+  hpx_parcel_t *(*new_parcel)(const void *obj, hpx_addr_t addr,
+                              hpx_addr_t rsync, hpx_action_t rop, int n,
+                              va_list *args);
 
   /// Exit a thread.
   ///
@@ -223,23 +229,25 @@ typedef struct {
 ///
 /// @field parcel_class The parcel management vtable pointer.
 /// @field   call_class The calling convention vtable pointer.
+/// @field       finish Called to finish registration.
+/// @field         fini The destructor.
 /// @field      handler The action handler function pointer.
 /// @field           id The pointer to the action id.
 /// @field          key The pointer to the unique key for the action.
 /// @field         type The action type.
 /// @field         attr Type attributes.
-/// @field          cif The ffi descriptor if the action is ffi-type.
 /// @field          env Type-specific data (e.g., compiled OpenCL).
 typedef struct {
   const parcel_management_vtable_t *parcel_class;
   const calling_convention_vtable_t  *call_class;
+  void (*finish)(void*);
+  void (*fini)(void*);
 
   handler_t      handler;
   hpx_action_t       *id;
   const char        *key;
   hpx_action_type_t type;
   uint32_t          attr;
-  ffi_cif           *cif;
   void              *env;
 } action_t;
 
@@ -271,16 +279,13 @@ void CHECK_ACTION(hpx_action_t id);
 /// @param  type The type of the action to be registered.
 /// @param  attr The attribute of the action (PINNED, PACKED, ...).
 /// @param   key A unique string key for the action.
-/// @param     f The local function pointer to associate with the action.
 /// @param    id The action id for this action to be returned after
 ///                registration.
 /// @param nargs The variadic number of parameters that the action accepts.
 /// @param   ... The HPX types of the action parameters (HPX_INT, ...).
 ///
-/// @returns     HPX_SUCCESS or an error code
-int libhpx_register_action(hpx_action_type_t type, uint32_t attr,
-                           const char *key, hpx_action_t *id, void (*f)(void),
-                           unsigned nargs, ...);
+void libhpx_register_action(hpx_action_type_t type, uint32_t attr,
+                           const char *key, hpx_action_t *id, unsigned n, ...);
 
 /// Called when all of the actions have been registered.
 void action_registration_finalize(void);
@@ -294,14 +299,14 @@ int action_table_size(void);
 static inline int action_exec_parcel(hpx_action_t id, hpx_parcel_t *p) {
   CHECK_ACTION(id);
   const action_t *action = &actions[id];
-  return action->parcel_class->exec(action, p);
+  return action->parcel_class->exec_parcel(action, p);
 }
 
 static inline void action_pack_parcel_va(hpx_action_t id, hpx_parcel_t *p,
                                          int n, va_list *args) {
   CHECK_ACTION(id);
   const action_t *action = &actions[id];
-  return action->parcel_class->pack(action, p, n, args);
+  return action->parcel_class->pack_parcel(action, p, n, args);
 }
 
 static inline hpx_parcel_t *action_new_parcel_va(hpx_action_t id,
@@ -311,7 +316,7 @@ static inline hpx_parcel_t *action_new_parcel_va(hpx_action_t id,
                                                  int n, va_list *args) {
   CHECK_ACTION(id);
   const action_t *action = &actions[id];
-  return action->parcel_class->new(action, addr, rsync, rop, n, args);
+  return action->parcel_class->new_parcel(action, addr, rsync, rop, n, args);
 }
 
 static inline hpx_parcel_t *action_new_parcel(hpx_action_t id, hpx_addr_t addr,
@@ -333,6 +338,17 @@ static inline int action_call_async_va(hpx_action_t id, hpx_addr_t addr,
   return act->call_class->async(act, addr, lsync, lop, rsync, rop, n, args);
 }
 
+static inline int action_call_async(hpx_action_t id, hpx_addr_t addr,
+                                    hpx_addr_t lsync, hpx_action_t lop,
+                                    hpx_addr_t rsync, hpx_action_t rop,
+                                    int n, ...) {
+  va_list args;
+  va_start(args, n);
+  int e = action_call_async_va(id, addr, lsync, lop, rsync, rop, n, &args);
+  va_end(args);
+  return e;
+}
+
 static inline int action_call_lsync_va(hpx_action_t id, hpx_addr_t addr,
                                        hpx_addr_t rsync, hpx_action_t rop,
                                        int n, va_list *args) {
@@ -342,8 +358,8 @@ static inline int action_call_lsync_va(hpx_action_t id, hpx_addr_t addr,
 }
 
 static inline int action_call_lsync(hpx_action_t id, hpx_addr_t addr,
-                                       hpx_addr_t rsync, hpx_action_t rop,
-                                       int n, ...) {
+                                    hpx_addr_t rsync, hpx_action_t rop,
+                                    int n, ...) {
   va_list args;
   va_start(args, n);
   int e = action_call_lsync_va(id, addr, rsync, rop, n, &args);
@@ -359,6 +375,14 @@ static inline int action_call_rsync_va(hpx_action_t id, hpx_addr_t addr,
   return action->call_class->rsync(action, addr, rout, rbytes, n, args);
 }
 
+static inline int action_call_rsync(hpx_action_t id, hpx_addr_t addr,
+                                    void *rout, size_t rbytes, int n, ...) {
+  va_list args;
+  va_start(args, n);
+  int e = action_call_rsync_va(id, addr, rout, rbytes, n, &args);
+  va_end(args);
+  return e;
+}
 
 static inline int action_when_async_va(hpx_action_t id, hpx_addr_t addr,
                                        hpx_addr_t gate, hpx_addr_t lsync,
@@ -465,13 +489,11 @@ static inline bool action_is_opencl(hpx_action_t id) {
 ///
 /// @param        type The type of the action (THREAD, TASK, INTERRUPT, ...).
 /// @param        attr The attribute of the action (PINNED, PACKED, ...).
-/// @param     handler The action handler (the function).
 /// @param          id The action id (the hpx_action_t address).
 /// @param __VA_ARGS__ The parameter types (HPX_INT, ...).
-#define LIBHPX_REGISTER_ACTION(type, attr, id, handler, ...)          \
-  libhpx_register_action(type, attr, __FILE__ ":" _HPX_XSTR(id),      \
-                         &id, (handler_t)handler,          \
-                         __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+#define LIBHPX_REGISTER_ACTION(type, attr, id,  ...)                    \
+  libhpx_register_action(type, attr, __FILE__ ":" _HPX_XSTR(id),        \
+                         &id, __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
 /// Create an action id for a function, so that it can be called asynchronously.
 ///
@@ -486,8 +508,8 @@ static inline bool action_is_opencl(hpx_action_t id) {
 ///
 /// @param         type The action type.
 /// @param         attr The action attributes.
-/// @param      handler The handler.
 /// @param           id The action id.
+/// @param      handler The handler.
 /// @param  __VA_ARGS__ The HPX types of the action paramters
 ///                     (HPX_INT, ...).
 #define LIBHPX_ACTION(type, attr, id, handler, ...)                  \
@@ -496,5 +518,10 @@ static inline bool action_is_opencl(hpx_action_t id) {
     LIBHPX_REGISTER_ACTION(type, attr, id, handler , ##__VA_ARGS__); \
   }                                                                  \
   static HPX_CONSTRUCTOR void _register##_##id(void)
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_ACTION_H

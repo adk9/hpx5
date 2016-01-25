@@ -19,9 +19,9 @@
 #include <libsync/lockable_ptr.h>
 #include "cvar.h"
 
-#define LCO_LOG_NEW(gva) do {                                   \
+#define LCO_LOG_NEW(gva, lva) do {                              \
     dbg_assert_str(gva, "Could not malloc global memory\n");    \
-    log_lco("allocated lco %"PRIu64"\n", gva);                  \
+    log_lco("allocated lco %"PRIu64" (%p)\n", gva, (void*)lva); \
   } while (0)
 
 /// This constant is used to determine when a set should be performed

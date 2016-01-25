@@ -259,6 +259,16 @@ _agas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
 
 static gas_t _agas_vtable = {
   .type           = HPX_GAS_AGAS,
+  .string = {
+    .memget       = agas_memget,
+    .memget_rsync = agas_memget_rsync,
+    .memget_lsync = agas_memget_lsync,
+    .memput       = agas_memput,
+    .memput_lsync = agas_memput_lsync,
+    .memput_rsync = agas_memput_rsync,
+    .memcpy       = agas_memcpy,
+    .memcpy_sync  = agas_memcpy_sync,
+  },
   .dealloc        = _agas_dealloc,
   .local_size     = NULL,
   .local_base     = NULL,
@@ -275,13 +285,6 @@ static gas_t _agas_vtable = {
   .calloc_local   = agas_local_calloc,
   .free           = agas_free,
   .move           = agas_move,
-  .memget         = agas_memget,
-  .memget_sync    = agas_memget_lsync,
-  .memput         = agas_memput,
-  .memput_lsync   = agas_memput_lsync,
-  .memput_rsync   = agas_memput_rsync,
-  .memcpy         = agas_memcpy,
-  .memcpy_sync    = agas_memcpy_sync,
   .owner_of       = _agas_owner_of
 };
 

@@ -10,17 +10,38 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
 
-#include <libhpx/gpa.h>
-#include <libhpx/locality.h>
-#include <libhpx/network.h>
+#include <iostream>
+#include <hpx/hpx++.h>
 
-static int _lco_set_handler(int src, uint64_t command) {
-  hpx_addr_t lco = offset_to_gpa(here->rank, command);
-  hpx_lco_set(lco, 0, NULL, HPX_NULL, HPX_NULL);
-  return HPX_SUCCESS;
+namespace {
+using namespace hpx;
+
+int test_handler(void) {
+  auto f1 = lco::Future<double>::Alloc();
+  auto f2 = lco::Future<void>::Alloc();
+
+  hpx_exit(hpx::SUCCESS);
 }
-COMMAND_DEF(lco_set, _lco_set_handler);
+HPX_ACTION(HPX_DEFAULT, 0, test, test_handler);
+}
+
+int main(int argc, char* argv[]) {
+
+  if (int e = hpx::init(&argc, &argv)) {
+    std::cerr << "HPX: failed to initialize." << std::endl;
+    return e;
+  }
+
+  if (int e = hpx::run(&test)) {
+    return e;
+  }
+
+  hpx::finalize();
+  return 0;
+}
+

@@ -14,6 +14,10 @@
 #ifndef HPX_LCO_H
 #define HPX_LCO_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @defgroup lcos LCOs
 /// @brief Functions and definitions for using LCOs
 /// @{
@@ -24,8 +28,6 @@
 #include <hpx/addr.h>
 #include <hpx/attributes.h>
 #include <hpx/types.h>
-
-
 
 /// Forward declarations.
 /// @{
@@ -75,7 +77,7 @@ void hpx_lco_delete_sync(hpx_addr_t lco)
 /// rsync lco will only be set *once*, and any errors will be reported there.
 ///
 /// @param     n The number of LCOs to delete.
-/// @param   lco An array of the addresses of the LCOs to delete.
+/// @param  lcos An array of the addresses of the LCOs to delete.
 /// @param rsync An LCO to signal remote completion of all of the deletes.
 ///
 /// @returns HPX_SUCCESS, or an error if the operation failed (errors in the
@@ -737,4 +739,9 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
 /// @}
 
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

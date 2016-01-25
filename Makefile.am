@@ -27,11 +27,6 @@ if ENABLE_TESTS
 SUBDIRS      += tests
 endif
 
-if HAVE_HPXPP
-SUBDIRS      += hpx++
-DIST_SUBDIRS += hpx++
-endif
-
 bin_SCRIPTS = scripts/hpx-config
 
 install-exec-hook:

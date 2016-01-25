@@ -14,7 +14,6 @@ libnetwork_la_SOURCES  = locality.c \
                          parcel_block.c \
                          hpx_parcel_glue.c \
                          smp.c inst.c \
-                         commands.c \
                          coalesced_network.c
 
 if HAVE_NETWORK

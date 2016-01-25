@@ -266,54 +266,53 @@ void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
 int hpx_gas_memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
-  dbg_assert(gas->memget);
-  return gas->memget(here->gas, to, from, size, lsync);
+  dbg_assert(gas->string.memget_rsync);
+  return gas->string.memget(here->gas, to, from, size, lsync, HPX_NULL);
 }
 
 int hpx_gas_memget_sync(void *to, hpx_addr_t from, size_t size) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
-  dbg_assert(gas->memget_sync);
-  return gas->memget_sync(here->gas, to, from, size);
+  dbg_assert(gas->string.memget_lsync);
+  return gas->string.memget_lsync(here->gas, to, from, size);
 }
 
 int hpx_gas_memput(hpx_addr_t to, const void *from, size_t size,
                    hpx_addr_t lsync, hpx_addr_t rsync) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
-  dbg_assert(gas->memput);
-  return gas->memput(here->gas, to, from, size, lsync, rsync);
+  dbg_assert(gas->string.memput);
+  return gas->string.memput(here->gas, to, from, size, lsync, rsync);
 }
 
 int hpx_gas_memput_lsync(hpx_addr_t to, const void *from, size_t size,
                          hpx_addr_t rsync) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
-  dbg_assert(gas->memput_lsync);
-  return gas->memput_lsync(here->gas, to, from, size, rsync);
+  dbg_assert(gas->string.memput_lsync);
+  return gas->string.memput_lsync(here->gas, to, from, size, rsync);
 }
 
 int hpx_gas_memput_rsync(hpx_addr_t to, const void *from, size_t size) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
-  dbg_assert(gas->memput_rsync);
-  return gas->memput_rsync(here->gas, to, from, size);
+  dbg_assert(gas->string.memput_rsync);
+  return gas->string.memput_rsync(here->gas, to, from, size);
 }
 
 int hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
 {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
-  dbg_assert(gas->memcpy);
-  // NB: weird call syntax prevents clang error when memcpy is builtin
-  return (*gas->memcpy)(here->gas, to, from, size, sync);
+  dbg_assert(gas->string.memcpy);
+  return gas->string.memcpy(here->gas, to, from, size, sync);
 }
 
 int hpx_gas_memcpy_sync(hpx_addr_t to, hpx_addr_t from, size_t size) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
-  dbg_assert(gas->memcpy_sync);
-  return gas->memcpy_sync(here->gas, to, from, size);
+  dbg_assert(gas->string.memcpy_sync);
+  return gas->string.memcpy_sync(here->gas, to, from, size);
 }
 
 static int _gas_alloc_local_at_handler(size_t n, uint32_t bsize,

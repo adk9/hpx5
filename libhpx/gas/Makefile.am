@@ -3,7 +3,7 @@ SUBDIRS =
 # LT Utility libraries
 noinst_LTLIBRARIES = libgas.la
 
-EXTRA_DIST = parcel/emulation.h smp/smp.h
+EXTRA_DIST = smp/smp.h
 
 # libgas files and flags
 libgas_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
@@ -12,7 +12,6 @@ libgas_la_SOURCES  = hpx_gas_glue.c \
                      gas.c \
                      gpa.c \
                      smp/smp.c \
-                     parcel/memcpy.c \
                      bcast.c
 libgas_la_LIBADD   = 
 

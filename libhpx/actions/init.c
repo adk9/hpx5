@@ -20,17 +20,17 @@
 #include <libhpx/debug.h>
 #include "init.h"
 
-void action_init_handlers(action_t *action) {
+void action_init(action_t *action, int n, va_list *args) {
   uint32_t attr = action->attr & (HPX_MARSHALLED | HPX_VECTORED);
   switch (attr) {
    case (HPX_ATTR_NONE):
-    action_init_ffi(action);
+    action_init_ffi(action, n, args);
     return;
    case (HPX_MARSHALLED):
-    action_init_marshalled(action);
+    action_init_marshalled(action, n, args);
     return;
    case (HPX_MARSHALLED | HPX_VECTORED):
-    action_init_vectored(action);
+    action_init_vectored(action, n, args);
     return;
   }
   dbg_error("Could not initialize action for attr %" PRIu32 "\n", attr);

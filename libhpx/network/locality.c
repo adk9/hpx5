@@ -25,11 +25,11 @@
 locality_t *here = NULL;
 
 /// The action that shuts down the HPX scheduler.
-static int _locality_stop_handler(int src, uint64_t code) {
+static int _locality_stop_handler(uint64_t code) {
   dbg_assert(code < UINT64_MAX);
-  log_net("received shutdown from %d (code %i)\n", src, (uint32_t)code);
+  log_net("received shutdown (code %i)\n", (uint32_t)code);
   scheduler_stop(here->sched, (uint32_t)code);
   return HPX_SUCCESS;
 }
 LIBHPX_ACTION(HPX_INTERRUPT, 0, locality_stop, _locality_stop_handler,
-              HPX_INT, HPX_UINT64);
+              HPX_UINT64);

@@ -43,13 +43,6 @@ AC_PROG_INSTALL
 AM_PROG_AS
 AX_CFI_DIRECTIVES
 
-# C++ doesn't have an AC_PROG_CXX_CXX11 version, but we can get that effect
-# through the use of an AX m4 macro. We're currently mandating a gnu++11
-# compiler, but we could conceivably reduce the strength of our requirement in
-# cases where we're not specifically depending on C++11 functionality. The
-# modern systems are compliant enough for us though.
-AX_CXX_COMPILE_STDCXX_11([ext],[mandatory])
-
 # Initialize automake and libtool
 AM_INIT_AUTOMAKE([1.11 dist-bzip2 subdir-objects foreign tar-ustar -Wall
                   -Werror parallel-tests color-tests])
@@ -146,7 +139,7 @@ AS_IF([test "x$enable_parallel_config" != xno],
 # The substituted variables are straightforward. The LIBHPX_ prefixed variables
 # are variables required to build an link libhpx itself. The HPX_PC variables
 # are replaced in the hpx.pc file to allow external tools to link with libhpx.
-
+HPX_CONFIG_HPXPP
 HPX_CONFIG_PHOTON([contrib/photon], [photon])
 HPX_CONFIG_MPI([ompi])
 HPX_CONFIG_PMI([cray-pmi])

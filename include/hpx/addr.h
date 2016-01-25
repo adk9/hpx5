@@ -14,6 +14,10 @@
 #ifndef HPX_ADDR_H
 #define HPX_ADDR_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @addtogroup agas
 /// @{
 
@@ -75,5 +79,9 @@ int64_t hpx_addr_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize)
   HPX_PUBLIC;
 
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
