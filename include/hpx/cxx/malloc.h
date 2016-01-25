@@ -22,18 +22,18 @@ namespace hpx {
 namespace gas {
 
 void free(const global_ptr<void>& gva) {
-  hpx_gas_free_sync(gva);
+  hpx_gas_free_sync(gva.get());
 }
 
 template <template <typename> class LCO>
 void free(const global_ptr<void>& gva, const global_ptr<LCO<void>>& rsync) {
   static_assert(std::is_base_of<lco::Base<void>, LCO<void>>::value,
                 "rsync must be a control-only LCO");
-  hpx_gas_free(gva, rsync.get());
+  hpx_gas_free(gva.get(), rsync.get());
 }
 
 void free(const global_ptr<void>& gva, std::nullptr_t) {
-  hpx_gas_free(gva, HPX_NULL);
+  hpx_gas_free(gva.get(), HPX_NULL);
 }
 
 /// The generic gas allocation routine.
