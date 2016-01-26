@@ -154,6 +154,10 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
   }                                                               \
   static HPX_CONSTRUCTOR void _register##_##id(void)
 
+/// Get the handler associated with a given action id.
+hpx_action_handler_t hpx_action_get_handler(hpx_action_t id)
+  HPX_PUBLIC;
+
 /// @}
 
 #ifdef __cplusplus
