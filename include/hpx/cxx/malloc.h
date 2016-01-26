@@ -71,6 +71,15 @@ global_ptr<T> alloc_cyclic(size_t n, unsigned block) {
   return malloc<T>(n, block, 0, HPX_GAS_DIST_CYCLIC, HPX_GAS_ATTR_NONE);
 }
 
+template <typename T>
+T* malloc(size_t bytes) {
+  return static_cast<T*>(hpx_malloc_registered(bytes));
+}
+
+void free(void* registered) {
+  hpx_free_registered(registered);
+}
+
 } // namespace hpx
 
 #endif // HPX_CXX_MALLOC_H
