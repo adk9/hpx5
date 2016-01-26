@@ -55,7 +55,6 @@ HPXPP_REGISTER_ACTION(hello);
 
 hpx_status_t test1(int arg) {
 
-  hello_action_struct obj;
   int r;
 
   // commented code should fail to compile
