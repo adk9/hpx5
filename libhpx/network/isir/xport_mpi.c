@@ -152,7 +152,7 @@ _init_mpi(void) {
   int init = 0;
   MPI_Initialized(&init);
   if (!init) {
-    static const int LIBHPX_THREAD_LEVEL = MPI_THREAD_FUNNELED;
+    static const int LIBHPX_THREAD_LEVEL = MPI_THREAD_SERIALIZED;
     int level;
     int e = MPI_Init_thread(NULL, NULL, LIBHPX_THREAD_LEVEL, &level);
     if (e != MPI_SUCCESS) {
