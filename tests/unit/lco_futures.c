@@ -60,6 +60,7 @@ static int lco_future_new_handler(void) {
 
   for (int i = 0; i < count; i++) {
     hpx_lco_delete(futures[i], HPX_NULL);
+    sizes[i] = 4;
     futures[i] = hpx_lco_future_new(4);
     hpx_call(HPX_THERE(i), _set_value, futures[i], &value);
   }
@@ -99,6 +100,8 @@ static int lco_future_array_handler(void) {
   printf("value = %"PRIu64"\n", value);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
+  hpx_lco_delete(base);
+  hpx_lco_delete(other);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, lco_future_array, lco_future_array_handler);
