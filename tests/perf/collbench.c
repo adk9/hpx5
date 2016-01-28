@@ -47,6 +47,11 @@ static int
 _allreduce_set_get_handler(hpx_addr_t allreduce, int iters, size_t size) {
   unsigned char sbuf[size];
   unsigned char rbuf[size];
+
+  for (int i = 0, e = size; i < e; ++i) {
+    sbuf[i] = rand();
+  }
+
   for (int i = 0; i < iters; ++i) {
     hpx_lco_set_lsync(allreduce, size, sbuf, HPX_NULL);
     hpx_lco_get(allreduce, size, rbuf);
@@ -61,6 +66,11 @@ static int
 _allreduce_join_handler(hpx_addr_t allreduce, int iters, size_t size) {
   unsigned char sbuf[size];
   unsigned char rbuf[size];
+
+  for (int i = 0, e = size; i < e; ++i) {
+    sbuf[i] = rand();
+  }
+
   int id = (HPX_LOCALITY_ID * HPX_THREADS) + HPX_THREAD_ID;
   hpx_addr_t f = hpx_lco_future_new(0);
   for (int i = 0; i < iters; ++i) {
@@ -78,6 +88,11 @@ static int
 _allreduce_join_sync_handler(hpx_addr_t allreduce, int iters, size_t size) {
   unsigned char sbuf[size];
   unsigned char rbuf[size];
+
+  for (int i = 0, e = size; i < e; ++i) {
+    sbuf[i] = rand();
+  }
+
   int id = (HPX_LOCALITY_ID * HPX_THREADS) + HPX_THREAD_ID;
   for (int i = 0; i < iters; ++i) {
     hpx_lco_allreduce_join_sync(allreduce, id, size, sbuf, rbuf);
