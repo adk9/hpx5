@@ -53,7 +53,6 @@ static void _pack_pinned_ffi_n(const void *obj, hpx_parcel_t *p, int n,
                                va_list *args) {
   const action_t *action = obj;
   const ffi_cif *cif = action->env;
-  void *buffer = hpx_parcel_get_data(p);
 
   DEBUG_IF (n + 1 != cif->nargs) {
     const char *key = action->key;
@@ -64,15 +63,28 @@ static void _pack_pinned_ffi_n(const void *obj, hpx_parcel_t *p, int n,
   // adding an extra "slot" for the pinned parameter.
   void *argps[++n];
 
-  // special case pinned actions
-  argps[0] = &argps[0];
+  // Special case pinned actions.
+  //
+  // ffi actually thinks that it needs to serialize a pointer as its first
+  // argument. This is the pinned pointer that we need at the call site. We
+  // don't have this pointer here though, and we don't want to serialize it. No
+  // matter what we do ffi_ptrarray_to_raw is going to need to process the first
+  // pointer though.
+  //
+  // We cleverly spoof this pointer to be sizeof(void*) bytes off the front of
+  // the parcel buffer. During serialization, this will cause ffi to overwrite
+  // the first 8 bytes of the target buffer with the 8 bytes that were there,
+  // thus no header data is changed and the rest of the payload is handled
+  // properly.
+  void *buffer = p->buffer - sizeof(void*);
+  argps[0] = buffer;
 
-  // copy the individual vaargs
+  // Copy the individual vaargs.
   for (int i = 1, e = n; i < e; ++i) {
     argps[i] = va_arg(*args, void*);
   }
 
-  // use ffi to copy them to the buffer
+  // Use ffi to copy them to the buffer.
   ffi_ptrarray_to_raw((void*)cif, argps, buffer);
 }
 
@@ -103,7 +115,9 @@ static hpx_parcel_t *_new_pinned_ffi_n(const void *obj, hpx_addr_t addr,
   const action_t *action = obj;
   hpx_action_t id = *action->id;
   hpx_pid_t pid = hpx_thread_current_pid();
-  size_t bytes = ffi_raw_size(action->env);
+  // The ffi cif thinks we're going to send one more pointer than we're actually
+  // going to send, so we adjust the size before parcel allocation.
+  size_t bytes = ffi_raw_size(action->env) - sizeof(void*);
   hpx_parcel_t *p = parcel_new(addr, id, c_addr, c_action, pid, NULL, bytes);
   _pack_pinned_ffi_n(obj, p, n, args);
   return p;
@@ -126,8 +140,15 @@ static int _exec_pinned_ffi_n(const void *obj, hpx_parcel_t *p) {
   }
 
   const action_t *action = obj;
+
+  // We need to pack a void* array from the parcel data buffer using the ffi cif
+  // information. ffi thinks that we have one more parameter then we sent in the
+  // parcel though, the pinned pointer. We roll-back the pointer we give to ffi
+  // to deal with this---it reads garbage into the first element but we then
+  // overwrite that with the pointer to the pinned target, so we get the right
+  // value in the end.
   ffi_cif *cif = action->env;
-  void *args = hpx_parcel_get_data(p);
+  void *args = p->buffer - sizeof(void*);
   void *avalue[cif->nargs];
   ffi_raw_to_ptrarray(cif, args, avalue);
   avalue[0] = &target;
