@@ -19,11 +19,13 @@
 #include <hpx/hpx++.h>
 
 namespace {
-using namespace hpx;
 
 int test_handler(void) {
-  auto f1 = lco::Future<double>::Alloc();
-  auto f2 = lco::Future<void>::Alloc();
+  auto f1 = hpx::lco::Future<double>::Alloc();
+  auto f2 = hpx::lco::Future<void>::Alloc();
+
+  hpx::lco::dealloc(f1);
+  hpx::lco::dealloc(f2);
 
   hpx_exit(hpx::SUCCESS);
 }

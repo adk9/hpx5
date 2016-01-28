@@ -66,6 +66,26 @@ void reset(const global_ptr<LCO<T>>& lco) {
   hpx_lco_reset(lco.get());
 }
 
+template <typename T, template <typename> class LCO>
+void dealloc(const global_ptr<LCO<T>>& lco) {
+  static_assert(std::is_base_of<Base<T>, LCO<T>>::value, "LCO type required");
+  hpx_lco_delete_sync(lco.get());
+}
+
+template <typename T, template <typename> class LT,
+          typename U, template <typename> class LU>
+void dealloc(const global_ptr<LT<T>>& lco, const global_ptr<LU<U>>& sync) {
+  static_assert(std::is_base_of<Base<T>, LT<T>>::value, "LCO type required");
+  static_assert(std::is_base_of<Base<U>, LU<U>>::value, "LCO type required");
+  hpx_lco_delete(lco.get(), sync.get());
+}
+
+template <typename T, template <typename> class LCO>
+void dealloc(const global_ptr<LCO<T>>& lco, std::nullptr_t) {
+  static_assert(std::is_base_of<Base<T>, LCO<T>>::value, "LCO type required");
+  hpx_lco_delete_sync(lco.get(), HPX_NULL);
+}
+
 template <typename T>
 class Future : public Base<T> {
  public:
