@@ -25,6 +25,9 @@
 #include <libhpx/action.h>
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
+#include <libhpx/gas.h>
+
+#include "action_coalescing_network.h"
 
 /// A RPC call with a user-specified continuation action.
 int _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
@@ -52,9 +55,22 @@ int _hpx_call(hpx_addr_t addr, hpx_action_t id, hpx_addr_t result, int n, ...) {
   va_list args;
   va_start(args, n);
   hpx_action_t rop = hpx_lco_set_action;
-  int e = action_call_lsync_va(id, addr, result, rop, n, &args);
-  va_end(args);
-  return e;
+
+  // 1)check which destination the data is targetted for.
+  gas_t  *gas = here->gas;
+  hpx_addr_t l = gas_owner_of(gas, addr);
+
+  // if locally addressed, then continue with the default implementation
+  // with parcel wrapper
+  if (l == HPX_HERE) {
+    int e = action_call_lsync_va(id, addr, result, rop, n, &args);
+    va_end(args);
+    return e;
+  } else {  // Otherwise coalesce data-parcels here
+    int e = coalesce_data(addr, id, l, args, n);
+    va_end(args);
+    return e;
+  }
 }
 
 int _hpx_call_sync(hpx_addr_t addr, hpx_action_t id, void *out, size_t olen,

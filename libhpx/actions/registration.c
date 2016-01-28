@@ -28,6 +28,8 @@
 #endif
 #include "init.h"
 
+#define COALESCING_SIZE 10000
+
 /// A static action table.
 ///
 /// We currently need to be able to register actions before we call hpx_init()
@@ -44,7 +46,8 @@ static void HPX_CONSTRUCTOR _init_null_handler(void) {
     .type = 0,
     .attr = UINT32_C(0),
     .cif = NULL,
-    .env = NULL
+    .env = NULL,
+    .coalesced_dest_buffer = NULL
   };
 }
 
@@ -88,6 +91,21 @@ static int _push_back(hpx_action_t *id, const char *key, handler_t f,
   back->attr = attr;
   back->cif = cif;
   back->env = env;
+
+  if (action_is_coalesced(*id)) {
+    back->coalesced_dest_buffer = calloc(HPX_LOCALITIES, sizeof(_coalesced_dest_buffer_t));
+    size_t bytes =  COALESCING_SIZE * (sizeof(hpx_addr_t) + sizeof(uint64_t);
+    for (int l = 0; l < HPX_LOCALITIES; l++) {
+      //TODO: we want the coalescing size in terms of number of buffers, not bytes
+      //TODO: skip current locality
+
+      back->coalesced_dest_buffer[l]->fatp = action_new_parcel(_demux,
+					    HPX_THERE(l), 0, 0, 2, NULL, bytes);
+      back->coalesced_dest_buffer[l]->current_data_count = 0;
+    }
+  } else {
+    back->coalesced_dest_buffer = NULL;
+  }
   action_init_handlers(back);
   return HPX_SUCCESS;
 }

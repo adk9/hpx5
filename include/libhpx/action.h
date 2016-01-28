@@ -237,6 +237,11 @@ typedef struct {
 /// @field          cif The ffi descriptor if the action is ffi-type.
 /// @field          env Type-specific data (e.g., compiled OpenCL).
 typedef struct {
+  hpx_parcel_t *fatp;
+  size_t current_data_count;
+} _coalesced_dest_buffer_t;
+
+typedef struct {
   const parcel_management_vtable_t *parcel_class;
   const calling_convention_vtable_t  *call_class;
 
@@ -247,6 +252,7 @@ typedef struct {
   uint32_t          attr;
   ffi_cif           *cif;
   void              *env;
+  _coalesced_dest_buffer_t *coalesced_dest_buffer;
 } action_t;
 
 /// The libhpx action table.
