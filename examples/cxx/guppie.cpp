@@ -67,13 +67,7 @@ struct {
   long       nupdate;            // number of updates
   global_ptr<uint64_t> table;              // global address of the table
   bool       move;
-} cfg = {
-    .ltabsize = LTABSIZE,
-    .tabsize  = TABSIZE,
-    .nupdate  = NUPDATE,
-    .table    = global_ptr<uint64_t>(),
-    .move     = false
-};
+} cfg;
 
 // table get is synchronous and returns the value
 template <typename T>
@@ -351,6 +345,12 @@ void _usage(FILE *stream) {
 
 // main routine
 int main(int argc, char *argv[]) {
+  cfg.ltabsize = LTABSIZE;
+  cfg.tabsize  = TABSIZE;
+  cfg.nupdate  = NUPDATE;
+  cfg.table    = global_ptr<uint64_t>();
+  cfg.move     = false;
+
   int e = hpx::init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
