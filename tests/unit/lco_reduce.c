@@ -92,7 +92,7 @@ static int lco_reduce_getRef_handler(void) {
     hpx_lco_delete(and, HPX_NULL);
 
     // Get the gathered value, and print the debugging string.
-    double *ans = (double*)malloc(sizeof(double));
+    double *ans = NULL;
     hpx_lco_getref(newdt, sizeof(*ans), (void **)&ans);
     double compval = nDoms * ((nDoms-1)/2) * data;
     if (fabs((compval - *ans)/compval) > 0.001) { // works if not near zero
