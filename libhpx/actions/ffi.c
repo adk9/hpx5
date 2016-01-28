@@ -197,7 +197,7 @@ static const parcel_management_vtable_t _ffi_n_vtable = {
 
 static const parcel_management_vtable_t _pinned_ffi_n_vtable = {
   .new_parcel = _new_pinned_ffi_n,
-  .pack_parcel = _pack_ffi_n,
+  .pack_parcel = _pack_pinned_ffi_n,
   .exec_parcel = _exec_pinned_ffi_n,
   .exit = exit_pinned_action
 };

@@ -85,7 +85,7 @@ hpx_addr_t _cascade(hpx_addr_t done, hpx_addr_t val, const int n) {
     // set up the initial action we want to run
     hpx_parcel_set_target(p, val);
     hpx_parcel_set_action(p, _parcelsendthrough_increment);
-    hpx_parcel_set_data(p, &i, sizeof(i));
+    hpx_parcel_set_args(p, &i);
 
     // set up the continuation (trigger the next lco, or the done lco if we're
     // done)
