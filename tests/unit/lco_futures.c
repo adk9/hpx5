@@ -100,8 +100,6 @@ static int lco_future_array_handler(void) {
   printf("value = %"PRIu64"\n", value);
 
   printf(" Elapsed: %g\n", hpx_time_elapsed_ms(t1));
-  hpx_lco_delete(base);
-  hpx_lco_delete(other);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, lco_future_array, lco_future_array_handler);
