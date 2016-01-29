@@ -34,6 +34,10 @@ typedef struct {
   void *cyclic_bitmap;
 } agas_t;
 
+// set the block size of an allocation out-of-band using this TLS
+// variable
+extern __thread size_t agas_alloc_bsize;
+
 struct gas *gas_agas_new(const struct config *config, struct boot *boot);
 
 void agas_global_allocator_init(agas_t *agas);

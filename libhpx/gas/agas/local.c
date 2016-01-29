@@ -36,6 +36,7 @@ agas_local_alloc(size_t n, uint32_t bsize, uint32_t boundary, uint32_t attr) {
   uint32_t padded = UINT32_C(1) << align;
   uint32_t aligned = max_u32(boundary, padded);
 
+  agas_alloc_bsize = aligned;
   char *lva = global_memalign(aligned, n * padded);
   if (!lva) {
     return HPX_NULL;
