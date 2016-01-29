@@ -13,15 +13,15 @@ Photon networking should be enabled, which is detailed in next section.
 
 The HPX-5 configuration infrastructure supports the use of ‘pkg-config’ to look
 for installed packages. In particular, if your compilation environment requires
-explicit paths to MPI, you should compile with --enable-mpi --with-mpi=ompi,
-mvapich2, etc.
+explicit paths to MPI, you should compile with --enable-mpi --with-mpi={ompi,
+mvapich2,etc}.
 
 See ‘./configure --help’ for further details.
 
 ## Configuring with MPI
 
-The `--enable-mpi` configuration flag will add support for `mpirun` and the MPI
-network. By default, HPX–5 will try and see if `hpx.h` and `libmpi.so` are
+The `--enable-mpi` configuration flag will add support for `mpirun` and the ISIR
+network. By default, HPX–5 will try and see if `mpi.h` and `libmpi.so` are
 available with no additional flags (e.g., for `CC=mpicc` or on Cray `CC=cc`).
 
 If you want to specify which MPI should be used or the build system cannot find
@@ -79,6 +79,11 @@ seen no performance benefits to using it at this point.
 ```
 $ ./configure --prefix=/path/to/install/ CC=cc
 ```
+We recommend that users of the Cray Intel module also `module load gcc`, as the
+intel tools try to provide compatibility with the gnu toolchain that it sees in
+the path, and the default gnu toolchain in the CLE is ancient. See
+https://www.nersc.gov/users/software/compilers/intel-fortran-c-and-c/intel-bug-reports/c-11-header-files-appear-missing-on-edison/
+for more details.
 
 ### MPI Details
 
@@ -91,23 +96,11 @@ If you have MPICH loaded, you need to specify the pkg-config package manually.
 
 ### Photon Details
 
-Photon requires an explicit `--enable-ugni` configuration argument.
+Photon requires an explicit `--enable-ugni --disable-libfabric` configuration argument.
 
 ```
 $ ./configure --prefix=/path/to/install/ CC=cc --enable-photon 
-  --enable-pmi PHOTON_CARGS="--enable-ugni"
-```
-
-## System-specific Notes
-
-### Stampede
-
-In order to build with Photon networking on stampede pass PHOTON_CARGS to ofed
-path during configuration.
-
-```
-$ ./configure --enable-mpi CC=mpicc --enable-photon 
-  PHOTON_CARGS="LDFLAGS=-L/opt/ofed/lib64 CPPFLAGS=-I/opt/ofed/include"
+  --enable-pmi PHOTON_CARGS="--enable-ugni --disable-libfabric"
 ```
 
 ## Bootstrapping
