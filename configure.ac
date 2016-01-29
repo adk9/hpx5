@@ -13,6 +13,12 @@ m4_define([LIBHPX_MINOR], [1])
 m4_define([LIBHPX_PATCH], [0])
 AC_INIT([hpx-5], LIBHPX_MAJOR.LIBHPX_MINOR.LIBHPX_PATCH, [hpx@indiana.edu])
 
+# WE OVERWRITE "-O2 -g" default flags, because there is no world where
+# ./hpx/configure CFLAGS="-O2 -g" is better than ./hpx/configure CXXFLAGS="-O3
+# -g"
+: ${CFLAGS="-O3 -g"}
+: ${CXXFLAGS="-O3 -g"}
+
 AC_SUBST(HPX_COPYRIGHT,["Copyright (c) 2013-2015, Trustees of Indiana University."])
 AC_COPYRIGHT([Copyright (c) 2013-2015, Trustees of Indiana University.])
 
