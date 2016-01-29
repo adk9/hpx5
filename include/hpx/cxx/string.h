@@ -45,8 +45,6 @@ void memget(void* to, const global_ptr<T>& from, size_t n) {
   }
 } // template memget
 
-/// @overload memget(void*, const global_ptr<T>&, size_t)
-///
 /// This version of memget is completely asynchronous, i.e., it will return
 /// immediately. The user must provide an @p lsync LCO to test for memget
 /// completion, as there is no other safe mechanism to determine that the local
@@ -95,8 +93,6 @@ void memput(const global_ptr<T>& to, const void *from, size_t n) {
   }
 }
 
-/// @overload memput(const global_ptr<T>&, const void*, size_t)
-///
 /// This version of memput is locally synchronous, it will return when the @p
 /// from buffer can be modified or freed. The user must an @p rsync LCO to test
 /// for remote completion---without an @p rsync there is no way to determine if
@@ -116,8 +112,6 @@ void memput(const global_ptr<T>& to, const void *from, size_t n,
   }
 }
 
-/// @overload memput(const global_ptr<T>&, const void*, size_t)
-///
 /// This version of memput is fully asynchronous. The user will supply a
 /// required @p rsync LCO that they must use remote completion, and may supply
 /// an optional @p lsync LCO that can be used to test for local
@@ -141,8 +135,6 @@ void memput(const global_ptr<T>& to, const void *from, size_t n,
   }
 }
 
-/// @overload memput(const global_ptr<T>&, const void*, size_t)
-///
 /// This version of memput is fully asynchronous. The user will supply a
 /// required @p rsync LCO that they must use remote completion, and may supply
 /// an optional @p lsync LCO that can be used to test for local

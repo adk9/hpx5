@@ -138,13 +138,6 @@ inline
 template <typename A>
 class action_struct {
  private:
-  /// @param        type The type of the action (THREAD, TASK, INTERRUPT, ...).
-  /// @param        attr The attribute of the action (PINNED, PACKED, ...).
-  /// @param     handler The action handler (the function).
-  /// @param          id The action id (the hpx_action_t address).
-  /// @param __VA_ARGS__ The parameter types (HPX_INT, ...).
-  /// #define HPX_REGISTER_ACTION(type, attr, id, handler, ...)
-
   // for 0 args, HPX_REGISTER_ACTION is not HPX_MARSHALLED
   template <typename F, typename Tpl>
   static int _register_helper(F f, Tpl&& t, seq<>&& s) {
