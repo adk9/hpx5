@@ -18,6 +18,7 @@
 #include <hpx/attributes.h>
 #include "sync.h"
 
+/// @struct cptr_t
 /// ----------------------------------------------------------------------------
 /// A "counted pointer" structure.
 ///
@@ -28,8 +29,10 @@
 ///
 /// It relies on having access to a CAS that is twice as big as a pointer.
 ///
-/// @field p - the actual pointer that we're protecting
-/// @field c - the count of the number of times this pointer has been CASed
+/// @var cptr_t::p
+/// the actual pointer that we're protecting
+/// @var cptr_t::c
+/// the count of the number of times this pointer has been CASed
 /// ----------------------------------------------------------------------------
 #ifdef __LP64__
 typedef struct {

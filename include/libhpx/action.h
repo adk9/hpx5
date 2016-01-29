@@ -220,23 +220,34 @@ typedef struct {
 
 } parcel_management_vtable_t;
 
-/// An action table action type.
+/// @struct action_t
+/// @brief An action table action type.
 ///
 /// The action type uses basic multiple inheritance to implement the calling
 /// convention and call interfaces. Action types are allocated in an array, so
 /// their records contain the union of all of the fields that all of the
 /// different actions might need.
 ///
-/// @field parcel_class The parcel management vtable pointer.
-/// @field   call_class The calling convention vtable pointer.
-/// @field       finish Called to finish registration.
-/// @field         fini The destructor.
-/// @field      handler The action handler function pointer.
-/// @field           id The pointer to the action id.
-/// @field          key The pointer to the unique key for the action.
-/// @field         type The action type.
-/// @field         attr Type attributes.
-/// @field          env Type-specific data (e.g., compiled OpenCL).
+/// @var action_t::parcel_class 
+/// The parcel management vtable pointer.
+/// @var action_t::call_class 
+/// The calling convention vtable pointer.
+/// @var action_t::finish 
+/// Called to finish registration.
+/// @var action_t::fini 
+/// The destructor.
+/// @var action_t::handler 
+/// The action handler function pointer.
+/// @var action_t::id 
+/// The pointer to the action id.
+/// @var action_t::key 
+/// The pointer to the unique key for the action.
+/// @var action_t::type
+/// The action type.
+/// @var action_t::attr
+/// Type attributes.
+/// @var action_t::env
+/// Type-specific data (e.g., compiled OpenCL).
 typedef struct {
   const parcel_management_vtable_t *parcel_class;
   const calling_convention_vtable_t  *call_class;

@@ -43,30 +43,38 @@ struct scheduler;
 struct topology;
 /// @}
 
-/// The locality object.
+/// @struct locality
+/// @brief The locality object.
 ///
-/// @field        rank The dense, 0-based rank of this locality.
-/// @field       ranks The total number of ranks running the current job.
-/// @filed       epoch Keep track of the current hpx_run() epoch.
-/// @field        boot The bootstrap object. This provides rank and ranks, as well
-///                    as some basic, IP-based networking functionality.
-/// @field         gas The global address space object. This provides global
-///                    memory allocation and address space functionality.
-/// @field     network The network layer. This provides an active message
-///                    interface targeting global addresses.
-/// @field       sched The lightweight thread scheduler. This provides the
-///                    infrastructure required to create lightweight threads, and
-///                    to deal with inter-thread data and control dependencies
-///                    using LCOs.
-/// @field      config The libhpx configuration object. This stores the
-///                    per-locality configuration parameters based on
-///                    the user-specified runtime configuration values
-///                    and/or the defaults.
-/// @field     actions The symmetric "action table" which stores the
-///                    details of all of the actions registered at this locality.
-/// @field    topology The topology information.
-/// @field percolation An interface for dealing with GPU backends.
-/// @field        mask The default signal mask.
+/// @var locality::rank The dense, 0-based rank of this locality.
+/// @var locality::ranks The total number of ranks running the current job.
+/// @var locality::epoch Keep track of the current hpx_run() epoch.
+/// @var locality::boot
+/// The bootstrap object. This provides rank and ranks, as well as some basic,
+/// IP-based networking functionality.
+/// @var locality::gas
+/// The global address space object. This provides global memory allocation and 
+/// address space functionality.
+/// @var locality::network 
+/// The network layer. This provides an active message interface targeting
+/// global addresses.
+/// @var locality::sched
+/// The lightweight thread scheduler. This provides the infrastructure required
+/// to create lightweight threads, and to deal with inter-thread data and
+/// control dependencies using LCOs.
+/// @var locality::config 
+/// The libhpx configuration object. This stores the per-locality configuration 
+/// parameters based on the user-specified runtime configuration values and/or 
+///the defaults.
+/// @var locality::actions
+/// The symmetric "action table" which stores the details of all of the actions
+/// registered at this locality.
+/// @var locality::topology
+/// The topology information.
+/// @var locality::percolation
+/// An interface for dealing with GPU backends.
+/// @var locality::mask
+/// The default signal mask.
 typedef struct locality {
   uint32_t             rank;
   uint32_t            ranks;

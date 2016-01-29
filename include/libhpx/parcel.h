@@ -62,21 +62,35 @@ static inline uint16_t parcel_pinned(parcel_state_t state) {
   return state & PARCEL_PINNED;
 }
 
-/// The hpx_parcel structure is what the user-level interacts with.
+/// @struct hpx_parcel
+/// @brief The hpx_parcel structure is what the user-level interacts with.
 ///
-/// @field       ustack A pointer to a stack.
-/// @field         next A pointer to the next parcel.
-/// @field          src The src rank for the parcel.
-/// @field         size The data size in bytes.
-/// @field        state The parcel's state bits.
-/// @field       offset Reserved for future use.
-/// @field       action The target action identifier.
-/// @field     c_action The continuation action identifier.
-/// @field       target The target address for parcel_send().
-/// @field     c_target The target address for the continuation.
-/// @field           id A unique identifier for parcel tracing.
-/// @field      padding Ensure consistent buffer alignment with instrumentation.
-/// @field       buffer Either an in-place payload, or a pointer.
+/// @var  hpx_parcel::ustack 
+/// A pointer to a stack.
+/// @var  hpx_parcel::next
+/// A pointer to the next parcel.
+/// @var  hpx_parcel::src
+/// The src rank for the parcel.
+/// @var  hpx_parcel::size
+/// The data size in bytes.
+/// @var  hpx_parcel::state
+/// The parcel's state bits.
+/// @var  hpx_parcel::offset
+/// Reserved for future use.
+/// @var  hpx_parcel::action
+/// The target action identifier.
+/// @var  hpx_parcel::c_action
+/// The continuation action identifier.
+/// @var  hpx_parcel::target
+/// The target address for parcel_send().
+/// @var  hpx_parcel::c_target
+/// The target address for the continuation.
+/// @var  hpx_parcel::id
+/// A unique identifier for parcel tracing.
+/// @var  hpx_parcel::padding
+/// Ensure consistent buffer alignment with instrumentation.
+/// @var  hpx_parcel::buffer
+/// Either an in-place payload, or a pointer.
 struct hpx_parcel {
   struct ustack   *ustack;
   struct hpx_parcel *next;

@@ -25,16 +25,26 @@
 
 struct config;
 
-/// The data structure representing profiling entries
-/// @field        start_time Time of initialization
-/// @field          ref_time Time of resumption of recording session
-/// @field          run_time Total time spent in this entry
-/// @field    counter_totals Counter totals
-/// @field          user_val Stores the value of a user-defined metric
-/// @field        last_entry The previous entry being recorded
-/// @field        last_event The previous event being recorded
-/// @field            marked True if values have been recorded
-/// @field            paused True if recording has been paused
+/// @struct profile_entry_t
+/// @brief The data structure representing profiling entries
+/// @var  profile_entry_t::start_time
+/// Time of initialization
+/// @var  profile_entry_t::ref_time
+/// Time of resumption of recording session
+/// @var  profile_entry_t::run_time
+/// Total time spent in this entry
+/// @var  profile_entry_t::counter_totals
+/// Counter totals
+/// @var  profile_entry_t::user_val
+/// Stores the value of a user-defined metric
+/// @var  profile_entry_t::last_entry
+/// The previous entry being recorded
+/// @var  profile_entry_t::last_event
+/// The previous event being recorded
+/// @var  profile_entry_t::marked
+/// True if values have been recorded
+/// @var  profile_entry_t::paused
+/// True if recording has been paused
 typedef struct {
   hpx_time_t   start_time;
   hpx_time_t     ref_time;
@@ -47,13 +57,20 @@ typedef struct {
   bool             paused;
 } profile_entry_t;
 
-/// The data structure representing a profiled code event
-/// @field       max_entries Maximum length of the list
-/// @field       num_entries Number of entries in the list
-/// @field               key The name of the profiled event
-/// @field           entries The actual entries
-/// @field            simple True if hardware counters don't apply
-/// @field          eventset The eventset that will be used for this event
+/// @struct profile_list_t
+/// @brief The data structure representing a profiled code event
+/// @var  profile_list_t::max_entries
+/// Maximum length of the list
+/// @var  profile_list_t::num_entries
+/// Number of entries in the list
+/// @var  profile_list_t::key
+/// The name of the profiled event
+/// @var  profile_list_t::entries
+/// The actual entries
+/// @var  profile_list_t::simple
+/// True if hardware counters don't apply
+/// @var  profile_list_t::eventset
+/// The eventset that will be used for this event
 typedef struct {
   int          max_entries;
   int          num_entries;
@@ -63,14 +80,22 @@ typedef struct {
   int             eventset;
 } profile_list_t;
 
-/// The data structure for storing profiling entries
-/// @field      num_counters Number of counters utilized
-/// @field       num_entries Number of code events profiled
-/// @field        max_events Maximum number of code events profilable
-/// @field          counters The ids of the counters used
-/// @field            events The actual profiled events
-/// @field     current_entry The current entry
-/// @field     current_event The current code event
+/// @struct profile_log_t
+/// @brief The data structure for storing profiling entries
+/// @var  profile_log_t::num_counters
+/// Number of counters utilized
+/// @var  profile_log_t::num_entries
+/// Number of code events profiled
+/// @var  profile_log_t::max_events
+/// Maximum number of code events profilable
+/// @var  profile_log_t::counters
+/// The ids of the counters used
+/// @var  profile_log_t::events
+/// The actual profiled events
+/// @var  profile_log_t::current_entry
+/// The current entry
+/// @var  profile_log_t::current_event
+/// The current code event
 typedef struct {
   int           num_counters;
   int             num_events;
@@ -91,23 +116,20 @@ typedef struct {
     .current_event = -1                     \
     }
 
-/// Add a new entry to the profile list in the profile log @p log.
-/// @field               log The profile log to add the entry to
-/// @field             event The event id of the new entry being added
+/// Add a new entry to the profile list in the profile log.
+/// @param             event The event id of the new entry being added
 /// @returns                 Index of the new entry.  
 int profile_new_entry(int event);
 
 /// Get the event corresponding to the event key @p key in the profile
-/// log @p log.
-/// @field               log The profile log to add the entry to
-/// @field               key The key of the event we are getting
+/// log.
+/// @param               key The key of the event we are getting
 int profile_get_event(char *key);
 
-/// Create a new profile event list in the profile log @p log.
-/// @field               log The profile log to add the entry to
-/// @field               key The key of the event we are creating
-/// @field            simple True if hardware counters don't apply
-/// @field          eventset The eventset of the new event entry
+/// Create a new profile event list in the profile log.
+/// @param               key The key of the event we are creating
+/// @param            simple True if hardware counters don't apply
+/// @param          eventset The eventset of the new event entry
 int profile_new_event(char *key, bool simple, int eventset);
 
 /// Initialize profiling. This is usually called in hpx_init().

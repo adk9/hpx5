@@ -69,6 +69,7 @@ typedef struct {
   void            *profiler;                    // worker maintains a
                                                 // reference to its profiler
 } worker_t HPX_ALIGNED(HPX_CACHELINE_SIZE);
+/// @}
 
 extern __thread worker_t * volatile self;
 
@@ -116,12 +117,10 @@ void worker_execute_thread(hpx_parcel_t *p)
 void worker_finish_thread(hpx_parcel_t *p, int status)
   HPX_NORETURN;
 
-/// Check to see if the current worker should be active.
-///
-/// This file is distinct to the APEX subsystem.
+/// Check to see if the current worker is active.
 int worker_is_active(void);
 
-/// Check to see if the current worker should stop.
+/// Check to see if the current worker is stopped.
 int worker_is_stopped(void);
 
 #ifdef __cplusplus

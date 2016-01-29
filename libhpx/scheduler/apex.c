@@ -15,6 +15,8 @@
 # include "config.h"
 #endif
 
+/// @file libhpx/scheduler/apex.c
+
 #include <libhpx/locality.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/worker.h>

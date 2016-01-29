@@ -102,19 +102,25 @@ static inline block_t _create_mask(uint32_t offset, uint32_t length) {
 }
 /// @}
 
-/// The bitmap structure.
+/// @struct bitmap
+/// @brief The bitmap structure.
 ///
 /// The bitmap is fundamentally an array of bits chunked up into blocks combined
 /// with some header data describing the block array and a lock for
 /// concurrency.
 ///
-/// @field         lock A single lock to serialize access to the bitmap.
-/// @field          min An index such that there are no free bits < min.
-/// @field          max An index such that there are no free bits >= max.
-/// @field        nbits The number of bits in the bitmap.
-/// @field      nblocks The number of blocks in the block array.
-/// @field       blocks The block array.
-///
+/// @var  bitmap::lock 
+/// A single lock to serialize access to the bitmap.
+/// @var  bitmap::min
+/// An index such that there are no free bits < min.
+/// @var  bitmap::max
+/// An index such that there are no free bits >= max.
+/// @var  bitmap::nbits
+/// The number of bits in the bitmap.
+/// @var  bitmap::nblocks
+/// The number of blocks in the block array.
+/// @var  bitmap::blocks
+/// The block array.
 struct bitmap {
   tatas_lock_t      lock;
   uint32_t     min_align;

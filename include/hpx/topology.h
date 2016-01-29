@@ -73,7 +73,7 @@ int hpx_get_my_thread_id(void)
 /// @copydoc hpx_get_num_ranks()
 #define HPX_LOCALITIES hpx_get_num_ranks()
 
-/// @copydoc hpx_get_num_thread()
+/// @copydoc hpx_get_num_threads()
 #define HPX_THREADS hpx_get_num_threads()
 
 /// @copydoc hpx_get_my_thread_id()
