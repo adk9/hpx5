@@ -330,7 +330,7 @@ agas_chunk_alloc(agas_t *agas, void *bitmap, void *addr, size_t n, size_t align)
 {
   // 1) get gva placement for this allocation
   uint32_t nbits = ceil_div_64(n, agas->chunk_size);
-  uint32_t log2_align = ceil_log2_size_t(max_u64(align, agas_alloc_bsize));
+  uint32_t log2_align = ceil_log2_size_t(max_size_t(align, agas_alloc_bsize));
   uint32_t bit;
   int e = bitmap_reserve(bitmap, nbits, log2_align, &bit);
   dbg_check(e, "Could not reserve gva for %lu bytes\n", n);
