@@ -18,9 +18,10 @@
 #include <iostream>
 #include <hpx/hpx++.h>
 
+namespace {
 using namespace std;
 
-hpx_status_t test_addr_arith() {
+int test_addr_arith_handler() {
   int n1 = 10, n2 = 20;
   auto ptr1 = hpx::alloc_cyclic<uint64_t>(n1, 2);
   auto ptr2 = ptr1 + 5;
@@ -32,10 +33,11 @@ hpx_status_t test_addr_arith() {
   // this should fail?
   auto ptr4 = ptr1[4];
 
-  return HPX_SUCCESS;
+  hpx::exit(HPX_SUCCESS);
 }
+HPX_ACTION(HPX_DEFAULT, 0, test_addr_arith, test_addr_arith_handler);
 
-hpx_status_t test_pin_unpin() {
+int test_pin_unpin_handler() {
   int n1 = 10;
   auto ptr1 = hpx::alloc_local<int>(n1);
   hpx::pin_guard<int> guard(ptr1);
@@ -43,29 +45,39 @@ hpx_status_t test_pin_unpin() {
   for (int i = 0; i != n1; i++) {
     p[i] = i;
   }
-  return HPX_SUCCESS;
+  hpx::exit(HPX_SUCCESS);
 }
+HPX_ACTION(HPX_DEFAULT, 0, test_pin_unpin, test_pin_unpin_handler);
 
-hpx_status_t test_subscript() {
+int test_subscript_handler() {
   int n1 = 10;
   auto ptr = hpx::alloc_cyclic<uint64_t>(n1, 1);
   hpx::global_ptr<uint64_t> ptr1 = &ptr[2];
 
   //   uint64_t val = ptr[2]; // not allowed
 
-  return HPX_SUCCESS;
+  hpx::exit(HPX_SUCCESS);
+}
+HPX_ACTION(HPX_DEFAULT, 0, test_subscript, test_subscript_handler);
 }
 
 int main(int argc, char* argv[]) {
-
-  int e = hpx::init(&argc, &argv);
-  if (e) {
-    cerr << "HPX: failed to initialize." << endl;
+  if (int e = hpx::init(&argc, &argv)) {
+    std::cerr << "HPX: failed to initialize.\n";
     return e;
   }
 
-  // TODO use hpx test framework
-  test_addr_arith();
+  if (int e = hpx::run(&test_addr_arith)) {
+    return e;
+  }
+
+  if (int e = hpx::run(&test_pin_unpin)) {
+    return e;
+  }
+
+  if (int e = hpx::run(&test_subscript)) {
+    return e;
+  }
 
   hpx::finalize();
   return 0;
