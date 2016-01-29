@@ -114,7 +114,7 @@ LIBHPX_ACTION(HPX_DEFAULT, 0, pgas_calloc_cyclic, _calloc_cyclic_handler,
 /// with the offset, and memsets them to 0. We can't just do one large memset
 /// because we have alignment issues and may have internal padding.
 ///
-/// @param         base The base offset of the allocation.
+/// @param       offset The base offset of the allocation.
 /// @param        bytes The total number of bytes to allocate.
 /// @param        bsize The block size.
 ///

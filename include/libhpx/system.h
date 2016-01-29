@@ -43,7 +43,7 @@ void system_get_stack(pthread_t thread, void **base, size_t *size);
 ///
 /// @param          obj User data to match the object oriented mmap interface.
 /// @param         addr A hint about where to try and place the allocation.
-/// @param         size The size in bytes of the allocation (must be 2^n).
+/// @param        bytes The size in bytes of the allocation (must be 2^n).
 /// @param        align The alignment in bytes of the allocation (must be 2^n).
 ///
 /// @returns The allocated region.
@@ -58,7 +58,7 @@ typedef void *(*system_mmap_t)(void *, void *, size_t, size_t);
 ///
 /// @param          obj User data to match the object oriented mmap interface.
 /// @param         addr A hint about where to try and place the allocation.
-/// @param         size The size in bytes of the allocation (must be 2^n).
+/// @param        bytes The size in bytes of the allocation (must be 2^n).
 /// @param        align The alignment in bytes of the allocation (must be 2^n).
 ///
 /// @returns The allocated region.

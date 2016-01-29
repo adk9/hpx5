@@ -212,7 +212,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
 /// @param          w The current worker (we will use its stack freelist)
 /// @param          p The parcel that is generating this thread.
 ///
-/// @returns          The parcel @p, but with a valid stack.
+/// @returns          The parcel @p but with a valid stack.
 static hpx_parcel_t *_try_bind(worker_t *w, hpx_parcel_t *p) {
   if (p->ustack) {
     return p;
@@ -750,10 +750,9 @@ int worker_start(void) {
   return code;
 }
 
-/// Spawn a parcel.
-///
-/// This complicated function does a bunch of logic to figure out the proper
-/// method of computation for the parcel.
+// Spawn a parcel.
+// This complicated function does a bunch of logic to figure out the proper
+// method of computation for the parcel.
 void scheduler_spawn(hpx_parcel_t *p) {
   worker_t *w = self;
   dbg_assert(w);

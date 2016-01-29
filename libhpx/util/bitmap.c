@@ -216,8 +216,8 @@ static uint32_t _first_free(const block_t *blocks, uint32_t bit, uint32_t max) {
 
 /// Set a contiguous number of bits in the bitmap.
 ///
-/// @param          map The bitmap we're updating.
-/// @param            i The absolute bit index we're starting with.
+/// @param       blocks The blocks of the bitmap we're updating.
+/// @param          bit The absolute bit index we're starting with.
 /// @param        nbits The number of bits that we're setting.
 static void _set(block_t *blocks, uint32_t bit, uint32_t nbits) {
   assert(blocks);
@@ -246,8 +246,8 @@ static void _set(block_t *blocks, uint32_t bit, uint32_t nbits) {
 
 /// Clear a continuous number of bits in the bitmap.
 ///
-/// @param          map The bitmap we're updating.
-/// @param            i The absolute bit index we're starting with.
+/// @param       blocks The blocks we're updating.
+/// @param          bit The absolute bit index we're starting with.
 /// @param        nbits The number of bits that we're clearing.
 static void _clear(block_t *blocks, uint32_t bit, uint32_t nbits) {
   assert(blocks);
@@ -289,8 +289,7 @@ static int32_t _bitmap_unused_blocks(const bitmap_t *map) {
 ///
 /// @param          map The map that is full.
 /// @param        nbits The request size that triggered the OOM.
-/// @param         bias The alignment that triggered OOM.
-/// @param       period The period that triggered the OOM.
+/// @param        align The alignment that triggered OOM.
 ///
 /// @returns LIBHPX_ENOMEM
 static int _bitmap_oom(const bitmap_t *map, uint32_t nbits, uint32_t align) {

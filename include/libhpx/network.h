@@ -74,7 +74,7 @@ network_new(struct config *cfg, struct boot *boot, struct gas *gas)
 /// This does not synchronize. The caller is required to ensure that no other
 /// threads may be operating on the network before making this call.
 ///
-/// @param      network The network to delete.
+/// @param      obj The network to delete.
 static inline void
 network_delete(void *obj) {
   network_t *network = obj;
@@ -86,7 +86,8 @@ network_delete(void *obj) {
 /// This is not synchronized at this point, and must be synchronized
 /// externally.
 ///
-/// @param      network The network to start.
+/// @param      obj The network to start.
+/// @param       id The id to use when progressing the network.
 ///
 /// @returns  LIBHPX_OK The network was progressed without error.
 static inline int
@@ -111,7 +112,7 @@ network_progress(void *obj, int id) {
 /// @todo There is currently no way to test for send completion. We should add a
 ///       future parameter so that the sender can wait if necessary.
 ///
-/// @param      network The network to use for the send.
+/// @param          obj The network to use for the send.
 /// @param            p The parcel to send.
 ///
 /// @returns  LIBHPX_OK The send was buffered successfully
@@ -134,9 +135,10 @@ network_probe(void *obj, int rank) {
 /// registration failures as unrecoverable. In the future it will make sense to
 /// implement a registration cache or other mechanism for resource management.
 ///
-/// @param      network The network object.
-/// @param      segment The beginning of the region to register.
+/// @param          obj The network object.
+/// @param         base The beginning of the region to register.
 /// @param        bytes The number of bytes to register.
+/// @param          key The key to use when registering dma.
 static inline void
 network_register_dma(void *obj, const void *base, size_t bytes, void *key) {
   network_t *network = obj;
@@ -148,8 +150,8 @@ network_register_dma(void *obj, const void *base, size_t bytes, void *key) {
 /// The region denotated by @p segment, @p bytes must correspond to a region
 /// previously registered.
 ///
-/// @param      network The network object.
-/// @param      segment The beginning of the region to release.
+/// @param          obj The network object.
+/// @param         base The beginning of the region to release.
 /// @param        bytes The number of bytes to release.
 static inline void
 network_release_dma(void *obj, const void *base, size_t bytes) {

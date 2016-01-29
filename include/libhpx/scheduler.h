@@ -153,7 +153,7 @@ void scheduler_join(struct scheduler *scheduler)
 
 /// Spawn a new user-level thread for the parcel.
 ///
-/// @param    parcel The parcel to spawn.
+/// @param    p The parcel to spawn.
 void scheduler_spawn(hpx_parcel_t *p)
   HPX_NON_NULL(1);
 
@@ -200,7 +200,7 @@ void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env, int block);
 /// thread.
 ///
 /// @param         lock The lock protecting the condition.
-/// @param         cvar The condition we'd like to wait for.
+/// @param          con The condition we'd like to wait for.
 ///
 /// @returns            LIBHPX_OK or an error
 hpx_status_t scheduler_wait(lockable_ptr_t *lock, struct cvar *con)
@@ -211,7 +211,7 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, struct cvar *con)
 /// The calling thread must hold the lock protecting the condition. This call is
 /// synchronous (MESA style) and one waiting thread will be woken up.
 ///
-/// @param         cvar The condition we'd like to signal.
+/// @param         cond The condition we'd like to signal.
 void scheduler_signal(struct cvar *cond)
   HPX_NON_NULL(1);
 

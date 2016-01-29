@@ -343,6 +343,8 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED,
 /// @param         op The commutative-associative operation we're
 ///                   performing.
 /// @param  predicate Predicate to guard the LCO.
+/// @param       init The initialization data address.
+/// @param  init_size The size of the initialization data.
 ///
 /// @returns the global address of the allocated array lco.
 hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size, hpx_action_t id,

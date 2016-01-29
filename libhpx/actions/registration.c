@@ -132,7 +132,6 @@ void action_table_finalize(void) {
 /// @param         attr The attributes associated with this action.
 /// @param          key The unique key for this action; read in _sort_entries().
 /// @param           id The address of the user's id; written in _assign_ids().
-/// @param            f The handler for this action.
 /// @param       system A flag indicating if this is a system or user action.
 /// @param            n The number of args.
 /// @param         args The args.

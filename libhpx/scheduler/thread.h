@@ -52,9 +52,10 @@ void thread_set_stack_size(int stack_bytes);
 /// execution. The @p entry function will be run as a result of the initial
 /// transfer.
 ///
-/// @param       thread The thread to initialize.
+/// @param        stack The thread stack pointer.
 /// @param       parcel The parcel that is generating this thread.
 /// @param            f The entry function for the thread.
+/// @param         size The thread size.
 void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f,
                  size_t size)
   HPX_NON_NULL(1, 2);
@@ -73,7 +74,7 @@ ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f)
 
 /// Deletes the thread.
 ///
-/// @param thread - The thread pointer.
+/// @param stack - The thread stack pointer.
 void thread_delete(ustack_t *stack)
   HPX_NON_NULL(1);
 

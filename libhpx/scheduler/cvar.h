@@ -87,7 +87,7 @@ hpx_status_t cvar_push_thread(cvar_t *cvar, struct ustack *thread)
 /// it will push the parcel and return HPX_SUCCESS.
 ///
 /// @param         cvar The condition variable to modify.
-/// @param       thread The parcel to push.
+/// @param       parcel The parcel to push.
 ///
 /// @returns            HPX_SUCCESS or an error code
 hpx_status_t cvar_attach(cvar_t *cvar, struct hpx_parcel *parcel)

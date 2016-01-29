@@ -227,8 +227,9 @@ static int _probe(irecv_buffer_t *irecvs) {
 ///
 /// This extracts and finishes the parcel and regenerates the irecv.
 ///
-/// @param       buffer The buffer.
+/// @param       irecvs The buffer.
 /// @param            i The index to finish.
+/// @param       status The status of the operation.
 ///
 /// @returns            The parcel that we received.
 static hpx_parcel_t *_finish(irecv_buffer_t *irecvs, int i, void *status) {

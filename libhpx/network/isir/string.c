@@ -139,6 +139,7 @@ static int _isir_memget_lsync(void *obj, void *to, hpx_addr_t from,
 ///
 /// @param           to The pinned target buffer to copy into.
 /// @param         from The temporary buffer we're copying from.
+/// @param            n The size of the memory object being put.
 ///
 /// @returns            HPX_SUCCESS
 static int _isir_memput_request_handler(void *to, const void *from, size_t n) {

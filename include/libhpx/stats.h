@@ -70,8 +70,6 @@ struct libhpx_stats *libhpx_stats_accum(struct libhpx_stats *lhs,
 void libhpx_stats_print(void);
 
 /// Save collected statistics to APEX.
-///
-/// @param    counts The libhpx stats.
 void libhpx_save_apex_stats(void);
 
 #endif // LIBHPX_STATS_H

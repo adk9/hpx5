@@ -79,7 +79,6 @@ hpx_finalize();
 /// @param entry an action to execute, or HPX_ACTION NULL to wait for an
 ///              incoming parcel or a inter-locality steal (if implemented)
 /// @param  args arguments to pass to @p entry
-/// @param  size the size of @p args
 /// @returns     the status code passed to exit() upon
 ///              termination.
 template <typename... Args>

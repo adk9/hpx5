@@ -112,7 +112,7 @@ intptr_t hpx_thread_can_alloca(size_t bytes)
 /// about the distribution of work that they want.
 ///
 /// This is not a hard guarantee for actual affinity. Various conditions at
-/// runtime @i{actually} control where threads execute, including system
+/// runtime actually control where threads execute, including system
 /// load. The scheduler will do its best to return a thread to it's assigned
 /// locality. Using affinity badly can cause excessive thread movement and
 /// should be used carefully.

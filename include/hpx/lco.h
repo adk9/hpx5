@@ -222,10 +222,10 @@ hpx_status_t hpx_lco_wait_reset(hpx_addr_t lco)
 /// hpx_lco_error() rather than hpx_lco_set(), in such a case the memory pointed
 /// to by @p out will not be inspected.
 ///
-/// @param      lco the LCO we're processing
-/// @param     size the size of the data
-/// @param[out] out the output location (may be null)
-/// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
+/// @param        lco the LCO we're processing
+/// @param       size the size of the data
+/// @param[out] value the output location (may be null)
+/// @returns          HPX_SUCCESS or the code passed to hpx_lco_error()
 hpx_status_t hpx_lco_get(hpx_addr_t lco, size_t size, void *value)
   HPX_PUBLIC;
 
@@ -239,10 +239,10 @@ hpx_status_t hpx_lco_get(hpx_addr_t lco, size_t size, void *value)
 /// hpx_lco_error() rather than hpx_lco_set(), in such a case the memory pointed
 /// to by @p out will not be inspected.
 ///
-/// @param      lco the LCO we're processing
-/// @param     size the size of the data
-/// @param[out] out the output location (may be null)
-/// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
+/// @param        lco the LCO we're processing
+/// @param       size the size of the data
+/// @param[out] value the output location (may be null)
+/// @returns          HPX_SUCCESS or the code passed to hpx_lco_error()
 hpx_status_t hpx_lco_get_reset(hpx_addr_t lco, size_t size, void *value)
   HPX_PUBLIC;
 

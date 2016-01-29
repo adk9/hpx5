@@ -117,7 +117,6 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
 /// @param        type The type of the action (THREAD, TASK, INTERRUPT, ...).
 /// @param        attr The attribute of the action (PINNED, PACKED, ...).
 /// @param          id The action id (the hpx_action_t address).
-/// @param __VA_ARGS__ The parameter types (HPX_INT, ...).
 #define HPX_REGISTER_ACTION(type, attr, id, ...)                    \
   hpx_register_action(type, attr, __FILE__ ":" _HPX_XSTR(id),       \
                       &id, __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
@@ -145,8 +144,6 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
 /// @param         attr The action attributes.
 /// @param      handler The handler.
 /// @param           id The action id.
-/// @param  __VA_ARGS__ The HPX types of the action paramters
-///                     (HPX_INT, ...).
 #define HPX_ACTION(type, attr, id, handler, ...)                  \
   HPX_ACTION_DECL(id) = HPX_ACTION_INVALID;                       \
   static HPX_CONSTRUCTOR void _register##_##id(void) {            \

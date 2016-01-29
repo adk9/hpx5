@@ -363,7 +363,6 @@ hpx_lco_allreduce_join(hpx_addr_t lco, int id, size_t n, const void *value,
 /// @}
 
 /// Synchronous allreduce join interface.
-/// @{
 hpx_status_t
 hpx_lco_allreduce_join_sync(hpx_addr_t lco, int id, size_t n,
                             const void *value, void *out) {
@@ -376,15 +375,14 @@ hpx_lco_allreduce_join_sync(hpx_addr_t lco, int id, size_t n,
   hpx_gas_unpin(lco);
   return rc;
 }
-/// @}
 
+/// @{
 /// Async allreduce join functionality. This is slightly complicated because of
 /// the interface. It's set up like a memget-with-completion interface where the
 /// user is supplying both a local target address and an LCO to signal when the
 /// get is complete. The LCO isn't necessarily local to the caller though, so we
 /// need to pass it through a couple of levels. We use an explicit request-reply
 /// mechanism here, rather than relying on pwc, because of that.
-/// @{
 
 /// The request-reply structure is a header and a data buffer.
 typedef struct {

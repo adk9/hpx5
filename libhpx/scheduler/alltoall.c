@@ -314,7 +314,7 @@ static hpx_status_t _alltoall_setid(_alltoall_t *g, unsigned offset, int size,
 /// @param   value      Address of the value to be set
 /// @param   lsync      An LCO to signal on local completion HPX_NULL if we
 ///                     don't care. Local completion indicates that the
-///                     @value may be freed or reused.
+///                     @p value may be freed or reused.
 /// @param   rsync      An LCO to signal remote completion HPX_NULL if we
 ///                     don't care.
 /// @returns HPX_SUCCESS or the code passed to hpx_lco_error()
@@ -426,8 +426,8 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _alltoall_init_async,
 /// participants to call the hpx_lco_alltoall_setid() operation as the first
 /// phase of operation.
 ///
-/// @param participants The static number of participants in the gathering.
-/// @param size         The size of the data being gathered.
+/// @param inputs The static number of participants in the gathering.
+/// @param size   The size of the data being gathered.
 hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) {
   _alltoall_t *g = NULL;
   hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*g), 0);

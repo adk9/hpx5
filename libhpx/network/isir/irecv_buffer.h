@@ -36,6 +36,7 @@ typedef struct {
 /// Initialize an irecv buffer.
 ///
 /// @param       buffer The buffer to initialize.
+/// @param        xport The isir xport to use.
 /// @param         size The initial size for the buffer.
 /// @param        limit The limit of the number of active requests.
 ///

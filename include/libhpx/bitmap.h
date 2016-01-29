@@ -40,6 +40,8 @@ typedef struct bitmap bitmap_t;
 /// Allocate and initialize a bitmap.
 ///
 /// @param        nbits The number of bits we need to manage.
+/// @param    min_align The minimum alignment.
+/// @param   base_align The base alignment.
 ///
 /// @returns The new bitmap or NULL if there was an error.
 bitmap_t *bitmap_new(uint32_t nbits, uint32_t min_align, uint32_t base_align)
@@ -89,7 +91,8 @@ void bitmap_release(bitmap_t *map, uint32_t i, uint32_t nbits)
 /// Determine if a particular region has been allocated.
 ///
 /// @param          map The bitmap to check.
-/// @param            i The bit offset to check.
+/// @param          bit The bit offset to check.
+/// @param        nbits The number of bits.
 ///
 /// @returns true if the bit is set, false otherwise.
 bool bitmap_is_set(const bitmap_t *map, uint32_t bit, uint32_t nbits)

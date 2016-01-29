@@ -211,7 +211,7 @@ static inline hpx_parcel_t *parcel_stack_pop(hpx_parcel_t **stack) {
 ///
 /// @param[in,out] stack The address of the top parcel in the stack, modified
 ///                      as a side effect of the call.
-/// @param[in]    parcel The new top of the stack.
+/// @param[in]         p The new top of the stack.
 static inline void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *p) {
   p->next = *stack;
   *stack = p;

@@ -69,14 +69,14 @@ int pwc_lco_wait(void *network, hpx_addr_t lco, int reset);
 /// thread to get an LCO value without having to allocate an intermediate
 /// "proxy" future and its associated redundant copies.
 ///
-/// @param      network The network object pointer.
+/// @param          obj The network object pointer.
 /// @param          lco The global address of the LCO to wait for.
 /// @param            n The size of the output buffer, in bytes.
 /// @param          out The output buffer---must be from registered memory.
 /// @param        reset True if the wait should also reset the LCO.
 ///
 /// @returns            The status set in the LCO.
-int pwc_lco_get(void *network, hpx_addr_t lco, size_t n, void *out, int reset);
+int pwc_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset);
 
 /// Perform a rendezvous parcel send operation.
 ///
@@ -217,8 +217,8 @@ int pwc_memcpy_sync(void *obj, hpx_addr_t to, hpx_addr_t from, size_t size);
 /// the @p rcmd when the read completes remotely and running the @p lcmd when
 /// the local write is complete.
 ///
-/// @param      network The network instance to use.
-/// @param           to The local target for the get.
+/// @param          obj The network instance to use.
+/// @param          lva The local target for the get.
 /// @param         from The global source for the get.
 /// @param            n The number of bytes to get.
 /// @param         lcmd A local command, run when @p lva is written.
@@ -234,9 +234,9 @@ int pwc_get(void *obj, void *lva, hpx_addr_t from, size_t n,
 /// the @p lcmd when the local buffer can be modified or deleted and the @p rcmd
 /// when the remote write has completed.
 ///
-/// @param        network The transport instance to use.
+/// @param          obj The transport instance to use.
 /// @param           to The global target for the put.
-/// @param         from The local source for the put.
+/// @param          lva The local source for the put.
 /// @param            n The number of bytes to put.
 /// @param         lcmd The local command, run when @p lva can be reused.
 /// @param         rcmd The remote command, run when @p to has be written.

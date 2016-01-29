@@ -52,6 +52,7 @@ typedef hpx_addr_t (*hpx_gas_dist_t)(uint32_t i, size_t n, uint32_t bsize);
 /// @param            n The number of blocks to allocate.
 /// @param        bsize The number of bytes per block.
 /// @param     boundary The alignment (2^k).
+/// @param         dist The gas distribution type.
 /// @param         attr The attributes of this global allocation space
 ///
 /// @returns            The global address of the allocated memory.
@@ -62,6 +63,7 @@ hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bsize, uint32_t boundary,
 /// @param            n The number of blocks to allocate.
 /// @param        bsize The number of bytes per block.
 /// @param     boundary The alignment (2^k).
+/// @param         dist The gas distribution type.
 /// @param         attr The attributes of this global allocation space
 ///
 /// @returns            The global address of the allocated memory.
@@ -293,7 +295,7 @@ void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) HPX_PUBLIC;
 ///                true If @p addr is local and @p local is not NULL and pin is
 ///                       successful.
 ///               false If @p is not local.
-///               false If @p is local and @local is not NULL and pin fails.
+///               false If @p is local and @p local is not NULL and pin fails.
 bool hpx_gas_try_pin(hpx_addr_t addr, void **local) HPX_PUBLIC;
 
 /// Unpin a previously pinned block.
@@ -478,11 +480,11 @@ _hpx_gas_bcast_with_continuation(hpx_action_t action, hpx_addr_t base, int n,
 /// elements. The output "continued" by the action, if any, is not
 /// returned.
 ///
-/// @param       action The action to run.
-/// @param         base The base of the array.
-/// @param            n The number of elements in the array.
-/// @param       offset The offset within each element to target.
-/// @param        bsize The block size for the array.
+/// @param       ACTION The action to run.
+/// @param         BASE The base of the array.
+/// @param            N The number of elements in the array.
+/// @param       OFFSET The offset within each element to target.
+/// @param        BSIZE The block size for the array.
 /// @param          ... The addresses of each argument.
 ///
 /// @returns      HPX_SUCCESS if no errors were encountered.

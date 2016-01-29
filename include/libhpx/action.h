@@ -292,7 +292,7 @@ void CHECK_ACTION(hpx_action_t id);
 /// @param   key A unique string key for the action.
 /// @param    id The action id for this action to be returned after
 ///                registration.
-/// @param nargs The variadic number of parameters that the action accepts.
+/// @param     n The variadic number of parameters that the action accepts.
 /// @param   ... The HPX types of the action parameters (HPX_INT, ...).
 ///
 void libhpx_register_action(hpx_action_type_t type, uint32_t attr,
@@ -501,7 +501,6 @@ static inline bool action_is_opencl(hpx_action_t id) {
 /// @param        type The type of the action (THREAD, TASK, INTERRUPT, ...).
 /// @param        attr The attribute of the action (PINNED, PACKED, ...).
 /// @param          id The action id (the hpx_action_t address).
-/// @param __VA_ARGS__ The parameter types (HPX_INT, ...).
 #define LIBHPX_REGISTER_ACTION(type, attr, id,  ...)                    \
   libhpx_register_action(type, attr, __FILE__ ":" _HPX_XSTR(id),        \
                          &id, __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
@@ -521,8 +520,6 @@ static inline bool action_is_opencl(hpx_action_t id) {
 /// @param         attr The action attributes.
 /// @param           id The action id.
 /// @param      handler The handler.
-/// @param  __VA_ARGS__ The HPX types of the action paramters
-///                     (HPX_INT, ...).
 #define LIBHPX_ACTION(type, attr, id, handler, ...)                  \
   HPX_ACTION_DECL(id) = HPX_ACTION_INVALID;                          \
   static HPX_CONSTRUCTOR void _register##_##id(void) {               \

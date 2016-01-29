@@ -260,9 +260,6 @@ void config_delete(config_t *cfg);
 void config_print(const config_t *cfg, FILE *file);
 
 /// Add declarations to query each of the set options.
-///
-/// @param          cfg The configuration to query.
-/// @param        value The value to check for.
 #define LIBHPX_OPT_INTSET(group, id, UNUSED2, UNUSED3, UNUSED4)     \
   int config_##group##id##_isset(const config_t *cfg, int value)    \
     HPX_NON_NULL(1);

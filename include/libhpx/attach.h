@@ -21,11 +21,6 @@
 ///
 /// This is asynchronous, i.e., it will possibly return before the parcel has
 /// been attached. Users may supply an LCO for synchronization.
-///
-/// @target             The lco.
-/// @args             p The parcel to attach.
-///
-/// @continues          HPX_SUCCESS or an error code
 extern hpx_action_t lco_attach;
 
 #endif

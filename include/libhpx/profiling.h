@@ -141,25 +141,21 @@ void prof_fini(void);
 
 /// Obtain the average values of the counters across all profiled sessions
 /// @param      values A pointer to an array for storing counter values
-/// @param  num_values The size of the array
 /// @param         key The key that identifies the code event
 int prof_get_averages(int64_t *values, char *key);
 
 /// Return the accumulated totals of the counters
 /// @param      values A pointer to an array where the totals will be stored
-/// @param  num_values The size of the array
 /// @param         key The key that identifies the code event
 int prof_get_totals(int64_t *values, char *key);
 
 /// Return the minimum recorded values of the counters
 /// @param      values A pointer to an array where the totals will be stored
-/// @param  num_values The size of the array
 /// @param         key The key that identifies the code event
 int prof_get_minimums(int64_t *values, char *key);
 
 /// Return the maximum recorded values of the counters
 /// @param      values A pointer to an array where the totals will be stored
-/// @param  num_values The size of the array
 /// @param         key The key that identifies the code event
 int prof_get_maximums(int64_t *values, char *key);
 
@@ -173,18 +169,22 @@ int prof_get_event_count(char *key);
 
 /// Return the average amount of time that a code event runs for
 /// @param         key The key that identifies the code event
+/// @param         avg The average duration of the code event
 void prof_get_average_time(char *key, hpx_time_t *avg);
 
 /// Return the total amount of time spent on a code event
 /// @param         key The key that identifies the code event
+/// @param         tot The total time spent in the code event
 void prof_get_total_time(char *key, hpx_time_t *tot);
 
 /// Return the minimum amount of time spent on a code event
 /// @param         key The key that identifies the code event
+/// @param         min The min recorded duration of the code event
 void prof_get_min_time(char *key, hpx_time_t *min);
 
 /// Return the maximum amount of time spent on a code event
 /// @param         key The key that identifies the code event
+/// @param         max The max recorded duration of the code event
 void prof_get_max_time(char *key, hpx_time_t *max);
 
 /// Return the number of counters being used

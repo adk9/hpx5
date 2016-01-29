@@ -52,16 +52,14 @@ typedef struct {
 /// CAS a counter pointer.
 ///
 /// This performs a compare-and-swap of the counted pointer, attempting to
-/// atomically update @p ptr->p from @from->p to @p to, while updating the count
-/// from @p from->c to @p from->p + 1. If either the pointer or count is not
-/// correct, it will fail and return the actual "seen" value in *from.
+/// atomically update @p ptr ->p from @p from ->p to @p to while updating the
+/// count from @p from ->c to @p from ->p + 1. If either the pointer or count is
+/// not correct, it will fail and return the actual "seen" value in *from.
+/// This does not update @p from and thus isn't really a CAS.
 ///
-/// This does not update @p from, and thus isn't really a CAS.
-///
-/// @param  ptr - the memory location we are going to cas
-/// @param from - the value we're expecting to see at *ptr
-/// @param   to - the address that we're trying to update *ptr to
-/// ----------------------------------------------------------------------------
+/// @param  ptr the memory location we are going to cas
+/// @param from the value we're expecting to see at ptr
+/// @param   to the address that we're trying to update ptr to
 void sync_cptr_cas_val(volatile cptr_t *ptr, const cptr_t *from, const void *to)
   HPX_PUBLIC;
 
