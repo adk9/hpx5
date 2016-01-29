@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 URL="http://stout.crest.iu.edu/hpx"
-DIR=$(mktemp -d hpx.XXXXXXX --tmpdir=/tmp)
+DIR=$(mktemp -d "${TMPDIR:-/tmp}"/hpx.XXXXXXX)
 CONTRIB=contrib
 
 # set the array of tarball deps here
