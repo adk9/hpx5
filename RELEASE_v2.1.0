@@ -1,0 +1,209 @@
+HPX–5 Version 2.1.0 Release Notes
+---------------------------------
+
+Release date: 01/30/2015
+
+Distributed under the Indiana University License.
+(See accompanying file LICENSE.txt) 
+
+HPX-5 is the High Performance ParalleX runtime library from the Center for 
+Research in Extreme Scale Technology (CREST) at Indiana University for 
+petascale/exascale computing. Building on CREST’s commitment to developing 
+new approaches for achieving the highest levels of performance on current 
+and next-generation supercomputing platforms, HPX-5 is provided to support 
+the international high-performance computing community in addressing 
+significant challenges involved in achieving exascale computing.
+
+HPX-5 is a reduction to practice of the revolutionary ParalleX execution model, 
+which establishes roles and responsibilities between layers in an exascale 
+system and supports dynamic and adaptive resource management and scheduling. 
+It is implemented in portable C99 and is organized around a cooperative 
+lightweight thread scheduler, a global address space, an active-message parcel 
+transport, and a group of globally addressable local synchronization object 
+classes. Internally, the infrastructure is built on scalable concurrent data 
+structures to minimize shared-memory synchronization overhead. The global 
+address space and parcel transport are based on the innovative Photon network 
+transport library, which supports low-level access to network hardware and 
+provides RDMA with remote completion events for low overhead signaling. An 
+alternative ISend/IRecv network layer is included for portability, along with 
+a reference MPI implementation. HPX-5 is compatible with Linux running on Intel 
+x86, MAC OSX and Xeon Phi processors and various ARM core platforms (including 
+both ARMv7 and ARMv8/Aarch64).
+
+
+What's new in HPX-5 v2.1.0?
+----------------------------
+
+1. Experimental support for C++ bindings to HPX. They can be enabled using 
+`--enable-hpx++` during configure.
+
+2. Parcel coalescing. Use `--hpx-coalescing-buffersize=N` runtime option, 
+where `N` is the number of parcels that will be coalesced on a per-target-rank 
+basis, to enable message coalescing. Coalescing is only applied for parcels 
+targeting actions registered with the HPX_COALESCED attribute.
+
+3. The memget implementation for efficient remote completion.
+
+4. User code may retain parcels across send operations.
+
+5. Users LCOs now support the setref and release functions. 
+
+6. User level threads may modify their signal mask through an 
+`hpx_thread_sigmask` interface. This is to aid transition from legacy code.
+
+7. Instrumentation measurements are now time-stamped.
+
+7.1 Two new types of measurement are available: 
+`prof_record_user_val(char *key)` records a user specified value for a 
+particular event type each time it is called; prof_mark(char *key) simply marks 
+a time-stamp for the occurrence of the event of type key.
+7.2 A new command line option is available for profiling hpx-prof-detailed, 
+which tells the instrumentation system to dump all individual measurements to 
+file after program execution as opposed to simply writing measurement summaries.
+
+8. Numerous fixes to increase the code stability.
+
+API Changes: Improvements/Enhancements
+---------------------------------------
+
+1. We have updated semantics for `hpx_thread_continue`, `hpx_call_cc`, and 
+`hpx_call_when_cc` so that they return.
+
+1.1 This supports C++ actions with stack-allocated objects.
+1.2 The cleanup versions have been eliminated as the action can manually clean 
+up after continuing.
+1.3 Threads with non-blocking semantics (the `HPX_INTERRUPT` attribute) may 
+now continue values.
+1.4 Internal control flow is simplified.
+
+2. The environment parameter to `hpx_par_for` is now non-const.
+
+3. The `hpx_parcel_send_through` and `hpx_call_when` variants check the 
+requirement that the dependent LCO “gate” be non `HPX_NULL` in debug builds.
+
+4. The instrumentation interface has been improved.
+
+4.1 The calculation of average and total values is more accurate as it now 
+corrects for some (but not all i.e. garbage data entries) errors that 
+occasionally occur when taking PAPI measurements.
+4.2 Timing information has been made significantly more accurate as earlier 
+versions included more of the profiling management overhead, whereas now the 
+overhead included in timings is minimal (basically just the overhead of making 
+the measurement).
+
+Removed/Retired Features
+--------------------------
+
+1. In HPX 2.1, `hpx_thread_exit` should be avoided if possible. Given the 
+modifications for C++, hpx_thread_exit now performs stack unwinding which is 
+not scalable in current versions of glibc. `hpx_thread_exit` should only be 
+used to terminate thread execution in situations where you cannot thread the 
+status code back up to the main action in order to return it.
+
+2. Some unnecessary functionality was removed from instrumentation. The 
+functions `prof_begin()`, `prof_end()`, and `prof_duration()` specifically have 
+been removed as this functionality is now implicit in the startup, shutdown, 
+and running of the instrumentation system.
+
+Bug Fixes
+-----------
+
+1. Returning `HPX_ERROR` via `hpx_exit` no longer triggers an incorrect assert.
+
+2. The `gas_alloc` call will search non-local nodes to find memory if local 
+memory is exhausted.
+
+3. Fix a segmentation fault that was occurring when PAPI counters were 
+activated at runtime but only using `prof_start`/`stop_timing()` function calls 
+for measurements.
+
+4. Fix an output error that would dump useless or garbage information when 
+values for certain events were not recorded.
+
+5. Fixed the `libysnc/sync.h` for GCC version prior to 4.8.
+
+6. `hpx_gas_memget/memput` now work correctly with non-local `lsync/rsync` 
+completion LCOs.
+
+7. Fixed an AGAS bug with tbbmalloc when the block size is larger than the 
+chunk size.
+
+Application Updates
+--------------------
+
+1. LibPXGL performance at scale has been improved through the use of message 
+coalescing.
+
+Known bugs & limitations in the release
+-----------------------------------------
+
+1. HPX-5 on Mac OS X only builds with default xcode toolchain. Use 
+`$ ./configure --with-hwloc=contrib --with-libffi=contrib CC=clang` to 
+configure. gcc installed with brew or port is not supported. We believe this is 
+due to https://gcc.gnu.org/bugzilla/show_bug.cgi?format=multiple&id=60893.
+
+2. The HPX C++ bindings, `AGAS` and `TBBMalloc` require a C++11 compiler.
+
+3. The AGAS implementation only works with the `Isend/Irecv` network, and is 
+still considered experimental.
+
+4. Clang versions prior to 3.6 (3.5.1 and earlier) contain regressions that 
+trigger runtime failures in HPX.
+
+5. The `--map-by node:pe=1` flag will be incorrectly interpreted when using 
+openmpi version 1.10.0, and will spawn #cores HPX-5 worker threads. Use 
+`--hpx-threads=1` to force `1` worker thread if necessary.
+
+5. LULESH induces a performance regression with jemalloc, prefer tbbmalloc for 
+it. When using jemalloc set `MALLOC_CONF=lg_dirty_mult:-1` on the command 
+line—this resolves the performance regression but may cause memory exhaustion. 
+Also use `hugetlbfs` when available.
+
+6. Blocked GAS distribution is unimplemented.
+
+7. Remote `hpx_lco_get/wait` operations do not propagate errors correctly.
+
+8. Photon CQ overrun warning is generated for large uGNI allocations. Can be 
+safely ignored for most jobs.
+
+General Information
+---------------------
+
+If you plan to use HPX–5, we suggest starting with the latest released
+version (currently HPX–5 v2.1.0) which can be downloaded from
+http://hpx.crest.iu.edu/download. If you would like to work with the
+cutting edge version of HPX–5, we suggest using the the `develop`
+branch at https://gitlab.crest.iu.edu/extreme/hpx. While we try to
+keep the develop branch stable and usable, sometimes new bugs trick
+their way into the code base - be aware!
+
+Documentation for the latest release of HPX–5 (currently v2.1.0) and
+the previous versions can be accessed at
+http://hpx.crest.iu.edu/documentation. The FAQ can be found at
+http://hpx.crest.iu.edu/faqs_and_tutorials.
+
+Reporting bugs
+=================
+
+In any case, if you happen to run into problems we very much encourage and 
+appreciate issue reports through the issue tracker for this Gitlab project 
+(https://gitlab.crest.iu.edu/extreme/hpx/issues).  
+
+Participate in HPX-5
+======================
+
+HPX-5 is published under a liberal open-source license and has an open, 
+active, and thriving developer community. Further information can be found at 
+http://hpx.crest.iu.edu.
+
+More about HPX-5
+--------------------
+
+For more information about HPX-5, including information about the latest 
+release, please check out the main https://hpx.crest.iu.edu/about. If you 
+have questions or comments, the HPX-5 Developer’s Mailing List is a good 
+place to send them.
+
+Subscribe your e-mail address to be notified when new releases of HPX-5 
+are released using the mailing list: HPX-5 Announcements List 
+http://www.crest.iu.edu/mailman/listinfo.cgi/hpx-announce.
