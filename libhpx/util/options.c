@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -350,8 +350,7 @@ config_t *config_new(int *argc, char ***argv) {
   return cfg;
 }
 
-void
-config_print(config_t *cfg, FILE *f) {
+void config_print(const config_t *cfg, FILE *f) {
   fprintf(f, "------------------------\n"
              "HPX PARSED CONFIGURATION\n"
              "------------------------\n");
@@ -484,6 +483,10 @@ config_print(config_t *cfg, FILE *f) {
 #endif
   fprintf(f, "\nOptimization\n");
   fprintf(f, "  smp\t\t\t%d\n", cfg->opt_smp);
+
+  fprintf(f, "\nCoalescing parameters\n");
+  fprintf(f, " Coalescing buffer size\t\t%d", cfg->coalescing_buffersize);
+
 
   fprintf(f, "------------------------\n"
              "------------------------\n");

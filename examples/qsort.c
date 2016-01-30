@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -246,7 +246,7 @@ static int _parallelQuicksortHelper_action(void *threadarg, size_t size)
   if (my_data->level <= 0 || my_data->low == my_data->high) {
     //We have plenty of threads, finish with sequential.
     quicksortHelper(my_data->lyst, my_data->low, my_data->high);
-    hpx_thread_exit(HPX_SUCCESS);
+    return HPX_SUCCESS;
   }
 
   //Now we partition our part of the lyst.

@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -42,6 +42,7 @@ static int _index_of(uint64_t i, uint32_t n) {
 
 /// Figure out what tag I'm supposed to use for a particular payload size.
 ///
+/// @param        isends The send buffer.
 /// @param       payload The payload size.
 ///
 /// @returns             The correct tag.
@@ -158,8 +159,8 @@ static int _resize(isend_buffer_t *buffer, uint32_t size) {
 
 /// Start an isend operation.
 ///
-/// @precondition There must be a valid entry in the buffer that is not yet
-///               active.
+/// A precondition of this function is that there must be a valid entry in the 
+/// buffer that is not yet active.
 ///
 /// @param       isends The buffer to start the send from.
 /// @param            i The index to start.
@@ -206,6 +207,7 @@ int _start_all(isend_buffer_t *isends) {
 /// @param       buffer The buffer to test.
 /// @param            i The physical index at which the range starts.
 /// @param            n The number of sends to test.
+/// @param            o The index added to buffer->out.
 ///
 /// @returns            The number of completed requests in this range.
 static int _test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n, int o) {
@@ -225,7 +227,7 @@ static int _test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n, int o) {
     assert(i <= k && k < i + n);
 
     // handle each of the completed requests
-    hpx_parcel_release(buffer->records[k].parcel);
+    parcel_delete(buffer->records[k].parcel);
     hpx_gas_free(buffer->records[k].handler, HPX_NULL);
   }
 
@@ -332,7 +334,7 @@ static int _cancel(isend_buffer_t *buffer, int i) {
 
   if (buffer->records) {
     hpx_gas_free(buffer->records[i].handler, HPX_NULL);
-    hpx_parcel_release(buffer->records[i].parcel);
+    parcel_delete(buffer->records[i].parcel);
   }
   return LIBHPX_OK;
 }
@@ -434,8 +436,8 @@ int isend_buffer_progress(isend_buffer_t *isends) {
     log_net("failed to start %d sends\n", n);
   }
 
-  return m;
-
   // avoid unused errors.
   (void)n;
+
+  return m;
 }

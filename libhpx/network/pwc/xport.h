@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -51,7 +51,7 @@ typedef struct pwc_xport {
   void (*key_find)(void *xport, const void *addr, size_t n, void *key);
   void (*key_copy)(void *restrict dest, const void *restrict src);
   void (*key_clear)(void *key);
-  int (*command)(const xport_op_t *op);
+  int (*cmd)(int rank, command_t lcmd, command_t rcmd);
   int (*pwc)(xport_op_t *op);
   int (*gwc)(xport_op_t *op);
   int (*test)(command_t *op, int *remaining, int id, int *src);

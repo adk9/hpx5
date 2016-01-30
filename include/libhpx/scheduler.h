@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -36,10 +36,11 @@ extern "C" {
 #include <libhpx/worker.h>
 
 /// Preprocessor define that tells us if the scheduler is cooperative or
-/// preemptive. Unused at this point
+/// preemptive. Unused at this point.
+/// @{
 #define LIBHPX_SCHEDULER_COOPERATIVE 1
 //#define LIBHPX_SCHEDULER_PREEMPTIVE 1
-
+/// @}
 
 /// Forward declarations
 /// @{
@@ -93,8 +94,8 @@ struct scheduler *scheduler_new(const struct config *config)
 /// Finalize and free the scheduler object.
 ///
 /// The scheduler must already have been shutdown with
-/// scheduler_shutdown(). Shutting down a scheduler that is active, or was
-/// aborted with scheduler_abort(), results in undefined behavior.
+/// scheduler_shutdown(). Shutting down a scheduler that is active results in
+/// undefined behavior.
 ///
 /// @param    scheduler The scheduler to free.
 void scheduler_delete(struct scheduler *scheduler);
@@ -150,18 +151,9 @@ int scheduler_is_stopped(struct scheduler *scheduler)
 void scheduler_join(struct scheduler *scheduler)
   HPX_NON_NULL(1);
 
-/// Stops the scheduler asynchronously.
-///
-/// This cancels and joins all of the scheduler threads, and then returns. It
-/// should only be called by the main thread that called scheduler_startup().
-///
-/// @param    scheduler The scheduler to abort.
-void scheduler_abort(struct scheduler *scheduler)
-  HPX_NON_NULL(1);
-
 /// Spawn a new user-level thread for the parcel.
 ///
-/// @param    parcel The parcel to spawn.
+/// @param    p The parcel to spawn.
 void scheduler_spawn(hpx_parcel_t *p)
   HPX_NON_NULL(1);
 
@@ -208,7 +200,7 @@ void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env, int block);
 /// thread.
 ///
 /// @param         lock The lock protecting the condition.
-/// @param         cvar The condition we'd like to wait for.
+/// @param          con The condition we'd like to wait for.
 ///
 /// @returns            LIBHPX_OK or an error
 hpx_status_t scheduler_wait(lockable_ptr_t *lock, struct cvar *con)
@@ -219,7 +211,7 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, struct cvar *con)
 /// The calling thread must hold the lock protecting the condition. This call is
 /// synchronous (MESA style) and one waiting thread will be woken up.
 ///
-/// @param         cvar The condition we'd like to signal.
+/// @param         cond The condition we'd like to signal.
 void scheduler_signal(struct cvar *cond)
   HPX_NON_NULL(1);
 

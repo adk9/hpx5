@@ -47,7 +47,7 @@ enum enum_hpx_sched_policy { hpx_sched_policy__NULL = -1, hpx_sched_policy_arg_d
 enum enum_hpx_log_level { hpx_log_level__NULL = -1, hpx_log_level_arg_default = 0, hpx_log_level_arg_boot, hpx_log_level_arg_sched, hpx_log_level_arg_gas, hpx_log_level_arg_lco, hpx_log_level_arg_net, hpx_log_level_arg_trans, hpx_log_level_arg_parcel, hpx_log_level_arg_action, hpx_log_level_arg_config, hpx_log_level_arg_memory, hpx_log_level_arg_coll, hpx_log_level_arg_all };
 enum enum_hpx_dbg_waitonsig { hpx_dbg_waitonsig__NULL = -1, hpx_dbg_waitonsig_arg_segv = 0, hpx_dbg_waitonsig_arg_abrt, hpx_dbg_waitonsig_arg_fpe, hpx_dbg_waitonsig_arg_ill, hpx_dbg_waitonsig_arg_bus, hpx_dbg_waitonsig_arg_iot, hpx_dbg_waitonsig_arg_sys, hpx_dbg_waitonsig_arg_trap, hpx_dbg_waitonsig_arg_all };
 enum enum_hpx_trace_classes { hpx_trace_classes__NULL = -1, hpx_trace_classes_arg_parcel = 0, hpx_trace_classes_arg_pwc, hpx_trace_classes_arg_sched, hpx_trace_classes_arg_lco, hpx_trace_classes_arg_process, hpx_trace_classes_arg_memory, hpx_trace_classes_arg_schedtimes, hpx_trace_classes_arg_all };
-enum enum_hpx_prof_counters { hpx_prof_counters__NULL = -1, hpx_prof_counters_arg_HPX_L1_TCM = 0, hpx_prof_counters_arg_HPX_L2_TCM, hpx_prof_counters_arg_HPX_L3_TCM, hpx_prof_counters_arg_HPX_TLB_TL, hpx_prof_counters_arg_HPX_TOT_INS, hpx_prof_counters_arg_HPX_INT_INS, hpx_prof_counters_arg_HPX_FP_INS, hpx_prof_counters_arg_HPX_LD_INS, hpx_prof_counters_arg_HPX_SR_INS, hpx_prof_counters_arg_HPX_BR_INS, hpx_prof_counters_arg_HPX_TOT_CYC, hpx_prof_counters_arg_all };
+enum enum_hpx_prof_counters { hpx_prof_counters__NULL = -1, hpx_prof_counters_arg_L1_TCM = 0, hpx_prof_counters_arg_L2_TCM, hpx_prof_counters_arg_L3_TCM, hpx_prof_counters_arg_TLB_TL, hpx_prof_counters_arg_TOT_INS, hpx_prof_counters_arg_INT_INS, hpx_prof_counters_arg_FP_INS, hpx_prof_counters_arg_LD_INS, hpx_prof_counters_arg_SR_INS, hpx_prof_counters_arg_BR_INS, hpx_prof_counters_arg_TOT_CYC, hpx_prof_counters_arg_all };
 enum enum_hpx_photon_backend { hpx_photon_backend__NULL = -1, hpx_photon_backend_arg_default = 0, hpx_photon_backend_arg_verbs, hpx_photon_backend_arg_ugni, hpx_photon_backend_arg_fi };
 
 /** @brief Where the command line options are stored */
@@ -66,6 +66,9 @@ struct hpx_options_t
   enum enum_hpx_boot hpx_boot_arg;	/**< @brief HPX bootstrap method to use.  */
   char * hpx_boot_orig;	/**< @brief HPX bootstrap method to use original value given at command line.  */
   const char *hpx_boot_help; /**< @brief HPX bootstrap method to use help description.  */
+  long hpx_coalescing_buffersize_arg;	/**< @brief Coalescing buffer size.  */
+  char * hpx_coalescing_buffersize_orig;	/**< @brief Coalescing buffer size original value given at command line.  */
+  const char *hpx_coalescing_buffersize_help; /**< @brief Coalescing buffer size help description.  */
   enum enum_hpx_transport hpx_transport_arg;	/**< @brief type of transport to use.  */
   char * hpx_transport_orig;	/**< @brief type of transport to use original value given at command line.  */
   const char *hpx_transport_help; /**< @brief type of transport to use help description.  */
@@ -137,11 +140,13 @@ struct hpx_options_t
   long hpx_trace_filesize_arg;	/**< @brief set the size of each trace file.  */
   char * hpx_trace_filesize_orig;	/**< @brief set the size of each trace file original value given at command line.  */
   const char *hpx_trace_filesize_help; /**< @brief set the size of each trace file help description.  */
-  enum enum_hpx_prof_counters *hpx_prof_counters_arg;	/**< @brief set which PAPI counters to use for profiling.  */
-  char ** hpx_prof_counters_orig;	/**< @brief set which PAPI counters to use for profiling original value given at command line.  */
-  unsigned int hpx_prof_counters_min; /**< @brief set which PAPI counters to use for profiling's minimum occurreces */
-  unsigned int hpx_prof_counters_max; /**< @brief set which PAPI counters to use for profiling's maximum occurreces */
-  const char *hpx_prof_counters_help; /**< @brief set which PAPI counters to use for profiling help description.  */
+  enum enum_hpx_prof_counters *hpx_prof_counters_arg;	/**< @brief set which HW counters to use for profiling.  */
+  char ** hpx_prof_counters_orig;	/**< @brief set which HW counters to use for profiling original value given at command line.  */
+  unsigned int hpx_prof_counters_min; /**< @brief set which HW counters to use for profiling's minimum occurreces */
+  unsigned int hpx_prof_counters_max; /**< @brief set which HW counters to use for profiling's maximum occurreces */
+  const char *hpx_prof_counters_help; /**< @brief set which HW counters to use for profiling help description.  */
+  int hpx_prof_detailed_flag;	/**< @brief dump all individual measurements to file in addition to summaries (default=off).  */
+  const char *hpx_prof_detailed_help; /**< @brief dump all individual measurements to file in addition to summaries help description.  */
   long hpx_isir_testwindow_arg;	/**< @brief number of ISIR requests to test in progress loop.  */
   char * hpx_isir_testwindow_orig;	/**< @brief number of ISIR requests to test in progress loop original value given at command line.  */
   const char *hpx_isir_testwindow_help; /**< @brief number of ISIR requests to test in progress loop help description.  */
@@ -213,6 +218,7 @@ struct hpx_options_t
   unsigned int hpx_heapsize_given ;	/**< @brief Whether hpx-heapsize was given.  */
   unsigned int hpx_gas_given ;	/**< @brief Whether hpx-gas was given.  */
   unsigned int hpx_boot_given ;	/**< @brief Whether hpx-boot was given.  */
+  unsigned int hpx_coalescing_buffersize_given ;	/**< @brief Whether hpx-coalescing-buffersize was given.  */
   unsigned int hpx_transport_given ;	/**< @brief Whether hpx-transport was given.  */
   unsigned int hpx_network_given ;	/**< @brief Whether hpx-network was given.  */
   unsigned int hpx_statistics_given ;	/**< @brief Whether hpx-statistics was given.  */
@@ -235,6 +241,7 @@ struct hpx_options_t
   unsigned int hpx_trace_classes_given ;	/**< @brief Whether hpx-trace-classes was given.  */
   unsigned int hpx_trace_filesize_given ;	/**< @brief Whether hpx-trace-filesize was given.  */
   unsigned int hpx_prof_counters_given ;	/**< @brief Whether hpx-prof-counters was given.  */
+  unsigned int hpx_prof_detailed_given ;	/**< @brief Whether hpx-prof-detailed was given.  */
   unsigned int hpx_isir_testwindow_given ;	/**< @brief Whether hpx-isir-testwindow was given.  */
   unsigned int hpx_isir_sendlimit_given ;	/**< @brief Whether hpx-isir-sendlimit was given.  */
   unsigned int hpx_isir_recvlimit_given ;	/**< @brief Whether hpx-isir-recvlimit was given.  */

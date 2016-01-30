@@ -15,6 +15,7 @@ AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
    libsync/arch/Makefile
    libhpx/Makefile
    libhpx/boot/Makefile
+   libhpx/actions/Makefile
    libhpx/gas/Makefile
    libhpx/gas/pgas/Makefile
    libhpx/gas/agas/Makefile
@@ -33,7 +34,13 @@ AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
    include/Makefile
    include/libhpx/Makefile
    examples/Makefile])
-  
+
+ AS_IF([test "x$have_hpxpp" != xno], [
+   AC_CONFIG_FILES([
+     hpx++.pc
+     examples/cxx/Makefile
+     tests/cxx/Makefile])])
+   
  AS_IF([test "x$have_docs" != xno], [
    AC_CONFIG_FILES([
      docs/Doxyfile

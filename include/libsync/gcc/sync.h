@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -36,7 +36,7 @@
  * extensions I can't figure out a good way to deal with the compiler barrier.
  */
 #if defined(__x86_64__) || defined(__ARMEL__)
-# define sync_load(addr, mm) *(addr); __asm volatile ("":::"memory")
+# define sync_load(addr, mm) ({ __typeof(*(addr)) a = *(addr); __asm volatile ("":::"memory"); a; })
 #else
 #error sync_load not implemented for your processor
 #endif
@@ -59,11 +59,15 @@
 
 #define sync_swap(addr, val, mm) __sync_lock_test_and_set (addr, val)
 
-#define sync_cas(addr, from, to, onsuccess, onfailure)  \
-  __sync_bool_compare_and_swap(addr, from, to)
-
-#define sync_cas_val(addr, from, to, onsuccess, onfailure)  \
-  __sync_val_compare_and_swap(addr, from, to)
+#define sync_cas(addr, from, to, onsuccess, onfailure) ({               \
+      __typeof(to) expected = *(from);                                  \
+      __typeof(to) actual = __sync_val_compare_and_swap(addr, expected, to); \
+      bool success = (actual == expected);                              \
+      if (!success) {                                                   \
+        *(from) = actual;                                               \
+      }                                                                 \
+      success;                                                          \
+    })
 
 #define sync_fadd(addr, val, mm) __sync_fetch_and_add(addr, val)
 #define sync_addf(addr, val, mm) __sync_add_and_fetch(addr, val)

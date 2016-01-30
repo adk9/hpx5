@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -29,7 +29,7 @@ static void _addDouble_handler(double *lhs, const double *rhs, size_t UNUSED) {
 static HPX_ACTION(HPX_FUNCTION, 0, _addDouble, _addDouble_handler);
 
 static int _reduce_handler(double data) {
-  HPX_THREAD_CONTINUE(data);
+  return HPX_THREAD_CONTINUE(data);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _reduce, _reduce_handler, HPX_DOUBLE);
 
@@ -92,7 +92,7 @@ static int lco_reduce_getRef_handler(void) {
     hpx_lco_delete(and, HPX_NULL);
 
     // Get the gathered value, and print the debugging string.
-    double *ans = (double*)malloc(sizeof(double));
+    double *ans = NULL;
     hpx_lco_getref(newdt, sizeof(*ans), (void **)&ans);
     double compval = nDoms * ((nDoms-1)/2) * data;
     if (fabs((compval - *ans)/compval) > 0.001) { // works if not near zero
@@ -116,8 +116,8 @@ struct _par_reduce_args {
   double *nums;
 };
 
-static int _par_reduce(const int i, const void *args) {
-  struct _par_reduce_args *a = (struct _par_reduce_args*)args;
+static int _par_reduce(const int i, void *args) {
+  struct _par_reduce_args *a = args;
   hpx_lco_set(a->rlco, sizeof(double), &a->nums[i], HPX_NULL, HPX_NULL);
   return 0;
 }

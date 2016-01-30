@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -14,27 +14,18 @@
 #ifndef HPX_RUNTIME_H
 #define HPX_RUNTIME_H
 
-#include "hpx/attributes.h"
-#include "hpx/builtins.h"
-#include "hpx/action.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <hpx/attributes.h>
+#include <hpx/builtins.h>
+#include <hpx/action.h>
 
 /// @defgroup system System
+/// @file include/hpx/runtime.h
 /// @brief Functions that control the overall runtime
 /// @{
-
-/// @file
-/// @brief HPX system interface.
-/// hpx_init() initializes the scheduler, network, and locality
-///
-/// hpx_run() is called from the native thread after hpx_init() and action
-/// registration is complete, in order
-///
-/// hpx_abort() is called from an HPX lightweight thread to terminate scheduler
-/// execution asynchronously
-///
-/// hpx_exit() is called from an HPX lightweight thread to terminate
-/// scheduler execution
-
 
 /// Initializes the HPX runtime.
 ///
@@ -42,82 +33,91 @@
 /// scheduler, network, and locality and should be called before any other HPX
 /// functions.
 ///
-/// @param argc   count of command-line arguments
-/// @param argv   array of command-line arguments
+/// @param         argc Count of command-line arguments.
+/// @param         argv Array of command-line arguments.
 /// @returns      HPX_SUCCESS on success
-int hpx_init(int *argc, char ***argv) HPX_PUBLIC;
+int hpx_init(int *argc, char ***argv)
+  HPX_PUBLIC;
 
 /// Finalize/cleanup from the HPX runtime.
 ///
 /// This function will remove almost all data structures and allocations, and
-/// will finalize the underlying network implementation. Note that hpx_run() 
+/// will finalize the underlying network implementation. Note that hpx_run()
 /// must never be called after hpx_finalize().
-void hpx_finalize() HPX_PUBLIC;
+void hpx_finalize()
+  HPX_PUBLIC;
 
 /// Start the HPX runtime, and run a given action.
 ///
-/// This creates an HPX "main" process, and calls the given action @p
-/// entry in the context of this process. The @p entry action is
-/// invoked only on the root locality. On termination, it deletes the
-/// main process and returns the status returned by hpx_exit()
+/// This creates an HPX "main" process, and calls the given action @p entry in
+/// the context of this process. The @p entry action is invoked only on the root
+/// locality. On termination, it deletes the main process and returns the status
+/// returned by hpx_exit()
 ///
-/// hpx_run finalizes action registration, starts up any scheduler and
-/// native threads that need to run, and transfers all control into
-/// the HPX scheduler, beginning execution of the top action in the
-/// scheduler queue.
+/// hpx_run finalizes action registration, starts up any scheduler and native
+/// threads that need to run, and transfers all control into the HPX scheduler,
+/// beginning execution of the top action in the scheduler queue.
 ///
-/// The scheduler queue could be empty, in which case the entire
-/// scheduler instance is running, waiting for a successful
-/// inter-locality steal operation (if that is implemented) or a
-/// network parcel.
+/// The scheduler queue could be empty, in which case the entire scheduler
+/// instance is running, waiting for a successful inter-locality steal operation
+/// (if that is implemented) or a network parcel.
 ///
-/// @param entry an action to execute, or HPX_ACTION NULL to wait for an
-///              incoming parcel or a inter-locality steal (if implemented)
-/// @param nargs the number of arguments to pass to @p entry
-/// @returns     the status code passed to hpx_exit() upon
-///              termination.
-int    _hpx_run(hpx_action_t *entry, int nargs, ...) HPX_PUBLIC;
-#define hpx_run(entry, ...) _hpx_run(entry, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+/// @param        entry An action to execute, or HPX_ACTION NULL to wait for an
+///                     incoming parcel or a inter-locality steal (if
+///                     implemented).
+/// @param        nargs The number of arguments to pass to @p entry.
+///
+/// @returns            The status code passed to hpx_exit() upon termination.
+int _hpx_run(hpx_action_t *entry, int nargs, ...)
+  HPX_PUBLIC;
 
+#define hpx_run(entry, ...)                                 \
+  _hpx_run(entry, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 /// Exit the HPX runtime.
 ///
-/// This causes the hpx_run() in the main native thread to return the @p code.
-/// The returned thread is executing the original native thread, and all
-/// supplementary scheduler threads and network will have been shutdown, and any
-/// library resources will have been cleaned up.
+/// This causes the hpx_run() in the main native thread to return the @p
+/// code. It is safe to call hpx_run() again after hpx_exit().
 ///
-/// This call is cooperative and synchronous, so it may not return if there are
-/// misbehaving HPX lightweight threads.
+/// This call does not imply that the HPX runtime has shut down. In particular,
+/// system threads may continue to run and execute HPX high-speed network
+/// progress or outstanding lightweight threads. Users should ensure that such
+/// concurrent activity will not create detrimental data races in their
+/// applications.
 ///
-/// It is safe to call hpx_run() again after hpx_exit().
+/// @note This routine enacts non-local control flow, however the runtime must
+///       correctly unwind the stack for languages that require such behavior
+///       (e.g., C++).
 ///
-/// @param code a status code to be returned by hpx_run()
+/// @note While this routine does not guarantee to suspend the runtime,
+///       high-performance implementations are expected to reduce their resource
+///       consumption as a result of this call. In particular, runtime-spawned
+///       system threads should be suspended.
+///
+/// @param         code A status code to be returned by hpx_run().
 void hpx_exit(int code)
-  HPX_NORETURN HPX_PUBLIC;
+  HPX_PUBLIC HPX_NORETURN;
 
 /// Abort the HPX runtime.
 ///
-/// This causes the main native thread to return the @p code from hpx_run(). The
-/// returned thread is executing the original native thread, and all
-/// supplementary scheduler threads an network will ahve been shutdown.
-///
-/// This is not cooperative, and will not clean up any resources. Furthermore,
-/// the state of the system after the return is not well defined. The
-/// application's main native thread should only rely on the async-safe
-/// interface provided in signal(7).
+/// This is not cooperative, and will not clean up any resources.
 void hpx_abort(void)
-  HPX_NORETURN HPX_PUBLIC;
+  HPX_PUBLIC HPX_NORETURN;
 
 /// Print the help string associated with the runtime configuration
 /// options supported by the HPX runtime.
-///
-void hpx_print_help(void) HPX_PUBLIC;
+void hpx_print_help(void)
+  HPX_PUBLIC;
 
 /// Print the version string associated with the HPX interface implemented by
 /// the runtime.
-void hpx_print_version(void) HPX_PUBLIC;
+void hpx_print_version(void)
+  HPX_PUBLIC;
 
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

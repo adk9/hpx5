@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -30,77 +30,43 @@
 #include <libhpx/profiling.h>
 #include <libsync/sync.h>
 
-void prof_init(struct config *cfg){
-}
-
-int prof_fini(){
+int prof_init(struct config *cfg) {
   return LIBHPX_OK;
 }
 
-int prof_get_averages(int64_t *values, char *key){
+void prof_fini(void) {
+}
+
+int prof_get_averages(int64_t *values, char *key) {
   return LIBHPX_OK;
 }
 
-int prof_get_totals(int64_t *values, char *key){
+int prof_get_totals(int64_t *values, char *key) {
   return LIBHPX_OK;
 }
 
-int prof_get_minimums(int64_t *values, char *key){
+int prof_get_minimums(int64_t *values, char *key) {
   return LIBHPX_OK;
 }
 
-int prof_get_maximums(int64_t *values, char *key){
+int prof_get_maximums(int64_t *values, char *key) {
   return LIBHPX_OK;
 }
 
-int prof_get_tally(char *key){
+int prof_start_hardware_counters(char *key, int *tag) {
   return LIBHPX_OK;
 }
 
-void prof_get_average_time(char *key, hpx_time_t *avg){
-}
-
-void prof_get_total_time(char *key, hpx_time_t *tot){
-}
-
-void prof_get_min_time(char *key, hpx_time_t *min){
-}
-
-void prof_get_max_time(char *key, hpx_time_t *max){
-}
-
-int prof_get_num_counters(){
-  return LIBHPX_OK;
-}
-
-hpx_time_t prof_get_duration(){
-  return hpx_time_now();
-}
-
-void prof_increment_tally(char *key){
-}
-
-void prof_start_timing(char *key, int *tag){
-}
-
-int prof_stop_timing(char *key, int *tag){
-  return LIBHPX_OK;
-}
-
-int prof_start_hardware_counters(char *key, int *tag){
-  return LIBHPX_OK;
-}
-
-int prof_stop_hardware_counters(char *key, int *tag){
+int prof_stop_hardware_counters(char *key, int *tag) {
   prof_stop_timing(key, tag);
   return LIBHPX_OK;
 }
 
-int prof_pause(char *key, int *tag){
+int prof_pause(char *key, int *tag) {
   return LIBHPX_OK;
 }
 
-int prof_resume(char *key, int *tag){
+int prof_resume(char *key, int *tag) {
   return LIBHPX_OK;
 }
 

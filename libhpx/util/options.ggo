@@ -27,6 +27,10 @@ typestr="type"
 values="default","smp","mpi","pmi"
 enum optional
 
+option "hpx-coalescing-buffersize" - "Coalescing buffer size"
+typestr="Integer"
+long optional
+
 option "hpx-transport" - "type of transport to use"
 typestr="type"
 values="default","mpi","photon"
@@ -128,10 +132,13 @@ long optional
 
 section "Profiling"
 
-option "hpx-prof-counters" - "set which PAPI counters to use for profiling"
+option "hpx-prof-counters" - "set which HW counters to use for profiling"
 typestr="counters"
-values="HPX_L1_TCM","HPX_L2_TCM","HPX_L3_TCM","HPX_TLB_TL","HPX_TOT_INS","HPX_INT_INS","HPX_FP_INS","HPX_LD_INS","HPX_SR_INS","HPX_BR_INS","HPX_TOT_CYC","all"
+values="L1_TCM","L2_TCM","L3_TCM","TLB_TL","TOT_INS","INT_INS","FP_INS","LD_INS","SR_INS","BR_INS","TOT_CYC","all"
 enum optional multiple
+
+option "hpx-prof-detailed" - "dump all individual measurements to file in addition to summaries"
+flag off
 
 section "ISIR Network Options"
 
@@ -153,7 +160,7 @@ option "hpx-pwc-parcelbuffersize" - "set the size of p2p recv buffers for parcel
 typestr="bytes"
 long optional
 
-option "hpx-pwc-parceleagerlimit" - "set the largest eager parcel size (header inclusive)" 
+option "hpx-pwc-parceleagerlimit" - "set the largest eager parcel size (header inclusive)"
 typestr="bytes"
 long optional
 

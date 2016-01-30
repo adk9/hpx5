@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -51,7 +51,7 @@ static int _verify_handler(_call_marshalled_args_t *args, int nargs,
   return e;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED | HPX_VECTORED,
-                  _verify, _verify_handler, HPX_POINTER, HPX_INT, 
+                  _verify, _verify_handler, HPX_POINTER, HPX_INT,
                   HPX_POINTER, HPX_POINTER);
 
 static int call_marshalled_handler(void) {
@@ -70,6 +70,7 @@ static int call_marshalled_handler(void) {
   hpx_call_sync(buf, _verify, NULL, 0, &i, sizeof(i), &f, sizeof(f),
                 &d, sizeof(d));
 
+  hpx_gas_free_sync(buf);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, call_marshalled, call_marshalled_handler);

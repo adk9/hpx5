@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -70,8 +70,6 @@ struct libhpx_stats *libhpx_stats_accum(struct libhpx_stats *lhs,
 void libhpx_stats_print(void);
 
 /// Save collected statistics to APEX.
-///
-/// @param    counts The libhpx stats.
 void libhpx_save_apex_stats(void);
 
 #endif // LIBHPX_STATS_H

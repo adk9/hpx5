@@ -1,8 +1,12 @@
-examplesdir          = $(datarootdir)/doc/@PACKAGE@
+if HAVE_HPXPP
+SUBDIRS = cxx
+endif
+
+examplesdir             = $(datarootdir)/doc/@PACKAGE@
 
 noinst_PROGRAMS         = fibonacci pingpong allreduce countdown seqspawn \
                           parspawn future memput memget guppie hello \
-                          qsort call netbench cpi heat
+                          qsort call netbench cpi heat jacobi
 
 fibonacci_SOURCES       = fibonacci.c
 pingpong_SOURCES        = pingpong.c
@@ -20,11 +24,12 @@ call_SOURCES            = call.c
 netbench_SOURCES        = netbench.c
 cpi_SOURCES             = cpi.c
 heat_SOURCES            = heat.c
+jacobi_SOURCES          = jacobi.c
 
-AM_CPPFLAGS      		= -D_GNU_SOURCE $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include
+AM_CPPFLAGS             = -D_GNU_SOURCE $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include
 AM_CFLAGS               = $(HPX_APPS_CFLAGS) -Wno-unused
-AM_LDFLAGS       		= $(HPX_APPS_LDFLAGS) -no-install
-LDADD            		= $(HPX_APPS_LDADD)
+AM_LDFLAGS              = $(HPX_APPS_LDFLAGS) -no-install
+LDADD                   = $(HPX_APPS_LDADD)
 
 fibonacci_DEPENDENCIES  = $(HPX_APPS_DEPS)
 pingpong_DEPENDENCIES   = $(HPX_APPS_DEPS)
@@ -42,3 +47,4 @@ call_DEPENDENCIES       = $(HPX_APPS_DEPS)
 netbench_DEPENDENCIES   = $(HPX_APPS_DEPS)
 cpi_DEPENDENCIES        = $(HPX_APPS_DEPS)
 heat_DEPENDENCIES       = $(HPX_APPS_DEPS)
+jacobi_DEPENDENCIES     = $(HPX_APPS_DEPS)

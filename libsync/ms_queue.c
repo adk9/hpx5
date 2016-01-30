@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -71,6 +71,13 @@ void sync_ms_queue_delete(ms_queue_t *q) {
 
 
 void sync_ms_queue_enqueue(ms_queue_t *q, void *val) {
+#ifdef __clang_analyzer__
+  // The static analyzer thinks that we leak the *node because it is written in
+  // inline asm. This prevents the analyzer from processing this function,
+  // though the produced code doesn't "work" in any meaningful way.
+  return;
+#endif
+
   _node_t *node = _node_new(val);
   cptr_t tail, next;
 

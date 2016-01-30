@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -34,6 +34,10 @@ typedef struct {
   void *cyclic_bitmap;
 } agas_t;
 
+// set the block size of an allocation out-of-band using this TLS
+// variable
+extern __thread size_t agas_alloc_bsize;
+
 struct gas *gas_agas_new(const struct config *config, struct boot *boot);
 
 void agas_global_allocator_init(agas_t *agas);
@@ -54,7 +58,10 @@ int agas_memput_lsync(void *gas, hpx_addr_t to, const void *from, size_t n,
 int agas_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t n);
 
 int agas_memget(void *gas, void *to, hpx_addr_t from, size_t n,
-                hpx_addr_t lsync);
+                hpx_addr_t lsync, hpx_addr_t rsync);
+
+int agas_memget_rsync(void *gas, void *to, hpx_addr_t from, size_t n,
+                      hpx_addr_t lsync);
 
 int agas_memget_lsync(void *gas, void *to, hpx_addr_t from, size_t n);
 

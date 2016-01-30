@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -14,7 +14,11 @@
 #ifndef HPX_ACTION_H
 #define HPX_ACTION_H
 
-#include "hpx/builtins.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <hpx/builtins.h>
 
 /// @defgroup actions Actions and threads
 /// @brief Functions and definitions for registering, calling, and controlling
@@ -59,8 +63,7 @@ typedef enum {
   HPX_INTERRUPT,
   /// Functions are simple functions that have uniform ids across localities,
   /// but can not be called with the set of hpx_call operations or as the action
-  /// or continuation in a parcel. Functions can only be called by using the
-  /// returned value from hpx_action_get_handler().
+  /// or continuation in a parcel.
   HPX_FUNCTION,
   /// Action that runs OpenCL kernels
   HPX_OPENCL,
@@ -88,6 +91,8 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
 #define HPX_INTERNAL   0x4
 // Action is a vectored action
 #define HPX_VECTORED   0x8
+// Action is a coalesced action
+#define HPX_COALESCED 0x10
 //@}
 
 /// Register an HPX action of a given @p type.
@@ -98,15 +103,12 @@ static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
 /// @param  attr The attribute of the action (PINNED, PACKED, ...).
 /// @param   key A unique string key for the action.
 /// @param    id The action id for this action to be returned after
-/// @param     f The local function pointer to associate with the action.
-///                registration.
-/// @param nargs The variadic number of parameters that the action accepts.
+/// @param     n The variadic number of parameters that the action accepts.
 /// @param   ... The HPX types of the action parameters (HPX_INT, ...).
 ///
 /// @returns     HPX_SUCCESS or an error code
-int hpx_register_action(hpx_action_type_t type, uint32_t attr,
-                        const char *key, hpx_action_t *id,
-                        hpx_action_handler_t f, unsigned int nargs, ...)
+int hpx_register_action(hpx_action_type_t type, uint32_t attr, const char *key,
+                        hpx_action_t *id, unsigned n, ...)
   HPX_PUBLIC;
 
 /// Wraps the hpx_register_action() function to make it slightly
@@ -114,16 +116,10 @@ int hpx_register_action(hpx_action_type_t type, uint32_t attr,
 ///
 /// @param        type The type of the action (THREAD, TASK, INTERRUPT, ...).
 /// @param        attr The attribute of the action (PINNED, PACKED, ...).
-/// @param     handler The action handler (the function).
 /// @param          id The action id (the hpx_action_t address).
-/// @param __VA_ARGS__ The parameter types (HPX_INT, ...).
-#define HPX_REGISTER_ACTION(type, attr, id, handler, ...)          \
-  hpx_register_action(type, attr, __FILE__ ":" _HPX_XSTR(id),      \
-                      &id, (hpx_action_handler_t)handler,          \
-                      __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
-
-/// Get the handler associated with a given action id.
-hpx_action_handler_t hpx_action_get_handler(hpx_action_t id) HPX_PUBLIC;
+#define HPX_REGISTER_ACTION(type, attr, id, ...)                    \
+  hpx_register_action(type, attr, __FILE__ ":" _HPX_XSTR(id),       \
+                      &id, __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
 /// Declare an action.
 ///
@@ -148,8 +144,6 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id) HPX_PUBLIC;
 /// @param         attr The action attributes.
 /// @param      handler The handler.
 /// @param           id The action id.
-/// @param  __VA_ARGS__ The HPX types of the action paramters
-///                     (HPX_INT, ...).
 #define HPX_ACTION(type, attr, id, handler, ...)                  \
   HPX_ACTION_DECL(id) = HPX_ACTION_INVALID;                       \
   static HPX_CONSTRUCTOR void _register##_##id(void) {            \
@@ -157,6 +151,14 @@ hpx_action_handler_t hpx_action_get_handler(hpx_action_t id) HPX_PUBLIC;
   }                                                               \
   static HPX_CONSTRUCTOR void _register##_##id(void)
 
+/// Get the handler associated with a given action id.
+hpx_action_handler_t hpx_action_get_handler(hpx_action_t id)
+  HPX_PUBLIC;
+
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

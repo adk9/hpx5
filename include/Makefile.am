@@ -25,7 +25,6 @@ nobase_include_HEADERS = hpx/action.h \
                          libsync/locks.h \
                          libsync/lockable_ptr.h \
                          libsync/queues.h \
-                         libsync/spscq.h \
                          libsync/sync.h \
                          libsync/types.def \
                          libsync/gcc/sync.h \
@@ -34,3 +33,18 @@ nobase_include_HEADERS = hpx/action.h \
                          libhpx/libhpx.h \
                          libhpx/config.h \
                          libhpx/options.def
+
+if HAVE_HPXPP
+nobase_include_HEADERS += hpx/hpx++.h \
+                          hpx/cxx/action.h \
+                          hpx/cxx/errors.h \
+                          hpx/cxx/gas.h \
+                          hpx/cxx/global_ptr.h \
+                          hpx/cxx/lco.h \
+                          hpx/cxx/malloc.h \
+                          hpx/cxx/par_for.h \
+                          hpx/cxx/runtime.h \
+                          hpx/cxx/string.h \
+                          hpx/cxx/system.h \
+                          hpx/cxx/thread.h
+endif

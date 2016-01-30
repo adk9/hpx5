@@ -4,15 +4,19 @@ noinst_PROGRAMS  = $(TESTS)
 
 AM_CPPFLAGS      = $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include -Wno-unused
 AM_CFLAGS        = $(HPX_APPS_CFLAGS)
+AM_CXXFLAGS      = $(HPX_APPS_CXXFLAGS)
 AM_LDFLAGS       = $(HPX_APPS_LDFLAGS) -no-install
 LDADD            = $(HPX_APPS_LDADD)
 
 LOG_COMPILER = $(TESTS_CMD)
 
+TEST_EXTENSIONS = .cc .c
+
 TESTS = allreduce               \
         bcast                   \
         call_when               \
         call_vectored           \
+        cxx_raii                \
         gas_alloc               \
         gas_alloc_dist          \
         gas_coll                \
@@ -35,16 +39,18 @@ TESTS = allreduce               \
         parcel_continuation     \
         parcel_create           \
         parcel_send             \
+        parcel_send_coalesced   \
         parcel_send_rendezvous  \
         parcel_send_through     \
         process                 \
         runtime                 \
-        thread_set_affinity     \
         task                    \
         thread_cont_action      \
         thread_continue         \
         thread_create           \
         thread_gettlsid         \
+        thread_set_affinity     \
+        thread_sigmask          \
         thread_yield
 
 if ENABLE_LENGTHY_TESTS
@@ -59,15 +65,20 @@ if HAVE_PERCOLATION
 TESTS           += percolation
 endif
 
-# Override libhpx tests so that they have the right paths and flags.
+# For some reason I need to explicitly set C++ source files
+cxx_raii_SOURCES                    = cxx_raii.cc
+
+# Override libhpx tests so that they have the right paths and flags, which are
+# the LIBHPX versions rather than the HPX_APPS version.
 libhpx_boot_CPPFLAGS                = $(LIBHPX_CPPFLAGS) -I$(top_srcdir)/include -Wno-unused
-libhpx_boot_CFLAGS                  = $(LIBHPX_CFLAGS) 
+libhpx_boot_CFLAGS                  = $(LIBHPX_CFLAGS)
 
 apex_DEPENDENCIES                   = $(HPX_APPS_DEPS)
 allreduce_DEPENDENCIES              = $(HPX_APPS_DEPS)
 bcast_DEPENDENCIES                  = $(HPX_APPS_DEPS)
 call_when_DEPENDENCIES              = $(HPX_APPS_DEPS)
 call_vectored_DEPENDENCIES          = $(HPX_APPS_DEPS)
+cxx_raii_DEPENDENCIES               = $(HPX_APPS_DEPS)
 gas_alloc_DEPENDENCIES              = $(HPX_APPS_DEPS)
 gas_alloc_dist_DEPENDENCIES         = $(HPX_APPS_DEPS)
 gas_coll_DEPENDENCIES               = $(HPX_APPS_DEPS)
@@ -91,6 +102,7 @@ libhpx_boot_DEPENDENCIES            = $(HPX_APPS_DEPS)
 parcel_continuation_DEPENDENCIES    = $(HPX_APPS_DEPS)
 parcel_create_DEPENDENCIES          = $(HPX_APPS_DEPS)
 parcel_send_DEPENDENCIES            = $(HPX_APPS_DEPS)
+parcel_send_coalesced_DEPENDENCIES  = $(HPX_APPS_DEPS)
 parcel_send_rendezvous_DEPENDENCIES = $(HPX_APPS_DEPS)
 parcel_send_through_DEPENDENCIES    = $(HPX_APPS_DEPS)
 percolation_DEPENDENCIES            = $(HPX_APPS_DEPS)
@@ -102,4 +114,5 @@ thread_continue_DEPENDENCIES        = $(HPX_APPS_DEPS)
 thread_create_DEPENDENCIES          = $(HPX_APPS_DEPS)
 thread_gettlsid_DEPENDENCIES        = $(HPX_APPS_DEPS)
 thread_set_affinity_DEPENDENCIES    = $(HPX_APPS_DEPS)
+thread_sigmask_DEPENDENCIES         = $(HPX_APPS_DEPS)
 thread_yield_DEPENDENCIES           = $(HPX_APPS_DEPS)

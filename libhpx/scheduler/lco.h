@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -19,9 +19,9 @@
 #include <libsync/lockable_ptr.h>
 #include "cvar.h"
 
-#define LCO_LOG_NEW(gva) do {                                   \
+#define LCO_LOG_NEW(gva, lva) do {                              \
     dbg_assert_str(gva, "Could not malloc global memory\n");    \
-    log_lco("allocated lco %"PRIu64"\n", gva);                  \
+    log_lco("allocated lco %"PRIu64" (%p)\n", gva, (void*)lva); \
   } while (0)
 
 /// This constant is used to determine when a set should be performed

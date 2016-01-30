@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -31,6 +31,8 @@
 #include "gva.h"
 
 static const uint64_t AGAS_THERE_OFFSET = UINT64_C(4398046511103);
+
+__thread size_t agas_alloc_bsize;
 
 HPX_ACTION_DECL(agas_alloc_cyclic);
 HPX_ACTION_DECL(agas_calloc_cyclic);
@@ -184,6 +186,7 @@ hpx_addr_t _agas_alloc_cyclic_sync(size_t n, uint32_t bsize, uint32_t attr,
   dbg_assert(align < 32);
   uint32_t padded = 1u << align;
 
+  agas_alloc_bsize = padded;
   // Allocate the blocks as a contiguous, aligned array from cyclic memory.
   void *lva = cyclic_memalign(padded, blocks * padded);
   if (!lva) {
@@ -208,7 +211,7 @@ hpx_addr_t agas_alloc_cyclic_sync(size_t n, uint32_t bsize, uint32_t attr) {
 
 static int _alloc_cyclic_handler(size_t n, size_t bsize, uint32_t attr) {
   hpx_addr_t addr = agas_alloc_cyclic_sync(n, bsize, attr);
-  HPX_THREAD_CONTINUE(addr);
+  return HPX_THREAD_CONTINUE(addr);
 }
 LIBHPX_ACTION(HPX_DEFAULT, 0, agas_alloc_cyclic, _alloc_cyclic_handler,
               HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32);
@@ -235,7 +238,7 @@ hpx_addr_t agas_calloc_cyclic_sync(size_t n, uint32_t bsize, uint32_t attr) {
 
 static int _calloc_cyclic_handler(size_t n, size_t bsize, uint32_t attr) {
   hpx_addr_t addr = agas_calloc_cyclic_sync(n, bsize, attr);
-  HPX_THREAD_CONTINUE(addr);
+  return HPX_THREAD_CONTINUE(addr);
 }
 LIBHPX_ACTION(HPX_DEFAULT, 0, agas_calloc_cyclic, _calloc_cyclic_handler,
               HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32);
@@ -259,6 +262,16 @@ _agas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
 
 static gas_t _agas_vtable = {
   .type           = HPX_GAS_AGAS,
+  .string = {
+    .memget       = agas_memget,
+    .memget_rsync = agas_memget_rsync,
+    .memget_lsync = agas_memget_lsync,
+    .memput       = agas_memput,
+    .memput_lsync = agas_memput_lsync,
+    .memput_rsync = agas_memput_rsync,
+    .memcpy       = agas_memcpy,
+    .memcpy_sync  = agas_memcpy_sync,
+  },
   .dealloc        = _agas_dealloc,
   .local_size     = NULL,
   .local_base     = NULL,
@@ -275,13 +288,6 @@ static gas_t _agas_vtable = {
   .calloc_local   = agas_local_calloc,
   .free           = agas_free,
   .move           = agas_move,
-  .memget         = agas_memget,
-  .memget_sync    = agas_memget_lsync,
-  .memput         = agas_memput,
-  .memput_lsync   = agas_memput_lsync,
-  .memput_rsync   = agas_memput_rsync,
-  .memcpy         = agas_memcpy,
-  .memcpy_sync    = agas_memcpy_sync,
   .owner_of       = _agas_owner_of
 };
 
@@ -289,6 +295,7 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   agas_t *agas = malloc(sizeof(*agas));
   dbg_assert(agas);
 
+  agas_alloc_bsize = 0;
   agas->vtable = _agas_vtable;
   agas->chunk_table = chunk_table_new(0);
   agas->btt = btt_new(0);
@@ -323,13 +330,14 @@ agas_chunk_alloc(agas_t *agas, void *bitmap, void *addr, size_t n, size_t align)
 {
   // 1) get gva placement for this allocation
   uint32_t nbits = ceil_div_64(n, agas->chunk_size);
-  uint32_t log2_align = ceil_log2_size_t(align);
+  uint32_t log2_align = ceil_log2_size_t(max_size_t(align, agas_alloc_bsize));
   uint32_t bit;
   int e = bitmap_reserve(bitmap, nbits, log2_align, &bit);
   dbg_check(e, "Could not reserve gva for %lu bytes\n", n);
   uint64_t offset = bit * agas->chunk_size;
 
   // 2) get backing memory
+  align = 1 << log2_align;
   void *base = system_mmap(NULL, addr, n, align);
   dbg_assert(base);
   dbg_assert(((uintptr_t)base & (align - 1)) == 0);
@@ -341,6 +349,7 @@ agas_chunk_alloc(agas_t *agas, void *bitmap, void *addr, size_t n, size_t align)
     offset += agas->chunk_size;
     chunk += agas->chunk_size;
   }
+  agas_alloc_bsize = 0;
   return base;
 }
 

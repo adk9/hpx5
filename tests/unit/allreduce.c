@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -62,7 +62,7 @@ static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _unsubscribe, _unsubscribe_handler,
 static int _reduce_handler(element_t *element, hpx_addr_t allreduce, int i) {
   hpx_process_collective_allreduce_join(allreduce, element->id, sizeof(i), &i);
   hpx_lco_get_reset(element->f, sizeof(i), &i);
-  HPX_THREAD_CONTINUE(i);
+  return HPX_THREAD_CONTINUE(i);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _reduce, _reduce_handler,
                   HPX_POINTER, HPX_ADDR, HPX_INT);
@@ -77,7 +77,7 @@ static int _reduce_block_handler(hpx_addr_t allreduce) {
   int result;
   hpx_lco_get(reduce, sizeof(result), &result);
   hpx_lco_delete_sync(reduce);
-  HPX_THREAD_CONTINUE(result);
+  return HPX_THREAD_CONTINUE(result);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _reduce_block, _reduce_block_handler,
                   HPX_ADDR);

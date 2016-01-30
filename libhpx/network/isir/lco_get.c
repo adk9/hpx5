@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -15,7 +15,6 @@
 # include "config.h"
 #endif
 
-#include <alloca.h>
 #include <string.h>
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
@@ -48,11 +47,7 @@ _isir_lco_get_request_handler(hpx_parcel_t *p, size_t n, void *out, int reset) {
   // eagerly create a continuation parcel so that we can serialize the data into
   // it directly without an extra copy
   size_t bytes = sizeof(_isir_lco_get_reply_args_t) + n;
-  hpx_parcel_t *curr = self->current;
-  hpx_parcel_t *cont = parcel_new(curr->c_target, curr->c_action, 0, 0,
-                                  curr->pid, NULL, bytes);
-  curr->c_target = 0;
-  curr->c_action = 0;
+  hpx_parcel_t *cont = hpx_thread_generate_continuation(NULL, bytes);
 
   // forward the parcel and output buffer back to the sender
   _isir_lco_get_reply_args_t *args = hpx_parcel_get_data(cont);
@@ -61,11 +56,12 @@ _isir_lco_get_request_handler(hpx_parcel_t *p, size_t n, void *out, int reset) {
 
   // perform the blocking get operation
   int e = HPX_SUCCESS;
+  hpx_addr_t target = hpx_thread_current_target();
   if (reset) {
-    e = hpx_lco_get_reset(curr->target, n, args->data);
+    e = hpx_lco_get_reset(target, n, args->data);
   }
   else {
-    e = hpx_lco_get(curr->target, n, args->data);
+    e = hpx_lco_get(target, n, args->data);
   }
 
   // send the continuation
@@ -86,10 +82,14 @@ typedef struct {
 
 static void _lco_get_continuation(hpx_parcel_t *p, void *env) {
   _lco_get_env_t *e = env;
-  hpx_parcel_t *l = action_create_parcel(e->lco, _isir_lco_get_request,
-                                         HPX_HERE, _isir_lco_get_reply,
-                                         4, &p, &e->n, &e->out, &e->reset);
-  parcel_launch(l);
+  hpx_addr_t addr = e->lco;
+  size_t n = e->n;
+  void *out = e->out;
+  int reset = e->reset;
+  hpx_action_t act = _isir_lco_get_request;
+  hpx_addr_t rsync = HPX_HERE;
+  hpx_action_t rop = _isir_lco_get_reply;
+  dbg_check(action_call_lsync(act, addr, rsync, rop, 4, &p, &n, &out, &reset));
 }
 
 int isir_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset) {

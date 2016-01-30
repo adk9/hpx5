@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -13,6 +13,10 @@
 
 #ifndef HPX_ADDR_H
 #define HPX_ADDR_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /// @addtogroup agas
 /// @{
@@ -75,5 +79,9 @@ int64_t hpx_addr_sub(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize)
   HPX_PUBLIC;
 
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

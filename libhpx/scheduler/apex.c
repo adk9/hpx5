@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -14,6 +14,8 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
+
+/// @file libhpx/scheduler/apex.c
 
 #include <libhpx/locality.h>
 #include <libhpx/scheduler.h>
@@ -125,7 +127,6 @@ static void _apex_worker_shutdown(void) {
     apex_stop(w->profiler);
     w->profiler = NULL;
   }
-  apex_exit_thread();
 }
 
 int worker_is_active(void) {

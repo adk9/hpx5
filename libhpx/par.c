@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -28,7 +28,8 @@
 #include <libhpx/scheduler.h>
 
 
-static int _par_for_async_handler(hpx_for_action_t f, void *args, int min, int max) {
+static int _par_for_async_handler(hpx_for_action_t f, void *args, int min,
+                                  int max) {
   for (int i = min, e = max; i < e; ++i) {
     f(i, args);
   }
@@ -38,8 +39,8 @@ static int _par_for_async_handler(hpx_for_action_t f, void *args, int min, int m
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _par_for_async, _par_for_async_handler,
                      HPX_POINTER, HPX_POINTER, HPX_INT, HPX_INT);
 
-int hpx_par_for(hpx_for_action_t f, const int min, const int max,
-                const void *args, hpx_addr_t sync) {
+int hpx_par_for(hpx_for_action_t f, int min, int max, void *args,
+                hpx_addr_t sync) {
   dbg_assert(max - min > 0);
 
   // get the number of scheduler threads
@@ -47,9 +48,10 @@ int hpx_par_for(hpx_for_action_t f, const int min, const int max,
 
   hpx_addr_t and = HPX_NULL;
   if (sync) {
+    hpx_action_t set = hpx_lco_set_action;
+    hpx_action_t delete = hpx_lco_delete_action;
     and = hpx_lco_and_new(nthreads);
-    hpx_call_when_with_continuation(and, sync, hpx_lco_set_action,
-                                    and, hpx_lco_delete_action, NULL, 0);
+    hpx_call_when_with_continuation(and, sync, set, and, delete, NULL, 0);
   }
 
   const int n = max - min;
@@ -63,7 +65,8 @@ int hpx_par_for(hpx_for_action_t f, const int min, const int max,
     rmin = base;
     rmax = base + m + ((r-- > 0) ? 1 : 0);
     base = rmax;
-    int e = hpx_call(HPX_HERE, _par_for_async, and, &f, &args, &rmin, &rmax);
+    hpx_action_t act = _par_for_async;
+    int e = hpx_call(HPX_HERE, act, and, &f, &args, &rmin, &rmax);
     if (e) {
       return e;
     }
@@ -72,8 +75,7 @@ int hpx_par_for(hpx_for_action_t f, const int min, const int max,
   return HPX_SUCCESS;
 }
 
-int hpx_par_for_sync(hpx_for_action_t f, const int min, const int max,
-                     const void *args) {
+int hpx_par_for_sync(hpx_for_action_t f, int min, int max, void *args) {
   dbg_assert(max - min > 0);
   hpx_addr_t sync = hpx_lco_future_new(0);
   if (sync == HPX_NULL) {

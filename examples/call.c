@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -22,22 +22,19 @@ static HPX_ACTION(HPX_INTERRUPT, 0, _my_interrupt, _my_interrupt_handler);
 
 static int _my_task_handler(void) {
   printf("Hi, I am a task!\n");
-  hpx_call_cc(HPX_HERE, _my_interrupt, NULL, NULL);
-  return HPX_SUCCESS;
+  return hpx_call_cc(HPX_HERE, _my_interrupt);
 }
 static HPX_ACTION(HPX_TASK, 0, _my_task, _my_task_handler);
 
 static int _my_action_handler(void) {
   printf("Hi, I am an action!\n");
-  hpx_call_cc(HPX_HERE, _my_task, NULL, NULL);
-  return HPX_SUCCESS;
+  return hpx_call_cc(HPX_HERE, _my_task);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _my_action, _my_action_handler);
 
 static int _my_typed_handler(int i, float f, char c) {
   printf("Hi, I am a typed action with args: %d %f %c!\n", i, f, c);
-  hpx_call_cc(HPX_HERE, _my_action, NULL, NULL);
-  return HPX_SUCCESS;
+  return hpx_call_cc(HPX_HERE, _my_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _my_typed, _my_typed_handler, HPX_INT,
                   HPX_FLOAT, HPX_CHAR);
@@ -45,7 +42,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _my_typed, _my_typed_handler, HPX_INT,
 
 static int _cont_fut_handler(hpx_addr_t future) {
   printf("Continuing an LCO to a typed continuation action.\n");
-  hpx_thread_continue(&future);
+  return hpx_thread_continue(&future);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _cont_fut, _cont_fut_handler, HPX_ADDR);
 

@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -15,6 +15,7 @@
 # include "config.h"
 #endif
 
+#include <alloca.h>
 #include <string.h>
 #include <unistd.h>
 #include <libhpx/config.h>
@@ -49,7 +50,7 @@ static int _get_resources_by_affinity(topology_t *topology,
   return n;
 }
 
-static hwloc_cpuset_t *_cpu_affinity_map_new(topology_t *topology, 
+static hwloc_cpuset_t *_cpu_affinity_map_new(topology_t *topology,
                                              libhpx_thread_affinity_t policy) {
   int resources = _get_resources_by_affinity(topology, policy);
   if (!resources) {
@@ -58,7 +59,7 @@ static hwloc_cpuset_t *_cpu_affinity_map_new(topology_t *topology,
   hwloc_cpuset_t *cpu_affinity_map = calloc(resources, sizeof(*cpu_affinity_map));
 
   for (int r = 0; r < resources; ++r) {
-    hwloc_cpuset_t cpuset = cpu_affinity_map[r] = hwloc_bitmap_alloc();  
+    hwloc_cpuset_t cpuset = cpu_affinity_map[r] = hwloc_bitmap_alloc();
     switch (policy) {
      case HPX_THREAD_AFFINITY_DEFAULT:
      case HPX_THREAD_AFFINITY_NUMA:
@@ -99,132 +100,148 @@ static void _cpu_affinity_map_delete(topology_t *topology) {
 }
 
 topology_t *topology_new(const struct config *config) {
-  topology_t *topology = malloc(sizeof(*topology));
-  int e = hwloc_topology_init(&topology->hwloc_topology);
-  if (e) {
+  // Allocate the topology structure/
+  topology_t *topo = malloc(sizeof(*topo));
+  if (!topo) {
+    log_error("failed to allocate topology structure\n");
+    return NULL;
+  }
+
+  // Provide initial values.
+  topo->ncpus = 0;
+  topo->ncores = 0;
+  topo->nnodes = 0;
+  topo->numa_nodes = NULL;
+  topo->cpus_per_node = 0;
+  topo->cpu_to_core = 0;
+  topo->cpu_to_numa = NULL;
+  topo->numa_to_cpus = 0;
+  topo->cpu_affinity_map = NULL;
+
+  // Initialize the hwloc infrastructure.
+  hwloc_topology_t *hwloc = &topo->hwloc_topology;
+  if (hwloc_topology_init(hwloc)) {
     log_error("failed to initialize HWLOC topology.\n");
+    topology_delete(topo);
     return NULL;
   }
-  e = hwloc_topology_load(topology->hwloc_topology);
-  if (e) {
+
+  if (hwloc_topology_load(*hwloc)) {
     log_error("failed to load HWLOC topology.\n");
+    topology_delete(topo);
     return NULL;
   }
 
-  // get the number of CPUs in the system
-  topology->ncpus = hwloc_get_nbobjs_by_type(topology->hwloc_topology,
-                                             HWLOC_OBJ_PU);
+  // Query the hwloc object for cpus, cores, and numa nodes---"fix" nnodes if
+  // hwloc returns something unpleasant
+  topo->ncpus = hwloc_get_nbobjs_by_type(*hwloc, HWLOC_OBJ_PU);
+  topo->ncores = hwloc_get_nbobjs_by_type(*hwloc, HWLOC_OBJ_CORE);
+  topo->nnodes = hwloc_get_nbobjs_by_type(*hwloc, HWLOC_OBJ_NODE);
+  topo->nnodes = (topo->nnodes > 0) ? topo->nnodes : 1;
+  topo->cpus_per_node = topo->ncpus / topo->nnodes;
 
-  // detect how many CPUs we can run on based on affinity or
-  // environment information. on cray platforms, we look at the ALPS
-  // depth to figure out how many CPUs to use
-  topology->allowed_cpus = hwloc_bitmap_alloc();
-  if (!topology->allowed_cpus) {
+  // Allocate our secondary arrays.
+  topo->allowed_cpus = hwloc_bitmap_alloc();
+  if (!topo->allowed_cpus) {
     log_error("failed to allocate memory for cpuset.\n");
+    topology_delete(topo);
     return NULL;
   }
 
-  int cores = libhpx_getenv_num("ALPS_APP_DEPTH", 0);
-  if (!cores) {
-    e = hwloc_get_cpubind(topology->hwloc_topology, topology->allowed_cpus,
-                          HWLOC_CPUBIND_PROCESS);
-    if (e) {
-      // failed to get the CPU binding, use all available cpus
-      hwloc_bitmap_set_range(topology->allowed_cpus, 0, topology->ncpus-1);
-    }
-  } else {
-    hwloc_bitmap_set_range(topology->allowed_cpus, 0, cores-1);
-  }
-
-  topology->cpus = calloc(topology->ncpus, sizeof(hwloc_obj_t));
-  if (!topology->cpus) {
+  topo->cpus = calloc(topo->ncpus, sizeof(topo->cpus[0]));
+  if (!topo->cpus) {
     log_error("failed to allocate memory for cpu objects.\n");
+    topology_delete(topo);
     return NULL;
   }
 
-  // get the number of cores in the system
-  topology->ncores = hwloc_get_nbobjs_by_type(topology->hwloc_topology,
-                                              HWLOC_OBJ_CORE);
-  // initalize the core map
-  topology->cpu_to_core = calloc(topology->ncpus, sizeof(int));
-  if (!topology->cpu_to_core) {
+  topo->cpu_to_core = calloc(topo->ncpus, sizeof(topo->cpu_to_core[0]));
+  if (!topo->cpu_to_core) {
     log_error("failed to allocate memory for the core map.\n");
+    topology_delete(topo);
     return NULL;
   }
 
-  // initalize the NUMA map
-  topology->cpu_to_numa = calloc(topology->ncpus, sizeof(int));
-  if (!topology->cpu_to_numa) {
+  topo->cpu_to_numa = calloc(topo->ncpus, sizeof(topo->cpu_to_numa[0]));
+  if (!topo->cpu_to_numa) {
     log_error("failed to allocate memory for the NUMA map.\n");
+    topology_delete(topo);
     return NULL;
   }
 
-  // get the number of NUMA nodes in the system
-  topology->nnodes = hwloc_get_nbobjs_by_type(topology->hwloc_topology,
-                                              HWLOC_OBJ_NODE);
-  topology->numa_nodes = NULL;
-  if (topology->nnodes > 0) {
-    topology->numa_nodes = calloc(topology->nnodes, sizeof(hwloc_obj_t));
-    if (!topology->numa_nodes) {
-      log_error("failed to allocate memory for numa node objects.\n");
-      return NULL;
-    }
-    topology->cpus_per_node = topology->ncpus / topology->nnodes;
-  } else {
-    topology->cpus_per_node = topology->ncpus;
+  topo->numa_nodes = calloc(topo->nnodes, sizeof(topo->numa_nodes[0]));
+  if (!topo->numa_nodes) {
+    log_error("failed to allocate memory for numa node objects.\n");
+    topology_delete(topo);
+    return NULL;
   }
 
-  int numa_to_cpus_index[topology->nnodes];
-  // initialize the reverse NUMA map
-  if (topology->nnodes > 0) {
-    topology->numa_to_cpus = calloc(topology->nnodes, sizeof(int*));
-    if (!topology->numa_to_cpus) {
+  topo->numa_to_cpus = calloc(topo->nnodes, sizeof(topo->numa_to_cpus[0]));
+  if (!topo->numa_to_cpus) {
+    log_error("failed to allocate memory for the reverse NUMA map.\n");
+    topology_delete(topo);
+    return NULL;
+  }
+
+  for (int i = 0, e = topo->nnodes; i < e; ++i) {
+    topo->numa_to_cpus[i] = calloc(topo->cpus_per_node, sizeof(int));
+    if (!topo->numa_to_cpus[i]) {
       log_error("failed to allocate memory for the reverse NUMA map.\n");
+      topology_delete(topo);
       return NULL;
     }
-
-    for (int i = 0; i < topology->nnodes; ++i) {
-      numa_to_cpus_index[i] = 0;
-      topology->numa_to_cpus[i] = calloc(topology->cpus_per_node, sizeof(int));
-      if (!topology->numa_to_cpus[i]) {
-        log_error("failed to allocate memory for the reverse NUMA map.\n");
-        return NULL;
-      }
-    }
-  } else {
-    topology->numa_to_cpus = NULL;
   }
+
+  // Detect how many CPUs we can run on based on affinity or environment.  On
+  // aprun platforms, we look at the ALPS depth to figure out how many CPUs to
+  // use, otherwise we try and use hwloc to figure out what the process mask is
+  // set to, otherwise we just bail out and use all CPUs.
+  int cores = libhpx_getenv_num("ALPS_APP_DEPTH", 0);
+  if (cores) {
+    hwloc_bitmap_set_range(topo->allowed_cpus, 0, cores - 1);
+  }
+  else if (hwloc_get_cpubind(*hwloc, topo->allowed_cpus, HWLOC_CPUBIND_PROCESS))
+  {
+    hwloc_bitmap_set_range(topo->allowed_cpus, 0, topo->ncpus - 1);
+  }
+
+  // We want to be able to map from a numa domain to its associated cpus, but we
+  // are going to iterate through the cpus in an undefined order. This array
+  // keeps track of the "next" index for each numa node array, so that we can
+  // insert into the right place.
+  int numa_to_cpus_next[topo->nnodes];
+  memset(numa_to_cpus_next, 0, sizeof(numa_to_cpus_next));
 
   hwloc_obj_t cpu = NULL;
-  for (int i = 0; i < topology->ncpus; ++i) {
-    cpu = hwloc_get_next_obj_by_type(topology->hwloc_topology,
-                                     HWLOC_OBJ_PU, cpu);
-    dbg_assert(cpu);
-    topology->cpus[cpu->os_index] = cpu;
+  hwloc_obj_t core = NULL;
+  hwloc_obj_t numa_node = NULL;
+  for (int i = 0, e = topo->ncpus; i < e; ++i) {
+    // get the hwloc tree nodes for the cpu, core, and numa node
+    cpu = hwloc_get_next_obj_by_type(*hwloc, HWLOC_OBJ_PU, cpu);
+    core = hwloc_get_ancestor_obj_by_type(*hwloc, HWLOC_OBJ_CORE, cpu);
+    numa_node = hwloc_get_ancestor_obj_by_type(*hwloc, HWLOC_OBJ_NODE, cpu);
 
-    hwloc_obj_t core =
-      hwloc_get_ancestor_obj_by_type(topology->hwloc_topology,
-                                     HWLOC_OBJ_CORE, cpu);
-    int index = core ? core->os_index : -1;
-    topology->cpu_to_core[cpu->os_index] = index;
+    // get integer indexes for the cpu, core, and numa node
+    int index = cpu->os_index;
+    int core_index = (core) ? core->os_index : 0;
+    int numa_index = (numa_node) ? numa_node->os_index : 0;
 
-    hwloc_obj_t numa_node =
-      hwloc_get_ancestor_obj_by_type(topology->hwloc_topology,
-                                     HWLOC_OBJ_NODE, cpu);
-    index = numa_node ? numa_node->os_index : -1;
-    if (numa_node && topology->numa_nodes[index] == NULL) {
-      topology->numa_nodes[index] = numa_node;
-    }
-    topology->cpu_to_numa[cpu->os_index] = index;
-    if (topology->numa_to_cpus && index >= 0) {
-      int map_index = numa_to_cpus_index[index]++;
-      topology->numa_to_cpus[index][map_index] = cpu->os_index;
-    }
+    // record our hwloc nodes so that we can get them quickly during queries
+    topo->cpus[index] = cpu;
+    topo->numa_nodes[numa_index] = numa_node;
+
+    // record our core and numa indices for quick query
+    topo->cpu_to_core[index] = core_index;
+    topo->cpu_to_numa[index] = numa_index;
+
+    // and record this cpu in the correct numa set
+    int next_cpu_index = numa_to_cpus_next[numa_index]++;
+    topo->numa_to_cpus[numa_index][next_cpu_index] = index;
   }
 
   // generate the CPU affinity map
-  topology->cpu_affinity_map = _cpu_affinity_map_new(topology, config->thread_affinity);
-  return topology;
+  topo->cpu_affinity_map = _cpu_affinity_map_new(topo, config->thread_affinity);
+  return topo;
 }
 
 void topology_delete(topology_t *topology) {

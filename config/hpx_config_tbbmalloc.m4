@@ -15,7 +15,6 @@
 AC_ARG_VAR([TBBROOT], [The TBB root installation directory])
 
 AC_DEFUN([_HAVE_TBBMALLOC], [
-  AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
   AC_DEFINE([HAVE_TBBMALLOC], [1], [We have the tbbmalloc allocator])
   have_tbbmalloc=yes
 ])

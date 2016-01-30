@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -36,7 +36,7 @@ static hpx_action_t _main = 0;
 
 /// The empty action
 static int _nop_action(hpx_addr_t *args, size_t size) {
-  hpx_thread_continue(NULL, 0);
+  return hpx_thread_continue(NULL, 0);
 }
 
 static int _main_action(int *args, size_t size) {

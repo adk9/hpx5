@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -37,10 +37,10 @@
 /// Derived OpenCL percolation class
 typedef struct {
   const char *(*id)(void);
-  void (*delete)(struct percolation*);
-  void *(*prepare)(const struct percolation*, const char *, const char *);
-  int (*execute)(const struct percolation*, void *, int, void **, size_t *);
-  void (*destroy)(const struct percolation*, void *);
+  void (*delete)(void*);
+  void *(*prepare)(const void*, const char *, const char *);
+  int (*execute)(const void*, void *, int, void **, size_t *);
+  void (*destroy)(const void*, void *);
 
   cl_device_id device;
   cl_platform_id platform;
@@ -52,15 +52,15 @@ static HPX_RETURNS_NON_NULL const char *_id(void) {
   return "OPENCL";
 }
 
-static void _delete(percolation_t *percolation) {
-  _opencl_percolation_t *cl = (_opencl_percolation_t*)percolation;
+static void _delete(void *percolation) {
+  _opencl_percolation_t *cl = percolation;
   clReleaseCommandQueue(cl->queue);
   clReleaseContext(cl->context);
 }
 
-static void *_prepare(const percolation_t *percolation, const char *key,
+static void *_prepare(const void *percolation, const char *key,
                       const char *kernel) {
-  _opencl_percolation_t *cl = (_opencl_percolation_t*)percolation;
+  _opencl_percolation_t *cl = percolation;
 
   int e;
   cl_program program = clCreateProgramWithSource(cl->context, 1, &kernel,
@@ -78,27 +78,9 @@ static void *_prepare(const percolation_t *percolation, const char *key,
   return (void*)k;
 }
 
-typedef struct {
-  cl_mem obj;
-  void  *buf;
-} _cl_mem_buf_t;
-
-static void _free_cl_mem_buf(void *p) {
-  _cl_mem_buf_t *mem_buf = (_cl_mem_buf_t *)p;
-  if (!mem_buf) {
-    return;
-  }
-
-  clReleaseMemObject(mem_buf->obj);
-  if (mem_buf->buf) {
-    free(mem_buf->buf);
-  }
-  free(mem_buf);
-}
-
-static int _execute(const percolation_t *percolation, void *obj, int nargs,
+static int _execute(const void *percolation, void *obj, int nargs,
                     void *vargs[], size_t sizes[]) {
-  _opencl_percolation_t *cl = (_opencl_percolation_t*)percolation;
+  _opencl_percolation_t *cl = percolation;
   cl_kernel kernel = (cl_kernel)obj;
 
   cl_mem buf[nargs];
@@ -134,9 +116,9 @@ static int _execute(const percolation_t *percolation, void *obj, int nargs,
   // TODO: determine optimal work group size.
   // TODO: look at clEnqueueTask.
   size_t local_size = 64;
-  size_t global_size = ceil(osize/local_size)*local_size;
-  
-  e = clEnqueueNDRangeKernel(cl->queue, kernel, 1, NULL, &global_size, 
+  size_t global_size = ((osize+local_size)/local_size)*local_size;
+
+  e = clEnqueueNDRangeKernel(cl->queue, kernel, 1, NULL, &global_size,
                              &local_size, 0, NULL, NULL);
 
   // TODO: make kernel execution asynchronous
@@ -149,15 +131,17 @@ static int _execute(const percolation_t *percolation, void *obj, int nargs,
     clReleaseMemObject(buf[i]);
   }
 
-  _cl_mem_buf_t *mem_buf = malloc(sizeof(*mem_buf));
-  mem_buf->obj = obuf;
-  mem_buf->buf = output;
+  int e = hpx_thread_continue(output, osize);
 
-  hpx_thread_continue_cleanup(_free_cl_mem_buf, mem_buf, output, osize);
-  return HPX_SUCCESS;
+  clReleaseMemObject(obuf);
+  if (output) {
+    free(output);
+  }
+
+  return e;
 }
 
-static void _destroy(const percolation_t *percolation, void *obj) {
+static void _destroy(const void *percolation, void *obj) {
   cl_kernel kernel = (cl_kernel)obj;
   clReleaseKernel(kernel);
 }

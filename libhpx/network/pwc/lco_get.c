@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -28,12 +28,12 @@
 /// This acts as a parcel_suspend transfer to allow _pwc_lco_get_request_handler
 /// to wait for its pwc to complete.
 static void _get_reply_continuation(hpx_parcel_t *p, void *env) {
-  pwc_network_t *pwc = (pwc_network_t*)here->network;
   xport_op_t *op = env;
 
   // at this point we know which parcel to resume for local completion
-  op->lop = command_pack(resume_parcel, (uint64_t)(uintptr_t)p);
-  dbg_check( pwc->xport->pwc(op) );
+  op->lop.op  = RESUME_PARCEL;
+  op->lop.arg = (uintptr_t)p;
+  dbg_check( pwc_network->xport->pwc(op) );
 }
 
 typedef struct {
@@ -91,7 +91,11 @@ static int _get_reply_stack(_pwc_lco_get_request_args_t *args,
     dbg_error("Cannot yet return an error from a remote get operation\n");
   }
 
-  command_t resume = command_pack(resume_parcel, (uintptr_t)args->p);
+  command_t resume = {
+    .op  = RESUME_PARCEL,
+    .arg = (uintptr_t)args->p
+  };
+
   return _get_reply(args, pwc, ref, resume);
 }
 
@@ -114,7 +118,10 @@ static int _get_reply_malloc(_pwc_lco_get_request_args_t *args,
     dbg_error("Cannot yet return an error from a remote get operation\n");
   }
 
-  command_t resume = command_pack(resume_parcel, (uintptr_t)args->p);
+  command_t resume = {
+    .op  = RESUME_PARCEL,
+    .arg = (uintptr_t)args->p
+  };
   e = _get_reply(args, pwc, ref, resume);
   registered_free(ref);
   return e;
@@ -142,8 +149,11 @@ static int _get_reply_getref(_pwc_lco_get_request_args_t *args,
   hpx_lco_release(lco, ref);
 
   // Wake the remote getter up.
-  e = network_command(pwc, HPX_THERE(args->rank), resume_parcel,
-                      (uintptr_t)args->p);
+  command_t rcmd = {
+    .op  = RESUME_PARCEL,
+    .arg = (uintptr_t)args->p
+  };
+  e = pwc_cmd(pwc, args->rank, (command_t){0}, rcmd);
   dbg_check(e, "Failed to start resume command during remote lco get.\n");
   return e;
 }
@@ -154,7 +164,6 @@ static int _pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args,
                                         size_t n) {
   dbg_assert(n > 0);
 
-  pwc_network_t *pwc = (pwc_network_t*)here->network;
   hpx_addr_t lco = hpx_thread_current_target();
 
   // We would like to rdma directly from the LCO's buffer, when
@@ -166,13 +175,13 @@ static int _pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args,
   // put operations, one to put back to the waiting buffer, and one to resume
   // the waiting thread after we drop our local reference.
   if (args->n > LIBHPX_SMALL_THRESHOLD && !args->reset) {
-    return _get_reply_getref(args, pwc, lco);
+    return _get_reply_getref(args, pwc_network, lco);
   }
 
   // If there is enough space to stack allocate a buffer to copy, use the stack
   // version, otherwise malloc a buffer to copy to.
   else if (hpx_thread_can_alloca(args->n) >= HPX_PAGE_SIZE) {
-    return _get_reply_stack(args, pwc, lco);
+    return _get_reply_stack(args, pwc_network, lco);
   }
 
   // Otherwise we get to a registered buffer and then do the put. The theory
@@ -183,7 +192,7 @@ static int _pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args,
   //     LIBHPX_SMALL_THRESHOLD is appropriate. Honestly, given enough work to
   //     do, the latency of two puts might not be a big deal.
   else {
-    return _get_reply_malloc(args, pwc, lco);
+    return _get_reply_malloc(args, pwc_network, lco);
   }
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _pwc_lco_get_request,
@@ -198,11 +207,9 @@ typedef struct {
 static void _pwc_lco_get_continuation(hpx_parcel_t *p, void *env) {
   _pwc_lco_get_continuation_env_t *e = env;
   e->request.p = p;
-  hpx_parcel_t *q = action_create_parcel(e->lco, _pwc_lco_get_request,
-                                         HPX_NULL, HPX_ACTION_NULL,
-                                         2, &e->request, sizeof(e->request));
-  dbg_assert(q);
-  parcel_launch(q);
+  hpx_action_t act = _pwc_lco_get_request;
+  size_t n = sizeof(e->request);
+  dbg_check(action_call_lsync(act, e->lco, 0, 0, 2, &e->request, n));
 }
 
 /// This is the top-level LCO get handler that is called for (possibly) remote
@@ -212,8 +219,6 @@ static void _pwc_lco_get_continuation(hpx_parcel_t *p, void *env) {
 /// This operation is synchronous and will block until the operation has
 /// completed.
 int pwc_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset) {
-  pwc_network_t *pwc = (pwc_network_t*)here->network;
-
   _pwc_lco_get_continuation_env_t env = {
     .request = {
       .p = NULL,                             // set in _pwc_lco_get_continuation
@@ -228,12 +233,12 @@ int pwc_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset) {
 
   // If the output buffer is already registered, then we just need to copy the
   // key into the args structure, otherwise we need to register the region.
-  const void *key = pwc->xport->key_find_ref(pwc->xport, out, n);
+  const void *key = pwc_network->xport->key_find_ref(pwc_network->xport, out, n);
   if (key) {
-    pwc->xport->key_copy(&env.request.key, key);
+    pwc_network->xport->key_copy(&env.request.key, key);
   }
   else {
-    pwc->xport->pin(out, n, &env.request.key);
+    pwc_network->xport->pin(out, n, &env.request.key);
   }
 
   // Perform the get operation synchronously.
@@ -242,7 +247,7 @@ int pwc_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset) {
   // If we registered the output buffer dynamically, then we need to de-register
   // it now.
   if (!key) {
-    pwc->xport->unpin(out, n);
+    pwc_network->xport->unpin(out, n);
   }
   return HPX_SUCCESS;
 }

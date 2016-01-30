@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -34,15 +34,12 @@
 ///
 /// This is used to schedule the transferred parcel once the get operation has
 /// completed. The command encodes the local address of the parcel to schedule.
-static int _rendezvous_launch_handler(int src, command_t cmd) {
-  uintptr_t arg = command_get_arg(cmd);
-  hpx_parcel_t *p = (void*)arg;
+void handle_rendezvous_launch(int src, command_t cmd) {
+  hpx_parcel_t *p = (hpx_parcel_t*)(uintptr_t)cmd.arg;
   parcel_set_state(p, PARCEL_SERIALIZED);
   EVENT_PARCEL_RECV(p);
   scheduler_spawn(p);
-  return HPX_SUCCESS;
 }
-COMMAND_DEF(_rendezvous_launch, _rendezvous_launch_handler);
 
 typedef struct {
   int              rank;
@@ -55,26 +52,25 @@ typedef struct {
 ///
 /// This handler will allocate a parcel to "get" into, and then initiate the
 /// get-with-completion operation. It does not need to persist across the get
-/// operation because it can attach the release_parcel and _rendezvous_launch
+/// operation because it can attach the delete_parcel and _rendezvous_launch
 /// event handlers to the get operation.
 ///
 /// We need to use a marshaled operation because we send the transport key by
 /// value and we don't have an FFI type to capture that.
 static int _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size) {
-  pwc_network_t *pwc = (pwc_network_t*)here->network;
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, args->n - sizeof(*p));
   dbg_assert(p);
   xport_op_t op = {
     .rank = args->rank,
     .n = args->n,
     .dest = p,
-    .dest_key = pwc->xport->key_find_ref(pwc->xport, p, args->n),
+    .dest_key = pwc_network->xport->key_find_ref(pwc_network->xport, p, args->n),
     .src = args->p,
     .src_key = &args->key,
-    .lop = command_pack(_rendezvous_launch, (uintptr_t)p),
-    .rop = command_pack(release_parcel, (uintptr_t)args->p)
+    .lop = (command_t){ .op = RENDEZVOUS_LAUNCH, .arg = (uintptr_t)p },
+    .rop = (command_t){ .op = DELETE_PARCEL, .arg = (uintptr_t)args->p }
   };
-  int e = pwc->xport->gwc(&op);
+  int e = pwc_network->xport->gwc(&op);
   dbg_check(e, "could not issue get during rendezvous parcel\n");
   return HPX_SUCCESS;
 }

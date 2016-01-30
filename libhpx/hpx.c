@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -37,7 +37,7 @@
 #include <libhpx/instrumentation.h>
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
-#include <libhpx/profiling.h>
+#include <libhpx/percolation.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/system.h>
 #include <libhpx/time.h>
@@ -45,10 +45,6 @@
 
 #ifdef HAVE_APEX
 #include "apex.h"
-#endif
-
-#ifdef HAVE_PERCOLATION
-#include <libhpx/percolation.h>
 #endif
 
 static hpx_addr_t _hpx_143;
@@ -89,12 +85,10 @@ static void _cleanup(locality_t *l) {
   apex_finalize();
 #endif
 
-#ifdef HAVE_PERCOLATION
   if (l->percolation) {
     percolation_delete(l->percolation);
     l->percolation = NULL;
   }
-#endif
 
   if (l->gas) {
     gas_dealloc(l->gas);
@@ -113,10 +107,7 @@ static void _cleanup(locality_t *l) {
     l->topology = NULL;
   }
 
-  if (l->actions) {
-    action_table_free(l->actions);
-  }
-
+  action_table_finalize();
   inst_fini();
 
   if (l->config) {
@@ -141,7 +132,10 @@ int hpx_init(int *argc, char ***argv) {
   here->rank = -1;
   here->ranks = 0;
   here->epoch = 0;
-  here->actions = NULL;
+
+  sigset_t set;
+  sigemptyset(&set);
+  dbg_check(pthread_sigmask(SIG_BLOCK, &set, &here->mask));
 
   here->config = config_new(argc, argv);
   if (!here->config) {
@@ -185,7 +179,7 @@ int hpx_init(int *argc, char ***argv) {
     }
   }
 
-  // topology
+  // topology discovery and initialization
   here->topology = topology_new(here->config);
   if (!here->topology) {
     status = log_error("failed to discover topology.\n");
@@ -197,8 +191,6 @@ int hpx_init(int *argc, char ***argv) {
     log_dflt("error detected while initializing instrumentation\n");
   }
 
-  prof_init(here->config);
-
   // Allocate the global heap.
   here->gas = gas_new(here->config, here->boot);
   if (!here->gas) {
@@ -207,13 +199,11 @@ int hpx_init(int *argc, char ***argv) {
   }
   HPX_HERE = HPX_THERE(here->rank);
 
-#ifdef HAVE_PERCOLATION
   here->percolation = percolation_new();
   if (!here->percolation) {
     status = log_error("failed to activate percolation.\n");
     goto unwind1;
   }
-#endif
 
   int cores = system_get_available_cores();
   dbg_assert(cores > 0);
@@ -243,12 +233,7 @@ int hpx_init(int *argc, char ***argv) {
   apex_set_node_id(here->rank);
 #endif
 
-  here->actions = action_table_finalize();
-  if (!here->actions) {
-    status = log_error("failed to finalize the action table.\n");
-    goto unwind1;
-  }
-
+  action_registration_finalize();
   inst_start();
 
   // start the scheduler, this will return after scheduler_shutdown()
@@ -273,10 +258,10 @@ int hpx_init(int *argc, char ***argv) {
 /// Called to run HPX.
 int _hpx_run(hpx_action_t *act, int n, ...) {
   if (here->rank == 0) {
-    va_list vargs;
-    va_start(vargs, n);
-    hpx_parcel_t *p = action_create_parcel_va(HPX_HERE, *act, 0, 0, n, &vargs);
-    va_end(vargs);
+    va_list args;
+    va_start(args, n);
+    hpx_parcel_t *p = action_new_parcel_va(*act, HPX_HERE, 0, 0, n, &args);
+    va_end(args);
     dbg_check(hpx_parcel_send(p, HPX_NULL), "failed to spawn initial action\n");
   }
   log_dflt("hpx started running %"PRIu64"\n", here->epoch);
@@ -304,7 +289,7 @@ int hpx_get_num_ranks(void) {
 }
 
 int hpx_get_num_threads(void) {
-  return (here && here->sched) ? here->sched->n_workers : 0;
+  return (here && here->sched) ? here->sched->n_workers : -1;
 }
 
 int hpx_is_active(void) {
@@ -316,21 +301,23 @@ void hpx_exit(int code) {
   dbg_assert_str(here->ranks,
                  "hpx_exit can only be called when the system is running.\n");
 
+  uint64_t c = (uint32_t)code;
+
   // Make sure we flush our local network when we stop, but don't send our own
   // shutdown here because it can "arrive" locally very quickly, before we've
   // even come close to sending the rest of the stop commands. This can cause
   // problems with flushing.
-  uint64_t c = code;
   for (int i = 0, e = here->ranks; i < e; ++i) {
     if (i != here->rank) {
-      int e = network_command(here->network, HPX_THERE(i), locality_stop, c);
+      int e = action_call_lsync(locality_stop, HPX_THERE(i), 0, 0, 1, &c);
       dbg_check(e);
     }
   }
 
   // Call our own shutdown through cc, which orders it locally after the effects
   // from the loop above.
-  hpx_call_cc(HPX_HERE, locality_stop, NULL, NULL, &here->rank, &c);
+  int e = hpx_call_cc(HPX_HERE, locality_stop, &c);
+  hpx_thread_exit(e);
 }
 
 /// Called by the application to shutdown the scheduler and network. May be

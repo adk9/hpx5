@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -58,8 +58,9 @@ void sync_mcs_lock_release(struct mcs_lock *mcs, struct mcs_node *node) {
     return;
   }
 
-  // release the lock to no one
-  if (sync_cas(&mcs->tail, node, NULL, SYNC_RELEASE, SYNC_RELAXED)) {
+  // release the lock to no one--don't overwrite "node" during a failed cas
+  struct mcs_node *temp = node;
+  if (sync_cas(&mcs->tail, &temp, NULL, SYNC_RELEASE, SYNC_RELAXED)) {
     return;
   }
 

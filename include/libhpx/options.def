@@ -1,7 +1,7 @@
 // -*- C -*- ===================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -145,6 +145,7 @@ LIBHPX_OPT_BITSET(trace_, classes, LIBHPX_OPT_BITSET_NONE)
 /// Profiling options
 /// @{
 LIBHPX_OPT_BITSET(prof_, counters, LIBHPX_OPT_BITSET_NONE)
+LIBHPX_OPT_FLAG(prof_, detailed, 0)
 /// @}
 
 /// PWC options
@@ -185,6 +186,11 @@ LIBHPX_OPT_STRING(photon_, fidev, NULL)
 /// Optimization options
 /// @{
 LIBHPX_OPT_SCALAR(opt_, smp, 1, int)
+/// @}
+
+/// coalescing option
+/// @{
+LIBHPX_OPT_SCALAR(coalescing_, buffersize, 0, int)
 /// @}
 
 #ifdef _LIBHPX_OPT_INTSET_UNDEF

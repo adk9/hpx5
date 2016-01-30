@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -49,7 +49,7 @@ static int num_readers[]  ={
 };
 
 static int action_get_value(void *args, size_t size) {
-  HPX_THREAD_CONTINUE(value);
+  return HPX_THREAD_CONTINUE(value);
 }
 
 static int action_set_value(void *args, size_t size) {

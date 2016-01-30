@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -13,6 +13,10 @@
 
 #ifndef HPX_PARCEL_H
 #define HPX_PARCEL_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /// @defgroup parcels Parcels
 /// @brief Functions and definitions for using parcels (as distinct from actions)
@@ -74,6 +78,16 @@ typedef struct hpx_parcel hpx_parcel_t;
 hpx_parcel_t *hpx_parcel_acquire(const void *data, size_t bytes)
   HPX_MALLOC HPX_PUBLIC;
 
+/// Prevent a parcel from being released by the system during a send operation.
+///
+/// Retained parcels can be useful for regular applications that resend the same
+/// parcels repeatedly, and *must* be manually released using
+/// hpx_parcel_release().
+///
+/// @param            p The parcel to retain.
+void hpx_parcel_retain(hpx_parcel_t *p)
+  HPX_NON_NULL(1) HPX_PUBLIC;
+
 /// Explicitly release a parcel.
 ///
 /// The @p p argument must correspond to a parcel pointer returned from
@@ -132,7 +146,8 @@ hpx_status_t hpx_parcel_send_sync(hpx_parcel_t *p)
 /// @param            p The parcel to send, must correspond to a parcel returned
 ///                       from hpx_parcel_acquire().
 ///
-/// @param         gate The LCO that will serve as the gate.
+/// @param         gate The LCO that will serve as the gate, must be
+///                       non-HPX_NULL.
 ///
 /// @param        lsync The global address of an LCO to set once the send has
 ///                       completed locally (i.e., the parcel's buffer can be
@@ -154,7 +169,8 @@ hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
 /// @param            p The parcel to send, must correspond to a parcel returned
 ///                       from hpx_parcel_acquire().
 ///
-/// @param          lco The LCO that will serve as the gate.
+/// @param          lco The LCO that will serve as the gate, must be
+///                       non-HPX_NULL.
 ///
 /// @returns            HPX_SUCCESS or an error code.
 hpx_status_t hpx_parcel_send_through_sync(hpx_parcel_t *p, hpx_addr_t lco)
@@ -273,5 +289,9 @@ void hpx_parcel_set_pid(hpx_parcel_t *p, const hpx_pid_t pid)
   HPX_NON_NULL(1) HPX_PUBLIC;
 
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

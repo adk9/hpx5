@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -10,18 +10,22 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
 
+#include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include "allreduce.h"
 
 static int _allreduce_init_handler(allreduce_t *r, size_t bytes,
                                    hpx_addr_t parent, hpx_action_t id,
                                    hpx_action_t op) {
-  hpx_monoid_id_t rid = (hpx_monoid_id_t)hpx_action_get_handler(id);
-  hpx_monoid_op_t rop = (hpx_monoid_op_t)hpx_action_get_handler(op);
+  CHECK_ACTION(id);
+  CHECK_ACTION(op);
+  hpx_monoid_id_t rid = (hpx_monoid_id_t)actions[id].handler;
+  hpx_monoid_op_t rop = (hpx_monoid_op_t)actions[op].handler;
   allreduce_init(r, bytes, parent, rid, rop);
   return HPX_SUCCESS;
 }
@@ -39,7 +43,7 @@ HPX_ACTION(HPX_DEFAULT, HPX_PINNED, allreduce_fini_async,
 static int _allreduce_add_handler(allreduce_t *r, hpx_action_t op,
                                   hpx_addr_t addr) {
   int32_t i = allreduce_add(r, op, addr);
-  HPX_THREAD_CONTINUE(i);
+  return HPX_THREAD_CONTINUE(i);
 }
 HPX_ACTION(HPX_DEFAULT, HPX_PINNED, allreduce_add_async,
            _allreduce_add_handler, HPX_POINTER, HPX_ACTION_T, HPX_ADDR);

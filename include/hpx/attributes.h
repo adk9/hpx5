@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -13,6 +13,10 @@
 
 #ifndef HPX_ATTRIBUTES_H
 #define HPX_ATTRIBUTES_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /// @file
 /// @brief Attribute definitions for HPX functions.
@@ -47,6 +51,10 @@
 # define HPX_NO_OPTIMIZE HPX_ATTRIBUTE((optnone))
 #else
 # define HPX_NO_OPTIMIZE HPX_OPTIMIZE("O0")
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif // HPX_ATTRIBUTES_H

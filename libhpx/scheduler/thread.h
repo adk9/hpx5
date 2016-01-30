@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -25,15 +25,16 @@ struct lco_class;
 /// @}
 
 typedef struct ustack {
-  void             *sp;                         // checkpointed stack pointer
+  void *sp;                                     // checkpointed stack pointer
   hpx_parcel_t *parcel;                         // the progenitor parcel
   struct ustack  *next;                         // freelists and condition vars
   int        lco_depth;                         // how many lco locks we hold
-  int           tls_id;                         //
-  int         stack_id;                         //
-  int             size;                         //
-  int            error;                         // like errno for this thread
+  int           tls_id;                         // backs tls
+  int         stack_id;                         // used by VALGRIND
+  int             size;                         // the size of this stack
+  short           cont;                         // the continuation flag
   short       affinity;                         // set by user
+  short         masked;                         // should we checkpoint sigmask
   char           stack[];
 } ustack_t;
 
@@ -51,9 +52,10 @@ void thread_set_stack_size(int stack_bytes);
 /// execution. The @p entry function will be run as a result of the initial
 /// transfer.
 ///
-/// @param       thread The thread to initialize.
+/// @param        stack The thread stack pointer.
 /// @param       parcel The parcel that is generating this thread.
 /// @param            f The entry function for the thread.
+/// @param         size The thread size.
 void thread_init(ustack_t *stack, hpx_parcel_t *parcel, thread_entry_t f,
                  size_t size)
   HPX_NON_NULL(1, 2);
@@ -72,7 +74,7 @@ ustack_t *thread_new(hpx_parcel_t *parcel, thread_entry_t f)
 
 /// Deletes the thread.
 ///
-/// @param thread - The thread pointer.
+/// @param stack - The thread stack pointer.
 void thread_delete(ustack_t *stack)
   HPX_NON_NULL(1);
 

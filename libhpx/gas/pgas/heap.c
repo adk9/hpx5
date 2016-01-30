@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -246,7 +246,7 @@ heap_set_csbrk(heap_t *heap, uint64_t offset) {
   // larger than the new offset, it means that this is happening out of order
   uint64_t old = sync_load(&heap->csbrk, SYNC_RELAXED);
   if (old < offset) {
-    sync_cas(&heap->csbrk, old, offset, SYNC_RELAXED, SYNC_RELAXED);
+    sync_cas(&heap->csbrk, &old, offset, SYNC_RELAXED, SYNC_RELAXED);
     int used = _chunks_are_used(heap, old, offset - old);
     return (used) ? HPX_ERROR : HPX_SUCCESS;
   }

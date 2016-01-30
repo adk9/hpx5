@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -27,6 +27,7 @@
 /// Furthermore, this file defines a number of inline convenience functions that
 /// wrap common functionality that needs access to the global here object.
 
+#include <signal.h>
 #include <hpx/hpx.h>
 
 #ifdef __cplusplus
@@ -35,53 +36,57 @@ extern "C" {
 
 /// Forward declarations.
 /// @{
-struct action_table;
 struct boot;
 struct config;
 struct network;
 struct scheduler;
 struct topology;
-struct percolation;
 /// @}
-//
 
-/// The locality object.
+/// @struct locality
+/// @brief The locality object.
 ///
-/// @field        rank The dense, 0-based rank of this locality.
-/// @field       ranks The total number of ranks running the current job.
-/// @filed       epoch Keep track of the current hpx_run() epoch.
-/// @field        boot The bootstrap object. This provides rank and ranks, as well
-///                    as some basic, IP-based networking functionality.
-/// @field         gas The global address space object. This provides global
-///                    memory allocation and address space functionality.
-/// @field     network The network layer. This provides an active message
-///                    interface targeting global addresses.
-/// @field       sched The lightweight thread scheduler. This provides the
-///                    infrastructure required to create lightweight threads, and
-///                    to deal with inter-thread data and control dependencies
-///                    using LCOs.
-/// @field      config The libhpx configuration object. This stores the
-///                    per-locality configuration parameters based on
-///                    the user-specified runtime configuration values
-///                    and/or the defaults.
-/// @field     actions The symmetric "action table" which stores the
-///                    details of all of the actions registered at this locality.
-/// @field    topology The topology information.
-/// @field percolation An interface for dealing with GPU backends.
+/// @var locality::rank The dense, 0-based rank of this locality.
+/// @var locality::ranks The total number of ranks running the current job.
+/// @var locality::epoch Keep track of the current hpx_run() epoch.
+/// @var locality::boot
+/// The bootstrap object. This provides rank and ranks, as well as some basic,
+/// IP-based networking functionality.
+/// @var locality::gas
+/// The global address space object. This provides global memory allocation and 
+/// address space functionality.
+/// @var locality::network 
+/// The network layer. This provides an active message interface targeting
+/// global addresses.
+/// @var locality::sched
+/// The lightweight thread scheduler. This provides the infrastructure required
+/// to create lightweight threads, and to deal with inter-thread data and
+/// control dependencies using LCOs.
+/// @var locality::config 
+/// The libhpx configuration object. This stores the per-locality configuration 
+/// parameters based on the user-specified runtime configuration values and/or 
+///the defaults.
+/// @var locality::actions
+/// The symmetric "action table" which stores the details of all of the actions
+/// registered at this locality.
+/// @var locality::topology
+/// The topology information.
+/// @var locality::percolation
+/// An interface for dealing with GPU backends.
+/// @var locality::mask
+/// The default signal mask.
 typedef struct locality {
-  uint32_t                      rank;
-  uint32_t                     ranks;
-  uint64_t                     epoch;
-  struct boot                  *boot;
-  void                          *gas;
-  struct network            *network;
-  struct scheduler            *sched;
-  struct config              *config;
-  const struct action_table *actions;
-  struct topology          *topology;
-#ifdef HAVE_PERCOLATION
-  struct percolation    *percolation;
-#endif
+  uint32_t             rank;
+  uint32_t            ranks;
+  uint64_t            epoch;
+  struct boot         *boot;
+  void                 *gas;
+  struct network   *network;
+  struct scheduler   *sched;
+  struct config     *config;
+  struct topology *topology;
+  void         *percolation;
+  sigset_t             mask;
 } locality_t;
 
 /// Inter-locality action interface.

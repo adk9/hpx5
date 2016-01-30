@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -44,9 +44,7 @@
 #define sync_store(addr, val, mm) __atomic_store_n(addr, val, mm)
 #define sync_swap(addr, val, mm) __atomic_exchange_n(addr, val, mm)
 #define sync_cas(addr, from, to, onsuccess, onfailure)              \
-    __atomic_compare_exchange_n(addr, &from, to, false, onsuccess, onfailure)
-#define sync_cas_val(addr, from, to, onsuccess, onfailure)          \
-  __atomic_compare_exchange_n(addr, &from, to, false, onsuccess, onfailure) ? from : from
+    __atomic_compare_exchange_n(addr, from, to, false, onsuccess, onfailure)
 
 #define sync_fadd(addr, val, mm) __atomic_fetch_add(addr, val, mm)
 #define sync_addf(addr, val, mm) __atomic_add_fetch(addr, val, mm)

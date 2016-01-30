@@ -28,6 +28,6 @@ if [ ! -f $TARBALL ]; then
 fi
 
 md5=($($md5sum $TARBALL))
-echo "Uploading $CONTRIB tarball with md5 ${md5}..."
+echo "Uploading $CONTRIB tarball with md5 ${md5}"
 $rsync -arv $TARBALL ${USER}@${DEST}/${CONTRIB}/${md5}/
 

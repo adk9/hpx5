@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -13,12 +13,6 @@
 
 #include "reg_macros.h"
 #include "../common/asm_macros.h"
-
-#ifdef ENABLE_DEBUG
-#  define FRAME_SIZE 192
-#else
-#  define FRAME_SIZE 176
-#endif
 
         // @param x0 - a pointer to the stack pointer to transfer to
         // @param x1 - the continuation to call after the sp exchange
@@ -33,7 +27,7 @@
 LABEL(thread_transfer)
         STARTPROC
 
-        sub sp, sp, FRAME_SIZE
+        sub sp, sp, 192
 
 #define REG_PAIR(REG1, REG2, OFFS)	stp REG1, REG2, [sp, OFFS]
 #define REG_ONE(REG1, OFFS)		str REG1, [sp, OFFS]
@@ -66,7 +60,7 @@ LABEL(thread_transfer)
         FPR_LAYOUT
 #undef REG_PAIR
 #undef REG_ONE
-        add sp, sp, FRAME_SIZE
+        add sp, sp, 192
 
         ret x30
         ENDPROC

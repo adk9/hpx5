@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -219,13 +219,13 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _and_init, _and_init_handler,
 hpx_addr_t hpx_lco_and_new(int64_t limit) {
   _and_t *and = NULL;
   hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*and), 0);
-  LCO_LOG_NEW(gva);
 
   if (!hpx_gas_try_pin(gva, (void**)&and)) {
     int e = hpx_call_sync(gva, _and_init, NULL, 0, &limit);
     dbg_check(e, "could not initialize an and gate at %"PRIu64"\n", gva);
   }
   else {
+    LCO_LOG_NEW(gva, and);
     _and_init_handler(and, limit);
     hpx_gas_unpin(gva);
   }

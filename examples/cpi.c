@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -57,7 +57,7 @@ static double myreduce(int count, double values[count]) {
   return total;
 }
 
-static double _getVal_action(void *args, size_t size) {
+static int _getVal_action(void *args, size_t size) {
   int THREADS = HPX_LOCALITIES;
   int MYTHREAD = HPX_LOCALITY_ID;
 
@@ -69,7 +69,7 @@ static double _getVal_action(void *args, size_t size) {
 
   double value = integrate(mystart, myend, interval);
 
-  HPX_THREAD_CONTINUE(value);
+  return HPX_THREAD_CONTINUE(value);
 }
 
 static int _setVal_action(void *args, size_t size) {
@@ -81,8 +81,9 @@ static int _main_action(int *args, size_t size) {
   double realpi=3.141592653589793238462643;
   int THREADS = HPX_LOCALITIES;
   int MYTHREAD = HPX_LOCALITY_ID;
-  int interval = *(int*)args;
+  int interval = *args;
 
+  int             ns[THREADS];
   double      values[THREADS];
   void        *addrs[THREADS];
   size_t       sizes[THREADS];
@@ -91,8 +92,9 @@ static int _main_action(int *args, size_t size) {
   for (int i = 0; i < THREADS; ++i) {
     addrs[i] = &values[i];
     sizes[i] = sizeof(double);
+    ns[i]    = interval;
     futures[i] = hpx_lco_future_new(sizeof(double));
-    hpx_call(HPX_THERE(i), _getVal, futures[i], &interval, sizeof(interval));
+    hpx_call(HPX_THERE(i), _getVal, futures[i], &ns[THREADS], sizeof(int));
   }
 
   hpx_lco_get_all(THREADS, futures, sizes, addrs, NULL);

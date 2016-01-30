@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -261,13 +261,13 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_init,
 hpx_addr_t hpx_lco_future_new(int size) {
   _future_t *future = NULL;
   hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*future) + size, 0);
-  LCO_LOG_NEW(gva);
 
   if (!hpx_gas_try_pin(gva, (void**)&future)) {
     int e = hpx_call_sync(gva, _future_init_async, NULL, 0, &size);
     dbg_check(e, "could not initialize a future at %"PRIu64"\n", gva);
   }
   else {
+    LCO_LOG_NEW(gva, future);
     _future_init_handler(future, size);
     hpx_gas_unpin(gva);
   }

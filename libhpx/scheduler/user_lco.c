@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -114,12 +114,11 @@ static int _user_lco_set(lco_t *lco, int size, const void *from) {
   }
 
   // perform the op()
-  hpx_action_handler_t f = 0;
-  f = action_table_get_handler(here->actions, u->op);
+  handler_t f = actions[u->op].handler;
   hpx_monoid_op_t op = (hpx_monoid_op_t)f;
   op(u->buffer, from, size);
 
-  f = action_table_get_handler(here->actions, u->predicate);
+  f = actions[u->predicate].handler;
   hpx_predicate_t predicate = (hpx_predicate_t)f;
   if (predicate(u->buffer, u->size)) {
     lco_set_triggered(&u->lco);
@@ -195,12 +194,36 @@ static hpx_status_t _user_lco_wait(lco_t *lco, int reset) {
   lco_lock(lco);
   _user_lco_t *u = (_user_lco_t *)lco;
   status = _wait(u);
+
   if (reset && status == HPX_SUCCESS) {
     _reset(u);
   }
 
   lco_unlock(lco);
   return status;
+}
+
+// Get the reference to the reduction.
+static hpx_status_t _user_lco_getref(lco_t *lco, int size, void **out, int *unpin) {
+  dbg_assert(size && out);
+
+  hpx_status_t status = _user_lco_wait(lco, 0);
+  if (status != HPX_SUCCESS) {
+    return status;
+  }
+
+  // No need for a lock here, synchronization happened in _wait(), and the LCO
+  // is pinned externally.
+  _user_lco_t *u = (_user_lco_t *)lco;
+  *out  = u->buffer;
+  *unpin = 0;
+  return HPX_SUCCESS;
+}
+
+// Release the reference to the buffer.
+static int _user_lco_release(lco_t *lco, void *out) {
+  dbg_assert(lco && out && out == ((_user_lco_t *)lco)->buffer);
+  return 1;
 }
 
 // vtable
@@ -210,8 +233,8 @@ static const lco_class_t _user_lco_vtable = {
   .on_set      = _user_lco_set,
   .on_attach   = _user_lco_attach,
   .on_get      = _user_lco_get,
-  .on_getref   = NULL,
-  .on_release  = NULL,
+  .on_getref   = _user_lco_getref,
+  .on_release  = _user_lco_release,
   .on_wait     = _user_lco_wait,
   .on_reset    = _user_lco_reset,
   .on_size     = _user_lco_size
@@ -231,13 +254,12 @@ _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
   u->id = id;
   u->op = op;
   u->predicate = predicate;
-  memset(u->data + init_size, 0, size);
   u->init = u->data;
   u->buffer = (char*)u->data + init_size;
 
-  hpx_action_handler_t f = action_table_get_handler(here->actions, u->id);
+  handler_t f = actions[u->id].handler;
   _hpx_user_lco_id_t init_fn = (_hpx_user_lco_id_t)f;
-  init_fn(u->buffer, u->size, u->init, init_size);
+  init_fn(u->buffer, u->size, init, init_size);
   return HPX_SUCCESS;
 }
 /// @}
@@ -272,7 +294,6 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
                             size_t init_size) {
   _user_lco_t *u = NULL;
   hpx_addr_t gva = hpx_gas_calloc_local(1, sizeof(*u) + size + init_size, 0);
-  LCO_LOG_NEW(gva);
 
   if (!hpx_gas_try_pin(gva, (void**)&u)) {
     size_t args_size = sizeof(_user_lco_t) + init_size;
@@ -288,6 +309,8 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
     dbg_check(e, "could not initialize an allreduce at %"PRIu64"\n", gva);
     free(args);
   } else {
+    LCO_LOG_NEW(gva, u);
+    memcpy(u->data, init, init_size);
     _user_lco_init(u, size, id, op, predicate, init, init_size);
     hpx_gas_unpin(gva);
   }
@@ -320,6 +343,8 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED,
 /// @param         op The commutative-associative operation we're
 ///                   performing.
 /// @param  predicate Predicate to guard the LCO.
+/// @param       init The initialization data address.
+/// @param  init_size The size of the initialization data.
 ///
 /// @returns the global address of the allocated array lco.
 hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size, hpx_action_t id,
@@ -345,4 +370,11 @@ hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size, hpx_action_t id,
   free(args);
   // return the base address of the allocation
   return base;
+}
+
+/// Get the user-defined LCO's user data. This allows to access the buffer
+/// portion of the user-defined LCO regardless the LCO has been set or not.
+void *hpx_lco_user_get_user_data(void *lco) {
+  _user_lco_t *u = lco;
+  return u->buffer;
 }

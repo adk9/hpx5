@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -13,6 +13,10 @@
 
 #ifndef HPX_BUILTINS_H
 #define HPX_BUILTINS_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // ----------------------------------------------------------------------------
 /// @file builtins.h
@@ -232,5 +236,9 @@ _HPX_ASSERT(__HPX_NARGS() == 0, __c_preprocessor_is_not_gnu99_compatible);
 
 #define __HPX_FOREACH(F, ...)                                       \
   _HPX_CAT1(_HPX_FOREACH_, __HPX_NARGS(__VA_ARGS__))(F, __VA_ARGS__)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // HPX_BUILTINS_H

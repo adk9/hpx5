@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -23,7 +23,7 @@ static uint64_t value;
 // are always allocated in the global address space, because their addresses
 // are used as the targets of parcels.
 static int _get_value_handler(void) {
-  HPX_THREAD_CONTINUE(value);
+  return HPX_THREAD_CONTINUE(value);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _get_value, _get_value_handler);
 
@@ -60,6 +60,7 @@ static int lco_future_new_handler(void) {
 
   for (int i = 0; i < count; i++) {
     hpx_lco_delete(futures[i], HPX_NULL);
+    sizes[i] = 4;
     futures[i] = hpx_lco_future_new(4);
     hpx_call(HPX_THERE(i), _set_value, futures[i], &value);
   }
@@ -80,7 +81,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, lco_future_new, lco_future_new_handler);
 // an address of a future in a future array
 static int _get_future_value_handler(void) {
   uint64_t data = SET_VALUE;
-  HPX_THREAD_CONTINUE(data);
+  return HPX_THREAD_CONTINUE(data);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _get_future_value, _get_future_value_handler);
 

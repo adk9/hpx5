@@ -21,6 +21,7 @@
 /Makefile
 /Makefile.in
 /hpx.pc
+/hpx++.pc
 /scripts/hpx-config
 
 # /config/
@@ -39,6 +40,7 @@
 /examples/.deps
 /examples/Makefile
 /examples/Makefile.in
+/examples/cxx/Makefile
 /examples/fibonacci
 /examples/pingpong
 /examples/allreduce
@@ -56,6 +58,7 @@
 /examples/netbench
 /examples/cpi
 /examples/heat
+/examples/jacobi
 
 # /include/
 /include/stamp-h1
@@ -84,6 +87,7 @@ contrib/libcuckoo/
 
 # /libhpx/
 /libhpx/Makefile
+/libhpx/actions/Makefile
 /libhpx/boot/Makefile
 /libhpx/gas/Makefile
 /libhpx/gas/agas/Makefile
@@ -110,47 +114,49 @@ contrib/libcuckoo/
 /tests/Makefile
 /tests/Makefile.in
 /tests/unit/Makefile
-tests/unit/apex
-tests/unit/allreduce
-tests/unit/call_when
-tests/unit/call_vectored
-tests/unit/gas_alloc
-tests/unit/parcel_send_through
-tests/unit/gas_global_alloc
-tests/unit/lco_collectives
-tests/unit/lco_array
-tests/unit/lco_allreduce
-tests/unit/lco_futures
-tests/unit/lco_get_remote
-tests/unit/lco_user
+/tests/perf/Makefile
+/tests/cxx/Makefile
 tests/unit/gas_memget
-tests/unit/parcel_create
-tests/unit/parcel_send
-tests/unit/percolation
-tests/unit/process
-tests/unit/thread_continue
-tests/unit/gas_memput
 tests/unit/thread_yield
+tests/unit/cxx_raii
 tests/unit/lco_gencount
-tests/unit/parcel_continuation
-tests/unit/thread_cont_action
-tests/unit/bcast
-tests/unit/lco_reduce
+tests/unit/parcel_send
 tests/unit/lco_sema
-tests/unit/lco_setget
-tests/unit/thread_create
-tests/unit/thread_gettlsid
-tests/unit/thread_set_affinity
+tests/unit/process
+tests/unit/lco_collectives
+tests/unit/parcel_send_through
 tests/unit/task
+tests/unit/lco_user
+tests/unit/gas_memput
+tests/unit/call_vectored
+tests/unit/parcel_create
+tests/unit/lco_allreduce
+tests/unit/allreduce
+tests/unit/lco_get_remote
+tests/unit/parcel_send_rendezvous
+tests/unit/libhpx_boot
+tests/unit/bcast
+tests/unit/thread_set_affinity
+tests/unit/lco_reduce
+tests/unit/thread_gettlsid
+tests/unit/lco_futures
+tests/unit/thread_create
+tests/unit/parcel_continuation
+tests/unit/lco_setget
+tests/unit/thread_continue
+tests/unit/thread_sigmask
+tests/unit/gas_global_alloc
+tests/unit/gas_alloc
+tests/unit/call_when
+tests/unit/lco_array
+tests/unit/parcel_send_coalesced
+tests/unit/gas_alloc_dist
+tests/unit/thread_cont_action
+tests/unit/runtime
+tests/unit/gas_move
+tests/unit/gas_coll
 tests/unit/lco_and
 tests/unit/lco_wait
-tests/unit/runtime
-tests/unit/libhpx_boot
-tests/unit/parcel_send_rendezvous
-tests/unit/gas_coll
-tests/unit/gas_move
-tests/unit/gas_alloc_dist
-/tests/perf/Makefile
 tests/perf/gas_alloc
 tests/perf/gas_addr_trans
 tests/perf/lco_sema
@@ -215,4 +221,13 @@ tutorial/HeatSeq/heat_1
 tutorial/Makefile
 tutorial/cpi/Makefile
 tutorial/cpi/cpi
+
+hpx++/Makefile
+hpx++/examples/Makefile
+hpx++/examples/guppie
+hpx++/tests/Makefile
+hpx++/tests/unit/Makefile
+include/hpx++/.kdev_include_paths
+hpx++/tests/unit/globalp
+
 

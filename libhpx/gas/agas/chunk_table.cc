@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -37,7 +37,7 @@ chunk_table_delete(void *obj) {
 uint64_t
 chunk_table_lookup(void *obj, void *chunk) {
   ChunkTable *table = static_cast<ChunkTable*>(obj);
-  uint64_t base;
+  uint64_t base = 0;
   bool found = table->find(chunk, base);
   assert(found);
   return base;

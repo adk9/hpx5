@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -19,17 +19,18 @@
 #include "../../thread.h"
 #include "asm.h"
 
-
+/// The fp control register state; we read this once at startup and then use it
+/// to initialize thread state.
+///
+/// @{
 static uint32_t  _mxcsr = 0;
 static uint16_t  _fpucw = 0;
 
-
-HPX_CONSTRUCTOR
-static void _init_thread(void) {
+static void HPX_CONSTRUCTOR _init_x86_64(void) {
   get_mxcsr(&_mxcsr);
   get_fpucw(&_fpucw);
 }
-
+/// @}
 
 /// A structure describing the initial frame on a stack.
 ///
@@ -48,26 +49,23 @@ typedef struct {
   thread_entry_t rbx;                           // 2
   void          *rbp;                           // 1
   void         (*rip)(void);                    // 0
-#ifdef ENABLE_DEBUG
   void      *top_rbp;
   void     (*top_rip)(void);
-#endif
 } HPX_PACKED _frame_t;
 
+void *transfer_frame_init(void *top, hpx_parcel_t *p, thread_entry_t f) {
+  // x86_64 wants 16 byte alignment, so we adjust the top pointer if necessary
+  top = (void*)((uintptr_t)top & ~(15));
 
-static _frame_t *_get_top_frame(ustack_t *thread, size_t size) {
-  int offset = size - sizeof(_frame_t);
-  return (_frame_t*)((char*)thread + offset);
-}
-
-
-void thread_init(ustack_t *thread, hpx_parcel_t *parcel, thread_entry_t f,
-                 size_t size) {
-  // set up the initial stack frame
-  _frame_t *frame = _get_top_frame(thread, size);
+  // Stack frame addresses go "down" while C struct addresses go "up, so compute
+  // the frame base from the top of the frame using the size of the frame
+  // structure. After this, we can just write values to the frame structure and
+  // they'll be in the right place for the initial return from transfer.
+  _frame_t *frame = (void*)((char*)top - sizeof(*frame));
   assert((uintptr_t)frame % 16 == 0);
-  frame->mxcsr   = _mxcsr;
-  frame->fpucw   = _fpucw;
+
+  frame->mxcsr = _mxcsr;
+  frame->fpucw = _fpucw;
 
 #ifdef ENABLE_DEBUG
   frame->r15 = NULL;
@@ -75,7 +73,7 @@ void thread_init(ustack_t *thread, hpx_parcel_t *parcel, thread_entry_t f,
   frame->r13 = NULL;
 #endif
 
-  frame->r12 = parcel;
+  frame->r12 = p;
   frame->rbx = f;
   frame->rbp = &frame->rip;
   frame->rip = align_stack_trampoline;
@@ -85,12 +83,5 @@ void thread_init(ustack_t *thread, hpx_parcel_t *parcel, thread_entry_t f,
   frame->top_rip = NULL;
 #endif
 
-  // set the stack stuff
-  thread->sp        = frame;
-  thread->next      = NULL;
-  thread->parcel    = parcel;
-  thread->lco_depth = 0;
-  thread->tls_id    = -1;
-  thread->size      = size;
-  thread->affinity  = -1;
+  return frame;
 }

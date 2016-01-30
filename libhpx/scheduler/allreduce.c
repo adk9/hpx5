@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -53,7 +53,7 @@ static void _op(_allreduce_t *r, size_t size, const void *from) {
   dbg_assert(!size || r->op);
   dbg_assert(!size || from);
   if (size) {
-    hpx_action_handler_t f = action_table_get_handler(here->actions, r->op);
+    handler_t f = actions[r->op].handler;
     hpx_monoid_op_t op = (hpx_monoid_op_t)f;
     op(r->value, from, size);
   }
@@ -62,7 +62,7 @@ static void _op(_allreduce_t *r, size_t size, const void *from) {
 static void _id(_allreduce_t *r, size_t size) {
   dbg_assert(!size || r->id);
   if (r->id) {
-    hpx_action_handler_t f = action_table_get_handler(here->actions, r->id);
+    handler_t f = actions[r->id].handler;
     hpx_monoid_id_t id = (hpx_monoid_id_t)f;
     id(r->value, size);
   }
@@ -273,7 +273,6 @@ hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
                                  hpx_action_t id, hpx_action_t op) {
   _allreduce_t *r = NULL;
   hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*r), 0);
-  LCO_LOG_NEW(gva);
 
   if (!hpx_gas_try_pin(gva, (void**)&r)) {
     int e = hpx_call_sync(gva, _allreduce_init_async, NULL, 0, &inputs,
@@ -281,6 +280,7 @@ hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
     dbg_check(e, "could not initialize an allreduce at %"PRIu64"\n", gva);
   }
   else {
+    LCO_LOG_NEW(gva, r);
     _allreduce_init_handler(r, inputs, outputs, size, id, op);
     hpx_gas_unpin(gva);
   }
@@ -363,7 +363,6 @@ hpx_lco_allreduce_join(hpx_addr_t lco, int id, size_t n, const void *value,
 /// @}
 
 /// Synchronous allreduce join interface.
-/// @{
 hpx_status_t
 hpx_lco_allreduce_join_sync(hpx_addr_t lco, int id, size_t n,
                             const void *value, void *out) {
@@ -376,15 +375,14 @@ hpx_lco_allreduce_join_sync(hpx_addr_t lco, int id, size_t n,
   hpx_gas_unpin(lco);
   return rc;
 }
-/// @}
 
+/// @{
 /// Async allreduce join functionality. This is slightly complicated because of
 /// the interface. It's set up like a memget-with-completion interface where the
 /// user is supplying both a local target address and an LCO to signal when the
 /// get is complete. The LCO isn't necessarily local to the caller though, so we
 /// need to pass it through a couple of levels. We use an explicit request-reply
 /// mechanism here, rather than relying on pwc, because of that.
-/// @{
 
 /// The request-reply structure is a header and a data buffer.
 typedef struct {
@@ -400,10 +398,7 @@ _join_async_request_handler(_allreduce_t *lco, _join_async_args_t *args,
                             size_t n) {
   size_t bytes = n - sizeof(*args);
   int rc = _join_sync(lco, bytes, &args->data, &args->data);
-  if (rc != HPX_SUCCESS) {
-    hpx_thread_exit(rc);
-  }
-  hpx_thread_continue(args, n);
+  return (rc != HPX_SUCCESS) ? rc : hpx_thread_continue(args, n);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_PINNED,
                      _join_async_request, _join_async_request_handler,

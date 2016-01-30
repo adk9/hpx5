@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -53,7 +54,7 @@ static int _yield_worker_handler(struct _yield_args *args, size_t n) {
   }
 
   // printf("Thread %d done after %f ms.\n", num, hpx_time_elapsed_ms(start_time));
-  HPX_THREAD_CONTINUE(timeout);
+  return HPX_THREAD_CONTINUE(timeout);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _yield_worker,
                   _yield_worker_handler, HPX_POINTER, HPX_SIZE_T);

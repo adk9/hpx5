@@ -8,7 +8,7 @@ AC_DEFUN([HPX_DO_SUMMARY], [
  # Compute some friendly strings
  AS_IF([test "x$have_mpi" == xyes], [networks="MPI"])
  AS_IF([test "x$have_photon" == xyes], [networks="Photon $networks"])
-
+ 
  AS_IF([test "x$have_jemalloc" == xyes], [allocator="jemalloc"])
  AS_IF([test "x$have_tbbmalloc" == xyes], [allocator="tbbmalloc"])
 
@@ -23,6 +23,7 @@ AC_DEFUN([HPX_DO_SUMMARY], [
  echo "================================================"
  echo "               Host CPU : $host_cpu"
  echo "                Host OS : $host_os"
+ echo "                  HPX++ : $have_hpxpp"
  echo "               Networks : $networks"
  echo "              Allocator : $allocator"
  echo "                    GAS : $gas"

@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -15,14 +15,14 @@
 #define LIBHPX_TIME_H
 
 /// Initialize internal clocks
-/// This is presently used mainly to enable hpx_time_to_ns(),
+/// This is presently used mainly to enable hpx_time_from_start_ns(),
 /// but could be used to provide other functionality.
-void libhpx_time_start();
+void libhpx_time_start(void);
 
 /// Report what is considered the beginning of time
 /// This is the value of the clock when libhx_time_start() was called.
 /// This function is useful for making sure different parts of libhpx
 /// are counting time from the same start time.
-hpx_time_t libhpx_beginning_of_time();
+hpx_time_t libhpx_beginning_of_time(void);
 
-#endif // LIBHPX_UTILS_H
+#endif // LIBHPX_TIME_H

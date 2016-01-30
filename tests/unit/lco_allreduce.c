@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -74,7 +74,7 @@ _set_get_leaf_handler(hpx_addr_t allreduce, int i, int j, hpx_addr_t sum) {
   hpx_lco_set_lsync(allreduce, sizeof(j), &j, HPX_NULL);
   CHECK( hpx_lco_get(allreduce, sizeof(r), &r) );
   test_assert(r == HPX_LOCALITIES * N * (N + 1) / 2);
-  hpx_call_cc(sum, hpx_lco_set_action, NULL, NULL, &r, sizeof(r));
+  return hpx_call_cc(sum, hpx_lco_set_action, &r, sizeof(r));
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _set_get_leaf, _set_get_leaf_handler,
                   HPX_ADDR, HPX_INT, HPX_INT, HPX_ADDR);
@@ -98,7 +98,7 @@ _join_async_leaf_handler(hpx_addr_t allreduce, int i, int j, hpx_addr_t sum) {
   CHECK( hpx_lco_wait(f) );
   hpx_lco_delete(f, HPX_NULL);
   test_assert(r == HPX_LOCALITIES * N * (N + 1) / 2);
-  hpx_call_cc(sum, hpx_lco_set_action, NULL, NULL, &r, sizeof(r));
+  return hpx_call_cc(sum, hpx_lco_set_action, &r, sizeof(r));
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _join_async_leaf, _join_async_leaf_handler,
                   HPX_ADDR, HPX_INT, HPX_INT, HPX_ADDR);
@@ -109,7 +109,7 @@ _join_sync_leaf_handler(hpx_addr_t allreduce, int i, int j, hpx_addr_t sum) {
   int r;
   CHECK( hpx_lco_allreduce_join_sync(allreduce, i, sizeof(j), &j, &r) );
   test_assert(r == HPX_LOCALITIES * N * (N + 1) / 2);
-  hpx_call_cc(sum, hpx_lco_set_action, NULL, NULL, &r, sizeof(r));
+  return hpx_call_cc(sum, hpx_lco_set_action, &r, sizeof(r));
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _join_sync_leaf, _join_sync_leaf_handler,
                   HPX_ADDR, HPX_INT, HPX_INT, HPX_ADDR);

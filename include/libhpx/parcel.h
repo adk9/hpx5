@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -31,10 +31,16 @@ struct ustack;
 
 typedef uint16_t parcel_state_t;
 
-static const parcel_state_t PARCEL_SERIALIZED = 1;
-static const parcel_state_t PARCEL_RETAINED = 2;
-static const parcel_state_t PARCEL_NESTED = 4;
-static const parcel_state_t PARCEL_BLOCK_ALLOCATED = 8;
+static const parcel_state_t      PARCEL_SERIALIZED = UINT16_C(0x1 << 1);
+static const parcel_state_t        PARCEL_RETAINED = UINT16_C(0x1 << 2);
+static const parcel_state_t          PARCEL_NESTED = UINT16_C(0x1 << 3);
+static const parcel_state_t PARCEL_BLOCK_ALLOCATED = UINT16_C(0x1 << 4);
+static const parcel_state_t          PARCEL_PINNED = UINT16_C(0x1 << 5);
+
+void parcel_pin(hpx_parcel_t *p);
+void parcel_nest(hpx_parcel_t *p);
+void parcel_retain(hpx_parcel_t *p);
+void parcel_release(hpx_parcel_t *p);
 
 static inline uint16_t parcel_serialized(parcel_state_t state) {
   return state & PARCEL_SERIALIZED;
@@ -52,24 +58,39 @@ static inline uint16_t parcel_block_allocated(parcel_state_t state) {
   return state & PARCEL_BLOCK_ALLOCATED;
 }
 
-// Verify that this bitfield is actually being packed correctly.
-_HPX_ASSERT(sizeof(parcel_state_t) == 2, packed_parcel_state);
+static inline uint16_t parcel_pinned(parcel_state_t state) {
+  return state & PARCEL_PINNED;
+}
 
-/// The hpx_parcel structure is what the user-level interacts with.
+/// @struct hpx_parcel
+/// @brief The hpx_parcel structure is what the user-level interacts with.
 ///
-/// @field       ustack A pointer to a stack.
-/// @field         next A pointer to the next parcel.
-/// @field          src The src rank for the parcel.
-/// @field         size The data size in bytes.
-/// @field        state The parcel's state bits.
-/// @field       offset Reserved for future use.
-/// @field       action The target action identifier.
-/// @field     c_action The continuation action identifier.
-/// @field       target The target address for parcel_send().
-/// @field     c_target The target address for the continuation.
-/// @field           id A unique identifier for parcel tracing.
-/// @field      padding Ensure consistent buffer alignment with instrumentation.
-/// @field       buffer Either an in-place payload, or a pointer.
+/// @var  hpx_parcel::ustack 
+/// A pointer to a stack.
+/// @var  hpx_parcel::next
+/// A pointer to the next parcel.
+/// @var  hpx_parcel::src
+/// The src rank for the parcel.
+/// @var  hpx_parcel::size
+/// The data size in bytes.
+/// @var  hpx_parcel::state
+/// The parcel's state bits.
+/// @var  hpx_parcel::offset
+/// Reserved for future use.
+/// @var  hpx_parcel::action
+/// The target action identifier.
+/// @var  hpx_parcel::c_action
+/// The continuation action identifier.
+/// @var  hpx_parcel::target
+/// The target address for parcel_send().
+/// @var  hpx_parcel::c_target
+/// The target address for the continuation.
+/// @var  hpx_parcel::id
+/// A unique identifier for parcel tracing.
+/// @var  hpx_parcel::padding
+/// Ensure consistent buffer alignment with instrumentation.
+/// @var  hpx_parcel::buffer
+/// Either an in-place payload, or a pointer.
 struct hpx_parcel {
   struct ustack   *ustack;
   struct hpx_parcel *next;
@@ -136,6 +157,8 @@ void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
                  hpx_action_t c_action, hpx_pid_t pid, const void *data,
                  size_t len, hpx_parcel_t *p);
 
+hpx_parcel_t *parcel_alloc(size_t payload);
+
 hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
                          hpx_action_t c_action, hpx_pid_t pid, const void *data,
                          size_t len)
@@ -169,8 +192,6 @@ parcel_state_t parcel_get_state(const hpx_parcel_t *p);
 
 parcel_state_t parcel_exchange_state(hpx_parcel_t *p, parcel_state_t state);
 
-void parcel_retain(hpx_parcel_t *p);
-
 /// Treat a parcel as a stack of parcels, and pop the top.
 ///
 /// @param[in,out] stack The address of the top parcel in the stack, modified
@@ -190,7 +211,7 @@ static inline hpx_parcel_t *parcel_stack_pop(hpx_parcel_t **stack) {
 ///
 /// @param[in,out] stack The address of the top parcel in the stack, modified
 ///                      as a side effect of the call.
-/// @param[in]    parcel The new top of the stack.
+/// @param[in]         p The new top of the stack.
 static inline void parcel_stack_push(hpx_parcel_t **stack, hpx_parcel_t *p) {
   p->next = *stack;
   *stack = p;
@@ -204,9 +225,11 @@ static inline uint32_t parcel_payload_size(const hpx_parcel_t *p) {
   return p->size;
 }
 
+void parcel_prepare(hpx_parcel_t *p)
+  HPX_NON_NULL(1);
+
 #ifdef __cplusplus
 }
 #endif
 
 #endif // LIBHPX_PARCEL_H
-

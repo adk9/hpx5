@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -55,10 +55,6 @@ extern HPX_ACTION_DECL(pgas_calloc_cyclic);
 /// Asynchronous entry point for free.
 extern HPX_ACTION_DECL(pgas_free);
 
-/// Asynchronous entry point for the rsync handler for memput
-/// void (int src, uint64_t command)
-// extern COMMAND_DECL(memput_rsync);
-
 /// Synchronous entry point for alloc.
 ///
 /// @param            n The total number of bytes to allocate.
@@ -103,5 +99,125 @@ hpx_addr_t pgas_lva_to_gpa(const void *lva);
 
 /// Get the current maximum heap offset.
 uint64_t pgas_max_offset(void);
+
+/// The asynchronous memget operation.
+///
+/// This operation will return before either the remote or the local operations
+/// have completed. The user may specify either an @p lsync or @p rsync LCO to
+/// detect the completion of the operations.
+///
+/// @param          obj The pwc network object.
+/// @param           to The local address to memget into.
+/// @param         from The global address we're memget-ing from
+/// @param         size The number of bytes to get.
+/// @param        lsync An LCO to set when @p to has been written.
+/// @param        rsync An LCO to set when @p from has been read.
+///
+/// @returns            HPX_SUCCESS
+int pgas_memget(void *obj, void *to, hpx_addr_t from, size_t size,
+                hpx_addr_t lsync, hpx_addr_t rsync);
+
+/// The rsync memget operation.
+///
+/// This operation will not return until the remote read operation has
+/// completed. The @p lsync LCO will be set once the local write operation has
+/// completed.
+///
+/// @param          obj The pwc network object.
+/// @param           to The local address to memget into.
+/// @param         from The global address we're memget-ing from
+/// @param         size The number of bytes to get.
+/// @param        lsync An LCO to set when @p to has been written.
+///
+/// @returns            HPX_SUCCESS
+int pgas_memget_rsync(void *obj, void *to, hpx_addr_t from, size_t size,
+                      hpx_addr_t lsync);
+
+/// The rsync memget operation.
+///
+/// This operation will not return until the @p to buffer has been written,
+/// which also implies that the remote read has completed.
+///
+/// @param          obj The pwc network object.
+/// @param           to The local address to memget into.
+/// @param         from The global address we're memget-ing from
+/// @param         size The number of bytes to get.
+///
+/// @returns            HPX_SUCCESS
+int pgas_memget_lsync(void *obj, void *to, hpx_addr_t from, size_t size);
+
+/// The asynchronous memput operation.
+///
+/// The @p lsync LCO will be set when it is safe to reuse or free the @p from
+/// buffer. The @p rsync LCO will be set when the remote buffer has been
+/// written.
+///
+/// @param          obj The pwc network object.
+/// @param           to The global address to put into.
+/// @param         from The local address we're putting from.
+/// @param         size The number of bytes to put.
+/// @param        lsync An LCO to set when @p from has been read.
+/// @param        rsync An LCO to set when @p to has been written.
+///
+/// @returns            HPX_SUCCESS
+int pgas_memput(void *obj, hpx_addr_t to, const void *from, size_t size,
+                hpx_addr_t lsync, hpx_addr_t rsync);
+
+/// The locally synchronous memput operation.
+///
+/// This will not return until it is safe to modify or free the @p from
+/// buffer. The @p rsync LCO will be set when the remote buffer has been
+/// written.
+///
+/// @param          obj The pwc network object.
+/// @param           to The global address to put into.
+/// @param         from The local address we're putting from.
+/// @param         size The number of bytes to put.
+/// @param        rsync An LCO to set when @p to has been written.
+///
+/// @returns            HPX_SUCCESS
+int pgas_memput_lsync(void *obj, hpx_addr_t to, const void *from, size_t size,
+                      hpx_addr_t rsync);
+
+/// The fully synchronous memput operation.
+///
+/// This will not return until the buffer has been written and is visible at the
+/// remote size.
+///
+/// @param          obj The pwc network object.
+/// @param           to The global address to put into.
+/// @param         from The local address we're putting from.
+/// @param         size The number of bytes to put.
+///
+/// @returns            HPX_SUCCESS
+int pgas_memput_rsync(void *obj, hpx_addr_t to, const void *from, size_t size);
+
+/// The asynchronous memcpy operation.
+///
+/// This will return immediately, and set the @p sync lco when the operation has
+/// completed.
+///
+/// @param          obj The pwc network object.
+/// @param           to The global address to write into.
+/// @param         from The global address to read from (const).
+/// @param         size The number of bytes to write.
+/// @param         sync An optional LCO to signal remote completion.
+///
+/// @returns            HPX_SUCCESS;
+int pgas_memcpy(void *obj, hpx_addr_t to, hpx_addr_t from, size_t size,
+                hpx_addr_t sync);
+
+/// The asynchronous memcpy operation.
+///
+/// This will not return until the operation has completed.
+///
+/// @param          obj The pwc network object.
+/// @param           to The global address to write into.
+/// @param         from The global address to read from (const).
+/// @param         size The number of bytes to write.
+///
+/// @returns            HPX_SUCCESS;
+int pgas_memcpy_sync(void *obj, hpx_addr_t to, hpx_addr_t from, size_t size);
+
 
 #endif // LIBHPX_GAS_PGAS_H

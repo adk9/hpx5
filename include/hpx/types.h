@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -14,9 +14,13 @@
 #ifndef HPX_TYPES_H
 #define HPX_TYPES_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <ffi.h>
-#include "hpx/builtins.h"
-#include "hpx/attributes.h"
+#include <hpx/builtins.h>
+#include <hpx/attributes.h>
 
 /// @file include/hpx/types.h
 
@@ -81,5 +85,9 @@ typedef ffi_type* hpx_type_t;
 #define HPX_ADDR               HPX_UINT64
 #define HPX_ACTION_T           HPX_UINT16
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -31,25 +31,49 @@
 #include <libhpx/scheduler.h>
 
 
+static const char *_dummy_id(void) {
+  return "dummy";
+}
+
+static void *_dummy_prepare(const void *obj, const char *key, const char *kern)
+{
+  return NULL;
+}
+
+static void _dummy_delete(void* obj) {
+}
+
+static int _dummy_execute(const void *obj, void *o, int n, void **v, size_t *s)
+{
+  return 0;
+}
+
+static void _dummy_destroy(const void *obj, void *o) {
+}
+
+static percolation_t _dummy = {
+  .id = _dummy_id,
+  .prepare = _dummy_prepare,
+  .delete = _dummy_delete,
+  .execute = _dummy_execute,
+  .destroy = _dummy_destroy
+};
+
 percolation_t *percolation_new(void) {
 #ifdef HAVE_OPENCL
   return percolation_new_opencl();
 #endif
-  log_error("percolation: no usable back-end found!\n");
-  return NULL;
+  return &_dummy;
 }
 
-int percolation_execute_handler(int nargs, void *vargs[],
-                                size_t sizes[]) {
+int percolation_execute_handler(int nargs, void *vargs[], size_t sizes[]) {
   hpx_parcel_t *p = scheduler_current_parcel();
 
   percolation_t *percolation = here->percolation;
   dbg_assert(percolation);
 
-  const struct action_table *actions = here->actions;
-  dbg_assert(actions);
-
-  void *obj = action_table_get_env(actions, p->action);
+  CHECK_ACTION(p->action);
+  void *obj = actions[p->action].env;
   if (!obj) {
     return HPX_ERROR;
   }

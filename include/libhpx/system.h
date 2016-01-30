@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -43,7 +43,7 @@ void system_get_stack(pthread_t thread, void **base, size_t *size);
 ///
 /// @param          obj User data to match the object oriented mmap interface.
 /// @param         addr A hint about where to try and place the allocation.
-/// @param         size The size in bytes of the allocation (must be 2^n).
+/// @param        bytes The size in bytes of the allocation (must be 2^n).
 /// @param        align The alignment in bytes of the allocation (must be 2^n).
 ///
 /// @returns The allocated region.
@@ -58,7 +58,7 @@ typedef void *(*system_mmap_t)(void *, void *, size_t, size_t);
 ///
 /// @param          obj User data to match the object oriented mmap interface.
 /// @param         addr A hint about where to try and place the allocation.
-/// @param         size The size in bytes of the allocation (must be 2^n).
+/// @param        bytes The size in bytes of the allocation (must be 2^n).
 /// @param        align The alignment in bytes of the allocation (must be 2^n).
 ///
 /// @returns The allocated region.

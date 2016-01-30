@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -23,11 +23,11 @@
 /// This is a simple AGAS test: We allocate two futures cyclically,
 /// one on the root locality and the other on a remote locality. After
 /// a move operation, we verify if the remote future has moved to the
-/// local calling locality. 
+/// local calling locality.
 
 static int get_rank_handler(void) {
   int rank = HPX_LOCALITY_ID;
-  HPX_THREAD_CONTINUE(rank);
+  return HPX_THREAD_CONTINUE(rank);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, get_rank, get_rank_handler);
 
@@ -63,7 +63,7 @@ static int gas_move_handler(void) {
   hpx_call_sync(other, get_rank, &my_rank, sizeof(my_rank));
   printf("target locality's rank (after move): %d\n", my_rank);
 
-  libhpx_config_t *cfg = libhpx_get_config();
+  const libhpx_config_t *cfg = libhpx_get_config();
   if (((my_rank == HPX_LOCALITY_ID) && cfg->gas == HPX_GAS_AGAS) ||
       ((my_rank == other_rank) && cfg->gas == HPX_GAS_PGAS)) {
     printf("AGAS test: passed.\n");

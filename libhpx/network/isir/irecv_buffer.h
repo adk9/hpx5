@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -36,6 +36,7 @@ typedef struct {
 /// Initialize an irecv buffer.
 ///
 /// @param       buffer The buffer to initialize.
+/// @param        xport The isir xport to use.
 /// @param         size The initial size for the buffer.
 /// @param        limit The limit of the number of active requests.
 ///

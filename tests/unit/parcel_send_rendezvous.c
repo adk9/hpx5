@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -19,7 +19,7 @@
 #include "tests.h"
 
 static int _echo_handler(int *args, size_t n) {
-  hpx_thread_continue(args, n);
+  return hpx_thread_continue(args, n);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _echo,
                   _echo_handler, HPX_POINTER, HPX_SIZE_T);
@@ -27,7 +27,7 @@ static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _echo,
 static int parcel_send_rendezvous_handler(void) {
   printf("Testing the hpx parcel send function for large parcels\n");
   unsigned seed = 0;
-  libhpx_config_t *cfg = libhpx_get_config();
+  const libhpx_config_t *cfg = libhpx_get_config();
   size_t eagerlimit = cfg->pwc_parceleagerlimit;
   size_t N = eagerlimit / sizeof(int) + 1;
   for (int i = 1, e = 10; i < e; ++i) {

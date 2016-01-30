@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -38,11 +38,13 @@ void _bitmap_bounds_check(bitmap_t *b, uint32_t page, uint32_t word) {
       void *newp = NULL;
       int e = posix_memalign((void**)&newp, HPX_CACHELINE_SIZE,
                              _bitmap_num_words * sizeof(_bitmap_word_t));
-      if (e)
-        dbg_error("failed to allocate a page for %u words\n", _bitmap_num_words);
+      if (e) {
+        dbg_error("failed to allocate a page for %u words\n",
+                  _bitmap_num_words);
+      }
       memset(newp, 0, _bitmap_num_words * sizeof(_bitmap_word_t));
 
-      if (!sync_cas(&b[page].page, p, newp, SYNC_RELEASE, SYNC_RELAXED)) {
+      if (!sync_cas(&b[page].page, &p, newp, SYNC_RELEASE, SYNC_RELAXED)) {
         free(newp);
         // try again..
         continue;

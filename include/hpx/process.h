@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -13,6 +13,10 @@
 
 #ifndef HPX_PROCESS_H
 #define HPX_PROCESS_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /// @defgroup processes Processes
 /// @brief Functions and definitions for using HPX processes
@@ -237,5 +241,9 @@ int hpx_process_collective_allreduce_join(hpx_addr_t allreduce,
 //   HPX_PUBLIC;
 
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

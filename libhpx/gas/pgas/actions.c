@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -60,7 +60,7 @@ hpx_addr_t pgas_alloc_cyclic_sync(size_t n, uint32_t bsize) {
 
 static int _alloc_cyclic_handler(size_t n, size_t bsize) {
   hpx_addr_t addr = pgas_alloc_cyclic_sync(n, bsize);
-  HPX_THREAD_CONTINUE(addr);
+  return HPX_THREAD_CONTINUE(addr);
 }
 LIBHPX_ACTION(HPX_DEFAULT, 0, pgas_alloc_cyclic, _alloc_cyclic_handler,
               HPX_SIZE_T, HPX_SIZE_T);
@@ -102,7 +102,7 @@ hpx_addr_t pgas_calloc_cyclic_sync(size_t n, uint32_t bsize) {
 
 static int _calloc_cyclic_handler(size_t n, size_t bsize) {
   hpx_addr_t addr = pgas_calloc_cyclic_sync(n, bsize);
-  HPX_THREAD_CONTINUE(addr);
+  return HPX_THREAD_CONTINUE(addr);
 }
 LIBHPX_ACTION(HPX_DEFAULT, 0, pgas_calloc_cyclic, _calloc_cyclic_handler,
               HPX_SIZE_T, HPX_SIZE_T);
@@ -114,7 +114,7 @@ LIBHPX_ACTION(HPX_DEFAULT, 0, pgas_calloc_cyclic, _calloc_cyclic_handler,
 /// with the offset, and memsets them to 0. We can't just do one large memset
 /// because we have alignment issues and may have internal padding.
 ///
-/// @param         base The base offset of the allocation.
+/// @param       offset The base offset of the allocation.
 /// @param        bytes The total number of bytes to allocate.
 /// @param        bsize The block size.
 ///

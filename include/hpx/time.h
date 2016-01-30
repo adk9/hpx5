@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -13,6 +13,10 @@
 
 #ifndef HPX_TIME_H
 #define HPX_TIME_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /// @addtogroup other
 /// @{
@@ -30,7 +34,10 @@ typedef uint64_t hpx_time_t;
 #define HPX_TIME_INIT (0)
 #endif
 
-/// @struct {hpx_time_t} the type used internally by HPX to represent time
+/// @struct {hpx_time_t} the type used internally by HPX to represent
+/// time
+
+#define HPX_TIME_NULL hpx_time_construct(0,0)
 
 /// Get the current time
 /// @returns the current time at the highest resolution possible
@@ -39,7 +46,12 @@ hpx_time_t hpx_time_now(void) HPX_PUBLIC;
 /// Convert a time object to an integer counting nanoseconds since some start time
 /// "Start" is not specifically defined, but occurs sometime before the first call
 /// to hpx_time_now().
-uint64_t hpx_time_to_ns(hpx_time_t t) HPX_PUBLIC;
+uint64_t hpx_time_from_start_ns(hpx_time_t t) HPX_PUBLIC;
+
+/// Get a double representing a time in nanoseconds
+/// @param from the time to convert
+/// @returns    the time as converted to a double, in nanoseconds
+double hpx_time_ns(hpx_time_t from) HPX_PUBLIC;
 
 /// Get a double representing a time in microseconds
 /// @param from the time to convert
@@ -95,9 +107,9 @@ double hpx_time_elapsed_ms(hpx_time_t from) HPX_PUBLIC;
 uint64_t hpx_time_elapsed_ns(hpx_time_t from) HPX_PUBLIC;
 
 /// Get the time elapsed since @p from, in hpx_time_t.
-/// @param start the start time to measure from
+/// @param  from the start time to measure from
 /// @param  diff the difference between @p start and now.
-void hpx_time_elapsed(hpx_time_t start, hpx_time_t *diff) HPX_PUBLIC;
+void hpx_time_elapsed(hpx_time_t from, hpx_time_t *diff) HPX_PUBLIC;
 
 /// Construct an hpx time object
 /// @param  s seconds
@@ -106,15 +118,19 @@ void hpx_time_elapsed(hpx_time_t start, hpx_time_t *diff) HPX_PUBLIC;
 ///           duration
 hpx_time_t hpx_time_construct(unsigned long s, unsigned long ns) HPX_PUBLIC;
 
-/// Construct an hpx time to represent a point in time
+/// Add two hpx time objects
 /// Given a point in time, and a duration from that point, construct a new
 /// point in time. Duration at present must be a positive interval.
-/// @param     time A starting time
+/// @param    start A starting time
 /// @param duration A duration from the starting time
 /// @returns        A pointer to an object of type hpx_time_t that represents
 ///                 a point in time, based on the start time and duration
-hpx_time_t hpx_time_point(hpx_time_t time, hpx_time_t duration) HPX_PUBLIC;
+hpx_time_t hpx_time_add(hpx_time_t start, hpx_time_t duration) HPX_PUBLIC;
 
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -63,7 +63,7 @@ static void _reset(int *set, int *get, hpx_addr_t sync, hpx_addr_t lco) {
 
 static int _new_future_at_handler(void) {
   hpx_addr_t future = hpx_lco_future_new(sizeof(ONES));
-  HPX_THREAD_CONTINUE(future);
+  return HPX_THREAD_CONTINUE(future);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _new_future_at, _new_future_at_handler);
 
@@ -103,7 +103,7 @@ static int _test_set_handler(hpx_addr_t lco) {
   }
   printf("ok\n");
 
-  hpx_call_cc(sync, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(sync, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _test_set, _test_set_handler, HPX_ADDR);
 
@@ -133,7 +133,7 @@ static int _test_set_lsync_handler(hpx_addr_t lco) {
   }
   printf("ok\n");
 
-  hpx_call_cc(rsync, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(rsync, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _test_set_lsync, _test_set_lsync_handler, HPX_ADDR);
 
@@ -154,7 +154,7 @@ static int _test_set_local_handler(void) {
   hpx_addr_t lco;
   hpx_call_sync(HPX_HERE, _new_future_at, &lco, sizeof(lco));
   hpx_call_sync(HPX_HERE, _test_set, NULL, 0, &lco);
-  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(lco, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _test_set_local, _test_set_local_handler);
 
@@ -162,7 +162,7 @@ static int _test_set_lsync_local_handler(void) {
   hpx_addr_t lco;
   hpx_call_sync(HPX_HERE, _new_future_at, &lco, sizeof(lco));
   hpx_call_sync(HPX_HERE, _test_set_lsync, NULL, 0, &lco);
-  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(lco, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _test_set_lsync_local, _test_set_lsync_local_handler);
 
@@ -170,7 +170,7 @@ static int _test_set_rsync_local_handler(void) {
   hpx_addr_t lco;
   hpx_call_sync(HPX_HERE, _new_future_at, &lco, sizeof(lco));
   hpx_call_sync(HPX_HERE, _test_set_rsync, NULL, 0, &lco);
-  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(lco, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _test_set_rsync_local, _test_set_rsync_local_handler);
 
@@ -179,7 +179,7 @@ static int _test_set_remote_handler(void) {
   hpx_addr_t lco;
   hpx_call_sync(peer, _new_future_at, &lco, sizeof(lco));
   hpx_call_sync(peer, _test_set, NULL, 0, &lco);
-  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(lco, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _test_set_remote, _test_set_remote_handler);
 
@@ -188,7 +188,7 @@ static int _test_set_lsync_remote_handler(void) {
   hpx_addr_t lco;
   hpx_call_sync(peer, _new_future_at, &lco, sizeof(lco));
   hpx_call_sync(peer, _test_set_lsync, NULL, 0, &lco);
-  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(lco, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _test_set_lsync_remote, _test_set_lsync_remote_handler);
 
@@ -197,7 +197,7 @@ static int _test_set_rsync_remote_handler(void) {
   hpx_addr_t lco;
   hpx_call_sync(peer, _new_future_at, &lco, sizeof(lco));
   hpx_call_sync(peer, _test_set_rsync, NULL, 0, &lco);
-  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(lco, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _test_set_rsync_remote, _test_set_rsync_remote_handler);
 
@@ -283,8 +283,9 @@ static HPX_ACTION_DECL(_getAll);
 // Testcase to test hpx_lco_get_all function
 static int _getAll_handler(uint32_t *args, size_t size) {
   uint32_t n = *args;
-  if (n < 2)
-    HPX_THREAD_CONTINUE(n);
+  if (n < 2) {
+    return HPX_THREAD_CONTINUE(n);
+  }
 
   hpx_addr_t peers[] = {
     HPX_HERE,
@@ -331,8 +332,7 @@ static int _getAll_handler(uint32_t *args, size_t size) {
 
   uint32_t sn = ssn[0] * ssn[0] + ssn[1] * ssn[1];
 
-  HPX_THREAD_CONTINUE(sn);
-  return HPX_SUCCESS;
+  return HPX_THREAD_CONTINUE(sn);
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _getAll,
                   _getAll_handler, HPX_POINTER, HPX_SIZE_T);

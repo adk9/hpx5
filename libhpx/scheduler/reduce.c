@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -51,7 +51,7 @@ static void _reset(_reduce_t *r) {
   cvar_reset(&r->barrier);
   r->remaining = r->inputs;
 
-  hpx_action_handler_t f = action_table_get_handler(here->actions, r->id);
+  handler_t f = actions[r->id].handler;
   hpx_monoid_id_t id = (hpx_monoid_id_t)f;
   id(r->value, r->size);
 }
@@ -126,7 +126,7 @@ static int _reduce_set(lco_t *lco, int size, const void *from) {
 
   // perform the op()
   assert(size && from);
-  hpx_action_handler_t f = action_table_get_handler(here->actions, r->op);
+  handler_t f = actions[r->op].handler;
   hpx_monoid_op_t op = (hpx_monoid_op_t)f;
   op(r->value, from, size);
 
@@ -241,7 +241,7 @@ static int _reduce_init_handler(_reduce_t *r, int inputs, size_t size,
     assert(r->value);
   }
 
-  hpx_action_handler_t f = action_table_get_handler(here->actions, r->id);
+  handler_t f = actions[r->id].handler;
   hpx_monoid_id_t lid = (hpx_monoid_id_t)f;
   lid(r->value, size);
 
@@ -258,7 +258,6 @@ hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_action_t id,
                               hpx_action_t op) {
   _reduce_t *r = NULL;
   hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*r), 0);
-  LCO_LOG_NEW(gva);
 
   if (!hpx_gas_try_pin(gva, (void**)&r)) {
     int e = hpx_call_sync(gva, _reduce_init_async, NULL, 0, &inputs, &size, &id,
@@ -266,6 +265,7 @@ hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_action_t id,
     dbg_check(e, "could not initialize an allreduce at %"PRIu64"\n", gva);
   }
   else {
+    LCO_LOG_NEW(gva, r);
     _reduce_init_handler(r, inputs, size, id, op);
     hpx_gas_unpin(gva);
   }

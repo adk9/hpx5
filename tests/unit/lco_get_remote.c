@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -21,7 +21,7 @@
 static int
 _new_future_handler(void) {
   hpx_addr_t f = hpx_lco_future_new(sizeof(int));
-  hpx_thread_continue(&f, sizeof(f));
+  return hpx_thread_continue(&f, sizeof(f));
 }
 static HPX_ACTION(HPX_TASK, 0, _new_future, _new_future_handler);
 
@@ -39,7 +39,7 @@ _lco_get_remote_handler(void) {
   e = hpx_lco_get(lco, sizeof(i), &i);
   assert(e == HPX_SUCCESS);
   assert(i = 42);
-  hpx_call_cc(lco, hpx_lco_delete_action, NULL, NULL);
+  return hpx_call_cc(lco, hpx_lco_delete_action);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _lco_get_remote, _lco_get_remote_handler);
 

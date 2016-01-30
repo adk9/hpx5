@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -102,7 +103,7 @@ static int _proc_return_credit_handler(_process_t *p, uint64_t *args, size_t siz
     uint64_t credit = sync_load(&p->credit, SYNC_ACQUIRE);
     if ((credit != 0) && ~(debt | ((UINT64_C(1) << (64-credit)) - 1)) == 0) {
       // log("detected quiescence...\n");
-      if (!sync_cas(&p->credit, credit, -credit, SYNC_RELEASE, SYNC_RELAXED)) {
+      if (!sync_cas(&p->credit, &credit, -credit, SYNC_RELEASE, SYNC_RELAXED)) {
         continue;
       }
       dbg_assert(_is_tracked(p));
@@ -161,35 +162,35 @@ hpx_pid_t hpx_process_getpid(hpx_addr_t process) {
   return (hpx_pid_t)process;
 }
 
-int _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
+int _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t id,
                       hpx_addr_t result, int n, ...) {
-  va_list vargs;
-  va_start(vargs, n);
-  hpx_parcel_t *parcel = action_create_parcel_va(addr, action, result,
-                                                 hpx_lco_set_action, n, &vargs);
-  va_end(vargs);
+  va_list args;
+  va_start(args, n);
+  hpx_action_t set = hpx_lco_set_action;
+  hpx_parcel_t  *p = action_new_parcel_va(id, addr, result, set, n, &args);
+  va_end(args);
 
   if (hpx_thread_current_pid() == hpx_process_getpid(process)) {
-    hpx_parcel_send_sync(parcel);
+    hpx_parcel_send_sync(p);
     return HPX_SUCCESS;
   }
 
   hpx_addr_t sync = hpx_lco_future_new(0);
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, parcel_size(parcel));
-  p->target = process;
-  p->action = _proc_call;
-  p->c_target = sync;
-  p->c_action = hpx_lco_set_action;
-  hpx_parcel_set_data(p, parcel, parcel_size(parcel));
-  p->pid = 0;
-  p->credit = 0;
+  hpx_parcel_t *q = hpx_parcel_acquire(NULL, parcel_size(p));
+  q->target = process;
+  q->action = _proc_call;
+  q->c_target = sync;
+  q->c_action = hpx_lco_set_action;
+  hpx_parcel_set_data(q, p, parcel_size(p));
+  q->pid = 0;
+  q->credit = 0;
 #ifdef ENABLE_INSTRUMENTATION
   inst_trace(HPX_INST_CLASS_PROCESS, HPX_INST_EVENT_PROCESS_CALL,
-             process, p->pid);
+             process, q->pid);
 #endif
-  hpx_parcel_send_sync(p);
+  hpx_parcel_send_sync(q);
 
-  hpx_parcel_release(parcel);
+  parcel_delete(p);
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
   return HPX_SUCCESS;

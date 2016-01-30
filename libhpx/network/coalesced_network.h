@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -11,11 +11,19 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef LIBHPX_GAS_PARCELS_EMULATION_H
-#define LIBHPX_GAS_PARCELS_EMULATION_H
+#ifndef LIBHPX_NETWORK_COALESCED_COALESCED_H
+#define LIBHPX_NETWORK_COALESCED_COALESCED_H
 
-#include <hpx/hpx.h>
+#include <hpx/attributes.h>
+#include <libhpx/network.h>
 
-int parcel_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync);
+/// Forward declarations.
+/// @{
+struct config;
+/// @}
 
-#endif // LIBHPX_GAS_PARCELS_EMULATION_H
+
+network_t* coalesced_network_new (network_t *network, const struct config *cfg)
+  HPX_MALLOC;
+
+#endif // LIBHPX_NETWORK_COALESCED_COALESCED_H

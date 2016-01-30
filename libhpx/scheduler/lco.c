@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -21,16 +21,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "libsync/sync.h"
-#include "libhpx/action.h"
-#include "libhpx/attach.h"
-#include "libhpx/debug.h"
-#include "libhpx/instrumentation.h"
-#include "libhpx/locality.h"
-#include "libhpx/memory.h"
-#include "libhpx/network.h"
-#include "libhpx/scheduler.h"
-#include "libhpx/parcel.h"
+#include <libsync/sync.h>
+#include <libhpx/action.h>
+#include <libhpx/attach.h>
+#include <libhpx/debug.h>
+#include <libhpx/instrumentation.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+#include <libhpx/network.h>
+#include <libhpx/scheduler.h>
+#include <libhpx/parcel.h>
 #include "lco.h"
 #include "thread.h"
 
@@ -42,7 +42,7 @@
 
 static void _EVENT(const lco_t *lco, const int id) {
   static const int class = HPX_INST_CLASS_LCO;
-  inst_trace(class, id, lco, hpx_get_my_thread_id(), lco->bits);
+  inst_trace(class, id, lco, (self) ? self->id : -1, lco->bits);
 }
 
 /// return the class pointer, masking out the state.
@@ -132,23 +132,17 @@ static hpx_status_t _attach(lco_t *lco, hpx_parcel_t *p) {
 /// resent.
 ///
 /// @{
-static int _lco_delete_action_handler(void) {
-  hpx_addr_t target = hpx_thread_current_target();
-  lco_t *lco = NULL;
-  if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    hpx_call_cc(target, hpx_lco_delete_action, NULL, NULL);
-  }
-  log_lco("deleting lco %p\n", (void*)lco);
+static int _lco_delete_action_handler(lco_t *lco) {
   _fini(lco);
-  hpx_gas_unpin(target);
-  hpx_gas_free(target, HPX_NULL);
-  return HPX_SUCCESS;
+  hpx_addr_t target = hpx_thread_current_target();
+  return hpx_call_cc(target, hpx_gas_free_action);
 }
-LIBHPX_ACTION(HPX_DEFAULT, 0, hpx_lco_delete_action, _lco_delete_action_handler);
+LIBHPX_ACTION(HPX_INTERRUPT, HPX_PINNED, hpx_lco_delete_action,
+              _lco_delete_action_handler, HPX_POINTER);
 
 int hpx_lco_set_action_handler(lco_t *lco, void *data, size_t n) {
   int i = _set(lco, n, data);
-  HPX_THREAD_CONTINUE(i);
+  return HPX_THREAD_CONTINUE(i);
 }
 LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, hpx_lco_set_action,
               hpx_lco_set_action_handler, HPX_POINTER, HPX_POINTER,
@@ -173,18 +167,7 @@ static int _lco_size_handler(lco_t *lco, void *UNUSED) {
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_size,
                      _lco_size_handler, HPX_POINTER);
 
-typedef struct {
-  lco_t *lco;
-  void *buffer;
-} _cleanup_release_args_t;
-
-static void _cleanup_release(void *args) {
-  _cleanup_release_args_t *a = args;
-  _release(a->lco, a->buffer);
-}
-
-static int
-_lco_get_handler(lco_t *lco, int n) {
+static int _lco_get_handler(lco_t *lco, int n) {
   dbg_assert(n > 0);
 
   // Use the getref handler, no need to worry about pinning here because we
@@ -195,11 +178,9 @@ _lco_get_handler(lco_t *lco, int n) {
   if (status != HPX_SUCCESS) {
     return status;
   }
-  _cleanup_release_args_t args = {
-    lco,
-    buffer
-  };
-  hpx_thread_continue_cleanup(&_cleanup_release, &args, buffer, n);
+  int e = hpx_thread_continue(buffer, n);
+  _release(lco, buffer);
+  return e;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_get,
                      _lco_get_handler, HPX_POINTER, HPX_INT);
@@ -211,20 +192,11 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_wait, _lco_wait_handler,
                      HPX_POINTER, HPX_INT);
 
 int lco_attach_handler(lco_t *lco, hpx_parcel_t *p, size_t size) {
-  hpx_parcel_t *parent = scheduler_current_parcel();
+  hpx_parcel_t *parent = self->current;
   dbg_assert(hpx_parcel_get_data(parent) == p);
-  log_lco("retaining %p, nesting %p\n", (void*)parent, (void*)p);
-
-  parcel_state_t state = parcel_get_state(parent);
-  dbg_assert(!parcel_retained(state));
-  state |= PARCEL_RETAINED;
-  parcel_set_state(parent, state);
-
-  state = parcel_get_state(p);
-  dbg_assert(!parcel_nested(state));
-  state |= PARCEL_NESTED;
-
-  parcel_set_state(p, state);
+  log_lco("pinning %p, nesting %p\n", (void*)parent, (void*)p);
+  parcel_pin(parent);
+  parcel_nest(p);
   return _attach(lco, p);
 }
 LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, lco_attach,
@@ -289,7 +261,7 @@ void hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync) {
     dbg_check(e, "Could not forward lco_delete\n");
   }
   else {
-    log_lco("deleting lco %p\n", (void*)lco);
+    log_lco("deleting lco %"PRIu64" (%p)\n", target, (void*)lco);
     int e = _fini(lco);
     hpx_gas_unpin(target);
     hpx_gas_free(target, HPX_NULL);

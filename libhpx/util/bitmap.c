@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -102,19 +102,25 @@ static inline block_t _create_mask(uint32_t offset, uint32_t length) {
 }
 /// @}
 
-/// The bitmap structure.
+/// @struct bitmap
+/// @brief The bitmap structure.
 ///
 /// The bitmap is fundamentally an array of bits chunked up into blocks combined
 /// with some header data describing the block array and a lock for
 /// concurrency.
 ///
-/// @field         lock A single lock to serialize access to the bitmap.
-/// @field          min An index such that there are no free bits < min.
-/// @field          max An index such that there are no free bits >= max.
-/// @field        nbits The number of bits in the bitmap.
-/// @field      nblocks The number of blocks in the block array.
-/// @field       blocks The block array.
-///
+/// @var  bitmap::lock 
+/// A single lock to serialize access to the bitmap.
+/// @var  bitmap::min
+/// An index such that there are no free bits < min.
+/// @var  bitmap::max
+/// An index such that there are no free bits >= max.
+/// @var  bitmap::nbits
+/// The number of bits in the bitmap.
+/// @var  bitmap::nblocks
+/// The number of blocks in the block array.
+/// @var  bitmap::blocks
+/// The block array.
 struct bitmap {
   tatas_lock_t      lock;
   uint32_t     min_align;
@@ -210,8 +216,8 @@ static uint32_t _first_free(const block_t *blocks, uint32_t bit, uint32_t max) {
 
 /// Set a contiguous number of bits in the bitmap.
 ///
-/// @param          map The bitmap we're updating.
-/// @param            i The absolute bit index we're starting with.
+/// @param       blocks The blocks of the bitmap we're updating.
+/// @param          bit The absolute bit index we're starting with.
 /// @param        nbits The number of bits that we're setting.
 static void _set(block_t *blocks, uint32_t bit, uint32_t nbits) {
   assert(blocks);
@@ -240,8 +246,8 @@ static void _set(block_t *blocks, uint32_t bit, uint32_t nbits) {
 
 /// Clear a continuous number of bits in the bitmap.
 ///
-/// @param          map The bitmap we're updating.
-/// @param            i The absolute bit index we're starting with.
+/// @param       blocks The blocks we're updating.
+/// @param          bit The absolute bit index we're starting with.
 /// @param        nbits The number of bits that we're clearing.
 static void _clear(block_t *blocks, uint32_t bit, uint32_t nbits) {
   assert(blocks);
@@ -283,8 +289,7 @@ static int32_t _bitmap_unused_blocks(const bitmap_t *map) {
 ///
 /// @param          map The map that is full.
 /// @param        nbits The request size that triggered the OOM.
-/// @param         bias The alignment that triggered OOM.
-/// @param       period The period that triggered the OOM.
+/// @param        align The alignment that triggered OOM.
 ///
 /// @returns LIBHPX_ENOMEM
 static int _bitmap_oom(const bitmap_t *map, uint32_t nbits, uint32_t align) {

@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -25,48 +25,40 @@
 ///
 /// This should be managed in an asm-specific manner.
 typedef struct {
-  void      *alignment; // keep 8-byte aligned stack
+  void     *alignment; // keep 8-byte aligned stack
 #ifdef __VFP_FP__
-  void  *vfp_alignment;
-  void          *fpscr;
-  void    *vfpregs[16];
+  void *vfp_alignment;
+  void         *fpscr;
+  void   *vfpregs[16];
 #endif
-  void        *regs[6]; // r6-r11
-  void             *r5; // we use this to hold the parcel that is passed to f()
-  thread_entry_t    r4; // used to hold f(), called by align_stack_trampoline
-  void     (*lr)(void); // return address - set to align_stack_trampoline
-#ifdef ENABLE_DEBUG
-  void         *top_r4;
-  void (*top_lr)(void);
-#endif
+  void       *regs[6]; // r6-r11
+  void            *r5; // we use this to hold the parcel that is passed to f()
+  thread_entry_t   r4; // used to hold f(), called by align_stack_trampoline
+  void           (*lr)(void); // return address
+  void        *top_r4;
+  void       (*top_lr)(void);
 } HPX_PACKED _frame_t;
 
-static _frame_t *_get_top_frame(ustack_t *thread, size_t size) {
-  int offset = size - sizeof(_frame_t);
-  return (_frame_t*)((char*)thread + offset);
-}
+void *transfer_frame_init(void *top, hpx_parcel_t *p, thread_entry_t f) {
+  // arm wants 8 byte alignment, so we adjust the top pointer if necessary
+  top = (void*)((uintptr_t)top & ~(7));
 
-void thread_init(ustack_t *thread, hpx_parcel_t *parcel, thread_entry_t f,
-                 size_t size) {
-  // set up the initial stack frame
-  _frame_t *frame = _get_top_frame(thread, size);
+  // Stack frame addresses go "down" while C struct addresses go "up, so compute
+  // the frame base from the top of the frame using the size of the frame
+  // structure. After this, we can just write values to the frame structure and
+  // they'll be in the right place for the initial return from transfer.
+  _frame_t *frame = (void*)((char*)top - sizeof(*frame));
   assert((uintptr_t)frame % 8 == 0);
-  frame->r4      = (thread_entry_t)f; // register must be the same as the one
-                                      // in align_stack_trampoline
-  frame->r5      = parcel;
-  frame->lr      = align_stack_trampoline;
+
+  // register must be the same as the one used in align_stack_trampoline
+  frame->r4 = f;
+  frame->r5 = p;
+  frame->lr = align_stack_trampoline;
 
 #ifdef ENABLE_DEBUG
   frame->top_r4 = NULL;
   frame->top_lr = NULL;
 #endif
 
-  // set the stack stuff
-  thread->sp        = frame;
-  thread->next      = NULL;
-  thread->parcel    = parcel;
-  thread->lco_depth = 0;
-  thread->tls_id    = -1;
-  thread->size      = size;
-  thread->affinity  = -1;
+  return frame;
 }

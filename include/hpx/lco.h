@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -14,6 +14,10 @@
 #ifndef HPX_LCO_H
 #define HPX_LCO_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @defgroup lcos LCOs
 /// @brief Functions and definitions for using LCOs
 /// @{
@@ -24,8 +28,6 @@
 #include <hpx/addr.h>
 #include <hpx/attributes.h>
 #include <hpx/types.h>
-
-
 
 /// Forward declarations.
 /// @{
@@ -75,7 +77,7 @@ void hpx_lco_delete_sync(hpx_addr_t lco)
 /// rsync lco will only be set *once*, and any errors will be reported there.
 ///
 /// @param     n The number of LCOs to delete.
-/// @param   lco An array of the addresses of the LCOs to delete.
+/// @param  lcos An array of the addresses of the LCOs to delete.
 /// @param rsync An LCO to signal remote completion of all of the deletes.
 ///
 /// @returns HPX_SUCCESS, or an error if the operation failed (errors in the
@@ -182,7 +184,8 @@ int hpx_lco_set_rsync(hpx_addr_t lco, size_t size, const void *value)
 ///                local completion indicates that the @p value may be freed
 ///                or reused.
 /// @param raddr A continuation address for the set return value.
-/// @param   rop The continuation operation (should be marshalled).
+/// @param   rop The continuation operation (should be marshalled, and type
+///                of value should be int).
 void hpx_lco_set_with_continuation(hpx_addr_t lco, size_t size, const void *value,
                                    hpx_addr_t lsync,
                                    hpx_addr_t raddr, hpx_action_t rop)
@@ -219,10 +222,10 @@ hpx_status_t hpx_lco_wait_reset(hpx_addr_t lco)
 /// hpx_lco_error() rather than hpx_lco_set(), in such a case the memory pointed
 /// to by @p out will not be inspected.
 ///
-/// @param      lco the LCO we're processing
-/// @param     size the size of the data
-/// @param[out] out the output location (may be null)
-/// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
+/// @param        lco the LCO we're processing
+/// @param       size the size of the data
+/// @param[out] value the output location (may be null)
+/// @returns          HPX_SUCCESS or the code passed to hpx_lco_error()
 hpx_status_t hpx_lco_get(hpx_addr_t lco, size_t size, void *value)
   HPX_PUBLIC;
 
@@ -236,10 +239,10 @@ hpx_status_t hpx_lco_get(hpx_addr_t lco, size_t size, void *value)
 /// hpx_lco_error() rather than hpx_lco_set(), in such a case the memory pointed
 /// to by @p out will not be inspected.
 ///
-/// @param      lco the LCO we're processing
-/// @param     size the size of the data
-/// @param[out] out the output location (may be null)
-/// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
+/// @param        lco the LCO we're processing
+/// @param       size the size of the data
+/// @param[out] value the output location (may be null)
+/// @returns          HPX_SUCCESS or the code passed to hpx_lco_error()
 hpx_status_t hpx_lco_get_reset(hpx_addr_t lco, size_t size, void *value)
   HPX_PUBLIC;
 
@@ -510,6 +513,11 @@ hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size,
                                         size_t init_size)
   HPX_PUBLIC;
 
+/// Get the user-defined LCO's user data. This allows to access the buffer
+/// portion of the user-defined LCO regardless the LCO has been set or not.
+/// @param        lco The LCO we're processing.
+void *hpx_lco_user_get_user_data(void *lco) HPX_PUBLIC;
+
 /// Allocate a new generation counter.
 ///
 /// A generation counter allows an application programmer to efficiently wait
@@ -731,4 +739,9 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
 /// @}
 
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

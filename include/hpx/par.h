@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -14,6 +14,10 @@
 #ifndef HPX_PAR_H
 #define HPX_PAR_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @addtogroup actions
 /// @{
 
@@ -21,15 +25,13 @@
 /// @brief HPX parallel loop interface
 
 /// The type of functions that can be passed to hpx_par_for().
-typedef int (*hpx_for_action_t)(const int, const void*);
+typedef int (*hpx_for_action_t)(int, void*);
 
+int hpx_par_for(hpx_for_action_t f, int min, int max, void *args,
+                hpx_addr_t sync) HPX_PUBLIC;
 
-int hpx_par_for(hpx_for_action_t f, const int min, const int max,
-                const void *args, hpx_addr_t sync) HPX_PUBLIC;
-
-int hpx_par_for_sync(hpx_for_action_t f, const int min, const int max,
-                     const void *args) HPX_PUBLIC;
-
+int hpx_par_for_sync(hpx_for_action_t f, int min, int max,
+                     void *args) HPX_PUBLIC;
 
 /// Perform a parallel call.
 ///
@@ -77,13 +79,17 @@ int hpx_par_call_sync(hpx_action_t action,
                      const void *env) HPX_PUBLIC;
 
 int hpx_count_range_call(hpx_action_t action,
-			 const hpx_addr_t addr,
-			 const size_t count,
-			 const size_t increment,
-			 const uint32_t bsize,
-			 const size_t arg_size,
-			 void *const arg) HPX_PUBLIC;
+             const hpx_addr_t addr,
+             const size_t count,
+             const size_t increment,
+             const uint32_t bsize,
+             const size_t arg_size,
+             void *const arg) HPX_PUBLIC;
 
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // HPX_PAR_H

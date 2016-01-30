@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -34,7 +34,6 @@
 #include "global.h"
 #include "heap.h"
 #include "pgas.h"
-#include "../parcel/emulation.h"
 
 /// The PGAS type is a global address space that manages a shared heap.
 ///
@@ -50,8 +49,7 @@
 ///
 heap_t *global_heap = NULL;
 
-static void
-_pgas_dealloc(void *gas) {
+static void _pgas_dealloc(void *gas) {
   if (global_heap) {
     heap_fini(global_heap);
     free(global_heap);
@@ -64,12 +62,12 @@ static bool _gpa_is_cyclic(hpx_addr_t gpa) {
 }
 
 hpx_addr_t pgas_lva_to_gpa(const void *lva) {
-  const uint64_t offset = heap_lva_to_offset(global_heap, lva);
+  uint64_t offset = heap_lva_to_offset(global_heap, lva);
   return offset_to_gpa(here->rank, offset);
 }
 
 void *pgas_gpa_to_lva(hpx_addr_t gpa) {
-   const uint64_t offset = gpa_to_offset(gpa);
+  uint64_t offset = gpa_to_offset(gpa);
    return heap_offset_to_lva(global_heap, offset);
 }
 
@@ -83,8 +81,8 @@ uint64_t pgas_max_offset(void) {
 
 static int64_t
 _pgas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
-  const bool l = _gpa_is_cyclic(lhs);
-  const bool r = _gpa_is_cyclic(rhs);
+  bool l = _gpa_is_cyclic(lhs);
+  bool r = _gpa_is_cyclic(rhs);
   dbg_assert_str(l == r, "cannot compare addresses across allocations.\n");
   dbg_assert_str(!(l ^ r), "cannot compare cyclic with non-cyclic.\n");
 
@@ -93,13 +91,12 @@ _pgas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
 
 static hpx_addr_t
 _pgas_add(const void *gas, hpx_addr_t gpa, int64_t bytes, uint32_t bsize) {
-  const bool cyclic = _gpa_is_cyclic(gpa);
+  bool cyclic = _gpa_is_cyclic(gpa);
   return (cyclic) ? gpa_add_cyclic(gpa, bytes, bsize) : gpa_add(gpa, bytes);
 }
 
 // Compute a global address for a locality.
-static hpx_addr_t
-_pgas_there(void *gas, uint32_t i) {
+static hpx_addr_t _pgas_there(void *gas, uint32_t i) {
   hpx_addr_t there = offset_to_gpa(i, UINT64_MAX);
   if (DEBUG) {
     uint64_t offset = gpa_to_offset(there);
@@ -113,8 +110,7 @@ _pgas_there(void *gas, uint32_t i) {
 /// Pin and translate an hpx address into a local virtual address. PGAS
 /// addresses don't get pinned, so we're really only talking about translating
 /// the address if its local.
-static bool
-_pgas_try_pin(void *gas, hpx_addr_t gpa, void **local) {
+static bool _pgas_try_pin(void *gas, hpx_addr_t gpa, void **local) {
   dbg_assert_str(gpa, "cannot pin HPX_NULL\n");
 
   // we're safe for HPX_HERE/THERE because gpa_to_rank doesn't range-check
@@ -130,15 +126,13 @@ _pgas_try_pin(void *gas, hpx_addr_t gpa, void **local) {
   return true;
 }
 
-static void
-_pgas_unpin(void *gas, hpx_addr_t addr) {
+static void _pgas_unpin(void *gas, hpx_addr_t addr) {
   dbg_assert_str(_pgas_try_pin(gas, addr, NULL),
                  "%"PRIu64" is not local to %u\n", addr, here->rank);
 }
 
-static hpx_addr_t
-_pgas_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
-                       uint32_t attr) {
+static hpx_addr_t _pgas_gas_alloc_cyclic(size_t n, uint32_t bsize,
+                                         uint32_t boundary, uint32_t attr) {
   hpx_addr_t addr;
   if (here->rank == 0) {
     addr = pgas_alloc_cyclic_sync(n, bsize);
@@ -152,9 +146,8 @@ _pgas_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
   return addr;
 }
 
-static hpx_addr_t
-_pgas_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
-                        uint32_t attr) {
+static hpx_addr_t _pgas_gas_calloc_cyclic(size_t n, uint32_t bsize,
+                                          uint32_t boundary, uint32_t attr) {
   hpx_addr_t addr;
   if (here->rank == 0) {
     addr = pgas_calloc_cyclic_sync(n, bsize);
@@ -168,11 +161,9 @@ _pgas_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
   return addr;
 }
 
-/// Allocate a single global block from the global heap, and return it as an
-/// hpx_addr_t.
-static hpx_addr_t
-_pgas_gas_alloc_local(size_t n, uint32_t bsize, uint32_t boundary,
-                      uint32_t attr) {
+/// Allocate global blocks from the global heap.
+static hpx_addr_t _pgas_gas_alloc_local(size_t n, uint32_t bsize,
+                                        uint32_t boundary, uint32_t attr) {
   size_t bytes = n * bsize;
   void *lva = NULL;
   if (boundary) {
@@ -180,15 +171,12 @@ _pgas_gas_alloc_local(size_t n, uint32_t bsize, uint32_t boundary,
   } else {
     lva = global_malloc(bytes);
   }
-  dbg_assert(heap_contains_lva(global_heap, lva));
-  return pgas_lva_to_gpa(lva);
+  return (lva) ? pgas_lva_to_gpa(lva) : HPX_NULL;
 }
 
-/// Allocate a single global block, filled with 0, from the global heap, and
-/// return it as an hpx_addr_t.
-static hpx_addr_t
-_pgas_gas_calloc_local(size_t n, uint32_t bsize, uint32_t boundary,
-                       uint32_t attr) {
+/// Allocate global zero-filled blocks from the global heap.
+static hpx_addr_t _pgas_gas_calloc_local(size_t n, uint32_t bsize,
+                                         uint32_t boundary, uint32_t attr) {
   size_t bytes = n * bsize;
   void *lva = NULL;
   if (boundary) {
@@ -197,8 +185,7 @@ _pgas_gas_calloc_local(size_t n, uint32_t bsize, uint32_t boundary,
   } else {
     lva = global_calloc(n, bsize);
   }
-  dbg_assert(heap_contains_lva(global_heap, lva));
-  return pgas_lva_to_gpa(lva);
+  return (lva) ? pgas_lva_to_gpa(lva) : HPX_NULL;
 }
 
 /// Free a global address.
@@ -206,264 +193,59 @@ _pgas_gas_calloc_local(size_t n, uint32_t bsize, uint32_t boundary,
 /// This global address must either be the base of a cyclic allocation, or a
 /// block allocated by _pgas_gas_alloc_local. At this time, we do not attempt to deal
 /// with the cyclic allocations, as they are using a simple csbrk allocator.
-static void
-_pgas_gas_free(void *gas, hpx_addr_t gpa, hpx_addr_t sync) {
+static void _pgas_gas_free(void *gas, hpx_addr_t gpa, hpx_addr_t sync) {
   if (gpa == HPX_NULL) {
     return;
   }
 
-  const uint64_t offset = gpa_to_offset(gpa);
-
-  const void *lva = heap_offset_to_lva(global_heap, offset);
+  uint64_t offset = gpa_to_offset(gpa);
+  void *lva = heap_offset_to_lva(global_heap, offset);
   dbg_assert_str(heap_contains_lva(global_heap, lva),
                  "attempt to free out of bounds offset %"PRIu64"", offset);
   (void)lva;
 
   if (heap_offset_is_cyclic(global_heap, offset)) {
     heap_free_cyclic(global_heap, offset);
+    hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
   }
   else if (gpa_to_rank(gpa) == here->rank) {
     global_free(pgas_gpa_to_lva(offset));
+    hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
   }
   else {
-    int e = hpx_call(gpa, pgas_free, sync);
-    dbg_check(e, "failed to call pgas_free on %"PRIu64"", gpa);
-    return;
+    dbg_check(hpx_call(gpa, pgas_free, sync), "free failed on %"PRIu64"", gpa);
   }
+}
 
+static void _pgas_move(void *gas, hpx_addr_t src, hpx_addr_t dst,
+                       hpx_addr_t sync) {
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
-static int
-_pgas_parcel_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
-                    hpx_addr_t sync) {
-  if (!size) {
-    return HPX_SUCCESS;
-  }
-
-  const uint32_t rank = here->rank;
-  if (gpa_to_rank(to) == rank && gpa_to_rank(from) == rank) {
-    void *lto = pgas_gpa_to_lva(to);
-    const void *lfrom = pgas_gpa_to_lva(from);
-    memcpy(lto, lfrom, size);
-  }
-  else {
-    return parcel_memcpy(to, from, size, sync);
-  }
-
-  hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
-  return HPX_SUCCESS;
-}
-
-static int
-_pgas_parcel_memcpy_sync(void *gas, hpx_addr_t to, hpx_addr_t from,
-                         size_t size) {
-  int e = HPX_SUCCESS;
-  if (!size) {
-    return e;
-  }
-
-  hpx_addr_t sync = hpx_lco_future_new(0);
-  if (sync == HPX_NULL) {
-    log_error("could not allocate an LCO.\n");
-    return HPX_ENOMEM;
-  }
-
-  e = _pgas_parcel_memcpy(gas, to, from, size, sync);
-
-  if (HPX_SUCCESS != hpx_lco_wait(sync)) {
-    dbg_error("failed agas_memcpy_sync\n");
-  }
-
-  hpx_lco_delete(sync, HPX_NULL);
-  return e;
-}
-
-static int _lco_rsync_handler(int src, uint64_t command) {
-  return network_command(here->network, HPX_THERE(src), lco_set, command);
-}
-static COMMAND_DEF(_lco_rsync, _lco_rsync_handler);
-
-static int
-_pgas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
-             hpx_addr_t lsync, hpx_addr_t rsync) {
-  if (!n) {
-    return HPX_SUCCESS;
-  }
-
-  hpx_action_t lop = lsync ? lco_set : HPX_ACTION_NULL;
-  if (gpa_to_rank(to) == here->rank) {
-    void *lto = pgas_gpa_to_lva(to);
-    memcpy(lto, from, n);
-    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
-    return HPX_SUCCESS;
-  }
-  else if (rsync) {
-    return network_pwc(here->network, to, from, n, lop, lsync,
-                       _lco_rsync, rsync);
-  }
-  else {
-    return network_put(here->network, to, from, n, lop, lsync);
-  }
-}
-
-typedef struct {
-  hpx_addr_t to;
-  const void *from;
-  size_t n;
-  hpx_addr_t rsync;
-} _pgas_memput_lsync_continuation_env_t;
-
-static void
-_pgas_memput_lsync_continuation(hpx_parcel_t *p, void *env) {
-  _pgas_memput_lsync_continuation_env_t *e = env;
-  hpx_addr_t pgpa = offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p);
-  if (e->rsync) {
-    dbg_check( network_pwc(here->network, e->to, e->from, e->n, resume_parcel,
-                           pgpa, _lco_rsync, e->rsync) );
-  }
-  else {
-    dbg_check( network_put(here->network, e->to, e->from, e->n, resume_parcel,
-                           pgpa) );
-  }
-}
-
-static int
-_pgas_memput_lsync(void *gas, hpx_addr_t to, const void *from, size_t n,
-                   hpx_addr_t rsync) {
-  if (!n) {
-    return HPX_SUCCESS;
-  }
-
-  if (gpa_to_rank(to) == here->rank) {
-    void *lto = pgas_gpa_to_lva(to);
-    memcpy(lto, from, n);
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
-    return HPX_SUCCESS;
-  }
-
-  _pgas_memput_lsync_continuation_env_t env = {
-    .to = to,
-    .from = from,
-    .n = n,
-    .rsync = rsync
-  };
-
-  scheduler_suspend(_pgas_memput_lsync_continuation, &env, 0);
-  return HPX_SUCCESS;
-}
-
-
-typedef struct {
-  hpx_addr_t to;
-  const void *from;
-  size_t n;
-} _pgas_memput_rsync_continuation_env_t;
-
-static void
-_pgas_memput_rsync_continuation(hpx_parcel_t *p, void *env) {
-  _pgas_memput_rsync_continuation_env_t *e = env;
-  hpx_addr_t pgpa = offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p);
-  dbg_check( network_pwc(here->network, e->to, e->from, e->n, 0, 0,
-                         resume_parcel_remote, pgpa) );
-}
-
-static int
-_pgas_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t n) {
-  if (!n) {
-    return HPX_SUCCESS;
-  }
-
-  if (gpa_to_rank(to) == here->rank) {
-    void *lto = pgas_gpa_to_lva(to);
-    memcpy(lto, from, n);
-    return HPX_SUCCESS;
-  }
-
-  _pgas_memput_rsync_continuation_env_t env = {
-    .to = to,
-    .from = from,
-    .n = n
-  };
-
-  scheduler_suspend(_pgas_memput_rsync_continuation, &env, 0);
-  return HPX_SUCCESS;
-}
-
-static int
-_pgas_memget(void *gas, void *to, hpx_addr_t from, size_t n, hpx_addr_t lsync) {
-  if (!n) {
-    return HPX_SUCCESS;
-  }
-
-  if (gpa_to_rank(from) == here->rank) {
-    const void *lfrom = pgas_gpa_to_lva(from);
-    memcpy(to, lfrom, n);
-    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-    return HPX_SUCCESS;
-  }
-
-  return network_get(here->network, to, from, n, lco_set, lsync);
-}
-
-typedef struct {
-  void *to;
-  hpx_addr_t from;
-  size_t n;
-} _pgas_memget_sync_continutation_env_t;
-
-static void _pgas_memget_sync_continutation(hpx_parcel_t *p, void *env) {
-  _pgas_memget_sync_continutation_env_t *e = env;
-  hpx_addr_t pgpa = offset_to_gpa(here->rank, (uint64_t)(uintptr_t)p);
-  dbg_check( network_get(here->network, e->to, e->from, e->n, resume_parcel,
-                         pgpa) );
-}
-
-static int
-_pgas_memget_sync(void *gas, void *to, hpx_addr_t from, size_t n) {
-  if (!n) {
-    return HPX_SUCCESS;
-  }
-
-  if (gpa_to_rank(from) == here->rank) {
-    const void *lfrom = pgas_gpa_to_lva(from);
-    memcpy(to, lfrom, n);
-    return HPX_SUCCESS;
-  }
-
-  _pgas_memget_sync_continutation_env_t env = {
-    .to = to,
-    .from = from,
-    .n = n
-  };
-
-  scheduler_suspend(_pgas_memget_sync_continutation, &env, 0);
-  return HPX_SUCCESS;
-}
-
-static void
-_pgas_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
-  hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
-}
-
-static size_t
-_pgas_local_size(void *gas) {
+static size_t _pgas_local_size(void *gas) {
   return global_heap->nbytes;
 }
 
-static void *
-_pgas_local_base(void *gas) {
+static void *_pgas_local_base(void *gas) {
   return global_heap->base;
 }
 
-static uint32_t
-_pgas_owner_of(const void *pgas, hpx_addr_t addr) {
+static uint32_t _pgas_owner_of(const void *pgas, hpx_addr_t addr) {
   return gpa_to_rank(addr);
 }
 
 static gas_t _pgas_vtable = {
   .type           = HPX_GAS_PGAS,
+  .string = {
+    .memget       = pgas_memget,
+    .memget_rsync = pgas_memget_rsync,
+    .memget_lsync = pgas_memget_lsync,
+    .memput       = pgas_memput,
+    .memput_lsync = pgas_memput_lsync,
+    .memput_rsync = pgas_memput_rsync,
+    .memcpy       = pgas_memcpy,
+    .memcpy_sync  = pgas_memcpy_sync,
+  },
   .dealloc        = _pgas_dealloc,
   .local_size     = _pgas_local_size,
   .local_base     = _pgas_local_base,
@@ -480,18 +262,10 @@ static gas_t _pgas_vtable = {
   .calloc_local   = _pgas_gas_calloc_local,
   .free           = _pgas_gas_free,
   .move           = _pgas_move,
-  .memget         = _pgas_memget,
-  .memget_sync    = _pgas_memget_sync,
-  .memput         = _pgas_memput,
-  .memput_lsync   = _pgas_memput_lsync,
-  .memput_rsync   = _pgas_memput_rsync,
-  .memcpy         = _pgas_parcel_memcpy,
-  .memcpy_sync    = _pgas_parcel_memcpy_sync,
   .owner_of       = _pgas_owner_of
 };
 
-gas_t *
-gas_pgas_new(const config_t *cfg, boot_t *boot) {
+gas_t *gas_pgas_new(const config_t *cfg, boot_t *boot) {
   size_t heap_size = cfg->heapsize;
 
   if (global_heap) {
@@ -501,13 +275,13 @@ gas_pgas_new(const config_t *cfg, boot_t *boot) {
   global_heap = malloc(sizeof(*global_heap));
   if (!global_heap) {
     dbg_error("could not allocate global heap\n");
-    goto unwind0;
+    return NULL;
   }
 
-  int e = heap_init(global_heap, heap_size);
-  if (e != LIBHPX_OK) {
+  if (heap_init(global_heap, heap_size) != LIBHPX_OK) {
     dbg_error("failed to allocate global heap\n");
-    goto unwind1;
+    free(global_heap);
+    return NULL;
   }
 
   global_allocator_init();
@@ -516,9 +290,4 @@ gas_pgas_new(const config_t *cfg, boot_t *boot) {
   }
 
   return &_pgas_vtable;
-
- unwind1:
-  free(global_heap);
- unwind0:
-  return NULL;
 }

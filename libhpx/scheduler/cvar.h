@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -87,7 +87,7 @@ hpx_status_t cvar_push_thread(cvar_t *cvar, struct ustack *thread)
 /// it will push the parcel and return HPX_SUCCESS.
 ///
 /// @param         cvar The condition variable to modify.
-/// @param       thread The parcel to push.
+/// @param       parcel The parcel to push.
 ///
 /// @returns            HPX_SUCCESS or an error code
 hpx_status_t cvar_attach(cvar_t *cvar, struct hpx_parcel *parcel)

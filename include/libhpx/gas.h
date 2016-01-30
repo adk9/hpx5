@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -16,6 +16,7 @@
 
 #include <hpx/hpx.h>
 #include <libhpx/config.h>
+#include <libhpx/string.h>
 #include <libhpx/system.h>
 
 #ifdef __cplusplus
@@ -30,6 +31,8 @@ struct boot;
 /// Generic object oriented interface to the global address space.
 typedef struct gas {
   libhpx_gas_t type;
+
+  class_string_t string;
 
   void (*dealloc)(void *gas);
   size_t (*local_size)(void *gas);
@@ -47,24 +50,6 @@ typedef struct gas {
   void (*free)(void *gas, hpx_addr_t addr, hpx_addr_t rsync);
 
   void (*move)(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
-
-  int (*memget)(void *gas, void *to, hpx_addr_t from, size_t size,
-                hpx_addr_t lsync);
-
-  int (*memget_sync)(void *gas, void *to, hpx_addr_t from, size_t size);
-
-  int (*memput)(void *gas, hpx_addr_t to, const void *from, size_t size,
-                hpx_addr_t lsync, hpx_addr_t rsync);
-
-  int (*memput_lsync)(void *gas, hpx_addr_t to, const void *from, size_t size,
-                      hpx_addr_t rsync);
-
-  int (*memput_rsync)(void *gas, hpx_addr_t to, const void *from, size_t size);
-
-  int (*memcpy)(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
-                hpx_addr_t sync);
-
-  int (*memcpy_sync)(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size);
 
   // implement hpx/gas.h
   __typeof(hpx_gas_alloc_local_attr) *alloc_local;

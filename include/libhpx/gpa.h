@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -45,7 +45,7 @@ static inline uint32_t gpa_to_rank(hpx_addr_t addr) {
 /// address in its global heap. It encodes both the gpa offset and the gpa
 /// phase, and can be used to extract either of those in the future.
 ///
-/// @param          gpa The global address.
+/// @param         addr The global address.
 ///
 /// @returns            The offset within the global heap that corresponds to
 ///                     the address.
@@ -117,7 +117,7 @@ int64_t gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize);
 /// @param        bsize The block size in bytes for the allocation.
 ///
 /// @returns            The global address representation that is @p bytes away
-///                     from @gpa.
+///                     from @p gpa.
 hpx_addr_t gpa_add_cyclic(hpx_addr_t gpa, int64_t bytes, uint32_t bsize);
 
 

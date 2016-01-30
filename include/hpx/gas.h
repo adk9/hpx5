@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -13,6 +13,10 @@
 
 #ifndef HPX_GAS_H
 #define HPX_GAS_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /// @defgroup agas Global Address Space
 /// @brief Functions and definitions for using the global address space
@@ -48,6 +52,7 @@ typedef hpx_addr_t (*hpx_gas_dist_t)(uint32_t i, size_t n, uint32_t bsize);
 /// @param            n The number of blocks to allocate.
 /// @param        bsize The number of bytes per block.
 /// @param     boundary The alignment (2^k).
+/// @param         dist The gas distribution type.
 /// @param         attr The attributes of this global allocation space
 ///
 /// @returns            The global address of the allocated memory.
@@ -58,6 +63,7 @@ hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bsize, uint32_t boundary,
 /// @param            n The number of blocks to allocate.
 /// @param        bsize The number of bytes per block.
 /// @param     boundary The alignment (2^k).
+/// @param         dist The gas distribution type.
 /// @param         attr The attributes of this global allocation space
 ///
 /// @returns            The global address of the allocated memory.
@@ -148,11 +154,17 @@ hpx_addr_t hpx_gas_calloc_blocked(size_t n, uint32_t bsize, uint32_t boundary)
 /// @param     boundary The alignment (2^k).
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_alloc_local(size_t n, uint32_t bsize, uint32_t boundary) HPX_PUBLIC;
+hpx_addr_t hpx_gas_alloc_local(size_t n, uint32_t bsize, uint32_t boundary)
+  HPX_PUBLIC;
+
 hpx_addr_t hpx_gas_alloc_local_at_sync(size_t n, uint32_t bsize, uint32_t boundary,
-                                       hpx_addr_t loc) HPX_PUBLIC;
+                                       hpx_addr_t loc)
+  HPX_PUBLIC;
+
 void hpx_gas_alloc_local_at_async(size_t n, uint32_t bsize, uint32_t boundary,
-                                  hpx_addr_t loc, hpx_addr_t lco) HPX_PUBLIC;
+                                  hpx_addr_t loc, hpx_addr_t lco)
+  HPX_PUBLIC;
+
 extern HPX_PUBLIC HPX_ACTION_DECL(hpx_gas_alloc_local_at_action);
 
 /// Allocate a 0-initialized block of global memory.
@@ -173,12 +185,16 @@ extern HPX_PUBLIC HPX_ACTION_DECL(hpx_gas_alloc_local_at_action);
 /// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_calloc_local(size_t n, uint32_t bsize, uint32_t boundary)
   HPX_PUBLIC;
+
 hpx_addr_t hpx_gas_calloc_local_at_sync(size_t n, uint32_t bsize,
                                         uint32_t boundary, hpx_addr_t loc)
   HPX_PUBLIC;
+
 void hpx_gas_calloc_local_at_async(size_t n, uint32_t bsize,
                                    uint32_t boundary, hpx_addr_t loc,
-                                   hpx_addr_t out) HPX_PUBLIC;
+                                   hpx_addr_t out)
+  HPX_PUBLIC;
+
 extern HPX_PUBLIC HPX_ACTION_DECL(hpx_gas_calloc_local_at_action);
 
 /// Global memory allocation routines with GAS attributes.
@@ -279,7 +295,7 @@ void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) HPX_PUBLIC;
 ///                true If @p addr is local and @p local is not NULL and pin is
 ///                       successful.
 ///               false If @p is not local.
-///               false If @p is local and @local is not NULL and pin fails.
+///               false If @p is local and @p local is not NULL and pin fails.
 bool hpx_gas_try_pin(hpx_addr_t addr, void **local) HPX_PUBLIC;
 
 /// Unpin a previously pinned block.
@@ -464,11 +480,11 @@ _hpx_gas_bcast_with_continuation(hpx_action_t action, hpx_addr_t base, int n,
 /// elements. The output "continued" by the action, if any, is not
 /// returned.
 ///
-/// @param       action The action to run.
-/// @param         base The base of the array.
-/// @param            n The number of elements in the array.
-/// @param       offset The offset within each element to target.
-/// @param        bsize The block size for the array.
+/// @param       ACTION The action to run.
+/// @param         BASE The base of the array.
+/// @param            N The number of elements in the array.
+/// @param       OFFSET The offset within each element to target.
+/// @param        BSIZE The block size for the array.
 /// @param          ... The addresses of each argument.
 ///
 /// @returns      HPX_SUCCESS if no errors were encountered.
@@ -503,5 +519,9 @@ _hpx_gas_bcast_sync(hpx_action_t action, hpx_addr_t base, int n,
 
 
 /// @}
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

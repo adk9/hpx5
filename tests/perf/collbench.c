@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -47,6 +47,11 @@ static int
 _allreduce_set_get_handler(hpx_addr_t allreduce, int iters, size_t size) {
   unsigned char sbuf[size];
   unsigned char rbuf[size];
+
+  for (int i = 0, e = size; i < e; ++i) {
+    sbuf[i] = rand();
+  }
+
   for (int i = 0; i < iters; ++i) {
     hpx_lco_set_lsync(allreduce, size, sbuf, HPX_NULL);
     hpx_lco_get(allreduce, size, rbuf);
@@ -61,6 +66,11 @@ static int
 _allreduce_join_handler(hpx_addr_t allreduce, int iters, size_t size) {
   unsigned char sbuf[size];
   unsigned char rbuf[size];
+
+  for (int i = 0, e = size; i < e; ++i) {
+    sbuf[i] = rand();
+  }
+
   int id = (HPX_LOCALITY_ID * HPX_THREADS) + HPX_THREAD_ID;
   hpx_addr_t f = hpx_lco_future_new(0);
   for (int i = 0; i < iters; ++i) {
@@ -78,6 +88,11 @@ static int
 _allreduce_join_sync_handler(hpx_addr_t allreduce, int iters, size_t size) {
   unsigned char sbuf[size];
   unsigned char rbuf[size];
+
+  for (int i = 0, e = size; i < e; ++i) {
+    sbuf[i] = rand();
+  }
+
   int id = (HPX_LOCALITY_ID * HPX_THREADS) + HPX_THREAD_ID;
   for (int i = 0; i < iters; ++i) {
     hpx_lco_allreduce_join_sync(allreduce, id, size, sbuf, rbuf);
@@ -118,7 +133,7 @@ static int _benchmark(char *name, hpx_action_t op, int iters, size_t size) {
 
 static HPX_ACTION_DECL(_main);
 static int _main_action(int iters, size_t size) {
-  printf("collbench(iters=%d, size=%lu)\n", iters, size);
+  printf("collbench(iters=%d, size=%zu)\n", iters, size);
   printf("time resolution: milliseconds\n");
   fflush(stdout);
 
@@ -127,7 +142,7 @@ static int _main_action(int iters, size_t size) {
   _BENCHMARK(_allreduce_join_sync, iters, size);
 
   hpx_exit(HPX_SUCCESS);
-}  
+}
 static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_action, HPX_INT, HPX_SIZE_T);
 
 static void _usage(FILE *f, int error) {

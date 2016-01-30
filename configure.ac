@@ -1,4 +1,4 @@
-# Copyright (c) 2013-2015, Trustees of Indiana University 
+# Copyright (c) 2013-2016, Trustees of Indiana University 
 # All rights reserved.
 
 # This software may be modified and distributed under the terms of
@@ -8,7 +8,16 @@
 # Research in Extreme Scale Technologies (CREST).
 
 AC_PREREQ([2.63])
-AC_INIT([hpx-5], [2.0.0], [hpx@indiana.edu])
+m4_define([LIBHPX_MAJOR], [2])
+m4_define([LIBHPX_MINOR], [1])
+m4_define([LIBHPX_PATCH], [0])
+AC_INIT([hpx-5], LIBHPX_MAJOR.LIBHPX_MINOR.LIBHPX_PATCH, [hpx@indiana.edu])
+
+# WE OVERWRITE "-O2 -g" default flags, because there is no world where
+# ./hpx/configure CFLAGS="-O2 -g" is better than ./hpx/configure CXXFLAGS="-O3
+# -g"
+: ${CFLAGS="-O3 -g"}
+: ${CXXFLAGS="-O3 -g"}
 
 AC_SUBST(HPX_COPYRIGHT,["Copyright (c) 2013-2015, Trustees of Indiana University."])
 AC_COPYRIGHT([Copyright (c) 2013-2015, Trustees of Indiana University.])
@@ -33,14 +42,7 @@ AC_USE_SYSTEM_EXTENSIONS
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 
-# Checks for programs that we depend on. Our use of CXX is conditional, however
-# we have autotools errors if we don't include the AC_PROG_CXX
-# unconditionally. This is annoying, but doesn't take very long so we just
-# leave it in. Where we need C++, we need C++11, so we use
-# AX_CXX_COMPILE_STDCXX_11 conditionally.
-#
-# @todo: Figure out if it is possible to avoid the AC_PROG_CXX check on the
-#        common path.
+# Checks for programs that we depend on.
 AC_PROG_CC_C99
 AC_PROG_CXX
 AC_PROG_INSTALL
@@ -143,7 +145,7 @@ AS_IF([test "x$enable_parallel_config" != xno],
 # The substituted variables are straightforward. The LIBHPX_ prefixed variables
 # are variables required to build an link libhpx itself. The HPX_PC variables
 # are replaced in the hpx.pc file to allow external tools to link with libhpx.
-
+HPX_CONFIG_HPXPP
 HPX_CONFIG_PHOTON([contrib/photon], [photon])
 HPX_CONFIG_MPI([ompi])
 HPX_CONFIG_PMI([cray-pmi])
@@ -202,6 +204,7 @@ AC_SUBST(HPX_PC_PRIVATE_PKGS)
 
 AC_SUBST(HPX_APPS_CPPFLAGS)
 AC_SUBST(HPX_APPS_CFLAGS)
+AC_SUBST(HPX_APPS_CXXFLAGS)
 AC_SUBST(HPX_APPS_LDFLAGS)
 AC_SUBST(HPX_APPS_LDADD)
 AC_SUBST(HPX_APPS_DEPS)

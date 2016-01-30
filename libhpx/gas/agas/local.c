@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -36,7 +36,12 @@ agas_local_alloc(size_t n, uint32_t bsize, uint32_t boundary, uint32_t attr) {
   uint32_t padded = UINT32_C(1) << align;
   uint32_t aligned = max_u32(boundary, padded);
 
+  agas_alloc_bsize = aligned;
   char *lva = global_memalign(aligned, n * padded);
+  if (!lva) {
+    return HPX_NULL;
+  }
+
   gva_t gva = agas_lva_to_gva(agas, lva, padded);
   hpx_addr_t base = gva.addr;
   for (int i = 0; i < n; i++) {
@@ -56,6 +61,10 @@ agas_local_calloc(size_t n, uint32_t bsize, uint32_t boundary, uint32_t attr) {
   uint32_t aligned = max_u32(boundary, padded);
 
   char *lva = global_memalign(aligned, n * padded);
+  if (!lva) {
+    return HPX_NULL;
+  }
+
   memset(lva, 0, n * padded);
 
   gva_t gva = agas_lva_to_gva(agas, lva, padded);

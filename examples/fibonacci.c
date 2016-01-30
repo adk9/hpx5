@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -19,6 +19,7 @@
 /// demonstrate some of the basic of HPX and it may demonstrate a
 /// <em>pattern of computation</em> that might be used in the real world.)
 
+#include <signal.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,8 +40,9 @@ static hpx_action_t _fib_main = 0;
 static int _fib_action(int *args, size_t size) {
   int n = *args;
 
-  if (n < 2)
-    HPX_THREAD_CONTINUE(n);
+  if (n < 2) {
+    return HPX_THREAD_CONTINUE(n);
+  }
 
   hpx_addr_t peers[] = {
     HPX_HERE,
@@ -79,8 +81,7 @@ static int _fib_action(int *args, size_t size) {
   hpx_lco_delete(futures[1], HPX_NULL);
 
   int fn = fns[0] + fns[1];
-  HPX_THREAD_CONTINUE(fn);
-  return HPX_SUCCESS;
+  return HPX_THREAD_CONTINUE(fn);
 }
 
 static int _fib_main_action(int *args, size_t size) {

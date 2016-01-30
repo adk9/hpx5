@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -79,7 +79,12 @@ hpx_status_t hpx_parcel_send_through(hpx_parcel_t *p, hpx_addr_t gate,
   }
 }
 
+void hpx_parcel_retain(hpx_parcel_t *p) {
+  parcel_retain(p);
+}
+
 void hpx_parcel_release(hpx_parcel_t *p) {
+  parcel_release(p);
   parcel_delete(p);
 }
 
@@ -109,7 +114,7 @@ void hpx_parcel_set_data(hpx_parcel_t *p, const void *data, size_t size) {
 void _hpx_parcel_set_args(hpx_parcel_t *p, int n, ...) {
   va_list vargs;
   va_start(vargs, n);
-  action_pack_args(p, n, &vargs);
+  action_pack_parcel_va(p->action, p, n, &vargs);
   va_end(vargs);
 }
 

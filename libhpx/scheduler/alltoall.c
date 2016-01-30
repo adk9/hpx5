@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -222,7 +222,8 @@ hpx_status_t hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
 
   if (!hpx_gas_try_pin(alltoall, (void**)&local)) {
     _alltoall_get_offset_t args = {.size = size, .offset = id};
-    return hpx_call_sync(alltoall, _alltoall_getid_proxy, value, size, &args, sizeof(args));
+    hpx_action_t act = _alltoall_getid_proxy;
+    return hpx_call_sync(alltoall, act, value, size, &args, sizeof(args));
   }
 
   status = _alltoall_getid(local, id, size, value);
@@ -247,10 +248,11 @@ static int _alltoall_getid_proxy_handler(_alltoall_get_offset_t *args, size_t n)
 
   // if success, finish the current thread's execution, sending buffer value to
   // the thread's continuation address else finish the current thread's execution.
-  if(status == HPX_SUCCESS)
-    hpx_thread_continue(buffer, args->size);
-  else
-    hpx_thread_exit(status);
+  if (status == HPX_SUCCESS) {
+    return hpx_thread_continue(buffer, args->size);
+  }
+
+  return status;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _alltoall_getid_proxy,
                      _alltoall_getid_proxy_handler, HPX_POINTER, HPX_SIZE_T);
@@ -312,7 +314,7 @@ static hpx_status_t _alltoall_setid(_alltoall_t *g, unsigned offset, int size,
 /// @param   value      Address of the value to be set
 /// @param   lsync      An LCO to signal on local completion HPX_NULL if we
 ///                     don't care. Local completion indicates that the
-///                     @value may be freed or reused.
+///                     @p value may be freed or reused.
 /// @param   rsync      An LCO to signal remote completion HPX_NULL if we
 ///                     don't care.
 /// @returns HPX_SUCCESS or the code passed to hpx_lco_error()
@@ -424,18 +426,18 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _alltoall_init_async,
 /// participants to call the hpx_lco_alltoall_setid() operation as the first
 /// phase of operation.
 ///
-/// @param participants The static number of participants in the gathering.
-/// @param size         The size of the data being gathered.
+/// @param inputs The static number of participants in the gathering.
+/// @param size   The size of the data being gathered.
 hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) {
   _alltoall_t *g = NULL;
   hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*g), 0);
-  LCO_LOG_NEW(gva);
 
   if (!hpx_gas_try_pin(gva, (void**)&g)) {
     int e = hpx_call_sync(gva, _alltoall_init_async, NULL, 0, &inputs, &size);
     dbg_check(e, "could not initialize an allreduce at %"PRIu64"\n", gva);
   }
   else {
+    LCO_LOG_NEW(gva, g);
     _alltoall_init_handler(g, inputs, size);
     hpx_gas_unpin(gva);
   }

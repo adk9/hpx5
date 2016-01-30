@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -64,7 +64,7 @@ static hpx_parcel_t *_cancel(irecv_buffer_t *buffer, int i) {
   }
 
   if (cancelled) {
-    hpx_parcel_release(buffer->records[i].parcel);
+    parcel_delete(buffer->records[i].parcel);
     return NULL;
   }
   else {
@@ -227,8 +227,9 @@ static int _probe(irecv_buffer_t *irecvs) {
 ///
 /// This extracts and finishes the parcel and regenerates the irecv.
 ///
-/// @param       buffer The buffer.
+/// @param       irecvs The buffer.
 /// @param            i The index to finish.
+/// @param       status The status of the operation.
 ///
 /// @returns            The parcel that we received.
 static hpx_parcel_t *_finish(irecv_buffer_t *irecvs, int i, void *status) {
@@ -283,7 +284,7 @@ void irecv_buffer_fini(irecv_buffer_t *buffer) {
 
   hpx_parcel_t *p = NULL;
   while ((p = parcel_stack_pop(&chain))) {
-    hpx_parcel_release(p);
+    parcel_delete(p);
   }
 
   dbg_assert(!buffer->records);

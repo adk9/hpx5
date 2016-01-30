@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -29,7 +29,7 @@ static hpx_action_t increment = 0;
 
 static int _increment_action(int *args, size_t size) {
   int n = *args + 1;
-  HPX_THREAD_CONTINUE(n);
+  return HPX_THREAD_CONTINUE(n);
 }
 
 

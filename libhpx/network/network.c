@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2015, Trustees of Indiana University,
+//  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -23,6 +23,7 @@
 #include <libhpx/network.h>
 #include "isir/isir.h"
 #include "pwc/pwc.h"
+#include "coalesced_network.h"
 #include "inst.h"
 #include "smp.h"
 
@@ -75,6 +76,7 @@ network_t *network_new(config_t *cfg, boot_t *boot, struct gas *gas) {
    case HPX_NETWORK_PWC:
 #ifdef HAVE_NETWORK
     network = network_pwc_funneled_new(cfg, boot, gas);
+    pwc_network = (pwc_network_t*) network;
 #else
     log_level(LEVEL, "PWC network unavailable (no network configured)\n");
 #endif
@@ -102,6 +104,10 @@ network_t *network_new(config_t *cfg, boot_t *boot, struct gas *gas) {
   }
   else {
     log_level(LEVEL, "%s network initialized\n", HPX_NETWORK_TO_STRING[type]);
+  }
+
+  if (cfg->coalescing_buffersize) {
+    network =  coalesced_network_new(network, cfg);
   }
 
   if (!config_inst_at_isset(here->config, here->rank)) {
