@@ -30,6 +30,11 @@ AC_DEFUN([_HPX_DO_PE_CLANG], [
 ])
 
 AC_DEFUN([_HPX_DO_PE_INTEL], [
+ # icc complains about our use of gcc memory model macros, but the complaint
+ # isn't a problem or helpful, so suppress that one warning. The sync headers
+ # aren't included by HPX so external users don't care.
+ LIBHPX_CFLAGS="$LIBHPX_CFLAGS -wd32013"
+ HPX_APPS_CFLAGS="$HPX_APPS_CFLAGS -wd32013"
  hpx_pe_env_cflags_pedantic="-pedantic"
  hpx_pe_env_cflags_wall="-Wall"
 ])
