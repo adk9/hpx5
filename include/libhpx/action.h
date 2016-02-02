@@ -238,7 +238,12 @@ typedef struct {
 /// @field          env Type-specific data (e.g., compiled OpenCL).
 typedef struct {
   hpx_parcel_t *fatp;
-  size_t current_data_count;
+  unsigned int current_data_count;
+  unsigned int sender_active;
+  unsigned int count_mask;
+  unsigned int count_allocated;
+  unsigned int count_written;
+  bool         registered_with_td;
 } _coalesced_dest_buffer_t;
 
 typedef struct {

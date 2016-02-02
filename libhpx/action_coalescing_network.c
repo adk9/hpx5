@@ -14,6 +14,10 @@
 #define COALESCING_SIZE 1000
 
 
+//TODO: Fix types
+//TODO: check whether ampp max_count is equal to coalescing size
+unsigned int max_count = COALESCING_SIZE;
+
 static int _demux_handler(char* buffer, int n) {
   // In a for loop (normal for or par for) do the follwoing
   // 1. memcpy/extract the data and address (for graph it will be vertex address and distance data)
@@ -23,49 +27,89 @@ static int _demux_handler(char* buffer, int n) {
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _demux, _demux_handler,
                      HPX_POINTER, HPX_INT);
 
+static void _clear_all(action_t *action) {
+  bool test = false;
+  unsigned int _clear_counts = 0;
+  sync_store(&action->coalesced_dest_buffer[dest]->registered_with_td, test,
+	     SYNC_RELAXED);
+  sync_store(&action->coalesced_dest_buffer[dest]->count_written, _clear_count, SYNC_RELAXED);
+  sync_store(&action->coalesced_dest_buffer[dest]->count_allocated, _clear_count, SYNC_RELAXED);
+}
+
+static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned int my_id) {
+  assert (sync_load(&action->coalesced_dest_buffer[dest]->count_allocated, SYNC_RELAXED) &action->coalesced_dest_buffer[dest]->sender_active);
+  const unsigned int count = my_id & action->coalesced_dest_buffer[dest]->count_mask;
+  if (my_id & action->coalesced_dest_buffer[dest]->sender_active != 0)
+    return false;
+  assert (count <= max_count);
+  if (count != 0) {
+    while (sync_load(&action->coalesced_dest_buffer[dest]->count_written, SYNC_RELAXED)) {
+      ;
+    }
+    assert ((sync_load(&action->coalesced_dest_buffer[dest]->registered_with_td),
+	    SYNC_RELAXED) == true);
+    network_send(here->network, action->coalesced_dest_buffer[dest]->fatp);
+    _clear_all(action);
+    return true;
+  }
+  return false;
+}
 
 static int _coalesce_data(hpx_addr_t addr, action_t *action,  uint32_t dest,
-				      void *args, int n) {
+				      void *args, int bytes) {
    // Coalesce on demand as long as we have enough pseudo-parcels available.
-  int count = sync_load(&action->coalesced_dest_buffer[dest].current_data_count,
-			SYNC_RELAXED);
   size_t coalescing_size = COALESCING_SIZE;
-  while (count >= coalescing_size) {
-    //TODO:flush
-    // Notify flush operations that we might be coalescing. This prevents a race
-    // where a flusher thinks everything is gone, but we have partially
-    // coalesced buffers to send.
-    //_atomic_inc(&network->syncflush);
-
-    // The cas updates the count for the next loop iteration if it fails,
-    // otherwise we manually update it.
-    // TODO:what will happen if one thread tries to put more data in the current fat parcel that exceed the coalescing size. For this I am assuming the following line would never happen.
-    //int n = count - coalescing_size;
-    // modified the sync_cas to store 0 rather than the diff of parcel_count
-    if (sync_cas(&action->coalesced_dest_buffer[dest].current_data_count,
-		 &count, 0, SYNC_RELAXED, SYNC_RELAXED)) {
-      network_send(here->network, action->coalesced_dest_buffer[dest]->fatp);
-      //_send_n(network, network->coalescing_size);
-      //count = n;
+  while (true) {
+    while (true) {
+      assert (max_count > 0);
+      unsigned int x =  sync_load(&action->coalesced_dest_buffer[dest]->count_allocated, SYNC_RELAXED);
+      // fprintf(stderr, "send_spin %08x of %x\n", x, max_count);
+      if ((x & action->coalesced_dest_buffer[dest]->count_mask) < max_count && (x & action->coalesced_dest_buffer[dest]->sender_active) == 0) {
+	break;
+      }
+      //TODO: equivalent of pausing?->//amplusplus::detail::do_pause();
     }
 
-    // TODO:fix flush
-    // Notify flush operations that we're not in their way anymore.
-    //_atomic_dec(&network->syncflush);
-  }
+    //TODO:fadd?
+    unsigned int my_id = sync_addf(&action->coalesced_dest_buffer[dest]->count_allocated, 1, SYNC_ACQ_REL);
+    if (my_id & action->coalesced_dest_buffer[dest]->sender_active)
+      continue; //TODO: don't understand this
+    if ((my_id & action->coalesced_dest_buffer[dest]->count_mask) >= max_count)
+      continue;
+    assert((my_id & action->coalesced_dest_buffer[dest]->count_mask) < max_count);
+    assert(action->coalesced_dest_buffer[dest]->fatp);
 
-  // TODO: put the buffer in the fat parcel
-  size_t idx = sync_addf(&action->coalesced_dest_buffer[dest].current_data_count,
-			 1, SYNC_ACQ_REL);
-  //TODO: assuming we only send distance and vertex address
-  size_t current_idx = (idx - 1) * (sizeof(hpx_addr_t) + sizeof(uint64_t));
+    //TODO: fix size calculation?
+    // size_t current_idx = (myid - 1) * (sizeof(hpx_addr_t) + sizeof(uint64_t));
+    //uint64_t data = (uint64_t) *args;
 
-  uint64_t data = (uint64_t) *args;
+    size_t current_idx = (my_id - 1) * bytes;
+    memcpy((char *)&(action->coalesced_dest_buffer[dest]->fatp) + current_idx, args,
+	  bytes);
 
-  memcpy( (char *)&(action->coalesced_dest_buffer[dest]->fatp) + current_idx, addr,
-	  sizeof(hpx_addr_t));
-  memcpy( (char *)&(action->coalesced_dest_buffer[dest]->fatp) + current_idx +
-	  sizeof(hpx_addr_t), data, sizeof(uint64_t));
+    // memcpy( (char *)&(action->coalesced_dest_buffer[dest]->fatp) + current_idx +
+    //sizeof(hpx_addr_t), data, sizeof(uint64_t));
+    if ((my_id & action->coalesced_dest_buffer[dest]->count_mask) == max_count - 1) {
+      sync_store(&action->coalesced_dest_buffer[dest]->count_allocated, action->coalesced_dest_buffer[dest]->sender_active, SYNC_RELAXED);
+      bool test = false;
+      if (sync_cas(&action->coalesced_dest_buffer[dest]->registered_with_td,
+		   &test, true, SYNC_RELAXED, SYNC_RELAXED)) {
+	;//TODO; don't understand the purpose of registered_with_td
+      }
+      ++action->coalesced_dest_buffer[dest]->count_written;
+      _handover_cbuf_to_network(action, dest, my_id);
+    } else if ((my_id & action->coalesced_dest_buffer[dest]->count_mask) == 0) {
+      if (sync_cas(&action->coalesced_dest_buffer[dest]->registered_with_td,
+		   &test, true, SYNC_RELAXED, SYNC_RELAXED)) {
+	;//TODO; don't understand the purpose of registered_with_td
+      }
+      ++action->coalesced_dest_buffer[dest]->count_written;
+    } else {
+      ++action->coalesced_dest_buffer[dest]->count_written;
+    }
+    break;
+}
+    // TODO:fix flush, and while doing so calculate size of the fat parcel
   return LIBHPX_OK;
 }
 
@@ -101,7 +145,7 @@ static int _coalesced_ffi_data(hpx_addr_t addr, action_t *action, uint64_t  dest
   // use ffi to copy them to the buffer
   ffi_ptrarray_to_raw((void*)cif, argps, buffer);
 
-  return _coalesce_data(addr, action, dest, buffer, n);
+  return _coalesce_data(addr, action, dest, buffer, bytes);
 }
 
 
@@ -124,3 +168,71 @@ int coalesce_data(hpx_addr_t addr, hpx_action_t id,  uint64_t dest,
   }
 
 }
+
+
+/*
+const unsigned int max_count = buf.max_count;
+    while (true) {
+      while (true) {
+        assert (max_count > 0);
+        unsigned int x = buf.count_allocated.load();
+        // fprintf(stderr, "send_spin %08x of %x\n", x, max_count);
+        if ((x & message_buffer::count_mask) < max_count && (x & message_buffer::sender_active) == 0) {
+          break;
+        }
+        amplusplus::detail::do_pause();
+      }
+      unsigned int my_id = buf.count_allocated.fetch_add(1);
+      // fprintf(stderr, "send %08x\n", my_id);
+      if (my_id & message_buffer::sender_active) continue;
+      if ((my_id & message_buffer::count_mask) >= max_count) continue;
+      BOOST_ASSERT ((my_id & message_buffer::count_mask) < max_count);
+      BOOST_ASSERT (buf.data_owner);
+      BOOST_ASSERT (buf.data);
+      buf.data[my_id & message_buffer::count_mask] = arg;
+      if ((my_id & message_buffer::count_mask) == max_count - 1) {
+        buf.count_allocated.store(message_buffer::sender_active);
+        if (!buf.registered_with_td.exchange(true)) {
+          this->mt.message_being_built(dest);
+        }
+        ++buf.count_written;
+        amplusplus::performance_counters::hook_full_buffer_send(dest, max_count, sizeof(Arg));
+        send_buffer(buf, max_count, dest);
+      } else if ((my_id & message_buffer::count_mask) == 0) {
+        if (!buf.registered_with_td.exchange(true)) {
+          this->mt.message_being_built(dest);
+        }
+        ++buf.count_written;
+      } else {
+        ++buf.count_written;
+      }
+      break;
+    }
+  }
+
+ bool send_buffer(message_buffer& buf, unsigned int my_id, transport::rank_type dest) {
+    // fprintf(stderr, "%zu: send_buffer %08x to %zu, current state is %08x\n", trans.rank(), my_id, dest, buf.count_allocated.load());
+    BOOST_ASSERT (buf.count_allocated.load() & message_buffer::sender_active);
+    const unsigned int count = my_id & message_buffer::count_mask;
+    if ((my_id & message_buffer::sender_active) != 0) return false;
+    BOOST_ASSERT (!!buf.data_owner);
+    BOOST_ASSERT (count <= buf.max_count);
+    if (count != 0) {
+      while (buf.count_written.load() != count) {amplusplus::detail::do_pause();} // Make sure all elements are written, must be an acquire so we can read data in the buffer
+      BOOST_ASSERT (buf.registered_with_td.load() == true); // This may not be true before the previous line's while loop is done
+      Arg* send_data = buf.data;
+      boost::shared_ptr<void> send_data_owner = buf.data_owner;
+      buf.clear(buf_cache->allocate());
+      // fprintf(stderr, "%zu: actual send %u to %zu, current state is %08x\n", trans.rank(), count, dest, buf.count_allocated.load());
+      this->mt.send(send_data, count, dest, sp_deleter(send_data_owner));
+      return true;
+    }
+    return false;
+  }
+    data_owner = new_data_owner;
+      data = static_cast<Arg*>(data_owner.get());
+      registered_with_td.store(false);
+      count_written.store(0u);
+      count_allocated.store(0u); /
+
+ */

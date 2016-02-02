@@ -60,9 +60,9 @@ int _hpx_call(hpx_addr_t addr, hpx_action_t id, hpx_addr_t result, int n, ...) {
   gas_t  *gas = here->gas;
   hpx_addr_t l = gas_owner_of(gas, addr);
 
-  // if locally addressed, then continue with the default implementation
-  // with parcel wrapper
-  if (l == HPX_HERE) {
+  // if locally addressed or action is not coalesced, then continue with the
+  // default implementation with parcel wrapper
+  if (l == HPX_HERE || (!action_is_coalesced(*id))) {
     int e = action_call_lsync_va(id, addr, result, rop, n, &args);
     va_end(args);
     return e;
