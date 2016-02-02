@@ -238,7 +238,7 @@ typedef struct {
 /// @field          env Type-specific data (e.g., compiled OpenCL).
 typedef struct {
   hpx_parcel_t *fatp;
-  unsigned int current_data_count;
+  char         *next;
   unsigned int sender_active;
   unsigned int count_mask;
   unsigned int count_allocated;
@@ -258,6 +258,7 @@ typedef struct {
   ffi_cif           *cif;
   void              *env;
   _coalesced_dest_buffer_t *coalesced_dest_buffer;
+  unsigned int *last_active;
 } action_t;
 
 /// The libhpx action table.

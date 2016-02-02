@@ -44,6 +44,8 @@
 #include "lco.h"
 #include "thread.h"
 
+#include "../network/coalesced_network.h"
+
 /// Storage for the thread-local worker pointer.
 __thread worker_t * volatile self = NULL;
 
@@ -275,7 +277,7 @@ static void _push_lifo(hpx_parcel_t *p, void *worker) {
     }
     w->work_first = (here->sched->wf_threshold < size);
   }
-}  
+}
 
 /// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *_schedule_lifo(worker_t *w) {
@@ -544,6 +546,8 @@ static void _schedule_network(worker_t *w, network_t *network) {
     EVENT_PARCEL_RECV(p);
     _push_lifo(p, w);
   }
+
+  //TODO: call flush interface but based on what condition and how frequently?
 }
 
 /// The main scheduling loop.
@@ -1070,4 +1074,3 @@ void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   log_sched("resuming %p\n in %s", (void*)p, actions[p->action].key);
   (void)p;
 }
-

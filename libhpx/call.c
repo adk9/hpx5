@@ -67,7 +67,7 @@ int _hpx_call(hpx_addr_t addr, hpx_action_t id, hpx_addr_t result, int n, ...) {
     va_end(args);
     return e;
   } else {  // Otherwise coalesce data-parcels here
-    int e = coalesce_data(addr, id, l, args, n);
+    int e = coalesce_data(addr, id, l, &args, n);
     va_end(args);
     return e;
   }

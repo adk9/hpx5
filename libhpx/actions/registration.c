@@ -94,6 +94,7 @@ static int _push_back(hpx_action_t *id, const char *key, handler_t f,
 
   if (action_is_coalesced(*id)) {
     back->coalesced_dest_buffer = calloc(HPX_LOCALITIES, sizeof(_coalesced_dest_buffer_t));
+    back->last_active = calloc (HPX_LOCALITIES, sizeof(unsigned int));
     //TODO: need to take  the size as a parameter
     size_t bytes = COALESCING_SIZE * (sizeof(hpx_addr_t) + sizeof(uint64_t);
     for (int l = 0; l < HPX_LOCALITIES; l++) {
@@ -102,12 +103,13 @@ static int _push_back(hpx_action_t *id, const char *key, handler_t f,
 
       back->coalesced_dest_buffer[l]->fatp = action_new_parcel(_demux,
 					    HPX_THERE(l), 0, 0, 2, NULL, bytes);
-      back->coalesced_dest_buffer[l]->current_data_count = 0;
+      back->coalesced_dest_buffer[l]->next = hpx_parcel_get_data(back->coalesced_dest_buffer[l]->fatp);
       back->coalesced_dest_buffer[l]->sender_active = UINT_MAX - UINT_MAX / 2;
       back->coalesced_dest_buffer[l]->count_mask = sender_active - 1;
       back->coalesced_dest_buffer[l]->count_allocated = 0;
       back->coalesced_dest_buffer[l]->count_written = 0;
       back->coalesced_dest_buffer[l]->registered_with_td = false;
+      back->last_active[l] = 0;
     }
   } else {
     back->coalesced_dest_buffer = NULL;

@@ -21,5 +21,5 @@
 int coalesce_data(hpx_addr_t addr, hpx_action_t id,  uint64_t dest,
 		  va_list *args, int n);
 
-
+void flush (action_t *action);
 #endif // LIBHPX_ACTION_COALESCED_COALESCED_H

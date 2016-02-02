@@ -19,6 +19,8 @@
 unsigned int max_count = COALESCING_SIZE;
 
 static int _demux_handler(char* buffer, int n) {
+  //TODO: how do I know the adjusted n? On the sender side the argument n needs to be modified
+  //uint32_t _parcel_payload_size = parcel_payload_size()
   // In a for loop (normal for or par for) do the follwoing
   // 1. memcpy/extract the data and address (for graph it will be vertex address and distance data)
   // 2. Call the corresponding *function* which will take an address and distance
@@ -26,6 +28,36 @@ static int _demux_handler(char* buffer, int n) {
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _demux, _demux_handler,
                      HPX_POINTER, HPX_INT);
+
+void flush (action_t *action) {
+  for (int l = 0, e = HPX_LOCALITIES; l < e; ++l) {
+    unsigned int my_id = sync_load(&action->coalesced_dest_buffer[l]->count_allocated, SYNC_RELAXED);
+    if (my_id != sync_load(&action->last_active[l], SYNC_RELAXED)) {
+      sync_store(&action->last_active[l], my_id, SYNC_RELAXED);
+      continue;
+    }
+    while (true) {
+      if (my_id > 0 && my_id < max_count) {
+	//TODO:my_id changed as a side effect of sync_cas?
+	if(sync_cas(&action->coalesced_dest_buffer[dest]->count_allocated,
+		    &my_id, &action->coalesced_dest_buffer[dest]->sender_active,
+		    SYNC_RELAXED, SYNC_RELAXED)) {
+	  break;
+	}
+	// 	  amplusplus::detail::do_pause();
+
+      } else {
+	break;
+      }
+    }
+    // TODO: this is a flash operation, so the dat parcel count can be less than coalescing size, so do we need to adjust any size?
+    if (my_id > 0 && my_id < max_count) {
+      network_send(here->network, action->coalesced_dest_buffer[dest]->fatp);
+      //TODO: IS call to clear_all needed?
+      _clear_all(action);
+    }
+  }
+}
 
 static void _clear_all(action_t *action) {
   bool test = false;
@@ -43,7 +75,7 @@ static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned 
     return false;
   assert (count <= max_count);
   if (count != 0) {
-    while (sync_load(&action->coalesced_dest_buffer[dest]->count_written, SYNC_RELAXED)) {
+    while (sync_load(&action->coalesced_dest_buffer[dest]->count_written, SYNC_RELAXED) != count) {
       ;
     }
     assert ((sync_load(&action->coalesced_dest_buffer[dest]->registered_with_td),
@@ -83,9 +115,9 @@ static int _coalesce_data(hpx_addr_t addr, action_t *action,  uint32_t dest,
     // size_t current_idx = (myid - 1) * (sizeof(hpx_addr_t) + sizeof(uint64_t));
     //uint64_t data = (uint64_t) *args;
 
-    size_t current_idx = (my_id - 1) * bytes;
-    memcpy((char *)&(action->coalesced_dest_buffer[dest]->fatp) + current_idx, args,
-	  bytes);
+    memcpy(action->coalesced_dest_buffer[dest]->next, args, bytes);
+    action->coalesced_dest_buffer[dest]->next += bytes;
+    action->coalesced_dest_buffer[dest]->fatp->size += bytes;
 
     // memcpy( (char *)&(action->coalesced_dest_buffer[dest]->fatp) + current_idx +
     //sizeof(hpx_addr_t), data, sizeof(uint64_t));
@@ -236,3 +268,35 @@ const unsigned int max_count = buf.max_count;
       count_allocated.store(0u); /
 
  */
+
+/*
+ bool flush(boost::shared_ptr<bool> alive) {
+    BOOST_ASSERT (alive.get());
+    if(!*alive) return false;
+    // fprintf(stderr, "%zu: counter_coalesced_message_type::flush(%zu)\n", trans.rank(), dest);
+    for (size_t i = 0; i < this->mt.get_possible_dests()->count(); ++i) {
+      rank_type r = this->mt.get_possible_dests()->rank_from_index(i);
+      BOOST_ASSERT (trans.is_valid_rank(r));
+      message_buffer& buf = this->outgoing_buffers[r];
+      const unsigned int max_count = buf.max_count;
+      unsigned int my_id = buf.count_allocated.load();
+      if(my_id != last_active[r].load()) {
+      last_active[r].store(my_id);
+      continue;
+      }
+      while (true) {
+      if (my_id > 0 && my_id < max_count) {
+        if (buf.count_allocated.compare_exchange_weak(my_id, message_buffer::sender_active)) break;
+	  amplusplus::detail::do_pause();
+	  } else {
+	    break;
+	    }
+      }
+      if (my_id > 0 && my_id < max_count) {
+      amplusplus::performance_counters::hook_flushed_message_size(r, my_id, sizeof(Arg));
+      send_buffer(buf, my_id, r);
+      }
+    }
+    return true;
+  }
+*/
