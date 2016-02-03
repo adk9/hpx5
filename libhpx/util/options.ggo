@@ -206,6 +206,10 @@ option "hpx-photon-ledgersize" - "set number of ledger entries"
 typestr="integer"
 int optional
 
+option "hpx-photon-pwcbufsize" - "set size of pwc buffers"
+typestr="bytes"
+int optional
+
 option "hpx-photon-eagerbufsize" - "set size of eager buffers"
 typestr="bytes"
 int optional
