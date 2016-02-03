@@ -18,7 +18,7 @@
 //TODO: check whether ampp max_count is equal to coalescing size
 unsigned int max_count = COALESCING_SIZE;
 
-void process_data(hpx_addr_t addr, uint64_t value) {
+int process_data(hpx_addr_t *addr, uint64_t *value) {
   return HPX_SUCCESS;
 }
 hpx_action_t _demux = 0;
@@ -27,11 +27,11 @@ int _demux_handler(char* buffer, int n) {
   // 1. memcpy/extract the data and address (for graph it will be vertex address and distance data)
   // 2. Call the corresponding *function* which will take an address and distance
   while (n) {
-    hpx_addr_t addr = NULL;
+    hpx_addr_t *addr = NULL;
     memcpy(addr, buffer, sizeof(hpx_addr_t));
     buffer += sizeof(hpx_addr_t);
     n -= sizeof(hpx_addr_t);
-    uint64_t value = 0;
+    uint64_t *value = 0;
     memcpy(value, buffer, sizeof(uint64_t));
     buffer += sizeof(uint64_t);
     n -= sizeof(uint64_t);
@@ -39,12 +39,22 @@ int _demux_handler(char* buffer, int n) {
   }
   return HPX_SUCCESS;
 }
+
 HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _demux, _demux_handler,
                      HPX_POINTER, HPX_INT);
 
+static void _clear_all(action_t *action, uint32_t dest) {
+  bool test = false;
+  unsigned int _clear_counts = 0;
+  sync_store(&action->coalesced_dest_buffer[dest].registered_with_td, test,
+	     SYNC_RELAXED);
+  sync_store(&action->coalesced_dest_buffer[dest].count_written, _clear_counts, SYNC_RELAXED);
+  sync_store(&action->coalesced_dest_buffer[dest].count_allocated, _clear_counts, SYNC_RELAXED);
+}
+
 void flush (action_t *action) {
   for (int l = 0, e = HPX_LOCALITIES; l < e; ++l) {
-    unsigned int my_id = sync_load(&action->coalesced_dest_buffer[l]->count_allocated, SYNC_RELAXED);
+    unsigned int my_id = sync_load(&action->coalesced_dest_buffer[l].count_allocated, SYNC_RELAXED);
     if (my_id != sync_load(&action->last_active[l], SYNC_RELAXED)) {
       sync_store(&action->last_active[l], my_id, SYNC_RELAXED);
       continue;
@@ -52,8 +62,8 @@ void flush (action_t *action) {
     while (true) {
       if (my_id > 0 && my_id < max_count) {
 	//TODO:my_id changed as a side effect of sync_cas?
-	if(sync_cas(&action->coalesced_dest_buffer[dest]->count_allocated,
-		    &my_id, &action->coalesced_dest_buffer[dest]->sender_active,
+	if(sync_cas(&action->coalesced_dest_buffer[l].count_allocated,
+		    &my_id, &action->coalesced_dest_buffer[l].sender_active,
 		    SYNC_RELAXED, SYNC_RELAXED)) {
 	  break;
 	}
@@ -66,38 +76,30 @@ void flush (action_t *action) {
     // TODO: this is a flash operation, so the data parcel count can be less than coalescing size, so do we need to adjust any size?
     if (my_id > 0 && my_id < max_count) {
       //adjust the partially filled buffer size
-      unsigned int count_written = sync_load(&action->coalesced_dest_buffer[l]->count_written, SYNC_RELAXED);
-      action->coalesced_dest_buffer[dest]->fatp->size = sizeof(hpx_addr_t) + sizeof(uint64_t) * count_written;
-      hpx_parcel_send(action->coalesced_dest_buffer[dest]->fatp, NULL);
+      unsigned int count_written = sync_load(&action->coalesced_dest_buffer[l].count_written, SYNC_RELAXED);
+      action->coalesced_dest_buffer[l].fatp->size = sizeof(hpx_addr_t) + sizeof(uint64_t) * count_written;
+      hpx_parcel_send(action->coalesced_dest_buffer[l].fatp, HPX_NULL);
       //TODO: IS call to clear_all needed?
-      _clear_all(action);
+      _clear_all(action, l);
     }
   }
 }
 
-static void _clear_all(action_t *action) {
-  bool test = false;
-  unsigned int _clear_counts = 0;
-  sync_store(&action->coalesced_dest_buffer[dest]->registered_with_td, test,
-	     SYNC_RELAXED);
-  sync_store(&action->coalesced_dest_buffer[dest]->count_written, _clear_count, SYNC_RELAXED);
-  sync_store(&action->coalesced_dest_buffer[dest]->count_allocated, _clear_count, SYNC_RELAXED);
-}
 
 static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned int my_id) {
-  assert (sync_load(&action->coalesced_dest_buffer[dest]->count_allocated, SYNC_RELAXED) & action->coalesced_dest_buffer[dest]->sender_active);
-  const unsigned int count = my_id & action->coalesced_dest_buffer[dest]->count_mask;
-  if (my_id & action->coalesced_dest_buffer[dest]->sender_active != 0)
+  assert (sync_load(&action->coalesced_dest_buffer[dest].count_allocated, SYNC_RELAXED) & action->coalesced_dest_buffer[dest].sender_active);
+  const unsigned int count = my_id & action->coalesced_dest_buffer[dest].count_mask;
+  if ((my_id & action->coalesced_dest_buffer[dest].sender_active) != 0)
     return false;
   assert (count <= max_count);
   if (count != 0) {
-    while (sync_load(&action->coalesced_dest_buffer[dest]->count_written, SYNC_RELAXED) != count) {
+    while (sync_load(&action->coalesced_dest_buffer[dest].count_written, SYNC_RELAXED) != count) {
       ;
     }
-    assert ((sync_load(&action->coalesced_dest_buffer[dest]->registered_with_td),
+    assert(sync_load(&action->coalesced_dest_buffer[dest].registered_with_td,
 	    SYNC_RELAXED) == true);
-    network_send(here->network, action->coalesced_dest_buffer[dest]->fatp);
-    _clear_all(action);
+    hpx_parcel_send(action->coalesced_dest_buffer[dest].fatp, HPX_NULL);
+    _clear_all(action, dest);
     return true;
   }
   return false;
@@ -110,49 +112,50 @@ static int _coalesce_data(hpx_addr_t addr, action_t *action,  uint32_t dest,
   while (true) {
     while (true) {
       assert (max_count > 0);
-      unsigned int x =  sync_load(&action->coalesced_dest_buffer[dest]->count_allocated, SYNC_RELAXED);
+      unsigned int x =  sync_load(&action->coalesced_dest_buffer[dest].count_allocated, SYNC_RELAXED);
       // fprintf(stderr, "send_spin %08x of %x\n", x, max_count);
-      if ((x & action->coalesced_dest_buffer[dest]->count_mask) < max_count && (x & action->coalesced_dest_buffer[dest]->sender_active) == 0) {
+      if ((x & action->coalesced_dest_buffer[dest].count_mask) < max_count && (x & action->coalesced_dest_buffer[dest].sender_active) == 0) {
 	break;
       }
       //TODO: equivalent of pausing?->//amplusplus::detail::do_pause();
     }
 
     //TODO:fadd?
-    unsigned int my_id = sync_addf(&action->coalesced_dest_buffer[dest]->count_allocated, 1, SYNC_ACQ_REL);
-    if (my_id & action->coalesced_dest_buffer[dest]->sender_active)
+    unsigned int my_id = sync_addf(&action->coalesced_dest_buffer[dest].count_allocated, 1, SYNC_ACQ_REL);
+    if (my_id & action->coalesced_dest_buffer[dest].sender_active)
       continue; //TODO: don't understand this
-    if ((my_id & action->coalesced_dest_buffer[dest]->count_mask) >= max_count)
+    if ((my_id & action->coalesced_dest_buffer[dest].count_mask) >= max_count)
       continue;
-    assert((my_id & action->coalesced_dest_buffer[dest]->count_mask) < max_count);
-    assert(action->coalesced_dest_buffer[dest]->fatp);
+    assert((my_id & action->coalesced_dest_buffer[dest].count_mask) < max_count);
+    assert(action->coalesced_dest_buffer[dest].fatp);
 
     //TODO: fix size calculation?
     // size_t current_idx = (myid - 1) * (sizeof(hpx_addr_t) + sizeof(uint64_t));
     //uint64_t data = (uint64_t) *args;
 
-    memcpy(action->coalesced_dest_buffer[dest]->next, args, bytes);
-    action->coalesced_dest_buffer[dest]->next += bytes;
+    memcpy(action->coalesced_dest_buffer[dest].next, args, bytes);
+    action->coalesced_dest_buffer[dest].next += bytes;
 
     // memcpy( (char *)&(action->coalesced_dest_buffer[dest]->fatp) + current_idx +
     //sizeof(hpx_addr_t), data, sizeof(uint64_t));
-    if ((my_id & action->coalesced_dest_buffer[dest]->count_mask) == max_count - 1) {
-      sync_store(&action->coalesced_dest_buffer[dest]->count_allocated, action->coalesced_dest_buffer[dest]->sender_active, SYNC_RELAXED);
+    if ((my_id & action->coalesced_dest_buffer[dest].count_mask) == max_count - 1) {
+      sync_store(&action->coalesced_dest_buffer[dest].count_allocated, action->coalesced_dest_buffer[dest].sender_active, SYNC_RELAXED);
       bool test = false;
-      if (sync_cas(&action->coalesced_dest_buffer[dest]->registered_with_td,
+      if (sync_cas(&action->coalesced_dest_buffer[dest].registered_with_td,
 		   &test, true, SYNC_RELAXED, SYNC_RELAXED)) {
 	;//TODO; don't understand the purpose of registered_with_td
       }
-      ++action->coalesced_dest_buffer[dest]->count_written;
+      ++action->coalesced_dest_buffer[dest].count_written;
       _handover_cbuf_to_network(action, dest, my_id);
-    } else if ((my_id & action->coalesced_dest_buffer[dest]->count_mask) == 0) {
-      if (sync_cas(&action->coalesced_dest_buffer[dest]->registered_with_td,
+    } else if ((my_id & action->coalesced_dest_buffer[dest].count_mask) == 0) {
+      bool test = false;
+      if (sync_cas(&action->coalesced_dest_buffer[dest].registered_with_td,
 		   &test, true, SYNC_RELAXED, SYNC_RELAXED)) {
 	;//TODO; don't understand the purpose of registered_with_td
       }
-      ++action->coalesced_dest_buffer[dest]->count_written;
+      ++action->coalesced_dest_buffer[dest].count_written;
     } else {
-      ++action->coalesced_dest_buffer[dest]->count_written;
+      ++action->coalesced_dest_buffer[dest].count_written;
     }
     break;
 }
@@ -170,7 +173,7 @@ static int _coalesce_marshalled_data(hpx_addr_t addr, action_t *action,  uint64_
   return _coalesce_data(addr, action, dest, data, bytes); //TODO: bytes or n?
 }
 
-static int _coalesced_ffi_data(hpx_addr_t addr, action_t *action, uint64_t  dest,
+static int _coalesce_ffi_data(hpx_addr_t addr, action_t *action, uint64_t  dest,
 			       va_list *args, int n) {
   hpx_pid_t pid = hpx_thread_current_pid();
   size_t bytes = ffi_raw_size(action->cif);
@@ -200,7 +203,7 @@ int coalesce_data(hpx_addr_t addr, hpx_action_t id,  uint64_t dest,
 		  va_list *args, int n) {
   // 1)check in which action entry we should put in the current data-parcel
   CHECK_ACTION(id);
-  const action_t *action = &actions[id];
+  action_t *action = &actions[id];
 
   // 2) check which type of action we are dealing with, is it marshalled or ffi
 

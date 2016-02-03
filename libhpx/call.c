@@ -27,7 +27,7 @@
 #include <libhpx/scheduler.h>
 #include <libhpx/gas.h>
 
-#include "action_coalescing_network.h"
+#include "./actions/data_coalesced_network.h"
 
 /// A RPC call with a user-specified continuation action.
 int _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
