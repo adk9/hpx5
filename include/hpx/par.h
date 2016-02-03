@@ -41,7 +41,7 @@ int hpx_par_for_sync(hpx_for_action_t f, int min, int max,
 /// for (int i = min, e = max; i < e; ++i) {
 ///   char args[arg_size];
 ///   arg_init(args, i, env);
-///   hpx_call(HPX_HERE, action, arg_size, args, sync);
+///   hpx_call(HPX_HERE, action, sync, args, arg_size);
 /// }
 /// @endcode
 ///
