@@ -27,6 +27,7 @@
 #include <libhpx/percolation.h>
 #endif
 #include "init.h"
+#include "data_coalesced_network.h"
 
 #define COALESCING_SIZE 10000
 
@@ -93,22 +94,26 @@ static int _push_back(hpx_action_t *id, const char *key, handler_t f,
   back->env = env;
 
   if (action_is_coalesced(*id)) {
+    printf("Creating data coalescing buffer for coalesced action\n");
     back->coalesced_dest_buffer = calloc(HPX_LOCALITIES, sizeof(_coalesced_dest_buffer_t));
     back->last_active = calloc (HPX_LOCALITIES, sizeof(unsigned int));
     //TODO: need to take  the size as a parameter
-    size_t bytes = COALESCING_SIZE * (sizeof(hpx_addr_t) + sizeof(uint64_t);
+    size_t bytes = COALESCING_SIZE * (sizeof(hpx_addr_t) + sizeof(uint64_t));
     for (int l = 0; l < HPX_LOCALITIES; l++) {
       //TODO: we want the coalescing size in terms of number of buffers, not bytes
       //TODO: skip current locality
 
-      back->coalesced_dest_buffer[l]->fatp = action_new_parcel(_demux,
+      back->coalesced_dest_buffer[l].fatp = action_new_parcel(_demux,
 					    HPX_THERE(l), 0, 0, 2, NULL, bytes);
-      back->coalesced_dest_buffer[l]->next = hpx_parcel_get_data(back->coalesced_dest_buffer[l]->fatp);
-      back->coalesced_dest_buffer[l]->sender_active = UINT_MAX - UINT_MAX / 2;
-      back->coalesced_dest_buffer[l]->count_mask = sender_active - 1;
-      back->coalesced_dest_buffer[l]->count_allocated = 0;
-      back->coalesced_dest_buffer[l]->count_written = 0;
-      back->coalesced_dest_buffer[l]->registered_with_td = false;
+      //want to reuse the fat parcel
+      hpx_parcel_retain(back->coalesced_dest_buffer[l].fatp);
+      back->coalesced_dest_buffer[l].next = hpx_parcel_get_data(back->coalesced_dest_buffer[l].fatp);
+      unsigned int sender_active = UINT_MAX - UINT_MAX / 2;
+      back->coalesced_dest_buffer[l].sender_active = sender_active;
+      back->coalesced_dest_buffer[l].count_mask = sender_active - 1;
+      back->coalesced_dest_buffer[l].count_allocated = 0;
+      back->coalesced_dest_buffer[l].count_written = 0;
+      back->coalesced_dest_buffer[l].registered_with_td = false;
       back->last_active[l] = 0;
     }
   } else {

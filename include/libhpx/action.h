@@ -220,6 +220,17 @@ typedef struct {
 
 } parcel_management_vtable_t;
 
+typedef struct {
+  hpx_parcel_t *fatp;
+  char         *next;
+  unsigned int sender_active;
+  unsigned int count_mask;
+  unsigned int count_allocated;
+  unsigned int count_written;
+  bool         registered_with_td;
+} _coalesced_dest_buffer_t;
+
+
 /// An action table action type.
 ///
 /// The action type uses basic multiple inheritance to implement the calling
@@ -236,16 +247,6 @@ typedef struct {
 /// @field         attr Type attributes.
 /// @field          cif The ffi descriptor if the action is ffi-type.
 /// @field          env Type-specific data (e.g., compiled OpenCL).
-typedef struct {
-  hpx_parcel_t *fatp;
-  char         *next;
-  unsigned int sender_active;
-  unsigned int count_mask;
-  unsigned int count_allocated;
-  unsigned int count_written;
-  bool         registered_with_td;
-} _coalesced_dest_buffer_t;
-
 typedef struct {
   const parcel_management_vtable_t *parcel_class;
   const calling_convention_vtable_t  *call_class;

@@ -18,15 +18,28 @@
 //TODO: check whether ampp max_count is equal to coalescing size
 unsigned int max_count = COALESCING_SIZE;
 
-static int _demux_handler(char* buffer, int n) {
-  //TODO: how do I know the adjusted n? On the sender side the argument n needs to be modified
-  //uint32_t _parcel_payload_size = parcel_payload_size()
+void process_data(hpx_addr_t addr, uint64_t value) {
+  return HPX_SUCCESS;
+}
+hpx_action_t _demux = 0;
+int _demux_handler(char* buffer, int n) {
   // In a for loop (normal for or par for) do the follwoing
   // 1. memcpy/extract the data and address (for graph it will be vertex address and distance data)
   // 2. Call the corresponding *function* which will take an address and distance
+  while (n) {
+    hpx_addr_t addr = NULL;
+    memcpy(addr, buffer, sizeof(hpx_addr_t));
+    buffer += sizeof(hpx_addr_t);
+    n -= sizeof(hpx_addr_t);
+    uint64_t value = 0;
+    memcpy(value, buffer, sizeof(uint64_t));
+    buffer += sizeof(uint64_t);
+    n -= sizeof(uint64_t);
+    process_data(addr, value);
+  }
   return HPX_SUCCESS;
 }
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _demux, _demux_handler,
+HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _demux, _demux_handler,
                      HPX_POINTER, HPX_INT);
 
 void flush (action_t *action) {
@@ -50,9 +63,12 @@ void flush (action_t *action) {
 	break;
       }
     }
-    // TODO: this is a flash operation, so the dat parcel count can be less than coalescing size, so do we need to adjust any size?
+    // TODO: this is a flash operation, so the data parcel count can be less than coalescing size, so do we need to adjust any size?
     if (my_id > 0 && my_id < max_count) {
-      network_send(here->network, action->coalesced_dest_buffer[dest]->fatp);
+      //adjust the partially filled buffer size
+      unsigned int count_written = sync_load(&action->coalesced_dest_buffer[l]->count_written, SYNC_RELAXED);
+      action->coalesced_dest_buffer[dest]->fatp->size = sizeof(hpx_addr_t) + sizeof(uint64_t) * count_written;
+      hpx_parcel_send(action->coalesced_dest_buffer[dest]->fatp, NULL);
       //TODO: IS call to clear_all needed?
       _clear_all(action);
     }
@@ -69,7 +85,7 @@ static void _clear_all(action_t *action) {
 }
 
 static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned int my_id) {
-  assert (sync_load(&action->coalesced_dest_buffer[dest]->count_allocated, SYNC_RELAXED) &action->coalesced_dest_buffer[dest]->sender_active);
+  assert (sync_load(&action->coalesced_dest_buffer[dest]->count_allocated, SYNC_RELAXED) & action->coalesced_dest_buffer[dest]->sender_active);
   const unsigned int count = my_id & action->coalesced_dest_buffer[dest]->count_mask;
   if (my_id & action->coalesced_dest_buffer[dest]->sender_active != 0)
     return false;
@@ -89,7 +105,7 @@ static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned 
 
 static int _coalesce_data(hpx_addr_t addr, action_t *action,  uint32_t dest,
 				      void *args, int bytes) {
-   // Coalesce on demand as long as we have enough pseudo-parcels available.
+   // Coalesce on demand as long as we have enough data-parcels available.
   size_t coalescing_size = COALESCING_SIZE;
   while (true) {
     while (true) {
@@ -117,7 +133,6 @@ static int _coalesce_data(hpx_addr_t addr, action_t *action,  uint32_t dest,
 
     memcpy(action->coalesced_dest_buffer[dest]->next, args, bytes);
     action->coalesced_dest_buffer[dest]->next += bytes;
-    action->coalesced_dest_buffer[dest]->fatp->size += bytes;
 
     // memcpy( (char *)&(action->coalesced_dest_buffer[dest]->fatp) + current_idx +
     //sizeof(hpx_addr_t), data, sizeof(uint64_t));
