@@ -77,15 +77,100 @@ DEF_CONVERT_TYPE(std::size_t, HPX_SIZE_T)
 template <typename A>
 class action_struct {
  
- public:
+  public:
   
+/// Fully synchronous call interface.
+///
+/// Performs action on @p args at @p addr, and sets @p out with the
+/// resulting value. The output value @p out can be NULL, in which case no return
+/// value is generated. The type of @p out must be the same as output type of the calling action.
+///
+/// @param         addr The address that defines where the action is executed.
+/// @param       action The action to perform.
+/// @param          out Reference to the output variable.
+/// @param            n The number of arguments for @p action.
+///
+/// @returns            HPX_SUCCESS, or an error code if the action generated an
+///                     error that could not be handled remotely.
   template <typename R, typename... Args>
-  static int call_sync(hpx_addr_t& addr, R& result, Args&... args) {
+  static int call_sync(hpx_addr_t& addr, R& out, Args&... args) {
+    static_assert(!(std::is_same<void, R>::value or std::is_same<R, typename A::OType>::value), "output types do not match");
     static_assert(::std::is_same< typename A::traits::arg_types, hpx::detail::tlist<Args...> >::value,
                   "action and argument types do not match");
-    return _hpx_call_sync(addr, A::id, &result, sizeof(R), sizeof...(Args), &args...);
+    return _hpx_call_sync(addr, A::id, &out, sizeof(R), sizeof...(Args), &args...);
   }
 
+/// Locally synchronous call interface.
+///
+/// This is a locally-synchronous, globally-asynchronous variant of
+/// the remote-procedure call interface. If @p result is not HPX_NULL,
+/// hpx_call puts the the resulting value in @p result at some point
+/// in the future.
+///
+/// @param         addr The address that defines where the action is executed.
+/// @param       result An address of an LCO to trigger with the result.
+///
+/// @returns            HPX_SUCCESS, or an error code if there was a problem
+///                     locally during the hpx_call invocation.
+  template <typename... Args>
+  static int call(hpx_addr_t addr, hpx_addr_t result, Args&... args) {
+    return _hpx_call(addr, result, sizeof...(Args), &args...);
+  }
+  template <typename T1, typename LCO, typename... Args>
+  static int call(const ::hpx::global_ptr<T1>& addr, const ::hpx::global_ptr<LCO>& result, Args&... args) {
+    return _hpx_call(addr.get(), result.get(), sizeof...(Args), &args...);
+  }
+
+  
+/// Locally synchronous call interface when LCO is set.
+///
+/// This is a locally-synchronous, globally-asynchronous variant of
+/// the remote-procedure call interface which implements the hpx_parcel_send_
+/// through() function. The gate must be non-HPX_NULL.
+///
+/// @param         gate The LCO that will serve as the gate (not HPX_NULL).
+/// @param         addr The address that defines where the action is executed.
+/// @param       result An address of an LCO to trigger with the result.
+/// @param            n The number of arguments for @p action.
+///
+/// @returns            HPX_SUCCESS, or an error code if there was a problem
+///                     locally during the hpx_call invocation.
+  template <typename... Args>
+  int call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_addr_t result, Args&... args) {
+    return _hpx_call_when(gate, addr, result, sizeof...(Args), &args...);
+  }
+  template <typename LCO, typename T1, typename T2, typename... Args>
+  int call_when(const ::hpx::global_ptr<LCO>& gate, 
+		const ::hpx::global_ptr<T1>& addr, 
+		const ::hpx::global_ptr<T1>& result, Args&... args) {
+    return _hpx_call_when(gate.get(), addr.get(), result.get(), sizeof...(Args), &args...);
+  }
+
+  
+/// Locally synchronous call_when with continuation interface.
+///
+/// The gate must be non-HPX_NULL.
+///
+/// @param         gate The LCO that will serve as the gate (not HPX_NULL).
+/// @param         addr The address that defines where the action is executed.
+/// @param     c_target The address where the continuation action is executed.
+/// @param         Cont The continuation action to perform.
+///
+/// @returns            HPX_SUCCESS, or an error code if there was a problem
+///                     locally during the hpx_call invocation.
+  template <typename Cont, typename...Args>
+  int call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr, hpx_addr_t c_target, Args&... args) {
+    return _hpx_call_when_with_continuation(gate, addr, A::id, c_target, Cont::id, sizeof...(Args), &args...);
+  }
+  template <typename LCO, typename T1, typename T2, typename Cont, typename...Args>
+  int call_when_with_continuation(const ::hpx::global_ptr<LCO>& gate, 
+				  const ::hpx::global_ptr<T1>& addr, 
+				  const ::hpx::global_ptr<T2>& c_target, Args&... args) {
+    return _hpx_call_when_with_continuation(gate.get(), addr.get(), A::id, c_target.get(), Cont::id, sizeof...(Args), &args...);
+  }
+  
+  
+  
   template <typename... Args>
   static int run(Args&... args) {
     static_assert(::std::is_same< typename A::traits::arg_types, hpx::detail::tlist<Args...> >::value,
@@ -105,9 +190,10 @@ class action_struct {
 } // namespace detail
 } // namspace hpx
 
-#define HPXPP_REGISTER_ACTION(f)                                        \
+#define HPXPP_MAKE_ACTION(f, outtype, ...)				\
   struct f##_action_struct : public hpx::detail::action_struct<f##_action_struct> { \
     static hpx_action_t id;                                             \
+    using OType = outtype;						\
     using traits = hpx::detail::function_traits<decltype(f)>;		\
   };                                                                    \
   hpx_action_t f##_action_struct::id = 0;                               \
