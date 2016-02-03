@@ -25,8 +25,36 @@ extern "C" {
 /// @brief HPX parallel loop interface
 
 /// The type of functions that can be passed to hpx_par_for().
-typedef int (*hpx_for_action_t)(int, void*);
+///
+/// These functions are invoked by HPX in parallel and if they access
+/// shared data, care must be taken to synchronize the shared data
+/// structures. The first argument @p i represents the current
+/// iteration being executed. The second argument @p arg represents
+/// the arguments passed through the hpx_par_for call.
+typedef int (*hpx_for_action_t)(int i, void *arg);
 
+/// Perform a "for" loop in parallel.
+///
+/// This encapsulates a simple local parallel for loop:
+///
+/// @code
+/// for (int i = min, e = max; i < e; ++i) {
+///   hpx_call(HPX_HERE, action, sync, &i, &args);
+/// }
+/// @endcode
+///
+/// The work is divided in equal chunks among the number of "worker"
+/// threads available. Each thread performs a range of iterations. The
+/// mapping of lightweight threads to worker threads is dynamic, and
+/// depends on how these lightweight threads get scheduled.
+///
+/// @param        f The "for" loop body function.
+/// @param      min The minimum index in the loop.
+/// @param      max The maximum index in the loop.
+/// @param     args The arguments to the for function @p f.
+/// @param     sync An LCO that indicates the completion of all iterations.
+///
+//// @returns An error code, or HPX_SUCCESS.
 int hpx_par_for(hpx_for_action_t f, int min, int max, void *args,
                 hpx_addr_t sync) HPX_PUBLIC;
 
