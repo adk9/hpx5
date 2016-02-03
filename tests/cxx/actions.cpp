@@ -32,41 +32,37 @@ using namespace std;
 //   return HPX_SUCCESS;
 // }
 // static HPX_ACTION(HPX_TASK, 0, _my_task, _my_task_handler);
-//
-// static int _my_action_handler(void) {
-//   printf("Hi, I am an action!\n");
+
+static int _my_action_handler(void) {
+  printf("Hi, I am an action!\n");
 //   hpx_call_cc(HPX_HERE, _my_task, NULL, NULL);
-//   return HPX_SUCCESS;
-// }
-// HPXPP_REGISTER_ACTION(_my_action_handler);
+  return HPX_SUCCESS;
+}
+HPXPP_MAKE_ACTION(_my_action_handler, void);
 
 static int _my_typed_handler(int i, float f, char c) {
   printf("Hi, I am a typed action with args: %d %f %c!\n", i, f, c);
+  int r;
+  _my_action_handler_action_struct::call_sync(HPX_HERE, r);
   //   hpx_call_cc(HPX_HERE, _my_action_handler_action_struct::id, NULL, NULL);
   return HPX_SUCCESS;
 }
-HPXPP_REGISTER_ACTION(_my_typed_handler);
+HPXPP_MAKE_ACTION(_my_typed_handler, void);
 
 int hello(int a) {
   std::cout << "Rank#" << hpx_get_my_rank() << " received " << a << "." << std::endl;
   return HPX_SUCCESS;
 }
-HPXPP_REGISTER_ACTION(hello);
+HPXPP_MAKE_ACTION(hello, void);
 
 hpx_status_t test1(int arg) {
 
   int r;
 
-  // commented code should fail to compile
-  //   obj(HPX_HERE, r);
-  //   obj(HPX_HERE, r, "");
-
   hello_action_struct::call_sync(HPX_HERE, r, arg);
 
   return HPX_SUCCESS;
 }
-
-
 
 int main_act(int arg) {
   std::cout << "main action begin..." << std::endl;
@@ -79,7 +75,7 @@ int main_act(int arg) {
   hpx::exit(HPX_SUCCESS);
 }
 
-HPXPP_REGISTER_ACTION(main_act);
+HPXPP_MAKE_ACTION(main_act, void);
 
 int main(int argc, char* argv[]) {
 
