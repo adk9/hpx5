@@ -47,11 +47,11 @@ int hpx_par_for(hpx_for_action_t f, int min, int max, void *args,
   int nthreads = HPX_THREADS;
 
   hpx_addr_t and = HPX_NULL;
+  hpx_action_t set = hpx_lco_set_action;
+  hpx_action_t del = hpx_lco_delete_action;
   if (sync) {
-    hpx_action_t set = hpx_lco_set_action;
-    hpx_action_t delete = hpx_lco_delete_action;
     and = hpx_lco_and_new(nthreads);
-    hpx_call_when_with_continuation(and, sync, set, and, delete, NULL, 0);
+    hpx_call_when_with_continuation(and, sync, set, and, del, NULL, 0);
   }
 
   const int n = max - min;
@@ -65,11 +65,9 @@ int hpx_par_for(hpx_for_action_t f, int min, int max, void *args,
     rmin = base;
     rmax = base + m + ((r-- > 0) ? 1 : 0);
     base = rmax;
-    hpx_action_t act = _par_for_async;
-    int e = hpx_call(HPX_HERE, act, and, &f, &args, &rmin, &rmax);
-    if (e) {
-      return e;
-    }
+    hpx_parcel_t *p = action_new_parcel(_par_for_async, HPX_HERE, and, set,
+                                        4, &f, &args, &rmin, &rmax);
+    parcel_launch(p);
   }
 
   return HPX_SUCCESS;
