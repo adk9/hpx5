@@ -191,6 +191,9 @@ struct hpx_options_t
   int hpx_photon_ledgersize_arg;	/**< @brief set number of ledger entries.  */
   char * hpx_photon_ledgersize_orig;	/**< @brief set number of ledger entries original value given at command line.  */
   const char *hpx_photon_ledgersize_help; /**< @brief set number of ledger entries help description.  */
+  int hpx_photon_pwcbufsize_arg;	/**< @brief set size of pwc buffers.  */
+  char * hpx_photon_pwcbufsize_orig;	/**< @brief set size of pwc buffers original value given at command line.  */
+  const char *hpx_photon_pwcbufsize_help; /**< @brief set size of pwc buffers help description.  */
   int hpx_photon_eagerbufsize_arg;	/**< @brief set size of eager buffers.  */
   char * hpx_photon_eagerbufsize_orig;	/**< @brief set size of eager buffers original value given at command line.  */
   const char *hpx_photon_eagerbufsize_help; /**< @brief set size of eager buffers help description.  */
@@ -257,6 +260,7 @@ struct hpx_options_t
   unsigned int hpx_photon_fiprov_given ;	/**< @brief Whether hpx-photon-fiprov was given.  */
   unsigned int hpx_photon_fidev_given ;	/**< @brief Whether hpx-photon-fidev was given.  */
   unsigned int hpx_photon_ledgersize_given ;	/**< @brief Whether hpx-photon-ledgersize was given.  */
+  unsigned int hpx_photon_pwcbufsize_given ;	/**< @brief Whether hpx-photon-pwcbufsize was given.  */
   unsigned int hpx_photon_eagerbufsize_given ;	/**< @brief Whether hpx-photon-eagerbufsize was given.  */
   unsigned int hpx_photon_smallpwcsize_given ;	/**< @brief Whether hpx-photon-smallpwcsize was given.  */
   unsigned int hpx_photon_maxrd_given ;	/**< @brief Whether hpx-photon-maxrd was given.  */
