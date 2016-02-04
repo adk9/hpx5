@@ -151,6 +151,14 @@ int scheduler_is_stopped(struct scheduler *scheduler)
 void scheduler_join(struct scheduler *scheduler)
   HPX_NON_NULL(1);
 
+/// Spawn a new user-level thread for the parcel on the specified
+/// worker thread.
+///
+/// @param         p The parcel to spawn.
+/// @param    thread The worker thread id to spawn the parcel on.
+void scheduler_spawn_at(hpx_parcel_t *p, int thread)
+  HPX_NON_NULL(1);
+
 /// Spawn a new user-level thread for the parcel.
 ///
 /// @param    p The parcel to spawn.

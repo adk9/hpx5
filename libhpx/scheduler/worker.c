@@ -306,7 +306,6 @@ static HPX_ACTION_DECL(_push_half);
 static int _push_half_handler(int src) {
   const int steal_half_threshold = 6;
   log_sched("received push half request from worker %d\n", src);
-  worker_t *thief = scheduler_get_worker(here->sched, src);
   int qsize = sync_chase_lev_ws_deque_size(_work(self));
   if (qsize < steal_half_threshold) {
     return HPX_SUCCESS;
@@ -332,7 +331,7 @@ static int _push_half_handler(int src) {
 
   // send them back to the thief
   if (parcels) {
-    _send_mail(parcels, thief);
+    scheduler_spawn_at(parcels, src);
     EVENT_STEAL_LIFO(parcels, self);
   }
   return HPX_SUCCESS;
@@ -426,9 +425,9 @@ static hpx_parcel_t *_steal_hier(worker_t *w) {
   int idx = rand_r(&w->seed) % here->topology->cpus_per_node;
   cpu = here->topology->numa_to_cpus[numa_node][idx];
 
-  worker_t *victim = scheduler_get_worker(here->sched, cpu);
   p = action_new_parcel(_push_half, HPX_HERE, 0, 0, 1, &w->id);
-  _send_mail(p, victim);
+  parcel_prepare(p);
+  scheduler_spawn_at(p, cpu);
   return NULL;
 }
 
@@ -750,6 +749,17 @@ int worker_start(void) {
   return code;
 }
 
+// Spawn a parcel on a specified worker thread.
+void scheduler_spawn_at(hpx_parcel_t *p, int thread) {
+  dbg_assert(thread >= 0);
+  dbg_assert(thread < here->sched->n_workers);
+
+  worker_t *w = scheduler_get_worker(here->sched, thread);
+  dbg_assert(w);
+  dbg_assert(p);
+  _send_mail(p, w);
+}
+
 // Spawn a parcel.
 // This complicated function does a bunch of logic to figure out the proper
 // method of computation for the parcel.
@@ -890,10 +900,8 @@ static void _resume_parcels(hpx_parcel_t *parcels) {
   while ((p = parcel_stack_pop(&parcels))) {
     ustack_t *stack = p->ustack;
     if (stack && stack->affinity >= 0) {
-      worker_t *w = scheduler_get_worker(here->sched, stack->affinity);
-      _send_mail(p, w);
-    }
-    else {
+      scheduler_spawn_at(p, stack->affinity);
+    } else {
       parcel_launch(p);
     }
   }
