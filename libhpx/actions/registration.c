@@ -93,32 +93,8 @@ static int _push_back(hpx_action_t *id, const char *key, handler_t f,
   back->cif = cif;
   back->env = env;
 
-  if (action_is_coalesced(*id)) {
-    printf("Creating data coalescing buffer for coalesced action\n");
-    back->coalesced_dest_buffer = calloc(HPX_LOCALITIES, sizeof(_coalesced_dest_buffer_t));
-    back->last_active = calloc (HPX_LOCALITIES, sizeof(unsigned int));
-    //TODO: need to take  the size as a parameter
-    size_t bytes = COALESCING_SIZE * (sizeof(hpx_addr_t) + sizeof(uint64_t));
-    for (int l = 0; l < HPX_LOCALITIES; l++) {
-      //TODO: we want the coalescing size in terms of number of buffers, not bytes
-      //TODO: skip current locality
-
-      back->coalesced_dest_buffer[l].fatp = action_new_parcel(_demux,
-					    HPX_THERE(l), 0, 0, 2, NULL, bytes);
-      //want to reuse the fat parcel
-      hpx_parcel_retain(back->coalesced_dest_buffer[l].fatp);
-      back->coalesced_dest_buffer[l].next = hpx_parcel_get_data(back->coalesced_dest_buffer[l].fatp);
-      unsigned int sender_active = UINT_MAX - UINT_MAX / 2;
-      back->coalesced_dest_buffer[l].sender_active = sender_active;
-      back->coalesced_dest_buffer[l].count_mask = sender_active - 1;
-      back->coalesced_dest_buffer[l].count_allocated = 0;
-      back->coalesced_dest_buffer[l].count_written = 0;
-      back->coalesced_dest_buffer[l].registered_with_td = false;
-      back->last_active[l] = 0;
-    }
-  } else {
-    back->coalesced_dest_buffer = NULL;
-  }
+  // printf("Creating action for %d localities\n", hpx_get_num_ranks());
+  back->coalesced_dest_buffer = NULL;
   action_init_handlers(back);
   return HPX_SUCCESS;
 }
@@ -171,6 +147,32 @@ void action_registration_finalize(void) {
     hpx_action_type_t type = actions[i].type;
     void (*f)(void) = actions[i].handler;
     (void) key, (void) type, (void) f;
+
+    if (actions[i].attr & HPX_COALESCED) {
+      printf("Creating data coalescing buffer for coalesced action for %d localities\n", hpx_get_num_ranks());
+      actions[i].coalesced_dest_buffer = calloc(HPX_LOCALITIES, sizeof(_coalesced_dest_buffer_t));
+      assert(actions[i].coalesced_dest_buffer);
+      actions[i].last_active = calloc (HPX_LOCALITIES, sizeof(unsigned int));
+      //TODO: need to take  the size as a parameter
+      size_t bytes = COALESCING_SIZE * (sizeof(hpx_addr_t) + sizeof(uint64_t));
+      for (int l = 0; l < HPX_LOCALITIES; l++) {
+	//TODO: we want the coalescing size in terms of number of buffers, not bytes
+	//TODO: skip current locality
+
+	actions[i].coalesced_dest_buffer[l].fatp = action_new_parcel(_demux,
+								HPX_THERE(l), 0, 0, 2, NULL, bytes);
+	//want to reuse the fat parcel
+	hpx_parcel_retain(actions[i].coalesced_dest_buffer[l].fatp);
+	actions[i].coalesced_dest_buffer[l].next = hpx_parcel_get_data(actions[i].coalesced_dest_buffer[l].fatp);
+	unsigned int sender_active = UINT_MAX - UINT_MAX / 2;
+	actions[i].coalesced_dest_buffer[l].sender_active = sender_active;
+	actions[i].coalesced_dest_buffer[l].count_mask = sender_active - 1;
+	actions[i].coalesced_dest_buffer[l].count_allocated = 0;
+	actions[i].coalesced_dest_buffer[l].count_written = 0;
+	actions[i].coalesced_dest_buffer[l].registered_with_td = false;
+	actions[i].last_active[l] = 0;
+      }
+    }
 
 #ifdef HAVE_PERCOLATION
     if (here->percolation && type == HPX_OPENCL) {

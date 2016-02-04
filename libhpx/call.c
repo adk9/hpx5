@@ -26,7 +26,7 @@
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/gas.h>
-
+#include <libhpx/debug.h>
 #include "./actions/data_coalesced_network.h"
 
 /// A RPC call with a user-specified continuation action.
@@ -57,16 +57,20 @@ int _hpx_call(hpx_addr_t addr, hpx_action_t id, hpx_addr_t result, int n, ...) {
   hpx_action_t rop = hpx_lco_set_action;
 
   // 1)check which destination the data is targetted for.
+  //TODO: FIx for smp? There is no gas_owner_of interface for smp which will give assertion failure
+  dbg_assert(here->gas);
   gas_t  *gas = here->gas;
   hpx_addr_t l = gas_owner_of(gas, addr);
 
   // if locally addressed or action is not coalesced, then continue with the
   // default implementation with parcel wrapper
-  if (l == HPX_HERE || (!action_is_coalesced(*id))) {
+  if (l == HPX_HERE || (!action_is_coalesced(id))) {
+    // printf("I am in the actual branch in hpx call\n");
     int e = action_call_lsync_va(id, addr, result, rop, n, &args);
     va_end(args);
     return e;
   } else {  // Otherwise coalesce data-parcels here
+    printf("Executing data coalescing branch\n");
     int e = coalesce_data(addr, id, l, &args, n);
     va_end(args);
     return e;

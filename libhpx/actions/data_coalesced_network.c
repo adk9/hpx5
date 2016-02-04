@@ -21,7 +21,7 @@ unsigned int max_count = COALESCING_SIZE;
 int process_data(hpx_addr_t *addr, uint64_t *value) {
   return HPX_SUCCESS;
 }
-hpx_action_t _demux = 0;
+hpx_action_t _demux;
 int _demux_handler(char* buffer, int n) {
   // In a for loop (normal for or par for) do the follwoing
   // 1. memcpy/extract the data and address (for graph it will be vertex address and distance data)
@@ -40,7 +40,7 @@ int _demux_handler(char* buffer, int n) {
   return HPX_SUCCESS;
 }
 
-HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _demux, _demux_handler,
+HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _demux, _demux_handler,
                      HPX_POINTER, HPX_INT);
 
 static void _clear_all(action_t *action, uint32_t dest) {
@@ -170,6 +170,7 @@ static int _coalesce_marshalled_data(hpx_addr_t addr, action_t *action,  uint64_
   void *data = (n) ? va_arg(*args, void*) : NULL; //TODO: should we assume a certain datatype instead of void?
   int bytes = (n) ? va_arg(*args, int) : 0;
 
+  printf("In _coalesce_marshalled_data calling _coalesced_data\n");
   return _coalesce_data(addr, action, dest, data, bytes); //TODO: bytes or n?
 }
 
@@ -209,6 +210,7 @@ int coalesce_data(hpx_addr_t addr, hpx_action_t id,  uint64_t dest,
 
   // if marshalled-type
   if (action->attr & HPX_MARSHALLED) {
+    printf("Calling coalesed marshalled data function\n");
     _coalesce_marshalled_data(addr, action, dest, args, n);
     return HPX_SUCCESS;
   } else { // assume ffi-type
