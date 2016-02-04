@@ -25,8 +25,8 @@
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
+#include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
-
 
 static int _par_for_async_handler(hpx_for_action_t f, void *args, int min,
                                   int max) {
