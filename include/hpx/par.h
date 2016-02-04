@@ -61,6 +61,17 @@ int hpx_par_for(hpx_for_action_t f, int min, int max, void *args,
 int hpx_par_for_sync(hpx_for_action_t f, int min, int max,
                      void *args) HPX_PUBLIC;
 
+
+/// Perform a "for" loop in parallel with a static schedule.
+///
+/// The loop iteration range (@p max - @p min) is divided equally into
+/// chunks and each worker thread performs equal amount of work.
+int hpx_par_for_static(hpx_for_action_t f, int min, int max, void *args,
+                       hpx_addr_t sync) HPX_PUBLIC;
+
+int hpx_par_for_static_sync(hpx_for_action_t f, int min, int max,
+                            void *args) HPX_PUBLIC;
+
 /// Perform a parallel call.
 ///
 /// This encapsulates a simple parallel for loop with the following semantics.
