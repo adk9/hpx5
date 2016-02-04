@@ -145,7 +145,6 @@ class action_struct {
 		const ::hpx::global_ptr<T1>& result, Args&... args) {
     return _hpx_call_when(gate.get(), addr.get(), result.get(), sizeof...(Args), &args...);
   }
-
   
 /// Locally synchronous call_when with continuation interface.
 ///
