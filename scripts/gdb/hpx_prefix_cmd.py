@@ -8,9 +8,8 @@ class HPXPrefixCommand (gdb.Command):
   "Prefix command for HPX commands."
 
   def __init__ (self):
-    super (HPXPrefixCommand, self).__init__ ("hpx",
-                         gdb.COMMAND_SUPPORT,
-                         gdb.COMPLETE_NONE, True)
+    super (HPXPrefixCommand, self).__init__ ("hpx", gdb.COMMAND_SUPPORT, 
+        gdb.COMPLETE_NONE, True)
 
 HPXPrefixCommand()
 
