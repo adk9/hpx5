@@ -44,9 +44,8 @@ typedef int (*hpx_for_action_t)(int i, void *arg);
 /// @endcode
 ///
 /// The work is divided in equal chunks among the number of "worker"
-/// threads available. Each thread performs a range of iterations. The
-/// mapping of lightweight threads to worker threads is dynamic, and
-/// depends on how these lightweight threads get scheduled.
+/// threads available. Work is actively pushed to each worker thread
+/// but is not affinitized and can be stolen by other worker threads.
 ///
 /// @param        f The "for" loop body function.
 /// @param      min The minimum index in the loop.
@@ -60,17 +59,6 @@ int hpx_par_for(hpx_for_action_t f, int min, int max, void *args,
 
 int hpx_par_for_sync(hpx_for_action_t f, int min, int max,
                      void *args) HPX_PUBLIC;
-
-
-/// Perform a "for" loop in parallel with a static schedule.
-///
-/// The loop iteration range (@p max - @p min) is divided equally into
-/// chunks and each worker thread performs equal amount of work.
-int hpx_par_for_static(hpx_for_action_t f, int min, int max, void *args,
-                       hpx_addr_t sync) HPX_PUBLIC;
-
-int hpx_par_for_static_sync(hpx_for_action_t f, int min, int max,
-                            void *args) HPX_PUBLIC;
 
 /// Perform a parallel call.
 ///

@@ -66,7 +66,8 @@ int hpx_par_for(hpx_for_action_t f, int min, int max, void *args,
     base = rmax;
     hpx_parcel_t *p = action_new_parcel(_par_for_async, HPX_HERE, and, set,
                                         4, &f, &args, &rmin, &rmax);
-    parcel_launch(p);
+    parcel_prepare(p);
+    scheduler_spawn_at(p, i);
   }
 
   return HPX_SUCCESS;
@@ -80,56 +81,6 @@ int hpx_par_for_sync(hpx_for_action_t f, int min, int max, void *args) {
   }
 
   int e = hpx_par_for(f, min, max, args, sync);
-  if (!e) {
-    e = hpx_lco_wait(sync);
-  }
-  hpx_lco_delete(sync, HPX_NULL);
-  return e;
-}
-
-int hpx_par_for_static(hpx_for_action_t f, int min, int max, void *args,
-                       hpx_addr_t sync) {
-  dbg_assert(max - min > 0);
-
-  // get the number of scheduler threads
-  int nthreads = HPX_THREADS;
-
-  hpx_addr_t and = HPX_NULL;
-  hpx_action_t set = hpx_lco_set_action;
-  hpx_action_t del = hpx_lco_delete_action;
-  if (sync) {
-    and = hpx_lco_and_new(nthreads);
-    hpx_call_when_with_continuation(and, sync, set, and, del, NULL, 0);
-  }
-
-  const int n = max - min;
-  const int m = n / nthreads;
-  int r = n % nthreads;
-  int rmin = min;
-  int rmax = max;
-
-  int base = rmin;
-  for (int i = 0, e = nthreads; i < e; ++i) {
-    rmin = base;
-    rmax = base + m + ((r-- > 0) ? 1 : 0);
-    base = rmax;
-    hpx_parcel_t *p = action_new_parcel(_par_for_async, HPX_HERE, and, set,
-                                        4, &f, &args, &rmin, &rmax);
-    parcel_prepare(p);
-    scheduler_spawn_at(p, i);
-  }
-
-  return HPX_SUCCESS;
-}
-
-int hpx_par_for_static_sync(hpx_for_action_t f, int min, int max, void *args) {
-  dbg_assert(max - min > 0);
-  hpx_addr_t sync = hpx_lco_future_new(0);
-  if (sync == HPX_NULL) {
-    return log_error("could not allocate an LCO.\n");
-  }
-
-  int e = hpx_par_for_static(f, min, max, args, sync);
   if (!e) {
     e = hpx_lco_wait(sync);
   }
