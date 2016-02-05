@@ -190,7 +190,6 @@ static void _execute_interrupt(hpx_parcel_t *p) {
     dbg_error("interrupt produced unexpected error %s.\n", hpx_strerror(e));
   }
 
-//<<<<<<< HEAD
   // Restore the appropriate interrupt mask, if we need to. If the parent had a
   // mask, then we restore that, otherwise we restore the default system mask.
   if (masked) {
