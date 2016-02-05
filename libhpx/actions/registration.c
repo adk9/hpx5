@@ -39,6 +39,9 @@
 static int _n = 1;
 HPX_ALIGNED(HPX_PAGE_SIZE) action_t actions[LIBHPX_ACTION_MAX];
 
+static int _cn = -1;
+hpx_action_t coalesced_action_id[LIBHPX_ACTION_MAX];
+
 static void HPX_CONSTRUCTOR _init_null_handler(void) {
   actions[0] = (action_t){
     .handler = NULL,
@@ -56,6 +59,9 @@ int action_table_size(void) {
   return _n;
 }
 
+int coalesced_action_table_size(void) {
+  return _cn;
+}
 #ifdef ENABLE_DEBUG
 void CHECK_ACTION(hpx_action_t id) {
   if (id == HPX_ACTION_INVALID) {
@@ -155,12 +161,13 @@ void action_registration_finalize(void) {
       actions[i].last_active = calloc (HPX_LOCALITIES, sizeof(unsigned int));
       //TODO: need to take  the size as a parameter
       size_t bytes = COALESCING_SIZE * (sizeof(hpx_addr_t) + sizeof(uint64_t));
+      hpx_action_t *data_action_id = actions[i].id;
       for (int l = 0; l < HPX_LOCALITIES; l++) {
 	//TODO: we want the coalescing size in terms of number of buffers, not bytes
 	//TODO: skip current locality
 
 	actions[i].coalesced_dest_buffer[l].fatp = action_new_parcel(_demux,
-								HPX_THERE(l), 0, 0, 2, NULL, bytes);
+				HPX_THERE(l), 0, *data_action_id, 2, NULL, bytes);
 	//want to reuse the fat parcel
 	hpx_parcel_retain(actions[i].coalesced_dest_buffer[l].fatp);
 	actions[i].coalesced_dest_buffer[l].next = hpx_parcel_get_data(actions[i].coalesced_dest_buffer[l].fatp);
@@ -172,6 +179,8 @@ void action_registration_finalize(void) {
 	actions[i].coalesced_dest_buffer[l].registered_with_td = false;
 	actions[i].last_active[l] = 0;
       }
+
+      coalesced_action_id[++_cn] = *(actions[i].id);
     }
 
 #ifdef HAVE_PERCOLATION

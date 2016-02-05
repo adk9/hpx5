@@ -274,6 +274,8 @@ typedef struct {
 #define LIBHPX_ACTION_MAX (UINT32_C(1) << (sizeof(hpx_action_t) * 8))
 
 extern action_t actions[LIBHPX_ACTION_MAX] HPX_ALIGNED(HPX_PAGE_SIZE);
+extern hpx_action_t coalesced_action_id[LIBHPX_ACTION_MAX];
+int coalesced_action_table_size(void);
 /// @}
 
 #ifdef ENABLE_DEBUG

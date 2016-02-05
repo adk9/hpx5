@@ -18,9 +18,10 @@
 #include <libhpx/action.h>
 #include <libhpx/gas.h>
 
+extern hpx_action_t _demux;
 int coalesce_data(hpx_addr_t addr, hpx_action_t id,  uint64_t dest,
 		  va_list *args, int n);
 
 void flush (action_t *action);
-extern hpx_action_t _demux;
+void flush_all(void);
 #endif // LIBHPX_DATA_COALESCED_COALESCED_H

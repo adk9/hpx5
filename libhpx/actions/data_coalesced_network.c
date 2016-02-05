@@ -10,6 +10,7 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>
+#include <libhpx/worker.h>
 
 #define COALESCING_SIZE 1000
 
@@ -26,6 +27,13 @@ int _demux_handler(char* buffer, int n) {
   // In a for loop (normal for or par for) do the follwoing
   // 1. memcpy/extract the data and address (for graph it will be vertex address and distance data)
   // 2. Call the corresponding *function* which will take an address and distance
+
+  // First store the current address, so that once we are done with the following loop, we can restore the target address.
+  worker_t *w = self;
+  hpx_addr_t previous_target = w->current->target;
+
+  //For data coalesced action, we send the action id for the invoked action on data in the continuation id field of the parcel
+  hpx_action_t action_id = hpx_thread_current_cont_action();
   while (n) {
     hpx_addr_t *addr = NULL;
     memcpy(addr, buffer, sizeof(hpx_addr_t));
@@ -35,8 +43,12 @@ int _demux_handler(char* buffer, int n) {
     memcpy(value, buffer, sizeof(uint64_t));
     buffer += sizeof(uint64_t);
     n -= sizeof(uint64_t);
-    process_data(addr, value);
+    w->current->target = *addr; //TODO: Do we really need this line?
+    hpx_call(*addr, action_id, HPX_NULL, value, sizeof(value));
+    // process_data(addr, value);
   }
+  //TODO: clean up for the thread by setting up the address
+  w->current->target = previous_target;
   return HPX_SUCCESS;
 }
 
@@ -82,6 +94,13 @@ void flush (action_t *action) {
       //TODO: IS call to clear_all needed?
       _clear_all(action, l);
     }
+  }
+}
+
+void flush_all(void) {
+  for (int i = 0, e = coalesced_action_table_size(); i < e; i++) {
+    action_t action = actions[coalesced_action_id[i]];
+    flush(&action);
   }
 }
 
@@ -133,6 +152,8 @@ static int _coalesce_data(hpx_addr_t addr, action_t *action,  uint32_t dest,
     // size_t current_idx = (myid - 1) * (sizeof(hpx_addr_t) + sizeof(uint64_t));
     //uint64_t data = (uint64_t) *args;
 
+    memcpy(action->coalesced_dest_buffer[dest].next, &addr, sizeof(hpx_addr_t));
+    action->coalesced_dest_buffer[dest].next += sizeof(hpx_addr_t);
     memcpy(action->coalesced_dest_buffer[dest].next, args, bytes);
     action->coalesced_dest_buffer[dest].next += bytes;
 

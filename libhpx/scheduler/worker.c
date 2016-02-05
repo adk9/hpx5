@@ -45,6 +45,7 @@
 #include "thread.h"
 
 #include "../network/coalesced_network.h"
+#include "../actions/data_coalesced_network.h"
 
 /// Storage for the thread-local worker pointer.
 __thread worker_t * volatile self = NULL;
@@ -548,6 +549,7 @@ static void _schedule_network(worker_t *w, network_t *network) {
   }
 
   //TODO: call flush interface but based on what condition and how frequently?
+  flush_all();
 }
 
 /// The main scheduling loop.
