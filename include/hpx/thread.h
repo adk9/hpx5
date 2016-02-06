@@ -240,6 +240,9 @@ void hpx_thread_exit(int status)
 int hpx_thread_sigmask(int how, int mask)
   HPX_PUBLIC;
 
+void hpx_thread_void_current_cont_action(void)
+  HPX_PUBLIC;
+
 /// @}
 
 #endif

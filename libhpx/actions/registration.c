@@ -28,8 +28,9 @@
 #endif
 #include "init.h"
 #include "data_coalesced_network.h"
+#include <libhpx/parcel.h>
 
-#define COALESCING_SIZE 10000
+#define COALESCING_SIZE 2
 
 /// A static action table.
 ///
@@ -178,6 +179,8 @@ void action_registration_finalize(void) {
 	actions[i].coalesced_dest_buffer[l].count_written = 0;
 	actions[i].coalesced_dest_buffer[l].registered_with_td = false;
 	actions[i].last_active[l] = 0;
+	//
+	(actions[i].coalesced_dest_buffer[l].fatp)->size = 0;
       }
 
       coalesced_action_id[++_cn] = *(actions[i].id);

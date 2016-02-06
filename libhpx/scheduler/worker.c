@@ -1076,3 +1076,8 @@ void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   log_sched("resuming %p\n in %s", (void*)p, actions[p->action].key);
   (void)p;
 }
+
+void hpx_thread_void_current_cont_action(void) {
+  worker_t *w = self;
+  w->current->c_action = HPX_ACTION_NULL;
+}

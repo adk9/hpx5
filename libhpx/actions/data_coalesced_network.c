@@ -12,7 +12,7 @@
 #include <libhpx/parcel.h>
 #include <libhpx/worker.h>
 
-#define COALESCING_SIZE 1000
+#define COALESCING_SIZE 2
 
 
 //TODO: Fix types
@@ -34,21 +34,23 @@ int _demux_handler(char* buffer, int n) {
 
   //For data coalesced action, we send the action id for the invoked action on data in the continuation id field of the parcel
   hpx_action_t action_id = hpx_thread_current_cont_action();
+  hpx_thread_void_current_cont_action();
   while (n) {
-    hpx_addr_t *addr = NULL;
-    memcpy(addr, buffer, sizeof(hpx_addr_t));
+    hpx_addr_t addr;
+    memcpy(&addr, buffer, sizeof(hpx_addr_t));
     buffer += sizeof(hpx_addr_t);
     n -= sizeof(hpx_addr_t);
-    uint64_t *value = 0;
-    memcpy(value, buffer, sizeof(uint64_t));
+    uint64_t value = 0;
+    memcpy(&value, buffer, sizeof(uint64_t));
     buffer += sizeof(uint64_t);
     n -= sizeof(uint64_t);
-    w->current->target = *addr; //TODO: Do we really need this line?
-    hpx_call(*addr, action_id, HPX_NULL, value, sizeof(value));
+    w->current->target = addr; //TODO: Do we really need this line?
+    hpx_call(addr, action_id, HPX_NULL, &value, sizeof(value));
     // process_data(addr, value);
   }
   //TODO: clean up for the thread by setting up the address
   w->current->target = previous_target;
+  printf("Done executing demultiplexer\n");
   return HPX_SUCCESS;
 }
 
@@ -87,9 +89,9 @@ void flush (action_t *action) {
     }
     // TODO: this is a flash operation, so the data parcel count can be less than coalescing size, so do we need to adjust any size?
     if (my_id > 0 && my_id < max_count) {
-      //adjust the partially filled buffer size
-      unsigned int count_written = sync_load(&action->coalesced_dest_buffer[l].count_written, SYNC_RELAXED);
-      action->coalesced_dest_buffer[l].fatp->size = sizeof(hpx_addr_t) + sizeof(uint64_t) * count_written;
+       unsigned int count_written = sync_load(&action->coalesced_dest_buffer[l].count_written, SYNC_RELAXED);
+       // adjust the partially filled buffer size
+       // action->coalesced_dest_buffer[l].fatp->size = sizeof(hpx_addr_t) + sizeof(uint64_t) * count_written;
       hpx_parcel_send(action->coalesced_dest_buffer[l].fatp, HPX_NULL);
       //TODO: IS call to clear_all needed?
       _clear_all(action, l);
@@ -154,8 +156,10 @@ static int _coalesce_data(hpx_addr_t addr, action_t *action,  uint32_t dest,
 
     memcpy(action->coalesced_dest_buffer[dest].next, &addr, sizeof(hpx_addr_t));
     action->coalesced_dest_buffer[dest].next += sizeof(hpx_addr_t);
+    (action->coalesced_dest_buffer[dest].fatp)->size += sizeof(hpx_addr_t);
     memcpy(action->coalesced_dest_buffer[dest].next, args, bytes);
     action->coalesced_dest_buffer[dest].next += bytes;
+    (action->coalesced_dest_buffer[dest].fatp)->size += bytes;
 
     // memcpy( (char *)&(action->coalesced_dest_buffer[dest]->fatp) + current_idx +
     //sizeof(hpx_addr_t), data, sizeof(uint64_t));
