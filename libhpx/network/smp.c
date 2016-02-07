@@ -26,8 +26,6 @@
 
 #include "smp.h"
 
-static const int _zero = 0;
-
 // Define the transports allowed for the SMP network
 static void _smp_delete(void *network) {
 }
