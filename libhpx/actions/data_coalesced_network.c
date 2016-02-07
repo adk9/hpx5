@@ -64,8 +64,8 @@ static void _clear_all(action_t *action, uint32_t dest) {
 	     SYNC_RELAXED);
   sync_store(&action->coalesced_dest_buffer[dest].count_written, _clear_counts, SYNC_RELAXED);
   sync_store(&action->coalesced_dest_buffer[dest].count_allocated, _clear_counts, SYNC_RELAXED);
-  (action->coalesced_dest_buffer[dest].fatp)->size = 0;
-  action->coalesced_dest_buffer[dest].next = hpx_parcel_get_data(action->coalesced_dest_buffer[dest].fatp);
+  sync_store(&(action->coalesced_dest_buffer[dest].fatp)->size, 0, SYNC_RELAXED);
+  sync_store(&action->coalesced_dest_buffer[dest].next, hpx_parcel_get_data(action->coalesced_dest_buffer[dest].fatp),  SYNC_RELAXED);
 }
 
 void flush (action_t *action) {
