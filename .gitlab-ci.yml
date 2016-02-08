@@ -31,5 +31,3 @@ check-build:
   - export HPX_THREADS=1
   - export HPX_NETWORK=isir
   - make -C tests check || check_check
-  - export HPX_NETWORK=pwc
-  - make -C tests check || check_check
