@@ -12,7 +12,7 @@ scan-build:
   script:
   - ./bootstrap
   - ./configure --enable-debug --enable-instrumentation --enable-percolation --enable-agas --enable-hpx++
-                --enable-mpi --enable-photon --enable-testsuite --with-photon=system
+                --enable-mpi --enable-photon --enable-testsuite --enable-parallel-config --with-photon=system
                 --with-jemalloc=system --with-hwloc=system --with-libffi=contrib CC=clang CXX=clang
                 CFLAGS="-g -O0" CXXFLAGS="-g -O0"
   - BOUT=/tmp/scan-build-${CI_BUILD_ID}
@@ -24,13 +24,12 @@ check-build:
   script:
   - ./bootstrap
   - ./configure --prefix=$HOME --enable-debug --enable-mpi --enable-photon --enable-testsuite
-                --enable-instrumentation --enable-agas --enable-hpx++ PHOTON_CARGS="--enable-debug"
-                CFLAGS="-g -O0" CXXFLAGS="-g -O0"
+                --enable-instrumentation --enable-agas --enable-hpx++ --enable-parallel-config
+                PHOTON_CARGS="--enable-debug" CFLAGS="-g -O0" CXXFLAGS="-g -O0"
   - make -j 8
   - make install
   - export HPX_THREADS=1
-  - export HPX_NETWORK=pwc
-  - make -C tests check || check_check
   - export HPX_NETWORK=isir
   - make -C tests check || check_check
-
+  - export HPX_NETWORK=pwc
+  - make -C tests check || check_check
