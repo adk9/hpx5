@@ -14,6 +14,7 @@ scan-build:
   - ./configure --enable-debug --enable-instrumentation --enable-percolation --enable-agas --enable-hpx++
                 --enable-mpi --enable-photon --enable-testsuite --with-photon=system
                 --with-jemalloc=system --with-hwloc=system --with-libffi=contrib CC=clang CXX=clang
+                CFLAGS="-g -O0" CXXFLAGS="-g -O0"
   - BOUT=/tmp/scan-build-${CI_BUILD_ID}
   - scan-build --use-cc=clang -o /var/www/html/scan-builds make -j 8 | tee $BOUT
   - check_scan $BOUT
@@ -24,6 +25,7 @@ check-build:
   - ./bootstrap
   - ./configure --prefix=$HOME --enable-debug --enable-mpi --enable-photon --enable-testsuite
                 --enable-instrumentation --enable-agas --enable-hpx++ PHOTON_CARGS="--enable-debug"
+                CFLAGS="-g -O0" CXXFLAGS="-g -O0"
   - make -j 8
   - make install
   - export HPX_THREADS=1
