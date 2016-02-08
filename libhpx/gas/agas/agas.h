@@ -85,6 +85,10 @@ hpx_addr_t agas_local_add(const agas_t *agas, gva_t gva, int64_t bytes,
 
 void agas_free(void *gas, hpx_addr_t addr, hpx_addr_t rsync);
 
+#ifdef HAVE_AGAS_REBALANCING
+// Add block statistics to the AGAS BST
+void agas_bst_add(int src, int dst, hpx_addr_t block, size_t size);
+#endif
 
 #ifdef __cplusplus
 }

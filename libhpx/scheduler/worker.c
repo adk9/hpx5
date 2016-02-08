@@ -267,6 +267,7 @@ static void _push_lifo(hpx_parcel_t *p, void *worker) {
   dbg_assert(p->target != HPX_NULL);
   dbg_assert(actions[p->action].handler != NULL);
   EVENT_SCHED_PUSH_LIFO(p);
+  EVENT_AGAS_ACCESS(p->src, here->rank, p->target, p->size);
   worker_t *w = worker;
   uint64_t size = sync_chase_lev_ws_deque_push(_work(w), p);
   if (w->work_first < 0) {

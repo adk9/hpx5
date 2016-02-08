@@ -30,6 +30,7 @@
 #include "libhpx/action.h"
 #include "libhpx/config.h"
 #include "libhpx/debug.h"
+#include "libhpx/gas.h"
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/memory.h"
@@ -65,6 +66,11 @@ static void *_run(void *worker) {
 #ifdef HAVE_APEX
   // let APEX know there is a new thread
   apex_register_thread("HPX WORKER THREAD");
+#endif
+
+  // initialize the AGAS rebalancer
+#if defined(HAVE_AGAS) && defined(HAVE_AGAS_REBALANCING)
+  agas_rebalancer_bind_worker();
 #endif
 
   // wait for the other threads to join

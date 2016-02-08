@@ -30,6 +30,10 @@
 #include "chunk_table.h"
 #include "gva.h"
 
+#ifdef HAVE_AGAS_REBALANCING
+#include "rebalancing.h"
+#endif
+
 static const uint64_t AGAS_THERE_OFFSET = UINT64_C(4398046511103);
 
 __thread size_t agas_alloc_bsize;
@@ -49,6 +53,10 @@ _agas_dealloc(void *gas) {
   if (agas->bitmap) {
     bitmap_delete(agas->bitmap);
   }
+
+#ifdef HAVE_AGAS_REBALANCING
+  agas_rebalancer_finalize();
+#endif
 
   if (here->rank == 0) {
     if (agas->cyclic_bitmap) {
@@ -134,7 +142,7 @@ static uint32_t
 _agas_owner_of(const void *gas, hpx_addr_t addr) {
   const agas_t *agas = gas;
   gva_t gva = { .addr = addr };
-  return btt_owner_of(agas->btt, gva);
+  return btt_get_owner(agas->btt, gva);
 }
 
 static int
@@ -299,6 +307,11 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   agas->vtable = _agas_vtable;
   agas->chunk_table = chunk_table_new(0);
   agas->btt = btt_new(0);
+
+  // initialize the AGAS rebalancer
+#ifdef HAVE_AGAS_REBALANCING
+  agas_rebalancer_init();
+#endif
 
   // get the chunk size from jemalloc
   agas->chunk_size = as_bytes_per_chunk();

@@ -31,7 +31,6 @@ struct boot;
 /// Generic object oriented interface to the global address space.
 typedef struct gas {
   libhpx_gas_t type;
-
   class_string_t string;
 
   void (*dealloc)(void *gas);
@@ -82,6 +81,13 @@ inline static void *gas_local_base(gas_t *gas) {
   assert(gas && gas->local_base);
   return gas->local_base(gas);
 }
+
+#if defined(HAVE_AGAS) && defined(HAVE_AGAS_REBALANCING)
+# define EVENT_AGAS_ACCESS(src, dst, block, size) \
+    agas_bst_add(src, dst, block, size)
+#else
+# define EVENT_AGAS_ACCESS(src, dst, block, size)
+#endif
 
 #ifdef __cplusplus
 }

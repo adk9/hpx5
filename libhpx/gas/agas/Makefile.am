@@ -21,3 +21,12 @@ endif
 if HAVE_DLMALLOC
 libagas_la_SOURCES += dlmalloc.c
 endif
+
+if HAVE_AGAS_REBALANCING
+noinst_HEADERS     += rebalancing.h
+libagas_la_SOURCES += rebalancing.c partitioning.c bst.cc
+endif
+
+if HAVE_TASKSCALES
+libagas_la_SOURCES += taskscales.cc
+endif
