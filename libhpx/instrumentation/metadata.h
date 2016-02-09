@@ -11,8 +11,8 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef INSTRUMENTATION_EVENTS_H
-#define INSTRUMENTATION_EVENTS_H
+#ifndef METADATA_H
+#define METADATA_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -100,7 +100,7 @@ typedef struct inst_named_value {
 } HPX_PACKED inst_named_value_t;
 
 typedef struct inst_event_col_metadata {
-  const char mask; // this should an OR of all the following values:
+  const char mask;           // this should an OR of all the following values:
   const char data_type;      // mask 0x1
   const unsigned int offset; // mask 0x2
   const uint64_t min;        // mask 0x4

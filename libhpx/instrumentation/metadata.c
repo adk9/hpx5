@@ -19,7 +19,7 @@
 #include <stdint.h>
 
 #include <libhpx/instrumentation.h>
-#include <libhpx/instrumentation_events.h>
+#include "metadata.h"
 
 // Possibly, we might want to move more macros from the header into here as
 // variables

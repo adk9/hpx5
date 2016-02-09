@@ -4,9 +4,9 @@ noinst_HEADERS = \
                  bitmap.h \
                  boot.h \
                  debug.h \
+                 events.h \
                  gas.h \
                  gpa.h \
-                 instrumentation_events.h \
                  instrumentation.h \
                  lco.h \
                  locality.h \

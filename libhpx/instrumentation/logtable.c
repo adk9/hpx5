@@ -26,7 +26,7 @@
 
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
-#include <libhpx/instrumentation_events.h>
+#include "metadata.h"
 #include "file_header.h"
 #include "logtable.h"
 

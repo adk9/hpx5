@@ -19,7 +19,7 @@
 #include <string.h>
 
 #include <hpx/hpx.h>
-#include <libhpx/instrumentation_events.h>
+#include "metadata.h"
 #include "file_header.h"
 
 struct cols_metadata {

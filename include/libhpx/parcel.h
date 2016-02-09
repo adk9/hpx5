@@ -25,7 +25,6 @@ extern "C" {
 
 #include <hpx/hpx.h>
 #include <libhpx/instrumentation.h>
-#include <libhpx/instrumentation_events.h>
 
 struct ustack;
 

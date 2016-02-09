@@ -136,7 +136,6 @@ static const char *_get_log_path(const char *dir) {
   }
 
   struct stat sb;
-
   // if the path doesn't exist, then we make it
   if (stat(dir, &sb) != 0) {
     return _mkdir(dir);
