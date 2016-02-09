@@ -38,29 +38,27 @@ static int _my_action_handler(void) {
 //   hpx_call_cc(HPX_HERE, _my_task, NULL, NULL);
   return HPX_SUCCESS;
 }
-HPXPP_MAKE_ACTION(_my_action_handler, void);
+auto mah = hpx::make_action(_my_action_handler);
 
 static int _my_typed_handler(int i, float f, char c) {
   printf("Hi, I am a typed action with args: %d %f %c!\n", i, f, c);
   int r;
-  _my_action_handler_action_struct::call_sync(HPX_HERE, r);
+  mah.call_sync(HPX_HERE, r);
   //   hpx_call_cc(HPX_HERE, _my_action_handler_action_struct::id, NULL, NULL);
   return HPX_SUCCESS;
 }
-HPXPP_MAKE_ACTION(_my_typed_handler, void);
+auto mth = hpx::make_action(_my_typed_handler);
 
 int hello(int a) {
   std::cout << "Rank#" << hpx_get_my_rank() << " received " << a << "." << std::endl;
   return HPX_SUCCESS;
 }
-HPXPP_MAKE_ACTION(hello, void);
+auto h_act = hpx::make_action(hello);
 
 hpx_status_t test1(int arg) {
-
   int r;
-
-  hello_action_struct::call_sync(HPX_HERE, r, arg);
-
+  h_act.call_sync(HPX_HERE, r, arg);
+  
   return HPX_SUCCESS;
 }
 
@@ -70,12 +68,11 @@ int main_act(int arg) {
   test1(arg);
 
   int r, i = 1; float f = 3.0; char c = 'b';
-  _my_typed_handler_action_struct::call_sync(HPX_HERE, r, i, f, c);
+  mth.call_sync(HPX_HERE, r, i, f, c);
 
   hpx::exit(HPX_SUCCESS);
 }
-
-HPXPP_MAKE_ACTION(main_act, void);
+auto ma = hpx::make_action(main_act);
 
 int main(int argc, char* argv[]) {
 
@@ -86,8 +83,8 @@ int main(int argc, char* argv[]) {
   }
   int a = hpx_get_my_rank() + 1;
 
-  main_act_action_struct::run(a);
-
+  ma.run(a);
+  
   hpx::finalize();
   return 0;
 }

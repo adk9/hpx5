@@ -24,26 +24,23 @@ int cont2(int arg) {
   std::cout << "cont2 arg: " << arg << std::endl;
   return hpx::SUCCESS;
 }
-// HPXPP_MAKE_ACTION(cont2, void);
-// static hpx_action_t cont2_id;
-HPX_ACTION(HPX_DEFAULT, HPX_ATTR_NONE, cont2_id, cont2, HPX_INT);
+auto cont2_obj = hpx::make_action(cont2);
+
 int cont1(int arg) {
   std::cout << "cont1 arg: " << arg << std::endl;
 //   hpx_call_cc(HPX_HERE, cont2_action_struct::id, &arg);
   return hpx_thread_continue(&arg);
 }
-// HPXPP_MAKE_ACTION(cont1, void);
-HPX_ACTION(HPX_DEFAULT, HPX_ATTR_NONE, cont1_id, cont1, HPX_INT);
+auto cont1_obj = hpx::make_action(cont1);
 
 int main_act(int arg) {
   std::cout << "main_act arg: " << arg << std::endl;
   
-  hpx_call_with_continuation(HPX_HERE, cont1_id, HPX_HERE, cont2_id, &arg);
+  cont1_obj.call_with_continuation(HPX_HERE, HPX_HERE, cont2_obj, arg);
   
   hpx::exit(hpx::SUCCESS);
 }
-// HPXPP_MAKE_ACTION(main_act, void, int);
-HPX_ACTION(HPX_DEFAULT, HPX_ATTR_NONE, main_act_id, main_act, HPX_INT);
+auto main_act_obj = hpx::make_action(main_act);
 
 int main(int argc, char* argv[]) {
 
@@ -53,9 +50,7 @@ int main(int argc, char* argv[]) {
     return e;
   }
   int a = hpx_get_my_rank() + 1;
-
-//   main_act_action_struct::run(a);
-  hpx::run(&main_act_id, &a);
+  main_act_obj.run(a);
 
   hpx::finalize();
   return 0;
