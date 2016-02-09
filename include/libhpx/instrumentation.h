@@ -18,13 +18,10 @@
 #include <hpx/attributes.h>
 #include <hpx/builtins.h>
 #include <libhpx/config.h>
-#include <libhpx/locality.h> // for here object inlined in inst_trace_type
+#include <libhpx/locality.h>
 #include <libhpx/profiling.h>
 
 struct config;
-
-//hostnames can only be 63 characters in length, so
-#define HOSTNAME_LENGTH 64
 
 #ifdef ENABLE_INSTRUMENTATION
 /// INSTRUMENTATION is true if and only if instrumentation is enabled

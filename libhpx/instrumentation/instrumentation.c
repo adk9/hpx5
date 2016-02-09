@@ -23,6 +23,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <unistd.h>
 #include <pwd.h>
 
@@ -189,8 +190,8 @@ static void _dump_hostnames(void) {
   if (_log_path == NULL) {
     return;
   }
-  char hostname[HOSTNAME_LENGTH];
-  gethostname(hostname, HOSTNAME_LENGTH);
+  char hostname[HOST_NAME_MAX];
+  gethostname(hostname, HOST_NAME_MAX);
 
   char filename[256];
   snprintf(filename, 256, "hostname.%d", hpx_get_my_rank());
