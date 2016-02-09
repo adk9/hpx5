@@ -26,6 +26,7 @@
 #include <hpx/builtins.h>
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
+#include <libhpx/events.h>
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
@@ -40,7 +41,6 @@
 #include <libhpx/topology.h>
 #include <libhpx/worker.h>
 #include "cvar.h"
-#include "events.h"
 #include "lco.h"
 #include "thread.h"
 
@@ -265,7 +265,7 @@ static void _swap_epoch(worker_t *worker) {
 static void _push_lifo(hpx_parcel_t *p, void *worker) {
   dbg_assert(p->target != HPX_NULL);
   dbg_assert(actions[p->action].handler != NULL);
-  EVENT_PUSH_LIFO(p);
+  EVENT_SCHED_PUSH_LIFO(p);
   worker_t *w = worker;
   uint64_t size = sync_chase_lev_ws_deque_push(_work(w), p);
   if (w->work_first < 0) {
@@ -277,8 +277,8 @@ static void _push_lifo(hpx_parcel_t *p, void *worker) {
 /// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *_schedule_lifo(worker_t *w) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(_work(w));
-  EVENT_POP_LIFO(p);
-  EVENT_WQSIZE(w);
+  EVENT_SCHED_POP_LIFO(p);
+  EVENT_SCHED_WQSIZE(w);
   return p;
 }
 
@@ -333,7 +333,7 @@ static int _push_half_handler(int src) {
   // send them back to the thief
   if (parcels) {
     scheduler_spawn_at(parcels, src);
-    EVENT_STEAL_LIFO(parcels, self);
+    EVENT_SCHED_STEAL_LIFO(parcels, self);
   }
   return HPX_SUCCESS;
 }
@@ -345,7 +345,7 @@ static hpx_parcel_t *_steal_from(worker_t *w, int id) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(_work(victim));
   if (p) {
     w->last_victim = id;
-    EVENT_STEAL_LIFO(p, victim);
+    EVENT_SCHED_STEAL_LIFO(p, victim);
   } else {
     w->last_victim = -1;
   }
@@ -573,9 +573,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
     EVENT_SCHED_ENTER();
     if (!block) {
       p = _schedule_lifo(w);
-      if (INSTRUMENTATION && p != NULL) {
-        source = SOURCE_LIFO;
-      }
+      INST(source = SOURCE_LIFO);
       break;
     }
 
@@ -619,7 +617,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   p = (p) ? _try_bind(w, p) : w->system;
 
   EVENT_SCHED_EXIT();
-  inst_trace(HPX_INST_SCHEDTIMES, HPX_INST_SCHEDTIMES_SCHED,
+  inst_trace(INST_SCHEDTIMES, INST_EVENT_SCHEDTIMES_SCHED,
     start_time, source, spins);
 
   // don't transfer to the same parcel

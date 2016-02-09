@@ -126,33 +126,6 @@ struct hpx_parcel {
   #endif
 #endif
 
-/// Parcel tracing events shared across files.
-/// @{
-static inline void EVENT_PARCEL_CREATE(hpx_parcel_t *p, hpx_parcel_t *parent) {
-  static const int type = HPX_INST_CLASS_PARCEL;
-  static const int id = HPX_INST_EVENT_PARCEL_CREATE;
-  inst_trace(type, id, p->id, p->action, p->size, ((parent) ? parent->id : 0));
-}
-
-static inline void EVENT_PARCEL_SEND(hpx_parcel_t *p) {
-  static const int type = HPX_INST_CLASS_PARCEL;
-  static const int id = HPX_INST_EVENT_PARCEL_SEND;
-  inst_trace(type, id, p->id, p->action, p->size, p->target);
-}
-
-static inline void EVENT_PARCEL_RECV(hpx_parcel_t *p) {
-  static const int type = HPX_INST_CLASS_PARCEL;
-  static const int id = HPX_INST_EVENT_PARCEL_RECV;
-  inst_trace(type, id, p->id, p->action, p->size, p->src);
-}
-
-static inline void EVENT_PARCEL_RESEND(hpx_parcel_t *p) {
-  static const int type = HPX_INST_CLASS_PARCEL;
-  static const int id = HPX_INST_EVENT_PARCEL_RESEND;
-  inst_trace(type, id, p->id, p->action, p->size, p->target);
-}
-/// @}
-
 void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
                  hpx_action_t c_action, hpx_pid_t pid, const void *data,
                  size_t len, hpx_parcel_t *p);

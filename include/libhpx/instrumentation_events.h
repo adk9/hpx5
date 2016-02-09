@@ -116,7 +116,7 @@ typedef struct inst_event_metadata {
   const  inst_event_col_metadata_t col_metadata[INST_EVENT_NUM_COLS];
 } inst_event_metadata_t;
 
-extern const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS];
+extern const inst_event_metadata_t INST_EVENT_METADATA[INST_NUM_EVENTS];
 
 // typeof(INST_EVENT_COL_METADATA_WORKER) == inst_event_col_metadata_t
 #define INST_EVENT_COL_METADATA_WORKER          \

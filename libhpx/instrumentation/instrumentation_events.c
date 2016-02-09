@@ -24,7 +24,7 @@
 // Possibly, we might want to move more macros from the header into here as
 // variables
 
-const inst_event_metadata_t INST_EVENT_METADATA[HPX_INST_NUM_EVENTS] =
+const inst_event_metadata_t INST_EVENT_METADATA[INST_NUM_EVENTS] =
 {
   PARCEL_CREATE_METADATA,
   PARCEL_SEND_METADATA,
