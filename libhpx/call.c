@@ -61,7 +61,7 @@ int _hpx_call(hpx_addr_t addr, hpx_action_t id, hpx_addr_t result, int n, ...) {
   dbg_assert(here->gas);
   gas_t  *gas = here->gas;
   hpx_addr_t l = gas_owner_of(gas, addr);
-
+  // printf("Action is coaleseced %d\n", action_is_coalesced(id));
   // if locally addressed or action is not coalesced, then continue with the
   // default implementation with parcel wrapper
   if (l == HPX_HERE || (!action_is_coalesced(id))) {
@@ -70,7 +70,7 @@ int _hpx_call(hpx_addr_t addr, hpx_action_t id, hpx_addr_t result, int n, ...) {
     va_end(args);
     return e;
   } else {  // Otherwise coalesce data-parcels here
-    printf("Executing data coalescing branch\n");
+    // printf("Executing data coalescing branch\n");
     int e = coalesce_data(addr, id, l, &args, n);
     va_end(args);
     return e;

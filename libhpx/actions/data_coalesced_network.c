@@ -11,7 +11,7 @@
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>
 #include <libhpx/worker.h>
-
+#include <inttypes.h>
 #define COALESCING_SIZE 2
 
 
@@ -29,12 +29,15 @@ int _demux_handler(char* buffer, int n) {
   // 2. Call the corresponding *function* which will take an address and distance
 
   // First store the current address, so that once we are done with the following loop, we can restore the target address.
+  assert(n);
   worker_t *w = self;
   hpx_addr_t previous_target = w->current->target;
 
   //For data coalesced action, we send the action id for the invoked action on data in the continuation id field of the parcel
   hpx_action_t action_id = hpx_thread_current_cont_action();
   hpx_thread_void_current_cont_action();
+  const action_t *action = &actions[action_id];
+  hpx_action_handler_t handler = (hpx_action_handler_t)action->handler;
   while (n) {
     hpx_addr_t addr;
     memcpy(&addr, buffer, sizeof(hpx_addr_t));
@@ -44,8 +47,10 @@ int _demux_handler(char* buffer, int n) {
     memcpy(&value, buffer, sizeof(uint64_t));
     buffer += sizeof(uint64_t);
     n -= sizeof(uint64_t);
-    w->current->target = addr; //TODO: Do we really need this line?
-    hpx_call(addr, action_id, HPX_NULL, &value, sizeof(value));
+    w->current->target = addr; //TODO: Do we really need this line? what will happen in case of stealing?
+    printf("Calling the handler in the reciever side\n");
+    handler(&value, sizeof(value));
+    // hpx_call(addr, action_id, HPX_NULL, &value, sizeof(value));
     // process_data(addr, value);
   }
   //TODO: clean up for the thread by setting up the address
@@ -64,8 +69,9 @@ static void _clear_all(action_t *action, uint32_t dest) {
 	     SYNC_RELAXED);
   sync_store(&action->coalesced_dest_buffer[dest].count_written, _clear_counts, SYNC_RELAXED);
   sync_store(&action->coalesced_dest_buffer[dest].count_allocated, _clear_counts, SYNC_RELAXED);
-  sync_store(&(action->coalesced_dest_buffer[dest].fatp)->size, 0, SYNC_RELAXED);
-  sync_store(&action->coalesced_dest_buffer[dest].next, hpx_parcel_get_data(action->coalesced_dest_buffer[dest].fatp),  SYNC_RELAXED);
+  sync_store(&((action->coalesced_dest_buffer[dest].fatp)->size), 0, SYNC_RELAXED);
+  sync_store(&action->coalesced_dest_buffer[dest].next, (char*) hpx_parcel_get_data(action->coalesced_dest_buffer[dest].fatp),  SYNC_RELAXED);
+  printf("Clearing the fat parcel done.\n");
 }
 
 void flush (action_t *action) {
@@ -94,7 +100,11 @@ void flush (action_t *action) {
        unsigned int count_written = sync_load(&action->coalesced_dest_buffer[l].count_written, SYNC_RELAXED);
        // adjust the partially filled buffer size
        // action->coalesced_dest_buffer[l].fatp->size = sizeof(hpx_addr_t) + sizeof(uint64_t) * count_written;
-      hpx_parcel_send(action->coalesced_dest_buffer[l].fatp, HPX_NULL);
+       // need an lco for the following call bcz we clear out the parcel fields and we need to make sure that it has been copied out properly before clearing
+       hpx_addr_t send = hpx_lco_future_new(0);
+       hpx_parcel_send(action->coalesced_dest_buffer[l].fatp, send);
+       hpx_lco_wait(send);
+       hpx_lco_delete(send, HPX_NULL);
       //TODO: IS call to clear_all needed?
       _clear_all(action, l);
     }
@@ -121,7 +131,14 @@ static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned 
     }
     assert(sync_load(&action->coalesced_dest_buffer[dest].registered_with_td,
 	    SYNC_RELAXED) == true);
-    hpx_parcel_send(action->coalesced_dest_buffer[dest].fatp, HPX_NULL);
+    hpx_addr_t send = hpx_lco_future_new(0);
+    hpx_parcel_t temp;
+    memcpy(&temp, action->coalesced_dest_buffer[dest].fatp, parcel_size(action->coalesced_dest_buffer[dest].fatp));
+    hpx_parcel_send(action->coalesced_dest_buffer[dest].fatp, send);
+    //hpx_parcel_send(&temp, send);
+    hpx_lco_wait(send);
+    hpx_lco_delete(send, HPX_NULL);
+    printf("Have sent the fat parcel with size %"PRIu32" \n", action->coalesced_dest_buffer[dest].fatp->size);
     _clear_all(action, dest);
     return true;
   }
