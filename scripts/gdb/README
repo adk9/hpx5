@@ -8,6 +8,7 @@ directory [ABSOLUTE PATH WHERE THE SCRIPTS ARE PRESENT]
 source hpx_prefix_cmd.py
 source print_var.py
 source cmd_parcel.py
+source hpx_frame_filter.py
 
 Commands List:
 hpx print
