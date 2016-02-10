@@ -14,6 +14,10 @@
 #ifndef INSTRUMENTATION_H
 #define INSTRUMENTATION_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <hpx/attributes.h>
 #include <hpx/builtins.h>
@@ -37,7 +41,7 @@ int inst_init(struct config *cfg)
 /// "Start" instrumentation. This is usually called in hpx_run(). This takes
 /// care of some things that must be done after initialization is complete,
 /// specifically action registration.
-int inst_start();
+int inst_start(void);
 
 /// Finalize the instrumentation framework.
 void inst_fini(void);
@@ -58,7 +62,8 @@ void inst_vtrace(int type, int n, int id, ...);
 # define inst_trace(type, id, ...)
 #endif
 
-// This matches the order in config.h trace_t.
+/// Instrumentation classes.
+/// This matches the order in config.h trace_t.
 #define      INST_PARCEL INT32_C(0)
 #define INST_NETWORK_PWC INT32_C(1)
 #define       INST_SCHED INT32_C(2)
@@ -80,113 +85,12 @@ static const char * const INST_CLASS_TO_STRING[] = {
   "BOOKEND"
 };
 
-#define  INST_EVENT_PARCEL_CREATE INT32_C(0)
-#define    INST_EVENT_PARCEL_SEND INT32_C(1)
-#define    INST_EVENT_PARCEL_RECV INT32_C(2)
-#define     INST_EVENT_PARCEL_RUN INT32_C(3)
-#define     INST_EVENT_PARCEL_END INT32_C(4)
-#define INST_EVENT_PARCEL_SUSPEND INT32_C(5)
-#define  INST_EVENT_PARCEL_RESUME INT32_C(6)
-#define  INST_EVENT_PARCEL_RESEND INT32_C(7)
-
-#define INST_EVENT_NETWORK_PWC_SEND INT32_C(8)
-#define INST_EVENT_NETWORK_PWC_RECV INT32_C(9)
-
-#define     INST_EVENT_SCHED_WQSIZE INT32_C(10)
-#define  INST_EVENT_SCHED_PUSH_LIFO INT32_C(11)
-#define   INST_EVENT_SCHED_POP_LIFO INT32_C(12)
-#define INST_EVENT_SCHED_STEAL_LIFO INT32_C(13)
-#define      INST_EVENT_SCHED_ENTER INT32_C(14)
-#define       INST_EVENT_SCHED_EXIT INT32_C(15)
-
-#define          INST_EVENT_LCO_INIT INT32_C(16)
-#define        INST_EVENT_LCO_DELETE INT32_C(17)
-#define           INST_EVENT_LCO_SET INT32_C(18)
-#define         INST_EVENT_LCO_RESET INT32_C(19)
-#define INST_EVENT_LCO_ATTACH_PARCEL INT32_C(20)
-#define          INST_EVENT_LCO_WAIT INT32_C(21)
-#define       INST_EVENT_LCO_TRIGGER INT32_C(22)
-
-#define    INST_EVENT_PROCESS_NEW INT32_C(23)
-#define   INST_EVENT_PROCESS_CALL INT32_C(24)
-#define INST_EVENT_PROCESS_DELETE INT32_C(25)
-
-#define INST_EVENT_MEMORY_REGISTERED_ALLOC INT32_C(26)
-#define  INST_EVENT_MEMORY_REGISTERED_FREE INT32_C(27)
-#define     INST_EVENT_MEMORY_GLOBAL_ALLOC INT32_C(28)
-#define      INST_EVENT_MEMORY_GLOBAL_FREE INT32_C(29)
-#define     INST_EVENT_MEMORY_CYCLIC_ALLOC INT32_C(30)
-#define      INST_EVENT_MEMORY_CYCLIC_FREE INT32_C(31)
-#define INST_EVENT_MEMORY_ENTER_ALLOC_FREE INT32_C(32)
-
-#define        INST_EVENT_SCHEDTIMES_SCHED INT32_C(33)
-#define        INST_EVENT_SCHEDTIMES_PROBE INT32_C(34)
-#define     INST_EVENT_SCHEDTIMES_PROGRESS INT32_C(35)
-
-#define                 INST_EVENT_BOOKEND INT32_C(36)
-#define                    INST_NUM_EVENTS INT32_C(37)
-
-static const char * const INST_EVENT_TO_STRING[] = {
-  "PARCEL_CREATE",
-  "PARCEL_SEND",
-  "PARCEL_RECV",
-  "PARCEL_RUN",
-  "PARCEL_END",
-  "PARCEL_SUSPEND",
-  "PARCEL_RESUME",
-  "PARCEL_RESEND",
-
-  "NETWORK_PWC_SEND",
-  "NETWORK_PWC_RECV",
-
-  "SCHED_WQSIZE",
-  "SCHED_PUSH_LIFO",
-  "SCHED_POP_LIFO",
-  "SCHED_STEAL_LIFO",
-  "SCHED_ENTER",
-  "SCHED_EXIT",
-
-  "LCO_INIT",
-  "LCO_DELETE",
-  "LCO_SET",
-  "LCO_RESET",
-  "LCO_ATTACH_PARCEL",
-  "LCO_WAIT",
-  "LCO_TRIGGER",
-
-  "PROCESS_NEW",
-  "PROCESS_CALL",
-  "PROCESS_DELETE",
-
-  "MEMORY_REGISTERED_ALLOC",
-  "MEMORY_REGISTERED_FREE",
-  "MEMORY_GLOBAL_ALLOC",
-  "MEMORY_GLOBAL_FREE",
-  "MEMORY_CYCLIC_ALLOC",
-  "MEMORY_CYCLIC_FREE",
-  "MEMORY_ENTER_ALLOC_FREE",
-
-  "SCHEDTIMES_SCHED",
-  "SCHEDTIMES_PROBE",
-  "SCHEDTIMES_PROGRESS",
-
-  "INST_BOOKEND"
-};
-
-static const int INST_OFFSETS[] = {
-  INST_EVENT_PARCEL_CREATE,
-  INST_EVENT_NETWORK_PWC_SEND,
-  INST_EVENT_SCHED_WQSIZE,
-  INST_EVENT_LCO_INIT,
-  INST_EVENT_PROCESS_NEW,
-  INST_EVENT_MEMORY_REGISTERED_ALLOC,
-  INST_EVENT_SCHEDTIMES_SCHED,
-  INST_EVENT_BOOKEND,
-  INST_NUM_EVENTS
-};
-
 static inline bool inst_trace_class(int type) {
   return config_trace_classes_isset(here->config, 1 << type);
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

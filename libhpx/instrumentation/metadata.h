@@ -17,6 +17,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <libhpx/instrumentation.h>
+#include <libhpx/events.h>
 
 // ==================== Event data =============================================
 
