@@ -170,7 +170,7 @@ void action_registration_finalize(void) {
 	actions[i].coalesced_dest_buffer[l].fatp = action_new_parcel(_demux,
 				HPX_THERE(l), 0, *data_action_id, 2, NULL, bytes);
 	//want to reuse the fat parcel
-	hpx_parcel_retain(actions[i].coalesced_dest_buffer[l].fatp);
+	//hpx_parcel_retain(actions[i].coalesced_dest_buffer[l].fatp);
 	actions[i].coalesced_dest_buffer[l].next = hpx_parcel_get_data(actions[i].coalesced_dest_buffer[l].fatp);
 	unsigned int sender_active = UINT_MAX - UINT_MAX / 2;
 	actions[i].coalesced_dest_buffer[l].sender_active = sender_active;

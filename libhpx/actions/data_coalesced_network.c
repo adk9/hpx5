@@ -69,6 +69,12 @@ static void _clear_all(action_t *action, uint32_t dest) {
 	     SYNC_RELAXED);
   sync_store(&action->coalesced_dest_buffer[dest].count_written, _clear_counts, SYNC_RELAXED);
   sync_store(&action->coalesced_dest_buffer[dest].count_allocated, _clear_counts, SYNC_RELAXED);
+  hpx_action_t *data_action_id = action->id;
+  size_t bytes = COALESCING_SIZE * (sizeof(hpx_addr_t) + sizeof(uint64_t));
+  action->coalesced_dest_buffer[dest].fatp = action_new_parcel(_demux,
+				HPX_THERE(dest), 0, *data_action_id, 2, NULL, bytes);
+
+
   sync_store(&((action->coalesced_dest_buffer[dest].fatp)->size), 0, SYNC_RELAXED);
   sync_store(&action->coalesced_dest_buffer[dest].next, (char*) hpx_parcel_get_data(action->coalesced_dest_buffer[dest].fatp),  SYNC_RELAXED);
   printf("Clearing the fat parcel done.\n");
@@ -101,12 +107,20 @@ void flush (action_t *action) {
        // adjust the partially filled buffer size
        // action->coalesced_dest_buffer[l].fatp->size = sizeof(hpx_addr_t) + sizeof(uint64_t) * count_written;
        // need an lco for the following call bcz we clear out the parcel fields and we need to make sure that it has been copied out properly before clearing
+       //hpx_addr_t send = hpx_lco_future_new(0);
+       //hpx_parcel_send(action->coalesced_dest_buffer[l].fatp, send);
+       //hpx_lco_wait(send);
+       //hpx_lco_delete(send, HPX_NULL);
+      //TODO: IS call to clear_all needed?
+       hpx_parcel_t temp;
        hpx_addr_t send = hpx_lco_future_new(0);
-       hpx_parcel_send(action->coalesced_dest_buffer[l].fatp, send);
+       memcpy(&temp, action->coalesced_dest_buffer[l].fatp, parcel_size(action->coalesced_dest_buffer[l].fatp));
+       hpx_parcel_send(&temp, send);
        hpx_lco_wait(send);
        hpx_lco_delete(send, HPX_NULL);
-      //TODO: IS call to clear_all needed?
-      _clear_all(action, l);
+       printf("Have sent the fat parcel with size %"PRIu32" \n", action->coalesced_dest_buffer[l].fatp->size);
+       // network_send(here->network, &temp);
+       _clear_all(action, l);
     }
   }
 }
@@ -134,8 +148,9 @@ static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned 
     hpx_addr_t send = hpx_lco_future_new(0);
     hpx_parcel_t temp;
     memcpy(&temp, action->coalesced_dest_buffer[dest].fatp, parcel_size(action->coalesced_dest_buffer[dest].fatp));
-    hpx_parcel_send(action->coalesced_dest_buffer[dest].fatp, send);
-    //hpx_parcel_send(&temp, send);
+    //network_send(here->network, &temp);
+    //hpx_parcel_send(action->coalesced_dest_buffer[dest].fatp, send);
+    hpx_parcel_send(&temp, send);
     hpx_lco_wait(send);
     hpx_lco_delete(send, HPX_NULL);
     printf("Have sent the fat parcel with size %"PRIu32" \n", action->coalesced_dest_buffer[dest].fatp->size);
