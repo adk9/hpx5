@@ -47,7 +47,7 @@ static const char *_log_path = NULL;
 static bool _detailed_prof = false;
 
 /// We're keeping one log per event per locality. Here are their headers.
-static logtable_t _logs[INST_NUM_EVENTS] = {LOGTABLE_INIT};
+static logtable_t _logs[TRACE_NUM_EVENTS] = {LOGTABLE_INIT};
 
 /// Concatenate two paths. Callee must free returned char*.
 static char *_get_complete_path(const char *path, const char *filename) {
@@ -93,8 +93,8 @@ static void _log_create(int class, int id, size_t size, hpx_time_t now) {
   char filename[256];
   snprintf(filename, 256, "event.%d.%d.%d.%s.%s.log",
            class, id, hpx_get_my_rank(),
-           INST_CLASS_TO_STRING[class],
-           INST_EVENT_TO_STRING[id]);
+           TRACE_CLASS_TO_STRING[class],
+           TRACE_EVENT_TO_STRING[id]);
 
   char *file_path = _get_complete_path(_log_path, filename);
 
@@ -167,9 +167,9 @@ int inst_init(config_t *cfg) {
 
   // create log files
   hpx_time_t start = hpx_time_now();
-  inst_trace(INST_BOOKEND, INST_EVENT_BOOKEND);
-  for (int cl = 0, e = INST_NUM_CLASSES; cl < e; ++cl) {
-    for (int id = INST_OFFSETS[cl], e = INST_OFFSETS[cl + 1]; id < e; ++id) {
+  inst_trace(TRACE_BOOKEND, TRACE_EVENT_BOOKEND);
+  for (int cl = 0, e = TRACE_NUM_CLASSES; cl < e; ++cl) {
+    for (int id = TRACE_OFFSETS[cl], e = TRACE_OFFSETS[cl + 1]; id < e; ++id) {
       if (inst_trace_class(cl)) {
         _log_create(cl, id, cfg->trace_filesize, start);
       }
@@ -182,7 +182,7 @@ int inst_init(config_t *cfg) {
   }
   _detailed_prof = cfg->prof_detailed;
 
-  inst_trace(INST_BOOKEND, INST_EVENT_BOOKEND);
+  inst_trace(TRACE_BOOKEND, TRACE_EVENT_BOOKEND);
   return LIBHPX_OK;
 }
 
@@ -221,7 +221,7 @@ int inst_start(void) {
   return LIBHPX_OK;
 #endif
   // write action table for tracing
-  if (inst_trace_class(INST_PARCEL)) {
+  if (inst_trace_class(TRACE_PARCEL)) {
     _dump_actions();
     _dump_hostnames();
   }
@@ -230,9 +230,9 @@ int inst_start(void) {
 }
 
 void inst_fini(void) {
-  inst_trace(INST_BOOKEND, INST_EVENT_BOOKEND);
+  inst_trace(TRACE_BOOKEND, TRACE_EVENT_BOOKEND);
   prof_fini();
-  for (int i = 0, e = INST_NUM_EVENTS; i < e; ++i) {
+  for (int i = 0, e = TRACE_NUM_EVENTS; i < e; ++i) {
     logtable_fini(&_logs[i]);
   }
   free((void*)_log_path);

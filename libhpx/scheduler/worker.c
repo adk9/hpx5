@@ -617,7 +617,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   p = (p) ? _try_bind(w, p) : w->system;
 
   EVENT_SCHED_EXIT();
-  inst_trace(INST_SCHEDTIMES, INST_EVENT_SCHEDTIMES_SCHED,
+  inst_trace(TRACE_SCHEDTIMES, TRACE_EVENT_SCHEDTIMES_SCHED,
     start_time, source, spins);
 
   // don't transfer to the same parcel

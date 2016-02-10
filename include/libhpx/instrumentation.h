@@ -62,19 +62,19 @@ void inst_vtrace(int type, int n, int id, ...);
 # define inst_trace(type, id, ...)
 #endif
 
-/// Instrumentation classes.
+/// Tracing classes.
 /// This matches the order in config.h trace_t.
-#define      INST_PARCEL INT32_C(0)
-#define INST_NETWORK_PWC INT32_C(1)
-#define       INST_SCHED INT32_C(2)
-#define         INST_LCO INT32_C(3)
-#define     INST_PROCESS INT32_C(4)
-#define      INST_MEMORY INT32_C(5)
-#define  INST_SCHEDTIMES INT32_C(6)
-#define     INST_BOOKEND INT32_C(7)
-#define INST_NUM_CLASSES INT32_C(8)
+#define      TRACE_PARCEL INT32_C(0)
+#define TRACE_NETWORK_PWC INT32_C(1)
+#define       TRACE_SCHED INT32_C(2)
+#define         TRACE_LCO INT32_C(3)
+#define     TRACE_PROCESS INT32_C(4)
+#define      TRACE_MEMORY INT32_C(5)
+#define  TRACE_SCHEDTIMES INT32_C(6)
+#define     TRACE_BOOKEND INT32_C(7)
+#define TRACE_NUM_CLASSES INT32_C(8)
 
-static const char * const INST_CLASS_TO_STRING[] = {
+static const char * const TRACE_CLASS_TO_STRING[] = {
   "PARCEL",
   "NETWORK_PWC",
   "SCHED",

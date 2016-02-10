@@ -114,7 +114,7 @@ network_t *network_new(config_t *cfg, boot_t *boot, struct gas *gas) {
     return network;
   }
 
-  if (!inst_trace_class(INST_SCHEDTIMES)) {
+  if (!inst_trace_class(TRACE_SCHEDTIMES)) {
     return network;
   }
 

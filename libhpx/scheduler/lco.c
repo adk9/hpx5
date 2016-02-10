@@ -41,7 +41,7 @@
 #define _STATE_MASK        (0x7)
 
 static inline void EVENT_LCO(const lco_t *lco, const int id) {
-  inst_trace(INST_LCO, id, lco, (self) ? self->id : -1, lco->bits);
+  inst_trace(TRACE_LCO, id, lco, (self) ? self->id : -1, lco->bits);
 }
 
 /// return the class pointer, masking out the state.
@@ -56,14 +56,14 @@ static const lco_class_t *_class(lco_t *lco) {
 }
 
 static hpx_status_t _fini(lco_t *lco) {
-  EVENT_LCO(lco, INST_EVENT_LCO_DELETE);
+  EVENT_LCO(lco, TRACE_EVENT_LCO_DELETE);
   dbg_assert_str(_class(lco)->on_fini, "LCO implementation incomplete\n");
   _class(lco)->on_fini(lco);
   return HPX_SUCCESS;
 }
 
 static hpx_status_t _set(lco_t *lco, size_t size, const void *data) {
-  EVENT_LCO(lco, INST_EVENT_LCO_SET);
+  EVENT_LCO(lco, TRACE_EVENT_LCO_SET);
   const lco_class_t *class = _class(lco);
   dbg_assert_str(class->on_set, "LCO has no on_set handler\n");
   int e = class->on_set(lco, size, data);
@@ -84,7 +84,7 @@ static hpx_status_t _error(lco_t *lco, hpx_status_t code) {
 }
 
 static hpx_status_t _reset(lco_t *lco) {
-  EVENT_LCO(lco, INST_EVENT_LCO_RESET);
+  EVENT_LCO(lco, TRACE_EVENT_LCO_RESET);
   const lco_class_t *class = _class(lco);
   dbg_assert_str(class->on_reset, "LCO has no on_reset handler\n");
   class->on_reset(lco);
@@ -111,14 +111,14 @@ static hpx_status_t _release(lco_t *lco, void *out) {
 }
 
 static hpx_status_t _wait(lco_t *lco, int reset) {
-  EVENT_LCO(lco, INST_EVENT_LCO_WAIT);
+  EVENT_LCO(lco, TRACE_EVENT_LCO_WAIT);
   const lco_class_t *class = _class(lco);
   dbg_assert_str(class->on_wait, "LCO has no on_wait handler\n");
   return class->on_wait(lco, reset);
 }
 
 static hpx_status_t _attach(lco_t *lco, hpx_parcel_t *p) {
-  EVENT_LCO(lco, INST_EVENT_LCO_ATTACH_PARCEL);
+  EVENT_LCO(lco, TRACE_EVENT_LCO_ATTACH_PARCEL);
   const lco_class_t *class = _class(lco);
   dbg_assert_str(class->on_attach, "LCO has no on_attach handler\n");
   return class->on_attach(lco, p);
@@ -222,7 +222,7 @@ void lco_unlock(lco_t *lco) {
 }
 
 void lco_init(lco_t *lco, const lco_class_t *class) {
-  EVENT_LCO(lco, INST_EVENT_LCO_INIT);
+  EVENT_LCO(lco, TRACE_EVENT_LCO_INIT);
   lco->vtable = class;
 }
 
@@ -231,7 +231,7 @@ void lco_fini(lco_t *lco) {
 }
 
 void lco_set_triggered(lco_t *lco) {
-  EVENT_LCO(lco, INST_EVENT_LCO_TRIGGER);
+  EVENT_LCO(lco, TRACE_EVENT_LCO_TRIGGER);
   lco->bits |= _TRIGGERED_MASK;
 }
 
