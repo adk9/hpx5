@@ -31,7 +31,7 @@ int cont1(int arg) {
 //   hpx_call_cc(HPX_HERE, cont2_action_struct::id, &arg);
   return hpx_thread_continue(&arg);
 }
-auto cont1_obj = hpx::make_action(cont1);
+auto cont1_obj = hpx::make_action<HPX_DEFAULT, HPX_ATTR_NONE, decltype(cont1), int>(cont1);
 
 int main_act(int arg) {
   std::cout << "main_act arg: " << arg << std::endl;
