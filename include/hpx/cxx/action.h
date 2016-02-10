@@ -81,6 +81,24 @@ namespace hpx {
   
 // The action type 
 template <hpx_action_type_t TYPE, uint32_t ATTR, typename F, typename... ContTs>
+class Action;
+
+template <typename A>
+struct Action_traits;
+
+template <typename A>
+struct Action_traits<A&> : public Action_traits<A>
+{};
+
+template <hpx_action_type_t TYPE, uint32_t ATTR, typename F, typename... ContTs>
+struct Action_traits< Action<TYPE, ATTR, F, ContTs...> > {
+  using ftype = F;
+  using ctypes = hpx::detail::tlist<ContTs...>;
+  static constexpr std::size_t arity = sizeof...(ContTs);
+};
+  
+// The action type 
+template <hpx_action_type_t TYPE, uint32_t ATTR, typename F, typename... ContTs>
 class Action {
 private:
   hpx_action_t _id;
@@ -219,12 +237,16 @@ public:
 ///                     locally during the hpx_call invocation.
   template <typename Cont, typename... Args>
   int call_with_continuation(hpx_addr_t addr, hpx_addr_t c_target, Cont&& c_action, Args&... args) {
+    // check if the continued types of current action (caller) match input arguments of c_action (callee)
+    static_assert(std::is_same<hpx::detail::tlist<ContTs...>, hpx::detail::tlist<Args...>>::value, 
+		  "continued types and continuation argument types must match...");
     return _hpx_call_with_continuation(addr, _id, c_target, c_action.get_id(), sizeof...(Args), &args...);
   }
   template <typename T1, typename T2, typename Cont, typename... Args>
-  int call_with_continuation(const ::hpx::global_ptr<T1>& addr, 
-				    const ::hpx::global_ptr<T2>& c_target, 
-				    Cont&& c_action, Args&... args) {
+  int call_with_continuation(const ::hpx::global_ptr<T1>& addr, const ::hpx::global_ptr<T2>& c_target, 
+			     Cont&& c_action, Args&... args) {
+    static_assert(std::is_same<hpx::detail::tlist<ContTs...>, hpx::detail::tlist<Args...>>::value, 
+		  "continued types and continuation argument types must match...");
     return _hpx_call_with_continuation(addr.get(), _id, c_target.get(), c_action.get_id(), sizeof...(Args), &args...);
   }
   
