@@ -161,26 +161,28 @@ static const char *const HPX_LOG_LEVEL_TO_STRING[] = {
   "MEMORY"
 };
 
-#define HPX_TRACE_PARCELS   (UINT64_C(1) << 0)
-#define HPX_TRACE_PWC       (UINT64_C(1) << 1)
-#define HPX_TRACE_SCHED     (UINT64_C(1) << 2)
-#define HPX_TRACE_LCO       (UINT64_C(1) << 3)
-#define HPX_TRACE_PROCESS   (UINT64_C(1) << 4)
-#define HPX_TRACE_MEMORY    (UINT64_C(1) << 5)
-#define HPX_TRACE_BOOKEND   (UINT64_C(1) << 6)
+//! Configuration options for instrumentation in HPX.
+#define HPX_TRACE_PARCEL      (UINT64_C(1) << 0)
+#define HPX_TRACE_NETWORK_PWC (UINT64_C(1) << 1)
+#define HPX_TRACE_SCHED       (UINT64_C(1) << 2)
+#define HPX_TRACE_LCO         (UINT64_C(1) << 3)
+#define HPX_TRACE_PROCESS     (UINT64_C(1) << 4)
+#define HPX_TRACE_MEMORY      (UINT64_C(1) << 5)
+#define HPX_TRACE_SCHEDTIMES  (UINT64_C(1) << 6)
+#define HPX_TRACE_BOOKEND     (UINT64_C(1) << 7)
 
 static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
-  "PARCELS",
-  "PWC",
+  "PARCEL",
+  "NETWORK_PWC",
   "SCHED",
   "LCO",
   "PROCESS",
   "MEMORY",
   "SCHEDTIMES",
-  "BOOKEND",
-  "ALL"
+  "BOOKEND"
 };
 
+//! Configuration options for profiling in HPX.
 typedef enum {
  HPX_L1_TCM = 0,
  HPX_L1_TCA,

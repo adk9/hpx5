@@ -24,6 +24,7 @@
 #include <libsync/sync.h>
 #include <libhpx/action.h>
 #include <libhpx/attach.h>
+#include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/locality.h>
@@ -41,7 +42,7 @@
 #define _STATE_MASK        (0x7)
 
 static inline void EVENT_LCO(const lco_t *lco, const int id) {
-  inst_trace(TRACE_LCO, id, lco, (self) ? self->id : -1, lco->bits);
+  inst_trace(HPX_TRACE_LCO, id, lco, (self) ? self->id : -1, lco->bits);
 }
 
 /// return the class pointer, masking out the state.

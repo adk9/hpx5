@@ -93,7 +93,7 @@ static void _log_create(int class, int id, size_t size, hpx_time_t now) {
   char filename[256];
   snprintf(filename, 256, "event.%d.%d.%d.%s.%s.log",
            class, id, hpx_get_my_rank(),
-           TRACE_CLASS_TO_STRING[class],
+           HPX_TRACE_CLASS_TO_STRING[class],
            TRACE_EVENT_TO_STRING[id]);
 
   char *file_path = _get_complete_path(_log_path, filename);
@@ -167,10 +167,11 @@ int inst_init(config_t *cfg) {
 
   // create log files
   hpx_time_t start = hpx_time_now();
-  inst_trace(TRACE_BOOKEND, TRACE_EVENT_BOOKEND);
-  for (int cl = 0, e = TRACE_NUM_CLASSES; cl < e; ++cl) {
-    for (int id = TRACE_OFFSETS[cl], e = TRACE_OFFSETS[cl + 1]; id < e; ++id) {
-      if (inst_trace_class(cl)) {
+  inst_trace(HPX_TRACE_BOOKEND, TRACE_EVENT_BOOKEND);
+  int nclasses = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING);
+  for (int cl = 0, e = nclasses; cl < e; ++cl) {
+    if (inst_trace_class(1 << cl)) {
+      for (int id = TRACE_OFFSETS[cl], e = TRACE_OFFSETS[cl + 1]; id < e; ++id) {
         _log_create(cl, id, cfg->trace_filesize, start);
       }
     }
@@ -182,7 +183,7 @@ int inst_init(config_t *cfg) {
   }
   _detailed_prof = cfg->prof_detailed;
 
-  inst_trace(TRACE_BOOKEND, TRACE_EVENT_BOOKEND);
+  inst_trace(HPX_TRACE_BOOKEND, TRACE_EVENT_BOOKEND);
   return LIBHPX_OK;
 }
 
@@ -221,7 +222,7 @@ int inst_start(void) {
   return LIBHPX_OK;
 #endif
   // write action table for tracing
-  if (inst_trace_class(TRACE_PARCEL)) {
+  if (inst_trace_class(HPX_TRACE_PARCEL)) {
     _dump_actions();
     _dump_hostnames();
   }
@@ -230,7 +231,7 @@ int inst_start(void) {
 }
 
 void inst_fini(void) {
-  inst_trace(TRACE_BOOKEND, TRACE_EVENT_BOOKEND);
+  inst_trace(HPX_TRACE_BOOKEND, TRACE_EVENT_BOOKEND);
   prof_fini();
   for (int i = 0, e = TRACE_NUM_EVENTS; i < e; ++i) {
     logtable_fini(&_logs[i]);

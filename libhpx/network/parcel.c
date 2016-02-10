@@ -175,7 +175,7 @@ void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
   p->credit   = 0;
 
 #ifdef ENABLE_INSTRUMENTATION
-  if (inst_trace_class(TRACE_PARCEL)) {
+  if (inst_trace_class(HPX_TRACE_PARCEL)) {
     parcel_count++;
     int rank = hpx_get_my_rank();
     int thread = hpx_get_my_thread_id();

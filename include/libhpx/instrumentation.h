@@ -62,31 +62,8 @@ void inst_vtrace(int type, int n, int id, ...);
 # define inst_trace(type, id, ...)
 #endif
 
-/// Tracing classes.
-/// This matches the order in config.h trace_t.
-#define      TRACE_PARCEL INT32_C(0)
-#define TRACE_NETWORK_PWC INT32_C(1)
-#define       TRACE_SCHED INT32_C(2)
-#define         TRACE_LCO INT32_C(3)
-#define     TRACE_PROCESS INT32_C(4)
-#define      TRACE_MEMORY INT32_C(5)
-#define  TRACE_SCHEDTIMES INT32_C(6)
-#define     TRACE_BOOKEND INT32_C(7)
-#define TRACE_NUM_CLASSES INT32_C(8)
-
-static const char * const TRACE_CLASS_TO_STRING[] = {
-  "PARCEL",
-  "NETWORK_PWC",
-  "SCHED",
-  "LCO",
-  "PROCESS",
-  "MEMORY",
-  "SCHEDTIMES",
-  "BOOKEND"
-};
-
 static inline bool inst_trace_class(int type) {
-  return config_trace_classes_isset(here->config, 1 << type);
+  return config_trace_classes_isset(here->config, type);
 }
 
 #ifdef __cplusplus
