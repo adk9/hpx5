@@ -374,7 +374,7 @@ class pin_guard {
   /// @param        gva The address we're trying to pin.
   /// @throw   NotLocal If the @p gva is not local.
   explicit pin_guard(const global_ptr<T>& gva)
-    : _gva(gva), _local(true), _lva(gva.pin()) {
+    : _gva(gva), _lva(gva.pin()), _local(true) {
   }
 
   /// This version of the pin_guard constructor will return the success or
@@ -384,7 +384,7 @@ class pin_guard {
   /// @param        gva The address we're trying to pin.
   /// @param[out] local A flag indication if the @p gva was local.
   pin_guard(const global_ptr<T>& gva, bool &local)
-    : _gva(gva), _local(true), _lva(gva.pin(_local)) {
+    : _gva(gva), _lva(gva.pin(_local)), _local(true) {
     local = _local;
   }
 

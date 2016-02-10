@@ -18,32 +18,40 @@
 #include <iostream>
 #include <hpx/hpx++.h>
 
-namespace {
+using namespace std;
 
-int test_handler(void) {
-  auto f1 = hpx::lco::Future<double>::Alloc();
-  auto f2 = hpx::lco::Future<void>::Alloc();
-
-  hpx::lco::dealloc(f1);
-  hpx::lco::dealloc(f2);
-
-  hpx_exit(hpx::SUCCESS);
+int cont2(int arg) {
+  std::cout << "cont2 arg: " << arg << std::endl;
+  return hpx::SUCCESS;
 }
-auto test = hpx::make_action(test_handler);
+auto cont2_obj = hpx::make_action(cont2);
+
+int cont1(int arg) {
+  std::cout << "cont1 arg: " << arg << std::endl;
+//   hpx_call_cc(HPX_HERE, cont2_action_struct::id, &arg);
+  return hpx_thread_continue(&arg);
 }
+auto cont1_obj = hpx::make_action<HPX_DEFAULT, HPX_ATTR_NONE, decltype(cont1), int>(cont1);
+
+int main_act(int arg) {
+  std::cout << "main_act arg: " << arg << std::endl;
+  
+  cont1_obj.call_with_continuation(HPX_HERE, HPX_HERE, cont2_obj, arg);
+  
+  hpx::exit(hpx::SUCCESS);
+}
+auto main_act_obj = hpx::make_action(main_act);
 
 int main(int argc, char* argv[]) {
 
-  if (int e = hpx::init(&argc, &argv)) {
+  int e = hpx::init(&argc, &argv);
+  if (e) {
     std::cerr << "HPX: failed to initialize." << std::endl;
     return e;
   }
-
-  if (int e = test.run()) {
-    return e;
-  }
+  int a = hpx_get_my_rank() + 1;
+  main_act_obj.run(a);
 
   hpx::finalize();
   return 0;
 }
-
