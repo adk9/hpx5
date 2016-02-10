@@ -148,17 +148,17 @@ static const char * const HPX_SCHED_POLICY_TO_STRING[] = {
 #define HPX_LOG_COLL    2048            //!< Log collectives
 
 static const char *const HPX_LOG_LEVEL_TO_STRING[] = {
-  "default",
-  "boot",
-  "sched",
-  "gas",
-  "lco",
-  "net",
-  "trans",
-  "parcel",
-  "action",
-  "config",
-  "memory"
+  "DEFAULT",
+  "BOOT",
+  "SCHED",
+  "GAS",
+  "LCO",
+  "NET",
+  "TRANS",
+  "PARCEL",
+  "ACTION",
+  "CONFIG",
+  "MEMORY"
 };
 
 #define HPX_TRACE_PARCELS   (UINT64_C(1) << 0)
@@ -170,15 +170,15 @@ static const char *const HPX_LOG_LEVEL_TO_STRING[] = {
 #define HPX_TRACE_BOOKEND   (UINT64_C(1) << 6)
 
 static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
-  "parcels",
-  "pwc",
-  "sched",
-  "lco",
-  "process",
-  "memory",
-  "schedtimes",
-  "bookend",
-  "all"
+  "PARCELS",
+  "PWC",
+  "SCHED",
+  "LCO",
+  "PROCESS",
+  "MEMORY",
+  "SCHEDTIMES",
+  "BOOKEND",
+  "ALL"
 };
 
 typedef enum {
