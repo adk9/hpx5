@@ -39,6 +39,10 @@
 #include <libhpx/profiling.h>
 #include "logtable.h"
 
+#ifndef HOST_NAME_MAX
+#define HOST_NAME_MAX 255
+#endif
+
 /// complete path to the directory to which log files, etc. will be written
 static const char *_log_path = NULL;
 
