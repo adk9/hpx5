@@ -136,13 +136,13 @@ void logtable_fini(logtable_t *log) {
 void logtable_append(logtable_t *log, uint64_t u1, uint64_t u2, uint64_t u3,
                      uint64_t u4) {
   size_t i = sync_fadd(&log->next, 1, SYNC_ACQ_REL);
-  if (_header_size(log) + (i + 1) * sizeof(record_t) > log->max_size) {
+  if (_header_size(log) + (i+1) * sizeof(record_t) > log->max_size) {
     return;
   }
   sync_fadd(&log->last, 1, SYNC_ACQ_REL); // update size
 
   record_t *r = &log->records[i];
-  r->worker = hpx_get_my_thread_id();
+  r->worker = HPX_THREAD_ID;
   r->ns = hpx_time_from_start_ns(hpx_time_now());
   r->user[0] = u1;
   r->user[1] = u2;

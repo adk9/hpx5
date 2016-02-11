@@ -156,7 +156,7 @@ int inst_init(config_t *cfg) {
 #ifndef ENABLE_INSTRUMENTATION
   return LIBHPX_OK;
 #endif
-  if (!config_inst_at_isset(cfg, hpx_get_my_rank())) {
+  if (!config_inst_at_isset(cfg, HPX_LOCALITY_ID)) {
     return LIBHPX_OK;
   }
 
@@ -195,7 +195,7 @@ static void _dump_hostnames(void) {
   gethostname(hostname, HOST_NAME_MAX);
 
   char filename[256];
-  snprintf(filename, 256, "hostname.%d", hpx_get_my_rank());
+  snprintf(filename, 256, "hostname.%d", HPX_LOCALITY_ID);
   char *filepath = _get_complete_path(_log_path, filename);
   FILE *f = fopen(filepath, "w");
   if (f == NULL) {
@@ -245,7 +245,7 @@ void inst_prof_dump(profile_log_t log) {
   }
 
   char filename[256];
-  snprintf(filename, 256, "profile.%d", hpx_get_my_rank());
+  snprintf(filename, 256, "profile.%d", HPX_LOCALITY_ID);
   char *filepath = _get_complete_path(_log_path, filename);
   FILE *f = fopen(filepath, "w");
   if (!f) {
@@ -264,11 +264,11 @@ void inst_prof_dump(profile_log_t log) {
     hpx_time_t total_time;
     prof_get_total_time(log.events[i].key, &total_time);
     total_time_ms = hpx_time_ms(total_time);
-    if(total != 0){
+    if (total != 0) {
       fprintf(f, "Total recorded user value: %f\n", total);
     }
 
-    if(total_time_ms != 0 || (log.num_counters >0 && !log.events[i].simple)){
+    if (total_time_ms != 0 || (log.num_counters >0 && !log.events[i].simple)) {
       fprintf(f, "Statistics:\n");
       fprintf(f, "%-24s%-24s%-24s%-24s\n",
              "Type", "Average", "Minimum", "Maximum");
@@ -293,7 +293,7 @@ void inst_prof_dump(profile_log_t log) {
     prof_get_min_time(log.events[i].key, &min);
     prof_get_max_time(log.events[i].key, &max);
 
-    if(total_time_ms != 0){
+    if (total_time_ms != 0) {
       fprintf(f, "%-24s%-24.6f%-24.6f%-24.6f\n", "Time (ms)",
               hpx_time_ms(average),
               hpx_time_ms(min),
@@ -302,31 +302,31 @@ void inst_prof_dump(profile_log_t log) {
 
     if (_detailed_prof) {
       fprintf(f, "\nDUMP:\n\n%-24s", "Entry #");
-      if(!log.events[i].simple){
+      if (!log.events[i].simple) {
         for (int j = 0; j < log.num_counters; j++) {
           fprintf(f, "%-24s", HPX_COUNTER_TO_STRING[log.counters[j]]);
         }
       }
       fprintf(f, "%-24s", "Start Time (ms)");
-      if(total_time_ms != 0){
+      if (total_time_ms != 0) {
         fprintf(f, "%-24s", "CPU Time (ms)");
       }
-      if(total != 0){
+      if (total != 0) {
         fprintf(f, "%-24s", "User Value (ms)");
       }
       fprintf(f, "\n");
       for (int j = 0; j < log.events[i].num_entries; j++) {
         fprintf(f, "%-24d", j);
-        if(!log.events[i].simple){
+        if (!log.events[i].simple) {
           for (int k = 0; k < log.num_counters; k++) {
             fprintf(f, "%-24"PRIu64, log.events[i].entries[j].counter_totals[k]);
           }
         }
         fprintf(f, "%-24f", hpx_time_ms(log.events[i].entries[j].start_time));
-        if(total_time_ms != 0){
+        if (total_time_ms != 0) {
           fprintf(f, "%-24f", hpx_time_ms(log.events[i].entries[j].run_time));
         }
-        if(total != 0){
+        if (total != 0) {
           fprintf(f, "%-24f", log.events[i].entries[j].user_val);
         }
         fprintf(f, "\n");
@@ -349,16 +349,13 @@ void inst_vtrace(int UNUNSED, int n, int id, ...) {
     return;
   }
 
-  uint64_t args[4];
+  uint64_t args[4] = {0};
   va_list vargs;
   va_start(vargs, id);
   for (int i = 0; i < n; ++i) {
     args[i] = va_arg(vargs, uint64_t);
   }
   va_end(vargs);
-  for (int i = n; i < 4; ++i) {
-    args[i] = 0;
-  }
   logtable_append(log, args[0], args[1], args[2], args[3]);
 }
 
