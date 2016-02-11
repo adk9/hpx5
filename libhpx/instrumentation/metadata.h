@@ -218,7 +218,7 @@ typedef struct inst_event_col_metadata {
     .printf_code = "zu",                      \
     .name = "parent id"}
 
-#define METADATA_SCHEDULER_WQSIZE             \
+#define METADATA_SCHED_WQSIZE                 \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT64,         \
     .offset = INST_EVENT_COL_OFFSET_USER0,    \
@@ -310,291 +310,132 @@ typedef struct inst_event_metadata {
   const  inst_event_col_metadata_t col_metadata[INST_EVENT_NUM_COLS];
 } inst_event_metadata_t;
 
-#define EVENT_METADATA_NONE {0}
+#define _METADATA_NONE  {0}
+#define _METADATA_ARGS(a1,a2,a3,a4)           \
+  .num_cols = 6,                              \
+  .col_metadata = {                           \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
+    a1, a2, a3, a4                            \
+  }
 
 extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 
-#define PARCEL_CREATE_METADATA {              \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_PARCEL_ID,                       \
-    METADATA_PARCEL_ACTION,                   \
-    METADATA_PARCEL_SIZE,                     \
-    METADATA_PARCEL_PARENT_ID                 \
-  }                                           \
-}
+#define PARCEL_CREATE_METADATA                                   \
+  _METADATA_ARGS(METADATA_PARCEL_ID, METADATA_PARCEL_ACTION,     \
+                 METADATA_PARCEL_SIZE, METADATA_PARCEL_PARENT_ID)
 
-#define PARCEL_SEND_METADATA {                \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_PARCEL_ID,                       \
-    METADATA_PARCEL_ACTION,                   \
-    METADATA_PARCEL_SIZE,                     \
-    METADATA_PARCEL_TARGET                    \
-  }                                           \
-}
+#define PARCEL_SEND_METADATA                                     \
+  _METADATA_ARGS(METADATA_PARCEL_ID, METADATA_PARCEL_ACTION,     \
+                 METADATA_PARCEL_SIZE, METADATA_PARCEL_TARGET)
 
-#define PARCEL_RECV_METADATA {                \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_PARCEL_ID,                       \
-    METADATA_PARCEL_ACTION,                   \
-    METADATA_PARCEL_SIZE,                     \
-    METADATA_PARCEL_SOURCE                    \
-  }                                           \
-}
+#define PARCEL_RECV_METADATA                                     \
+  _METADATA_ARGS(METADATA_PARCEL_ID, METADATA_PARCEL_ACTION,     \
+                 METADATA_PARCEL_SIZE, METADATA_PARCEL_SOURCE)
 
-#define PARCEL_RUN_METADATA {                 \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_PARCEL_ID,                       \
-    METADATA_PARCEL_ACTION,                   \
-    METADATA_PARCEL_SIZE,                     \
-    METADATA_EMPTY3                           \
-  }                                           \
-}
+#define PARCEL_RUN_METADATA                                      \
+  _METADATA_ARGS(METADATA_PARCEL_ID, METADATA_PARCEL_ACTION,     \
+                 METADATA_PARCEL_SIZE, METADATA_EMPTY3)
 
-#define PARCEL_END_METADATA {                 \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_PARCEL_ID,                       \
-    METADATA_PARCEL_ACTION,                   \
-    METADATA_EMPTY2,                          \
-    METADATA_EMPTY3                           \
-  }                                           \
-}
+#define PARCEL_END_METADATA                                      \
+  _METADATA_ARGS(METADATA_PARCEL_ID, METADATA_PARCEL_ACTION,     \
+                 METADATA_EMPTY2, METADATA_EMPTY3)
 
-#define PARCEL_SUSPEND_METADATA {             \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_PARCEL_ID,                       \
-    METADATA_PARCEL_ACTION,                   \
-    METADATA_EMPTY2,                          \
-    METADATA_EMPTY3                           \
-  }                                           \
-}
+#define PARCEL_SUSPEND_METADATA                                  \
+  _METADATA_ARGS(METADATA_PARCEL_ID, METADATA_PARCEL_ACTION,     \
+                 METADATA_EMPTY2, METADATA_EMPTY3)
 
-#define PARCEL_RESUME_METADATA {              \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_PARCEL_ID,                       \
-    METADATA_PARCEL_ACTION,                   \
-    METADATA_EMPTY2,                          \
-    METADATA_EMPTY3                           \
-  }                                           \
-}
+#define PARCEL_RESUME_METADATA                                   \
+  _METADATA_ARGS(METADATA_PARCEL_ID, METADATA_PARCEL_ACTION,     \
+                 METADATA_EMPTY2, METADATA_EMPTY3)
 
-#define PARCEL_RESEND_METADATA {              \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_PARCEL_ID,                       \
-    METADATA_PARCEL_ACTION,                   \
-    METADATA_PARCEL_SIZE,                     \
-    METADATA_PARCEL_TARGET                    \
-  }                                           \
-}
+#define PARCEL_RESEND_METADATA                                   \
+  _METADATA_ARGS(METADATA_PARCEL_ID, METADATA_PARCEL_ACTION,     \
+                 METADATA_PARCEL_SIZE, METADATA_PARCEL_TARGET)
 
-#define NETWORK_PWC_SEND_METADATA EVENT_METADATA_NONE
-#define NETWORK_PWC_RECV_METADATA EVENT_METADATA_NONE
+#define NETWORK_PWC_SEND_METADATA _METADATA_NONE
+#define NETWORK_PWC_RECV_METADATA _METADATA_NONE
 
-#define SCHED_WQSIZE_METADATA {               \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_SCHEDULER_WQSIZE,                \
-    METADATA_EMPTY1,                          \
-    METADATA_EMPTY2,                          \
-    METADATA_EMPTY3                           \
-  }                                           \
-}
+#define SCHED_WQSIZE_METADATA                                    \
+  _METADATA_ARGS(METADATA_SCHED_WQSIZE, METADATA_EMPTY1,         \
+                 METADATA_EMPTY2, METADATA_EMPTY3)
 
-#define SCHED_PUSH_LIFO_METADATA  EVENT_METADATA_NONE
-#define SCHED_POP_LIFO_METADATA   EVENT_METADATA_NONE
-#define SCHED_STEAL_LIFO_METADATA EVENT_METADATA_NONE
-#define SCHED_ENTER_METADATA      EVENT_METADATA_NONE
-#define SCHED_EXIT_METADATA       EVENT_METADATA_NONE
+#define SCHED_PUSH_LIFO_METADATA  _METADATA_NONE
+#define SCHED_POP_LIFO_METADATA   _METADATA_NONE
+#define SCHED_STEAL_LIFO_METADATA _METADATA_NONE
+#define SCHED_ENTER_METADATA      _METADATA_NONE
+#define SCHED_EXIT_METADATA       _METADATA_NONE
 
-#define LCO_INIT_METADATA {                   \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_LCO_ADDRESS,                     \
-    METADATA_LCO_CURRENT_THREAD,              \
-    METADATA_LCO_STATE,                       \
-    METADATA_EMPTY3                           \
-  }                                           \
-}
+#define LCO_INIT_METADATA                                        \
+  _METADATA_ARGS(METADATA_LCO_ADDRESS,                           \
+                 METADATA_LCO_CURRENT_THREAD,                    \
+                 METADATA_LCO_STATE, METADATA_EMPTY3)
 
-#define LCO_DELETE_METADATA {                 \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_LCO_ADDRESS,                     \
-    METADATA_LCO_CURRENT_THREAD,              \
-    METADATA_LCO_STATE,                       \
-    METADATA_EMPTY3                           \
-  }                                           \
-}
+#define LCO_DELETE_METADATA                                      \
+  _METADATA_ARGS(METADATA_LCO_ADDRESS,                           \
+                 METADATA_LCO_CURRENT_THREAD,                    \
+                 METADATA_LCO_STATE, METADATA_EMPTY3)
 
-#define LCO_SET_METADATA {                    \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_LCO_ADDRESS,                     \
-    METADATA_LCO_CURRENT_THREAD,              \
-    METADATA_LCO_STATE,                       \
-    METADATA_EMPTY3                           \
-  }                                           \
-}
+#define LCO_SET_METADATA                                         \
+  _METADATA_ARGS(METADATA_LCO_ADDRESS,                           \
+                 METADATA_LCO_CURRENT_THREAD,                    \
+                 METADATA_LCO_STATE, METADATA_EMPTY3)
 
-#define LCO_RESET_METADATA {                  \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_LCO_ADDRESS,                     \
-    METADATA_LCO_CURRENT_THREAD,              \
-    METADATA_LCO_STATE,                       \
-    METADATA_EMPTY3                           \
-  }                                           \
-}
+#define LCO_RESET_METADATA                                       \
+  _METADATA_ARGS(METADATA_LCO_ADDRESS,                           \
+                 METADATA_LCO_CURRENT_THREAD,                    \
+                 METADATA_LCO_STATE, METADATA_EMPTY3)
 
-#define LCO_ATTACH_PARCEL_METADATA {          \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_LCO_ADDRESS,                     \
-    METADATA_LCO_CURRENT_THREAD,              \
-    METADATA_LCO_STATE,                       \
-    METADATA_PARCEL_ID                        \
-  }                                           \
-}
+#define LCO_ATTACH_PARCEL_METADATA                               \
+  _METADATA_ARGS(METADATA_LCO_ADDRESS,                           \
+                 METADATA_LCO_CURRENT_THREAD,                    \
+                 METADATA_LCO_STATE, METADATA_PARCEL_ID)
 
-#define LCO_WAIT_METADATA {                   \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_LCO_ADDRESS,                     \
-    METADATA_LCO_CURRENT_THREAD,              \
-    METADATA_LCO_STATE,                       \
-    METADATA_EMPTY3                           \
-  }                                           \
-}
+#define LCO_WAIT_METADATA                                        \
+  _METADATA_ARGS(METADATA_LCO_ADDRESS,                           \
+                 METADATA_LCO_CURRENT_THREAD,                    \
+                 METADATA_LCO_STATE, METADATA_EMPTY3)
 
-#define LCO_TRIGGER_METADATA {                \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,           \
-    METADATA_NS,               \
-    METADATA_LCO_ADDRESS,                     \
-    METADATA_LCO_CURRENT_THREAD,              \
-    METADATA_LCO_STATE,                       \
-    METADATA_EMPTY3            \
-  }                                           \
-}
+#define LCO_TRIGGER_METADATA                                     \
+  _METADATA_ARGS(METADATA_LCO_ADDRESS,                           \
+                 METADATA_LCO_CURRENT_THREAD,                    \
+                 METADATA_LCO_STATE, METADATA_EMPTY3)
 
-#define PROCESS_NEW_METADATA {                \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_PROCESS_ADDRESS,                 \
-    METADATA_PROCESS_TERMINATION_LCO,         \
-    METADATA_EMPTY2,                          \
-    METADATA_EMPTY3                           \
-  }                                           \
-}
+#define PROCESS_NEW_METADATA                                     \
+  _METADATA_ARGS(METADATA_PROCESS_ADDRESS,                       \
+                 METADATA_PROCESS_TERMINATION_LCO,               \
+                 METADATA_EMPTY2, METADATA_EMPTY3)
 
-#define PROCESS_CALL_METADATA {               \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_PROCESS_ADDRESS,                 \
-    METADATA_PARCEL_ID,                       \
-    METADATA_EMPTY2,                          \
-    METADATA_EMPTY3                           \
-  }                                           \
-}
+#define PROCESS_CALL_METADATA                                    \
+  _METADATA_ARGS(METADATA_PROCESS_ADDRESS,                       \
+                 METADATA_PROCESS_PARCEL_ID,                     \
+                 METADATA_EMPTY2, METADATA_EMPTY3)
 
-#define PROCESS_DELETE_METADATA {             \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_PROCESS_ADDRESS,                 \
-    METADATA_EMPTY1,                          \
-    METADATA_EMPTY2,                          \
-    METADATA_EMPTY3                           \
-  }                                           \
-}
+#define PROCESS_DELETE_METADATA                                  \
+  _METADATA_ARGS(METADATA_PROCESS_ADDRESS, METADATA_EMPTY1,      \
+                 METADATA_EMPTY2, METADATA_EMPTY3)
 
-#define MEMORY_REGISTERED_ALLOC_METADATA EVENT_METADATA_NONE
-#define MEMORY_REGISTERED_FREE_METADATA  EVENT_METADATA_NONE
-#define MEMORY_GLOBAL_ALLOC_METADATA     EVENT_METADATA_NONE
-#define MEMORY_GLOBAL_FREE_METADATA      EVENT_METADATA_NONE
-#define MEMORY_CYCLIC_ALLOC_METADATA     EVENT_METADATA_NONE
-#define MEMORY_CYCLIC_FREE_METADATA      EVENT_METADATA_NONE
-#define MEMORY_ENTER_ALLOC_FREE_METADATA EVENT_METADATA_NONE
+#define MEMORY_REGISTERED_ALLOC_METADATA _METADATA_NONE
+#define MEMORY_REGISTERED_FREE_METADATA  _METADATA_NONE
+#define MEMORY_GLOBAL_ALLOC_METADATA     _METADATA_NONE
+#define MEMORY_GLOBAL_FREE_METADATA      _METADATA_NONE
+#define MEMORY_CYCLIC_ALLOC_METADATA     _METADATA_NONE
+#define MEMORY_CYCLIC_FREE_METADATA      _METADATA_NONE
+#define MEMORY_ENTER_ALLOC_FREE_METADATA _METADATA_NONE
 
-#define SCHEDTIMES_SCHED_METADATA {           \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_SCHEDTIMES_SCHED_SOURCE,         \
-    METADATA_SCHEDTIMES_SCHED_SPINS,          \
-    METADATA_EMPTY2,                          \
-    METADATA_EMPTY3                           \
-  }                                           \
-}
+#define SCHEDTIMES_SCHED_METADATA                                \
+  _METADATA_ARGS(METADATA_SCHEDTIMES_SCHED_SOURCE,               \
+                 METADATA_SCHEDTIMES_SCHED_SPINS,                \
+                 METADATA_EMPTY2, METADATA_EMPTY3)
 
-#define SCHEDTIMES_PROBE_METADATA {           \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_EMPTY0,                          \
-    METADATA_EMPTY1,                          \
-    METADATA_EMPTY2,                          \
-    METADATA_EMPTY3                           \
-  }                                           \
-}
+#define SCHEDTIMES_PROBE_METADATA                                \
+  _METADATA_ARGS(METADATA_EMPTY0, METADATA_EMPTY1,               \
+                 METADATA_EMPTY2, METADATA_EMPTY3)
 
-#define SCHEDTIMES_PROGRESS_METADATA {        \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    METADATA_EMPTY0,                          \
-    METADATA_EMPTY1,                          \
-    METADATA_EMPTY2,                          \
-    METADATA_EMPTY3                           \
-  }                                           \
-}
+#define SCHEDTIMES_PROGRESS_METADATA                             \
+  _METADATA_ARGS(METADATA_EMPTY0, METADATA_EMPTY1,               \
+                 METADATA_EMPTY2, METADATA_EMPTY3)
 
-#define BOOKEND_BOOKEND_METADATA EVENT_METADATA_NONE
+#define BOOKEND_BOOKEND_METADATA _METADATA_NONE
 
 #endif
