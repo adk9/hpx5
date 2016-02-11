@@ -51,8 +51,8 @@ void inst_prof_dump(profile_log_t profile_log);
 
 /// Record an event to the log
 /// @param        type Type this event is part of (see hpx_inst_class_type_t)
-/// @param           id The event id (see hpx_inst_event_type_t)
 /// @param            n The number of user arguments to log, < 5.
+/// @param           id The event id (see hpx_inst_event_type_t)
 void inst_vtrace(int type, int n, int id, ...);
 
 #ifdef ENABLE_INSTRUMENTATION
