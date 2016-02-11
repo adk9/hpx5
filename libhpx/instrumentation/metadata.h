@@ -545,9 +545,9 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
   .col_metadata = {                           \
     INST_EVENT_COL_METADATA_WORKER,           \
     INST_EVENT_COL_METADATA_NS,               \
-    METADATA_SCHEDTIMES_STARTTIME,            \
     METADATA_SCHEDTIMES_SCHED_SOURCE,         \
     METADATA_SCHEDTIMES_SCHED_SPINS,          \
+    INST_EVENT_COL_METADATA_EMPTY2,           \
     INST_EVENT_COL_METADATA_EMPTY3            \
   }                                           \
 }
@@ -557,7 +557,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
   .col_metadata = {                           \
     INST_EVENT_COL_METADATA_WORKER,           \
     INST_EVENT_COL_METADATA_NS,               \
-    METADATA_SCHEDTIMES_STARTTIME,            \
+    INST_EVENT_COL_METADATA_EMPTY0,           \
     INST_EVENT_COL_METADATA_EMPTY1,           \
     INST_EVENT_COL_METADATA_EMPTY2,           \
     INST_EVENT_COL_METADATA_EMPTY3            \
@@ -569,7 +569,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
   .col_metadata = {                           \
     INST_EVENT_COL_METADATA_WORKER,           \
     INST_EVENT_COL_METADATA_NS,               \
-    METADATA_SCHEDTIMES_STARTTIME,            \
+    INST_EVENT_COL_METADATA_EMPTY0,           \
     INST_EVENT_COL_METADATA_EMPTY1,           \
     INST_EVENT_COL_METADATA_EMPTY2,           \
     INST_EVENT_COL_METADATA_EMPTY3            \
