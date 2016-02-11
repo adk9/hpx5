@@ -28,14 +28,14 @@ typedef struct record {
 } record_t;
 
 /// The number of columns for a recorded event; some may be unused
-#define INST_EVENT_NUM_COLS 6
+#define _NUM_COLS 6
 
-#define INST_EVENT_COL_OFFSET_WORKER offsetof(record_t, worker)
-#define INST_EVENT_COL_OFFSET_NS     offsetof(record_t, ns)
-#define INST_EVENT_COL_OFFSET_USER0  offsetof(record_t, user)
-#define INST_EVENT_COL_OFFSET_USER1  offsetof(record_t, user) + 8
-#define INST_EVENT_COL_OFFSET_USER2  offsetof(record_t, user) + 16
-#define INST_EVENT_COL_OFFSET_USER3  offsetof(record_t, user) + 24
+#define _COL_OFFSET_WORKER offsetof(record_t, worker)
+#define _COL_OFFSET_NS     offsetof(record_t, ns)
+#define _COL_OFFSET_USER0  offsetof(record_t, user)
+#define _COL_OFFSET_USER1  offsetof(record_t, user) + 8
+#define _COL_OFFSET_USER2  offsetof(record_t, user) + 16
+#define _COL_OFFSET_USER3  offsetof(record_t, user) + 24
 
 // ==================== Event metadata =========================================
 // Header file format:
@@ -113,7 +113,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_WORKER                       \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT32,         \
-    .offset = INST_EVENT_COL_OFFSET_WORKER,   \
+    .offset = _COL_OFFSET_WORKER,             \
     .min = 0,                                 \
     .max = INT_MAX,                           \
     .printf_code = "d",                       \
@@ -122,7 +122,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_NS                           \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_NS,       \
+    .offset = _COL_OFFSET_NS,                 \
     .min = 0,                                 \
     .max = 1e9-1,                             \
     .printf_code = "zu",                      \
@@ -131,7 +131,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_EMPTY0                       \
   { .mask = 0x3,                              \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_USER0,    \
+    .offset = _COL_OFFSET_USER0,              \
     .min = 0,                                 \
     .max = UINT64_MAX,                        \
     .printf_code = "zu",                      \
@@ -140,7 +140,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_EMPTY1                       \
   { .mask = 0x3,                              \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_USER1,    \
+    .offset = _COL_OFFSET_USER1,              \
     .min = 0,                                 \
     .max = UINT64_MAX,                        \
     .printf_code = "zu",                      \
@@ -149,7 +149,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_EMPTY2                       \
   { .mask = 0x3,                              \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_USER2,    \
+    .offset = _COL_OFFSET_USER2,              \
     .min = 0,                                 \
     .max = UINT64_MAX,                        \
     .printf_code = "zu",                      \
@@ -158,7 +158,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_EMPTY3                       \
   { .mask = 0x3,                              \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_USER3,    \
+    .offset = _COL_OFFSET_USER3,              \
     .min = 0,                                 \
     .max = UINT64_MAX,                        \
     .printf_code = "zu",                      \
@@ -167,7 +167,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_PARCEL_ID                    \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_USER0,    \
+    .offset = _COL_OFFSET_USER0,              \
     .min = 0,                                 \
     .max = UINT64_MAX,                        \
     .printf_code = "zu",                      \
@@ -176,7 +176,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_PARCEL_ACTION                \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_USER1,    \
+    .offset = _COL_OFFSET_USER1,              \
     .min = 0,                                 \
     .max = UINT16_MAX,                        \
     .printf_code = "zu",                      \
@@ -185,7 +185,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_PARCEL_SIZE                  \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_USER2,    \
+    .offset = _COL_OFFSET_USER2,              \
     .min = 0,                                 \
     .max = UINT32_MAX,                        \
     .printf_code = "zu",                      \
@@ -194,7 +194,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_PARCEL_TARGET                \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_USER3,    \
+    .offset = _COL_OFFSET_USER3,              \
     .min = 0,                                 \
     .max = UINT64_MAX,                        \
     .printf_code = "zu",                      \
@@ -203,7 +203,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_PARCEL_SOURCE                \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_USER3,    \
+    .offset = _COL_OFFSET_USER3,              \
     .min = 0,                                 \
     .max = UINT32_MAX,                        \
     .printf_code = "zu",                      \
@@ -212,7 +212,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_PARCEL_PARENT_ID             \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_USER3,    \
+    .offset = _COL_OFFSET_USER3,              \
     .min = 0,                                 \
     .max = UINT64_MAX,                        \
     .printf_code = "zu",                      \
@@ -221,7 +221,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_SCHED_WQSIZE                 \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_USER0,    \
+    .offset = _COL_OFFSET_USER0,              \
     .min = 0,                                 \
     .max = UINT64_MAX,                        \
     .printf_code = "zu",                      \
@@ -230,7 +230,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_LCO_ADDRESS                  \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_USER0,    \
+    .offset = _COL_OFFSET_USER0,              \
     .min = 0,                                 \
     .max = UINT64_MAX,                        \
     .printf_code = "zu",                      \
@@ -239,7 +239,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_LCO_CURRENT_THREAD           \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_USER1,    \
+    .offset = _COL_OFFSET_USER1,              \
     .min = 0,                                 \
     .max = UINT64_MAX,                        \
     .printf_code = "zu",                      \
@@ -248,7 +248,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_LCO_STATE                    \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_USER2,    \
+    .offset = _COL_OFFSET_USER2,              \
     .min = 0,                                 \
     .max = UINT64_MAX,                        \
     .printf_code = "zu",                      \
@@ -257,7 +257,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_PROCESS_ADDRESS              \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_USER2,    \
+    .offset = _COL_OFFSET_USER2,              \
     .min = 0,                                 \
     .max = UINT64_MAX,                        \
     .printf_code = "zu",                      \
@@ -266,7 +266,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_PROCESS_TERMINATION_LCO      \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_USER2,    \
+    .offset = _COL_OFFSET_USER2,              \
     .min = 0,                                 \
     .max = UINT64_MAX,                        \
     .printf_code = "zu",                      \
@@ -276,7 +276,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_SCHEDTIMES_STARTTIME         \
   { .mask = 0x3,                              \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_USER0,    \
+    .offset = _COL_OFFSET_USER0,              \
     .min = 0,                                 \
     .max = UINT64_MAX,                        \
     .printf_code = "zu",                      \
@@ -285,7 +285,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_SCHEDTIMES_SCHED_SOURCE      \
   { .mask = 0x3,                              \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_USER1,    \
+    .offset = _COL_OFFSET_USER1,              \
     .min = 0,                                 \
     .max = UINT64_MAX,                        \
     .printf_code = "zu",                      \
@@ -295,7 +295,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_SCHEDTIMES_SCHED_SPINS       \
   { .mask = 0x3,                              \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = INST_EVENT_COL_OFFSET_USER2,    \
+    .offset = _COL_OFFSET_USER2,              \
     .min = 0,                                 \
     .max = UINT64_MAX,                        \
     .printf_code = "zu",                      \
@@ -307,7 +307,7 @@ typedef struct inst_event_metadata {
   const int num_cols;
   // In theory the number of columns need not match the number of fields in
   // an event. In practice, right now they do.
-  const  inst_event_col_metadata_t col_metadata[INST_EVENT_NUM_COLS];
+  const  inst_event_col_metadata_t col_metadata[_NUM_COLS];
 } inst_event_metadata_t;
 
 #define _METADATA_NONE  {0}
