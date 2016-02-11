@@ -12,7 +12,7 @@
 #include <libhpx/parcel.h>
 #include <libhpx/worker.h>
 #include <inttypes.h>
-#define COALESCING_SIZE 2
+#define COALESCING_SIZE 10
 
 
 //TODO: Fix types
@@ -64,11 +64,6 @@ HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _demux, _demux_handler,
 
 static void _clear_all(action_t *action, uint32_t dest) {
   bool test = false;
-  unsigned int _clear_counts = 0;
-  sync_store(&action->coalesced_dest_buffer[dest].registered_with_td, test,
-	     SYNC_RELAXED);
-  sync_store(&action->coalesced_dest_buffer[dest].count_written, _clear_counts, SYNC_RELAXED);
-  sync_store(&action->coalesced_dest_buffer[dest].count_allocated, _clear_counts, SYNC_RELAXED);
   //TODO: Free the fat parcel first.
   hpx_action_t *data_action_id = action->id;
   size_t bytes = COALESCING_SIZE * (sizeof(hpx_addr_t) + sizeof(uint64_t));
@@ -78,6 +73,11 @@ static void _clear_all(action_t *action, uint32_t dest) {
 
   sync_store(&((action->coalesced_dest_buffer[dest].fatp)->size), 0, SYNC_RELAXED);
   // sync_store(&action->coalesced_dest_buffer[dest].next, (char*) hpx_parcel_get_data(action->coalesced_dest_buffer[dest].fatp),  SYNC_RELAXED);
+
+  unsigned int _clear_counts = 0;
+  sync_store(&action->coalesced_dest_buffer[dest].count_written, _clear_counts, SYNC_RELAXED);
+  sync_store(&action->coalesced_dest_buffer[dest].count_allocated, _clear_counts, SYNC_RELEASE);
+
   printf("Clearing the fat parcel done.\n");
 }
 
@@ -124,18 +124,17 @@ void flush_all(void) {
   }
 }
 
-static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned int my_id) {
+static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned int my_id) { //TODO: chnge name to send_buffer
   assert (sync_load(&action->coalesced_dest_buffer[dest].count_allocated, SYNC_RELAXED) & action->coalesced_dest_buffer[dest].sender_active);
   const unsigned int count = my_id & action->coalesced_dest_buffer[dest].count_mask;
-  if ((my_id & action->coalesced_dest_buffer[dest].sender_active) != 0)
+  if ((my_id & action->coalesced_dest_buffer[dest].sender_active) != 0) // TODO: is it redundant?
     return false;
   assert (count <= max_count);
   if (count != 0) {
-    while (sync_load(&action->coalesced_dest_buffer[dest].count_written, SYNC_RELAXED) != count) {
+    // assert((action->coalesced_dest_buffer[dest].fatp)->size ==16);
+    while (sync_load(&action->coalesced_dest_buffer[dest].count_written, SYNC_RELAXED) != count) { //TODO: use ACQ_REL
       ;
     }
-    assert(sync_load(&action->coalesced_dest_buffer[dest].registered_with_td,
-	    SYNC_RELAXED) == true);
     hpx_addr_t send = hpx_lco_future_new(0);
     hpx_parcel_t *temp = action->coalesced_dest_buffer[dest].fatp;
     _clear_all(action, dest);
@@ -146,6 +145,14 @@ static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned 
     return true;
   }
   return false;
+}
+
+static void message_being_built(action_t *action, uint32_t dest) {
+  bool test = false;
+  if (!sync_cas(&action->coalesced_dest_buffer[dest].registered_with_td,
+	       &test, true, SYNC_RELAXED, SYNC_RELAXED)) {
+    message_being_built(action, dest);
+  }
 }
 
 static int _coalesce_data(hpx_addr_t addr, action_t *action,  uint32_t dest,
@@ -165,7 +172,7 @@ static int _coalesce_data(hpx_addr_t addr, action_t *action,  uint32_t dest,
     }
 
     //TODO:fadd?
-    unsigned int my_id = sync_addf(&action->coalesced_dest_buffer[dest].count_allocated, 1, SYNC_ACQ_REL);
+    unsigned int my_id = sync_fadd(&action->coalesced_dest_buffer[dest].count_allocated, 1, SYNC_ACQ_REL);
     if (my_id & action->coalesced_dest_buffer[dest].sender_active)
       continue; //TODO: don't understand this
     if ((my_id & action->coalesced_dest_buffer[dest].count_mask) >= max_count)
@@ -173,35 +180,27 @@ static int _coalesce_data(hpx_addr_t addr, action_t *action,  uint32_t dest,
     assert((my_id & action->coalesced_dest_buffer[dest].count_mask) < max_count);
     assert(action->coalesced_dest_buffer[dest].fatp);
 
-    //TODO: fix size calculation?
-    size_t current_idx = (my_id - 1) * (sizeof(hpx_addr_t) + sizeof(uint64_t));
+    size_t current_idx = my_id * (sizeof(hpx_addr_t) + bytes);
 
     //TODO: do I need to use my_id for any kind of indexing like ampp?
     memcpy((action->coalesced_dest_buffer[dest].next) + current_idx, &addr, sizeof(hpx_addr_t));
     // action->coalesced_dest_buffer[dest].next += sizeof(hpx_addr_t);
-    sync_fadd(&(action->coalesced_dest_buffer[dest].fatp)->size, sizeof(hpx_addr_t), SYNC_RELAXED);
+    sync_fadd(&(action->coalesced_dest_buffer[dest].fatp)->size, sizeof(hpx_addr_t), SYNC_RELAXED); //TODO: use only count_written
     memcpy((action->coalesced_dest_buffer[dest].next) + current_idx + sizeof(hpx_addr_t), args, bytes);
     // action->coalesced_dest_buffer[dest].next += bytes;
+    // TODO: merge the two sync_fadd into one
     sync_fadd(&(action->coalesced_dest_buffer[dest].fatp)->size, bytes, SYNC_RELAXED);
-
+    printf("MY id %zu and max_count %zu\n", my_id, max_count);
+    assert((action->coalesced_dest_buffer[dest].fatp)->size);
     if ((my_id & action->coalesced_dest_buffer[dest].count_mask) == max_count - 1) {
       sync_store(&action->coalesced_dest_buffer[dest].count_allocated, action->coalesced_dest_buffer[dest].sender_active, SYNC_RELAXED);
-      bool test = false;
-      if (!sync_cas(&action->coalesced_dest_buffer[dest].registered_with_td,
-		   &test, true, SYNC_RELAXED, SYNC_RELAXED)) {
-	;//TODO; don't understand the purpose of registered_with_td
-      }
-      ++action->coalesced_dest_buffer[dest].count_written;
-      _handover_cbuf_to_network(action, dest, my_id);
-    } else if ((my_id & action->coalesced_dest_buffer[dest].count_mask) == 0) {
-      bool test = false;
-      if (!sync_cas(&action->coalesced_dest_buffer[dest].registered_with_td,
-		   &test, true, SYNC_RELAXED, SYNC_RELAXED)) {
-	;//TODO; don't understand the purpose of registered_with_td
-      }
-      ++action->coalesced_dest_buffer[dest].count_written;
+      sync_fadd(&(action->coalesced_dest_buffer[dest].count_written), 1, SYNC_RELAXED); //TODO: count_written with ACQ_REL
+      assert((action->coalesced_dest_buffer[dest].fatp)->size);
+      printf("trying to send with id: %zu\n", my_id);
+      _handover_cbuf_to_network(action, dest, max_count);
     } else {
-      ++action->coalesced_dest_buffer[dest].count_written;
+      sync_fadd(&(action->coalesced_dest_buffer[dest].count_written), 1, SYNC_RELAXED);
+      // ++action->coalesced_dest_buffer[dest].count_written;
     }
     break;
   }
