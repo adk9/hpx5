@@ -38,12 +38,12 @@ typedef struct record {
 #define INST_EVENT_COL_OFFSET_USER3  offsetof(record_t, user) + 24
 
 // ==================== Event metadata =========================================
-// Header file format (for Abstract Rendering):
+// Header file format:
 //
 // Magic file identifier bytes = 
 //   {'h', 'p', 'x', ' ', 'l', 'o', 'g', '\0', 0xFF, 0x00, 0xAA, 0x55}
 // table offset
-//  [metadata-id, length, data]*
+// [metadata-id, length, data]*
 //
 //
 //
@@ -68,13 +68,13 @@ typedef struct record {
 // long as indicated by the type. Label is an string of chars.
 //
 // Type details:
-// i: int -- 4 bytes
-// l: long -- 8 bytes
-// s: short -- 2 bytes
+// i: int    -- 4 bytes
+// l: long   -- 8 bytes
+// s: short  -- 2 bytes
 // d: double -- 8 bytes
-// f: float -- 4 bytes
-// b: byte -- 1 bytes
-// c: char -- 2 bytes
+// f: float  -- 4 bytes
+// b: byte   -- 1 bytes
+// c: char   -- 2 bytes
 
 #define METADATA_TYPE_NAMED_VALUE  -1
 #define METADATA_TYPE_DATA_TYPES   0
@@ -95,9 +95,9 @@ typedef struct record {
 #define METADATA_TYPE_FLOAT  'f'
 
 typedef struct inst_named_value {
-  const char type;
-  const uint32_t value;
-  const char name[8];
+  const char        type;
+  const uint32_t   value;
+  const char     name[8];
 } HPX_PACKED inst_named_value_t;
 
 typedef struct inst_event_col_metadata {
@@ -110,7 +110,7 @@ typedef struct inst_event_col_metadata {
   const char name[256];      // mask 0x20 (this value must be nul terminated)
 } inst_event_col_metadata_t;
 
-#define INST_EVENT_COL_METADATA_WORKER        \
+#define METADATA_WORKER                       \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT32,         \
     .offset = INST_EVENT_COL_OFFSET_WORKER,   \
@@ -119,7 +119,7 @@ typedef struct inst_event_col_metadata {
     .printf_code = "d",                       \
     .name = "worker"}
 
-#define INST_EVENT_COL_METADATA_NS            \
+#define METADATA_NS                           \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT64,         \
     .offset = INST_EVENT_COL_OFFSET_NS,       \
@@ -128,7 +128,7 @@ typedef struct inst_event_col_metadata {
     .printf_code = "zu",                      \
     .name = "nanoseconds"}
 
-#define INST_EVENT_COL_METADATA_EMPTY0        \
+#define METADATA_EMPTY0                       \
   { .mask = 0x3,                              \
     .data_type = METADATA_TYPE_INT64,         \
     .offset = INST_EVENT_COL_OFFSET_USER0,    \
@@ -137,7 +137,7 @@ typedef struct inst_event_col_metadata {
     .printf_code = "zu",                      \
     .name = ""}
 
-#define INST_EVENT_COL_METADATA_EMPTY1        \
+#define METADATA_EMPTY1                       \
   { .mask = 0x3,                              \
     .data_type = METADATA_TYPE_INT64,         \
     .offset = INST_EVENT_COL_OFFSET_USER1,    \
@@ -146,7 +146,7 @@ typedef struct inst_event_col_metadata {
     .printf_code = "zu",                      \
     .name = ""}
 
-#define INST_EVENT_COL_METADATA_EMPTY2        \
+#define METADATA_EMPTY2                       \
   { .mask = 0x3,                              \
     .data_type = METADATA_TYPE_INT64,         \
     .offset = INST_EVENT_COL_OFFSET_USER2,    \
@@ -155,7 +155,7 @@ typedef struct inst_event_col_metadata {
     .printf_code = "zu",                      \
     .name = ""}
 
-#define INST_EVENT_COL_METADATA_EMPTY3        \
+#define METADATA_EMPTY3                       \
   { .mask = 0x3,                              \
     .data_type = METADATA_TYPE_INT64,         \
     .offset = INST_EVENT_COL_OFFSET_USER3,    \
@@ -317,8 +317,8 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define PARCEL_CREATE_METADATA {              \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
     METADATA_PARCEL_ID,                       \
     METADATA_PARCEL_ACTION,                   \
     METADATA_PARCEL_SIZE,                     \
@@ -329,8 +329,8 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define PARCEL_SEND_METADATA {                \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
     METADATA_PARCEL_ID,                       \
     METADATA_PARCEL_ACTION,                   \
     METADATA_PARCEL_SIZE,                     \
@@ -341,8 +341,8 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define PARCEL_RECV_METADATA {                \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
     METADATA_PARCEL_ID,                       \
     METADATA_PARCEL_ACTION,                   \
     METADATA_PARCEL_SIZE,                     \
@@ -353,56 +353,56 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define PARCEL_RUN_METADATA {                 \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
     METADATA_PARCEL_ID,                       \
     METADATA_PARCEL_ACTION,                   \
     METADATA_PARCEL_SIZE,                     \
-    INST_EVENT_COL_METADATA_EMPTY3            \
+    METADATA_EMPTY3                           \
   }                                           \
 }
 
 #define PARCEL_END_METADATA {                 \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
     METADATA_PARCEL_ID,                       \
     METADATA_PARCEL_ACTION,                   \
-    INST_EVENT_COL_METADATA_EMPTY2,           \
-    INST_EVENT_COL_METADATA_EMPTY3            \
+    METADATA_EMPTY2,                          \
+    METADATA_EMPTY3                           \
   }                                           \
 }
 
 #define PARCEL_SUSPEND_METADATA {             \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
     METADATA_PARCEL_ID,                       \
     METADATA_PARCEL_ACTION,                   \
-    INST_EVENT_COL_METADATA_EMPTY2,           \
-    INST_EVENT_COL_METADATA_EMPTY3            \
+    METADATA_EMPTY2,                          \
+    METADATA_EMPTY3                           \
   }                                           \
 }
 
 #define PARCEL_RESUME_METADATA {              \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
     METADATA_PARCEL_ID,                       \
     METADATA_PARCEL_ACTION,                   \
-    INST_EVENT_COL_METADATA_EMPTY2,           \
-    INST_EVENT_COL_METADATA_EMPTY3            \
+    METADATA_EMPTY2,                          \
+    METADATA_EMPTY3                           \
   }                                           \
 }
 
 #define PARCEL_RESEND_METADATA {              \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
     METADATA_PARCEL_ID,                       \
     METADATA_PARCEL_ACTION,                   \
     METADATA_PARCEL_SIZE,                     \
@@ -416,12 +416,12 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define SCHED_WQSIZE_METADATA {               \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
     METADATA_SCHEDULER_WQSIZE,                \
-    INST_EVENT_COL_METADATA_EMPTY1,           \
-    INST_EVENT_COL_METADATA_EMPTY2,           \
-    INST_EVENT_COL_METADATA_EMPTY3            \
+    METADATA_EMPTY1,                          \
+    METADATA_EMPTY2,                          \
+    METADATA_EMPTY3                           \
   }                                           \
 }
 
@@ -434,56 +434,56 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define LCO_INIT_METADATA {                   \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
     METADATA_LCO_ADDRESS,                     \
     METADATA_LCO_CURRENT_THREAD,              \
     METADATA_LCO_STATE,                       \
-    INST_EVENT_COL_METADATA_EMPTY3            \
+    METADATA_EMPTY3                           \
   }                                           \
 }
 
 #define LCO_DELETE_METADATA {                 \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
     METADATA_LCO_ADDRESS,                     \
     METADATA_LCO_CURRENT_THREAD,              \
     METADATA_LCO_STATE,                       \
-    INST_EVENT_COL_METADATA_EMPTY3            \
+    METADATA_EMPTY3                           \
   }                                           \
 }
 
 #define LCO_SET_METADATA {                    \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
     METADATA_LCO_ADDRESS,                     \
     METADATA_LCO_CURRENT_THREAD,              \
     METADATA_LCO_STATE,                       \
-    INST_EVENT_COL_METADATA_EMPTY3            \
+    METADATA_EMPTY3                           \
   }                                           \
 }
 
 #define LCO_RESET_METADATA {                  \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
     METADATA_LCO_ADDRESS,                     \
     METADATA_LCO_CURRENT_THREAD,              \
     METADATA_LCO_STATE,                       \
-    INST_EVENT_COL_METADATA_EMPTY3            \
+    METADATA_EMPTY3                           \
   }                                           \
 }
 
 #define LCO_ATTACH_PARCEL_METADATA {          \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
     METADATA_LCO_ADDRESS,                     \
     METADATA_LCO_CURRENT_THREAD,              \
     METADATA_LCO_STATE,                       \
@@ -494,60 +494,60 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define LCO_WAIT_METADATA {                   \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
     METADATA_LCO_ADDRESS,                     \
     METADATA_LCO_CURRENT_THREAD,              \
     METADATA_LCO_STATE,                       \
-    INST_EVENT_COL_METADATA_EMPTY3            \
+    METADATA_EMPTY3                           \
   }                                           \
 }
 
 #define LCO_TRIGGER_METADATA {                \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,           \
+    METADATA_NS,               \
     METADATA_LCO_ADDRESS,                     \
     METADATA_LCO_CURRENT_THREAD,              \
     METADATA_LCO_STATE,                       \
-    INST_EVENT_COL_METADATA_EMPTY3            \
+    METADATA_EMPTY3            \
   }                                           \
 }
 
 #define PROCESS_NEW_METADATA {                \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
     METADATA_PROCESS_ADDRESS,                 \
     METADATA_PROCESS_TERMINATION_LCO,         \
-    INST_EVENT_COL_METADATA_EMPTY2,           \
-    INST_EVENT_COL_METADATA_EMPTY3            \
+    METADATA_EMPTY2,                          \
+    METADATA_EMPTY3                           \
   }                                           \
 }
 
 #define PROCESS_CALL_METADATA {               \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
     METADATA_PROCESS_ADDRESS,                 \
     METADATA_PARCEL_ID,                       \
-    INST_EVENT_COL_METADATA_EMPTY2,           \
-    INST_EVENT_COL_METADATA_EMPTY3            \
+    METADATA_EMPTY2,                          \
+    METADATA_EMPTY3                           \
   }                                           \
 }
 
 #define PROCESS_DELETE_METADATA {             \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
     METADATA_PROCESS_ADDRESS,                 \
-    INST_EVENT_COL_METADATA_EMPTY1,           \
-    INST_EVENT_COL_METADATA_EMPTY2,           \
-    INST_EVENT_COL_METADATA_EMPTY3            \
+    METADATA_EMPTY1,                          \
+    METADATA_EMPTY2,                          \
+    METADATA_EMPTY3                           \
   }                                           \
 }
 
@@ -562,36 +562,36 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define SCHEDTIMES_SCHED_METADATA {           \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
     METADATA_SCHEDTIMES_SCHED_SOURCE,         \
     METADATA_SCHEDTIMES_SCHED_SPINS,          \
-    INST_EVENT_COL_METADATA_EMPTY2,           \
-    INST_EVENT_COL_METADATA_EMPTY3            \
+    METADATA_EMPTY2,                          \
+    METADATA_EMPTY3                           \
   }                                           \
 }
 
 #define SCHEDTIMES_PROBE_METADATA {           \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
-    INST_EVENT_COL_METADATA_EMPTY0,           \
-    INST_EVENT_COL_METADATA_EMPTY1,           \
-    INST_EVENT_COL_METADATA_EMPTY2,           \
-    INST_EVENT_COL_METADATA_EMPTY3            \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
+    METADATA_EMPTY0,                          \
+    METADATA_EMPTY1,                          \
+    METADATA_EMPTY2,                          \
+    METADATA_EMPTY3                           \
   }                                           \
 }
 
 #define SCHEDTIMES_PROGRESS_METADATA {        \
   .num_cols = 6,                              \
   .col_metadata = {                           \
-    INST_EVENT_COL_METADATA_WORKER,           \
-    INST_EVENT_COL_METADATA_NS,               \
-    INST_EVENT_COL_METADATA_EMPTY0,           \
-    INST_EVENT_COL_METADATA_EMPTY1,           \
-    INST_EVENT_COL_METADATA_EMPTY2,           \
-    INST_EVENT_COL_METADATA_EMPTY3            \
+    METADATA_WORKER,                          \
+    METADATA_NS,                              \
+    METADATA_EMPTY0,                          \
+    METADATA_EMPTY1,                          \
+    METADATA_EMPTY2,                          \
+    METADATA_EMPTY3                           \
   }                                           \
 }
 

@@ -30,8 +30,8 @@ struct cols_metadata {
 
 logtable_header_t LOGTABLE_HEADER = _LOGTABLE_HEADER;
 
-static size_t _write_event_metadata_named_value(void* base,
-                                                inst_named_value_t const *nv_md)
+static size_t
+_write_event_metadata_named_value(void* base, inst_named_value_t const *nv_md)
 {
   // nv_md = [type, value, label] (e.g. [METADATA_TYPE_INT32, 4, "rank"]
   // metadata = [type, length, nv_md] where
@@ -71,7 +71,7 @@ static size_t _write_event_metadata_named_value(void* base,
   static size_t _write_event_metadata_ ## name(void* base,              \
                                   inst_event_metadata_t const *event_md \
                                                ) {                      \
-    if(event_md->num_cols == 0) {                                       \
+    if (event_md->num_cols == 0) {                                      \
         return 0;                                                       \
     }                                                                   \
     int md_data_size = event_md->num_cols * ((_length) + 1) + 1;        \
@@ -103,23 +103,16 @@ METADATA_HANDLER_STR(name, METADATA_TYPE_NAMES, 256)
 /// Write the metadata for the event to the header portion of the log
 static size_t _write_event_metadata(void* base, int class, int id) {
   inst_event_metadata_t const *event_md = &INST_EVENT_METADATA[id];
-  size_t bytes;
   uintptr_t curr = (uintptr_t)base;
   // 8 byte aligned data first
-  bytes = _write_event_metadata_min((void*)curr, event_md);
-  curr += bytes;
-  bytes = _write_event_metadata_max((void*)curr, event_md);
-  curr += bytes;
+  curr += _write_event_metadata_min((void*)curr, event_md);
+  curr += _write_event_metadata_max((void*)curr, event_md);
   // 4 byte-aligned
-  bytes = _write_event_metadata_offset((void*)curr, event_md);
-  curr += bytes;
+  curr += _write_event_metadata_offset((void*)curr, event_md);
   // 1 byte-aligned
-  bytes = _write_event_metadata_data_type((void*)curr, event_md);
-  curr += bytes;
-  bytes = _write_event_metadata_printf_code((void*)curr, event_md);
-  curr += bytes;
-  bytes = _write_event_metadata_name((void*)curr, event_md);
-  curr += bytes;
+  curr += _write_event_metadata_data_type((void*)curr, event_md);
+  curr += _write_event_metadata_printf_code((void*)curr, event_md);
+  curr += _write_event_metadata_name((void*)curr, event_md);
   // 1 byte-aligned named values
   // record rank
   inst_named_value_t rank_md = {
@@ -127,18 +120,14 @@ static size_t _write_event_metadata(void* base, int class, int id) {
     .value = hpx_get_my_rank(),
     .name = "rank"
   };
-  bytes = _write_event_metadata_named_value((void*)curr, &rank_md);
-  curr += bytes;
+  curr += _write_event_metadata_named_value((void*)curr, &rank_md);
   // event class
   inst_named_value_t class_md = {.type = METADATA_TYPE_INT32, .value = class,
                                 .name = "class"};
-  bytes = _write_event_metadata_named_value((void*)curr, &class_md);
-  curr += bytes;
+  curr += _write_event_metadata_named_value((void*)curr, &class_md);
   inst_named_value_t id_md = {.type = METADATA_TYPE_INT32,
                               .value = id, .name = "id"};
-  bytes = _write_event_metadata_named_value((void*)curr, &id_md);
-  curr += bytes;
-
+  curr += _write_event_metadata_named_value((void*)curr, &id_md);
   return curr - (uintptr_t)base;
 }
 
