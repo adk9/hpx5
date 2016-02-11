@@ -311,13 +311,14 @@ typedef struct inst_event_metadata {
 } inst_event_metadata_t;
 
 #define _METADATA_NONE  {0}
-#define _METADATA_ARGS(a1,a2,a3,a4)           \
+#define _METADATA_ARGS(a1,a2,a3,a4) {         \
   .num_cols = 6,                              \
   .col_metadata = {                           \
     METADATA_WORKER,                          \
     METADATA_NS,                              \
     a1, a2, a3, a4                            \
-  }
+  }                                           \
+}
 
 extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 
@@ -408,7 +409,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 
 #define PROCESS_CALL_METADATA                                    \
   _METADATA_ARGS(METADATA_PROCESS_ADDRESS,                       \
-                 METADATA_PROCESS_PARCEL_ID,                     \
+                 METADATA_PARCEL_ID,                             \
                  METADATA_EMPTY2, METADATA_EMPTY3)
 
 #define PROCESS_DELETE_METADATA                                  \
