@@ -73,14 +73,15 @@ static void _clear_all(action_t *action, uint32_t dest) {
   size_t bytes = COALESCING_SIZE * (sizeof(hpx_addr_t) + sizeof(uint64_t));
   action->coalesced_dest_buffer[dest].fatp = action_new_parcel(_demux,
 				HPX_THERE(dest), 0, *data_action_id, 2, NULL, bytes);
-
+  action->coalesced_dest_buffer[dest].next = hpx_parcel_get_data(action->coalesced_dest_buffer[dest].fatp);
 
   sync_store(&((action->coalesced_dest_buffer[dest].fatp)->size), 0, SYNC_RELAXED);
-  sync_store(&action->coalesced_dest_buffer[dest].next, (char*) hpx_parcel_get_data(action->coalesced_dest_buffer[dest].fatp),  SYNC_RELAXED);
+  // sync_store(&action->coalesced_dest_buffer[dest].next, (char*) hpx_parcel_get_data(action->coalesced_dest_buffer[dest].fatp),  SYNC_RELAXED);
   printf("Clearing the fat parcel done.\n");
 }
 
 void flush (action_t *action) {
+  printf("In flush function\n");
   for (int l = 0, e = HPX_LOCALITIES; l < e; ++l) {
     unsigned int my_id = sync_load(&action->coalesced_dest_buffer[l].count_allocated, SYNC_RELAXED);
     if (my_id != sync_load(&action->last_active[l], SYNC_RELAXED)) {
@@ -104,23 +105,13 @@ void flush (action_t *action) {
     // TODO: this is a flash operation, so the data parcel count can be less than coalescing size, so do we need to adjust any size?
     if (my_id > 0 && my_id < max_count) {
        unsigned int count_written = sync_load(&action->coalesced_dest_buffer[l].count_written, SYNC_RELAXED);
-       // adjust the partially filled buffer size
-       // action->coalesced_dest_buffer[l].fatp->size = sizeof(hpx_addr_t) + sizeof(uint64_t) * count_written;
-       // need an lco for the following call bcz we clear out the parcel fields and we need to make sure that it has been copied out properly before clearing
-       //hpx_addr_t send = hpx_lco_future_new(0);
-       //hpx_parcel_send(action->coalesced_dest_buffer[l].fatp, send);
-       //hpx_lco_wait(send);
-       //hpx_lco_delete(send, HPX_NULL);
-      //TODO: IS call to clear_all needed?
-       hpx_parcel_t temp;
+       hpx_parcel_t *temp = action->coalesced_dest_buffer[l].fatp;
+       _clear_all(action, l);
        hpx_addr_t send = hpx_lco_future_new(0);
-       memcpy(&temp, action->coalesced_dest_buffer[l].fatp, parcel_size(action->coalesced_dest_buffer[l].fatp));
-       hpx_parcel_send(&temp, send);
+       hpx_parcel_send(temp, send);
        hpx_lco_wait(send);
        hpx_lco_delete(send, HPX_NULL);
-       printf("Have sent the fat parcel with size %"PRIu32" \n", action->coalesced_dest_buffer[l].fatp->size);
-       // network_send(here->network, &temp);
-       _clear_all(action, l);
+       printf("Have sent the fat parcel with size %"PRIu32" \n", temp->size);
     }
   }
 }
@@ -132,7 +123,7 @@ void flush_all(void) {
   }
 }
 
-
+static hpx_parcel_t temp;
 static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned int my_id) {
   assert (sync_load(&action->coalesced_dest_buffer[dest].count_allocated, SYNC_RELAXED) & action->coalesced_dest_buffer[dest].sender_active);
   const unsigned int count = my_id & action->coalesced_dest_buffer[dest].count_mask;
@@ -146,15 +137,12 @@ static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned 
     assert(sync_load(&action->coalesced_dest_buffer[dest].registered_with_td,
 	    SYNC_RELAXED) == true);
     hpx_addr_t send = hpx_lco_future_new(0);
-    hpx_parcel_t temp;
-    memcpy(&temp, action->coalesced_dest_buffer[dest].fatp, parcel_size(action->coalesced_dest_buffer[dest].fatp));
-    //network_send(here->network, &temp);
-    //hpx_parcel_send(action->coalesced_dest_buffer[dest].fatp, send);
-    hpx_parcel_send(&temp, send);
+    hpx_parcel_t *temp = action->coalesced_dest_buffer[dest].fatp;
+    _clear_all(action, dest);
+    hpx_parcel_send(temp, send);
     hpx_lco_wait(send);
     hpx_lco_delete(send, HPX_NULL);
-    printf("Have sent the fat parcel with size %"PRIu32" \n", action->coalesced_dest_buffer[dest].fatp->size);
-    _clear_all(action, dest);
+    printf("Have sent the fat parcel with size %"PRIu32" \n", temp->size);
     return true;
   }
   return false;
@@ -172,7 +160,7 @@ static int _coalesce_data(hpx_addr_t addr, action_t *action,  uint32_t dest,
       if ((x & action->coalesced_dest_buffer[dest].count_mask) < max_count && (x & action->coalesced_dest_buffer[dest].sender_active) == 0) {
 	break;
       }
-      //TODO: equivalent of pausing?->//amplusplus::detail::do_pause();
+      ;//TODO: equivalent of pausing?->//amplusplus::detail::do_pause();
     }
 
     //TODO:fadd?
