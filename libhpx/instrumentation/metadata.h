@@ -306,4 +306,10 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 
 #define BOOKEND_BOOKEND_METADATA _METADATA_NONE
 
+#define GAS_ACCESS_METADATA                                \
+  _METADATA_ARGS(METADATA_UINT32(0, "source"),             \
+                 METADATA_UINT32(1, "destination"),        \
+                 METADATA_UINT64(2, "target"),             \
+                 METADATA_SIZE(3))
+
 #endif
