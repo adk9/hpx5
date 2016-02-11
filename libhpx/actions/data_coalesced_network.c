@@ -69,6 +69,7 @@ static void _clear_all(action_t *action, uint32_t dest) {
 	     SYNC_RELAXED);
   sync_store(&action->coalesced_dest_buffer[dest].count_written, _clear_counts, SYNC_RELAXED);
   sync_store(&action->coalesced_dest_buffer[dest].count_allocated, _clear_counts, SYNC_RELAXED);
+  //TODO: Free the fat parcel first.
   hpx_action_t *data_action_id = action->id;
   size_t bytes = COALESCING_SIZE * (sizeof(hpx_addr_t) + sizeof(uint64_t));
   action->coalesced_dest_buffer[dest].fatp = action_new_parcel(_demux,
@@ -96,7 +97,7 @@ void flush (action_t *action) {
 		    SYNC_RELAXED, SYNC_RELAXED)) {
 	  break;
 	}
-	// 	  amplusplus::detail::do_pause();
+	;// 	  amplusplus::detail::do_pause();
 
       } else {
 	break;
@@ -104,7 +105,7 @@ void flush (action_t *action) {
     }
     // TODO: this is a flash operation, so the data parcel count can be less than coalescing size, so do we need to adjust any size?
     if (my_id > 0 && my_id < max_count) {
-       unsigned int count_written = sync_load(&action->coalesced_dest_buffer[l].count_written, SYNC_RELAXED);
+      // unsigned int count_written = sync_load(&action->coalesced_dest_buffer[l].count_written, SYNC_RELAXED);
        hpx_parcel_t *temp = action->coalesced_dest_buffer[l].fatp;
        _clear_all(action, l);
        hpx_addr_t send = hpx_lco_future_new(0);
@@ -123,7 +124,6 @@ void flush_all(void) {
   }
 }
 
-static hpx_parcel_t temp;
 static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned int my_id) {
   assert (sync_load(&action->coalesced_dest_buffer[dest].count_allocated, SYNC_RELAXED) & action->coalesced_dest_buffer[dest].sender_active);
   const unsigned int count = my_id & action->coalesced_dest_buffer[dest].count_mask;
@@ -151,6 +151,7 @@ static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned 
 static int _coalesce_data(hpx_addr_t addr, action_t *action,  uint32_t dest,
 				      void *args, int bytes) {
    // Coalesce on demand as long as we have enough data-parcels available.
+  assert(bytes);
   size_t coalescing_size = COALESCING_SIZE;
   while (true) {
     while (true) {
@@ -173,22 +174,20 @@ static int _coalesce_data(hpx_addr_t addr, action_t *action,  uint32_t dest,
     assert(action->coalesced_dest_buffer[dest].fatp);
 
     //TODO: fix size calculation?
-    // size_t current_idx = (myid - 1) * (sizeof(hpx_addr_t) + sizeof(uint64_t));
-    //uint64_t data = (uint64_t) *args;
+    size_t current_idx = (my_id - 1) * (sizeof(hpx_addr_t) + sizeof(uint64_t));
 
-    memcpy(action->coalesced_dest_buffer[dest].next, &addr, sizeof(hpx_addr_t));
-    action->coalesced_dest_buffer[dest].next += sizeof(hpx_addr_t);
-    (action->coalesced_dest_buffer[dest].fatp)->size += sizeof(hpx_addr_t);
-    memcpy(action->coalesced_dest_buffer[dest].next, args, bytes);
-    action->coalesced_dest_buffer[dest].next += bytes;
-    (action->coalesced_dest_buffer[dest].fatp)->size += bytes;
+    //TODO: do I need to use my_id for any kind of indexing like ampp?
+    memcpy((action->coalesced_dest_buffer[dest].next) + current_idx, &addr, sizeof(hpx_addr_t));
+    // action->coalesced_dest_buffer[dest].next += sizeof(hpx_addr_t);
+    sync_fadd(&(action->coalesced_dest_buffer[dest].fatp)->size, sizeof(hpx_addr_t), SYNC_RELAXED);
+    memcpy((action->coalesced_dest_buffer[dest].next) + current_idx + sizeof(hpx_addr_t), args, bytes);
+    // action->coalesced_dest_buffer[dest].next += bytes;
+    sync_fadd(&(action->coalesced_dest_buffer[dest].fatp)->size, bytes, SYNC_RELAXED);
 
-    // memcpy( (char *)&(action->coalesced_dest_buffer[dest]->fatp) + current_idx +
-    //sizeof(hpx_addr_t), data, sizeof(uint64_t));
     if ((my_id & action->coalesced_dest_buffer[dest].count_mask) == max_count - 1) {
       sync_store(&action->coalesced_dest_buffer[dest].count_allocated, action->coalesced_dest_buffer[dest].sender_active, SYNC_RELAXED);
       bool test = false;
-      if (sync_cas(&action->coalesced_dest_buffer[dest].registered_with_td,
+      if (!sync_cas(&action->coalesced_dest_buffer[dest].registered_with_td,
 		   &test, true, SYNC_RELAXED, SYNC_RELAXED)) {
 	;//TODO; don't understand the purpose of registered_with_td
       }
@@ -196,7 +195,7 @@ static int _coalesce_data(hpx_addr_t addr, action_t *action,  uint32_t dest,
       _handover_cbuf_to_network(action, dest, my_id);
     } else if ((my_id & action->coalesced_dest_buffer[dest].count_mask) == 0) {
       bool test = false;
-      if (sync_cas(&action->coalesced_dest_buffer[dest].registered_with_td,
+      if (!sync_cas(&action->coalesced_dest_buffer[dest].registered_with_td,
 		   &test, true, SYNC_RELAXED, SYNC_RELAXED)) {
 	;//TODO; don't understand the purpose of registered_with_td
       }
@@ -205,7 +204,7 @@ static int _coalesce_data(hpx_addr_t addr, action_t *action,  uint32_t dest,
       ++action->coalesced_dest_buffer[dest].count_written;
     }
     break;
-}
+  }
     // TODO:fix flush, and while doing so calculate size of the fat parcel
   return LIBHPX_OK;
 }
