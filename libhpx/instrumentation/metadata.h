@@ -310,6 +310,8 @@ typedef struct inst_event_metadata {
   const  inst_event_col_metadata_t col_metadata[INST_EVENT_NUM_COLS];
 } inst_event_metadata_t;
 
+#define EVENT_METADATA_NONE {0}
+
 extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 
 #define PARCEL_CREATE_METADATA {              \
@@ -408,7 +410,10 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
   }                                           \
 }
 
-#define SCHEDULER_WQSIZE_METADATA {           \
+#define NETWORK_PWC_SEND_METADATA EVENT_METADATA_NONE
+#define NETWORK_PWC_RECV_METADATA EVENT_METADATA_NONE
+
+#define SCHED_WQSIZE_METADATA {               \
   .num_cols = 6,                              \
   .col_metadata = {                           \
     INST_EVENT_COL_METADATA_WORKER,           \
@@ -419,6 +424,12 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
     INST_EVENT_COL_METADATA_EMPTY3            \
   }                                           \
 }
+
+#define SCHED_PUSH_LIFO_METADATA  EVENT_METADATA_NONE
+#define SCHED_POP_LIFO_METADATA   EVENT_METADATA_NONE
+#define SCHED_STEAL_LIFO_METADATA EVENT_METADATA_NONE
+#define SCHED_ENTER_METADATA      EVENT_METADATA_NONE
+#define SCHED_EXIT_METADATA       EVENT_METADATA_NONE
 
 #define LCO_INIT_METADATA {                   \
   .num_cols = 6,                              \
@@ -540,6 +551,14 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
   }                                           \
 }
 
+#define MEMORY_REGISTERED_ALLOC_METADATA EVENT_METADATA_NONE
+#define MEMORY_REGISTERED_FREE_METADATA  EVENT_METADATA_NONE
+#define MEMORY_GLOBAL_ALLOC_METADATA     EVENT_METADATA_NONE
+#define MEMORY_GLOBAL_FREE_METADATA      EVENT_METADATA_NONE
+#define MEMORY_CYCLIC_ALLOC_METADATA     EVENT_METADATA_NONE
+#define MEMORY_CYCLIC_FREE_METADATA      EVENT_METADATA_NONE
+#define MEMORY_ENTER_ALLOC_FREE_METADATA EVENT_METADATA_NONE
+
 #define SCHEDTIMES_SCHED_METADATA {           \
   .num_cols = 6,                              \
   .col_metadata = {                           \
@@ -575,5 +594,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
     INST_EVENT_COL_METADATA_EMPTY3            \
   }                                           \
 }
+
+#define BOOKEND_BOOKEND_METADATA EVENT_METADATA_NONE
 
 #endif

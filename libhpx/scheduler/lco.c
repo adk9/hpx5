@@ -41,8 +41,8 @@
 #define _USER_MASK         (0x4)
 #define _STATE_MASK        (0x7)
 
-#define EVENT_LCO(lco, id)                                              \
-  inst_trace(HPX_TRACE_LCO, id, lco, (self) ? self->id : -1, (lco)->bits)
+#define EVENT_LCO(lco, event)                                              \
+  inst_trace(HPX_TRACE_LCO, event, lco, (self) ? self->id : -1, (lco)->bits)
 
 /// return the class pointer, masking out the state.
 static const lco_class_t *_class(lco_t *lco) {

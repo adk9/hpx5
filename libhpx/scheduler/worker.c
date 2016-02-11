@@ -177,7 +177,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
    case HPX_RESEND:
     log_sched("resending interrupt to %"PRIu64"\n", p->target);
     EVENT_THREAD_END(p, w);
-    EVENT_PARCEL_RESEND(p);
+    EVENT_PARCEL_RESEND(p->id, p->action, p->size, p->target);
     EVENT_THREAD_RESUME(q, self);
     p->ustack = NULL;
     parcel_launch(p);
@@ -279,7 +279,7 @@ static void _push_lifo(hpx_parcel_t *p, void *worker) {
 static hpx_parcel_t *_schedule_lifo(worker_t *w) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(_work(w));
   EVENT_SCHED_POP_LIFO(p);
-  EVENT_SCHED_WQSIZE(w);
+  EVENT_SCHED_WQSIZE(sync_chase_lev_ws_deque_size(&w->queues[w->work_id].work));
   return p;
 }
 
@@ -334,7 +334,7 @@ static int _push_half_handler(int src) {
   // send them back to the thief
   if (parcels) {
     scheduler_spawn_at(parcels, src);
-    EVENT_SCHED_STEAL_LIFO(parcels, self);
+    EVENT_SCHED_STEAL_LIFO(parcels, self->id);
   }
   return HPX_SUCCESS;
 }
@@ -346,7 +346,7 @@ static hpx_parcel_t *_steal_from(worker_t *w, int id) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(_work(victim));
   if (p) {
     w->last_victim = id;
-    EVENT_SCHED_STEAL_LIFO(p, victim);
+    EVENT_SCHED_STEAL_LIFO(p, victim->id);
   } else {
     w->last_victim = -1;
   }
@@ -540,7 +540,7 @@ static void _schedule_network(worker_t *w, network_t *network) {
 
   hpx_parcel_t *p = NULL;
   while ((p = parcel_stack_pop(&stack))) {
-    EVENT_PARCEL_RECV(p);
+    EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src);
     _push_lifo(p, w);
   }
 }
@@ -565,7 +565,6 @@ static void _schedule_network(worker_t *w, network_t *network) {
 ///
 /// @returns            The status from _transfer.
 static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
-  INST(uint64_t start_time = hpx_time_from_start_ns(hpx_time_now()));
   int source = -1;
   int spins = 0;
   hpx_parcel_t *p = NULL;
@@ -618,8 +617,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   p = (p) ? _try_bind(w, p) : w->system;
 
   EVENT_SCHED_EXIT();
-  inst_trace(HPX_TRACE_SCHEDTIMES, TRACE_EVENT_SCHEDTIMES_SCHED,
-    start_time, source, spins);
+  EVENT_SCHEDTIMES_SCHED(source, spins);
 
   // don't transfer to the same parcel
   if (p != w->current) {
@@ -929,7 +927,8 @@ void HPX_NORETURN worker_finish_thread(hpx_parcel_t *p, int status) {
   switch (status) {
    case HPX_RESEND:
     EVENT_THREAD_END(p, self);
-    EVENT_PARCEL_RESEND(self->current);
+    EVENT_PARCEL_RESEND(self->current->id, self->current->action,
+                        self->current->size, self->current->src);
     _schedule(_resend_parcel, NULL, 0);
 
    case HPX_SUCCESS:

@@ -37,7 +37,7 @@ static void _inst_delete(void *network) {
 static int _inst_progress(void *network, int id) {
   _inst_network_t *inst = network;
   int r = inst->impl->progress(network, id);
-  EVENT_SCHEDTIMES_PROGRESS(hpx_time_from_start_ns(hpx_time_now()));
+  EVENT_SCHEDTIMES_PROGRESS();
   return r;
 }
 
@@ -49,7 +49,7 @@ static int _inst_send(void *network, hpx_parcel_t *p) {
 static hpx_parcel_t *_inst_probe(void *network, int nrx) {
   _inst_network_t *inst = network;
   hpx_parcel_t *p = inst->impl->probe(network, nrx);
-  EVENT_SCHEDTIMES_PROBE(hpx_time_from_start_ns(hpx_time_now()));
+  EVENT_SCHEDTIMES_PROBE();
   return p;
 }
 

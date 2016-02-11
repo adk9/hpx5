@@ -167,7 +167,7 @@ int inst_init(config_t *cfg) {
 
   // create log files
   hpx_time_t start = hpx_time_now();
-  inst_trace(HPX_TRACE_BOOKEND, TRACE_EVENT_BOOKEND);
+  inst_trace(HPX_TRACE_BOOKEND, TRACE_EVENT_BOOKEND_BOOKEND);
   int nclasses = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING);
   for (int cl = 0, e = nclasses; cl < e; ++cl) {
     if (inst_trace_class(1 << cl)) {
@@ -183,7 +183,7 @@ int inst_init(config_t *cfg) {
   }
   _detailed_prof = cfg->prof_detailed;
 
-  inst_trace(HPX_TRACE_BOOKEND, TRACE_EVENT_BOOKEND);
+  inst_trace(HPX_TRACE_BOOKEND, TRACE_EVENT_BOOKEND_BOOKEND);
   return LIBHPX_OK;
 }
 
@@ -231,7 +231,7 @@ int inst_start(void) {
 }
 
 void inst_fini(void) {
-  inst_trace(HPX_TRACE_BOOKEND, TRACE_EVENT_BOOKEND);
+  inst_trace(HPX_TRACE_BOOKEND, TRACE_EVENT_BOOKEND_BOOKEND);
   prof_fini();
   for (int i = 0, e = TRACE_NUM_EVENTS; i < e; ++i) {
     logtable_fini(&_logs[i]);
@@ -358,4 +358,3 @@ void inst_vtrace(int UNUNSED, int n, int id, ...) {
   va_end(vargs);
   logtable_append(log, args[0], args[1], args[2], args[3]);
 }
-
