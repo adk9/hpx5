@@ -22,11 +22,11 @@
 #include "metadata.h"
 #include "file_header.h"
 
-struct cols_metadata {
+typedef struct _cols_metadata {
   int kind;
   int length;
   char metadata[];
-};
+} _cols_metadata_t;
 
 logtable_header_t LOGTABLE_HEADER = _LOGTABLE_HEADER;
 
@@ -37,60 +37,46 @@ _write_event_metadata_named_value(void* base, inst_named_value_t const *nv_md)
   // metadata = [type, length, nv_md] where
   //   type = METADATA_TYPE_NAMED_VALUE and 
   //   length = sizeof(metadata) + sizeof(nv_md)
-  int nv_size = sizeof(inst_named_value_t);
-  int md_size = sizeof(struct cols_metadata) + nv_size;
-  struct cols_metadata *md = malloc(md_size);
+  _cols_metadata_t *md = (_cols_metadata_t*)base;
   md->kind = METADATA_TYPE_NAMED_VALUE;
-  md->length = nv_size;
-  memcpy(md->metadata, nv_md, nv_size);
-  memcpy(base, md, md_size);
-  free(md);
-  return md_size;
+  md->length = sizeof(inst_named_value_t);
+  memcpy(md->metadata, nv_md, md->length);
+  return sizeof(*md) + md->length;
 }
 
 #define METADATA_HANDLER(name, md_kind, ctype)                          \
   static size_t _write_event_metadata_ ## name(void* base,              \
-                                  inst_event_metadata_t const *event_md \
-                                               ) {                      \
-    int el_size = sizeof(ctype);                                        \
-    int md_size = sizeof(struct cols_metadata) + event_md->num_cols * el_size; \
-    struct cols_metadata *md = malloc(md_size);                         \
+    inst_event_metadata_t const *event_md) {                            \
+    if (event_md->num_cols == 0) {                                      \
+      return 0;                                                         \
+    }                                                                   \
+    _cols_metadata_t *md = (_cols_metadata_t*)base;                     \
     md->kind = (md_kind);                                               \
-    md->length = event_md->num_cols * el_size;                          \
-    ctype data[event_md->num_cols];                                     \
+    md->length = event_md->num_cols * sizeof(ctype);                    \
+    ctype *data = (ctype*)md->metadata;                                 \
     for (int i = 0; i < event_md->num_cols; i++) {                      \
       data[i] = event_md->col_metadata[i].name;                         \
     }                                                                   \
-    memcpy(md->metadata, data, sizeof(data));                           \
-    memcpy(base, md, md_size);                                          \
-    free(md);                                                           \
-    return md_size;                                                     \
+    return sizeof(*md) + md->length;                                    \
   }
 
 #define METADATA_HANDLER_STR(name, md_kind, _length)                    \
   static size_t _write_event_metadata_ ## name(void* base,              \
-                                  inst_event_metadata_t const *event_md \
-                                               ) {                      \
+    inst_event_metadata_t const *event_md) {                            \
     if (event_md->num_cols == 0) {                                      \
-        return 0;                                                       \
+      return 0;                                                         \
     }                                                                   \
-    int md_data_size = event_md->num_cols * ((_length) + 1) + 1;        \
-    int md_size = sizeof(struct cols_metadata) + md_data_size;          \
-    struct cols_metadata *md = malloc(md_size);                         \
+    _cols_metadata_t *md = (_cols_metadata_t*)base;                     \
     md->kind = (md_kind);                                               \
-    char *data = malloc(md_data_size);                                  \
+    int md_data_size = event_md->num_cols * ((_length) + 1) + 1;        \
+    char *data = (char*)md->metadata;                                   \
     strncpy(data, event_md->col_metadata[0].name, (_length));           \
     for (int i = 1; i < event_md->num_cols; i++) {                      \
       strncat(data, "|", 1);                                            \
       strncat(data, event_md->col_metadata[i].name, (_length));         \
     }                                                                   \
-    strncpy(md->metadata, data, md_data_size);                          \
-    md->length = strlen(data);                                          \
-    md_size = sizeof(struct cols_metadata) + md->length;                \
-    memcpy(base, md, md_size);                                          \
-    free(data);                                                         \
-    free(md);                                                           \
-    return md_size;                                                     \
+    md->length = md_data_size;                                          \
+    return sizeof(*md) + md_data_size;                                  \
   }
 
 METADATA_HANDLER(data_type, METADATA_TYPE_DATA_TYPES, char)
