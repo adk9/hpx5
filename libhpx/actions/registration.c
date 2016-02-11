@@ -61,7 +61,7 @@ int action_table_size(void) {
 }
 
 int coalesced_action_table_size(void) {
-  return _cn;
+  return _cn + 1;
 }
 #ifdef ENABLE_DEBUG
 void CHECK_ACTION(hpx_action_t id) {
@@ -182,7 +182,7 @@ void action_registration_finalize(void) {
 	//
 	(actions[i].coalesced_dest_buffer[l].fatp)->size = 0;
       }
-
+      printf("Coalesced action id %d\n", *(actions[i].id));
       coalesced_action_id[++_cn] = *(actions[i].id);
     }
 
@@ -199,6 +199,7 @@ void action_registration_finalize(void) {
                actions[i].attr);
   }
 
+  printf("No of coalescing action %d \n", coalesced_action_table_size());
   // this is a sanity check to ensure that the reserved "null" action
   // is still at index 0.
   dbg_assert(actions[0].id == NULL);

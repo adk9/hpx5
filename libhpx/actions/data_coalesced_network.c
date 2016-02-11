@@ -81,49 +81,6 @@ static void _clear_all(action_t *action, uint32_t dest) {
   printf("Clearing the fat parcel done.\n");
 }
 
-void flush (action_t *action) {
-  printf("In flush function\n");
-  for (int l = 0, e = HPX_LOCALITIES; l < e; ++l) {
-    unsigned int my_id = sync_load(&action->coalesced_dest_buffer[l].count_allocated, SYNC_RELAXED);
-    if (my_id != sync_load(&action->last_active[l], SYNC_RELAXED)) {
-      sync_store(&action->last_active[l], my_id, SYNC_RELAXED);
-      continue;
-    }
-    while (true) {
-      if (my_id > 0 && my_id < max_count) {
-	//TODO:my_id changed as a side effect of sync_cas?
-	if(sync_cas(&action->coalesced_dest_buffer[l].count_allocated,
-		    &my_id, &action->coalesced_dest_buffer[l].sender_active,
-		    SYNC_RELAXED, SYNC_RELAXED)) {
-	  break;
-	}
-	;// 	  amplusplus::detail::do_pause();
-
-      } else {
-	break;
-      }
-    }
-    // TODO: this is a flash operation, so the data parcel count can be less than coalescing size, so do we need to adjust any size?
-    if (my_id > 0 && my_id < max_count) {
-      // unsigned int count_written = sync_load(&action->coalesced_dest_buffer[l].count_written, SYNC_RELAXED);
-       hpx_parcel_t *temp = action->coalesced_dest_buffer[l].fatp;
-       _clear_all(action, l);
-       hpx_addr_t send = hpx_lco_future_new(0);
-       hpx_parcel_send(temp, send);
-       hpx_lco_wait(send);
-       hpx_lco_delete(send, HPX_NULL);
-       printf("Have sent the fat parcel with size %"PRIu32" \n", temp->size);
-    }
-  }
-}
-
-void flush_all(void) {
-  for (int i = 0, e = coalesced_action_table_size(); i < e; i++) {
-    action_t action = actions[coalesced_action_id[i]];
-    flush(&action);
-  }
-}
-
 static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned int my_id) { //TODO: chnge name to send_buffer
   assert (sync_load(&action->coalesced_dest_buffer[dest].count_allocated, SYNC_RELAXED) & action->coalesced_dest_buffer[dest].sender_active);
   const unsigned int count = my_id & action->coalesced_dest_buffer[dest].count_mask;
@@ -147,11 +104,45 @@ static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned 
   return false;
 }
 
-static void message_being_built(action_t *action, uint32_t dest) {
-  bool test = false;
-  if (!sync_cas(&action->coalesced_dest_buffer[dest].registered_with_td,
-	       &test, true, SYNC_RELAXED, SYNC_RELAXED)) {
-    message_being_built(action, dest);
+
+void flush (action_t *action) {
+  // printf("In flush function\n");
+  for (int l = 0, e = HPX_LOCALITIES; l < e; ++l) {
+    unsigned int my_id = sync_load(&action->coalesced_dest_buffer[l].count_allocated, SYNC_RELAXED);
+    unsigned int temp = my_id;
+    if (my_id != sync_load(&action->last_active[l], SYNC_RELAXED)) {
+      sync_store(&action->last_active[l], my_id, SYNC_RELAXED);
+      continue;
+    }
+    while (true) {
+      if (my_id > 0 && my_id < max_count) {
+	//TODO:my_id changed as a side effect of sync_cas?
+	temp = my_id;
+	if(sync_cas(&action->coalesced_dest_buffer[l].count_allocated,
+		    &temp, action->coalesced_dest_buffer[l].sender_active,
+		    SYNC_RELAXED, SYNC_RELAXED)) {
+	  break;
+	}
+	;// 	  amplusplus::detail::do_pause();
+
+      } else {
+	break;
+      }
+    }
+    // TODO: this is a flash operation, so the data parcel count can be less than coalescing size, so do we need to adjust any size?
+    if (my_id > 0 && my_id < max_count) {
+      _handover_cbuf_to_network(action, l, my_id);
+      printf("Have sent the fat parcel with size %"PRIu32" \n", (action->coalesced_dest_buffer[l].fatp)->size);
+    }
+  }
+}
+
+void flush_all(void) {
+  //printf("In flush all\n");
+  for (int i = 0, e = coalesced_action_table_size(); i < e; i++) {
+    action_t *action = &(actions[coalesced_action_id[i]]);
+    // printf("Calling flush on action with id %d\n",coalesced_action_id[i]);
+    flush(action);
   }
 }
 
