@@ -128,178 +128,27 @@ typedef struct inst_event_col_metadata {
     .printf_code = "zu",                      \
     .name = "nanoseconds"}
 
-#define METADATA_EMPTY0                       \
-  { .mask = 0x3,                              \
-    .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER0,              \
-    .min = 0,                                 \
-    .max = UINT64_MAX,                        \
-    .printf_code = "zu",                      \
-    .name = ""}
-
-#define METADATA_EMPTY1                       \
-  { .mask = 0x3,                              \
-    .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER1,              \
-    .min = 0,                                 \
-    .max = UINT64_MAX,                        \
-    .printf_code = "zu",                      \
-    .name = ""}
-
-#define METADATA_EMPTY2                       \
-  { .mask = 0x3,                              \
-    .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER2,              \
-    .min = 0,                                 \
-    .max = UINT64_MAX,                        \
-    .printf_code = "zu",                      \
-    .name = ""}
-
-#define METADATA_EMPTY3                       \
-  { .mask = 0x3,                              \
-    .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER3,              \
-    .min = 0,                                 \
-    .max = UINT64_MAX,                        \
-    .printf_code = "zu",                      \
-    .name = ""}
-
-#define METADATA_PARCEL_ID                    \
+#define METADATA_UINT(width, off, _name)      \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER0,              \
+    .offset = _COL_OFFSET_USER##off,          \
     .min = 0,                                 \
-    .max = UINT64_MAX,                        \
+    .max = UINT##width##_MAX,                 \
     .printf_code = "zu",                      \
-    .name = "parcel id"}
+    .name = _name}
 
-#define METADATA_PARCEL_ACTION                \
-  { .mask = 0x3f,                             \
-    .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER1,              \
-    .min = 0,                                 \
-    .max = UINT16_MAX,                        \
-    .printf_code = "zu",                      \
-    .name = "action"}
+#define METADATA_UINT16(off, _name) METADATA_UINT(16, off, _name)
+#define METADATA_UINT32(off, _name) METADATA_UINT(32, off, _name)
+#define METADATA_UINT64(off, _name) METADATA_UINT(64, off, _name)
 
-#define METADATA_PARCEL_SIZE                  \
-  { .mask = 0x3f,                             \
-    .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER2,              \
-    .min = 0,                                 \
-    .max = UINT32_MAX,                        \
-    .printf_code = "zu",                      \
-    .name = "parcel size"}
+/// Helper metadata generation macros for commonly used types
 
-#define METADATA_PARCEL_TARGET                \
-  { .mask = 0x3f,                             \
-    .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER3,              \
-    .min = 0,                                 \
-    .max = UINT64_MAX,                        \
-    .printf_code = "zu",                      \
-    .name = "target address"}
+#define METADATA_EMPTY(off)         METADATA_UINT64(off, "")
 
-#define METADATA_PARCEL_SOURCE                \
-  { .mask = 0x3f,                             \
-    .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER3,              \
-    .min = 0,                                 \
-    .max = UINT32_MAX,                        \
-    .printf_code = "zu",                      \
-    .name = "source rank"}
-
-#define METADATA_PARCEL_PARENT_ID             \
-  { .mask = 0x3f,                             \
-    .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER3,              \
-    .min = 0,                                 \
-    .max = UINT64_MAX,                        \
-    .printf_code = "zu",                      \
-    .name = "parent id"}
-
-#define METADATA_SCHED_WQSIZE                 \
-  { .mask = 0x3f,                             \
-    .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER0,              \
-    .min = 0,                                 \
-    .max = UINT64_MAX,                        \
-    .printf_code = "zu",                      \
-    .name = "work_queue_size"}
-
-#define METADATA_LCO_ADDRESS                  \
-  { .mask = 0x3f,                             \
-    .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER0,              \
-    .min = 0,                                 \
-    .max = UINT64_MAX,                        \
-    .printf_code = "zu",                      \
-    .name = "lco address"}
-
-#define METADATA_LCO_CURRENT_THREAD           \
-  { .mask = 0x3f,                             \
-    .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER1,              \
-    .min = 0,                                 \
-    .max = UINT64_MAX,                        \
-    .printf_code = "zu",                      \
-    .name = "lco current thread"}
-
-#define METADATA_LCO_STATE                    \
-  { .mask = 0x3f,                             \
-    .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER2,              \
-    .min = 0,                                 \
-    .max = UINT64_MAX,                        \
-    .printf_code = "zu",                      \
-    .name = "lco state"}
-
-#define METADATA_PROCESS_ADDRESS              \
-  { .mask = 0x3f,                             \
-    .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER2,              \
-    .min = 0,                                 \
-    .max = UINT64_MAX,                        \
-    .printf_code = "zu",                      \
-    .name = "process address"}
-
-#define METADATA_PROCESS_TERMINATION_LCO      \
-  { .mask = 0x3f,                             \
-    .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER2,              \
-    .min = 0,                                 \
-    .max = UINT64_MAX,                        \
-    .printf_code = "zu",                      \
-    .name = "process termination lco"}
-
-
-#define METADATA_SCHEDTIMES_STARTTIME         \
-  { .mask = 0x3,                              \
-    .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER0,              \
-    .min = 0,                                 \
-    .max = UINT64_MAX,                        \
-    .printf_code = "zu",                      \
-    .name = "start_time"}
-
-#define METADATA_SCHEDTIMES_SCHED_SOURCE      \
-  { .mask = 0x3,                              \
-    .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER1,              \
-    .min = 0,                                 \
-    .max = UINT64_MAX,                        \
-    .printf_code = "zu",                      \
-    .name = "parcel_source"}
-
-
-#define METADATA_SCHEDTIMES_SCHED_SPINS       \
-  { .mask = 0x3,                              \
-    .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER2,              \
-    .min = 0,                                 \
-    .max = UINT64_MAX,                        \
-    .printf_code = "zu",                      \
-    .name = "spins"}
+#define METADATA_SIZE(off)          METADATA_UINT64(off, "size")
+#define METADATA_ACTION(off)        METADATA_UINT16(off, "action")
+#define METADATA_HPX_ADDR(off)      METADATA_UINT(64, off, "global address")
+#define METADATA_PTR(off)           METADATA_UINT(64, off, "local address")
 
 /// Event metadata
 
@@ -322,44 +171,55 @@ typedef struct inst_event_metadata {
 
 extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 
-#define PARCEL_CREATE_METADATA                                   \
-  _METADATA_ARGS(METADATA_PARCEL_ID, METADATA_PARCEL_ACTION,     \
-                 METADATA_PARCEL_SIZE, METADATA_PARCEL_PARENT_ID)
+#define METADATA_PARCEL_ID(off)        METADATA_UINT64(off, "parcel id")
+#define METADATA_PARCEL_SIZE(off)      METADATA_UINT64(off, "parcel size")
+#define METADATA_PARCEL_SOURCE(off)    METADATA_UINT32(off, "source rank")
+#define METADATA_PARCEL_PARENT_ID(off) METADATA_UINT64(off, "parent id")
+#define METADATA_PARCEL_TARGET(off)    METADATA_UINT64(off, "parent id")
 
-#define PARCEL_SEND_METADATA                                     \
-  _METADATA_ARGS(METADATA_PARCEL_ID, METADATA_PARCEL_ACTION,     \
-                 METADATA_PARCEL_SIZE, METADATA_PARCEL_TARGET)
+#define PARCEL_CREATE_METADATA                               \
+  _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),  \
+                 METADATA_PARCEL_SIZE(2),                    \
+                 METADATA_PARCEL_PARENT_ID(3))
 
-#define PARCEL_RECV_METADATA                                     \
-  _METADATA_ARGS(METADATA_PARCEL_ID, METADATA_PARCEL_ACTION,     \
-                 METADATA_PARCEL_SIZE, METADATA_PARCEL_SOURCE)
+#define PARCEL_SEND_METADATA                                 \
+  _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),  \
+                 METADATA_PARCEL_SIZE(2),                    \
+                 METADATA_PARCEL_TARGET(3))
 
-#define PARCEL_RUN_METADATA                                      \
-  _METADATA_ARGS(METADATA_PARCEL_ID, METADATA_PARCEL_ACTION,     \
-                 METADATA_PARCEL_SIZE, METADATA_EMPTY3)
+#define PARCEL_RECV_METADATA                                 \
+ _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),   \
+                 METADATA_PARCEL_SIZE(2),                    \
+                 METADATA_PARCEL_SOURCE(3))
 
-#define PARCEL_END_METADATA                                      \
-  _METADATA_ARGS(METADATA_PARCEL_ID, METADATA_PARCEL_ACTION,     \
-                 METADATA_EMPTY2, METADATA_EMPTY3)
+#define PARCEL_RUN_METADATA                                  \
+  _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),  \
+                 METADATA_PARCEL_SIZE(2), METADATA_EMPTY(3))
 
-#define PARCEL_SUSPEND_METADATA                                  \
-  _METADATA_ARGS(METADATA_PARCEL_ID, METADATA_PARCEL_ACTION,     \
-                 METADATA_EMPTY2, METADATA_EMPTY3)
+#define PARCEL_END_METADATA                                  \
+  _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),  \
+                 METADATA_EMPTY(2), METADATA_EMPTY(3))
 
-#define PARCEL_RESUME_METADATA                                   \
-  _METADATA_ARGS(METADATA_PARCEL_ID, METADATA_PARCEL_ACTION,     \
-                 METADATA_EMPTY2, METADATA_EMPTY3)
+#define PARCEL_SUSPEND_METADATA                              \
+ _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),   \
+                METADATA_EMPTY(2), METADATA_EMPTY(3))
 
-#define PARCEL_RESEND_METADATA                                   \
-  _METADATA_ARGS(METADATA_PARCEL_ID, METADATA_PARCEL_ACTION,     \
-                 METADATA_PARCEL_SIZE, METADATA_PARCEL_TARGET)
+#define PARCEL_RESUME_METADATA                               \
+ _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),   \
+                METADATA_EMPTY(2), METADATA_EMPTY(3))
+
+#define PARCEL_RESEND_METADATA                               \
+ _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),   \
+                METADATA_PARCEL_SIZE(2),                     \
+                METADATA_PARCEL_TARGET(3))
 
 #define NETWORK_PWC_SEND_METADATA _METADATA_NONE
 #define NETWORK_PWC_RECV_METADATA _METADATA_NONE
 
-#define SCHED_WQSIZE_METADATA                                    \
-  _METADATA_ARGS(METADATA_SCHED_WQSIZE, METADATA_EMPTY1,         \
-                 METADATA_EMPTY2, METADATA_EMPTY3)
+#define SCHED_WQSIZE_METADATA                                \
+  _METADATA_ARGS(METADATA_UINT64(0, "work_queue_size"),      \
+                 METADATA_EMPTY(1), METADATA_EMPTY(2),       \
+                 METADATA_EMPTY(3))
 
 #define SCHED_PUSH_LIFO_METADATA  _METADATA_NONE
 #define SCHED_POP_LIFO_METADATA   _METADATA_NONE
@@ -367,54 +227,55 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define SCHED_ENTER_METADATA      _METADATA_NONE
 #define SCHED_EXIT_METADATA       _METADATA_NONE
 
-#define LCO_INIT_METADATA                                        \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS,                           \
-                 METADATA_LCO_CURRENT_THREAD,                    \
-                 METADATA_LCO_STATE, METADATA_EMPTY3)
+#define METADATA_LCO_ADDRESS(off) METADATA_UINT64(off, "lco address")
+#define METADATA_LCO_STATE(off)   METADATA_UINT64(off, "lco state")
 
-#define LCO_DELETE_METADATA                                      \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS,                           \
-                 METADATA_LCO_CURRENT_THREAD,                    \
-                 METADATA_LCO_STATE, METADATA_EMPTY3)
+#define LCO_INIT_METADATA                                   \
+  _METADATA_ARGS(METADATA_LCO_ADDRESS(0), METADATA_EMPTY(1),\
+                 METADATA_LCO_STATE(2), METADATA_EMPTY(3))
 
-#define LCO_SET_METADATA                                         \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS,                           \
-                 METADATA_LCO_CURRENT_THREAD,                    \
-                 METADATA_LCO_STATE, METADATA_EMPTY3)
+#define LCO_DELETE_METADATA                                 \
+  _METADATA_ARGS(METADATA_LCO_ADDRESS(0), METADATA_EMPTY(1),\
+                 METADATA_LCO_STATE(2), METADATA_EMPTY(3))
 
-#define LCO_RESET_METADATA                                       \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS,                           \
-                 METADATA_LCO_CURRENT_THREAD,                    \
-                 METADATA_LCO_STATE, METADATA_EMPTY3)
+#define LCO_SET_METADATA                                    \
+  _METADATA_ARGS(METADATA_LCO_ADDRESS(0), METADATA_EMPTY(1),\
+                 METADATA_LCO_STATE(2), METADATA_EMPTY(3))
 
-#define LCO_ATTACH_PARCEL_METADATA                               \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS,                           \
-                 METADATA_LCO_CURRENT_THREAD,                    \
-                 METADATA_LCO_STATE, METADATA_PARCEL_ID)
+#define LCO_RESET_METADATA                                  \
+  _METADATA_ARGS(METADATA_LCO_ADDRESS(0), METADATA_EMPTY(1),\
+                 METADATA_LCO_STATE(2), METADATA_EMPTY(3))
 
-#define LCO_WAIT_METADATA                                        \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS,                           \
-                 METADATA_LCO_CURRENT_THREAD,                    \
-                 METADATA_LCO_STATE, METADATA_EMPTY3)
+#define LCO_ATTACH_PARCEL_METADATA                          \
+  _METADATA_ARGS(METADATA_LCO_ADDRESS(0), METADATA_EMPTY(1),\
+                 METADATA_LCO_STATE(2), METADATA_PARCEL_ID(3))
 
-#define LCO_TRIGGER_METADATA                                     \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS,                           \
-                 METADATA_LCO_CURRENT_THREAD,                    \
-                 METADATA_LCO_STATE, METADATA_EMPTY3)
+#define LCO_WAIT_METADATA                                   \
+  _METADATA_ARGS(METADATA_LCO_ADDRESS(0), METADATA_EMPTY(1),\
+                 METADATA_LCO_STATE(2), METADATA_EMPTY(3))
 
-#define PROCESS_NEW_METADATA                                     \
-  _METADATA_ARGS(METADATA_PROCESS_ADDRESS,                       \
-                 METADATA_PROCESS_TERMINATION_LCO,               \
-                 METADATA_EMPTY2, METADATA_EMPTY3)
+#define LCO_TRIGGER_METADATA                                \
+  _METADATA_ARGS(METADATA_LCO_ADDRESS(0), METADATA_EMPTY(1),\
+                 METADATA_LCO_STATE(2), METADATA_EMPTY(3))
 
-#define PROCESS_CALL_METADATA                                    \
-  _METADATA_ARGS(METADATA_PROCESS_ADDRESS,                       \
-                 METADATA_PARCEL_ID,                             \
-                 METADATA_EMPTY2, METADATA_EMPTY3)
 
-#define PROCESS_DELETE_METADATA                                  \
-  _METADATA_ARGS(METADATA_PROCESS_ADDRESS, METADATA_EMPTY1,      \
-                 METADATA_EMPTY2, METADATA_EMPTY3)
+#define METADATA_PROCESS_ADDRESS(off) METADATA_UINT64(off, "process address")
+#define METADATA_PROCESS_LCO(off)     METADATA_UINT64(off, "termination lco")
+
+#define PROCESS_NEW_METADATA                                \
+  _METADATA_ARGS(METADATA_PROCESS_ADDRESS(0),               \
+                 METADATA_PROCESS_LCO(1),                   \
+                 METADATA_EMPTY(2), METADATA_EMPTY(3))
+
+#define PROCESS_CALL_METADATA                               \
+  _METADATA_ARGS(METADATA_PROCESS_ADDRESS(0),               \
+                 METADATA_PARCEL_ID(1),                     \
+                 METADATA_EMPTY(2), METADATA_EMPTY(3))
+
+#define PROCESS_DELETE_METADATA                             \
+  _METADATA_ARGS(METADATA_PROCESS_ADDRESS(0),               \
+                 METADATA_EMPTY(1), METADATA_EMPTY(2),      \
+                 METADATA_EMPTY(3))
 
 #define MEMORY_REGISTERED_ALLOC_METADATA _METADATA_NONE
 #define MEMORY_REGISTERED_FREE_METADATA  _METADATA_NONE
@@ -424,18 +285,24 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define MEMORY_CYCLIC_FREE_METADATA      _METADATA_NONE
 #define MEMORY_ENTER_ALLOC_FREE_METADATA _METADATA_NONE
 
-#define SCHEDTIMES_SCHED_METADATA                                \
-  _METADATA_ARGS(METADATA_SCHEDTIMES_SCHED_SOURCE,               \
-                 METADATA_SCHEDTIMES_SCHED_SPINS,                \
-                 METADATA_EMPTY2, METADATA_EMPTY3)
+#define METADATA_SCHEDTIMES_SCHED_SOURCE(off)   \
+  METADATA_UINT64(off, "parcel source")
 
-#define SCHEDTIMES_PROBE_METADATA                                \
-  _METADATA_ARGS(METADATA_EMPTY0, METADATA_EMPTY1,               \
-                 METADATA_EMPTY2, METADATA_EMPTY3)
+#define METADATA_SCHEDTIMES_SCHED_SPINS(off)   \
+  METADATA_UINT64(off, "spins")
 
-#define SCHEDTIMES_PROGRESS_METADATA                             \
-  _METADATA_ARGS(METADATA_EMPTY0, METADATA_EMPTY1,               \
-                 METADATA_EMPTY2, METADATA_EMPTY3)
+#define SCHEDTIMES_SCHED_METADATA                          \
+  _METADATA_ARGS(METADATA_SCHEDTIMES_SCHED_SOURCE(0),      \
+                     METADATA_SCHEDTIMES_SCHED_SPINS(0),   \
+                 METADATA_EMPTY(2), METADATA_EMPTY(3))
+
+#define SCHEDTIMES_PROBE_METADATA                          \
+  _METADATA_ARGS(METADATA_EMPTY(0), METADATA_EMPTY(1),     \
+                 METADATA_EMPTY(2), METADATA_EMPTY(3))
+
+#define SCHEDTIMES_PROGRESS_METADATA                       \
+  _METADATA_ARGS(METADATA_EMPTY(0), METADATA_EMPTY(1),     \
+                 METADATA_EMPTY(2), METADATA_EMPTY(3))
 
 #define BOOKEND_BOOKEND_METADATA _METADATA_NONE
 
