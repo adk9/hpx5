@@ -11,9 +11,9 @@ scan-build:
   stage: scan
   script:
   - ./bootstrap
-  - ./configure --enable-debug --enable-instrumentation --enable-percolation --enable-agas --enable-hpx++
-                --enable-mpi --enable-photon --enable-testsuite --enable-parallel-config --with-photon=system
-                --with-jemalloc=system --with-hwloc=system --with-libffi=contrib CC=clang CXX=clang
+  - scan-build ./configure --enable-debug --enable-instrumentation --enable-percolation --enable-agas
+                --enable-hpx++ --enable-mpi --enable-photon --enable-testsuite --enable-parallel-config
+                --with-photon=system --with-jemalloc=system --with-hwloc=system --with-libffi=contrib
                 CFLAGS="-g -O0" CXXFLAGS="-g -O0"
   - BOUT=/tmp/scan-build-${CI_BUILD_ID}
   - scan-build --use-cc=clang -o /var/www/html/scan-builds make -j 8 | tee $BOUT
