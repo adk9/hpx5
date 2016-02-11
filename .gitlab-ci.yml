@@ -16,7 +16,7 @@ scan-build:
                 --with-photon=system --with-jemalloc=system --with-hwloc=system --with-libffi=contrib
                 CFLAGS="-g -O0" CXXFLAGS="-g -O0"
   - BOUT=/tmp/scan-build-${CI_BUILD_ID}
-  - scan-build --use-cc=clang -o /var/www/html/scan-builds make -j 8 | tee $BOUT
+  - scan-build -o /var/www/html/scan-builds make -j 8 | tee $BOUT
   - check_scan $BOUT
 
 check-build:
