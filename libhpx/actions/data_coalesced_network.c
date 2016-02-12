@@ -48,14 +48,14 @@ int _demux_handler(char* buffer, int n) {
     buffer += sizeof(uint64_t);
     n -= sizeof(uint64_t);
     w->current->target = addr; //TODO: Do we really need this line? what will happen in case of stealing?
-    printf("Calling the handler in the reciever side\n");
+    // printf("Calling the handler in the reciever side\n");
     handler(&value, sizeof(value));
     // hpx_call(addr, action_id, HPX_NULL, &value, sizeof(value));
     // process_data(addr, value);
   }
   //TODO: clean up for the thread by setting up the address
   w->current->target = previous_target;
-  printf("Done executing demultiplexer\n");
+  // printf("Done executing demultiplexer\n");
   return HPX_SUCCESS;
 }
 
@@ -75,10 +75,10 @@ static void _clear_all(action_t *action, uint32_t dest) {
   // sync_store(&action->coalesced_dest_buffer[dest].next, (char*) hpx_parcel_get_data(action->coalesced_dest_buffer[dest].fatp),  SYNC_RELAXED);
 
   unsigned int _clear_counts = 0;
-  sync_store(&action->coalesced_dest_buffer[dest].count_written, _clear_counts, SYNC_RELAXED);
+  sync_store(&action->coalesced_dest_buffer[dest].count_written, _clear_counts, SYNC_RELEASE);
   sync_store(&action->coalesced_dest_buffer[dest].count_allocated, _clear_counts, SYNC_RELEASE);
 
-  printf("Clearing the fat parcel done.\n");
+  // printf("Clearing the fat parcel done.\n");
 }
 
 static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned int my_id) { //TODO: chnge name to send_buffer
@@ -89,7 +89,7 @@ static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned 
   assert (count <= max_count);
   if (count != 0) {
     // assert((action->coalesced_dest_buffer[dest].fatp)->size ==16);
-    while (sync_load(&action->coalesced_dest_buffer[dest].count_written, SYNC_RELAXED) != count) { //TODO: use ACQ_REL
+    while (sync_load(&action->coalesced_dest_buffer[dest].count_written, SYNC_ACQUIRE) != count) { //TODO: use ACQ_REL
       ;
     }
     hpx_addr_t send = hpx_lco_future_new(0);
@@ -118,6 +118,8 @@ void flush (action_t *action) {
       if (my_id > 0 && my_id < max_count) {
 	//TODO:my_id changed as a side effect of sync_cas?
 	temp = my_id;
+	if( sync_load(&action->coalesced_dest_buffer[l].count_allocated, SYNC_RELAXED) == 0)
+	  return;
 	if(sync_cas(&action->coalesced_dest_buffer[l].count_allocated,
 		    &temp, action->coalesced_dest_buffer[l].sender_active,
 		    SYNC_RELAXED, SYNC_RELAXED)) {
@@ -181,16 +183,16 @@ static int _coalesce_data(hpx_addr_t addr, action_t *action,  uint32_t dest,
     // action->coalesced_dest_buffer[dest].next += bytes;
     // TODO: merge the two sync_fadd into one
     sync_fadd(&(action->coalesced_dest_buffer[dest].fatp)->size, bytes, SYNC_RELAXED);
-    printf("MY id %zu and max_count %zu\n", my_id, max_count);
+    // printf("MY id %zu and max_count %zu\n", my_id, max_count);
     assert((action->coalesced_dest_buffer[dest].fatp)->size);
     if ((my_id & action->coalesced_dest_buffer[dest].count_mask) == max_count - 1) {
       sync_store(&action->coalesced_dest_buffer[dest].count_allocated, action->coalesced_dest_buffer[dest].sender_active, SYNC_RELAXED);
-      sync_fadd(&(action->coalesced_dest_buffer[dest].count_written), 1, SYNC_RELAXED); //TODO: count_written with ACQ_REL
+      sync_fadd(&(action->coalesced_dest_buffer[dest].count_written), 1, SYNC_ACQ_REL); //TODO: count_written with ACQ_REL
       assert((action->coalesced_dest_buffer[dest].fatp)->size);
-      printf("trying to send with id: %zu\n", my_id);
+      // printf("trying to send with id: %zu\n", my_id);
       _handover_cbuf_to_network(action, dest, max_count);
     } else {
-      sync_fadd(&(action->coalesced_dest_buffer[dest].count_written), 1, SYNC_RELAXED);
+      sync_fadd(&(action->coalesced_dest_buffer[dest].count_written), 1, SYNC_ACQ_REL);
       // ++action->coalesced_dest_buffer[dest].count_written;
     }
     break;
@@ -206,7 +208,7 @@ static int _coalesce_marshalled_data(hpx_addr_t addr, action_t *action,  uint64_
   void *data = (n) ? va_arg(*args, void*) : NULL; //TODO: should we assume a certain datatype instead of void?
   int bytes = (n) ? va_arg(*args, int) : 0;
 
-  printf("In _coalesce_marshalled_data calling _coalesced_data\n");
+  // printf("In _coalesce_marshalled_data calling _coalesced_data\n");
   return _coalesce_data(addr, action, dest, data, bytes); //TODO: bytes or n?
 }
 
@@ -246,7 +248,7 @@ int coalesce_data(hpx_addr_t addr, hpx_action_t id,  uint64_t dest,
 
   // if marshalled-type
   if (action->attr & HPX_MARSHALLED) {
-    printf("Calling coalesed marshalled data function\n");
+    // printf("Calling coalesed marshalled data function\n");
     _coalesce_marshalled_data(addr, action, dest, args, n);
     return HPX_SUCCESS;
   } else { // assume ffi-type

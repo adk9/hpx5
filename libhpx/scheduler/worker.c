@@ -534,6 +534,7 @@ static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
   c->f(prev, c->env);
 }
 
+static uint64_t flush_count = 0;
 /// Probe and progress the network.
 static void _schedule_network(worker_t *w, network_t *network) {
   // suppress work-first scheduling while we're inside the network.
@@ -549,7 +550,9 @@ static void _schedule_network(worker_t *w, network_t *network) {
   }
 
   //TODO: call flush interface but based on what condition and how frequently?
-  flush_all();
+  //flush_count++;
+  //if (flush_count % 10 ==0)
+    flush_all();
 }
 
 /// The main scheduling loop.
