@@ -23,12 +23,13 @@
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/parcel.h>
+#include <libhpx/rebalancer.h>
 #include <libhpx/scheduler.h>
 #include <uthash.h>
 #include "agas.h"
 #include "btt.h"
 #include "gva.h"
-#include "rebalancing.h"
+#include "rebalancer.h"
 
 // Block Statistics Table (BST) entry.
 typedef struct agas_bst {
@@ -48,7 +49,8 @@ static agas_bst_t **_local_bsts;
 static void *_global_bst;
 
 // Add an entry to the thread-local BST.
-void agas_bst_add(int src, int dst, hpx_addr_t block, size_t size) {
+void libhpx_rebalancer_add_entry(int src, int dst, hpx_addr_t block,
+                                 size_t size) {
   const agas_t *agas = here->gas;
   dbg_assert(agas && agas->btt);
 
@@ -74,8 +76,8 @@ void agas_bst_add(int src, int dst, hpx_addr_t block, size_t size) {
   entry->sizes[src] += size;
 }
 
-// Initialize the AGAS rebalancer
-int agas_rebalancer_init(void) {
+// Initialize the AGAS-based rebalancer
+int libhpx_rebalancer_init(void) {
   if (!_local_bsts) {
     _local_bsts = calloc(HPX_THREADS, sizeof(*_local_bsts));
   }
@@ -88,7 +90,7 @@ int agas_rebalancer_init(void) {
   return HPX_SUCCESS;
 }
 
-void agas_rebalancer_finalize(void) {
+void libhpx_rebalancer_finalize(void) {
   free(_local_bsts);
   _local_bsts = NULL;
 
@@ -96,7 +98,7 @@ void agas_rebalancer_finalize(void) {
   _global_bst = NULL;
 }
 
-void agas_rebalancer_bind_worker(void) {
+void libhpx_rebalancer_bind_worker(void) {
   int id = HPX_THREAD_ID;
   dbg_assert(_local_bsts[id]);
 
@@ -145,21 +147,21 @@ static int _aggregate_bst_handler(hpx_addr_t graph) {
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _aggregate_bst, _aggregate_bst_handler,
                      HPX_ADDR);
 
-typedef struct _agas_rebalancer_args {
+typedef struct _rebalance_blocks__args {
   hpx_addr_t done;
   uint64_t *vtxs;
   uint64_t *partition;
-} _agas_rebalancer_args_t;
+} _rebalance_blocks_args_t;
 
-int _agas_rebalancer(int id, void *a) {
-  _agas_rebalancer_args_t *args = (_agas_rebalancer_args_t*)a;
+int _rebalance_blocks(int id, void *a) {
+  _rebalance_blocks_args_t *args = (_rebalance_blocks_args_t*)a;
   hpx_gas_move(args->vtxs[id], HPX_THERE(args->partition[id]), args->done);
   return HPX_SUCCESS;
 }
 
 // Start balancing the blocks.
 // This can be called by any locality in the system.
-int agas_rebalance(void) {
+static int libhpx_rebalancer_start_sync(void) {
   hpx_addr_t graph = agas_graph_new();
 
   // first, aggregate the "block" graph locally
@@ -172,14 +174,14 @@ int agas_rebalance(void) {
   }
   
   // then, divide it into partitions
-  _agas_rebalancer_args_t args;
+  _rebalance_blocks_args_t args;
   int nvtxs = agas_graph_get_vtxs(g, &args.vtxs);
   args.done = hpx_lco_and_new(nvtxs);
   size_t psize = agas_graph_partition(g, here->ranks, &args.partition);
   dbg_assert(psize > 0 && args.partition);
 
   // rebalance blocks based on the resulting partition
-  hpx_par_for(_agas_rebalancer, 0, psize, &args, HPX_NULL);
+  hpx_par_for(_rebalance_blocks, 0, psize, &args, HPX_NULL);
   hpx_lco_wait(args.done);
   hpx_lco_delete(args.done, HPX_NULL);
 
@@ -187,4 +189,10 @@ int agas_rebalance(void) {
   free(args.partition);
   agas_graph_delete(graph);
   return HPX_SUCCESS;
+}
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _rebalancer_start_sync,
+                     libhpx_rebalancer_start_sync);
+
+int libhpx_rebalancer_start(hpx_addr_t sync) {
+  return hpx_call(HPX_HERE, _rebalancer_start_sync, sync);
 }

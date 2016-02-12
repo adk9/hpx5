@@ -35,6 +35,7 @@
 #include "libhpx/locality.h"
 #include "libhpx/memory.h"
 #include "libhpx/network.h"
+#include "libhpx/rebalancer.h"
 #include "libhpx/scheduler.h"
 #include "thread.h"
 
@@ -68,10 +69,8 @@ static void *_run(void *worker) {
   apex_register_thread("HPX WORKER THREAD");
 #endif
 
-  // initialize the AGAS rebalancer
-#if defined(HAVE_AGAS) && defined(HAVE_AGAS_REBALANCING)
-  agas_rebalancer_bind_worker();
-#endif
+  // register this worker thread with the rebalancer
+  libhpx_rebalancer_bind_worker();
 
   // wait for the other threads to join
   system_barrier_wait(&here->sched->barrier);

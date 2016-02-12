@@ -21,7 +21,7 @@
 #include <libhpx/scheduler.h>
 #include <cuckoohash_map.hh>
 #include <city_hasher.hh>
-#include "rebalancing.h"
+#include "rebalancer.h"
 
 namespace {
   struct Entry {

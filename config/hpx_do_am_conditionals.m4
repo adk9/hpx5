@@ -34,7 +34,7 @@ AC_DEFUN([HPX_DO_AM_CONDITIONALS], [
  AM_CONDITIONAL([HAVE_HUGETLBFS], [test "x$have_hugetlbfs" == xyes])
  AM_CONDITIONAL([HAVE_AGAS], [test "x$have_agas" == xyes])
  AM_CONDITIONAL([HAVE_LIBCUCKOO], [test "x$have_libcuckoo" == xyes])
- AM_CONDITIONAL([HAVE_AGAS_REBALANCING], [test "x$have_agas_rebalancing" == xyes])
+ AM_CONDITIONAL([HAVE_REBALANCING], [test "x$have_rebalancing" == xyes])
  AM_CONDITIONAL([HAVE_TASKSCALES], [test "x$have_taskscales" == xyes])
  AM_CONDITIONAL([HAVE_METIS], [test "x$have_metis" == xyes])
  AM_CONDITIONAL([HAVE_PAPI], [test "x$have_papi" == xyes])

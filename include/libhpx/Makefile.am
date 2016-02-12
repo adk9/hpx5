@@ -18,6 +18,7 @@ noinst_HEADERS = \
                  percolation.h \
                  process.h \
                  profiling.h \
+                 rebalancer.h \
                  scheduler.h \
                  stats.h \
                  system.h \

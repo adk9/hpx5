@@ -11,18 +11,14 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef LIBHPX_GAS_AGAS_REBALANCING_H
-#define LIBHPX_GAS_AGAS_REBALANCING_H
+#ifndef LIBHPX_GAS_AGAS_REBALANCER_H
+#define LIBHPX_GAS_AGAS_REBALANCER_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include <hpx/hpx.h>
-
-// AGAS Rebalancer API
-int agas_rebalancer_init(void);
-void agas_rebalancer_finalize(void);
     
 // Block Statistics Table (BST) API
 void *bst_new(size_t size);
@@ -42,4 +38,4 @@ size_t agas_graph_get_vtxs(void *graph, uint64_t **vtxs);
 }
 #endif
 
-#endif // LIBHPX_GAS_AGAS_REBALANCING_H
+#endif // LIBHPX_GAS_AGAS_REBALANCER_H

@@ -82,11 +82,14 @@ inline static void *gas_local_base(gas_t *gas) {
   return gas->local_base(gas);
 }
 
-#if defined(HAVE_AGAS) && defined(HAVE_AGAS_REBALANCING)
-# define EVENT_AGAS_ACCESS(src, dst, block, size) \
-    agas_bst_add(src, dst, block, size)
+/// Macro to record a parcel's GAS access.
+#if defined(HAVE_AGAS) && defined(HAVE_REBALANCING)
+# define GAS_TRACE_ACCESS(src, dst, block, size) \
+  libhpx_rebalancer_add_entry(src, dst, block, size)
+#elif defined(ENABLE_INSTRUMENTATION)
+# define GAS_TRACE_ACCESS EVENT_GAS_ACCESS
 #else
-# define EVENT_AGAS_ACCESS(src, dst, block, size)
+# define GAS_TRACE_ACCESS(src, dst, block, size)
 #endif
 
 #ifdef __cplusplus

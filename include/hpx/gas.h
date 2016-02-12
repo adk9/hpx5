@@ -542,6 +542,18 @@ _hpx_gas_bcast_sync(hpx_action_t action, hpx_addr_t base, int n,
                       __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 
+/// Rebalance GAS blocks in the system. (EXPERIMENTAL).
+///
+/// This operation tries to rebalance blocks allocated in the global
+/// address space based on the tracing information it collects at
+/// runtime. All accesses to blocks marked with the HPX_GAS_ATTR_LB
+/// are recorded, and when the "rebalance" operation is invoked,
+/// blocks are moved automatically to come up with a better
+/// distribution.
+///
+/// @param       sync  Notification of completion.
+void hpx_gas_rebalance(hpx_addr_t sync);
+    
 /// @}
 
 #ifdef __cplusplus

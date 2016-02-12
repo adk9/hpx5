@@ -24,15 +24,12 @@
 #include <libhpx/gpa.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
+#include <libhpx/rebalancer.h>
 #include <libhpx/system.h>
 #include "agas.h"
 #include "btt.h"
 #include "chunk_table.h"
 #include "gva.h"
-
-#ifdef HAVE_AGAS_REBALANCING
-#include "rebalancing.h"
-#endif
 
 static const uint64_t AGAS_THERE_OFFSET = UINT64_C(4398046511103);
 
@@ -54,9 +51,7 @@ _agas_dealloc(void *gas) {
     bitmap_delete(agas->bitmap);
   }
 
-#ifdef HAVE_AGAS_REBALANCING
-  agas_rebalancer_finalize();
-#endif
+  libhpx_rebalancer_finalize();
 
   if (here->rank == 0) {
     if (agas->cyclic_bitmap) {
@@ -308,10 +303,8 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   agas->chunk_table = chunk_table_new(0);
   agas->btt = btt_new(0);
 
-  // initialize the AGAS rebalancer
-#ifdef HAVE_AGAS_REBALANCING
-  agas_rebalancer_init();
-#endif
+  // initialize the rebalancer
+  libhpx_rebalancer_init();
 
   // get the chunk size from jemalloc
   agas->chunk_size = as_bytes_per_chunk();
