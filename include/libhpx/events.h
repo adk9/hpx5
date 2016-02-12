@@ -98,6 +98,9 @@ static const int TRACE_OFFSETS[] = {
 /// Thread tracing events.
 /// @{
 static inline void EVENT_THREAD_RUN(hpx_parcel_t *p, worker_t *w) {
+  if (p == w->system) {
+    return;
+  }
 #ifdef HAVE_APEX
   // if this is NOT a null or lightweight action, send a "start" event to APEX
   if (p->action != hpx_lco_set_action) {
@@ -110,6 +113,9 @@ static inline void EVENT_THREAD_RUN(hpx_parcel_t *p, worker_t *w) {
 }
 
 static inline void EVENT_THREAD_END(hpx_parcel_t *p, worker_t *w) {
+  if (p == w->system) {
+    return;
+  }
 #ifdef HAVE_APEX
   if (w->profiler != NULL) {
     apex_stop((apex_profiler_handle)(w->profiler));
@@ -120,6 +126,9 @@ static inline void EVENT_THREAD_END(hpx_parcel_t *p, worker_t *w) {
 }
 
 static inline void EVENT_THREAD_SUSPEND(hpx_parcel_t *p, worker_t *w) {
+  if (p == w->system) {
+    return;
+  }
 #ifdef HAVE_APEX
   if (w->profiler != NULL) {
     apex_stop((apex_profiler_handle)(w->profiler));
@@ -130,6 +139,9 @@ static inline void EVENT_THREAD_SUSPEND(hpx_parcel_t *p, worker_t *w) {
 }
 
 static inline void EVENT_THREAD_RESUME(hpx_parcel_t *p, worker_t *w) {
+  if (p == w->system) {
+    return;
+  }
 #ifdef HAVE_APEX
   if (p->action != hpx_lco_set_action) {
     void* handler = (void*)actions[p->action].handler;
