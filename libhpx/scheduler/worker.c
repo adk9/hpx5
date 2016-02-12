@@ -625,7 +625,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
     _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = f, .env = env }, w);
   }
 
-  EVENT_THREAD_RESUME(p, w);
+  EVENT_THREAD_RESUME(w->current, w);
   (void)source;
   (void)spins;
 }
