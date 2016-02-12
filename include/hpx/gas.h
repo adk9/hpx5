@@ -303,15 +303,39 @@ bool hpx_gas_try_pin(hpx_addr_t addr, void **local) HPX_PUBLIC;
 /// @param         addr The address of global memory to unpin.
 void hpx_gas_unpin(hpx_addr_t addr) HPX_PUBLIC;
 
-/// Allocate local memory for use in the memget/memput functions. Any memory can
-/// be used in these functions, however only thread stacks and buffers allocated
-/// with hpx_malloc_registered() are considered to be fast sources or targets
-/// for these operations.
+/// Allocate local memory for use in the memget/memput functions.
+///
+/// Any memory can be used in these functions, however only thread stacks and
+/// buffers allocated with the registered interface are considered to be fast
+/// sources or targets for these operations.
 ///
 /// @param        bytes The number of bytes to allocate.
 ///
 /// @returns      The buffer, or NULL if there was an error.
-void *hpx_malloc_registered(size_t bytes) HPX_PUBLIC;
+void *hpx_malloc_registered(size_t bytes)
+  HPX_PUBLIC;
+
+/// Allocate local zeroed memory for use in the memget/memput functions.
+///
+/// Any memory can be used in these functions, however only thread stacks and
+/// buffers allocated with the registered interface are considered to be fast
+/// sources or targets for these operations.
+///
+/// @param     elements The number of elements to allocate.
+/// @param        bytes The number of bytes to allocate.
+void *hpx_calloc_regisered(size_t elements, size_t bytes)
+  HPX_PUBLIC;
+
+/// Allocate local aligned memory for use in the memget/memput functions.
+///
+/// Any memory can be used in these functions, however only thread stacks and
+/// buffers allocated with the registered interface are considered to be fast
+/// sources or targets for these operations.
+///
+/// @param        bytes The number of bytes to allocate.
+/// @param        align The alignment requested (must be 2^k)
+void *hpx_memalign_regisered(size_t bytes, size_t align)
+  HPX_PUBLIC;
 
 /// Free local memory that was allocated with hpx_malloc_registered().
 ///
