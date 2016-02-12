@@ -57,7 +57,7 @@ static const int TRACE_OFFSETS[] = {
 
 /// Trace event macros.
 #ifndef ENABLE_INSTRUMENTATION
-# include "event_stubs.h"
+# include <libhpx/event_stubs.h>
 
 # define EVENT_THREAD_RUN(...)
 # define EVENT_THREAD_END(...)
