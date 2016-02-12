@@ -112,7 +112,7 @@ int _init_table_action() {
   long blocks = cfg.tabsize / nranks + ((me < r) ? 1 : 0);
   hpx_addr_t and_lco = hpx_lco_and_new(blocks);
   for (long b = 0, i = me; b < blocks; ++b, i += nranks) {
-    table_set(cfg.table, i, (unsigned long)i, global_ptr<hpx::lco::And<void>>(and_lco, 1));
+    table_set(cfg.table, i, (unsigned long long)i, global_ptr<hpx::lco::And<void>>(and_lco, 1));
   }
   hpx_lco_wait(and_lco);
   hpx_lco_delete(and_lco, HPX_NULL);
