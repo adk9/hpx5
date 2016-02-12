@@ -178,9 +178,11 @@ void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
 #ifdef ENABLE_INSTRUMENTATION
   if (inst_trace_class(HPX_TRACE_PARCEL)) {
     parcel_count++;
-    int rank = hpx_get_my_rank();
-    int thread = hpx_get_my_thread_id();
+    int rank   = HPX_LOCALITY_ID;
+    int thread = HPX_THREAD_ID;
     p->id = topo_offset_to_value(rank, thread, parcel_count);
+  } else {
+    p->id = 0;
   }
 #endif
 
