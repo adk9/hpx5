@@ -440,8 +440,23 @@ class pin_guard {
 }; // template pin_guard
 
 template <typename T>
+pin_guard<T> scoped_pin(const global_ptr<T> gva) noexcept(false) {
+  return pin_guard<T>(gva);
+}
+
+template <typename T>
+pin_guard<T> scoped_pin(const global_ptr<T> gva, bool& local) noexcept {
+  return pin_guard<T>(gva, local);
+}
+
+template <typename T>
 pin_guard<T> scoped_pin(hpx_addr_t gva, T*& lva) noexcept {
   return pin_guard<T>(gva, lva);
+}
+
+template <typename T>
+pin_guard<T> scoped_pin(hpx_addr_t gva) noexcept {
+  return pin_guard<T>(gva);
 }
 
 } // namespace hpx
