@@ -32,6 +32,8 @@
 
 #define COALESCING_SIZE 2
 
+hpx_time_t time_now;
+
 /// A static action table.
 ///
 /// We currently need to be able to register actions before we call hpx_init()
@@ -182,8 +184,14 @@ void action_registration_finalize(void) {
 	//
 	(actions[i].coalesced_dest_buffer[l].fatp)->size = 0;
       }
+      actions[i].previous_count = 0;
+      actions[i].current_count = 0;
       printf("Coalesced action id %d\n", *(actions[i].id));
       coalesced_action_id[++_cn] = *(actions[i].id);
+
+#ifdef RATE_BASED_FLUSH_HEURISTIC
+      time_now = hpx_time_now();
+#endif
     }
 
 #ifdef HAVE_PERCOLATION

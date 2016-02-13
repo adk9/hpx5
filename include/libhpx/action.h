@@ -260,7 +260,12 @@ typedef struct {
   void              *env;
   _coalesced_dest_buffer_t *coalesced_dest_buffer;
   unsigned int *last_active;
+  uint64_t previous_count;
+  uint64_t current_count;
 } action_t;
+
+extern hpx_time_t time_now;
+extern double elapsed_time;
 
 /// The libhpx action table.
 ///

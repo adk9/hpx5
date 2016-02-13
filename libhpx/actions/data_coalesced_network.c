@@ -12,22 +12,21 @@
 #include <libhpx/parcel.h>
 #include <libhpx/worker.h>
 #include <inttypes.h>
+
 #define COALESCING_SIZE 10
+// #define RATE_BASED_FLUSH_HEURISTIC 1
+#define ACCELERATION_BASED_FLUSH_HEURISTIC 2
+#define RATE_THRESHOLD 1
+
 
 
 //TODO: Fix types
 //TODO: check whether ampp max_count is equal to coalescing size
 unsigned int max_count = COALESCING_SIZE;
+double elapsed_time;
 
-int process_data(hpx_addr_t *addr, uint64_t *value) {
-  return HPX_SUCCESS;
-}
 hpx_action_t _demux;
 int _demux_handler(char* buffer, int n) {
-  // In a for loop (normal for or par for) do the follwoing
-  // 1. memcpy/extract the data and address (for graph it will be vertex address and distance data)
-  // 2. Call the corresponding *function* which will take an address and distance
-
   // First store the current address, so that once we are done with the following loop, we can restore the target address.
   assert(n);
   worker_t *w = self;
@@ -63,7 +62,6 @@ HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _demux, _demux_handler,
                      HPX_POINTER, HPX_INT);
 
 static void _clear_all(action_t *action, uint32_t dest) {
-  bool test = false;
   //TODO: Free the fat parcel first.
   hpx_action_t *data_action_id = action->id;
   size_t bytes = COALESCING_SIZE * (sizeof(hpx_addr_t) + sizeof(uint64_t));
@@ -81,7 +79,7 @@ static void _clear_all(action_t *action, uint32_t dest) {
   // printf("Clearing the fat parcel done.\n");
 }
 
-static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned int my_id) { //TODO: chnge name to send_buffer
+static bool send_buffer(action_t *action, uint32_t dest, unsigned int my_id) { //TODO: chnge name to send_buffer
   assert (sync_load(&action->coalesced_dest_buffer[dest].count_allocated, SYNC_RELAXED) & action->coalesced_dest_buffer[dest].sender_active);
   const unsigned int count = my_id & action->coalesced_dest_buffer[dest].count_mask;
   if ((my_id & action->coalesced_dest_buffer[dest].sender_active) != 0) // TODO: is it redundant?
@@ -92,13 +90,16 @@ static bool _handover_cbuf_to_network(action_t *action, uint32_t dest, unsigned 
     while (sync_load(&action->coalesced_dest_buffer[dest].count_written, SYNC_ACQUIRE) != count) { //TODO: use ACQ_REL
       ;
     }
+    /* unsigned int count_written = sync_load(&(action->coalesced_dest_buffer[dest].count_written), SYNC_ACQUIRE) + sizeof(hpx_addr_t) + sizeof(uint64_t); */
+    /* sync_store(&(action->coalesced_dest_buffer[dest].fatp)->size, count_written, SYNC_RELEASE); */
+    /* assert((action->coalesced_dest_buffer[dest].fatp)->size); */
     hpx_addr_t send = hpx_lco_future_new(0);
     hpx_parcel_t *temp = action->coalesced_dest_buffer[dest].fatp;
     _clear_all(action, dest);
     hpx_parcel_send(temp, send);
     hpx_lco_wait(send);
     hpx_lco_delete(send, HPX_NULL);
-    printf("Have sent the fat parcel with size %"PRIu32" \n", temp->size);
+    // printf("Have sent the fat parcel with size %"PRIu32" \n", temp->size);
     return true;
   }
   return false;
@@ -118,7 +119,7 @@ void flush (action_t *action) {
       if (my_id > 0 && my_id < max_count) {
 	//TODO:my_id changed as a side effect of sync_cas?
 	temp = my_id;
-	if( sync_load(&action->coalesced_dest_buffer[l].count_allocated, SYNC_RELAXED) == 0)
+	if (sync_load(&action->coalesced_dest_buffer[l].count_allocated, SYNC_ACQUIRE) == 0)
 	  return;
 	if(sync_cas(&action->coalesced_dest_buffer[l].count_allocated,
 		    &temp, action->coalesced_dest_buffer[l].sender_active,
@@ -131,28 +132,48 @@ void flush (action_t *action) {
 	break;
       }
     }
-    // TODO: this is a flash operation, so the data parcel count can be less than coalescing size, so do we need to adjust any size?
+    // TODO: this is a flush operation, so the data parcel count can be less than coalescing size, so do we need to adjust any size?
     if (my_id > 0 && my_id < max_count) {
-      _handover_cbuf_to_network(action, l, my_id);
-      printf("Have sent the fat parcel with size %"PRIu32" \n", (action->coalesced_dest_buffer[l].fatp)->size);
+      send_buffer(action, l, my_id);
+      // printf("Have sent the fat parcel with size %"PRIu32" \n", (action->coalesced_dest_buffer[l].fatp)->size);
     }
   }
 }
 
 void flush_all(void) {
   //printf("In flush all\n");
+#ifdef RATE_BASED_FLUSH_HEURISTIC
+  elapsed_time = hpx_time_elapsed_ms(time_now)/1e3;
+#endif
+
   for (int i = 0, e = coalesced_action_table_size(); i < e; i++) {
     action_t *action = &(actions[coalesced_action_id[i]]);
     // printf("Calling flush on action with id %d\n",coalesced_action_id[i]);
+#ifdef RATE_BASED_FLUSH_HEURISTIC
+    uint64_t current_msg_count = sync_load(&(action->current_count), SYNC_RELAXED);
+    uint64_t previous_msg_count = sync_load(&(action->previous_count), SYNC_RELAXED);
+    if (((current_msg_count - previous_msg_count) / elapsed_time) > RATE_THRESHOLD) {
+      flush(action);
+      sync_store(&action->previous_count, 0, SYNC_RELAXED);
+      sync_store(&action->current_count, 0, SYNC_RELAXED);
+      elapsed_time = 0;
+      time_now = hpx_time_now();
+    } //TODO: add another condition to support flushing at the very end of the program
+    else {
+      sync_store(&action->previous_count, current_msg_count, SYNC_RELAXED);
+      elapsed_time = 0;
+      time_now = hpx_time_now();
+    }
+#else
     flush(action);
+#endif
   }
 }
 
 static int _coalesce_data(hpx_addr_t addr, action_t *action,  uint32_t dest,
 				      void *args, int bytes) {
-   // Coalesce on demand as long as we have enough data-parcels available.
+  // Coalesce on demand as long as we have enough space available.
   assert(bytes);
-  size_t coalescing_size = COALESCING_SIZE;
   while (true) {
     while (true) {
       assert (max_count > 0);
@@ -161,13 +182,12 @@ static int _coalesce_data(hpx_addr_t addr, action_t *action,  uint32_t dest,
       if ((x & action->coalesced_dest_buffer[dest].count_mask) < max_count && (x & action->coalesced_dest_buffer[dest].sender_active) == 0) {
 	break;
       }
-      ;//TODO: equivalent of pausing?->//amplusplus::detail::do_pause();
+      ;//TODO: equivalent of pausing with special purpose instruction?->//amplusplus::detail::do_pause();
     }
 
-    //TODO:fadd?
     unsigned int my_id = sync_fadd(&action->coalesced_dest_buffer[dest].count_allocated, 1, SYNC_ACQ_REL);
     if (my_id & action->coalesced_dest_buffer[dest].sender_active)
-      continue; //TODO: don't understand this
+      continue;
     if ((my_id & action->coalesced_dest_buffer[dest].count_mask) >= max_count)
       continue;
     assert((my_id & action->coalesced_dest_buffer[dest].count_mask) < max_count);
@@ -175,29 +195,26 @@ static int _coalesce_data(hpx_addr_t addr, action_t *action,  uint32_t dest,
 
     size_t current_idx = my_id * (sizeof(hpx_addr_t) + bytes);
 
-    //TODO: do I need to use my_id for any kind of indexing like ampp?
     memcpy((action->coalesced_dest_buffer[dest].next) + current_idx, &addr, sizeof(hpx_addr_t));
-    // action->coalesced_dest_buffer[dest].next += sizeof(hpx_addr_t);
-    sync_fadd(&(action->coalesced_dest_buffer[dest].fatp)->size, sizeof(hpx_addr_t), SYNC_RELAXED); //TODO: use only count_written
+    sync_fadd(&(action->coalesced_dest_buffer[dest].fatp)->size, sizeof(hpx_addr_t), SYNC_RELAXED);
     memcpy((action->coalesced_dest_buffer[dest].next) + current_idx + sizeof(hpx_addr_t), args, bytes);
-    // action->coalesced_dest_buffer[dest].next += bytes;
-    // TODO: merge the two sync_fadd into one
     sync_fadd(&(action->coalesced_dest_buffer[dest].fatp)->size, bytes, SYNC_RELAXED);
-    // printf("MY id %zu and max_count %zu\n", my_id, max_count);
     assert((action->coalesced_dest_buffer[dest].fatp)->size);
+
+#ifdef RATE_BASED_FLUSH_HEURISTIC
+    sync_fadd(&(action->current_count), 1, SYNC_RELAXED);
+#endif
+
     if ((my_id & action->coalesced_dest_buffer[dest].count_mask) == max_count - 1) {
       sync_store(&action->coalesced_dest_buffer[dest].count_allocated, action->coalesced_dest_buffer[dest].sender_active, SYNC_RELAXED);
       sync_fadd(&(action->coalesced_dest_buffer[dest].count_written), 1, SYNC_ACQ_REL); //TODO: count_written with ACQ_REL
-      assert((action->coalesced_dest_buffer[dest].fatp)->size);
       // printf("trying to send with id: %zu\n", my_id);
-      _handover_cbuf_to_network(action, dest, max_count);
+      send_buffer(action, dest, max_count);
     } else {
       sync_fadd(&(action->coalesced_dest_buffer[dest].count_written), 1, SYNC_ACQ_REL);
-      // ++action->coalesced_dest_buffer[dest].count_written;
     }
     break;
   }
-    // TODO:fix flush, and while doing so calculate size of the fat parcel
   return LIBHPX_OK;
 }
 
@@ -261,7 +278,10 @@ int coalesce_data(hpx_addr_t addr, hpx_action_t id,  uint64_t dest,
 
 
 /*
-const unsigned int max_count = buf.max_count;
+oid send(const arg_type& arg, transport::rank_type dest) {
+    BOOST_ASSERT (trans.is_valid_rank(dest));
+    message_buffer& buf = outgoing_buffers[dest];
+    const unsigned int max_count = buf.max_count;
     while (true) {
       while (true) {
         assert (max_count > 0);
