@@ -204,6 +204,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _rebalancer_start_sync,
 
 int libhpx_rebalancer_start(hpx_addr_t sync) {
   if (here->config->gas != HPX_GAS_AGAS) {
+    hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
     return 0;
   }
   return hpx_call(HPX_HERE, _rebalancer_start_sync, sync);
