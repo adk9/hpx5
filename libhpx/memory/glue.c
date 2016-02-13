@@ -30,8 +30,8 @@ void *hpx_calloc_registered(size_t elements, size_t bytes) {
   return as_calloc(AS_REGISTERED, elements, bytes);
 }
 
-void *hpx_memalign_registered(size_t bytes, size_t align) {
-  return as_memalign(AS_REGISTERED, bytes, align);
+void *hpx_memalign_registered(size_t align, size_t bytes) {
+  return as_memalign(AS_REGISTERED, align, bytes);
 }
 
 void hpx_free_registered(void *p) {

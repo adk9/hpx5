@@ -332,9 +332,9 @@ void *hpx_calloc_regisered(size_t elements, size_t bytes)
 /// buffers allocated with the registered interface are considered to be fast
 /// sources or targets for these operations.
 ///
-/// @param        bytes The number of bytes to allocate.
 /// @param        align The alignment requested (must be 2^k)
-void *hpx_memalign_registered(size_t bytes, size_t align)
+/// @param        bytes The number of bytes to allocate.
+void *hpx_memalign_registered(size_t align, size_t bytes)
   HPX_PUBLIC;
 
 /// Free local memory that was allocated with hpx_malloc_registered().
