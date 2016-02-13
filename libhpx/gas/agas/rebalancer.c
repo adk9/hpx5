@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <libhpx/action.h>
+#include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
@@ -51,6 +52,9 @@ static void *_global_bst;
 // Add an entry to the thread-local BST.
 void libhpx_rebalancer_add_entry(int src, int dst, hpx_addr_t block,
                                  size_t size) {
+  if (here->config->gas != HPX_GAS_AGAS) {
+    return;
+  }
   const agas_t *agas = here->gas;
   dbg_assert(agas && agas->btt);
 
@@ -99,6 +103,9 @@ void libhpx_rebalancer_finalize(void) {
 }
 
 void libhpx_rebalancer_bind_worker(void) {
+  if (here->config->gas != HPX_GAS_AGAS) {
+    return;
+  }
   int id = HPX_THREAD_ID;
   dbg_assert(_local_bsts[id]);
 
@@ -194,5 +201,8 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _rebalancer_start_sync,
                      libhpx_rebalancer_start_sync);
 
 int libhpx_rebalancer_start(hpx_addr_t sync) {
+  if (here->config->gas != HPX_GAS_AGAS) {
+    return 0;
+  }
   return hpx_call(HPX_HERE, _rebalancer_start_sync, sync);
 }
