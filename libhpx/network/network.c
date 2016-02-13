@@ -42,7 +42,8 @@ network_t *network_new(config_t *cfg, boot_t *boot, struct gas *gas) {
   // default to HPX_NETWORK_SMP for SMP execution
   if (ranks == 1 && cfg->opt_smp) {
     if (type != HPX_NETWORK_SMP && type != HPX_NETWORK_DEFAULT) {
-      log_level(LEVEL, "%s overriden to SMP.\n", HPX_NETWORK_TO_STRING[type]);
+      log_level(LEVEL, "%s overridden to SMP.\n", HPX_NETWORK_TO_STRING[type]);
+      cfg->network = HPX_NETWORK_SMP;
     }
     type = HPX_NETWORK_SMP;
   }
