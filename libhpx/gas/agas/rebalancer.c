@@ -91,6 +91,7 @@ int libhpx_rebalancer_init(void) {
   }
 
   dbg_assert(_global_bst);
+  log_gas("GAS rebalancer initialized\n");
   return HPX_SUCCESS;
 }
 
@@ -169,8 +170,9 @@ int _rebalance_blocks(int id, void *a) {
 // Start balancing the blocks.
 // This can be called by any locality in the system.
 static int libhpx_rebalancer_start_sync(void) {
-  hpx_addr_t graph = agas_graph_new();
+  log_gas("Starting GAS rebalancing\n");
 
+  hpx_addr_t graph = agas_graph_new();
   // first, aggregate the "block" graph locally
   hpx_bcast_rsync(_aggregate_bst, &graph);
 
