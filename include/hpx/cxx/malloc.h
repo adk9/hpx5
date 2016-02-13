@@ -61,6 +61,16 @@ global_ptr<T> alloc_local(size_t n) {
   return malloc<T>(n, 1, 0, HPX_GAS_DIST_LOCAL, HPX_GAS_ATTR_NONE);
 }
 
+template <typename T, typename V>
+global_ptr<T> calloc_local(size_t n, unsigned boundary) {
+  return calloc<T>(n, 1, boundary, HPX_GAS_DIST_LOCAL, HPX_GAS_ATTR_NONE);
+}
+
+template <typename T>
+global_ptr<T> calloc_local(size_t n) {
+  return calloc<T>(n, 1, 0, HPX_GAS_DIST_LOCAL, HPX_GAS_ATTR_NONE);
+}
+
 template <typename T>
 global_ptr<T> alloc_cyclic(size_t n, unsigned block, unsigned boundary) {
   return malloc<T>(n, block, boundary, HPX_GAS_DIST_CYCLIC, HPX_GAS_ATTR_NONE);
@@ -69,6 +79,16 @@ global_ptr<T> alloc_cyclic(size_t n, unsigned block, unsigned boundary) {
 template <typename T>
 global_ptr<T> alloc_cyclic(size_t n, unsigned block) {
   return malloc<T>(n, block, 0, HPX_GAS_DIST_CYCLIC, HPX_GAS_ATTR_NONE);
+}
+
+template <typename T>
+global_ptr<T> calloc_cyclic(size_t n, unsigned block, unsigned boundary) {
+  return calloc<T>(n, block, boundary, HPX_GAS_DIST_CYCLIC, HPX_GAS_ATTR_NONE);
+}
+
+template <typename T>
+global_ptr<T> calloc_cyclic(size_t n, unsigned block) {
+  return calloc<T>(n, block, 0, HPX_GAS_DIST_CYCLIC, HPX_GAS_ATTR_NONE);
 }
 
 template <typename T>
