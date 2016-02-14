@@ -47,8 +47,8 @@ hpx_addr_t hpx_process_new(hpx_addr_t termination) HPX_PUBLIC;
 int    _hpx_process_call(hpx_addr_t process, hpx_addr_t addr, hpx_action_t action,
                          hpx_addr_t result, int nargs, ...) HPX_PUBLIC;
 #define hpx_process_call(process, addr, action, result, ...)                \
-  _hpx_process_call(process, addr, action, result, __HPX_NARGS(__VA_ARGS__),\
-                    __VA_ARGS__)
+  _hpx_process_call(process, addr, action, result, __HPX_NARGS(__VA_ARGS__) \
+                    , ##__VA_ARGS__)
 
 /// Delete a specified process
 ///
