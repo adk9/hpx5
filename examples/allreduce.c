@@ -90,12 +90,15 @@ static void _sum_int_handler(int *output, const int *input, const size_t size) {
 }
 static HPX_ACTION(HPX_FUNCTION, 0, _sum_int, _sum_int_handler);
 
-static int do_allreduce_handler(hpx_addr_t rlco, int value, int iters) {
+static int do_allreduce_handler(hpx_addr_t rlco, int value, int iters,
+                                hpx_addr_t barrier) {
 
   hpx_addr_t lco = hpx_lco_future_new(sizeof(int));
   int32_t id = hpx_process_collective_allreduce_subscribe(rlco,
                                                           hpx_lco_set_action,
                                                           lco);
+  hpx_lco_set(barrier, 0, NULL, HPX_NULL, HPX_NULL);
+  hpx_lco_wait(barrier);
 
   for (int i = 0; i < iters; i++) {
     hpx_process_collective_allreduce_join(rlco, id, sizeof(value), &value);
@@ -108,7 +111,7 @@ static int do_allreduce_handler(hpx_addr_t rlco, int value, int iters) {
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, do_allreduce, do_allreduce_handler,
-                  HPX_ADDR, HPX_INT, HPX_INT);
+                  HPX_ADDR, HPX_INT, HPX_INT, HPX_ADDR);
 
 
 static int proc_allreduce_handler(int value) {
@@ -117,8 +120,10 @@ static int proc_allreduce_handler(int value) {
                                                         _sum_int);
 
   int iters = 10;
-  hpx_bcast_rsync(do_allreduce, &lco, &value, &iters);
+  hpx_addr_t barrier = hpx_lco_and_new(HPX_LOCALITIES);
+  hpx_bcast_rsync(do_allreduce, &lco, &value, &iters, &barrier);
 
+  hpx_lco_delete_sync(barrier);
   hpx_process_collective_allreduce_delete(lco);
   hpx_exit(HPX_SUCCESS);
 }
