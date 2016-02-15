@@ -100,8 +100,8 @@ static int do_allreduce_handler(hpx_addr_t rlco, int value, int iters) {
   for (int i = 0; i < iters; i++) {
     hpx_process_collective_allreduce_join(rlco, id, sizeof(value), &value);
     hpx_lco_get_reset(lco, sizeof(value), &value);
+    printf("rank %d: iter %d: reduced value %d\n", HPX_LOCALITY_ID, i, value);
   }
-  printf("rank %d: reduced value %d\n", HPX_LOCALITY_ID, value);
 
   hpx_process_collective_allreduce_unsubscribe(rlco, id);
   hpx_lco_delete(lco, HPX_NULL);
@@ -143,6 +143,11 @@ int main(int argc, char** argv) {
   value = HPX_LOCALITY_ID;
 
   e = hpx_run(&allreduce, NULL, 0);
+  if (e != HPX_SUCCESS) {
+    printf("Error %d in hpx_run(allreduce)!\n", e);
+    exit(EXIT_FAILURE);
+  }
+
   e = hpx_run(&proc_allreduce, &value, sizeof(value));
   hpx_finalize();
   return e;
