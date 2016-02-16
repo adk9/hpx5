@@ -32,10 +32,17 @@
 #include <metis.h>
 #endif
 
+// The owner map for vertices in the graph.
+typedef struct _owner_map {
+  uint64_t start; //!< the starting vertex id of vertices mapped to an owner
+  int      owner;
+} _owner_map_t;
+
 // A graph representing the GAS accesses.
 typedef struct agas_graph {
   int nvtxs;
   int nedges;
+  _owner_map_t *owner_map;
   UT_string *vtxs;
   UT_string *vwgt;
   UT_string *vsizes;
@@ -43,6 +50,7 @@ typedef struct agas_graph {
   UT_string *adjncy;
   UT_string *adjwgt;
   volatile int lock;
+  int count;
 } _agas_graph_t;
 
 #define _UTBUF(s) ((void*)utstring_body(s))
@@ -53,6 +61,8 @@ static void _init(_agas_graph_t *graph) {
 
   graph->nvtxs = 0;
   graph->nedges = 0;
+  graph->count = 0;
+  graph->owner_map = calloc(HPX_LOCALITIES, sizeof(*graph->owner_map));
   utstring_new(graph->vtxs);
   utstring_new(graph->vwgt);
   utstring_new(graph->vsizes);
@@ -60,6 +70,18 @@ static void _init(_agas_graph_t *graph) {
   utstring_new(graph->adjncy);
   utstring_new(graph->adjwgt);  
 }
+
+static void _free(_agas_graph_t *g) {
+  utstring_free(g->vtxs);
+  utstring_free(g->vwgt);
+  utstring_free(g->vsizes);
+  utstring_free(g->xadj);
+  utstring_free(g->adjncy);
+  utstring_free(g->adjwgt);
+  free(g->owner_map);
+  free(g);
+}
+
 
 hpx_addr_t agas_graph_new(void) {
   _agas_graph_t *g = NULL;
@@ -72,16 +94,6 @@ hpx_addr_t agas_graph_new(void) {
   _init(g);
   hpx_gas_unpin(graph);
   return graph;
-}
-
-static void _free(_agas_graph_t *g) {
-  utstring_free(g->vtxs);
-  utstring_free(g->vwgt);
-  utstring_free(g->vsizes);
-  utstring_free(g->xadj);
-  utstring_free(g->adjncy);
-  utstring_free(g->adjwgt);
-  free(g);
 }
 
 HPX_ACTION_DECL(agas_graph_delete_action);
@@ -113,9 +125,8 @@ static void _deserialize_bst(uint64_t *data, size_t size, int *nvtxs,
   *adjwgt = &data[4*(*nvtxs)+3+(*nedges)];
 }
 
-int agas_graph_from_bst(hpx_addr_t graph, uint64_t *data, size_t size) {
-  _agas_graph_t *g = NULL;
-
+int agas_graph_from_bst(hpx_addr_t graph, uint64_t *data, size_t size,
+                        int owner) {
   int nvtxs;
   int nedges;
   uint64_t *vtxs;
@@ -128,15 +139,20 @@ int agas_graph_from_bst(hpx_addr_t graph, uint64_t *data, size_t size) {
   _deserialize_bst(data, size, &nvtxs, &nedges, &vtxs, &vwgt, &vsizes,
                    &xadj, &adjncy, &adjwgt);
 
+  _agas_graph_t *g = NULL;
   if (!hpx_gas_try_pin(graph, (void**)&g)) {
     dbg_error("Could not pin the graph. Did it move?\n");
     return HPX_ERROR;
-  }  
+  }
 
   while (!sync_swap(&g->lock, 0, SYNC_ACQUIRE))
     ;
 
-  g->nvtxs += nvtxs;
+  _owner_map_t *map = &g->owner_map[g->count++];
+  map->start = g->nvtxs;
+  map->owner = owner;
+
+  g->nvtxs  += nvtxs;
   g->nedges += nedges;
 
   utstring_bincpy(g->vtxs, vtxs, sizeof(*vtxs)*nvtxs);
@@ -154,8 +170,6 @@ int agas_graph_from_bst(hpx_addr_t graph, uint64_t *data, size_t size) {
 #ifdef HAVE_METIS
 static size_t _metis_partition(_agas_graph_t *g, int nparts,
                                uint64_t **partition) {
-  dbg_assert(sizeof(idx_t) == sizeof(uint64_t));
-
   idx_t options[METIS_NOPTIONS];
   options[METIS_OPTION_NUMBERING] = 0;
 
@@ -185,4 +199,23 @@ size_t agas_graph_get_vtxs(void *graph, uint64_t **vtxs) {
   dbg_assert(g);
   *vtxs = _UTBUF(g->vtxs);
   return g->nvtxs;
+}
+
+int agas_graph_get_owner_entry(void *graph, uint64_t id, int *start,
+                               int *end, int *owner) {
+  _agas_graph_t *g = (_agas_graph_t*)graph;
+  dbg_assert(g);
+  dbg_assert(id >= 0 && id <= HPX_LOCALITIES);
+
+  _owner_map_t entry = g->owner_map[id];
+  *start = entry.start;
+  *owner = entry.owner;
+
+  if (id == HPX_LOCALITIES) {
+    *end = g->nvtxs - 1;
+  } else {
+    _owner_map_t next_entry = g->owner_map[id+1];
+    *end = next_entry.start - 1;
+  }
+  return HPX_SUCCESS;
 }

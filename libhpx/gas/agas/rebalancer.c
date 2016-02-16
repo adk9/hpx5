@@ -123,9 +123,12 @@ int _local_to_global_bst(int id, void *env) {
   return HPX_SUCCESS;
 }
 
+// Constructs a graph at the target global address from the serialized
+// parcel payload.
 static int _aggregate_global_bst_handler(void *data, size_t size) {
   hpx_addr_t graph = hpx_thread_current_target();
-  return agas_graph_from_bst(graph, data, size);
+  hpx_parcel_t *p = hpx_thread_current_parcel();
+  return agas_graph_from_bst(graph, data, size, p->src);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _aggregate_global_bst,
                      _aggregate_global_bst_handler, HPX_POINTER, HPX_SIZE_T);
@@ -151,17 +154,26 @@ static int _aggregate_bst_handler(hpx_addr_t graph) {
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _aggregate_bst, _aggregate_bst_handler,
                      HPX_ADDR);
 
-typedef struct _rebalance_blocks__args {
-  hpx_addr_t done;
-  uint64_t *vtxs;
-  uint64_t *partition;
-} _rebalance_blocks_args_t;
+int _rebalance_blocks(int start, int end, int owner,
+                      void *graph, void *partition, hpx_addr_t done) {
+  uint64_t *vtxs = NULL;
+  agas_graph_get_vtxs(graph, &vtxs);
 
-int _rebalance_blocks(int id, void *a) {
-  _rebalance_blocks_args_t *args = (_rebalance_blocks_args_t*)a;
-  hpx_gas_move(args->vtxs[id], HPX_THERE(args->partition[id]), args->done);
+  for (int i = start; i <= end; ++i) {
+    int new_owner = partition[i];
+    if (owner != new_owner) {
+      log_gas("move block 0x%lx from %lu to %lu (0x%lx)\n", vtxs[i], owner,
+              new_owner, HPX_THERE(new_owner));
+      hpx_gas_move(vtxs[i], HPX_THERE(new_owner), done);
+    } else {
+      hpx_lco_set(done, 0, NULL, HPX_NULL, HPX_NULL);
+    }
+  }
   return HPX_SUCCESS;
 }
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _rebalance_blocks,
+                     _rebalance_blocks_handler, HPX_INT, HPX_INT, HPX_INT,
+                     HPX_POINTER, HPX_POINTER, HPX_ADDR);
 
 // Start balancing the blocks.
 // This can be called by any locality in the system.
@@ -179,19 +191,23 @@ static int libhpx_rebalancer_start_sync(void) {
   }
   
   // then, divide it into partitions
-  _rebalance_blocks_args_t args;
-  int nvtxs = agas_graph_get_vtxs(g, &args.vtxs);
-  args.done = hpx_lco_and_new(nvtxs);
-  size_t psize = agas_graph_partition(g, here->ranks, &args.partition);
-  dbg_assert(psize > 0 && args.partition);
+  uint64_t *partition = NULL;
+  size_t nvtxs = agas_graph_partition(g, here->ranks, &partition);
+  dbg_assert(nvtxs > 0 && partition);
 
   // rebalance blocks based on the resulting partition
-  hpx_par_for(_rebalance_blocks, 0, psize, &args, HPX_NULL);
-  hpx_lco_wait(args.done);
-  hpx_lco_delete(args.done, HPX_NULL);
+  hpx_addr_t done = hpx_lco_and_new(nvtxs);
+  for (int i = 0; i < HPX_LOCALITIES; ++i) {
+    int start, end, owner;
+    agas_graph_get_owner_entry(g, i, &start, &end, &owner);
+    hpx_call(HPX_HERE, _rebalance_blocks, HPX_NULL, &start, &end, &owner,
+             &g, &partition, &done);
+  }
+  hpx_lco_wait(done);
+  hpx_lco_delete(done, HPX_NULL);
 
   hpx_gas_unpin(graph);
-  free(args.partition);
+  free(partition);
   agas_graph_delete(graph);
   return HPX_SUCCESS;
 }
