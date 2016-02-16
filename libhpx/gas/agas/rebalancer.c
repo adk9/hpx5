@@ -44,7 +44,7 @@ typedef struct agas_bst {
 static __thread agas_bst_t *_local_bst;
 
 // Global array of all BSTs
-static agas_bst_t **_local_bsts;
+static agas_bst_t ***_local_bsts;
 
 // Per-locality BST
 static void *_global_bst;
@@ -82,15 +82,12 @@ void libhpx_rebalancer_add_entry(int src, int dst, hpx_addr_t block,
 
 // Initialize the AGAS-based rebalancer
 int libhpx_rebalancer_init(void) {
-  if (!_local_bsts) {
-    _local_bsts = calloc(HPX_THREADS, sizeof(*_local_bsts));
-  }
+  _local_bsts = calloc(here->config->threads, sizeof(agas_bst_t**));
+  dbg_assert(_local_bsts);
 
-  if (!_global_bst) {
-    _global_bst = bst_new(0);
-  }
-
+  _global_bst = bst_new(0);
   dbg_assert(_global_bst);
+
   log_gas("GAS rebalancer initialized\n");
   return HPX_SUCCESS;
 }
@@ -107,19 +104,18 @@ void libhpx_rebalancer_bind_worker(void) {
   if (here->config->gas != HPX_GAS_AGAS) {
     return;
   }
-  int id = HPX_THREAD_ID;
-  dbg_assert(_local_bsts[id]);
 
   // publish my private bst to the global BST array
-  _local_bsts[id] = _local_bst;
+  _local_bsts[HPX_THREAD_ID] = &_local_bst;
 }
 
 // This construct a sparse graph in the compressed storage format
 // (CSR) from the thread-private block statistics table.
 int _local_to_global_bst(int id, void *env) {
-  agas_bst_t *bst = _local_bsts[id];
-  agas_bst_t *entry, *tmp;
+  agas_bst_t *bst = *_local_bsts[id];
+  dbg_assert(bst);
 
+  agas_bst_t *entry, *tmp;
   HASH_ITER(hh, bst, entry, tmp) {
     bst_upsert(_global_bst, entry->block, entry->counts, entry->sizes);
     free(entry);
