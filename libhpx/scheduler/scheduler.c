@@ -47,6 +47,9 @@ static void _bind_self(worker_t *worker) {
   }
   self = worker;
   self->thread = pthread_self();
+
+  // register this worker with the rebalancer
+  libhpx_rebalancer_bind_worker();
 }
 
 /// The pthread entry function for dedicated worker threads.
@@ -68,9 +71,6 @@ static void *_run(void *worker) {
   // let APEX know there is a new thread
   apex_register_thread("HPX WORKER THREAD");
 #endif
-
-  // register this worker thread with the rebalancer
-  libhpx_rebalancer_bind_worker();
 
   // wait for the other threads to join
   system_barrier_wait(&here->sched->barrier);
