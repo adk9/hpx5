@@ -320,19 +320,19 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
 
 /// Initialize a block of array of lco.
 static int
-_block_local_init_handler(_user_lco_t *lco, _user_lco_init_args_t *args) {
+_block_init_handler(_user_lco_t *lco, _user_lco_init_args_t *args) {
   int n = args->n;
   int lco_bytes = sizeof(_user_lco_t) + args->size + args->init_size;
   for (int i = 0; i < n; i++) {
     void *addr = (void *)((uintptr_t)lco + (i * lco_bytes));
     int e = _user_lco_init_handler(addr, args);
-    dbg_check(e, "_block_local_init_handler failed\n");
+    dbg_check(e, "_block_init_handler failed\n");
   }
   return HPX_SUCCESS;
 }
 
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED,
-                     _block_local_init, _block_local_init_handler,
+                     _block_init, _block_init_handler,
                      HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 /// Allocate an array of user LCO local to the calling locality.
@@ -364,7 +364,7 @@ hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size, hpx_action_t id,
   args->init_size = init_size;
   memcpy(args->data, init, init_size);
 
-  int e = hpx_call_sync(base, _block_local_init, NULL, 0, args, args_size);
+  int e = hpx_call_sync(base, _block_init, NULL, 0, args, args_size);
   dbg_check(e, "call of _block_init_action failed\n");
 
   free(args);

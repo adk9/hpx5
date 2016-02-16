@@ -288,10 +288,10 @@ hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
   return gva;
 }
 
-/// Initialize a block allreduce LCOs.
+/// Initialize a block of allreduce LCOs.
 static int
-_block_local_init_handler(void *lco, int n, size_t participants, size_t readers,
-                          size_t size, hpx_action_t id, hpx_action_t op) {
+_block_init_handler(void *lco, int n, size_t participants, size_t readers,
+                    size_t size, hpx_action_t id, hpx_action_t op) {
   for (int i = 0; i < n; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_allreduce_t) + size));
     _allreduce_init_handler(addr, participants, readers, size, id, op);
@@ -299,8 +299,8 @@ _block_local_init_handler(void *lco, int n, size_t participants, size_t readers,
   return HPX_SUCCESS;
 }
 
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
-                     _block_local_init_handler, HPX_POINTER, HPX_INT,
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_init,
+                     _block_init_handler, HPX_POINTER, HPX_INT,
                      HPX_SIZE_T, HPX_SIZE_T, HPX_POINTER, HPX_SIZE_T,
                      HPX_POINTER);
 
@@ -312,7 +312,7 @@ hpx_lco_allreduce_local_array_new(int n, size_t participants, size_t readers,
   dbg_assert(n * lco_bytes < UINT32_MAX);
   hpx_addr_t base = hpx_gas_alloc_local(n, lco_bytes, 0);
 
-  dbg_check( hpx_call_sync(base, _block_local_init, NULL, 0, &n, &participants,
+  dbg_check( hpx_call_sync(base, _block_init, NULL, 0, &n, &participants,
                            &readers, &size, &id, &op) );
 
   // return the base address of the allocation

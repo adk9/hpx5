@@ -444,17 +444,17 @@ hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) {
   return gva;
 }
 
-/// Initialize a block of array of lco.
-static int _block_local_init_handler(void *lco, uint32_t n, uint32_t inputs,
-                                     uint32_t size) {
+/// Initialize a block of alltoall LCOs.
+static int _block_init_handler(void *lco, uint32_t n, uint32_t inputs,
+                               uint32_t size) {
   for (int i = 0; i < n; i++) {
     void *addr = (void *)((uintptr_t)lco + i * (sizeof(_alltoall_t) + size));
     _alltoall_init_handler(addr, inputs, size);
   }
   return HPX_SUCCESS;
 }
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_local_init,
-                     _block_local_init_handler,
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_init,
+                     _block_init_handler,
                      HPX_POINTER, HPX_UINT32, HPX_UINT32, HPX_UINT32);
 
 /// Allocate an array of alltoall LCO local to the calling locality.
@@ -468,7 +468,7 @@ hpx_addr_t hpx_lco_alltoall_local_array_new(int n, size_t inputs, size_t size) {
   dbg_assert(n * lco_bytes < UINT32_MAX);
   hpx_addr_t base = hpx_gas_alloc_local(n, lco_bytes, 0);
 
-  int e = hpx_call_sync(base, _block_local_init, NULL, 0, &n, &inputs, &size);
+  int e = hpx_call_sync(base, _block_init, NULL, 0, &n, &inputs, &size);
   dbg_check(e, "call of _block_init_action failed\n");
 
   // return the base address of the allocation
