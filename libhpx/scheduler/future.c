@@ -262,7 +262,7 @@ hpx_addr_t hpx_lco_future_new(int size) {
 }
 
 /// Initialize a block of futures.
-static int _block_init_handler(void *base, const uint32_t n,
+static int _block_init_handler(void *lco, const uint32_t n,
                                const uint32_t size) {
   // sequentially initialize each future
   for (uint32_t i = 0; i < n; ++i) {
