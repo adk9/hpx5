@@ -127,7 +127,7 @@ int _local_to_global_bst(int id, void *env) {
 // parcel payload.
 static int _aggregate_global_bst_handler(void *data, size_t size) {
   hpx_addr_t graph = hpx_thread_current_target();
-  hpx_parcel_t *p = hpx_thread_current_parcel();
+  const hpx_parcel_t *p = hpx_thread_current_parcel();
   return agas_graph_from_bst(graph, data, size, p->src);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _aggregate_global_bst,
@@ -154,15 +154,15 @@ static int _aggregate_bst_handler(hpx_addr_t graph) {
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _aggregate_bst, _aggregate_bst_handler,
                      HPX_ADDR);
 
-int _rebalance_blocks(int start, int end, int owner,
-                      void *graph, void *partition, hpx_addr_t done) {
+int _rebalance_blocks_handler(int start, int end, int owner, void *graph,
+                              uint64_t *partition, hpx_addr_t done) {
   uint64_t *vtxs = NULL;
   agas_graph_get_vtxs(graph, &vtxs);
 
   for (int i = start; i <= end; ++i) {
     int new_owner = partition[i];
     if (owner != new_owner) {
-      log_gas("move block 0x%lx from %lu to %lu (0x%lx)\n", vtxs[i], owner,
+      log_gas("move block 0x%lx from %d to %d (0x%lx)\n", vtxs[i], owner,
               new_owner, HPX_THERE(new_owner));
       hpx_gas_move(vtxs[i], HPX_THERE(new_owner), done);
     } else {
