@@ -74,16 +74,16 @@ template <typename T>
 T table_get(const global_ptr<T>& table, long i) {
   auto f = hpx::lco::Future<void>::Alloc();
   T val;
-  memget(&val, &table[i], sizeof(T), f);
+  memget(&val, table + i, sizeof(T), f);
   hpx::lco::get(f);
   return val;
 }
 
 // table set is asynchronous and uses an LCO for synchronization.
-template <typename T, template <typename> class L>
+template <typename T, typename U>
 void table_set(global_ptr<T> table, long i, const T& val,
-               const global_ptr<L<void>>& rsync) {
-  memput(&table[i], &val, sizeof(T), nullptr, rsync);
+               const global_ptr<U>& rsync) {
+  memput(table + i, &val, sizeof(T), nullptr, rsync);
 }
 
 int _bitwiseor_action(uint64_t *args, size_t size) {
@@ -112,7 +112,7 @@ int _init_table_action() {
   long blocks = cfg.tabsize / nranks + ((me < r) ? 1 : 0);
   hpx_addr_t and_lco = hpx_lco_and_new(blocks);
   for (long b = 0, i = me; b < blocks; ++b, i += nranks) {
-    table_set(cfg.table, i, (unsigned long)i, global_ptr<hpx::lco::And<void>>(and_lco, 1));
+    table_set(cfg.table, i, (unsigned long)i, global_ptr<hpx::lco::And>(and_lco, 1));
   }
   hpx_lco_wait(and_lco);
   hpx_lco_delete(and_lco, HPX_NULL);
@@ -240,7 +240,7 @@ int _update_table_action() {
     hpx_addr_t done = hpx_lco_and_new(VLEN);
     for (j=0; j<VLEN; j++) {
       table_set(cfg.table, ran[j] & (cfg.tabsize-1), t1[j],
-                global_ptr<hpx::lco::And<void>>(done, 1));
+                global_ptr<hpx::lco::And>(done, 1));
     }
     hpx_lco_wait(done);
     hpx_lco_delete(done, HPX_NULL);

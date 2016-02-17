@@ -180,7 +180,7 @@ class global_ptr {
 
   /// Standard self-update pointer arithmetic.
   template <typename U>
-  global_ptr<T>& operator+=(U n) const noexcept {
+  global_ptr<T>& operator+=(U n) noexcept {
     _gbl_ptr = (*this + n).get();
     return *this;
   }
