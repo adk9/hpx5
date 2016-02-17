@@ -258,6 +258,9 @@ static int _hpx_gas_free_handler(void) {
 LIBHPX_ACTION(HPX_DEFAULT, 0, hpx_gas_free_action, _hpx_gas_free_handler);
 
 void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
+  if (src == HPX_NULL || dst == HPX_NULL) {
+    return;
+  }
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
   dbg_assert(gas->move);
