@@ -61,6 +61,22 @@ void get(const global_ptr<T>& lco, U& out) {
   }
 }
 
+template <typename T, template <typename> class LCO>
+T get(const global_ptr<LCO<T>>& lco) {
+  T out;
+  if (int e = hpx_lco_get(lco.get(), sizeof(out), &out)) {
+    throw Error(e);
+  }
+  return out;
+}
+
+template <template <typename> class LCO>
+void get(const global_ptr<LCO<void>>& lco) {
+  if (int e = hpx_lco_wait(lco.get())) {
+    throw Error(e);
+  }
+}
+
 template <typename T>
 void get(const global_ptr<T>& lco) {
   wait(lco);
@@ -105,7 +121,7 @@ class Future : public LCO {
 /// Future to void is a 0-sized future that only contains control information.
 template <>
 global_ptr<Future<void>> Future<void>::Alloc() {
-    return global_ptr<Future<void>>(hpx_lco_future_new(0));
+  return global_ptr<Future<void>>(hpx_lco_future_new(0));
 }
 
 class And : public LCO {
@@ -124,12 +140,74 @@ class Reduce : public LCO {
   Reduce() = delete;
   ~Reduce() = delete;
 
-  static global_ptr<Reduce<T>> Alloc(int inputs, hpx_action_t id,
-                                     hpx_action_t op) {
+  template <template <typename> class Op>
+  static global_ptr<Reduce<T>> Alloc(int inputs) {
+    hpx_action_t id = Op<T>::id;
+    hpx_action_t op = Op<T>::op;
     return global_ptr<Reduce<T>>(hpx_lco_reduce_new(inputs, sizeof(T), id, op));
   }
 };
 
+namespace Ops {
+template <typename T>
+class Sum {
+  static void init(T* t, size_t) {
+    *t = T(0);
+  }
+
+  static void sum(T* lhs, const T* rhs, size_t) {
+    *lhs += *rhs;
+  }
+
+ public:
+  static int Init() {
+    if (int e = hpx_register_action(HPX_FUNCTION, 0, "SumId", &id, 1, &init)) {
+      throw Error(e);
+    }
+
+    if (int e = hpx_register_action(HPX_FUNCTION, 0, "SumOp", &op, 1, &sum)) {
+      throw Error(e);
+    }
+
+    return HPX_SUCCESS;
+  }
+
+  static hpx_action_t id;
+  static hpx_action_t op;
+};
+
+template <typename T>
+class Product {
+  static void init(T* t, size_t) {
+    *t = T(1);
+  }
+
+  static void product(T* lhs, const T* rhs, size_t) {
+    *lhs *= *rhs;
+  }
+
+ public:
+  static int Init() {
+    if (int e = hpx_register_action(HPX_FUNCTION, 0, "", &id, 1, &init)) {
+      throw Error(e);
+    }
+
+    if (int e = hpx_register_action(HPX_FUNCTION, 0, "", &op, 1, &product)) {
+      throw Error(e);
+    }
+
+    return HPX_SUCCESS;
+  }
+
+  static hpx_action_t id;
+  static hpx_action_t op;
+};
+
+template <typename T> hpx_action_t Sum<T>::id = HPX_ACTION_NULL;
+template <typename T> hpx_action_t Sum<T>::op = HPX_ACTION_NULL;
+template <typename T> hpx_action_t Product<T>::id = HPX_ACTION_NULL;
+template <typename T> hpx_action_t Product<T>::op = HPX_ACTION_NULL;
+} // namespace ops
 } // namespace lco
 } // namespace hpx
 
