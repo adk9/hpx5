@@ -171,7 +171,6 @@ int inst_init(config_t *cfg) {
 
   // create log files
   hpx_time_t start = hpx_time_now();
-  inst_trace(HPX_TRACE_BOOKEND, TRACE_EVENT_BOOKEND_BOOKEND);
   int nclasses = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING);
   for (int cl = 0, e = nclasses; cl < e; ++cl) {
     if (inst_trace_class(1 << cl)) {
