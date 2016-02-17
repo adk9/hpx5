@@ -55,20 +55,39 @@ typedef struct agas_graph {
 
 #define _UTBUF(s) ((void*)utstring_body(s))
 
-static void _init(_agas_graph_t *graph) {
-  // Initialize locks.
-  sync_store(&graph->lock, 1, SYNC_RELEASE);
+static void _add_locality_nodes(_agas_graph_t *g) {
+  int n = HPX_LOCALITIES;
+  uint64_t vtxs[n];
+  uint64_t vwgt[n];
+  for (int i = 0; i < n; ++i) {
+    vtxs[i] = i;
+    vwgt[i] = INT_MAX;
+  }
+  uint64_t *zeros = calloc(n, sizeof(zeros));
 
-  graph->nvtxs = 0;
-  graph->nedges = 0;
-  graph->count = 0;
-  graph->owner_map = calloc(HPX_LOCALITIES, sizeof(*graph->owner_map));
-  utstring_new(graph->vtxs);
-  utstring_new(graph->vwgt);
-  utstring_new(graph->vsizes);
-  utstring_new(graph->xadj);
-  utstring_new(graph->adjncy);
-  utstring_new(graph->adjwgt);  
+  g->nvtxs = n;
+  utstring_bincpy(g->vtxs, vtxs, sizeof(uint64_t)*n);
+  utstring_bincpy(g->vwgt, vwgt, sizeof(uint64_t)*n);
+  utstring_bincpy(g->vsizes, zeros, sizeof(uint64_t)*n);
+  utstring_bincpy(g->xadj, zeros, sizeof(uint64_t)*n);
+}
+
+static void _init(_agas_graph_t *g) {
+  // Initialize locks.
+  sync_store(&g->lock, 1, SYNC_RELEASE);
+
+  g->nvtxs = 0;
+  g->nedges = 0;
+  g->count = 0;
+  g->owner_map = calloc(HPX_LOCALITIES, sizeof(*g->owner_map));
+  utstring_new(g->vtxs);
+  utstring_new(g->vwgt);
+  utstring_new(g->vsizes);
+  utstring_new(g->xadj);
+  utstring_new(g->adjncy);
+  utstring_new(g->adjwgt);
+
+  _add_locality_nodes(g);
 }
 
 static void _free(_agas_graph_t *g) {
@@ -81,7 +100,6 @@ static void _free(_agas_graph_t *g) {
   free(g->owner_map);
   free(g);
 }
-
 
 hpx_addr_t agas_graph_new(void) {
   _agas_graph_t *g = NULL;
@@ -233,3 +251,4 @@ int agas_graph_get_owner_entry(void *graph, uint64_t id, int *start,
   }
   return HPX_SUCCESS;
 }
+
