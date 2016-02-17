@@ -55,6 +55,11 @@ void libhpx_rebalancer_add_entry(int src, int dst, hpx_addr_t block,
   if (here->config->gas != HPX_GAS_AGAS) {
     return;
   }
+
+  if (_local_bsts == NULL) {
+    return;
+  }
+
   const agas_t *agas = here->gas;
   dbg_assert(agas && agas->btt);
 
@@ -65,7 +70,7 @@ void libhpx_rebalancer_add_entry(int src, int dst, hpx_addr_t block,
   if (!likely(attr & HPX_GAS_ATTR_LB)) {
     return;
   }
-  
+
   agas_bst_t *entry = NULL;
   HASH_FIND(hh, _local_bst, &block, sizeof(uint64_t), entry);
   if (!entry) {
@@ -93,11 +98,15 @@ int libhpx_rebalancer_init(void) {
 }
 
 void libhpx_rebalancer_finalize(void) {
-  free(_local_bsts);
-  _local_bsts = NULL;
+  if (_local_bsts) {
+    free(_local_bsts);
+    _local_bsts = NULL;
+  }
 
-  bst_delete(_global_bst);
-  _global_bst = NULL;
+  if (_global_bst) {
+    bst_delete(_global_bst);
+    _global_bst = NULL;
+  }
 }
 
 void libhpx_rebalancer_bind_worker(void) {
@@ -120,7 +129,9 @@ int _local_to_global_bst(int id, void *UNUSED) {
   agas_bst_t *entry, *tmp;
   HASH_ITER(hh, bst, entry, tmp) {
     bst_upsert(_global_bst, entry->block, entry->counts, entry->sizes);
+    HASH_DEL(bst, entry);
     free(entry);
+    entry = NULL;
   }
   return HPX_SUCCESS;
 }
