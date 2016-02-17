@@ -153,7 +153,7 @@ int main(int argc, char** argv) {
     exit(EXIT_FAILURE);
   }
 
-  e = hpx_run(&proc_allreduce, &value, sizeof(value));
+  e = hpx_run(&proc_allreduce, &value);
   hpx_finalize();
   return e;
 }
