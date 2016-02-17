@@ -170,16 +170,25 @@ int agas_graph_from_bst(hpx_addr_t graph, uint64_t *data, size_t size,
 #ifdef HAVE_METIS
 static size_t _metis_partition(_agas_graph_t *g, int nparts,
                                uint64_t **partition) {
-  idx_t options[METIS_NOPTIONS];
+  idx_t options[METIS_NOPTIONS] = { 0 };
   options[METIS_OPTION_NUMBERING] = 0;
+  options[METIS_OPTION_OBJTYPE] = METIS_OBJTYPE_CUT;
+  options[METIS_OPTION_CTYPE] = METIS_CTYPE_RM;
+  options[METIS_OPTION_NCUTS] = 1;
+  options[METIS_OPTION_NITER] = 10;
+  options[METIS_OPTION_UFACTOR] = 1;
 
   idx_t ncon = 1;
-  idx_t objval;
+  idx_t objval = 0;
   *partition = calloc(g->nvtxs, sizeof(uint64_t));
   dbg_assert(partition);
-  METIS_PartGraphRecursive(&g->nvtxs, &ncon, _UTBUF(g->xadj), _UTBUF(g->adjncy),
-                           _UTBUF(g->vwgt), _UTBUF(g->vsizes), _UTBUF(g->adjwgt),
-                           &nparts, NULL, NULL, options, &objval, (idx_t*)*partition);
+  int e = METIS_PartGraphRecursive(&g->nvtxs, &ncon, _UTBUF(g->xadj),
+            _UTBUF(g->adjncy), _UTBUF(g->vwgt), _UTBUF(g->vsizes),
+            _UTBUF(g->adjwgt), &nparts, NULL, NULL, options, &objval,
+            (idx_t*)*partition);
+  if (e != METIS_OK) {
+    return 0;
+  }
   return g->nvtxs;
 }
 #endif
@@ -201,17 +210,22 @@ size_t agas_graph_get_vtxs(void *graph, uint64_t **vtxs) {
   return g->nvtxs;
 }
 
+size_t agas_graph_get_owner_count(void *graph) {
+  _agas_graph_t *g = (_agas_graph_t*)graph;
+  return g->count;
+}
+
 int agas_graph_get_owner_entry(void *graph, uint64_t id, int *start,
                                int *end, int *owner) {
   _agas_graph_t *g = (_agas_graph_t*)graph;
   dbg_assert(g);
-  dbg_assert(id >= 0 && id <= HPX_LOCALITIES);
+  dbg_assert(id >= 0 && id <= g->count);
 
   _owner_map_t entry = g->owner_map[id];
   *start = entry.start;
   *owner = entry.owner;
 
-  if (id == HPX_LOCALITIES) {
+  if (id == g->count-1) {
     *end = g->nvtxs - 1;
   } else {
     _owner_map_t next_entry = g->owner_map[id+1];

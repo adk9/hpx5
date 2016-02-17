@@ -60,6 +60,10 @@ bst_serialize_to_parcel(void* obj, hpx_parcel_t **parcel) {
   BST *bst = static_cast<BST*>(obj);
 
   int nvtxs = bst->size();
+  if (!nvtxs) {
+    return 0;
+  }
+
   size_t buf_size = (4*nvtxs*sizeof(uint64_t)) + (3*sizeof(uint64_t))
       + (2*nvtxs*here->ranks*sizeof(uint64_t));
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, buf_size);
@@ -96,16 +100,12 @@ bst_serialize_to_parcel(void* obj, hpx_parcel_t **parcel) {
       uint64_t total_vwgt = 0;
       uint64_t total_vsize = 0;
       for (unsigned k = 0; k < here->ranks; ++k) {
-        if (k == here->rank) {
-          continue;
-        }
-
         if (entry.counts[k] != 0) {
           assert(entry.sizes[k] != 0);
 
           adjncy[nbrs] = k;
           adjwgt[nbrs] = entry.counts[k] * entry.sizes[k];
-          total_vwgt += entry.counts[k];
+          total_vwgt  += entry.counts[k];
           total_vsize += entry.sizes[k];
           nbrs++;
         }

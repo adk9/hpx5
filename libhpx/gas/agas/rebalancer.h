@@ -34,6 +34,7 @@ int agas_graph_from_bst(hpx_addr_t graph, uint64_t *data, size_t size,
                         int owner);
 size_t agas_graph_partition(void *g, int nparts, uint64_t **partition);
 size_t agas_graph_get_vtxs(void *graph, uint64_t **vtxs);
+size_t agas_graph_get_owner_count(void *graph);
 int agas_graph_get_owner_entry(void *graph, uint64_t id, int *start,
                                int *end, int *owner);
 

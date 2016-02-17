@@ -62,19 +62,19 @@ void libhpx_rebalancer_add_entry(int src, int dst, hpx_addr_t block,
   // attribute
   gva_t gva = { .addr = block };
   uint32_t attr = btt_get_attr(agas->btt, gva);
-  if (!(attr & HPX_GAS_ATTR_LB)) {
+  if (!likely(attr & HPX_GAS_ATTR_LB)) {
     return;
   }
   
   agas_bst_t *entry = NULL;
-  HASH_FIND_INT(_local_bst, (uint64_t*)&block, entry);
+  HASH_FIND(hh, _local_bst, &block, sizeof(uint64_t), entry);
   if (!entry) {
     entry = malloc(sizeof(*entry));
     dbg_assert(entry);
+    entry->block = block;
     entry->counts = calloc(here->ranks, sizeof(uint64_t));
     entry->sizes = calloc(here->ranks, sizeof(uint64_t));
-    HASH_ADD_INT(_local_bst, block, entry);
-    return;
+    HASH_ADD(hh, _local_bst, block, sizeof(uint64_t), entry);
   }
   entry->counts[src]++;
   entry->sizes[src] += size;
@@ -111,9 +111,11 @@ void libhpx_rebalancer_bind_worker(void) {
 
 // This construct a sparse graph in the compressed storage format
 // (CSR) from the thread-private block statistics table.
-int _local_to_global_bst(int id, void *env) {
+int _local_to_global_bst(int id, void *UNUSED) {
   agas_bst_t *bst = *_local_bsts[id];
-  dbg_assert(bst);
+  if (!bst) {
+    return HPX_SUCCESS;
+  }
 
   agas_bst_t *entry, *tmp;
   HASH_ITER(hh, bst, entry, tmp) {
@@ -137,7 +139,9 @@ static int _aggregate_bst_handler(hpx_addr_t graph) {
   hpx_par_for_sync(_local_to_global_bst, 0, HPX_THREADS, NULL);
   hpx_parcel_t *p = NULL;
   size_t size = bst_serialize_to_parcel(_global_bst, &p);
-  dbg_assert(size > 0);
+  if (!size) {
+    return HPX_SUCCESS;
+  }
   p->target = graph;
   p->action = _aggregate_global_bst;
 
@@ -162,8 +166,7 @@ int _rebalance_blocks_handler(int start, int end, int owner, void *graph,
   for (int i = start; i <= end; ++i) {
     int new_owner = partition[i];
     if (owner != new_owner) {
-      log_gas("move block 0x%lx from %d to %d (0x%lx)\n", vtxs[i], owner,
-              new_owner, HPX_THERE(new_owner));
+      log_gas("move block 0x%lx from %d to %d\n", vtxs[i], owner, new_owner);
       hpx_gas_move(vtxs[i], HPX_THERE(new_owner), done);
     } else {
       hpx_lco_set(done, 0, NULL, HPX_NULL, HPX_NULL);
@@ -183,6 +186,7 @@ static int libhpx_rebalancer_start_sync(void) {
   hpx_addr_t graph = agas_graph_new();
   // first, aggregate the "block" graph locally
   hpx_bcast_rsync(_aggregate_bst, &graph);
+  log_gas("Block graph aggregated on root locality\n");
 
   void *g = NULL;
   if (!hpx_gas_try_pin(graph, (void**)&g)) {
@@ -193,18 +197,19 @@ static int libhpx_rebalancer_start_sync(void) {
   // then, divide it into partitions
   uint64_t *partition = NULL;
   size_t nvtxs = agas_graph_partition(g, here->ranks, &partition);
-  dbg_assert(nvtxs > 0 && partition);
-
-  // rebalance blocks based on the resulting partition
-  hpx_addr_t done = hpx_lco_and_new(nvtxs);
-  for (int i = 0; i < HPX_LOCALITIES; ++i) {
-    int start, end, owner;
-    agas_graph_get_owner_entry(g, i, &start, &end, &owner);
-    hpx_call(HPX_HERE, _rebalance_blocks, HPX_NULL, &start, &end, &owner,
-             &g, &partition, &done);
+  log_gas("Finished partitioning block graph (%ld vertices)\n", nvtxs);
+  if (nvtxs > 0 && partition) {
+    // rebalance blocks based on the resulting partition
+    hpx_addr_t done = hpx_lco_and_new(nvtxs);
+    for (int i = 0; i < agas_graph_get_owner_count(g); ++i) {
+      int start, end, owner;
+      agas_graph_get_owner_entry(g, i, &start, &end, &owner);
+      hpx_call(HPX_HERE, _rebalance_blocks, HPX_NULL, &start, &end, &owner,
+               &g, &partition, &done);
+    }
+    hpx_lco_wait(done);
+    hpx_lco_delete(done, HPX_NULL);
   }
-  hpx_lco_wait(done);
-  hpx_lco_delete(done, HPX_NULL);
 
   hpx_gas_unpin(graph);
   free(partition);
