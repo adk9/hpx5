@@ -159,16 +159,24 @@ class Sum {
     *lhs += *rhs;
   }
 
+  static void register_id(void) {
+    if (int e = hpx_register_action(HPX_FUNCTION, 0, __PRETTY_FUNCTION__, &id,
+                                    1, &init)) {
+      throw Error(e);
+    }
+  }
+
+  static void register_op(void) {
+    if (int e = hpx_register_action(HPX_FUNCTION, 0, __PRETTY_FUNCTION__, &op,
+                                    1, &sum)) {
+      throw Error(e);
+    }
+  }
+
  public:
   static int Init() {
-    if (int e = hpx_register_action(HPX_FUNCTION, 0, "SumId", &id, 1, &init)) {
-      throw Error(e);
-    }
-
-    if (int e = hpx_register_action(HPX_FUNCTION, 0, "SumOp", &op, 1, &sum)) {
-      throw Error(e);
-    }
-
+    register_id();
+    register_op();
     return HPX_SUCCESS;
   }
 
@@ -186,16 +194,24 @@ class Product {
     *lhs *= *rhs;
   }
 
+  static void register_id(void) {
+    if (int e = hpx_register_action(HPX_FUNCTION, 0, __PRETTY_FUNCTION__, &id,
+                                    1, &init)) {
+      throw Error(e);
+    }
+  }
+
+  static void register_op(void) {
+    if (int e = hpx_register_action(HPX_FUNCTION, 0, __PRETTY_FUNCTION__, &op,
+                                    1, &product)) {
+      throw Error(e);
+    }
+  }
+
  public:
   static int Init() {
-    if (int e = hpx_register_action(HPX_FUNCTION, 0, "", &id, 1, &init)) {
-      throw Error(e);
-    }
-
-    if (int e = hpx_register_action(HPX_FUNCTION, 0, "", &op, 1, &product)) {
-      throw Error(e);
-    }
-
+    register_id();
+    register_op();
     return HPX_SUCCESS;
   }
 
