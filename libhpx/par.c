@@ -24,6 +24,7 @@
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
+#include <libhpx/gas.h>
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
@@ -37,6 +38,17 @@ static int _par_for_async_handler(hpx_for_action_t f, void *args, int min,
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _par_for_async, _par_for_async_handler,
                      HPX_POINTER, HPX_POINTER, HPX_INT, HPX_INT);
+
+static int _nested_for_async_handler(hpx_for_action_t f, void * args,
+                                     const void *indexes, size_t len){
+  for (int i = 0; i < len; ++i){
+    f (indexes + i, args);
+  }
+  return HPX_SUCCESS;
+}
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _nested_for_async,
+                     _nested_for_async_handler, HPX_POINTER, HPX_POINTER,
+                     HPX_POINTER, HPX_SIZE_T);
 
 int hpx_par_for(hpx_for_action_t f, int min, int max, void *args,
                 hpx_addr_t sync) {
@@ -81,6 +93,57 @@ int hpx_par_for_sync(hpx_for_action_t f, int min, int max, void *args) {
   }
 
   int e = hpx_par_for(f, min, max, args, sync);
+  if (!e) {
+    e = hpx_lco_wait(sync);
+  }
+  hpx_lco_delete(sync, HPX_NULL);
+  return e;
+}
+int hpx_nested_for(hpx_for_action_t f, const int min, const int max, 
+                   const int stride, const int block_size, void *args, 
+                   hpx_addr_t sync) {
+  dbg_assert(0 < max - min);
+  dbg_assert(0 < stride);
+  dbg_assert(0 < block_size);
+
+  // get the number of scheduler threads
+  int nthreads = HPX_THREADS;
+
+  //sychronization, when all localities are called "nthreads" times, end
+  hpx_addr_t and = HPX_NULL;
+  hpx_action_t set = hpx_lco_set_action;
+  hpx_action_t del = hpx_lco_delete_action;
+  if (sync) {
+    and = hpx_lco_and_new(nthreads);
+    hpx_call_when_with_continuation(and, sync, set, and, del, NULL, 0);
+  }
+
+  //get the address from gas
+  hpx_addr_t local = hpx_thread_current_target();
+  void *array = NULL;
+  if (!hpx_gas_try_pin(local, (void**)&array));
+     return HPX_RESEND;
+  hpx_gas_unpin(local);
+
+  gas_t *gas = (gas_t*)here->gas;
+  int owener = gas_owner_of(gas, local);
+  for (int i = 0, e = nthreads; i < e; ++i) {
+    ;//hpx_par_for(f, min, max, args, sync);
+  }
+  return HPX_SUCCESS;
+}
+
+int hpx_nested_for_sync(hpx_for_action_t f, const int min, const int max, 
+                        const int stride, const int block_size, void *args) {
+  dbg_assert(0 < max - min);
+  dbg_assert(0 < stride);
+  dbg_assert(0 < block_size);
+  hpx_addr_t sync = hpx_lco_future_new(0);
+  if (HPX_NULL == sync) {
+    return log_error("could not allocate an LCO.\n");
+  }
+
+  int e = hpx_nested_for(f, min, max, stride, block_size, args, sync);
   if (!e) {
     e = hpx_lco_wait(sync);
   }

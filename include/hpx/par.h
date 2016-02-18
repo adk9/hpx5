@@ -60,6 +60,12 @@ int hpx_par_for(hpx_for_action_t f, int min, int max, void *args,
 int hpx_par_for_sync(hpx_for_action_t f, int min, int max,
                      void *args) HPX_PUBLIC;
 
+int hpx_nested_for(hpx_for_action_t f, int min, int max, int stride,
+                   int block_size, void *args, hpx_addr_t sync) HPX_PUBLIC;
+
+int hpx_nested_for_sync(hpx_for_action_t f, int min, int max, int stride,
+                        int block_size, void *args) HPX_PUBLIC;
+
 /// Perform a parallel call.
 ///
 /// This encapsulates a simple parallel for loop with the following semantics.
