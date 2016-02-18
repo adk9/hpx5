@@ -90,7 +90,7 @@ class global_ptr {
     reference() = delete;
 
     /// The only thing we can do with a reference is to get its global address.
-    const global_ptr<T>& operator&() const noexcept {
+    global_ptr<T> operator&() const noexcept {
       return _gp;
     }
 
@@ -103,7 +103,7 @@ class global_ptr {
     reference(const global_ptr<T>& gp) noexcept : _gp(gp) {
     }
 
-    const global_ptr<T>& _gp;
+    global_ptr<T> _gp;
   };
 
  public:
