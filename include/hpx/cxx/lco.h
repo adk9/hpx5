@@ -46,40 +46,34 @@ void reset(const global_ptr<T>& lco) {
 }
 
 template <typename T>
-void wait(const global_ptr<T>& lco) {
+void wait(const global_ptr<T>& lco, bool reset = true) {
   static_assert(is_lco<T>::value, "LCO type required");
-  if (int e = hpx_lco_wait(lco.get())) {
+  const hpx_addr_t& gva = lco.get();
+  if (int e = (reset) ? hpx_lco_wait_reset(gva) : hpx_lco_wait(gva)) {
     throw Error(e);
   }
 }
 
 template <typename T, typename U>
-void get(const global_ptr<T>& lco, U& out) {
+void get(const global_ptr<T>& lco, U& out, bool reset = false) {
   static_assert(is_lco<T>::value, "LCO type required");
-  if (int e = hpx_lco_get(lco.get(), sizeof(out), &out)) {
+  const hpx_addr_t& gva = lco.get();
+  if (int e = (reset) ? hpx_lco_get_reset(gva, sizeof(out), &out) :
+                        hpx_lco_get(gva, sizeof(out), &out)) {
     throw Error(e);
   }
 }
 
 template <typename T, template <typename> class LCO>
-T get(const global_ptr<LCO<T>>& lco) {
+T get(const global_ptr<LCO<T>>& lco, bool reset = false) {
   T out;
-  if (int e = hpx_lco_get(lco.get(), sizeof(out), &out)) {
-    throw Error(e);
-  }
+  get(lco, out, reset);
   return out;
 }
 
 template <template <typename> class LCO>
-void get(const global_ptr<LCO<void>>& lco) {
-  if (int e = hpx_lco_wait(lco.get())) {
-    throw Error(e);
-  }
-}
-
-template <typename T>
-void get(const global_ptr<T>& lco) {
-  wait(lco);
+void get(const global_ptr<LCO<void>>& lco, bool reset = false) {
+  wait(lco, reset);
 }
 
 template <typename T, typename U>
