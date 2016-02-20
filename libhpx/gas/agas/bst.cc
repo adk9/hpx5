@@ -52,24 +52,17 @@ bst_new(size_t size) {
 void
 bst_delete(void* obj) {
   BST *bst = static_cast<BST*>(obj);
+  bst->clear();
   delete bst;
 }
 
-size_t
-bst_serialize_to_parcel(void* obj, hpx_parcel_t **parcel) {
+static size_t
+_bst_serialize(void *obj, void *buf) {
   BST *bst = static_cast<BST*>(obj);
+  uint64_t *base = (uint64_t*)buf;
 
+  unsigned ranks = here->ranks;
   int nvtxs = bst->size();
-  if (!nvtxs) {
-    return 0;
-  }
-
-  size_t buf_size = (4*nvtxs*sizeof(uint64_t)) + (3*sizeof(uint64_t))
-      + (2*nvtxs*here->ranks*sizeof(uint64_t));
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, buf_size);
-  assert(p);
-  uint64_t *base = static_cast<uint64_t*>(hpx_parcel_get_data(p));
-
   // store the vertex count first
   base[0] = nvtxs;
 
@@ -83,11 +76,10 @@ bst_serialize_to_parcel(void* obj, hpx_parcel_t **parcel) {
   uint64_t *xadj = &base[3*nvtxs+1];
 
   uint64_t *nedges = &base[4*nvtxs+2];
-  *nedges = 0;
-  // the next two arrays are (nvtxs * here->ranks * sizeof(uint64_t))
+  // the next two arrays are (nvtxs * ranks * sizeof(uint64_t))
   // bytes long
-  uint64_t *adjncy = nedges++;
-  uint64_t *adjwgt = (uint64_t*)calloc(nvtxs*here->ranks, sizeof(uint64_t));
+  uint64_t *adjncy = nedges+1;
+  uint64_t *adjwgt = (uint64_t*)calloc(nvtxs*ranks, sizeof(uint64_t));
   assert(adjncy && adjwgt);
 
   int i = 0;
@@ -99,7 +91,7 @@ bst_serialize_to_parcel(void* obj, hpx_parcel_t **parcel) {
       xadj[i] = nbrs;
       uint64_t total_vwgt = 0;
       uint64_t total_vsize = 0;
-      for (unsigned k = 0; k < here->ranks; ++k) {
+      for (unsigned k = 0; k < ranks; ++k) {
         if (entry.counts[k] != 0) {
           assert(entry.sizes[k] != 0);
 
@@ -109,7 +101,6 @@ bst_serialize_to_parcel(void* obj, hpx_parcel_t **parcel) {
           total_vsize += entry.sizes[k];
           nbrs++;
         }
-        *nedges += nbrs;
       }
 
       vtxs[i] = item.first;
@@ -120,13 +111,29 @@ bst_serialize_to_parcel(void* obj, hpx_parcel_t **parcel) {
       free(entry.sizes);
     }
   }
-
-  p->size = (4*nvtxs*sizeof(uint64_t)) + (3*sizeof(uint64_t))
-          + (2*(*nedges)*sizeof(uint64_t));
-  memcpy(adjncy+(*nedges), adjwgt, (*nedges)*sizeof(uint64_t));
+  *nedges = nbrs;
+  memcpy(adjncy+nbrs, adjwgt, nbrs*sizeof(uint64_t));
   free(adjwgt);
-  *parcel = p;
-  return p->size;
+  size_t size = (4*nvtxs*sizeof(uint64_t)) + (3*sizeof(uint64_t))
+                 + (2*nbrs*sizeof(uint64_t));
+  return size;
+}
+
+size_t
+bst_serialize_to_parcel(void* obj, hpx_parcel_t **parcel) {
+  BST *bst = static_cast<BST*>(obj);
+  int nvtxs = bst->size();
+  if (!nvtxs) {
+    return 0;
+  }
+
+  size_t buf_size = (4*nvtxs*sizeof(uint64_t)) + (3*sizeof(uint64_t))
+    + (3*nvtxs*here->ranks*sizeof(uint64_t));
+  *parcel = hpx_parcel_acquire(NULL, buf_size);
+  uint64_t *buf = static_cast<uint64_t*>(hpx_parcel_get_data(*parcel));
+  size_t size = _bst_serialize(bst, buf);
+  (*parcel)->size = size;
+  return size;
 }
 
 void

@@ -131,8 +131,9 @@ int _local_to_global_bst(int id, void *UNUSED) {
     bst_upsert(_global_bst, entry->block, entry->counts, entry->sizes);
     HASH_DEL(bst, entry);
     free(entry);
-    entry = NULL;
   }
+  HASH_CLEAR(hh, bst);
+  *_local_bsts[id] = NULL;
   return HPX_SUCCESS;
 }
 
@@ -211,7 +212,7 @@ static int libhpx_rebalancer_start_sync(void) {
   log_gas("Finished partitioning block graph (%ld vertices)\n", nvtxs);
   if (nvtxs > 0 && partition) {
     // rebalance blocks based on the resulting partition
-    hpx_addr_t done = hpx_lco_and_new(nvtxs);
+    hpx_addr_t done = hpx_lco_and_new(nvtxs-HPX_LOCALITIES);
     for (int i = 0; i < agas_graph_get_owner_count(g); ++i) {
       int start, end, owner;
       agas_graph_get_owner_entry(g, i, &start, &end, &owner);
