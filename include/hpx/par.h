@@ -87,7 +87,7 @@ int hpx_par_for_sync(hpx_for_action_t f, int min, int max,
 /// @param              env An environment to pass to arg_init.
 /// @param             sync An LCO to set as the continuation for each iteration.
 ///
-//// @returns An error code, or HPX_SUCCESS.
+/// @returns An error code, or HPX_SUCCESS.
 int hpx_par_call(hpx_action_t action,
                 const int min, const int max,
                 const int branching_factor, const int cutoff,
