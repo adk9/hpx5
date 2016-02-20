@@ -23,7 +23,6 @@ extern "C" {
 // Block Statistics Table (BST) API
 void *bst_new(size_t size);
 void bst_delete(void *bst);
-void bst_remove(void *bst, uint64_t block);
 void bst_upsert(void *obj, uint64_t block, uint64_t *counts, uint64_t *sizes);
 size_t bst_serialize_to_parcel(void* obj, hpx_parcel_t **parcel);
 

@@ -142,11 +142,3 @@ bst_upsert(void *obj, uint64_t block, uint64_t *counts, uint64_t *sizes) {
   };
   bst->upsert(block, updatefn, Entry(counts, sizes));
 }
-
-void
-bst_remove(void *obj, uint64_t block) {
-  BST *bst = static_cast<BST*>(obj);
-  bool erased = bst->erase(block);
-  assert(erased);
-  (void)erased;
-}
