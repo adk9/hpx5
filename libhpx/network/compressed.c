@@ -28,7 +28,6 @@
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
 #include <lz4.h>
 
 // TODO:
@@ -51,13 +50,10 @@ static void _compressed_network_delete(void *obj) {
 /// @param       buffer The compressed parcel.
 /// @param            n The size of @p buffer.
 static int _decompress_handler(char* buffer, int n) {
-  hpx_parcel_t *current = scheduler_current_parcel();
-
-  // retrieve the original size from "c_target" and reset it.
-  size_t size = (size_t)current->c_target;
-  current->c_target = HPX_NULL;
-
+  // retrieve the original size from the payload.
+  size_t size = *(size_t*)buffer;
   hpx_parcel_t *p = as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, size);
+  buffer += sizeof(size_t);
   size_t osize = LZ4_decompress_fast(buffer, (char*)p, size);
   dbg_assert(osize == n);
 
@@ -78,15 +74,17 @@ static int _compressed_network_send(void *obj, hpx_parcel_t *p) {
 
   // allocate a new enclosing parcel
   size_t isize = parcel_size(p);
-  size_t bytes = LZ4_compressBound(isize);
+  size_t bytes = LZ4_compressBound(isize) + sizeof(size_t);
 
-  // we need to store the original size to be able to decompress this
-  // parcel. instead of putting it in the payload, we store it in the
-  // "c_target" field of the enclosing parcel.
-  hpx_parcel_t *cp = parcel_new(p->target, _decompress, isize, 0,
+  hpx_parcel_t *cp = parcel_new(p->target, _decompress, 0, 0,
                                 p->pid, 0, bytes);
   dbg_assert(cp);
-  void *data = hpx_parcel_get_data(cp);
+
+  // the original size is stored in the payload since we need it
+  // during decompression.
+  char *data = hpx_parcel_get_data(cp);
+  *(size_t*)data = isize;
+  data += sizeof(size_t);
 
   // compress the original parcel
   size_t osize = LZ4_compress_fast((const char*)p, data, isize, bytes, 1);
@@ -96,7 +94,7 @@ static int _compressed_network_send(void *obj, hpx_parcel_t *p) {
     cp = p;
   } else {
     parcel_delete(p);
-    cp->size = osize;
+    cp->size = osize + sizeof(size_t);
   }
   return network_send(network->impl, cp);
 }
