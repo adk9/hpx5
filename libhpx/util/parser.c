@@ -97,7 +97,8 @@ const char *hpx_options_t_help[] = {
   "      --hpx-photon-usercq=integer\n                                enable remote completion support (default 0,\n                                  disabled)",
   "\nOptimization:",
   "      --hpx-opt-smp[=0 off]     optimize for SMP execution",
-  "      --hpx-coalescing-buffersize=Integer\n                                Coalescing buffer size",
+  "      --hpx-parcel-compression  enable parcel compression  (default=off)",
+  "      --hpx-coalescing-buffersize=Integer\n                                set coalescing buffer size",
     0
 };
 
@@ -214,6 +215,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_photon_numcq_given = 0 ;
   args_info->hpx_photon_usercq_given = 0 ;
   args_info->hpx_opt_smp_given = 0 ;
+  args_info->hpx_parcel_compression_given = 0 ;
   args_info->hpx_coalescing_buffersize_given = 0 ;
 }
 
@@ -292,6 +294,7 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_photon_numcq_orig = NULL;
   args_info->hpx_photon_usercq_orig = NULL;
   args_info->hpx_opt_smp_orig = NULL;
+  args_info->hpx_parcel_compression_flag = 0;
   args_info->hpx_coalescing_buffersize_orig = NULL;
   
 }
@@ -366,7 +369,8 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_photon_numcq_help = hpx_options_t_help[59] ;
   args_info->hpx_photon_usercq_help = hpx_options_t_help[60] ;
   args_info->hpx_opt_smp_help = hpx_options_t_help[62] ;
-  args_info->hpx_coalescing_buffersize_help = hpx_options_t_help[63] ;
+  args_info->hpx_parcel_compression_help = hpx_options_t_help[63] ;
+  args_info->hpx_coalescing_buffersize_help = hpx_options_t_help[64] ;
   
 }
 
@@ -727,6 +731,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-photon-usercq", args_info->hpx_photon_usercq_orig, 0);
   if (args_info->hpx_opt_smp_given)
     write_into_file(outfile, "hpx-opt-smp", args_info->hpx_opt_smp_orig, 0);
+  if (args_info->hpx_parcel_compression_given)
+    write_into_file(outfile, "hpx-parcel-compression", 0, 0 );
   if (args_info->hpx_coalescing_buffersize_given)
     write_into_file(outfile, "hpx-coalescing-buffersize", args_info->hpx_coalescing_buffersize_orig, 0);
   
@@ -1383,6 +1389,7 @@ hpx_option_parser_internal (
         { "hpx-photon-numcq",	1, NULL, 0 },
         { "hpx-photon-usercq",	1, NULL, 0 },
         { "hpx-opt-smp",	2, NULL, 0 },
+        { "hpx-parcel-compression",	0, NULL, 0 },
         { "hpx-coalescing-buffersize",	1, NULL, 0 },
         { 0,  0, 0, 0 }
       };
@@ -2072,7 +2079,19 @@ hpx_option_parser_internal (
               goto failure;
           
           }
-          /* Coalescing buffer size.  */
+          /* enable parcel compression.  */
+          else if (strcmp (long_options[option_index].name, "hpx-parcel-compression") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->hpx_parcel_compression_flag), 0, &(args_info->hpx_parcel_compression_given),
+                &(local_args_info.hpx_parcel_compression_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "hpx-parcel-compression", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* set coalescing buffer size.  */
           else if (strcmp (long_options[option_index].name, "hpx-coalescing-buffersize") == 0)
           {
           

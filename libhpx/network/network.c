@@ -24,6 +24,7 @@
 #include "isir/isir.h"
 #include "pwc/pwc.h"
 #include "coalesced_network.h"
+#include "compressed.h"
 #include "inst.h"
 #include "smp.h"
 
@@ -107,8 +108,12 @@ network_t *network_new(config_t *cfg, boot_t *boot, struct gas *gas) {
     log_level(LEVEL, "%s network initialized\n", HPX_NETWORK_TO_STRING[type]);
   }
 
+  if (cfg->parcel_compression) {
+    network = compressed_network_new(network);
+  }
+
   if (cfg->coalescing_buffersize) {
-    network =  coalesced_network_new(network, cfg);
+    network = coalesced_network_new(network, cfg);
   }
 
   if (!config_inst_at_isset(here->config, here->rank)) {

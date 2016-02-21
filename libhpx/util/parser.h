@@ -212,9 +212,11 @@ struct hpx_options_t
   int hpx_opt_smp_arg;	/**< @brief optimize for SMP execution.  */
   char * hpx_opt_smp_orig;	/**< @brief optimize for SMP execution original value given at command line.  */
   const char *hpx_opt_smp_help; /**< @brief optimize for SMP execution help description.  */
-  long hpx_coalescing_buffersize_arg;	/**< @brief Coalescing buffer size.  */
-  char * hpx_coalescing_buffersize_orig;	/**< @brief Coalescing buffer size original value given at command line.  */
-  const char *hpx_coalescing_buffersize_help; /**< @brief Coalescing buffer size help description.  */
+  int hpx_parcel_compression_flag;	/**< @brief enable parcel compression (default=off).  */
+  const char *hpx_parcel_compression_help; /**< @brief enable parcel compression help description.  */
+  long hpx_coalescing_buffersize_arg;	/**< @brief set coalescing buffer size.  */
+  char * hpx_coalescing_buffersize_orig;	/**< @brief set coalescing buffer size original value given at command line.  */
+  const char *hpx_coalescing_buffersize_help; /**< @brief set coalescing buffer size help description.  */
   
   unsigned int hpx_help_given ;	/**< @brief Whether hpx-help was given.  */
   unsigned int hpx_version_given ;	/**< @brief Whether hpx-version was given.  */
@@ -267,6 +269,7 @@ struct hpx_options_t
   unsigned int hpx_photon_numcq_given ;	/**< @brief Whether hpx-photon-numcq was given.  */
   unsigned int hpx_photon_usercq_given ;	/**< @brief Whether hpx-photon-usercq was given.  */
   unsigned int hpx_opt_smp_given ;	/**< @brief Whether hpx-opt-smp was given.  */
+  unsigned int hpx_parcel_compression_given ;	/**< @brief Whether hpx-parcel-compression was given.  */
   unsigned int hpx_coalescing_buffersize_given ;	/**< @brief Whether hpx-coalescing-buffersize was given.  */
 
 } ;
