@@ -66,9 +66,6 @@ struct hpx_options_t
   enum enum_hpx_boot hpx_boot_arg;	/**< @brief HPX bootstrap method to use.  */
   char * hpx_boot_orig;	/**< @brief HPX bootstrap method to use original value given at command line.  */
   const char *hpx_boot_help; /**< @brief HPX bootstrap method to use help description.  */
-  long hpx_coalescing_buffersize_arg;	/**< @brief Coalescing buffer size.  */
-  char * hpx_coalescing_buffersize_orig;	/**< @brief Coalescing buffer size original value given at command line.  */
-  const char *hpx_coalescing_buffersize_help; /**< @brief Coalescing buffer size help description.  */
   enum enum_hpx_transport hpx_transport_arg;	/**< @brief type of transport to use.  */
   char * hpx_transport_orig;	/**< @brief type of transport to use original value given at command line.  */
   const char *hpx_transport_help; /**< @brief type of transport to use help description.  */
@@ -215,13 +212,15 @@ struct hpx_options_t
   int hpx_opt_smp_arg;	/**< @brief optimize for SMP execution.  */
   char * hpx_opt_smp_orig;	/**< @brief optimize for SMP execution original value given at command line.  */
   const char *hpx_opt_smp_help; /**< @brief optimize for SMP execution help description.  */
+  long hpx_coalescing_buffersize_arg;	/**< @brief Coalescing buffer size.  */
+  char * hpx_coalescing_buffersize_orig;	/**< @brief Coalescing buffer size original value given at command line.  */
+  const char *hpx_coalescing_buffersize_help; /**< @brief Coalescing buffer size help description.  */
   
   unsigned int hpx_help_given ;	/**< @brief Whether hpx-help was given.  */
   unsigned int hpx_version_given ;	/**< @brief Whether hpx-version was given.  */
   unsigned int hpx_heapsize_given ;	/**< @brief Whether hpx-heapsize was given.  */
   unsigned int hpx_gas_given ;	/**< @brief Whether hpx-gas was given.  */
   unsigned int hpx_boot_given ;	/**< @brief Whether hpx-boot was given.  */
-  unsigned int hpx_coalescing_buffersize_given ;	/**< @brief Whether hpx-coalescing-buffersize was given.  */
   unsigned int hpx_transport_given ;	/**< @brief Whether hpx-transport was given.  */
   unsigned int hpx_network_given ;	/**< @brief Whether hpx-network was given.  */
   unsigned int hpx_statistics_given ;	/**< @brief Whether hpx-statistics was given.  */
@@ -268,6 +267,7 @@ struct hpx_options_t
   unsigned int hpx_photon_numcq_given ;	/**< @brief Whether hpx-photon-numcq was given.  */
   unsigned int hpx_photon_usercq_given ;	/**< @brief Whether hpx-photon-usercq was given.  */
   unsigned int hpx_opt_smp_given ;	/**< @brief Whether hpx-opt-smp was given.  */
+  unsigned int hpx_coalescing_buffersize_given ;	/**< @brief Whether hpx-coalescing-buffersize was given.  */
 
 } ;
 

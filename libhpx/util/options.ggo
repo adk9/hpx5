@@ -27,10 +27,6 @@ typestr="type"
 values="default","smp","mpi","pmi"
 enum optional
 
-option "hpx-coalescing-buffersize" - "Coalescing buffer size"
-typestr="Integer"
-long optional
-
 option "hpx-transport" - "type of transport to use"
 typestr="type"
 values="default","mpi","photon"
@@ -239,3 +235,8 @@ section "Optimization"
 option "hpx-opt-smp" - "optimize for SMP execution"
 typestr="0 off"
 int optional argoptional
+
+option "hpx-coalescing-buffersize" - "Coalescing buffer size"
+typestr="Integer"
+long optional
+
