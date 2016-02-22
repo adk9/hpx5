@@ -23,7 +23,7 @@
 #include <libhpx/network.h>
 #include "isir/isir.h"
 #include "pwc/pwc.h"
-#include "coalesced_network.h"
+#include "coalesced.h"
 #include "compressed.h"
 #include "inst.h"
 #include "smp.h"

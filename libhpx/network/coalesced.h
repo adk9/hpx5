@@ -11,8 +11,8 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef LIBHPX_NETWORK_COALESCED_COALESCED_H
-#define LIBHPX_NETWORK_COALESCED_COALESCED_H
+#ifndef LIBHPX_NETWORK_COALESCED_H
+#define LIBHPX_NETWORK_COALESCED_H
 
 #include <hpx/attributes.h>
 #include <libhpx/network.h>
@@ -22,8 +22,7 @@
 struct config;
 /// @}
 
-
 network_t* coalesced_network_new (network_t *network, const struct config *cfg)
   HPX_MALLOC;
 
-#endif // LIBHPX_NETWORK_COALESCED_COALESCED_H
+#endif // LIBHPX_NETWORK_COALESCED_H
