@@ -465,6 +465,12 @@ static inline bool action_is_coalesced(hpx_action_t id) {
   return (action->attr & HPX_COALESCED);
 }
 
+static inline bool action_is_compressed(hpx_action_t id) {
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->attr & HPX_COMPRESSED);
+}
+
 static inline bool action_is_default(hpx_action_t id) {
   CHECK_ACTION(id);
   const action_t *action = &actions[id];

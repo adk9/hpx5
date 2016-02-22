@@ -187,10 +187,7 @@ LIBHPX_OPT_STRING(photon_, fidev, NULL)
 /// Optimization options
 /// @{
 LIBHPX_OPT_SCALAR(opt_, smp, 1, int)
-/// @}
-
-/// coalescing option
-/// @{
+LIBHPX_OPT_FLAG(, parcel_compression, 0)
 LIBHPX_OPT_SCALAR(coalescing_, buffersize, 0, int)
 /// @}
 

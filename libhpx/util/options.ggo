@@ -236,7 +236,10 @@ option "hpx-opt-smp" - "optimize for SMP execution"
 typestr="0 off"
 int optional argoptional
 
-option "hpx-coalescing-buffersize" - "Coalescing buffer size"
+option "hpx-parcel-compression" - "enable parcel compression"
+flag off
+
+option "hpx-coalescing-buffersize" - "set coalescing buffer size"
 typestr="Integer"
 long optional
 
