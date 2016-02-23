@@ -159,7 +159,6 @@ typedef struct inst_event_metadata {
   const  inst_event_col_metadata_t col_metadata[_NUM_COLS];
 } inst_event_metadata_t;
 
-#define _METADATA_NONE  {0}
 #define _METADATA_ARGS(a1,a2,a3,a4) {         \
   .num_cols = 6,                              \
   .col_metadata = {                           \
@@ -168,6 +167,10 @@ typedef struct inst_event_metadata {
     a1, a2, a3, a4                            \
   }                                           \
 }
+#define _METADATA_NONE _METADATA_ARGS(        \
+  METADATA_EMPTY(0), METADATA_EMPTY(1),       \
+  METADATA_EMPTY(2), METADATA_EMPTY(3))
+  
 
 extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 

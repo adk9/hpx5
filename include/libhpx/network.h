@@ -129,6 +129,13 @@ network_probe(void *obj, int rank) {
   return network->probe(network, rank);
 }
 
+/// Flush the network to force it to finish its pending operations.
+static inline void
+network_flush(void *obj) {
+  network_t *network = obj;
+  return network->flush(network);
+}
+
 /// Register a memory region for dma access.
 ///
 /// Network registration is a limited resource. Currently, we handle

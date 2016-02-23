@@ -259,6 +259,11 @@ _smp_local_base(void *gas) {
   dbg_error("SMP execution should not call this function\n");
 }
 
+static uint32_t _smp_owner_of(const void *gas, hpx_addr_t addr) {
+  return here->rank;
+}
+
+
 static gas_t _smp_vtable = {
   .type           = HPX_GAS_SMP,
   .string = {
@@ -287,6 +292,7 @@ static gas_t _smp_vtable = {
   .calloc_local   = _smp_gas_calloc_local,
   .free           = _smp_gas_free,
   .move           = _smp_move,
+  .owner_of       = _smp_owner_of
 };
 
 gas_t *gas_smp_new(void) {
