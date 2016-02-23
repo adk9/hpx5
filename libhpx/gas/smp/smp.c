@@ -263,7 +263,6 @@ static uint32_t _smp_owner_of(const void *gas, hpx_addr_t addr) {
   return here->rank;
 }
 
-
 static gas_t _smp_vtable = {
   .type           = HPX_GAS_SMP,
   .string = {
