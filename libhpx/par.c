@@ -51,7 +51,7 @@ typedef struct {
 
 static int _nested_for_async_handler(hpx_nested_for_action_t f, void * args){
   hpx_nested_for_call_args_t *call_arg = args;
-  fprintf(stdout, "rank:%d\nmin:%d\nmax:%d\nstride:%d\noffset:%d\nblksize:%d\n", here->rank, call_arg->min, call_arg->max, call_arg->stride, call_arg->offset, call_arg->block_size);
+  printf("rank:%d\nmin:%d\nmax:%d\nstride:%d\noffset:%d\nblksize:%d\n", here->rank, call_arg->min, call_arg->max, call_arg->stride, call_arg->offset, call_arg->block_size);
   hpx_addr_t target = hpx_thread_current_target();
   uint32_t to = gas_owner_of(here->gas, target);
   if (to == here->rank){
@@ -60,7 +60,8 @@ static int _nested_for_async_handler(hpx_nested_for_action_t f, void * args){
       return HPX_RESEND;
 
     for (int i = call_arg->min; i < call_arg->max; ++i){
-      f (i, local + i, call_arg->arg);
+      //printf("%d %d == ", i, *((int*)local+i));
+      f (i, local, call_arg->arg);
     }
     hpx_gas_unpin(target);
   }
@@ -150,13 +151,13 @@ int hpx_nested_for(hpx_nested_for_action_t f, const int min, const int max,
   call_args->block_size = block_size;
   call_args->arg_size = arg_size;
 
-  printf("nthreads:%d\narg_size:%d\n", nthreads, arg_size);
+  //printf("nthreads:%d\narg_size:%d\n", nthreads, arg_size);
   for (int i = 0, e = nthreads; i < e; ++i) {
     //get the address from gas
     hpx_addr_t target = hpx_addr_add(addr, 0, block_size);
     hpx_parcel_t *p = action_new_parcel(_nested_for_async, target, and, set,
                                         2, &f, &call_args);
-parcel_prepare(p);
+    parcel_prepare(p);
     scheduler_spawn_at(p, i);
   }
   free(call_args);
