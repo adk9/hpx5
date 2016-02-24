@@ -531,11 +531,11 @@ static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
 }
 
 /// Probe and progress the network.
-static void _schedule_network(worker_t *w, network_t *network) {
+static void _schedule_network(worker_t *w) {
   // suppress work-first scheduling while we're inside the network.
   w->work_first = -1;
-  network_progress(network, 0);
-  hpx_parcel_t *stack = network_probe(network, 0);
+  network_progress(w->network, 0);
+  hpx_parcel_t *stack = network_probe(w->network, 0);
   w->work_first = 0;
 
   hpx_parcel_t *p = NULL;
@@ -598,7 +598,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
     _swap_epoch(w);
 
     // Do some network stuff;
-    _schedule_network(w, here->network);
+    _schedule_network(w);
 
     // Try and steal some work
     if ((p = _schedule_steal(w))) {
@@ -644,6 +644,7 @@ int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   w->work_id     = 0;
   w->active      = true;
   w->profiler    = NULL;
+  w->network     = here->net;
 
   sync_chase_lev_ws_deque_init(&w->queues[0].work, work_size);
   sync_chase_lev_ws_deque_init(&w->queues[1].work, work_size);
@@ -688,7 +689,7 @@ int worker_start(void) {
   dbg_assert(((uintptr_t)&w->inbox & (HPX_CACHELINE_SIZE - 1))== 0);
 
   // make sure the system is initialized
-  dbg_assert(here && here->config && here->network);
+  dbg_assert(here && here->config && here->net);
 
   // affinitize the worker thread
   libhpx_thread_affinity_t policy = here->config->thread_affinity;

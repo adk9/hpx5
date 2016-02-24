@@ -139,7 +139,7 @@ void parcel_launch(hpx_parcel_t *p) {
     scheduler_spawn(p);
   }
   else {
-    int e = network_send(here->network, p);
+    int e = network_send(self->network, p);
     dbg_check(e, "failed to perform a network send\n");
   }
 }

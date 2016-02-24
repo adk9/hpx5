@@ -31,6 +31,7 @@
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
 #include <libhpx/scheduler.h>
+#include <libhpx/worker.h>
 #include <libhpx/parcel.h>
 #include "lco.h"
 #include "thread.h"
@@ -477,7 +478,7 @@ hpx_status_t hpx_lco_get(hpx_addr_t target, size_t size, void *value) {
   dbg_assert(value);
   lco_t *lco;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return network_lco_get(here->network, target, size, value, 0);
+    return network_lco_get(self->network, target, size, value, 0);
   }
 
   hpx_status_t status = _get(lco, size, value, 0);
@@ -493,7 +494,7 @@ hpx_status_t hpx_lco_get_reset(hpx_addr_t target, size_t size, void *value) {
   dbg_assert(value);
   lco_t *lco;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return network_lco_get(here->network, target, size, value, 1);
+    return network_lco_get(self->network, target, size, value, 1);
   }
 
   hpx_status_t status = _get(lco, size, value, 1);
