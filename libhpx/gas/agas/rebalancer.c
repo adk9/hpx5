@@ -33,6 +33,12 @@
 #include "rebalancer.h"
 
 // Block Statistics Table (BST) entry.
+//
+// The BST entry maintains statistics about block accesses. In
+// particular, the number of times a block was accessed (@p counts) and
+// the size of data transferred (@p sizes) is maintained. The index in
+// the @p counts and @p sizes array represents the node which accessed
+// this block.
 typedef struct agas_bst {
   uint64_t block;
   uint64_t *counts;
@@ -40,16 +46,29 @@ typedef struct agas_bst {
   UT_hash_handle hh;
 } agas_bst_t;
 
-// BST private to a worker thread
+// BST private to a worker thread.
+//
+// Each worker thread maintains its own private thread-local BST so
+// that insertions into the BST don't have to be synchronized.
 static __thread agas_bst_t *_local_bst;
 
-// Global array of all BSTs
+// Global array of all BSTs.
 static agas_bst_t ***_local_bsts;
 
-// Per-locality BST
+// Per-locality BST.
+//
+// During statistics aggration, all of the thread-local BSTs are
+// aggregated into a per-locality BST.
 static void *_global_bst;
 
-// Add an entry to the thread-local BST.
+// Add an entry to the rebalancer's (thread-local) BST table.
+///
+/// @param      src The "src" locality accessing the block.
+/// @param      dst The "dst" locality where the block is mapped.
+/// @param    block The global address of the block.
+/// @param     size The block's size in bytes.
+///
+//// @returns An error code, or HPX_SUCCESS.
 void libhpx_rebalancer_add_entry(int src, int dst, hpx_addr_t block,
                                  size_t size) {
   if (here->config->gas != HPX_GAS_AGAS) {
@@ -64,13 +83,14 @@ void libhpx_rebalancer_add_entry(int src, int dst, hpx_addr_t block,
   dbg_assert(agas && agas->btt);
 
   // ignore this block if it does not have the "load-balance"
-  // attribute
+  // (HPX_GAS_ATTR_LB) attribute
   gva_t gva = { .addr = block };
   uint32_t attr = btt_get_attr(agas->btt, gva);
   if (!likely(attr & HPX_GAS_ATTR_LB)) {
     return;
   }
 
+  // insert the block if it does not already exist
   agas_bst_t *entry = NULL;
   HASH_FIND(hh, _local_bst, &block, sizeof(uint64_t), entry);
   if (!entry) {
@@ -81,11 +101,13 @@ void libhpx_rebalancer_add_entry(int src, int dst, hpx_addr_t block,
     entry->sizes = calloc(here->ranks, sizeof(uint64_t));
     HASH_ADD(hh, _local_bst, block, sizeof(uint64_t), entry);
   }
+
+  // otherwise, simply update the counts and sizes
   entry->counts[src]++;
   entry->sizes[src] += size;
 }
 
-// Initialize the AGAS-based rebalancer
+// Initialize the AGAS-based rebalancer.
 int libhpx_rebalancer_init(void) {
   _local_bsts = calloc(here->config->threads, sizeof(agas_bst_t**));
   dbg_assert(_local_bsts);
@@ -97,6 +119,7 @@ int libhpx_rebalancer_init(void) {
   return HPX_SUCCESS;
 }
 
+// Finalize the AGAS-based rebalancer.
 void libhpx_rebalancer_finalize(void) {
   if (_local_bsts) {
     free(_local_bsts);
@@ -109,6 +132,11 @@ void libhpx_rebalancer_finalize(void) {
   }
 }
 
+// Bind a worker thread to the rebalancer.
+//
+// This operation registers a libhpx worker thread with the rebalancer
+// so that all of the thread-private state that the rebalancer needs
+// can be initialized.
 void libhpx_rebalancer_bind_worker(void) {
   if (here->config->gas != HPX_GAS_AGAS) {
     return;
@@ -118,8 +146,8 @@ void libhpx_rebalancer_bind_worker(void) {
   _local_bsts[HPX_THREAD_ID] = &_local_bst;
 }
 
-// This construct a sparse graph in the compressed storage format
-// (CSR) from the thread-private block statistics table.
+// This function takes the thread-local BST and merges it with the
+// per-node global BST.
 int _local_to_global_bst(int id, void *UNUSED) {
   agas_bst_t *bst = *_local_bsts[id];
   if (!bst) {
@@ -142,11 +170,19 @@ int _local_to_global_bst(int id, void *UNUSED) {
 static int _aggregate_global_bst_handler(void *data, size_t size) {
   hpx_addr_t graph = hpx_thread_current_target();
   const hpx_parcel_t *p = hpx_thread_current_parcel();
-  return agas_graph_from_bst(graph, data, size, p->src);
+  return agas_graph_construct(graph, data, size, p->src);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _aggregate_global_bst,
                      _aggregate_global_bst_handler, HPX_POINTER, HPX_SIZE_T);
 
+// Aggregate the BST on a given locality.
+//
+// This function collects all of the block statistics on a given
+// locality and serializes it into a parcel that is sent to the @p
+// graph global address. All of the local BSTs are merged into a
+// single global BST in parallel, before the global BST is serialized
+// into a parcel. This function steals the current continuation and
+// forwards it along to the generated parcel.
 static int _aggregate_bst_handler(hpx_addr_t graph) {
   hpx_par_for_sync(_local_to_global_bst, 0, HPX_THREADS, NULL);
   hpx_parcel_t *p = NULL;
@@ -170,13 +206,35 @@ static int _aggregate_bst_handler(hpx_addr_t graph) {
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _aggregate_bst, _aggregate_bst_handler,
                      HPX_ADDR);
 
-int _rebalance_blocks_handler(int start, int end, int owner, void *graph,
-                              uint64_t *partition, hpx_addr_t done) {
+// Move blocks that need to be rebalanced.
+//
+// This function issues "move" requests to blocks that need to be
+// rebalanced. The graph's owner map is referred to to figure out
+// which blocks need to be moved.
+//
+// @param    start The starting index of the block in graph.
+// @param      end The end index of the block in the graph.
+// @param    owner The existing owner of the block.
+// @param    graph Pointer to the AGAS graph.
+// @param partiton The partition array returned by the partition.
+// @param     done LCO to set when the rebalancing is done.
+static int
+_rebalance_blocks_handler(int start, int end, int owner, void *graph,
+                          uint64_t *partition, hpx_addr_t done) {
   uint64_t *vtxs = NULL;
   agas_graph_get_vtxs(graph, &vtxs);
 
   for (int i = start; i <= end; ++i) {
-    int new_owner = partition[i];
+    int partition_id = partition[i];
+    int new_owner = -1;
+    for (int k = 0; k < here->ranks; ++k) {
+      if (partition_id == partition[k]) {
+        new_owner = k;
+        break;
+      }
+    }
+    dbg_assert(new_owner >= 0);
+
     if (owner != new_owner) {
       log_gas("move block 0x%lx from %d to %d\n", vtxs[i], owner, new_owner);
       hpx_gas_move(vtxs[i], HPX_THERE(new_owner), done);
@@ -231,6 +289,10 @@ static int libhpx_rebalancer_start_sync(void) {
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _rebalancer_start_sync,
                      libhpx_rebalancer_start_sync);
 
+// Start balancing the blocks asynchronously.
+//
+// The LCO @p sync can be used for completion notification. This can
+// be called by any locality in the system.
 int libhpx_rebalancer_start(hpx_addr_t sync) {
   if (here->config->gas != HPX_GAS_AGAS) {
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);

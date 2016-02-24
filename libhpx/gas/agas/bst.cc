@@ -56,45 +56,50 @@ bst_delete(void* obj) {
   delete bst;
 }
 
+#define _BUF(ptr, size)                         \
+  uint64_t ptr = (uint64_t*)buf; buf += (size);
+
+// This handler constructs a sparse graph in the compressed storage
+// format (CSR) from the global BST.
 static size_t
-_bst_serialize(void *obj, void *buf) {
+_bst_serialize(void *obj, char *buf) {
   BST *bst = static_cast<BST*>(obj);
-  uint64_t *base = (uint64_t*)buf;
-
   unsigned ranks = here->ranks;
-  int nvtxs = bst->size();
+
   // store the vertex count first
-  base[0] = nvtxs;
+  _BUF(*nvtxs, sizeof(uint64_t));
+  *nvtxs = bst->size();
 
-  // next, store the vtxs, vwgt and vsizes array each (nvtxs *
-  // sizeof(uint64_t)) bytes long
-  uint64_t *vtxs = &base[1];
-  uint64_t *vwgt = &base[nvtxs+1];
-  uint64_t *vsizes = &base[2*nvtxs+1];
+  size_t nsize = *nvtxs * sizeof(uint64_t);
 
-  // xadj is (nvtxs+1 * sizeof(uint64_t)) bytes long
-  uint64_t *xadj = &base[3*nvtxs+1];
+  // next, store the vtxs, vwgt, vsizes and xadj array each nsize bytes long
+  _BUF(*vtxs,   nsize);
+  _BUF(*vwgt,   nsize);
+  _BUF(*vsizes, nsize);
+  _BUF(*xadj,   nsize);
 
-  uint64_t *nedges = &base[4*nvtxs+2];
-  // the next two arrays are (nvtxs * ranks * sizeof(uint64_t))
-  // bytes long
-  uint64_t *adjncy = nedges+1;
-  uint64_t *adjwgt = (uint64_t*)calloc(nvtxs*ranks, sizeof(uint64_t));
-  assert(adjncy && adjwgt);
+  // store the number of edges
+  _BUF(*nedges, sizeof(uint64_t));
 
-  int i = 0;
+  // the length of the next two arrays depends on the number of neighbors
+  uint64_t *adjncy = (uint64_t*)buf;
+  uint64_t *adjwgt = (uint64_t*)malloc(ranks*nsize);
+
+  int id   = 0;
   int nbrs = 0;
+  std::vector<uint64_t> lnbrs[ranks];
   {
     auto lt = bst->lock_table();
     for (const auto& item : lt) {
       Entry entry = item.second;
-      xadj[i] = nbrs;
-      uint64_t total_vwgt = 0;
+      uint64_t total_vwgt  = 0;
       uint64_t total_vsize = 0;
+      int prev_nbrs = nbrs;
       for (unsigned k = 0; k < ranks; ++k) {
         if (entry.counts[k] != 0) {
           assert(entry.sizes[k] != 0);
 
+          lnbrs[k].push_back(id);
           adjncy[nbrs] = k;
           adjwgt[nbrs] = entry.counts[k] * entry.sizes[k];
           total_vwgt  += entry.counts[k];
@@ -103,22 +108,39 @@ _bst_serialize(void *obj, void *buf) {
         }
       }
 
-      vtxs[i] = item.first;
-      vwgt[i] = total_vwgt;
-      vsizes[i] = total_vsize;
-      i++;
+      vtxs[id]   = item.first;
+      vwgt[id]   = total_vwgt;
+      vsizes[id] = total_vsize;
+      xadj[id]   = nbrs - prev_nbrs;
+      id++;
       free(entry.counts);
       free(entry.sizes);
     }
   }
   *nedges = nbrs;
-  memcpy(adjncy+nbrs, adjwgt, nbrs*sizeof(uint64_t));
+  buf += (nbrs*sizeof(uint64_t));
+  memcpy(buf, adjwgt, nbrs*sizeof(uint64_t));
   free(adjwgt);
-  size_t size = (4*nvtxs*sizeof(uint64_t)) + (3*sizeof(uint64_t))
-                 + (2*nbrs*sizeof(uint64_t));
+  buf += (nbrs*sizeof(uint64_t));
+
+  // size of the buffer excluding the locality neighbor graph
+  size_t size = (4*nsize) + (3*sizeof(uint64_t))
+    + (2*nbrs*sizeof(uint64_t)) + (ranks*sizeof(uint64_t));
+
+  _BUF(*lsizes, ranks * sizeof(uint64_t));
+  for (unsigned k = 0; k < ranks; ++k) {
+    lsizes[k] = lnbrs[k].size();
+    size_t bytes = lsizes[k]*sizeof(uint64_t);
+    memcpy(buf, lnbrs[k].data(), bytes);
+    buf  += bytes;
+    size += bytes;
+  }
+
   return size;
 }
 
+// Serialize the global BST into a parcel. This function allocates and
+// returns a parcel.
 size_t
 bst_serialize_to_parcel(void* obj, hpx_parcel_t **parcel) {
   BST *bst = static_cast<BST*>(obj);
@@ -127,10 +149,24 @@ bst_serialize_to_parcel(void* obj, hpx_parcel_t **parcel) {
     return 0;
   }
 
-  size_t buf_size = (4*nvtxs*sizeof(uint64_t)) + (3*sizeof(uint64_t))
-    + (3*nvtxs*here->ranks*sizeof(uint64_t));
+  int ranks = here->ranks;
+  size_t nsize = nvtxs*sizeof(uint64_t);
+
+  // Serialization format:
+  // nvtxs  : sizeof(uint64_t)
+  // vtxs   : nsize
+  // vwgts  : nsize
+  // vsizes : nsize
+  // xadj   : nsize
+  // nedges : sizeof(uint64_t)
+  // adjncy : ranks * nsize
+  // adjwgt : ranks * nsize
+  // lnbrs  : ranks * sizeof(uint64_t) + ranks * nsize
+
+  size_t buf_size = (4*nsize) + (ranks+2)*sizeof(uint64_t)
+    + (3*ranks*nsize);
   *parcel = hpx_parcel_acquire(NULL, buf_size);
-  uint64_t *buf = static_cast<uint64_t*>(hpx_parcel_get_data(*parcel));
+  char *buf = static_cast<char*>(hpx_parcel_get_data(*parcel));
   size_t size = _bst_serialize(bst, buf);
   (*parcel)->size = size;
   return size;
