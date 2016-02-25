@@ -82,16 +82,6 @@ inline static void *gas_local_base(gas_t *gas) {
   return gas->local_base(gas);
 }
 
-/// Macro to record a parcel's GAS access.
-#if defined(HAVE_AGAS) && defined(HAVE_REBALANCING)
-# define GAS_TRACE_ACCESS(src, dst, block, size) \
-  libhpx_rebalancer_add_entry(src, dst, block, size)
-#elif defined(ENABLE_INSTRUMENTATION)
-# define GAS_TRACE_ACCESS EVENT_GAS_ACCESS
-#else
-# define GAS_TRACE_ACCESS(src, dst, block, size)
-#endif
-
 #ifdef __cplusplus
 }
 #endif
