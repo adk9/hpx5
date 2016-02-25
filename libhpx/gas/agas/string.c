@@ -29,9 +29,10 @@
 
 static int _insert_block_handler(int n, void *args[], size_t sizes[]) {
   agas_t *agas = (agas_t*)here->gas;
-  void *block = args[0];
-  hpx_addr_t *src = args[1];
-  uint32_t *attr = args[2];
+
+  void       *block = args[0];
+  hpx_addr_t *src   = args[1];
+  uint32_t   *attr  = args[2];
 
   gva_t gva = { .addr = *src };
   btt_insert(agas->btt, gva, here->rank, block, 1, *attr);
@@ -41,7 +42,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_VECTORED, _insert_block,
                      _insert_block_handler, HPX_INT, HPX_POINTER, HPX_POINTER);
 
 /// Invalidate the remote block mapping. This action blocks until it
-/// can safely invalide the block.
+/// can safely invalidate the block.
 static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int rank) {
   agas_t *agas = (agas_t*)here->gas;
   hpx_addr_t src = hpx_thread_current_target();
@@ -56,11 +57,11 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int rank) {
     return e;
   }
 
-  // since rank 0 maintains the cyclic global address space, we cannot
-  // free cyclic blocks on rank 0.
   e = hpx_call_cc(dst, _insert_block, &block, bsize, &src, sizeof(src), &attr,
                   sizeof(attr));
 
+  // since rank 0 maintains the cyclic global address space, we cannot
+  // free cyclic blocks on rank 0.
   if (!(gva.bits.cyclic && here->rank == 0)) {
     free(block);
   }

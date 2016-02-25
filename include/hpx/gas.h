@@ -198,6 +198,7 @@ void hpx_gas_calloc_local_at_async(size_t n, uint32_t bsize,
 extern HPX_PUBLIC HPX_ACTION_DECL(hpx_gas_calloc_local_at_action);
 
 /// Global memory allocation routines with GAS attributes.
+///
 /// @param            n The number of blocks to allocate.
 /// @param        bsize The number of bytes per block.
 /// @param     boundary The alignment (2^k).
@@ -459,7 +460,7 @@ int hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
 /// global address.
 ///
 /// This shares the same functionality as hpx_gas_memcpy(), but will not return
-/// until the copu has completed remotely. This exposes the potential for
+/// until the copy has completed remotely. This exposes the potential for
 /// a more efficient mechanism for synchronous operation, and should be
 /// preferred where fully synchronous semantics are necessary.
 ///

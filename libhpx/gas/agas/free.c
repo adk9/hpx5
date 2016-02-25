@@ -55,7 +55,7 @@ static int _agas_free_block_handler(hpx_addr_t block) {
   }
 
   // This was a relocated block, free the clone and then forward the request
-  // back to the home locality.x
+  // back to the home locality.
   free(lva);
   hpx_addr_t home = HPX_THERE(gva.bits.home);
   return hpx_call_cc(home, _agas_free_block, &block);
