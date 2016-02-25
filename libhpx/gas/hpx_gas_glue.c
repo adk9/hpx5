@@ -21,6 +21,7 @@
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/locality.h>
+#include <libhpx/rebalancer.h>
 #include <libhpx/worker.h>
 
 hpx_addr_t HPX_HERE = 0;
@@ -371,4 +372,8 @@ void hpx_gas_calloc_local_at_async(size_t n, uint32_t bsize, uint32_t boundary,
   dbg_check( hpx_call(loc, hpx_gas_calloc_local_at_action, lco, &n, &bsize,
                       &boundary, &attr),
              "Failed async call during allocation\n");
+}
+
+void hpx_gas_rebalance(hpx_addr_t sync) {
+  rebalancer_start(sync);
 }

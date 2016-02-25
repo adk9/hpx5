@@ -30,7 +30,8 @@ void btt_remove(void *btt, gva_t gva);
 bool btt_try_pin(void *btt, gva_t gva, void **lva);
 void btt_unpin(void *btt, gva_t gva);
 void *btt_lookup(const void* obj, gva_t gva);
-uint32_t btt_owner_of(const void *btt, gva_t gva);
+uint32_t btt_get_owner(const void *btt, gva_t gva);
+uint32_t btt_get_attr(const void *btt, gva_t gva);
 size_t btt_get_blocks(const void *btt, gva_t gva);
 int btt_get_all(const void *btt, gva_t gva, void **lva, size_t *blocks,
                 int32_t *count);

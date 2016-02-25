@@ -85,7 +85,6 @@ hpx_addr_t agas_local_add(const agas_t *agas, gva_t gva, int64_t bytes,
 
 void agas_free(void *gas, hpx_addr_t addr, hpx_addr_t rsync);
 
-
 #ifdef __cplusplus
 }
 #endif
