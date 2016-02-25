@@ -20,6 +20,7 @@
 /// <em>pattern of computation</em> that might be used in the real world.)
 
 #include <iostream>
+#include <vector>
 
 #include <signal.h>
 #include <unistd.h>
@@ -44,48 +45,31 @@ hpx::Action<HPX_DEFAULT, HPX_ATTR_NONE, decltype(_fib_action), int> _fib;
 int _fib_action(int n) {
   
   if (n < 2) {
-    return HPX_THREAD_CONTINUE(n);
+    return _fib.thread_continue(n);
+//     return HPX_THREAD_CONTINUE(n);
   }
 
-  hpx_addr_t peers[] = {
-    HPX_HERE,
-    HPX_HERE
-  };
+  hpx::global_ptr<hpx::lco::Future<int>> f0 = hpx::lco::Future<int>::Alloc();
+  hpx::global_ptr<hpx::lco::Future<int>> f1 = hpx::lco::Future<int>::Alloc();
 
-  int ns[] = {
-    n - 1,
-    n - 2
-  };
-
-  hpx_addr_t futures[] = {
-    hpx_lco_future_new(sizeof(int)),
-    hpx_lco_future_new(sizeof(int))
-  };
-
-  int fns[] = {
-    0,
-    0
-  };
-
-  void *addrs[] = {
-    &fns[0],
-    &fns[1]
-  };
-
-  size_t sizes[] = {
-    sizeof(int),
-    sizeof(int)
-  };
+  int v1 = n - 1, v2 = n - 2;
   
-  _fib.call(peers[0], futures[0], ns[0]);
-  _fib.call(peers[1], futures[1], ns[1]);
+  _fib.call(HPX_HERE, f0, v1);
+  _fib.call(HPX_HERE, f1, v2);
   
-  hpx_lco_get_all(2, futures, sizes, addrs, NULL);
-  hpx_lco_delete(futures[0], HPX_NULL);
-  hpx_lco_delete(futures[1], HPX_NULL);
+//   hpx_lco_get_all(2, futures, sizes, addrs, NULL);
+  int rv1, rv2;
+  std::vector<decltype(f0)> futures = {f0, f1};
+  std::vector<int> rvars = {rv1, rv2};
+  
+  hpx::lco::get_all(futures, rvars);
+  
+  hpx::lco::dealloc(f0, nullptr);
+  hpx::lco::dealloc(f1, nullptr);
 
-  int fn = fns[0] + fns[1];
-  return HPX_THREAD_CONTINUE(fn);
+  int fn = v1 + v2;
+  return _fib.thread_continue(fn);
+//   return HPX_THREAD_CONTINUE(fn);
 }
 
 static int _fib_main_action(int n) {
