@@ -96,8 +96,8 @@ _funneled_probe(void *network, int nrx) {
 static void
 _funneled_flush(void *network) {
   _funneled_t *isir = network;
-  while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
-    ;
+  while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE)) {
+  }
   _send_all(isir);
   isend_buffer_flush(&isir->isends);
   sync_store(&isir->progress_lock, 1, SYNC_RELEASE);

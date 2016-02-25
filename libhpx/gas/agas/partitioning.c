@@ -214,8 +214,8 @@ int agas_graph_construct(hpx_addr_t graph, char *buf, size_t size,
     return HPX_ERROR;
   }
 
-  while (!sync_swap(&g->lock, 0, SYNC_ACQUIRE))
-    ;
+  while (!sync_swap(&g->lock, 0, SYNC_ACQUIRE)) {
+  }
 
   // add owner map entry
   _owner_map_t *map = &g->owner_map[g->count++];
