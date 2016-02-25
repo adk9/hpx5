@@ -24,7 +24,7 @@
 
 // Did we initialize MPI? If not, we don't want to finalize it.
 static bool _inited_mpi = false;
-MPI_Comm LIBHPX_COMM;
+MPI_Comm LIBHPX_COMM = MPI_COMM_NULL;
 
 static HPX_RETURNS_NON_NULL const char *_id(void) {
   return "MPI";
