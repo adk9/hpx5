@@ -46,7 +46,6 @@ int _fib_action(int n) {
   
   if (n < 2) {
     return _fib.thread_continue(n);
-//     return HPX_THREAD_CONTINUE(n);
   }
 
   hpx::global_ptr<hpx::lco::Future<int>> f0 = hpx::lco::Future<int>::Alloc();
@@ -54,10 +53,9 @@ int _fib_action(int n) {
 
   int v1 = n - 1, v2 = n - 2;
   
-  _fib.call(HPX_HERE, f0, v1);
-  _fib.call(HPX_HERE, f1, v2);
+  _fib.call(HPX_HERE, f0.get(), v1);
+  _fib.call(HPX_HERE, f1.get(), v2);
   
-//   hpx_lco_get_all(2, futures, sizes, addrs, NULL);
   int rv1, rv2;
   std::vector<decltype(f0)> futures = {f0, f1};
   std::vector<int> rvars = {rv1, rv2};
@@ -69,7 +67,6 @@ int _fib_action(int n) {
 
   int fn = v1 + v2;
   return _fib.thread_continue(fn);
-//   return HPX_THREAD_CONTINUE(fn);
 }
 
 static int _fib_main_action(int n) {
