@@ -47,9 +47,6 @@ static void _bind_self(worker_t *worker) {
   }
   self = worker;
   self->thread = pthread_self();
-
-  // register this worker with the rebalancer
-  rebalancer_bind_worker();
 }
 
 /// The pthread entry function for dedicated worker threads.

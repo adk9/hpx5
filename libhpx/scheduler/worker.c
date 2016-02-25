@@ -656,6 +656,7 @@ int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   w->work_id     = 0;
   w->active      = true;
   w->profiler    = NULL;
+  w->bst         = NULL;
   w->network     = here->net;
 
   sync_chase_lev_ws_deque_init(&w->queues[0].work, work_size);

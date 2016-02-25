@@ -26,6 +26,7 @@
 #include <libhpx/parcel.h>
 #include <libhpx/rebalancer.h>
 #include <libhpx/scheduler.h>
+#include <libhpx/worker.h>
 #include <uthash.h>
 #include "agas.h"
 #include "btt.h"
@@ -35,25 +36,18 @@
 // Block Statistics Table (BST) entry.
 //
 // The BST entry maintains statistics about block accesses. In
-// particular, the number of times a block was accessed (@p counts) and
-// the size of data transferred (@p sizes) is maintained. The index in
-// the @p counts and @p sizes array represents the node which accessed
-// this block.
+// particular, the number of times a block was accessed (@p counts)
+// and the size of data transferred (@p sizes) is maintained. The
+// index in the @p counts and @p sizes array represents the node which
+// accessed this block. Each worker thread maintains its own private
+// thread-local BST so that insertions into the BST don't have to be
+// synchronized.
 typedef struct agas_bst {
   uint64_t block;
   uint64_t *counts;
   uint64_t *sizes;
   UT_hash_handle hh;
 } agas_bst_t;
-
-// BST private to a worker thread.
-//
-// Each worker thread maintains its own private thread-local BST so
-// that insertions into the BST don't have to be synchronized.
-static __thread agas_bst_t *_local_bst;
-
-// Global array of all BSTs.
-static agas_bst_t ***_local_bsts = NULL;
 
 // Per-locality BST.
 //
@@ -69,13 +63,8 @@ static void *_global_bst = NULL;
 /// @param     size The block's size in bytes.
 ///
 //// @returns An error code, or HPX_SUCCESS.
-void rebalancer_add_entry(int src, int dst, hpx_addr_t block,
-                                 size_t size) {
+void rebalancer_add_entry(int src, int dst, hpx_addr_t block, size_t size) {
   if (here->config->gas != HPX_GAS_AGAS) {
-    return;
-  }
-
-  if (_local_bsts == NULL) {
     return;
   }
 
@@ -92,14 +81,15 @@ void rebalancer_add_entry(int src, int dst, hpx_addr_t block,
 
   // insert the block if it does not already exist
   agas_bst_t *entry = NULL;
-  HASH_FIND(hh, _local_bst, &block, sizeof(uint64_t), entry);
+  agas_bst_t *bst = self->bst;
+  HASH_FIND(hh, bst, &block, sizeof(uint64_t), entry);
   if (!entry) {
     entry = malloc(sizeof(*entry));
     dbg_assert(entry);
     entry->block = block;
     entry->counts = calloc(here->ranks, sizeof(uint64_t));
     entry->sizes = calloc(here->ranks, sizeof(uint64_t));
-    HASH_ADD(hh, _local_bst, block, sizeof(uint64_t), entry);
+    HASH_ADD(hh, bst, block, sizeof(uint64_t), entry);
   }
 
   // otherwise, simply update the counts and sizes
@@ -109,9 +99,6 @@ void rebalancer_add_entry(int src, int dst, hpx_addr_t block,
 
 // Initialize the AGAS-based rebalancer.
 int rebalancer_init(void) {
-  _local_bsts = calloc(here->config->threads, sizeof(agas_bst_t**));
-  dbg_assert(_local_bsts);
-
   _global_bst = bst_new(0);
   dbg_assert(_global_bst);
 
@@ -121,35 +108,19 @@ int rebalancer_init(void) {
 
 // Finalize the AGAS-based rebalancer.
 void rebalancer_finalize(void) {
-  if (_local_bsts) {
-    free(_local_bsts);
-    _local_bsts = NULL;
-  }
-
   if (_global_bst) {
     bst_delete(_global_bst);
     _global_bst = NULL;
   }
 }
 
-// Bind a worker thread to the rebalancer.
-//
-// This operation registers a libhpx worker thread with the rebalancer
-// so that all of the thread-private state that the rebalancer needs
-// can be initialized.
-void rebalancer_bind_worker(void) {
-  if (here->config->gas != HPX_GAS_AGAS) {
-    return;
-  }
-
-  // publish my private bst to the global BST array
-  _local_bsts[HPX_THREAD_ID] = &_local_bst;
-}
-
 // This function takes the thread-local BST and merges it with the
 // per-node global BST.
 int _local_to_global_bst(int id, void *UNUSED) {
-  agas_bst_t *bst = *_local_bsts[id];
+  worker_t *w = scheduler_get_worker(here->sched, id);
+  dbg_assert(w);
+
+  agas_bst_t *bst = w->bst;
   if (!bst) {
     return HPX_SUCCESS;
   }
@@ -161,7 +132,7 @@ int _local_to_global_bst(int id, void *UNUSED) {
     free(entry);
   }
   HASH_CLEAR(hh, bst);
-  *_local_bsts[id] = NULL;
+  w->bst = NULL;
   return HPX_SUCCESS;
 }
 

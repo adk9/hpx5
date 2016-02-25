@@ -26,20 +26,14 @@ extern "C" {
 int rebalancer_init(void);
 void rebalancer_finalize(void);
 
-// Register a worker thread with the rebalancer
-void rebalancer_bind_worker(void);
-
-// Record the GAS block entry access info in the rebalancer
-void rebalancer_add_entry(int src, int dst, hpx_addr_t block,
-                                 size_t size);
-
+// Record a GAS block access in the BST
+void rebalancer_add_entry(int src, int dst, hpx_addr_t block, size_t size);
 int rebalancer_start(hpx_addr_t sync);
 
 #else
 
 #define rebalancer_init()
 #define rebalancer_finalize()
-#define rebalancer_bind_worker()
 #define rebalancer_add_entry(...)
 #define rebalancer_start(...)
 
