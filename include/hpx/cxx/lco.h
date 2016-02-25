@@ -15,6 +15,7 @@
 #define HPX_CXX_LCO_H
 
 #include <vector>
+#include <algorithm>
 
 #include <hpx/addr.h>
 #include <hpx/lco.h>
@@ -88,33 +89,28 @@ void get(const global_ptr<LCO<void>>& lco, bool reset = false) {
 /// @param          lcos an array of @p n global LCO addresses
 /// @param[out]   values an array of @p n local buffers with sizes corresponding
 ///                      to @p sizes
-/// @param[out] statuses an array of statuses, pass NULL if statuses are not
-///                      required
 ///
-/// @returns The number of entries in @p statuses that have non-HPX_SUCCESS
-///                        values, will be set irrespective of if @p statuses is
-///                        NULL.
+/// @returns statuses an array of statuses, pass NULL if statuses are not
+///                      required
 template <typename T, template <typename> class LCO>
 std::vector<hpx_status_t>
 get_all(const std::vector<hpx::global_ptr<LCO<T>>>& lcos, 
 	std::vector<T>& values) {
   assert(lcos.size() == values.size());
-  size_t n = lcos.size();
-  hpx_addr_t* _lcos = new hpx_addr_t[n];
-  T** _values = new T*[n];
-  size_t* _sizes = new size_t[n];
-  for (size_t i = 0; i < n; i++) {
-    _lcos[i] = lcos[i].get();
-    _sizes[i] = sizeof(T);
-    _values[i] = &(values[i]);
-  }
+  
+  std::vector<hpx_addr_t> _lcos;
+  std::transform(lcos.begin(), lcos.end(), std::back_inserter(_lcos),
+    [](const hpx::global_ptr<LCO<T>>& f) {return f.get();});
+  std::vector<std::size_t> _sizes;
+  std::transform(lcos.begin(), lcos.end(), std::back_inserter(_sizes),
+    [](const hpx::global_ptr<LCO<T>>& f) {return sizeof(T);});
+  std::vector<T*> _values;
+  std::transform(values.begin(), values.end(), std::back_inserter(_values),
+    [](T& val) {return &val;});
   
   std::vector<hpx_status_t> statuses;
-  hpx_lco_get_all(lcos.size(), _lcos, _sizes, (void**) _values, statuses.data());
+  hpx_lco_get_all(_lcos.size(), _lcos.data(), _sizes.data(), (void**) _values.data(), statuses.data());
   
-  delete[] _sizes;
-  delete[] _values;
-  delete[] _lcos;
   return statuses;
 }
 
