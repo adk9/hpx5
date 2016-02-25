@@ -167,7 +167,6 @@ _init_mpi(void) {
     if (LIBHPX_COMM == MPI_COMM_NULL) {
       if (MPI_SUCCESS != MPI_Comm_dup(MPI_COMM_WORLD, &LIBHPX_COMM)) {
         log_error("mpi communicator duplication failed\n");
-        return NULL;
       }
     }
 
