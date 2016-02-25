@@ -22,7 +22,7 @@
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
-#include <libsync/sync.h>
+#include <libsync/locks.h>
 #include <utstring.h>
 #include "agas.h"
 #include "btt.h"
@@ -37,6 +37,8 @@
 
 extern void *LIBHPX_COMM;
 #endif
+
+static tatas_lock_t _lock = SYNC_TATAS_LOCK_INIT;
 
 // The owner map for vertices in the graph.
 typedef struct _owner_map {
@@ -57,7 +59,6 @@ typedef struct agas_graph {
   UT_string *adjncy;
   UT_string *adjwgt;
   UT_string **lnbrs;
-  volatile int lock;
   int count;
 } _agas_graph_t;
 
@@ -93,9 +94,6 @@ static void _add_locality_nodes(_agas_graph_t *g) {
 
 // Initialize a AGAS graph.
 static void _init(_agas_graph_t *g) {
-  // Initialize the graph lock
-  sync_store(&g->lock, 1, SYNC_RELEASE);
-
   g->nvtxs  = 0;
   g->nedges = 0;
   g->count  = 0;
@@ -214,8 +212,7 @@ int agas_graph_construct(hpx_addr_t graph, char *buf, size_t size,
     return HPX_ERROR;
   }
 
-  while (!sync_swap(&g->lock, 0, SYNC_ACQUIRE)) {
-  }
+  sync_tatas_acquire(&_lock);
 
   // add owner map entry
   _owner_map_t *map = &g->owner_map[g->count++];
@@ -244,7 +241,7 @@ int agas_graph_construct(hpx_addr_t graph, char *buf, size_t size,
   utstring_bincpy(g->adjncy, adjncy, esize);
   utstring_bincpy(g->adjwgt, adjwgt, esize);
 
-  sync_store(&g->lock, 1, SYNC_RELEASE);
+  sync_tatas_release(&_lock);
   hpx_gas_unpin(graph);
   
   return HPX_SUCCESS;
