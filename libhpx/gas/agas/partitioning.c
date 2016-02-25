@@ -32,6 +32,12 @@
 #include <metis.h>
 #endif
 
+#ifdef HAVE_PARMETIS
+#include <parmetis.h>
+
+extern void *LIBHPX_COMM;
+#endif
+
 // The owner map for vertices in the graph.
 typedef struct _owner_map {
   uint64_t start; //!< the starting vertex id of vertices mapped to an owner
@@ -44,6 +50,7 @@ typedef struct agas_graph {
   int nedges;
   _owner_map_t *owner_map;
   UT_string *vtxs;
+  UT_string *vtxdist;
   UT_string *vwgt;
   UT_string *vsizes;
   UT_string *xadj;
@@ -94,6 +101,7 @@ static void _init(_agas_graph_t *g) {
   g->count  = 0;
   g->owner_map = calloc(here->ranks, sizeof(*g->owner_map));
   utstring_new(g->vtxs);
+  utstring_new(g->vtxdist);
   utstring_new(g->vwgt);
   utstring_new(g->vsizes);
   utstring_new(g->xadj);
@@ -106,6 +114,7 @@ static void _init(_agas_graph_t *g) {
 // Free the AGAS graph.
 static void _free(_agas_graph_t *g) {
   utstring_free(g->vtxs);
+  utstring_free(g->vtxdist);
   utstring_free(g->vwgt);
   utstring_free(g->vsizes);
   utstring_free(g->xadj);
@@ -283,7 +292,8 @@ static size_t _metis_partition(_agas_graph_t *g, idx_t nparts,
   idx_t ncon   = 1;
   idx_t objval = 0;
 
-  *partition = calloc(g->nvtxs, sizeof(uint64_t));
+  idx_t nvtxs = g->nvtxs;
+  *partition = calloc(nvtxs, sizeof(uint64_t));
   dbg_assert(partition);
 
   idx_t *vwgt   = _UTBUF(g->vwgt);
@@ -291,9 +301,38 @@ static size_t _metis_partition(_agas_graph_t *g, idx_t nparts,
   idx_t *xadj   = _UTBUF(g->xadj);
   idx_t *adjncy = _UTBUF(g->adjncy);
 
-  idx_t nvtxs = g->nvtxs;
   int e = METIS_PartGraphRecursive(&nvtxs, &ncon, xadj, adjncy, vwgt, vsizes,
             NULL, &nparts, NULL, NULL, options, &objval, (idx_t*)*partition);
+  if (e != METIS_OK) {
+    return 0;
+  }
+  return g->nvtxs;
+}
+#endif
+
+
+#ifdef HAVE_PARMETIS
+static size_t _parmetis_partition(_agas_graph_t *g, idx_t nparts,
+                                  uint64_t **partition) {
+  idx_t options[1] = { 0 };
+
+  idx_t ncon    = 1;
+  idx_t wgtflag = 2;
+  idx_t numflag = 0;
+  idx_t edgecut = 0;
+
+  idx_t nvtxs = g->nvtxs;
+  *partition = calloc(nvtxs, sizeof(uint64_t));
+  dbg_assert(partition);
+
+  idx_t *vtxdist = _UTBUF(g->vtxdist);
+  idx_t *vwgt    = _UTBUF(g->vwgt);
+  idx_t *xadj    = _UTBUF(g->xadj);
+  idx_t *adjncy  = _UTBUF(g->adjncy);
+
+  int e = ParMETIS_V3_PartKway(vtxdist, xadj, adjncy, vwgt, NULL, &wgtflag,
+                               &numflag, &ncon, &nparts, NULL, NULL, options,
+                               &edgecut, (idx_t*)*partition, &LIBHPX_COMM);
   if (e != METIS_OK) {
     return 0;
   }
@@ -331,8 +370,9 @@ size_t agas_graph_partition(void *g, int nparts, uint64_t **partition) {
   _postprocess_graph(g);
   _dump_agas_graph(g);
 #ifdef HAVE_METIS
-  _agas_graph_t *graph = (_agas_graph_t*)g;
-  return _metis_partition(graph, nparts, partition);
+  return _metis_partition((_agas_graph_t*)g, nparts, partition);
+#elif HAVE_PARMETIS
+  return _parmetis_partition((_agas_graph_t*)g, nparts, partition);
 #else
   log_dflt("No partitioner found.\n");
 #endif
