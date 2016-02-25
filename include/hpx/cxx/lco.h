@@ -14,6 +14,8 @@
 #ifndef HPX_CXX_LCO_H
 #define HPX_CXX_LCO_H
 
+#include <vector>
+
 #include <hpx/addr.h>
 #include <hpx/lco.h>
 #include <hpx/cxx/errors.h>
@@ -76,6 +78,46 @@ void get(const global_ptr<LCO<void>>& lco, bool reset = false) {
   wait(lco, reset);
 }
 
+/// Get values for all of the LCOs.
+///
+/// This admits some parallelism in the implementation, and is preferable to
+/// using hpx_lco_get() in a loop. The calling thread will block until all of
+/// the LCOs are available. Entries in @p lcos that are set to HPX_NULL are
+/// ignored, their corresponding values in @p values will not be written to.
+///
+/// @param          lcos an array of @p n global LCO addresses
+/// @param[out]   values an array of @p n local buffers with sizes corresponding
+///                      to @p sizes
+/// @param[out] statuses an array of statuses, pass NULL if statuses are not
+///                      required
+///
+/// @returns The number of entries in @p statuses that have non-HPX_SUCCESS
+///                        values, will be set irrespective of if @p statuses is
+///                        NULL.
+template <typename T, template <typename> class LCO>
+std::vector<hpx_status_t>
+get_all(const std::vector<hpx::global_ptr<LCO<T>>>& lcos, 
+	std::vector<T>& values) {
+  assert(lcos.size() == values.size());
+  size_t n = lcos.size();
+  hpx_addr_t* _lcos = new hpx_addr_t[n];
+  T** _values = new T*[n];
+  size_t* _sizes = new size_t[n];
+  for (size_t i = 0; i < n; i++) {
+    _lcos[i] = lcos[i].get();
+    _sizes[i] = sizeof(T);
+    _values[i] = &(values[i]);
+  }
+  
+  std::vector<hpx_status_t> statuses;
+  hpx_lco_get_all(lcos.size(), _lcos, _sizes, (void**) _values, statuses.data());
+  
+  delete[] _sizes;
+  delete[] _values;
+  delete[] _lcos;
+  return statuses;
+}
+
 template <typename T, typename U>
 void set(const global_ptr<T>& lco, U&& in) {
   static_assert(is_lco<T>::value, "LCO type required");
@@ -98,7 +140,7 @@ void dealloc(const global_ptr<T>& lco, const global_ptr<U>& sync) {
 template <typename T>
 void dealloc(const global_ptr<T>& lco, std::nullptr_t) {
   static_assert(is_lco<T>::value, "LCO type required");
-  hpx_lco_delete_sync(lco.get(), HPX_NULL);
+  hpx_lco_delete_sync(lco.get());
 }
 
 template <typename T>
