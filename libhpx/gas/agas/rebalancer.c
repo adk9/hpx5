@@ -53,13 +53,13 @@ typedef struct agas_bst {
 static __thread agas_bst_t *_local_bst;
 
 // Global array of all BSTs.
-static agas_bst_t ***_local_bsts;
+static agas_bst_t ***_local_bsts = NULL;
 
 // Per-locality BST.
 //
 // During statistics aggration, all of the thread-local BSTs are
 // aggregated into a per-locality BST.
-static void *_global_bst;
+static void *_global_bst = NULL;
 
 // Add an entry to the rebalancer's (thread-local) BST table.
 ///
