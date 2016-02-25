@@ -23,25 +23,25 @@ extern "C" {
 #if defined(HAVE_AGAS) && defined(HAVE_REBALANCING)
     
 // AGAS-based Rebalancer API
-int libhpx_rebalancer_init(void);
-void libhpx_rebalancer_finalize(void);
+int rebalancer_init(void);
+void rebalancer_finalize(void);
 
 // Register a worker thread with the rebalancer
-void libhpx_rebalancer_bind_worker(void);
+void rebalancer_bind_worker(void);
 
 // Record the GAS block entry access info in the rebalancer
-void libhpx_rebalancer_add_entry(int src, int dst, hpx_addr_t block,
+void rebalancer_add_entry(int src, int dst, hpx_addr_t block,
                                  size_t size);
 
-int libhpx_rebalancer_start(hpx_addr_t sync);
+int rebalancer_start(hpx_addr_t sync);
 
 #else
 
-#define libhpx_rebalancer_init()
-#define libhpx_rebalancer_finalize()
-#define libhpx_rebalancer_bind_worker()
-#define libhpx_rebalancer_add_entry(...)
-#define libhpx_rebalancer_start(...)
+#define rebalancer_init()
+#define rebalancer_finalize()
+#define rebalancer_bind_worker()
+#define rebalancer_add_entry(...)
+#define rebalancer_start(...)
 
 #endif
 

@@ -375,5 +375,5 @@ void hpx_gas_calloc_local_at_async(size_t n, uint32_t bsize, uint32_t boundary,
 }
 
 void hpx_gas_rebalance(hpx_addr_t sync) {
-  libhpx_rebalancer_start(sync);
+  rebalancer_start(sync);
 }

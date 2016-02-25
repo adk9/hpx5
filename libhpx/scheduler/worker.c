@@ -57,7 +57,7 @@ __thread worker_t * volatile self = NULL;
 /// Macro to record a parcel's GAS accesses.
 #if defined(HAVE_AGAS) && defined(HAVE_REBALANCING)
 # define GAS_TRACE_ACCESS(src, dst, block, size) \
-  libhpx_rebalancer_add_entry(src, dst, block, size)
+  rebalancer_add_entry(src, dst, block, size)
 #elif defined(ENABLE_INSTRUMENTATION)
 # define GAS_TRACE_ACCESS EVENT_GAS_ACCESS
 #else

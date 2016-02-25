@@ -69,7 +69,7 @@ static void *_global_bst;
 /// @param     size The block's size in bytes.
 ///
 //// @returns An error code, or HPX_SUCCESS.
-void libhpx_rebalancer_add_entry(int src, int dst, hpx_addr_t block,
+void rebalancer_add_entry(int src, int dst, hpx_addr_t block,
                                  size_t size) {
   if (here->config->gas != HPX_GAS_AGAS) {
     return;
@@ -108,7 +108,7 @@ void libhpx_rebalancer_add_entry(int src, int dst, hpx_addr_t block,
 }
 
 // Initialize the AGAS-based rebalancer.
-int libhpx_rebalancer_init(void) {
+int rebalancer_init(void) {
   _local_bsts = calloc(here->config->threads, sizeof(agas_bst_t**));
   dbg_assert(_local_bsts);
 
@@ -120,7 +120,7 @@ int libhpx_rebalancer_init(void) {
 }
 
 // Finalize the AGAS-based rebalancer.
-void libhpx_rebalancer_finalize(void) {
+void rebalancer_finalize(void) {
   if (_local_bsts) {
     free(_local_bsts);
     _local_bsts = NULL;
@@ -137,7 +137,7 @@ void libhpx_rebalancer_finalize(void) {
 // This operation registers a libhpx worker thread with the rebalancer
 // so that all of the thread-private state that the rebalancer needs
 // can be initialized.
-void libhpx_rebalancer_bind_worker(void) {
+void rebalancer_bind_worker(void) {
   if (here->config->gas != HPX_GAS_AGAS) {
     return;
   }
@@ -250,7 +250,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _rebalance_blocks,
 
 // Start balancing the blocks.
 // This can be called by any locality in the system.
-static int libhpx_rebalancer_start_sync(void) {
+static int rebalancer_start_sync(void) {
   log_gas("Starting GAS rebalancing\n");
 
   hpx_addr_t graph = agas_graph_new();
@@ -287,13 +287,13 @@ static int libhpx_rebalancer_start_sync(void) {
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _rebalancer_start_sync,
-                     libhpx_rebalancer_start_sync);
+                     rebalancer_start_sync);
 
 // Start balancing the blocks asynchronously.
 //
 // The LCO @p sync can be used for completion notification. This can
 // be called by any locality in the system.
-int libhpx_rebalancer_start(hpx_addr_t sync) {
+int rebalancer_start(hpx_addr_t sync) {
   if (here->config->gas != HPX_GAS_AGAS) {
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
     return 0;

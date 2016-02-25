@@ -49,7 +49,7 @@ static void _bind_self(worker_t *worker) {
   self->thread = pthread_self();
 
   // register this worker with the rebalancer
-  libhpx_rebalancer_bind_worker();
+  rebalancer_bind_worker();
 }
 
 /// The pthread entry function for dedicated worker threads.

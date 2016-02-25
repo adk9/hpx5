@@ -51,7 +51,7 @@ _agas_dealloc(void *gas) {
     bitmap_delete(agas->bitmap);
   }
 
-  libhpx_rebalancer_finalize();
+  rebalancer_finalize();
 
   if (here->rank == 0) {
     if (agas->cyclic_bitmap) {
@@ -304,7 +304,7 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   agas->btt = btt_new(0);
 
   // initialize the rebalancer
-  libhpx_rebalancer_init();
+  rebalancer_init();
 
   // get the chunk size from jemalloc
   agas->chunk_size = as_bytes_per_chunk();
