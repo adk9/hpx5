@@ -26,7 +26,3 @@ if HAVE_REBALANCING
 noinst_HEADERS     += rebalancer.h
 libagas_la_SOURCES += rebalancer.c partitioning.c bst.cc
 endif
-
-if HAVE_TASKSCALES
-libagas_la_SOURCES += taskscales.cc
-endif
