@@ -37,12 +37,12 @@ AC_DEFUN([HPX_DO_AM_CONDITIONALS], [
  AM_CONDITIONAL([HAVE_REBALANCING], [test "x$have_rebalancing" == xyes])
  AM_CONDITIONAL([HAVE_TASKSCALES], [test "x$have_taskscales" == xyes])
  AM_CONDITIONAL([HAVE_METIS], [test "x$have_metis" == xyes])
+ AM_CONDITIONAL([HAVE_PARMETIS], [test "x$have_parmetis" == xyes])
  AM_CONDITIONAL([HAVE_PAPI], [test "x$have_papi" == xyes])
  AM_CONDITIONAL([HAVE_APEX], [test "x$have_apex" == xyes])
  AM_CONDITIONAL([HAVE_PERCOLATION], [test "x$have_percolation" == xyes])
  AM_CONDITIONAL([HAVE_OPENCL], [test "x$have_opencl" == xyes])
  AM_CONDITIONAL([HAVE_HPXPP], [test "x$have_hpxpp" == xyes])
- AM_CONDITIONAL([HAVE_TASKSCALES], [test "x$have_taskscales" == xyes])
  
  AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" == xyes])
  AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" == xyes])
