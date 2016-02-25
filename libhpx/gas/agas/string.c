@@ -21,6 +21,7 @@
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
+#include <libhpx/memory.h>
 #include <libhpx/network.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/worker.h>
@@ -30,7 +31,7 @@
 static int _insert_block_handler(int n, void *args[], size_t sizes[]) {
   agas_t *agas = (agas_t*)here->gas;
 
-  void       *block = args[0];
+  void       *block = args[0]; // ADK: do we need a copy?
   hpx_addr_t *src   = args[1];
   uint32_t   *attr  = args[2];
 
@@ -49,6 +50,8 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int rank) {
   gva_t gva = { .addr = src };
   size_t bsize = UINT64_C(1) << gva.bits.size;
 
+  dbg_assert(here->rank == btt_get_owner(agas->btt, gva));
+
   void *block = NULL;
   uint32_t attr;
   int e = btt_try_move(agas->btt, gva, rank, &block, &attr);
@@ -60,9 +63,14 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int rank) {
   e = hpx_call_cc(dst, _insert_block, &block, bsize, &src, sizeof(src), &attr,
                   sizeof(attr));
 
-  // since rank 0 maintains the cyclic global address space, we cannot
-  // free cyclic blocks on rank 0.
-  if (!(gva.bits.cyclic && here->rank == 0)) {
+  // always free if it is a single block
+  int blocks = btt_get_blocks(agas->btt, gva);
+  if (!gva.bits.cyclic && blocks == 1) {
+    global_free(block);
+  }
+
+  // otherwise only free if the block is not at its home
+  if (gva.bits.home != here->rank) {
     free(block);
   }
 
