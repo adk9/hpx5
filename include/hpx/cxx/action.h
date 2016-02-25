@@ -74,6 +74,22 @@ DEF_CONVERT_TYPE(float, HPX_FLOAT)
 DEF_CONVERT_TYPE(double, HPX_DOUBLE)
 DEF_CONVERT_TYPE(std::size_t, HPX_SIZE_T)
 
+// global ptr conversion
+template <typename T>
+struct _convert_arg_type< hpx::global_ptr<T> > {
+  constexpr static auto type = HPX_ADDR;
+};
+template <typename T>
+constexpr decltype(HPX_ADDR) _convert_arg_type< hpx::global_ptr<T> >::type;
+
+// pointer convesion
+template <typename T>
+struct _convert_arg_type<T*> {
+  constexpr static auto type = HPX_POINTER;
+};
+template <typename T>
+constexpr decltype(HPX_POINTER) _convert_arg_type<T*>::type;
+
 } // namespace detail
 } // namspace hpx
 
@@ -340,6 +356,15 @@ public:
     return _hpx_call_cc(addr.get(), _id, sizeof...(Args), &args...);
   }
   
+//   template <typename... Args>
+//   int thread_continue(Args&... args) {
+//     return _hpx_thread_continue(sizeof...(Args), &args...);
+//   };
+  
+  template <typename T>
+  int thread_continue(T& arg) {
+    return _hpx_thread_continue(2, &arg, sizeof(T));
+  };
 /// Collective calls.
 ///
 
