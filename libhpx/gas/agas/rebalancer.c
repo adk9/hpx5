@@ -81,15 +81,15 @@ void rebalancer_add_entry(int src, int dst, hpx_addr_t block, size_t size) {
 
   // insert the block if it does not already exist
   agas_bst_t *entry = NULL;
-  agas_bst_t *bst = self->bst;
-  HASH_FIND(hh, bst, &block, sizeof(uint64_t), entry);
+  agas_bst_t **bst = (agas_bst_t**)&self->bst;
+  HASH_FIND(hh, *bst, &block, sizeof(uint64_t), entry);
   if (!entry) {
     entry = malloc(sizeof(*entry));
     dbg_assert(entry);
     entry->block = block;
     entry->counts = calloc(here->ranks, sizeof(uint64_t));
     entry->sizes = calloc(here->ranks, sizeof(uint64_t));
-    HASH_ADD(hh, bst, block, sizeof(uint64_t), entry);
+    HASH_ADD(hh, *bst, block, sizeof(uint64_t), entry);
   }
 
   // otherwise, simply update the counts and sizes
@@ -120,19 +120,19 @@ int _local_to_global_bst(int id, void *UNUSED) {
   worker_t *w = scheduler_get_worker(here->sched, id);
   dbg_assert(w);
 
-  agas_bst_t *bst = w->bst;
-  if (!bst) {
+  agas_bst_t **bst = (agas_bst_t **)&w->bst;
+  if (*bst == NULL) {
     return HPX_SUCCESS;
   }
 
   agas_bst_t *entry, *tmp;
-  HASH_ITER(hh, bst, entry, tmp) {
+  HASH_ITER(hh, *bst, entry, tmp) {
     bst_upsert(_global_bst, entry->block, entry->counts, entry->sizes);
-    HASH_DEL(bst, entry);
+    HASH_DEL(*bst, entry);
     free(entry);
   }
-  HASH_CLEAR(hh, bst);
-  w->bst = NULL;
+  HASH_CLEAR(hh, *bst);
+  *bst = NULL;
   return HPX_SUCCESS;
 }
 
