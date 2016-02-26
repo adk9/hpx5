@@ -375,6 +375,7 @@ void hpx_gas_calloc_local_at_async(size_t n, uint32_t bsize, uint32_t boundary,
              "Failed async call during allocation\n");
 }
 
+static HPX_ACTION_DECL(_set_attr_action);
 void hpx_gas_set_attr(hpx_addr_t addr, uint32_t attr) {
   if (attr != HPX_GAS_ATTR_NONE &&
       attr != HPX_GAS_ATTR_RO   &&
@@ -386,9 +387,16 @@ void hpx_gas_set_attr(hpx_addr_t addr, uint32_t attr) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
   if (gas->set_attr) {
+    if (!hpx_gas_try_pin(addr, NULL)) {
+      int e = hpx_call_sync(addr, _set_attr_action, NULL, 0, &addr, &attr);
+      dbg_check(e, "Could not forward hpx_gas_set_attr\n");
+    }
     gas->set_attr(here->gas, addr, attr);
+    hpx_gas_unpin(addr);
   }
 }
+static LIBHPX_ACTION(HPX_INTERRUPT, 0, _set_attr_action,
+                     hpx_gas_set_attr, HPX_ADDR, HPX_UINT32);
 
 void hpx_gas_rebalance(hpx_addr_t sync) {
   rebalancer_start(sync);
