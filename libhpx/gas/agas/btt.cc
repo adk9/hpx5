@@ -46,8 +46,9 @@ namespace {
     hpx_parcel_t *unpin(gva_t gva);
     void *lookup(gva_t gva) const;
     uint32_t getOwner(gva_t gva) const;
-    uint32_t getAttr(gva_t gva) const;
     void setOwner(gva_t gva, uint32_t owner) const;
+    uint32_t getAttr(gva_t gva) const;
+    void setAttr(gva_t gva, uint32_t attr) const;
     size_t getBlocks(gva_t gva) const;
   };
 }
@@ -167,6 +168,16 @@ BTT::getAttr(gva_t gva) const {
   }
 }
 
+void
+BTT::setAttr(gva_t gva, uint32_t attr) const {
+  Entry entry;
+  uint64_t key = gva_to_key(gva);
+  bool found = find(key, entry);
+  if (found) {
+    entry.attr = attr;
+  }
+}
+
 size_t
 BTT::getBlocks(gva_t gva) const {
   Entry entry;
@@ -237,10 +248,22 @@ btt_get_owner(const void* obj, gva_t gva) {
   return btt->getOwner(gva);
 }
 
+void
+btt_set_owner(const void* obj, gva_t gva, uint32_t owner) {
+  const BTT *btt = static_cast<const BTT*>(obj);
+  return btt->setOwner(gva, owner);
+}
+
 uint32_t
 btt_get_attr(const void* obj, gva_t gva) {
   const BTT *btt = static_cast<const BTT*>(obj);
   return btt->getAttr(gva);
+}
+
+void
+btt_set_attr(const void* obj, gva_t gva, uint32_t attr) {
+  const BTT *btt = static_cast<const BTT*>(obj);
+  return btt->setAttr(gva, attr);
 }
 
 size_t
