@@ -387,9 +387,11 @@ void hpx_gas_set_attr(hpx_addr_t addr, uint32_t attr) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
   if (gas->set_attr) {
-    if (!hpx_gas_try_pin(addr, NULL)) {
+    void *lva;
+    if (!hpx_gas_try_pin(addr, &lva)) {
       int e = hpx_call_sync(addr, _set_attr_action, NULL, 0, &addr, &attr);
       dbg_check(e, "Could not forward hpx_gas_set_attr\n");
+      return;
     }
     gas->set_attr(here->gas, addr, attr);
     hpx_gas_unpin(addr);
