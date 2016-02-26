@@ -15,6 +15,7 @@
 # include "config.h"
 #endif
 
+#include <inttypes.h>
 #include <stdlib.h>
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
@@ -372,6 +373,21 @@ void hpx_gas_calloc_local_at_async(size_t n, uint32_t bsize, uint32_t boundary,
   dbg_check( hpx_call(loc, hpx_gas_calloc_local_at_action, lco, &n, &bsize,
                       &boundary, &attr),
              "Failed async call during allocation\n");
+}
+
+void hpx_gas_set_attr(hpx_addr_t addr, uint32_t attr) {
+  if (attr != HPX_GAS_ATTR_NONE &&
+      attr != HPX_GAS_ATTR_RO   &&
+      attr != HPX_GAS_ATTR_LB) {
+    log_dflt("invalid attribute %d for addr %"PRIu64".\n",
+             attr, addr);
+    return;
+  }
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  if (gas->set_attr) {
+    gas->set_attr(here->gas, addr, attr);
+  }
 }
 
 void hpx_gas_rebalance(hpx_addr_t sync) {

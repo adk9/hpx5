@@ -140,6 +140,12 @@ _agas_owner_of(const void *gas, hpx_addr_t addr) {
   return btt_get_owner(agas->btt, gva);
 }
 
+void _agas_set_attr(void *gas, hpx_addr_t addr, uint32_t attr) {
+  const agas_t *agas = gas;
+  gva_t gva = { .addr = addr };
+  btt_set_attr(agas->btt, gva, attr);
+}
+
 static int
 _locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align, uint64_t offset,
                                void *lva, uint32_t attr, int zero) {
@@ -262,7 +268,6 @@ _agas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
   return addr;
 }
 
-
 static gas_t _agas_vtable = {
   .type           = HPX_GAS_AGAS,
   .string = {
@@ -290,6 +295,7 @@ static gas_t _agas_vtable = {
   .alloc_local    = agas_local_alloc,
   .calloc_local   = agas_local_calloc,
   .free           = agas_free,
+  .set_attr       = _agas_set_attr,
   .move           = agas_move,
   .owner_of       = _agas_owner_of
 };

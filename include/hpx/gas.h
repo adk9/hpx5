@@ -256,6 +256,13 @@ hpx_addr_t hpx_gas_calloc_local_attr(size_t n, uint32_t bsize, uint32_t boundary
                                      uint32_t attr)
   HPX_PUBLIC;
 
+/// Set an attribute for a global address.
+///
+/// @param  addr         The global address.
+/// @param  attr         The GAS attribute to set.
+void hpx_gas_set_attr(hpx_addr_t addr, uint32_t attr)
+  HPX_PUBLIC;
+
 /// Free a global allocation.
 ///
 /// This global free is asynchronous. The @p sync LCO address can be used to

@@ -253,7 +253,6 @@ _smp_local_size(void *gas) {
   dbg_error("SMP execution should not call this function\n");
 }
 
-
 static void *
 _smp_local_base(void *gas) {
   dbg_error("SMP execution should not call this function\n");
@@ -290,6 +289,7 @@ static gas_t _smp_vtable = {
   .alloc_local    = _smp_gas_alloc_local,
   .calloc_local   = _smp_gas_calloc_local,
   .free           = _smp_gas_free,
+  .set_attr       = NULL,
   .move           = _smp_move,
   .owner_of       = _smp_owner_of
 };
