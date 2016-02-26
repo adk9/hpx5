@@ -553,7 +553,7 @@ _hpx_gas_bcast_sync(hpx_action_t action, hpx_addr_t base, int n,
 /// distribution.
 ///
 /// @param       sync  Notification of completion.
-void hpx_gas_rebalance(hpx_addr_t sync);
+void hpx_gas_rebalance(hpx_addr_t sync) HPX_PUBLIC;
     
 /// @}
 
