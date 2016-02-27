@@ -786,7 +786,6 @@ void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(w);
   dbg_assert(w->id >= 0);
   dbg_assert(p);
-  dbg_assert(hpx_gas_try_pin(p->target, NULL)); // just performs translation
   dbg_assert(actions[p->action].handler != NULL);
   COUNTER_SAMPLE(w->stats.spawns++);
 

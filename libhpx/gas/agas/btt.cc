@@ -78,23 +78,22 @@ BTT::attachParcel(gva_t gva, hpx_parcel_t *p) {
 bool
 BTT::tryPin(gva_t gva, void** lva) {
   uint64_t key = gva_to_key(gva);
-  bool ret = true;
+  bool ret = false;
   bool found = update_fn(key, [&](Entry& entry) {
-      if (!lva) {
-        return;
-      }
-
       // If we do not own the block or if there is a pending delete on
       // this block, the try-pin operation fails.
       if (entry.owner != here->rank || entry.onunpin != NULL) {
-        ret = false;
         return;
       }
 
       assert(entry.count >= 0);
       entry.count++;
-      // printf("%lu %d ++\n", key, entry.count);
-      *lva = (char*)(entry.lva) + gva_to_block_offset(gva);
+      ret = true;
+
+      if (lva) {
+        // printf("%lu %d ++\n", key, entry.count);
+        *lva = (char*)(entry.lva) + gva_to_block_offset(gva);
+      }
     });
   return found && ret;
 }

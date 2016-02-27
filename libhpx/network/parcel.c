@@ -137,6 +137,7 @@ void parcel_launch(hpx_parcel_t *p) {
     // instrument local "receives"
     EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src);
     scheduler_spawn(p);
+    hpx_gas_unpin(p->target);
   }
   else {
     int e = network_send(self->network, p);
