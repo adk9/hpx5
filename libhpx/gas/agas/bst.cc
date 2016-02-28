@@ -97,8 +97,6 @@ _bst_serialize(void *obj, char *buf) {
       int prev_nbrs = nbrs;
       for (unsigned k = 0; k < ranks; ++k) {
         if (entry.counts[k] != 0) {
-          assert(entry.sizes[k] != 0);
-
           lnbrs[k].push_back(id);
           adjncy[nbrs] = k;
           adjwgt[nbrs] = entry.counts[k] * entry.sizes[k];
