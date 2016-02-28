@@ -77,7 +77,7 @@ _agas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
 
   if (!l.bits.cyclic && !r.bits.cyclic) {
     if (l.bits.home == r.bits.home) {
-      return agas_local_sub(gas, l, r, bsize);
+      return agas_sub_local(gas, l, r, bsize);
     }
   }
 
@@ -99,7 +99,7 @@ _agas_add(const void *gas, hpx_addr_t addr, int64_t bytes, uint32_t bsize) {
     return gva.addr;
   }
   else {
-    return agas_local_add(gas, gva, bytes, bsize);
+    return agas_add_local(gas, gva, bytes, bsize);
   }
 }
 
@@ -292,8 +292,8 @@ static gas_t _agas_vtable = {
   .calloc_cyclic  = _agas_calloc_cyclic,
   .alloc_blocked  = NULL,
   .calloc_blocked = NULL,
-  .alloc_local    = agas_local_alloc,
-  .calloc_local   = agas_local_calloc,
+  .alloc_local    = agas_alloc_local,
+  .calloc_local   = agas_calloc_local,
   .free           = agas_free,
   .set_attr       = _agas_set_attr,
   .move           = agas_move,
