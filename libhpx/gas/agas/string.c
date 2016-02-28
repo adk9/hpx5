@@ -31,12 +31,16 @@
 static int _insert_block_handler(int n, void *args[], size_t sizes[]) {
   agas_t *agas = (agas_t*)here->gas;
 
-  void       *block = args[0]; // ADK: do we need a copy?
   hpx_addr_t *src   = args[1];
   uint32_t   *attr  = args[2];
 
+  dbg_assert(args[0] && sizes[0]);
+  size_t bsize = sizes[0];
+  char *lva = global_malloc(bsize);
+  memcpy(lva, args[0], bsize);
+
   gva_t gva = { .addr = *src };
-  btt_insert(agas->btt, gva, here->rank, block, 1, *attr);
+  btt_insert(agas->btt, gva, here->rank, lva, 1, *attr);
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_VECTORED, _insert_block,
