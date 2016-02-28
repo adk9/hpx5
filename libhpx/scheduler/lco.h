@@ -131,12 +131,24 @@ void lco_reset_triggered(lco_t *lco)
 uintptr_t lco_get_triggered(const lco_t *lco)
   HPX_NON_NULL(1);
 
-
+/// Set the user state to true.
+///
+/// This operation does not acquire the LCO lock---the caller must lock the
+/// pointer first if this could occur concurrently.
+///
+/// @param           lco The target LCO.
 void lco_set_user(lco_t *lco)
   HPX_NON_NULL(1);
 
+/// Get the user state of an LCO.
+///
+/// This operation does not acquire the LCO lock---the caller must lock the
+/// pointer first if this could occur concurrently.
+///
+/// @param           lco The LCO to read.
+///
+/// @returns Non-zero if the user bit is set, zero otherwise.
 uintptr_t lco_get_user(const lco_t *lco)
   HPX_NON_NULL(1);
-
 
 #endif // LIBHPX_LCO_H
