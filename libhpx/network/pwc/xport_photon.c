@@ -340,6 +340,14 @@ _photon_dealloc(void *photon) {
   free(photon);
 }
 
+static void _photon_create_comm(void *c, int rank, void *active_ranks,
+                                int num_active, int total) {
+}
+
+static void _photon_allreduce(void *sendbuf, void *out, int count,
+                              void *datatype, void *op, void *c) {
+}
+
 pwc_xport_t *
 pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas) {
   photon_pwc_xport_t *photon = malloc(sizeof(*photon));
@@ -359,6 +367,8 @@ pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas) {
   photon->vtable.gwc          = _photon_gwc;
   photon->vtable.test         = _photon_test;
   photon->vtable.probe        = _photon_probe;
+  photon->vtable.create_comm  = _photon_create_comm;
+  photon->vtable.allreduce    = _photon_allreduce;
 
   // initialize the registered memory allocator
   registered_allocator_init(&photon->vtable);

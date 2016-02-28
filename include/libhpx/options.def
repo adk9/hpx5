@@ -161,6 +161,11 @@ LIBHPX_OPT_SCALAR(isir_, sendlimit, 1lu << 14, uint32_t)
 LIBHPX_OPT_SCALAR(isir_, recvlimit, 1lu << 14, uint32_t)
 //// #}
 
+/// Collectives options
+/// @{
+LIBHPX_OPT_FLAG(coll_, network, 0)
+/// #}
+
 #ifdef HAVE_PHOTON
 /// Photon options
 /// @{

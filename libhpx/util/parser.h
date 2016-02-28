@@ -159,6 +159,8 @@ struct hpx_options_t
   long hpx_pwc_parceleagerlimit_arg;	/**< @brief set the largest eager parcel size (header inclusive).  */
   char * hpx_pwc_parceleagerlimit_orig;	/**< @brief set the largest eager parcel size (header inclusive) original value given at command line.  */
   const char *hpx_pwc_parceleagerlimit_help; /**< @brief set the largest eager parcel size (header inclusive) help description.  */
+  int hpx_coll_network_flag;	/**< @brief set collective implementation to network based version (override parcel collectives) (default=off).  */
+  const char *hpx_coll_network_help; /**< @brief set collective implementation to network based version (override parcel collectives) help description.  */
   enum enum_hpx_photon_backend hpx_photon_backend_arg;	/**< @brief set the underlying network API to use.  */
   char * hpx_photon_backend_orig;	/**< @brief set the underlying network API to use original value given at command line.  */
   const char *hpx_photon_backend_help; /**< @brief set the underlying network API to use help description.  */
@@ -251,6 +253,7 @@ struct hpx_options_t
   unsigned int hpx_isir_recvlimit_given ;	/**< @brief Whether hpx-isir-recvlimit was given.  */
   unsigned int hpx_pwc_parcelbuffersize_given ;	/**< @brief Whether hpx-pwc-parcelbuffersize was given.  */
   unsigned int hpx_pwc_parceleagerlimit_given ;	/**< @brief Whether hpx-pwc-parceleagerlimit was given.  */
+  unsigned int hpx_coll_network_given ;	/**< @brief Whether hpx-coll-network was given.  */
   unsigned int hpx_photon_backend_given ;	/**< @brief Whether hpx-photon-backend was given.  */
   unsigned int hpx_photon_ibdev_given ;	/**< @brief Whether hpx-photon-ibdev was given.  */
   unsigned int hpx_photon_ethdev_given ;	/**< @brief Whether hpx-photon-ethdev was given.  */

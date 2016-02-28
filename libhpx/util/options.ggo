@@ -160,6 +160,11 @@ option "hpx-pwc-parceleagerlimit" - "set the largest eager parcel size (header i
 typestr="bytes"
 long optional
 
+section "Collectives Options"
+
+option "hpx-coll-network" - "set collective implementation to network based version (override parcel collectives)"
+flag off
+
 section "Photon Transport Options"
 
 option "hpx-photon-backend" - "set the underlying network API to use"
