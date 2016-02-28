@@ -83,6 +83,14 @@ inline static void *gas_local_base(gas_t *gas) {
   return gas->local_base(gas);
 }
 
+static const char* const HPX_GAS_ATTR_TO_STRING[] = {
+  "NONE",
+  "READONLY",
+  "LOAD-BALANCE",
+  "LCO"
+};
+
+
 #ifdef __cplusplus
 }
 #endif
