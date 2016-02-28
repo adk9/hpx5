@@ -293,7 +293,7 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
                             hpx_action_t predicate, void *init,
                             size_t init_size) {
   _user_lco_t *u = NULL;
-  hpx_addr_t gva = hpx_gas_calloc_local(1, sizeof(*u) + size + init_size, 0);
+  hpx_addr_t gva = lco_alloc_local(1, sizeof(*u) + size + init_size, 0);
 
   if (!hpx_gas_try_pin(gva, (void**)&u)) {
     size_t args_size = sizeof(_user_lco_t) + init_size;
@@ -352,7 +352,7 @@ hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size, hpx_action_t id,
                                         void *init, size_t init_size) {
   uint32_t lco_bytes = sizeof(_user_lco_t) + size + init_size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
-  hpx_addr_t base = hpx_gas_alloc_local(n, lco_bytes, 0);
+  hpx_addr_t base = lco_alloc_local(n, lco_bytes, 0);
 
   size_t args_size = sizeof(_user_lco_t) + init_size;
   _user_lco_init_args_t *args = calloc(1, args_size);

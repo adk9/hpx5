@@ -257,7 +257,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _reduce_init_async,
 hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_action_t id,
                               hpx_action_t op) {
   _reduce_t *r = NULL;
-  hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*r), 0);
+  hpx_addr_t gva = lco_alloc_local(1, sizeof(*r), 0);
 
   if (!hpx_gas_try_pin(gva, (void**)&r)) {
     int e = hpx_call_sync(gva, _reduce_init_async, NULL, 0, &inputs, &size, &id,
@@ -302,7 +302,7 @@ hpx_addr_t hpx_lco_reduce_local_array_new(int n, int inputs, size_t size,
                                           hpx_action_t op) {
   uint32_t lco_bytes = sizeof(_reduce_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
-  hpx_addr_t base = hpx_gas_alloc_local(n, lco_bytes, 0);
+  hpx_addr_t base = lco_alloc_local(n, lco_bytes, 0);
 
   int e = hpx_call_sync(base, _block_init, NULL, 0, &n, &inputs, &size,
                         &id, &op);

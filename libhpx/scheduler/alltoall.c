@@ -430,7 +430,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _alltoall_init_async,
 /// @param size   The size of the data being gathered.
 hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) {
   _alltoall_t *g = NULL;
-  hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*g), 0);
+  hpx_addr_t gva = lco_alloc_local(1, sizeof(*g), 0);
 
   if (!hpx_gas_try_pin(gva, (void**)&g)) {
     int e = hpx_call_sync(gva, _alltoall_init_async, NULL, 0, &inputs, &size);
@@ -466,7 +466,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_init,
 hpx_addr_t hpx_lco_alltoall_local_array_new(int n, size_t inputs, size_t size) {
   uint32_t lco_bytes = sizeof(_alltoall_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
-  hpx_addr_t base = hpx_gas_alloc_local(n, lco_bytes, 0);
+  hpx_addr_t base = lco_alloc_local(n, lco_bytes, 0);
 
   int e = hpx_call_sync(base, _block_init, NULL, 0, &n, &inputs, &size);
   dbg_check(e, "call of _block_init_action failed\n");

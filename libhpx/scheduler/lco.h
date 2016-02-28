@@ -151,4 +151,11 @@ void lco_set_user(lco_t *lco)
 uintptr_t lco_get_user(const lco_t *lco)
   HPX_NON_NULL(1);
 
+// Helper macros to allocate LCOs in the global address space
+#define lco_alloc_local(n, size, boundary)                      \
+  hpx_gas_alloc_local_attr(n, size, boundary, HPX_GAS_ATTR_LCO)
+
+#define lco_alloc_cyclic(n, size, boundary)                      \
+  hpx_gas_alloc_cyclic_attr(n, size, boundary, HPX_GAS_ATTR_LCO)
+
 #endif // LIBHPX_LCO_H

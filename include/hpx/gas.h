@@ -47,6 +47,7 @@ typedef hpx_addr_t (*hpx_gas_dist_t)(uint32_t i, size_t n, uint32_t bsize);
 #define HPX_GAS_ATTR_NONE  0x0  //!< Empty attribute.
 #define HPX_GAS_ATTR_RO    0x1  //!< This block is read-only.
 #define HPX_GAS_ATTR_LB    0x2  //!< Consider for automatic load balancing.
+#define HPX_GAS_ATTR_LCO   0x4  //!< This block is an LCO.
 
 /// Allocate distributed global memory given a distribution.
 /// @param            n The number of blocks to allocate.

@@ -306,7 +306,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _gather_init_async,
 /// @param    size The size of the data being gathered.
 hpx_addr_t hpx_lco_gather_new(size_t inputs, size_t outputs, size_t size) {
   _gather_t *g = NULL;
-  hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*g), 0);
+  hpx_addr_t gva = lco_alloc_local(1, sizeof(*g), 0);
   dbg_assert_str(gva, "Could not malloc global memory\n");
   if (!hpx_gas_try_pin(gva, (void**)&g)) {
     int e = hpx_call_sync(gva, _gather_init_async, NULL, 0, &inputs, &outputs, &size);
@@ -343,7 +343,7 @@ hpx_addr_t hpx_lco_gather_local_array_new(int n, size_t inputs, size_t outputs,
                                           size_t size) {
   uint32_t lco_bytes = sizeof(_gather_t) + size;
   dbg_assert(n * lco_bytes < UINT32_MAX);
-  hpx_addr_t base = hpx_gas_alloc_local(n, lco_bytes, 0);
+  hpx_addr_t base = lco_alloc_local(n, lco_bytes, 0);
 
   int e = hpx_call_sync(base, _block_init, NULL, 0, &n, &inputs, &outputs,
                         &size);
