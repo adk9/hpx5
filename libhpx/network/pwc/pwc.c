@@ -165,8 +165,8 @@ static const class_string_t _pwc_string_vtable = {
   .memput       = pwc_memput,
   .memput_lsync = pwc_memput_lsync,
   .memput_rsync = pwc_memput_rsync,
-  .memcpy       = NULL,
-  .memcpy_sync  = NULL
+  .memcpy       = pwc_memcpy,
+  .memcpy_sync  = pwc_memcpy_sync
 };
 
 network_t *
