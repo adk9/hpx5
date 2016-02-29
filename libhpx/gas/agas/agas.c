@@ -137,7 +137,9 @@ static uint32_t
 _agas_owner_of(const void *gas, hpx_addr_t addr) {
   const agas_t *agas = gas;
   gva_t gva = { .addr = addr };
-  return btt_get_owner(agas->btt, gva);
+  uint32_t owner;
+  btt_get_owner(agas->btt, gva, &owner);
+  return owner;
 }
 
 void _agas_set_attr(void *gas, hpx_addr_t addr, uint32_t attr) {

@@ -54,7 +54,9 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int rank) {
   gva_t gva = { .addr = src };
   size_t bsize = UINT64_C(1) << gva.bits.size;
 
-  dbg_assert(here->rank == btt_get_owner(agas->btt, gva));
+  uint32_t owner;
+  dbg_assert(btt_get_owner(agas->btt, gva, &owner) && (here->rank == owner));
+  (void)owner;
 
   void *block = NULL;
   uint32_t attr;

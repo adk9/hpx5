@@ -74,8 +74,9 @@ void rebalancer_add_entry(int src, int dst, hpx_addr_t block, size_t size) {
   // ignore this block if it does not have the "load-balance"
   // (HPX_GAS_ATTR_LB) attribute
   gva_t gva = { .addr = block };
-  uint32_t attr = btt_get_attr(agas->btt, gva);
-  if (!likely(attr & HPX_GAS_ATTR_LB)) {
+  uint32_t attr = 0;
+  bool found = btt_get_attr(agas->btt, gva, &attr);
+  if (likely(!found || !(attr & HPX_GAS_ATTR_LB))) {
     return;
   }
 
