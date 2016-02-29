@@ -43,7 +43,7 @@ double CPUSEC() {
 
 // Random number generator
 static const unsigned long POLY = 0x0000000000000007UL;
-static const long PERIOD = 1317624576693539401L;
+static const long long PERIOD = 1317624576693539401L;
 
 // Log size of main table
 // (suggested: half of global memory)
@@ -58,8 +58,6 @@ static const long TABSIZE = (1L << LTABSIZE);
 // (suggested: 4x number of table entries)
 static const long NUPDATE = (4L * TABSIZE);
 //static const long NUPDATE = 134217728;
-
-static const size_t BLOCK_SIZE = sizeof(uint64_t);
 
 /*
 struct {
@@ -132,7 +130,7 @@ int _init_table_action(guppie_config_t *cfg, size_t size) {
 HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _init_table, _init_table_action, HPX_POINTER, HPX_SIZE_T);
 
 // Utility routine to start random number generator at Nth step
-uint64_t startr(long n) {
+uint64_t startr(long long n) {
   int i, j;
   uint64_t m2[64];
   uint64_t temp, ran;
@@ -268,7 +266,6 @@ void _main_action(guppie_config_t *cfg, size_t size) {
   long i;
   long j;
   hpx_addr_t lco;
-  hpx_addr_t there;
 
   printf("nThreads = %d\n", hpx_get_num_ranks());
   printf("Main table size = 2^%ld = %ld words\n", cfg->ltabsize, cfg->tabsize);
