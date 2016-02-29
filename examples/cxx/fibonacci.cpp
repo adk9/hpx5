@@ -56,7 +56,7 @@ int _fib_action(int n) {
   _fib.call(HPX_HERE, f0.get(), v1);
   _fib.call(HPX_HERE, f1.get(), v2);
   
-  int rv1, rv2;
+  int rv1 = 0, rv2 = 0;
   std::vector<decltype(f0)> futures = {f0, f1};
   std::vector<int> rvars = {rv1, rv2};
   
@@ -65,18 +65,21 @@ int _fib_action(int n) {
   hpx::lco::dealloc(f0, nullptr);
   hpx::lco::dealloc(f1, nullptr);
 
-  int fn = v1 + v2;
+  // rv1, rv2 copied by value into rvars, so they won't be updated
+  // hence have to use rvars[0] and rvars[1] here
+  int fn = rvars[0] + rvars[1];
   return _fib.thread_continue(fn);
 }
 
 static int _fib_main_action(int n) {
   int fn = 0;                                   // fib result
-  std::cout << "fib("<< n << ")=";
+  
   hpx_time_t now = hpx_time_now();
 
   _fib.call_sync(HPX_HERE, fn, n);
   double elapsed = hpx_time_elapsed_ms(now)/1e3;
-
+  
+  std::cout << "fib("<< n << ")=";
   std::cout << fn << std::endl;
   std::cout << "seconds: " << elapsed << std::endl;
   std::cout << "localities: " << HPX_LOCALITIES << std::endl;
