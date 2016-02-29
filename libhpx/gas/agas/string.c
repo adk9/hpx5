@@ -93,6 +93,7 @@ static int _agas_move_handler(hpx_addr_t src) {
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_move, _agas_move_handler, HPX_ADDR);
 
 void agas_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
+  agas_t *agas = gas;
   libhpx_network_t net = here->config->network;
   if (net == HPX_NETWORK_PWC || net == HPX_NETWORK_SMP) {
     log_dflt("AGAS move not supported for network %s\n",
@@ -100,6 +101,14 @@ void agas_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
     return;
   }
+
+  gva_t gva = { .addr = src };
+  uint32_t owner;
+  bool found = btt_get_owner(agas->btt, gva, &owner);
+  if (found) {
+    hpx_call_cc(src, _agas_invalidate_mapping, &dst, &owner);
+  }
+
   hpx_call(dst, _agas_move, sync, &src);
 }
 
