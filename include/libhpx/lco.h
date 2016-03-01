@@ -15,12 +15,12 @@
 #define LIBHPX_LCO_H
 
 #include "hpx/hpx.h"
-#include <libsync/lockable_ptr.h>
+#include <libsync/locks.h>
 
 typedef struct lco {
-  lockable_ptr_t  lock;
-  uint8_t         type;
-  uint8_t        state;
+  tatas_lock_t lock;
+  uint8_t      type;
+  uint8_t     state;
 } HPX_ALIGNED(16) lco_t;
 
 #endif

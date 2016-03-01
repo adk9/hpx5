@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include <libsync/sync.h>
+#include <libsync/locks.h>
 #include <libhpx/action.h>
 #include <libhpx/attach.h>
 #include <libhpx/config.h>
@@ -40,8 +41,7 @@
 /// LCO dynamic dispatch table
 const lco_class_t *lco_vtables[LCO_MAX];
 
-/// We pack state into the LCO pointer---least-significant-bit is already used
-/// in the sync_lockable_ptr interface
+/// LCO states
 #define _TRIGGERED_MASK    (0x2)
 #define _USER_MASK         (0x4)
 #define _STATE_MASK        (0x7)
@@ -212,14 +212,14 @@ void lco_lock(lco_t *lco) {
   dbg_assert(lco);
   dbg_assert(self->current->ustack->lco_depth == 0);
   self->current->ustack->lco_depth = 1;
-  sync_lockable_ptr_lock(&lco->lock);
+  sync_tatas_acquire(&lco->lock);
   log_lco("%p acquired lco %p\n", (void*)self->current, (void*)lco);
 }
 
 void lco_unlock(lco_t *lco) {
   dbg_assert(lco);
   log_lco("%p released lco %p\n", (void*)self->current, (void*)lco);
-  sync_lockable_ptr_unlock(&lco->lock);
+  sync_tatas_release(&lco->lock);
   dbg_assert(self->current->ustack->lco_depth == 1);
   self->current->ustack->lco_depth = 0;
 }
@@ -229,6 +229,7 @@ void lco_init(lco_t *lco, const lco_class_t *class) {
   uint8_t type = class->type;
   lco->type = type;
   lco->state = 0;
+  sync_tatas_init(&lco->lock);
   dbg_assert(lco_vtables[type] == class);
 }
 

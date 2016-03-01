@@ -26,6 +26,7 @@
 #include <libhpx/network.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/worker.h>
+#include <libsync/locks.h>
 #include "agas.h"
 #include "btt.h"
 
@@ -42,7 +43,7 @@ static int _insert_block_handler(int n, void *args[], size_t sizes[]) {
 
   if (*attr & HPX_GAS_ATTR_LCO) {
     lco_t *lco = (lco_t*)lva;
-    sync_lockable_ptr_unlock(&lco->lock);
+    sync_tatas_release(&lco->lock);
   }
 
   gva_t gva = { .addr = *src };
@@ -74,7 +75,7 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int rank) {
 
   if (attr & HPX_GAS_ATTR_LCO) {
     lco_t *lco = block;
-    sync_lockable_ptr_lock(&lco->lock);
+    sync_tatas_acquire(&lco->lock);
   }
 
   e = hpx_call_cc(dst, _insert_block, block, bsize, &src, sizeof(src), &attr,

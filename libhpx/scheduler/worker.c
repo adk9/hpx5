@@ -874,12 +874,12 @@ void scheduler_yield(void) {
 /// we know that it has already been enqueued on whatever LCO we need it to be.
 ///
 /// @param           to The parcel we are transferring to.
-/// @param         lock A lockable_ptr_t to unlock.
+/// @param         lock A tatas lock to unlock.
 static void _unlock(hpx_parcel_t *to, void *lock) {
-  sync_lockable_ptr_unlock(lock);
+  sync_tatas_release(lock);
 }
 
-hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
+hpx_status_t scheduler_wait(tatas_lock_t *lock, cvar_t *condition) {
   // push the current thread onto the condition variable---no lost-update
   // problem here because we're holing the @p lock
   worker_t *w = self;
@@ -899,7 +899,7 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   EVENT_THREAD_RESUME(p, self);
 
   // reacquire the lco lock before returning
-  sync_lockable_ptr_lock(lock);
+  sync_tatas_acquire(lock);
   return cvar_get_error(condition);
 }
 
