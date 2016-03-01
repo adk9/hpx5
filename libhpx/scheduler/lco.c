@@ -27,6 +27,7 @@
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/instrumentation.h>
+#include <libhpx/lco.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
@@ -36,21 +37,22 @@
 #include "lco.h"
 #include "thread.h"
 
+/// LCO dynamic dispatch table
+const lco_class_t *lco_vtables[LCO_MAX];
+
 /// We pack state into the LCO pointer---least-significant-bit is already used
 /// in the sync_lockable_ptr interface
 #define _TRIGGERED_MASK    (0x2)
 #define _USER_MASK         (0x4)
 #define _STATE_MASK        (0x7)
 
-#define EVENT_LCO(lco, event)                                              \
-  inst_trace(HPX_TRACE_LCO, event, lco, (lco)->bits)
+#define EVENT_LCO(lco, event)                           \
+  inst_trace(HPX_TRACE_LCO, event, lco, (lco)->state)
 
 /// return the class pointer, masking out the state.
 static const lco_class_t *_class(lco_t *lco) {
   dbg_assert(lco);
-  uintptr_t bits = (uintptr_t)(sync_lockable_ptr_read(&lco->lock));
-  bits = bits & ~_STATE_MASK;
-  const lco_class_t *class = (lco_class_t*)bits;
+  const lco_class_t *class = (lco_class_t*)lco_vtables[lco->type];
   dbg_assert_str(class, "LCO vtable pointer is null, "
                  "this is often an LCO use-after-free\n");
   return class;
@@ -224,7 +226,10 @@ void lco_unlock(lco_t *lco) {
 
 void lco_init(lco_t *lco, const lco_class_t *class) {
   EVENT_LCO(lco, TRACE_EVENT_LCO_INIT);
-  lco->vtable = class;
+  uint8_t type = class->type;
+  lco->type = type;
+  lco->state = 0;
+  dbg_assert(lco_vtables[type] == class);
 }
 
 void lco_fini(lco_t *lco) {
@@ -233,23 +238,23 @@ void lco_fini(lco_t *lco) {
 
 void lco_set_triggered(lco_t *lco) {
   EVENT_LCO(lco, TRACE_EVENT_LCO_TRIGGER);
-  lco->bits |= _TRIGGERED_MASK;
+  lco->state |= _TRIGGERED_MASK;
 }
 
 void lco_reset_triggered(lco_t *lco) {
-  lco->bits &= ~_TRIGGERED_MASK;
+  lco->state &= ~_TRIGGERED_MASK;
 }
 
 uintptr_t lco_get_triggered(const lco_t *lco) {
-  return lco->bits & _TRIGGERED_MASK;
+  return lco->state & _TRIGGERED_MASK;
 }
 
 void lco_set_user(lco_t *lco) {
-  lco->bits |= _USER_MASK;
+  lco->state |= _USER_MASK;
 }
 
 uintptr_t lco_get_user(const lco_t *lco) {
-  return lco->bits & _USER_MASK;
+  return lco->state & _USER_MASK;
 }
 
 /// @}

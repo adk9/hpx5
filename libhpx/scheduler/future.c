@@ -217,6 +217,7 @@ static int _future_release(lco_t *lco, void *out) {
 
 // the future vtable
 static const lco_class_t _future_vtable = {
+  .type        = LCO_FUTURE,
   .on_fini     = _future_fini,
   .on_error    = _future_error,
   .on_set      = _future_set,
@@ -228,6 +229,10 @@ static const lco_class_t _future_vtable = {
   .on_reset    = _future_reset,
   .on_size     = _future_size
 };
+
+static void HPX_CONSTRUCTOR _register_vtable(void) {
+  lco_vtables[LCO_FUTURE] = &_future_vtable;
+}
 
 /// initialize the future
 static int _future_init_handler(_future_t *f, int size) {

@@ -387,6 +387,7 @@ static int _alltoall_release(lco_t *lco, void *out) {
 }
 
 static const lco_class_t _alltoall_vtable = {
+  .type        = LCO_ALLTOALL,
   .on_fini     = _alltoall_fini,
   .on_error    = _alltoall_error,
   .on_set      = _alltoall_set,
@@ -398,6 +399,10 @@ static const lco_class_t _alltoall_vtable = {
   .on_reset    = _alltoall_reset,
   .on_size     = _alltoall_size
 };
+
+static void HPX_CONSTRUCTOR _register_vtable(void) {
+  lco_vtables[LCO_ALLTOALL] = &_alltoall_vtable;
+}
 
 static int _alltoall_init_handler(_alltoall_t *g, size_t participants, size_t size) {
   lco_init(&g->lco, &_alltoall_vtable);

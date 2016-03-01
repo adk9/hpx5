@@ -226,6 +226,7 @@ static int _allreduce_release(lco_t *lco, void *out) {
 
 // vtable
 static const lco_class_t _allreduce_vtable = {
+  .type        = LCO_ALLREDUCE,
   .on_fini     = _allreduce_fini,
   .on_error    = _allreduce_error,
   .on_set      = _allreduce_set,
@@ -237,6 +238,10 @@ static const lco_class_t _allreduce_vtable = {
   .on_reset    = _allreduce_reset,
   .on_size     = _allreduce_size
 };
+
+static void HPX_CONSTRUCTOR _register_vtable(void) {
+  lco_vtables[LCO_ALLREDUCE] = &_allreduce_vtable;
+}
 
 static int
 _allreduce_init_handler(_allreduce_t *r, size_t writers, size_t readers,

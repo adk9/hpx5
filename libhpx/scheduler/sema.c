@@ -60,6 +60,7 @@ static size_t _sema_size(lco_t *lco) {
 
 // the semaphore vtable
 static const lco_class_t _sema_vtable = {
+  .type        = LCO_SEMA,
   .on_fini     = _sema_fini,
   .on_error    = _sema_error,
   .on_set      = _sema_set,
@@ -71,6 +72,10 @@ static const lco_class_t _sema_vtable = {
   .on_reset    = _sema_reset,
   .on_size     = _sema_size
 };
+
+static void HPX_CONSTRUCTOR _register_vtable(void) {
+  lco_vtables[LCO_SEMA] = &_sema_vtable;
+}
 
 static int _sema_init_handler(_sema_t *sema, unsigned count) {
   lco_init(&sema->lco, &_sema_vtable);

@@ -143,7 +143,8 @@ static hpx_status_t _gencount_wait_gen(_gencount_t *gencnt, unsigned long gen) {
   return status;
 }
 
-static const lco_class_t gencount_vtable = {
+static const lco_class_t _gencount_vtable = {
+  .type        = LCO_GENCOUNT,
   .on_fini     = _gencount_fini,
   .on_error    = _gencount_error,
   .on_set      = _gencount_set,
@@ -156,8 +157,12 @@ static const lco_class_t gencount_vtable = {
   .on_size     = _gencount_size
 };
 
+static void HPX_CONSTRUCTOR _register_vtable(void) {
+  lco_vtables[LCO_GENCOUNT] = &_gencount_vtable;
+}
+
 static int _gencount_init_handler(_gencount_t *gencnt, unsigned long ninplace) {
-  lco_init(&gencnt->lco, &gencount_vtable);
+  lco_init(&gencnt->lco, &_gencount_vtable);
   cvar_reset(&gencnt->oflow);
   gencnt->gen = 0;
   gencnt->ninplace = ninplace;

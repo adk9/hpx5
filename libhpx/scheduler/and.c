@@ -184,6 +184,7 @@ static int _and_release(lco_t *lco, void *out) {
 }
 
 static const lco_class_t _and_vtable = {
+  .type        = LCO_AND,
   .on_fini     = _and_fini,
   .on_error    = _and_error,
   .on_set      = _and_set,
@@ -195,6 +196,10 @@ static const lco_class_t _and_vtable = {
   .on_reset    = _and_reset,
   .on_size     = _and_size
 };
+
+static void HPX_CONSTRUCTOR _register_vtable(void) {
+  lco_vtables[LCO_AND] = &_and_vtable;
+}
 
 static int _and_init_handler(_and_t *and, int64_t count) {
   dbg_assert(count >= 0);

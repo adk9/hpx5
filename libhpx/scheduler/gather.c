@@ -261,6 +261,7 @@ static int _gather_set(lco_t *lco, int size, const void *from) {
 }
 
 static const lco_class_t _gather_vtable = {
+  .type        = LCO_GATHER,
   .on_fini     = _gather_fini,
   .on_error    = _gather_error,
   .on_set      = _gather_set,
@@ -272,6 +273,10 @@ static const lco_class_t _gather_vtable = {
   .on_reset    = _gather_reset,
   .on_size     = _gather_size
 };
+
+static void HPX_CONSTRUCTOR _register_vtable(void) {
+  lco_vtables[LCO_GATHER] = &_gather_vtable;
+}
 
 static int _gather_init_handler(_gather_t *g, int writers, int readers,
                                 size_t size) {

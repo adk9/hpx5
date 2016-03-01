@@ -228,6 +228,7 @@ static int _user_lco_release(lco_t *lco, void *out) {
 
 // vtable
 static const lco_class_t _user_lco_vtable = {
+  .type        = LCO_USER,
   .on_fini     = _user_lco_fini,
   .on_error    = _user_lco_error,
   .on_set      = _user_lco_set,
@@ -239,6 +240,10 @@ static const lco_class_t _user_lco_vtable = {
   .on_reset    = _user_lco_reset,
   .on_size     = _user_lco_size
 };
+
+static void HPX_CONSTRUCTOR _register_vtable(void) {
+  lco_vtables[LCO_USER] = &_user_lco_vtable;
+}
 
 static int
 _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
