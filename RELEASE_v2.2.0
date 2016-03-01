@@ -1,0 +1,253 @@
+HPX–5 Version 2.2.0 Release Notes
+---------------------------------
+
+Release date: 03/01/2016
+
+Distributed under the Indiana University License.
+(See accompanying file LICENSE.txt) 
+
+HPX-5 is the High Performance ParalleX runtime library from the Center for 
+Research in Extreme Scale Technology (CREST) at Indiana University for 
+petascale/exascale computing. Building on CREST’s commitment to developing 
+new approaches for achieving the highest levels of performance on current 
+and next-generation supercomputing platforms, HPX-5 is provided to support 
+the international high-performance computing community in addressing 
+significant challenges involved in achieving exascale computing.
+
+HPX-5 is a reduction to practice of the revolutionary ParalleX execution model, 
+which establishes roles and responsibilities between layers in an exascale 
+system and supports dynamic and adaptive resource management and scheduling. 
+It is implemented in portable C99 and is organized around a cooperative 
+lightweight thread scheduler, a global address space, an active-message parcel 
+transport, and a group of globally addressable local synchronization object 
+classes. Internally, the infrastructure is built on scalable concurrent data 
+structures to minimize shared-memory synchronization overhead. The global 
+address space and parcel transport are based on the innovative Photon network 
+transport library, which supports low-level access to network hardware and 
+provides RDMA with remote completion events for low overhead signaling. An 
+alternative ISend/IRecv network layer is included for portability, along with 
+a reference MPI implementation. HPX-5 is compatible with Linux running on Intel 
+x86, MAC OSX and Xeon Phi processors and various ARM core platforms (including 
+both ARMv7 and ARMv8/Aarch64).
+
+
+What's new in HPX-5 v2.2.0?
+----------------------------
+
+1. GAS changes
+ - We have added an experimental AGAS-based dynamic, global, centralized load 
+balancing capability to HPX-5. Load-balancing has to be turned on explicitly 
+using `--enable-rebalancing`.  This enables runtime collection of GAS 
+statistics. When the user requests load-balancing (explicitly through 
+`hpx_gas_rebalance`), the collected information is aggregated and fed to a 
+graph partitioning library (METIS). The AGAS rebalancer initiates "move" 
+operations in parallel to rebalance blocks. The guppie example has been extended
+ to perform rebalancing.
+ - Added the function `hpx_gas_set_attr` which can be used to set a block's GAS
+ attribute.
+ - Added `hpx_memalign_registered` and `hpx_calloc_registered`.
+
+2. Prototype nonblocking network collectives have been added for hierarchical 
+process collective operations.
+ - Added `--hpx-coll-network` to configure set collective implementation to 
+network based version to override parcel collectives.
+ - Currently only implemented for allreduce.
+ - Currently only available for the ISIR/MPI backend.
+
+3. Extended experimental support for C++ bindings to HPX
+ - The HPX++ API can be enabled using `--enable-hpx++` during configure. 
+ - Added support for actions, LCOs and continuations. 
+ - We have added tests and examples for testing the HPX++ bindings.
+
+4. We have added a parcel compression network. 
+ - The `--hpx-parcel-compression` option can be used to enable this feature. 
+ - The lz4 compression scheme is used because it provides fast compression and
+ decompression rates. 
+ - Presently, we do not do in-place compression and as such the network incurs 
+extra copies on the send and receive sides. 
+ - Only actions tagged with the `HPX_COMPRESSED` attribute will be compressed.
+
+5. Updated `hpx_par_for` to use static scheduling.
+ - The work is equally divided among `HPX_THREADS` number of lightweight 
+threads. Each lightweight thread is sent to a different worker thread via the 
+mailbox.
+ - e.g., `#pragma omp for schedule(static)`.
+
+6.  Network and photon changes
+ - Photon now properly deals with out-of-order BTE transactions so performance 
+mode is re-actived for uGNI.  This update eliminates the slower memput 
+performance on Cray at the BTE threshold (>4KB).
+ - Reducing the default eager buffer size that gets allocated for non-PWC 
+Photon operations. This was wasted space since HPX is only using the PWC 
+interface.
+ - Updated `libsync` to suppress icc warning.
+ - A number of libfabric/socket provider bug fixes added in Photon's fi contrib.
+ - Proper locking of fi backend MR ops for non thread-safe providers.
+ - Use a more manageable descriptor pool for uGNI.
+ - Started on improved queued request handling, e.g., separate queue for 
+non-aligned uGNI gets.
+
+7. Debugging support
+ - Added new gdb commands to support debugging HPX applications through gdb: 
+`hpx print` and `info parcels`. `hpx print`: access GAS and print variables 
+based on HPX address. `info parcels`: print the parcels currently running.
+ - Added new gdb script `hpx_frame_filter.py` that will hide stack frame 
+related to HPX from the output of the `backtrace` command.
+
+Additional dependencies
+---------------------------
+
+1. lz4 - compression scheme used to provide fast compression and decompression
+ rates.
+
+2  metis - for graph partitioning required for GAS rebalancing.
+
+3. Update libcuckoo to 59bfd4b.
+
+API Changes: Improvements/Enhancements
+---------------------------------------
+
+1. HPX++ API Changes
+ - Extensive modifications to the HPX++ headers are done when compared to 
+previous release.
+ - We changed the action interface so that action registration does not need to
+ create a new type for each action. The `Action` class now encapsulates all the 
+type information of the action being registered. A utility function 
+`hpx::make_action` is provided to make action registration easier.
+ - HPX++ is still experimental and will continue to change.
+ - Bug fixes in `hpx::global_ptr<T>` class.
+ - A new `hpx::lco::get_all` method that gets values for all of the LCOs passed
+ as `global_ptr` objects.
+
+2. LCO Changes
+ - Added a `gather` LCO. Drop the "all" prefix from the allgather LCO. Support 
+variable number of readers and writers in the gather LCO.
+
+3. Fixed `hpx_process_call` to call actions with no arguments.
+
+4. Instrumentation and Tracing infrastructure changes
+ - Introduced event macros for process events.
+ - Reorganized instrumentation files to make it more modular.
+ - Moved towards a declarative specification of trace events. Events have to be
+ added to `libhpx/events.def` in the following format: 
+`LIBHPX_EVENT(class, event, ...)` where `...` stands for the optional event 
+arguments. Note that tracing infrastructure only supports up to 4 `uint64_t` 
+values. Once an event is declared, the metadata for it needs to go in 
+`libhpx/instrumentation/metadata.h`.
+ - Added a new `GAS_EVENT_ACCESS` event to trace GAS accesses.
+ - We have cleaned up instrumentation metadata macros and added a helper macro 
+to generate metadata information for tracing events. Removed `start_time` from 
+event metadata.
+ - We have turned `EVENT_LCO` into a macro and added a new `GAS_EVENT_ACCESS` 
+event to trace GAS accesses.
+
+Bug Fixes
+-----------
+
+1. Fixed a bug in non-aligned GWC handling. This only affected 1-3 Byte gets 
+on Cray systems, e.g., in the memget test.
+
+2. Disabled icc warnings about memory consistency models when building 
+`libsync`.
+
+3. Fixed the invalid free during AGAS move.
+
+4. Added `bookend` class and event for tracing, used for marking `start` and 
+`stop` of traces and added in new profiling options for use with PAPI
+
+5. Fixed the `EVENT_THREAD_RESUME` crash.
+
+6. Fixed the `gas-try-pin`. `gas-try-pin` with a `NULL lva` is supposed to pin
+ but not translate. Fixed the agas implementation and the usage of `gas-try-pin`
+ in a couple of places.
+
+Application Updates
+--------------------
+
+1. The HPX-5 HPCG version now supports 3 different approaches memput copyless. 
+For each of these approaches, an overdecomposition modality is also supported. 
+For large overdecomposition factors, core major decomposition is provided as 
+an option.
+
+Known bugs & limitations in the release
+-----------------------------------------
+
+1. HPX-5 on Mac OS X only builds with default xcode toolchain. Use 
+`$ ./configure --with-hwloc=contrib --with-libffi=contrib CC=clang` to 
+configure. gcc installed with brew or port is not supported. We believe this is
+ due to https://gcc.gnu.org/bugzilla/show_bug.cgi?format=multiple&id=60893.
+
+2. The HPX C++ bindings, AGAS and TBBMalloc require a C++11 compiler.
+ - There are known regressions with TBBmalloc 4.4. Please use TBBmalloc 4.3 
+or earlier. 
+ - The Intel toolchain on Cray platforms requires the gcc 4.8 or 4.9 compiler 
+in the path (see https://www.nersc.gov/users/software/compilers/\
+intel-fortran-c-and-c/intel-bug-reports/\
+ c-11-header-files-appear-missing-on-edison/).
+
+3. The AGAS implementation only works with the Isend/Irecv network (ISIR).
+
+4. Clang versions prior to 3.6 (3.5.1 or earlier) contain regressions that 
+trigger runtime failures in HPX. 
+
+5. The `--map-by node:pe=1` flag will be incorrectly interpreted when using 
+openmpi version 1.10.0, and will spawn #cores HPX-5 worker threads. Use 
+`--hpx-threads=1` to force 1 worker thread if necessary.
+
+6. LULESH induces a performance regression with jemalloc, prefer tbbmalloc 
+for it. When using jemalloc set `MALLOC_CONF=lg_dirty_mult:-1` on the command 
+line—this resolves the performance regression but may cause memory exhaustion. 
+Also use hugetlbfs when available.
+
+7. Blocked GAS distribution is unimplemented.
+
+8. Remote `hpx_lco_get/wait` operations do not propagate errors correctly.
+
+9. Photon CQ overrun warning is generated for large uGNI allocations. Can be 
+safely ignored for most jobs.
+
+10. `lco_gencount` unit test fails with odd number of localities > 1.
+
+11. User registered signal handlers are overwritten by `--hpx-dbg-waitonsig`.
+
+General Information
+---------------------
+
+If you plan to use HPX–5, we suggest starting with the latest released
+version (currently HPX–5 v2.2.0) which can be downloaded from
+http://hpx.crest.iu.edu/download. If you would like to work with the
+cutting edge version of HPX–5, we suggest using the the `develop`
+branch at https://gitlab.crest.iu.edu/extreme/hpx. While we try to
+keep the develop branch stable and usable, sometimes new bugs trick
+their way into the code base - be aware!
+
+Documentation for the latest release of HPX–5 (currently v2.2.0) and
+the previous versions can be accessed at
+http://hpx.crest.iu.edu/documentation. The FAQ can be found at
+http://hpx.crest.iu.edu/faqs_and_tutorials.
+
+Reporting bugs
+=================
+
+In any case, if you happen to run into problems we very much encourage and 
+appreciate issue reports through the issue tracker for this Gitlab project 
+(https://gitlab.crest.iu.edu/extreme/hpx/issues).  
+
+Participate in HPX-5
+======================
+
+HPX-5 is published under a liberal open-source license and has an open, 
+active, and thriving developer community. Further information can be found at 
+http://hpx.crest.iu.edu.
+
+More about HPX-5
+--------------------
+
+For more information about HPX-5, including information about the latest 
+release, please check out the main https://hpx.crest.iu.edu/about. If you 
+have questions or comments, the HPX-5 Developer’s Mailing List is a good 
+place to send them.
+
+Subscribe your e-mail address to be notified when new releases of HPX-5 
+are released using the mailing list: HPX-5 Announcements List 
+http://www.crest.iu.edu/mailman/listinfo.cgi/hpx-announce.
