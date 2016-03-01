@@ -19,8 +19,8 @@ AC_INIT([hpx-5], LIBHPX_MAJOR.LIBHPX_MINOR.LIBHPX_PATCH, [hpx@indiana.edu])
 : ${CFLAGS="-O3 -g"}
 : ${CXXFLAGS="-O3 -g"}
 
-AC_SUBST(HPX_COPYRIGHT,["Copyright (c) 2013-2015, Trustees of Indiana University."])
-AC_COPYRIGHT([Copyright (c) 2013-2015, Trustees of Indiana University.])
+AC_SUBST(HPX_COPYRIGHT,["Copyright (c) 2013-2016, Trustees of Indiana University."])
+AC_COPYRIGHT([Copyright (c) 2013-2016, Trustees of Indiana University.])
 
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
