@@ -20,6 +20,7 @@
 #include <libhpx/action.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
+#include <libhpx/lco.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
@@ -38,6 +39,10 @@ static int _insert_block_handler(int n, void *args[], size_t sizes[]) {
   size_t bsize = sizes[0];
   char *lva = global_malloc(bsize);
   memcpy(lva, args[0], bsize);
+
+  if (*attr & HPX_GAS_ATTR_LCO) {
+    lco_unlock(lva);
+  }
 
   gva_t gva = { .addr = *src };
   btt_insert(agas->btt, gva, here->rank, lva, 1, *attr);
@@ -64,6 +69,10 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int rank) {
   if (e != HPX_SUCCESS) {
     log_error("failed to invalidate remote mapping.\n");
     return e;
+  }
+
+  if (attr & HPX_GAS_ATTR_LCO) {
+    lco_lock(block);
   }
 
   e = hpx_call_cc(dst, _insert_block, &block, bsize, &src, sizeof(src), &attr,
