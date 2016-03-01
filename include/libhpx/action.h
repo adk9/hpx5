@@ -435,6 +435,16 @@ static inline void action_exit(hpx_action_t id, hpx_parcel_t *p) {
   act->parcel_class->exit(act, p);
 }
 
+static const char* const HPX_ACTION_ATTR_TO_STRING[] = {
+  "NONE",
+  "MARSHALLED",
+  "PINNED",
+  "INTERNAL",
+  "VECTORED",
+  "COALESCED",
+  "COMPRESSED"
+};
+
 static inline bool action_is_pinned(hpx_action_t id) {
   CHECK_ACTION(id);
   const action_t *action = &actions[id];
@@ -464,6 +474,20 @@ static inline bool action_is_coalesced(hpx_action_t id) {
   const action_t *action = &actions[id];
   return (action->attr & HPX_COALESCED);
 }
+
+static inline bool action_is_compressed(hpx_action_t id) {
+  CHECK_ACTION(id);
+  const action_t *action = &actions[id];
+  return (action->attr & HPX_COMPRESSED);
+}
+
+static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
+  "DEFAULT",
+  "TASK",
+  "INTERRUPT",
+  "FUNCTION",
+  "OPENCL"
+};
 
 static inline bool action_is_default(hpx_action_t id) {
   CHECK_ACTION(id);

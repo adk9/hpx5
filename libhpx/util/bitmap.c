@@ -109,7 +109,7 @@ static inline block_t _create_mask(uint32_t offset, uint32_t length) {
 /// with some header data describing the block array and a lock for
 /// concurrency.
 ///
-/// @var  bitmap::lock 
+/// @var  bitmap::lock
 /// A single lock to serialize access to the bitmap.
 /// @var  bitmap::min
 /// An index such that there are no free bits < min.
@@ -296,11 +296,7 @@ static int _bitmap_oom(const bitmap_t *map, uint32_t nbits, uint32_t align) {
   int32_t unused = _bitmap_unused_blocks(map);
   dbg_error("Application ran out of global address space.\n"
             "\t-%u blocks requested with alignment %u\n"
-            "\t-%u blocks available\n"
-            "This space is used for all global allocation, as well as all\n"
-            "stacks and parcel data. Pathological allocation may introduce\n"
-            "fragmentation leading to unexpected counts above. Try adjusting\n"
-            "your configuration.\n", nbits, align, unused);
+            "\t-%u blocks available\n", nbits, align, unused);
   return LIBHPX_ENOMEM;
 }
 

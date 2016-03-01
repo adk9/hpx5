@@ -85,7 +85,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _sema_init_async,
 /// Allocate a semaphore LCO.
 hpx_addr_t hpx_lco_sema_new(unsigned count) {
   _sema_t *sema = NULL;
-  hpx_addr_t gva = hpx_gas_alloc_local(1, sizeof(*sema), 0);
+  hpx_addr_t gva = lco_alloc_local(1, sizeof(*sema), 0);
 
   if (!hpx_gas_try_pin(gva, (void**)&sema)) {
     int e = hpx_call_sync(gva, _sema_init_async, NULL, 0, &count);

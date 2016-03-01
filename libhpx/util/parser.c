@@ -41,7 +41,6 @@ const char *hpx_options_t_help[] = {
   "      --hpx-heapsize=bytes      set HPX per-PE global heap size",
   "      --hpx-gas=type            type of Global Address Space (GAS)  (possible\n                                  values=\"default\", \"smp\", \"pgas\",\n                                  \"agas\")",
   "      --hpx-boot=type           HPX bootstrap method to use  (possible\n                                  values=\"default\", \"smp\", \"mpi\",\n                                  \"pmi\")",
-  "      --hpx-coalescing-buffersize=Integer\n                                Coalescing buffer size",
   "      --hpx-transport=type      type of transport to use  (possible\n                                  values=\"default\", \"mpi\", \"photon\")",
   "      --hpx-network=type        type of network to use  (possible\n                                  values=\"default\", \"smp\", \"pwc\",\n                                  \"isir\")",
   "      --hpx-statistics          print HPX runtime statistics  (default=off)",
@@ -66,10 +65,10 @@ const char *hpx_options_t_help[] = {
   "      --hpx-inst-dir=dir        directory to output instrumentation files",
   "      --hpx-inst-at=[localities]\n                                set the localities to activate instrumentation\n                                  at",
   "\nTracing:",
-  "      --hpx-trace-classes=class set the event classes to trace  (possible\n                                  values=\"parcel\", \"pwc\", \"sched\",\n                                  \"lco\", \"process\", \"memory\",\n                                  \"schedtimes\", \"all\")",
+  "      --hpx-trace-classes=class set the event classes to trace  (possible\n                                  values=\"parcel\", \"pwc\", \"sched\",\n                                  \"lco\", \"process\", \"memory\",\n                                  \"schedtimes\", \"bookend\", \"gas\",\n                                  \"all\")",
   "      --hpx-trace-filesize=bytes\n                                set the size of each trace file",
   "\nProfiling:",
-  "      --hpx-prof-counters=counters\n                                set which HW counters to use for profiling\n                                  (possible values=\"L1_TCM\", \"L2_TCM\",\n                                  \"L3_TCM\", \"TLB_TL\", \"TOT_INS\",\n                                  \"INT_INS\", \"FP_INS\", \"LD_INS\",\n                                  \"SR_INS\", \"BR_INS\", \"TOT_CYC\", \"all\")",
+  "      --hpx-prof-counters=counters\n                                set which HW counters to use for profiling\n                                  (possible values=\"L1_TCM\", \"L1_TCA\",\n                                  \"L2_TCM\", \"L2_TCA\", \"L3_TCM\",\n                                  \"L3_TCA\", \"TLB_TL\", \"TOT_INS\",\n                                  \"INT_INS\", \"FP_INS\", \"LD_INS\",\n                                  \"SR_INS\", \"BR_INS\", \"TOT_CYC\", \"all\")",
   "      --hpx-prof-detailed       dump all individual measurements to file in\n                                  addition to summaries  (default=off)",
   "\nISIR Network Options:",
   "      --hpx-isir-testwindow=requests\n                                number of ISIR requests to test in progress\n                                  loop",
@@ -78,6 +77,8 @@ const char *hpx_options_t_help[] = {
   "\nPWC Network Options:",
   "      --hpx-pwc-parcelbuffersize=bytes\n                                set the size of p2p recv buffers for parcel\n                                  sends",
   "      --hpx-pwc-parceleagerlimit=bytes\n                                set the largest eager parcel size (header\n                                  inclusive)",
+  "\nCollectives Options:",
+  "      --hpx-coll-network        set collective implementation to network based\n                                  version (override parcel collectives)\n                                  (default=off)",
   "\nPhoton Transport Options:",
   "      --hpx-photon-backend=type set the underlying network API to use\n                                  (possible values=\"default\", \"verbs\",\n                                  \"ugni\", \"fi\")",
   "      --hpx-photon-ibdev=device [verbs] set a particular IB device (also a\n                                  filter for device and port discovery, e.g.\n                                  qib0:1+mlx4_0:2)",
@@ -89,6 +90,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-photon-fiprov=provider\n                                [libfabric] provider to use (sockets, psm,\n                                  etc.)",
   "      --hpx-photon-fidev=interface\n                                [libfabric] network interface to use",
   "      --hpx-photon-ledgersize=integer\n                                set number of ledger entries",
+  "      --hpx-photon-pwcbufsize=bytes\n                                set size of pwc buffers",
   "      --hpx-photon-eagerbufsize=bytes\n                                set size of eager buffers",
   "      --hpx-photon-smallpwcsize=bytes\n                                set PWC small msg limit",
   "      --hpx-photon-maxrd=integer\n                                set max number of request descriptors",
@@ -97,6 +99,8 @@ const char *hpx_options_t_help[] = {
   "      --hpx-photon-usercq=integer\n                                enable remote completion support (default 0,\n                                  disabled)",
   "\nOptimization:",
   "      --hpx-opt-smp[=0 off]     optimize for SMP execution",
+  "      --hpx-parcel-compression  enable parcel compression  (default=off)",
+  "      --hpx-coalescing-buffersize=Integer\n                                set coalescing buffer size",
     0
 };
 
@@ -152,8 +156,8 @@ const char *hpx_option_parser_hpx_thread_affinity_values[] = {"default", "hwthre
 const char *hpx_option_parser_hpx_sched_policy_values[] = {"default", "random", "hier", 0}; /*< Possible values for hpx-sched-policy. */
 const char *hpx_option_parser_hpx_log_level_values[] = {"default", "boot", "sched", "gas", "lco", "net", "trans", "parcel", "action", "config", "memory", "coll", "all", 0}; /*< Possible values for hpx-log-level. */
 const char *hpx_option_parser_hpx_dbg_waitonsig_values[] = {"segv", "abrt", "fpe", "ill", "bus", "iot", "sys", "trap", "all", 0}; /*< Possible values for hpx-dbg-waitonsig. */
-const char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "pwc", "sched", "lco", "process", "memory", "schedtimes", "all", 0}; /*< Possible values for hpx-trace-classes. */
-const char *hpx_option_parser_hpx_prof_counters_values[] = {"L1_TCM", "L2_TCM", "L3_TCM", "TLB_TL", "TOT_INS", "INT_INS", "FP_INS", "LD_INS", "SR_INS", "BR_INS", "TOT_CYC", "all", 0}; /*< Possible values for hpx-prof-counters. */
+const char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "pwc", "sched", "lco", "process", "memory", "schedtimes", "bookend", "gas", "all", 0}; /*< Possible values for hpx-trace-classes. */
+const char *hpx_option_parser_hpx_prof_counters_values[] = {"L1_TCM", "L1_TCA", "L2_TCM", "L2_TCA", "L3_TCM", "L3_TCA", "TLB_TL", "TOT_INS", "INT_INS", "FP_INS", "LD_INS", "SR_INS", "BR_INS", "TOT_CYC", "all", 0}; /*< Possible values for hpx-prof-counters. */
 const char *hpx_option_parser_hpx_photon_backend_values[] = {"default", "verbs", "ugni", "fi", 0}; /*< Possible values for hpx-photon-backend. */
 
 static char *
@@ -167,7 +171,6 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_heapsize_given = 0 ;
   args_info->hpx_gas_given = 0 ;
   args_info->hpx_boot_given = 0 ;
-  args_info->hpx_coalescing_buffersize_given = 0 ;
   args_info->hpx_transport_given = 0 ;
   args_info->hpx_network_given = 0 ;
   args_info->hpx_statistics_given = 0 ;
@@ -196,6 +199,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_isir_recvlimit_given = 0 ;
   args_info->hpx_pwc_parcelbuffersize_given = 0 ;
   args_info->hpx_pwc_parceleagerlimit_given = 0 ;
+  args_info->hpx_coll_network_given = 0 ;
   args_info->hpx_photon_backend_given = 0 ;
   args_info->hpx_photon_ibdev_given = 0 ;
   args_info->hpx_photon_ethdev_given = 0 ;
@@ -206,6 +210,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_photon_fiprov_given = 0 ;
   args_info->hpx_photon_fidev_given = 0 ;
   args_info->hpx_photon_ledgersize_given = 0 ;
+  args_info->hpx_photon_pwcbufsize_given = 0 ;
   args_info->hpx_photon_eagerbufsize_given = 0 ;
   args_info->hpx_photon_smallpwcsize_given = 0 ;
   args_info->hpx_photon_maxrd_given = 0 ;
@@ -213,6 +218,8 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_photon_numcq_given = 0 ;
   args_info->hpx_photon_usercq_given = 0 ;
   args_info->hpx_opt_smp_given = 0 ;
+  args_info->hpx_parcel_compression_given = 0 ;
+  args_info->hpx_coalescing_buffersize_given = 0 ;
 }
 
 static
@@ -226,7 +233,6 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_gas_orig = NULL;
   args_info->hpx_boot_arg = hpx_boot__NULL;
   args_info->hpx_boot_orig = NULL;
-  args_info->hpx_coalescing_buffersize_orig = NULL;
   args_info->hpx_transport_arg = hpx_transport__NULL;
   args_info->hpx_transport_orig = NULL;
   args_info->hpx_network_arg = hpx_network__NULL;
@@ -268,6 +274,7 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_isir_recvlimit_orig = NULL;
   args_info->hpx_pwc_parcelbuffersize_orig = NULL;
   args_info->hpx_pwc_parceleagerlimit_orig = NULL;
+  args_info->hpx_coll_network_flag = 0;
   args_info->hpx_photon_backend_arg = hpx_photon_backend__NULL;
   args_info->hpx_photon_backend_orig = NULL;
   args_info->hpx_photon_ibdev_arg = NULL;
@@ -283,6 +290,7 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_photon_fidev_arg = NULL;
   args_info->hpx_photon_fidev_orig = NULL;
   args_info->hpx_photon_ledgersize_orig = NULL;
+  args_info->hpx_photon_pwcbufsize_orig = NULL;
   args_info->hpx_photon_eagerbufsize_orig = NULL;
   args_info->hpx_photon_smallpwcsize_orig = NULL;
   args_info->hpx_photon_maxrd_orig = NULL;
@@ -290,6 +298,8 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_photon_numcq_orig = NULL;
   args_info->hpx_photon_usercq_orig = NULL;
   args_info->hpx_opt_smp_orig = NULL;
+  args_info->hpx_parcel_compression_flag = 0;
+  args_info->hpx_coalescing_buffersize_orig = NULL;
   
 }
 
@@ -303,66 +313,69 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_heapsize_help = hpx_options_t_help[4] ;
   args_info->hpx_gas_help = hpx_options_t_help[5] ;
   args_info->hpx_boot_help = hpx_options_t_help[6] ;
-  args_info->hpx_coalescing_buffersize_help = hpx_options_t_help[7] ;
-  args_info->hpx_transport_help = hpx_options_t_help[8] ;
-  args_info->hpx_network_help = hpx_options_t_help[9] ;
-  args_info->hpx_statistics_help = hpx_options_t_help[10] ;
-  args_info->hpx_configfile_help = hpx_options_t_help[11] ;
-  args_info->hpx_threads_help = hpx_options_t_help[13] ;
-  args_info->hpx_thread_affinity_help = hpx_options_t_help[14] ;
-  args_info->hpx_stacksize_help = hpx_options_t_help[15] ;
-  args_info->hpx_sched_policy_help = hpx_options_t_help[16] ;
-  args_info->hpx_sched_wfthreshold_help = hpx_options_t_help[17] ;
-  args_info->hpx_sched_stackcachelimit_help = hpx_options_t_help[18] ;
-  args_info->hpx_log_at_help = hpx_options_t_help[20] ;
+  args_info->hpx_transport_help = hpx_options_t_help[7] ;
+  args_info->hpx_network_help = hpx_options_t_help[8] ;
+  args_info->hpx_statistics_help = hpx_options_t_help[9] ;
+  args_info->hpx_configfile_help = hpx_options_t_help[10] ;
+  args_info->hpx_threads_help = hpx_options_t_help[12] ;
+  args_info->hpx_thread_affinity_help = hpx_options_t_help[13] ;
+  args_info->hpx_stacksize_help = hpx_options_t_help[14] ;
+  args_info->hpx_sched_policy_help = hpx_options_t_help[15] ;
+  args_info->hpx_sched_wfthreshold_help = hpx_options_t_help[16] ;
+  args_info->hpx_sched_stackcachelimit_help = hpx_options_t_help[17] ;
+  args_info->hpx_log_at_help = hpx_options_t_help[19] ;
   args_info->hpx_log_at_min = 0;
   args_info->hpx_log_at_max = 0;
-  args_info->hpx_log_level_help = hpx_options_t_help[21] ;
+  args_info->hpx_log_level_help = hpx_options_t_help[20] ;
   args_info->hpx_log_level_min = 0;
   args_info->hpx_log_level_max = 0;
-  args_info->hpx_dbg_waitat_help = hpx_options_t_help[23] ;
+  args_info->hpx_dbg_waitat_help = hpx_options_t_help[22] ;
   args_info->hpx_dbg_waitat_min = 0;
   args_info->hpx_dbg_waitat_max = 0;
-  args_info->hpx_dbg_waitonabort_help = hpx_options_t_help[24] ;
-  args_info->hpx_dbg_waitonsig_help = hpx_options_t_help[25] ;
+  args_info->hpx_dbg_waitonabort_help = hpx_options_t_help[23] ;
+  args_info->hpx_dbg_waitonsig_help = hpx_options_t_help[24] ;
   args_info->hpx_dbg_waitonsig_min = 0;
   args_info->hpx_dbg_waitonsig_max = 0;
-  args_info->hpx_dbg_mprotectstacks_help = hpx_options_t_help[26] ;
-  args_info->hpx_dbg_syncfree_help = hpx_options_t_help[27] ;
-  args_info->hpx_inst_dir_help = hpx_options_t_help[29] ;
-  args_info->hpx_inst_at_help = hpx_options_t_help[30] ;
+  args_info->hpx_dbg_mprotectstacks_help = hpx_options_t_help[25] ;
+  args_info->hpx_dbg_syncfree_help = hpx_options_t_help[26] ;
+  args_info->hpx_inst_dir_help = hpx_options_t_help[28] ;
+  args_info->hpx_inst_at_help = hpx_options_t_help[29] ;
   args_info->hpx_inst_at_min = 0;
   args_info->hpx_inst_at_max = 0;
-  args_info->hpx_trace_classes_help = hpx_options_t_help[32] ;
+  args_info->hpx_trace_classes_help = hpx_options_t_help[31] ;
   args_info->hpx_trace_classes_min = 0;
   args_info->hpx_trace_classes_max = 0;
-  args_info->hpx_trace_filesize_help = hpx_options_t_help[33] ;
-  args_info->hpx_prof_counters_help = hpx_options_t_help[35] ;
+  args_info->hpx_trace_filesize_help = hpx_options_t_help[32] ;
+  args_info->hpx_prof_counters_help = hpx_options_t_help[34] ;
   args_info->hpx_prof_counters_min = 0;
   args_info->hpx_prof_counters_max = 0;
-  args_info->hpx_prof_detailed_help = hpx_options_t_help[36] ;
-  args_info->hpx_isir_testwindow_help = hpx_options_t_help[38] ;
-  args_info->hpx_isir_sendlimit_help = hpx_options_t_help[39] ;
-  args_info->hpx_isir_recvlimit_help = hpx_options_t_help[40] ;
-  args_info->hpx_pwc_parcelbuffersize_help = hpx_options_t_help[42] ;
-  args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[43] ;
-  args_info->hpx_photon_backend_help = hpx_options_t_help[45] ;
-  args_info->hpx_photon_ibdev_help = hpx_options_t_help[46] ;
-  args_info->hpx_photon_ethdev_help = hpx_options_t_help[47] ;
-  args_info->hpx_photon_ibport_help = hpx_options_t_help[48] ;
-  args_info->hpx_photon_usecma_help = hpx_options_t_help[49] ;
-  args_info->hpx_photon_ibsrq_help = hpx_options_t_help[50] ;
-  args_info->hpx_photon_btethresh_help = hpx_options_t_help[51] ;
-  args_info->hpx_photon_fiprov_help = hpx_options_t_help[52] ;
-  args_info->hpx_photon_fidev_help = hpx_options_t_help[53] ;
-  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[54] ;
-  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[55] ;
-  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[56] ;
-  args_info->hpx_photon_maxrd_help = hpx_options_t_help[57] ;
-  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[58] ;
-  args_info->hpx_photon_numcq_help = hpx_options_t_help[59] ;
-  args_info->hpx_photon_usercq_help = hpx_options_t_help[60] ;
-  args_info->hpx_opt_smp_help = hpx_options_t_help[62] ;
+  args_info->hpx_prof_detailed_help = hpx_options_t_help[35] ;
+  args_info->hpx_isir_testwindow_help = hpx_options_t_help[37] ;
+  args_info->hpx_isir_sendlimit_help = hpx_options_t_help[38] ;
+  args_info->hpx_isir_recvlimit_help = hpx_options_t_help[39] ;
+  args_info->hpx_pwc_parcelbuffersize_help = hpx_options_t_help[41] ;
+  args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[42] ;
+  args_info->hpx_coll_network_help = hpx_options_t_help[44] ;
+  args_info->hpx_photon_backend_help = hpx_options_t_help[46] ;
+  args_info->hpx_photon_ibdev_help = hpx_options_t_help[47] ;
+  args_info->hpx_photon_ethdev_help = hpx_options_t_help[48] ;
+  args_info->hpx_photon_ibport_help = hpx_options_t_help[49] ;
+  args_info->hpx_photon_usecma_help = hpx_options_t_help[50] ;
+  args_info->hpx_photon_ibsrq_help = hpx_options_t_help[51] ;
+  args_info->hpx_photon_btethresh_help = hpx_options_t_help[52] ;
+  args_info->hpx_photon_fiprov_help = hpx_options_t_help[53] ;
+  args_info->hpx_photon_fidev_help = hpx_options_t_help[54] ;
+  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[55] ;
+  args_info->hpx_photon_pwcbufsize_help = hpx_options_t_help[56] ;
+  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[57] ;
+  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[58] ;
+  args_info->hpx_photon_maxrd_help = hpx_options_t_help[59] ;
+  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[60] ;
+  args_info->hpx_photon_numcq_help = hpx_options_t_help[61] ;
+  args_info->hpx_photon_usercq_help = hpx_options_t_help[62] ;
+  args_info->hpx_opt_smp_help = hpx_options_t_help[64] ;
+  args_info->hpx_parcel_compression_help = hpx_options_t_help[65] ;
+  args_info->hpx_coalescing_buffersize_help = hpx_options_t_help[66] ;
   
 }
 
@@ -495,7 +508,6 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_heapsize_orig));
   free_string_field (&(args_info->hpx_gas_orig));
   free_string_field (&(args_info->hpx_boot_orig));
-  free_string_field (&(args_info->hpx_coalescing_buffersize_orig));
   free_string_field (&(args_info->hpx_transport_orig));
   free_string_field (&(args_info->hpx_network_orig));
   free_string_field (&(args_info->hpx_configfile_arg));
@@ -541,6 +553,7 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_photon_fidev_arg));
   free_string_field (&(args_info->hpx_photon_fidev_orig));
   free_string_field (&(args_info->hpx_photon_ledgersize_orig));
+  free_string_field (&(args_info->hpx_photon_pwcbufsize_orig));
   free_string_field (&(args_info->hpx_photon_eagerbufsize_orig));
   free_string_field (&(args_info->hpx_photon_smallpwcsize_orig));
   free_string_field (&(args_info->hpx_photon_maxrd_orig));
@@ -548,6 +561,7 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_photon_numcq_orig));
   free_string_field (&(args_info->hpx_photon_usercq_orig));
   free_string_field (&(args_info->hpx_opt_smp_orig));
+  free_string_field (&(args_info->hpx_coalescing_buffersize_orig));
   
   
 
@@ -637,8 +651,6 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-gas", args_info->hpx_gas_orig, hpx_option_parser_hpx_gas_values);
   if (args_info->hpx_boot_given)
     write_into_file(outfile, "hpx-boot", args_info->hpx_boot_orig, hpx_option_parser_hpx_boot_values);
-  if (args_info->hpx_coalescing_buffersize_given)
-    write_into_file(outfile, "hpx-coalescing-buffersize", args_info->hpx_coalescing_buffersize_orig, 0);
   if (args_info->hpx_transport_given)
     write_into_file(outfile, "hpx-transport", args_info->hpx_transport_orig, hpx_option_parser_hpx_transport_values);
   if (args_info->hpx_network_given)
@@ -688,6 +700,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-pwc-parcelbuffersize", args_info->hpx_pwc_parcelbuffersize_orig, 0);
   if (args_info->hpx_pwc_parceleagerlimit_given)
     write_into_file(outfile, "hpx-pwc-parceleagerlimit", args_info->hpx_pwc_parceleagerlimit_orig, 0);
+  if (args_info->hpx_coll_network_given)
+    write_into_file(outfile, "hpx-coll-network", 0, 0 );
   if (args_info->hpx_photon_backend_given)
     write_into_file(outfile, "hpx-photon-backend", args_info->hpx_photon_backend_orig, hpx_option_parser_hpx_photon_backend_values);
   if (args_info->hpx_photon_ibdev_given)
@@ -708,6 +722,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-photon-fidev", args_info->hpx_photon_fidev_orig, 0);
   if (args_info->hpx_photon_ledgersize_given)
     write_into_file(outfile, "hpx-photon-ledgersize", args_info->hpx_photon_ledgersize_orig, 0);
+  if (args_info->hpx_photon_pwcbufsize_given)
+    write_into_file(outfile, "hpx-photon-pwcbufsize", args_info->hpx_photon_pwcbufsize_orig, 0);
   if (args_info->hpx_photon_eagerbufsize_given)
     write_into_file(outfile, "hpx-photon-eagerbufsize", args_info->hpx_photon_eagerbufsize_orig, 0);
   if (args_info->hpx_photon_smallpwcsize_given)
@@ -722,6 +738,10 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-photon-usercq", args_info->hpx_photon_usercq_orig, 0);
   if (args_info->hpx_opt_smp_given)
     write_into_file(outfile, "hpx-opt-smp", args_info->hpx_opt_smp_orig, 0);
+  if (args_info->hpx_parcel_compression_given)
+    write_into_file(outfile, "hpx-parcel-compression", 0, 0 );
+  if (args_info->hpx_coalescing_buffersize_given)
+    write_into_file(outfile, "hpx-coalescing-buffersize", args_info->hpx_coalescing_buffersize_orig, 0);
   
 
   i = EXIT_SUCCESS;
@@ -1330,7 +1350,6 @@ hpx_option_parser_internal (
         { "hpx-heapsize",	1, NULL, 0 },
         { "hpx-gas",	1, NULL, 0 },
         { "hpx-boot",	1, NULL, 0 },
-        { "hpx-coalescing-buffersize",	1, NULL, 0 },
         { "hpx-transport",	1, NULL, 0 },
         { "hpx-network",	1, NULL, 0 },
         { "hpx-statistics",	0, NULL, 0 },
@@ -1359,6 +1378,7 @@ hpx_option_parser_internal (
         { "hpx-isir-recvlimit",	1, NULL, 0 },
         { "hpx-pwc-parcelbuffersize",	1, NULL, 0 },
         { "hpx-pwc-parceleagerlimit",	1, NULL, 0 },
+        { "hpx-coll-network",	0, NULL, 0 },
         { "hpx-photon-backend",	1, NULL, 0 },
         { "hpx-photon-ibdev",	1, NULL, 0 },
         { "hpx-photon-ethdev",	1, NULL, 0 },
@@ -1369,6 +1389,7 @@ hpx_option_parser_internal (
         { "hpx-photon-fiprov",	1, NULL, 0 },
         { "hpx-photon-fidev",	1, NULL, 0 },
         { "hpx-photon-ledgersize",	1, NULL, 0 },
+        { "hpx-photon-pwcbufsize",	1, NULL, 0 },
         { "hpx-photon-eagerbufsize",	1, NULL, 0 },
         { "hpx-photon-smallpwcsize",	1, NULL, 0 },
         { "hpx-photon-maxrd",	1, NULL, 0 },
@@ -1376,6 +1397,8 @@ hpx_option_parser_internal (
         { "hpx-photon-numcq",	1, NULL, 0 },
         { "hpx-photon-usercq",	1, NULL, 0 },
         { "hpx-opt-smp",	2, NULL, 0 },
+        { "hpx-parcel-compression",	0, NULL, 0 },
+        { "hpx-coalescing-buffersize",	1, NULL, 0 },
         { 0,  0, 0, 0 }
       };
 
@@ -1449,20 +1472,6 @@ hpx_option_parser_internal (
                 &(local_args_info.hpx_boot_given), optarg, hpx_option_parser_hpx_boot_values, 0, ARG_ENUM,
                 check_ambiguity, override, 0, 0,
                 "hpx-boot", '-',
-                additional_error))
-              goto failure;
-          
-          }
-          /* Coalescing buffer size.  */
-          else if (strcmp (long_options[option_index].name, "hpx-coalescing-buffersize") == 0)
-          {
-          
-          
-            if (update_arg( (void *)&(args_info->hpx_coalescing_buffersize_arg), 
-                 &(args_info->hpx_coalescing_buffersize_orig), &(args_info->hpx_coalescing_buffersize_given),
-                &(local_args_info.hpx_coalescing_buffersize_given), optarg, 0, 0, ARG_LONG,
-                check_ambiguity, override, 0, 0,
-                "hpx-coalescing-buffersize", '-',
                 additional_error))
               goto failure;
           
@@ -1828,6 +1837,18 @@ hpx_option_parser_internal (
               goto failure;
           
           }
+          /* set collective implementation to network based version (override parcel collectives).  */
+          else if (strcmp (long_options[option_index].name, "hpx-coll-network") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->hpx_coll_network_flag), 0, &(args_info->hpx_coll_network_given),
+                &(local_args_info.hpx_coll_network_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "hpx-coll-network", '-',
+                additional_error))
+              goto failure;
+          
+          }
           /* set the underlying network API to use.  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-backend") == 0)
           {
@@ -1966,6 +1987,20 @@ hpx_option_parser_internal (
               goto failure;
           
           }
+          /* set size of pwc buffers.  */
+          else if (strcmp (long_options[option_index].name, "hpx-photon-pwcbufsize") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_photon_pwcbufsize_arg), 
+                 &(args_info->hpx_photon_pwcbufsize_orig), &(args_info->hpx_photon_pwcbufsize_given),
+                &(local_args_info.hpx_photon_pwcbufsize_given), optarg, 0, 0, ARG_INT,
+                check_ambiguity, override, 0, 0,
+                "hpx-photon-pwcbufsize", '-',
+                additional_error))
+              goto failure;
+          
+          }
           /* set size of eager buffers.  */
           else if (strcmp (long_options[option_index].name, "hpx-photon-eagerbufsize") == 0)
           {
@@ -2060,6 +2095,32 @@ hpx_option_parser_internal (
                 &(local_args_info.hpx_opt_smp_given), optarg, 0, 0, ARG_INT,
                 check_ambiguity, override, 0, 0,
                 "hpx-opt-smp", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* enable parcel compression.  */
+          else if (strcmp (long_options[option_index].name, "hpx-parcel-compression") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->hpx_parcel_compression_flag), 0, &(args_info->hpx_parcel_compression_given),
+                &(local_args_info.hpx_parcel_compression_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "hpx-parcel-compression", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* set coalescing buffer size.  */
+          else if (strcmp (long_options[option_index].name, "hpx-coalescing-buffersize") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_coalescing_buffersize_arg), 
+                 &(args_info->hpx_coalescing_buffersize_orig), &(args_info->hpx_coalescing_buffersize_given),
+                &(local_args_info.hpx_coalescing_buffersize_given), optarg, 0, 0, ARG_LONG,
+                check_ambiguity, override, 0, 0,
+                "hpx-coalescing-buffersize", '-',
                 additional_error))
               goto failure;
           

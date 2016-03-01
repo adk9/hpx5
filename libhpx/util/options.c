@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <utstring.h>
 
+#include <hpx/builtins.h>
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
 #include <libhpx/boot.h>
@@ -370,8 +371,7 @@ void config_print(const config_t *cfg, FILE *f) {
 
   fprintf(f, "\nLogging\n");
   fprintf(f, "  level\t\t\t");
-  for (int i = 0, e = sizeof(HPX_LOG_LEVEL_TO_STRING) /
-               sizeof(HPX_LOG_LEVEL_TO_STRING[0]); i < e; ++i) {
+  for (int i = 0, e = _HPX_NELEM(HPX_LOG_LEVEL_TO_STRING); i < e; ++i) {
     uint64_t level = 1lu << i;
     if (cfg->log_level & level) {
       fprintf(f, "\"%s\", ", HPX_LOG_LEVEL_TO_STRING[i]);
@@ -399,8 +399,7 @@ void config_print(const config_t *cfg, FILE *f) {
   fprintf(f, "  mprotectstacks\t%d\n", cfg->dbg_mprotectstacks);
   fprintf(f, "  waitonabort\t\t%d\n", cfg->dbg_waitonabort);
   fprintf(f, "  waitonsig\t\t");
-  for (int i = 0, e = sizeof(HPX_WAITON_TO_STRING) /
-               sizeof(HPX_WAITON_TO_STRING[0]); i < e; ++i) {
+  for (int i = 0, e = _HPX_NELEM(HPX_WAITON_TO_STRING); i < e; ++i) {
     uint64_t signal = 1lu << i;
     if (cfg->dbg_waitonsig & signal) {
       fprintf(f, "\"%s\", ", HPX_WAITON_TO_STRING[i]);
@@ -428,8 +427,7 @@ void config_print(const config_t *cfg, FILE *f) {
   fprintf(f, "  dir\t\t\t\"%s\"\n", cfg->inst_dir);
   fprintf(f, "  trace filesize\t\t%zu\n", cfg->trace_filesize);
   fprintf(f, "  trace classes\t\t");
-  for (int i = 0, e = sizeof(HPX_TRACE_CLASS_TO_STRING) /
-               sizeof(HPX_TRACE_CLASS_TO_STRING[0]); i < e; ++i) {
+  for (int i = 0, e = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING); i < e; ++i) {
     uint64_t class = (1lu << i);
     if (cfg->trace_classes & class) {
       fprintf(f, "\"%s\", ", HPX_TRACE_CLASS_TO_STRING[i]);

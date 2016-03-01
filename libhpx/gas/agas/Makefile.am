@@ -17,3 +17,8 @@ libtbbmalloc_la_CXXFLAGS    = $(LIBHPX_CXXFLAGS)
 libtbbmalloc_la_SOURCES     = tbbmalloc_cyclic.cc tbbmalloc_global.cc
 libagas_la_LIBADD           = libtbbmalloc.la
 endif
+
+if HAVE_REBALANCING
+noinst_HEADERS     += rebalancer.h
+libagas_la_SOURCES += rebalancer.c partitioning.c bst.cc
+endif

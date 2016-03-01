@@ -11,19 +11,22 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef LIBHPX_NETWORK_COALESCED_COALESCED_H
-#define LIBHPX_NETWORK_COALESCED_COALESCED_H
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 
-#include <hpx/attributes.h>
-#include <libhpx/network.h>
+#include <limits.h>
+#include <stdint.h>
 
-/// Forward declarations.
-/// @{
-struct config;
-/// @}
+#include <libhpx/instrumentation.h>
+#include "metadata.h"
 
+// Possibly, we might want to move more macros from the header into here as
+// variables
 
-network_t* coalesced_network_new (network_t *network, const struct config *cfg)
-  HPX_MALLOC;
-
-#endif // LIBHPX_NETWORK_COALESCED_COALESCED_H
+const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS] =
+{
+#define LIBHPX_EVENT(class, event, ...) class##_##event##_METADATA,
+# include <libhpx/events.def>
+#undef LIBHPX_EVENT
+};

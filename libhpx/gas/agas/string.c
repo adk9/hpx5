@@ -21,31 +21,42 @@
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
+#include <libhpx/memory.h>
 #include <libhpx/network.h>
 #include <libhpx/scheduler.h>
+#include <libhpx/worker.h>
 #include "agas.h"
 #include "btt.h"
 
 static int _insert_block_handler(int n, void *args[], size_t sizes[]) {
   agas_t *agas = (agas_t*)here->gas;
-  void *block = args[0];
-  hpx_addr_t *src = args[1];
-  uint32_t *attr = args[2];
+
+  hpx_addr_t *src   = args[1];
+  uint32_t   *attr  = args[2];
+
+  dbg_assert(args[0] && sizes[0]);
+  size_t bsize = sizes[0];
+  char *lva = global_malloc(bsize);
+  memcpy(lva, args[0], bsize);
 
   gva_t gva = { .addr = *src };
-  btt_insert(agas->btt, gva, here->rank, block, 1, *attr);
+  btt_insert(agas->btt, gva, here->rank, lva, 1, *attr);
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_VECTORED, _insert_block,
                      _insert_block_handler, HPX_INT, HPX_POINTER, HPX_POINTER);
 
 /// Invalidate the remote block mapping. This action blocks until it
-/// can safely invalide the block.
+/// can safely invalidate the block.
 static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int rank) {
   agas_t *agas = (agas_t*)here->gas;
   hpx_addr_t src = hpx_thread_current_target();
   gva_t gva = { .addr = src };
   size_t bsize = UINT64_C(1) << gva.bits.size;
+
+  uint32_t owner;
+  dbg_assert(btt_get_owner(agas->btt, gva, &owner) && (here->rank == owner));
+  (void)owner;
 
   void *block = NULL;
   uint32_t attr;
@@ -55,12 +66,17 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int rank) {
     return e;
   }
 
-  // since rank 0 maintains the cyclic global address space, we cannot
-  // free cyclic blocks on rank 0.
   e = hpx_call_cc(dst, _insert_block, &block, bsize, &src, sizeof(src), &attr,
                   sizeof(attr));
 
-  if (!(gva.bits.cyclic && here->rank == 0)) {
+  // always free if it is a single block
+  int blocks = btt_get_blocks(agas->btt, gva);
+  if (!gva.bits.cyclic && blocks == 1) {
+    global_free(block);
+  }
+
+  // otherwise only free if the block is not at its home
+  if (gva.bits.home != here->rank) {
     free(block);
   }
 
@@ -77,10 +93,22 @@ static int _agas_move_handler(hpx_addr_t src) {
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_move, _agas_move_handler, HPX_ADDR);
 
 void agas_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
+  agas_t *agas = gas;
   libhpx_network_t net = here->config->network;
-  if (net != HPX_NETWORK_ISIR) {
+  if (net == HPX_NETWORK_PWC || net == HPX_NETWORK_SMP) {
+    log_dflt("AGAS move not supported for network %s\n",
+             HPX_NETWORK_TO_STRING[net]);
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
+    return;
   }
+
+  gva_t gva = { .addr = src };
+  uint32_t owner;
+  bool found = btt_get_owner(agas->btt, gva, &owner);
+  if (found) {
+    hpx_call_cc(src, _agas_invalidate_mapping, &dst, &owner);
+  }
+
   hpx_call(dst, _agas_move, sync, &src);
 }
 
@@ -103,7 +131,7 @@ int agas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
     return HPX_SUCCESS;
   }
 
-  return network_memput(here->network, to, from, n, lsync, rsync);
+  return network_memput(self->network, to, from, n, lsync, rsync);
 }
 
 int agas_memput_lsync(void *gas, hpx_addr_t to, const void *from, size_t n,
@@ -123,7 +151,7 @@ int agas_memput_lsync(void *gas, hpx_addr_t to, const void *from, size_t n,
     return HPX_SUCCESS;
   }
 
-  return network_memput_lsync(here->network, to, from, n, rsync);
+  return network_memput_lsync(self->network, to, from, n, rsync);
 }
 
 int agas_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t n) {
@@ -140,7 +168,7 @@ int agas_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t n) {
     return HPX_SUCCESS;
   }
 
-  return network_memput_rsync(here->network, to, from, n);
+  return network_memput_rsync(self->network, to, from, n);
 }
 
 int agas_memget(void *gas, void *to, hpx_addr_t from, size_t n,
@@ -162,7 +190,7 @@ int agas_memget(void *gas, void *to, hpx_addr_t from, size_t n,
     return HPX_SUCCESS;
   }
 
-  return network_memget(here->network, to, from, n, lsync, rsync);
+  return network_memget(self->network, to, from, n, lsync, rsync);
 }
 
 int agas_memget_rsync(void *gas, void *to, hpx_addr_t from, size_t n,
@@ -182,7 +210,7 @@ int agas_memget_rsync(void *gas, void *to, hpx_addr_t from, size_t n,
     return HPX_SUCCESS;
   }
 
-  return network_memget_rsync(here->network, to, from, n, lsync);
+  return network_memget_rsync(self->network, to, from, n, lsync);
 }
 
 int agas_memget_lsync(void *gas, void *to, hpx_addr_t from, size_t n) {
@@ -199,7 +227,7 @@ int agas_memget_lsync(void *gas, void *to, hpx_addr_t from, size_t n) {
     return HPX_SUCCESS;
   }
 
-  return network_memget_lsync(here->network, to, from, n);
+  return network_memget_lsync(self->network, to, from, n);
 }
 
 int agas_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
@@ -212,12 +240,12 @@ int agas_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t size,
   void *lfrom;
 
   if (!hpx_gas_try_pin(to, &lto)) {
-    return network_memcpy(here->network, to, from, size, sync);
+    return network_memcpy(self->network, to, from, size, sync);
   }
 
   if (!hpx_gas_try_pin(from, &lfrom)) {
     hpx_gas_unpin(to);
-    return network_memcpy(here->network, to, from, size, sync);
+    return network_memcpy(self->network, to, from, size, sync);
   }
 
   memcpy(lto, lfrom, size);
