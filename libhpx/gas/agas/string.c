@@ -32,16 +32,17 @@
 static int _insert_block_handler(int n, void *args[], size_t sizes[]) {
   agas_t *agas = (agas_t*)here->gas;
 
-  hpx_addr_t *src   = args[1];
-  uint32_t   *attr  = args[2];
-
   dbg_assert(args[0] && sizes[0]);
+  hpx_addr_t *src  = args[1];
+  uint32_t   *attr = args[2];
+
   size_t bsize = sizes[0];
   char *lva = global_malloc(bsize);
   memcpy(lva, args[0], bsize);
 
   if (*attr & HPX_GAS_ATTR_LCO) {
-    lco_unlock(lva);
+    lco_t *lco = (lco_t*)lva;
+    sync_lockable_ptr_unlock(&lco->lock);
   }
 
   gva_t gva = { .addr = *src };
@@ -72,10 +73,11 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int rank) {
   }
 
   if (attr & HPX_GAS_ATTR_LCO) {
-    lco_lock(block);
+    lco_t *lco = block;
+    sync_lockable_ptr_lock(&lco->lock);
   }
 
-  e = hpx_call_cc(dst, _insert_block, &block, bsize, &src, sizeof(src), &attr,
+  e = hpx_call_cc(dst, _insert_block, block, bsize, &src, sizeof(src), &attr,
                   sizeof(attr));
 
   // always free if it is a single block
@@ -111,11 +113,12 @@ void agas_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
     return;
   }
 
-  gva_t gva = { .addr = src };
+  gva_t gva = { .addr = dst };
   uint32_t owner;
   bool found = btt_get_owner(agas->btt, gva, &owner);
   if (found) {
     hpx_call_cc(src, _agas_invalidate_mapping, &dst, &owner);
+    return;
   }
 
   hpx_call(dst, _agas_move, sync, &src);
