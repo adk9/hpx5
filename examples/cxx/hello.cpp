@@ -11,14 +11,23 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef LIBHPX_NETWORK_INST_H
-#define LIBHPX_NETWORK_INST_H
+#include <iostream>
+#include <hpx/hpx++.h>
 
-/// Forward declarations.
-/// @{
-struct network;
-/// @}
+static int _hello_action(void) {
+  std::cout << "Hello World from " << hpx_get_my_rank() << std::endl;
+  hpx::exit(hpx::SUCCESS);
+}
+auto _hello = hpx::make_action(_hello_action);
 
-struct network *network_inst_new(struct network *impl);
-
-#endif
+int main(int argc, char* argv[]) {
+  if (hpx::init(&argc, &argv) != 0) {
+    return -1;
+  }
+  
+  int e = _hello.run();
+  
+  hpx::finalize();
+  
+  return e;
+}

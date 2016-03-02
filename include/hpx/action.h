@@ -69,14 +69,6 @@ typedef enum {
   HPX_OPENCL,
 } hpx_action_type_t;
 
-static const char* const HPX_ACTION_TYPE_TO_STRING[] = {
-  "DEFAULT",
-  "TASK",
-  "INTERRUPT",
-  "FUNCTION",
-  "OPENCL"
-};
-
 /// @name Action attributes.
 /// These attributes control aspects of actions.  Attributes can be combined
 /// using bitwise or.

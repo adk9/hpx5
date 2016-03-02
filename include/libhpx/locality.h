@@ -81,7 +81,7 @@ typedef struct locality {
   uint64_t            epoch;
   struct boot         *boot;
   void                 *gas;
-  struct network   *network;
+  struct network       *net;
   struct scheduler   *sched;
   struct config     *config;
   struct topology *topology;

@@ -20,6 +20,7 @@
 #include <hpx/types.h>
 #include <hpx/action.h>
 #include <hpx/rpc.h>
+#include <hpx/par.h>
 #include <hpx/cxx/lco.h>
 #include <hpx/cxx/runtime.h>
 
@@ -73,6 +74,22 @@ DEF_CONVERT_TYPE(int, HPX_INT)
 DEF_CONVERT_TYPE(float, HPX_FLOAT)
 DEF_CONVERT_TYPE(double, HPX_DOUBLE)
 DEF_CONVERT_TYPE(std::size_t, HPX_SIZE_T)
+
+// global ptr conversion
+template <typename T>
+struct _convert_arg_type< hpx::global_ptr<T> > {
+  constexpr static auto type = HPX_ADDR;
+};
+template <typename T>
+constexpr decltype(HPX_ADDR) _convert_arg_type< hpx::global_ptr<T> >::type;
+
+// pointer convesion
+template <typename T>
+struct _convert_arg_type<T*> {
+  constexpr static auto type = HPX_POINTER;
+};
+template <typename T>
+constexpr decltype(HPX_POINTER) _convert_arg_type<T*>::type;
 
 } // namespace detail
 } // namspace hpx
@@ -339,6 +356,102 @@ public:
   int _hpx_call_cc(const ::hpx::global_ptr<T>& addr, Args&... args) {
     return _hpx_call_cc(addr.get(), _id, sizeof...(Args), &args...);
   }
+  
+//   template <typename... Args>
+//   int thread_continue(Args&... args) {
+//     return _hpx_thread_continue(sizeof...(Args), &args...);
+//   };
+  
+  template <typename T>
+  int thread_continue(T& arg) {
+    return _hpx_thread_continue(2, &arg, sizeof(T));
+  };
+  
+/// hpx parallel loop interface
+/// Perform a "for" loop in parallel.
+///
+/// This encapsulates a simple local parallel for loop:
+///
+/// @code
+/// for (int i = min, e = max; i < e; ++i) {
+///   hpx_call(HPX_HERE, action, sync, &i, &args);
+/// }
+/// @endcode
+///
+/// The work is divided in equal chunks among the number of "worker"
+/// threads available. Work is actively pushed to each worker thread
+/// but is not affinitized and can be stolen by other worker threads.
+///
+/// @param      min The minimum index in the loop.
+/// @param      max The maximum index in the loop.
+/// @param     args The arguments to the for function @p f.
+/// @param     sync An LCO that indicates the completion of all iterations.
+///
+//// @returns An error code, or HPX_SUCCESS.
+template <typename LCO, typename... Args>
+int par_for(const hpx::global_ptr<LCO>& sync, int min, int max, Args&... args) {
+  return hpx_par_for(_id, min, max, &args..., sync.get());
+}
+template <typename... Args>
+int par_for_sync(int min, int max, Args&... args) {
+  return hpx_par_for_sync(_id, min, max, &args...);
+}
+
+/// Perform a parallel call.
+///
+/// This encapsulates a simple parallel for loop with the following semantics.
+///
+/// @code
+/// for (int i = min, e = max; i < e; ++i) {
+///   char args[arg_size];
+///   arg_init(args, i, env);
+///   hpx_call(HPX_HERE, action, sync, args, arg_size);
+/// }
+/// @endcode
+///
+/// The loop may actually be spawned as a tree, in which case @p
+/// branching_factor controls how many chunks each range is partitioned into,
+/// and @p cutoff controls the smalled chunk that is split.
+///
+/// @param              min The minimum index in the loop.
+/// @param              max The maximum index in the loop.
+/// @param branching_factor The tree branching factor for tree-spawn.
+/// @param           cutoff The largest chunk we won't split.
+/// @param         arg_size The size of the arguments to action.
+/// @param         arg_init A callback to initialize the arguments
+/// @param         env_size The size of the environment of arg_init.
+/// @param              env An environment to pass to arg_init.
+/// @param             sync An LCO to set as the continuation for each iteration.
+///
+/// @returns An error code, or HPX_SUCCESS.
+template <typename LCO>
+int par_call(const int min, const int max,
+	     const int branching_factor, const int cutoff,
+	     const size_t arg_size,
+	     void (*arg_init)(void*, const int, const void*),
+	     const size_t env_size, const void *env,
+	     const hpx::global_ptr<LCO>& sync) {
+  return hpx_par_call(_id, min, max, branching_factor, cutoff, arg_size, arg_init, env_size, env, sync.get());
+}
+
+int par_call_sync(const int min, const int max,
+		  const int branching_factor, const int cutoff,
+		  const size_t arg_size,
+		  void (*arg_init)(void*, const int, const void*),
+		  const size_t env_size,
+		  const void *env) {
+  return hpx_par_call_sync(_id, min, max, branching_factor, cutoff, arg_size, arg_init, env_size, env);
+}
+
+template <typename T>
+int count_range_call(const hpx::global_ptr<T>& addr,
+             const size_t count,
+             const size_t increment,
+             const uint32_t bsize,
+             const size_t arg_size,
+             void *const arg) {
+  return hpx_count_range_call(addr.get(), count, increment, bsize, arg_size, arg);
+}
   
 /// Collective calls.
 ///

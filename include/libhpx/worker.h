@@ -29,6 +29,7 @@ extern "C" {
 /// Forward declarations.
 /// @{
 struct ustack;
+struct network;
 /// @}
 
 /// Class representing a worker thread's state.
@@ -66,8 +67,9 @@ typedef struct {
   libhpx_stats_t      stats;                    // per-worker statistics
   int           last_victim;                    // last successful victim
   int             numa_node;                    // this worker's numa node
-  void            *profiler;                    // worker maintains a
-                                                // reference to its profiler
+  void            *profiler;                    // reference to the profiler
+  void                 *bst;                    // reference to the profiler
+  struct network   *network;                    // reference to the network
 } worker_t HPX_ALIGNED(HPX_CACHELINE_SIZE);
 /// @}
 

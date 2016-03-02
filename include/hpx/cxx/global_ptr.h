@@ -375,12 +375,8 @@ class pin_guard {
   /// Construct a pin_guard from a global address.
   ///
   /// @param        gva The address we're trying to pin.
-  /// @throw   NotLocal If the @p gva is not local.
-  explicit pin_guard(const global_ptr<T>& gva) noexcept(false)
+  explicit pin_guard(const global_ptr<T>& gva) noexcept
     : _gva(gva), _local(false), _lva(gva.pin(_local)) {
-    if (!_local) {
-      throw NotLocal();
-    }
   }
 
   /// Construct a pin_guard from a C-API global address.

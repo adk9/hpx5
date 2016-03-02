@@ -47,6 +47,7 @@ typedef hpx_addr_t (*hpx_gas_dist_t)(uint32_t i, size_t n, uint32_t bsize);
 #define HPX_GAS_ATTR_NONE  0x0  //!< Empty attribute.
 #define HPX_GAS_ATTR_RO    0x1  //!< This block is read-only.
 #define HPX_GAS_ATTR_LB    0x2  //!< Consider for automatic load balancing.
+#define HPX_GAS_ATTR_LCO   0x4  //!< This block is an LCO.
 
 /// Allocate distributed global memory given a distribution.
 /// @param            n The number of blocks to allocate.
@@ -57,7 +58,8 @@ typedef hpx_addr_t (*hpx_gas_dist_t)(uint32_t i, size_t n, uint32_t bsize);
 ///
 /// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bsize, uint32_t boundary,
-                         hpx_gas_dist_t dist, uint32_t attr) HPX_PUBLIC;
+                         hpx_gas_dist_t dist, uint32_t attr)
+  HPX_PUBLIC;
 
 /// Allocate distributed zeroed global memory given a distribution.
 /// @param            n The number of blocks to allocate.
@@ -68,7 +70,8 @@ hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bsize, uint32_t boundary,
 ///
 /// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_calloc(size_t n, uint32_t bsize, uint32_t boundary,
-                          hpx_gas_dist_t dist, uint32_t attr) HPX_PUBLIC;
+                          hpx_gas_dist_t dist, uint32_t attr)
+  HPX_PUBLIC;
 
 /// Allocate cyclically distributed global memory.
 ///
@@ -198,6 +201,7 @@ void hpx_gas_calloc_local_at_async(size_t n, uint32_t bsize,
 extern HPX_PUBLIC HPX_ACTION_DECL(hpx_gas_calloc_local_at_action);
 
 /// Global memory allocation routines with GAS attributes.
+///
 /// @param            n The number of blocks to allocate.
 /// @param        bsize The number of bytes per block.
 /// @param     boundary The alignment (2^k).
@@ -253,6 +257,13 @@ hpx_addr_t hpx_gas_calloc_local_attr(size_t n, uint32_t bsize, uint32_t boundary
                                      uint32_t attr)
   HPX_PUBLIC;
 
+/// Set an attribute for a global address.
+///
+/// @param  addr         The global address.
+/// @param  attr         The GAS attribute to set.
+void hpx_gas_set_attr(hpx_addr_t addr, uint32_t attr)
+  HPX_PUBLIC;
+
 /// Free a global allocation.
 ///
 /// This global free is asynchronous. The @p sync LCO address can be used to
@@ -273,7 +284,8 @@ extern HPX_PUBLIC HPX_ACTION_DECL(hpx_gas_free_action);
 /// @param          dst The address pointing to the target locality to move the
 ///                       source address @p src to.
 /// @param[out]     lco LCO object to check to wait for the completion of move.
-void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) HPX_PUBLIC;
+void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco)
+  HPX_PUBLIC;
 
 /// Performs address translation.
 ///
@@ -296,7 +308,8 @@ void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) HPX_PUBLIC;
 ///                       successful.
 ///               false If @p is not local.
 ///               false If @p is local and @p local is not NULL and pin fails.
-bool hpx_gas_try_pin(hpx_addr_t addr, void **local) HPX_PUBLIC;
+bool hpx_gas_try_pin(hpx_addr_t addr, void **local)
+  HPX_PUBLIC;
 
 /// Unpin a previously pinned block.
 ///
@@ -340,7 +353,8 @@ void *hpx_memalign_registered(size_t align, size_t bytes)
 /// Free local memory that was allocated with hpx_malloc_registered().
 ///
 /// @param            p The buffer.
-void hpx_free_registered(void *p) HPX_PUBLIC;
+void hpx_free_registered(void *p)
+  HPX_PUBLIC;
 
 /// This copies data from a global address to a local buffer, asynchronously.
 ///
@@ -393,7 +407,8 @@ int hpx_gas_memget_sync(void *to, hpx_addr_t from, size_t size) HPX_PUBLIC;
 ///
 /// @returns  HPX_SUCCESS
 int hpx_gas_memput(hpx_addr_t to, const void *from, size_t size,
-                   hpx_addr_t lsync, hpx_addr_t rsync) HPX_PUBLIC;
+                   hpx_addr_t lsync, hpx_addr_t rsync)
+  HPX_PUBLIC;
 
 /// This copies data from a local buffer to a global address with locally
 /// synchronous semantics.
@@ -413,7 +428,8 @@ int hpx_gas_memput(hpx_addr_t to, const void *from, size_t size,
 ///
 /// @returns  HPX_SUCCESS
 int hpx_gas_memput_lsync(hpx_addr_t to, const void *from, size_t size,
-                         hpx_addr_t rsync) HPX_PUBLIC;
+                         hpx_addr_t rsync)
+  HPX_PUBLIC;
 
 /// This copies data synchronously from a local buffer to a global address.
 ///
@@ -459,7 +475,7 @@ int hpx_gas_memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync)
 /// global address.
 ///
 /// This shares the same functionality as hpx_gas_memcpy(), but will not return
-/// until the copu has completed remotely. This exposes the potential for
+/// until the copy has completed remotely. This exposes the potential for
 /// a more efficient mechanism for synchronous operation, and should be
 /// preferred where fully synchronous semantics are necessary.
 ///
@@ -490,7 +506,8 @@ int hpx_gas_memcpy_sync(hpx_addr_t to, hpx_addr_t from, size_t size)
 int
 _hpx_gas_bcast_with_continuation(hpx_action_t action, hpx_addr_t base, int n,
                                  size_t offset, size_t bsize, hpx_action_t cont,
-                                 hpx_addr_t caddr, int nargs, ...) HPX_PUBLIC;
+                                 hpx_addr_t caddr, int nargs, ...)
+  HPX_PUBLIC;
 
 #define hpx_gas_bcast_with_continuation(ACTION, BASE, N, OFFSET, BSIZE, CONT,  \
                                         CADDR, ...)                            \
@@ -535,13 +552,27 @@ _hpx_gas_bcast_with_continuation(hpx_action_t action, hpx_addr_t base, int n,
 /// @returns      HPX_SUCCESS if no errors were encountered.
 int
 _hpx_gas_bcast_sync(hpx_action_t action, hpx_addr_t base, int n,
-                    size_t offset, size_t bsize, int nargs, ...) HPX_PUBLIC;
+                    size_t offset, size_t bsize, int nargs, ...)
+  HPX_PUBLIC;
 
 #define hpx_gas_bcast_sync(ACTION, BASE, N, OFFSET, BSIZE, ...) \
   _hpx_gas_bcast_sync(ACTION, BASE, N, OFFSET, BSIZE,           \
                       __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 
+/// Rebalance GAS blocks in the system. (EXPERIMENTAL).
+///
+/// This operation tries to rebalance blocks allocated in the global
+/// address space based on the tracing information it collects at
+/// runtime. All accesses to blocks marked with the HPX_GAS_ATTR_LB
+/// are recorded, and when the "rebalance" operation is invoked,
+/// blocks are moved automatically to come up with a better
+/// distribution.
+///
+/// @param       sync  Notification of completion.
+void hpx_gas_rebalance(hpx_addr_t sync)
+  HPX_PUBLIC;
+    
 /// @}
 
 #ifdef __cplusplus

@@ -22,6 +22,7 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>
+#include <libhpx/worker.h>
 #include "irecv_buffer.h"
 #include "parcel_utils.h"
 #include "xport.h"
@@ -243,7 +244,7 @@ static hpx_parcel_t *_finish(irecv_buffer_t *irecvs, int i, void *status) {
   if (here->config->gas == HPX_GAS_AGAS) {
     int to = gas_owner_of(here->gas, p->target);
     if (to != here->rank) {
-      network_send(here->network, p);
+      network_send(self->network, p);
       return NULL;
     }
   }

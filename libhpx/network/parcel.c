@@ -133,13 +133,14 @@ void parcel_launch(hpx_parcel_t *p) {
 
   // do a local send through loopback, bypassing the network, otherwise dump the
   // parcel out to the network
-  if (hpx_gas_try_pin(p->target, NULL)) {
+  int target = gas_owner_of(here->gas, p->target);
+  if (target == here->rank) {
     // instrument local "receives"
     EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src);
     scheduler_spawn(p);
   }
   else {
-    int e = network_send(here->network, p);
+    int e = network_send(self->network, p);
     dbg_check(e, "failed to perform a network send\n");
   }
 }

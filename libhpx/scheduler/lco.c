@@ -22,34 +22,37 @@
 #include <string.h>
 
 #include <libsync/sync.h>
+#include <libsync/locks.h>
 #include <libhpx/action.h>
 #include <libhpx/attach.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/instrumentation.h>
+#include <libhpx/lco.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
 #include <libhpx/scheduler.h>
+#include <libhpx/worker.h>
 #include <libhpx/parcel.h>
 #include "lco.h"
 #include "thread.h"
 
-/// We pack state into the LCO pointer---least-significant-bit is already used
-/// in the sync_lockable_ptr interface
+/// LCO dynamic dispatch table
+const lco_class_t *lco_vtables[LCO_MAX];
+
+/// LCO states
 #define _TRIGGERED_MASK    (0x2)
 #define _USER_MASK         (0x4)
 #define _STATE_MASK        (0x7)
 
-#define EVENT_LCO(lco, event)                                              \
-  inst_trace(HPX_TRACE_LCO, event, lco, (lco)->bits)
+#define EVENT_LCO(lco, event)                           \
+  inst_trace(HPX_TRACE_LCO, event, lco, (lco)->state)
 
 /// return the class pointer, masking out the state.
 static const lco_class_t *_class(lco_t *lco) {
   dbg_assert(lco);
-  uintptr_t bits = (uintptr_t)(sync_lockable_ptr_read(&lco->lock));
-  bits = bits & ~_STATE_MASK;
-  const lco_class_t *class = (lco_class_t*)bits;
+  const lco_class_t *class = (lco_class_t*)lco_vtables[lco->type];
   dbg_assert_str(class, "LCO vtable pointer is null, "
                  "this is often an LCO use-after-free\n");
   return class;
@@ -209,21 +212,25 @@ void lco_lock(lco_t *lco) {
   dbg_assert(lco);
   dbg_assert(self->current->ustack->lco_depth == 0);
   self->current->ustack->lco_depth = 1;
-  sync_lockable_ptr_lock(&lco->lock);
+  sync_tatas_acquire(&lco->lock);
   log_lco("%p acquired lco %p\n", (void*)self->current, (void*)lco);
 }
 
 void lco_unlock(lco_t *lco) {
   dbg_assert(lco);
   log_lco("%p released lco %p\n", (void*)self->current, (void*)lco);
-  sync_lockable_ptr_unlock(&lco->lock);
+  sync_tatas_release(&lco->lock);
   dbg_assert(self->current->ustack->lco_depth == 1);
   self->current->ustack->lco_depth = 0;
 }
 
 void lco_init(lco_t *lco, const lco_class_t *class) {
   EVENT_LCO(lco, TRACE_EVENT_LCO_INIT);
-  lco->vtable = class;
+  uint8_t type = class->type;
+  lco->type = type;
+  lco->state = 0;
+  sync_tatas_init(&lco->lock);
+  dbg_assert(lco_vtables[type] == class);
 }
 
 void lco_fini(lco_t *lco) {
@@ -232,23 +239,23 @@ void lco_fini(lco_t *lco) {
 
 void lco_set_triggered(lco_t *lco) {
   EVENT_LCO(lco, TRACE_EVENT_LCO_TRIGGER);
-  lco->bits |= _TRIGGERED_MASK;
+  lco->state |= _TRIGGERED_MASK;
 }
 
 void lco_reset_triggered(lco_t *lco) {
-  lco->bits &= ~_TRIGGERED_MASK;
+  lco->state &= ~_TRIGGERED_MASK;
 }
 
 uintptr_t lco_get_triggered(const lco_t *lco) {
-  return lco->bits & _TRIGGERED_MASK;
+  return lco->state & _TRIGGERED_MASK;
 }
 
 void lco_set_user(lco_t *lco) {
-  lco->bits |= _USER_MASK;
+  lco->state |= _USER_MASK;
 }
 
 uintptr_t lco_get_user(const lco_t *lco) {
-  return lco->bits & _USER_MASK;
+  return lco->state & _USER_MASK;
 }
 
 /// @}
@@ -477,7 +484,7 @@ hpx_status_t hpx_lco_get(hpx_addr_t target, size_t size, void *value) {
   dbg_assert(value);
   lco_t *lco;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return network_lco_get(here->network, target, size, value, 0);
+    return network_lco_get(self->network, target, size, value, 0);
   }
 
   hpx_status_t status = _get(lco, size, value, 0);
@@ -493,7 +500,7 @@ hpx_status_t hpx_lco_get_reset(hpx_addr_t target, size_t size, void *value) {
   dbg_assert(value);
   lco_t *lco;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return network_lco_get(here->network, target, size, value, 1);
+    return network_lco_get(self->network, target, size, value, 1);
   }
 
   hpx_status_t status = _get(lco, size, value, 1);

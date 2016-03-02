@@ -41,6 +41,10 @@
 /examples/Makefile
 /examples/Makefile.in
 /examples/cxx/Makefile
+/examples/cxx/fibonacci
+/examples/cxx/guppie
+/examples/cxx/hello
+/examples/cxx/parspawn
 /examples/fibonacci
 /examples/pingpong
 /examples/allreduce
@@ -119,6 +123,11 @@ contrib/libcuckoo/
 /tests/unit/Makefile
 /tests/perf/Makefile
 /tests/cxx/Makefile
+tests/cxx/actions
+tests/cxx/continuations
+tests/cxx/futures
+tests/cxx/global_ptr
+tests/cxx/system
 tests/unit/gas_memget
 tests/unit/thread_yield
 tests/unit/cxx_raii

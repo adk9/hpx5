@@ -36,6 +36,7 @@
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>                      // used as thread-control block
 #include <libhpx/process.h>
+#include <libhpx/rebalancer.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/system.h>
 #include <libhpx/termination.h>
@@ -52,6 +53,16 @@ __thread worker_t * volatile self = NULL;
 #define SOURCE_YIELD 1
 #define SOURCE_STEAL 2
 #define SOURCE_FINAL 3
+
+/// Macro to record a parcel's GAS accesses.
+#if defined(HAVE_AGAS) && defined(HAVE_REBALANCING)
+# define GAS_TRACE_ACCESS(src, dst, block, size) \
+  rebalancer_add_entry(src, dst, block, size)
+#elif defined(ENABLE_INSTRUMENTATION)
+# define GAS_TRACE_ACCESS EVENT_GAS_ACCESS
+#else
+# define GAS_TRACE_ACCESS(src, dst, block, size)
+#endif
 
 #ifdef ENABLE_DEBUG
 /// This transfer wrapper is used for logging, debugging, and instrumentation.
@@ -267,6 +278,7 @@ static void _push_lifo(hpx_parcel_t *p, void *worker) {
   dbg_assert(p->target != HPX_NULL);
   dbg_assert(actions[p->action].handler != NULL);
   EVENT_SCHED_PUSH_LIFO(p);
+  GAS_TRACE_ACCESS(p->src, here->rank, p->target, p->size);
   worker_t *w = worker;
   uint64_t size = sync_chase_lev_ws_deque_push(_work(w), p);
   if (w->work_first < 0) {
@@ -531,11 +543,11 @@ static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
 }
 
 /// Probe and progress the network.
-static void _schedule_network(worker_t *w, network_t *network) {
+static void _schedule_network(worker_t *w) {
   // suppress work-first scheduling while we're inside the network.
   w->work_first = -1;
-  network_progress(network, 0);
-  hpx_parcel_t *stack = network_probe(network, 0);
+  network_progress(w->network, 0);
+  hpx_parcel_t *stack = network_probe(w->network, 0);
   w->work_first = 0;
 
   hpx_parcel_t *p = NULL;
@@ -598,7 +610,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
     _swap_epoch(w);
 
     // Do some network stuff;
-    _schedule_network(w, here->network);
+    _schedule_network(w);
 
     // Try and steal some work
     if ((p = _schedule_steal(w))) {
@@ -644,6 +656,8 @@ int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   w->work_id     = 0;
   w->active      = true;
   w->profiler    = NULL;
+  w->bst         = NULL;
+  w->network     = here->net;
 
   sync_chase_lev_ws_deque_init(&w->queues[0].work, work_size);
   sync_chase_lev_ws_deque_init(&w->queues[1].work, work_size);
@@ -688,7 +702,7 @@ int worker_start(void) {
   dbg_assert(((uintptr_t)&w->inbox & (HPX_CACHELINE_SIZE - 1))== 0);
 
   // make sure the system is initialized
-  dbg_assert(here && here->config && here->network);
+  dbg_assert(here && here->config && here->net);
 
   // affinitize the worker thread
   libhpx_thread_affinity_t policy = here->config->thread_affinity;
@@ -772,7 +786,6 @@ void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(w);
   dbg_assert(w->id >= 0);
   dbg_assert(p);
-  dbg_assert(hpx_gas_try_pin(p->target, NULL)); // just performs translation
   dbg_assert(actions[p->action].handler != NULL);
   COUNTER_SAMPLE(w->stats.spawns++);
 
@@ -861,12 +874,12 @@ void scheduler_yield(void) {
 /// we know that it has already been enqueued on whatever LCO we need it to be.
 ///
 /// @param           to The parcel we are transferring to.
-/// @param         lock A lockable_ptr_t to unlock.
+/// @param         lock A tatas lock to unlock.
 static void _unlock(hpx_parcel_t *to, void *lock) {
-  sync_lockable_ptr_unlock(lock);
+  sync_tatas_release(lock);
 }
 
-hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
+hpx_status_t scheduler_wait(tatas_lock_t *lock, cvar_t *condition) {
   // push the current thread onto the condition variable---no lost-update
   // problem here because we're holing the @p lock
   worker_t *w = self;
@@ -886,7 +899,7 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   EVENT_THREAD_RESUME(p, self);
 
   // reacquire the lco lock before returning
-  sync_lockable_ptr_lock(lock);
+  sync_tatas_acquire(lock);
   return cvar_get_error(condition);
 }
 
