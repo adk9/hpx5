@@ -425,7 +425,7 @@ void config_print(const config_t *cfg, FILE *f) {
 
   fprintf(f, "\nInstrumentation\n");
   fprintf(f, "  dir\t\t\t\"%s\"\n", cfg->inst_dir);
-  fprintf(f, "  trace filesize\t\t%zu\n", cfg->trace_filesize);
+  fprintf(f, "  trace filesize\t%zu\n", cfg->trace_filesize);
   fprintf(f, "  trace classes\t\t");
   for (int i = 0, e = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING); i < e; ++i) {
     uint64_t class = (1lu << i);
@@ -483,11 +483,10 @@ void config_print(const config_t *cfg, FILE *f) {
   fprintf(f, "  smp\t\t\t%d\n", cfg->opt_smp);
 
   fprintf(f, "\nCoalescing parameters\n");
-  fprintf(f, " Coalescing buffer size\t\t%d", cfg->coalescing_buffersize);
+  fprintf(f, " Coalescing buffer size\t\t%d\n", cfg->coalescing_buffersize);
 
 
-  fprintf(f, "------------------------\n"
-             "------------------------\n");
+  fprintf(f, "------------------------\n");
 }
 
 void config_delete(config_t *cfg) {
