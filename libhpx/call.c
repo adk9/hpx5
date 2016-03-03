@@ -29,6 +29,8 @@
 #include <libhpx/debug.h>
 #include "./actions/data_coalesced_network.h"
 
+#include <inttypes.h>
+
 /// A RPC call with a user-specified continuation action.
 int _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
                                 hpx_addr_t c_target, hpx_action_t c_action,
@@ -64,13 +66,17 @@ int _hpx_call(hpx_addr_t addr, hpx_action_t id, hpx_addr_t result, int n, ...) {
   // printf("Action is coaleseced %d\n", action_is_coalesced(id));
   // if locally addressed or action is not coalesced, then continue with the
   // default implementation with parcel wrapper
-  if (l == HPX_HERE || (!action_is_coalesced(id))) {
+  if (l == hpx_get_my_rank() || (!action_is_coalesced(id))) {
     // printf("I am in the actual branch in hpx call\n");
     int e = action_call_lsync_va(id, addr, result, rop, n, &args);
     va_end(args);
     return e;
   } else {  // Otherwise coalesce data-parcels here
     // printf("Executing data coalescing branch\n");
+    // printf("Sending address %zu \n", addr);
+    // assert(addr <= 276938752);
+    // assert(addr >= 524296);
+    // printf("Address %" PRIu64 "\n", addr);
     int e = coalesce_data(addr, id, l, &args, n);
     va_end(args);
     return e;

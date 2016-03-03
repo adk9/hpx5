@@ -1,3 +1,4 @@
+
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
@@ -179,8 +180,8 @@ void action_registration_finalize(void) {
 	actions[i].coalesced_dest_buffer[l].count_mask = sender_active - 1;
 	actions[i].coalesced_dest_buffer[l].count_allocated = 0;
 	actions[i].coalesced_dest_buffer[l].count_written = 0;
-	actions[i].coalesced_dest_buffer[l].registered_with_td = false;
 	actions[i].last_active[l] = 0;
+	actions[i].syncflush = 0;
 	//
 	(actions[i].coalesced_dest_buffer[l].fatp)->size = 0;
       }

@@ -227,7 +227,6 @@ typedef struct {
   unsigned int count_mask;
   unsigned int count_allocated;
   unsigned int count_written;
-  bool         registered_with_td;
 } _coalesced_dest_buffer_t;
 
 
@@ -262,6 +261,7 @@ typedef struct {
   unsigned int *last_active;
   uint64_t previous_count;
   uint64_t current_count;
+  volatile int    syncflush;
 } action_t;
 
 extern hpx_time_t time_now;

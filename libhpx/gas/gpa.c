@@ -118,6 +118,7 @@ static hpx_addr_t _add_cyclic(hpx_addr_t gpa, int64_t n, uint32_t bsize,
 
   // sanity check
   const int64_t diff = _sub_cyclic(addr, gpa, bsize, false);
+  //assert(diff == n);
   dbg_assert_str(diff == n, "Address %"PRIu64"+%"PRId64" computed as %"PRIu64"."
                  " Expected %"PRId64".\n", gpa, n, addr, diff);
   return addr;
