@@ -38,7 +38,7 @@ static int _insert_block_handler(int n, void *args[], size_t sizes[]) {
   uint32_t   *attr = args[2];
 
   size_t bsize = sizes[0];
-  char *lva = global_malloc(bsize);
+  char *lva = malloc(bsize);
   memcpy(lva, args[0], bsize);
 
   if (*attr & HPX_GAS_ATTR_LCO) {
