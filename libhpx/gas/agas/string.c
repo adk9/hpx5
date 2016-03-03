@@ -81,12 +81,6 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int rank) {
   e = hpx_call_cc(dst, _insert_block, block, bsize, &src, sizeof(src), &attr,
                   sizeof(attr));
 
-  // always free if it is a single block
-  int blocks = btt_get_blocks(agas->btt, gva);
-  if (!gva.bits.cyclic && blocks == 1) {
-    global_free(block);
-  }
-
   // otherwise only free if the block is not at its home
   if (gva.bits.home != here->rank) {
     free(block);
