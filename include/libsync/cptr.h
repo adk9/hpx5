@@ -33,7 +33,6 @@
 /// the actual pointer that we're protecting
 /// @var cptr_t::c
 /// the count of the number of times this pointer has been CASed
-/// ----------------------------------------------------------------------------
 #ifdef __LP64__
 typedef struct {
   void *p;

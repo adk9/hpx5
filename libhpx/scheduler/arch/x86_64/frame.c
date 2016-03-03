@@ -32,26 +32,47 @@ static void HPX_CONSTRUCTOR _init_x86_64(void) {
 }
 /// @}
 
-/// A structure describing the initial frame on a stack.
+/// @struct _frame_t
+/// @brief A structure describing the initial frame on a stack.
 ///
 /// This must match the transfer.S asm file usage.
 ///
 /// This should be managed in an asm-specific manner, but we are just worried
 /// about x86-64 at the moment.
+/// @var _frame_t::mxcsr
+/// 7
+/// @var _frame_t::fpucw
+/// 7.5
+/// @var _frame_t::padding
+/// 7.75 has to match transfer.S
+/// @var _frame_t::r15
+/// 6
+/// @var _frame_t::r14
+/// 5
+/// @var _frame_t::r13
+/// 4
+/// @var _frame_t::r12
+/// 3
+/// @var _frame_t::rbx
+/// 2
+/// @var _frame_t::rbp
+/// 1
+/// @var _frame_t::rip
+/// 0
 typedef struct {
-  uint32_t     mxcsr;                           // 7
-  uint16_t     fpucw;                           // 7.5
-  uint16_t   padding;                           // 7.75 has to match transfer.S
-  void          *r15;                           // 6
-  void          *r14;                           // 5
-  void          *r13;                           // 4
-  hpx_parcel_t  *r12;                           // 3
-  thread_entry_t rbx;                           // 2
-  void          *rbp;                           // 1
-  void         (*rip)(void);                    // 0
+  uint32_t     mxcsr;                           
+  uint16_t     fpucw;                           
+  uint16_t   padding;                           
+  void          *r15;                           
+  void          *r14;                           
+  void          *r13;                           
+  hpx_parcel_t  *r12;                           
+  thread_entry_t rbx;                           
+  void          *rbp;                           
+  void         (*rip)(void);                    
   void      *top_rbp;
   void     (*top_rip)(void);
-} HPX_PACKED _frame_t;
+} __attribute__((packed)) _frame_t;
 
 void *transfer_frame_init(void *top, hpx_parcel_t *p, thread_entry_t f) {
   // x86_64 wants 16 byte alignment, so we adjust the top pointer if necessary

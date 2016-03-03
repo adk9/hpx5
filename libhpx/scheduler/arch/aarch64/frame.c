@@ -21,23 +21,35 @@
 #include "../../thread.h"
 #include "../common/asm.h"
 
+/// @struct _frame_t
+/// @brief
 /// A structure describing the initial frame on a stack.
 ///
 /// This must match the transfer.S asm file usage.
 ///
 /// This should be managed in an asm-specific manner.
+/// @var _frame_t::x19
+/// used to hold f(), called by align_stack_trampoline
+/// @var _frame_t::x20
+/// we use this to hold the parcel that is passed to f()
+/// @var _frame_t::regs
+/// x21-x28
+/// @var _frame_t::x29
+/// The frame pointer
+/// @var _frame_t::x30
+/// return address - set to align_stack_trampoline
 typedef struct {
-  thread_entry_t    x19; // used to hold f(), called by align_stack_trampoline
-  void             *x20; // we use this to hold the parcel that is passed to f()
-  void         *regs[8]; // x21-x28
-  void             *x29; // The frame pointer
-  void     (*x30)(void); // return address - set to align_stack_trampoline
+  thread_entry_t    x19; 
+  void             *x20; 
+  void         *regs[8]; 
+  void             *x29; 
+  void     (*x30)(void); 
   void   *vfp_alignment;
   void           *fpscr;
   void      *vfpregs[8];
   void         *top_x19;
   void (*top_x30)(void);
-} HPX_PACKED _frame_t;
+} __attribute__((packed)) _frame_t;
 
 void *transfer_frame_init(void *top, hpx_parcel_t *p, thread_entry_t f) {
   // wants 16 byte alignment, so we adjust the top pointer if necessary

@@ -16,17 +16,37 @@
 
 struct record;
 
+/// @struct logtable_t
+/// @brief
 /// All of the data needed to keep the state of an individual event log
+/// @var logtable_t::fd
+/// file backing the log
+/// @var logtable_t::class
+/// the class we're logging
+/// @var logtable_t::id
+/// the event we're logging
+/// @var logtable_t::UNUSED
+/// padding
+/// @var logtable_t::max_size
+/// max size in bytes
+/// @var logtable_t::header
+/// pointer to file header
+/// @var logtable_t::records
+/// pointer to data for log
+/// @var logtable_t::next
+/// the next element to write
+/// @var logtable_t::last
+/// the last element written
 typedef struct {
-  int                 fd;       // file backing the log
-  int              class;       // the class we're logging
-  int                 id;       // the event we're logging
-  int             UNUSED;       // padding
-  size_t        max_size;       // max size in bytes
-  void           *header;       // pointer to file header
-  struct record *records;       // pointer to data for log
-  volatile size_t   next;       // the next element to write
-  volatile size_t   last;       // the last element written
+  int                 fd;       
+  int              class;       
+  int                 id;       
+  int             UNUSED;       
+  size_t        max_size;       
+  void           *header;       
+  struct record *records;       
+  volatile size_t   next;       
+  volatile size_t   last;       
 } logtable_t;
 
 #define LOGTABLE_INIT {          \

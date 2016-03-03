@@ -29,32 +29,32 @@ extern "C" {
 struct config;
 /// @}
 
-/// @struct topology
+/// @struct topology_t
 /// @brief The "physical" topology object.
 ///
-/// @var topology::hwloc_topology
+/// @var topology_t::hwloc_topology
 /// The HWLOC topology object.
-/// @var topology::ncpus
+/// @var topology_t::ncpus
 /// The number of physical CPUs in the system.
-/// @var topology::cpus
+/// @var topology_t::cpus
 /// The HWLOC object corresponding to each CPU.
-/// @var topology::ncores
+/// @var topology_t::ncores
 /// The number of physical cores in the system.
-/// @var topology::nnodes
+/// @var topology_t::nnodes
 /// The number of NUMA nodes in the system.
-/// @var topology::numa_nodes
+/// @var topology_t::numa_nodes
 /// The HWLOC object corresponding to each NUMA node.
-/// @var topology::cpus_per_node
+/// @var topology_t::cpus_per_node
 /// The number of CPUs per NUMA node
-/// @var topology::cpu_to_core
+/// @var topology_t::cpu_to_core
 /// The CPU to core mapping.
-/// @var topology::cpu_to_numa
+/// @var topology_t::cpu_to_numa
 /// The CPU to NUMA node mapping.
-/// @var topology::numa_to_cpus
+/// @var topology_t::numa_to_cpus
 /// The (reverse) NUMA node to cpus mapping.
-/// @var topology::allowed_cpus
+/// @var topology_t::allowed_cpus
 /// The initial CPU binding of the HPX process.
-/// @var topology::cpu_affinity_map
+/// @var topology_t::cpu_affinity_map
 /// The CPU affinity map that maintains the CPU binding for a resource
 /// (numa-node, core-id) depending on the global affinity policy.
 typedef struct topology {

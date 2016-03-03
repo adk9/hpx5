@@ -24,6 +24,27 @@
 struct lco_class;
 /// @}
 
+/// @struct ustack_t
+/// @var ustack_t::sp
+/// checkpointed stack pointer
+/// @var ustack_t::parcel
+/// the progenitor parcel
+/// @var ustack_t::next
+/// freelists and condition vars
+/// @var ustack_t::lco_depth
+/// how many lco locks we hold
+/// @var ustack_t::tls_id
+/// backs tls
+/// @var ustack_t::stack_id
+/// used by VALGRIND
+/// @var ustack_t::size
+/// the size of this stack
+/// @var ustack_t::cont
+/// the continuation flag
+/// @var ustack_t::affinity
+/// set by user
+/// @var ustack_t::masked
+/// should we checkpoint sigmask
 typedef struct ustack {
   void *sp;                                     // checkpointed stack pointer
   hpx_parcel_t *parcel;                         // the progenitor parcel

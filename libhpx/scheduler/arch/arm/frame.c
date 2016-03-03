@@ -19,11 +19,20 @@
 #include "../../thread.h"
 #include "../common/asm.h"
 
-/// A structure describing the initial frame on a stack.
+/// @struct _frame_t
+/// @brief A structure describing the initial frame on a stack.
 ///
 /// This must match the transfer.S asm file usage.
 ///
 /// This should be managed in an asm-specific manner.
+/// @var _frame_t::regs
+/// r6-r11
+/// @var _frame_t::r5
+/// we use this to hold the parcel that is passed to f()
+/// @var _frame_t::r4
+/// used to hold f(), called by align_stack_trampoline
+/// @var _frame_t::lr
+/// return address
 typedef struct {
   void     *alignment; // keep 8-byte aligned stack
 #ifdef __VFP_FP__
@@ -31,13 +40,13 @@ typedef struct {
   void         *fpscr;
   void   *vfpregs[16];
 #endif
-  void       *regs[6]; // r6-r11
-  void            *r5; // we use this to hold the parcel that is passed to f()
-  thread_entry_t   r4; // used to hold f(), called by align_stack_trampoline
-  void           (*lr)(void); // return address
+  void       *regs[6]; 
+  void            *r5; 
+  thread_entry_t   r4; 
+  void           (*lr)(void); 
   void        *top_r4;
   void       (*top_lr)(void);
-} HPX_PACKED _frame_t;
+} __attribute__((packed)) _frame_t;
 
 void *transfer_frame_init(void *top, hpx_parcel_t *p, thread_entry_t f) {
   // arm wants 8 byte alignment, so we adjust the top pointer if necessary

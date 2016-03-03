@@ -100,6 +100,21 @@ typedef struct inst_named_value {
   const char     name[8];
 } HPX_PACKED inst_named_value_t;
 
+/// @struct inst_event_col_metadata_t
+/// @var inst_event_col_metadata_t::mask
+/// this should an OR of all the following values:
+/// @var inst_event_col_metadata_t::data_type
+/// mask 0x1
+/// @var inst_event_col_metadata_t::offset
+/// mask 0x2
+/// @var inst_event_col_metadata_t::min
+/// mask 0x4
+/// @var inst_event_col_metadata_t::max
+/// mask 0x8
+/// @var inst_event_col_metadata_t::printf_code
+/// mask 0x10 (this value must be nul terminated)
+/// @var inst_event_col_metadata_t::name
+/// mask 0x20 (this value must be nul terminated)
 typedef struct inst_event_col_metadata {
   const char mask;           // this should an OR of all the following values:
   const char data_type;      // mask 0x1
