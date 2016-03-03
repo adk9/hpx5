@@ -37,14 +37,30 @@ typedef enum {
   ALL_REDUCE = 1000 ,
 } coll_type_t;
 
+/// @struct coll_t
+/// @var coll_t::type
+/// type of collective operation
+/// @var coll_t::op
+/// collective operator 
+/// @var coll_t::group_sz
+/// active group size
+/// @var coll_t::recv_count
+/// how many bytes to be recieved
+/// @var coll_t::comm_bytes
+/// active comm size in bytes
+/// @var coll_t::group_bytes
+/// active group size in bytes
+/// @var coll_t::data
+/// variable data - group of localities + communicator
+
 typedef struct collective{
-  coll_type_t      type;   // type of collective operation
-  hpx_monoid_op_t    op;   // collective operator 
-  int32_t      group_sz;   // active group size
-  int32_t    recv_count;   // how many bytes to be recieved
-  int32_t    comm_bytes;   // active comm size in bytes
-  int32_t   group_bytes;   // active group size in bytes
-  char           data[];   // variable data - group of localities + communicator
+  coll_type_t      type;   
+  hpx_monoid_op_t    op;   
+  int32_t      group_sz;   
+  int32_t    recv_count;   
+  int32_t    comm_bytes;   
+  int32_t   group_bytes;   
+  char           data[];   
 } coll_t;
 /// All network objects implement the network interface.
 typedef struct network {

@@ -43,37 +43,40 @@ struct scheduler;
 struct topology;
 /// @}
 
-/// @struct locality
+/// @struct locality_t
 /// @brief The locality object.
 ///
-/// @var locality::rank The dense, 0-based rank of this locality.
-/// @var locality::ranks The total number of ranks running the current job.
-/// @var locality::epoch Keep track of the current hpx_run() epoch.
-/// @var locality::boot
+/// @var locality_t::rank 
+/// The dense, 0-based rank of this locality.
+/// @var locality_t::ranks 
+/// The total number of ranks running the current job.
+/// @var locality_t::epoch 
+/// Keep track of the current hpx_run() epoch.
+/// @var locality_t::boot
 /// The bootstrap object. This provides rank and ranks, as well as some basic,
 /// IP-based networking functionality.
-/// @var locality::gas
+/// @var locality_t::gas
 /// The global address space object. This provides global memory allocation and 
 /// address space functionality.
-/// @var locality::network 
+/// @var locality_t::network 
 /// The network layer. This provides an active message interface targeting
 /// global addresses.
-/// @var locality::sched
+/// @var locality_t::sched
 /// The lightweight thread scheduler. This provides the infrastructure required
 /// to create lightweight threads, and to deal with inter-thread data and
 /// control dependencies using LCOs.
-/// @var locality::config 
+/// @var locality_t::config 
 /// The libhpx configuration object. This stores the per-locality configuration 
 /// parameters based on the user-specified runtime configuration values and/or 
 ///the defaults.
-/// @var locality::actions
+/// @var locality_t::actions
 /// The symmetric "action table" which stores the details of all of the actions
 /// registered at this locality.
-/// @var locality::topology
+/// @var locality_t::topology
 /// The topology information.
-/// @var locality::percolation
+/// @var locality_t::percolation
 /// An interface for dealing with GPU backends.
-/// @var locality::mask
+/// @var locality_t::mask
 /// The default signal mask.
 typedef struct locality {
   uint32_t             rank;
