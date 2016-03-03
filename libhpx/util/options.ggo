@@ -1,4 +1,4 @@
-args "--input=options.ggo --func-name=hpx_option_parser --arg-struct-name=hpx_options_t --file-name=parser --default-optional --string-parser --conf-parser --no-help --no-version"
+args "--include-getopt --input=options.ggo --func-name=hpx_option_parser --arg-struct-name=hpx_options_t --file-name=parser --default-optional --string-parser --conf-parser --no-help --no-version"
 
 section "HPX Runtime Options"
 
