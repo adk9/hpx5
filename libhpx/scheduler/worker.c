@@ -295,7 +295,7 @@ static hpx_parcel_t *_schedule_lifo(worker_t *w) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(_work(w));
   EVENT_SCHED_POP_LIFO(p);
   EVENT_SCHED_WQSIZE(sync_chase_lev_ws_deque_size(
-      &w->queues[sync_load(&worker->work_id, SYNC_RELAXED)].work));
+      &w->queues[sync_load(&w->work_id, SYNC_RELAXED)].work));
   return p;
 }
 
