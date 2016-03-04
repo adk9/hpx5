@@ -84,30 +84,30 @@ typedef struct {
 /// @var worker_t::network
 /// reference to the network
 typedef struct {
-  pthread_t          thread;                    
-  int                    id;                    
-  unsigned             seed;                    
-  int            work_first;                    
-  int               nstacks;                    
-  int               yielded;                    
-  int                active;                    
-  hpx_parcel_t      *system;                    
-  hpx_parcel_t     *current;                    
-  struct ustack     *stacks;                    
+  pthread_t          thread;
+  int                    id;
+  unsigned             seed;
+  int            work_first;
+  int               nstacks;
+  int               yielded;
+  int                active;
+  hpx_parcel_t      *system;
+  hpx_parcel_t     *current;
+  struct ustack     *stacks;
   PAD_TO_CACHELINE(sizeof(pthread_t) +
                    sizeof(int) * 6 +
                    sizeof(hpx_parcel_t*) * 2 +
                    sizeof(struct ustack*));
-  int               work_id;                    
+  volatile int      work_id;
   PAD_TO_CACHELINE(sizeof(int));
   padded_deque_t  queues[2];
-  two_lock_queue_t    inbox;                    
-  libhpx_stats_t      stats;                    
-  int           last_victim;                    
-  int             numa_node;                    
-  void            *profiler;                    
-  void                 *bst;                    
-  struct network   *network;                    
+  two_lock_queue_t    inbox;
+  libhpx_stats_t      stats;
+  int           last_victim;
+  int             numa_node;
+  void            *profiler;
+  void                 *bst;
+  struct network   *network;
 } worker_t HPX_ALIGNED(HPX_CACHELINE_SIZE);
 /// @}
 

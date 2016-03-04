@@ -256,15 +256,18 @@ static hpx_parcel_t *_try_bind(worker_t *w, hpx_parcel_t *p) {
 }
 
 static chase_lev_ws_deque_t *_work(worker_t *worker) {
-  return &worker->queues[worker->work_id].work;
+  int id = sync_load(&worker->work_id, SYNC_RELAXED);
+  return &worker->queues[id].work;
 }
 
 static chase_lev_ws_deque_t *_yielded(worker_t *worker) {
-  return &worker->queues[1 - worker->work_id].work;
+  int id = sync_load(&worker->work_id, SYNC_RELAXED);
+  return &worker->queues[1 - id].work;
 }
 
 static void _swap_epoch(worker_t *worker) {
-  worker->work_id = 1 - worker->work_id;
+  int id = sync_load(&worker->work_id, SYNC_RELAXED);
+  sync_store(&worker->work_id, 1 - id, SYNC_RELAXED);
 }
 
 /// Add a parcel to the top of the worker's work queue.
@@ -291,7 +294,8 @@ static void _push_lifo(hpx_parcel_t *p, void *worker) {
 static hpx_parcel_t *_schedule_lifo(worker_t *w) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(_work(w));
   EVENT_SCHED_POP_LIFO(p);
-  EVENT_SCHED_WQSIZE(sync_chase_lev_ws_deque_size(&w->queues[w->work_id].work));
+  EVENT_SCHED_WQSIZE(sync_chase_lev_ws_deque_size(
+      &w->queues[sync_load(&worker->work_id, SYNC_RELAXED)].work));
   return p;
 }
 
@@ -653,7 +657,7 @@ int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   w->system      = NULL;
   w->current     = NULL;
   w->stacks      = NULL;
-  w->work_id     = 0;
+  sync_store(&w->work_id, 0, SYNC_RELAXED);
   w->active      = true;
   w->profiler    = NULL;
   w->bst         = NULL;
