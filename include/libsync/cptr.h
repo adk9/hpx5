@@ -18,25 +18,18 @@
 #include <hpx/attributes.h>
 #include "sync.h"
 
-/// @struct cptr_t
-/// ----------------------------------------------------------------------------
-/// A "counted pointer" structure.
-///
-/// This common pattern is used in non-blocking algorithms where CAS is the
-/// primitive atomic operation. It represents a normal pointer, where each CAS
-/// updates the "version" of the pointer, and avoids the ABA problem for up to
-/// 64-bits worth of CAS operations.
-///
-/// It relies on having access to a CAS that is twice as big as a pointer.
-///
-/// @var cptr_t::p
-/// the actual pointer that we're protecting
-/// @var cptr_t::c
-/// the count of the number of times this pointer has been CASed
+//! A "counted pointer" structure.
+//!
+//! This common pattern is used in non-blocking algorithms where CAS is the
+//! primitive atomic operation. It represents a normal pointer, where each CAS
+//! updates the "version" of the pointer, and avoids the ABA problem for up to
+//! 64-bits worth of CAS operations.
+//!
+//! It relies on having access to a CAS that is twice as big as a pointer.
 #ifdef __LP64__
 typedef struct {
-  void *p;
-  uint64_t c;
+  void *p;     //!< the actual pointer that we're protecting
+  uint64_t c;  //!< the count of the number of times this pointer has been CASed
 } cptr_t __attribute__((aligned(16)));
 #else
 typedef struct {

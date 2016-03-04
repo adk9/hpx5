@@ -36,12 +36,12 @@ struct two_lock_queue_node {
 /// @brief
 /// Using SWAP on the head and tail pointers for locking. Could use something
 /// more scalable if higher contention.
-typedef struct {
+typedef struct HPX_ALIGNED(64){
   two_lock_queue_node_t *head;
   const char _paddinga[HPX_CACHELINE_SIZE - sizeof(two_lock_queue_node_t*)];
   two_lock_queue_node_t *tail;
   const char _paddingb[HPX_CACHELINE_SIZE - sizeof(two_lock_queue_node_t*)];
-} __attribute__((aligned(64))) two_lock_queue_t;
+} two_lock_queue_t;
 
 #define SYNC_TWO_LOCK_QUEUE_INIT {              \
     .head = NULL,                               \
