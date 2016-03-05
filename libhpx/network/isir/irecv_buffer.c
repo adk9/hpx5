@@ -94,6 +94,7 @@ static int _start(irecv_buffer_t *irecvs, int i) {
   void *b = isir_network_offset(p);
   int e = irecvs->xport->irecv(b, n, tag, request);
   if (LIBHPX_OK != e) {
+    parcel_delete(p);
     return e;
   }
 
