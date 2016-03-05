@@ -21,11 +21,11 @@
 #include "../../thread.h"
 #include "../common/asm.h"
 
-//! A structure describing the initial frame on a stack.
-//!
-//! This must match the transfer.S asm file usage.
-//!
-//! This should be managed in an asm-specific manner.
+/// A structure describing the initial frame on a stack.
+///
+/// This must match the transfer.S asm file usage.
+///
+/// This should be managed in an asm-specific manner.
 typedef struct HPX_PACKED {
   thread_entry_t    x19; //!< used to hold f(), called by align_stack_trampoline
   void             *x20; //!< we use this to hold the parcel that is passed to f()

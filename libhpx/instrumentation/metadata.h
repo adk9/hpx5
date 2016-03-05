@@ -150,9 +150,9 @@ typedef struct inst_event_col_metadata {
 #define METADATA_HPX_ADDR(off)      METADATA_UINT(64, off, "global address")
 #define METADATA_PTR(off)           METADATA_UINT(64, off, "local address")
 
-//! Event metadata struct.
-//! In theory the number of columns need not match the number of fields in
-//! an event. In practice, right now they do.
+/// Event metadata struct.
+/// In theory the number of columns need not match the number of fields in
+/// an event. In practice, right now they do.
 typedef struct inst_event_metadata {
   const int num_cols;
   const  inst_event_col_metadata_t col_metadata[_NUM_COLS];

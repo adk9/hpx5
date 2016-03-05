@@ -25,7 +25,7 @@
 
 struct config;
 
-//! The data structure representing profiling entries
+/// The data structure representing profiling entries
 typedef struct {
   hpx_time_t   start_time; //!< Time of initialization
   hpx_time_t     ref_time; //!< Time of resumption of recording session
@@ -38,7 +38,7 @@ typedef struct {
   bool             paused; //!< True if recording has been paused
 } profile_entry_t;
 
-//! The data structure representing a profiled code event
+/// The data structure representing a profiled code event
 typedef struct {
   int          max_entries; //!< Maximum length of the list
   int          num_entries; //!< Number of entries in the list
@@ -48,7 +48,7 @@ typedef struct {
   int             eventset; //!< The eventset that will be used for this event
 } profile_list_t;
 
-//! The data structure for storing profiling entries
+/// The data structure for storing profiling entries
 typedef struct {
   int           num_counters; //!< Number of counters utilized
   int             num_events; //!< Number of code events profiled

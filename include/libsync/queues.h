@@ -31,7 +31,6 @@ struct two_lock_queue_node {
   void *value;
 };
 
-
 /// @struct two_lock_queue_t
 /// @brief
 /// Using SWAP on the head and tail pointers for locking. Could use something

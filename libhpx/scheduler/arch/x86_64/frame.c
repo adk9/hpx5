@@ -32,13 +32,13 @@ static void HPX_CONSTRUCTOR _init_x86_64(void) {
 }
 /// @}
 
-//! A structure describing the initial frame on a stack.
-//!
-//! This must match the transfer.S asm file usage.
-//!
-//! This should be managed in an asm-specific manner, but we are just worried
-//! about x86-64 at the moment.
-typedef struct HPX_PACKED{
+/// A structure describing the initial frame on a stack.
+///
+/// This must match the transfer.S asm file usage.
+///
+/// This should be managed in an asm-specific manner, but we are just worried
+/// about x86-64 at the moment.
+typedef struct HPX_PACKED {
   uint32_t     mxcsr;                        //!< 7
   uint16_t     fpucw;                        //!< 7.5
   uint16_t   padding;                        //!< 7.75 has to match transfer.S

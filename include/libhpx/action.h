@@ -220,19 +220,19 @@ typedef struct {
 
 } parcel_management_vtable_t;
 
-//! An action table action type.
-//!
-//! The action type uses basic multiple inheritance to implement the calling
-//! convention and call interfaces. Action types are allocated in an array, so
-//! their records contain the union of all of the fields that all of the
-//! different actions might need.
+/// An action table action type.
+///
+/// The action type uses basic multiple inheritance to implement the calling
+/// convention and call interfaces. Action types are allocated in an array, so
+/// their records contain the union of all of the fields that all of the
+/// different actions might need.
 typedef struct {
-  const parcel_management_vtable_t *parcel_class; /**< The parcel management 
-                                                       vtable pointer. */
-  const calling_convention_vtable_t  *call_class; /**< The calling convention 
-                                                       vtable pointer. */
-  void (*finish)(void*);                          /**< Called to finish 
-                                                       registration.   */
+  const parcel_management_vtable_t *parcel_class; //!< The parcel management 
+                                                  //!< vtable pointer.
+  const calling_convention_vtable_t  *call_class; //!< The calling convention 
+                                                  //!< vtable pointer.
+  void (*finish)(void*);                          //!< Called to finish 
+                                                  //!< registration.
   void (*fini)(void*);                            //!< The destructor.
 
   handler_t      handler; //!< The action handler function pointer.

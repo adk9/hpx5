@@ -19,12 +19,12 @@
 #include "../../thread.h"
 #include "../common/asm.h"
 
-//! A structure describing the initial frame on a stack.
-//!
-//! This must match the transfer.S asm file usage.
-//!
-//! This should be managed in an asm-specific manner.
-typedef struct HPX_PACKED{
+/// A structure describing the initial frame on a stack.
+///
+/// This must match the transfer.S asm file usage.
+///
+/// This should be managed in an asm-specific manner.
+typedef struct HPX_PACKED {
   void     *alignment; // keep 8-byte aligned stack
 #ifdef __VFP_FP__
   void *vfp_alignment;

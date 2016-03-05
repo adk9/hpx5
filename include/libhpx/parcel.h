@@ -61,21 +61,8 @@ static inline uint16_t parcel_pinned(parcel_state_t state) {
   return state & PARCEL_PINNED;
 }
 
-//! The hpx_parcel structure is what the user-level interacts with.
+/// The hpx_parcel structure is what the user-level interacts with.
 ///
-
-
-
-
-
-
-
-
-
-
-
-
-
 struct hpx_parcel {
   struct ustack   *ustack;  //!< A pointer to a stack.
   struct hpx_parcel *next;  //!< A pointer to the next parcel.
@@ -87,12 +74,12 @@ struct hpx_parcel {
   hpx_action_t   c_action;  //!< The continuation action identifier.
   hpx_addr_t       target;  //!< The target address for parcel_send().
   hpx_addr_t     c_target;  //!< The target address for the continuation.
-  hpx_pid_t           pid;  
-  uint64_t         credit;  
+  hpx_pid_t           pid;  //!< The process ID.
+  uint64_t         credit;  //!< Credit held by the parcel.
 #ifdef ENABLE_INSTRUMENTATION
   uint64_t             id;  //!< A unique identifier for parcel tracing.
-  const uint64_t  padding;  /**< Ensure consistent buffer alignment with
-                                 instrumentation. */
+  const uint64_t  padding;  //!< Ensure consistent buffer alignment with
+                            //!< instrumentation.
 #endif
   char           buffer[];  //!< Either an in-place payload, or a pointer.
 };

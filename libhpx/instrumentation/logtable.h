@@ -16,7 +16,7 @@
 
 struct record;
 
-//! All of the data needed to keep the state of an individual event log
+/// All of the data needed to keep the state of an individual event log
 typedef struct {
   int                 fd;       //!< file backing the log
   int              class;       //!< the class we're logging
