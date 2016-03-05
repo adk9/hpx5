@@ -112,7 +112,7 @@ void agas_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
   uint32_t owner;
   bool found = btt_get_owner(agas->btt, gva, &owner);
   if (found) {
-    hpx_call_cc(src, _agas_invalidate_mapping, &dst, &owner);
+    hpx_call(src, _agas_invalidate_mapping, sync, &dst, &owner);
     return;
   }
 
