@@ -107,6 +107,12 @@ _mpi_clear(void *request) {
 
 static int
 _mpi_cancel(void *request, int *cancelled) {
+  MPI_Request *r = request;
+  if (*r == MPI_REQUEST_NULL) {
+    *cancelled = 1;
+    return LIBHPX_OK;
+  }
+
   if (MPI_SUCCESS != MPI_Cancel(request)) {
     return log_error("could not cancel MPI request\n");
   }
